@@ -1,0 +1,76 @@
+# =============================================================================
+# Agenerela — Git ignore
+#
+# Committed BEFORE the Unity project is created. Unity generates Library/ the
+# moment it opens a project (hundreds of MB, sometimes GB); a single `git add -A`
+# without these rules in place would put that in history permanently.
+#
+# Patterns have no leading slash, so they match at any depth — e.g. [Ll]ibrary/
+# also matches UnityProject/Library/.
+# =============================================================================
+
+# --- Unity generated folders -------------------------------------------------
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+[Rr]ecordings/
+
+# --- Unity build outputs and crash reports -----------------------------------
+*.apk
+*.aab
+*.app
+*.unitypackage
+*.unitypackage.meta
+crashlytics-build.properties
+sysinfo.txt
+
+# --- Asset Store tools -------------------------------------------------------
+[Aa]ssets/AssetStoreTools*
+[Aa]ssets/Plugins/Editor/JetBrains*
+
+# --- IDE and editor files ----------------------------------------------------
+.vs/
+.vscode/
+.idea/
+.gradle/
+ExportedObj/
+*.csproj
+*.sln
+*.slnx
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# --- OS files ----------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# --- Secrets — never commit API keys -----------------------------------------
+# .env holds real keys and stays local. .env.example is the committed template.
+.env
+.env.*
+!.env.example
+
+# --- Local tooling scratch ---------------------------------------------------
+# Benchmark output is regenerated on every run; archive copies land in docs/.
+/benchmark-output.txt
+*.local
