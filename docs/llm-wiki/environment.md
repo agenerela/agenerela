@@ -10,23 +10,54 @@ Open `UnityProject/`. The framework is an *embedded* package under
 `UnityProject/Packages/com.agenerela.framework/`, so it compiles automatically with no
 install step.
 
-## Per-machine git setup (each teammate does this once)
+## Per-machine setup — do this BEFORE cloning
 
-The repo's `.gitattributes` routes Unity YAML through `unityyamlmerge`, but **that merge
-driver only works if it is also configured locally** — the attribute names a driver, git
-needs to know where it lives. Without this, scene and prefab conflicts fall back to a
-plain text merge and become unmergeable.
+Order matters for the first command.
 
 ```bash
-git config merge.unityyamlmerge.name "Unity SmartMerge"
-git config merge.unityyamlmerge.driver '"C:/Program Files/Unity/Hub/Editor/6000.3.23f1/Editor/Data/Tools/UnityYAMLMerge.exe" merge -p "$BASE" "$REMOTE" "$LOCAL" "$MERGED"'
-git config merge.unityyamlmerge.recursive binary
+# 1. Git LFS. Run this BEFORE `git clone`: it installs the filters that fetch real
+#    binaries during checkout. Clone without it and you get pointer files instead.
+#    Already cloned? Run `git lfs install` then `git lfs pull` to repair.
+git lfs install
+
+# 2. Unity's YAML merge driver (see note below).
+git config --global merge.unityyamlmerge.name "Unity SmartMerge"
+git config --global merge.unityyamlmerge.driver '"C:/Program Files/Unity/Hub/Editor/6000.3.23f1/Editor/Data/Tools/UnityYAMLMerge.exe" merge -p "$BASE" "$REMOTE" "$LOCAL" "$MERGED"'
+git config --global merge.unityyamlmerge.recursive binary
 ```
 
-On macOS the tool is at
-`/Applications/Unity/Hub/Editor/6000.3.23f1/Unity.app/Contents/Tools/UnityYAMLMerge`.
+Then clone, and verify LFS worked:
 
-Also ensure Git LFS is active (`git lfs install`) before pulling any binary assets.
+```bash
+git clone https://github.com/agenerela/agenerela.git
+cd agenerela && git lfs ls-files      # must list URP.png; empty means LFS was inactive
+```
+
+**Why the merge driver needs local config.** The committed `.gitattributes` says
+`*.unity merge=unityyamlmerge` — that names a driver but does not say where the
+executable is, and the path differs per machine and OS, so it cannot be committed. Each
+person configures it once. Scenes and prefabs are YAML with `fileID` cross-references;
+git's line-based merge interleaves them into files Unity cannot open or that silently
+lose objects. UnityYAMLMerge merges at the object level instead.
+
+**A wrong path fails silently** — git falls back to the line merge with no error. Verify
+with `git config --global --get merge.unityyamlmerge.driver` and check the file exists.
+
+Paths by platform:
+- Windows: `C:/Program Files/Unity/Hub/Editor/6000.3.23f1/Editor/Data/Tools/UnityYAMLMerge.exe`
+- macOS: `/Applications/Unity/Hub/Editor/6000.3.23f1/Unity.app/Contents/Tools/UnityYAMLMerge`
+
+The tool helps, but is not magic. The social rule still applies: **one person owns a
+scene at a time.** Talking prevents more conflicts than any tool resolves.
+
+## Branch workflow
+
+`test` is the default and integration branch; `main` is protected and restricted.
+
+- Branch off `test`, open pull requests **into `test`**.
+- Do not target `main` — pushes are restricted to the repository owner, and merges
+  additionally require a Code Owner review.
+- Promotion from `test` to `main` is done by the owner when `test` is in good shape.
 
 ## Local models — Ollama
 
