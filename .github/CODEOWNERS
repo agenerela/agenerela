@@ -1,0 +1,11 @@
+# Code owners for Agenerela.
+#
+# Combined with the "Require review from Code Owners" branch protection rule,
+# every pull request into main needs an approval from an owner listed here.
+# This is what makes merges into main gated rather than self-service.
+#
+# Syntax: <path pattern>  <@user or @org/team>
+# Later matching rules win, so put narrower paths further down.
+
+# Everything, by default.
+*   @Draganoider
