@@ -1,0 +1,18 @@
+{
+    "name": "Agenerela.Editor",
+    "rootNamespace": "Agenerela.Editor",
+    "references": [
+        "Agenerela"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
