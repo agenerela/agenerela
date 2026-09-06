@@ -14,15 +14,26 @@ automatically by Claude Code when a session starts in this repository.
 Settings load in order **user → project → local**, so `settings.local.json`
 overrides `settings.json`, which overrides your personal `~/.claude/settings.json`.
 
-## Why `CLAUDE.md` is not in here
+## Where the rules actually live
 
-[`CLAUDE.md`](../CLAUDE.md) stays at the **repository root**. That is the location
-Claude Code discovers automatically as project memory; moving it into `.claude/`
-would stop it being loaded. Root is also where a human contributor expects to find
-it, next to `README.md`.
+Not here, and not in `CLAUDE.md` either. **[`AGENTS.md`](../AGENTS.md) at the
+repository root is the single source of truth** for every AI agent used on this
+project — Claude Code, Codex, Cursor, Copilot and the rest.
 
-Rule of thumb: **`CLAUDE.md` is instructions** (what Claude should know and do in
-this repo), **`.claude/` is configuration** (how the tool itself behaves).
+[`CLAUDE.md`](../CLAUDE.md) is a thin file whose first line is `@AGENTS.md`, which
+imports it. It exists only because Claude Code loads `CLAUDE.md` rather than
+`AGENTS.md`; everything else reads `AGENTS.md` natively.
+
+So there are three layers, and it matters which you edit:
+
+| Layer | File | Holds |
+|---|---|---|
+| Rules | `AGENTS.md` | Everything an agent must know or do. **Edit this one.** |
+| Adapter | `CLAUDE.md` | The `@AGENTS.md` import, plus Claude-only notes |
+| Configuration | `.claude/settings.json` | How the tool behaves, not what it should do |
+
+A rule written only in `CLAUDE.md` is invisible to Codex. A rule written in
+`AGENTS.md` reaches everything.
 
 ## Current settings
 

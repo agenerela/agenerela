@@ -47,6 +47,7 @@ The LLM never touches Unity directly.
 | `docs/FRAMEWORK_BUILD_PLAN.md` | Architecture, build phases, decision records |
 | `docs/llm-wiki/` | Measured findings and working conventions |
 | `tools/benchmarks/` | Standalone probes for fast iteration outside Unity |
+| `AGENTS.md` | Rules for AI coding agents — and the shortest description of how this project works |
 
 ## Developing
 
