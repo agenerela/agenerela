@@ -70,6 +70,10 @@ Desktop.ini
 .env.*
 !.env.example
 
+# --- Claude Code -------------------------------------------------------------
+# .claude/settings.json is committed (team-wide). Personal overrides are not.
+.claude/settings.local.json
+
 # --- Local tooling scratch ---------------------------------------------------
 # Benchmark output is regenerated on every run; archive copies land in docs/.
 /benchmark-output.txt

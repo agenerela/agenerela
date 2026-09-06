@@ -33,6 +33,17 @@ they are taken.
    executor validates independently and runs the Unity code.
 6. **The framework core has no third-party runtime dependencies.** Providers are the
    exception, and must be isolated behind a version define or a separate package.
+7. **No attribution trailers in commits or pull requests.** No `Co-Authored-By: Claude`,
+   no "Generated with Claude Code". Enforced by `attribution` in
+   [`.claude/settings.json`](.claude/settings.json); do not reintroduce it by hand. The
+   history should read as the team's work, and authorship is already recorded by the
+   committer field.
+
+## Claude Code configuration
+
+Tool configuration lives in [`.claude/`](.claude/README.md) — see that README for what
+belongs there. `CLAUDE.md` (this file) stays at the repository root, because that is the
+location loaded automatically as project memory. Instructions here, configuration there.
 
 ## Settled design rules (measured — do not relitigate without new evidence)
 
