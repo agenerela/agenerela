@@ -75,7 +75,7 @@ com.<team>.agentframework/
 │   ├── Core/                     ← agent, decision types, context, telemetry
 │   ├── Actions/                  ← action definitions, availability, registration
 │   ├── Schema/                   ← provider-neutral schema model + per-provider serializers
-│   ├── Providers/                ← ILLMProvider, OllamaProvider, (later) GeminiProvider
+│   ├── Providers/                ← ILLMProvider, OllamaProvider, cloud providers, in-process
 │   ├── Validation/               ← guard pipeline: whitelist, grounding, state legality
 │   ├── Memory/                   ← IMemoryStrategy, rolling history default
 │   └── Scheduling/               ← request queue, priorities, cancellation, budgets
@@ -509,7 +509,7 @@ available actions and targets, then serialized by each provider.
 **Two serializers are required, not one.** This is easy to miss because Ollama hides it:
 
 ```
-DecisionSchema ──► JsonSchemaSerializer ──► Ollama, Gemini  (they compile it to a grammar internally)
+DecisionSchema ──► JsonSchemaSerializer ──► Ollama, cloud APIs (they compile it to a grammar internally)
                └─► GbnfSerializer       ──► in-process provider (llama.cpp wants GBNF directly)
 ```
 
@@ -566,7 +566,17 @@ the others cannot do its job:
 |---|---|---|
 | `OllamaProvider` | **Development.** Swap models in seconds, no packaging, easy benchmarking. | Requires the player to install Ollama and run a server — **not shippable in a game.** |
 | `InProcessProvider` | **Shipping.** Model runs inside the game process; player installs nothing. | The only option that actually ships. |
-| `GeminiProvider` (or any cloud) | **Optional / comparison.** Higher quality for low-frequency decisions; a reference labeller when building the eval set. | Per-request cost collapses at many-agent scale (Appendix A), and needs a network. |
+| **Cloud API providers** (`GeminiProvider`, `OpenAIProvider`, …) | **Optional / comparison.** Higher quality for low-frequency decisions; a reference labeller when building the eval set. | Per-request cost collapses at many-agent scale (Appendix A), and needs a network. |
+
+**The cloud tier is plural by design.** The goal is not "support Gemini" but "support cloud
+APIs generally", with each vendor behind the same `ILLMProvider`. Gemini is simply the
+first one implemented, because it is what the prototype measured against — so its quirks
+are documented, and it doubles as the conformance reference for the next provider.
+
+Expect vendors to differ in ways the interface must absorb, not paper over. Already
+observed with Gemini: empty strings rejected as enum values, property ordering that must
+be stated explicitly rather than inferred, and rate limits that need budget caps in code.
+A second vendor will surface its own list. `ProviderCapabilities` exists for exactly this.
 
 #### The in-process provider — how the framework actually ships
 
@@ -703,7 +713,7 @@ data shapes underneath have stopped moving.
 | **3. Validation pipeline** | Guards of §2.5 wired between provider and handler | EditMode tests with hand-built fake decisions: substitution attack rewritten to `none`; unavailable action rejected; guard verdicts appear in telemetry. Integration: prototype's "impossible request" suite passes ≥ 95% on a 2B model |
 | **4. Evaluation harness** | The measurement instrument — **before more features** | 200+ labelled prompts (grow from the prototype's 53), each declaring its required precondition state; runner executes A/B (two configs, same model/session) and writes a classified report (correct / wrong-legal / contained / rejected / pipeline-error); second annotator labels a subset, agreement reported. Methodology checklist (§4) committed to the wiki |
 | **5. Editor tooling** | §2.7 | A developer with zero framework knowledge builds a working 3-action agent in an empty scene in < 15 min without editing framework source (actually run this test on a teammate) |
-| **6. Second provider (Gemini)** | Proof the abstraction is real | Same eval subset runs against Gemini through `ILLMProvider` with **zero framework-code changes** (only a provider + config); a provider conformance test suite exists; budget caps + RPM throttling enforced in code |
+| **6. Cloud API providers** | Proof the abstraction is real, and the path to supporting any vendor | At least one cloud provider (Gemini first — it is what the prototype measured) runs the same eval subset through `ILLMProvider` with **zero framework-code changes**: a provider class plus config, nothing more. A **provider conformance test suite** exists that any future vendor must pass, so adding OpenAI or Anthropic later is implementing an interface rather than editing the framework. Budget caps and RPM throttling enforced in code, not convention |
 | **6b. In-process provider** | `GbnfSerializer` (§2.3) + `LLMUnityProvider` — the one a player can actually run (§2.4) | A **built player executable** (not the Editor) runs agent decisions with **no Ollama and no network** — the deliverable that makes "local-first" true rather than aspirational. Also: GBNF serializer emits the same constraints as the JSON-Schema path (unit-tested against the same `DecisionSchema` fixtures); same eval subset passes within noise of the Ollama arm; LLMUnity pinned to an exact version and **not** in `dependencies` (version-defined, so users who don't want it never add OpenUPM's scoped registry); model file's license recorded in the wiki |
 | **7. Samples** | Three tiny in-package samples (`Samples~/`): minimal agent, targeted actions, custom provider | Each is tens of lines with no art; all three import cleanly via Package Manager into a blank project |
 | **8. Demo games** | `Assets/Demos/` — one polished (`CompanionRPG`), two grey-box (`GreyBox2D`, `GreyBoxStrategy`) + `DemoLauncher` | Each demo has its own asmdef referencing **only** the framework's public Runtime assembly — no `InternalsVisibleTo`, no copied framework code. `GreyBoxStrategy` drives a faction agent with no Transform through the same `Agent` API as a talking NPC. See §1.6 — this phase runs *in parallel* with 2–7, not after |
