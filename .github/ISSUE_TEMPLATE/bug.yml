@@ -1,0 +1,81 @@
+name: Bug
+description: Something behaves incorrectly
+title: "Bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If the bug is that **an agent chose the wrong action**, consider filing a
+        *Finding* instead - that is usually a measurement question rather than a defect,
+        and the Finding form asks for the conditions that make it diagnosable.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happens
+      description: What you observed, not what you think causes it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: >
+        Numbered, from a clean state. "Sometimes" is worth saying explicitly - an
+        intermittent bug is a different investigation from a deterministic one.
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: input
+    id: branch
+    attributes:
+      label: Branch or commit
+      placeholder: "test @ 9188030"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where does it happen
+      options:
+        - Unity Editor
+        - Built player
+        - Standalone Python probe (tools/benchmarks)
+        - CI
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: console
+    attributes:
+      label: Console output or stack trace
+      description: >
+        Paste the full error including the stack trace. **Check it contains no API key**
+        before posting - this repository is public.
+      render: text
+    validations:
+      required: false
+
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      description: Unity version, OS, and the model in use if relevant.
+      placeholder: "Unity 6000.3.23f1, Windows 11, qwen3.5:4b"
+    validations:
+      required: false

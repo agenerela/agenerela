@@ -1,0 +1,114 @@
+name: Finding
+description: A measurement result - especially one that surprised you
+title: "Finding: "
+labels: ["finding"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Negative results are the most valuable entries here.** Two of three attempts to
+        improve accuracy in the prototype made it *worse*, and those write-ups saved more
+        time than the successes did.
+
+        This form asks for the conditions because a number without them cannot be trusted
+        or reproduced. If you cannot fill in the control arm, you have an anecdote rather
+        than a finding - which is fine, just say so in the notes.
+
+        File this the **same day you measure it**, then copy it into
+        `docs/llm-wiki/findings.md`.
+
+  - type: textarea
+    id: change
+    attributes:
+      label: What changed
+      description: Precise enough that someone else could reproduce it exactly.
+      placeholder: "Moved the `action` field before `dialogue` in the response schema. Nothing else altered."
+    validations:
+      required: true
+
+  - type: input
+    id: control
+    attributes:
+      label: Control arm result
+      description: The baseline - the configuration you changed *from*.
+      placeholder: "58.5% correct (31/53)"
+    validations:
+      required: true
+
+  - type: input
+    id: treatment
+    attributes:
+      label: Treatment arm result
+      description: The configuration you changed *to*.
+      placeholder: "84.9% correct (45/53)"
+    validations:
+      required: true
+
+  - type: input
+    id: n
+    attributes:
+      label: Sample size (n)
+      description: >
+        Per arm. At n≈50 the observed run-to-run noise on the control arm alone was about
+        10 points - a smaller difference than that is not a result.
+      placeholder: "53 prompts per arm"
+    validations:
+      required: true
+
+  - type: input
+    id: model
+    attributes:
+      label: Model and quantisation
+      placeholder: "qwen3.5:2b (Q4, via Ollama)"
+    validations:
+      required: true
+
+  - type: input
+    id: hardware
+    attributes:
+      label: Hardware
+      placeholder: "RTX 4060 Laptop, 8GB VRAM"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: methodology
+    attributes:
+      label: Methodology checks
+      description: >
+        Each of these has invalidated a real run in this project. Tick honestly - an
+        untickable box does not make the finding useless, it makes it *qualified*.
+      options:
+        - label: Both arms ran in the same session, on the same machine, with the same prompt set
+        - label: Exactly one model was resident on the GPU while timing (`ollama ps`)
+        - label: No few-shot example appears in the evaluation prompt set
+        - label: Each test case declared the precondition state the agent must be in
+        - label: Outcomes are classified (correct / wrong-legal / contained / rejected / pipeline-error), not collapsed into one percentage
+
+  - type: textarea
+    id: conclusion
+    attributes:
+      label: What you now believe
+      description: What does this change about how we build the framework?
+    validations:
+      required: true
+
+  - type: textarea
+    id: falsify
+    attributes:
+      label: What would change your mind
+      description: >
+        What result would make you abandon this conclusion? A finding without this is
+        an opinion.
+      placeholder: "If the same test on a 4B model showed no difference, the effect is size-specific rather than structural."
+    validations:
+      required: true
+
+  - type: textarea
+    id: raw
+    attributes:
+      label: Raw output
+      description: Paste the run output, or link the archived report file.
+      render: text
+    validations:
+      required: false
