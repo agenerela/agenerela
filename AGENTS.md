@@ -46,8 +46,13 @@ they are taken.
 
 ## Settled design rules (measured — do not relitigate without new evidence)
 
-- Response field order is `action`, then `target`, then `dialogue`. Emitting `dialogue`
-  first makes the model rationalise its own chat and collapses commands to "no action".
+- Response field order is `action`, then `target`, then the free-text field (`statement`;
+  the prototype called it `dialogue`). Emitting the free text first makes the model
+  rationalise its own reply and collapses commands to "no action". The rule is about
+  order; the rename is unmeasured and is an early Phase 4 A/B run (DR-008).
+- The framework never assumes a speaking character, and never classifies *when* or *why*
+  an agent is asked. Inputs are open: a free-form stimulus, a free-form label, a list of
+  observations. The developer's own systems decide the moment (DR-008).
 - `target` is **required**, with a `no_target` sentinel value. Never optional, never `""`
   (Gemini rejects empty enum strings outright).
 - **Do not** add a reasoning/chain-of-thought field before `action` — measured as the

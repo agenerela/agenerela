@@ -20,7 +20,7 @@ developer explicitly registered. The model decides; validated deterministic code
 
 A small local model (2B parameters) driving game agents is unreliable naively (~60%
 correct) but reaches **95%+** when surrounded by the right engineering: a per-request JSON
-schema whose enums are masked by agent state, `action` emitted before `dialogue`,
+schema whose enums are masked by agent state, `action` emitted before the free-text field,
 generated few-shot examples, a required `target` field with a `no_target` sentinel, and a
 ~10-line deterministic grounding guard. A 2B model with this scaffolding beat a 4B model
 without it. **The framework IS the scaffolding.** That is the product; the model is a
@@ -458,7 +458,7 @@ public sealed class Agent {
 public class AgentBehaviour : MonoBehaviour { public Agent Agent { get; } ... }
 ```
 
-`AgentDecision` is `{ actionId, targetId, dialogue }` plus full telemetry (latency, token
+`AgentDecision` is `{ actionId, targetId, statement }` plus full telemetry (latency, token
 counts, schema mode, which guards fired). Telemetry is not optional — every decision is
 measurable or the eval harness (Phase 4) can't exist.
 
@@ -524,10 +524,13 @@ than a second schema system — do not let provider-specific syntax leak into th
 
 **Settled rules:**
 
-1. **Field order: `action`, then `target`, then `dialogue`.** Generation is left-to-right;
-   dialogue-first makes the model chat first and then pick the action that agrees with its
-   own chat (measured collapse to `none`). Worth +11.7 accuracy points alone. For
-   providers that need it explicitly (Gemini), emit `propertyOrdering`.
+1. **Field order: `action`, then `target`, then the free-text field (`statement`).**
+   Generation is left-to-right; free-text-first makes the model chat first and then pick
+   the action that agrees with its own chat (measured collapse to `none`). Worth +11.7
+   accuracy points alone. For providers that need it explicitly (Gemini), emit
+   `propertyOrdering`. The prototype named the field `dialogue`; it is `statement` in the
+   framework because a country or colony does not have dialogue (DR-008). The measured rule
+   is the *order*; the rename is unmeasured and is an early Phase 4 A/B run.
 2. **`target` is REQUIRED, with a `"no_target"` sentinel in its enum.** Never optional
    (models omit it even when needed — measured 0/5 on a 4B model), and never `""` as the
    empty value (Gemini rejects empty enum strings with HTTP 400; `no_target` also gives
@@ -708,7 +711,7 @@ data shapes underneath have stopped moving.
 | Phase | Deliverable | Definition of done |
 |---|---|---|
 | **0. Skeleton** | Repo + package layout of §1 | Checklist §1.3 all green |
-| **1. Core + Actions + Schema** (pure C#, no LLM, no scene) | `Agent`, `ActionDefinition`, registries, `DecisionSchema` builder + Ollama-dialect serializer | EditMode tests prove: state masking (following agent's schema omits `follow_player`); `target` required w/ `no_target`; field order action→target→dialogue; few-shot block matches registered actions and rotates only sensible example targets; empty target-registry removes `target` property entirely. **All testable without any model running — this is why Phase 1 has no LLM.** |
+| **1. Core + Actions + Schema** (pure C#, no LLM, no scene) | `Agent`, `ActionDefinition`, registries, `DecisionSchema` builder + Ollama-dialect serializer | EditMode tests prove: state masking (following agent's schema omits `follow_player`); `target` required w/ `no_target`; field order action→target→statement; few-shot block matches registered actions and rotates only sensible example targets; empty target-registry removes `target` property entirely. **All testable without any model running — this is why Phase 1 has no LLM.** |
 | **2. OllamaProvider + queue** | End-to-end decision in a sandbox scene | PlayMode test (tagged `RequiresOllama`): one agent, five actions, live decision round-trip < 5s; telemetry fields populated; provider failure (missing model) surfaces as a typed error, not an exception leak |
 | **3. Validation pipeline** | Guards of §2.5 wired between provider and handler | EditMode tests with hand-built fake decisions: substitution attack rewritten to `none`; unavailable action rejected; guard verdicts appear in telemetry. Integration: prototype's "impossible request" suite passes ≥ 95% on a 2B model |
 | **4. Evaluation harness** | The measurement instrument — **before more features** | 200+ labelled prompts (grow from the prototype's 53), each declaring its required precondition state; runner executes A/B (two configs, same model/session) and writes a classified report (correct / wrong-legal / contained / rejected / pipeline-error); second annotator labels a subset, agreement reported. Methodology checklist (§4) committed to the wiki |
@@ -949,10 +952,11 @@ support isn't covered. In any of those cases the fallback ladder is
 |---|---|---|
 | DR-002 | One repository for package, demos, dev project, wiki and tools | §6.1 |
 | DR-003 | Demo games live in `Assets/Demos/`, not in the package's `Samples~/` | §1.6 |
-| DR-004 | `action` emitted before `dialogue`; `target` required with a `no_target` sentinel; no reasoning field | §2.3, Appendix A |
+| DR-004 | `action` emitted before the free-text field; `target` required with a `no_target` sentinel; no reasoning field | §2.3, Appendix A |
 | DR-005 | Grounding guard in code rather than relying on model scale | §2.5, Appendix A |
 | DR-006 | Evaluation harness (Phase 4) built before editor tooling and demos | §3 |
 | DR-007 | License MIT, pending the university IP check | §1.8 |
+| DR-008 | No speaking-character assumption and no input taxonomy: the free-text field is `statement`, not `dialogue`; the developer decides when an agent is asked and passes a free-form stimulus, label and observations; the framework never classifies the call. Rename unmeasured — early Phase 4 A/B | §2.1, §2.3, issues #2, #8, #17, #18 |
 
 ---
 
