@@ -38,8 +38,12 @@ they are taken.
    then scoring on that same phrase invalidates the result.
 5. **The LLM never touches Unity directly.** It selects from a registered action set; the
    executor validates independently and runs the Unity code.
-6. **The framework core has no third-party runtime dependencies.** Providers are the
-   exception, and must be isolated behind a version define or a separate package.
+6. **The framework core's only third-party dependency is Newtonsoft JSON**
+   (`com.unity.nuget.newtonsoft-json`), declared in the package's `package.json` so it
+   installs with the framework. Adding any other needs a decision record (DR-009). Core
+   asmdefs set `overrideReferences` and list their DLLs explicitly, so a DLL that merely
+   exists in the project cannot leak in. Providers are the exception, and must be
+   isolated behind a version define or a separate package.
 7. **No attribution trailers in commits or pull requests.** No `Co-Authored-By`, no
    "Generated with &lt;tool&gt;". The history should read as the team's work; authorship is
    already recorded by the committer field.

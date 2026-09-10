@@ -102,12 +102,16 @@ Assembly-definition rules (enforce from the first commit):
 - `Runtime` asmdef has **zero** references to Editor assemblies and zero `#if UNITY_EDITOR`
   business logic.
 - Tests reference Runtime (and Editor where needed); nothing references Tests.
-- **The core has no third-party runtime dependencies.** Use Unity 6's built-in `Awaitable`
+- **The core's only third-party runtime dependency is Newtonsoft JSON**
+  (`com.unity.nuget.newtonsoft-json`), declared in `package.json` so Package Manager
+  installs it with the framework (DR-009). Beyond that, use what Unity 6 ships: `Awaitable`
   for async (not UniTask, not Tasks-over-coroutines hacks) and `UnityWebRequest` for HTTP.
+  Core asmdefs set `overrideReferences: true` and list `Newtonsoft.Json.dll` explicitly, so
+  a DLL that merely exists in the project cannot leak into the core.
   *Providers are the exception*: the in-process provider depends on LLMUnity for embedded
   llama.cpp (§2.4). Isolate it behind a version define or a separate package so a
   developer using only Ollama or a cloud backend never pulls native binaries they don't
-  need. The rule is "the core is dependency-free," not "nothing may ever depend on anything."
+  need. The rule constrains the core; it is not "nothing may ever depend on anything."
 
 ### 1.3 Phase 0 — the first commits, in exact order
 
@@ -945,6 +949,54 @@ goes unmaintained or breaks against a needed Unity/llama.cpp version; a first-pa
 (e.g. Unity Inference Engine) becomes viable for LLM-sized models; or a platform we must
 support isn't covered. In any of those cases the fallback ladder is
 **fork → vendor → build**, in that order.
+
+### DR-009 — Newtonsoft JSON is the core's one dependency
+
+**Status:** Decided, September 2026. Amends hard rule 6 in `AGENTS.md`.
+
+**Context.** Rule 6 kept the core free of third-party runtime dependencies. Adding MCP for
+Unity to the dev project brought in `com.unity.nuget.newtonsoft-json` as a transitive
+dependency, and LLMUnity declares it too. Unity auto-references that DLL in every assembly
+that does not set `overrideReferences`, and the core's asmdefs did not — so core code could
+have used Newtonsoft, compiled and passed tests here, and then failed to compile for any
+user whose project lacked it. Meanwhile the core needs JSON in both directions from Phase 1:
+emitting schemas and parsing replies. Unity's built-in `JsonUtility` maps only onto fixed
+classes and silently fills missing fields with defaults, so a reply without `target` would
+parse without complaint.
+
+**Options considered**
+
+| Option | Cost | Verdict |
+|---|---|---|
+| Stay dependency-free: `JsonUtility` plus our own JSON reader | A reader to write and maintain, for a solved problem | Rejected |
+| **Declare Newtonsoft in `package.json`** | One line; Package Manager installs it from Unity's own registry | **Chosen.** |
+| Use it without declaring it | Nothing here; compile errors for users whose project lacks it | Rejected — the failure this record exists to prevent |
+
+**Decision.** The core depends on `com.unity.nuget.newtonsoft-json`, declared in the
+framework's `package.json`. It is the only exception to rule 6; any further core
+dependency needs its own record. Core asmdefs set `overrideReferences: true` and list
+`Newtonsoft.Json.dll` explicitly, so a DLL that is merely present in the project — from MCP
+for Unity, LLMUnity or anything else — stays invisible to the core, and an undeclared
+dependency fails to compile here rather than on a user's machine.
+
+**Why this does not undercut rule 6.** The rule exists so that installing the framework
+never forces a scoped registry or native binaries on anyone (§2.4). Newtonsoft is managed
+code from Unity's own registry, and Package Manager installs it with no action from the user.
+
+**Consequences**
+- Declared as `3.2.2`, the version the dev project resolves on Unity 6000.3. Package
+  Manager picks the highest version any package requests, so MCP for Unity asking for
+  `3.0.2` does not conflict.
+- Projects that ship a loose `Newtonsoft.Json.dll` (old Asset Store packages, a copy in
+  `Plugins/`) get a duplicate-assembly error and must remove one copy. The same is true of
+  every package that depends on it, MCP for Unity and LLMUnity included.
+- Newtonsoft deserialises by reflection, so IL2CPP managed-code stripping can remove members
+  it needs in a player build. Types it deserialises into need `[Preserve]` or a `link.xml`
+  entry; the Phase 6b player build is where this would surface.
+
+**Revisit if:** duplicate-DLL reports become a recurring support problem, or Unity's move to
+CoreCLR makes `System.Text.Json` available in players, which would let the core drop the
+dependency.
 
 ### Decisions already recorded elsewhere in this plan
 
