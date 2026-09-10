@@ -108,13 +108,28 @@ jobs:
           # machine, silently breaking every reference to that asset. An orphaned .meta
           # means a file was deleted without its metadata. Both are classic team bugs.
           fail=0
+          assets() { git ls-files 'UnityProject/Assets/**' 'UnityProject/Packages/com.agenerela.framework/**' | grep -v '/Documentation~/' | grep -v '/Samples~/'; }
           while IFS= read -r f; do
             case "$f" in *.meta) continue ;; esac
             if ! git ls-files --error-unmatch "$f.meta" >/dev/null 2>&1; then
               echo "::error file=$f::Missing $f.meta - Unity will regenerate it with a new guid and break references."
               fail=1
             fi
-          done < <(git ls-files 'UnityProject/Assets/**' 'UnityProject/Packages/com.agenerela.framework/**' | grep -v '/Documentation~/' | grep -v '/Samples~/')
+          done < <(assets)
+
+          # Folders carry a .meta too, but git tracks only files, so the loop above never
+          # sees them. Walk each file's parent folders up to the two roots, which have none.
+          while IFS= read -r d; do
+            if ! git ls-files --error-unmatch "$d.meta" >/dev/null 2>&1; then
+              echo "::error::Missing $d.meta - Unity will regenerate the folder's guid on every machine."
+              fail=1
+            fi
+          done < <(assets | while IFS= read -r f; do
+                     d=$(dirname "$f")
+                     while [ "$d" != UnityProject/Assets ] && [ "$d" != UnityProject/Packages/com.agenerela.framework ] && [ "$d" != . ]; do
+                       echo "$d"; d=$(dirname "$d")
+                     done
+                   done | sort -u)
 
           while IFS= read -r m; do
             asset="${m%.meta}"

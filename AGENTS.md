@@ -86,7 +86,14 @@ pushes there are restricted to the repository owner.
 - Unity console clean — no new errors or warnings
 - EditMode tests pass (`Window → General → Test Runner`)
 - No secrets, no generated files (`Library/`, `Logs/`, `*.csproj`)
+- Every new file and folder under `UnityProject/` has its `.meta` committed with it.
+  Unity only creates one when it sees the file, so if you made files in an IDE or on
+  GitHub, open the project in Unity before committing
 - Any accuracy claim has a control arm and is recorded in `docs/llm-wiki/findings.md`
+
+**Never merge a pull request with a failing CI check.** `Repo hygiene` catches missing
+`.meta` files, broken JSON and committed generated files; a red check is a blocker, not a
+warning.
 
 **Do not** commit `Library/`, `Logs/`, `UserSettings/`, `*.csproj`, `*.slnx`, or `.env`.
 They are gitignored; if one appears in `git status`, something is wrong — investigate
