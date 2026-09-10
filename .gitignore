@@ -78,3 +78,4 @@ Desktop.ini
 # Benchmark output is regenerated on every run; archive copies land in docs/.
 /benchmark-output.txt
 *.local
+*.meta
