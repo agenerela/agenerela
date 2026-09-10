@@ -12,6 +12,7 @@
 - [ ] EditMode tests pass (`Window → General → Test Runner`)
 - [ ] No secrets, keys or `.env` contents included
 - [ ] No generated files committed (`Library/`, `Logs/`, `*.csproj`)
+- [ ] Every new file and folder has its `.meta` committed (open the project in Unity before committing)
 
 ## If this touches accuracy or performance
 

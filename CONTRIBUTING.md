@@ -68,10 +68,13 @@ Each issue lists the **files it owns**. Stick to them and merge conflicts mostly
 - Unity console clean — no new errors or warnings
 - EditMode tests pass (`Window → General → Test Runner`)
 - No secrets, no generated files (`Library/`, `Logs/`, `*.csproj`)
+- Every new file and folder under `UnityProject/` has its `.meta` committed with it —
+  if you created files outside Unity, open the project in Unity before committing
 - The PR template's checklist filled in honestly
 
 CI runs automatically and checks the mechanical things: JSON validity, `.meta` file parity,
-and that no generated files slipped in.
+and that no generated files slipped in. **A red check blocks the merge** — fix it rather
+than merging past it.
 
 ## If your change touches accuracy
 

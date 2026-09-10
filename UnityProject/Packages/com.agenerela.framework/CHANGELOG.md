@@ -17,6 +17,11 @@ While the version stays `0.x`, the public API may change in any release.
 - `Documentation~/providers.md`: how each planned backend answers the contract, what a
   second cloud vendor would need, and which parts are deliberately still open.
 
+### Changed
+- The package depends on `com.unity.nuget.newtonsoft-json` 3.2.2, which Package Manager
+  installs automatically. The runtime and editor assemblies reference `Newtonsoft.Json.dll`
+  explicitly and no other precompiled DLL (DR-009).
+
 ## [0.1.0] - 2026-09-03
 
 ### Added

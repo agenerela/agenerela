@@ -38,8 +38,12 @@ they are taken.
    then scoring on that same phrase invalidates the result.
 5. **The LLM never touches Unity directly.** It selects from a registered action set; the
    executor validates independently and runs the Unity code.
-6. **The framework core has no third-party runtime dependencies.** Providers are the
-   exception, and must be isolated behind a version define or a separate package.
+6. **The framework core's only third-party dependency is Newtonsoft JSON**
+   (`com.unity.nuget.newtonsoft-json`), declared in the package's `package.json` so it
+   installs with the framework. Adding any other needs a decision record (DR-009). Core
+   asmdefs set `overrideReferences` and list their DLLs explicitly, so a DLL that merely
+   exists in the project cannot leak in. Providers are the exception, and must be
+   isolated behind a version define or a separate package.
 7. **No attribution trailers in commits or pull requests.** No `Co-Authored-By`, no
    "Generated with &lt;tool&gt;". The history should read as the team's work; authorship is
    already recorded by the committer field.
@@ -82,7 +86,14 @@ pushes there are restricted to the repository owner.
 - Unity console clean — no new errors or warnings
 - EditMode tests pass (`Window → General → Test Runner`)
 - No secrets, no generated files (`Library/`, `Logs/`, `*.csproj`)
+- Every new file and folder under `UnityProject/` has its `.meta` committed with it.
+  Unity only creates one when it sees the file, so if you made files in an IDE or on
+  GitHub, open the project in Unity before committing
 - Any accuracy claim has a control arm and is recorded in `docs/llm-wiki/findings.md`
+
+**Never merge a pull request with a failing CI check.** `Repo hygiene` catches missing
+`.meta` files, broken JSON and committed generated files; a red check is a blocker, not a
+warning.
 
 **Do not** commit `Library/`, `Logs/`, `UserSettings/`, `*.csproj`, `*.slnx`, or `.env`.
 They are gitignored; if one appears in `git status`, something is wrong — investigate
