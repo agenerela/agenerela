@@ -4,6 +4,9 @@
   "displayName": "Agenerela — AI Agents for Unity",
   "description": "Let a language model drive game agents — NPCs, companions, factions, colonies — constrained to actions you explicitly register. The model selects a behaviour; validated deterministic code executes it. Local-first, with a provider interface for cloud backends.",
   "unity": "6000.0",
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.2"
+  },
   "author": {
     "name": "Agenerela",
     "url": "https://github.com/agenerela/agenerela"
