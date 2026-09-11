@@ -33,7 +33,8 @@ swappable commodity behind an interface.
 ### 1.1 Repo shape — settled recommendation
 
 One repository containing **one Unity dev project with the framework embedded as a local
-package**. This is the standard Unity package-development pattern: the dev project gives
+package**, plus **one Unity project per demo game** that loads the same package from disk
+(DR-010). This is the standard Unity package-development pattern: the dev project gives
 you a compiler, a test runner, and a place for sample scenes; consumers install the
 package alone.
 
@@ -47,18 +48,19 @@ package alone.
 │   └── llm-wiki/                      ← start one immediately (see 1.5)
 ├── tools/
 │   └── benchmarks/                    ← standalone Python probes (copy from prototype)
-└── UnityProject/                      ← the dev/host Unity project (Unity 6000.3+, URP or built-in — framework must not care)
-    ├── Assets/
-    │   ├── Demos/                     ← THE DEMO GAMES live here — real, compiled, editable (see 1.6)
-    │   │   ├── _Shared/               ← player controller, camera rig, debug UI reused by demos
-    │   │   ├── CompanionRPG/          ← the one polished demo
-    │   │   ├── GreyBox2D/             ← deliberately ugly — proves genre independence
-    │   │   └── GreyBoxStrategy/       ← deliberately ugly — proves "agent ≠ NPC"
-    │   ├── Evaluation/                ← Phase-4 eval harness + labelled prompt set (see 1.7)
-    │   └── DevSandbox/                ← throwaway test scenes; never referenced by anything
-    ├── Packages/
-    │   └── com.<team>.agentframework/ ← THE PACKAGE — everything shippable lives here
-    └── ProjectSettings/
+├── UnityProject/                      ← the framework's dev project (Unity 6000.3+; any render pipeline — framework must not care)
+│   ├── Assets/
+│   │   ├── Evaluation/                ← Phase-4 eval harness + labelled prompt set (see 1.7)
+│   │   └── DevSandbox/                ← throwaway test scenes; never referenced by anything
+│   ├── Packages/
+│   │   └── com.<team>.agentframework/ ← THE PACKAGE — everything shippable lives here
+│   └── ProjectSettings/
+└── Demos/                             ← THE DEMO GAMES — one full Unity project each (see 1.6, DR-010)
+    ├── README.md                      ← checklist for adding a game project
+    ├── CompanionRPG/                  ← its own Assets/, Packages/, ProjectSettings/
+    ├── GreyBox2D/                     ← proves genre independence
+    ├── GreyBoxStrategy/               ← proves "agent ≠ NPC"
+    └── Shared/                        ← local packages two or more games need (created on demand)
 ```
 
 Consumers install via git URL with a path query:
@@ -96,7 +98,8 @@ com.<team>.agentframework/
 > in `Samples~/` is therefore *not compiled* while you develop, and its scenes can't be
 > opened from the Project window. That is fine for three tiny illustrative samples you
 > write once and rarely touch — it is completely unworkable for a demo game you are
-> actively building. This is why the demos live in `Assets/Demos/` instead (§1.6).
+> actively building. This is why the demo games are full Unity projects under `Demos/`
+> instead (§1.6).
 
 Assembly-definition rules (enforce from the first commit):
 - `Runtime` asmdef has **zero** references to Editor assemblies and zero `#if UNITY_EDITOR`
@@ -305,7 +308,7 @@ whether `package.json` is correct.
 3. Verify:
    - [ ] It resolves and compiles with zero errors.
    - [ ] The package appears in Package Manager with the right name and version.
-   - [ ] `Assets/Demos/` and `UnityProject/` do **not** appear anywhere in the consuming
+   - [ ] `Demos/` and `UnityProject/` do **not** appear anywhere in the consuming
          project — only the package subfolder is installed.
 
 **Phase 0 is done when all boxes above are ticked.** Do not start Phase 1 with any of them
@@ -330,24 +333,46 @@ Create `docs/llm-wiki/` with a README and a findings page on day one, and a root
 findings — including the failures. Rule for the wiki: when a measurement surprises you, it
 goes in the findings page *the same day*.
 
-### 1.6 Demo games — where they live and why (settled)
+### 1.6 Demo games — where they live and why (settled — DR-010)
 
 **Samples and demo games are different artifacts.** Conflating them is the most common
 structural mistake in Unity package projects:
 
-| | Samples (`Samples~/` in package) | Demo games (`Assets/Demos/`) |
+| | Samples (`Samples~/` in package) | Demo games (`Demos/<Game>/`) |
 |---|---|---|
 | Purpose | Teach one API concept | Prove the framework works, and get presented at review |
-| Size | Tens of lines, no art | Scenes, prefabs, possibly art |
+| Size | Tens of lines, no art | Near-polished games: scenes, prefabs, art, audio |
 | Audience | A developer who installed the package | Your review panel, and you |
 | Ships to consumers | Yes, on demand via Package Manager | **No** — would bloat every install |
-| Compiled during dev | **No** (`~` folders are ignored by Unity) | Yes |
+| Compiled during dev | **No** (`~` folders are ignored by Unity) | Yes, in the game's own project |
 
-So: **demos are first-class projects in the dev project's `Assets/Demos/`, outside the
-package.** They consume the framework exactly the way a real developer would — through
-its public API, from a `Packages/` install — but they are not part of what gets shipped.
+So: **each demo game is a full Unity project under `Demos/`, outside the package and
+outside the dev project.** It consumes the framework exactly the way a real developer
+would — through its public API, from a `Packages/` reference — but it is not part of what
+gets shipped. Each game loads the package from this repo by relative path, in its
+`Packages/manifest.json`:
 
-**Each demo gets its own asmdef** referencing only the framework's `Runtime` assembly.
+```json
+"com.agenerela.framework": "file:../../../UnityProject/Packages/com.agenerela.framework"
+```
+
+Relative `file:` paths resolve from the project's `Packages/` folder, hence three `..`.
+Never a version or a git URL: either one pins a copy, and the game quietly stops testing
+the framework you are changing. CI rejects both.
+
+**Why separate projects rather than `Assets/Demos/` inside the dev project.** The demos end
+as near-polished games, and a polished game tunes settings Unity keeps per project: render
+pipeline, layers and tags, the physics collision matrix, quality levels, Player settings.
+Three games cannot each have their own in one project. Separate projects also stop one
+game's compile error from blocking Play mode in the other two. DR-010 has the options
+weighed.
+
+**Each game picks its own render pipeline** — Built-in, URP (with the 2D Renderer for a
+2D game) or HDRP. The framework references no pipeline and must keep working under all of
+them. A game that needs a pipeline-specific hook has found a missing extension point in the
+framework, not a reason to add a pipeline dependency to it.
+
+**Each game gets its own asmdef** referencing only the framework's public assemblies.
 This is not bureaucracy; it is the plan's main API-design forcing function:
 
 > If a demo ever needs `InternalsVisibleTo`, a `public` field that shouldn't be public, or
@@ -357,24 +382,32 @@ This is not bureaucracy; it is the plan's main API-design forcing function:
 > than shaped around one game.
 
 Practical notes:
-- `Assets/Demos/_Shared/` (own asmdef) holds things demos legitimately share — a player
-  controller, a camera rig, a debug overlay. Discipline: if the *framework* would want it,
-  it belongs in the package; if only demos want it, it belongs here. When in doubt, leave
-  it here — promoting later is easy, un-shipping a bad public API is not.
-- Add a tiny `DemoLauncher` scene with three buttons. Presenting is far smoother when you
-  can switch demos live instead of editing Build Settings on a projector.
-- Keep the two grey-box demos genuinely grey-box. Their ugliness is the argument.
-- Enable **Git LFS** before the first art asset lands in `CompanionRPG` (`*.png`, `*.fbx`,
-  `*.wav`, `*.tga`). Retrofitting LFS after binaries are in history is painful.
+- [`Demos/README.md`](../Demos/README.md) is the checklist for creating a game project.
+- Code two or more games legitimately share — a camera rig, a debug overlay — goes in a
+  local package under `Demos/Shared/`, which each game references by `file:` path the
+  same way it references the framework. Discipline: if the *framework* would want it, it
+  belongs in the framework package; if only demos want it, it belongs in `Demos/Shared/`.
+  When in doubt, keep it in the one game that needs it — promoting later is easy,
+  un-shipping a bad public API is not.
+- Framework work happens in `UnityProject/`, where its tests are. Add new framework files
+  from there, so that one editor generates their `.meta` files.
+- A framework API change must still compile in every game. Until Unity runs in CI (§6.3),
+  that means opening each game project before merging — the main cost of this layout.
+- Start each game grey-box and let it break loudly while the API moves; polish comes once
+  the phases it exercises are done (§3).
+- Art goes through **Git LFS**, already configured in `.gitattributes`. Three polished
+  games will press on the LFS quota (§6.4); `Demos/README.md` shows how each person
+  fetches only the game they work on.
 - The strategy demo is the one that proves the thesis — a *faction* agent with no
   Transform, no navmesh, no dialogue box, driven through the same `Agent` API as a
   talking NPC. If time collapses, cut the 2D demo before this one.
 
-**Also verify the real consumer path.** Because demos live inside the dev project, they
-compile against the embedded package and will happily use APIs that a real install might
-not expose. Once per phase, install the package from its git URL into a *blank* Unity
-project and confirm it compiles and the samples import. Ten minutes; catches packaging
-mistakes that the dev project structurally cannot.
+**Also verify the real consumer path.** Game projects compile against the package as an
+editable folder on disk, not as the read-only git install a real developer gets, so
+packaging mistakes can hide from them. Once per phase, install the package from its git
+URL into a *blank* Unity project outside the repo and confirm it compiles and the samples
+import. Ten minutes; catches packaging mistakes that no project inside the repo
+structurally can.
 
 ### 1.7 The evaluation harness lives outside the package (initially)
 
@@ -723,7 +756,7 @@ data shapes underneath have stopped moving.
 | **6. Cloud API providers** | Proof the abstraction is real, and the path to supporting any vendor | At least one cloud provider (Gemini first — it is what the prototype measured) runs the same eval subset through `ILLMProvider` with **zero framework-code changes**: a provider class plus config, nothing more. A **provider conformance test suite** exists that any future vendor must pass, so adding OpenAI or Anthropic later is implementing an interface rather than editing the framework. Budget caps and RPM throttling enforced in code, not convention |
 | **6b. In-process provider** | `GbnfSerializer` (§2.3) + `LLMUnityProvider` — the one a player can actually run (§2.4) | A **built player executable** (not the Editor) runs agent decisions with **no Ollama and no network** — the deliverable that makes "local-first" true rather than aspirational. Also: GBNF serializer emits the same constraints as the JSON-Schema path (unit-tested against the same `DecisionSchema` fixtures); same eval subset passes within noise of the Ollama arm; LLMUnity pinned to an exact version and **not** in `dependencies` (version-defined, so users who don't want it never add OpenUPM's scoped registry); model file's license recorded in the wiki |
 | **7. Samples** | Three tiny in-package samples (`Samples~/`): minimal agent, targeted actions, custom provider | Each is tens of lines with no art; all three import cleanly via Package Manager into a blank project |
-| **8. Demo games** | `Assets/Demos/` — one polished (`CompanionRPG`), two grey-box (`GreyBox2D`, `GreyBoxStrategy`) + `DemoLauncher` | Each demo has its own asmdef referencing **only** the framework's public Runtime assembly — no `InternalsVisibleTo`, no copied framework code. `GreyBoxStrategy` drives a faction agent with no Transform through the same `Agent` API as a talking NPC. See §1.6 — this phase runs *in parallel* with 2–7, not after |
+| **8. Demo games** | `Demos/` — three near-polished games, each its own Unity project: `CompanionRPG`, `GreyBox2D`, `GreyBoxStrategy` | Each game's asmdef references **only** the framework's public assemblies — no `InternalsVisibleTo`, no copied framework code — and the game loads the package by relative `file:` path. `GreyBoxStrategy` drives a faction agent with no Transform through the same `Agent` API as a talking NPC. See §1.6 and DR-010 — this phase runs *in parallel* with 2–7, not after |
 
 **Demo games run alongside phases 2–8, not after them.** They are the integration test for
 every phase — start `GreyBox2D` as soon as Phase 2 produces a working decision, and let it
@@ -731,17 +764,17 @@ break loudly whenever the API changes. Suggested cadence:
 
 | After phase | Demo milestone |
 |---|---|
-| 2 (provider works) | `GreyBox2D` — one agent, three actions, no art. First proof the API is usable from outside the package. |
+| 2 (provider works) | `GreyBox2D` — one agent, three actions, no art yet. First proof the API is usable from outside the package. |
 | 3 (guards) | `GreyBoxStrategy` — a **faction** agent with no Transform and no dialogue box. The thesis demo; build it early, because if the API can't express a non-NPC agent you want to know in month two, not month eight. |
-| 5 (editor tooling) | `CompanionRPG` — the polished one. Built last on purpose: it's the demo that benefits most from Inspector tooling existing, and the only one that needs art. |
-| 8 | `DemoLauncher` scene + a build of all three for the review presentation. |
+| 5 (editor tooling) | `CompanionRPG` — started last on purpose: it's the demo that benefits most from Inspector tooling existing. |
+| 8 | A player build of each game for the review presentation. Polish on all three runs through COMP 491 (§6.5). |
 
 Phases 1–3 are the critical path and port proven prototype logic — low research risk.
 Phase 4 is deliberately *before* editor polish: every accuracy claim after it inherits its
-credibility from that instrument. If the semester compresses, cut `CompanionRPG` down to
-grey-box (its art is the least load-bearing thing in the project) or drop `GreyBox2D`
-entirely — **never** cut `GreyBoxStrategy`, which is the only demo that proves the
-genre-agnostic claim, and never cut Phase 4.
+credibility from that instrument. If the semester compresses, cut polish first — a game's
+art is the least load-bearing thing in the project — then drop `GreyBox2D` entirely.
+**Never** cut `GreyBoxStrategy`, which is the only demo that proves the genre-agnostic
+claim, and never cut Phase 4.
 
 ---
 
@@ -806,7 +839,8 @@ For a two-person team this is clearly correct:
 - **Atomic commits.** Change the API and update all three demos in one commit. With split
   repos, every breaking change becomes a two-repo dance and the demos drift.
 - **The demos are your integration tests.** They should break in the same CI run that
-  builds the framework, not silently rot in another repository.
+  builds the framework, not silently rot in another repository. Each game is its own
+  Unity project (DR-010), so that CI run has to compile every one of them (§6.3).
 - **One clone for reviewers.** Your advisor and panel see everything at once.
 - **No submodule pain.** Git submodules are the single most common source of "it doesn't
   build on my machine" in student projects.
@@ -817,8 +851,9 @@ For a two-person team this is clearly correct:
 
 *Caveat:* UPM resolves a git dependency by cloning the repository before extracting the
 subfolder, so total repo size can affect install time even though installed size doesn't
-change. Keep `CompanionRPG`'s art proportionate, use LFS, and this stays a non-issue at
-student-project scale. Revisit only if the repo grows into the gigabytes.
+change. Keep the games' art proportionate, use LFS, and this stays a non-issue at
+student-project scale. Revisit only if the repo grows into the gigabytes — which three
+near-polished games (DR-010) make a real possibility rather than a theoretical one.
 
 **Own the repo in a GitHub organization, not a personal account.** Free, takes two
 minutes, and means the project survives either teammate's account, and access can be
@@ -830,7 +865,8 @@ Unity + Git has specific failure modes. Agree on these in week one:
 
 - **Pin the Unity version exactly.** `ProjectSettings/ProjectVersion.txt` is committed;
   if one person opens the project in a newer patch release it rewrites that file and can
-  silently upgrade serialized assets. Nobody upgrades Unity unilaterally.
+  silently upgrade serialized assets. Nobody upgrades Unity unilaterally. Every game
+  project uses the same version as `UnityProject/`, and CI fails if one differs.
 - **Scenes and prefabs merge badly.** Two mitigations, use both: configure
   **UnityYAMLMerge** (ships with Unity, wire it up per `.gitattributes` above), and adopt
   the social rule *one person owns a scene at a time*. Most scene conflicts are avoided by
@@ -852,6 +888,10 @@ week-long time sink. Recommended sequencing:
 2. **Phase 3+**, once the test suite is worth protecting: add GameCI with EditMode tests.
    Keep PlayMode/Ollama tests **out** of CI permanently — no runner has a GPU or a model,
    and tagging them `RequiresOllama` (per §4) exists exactly so CI can skip them.
+   GameCI must also compile **every game project**, not just `UnityProject/` — until it
+   does, checking that a framework change still compiles in each game is manual (DR-010).
+   The hygiene workflow already finds every project by its committed
+   `ProjectSettings/ProjectVersion.txt`; reuse that rule rather than listing projects.
 
 Don't let CI setup block Phase 1. A green test suite you actually run beats a red pipeline
 nobody looks at.
@@ -860,7 +900,7 @@ nobody looks at.
 
 | Thing | Limit | Matters when |
 |---|---|---|
-| GitHub LFS (free tier) | ~1 GB storage, ~1 GB bandwidth/month | `CompanionRPG` art; a few large textures plus CI pulls will find this fast |
+| GitHub LFS (free tier) | ~1 GB storage, ~1 GB bandwidth/month | Demo game art; three near-polished games plus CI pulls will find this fast. Each person can fetch only their own game's files (`Demos/README.md`) |
 | Gemini free tier | ~15 req/min, ~1000 req/day | Any cloud eval run — budget-cap it in code, as the prototype scripts do |
 | GitHub Actions (free) | 2,000 min/month private repos | Unlimited if the repo is **public** — another reason to open-source if IP policy allows |
 | VRAM | 8 GB typical student laptop | Model + game must coexist; see Appendix A |
@@ -872,7 +912,7 @@ The eight phases are not evenly sized. A realistic two-semester split:
 | Term | Phases | What you can demo at the end |
 |---|---|---|
 | **COMP 490** (fall) | 0–4, plus `GreyBox2D` and `GreyBoxStrategy` | A working, *measured* framework: agents decide correctly ~95% with guards, proven on two genres including a non-NPC faction agent. This is a complete, defensible result even if 491 went badly. |
-| **COMP 491** (spring) | 5–8, plus `CompanionRPG` and the polished write-up | A framework other developers can actually use: Inspector tooling, second provider, samples, one polished demo, final paper/poster. |
+| **COMP 491** (spring) | 5–8, plus `CompanionRPG`, polish on all three games, and the polished write-up | A framework other developers can actually use: Inspector tooling, second provider, samples, three near-polished demo games, final paper/poster. |
 
 Deliberately front-loading measurement (Phase 4 in the fall) means **your headline claim
 exists by December**. Spring is then about usability and presentation, which is far lower
@@ -998,12 +1038,62 @@ code from Unity's own registry, and Package Manager installs it with no action f
 CoreCLR makes `System.Text.Json` available in players, which would let the core drop the
 dependency.
 
+### DR-010 — Each demo game is its own Unity project
+
+**Status:** Decided, September 2026. Replaces the location half of DR-003; its other half —
+demo games never ship in the package's `Samples~/` — stands.
+
+**Context.** DR-003 put the three demos in the dev project's `Assets/Demos/`, which suited
+the original scope of one polished game and two deliberately ugly grey-box ones. The team
+has since decided all three will end as near-polished games. A polished game tunes settings
+Unity keeps once per project — render pipeline, layers and tags, the physics collision
+matrix, quality levels, Player settings — so three games in one project would each have
+to work around the other two. Sharing a project would also mean six people editing the same
+few `ProjectSettings/` files, one game's compile error stopping the other two from entering
+Play mode, and everyone importing every game's art and packages.
+
+**Options considered**
+
+| Option | Cost | Verdict |
+|---|---|---|
+| All demos in `UnityProject/Assets/Demos/` (DR-003) | Shared settings and one render pipeline for three games; one team's compile error blocks the others | Rejected once the demos became full games |
+| **One Unity project per game under `Demos/`, same repo** | Every framework change must compile in each game project; one `Library/` per project | **Chosen.** |
+| One repository per game | Every framework change becomes a multi-repo change and the demos drift (§6.1) | Rejected — DR-002 still holds |
+
+**Decision.** Each demo game is a full Unity project at `Demos/<Game>/`, on the same
+pinned Unity version as `UnityProject/`, and loads the framework from this repo through a
+relative `file:` path in its `Packages/manifest.json`. `UnityProject/` remains the
+framework's dev project: the package, its tests, the evaluation harness and the sandbox.
+Each game picks its own render pipeline; the framework must work under any of them.
+`Demos/README.md` is the checklist for adding a game.
+
+**Consequences**
+- Atomic commits survive. They come from having one repo (DR-002), not one project.
+- A game sees only what is inside the package — closer to a real install than
+  `Assets/Demos/` was, where demo code could lean on anything else in the dev project.
+- Until Unity runs in CI (§6.3), checking that a framework change still compiles in every
+  game means opening each project by hand. This is the main cost.
+- No launcher build that switches between games; each is built and presented on its own.
+- Code two games share goes in a local package under `Demos/Shared/`, never copied.
+- The hygiene workflow finds every Unity project by its committed
+  `ProjectSettings/ProjectVersion.txt` and runs each check on all of them: `.meta` parity,
+  generated files, the pinned Unity version, and a relative `file:` reference to the
+  framework. Adding a game needs no CI change.
+- Scope: §1.6's old rule to keep two demos deliberately ugly no longer applies. The cut
+  order in §3 still does — polish goes first, then `GreyBox2D`, never `GreyBoxStrategy`.
+- Three polished games make the repo-size caveat (§6.1) and the LFS quota (§6.4) real
+  constraints.
+
+**Revisit if:** the repo grows into the gigabytes and slows installs from the git URL
+(§6.1), or a game needs its own release cadence, at which point it can move to its own
+repository and install the framework from the git URL like any consumer.
+
 ### Decisions already recorded elsewhere in this plan
 
 | ID | Decision | Where |
 |---|---|---|
 | DR-002 | One repository for package, demos, dev project, wiki and tools | §6.1 |
-| DR-003 | Demo games live in `Assets/Demos/`, not in the package's `Samples~/` | §1.6 |
+| DR-003 | Demo games are not in the package's `Samples~/`. Where they live instead is now DR-010 | §1.6 |
 | DR-004 | `action` emitted before the free-text field; `target` required with a `no_target` sentinel; no reasoning field | §2.3, Appendix A |
 | DR-005 | Grounding guard in code rather than relying on model scale | §2.5, Appendix A |
 | DR-006 | Evaluation harness (Phase 4) built before editor tooling and demos | §3 |

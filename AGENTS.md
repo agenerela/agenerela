@@ -69,8 +69,8 @@ they are taken.
 | Path | Contents |
 |---|---|
 | `UnityProject/Packages/com.agenerela.framework/` | The package — everything shippable |
-| `UnityProject/Assets/Demos/` | Demo games, outside the package |
 | `UnityProject/Assets/Evaluation/` | Benchmark harness and labelled prompt set |
+| `Demos/<Game>/` | Demo games — one full Unity project each, loading the package by relative path (DR-010) |
 | `docs/` | Build plan and llm-wiki |
 | `tools/benchmarks/` | Standalone Python probes, no Unity required |
 
@@ -82,25 +82,35 @@ pushes there are restricted to the repository owner.
 
 **Commits.** Explain *why*, not just *what*. No attribution trailers (rule 7).
 
+**Demo games are separate Unity projects** under `Demos/`, one per game (DR-010). Read
+[`Demos/README.md`](Demos/README.md) before creating or changing one. A game loads the
+framework through a relative `file:` path in its `Packages/manifest.json` — never a
+version or git URL — and uses only the framework's public API. Framework work happens in
+`UnityProject/`.
+
 **Before opening a pull request:**
 - Unity console clean — no new errors or warnings
 - EditMode tests pass (`Window → General → Test Runner`)
 - No secrets, no generated files (`Library/`, `Logs/`, `*.csproj`)
-- Every new file and folder under `UnityProject/` has its `.meta` committed with it.
-  Unity only creates one when it sees the file, so if you made files in an IDE or on
-  GitHub, open the project in Unity before committing
+- Every new file and folder in a Unity project or package has its `.meta` committed with
+  it. Unity only creates one when it sees the file, so if you made files in an IDE or on
+  GitHub, open that project in Unity before committing
+- If the framework's public API changed, every game project under `Demos/` still
+  compiles. CI cannot check this yet; open each one
 - Any accuracy claim has a control arm and is recorded in `docs/llm-wiki/findings.md`
 
 **Never merge a pull request with a failing CI check.** `Repo hygiene` catches missing
-`.meta` files, broken JSON and committed generated files; a red check is a blocker, not a
-warning.
+`.meta` files, broken JSON and committed generated files in every Unity project, plus a
+project on the wrong Unity version or a game not loading the framework from this repo; a
+red check is a blocker, not a warning.
 
 **Do not** commit `Library/`, `Logs/`, `UserSettings/`, `*.csproj`, `*.slnx`, or `.env`.
 They are gitignored; if one appears in `git status`, something is wrong — investigate
 rather than force-adding.
 
-**Unity version is pinned** to 6000.3.23f1 by `ProjectSettings/ProjectVersion.txt`.
-Do not upgrade it; opening the project in a newer patch rewrites that file for everyone.
+**Unity version is pinned** to 6000.3.23f1 by each project's
+`ProjectSettings/ProjectVersion.txt`, and CI fails if any project differs. Do not upgrade
+it; opening a project in a newer patch rewrites that file for everyone.
 
 ## Current state
 

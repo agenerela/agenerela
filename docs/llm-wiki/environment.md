@@ -2,13 +2,18 @@
 
 ## Unity
 
-**6000.3.23f1** — pinned. `UnityProject/ProjectSettings/ProjectVersion.txt` is committed
-and is what enforces this. Nobody upgrades unilaterally: opening the project in a newer
-patch release rewrites that file and can silently upgrade serialized assets for everyone.
+**6000.3.23f1** — pinned. Every project's `ProjectSettings/ProjectVersion.txt` is
+committed and is what enforces this; CI fails if a project differs from `UnityProject/`.
+Nobody upgrades unilaterally: opening a project in a newer patch release rewrites that
+file and can silently upgrade serialized assets for everyone.
 
-Open `UnityProject/`. The framework is an *embedded* package under
+Open `UnityProject/` for framework work. The framework is an *embedded* package under
 `UnityProject/Packages/com.agenerela.framework/`, so it compiles automatically with no
 install step.
+
+Each demo game is its own Unity project under `Demos/`, loading the same package from
+disk by relative path. [`Demos/README.md`](../../Demos/README.md) covers creating one, and
+how to skip downloading the art of games you don't work on.
 
 ## Per-machine setup — do this BEFORE cloning
 

@@ -6,7 +6,7 @@
 # without these rules in place would put that in history permanently.
 #
 # Patterns have no leading slash, so they match at any depth — e.g. [Ll]ibrary/
-# also matches UnityProject/Library/.
+# also matches UnityProject/Library/ and every Demos/<Game>/Library/.
 # =============================================================================
 
 # --- Unity generated folders -------------------------------------------------
