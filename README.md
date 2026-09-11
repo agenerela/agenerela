@@ -42,8 +42,8 @@ The LLM never touches Unity directly.
 | Path | Contents |
 |---|---|
 | `UnityProject/Packages/com.agenerela.framework/` | The package — everything shippable |
-| `UnityProject/Assets/Demos/` | Demo games (not shipped to consumers) |
 | `UnityProject/Assets/Evaluation/` | Accuracy benchmark harness and prompt set |
+| `Demos/` | Demo games, one Unity project each (not shipped to consumers) |
 | `docs/FRAMEWORK_BUILD_PLAN.md` | Architecture, build phases, decision records |
 | `docs/llm-wiki/` | Measured findings and working conventions |
 | `tools/benchmarks/` | Standalone probes for fast iteration outside Unity |
@@ -60,7 +60,8 @@ ollama pull qwen3.5:4b
 ```
 
 Open `UnityProject/` in Unity. The package is embedded, so it compiles automatically.
-Run tests via **Window → General → Test Runner → EditMode**.
+Run tests via **Window → General → Test Runner → EditMode**. Each demo game is a separate
+Unity project under `Demos/`; see [`Demos/README.md`](Demos/README.md).
 
 Copy `.env.example` to `.env` if you intend to test a cloud provider. `.env` is
 gitignored and must never be committed.

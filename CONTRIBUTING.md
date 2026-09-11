@@ -39,10 +39,14 @@ and that merge corrupts Unity scenes. Verify with
 
 ## Then
 
-- **Unity 6000.3.23f1** — exactly. The version is pinned by `ProjectVersion.txt`; opening
-  the project in a newer patch rewrites that file for everyone and can silently upgrade
-  serialized assets. Nobody upgrades alone.
-- Open `UnityProject/`. The framework is an embedded package, so it compiles automatically.
+- **Unity 6000.3.23f1** — exactly, in every project. The version is pinned by
+  `ProjectVersion.txt`; opening a project in a newer patch rewrites that file for everyone
+  and can silently upgrade serialized assets. Nobody upgrades alone.
+- Open `UnityProject/` for framework work. The framework is an embedded package, so it
+  compiles automatically.
+- Each demo game is its own Unity project under `Demos/` that loads the same package from
+  disk. Open the one you are working on; [`Demos/README.md`](Demos/README.md) covers
+  creating one.
 - **Ollama** is only needed once there is code that calls a model — not for Phase 1.
 
 ## Branches
@@ -68,13 +72,16 @@ Each issue lists the **files it owns**. Stick to them and merge conflicts mostly
 - Unity console clean — no new errors or warnings
 - EditMode tests pass (`Window → General → Test Runner`)
 - No secrets, no generated files (`Library/`, `Logs/`, `*.csproj`)
-- Every new file and folder under `UnityProject/` has its `.meta` committed with it —
-  if you created files outside Unity, open the project in Unity before committing
+- Every new file and folder in a Unity project or package has its `.meta` committed with
+  it — if you created files outside Unity, open that project in Unity before committing
+- If you changed the framework's public API, every game project under `Demos/` still
+  compiles — open each one, since CI cannot check this yet
 - The PR template's checklist filled in honestly
 
-CI runs automatically and checks the mechanical things: JSON validity, `.meta` file parity,
-and that no generated files slipped in. **A red check blocks the merge** — fix it rather
-than merging past it.
+CI runs automatically and checks the mechanical things, in every Unity project: JSON
+validity, `.meta` file parity, that no generated files slipped in, that every project is on
+the pinned Unity version, and that each game loads the framework from this repo. **A red
+check blocks the merge** — fix it rather than merging past it.
 
 ## If your change touches accuracy
 
@@ -105,8 +112,8 @@ chat before you open one someone else might be in.
 | Path | What |
 |---|---|
 | `UnityProject/Packages/com.agenerela.framework/` | The package — everything shippable |
-| `UnityProject/Assets/Demos/` | Demo games, outside the package |
 | `UnityProject/Assets/Evaluation/` | Benchmark harness and labelled prompts |
+| `Demos/<Game>/` | Demo games — one Unity project each ([`Demos/README.md`](Demos/README.md)) |
 | `docs/FRAMEWORK_BUILD_PLAN.md` | **The plan of record** — read before building |
 | `docs/llm-wiki/` | Measured findings and conventions |
 | `tools/benchmarks/` | Standalone probes, no Unity required |
