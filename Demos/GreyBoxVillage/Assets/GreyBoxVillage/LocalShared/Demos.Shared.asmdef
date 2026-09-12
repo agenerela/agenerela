@@ -1,0 +1,9 @@
+{
+  "name": "Demos.Shared",
+  "rootNamespace": "Demos.Shared",
+  "references": [
+    "Unity.InputSystem"
+  ],
+  "overrideReferences": true,
+  "precompiledReferences": []
+}

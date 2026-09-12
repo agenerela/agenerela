@@ -8,6 +8,7 @@ in general: §1.6.
 
 | Game | What it proves | Starts after | Render pipeline |
 |---|---|---|---|
+| `GreyBoxVillage/` | The village guard playground from #19; placeholder commands before Phase 2 | groundwork now | Universal 3D (URP) |
 | `GreyBox2D/` | The API works from outside the package, in a second genre | Phase 2 | not created yet |
 | `GreyBoxStrategy/` | A faction agent with no Transform — an agent is not an NPC. **Never cut** | Phase 3 | not created yet |
 | `CompanionRPG/` | A companion built with the Inspector tooling | Phase 5 | not created yet |
