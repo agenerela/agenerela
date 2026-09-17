@@ -46,6 +46,7 @@ The LLM never touches Unity directly.
 | `Demos/` | Demo games, one Unity project each (not shipped to consumers) |
 | `docs/FRAMEWORK_BUILD_PLAN.md` | Architecture, build phases, decision records |
 | `docs/llm-wiki/` | Measured findings and working conventions |
+| `docs/design/` | Sitemap and screen wireframes — what a developer and a player see |
 | `tools/benchmarks/` | Standalone probes for fast iteration outside Unity |
 | `AGENTS.md` | Rules for AI coding agents — and the shortest description of how this project works |
 

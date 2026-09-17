@@ -71,7 +71,7 @@ they are taken.
 | `UnityProject/Packages/com.agenerela.framework/` | The package — everything shippable |
 | `UnityProject/Assets/Evaluation/` | Benchmark harness and labelled prompt set |
 | `Demos/<Game>/` | Demo games — one full Unity project each, loading the package by relative path (DR-010) |
-| `docs/` | Build plan and llm-wiki |
+| `docs/` | Build plan, llm-wiki and the screen designs (`docs/design/`) |
 | `tools/benchmarks/` | Standalone Python probes, no Unity required |
 
 ## Working conventions

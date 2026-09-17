@@ -1,0 +1,124 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Screen 3 - Decision Log</title>
+<link rel="stylesheet" href="wf.css">
+<style>
+body{width:1600px;height:1000px}
+.win{overflow:visible}.bar{border-radius:5px 5px 0 0}
+.rel{position:relative}
+.tb{display:flex;align-items:center;gap:8px;height:46px;padding:0 12px;border-bottom:1.5px solid var(--line);background:var(--fill0)}
+.sep{width:1.5px;height:24px;background:var(--line2);margin:0 4px}
+.fchip{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 9px;border:1.5px solid var(--ink2);border-radius:999px;font-size:12px;font-weight:600;background:#fff}
+.fchip .cnt{font-weight:400;color:var(--ink3)}
+.oc{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border:1.5px solid var(--ink2);border-radius:50%;font-size:12px;font-weight:700;background:#fff;flex:none}
+.oc.x{background:var(--ink);color:#fff;border-color:var(--ink)}
+.oc.w{border-radius:4px;border-style:dashed;border-width:2px}
+.oc.sm{width:18px;height:18px;font-size:10px}
+.list{position:absolute;left:0;top:76px;width:548px;bottom:0;border-right:2px solid var(--line)}
+.lh{display:grid;grid-template-columns:34px 104px 1fr 58px;column-gap:8px;align-items:center;height:28px;padding:0 30px 0 10px;font-size:11.5px;font-weight:600;color:var(--ink3);border-bottom:1.5px solid var(--line2)}
+.lr{display:grid;grid-template-columns:34px 104px 1fr 58px;column-gap:8px;align-items:center;height:62px;padding:0 30px 0 10px;border-bottom:1px solid var(--line3);font-size:12.5px}
+.lr.sel{background:var(--fill2);box-shadow:inset 4px 0 0 var(--ink)}
+.lr .two{line-height:1.45;white-space:nowrap;overflow:hidden}
+.lr .res{font-family:var(--mono);font-size:12px;color:var(--ink2)}
+.lf{position:absolute;left:0;right:0;bottom:0;height:32px;display:flex;align-items:center;padding:0 12px;border-top:1.5px solid var(--line2);font-size:12px;color:var(--ink3);background:var(--fill0)}
+.det{position:absolute;left:550px;right:0;top:76px;bottom:0;padding:14px 18px}
+.dh{display:flex;gap:12px;align-items:center;padding-bottom:12px;border-bottom:1.5px solid var(--line3)}
+.blk{margin-top:12px}
+.blk h6{margin:0 0 6px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+.kv{display:flex;gap:10px;font-size:12.5px;line-height:1.5;margin-bottom:3px}
+.kv > span:first-child{width:92px;flex:none;color:var(--ink2)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.code{margin:0;padding:8px 10px;border:1.5px solid var(--line2);border-radius:5px;background:var(--fill);font:12px/1.5 var(--mono);white-space:pre}
+.gt{display:grid;grid-template-columns:22px 170px 140px 1fr;column-gap:8px;align-items:center;min-height:30px;font-size:12.5px;border-bottom:1px solid var(--line3)}
+.verdict{font-weight:700}
+.tele{display:grid;grid-template-columns:repeat(5,auto);justify-content:start;column-gap:26px;font-size:12.5px}
+.tele span{display:block;font-size:11px;color:var(--ink3)}
+</style></head>
+<body><div class="page">
+
+<div class="hdr">
+  <div>
+    <div class="kicker">Screen 3 of 6 · Unity Editor</div>
+    <div class="title">Decision Log</div>
+    <div class="sub">A live window that answers “why did my agent do that?” for every decision</div>
+  </div>
+  <div class="meta">Agenerela · COMP 490 · Section 04<br>Opened from <b>Window ▸ Agenerela ▸ Decision Log</b><br><span class="pill">Phase 5 · reads Phase 1 telemetry</span> <span class="pill dash">Sample data</span></div>
+</div>
+
+<div class="wf">
+  <div class="win" style="left:0;top:0;width:1126px;height:828px">
+    <div class="bar"><div class="tabx">Decision Log</div><div class="tabx off">Console</div><div class="tabx off">Game</div></div>
+    <div class="tb rel">
+      <span class="btn pri">● Recording</span><span class="btn">Clear</span><span class="sep"></span>
+      <span class="hint" style="font-size:12px">Agent</span><div class="f dd" style="flex:none;width:118px">All agents</div><span class="sep"></span>
+      <span class="rel" style="display:flex;gap:6px">
+        <span class="fchip"><span class="oc sm">✓</span>Executed <span class="cnt">3</span></span>
+        <span class="fchip"><span class="oc sm">○</span>No action <span class="cnt">3</span></span>
+        <span class="fchip"><span class="oc sm w">⚠</span>Contained <span class="cnt">1</span></span>
+        <span class="fchip"><span class="oc sm x">✕</span>Error <span class="cnt">1</span></span>
+        <span class="c" style="left:-6px;top:-24px">2</span>
+      </span>
+      <span class="sep"></span>
+      <div class="f muted" style="flex:1">⌕ Search stimulus</div>
+      <span class="btn">Export .jsonl</span>
+    </div>
+
+    <div class="list">
+      <div class="lh rel"><span></span><span>Time · agent</span><span>Asked → result</span><span style="text-align:right">Latency</span>
+        <span class="c" style="left:-15px;top:1px">1</span><span class="c" style="left:18px;top:-15px;display:none"></span></div>
+      <div class="lr rel"><span class="oc">✓</span><span class="two">14:02:31<br><span class="muted">Guard (Gate)</span></span><span class="two">Player: “Go to the tower.”<br><span class="res">move_to · tower</span></span><span style="text-align:right">1.31 s</span>
+        <span class="c" style="left:-15px;top:18px">3</span></div>
+      <div class="lr sel"><span class="oc w">⚠</span><span class="two">14:02:18<br><span class="muted">Guard (Gate)</span></span><span class="two">Player: “Attack Godzilla.”<br><span class="res">attack_target · training_dummy ⇒ none</span></span><span style="text-align:right">1.40 s</span></div>
+      <div class="lr"><span class="oc">○</span><span class="two">14:01:47<br><span class="muted">Guard (Bridge)</span></span><span class="two">Situation: “Nothing has happened for a while.”<br><span class="res">none</span></span><span style="text-align:right">0.98 s</span></div>
+      <div class="lr"><span class="oc">✓</span><span class="two">14:01:12<br><span class="muted">Guard (Gate)</span></span><span class="two">Player: “Follow me.”<br><span class="res">follow_player</span></span><span style="text-align:right">1.25 s</span></div>
+      <div class="lr"><span class="oc">○</span><span class="two">14:00:40<br><span class="muted">Guard (Gate)</span></span><span class="two">Player: “Lovely evening, isn't it?”<br><span class="res">none</span></span><span style="text-align:right">1.08 s</span></div>
+      <div class="lr"><span class="oc">✓</span><span class="two">14:00:15<br><span class="muted">Guard (Bridge)</span></span><span class="two">Player: “Come with me.”<br><span class="res">follow_player</span></span><span style="text-align:right">1.19 s</span></div>
+      <div class="lr"><span class="oc">○</span><span class="two">14:00:09<br><span class="muted">Guard (Bridge)</span></span><span class="two">Event: “A wolf howls in the woods.”<br><span class="res">none</span></span><span style="text-align:right">1.02 s</span></div>
+      <div class="lr"><span class="oc x">✕</span><span class="two">14:00:02<br><span class="muted">Guard (Gate)</span></span><span class="two">Player: “Go to the bridge.”<br><span class="res">error: Ollama not reachable</span></span><span style="text-align:right" class="muted">n/a</span></div>
+      <div class="hint" style="padding:14px 14px;line-height:1.5">Newest first. Rows keep arriving while the game runs in Play mode. Click a row to see the full story on the right.</div>
+      <div class="lf">8 decisions · 2 agents · average 1.18 s</div>
+    </div>
+
+    <div class="det">
+      <div class="dh"><span class="oc w" style="width:34px;height:34px;font-size:17px">⚠</span>
+        <div><div style="font-size:18px;font-weight:700">Contained by a guard</div><div class="hint">Guard (Gate) · 14:02:18 · the model's choice was blocked before it ran</div></div>
+        <span class="btn" style="margin-left:auto">Select agent in scene</span></div>
+
+      <div class="blk rel"><span class="c" style="left:-32px;top:-2px">4</span><h6>1 · Asked</h6>
+        <div class="kv"><span>Stimulus</span><b>Player: “Attack Godzilla.”</b></div>
+        <div class="kv"><span>Observations</span><span>It is daytime. · The gate is open. · You are standing at the gate. · The player is 3.2 m away.</span></div>
+      </div>
+      <div class="blk"><h6>2 · Offered to the model</h6>
+        <div class="kv"><span>Actions</span><span class="chips"><span class="chip">follow_player</span><span class="chip">move_to</span><span class="chip">attack_target</span><span class="chip">none</span></span></div>
+        <div class="kv"><span>Targets</span><span class="chips"><span class="chip">no_target</span><span class="chip">tower</span><span class="chip">bridge</span><span class="chip">training_dummy</span></span></div>
+      </div>
+      <div class="blk"><h6>3 · Model answered</h6>
+<pre class="code">{ "action": "attack_target", "target": "training_dummy",
+  "statement": "Stand back. I'll deal with it." }</pre>
+      </div>
+      <div class="blk rel"><span class="c" style="left:-32px;top:-2px">5</span><h6>4 · Guards, in order</h6>
+        <div class="gt"><span class="muted">1</span><span class="mono">SchemaLegalityGuard</span><span class="verdict">✓ Pass</span><span class="muted">action and target are registered and available</span></div>
+        <div class="gt" style="background:var(--fill2)"><span class="muted">2</span><span class="mono">TargetGroundingGuard</span><span class="verdict">⚠ Rewrite to none</span><span>“training_dummy” is never mentioned in what the player said</span></div>
+        <div class="gt"><span class="muted">3</span><span class="muted">your own guards</span><span class="muted">none added</span><span class="muted">e.g. line of sight, cooldowns</span></div>
+      </div>
+      <div class="blk"><h6>5 · Result</h6>
+        <div style="font-size:12.5px"><b class="mono">none</b> ran. The guard stays at the gate and nothing is attacked. This is the safety layer working, not a bug.</div>
+      </div>
+      <div class="blk rel" style="padding-top:10px;border-top:1.5px solid var(--line3)"><span class="c" style="left:-32px;top:8px">6</span><h6>Telemetry</h6>
+        <div class="tele"><div><span>Latency</span>1.40 s</div><div><span>Tokens</span>143 in · 21 out</div><div><span>Provider</span>Ollama</div><div><span>Model</span>qwen3.5:2b</div><div><span>Framework</span>0.1.0</div></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px"><span class="btn">Copy as JSON</span><span class="btn">Add to evaluation prompts</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="notes">
+  <h4>What the numbers point to</h4>
+  <div class="note"><span class="n">1</span><div><b>Decision list</b><p>One row per decision from every agent, newest first, while the game runs in Play mode.</p></div></div>
+  <div class="note"><span class="n">2</span><div><b>Filters</b><p>Show only one kind of outcome or one agent, or search what the agents were asked.</p></div></div>
+  <div class="note"><span class="n">3</span><div><b>Outcome icons</b><p>Executed, no action, contained by a guard, error. “The agent did nothing” has several causes, and each needs a different fix.</p></div></div>
+  <div class="note"><span class="n">4</span><div><b>Asked vs. answered</b><p>What the agent knew, the exact options the model was offered, and its raw reply, in order.</p></div></div>
+  <div class="note"><span class="n">5</span><div><b>Guard pipeline</b><p>Every check in order, with its verdict and reason. Here the model tried to attack the training dummy the player never named, and the grounding guard stopped it.</p></div></div>
+  <div class="note"><span class="n">6</span><div><b>Telemetry</b><p>Latency, token counts, provider, model and framework version, recorded for every decision.</p></div></div>
+</div>
+
+</div></body></html>

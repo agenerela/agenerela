@@ -1,0 +1,140 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Screen 6 - GreyBoxStrategy</title>
+<link rel="stylesheet" href="wf.css">
+<style>
+body{width:1600px;height:1000px}
+.rel{position:relative}
+.screen{position:absolute;left:0;top:0;width:1126px;height:828px;border:2.5px solid var(--ink);border-radius:8px;background:#fff}
+.topbar{position:absolute;left:0;top:0;width:1122px;height:60px;border-radius:5px 5px 0 0;background:var(--fill2);border-bottom:2px solid var(--ink2);display:flex;align-items:center;gap:18px;padding:0 16px}
+.turn{font-size:19px;font-weight:700}
+.prog{display:flex;gap:4px}
+.pg{width:34px;height:12px;border:1.5px solid var(--ink2);background:#fff}
+.pg.done{background:#3a3a3a}
+.pg.now{background:repeating-linear-gradient(45deg,#fff,#fff 3px,#6a6a6a 3px,#6a6a6a 7px)}
+.panel{position:absolute;border:2px solid var(--ink2);border-radius:7px;background:var(--fill0)}
+.cp{padding:12px 14px}
+.stat{display:flex;gap:8px;margin:8px 0 10px}
+.stat div{flex:1;border:1.5px solid var(--line2);border-radius:5px;background:#fff;padding:6px 8px}
+.stat b{display:block;font-size:17px;line-height:1.2}
+.stat span{font-size:11px;color:var(--ink3)}
+h6{margin:0 0 6px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+.rel2{display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0;border-bottom:1px solid var(--line3)}
+.obs{font-size:12.5px;line-height:1.6;margin:0;padding-left:16px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.log{position:absolute;left:16px;top:544px;width:1094px;height:268px;border:2px solid var(--ink2);border-radius:7px;background:#fff;overflow:hidden}
+.lhdr{display:flex;align-items:center;gap:10px;height:38px;padding:0 14px;border-bottom:1.5px solid var(--line);background:var(--fill)}
+.trow{display:grid;grid-template-columns:26px 186px 210px 1fr 62px;column-gap:10px;align-items:center;min-height:30px;padding:0 14px;font-size:12.5px;border-bottom:1px solid var(--line3)}
+.thead{padding:4px 14px;font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--ink3);background:var(--fill0);border-bottom:1px solid var(--line3)}
+.oc{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1.5px solid var(--ink2);border-radius:50%;font-size:11px;font-weight:700;background:#fff}
+</style></head>
+<body><div class="page">
+
+<div class="hdr">
+  <div>
+    <div class="kicker">Screen 6 of 6 · Demo game</div>
+    <div class="title">GreyBoxStrategy — end of turn</div>
+    <div class="sub">Each country is an agent with no body and no voice: it reads a report and picks one move from a list</div>
+  </div>
+  <div class="meta">Agenerela · COMP 490 · Section 04<br>Opened from <b>GreyBoxStrategy start screen ▸ New game</b><br><span class="pill">Grey box today (#20) · real decisions in Phase 3</span></div>
+</div>
+
+<div class="wf">
+  <div class="screen">
+    <div class="topbar rel">
+      <span class="c" style="right:-15px;top:17px">1</span>
+      <span class="turn">Turn 7 · Spring</span>
+      <span style="font-size:12.5px;color:var(--ink2)">Deciding: <b>Duchy of Merrow</b> (3 of 4)</span>
+      <span class="prog"><i class="pg done"></i><i class="pg done"></i><i class="pg now"></i><i class="pg"></i></span>
+      <span class="hint" style="margin-left:auto">End Turn waits until all four countries have answered</span>
+      <span class="btn off" style="height:32px;font-size:13px">End Turn ▶</span>
+    </div>
+
+    <!-- map -->
+    <div class="panel rel" style="left:16px;top:70px;width:686px;height:458px;background:#fff;overflow:hidden">
+      <span class="c" style="left:8px;top:14px">2</span>
+      <svg width="682" height="448" viewBox="0 0 686 452">
+        <defs><marker id="env" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#4a4a4a"/></marker></defs>
+        <polygon points="0,0 360,0 340,140 280,210 0,230" fill="#e8e8e8" stroke="#4a4a4a" stroke-width="2"/>
+        <polygon points="360,0 686,0 686,250 470,280 280,210 340,140" fill="#d4d4d4" stroke="#4a4a4a" stroke-width="2"/>
+        <polygon points="470,280 686,250 686,452 420,452" fill="#dedede" stroke="#4a4a4a" stroke-width="2"/>
+        <polygon points="0,230 280,210 470,280 420,452 0,452" fill="#fbfbfb" stroke="#1c1c1c" stroke-width="4"/>
+
+        <text x="120" y="86" font-family="Segoe UI" font-size="15" font-weight="700">Kingdom of Valen</text>
+        <text x="120" y="106" font-family="Segoe UI" font-size="12.5" fill="#4a4a4a">340 gold · army 60</text>
+        <text x="470" y="96" font-family="Segoe UI" font-size="15" font-weight="700">Orsk Republic</text>
+        <text x="470" y="116" font-family="Segoe UI" font-size="12.5" fill="#4a4a4a">180 gold · army 75</text>
+        <text x="60" y="330" font-family="Segoe UI" font-size="15" font-weight="700">Duchy of Merrow</text>
+        <text x="60" y="350" font-family="Segoe UI" font-size="12.5" fill="#4a4a4a">200 gold · army 40</text>
+        <rect x="58" y="362" width="104" height="22" rx="11" fill="#fff" stroke="#1c1c1c" stroke-width="1.5"/>
+        <text x="110" y="377" font-family="Segoe UI" font-size="12" font-weight="600" text-anchor="middle">⋯ deciding</text>
+        <text x="500" y="360" font-family="Segoe UI" font-size="15" font-weight="700">Free City of Tal</text>
+        <text x="500" y="380" font-family="Segoe UI" font-size="12.5" fill="#4a4a4a">260 gold · army 15</text>
+
+        <!-- border relation tags -->
+        <g font-family="Segoe UI" font-size="11.5" font-weight="600" text-anchor="middle">
+          <rect x="306" y="34" width="66" height="21" rx="10" fill="#fff" stroke="#8c8c8c" stroke-width="1.5"/><text x="339" y="49">peace</text>
+          <rect x="102" y="206" width="66" height="21" rx="10" fill="#fff" stroke="#8c8c8c" stroke-width="1.5"/><text x="135" y="221">peace</text>
+          <rect x="540" y="252" width="66" height="21" rx="10" fill="#fff" stroke="#8c8c8c" stroke-width="1.5"/><text x="573" y="267">peace</text>
+          <rect x="398" y="356" width="66" height="21" rx="10" fill="#fff" stroke="#8c8c8c" stroke-width="1.5"/><text x="431" y="371">peace</text>
+          <rect x="330" y="228" width="88" height="24" rx="12" fill="#fff" stroke="#1c1c1c" stroke-width="2.5"/><text x="374" y="245">at war</text>
+        </g>
+        <!-- envoy sent this turn -->
+        <path d="M188,120 Q400,150 508,330" fill="none" stroke="#4a4a4a" stroke-width="2" stroke-dasharray="2 6" stroke-linecap="round" marker-end="url(#env)"/>
+        <rect x="392" y="158" width="126" height="22" fill="#fff"/>
+        <text x="398" y="174" font-family="Segoe UI" font-size="12" font-weight="600" fill="#4a4a4a">envoy, this turn</text>
+      </svg>
+      <div class="hint" style="position:absolute;left:14px;bottom:8px">A country has no Transform and no NavMesh. The map is drawn by the game, not by the framework.</div>
+    </div>
+
+    <!-- country panel -->
+    <div class="panel cp rel" style="left:718px;top:70px;width:392px;height:458px">
+      <span class="c" style="right:-15px;top:14px">3</span>
+      <div style="font-size:19px;font-weight:700">Duchy of Merrow</div>
+      <div class="hint">a plain C# object — no GameObject, no voice</div>
+      <div class="stat"><div><b>200</b><span>treasury (gold)</span></div><div><b>40</b><span>army</span></div><div><b>1</b><span>forts</span></div></div>
+      <h6>Relations</h6>
+      <div class="rel2"><span>Kingdom of Valen</span><span>peace</span></div>
+      <div class="rel2"><span>Orsk Republic</span><b>at war</b></div>
+      <div class="rel2" style="border-bottom:none"><span>Free City of Tal</span><span>peace</span></div>
+
+      <div class="rel" style="margin-top:12px"><span class="c" style="left:-29px;top:-2px">4</span>
+        <h6>What Merrow is told this turn</h6>
+        <div style="font-size:12.5px;margin-bottom:4px">Report: <b>“End of turn 7. Choose Merrow's move.”</b></div>
+        <ul class="obs"><li>Treasury: 200 gold.</li><li>At war with Orsk.</li><li>Border raided last turn.</li><li>Harvest was poor.</li></ul>
+      </div>
+
+      <div class="rel" style="margin-top:10px"><span class="c" style="left:-29px;top:-2px">5</span>
+        <h6>Moves it can make right now</h6>
+        <div class="chips"><span class="chip solid">raise_taxes</span><span class="chip solid">send_envoy</span><span class="chip solid">build_fort</span><span class="chip solid">none</span><span class="chip off">declare_war</span></div>
+        <div class="hint" style="margin-top:6px">Not offered: <span class="mono">declare_war</span> — Merrow's army is under 50.</div>
+      </div>
+    </div>
+
+    <!-- event log -->
+    <span class="c" style="position:absolute;left:1px;top:554px">6</span>
+    <div class="log rel">
+      <div class="lhdr"><b style="font-size:13px">Event log</b><span class="btn">All</span><span class="btn">Proclamations</span><span class="btn">Events</span>
+        <span class="hint" style="margin-left:auto">Each country's <span class="mono">statement</span> appears here — the same field the village guard speaks out loud</span></div>
+      <div class="thead">Turn 7</div>
+      <div class="trow"><span class="oc">✓</span><span>Kingdom of Valen</span><span class="mono">send_envoy · free_city_of_tal</span><span>“Valen offers grain and friendship to the Free City.”</span><span style="text-align:right">1.21 s</span></div>
+      <div class="trow"><span class="oc">✓</span><span>Orsk Republic</span><span class="mono">raise_taxes</span><span>“The war with Merrow must be paid for. Taxes rise by a tenth.”</span><span style="text-align:right">1.38 s</span></div>
+      <div class="trow" style="background:var(--fill2)"><span class="oc">⋯</span><span><b>Duchy of Merrow</b></span><span class="muted">deciding…</span><span class="muted">the panel above shows exactly what it was told</span><span></span></div>
+      <div class="trow"><span class="oc">○</span><span class="muted">Free City of Tal</span><span class="muted">waiting its turn</span><span></span><span></span></div>
+      <div class="thead">Turn 6</div>
+      <div class="trow"><span class="oc">✓</span><span>Orsk Republic</span><span class="mono">declare_war · duchy_of_merrow</span><span>“Merrow has mocked Orsk for the last time.”</span><span style="text-align:right">1.44 s</span></div>
+      <div class="trow" style="border-bottom:none"><span style="text-align:center">•</span><span class="muted">Game events</span><span class="muted" style="grid-column:3 / 5">Orsk raided Merrow's border · the harvest failed in Merrow</span><span></span></div>
+    </div>
+  </div>
+</div>
+
+<div class="notes">
+  <h4>What the numbers point to</h4>
+  <div class="note"><span class="n">1</span><div><b>Turn bar</b><p>End Turn asks each country for one decision, one after another. The progress squares show who has answered.</p></div></div>
+  <div class="note"><span class="n">2</span><div><b>Map</b><p>Four countries and their relations. None of them is a character: no body, no pathfinding, nothing spoken aloud.</p></div></div>
+  <div class="note"><span class="n">3</span><div><b>Country panel</b><p>Treasury, army, forts and relations: the game state our own code keeps, exactly as it would without any AI.</p></div></div>
+  <div class="note"><span class="n">4</span><div><b>What it is told</b><p>The short sentences sent with the request. The game decides what each country knows, and a country is told only its own facts.</p></div></div>
+  <div class="note"><span class="n">5</span><div><b>Moves offered now</b><p>Only legal moves are offered. With an army under 50, Merrow is never even shown <span class="mono">declare_war</span>.</p></div></div>
+  <div class="note"><span class="n">6</span><div><b>Event log</b><p>Each decision's statement becomes a proclamation, and its action changes the map. Same framework, same fields as the village guard.</p></div></div>
+</div>
+
+</div></body></html>
