@@ -42,4 +42,7 @@ the credibility of everything measured afterwards.
 
 ## New findings
 
-*Nothing yet — Phase 1 has not started.*
+*Nothing yet.* Phase 1 is pure C# with no model in the loop — its correctness is settled by
+EditMode tests, not by measurement — so the first entry here arrives with Phase 2, when a
+real provider answers a real request. Until then, every number about this project comes from
+the build plan's Appendix A and was measured in the predecessor prototype, not here.

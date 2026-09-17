@@ -9,6 +9,10 @@ While the version stays `0.x`, the public API may change in any release.
 ## [Unreleased]
 
 ### Added
+- `TargetRegistry` in namespace `Agenerela` — what an agent is allowed to refer to, held as
+  ids the schema can offer and the guards can check: `Register`, `Unregister`, `TryGet`,
+  `Contains`, `Ids` and `Count`, with EditMode tests. Follow-up work — reserving
+  `no_target`, safer lookups and the missing test cases — is tracked in #29.
 - `ILLMProvider` and its supporting types (`ProviderCapabilities`, `SchemaDialect`,
   `RateLimit`, `DecisionRequest`, `ProviderResult`) in `Agenerela.Providers` — the contract
   every backend satisfies, defined before any of them is written so that Ollama, cloud APIs

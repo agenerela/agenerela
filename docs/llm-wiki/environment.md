@@ -90,6 +90,23 @@ ollama stop <other-model>
 Two models on one card share compute and flatten every latency measurement toward the
 same value. This has caught people out already; see the build plan Appendix A.
 
+## MCP for Unity (optional)
+
+The dev project depends on [MCP for Unity](https://github.com/CoplayDev/unity-mcp), pinned
+to one git revision (`2fcc179`) in `UnityProject/Packages/manifest.json`, so an AI agent can
+drive the editor — create objects, run tests, read the console — instead of describing what
+it would do. `Demos/GreyBoxVillage` pins the same revision.
+
+It is a development convenience, not a dependency of the framework: nothing in
+`com.agenerela.framework` references it, and it never ships to anyone installing the package.
+Only the version bump matters to everyone, so treat it like the Unity version — nobody
+changes the pin alone.
+
+To use it, open **Window ▸ MCP For Unity** in the project you have open, select local HTTP at
+`http://127.0.0.1:8080`, start the server if it is not running, and connect your client to
+the `/mcp` endpoint on that port. Keep **one** Unity project open while a client is
+connected; two editors competing for the same port is the usual reason a connection fails.
+
 ## Cloud provider (optional)
 
 Copy `.env.example` to `.env` and fill in `GEMINI_API_KEY` from
