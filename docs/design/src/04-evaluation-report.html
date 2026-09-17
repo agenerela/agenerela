@@ -1,0 +1,149 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Screen 4 - Evaluation Report</title>
+<link rel="stylesheet" href="wf.css">
+<style>
+body{width:1600px;height:1000px}
+.win{overflow:visible}.bar{border-radius:5px 5px 0 0}
+.rel{position:relative}
+.setup{padding:12px 16px 14px;border-bottom:2px solid var(--line)}
+.srow{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:12.5px}
+.srow .k2{color:var(--ink2)}
+.check{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600}
+.sect{position:absolute;padding:13px 18px}
+.sect h5{margin:0 0 10px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+.arm{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.arm .al2{width:104px;flex:none;font-size:12.5px;font-weight:600;line-height:1.25}
+.arm .al2 span{display:block;font-weight:400;color:var(--ink3);font-size:11px}
+.stack{display:flex;height:28px;border:1.5px solid var(--ink2);border-radius:4px;overflow:hidden;width:420px}
+.s1{background:#3a3a3a}
+.s2{background:repeating-linear-gradient(45deg,#fff,#fff 3px,#6a6a6a 3px,#6a6a6a 7px)}
+.s3{background:#b5b5b5}
+.s4{background:#e4e4e4}
+.s5{background:repeating-linear-gradient(0deg,#fff,#fff 3px,#c0c0c0 3px,#c0c0c0 5px)}
+.seg{border-right:1.5px solid var(--ink2);display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700}
+.seg:last-child{border-right:none}
+.lg{display:flex;flex-wrap:wrap;gap:12px;font-size:11.5px;color:var(--ink2);margin:2px 0 10px 114px}
+.lg span{display:flex;align-items:center;gap:5px}
+.sw{width:16px;height:12px;border:1.5px solid var(--ink2);display:inline-block}
+.ot{width:100%;border-collapse:collapse;font-size:12.5px}
+.ot th{text-align:left;font-size:11px;color:var(--ink3);font-weight:600;padding:4px 6px;border-bottom:1.5px solid var(--line2)}
+.ot td{padding:5px 6px;border-bottom:1px solid var(--line3)}
+.ot td.num{text-align:right;font-variant-numeric:tabular-nums}
+.ot .d{font-weight:700}
+.noise{font-size:11px;color:var(--ink3);font-weight:400}
+.mb{display:inline-block;width:84px;height:9px;border:1.5px solid var(--line2);border-radius:5px;overflow:hidden;vertical-align:middle;margin-right:6px}
+.mb i{display:block;height:100%;background:var(--ink2)}
+.mb.b i{background:#3a3a3a}
+.ft{width:100%;border-collapse:collapse;font-size:12.5px}
+.ft td{padding:6px 6px;border-bottom:1px solid var(--line3);vertical-align:top}
+.big{font-size:40px;font-weight:700;line-height:1}
+#cat .mb{width:54px}
+#cat td{padding:4px 6px;white-space:nowrap}
+#cat th{padding:4px 6px}
+</style></head>
+<body><div class="page">
+
+<div class="hdr">
+  <div>
+    <div class="kicker">Screen 4 of 6 · Unity Editor</div>
+    <div class="title">Evaluation Report</div>
+    <div class="sub">Measures whether agents choose correctly: two set-ups, one labelled prompt set, one session</div>
+  </div>
+  <div class="meta">Agenerela · COMP 490 · Section 04<br>Opened from <b>Window ▸ Agenerela ▸ Evaluation</b><br><span class="pill">Phase 4 · before any accuracy claim</span> <span class="pill dash">Illustrative numbers</span></div>
+</div>
+
+<div class="wf">
+  <div class="win" style="left:0;top:0;width:1126px;height:828px">
+    <div class="bar"><div class="tabx">Evaluation</div><div class="tabx off">Decision Log</div></div>
+
+    <div class="setup rel">
+      <span class="c" style="left:-15px;top:14px">1</span>
+      <div class="srow"><span class="k2" style="width:74px">Prompt set</span><div class="f dd" style="flex:none;width:300px">village_guard.json · 212 labelled prompts</div>
+        <span class="k2" style="margin-left:14px">Model</span><div class="f dd" style="flex:none;width:210px">qwen3.5:2b · Ollama</div>
+        <span class="btn" style="margin-left:auto">Edit prompt set</span></div>
+      <div class="srow"><span class="k2" style="width:74px">Arm A</span><div class="f dd" style="flex:none;width:300px">Baseline · guards off</div>
+        <span class="k2" style="margin-left:14px">Arm B</span><div class="f dd" style="flex:none;width:300px">Treatment · grounding guard on</div>
+        <span class="btn pri" style="margin-left:auto">▶ Run A/B</span></div>
+      <div class="srow" style="margin-bottom:0">
+        <span class="check">☑ Warm up with 3 requests</span>
+        <span class="check">✓ Only one model loaded</span>
+        <span class="check">✓ No example reuses an evaluation prompt</span>
+        <span class="hint" style="margin-left:auto">Last run: today 14:20 · one session · 212 prompts × 2 arms · 9 min 40 s</span></div>
+    </div>
+
+    <!-- outcomes -->
+    <div class="sect rel" style="left:0;top:138px;width:664px;height:400px;border-right:1.5px solid var(--line2);border-bottom:1.5px solid var(--line2)">
+      <span class="c" style="left:-15px;top:12px">2</span>
+      <h5>Outcomes · 212 prompts per arm</h5>
+      <div class="arm"><div class="al2">A · Baseline<span>guards off</span></div>
+        <div class="stack"><div class="seg s1" style="width:60%">60%</div><div class="seg s2" style="width:38%">38%</div><div class="seg s5" style="width:2%"></div></div></div>
+      <div class="arm"><div class="al2">B · Treatment<span>grounding guard on</span></div>
+        <div class="stack"><div class="seg s1" style="width:86%">86%</div><div class="seg s2" style="width:4%"></div><div class="seg s3" style="width:8%">8%</div><div class="seg s4" style="width:2%"></div></div></div>
+      <div class="lg">
+        <span><i class="sw s1"></i>Correct</span><span><i class="sw s2"></i>Wrong but legal</span><span><i class="sw s3"></i>Contained by a guard</span><span><i class="sw s4"></i>Rejected when an action was expected</span><span><i class="sw s5"></i>Pipeline error</span>
+      </div>
+      <table class="ot">
+        <tr><th>Outcome</th><th class="num" style="text-align:right">A</th><th class="num" style="text-align:right">B</th><th style="text-align:right">Difference</th></tr>
+        <tr><td>Correct</td><td class="num">60%</td><td class="num">86%</td><td class="num d">+26 pts</td></tr>
+        <tr><td>Wrong but legal <span class="hint">— the agent visibly misbehaves</span></td><td class="num">38%</td><td class="num">4%</td><td class="num d">−34 pts</td></tr>
+        <tr><td>Contained by a guard <span class="hint">— safety layer working</span></td><td class="num">0%</td><td class="num">8%</td><td class="num d">+8 pts</td></tr>
+        <tr><td>Rejected when an action was expected</td><td class="num">0%</td><td class="num">2%</td><td class="num"><span class="noise">+2 · within noise</span></td></tr>
+        <tr style="border-bottom:none"><td>Pipeline error</td><td class="num">2%</td><td class="num">0%</td><td class="num"><span class="noise">−2 · within noise</span></td></tr>
+      </table>
+      <div class="hint rel" style="margin-top:10px;line-height:1.45"><span class="c" style="left:-26px;top:-2px">3</span>A difference this small could be chance with 212 prompts, so the report says so instead of calling it an improvement.</div>
+    </div>
+
+    <!-- by category -->
+    <div class="sect rel" style="left:664px;right:0;top:138px;height:400px;border-bottom:1.5px solid var(--line2)">
+      <span class="c" style="right:-15px;top:12px">4</span>
+      <h5>Correct answers by prompt category</h5>
+      <table class="ot" id="cat">
+        <tr><th>Category</th><th style="text-align:right">n</th><th>A</th><th>B</th></tr>
+        <tr><td>simple_command</td><td class="num">36</td><td><span class="mb"><i style="width:83%"></i></span>83%</td><td><span class="mb b"><i style="width:92%"></i></span>92%</td></tr>
+        <tr><td>command_with_target</td><td class="num">40</td><td><span class="mb"><i style="width:70%"></i></span>70%</td><td><span class="mb b"><i style="width:90%"></i></span>90%</td></tr>
+        <tr><td>impossible_request</td><td class="num">48</td><td><span class="mb"><i style="width:25%"></i></span>25%</td><td><span class="mb b"><i style="width:85%"></i></span>85%</td></tr>
+        <tr><td>conversation</td><td class="num">30</td><td><span class="mb"><i style="width:80%"></i></span>80%</td><td><span class="mb b"><i style="width:83%"></i></span>83%</td></tr>
+        <tr><td>situation <span class="hint">“what now?”</span></td><td class="num">30</td><td><span class="mb"><i style="width:60%"></i></span>60%</td><td><span class="mb b"><i style="width:80%"></i></span>80%</td></tr>
+        <tr><td>event <span class="hint">reported by the game</span></td><td class="num">28</td><td><span class="mb"><i style="width:54%"></i></span>54%</td><td><span class="mb b"><i style="width:82%"></i></span>82%</td></tr>
+      </table>
+      <div class="hint" style="margin-top:12px;line-height:1.45">Categories exist so the headline number is never measured on player chat alone: our agents are also asked by timers and game events, and a country reads reports.</div>
+      <div class="help" style="margin-top:12px"><span class="ico">⚠</span><span><b>impossible_request is the one that matters.</b> Substituting a legal target for one the player never named is the failure that looks worst in a demo.</span></div>
+    </div>
+
+    <!-- failures -->
+    <div class="sect rel" style="left:0;top:540px;width:664px;bottom:0;border-right:1.5px solid var(--line2)">
+      <span class="c" style="left:-15px;top:12px">5</span>
+      <h5>Wrong but legal in arm B · 9 prompts</h5>
+      <table class="ft">
+        <tr><td class="mono" style="width:76px">con_019</td><td>Player: “The tower looks lovely today.”<br><span class="hint">expected <span class="mono">none</span> · got <span class="mono">move_to · tower</span> — the target was named, so no guard fired</span></td><td style="width:96px;text-align:right"><span class="btn">Open ↗</span></td></tr>
+        <tr><td class="mono">cmd_031</td><td>Player: “Walk with me to the bridge.”<br><span class="hint">expected <span class="mono">follow_player</span> · got <span class="mono">move_to · bridge</span></span></td><td style="text-align:right"><span class="btn">Open ↗</span></td></tr>
+        <tr><td class="mono">evt_012</td><td>Event: “An enemy was spotted near the bridge.”<br><span class="hint">expected <span class="mono">move_to · bridge</span> · got <span class="mono">none</span></span></td><td style="text-align:right"><span class="btn">Open ↗</span></td></tr>
+      </table>
+      <div class="hint" style="margin-top:8px">+ 6 more · “Open” shows the whole decision in the Decision Log (screen 3).</div>
+    </div>
+
+    <!-- labels -->
+    <div class="sect rel" style="left:664px;right:0;top:540px;bottom:0">
+      <span class="c" style="right:-15px;top:12px">6</span>
+      <h5>Labelling and export</h5>
+      <div style="display:flex;gap:18px;align-items:flex-start">
+        <div><div class="big">88%</div><div class="hint" style="margin-top:4px;line-height:1.4">agreement between<br>our two labellers</div></div>
+        <div style="font-size:12.5px;line-height:1.6">80 of 212 prompts were labelled twice, by two<br>different people.<br><b>3 disagreements still to resolve.</b></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px"><span class="btn">Review disagreements</span><span class="btn">Copy summary for findings.md</span></div>
+      <div class="hint" style="margin-top:14px;line-height:1.45;border-top:1.5px solid var(--line3);padding-top:10px">Every accuracy claim we make has to come from a run like this one: a control arm, the same model, the same machine, the same session.</div>
+    </div>
+  </div>
+</div>
+
+<div class="notes">
+  <h4>What the numbers point to</h4>
+  <div class="note"><span class="n">1</span><div><b>Run set-up</b><p>The same prompts and model for both set-ups (arm A and arm B), in one session, after a warm-up, with only one model loaded.</p></div></div>
+  <div class="note"><span class="n">2</span><div><b>Five outcomes, not one score</b><p>Correct, wrong but legal, contained by a guard, rejected when an action was expected, pipeline error. Each one needs a different fix.</p></div></div>
+  <div class="note"><span class="n">3</span><div><b>Noise check</b><p>Differences too small to trust at this number of prompts are marked, so nobody reports an improvement that isn't real.</p></div></div>
+  <div class="note"><span class="n">4</span><div><b>By category</b><p>Commands, impossible requests, conversation, situations and events, so accuracy is never measured on chat alone.</p></div></div>
+  <div class="note"><span class="n">5</span><div><b>Failures</b><p>The prompts the agent got wrong, with expected vs. actual. “Open” jumps to that decision in the Decision Log.</p></div></div>
+  <div class="note"><span class="n">6</span><div><b>Labels and export</b><p>How often our two labellers agreed, and a one-click summary to paste into our findings page.</p></div></div>
+</div>
+
+</div></body></html>

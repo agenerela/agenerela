@@ -1,0 +1,164 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Screen 5 - GreyBoxVillage</title>
+<link rel="stylesheet" href="wf.css">
+<style>
+body{width:1600px;height:1000px}
+.rel{position:relative}
+.screen{position:absolute;left:0;top:0;width:1126px;height:640px;border:2.5px solid var(--ink);border-radius:8px;overflow:hidden;background:#f7f7f7}
+.hud{position:absolute;background:rgba(255,255,255,.92);border:1.5px solid var(--ink2);border-radius:6px;padding:9px 11px;font-size:12.5px;line-height:1.65}
+.hud b{display:inline-block;width:64px}
+.ovl{position:absolute;background:#2b2b2b;color:#fff;border-radius:6px;padding:10px 12px;font-size:12px;line-height:1.7}
+.ovl h6{margin:0 0 6px;font-size:10.5px;letter-spacing:.12em;color:#c9c9c9;font-weight:700}
+.ovl .k3{display:inline-block;width:74px;color:#b9b9b9}
+.ovl .mono{font-family:var(--mono)}
+.talk{position:absolute;left:16px;top:510px;width:686px;background:rgba(255,255,255,.95);border:1.5px solid var(--ink);border-radius:7px;padding:10px 12px}
+.lineq{font-size:13.5px;line-height:1.6}
+.lineq b{width:52px;display:inline-block;color:var(--ink2)}
+.inp{display:flex;align-items:center;gap:8px;margin-top:8px}
+.inp .f{height:28px}
+.sb{position:absolute;display:flex;flex-direction:column;justify-content:center;background:#fff;border:2px solid var(--ink);border-radius:9px;padding:7px 12px;font-size:13.5px}
+.sb:after{content:"";position:absolute;left:-9px;bottom:14px;width:14px;height:14px;background:#fff;border-left:2px solid var(--ink);border-bottom:2px solid var(--ink);transform:rotate(45deg)}
+.strip{position:absolute;left:0;top:664px;width:1126px;height:164px}
+.sfrm{position:absolute;top:22px;width:268px;height:142px;border:2px solid var(--ink2);border-radius:7px;background:var(--fill0);padding:9px 11px}
+.sfrm .st{font-size:12.5px;font-weight:700;margin-bottom:6px}
+.sfrm p{margin:6px 0 0;font-size:12px;color:var(--ink2);line-height:1.4}
+.pill2{display:inline-block;border:1.5px solid var(--ink);border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:600;background:#fff}
+.mini-sb{border:1.5px solid var(--ink2);border-radius:7px;background:#fff;padding:4px 8px;font-size:11.5px;display:inline-block}
+</style></head>
+<body><div class="page">
+
+<div class="hdr">
+  <div>
+    <div class="kicker">Screen 5 of 6 · Demo game</div>
+    <div class="title">GreyBoxVillage — talking to the guard</div>
+    <div class="sub">The player says what they want in plain English; the guard picks one registered action and carries it out</div>
+  </div>
+  <div class="meta">Agenerela · COMP 490 · Section 04<br>Opened from <b>GreyBoxVillage start screen ▸ Play</b><br><span class="pill">Grey box today (#19) · real decisions in Phase 2</span></div>
+</div>
+
+<div class="wf">
+  <div class="screen">
+    <svg width="1122" height="636" viewBox="0 0 1122 636">
+      <defs>
+        <pattern id="water" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <rect width="14" height="14" fill="#f0f0f0"/><line x1="0" y1="0" x2="0" y2="14" stroke="#c2c2c2" stroke-width="2"/>
+        </pattern>
+        <marker id="pa" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1c1c1c"/></marker>
+      </defs>
+      <rect width="1122" height="636" fill="#f7f7f7"/>
+      <!-- river + bridge -->
+      <rect x="700" y="0" width="90" height="636" fill="url(#water)" stroke="#a6a6a6" stroke-width="1.5"/>
+      <text x="745" y="604" font-family="Segoe UI" font-size="13" fill="#7f7f7f" text-anchor="middle">river</text>
+      <rect x="660" y="120" width="170" height="56" fill="#e4e4e4" stroke="#4a4a4a" stroke-width="2"/>
+      <text x="745" y="154" font-family="Segoe UI" font-size="14" font-weight="600" text-anchor="middle">Bridge</text>
+      <!-- tower -->
+      <rect x="280" y="140" width="100" height="100" fill="#e4e4e4" stroke="#1c1c1c" stroke-width="2.5"/>
+      <circle cx="330" cy="190" r="25" fill="#fff" stroke="#4a4a4a" stroke-width="2"/>
+      <text x="392" y="188" font-family="Segoe UI" font-size="14" font-weight="600">Tower</text>
+      <!-- houses -->
+      <rect x="60" y="180" width="100" height="70" fill="#ededed" stroke="#8c8c8c" stroke-width="2"/>
+      <rect x="60" y="268" width="82" height="56" fill="#ededed" stroke="#8c8c8c" stroke-width="2"/>
+      <text x="60" y="346" font-family="Segoe UI" font-size="12.5" fill="#7f7f7f">houses (not targets)</text>
+      <!-- training yard -->
+      <rect x="470" y="140" width="190" height="160" fill="none" stroke="#8c8c8c" stroke-width="2" stroke-dasharray="8 6"/>
+      <text x="565" y="130" font-family="Segoe UI" font-size="12.5" fill="#7f7f7f" text-anchor="middle">training yard</text>
+      <rect x="561" y="196" width="8" height="46" fill="#4a4a4a"/><rect x="541" y="204" width="48" height="8" fill="#4a4a4a"/><circle cx="565" cy="186" r="10" fill="#fff" stroke="#4a4a4a" stroke-width="2"/>
+      <text x="565" y="278" font-family="Segoe UI" font-size="14" font-weight="600" text-anchor="middle">Training dummy</text>
+      <!-- wall + gate -->
+      <rect x="30" y="380" width="270" height="12" fill="#cfcfcf" stroke="#4a4a4a" stroke-width="2"/>
+      <rect x="390" y="380" width="272" height="12" fill="#cfcfcf" stroke="#4a4a4a" stroke-width="2"/>
+      <text x="398" y="370" font-family="Segoe UI" font-size="14" font-weight="600">Gate</text>
+      <text x="90" y="412" font-family="Segoe UI" font-size="12.5" fill="#7f7f7f">village wall</text>
+      <!-- talk radius -->
+      <circle cx="330" cy="432" r="76" fill="none" stroke="#4a4a4a" stroke-width="2" stroke-dasharray="7 7"/>
+      <text x="246" y="470" font-family="Segoe UI" font-size="12.5" fill="#4a4a4a" text-anchor="end">5 m: close enough to talk</text>
+      <!-- path through the gate to the tower -->
+      <path d="M330,412 L330,250" fill="none" stroke="#1c1c1c" stroke-width="2.5" stroke-dasharray="3 7" stroke-linecap="round" marker-end="url(#pa)"/>
+      <rect x="150" y="300" width="140" height="24" fill="#f7f7f7"/>
+      <text x="156" y="317" font-family="Segoe UI" font-size="12.5" font-weight="600">walks to the tower</text>
+      <!-- guard + player -->
+      <circle cx="330" cy="432" r="18" fill="#5a5a5a" stroke="#1c1c1c" stroke-width="2.5"/>
+      <text x="300" y="437" font-family="Segoe UI" font-size="13.5" font-weight="600" text-anchor="end">Guard</text>
+      <circle cx="394" cy="456" r="18" fill="#fff" stroke="#1c1c1c" stroke-width="2.5"/>
+      <text x="420" y="461" font-family="Segoe UI" font-size="13.5" font-weight="600">You</text>
+      <!-- woods -->
+      <circle cx="860" cy="470" r="20" fill="#ededed" stroke="#a6a6a6" stroke-width="2"/>
+      <circle cx="916" cy="500" r="16" fill="#ededed" stroke="#a6a6a6" stroke-width="2"/>
+      <circle cx="960" cy="452" r="22" fill="#ededed" stroke="#a6a6a6" stroke-width="2"/>
+      <text x="906" y="546" font-family="Segoe UI" font-size="12.5" fill="#7f7f7f" text-anchor="middle">woods · nothing registered here</text>
+    </svg>
+
+    <div class="hud" style="left:16px;top:16px;width:238px">
+      <div><b>WASD</b> move</div><div><b>Enter</b> talk to the guard</div><div><b>Esc</b> cancel · <b style="width:auto">F1</b> decision overlay</div>
+    </div>
+
+    <div class="ovl rel" style="left:826px;top:16px;width:280px">
+      <h6>DECISION OVERLAY · F1</h6>
+      <div><span class="k3">Stimulus</span>Player: “Go to the tower.”</div>
+      <div><span class="k3">Action</span><span class="mono">move_to</span></div>
+      <div><span class="k3">Target</span><span class="mono">tower</span></div>
+      <div><span class="k3">Statement</span>“On my way.”</div>
+      <div><span class="k3">Latency</span>1.31 s</div>
+      <div><span class="k3">Guards</span>legality ✓ · grounding ✓</div>
+      <div><span class="k3">Provider</span>Ollama · qwen3.5:2b</div>
+      <span class="c" style="left:-15px;top:26px">6</span>
+    </div>
+
+    <div class="sb" style="left:430px;top:388px;width:168px;height:46px">“On my way.”</div>
+
+    <div class="talk rel">
+      <div class="lineq"><b>You</b> Go to the tower.</div>
+      <div class="lineq"><b>Guard</b> On my way.</div>
+      <div class="inp"><div class="f muted" style="height:30px">Say something to the guard…</div><span class="btn pri" style="height:30px">Enter ↵</span></div>
+      <span class="c" style="left:-15px;top:40px">3</span>
+    </div>
+
+    <span class="c" style="left:390px;top:150px">1</span>
+    <span class="c" style="left:262px;top:472px">2</span>
+    <span class="c" style="left:296px;top:300px">5</span>
+  </div>
+
+  <div class="strip">
+    <div style="position:absolute;left:0;top:0;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)">How one exchange goes · and what a refusal looks like</div>
+
+    <div class="sfrm" style="left:0">
+      <div class="st">1 · Walk up</div>
+      <svg width="244" height="56" viewBox="0 0 244 56"><circle cx="46" cy="30" r="13" fill="#5a5a5a" stroke="#1c1c1c" stroke-width="2"/><circle cx="86" cy="36" r="13" fill="#fff" stroke="#1c1c1c" stroke-width="2"/><circle cx="46" cy="30" r="46" fill="none" stroke="#4a4a4a" stroke-width="1.5" stroke-dasharray="6 6"/><rect x="120" y="18" width="118" height="24" rx="12" fill="#fff" stroke="#1c1c1c" stroke-width="1.5"/><text x="179" y="34" font-family="Segoe UI" font-size="11.5" font-weight="600" text-anchor="middle">Press Enter to talk</text></svg>
+      <p>The prompt only appears inside the guard's 5 m circle.</p>
+    </div>
+
+    <div class="sfrm" style="left:286px">
+      <div class="st">2 · Type anything</div>
+      <div class="f" style="height:30px;font-size:12.5px">Go to the tower.<span style="border-left:2px solid var(--ink);margin-left:2px">&nbsp;</span></div>
+      <p>Free text, not a menu. The exact words become the stimulus; movement pauses while typing.</p>
+    </div>
+
+    <div class="sfrm rel" style="left:572px">
+      <span class="c" style="left:-15px;top:44px">4</span>
+      <div class="st">3 · The guard thinks</div>
+      <svg width="244" height="56" viewBox="0 0 244 56"><circle cx="40" cy="34" r="13" fill="#5a5a5a" stroke="#1c1c1c" stroke-width="2"/><rect x="66" y="8" width="66" height="30" rx="10" fill="#fff" stroke="#1c1c1c" stroke-width="2"/><circle cx="85" cy="23" r="3.5" fill="#1c1c1c"/><circle cx="99" cy="23" r="3.5" fill="#1c1c1c"/><circle cx="113" cy="23" r="3.5" fill="#1c1c1c"/><text x="146" y="28" font-family="Segoe UI" font-size="12" fill="#4a4a4a">about 1–2 s</text></svg>
+      <p>A thinking bubble, so the wait never reads as a freeze.</p>
+    </div>
+
+    <div class="sfrm" style="left:858px">
+      <div class="st">Refusal · nothing happens</div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-start">
+        <span class="mini-sb">You: “Attack Godzilla.”</span>
+        <span class="mini-sb">Guard: “Godzilla? Nothing like that here.”</span>
+      </div>
+      <p><span class="mono">none · no_target</span> — the guard will not attack the nearest legal thing instead.</p>
+    </div>
+  </div>
+</div>
+
+<div class="notes">
+  <h4>What the numbers point to</h4>
+  <div class="note"><span class="n">1</span><div><b>The world</b><p>Tower, bridge and training dummy are the registered targets: the only things the guard can be sent to. Houses and woods are scenery.</p></div></div>
+  <div class="note"><span class="n">2</span><div><b>Talk radius</b><p>Within 5 m of the guard, “Press Enter to talk” appears. Movement pauses while the player types.</p></div></div>
+  <div class="note"><span class="n">3</span><div><b>Say anything</b><p>A free text box, not a menu. What the player types is sent as it stands, and the guard's reply comes back on the line above.</p></div></div>
+  <div class="note"><span class="n">4</span><div><b>Thinking</b><p>A “…” bubble covers the second or two the model takes, so the game never looks frozen.</p></div></div>
+  <div class="note"><span class="n">5</span><div><b>The action runs</b><p>The guard walks to the tower. Our own game code moves it; the model only chose <span class="mono">move_to</span> and <span class="mono">tower</span>.</p></div></div>
+  <div class="note"><span class="n">6</span><div><b>Decision overlay (F1)</b><p>Action, target, latency and which guards ran. This is the view we put on screen at the review demo.</p></div></div>
+</div>
+
+</div></body></html>
