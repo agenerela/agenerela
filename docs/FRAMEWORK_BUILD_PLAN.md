@@ -60,6 +60,7 @@ package alone.
     ├── CompanionRPG/                  ← its own Assets/, Packages/, ProjectSettings/
     ├── GreyBox2D/                     ← proves genre independence
     ├── GreyBoxStrategy/               ← proves "agent ≠ NPC"
+    ├── GreyBoxVillage/                ← the guard playground; the first game built
     └── Shared/                        ← local packages two or more games need (created on demand)
 ```
 
@@ -834,7 +835,7 @@ comparisons within one environment; distrust absolute latency claims across envi
 ### 6.1 One repository — settled, with one caveat
 
 **Use one repo for the package, the demos, the dev project, the wiki, and the tools.**
-For a two-person team this is clearly correct:
+For a team of six it is clearly correct:
 
 - **Atomic commits.** Change the API and update all three demos in one commit. With split
   repos, every breaking change becomes a two-repo dance and the demos drift.
@@ -859,9 +860,11 @@ near-polished games (DR-010) make a real possibility rather than a theoretical o
 minutes, and means the project survives either teammate's account, and access can be
 granted to your advisor without transferring anything.
 
-### 6.2 Two-person Unity workflow
+### 6.2 Unity workflow for a team
 
-Unity + Git has specific failure modes. Agree on these in week one:
+Unity + Git has specific failure modes. Agree on these in week one. This plan was drafted
+for two people; the team is now **six**, which changes none of the rules below and makes
+the scene-ownership one matter considerably more.
 
 - **Pin the Unity version exactly.** `ProjectSettings/ProjectVersion.txt` is committed;
   if one person opens the project in a newer patch release it rewrites that file and can
@@ -871,9 +874,11 @@ Unity + Git has specific failure modes. Agree on these in week one:
   **UnityYAMLMerge** (ships with Unity, wire it up per `.gitattributes` above), and adopt
   the social rule *one person owns a scene at a time*. Most scene conflicts are avoided by
   talking, not tooling.
-- **Branching:** `main` protected, short-lived feature branches, PR review. With two
-  people, each reviews the other — this is also the most reliable way to keep the wiki's
-  findings honest, since the reviewer asks "where's the A/B run?"
+- **Branching:** `main` protected and restricted to the owner; **`test` is the integration
+  branch** everyone branches off and opens pull requests into; short-lived feature branches;
+  one teammate reviews each. A green `Repo hygiene` check is required before a pull request
+  can merge into `test`. Review is also the most reliable way to keep the wiki's findings
+  honest, since the reviewer is the one who asks "where's the A/B run?"
 - **Force Text serialization + visible meta files** (Unity's default now — verify, don't
   assume).
 
@@ -926,15 +931,23 @@ technical difficulty.
 
 ### 6.6 Divide the work along seams, not files
 
-With two people, split by **module boundary** so you're rarely in the same file:
+Split by **module boundary** so two people are rarely in the same file, and give every
+module one owner who reviews changes to it. With six people that is roughly:
 
-- One owns **Core + Actions + Schema** (§2.1–2.3) — the API surface.
-- One owns **Providers + Validation + Scheduling** (§2.4–2.6) — the runtime path.
-- **Evaluation (Phase 4) is shared** — and the second annotator requirement means it
-  *needs* both of you anyway (inter-annotator agreement is impossible solo).
-- Demos: whoever didn't build the subsystem a demo exercises should build that demo. It's
-  a free API usability test — if the author has to explain their own API to their partner,
-  the API needs work.
+- **Core + Actions** (§2.1–2.2) — the agent, the decision types, the action registry.
+- **Schema + prompt assembly** (§2.3) — the request the provider actually sends, and the
+  measured rules baked into it.
+- **Providers + Scheduling** (§2.4, §2.6) — the transport, the queue, the budgets.
+- **Validation** (§2.5) — the guard pipeline, which is the product's safety claim.
+- **Evaluation** (Phase 4) — the instrument every later claim depends on. Shared by
+  definition: inter-annotator agreement is impossible solo, so it needs at least two people.
+- **Demos** — one owner per game, and they keep that game compiling as the API moves.
+
+Two rules matter more than the exact split. **Nobody builds the demo that exercises their
+own subsystem**: handing it to someone else is a free API usability test, and if the author
+has to explain their own API to a teammate, the API needs work. And **one person owns a
+scene at a time** — with six people, scene conflicts are the failure mode most likely to
+cost a day.
 
 ---
 

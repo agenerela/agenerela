@@ -69,9 +69,9 @@ they are taken.
 | Path | Contents |
 |---|---|
 | `UnityProject/Packages/com.agenerela.framework/` | The package — everything shippable |
-| `UnityProject/Assets/Evaluation/` | Benchmark harness and labelled prompt set |
+| `UnityProject/Assets/Evaluation/` | Benchmark harness and labelled prompt set — Phase 4, does not exist yet |
 | `Demos/<Game>/` | Demo games — one full Unity project each, loading the package by relative path (DR-010) |
-| `docs/` | Build plan, llm-wiki and the screen designs (`docs/design/`) |
+| `docs/` | Build plan, llm-wiki, screen designs and course materials — [`docs/README.md`](docs/README.md) maps them |
 | `tools/benchmarks/` | Standalone Python probes, no Unity required |
 
 ## Working conventions
@@ -114,9 +114,23 @@ it; opening a project in a newer patch rewrites that file for everyone.
 
 ## Current state
 
-Phase 0 complete: repo skeleton, empty Unity project, package with runtime/editor/test
-assemblies and passing smoke tests. **No framework code exists yet** — Phase 1 (Core,
-Actions, Schema) is next. See the build plan's phase table.
+Phase 0 is complete and **Phase 1 (Core, Actions, Schema) is underway.** See the build
+plan's phase table for what each phase means.
+
+Merged so far: the `ILLMProvider` contract and its supporting types (#12), `TargetRegistry`
+(#5), Newtonsoft as the core's one declared dependency (DR-009), each demo game as its own
+Unity project (DR-010), and `Demos/GreyBoxVillage` — a playable grey-box scene whose guard
+still answers from placeholder string matching, not a model (#19).
+
+Not written yet: the core decision types (#2), telemetry (#3 — its three files under
+`Runtime/Core/` are committed **empty** as placeholders), `ActionDefinition` (#4),
+`ActionRegistry` (#6), state-derived availability (#7), `DecisionSchema` (#8), its JSON
+serializer (#9), the few-shot builder (#10), `AgentProfile` (#15), `PromptBuilder` (#16)
+and `Agent` itself (#17). **Nothing in the framework calls a model yet** — that starts in
+Phase 2, so Phase 1 work is pure C# with EditMode tests and no Ollama.
+
+What all of this is meant to become, screen by screen, is drawn in
+[`docs/design/`](docs/design/README.md).
 
 ## Agent-specific configuration
 
