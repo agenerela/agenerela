@@ -239,18 +239,18 @@ footer p{max-width:74ch}
         <div class="band">
           <div class="bandhd"><span class="num">A</span>Set up · once per project</div>
           <div class="stepcard"><div class="st"><span class="sn">01</span>Install the package</div><p>One line in <span class="mono">Packages/manifest.json</span>. Newtonsoft comes with it; nothing else does.</p><div class="kindrow"><span class="kind code">manifest</span></div></div>
-          <div class="stepcard"><div class="st"><span class="sn">02</span>Point at a model</div><p>A provider config: Ollama on your own machine while building. Endpoint, model, budget.</p><div class="kindrow"><span class="kind asset">asset</span><span class="kind gap">window missing</span></div></div>
+          <div class="stepcard"><div class="st"><span class="sn">02</span>Point at a model</div><p>A provider config asset: Ollama on your own machine while building. Endpoint, model, budget.</p><div class="kindrow"><span class="kind asset">asset</span><span class="kind gap">screen to draw</span></div></div>
         </div>
         <div class="band">
           <div class="bandhd"><span class="num">B</span>Author the agent · per agent</div>
-          <div class="stepcard"><div class="st"><span class="sn">03</span>Define the verbs</div><p>One Action asset per thing this agent can ever do: <span class="mono">move_to</span>, <span class="mono">follow_player</span>.</p><div class="kindrow"><span class="kind asset">asset ×N</span><span class="kind gui">inspector</span></div></div>
+          <div class="stepcard"><div class="st"><span class="sn">03</span>Define the verbs</div><p>Everything this agent can ever do — <span class="mono">move_to</span>, <span class="mono">follow_player</span> — tagged in code or authored as assets.</p><div class="kindrow"><span class="kind code">code</span><span class="kind asset">or asset ×N</span></div></div>
           <div class="stepcard"><div class="st"><span class="sn">04</span>Say who it is</div><p>An Agent Profile: name, role, personality, goals, and the action list. Ten guards share one.</p><div class="kindrow"><span class="kind asset">asset</span><span class="kind gui">screen 1</span></div></div>
         </div>
         <div class="band">
           <div class="bandhd"><span class="num">C</span>Wire it to your game</div>
           <div class="stepcard"><div class="st"><span class="sn">05</span>Write the handlers</div><p>Your C#, one class per action: when it is legal, and what it does in Unity.</p><div class="kindrow"><span class="kind code">script ×N</span></div></div>
-          <div class="stepcard"><div class="st"><span class="sn">06</span>Put it in the scene</div><p>A GameObject with Agent Behaviour: profile, provider, handlers, the targets it may name.</p><div class="kindrow"><span class="kind scene">GameObject</span><span class="kind gui">screen 2</span></div></div>
-          <div class="stepcard"><div class="st"><span class="sn">07</span>Decide when to ask</div><p>Your own trigger calls <span class="mono">DecideAsync</span>. The framework never picks the moment.</p><div class="kindrow"><span class="kind code">script</span></div></div>
+          <div class="stepcard"><div class="st"><span class="sn">06</span>Put it in the scene</div><p>A GameObject with Agent Behaviour, and a <span class="mono">Targetable</span> on anything it may notice or name.</p><div class="kindrow"><span class="kind scene">GameObject</span><span class="kind gui">screen 2</span></div></div>
+          <div class="stepcard"><div class="st"><span class="sn">07</span>Decide when to ask</div><p>Your own trigger calls <span class="mono">DecideAsync</span> and says whether anyone is waiting.</p><div class="kindrow"><span class="kind code">script</span></div></div>
         </div>
         <div class="band">
           <div class="bandhd"><span class="num">D</span>Run and improve · forever</div>
@@ -290,7 +290,7 @@ footer p{max-width:74ch}
   </div>
 
   <figure style="margin-top:26px">
-    <div class="fig"><div class="figbar">Figure 2 · Provider config — a screen we have not designed yet<span class="tag">proposed · fills a gap at step 02</span></div>
+    <div class="fig"><div class="figbar">Figure 2 · Provider config — the screen the six-figure set was missing<span class="tag">DR-013 · shape settled, drawing still a first pass</span></div>
     <div class="figbody">
       <div class="cols" style="gap:16px">
         <div class="win">
@@ -331,14 +331,14 @@ footer p{max-width:74ch}
         <li><span class="cn">4</span><div><b>The queue lives here</b>Requests in flight is a property of the backend, not of an agent.</div></li>
       </ul>
     </div></div>
-    <figcaption>Proposed, not decided. The alternative is putting all of this in Project Settings only — simpler, but then the evaluation harness cannot name two configurations.</figcaption>
+    <figcaption>The asset-plus-defaults shape is settled in DR-013. The alternative — everything in Project Settings — was rejected because a singleton cannot hold the two configurations an evaluation run needs alive at once. The drawing itself is still a first pass.</figcaption>
   </figure>
 </section>
 
 <!-- ============ BAND B ============ -->
 <section class="sec" id="author">
-  <div class="sechead"><h2>Band B · Author the agent</h2><span class="pill">assets only — no code yet</span></div>
-  <p class="seclede">Two asset types, both authored in the Inspector, both plain data. A designer with no C# can do this half. Nothing here mentions Unity, the scene, or a model.</p>
+  <div class="sechead"><h2>Band B · Author the agent</h2><span class="pill">two front doors, one result</span></div>
+  <p class="seclede">Describing what an agent is and what it can do. Nothing here mentions the scene, a handler or a model. It can be done entirely in one script, or entirely in assets a designer edits without opening C# — and the framework cannot tell the difference afterwards.</p>
 
   <h3 style="margin-bottom:10px">Step 03 — Define each verb</h3>
   <p class="body"><b>Two ways to do this, and both are supported (DR-011).</b> In code, each action is a tagged method on one script — no assets at all, and the minimum agent becomes one file. Or as an asset: right-click in the Project window → <span class="mono">Create ▸ Agenerela ▸ Action Definition</span>. Both produce the same <span class="mono">ActionDefinition</span> in the same registry, and nothing downstream can tell which was used. Where both define the same id, the asset wins — so you can start in code and drop in an asset later for just the action whose wording you want to measure.</p>
@@ -346,11 +346,24 @@ footer p{max-width:74ch}
   <p class="body">Whichever door you use, the fields are the same. The <span class="mono">Id</span> becomes the literal string the model is allowed to emit. The description is the only thing the model reads about this action, which is why its length is checked: an emphatic paragraph on one option measurably drags a small model toward that option.</p>
 
   <figure>
-    <div class="fig"><div class="figbar">Figure 3 · The Action Definition asset<span class="tag">created 3–6 times per agent</span></div>
+    <div class="fig"><div class="figbar">Figure 3 · The same action, through either front door<span class="tag">DR-011 · both land in one registry</span></div>
     <div class="figbody">
-      <div class="cols" style="gap:16px">
+      <div class="cols" style="gap:16px;align-items:stretch">
+        <div>
+          <div class="filetab">VillageGuard.cs — the code door</div>
+          <pre style="min-height:238px"><b>[AgentAction</b>(<u>"move_to"</u>,
+    <u>"Walk to a named place."</u>,
+    RequiresTarget = <b>true</b>)<b>]</b>
+<b>[Example</b>(<u>"Head over to the {0}."</u>,
+    <u>"tower"</u>, <u>"bridge"</u>)<b>]</b>
+<b>public void</b> MoveTo(AgentContext ctx,
+                   Transform target)
+    =&gt; nav.SetDestination(target.position);</pre>
+          <div class="help" style="margin:10px 0 0"><span class="ico">✓</span><div><b>Zero assets.</b> The whole agent can be one file. This is the shortest path to something running, and the shape a Unity developer already writes.</div></div>
+          <div class="help warn" style="margin:8px 0 0"><span class="ico">▲</span><div>Changing that description means a recompile, and the evaluation harness cannot vary it between arms.</div></div>
+        </div>
         <div class="win">
-          <div class="wbar"><div class="tabx">Inspector</div></div>
+          <div class="wbar"><div class="tabx">Inspector — the asset door</div></div>
           <div class="chdr"><span>▾</span><span>◆ move_to</span><span class="hint" style="margin-left:auto">Agenerela Action Definition</span></div>
           <div class="r"><span class="k">Id</span><div class="f mono">move_to</div><span class="hint">snake_case · this exact string is what the model emits</span></div>
           <div class="r" style="align-items:flex-start"><span class="k" style="margin-top:4px">Description</span><div class="f ta">Walk to a named place.</div></div>
@@ -362,22 +375,32 @@ footer p{max-width:74ch}
           <div class="help"><span class="ico">▸</span><div><b>Preview:</b> <span class="mono">Player: "Head over to the tower." → {"action":"move_to","target":"tower","statement":"On my way."}</span></div></div>
           <div class="help warn"><span class="ico">▲</span><div>Sensible targets are listed by hand because blind rotation produced <span class="mono">"Pick up the Blacksmith"</span> — a nonsense demonstration that teaches the model nonsense.</div></div>
         </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:16px;align-items:center">
+        <div class="card" style="text-align:center;border-style:dashed"><span class="mono" style="font-size:13px">[AgentAction]</span><div class="hint" style="margin-top:4px">attributed method</div></div>
+        <div class="card" style="text-align:center;border-style:dashed"><span class="mono" style="font-size:13px">move_to.asset</span><div class="hint" style="margin-top:4px">ScriptableObject</div></div>
+        <div class="card strong" style="text-align:center"><span class="mono" style="font-size:13px">ActionDefinition</span><div class="hint" style="margin-top:4px">one plain type, in the registry</div></div>
+      </div>
+      <div class="help acc" style="margin:14px 0 0"><span class="ico">◆</span><div><b>Nothing downstream can tell which door was used.</b> The schema, the guards, the log and the eval harness only ever see the registry — which is what makes two front doors affordable rather than two frameworks. <b>If both declare the same id on one agent, the asset wins</b>, so you can start in code and drop in an asset later for only the action whose wording you want to measure.</div></div>
+
+      <div class="cols" style="margin-top:16px">
         <div>
           <h4>Why each field exists</h4>
           <ul class="notes" style="grid-template-columns:1fr;margin-top:8px">
             <li><span class="cn">1</span><div><b>Id</b>Goes straight into the schema enum. If it is not in the enum, the model physically cannot emit it.</div></li>
             <li><span class="cn">2</span><div><b>Description</b>One short clause. Length parity between actions is a measured accuracy rule, not a style preference.</div></li>
             <li><span class="cn">3</span><div><b>Requires target</b>Decides whether <span class="mono">no_target</span> is accepted for this action, and whether the grounding guard runs.</div></li>
-            <li><span class="cn">4</span><div><b>Example utterance</b>Feeds the few-shot block — the single largest accuracy lever we measured, +35 points. Never reuse an evaluation prompt here.</div></li>
+            <li><span class="cn">4</span><div><b>Example stimulus</b>Feeds the few-shot block — the single largest accuracy lever we measured, +35 points. Never reuse an evaluation prompt here.</div></li>
           </ul>
-          <div class="callbox" style="margin-top:14px">
-            <h4 style="margin-bottom:8px">The one action nobody authors</h4>
-            <p style="margin:0;font-size:13.5px;color:var(--ink2)"><span class="chip solid">none</span> is added by the framework, always last in the enum, always offered, and cannot be deleted or reworded. Last so it reads as a fallback rather than a default. A developer who forgets it cannot break their agent, and one who writes an emphatic description for it cannot bias the model — because they never get to write one.</p>
-          </div>
+        </div>
+        <div class="callbox">
+          <h4 style="margin-bottom:8px">The one action nobody authors</h4>
+          <p style="margin:0;font-size:13.5px;color:var(--ink2)"><span class="chip solid">none</span> is added by the framework, always last in the enum, always offered, and cannot be deleted or reworded. Last so it reads as a fallback rather than a default. A developer who forgets it cannot break their agent, and one who writes an emphatic description for it cannot bias the model — because they never get to write one.</p>
         </div>
       </div>
     </div></div>
-    <figcaption>The asset is pure data. It says nothing about Unity, nothing about this scene, and nothing about how walking is implemented — that is step 05.</figcaption>
+    <figcaption>Either door produces pure data. Neither says anything about Unity, this scene, or how walking is implemented — that is step 05.</figcaption>
   </figure>
 
   <h3 style="margin:30px 0 10px">Step 04 — One Agent Profile per kind of agent</h3>
@@ -422,9 +445,25 @@ footer p{max-width:74ch}
   <p class="body"><b>A handler is never required to be its own file.</b> Three actions as three methods on one <span class="mono">VillageGuard.cs</span> is the expected shape for a scene NPC — which is what the demo's script already is. Attributed methods, delegates, plain classes and MonoBehaviours are all adapted to the same <span class="mono">IActionHandler</span>. The separate-class version below is just the verbose end of the range, for a handler with enough state to deserve its own file.</p>
 
   <figure>
-    <div class="fig"><div class="figbar">Figure 5 · A handler — the developer's own code<span class="tag">Assets/Village/Handlers/MoveToHandler.cs</span></div>
+    <div class="fig"><div class="figbar">Figure 5 · Two shapes of the same handler<span class="tag">compact is the common case</span></div>
     <div class="figbody">
-      <div class="filetab">MoveToHandler.cs</div>
+      <div class="filetab">VillageGuard.cs — three actions, one file</div>
+      <pre><b>public class</b> VillageGuard : MonoBehaviour
+{
+    [SerializeField] NavMeshAgent nav;
+
+    <b>[AgentAction</b>(<u>"move_to"</u>, <u>"Walk to a named place."</u>, RequiresTarget = <b>true</b>)<b>]</b>
+    <b>public void</b> MoveTo(AgentContext ctx, Transform t) =&gt; nav.SetDestination(t.position);
+
+    <b>[Available</b>(<u>"move_to"</u>)<b>]</b>   <i>// state masking: not offered while already walking</i>
+    <b>public bool</b> CanMove() =&gt; !nav.pathPending &amp;&amp; nav.remainingDistance &lt; 0.2f;
+
+    <b>[AgentAction</b>(<u>"follow_player"</u>, <u>"Walk with the person who asked."</u>)<b>]</b>
+    <b>public void</b> Follow(AgentContext ctx) =&gt; follower.Begin(ctx.Asker);
+}</pre>
+      <div class="help acc" style="margin:12px 0 16px"><span class="ico">◆</span><div><b>This is the expected shape for a scene NPC</b> — and it is what the demo's <span class="mono">VillageGuard.cs</span> already is. The verbose version below is the other end of the range: one class per action, for a handler with enough state to deserve its own file. Both reach the same <span class="mono">IActionHandler</span>.</div></div>
+
+      <div class="filetab">MoveToHandler.cs — the same action, given its own class</div>
       <pre><i>using</i> Agenerela; <i>using</i> UnityEngine; <i>using</i> UnityEngine.AI;
 
 <i>// ActionHandlerBehaviour is a MonoBehaviour we ship that implements IActionHandler,</i>
@@ -451,7 +490,7 @@ footer p{max-width:74ch}
         <div class="card strong"><h4>The extension point</h4><p style="margin:0;font-size:13.5px;color:var(--ink2)">A third method on the same interface lets a developer add a game-specific guard — line of sight, cooldown, faction rules — that runs in the same pipeline as ours and shows up in the Decision Log beside them.</p></div>
       </div>
     </div></div>
-    <figcaption><span class="mono">ActionHandlerBehaviour</span> is a proposal — see open decision 1. The two-method shape of <span class="mono">IActionHandler</span> is settled in the build plan.</figcaption>
+    <figcaption>Both shapes are settled in DR-011: an attributed method, a delegate, a plain class and a <span class="mono">MonoBehaviour</span> are all adapted to the same two-method <span class="mono">IActionHandler</span>. A country with no GameObject uses the plain-class form.</figcaption>
   </figure>
 
   <h3 style="margin:30px 0 10px">Step 06 — The GameObject</h3>
@@ -503,11 +542,68 @@ footer p{max-width:74ch}
     </div></div>
   </figure>
 
+  <h3 style="margin:30px 0 10px">The other half of step 06 — what the agent notices</h3>
+  <p class="body">An agent needs two things from the world: the set of things it may <em>name</em>, and the facts it currently <em>knows</em>. Those come from the same component. An object a guard can notice and an object it can refer to are the same object, so <span class="mono">Targetable</span> carries both its id and its one line of description — which is what guarantees the sentence the agent reads and the id it may choose can never drift apart.</p>
+
+  <figure>
+    <div class="fig"><div class="figbar">Figure 7 · One component, two jobs<span class="tag">DR-012 + DR-014</span></div>
+    <div class="figbody">
+      <div class="cols" style="gap:16px;align-items:start">
+        <div class="win">
+          <div class="wbar"><div class="tabx">Inspector</div></div>
+          <div class="chdr"><span class="cb">✓</span><span>Tower</span><span class="hint" style="margin-left:auto">Transform · Mesh · <b style="color:var(--ink)">Targetable</b></span></div>
+          <div class="r"><span class="k">Id</span><div class="f mono">tower</div><span class="hint">explicit, never from the object name</span></div>
+          <div class="r" style="align-items:flex-start"><span class="k" style="margin-top:4px">Description</span><div class="f ta">The watchtower door stands open.</div></div>
+          <div class="r"><span class="k">Category</span><div class="f dd">landmark</div></div>
+          <div class="r"><span class="k">Targetable now</span><span class="cb">✓</span><span class="hint">a sealed gate stops being nameable without being destroyed</span></div>
+          <div class="help warn"><span class="ico">▲</span><div>Auto-deriving the id from <span class="mono">GameObject.name</span> would give <span class="mono">Training Dummy (1)</span> — a bad enum value, and one the lexical guard cannot match.</div></div>
+        </div>
+        <div>
+          <h4 style="margin-bottom:10px">How the two lists get built, every decision</h4>
+          <div style="display:grid;gap:8px">
+            <div class="card" style="padding:11px 13px"><b style="font-size:13.5px">Targets</b><div class="hint" style="margin-top:4px;line-height:1.5">Query from this agent — radius, layer, category. Nearest first, then capped. <span class="mono">no_target</span> appended.</div><div class="chips" style="margin-top:7px"><span class="chip solid">tower</span><span class="chip solid">bridge</span><span class="chip solid">training_dummy</span><span class="chip">no_target</span></div></div>
+            <div class="card" style="padding:11px 13px"><b style="font-size:13.5px">Observations</b><div class="hint" style="margin-top:4px;line-height:1.5">Each source pulled in order, then capped. What was dropped is recorded.</div>
+              <div style="margin-top:7px;font-size:12.5px;line-height:1.7;color:var(--ink2)">
+                <div>· <span class="mono" style="color:var(--ink3)">proximity</span> &nbsp;"The watchtower door stands open."</div>
+                <div>· <span class="mono" style="color:var(--ink3)">proximity</span> &nbsp;"The bridge is crowded."</div>
+                <div>· <span class="mono" style="color:var(--ink3)">per call</span> &nbsp;"It is daytime."</div>
+                <div style="color:var(--ink4)">· 6 more dropped by the cap</div>
+              </div>
+            </div>
+          </div>
+          <div class="help" style="margin:12px 0 0"><span class="ico">⌁</span><div><b>The cap is not tidiness.</b> Observations are the last thing the model reads before the question — the most powerful block in the prompt and the worst place for noise. The measured good arm ran 143 tokens against a 332-token baseline.</div></div>
+        </div>
+      </div>
+
+      <div style="margin-top:18px;border-top:1.5px solid var(--line3);padding-top:16px">
+        <h4 style="margin-bottom:10px">Where a summarising model is allowed to sit</h4>
+        <div class="cols" style="gap:14px">
+          <div class="card" style="border-color:var(--ok);border-width:2px">
+            <span class="pill ok" style="margin-bottom:8px">supported</span>
+            <p style="margin:0;font-size:13.5px"><b>As one source among others.</b> It compresses a large world state into lines, and the composer treats its output like any other source — ordered, capped, logged.</p>
+            <ul style="margin:9px 0 0;padding-left:18px;font-size:13px;color:var(--ink2);line-height:1.5">
+              <li>Cached and invalidated by an event — per turn, per world change</li>
+              <li>Registered ids emitted verbatim</li>
+              <li>Recorded as part of the arm in an eval run</li>
+            </ul>
+          </div>
+          <div class="card" style="border-color:var(--warn);border-width:2px;border-style:dashed">
+            <span class="pill warn" style="margin-bottom:8px">rejected</span>
+            <p style="margin:0;font-size:13.5px"><b>As a stage before every decision.</b> It doubles latency against a ≈21 s ceiling for 30 agents, and prose paraphrase turns <span class="mono">tower</span> into "the big stone tower" — which silently disables the guard that took a 2B model from 60% to 95%.</p>
+            <p style="margin:9px 0 0;font-size:13px;color:var(--ink2)">It also makes eval inputs non-deterministic, against a noise floor of about 10 points.</p>
+          </div>
+        </div>
+        <div class="help acc" style="margin:14px 0 0"><span class="ico">◆</span><div><b>Whether summarised beats templated is a Phase 4 A/B, not an argument.</b> Same prompt set, same model, same session, one thing changed. Until that runs, templated lines are the default because they are free, deterministic and keep the ids intact.</div></div>
+      </div>
+    </div></div>
+    <figcaption>A country with no Transform has nothing to query from, so it supplies its own target set and its own observations. Same interfaces, different source.</figcaption>
+  </figure>
+
   <h3 style="margin:30px 0 10px">Step 07 — Decide when to ask</h3>
   <p class="body">The framework never picks the moment and never classifies the reason (DR-008). There is no "dialogue mode" and no enum of situations. The developer calls <span class="mono">DecideAsync</span> from whatever already exists in their game: a submit button, an end-turn loop, a perception event, a timer. Three call sites, one API:</p>
 
   <figure>
-    <div class="fig"><div class="figbar">Figure 7 · Three ways the same API is called<span class="tag">your code · your trigger · your label</span></div>
+    <div class="fig"><div class="figbar">Figure 8 · Three ways the same API is called<span class="tag">your code · your trigger · your label</span></div>
     <div class="figbody">
       <div class="cols3">
         <div>
@@ -550,16 +646,18 @@ footer p{max-width:74ch}
   _ = guard.Agent.DecideAsync(
       <u>"Smoke over the north field."</u>,
       <b>new</b> DecideOptions {
-        Label = <u>"Event"</u> });
+        Label = <u>"Event"</u>,
+        Priority = <b>Background</b> });
 
-  <i>// same agent, same actions,</i>
-  <i>// no player involved at all</i>
+  <i>// nobody is waiting on this,</i>
+  <i>// so a player's question jumps it</i>
 }</pre>
         </div>
       </div>
-      <div class="help" style="margin:14px 0 0"><span class="ico">◆</span><div><b>The label is a free string you choose per call.</b> The framework passes it through and never reads it. That is deliberate: the moment we ship an enum of situations, every game that does not fit it has to fight us. <span class="mono">DecideOptions</span> itself is a proposed shape — the build plan reserves the parameter, the fields are ours to settle.</div></div>
+      <div class="help" style="margin:14px 0 0"><span class="ico">◆</span><div><b>The label is a free string you choose per call.</b> The framework passes it through and never reads it. That is deliberate: the moment we ship an enum of situations, every game that does not fit it has to fight us.</div></div>
+      <div class="help acc" style="margin:10px 0 0"><span class="ico">⚑</span><div><b>Priority is the one field worth setting deliberately (DR-015).</b> Player-facing by default, so a developer who never thinks about it gets the responsive behaviour. Only ambient work opts into waiting. Without it every call looks identical to the queue, and at ≈21 s for 30 agents the scheduler cannot tell a player's question from background chatter — which is also why <b>a behaviour-tree node calling this is a supported integration</b>, not a workaround: it sets its own priority like anything else.</div></div>
     </div></div>
-    <figcaption>All three go through the same queue, the same schema build, the same guards and the same log.</figcaption>
+    <figcaption>All three go through the same queue, the same schema build, the same guards and the same log. <span class="mono">DecideOptions</span>' exact fields are still ours to settle; the build plan reserves the parameter.</figcaption>
   </figure>
 </section>
 
@@ -569,7 +667,7 @@ footer p{max-width:74ch}
   <p class="seclede">This is the picture to hold onto. Three lanes: the developer's code, our framework, and the model. The developer writes the first and the fifth step. Everything between them is what they installed the package for.</p>
 
   <figure>
-    <div class="fig"><div class="figbar">Figure 8 · One decision, end to end<span class="tag">"Go to the tower." → the guard walks</span></div>
+    <div class="fig"><div class="figbar">Figure 9 · One decision, end to end<span class="tag">"Go to the tower." → the guard walks</span></div>
     <div class="figbody">
       <div class="lanes">
         <div class="lanelbl you">Your game</div>
@@ -577,7 +675,7 @@ footer p{max-width:74ch}
 
         <div class="lanelbl">Framework</div>
         <div class="lanebox">
-          <div class="step2"><span class="snum">2</span><div><b>It builds the menu, right now</b><p>Asks every registered handler <span class="mono">IsAvailable</span>, then assembles a schema from what survived: the action enum with <span class="mono">none</span> last, the target enum with <span class="mono">no_target</span>, the few-shot block, the observations. Field order <span class="mono">action → target → statement</span>, which is worth 11.7 points on its own.</p>
+          <div class="step2"><span class="snum">2</span><div><b>It builds the menu, right now</b><p>Asks every registered handler <span class="mono">IsAvailable</span>; queries the scene for <span class="mono">Targetable</span>s this agent can reach; pulls each observation source and caps the result. Then assembles a schema from what survived: the action enum with <span class="mono">none</span> last, the target enum with <span class="mono">no_target</span>, the few-shot block, the observations. Field order <span class="mono">action → target → statement</span>, which is worth 11.7 points on its own.</p>
           <div class="chips" style="margin-top:8px"><span class="chip solid">follow_player</span><span class="chip solid">move_to</span><span class="chip solid">none</span><span class="chip off">attack_target</span><span class="hint">— already walking? then move_to would be missing too</span></div></div></div>
         </div>
 
@@ -618,7 +716,7 @@ footer p{max-width:74ch}
   <p class="seclede">The question came up because most Unity AI packages want a singleton in the scene. Ours must not require one — a country in GreyBoxStrategy has no Transform, and an EditMode test has no scene at all. So there are two ownership patterns, and the shared plumbing belongs to neither.</p>
 
   <figure>
-    <div class="fig"><div class="figbar">Figure 9 · Who owns an agent<span class="tag">both patterns, one API</span></div>
+    <div class="fig"><div class="figbar">Figure 10 · Who owns an agent<span class="tag">both patterns, one API</span></div>
     <div class="figbody">
       <div class="cols">
         <div class="card strong">
@@ -657,63 +755,79 @@ footer p{max-width:74ch}
 <!-- ============ FILES ============ -->
 <section class="sec" id="tree">
   <div class="sechead"><h2>What the developer ends up with on disk</h2><span class="pill">one guard, three actions</span></div>
-  <p class="seclede">Six assets and four scripts. Nothing generated, nothing copied out of our package, nothing edited inside it.</p>
+  <p class="seclede">Two trees, same guard, same three actions, same behaviour at run time. Which one you end up with is a choice about who edits the wording, not about what the framework can do.</p>
 
   <figure>
-    <div class="fig"><div class="figbar">Figure 10 · The project tree after nine steps<span class="tag">their project · our package is untouched</span></div>
+    <div class="fig"><div class="figbar">Figure 11 · The smallest agent, and the fully authored one<span class="tag">DR-011 · both are supported</span></div>
     <div class="figbody">
-      <div class="cols" style="gap:20px">
-        <div style="overflow-x:auto">
+      <div class="cols" style="gap:18px;align-items:start">
+        <div>
+          <div style="display:flex;align-items:baseline;gap:9px;margin-bottom:9px"><span class="pill ok">2 files</span><span class="hint">everything in code</span></div>
+          <div style="overflow-x:auto">
 <pre class="tree">Assets/
   Village/
-    <b>Village.asmdef</b>          <i>references Agenerela</i>
-    Agents/
-      Actions/
-        <b>move_to.asset</b>       <i>step 03</i>
-        <b>follow_player.asset</b>
-        <b>attack_target.asset</b>
-      <b>VillageGuard.asset</b>     <i>step 04 · the profile</i>
-      <b>OllamaLocal.asset</b>      <i>step 02 · provider config</i>
-    Handlers/
-      <b>MoveToHandler.cs</b>       <i>step 05</i>
-      <b>FollowHandler.cs</b>
-      <b>AttackHandler.cs</b>
-    <b>GuardDialogue.cs</b>         <i>step 07 · the trigger</i>
+    <b>Village.asmdef</b>       <i>references Agenerela</i>
+    <b>VillageGuard.cs</b>      <i>steps 03 + 05</i>
+                         <i>actions and handlers</i>
+    <b>GuardDialogue.cs</b>     <i>step 07 · the trigger</i>
   Scenes/
-    <b>Village.unity</b>            <i>step 06 · the GameObject</i>
+    <b>Village.unity</b>        <i>step 06 · the GameObject</i>
+                         <i>+ Targetable on 3 objects</i>
 
 Packages/
-  <b>manifest.json</b>             <i>step 01 · one line</i>
+  <b>manifest.json</b>          <i>step 01 · one line</i>
 </pre>
+          </div>
+          <div class="help" style="margin:10px 0 0"><span class="ico">✓</span><div>No action assets, no profile asset, no provider asset — the project default covers the last one. This is the fifteen-minute path.</div></div>
         </div>
         <div>
-          <h4>Reading the tree</h4>
-          <ul class="notes" style="grid-template-columns:1fr;margin-top:8px">
-            <li><span class="cn">1</span><div><b>Assets outnumber scripts</b>Six data files, four code files. Adding a fourth action is one asset and one handler — no framework edit, no enum, no recompile of our package.</div></li>
-            <li><span class="cn">2</span><div><b>Every one gets a .meta</b>Unity writes them when it sees the file. Our repo hygiene check fails a pull request that is missing one.</div></li>
-            <li><span class="cn">3</span><div><b>The asmdef is the boundary</b>Game code references <span class="mono">Agenerela</span> and nothing internal. If a demo needs <span class="mono">InternalsVisibleTo</span>, our public API is wrong.</div></li>
-            <li><span class="cn">4</span><div><b>Nothing lives in our package</b>A developer never opens <span class="mono">com.agenerela.framework/</span>. If they have to, we have a bug.</div></li>
-          </ul>
+          <div style="display:flex;align-items:baseline;gap:9px;margin-bottom:9px"><span class="pill">9 files</span><span class="hint">wording lives in assets</span></div>
+          <div style="overflow-x:auto">
+<pre class="tree">Assets/
+  Village/
+    <b>Village.asmdef</b>
+    Agents/
+      Actions/
+        <b>move_to.asset</b>    <i>step 03</i>
+        <b>follow_player.asset</b>
+        <b>attack_target.asset</b>
+      <b>VillageGuard.asset</b>  <i>step 04 · profile</i>
+      <b>OllamaLocal.asset</b>   <i>step 02 · provider</i>
+    <b>VillageGuard.cs</b>      <i>step 05 · handlers</i>
+    <b>GuardDialogue.cs</b>     <i>step 07 · the trigger</i>
+  Scenes/
+    <b>Village.unity</b>        <i>step 06</i>
+</pre>
+          </div>
+          <div class="help" style="margin:10px 0 0"><span class="ico">◆</span><div>Worth the extra files when a writer edits the descriptions, or when an evaluation run has to swap wording between arms without a recompile.</div></div>
         </div>
       </div>
+
+      <div class="cols" style="margin-top:18px;gap:14px">
+        <div class="card"><h4>You can mix them</h4><p style="margin:0;font-size:13.5px;color:var(--ink2)">Start in the left tree and add a single <span class="mono">move_to.asset</span> when you want to measure that one action's wording. The asset wins on the id; everything else stays in code. Nothing has to be rewritten to cross over.</p></div>
+        <div class="card"><h4>Every file gets a .meta</h4><p style="margin:0;font-size:13.5px;color:var(--ink2)">Unity writes them when it sees the file, and our hygiene check fails a pull request missing one. Make files from inside Unity, not from an IDE or GitHub.</p></div>
+        <div class="card"><h4>Nothing lives in our package</h4><p style="margin:0;font-size:13.5px;color:var(--ink2)">The asmdef references <span class="mono">Agenerela</span> and nothing internal. A developer never opens <span class="mono">com.agenerela.framework/</span> — if they have to, that is our bug, not theirs.</p></div>
+      </div>
     </div></div>
+    <figcaption>Adding a fourth action is one method, or one asset. Never an edit to framework source, never an enum, never a recompile of the package.</figcaption>
   </figure>
 </section>
 
 <!-- ============ WINDOWS ============ -->
 <section class="sec" id="windows">
-  <div class="sechead"><h2>The windows this workflow needs</h2><span class="pill">4 designed · 2 gaps · 1 proposal</span></div>
-  <p class="seclede">Walking the nine steps is how you find out which screens are missing. Four of ours already have wireframes from the sketch lab. Two steps have no screen at all, and one screen exists only to make the Phase 5 target reachable.</p>
+  <div class="sechead"><h2>The windows this workflow needs</h2><span class="pill">4 drawn · 3 to draw</span></div>
+  <p class="seclede">Walking the nine steps is how you find out which screens are missing. Four already have wireframes from the sketch lab. Three do not: provider config and the <span class="mono">Targetable</span> component both now have decisions behind them but only a first sketch here, and the wizard is still a proposal.</p>
 
   <div class="scrollx">
     <table>
       <thead><tr><th>Step</th><th>Window</th><th>Kind</th><th>Status</th><th>Phase</th></tr></thead>
       <tbody>
         <tr><td>01</td><td><b>Package Manager</b> — confirms the package is in</td><td>Unity's own</td><td><span class="pill">nothing to build</span></td><td>—</td></tr>
-        <tr><td>02</td><td><b>Provider config</b> + Project Settings page</td><td>Asset inspector + settings</td><td><span class="pill dash" style="border-color:var(--warn);color:var(--warn)">gap — figure 2 is the first sketch</span></td><td>2</td></tr>
-        <tr><td>03</td><td><b>Action Definition</b> inspector</td><td>Asset inspector</td><td><span class="pill dash" style="border-color:var(--warn);color:var(--warn)">gap — implied by screen 1, never drawn alone</span></td><td>1 → 5</td></tr>
+        <tr><td>02</td><td><b>Provider config</b> + Project Settings page</td><td>Asset inspector + settings</td><td><span class="pill warn">to draw — DR-013 settled the shape, figure 2 is the sketch</span></td><td>2</td></tr>
+        <tr><td>03</td><td><b>Action Definition</b> inspector</td><td>Asset inspector</td><td><span class="pill warn">to draw — implied by screen 1, never drawn alone</span></td><td>1 → 5</td></tr>
         <tr><td>04</td><td><b>Agent Profile &amp; Actions</b></td><td>Asset inspector</td><td><span class="pill ok">screen 1</span></td><td>1 → 5</td></tr>
-        <tr><td>06</td><td><b>Agent Behaviour</b></td><td>Component inspector</td><td><span class="pill ok">screen 2</span></td><td>2 → 5</td></tr>
+        <tr><td>06</td><td><b>Agent Behaviour</b></td><td>Component inspector</td><td><span class="pill ok">screen 2</span> <span class="hint">needs redrawing — targets and handler binding both changed</span></td><td>2 → 5</td></tr>
+        <tr><td>06</td><td><b>Targetable</b> — on every nameable object</td><td>Component inspector</td><td><span class="pill warn">to draw — DR-014, figure 7 is the sketch</span></td><td>1 → 2</td></tr>
         <tr><td>08</td><td><b>Decision Log</b></td><td>Editor window</td><td><span class="pill ok">screen 3</span></td><td>5</td></tr>
         <tr><td>09</td><td><b>Evaluation Report</b></td><td>Editor window</td><td><span class="pill ok">screen 4</span></td><td>4</td></tr>
         <tr><td>03–06</td><td><b>New Agent wizard</b> — scaffolds profile, actions and handler stubs in one dialog</td><td>Modal, from Create menu</td><td><span class="pill acc">proposed — see below</span></td><td>5</td></tr>
@@ -722,7 +836,7 @@ Packages/
   </div>
 
   <figure style="margin-top:24px">
-    <div class="fig"><div class="figbar">Figure 11 · The wizard that makes the Phase 5 target reachable<span class="tag">proposed · Create ▸ Agenerela ▸ New Agent…</span></div>
+    <div class="fig"><div class="figbar">Figure 12 · The wizard that makes the Phase 5 target reachable<span class="tag">proposed · Create ▸ Agenerela ▸ New Agent…</span></div>
     <div class="figbody">
       <div class="cols" style="gap:16px">
         <div class="win">
@@ -744,7 +858,7 @@ Packages/
         <div>
           <h4>Why this earns its place</h4>
           <p style="font-size:14px">Phase 5's definition of done is a real test on a real teammate: <em>a developer with zero framework knowledge builds a working three-action agent in an empty scene in under fifteen minutes, without editing framework source.</em></p>
-          <p style="font-size:14px">Nine steps across two asset types, an interface and a scene component is not a fifteen-minute path for someone who has never seen it. The wizard collapses steps 03 through 06 into one dialog and leaves behind exactly the files in figure 10 — the same assets, editable afterwards, nothing hidden or generated-and-locked.</p>
+          <p style="font-size:14px">Nine steps across two asset types, an interface and a scene component is not a fifteen-minute path for someone who has never seen it. The wizard collapses steps 03 through 06 into one dialog and leaves behind exactly the files in figure 11 — the same assets, editable afterwards, nothing hidden or generated-and-locked.</p>
           <p style="font-size:14px;margin-bottom:0">It is also the honest answer to "what does this framework feel like": if the first five minutes are filling in a form and pressing play, we have a product. If they are reading a build plan, we have a library.</p>
           <div class="help" style="margin:14px 0 0"><span class="ico">⌁</span><div>Cost is one Editor window over APIs that will already exist. Worth building only after the data shapes underneath have stopped moving — which is exactly why Phase 5 is last.</div></div>
         </div>
@@ -811,7 +925,7 @@ Packages/
       <li><b>DR-013</b> provider config asset + resolution chain</li>
       <li><b>DR-014</b> <span class="mono">Targetable</span> discovery instead of typed lists</li>
       <li><b>DR-015</b> priority on the call; optional ticker</li>
-      <li>Still only proposed: the <b>New Agent wizard</b> (figure 11) and the on-demand runtime service (figure 9)</li>
+      <li>Still only proposed: the <b>New Agent wizard</b> (figure 12) and the on-demand runtime service (figure 10)</li>
     </ul></div>
   </div>
   <div class="callbox" style="margin-top:20px">
