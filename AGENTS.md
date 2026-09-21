@@ -106,9 +106,13 @@ version or git URL — and uses only the framework's public API. Framework work 
 - Any accuracy claim has a control arm and is recorded in `docs/llm-wiki/findings.md`
 
 **Never merge a pull request with a failing CI check.** `Repo hygiene` catches missing
-`.meta` files, broken JSON and committed generated files in every Unity project, plus a
-project on the wrong Unity version or a game not loading the framework from this repo; a
-red check is a blocker, not a warning.
+`.meta` files, a committed `.meta` whose GUID changed, broken JSON and committed generated
+files in every Unity project, plus a `.gitignore` rule that ignores tracked files, a project
+on the wrong Unity version or a game not loading the framework from this repo; a red check
+is a blocker, not a warning. When it reports a missing or changed `.meta` for an asset that
+already existed, restore the committed one (`git checkout origin/test -- <path>.meta`).
+Never commit the copy Unity regenerates: its GUID is new, so every reference to the asset
+stays broken.
 
 **Reviewing a pull request** follows [`REVIEWING.md`](REVIEWING.md): the checks in order,
 the four finding labels, and the summary template. A green check is not a review, because
