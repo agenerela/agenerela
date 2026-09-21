@@ -32,16 +32,24 @@ namespace Agenerela
                 return false;
             }
 
-            if (id != id.ToLower())
+            // Invariant, not the current culture: under a Turkish locale 'I'.ToLower()
+            // is the dotless i (U+0131), so a culture-sensitive compare classifies ids by
+            // whichever machine happens to open the asset.
+            if (id != id.ToLowerInvariant())
             {
                 problem = $"Id '{id}' cannot have uppercase characters";
                 return false;
             }
 
-            if (id.Contains(' '))
+            // Any whitespace, not just ' '. A tab is invisible in the Inspector but the
+            // id goes verbatim into the schema enum, so it has to be caught here.
+            foreach (char c in id)
             {
-                problem = $"Id '{id}' cannot have spaces";
-                return false;
+                if (char.IsWhiteSpace(c))
+                {
+                    problem = $"Id '{id}' cannot have whitespace";
+                    return false;
+                }
             }
 
             return true;
