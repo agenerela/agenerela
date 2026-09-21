@@ -37,8 +37,11 @@ Without the GitHub CLI: `git fetch origin pull/<number>/head:pr-<number>`, then
    git diff --stat origin/test...HEAD
    ```
 
-3. **Scan the Unity plumbing.** Each of these must print nothing, or every line it prints
-   needs a reason in the description.
+3. **Scan the Unity plumbing.** The first two commands must print nothing. `Repo hygiene`
+   runs both and fails the pull request if either prints a line, so on a green check they
+   are already clean; they are here to check a branch on your own machine, or before its CI
+   has finished. The third may print lines, but every line needs a reason in the
+   description.
 
    ```bash
    git diff --diff-filter=M -G'^guid:' --name-only origin/test...HEAD -- '*.meta'
@@ -177,11 +180,12 @@ tells everyone the pull request is still broken.
 Each one is here because skipping it costs something nothing else catches. Before dropping
 one, read what it is for.
 
-- **The file list and the GUID scan.** CI checks that every asset *has* a `.meta`, not that
-  it is the *same* `.meta`. Delete the metas and let Unity regenerate them, and every check
-  passes while every reference to those assets breaks: the render pipeline, the build's
-  scene list, a scene's volume profile. The changed-files list is often the only place it
-  shows.
+- **The file list and the GUID scan.** Delete the metas and let Unity regenerate them, and
+  every reference to those assets breaks: the render pipeline, the build's scene list, a
+  scene's volume profile. Unity reports nothing until someone opens the thing that broke.
+  CI used to check only that every asset *has* a `.meta`, and passed exactly this; it now
+  also fails on a changed GUID. The changed-files list still catches what no check knows to
+  look for, such as a scene the author does not own or a setting Unity rewrote.
 - **Compile it yourself.** CI never compiles C#, so a duplicate class, a missing `using` or a
   misspelled type all pass it. Until GameCI arrives in Phase 3 (build plan §6.3), the
   reviewer's Unity is the only compiler between a branch and `test`.
