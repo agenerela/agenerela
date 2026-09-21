@@ -341,7 +341,7 @@ footer p{max-width:74ch}
   <p class="seclede">Describing what an agent is and what it can do. Nothing here mentions the scene, a handler or a model. It can be done entirely in one script, or entirely in assets a designer edits without opening C# — and the framework cannot tell the difference afterwards.</p>
 
   <h3 style="margin-bottom:10px">Step 03 — Define each verb</h3>
-  <p class="body"><b>Two ways to do this, and both are supported (DR-011).</b> In code, each action is a tagged method on one script — no assets at all, and the minimum agent becomes one file. Or as an asset: right-click in the Project window → <span class="mono">Create ▸ Agenerela ▸ Action Definition</span>. Both produce the same <span class="mono">ActionDefinition</span> in the same registry, and nothing downstream can tell which was used. Where both define the same id, the asset wins — so you can start in code and drop in an asset later for just the action whose wording you want to measure.</p>
+  <p class="body"><b>Two ways to do this, and both are supported (DR-011).</b> In code, each action is a tagged method on one script — no assets at all, and the minimum agent becomes one file. Or as an asset: right-click in the Project window → <span class="mono">Create ▸ Agenerela ▸ Action</span>. Both produce the same <span class="mono">ActionDefinition</span> in the same registry, and nothing downstream can tell which was used. Where both define the same id, the asset wins — so you can start in code and drop in an asset later for just the action whose wording you want to measure.</p>
   <div class="help acc" style="margin:0 0 16px"><span class="ico">◆</span><div><b>Why keep the asset path at all:</b> description and example wording is what Phase 4 A/B-tests. Text inside a C# attribute cannot be swapped between arm A and arm B without a recompile, so the harness could not drive it — and no writer on the team could edit it.</div></div>
   <p class="body">Whichever door you use, the fields are the same. The <span class="mono">Id</span> becomes the literal string the model is allowed to emit. The description is the only thing the model reads about this action, which is why its length is checked: an emphatic paragraph on one option measurably drags a small model toward that option.</p>
 
@@ -364,7 +364,7 @@ footer p{max-width:74ch}
         </div>
         <div class="win">
           <div class="wbar"><div class="tabx">Inspector — the asset door</div></div>
-          <div class="chdr"><span>▾</span><span>◆ move_to</span><span class="hint" style="margin-left:auto">Agenerela Action Definition</span></div>
+          <div class="chdr"><span>▾</span><span>◆ move_to</span><span class="hint" style="margin-left:auto">Agenerela Action Definition Asset</span></div>
           <div class="r"><span class="k">Id</span><div class="f mono">move_to</div><span class="hint">snake_case · this exact string is what the model emits</span></div>
           <div class="r" style="align-items:flex-start"><span class="k" style="margin-top:4px">Description</span><div class="f ta">Walk to a named place.</div></div>
           <div class="r"><span class="k"></span><div class="chips"><span class="chip solid">21 characters</span><span class="hint">others in this profile: 19, 24, 17 — comparable ✓</span></div></div>
@@ -421,7 +421,7 @@ footer p{max-width:74ch}
         <div class="grid2"><span class="mono">move_to</span><div class="f">Walk to a named place.</div><span class="hint">needs target</span></div>
         <div class="grid2"><span class="mono">attack_target</span><div class="f">Strike a named thing.</div><span class="hint">needs target</span></div>
         <div class="grid2"><span class="mono" style="color:var(--ink3)">none</span><div class="f" style="color:var(--ink3);border-style:dashed">Do nothing.</div><span class="hint">built in · locked · always last</span></div>
-        <div class="r"><span class="k"></span><span class="btnw">+ Add action</span><span class="hint">drag an Action Definition asset in</span></div>
+        <div class="r"><span class="k"></span><span class="btnw">+ Add action</span><span class="hint">drag an Action asset in</span></div>
         <div class="help acc"><span class="ico">✓</span><div><b>Ready.</b> 3 authored actions + <span class="mono">none</span>. Descriptions 19–24 characters — comparable. Every id unique.</div></div>
       </div>
       <ul class="notes">

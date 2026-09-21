@@ -528,8 +528,8 @@ either writes the action in code, or authors it as an asset:
 public void MoveTo(AgentContext ctx, Transform target) => nav.SetDestination(target.position);
 
 // Front door 2 — asset. A thin ScriptableObject wrapper holding one ActionDefinition.
-[CreateAssetMenu(menuName = "Agenerela/Action Definition")]
-public class ActionDefinitionAsset : ScriptableObject { public ActionDefinition Value; }
+[CreateAssetMenu(menuName = "Agenerela/Action", fileName = "NewAction")]
+public sealed class ActionDefinitionAsset : ScriptableObject { public ActionDefinition Action; }
 ```
 
 Both end as the same `ActionDefinition` in the same registry; nothing downstream — schema,
