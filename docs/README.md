@@ -6,7 +6,7 @@ Everything written down about Agenerela that is not source code.
 |---|---|---|
 | [`FRAMEWORK_BUILD_PLAN.md`](FRAMEWORK_BUILD_PLAN.md) | **The plan of record.** Architecture, the eight build phases with their definitions of done, testing standards, decision records, and Appendix A's measurements carried from the prototype | Before doing any work here — especially before re-trying something Appendix A already measured |
 | [`llm-wiki/`](llm-wiki/README.md) | What we have learned since: [`findings.md`](llm-wiki/findings.md) for measurements taken in this repo, [`environment.md`](llm-wiki/environment.md) for setting a machine up | Setting up, or the day you measure something |
-| [`design/`](design/README.md) | The sitemap and a wireframe of every screen, with the HTML they are rendered from | Building editor tooling or a demo's UI, or arguing with a screen |
+| [`design/`](design/README.md) | The sitemap, a wireframe of every screen with the HTML it is rendered from, and the developer walkthrough that strings them together | Building editor tooling or a demo's UI, or arguing with a screen |
 | [`course/`](course/README.md) | COMP 490 deliverables built as shared pages: requirements, interviews, the sketch lab | Preparing a class deliverable, or looking up what we told the class |
 
 Rules for working in this repo — branches, hard rules, conventions — are in

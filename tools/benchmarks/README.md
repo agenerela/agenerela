@@ -13,6 +13,10 @@ result from these scripts is *provisional* until confirmed in-engine — the two
 have shown different absolute latency numbers for reasons not yet explained (see
 `docs/llm-wiki/findings.md`).
 
+When porting: both scripts name the free-text field `dialogue`, as the prototype did. The
+framework calls it `statement` (DR-008); the rename itself is unmeasured, and scheduled as an
+early Phase 4 A/B.
+
 ## `compare_2b_4b.py`
 
 Runs a focused 20-prompt test in four categories — simple commands, commands with a
@@ -32,7 +36,7 @@ already.
 
 ## `gemini_compare.py`
 
-The same 17-case set against a cloud API. Reads `GEMINI_API_KEY` and `GEMINI_MODEL` from
+A separate 17-case set — the one behind Appendix A's cloud-versus-local row — against a cloud API. Reads `GEMINI_API_KEY` and `GEMINI_MODEL` from
 `.env` at the repo root (gitignored — copy `.env.example`).
 
 ```bash

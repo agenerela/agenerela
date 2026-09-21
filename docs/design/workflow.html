@@ -250,7 +250,7 @@ footer p{max-width:74ch}
         </div>
         <div class="band">
           <div class="bandhd"><span class="num">C</span>Wire it to your game</div>
-          <div class="stepcard"><div class="st"><span class="sn">05</span>Write the handlers</div><p>Your C#, one class per action: when it is legal, and what it does in Unity.</p><div class="kindrow"><span class="kind code">script ×N</span></div></div>
+          <div class="stepcard"><div class="st"><span class="sn">05</span>Write the handlers</div><p>Your C#: when each action is legal, and what it does in Unity. One script can hold them all.</p><div class="kindrow"><span class="kind code">script</span></div></div>
           <div class="stepcard"><div class="st"><span class="sn">06</span>Put it in the scene</div><p>A GameObject with Agent Behaviour, and a <span class="mono">Targetable</span> on anything it may notice or name.</p><div class="kindrow"><span class="kind scene">GameObject</span><span class="kind gui">screen 2</span></div></div>
           <div class="stepcard"><div class="st"><span class="sn">07</span>Decide when to ask</div><p>Your own trigger calls <span class="mono">DecideAsync</span> and says whether anyone is waiting.</p><div class="kindrow"><span class="kind code">script</span></div></div>
         </div>
@@ -279,7 +279,8 @@ footer p{max-width:74ch}
       <div class="filetab">Packages/manifest.json</div>
       <pre>"dependencies": {
   <b>"com.agenerela.framework"</b>: <u>"file:../../../UnityProject/Packages/com.agenerela.framework"</u>,
-  <i>"com.unity.nuget.newtonsoft-json": "3.2.1",  // pulled in by us, not by you</i>
+  <i>// com.unity.nuget.newtonsoft-json 3.2.2 arrives with it: Package Manager</i>
+  <i>// resolves it into packages-lock.json, not into this file</i>
   ...
 }</pre>
       <p class="hint" style="margin-top:10px">Then add <span class="mono">Agenerela</span> to the game's own asmdef, so game code can see the API. No scoped registry, no OpenUPM, no native binaries — the in-process provider that needs those is a separate opt-in package later.</p>
@@ -372,7 +373,7 @@ footer p{max-width:74ch}
           <div class="r"><span class="k"></span><div class="chips"><span class="chip solid">21 characters</span><span class="hint">others in this profile: 19, 24, 17 — comparable ✓</span></div></div>
           <div class="r"><span class="k">Requires target</span><span class="cb">✓</span><span class="hint">so <span class="mono">no_target</span> is not a legal answer with this action</span></div>
           <div class="sub2">Few-shot example</div>
-          <div class="r"><span class="k">Utterance</span><div class="f">Head over to the {0}.</div></div>
+          <div class="r"><span class="k">Example stimulus</span><div class="f">Head over to the {0}.</div></div>
           <div class="r"><span class="k">Sensible targets</span><div class="chips"><span class="chip">tower</span><span class="chip">bridge</span><span class="btnw">+</span></div></div>
           <div class="help"><span class="ico">▸</span><div><b>Preview:</b> <span class="mono">Player: "Head over to the tower." → {"action":"move_to","target":"tower","statement":"On my way."}</span></div></div>
           <div class="help warn"><span class="ico">▲</span><div>Sensible targets are listed by hand because blind rotation produced <span class="mono">"Pick up the Blacksmith"</span> — a nonsense demonstration that teaches the model nonsense.</div></div>
@@ -496,7 +497,7 @@ footer p{max-width:74ch}
   </figure>
 
   <h3 style="margin:30px 0 10px">Step 06 — The GameObject</h3>
-  <p class="body">Screen 2 from the sketch lab. A guard in the scene is an ordinary GameObject — Transform, NavMeshAgent, collider, mesh — with one extra component. That component is four references: which profile, which model, which handler runs which action, and the complete list of things this agent is allowed to name.</p>
+  <p class="body">Screen 2 from the sketch lab. A guard in the scene is an ordinary GameObject — Transform, NavMeshAgent, collider, mesh — with one extra component. That component holds four things: which profile, an optional provider override (blank means the project default), which handler runs each asset-authored action — a code-authored action's method is its own handler — and where its targets come from.</p>
 
   <figure>
     <div class="fig"><div class="figbar">Figure 6 · Agent Behaviour on a scene object<span class="tag">screen 2 · Add Component ▸ Agenerela ▸ Agent Behaviour</span></div>
@@ -612,17 +613,18 @@ footer p{max-width:74ch}
           <div class="filetab">GuardDialogue.cs · a player typed</div>
           <pre><b>async void</b> OnSubmit(<b>string</b> typed)
 {
-  <b>var</b> d = <b>await</b> guard.Agent.DecideAsync(
+  <b>var</b> r = <b>await</b> guard.Agent.DecideAsync(
       typed,
       <b>new</b> DecideOptions {
-        Label = <u>"Player"</u>,
+        StimulusLabel = <u>"Player"</u>,
         Observations = <b>new</b>[] {
           <u>"It is daytime."</u>,
           <u>"The gate is open."</u> }
       });
 
-  bubble.Show(d.Statement);
-  <i>// the handler already ran</i>
+  guard.Agent.Execute(r);
+  bubble.Show(r.Decision?.Statement);
+  <i>// Execute re-checked it first</i>
 }</pre>
         </div>
         <div>
@@ -630,12 +632,14 @@ footer p{max-width:74ch}
           <pre><b>async</b> Task EndTurn()
 {
   <b>foreach</b> (<b>var</b> c <b>in</b> countries)
-    <b>await</b> c.Agent.DecideAsync(
+  {
+    <b>var</b> r = <b>await</b> c.Agent.DecideAsync(
       c.SeasonReport(),
       <b>new</b> DecideOptions {
-        Label = <u>"Report"</u>,
-        Observations = c.Intel()
-      });
+        StimulusLabel = <u>"Report"</u>,
+        Observations = c.Intel() });
+    c.Agent.Execute(r);
+  }
 
   <i>// no Transform, no bubble,</i>
   <i>// no AgentBehaviour</i>
@@ -643,13 +647,14 @@ footer p{max-width:74ch}
         </div>
         <div>
           <div class="filetab">GuardSenses.cs · nobody spoke</div>
-          <pre><b>void</b> OnSmokeSeen()
+          <pre><b>async void</b> OnSmokeSeen()
 {
-  _ = guard.Agent.DecideAsync(
+  <b>var</b> r = <b>await</b> guard.Agent.DecideAsync(
       <u>"Smoke over the north field."</u>,
       <b>new</b> DecideOptions {
-        Label = <u>"Event"</u>,
+        StimulusLabel = <u>"Event"</u>,
         Priority = <b>Background</b> });
+  guard.Agent.Execute(r);
 
   <i>// nobody is waiting on this,</i>
   <i>// so a player's question jumps it</i>
@@ -659,7 +664,7 @@ footer p{max-width:74ch}
       <div class="help" style="margin:14px 0 0"><span class="ico">◆</span><div><b>The label is a free string you choose per call.</b> The framework passes it through and never reads it. That is deliberate: the moment we ship an enum of situations, every game that does not fit it has to fight us.</div></div>
       <div class="help acc" style="margin:10px 0 0"><span class="ico">⚑</span><div><b>Priority is the one field worth setting deliberately (DR-015).</b> Player-facing by default, so a developer who never thinks about it gets the responsive behaviour. Only ambient work opts into waiting. Without it every call looks identical to the queue, and at ≈21 s for 30 agents the scheduler cannot tell a player's question from background chatter — which is also why <b>a behaviour-tree node calling this is a supported integration</b>, not a workaround: it sets its own priority like anything else.</div></div>
     </div></div>
-    <figcaption>All three go through the same queue, the same schema build, the same guards and the same log. <span class="mono">DecideOptions</span>' exact fields are still ours to settle; the build plan reserves the parameter.</figcaption>
+    <figcaption>All three go through the same queue, the same schema build, the same guards and the same log. <span class="mono">DecideAsync</span> only decides; <span class="mono">Execute</span> re-checks the answer independently and runs the handler — two calls on purpose (hard rule 5, #17). <span class="mono">DecideOptions</span>' Phase 1 fields are specified in #17: <span class="mono">StimulusLabel</span> (default <span class="mono">"Player"</span>), <span class="mono">Observations</span> and <span class="mono">IdleExampleStimulus</span>. <span class="mono">Priority</span> (DR-015) is read by the queue, which arrives in Phase 2.</figcaption>
   </figure>
 </section>
 
@@ -673,7 +678,7 @@ footer p{max-width:74ch}
     <div class="figbody">
       <div class="lanes">
         <div class="lanelbl you">Your game</div>
-        <div class="lanebox"><div class="step2"><span class="snum">1</span><div><b>The player pressed Enter</b><p>Your dialogue script calls <span class="mono">DecideAsync("Go to the tower.", Label: "Player")</span>. You chose this moment; nothing in the framework polls.</p></div></div></div>
+        <div class="lanebox"><div class="step2"><span class="snum">1</span><div><b>The player pressed Enter</b><p>Your dialogue script calls <span class="mono">DecideAsync("Go to the tower.")</span> — the label defaults to <span class="mono">"Player"</span>. You chose this moment; nothing in the framework polls.</p></div></div></div>
 
         <div class="lanelbl">Framework</div>
         <div class="lanebox">
@@ -690,7 +695,7 @@ footer p{max-width:74ch}
         <div class="help warn" style="margin:9px 0 0"><span class="ico">▲</span><div>Had the player said <b>"Attack Godzilla"</b> and the model answered <span class="mono">attack_target · training_dummy</span>, grounding would catch it: the dummy was never mentioned. Rewritten to <span class="mono">none</span>. Nothing is attacked, and the log says exactly why. That ten-line guard took a 2B model from 60% to 95%.</div></div></div></div></div>
 
         <div class="lanelbl you">Your game</div>
-        <div class="lanebox"><div class="step2"><span class="snum">5</span><div><b>Your handler runs</b><p><span class="mono">MoveToHandler.Execute</span> — <span class="mono">nav.SetDestination(tower.position)</span>. Deterministic C#. The model never had a reference to that Transform; it only ever had the string <span class="mono">"tower"</span>.</p></div></div></div>
+        <div class="lanebox"><div class="step2"><span class="snum">5</span><div><b>Your handler runs</b><p>You call <span class="mono">Execute(result)</span>; it re-checks legality on its own (hard rule 5), then runs <span class="mono">MoveToHandler.Execute</span> — <span class="mono">nav.SetDestination(tower.position)</span>. Deterministic C#. The model never had a reference to that Transform; it only ever had the string <span class="mono">"tower"</span>.</p></div></div></div>
 
         <div class="lanelbl">Framework</div>
         <div class="lanebox"><div class="step2"><span class="snum">6</span><div><b>The row lands in the log</b><p>Stimulus, the exact menu offered, the raw reply, every guard verdict in order, latency, token counts, which provider and model. Not optional — the evaluation harness is built on top of this, and so is every accuracy number we will ever claim.</p></div></div></div>
@@ -818,7 +823,7 @@ Packages/
 <!-- ============ WINDOWS ============ -->
 <section class="sec" id="windows">
   <div class="sechead"><h2>The windows this workflow needs</h2><span class="pill">4 drawn · 3 to draw</span></div>
-  <p class="seclede">Walking the nine steps is how you find out which screens are missing. Four already have wireframes from the sketch lab. Three do not: provider config and the <span class="mono">Targetable</span> component both now have decisions behind them but only a first sketch here, and the wizard is still a proposal.</p>
+  <p class="seclede">Walking the nine steps is how you find out which screens are missing. Four already have wireframes from the sketch lab. Three do not: provider config and the <span class="mono">Targetable</span> component now have decisions behind them but only a first sketch here, and the Action Definition inspector has never been drawn on its own. The wizard is a proposal on top.</p>
 
   <div class="scrollx">
     <table>
@@ -913,17 +918,18 @@ Packages/
     <div class="card"><h4 style="color:var(--ok)">Merged and real</h4><ul>
       <li><b>TargetRegistry</b> — id → object, with tests (#5)</li>
       <li><b>ILLMProvider</b> and its request/result types (#12)</li>
+      <li><b>ActionDefinition</b> and its asset wrapper — DR-011's asset door (#4, via #35; tests still owed)</li>
       <li><b>Newtonsoft</b> as the core's one declared dependency (DR-009)</li>
       <li><b>GreyBoxVillage</b> — a playable grey-box scene whose guard still answers from string matching, not a model (#19)</li>
     </ul></div>
     <div class="card"><h4>Written down, not written</h4><ul>
       <li><b>Agent, AgentDecision, telemetry</b> (#2, #3 — three empty placeholder files)</li>
-      <li><b>ActionDefinition, ActionRegistry, availability</b> (#4, #6, #7)</li>
+      <li><b>ActionRegistry, availability</b> (#6, #7)</li>
       <li><b>DecisionSchema</b> and its JSON serializer (#8, #9)</li>
       <li><b>Few-shot builder, AgentProfile, PromptBuilder</b> (#10, #15, #16)</li>
     </ul></div>
     <div class="card"><h4 style="color:var(--warn)">Decided here, not yet built</h4><ul>
-      <li><b>DR-011</b> actions in code or as assets, over one plain type</li>
+      <li><b>DR-011</b> the code front door and the registry — the asset door exists (#35)</li>
       <li><b>DR-012</b> observation sources, capped; summariser as one source</li>
       <li><b>DR-013</b> provider config asset + resolution chain</li>
       <li><b>DR-014</b> <span class="mono">Targetable</span> discovery instead of typed lists</li>
@@ -938,7 +944,7 @@ Packages/
 
 <footer>
   <p><b>Agenerela</b> — a Unity framework that lets a language model drive game agents by choosing from actions the developer registered. CSUN COMP 490 / 491.</p>
-  <p style="margin-top:10px">This page walks the developer's path; the six sketch-lab wireframes it refers to are the screens themselves. Rules cited here come from <span class="mono">docs/FRAMEWORK_BUILD_PLAN.md</span> and its decision records — DR-008 (no input taxonomy), DR-009 (one dependency), DR-010 (demos as separate projects) — and the measurements come from Appendix A. Where this page proposes something the plan does not settle, it says so on the figure.</p>
+  <p style="margin-top:10px">This page walks the developer's path; the six sketch-lab wireframes it refers to are the screens themselves. Rules cited here come from <span class="mono">docs/FRAMEWORK_BUILD_PLAN.md</span> and its decision records — DR-008 (no input taxonomy), DR-009 (one dependency), DR-010 (demos as separate projects) — and the measurements come from Appendix A. Where this page proposes something the plan does not settle, it says so on the figure. Last brought in step with the plan and the issues on 20 September 2026, after #35 and the DR-011 amendment; where the page and the plan disagree, the plan is current.</p>
 </footer>
 </div>
 </body>

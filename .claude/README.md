@@ -7,9 +7,9 @@ automatically by Claude Code when a session starts in this repository.
 |---|---|---|
 | `settings.json` | yes | Team-wide settings. Applies to everyone. |
 | `settings.local.json` | **no** (gitignored) | Personal overrides. Never commit — it is where machine-specific paths and personal preferences go. |
-| `commands/` | yes | Custom slash commands, one Markdown file per command. |
-| `agents/` | yes | Custom subagent definitions. |
-| `skills/` | yes | Project-specific skills. |
+| `commands/` | yes | Custom slash commands, one Markdown file per command. None yet. |
+| `agents/` | yes | Custom subagent definitions. None yet. |
+| `skills/` | yes | Project-specific skills. None yet. |
 
 Settings load in order **user → project → local**, so `settings.local.json`
 overrides `settings.json`, which overrides your personal `~/.claude/settings.json`.
