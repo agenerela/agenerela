@@ -4,7 +4,10 @@ name: Repo hygiene
 # known time sink, and the build plan defers it to Phase 3 (§6.3). Everything here runs in
 # seconds on a plain runner and catches the mistakes that actually happen in a Unity repo:
 # committed generated files, broken JSON, missing .meta files, and scene code leaking into
-# the part of the framework an agent with no scene has to be able to run.
+# the part of the framework an agent with no scene has to be able to run. It also holds the
+# hard rules that a machine can check (AGENTS.md): one dependency, no attribution lines, no
+# key in a URL - and the two checks section 6.3 asks for before Phase 3: doc links resolve,
+# and the Python probes lint.
 #
 # Unity EditMode tests get added at Phase 3, once there is a test suite worth protecting.
 #
@@ -16,6 +19,9 @@ name: Repo hygiene
 on:
   pull_request:
     branches: [test, main]
+    # "edited" so that fixing a pull request's description re-runs the attribution check;
+    # a manual re-run replays the original event, old description included.
+    types: [opened, synchronize, reopened, edited]
   push:
     branches: [test, main]
 
@@ -28,6 +34,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the attribution check reads every commit in the pull request
 
       # ---------------------------------------------------------------- discovery
       - name: Find Unity projects and packages
@@ -360,5 +368,211 @@ jobs:
                           errors.append(f"::error file={f},line={no}::UnityEditor outside #if UNITY_EDITOR. It compiles "
                                         f"in the editor and breaks every player build (build plan section 1.2).")
           print("\n".join(errors) if errors else f"OK: {len(files)} runtime files, scene types only under Runtime/Unity/")
+          sys.exit(1 if errors else 0)
+          PY
+
+      # ---------------------------------------------------------------- one dependency
+      - name: The framework depends on nothing beyond Newtonsoft
+        run: |
+          # Hard rule 6 and DR-009: installing the framework must never pull in a scoped
+          # registry or native binaries. package.json may declare only Newtonsoft, and every
+          # framework assembly must set overrideReferences and name only Newtonsoft.Json.dll -
+          # otherwise a DLL that merely exists in this project compiles here and fails on a
+          # user's machine. The plan's own exception is honoured: a provider assembly that
+          # compiles only when its dependency is present (a versionDefine used in its
+          # defineConstraints, build plan section 1.2) is exempt.
+          python3 - <<'PY'
+          import json, re, subprocess, sys
+
+          pkg = "UnityProject/Packages/com.agenerela.framework"
+          allowed_packages = {"com.unity.nuget.newtonsoft-json"}
+          allowed_dlls = {"Newtonsoft.Json.dll"}
+          why = "Newtonsoft is the core's one third-party dependency; another needs a decision record first (hard rule 6, DR-009)."
+          errors = []
+
+          manifest = json.load(open(f"{pkg}/package.json", encoding="utf-8"))
+          for dep in sorted(set(manifest.get("dependencies") or {}) - allowed_packages):
+              errors.append(f"::error file={pkg}/package.json::The framework depends on {dep}. {why}")
+
+          asmdefs = [f for f in subprocess.run(["git", "ls-files", f"{pkg}/*.asmdef"], capture_output=True,
+                                               text=True, check=True).stdout.split("\n") if f]
+          own = set()
+          for f in asmdefs:
+              own.add(json.load(open(f, encoding="utf-8-sig"))["name"])
+              try:
+                  guid = re.search(r"^guid:\s*(\w+)", open(f + ".meta", encoding="utf-8").read(), re.M)
+                  if guid:
+                      own.add("GUID:" + guid.group(1))
+              except OSError:
+                  pass  # the .meta step reports a missing .meta
+
+          for f in asmdefs:
+              if "/Tests/" in f:
+                  continue  # editor-only; the test-assembly step checks these
+              a = json.load(open(f, encoding="utf-8-sig"))
+              # The rule's own exception: a provider that compiles only when its dependency is present.
+              defines = {v.get("define") for v in a.get("versionDefines") or []}
+              if defines & set(a.get("defineConstraints") or []):
+                  print(f"OK: {f} is isolated behind a version define")
+                  continue
+              if not a.get("overrideReferences"):
+                  errors.append(f"::error file={f}::overrideReferences must be true. Without it Unity references every "
+                                f"DLL in a user's project, and an undeclared dependency compiles here and fails there (DR-009).")
+              for dll in sorted(set(a.get("precompiledReferences") or []) - allowed_dlls):
+                  errors.append(f"::error file={f}::References {dll}. {why}")
+              for ref in a.get("references") or []:
+                  if ref not in own:
+                      errors.append(f"::error file={f}::References the assembly {ref}, which is not part of the framework. "
+                                    f"If it is a provider's dependency, isolate that provider behind a versionDefine used "
+                                    f"in its defineConstraints (build plan section 1.2); otherwise: {why}")
+          print("\n".join(errors) if errors else f"OK: {len(asmdefs)} framework assemblies depend on nothing beyond Newtonsoft")
+          sys.exit(1 if errors else 0)
+          PY
+
+      # ---------------------------------------------------------------- doc links
+      - name: Links between docs resolve
+        run: |
+          # Section 6.3: a markdown link check from Phase 0. Covers every relative link in a
+          # tracked .md file and every relative href/src in docs/*.html, resolved against
+          # what git tracks - a link to an ignored or untracked file is broken on GitHub even
+          # if it opens on your machine. External URLs and #anchors are not followed.
+          python3 - <<'PY'
+          import html, posixpath, re, subprocess, sys
+          from urllib.parse import unquote
+
+          tracked = [f for f in subprocess.run(["git", "ls-files", "-z"], capture_output=True,
+                                               text=True, check=True).stdout.split("\0") if f]
+          files = set(tracked)
+          folders = set()
+          for f in tracked:
+              d = posixpath.dirname(f)
+              while d and d not in folders:
+                  folders.add(d)
+                  d = posixpath.dirname(d)
+
+          def targets_md(text):
+              # Links inside fenced blocks and inline code are examples, not links.
+              text = re.sub(r"^(```|~~~).*?^\1", lambda m: "\n" * m.group(0).count("\n"),
+                            text, flags=re.S | re.M)
+              text = re.sub(r"`[^`\n]*`", "", text)
+              for m in re.finditer(r"\]\(\s*<?([^)\s>]+)>?(?:\s+\"[^\"]*\")?\s*\)", text):
+                  yield text.count("\n", 0, m.start()) + 1, m.group(1)
+              for m in re.finditer(r"^\s{0,3}\[[^\]]+\]:\s*<?(\S+?)>?(?:\s|$)", text, re.M):
+                  yield text.count("\n", 0, m.start()) + 1, m.group(1)
+
+          def targets_html(text):
+              text = re.sub(r"<(script|style|pre|code)\b.*?</\1>",
+                            lambda m: "\n" * m.group(0).count("\n"), text, flags=re.S | re.I)
+              for m in re.finditer(r"\b(?:href|src)\s*=\s*([\"'])(.*?)\1", text, re.I):
+                  yield text.count("\n", 0, m.start()) + 1, html.unescape(m.group(2))
+
+          errors, checked = [], 0
+          for f in tracked:
+              if f.endswith(".md"):
+                  found = targets_md(open(f, encoding="utf-8").read())
+              elif f.endswith(".html") and f.startswith("docs/"):
+                  found = targets_html(open(f, encoding="utf-8").read())
+              else:
+                  continue
+              for line, raw in found:
+                  t = raw.strip()
+                  if not t or t.startswith(("#", "mailto:", "data:", "javascript:")) or re.match(r"^[a-z][a-z0-9+.-]*://", t, re.I):
+                      continue
+                  path = unquote(t.split("#", 1)[0].split("?", 1)[0])
+                  if not path:
+                      continue
+                  resolved = posixpath.normpath(path.lstrip("/") if path.startswith("/")
+                                                else posixpath.join(posixpath.dirname(f), path))
+                  checked += 1
+                  if resolved.rstrip("/") not in files and resolved.rstrip("/") not in folders:
+                      errors.append(f"::error file={f},line={line}::Broken link: {raw} (resolves to {resolved}, "
+                                    f"which is not a tracked file or folder).")
+          print("\n".join(errors) if errors else f"OK: {checked} relative links resolve")
+          sys.exit(1 if errors else 0)
+          PY
+
+      # ---------------------------------------------------------------- probes and keys
+      - name: Python probes lint, and no API key sits in a URL
+        run: |
+          # Section 6.3 asks for probe linting before Phase 3. The probes under tools/ must
+          # compile and import only the standard library, as their README promises. And hard
+          # rule 1 - keys go in headers - is checked across every .py and .cs file.
+          python3 - <<'PY'
+          import ast, posixpath, re, subprocess, sys
+
+          def tracked(*patterns):
+              return [f for f in subprocess.run(["git", "ls-files", *patterns], capture_output=True,
+                                                text=True, check=True).stdout.split("\n") if f]
+
+          errors = []
+          probes = tracked("tools/*.py")
+          stdlib = set(sys.stdlib_module_names)
+          for f in probes:
+              src = open(f, encoding="utf-8").read()
+              try:
+                  tree = compile(src, f, "exec", ast.PyCF_ONLY_AST)
+                  compile(tree, f, "exec")
+              except SyntaxError as e:
+                  errors.append(f"::error file={f},line={e.lineno}::Does not compile: {e.msg}")
+                  continue
+              siblings = {posixpath.splitext(posixpath.basename(p))[0] for p in probes
+                          if posixpath.dirname(p) == posixpath.dirname(f)}
+              for node in ast.walk(tree):
+                  if isinstance(node, ast.Import):
+                      mods = [a.name for a in node.names]
+                  elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+                      mods = [node.module]
+                  else:
+                      continue
+                  for mod in mods:
+                      if mod.split(".")[0] not in stdlib | siblings:
+                          errors.append(f"::error file={f},line={node.lineno}::Imports {mod}, which is not in the standard "
+                                        f"library. The probes promise to run with no pip install (tools/benchmarks/README.md).")
+
+          # Hard rule 1: keys travel in headers. "?key=" is how Gemini's own examples do it, which
+          # is exactly why it is worth a check - the key then lands in logs, proxies and history.
+          for f in tracked("*.py", "*.cs"):
+              for no, line in enumerate(open(f, encoding="utf-8-sig", errors="replace"), 1):
+                  if re.search(r"[?&](?:api_?)?key=", line, re.I):
+                      errors.append(f"::error file={f},line={no}::An API key in a URL. Send it in a header and redact it from "
+                                    f"errors (hard rule 1); a key in a URL ends up in logs, proxies and history.")
+          print("\n".join(errors) if errors else f"OK: {len(probes)} probes compile on the standard library alone; no key in any URL")
+          sys.exit(1 if errors else 0)
+          PY
+
+      # ---------------------------------------------------------------- attribution
+      - name: No attribution lines in commits or the description
+        if: github.event_name == 'pull_request'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          # Hard rule 7: no Co-Authored-By, no "Generated with <tool>". Claude Code's settings
+          # strip them already; every other agent and every human follows the rule only by
+          # convention. The description arrives through env, never pasted into the script, so
+          # it cannot inject shell or Python.
+          python3 - <<'PY'
+          import os, re, subprocess, sys
+
+          sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+          tools = "claude|codex|copilot|cursor|chatgpt|gpt|gemini|aider|windsurf|devin|zed|openai|anthropic"
+          trailer = re.compile(r"^\s*(?:co-authored-by\s*:|\W{0,3}\s*generated\s+(?:with|by)\s+\[?(?:" + tools + r")\b)",
+                               re.I | re.M)
+          errors = []
+          log = subprocess.run(["git", "log", "--format=%h%x00%B%x01", f"{os.environ['BASE']}..{os.environ['HEAD']}"],
+                               capture_output=True, text=True, encoding="utf-8",
+                               errors="replace", check=True).stdout
+          commits = [c.strip("\n") for c in log.split("\x01") if c.strip()]
+          for c in commits:
+              sha, _, body = c.partition("\x00")
+              for m in trailer.finditer(body):
+                  errors.append(f"::error::Commit {sha} carries an attribution line: \"{m.group(0).strip()}\". "
+                                f"Hard rule 7 - the history reads as the team's work. Reword the commit and force-push the branch.")
+          for m in trailer.finditer(os.environ.get("PR_BODY") or ""):
+              errors.append(f"::error::The pull request description carries an attribution line: \"{m.group(0).strip()}\". "
+                            f"Hard rule 7 - edit it out of the description, then re-run this check.")
+          print("\n".join(errors) if errors else f"OK: {len(commits)} commits and the description carry no attribution lines")
           sys.exit(1 if errors else 0)
           PY
