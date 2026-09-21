@@ -5,6 +5,16 @@ namespace Agenerela.Providers
     /// it selects a different serializer over the same provider-neutral
     /// <c>DecisionSchema</c> (#8).
     /// </summary>
+    /// <remarks>
+    /// Not the "schema mode" that decision telemetry should record (build plan §2.1). A
+    /// dialect is the format the schema is written in, not whether it is enforced: a provider
+    /// whose <see cref="ProviderCapabilities.SupportsConstrainedDecoding"/> is false still
+    /// reports one, but its model only reads the schema as text in the prompt and is free to
+    /// ignore it. Schema mode needs a third value, "not enforced", so it is derived from both
+    /// fields. Telemetry gains it once real providers exist (#3, extension points). It is
+    /// worth recording because enforcement moves accuracy: the prototype's constrained schema,
+    /// with few-shot examples, took it from 58.5% to 84.9% (build plan, Appendix A).
+    /// </remarks>
     public enum SchemaDialect
     {
         /// <summary>
