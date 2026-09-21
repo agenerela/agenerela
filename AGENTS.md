@@ -82,6 +82,12 @@ pushes there are restricted to the repository owner.
 
 **Commits.** Explain *why*, not just *what*. No attribution trailers (rule 7).
 
+**Only `Runtime/Unity/` touches a scene.** Everywhere else in the framework's `Runtime/`,
+no `GameObject`, `Component`, `MonoBehaviour`, `Transform`, scene query or physics call, so
+an agent can exist with no scene at all — a country in GreyBoxStrategy has no Transform.
+`UnityEngine` itself is fine (`Awaitable`, `ScriptableObject`, `[Tooltip]`), and `UnityEditor`
+in `Runtime/` must sit inside `#if UNITY_EDITOR`. CI enforces both (DR-011, build plan §1.2).
+
 **Demo games are separate Unity projects** under `Demos/`, one per game (DR-010). Read
 [`Demos/README.md`](Demos/README.md) before creating or changing one. A game loads the
 framework through a relative `file:` path in its `Packages/manifest.json` — never a

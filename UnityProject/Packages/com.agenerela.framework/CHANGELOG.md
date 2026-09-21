@@ -9,6 +9,13 @@ While the version stays `0.x`, the public API may change in any release.
 ## [Unreleased]
 
 ### Added
+- `ActionDefinition` and `ActionDefinitionAsset` in namespace `Agenerela` — the
+  developer-authored action vocabulary (#4). `ActionDefinition` is the plain serializable type
+  the registry, schema and few-shot builders consume; `ActionDefinitionAsset` is the
+  `ScriptableObject` a developer creates from **Create → Agenerela → Action** (DR-011).
+  `ActionDefinition.ValidateId` rejects an empty id, uppercase (compared culture-invariantly)
+  and any whitespace, and the asset warns about a malformed id while it is being edited.
+  EditMode tests for it are still owed by #4.
 - `TargetRegistry` in namespace `Agenerela` — what an agent is allowed to refer to, held as
   ids the schema can offer and the guards can check: `Register`, `Unregister`, `TryGet`,
   `Contains`, `Ids` and `Count`, with EditMode tests. Follow-up work — reserving

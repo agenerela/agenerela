@@ -62,6 +62,8 @@ h1{font-size:clamp(30px,5vw,46px);line-height:1.05;letter-spacing:-.025em;margin
 .pill.dash{border-style:dashed}
 .pill.dark{background:var(--ink);border-color:var(--ink);color:var(--ground)}
 .pill.acc{border-color:var(--accent);color:var(--accent-ink);background:var(--accent-soft)}
+.pill.ok{border-color:var(--ok);color:var(--ok);background:var(--ok-soft)}
+.pill.warn{border-color:var(--warn);color:var(--warn);background:var(--warn-soft)}
 .mono{font-family:var(--mono);font-size:.92em}
 .chip{display:inline-flex;align-items:center;gap:5px;min-height:23px;padding:1px 9px;border:1.5px solid var(--line2);border-radius:999px;font-family:var(--mono);font-size:12px;background:var(--surface);white-space:nowrap;color:var(--ink)}
 .chip.solid{background:var(--fill2)}
@@ -748,7 +750,7 @@ footer p{max-width:74ch}
       </div>
       <div class="help acc" style="margin:16px 11px 0"><span class="ico">◆</span><div><b>What is genuinely shared — and how it gets there.</b> One HTTP client, one serialised request queue, one session budget. That is real shared state, but it must not be a GameObject the developer has to remember to add: forgetting it would mean a null reference at run time, in a build, on someone else's machine. Proposal: the runtime service is created on demand from the provider asset, lives outside the scene, and survives scene loads. A developer who wants to see it can add an optional component that exposes and overrides it for one scene.</div></div>
     </div></div>
-    <figcaption>Consequence for us: nothing in <span class="mono">Runtime/Core</span> may reference <span class="mono">UnityEngine.GameObject</span>. If <span class="mono">Agent</span> ever needs a scene to exist, pattern B is dead and GreyBoxStrategy cannot be built.</figcaption>
+    <figcaption>Consequence for us: nothing in the runtime outside <span class="mono">Runtime/Unity/</span> may reference a scene type — <span class="mono">GameObject</span>, <span class="mono">Transform</span>, <span class="mono">MonoBehaviour</span> — and CI enforces it. If <span class="mono">Agent</span> ever needs a scene to exist, pattern B is dead and GreyBoxStrategy cannot be built.</figcaption>
   </figure>
 </section>
 
@@ -873,9 +875,10 @@ Packages/
   <p class="seclede">These started as open questions on this page. Each was argued through and written into the build plan as a decision record. Two of them reversed the recommendation this page first carried — those reversals are kept visible below rather than quietly edited out, because the reasoning is the useful part.</p>
 
   <div class="qa">
-    <h3>1. How are actions and handlers authored? <span class="pill ok" style="vertical-align:3px">decided · DR-011</span></h3>
-    <p><b>Both ways, over one plain data type.</b> <span class="mono">ActionDefinition</span> is a plain serializable type in Core with no <span class="mono">UnityEngine</span> reference; <span class="mono">ActionDefinitionAsset</span> is a thin ScriptableObject wrapper holding one. Attributed methods and asset files are two front doors into the same registry, and a handler is never required to be its own file. On an id collision within one agent, the asset wins.</p>
+    <h3>1. How are actions and handlers authored? <span class="pill ok" style="vertical-align:3px">decided · DR-011</span> <span class="pill warn" style="vertical-align:3px">amended 20 Sep</span></h3>
+    <p><b>Both ways, over one plain data type.</b> <span class="mono">ActionDefinition</span> is a plain serializable type with no scene dependency, beside its wrapper in <span class="mono">Runtime/Actions/</span>; <span class="mono">ActionDefinitionAsset</span> is a thin ScriptableObject wrapper holding one. Attributed methods and asset files are two front doors into the same registry, and a handler is never required to be its own file. On an id collision within one agent, the asset wins.</p>
     <p class="rec"><b>What it costs:</b> every front door must be covered by the same Phase 1 EditMode assertions, as one parameterized fixture — three registration paths without that is three implementations that drift until a demo breaks. Attribute reflection also needs <span class="mono">[Preserve]</span> or a link.xml to survive IL2CPP stripping, which belongs in the Phase 6b player test rather than in a demo-day surprise.</p>
+    <p class="rec"><b>Amended once it was built (#35):</b> this card first said "in Core with no <span class="mono">UnityEngine</span> reference". That wording cost every Inspector tooltip — Unity reads them from attributes on the inner type's own fields — and it over-reached: the plan uses <span class="mono">UnityEngine</span> by design elsewhere, since <span class="mono">ILLMProvider</span> already returns Unity's <span class="mono">Awaitable</span> and <span class="mono">AgentProfile</span> is specified as a <span class="mono">ScriptableObject</span>. The rule worth keeping is the one figure 10 states: no scene. <span class="mono">UnityEngine</span> is fine; <span class="mono">GameObject</span>, <span class="mono">Transform</span> and <span class="mono">MonoBehaviour</span> live only in <span class="mono">Runtime/Unity/</span>, and CI enforces it.</p>
   </div>
 
   <div class="qa">
@@ -898,7 +901,7 @@ Packages/
 
   <div class="qa" style="border-left-color:var(--ok)">
     <h3>5. How does an agent learn what is around it? <span class="pill ok" style="vertical-align:3px">decided · DR-012</span></h3>
-    <p><b>Pulled from observation sources at decision time, and capped.</b> Per-call observations still work; this adds the path for agents that should notice rather than be told. Scene-reading sources live Unity-side so Core stays free of <span class="mono">UnityEngine</span>.</p>
+    <p><b>Pulled from observation sources at decision time, and capped.</b> Per-call observations still work; this adds the path for agents that should notice rather than be told. Scene-reading sources live in <span class="mono">Runtime/Unity/</span>, the one folder allowed to touch a scene.</p>
     <p class="rec"><b>On the LLM summariser idea:</b> supported, but as one source rather than a stage before every decision. Three conditions — cached and invalidated by an event, never per decision; registered target ids emitted verbatim, or the lexical grounding guard silently stops working; recorded as part of the arm in an eval run, because generated observations are non-deterministic input against a 10-point noise floor. Whether summarised beats templated is an early Phase 4 A/B, not an argument to settle now.</p>
   </div>
 </section>
