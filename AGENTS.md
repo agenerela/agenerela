@@ -110,6 +110,11 @@ version or git URL — and uses only the framework's public API. Framework work 
 project on the wrong Unity version or a game not loading the framework from this repo; a
 red check is a blocker, not a warning.
 
+**Reviewing a pull request** follows [`REVIEWING.md`](REVIEWING.md): the checks in order,
+the four finding labels, and the summary template. A green check is not a review, because
+CI never compiles C# or runs a test. An agent that cannot open Unity says so in the review
+rather than implying the code builds.
+
 **Do not** commit `Library/`, `Logs/`, `UserSettings/`, `*.csproj`, `*.slnx`, or `.env`.
 They are gitignored; if one appears in `git status`, something is wrong — investigate
 rather than force-adding.

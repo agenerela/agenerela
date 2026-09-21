@@ -86,6 +86,13 @@ Newtonsoft, doc links that resolve, Python probes that lint, no API key in a URL
 attribution line in any commit or pull request description. **A red
 check blocks the merge** — fix it rather than merging past it.
 
+## Reviewing
+
+Every pull request into `test` gets a teammate's review before it merges.
+[`REVIEWING.md`](REVIEWING.md) covers what to check and in what order, how to label
+findings, and the template for the summary. Open the branch in Unity when you review: CI
+never compiles C#, so a green check does not mean the code builds.
+
 ## If your change touches accuracy
 
 This project's credibility rests on its measurements, so there is one extra bar:

@@ -54,6 +54,7 @@ The LLM never touches Unity directly.
 | `docs/course/` | COMP 490 deliverables: requirements, interviews, the sketch lab |
 | `tools/benchmarks/` | Standalone probes for fast iteration outside Unity |
 | `AGENTS.md` | Rules for AI coding agents — and the shortest description of how this project works |
+| `CONTRIBUTING.md`, `REVIEWING.md` | Opening a pull request, and reviewing one |
 
 ## Developing
 

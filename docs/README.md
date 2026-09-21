@@ -11,7 +11,8 @@ Everything written down about Agenerela that is not source code.
 
 Rules for working in this repo — branches, hard rules, conventions — are in
 [`../AGENTS.md`](../AGENTS.md), which every AI agent reads and which is the shortest
-description of how the project works. Humans have [`../CONTRIBUTING.md`](../CONTRIBUTING.md).
+description of how the project works. Humans have [`../CONTRIBUTING.md`](../CONTRIBUTING.md),
+and every reviewer, human or agent, has [`../REVIEWING.md`](../REVIEWING.md).
 
 Two habits keep these pages worth reading:
 
