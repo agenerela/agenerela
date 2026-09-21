@@ -75,16 +75,22 @@ assets or profiles have been invented before the framework types exist.
 | `attack_target` | `training_dummy` | `VillageGuard.Attack(target)` logs the intended attack | Approach the dummy and invoke game-side combat; no combat exists yet |
 | Framework-owned `none` | `no_target` | No action | Leave the guard's current behavior unchanged |
 
-The named landmark roots are the registration points. `tower` is at its door approach,
+The named landmark roots are where the targets live. `tower` is at its door approach,
 `bridge` is on its deck, and `training_dummy` is in front of the dummy. Geometry is under
-`VillageGeometry`; the guard has a NavMeshAgent and a separate capsule collider.
+`VillageGeometry`; the guard has a NavMeshAgent and a separate capsule collider. Since
+DR-014, each root gets a `Targetable` carrying its explicit id and a one-line description,
+and the guard discovers them by proximity at decision time rather than having them typed in
+([#32](https://github.com/agenerela/agenerela/issues/32)). The same component can feed the
+guard's observations (DR-012), so the landmark lines in `VillageCommands.Observations()` above
+could come from the scene instead of being written by hand.
 
 Compared with [#2](https://github.com/agenerela/agenerela/issues/2) and
 [#17](https://github.com/agenerela/agenerela/issues/17), this scene needs no additional
-framework API: stimulus, label and observations carry the request; target registration
-maps IDs to transforms; game-owned state controls availability; Bind/Execute call the
-game handlers. Following state belongs in `State` for code and in an observation for the
-model. The existing lexical shortcuts are to be replaced, not reused as framework guards.
+framework API: stimulus, label and observations carry the request; `Targetable` components
+map ids to transforms (DR-014, #32); game-owned state controls availability; Bind/Execute
+call the game handlers. Following state belongs in `State` for code and in an observation
+for the model. The existing lexical shortcuts are to be replaced, not reused as framework
+guards.
 
 ## Navigation and verification
 

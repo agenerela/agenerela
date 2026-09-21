@@ -25,6 +25,13 @@ and kept here because they are also the first picture of the framework's user-fa
 | [`png/05-village.png`](png/05-village.png) | **GreyBoxVillage play screen** — talking to the guard | Grey box today (#19); real decisions in Phase 2 |
 | [`png/06-strategy.png`](png/06-strategy.png) | **GreyBoxStrategy turn screen** — countries as agents | Grey box next (#20); real decisions in Phase 3 |
 
+**Screen 2 is partly superseded.** Three decisions made after the lab changed it: the model is
+configured in a provider config asset that the component only overrides (DR-013), targets are
+discovered from `Targetable` components instead of typed per agent (DR-014), and only
+asset-authored actions are bound to a handler (DR-011). The figure keeps what the lab drew and
+marks each change in its notes column; the sitemap's screen 2 card carries the same mark. The
+current picture is figure 6 of the walkthrough, below.
+
 ## The walkthrough
 
 [`workflow.html`](workflow.html) is the other half of this folder: not a screen, but the
@@ -86,4 +93,6 @@ down as real files only if `git lfs install` was run before cloning — `git lfs
 clone that has pointer files instead.
 
 The same figures are also published as a page the whole team can open:
-<https://claude.ai/artifact/EtcUHSQ7a4b49Mg7M4unsQ>
+<https://claude.ai/artifact/EtcUHSQ7a4b49Mg7M4unsQ>. That page is the lab kit, a course
+snapshot holding what the team entered, so it is not updated: it shows screen 2 as first
+drawn. The PNGs here are current.

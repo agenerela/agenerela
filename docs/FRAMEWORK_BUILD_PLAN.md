@@ -40,12 +40,15 @@ package alone.
 
 ```
 <repo root>/
-├── FRAMEWORK_BUILD_PLAN.md            ← this file
 ├── README.md
+├── AGENTS.md                          ← rules for every AI agent; CLAUDE.md imports it
 ├── .gitignore                         ← Unity template + secrets rules (see 1.4)
 ├── .env.example                       ← committed template; .env is gitignored
 ├── docs/
-│   └── llm-wiki/                      ← start one immediately (see 1.5)
+│   ├── FRAMEWORK_BUILD_PLAN.md        ← this file
+│   ├── llm-wiki/                      ← start one immediately (see 1.5)
+│   ├── design/                        ← sitemap, screen wireframes, the developer walkthrough
+│   └── course/                        ← COMP 490 deliverables, archived
 ├── tools/
 │   └── benchmarks/                    ← standalone Python probes (copy from prototype)
 ├── UnityProject/                      ← the framework's dev project (Unity 6000.3+; any render pipeline — framework must not care)
@@ -293,7 +296,7 @@ git commit -m "Add package skeleton with runtime, editor and test assemblies"
 
 `README.md` (10-line quickstart — the first thing a reviewer reads), `LICENSE.md` (after
 the IP check in §1.8), `CHANGELOG.md`, `.env.example`, `CLAUDE.md`, and
-`docs/llm-wiki/` seeded with `README.md` + an empty `03-findings.md` (§1.5).
+`docs/llm-wiki/` seeded with `README.md` + an empty `findings.md` (§1.5).
 
 ```bash
 git add README.md LICENSE.md CHANGELOG.md .env.example CLAUDE.md docs/
@@ -495,7 +498,9 @@ public sealed class Agent {
     public AgentIdentity Identity;            // name, role, personality, goals
     public IMemoryStrategy Memory;            // default: RollingHistory(turns: 6)
     public ActionRegistry Actions;            // see 2.2
-    public Awaitable<AgentDecision> DecideAsync(string stimulus, DecideOptions opts = default);
+    public Awaitable<DecisionResult> DecideAsync(string stimulus, DecideOptions options = null,
+                                                 CancellationToken ct = default);  // decides only
+    public void Execute(DecisionResult result);   // re-checks legality, then runs the handler
 }
 
 // Thin MonoBehaviour adapter for scene objects, in Runtime/Unity/ (§1.2). A faction
@@ -503,9 +508,12 @@ public sealed class Agent {
 public class AgentBehaviour : MonoBehaviour { public Agent Agent { get; } ... }
 ```
 
-`AgentDecision` is `{ actionId, targetId, statement }` plus full telemetry (latency, token
-counts, schema mode, which guards fired). Telemetry is not optional — every decision is
-measurable or the eval harness (Phase 4) can't exist.
+`AgentDecision` is the bare answer, `{ actionId, targetId, statement }`. `DecideAsync`
+returns it inside a `DecisionResult`, beside its `DecisionTelemetry` — latency, token
+counts, schema mode, which guards fired (#3). Telemetry is not optional — every decision is
+measurable or the eval harness (Phase 4) can't exist. Deciding and executing are separate
+calls on purpose: `Execute` re-checks the decision independently before any handler runs
+(hard rule 5, #17).
 
 ### 2.2 Actions (`Runtime/Actions/`) — the heart of the framework
 
@@ -624,6 +632,7 @@ than a second schema system — do not let provider-specific syntax leak into th
 
 ```csharp
 public interface ILLMProvider {
+    string Name { get; }
     ProviderCapabilities Capabilities { get; }   // constrained decoding? property ordering? enum-of-empty-string?
     Awaitable<ProviderResult> RequestAsync(DecisionRequest req, CancellationToken ct);
 }
@@ -789,12 +798,13 @@ distinction is the difference between a responsive NPC and a queue full of ambie
 
 ### 2.7 Editor (`Editor/`)
 
-Custom inspector for `AgentBehaviour` (identity fields, drag-in list of ActionDefinition
-assets, target registry view), `Create → AI Agent → …` menus, and a **Decision Log
-window** streaming per-decision telemetry (chosen action, guard verdicts, latency, token
-counts). The log window is not a luxury — it is how a developer debugs "why did my agent
-do that", which is the framework's main support burden. Built **last** (Phase 5), once the
-data shapes underneath have stopped moving.
+Custom inspectors for `AgentProfile` (identity fields, the drag-in list of action assets —
+#15) and `AgentBehaviour` (profile, optional provider override, the targets it discovered —
+DR-013, DR-014), `Create → Agenerela → …` menus, and a **Decision Log window** streaming
+per-decision telemetry (chosen action, guard verdicts, latency, token counts). The log
+window is not a luxury — it is how a developer debugs "why did my agent do that", which is
+the framework's main support burden. Built **last** (Phase 5), once the data shapes
+underneath have stopped moving.
 
 ### 2.8 Observations (`Runtime/Observations/`) — how an agent learns what is around it
 
@@ -878,7 +888,7 @@ break loudly whenever the API changes. Suggested cadence:
 
 | After phase | Demo milestone |
 |---|---|
-| 2 (provider works) | `GreyBox2D` — one agent, three actions, no art yet. First proof the API is usable from outside the package. |
+| 2 (provider works) | `GreyBoxVillage` — the guard's placeholder string matching gives way to a real decision (#19). First proof the API is usable from outside the package. Then `GreyBox2D`: the same API in a second genre, no art yet. |
 | 3 (guards) | `GreyBoxStrategy` — a **faction** agent with no Transform and no dialogue box. The thesis demo; build it early, because if the API can't express a non-NPC agent you want to know in month two, not month eight. |
 | 5 (editor tooling) | `CompanionRPG` — started last on purpose: it's the demo that benefits most from Inspector tooling existing. |
 | 8 | A player build of each game for the review presentation. Polish on all three runs through COMP 491 (§6.5). |
@@ -950,7 +960,7 @@ comparisons within one environment; distrust absolute latency claims across envi
 **Use one repo for the package, the demos, the dev project, the wiki, and the tools.**
 For a team of six it is clearly correct:
 
-- **Atomic commits.** Change the API and update all three demos in one commit. With split
+- **Atomic commits.** Change the API and update every demo in the same commit. With split
   repos, every breaking change becomes a two-repo dance and the demos drift.
 - **The demos are your integration tests.** They should break in the same CI run that
   builds the framework, not silently rot in another repository. Each game is its own
@@ -1002,7 +1012,8 @@ storing an activation file in repository secrets. It works, but it is fiddly and
 week-long time sink. Recommended sequencing:
 
 1. **Phase 0–2:** CI runs only the non-Unity parts — markdown link check, Python probe
-   linting. Run Unity EditMode tests locally before pushing.
+   linting. Run Unity EditMode tests locally before pushing. (Both checks are in
+   `repo-hygiene.yml`, beside the ones for the hard rules a machine can check.)
 2. **Phase 3+**, once the test suite is worth protecting: add GameCI with EditMode tests.
    Keep PlayMode/Ollama tests **out** of CI permanently — no runner has a GPU or a model,
    and tagging them `RequiresOllama` (per §4) exists exactly so CI can skip them.
