@@ -88,8 +88,9 @@ Compared with [#2](https://github.com/agenerela/agenerela/issues/2) and
 [#17](https://github.com/agenerela/agenerela/issues/17), this scene needs no additional
 framework API: stimulus, label and observations carry the request; `Targetable` components
 map ids to transforms (DR-014, #32); game-owned state controls availability; Bind/Execute
-call the game handlers. Following state belongs in `State` for code and in an observation for the
-model. The existing lexical shortcuts are to be replaced, not reused as framework guards.
+call the game handlers. Following state belongs in `State` for code and in an observation
+for the model. The existing lexical shortcuts are to be replaced, not reused as framework
+guards.
 
 ## Navigation and verification
 

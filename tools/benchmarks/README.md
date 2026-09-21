@@ -36,8 +36,9 @@ already.
 
 ## `gemini_compare.py`
 
-A separate 17-case set — the one behind Appendix A's cloud-versus-local row — against a cloud API. Reads `GEMINI_API_KEY` and `GEMINI_MODEL` from
-`.env` at the repo root (gitignored — copy `.env.example`).
+A separate 17-case set — the one behind Appendix A's cloud-versus-local row — against a
+cloud API. Reads `GEMINI_API_KEY` and `GEMINI_MODEL` from `.env` at the repo root
+(gitignored — copy `.env.example`).
 
 ```bash
 python tools/benchmarks/gemini_compare.py

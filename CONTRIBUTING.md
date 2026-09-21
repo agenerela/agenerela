@@ -62,8 +62,8 @@ rejected. Promotion from `test` to `main` is done by the owner when `test` is in
 ## Claiming work
 
 If an issue is unassigned, **assign yourself** before you start, so nobody duplicates it.
-Many are assigned already; if one you want belongs to someone else, ask them first. Issues labelled `ready` have no blockers; `blocked` ones name what they are
-waiting on.
+Many are assigned already; if one you want belongs to someone else, ask them first. Issues
+labelled `ready` have no blockers; `blocked` ones name what they are waiting on.
 
 Each issue lists the **files it owns**. Stick to them and merge conflicts mostly disappear.
 

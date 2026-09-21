@@ -81,11 +81,11 @@ decision.
 
 > **Since the lab (20 September).** Three of these callouts changed after we posted this.
 > ② The model is configured in a provider config asset, and this field only overrides it;
-> blank means the project default (DR-013). ③ Only asset-authored actions are bound here — an
-> action declared in code is its own handler (DR-011). ④ Targets are discovered each decision
-> from `Targetable` components near the agent, not typed per agent (DR-014). The text above is
-> what we posted and stays as it was; the figure marks each change in its notes column, and
-> figure 6 of [`workflow.html`](workflow.html) is the current picture.
+> blank means the project default (DR-013). ③ Only asset-authored actions are bound here —
+> an action declared in code is its own handler (DR-011). ④ Targets are discovered each
+> decision from `Targetable` components near the agent, not typed per agent (DR-014). The
+> text above is what we posted and stays as it was; the figure marks each change in its
+> notes column, and figure 6 of [`workflow.html`](workflow.html) is the current picture.
 
 ---
 

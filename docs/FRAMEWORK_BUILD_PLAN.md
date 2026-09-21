@@ -508,11 +508,12 @@ public sealed class Agent {
 public class AgentBehaviour : MonoBehaviour { public Agent Agent { get; } ... }
 ```
 
-`AgentDecision` is the bare answer, `{ actionId, targetId, statement }`. `DecideAsync` returns
-it inside a `DecisionResult`, beside its `DecisionTelemetry` — latency, token counts, schema
-mode, which guards fired (#3). Telemetry is not optional — every decision is measurable or the
-eval harness (Phase 4) can't exist. Deciding and executing are separate calls on purpose:
-`Execute` re-checks the decision independently before any handler runs (hard rule 5, #17).
+`AgentDecision` is the bare answer, `{ actionId, targetId, statement }`. `DecideAsync`
+returns it inside a `DecisionResult`, beside its `DecisionTelemetry` — latency, token
+counts, schema mode, which guards fired (#3). Telemetry is not optional — every decision is
+measurable or the eval harness (Phase 4) can't exist. Deciding and executing are separate
+calls on purpose: `Execute` re-checks the decision independently before any handler runs
+(hard rule 5, #17).
 
 ### 2.2 Actions (`Runtime/Actions/`) — the heart of the framework
 
@@ -799,10 +800,11 @@ distinction is the difference between a responsive NPC and a queue full of ambie
 
 Custom inspectors for `AgentProfile` (identity fields, the drag-in list of action assets —
 #15) and `AgentBehaviour` (profile, optional provider override, the targets it discovered —
-DR-013, DR-014), `Create → Agenerela → …` menus, and a **Decision Log window** streaming per-decision telemetry (chosen action, guard verdicts, latency, token
-counts). The log window is not a luxury — it is how a developer debugs "why did my agent
-do that", which is the framework's main support burden. Built **last** (Phase 5), once the
-data shapes underneath have stopped moving.
+DR-013, DR-014), `Create → Agenerela → …` menus, and a **Decision Log window** streaming
+per-decision telemetry (chosen action, guard verdicts, latency, token counts). The log
+window is not a luxury — it is how a developer debugs "why did my agent do that", which is
+the framework's main support burden. Built **last** (Phase 5), once the data shapes
+underneath have stopped moving.
 
 ### 2.8 Observations (`Runtime/Observations/`) — how an agent learns what is around it
 

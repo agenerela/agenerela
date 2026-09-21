@@ -130,10 +130,11 @@ each demo game as its own Unity project (DR-010), and `Demos/GreyBoxVillage` —
 grey-box scene whose guard still answers from placeholder string matching, not a model (#19).
 
 Not written yet: the core decision types (#2), telemetry (#3 — its three files under
-`Runtime/Core/` are committed **empty** as placeholders), `ActionRegistry` (#6), state-derived availability (#7), `DecisionSchema` (#8), its JSON
-serializer (#9), the few-shot builder (#10), `AgentProfile` (#15), `PromptBuilder` (#16)
-and `Agent` itself (#17). **Nothing in the framework calls a model yet** — that starts in
-Phase 2, so Phase 1 work is pure C# with EditMode tests and no Ollama.
+`Runtime/Core/` are committed **empty** as placeholders), `ActionRegistry` (#6),
+state-derived availability (#7), `DecisionSchema` (#8), its JSON serializer (#9), the
+few-shot builder (#10), `AgentProfile` (#15), `PromptBuilder` (#16) and `Agent` itself
+(#17). **Nothing in the framework calls a model yet** — that starts in Phase 2, so Phase 1
+work is pure C# with EditMode tests and no Ollama.
 
 What all of this is meant to become, screen by screen, is drawn in
 [`docs/design/`](docs/design/README.md).
