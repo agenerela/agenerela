@@ -81,7 +81,8 @@ com.<team>.agentframework/
 │   ├── Providers/                ← ILLMProvider, OllamaProvider, cloud providers, in-process
 │   ├── Validation/               ← guard pipeline: whitelist, grounding, state legality
 │   ├── Memory/                   ← IMemoryStrategy, rolling history default
-│   └── Scheduling/               ← request queue, priorities, cancellation, budgets
+│   ├── Scheduling/               ← request queue, priorities, cancellation, budgets
+│   └── Unity/                    ← AgentBehaviour, Targetable, scene sources: the only folder that touches a scene
 ├── Editor/
 │   └── <Team>.AgentFramework.Editor.asmdef   ← references Runtime; nothing references it back
 ├── Tests/
@@ -106,6 +107,12 @@ Assembly-definition rules (enforce from the first commit):
 - `Runtime` asmdef has **zero** references to Editor assemblies and zero `#if UNITY_EDITOR`
   business logic.
 - Tests reference Runtime (and Editor where needed); nothing references Tests.
+- **Only `Runtime/Unity/` may touch a scene** (DR-011). Everywhere else in `Runtime/`, no
+  `GameObject`, `Component`, `MonoBehaviour`, `Transform`, scene query or physics call, so an
+  agent can exist with no scene at all — a country in `GreyBoxStrategy` has no Transform, and
+  an EditMode test has no scene. `UnityEngine` itself is fine: `Awaitable`, `ScriptableObject`
+  and serialization attributes like `[Tooltip]` do not need a scene. The hygiene workflow
+  enforces this, along with the no-`UnityEditor` rule above.
 - **The core's only third-party runtime dependency is Newtonsoft JSON**
   (`com.unity.nuget.newtonsoft-json`), declared in `package.json` so Package Manager
   installs it with the framework (DR-009). Beyond that, use what Unity 6 ships: `Awaitable`
@@ -491,8 +498,8 @@ public sealed class Agent {
     public Awaitable<AgentDecision> DecideAsync(string stimulus, DecideOptions opts = default);
 }
 
-// Thin MonoBehaviour adapter for scene objects. A faction manager or colony sim
-// can own Agent instances directly with no GameObject involved.
+// Thin MonoBehaviour adapter for scene objects, in Runtime/Unity/ (§1.2). A faction
+// manager or colony sim can own Agent instances directly with no GameObject involved.
 public class AgentBehaviour : MonoBehaviour { public Agent Agent { get; } ... }
 ```
 
@@ -504,11 +511,12 @@ measurable or the eval harness (Phase 4) can't exist.
 
 **Settled rule: the action vocabulary is data, not an enum.** The prototype's fixed
 `NPCAction` enum is the single biggest thing this rewrite exists to kill. An action is
-*data the game developer authors*, and it is a plain type so that Core stays free of
-`UnityEngine` (same reasoning that keeps `Agent` off `MonoBehaviour`):
+*data the game developer authors*, and it is a plain type so that nothing about an action
+needs a scene (same reasoning that keeps `Agent` off `MonoBehaviour`):
 
 ```csharp
-// Runtime/Core — plain data, no UnityEngine reference.
+// Runtime/Actions — plain data, no scene dependency (DR-011).
+[Serializable]
 public sealed class ActionDefinition {
     public string Id;                    // snake_case, becomes the schema enum value
     public string Description;           // one short clause — see symmetry rule below
@@ -815,8 +823,8 @@ dropped in telemetry. The cap is not tidiness — the measured good arm ran a 14
 prompt against a 332-token prose baseline, and an unbounded gatherer is the easiest way to
 regress accuracy while looking like a model problem.
 
-**Sources that read the scene live outside Core.** Core stays free of `UnityEngine` (§2.1,
-DR-011), so scene inspection ships in the Unity-side assembly:
+**Sources that read the scene live in `Runtime/Unity/`.** Nothing else in the runtime may
+touch a scene (§1.2, DR-011), so scene inspection ships there:
 
 - `Targetable` — one component a developer puts on a scene object, carrying its **id**, a
   one-line self-description ("The gate is open.") and a category. It is deliberately the
@@ -1208,7 +1216,8 @@ repository and install the framework from the git URL like any consumer.
 
 ### DR-011 — Actions are authorable in code *and* as assets, over one plain data type
 
-**Status:** Decided, 19 September 2026. Refines §2.2; supersedes nothing measured.
+**Status:** Decided, 19 September 2026; amended 20 September 2026 (below). Refines §2.2;
+supersedes nothing measured.
 
 **Context.** §2.2 originally made `ActionDefinition` a `ScriptableObject`, which made one
 `.asset` per verb mandatory. Walking the developer's whole path end to end (the workflow
@@ -1229,8 +1238,9 @@ without an edit and a domain reload, so the harness could not drive it.
 | Attributes/code only | Least ceremony; wording cannot be varied without a recompile, so Phase 4 cannot drive it, and no non-programmer can edit it | Rejected as the *only* path |
 | **Both, over one plain `ActionDefinition`** | Two small readers and one conflict rule; every front door needs the same conformance tests | **Chosen.** |
 
-**Decision.** `ActionDefinition` is a plain serializable type in Core with no `UnityEngine`
-reference. `ActionDefinitionAsset : ScriptableObject` is a thin wrapper holding one.
+**Decision.** `ActionDefinition` is a plain serializable type with no scene dependency, in
+`Runtime/Actions/` beside its wrapper. `ActionDefinitionAsset : ScriptableObject` is a thin
+wrapper holding one.
 Attributed methods and asset files are both *front doors* that produce the same value in
 the same `ActionRegistry`. On an id collision within one agent, **the asset wins**.
 `IActionHandler` stays the contract, and a handler is never required to be its own file:
@@ -1250,11 +1260,29 @@ attributed methods, delegates, plain classes and `MonoBehaviour`s are all adapte
 - Reflection over attributes needs `[Preserve]` or a `link.xml` to survive IL2CPP
   stripping. That belongs in the Phase 6b player test, not in a demo-day surprise.
 - Issues #4 and #6 change shape: #4 delivers the plain type plus the asset wrapper, and #6
-  owns the conflict rule and the shared conformance fixture.
+  owns the conflict rule and the shared conformance fixture. #15 changes too: a profile's
+  action list holds `ActionDefinitionAsset` references, because a list of the plain type would
+  embed copies, and editing `move_to.asset` would then change no agent.
 
 **Revisit if:** the attribute reader's cost in Editor scan time or IL2CPP workarounds
 exceeds what it saves, in which case the fluent code API stays and the attributes go — the
 core type and the registry are unaffected either way.
+
+**Amendment, 20 September 2026 — the rule is "no scene", not "no `UnityEngine`".** As first
+written, this record put `ActionDefinition` in Core with no `UnityEngine` reference. Building
+it (#35) showed the cost that wording never counted: Unity draws tooltips from attributes on
+the inner type's own fields, so an engine-free type has no Inspector tooltips unless a
+hand-written `PropertyDrawer` supplies them — and on this type the tooltip is the spec at the
+point of authoring. The wording also over-reached: Core was never going to be engine-free.
+§1.2 chose `Awaitable` deliberately, `ILLMProvider` already returns it and `Agent.DecideAsync`
+is specified to (#17), and `AgentProfile` (#15) is itself a `ScriptableObject`, while the
+Phase 4 harness runs inside Unity (§1.7). What the separation actually protects is **scene independence**, the reason
+`Agent` stays off `MonoBehaviour` and the thing that lets a country with no Transform be an
+agent. So: `UnityEngine` is allowed, scene types are not, and the type sits in
+`Runtime/Actions/` beside its wrapper, which is where §1.2 already put action definitions.
+§1.2 states the rule; CI enforces it. Revisit only if something must run the core outside
+Unity, which would also mean replacing `Awaitable` with `Task` across the provider contract
+and `Agent`.
 
 ### DR-012 — Agents may gather their own observations; the summariser is a source, not a stage
 
@@ -1279,9 +1307,9 @@ conflicts with three things this project has already measured.
 
 **Decision.** §2.8. Observations are gathered by pull at decision time from an ordered list
 of `IObservationSource`, capped, with drops recorded in telemetry. Scene-reading sources
-(`Targetable`, `ProximityObservationSource`) ship Unity-side so Core stays free of
-`UnityEngine`. A summarising source is supported and must be cached rather than run per
-decision, must emit registered target ids verbatim, and must be recorded as part of the arm
+(`Targetable`, `ProximityObservationSource`) ship in `Runtime/Unity/`, the one folder allowed
+to touch a scene (§1.2). A summarising source is supported and must be cached rather than run
+per decision, must emit registered target ids verbatim, and must be recorded as part of the arm
 in any evaluation run.
 
 **Consequences**
