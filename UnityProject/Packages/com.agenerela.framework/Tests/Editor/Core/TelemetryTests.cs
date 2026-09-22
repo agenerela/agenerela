@@ -6,7 +6,7 @@ namespace Agenerela.Tests
 {
     public class TelemetryTests 
     {
-        [Test]=
+        [Test]
         public void OutcomeHasExactlyTheFiveClassesInOrder()
         {
             // Phase 4 reports key on these names, and a serialized enum is its position, so
