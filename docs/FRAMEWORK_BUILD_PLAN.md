@@ -40,12 +40,15 @@ package alone.
 
 ```
 <repo root>/
-├── FRAMEWORK_BUILD_PLAN.md            ← this file
 ├── README.md
+├── AGENTS.md                          ← rules for every AI agent; CLAUDE.md imports it
 ├── .gitignore                         ← Unity template + secrets rules (see 1.4)
 ├── .env.example                       ← committed template; .env is gitignored
 ├── docs/
-│   └── llm-wiki/                      ← start one immediately (see 1.5)
+│   ├── FRAMEWORK_BUILD_PLAN.md        ← this file
+│   ├── llm-wiki/                      ← start one immediately (see 1.5)
+│   ├── design/                        ← sitemap, screen wireframes, the developer walkthrough
+│   └── course/                        ← COMP 490 deliverables, archived
 ├── tools/
 │   └── benchmarks/                    ← standalone Python probes (copy from prototype)
 ├── UnityProject/                      ← the framework's dev project (Unity 6000.3+; any render pipeline — framework must not care)
@@ -60,6 +63,7 @@ package alone.
     ├── CompanionRPG/                  ← its own Assets/, Packages/, ProjectSettings/
     ├── GreyBox2D/                     ← proves genre independence
     ├── GreyBoxStrategy/               ← proves "agent ≠ NPC"
+    ├── GreyBoxVillage/                ← the guard playground; the first game built
     └── Shared/                        ← local packages two or more games need (created on demand)
 ```
 
@@ -80,7 +84,8 @@ com.<team>.agentframework/
 │   ├── Providers/                ← ILLMProvider, OllamaProvider, cloud providers, in-process
 │   ├── Validation/               ← guard pipeline: whitelist, grounding, state legality
 │   ├── Memory/                   ← IMemoryStrategy, rolling history default
-│   └── Scheduling/               ← request queue, priorities, cancellation, budgets
+│   ├── Scheduling/               ← request queue, priorities, cancellation, budgets
+│   └── Unity/                    ← AgentBehaviour, Targetable, scene sources: the only folder that touches a scene
 ├── Editor/
 │   └── <Team>.AgentFramework.Editor.asmdef   ← references Runtime; nothing references it back
 ├── Tests/
@@ -105,6 +110,12 @@ Assembly-definition rules (enforce from the first commit):
 - `Runtime` asmdef has **zero** references to Editor assemblies and zero `#if UNITY_EDITOR`
   business logic.
 - Tests reference Runtime (and Editor where needed); nothing references Tests.
+- **Only `Runtime/Unity/` may touch a scene** (DR-011). Everywhere else in `Runtime/`, no
+  `GameObject`, `Component`, `MonoBehaviour`, `Transform`, scene query or physics call, so an
+  agent can exist with no scene at all — a country in `GreyBoxStrategy` has no Transform, and
+  an EditMode test has no scene. `UnityEngine` itself is fine: `Awaitable`, `ScriptableObject`
+  and serialization attributes like `[Tooltip]` do not need a scene. The hygiene workflow
+  enforces this, along with the no-`UnityEditor` rule above.
 - **The core's only third-party runtime dependency is Newtonsoft JSON**
   (`com.unity.nuget.newtonsoft-json`), declared in `package.json` so Package Manager
   installs it with the framework (DR-009). Beyond that, use what Unity 6 ships: `Awaitable`
@@ -285,7 +296,7 @@ git commit -m "Add package skeleton with runtime, editor and test assemblies"
 
 `README.md` (10-line quickstart — the first thing a reviewer reads), `LICENSE.md` (after
 the IP check in §1.8), `CHANGELOG.md`, `.env.example`, `CLAUDE.md`, and
-`docs/llm-wiki/` seeded with `README.md` + an empty `03-findings.md` (§1.5).
+`docs/llm-wiki/` seeded with `README.md` + an empty `findings.md` (§1.5).
 
 ```bash
 git add README.md LICENSE.md CHANGELOG.md .env.example CLAUDE.md docs/
@@ -487,34 +498,60 @@ public sealed class Agent {
     public AgentIdentity Identity;            // name, role, personality, goals
     public IMemoryStrategy Memory;            // default: RollingHistory(turns: 6)
     public ActionRegistry Actions;            // see 2.2
-    public Awaitable<AgentDecision> DecideAsync(string stimulus, DecideOptions opts = default);
+    public Awaitable<DecisionResult> DecideAsync(string stimulus, DecideOptions options = null,
+                                                 CancellationToken ct = default);  // decides only
+    public void Execute(DecisionResult result);   // re-checks legality, then runs the handler
 }
 
-// Thin MonoBehaviour adapter for scene objects. A faction manager or colony sim
-// can own Agent instances directly with no GameObject involved.
+// Thin MonoBehaviour adapter for scene objects, in Runtime/Unity/ (§1.2). A faction
+// manager or colony sim can own Agent instances directly with no GameObject involved.
 public class AgentBehaviour : MonoBehaviour { public Agent Agent { get; } ... }
 ```
 
-`AgentDecision` is `{ actionId, targetId, statement }` plus full telemetry (latency, token
-counts, schema mode, which guards fired). Telemetry is not optional — every decision is
-measurable or the eval harness (Phase 4) can't exist.
+`AgentDecision` is the bare answer, `{ actionId, targetId, statement }`. `DecideAsync`
+returns it inside a `DecisionResult`, beside its `DecisionTelemetry` — latency, token
+counts, schema mode, which guards fired (#3). Telemetry is not optional — every decision is
+measurable or the eval harness (Phase 4) can't exist. Deciding and executing are separate
+calls on purpose: `Execute` re-checks the decision independently before any handler runs
+(hard rule 5, #17).
 
 ### 2.2 Actions (`Runtime/Actions/`) — the heart of the framework
 
 **Settled rule: the action vocabulary is data, not an enum.** The prototype's fixed
-`NPCAction` enum is the single biggest thing this rewrite exists to kill. An action is a
-`ScriptableObject` the *game developer* authors:
+`NPCAction` enum is the single biggest thing this rewrite exists to kill. An action is
+*data the game developer authors*, and it is a plain type so that nothing about an action
+needs a scene (same reasoning that keeps `Agent` off `MonoBehaviour`):
 
 ```csharp
-[CreateAssetMenu(menuName = "AI Agent/Action Definition")]
-public class ActionDefinition : ScriptableObject {
+// Runtime/Actions — plain data, no scene dependency (DR-011).
+[Serializable]
+public sealed class ActionDefinition {
     public string Id;                    // snake_case, becomes the schema enum value
-    [TextArea] public string Description;      // one short clause — see symmetry rule below
+    public string Description;           // one short clause — see symmetry rule below
     public bool RequiresTarget;
-    public string ExampleUtterance;      // "{0}" placeholder for target; see few-shot rules
+    public string ExampleStimulus;       // "{0}" placeholder for target; see few-shot rules
     public string[] PreferredExampleTargets;   // targets this verb sensibly applies to
 }
 ```
+
+**Two front doors produce it, and only one registry consumes it (DR-011).** A developer
+either writes the action in code, or authors it as an asset:
+
+```csharp
+// Front door 1 — code. One script, one method per action, no assets.
+[AgentAction("move_to", "Walk to a named place.", RequiresTarget = true)]
+[Example("Head over to the {0}.", "tower", "bridge")]
+public void MoveTo(AgentContext ctx, Transform target) => nav.SetDestination(target.position);
+
+// Front door 2 — asset. A thin ScriptableObject wrapper holding one ActionDefinition.
+[CreateAssetMenu(menuName = "Agenerela/Action", fileName = "NewAction")]
+public sealed class ActionDefinitionAsset : ScriptableObject { public ActionDefinition Action; }
+```
+
+Both end as the same `ActionDefinition` in the same registry; nothing downstream — schema,
+guards, telemetry, the eval harness — can tell which was used. **Where both define the same
+id on one agent, the asset wins**, so a developer can start in code and later drop in an
+asset for just the one action whose wording is being A/B tested.
 
 Registration binds a definition to gameplay and to availability:
 
@@ -523,11 +560,21 @@ public interface IActionHandler {
     bool IsAvailable(AgentContext ctx);        // state masking — see settled rules
     void Execute(AgentContext ctx, AgentDecision decision);   // deterministic Unity code
 }
-agent.Actions.Register(definitionAsset, handler);
+agent.Actions.Register(definition, handler);
 ```
 
-Targets are registered the same way (`TargetRegistry`: id → object reference), so "what
-can this agent currently reference" is queryable, not hand-maintained prose.
+**A handler is not required to be its own file.** The interface is the contract; an
+attributed method, a delegate, a plain class and a `MonoBehaviour` on the same GameObject
+are all adapted to it. Three actions on one `VillageGuard.cs` is the expected shape for a
+scene NPC, and a plain class is what a `Country` with no GameObject uses.
+
+Targets resolve into the same kind of registry (`TargetRegistry`: id → object reference), so
+"what can this agent currently reference" is queryable, not hand-maintained prose. **The
+registry is computed per decision rather than typed (DR-014):** a `Targetable` component
+marks an object as nameable and carries its id, and an `ITargetSource` on the agent — by
+default a proximity and category query — assembles the set each time. A hand-supplied list
+remains available for agents with nothing to query from. What the enum contains at the
+instant of the decision is what matters; where it came from does not.
 
 **Settled design rules baked into this module (each is a measured result — Appendix A):**
 1. *State masking*: `IsAvailable` decides whether an action appears in the schema enum
@@ -575,7 +622,7 @@ than a second schema system — do not let provider-specific syntax leak into th
 3. **Do NOT add a reasoning/chain-of-thought field before `action`.** Measured: worst of
    five variants, below the unmodified baseline. Don't retry without new evidence.
 4. Few-shot block: assembled at request time from each registered action's
-   `ExampleUtterance` + a `PreferredExampleTarget` **that the verb sensibly applies to**
+   `ExampleStimulus` + a `PreferredExampleTarget` **that the verb sensibly applies to**
    (blind rotation produced "Pick up the Blacksmith" — a nonsense demonstration), plus one
    negative example showing a refusal with `no_target`. **Example utterances must never
    overlap the evaluation prompt set** (see Phase 4). Few-shot was the largest single
@@ -585,6 +632,7 @@ than a second schema system — do not let provider-specific syntax leak into th
 
 ```csharp
 public interface ILLMProvider {
+    string Name { get; }
     ProviderCapabilities Capabilities { get; }   // constrained decoding? property ordering? enum-of-empty-string?
     Awaitable<ProviderResult> RequestAsync(DecisionRequest req, CancellationToken ct);
 }
@@ -617,6 +665,15 @@ Expect vendors to differ in ways the interface must absorb, not paper over. Alre
 observed with Gemini: empty strings rejected as enum values, property ordering that must
 be stated explicitly rather than inferred, and rate limits that need budget caps in code.
 A second vendor will surface its own list. `ProviderCapabilities` exists for exactly this.
+
+**Where configuration lives (DR-013).** Endpoint, model, context size, timeout, requests
+in flight and the session budget are a **provider config asset** — several may exist in one
+project. A Project Settings page names only the project default and the two evaluation arms.
+Resolution is agent override → scene override → project default, so an agent with an empty
+provider field works with no configuration at all, and swapping models is selecting a
+different asset rather than editing every agent in the scene. The config that actually
+resolved is recorded in telemetry, so a misbehaving provider never needs guessing about
+which of the three levels won.
 
 #### The in-process provider — how the framework actually ships
 
@@ -732,14 +789,81 @@ providers (the Gemini probe scripts were budget-capped for a reason — keep tha
 discipline). Full scheduler redesign is Phase 6+; don't gold-plate it early. Known
 ceiling to state honestly: serialized local inference ≈ 21s for 30 agents/round.
 
+**Priority is declared by the caller (DR-015).** `DecideOptions.Priority` — player-facing
+by default, or background — is how the queue tells a request a human is waiting on from one
+nobody asked for. It has to come from the caller because the framework never classifies why
+an agent is being asked (DR-008): a developer's own `Update` loop, a behaviour-tree node and
+a coroutine all look identical to us otherwise, and at a ceiling of ≈21 s for 30 agents that
+distinction is the difference between a responsive NPC and a queue full of ambient chatter.
+
 ### 2.7 Editor (`Editor/`)
 
-Custom inspector for `AgentBehaviour` (identity fields, drag-in list of ActionDefinition
-assets, target registry view), `Create → AI Agent → …` menus, and a **Decision Log
-window** streaming per-decision telemetry (chosen action, guard verdicts, latency, token
-counts). The log window is not a luxury — it is how a developer debugs "why did my agent
-do that", which is the framework's main support burden. Built **last** (Phase 5), once the
-data shapes underneath have stopped moving.
+Custom inspectors for `AgentProfile` (identity fields, the drag-in list of action assets —
+#15) and `AgentBehaviour` (profile, optional provider override, the targets it discovered —
+DR-013, DR-014), `Create → Agenerela → …` menus, and a **Decision Log window** streaming
+per-decision telemetry (chosen action, guard verdicts, latency, token counts). The log
+window is not a luxury — it is how a developer debugs "why did my agent do that", which is
+the framework's main support burden. Built **last** (Phase 5), once the data shapes
+underneath have stopped moving.
+
+### 2.8 Observations (`Runtime/Observations/`) — how an agent learns what is around it
+
+`DecisionRequest.Observations` is what the agent knows right now, and it sits *after* the
+few-shot block, immediately before the question — the last thing the model reads. That
+placement makes it the most powerful block in the prompt and the most damaging place to put
+noise. Everything in this module exists to fill it deliberately.
+
+A developer can always pass observations per call, and always could (DR-008). This adds the
+alternative, for agents that should notice their own surroundings rather than be told:
+
+```csharp
+public interface IObservationSource {
+    IEnumerable<string> Observe(AgentContext ctx);   // pulled at decision time
+}
+```
+
+**Pull-based, never a push bus.** Sources are asked during the decision, in order, and
+return short natural-language lines. Nothing accumulates between decisions; the moment this
+becomes a subscribe-and-accumulate blackboard we inherit every blackboard problem and lose
+the ability to say what an agent knew at one instant.
+
+**Composition and budget.** An agent holds an ordered list of sources; per-call
+observations append last. The framework then applies a **hard cap** and records what it
+dropped in telemetry. The cap is not tidiness — the measured good arm ran a 143-token
+prompt against a 332-token prose baseline, and an unbounded gatherer is the easiest way to
+regress accuracy while looking like a model problem.
+
+**Sources that read the scene live in `Runtime/Unity/`.** Nothing else in the runtime may
+touch a scene (§1.2, DR-011), so scene inspection ships there:
+
+- `Targetable` — one component a developer puts on a scene object, carrying its **id**, a
+  one-line self-description ("The gate is open.") and a category. It is deliberately the
+  same component that makes the object nameable (DR-014): an object an agent can notice and
+  an object it can refer to are the same object, and having one component guarantees the
+  line the agent reads and the id it may choose come from the same place.
+- `ProximityObservationSource` — collects lines from `Targetable`s within a radius, nearest
+  first, so the cap truncates the far ones rather than arbitrary ones.
+
+**An LLM summariser is one source, not a stage.** A source may call a model to compress a
+large world state into prose, and it implements the same interface as any other — a front
+door, not a branch in the pipeline. Three conditions apply, and they are what keep it from
+breaking the rest of the framework:
+
+1. **Cached and invalidated by an event** — per turn, per world change — **never run per
+   decision.** A summary call per decision doubles latency, and the serialized queue is
+   already ≈21 s for 30 agents.
+2. **Registered target ids appear verbatim.** The grounding guard (§2.5) is lexical: it
+   checks that the chosen target is named in the text. A summariser that paraphrases
+   `tower` into "the big stone tower" silently disables the highest-value component in the
+   framework.
+3. **Recorded as part of the arm in any evaluation run.** Generated observations are
+   non-deterministic input, and a run that varies its own inputs cannot resolve a 10-point
+   noise floor.
+
+**Settle it by measurement, not by argument.** "Templated observations vs LLM-summarised
+observations" is a clean Phase 4 A/B with a control arm. Build the interface in Phase 2,
+when observations first reach a model; run the comparison in Phase 4 and record it in
+`docs/llm-wiki/findings.md` (DR-012).
 
 ---
 
@@ -764,7 +888,7 @@ break loudly whenever the API changes. Suggested cadence:
 
 | After phase | Demo milestone |
 |---|---|
-| 2 (provider works) | `GreyBox2D` — one agent, three actions, no art yet. First proof the API is usable from outside the package. |
+| 2 (provider works) | `GreyBoxVillage` — the guard's placeholder string matching gives way to a real decision (#19). First proof the API is usable from outside the package. Then `GreyBox2D`: the same API in a second genre, no art yet. |
 | 3 (guards) | `GreyBoxStrategy` — a **faction** agent with no Transform and no dialogue box. The thesis demo; build it early, because if the API can't express a non-NPC agent you want to know in month two, not month eight. |
 | 5 (editor tooling) | `CompanionRPG` — started last on purpose: it's the demo that benefits most from Inspector tooling existing. |
 | 8 | A player build of each game for the review presentation. Polish on all three runs through COMP 491 (§6.5). |
@@ -834,9 +958,9 @@ comparisons within one environment; distrust absolute latency claims across envi
 ### 6.1 One repository — settled, with one caveat
 
 **Use one repo for the package, the demos, the dev project, the wiki, and the tools.**
-For a two-person team this is clearly correct:
+For a team of six it is clearly correct:
 
-- **Atomic commits.** Change the API and update all three demos in one commit. With split
+- **Atomic commits.** Change the API and update every demo in the same commit. With split
   repos, every breaking change becomes a two-repo dance and the demos drift.
 - **The demos are your integration tests.** They should break in the same CI run that
   builds the framework, not silently rot in another repository. Each game is its own
@@ -859,9 +983,11 @@ near-polished games (DR-010) make a real possibility rather than a theoretical o
 minutes, and means the project survives either teammate's account, and access can be
 granted to your advisor without transferring anything.
 
-### 6.2 Two-person Unity workflow
+### 6.2 Unity workflow for a team
 
-Unity + Git has specific failure modes. Agree on these in week one:
+Unity + Git has specific failure modes. Agree on these in week one. This plan was drafted
+for two people; the team is now **six**, which changes none of the rules below and makes
+the scene-ownership one matter considerably more.
 
 - **Pin the Unity version exactly.** `ProjectSettings/ProjectVersion.txt` is committed;
   if one person opens the project in a newer patch release it rewrites that file and can
@@ -871,9 +997,11 @@ Unity + Git has specific failure modes. Agree on these in week one:
   **UnityYAMLMerge** (ships with Unity, wire it up per `.gitattributes` above), and adopt
   the social rule *one person owns a scene at a time*. Most scene conflicts are avoided by
   talking, not tooling.
-- **Branching:** `main` protected, short-lived feature branches, PR review. With two
-  people, each reviews the other — this is also the most reliable way to keep the wiki's
-  findings honest, since the reviewer asks "where's the A/B run?"
+- **Branching:** `main` protected and restricted to the owner; **`test` is the integration
+  branch** everyone branches off and opens pull requests into; short-lived feature branches;
+  one teammate reviews each. A green `Repo hygiene` check is required before a pull request
+  can merge into `test`. Review is also the most reliable way to keep the wiki's findings
+  honest, since the reviewer is the one who asks "where's the A/B run?"
 - **Force Text serialization + visible meta files** (Unity's default now — verify, don't
   assume).
 
@@ -884,7 +1012,8 @@ storing an activation file in repository secrets. It works, but it is fiddly and
 week-long time sink. Recommended sequencing:
 
 1. **Phase 0–2:** CI runs only the non-Unity parts — markdown link check, Python probe
-   linting. Run Unity EditMode tests locally before pushing.
+   linting. Run Unity EditMode tests locally before pushing. (Both checks are in
+   `repo-hygiene.yml`, beside the ones for the hard rules a machine can check.)
 2. **Phase 3+**, once the test suite is worth protecting: add GameCI with EditMode tests.
    Keep PlayMode/Ollama tests **out** of CI permanently — no runner has a GPU or a model,
    and tagging them `RequiresOllama` (per §4) exists exactly so CI can skip them.
@@ -926,15 +1055,23 @@ technical difficulty.
 
 ### 6.6 Divide the work along seams, not files
 
-With two people, split by **module boundary** so you're rarely in the same file:
+Split by **module boundary** so two people are rarely in the same file, and give every
+module one owner who reviews changes to it. With six people that is roughly:
 
-- One owns **Core + Actions + Schema** (§2.1–2.3) — the API surface.
-- One owns **Providers + Validation + Scheduling** (§2.4–2.6) — the runtime path.
-- **Evaluation (Phase 4) is shared** — and the second annotator requirement means it
-  *needs* both of you anyway (inter-annotator agreement is impossible solo).
-- Demos: whoever didn't build the subsystem a demo exercises should build that demo. It's
-  a free API usability test — if the author has to explain their own API to their partner,
-  the API needs work.
+- **Core + Actions** (§2.1–2.2) — the agent, the decision types, the action registry.
+- **Schema + prompt assembly** (§2.3) — the request the provider actually sends, and the
+  measured rules baked into it.
+- **Providers + Scheduling** (§2.4, §2.6) — the transport, the queue, the budgets.
+- **Validation** (§2.5) — the guard pipeline, which is the product's safety claim.
+- **Evaluation** (Phase 4) — the instrument every later claim depends on. Shared by
+  definition: inter-annotator agreement is impossible solo, so it needs at least two people.
+- **Demos** — one owner per game, and they keep that game compiling as the API moves.
+
+Two rules matter more than the exact split. **Nobody builds the demo that exercises their
+own subsystem**: handing it to someone else is a free API usability test, and if the author
+has to explain their own API to a teammate, the API needs work. And **one person owns a
+scene at a time** — with six people, scene conflicts are the failure mode most likely to
+cost a day.
 
 ---
 
@@ -1087,6 +1224,251 @@ Each game picks its own render pipeline; the framework must work under any of th
 **Revisit if:** the repo grows into the gigabytes and slows installs from the git URL
 (§6.1), or a game needs its own release cadence, at which point it can move to its own
 repository and install the framework from the git URL like any consumer.
+
+### DR-011 — Actions are authorable in code *and* as assets, over one plain data type
+
+**Status:** Decided, 19 September 2026; amended 20 September 2026 (below). Refines §2.2;
+supersedes nothing measured.
+
+**Context.** §2.2 originally made `ActionDefinition` a `ScriptableObject`, which made one
+`.asset` per verb mandatory. Walking the developer's whole path end to end (the workflow
+walkthrough, September 2026) showed what that costs at the smallest size: a three-action
+guard needed three action assets, a profile asset and — as first drawn — three handler
+scripts, before anything ran. For most games that ceremony buys nothing, and it is a poor
+fit for Phase 5's definition of done, which is a stranger building a working three-action
+agent in under fifteen minutes. The opposite extreme, attributes only, fails us for a
+reason specific to this project: description and example wording is exactly what Phase 4
+A/B-tests, and text living in a C# attribute cannot be varied between arm A and arm B
+without an edit and a domain reload, so the harness could not drive it.
+
+**Options considered**
+
+| Option | Cost | Verdict |
+|---|---|---|
+| ScriptableObject only (as first written) | One asset per verb, always; wording is designer-editable and A/B-swappable | Rejected as the *only* path — too much ceremony for a small agent |
+| Attributes/code only | Least ceremony; wording cannot be varied without a recompile, so Phase 4 cannot drive it, and no non-programmer can edit it | Rejected as the *only* path |
+| **Both, over one plain `ActionDefinition`** | Two small readers and one conflict rule; every front door needs the same conformance tests | **Chosen.** |
+
+**Decision.** `ActionDefinition` is a plain serializable type with no scene dependency, in
+`Runtime/Actions/` beside its wrapper. `ActionDefinitionAsset : ScriptableObject` is a thin
+wrapper holding one.
+Attributed methods and asset files are both *front doors* that produce the same value in
+the same `ActionRegistry`. On an id collision within one agent, **the asset wins**.
+`IActionHandler` stays the contract, and a handler is never required to be its own file:
+attributed methods, delegates, plain classes and `MonoBehaviour`s are all adapted to it.
+
+**Consequences**
+- The minimum viable agent is one script and zero assets, using the project's default
+  provider. The asset path remains first-class, not legacy.
+- The Inspector shows the action list either way. In code mode the fields are read-only
+  and link to the declaring line; the *actions → handler* binding column disappears
+  entirely, because the method is the handler.
+- Everything downstream sees only the registry, so the measured rules — state masking,
+  field order, `none` last, `target` required — are implemented and tested once.
+- **Every front door must be covered by the same Phase 1 EditMode assertions**, as one
+  parameterized fixture. Three registration paths without that is three implementations
+  that drift until a demo breaks.
+- Reflection over attributes needs `[Preserve]` or a `link.xml` to survive IL2CPP
+  stripping. That belongs in the Phase 6b player test, not in a demo-day surprise.
+- Issues #4 and #6 change shape: #4 delivers the plain type plus the asset wrapper, and #6
+  owns the conflict rule and the shared conformance fixture. #15 changes too: a profile's
+  action list holds `ActionDefinitionAsset` references, because a list of the plain type would
+  embed copies, and editing `move_to.asset` would then change no agent.
+
+**Revisit if:** the attribute reader's cost in Editor scan time or IL2CPP workarounds
+exceeds what it saves, in which case the fluent code API stays and the attributes go — the
+core type and the registry are unaffected either way.
+
+**Amendment, 20 September 2026 — the rule is "no scene", not "no `UnityEngine`".** As first
+written, this record put `ActionDefinition` in Core with no `UnityEngine` reference. Building
+it (#35) showed the cost that wording never counted: Unity draws tooltips from attributes on
+the inner type's own fields, so an engine-free type has no Inspector tooltips unless a
+hand-written `PropertyDrawer` supplies them — and on this type the tooltip is the spec at the
+point of authoring. The wording also over-reached: Core was never going to be engine-free.
+§1.2 chose `Awaitable` deliberately, `ILLMProvider` already returns it and `Agent.DecideAsync`
+is specified to (#17), and `AgentProfile` (#15) is itself a `ScriptableObject`, while the
+Phase 4 harness runs inside Unity (§1.7). What the separation actually protects is **scene independence**, the reason
+`Agent` stays off `MonoBehaviour` and the thing that lets a country with no Transform be an
+agent. So: `UnityEngine` is allowed, scene types are not, and the type sits in
+`Runtime/Actions/` beside its wrapper, which is where §1.2 already put action definitions.
+§1.2 states the rule; CI enforces it. Revisit only if something must run the core outside
+Unity, which would also mean replacing `Awaitable` with `Task` across the provider contract
+and `Agent`.
+
+### DR-012 — Agents may gather their own observations; the summariser is a source, not a stage
+
+**Status:** Decided, 20 September 2026, except the last clause — whether an LLM summariser
+beats templated lines is an open Phase 4 measurement, not an opinion to settle now.
+
+**Context.** DR-008 leaves it to the developer to pass observations per call. That is right
+for a guard with two facts and wrong for an agent that should notice things: a colony, a
+country, an NPC that should react to what is near it. The team proposed a first model call
+that writes a prose summary of the surroundings, which would then be passed to the decision
+call. The intuition behind it is correct — an agent reasoning over natural-language facts is
+what makes the decision human-like — but generating those facts with a model, per decision,
+conflicts with three things this project has already measured.
+
+**Options considered**
+
+| Option | Cost | Verdict |
+|---|---|---|
+| Per-call observations only (DR-008 as it stood) | Nothing to gather from; five call sites retype the same facts | Kept, but no longer the only way |
+| LLM summariser pass before every decision | Doubles latency (≈21 s → ≈42 s for 30 agents); paraphrases target ids and disables the lexical grounding guard; makes eval inputs non-deterministic against a 10-point noise floor | Rejected **as a pipeline stage** |
+| **`IObservationSource`, pulled and capped, with the summariser as one optional source** | Two small pieces and a cap; the summariser's cost is paid only by projects that opt in | **Chosen.** |
+
+**Decision.** §2.8. Observations are gathered by pull at decision time from an ordered list
+of `IObservationSource`, capped, with drops recorded in telemetry. Scene-reading sources
+(`Targetable`, `ProximityObservationSource`) ship in `Runtime/Unity/`, the one folder allowed
+to touch a scene (§1.2). A summarising source is supported and must be cached rather than run
+per decision, must emit registered target ids verbatim, and must be recorded as part of the arm
+in any evaluation run.
+
+**Consequences**
+- The prompt gains a budget that is enforced in code rather than trusted to a developer.
+  Telemetry says what was dropped, so a thin-looking prompt is diagnosable.
+- Grounding stays lexical and keeps working, because the component that writes a line and
+  the id the model may choose are the same object.
+- "Why did my agent do that" gains one hop only for projects that opt into a summariser.
+- An early Phase 4 A/B — templated versus summarised observations — is added to the
+  evaluation backlog alongside the `dialogue` → `statement` rename (DR-008).
+
+**Revisit if:** the A/B shows summarised observations winning by more than the noise floor,
+in which case the caching and id-verbatim conditions stay and the default changes.
+
+### DR-013 — Provider configuration is an asset, with a three-level resolution chain
+
+**Status:** Decided, 20 September 2026.
+
+**Context.** The Agent Behaviour wireframe (screen 2) drew the provider as a dropdown on
+each agent, which means a village of eight guards carries eight copies of the endpoint,
+timeout and budget. The obvious correction — one Project Settings page — cannot express
+what Phase 4 requires: an A/B run needs **two** configurations alive in the same session,
+each nameable, so the harness can point arm A and arm B at them.
+
+**Options considered**
+
+| Option | Cost | Verdict |
+|---|---|---|
+| Per-agent fields only (as drawn on screen 2) | Endpoint and budget duplicated per agent; changing a model means editing every agent | Rejected |
+| Project Settings singleton only | One place to look; cannot hold two configurations, so Phase 4's A/B cannot be driven from it | Rejected |
+| **Config asset + settings page naming the defaults** | Three places a value can come from | **Chosen.** |
+
+**Decision.** A provider config is a ScriptableObject asset: backend, endpoint, model,
+context size, timeout, requests in flight, session budget. Several coexist — `OllamaLocal`,
+`OllamaLocal-noGuards`, `GeminiFlash`. A Project Settings page names the project default and
+the two evaluation arms and holds nothing else. Resolution runs agent override → scene
+override → project default. API keys are never serialised into the asset (hard rule 1); the
+field records where the key is read from, not its value.
+
+**Consequences**
+- A freshly added `AgentBehaviour` with an empty provider field works immediately, which is
+  what keeps the Phase 5 fifteen-minute target reachable.
+- Phase 4's harness takes two asset references and needs no other configuration surface.
+- Swapping a model across a whole game is selecting a different default, not an edit pass.
+- **Three levels mean three places to look when a provider misbehaves**, so the resolved
+  config is recorded in decision telemetry and shown in the Decision Log. This is the cost
+  of the choice and it is paid in the log window, not in documentation.
+- The scheduler's queue and budget belong to the provider config, not to an agent —
+  requests in flight is a property of the backend (§2.6).
+
+**Revisit if:** the scene-override level turns out to be unused after the demos are built,
+in which case it can be dropped to two levels without touching the asset or the settings
+page.
+
+### DR-014 — Targets are discovered from the scene, not typed per agent
+
+**Status:** Decided, 20 September 2026. Replaces the per-agent target list drawn on screen 2.
+
+**Context.** Screen 2 drew the target registry as a list the developer fills in on every
+agent. In a village where eight guards can reach the same three landmarks, that is the same
+three rows typed eight times — authoring burden that buys nothing and starts to resemble the
+hand-built behaviour tree this framework exists to replace. The objection to discovery was
+that the target list is the whitelist that makes an impossible request safe. That objection
+does not survive inspection: **the whitelist has to exist at the instant of the decision, but
+nothing requires it to have been typed.** A set computed from the scene a millisecond earlier
+constrains the schema exactly as well, and the guards re-check it either way.
+
+**Options considered**
+
+| Option | Cost | Verdict |
+|---|---|---|
+| Hand-typed list per agent (screen 2) | Duplicated across every agent; grows with the scene; the developer maintains what the engine already knows | Rejected as the default |
+| One scene-wide registry shared by all agents | No per-agent narrowing at all — every agent may name everything in the scene | Rejected |
+| A Unity tag on nameable objects | One flat string per object, with nowhere to put an id, a description or a category | Rejected — a component holds what a tag cannot |
+| **`Targetable` component + per-agent query** | The enum grows with scene density, so discovery needs a cap; ids must be explicit | **Chosen.** |
+
+**Decision.** A `Targetable` component marks an object as nameable and carries its **id**, a
+one-line self-description and a category. It is the same component that supplies observations
+(§2.8) — an object an agent can notice and one it can refer to are the same object. An
+`ITargetSource` on the agent assembles the registry per decision; the default source is a
+proximity, layer and category query, optionally line-of-sight. A hand-supplied set remains
+available and is what a non-scene agent uses.
+
+**Consequences**
+- Per-agent narrowing survives without per-agent typing, because the query runs from the
+  agent: a shopkeeper does not discover things across the map.
+- **Discovery needs the same cap and nearest-first ordering as observations (§2.8).** "Any
+  entity around him" cannot be literally unbounded — forty targetables within radius is a
+  forty-value enum and a prompt that has lost its measured size advantage.
+- **Ids are explicit on the component**, never derived from `GameObject.name`, which yields
+  values like `Training Dummy (1)`. A missing id is an Inspector error; a duplicate id
+  within one agent's resolved set is a decision-time error recorded in telemetry.
+- The grounding guard matters more, not less: a wider candidate set is exactly the case
+  where a model substitutes a legal target for the illegal one the player named, and the
+  lexical check is what caught that (60% → 95%, Appendix A).
+- `GreyBoxStrategy` is unaffected — a country has no Transform to query from and supplies
+  its own set, which is why `ITargetSource` is an interface rather than a built-in query.
+- The resolved set is recorded per decision, so "why was that offered" is answerable.
+
+**Revisit if:** scene-density caps turn out to bite in a real demo, in which case the fix is
+a better ordering heuristic (recency, salience, the developer's own comparer) rather than a
+return to typing lists.
+
+### DR-015 — Triggering stays the developer's; the call declares its priority
+
+**Status:** Decided, 20 September 2026.
+
+**Context.** Nothing in the framework triggers a decision — the developer calls
+`DecideAsync`, which DR-008 requires. The question raised was whether `AgentBehaviour`
+should also be able to fire on an interval, for ambient behaviour. The first answer given
+was a flat no, on the grounds that a built-in timer would make the framework decide when an
+agent is asked. That reading was too strict: DR-008 forbids us from *classifying the
+situation*, not from shipping a convenience trigger the developer configures.
+
+Working through it exposed a better-aimed problem. The risk was never that someone writes a
+tick loop — it is that **every call currently looks identical to the queue.** When an
+ambient tick and a player's question arrive together, the scheduler has no way to know which
+one a human is waiting on, so it cannot do the right thing however well it is written.
+
+**Options considered**
+
+| Option | Cost | Verdict |
+|---|---|---|
+| No trigger of any kind, ever | Everyone writes their own loop; ambient requests still enter the queue indistinguishable from player-facing ones | Rejected — refuses the convenience without fixing the real problem |
+| A tick interval on `AgentBehaviour` as the answer | Helps only agents that use our component; a behaviour tree or a custom loop is still invisible to the queue | Rejected as the primary mechanism |
+| **`DecideOptions.Priority` on every call, ticker optional on top** | One more field callers should set; the default has to be the safe one | **Chosen.** |
+
+**Decision.** Every call carries a priority — player-facing by default, or background.
+The scheduler preempts background work for player-facing requests (§2.6). Any caller can
+set it: a custom trigger, a behaviour-tree node, a coroutine, a perception event. **A
+behaviour tree driving an agent is a supported and expected integration**, not a workaround —
+the tree handles the cheap mechanical decisions and hands the open-ended one to the agent.
+An optional ticker component ships as sugar over this: off by default, no default interval,
+sets background priority, and cancels when the agent is disabled or off-screen.
+
+**Consequences**
+- The framework still never decides *when* or *why* an agent is asked; it only learns, from
+  the caller, whether anyone is waiting.
+- The ticker is a convenience, not the mechanism. Removing it would change nothing about
+  scheduling behaviour, which is the test that it sits at the right level.
+- Priority belongs in telemetry, so "the guard took nine seconds" is answerable with "it was
+  behind four background requests" rather than guesswork.
+- Default must be player-facing: a developer who never thinks about this gets the responsive
+  behaviour, and only someone deliberately writing ambient behaviour opts into waiting.
+
+**Revisit if:** two tiers prove too coarse once `GreyBoxStrategy` runs four agents a turn
+alongside a player-facing NPC, in which case tiers become a small ordered enum rather than a
+boolean — a change to the scheduler, not to the API shape.
 
 ### Decisions already recorded elsewhere in this plan
 

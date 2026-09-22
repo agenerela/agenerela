@@ -1,0 +1,856 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found]){display:none!important}</style></head><body>
+<title>Agenerela Interview Kit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+  :root {
+    --ground: #F3F4F8;
+    --surface: #FFFFFF;
+    --field: #F7F8FB;
+    --ink: #151A2B;
+    --muted: #586074;
+    --rule: #D9DCE6;
+    --code-bg: #ECEEF5;
+    --accent: #2A4BB0;
+    --on-accent: #FFFFFF;
+    --should: #9A5B00;
+    --ok: #2B7A4B;
+    --display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+    --gutter: 52px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0E1018;
+      --surface: #161926;
+      --field: #1C2030;
+      --ink: #E2E5EF;
+      --muted: #9AA0B4;
+      --rule: #2A2E3F;
+      --code-bg: #22263B;
+      --accent: #9DB0F4;
+      --on-accent: #10131F;
+      --should: #E4A94A;
+      --ok: #74CC96;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0E1018;
+    --surface: #161926;
+    --field: #1C2030;
+    --ink: #E2E5EF;
+    --muted: #9AA0B4;
+    --rule: #2A2E3F;
+    --code-bg: #22263B;
+    --accent: #9DB0F4;
+    --on-accent: #10131F;
+    --should: #E4A94A;
+    --ok: #74CC96;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 16px;
+    line-height: 1.55;
+  }
+  .page { max-width: 1160px; margin: 0 auto; padding: 44px 28px 88px; }
+
+  .label, .eyebrow, .flabel {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0;
+  }
+  .flabel { font-size: 11px; }
+
+  /* Masthead */
+  .masthead { display: grid; gap: 14px; max-width: 780px; margin-bottom: 44px; }
+  h1 {
+    font-family: var(--display); font-stretch: 76%; font-weight: 700;
+    font-size: clamp(32px, 4.6vw, 48px); line-height: 1.02; letter-spacing: -.012em;
+    text-wrap: balance; margin: 0;
+  }
+  .lede { font-size: 17.5px; color: var(--muted); max-width: 62ch; margin: 0; }
+  .rubric { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px 32px; margin: 6px 0 0; padding-top: 14px; border-top: 1px solid var(--rule); }
+  .rubric div { display: grid; gap: 4px; }
+  .rubric ul { list-style: none; margin: 0; padding: 0; font-family: var(--mono); font-size: 12.5px; color: var(--ink); display: grid; gap: 2px; }
+  .rubric li span { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .m { font-weight: 600; text-decoration-line: underline; text-underline-offset: 3px; }
+  .m-shall { color: var(--accent); text-decoration-style: solid; text-decoration-thickness: 1.5px; }
+  .m-should { color: var(--should); text-decoration-style: dotted; text-decoration-thickness: 2px; }
+  code { font-family: var(--mono); font-size: .84em; background: var(--code-bg); padding: .06em .32em; border-radius: 3px; overflow-wrap: anywhere; }
+
+  /* Layout */
+  .layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 52px; align-items: start; }
+  .rail { position: sticky; top: 24px; display: grid; gap: 12px; }
+  .nav { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  .nav a { display: grid; gap: 1px; padding: 8px 10px; margin-left: -10px; color: inherit; text-decoration: none; border-radius: 6px; border-left: 2px solid transparent; }
+  .nav .who { font-family: var(--display); font-stretch: 88%; font-weight: 650; font-size: 16px; line-height: 1.25; }
+  .nav .feat { font-size: 13.5px; line-height: 1.35; color: var(--muted); }
+  .nav .prog { font-family: var(--mono); font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .nav .prog[data-ready="true"] { color: var(--ok); }
+  .nav a:hover .who, .nav a[aria-current="true"] .who { color: var(--accent); }
+  .nav a[aria-current="true"] { border-left-color: var(--accent); border-radius: 0 6px 6px 0; }
+  .nav a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .nav .divider { height: 1px; background: var(--rule); margin: 8px 0; }
+
+  /* Posts */
+  .posts { display: grid; gap: 60px; min-width: 0; }
+  .post { display: grid; gap: 14px; scroll-margin-top: 24px; }
+  .post-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+  .post-head h2 { font-family: var(--display); font-stretch: 78%; font-weight: 700; font-size: 30px; line-height: 1.08; margin: 3px 0 4px; }
+  .post-head .meta { font-family: var(--mono); font-size: 12.5px; color: var(--muted); margin: 0; }
+  .tools { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px 16px; }
+  .progress { font-family: var(--mono); font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .progress[data-ready="true"] { color: var(--ok); }
+  .status { font-family: var(--mono); font-size: 12px; color: var(--muted); flex-basis: 100%; text-align: right; }
+  .status:empty { display: none; }
+
+  button { font: inherit; cursor: pointer; }
+  .copy {
+    font-family: var(--display); font-weight: 600; font-size: 14px; letter-spacing: .01em;
+    padding: 9px 18px; border-radius: 6px;
+    border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent);
+  }
+  .copy:hover { filter: brightness(1.1); }
+  .copy[data-state="done"] { background: transparent; color: var(--accent); filter: none; }
+  .ghost {
+    font-family: var(--display); font-weight: 600; font-size: 13.5px;
+    padding: 7px 14px; border-radius: 6px;
+    border: 1px solid var(--rule); background: var(--surface); color: var(--ink);
+  }
+  .ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .ghost:disabled { opacity: .55; cursor: default; border-color: var(--rule); color: var(--muted); }
+  .link { background: none; border: 0; padding: 0; color: var(--muted); font-family: var(--mono); font-size: 12px; text-decoration: underline; text-underline-offset: 3px; }
+  .link:hover { color: var(--accent); }
+  .copy:focus-visible, .ghost:focus-visible, .link:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  .sheet { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 26px clamp(18px, 4vw, 38px) 26px; display: grid; gap: 28px; }
+  .part { display: grid; gap: 16px; }
+  .part + .part { border-top: 1px solid var(--rule); padding-top: 26px; }
+  .part-title { font-family: var(--display); font-stretch: 86%; font-weight: 700; font-size: 19px; margin: 0; }
+  .part-note { margin: -10px 0 0; color: var(--muted); font-size: 15px; max-width: 62ch; }
+
+  /* Leader post, read as a document */
+  .doc { display: block; }
+  .doc p { margin: 0 0 10px; max-width: 66ch; }
+  .doc ul, .doc ol { margin: 0 0 18px; padding-left: 22px; display: grid; gap: 6px; max-width: 68ch; }
+  .doc li { padding-left: 2px; }
+  .doc strong { font-weight: 600; }
+  .doc > p > strong:only-child { font-family: var(--display); font-stretch: 88%; font-weight: 700; font-size: 16.5px; }
+
+  /* Fields */
+  .field { display: grid; gap: 6px; }
+  input[type="text"], textarea {
+    font: inherit; font-size: 15.5px; line-height: 1.5; color: var(--ink);
+    background: var(--field); border: 1px solid var(--rule); border-radius: 6px;
+    padding: 8px 11px; width: 100%;
+  }
+  textarea { resize: vertical; min-height: 44px; overflow: hidden; }
+  input[type="text"]:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
+  ::placeholder { color: var(--muted); opacity: .75; }
+
+  .qs { list-style: none; margin: 0; padding: 0; display: grid; gap: 18px; }
+  .q { display: grid; grid-template-columns: var(--gutter) minmax(0, 1fr); }
+  .rid { font-family: var(--mono); font-size: 12.5px; padding-top: 3px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .q-body { display: grid; gap: 6px; }
+  .q-text { margin: 0; font-size: 16.5px; max-width: 64ch; }
+  .q-hint { margin: -4px 0 2px; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+
+  .rev-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+  .draft-status { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .revs { display: grid; gap: 14px; }
+  .revs:empty { display: none; }
+  .rev { display: grid; gap: 10px; padding: 14px 16px; border: 1px solid var(--rule); border-radius: 6px; background: var(--field); }
+  .rev input[type="text"], .rev textarea { background: var(--surface); }
+  .rev-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+  .rev-top .field { width: 150px; }
+  .was { margin: 0; font-size: 14.5px; color: var(--muted); max-width: 66ch; }
+  .was b { font-family: var(--mono); font-size: 11px; letter-spacing: .07em; text-transform: uppercase; font-weight: 500; margin-right: 6px; }
+
+  details.orig { border-top: 1px dashed var(--rule); padding-top: 12px; }
+  details.orig summary { cursor: pointer; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  details.orig summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .orig-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 7px; }
+  .orig-list li { display: grid; grid-template-columns: var(--gutter) minmax(0, 1fr); font-size: 14.5px; }
+  .orig-list li.is-ur { margin-top: 8px; }
+  .orig-list li.is-ur span:last-child { font-weight: 600; }
+
+  .foot { margin-top: 56px; padding-top: 14px; border-top: 1px solid var(--rule); font-family: var(--mono); font-size: 12px; color: var(--muted); max-width: 90ch; }
+  .foot p { margin: 0 0 6px; }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; gap: 32px; }
+    .rail { position: static; }
+    .nav { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 4px 16px; }
+    .nav .divider { display: none; }
+  }
+  @media (max-width: 560px) {
+    .page { padding: 28px 16px 64px; }
+    :root { --gutter: 40px; }
+    .tools { width: 100%; justify-content: space-between; }
+    .status { text-align: left; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
+  }
+</style>
+
+<div class="page">
+  <header class="masthead">
+    <p class="eyebrow">COMP 490 · Section 04 · Requirements interviews</p>
+    <h1>Interview questions, what you heard, and what changed</h1>
+    <p class="lede">Ask your questions in short interviews with classmates and with people outside the class. Type what each person said under the question, then add one or two requirement changes those answers support. Copy post builds your Canvas reply from whatever you have filled in.</p>
+    <div class="rubric">
+      <div>
+        <p class="label">Leader reply</p>
+        <ul>
+          <li>Project name and stakeholders <span>2 pts</span></li>
+          <li>How requirements are collected <span>1 pt</span></li>
+          <li>Who they are collected from <span>2 pts</span></li>
+          <li>Major features <span>2 pts</span></li>
+        </ul>
+      </div>
+      <div>
+        <p class="label">Every member, leader included</p>
+        <ul>
+          <li>Interview questions <span>3 pts</span></li>
+          <li>Responses and suggestions received <span>5 pts</span></li>
+          <li>Revised requirements <span>5 pts</span></li>
+        </ul>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="rail" aria-label="Replies">
+      <p class="label">Replies</p>
+      <ol class="nav" id="nav"></ol>
+    </nav>
+    <main class="posts" id="posts">
+      <section class="post" id="leader">
+        <header class="post-head">
+          <div>
+            <p class="label">Leader reply · posted once</p>
+            <h2>Yevhen, for the group</h2>
+            <p class="meta">@Draganoider · project, stakeholders, method, sources, features</p>
+          </div>
+          <div class="tools">
+            <button type="button" class="copy" id="leader-copy">Copy post</button>
+            <span class="status" id="leader-status" aria-live="polite"></span>
+          </div>
+        </header>
+        <article class="sheet"><div class="doc" id="leader-doc"></div></article>
+      </section>
+    </main>
+  </div>
+
+  <footer class="foot">
+    <p id="save-note">Your notes are saved in this browser only. Nobody else sees them until you paste your post into Canvas.</p>
+    <p>Draft from my notes sends that member's questions, notes and requirements to Claude on your own account, and adds its suggestions as editable revisions.</p>
+  </footer>
+</div>
+
+<script>
+const LEADER_HTML = `
+<p><strong>Project name:</strong> Agenerela, an AI agent framework for Unity</p>
+<p><strong>Stakeholders</strong></p>
+<ul>
+<li><strong>Unity game developers (primary users):</strong> indie, student and small-studio developers who install Agenerela so a language model can choose actions for NPCs, companions, enemies, factions or colonies.</li>
+<li><strong>Players (indirect users):</strong> people who play those games. They care that characters respond quickly, behave sensibly, and work without an internet connection.</li>
+<li><strong>Our team:</strong> six developers who build, test and maintain the framework and its demo games.</li>
+<li><strong>Course instructor and project advisor:</strong> set the scope and evaluate the project (CSUN COMP 490/491).</li>
+<li><strong>External providers:</strong> Ollama, LLMUnity and cloud AI services such as Google Gemini. Their APIs, licenses and rate limits constrain our design.</li>
+</ul>
+<p><strong>How we are collecting requirements:</strong> Interviews. Each team member runs short one-on-one interviews (about 10 minutes) using the questions for the feature they own, and writes down the answers.</p>
+<p><strong>Who we plan to collect requirements from</strong></p>
+<ul>
+<li>Students in our class (COMP 490, Section 04), especially groups building games or Unity projects</li>
+<li>Other CSUN students who have used Unity in courses, clubs or personal projects</li>
+<li>Game developers outside CSUN whom team members know, including some who use Godot or Unreal, for comparison</li>
+</ul>
+<p><strong>Major features</strong></p>
+<ol>
+<li><strong>Agents and decision requests:</strong> describe an agent (name, role, personality, goals) and ask it to decide whenever the game chooses. This works for characters and also for non-character agents such as factions.</li>
+<li><strong>Developer-authored actions:</strong> define what agents can do as Unity assets, without editing framework code.</li>
+<li><strong>Action availability and the decision schema:</strong> the model is offered only the actions that make sense right now, so it cannot choose an illegal one.</li>
+<li><strong>Targets and grounding:</strong> control what agents can refer to, and block actions on things that were never mentioned.</li>
+<li><strong>Swappable model providers:</strong> run the same agents on a local model during development, on a cloud service, or on a model built into the shipped game that needs no internet.</li>
+<li><strong>Decision telemetry and evaluation:</strong> record time, tokens and safety-check results for every decision, and measure accuracy by type of outcome.</li>
+</ol>`;
+
+const MEMBERS = [
+  {
+    id: "hunter", name: "Hunter", handle: "@Hunaveli", feature: "Agents and decision requests",
+    questions: [
+      ["What kinds of characters or groups in your game act on their own?", "enemies / companions / shopkeepers / factions / other"],
+      ["What should make a character decide to do something?", "player talks to it / something happens in the game / a timer / other"],
+      ["What should a character know about itself when it decides?", "short answer"],
+      ["Should characters remember earlier conversations, and for how long?", "short answer"]
+    ],
+    urs: [
+      ["The framework shall allow a game developer to describe who an agent is (its name, role, personality and goals) as data, without writing behaviour code.", [
+        "`AgentIdentity` shall hold `Name`, `Role`, `Personality` and `Goals` as serializable fields that can be edited in the Unity Inspector.",
+        "The framework shall include the agent’s identity in every decision request it builds for that agent.",
+        "The framework should provide an `AgentProfile` asset so that one identity and its action set can be reused by many agents."]],
+      ["The framework shall let the developer’s game decide when an agent makes a decision and what the agent is told, for any kind of agent: a character, a faction or a colony.", [
+        "`Agent` shall be a plain C# class that does not inherit from `MonoBehaviour`, so an agent can exist without a GameObject or Transform; an `AgentBehaviour` component shall be provided for agents that live in a scene.",
+        "`Agent.DecideAsync` shall accept a free-form stimulus string and an optional list of observation sentences; the framework shall not define a fixed list of situation types or decide by itself when an agent is asked.",
+        "Agent state (key/value pairs such as `isFollowing` or `atWar`) shall be readable by action handlers and guards but shall never be sent to the model; only the stimulus and the observations shall reach the prompt.",
+        "The agent should remember its most recent exchanges (by default, the last 6 turns) through a replaceable `IMemoryStrategy`, so that consecutive decisions stay consistent."]],
+      ["The framework shall return every decision in one predictable form that the game can act on directly.", [
+        "`DecideAsync` shall return a `DecisionResult` that carries the `AgentDecision` together with its `DecisionTelemetry`.",
+        "`AgentDecision` shall contain exactly `ActionId`, `TargetId` and `Statement`, and shall be immutable once constructed.",
+        "`TargetId` shall be `no_target` when no target applies, and `Statement` (what the agent says or announces) shall be allowed to be empty for agents that act without speaking."]]
+    ]
+  },
+  {
+    id: "tim", name: "Tim", handle: "@TimBrustinov", feature: "Developer-authored actions",
+    questions: [
+      ["Name three things you'd want an AI character in your game to be able to do.", "short answer"],
+      ["How would you prefer to add a new action?", "fill in fields in the Unity Inspector / write a C# script / both"],
+      ["How long would you spend setting up your first AI character before giving up?", "5 min / 15 min / 1 hour / longer"]
+    ],
+    urs: [
+      ["The framework shall let a game developer define the actions their agents can take, for any genre of game, without modifying the framework’s source code.", [
+        "The framework shall provide an `ActionDefinition` ScriptableObject that can be created from the Unity menu Create → Agenerela → Action.",
+        "Each `ActionDefinition` shall have the fields `Id` (lower_snake_case), `Description`, `RequiresTarget`, `ExampleStimulus` and `PreferredExampleTargets`.",
+        "The action vocabulary shall be data, not a compiled enum: adding an action shall require only creating an asset and registering it with a handler."]],
+      ["The framework shall warn the developer in the Unity Editor when an action is defined incorrectly.", [
+        "`ActionDefinition` shall log a warning, linked to the asset, whenever its `Id` is empty or contains spaces or uppercase letters.",
+        "Every field shall show an Inspector tooltip; the `Description` tooltip shall tell the developer to keep it to one short clause of similar length to their other actions.",
+        "The Editor should warn when an action’s `Description` is more than twice the average length of the other actions’ descriptions, because a long description measurably biases small models toward that action."]],
+      ["The framework shall use the developer’s action definitions to show the model worked examples of when each action applies, with no extra authoring.", [
+        "For each request, the framework shall build a few-shot example block from every currently available action’s `ExampleStimulus`, filling its `{0}` placeholder with one of that action’s `PreferredExampleTargets`.",
+        "Example targets shall be drawn only from an action’s `PreferredExampleTargets` that are currently registered, never from arbitrary targets, which prevents nonsense such as “Pick up the Blacksmith”.",
+        "The block shall include one negative example that refuses an impossible request with action `none` and target `no_target`.",
+        "The framework should automatically check that no example stimulus repeats a prompt from the evaluation prompt set, since reusing evaluation prompts as examples invalidates accuracy results."]]
+    ]
+  },
+  {
+    id: "jay", name: "Jay", handle: "@JaySlifer", feature: "Action availability",
+    questions: [
+      ["What should an AI character never be allowed to do in your game?", "short answer"],
+      ["How do you stop characters from doing things that make no sense at the moment today?", "short answer"],
+      ["Should your game code get the final say before an AI's chosen action happens?", "yes / no / depends"]
+    ],
+    urs: [
+      ["The framework shall let a developer connect each action to the game code that performs it, and let that code decide when the action is allowed.", [
+        "The framework shall define an `IActionHandler` interface with two methods: `IsAvailable(AgentContext)` and `Execute(AgentContext, AgentDecision)`.",
+        "`ActionRegistry.Register(ActionDefinition, IActionHandler)` shall reject a duplicate action id or a null handler with a clear error message, and the registry shall list its actions in a stable order.",
+        "The framework shall call a handler’s `Execute` only after every validation guard has passed, including a re-check that the returned action id is registered and currently available, because the model’s output is treated as untrusted."]],
+      ["The framework shall only offer the model actions that make sense in the agent’s current situation.", [
+        "The list of available actions shall be recomputed for every decision by calling each handler’s `IsAvailable`, and shall never be cached between decisions.",
+        "An unavailable action shall be left out of the action list sent to the model entirely, rather than forbidden by a written instruction; for example, an agent that is already following the player shall never be offered `follow_player`.",
+        "Every action whose `RequiresTarget` is true shall be unavailable while the agent has no registered targets."]],
+      ["The framework shall describe the answer it expects from the model in one provider-independent format that follows the team’s measured accuracy rules.", [
+        "`DecisionSchema` shall contain no JSON Schema or GBNF syntax; separate serializers shall translate it for each kind of provider.",
+        "The schema’s fields shall be ordered `action`, then `target`, then `statement`, with no reasoning or chain-of-thought field before `action`.",
+        "The framework shall add a `none` action (“Take no action”) to every schema automatically and always list it last.",
+        "The developer should be able to override the default field descriptions that are sent to the model."]]
+    ]
+  },
+  {
+    id: "hero", name: "Hero", handle: "@phupanawat", feature: "Targets and grounding",
+    questions: [
+      ["What should an AI character be able to act on?", "objects / other characters / places / whole groups or factions"],
+      ["If a player asks for something impossible, like “attack the dragon” when there is no dragon, what should the character do?", "refuse and say why / ignore it / do something close / other"],
+      ["How important is it that players can say “it” or “over there” instead of exact names?", "1–5 scale"]
+    ],
+    urs: [
+      ["The framework shall let game code add and remove, while the game is running, the things an agent is allowed to refer to, including things that are not scene objects, such as a faction or a trade route.", [
+        "`TargetRegistry` shall provide `Register(id, target)`, `Unregister(id)`, `TryGet(id, out target)`, `Contains(id)` and `Count`.",
+        "The registry shall store targets as `object` rather than `Transform`, so that targets with no scene presence can be registered.",
+        "The registry shall return ids in stable insertion order and shall reject duplicate or malformed ids with a clear error message."]],
+      ["The framework shall make it impossible for the model to choose a target that is not currently registered.", [
+        "The schema’s `target` field shall be an enumeration built from the registry’s current ids plus a `no_target` sentinel value.",
+        "Whenever at least one target is registered, `target` shall be a required field; “nothing applies” shall be expressed as `no_target`, never as an empty string or a missing field.",
+        "When the registry is empty, the `target` field shall be left out of the schema entirely."]],
+      ["The framework shall stop an agent from acting on a target that the stimulus never mentioned; for example, an agent told to “attack the dragon” in a scene with no dragon shall not attack the training dummy instead.", [
+        "For an action that requires a target, `TargetGroundingGuard` shall pass the decision only if the target’s id appears in the stimulus text (as an exact match, or after splitting snake_case and camelCase into words); otherwise it shall rewrite the decision to `none`.",
+        "A grounding rewrite shall be recorded in the decision’s telemetry, naming the guard that fired, and shall count as a contained refusal rather than an error.",
+        "With the grounding guard enabled, a 2-billion-parameter model shall pass at least 95% of the impossible-request test suite.",
+        "Each target should accept optional aliases (for example, “the dummy” for `training_dummy`) that the grounding guard also recognizes."]]
+    ]
+  },
+  {
+    id: "yevhen", name: "Yevhen", handle: "@Draganoider", feature: "Model providers",
+    questions: [
+      ["How long can a character take to respond before it feels broken?", "under 1 s / 1–3 s / 3–10 s / longer is fine"],
+      ["Would it be okay if your game needed internet for the AI to work?", "yes / no / only for some features"],
+      ["How much bigger could your game's download get to include an AI model?", "under 100 MB / about 500 MB / about 1 GB / more"],
+      ["Would you pay for an online AI service, or must it be free to run?", "would pay / free only / depends on price"]
+    ],
+    urs: [
+      ["The framework shall allow a game developer to change which language-model service their agents use without changing their agents or their game code.", [
+        "The framework shall route every model request through a single `ILLMProvider` interface (`RequestAsync(DecisionRequest, CancellationToken)`); agent and game code shall depend only on this interface.",
+        "Each provider shall declare its `ProviderCapabilities` (constrained decoding, property ordering, empty-string enum support), and the framework shall adapt each request to those capabilities rather than assume one schema dialect.",
+        "Adding a new backend shall require only a new provider class and its configuration, with no change to framework source code, and every provider shall pass a shared provider conformance test suite.",
+        "A cloud provider shall read its API key from a git-ignored `.env` file, send it only in an HTTP header (never in a URL), and redact it from all log and error output."]],
+      ["The framework shall keep the game running smoothly while an agent waits for the model, and shall report a backend problem to the developer instead of crashing the game.", [
+        "`RequestAsync` shall run asynchronously using Unity’s `Awaitable` and shall not block the main thread while a request is in flight.",
+        "Requests from several agents shall pass through a request queue that delivers each response only to the agent that asked, and each request shall be cancellable through its `CancellationToken`.",
+        "A backend failure (server not running, model not installed, timeout, malformed response) shall be returned as a typed error result, never as an unhandled exception.",
+        "On the team’s reference machine (8 GB laptop GPU, 2-billion-parameter model through Ollama), one decision round-trip shall complete in under 5 seconds."]],
+      ["The framework shall allow a finished game to run its agents entirely on the player’s computer, with no internet connection and no separately installed AI server.", [
+        "The framework shall provide an in-process provider, `LLMUnityProvider`, that runs a local GGUF model inside the built game through the LLMUnity library.",
+        "A `GbnfSerializer` shall translate the same `DecisionSchema` into a GBNF grammar that enforces the same constraints as the JSON Schema path (allowed actions, the `no_target` sentinel, field order), verified against shared test fixtures.",
+        "LLMUnity shall be an optional dependency, compiled only when it is installed and pinned to an exact version, so developers who use only Ollama or a cloud service install nothing extra.",
+        "In-process decisions should score within the measured noise floor (about 10 percentage points) of the Ollama provider on the same evaluation subset."]]
+    ]
+  },
+  {
+    id: "maxim", name: "Maxim", handle: "@MaximGolubitsky", feature: "Telemetry and evaluation",
+    questions: [
+      ["When a character does something wrong, how do you find out why today?", "short answer"],
+      ["What would you need to see before trusting the AI's choices?", "a log of decisions / the reason for each / test scores / other"],
+      ["Which details would you want for each decision?", "response time / cost / which safety check stopped it / success rate"]
+    ],
+    urs: [
+      ["The framework shall record how every agent decision was made, so a developer can find out why an agent did what it did.", [
+        "Every call to `DecideAsync` shall produce a `DecisionTelemetry` record, including calls that fail.",
+        "`DecisionTelemetry` shall contain the latency in seconds, prompt and completion token counts, the provider name, the framework version (`AgenerelaInfo.Version`) and the names of the guards that fired, in the order they ran.",
+        "Telemetry shall be returned together with the decision in `DecisionResult`, and recording it shall not be optional."]],
+      ["The framework shall classify each evaluated decision by the kind of result it was, not only as right or wrong.", [
+        "`DecisionOutcome` shall have exactly five documented values: `Correct`, `WrongLegalAction`, `ContainedByGuard`, `RejectedWhenActionExpected` and `PipelineError`.",
+        "The outcome shall be empty (null) during normal gameplay and shall be set only by the evaluation harness, by comparing the decision against a labelled test prompt.",
+        "A transport or parse failure shall be classified as `PipelineError` and shall carry no decision.",
+        "Evaluation reports shall show results for each outcome category separately, never as a single accuracy percentage."]],
+      ["The framework should let a developer watch agent decisions live in the Unity Editor and export them for later analysis.", [
+        "The Editor package should provide a Decision Log window that lists each decision as it happens: agent, stimulus, chosen action and target, guard verdicts, latency and token counts.",
+        "The Decision Log should let the developer filter entries by agent and by outcome.",
+        "Telemetry records should be exportable to CSV or JSON so that two evaluation runs (an A/B comparison) can be compared outside Unity."]]
+    ]
+  }
+];
+
+/* ---------- text helpers ---------- */
+const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const escBr = s => esc(String(s).trim()).replace(/\n/g, "<br>");
+const codeHtml = s => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>");
+const showInline = s => codeHtml(s).replace(/\b(shall|should)\b/g, '<span class="m m-$1">$1</span>');
+const pasteInline = s => codeHtml(String(s).trim()).replace(/\b(shall|should)\b/g, "<strong>$1</strong>").replace(/\n/g, "<br>");
+const plain = s => String(s).replace(/`([^`]+)`/g, "$1");
+
+/* Flat requirement list with the IDs used in the last post (UR1, SR1.1 ...). */
+MEMBERS.forEach(m => {
+  m.reqs = [];
+  m.urs.forEach(([ur, srs], i) => {
+    m.reqs.push({ id: `UR${i + 1}`, text: ur, ur: true });
+    srs.forEach((s, j) => m.reqs.push({ id: `SR${i + 1}.${j + 1}`, text: s }));
+  });
+});
+const normId = id => String(id || "").trim().toUpperCase().replace(/\s*\(.*$/, "").replace(/\s+/g, "");
+const findReq = (m, id) => m.reqs.find(r => r.id === normId(id));
+
+/* ---------- per-browser state ---------- */
+const KEY = "agenerela-interviews:v1:";
+let storageOk = true;
+const state = {};
+MEMBERS.forEach(m => {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(KEY + m.id) || "null"); } catch (e) { storageOk = false; }
+  const s = saved && typeof saved === "object" ? saved : {};
+  state[m.id] = {
+    who: typeof s.who === "string" ? s.who : "",
+    answers: m.questions.map((_, i) => (Array.isArray(s.answers) && typeof s.answers[i] === "string") ? s.answers[i] : ""),
+    other: typeof s.other === "string" ? s.other : "",
+    revs: Array.isArray(s.revs) ? s.revs.filter(r => r && typeof r === "object").map(r => ({
+      id: String(r.id || ""), text: String(r.text || ""), why: String(r.why || "")
+    })) : []
+  };
+});
+const saveTimers = {};
+function save(m) {
+  clearTimeout(saveTimers[m.id]);
+  saveTimers[m.id] = setTimeout(() => {
+    try { localStorage.setItem(KEY + m.id, JSON.stringify(state[m.id])); }
+    catch (e) {
+      storageOk = false;
+      document.getElementById("save-note").textContent =
+        "This browser is not saving notes for this page. Copy your post before closing the tab.";
+    }
+  }, 350);
+  updateProgress(m);
+}
+if (!storageOk) {
+  document.getElementById("save-note").textContent =
+    "This browser is not saving notes for this page. Copy your post before closing the tab.";
+}
+
+/* ---------- rendering ---------- */
+const navEl = document.getElementById("nav");
+const postsEl = document.getElementById("posts");
+document.getElementById("leader-doc").innerHTML = LEADER_HTML;
+
+function navItem(href, who, feat, progId) {
+  const li = document.createElement("li");
+  li.innerHTML = `<a href="#${href}" data-id="${href}"><span class="who">${esc(who)}</span><span class="feat">${esc(feat)}</span>${progId ? `<span class="prog" id="${progId}"></span>` : ""}</a>`;
+  navEl.appendChild(li);
+}
+navItem("leader", "Leader reply", "Project, stakeholders, method, sources, features", null);
+const div = document.createElement("li");
+div.className = "divider";
+div.setAttribute("aria-hidden", "true");
+navEl.appendChild(div);
+
+function autosize(t) { t.style.height = "auto"; t.style.height = (t.scrollHeight + 2) + "px"; }
+
+MEMBERS.forEach(m => {
+  navItem(m.id, m.name, m.feature, `prog-${m.id}`);
+  const s = state[m.id];
+
+  const sec = document.createElement("section");
+  sec.className = "post";
+  sec.id = m.id;
+  sec.innerHTML = `
+    <header class="post-head">
+      <div>
+        <p class="label">Member reply</p>
+        <h2>${esc(m.name)}</h2>
+        <p class="meta">${esc(m.handle)} · ${esc(m.feature)}</p>
+      </div>
+      <div class="tools">
+        <span class="progress" id="progress-${m.id}"></span>
+        <button type="button" class="copy">Copy post</button>
+        <span class="status copy-status" aria-live="polite"></span>
+      </div>
+    </header>
+    <article class="sheet">
+      <div class="part">
+        <p class="part-title">Questions and what people said</p>
+        <label class="field">
+          <span class="flabel">Who you interviewed</span>
+          <input type="text" class="who-input" placeholder="For example: a classmate from another group, and a friend who makes Unity games">
+        </label>
+        <ol class="qs">
+          ${m.questions.map(([q, hint], i) => `
+            <li class="q">
+              <span class="rid">Q${i + 1}</span>
+              <div class="q-body">
+                <p class="q-text">${esc(q)}</p>
+                <p class="q-hint">${esc(hint)}</p>
+                <textarea class="answer" data-i="${i}" rows="2" aria-label="What they said to question ${i + 1}" placeholder="What they said"></textarea>
+              </div>
+            </li>`).join("")}
+        </ol>
+        <label class="field">
+          <span class="flabel">Other suggestions they made</span>
+          <textarea class="other-input" rows="2" placeholder="Anything they raised that your questions didn't cover"></textarea>
+        </label>
+      </div>
+      <div class="part">
+        <p class="part-title">Revised requirements</p>
+        <p class="part-note">One or two changes the answers above support. Name the requirement you changed, or give a new ID such as SR2.5.</p>
+        <div class="rev-tools">
+          <button type="button" class="ghost draft" hidden>Draft from my notes</button>
+          <button type="button" class="ghost stop" hidden>Stop</button>
+          <button type="button" class="ghost add">Add a revision</button>
+          <span class="draft-status" aria-live="polite"></span>
+        </div>
+        <div class="revs"></div>
+        <datalist id="ids-${m.id}">${m.reqs.map(r => `<option value="${r.id}"></option>`).join("")}</datalist>
+        <details class="orig">
+          <summary>Your requirements from the last post</summary>
+          <ol class="orig-list">
+            ${m.reqs.map(r => `<li class="${r.ur ? "is-ur" : ""}"><span class="rid">${r.id}</span><span>${showInline(r.text)}</span></li>`).join("")}
+          </ol>
+        </details>
+      </div>
+    </article>`;
+  postsEl.appendChild(sec);
+
+  const who = sec.querySelector(".who-input");
+  who.value = s.who;
+  who.addEventListener("input", () => { s.who = who.value; save(m); });
+
+  sec.querySelectorAll(".answer").forEach(t => {
+    const i = Number(t.dataset.i);
+    t.value = s.answers[i];
+    t.addEventListener("input", () => { s.answers[i] = t.value; autosize(t); save(m); });
+  });
+  const other = sec.querySelector(".other-input");
+  other.value = s.other;
+  other.addEventListener("input", () => { s.other = other.value; autosize(other); save(m); });
+
+  sec.querySelector(".add").addEventListener("click", () => {
+    s.revs.push({ id: "", text: "", why: "" });
+    renderRevs(m);
+    save(m);
+    const rows = sec.querySelectorAll(".rev");
+    const last = rows[rows.length - 1];
+    if (last) last.querySelector(".rev-id").focus();
+  });
+
+  sec.querySelector(".copy").addEventListener("click", e => {
+    const { html, text } = memberPost(m);
+    copyRich(html, text, e.currentTarget, sec.querySelector(".copy-status"), sec.querySelector(".sheet"));
+  });
+
+  wireDraft(m, sec);
+  renderRevs(m);
+  updateProgress(m);
+});
+
+requestAnimationFrame(() => document.querySelectorAll("textarea").forEach(autosize));
+
+function renderRevs(m) {
+  const s = state[m.id];
+  const box = document.querySelector(`#${m.id} .revs`);
+  box.innerHTML = "";
+  s.revs.forEach((r, idx) => {
+    const row = document.createElement("div");
+    row.className = "rev";
+    row.innerHTML = `
+      <div class="rev-top">
+        <label class="field">
+          <span class="flabel">Requirement</span>
+          <input type="text" class="rev-id" list="ids-${m.id}" placeholder="SR2.4">
+        </label>
+        <button type="button" class="link remove">Remove</button>
+      </div>
+      <p class="was" hidden></p>
+      <label class="field">
+        <span class="flabel">Revised text</span>
+        <textarea class="rev-text" rows="2" placeholder="The framework shall …"></textarea>
+      </label>
+      <label class="field">
+        <span class="flabel">Changed because</span>
+        <textarea class="rev-why" rows="1" placeholder="Which answer led to this change"></textarea>
+      </label>`;
+    const idIn = row.querySelector(".rev-id");
+    const text = row.querySelector(".rev-text");
+    const why = row.querySelector(".rev-why");
+    const was = row.querySelector(".was");
+    const showWas = () => {
+      const orig = findReq(m, idIn.value);
+      was.hidden = !orig;
+      was.innerHTML = orig ? `<b>Was</b>${showInline(orig.text)}` : "";
+    };
+    idIn.value = r.id; text.value = r.text; why.value = r.why;
+    showWas();
+    idIn.addEventListener("input", () => { r.id = idIn.value; showWas(); save(m); });
+    text.addEventListener("input", () => { r.text = text.value; autosize(text); save(m); });
+    why.addEventListener("input", () => { r.why = why.value; autosize(why); save(m); });
+    row.querySelector(".remove").addEventListener("click", () => {
+      s.revs.splice(idx, 1);
+      renderRevs(m);
+      save(m);
+    });
+    box.appendChild(row);
+    requestAnimationFrame(() => { autosize(text); autosize(why); });
+  });
+}
+
+function counts(m) {
+  const s = state[m.id];
+  const answered = s.answers.filter(a => a.trim()).length;
+  const revs = s.revs.filter(r => r.text.trim()).length;
+  return { answered, total: m.questions.length, revs, ready: answered > 0 && revs > 0 };
+}
+function updateProgress(m) {
+  const c = counts(m);
+  const long = `${c.answered} of ${c.total} answered · ${c.revs} ${c.revs === 1 ? "revision" : "revisions"}`;
+  const p = document.getElementById(`progress-${m.id}`);
+  if (p) { p.textContent = long; p.dataset.ready = String(c.ready); }
+  const n = document.getElementById(`prog-${m.id}`);
+  if (n) { n.textContent = c.ready ? "Ready to post" : `${c.answered}/${c.total} answered · ${c.revs} rev`; n.dataset.ready = String(c.ready); }
+}
+
+/* ---------- the post each member pastes ---------- */
+function memberPost(m) {
+  const s = state[m.id];
+  let html = `<p><strong>Questions I composed for our interviews</strong></p><ol>` +
+    m.questions.map(([q, hint]) => `<li>${esc(q)} (${esc(hint)})</li>`).join("") + `</ol>`;
+  const text = ["Questions I composed for our interviews",
+    ...m.questions.map(([q, hint], i) => `${i + 1}. ${q} (${hint})`), ""];
+
+  const answered = m.questions.map(([q], i) => ({ q, a: s.answers[i].trim() })).filter(x => x.a);
+  if (s.who.trim() || answered.length || s.other.trim()) {
+    html += `<p><strong>Responses and suggestions I received</strong></p>`;
+    text.push("Responses and suggestions I received");
+    if (s.who.trim()) { html += `<p>Interviewed: ${escBr(s.who)}</p>`; text.push(`Interviewed: ${s.who.trim()}`); }
+    if (answered.length) {
+      html += `<ul>` + answered.map(x => `<li><em>${esc(x.q)}</em><br>${escBr(x.a)}</li>`).join("") + `</ul>`;
+      answered.forEach(x => text.push(`- ${x.q}`, `  ${x.a}`));
+    }
+    if (s.other.trim()) { html += `<p>Other suggestions: ${escBr(s.other)}</p>`; text.push(`Other suggestions: ${s.other.trim()}`); }
+    text.push("");
+  }
+
+  const revs = s.revs.filter(r => r.text.trim());
+  if (revs.length) {
+    html += `<p><strong>Revised requirements based on the responses</strong></p><ul>`;
+    text.push("Revised requirements based on the responses");
+    revs.forEach(r => {
+      const orig = findReq(m, r.id);
+      const raw = r.id.trim();
+      const label = orig ? `${orig.id} (revised)` : raw ? (/new/i.test(raw) ? raw : `${raw} (new)`) : "New requirement";
+      html += `<li><strong>${esc(label)}</strong> ${pasteInline(r.text)}` +
+        (orig ? `<br>Was: ${pasteInline(orig.text)}` : "") +
+        (r.why.trim() ? `<br>Why: ${escBr(r.why)}` : "") + `</li>`;
+      text.push(`${label}: ${plain(r.text.trim())}`);
+      if (orig) text.push(`  Was: ${plain(orig.text)}`);
+      if (r.why.trim()) text.push(`  Why: ${r.why.trim()}`);
+    });
+    html += `</ul>`;
+  }
+  return { html, text: text.join("\n").trim() };
+}
+
+/* ---------- clipboard ---------- */
+async function copyRich(html, text, btn, status, selectable) {
+  let ok = false;
+  try {
+    if (navigator.clipboard && window.ClipboardItem) {
+      await navigator.clipboard.write([new ClipboardItem({
+        "text/html": new Blob([html], { type: "text/html" }),
+        "text/plain": new Blob([text], { type: "text/plain" })
+      })]);
+      ok = true;
+    }
+  } catch (e) { ok = false; }
+
+  if (!ok) {
+    const holder = document.createElement("div");
+    holder.innerHTML = html;
+    holder.style.cssText = "position:fixed;left:-10000px;top:0;font:16px Arial,sans-serif;color:#000;background:#fff;";
+    document.body.appendChild(holder);
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(holder);
+    sel.removeAllRanges(); sel.addRange(range);
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    sel.removeAllRanges();
+    holder.remove();
+  }
+
+  if (ok) {
+    btn.textContent = "Copied";
+    btn.dataset.state = "done";
+    status.textContent = "";
+    setTimeout(() => { btn.textContent = "Copy post"; delete btn.dataset.state; }, 2200);
+  } else {
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(selectable);
+    sel.removeAllRanges(); sel.addRange(range);
+    status.textContent = "Clipboard access is blocked here. The text is selected: press Ctrl+C (Cmd+C on Mac).";
+  }
+}
+
+document.getElementById("leader-copy").addEventListener("click", e => {
+  const doc = document.getElementById("leader-doc");
+  copyRich(LEADER_HTML, doc.innerText, e.currentTarget, document.getElementById("leader-status"), doc);
+});
+
+/* ---------- drafting revisions with Claude (optional) ---------- */
+let sampleFn = null;
+let draftingOff = false;
+(async () => {
+  try {
+    sampleFn = (window.claude && typeof window.claude.use === "function") ? await window.claude.use("sample") : null;
+  } catch (e) { sampleFn = null; }
+  if (sampleFn && !draftingOff) document.querySelectorAll(".draft").forEach(b => { b.hidden = false; });
+})();
+
+function draftPrompt(m) {
+  const s = state[m.id];
+  const reqs = m.reqs.map(r => `${r.id}: ${plain(r.text)}`).join("\n");
+  const qa = m.questions.map(([q, hint], i) =>
+    `Q${i + 1}: ${q} (${hint})\nRecorded answer: ${s.answers[i].trim() || "(no answer recorded)"}`).join("\n\n");
+  return `A university student is revising software requirements after short requirements interviews.
+
+Project: Agenerela, a Unity framework that lets a language model choose actions for game agents (NPCs, companions, factions) from actions the developer has registered.
+Feature this student owns: ${m.feature}
+
+Current requirements (keep these IDs):
+${reqs}
+
+Interview questions and the answers the student recorded:
+${qa}
+
+Who was interviewed: ${s.who.trim() || "(not recorded)"}
+Other suggestions recorded: ${s.other.trim() || "(none)"}
+
+Task: propose at most 2 small revisions that the recorded answers directly support. A revision either rewrites one existing requirement (use its ID, for example "SR2.4") or adds one new system requirement under an existing user requirement (use the next free ID followed by " (new)", for example "SR2.5 (new)"). Base every revision only on what the recorded answers say, and never invent interview content. If the answers do not support any change, reply with an empty array.
+Write each requirement as one sentence in the same style as the current ones, using "shall" for mandatory and "should" for desirable.
+
+Reply with only a JSON array, for example:
+[{"id": "SR2.4", "revised": "The framework shall ...", "reason": "One sentence naming the answer that led to this change."}]`;
+}
+
+function wireDraft(m, sec) {
+  const btn = sec.querySelector(".draft");
+  const stop = sec.querySelector(".stop");
+  const status = sec.querySelector(".draft-status");
+  let ctl = null;
+
+  stop.addEventListener("click", () => { if (ctl) ctl.abort(); });
+
+  btn.addEventListener("click", async () => {
+    const s = state[m.id];
+    if (!s.answers.some(a => a.trim()) && !s.other.trim()) {
+      status.textContent = "Record at least one answer first.";
+      return;
+    }
+    ctl = new AbortController();
+    btn.disabled = true;
+    stop.hidden = false;
+    status.textContent = "Drafting from your notes. This can take up to a minute.";
+    try {
+      const out = await sampleFn.json(draftPrompt(m), { signal: ctl.signal, cache: false });
+      const list = Array.isArray(out) ? out : (out && Array.isArray(out.revisions) ? out.revisions : []);
+      const clean = list.filter(x => x && typeof x === "object" && typeof x.revised === "string" && x.revised.trim())
+        .slice(0, 2)
+        .map(x => ({ id: String(x.id || ""), text: x.revised.trim(), why: String(x.reason || "").trim() }));
+      if (clean.length) {
+        s.revs.push(...clean);
+        renderRevs(m);
+        save(m);
+        status.textContent = `Added ${clean.length} drafted ${clean.length === 1 ? "revision" : "revisions"}. Check the wording before you post.`;
+      } else {
+        status.textContent = "Your notes don't point to a change yet. Add more detail, or write one yourself.";
+      }
+    } catch (e) {
+      const code = e && e.code;
+      if (code === "cancelled") status.textContent = "";
+      else if (["not_granted", "sampling_disabled", "not_declared", "capability_disabled", "capability_removed"].includes(code)) {
+        draftingOff = true;
+        document.querySelectorAll(".draft").forEach(b => { b.hidden = true; });
+        status.textContent = "Drafting isn't available here. Use Add a revision to write one yourself.";
+      }
+      else if (code === "rate_limited") status.textContent = "Too many requests right now. Try again in a minute.";
+      else if (code === "session_expired") status.textContent = "Your Claude session expired. Sign in again, then retry.";
+      else if (code === "invalid_json") status.textContent = "The draft came back in an unexpected format. Try again.";
+      else if (code === "refused" || code === "empty_completion") status.textContent = "No draft came back for these notes. Edit them, or write the revision yourself.";
+      else status.textContent = "Drafting failed. Try again.";
+    } finally {
+      btn.disabled = false;
+      stop.hidden = true;
+      ctl = null;
+    }
+  });
+}
+
+/* ---------- mark the reply in view ---------- */
+const links = [...navEl.querySelectorAll("a")];
+const setCurrent = id => links.forEach(a => a.setAttribute("aria-current", String(a.dataset.id === id)));
+setCurrent("leader");
+if ("IntersectionObserver" in window) {
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) setCurrent(e.target.id); });
+  }, { rootMargin: "-25% 0px -65% 0px" });
+  document.querySelectorAll(".post").forEach(s => io.observe(s));
+}
+</script>
+
+</body></html>

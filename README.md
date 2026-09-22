@@ -5,9 +5,13 @@ Let a language model drive game agents — NPCs, companions, factions, colonies 
 validated deterministic code executes it. Local-first, with a provider interface for
 cloud backends.
 
-> **Status: early development.** The API does not exist yet. This repository is being
-> built from a measured prototype; see [the build plan](docs/FRAMEWORK_BUILD_PLAN.md)
-> for the architecture, phases and the evidence behind the design decisions.
+> **Status: early development — Phase 1 of 8.** The provider contract, the target registry
+> and the action definition exist; the agent, its action registry and the schema do not,
+> and nothing calls a model before Phase 2. This repository is being built from a measured
+> prototype: see [the build plan](docs/FRAMEWORK_BUILD_PLAN.md) for the architecture, the
+> phases and the evidence behind each design decision, and
+> [`docs/design/`](docs/design/README.md) for what the finished screens are meant to look
+> like.
 
 ## Why it exists
 
@@ -42,12 +46,15 @@ The LLM never touches Unity directly.
 | Path | Contents |
 |---|---|
 | `UnityProject/Packages/com.agenerela.framework/` | The package — everything shippable |
-| `UnityProject/Assets/Evaluation/` | Accuracy benchmark harness and prompt set |
+| `UnityProject/Assets/Evaluation/` | Accuracy benchmark harness and prompt set — Phase 4, not created yet |
 | `Demos/` | Demo games, one Unity project each (not shipped to consumers) |
 | `docs/FRAMEWORK_BUILD_PLAN.md` | Architecture, build phases, decision records |
 | `docs/llm-wiki/` | Measured findings and working conventions |
+| `docs/design/` | Sitemap, screen wireframes and the developer walkthrough — what a developer and a player see |
+| `docs/course/` | COMP 490 deliverables: requirements, interviews, the sketch lab |
 | `tools/benchmarks/` | Standalone probes for fast iteration outside Unity |
 | `AGENTS.md` | Rules for AI coding agents — and the shortest description of how this project works |
+| `CONTRIBUTING.md`, `REVIEWING.md` | Opening a pull request, and reviewing one |
 
 ## Developing
 

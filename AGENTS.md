@@ -69,9 +69,9 @@ they are taken.
 | Path | Contents |
 |---|---|
 | `UnityProject/Packages/com.agenerela.framework/` | The package — everything shippable |
-| `UnityProject/Assets/Evaluation/` | Benchmark harness and labelled prompt set |
+| `UnityProject/Assets/Evaluation/` | Benchmark harness and labelled prompt set — Phase 4, does not exist yet |
 | `Demos/<Game>/` | Demo games — one full Unity project each, loading the package by relative path (DR-010) |
-| `docs/` | Build plan and llm-wiki |
+| `docs/` | Build plan, llm-wiki, screen designs and course materials — [`docs/README.md`](docs/README.md) maps them |
 | `tools/benchmarks/` | Standalone Python probes, no Unity required |
 
 ## Working conventions
@@ -81,6 +81,12 @@ restricted. Branch off `test`, open pull requests **into `test`**. Never target 
 pushes there are restricted to the repository owner.
 
 **Commits.** Explain *why*, not just *what*. No attribution trailers (rule 7).
+
+**Only `Runtime/Unity/` touches a scene.** Everywhere else in the framework's `Runtime/`,
+no `GameObject`, `Component`, `MonoBehaviour`, `Transform`, scene query or physics call, so
+an agent can exist with no scene at all — a country in GreyBoxStrategy has no Transform.
+`UnityEngine` itself is fine (`Awaitable`, `ScriptableObject`, `[Tooltip]`), and `UnityEditor`
+in `Runtime/` must sit inside `#if UNITY_EDITOR`. CI enforces both (DR-011, build plan §1.2).
 
 **Demo games are separate Unity projects** under `Demos/`, one per game (DR-010). Read
 [`Demos/README.md`](Demos/README.md) before creating or changing one. A game loads the
@@ -100,9 +106,18 @@ version or git URL — and uses only the framework's public API. Framework work 
 - Any accuracy claim has a control arm and is recorded in `docs/llm-wiki/findings.md`
 
 **Never merge a pull request with a failing CI check.** `Repo hygiene` catches missing
-`.meta` files, broken JSON and committed generated files in every Unity project, plus a
-project on the wrong Unity version or a game not loading the framework from this repo; a
-red check is a blocker, not a warning.
+`.meta` files, a committed `.meta` whose GUID changed, broken JSON and committed generated
+files in every Unity project, plus a `.gitignore` rule that ignores tracked files, a project
+on the wrong Unity version or a game not loading the framework from this repo; a red check
+is a blocker, not a warning. When it reports a missing or changed `.meta` for an asset that
+already existed, restore the committed one (`git checkout origin/test -- <path>.meta`).
+Never commit the copy Unity regenerates: its GUID is new, so every reference to the asset
+stays broken.
+
+**Reviewing a pull request** follows [`REVIEWING.md`](REVIEWING.md): the checks in order,
+the four finding labels, and the summary template. A green check is not a review, because
+CI never compiles C# or runs a test. An agent that cannot open Unity says so in the review
+rather than implying the code builds.
 
 **Do not** commit `Library/`, `Logs/`, `UserSettings/`, `*.csproj`, `*.slnx`, or `.env`.
 They are gitignored; if one appears in `git status`, something is wrong — investigate
@@ -114,9 +129,24 @@ it; opening a project in a newer patch rewrites that file for everyone.
 
 ## Current state
 
-Phase 0 complete: repo skeleton, empty Unity project, package with runtime/editor/test
-assemblies and passing smoke tests. **No framework code exists yet** — Phase 1 (Core,
-Actions, Schema) is next. See the build plan's phase table.
+Phase 0 is complete and **Phase 1 (Core, Actions, Schema) is underway.** See the build
+plan's phase table for what each phase means.
+
+Merged so far: the `ILLMProvider` contract and its supporting types (#12), `TargetRegistry`
+(#5), `ActionDefinition` and its `ActionDefinitionAsset` wrapper (#4, via #35 — #4 stays open
+for its tests and a tooltip fix), Newtonsoft as the core's one declared dependency (DR-009),
+each demo game as its own Unity project (DR-010), and `Demos/GreyBoxVillage` — a playable
+grey-box scene whose guard still answers from placeholder string matching, not a model (#19).
+
+Not written yet: the core decision types (#2), telemetry (#3 — its three files under
+`Runtime/Core/` are committed **empty** as placeholders), `ActionRegistry` (#6),
+state-derived availability (#7), `DecisionSchema` (#8), its JSON serializer (#9), the
+few-shot builder (#10), `AgentProfile` (#15), `PromptBuilder` (#16) and `Agent` itself
+(#17). **Nothing in the framework calls a model yet** — that starts in Phase 2, so Phase 1
+work is pure C# with EditMode tests and no Ollama.
+
+What all of this is meant to become, screen by screen, is drawn in
+[`docs/design/`](docs/design/README.md).
 
 ## Agent-specific configuration
 

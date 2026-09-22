@@ -1,0 +1,123 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Screen 1 - Agent Profile & Actions</title>
+<link rel="stylesheet" href="wf.css">
+<style>
+body{width:1600px;height:1000px}
+.win{overflow:visible}.bar{border-radius:5px 5px 0 0}
+.rel{position:relative}
+.tree{padding:6px 0;font-size:12.5px}
+.tree div{height:25px;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.tree .sel{background:var(--fill3);font-weight:600}
+.menu{position:absolute;background:#fff;border:1.5px solid var(--ink2);border-radius:5px;box-shadow:3px 4px 0 var(--fill3);font-size:12.5px;padding:4px 0;z-index:5}
+.menu div{height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 10px}
+.menu .on{background:var(--ink);color:#fff}
+.ahdr{display:flex;align-items:center;gap:12px;height:62px;padding:0 14px;border-bottom:1.5px solid var(--line3)}
+.aicon{width:38px;height:38px;border:1.5px solid var(--line);border-radius:6px;background:var(--fill);display:flex;align-items:center;justify-content:center;font-size:20px}
+.grid{display:grid;grid-template-columns:30px 176px 1fr 84px 150px;align-items:center;column-gap:8px;padding:0 12px;font-size:12.5px;min-height:31px;border-bottom:1px solid var(--line3)}
+.grid.h{min-height:26px;color:var(--ink3);font-size:11.5px;font-weight:600;background:#fff}
+.bar2{display:flex;align-items:center;gap:8px}
+.track{width:104px;height:9px;border:1.5px solid var(--line2);border-radius:5px;overflow:hidden}
+.track i{display:block;height:100%;background:var(--ink2)}
+.exp{margin:0 12px 0 42px;padding:6px 0 8px;border-left:3px solid var(--ink2);background:var(--fill0);border-bottom:1px solid var(--line3)}
+.exp .r .k{width:150px}
+.locked{color:var(--ink3);background:var(--fill0)}
+.drop{margin:8px 12px 10px;height:40px;border:2px dashed var(--line2);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12.5px;color:var(--ink3)}
+.warnrow{background:#fff;outline:2px dashed var(--ink2);outline-offset:-3px}
+</style></head>
+<body><div class="page">
+
+<div class="hdr">
+  <div>
+    <div class="kicker">Screen 1 of 6 · Unity Editor</div>
+    <div class="title">Agent Profile &amp; Actions</div>
+    <div class="sub">The Inspector for an Agent Profile asset: who the agent is, and what it is allowed to do</div>
+  </div>
+  <div class="meta">Agenerela · COMP 490 · Section 04<br>Opened from <b>Create ▸ Agenerela ▸ Agent Profile</b><br><span class="pill">Phase 1 assets · Phase 5 Inspector polish</span></div>
+</div>
+
+<div class="wf">
+  <!-- Project window -->
+  <div class="win" style="left:0;top:0;width:262px;height:828px">
+    <div class="bar"><div class="tabx">Project</div></div>
+    <div class="r" style="padding-top:8px"><div class="f muted">⌕ Search</div></div>
+    <div class="tree">
+      <div style="padding-left:10px">▾ Assets</div>
+      <div style="padding-left:26px">▾ MyVillage</div>
+      <div style="padding-left:42px">▾ Agents</div>
+      <div style="padding-left:58px">◆ Innkeeper</div>
+      <div class="sel" style="padding-left:58px">◆ VillageGuard</div>
+      <div style="padding-left:42px">▾ Actions</div>
+      <div style="padding-left:58px">◇ attack_target</div>
+      <div style="padding-left:58px">◇ follow_player</div>
+      <div style="padding-left:58px">◇ give_item</div>
+      <div style="padding-left:58px">◇ move_to</div>
+      <div style="padding-left:42px">▸ Scenes</div>
+    </div>
+    <div class="hint" style="position:absolute;left:12px;top:356px">Right-click in the Project window:</div>
+    <div class="menu" style="left:10px;top:378px;width:130px">
+      <div>Folder</div><div>C# Script</div><div>Scene</div><div class="on">Agenerela <span>▸</span></div><div>Material</div>
+    </div>
+    <div class="menu" style="left:136px;top:450px;width:116px">
+      <div class="on">Agent Profile</div><div>Action</div>
+    </div>
+    <div class="hint" style="position:absolute;left:12px;right:12px;top:540px;line-height:1.45">◆ Agent Profile asset<br>◇ Action asset<br><br>Both are ordinary Unity assets: no code, and they merge cleanly in git.</div>
+  </div>
+
+  <!-- Inspector -->
+  <div class="win" style="left:278px;top:0;width:848px;height:828px">
+    <div class="bar"><div class="tabx">Inspector</div><div class="tabx off">Lighting</div></div>
+    <div class="ahdr">
+      <div class="aicon">◆</div>
+      <div><div style="font-size:17px;font-weight:700">VillageGuard</div><div class="hint">Agent Profile</div></div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px"><span class="hint">Shared by 10 guards in 2 scenes</span><span class="btn">Show users</span></div>
+    </div>
+
+    <div class="sec rel">▾ Identity<span class="c" style="left:-15px;top:1px">1</span></div>
+    <div class="r"><span class="k">Name</span><div class="f">Village Guard</div></div>
+    <div class="r"><span class="k">Role</span><div class="f">a guard at the town gate</div></div>
+    <div class="r"><span class="k">Personality</span><div class="f">Loyal, brief, a little suspicious of strangers.</div></div>
+    <div class="r"><span class="k">Goals</span><div class="f">Keep the gate safe; help the player when asked.</div></div>
+
+    <div class="sec rel" style="margin-top:6px">▾ Actions · 3
+      <span style="margin-left:auto;display:flex;align-items:center;gap:10px;font-weight:400"><span class="hint">✓ Descriptions are a similar length</span><span class="btn">+ Add</span></span>
+      <span class="c" style="left:-15px;top:1px">2</span></div>
+    <div class="grid h rel"><span></span><span>Id</span><span>Description (one short clause)</span><span>Needs target</span><span class="rel">Length<span class="c" style="left:54px;top:-3px">3</span></span></div>
+
+    <div class="grid"><span class="muted">≡ ▸</span><span class="mono">follow_player</span><span>Start following the player</span><span class="muted">no</span><span class="bar2"><span class="track"><i style="width:70%"></i></span><span class="hint">26</span></span></div>
+    <div class="grid" style="background:var(--fill)"><span class="muted">≡ ▾</span><span class="mono" style="font-weight:700">move_to</span><span>Walk to the named place</span><span>yes</span><span class="bar2"><span class="track"><i style="width:62%"></i></span><span class="hint">23</span></span></div>
+    <div class="exp rel">
+      <span class="c" style="left:-46px;top:36px">4</span>
+      <div class="r"><span class="k">Example stimulus</span><div class="f">Proceed to the {0}.</div><span class="hint">{0} = target</span></div>
+      <div class="r"><span class="k">Sensible example targets</span><span class="chip">tower ✕</span><span class="chip">bridge ✕</span><span class="btn">+</span><span class="hint" style="margin-left:6px">never “Proceed to the training_dummy”</span></div>
+      <div class="r"><span class="k">Generated example</span><span class="mono" style="font-size:12px">Player: "Proceed to the tower."  →  move_to · tower</span></div>
+    </div>
+    <div class="grid"><span class="muted">≡ ▸</span><span class="mono">attack_target</span><span>Attack the named enemy</span><span>yes</span><span class="bar2"><span class="track"><i style="width:59%"></i></span><span class="hint">22</span></span></div>
+    <div class="grid warnrow"><span class="muted">≡ ⚠</span><div class="f obj muted" style="grid-column:2 / 4">None (Action)</div><span></span><span class="hint">empty row</span></div>
+    <div class="grid locked rel"><span>
+      <svg width="12" height="14" viewBox="0 0 12 14"><rect x="1" y="6" width="10" height="7.5" rx="1.5" fill="#7f7f7f"/><path d="M3.2 6V4.2a2.8 2.8 0 0 1 5.6 0V6" stroke="#7f7f7f" stroke-width="1.6" fill="none"/></svg></span>
+      <span class="mono">none</span><span style="font-style:italic">Do nothing · added by the framework, always last</span><span>no</span><span class="hint">locked</span>
+      <span class="c" style="right:8px;top:2px">5</span></div>
+    <div class="drop">Drag Action assets here · or Create ▸ Agenerela ▸ Action</div>
+
+    <div class="sec">▾ Idle example</div>
+    <div class="r"><span class="k">Idle stimulus</span><div class="f">Nothing has changed since last time.</div></div>
+    <div class="r" style="min-height:22px;padding-top:0"><span class="k"></span><span class="hint">A stimulus where the right answer is <span class="mono">none</span>. Shown to the model as an example. Leave empty to omit.</span></div>
+
+    <div class="help rel" style="margin:12px 12px 0">
+      <span class="ico">⚠</span><span><b>1 problem.</b> Actions, row 4 is empty. Drag in an Action asset or remove the row.</span>
+      <span class="btn" style="margin-left:auto">Remove empty rows</span>
+      <span class="c" style="left:-15px;top:7px">6</span></div>
+  </div>
+</div>
+
+<div class="notes">
+  <h4>What the numbers point to</h4>
+  <div class="note"><span class="n">1</span><div><b>Identity</b><p>Name, role, personality and goals. The framework builds the prompt from these fields, so the developer never writes one.</p></div></div>
+  <div class="note"><span class="n">2</span><div><b>Action list</b><p>Drag in Action assets. This is everything the agent can <i>ever</i> do; the game's code decides which are legal at any moment.</p></div></div>
+  <div class="note"><span class="n">3</span><div><b>Length check</b><p>Each description should be one short clause of similar length. A much longer one biases small models toward it, so it gets flagged.</p></div></div>
+  <div class="note"><span class="n">4</span><div><b>Edit an action in place</b><p>Expand a row to set its example stimulus and the targets it makes sense for, with a preview of the example the model will see.</p></div></div>
+  <div class="note"><span class="n">5</span><div><b>Built-in “none”</b><p>Added by the framework, always last and locked, so a developer can't forget it or delete it.</p></div></div>
+  <div class="note"><span class="n">6</span><div><b>Problems where you look</b><p>An empty name, an empty row or a duplicate id shows up here, with a fix button, not only in the Console.</p></div></div>
+</div>
+
+</div></body></html>
