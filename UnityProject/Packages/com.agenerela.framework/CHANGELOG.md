@@ -27,6 +27,13 @@ While the version stays `0.x`, the public API may change in any release.
   implementation yet; `DecisionRequest.Schema` lands with `DecisionSchema`.
 - `Documentation~/providers.md`: how each planned backend answers the contract, what a
   second cloud vendor would need, and which parts are deliberately still open.
+- `DecisionOutcome`, `DecisionTelemetry` and `DecisionResult` in namespace `Agenerela` (#3) —
+  the outcome classification a decision gets scored against (`Correct`, `WrongLegalAction`,
+  `ContainedByGuard`, `RejectedWhenActionExpected`, `PipelineError`) and the record it is
+  written into: latency, prompt/completion tokens, provider name and fired guards. EditMode
+  tests cover the enum's five names and order, a freshly-constructed `DecisionTelemetry`, and
+  a Newtonsoft round trip. `DecisionResult`, which wraps an `AgentDecision`, is commented out
+  for now — `AgentDecision` is #2, not yet merged — and comes back once #2 lands (PR #39).
 
 ### Changed
 - The package depends on `com.unity.nuget.newtonsoft-json` 3.2.2, which Package Manager
