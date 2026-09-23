@@ -141,9 +141,11 @@ Merged so far:
   `Description` and `ExampleStimulus` tooltips still need the wording suggested in #4's last
   two comments.
 - Decision telemetry (#3, via #36): `DecisionOutcome` and `DecisionTelemetry`, with EditMode
-  tests. `DecisionResult` is committed **commented out**: it wraps `AgentDecision` from #2,
-  and without that type the assembly does not compile. It comes back when #39 merges — do
-  not delete it.
+  tests, and `DecisionResult`, which pairs a decision with its telemetry. `DecisionResult`
+  has no EditMode tests yet.
+- The core decision types `AgentIdentity`, `AgentContext` and `AgentDecision` (#2, via #39),
+  with input validation and EditMode tests. `AgentContext.Actions` stays a TODO until
+  `ActionRegistry` (#6) lands.
 - Newtonsoft as the core's one declared dependency (DR-009), and each demo game as its own
   Unity project (DR-010).
 - `Demos/GreyBoxVillage` — a playable grey-box scene whose guard still answers from
@@ -151,9 +153,6 @@ Merged so far:
 - `Repo hygiene` checks for the hard rules a script can check, including "only
   `Runtime/Unity/` touches a scene" (#38, #40), and for a changed `.meta` GUID (#41). It
   still compiles no C#, so a green check does not prove `test` builds.
-
-In review: the core decision types `AgentIdentity`, `AgentContext` and `AgentDecision` (#2,
-PR #39).
 
 Not written yet: `ActionRegistry` (#6), state-derived availability (#7), `DecisionSchema`
 (#8), its JSON serializer (#9), the few-shot builder (#10), `AgentProfile` (#15),

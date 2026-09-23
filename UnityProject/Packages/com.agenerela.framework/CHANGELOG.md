@@ -32,8 +32,15 @@ While the version stays `0.x`, the public API may change in any release.
   `ContainedByGuard`, `RejectedWhenActionExpected`, `PipelineError`) and the record it is
   written into: latency, prompt/completion tokens, provider name and fired guards. EditMode
   tests cover the enum's five names and order, a freshly-constructed `DecisionTelemetry`, and
-  a Newtonsoft round trip. `DecisionResult`, which wraps an `AgentDecision`, is commented out
-  for now — `AgentDecision` is #2, not yet merged — and comes back once #2 lands (PR #39).
+  a Newtonsoft round trip. `DecisionResult` pairs an `AgentDecision` with its telemetry, and
+  allows a null decision only for a `PipelineError`.
+- `AgentIdentity`, `AgentContext` and `AgentDecision` in namespace `Agenerela` (#2) — who an
+  agent is, what it knows at the moment of a decision, and what it chose. `AgentDecision`
+  rejects a null or whitespace action or target id but accepts ids that are not registered,
+  so the guards can inspect them. `AgentContext` rejects a null identity or target registry,
+  and turns a null stimulus, observations or state into an empty value. EditMode tests cover
+  construction, the rejected ids, a null identity, and null observations, state and
+  statement. `AgentContext.Actions` arrives with `ActionRegistry` (#6).
 
 ### Changed
 - The package depends on `com.unity.nuget.newtonsoft-json` 3.2.2, which Package Manager
