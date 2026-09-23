@@ -1,12 +1,17 @@
-# RiskRace — a racing demo where agents choose how much to risk
+# Risk race — a 3D racing demo where agents choose how much to risk
 
-**Status:** proposal, 23 September 2026. Nothing is built yet. Tracked in #53, a
-sub-issue of #47.
+**Status:** an idea, recorded 23 September 2026. Nothing is built, and nobody has
+committed to building it yet. Tracked in #53, a sub-issue of #47.
 
-> **This is a proposal, not a spec.** Where it relies on a settled rule, the rule comes
-> from [the build plan](../FRAMEWORK_BUILD_PLAN.md) and its decision records, not from this
-> page. Everything else here is a starting point. The track, the numbers and the racers are
-> meant to be argued with and tuned in the grey box.
+> **Decided:** it is a 3D game, and its racers' agents choose how much to risk.
+>
+> **Not decided:** the name, and every mechanic on this page: the track, the forks, lives,
+> hazards, the pit lane, the racers and all the numbers. They are one sketch of how the idea
+> could work, written down so there is something concrete to change when the game is picked
+> up. *RiskRace* is only a placeholder for folder and assembly names.
+>
+> Where the sketch relies on a settled rule, the rule comes from
+> [the build plan](../FRAMEWORK_BUILD_PLAN.md) and its decision records, not from this page.
 
 ## In plain terms
 
@@ -32,7 +37,7 @@ shout at one racer, who may ignore them.
 |---|---|---|---|
 | GreyBoxVillage (#19) | a guard | the player types | Yes. The player waits for a reply |
 | GreyBoxStrategy (#20) | a country | once a turn | Yes. The turn ends when every country has decided |
-| **RiskRace** | a racer | a few seconds before each fork | **No. The racer keeps driving** |
+| **Risk race** | a racer | a few seconds before each fork | **No. The racer keeps driving** |
 
 It is the first demo where the answer has a deadline. That gives it four things to show:
 
@@ -50,7 +55,10 @@ It is the first demo where the answer has a deadline. That gives it four things 
    personality. That is what the framework offers in place of a hand-written condition tree
    (§5), and a race shows it plainly: everyone can see who took the shortcut.
 
-## The game
+## The game — a first sketch
+
+None of this section is decided. It makes risk a choice through routes at forks, which is
+one way to do it; the open questions at the end name another.
 
 ### One lap
 
@@ -247,9 +255,9 @@ actually runs into it.
 
 ## Build steps
 
-Each step becomes a sub-issue of #53 when it starts, as #47 asks.
+When someone picks the idea up, each step becomes a sub-issue of #53, as #47 asks.
 
-### Step 1 — Grey box, no framework calls (can start now)
+### Step 1 — Grey box, no framework calls (needs nothing from the framework)
 
 - **Create `Demos/RiskRace/`** as a Universal 3D project, following the
   [`Demos/README.md`](../../Demos/README.md) checklist, and add its row to that page's table.
@@ -323,7 +331,8 @@ MCP for Unity runs inside an open editor, so it cannot create the project. Do th
 steps by hand:
 
 1. **Create the project in Unity Hub:** editor 6000.3.23f1, the Universal 3D template,
-   location `Demos/`, name `RiskRace`. Close the editor once it has finished importing.
+   location `Demos/`, and the game's name, or `RiskRace` until it has one. Close the editor
+   once it has finished importing.
 2. **Edit `Demos/RiskRace/Packages/manifest.json`.** Add the framework line from the
    [`Demos/README.md`](../../Demos/README.md) checklist. Also copy the
    `com.coplaydev.unity-mcp` line from `Demos/GreyBoxVillage/Packages/manifest.json`, so
@@ -379,13 +388,16 @@ Watching one race proves nothing about accuracy, because one race is one run.
 - **A human-driven car** among the agents.
 - **More racers**, to find the queue's ceiling.
 - **Weather** that changes the odds.
-- **A top-down 2D version**, if the team wants this demo to double as #44's second genre.
 
-## Open questions for the team
+## Open questions
 
-1. **The name.** *RiskRace* is a working title.
-2. **Is this #44?** A top-down 2D race would give #44 its second genre. As a 3D race, it is
-   a separate demo under #47.
+Settled so far: it is a 3D game, and a separate demo under #47 rather than #44's 2D one.
+
+1. **The name.** *RiskRace* is only a placeholder.
+2. **The mechanics.** Routes at forks are one way to make risk a choice. Another is a
+   strategy per sector on a single track, such as push, hold or play safe. The framework
+   works with either, provided the game asks at a moment it can name and has a fallback
+   for a late answer.
 3. **Lives or sudden death?** A wreck could remove the racer on the spot instead of costing
    a life. That is more dramatic, but it means fewer decisions per race.
 4. **Numbers or words for risk?** Start with "about 1 in 4", and let a Phase 4 A/B run
