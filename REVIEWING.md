@@ -68,7 +68,8 @@ Without the GitHub CLI: `git fetch origin pull/<number>/head:pr-<number>`, then
 4. **Compile it and run the tests.** Open `UnityProject/` in Unity 6000.3.23f1 and let it
    import. The console must be clean. Then *Window → General → Test Runner → EditMode → Run
    All*, and write down the counts. If the framework's public API changed, open every
-   project under `Demos/` as well.
+   project under `Demos/` as well. The same run works from a shell without opening the
+   editor; [`environment.md`](docs/llm-wiki/environment.md) has the command.
 
    **If you cannot do this step, say so in the review.** That includes an AI agent with no
    Unity. A review that did not compile the code is still worth having, as long as it does

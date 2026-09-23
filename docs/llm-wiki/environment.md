@@ -15,6 +15,33 @@ Each demo game is its own Unity project under `Demos/`, loading the same package
 disk by relative path. [`Demos/README.md`](../../Demos/README.md) covers creating one, and
 how to skip downloading the art of games you don't work on.
 
+### Running the EditMode tests without the editor
+
+The same run as *Test Runner → EditMode → Run All*, from a shell. It is useful for checking a
+branch, and it is how an agent reviewing a pull request can compile it (`REVIEWING.md`,
+step 4). Close any editor that has the same project folder open first: Unity lets one
+editor at a time open a project.
+
+```bash
+"C:/Program Files/Unity/Hub/Editor/6000.3.23f1/Editor/Unity.exe" -batchmode -nographics -projectPath <checkout>/UnityProject -runTests -testPlatform EditMode -testResults results.xml -logFile unity.log
+```
+
+- Exit code 0 means every test passed and 2 means at least one failed. Any other code means
+  the run itself failed, most often on a compile error. The counts are on the `<test-run>`
+  element of `results.xml`; compiler problems are the `error CS` and `warning CS` lines in
+  `unity.log`.
+- Do not add `-quit`: `-runTests` quits on its own.
+- The first run in a fresh checkout imports every package and takes several minutes. Runs
+  after that are much faster.
+- To test a branch without touching your own checkout, run it in a worktree:
+  `git worktree add --detach <short path> origin/<branch>`. Remove it afterwards with
+  `git worktree remove <path>`.
+- **Keep that path short on Windows.** Under a deep folder, such as a temp directory, paths
+  in `Library/PackageCache` pass 260 characters and third-party package assets (URP, Shader
+  Graph, Input System) fail to import with `DirectoryNotFoundException`. The C# still
+  compiles and the tests still run, but the log fills with errors that are not the branch's.
+  Turning on Windows long paths does not help.
+
 ## Per-machine setup — do this BEFORE cloning
 
 Order matters for the first command.
