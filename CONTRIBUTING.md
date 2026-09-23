@@ -65,6 +65,13 @@ If an issue is unassigned, **assign yourself** before you start, so nobody dupli
 Many are assigned already; if one you want belongs to someone else, ask them first. Issues
 labelled `ready` have no blockers; `blocked` ones name what they are waiting on.
 
+Every issue is on the [project board](https://github.com/orgs/agenerela/projects/1), and its
+Status says the same as its label: **Todo** is `ready`, **Blocked** is `blocked`, and
+**Ideas** holds proposals nobody has committed to yet. Move your issue to **In progress**
+when you start. A new issue lands on the board by itself; check that its Status matches its
+label. Demo games are sub-issues of #47, one per game. To change the board with `gh`, add
+the `project` scope once: `gh auth refresh -h github.com -s project`.
+
 Each issue lists the **files it owns**. Stick to them and merge conflicts mostly disappear.
 
 ## Before opening a pull request
