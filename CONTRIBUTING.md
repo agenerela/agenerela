@@ -86,13 +86,13 @@ Each issue lists the **files it owns**. Stick to them and merge conflicts mostly
 - The PR template's checklist filled in honestly
 
 CI runs automatically and checks the mechanical things, in every Unity project: JSON
-validity, `.meta` file parity, that no committed `.meta` changed its GUID, that no generated
-files slipped in, that `.gitignore` ignores no tracked file, that every project is on the
-pinned Unity version, and that each game loads the framework from this repo. It also checks
-the rules a machine can: scene code only in `Runtime/Unity/`, no dependency beyond
-Newtonsoft, doc links that resolve, Python probes that lint, no API key in a URL, and no
-attribution line in any commit or pull request description. **A red check blocks the
-merge** — fix it rather than merging past it.
+validity, `.meta` file parity, that no committed `.meta` changed its GUID in place or in a
+move, that no generated files slipped in, that `.gitignore` ignores no tracked file, that
+every project is on the pinned Unity version, and that each game loads the framework from
+this repo. It also checks the rules a machine can: scene code only in `Runtime/Unity/`, no
+dependency beyond Newtonsoft, doc links that resolve, Python probes that lint, no API key in
+a URL, and no attribution line in any commit or pull request description. **A red check
+blocks the merge** — fix it rather than merging past it.
 
 If it names a missing or changed `.meta` for an asset that already existed, restore the
 committed one with `git checkout origin/test -- <path>.meta`. Do not commit the copy Unity
@@ -100,8 +100,10 @@ regenerates: its GUID is new, so everything that referred to the asset stays bro
 fails it anyway.
 
 Moving an asset to another folder? Move its `.meta` with it: move it inside Unity, or
-`git mv` both files. CI cannot tell a moved `.meta` from one Unity regenerated at the new
-path, so here nothing catches the mistake for you.
+`git mv` both files. CI fails a move whose `.meta` Unity regenerated at the new path, and its
+message gives the two commands that put the old one back. It only recognises a file whose
+content did not change in the same pull request, so do not lean on it for a file you also
+edited.
 
 ## Reviewing
 
