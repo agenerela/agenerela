@@ -57,10 +57,10 @@ latency, prompt/completion tokens, provider name, fired guards, and an outcome c
 (`Correct`, `WrongLegalAction`, `ContainedByGuard`, `RejectedWhenActionExpected`,
 `PipelineError`). This is where Phase 2's first real numbers land — not a finding itself.
 
-`DecisionResult` is temporarily commented out on `test`: it wraps `AgentDecision`, which
-issue #2 adds and which had not merged yet, so the package stopped compiling. It comes back
-once #2 lands (PR #39) — nothing else depends on it yet, so nobody using telemetry is
-blocked in the meantime.
+`DecisionResult` was briefly commented out on `test`: it wraps `AgentDecision`, which
+issue #2 adds and which had not merged yet, so the package had stopped compiling. It came
+back once #2 landed (PR #39); nothing else depended on it in the meantime, so nobody using
+telemetry was blocked.
 
 Left out on purpose: **schema mode** — whether the response was actually constrained, or the
 model merely saw the schema as prompt text and could ignore it. `ProviderCapabilities`
