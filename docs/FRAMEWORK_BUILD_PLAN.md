@@ -394,6 +394,8 @@ This is not bureaucracy; it is the plan's main API-design forcing function:
 
 Practical notes:
 - [`Demos/README.md`](../Demos/README.md) is the checklist for creating a game project.
+- Each game is tracked as a sub-issue of #47, and its steps (grey box, first real
+  decision, polish) become sub-issues of that game.
 - Code two or more games legitimately share — a camera rig, a debug overlay — goes in a
   local package under `Demos/Shared/`, which each game references by `file:` path the
   same way it references the framework. Discipline: if the *framework* would want it, it
@@ -888,7 +890,7 @@ break loudly whenever the API changes. Suggested cadence:
 
 | After phase | Demo milestone |
 |---|---|
-| 2 (provider works) | `GreyBoxVillage` — the guard's placeholder string matching gives way to a real decision (#19). First proof the API is usable from outside the package. Then `GreyBox2D`: the same API in a second genre, no art yet. |
+| 2 (provider works) | `GreyBoxVillage` — the guard's placeholder string matching, from #19's grey box, gives way to a real decision. First proof the API is usable from outside the package. Then `GreyBox2D`: the same API in a second genre, no art yet. |
 | 3 (guards) | `GreyBoxStrategy` — a **faction** agent with no Transform and no dialogue box. The thesis demo; build it early, because if the API can't express a non-NPC agent you want to know in month two, not month eight. |
 | 5 (editor tooling) | `CompanionRPG` — started last on purpose: it's the demo that benefits most from Inspector tooling existing. |
 | 8 | A player build of each game for the review presentation. Polish on all three runs through COMP 491 (§6.5). |

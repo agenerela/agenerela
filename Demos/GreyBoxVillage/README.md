@@ -35,7 +35,7 @@ Keep only this game open while working on the village.
 
 `Assets/GreyBoxVillage/LocalShared/` contains the provisional player, camera, input,
 overlay and start screen. Keep them here until a second game needs them, then extract a
-local package under `Demos/Shared/` per the repository's demo rules.
+local package under `Demos/Shared/` per the repository's demo rules (#14).
 
 ## When the game would call DecideAsync
 
