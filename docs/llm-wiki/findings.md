@@ -90,7 +90,7 @@ Schema mode needs a third state ("not enforced") derived from both fields, so it
 real provider in #3's extension points rather than being bolted onto `SchemaDialect`.
 
 Why it's worth carrying forward rather than shrugging off as a naming nit: enforcement was
-the single largest lever the prototype measured — its constrained-schema arm, combined with
+half of the prototype's biggest measured gain — its constrained-schema arm, combined with
 few-shot examples, went from 58.5% to 84.9% (build plan, Appendix A). Once schema mode lands
 in telemetry, it should be the first thing cut against when a Phase 2 run looks off — a model
 answering "correctly" without constrained decoding is a different (weaker, cheaper-to-break)
