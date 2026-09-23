@@ -40,24 +40,43 @@ The prototype's eval set was n=53 with a single annotator. Differences under ~10
 were not detectable. Building the 200+ prompt, multi-annotator set is Phase 4 and gates
 the credibility of everything measured afterwards.
 
-### Few-shot's +35 points is one measurement of one design
+### Few-shot's +35 points is one small measurement of one design
 
-The generated few-shot block was the largest single lever the prototype measured: **+35.3
-points** on its own, and part of the arm that went from 58.5% to 84.9% together with the
-constrained schema (build plan, Appendix A). The combined arm ran at n=53 per arm on one 2B
-model with greedy decoding; Appendix A gives no sample size for the isolated figure.
+The few-shot block was the largest single lever the prototype measured (build plan,
+Appendix A). Where its numbers come from, per Feasibility Report II (27 August 2026):
 
-It measured the block as a whole. The rules inside it were never isolated: one example per
-available action, with a target the verb sensibly applies to, then an idle example and a
-negative example with `no_target` (build plan §2.3, rule 4; #10). The sensible-target rule
-came from reading bad output ("Pick up the Blacksmith"), not from an A/B run. Treat these
-as starting rules. Phase 4 should re-measure the block and try levers the prototype never
-measured: how many examples, their order, examples picked by similarity to the stimulus, and
-a hand-written block per profile (#10's extension points).
+- **+35.3 points** is the gap between two of five schema variants run straight against the
+  model, outside Unity, on **17 prompts** (the variant study's cases, per
+  `tools/benchmarks/gemini_compare.py`). Action-first alone scored 52.9% (9/17); action-first
+  with few-shot examples scored 88.2% (15/17). That is six prompts, and at n=17 one prompt
+  moves the score by 5.9 points. Few-shot also lifted the reasoning-first variant, from 35.3%
+  (6/17) to 76.5% (13/17).
+- **58.5% → 84.9%** is the controlled A/B: 53 labelled prompts per arm, `qwen3.5:2b` (Q4)
+  on an RTX 4060 Laptop through Ollama, greedy decoding, one annotator. Its treatment arm
+  changed four things at once (per-request schema, state masking, few-shot and action-first
+  order), so it does not say how much of the gain is few-shot's.
 
-The design already leaves room for that. `DecisionRequest.FewShotBlock` is its own field, so
-an A/B arm can swap or drop the block while the rest of the prompt stays byte-identical.
-Give `FewShotBuilder` (#10) a parameter when an experiment needs one, not before.
+Never measured: the rules inside the block. One example per available action with a target
+the verb sensibly applies to, then an idle example and a negative example with `no_target`
+(build plan §2.3, rule 4; #10). Blind rotation through the targets was dropped mid-run after
+it produced "Pick up the Blacksmith", and was never scored. Nothing ran on a second model,
+scene or action vocabulary.
+
+So the builder's rules are starting rules. **Experiments owed in Phase 4**, each an A/B with
+a control arm on the 200+ prompt set, and each recorded here:
+
+1. Few-shot on vs off, to re-measure the lift at a sample size that can see less than 10
+   points.
+2. The same comparison on the 0.8B and 4B models of the report's model-size study: the lift
+   may shrink or grow with model size.
+3. The rules one at a time: sensible vs rotated example targets, with and without the
+   negative example, the number of examples per action, and their order.
+4. Levers never tried: examples picked by similarity to the stimulus, and a hand-written
+   block per profile (#10's extension points).
+
+The design already allows all four. `DecisionRequest.FewShotBlock` is its own field, so an
+arm can swap or drop the block while the rest of the prompt stays byte-identical. Give
+`FewShotBuilder` (#10) a parameter when an experiment needs one, not before.
 
 ---
 
