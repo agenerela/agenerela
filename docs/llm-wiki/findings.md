@@ -40,6 +40,25 @@ The prototype's eval set was n=53 with a single annotator. Differences under ~10
 were not detectable. Building the 200+ prompt, multi-annotator set is Phase 4 and gates
 the credibility of everything measured afterwards.
 
+### Few-shot's +35 points is one measurement of one design
+
+The generated few-shot block was the largest single lever the prototype measured: **+35.3
+points** on its own, and part of the arm that went from 58.5% to 84.9% together with the
+constrained schema (build plan, Appendix A). The combined arm ran at n=53 per arm on one 2B
+model with greedy decoding; Appendix A gives no sample size for the isolated figure.
+
+It measured the block as a whole. The rules inside it were never isolated: one example per
+available action, with a target the verb sensibly applies to, then an idle example and a
+negative example with `no_target` (build plan §2.3, rule 4; #10). The sensible-target rule
+came from reading bad output ("Pick up the Blacksmith"), not from an A/B run. Treat these
+as starting rules. Phase 4 should re-measure the block and try levers the prototype never
+measured: how many examples, their order, examples picked by similarity to the stimulus, and
+a hand-written block per profile (#10's extension points).
+
+The design already leaves room for that. `DecisionRequest.FewShotBlock` is its own field, so
+an A/B arm can swap or drop the block while the rest of the prompt stays byte-identical.
+Give `FewShotBuilder` (#10) a parameter when an experiment needs one, not before.
+
 ---
 
 ## New findings
