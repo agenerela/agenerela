@@ -5,9 +5,9 @@ Let a language model drive game agents — NPCs, companions, factions, colonies 
 validated deterministic code executes it. Local-first, with a provider interface for
 cloud backends.
 
-> **Status: early development — Phase 1 of 8.** The provider contract, the target registry
-> and the action definition exist; the agent, its action registry and the schema do not,
-> and nothing calls a model before Phase 2. This repository is being built from a measured
+> **Status: early development — Phase 1 of 8.** The provider contract, the core decision
+> types, decision telemetry, the target registry and the action definition exist; the agent,
+> its action registry and the schema do not, and nothing calls a model before Phase 2. This repository is being built from a measured
 > prototype: see [the build plan](docs/FRAMEWORK_BUILD_PLAN.md) for the architecture, the
 > phases and the evidence behind each design decision, and
 > [`docs/design/`](docs/design/README.md) for what the finished screens are meant to look

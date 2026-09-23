@@ -918,21 +918,23 @@ Packages/
     <div class="card"><h4 style="color:var(--ok)">Merged and real</h4><ul>
       <li><b>TargetRegistry</b> — id → object, with tests (#5)</li>
       <li><b>ILLMProvider</b> and its request/result types (#12)</li>
-      <li><b>ActionDefinition</b> and its asset wrapper — DR-011's asset door (#4, via #35; tests still owed)</li>
+      <li><b>AgentIdentity, AgentContext, AgentDecision</b> — the core decision types, with input validation and tests (#2, via #39)</li>
+      <li><b>Decision telemetry</b> — DecisionOutcome, DecisionTelemetry and DecisionResult (#3, via #36 and #42; DecisionResult's tests: #43)</li>
+      <li><b>ActionDefinition</b> and its asset wrapper — DR-011's asset door (#4, via #35; tests and two tooltips still owed: #49)</li>
       <li><b>Newtonsoft</b> as the core's one declared dependency (DR-009)</li>
       <li><b>GreyBoxVillage</b> — a playable grey-box scene whose guard still answers from string matching, not a model (#19)</li>
     </ul></div>
     <div class="card"><h4>Written down, not written</h4><ul>
-      <li><b>Agent, AgentDecision, telemetry</b> (#2, #3 — three empty placeholder files)</li>
+      <li><b>Agent</b> itself — the DecideAsync pipeline (#17)</li>
       <li><b>ActionRegistry, availability</b> (#6, #7)</li>
       <li><b>DecisionSchema</b> and its JSON serializer (#8, #9)</li>
       <li><b>Few-shot builder, AgentProfile, PromptBuilder</b> (#10, #15, #16)</li>
     </ul></div>
     <div class="card"><h4 style="color:var(--warn)">Decided here, not yet built</h4><ul>
-      <li><b>DR-011</b> the code front door and the registry — the asset door exists (#35)</li>
+      <li><b>DR-011</b> the code front door (#50) and the registry (#6) — the asset door exists (#35)</li>
       <li><b>DR-012</b> observation sources, capped; summariser as one source</li>
       <li><b>DR-013</b> provider config asset + resolution chain</li>
-      <li><b>DR-014</b> <span class="mono">Targetable</span> discovery instead of typed lists</li>
+      <li><b>DR-014</b> <span class="mono">Targetable</span> discovery instead of typed lists (#32)</li>
       <li><b>DR-015</b> priority on the call; optional ticker</li>
       <li>Still only proposed: the <b>New Agent wizard</b> (figure 12) and the on-demand runtime service (figure 10)</li>
     </ul></div>
@@ -944,7 +946,7 @@ Packages/
 
 <footer>
   <p><b>Agenerela</b> — a Unity framework that lets a language model drive game agents by choosing from actions the developer registered. CSUN COMP 490 / 491.</p>
-  <p style="margin-top:10px">This page walks the developer's path; the six sketch-lab wireframes it refers to are the screens themselves. Rules cited here come from <span class="mono">docs/FRAMEWORK_BUILD_PLAN.md</span> and its decision records — DR-008 (no input taxonomy), DR-009 (one dependency), DR-010 (demos as separate projects) — and the measurements come from Appendix A. Where this page proposes something the plan does not settle, it says so on the figure. Last brought in step with the plan and the issues on 20 September 2026, after #35 and the DR-011 amendment; where the page and the plan disagree, the plan is current.</p>
+  <p style="margin-top:10px">This page walks the developer's path; the six sketch-lab wireframes it refers to are the screens themselves. Rules cited here come from <span class="mono">docs/FRAMEWORK_BUILD_PLAN.md</span> and its decision records — DR-008 (no input taxonomy), DR-009 (one dependency), DR-010 (demos as separate projects) — and the measurements come from Appendix A. Where this page proposes something the plan does not settle, it says so on the figure. Last brought in step with the plan and the issues on 23 September 2026, after #39, #42 and DR-011's note on the code front door; where the page and the plan disagree, the plan is current.</p>
 </footer>
 </div>
 </body>
