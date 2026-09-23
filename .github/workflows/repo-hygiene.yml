@@ -273,10 +273,11 @@ jobs:
           # Unity shows no error until someone opens the thing that broke, and the rest of this
           # workflow stays green - that happened to 40 metas in one pull request.
           #
-          # So a tracked .meta whose guid changed fails. An asset moved together with its .meta
-          # keeps its guid and passes, and a new asset has no old guid to compare.
+          # So a tracked .meta whose guid changed fails, and so does an asset moved to another
+          # folder whose .meta Unity regenerated there (part 2 below). An asset moved together
+          # with its .meta keeps its guid and passes, and a new asset has no old guid to compare.
           python3 - <<'PY'
-          import os, re, shlex, subprocess, sys
+          import collections, os, posixpath, re, shlex, subprocess, sys
 
           base, head = os.environ.get("COMPARE_BASE"), os.environ.get("COMPARE_HEAD")
           restore = os.environ.get("RESTORE_FROM") or "origin/test"
@@ -292,24 +293,86 @@ jobs:
               m = re.search(r"^guid:\s*(\w+)", git("show", f"{rev}:{path}"), re.M)
               return m.group(1) if m else None
 
-          # -G keeps the metas whose diff touches a guid line; comparing the values then drops a
-          # line that was rewritten with the same guid.
+          # 1. A .meta rewritten in place. -G keeps the metas whose diff touches a guid line;
+          # comparing the values then drops a line that was rewritten with the same guid.
           candidates = [f for f in git("diff", "--diff-filter=M", "-G^guid:", "--name-only", "-z",
                                        base, head, "--", "*.meta").split("\0") if f]
           changed = [(f, guid(base, f), guid(head, f)) for f in candidates]
           changed = [c for c in changed if c[1] != c[2]]
-          if not changed:
-              print(f"OK: every existing .meta keeps its guid ({len(candidates)} touched a guid line)")
+
+          # 2. An asset moved to another folder with a .meta Unity regenerated there. Git records
+          # that as a delete and an add, so part 1 never sees it. Git's rename detection is no help:
+          # it pairs .meta files by their text, and two unrelated assets' .meta files are often
+          # closer to each other than a regenerated one is to its original. So moves are paired
+          # here from the assets themselves: a deleted file and an added file are the same asset
+          # when they have the same file name AND the same content. Requiring both keeps a new
+          # asset that merely shares a name from failing this step; the price is that a file moved
+          # and edited in the same change is not checked. An identical file with the same name
+          # cannot be told apart from a move, so asking it to keep its guid can only help.
+          # A folder counts as moved when a file inside it moved to the same place inside a folder
+          # of the same name. That is what moving a folder outside Unity does: its .meta sits
+          # beside it, stays behind, and Unity makes a new one at the destination.
+          deleted, added = {}, {}
+          raw = git("diff", "--raw", "--no-renames", "--no-abbrev", "-z", base, head).split("\0")
+          for info, path in zip(raw[0::2], raw[1::2]):
+              _, _, old_blob, new_blob, status = info.split()
+              if status == "D":
+                  deleted[path] = old_blob
+              elif status == "A":
+                  added[path] = new_blob
+
+          same_asset = collections.defaultdict(lambda: ([], []))
+          for side, files in ((0, deleted), (1, added)):
+              for path, blob in files.items():
+                  if not path.endswith(".meta"):
+                      same_asset[(posixpath.basename(path), blob)][side].append(path)
+          pairs = [(o, n) for olds, news in same_asset.values() for o in olds for n in news]
+          for o, n in list(pairs):
+              while True:
+                  o, n = posixpath.dirname(o), posixpath.dirname(n)
+                  if not o or not n or posixpath.basename(o) != posixpath.basename(n):
+                      break
+                  pairs.append((o, n))
+
+          # Each added .meta, and the deleted ones it may have replaced. Several identical files
+          # with the same name moving at once give several candidates; matching any one is a move.
+          moves = collections.defaultdict(set)
+          for o, n in pairs:
+              if o + ".meta" in deleted and n + ".meta" in added:
+                  moves[n + ".meta"].add(o + ".meta")
+          moved = []
+          for new_meta, old_metas in sorted(moves.items()):
+              olds = {m: guid(base, m) for m in sorted(old_metas)}
+              new = guid(head, new_meta)
+              if new not in olds.values():
+                  old_meta, old = next(iter(olds.items()))
+                  moved.append((old_meta, new_meta, old, new))
+
+          if not changed and not moved:
+              print(f"OK: every existing .meta keeps its guid ({len(candidates)} touched a guid line, "
+                    f"{len(moves)} moved with their asset)")
               sys.exit(0)
 
-          # The summary goes first: GitHub shows only the first ten annotations of a step.
-          everything = " ".join(shlex.quote(f) for f, _, _ in changed)
-          print(f"::error::{len(changed)} existing .meta file(s) changed their guid, which usually means they "
-                f"were deleted and Unity regenerated them. Restore the committed ones: git checkout {restore} -- {everything}")
+          # Summaries go first: GitHub shows only the first ten annotations of a step.
+          if changed:
+              everything = " ".join(shlex.quote(f) for f, _, _ in changed)
+              print(f"::error::{len(changed)} existing .meta file(s) changed their guid, which usually means they "
+                    f"were deleted and Unity regenerated them. Restore the committed ones: git checkout {restore} -- {everything}")
+          if len(moved) > 1:
+              print(f"::error::{len(moved)} moved assets got a new .meta at their new path, and with it a new guid. "
+                    f"Each annotation below names the old .meta to put back.")
           for f, old, new in changed:
               print(f"::error file={f}::guid changed from {old} to {new}. Unity finds an asset by its guid, so "
                     f"everything that referred to this one now points at nothing, with no error until someone "
                     f"opens it. Restore the committed .meta: git checkout {restore} -- {shlex.quote(f)}")
+          # Two commands, joined in prose: Windows PowerShell 5.1 has no &&, and its > would write
+          # the .meta as UTF-16, so neither a && chain nor git show > file is safe to paste there.
+          for old_meta, new_meta, old, new in moved:
+              print(f"::error file={new_meta}::Moved from {old_meta}, but with a new .meta: guid changed from {old} "
+                    f"to {new}. Unity finds an asset by its guid, so everything that referred to it now points at "
+                    f"nothing, with no error until someone opens it. Put the old .meta at the new path: "
+                    f"git checkout {restore} -- {shlex.quote(old_meta)}, then git mv -f {shlex.quote(old_meta)} "
+                    f"{shlex.quote(new_meta)}")
           sys.exit(1)
           PY
 

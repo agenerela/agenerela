@@ -50,9 +50,11 @@ Without the GitHub CLI: `git fetch origin pull/<number>/head:pr-<number>`, then
    An existing asset whose GUID changed. Every scene, setting and asset that referred to it
    now points at nothing, and no error appears until someone opens the thing that broke.
 
-   This scan and CI both miss one case: an asset *moved* to a new folder whose `.meta` Unity
-   regenerated there. Git records that as a delete and an add, not a change. If the pull
-   request moves files, list its `.meta` moves:
+   This command sees only a `.meta` rewritten in place. An asset *moved* to a new folder whose
+   `.meta` Unity regenerated there shows up as a delete and an add, and CI checks those too:
+   it pairs a deleted file with an added one of the same name and the same content, and fails
+   when their `.meta` files carry different GUIDs. It cannot pair a file that was moved *and*
+   edited in the same pull request. If one was, list the `.meta` moves:
 
    ```bash
    git diff -M --name-status origin/test...HEAD -- '*.meta'
