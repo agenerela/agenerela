@@ -15,7 +15,8 @@ While the version stays `0.x`, the public API may change in any release.
   `ScriptableObject` a developer creates from **Create → Agenerela → Action** (DR-011).
   `ActionDefinition.ValidateId` rejects an empty id, uppercase (compared culture-invariantly)
   and any whitespace, and the asset warns about a malformed id while it is being edited.
-  EditMode tests for it are still owed by #4.
+  Its EditMode tests, and clearer tooltips for `Description` and `ExampleStimulus`, are still
+  owed (#49).
 - `TargetRegistry` in namespace `Agenerela` — what an agent is allowed to refer to, held as
   ids the schema can offer and the guards can check: `Register`, `Unregister`, `TryGet`,
   `Contains`, `Ids` and `Count`, with EditMode tests. Follow-up work — reserving
@@ -33,7 +34,7 @@ While the version stays `0.x`, the public API may change in any release.
   written into: latency, prompt/completion tokens, provider name and fired guards. EditMode
   tests cover the enum's five names and order, a freshly-constructed `DecisionTelemetry`, and
   a Newtonsoft round trip. `DecisionResult` pairs an `AgentDecision` with its telemetry, and
-  allows a null decision only for a `PipelineError`.
+  allows a null decision only for a `PipelineError`; its EditMode tests are still owed (#43).
 - `AgentIdentity`, `AgentContext` and `AgentDecision` in namespace `Agenerela` (#2) — who an
   agent is, what it knows at the moment of a decision, and what it chose. `AgentDecision`
   rejects a null or whitespace action or target id but accepts ids that are not registered,
