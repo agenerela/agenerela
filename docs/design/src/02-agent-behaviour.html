@@ -36,7 +36,7 @@ body{width:1600px;height:1000px}
     <div class="title">Agent Behaviour</div>
     <div class="sub">The component that puts an agent into a scene: its profile, the model it uses, its game code and its targets</div>
   </div>
-  <div class="meta">Agenerela · COMP 490 · Section 04<br>Opened from <b>select a GameObject ▸ Add Component ▸ Agent Behaviour</b><br><span class="pill">Phase 2 component · Phase 5 Inspector polish</span></div>
+  <div class="meta">Agenerela · COMP 490 · Section 04<br>Opened from <b>select a GameObject ▸ Add Component ▸ Agent Behaviour</b><br><span class="pill">Phase 2 component · Phase 5 Inspector polish</span> <span class="pill dash">Partly superseded · notes 2–4</span></div>
 </div>
 
 <div class="wf">
@@ -116,9 +116,9 @@ body{width:1600px;height:1000px}
 <div class="notes">
   <h4>What the numbers point to</h4>
   <div class="note"><span class="n">1</span><div><b>Profile</b><p>Points to the shared Agent Profile from screen 1. Ten guards can use one profile.</p></div></div>
-  <div class="note"><span class="n">2</span><div><b>Model provider</b><p>Where the model runs: Ollama while developing, a cloud API or an in-game model later. Shows whether it's connected.</p></div></div>
-  <div class="note"><span class="n">3</span><div><b>Actions → game code</b><p>Each action is bound to a handler: the developer's own C#. An action with no handler is flagged and never offered to the model.</p></div></div>
-  <div class="note"><span class="n">4</span><div><b>Targets</b><p>The scene objects this agent may refer to. The model can only name ids from this list.</p></div></div>
+  <div class="note"><span class="n">2</span><div><b>Model provider</b><p>Where the model runs: Ollama while developing, a cloud API or an in-game model later. Shows whether it's connected.</p><div class="now"><b>Now (DR-013):</b> a provider config asset. This field is only an optional override; blank means the project default.</div></div></div>
+  <div class="note"><span class="n">3</span><div><b>Actions → game code</b><p>Each action is bound to a handler: the developer's own C#. An action with no handler is flagged and never offered to the model.</p><div class="now"><b>Now (DR-011):</b> only asset-authored actions are bound here; a code-authored action's method is its own handler.</div></div></div>
+  <div class="note"><span class="n">4</span><div><b>Targets</b><p>The scene objects this agent may refer to. The model can only name ids from this list.</p><div class="now"><b>Now (DR-014):</b> discovered each decision from nearby <span class="mono">Targetable</span> components, not typed per agent.</div></div></div>
   <div class="note"><span class="n">5</span><div><b>Live menu (Play mode)</b><p>Exactly what the model is offered at this moment. Illegal options are left out entirely, not forbidden in the prompt.</p></div></div>
   <div class="note"><span class="n">6</span><div><b>Try a decision</b><p>Type a stimulus, press Decide, and see the action, target, reply and latency, without writing any test code.</p></div></div>
 </div>

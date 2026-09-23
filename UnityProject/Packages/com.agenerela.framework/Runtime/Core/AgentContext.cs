@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 
 namespace Agenerela
 {
@@ -13,14 +14,43 @@ namespace Agenerela
         public IReadOnlyList<string> Observations{ get; }
         /// <summary>The current state of the agent, such as "isFollowing".</summary>
         public IReadOnlyDictionary<string, object> State{ get; }
+        /// <summary>What this agent may refer to this request. Live list from 'TargetRegistry'.</summary>
         public TargetRegistry Targets{ get; }
-        // !! IMPORTANT TODO: #6 issue must be resolved first
+        // !! IMPORTANT TODO: add Actions once ActionRegistry lands
         // public ActionRegistry Actions{ get; }
 
-
-        /// <summary>Contrustor for AgentContext.</summary>
+        /// <summary>
+        /// Creates a snapshot of what the agent knows for one decision.
+        /// Identity and Targets cannot be null.
+        /// Null stimulus becomes empty.
+        /// Null observations or state become empty collections and stay non-null.</summary>
         public AgentContext(AgentIdentity identity, string stimulus, IReadOnlyList<string> observations, IReadOnlyDictionary<string, object> state, TargetRegistry targets)
         {
+            if (identity == null)
+            {
+                throw new ArgumentNullException(nameof(identity));
+            }
+
+            if (targets == null)
+            {
+                throw new ArgumentNullException(nameof(targets));
+            }
+
+            if (stimulus == null)
+            {
+                stimulus = "";
+            }
+
+            if (observations == null)
+            {
+                observations = Array.Empty<string>();
+            }
+
+            if (state == null)
+            {
+                state = new Dictionary<string, object>();
+            }
+
             Identity = identity;
             Stimulus = stimulus;
             Observations = observations;

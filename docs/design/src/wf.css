@@ -19,6 +19,10 @@ html,body{margin:0;background:#fff;color:var(--ink);font-family:"Segoe UI",syste
 .pill{display:inline-block;border:1.5px solid var(--ink2);border-radius:999px;padding:0 9px;font-size:12px;font-weight:600;color:var(--ink2);background:#fff;line-height:19px}
 .pill.dash{border-style:dashed}
 .pill.dark{background:var(--ink);border-color:var(--ink);color:#fff}
+/* A decision made after the lab changed this part of the drawing. Grayscale on purpose:
+   blue stays reserved for the callouts. */
+.now{margin-top:5px;padding:3px 7px;border:1.5px dashed var(--ink3);border-radius:4px;font-size:12px;line-height:1.35;color:var(--ink2);background:#fff}
+.note .now b{display:inline;font-size:12px;margin:0}
 
 /* wireframe + notes columns (member screens) */
 .wf{position:absolute;left:32px;top:146px;width:1126px;height:828px}

@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using System.Collections.Generic;
+using System;
 
 namespace Agenerela.Tests
 {
@@ -68,6 +69,56 @@ namespace Agenerela.Tests
             Assert.That(idle.ActionId, Is.EqualTo("none"));
             Assert.That(idle.TargetId, Is.EqualTo("no_target"));
             Assert.That(idle.Statement, Is.EqualTo(""));    
+        }
+
+        [Test]
+        public void DecisionRejectsNullActionId()
+        {
+            Assert.Throws<ArgumentException>(() => new AgentDecision(null, "tower", ""));
+        }
+
+        [Test]
+        public void DecisionRejectsNullTargetId()
+        {
+            Assert.Throws<ArgumentException>(() => new AgentDecision("move_to", null, ""));
+        }
+
+        [Test]
+        public void DecisionRejectsWhitespaceTargetId()
+        {
+            Assert.Throws<ArgumentException>(() => new AgentDecision("move_to", "  ", ""));
+        }
+
+        [Test]
+        public void DecisionTreatsNullStatementAsEmpty()
+        {
+            var decision = new AgentDecision("none", "no_target", null);
+            Assert.That(decision.Statement, Is.EqualTo(""));
+        }
+
+        [Test]
+        public void ContextRejectsNullIdentity()
+        {
+            var targets = new TargetRegistry();
+            Assert.Throws<ArgumentNullException>(() =>
+                new AgentContext(null, "Go to the tower", new string[0], new Dictionary<string, object>(), targets));
+        }
+
+        [Test]
+        public void ContextTreatsNullObservationsAndStateAsEmpty()
+        {
+            var identity = new AgentIdentity { Name = "Gate Guard" };
+            var targets = new TargetRegistry();
+            var context = new AgentContext(identity, "Go to the tower", null, null, targets);
+
+            Assert.That(context.Observations, Is.Empty);
+            Assert.That(context.State, Is.Empty);
+        }
+
+        [Test]
+        public void IdentityIsSerializable()
+        {
+            Assert.That(typeof(AgentIdentity).IsSerializable, Is.True);
         }
     }
 }

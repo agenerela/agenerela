@@ -61,9 +61,9 @@ rejected. Promotion from `test` to `main` is done by the owner when `test` is in
 
 ## Claiming work
 
-Issues are unassigned by design — **assign yourself** to whatever you pick up, so nobody
-duplicates it. Issues labelled `ready` have no blockers; `blocked` ones name what they are
-waiting on.
+If an issue is unassigned, **assign yourself** before you start, so nobody duplicates it.
+Many are assigned already; if one you want belongs to someone else, ask them first. Issues
+labelled `ready` have no blockers; `blocked` ones name what they are waiting on.
 
 Each issue lists the **files it owns**. Stick to them and merge conflicts mostly disappear.
 
@@ -79,9 +79,25 @@ Each issue lists the **files it owns**. Stick to them and merge conflicts mostly
 - The PR template's checklist filled in honestly
 
 CI runs automatically and checks the mechanical things, in every Unity project: JSON
-validity, `.meta` file parity, that no generated files slipped in, that every project is on
-the pinned Unity version, and that each game loads the framework from this repo. **A red
-check blocks the merge** — fix it rather than merging past it.
+validity, `.meta` file parity, that no committed `.meta` changed its GUID, that no generated
+files slipped in, that `.gitignore` ignores no tracked file, that every project is on the
+pinned Unity version, and that each game loads the framework from this repo. It also checks
+the rules a machine can: scene code only in `Runtime/Unity/`, no dependency beyond
+Newtonsoft, doc links that resolve, Python probes that lint, no API key in a URL, and no
+attribution line in any commit or pull request description. **A red check blocks the
+merge** — fix it rather than merging past it.
+
+If it names a missing or changed `.meta` for an asset that already existed, restore the
+committed one with `git checkout origin/test -- <path>.meta`. Do not commit the copy Unity
+regenerates: its GUID is new, so everything that referred to the asset stays broken, and CI
+fails it anyway.
+
+## Reviewing
+
+Every pull request into `test` gets a teammate's review before it merges.
+[`REVIEWING.md`](REVIEWING.md) covers what to check and in what order, how to label
+findings, and the template for the summary. Open the branch in Unity when you review: CI
+never compiles C#, so a green check does not mean the code builds.
 
 ## If your change touches accuracy
 
@@ -99,7 +115,8 @@ This project's credibility rests on its measurements, so there is one extra bar:
 ## Commits
 
 Explain *why*, not just *what*. No attribution trailers — no `Co-Authored-By`, no
-"Generated with &lt;tool&gt;". The history should read as the team's work.
+"Generated with &lt;tool&gt;". The history should read as the team's work, and CI rejects a
+pull request whose commits or description carry one.
 
 ## Scenes and prefabs
 
@@ -116,7 +133,7 @@ chat before you open one someone else might be in.
 | `Demos/<Game>/` | Demo games — one Unity project each ([`Demos/README.md`](Demos/README.md)) |
 | `docs/FRAMEWORK_BUILD_PLAN.md` | **The plan of record** — read before building |
 | `docs/llm-wiki/` | Measured findings and conventions |
-| `docs/design/` | The sitemap and a wireframe of every screen ([`docs/design/README.md`](docs/design/README.md)) |
+| `docs/design/` | The sitemap, a wireframe of every screen, and the developer walkthrough ([`docs/design/README.md`](docs/design/README.md)) |
 | `docs/course/` | COMP 490 deliverables, archived ([`docs/course/README.md`](docs/course/README.md)) |
 | `tools/benchmarks/` | Standalone probes, no Unity required |
 

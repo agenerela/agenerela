@@ -25,6 +25,36 @@ and kept here because they are also the first picture of the framework's user-fa
 | [`png/05-village.png`](png/05-village.png) | **GreyBoxVillage play screen** — talking to the guard | Grey box today (#19); real decisions in Phase 2 |
 | [`png/06-strategy.png`](png/06-strategy.png) | **GreyBoxStrategy turn screen** — countries as agents | Grey box next (#20); real decisions in Phase 3 |
 
+**Screen 2 is partly superseded.** Three decisions made after the lab changed it: the model is
+configured in a provider config asset that the component only overrides (DR-013), targets are
+discovered from `Targetable` components instead of typed per agent (DR-014), and only
+asset-authored actions are bound to a handler (DR-011). The figure keeps what the lab drew and
+marks each change in its notes column; the sitemap's screen 2 card carries the same mark. The
+current picture is figure 6 of the walkthrough, below.
+
+## The walkthrough
+
+[`workflow.html`](workflow.html) is the other half of this folder: not a screen, but the
+**developer's path through all of them**. Nine steps from an empty Unity project to a guard
+that answers a player — every asset created, every GameObject added, every window opened, and
+the exact line where the developer's code takes over from the framework's. It is what the
+screens above are *for*.
+
+Unlike the six figures it is a scrolling page rather than a fixed-size sheet, so it lives
+outside `src/` and `render.ps1` does not touch it. Open it in any browser.
+
+Walking that path is what produced DR-011 to DR-015 in
+[the build plan](../FRAMEWORK_BUILD_PLAN.md) — five questions the plan had never answered,
+two of which reversed the recommendation the page first carried. The page keeps both
+reversals visible rather than quietly editing them out. It also carries the two screens the
+six-figure set is missing: **provider configuration** (where anyone types an endpoint and a
+model name) and a **New Agent wizard**, which is what makes the Phase 5 fifteen-minute target
+reachable. Both are proposals.
+
+Also published for the team: <https://claude.ai/artifact/1XGr1eewmN69dvbWvq7oZc>
+
+## The notes
+
 [`screen-notes.md`](screen-notes.md) describes each figure in plain English — what it shows,
 and what each numbered callout points at. It was written as the text we posted with the
 figures, so it reads as prose rather than as a specification.
@@ -63,4 +93,6 @@ down as real files only if `git lfs install` was run before cloning — `git lfs
 clone that has pointer files instead.
 
 The same figures are also published as a page the whole team can open:
-<https://claude.ai/artifact/EtcUHSQ7a4b49Mg7M4unsQ>
+<https://claude.ai/artifact/EtcUHSQ7a4b49Mg7M4unsQ>. That page is the lab kit, a course
+snapshot holding what the team entered, so it is not updated: it shows screen 2 as first
+drawn. The PNGs here are current.

@@ -9,6 +9,13 @@ While the version stays `0.x`, the public API may change in any release.
 ## [Unreleased]
 
 ### Added
+- `ActionDefinition` and `ActionDefinitionAsset` in namespace `Agenerela` — the
+  developer-authored action vocabulary (#4). `ActionDefinition` is the plain serializable type
+  the registry, schema and few-shot builders consume; `ActionDefinitionAsset` is the
+  `ScriptableObject` a developer creates from **Create → Agenerela → Action** (DR-011).
+  `ActionDefinition.ValidateId` rejects an empty id, uppercase (compared culture-invariantly)
+  and any whitespace, and the asset warns about a malformed id while it is being edited.
+  EditMode tests for it are still owed by #4.
 - `TargetRegistry` in namespace `Agenerela` — what an agent is allowed to refer to, held as
   ids the schema can offer and the guards can check: `Register`, `Unregister`, `TryGet`,
   `Contains`, `Ids` and `Count`, with EditMode tests. Follow-up work — reserving
@@ -20,6 +27,13 @@ While the version stays `0.x`, the public API may change in any release.
   implementation yet; `DecisionRequest.Schema` lands with `DecisionSchema`.
 - `Documentation~/providers.md`: how each planned backend answers the contract, what a
   second cloud vendor would need, and which parts are deliberately still open.
+- `DecisionOutcome`, `DecisionTelemetry` and `DecisionResult` in namespace `Agenerela` (#3) —
+  the outcome classification a decision gets scored against (`Correct`, `WrongLegalAction`,
+  `ContainedByGuard`, `RejectedWhenActionExpected`, `PipelineError`) and the record it is
+  written into: latency, prompt/completion tokens, provider name and fired guards. EditMode
+  tests cover the enum's five names and order, a freshly-constructed `DecisionTelemetry`, and
+  a Newtonsoft round trip. `DecisionResult`, which wraps an `AgentDecision`, is commented out
+  for now — `AgentDecision` is #2, not yet merged — and comes back once #2 lands (PR #39).
 
 ### Changed
 - The package depends on `com.unity.nuget.newtonsoft-json` 3.2.2, which Package Manager
