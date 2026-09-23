@@ -92,6 +92,10 @@ committed one with `git checkout origin/test -- <path>.meta`. Do not commit the 
 regenerates: its GUID is new, so everything that referred to the asset stays broken, and CI
 fails it anyway.
 
+Moving an asset to another folder? Move its `.meta` with it: move it inside Unity, or
+`git mv` both files. CI cannot tell a moved `.meta` from one Unity regenerated at the new
+path, so here nothing catches the mistake for you.
+
 ## Reviewing
 
 Every pull request into `test` gets a teammate's review before it merges.

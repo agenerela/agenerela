@@ -50,6 +50,17 @@ Without the GitHub CLI: `git fetch origin pull/<number>/head:pr-<number>`, then
    An existing asset whose GUID changed. Every scene, setting and asset that referred to it
    now points at nothing, and no error appears until someone opens the thing that broke.
 
+   This scan and CI both miss one case: an asset *moved* to a new folder whose `.meta` Unity
+   regenerated there. Git records that as a delete and an add, not a change. If the pull
+   request moves files, list its `.meta` moves:
+
+   ```bash
+   git diff -M --name-status origin/test...HEAD -- '*.meta'
+   ```
+
+   `R100` is a clean move. A `D` and an `A` of the same file name, or an `R` below 100, is a
+   `.meta` that probably lost its GUID.
+
    ```bash
    git ls-files -ci --exclude-standard
    ```
