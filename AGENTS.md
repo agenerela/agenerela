@@ -137,12 +137,12 @@ Merged so far:
 - The `ILLMProvider` contract and its supporting types (#12).
 - `TargetRegistry` (#5). Its follow-up is still open: reserve `no_target`, return false
   rather than throw on a malformed id, and add the missing tests (#29).
-- `ActionDefinition` and its `ActionDefinitionAsset` wrapper (#4, via #35 and #37). The
-  `Description` and `ExampleStimulus` tooltips still need the wording suggested in #4's last
-  two comments.
+- `ActionDefinition` and its `ActionDefinitionAsset` wrapper (#4, via #35 and #37). Its
+  `Description` and `ExampleStimulus` tooltips and the `ValidateId` tests are still owed
+  (#49).
 - Decision telemetry (#3, via #36): `DecisionOutcome` and `DecisionTelemetry`, with EditMode
-  tests, and `DecisionResult`, which pairs a decision with its telemetry. `DecisionResult`
-  has no EditMode tests yet.
+  tests, and `DecisionResult`, which pairs a decision with its telemetry. `DecisionResult`'s
+  EditMode tests are still owed (#43).
 - The core decision types `AgentIdentity`, `AgentContext` and `AgentDecision` (#2, via #39),
   with input validation and EditMode tests. `AgentContext.Actions` stays a TODO until
   `ActionRegistry` (#6) lands.
@@ -156,12 +156,14 @@ Merged so far:
 
 Not written yet: `ActionRegistry` (#6), state-derived availability (#7), `DecisionSchema`
 (#8), its JSON serializer (#9), the few-shot builder (#10), `AgentProfile` (#15),
-`PromptBuilder` (#16), target discovery through `Targetable` and `ITargetSource` (#32), and
-`Agent` itself (#17). **Nothing in the framework calls a model yet** — that starts in Phase
-2, so Phase 1 work is pure C# with EditMode tests and no Ollama.
+`PromptBuilder` (#16), target discovery through `Targetable` and `ITargetSource` (#32), the
+`[AgentAction]` code front door (#50, which anyone can claim), and `Agent` itself (#17).
+**Nothing in the framework calls a model yet** — that starts in Phase 2, so Phase 1 work is
+pure C# with EditMode tests and no Ollama.
 
-Open groundwork beside Phase 1: the evaluation prompt set (#13), shared demo code in
-`Demos/_Shared` (#14) and the GreyBoxStrategy grey box (#20).
+Open groundwork beside Phase 1: the evaluation prompt set (#13), and the demo games, one
+sub-issue each under #47, starting with the GreyBoxStrategy grey box (#20). Code two games
+share moves into `Demos/Shared/` once a second game needs it (#14).
 
 What all of this is meant to become, screen by screen, is drawn in
 [`docs/design/`](docs/design/README.md).
