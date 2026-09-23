@@ -1295,6 +1295,14 @@ agent. So: `UnityEngine` is allowed, scene types are not, and the type sits in
 Unity, which would also mean replacing `Awaitable` with `Task` across the provider contract
 and `Agent`.
 
+**Note, 23 September 2026 — where the code front door is built.** The decision stands; only
+the issues moved. #4 shipped the plain type and the asset wrapper (#35, #37) as planned, but
+the code front door never had an issue, and #6 never took on the conflict rule or the shared
+conformance fixture. All three now live in #50: the rule and the fixture only mean something
+once both front doors exist, and #6 stays on the Phase 1 critical path without them. #50 is
+Phase 1 work that anyone can claim, not part of the gate: `Agent` (#17) can already be built
+from a list of `ActionDefinition`s, and none of #11's five checks needs the code front door.
+
 ### DR-012 — Agents may gather their own observations; the summariser is a source, not a stage
 
 **Status:** Decided, 20 September 2026, except the last clause — whether an LLM summariser
