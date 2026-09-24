@@ -5,6 +5,10 @@ Unity Editor tools a game developer uses, and the two demo games a player and ou
 panel see. Drawn for the COMP 490 Section 04 sketch/mockup practice on 17 September 2026,
 and kept here because they are also the first picture of the framework's user-facing surface.
 
+Beside them sits one figure that is not a screen: the **framework design**, the package's
+modules with one decision passing through them, drawn for the system-design practice on
+24 September 2026.
+
 > **These are proposals, not a spec.** Nothing here is built yet. Where a wireframe encodes a
 > rule that *is* settled — state-masked action lists, the built-in `none`, `no_target`, the
 > five decision outcomes, field order — the rule comes from
@@ -24,6 +28,7 @@ and kept here because they are also the first picture of the framework's user-fa
 | [`png/04-evaluation-report.png`](png/04-evaluation-report.png) | **Evaluation Report** — A/B over the labelled prompt set | Phase 4 (#13) |
 | [`png/05-village.png`](png/05-village.png) | **GreyBoxVillage play screen** — talking to the guard | Grey box today (#19); real decisions in Phase 2 |
 | [`png/06-strategy.png`](png/06-strategy.png) | **GreyBoxStrategy turn screen** — countries as agents | Grey box next (#20); real decisions in Phase 3 |
+| [`png/07-framework-design.png`](png/07-framework-design.png) | **Framework design** — the game, the package and the model, with one decision through them in nine steps | — |
 
 **Screen 2 is partly superseded.** Three decisions made after the lab changed it: the model is
 configured in a provider config asset that the component only overrides (DR-013), targets are
@@ -66,16 +71,21 @@ No accuracy number is real until it comes out of a Phase-4 run with a control ar
 
 ## Changing a figure
 
-Each figure is one self-contained HTML file in [`src/`](src) that shares
-[`src/wf.css`](src/wf.css), laid out at a fixed pixel size — 1600 × 1000 for the six screen
-sheets, 1800 × 1125 for the sitemap. Open the file in any browser to edit it; what you see is
-what renders.
+Each figure is one self-contained HTML file in [`src/`](src), laid out at a fixed pixel
+size — 1600 × 1000 for the six screen sheets, 1800 × 1125 for the sitemap, 1280 × 1280 for
+the framework figure. The wireframes share [`src/wf.css`](src/wf.css); the framework figure is
+one inline SVG. It is square because Canvas shows an image at Medium with its longest side at
+320 px, and a square keeps the most of it readable at that size. Open the file in any browser
+to edit it; what you see is what renders.
 
 Conventions worth keeping, because they are what makes the set read as one deliverable:
 
 - Grayscale only. The single blue is reserved for the numbered callouts and their notes, so
-  a reader can tell our annotations from the interface being drawn.
+  a reader can tell our annotations from the interface being drawn. The framework figure
+  spends it the same way, on the numbered steps of one decision.
 - Every callout number in the drawing has a matching entry in the notes column on the right.
+  The framework figure has no notes column; [`screen-notes.md`](screen-notes.md) explains its
+  nine steps.
 - Real data, never lorem: the village guard, its three actions, the four countries.
 - A figure that shows made-up numbers says so on the figure.
 

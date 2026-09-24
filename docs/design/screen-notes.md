@@ -1,8 +1,9 @@
 # What each screen shows
 
-Plain-English notes on the seven figures in this folder — see [`README.md`](README.md) for
+Plain-English notes on the eight figures in this folder — see [`README.md`](README.md) for
 what they are and how to re-render them. Written as the text we posted with each figure for
-the COMP 490 Section 04 sketch/mockup practice, so it reads as prose, not as a specification.
+the COMP 490 Section 04 sketch/mockup practice, and for the last one the system-design
+practice, so it reads as prose, not as a specification.
 
 ---
 
@@ -185,3 +186,29 @@ it is what makes Agenerela an agent framework rather than an NPC chat plugin.
 
 **What the numbers on the image point to:** ① the turn bar · ② the map · ③ the country panel ·
 ④ what the country is told · ⑤ the moves it is offered · ⑥ the event log.
+
+---
+
+## Team lead post — framework design
+
+**Image:** `png/07-framework-design.png`
+**Practice:** system design, 24 September 2026 — the draft framework figure for Part 2, shown
+in the post at Canvas's Medium size.
+
+The left column is the developer's game, the middle is our package, and the right is the
+language model. One decision runs through nine steps: the game asks the agent; the agent
+gathers who it is and what it remembers and sees; the framework keeps only the actions legal
+right now, by asking the game's handlers, plus the targets it may name; it builds the schema
+and prompt; it queues the request and sends it through a provider; the model picks from the
+legal options; guards re-check the answer; the result and its telemetry go back to the game;
+and the game's own handler carries it out.
+
+No arrow runs from the model to the game: the model only ever sees ids such as `tower` and
+returns three fields. Dashed lines read state or report telemetry, and the small circles mark
+extension points, interfaces a developer implements. Along the bottom sit the parts around
+the pipeline: the Unity adapter, the only code that touches a scene; the Editor tools; and the
+evaluation harness.
+
+**What the numbers on the image point to:** ① the game asks · ② the agent · ③ actions and
+targets · ④ schema and prompt · ⑤ queue and provider · ⑥ the model chooses · ⑦ guards ·
+⑧ result and telemetry · ⑨ the game acts on it.
