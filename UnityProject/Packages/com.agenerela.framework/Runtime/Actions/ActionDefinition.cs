@@ -9,14 +9,16 @@ namespace Agenerela
         [Tooltip("snake_case. Becomes the value the model picks from.")]
         public string Id;
 
-        [Tooltip("One SHORT clause. Keep comparable in length to your other actions - " +
-                 "a long emphatic description measurably biases small models toward it.")]
+        [Tooltip("One SHORT clause telling the model WHEN to use this action. Keep it " +
+         "comparable in length to your other actions. A long emphatic description " +
+         "measurably biases small models toward picking it.")]
         [TextArea(1, 3)] public string Description;
 
         [Tooltip("Does this action need something to act on?")]
         public bool RequiresTarget;
 
-        [Tooltip("A stimulus that should lead to this action. A player's input, an event, or behavior that triggers this action.")]
+        [Tooltip("A stimulus that should lead to this action. A player's input, an event, " +
+         "or behavior that triggers this action. Use {0} for the target and never reuse an evaluation prompt")]
         public string ExampleStimulus;
 
         [Tooltip("Target ids this verb sensibly applies to. Prevents nonsense examples " +
