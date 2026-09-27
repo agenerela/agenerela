@@ -136,11 +136,12 @@ five checks in #11 pass. See the build plan's phase table for what each phase me
 Merged so far:
 
 - The `ILLMProvider` contract and its supporting types (#12).
-- `TargetRegistry` (#5). Its follow-up is still open: reserve `no_target`, return false
-  rather than throw on a malformed id, and add the missing tests (#29).
-- `ActionDefinition` and its `ActionDefinitionAsset` wrapper (#4, via #35 and #37). Its
-  `Description` and `ExampleStimulus` tooltips and the `ValidateId` tests are still owed
-  (#49).
+- `TargetRegistry` (#5), with its follow-up (#29, via #55): `no_target` is reserved, and
+  lookups return false rather than throw on a malformed id, so a provider's raw output can
+  go straight in.
+- `ActionDefinition` and its `ActionDefinitionAsset` wrapper (#4, via #35 and #37), with its
+  follow-up (#49, via #54): the `Description` and `ExampleStimulus` tooltips and the
+  `ValidateId` tests.
 - Decision telemetry (#3, via #36): `DecisionOutcome` and `DecisionTelemetry`, with EditMode
   tests, and `DecisionResult`, which pairs a decision with its telemetry. `DecisionResult`'s
   EditMode tests are still owed (#43).

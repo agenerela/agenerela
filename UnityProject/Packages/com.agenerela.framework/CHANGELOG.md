@@ -15,12 +15,17 @@ While the version stays `0.x`, the public API may change in any release.
   `ScriptableObject` a developer creates from **Create → Agenerela → Action** (DR-011).
   `ActionDefinition.ValidateId` rejects an empty id, uppercase (compared culture-invariantly)
   and any whitespace, and the asset warns about a malformed id while it is being edited.
-  Its EditMode tests, and clearer tooltips for `Description` and `ExampleStimulus`, are still
-  owed (#49).
+  `ValidateId` has EditMode tests. The `Description` tooltip asks for one short when-to-use
+  clause, since it is the text the model chooses by, and the `ExampleStimulus` tooltip says
+  to use `{0}` for the target and never to reuse an evaluation prompt (#49).
 - `TargetRegistry` in namespace `Agenerela` — what an agent is allowed to refer to, held as
   ids the schema can offer and the guards can check: `Register`, `Unregister`, `TryGet`,
-  `Contains`, `Ids` and `Count`, with EditMode tests. Follow-up work — reserving
-  `no_target`, safer lookups and the missing test cases — is tracked in #29.
+  `Contains`, `Ids` and `Count`, with EditMode tests. `TargetRegistry.NoTarget`
+  (`no_target`) is the schema's "no target" value and can never be registered. `Register`
+  throws for a malformed, reserved or duplicate id and for a null target; `TryGet`,
+  `Contains` and `Unregister` return false for any id that is not registered, malformed ones
+  included, and never throw, so a provider's raw output is safe to pass in. `Ids` is a live
+  read-only view in insertion order, which the schema enum is built from (#29).
 - `ILLMProvider` and its supporting types (`ProviderCapabilities`, `SchemaDialect`,
   `RateLimit`, `DecisionRequest`, `ProviderResult`) in `Agenerela.Providers` — the contract
   every backend satisfies, defined before any of them is written so that Ollama, cloud APIs
