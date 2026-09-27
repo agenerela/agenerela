@@ -36,10 +36,11 @@ namespace Agenerela.Tests
         [TestCase("follow player")]
         [TestCase(" follow")]
         [TestCase("follow ")]
-        public void ValidateIdRejectsSpaces(string id)
+        [TestCase("follow\tplayer")]
+        public void ValidateIdRejectsWhitespace(string id)
         {
             Assert.That(ActionDefinition.ValidateId(id, out string problem), Is.False);
-            Assert.That(problem, Does.Contain("spaces"));
+            Assert.That(problem, Does.Contain("whitespace"));
         }
     }
 }
