@@ -16,6 +16,7 @@ namespace Agenerela
                  "is decided by each action's handler, not here.")]
         public List<ActionDefinitionAsset> Actions = new List<ActionDefinitionAsset>();
 
+        [Header("Idle example")]
         [Tooltip("A stimulus for which the right answer is 'none'. Shown to the model as " +
                  "the idle example. Leave empty to omit it.")]
         public string IdleExampleStimulus = "Nothing has changed since last time.";
