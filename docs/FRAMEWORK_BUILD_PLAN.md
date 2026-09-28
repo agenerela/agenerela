@@ -587,6 +587,14 @@ instant of the decision is what matters; where it came from does not.
    small model toward it — this alone caused a measured regression.
 3. *The idle/none option is listed last* in the enum, so it reads as fallback, not default.
 
+**Revisit later — letting an agent opt out of `none`.** Every agent gets `none` today, added
+by the framework (#8). An agent that must act every time it is asked, such as a country
+choosing its move each turn, might do better without it, through a switch on its profile.
+Not now: a guard rewrites a bad decision to `none` (Phase 3), and #10's idle and refusal
+examples both answer `none`, so an opt-out needs another fallback for the guards and drops
+both examples with it. It changes what the model can answer, so it needs an A/B with a
+control arm before it ships.
+
 ### 2.3 Schema (`Runtime/Schema/`)
 
 A provider-neutral `DecisionSchema` model built per request from the agent's currently
@@ -625,10 +633,13 @@ than a second schema system — do not let provider-specific syntax leak into th
    five variants, below the unmodified baseline. Don't retry without new evidence.
 4. Few-shot block: assembled at request time from each registered action's
    `ExampleStimulus` + a `PreferredExampleTarget` **that the verb sensibly applies to**
-   (blind rotation produced "Pick up the Blacksmith" — a nonsense demonstration), plus one
-   negative example showing a refusal with `no_target`. **Example utterances must never
-   overlap the evaluation prompt set** (see Phase 4). Few-shot was the largest single
-   lever measured: +35 points.
+   (blind rotation produced "Pick up the Blacksmith" — a nonsense demonstration), plus an
+   idle example answered with `none`, whose stimulus is the profile's `IdleExampleStimulus`
+   (#15), and one negative example showing a refusal with `no_target`. The idle example has
+   never been measured on its own; with vs without it is owed in Phase 4
+   ([findings](llm-wiki/findings.md)). **Example utterances must never overlap the
+   evaluation prompt set** (see Phase 4). Few-shot was the largest single lever measured:
+   +35 points.
 
 ### 2.4 Providers (`Runtime/Providers/`)
 
@@ -807,6 +818,14 @@ per-decision telemetry (chosen action, guard verdicts, latency, token counts). T
 window is not a luxury — it is how a developer debugs "why did my agent do that", which is
 the framework's main support burden. Built **last** (Phase 5), once the data shapes
 underneath have stopped moving.
+
+**The profile inspector shows the idle example on the `none` row.** `none` appears as a
+locked last row of the action list (screen 1 of [`docs/design`](design/README.md)). Other
+rows expand to show their action's example stimulus, so the `none` row expands to show and
+edit `IdleExampleStimulus` — the example for `none`, where a developer looks for it. The
+value stays on `AgentProfile`, because `none` has no action asset (#8). Until this inspector
+exists, a `[Header("Idle example")]` sets the field apart in the default Inspector. This came
+out of the review of #56, where the field read as a stray that belonged on an action.
 
 ### 2.8 Observations (`Runtime/Observations/`) — how an agent learns what is around it
 
