@@ -148,6 +148,10 @@ Merged so far:
 - The core decision types `AgentIdentity`, `AgentContext` and `AgentDecision` (#2, via #39),
   with input validation and EditMode tests. `AgentContext.Actions` stays a TODO until
   `ActionRegistry` (#6) lands.
+- `AgentProfile` (#15, via #56) — the asset a developer creates first: an `AgentIdentity`,
+  the `ActionDefinitionAsset`s the agent can ever use, and the idle few-shot example. It
+  warns in the Inspector about an empty name, a missing entry or a duplicate action id, with
+  EditMode tests.
 - Newtonsoft as the core's one declared dependency (DR-009), and each demo game as its own
   Unity project (DR-010).
 - `Demos/GreyBoxVillage` — a playable grey-box scene whose guard still answers from
@@ -157,9 +161,9 @@ Merged so far:
   still compiles no C#, so a green check does not prove `test` builds.
 
 Not written yet: `ActionRegistry` (#6), state-derived availability (#7), `DecisionSchema`
-(#8), its JSON serializer (#9), the few-shot builder (#10), `AgentProfile` (#15),
-`PromptBuilder` (#16), target discovery through `Targetable` and `ITargetSource` (#32), the
-`[AgentAction]` code front door (#50, which anyone can claim), and `Agent` itself (#17).
+(#8), its JSON serializer (#9), the few-shot builder (#10), `PromptBuilder` (#16), target
+discovery through `Targetable` and `ITargetSource` (#32), the `[AgentAction]` code front
+door (#50, which anyone can claim), and `Agent` itself (#17).
 **Nothing in the framework calls a model yet** — that starts in Phase 2, so Phase 1 work is
 pure C# with EditMode tests and no Ollama.
 

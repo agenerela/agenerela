@@ -47,6 +47,16 @@ While the version stays `0.x`, the public API may change in any release.
   and turns a null stimulus, observations or state into an empty value. EditMode tests cover
   construction, the rejected ids, a null identity, and null observations, state and
   statement. `AgentContext.Actions` arrives with `ActionRegistry` (#6).
+- `AgentProfile` in namespace `Agenerela` (#15) — the `ScriptableObject` a developer creates
+  from **Create → Agenerela → Agent Profile**, shared by every agent that uses it: an
+  `AgentIdentity`, the `ActionDefinitionAsset`s the agent can ever use (held as references,
+  so editing an action asset changes every profile that lists it, DR-011), and
+  `IdleExampleStimulus`, the stimulus for the few-shot example whose answer is `none`
+  (default `"Nothing has changed since last time."`; empty omits the example).
+  `AgentProfile.Validate` reports an empty identity name, a null entry in `Actions` or the
+  same action id listed twice, and the asset logs the problem as a warning while it is being
+  edited. Blank action ids are left to the action asset's own warning. EditMode tests cover
+  each case.
 
 ### Changed
 - The package depends on `com.unity.nuget.newtonsoft-json` 3.2.2, which Package Manager
