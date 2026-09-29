@@ -385,7 +385,7 @@ footer p{max-width:74ch}
         <div class="card" style="text-align:center;border-style:dashed"><span class="mono" style="font-size:13px">move_to.asset</span><div class="hint" style="margin-top:4px">ScriptableObject</div></div>
         <div class="card strong" style="text-align:center"><span class="mono" style="font-size:13px">ActionDefinition</span><div class="hint" style="margin-top:4px">one plain type, in the registry</div></div>
       </div>
-      <div class="help acc" style="margin:14px 0 0"><span class="ico">◆</span><div><b>Nothing downstream can tell which door was used.</b> The schema, the guards, the log and the eval harness only ever see the registry — which is what makes two front doors affordable rather than two frameworks. <b>If both declare the same id on one agent, the asset wins</b>, so you can start in code and drop in an asset later for only the action whose wording you want to measure.</div></div>
+      <div class="help acc" style="margin:14px 0 0"><span class="ico">◆</span><div><b>Nothing downstream can tell which door was used.</b> The schema, the guards, the log and the eval harness only ever see the registry — which is what makes two front doors affordable rather than two frameworks. <b>If both declare the same id on one agent, the asset wins</b>, so you can start in code and drop in an asset later for only the action whose wording you want to measure. The asset brings the wording; your method still runs the action.</div></div>
 
       <div class="cols" style="margin-top:16px">
         <div>
@@ -454,6 +454,8 @@ footer p{max-width:74ch}
       <pre><b>public class</b> VillageGuard : MonoBehaviour
 {
     [SerializeField] NavMeshAgent nav;
+    [SerializeField] Follower follower;   <i>// your own script</i>
+    [SerializeField] Transform player;    <i>// the game knows who is talking; we never assume</i>
 
     <b>[AgentAction</b>(<u>"move_to"</u>, <u>"Walk to a named place."</u>, RequiresTarget = <b>true</b>)<b>]</b>
     <b>public void</b> MoveTo(AgentContext ctx, Transform t) =&gt; nav.SetDestination(t.position);
@@ -462,9 +464,10 @@ footer p{max-width:74ch}
     <b>public bool</b> CanMove() =&gt; !nav.pathPending &amp;&amp; nav.remainingDistance &lt; 0.2f;
 
     <b>[AgentAction</b>(<u>"follow_player"</u>, <u>"Walk with the person who asked."</u>)<b>]</b>
-    <b>public void</b> Follow(AgentContext ctx) =&gt; follower.Begin(ctx.Asker);
+    <b>public void</b> Follow() =&gt; follower.Begin(player);
 }</pre>
-      <div class="help acc" style="margin:12px 0 16px"><span class="ico">◆</span><div><b>This is the expected shape for a scene NPC</b> — and it is what the demo's <span class="mono">VillageGuard.cs</span> already is. The verbose version below is the other end of the range: one class per action, for a handler with enough state to deserve its own file. Both reach the same <span class="mono">IActionHandler</span>.</div></div>
+      <div class="help acc" style="margin:12px 0 8px"><span class="ico">◆</span><div><b>This is the expected shape for a scene NPC</b> — and it is what the demo's <span class="mono">VillageGuard.cs</span> already is. The verbose version below is the other end of the range: one class per action, for a handler with enough state to deserve its own file. Both reach the same <span class="mono">IActionHandler</span>.</div></div>
+      <div class="help" style="margin:0 0 16px"><span class="ico">▸</span><div><b>One call registers the whole script.</b> <span class="mono">RegisterMethods(this)</span> on the agent's action registry reads the labels, and each method becomes the handler for its own action (#50). Each parameter is filled by its type: the <span class="mono">AgentContext</span>, the <span class="mono">AgentDecision</span>, or the target exactly as it was registered, so <span class="mono">Follow()</span> can take none at all. A method with the wrong shape is an error that names it, at registration rather than mid-game.</div></div>
 
       <div class="filetab">MoveToHandler.cs — the same action, given its own class</div>
       <pre><i>using</i> Agenerela; <i>using</i> UnityEngine; <i>using</i> UnityEngine.AI;
@@ -880,10 +883,11 @@ Packages/
   <p class="seclede">These started as open questions on this page. Each was argued through and written into the build plan as a decision record. Two of them reversed the recommendation this page first carried — those reversals are kept visible below rather than quietly edited out, because the reasoning is the useful part.</p>
 
   <div class="qa">
-    <h3>1. How are actions and handlers authored? <span class="pill ok" style="vertical-align:3px">decided · DR-011</span> <span class="pill warn" style="vertical-align:3px">amended 20 Sep</span></h3>
+    <h3>1. How are actions and handlers authored? <span class="pill ok" style="vertical-align:3px">decided · DR-011</span> <span class="pill warn" style="vertical-align:3px">amended 20 Sep</span> <span class="pill ok" style="vertical-align:3px">built 28 Sep</span></h3>
     <p><b>Both ways, over one plain data type.</b> <span class="mono">ActionDefinition</span> is a plain serializable type with no scene dependency, beside its wrapper in <span class="mono">Runtime/Actions/</span>; <span class="mono">ActionDefinitionAsset</span> is a thin ScriptableObject wrapper holding one. Attributed methods and asset files are two front doors into the same registry, and a handler is never required to be its own file. On an id collision within one agent, the asset wins.</p>
     <p class="rec"><b>What it costs:</b> every front door must be covered by the same Phase 1 EditMode assertions, as one parameterized fixture — three registration paths without that is three implementations that drift until a demo breaks. Attribute reflection also needs <span class="mono">[Preserve]</span> or a link.xml to survive IL2CPP stripping, which belongs in the Phase 6b player test rather than in a demo-day surprise.</p>
     <p class="rec"><b>Amended once it was built (#35):</b> this card first said "in Core with no <span class="mono">UnityEngine</span> reference". That wording cost every Inspector tooltip — Unity reads them from attributes on the inner type's own fields — and it over-reached: the plan uses <span class="mono">UnityEngine</span> by design elsewhere, since <span class="mono">ILLMProvider</span> already returns Unity's <span class="mono">Awaitable</span> and <span class="mono">AgentProfile</span> is specified as a <span class="mono">ScriptableObject</span>. The rule worth keeping is the one figure 10 states: no scene. <span class="mono">UnityEngine</span> is fine; <span class="mono">GameObject</span>, <span class="mono">Transform</span> and <span class="mono">MonoBehaviour</span> live only in <span class="mono">Runtime/Unity/</span>, and CI enforces it.</p>
+    <p class="rec"><b>Settled once the code door was built (#50, via #59):</b> the asset wins the <em>wording</em>, not the handler. The method still runs the action, which is what lets one action's wording move into an asset for an A/B run without touching code, and a second handler for the same id stays an error rather than silently replacing the method. Building it also added <span class="mono">[Available]</span>, the state-masking check in figure 5, which the decision had not listed; without it an action written in code could never be masked. The shared fixture runs four registration paths: an asset, an attribute, an attribute whose asset wins, and a definition built in code.</p>
   </div>
 
   <div class="qa">
@@ -948,7 +952,7 @@ Packages/
 
 <footer>
   <p><b>Agenerela</b> — a Unity framework that lets a language model drive game agents by choosing from actions the developer registered. CSUN COMP 490 / 491.</p>
-  <p style="margin-top:10px">This page walks the developer's path; the six sketch-lab wireframes it refers to are the screens themselves. Rules cited here come from <span class="mono">docs/FRAMEWORK_BUILD_PLAN.md</span> and its decision records — DR-008 (no input taxonomy), DR-009 (one dependency), DR-010 (demos as separate projects) — and the measurements come from Appendix A. Where this page proposes something the plan does not settle, it says so on the figure. Last brought in step with the plan and the issues on 23 September 2026, after #39, #42 and DR-011's note on the code front door; where the page and the plan disagree, the plan is current.</p>
+  <p style="margin-top:10px">This page walks the developer's path; the six sketch-lab wireframes it refers to are the screens themselves. Rules cited here come from <span class="mono">docs/FRAMEWORK_BUILD_PLAN.md</span> and its decision records — DR-008 (no input taxonomy), DR-009 (one dependency), DR-010 (demos as separate projects) — and the measurements come from Appendix A. Where this page proposes something the plan does not settle, it says so on the figure. Last brought in step with the plan and the issues on 28 September 2026, after the code front door was built (#50, via #59); where the page and the plan disagree, the plan is current.</p>
 </footer>
 </div>
 </body>
