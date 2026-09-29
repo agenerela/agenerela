@@ -545,6 +545,10 @@ either writes the action in code, or authors it as an asset:
 [Example("Head over to the {0}.", "tower", "bridge")]
 public void MoveTo(AgentContext ctx, Transform target) => nav.SetDestination(target.position);
 
+[Available("move_to")]   // state masking: not offered while already walking
+public bool CanMove() => !nav.pathPending && nav.remainingDistance < 0.2f;
+// ...registered with agent.Actions.RegisterMethods(this).
+
 // Front door 2 — asset. A thin ScriptableObject wrapper holding one ActionDefinition.
 [CreateAssetMenu(menuName = "Agenerela/Action", fileName = "NewAction")]
 public sealed class ActionDefinitionAsset : ScriptableObject { public ActionDefinition Action; }
@@ -553,7 +557,11 @@ public sealed class ActionDefinitionAsset : ScriptableObject { public ActionDefi
 Both end as the same `ActionDefinition` in the same registry; nothing downstream — schema,
 guards, telemetry, the eval harness — can tell which was used. **Where both define the same
 id on one agent, the asset wins**, so a developer can start in code and later drop in an
-asset for just the one action whose wording is being A/B tested.
+asset for just the one action whose wording is being A/B tested. The asset wins the
+definition, and the method still runs the action: `RegisterMethods(this, profile.Actions)`
+registers each matching asset's wording in place of the attribute's (DR-011's note of 28
+September). An attributed method's parameters are filled by type: the `AgentContext`, the
+`AgentDecision`, and at most one target, passed exactly as it was registered.
 
 Registration binds a definition to gameplay and to availability:
 
@@ -586,6 +594,33 @@ instant of the decision is what matters; where it came from does not.
    length. A long emphatic description on one option (the prototype's `none`) biases a
    small model toward it — this alone caused a measured regression.
 3. *The idle/none option is listed last* in the enum, so it reads as fallback, not default.
+
+**Revisit later — letting an agent opt out of `none`.** Every agent gets `none` today, added
+by the framework (#8). An agent that must act every time it is asked, such as a country
+choosing its move each turn, might do better without it, through a switch on its profile.
+Not now: a guard rewrites a bad decision to `none` (Phase 3), and #10's idle and refusal
+examples both answer `none`, so an opt-out needs another fallback for the guards and drops
+both examples with it. It changes what the model can answer, so it needs an A/B with a
+control arm before it ships.
+
+**Revisit later — renaming an action after it is registered.** `ActionRegistry` (#6) files
+each action under the id it had when `Register` was called, but keeps the developer's own
+`ActionDefinition` rather than a copy. Change the id afterwards, for instance in the
+Inspector during Play mode, and `Definitions` shows the new id while lookups still expect
+the old one: `TryGet` of the new id fails and `HandlerFor` throws. Left this way on purpose
+(#57 review): renaming an action mid-game is rare, and keeping the developer's object means a
+description edited during Play mode is what the next request reads. Revisit if a game needs
+to rename actions at runtime; the options are to copy the definition in `Register`, or to
+look handlers up by the definition object rather than its id.
+
+**Revisit later — a target registered as one type and taken as another.** An attributed
+method receives its target exactly as it was registered (#50): `MoveTo(AgentContext ctx,
+Transform target)` needs a `Transform` in the `TargetRegistry`, and anything else is a clear
+error when the action runs. Converting one into the other, a `Targetable` into its
+`Transform` say, would take scene calls, which only `Runtime/Unity/` may make. That is fine
+while a game registers what its methods take. Revisit when #32 settles what
+`ProximityTargetSource` registers: if it is the `Targetable`, the fix is a conversion that
+`Runtime/Unity/` supplies, not scene calls in the reader.
 
 ### 2.3 Schema (`Runtime/Schema/`)
 
@@ -625,10 +660,13 @@ than a second schema system — do not let provider-specific syntax leak into th
    five variants, below the unmodified baseline. Don't retry without new evidence.
 4. Few-shot block: assembled at request time from each registered action's
    `ExampleStimulus` + a `PreferredExampleTarget` **that the verb sensibly applies to**
-   (blind rotation produced "Pick up the Blacksmith" — a nonsense demonstration), plus one
-   negative example showing a refusal with `no_target`. **Example utterances must never
-   overlap the evaluation prompt set** (see Phase 4). Few-shot was the largest single
-   lever measured: +35 points.
+   (blind rotation produced "Pick up the Blacksmith" — a nonsense demonstration), plus an
+   idle example answered with `none`, whose stimulus is the profile's `IdleExampleStimulus`
+   (#15), and one negative example showing a refusal with `no_target`. The idle example has
+   never been measured on its own; with vs without it is owed in Phase 4
+   ([findings](llm-wiki/findings.md)). **Example utterances must never overlap the
+   evaluation prompt set** (see Phase 4). Few-shot was the largest single lever measured:
+   +35 points.
 
 ### 2.4 Providers (`Runtime/Providers/`)
 
@@ -807,6 +845,14 @@ per-decision telemetry (chosen action, guard verdicts, latency, token counts). T
 window is not a luxury — it is how a developer debugs "why did my agent do that", which is
 the framework's main support burden. Built **last** (Phase 5), once the data shapes
 underneath have stopped moving.
+
+**The profile inspector shows the idle example on the `none` row.** `none` appears as a
+locked last row of the action list (screen 1 of [`docs/design`](design/README.md)). Other
+rows expand to show their action's example stimulus, so the `none` row expands to show and
+edit `IdleExampleStimulus` — the example for `none`, where a developer looks for it. The
+value stays on `AgentProfile`, because `none` has no action asset (#8). Until this inspector
+exists, a `[Header("Idle example")]` sets the field apart in the default Inspector. This came
+out of the review of #56, where the field read as a stray that belonged on an action.
 
 ### 2.8 Observations (`Runtime/Observations/`) — how an agent learns what is around it
 
@@ -1304,6 +1350,17 @@ conformance fixture. All three now live in #50: the rule and the fixture only me
 once both front doors exist, and #6 stays on the Phase 1 critical path without them. #50 is
 Phase 1 work that anyone can claim, not part of the gate: `Agent` (#17) can already be built
 from a list of `ActionDefinition`s, and none of #11's five checks needs the code front door.
+
+**Note, 28 September 2026 — what the asset wins.** Building the code front door (#50)
+settled two things the decision left open. The asset wins the *definition*, not the handler:
+this record's own use case, moving one action's wording into an asset for a Phase 4 A/B run,
+works only if the method keeps running the action, so
+`ActionRegistry.RegisterMethods(owner, assets)` registers each matching asset's definition in
+place of the attribute's. An action still has exactly one handler, so an id bound through
+`Register` cannot also come from a method; that stays an error rather than silently dropping
+one of the two. And the code door gained `[Available]`, which the workflow walkthrough
+already drew: without it, an action defined in code could never be masked by state. The
+shared fixture runs four registration paths, the asset winning over an attribute among them.
 
 ### DR-012 — Agents may gather their own observations; the summariser is a source, not a stage
 

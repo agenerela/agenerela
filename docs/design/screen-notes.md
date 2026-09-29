@@ -54,6 +54,11 @@ village guards, one asset.
 description length check · ④ editing an action in place · ⑤ the built-in `none` · ⑥ validation
 messages with a fix button.
 
+**Changed since the lab:** the separate "Idle example" section at the bottom moves onto the
+locked `none` row ⑤, which expands like the other rows to show its example. The idle example
+is the example for `none`, so that is where a developer looks for it. The value is still
+stored on the profile, because `none` has no action asset (build plan §2.7).
+
 ---
 
 ## Screen 2 — Agent Behaviour

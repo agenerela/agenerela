@@ -70,7 +70,9 @@ a control arm on the 200+ prompt set, and each recorded here:
 2. The same comparison on the 0.8B and 4B models of the report's model-size study: the lift
    may shrink or grow with model size.
 3. The rules one at a time: sensible vs rotated example targets, with and without the
-   negative example, the number of examples per action, and their order.
+   idle example, with and without the negative example, the number of examples per action,
+   and their order. If the idle example does not help, `AgentProfile.IdleExampleStimulus`
+   (#15) can go.
 4. Levers never tried: examples picked by similarity to the stimulus, and a hand-written
    block per profile (#10's extension points).
 

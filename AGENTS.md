@@ -136,17 +136,33 @@ five checks in #11 pass. See the build plan's phase table for what each phase me
 Merged so far:
 
 - The `ILLMProvider` contract and its supporting types (#12).
-- `TargetRegistry` (#5). Its follow-up is still open: reserve `no_target`, return false
-  rather than throw on a malformed id, and add the missing tests (#29).
-- `ActionDefinition` and its `ActionDefinitionAsset` wrapper (#4, via #35 and #37). Its
-  `Description` and `ExampleStimulus` tooltips and the `ValidateId` tests are still owed
-  (#49).
+- `TargetRegistry` (#5), with its follow-up (#29, via #55): `no_target` is reserved, and
+  lookups return false rather than throw on a malformed id, so a provider's raw output can
+  go straight in.
+- `ActionDefinition` and its `ActionDefinitionAsset` wrapper (#4, via #35 and #37), with its
+  follow-up (#49, via #54): the `Description` and `ExampleStimulus` tooltips and the
+  `ValidateId` tests.
 - Decision telemetry (#3, via #36): `DecisionOutcome` and `DecisionTelemetry`, with EditMode
   tests, and `DecisionResult`, which pairs a decision with its telemetry. `DecisionResult`'s
   EditMode tests are still owed (#43).
 - The core decision types `AgentIdentity`, `AgentContext` and `AgentDecision` (#2, via #39),
-  with input validation and EditMode tests. `AgentContext.Actions` stays a TODO until
-  `ActionRegistry` (#6) lands.
+  with input validation and EditMode tests. `AgentContext.Actions` is still a TODO, now
+  #58.
+- `AgentProfile` (#15, via #56) — the asset a developer creates first: an `AgentIdentity`,
+  the `ActionDefinitionAsset`s the agent can ever use, and the idle few-shot example. It
+  warns in the Inspector about an empty name, a missing entry or a duplicate action id, with
+  EditMode tests.
+- `ActionRegistry` and `IActionHandler` (#6, via #57) — each action id bound to the game code
+  that runs it, listed in a stable order for the schema enum. `Register` rejects a null,
+  duplicate, malformed or reserved id (`none`, which #8 adds to every agent); lookups return
+  false rather than throw. Two adapters come with it: `DelegateActionHandler` for a pair of
+  lambdas, and `ActionHandlerBehaviour`, the first file in `Runtime/Unity/`. EditMode tests
+  throughout.
+- The `[AgentAction]` code front door (#50, via #59) — an action defined by the method that
+  runs it, with `[Example]` for its few-shot example and `[Available]` for state masking.
+  `ActionRegistry.RegisterMethods` registers every such method on an object; where an asset
+  shares the id, the asset's definition wins and the method still runs it (DR-011). One
+  parameterized fixture runs the same assertions through every way an action is registered.
 - Newtonsoft as the core's one declared dependency (DR-009), and each demo game as its own
   Unity project (DR-010).
 - `Demos/GreyBoxVillage` — a playable grey-box scene whose guard still answers from
@@ -155,10 +171,9 @@ Merged so far:
   `Runtime/Unity/` touches a scene" (#38, #40), and for a changed `.meta` GUID (#41). It
   still compiles no C#, so a green check does not prove `test` builds.
 
-Not written yet: `ActionRegistry` (#6), state-derived availability (#7), `DecisionSchema`
-(#8), its JSON serializer (#9), the few-shot builder (#10), `AgentProfile` (#15),
-`PromptBuilder` (#16), target discovery through `Targetable` and `ITargetSource` (#32), the
-`[AgentAction]` code front door (#50, which anyone can claim), and `Agent` itself (#17).
+Not written yet: `AgentContext.Actions` (#58), state-derived availability (#7),
+`DecisionSchema` (#8), its JSON serializer (#9), the few-shot builder (#10), `PromptBuilder` (#16), target
+discovery through `Targetable` and `ITargetSource` (#32), and `Agent` itself (#17).
 **Nothing in the framework calls a model yet** — that starts in Phase 2, so Phase 1 work is
 pure C# with EditMode tests and no Ollama.
 

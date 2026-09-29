@@ -95,6 +95,8 @@ figcaption{font-size:13px;color:var(--ink3);margin-top:9px;line-height:1.45;max-
 .tabx{min-height:23px;padding:2px 11px;display:flex;align-items:center;font-size:12px;font-weight:600;background:var(--surface);border:1.5px solid var(--line);border-bottom:none;border-radius:5px 5px 0 0;color:var(--ink)}
 .chdr{display:flex;align-items:center;gap:8px;min-height:31px;padding:5px 11px;background:var(--fill);border-bottom:1.5px solid var(--line2);font-weight:700;font-size:13px;flex-wrap:wrap}
 .cb{width:14px;height:14px;border:1.5px solid var(--ink2);border-radius:3px;font-size:10px;line-height:11px;text-align:center;flex:none}
+.rb{width:14px;height:14px;border:1.5px solid var(--ink2);border-radius:50%;flex:none;display:inline-flex;align-items:center;justify-content:center}
+.rb.on::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--ink)}
 .sub2{display:flex;align-items:center;gap:8px;min-height:22px;padding:9px 11px 3px;font-size:10.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--ink3)}
 .r{display:flex;align-items:center;gap:9px;min-height:29px;padding:3px 11px;font-size:12.5px;flex-wrap:wrap}
 .k{width:122px;flex:none;color:var(--ink2)}
@@ -385,7 +387,7 @@ footer p{max-width:74ch}
         <div class="card" style="text-align:center;border-style:dashed"><span class="mono" style="font-size:13px">move_to.asset</span><div class="hint" style="margin-top:4px">ScriptableObject</div></div>
         <div class="card strong" style="text-align:center"><span class="mono" style="font-size:13px">ActionDefinition</span><div class="hint" style="margin-top:4px">one plain type, in the registry</div></div>
       </div>
-      <div class="help acc" style="margin:14px 0 0"><span class="ico">◆</span><div><b>Nothing downstream can tell which door was used.</b> The schema, the guards, the log and the eval harness only ever see the registry — which is what makes two front doors affordable rather than two frameworks. <b>If both declare the same id on one agent, the asset wins</b>, so you can start in code and drop in an asset later for only the action whose wording you want to measure.</div></div>
+      <div class="help acc" style="margin:14px 0 0"><span class="ico">◆</span><div><b>Nothing downstream can tell which door was used.</b> The schema, the guards, the log and the eval harness only ever see the registry — which is what makes two front doors affordable rather than two frameworks. <b>If both declare the same id on one agent, the asset wins</b>, so you can start in code and drop in an asset later for only the action whose wording you want to measure. The asset brings the wording; your method still runs the action.</div></div>
 
       <div class="cols" style="margin-top:16px">
         <div>
@@ -454,6 +456,8 @@ footer p{max-width:74ch}
       <pre><b>public class</b> VillageGuard : MonoBehaviour
 {
     [SerializeField] NavMeshAgent nav;
+    [SerializeField] Follower follower;   <i>// your own script</i>
+    [SerializeField] Transform player;    <i>// the game knows who is talking; we never assume</i>
 
     <b>[AgentAction</b>(<u>"move_to"</u>, <u>"Walk to a named place."</u>, RequiresTarget = <b>true</b>)<b>]</b>
     <b>public void</b> MoveTo(AgentContext ctx, Transform t) =&gt; nav.SetDestination(t.position);
@@ -462,9 +466,10 @@ footer p{max-width:74ch}
     <b>public bool</b> CanMove() =&gt; !nav.pathPending &amp;&amp; nav.remainingDistance &lt; 0.2f;
 
     <b>[AgentAction</b>(<u>"follow_player"</u>, <u>"Walk with the person who asked."</u>)<b>]</b>
-    <b>public void</b> Follow(AgentContext ctx) =&gt; follower.Begin(ctx.Asker);
+    <b>public void</b> Follow() =&gt; follower.Begin(player);
 }</pre>
-      <div class="help acc" style="margin:12px 0 16px"><span class="ico">◆</span><div><b>This is the expected shape for a scene NPC</b> — and it is what the demo's <span class="mono">VillageGuard.cs</span> already is. The verbose version below is the other end of the range: one class per action, for a handler with enough state to deserve its own file. Both reach the same <span class="mono">IActionHandler</span>.</div></div>
+      <div class="help acc" style="margin:12px 0 8px"><span class="ico">◆</span><div><b>This is the expected shape for a scene NPC</b> — and it is what the demo's <span class="mono">VillageGuard.cs</span> already is. The verbose version below is the other end of the range: one class per action, for a handler with enough state to deserve its own file. Both reach the same <span class="mono">IActionHandler</span>.</div></div>
+      <div class="help" style="margin:0 0 16px"><span class="ico">▸</span><div><b>One call registers the whole script.</b> <span class="mono">RegisterMethods(this)</span> on the agent's action registry reads the labels, and each method becomes the handler for its own action (#50). Each parameter is filled by its type: the <span class="mono">AgentContext</span>, the <span class="mono">AgentDecision</span>, or the target exactly as it was registered, so <span class="mono">Follow()</span> can take none at all. A method with the wrong shape is an error that names it, at registration rather than mid-game.</div></div>
 
       <div class="filetab">MoveToHandler.cs — the same action, given its own class</div>
       <pre><i>using</i> Agenerela; <i>using</i> UnityEngine; <i>using</i> UnityEngine.AI;
@@ -837,7 +842,7 @@ Packages/
         <tr><td>06</td><td><b>Targetable</b> — on every nameable object</td><td>Component inspector</td><td><span class="pill warn">to draw — DR-014, figure 7 is the sketch</span></td><td>1 → 2</td></tr>
         <tr><td>08</td><td><b>Decision Log</b></td><td>Editor window</td><td><span class="pill ok">screen 3</span></td><td>5</td></tr>
         <tr><td>09</td><td><b>Evaluation Report</b></td><td>Editor window</td><td><span class="pill ok">screen 4</span></td><td>4</td></tr>
-        <tr><td>03–06</td><td><b>New Agent wizard</b> — scaffolds profile, actions and handler stubs in one dialog</td><td>Modal, from Create menu</td><td><span class="pill acc">proposed — see below</span></td><td>5</td></tr>
+        <tr><td>03–06</td><td><b>New Agent wizard</b> — scaffolds an agent in one dialog: its actions as one script, or as assets that script runs</td><td>Modal, from Create menu</td><td><span class="pill acc">proposed — see below</span></td><td>5</td></tr>
       </tbody>
     </table>
   </div>
@@ -857,15 +862,17 @@ Packages/
           <div class="r"><span class="cb">✓</span><span class="mono">speak_only</span><span class="hint">answer without moving</span></div>
           <div class="r"><span class="cb"> </span><span class="mono">attack_target</span><span class="hint">strike a named thing</span></div>
           <div class="r" style="color:var(--ink3)"><span class="cb">✓</span><span class="mono">none</span><span class="hint">always added, locked</span></div>
+          <div class="sub2">Write the actions</div>
+          <div class="r"><span class="rb on"></span><span><b>Into one script</b> — <span class="mono">VillageGuard.cs</span></span><span class="hint">an <span class="mono">[AgentAction]</span> method for each, ready to fill in</span></div>
+          <div class="r"><span class="rb"></span><span><b>As assets</b>, run by that same script</span><span class="hint">so a writer or an A/B run can change the wording</span></div>
           <div class="sub2">Also</div>
-          <div class="r"><span class="cb">✓</span><span>Generate a handler script per action</span></div>
           <div class="r"><span class="cb">✓</span><span>Add Agent Behaviour to <b>Guard (Gate)</b></span><span class="hint">the selected object</span></div>
-          <div class="r" style="padding-block:10px"><span class="btnw pri">Create agent</span><span class="hint">writes 5 assets and 3 scripts</span></div>
+          <div class="r" style="padding-block:10px"><span class="btnw pri">Create agent</span><span class="hint">writes 1 script</span></div>
         </div>
         <div>
           <h4>Why this earns its place</h4>
           <p style="font-size:14px">Phase 5's definition of done is a real test on a real teammate: <em>a developer with zero framework knowledge builds a working three-action agent in an empty scene in under fifteen minutes, without editing framework source.</em></p>
-          <p style="font-size:14px">Nine steps across two asset types, an interface and a scene component is not a fifteen-minute path for someone who has never seen it. The wizard collapses steps 03 through 06 into one dialog and leaves behind exactly the files in figure 11 — the same assets, editable afterwards, nothing hidden or generated-and-locked.</p>
+          <p style="font-size:14px">Nine steps across two asset types, an interface and a scene component is not a fifteen-minute path for someone who has never seen it. The wizard collapses steps 03 through 06 into one dialog and leaves behind exactly the files in figure 11. By default that is the left-hand tree: one script, with a labelled method for each action. Choosing assets writes the right-hand tree instead, adding an asset for each action and the profile, and the same script still runs every action. Everything it writes stays editable afterwards; nothing is hidden or generated-and-locked.</p>
           <p style="font-size:14px;margin-bottom:0">It is also the honest answer to "what does this framework feel like": if the first five minutes are filling in a form and pressing play, we have a product. If they are reading a build plan, we have a library.</p>
           <div class="help" style="margin:14px 0 0"><span class="ico">⌁</span><div>Cost is one Editor window over APIs that will already exist. Worth building only after the data shapes underneath have stopped moving — which is exactly why Phase 5 is last.</div></div>
         </div>
@@ -880,10 +887,11 @@ Packages/
   <p class="seclede">These started as open questions on this page. Each was argued through and written into the build plan as a decision record. Two of them reversed the recommendation this page first carried — those reversals are kept visible below rather than quietly edited out, because the reasoning is the useful part.</p>
 
   <div class="qa">
-    <h3>1. How are actions and handlers authored? <span class="pill ok" style="vertical-align:3px">decided · DR-011</span> <span class="pill warn" style="vertical-align:3px">amended 20 Sep</span></h3>
+    <h3>1. How are actions and handlers authored? <span class="pill ok" style="vertical-align:3px">decided · DR-011</span> <span class="pill warn" style="vertical-align:3px">amended 20 Sep</span> <span class="pill ok" style="vertical-align:3px">built 28 Sep</span></h3>
     <p><b>Both ways, over one plain data type.</b> <span class="mono">ActionDefinition</span> is a plain serializable type with no scene dependency, beside its wrapper in <span class="mono">Runtime/Actions/</span>; <span class="mono">ActionDefinitionAsset</span> is a thin ScriptableObject wrapper holding one. Attributed methods and asset files are two front doors into the same registry, and a handler is never required to be its own file. On an id collision within one agent, the asset wins.</p>
     <p class="rec"><b>What it costs:</b> every front door must be covered by the same Phase 1 EditMode assertions, as one parameterized fixture — three registration paths without that is three implementations that drift until a demo breaks. Attribute reflection also needs <span class="mono">[Preserve]</span> or a link.xml to survive IL2CPP stripping, which belongs in the Phase 6b player test rather than in a demo-day surprise.</p>
     <p class="rec"><b>Amended once it was built (#35):</b> this card first said "in Core with no <span class="mono">UnityEngine</span> reference". That wording cost every Inspector tooltip — Unity reads them from attributes on the inner type's own fields — and it over-reached: the plan uses <span class="mono">UnityEngine</span> by design elsewhere, since <span class="mono">ILLMProvider</span> already returns Unity's <span class="mono">Awaitable</span> and <span class="mono">AgentProfile</span> is specified as a <span class="mono">ScriptableObject</span>. The rule worth keeping is the one figure 10 states: no scene. <span class="mono">UnityEngine</span> is fine; <span class="mono">GameObject</span>, <span class="mono">Transform</span> and <span class="mono">MonoBehaviour</span> live only in <span class="mono">Runtime/Unity/</span>, and CI enforces it.</p>
+    <p class="rec"><b>Settled once the code door was built (#50, via #59):</b> the asset wins the <em>wording</em>, not the handler. The method still runs the action, which is what lets one action's wording move into an asset for an A/B run without touching code, and a second handler for the same id stays an error rather than silently replacing the method. Building it also added <span class="mono">[Available]</span>, the state-masking check in figure 5, which the decision had not listed; without it an action written in code could never be masked. The shared fixture runs four registration paths: an asset, an attribute, an attribute whose asset wins, and a definition built in code.</p>
   </div>
 
   <div class="qa">
@@ -920,18 +928,20 @@ Packages/
       <li><b>ILLMProvider</b> and its request/result types (#12)</li>
       <li><b>AgentIdentity, AgentContext, AgentDecision</b> — the core decision types, with input validation and tests (#2, via #39)</li>
       <li><b>Decision telemetry</b> — DecisionOutcome, DecisionTelemetry and DecisionResult (#3, via #36 and #42; DecisionResult's tests: #43)</li>
-      <li><b>ActionDefinition</b> and its asset wrapper — DR-011's asset door (#4, via #35; tests and two tooltips still owed: #49)</li>
+      <li><b>ActionDefinition</b> and its asset wrapper — DR-011's asset door (#4, via #35; tests and tooltips: #49, via #54)</li>
+      <li><b>AgentProfile</b> — identity, action list and idle example, with Inspector warnings and tests (#15, via #56)</li>
+      <li><b>ActionRegistry</b> and <b>IActionHandler</b> — each action bound to the game code that runs it, with delegate and MonoBehaviour adapters and tests (#6, via #57)</li>
+      <li><b>The code front door</b> — <span class="mono">[AgentAction]</span>, <span class="mono">[Example]</span> and <span class="mono">[Available]</span> on a game's own methods, the asset winning a shared id, and one fixture run through every door (DR-011; #50, via #59)</li>
       <li><b>Newtonsoft</b> as the core's one declared dependency (DR-009)</li>
       <li><b>GreyBoxVillage</b> — a playable grey-box scene whose guard still answers from string matching, not a model (#19)</li>
     </ul></div>
     <div class="card"><h4>Written down, not written</h4><ul>
       <li><b>Agent</b> itself — the DecideAsync pipeline (#17)</li>
-      <li><b>ActionRegistry, availability</b> (#6, #7)</li>
+      <li><b>Availability</b> (#7), and <b>AgentContext.Actions</b> (#58)</li>
       <li><b>DecisionSchema</b> and its JSON serializer (#8, #9)</li>
-      <li><b>Few-shot builder, AgentProfile, PromptBuilder</b> (#10, #15, #16)</li>
+      <li><b>Few-shot builder, PromptBuilder</b> (#10, #16)</li>
     </ul></div>
     <div class="card"><h4 style="color:var(--warn)">Decided here, not yet built</h4><ul>
-      <li><b>DR-011</b> the code front door (#50) and the registry (#6) — the asset door exists (#35)</li>
       <li><b>DR-012</b> observation sources, capped; summariser as one source</li>
       <li><b>DR-013</b> provider config asset + resolution chain</li>
       <li><b>DR-014</b> <span class="mono">Targetable</span> discovery instead of typed lists (#32)</li>
@@ -946,7 +956,7 @@ Packages/
 
 <footer>
   <p><b>Agenerela</b> — a Unity framework that lets a language model drive game agents by choosing from actions the developer registered. CSUN COMP 490 / 491.</p>
-  <p style="margin-top:10px">This page walks the developer's path; the six sketch-lab wireframes it refers to are the screens themselves. Rules cited here come from <span class="mono">docs/FRAMEWORK_BUILD_PLAN.md</span> and its decision records — DR-008 (no input taxonomy), DR-009 (one dependency), DR-010 (demos as separate projects) — and the measurements come from Appendix A. Where this page proposes something the plan does not settle, it says so on the figure. Last brought in step with the plan and the issues on 23 September 2026, after #39, #42 and DR-011's note on the code front door; where the page and the plan disagree, the plan is current.</p>
+  <p style="margin-top:10px">This page walks the developer's path; the six sketch-lab wireframes it refers to are the screens themselves. Rules cited here come from <span class="mono">docs/FRAMEWORK_BUILD_PLAN.md</span> and its decision records — DR-008 (no input taxonomy), DR-009 (one dependency), DR-010 (demos as separate projects) — and the measurements come from Appendix A. Where this page proposes something the plan does not settle, it says so on the figure. Last brought in step with the plan and the issues on 28 September 2026, after the code front door was built (#50, via #59); where the page and the plan disagree, the plan is current.</p>
 </footer>
 </div>
 </body>

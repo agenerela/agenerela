@@ -30,6 +30,10 @@ modules with one decision passing through them, drawn for the system-design prac
 | [`png/06-strategy.png`](png/06-strategy.png) | **GreyBoxStrategy turn screen** — countries as agents | Grey box next (#20); real decisions in Phase 3 |
 | [`png/07-framework-design.png`](png/07-framework-design.png) | **Framework design** — the game, the package and the model, with one decision through them in nine steps | — |
 
+**Screen 1 has one planned change.** The idle example moves from its own section onto the
+locked `none` row of the action list, which expands like the other rows (build plan §2.7).
+The figure still draws the separate section.
+
 **Screen 2 is partly superseded.** Three decisions made after the lab changed it: the model is
 configured in a provider config asset that the component only overrides (DR-013), targets are
 discovered from `Targetable` components instead of typed per agent (DR-014), and only

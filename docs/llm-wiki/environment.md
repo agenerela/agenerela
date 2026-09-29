@@ -31,6 +31,8 @@ editor at a time open a project.
   element of `results.xml`; compiler problems are the `error CS` and `warning CS` lines in
   `unity.log`.
 - Do not add `-quit`: `-runTests` quits on its own.
+- Give `-testResults` and `-logFile` paths with no `..` in them. Unity rejects each one
+  with `.. is not a valid directory name`; use an absolute path instead.
 - The first run in a fresh checkout imports every package and takes several minutes. Runs
   after that are much faster.
 - To test a branch without touching your own checkout, run it in a worktree:
