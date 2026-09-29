@@ -10,13 +10,16 @@ namespace Agenerela
         /// <summary>The schema's idle action value. Reserved: it can never be registered by game code.</summary>
         public const string None = "none";
 
-        private readonly List<ActionDefinition> definitions = new List<ActionDefinition>();
-        private readonly Dictionary<string, (ActionDefinition Definition, IActionHandler Handler)> byId =
+        // Holds the action definitions/options in stable order for the model to choose from.
+        private readonly List<ActionDefinition> _definitions = new List<ActionDefinition>();
+
+        // Uses the action definition id as the key, and stores the definition and handler together.
+        private readonly Dictionary<string, (ActionDefinition Definition, IActionHandler Handler)> _byId =
             new Dictionary<string, (ActionDefinition Definition, IActionHandler Handler)>();
 
         public ActionRegistry()
         {
-            Definitions = new ReadOnlyCollection<ActionDefinition>(definitions);
+            Definitions = new ReadOnlyCollection<ActionDefinition>(_definitions);
         }
 
         /// <summary>
@@ -30,6 +33,7 @@ namespace Agenerela
         /// </summary>
         public void Register(ActionDefinition definition, IActionHandler handler)
         {
+            // Adds an action to the registry. Developer mistakes throw clearly before anything is stored.
             if (definition == null)
             {
                 throw new ArgumentNullException(nameof(definition), "Action definition cannot be null.");
@@ -52,12 +56,12 @@ namespace Agenerela
                     nameof(definition));
             }
 
-            if (!byId.TryAdd(definition.Id, (definition, handler)))
+            if (!_byId.TryAdd(definition.Id, (definition, handler)))
             {
                 throw new InvalidOperationException($"Action already registered: {definition.Id}");
             }
 
-            definitions.Add(definition);
+            _definitions.Add(definition);
         }
 
         /// <summary>
@@ -66,14 +70,17 @@ namespace Agenerela
         /// </summary>
         public bool TryGet(string actionId, out ActionDefinition definition, out IActionHandler handler)
         {
+            // Checks whether the action id is already inside the dictionary.
             if (ActionDefinition.ValidateId(actionId, out _) &&
-                byId.TryGetValue(actionId, out var entry))
+                _byId.TryGetValue(actionId, out var entry))
             {
+                // If found, fills the out variables with the registered definition and handler.
                 definition = entry.Definition;
                 handler = entry.Handler;
                 return true;
             }
 
+            // If not found, clears the out variables and returns false.
             definition = null;
             handler = null;
             return false;
@@ -84,6 +91,7 @@ namespace Agenerela
         /// </summary>
         public IActionHandler HandlerFor(ActionDefinition definition)
         {
+            // Gets the handler from the dictionary for a definition expected to be registered.
             if (definition == null)
             {
                 throw new ArgumentNullException(nameof(definition));
