@@ -920,18 +920,20 @@ Packages/
       <li><b>ILLMProvider</b> and its request/result types (#12)</li>
       <li><b>AgentIdentity, AgentContext, AgentDecision</b> — the core decision types, with input validation and tests (#2, via #39)</li>
       <li><b>Decision telemetry</b> — DecisionOutcome, DecisionTelemetry and DecisionResult (#3, via #36 and #42; DecisionResult's tests: #43)</li>
-      <li><b>ActionDefinition</b> and its asset wrapper — DR-011's asset door (#4, via #35; tests and two tooltips still owed: #49)</li>
+      <li><b>ActionDefinition</b> and its asset wrapper — DR-011's asset door (#4, via #35; tests and tooltips: #49, via #54)</li>
+      <li><b>AgentProfile</b> — identity, action list and idle example, with Inspector warnings and tests (#15, via #56)</li>
+      <li><b>ActionRegistry</b> and <b>IActionHandler</b> — each action bound to the game code that runs it, with delegate and MonoBehaviour adapters and tests (#6, via #57)</li>
       <li><b>Newtonsoft</b> as the core's one declared dependency (DR-009)</li>
       <li><b>GreyBoxVillage</b> — a playable grey-box scene whose guard still answers from string matching, not a model (#19)</li>
     </ul></div>
     <div class="card"><h4>Written down, not written</h4><ul>
       <li><b>Agent</b> itself — the DecideAsync pipeline (#17)</li>
-      <li><b>ActionRegistry, availability</b> (#6, #7)</li>
+      <li><b>Availability</b> (#7), and <b>AgentContext.Actions</b> (#58)</li>
       <li><b>DecisionSchema</b> and its JSON serializer (#8, #9)</li>
-      <li><b>Few-shot builder, AgentProfile, PromptBuilder</b> (#10, #15, #16)</li>
+      <li><b>Few-shot builder, PromptBuilder</b> (#10, #16)</li>
     </ul></div>
     <div class="card"><h4 style="color:var(--warn)">Decided here, not yet built</h4><ul>
-      <li><b>DR-011</b> the code front door (#50) and the registry (#6) — the asset door exists (#35)</li>
+      <li><b>DR-011</b> the code front door (#50) — the asset door (#35) and the registry (#6) exist</li>
       <li><b>DR-012</b> observation sources, capped; summariser as one source</li>
       <li><b>DR-013</b> provider config asset + resolution chain</li>
       <li><b>DR-014</b> <span class="mono">Targetable</span> discovery instead of typed lists (#32)</li>

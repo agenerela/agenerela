@@ -46,7 +46,7 @@ While the version stays `0.x`, the public API may change in any release.
   so the guards can inspect them. `AgentContext` rejects a null identity or target registry,
   and turns a null stimulus, observations or state into an empty value. EditMode tests cover
   construction, the rejected ids, a null identity, and null observations, state and
-  statement. `AgentContext.Actions` arrives with `ActionRegistry` (#6).
+  statement. `AgentContext.Actions` is still to come (#58).
 - `AgentProfile` in namespace `Agenerela` (#15) — the `ScriptableObject` a developer creates
   from **Create → Agenerela → Agent Profile**, shared by every agent that uses it: an
   `AgentIdentity`, the `ActionDefinitionAsset`s the agent can ever use (held as references,
@@ -57,6 +57,21 @@ While the version stays `0.x`, the public API may change in any release.
   same action id listed twice, and the asset logs the problem as a warning while it is being
   edited. Blank action ids are left to the action asset's own warning. EditMode tests cover
   each case.
+- `IActionHandler` and `ActionRegistry` in namespace `Agenerela` (#6) — the binding from each
+  action to the game code that runs it. A handler answers `IsAvailable(ctx)`, whether the
+  action is legal right now, and `Execute(ctx, decision)`, the game's own code, reached only
+  after every guard has passed. `ActionRegistry.Register` pairs an `ActionDefinition` with its
+  handler, and throws for a null definition or handler, a duplicate id, an id
+  `ActionDefinition.ValidateId` rejects, and `ActionRegistry.None` (`none`), which is reserved
+  for the idle action the schema adds to every agent. `TryGet` returns false for any id that
+  is not registered, null and malformed ones included, and never throws; `HandlerFor` throws a
+  `KeyNotFoundException` naming the id for a definition that was never registered.
+  `Definitions` is a live read-only view in insertion order, which the schema enum is built
+  from. The registry keeps the developer's own definition, so an id changed after
+  registering is not picked up (build plan §2.2). Two adapters implement `IActionHandler` for
+  a developer who would rather not write a class per action: `DelegateActionHandler`, from a
+  pair of delegates, and `ActionHandlerBehaviour`, an abstract `MonoBehaviour` in
+  `Runtime/Unity/` that the Inspector can reference (DR-011). EditMode tests cover each rule.
 
 ### Changed
 - The package depends on `com.unity.nuget.newtonsoft-json` 3.2.2, which Package Manager
