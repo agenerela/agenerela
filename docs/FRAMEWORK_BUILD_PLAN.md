@@ -595,6 +595,16 @@ examples both answer `none`, so an opt-out needs another fallback for the guards
 both examples with it. It changes what the model can answer, so it needs an A/B with a
 control arm before it ships.
 
+**Revisit later — renaming an action after it is registered.** `ActionRegistry` (#6) files
+each action under the id it had when `Register` was called, but keeps the developer's own
+`ActionDefinition` rather than a copy. Change the id afterwards, for instance in the
+Inspector during Play mode, and `Definitions` shows the new id while lookups still expect
+the old one: `TryGet` of the new id fails and `HandlerFor` throws. Left this way on purpose
+(#57 review): renaming an action mid-game is rare, and keeping the developer's object means a
+description edited during Play mode is what the next request reads. Revisit if a game needs
+to rename actions at runtime; the options are to copy the definition in `Register`, or to
+look handlers up by the definition object rather than its id.
+
 ### 2.3 Schema (`Runtime/Schema/`)
 
 A provider-neutral `DecisionSchema` model built per request from the agent's currently
