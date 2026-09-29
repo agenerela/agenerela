@@ -26,9 +26,16 @@ namespace Agenerela
         public IReadOnlyList<ActionDefinition> Definitions => _definitions;
 
         // Method to add Action in to the dictionary of actions the AI can choose through from.
-        // If duplicate is found throws expeception
+        // If duplicate/Null values is found throws expeception
         public void Register(ActionDefinition definition, IActionHandler handler)
         {
+
+            if (definition == null)
+                throw new ArgumentNullException(nameof(definition), "Action definition cannot be null.");
+
+            if (handler == null)
+                throw new ArgumentNullException(nameof(handler), "Action handler cannot be null.");
+
             if (!_byId.TryAdd(definition.Id, (definition, handler)))
                 throw new InvalidOperationException($"Action already registered: {definition.Id}");
 
