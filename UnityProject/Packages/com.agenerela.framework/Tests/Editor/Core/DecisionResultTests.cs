@@ -26,17 +26,21 @@ namespace Agenerela.Tests
             var reuslt = new DecisionResult(decision, telemetry);
             
             Assert.That(reuslt.Decision, Is.SameAs(decision));  // Check whether result.Decision is the exact same object decision
-            Assert.That(reuslt.Telemetry, Is.SmaeAs(telemetry)); // Check whether result.Telemetry is the exact same object telemetry
+            Assert.That(reuslt.Telemetry, Is.SameAs(telemetry)); // Check whether result.Telemetry is the exact same object telemetry
         }
 
-        [Test]
+        [Test] // This test checks what happens when telemetry is null
         public void NullTelemetry()
         {
             var decision = new AgentDecision("move to", "player", "moving towards the payer");
 
-            Asert.Throws<ArgumentException>(() => new DecisionResults(decision, null));
+            // A valid decision is provided, but telemetry is null,
+            // so the constructor throws an ArgumentNullException.
+            Assert.Throws<ArgumentException>(() => new DecisionResult(decision, null)); 
         }
 
+
+        // One test method with four different input values; ALL NON-pipelin
         [Test]
         [TestCase(DecisionOutcome.Correct)]
         [TestCase(DecisionOutcome.WrongLegalAction)]
@@ -49,9 +53,14 @@ namespace Agenerela.Tests
                 Outcome = outcome
             };
 
+            // A null decision is provided, but valid telemetry
             Assert.Throws<ArgumentException>( () => new DecisionResult(null, telemetry));
         }
 
+
+        // Checks what happens when:
+        // decision is null
+        // telemetry is null
         [Test]
         public void NullDecisionAndNullOutcome()
         {
@@ -63,6 +72,7 @@ namespace Agenerela.Tests
             Assert.Throws<ArgumentException>( () => new DecisionResult(null, telemetry));
         }
 
+        // Checks the one situation where a null decision is allowed
         [Test]
         public void NullDecisionWIthPipelineErrorsIsAccepted()
         {
@@ -73,7 +83,7 @@ namespace Agenerela.Tests
 
             var result = new DecisionResult(null, telemetry);
 
-            Assert.That(result.Decision, IsBoxed.Null);
+            Assert.That(result.Decision, Is.Null);
             Assert.That(result.Telemetry, Is.SameAs(telemetry));
         }
     }
