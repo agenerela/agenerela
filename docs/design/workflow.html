@@ -95,6 +95,8 @@ figcaption{font-size:13px;color:var(--ink3);margin-top:9px;line-height:1.45;max-
 .tabx{min-height:23px;padding:2px 11px;display:flex;align-items:center;font-size:12px;font-weight:600;background:var(--surface);border:1.5px solid var(--line);border-bottom:none;border-radius:5px 5px 0 0;color:var(--ink)}
 .chdr{display:flex;align-items:center;gap:8px;min-height:31px;padding:5px 11px;background:var(--fill);border-bottom:1.5px solid var(--line2);font-weight:700;font-size:13px;flex-wrap:wrap}
 .cb{width:14px;height:14px;border:1.5px solid var(--ink2);border-radius:3px;font-size:10px;line-height:11px;text-align:center;flex:none}
+.rb{width:14px;height:14px;border:1.5px solid var(--ink2);border-radius:50%;flex:none;display:inline-flex;align-items:center;justify-content:center}
+.rb.on::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--ink)}
 .sub2{display:flex;align-items:center;gap:8px;min-height:22px;padding:9px 11px 3px;font-size:10.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--ink3)}
 .r{display:flex;align-items:center;gap:9px;min-height:29px;padding:3px 11px;font-size:12.5px;flex-wrap:wrap}
 .k{width:122px;flex:none;color:var(--ink2)}
@@ -840,7 +842,7 @@ Packages/
         <tr><td>06</td><td><b>Targetable</b> — on every nameable object</td><td>Component inspector</td><td><span class="pill warn">to draw — DR-014, figure 7 is the sketch</span></td><td>1 → 2</td></tr>
         <tr><td>08</td><td><b>Decision Log</b></td><td>Editor window</td><td><span class="pill ok">screen 3</span></td><td>5</td></tr>
         <tr><td>09</td><td><b>Evaluation Report</b></td><td>Editor window</td><td><span class="pill ok">screen 4</span></td><td>4</td></tr>
-        <tr><td>03–06</td><td><b>New Agent wizard</b> — scaffolds profile, actions and handler stubs in one dialog</td><td>Modal, from Create menu</td><td><span class="pill acc">proposed — see below</span></td><td>5</td></tr>
+        <tr><td>03–06</td><td><b>New Agent wizard</b> — scaffolds an agent in one dialog: its actions as one script, or as assets that script runs</td><td>Modal, from Create menu</td><td><span class="pill acc">proposed — see below</span></td><td>5</td></tr>
       </tbody>
     </table>
   </div>
@@ -860,15 +862,17 @@ Packages/
           <div class="r"><span class="cb">✓</span><span class="mono">speak_only</span><span class="hint">answer without moving</span></div>
           <div class="r"><span class="cb"> </span><span class="mono">attack_target</span><span class="hint">strike a named thing</span></div>
           <div class="r" style="color:var(--ink3)"><span class="cb">✓</span><span class="mono">none</span><span class="hint">always added, locked</span></div>
+          <div class="sub2">Write the actions</div>
+          <div class="r"><span class="rb on"></span><span><b>Into one script</b> — <span class="mono">VillageGuard.cs</span></span><span class="hint">an <span class="mono">[AgentAction]</span> method for each, ready to fill in</span></div>
+          <div class="r"><span class="rb"></span><span><b>As assets</b>, run by that same script</span><span class="hint">so a writer or an A/B run can change the wording</span></div>
           <div class="sub2">Also</div>
-          <div class="r"><span class="cb">✓</span><span>Generate a handler script per action</span></div>
           <div class="r"><span class="cb">✓</span><span>Add Agent Behaviour to <b>Guard (Gate)</b></span><span class="hint">the selected object</span></div>
-          <div class="r" style="padding-block:10px"><span class="btnw pri">Create agent</span><span class="hint">writes 5 assets and 3 scripts</span></div>
+          <div class="r" style="padding-block:10px"><span class="btnw pri">Create agent</span><span class="hint">writes 1 script</span></div>
         </div>
         <div>
           <h4>Why this earns its place</h4>
           <p style="font-size:14px">Phase 5's definition of done is a real test on a real teammate: <em>a developer with zero framework knowledge builds a working three-action agent in an empty scene in under fifteen minutes, without editing framework source.</em></p>
-          <p style="font-size:14px">Nine steps across two asset types, an interface and a scene component is not a fifteen-minute path for someone who has never seen it. The wizard collapses steps 03 through 06 into one dialog and leaves behind exactly the files in figure 11 — the same assets, editable afterwards, nothing hidden or generated-and-locked.</p>
+          <p style="font-size:14px">Nine steps across two asset types, an interface and a scene component is not a fifteen-minute path for someone who has never seen it. The wizard collapses steps 03 through 06 into one dialog and leaves behind exactly the files in figure 11. By default that is the left-hand tree: one script, with a labelled method for each action. Choosing assets writes the right-hand tree instead, adding an asset for each action and the profile, and the same script still runs every action. Everything it writes stays editable afterwards; nothing is hidden or generated-and-locked.</p>
           <p style="font-size:14px;margin-bottom:0">It is also the honest answer to "what does this framework feel like": if the first five minutes are filling in a form and pressing play, we have a product. If they are reading a build plan, we have a library.</p>
           <div class="help" style="margin:14px 0 0"><span class="ico">⌁</span><div>Cost is one Editor window over APIs that will already exist. Worth building only after the data shapes underneath have stopped moving — which is exactly why Phase 5 is last.</div></div>
         </div>
