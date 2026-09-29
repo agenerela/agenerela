@@ -34,34 +34,67 @@ namespace Agenerela
         public void Register(ActionDefinition definition, IActionHandler handler)
         {
             // Adds an action to the registry. Developer mistakes throw clearly before anything is stored.
-            if (definition == null)
+            Check(definition, handler);
+            Add(definition, handler);
+        }
+
+        /// <summary>
+        /// Registers every [AgentAction] method on <paramref name="owner"/>: the code front door
+        /// (DR-011). Each method becomes an action whose handler calls it, and whose IsAvailable
+        /// calls its [Available] check if it has one. Actions are added base class first, then in
+        /// the order they are declared.
+        /// </summary>
+        /// <param name="assets">
+        /// Action assets that win over an attribute with the same id (DR-011): the asset's
+        /// definition is registered, and the method still runs it. That is how one action's
+        /// wording moves into an asset, where Phase 4 can vary it without a recompile. Assets that
+        /// match no method are left for <see cref="Register"/>, and null entries are skipped.
+        /// </param>
+        /// <remarks>
+        /// Registers all of the owner's actions or, if one is rejected, none of them. Throws for an
+        /// owner with no [AgentAction] methods, a malformed method or attribute, an id that is
+        /// malformed, reserved or already registered, and two assets with one method's id. The asset
+        /// wins the definition only: an action still has exactly one handler, so an id already
+        /// registered through <see cref="Register"/> cannot come from a method as well.
+        /// </remarks>
+        public void RegisterMethods(object owner, IEnumerable<ActionDefinitionAsset> assets = null)
+        {
+            if (owner == null)
             {
-                throw new ArgumentNullException(nameof(definition), "Action definition cannot be null.");
+                throw new ArgumentNullException(nameof(owner));
             }
 
-            if (handler == null)
+            var actions = AgentActionReader.Read(owner);
+            if (actions.Count == 0)
             {
-                throw new ArgumentNullException(nameof(handler), "Action handler cannot be null.");
+                throw new ArgumentException($"{owner.GetType().Name} has no [AgentAction] methods.", nameof(owner));
             }
 
-            if (!ActionDefinition.ValidateId(definition.Id, out string problem))
+            var candidates = assets == null
+                ? new List<ActionDefinitionAsset>()
+                : new List<ActionDefinitionAsset>(assets);
+
+            // The asset wins (DR-011): its definition replaces the attribute's, and the method
+            // stays the handler.
+            for (int i = 0; i < actions.Count; i++)
             {
-                throw new ArgumentException(problem, nameof(definition));
+                var asset = AssetFor(actions[i].Definition.Id, candidates);
+                if (asset != null)
+                {
+                    actions[i] = (asset.Action, actions[i].Handler);
+                }
             }
 
-            if (string.Equals(definition.Id, None, StringComparison.Ordinal))
+            // Checks every action before storing any, so a rejected one leaves the registry as it was.
+            foreach (var (definition, handler) in actions)
             {
-                throw new ArgumentException(
-                    $"Action id '{None}' is reserved for the schema's idle action.",
-                    nameof(definition));
+                Check(definition, handler);
             }
 
-            if (!_byId.TryAdd(definition.Id, (definition, handler)))
+            foreach (var (definition, handler) in actions)
             {
-                throw new InvalidOperationException($"Action already registered: {definition.Id}");
+                Add(definition, handler);
             }
-
-            _definitions.Add(definition);
         }
 
         /// <summary>
@@ -104,6 +137,67 @@ namespace Agenerela
             }
 
             return handler;
+        }
+
+        // Throws for anything Register refuses. Stores nothing.
+        private void Check(ActionDefinition definition, IActionHandler handler)
+        {
+            if (definition == null)
+            {
+                throw new ArgumentNullException(nameof(definition), "Action definition cannot be null.");
+            }
+
+            if (handler == null)
+            {
+                throw new ArgumentNullException(nameof(handler), "Action handler cannot be null.");
+            }
+
+            if (!ActionDefinition.ValidateId(definition.Id, out string problem))
+            {
+                throw new ArgumentException(problem, nameof(definition));
+            }
+
+            if (string.Equals(definition.Id, None, StringComparison.Ordinal))
+            {
+                throw new ArgumentException(
+                    $"Action id '{None}' is reserved for the schema's idle action.",
+                    nameof(definition));
+            }
+
+            if (_byId.ContainsKey(definition.Id))
+            {
+                throw new InvalidOperationException($"Action already registered: {definition.Id}");
+            }
+        }
+
+        private void Add(ActionDefinition definition, IActionHandler handler)
+        {
+            _byId.Add(definition.Id, (definition, handler));
+            _definitions.Add(definition);
+        }
+
+        // The one asset that defines this id, or null. Two would leave its wording ambiguous.
+        private static ActionDefinitionAsset AssetFor(string id, List<ActionDefinitionAsset> assets)
+        {
+            ActionDefinitionAsset match = null;
+            foreach (var asset in assets)
+            {
+                if (asset == null || asset.Action == null || asset.Action.Id != id)
+                {
+                    continue;
+                }
+
+                if (match != null)
+                {
+                    throw new ArgumentException(
+                        $"Two assets define action '{id}': {match.name} and {asset.name}.",
+                        nameof(assets));
+                }
+
+                match = asset;
+            }
+
+            return match;
         }
     }
 }

@@ -158,6 +158,11 @@ Merged so far:
   false rather than throw. Two adapters come with it: `DelegateActionHandler` for a pair of
   lambdas, and `ActionHandlerBehaviour`, the first file in `Runtime/Unity/`. EditMode tests
   throughout.
+- The `[AgentAction]` code front door (#50, via #59) — an action defined by the method that
+  runs it, with `[Example]` for its few-shot example and `[Available]` for state masking.
+  `ActionRegistry.RegisterMethods` registers every such method on an object; where an asset
+  shares the id, the asset's definition wins and the method still runs it (DR-011). One
+  parameterized fixture runs the same assertions through every way an action is registered.
 - Newtonsoft as the core's one declared dependency (DR-009), and each demo game as its own
   Unity project (DR-010).
 - `Demos/GreyBoxVillage` — a playable grey-box scene whose guard still answers from
@@ -168,8 +173,7 @@ Merged so far:
 
 Not written yet: `AgentContext.Actions` (#58), state-derived availability (#7),
 `DecisionSchema` (#8), its JSON serializer (#9), the few-shot builder (#10), `PromptBuilder` (#16), target
-discovery through `Targetable` and `ITargetSource` (#32), the `[AgentAction]` code front
-door (#50, which anyone can claim), and `Agent` itself (#17).
+discovery through `Targetable` and `ITargetSource` (#32), and `Agent` itself (#17).
 **Nothing in the framework calls a model yet** — that starts in Phase 2, so Phase 1 work is
 pure C# with EditMode tests and no Ollama.
 

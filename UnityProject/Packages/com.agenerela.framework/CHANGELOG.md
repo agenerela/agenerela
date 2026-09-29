@@ -72,6 +72,24 @@ While the version stays `0.x`, the public API may change in any release.
   a developer who would rather not write a class per action: `DelegateActionHandler`, from a
   pair of delegates, and `ActionHandlerBehaviour`, an abstract `MonoBehaviour` in
   `Runtime/Unity/` that the Inspector can reference (DR-011). EditMode tests cover each rule.
+- The code front door in namespace `Agenerela` (#50, DR-011) — an action defined by a method in
+  the game's own script, with no asset. `[AgentAction(id, description)]`, with `RequiresTarget`,
+  makes a method an action and the code that runs it; `[Example(stimulus, preferredTargets)]`
+  gives it a few-shot example; and `[Available(actionId)]` marks a method returning bool, taking
+  nothing or an `AgentContext`, as its `IsAvailable`. Without one the action is always
+  available. `ActionRegistry.RegisterMethods(owner, assets)` registers every `[AgentAction]`
+  method on `owner`, private and inherited ones included, base class first and then in
+  declaration order. Each parameter is filled by its type: an `AgentContext`, an
+  `AgentDecision`, and at most one target, the object registered under the decision's target
+  id, passed as registered and never converted, or null for `no_target`, which a value-type
+  parameter such as an `int` refuses. Where one of `assets` shares a method's id, the asset's
+  definition is registered and the method still runs it: the asset wins (DR-011). The owner's
+  actions are registered all together or not at all: a malformed method, attribute or id throws
+  an `ArgumentException` naming the method, and an id already registered throws an
+  `InvalidOperationException`. The game's own exceptions reach the caller unwrapped. Methods
+  reached only by reflection may be stripped from an IL2CPP player; keeping them is part of the
+  Phase 6b player test. EditMode tests cover each rule, and `FrontDoorTests` runs the same
+  assertions through every way an action can be registered.
 
 ### Changed
 - The package depends on `com.unity.nuget.newtonsoft-json` 3.2.2, which Package Manager
