@@ -143,8 +143,8 @@ Merged so far:
   follow-up (#49, via #54): the `Description` and `ExampleStimulus` tooltips and the
   `ValidateId` tests.
 - Decision telemetry (#3, via #36): `DecisionOutcome` and `DecisionTelemetry`, with EditMode
-  tests, and `DecisionResult`, which pairs a decision with its telemetry. `DecisionResult`'s
-  EditMode tests are still owed (#43).
+  tests, and `DecisionResult`, which pairs a decision with its telemetry. Its follow-up (#43,
+  via #60) added `DecisionResult`'s EditMode tests.
 - The core decision types `AgentIdentity`, `AgentContext` and `AgentDecision` (#2, via #39),
   with input validation and EditMode tests. `AgentContext.Actions` is still a TODO, now
   #58.

@@ -39,7 +39,8 @@ While the version stays `0.x`, the public API may change in any release.
   written into: latency, prompt/completion tokens, provider name and fired guards. EditMode
   tests cover the enum's five names and order, a freshly-constructed `DecisionTelemetry`, and
   a Newtonsoft round trip. `DecisionResult` pairs an `AgentDecision` with its telemetry, and
-  allows a null decision only for a `PipelineError`; its EditMode tests are still owed (#43).
+  allows a null decision only for a `PipelineError`. Its EditMode tests cover that rule for
+  every outcome and for a null one, the objects stored as given, and a null telemetry (#43).
 - `AgentIdentity`, `AgentContext` and `AgentDecision` in namespace `Agenerela` (#2) — who an
   agent is, what it knows at the moment of a decision, and what it chose. `AgentDecision`
   rejects a null or whitespace action or target id but accepts ids that are not registered,
