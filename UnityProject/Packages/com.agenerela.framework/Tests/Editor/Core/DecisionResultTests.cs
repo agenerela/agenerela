@@ -1,7 +1,4 @@
 using System;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using Agenerela;
 using NUnit.Framework;
 
 namespace Agenerela.Tests
@@ -11,10 +8,10 @@ namespace Agenerela.Tests
         [Test]
         public void StoresDecisionAndTelemetry()
         {
-            // AgentDecision() calls the AgentDecison constructor 
-            // --> Creates and initialize new AgentDecison Object 
-            // --> Stores the object in var decison 
-            var decision = new AgentDecision("move to", "player", "moving towards the payer");
+            // AgentDecision() calls the AgentDecision constructor
+            // --> Creates and initializes a new AgentDecision object
+            // --> Stores the object in var decision
+            var decision = new AgentDecision("move_to", "player", "moving towards the player");
             
             // Creates new DecisionTelemetry Object; Outcome is part of it. Stores it in var telemetry
             var telemetry = new DecisionTelemetry
@@ -22,26 +19,25 @@ namespace Agenerela.Tests
                 Outcome = DecisionOutcome.Correct
             }; 
 
-            // DecisionResult() calls 
-            var reuslt = new DecisionResult(decision, telemetry);
-            
-            Assert.That(reuslt.Decision, Is.SameAs(decision));  // Check whether result.Decision is the exact same object decision
-            Assert.That(reuslt.Telemetry, Is.SameAs(telemetry)); // Check whether result.Telemetry is the exact same object telemetry
+            // DecisionResult() calls the DecisionResult constructor with both objects
+            var result = new DecisionResult(decision, telemetry);
+
+            Assert.That(result.Decision, Is.SameAs(decision));  // Check whether result.Decision is the exact same object decision
+            Assert.That(result.Telemetry, Is.SameAs(telemetry)); // Check whether result.Telemetry is the exact same object telemetry
         }
 
         [Test] // This test checks what happens when telemetry is null
-        public void NullTelemetry()
+        public void NullTelemetryIsRejected()
         {
-            var decision = new AgentDecision("move to", "player", "moving towards the payer");
+            var decision = new AgentDecision("move_to", "player", "moving towards the player");
 
             // A valid decision is provided, but telemetry is null,
             // so the constructor throws an ArgumentNullException.
-            Assert.Throws<ArgumentException>(() => new DecisionResult(decision, null)); 
+            Assert.Throws<ArgumentNullException>(() => new DecisionResult(decision, null));
         }
 
 
-        // One test method with four different input values; ALL NON-pipelin
-        [Test]
+        // One test method with four different input values: every outcome except PipelineError
         [TestCase(DecisionOutcome.Correct)]
         [TestCase(DecisionOutcome.WrongLegalAction)]
         [TestCase(DecisionOutcome.ContainedByGuard)]
@@ -60,7 +56,7 @@ namespace Agenerela.Tests
 
         // Checks what happens when:
         // decision is null
-        // telemetry is null
+        // outcome is null, as telemetry holds at runtime before the eval harness fills it in
         [Test]
         public void NullDecisionAndNullOutcome()
         {
@@ -74,7 +70,7 @@ namespace Agenerela.Tests
 
         // Checks the one situation where a null decision is allowed
         [Test]
-        public void NullDecisionWIthPipelineErrorsIsAccepted()
+        public void NullDecisionWithPipelineErrorIsAccepted()
         {
             var telemetry = new DecisionTelemetry
             {
