@@ -12,6 +12,7 @@ namespace Agenerela{
         public string ProviderName = string.Empty; // Checks provider name, such as Ollama 
         public string FrameworkVersion = string.Empty; // AgenerelaInfo.version
         public List<string> GuardsFired = new List<string>();
+        public List<string> TargetsDropped = new List<string>(); // Target ids a source found but left out because of its cap (#32)
         public DecisionOutcome? Outcome; // Outcome == null during normal runtime orperations
 
         public DecisionTelemetry()
@@ -22,7 +23,7 @@ namespace Agenerela{
             ProviderName = string.Empty;
             FrameworkVersion = string.Empty;
             GuardsFired = new List<string>();
-            GuardsFired = new List<string>();
+            TargetsDropped = new List<string>();
             Outcome = null;
 
 

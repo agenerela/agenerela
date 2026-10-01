@@ -617,10 +617,12 @@ look handlers up by the definition object rather than its id.
 method receives its target exactly as it was registered (#50): `MoveTo(AgentContext ctx,
 Transform target)` needs a `Transform` in the `TargetRegistry`, and anything else is a clear
 error when the action runs. Converting one into the other, a `Targetable` into its
-`Transform` say, would take scene calls, which only `Runtime/Unity/` may make. That is fine
-while a game registers what its methods take. Revisit when #32 settles what
-`ProximityTargetSource` registers: if it is the `Targetable`, the fix is a conversion that
-`Runtime/Unity/` supplies, not scene calls in the reader.
+`Transform` say, would take scene calls, which only `Runtime/Unity/` may make. #32 settled
+the common case: `ProximityTargetSource` registers each `Targetable`'s `Transform`, so a
+`Transform` parameter works with no conversion, and a method that wants the `Targetable` or
+another component calls `GetComponent` on it. Revisit if games keep writing that
+`GetComponent`: the fix is a conversion that `Runtime/Unity/` supplies, not scene calls in the
+reader.
 
 ### 2.3 Schema (`Runtime/Schema/`)
 

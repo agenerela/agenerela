@@ -91,8 +91,29 @@ While the version stays `0.x`, the public API may change in any release.
   reached only by reflection may be stripped from an IL2CPP player; keeping them is part of the
   Phase 6b player test. EditMode tests cover each rule, and `FrontDoorTests` runs the same
   assertions through every way an action can be registered.
+- Target discovery in namespace `Agenerela` (#32, DR-014) — an agent's targets are found, not
+  typed per agent. `ITargetSource.Collect(ctx, into)` adds a source's targets to a
+  `TargetRegistry`; finding nothing leaves it empty, never null, and an id an earlier source
+  already added is an `InvalidOperationException` naming it. `ExplicitTargetSource` is a set
+  the developer supplies with `Add(id, target)` and `Remove(id)`, in the order added, needing
+  no scene: what a country in GreyBoxStrategy uses. `Targetable`, in `Runtime/Unity/`, is the
+  component that makes a scene object nameable: an explicit `Id`, never taken from the
+  GameObject's name, a one-line `Description`, a `Category` and `IsCurrentlyTargetable`, so a
+  sealed door stops being nameable without being destroyed. `Targetable.ValidateId` applies
+  `ActionDefinition.ValidateId`'s rules and also rejects `no_target`, and the component warns
+  in the Inspector about a missing or malformed id. `ProximityTargetSource`, also in
+  `Runtime/Unity/`, offers every enabled `Targetable` within `Radius` of `Origin`, filtered by
+  layer, category and optionally line of sight, and never one on the agent itself. It sorts
+  nearest first, ties broken by id, and keeps at most `Cap` (8 by default); the ids the cap
+  left out are in `Dropped`, for `DecisionTelemetry.TargetsDropped`. A missing, malformed or
+  duplicate id in the resolved set throws an `InvalidOperationException` naming the
+  GameObjects. Each `Targetable` is registered as its `Transform`, so an `[AgentAction]` method
+  taking a `Transform` target needs no conversion. EditMode tests cover each rule, including
+  the empty set.
 
 ### Changed
+- `DecisionTelemetry.TargetsDropped` — the target ids a source found but left out because of
+  its cap, so a thin-looking target list can be diagnosed (#32).
 - The package depends on `com.unity.nuget.newtonsoft-json` 3.2.2, which Package Manager
   installs automatically. The runtime and editor assemblies reference `Newtonsoft.Json.dll`
   explicitly and no other precompiled DLL (DR-009).
