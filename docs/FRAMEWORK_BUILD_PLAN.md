@@ -978,6 +978,22 @@ latency in-Unity but ~3.5s from standalone Python scripts, same model/machine �
 from expectation, never root-caused. Until explained in the new codebase, trust *relative*
 comparisons within one environment; distrust absolute latency claims across environments.
 
+**Not yet scheduled: VRAM monitoring.** Nothing watches GPU memory while a local model
+runs. The one figure we have, a 2B model plus a minimal scene at 4.2 GB of 8 GB
+(Appendix A), was a single reading, and item 2 above is checked by hand with `ollama ps`.
+That matters because running out of VRAM does not fail: the part of the model that does not
+fit runs from system memory or on the CPU, and every latency number after that is quietly
+wrong. When someone picks this up, record first and build a dashboard later, if ever:
+
+- **During measurement.** The benchmark scripts and the Phase 4 harness log, per arm, which
+  models are resident and how much of each sits in VRAM — Ollama's `/api/ps` reports `size`
+  and `size_vram` for each model, and `ollama ps` shows the CPU/GPU split — and flag a run
+  where a second model is loaded or the model is not fully on the GPU. On NVIDIA hardware
+  `nvidia-smi` gives the whole card's usage, renderer included.
+- **In a game.** Once the in-process provider ships (Phase 6b), the model shares the card
+  with the renderer, so a developer needs to see the headroom. Telemetry or the Decision
+  Log window (§2.7) is the natural place for it.
+
 ---
 
 ## 5. Positioning and scope guardrails (so reviews go well)
