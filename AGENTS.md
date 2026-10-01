@@ -163,6 +163,10 @@ Merged so far:
   `ActionRegistry.RegisterMethods` registers every such method on an object; where an asset
   shares the id, the asset's definition wins and the method still runs it (DR-011). One
   parameterized fixture runs the same assertions through every way an action is registered.
+- Target discovery (#32, DR-014): `ITargetSource`, with `ExplicitTargetSource` for a
+  hand-supplied set that needs no scene, and in `Runtime/Unity/` the `Targetable` component
+  and `ProximityTargetSource`, which offers nearby `Targetable`s nearest first, capped, each
+  registered as its `Transform`. What the cap drops goes in `DecisionTelemetry.TargetsDropped`.
 - Newtonsoft as the core's one declared dependency (DR-009), and each demo game as its own
   Unity project (DR-010).
 - `Demos/GreyBoxVillage` — a playable grey-box scene whose guard still answers from
@@ -172,8 +176,8 @@ Merged so far:
   still compiles no C#, so a green check does not prove `test` builds.
 
 Not written yet: `AgentContext.Actions` (#58), state-derived availability (#7),
-`DecisionSchema` (#8), its JSON serializer (#9), the few-shot builder (#10), `PromptBuilder` (#16), target
-discovery through `Targetable` and `ITargetSource` (#32), and `Agent` itself (#17).
+`DecisionSchema` (#8), its JSON serializer (#9), the few-shot builder (#10), `PromptBuilder` (#16),
+and `Agent` itself (#17), which will hold the target sources and resolve them per decision.
 **Nothing in the framework calls a model yet** — that starts in Phase 2, so Phase 1 work is
 pure C# with EditMode tests and no Ollama.
 

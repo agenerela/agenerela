@@ -24,6 +24,7 @@ namespace Agenerela.Tests
             var t = new DecisionTelemetry();
             Assert.That(t.Outcome, Is.Null, "Only the eval harness knows the right answer.");
             Assert.That(t.GuardsFired, Is.Not.Null.And.Empty);
+            Assert.That(t.TargetsDropped, Is.Not.Null.And.Empty);
         }
 
         [Test]
