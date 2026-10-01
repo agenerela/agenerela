@@ -129,7 +129,9 @@ namespace Agenerela.Tests
         {
             var targetable = MakeTargetable("Training Dummy", Vector3.zero);
 
-            LogAssert.Expect(LogType.Warning, new Regex("Training Dummy"));
+            // The problem itself, not just the id: the GameObject is also named "Training Dummy",
+            // so a looser pattern would match some other warning about it.
+            LogAssert.Expect(LogType.Warning, new Regex("Id 'Training Dummy' cannot have uppercase"));
             InvokeOnValidate(targetable);
         }
 
@@ -295,6 +297,95 @@ namespace Agenerela.Tests
         }
 
         [Test]
+        public void ProximityMalformedIdBeyondTheCapIsStillAClearError()
+        {
+            MakeTargetable("tower", new Vector3(1f, 0f, 0f));
+            MakeTargetable("", new Vector3(2f, 0f, 0f)).name = "Nameless";
+
+            var error = Assert.Throws<InvalidOperationException>(() => Proximity(cap: 1).Collect(Context(), new TargetRegistry()));
+
+            Assert.That(error.Message, Does.Contain("Nameless"));
+        }
+
+        [Test]
+        public void ProximityDuplicateIdBeyondTheCapIsStillAClearError()
+        {
+            MakeTargetable("dummy", new Vector3(1f, 0f, 0f));
+            MakeTargetable("dummy", new Vector3(2f, 0f, 0f));
+
+            var error = Assert.Throws<InvalidOperationException>(() => Proximity(cap: 1).Collect(Context(), new TargetRegistry()));
+
+            Assert.That(error.Message, Does.Contain("'dummy'"));
+        }
+
+        [Test]
+        public void LineOfSightOffersATargetInPlainView()
+        {
+            AddBox(MakeTargetable("tower", new Vector3(10f, 0f, 0f)).gameObject);
+
+            Assert.That(CollectWithLineOfSight(), Is.EqualTo(new[] { "tower" }));
+        }
+
+        [Test]
+        public void LineOfSightOffersATargetWithNoCollider()
+        {
+            MakeTargetable("tower", new Vector3(10f, 0f, 0f));
+
+            Assert.That(CollectWithLineOfSight(), Is.EqualTo(new[] { "tower" }));
+        }
+
+        [Test]
+        public void LineOfSightHidesATargetBehindAWall()
+        {
+            AddBox(MakeTargetable("tower", new Vector3(10f, 0f, 0f)).gameObject);
+            MakeWall(new Vector3(5f, 0f, 0f));
+
+            Assert.That(CollectWithLineOfSight(), Is.Empty);
+        }
+
+        [Test]
+        public void LineOfSightIgnoresATriggerInTheWay()
+        {
+            AddBox(MakeTargetable("tower", new Vector3(10f, 0f, 0f)).gameObject);
+            MakeWall(new Vector3(5f, 0f, 0f)).isTrigger = true;
+
+            Assert.That(CollectWithLineOfSight(), Is.EqualTo(new[] { "tower" }));
+        }
+
+        [Test]
+        public void LineOfSightSeesATargetUnderARigidbodyParent()
+        {
+            var cart = new GameObject("Cart");
+            created.Add(cart);
+            cart.transform.position = Here + new Vector3(10f, 0f, 0f);
+            cart.AddComponent<Rigidbody>().isKinematic = true;
+            var wheel = MakeTargetable("wheel", new Vector3(10f, 0f, 0f));
+            wheel.transform.SetParent(cart.transform, true);
+            AddBox(wheel.gameObject);
+
+            Assert.That(CollectWithLineOfSight(), Is.EqualTo(new[] { "wheel" }));
+        }
+
+        [Test]
+        public void LineOfSightIsNotBlockedByTheAgentsOwnColliders()
+        {
+            AddBox(MakeTargetable("tower", new Vector3(10f, 0f, 0f)).gameObject);
+            var source = Proximity();
+            source.RequireLineOfSight = true;
+            var shield = new GameObject("Shield");
+            created.Add(shield);
+            shield.transform.SetParent(source.Origin, false);
+            shield.transform.localPosition = new Vector3(1f, 0f, 0f);
+            AddBox(shield);
+            var into = new TargetRegistry();
+
+            Physics.SyncTransforms();
+            source.Collect(Context(), into);
+
+            Assert.That(into.Ids, Is.EqualTo(new[] { "tower" }));
+        }
+
+        [Test]
         public void ProximityWithoutAnOriginIsAClearError()
         {
             var source = new ProximityTargetSource();
@@ -317,10 +408,51 @@ namespace Agenerela.Tests
             var obj = new GameObject(id ?? "Targetable");
             created.Add(obj);
             obj.transform.position = Here + offset;
-            var targetable = obj.AddComponent<Targetable>();
+            // AddComponent runs OnValidate before Id is set, which would warn that the empty id
+            // can never be named. That warning is about the helper, not the test, so keep it out
+            // of the console.
+            Debug.unityLogger.logEnabled = false;
+            Targetable targetable;
+            try
+            {
+                targetable = obj.AddComponent<Targetable>();
+            }
+            finally
+            {
+                Debug.unityLogger.logEnabled = true;
+            }
+
             targetable.Id = id;
             targetable.Category = category;
             return targetable;
+        }
+
+        private string[] CollectWithLineOfSight()
+        {
+            var source = Proximity();
+            source.RequireLineOfSight = true;
+            var into = new TargetRegistry();
+
+            // Colliders created this frame are not in the physics scene until transforms sync.
+            Physics.SyncTransforms();
+            source.Collect(Context(), into);
+
+            return new List<string>(into.Ids).ToArray();
+        }
+
+        private BoxCollider MakeWall(Vector3 offset)
+        {
+            var wall = new GameObject("Wall");
+            created.Add(wall);
+            wall.transform.position = Here + offset;
+            var box = wall.AddComponent<BoxCollider>();
+            box.size = new Vector3(1f, 5f, 5f);
+            return box;
+        }
+
+        private static BoxCollider AddBox(GameObject obj)
+        {
+            return obj.AddComponent<BoxCollider>();
         }
 
         private static void InvokeOnValidate(Targetable targetable)

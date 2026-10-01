@@ -27,7 +27,9 @@ namespace Agenerela
         [Tooltip("Only Targetables with one of these categories are offered. Leave empty for any category.")]
         public string[] Categories;
 
-        [Tooltip("Only offer Targetables with no collider between the origin and them.")]
+        [Tooltip("Only offer Targetables with no collider between the origin and them. " +
+                 "Colliders on the origin's own hierarchy never block. A Targetable inside another " +
+                 "object's collider, even its parent's, counts as hidden: put it on the collider's object.")]
         public bool RequireLineOfSight;
 
         [Tooltip("Most targets offered at once. Every target is one more enum value in the " +
@@ -83,17 +85,13 @@ namespace Agenerela
                 return byDistance != 0 ? byDistance : string.CompareOrdinal(a.Targetable.Id, b.Targetable.Id);
             });
 
+            // Every candidate is checked before the cap is applied, so whether a scene throws
+            // does not depend on where the agent happens to stand.
             var kept = new Dictionary<string, Targetable>(StringComparer.Ordinal);
 
-            for (int i = 0; i < inRange.Count; i++)
+            foreach (var candidate in inRange)
             {
-                var targetable = inRange[i].Targetable;
-
-                if (i >= Cap)
-                {
-                    dropped.Add(targetable.Id);
-                    continue;
-                }
+                var targetable = candidate.Targetable;
 
                 if (!Targetable.ValidateId(targetable.Id, out string problem))
                 {
@@ -116,7 +114,20 @@ namespace Agenerela
                 }
 
                 kept.Add(targetable.Id, targetable);
-                into.Register(targetable.Id, targetable.transform);
+            }
+
+            for (int i = 0; i < inRange.Count; i++)
+            {
+                var targetable = inRange[i].Targetable;
+
+                if (i < Cap)
+                {
+                    into.Register(targetable.Id, targetable.transform);
+                }
+                else
+                {
+                    dropped.Add(targetable.Id);
+                }
             }
         }
 
@@ -192,14 +203,36 @@ namespace Agenerela
         }
 
         // Visible when nothing is in the way, or the first thing in the way is the target itself.
-        private static bool CanSee(Vector3 origin, Transform target)
+        // Colliders on the agent's own hierarchy are skipped, so its body never blocks its view.
+        // A hit is attributed by hit.collider rather than hit.transform, which is the attached
+        // Rigidbody's transform and so would miss a Targetable under a Rigidbody parent.
+        private bool CanSee(Vector3 origin, Transform target)
         {
-            if (!Physics.Linecast(origin, target.position, out var hit, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+            var toTarget = target.position - origin;
+            float distance = toTarget.magnitude;
+
+            if (distance <= 0f)
             {
                 return true;
             }
 
-            return hit.transform.IsChildOf(target);
+            var hits = Physics.RaycastAll(origin, toTarget / distance, distance,
+                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+            foreach (var hit in hits)
+            {
+                var hitTransform = hit.collider.transform;
+
+                if (hitTransform.IsChildOf(Origin))
+                {
+                    continue;
+                }
+
+                return hitTransform.IsChildOf(target);
+            }
+
+            return true;
         }
 
         private readonly struct Candidate
