@@ -921,7 +921,7 @@ Packages/
 
 <!-- ============ STATUS ============ -->
 <section class="sec">
-  <div class="sechead"><h2>How much of this exists today</h2><span class="pill dark">Phase 1, September 2026</span></div>
+  <div class="sechead"><h2>How much of this exists today</h2><span class="pill dark">Phase 1, October 2026</span></div>
   <div class="cols3">
     <div class="card"><h4 style="color:var(--ok)">Merged and real</h4><ul>
       <li><b>TargetRegistry</b> — id → object, with tests (#5)</li>
@@ -932,19 +932,19 @@ Packages/
       <li><b>AgentProfile</b> — identity, action list and idle example, with Inspector warnings and tests (#15, via #56)</li>
       <li><b>ActionRegistry</b> and <b>IActionHandler</b> — each action bound to the game code that runs it, with delegate and MonoBehaviour adapters and tests (#6, via #57)</li>
       <li><b>The code front door</b> — <span class="mono">[AgentAction]</span>, <span class="mono">[Example]</span> and <span class="mono">[Available]</span> on a game's own methods, the asset winning a shared id, and one fixture run through every door (DR-011; #50, via #59)</li>
+      <li><b>Target discovery</b> — <span class="mono">Targetable</span> and <span class="mono">ITargetSource</span>: a capped, nearest-first proximity query for scene agents and a hand-supplied set for agents with no scene (DR-014; #32, via #61)</li>
+      <li><b>Availability</b> — <span class="mono">ActionAvailability.For</span> asks every handler's <span class="mono">IsAvailable</span> at each decision and drops target-needing actions when nothing is nameable, plus <b>AgentContext.Actions</b> (#7 and #58, via #63)</li>
       <li><b>Newtonsoft</b> as the core's one declared dependency (DR-009)</li>
       <li><b>GreyBoxVillage</b> — a playable grey-box scene whose guard still answers from string matching, not a model (#19)</li>
     </ul></div>
     <div class="card"><h4>Written down, not written</h4><ul>
       <li><b>Agent</b> itself — the DecideAsync pipeline (#17)</li>
-      <li><b>Availability</b> (#7), and <b>AgentContext.Actions</b> (#58)</li>
       <li><b>DecisionSchema</b> and its JSON serializer (#8, #9)</li>
       <li><b>Few-shot builder, PromptBuilder</b> (#10, #16)</li>
     </ul></div>
     <div class="card"><h4 style="color:var(--warn)">Decided here, not yet built</h4><ul>
       <li><b>DR-012</b> observation sources, capped; summariser as one source</li>
       <li><b>DR-013</b> provider config asset + resolution chain</li>
-      <li><b>DR-014</b> <span class="mono">Targetable</span> discovery instead of typed lists (#32)</li>
       <li><b>DR-015</b> priority on the call; optional ticker</li>
       <li>Still only proposed: the <b>New Agent wizard</b> (figure 12) and the on-demand runtime service (figure 10)</li>
     </ul></div>
@@ -956,7 +956,7 @@ Packages/
 
 <footer>
   <p><b>Agenerela</b> — a Unity framework that lets a language model drive game agents by choosing from actions the developer registered. CSUN COMP 490 / 491.</p>
-  <p style="margin-top:10px">This page walks the developer's path; the six sketch-lab wireframes it refers to are the screens themselves. Rules cited here come from <span class="mono">docs/FRAMEWORK_BUILD_PLAN.md</span> and its decision records — DR-008 (no input taxonomy), DR-009 (one dependency), DR-010 (demos as separate projects) — and the measurements come from Appendix A. Where this page proposes something the plan does not settle, it says so on the figure. Last brought in step with the plan and the issues on 28 September 2026, after the code front door was built (#50, via #59); where the page and the plan disagree, the plan is current.</p>
+  <p style="margin-top:10px">This page walks the developer's path; the six sketch-lab wireframes it refers to are the screens themselves. Rules cited here come from <span class="mono">docs/FRAMEWORK_BUILD_PLAN.md</span> and its decision records — DR-008 (no input taxonomy), DR-009 (one dependency), DR-010 (demos as separate projects) — and the measurements come from Appendix A. Where this page proposes something the plan does not settle, it says so on the figure. Last brought in step with the plan and the issues on 3 October 2026, after state-derived availability was built (#7, via #63); where the page and the plan disagree, the plan is current.</p>
 </footer>
 </div>
 </body>

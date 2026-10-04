@@ -44,10 +44,11 @@ While the version stays `0.x`, the public API may change in any release.
 - `AgentIdentity`, `AgentContext` and `AgentDecision` in namespace `Agenerela` (#2) — who an
   agent is, what it knows at the moment of a decision, and what it chose. `AgentDecision`
   rejects a null or whitespace action or target id but accepts ids that are not registered,
-  so the guards can inspect them. `AgentContext` rejects a null identity or target registry,
-  and turns a null stimulus, observations or state into an empty value. EditMode tests cover
-  construction, the rejected ids, a null identity, and null observations, state and
-  statement. `AgentContext.Actions` is still to come (#58).
+  so the guards can inspect them. `AgentContext` carries the agent's `TargetRegistry` and its
+  `ActionRegistry` (`Actions`, #58), rejects a null identity, target registry or action
+  registry, and turns a null stimulus, observations or state into an empty value. EditMode
+  tests cover construction, the rejected ids, a null identity, a null action registry, and
+  null observations, state and statement.
 - `AgentProfile` in namespace `Agenerela` (#15) — the `ScriptableObject` a developer creates
   from **Create → Agenerela → Agent Profile**, shared by every agent that uses it: an
   `AgentIdentity`, the `ActionDefinitionAsset`s the agent can ever use (held as references,
@@ -110,6 +111,16 @@ While the version stays `0.x`, the public API may change in any release.
   GameObjects. Each `Targetable` is registered as its `Transform`, so an `[AgentAction]` method
   taking a `Transform` target needs no conversion. EditMode tests cover each rule, including
   the empty set.
+- `ActionAvailability` in namespace `Agenerela` (#7) — state masking, built in.
+  `ActionAvailability.For(ctx)` returns the actions in `ctx.Actions` that are legal for this
+  decision, in the registry's order, which the schema enum is built from. An action with
+  `RequiresTarget` is left out while `ctx.Targets` is empty, and any action whose handler's
+  `IsAvailable(ctx)` returns false is left out, so an illegal option is absent from the
+  schema rather than forbidden in the prompt. The list is built fresh on every call, never
+  cached, because state and targets change between decisions. A null context throws an
+  `ArgumentNullException`. EditMode tests cover an agent already following (no
+  `follow_player`), an idle one (no `stop_following`), an empty target registry, and two
+  contexts sharing one registry.
 
 ### Changed
 - `DecisionTelemetry.TargetsDropped` — the target ids a source found but left out because of
