@@ -607,7 +607,7 @@ namespace Agenerela.Tests
 
         private static AgentContext Context(TargetRegistry targets, IReadOnlyDictionary<string, object> state = null)
         {
-            return new AgentContext(new AgentIdentity { Name = "Gate Guard" }, "", null, state, targets);
+            return new AgentContext(new AgentIdentity { Name = "Gate Guard" }, "", null, state, targets, new ActionRegistry());
         }
     }
 }

@@ -16,15 +16,21 @@ namespace Agenerela
         public IReadOnlyDictionary<string, object> State{ get; }
         /// <summary>What this agent may refer to this request. Live list from 'TargetRegistry'.</summary>
         public TargetRegistry Targets{ get; }
-        // !! IMPORTANT TODO: add Actions once ActionRegistry lands
-        // public ActionRegistry Actions{ get; }
+        /// <summary>What this agent may choose to do this request. Live list from 'ActionRegistry'.</summary>
+        public ActionRegistry Actions{ get; }
 
         /// <summary>
         /// Creates a snapshot of what the agent knows for one decision.
-        /// Identity and Targets cannot be null.
+        /// Identity, Targets, and Actions cannot be null.
         /// Null stimulus becomes empty.
         /// Null observations or state become empty collections and stay non-null.</summary>
-        public AgentContext(AgentIdentity identity, string stimulus, IReadOnlyList<string> observations, IReadOnlyDictionary<string, object> state, TargetRegistry targets)
+        public AgentContext(
+            AgentIdentity identity,
+            string stimulus,
+            IReadOnlyList<string> observations,
+            IReadOnlyDictionary<string, object> state,
+            TargetRegistry targets,
+            ActionRegistry actions)
         {
             if (identity == null)
             {
@@ -34,6 +40,11 @@ namespace Agenerela
             if (targets == null)
             {
                 throw new ArgumentNullException(nameof(targets));
+            }
+
+            if (actions == null)
+            {
+                throw new ArgumentNullException(nameof(actions));
             }
 
             if (stimulus == null)
@@ -56,6 +67,7 @@ namespace Agenerela
             Observations = observations;
             State = state;
             Targets = targets;
+            Actions = actions;
         }
     }
 }

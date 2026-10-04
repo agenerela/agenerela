@@ -281,7 +281,7 @@ namespace Agenerela.Tests
 
         private static AgentContext Context(TargetRegistry targets)
         {
-            return new AgentContext(new AgentIdentity { Name = "Gate Guard" }, "", null, null, targets);
+            return new AgentContext(new AgentIdentity { Name = "Gate Guard" }, "", null, null, targets, new ActionRegistry());
         }
     }
 }

@@ -30,7 +30,7 @@ namespace Agenerela.Tests
 
         private static AgentContext Context()
         {
-            return new AgentContext(new AgentIdentity { Name = "Guard" }, "", null, null, new TargetRegistry());
+            return new AgentContext(new AgentIdentity { Name = "Guard" }, "", null, null, new TargetRegistry(), new ActionRegistry());
         }
 
         // ---- ExplicitTargetSource: no scene -------------------------------------------------
