@@ -24,7 +24,7 @@ namespace Agenerela.Tests
         }
 
         [Test] // AgentContext.cs test
-        public void ContextStoresStimulusObservationsStateTargetRegistry()
+        public void ContextStoresStimulusObservationsStateTargetAndActionRegistries()
         {
             var identity = new AgentIdentity { Name = "Gate Guard"};
 
@@ -42,12 +42,15 @@ namespace Agenerela.Tests
             var targets = new TargetRegistry();
             targets.Register("tower", new object());
 
+            var actions = new ActionRegistry();
+
             var context = new AgentContext(
                 identity,
                 "Go to the tower", // Stimulus assignment
                 observations,
                 state,
-                targets);
+                targets,
+                actions);
 
             Assert.That(context.Identity.Name, Is.EqualTo("Gate Guard"));
             Assert.That(context.Stimulus, Is.EqualTo("Go to the tower"));
@@ -55,6 +58,7 @@ namespace Agenerela.Tests
             Assert.That(context.Observations, Does.Contain("The gate is open."));
             Assert.That(context.State["isFollowing"], Is.EqualTo(false));
             Assert.That(context.Targets.Contains("tower"), Is.True);
+            Assert.That(context.Actions, Is.SameAs(actions));
         }
 
         [Test] // AgentDecision.cs test
@@ -100,8 +104,32 @@ namespace Agenerela.Tests
         public void ContextRejectsNullIdentity()
         {
             var targets = new TargetRegistry();
+            var actions = new ActionRegistry();
+
             Assert.Throws<ArgumentNullException>(() =>
-                new AgentContext(null, "Go to the tower", new string[0], new Dictionary<string, object>(), targets));
+                new AgentContext(
+                    null,
+                    "Go to the tower",
+                    new string[0],
+                    new Dictionary<string, object>(),
+                    targets,
+                    actions));
+        }
+
+        [Test]
+        public void ContextRejectsNullActions()
+        {
+            var identity = new AgentIdentity { Name = "Gate Guard" };
+            var targets = new TargetRegistry();
+
+            Assert.Throws<ArgumentNullException>(() =>
+                new AgentContext(
+                    identity,
+                    "Go to the tower",
+                    new string[0],
+                    new Dictionary<string, object>(),
+                    targets,
+                    null));
         }
 
         [Test]
@@ -109,7 +137,8 @@ namespace Agenerela.Tests
         {
             var identity = new AgentIdentity { Name = "Gate Guard" };
             var targets = new TargetRegistry();
-            var context = new AgentContext(identity, "Go to the tower", null, null, targets);
+            var actions = new ActionRegistry();
+            var context = new AgentContext(identity, "Go to the tower", null, null, targets, actions);
 
             Assert.That(context.Observations, Is.Empty);
             Assert.That(context.State, Is.Empty);
