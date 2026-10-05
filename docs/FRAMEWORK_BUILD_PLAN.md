@@ -584,10 +584,18 @@ scene NPC, and a plain class is what a `Country` with no GameObject uses.
 Targets resolve into the same kind of registry (`TargetRegistry`: id → object reference), so
 "what can this agent currently reference" is queryable, not hand-maintained prose. **The
 registry is computed per decision rather than typed (DR-014):** a `Targetable` component
-marks an object as nameable and carries its id, and an `ITargetSource` on the agent — by
-default a proximity and category query — assembles the set each time. A hand-supplied list
-remains available for agents with nothing to query from. What the enum contains at the
-instant of the decision is what matters; where it came from does not.
+marks an object as nameable and carries its id, and the `ITargetSource`s on the agent, an
+ordered list, assemble the set each time. A hand-supplied list remains available for agents
+with nothing to query from. What the enum contains at the instant of the decision is what
+matters; where it came from does not.
+
+**The proximity query is one way to choose targets, not the way.** `ProximityTargetSource`
+(radius, layers, categories, optional line of sight, nearest first, capped) suits a scene
+agent that should name what is near it, and it is only used if the developer adds it. Who may
+name what, and when, is the developer's call: their own `ITargetSource` can follow what a
+faction has scouted, a quest stage or the time of day, and several sources can be combined. A
+strategy game is the plain case where proximity does not apply: a country has no position,
+so it supplies its own set through `ExplicitTargetSource` or a source of its own.
 
 **Settled design rules baked into this module (each is a measured result — Appendix A):**
 1. *State masking*: `IsAvailable` decides whether an action appears in the schema enum
@@ -1577,9 +1585,11 @@ constrains the schema exactly as well, and the guards re-check it either way.
 **Decision.** A `Targetable` component marks an object as nameable and carries its **id**, a
 one-line self-description and a category. It is the same component that supplies observations
 (§2.8) — an object an agent can notice and one it can refer to are the same object. An
-`ITargetSource` on the agent assembles the registry per decision; the default source is a
-proximity, layer and category query, optionally line-of-sight. A hand-supplied set remains
-available and is what a non-scene agent uses.
+`ITargetSource` on the agent assembles the registry per decision. The source shipped for
+scene agents is a proximity, layer and category query, optionally line-of-sight, and it is one
+option rather than a requirement: a developer can write a source with their own rule for what
+is nameable and when. A hand-supplied set remains available and is what a non-scene agent
+uses.
 
 **Consequences**
 - Per-agent narrowing survives without per-agent typing, because the query runs from the
