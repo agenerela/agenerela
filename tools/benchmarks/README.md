@@ -61,8 +61,9 @@ makes the guard attack the training dummy. There are 109 labelled prompts in two
 scenes, a village guard and a companion with items. Six arms ask the model: today's prompt
 and schema, the same without logprobs (to time them), a near-miss refusal example, a
 one-line rule, a field for the words the player used, and a free-text target. The scorer
-then applies checks afterwards: the name check, a yes/no verifier, and a confidence check on
-the probability the model gave its chosen target, read from Ollama's `logprobs`.
+then applies checks afterwards: the name check, a yes/no verifier, and confidence checks read
+from Ollama's `logprobs`. They read the probability the model gave its chosen target, and the
+share of its probability that stayed on the target list. The second is the one DR-016 adopts.
 
 ```bash
 python tools/benchmarks/target_swap_probe.py qwen3.5:2b qwen3.5:4b

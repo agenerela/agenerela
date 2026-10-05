@@ -180,6 +180,26 @@ so it shows what the model wanted to write, which was often "scarecrow".
   that no test prompt shares its frame, it refused 7. These are two sessions, the first on
   battery.
 
+**Update, the same day: checking every decision.** I re-scored the same results, with no new
+requests. The signal was the share of the model's probability that stayed on the target list
+at the start of its target (the scorer's `legal` signal). Below 0.8 → `none`, applied to every
+decision rather than only to player requests. The 2B scored 95 · 6 · 8 and the 4B 103 · 5 · 1,
+the same totals as the chosen-target version.
+
+- It added one false refusal on the 2B and none on the 4B. The refused request was "Go to the
+  water butt.": only 0.03 of the probability stayed on the list, because the model wanted to
+  write "water".
+- It refused no good game-triggered decision on either model.
+- On the 4B it caught a wrong one: "A merchant waves at you from the road." made the guard
+  walk to the bridge, with 0.33 on the list.
+- The chosen-target version, run on every decision, blocked one good game-triggered choice on
+  the 2B: "Someone dropped a weapon near the road. Secure it.", at 0.73.
+
+DR-016 adopts the on-list share, on by default. Its blind spot is a missing thing whose name
+starts like a listed one: "Pick up the spear." keeps 0.99 on the list through the "s" of
+`sword`. Not tested yet: an open choice between two equally good targets, since none of the 13
+game prompts was one.
+
 **What I believe now.** The model's own confidence in its target is the best check we have
 against the swap. It is free on Ollama, needs no word lists, and keeps the paraphrases and
 pronouns the name check refuses. The name check cost more good requests than it saved bad ones

@@ -115,7 +115,8 @@ for model in sorted({m for m, _ in by}):
     line("A0 control", model, "A0")
     line("A0 + name check", model, "A0", "name")
     line("A0 + verifier", model, "A0", "verify")
-    line("A0 + conf first 0.8", model, "A0", "first", 0.8)          # the setting DR-016 adopts
+    line("A0 + conf legal 0.8 all", model, "A0", "legal", 0.8, True)  # the setting DR-016 adopts
+    line("A0 + conf first 0.8", model, "A0", "first", 0.8)
     for k in ("prod", "first", "legal"):
         line(f"A0 + conf {k} 0.5", model, "A0", k, 0.5)
     line("A0 + conf first 0.8 all", model, "A0", "first", 0.8, True)
