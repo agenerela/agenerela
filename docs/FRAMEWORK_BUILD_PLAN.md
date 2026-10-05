@@ -856,9 +856,20 @@ Built-ins, in order:
    of 109 prompts, the guard took a 2B model from 73 to 95 correct and a 4B from 98 to 103,
    and between them it refused one good request ([findings](llm-wiki/findings.md)).
 
-   **It runs only when the caller switches it on for that call**, through a flag on
-   `DecideOptions` that is off by default. The framework cannot tell whether a stimulus is a
-   player's line or something the game raised, and must not guess (DR-008). Most decisions
+   **It runs only when the caller switches it on for that call**, through
+   `DecideOptions.CheckTarget`, which is off by default. The framework cannot tell whether a
+   stimulus is a player's line or something the game raised, and must not guess (DR-008).
+   So the switch is named for what it does, not for the kind of input. A player's request is
+   the usual reason to set it, but the framework never asks:
+
+   ```csharp
+   // The player typed into the chat box: check the target.
+   await guard.DecideAsync(playerLine, new DecideOptions { CheckTarget = true });
+   // The game's own timer names nothing: leave it off, the default.
+   await guard.DecideAsync("Your shift has ended.");
+   ```
+
+   Most decisions
    are triggered by the game itself (a tick, an event, a turn report). There the model picks
    a target nobody named, and it may rightly be unsure between two. In the probe, running
    the guard on every decision blocked one good game-triggered choice on the 2B, so Phase 4
@@ -869,7 +880,7 @@ Built-ins, in order:
    **Without token probabilities**, on a provider that cannot report them, the guard records
    that it could not run. The fallback is the next best option that costs nothing: one line
    in the system prompt, saying that only the listed things are here and the model must never
-   act on a different one. `PromptBuilder` adds it when the guard is on and the provider
+   act on a different one. `PromptBuilder` adds it when `CheckTarget` is on and the provider
    reports no probabilities. Measured: 2B 73 → 88, 4B 98 → 101 (DR-016).
 
    **Limits.** A near miss the model is sure of passes. On the probe that was a spear for
@@ -1067,7 +1078,7 @@ strategy interface is where that would go. Wait until a demo needs it.
 | **0. Skeleton** | Repo + package layout of §1 | Checklist §1.3 all green |
 | **1. Core + Actions + Schema** (pure C#, no LLM, no scene) | `Agent`, `ActionDefinition`, registries, `DecisionSchema` builder + Ollama-dialect serializer | EditMode tests prove: state masking (following agent's schema omits `follow_player`); `target` required w/ `no_target`; field order action→target→statement; few-shot block matches registered actions and rotates only sensible example targets; empty target-registry removes `target` property entirely. **All testable without any model running — this is why Phase 1 has no LLM.** |
 | **2. OllamaProvider + queue + memory** | End-to-end decision in a sandbox scene, with short-term memory (§2.9) | PlayMode test (tagged `RequiresOllama`): one agent, five actions, live decision round-trip < 5s; telemetry fields populated; provider failure (missing model) surfaces as a typed error, not an exception leak. EditMode tests for `RollingHistory`: it fills `DecisionRequest.History` oldest first within a token cap, records the decision `DecideAsync` returns rather than the provider's raw answer (so a Phase 3 guard's rewrite is what gets remembered), and keeps one memory per agent instance |
-| **3. Validation pipeline** | Guards of §2.5 wired between provider and handler | EditMode tests with hand-built fake decisions: substitution attack rewritten to `none`; unavailable action rejected; an action that needs a target, answered with `no_target`, rejected; guard verdicts appear in telemetry. With the grounding guard switched on, a decision whose target probability is below the threshold is rewritten to `none` and one above it passes; with it off (the default), a game-triggered decision is never blocked by it; a provider that reports no probabilities is recorded as such rather than passing silently. Integration: prototype's "impossible request" suite passes ≥ 95% on a 2B model |
+| **3. Validation pipeline** | Guards of §2.5 wired between provider and handler | EditMode tests with hand-built fake decisions: substitution attack rewritten to `none`; unavailable action rejected; an action that needs a target, answered with `no_target`, rejected; guard verdicts appear in telemetry. With `CheckTarget` on, a decision whose target probability is below the threshold is rewritten to `none` and one above it passes; with it off (the default), a game-triggered decision is never blocked by it; a provider that reports no probabilities is recorded as such rather than passing silently. Integration: prototype's "impossible request" suite passes ≥ 95% on a 2B model |
 | **4. Evaluation harness** | The measurement instrument — **before more features** | 200+ labelled prompts (grow from the prototype's 53), each declaring its required precondition state, and covering game-triggered stimuli (events, reports, turns) as well as player commands rather than mostly commands; runner executes A/B (two configs, same model/session) and writes a classified report (correct / wrong-legal / contained / rejected / pipeline-error); second annotator labels a subset, agreement reported. Methodology checklist (§4) committed to the wiki |
 | **5. Editor tooling** | §2.7 | A developer with zero framework knowledge builds a working 3-action agent in an empty scene in < 15 min without editing framework source (actually run this test on a teammate) |
 | **6. Cloud API providers** | Proof the abstraction is real, and the path to supporting any vendor | At least one cloud provider (Gemini first — it is what the prototype measured) runs the same eval subset through `ILLMProvider` with **zero framework-code changes**: a provider class plus config, nothing more. A **provider conformance test suite** exists that any future vendor must pass, so adding OpenAI or Anthropic later is implementing an interface rather than editing the framework. Budget caps and RPM throttling enforced in code, not convention |
@@ -1747,10 +1758,10 @@ not settle on one ([KnowNo](https://arxiv.org/abs/2307.01928)).
 **Decision.** `TargetGroundingGuard` keeps its name and its place in the pipeline, and
 decides by confidence. It reads the probability the model gave the target it chose, from the
 same request's token probabilities, and rewrites the decision to `none` below a threshold,
-0.8 to start. It runs when the caller switches it on for a player's request, as the name check
-did. Telemetry records the probability for every decision. On a provider that reports no
-token probabilities, the guard records that it could not run, and `PromptBuilder` adds the
-one-line rule instead.
+0.8 to start. It runs when the caller sets `DecideOptions.CheckTarget` for that call, usually
+for a player's request, as the name check did. Telemetry records the probability for every
+decision. On a provider that reports no token probabilities, the guard records that it could
+not run, and `PromptBuilder` adds the one-line rule instead.
 
 **Consequences**
 - `ProviderCapabilities` gains a flag for reporting token probabilities, and `ProviderResult`
