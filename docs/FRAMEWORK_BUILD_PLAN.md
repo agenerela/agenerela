@@ -635,6 +635,20 @@ another component calls `GetComponent` on it. Revisit if games keep writing that
 `GetComponent`: the fix is a conversion that `Runtime/Unity/` supplies, not scene calls in the
 reader.
 
+**Revisit later — which targets an action accepts.** Proposed in the COMP 490 requirements
+specification (3.4.2.2, October 2026), and not designed: each action declares the target
+categories it accepts, so `give` is offered props and characters but never the tower. Today
+one `target` enum serves every action, so the model can pair `give` with `tower`, which the
+schema allows and the game cannot use. The category already exists as the free-text
+`Category` on `Targetable` (#32); a target from `ExplicitTargetSource` has none, so targets
+with no scene presence would need one too. How to enforce it is open. A separate target list
+per action inside the schema makes the bad pair unexpressible, the same move as state masking
+(rule 1 above), but it changes the request shape the prototype measured, so it needs an A/B
+with a control arm before it ships. A guard (§2.5) leaves the schema alone but only catches
+the pair after the model has chosen it. Revisit when a demo needs it; until then a handler
+given a target it cannot use does nothing with it, and once guards land in Phase 3 a
+developer's own guard can reject the pair.
+
 ### 2.3 Schema (`Runtime/Schema/`)
 
 A provider-neutral `DecisionSchema` model built per request from the agent's currently
