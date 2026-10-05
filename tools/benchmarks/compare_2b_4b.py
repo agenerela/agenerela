@@ -7,7 +7,9 @@ Uses the same schema shape the Unity framework builds: action first, then target
 """
 import json, time, urllib.request, statistics, sys
 
-URL = "http://localhost:11434/api/chat"
+# 127.0.0.1, not localhost: on Windows localhost tries IPv6 first, and Ollama listens only on
+# IPv4, so every request waited ~2 s for the failed attempt (docs/llm-wiki/findings.md).
+URL = "http://127.0.0.1:11434/api/chat"
 TARGETS = ["Bridge", "Tower", "Blacksmith", "TrainingDummy", "Sword"]
 
 # (prompt, expected_action, expected_target, already_following)
@@ -114,7 +116,7 @@ def unload_all():
     for m in ALL_MODELS:
         try:
             body = json.dumps({"model": m, "keep_alive": 0}).encode()
-            req = urllib.request.Request("http://localhost:11434/api/generate", data=body,
+            req = urllib.request.Request("http://127.0.0.1:11434/api/generate", data=body,
                                          headers={"Content-Type": "application/json"})
             urllib.request.urlopen(req, timeout=30).read()
         except Exception:

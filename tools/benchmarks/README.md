@@ -9,13 +9,16 @@ Iterating on a schema or prompt idea inside Unity means entering Play Mode, wait
 domain reload, and running 50+ requests. These scripts do the same experiment in seconds.
 
 **The workflow is: find a fix here, port it into C#, then re-validate inside Unity.** A
-result from these scripts is *provisional* until confirmed in-engine — the two environments
-have shown different absolute latency numbers for reasons not yet explained (see
-`docs/llm-wiki/findings.md`).
+result from these scripts is *provisional* until confirmed in-engine.
 
-When porting: both scripts name the free-text field `dialogue`, as the prototype did. The
-framework calls it `statement` (DR-008); the rename itself is unmeasured, and scheduled as an
-early Phase 4 A/B.
+**Talk to `127.0.0.1`, never `localhost`.** On Windows `localhost` resolves to IPv6 first,
+Ollama listens on IPv4 only, and every request waited about 2 s for the failed attempt. That
+is most likely why the prototype's scripts measured ~3.5 s a decision against ~1.3 s in Unity
+(`docs/llm-wiki/findings.md`).
+
+When porting: `compare_2b_4b.py` and `gemini_compare.py` name the free-text field
+`dialogue`, as the prototype did. The framework calls it `statement` (DR-008); the rename
+itself is unmeasured, and scheduled as an early Phase 4 A/B.
 
 ## `compare_2b_4b.py`
 
@@ -50,6 +53,26 @@ requests, shared across everyone testing with that key.
 
 The key is read from `.env` and sent in an HTTP header, never a URL, and is redacted from
 any error output. Keep it that way.
+
+## `target_swap_probe.py` and `target_swap_score.py`
+
+Measures ways to stop a model swapping a missing target for a legal one: "Attack Godzilla"
+makes the guard attack the training dummy. There are 109 labelled prompts in two invented
+scenes, a village guard and a companion with items. Six arms ask the model: today's prompt
+and schema, the same without logprobs (to time them), a near-miss refusal example, a
+one-line rule, a field for the words the player used, and a free-text target. The scorer
+then applies checks afterwards: the name check, a yes/no verifier, and a confidence check on
+the probability the model gave its chosen target, read from Ollama's `logprobs`.
+
+```bash
+python tools/benchmarks/target_swap_probe.py qwen3.5:2b qwen3.5:4b
+python tools/benchmarks/target_swap_score.py -v
+```
+
+The probe appends to `target_swap_results.jsonl` in the current directory, so run it from a
+scratch folder, not the repository. The scorer reads the same file. A full run took about
+12 minutes for the 2B and 18 for the 4B on an RTX 4060 laptop on AC power. The results of
+5 October 2026, and what they led to, are in `docs/llm-wiki/findings.md` and DR-016.
 
 ## Before trusting any number these print
 

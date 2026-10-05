@@ -97,7 +97,7 @@ body{width:1600px;height:1000px}
       </div>
       <div class="blk rel"><span class="c" style="left:-32px;top:-2px">5</span><h6>4 · Guards, in order</h6>
         <div class="gt"><span class="muted">1</span><span class="mono">SchemaLegalityGuard</span><span class="verdict">✓ Pass</span><span class="muted">action and target are registered and available</span></div>
-        <div class="gt" style="background:var(--fill2)"><span class="muted">2</span><span class="mono">TargetGroundingGuard</span><span class="verdict">⚠ Rewrite to none</span><span>“training_dummy” is never mentioned in what the player said</span></div>
+        <div class="gt" style="background:var(--fill2)"><span class="muted">2</span><span class="mono">TargetGroundingGuard</span><span class="verdict">⚠ Rewrite to none</span><span>the model was only 4% sure of “training_dummy”, below 80%</span></div>
         <div class="gt"><span class="muted">3</span><span class="muted">your own guards</span><span class="muted">none added</span><span class="muted">e.g. line of sight, cooldowns</span></div>
       </div>
       <div class="blk"><h6>5 · Result</h6>
@@ -117,7 +117,7 @@ body{width:1600px;height:1000px}
   <div class="note"><span class="n">2</span><div><b>Filters</b><p>Show only one kind of outcome or one agent, or search what the agents were asked.</p></div></div>
   <div class="note"><span class="n">3</span><div><b>Outcome icons</b><p>Executed, no action, contained by a guard, error. “The agent did nothing” has several causes, and each needs a different fix.</p></div></div>
   <div class="note"><span class="n">4</span><div><b>Asked vs. answered</b><p>What the agent knew, the exact options the model was offered, and its raw reply, in order.</p></div></div>
-  <div class="note"><span class="n">5</span><div><b>Guard pipeline</b><p>Every check in order, with its verdict and reason. Here the model tried to attack the training dummy the player never named, and the grounding guard stopped it.</p></div></div>
+  <div class="note"><span class="n">5</span><div><b>Guard pipeline</b><p>Every check in order, with its verdict and reason. Here the model tried to attack the training dummy without being sure of it, and the grounding guard stopped it.</p></div></div>
   <div class="note"><span class="n">6</span><div><b>Telemetry</b><p>Latency, token counts, provider, model and framework version, recorded for every decision.</p></div></div>
 </div>
 

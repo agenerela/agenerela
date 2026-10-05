@@ -564,7 +564,7 @@ footer p{max-width:74ch}
           <div class="r" style="align-items:flex-start"><span class="k" style="margin-top:4px">Description</span><div class="f ta">The watchtower door stands open.</div></div>
           <div class="r"><span class="k">Category</span><div class="f dd">landmark</div></div>
           <div class="r"><span class="k">Targetable now</span><span class="cb">✓</span><span class="hint">a sealed gate stops being nameable without being destroyed</span></div>
-          <div class="help warn"><span class="ico">▲</span><div>Auto-deriving the id from <span class="mono">GameObject.name</span> would give <span class="mono">Training Dummy (1)</span> — a bad enum value, and one the lexical guard cannot match.</div></div>
+          <div class="help warn"><span class="ico">▲</span><div>Auto-deriving the id from <span class="mono">GameObject.name</span> would give <span class="mono">Training Dummy (1)</span> — a bad enum value, and a poor word for the model to answer with.</div></div>
         </div>
         <div>
           <h4 style="margin-bottom:10px">How the two lists get built, every decision</h4>
@@ -915,7 +915,7 @@ Packages/
   <div class="qa" style="border-left-color:var(--ok)">
     <h3>5. How does an agent learn what is around it? <span class="pill ok" style="vertical-align:3px">decided · DR-012</span></h3>
     <p><b>Pulled from observation sources at decision time, and capped.</b> Per-call observations still work; this adds the path for agents that should notice rather than be told. Scene-reading sources live in <span class="mono">Runtime/Unity/</span>, the one folder allowed to touch a scene.</p>
-    <p class="rec"><b>On the LLM summariser idea:</b> supported, but as one source rather than a stage before every decision. Three conditions — cached and invalidated by an event, never per decision; registered target ids emitted verbatim, or the lexical grounding guard silently stops working; recorded as part of the arm in an eval run, because generated observations are non-deterministic input against a 10-point noise floor. Whether summarised beats templated is an early Phase 4 A/B, not an argument to settle now.</p>
+    <p class="rec"><b>On the LLM summariser idea:</b> supported, but as one source rather than a stage before every decision. Three conditions — cached and invalidated by an event, never per decision; registered target ids emitted verbatim, so the model can map what it reads back to the ids; recorded as part of the arm in an eval run, because generated observations are non-deterministic input against a 10-point noise floor. Whether summarised beats templated is an early Phase 4 A/B, not an argument to settle now.</p>
   </div>
 </section>
 

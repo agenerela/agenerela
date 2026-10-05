@@ -15,15 +15,32 @@ quantisation, hardware, other models resident), and what would change your mind.
 Open questions the prototype could not close. Whoever addresses one should record the
 answer here.
 
-### Latency differs between Unity and standalone scripts, unexplained
+### Latency differs between Unity and standalone scripts — most likely `localhost`
 
 The same model measured **~1.31 s** mean latency inside Unity (while URP rendered a
 180-prop scene) but **~3.1–3.5 s** from standalone Python hitting the same Ollama server
 on the same machine, with the model correctly unloaded and reloaded between runs. That is
 backwards from expectation — Unity should be the *more* contended environment.
 
-Never root-caused. Until it is, treat *relative* comparisons within one environment as
-valid and be sceptical of absolute latency numbers quoted across environments.
+**Answer, 5 October 2026: the Python scripts paid about 2 s a request to reach Ollama.**
+They called `http://localhost:11434`. On Windows `localhost` resolves to `::1` first, and
+Ollama listens on `127.0.0.1:11434` only, so every request waited for the IPv6 attempt to
+fail before falling back. Measured with the same tiny request (`qwen3.5:2b`, 5 tokens out),
+six times each, alternating, from Python's `urllib`:
+
+| Endpoint | Client time, mean | Ollama's own time, mean |
+|---|---|---|
+| `http://localhost:11434` | 2.26 s | 0.22 s |
+| `http://127.0.0.1:11434` | 0.14 s | 0.12 s |
+
+Conditions: Windows 11, Ollama 0.34.2, RTX 4060 Laptop on AC power, one model resident. The
+~2.1 s offset matches the old gap. Unity was not re-measured, so this is the likely cause,
+not a proven one. If `UnityWebRequest` resolves `localhost` the same way and Unity still
+measures ~1.3 s, there is a second cause.
+
+What changed: the probes in `tools/benchmarks/` now call `127.0.0.1`. `OllamaProvider`'s
+default endpoint should be `127.0.0.1` too (build plan §2.4). Absolute latencies from the old
+scripts are inflated by ~2 s; relative comparisons within one run are unaffected.
 
 ### Every accuracy number was measured through Ollama's HTTP API
 
@@ -84,11 +101,102 @@ arm can swap or drop the block while the rest of the prompt stays byte-identical
 
 ## New findings
 
-*Still nothing measured.* Phase 1 is pure C# with no model in the loop — its correctness is
-settled by EditMode tests, not by measurement — so the first entry here arrives with Phase 2,
-when a real provider answers a real request. Until then, every number about this project
-comes from the build plan's Appendix A and was measured in the predecessor prototype, not
-here.
+The framework itself still measures nothing. Phase 1 is pure C# with no model in the loop,
+settled by EditMode tests, and its first numbers arrive with Phase 2, when a real provider
+answers a real request. Entries below that carry numbers come from the standalone probes in
+`tools/benchmarks/`, which ask a model directly. Everything else comes from the build plan's
+Appendix A, measured in the predecessor prototype.
+
+### Stopping a swapped target: the model's own confidence beats the name check (5 October 2026)
+
+**What changed.** `tools/benchmarks/target_swap_probe.py` runs 109 labelled prompts through
+the framework's planned prompt and schema: `action`, then a `target` enum with `no_target`,
+then `statement`, with a few-shot block holding one refusal. It also runs five variants of
+that prompt, and `target_swap_score.py` applies the checks afterwards. There are two invented
+scenes: a village guard with five targets, and a companion with five items. The categories:
+
+- requests for things that are not there at all, such as "Attack Godzilla." (16)
+- **near misses**, the same kind of thing as one that is there, such as a scarecrow beside the
+  training dummy (30)
+- requests by exact name (16) and by another name, such as "Hit the mannequin." (22)
+- pronouns resolved from the previous turn (4)
+- game-triggered stimuli (13) and chat (8)
+
+**Conditions.** `qwen3.5:2b` (Q8_0) and `qwen3.5:4b` (Q4_K_M) through Ollama 0.34.2, on an
+RTX 4060 Laptop on AC power, one model resident. Greedy decoding, `think: false`, `num_ctx`
+4096, every arm in one session. One annotator, who also wrote the arms. No few-shot example
+shares a phrasing or sentence frame with a test prompt.
+
+**Results.** Correct of 109 · wrong actions carried out · good requests refused:
+
+| Arm | `qwen3.5:2b` | `qwen3.5:4b` |
+|---|---|---|
+| Control: today's prompt and schema | 73 · 29 · 7 | 98 · 10 · 1 |
+| + name check, on player requests | 83 · 4 · 22 | 89 · 3 · 17 |
+| + yes/no verifier request | 86 · 5 · 18 | 103 · 3 · 3 |
+| **+ confidence check: chosen target below 0.8 → `none`** | **95 · 6 · 8** | **103 · 5 · 1** |
+| A one-line rule in the prompt instead | 88 · 8 · 13 | 101 · 3 · 5 |
+| A near-miss refusal example instead | 78 · 22 · 9 | 97 · 10 · 2 |
+| A field for the player's words, + a check on it | 88 · 6 · 15 | 100 · 1 · 8 |
+| A free-text target, resolved in code | 92 · 7 · 10 | 98 · 7 · 3, and one broken answer |
+
+**How the confidence check reads it.** It takes the probability the model gave the first
+token of the target it chose. Ollama returns that probability from before the schema's mask,
+so it shows what the model wanted to write, which was often "scarecrow".
+
+- **Separation.** It separates wrong targeted answers from right ones with an AUROC of 0.94 on
+  the 2B (27 wrong, 37 right) and 0.997 on the 4B (8 wrong, 41 right).
+- **Threshold.** Any threshold from 0.5 to 0.9 scored 92–95 on the 2B and 101–104 on the 4B.
+- **False refusals.** At 0.8 the check added one false refusal on the 2B ("Go to the water
+  butt.") and none on the 4B. The name check added 15 and 16, nearly all paraphrases and
+  pronouns.
+- **Multiplying all tokens instead.** Multiplying every token's probability does about as
+  well, but it punishes a right answer whenever the mask forces a split the model did not
+  want. On the 2B, "Pass me the healing draught." came out as health_potion with p ≈ 0,
+  because the model wanted "he|aling".
+- **Cost.** Asking for logprobs changed no decision. It added 0.08 s a decision on the 2B
+  (0.68 → 0.76 s) and 0.06 s on the 4B. The verifier's second request added 0.31–0.32 s to
+  every decision it checked.
+
+**What else it showed.**
+- **Near misses are the real problem.** Today's prompt already refuses most unrelated
+  requests (2B 12/16, 4B 16/16) but few near misses (2B 9/30, 4B 23/30).
+- **What still gets through** at 0.8: near misses the model is sure of. Spear → sword, bucket
+  → barrel, lantern → torch and Excalibur → sword, all at 0.83–0.90. Some of these labels are
+  judgment calls, since a designer may happily accept the torch.
+- **Wrong actions on the right target are out of reach of any target check.** On the 2B,
+  "That's an interesting sword you have." still picks the sword up at 0.999. Appendix A gives
+  that one to model scale, and the 4B gets it right.
+- **A one-line rule does help.** It cut the 2B's wrong actions from 29 to 8, against the
+  literature's finding that rules barely help ([arXiv 2510.22977](https://arxiv.org/abs/2510.22977)).
+  But it refuses more good requests than the confidence check, and adds nothing on top of it.
+- **The words-the-player-used field did not hold the player's words.** The model wrote the
+  name it had already matched: "Hit the mannequin." became "the training dummy", and "Drink
+  the mana potion." became "the health potion". A check on that field inherits the swap.
+- **A free-text target once ran past the token limit** on the 4B ("Attack it!"), a failure an
+  enum cannot have.
+- **Hard rule 4 in action.** With the refusal example "Go to Atlantis.", the 2B refused 9 of
+  the 10 village requests for things that are not there. Reworded to "Visit Atlantis.", so
+  that no test prompt shares its frame, it refused 7. These are two sessions, the first on
+  battery.
+
+**What I believe now.** The model's own confidence in its target is the best check we have
+against the swap. It is free on Ollama, needs no word lists, and keeps the paraphrases and
+pronouns the name check refuses. The name check cost more good requests than it saved bad ones
+on the 4B. DR-016 records the decision.
+
+**What would change my mind.** Any of these:
+- Phase 4's 200+ prompt set, written by other people, shows the separation falling well below
+  0.9, or the right threshold differing by scene.
+- The in-process provider reports probabilities from after the grammar rather than before it.
+- Confident near misses turn out common. Here they were 2 of 30 on the 2B and 3 of 30 on the 4B.
+
+**Limits.** Small categories, where one prompt moves a 16-prompt category by 6 points. Two
+invented scenes, one model family, Ollama only. Literature behind the design question:
+[forced choice without the gold label](https://arxiv.org/abs/2406.16203);
+["none of the above" drops of 30–50% across 28 models](https://aclanthology.org/2025.findings-acl.1031/);
+[grammar-constrained decoding distorting the distribution](https://arxiv.org/abs/2405.21047);
+[KnowNo's "an option not listed here" and asking for help](https://arxiv.org/abs/2307.01928).
 
 ### Telemetry now exists to catch Phase 2's numbers, with one field deliberately missing
 
