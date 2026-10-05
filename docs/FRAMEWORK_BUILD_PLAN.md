@@ -517,6 +517,9 @@ measurable or the eval harness (Phase 4) can't exist. Deciding and executing are
 calls on purpose: `Execute` re-checks the decision independently before any handler runs
 (hard rule 5, #17).
 
+`Memory` is what lets an agent carry a conversation from one decision to the next. It is an
+empty slot until Phase 2; what it holds, and the rules it follows, are in §2.9.
+
 ### 2.2 Actions (`Runtime/Actions/`) — the heart of the framework
 
 **Settled rule: the action vocabulary is data, not an enum.** The prototype's fixed
@@ -915,6 +918,72 @@ observations" is a clean Phase 4 A/B with a control arm. Build the interface in 
 when observations first reach a model; run the comparison in Phase 4 and record it in
 `docs/llm-wiki/findings.md` (DR-012).
 
+### 2.9 Memory (`Runtime/Memory/`) — what an agent remembers between decisions
+
+**Status: planned for Phase 2, nothing built.** The slots exist already: `Agent.Memory`
+(§2.1) and `DecisionRequest.History` (#12), which stays an empty list until a memory strategy
+fills it. This section records what memory is for and the rules it has to follow, so that
+Phase 2 designs it rather than bolting it on at the end.
+
+**What it is for.** Without memory every decision starts from nothing. The guard cannot
+follow "Follow me." with "Now wait here.", and it forgets that the player threatened it a
+minute ago. Observations (§2.8) say what is true *now*; memory says what *happened*. They are
+kept apart on purpose: §2.8 forbids anything accumulating between decisions, and memory is
+the one deliberate exception, bounded and owned by a single agent.
+
+```csharp
+// Sketch only. Phase 2 settles the shape.
+public interface IMemoryStrategy {
+    IReadOnlyList<string> Recall(AgentContext ctx);            // turns for this request, oldest first
+    void Remember(AgentContext ctx, DecisionResult result);    // after the guards have run
+}
+```
+
+**The default is short-term:** `RollingHistory(turns: 6)` (§2.1), the last six exchanges,
+oldest first. Where they go in the prompt is already fixed by `DecisionRequest`: after the
+system side (system prompt, few-shot block, observations) and before the stimulus, which
+stays the final user turn.
+
+**Rules Phase 2 must keep:**
+
+1. **Remember what happened, not what the model said.** A turn records the decision
+   `DecideAsync` returns, after any guard has run, never the provider's raw text. If the
+   grounding guard (Phase 3) rewrote "attack the training dummy" to `none`, memory
+   holds `none`. Otherwise the next request tells the model it attacked something it never
+   attacked, and the provider's untrusted output (§2.4) gets back in through the side door.
+2. **One memory per agent instance.** Ten guards share one `AgentProfile` (#15), never their
+   memories. An agent with no scene remembers the same way: a country's turns are the
+   reports it read and the moves it made.
+3. **Bounded by tokens, not only by turns.** History sits closer to the question than any
+   other block, so §2.8's warning about placement applies with more force, and every turn is
+   paid for on every request. The measured good arm ran a 143-token prompt (Appendix A) and
+   the queue's ceiling is ≈21 s for 30 agents (§2.6). So the window gets a token cap, and
+   telemetry records how many turns were sent and how many were dropped. #16 already lists
+   truncating history to `num_ctx` as Phase 2 work.
+4. **How a turn names its speaker is decided once, in Phase 2.** The remarks on
+   `DecisionRequest.History` forbid inventing an encoding before then.
+5. **Memory does not loosen the grounding guard.** The guard checks the current stimulus
+   only, so "attack it" after "Look at that dummy" is blocked today. Resolving a reference
+   across turns is the multi-turn hardening §2.5 already schedules. It stays deterministic
+   code, and it is measured before it ships; history being in the prompt is no reason to
+   hand the decision to the model.
+
+**Long-term memory is a strategy, not a new stage.** Remembering beyond the window, such as
+that the player lied yesterday or which faction betrayed which, fits behind the same
+interface: a strategy that keeps facts, or one that summarises old turns. A summarising
+strategy obeys the three conditions on the LLM summariser in §2.8: cached and refreshed by an
+event rather than per decision, registered ids verbatim, and recorded as part of the arm in
+any evaluation run. It is not planned for Phase 2; the interface simply must not rule it out.
+
+**Measure it like any other block.** No measurement in Appendix A covers history, so nothing
+is known yet about how it moves accuracy. Phase 4 owes multi-turn cases in the labelled set,
+each with its history staged like any other precondition (§4, item 4), an A/B of history on
+against off, and a comparison of window sizes, all recorded in `docs/llm-wiki/findings.md`.
+
+**Revisit later: saving memory with the game.** Memory lives in the agent object, so it is
+gone when the scene unloads. A save system will want to export and restore it, and the
+strategy interface is where that would go. Wait until a demo needs it.
+
 ---
 
 ## 3. Build order — phases, each independently shippable
@@ -923,7 +992,7 @@ when observations first reach a model; run the comparison in Phase 4 and record 
 |---|---|---|
 | **0. Skeleton** | Repo + package layout of §1 | Checklist §1.3 all green |
 | **1. Core + Actions + Schema** (pure C#, no LLM, no scene) | `Agent`, `ActionDefinition`, registries, `DecisionSchema` builder + Ollama-dialect serializer | EditMode tests prove: state masking (following agent's schema omits `follow_player`); `target` required w/ `no_target`; field order action→target→statement; few-shot block matches registered actions and rotates only sensible example targets; empty target-registry removes `target` property entirely. **All testable without any model running — this is why Phase 1 has no LLM.** |
-| **2. OllamaProvider + queue** | End-to-end decision in a sandbox scene | PlayMode test (tagged `RequiresOllama`): one agent, five actions, live decision round-trip < 5s; telemetry fields populated; provider failure (missing model) surfaces as a typed error, not an exception leak |
+| **2. OllamaProvider + queue + memory** | End-to-end decision in a sandbox scene, with short-term memory (§2.9) | PlayMode test (tagged `RequiresOllama`): one agent, five actions, live decision round-trip < 5s; telemetry fields populated; provider failure (missing model) surfaces as a typed error, not an exception leak. EditMode tests for `RollingHistory`: it fills `DecisionRequest.History` oldest first within a token cap, records the decision `DecideAsync` returns rather than the provider's raw answer (so a Phase 3 guard's rewrite is what gets remembered), and keeps one memory per agent instance |
 | **3. Validation pipeline** | Guards of §2.5 wired between provider and handler | EditMode tests with hand-built fake decisions: substitution attack rewritten to `none`; unavailable action rejected; guard verdicts appear in telemetry. Integration: prototype's "impossible request" suite passes ≥ 95% on a 2B model |
 | **4. Evaluation harness** | The measurement instrument — **before more features** | 200+ labelled prompts (grow from the prototype's 53), each declaring its required precondition state; runner executes A/B (two configs, same model/session) and writes a classified report (correct / wrong-legal / contained / rejected / pipeline-error); second annotator labels a subset, agreement reported. Methodology checklist (§4) committed to the wiki |
 | **5. Editor tooling** | §2.7 | A developer with zero framework knowledge builds a working 3-action agent in an empty scene in < 15 min without editing framework source (actually run this test on a teammate) |
@@ -1590,7 +1659,8 @@ boolean — a change to the scheduler, not to the API shape.
 
 **Not established, inherited as open**: generalization beyond one model family / one
 scene / one annotator; statistical power below ~10 pts at n=53; the in-Unity vs
-standalone latency discrepancy.
+standalone latency discrepancy; how conversation history (§2.9) affects accuracy, which no
+measurement here covers.
 
 **Shipping story — no longer open, but unproven.** "Players don't have Ollama" has a
 concrete answer (an in-process provider built on LLMUnity's embedded llama.cpp, §2.4 and
