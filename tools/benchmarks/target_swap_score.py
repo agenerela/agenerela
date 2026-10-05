@@ -21,8 +21,25 @@ for r in rows:
 def legal_values(scene):
     return [v.lower() for v in probe.SCENES[scene]["targets"]] + ["no_target"]
 
+def on_list_share(alts, prefix, vals, first):
+    """How much of one position's top-5 probability continues the chosen prefix into a target
+    on the list. A token that closes the value must complete a whole listed id."""
+    share = 0.0
+    for t, l in alts:
+        t2 = t.lstrip().lstrip('"') if first else t
+        closes = '"' in t2
+        cand = (prefix + t2.split('"', 1)[0]).lower()
+        ok = (cand in vals) if closes else (bool(cand) and any(v.startswith(cand) for v in vals))
+        share += math.exp(l) if ok else 0.0
+    return share
+
+
 def signals(r):
-    """The three confidence readings for the chosen target. Lower means less sure."""
+    """Confidence readings for the chosen target. Lower means less sure.
+    prod: every token of the chosen id multiplied. first: the chosen first token.
+    legal: the share of the first position that could start a listed target (DR-016).
+    path: the same share at every position of the target, the lowest one (reads past the
+    first token, so "spear" is caught at "pear" after the "s" it shares with "sword")."""
     top = r.get("top")
     if not top:
         return None
@@ -32,7 +49,15 @@ def signals(r):
         t = t.strip().strip('"').lower()
         return bool(t) and any(v.startswith(t) for v in vals)
     illegal = sum(math.exp(l) for t, l in alts if not legal_start(t))
-    return {"prod": r.get("p_target") or 0.0, "first": math.exp(lp), "legal": 1.0 - illegal}
+    out = {"prod": r.get("p_target") or 0.0, "first": math.exp(lp), "legal": 1.0 - illegal}
+    value = r.get("value")
+    if value:
+        prefix, shares = "", []
+        for k, (text, lp_k, alts_k) in enumerate(value):
+            shares.append(on_list_share(alts_k, prefix, vals, k == 0))
+            prefix += text
+        out["path"] = min(shares)
+    return out
 
 def decide(r, check=None, thr=None, everywhere=False):
     """Final (action, target) after the arm's own resolution and an optional check in code."""
@@ -55,12 +80,13 @@ def decide(r, check=None, thr=None, everywhere=False):
         rewrite = player and r.get("verify") == "no"
     elif check == "mention":
         rewrite = not probe.mention_check(scene, m.get("requested", ""), t)
-    elif check in ("prod", "first", "legal"):
+    elif check in ("prod", "first", "legal", "path"):
         s = signals(r)
-        rewrite = (player or everywhere) and s is not None and s[check] < thr
+        rewrite = (player or everywhere) and s is not None and check in s and s[check] < thr
     return ("none", "no_target") if rewrite else (a, t)
 
-CATS = ["imp_far", "imp_near", "imp_pron", "ok_exact", "ok_para", "ok_pron", "game", "chat"]
+CATS = ["imp_far", "imp_near", "imp_prefix", "imp_pron", "ok_exact", "ok_para", "ok_pron", "open",
+        "game", "chat"]
 
 def score(model, arm, check=None, thr=None, everywhere=False):
     src = by.get((model, arm), {})
@@ -115,7 +141,8 @@ for model in sorted({m for m, _ in by}):
     line("A0 control", model, "A0")
     line("A0 + name check", model, "A0", "name")
     line("A0 + verifier", model, "A0", "verify")
-    line("A0 + conf legal 0.8 all", model, "A0", "legal", 0.8, True)  # the setting DR-016 adopts
+    line("A0 + conf path 0.8 all", model, "A0", "path", 0.8, True)    # the setting DR-016 adopts
+    line("A0 + conf legal 0.8 all", model, "A0", "legal", 0.8, True)
     line("A0 + conf first 0.8", model, "A0", "first", 0.8)
     for k in ("prod", "first", "legal"):
         line(f"A0 + conf {k} 0.5", model, "A0", k, 0.5)

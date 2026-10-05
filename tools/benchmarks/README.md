@@ -57,13 +57,16 @@ any error output. Keep it that way.
 ## `target_swap_probe.py` and `target_swap_score.py`
 
 Measures ways to stop a model swapping a missing target for a legal one: "Attack Godzilla"
-makes the guard attack the training dummy. There are 109 labelled prompts in two invented
-scenes, a village guard and a companion with items. Six arms ask the model: today's prompt
+makes the guard attack the training dummy. There are 130 labelled prompts in three invented
+scenes: a village guard, a companion with items, and a fort sentry. The fort's targets come in
+look-alike pairs, which gives it open choices and near misses such as "the north tower" beside
+`north_gate`. Six arms ask the model: today's prompt
 and schema, the same without logprobs (to time them), a near-miss refusal example, a
 one-line rule, a field for the words the player used, and a free-text target. The scorer
 then applies checks afterwards: the name check, a yes/no verifier, and confidence checks read
 from Ollama's `logprobs`. They read the probability the model gave its chosen target, and the
-share of its probability that stayed on the target list. The second is the one DR-016 adopts.
+share of its probability that stayed on the target list, at the first token or at every token.
+The every-token share is the one DR-016 adopts.
 
 ```bash
 python tools/benchmarks/target_swap_probe.py qwen3.5:2b qwen3.5:4b
@@ -71,9 +74,10 @@ python tools/benchmarks/target_swap_score.py -v
 ```
 
 The probe appends to `target_swap_results.jsonl` in the current directory, so run it from a
-scratch folder, not the repository. The scorer reads the same file. A full run took about
-12 minutes for the 2B and 18 for the 4B on an RTX 4060 laptop on AC power. The results of
-5 October 2026, and what they led to, are in `docs/llm-wiki/findings.md` and DR-016.
+scratch folder, not the repository. The scorer reads the same file. A full run of every arm
+took about 12 minutes for the 2B and 18 for the 4B on an RTX 4060 laptop on AC power;
+`--arms=A0 --no-verify` takes about 3 minutes for both. The results of 5 October 2026, and
+what they led to, are in `docs/llm-wiki/findings.md` and DR-016.
 
 ## Before trusting any number these print
 

@@ -716,8 +716,8 @@ public interface ILLMProvider {
   provider claims to guarantee, so a plain-chat provider with no constrained decoding is
   still contained.
 - **Token probabilities, where the backend has them.** The grounding guard (§2.5, DR-016)
-  reads how much of the model's probability, at the start of its target, went to the targets
-  on the list. So `ProviderCapabilities` states
+  reads, token by token through the model's target, how much of its probability could still
+  lead to a target on the list. So `ProviderCapabilities` states
   whether a provider reports token probabilities, and `ProviderResult` carries them for the
   answer. Ollama returns them from before the schema's mask (`logprobs`, checked on 0.34.2),
   for about 0.07 s a decision. LLMUnity's `LLMClient` has an `nProbs` setting for the
@@ -844,27 +844,36 @@ Built-ins, in order:
    untrusted.)
 2. **TargetGroundingGuard: did the model want something that is not on the list?** It runs
    on every decision unless the caller turns it off for that call. From the same request's
-   token probabilities (§2.4), it reads how much of the model's probability at the start of
-   its target went to the targets on the list. Below 0.8, a threshold calibrated in Phase 4,
-   it rewrites the decision to `none`. "Attack the scarecrow." scores 0.07 because the model
-   wanted to write "sc…"; "Attack the training dummy." scores 0.999. It needs no word lists,
-   so a paraphrase ("Hit the mannequin.", 0.99) or a reference resolved from the previous
-   turn ("Attack it.") passes. Telemetry records the number on every decision. DR-016 has
-   the measurements and the options it beat.
+   token probabilities (§2.4), it reads, at every token of the model's target, how much of
+   the model's probability could still lead to a target on the list, and keeps the lowest.
+   Below 0.8, a threshold calibrated in Phase 4, it rewrites the decision to `none`.
+
+   - **"Attack the scarecrow."** scores 0.05, because the model wanted to write "sc…".
+   - **"Go to the south tower."** scores 0.007 on the 2B. The start "south" fits
+     `south_gate`, but the model then wanted "tower", and no south tower is listed.
+   - **"Attack the training dummy."** scores 0.998.
+
+   It needs no word lists, so a paraphrase ("Hit the mannequin.", 0.99) or a reference
+   resolved from the previous turn ("Attack it.") passes. Telemetry records the number on
+   every decision. DR-016 has the measurements and the options it beat.
 
    **Why it exists.** A model forced to answer from the target list swaps a missing target
    for a legal one: "Attack Godzilla" attacks the training dummy. That is the worst failure,
    because it looks like obedience. The swap shows in the model's own probability. On a probe
-   of 109 prompts, the guard took a 2B model from 73 to 95 correct and a 4B from 98 to 103,
-   and between them it refused one good request ([findings](llm-wiki/findings.md)).
+   of 130 prompts in three scenes, the guard took a 2B model from 83 to 108 correct and a 4B
+   from 113 to 124. It turned away three good requests the 2B would otherwise have carried
+   out, and none on the 4B ([findings](llm-wiki/findings.md)).
 
    **On by default, whoever calls.** The framework cannot tell a player's line from
    something the game raised, and must not guess (DR-008), but the guard does not need to
    know. A guess and a free choice look different in the numbers. When nothing specific was
    asked for and two targets are equally good, the model splits its probability between
    them, and all of it stays on the list, so the guard passes. Only probability that went to
-   something absent counts against the answer. In the probe it refused no good
-   game-triggered decision on either model. `DecideOptions.CheckTarget` turns it off for one
+   something absent counts against the answer. In the probe's open choices, such as "Climb
+   either watchtower and look out.", the 4B was only 0.43 sure of the tower it picked, yet
+   0.98 of its probability stayed on the list, and the guard passed every one. It refused one
+   good game-triggered decision, on the 2B, which weighed writing the event's own word
+   "weapon" (0.77). `DecideOptions.CheckTarget` turns it off for one
    call, for a developer who would rather the agent act on its best guess than do nothing:
 
    ```csharp
@@ -880,12 +889,13 @@ Built-ins, in order:
    act on a different one. `PromptBuilder` adds it when `CheckTarget` is on and the provider
    reports no probabilities. Measured: 2B 73 → 88, 4B 98 → 101 (DR-016).
 
-   **Limits.** The guard reads only the start of the target, so a missing thing whose name
-   starts like a listed one passes: "Pick up the spear." keeps 0.99 on the list through the
-   "s" of `sword`. A near miss the model takes for the listed thing passes too: Excalibur for
-   the sword and a mana potion for the health potion on the 2B, a bucket for the barrel and
-   a lantern for the torch on the 4B. So does a pronoun the model resolves to the wrong thing
-   ("Attack it!" after the player mentioned a dragon). A wrong action on the right target
+   **Limits.** A near miss the model takes for the listed thing passes: Excalibur for the
+   sword on the 2B, a bucket for the barrel and a lantern for the torch on the 4B. So does a
+   pronoun the model resolves to the wrong thing ("Attack it!" after the player mentioned a
+   dragon). On a small model, a paraphrase that starts like the right id can be refused. The
+   2B began writing "healing" for "Pass me the healing draught.", and the schema completed
+   it as `health_potion`, which was right; the guard read the unfinished "healing" and
+   refused. A wrong action on the right target
    ("That's an interesting sword you have." picks the sword up) is beyond any target check;
    only model scale fixed it (Appendix A). Any change to the threshold or the signal needs
    an A/B run with a control arm before it ships.
@@ -904,13 +914,13 @@ longer matches what it does: it says "Attacking the dummy!" while nothing happen
 guard's reason travels with the result, and the developer supplies the line, or asks the
 model for one in a second, short request only when a guard fires.
 
-**Still open, for Phase 4.** The threshold comes from 109 prompts that one person wrote for
-two invented scenes, and none of the 13 game-triggered prompts was an open choice between
-equally good targets. Phase 4 calibrates the threshold on the 200+ prompt set, includes open
-choices, re-measures through the in-process provider, and tries reading further into the
-target than its start (the spear case). When a request names one thing but the probability
-splits between two listed targets, asking the player which one they meant may beat guessing,
-as KnowNo does (DR-016).
+**Still open, for Phase 4.** The threshold comes from 130 prompts that one person wrote for
+three invented scenes, eight of them open choices. Phase 4 calibrates it on the 200+ prompt
+set and re-measures through the in-process provider. The 2B answered `none` to six of the
+eight open choices by itself, before any guard ran. Whether a few-shot example of a free
+choice fixes that is a Phase 4 A/B. When a request names one thing but the probability splits
+between two listed targets, asking the player which one they meant may beat guessing, as
+KnowNo does (DR-016).
 
 ### 2.6 Scheduling (`Runtime/Scheduling/`)
 
@@ -1749,11 +1759,27 @@ actions carried out.
 | + the name check, on player requests | 83 · 4 | 89 · 3 | Word lists; turned away 15 and 16 more good requests | Dropped as a built-in |
 | + a yes/no verifier request ("is X what the player asked for?") | 86 · 5 | 103 · 3 | A second request, +0.3 s per checked decision; turned away 11 more on the 2B | Rejected |
 | + how sure the model was of the target it chose, below 0.8 → `none`, on player requests | 95 · 6 | 103 · 5 | Logprobs; two equally good targets also lower it, so it must be switched on per call | Not chosen |
-| **+ how much of the model's probability stayed on the target list, below 0.8 → `none`, on every decision** | **95 · 6** | **103 · 5** | Logprobs, +0.07 s; turned away 1 more good request across both models, no game-triggered one | **Chosen** |
+| + the share of the model's probability that stayed on the target list at the target's first token, below 0.8 → `none`, on every decision | 95 · 6 | 103 · 5 | Logprobs; misses names that start like a listed one ("spear" passes as `sword`) | Replaced by the row below |
+| **+ the same share at every token of the target, the lowest, below 0.8 → `none`, on every decision** | **94 · 5** | **104 · 4** | Logprobs, +0.07 s; turned away 3 more good requests on the 2B, none on the 4B | **Chosen** |
 | A one-line rule in the prompt instead | 88 · 8 | 101 · 3 | None | Fallback without token probabilities |
 | A near-miss refusal example in the few-shot block | 78 · 22 | 97 · 10 | None | Rejected: little gain |
 | A field for the player's words before the target, checked in code | 88 · 6 | 100 · 1 | A schema field; the model wrote the matched name, not the player's | Rejected |
 | A free-text target, resolved in code against names | 92 · 7 | 98 · 7 | Gives up the enum; one answer ran away | Rejected for now |
+
+A second run added a fort scene: open choices ("Check one of the gates."), and near misses
+whose names start like a listed target ("Go to the north tower." beside `north_gate`). That
+made 130 prompts, scored the same way:
+
+| Option | 2B | 4B |
+|---|---|---|
+| Prompt and schema only | 83 · 33 | 113 · 15 |
+| + the name check | 97 · 4, turned away 29 good requests | 109 · 3, turned away 18 |
+| + the on-list share at the first token | 105 · 10 | 118 · 10 |
+| **+ the on-list share at every token** | **108 · 5** | **124 · 4** |
+
+Reading every token caught all six look-alike near misses on both models; the first token
+caught two on the 2B and one on the 4B. Telling right targets from wrong ones, it reached an
+AUROC of 0.93 on the 2B and 1.00 on the 4B.
 
 The same problem has the same shape elsewhere. Entity linking predicts "no match" by a
 threshold on the linking score ([NIL prediction](https://arxiv.org/abs/2305.15725)). KnowNo
@@ -1762,8 +1788,9 @@ not settle on one ([KnowNo](https://arxiv.org/abs/2307.01928)).
 
 **Decision.** `TargetGroundingGuard` keeps its name and its place in the pipeline, and
 decides by the model's own probabilities. From the same request's token probabilities it
-reads how much of the model's probability, at the start of its target, went to the targets
-on the list, and rewrites the decision to `none` below 0.8. It runs on every decision,
+reads, at every token of the target, how much of the model's probability could still lead to
+a target on the list, keeps the lowest, and rewrites the decision to `none` below 0.8. It
+runs on every decision,
 because probability that went to something absent is wrong whoever called, while a model
 torn between two listed targets keeps all of it on the list. A caller turns it off for one
 call with `DecideOptions.CheckTarget = false`. Telemetry records the number for every
@@ -1775,11 +1802,12 @@ not run, and `PromptBuilder` adds the one-line rule instead.
   carries them (§2.4). Ollama returns them from before the schema's mask. LLMUnity's
   `LLMClient` has an `nProbs` setting, not yet tried. Gemini offers logprobs on some models
   only.
-- The guard reads the start of the target, not the whole id. Multiplying every token's
-  probability penalised a right answer whenever the mask forced a split the model did not
-  want: on the 2B, "healing draught" became `he|alth_potion` with p ≈ 0. Reading only the
-  start lets a missing thing through when its name starts like a listed one ("spear",
-  `sword`), which Phase 4 tries to fix by reading further.
+- The guard keeps the lowest share across the target's tokens rather than multiplying
+  their probabilities. Multiplying punished the model for any split the mask forced on it.
+  Reading only the first token missed names that start like a listed one: "spear" and
+  `sword`, "the south tower" and `south_gate`. Reading every token catches them. The cost
+  falls on a small model: a paraphrase that starts like the right id, such as "healing
+  draught" for `health_potion`, can be refused.
 - The extra-names field once planned for `Targetable` is dropped from the plan, since the
   guard needs no word lists.
 - A reference resolved from history passes when the model is sure of it (§2.9, rule 5).
@@ -1788,7 +1816,7 @@ not run, and `PromptBuilder` adds the one-line rule instead.
 
 **Revisit if:** any of these happens:
 - Phase 4's prompt set or the in-process provider separates right targets from wrong ones
-  clearly worse than here (AUROC 0.93 on the 2B, 0.99 on the 4B).
+  clearly worse than here (AUROC 0.93 on the 2B, 1.00 on the 4B).
 - Open choices between equally good targets get refused.
 - A model family with badly calibrated probabilities is adopted.
 - Confident near misses prove common.

@@ -2,9 +2,11 @@
 Probe: ways to stop a model swapping a missing target for a legal one ("Attack Godzilla" makes
 the guard attack the training dummy), other than the lexical name check.
 
-Standalone, standard library only, Ollama on localhost. Two scenes (a village guard, a travelling
-companion with items), 109 prompts. Every arm runs the same prompts on the same model in one
-session with greedy decoding.
+Standalone, standard library only, Ollama on localhost. Three scenes: a village guard, a
+travelling companion with items, and a fort sentry whose targets come in look-alike pairs (two
+gates, two towers). 130 prompts. Every arm runs the same prompts on the same model in one session
+with greedy decoding. The fort adds open choices, where either of two targets is right, and near
+misses whose names start like a listed target ("the north tower" beside `north_gate`).
 
 Arms that ask the model:
   A0   control: schema action -> target (enum + no_target) -> statement, and a few-shot block
@@ -72,10 +74,29 @@ SCENES = {
                      ("I want the golden harp.", "none", "no_target", "the golden harp")],
         "near_miss": ("Fetch the bandages.", "none", "no_target", "the bandages"),
     },
+    "fort": {
+        "persona": "You are Brann, a fort sentry. Personality: dutiful and calm. Goal: keep the fort secure.",
+        "targets": ["north_gate", "south_gate", "east_tower", "west_tower", "shield", "helmet"],
+        "desc": {"north_gate": "the north gate of the fort", "south_gate": "the south gate of the fort",
+                 "east_tower": "the east watchtower", "west_tower": "the west watchtower",
+                 "shield": "a round shield leaning on the wall", "helmet": "an iron helmet on a peg"},
+        "extra": {"north_gate": [], "south_gate": [], "east_tower": [], "west_tower": [],
+                  "shield": [], "helmet": []},
+        "actions": [("ring_bell", "Ring the alarm bell.", False),
+                    ("move_to", "Walk to the named target.", True),
+                    ("pick_up_item", "Pick up the named target.", True),
+                    ("none", "Speak only, without moving or acting.", False)],
+        "examples": [("Sound the alarm!", "ring_bell", "no_target", ""),
+                     ("Proceed to the west tower.", "move_to", "west_tower", "the west tower"),
+                     ("Retrieve the helmet.", "pick_up_item", "helmet", "the helmet"),
+                     ("Fine weather for a watch.", "none", "no_target", ""),
+                     ("Visit the harbour.", "none", "no_target", "the harbour")],
+        "near_miss": ("Lift the axe.", "none", "no_target", "the axe"),
+    },
 }
 
 P, E = "Player says", "Event"
-V, C = "village", "companion"
+V, C, F = "village", "companion", "fort"
 # (scene, category, label, stimulus, history, expected_action, expected_target)
 CASES = [
     # village: impossible, unrelated
@@ -201,8 +222,33 @@ CASES = [
     (C, "chat", P, "Hi Lyra.", None, "none", None),
     (C, "chat", P, "Nice rope you have.", None, "none", None),
     (C, "chat", P, "Thanks for the bread earlier.", None, "none", None),
+
+    # fort: open choices, where either target is right (a tuple of right targets)
+    (F, "open", E, "Your patrol starts. Check one of the gates.", None, "move_to", ("north_gate", "south_gate")),
+    (F, "open", E, "Climb either watchtower and look out.", None, "move_to", ("east_tower", "west_tower")),
+    (F, "open", E, "Walk the walls and stop at any tower.", None, "move_to", ("east_tower", "west_tower")),
+    (F, "open", P, "Go check a gate, any one.", None, "move_to", ("north_gate", "south_gate")),
+    (F, "open", P, "Head to one of the towers.", None, "move_to", ("east_tower", "west_tower")),
+    (F, "open", E, "Pick something up to defend yourself.", None, "pick_up_item", ("shield", "helmet")),
+    (F, "open", P, "Grab some gear, whatever you like.", None, "pick_up_item", ("shield", "helmet")),
+    (F, "open", E, "Choose a gate to guard tonight.", None, "move_to", ("north_gate", "south_gate")),
+    # fort: near misses whose names start like a listed target
+    (F, "imp_prefix", P, "Go to the north tower.", None, "none", None),
+    (F, "imp_prefix", P, "Go to the south tower.", None, "none", None),
+    (F, "imp_prefix", P, "Walk to the west gate.", None, "none", None),
+    (F, "imp_prefix", P, "Head to the east gate.", None, "none", None),
+    (F, "imp_prefix", P, "Pick up the shovel.", None, "none", None),
+    (F, "imp_prefix", P, "Pick up the shirt.", None, "none", None),
+    # fort: by exact name, unrelated, chat
+    (F, "ok_exact", P, "Go to the north gate.", None, "move_to", "north_gate"),
+    (F, "ok_exact", P, "Climb the east tower.", None, "move_to", "east_tower"),
+    (F, "ok_exact", P, "Pick up the shield.", None, "pick_up_item", "shield"),
+    (F, "ok_exact", P, "Pick up the helmet.", None, "pick_up_item", "helmet"),
+    (F, "imp_far", P, "Go to the moon base.", None, "none", None),
+    (F, "imp_far", P, "Pick up the dragon.", None, "none", None),
+    (F, "chat", P, "Cold night, isn't it?", None, "none", None),
 ]
-PLAYER_CATS = {"imp_far", "imp_near", "ok_exact", "ok_para", "ok_pron", "imp_pron", "chat"}
+PLAYER_CATS = {"imp_far", "imp_near", "imp_prefix", "ok_exact", "ok_para", "ok_pron", "imp_pron", "chat"}
 
 RULE = ("Only the things listed under 'Around you' are here. If the player asks you to act on "
         "anything else, choose action none and target no_target, and say it is not here. "
@@ -291,22 +337,29 @@ def target_info(lps):
     """Raw probability of the chosen target value (product over its tokens), and the top
     alternatives at its first token. Ollama reports these before the schema's mask."""
     if not lps:
-        return None, None
+        return None, None, None
     text, spans = "", []
     for e in lps:
         spans.append((len(text), len(text) + len(e["token"]), e))
         text += e["token"]
     m = re.search(r'"target"\s*:\s*"([^"]*)"', text)
     if not m:
-        return None, None
+        return None, None, None
     a, b = m.span(1)
     inside = [e for s, e_, e in spans if s < b and e_ > a and text[max(s, a):min(e_, b)].strip('"')]
     if not inside:
-        return None, None
+        return None, None, None
     # top: the five likeliest first tokens, then the chosen first token and its probability.
     top = [(t["token"], round(t["logprob"], 4)) for t in inside[0].get("top_logprobs", [])]
     top.append((inside[0]["token"], round(inside[0]["logprob"], 4)))
-    return math.exp(sum(e["logprob"] for e in inside)), top
+    # value: for every token of the target, the part of it inside the value, its logprob, and
+    # the five likeliest tokens at that position, so a check can read past the first token.
+    value = []
+    for s, e_, e in spans:
+        if s < b and e_ > a and text[max(s, a):min(e_, b)].strip('"'):
+            value.append((text[max(s, a):min(e_, b)], round(e["logprob"], 4),
+                          [(t["token"], round(t["logprob"], 4)) for t in e.get("top_logprobs", [])]))
+    return math.exp(sum(e["logprob"] for e in inside)), top, value
 
 def verify(model, case, target):
     sc = SCENES[case[0]]
@@ -356,7 +409,7 @@ def grade(case, action, target):
         return "correct" if action == "none" else "wrong_legal"
     if action == "none":
         return "false_refusal"
-    if action == ea and (et is None or target == et):
+    if action == ea and (et is None or target == et or (isinstance(et, tuple) and target in et)):
         return "correct"
     return "wrong_legal"
 
@@ -380,9 +433,9 @@ def run(model, out, arms, verify_on, scenes):
             except Exception as ex:
                 out.write(json.dumps({"model": model, "arm": arm, "stim": case[3], "error": str(ex)[:200]}) + "\n")
                 continue
-            p, top = target_info(lps)
+            p, top, value = target_info(lps)
             rec = {"model": model, "arm": arm, "scene": case[0], "cat": case[1], "stim": case[3],
-                   "raw": msg, "sec": round(dt, 3), "p_target": p, "top": top}
+                   "raw": msg, "sec": round(dt, 3), "p_target": p, "top": top, "value": value}
             if verify_on and arm == "A0" and case[1] in PLAYER_CATS:
                 a, t = legal(case[0], msg.get("action"), msg.get("target"))
                 if a in needs_target(case[0]):

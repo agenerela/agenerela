@@ -195,7 +195,8 @@ the same totals as the chosen-target version.
 - The chosen-target version, run on every decision, blocked one good game-triggered choice on
   the 2B: "Someone dropped a weapon near the road. Secure it.", at 0.73.
 
-DR-016 adopts the on-list share, on by default. Its blind spot is a missing thing whose name
+DR-016 adopted the on-list share, on by default; the second run below moved it to every token
+of the target. Its blind spot here is a missing thing whose name
 starts like a listed one: "Pick up the spear." keeps 0.99 on the list through the "s" of
 `sword`. Not tested yet: an open choice between two equally good targets, since none of the 13
 game prompts was one.
@@ -217,6 +218,58 @@ invented scenes, one model family, Ollama only. Literature behind the design que
 ["none of the above" drops of 30–50% across 28 models](https://aclanthology.org/2025.findings-acl.1031/);
 [grammar-constrained decoding distorting the distribution](https://arxiv.org/abs/2405.21047);
 [KnowNo's "an option not listed here" and asking for help](https://arxiv.org/abs/2307.01928).
+
+### Open choices and look-alike names: read the whole target (5 October 2026, second run)
+
+**What changed.** The probe gained a third scene, a fort sentry whose targets come in
+look-alike pairs: `north_gate` and `south_gate`, `east_tower` and `west_tower`, plus a shield
+and a helmet. It brought 21 new prompts:
+
+- eight **open choices**, where either of two targets is right ("Check one of the gates.")
+- six **near misses whose names start like a listed target** ("Go to the north tower.")
+- four exact requests, two unrelated ones and one chat line
+
+The probe now records the model's probabilities for every token of the target, not only the
+first. The scorer gained a `path` signal: at each token of the target, the share of the top-5
+probability that could still lead to a listed target, keeping the lowest. Only the control
+prompt and schema ran (arm A0), on all 130 prompts, so every check is scored on identical
+answers. Same conditions as the first run, on AC power. The control matched the first run's
+answers exactly on the 109 shared prompts.
+
+**Results.** Correct of 130 · wrong actions carried out · good requests refused:
+
+| Check | `qwen3.5:2b` | `qwen3.5:4b` |
+|---|---|---|
+| None (control) | 83 · 33 · 14 | 113 · 15 · 2 |
+| Name check, on player requests | 97 · 4 · 29 | 109 · 3 · 18 |
+| On-list share at the first token, every decision | 105 · 10 · 15 | 118 · 10 · 2 |
+| **On-list share at every token, every decision** | **108 · 5 · 17** | **124 · 4 · 2** |
+
+- **Look-alike near misses:** reading every token caught 6 of 6 on both models. The first token
+  caught 2 on the 2B and 1 on the 4B. "Go to the south tower." walked the 4B to `south_gate`
+  with 1.00 on the list at the first token and 0.23 across the whole target. "Pick up the
+  spear." scored 0.00 on both models once the second token was read.
+- **Open choices:** the 4B got 7 of 8 right. Its targets kept 0.98–1.00 on the list while its
+  confidence in the one it picked fell to 0.42–0.52 on "Climb either watchtower and look out."
+  A check on that confidence would have refused those good choices; the on-list share
+  passed them. The 2B answered `none` to six of the eight by itself, before any guard. That is
+  the model, not the guard.
+- **Separation:** the every-token share separated wrong targeted answers from right ones with
+  an AUROC of 0.93 on the 2B and 1.00 on the 4B. The first-token share scored 0.86 and 0.81 on
+  this harder set.
+- **Cost:** three good requests refused on the 2B, none on the 4B. Thresholds from 0.6 to 0.9
+  scored 107–108 on the 2B and 123–125 on the 4B. The refused requests:
+  - "Go to the water butt." The model wanted "water".
+  - "Someone dropped a weapon near the road. Secure it." The model weighed "weapon", at 0.77.
+  - "Pass me the healing draught." The model began "healing", and the schema completed it as
+    `health_potion`, which was right.
+
+**What I believe now.** Read the whole target. It fixes the look-alike blind spot and passes
+open choices, and its only cost is a small model sometimes refusing a paraphrase. DR-016 adopts
+it.
+
+**What would change my mind.** A larger set, written by other people, where paraphrase
+refusals on a small model outnumber the look-alike swaps it catches.
 
 ### Telemetry now exists to catch Phase 2's numbers, with one field deliberately missing
 
