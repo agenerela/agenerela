@@ -846,15 +846,50 @@ Built-ins, in order:
 
    **Limits, stated honestly.** It matches words, so a name nobody listed ("the training
    thing") and a reference to an earlier turn ("attack it", "go there") are refused. It fails
-   safe: the agent declines rather than acting on the wrong thing. How to harden it,
-   starting with references across turns once memory exists (§2.9), is still an open design
-   question. Any change to how it matches needs an A/B run with a control arm before it
+   safe: the agent declines rather than acting on the wrong thing. Whether to harden it, and
+   how much to leave to the prompt instead, is the open investigation at the end of this
+   section. Any change to how it matches needs an A/B run with a control arm before it
    ships.
 3. Developer-supplied guards append here (game-specific rules: line-of-sight, cooldowns…).
 
 A guard rewriting to `none` is a **contained refusal**, not an error — telemetry records
 which guard fired so the eval harness can distinguish "model right", "model wrong but
 contained", and "model wrong and executed".
+
+**Open investigation: stop "Attack Godzilla" in the prompt, in code, or both.** A model that
+swaps a missing target for a legal one can be stopped in two places, and how to split the
+work between them is not decided.
+
+- *Before the model, in the prompt.* The target enum offers only registered ids plus
+  `no_target`, and the few-shot block includes a refusal (§2.3, rules 2 and 4), so refusing
+  is something the model can say. Both arrive with the schema in Phase 1. Until this
+  pipeline lands in Phase 3, they are the only guardrail against the swap.
+- *After the model, in code.* The name check above, or something smarter.
+
+What is measured is narrow. On the prototype's 20-prompt suite, whose prompt included a
+refusal example (`tools/benchmarks/compare_2b_4b.py`), the 2B model refused 1 of 6
+impossible requests; with the name check it refused all 6 (Appendix A). The prototype's
+Feasibility Report II explains why: constrained decoding forbids "godzilla", so its
+probability moves onto a legal id. Whether that prompt also offered `no_target` is not
+recorded (the committed probe leaves the target empty instead), so how far a prompt with
+both gets on its own is unknown.
+
+To settle it in Phase 4, each an A/B run with a control arm on the 200+ prompt set's
+impossible requests and its game-triggered cases, recorded in
+[findings](llm-wiki/findings.md):
+
+1. The prompt alone (`no_target` and the refusal example) against the same prompt plus the
+   name check: what the check still adds once refusing is expressible.
+2. Prompt-side variants: with and without the refusal example (already owed, as findings
+   experiment 3), and its wording.
+3. Code-side variants against today's word match: matching by meaning rather than by words,
+   one narrow follow-up question to the model ("was the training dummy named?"), and
+   references across turns once memory exists (§2.9, rule 5). Each costs something the word
+   match does not: a model or library to ship (any further core dependency needs its own
+   decision record, DR-009), or a second request per decision.
+
+Until those runs exist, the name check stays planned for Phase 3, and nothing claims the
+prompt alone is enough.
 
 ### 2.6 Scheduling (`Runtime/Scheduling/`)
 

@@ -582,6 +582,7 @@ async function build() {
       "SPEAKER: Yevhen Mishchenko · about 50 seconds",
       "",
       "- Where does the model run? It depends on the job, and all three options plug into one interface, ILLMProvider, which is already merged.",
+      "- In each row, the solid box is our provider class, and the dashed box is what it calls, which we don't control.",
       "- Build: while developing, the Unity Editor talks to a local Ollama server, so swapping models takes seconds. Our reference laptop has an 8 GB RTX 4060; a 2B model plus a scene used 4.2 GB.",
       "- Ship: players won't install a server, so the model runs inside the game through llama.cpp, via LLMUnity as an optional package. It adds about 1 GB and needs no network. This is the option that makes 'local-first' real.",
       "- Compare: cloud APIs, Gemini first. Useful for comparison, but the cost grows with every agent. Keys come from .env, go in a header, never in the build.",
@@ -622,26 +623,27 @@ async function build() {
     const s = pres.addSlide();
     header(s, 15, "DESIGN MODELS · GUARDS", "Guardrails for \"Attack Godzilla\"", TEAM.hero);
     tag(s, "design");
-    figure(s, "07-guards", 0.7, 1.12, 8.6, 2.6087, "Two player requests, 'Attack the mannequin' and 'Attack Godzilla', through the schema's target list and the name check: the first passes on an extra name, the second becomes none.");
+    figure(s, "07-guards", 0.7, 1.12, 8.6, 2.6087, "Three guardrails against 'Attack Godzilla': the target list and a refusal example in the prompt before the model answers, and checks in code after it, among them the name check, which turns an unnamed target into none.");
     chips(s, [
-      ["The list limits what can be said.", "\"godzilla\" is not an id, so the model cannot write it."],
-      ["A name check, for player requests.", "Switched on per call: the id's words or an extra name must be said."],
-      ["Still a design question.", "Unlisted names and \"attack it\" are refused for now: safe, not smart."],
+      ["Two guardrails before the model.", "The list limits what it can say; the prompt shows how to refuse."],
+      ["One after it: checks in code.", "Among them the name check: did the player name that target?"],
+      ["Prompt, code, or both?", "Phase 4 measures what each one adds before we settle it."],
     ], 4.5, 0.64);
-    caption(s, "Figure 10. Guardrails for a player's request; the name check is still a design question [1, §2.3, §2.5]. Results on player commands [1, App. A].");
+    caption(s, "Figure 10. Three guardrails for a player's request; their split is still a design question [1, §2.3, §2.5, App. A].");
     notes(s, [
       "SPEAKER: Hero Jaiyen · about 60 seconds",
       "",
       "- This only matters when a player names a target, like 'Attack the training dummy'. Most decisions come from the game itself, and nobody names anything; those are protected by the target list, state masking, the legality checks and Execute.",
-      "- First guardrail, the schema: the target can only be an id from the list we just built. 'godzilla' isn't one, so the model cannot write it.",
-      "- But a small model, asked to attack something that isn't there, often grabs the closest legal target: the training dummy. That's dangerous, because it looks like obedience.",
-      "- Second guardrail, the name check, which the developer switches on for player requests. After the model answers, it checks that the player actually said a name for that target: its id words, or an extra name the developer listed on its Targetable. 'Attack the mannequin' matches an extra name, so it passes. 'Attack Godzilla' matches nothing, so the answer becomes none and the guard refuses in character. Then Execute checks once more.",
-      "- Honest part: this is still a design question. Matching words is crude; a name nobody listed, or 'attack it', is refused for now. That fails safe, not smart, and we'll improve it with measured changes.",
-      "- In our prototype, on player commands, this check took a 2B model from 60 to 95 percent correct.",
+      "- 'Attack Godzilla': there is no Godzilla in the scene, and the guard should say so. We have three places to stop it: two before the model answers, one after.",
+      "- One, the target list: the model can only answer with an id from the list we just built, and 'godzilla' isn't one. On its own that isn't enough: a small model often grabs the closest legal target and attacks the training dummy. That looks like obedience, so it's the worst failure.",
+      "- Two, the prompt: every request includes a refusal example, and no_target gives the model a way to say 'that isn't here'. For now this is our guardrail; it arrives with the schema in Phase 1.",
+      "- Three, after the model, checks in code: the legality check and Execute's re-check always run. We've also designed a hard guardrail, the name check. When the developer switches it on for a player's request, the player must actually have said the target's name: its id words, or an extra name listed on its Targetable. If not, the answer becomes none and the guard refuses in character.",
+      "- Honest part: how to split the work is still a design question. In our prototype, with a refusal example in the prompt, a 2B model refused only 1 of 6 impossible requests; with the name check, all 6. Whether a better prompt, with no_target, is enough on its own we haven't measured yet. And the name check matches words, so 'attack it' is refused for now: safe, not smart. Phase 4 measures each option with A/B runs.",
       "",
       "HAND-OFF (to yourself): \"How do we know these techniques work? Here's what the prototype measured.\"",
       "",
-      "If asked 'What about \"attack the training thing\"?': refused for now unless the developer listed it as an extra name. Failing safe beats attacking the wrong thing, and better matching is open design work.",
+      "If asked 'Why not just tell the model to refuse?': we do, with the refusal example. But 'godzilla' can't be written, so the model's probability moves onto a legal id, and small models guess. That's why a check in code backs the prompt up.",
+      "If asked 'What about \"attack the training thing\"?': with the name check on, it's refused unless the developer listed it as an extra name. A better prompt or a smarter check might handle it; that's the open design question.",
     ]);
   }
 
@@ -839,7 +841,7 @@ async function build() {
       "- How fast is a decision? About 1 to 3 seconds locally; the queue serves player-facing requests first. Known ceiling: about 21 s per round at 30 agents, serialized. (Yevhen)",
       "- Does this replace behaviour trees? No, only the top-level selection node; a behaviour tree can call our agent. (Hunter)",
       "- Isn't this a chatbot framework? No: most calls come from the game itself, like timers, events, turn reports and behaviour-tree nodes. A player's line is one kind of input. (Hunter)",
-      "- What if a player says 'attack the training thing'? For now it's refused, unless the developer listed it as an extra name. Failing safe beats attacking the wrong thing; better matching is an open design question. (Hero)",
+      "- What if a player says 'attack the training thing'? With the name check on, it's refused unless the developer listed it as an extra name. Failing safe beats attacking the wrong thing; whether a better prompt or a smarter check handles it is an open design question. (Hero)",
       "- How does a strategy game choose targets, with no positions? Its own target source, or a list it supplies: the countries it borders or has met. The radius query is just one option for scene agents. (Hero)",
       "- Does an agent remember earlier turns? Yes: short-term memory is a Phase 2 deliverable. The last few turns, recorded after the guards, one memory per agent and capped by tokens. Long-term memory fits the same interface later (build plan §2.9). (Hunter)",
       "- What's built today? The Phase 1 decision types, action registry and both front doors, target discovery, availability and telemetry, with EditMode tests; nothing calls a model yet. That starts in Phase 2. (Maxim)",
