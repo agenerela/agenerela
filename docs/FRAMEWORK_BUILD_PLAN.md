@@ -810,15 +810,38 @@ Built-ins, in order:
 1. **SchemaLegalityGuard** — actionId is registered and currently available; targetId is
    in the registry or `no_target`. (Execution-time re-check of what the grammar should
    have enforced — providers are untrusted.)
-2. **TargetGroundingGuard** — if the chosen action requires a target, the chosen target
-   must actually be referred to in the stimulus text (exact or de-CamelCased word match).
-   This ~10-line guard is the highest-value component in the entire framework: it took a
-   2B model from 60% → 95% and a 4B to 100% on the focused suite, because it kills the
-   worst failure mode — the model substituting a *legal* target for an *illegal* one the
-   player actually named ("Attack Godzilla" → attacks the TrainingDummy). Documented
-   limitation to preserve honestly: it is lexical, and will wrongly block indirect
-   reference ("attack it", "go there"). Hardening it (pronouns, multi-turn reference) is
-   scheduled work, not a solved problem.
+2. **TargetGroundingGuard, the name check for player requests.** When a player's request
+   names what to act on ("Attack the training dummy."), the chosen target must actually be
+   named in what the player said, or the answer is rewritten to `none`.
+
+   **It runs only when the caller switches it on for that call**, through a flag on
+   `DecideOptions` that is off by default. The framework cannot tell whether a stimulus is a
+   player's line or something the game raised, and must not guess (DR-008). Most decisions
+   are triggered by the game itself (a tick, an event, a turn report), where nobody names a
+   target, and a check on every call would block legitimate choices, such as a guard
+   deciding on its own to walk to the open gate. Those decisions are protected by the
+   schema, state masking, the legality guard above, the developer's own guards and
+   `Execute`'s re-check, none of which depend on wording.
+
+   **How it matches.** The chosen target's id split into words (`training_dummy` →
+   "training dummy"), or any of the **extra names** the developer lists on that object's
+   `Targetable` ("dummy", "mannequin"), must appear in the stimulus, ignoring case and
+   punctuation. The extra-names field is planned for Phase 3, alongside the check; today's
+   `Targetable` (#32) has none.
+
+   **Why it exists.** A small model asked to act on something that is not on the list often
+   picks the closest *legal* target instead: "Attack Godzilla" attacks the training dummy.
+   That is the worst failure, because it looks like obedience. Rewriting such answers to
+   `none` took a 2B model from 60% → 95% and a 4B to 100% on the prototype's focused suite of
+   player commands (Appendix A). Those numbers say nothing yet about game-triggered
+   decisions.
+
+   **Limits, stated honestly.** It matches words, so a name nobody listed ("the training
+   thing") and a reference to an earlier turn ("attack it", "go there") are refused. It fails
+   safe: the agent declines rather than acting on the wrong thing. How to harden it,
+   starting with references across turns once memory exists (§2.9), is still an open design
+   question. Any change to how it matches needs an A/B run with a control arm before it
+   ships.
 3. Developer-supplied guards append here (game-specific rules: line-of-sight, cooldowns…).
 
 A guard rewriting to `none` is a **contained refusal**, not an error — telemetry records
@@ -964,8 +987,8 @@ stays the final user turn.
    `DecisionRequest.History` forbid inventing an encoding before then.
 5. **Memory does not loosen the grounding guard.** The guard checks the current stimulus
    only, so "attack it" after "Look at that dummy" is blocked today. Resolving a reference
-   across turns is the multi-turn hardening §2.5 already schedules. It stays deterministic
-   code, and it is measured before it ships; history being in the prompt is no reason to
+   across turns is the hardening §2.5 lists as an open design question. It stays
+   deterministic code, and it is measured before it ships; history being in the prompt is no reason to
    hand the decision to the model.
 
 **Long-term memory is a strategy, not a new stage.** Remembering beyond the window, such as
@@ -993,8 +1016,8 @@ strategy interface is where that would go. Wait until a demo needs it.
 | **0. Skeleton** | Repo + package layout of §1 | Checklist §1.3 all green |
 | **1. Core + Actions + Schema** (pure C#, no LLM, no scene) | `Agent`, `ActionDefinition`, registries, `DecisionSchema` builder + Ollama-dialect serializer | EditMode tests prove: state masking (following agent's schema omits `follow_player`); `target` required w/ `no_target`; field order action→target→statement; few-shot block matches registered actions and rotates only sensible example targets; empty target-registry removes `target` property entirely. **All testable without any model running — this is why Phase 1 has no LLM.** |
 | **2. OllamaProvider + queue + memory** | End-to-end decision in a sandbox scene, with short-term memory (§2.9) | PlayMode test (tagged `RequiresOllama`): one agent, five actions, live decision round-trip < 5s; telemetry fields populated; provider failure (missing model) surfaces as a typed error, not an exception leak. EditMode tests for `RollingHistory`: it fills `DecisionRequest.History` oldest first within a token cap, records the decision `DecideAsync` returns rather than the provider's raw answer (so a Phase 3 guard's rewrite is what gets remembered), and keeps one memory per agent instance |
-| **3. Validation pipeline** | Guards of §2.5 wired between provider and handler | EditMode tests with hand-built fake decisions: substitution attack rewritten to `none`; unavailable action rejected; guard verdicts appear in telemetry. Integration: prototype's "impossible request" suite passes ≥ 95% on a 2B model |
-| **4. Evaluation harness** | The measurement instrument — **before more features** | 200+ labelled prompts (grow from the prototype's 53), each declaring its required precondition state; runner executes A/B (two configs, same model/session) and writes a classified report (correct / wrong-legal / contained / rejected / pipeline-error); second annotator labels a subset, agreement reported. Methodology checklist (§4) committed to the wiki |
+| **3. Validation pipeline** | Guards of §2.5 wired between provider and handler | EditMode tests with hand-built fake decisions: substitution attack rewritten to `none`; unavailable action rejected; guard verdicts appear in telemetry. With the name check switched on, a target the player named by one of its extra names passes; with it off (the default), a game-triggered decision is never blocked by it. Integration: prototype's "impossible request" suite passes ≥ 95% on a 2B model |
+| **4. Evaluation harness** | The measurement instrument — **before more features** | 200+ labelled prompts (grow from the prototype's 53), each declaring its required precondition state, and covering game-triggered stimuli (events, reports, turns) as well as player commands rather than mostly commands; runner executes A/B (two configs, same model/session) and writes a classified report (correct / wrong-legal / contained / rejected / pipeline-error); second annotator labels a subset, agreement reported. Methodology checklist (§4) committed to the wiki |
 | **5. Editor tooling** | §2.7 | A developer with zero framework knowledge builds a working 3-action agent in an empty scene in < 15 min without editing framework source (actually run this test on a teammate) |
 | **6. Cloud API providers** | Proof the abstraction is real, and the path to supporting any vendor | At least one cloud provider (Gemini first — it is what the prototype measured) runs the same eval subset through `ILLMProvider` with **zero framework-code changes**: a provider class plus config, nothing more. A **provider conformance test suite** exists that any future vendor must pass, so adding OpenAI or Anthropic later is implementing an interface rather than editing the framework. Budget caps and RPM throttling enforced in code, not convention |
 | **6b. In-process provider** | `GbnfSerializer` (§2.3) + `LLMUnityProvider` — the one a player can actually run (§2.4) | A **built player executable** (not the Editor) runs agent decisions with **no Ollama and no network** — the deliverable that makes "local-first" true rather than aspirational. Also: GBNF serializer emits the same constraints as the JSON-Schema path (unit-tested against the same `DecisionSchema` fixtures); same eval subset passes within noise of the Ollama arm; LLMUnity pinned to an exact version and **not** in `dependencies` (version-defined, so users who don't want it never add OpenUPM's scoped registry); model file's license recorded in the wiki |
@@ -1647,7 +1670,7 @@ boolean — a change to the scheduler, not to the API shape.
 | Generated few-shot block (isolated) | **+35.3 pts** — largest single lever |
 | Reasoning field before action (tried, rejected) | **35.3%** vs 41.2% unmodified baseline — made it worse |
 | `target` optional → required + `no_target` sentinel | 4B target-naming 0/5 → **5/5**; 2B 3/5 → 5/5 |
-| Lexical grounding guard (~10 lines, post-hoc) | 2B 60% → **95%**; 4B 65% → **100%** (20-prompt focused suite); impossible-request refusals 1/6 → 6/6 on 2B |
+| Lexical grounding guard (~10 lines, post-hoc) | 2B 60% → **95%**; 4B 65% → **100%** (20-prompt focused suite of player commands); impossible-request refusals 1/6 → 6/6 on 2B |
 | 2B + guards vs 4B without | **95% vs 65%** — scaffolding beats scale |
 | Residual only model scale fixed | "That's an interesting sword you have." → 2B picks it up (target IS in text; guard correctly passes); 4B refuses. The honest boundary of code-side fixing |
 | Gemini schema dialect | rejects `""` in enums (HTTP 400); supports `propertyOrdering`; `gemini-2.5-flash-lite` 404s for new keys → use `gemini-3.5-flash-lite`; free tier ≈15 RPM / 1,000 req-day |
@@ -1660,7 +1683,8 @@ boolean — a change to the scheduler, not to the API shape.
 **Not established, inherited as open**: generalization beyond one model family / one
 scene / one annotator; statistical power below ~10 pts at n=53; the in-Unity vs
 standalone latency discrepancy; how conversation history (§2.9) affects accuracy, which no
-measurement here covers.
+measurement here covers; how accuracy holds on game-triggered decisions (events, reports,
+turns), since these measurements centred on player commands.
 
 **Shipping story — no longer open, but unproven.** "Players don't have Ollama" has a
 concrete answer (an in-process provider built on LLMUnity's embedded llama.cpp, §2.4 and
