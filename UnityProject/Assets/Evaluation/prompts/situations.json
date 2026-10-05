@@ -1,0 +1,163 @@
+{
+  "category": "situation",
+  "prompts": [
+    {
+      "id": "situation_001",
+      "label": "Situation",
+      "stimulus": "Nothing has happened for a while.",
+      "observations": [
+        "It is night",
+        "The gate is open",
+        "No villagers nearby"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Labelers may disagree about whether to move to the gate; no action is registered.",
+      "labelledBy": [
+        "alice",
+        "bob"
+      ]
+    },
+    {
+      "id": "situation_002",
+      "label": "Situation",
+      "stimulus": "The path ahead is empty.",
+      "observations": [
+        "No target is visible",
+        "The player is waiting"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "alice",
+        "bob"
+      ]
+    },
+    {
+      "id": "situation_003",
+      "label": "Situation",
+      "stimulus": "The camp is quiet.",
+      "observations": [
+        "Campfire is lit",
+        "No enemy is present"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "alice",
+        "bob"
+      ]
+    },
+    {
+      "id": "situation_004",
+      "label": "Situation",
+      "stimulus": "The road is blocked.",
+      "observations": [
+        "A fallen tree blocks the road",
+        "No alternate command was given"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "alice"
+      ]
+    },
+    {
+      "id": "situation_005",
+      "label": "Situation",
+      "stimulus": "The gate is closed.",
+      "observations": [
+        "The gate is locked",
+        "No key is visible"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "alice"
+      ]
+    },
+    {
+      "id": "situation_006",
+      "label": "Situation",
+      "stimulus": "The village looks peaceful.",
+      "observations": [
+        "Villagers are inside",
+        "No threat is visible"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "alice"
+      ]
+    },
+    {
+      "id": "situation_007",
+      "label": "Situation",
+      "stimulus": "The supply crate is empty.",
+      "observations": [
+        "The crate is open",
+        "No supplies remain"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "bob"
+      ]
+    },
+    {
+      "id": "situation_008",
+      "label": "Situation",
+      "stimulus": "The player is alone.",
+      "observations": [
+        "No allies nearby",
+        "No enemies nearby"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "bob"
+      ]
+    },
+    {
+      "id": "situation_009",
+      "label": "Situation",
+      "stimulus": "The watchtower is unattended.",
+      "observations": [
+        "The tower is reachable",
+        "No guard is present"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "bob"
+      ]
+    }
+  ]
+}

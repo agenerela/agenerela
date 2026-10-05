@@ -1,0 +1,134 @@
+{
+  "category": "conversation",
+  "prompts": [
+    {
+      "id": "conversation_001",
+      "label": "Player",
+      "stimulus": "Lovely evening.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "alice",
+        "bob"
+      ]
+    },
+    {
+      "id": "conversation_002",
+      "label": "Player",
+      "stimulus": "How are you doing?",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "alice",
+        "bob"
+      ]
+    },
+    {
+      "id": "conversation_003",
+      "label": "Player",
+      "stimulus": "That was a close one.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "alice",
+        "bob"
+      ]
+    },
+    {
+      "id": "conversation_004",
+      "label": "Player",
+      "stimulus": "Good morning.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "alice"
+      ]
+    },
+    {
+      "id": "conversation_005",
+      "label": "Player",
+      "stimulus": "I am glad you are here.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "alice"
+      ]
+    },
+    {
+      "id": "conversation_006",
+      "label": "Player",
+      "stimulus": "The weather is changing.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "alice"
+      ]
+    },
+    {
+      "id": "conversation_007",
+      "label": "Player",
+      "stimulus": "Tell me a story.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "bob"
+      ]
+    },
+    {
+      "id": "conversation_008",
+      "label": "Player",
+      "stimulus": "You look tired.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "bob"
+      ]
+    },
+    {
+      "id": "conversation_009",
+      "label": "Player",
+      "stimulus": "What a quiet place.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "bob"
+      ]
+    }
+  ]
+}
