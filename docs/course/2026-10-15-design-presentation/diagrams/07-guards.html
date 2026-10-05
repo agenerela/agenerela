@@ -10,12 +10,13 @@
      one after it. 1, the target enum holds only registered ids plus no_target (build plan 2.3,
      rule 2). 2, the few-shot block includes a refusal with no_target (2.3, rule 4); the example
      is slide 12's. 3, the guards of 2.5: the legality check, Execute's re-check, and the
-     grounding guard, which reads how sure the model was of its target and rewrites to none
-     below 0.8 (DR-016, designed, Phase 3). Measured on 109 prompts (findings, 5 Oct 2026):
-     2B 73 correct with today's design, 83 with the name check (22 good requests refused), 95
-     with the confidence check; scarecrow -> dummy at p 0.05, a real request at 0.998; a spear
-     for the sword passed at 0.87 (4B). The 4% on the card is illustrative, matching the
-     Decision Log mockup. The refusal line is the village wireframe's. -->
+     grounding guard, on every decision: at each token of the target, the share of the model's
+     probability that could still lead to a listed target, the lowest one, below 0.8 -> none
+     (DR-016, designed, Phase 3). Measured on 130 prompts (findings, 5 Oct 2026, second run):
+     2B 83 correct with today's design, 97 with the name check (29 good requests refused), 108
+     with the confidence check; scarecrow -> dummy kept 0.05 on the list, a real request
+     0.998; a bucket for the barrel still passed (4B). The 4% on the card is illustrative,
+     matching the Decision Log mockup. The refusal line is the village wireframe's. -->
 <svg width="1200" height="460" viewBox="0 0 1200 460" xmlns="http://www.w3.org/2000/svg">
 <defs>
   <marker id="ab" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4.2" markerHeight="4.2" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f5bd6"/></marker>
@@ -87,29 +88,29 @@
 <rect x="850" y="154" width="336" height="94" rx="8" fill="#f7f8fa"/>
 <text x="866" y="178" class="xs">if the model still guesses</text>
 <text x="866" y="206" class="mono" style="font-size:16px;font-weight:700">attack_target · training_dummy</text>
-<text x="866" y="234" style="font-size:15px;fill:#333">sure of it? only <tspan font-weight="700">4%</tspan></text>
+<text x="866" y="234" style="font-size:15px;fill:#333">on the list: only <tspan font-weight="700">4%</tspan></text>
 <rect x="1018" y="219" width="154" height="22" rx="11" fill="#1f5bd6"/>
 <text x="1095" y="235" text-anchor="middle" style="font-size:12.5px;font-weight:700;fill:#fff">BELOW 80% → none</text>
 <text x="854" y="272" class="d">Before anything runs: the legality check,</text>
-<text x="854" y="292" class="d">and how sure the model was of its target.</text>
-<text x="854" y="318" class="lim">Limit: a near miss the model is sure of</text>
-<text x="854" y="335" class="lim">passes, like a spear for the sword (87%).</text>
+<text x="854" y="292" class="d">and did it want a target not on the list?</text>
+<text x="854" y="318" class="lim">Limit: a near miss the model takes for a</text>
+<text x="854" y="335" class="lim">listed thing passes, like a bucket for a barrel.</text>
 
 <!-- now, measured, open -->
 <line x1="2" y1="358" x2="1198" y2="358" stroke="#ddd" stroke-width="2"/>
 <text x="2" y="386" class="h2">What we measured</text>
-<text x="2" y="410" class="s">109 prompts, 2B model: today's design got</text>
-<text x="2" y="430" class="s">73 right. A name check: 83, but it refused</text>
-<text x="2" y="450" class="s">22 good requests, like "Strike the straw man."</text>
+<text x="2" y="410" class="s">130 prompts, 2B model: today's design got</text>
+<text x="2" y="430" class="s">83 right. A name check: 97, but it refused</text>
+<text x="2" y="450" class="s">29 good requests, like "Strike the straw man."</text>
 
-<text x="410" y="386" class="h2">The confidence check: 95</text>
+<text x="410" y="386" class="h2">The confidence check: 108</text>
 <text x="410" y="410" class="s">A guess shows in the model's own odds:</text>
-<text x="410" y="430" class="s">scarecrow → dummy at 5%, a real request</text>
-<text x="410" y="450" class="s">at 99.8%. It needs no extra request.</text>
+<text x="410" y="430" class="s">scarecrow → dummy kept 5% on the list,</text>
+<text x="410" y="450" class="s">a real request 99.8%. No extra request.</text>
 
-<text x="820" y="386" class="h2">Still to settle</text>
-<text x="820" y="410" class="s">The 80% line comes from our own 109</text>
-<text x="820" y="430" class="s">prompts. Phase 4 recalibrates it on 200+</text>
-<text x="820" y="450" class="s">prompts that other people write.</text>
+<text x="820" y="386" class="h2">On every decision</text>
+<text x="820" y="410" class="s">Two equally good targets stay on the list,</text>
+<text x="820" y="430" class="s">so free choices pass. Phase 4 recalibrates</text>
+<text x="820" y="450" class="s">the 80% line on 200+ prompts by others.</text>
 </svg>
 </body></html>

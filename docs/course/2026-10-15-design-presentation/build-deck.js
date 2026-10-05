@@ -623,29 +623,30 @@ async function build() {
     const s = pres.addSlide();
     header(s, 15, "DESIGN MODELS · GUARDS", "Guardrails for \"Attack Godzilla\"", TEAM.hero);
     tag(s, "design");
-    figure(s, "07-guards", 0.7, 1.12, 8.6, 2.6087, "Three guardrails against 'Attack Godzilla': the target list and a refusal example in the prompt before the model answers, and checks in code after it, among them a confidence check that turns a target the model was unsure of into none. Below, what each measured.");
+    figure(s, "07-guards", 0.7, 1.12, 8.6, 2.6087, "Three guardrails against 'Attack Godzilla': the target list and a refusal example in the prompt before the model answers, and checks in code after it on every decision, among them a confidence check that turns a target the model reached for off the list into none. Below, what each measured.");
     chips(s, [
       ["Two guardrails before the model.", "The list limits what it can say; the prompt shows how to refuse."],
-      ["One after it: a confidence check.", "A guessed target shows as low confidence; below 80%, nothing runs."],
-      ["Measured on 109 prompts.", "2B: 73 → 95 correct. A name check got 83 and refused 22 good requests."],
+      ["One after it, on every decision.", "If under 80% of its choice stayed on the list, nothing runs."],
+      ["Measured on 130 prompts.", "2B: 83 → 108 correct. A name check got 97 and refused 29 good requests."],
     ], 4.5, 0.64);
-    caption(s, "Figure 10. Three guardrails for a player's request; results from our probe, Oct 2026 [1, §2.5, DR-016].");
+    caption(s, "Figure 10. Three guardrails, checked on every decision; results from our probe, Oct 2026 [1, §2.5, DR-016].");
     notes(s, [
       "SPEAKER: Hero Jaiyen · about 60 seconds",
       "",
-      "- This only matters when a player names a target, like 'Attack the training dummy'. Most decisions come from the game itself, and nobody names anything; those are protected by the target list, state masking, the legality checks and Execute.",
+      "- Whoever calls the agent, a player's line or the game's own event, the same guardrails run.",
       "- 'Attack Godzilla': there is no Godzilla in the scene, and the guard should say so. We stop it in three places: two before the model answers, one after.",
       "- One, the target list: the model can only answer with an id from the list we just built, and 'godzilla' isn't one. On its own that isn't enough: a small model often grabs the closest legal target and attacks the training dummy. That looks like obedience, so it's the worst failure.",
       "- Two, the prompt: every request includes a refusal example, and no_target gives the model a way to say 'that isn't here'. That already stops most requests for things that aren't there at all. The hard cases are near misses: 'Attack the scarecrow' when there's a training dummy.",
-      "- Three, after the model: the legality check and Execute's re-check always run, and on a player's request, a confidence check. The model reports how sure it was of the target it picked. A real request comes back at 99.8%; 'Attack the scarecrow' became the dummy at 5%. Below 80%, the answer becomes none and the guard refuses in character.",
-      "- We measured it against the alternatives on 109 prompts. Today's design: 73 right on the 2B model. A rule that the player must have said the target's name: 83, but it refused 22 good requests like 'Strike the straw man'. The confidence check: 95, with no extra request. On the 4B: 98 to 103.",
-      "- Honest part: the 80% line comes from our own 109 prompts, and a near miss the model is sure of still gets through, like a spear for the sword at 87%. Phase 4 recalibrates it on 200+ prompts written by other people.",
+      "- Three, after the model, on every decision: the legality check, Execute's re-check, and a confidence check. The model's own odds show whether it wanted something that isn't on the list. A real request keeps 99.8% on the list; 'Attack the scarecrow' became the dummy with only 5%. Below 80%, the answer becomes none and the guard refuses in character. When two targets are equally good, the odds split between them but stay on the list, so a free choice passes.",
+      "- We measured it on 130 prompts in three scenes. Today's design: 83 right on the 2B model. A rule that the player must have said the target's name: 97, but it refused 29 good requests like 'Strike the straw man'. The confidence check: 108, with no extra request. On the 4B: 113 to 124.",
+      "- Honest part: the 80% line comes from our own prompts, and a near miss the model takes for the real thing still gets through, like a bucket for the barrel. Phase 4 recalibrates it on 200+ prompts written by other people.",
       "",
       "HAND-OFF (to yourself): \"How do we know these techniques work? Here's what we measured.\"",
       "",
       "If asked 'Why not just tell the model to refuse?': we do, with the refusal example, and a one-line rule helps too (73 to 88 on the 2B). But 'scarecrow' can't be written, so its probability moves onto a legal id, and small models still guess. The confidence check catches what the prompt misses.",
       "If asked 'What about \"attack the training thing\"?': the model maps it to the training dummy, and if it's sure, it acts. No word lists to maintain.",
-      "If asked 'Why not check the player's words?': we tried. It refused 22 good requests on the 2B, and on the 4B it scored worse than no check at all, 89 against 98.",
+      "If asked 'Why not check the player's words?': we tried. It refused 29 good requests on the 2B, and on the 4B it scored worse than no check at all, 109 against 113.",
+      "If asked 'Does it stop the agent choosing freely?': no. A model torn between two good targets keeps its odds on the list; on our 4B test it passed every free choice.",
     ]);
   }
 
@@ -662,8 +663,8 @@ async function build() {
       ["Generated few-shot examples", "+35.3 pts", "largest single lever (17 prompts)", "ADOPT"],
       ["Action before the free-text field", "+11.7 pts", "isolated, five-variant head-to-head", "ADOPT"],
       ["target required, with a no_target value", "0/5 → 5/5", "4B model naming the target", "ADOPT"],
-      ["Confidence check on the chosen target", "73 → 95", "of 109, 2B; refused 8 good requests (7 without it); 4B 98 → 103", "ADOPT"],
-      ["Name check on the player's words", "73 → 83", "of 109, 2B; refused 22 good requests; 4B 98 → 89", "REJECTED"],
+      ["Confidence check: what stayed on the list", "83 → 108", "of 130, 2B; refused 17 good requests (14 without it); 4B 113 → 124", "ADOPT"],
+      ["Name check on the player's words", "83 → 97", "of 130, 2B; refused 29 good requests; 4B 113 → 109", "REJECTED"],
       ["Reasoning field before action", "35.3% vs 41.2%", "worse than no change at all", "REJECTED"],
     ];
     const table = [[hdr("METHOD"), hdr("MEASURED"), hdr("CONDITIONS"), hdr("VERDICT")].map((c) => ({ ...c, options: { ...c.options, border: [none, none, { type: "solid", pt: 1.25, color: C.ink }, none] } }))];
@@ -678,7 +679,7 @@ async function build() {
     });
     s.addTable(table, { x: 0.5, y: 1.15, w: 9.0, colW: [3.0, 1.85, 3.2, 0.95], rowH: [0.3, 0.44, 0.44, 0.44, 0.44, 0.44, 0.44, 0.44],
       fontFace: F.sans, valign: "middle", margin: [0, 0.06, 0, 0.06] });
-    text(s, "**Small samples:** at about 50 prompts the noise floor was about 10 points, and our probe's 109 prompts were written by one person, so Phase 4 re-measures each method on 200+ prompts, game events included, with a control arm.",
+    text(s, "**Small samples:** at about 50 prompts the noise floor was about 10 points, and our probe's 130 prompts were written by one person, so Phase 4 re-measures each method on 200+ prompts, game events included, with a control arm.",
       { x: 0.5, y: 4.6, w: 9.0, h: 0.5, size: S.body, color: C.ink2 });
     caption(s, "Rows 1–4, 7: prototype, Aug 2026 [1, App. A]; rows 5–6: our probe, Oct 2026 [1, DR-016]. qwen3.5 [9] via Ollama, greedy.");
     notes(s, [
@@ -687,7 +688,7 @@ async function build() {
       "- These are the methods we adopt or reject, and why. Most were measured in our prototype this summer; the two target checks, this month.",
       "- The schema plus few-shot examples together took accuracy from 58.5 to 84.9%, and the 'wrong but legal' answers, the ones players actually see as bugs, dropped from about 21% to 4%.",
       "- Few-shot examples alone: plus 35 points, the biggest lever. Action-first ordering: plus 11.7. Making target required: the 4B model went from never naming the target to always.",
-      "- The two target checks from the last slide: the confidence check took the 2B model from 73 to 95 correct out of 109; checking the player's words got 83 and refused 22 good requests, so we rejected it.",
+      "- The two target checks from the last slide: the confidence check took the 2B model from 83 to 108 correct out of 130; checking the player's words got 97 and refused 29 good requests, so we rejected it.",
       "- The last row is just as important: a reasoning field, the 'think step by step' idea, made it worse, so we rejected it.",
       "- Honest caveat: small samples. That's why Phase 4 re-measures everything on 200+ prompts.",
       "",
@@ -845,8 +846,8 @@ async function build() {
       "- How fast is a decision? About 1 to 3 seconds locally; the queue serves player-facing requests first. Known ceiling: about 21 s per round at 30 agents, serialized. (Yevhen)",
       "- Does this replace behaviour trees? No, only the top-level selection node; a behaviour tree can call our agent. (Hunter)",
       "- Isn't this a chatbot framework? No: most calls come from the game itself, like timers, events, turn reports and behaviour-tree nodes. A player's line is one kind of input. (Hunter)",
-      "- What if a player says 'attack the training thing'? The model maps it to the training dummy, and the confidence check lets it through if the model is sure. No word lists to maintain. (Hero)",
-      "- Why not just check the player's words? We measured it: 22 good requests refused on the 2B, and worse than no check at all on the 4B. The model's own confidence did better, 73 to 95 correct out of 109. (Hero)",
+      "- What if a player says 'attack the training thing'? The model maps it to the training dummy, and the confidence check lets it through when its odds stay on the list. No word lists to maintain. (Hero)",
+      "- Why not just check the player's words? We measured it: 29 good requests refused on the 2B, and worse than no check at all on the 4B. The model's own confidence did better, 83 to 108 correct out of 130. (Hero)",
       "- How does a strategy game choose targets, with no positions? Its own target source, or a list it supplies: the countries it borders or has met. The radius query is just one option for scene agents. (Hero)",
       "- Does an agent remember earlier turns? Yes: short-term memory is a Phase 2 deliverable. The last few turns, recorded after the guards, one memory per agent and capped by tokens. Long-term memory fits the same interface later (build plan §2.9). (Hunter)",
       "- What's built today? The Phase 1 decision types, action registry and both front doors, target discovery, availability and telemetry, with EditMode tests; nothing calls a model yet. That starts in Phase 2. (Maxim)",
