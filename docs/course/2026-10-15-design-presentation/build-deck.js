@@ -600,7 +600,7 @@ async function build() {
     tag(s, "built");
     figure(s, "07-targets", 0.7, 1.12, 8.6, 2.6087, "The Targetable component on a scene object, the area ProximityTargetSource searches around the agent, and the resulting list of names.");
     chips(s, [
-      ["Targetable is the tag.", "Its id is the exact word; extra names for players are planned."],
+      ["Targetable is the tag.", "Its id is the exact word the model may answer with."],
       ["The area is one option.", "A ready-made query for scene agents, used only if you add it."],
       ["Or your own rule.", "Your own target source decides; a country lists its targets."],
     ], 4.5, 0.64);
@@ -609,7 +609,7 @@ async function build() {
       "SPEAKER: Hero Jaiyen · about 60 seconds",
       "",
       "- Before the model can pick a target, we decide which targets it may name. This part is built and merged.",
-      "- Left, the tag: a developer adds a Targetable component to anything an agent may name, like the tower, the bridge or the training dummy. We also plan an 'extra names' field for other words players might use; I'll come back to why on the next slide. Its Id is the exact word the model is allowed to answer, set by hand, never taken from the object's name. Description is the one line the agent reads about it, so what it notices and what it may name come from one place. Category lets a source filter, and 'Targetable now' hides an object without deleting it, a sealed gate for example.",
+      "- Left, the tag: a developer adds a Targetable component to anything an agent may name, like the tower, the bridge or the training dummy. Its Id is the exact word the model is allowed to answer, set by hand, never taken from the object's name. Description is the one line the agent reads about it, so what it notices and what it may name come from one place. Category lets a source filter, and 'Targetable now' hides an object without deleting it, a sealed gate for example.",
       "- Middle, one way to choose: the area. ProximityTargetSource looks around the agent for tagged objects within 18 metres, optionally filtered by layer, category and line of sight, nearest first, at most 8. The houses have no tag, so they are scenery; the well is out of range.",
       "- That area is only one option, and it's used only if the developer adds it. Who may name what, and when, is the developer's call: their own target source can follow what a faction has scouted, a quest stage or the time of day. A strategy game is the clear case: a country has no position, so it simply lists its targets.",
       "- Right, the result: the TargetRegistry, plus no_target, which is always added. Whichever way it was built, that list becomes the target enum in the schema, so the model can only answer with one of those ids. Anything the cap drops goes to telemetry.",
@@ -623,27 +623,29 @@ async function build() {
     const s = pres.addSlide();
     header(s, 15, "DESIGN MODELS · GUARDS", "Guardrails for \"Attack Godzilla\"", TEAM.hero);
     tag(s, "design");
-    figure(s, "07-guards", 0.7, 1.12, 8.6, 2.6087, "Three guardrails against 'Attack Godzilla': the target list and a refusal example in the prompt before the model answers, and checks in code after it, among them the name check, which turns an unnamed target into none.");
+    figure(s, "07-guards", 0.7, 1.12, 8.6, 2.6087, "Three guardrails against 'Attack Godzilla': the target list and a refusal example in the prompt before the model answers, and checks in code after it, among them a confidence check that turns a target the model was unsure of into none. Below, what each measured.");
     chips(s, [
       ["Two guardrails before the model.", "The list limits what it can say; the prompt shows how to refuse."],
-      ["One after it: checks in code.", "Among them the name check: did the player name that target?"],
-      ["Prompt, code, or both?", "Phase 4 measures what each one adds before we settle it."],
+      ["One after it: a confidence check.", "A guessed target shows as low confidence; below 80%, nothing runs."],
+      ["Measured on 109 prompts.", "2B: 73 → 95 correct. A name check got 83 and refused 22 good requests."],
     ], 4.5, 0.64);
-    caption(s, "Figure 10. Three guardrails for a player's request; their split is still a design question [1, §2.3, §2.5, App. A].");
+    caption(s, "Figure 10. Three guardrails for a player's request; results from our probe, Oct 2026 [1, §2.5, DR-016].");
     notes(s, [
       "SPEAKER: Hero Jaiyen · about 60 seconds",
       "",
       "- This only matters when a player names a target, like 'Attack the training dummy'. Most decisions come from the game itself, and nobody names anything; those are protected by the target list, state masking, the legality checks and Execute.",
-      "- 'Attack Godzilla': there is no Godzilla in the scene, and the guard should say so. We have three places to stop it: two before the model answers, one after.",
+      "- 'Attack Godzilla': there is no Godzilla in the scene, and the guard should say so. We stop it in three places: two before the model answers, one after.",
       "- One, the target list: the model can only answer with an id from the list we just built, and 'godzilla' isn't one. On its own that isn't enough: a small model often grabs the closest legal target and attacks the training dummy. That looks like obedience, so it's the worst failure.",
-      "- Two, the prompt: every request includes a refusal example, and no_target gives the model a way to say 'that isn't here'. For now this is our guardrail; it arrives with the schema in Phase 1.",
-      "- Three, after the model, checks in code: the legality check and Execute's re-check always run. We've also designed a hard guardrail, the name check. When the developer switches it on for a player's request, the player must actually have said the target's name: its id words, or an extra name listed on its Targetable. If not, the answer becomes none and the guard refuses in character.",
-      "- Honest part: how to split the work is still a design question. In our prototype, with a refusal example in the prompt, a 2B model refused only 1 of 6 impossible requests; with the name check, all 6. Whether a better prompt, with no_target, is enough on its own we haven't measured yet. And the name check matches words, so 'attack it' is refused for now: safe, not smart. Phase 4 measures each option with A/B runs.",
+      "- Two, the prompt: every request includes a refusal example, and no_target gives the model a way to say 'that isn't here'. That already stops most requests for things that aren't there at all. The hard cases are near misses: 'Attack the scarecrow' when there's a training dummy.",
+      "- Three, after the model: the legality check and Execute's re-check always run, and on a player's request, a confidence check. The model reports how sure it was of the target it picked. A real request comes back at 99.8%; 'Attack the scarecrow' became the dummy at 5%. Below 80%, the answer becomes none and the guard refuses in character.",
+      "- We measured it against the alternatives on 109 prompts. Today's design: 73 right on the 2B model. A rule that the player must have said the target's name: 83, but it refused 22 good requests like 'Strike the straw man'. The confidence check: 95, with no extra request. On the 4B: 98 to 103.",
+      "- Honest part: the 80% line comes from our own 109 prompts, and a near miss the model is sure of still gets through, like a spear for the sword at 87%. Phase 4 recalibrates it on 200+ prompts written by other people.",
       "",
-      "HAND-OFF (to yourself): \"How do we know these techniques work? Here's what the prototype measured.\"",
+      "HAND-OFF (to yourself): \"How do we know these techniques work? Here's what we measured.\"",
       "",
-      "If asked 'Why not just tell the model to refuse?': we do, with the refusal example. But 'godzilla' can't be written, so the model's probability moves onto a legal id, and small models guess. That's why a check in code backs the prompt up.",
-      "If asked 'What about \"attack the training thing\"?': with the name check on, it's refused unless the developer listed it as an extra name. A better prompt or a smarter check might handle it; that's the open design question.",
+      "If asked 'Why not just tell the model to refuse?': we do, with the refusal example, and a one-line rule helps too (73 to 88 on the 2B). But 'scarecrow' can't be written, so its probability moves onto a legal id, and small models still guess. The confidence check catches what the prompt misses.",
+      "If asked 'What about \"attack the training thing\"?': the model maps it to the training dummy, and if it's sure, it acts. No word lists to maintain.",
+      "If asked 'Why not check the player's words?': we tried. It refused 22 good requests on the 2B, and on the 4B it scored worse than no check at all, 89 against 98.",
     ]);
   }
 
@@ -660,7 +662,8 @@ async function build() {
       ["Generated few-shot examples", "+35.3 pts", "largest single lever (17 prompts)", "ADOPT"],
       ["Action before the free-text field", "+11.7 pts", "isolated, five-variant head-to-head", "ADOPT"],
       ["target required, with a no_target value", "0/5 → 5/5", "4B model naming the target", "ADOPT"],
-      ["Name check on player requests, after the model", "60% → 95%", "2B, player commands; 4B 65% → 100% (20 prompts)", "ADOPT"],
+      ["Confidence check on the chosen target", "73 → 95", "of 109, 2B; refused 8 good requests (7 without it); 4B 98 → 103", "ADOPT"],
+      ["Name check on the player's words", "73 → 83", "of 109, 2B; refused 22 good requests; 4B 98 → 89", "REJECTED"],
       ["Reasoning field before action", "35.3% vs 41.2%", "worse than no change at all", "REJECTED"],
     ];
     const table = [[hdr("METHOD"), hdr("MEASURED"), hdr("CONDITIONS"), hdr("VERDICT")].map((c) => ({ ...c, options: { ...c.options, border: [none, none, { type: "solid", pt: 1.25, color: C.ink }, none] } }))];
@@ -673,17 +676,18 @@ async function build() {
         cell(d, { bold: true, fontSize: 9, color: rej ? C.ink3 : C.blue, charSpacing: 1 }),
       ]);
     });
-    s.addTable(table, { x: 0.5, y: 1.15, w: 9.0, colW: [3.0, 1.85, 3.2, 0.95], rowH: [0.3, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
+    s.addTable(table, { x: 0.5, y: 1.15, w: 9.0, colW: [3.0, 1.85, 3.2, 0.95], rowH: [0.3, 0.44, 0.44, 0.44, 0.44, 0.44, 0.44, 0.44],
       fontFace: F.sans, valign: "middle", margin: [0, 0.06, 0, 0.06] });
-    text(s, "**Small samples, mostly player commands:** at about 50 prompts the noise floor was about 10 points, so Phase 4 re-measures each method on 200+ prompts, game events included, with a control arm.",
-      { x: 0.5, y: 4.55, w: 9.0, h: 0.5, size: S.body, color: C.ink2 });
-    caption(s, "Prototype measurements, Aug 2026: qwen3.5 2B and 4B [9] via Ollama, RTX 4060 Laptop 8 GB, greedy decoding [1, App. A].");
+    text(s, "**Small samples:** at about 50 prompts the noise floor was about 10 points, and our probe's 109 prompts were written by one person, so Phase 4 re-measures each method on 200+ prompts, game events included, with a control arm.",
+      { x: 0.5, y: 4.6, w: 9.0, h: 0.5, size: S.body, color: C.ink2 });
+    caption(s, "Rows 1–4, 7: prototype, Aug 2026 [1, App. A]; rows 5–6: our probe, Oct 2026 [1, DR-016]. qwen3.5 [9] via Ollama, greedy.");
     notes(s, [
       "SPEAKER: Hero Jaiyen · about 45 seconds",
       "",
-      "- These are the methods we adopt, and why: each one was measured in our prototype this summer.",
+      "- These are the methods we adopt or reject, and why. Most were measured in our prototype this summer; the two target checks, this month.",
       "- The schema plus few-shot examples together took accuracy from 58.5 to 84.9%, and the 'wrong but legal' answers, the ones players actually see as bugs, dropped from about 21% to 4%.",
-      "- Few-shot examples alone: plus 35 points, the biggest lever. Action-first ordering: plus 11.7. Making target required: the 4B model went from never naming the target to always. The grounding guard: 60 to 95.",
+      "- Few-shot examples alone: plus 35 points, the biggest lever. Action-first ordering: plus 11.7. Making target required: the 4B model went from never naming the target to always.",
+      "- The two target checks from the last slide: the confidence check took the 2B model from 73 to 95 correct out of 109; checking the player's words got 83 and refused 22 good requests, so we rejected it.",
       "- The last row is just as important: a reasoning field, the 'think step by step' idea, made it worse, so we rejected it.",
       "- Honest caveat: small samples. That's why Phase 4 re-measures everything on 200+ prompts.",
       "",
@@ -841,7 +845,8 @@ async function build() {
       "- How fast is a decision? About 1 to 3 seconds locally; the queue serves player-facing requests first. Known ceiling: about 21 s per round at 30 agents, serialized. (Yevhen)",
       "- Does this replace behaviour trees? No, only the top-level selection node; a behaviour tree can call our agent. (Hunter)",
       "- Isn't this a chatbot framework? No: most calls come from the game itself, like timers, events, turn reports and behaviour-tree nodes. A player's line is one kind of input. (Hunter)",
-      "- What if a player says 'attack the training thing'? With the name check on, it's refused unless the developer listed it as an extra name. Failing safe beats attacking the wrong thing; whether a better prompt or a smarter check handles it is an open design question. (Hero)",
+      "- What if a player says 'attack the training thing'? The model maps it to the training dummy, and the confidence check lets it through if the model is sure. No word lists to maintain. (Hero)",
+      "- Why not just check the player's words? We measured it: 22 good requests refused on the 2B, and worse than no check at all on the 4B. The model's own confidence did better, 73 to 95 correct out of 109. (Hero)",
       "- How does a strategy game choose targets, with no positions? Its own target source, or a list it supplies: the countries it borders or has met. The radius query is just one option for scene agents. (Hero)",
       "- Does an agent remember earlier turns? Yes: short-term memory is a Phase 2 deliverable. The last few turns, recorded after the guards, one memory per agent and capped by tokens. Long-term memory fits the same interface later (build plan §2.9). (Hunter)",
       "- What's built today? The Phase 1 decision types, action registry and both front doors, target discovery, availability and telemetry, with EditMode tests; nothing calls a model yet. That starts in Phase 2. (Maxim)",

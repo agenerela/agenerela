@@ -878,9 +878,9 @@ Built-ins, in order:
    beyond any target check; only model scale fixed it (Appendix A). Any change to the
    threshold or the signal needs an A/B run with a control arm before it ships.
 
-   **The name check it replaces** required the chosen target's id words, or an extra name
-   listed on its `Targetable`, to appear in the player's line. Measured on the same probe, it
-   refused 15–16 good requests per model, paraphrases and "it". On the 4B it scored below no
+   **The name check it replaces** required the chosen target's name to appear in the
+   player's line. Measured on the same probe, it refused 15–16 good requests per model,
+   paraphrases and "it". On the 4B it scored below no
    check at all, 89 against 98. It is no longer built in. A developer who wants strict
    wording can add it as their own guard (item 3).
 3. Developer-supplied guards append here (game-specific rules: line-of-sight, cooldowns…).
@@ -1720,9 +1720,9 @@ one model:
 - A grammar mask moves the forbidden word's probability onto the legal ones
   ([Grammar-Aligned Decoding](https://arxiv.org/abs/2405.21047)).
 
-The plan was a name check: the chosen target's id words, or an extra name listed on its
-`Targetable`, had to appear in the player's line. It needed word lists, had to be switched on
-per call, and refused paraphrases and pronouns.
+The plan was a name check: the chosen target's name had to appear in the player's line. It
+needed a list of every other word players might use, had to be switched on per call, and
+refused paraphrases and pronouns.
 
 **Options considered.** Each ran on the same 109 prompts in two scenes, on `qwen3.5:2b` and
 `qwen3.5:4b`, greedy, in one session. The two model columns give correct of 109, then wrong
@@ -1761,8 +1761,8 @@ one-line rule instead.
   ids. Multiplying every token of the id penalises a right answer whenever the mask forces a
   split the model did not want: on the 2B, "healing draught" became `he|alth_potion` with
   p ≈ 0.
-- Extra names on `Targetable`, planned for the name check, are no longer needed for it.
-  Whether listing them in the prompt helps the model is unmeasured.
+- The extra-names field once planned for `Targetable` is dropped from the plan, since the
+  guard needs no word lists.
 - A reference resolved from history passes when the model is sure of it (§2.9, rule 5).
 - It still misses near misses the model is sure of, and wrong actions on the right target
   (§2.5, Limits).
