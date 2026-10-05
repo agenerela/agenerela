@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Agenerela system context</title>
+<link rel="stylesheet" href="fig.css">
+<style>body{width:1200px;height:480px}</style></head>
+<body>
+<!-- Architecture slide (Hunter Hudson): Agenerela as a black box, who and what it talks to.
+     Slide-sized redraw of the SRS system-context figure (28 Sep 2026), same composition,
+     larger type. Sources: build plan 2.1-2.5, DR-008, DR-013. -->
+<svg width="1200" height="480" viewBox="0 0 1200 480" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="ab" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4.2" markerHeight="4.2" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f5bd6"/></marker>
+  <marker id="ag" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#777"/></marker>
+</defs>
+
+<!-- game developer -->
+<circle cx="612" cy="22" r="13" fill="none" stroke="#2a2a2a" stroke-width="2.5"/>
+<path d="M589,60 Q612,34 635,60" fill="none" stroke="#2a2a2a" stroke-width="2.5"/>
+<text x="652" y="30" class="h2">Game developer</text>
+<text x="652" y="52" class="s">works in the Unity Editor</text>
+<line x1="596" y1="70" x2="596" y2="112" class="grey" marker-end="url(#ag)"/>
+<line x1="644" y1="112" x2="644" y2="70" class="grey" marker-end="url(#ag)"/>
+<text x="584" y="100" text-anchor="end" class="s">profiles, actions, provider config</text>
+<text x="656" y="100" class="s">Decision Log, evaluation reports</text>
+<path d="M582,40 L266,40 L266,122" class="grey" marker-end="url(#ag)"/>
+<text x="278" y="72" class="s">writes the game and its handlers</text>
+
+<!-- player -->
+<circle cx="52" cy="236" r="13" fill="none" stroke="#2a2a2a" stroke-width="2.5"/>
+<path d="M29,274 Q52,248 75,274" fill="none" stroke="#2a2a2a" stroke-width="2.5"/>
+<text x="52" y="300" text-anchor="middle" class="h2">Player</text>
+<text x="52" y="320" text-anchor="middle" class="s">plays</text>
+<line x1="84" y1="236" x2="132" y2="236" class="grey" marker-end="url(#ag)"/>
+<line x1="132" y1="276" x2="84" y2="276" class="grey" marker-end="url(#ag)"/>
+
+<!-- your game -->
+<rect x="140" y="130" width="252" height="282" rx="12" class="box"/>
+<text x="160" y="166" class="h">Your game</text>
+<text x="160" y="190" class="s">C# code, scenes, assets</text>
+<line x1="160" y1="206" x2="372" y2="206" stroke="#ccc" stroke-width="2"/>
+<text x="160" y="238" class="b">decides <tspan font-weight="700">when</tspan> to ask an</text>
+<text x="160" y="262" class="b">agent, and what to tell it</text>
+<text x="160" y="302" class="b">runs the chosen action</text>
+<text x="160" y="326" class="b">in its own handler code</text>
+<text x="160" y="392" class="s" style="font-size:14px">GreyBoxVillage · GreyBoxStrategy</text>
+
+<!-- AGENERELA black box -->
+<rect x="500" y="120" width="260" height="300" rx="14" fill="#1c1c1c"/>
+<text x="630" y="200" text-anchor="middle" style="font-size:32px;font-weight:800;fill:#fff;letter-spacing:3px">AGENERELA</text>
+<text x="630" y="230" text-anchor="middle" class="mono" style="font-size:15px;fill:#ddd">com.agenerela.framework</text>
+<text x="630" y="274" text-anchor="middle" style="font-size:17px;fill:#fff">offers only legal actions,</text>
+<text x="630" y="300" text-anchor="middle" style="font-size:17px;fill:#fff">remembers recent turns,</text>
+<text x="630" y="326" text-anchor="middle" style="font-size:17px;fill:#fff">checks every answer,</text>
+<text x="630" y="352" text-anchor="middle" style="font-size:17px;fill:#fff">records every decision</text>
+<text x="630" y="402" text-anchor="middle" style="font-size:12px;fill:#aaa;letter-spacing:1.5px">OPENED ON THE NEXT SLIDE</text>
+
+<!-- model backends -->
+<rect x="872" y="96" width="324" height="328" rx="14" class="dash"/>
+<text x="894" y="132" class="h">Model backends</text>
+<text x="894" y="156" class="s">outside our control · untrusted</text>
+<rect x="894" y="170" width="280" height="64" rx="10" class="box"/>
+<text x="912" y="197" class="b" font-weight="700">Ollama</text>
+<text x="912" y="221" class="s">local server · to build</text>
+<rect x="894" y="244" width="280" height="64" rx="10" class="box"/>
+<text x="912" y="271" class="b" font-weight="700">In-process model</text>
+<text x="912" y="295" class="s">llama.cpp in the game · to ship</text>
+<rect x="894" y="318" width="280" height="64" rx="10" class="box"/>
+<text x="912" y="345" class="b" font-weight="700">Cloud API</text>
+<text x="912" y="369" class="s">Gemini first · optional</text>
+<text x="894" y="410" class="s" font-style="italic">never touches the game or the scene</text>
+
+<!-- one decision: game <-> agenerela -->
+<line x1="396" y1="222" x2="492" y2="222" class="blue" marker-end="url(#ab)"/>
+<text x="446" y="208" text-anchor="middle" class="blbl">asks</text>
+<text x="446" y="246" text-anchor="middle" class="lbl">stimulus,</text>
+<text x="446" y="265" text-anchor="middle" class="lbl">observations</text>
+<line x1="496" y1="334" x2="400" y2="334" class="blue" marker-end="url(#ab)"/>
+<text x="448" y="320" text-anchor="middle" class="blbl">decision</text>
+<text x="448" y="358" text-anchor="middle" class="lbl">+ telemetry</text>
+
+<!-- one decision: agenerela <-> model -->
+<line x1="764" y1="222" x2="864" y2="222" class="blue" marker-end="url(#ab)"/>
+<text x="814" y="208" text-anchor="middle" class="blbl">request</text>
+<text x="814" y="246" text-anchor="middle" class="lbl">prompt +</text>
+<text x="814" y="265" text-anchor="middle" class="lbl">schema</text>
+<line x1="868" y1="334" x2="768" y2="334" class="blue" marker-end="url(#ab)"/>
+<text x="818" y="320" text-anchor="middle" class="blbl">answer</text>
+<text x="818" y="358" text-anchor="middle" class="lbl">action, target,</text>
+<text x="818" y="377" text-anchor="middle" class="lbl">statement</text>
+
+<!-- platform band -->
+<line x1="266" y1="412" x2="266" y2="438" class="greyd"/>
+<line x1="630" y1="420" x2="630" y2="438" class="greyd"/>
+<rect x="140" y="438" width="1056" height="38" rx="10" class="soft"/>
+<text x="160" y="463" class="cap" style="fill:#444">RUNS INSIDE</text>
+<text x="272" y="464" class="b"><tspan font-weight="700">Unity 6</tspan>, pinned to 6000.3.23f1 · only one folder of the package touches a scene</text>
+</svg>
+</body></html>

@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Schema and prompt</title>
+<link rel="stylesheet" href="fig.css">
+<style>body{width:1200px;height:460px}</style></head>
+<body>
+<!-- What the model receives (Tigran Kolsuzyan): the five DecisionRequest blocks in order (History
+     is the memory slot, filled from Phase 2, build plan 2.9) and the
+     DecisionSchema for the guard while it follows the player. Rules from build plan 2.3;
+     identity values from the Agent Profile wireframe; other example wording illustrative.
+     Designed, not built (#8, #9, #10, #16). -->
+<svg width="1200" height="460" viewBox="0 0 1200 460" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="ab" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4.2" markerHeight="4.2" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f5bd6"/></marker>
+</defs>
+
+<!-- ===== left: the prompt ===== -->
+<text x="2" y="14" class="cap">WHAT THE MODEL READS, IN ORDER</text>
+
+<rect x="2" y="24" width="556" height="52" rx="10" class="box"/>
+<circle cx="26" cy="44" r="12" fill="#1c1c1c"/><text x="26" y="49" text-anchor="middle" class="w" style="font-size:14px;font-weight:700">1</text>
+<text x="46" y="50" class="h2">System prompt</text>
+<text x="184" y="50" class="s">from the profile's identity</text>
+<text x="46" y="68" class="mono" style="font-size:14px;fill:#444">You are Village Guard, a guard at the town gate. …</text>
+
+<rect x="2" y="84" width="556" height="132" rx="10" class="soft"/>
+<circle cx="26" cy="104" r="12" fill="#1c1c1c"/><text x="26" y="109" text-anchor="middle" class="w" style="font-size:14px;font-weight:700">2</text>
+<text x="46" y="110" class="h2">Few-shot block</text>
+<text x="186" y="110" class="s">one per legal action, then idle, then a refusal</text>
+<g class="mono" style="font-size:14px">
+  <text x="46" y="132" class="mono">"Head over to the bridge."</text><text x="300" y="132" class="mono bluet">move_to · bridge</text>
+  <text x="46" y="152" class="mono">"Strike the training dummy."</text><text x="300" y="152" class="mono bluet">attack_target · training_dummy</text>
+  <text x="46" y="172" class="mono">"Nothing has changed since…"</text><text x="300" y="172" class="mono bluet">none · no_target</text>
+  <text x="46" y="192" class="mono">"Walk to the castle."</text><text x="300" y="192" class="mono bluet">none · no_target</text>
+</g>
+<text x="46" y="209" class="xs">No <tspan class="mono">follow_player</tspan> example: it is not legal while following.</text>
+
+<rect x="2" y="224" width="556" height="52" rx="10" class="box"/>
+<circle cx="26" cy="244" r="12" fill="#1c1c1c"/><text x="26" y="249" text-anchor="middle" class="w" style="font-size:14px;font-weight:700">3</text>
+<text x="46" y="250" class="h2">Observations</text>
+<text x="172" y="250" class="s">what is true now · pulled, capped</text>
+<text x="46" y="268" class="mono" style="font-size:14px;fill:#444">The watchtower door stands open. · It is daytime.</text>
+
+<rect x="2" y="284" width="556" height="72" rx="10" class="box"/>
+<circle cx="26" cy="304" r="12" fill="#1c1c1c"/><text x="26" y="309" text-anchor="middle" class="w" style="font-size:14px;font-weight:700">4</text>
+<text x="46" y="310" class="h2">History</text>
+<text x="118" y="310" class="s">memory: what happened, oldest first</text>
+<rect x="476" y="294" width="70" height="22" rx="11" fill="#fff" stroke="#777" stroke-width="1.5" stroke-dasharray="4 3"/>
+<text x="511" y="309" text-anchor="middle" style="font-size:11px;font-weight:700;fill:#555;letter-spacing:1px">PHASE 2</text>
+<g class="mono" style="font-size:14px">
+  <text x="46" y="330" class="mono">Player: "Follow me."</text><text x="300" y="330" class="mono bluet">follow_player</text>
+  <text x="46" y="348" class="mono">Player: "Stay close, okay?"</text><text x="300" y="348" class="mono bluet">none</text>
+</g>
+
+<rect x="2" y="364" width="556" height="52" rx="10" fill="#fff" stroke="#1f5bd6" stroke-width="3"/>
+<circle cx="26" cy="384" r="12" fill="#1f5bd6"/><text x="26" y="389" text-anchor="middle" class="w" style="font-size:14px;font-weight:700">5</text>
+<text x="46" y="390" class="h2">Stimulus</text>
+<text x="132" y="390" class="s">free-form, from your game · read last</text>
+<text x="46" y="408" class="mono" style="font-size:14px">Player: "Go to the tower."</text>
+
+<text x="2" y="444" class="s">Each block is a separate field, so an A/B run can swap just one.</text>
+
+<line x1="566" y1="200" x2="606" y2="200" class="blue" marker-end="url(#ab)"/>
+
+<!-- ===== right: the schema ===== -->
+<text x="614" y="14" class="cap">THE SCHEMA, BUILT FOR THIS REQUEST</text>
+<rect x="614" y="26" width="584" height="176" rx="10" class="soft"/>
+<g class="mono" style="font-size:15px;white-space:pre">
+  <text xml:space="preserve" x="630" y="54" class="mono">{</text>
+  <text xml:space="preserve" x="644" y="80" class="mono">"action":    { "enum": [<tspan class="bluet">"move_to", "attack_target", "none"</tspan>] },</text>
+  <text xml:space="preserve" x="644" y="106" class="mono">"target":    { "enum": [<tspan class="bluet">"tower", "bridge",</tspan></text>
+  <text xml:space="preserve" x="644" y="128" class="mono">                        <tspan class="bluet">"training_dummy", "no_target"</tspan>] },</text>
+  <text xml:space="preserve" x="644" y="154" class="mono">"statement": { "type": "string" }</text>
+  <text xml:space="preserve" x="630" y="182" class="mono">}  <tspan style="fill:#777">required: action, target, statement</tspan></text>
+</g>
+
+<text x="614" y="228" class="cap">THE MODEL'S WHOLE ANSWER</text>
+<rect x="614" y="238" width="584" height="38" rx="10" class="dashw"/>
+<text x="630" y="263" class="mono" style="font-size:15px">{"action": "move_to", "target": "tower", "statement": "On my way."}</text>
+
+<g>
+  <circle cx="626" cy="306" r="11" fill="#1f5bd6"/><text x="626" y="311" text-anchor="middle" class="w" style="font-size:13px;font-weight:700">A</text>
+  <text x="646" y="312" class="b"><tspan font-weight="700">Masked:</tspan> <tspan class="mono" style="font-size:15px">follow_player</tspan> is absent, not forbidden in prose.</text>
+  <circle cx="626" cy="340" r="11" fill="#1f5bd6"/><text x="626" y="345" text-anchor="middle" class="w" style="font-size:13px;font-weight:700">B</text>
+  <text x="646" y="346" class="b"><tspan class="mono" style="font-size:15px">none</tspan> <tspan font-weight="700">is always last</tspan>, so it reads as a fallback.</text>
+  <circle cx="626" cy="374" r="11" fill="#1f5bd6"/><text x="626" y="379" text-anchor="middle" class="w" style="font-size:13px;font-weight:700">C</text>
+  <text x="646" y="380" class="b"><tspan font-weight="700">target is required</tspan>, with <tspan class="mono" style="font-size:15px">no_target</tspan>; never optional, never "".</text>
+  <circle cx="626" cy="408" r="11" fill="#1f5bd6"/><text x="626" y="413" text-anchor="middle" class="w" style="font-size:13px;font-weight:700">D</text>
+  <text x="646" y="414" class="b"><tspan font-weight="700">Order:</tspan> action → target → statement. No reasoning field.</text>
+  <text x="614" y="448" class="s">Sent as JSON Schema to Ollama and cloud APIs, as GBNF to llama.cpp.</text>
+</g>
+</svg>
+</body></html>

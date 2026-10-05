@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Two kinds of agent</title>
+<link rel="stylesheet" href="fig.css">
+<style>body{width:1200px;height:300px}</style></head>
+<body>
+<!-- Motivation (Yevhen Mishchenko): one framework drives a guard you talk to and a country
+     with no body. Scenes follow the GreyBoxVillage and GreyBoxStrategy wireframes
+     (docs/design/png/05-village.png, 06-strategy.png); moves and names are illustrative. -->
+<svg width="1200" height="300" viewBox="0 0 1200 300" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="ab" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4.2" markerHeight="4.2" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f5bd6"/></marker>
+  <marker id="ag" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#777"/></marker>
+</defs>
+
+<!-- ===== a guard you talk to ===== -->
+<rect x="2" y="2" width="526" height="296" rx="12" class="box"/>
+<rect x="14" y="14" width="502" height="34" rx="7" fill="#1c1c1c"/>
+<text x="28" y="37" class="bartxt">A GUARD AT THE GATE</text>
+<text x="502" y="37" text-anchor="end" style="font-size:13px;fill:#ccc">GreyBoxVillage</text>
+
+<rect x="14" y="58" width="232" height="228" rx="8" fill="#f7f8fa"/>
+<line x1="24" y1="210" x2="110" y2="210" stroke="#aaa" stroke-width="6"/>
+<line x1="150" y1="210" x2="236" y2="210" stroke="#aaa" stroke-width="6"/>
+<text x="130" y="230" text-anchor="middle" class="xs">gate</text>
+<rect x="176" y="84" width="40" height="40" fill="#fff" stroke="#2a2a2a" stroke-width="2.5"/>
+<circle cx="196" cy="104" r="10" fill="#fff" stroke="#2a2a2a" stroke-width="2.5"/>
+<text x="196" y="76" text-anchor="middle" class="xs">tower</text>
+<path d="M134,186 C150,160 168,146 184,132" class="greyd" marker-end="url(#ag)"/>
+<circle cx="130" cy="196" r="13" fill="#2a2a2a"/>
+<text x="148" y="192" class="xs">guard</text>
+<circle cx="62" cy="168" r="11" fill="#fff" stroke="#2a2a2a" stroke-width="2.5"/>
+<text x="62" y="194" text-anchor="middle" class="xs">you</text>
+<path d="M30,72 h120 a8,8 0 0 1 8,8 v28 a8,8 0 0 1 -8,8 h-70 l-12,14 l-2,-14 h-36 a8,8 0 0 1 -8,-8 v-28 a8,8 0 0 1 8,-8 z" fill="#fff" stroke="#2a2a2a" stroke-width="2"/>
+<text x="90" y="91" text-anchor="middle" style="font-size:13px">"Head over</text>
+<text x="90" y="107" text-anchor="middle" style="font-size:13px">to the tower."</text>
+
+<text x="264" y="84" class="cap" style="font-size:11.5px">IS ASKED</text>
+<text x="264" y="106" class="b">by the player, or by the game</text>
+<text x="264" y="142" class="cap" style="font-size:11.5px">CHOOSES</text>
+<text x="264" y="164" class="mono" style="font-size:16px;font-weight:700">move_to · tower</text>
+<text x="264" y="186" class="b">and says "On my way."</text>
+<text x="264" y="222" class="cap" style="font-size:11.5px">REFUSES</text>
+<text x="264" y="244" class="b">"Attack Godzilla", in character,</text>
+<text x="264" y="266" class="b">because Godzilla isn't there</text>
+
+<!-- ===== the framework in the middle ===== -->
+<rect x="548" y="96" width="104" height="108" rx="12" fill="#1c1c1c"/>
+<text x="600" y="140" text-anchor="middle" style="font-size:13px;font-weight:800;fill:#fff;letter-spacing:1.5px">AGENERELA</text>
+<text x="600" y="164" text-anchor="middle" style="font-size:12px;fill:#ccc">same API,</text>
+<text x="600" y="181" text-anchor="middle" style="font-size:12px;fill:#ccc">same checks</text>
+<line x1="546" y1="150" x2="534" y2="150" class="blue" marker-end="url(#ab)"/>
+<line x1="654" y1="150" x2="666" y2="150" class="blue" marker-end="url(#ab)"/>
+
+<!-- ===== a country with no body ===== -->
+<rect x="672" y="2" width="526" height="296" rx="12" class="box"/>
+<rect x="684" y="14" width="502" height="34" rx="7" fill="#1c1c1c"/>
+<text x="698" y="37" class="bartxt">A COUNTRY WITH NO BODY</text>
+<text x="1172" y="37" text-anchor="end" style="font-size:13px;fill:#ccc">GreyBoxStrategy</text>
+
+<rect x="684" y="58" width="232" height="228" rx="8" fill="#f7f8fa"/>
+<path d="M694,68 L800,68 L792,150 L694,166 z" fill="#e6e6e6" stroke="#555" stroke-width="2"/>
+<path d="M800,68 L906,68 L906,170 L846,178 L792,150 z" fill="#d4d4d4" stroke="#555" stroke-width="2"/>
+<path d="M694,166 L792,150 L846,178 L834,276 L694,276 z" fill="#f2f2f2" stroke="#555" stroke-width="2"/>
+<path d="M846,178 L906,170 L906,276 L834,276 z" fill="#dcdcdc" stroke="#555" stroke-width="2"/>
+<text x="740" y="106" text-anchor="middle" style="font-size:12px;font-weight:700">Valen</text>
+<text x="858" y="112" text-anchor="middle" style="font-size:12px;font-weight:700">Orsk</text>
+<text x="752" y="222" text-anchor="middle" style="font-size:12px;font-weight:700">Merrow</text>
+<text x="876" y="232" text-anchor="middle" style="font-size:12px;font-weight:700">Tal</text>
+<path d="M752,118 C800,150 846,188 868,214" fill="none" stroke="#1f5bd6" stroke-width="3" stroke-dasharray="7 5" marker-end="url(#ab)"/>
+<text x="738" y="140" text-anchor="middle" style="font-size:11px;fill:#1f5bd6;font-weight:700">envoy</text>
+
+<text x="934" y="84" class="cap" style="font-size:11.5px">READS</text>
+<text x="934" y="106" class="b">a short report each turn</text>
+<text x="934" y="142" class="cap" style="font-size:11.5px">CHOOSES</text>
+<text x="934" y="164" class="mono" style="font-size:16px;font-weight:700">send_envoy · tal</text>
+<text x="934" y="186" class="b">and announces it</text>
+<text x="934" y="222" class="cap" style="font-size:11.5px">HAS NO</text>
+<text x="934" y="244" class="b">Transform, NavMesh or voice,</text>
+<text x="934" y="266" class="b">and needs none of them</text>
+</svg>
+</body></html>

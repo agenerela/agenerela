@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Targets</title>
+<link rel="stylesheet" href="fig.css">
+<style>body{width:1200px;height:460px}</style></head>
+<body>
+<!-- Targets (Hero Jaiyen): the Targetable component is the tag, ProximityTargetSource is one
+     optional way to choose targets (build plan 2.2), TargetRegistry is the result. As merged in #32 (via #61, fixes in #62):
+     Id, Description, Category, IsCurrentlyTargetable; Radius 18, Cap 8, layers, categories,
+     optional line of sight, nearest first; drops in DecisionTelemetry.TargetsDropped;
+     ExplicitTargetSource for agents with no scene (DR-014). Scene layout is illustrative. -->
+<svg width="1200" height="460" viewBox="0 0 1200 460" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="ab" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4.2" markerHeight="4.2" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f5bd6"/></marker>
+</defs>
+
+<!-- ===== the tag: Targetable ===== -->
+<text x="2" y="14" class="cap">THE TAG</text>
+<rect x="2" y="24" width="370" height="434" rx="12" class="box"/>
+<rect x="14" y="36" width="346" height="34" rx="7" fill="#1c1c1c"/>
+<text x="28" y="59" class="bartxt">TARGETABLE</text>
+<text x="346" y="59" text-anchor="end" style="font-size:13px;fill:#ccc">on the Tower object</text>
+<g>
+  <text x="22" y="100" class="s">Id</text>
+  <rect x="140" y="82" width="216" height="26" rx="4" fill="#fff" stroke="#1f5bd6" stroke-width="2"/>
+  <text x="150" y="100" class="mono" style="font-size:14px;font-weight:700">tower</text>
+  <text x="140" y="124" class="xs">the exact word; never the object's name</text>
+
+  <text x="22" y="150" class="s">Description</text>
+  <rect x="140" y="132" width="216" height="26" rx="4" fill="#fff" stroke="#c2c2c2" stroke-width="1.5"/>
+  <text x="148" y="150" style="font-size:13px">The watchtower door stands open.</text>
+  <text x="140" y="174" class="xs">the one line the agent reads about it</text>
+
+  <text x="22" y="200" class="s">Category</text>
+  <rect x="140" y="182" width="216" height="26" rx="4" fill="#fff" stroke="#c2c2c2" stroke-width="1.5"/>
+  <text x="150" y="200" style="font-size:14px">landmark</text>
+  <text x="140" y="224" class="xs">lets a source filter what it finds</text>
+
+  <text x="22" y="250" class="s">Targetable now</text>
+  <rect x="140" y="234" width="20" height="20" rx="3" fill="#1f5bd6"/>
+  <path d="M144,244 L149,249 L157,239" fill="none" stroke="#fff" stroke-width="2.5"/>
+  <text x="140" y="274" class="xs">untick to hide it, e.g. a sealed gate</text>
+
+  <text x="22" y="300" class="s">Extra names</text>
+  <rect x="140" y="282" width="216" height="26" rx="4" fill="#fafafa" stroke="#999" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="150" y="300" style="font-size:13px;fill:#777">watchtower, lookout</text>
+  <text x="140" y="324" class="xs">planned: other words players may use</text>
+</g>
+<line x1="22" y1="340" x2="352" y2="340" stroke="#ddd" stroke-width="2"/>
+<text x="22" y="366" class="h2">One component, two jobs</text>
+<text x="22" y="390" class="s">what the agent may name, and the line it</text>
+<text x="22" y="410" class="s">reads about that thing, from one place.</text>
+<text x="22" y="444" class="xs">No Targetable, no name: houses stay scenery.</text>
+
+<line x1="374" y1="200" x2="392" y2="200" class="blue" marker-end="url(#ab)"/>
+
+<!-- ===== the area: ProximityTargetSource ===== -->
+<text x="398" y="14" class="cap">ONE OPTION · <tspan class="mono" style="letter-spacing:0">ProximityTargetSource</tspan></text>
+<rect x="398" y="24" width="402" height="306" rx="12" fill="#f7f8fa" stroke="#c2c2c2" stroke-width="1.5"/>
+<circle cx="600" cy="196" r="130" fill="none" stroke="#777" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="742" y="52" text-anchor="middle" class="xs">radius 18 m</text>
+
+<!-- training dummy, 2nd nearest -->
+<circle cx="520" cy="112" r="7" fill="#fff" stroke="#2a2a2a" stroke-width="2.5"/>
+<line x1="520" y1="119" x2="520" y2="142" stroke="#2a2a2a" stroke-width="2.5"/>
+<line x1="507" y1="126" x2="533" y2="126" stroke="#2a2a2a" stroke-width="2.5"/>
+<rect x="440" y="62" width="136" height="24" rx="12" class="chip"/><text x="508" y="79" text-anchor="middle" class="mono" style="font-size:14px">training_dummy</text>
+<circle cx="586" cy="74" r="10" fill="#1f5bd6"/><text x="586" y="79" text-anchor="middle" class="w" style="font-size:12px;font-weight:700">2</text>
+<!-- tower, 3rd -->
+<rect x="674" y="104" width="32" height="32" fill="#fff" stroke="#2a2a2a" stroke-width="2.5"/><circle cx="690" cy="120" r="8" fill="#fff" stroke="#2a2a2a" stroke-width="2.5"/>
+<rect x="714" y="108" width="62" height="24" rx="12" class="chip"/><text x="745" y="125" text-anchor="middle" class="mono" style="font-size:14px">tower</text>
+<circle cx="786" cy="120" r="10" fill="#1f5bd6"/><text x="786" y="125" text-anchor="middle" class="w" style="font-size:12px;font-weight:700">3</text>
+<!-- bridge, nearest -->
+<rect x="500" y="262" width="80" height="22" fill="#e2e2e2" stroke="#2a2a2a" stroke-width="2"/>
+<rect x="500" y="290" width="68" height="24" rx="12" class="chip"/><text x="534" y="307" text-anchor="middle" class="mono" style="font-size:14px">bridge</text>
+<circle cx="578" cy="302" r="10" fill="#1f5bd6"/><text x="578" y="307" text-anchor="middle" class="w" style="font-size:12px;font-weight:700">1</text>
+<!-- the guard -->
+<circle cx="600" cy="196" r="13" fill="#2a2a2a"/>
+<text x="600" y="226" text-anchor="middle" class="xs">guard</text>
+<!-- scenery and out of range -->
+<rect x="626" y="228" width="26" height="26" fill="#e6e6e6" stroke="#999" stroke-width="1.5"/>
+<rect x="658" y="240" width="22" height="22" fill="#e6e6e6" stroke="#999" stroke-width="1.5"/>
+<text x="652" y="280" text-anchor="middle" class="xs">house: scenery</text>
+<circle cx="440" cy="290" r="13" fill="#e6e6e6" stroke="#999" stroke-width="1.5"/>
+<text x="440" y="320" text-anchor="middle" class="xs">out of range</text>
+
+<g>
+  <text x="404" y="358" class="s">Radius</text><text x="574" y="358" class="b" style="font-size:16px">18 m from the agent</text>
+  <text x="404" y="382" class="s">Layers, categories</text><text x="574" y="382" class="b" style="font-size:16px">optional filters</text>
+  <text x="404" y="406" class="s">Line of sight</text><text x="574" y="406" class="b" style="font-size:16px">optional</text>
+  <text x="404" y="430" class="s">Cap</text><text x="574" y="430" class="b" style="font-size:16px">8, nearest first</text>
+  <text x="404" y="454" class="xs">Used only if the developer adds it; asked again every decision.</text>
+</g>
+
+<line x1="802" y1="140" x2="822" y2="140" class="blue" marker-end="url(#ab)"/>
+
+<!-- ===== the result: TargetRegistry ===== -->
+<text x="828" y="14" class="cap">THE RESULT · <tspan class="mono" style="letter-spacing:0">TargetRegistry</tspan></text>
+<rect x="828" y="24" width="370" height="222" rx="12" class="soft"/>
+<text x="846" y="54" class="h2">Names offered this decision</text>
+<g>
+  <circle cx="856" cy="84" r="10" fill="#1f5bd6"/><text x="856" y="89" text-anchor="middle" class="w" style="font-size:12px;font-weight:700">1</text>
+  <rect x="874" y="72" width="70" height="24" rx="12" class="chip"/><text x="909" y="89" text-anchor="middle" class="mono" style="font-size:14px">bridge</text>
+  <circle cx="856" cy="118" r="10" fill="#1f5bd6"/><text x="856" y="123" text-anchor="middle" class="w" style="font-size:12px;font-weight:700">2</text>
+  <rect x="874" y="106" width="136" height="24" rx="12" class="chip"/><text x="942" y="123" text-anchor="middle" class="mono" style="font-size:14px">training_dummy</text>
+  <circle cx="856" cy="152" r="10" fill="#1f5bd6"/><text x="856" y="157" text-anchor="middle" class="w" style="font-size:12px;font-weight:700">3</text>
+  <rect x="874" y="140" width="62" height="24" rx="12" class="chip"/><text x="905" y="157" text-anchor="middle" class="mono" style="font-size:14px">tower</text>
+  <rect x="874" y="176" width="96" height="24" rx="12" fill="#e8effc" stroke="#1f5bd6" stroke-width="2"/><text x="922" y="193" text-anchor="middle" class="mono" style="font-size:14px">no_target</text>
+  <text x="980" y="193" class="xs">always added last</text>
+</g>
+<text x="846" y="230" class="s">This list becomes the schema's target enum.</text>
+
+<rect x="828" y="258" width="370" height="74" rx="12" class="box"/>
+<text x="846" y="284" class="h2">More than 8 in range?</text>
+<text x="846" y="306" class="s">The far ones are dropped and listed in</text>
+<text x="846" y="324" class="s">telemetry, in <tspan class="mono" style="font-size:14px">TargetsDropped</tspan>.</text>
+
+<rect x="828" y="344" width="370" height="114" rx="12" class="dash"/>
+<text x="846" y="368" class="h2">Or your own rule</text>
+<text x="846" y="390" class="s">Your own <tspan class="mono" style="font-size:14px">ITargetSource</tspan> can decide what is</text>
+<text x="846" y="409" class="s">nameable and when: what a faction scouted,</text>
+<text x="846" y="428" class="s">a quest stage. A country with no position</text>
+<text x="846" y="447" class="s">lists its own: <tspan class="mono" style="font-size:14px">ExplicitTargetSource</tspan>.</text>
+</svg>
+</body></html>

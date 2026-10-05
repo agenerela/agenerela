@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Decision telemetry</title>
+<link rel="stylesheet" href="fig.css">
+<style>body{width:827px;height:500px}</style></head>
+<body>
+<!-- Decision telemetry (Maxim Goloubitsky): one DecisionResult record. Field names from
+     Runtime/Core as merged (#2, #3, #43, TargetsDropped from #32). Planned fields come from
+     findings.md (schema mode), DR-013, DR-015 and DR-012. -->
+<svg width="827" height="500" viewBox="0 0 827 500" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="ab" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4.2" markerHeight="4.2" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f5bd6"/></marker>
+</defs>
+
+<rect x="2" y="2" width="560" height="440" rx="12" class="box"/>
+<rect x="14" y="14" width="536" height="36" rx="7" fill="#1c1c1c"/>
+<text x="28" y="38" class="bartxt">DECISIONRESULT</text>
+<text x="536" y="38" text-anchor="end" style="font-size:13px;fill:#ccc">one record per decision</text>
+
+<text x="28" y="80" class="cap">DECISION · WHAT THE MODEL CHOSE</text>
+<text x="28" y="102" class="xs">action</text>
+<rect x="28" y="108" width="140" height="32" rx="6" fill="#f3f4f6" stroke="#c2c2c2" stroke-width="1.5"/>
+<text x="40" y="130" class="mono" style="font-size:15px">move_to</text>
+<text x="184" y="102" class="xs">target</text>
+<rect x="184" y="108" width="140" height="32" rx="6" fill="#f3f4f6" stroke="#c2c2c2" stroke-width="1.5"/>
+<text x="196" y="130" class="mono" style="font-size:15px">tower</text>
+<text x="340" y="102" class="xs">statement</text>
+<rect x="340" y="108" width="208" height="32" rx="6" fill="#f3f4f6" stroke="#c2c2c2" stroke-width="1.5"/>
+<text x="352" y="130" class="mono" style="font-size:15px">"On my way."</text>
+
+<text x="28" y="176" class="cap">TELEMETRY · HOW IT WENT</text>
+<g>
+  <line x1="28" y1="190" x2="548" y2="190" stroke="#e2e2e2" stroke-width="1.5"/>
+  <text x="28" y="212" class="b" style="font-size:16px">Latency</text>
+  <text x="300" y="212" class="mono" style="font-size:14px;fill:#666">LatencySeconds</text>
+  <line x1="28" y1="224" x2="548" y2="224" stroke="#e2e2e2" stroke-width="1.5"/>
+  <text x="28" y="246" class="b" style="font-size:16px">Tokens in and out</text>
+  <text x="300" y="246" class="mono" style="font-size:14px;fill:#666">PromptTokens, CompletionTokens</text>
+  <line x1="28" y1="258" x2="548" y2="258" stroke="#e2e2e2" stroke-width="1.5"/>
+  <text x="28" y="280" class="b" style="font-size:16px">Which provider answered</text>
+  <text x="300" y="280" class="mono" style="font-size:14px;fill:#666">ProviderName</text>
+  <line x1="28" y1="292" x2="548" y2="292" stroke="#e2e2e2" stroke-width="1.5"/>
+  <text x="28" y="314" class="b" style="font-size:16px">Framework version</text>
+  <text x="300" y="314" class="mono" style="font-size:14px;fill:#666">FrameworkVersion</text>
+  <line x1="28" y1="326" x2="548" y2="326" stroke="#e2e2e2" stroke-width="1.5"/>
+  <text x="28" y="348" class="b" style="font-size:16px">Guards that fired, in order</text>
+  <text x="300" y="348" class="mono" style="font-size:14px;fill:#666">GuardsFired</text>
+  <line x1="28" y1="360" x2="548" y2="360" stroke="#e2e2e2" stroke-width="1.5"/>
+  <text x="28" y="382" class="b" style="font-size:16px">Targets the cap left out</text>
+  <text x="300" y="382" class="mono" style="font-size:14px;fill:#666">TargetsDropped</text>
+  <line x1="28" y1="394" x2="548" y2="394" stroke="#e2e2e2" stroke-width="1.5"/>
+  <rect x="20" y="398" width="536" height="34" rx="6" fill="#e8effc"/>
+  <text x="28" y="420" class="b" style="font-size:16px;font-weight:700;fill:#1f5bd6">Outcome</text>
+  <text x="300" y="420" class="mono" style="font-size:14px;fill:#1f5bd6;font-weight:700">Outcome</text>
+</g>
+<text x="2" y="470" class="s" font-style="italic">The decision is empty only when the outcome is a pipeline error.</text>
+
+<line x1="560" y1="415" x2="816" y2="415" class="blue" marker-end="url(#ab)"/>
+<text x="592" y="400" class="blbl">one of five outcomes</text>
+<text x="592" y="442" class="xs">set by the evaluation harness</text>
+
+<rect x="590" y="2" width="234" height="302" rx="12" class="dash"/>
+<text x="606" y="30" class="cap" style="font-size:12px">PLANNED · NOT BUILT YET</text>
+<g class="s">
+  <text x="606" y="62">Schema mode: was the</text>
+  <text x="606" y="82">output really enforced?</text>
+  <text x="606" y="114">Which provider config</text>
+  <text x="606" y="134">was resolved</text>
+  <text x="606" y="166">Priority: player-facing</text>
+  <text x="606" y="186">or background</text>
+  <text x="606" y="218">Observations dropped</text>
+  <text x="606" y="238">by the cap</text>
+  <text x="606" y="270">Memory: turns sent</text>
+  <text x="606" y="290">and turns dropped</text>
+</g>
+</svg>
+</body></html>

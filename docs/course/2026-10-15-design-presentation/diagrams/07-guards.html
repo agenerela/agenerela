@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Stopping Attack Godzilla</title>
+<link rel="stylesheet" href="fig.css">
+<style>body{width:1200px;height:460px}</style></head>
+<body>
+<!-- Guards (Hero Jaiyen): how "Attack Godzilla" is stopped. The target enum holds only
+     registered ids (build plan 2.3 rule 2); a small model substitutes the closest legal
+     target; TargetGroundingGuard checks the chosen target was named in the stimulus, exact or
+     after splitting snake_case/CamelCase, and rewrites to none (2.5, Appendix A). Designed,
+     Phase 3. The refusal line is the village wireframe's. -->
+<svg width="1200" height="460" viewBox="0 0 1200 460" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="ab" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4.2" markerHeight="4.2" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f5bd6"/></marker>
+</defs>
+
+<!-- the list the model must choose from -->
+<rect x="2" y="2" width="1196" height="58" rx="10" fill="#f3f4f6"/>
+<text x="20" y="27" class="cap" style="font-size:11.5px">THE SCHEMA'S</text>
+<text x="20" y="45" class="cap" style="font-size:11.5px">TARGET LIST</text>
+<rect x="150" y="18" width="70" height="26" rx="13" class="chip"/><text x="185" y="36" text-anchor="middle" class="mono" style="font-size:14px">bridge</text>
+<rect x="228" y="18" width="136" height="26" rx="13" class="chip"/><text x="296" y="36" text-anchor="middle" class="mono" style="font-size:14px">training_dummy</text>
+<rect x="372" y="18" width="62" height="26" rx="13" class="chip"/><text x="403" y="36" text-anchor="middle" class="mono" style="font-size:14px">tower</text>
+<rect x="442" y="18" width="96" height="26" rx="13" fill="#e8effc" stroke="#1f5bd6" stroke-width="2"/><text x="490" y="36" text-anchor="middle" class="mono" style="font-size:14px">no_target</text>
+<rect x="580" y="18" width="88" height="26" rx="13" class="chipx"/><text x="624" y="36" text-anchor="middle" class="mono" style="font-size:14px;fill:#999" text-decoration="line-through">godzilla</text>
+<text x="684" y="36" class="b">is not an id, so the model cannot even write it.</text>
+
+<!-- column heads -->
+<text x="2" y="96" class="cap">THE PLAYER SAYS</text>
+<text x="296" y="96" class="cap">THE MODEL ANSWERS</text>
+<text x="590" y="96" class="cap">NAME CHECK</text>
+<text x="590" y="112" class="xs">switched on for player requests</text>
+<text x="914" y="96" class="cap">WHAT HAPPENS</text>
+
+<!-- row A: the honest request -->
+<rect x="2" y="122" width="262" height="96" rx="10" class="box"/>
+<text x="20" y="160" class="h2">"Attack the</text>
+<text x="20" y="186" class="h2"><tspan class="bluet">mannequin</tspan>."</text>
+<line x1="268" y1="170" x2="290" y2="170" class="blue" marker-end="url(#ab)"/>
+<rect x="296" y="122" width="262" height="96" rx="10" class="dashw"/>
+<text x="314" y="160" class="mono" style="font-size:16px;font-weight:700">attack_target</text>
+<text x="314" y="184" class="mono" style="font-size:16px;font-weight:700">training_dummy</text>
+<text x="314" y="206" class="xs">what was asked for</text>
+<line x1="562" y1="170" x2="584" y2="170" class="blue" marker-end="url(#ab)"/>
+<rect x="590" y="122" width="296" height="96" rx="10" class="box"/>
+<text x="608" y="150" style="font-size:13px;fill:#555">names: training dummy · dummy · <tspan font-weight="700" fill="#1f5bd6">mannequin</tspan></text>
+<text x="608" y="176" class="s">one of them was said</text>
+<rect x="608" y="188" width="78" height="22" rx="11" fill="#fff" stroke="#1f5bd6" stroke-width="2"/>
+<text x="647" y="204" text-anchor="middle" style="font-size:12px;font-weight:700;fill:#1f5bd6">PASS ✓</text>
+<line x1="890" y1="170" x2="908" y2="170" class="blue" marker-end="url(#ab)"/>
+<rect x="914" y="122" width="284" height="96" rx="10" class="box"/>
+<text x="932" y="160" class="h2">The guard attacks</text>
+<text x="932" y="184" class="h2">the training dummy.</text>
+<text x="932" y="206" class="xs">your handler runs</text>
+
+<!-- row B: the impossible request -->
+<rect x="2" y="234" width="262" height="96" rx="10" class="box"/>
+<text x="20" y="286" class="h2">"Attack Godzilla."</text>
+<line x1="268" y1="282" x2="290" y2="282" class="blue" marker-end="url(#ab)"/>
+<rect x="296" y="234" width="262" height="96" rx="10" class="dashw"/>
+<text x="314" y="272" class="mono" style="font-size:16px;font-weight:700">attack_target</text>
+<text x="314" y="296" class="mono" style="font-size:16px;font-weight:700">training_dummy</text>
+<text x="314" y="318" class="xs">its closest legal guess</text>
+<line x1="562" y1="282" x2="584" y2="282" class="blue" marker-end="url(#ab)"/>
+<rect x="590" y="234" width="296" height="96" rx="10" fill="#fff" stroke="#1f5bd6" stroke-width="3"/>
+<text x="608" y="262" style="font-size:13px;fill:#555">names: training dummy · dummy · mannequin</text>
+<text x="608" y="288" class="s">none of them was said</text>
+<rect x="608" y="300" width="184" height="22" rx="11" fill="#1f5bd6"/>
+<text x="700" y="316" text-anchor="middle" style="font-size:12px;font-weight:700;fill:#fff">NO → REWRITE TO none</text>
+<line x1="890" y1="282" x2="908" y2="282" class="blue" marker-end="url(#ab)"/>
+<rect x="914" y="234" width="284" height="96" rx="10" class="soft"/>
+<text x="932" y="272" class="h2">"Godzilla? Nothing</text>
+<text x="932" y="296" class="h2">like that here."</text>
+<text x="932" y="318" class="xs">nothing is attacked</text>
+
+<!-- why, how, and what it bought -->
+<line x1="2" y1="350" x2="1198" y2="350" stroke="#ddd" stroke-width="2"/>
+<text x="2" y="378" class="h2">Why the model guesses</text>
+<text x="2" y="402" class="s">When the named thing is not on the list, a small</text>
+<text x="2" y="422" class="s">model often picks the closest legal target. It</text>
+<text x="2" y="442" class="s">looks like obedience, so it is the worst failure.</text>
+
+<text x="410" y="378" class="h2">How the check works</text>
+<text x="410" y="402" class="s">The developer switches it on for a player's</text>
+<text x="410" y="422" class="s">request. The target's id words, or an extra name</text>
+<text x="410" y="442" class="s">listed on its Targetable, must have been said.</text>
+
+<text x="820" y="378" class="h2">Still a design question</text>
+<text x="820" y="402" class="s">A name nobody listed, or "attack it", is refused</text>
+<text x="820" y="422" class="s">for now: safe, not smart. On player commands</text>
+<text x="820" y="442" class="s">the check took a 2B model from 60% to 95%.</text>
+</svg>
+</body></html>

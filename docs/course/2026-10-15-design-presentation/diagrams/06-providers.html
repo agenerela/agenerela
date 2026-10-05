@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Where the model runs</title>
+<link rel="stylesheet" href="fig.css">
+<style>body{width:1200px;height:460px}</style></head>
+<body>
+<!-- Model providers (Yevhen Mishchenko): one ILLMProvider, three jobs. Build plan 2.4 (the
+     three-provider table), DR-001 (LLMUnity, optional), DR-013 (config assets), 6.4 (Gemini free
+     tier), Appendix A. ILLMProvider is merged (#12); none of the three providers is built yet. -->
+<svg width="1200" height="460" viewBox="0 0 1200 460" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="ab" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4.2" markerHeight="4.2" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f5bd6"/></marker>
+  <marker id="ag" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#777"/></marker>
+</defs>
+
+<!-- the package -->
+<rect x="2" y="140" width="230" height="180" rx="14" fill="#1c1c1c"/>
+<text x="117" y="204" text-anchor="middle" style="font-size:26px;font-weight:800;fill:#fff;letter-spacing:2.5px">AGENERELA</text>
+<text x="117" y="238" text-anchor="middle" style="font-size:15px;fill:#ccc">builds the request,</text>
+<text x="117" y="260" text-anchor="middle" style="font-size:15px;fill:#ccc">checks the answer</text>
+<text x="117" y="298" text-anchor="middle" style="font-size:11.5px;fill:#aaa;letter-spacing:1.5px">SAME CODE FOR ALL THREE</text>
+
+<!-- the plug -->
+<line x1="232" y1="230" x2="262" y2="230" stroke="#4a4a4a" stroke-width="2.5"/>
+<circle cx="272" cy="230" r="10" fill="#fff" stroke="#4a4a4a" stroke-width="2.5"/>
+<text x="117" y="350" text-anchor="middle" class="mono" style="font-size:15px;font-weight:700">ILLMProvider</text>
+<text x="117" y="370" text-anchor="middle" class="xs">one interface, three providers</text>
+
+<path d="M282,230 C300,230 296,78 316,78" class="blue" marker-end="url(#ab)"/>
+<line x1="282" y1="230" x2="316" y2="230" class="blue" marker-end="url(#ab)"/>
+<path d="M282,230 C300,230 296,382 316,382" class="blue" marker-end="url(#ab)"/>
+
+<!-- ===== row helper layout: ours (chip) -> theirs (dashed box) ===== -->
+<!-- BUILD -->
+<rect x="322" y="32" width="244" height="92" rx="10" class="box"/>
+<rect x="334" y="42" width="78" height="26" rx="5" fill="#1c1c1c"/><text x="373" y="60" text-anchor="middle" class="bartxt" style="font-size:13px">BUILD</text>
+<text x="424" y="60" class="xs">ours</text>
+<text x="338" y="92" class="mono" style="font-size:16px;font-weight:700">OllamaProvider</text>
+<text x="338" y="112" class="xs">development</text>
+<line x1="570" y1="78" x2="604" y2="78" class="grey" marker-end="url(#ag)"/>
+<text x="587" y="68" text-anchor="middle" style="font-size:11px;fill:#666;font-weight:700">HTTP</text>
+<rect x="612" y="16" width="586" height="124" rx="12" class="dashw"/>
+<g transform="translate(670,78)">
+  <rect x="-24" y="-20" width="48" height="30" rx="3" fill="#fff" stroke="#2a2a2a" stroke-width="2.5"/>
+  <path d="M-32,13 L32,13 L26,21 L-26,21 z" fill="#fff" stroke="#2a2a2a" stroke-width="2.5"/>
+</g>
+<text x="720" y="54" class="h2">Ollama, on the developer's PC</text>
+<text x="720" y="80" class="s">the Unity Editor calls a local server · localhost:11434</text>
+<text x="720" y="102" class="s">swap models in seconds · qwen3.5 2B and 4B</text>
+<text x="720" y="126" class="xs">not shippable: players will not install and run a server</text>
+
+<!-- SHIP -->
+<rect x="322" y="184" width="244" height="92" rx="10" class="box" style="stroke:#1f5bd6;stroke-width:3"/>
+<rect x="334" y="194" width="78" height="26" rx="5" fill="#1f5bd6"/><text x="373" y="212" text-anchor="middle" class="bartxt" style="font-size:13px">SHIP</text>
+<text x="424" y="212" class="xs">ours</text>
+<text x="338" y="244" class="mono" style="font-size:16px;font-weight:700">LLMUnityProvider</text>
+<text x="338" y="264" class="xs">shipping</text>
+<line x1="570" y1="230" x2="604" y2="230" class="grey" marker-end="url(#ag)"/>
+<rect x="612" y="168" width="586" height="124" rx="12" class="dashw"/>
+<g transform="translate(670,230)">
+  <rect x="-30" y="-16" width="60" height="32" rx="16" fill="#fff" stroke="#2a2a2a" stroke-width="2.5"/>
+  <path d="M-17,-6 v12 M-23,0 h12" stroke="#2a2a2a" stroke-width="3"/>
+  <circle cx="13" cy="-4" r="3.5" fill="#2a2a2a"/><circle cx="20" cy="4" r="3.5" fill="#2a2a2a"/>
+</g>
+<text x="720" y="206" class="h2">llama.cpp, inside the built game</text>
+<text x="720" y="232" class="s">through LLMUnity, an optional package · GBNF grammar</text>
+<text x="720" y="254" class="s">no server, no network · the model file adds about 1 GB</text>
+<text x="720" y="278" class="xs">the only option a player can actually run</text>
+
+<!-- COMPARE -->
+<rect x="322" y="336" width="244" height="92" rx="10" class="box"/>
+<rect x="334" y="346" width="96" height="26" rx="5" fill="#1c1c1c"/><text x="382" y="364" text-anchor="middle" class="bartxt" style="font-size:13px">COMPARE</text>
+<text x="442" y="364" class="xs">ours</text>
+<text x="338" y="396" class="mono" style="font-size:16px;font-weight:700">GeminiProvider</text>
+<text x="338" y="416" class="xs">optional · first of many vendors</text>
+<line x1="570" y1="382" x2="604" y2="382" class="grey" marker-end="url(#ag)"/>
+<text x="587" y="372" text-anchor="middle" style="font-size:11px;fill:#666;font-weight:700">HTTPS</text>
+<rect x="612" y="320" width="586" height="124" rx="12" class="dashw"/>
+<g transform="translate(670,384)">
+  <path d="M-22,14 a12,12 0 0 1 -2,-24 a16,16 0 0 1 30,-6 a12,12 0 0 1 16,12 a10,10 0 0 1 -4,18 z" fill="#fff" stroke="#2a2a2a" stroke-width="2.5"/>
+</g>
+<text x="720" y="358" class="h2">A cloud API, Gemini first</text>
+<text x="720" y="384" class="s">the API key is read from .env and sent in a header</text>
+<text x="720" y="406" class="s">free tier about 15 requests a minute, so caps live in code</text>
+<text x="720" y="430" class="xs">good for comparison; cost grows with every agent</text>
+</svg>
+</body></html>

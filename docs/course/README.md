@@ -1,6 +1,6 @@
 # Course materials
 
-COMP 490 deliverables that were built as shared web pages rather than documents: each one
+COMP 490 deliverables. Most were built as shared web pages rather than documents: each one
 collects the team's answers for a Canvas practice and produces the text every member posts.
 They are archived here so they outlive the links, and so a reader a year from now can see
 what the class asked of us and what we said.
@@ -12,6 +12,7 @@ what the class asked of us and what we said.
 | 2026-09-10 | [`2026-09-10-interview-replies.html`](2026-09-10-interview-replies.html) | The replies built from those interviews, each change pointing back to a requirement id from the first practice |
 | 2026-09-17 | [`2026-09-17-lab-kit.html`](2026-09-17-lab-kit.html) | Sketch/mockup lab: the sitemap and the six screen wireframes, with the text posted alongside each figure |
 | 2026-09-24 | [`2026-09-24-system-design.html`](2026-09-24-system-design.html) | System design: the group leader's reply, with our goals and how we reach each, hardware, software, algorithms and user stories, and the framework figure sized for Canvas's Medium image |
+| 2026-10-15 | [`2026-10-15-design-presentation/`](2026-10-15-design-presentation/README.md) | Project design presentation: the 20-slide deck (a .pptx for Google Slides and a PDF preview), its figures with their HTML sources, the script that builds it, and who presents what |
 
 Open any of them by double-clicking the file; they are self-contained pages that need no
 server. The lab kit and the system-design page load their figures from
