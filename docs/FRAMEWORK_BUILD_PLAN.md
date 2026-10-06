@@ -635,6 +635,20 @@ another component calls `GetComponent` on it. Revisit if games keep writing that
 `GetComponent`: the fix is a conversion that `Runtime/Unity/` supplies, not scene calls in the
 reader.
 
+**Revisit later — which targets an action accepts.** Proposed in the COMP 490 requirements
+specification (3.4.2.2, October 2026), and not designed: each action declares the target
+categories it accepts, so `give` is offered props and characters but never the tower. Today
+one `target` enum serves every action, so the model can pair `give` with `tower`, which the
+schema allows and the game cannot use. The category already exists as the free-text
+`Category` on `Targetable` (#32); a target from `ExplicitTargetSource` has none, so targets
+with no scene presence would need one too. How to enforce it is open. A separate target list
+per action inside the schema makes the bad pair unexpressible, the same move as state masking
+(rule 1 above), but it changes the request shape the prototype measured, so it needs an A/B
+with a control arm before it ships. A guard (§2.5) leaves the schema alone but only catches
+the pair after the model has chosen it. Revisit when a demo needs it; until then a handler
+given a target it cannot use does nothing with it, and once guards land in Phase 3 a
+developer's own guard can reject the pair.
+
 ### 2.3 Schema (`Runtime/Schema/`)
 
 A provider-neutral `DecisionSchema` model built per request from the agent's currently
@@ -693,12 +707,21 @@ public interface ILLMProvider {
 
 - `OllamaProvider` first (port from prototype's `OllamaClient`: non-blocking, `think:false`
   for Qwen-family reasoning modes, `num_ctx` configurable, telemetry from the response
-  envelope).
+  envelope). Its default endpoint is `http://127.0.0.1:11434`, not `localhost`: on Windows
+  `localhost` resolves to IPv6 first, Ollama listens on IPv4 only, and the prototype's
+  Python probes paid about 2 s a request for it ([findings](llm-wiki/findings.md)).
 - The abstraction must absorb **schema dialect differences** (that's why `Capabilities`
   exists), not just base URLs. This was proven necessary, not speculative.
 - The provider is *untrusted* by design: everything in 2.5 runs regardless of what the
   provider claims to guarantee, so a plain-chat provider with no constrained decoding is
   still contained.
+- **Token probabilities, where the backend has them.** The grounding guard (§2.5, DR-016)
+  reads, token by token through the model's target, how much of its probability could still
+  lead to a target on the list. So `ProviderCapabilities` states
+  whether a provider reports token probabilities, and `ProviderResult` carries them for the
+  answer. Ollama returns them from before the schema's mask (`logprobs`, checked on 0.34.2),
+  for about 0.07 s a decision. LLMUnity's `LLMClient` has an `nProbs` setting for the
+  in-process provider, not yet tried; cloud vendors differ by model.
 
 **Three providers, three different jobs.** These are not redundant — each exists because
 the others cannot do its job:
@@ -816,80 +839,88 @@ public interface IDecisionGuard {
 
 Built-ins, in order:
 1. **SchemaLegalityGuard** — actionId is registered and currently available; targetId is
-   in the registry or `no_target`. (Execution-time re-check of what the grammar should
-   have enforced — providers are untrusted.)
-2. **TargetGroundingGuard, the name check for player requests.** When a player's request
-   names what to act on ("Attack the training dummy."), the chosen target must actually be
-   named in what the player said, or the answer is rewritten to `none`.
+   in the registry or `no_target`, and an action that needs a target got a real one.
+   (Execution-time re-check of what the grammar should have enforced — providers are
+   untrusted.)
+2. **TargetGroundingGuard: did the model want something that is not on the list?** It runs
+   on every decision unless the caller turns it off for that call. From the same request's
+   token probabilities (§2.4), it reads, at every token of the model's target, how much of
+   the model's probability could still lead to a target on the list, and keeps the lowest.
+   Below 0.8, a threshold calibrated in Phase 4, it rewrites the decision to `none`.
 
-   **It runs only when the caller switches it on for that call**, through a flag on
-   `DecideOptions` that is off by default. The framework cannot tell whether a stimulus is a
-   player's line or something the game raised, and must not guess (DR-008). Most decisions
-   are triggered by the game itself (a tick, an event, a turn report), where nobody names a
-   target, and a check on every call would block legitimate choices, such as a guard
-   deciding on its own to walk to the open gate. Those decisions are protected by the
-   schema, state masking, the legality guard above, the developer's own guards and
-   `Execute`'s re-check, none of which depend on wording.
+   - **"Attack the scarecrow."** scores 0.05, because the model wanted to write "sc…".
+   - **"Go to the south tower."** scores 0.007 on the 2B. The start "south" fits
+     `south_gate`, but the model then wanted "tower", and no south tower is listed.
+   - **"Attack the training dummy."** scores 0.998.
 
-   **How it matches.** The chosen target's id split into words (`training_dummy` →
-   "training dummy"), or any of the **extra names** the developer lists on that object's
-   `Targetable` ("dummy", "mannequin"), must appear in the stimulus, ignoring case and
-   punctuation. The extra-names field is planned for Phase 3, alongside the check; today's
-   `Targetable` (#32) has none.
+   It needs no word lists, so a paraphrase ("Hit the mannequin.", 0.99) or a reference
+   resolved from the previous turn ("Attack it.") passes. Telemetry records the number on
+   every decision. DR-016 has the measurements and the options it beat.
 
-   **Why it exists.** A small model asked to act on something that is not on the list often
-   picks the closest *legal* target instead: "Attack Godzilla" attacks the training dummy.
-   That is the worst failure, because it looks like obedience. Rewriting such answers to
-   `none` took a 2B model from 60% → 95% and a 4B to 100% on the prototype's focused suite of
-   player commands (Appendix A). Those numbers say nothing yet about game-triggered
-   decisions.
+   **Why it exists.** A model forced to answer from the target list swaps a missing target
+   for a legal one: "Attack Godzilla" attacks the training dummy. That is the worst failure,
+   because it looks like obedience. The swap shows in the model's own probability. On a probe
+   of 130 prompts in three scenes, the guard took a 2B model from 83 to 108 correct and a 4B
+   from 113 to 124. It turned away three good requests the 2B would otherwise have carried
+   out, and none on the 4B ([findings](llm-wiki/findings.md)).
 
-   **Limits, stated honestly.** It matches words, so a name nobody listed ("the training
-   thing") and a reference to an earlier turn ("attack it", "go there") are refused. It fails
-   safe: the agent declines rather than acting on the wrong thing. Whether to harden it, and
-   how much to leave to the prompt instead, is the open investigation at the end of this
-   section. Any change to how it matches needs an A/B run with a control arm before it
-   ships.
+   **On by default, whoever calls.** The framework cannot tell a player's line from
+   something the game raised, and must not guess (DR-008), but the guard does not need to
+   know. A guess and a free choice look different in the numbers. When nothing specific was
+   asked for and two targets are equally good, the model splits its probability between
+   them, and all of it stays on the list, so the guard passes. Only probability that went to
+   something absent counts against the answer. In the probe's open choices, such as "Climb
+   either watchtower and look out.", the 4B was only 0.43 sure of the tower it picked, yet
+   0.98 of its probability stayed on the list, and the guard passed every one. It refused one
+   good game-triggered decision, on the 2B, which weighed writing the event's own word
+   "weapon" (0.77). `DecideOptions.CheckTarget` turns it off for one
+   call, for a developer who would rather the agent act on its best guess than do nothing:
+
+   ```csharp
+   // Checked: the default, whoever is calling.
+   await guard.DecideAsync(stimulus);
+   // Not checked, for this one call.
+   await guard.DecideAsync(stimulus, new DecideOptions { CheckTarget = false });
+   ```
+
+   **Without token probabilities**, on a provider that cannot report them, the guard records
+   that it could not run. The fallback is the next best option that costs nothing: one line
+   in the system prompt, saying that only the listed things are here and the model must never
+   act on a different one. `PromptBuilder` adds it when `CheckTarget` is on and the provider
+   reports no probabilities. Measured: 2B 73 → 88, 4B 98 → 101 (DR-016).
+
+   **Limits.** A near miss the model takes for the listed thing passes: Excalibur for the
+   sword on the 2B, a bucket for the barrel and a lantern for the torch on the 4B. So does a
+   pronoun the model resolves to the wrong thing ("Attack it!" after the player mentioned a
+   dragon). On a small model, a paraphrase that starts like the right id can be refused. The
+   2B began writing "healing" for "Pass me the healing draught.", and the schema completed
+   it as `health_potion`, which was right; the guard read the unfinished "healing" and
+   refused. A wrong action on the right target
+   ("That's an interesting sword you have." picks the sword up) is beyond any target check;
+   only model scale fixed it (Appendix A). Any change to the threshold or the signal needs
+   an A/B run with a control arm before it ships.
+
+   **The name check it replaces** required the chosen target's name to appear in the
+   player's line. Measured on the same probe, it refused 15–16 good requests per model,
+   paraphrases and "it". On the 4B it scored below no check at all, 89 against 98. It is no
+   longer built in. A developer who wants strict wording can add it as their own guard
+   (item 3).
 3. Developer-supplied guards append here (game-specific rules: line-of-sight, cooldowns…).
 
 A guard rewriting to `none` is a **contained refusal**, not an error — telemetry records
 which guard fired so the eval harness can distinguish "model right", "model wrong but
-contained", and "model wrong and executed".
+contained", and "model wrong and executed". After a rewrite, the agent's `statement` no
+longer matches what it does: it says "Attacking the dummy!" while nothing happens. So the
+guard's reason travels with the result, and the developer supplies the line, or asks the
+model for one in a second, short request only when a guard fires.
 
-**Open investigation: stop "Attack Godzilla" in the prompt, in code, or both.** A model that
-swaps a missing target for a legal one can be stopped in two places, and how to split the
-work between them is not decided.
-
-- *Before the model, in the prompt.* The target enum offers only registered ids plus
-  `no_target`, and the few-shot block includes a refusal (§2.3, rules 2 and 4), so refusing
-  is something the model can say. Both arrive with the schema in Phase 1. Until this
-  pipeline lands in Phase 3, they are the only guardrail against the swap.
-- *After the model, in code.* The name check above, or something smarter.
-
-What is measured is narrow. On the prototype's 20-prompt suite, whose prompt included a
-refusal example (`tools/benchmarks/compare_2b_4b.py`), the 2B model refused 1 of 6
-impossible requests; with the name check it refused all 6 (Appendix A). The prototype's
-Feasibility Report II explains why: constrained decoding forbids "godzilla", so its
-probability moves onto a legal id. Whether that prompt also offered `no_target` is not
-recorded (the committed probe leaves the target empty instead), so how far a prompt with
-both gets on its own is unknown.
-
-To settle it in Phase 4, each an A/B run with a control arm on the 200+ prompt set's
-impossible requests and its game-triggered cases, recorded in
-[findings](llm-wiki/findings.md):
-
-1. The prompt alone (`no_target` and the refusal example) against the same prompt plus the
-   name check: what the check still adds once refusing is expressible.
-2. Prompt-side variants: with and without the refusal example (already owed, as findings
-   experiment 3), and its wording.
-3. Code-side variants against today's word match: matching by meaning rather than by words,
-   one narrow follow-up question to the model ("was the training dummy named?"), and
-   references across turns once memory exists (§2.9, rule 5). Each costs something the word
-   match does not: a model or library to ship (any further core dependency needs its own
-   decision record, DR-009), or a second request per decision.
-
-Until those runs exist, the name check stays planned for Phase 3, and nothing claims the
-prompt alone is enough.
+**Still open, for Phase 4.** The threshold comes from 130 prompts that one person wrote for
+three invented scenes, eight of them open choices. Phase 4 calibrates it on the 200+ prompt
+set and re-measures through the in-process provider. The 2B answered `none` to six of the
+eight open choices by itself, before any guard ran. Whether a few-shot example of a free
+choice fixes that is a Phase 4 A/B. When a request names one thing but the probability splits
+between two listed targets, asking the player which one they meant may beat guessing, as
+KnowNo does (DR-016).
 
 ### 2.6 Scheduling (`Runtime/Scheduling/`)
 
@@ -971,10 +1002,11 @@ breaking the rest of the framework:
 1. **Cached and invalidated by an event** — per turn, per world change — **never run per
    decision.** A summary call per decision doubles latency, and the serialized queue is
    already ≈21 s for 30 agents.
-2. **Registered target ids appear verbatim.** The grounding guard (§2.5) is lexical: it
-   checks that the chosen target is named in the text. A summariser that paraphrases
-   `tower` into "the big stone tower" silently disables the highest-value component in the
-   framework.
+2. **Registered target ids appear verbatim.** The model answers with ids, so observations
+   should use them. A summariser that turns `tower` into "the big stone tower" leaves every
+   agent that reads it to map the paraphrase back to the id, which is unmeasured and may
+   cost accuracy. This condition was first written to protect the lexical name check, which
+   DR-016 replaced; it still holds for this reason.
 3. **Recorded as part of the arm in any evaluation run.** Generated observations are
    non-deterministic input, and a run that varies its own inputs cannot resolve a 10-point
    noise floor.
@@ -1028,11 +1060,12 @@ stays the final user turn.
    truncating history to `num_ctx` as Phase 2 work.
 4. **How a turn names its speaker is decided once, in Phase 2.** The remarks on
    `DecisionRequest.History` forbid inventing an encoding before then.
-5. **Memory does not loosen the grounding guard.** The guard checks the current stimulus
-   only, so "attack it" after "Look at that dummy" is blocked today. Resolving a reference
-   across turns is the hardening §2.5 lists as an open design question. It stays
-   deterministic code, and it is measured before it ships; history being in the prompt is no reason to
-   hand the decision to the model.
+5. **Memory works with the grounding guard, not around it.** The guard reads where the
+   model's probability went (§2.5, DR-016). So "Attack it." after "Do you see the training
+   dummy?" passes when the model resolves "it" to a target on the list, and is refused when it
+   reaches for something that is not there. On the probe the 2B resolved 2 of 3 such
+   references and the 4B all 3. The legality guard
+   and `Execute`'s re-check still run on every decision, whatever the history says.
 
 **Long-term memory is a strategy, not a new stage.** Remembering beyond the window, such as
 that the player lied yesterday or which faction betrayed which, fits behind the same
@@ -1059,7 +1092,7 @@ strategy interface is where that would go. Wait until a demo needs it.
 | **0. Skeleton** | Repo + package layout of §1 | Checklist §1.3 all green |
 | **1. Core + Actions + Schema** (pure C#, no LLM, no scene) | `Agent`, `ActionDefinition`, registries, `DecisionSchema` builder + Ollama-dialect serializer | EditMode tests prove: state masking (following agent's schema omits `follow_player`); `target` required w/ `no_target`; field order action→target→statement; few-shot block matches registered actions and rotates only sensible example targets; empty target-registry removes `target` property entirely. **All testable without any model running — this is why Phase 1 has no LLM.** |
 | **2. OllamaProvider + queue + memory** | End-to-end decision in a sandbox scene, with short-term memory (§2.9) | PlayMode test (tagged `RequiresOllama`): one agent, five actions, live decision round-trip < 5s; telemetry fields populated; provider failure (missing model) surfaces as a typed error, not an exception leak. EditMode tests for `RollingHistory`: it fills `DecisionRequest.History` oldest first within a token cap, records the decision `DecideAsync` returns rather than the provider's raw answer (so a Phase 3 guard's rewrite is what gets remembered), and keeps one memory per agent instance |
-| **3. Validation pipeline** | Guards of §2.5 wired between provider and handler | EditMode tests with hand-built fake decisions: substitution attack rewritten to `none`; unavailable action rejected; guard verdicts appear in telemetry. With the name check switched on, a target the player named by one of its extra names passes; with it off (the default), a game-triggered decision is never blocked by it. Integration: prototype's "impossible request" suite passes ≥ 95% on a 2B model |
+| **3. Validation pipeline** | Guards of §2.5 wired between provider and handler | EditMode tests with hand-built fake decisions: substitution attack rewritten to `none`; unavailable action rejected; an action that needs a target, answered with `no_target`, rejected; guard verdicts appear in telemetry. With `CheckTarget` on (the default), a decision where less than the threshold of the model's probability stayed on the target list is rewritten to `none`, and one split between two listed targets passes; with it off for a call, the guard does not run on that call; a provider that reports no probabilities is recorded as such rather than passing silently. Integration: prototype's "impossible request" suite passes ≥ 95% on a 2B model |
 | **4. Evaluation harness** | The measurement instrument — **before more features** | 200+ labelled prompts (grow from the prototype's 53), each declaring its required precondition state, and covering game-triggered stimuli (events, reports, turns) as well as player commands rather than mostly commands; runner executes A/B (two configs, same model/session) and writes a classified report (correct / wrong-legal / contained / rejected / pipeline-error); second annotator labels a subset, agreement reported. Methodology checklist (§4) committed to the wiki |
 | **5. Editor tooling** | §2.7 | A developer with zero framework knowledge builds a working 3-action agent in an empty scene in < 15 min without editing framework source (actually run this test on a teammate) |
 | **6. Cloud API providers** | Proof the abstraction is real, and the path to supporting any vendor | At least one cloud provider (Gemini first — it is what the prototype measured) runs the same eval subset through `ILLMProvider` with **zero framework-code changes**: a provider class plus config, nothing more. A **provider conformance test suite** exists that any future vendor must pass, so adding OpenAI or Anthropic later is implementing an interface rather than editing the framework. Budget caps and RPM throttling enforced in code, not convention |
@@ -1108,10 +1141,13 @@ Before writing down any accuracy number:
 7. CI: EditMode tests always run; PlayMode integration tests behind a `RequiresOllama`
    category so the suite is green on machines without a model.
 
-Known unresolved measurement issue to carry forward: the prototype measured ~1.3s mean
-latency in-Unity but ~3.5s from standalone Python scripts, same model/machine — backwards
-from expectation, never root-caused. Until explained in the new codebase, trust *relative*
-comparisons within one environment; distrust absolute latency claims across environments.
+A measurement issue, most likely explained on 5 October 2026: the prototype measured ~1.3s
+mean latency in-Unity but ~3.5s from standalone Python scripts, same model/machine. The
+scripts called `localhost`, which on Windows tries IPv6 first while Ollama listens on IPv4
+only, and each request waited about 2.1 s for the failed attempt ([findings](llm-wiki/findings.md)).
+Use `127.0.0.1` in probes and as the provider's default endpoint. Unity was not re-measured,
+so until it is, trust *relative* comparisons within one environment over absolute latency
+claims across environments.
 
 **Not yet scheduled: VRAM monitoring.** Nothing watches GPU memory while a local model
 runs. The one figure we have, a 2B model plus a minimal scene at 4.2 GB of 8 GB
@@ -1636,8 +1672,8 @@ uses.
   values like `Training Dummy (1)`. A missing id is an Inspector error; a duplicate id
   within one agent's resolved set is a decision-time error recorded in telemetry.
 - The grounding guard matters more, not less: a wider candidate set is exactly the case
-  where a model substitutes a legal target for the illegal one the player named, and the
-  lexical check is what caught that (60% → 95%, Appendix A).
+  where a model substitutes a legal target for the illegal one the player named. The guard
+  now catches it by the model's own confidence rather than by matching words (DR-016).
 - `GreyBoxStrategy` is unaffected — a country has no Transform to query from and supplies
   its own set, which is why `ITargetSource` is an interface rather than a built-in query.
 - The resolved set is recorded per decision, so "why was that offered" is answerable.
@@ -1692,6 +1728,99 @@ sets background priority, and cancels when the agent is disabled or off-screen.
 alongside a player-facing NPC, in which case tiers become a small ordered enum rather than a
 boolean — a change to the scheduler, not to the API shape.
 
+### DR-016 — The grounding guard reads the model's confidence, not the player's words
+
+**Status:** Decided for now, 5 October 2026, from a probe ([findings](llm-wiki/findings.md)).
+Phase 4 re-measures it on the 200+ prompt set.
+
+**Context.** The schema's target enum holds only registered ids, so a model asked to act on
+something absent cannot name it. It names the closest legal target instead: "Attack Godzilla"
+attacks the training dummy. This is the general weakness of a forced choice, not a quirk of
+one model:
+
+- Language models pick from a label set even when the right label is missing
+  ([Classify-w/o-Gold](https://arxiv.org/abs/2406.16203)).
+- Accuracy falls 30–50% across 28 models when "none of the above" is the right answer
+  ([ACL Findings 2025](https://aclanthology.org/2025.findings-acl.1031/)).
+- A grammar mask moves the forbidden word's probability onto the legal ones
+  ([Grammar-Aligned Decoding](https://arxiv.org/abs/2405.21047)).
+
+The plan was a name check: the chosen target's name had to appear in the player's line. It
+needed a list of every other word players might use, had to be switched on per call, and
+refused paraphrases and pronouns.
+
+**Options considered.** Each ran on the same 109 prompts in two scenes, on `qwen3.5:2b` and
+`qwen3.5:4b`, greedy, in one session. The two model columns give correct of 109, then wrong
+actions carried out.
+
+| Option | 2B | 4B | Cost | Verdict |
+|---|---|---|---|---|
+| Prompt and schema only: target enum, `no_target`, one refusal example | 73 · 29 | 98 · 10 | — | The base, kept |
+| + the name check, on player requests | 83 · 4 | 89 · 3 | Word lists; turned away 15 and 16 more good requests | Dropped as a built-in |
+| + a yes/no verifier request ("is X what the player asked for?") | 86 · 5 | 103 · 3 | A second request, +0.3 s per checked decision; turned away 11 more on the 2B | Rejected |
+| + how sure the model was of the target it chose, below 0.8 → `none`, on player requests | 95 · 6 | 103 · 5 | Logprobs; two equally good targets also lower it, so it must be switched on per call | Not chosen |
+| + the share of the model's probability that stayed on the target list at the target's first token, below 0.8 → `none`, on every decision | 95 · 6 | 103 · 5 | Logprobs; misses names that start like a listed one ("spear" passes as `sword`) | Replaced by the row below |
+| **+ the same share at every token of the target, the lowest, below 0.8 → `none`, on every decision** | **94 · 5** | **104 · 4** | Logprobs, +0.07 s; turned away 3 more good requests on the 2B, none on the 4B | **Chosen** |
+| A one-line rule in the prompt instead | 88 · 8 | 101 · 3 | None | Fallback without token probabilities |
+| A near-miss refusal example in the few-shot block | 78 · 22 | 97 · 10 | None | Rejected: little gain |
+| A field for the player's words before the target, checked in code | 88 · 6 | 100 · 1 | A schema field; the model wrote the matched name, not the player's | Rejected |
+| A free-text target, resolved in code against names | 92 · 7 | 98 · 7 | Gives up the enum; one answer ran away | Rejected for now |
+
+A second run added a fort scene: open choices ("Check one of the gates."), and near misses
+whose names start like a listed target ("Go to the north tower." beside `north_gate`). That
+made 130 prompts, scored the same way:
+
+| Option | 2B | 4B |
+|---|---|---|
+| Prompt and schema only | 83 · 33 | 113 · 15 |
+| + the name check | 97 · 4, turned away 29 good requests | 109 · 3, turned away 18 |
+| + the on-list share at the first token | 105 · 10 | 118 · 10 |
+| **+ the on-list share at every token** | **108 · 5** | **124 · 4** |
+
+Reading every token caught all six look-alike near misses on both models; the first token
+caught two on the 2B and one on the 4B. Telling right targets from wrong ones, it reached an
+AUROC of 0.93 on the 2B and 1.00 on the 4B.
+
+The same problem has the same shape elsewhere. Entity linking predicts "no match" by a
+threshold on the linking score ([NIL prediction](https://arxiv.org/abs/2305.15725)). KnowNo
+adds "an option not listed here", and asks a human when the model's option probabilities do
+not settle on one ([KnowNo](https://arxiv.org/abs/2307.01928)).
+
+**Decision.** `TargetGroundingGuard` keeps its name and its place in the pipeline, and
+decides by the model's own probabilities. From the same request's token probabilities it
+reads, at every token of the target, how much of the model's probability could still lead to
+a target on the list, keeps the lowest, and rewrites the decision to `none` below 0.8. It
+runs on every decision,
+because probability that went to something absent is wrong whoever called, while a model
+torn between two listed targets keeps all of it on the list. A caller turns it off for one
+call with `DecideOptions.CheckTarget = false`. Telemetry records the number for every
+decision. On a provider that reports no token probabilities, the guard records that it could
+not run, and `PromptBuilder` adds the one-line rule instead.
+
+**Consequences**
+- `ProviderCapabilities` gains a flag for reporting token probabilities, and `ProviderResult`
+  carries them (§2.4). Ollama returns them from before the schema's mask. LLMUnity's
+  `LLMClient` has an `nProbs` setting, not yet tried. Gemini offers logprobs on some models
+  only.
+- The guard keeps the lowest share across the target's tokens rather than multiplying
+  their probabilities. Multiplying punished the model for any split the mask forced on it.
+  Reading only the first token missed names that start like a listed one: "spear" and
+  `sword`, "the south tower" and `south_gate`. Reading every token catches them. The cost
+  falls on a small model: a paraphrase that starts like the right id, such as "healing
+  draught" for `health_potion`, can be refused.
+- The extra-names field once planned for `Targetable` is dropped from the plan, since the
+  guard needs no word lists.
+- A reference resolved from history passes when the model is sure of it (§2.9, rule 5).
+- It still misses near misses the model is sure of, and wrong actions on the right target
+  (§2.5, Limits).
+
+**Revisit if:** any of these happens:
+- Phase 4's prompt set or the in-process provider separates right targets from wrong ones
+  clearly worse than here (AUROC 0.93 on the 2B, 1.00 on the 4B).
+- Open choices between equally good targets get refused.
+- A model family with badly calibrated probabilities is adopted.
+- Confident near misses prove common.
+
 ### Decisions already recorded elsewhere in this plan
 
 | ID | Decision | Where |
@@ -1699,7 +1828,7 @@ boolean — a change to the scheduler, not to the API shape.
 | DR-002 | One repository for package, demos, dev project, wiki and tools | §6.1 |
 | DR-003 | Demo games are not in the package's `Samples~/`. Where they live instead is now DR-010 | §1.6 |
 | DR-004 | `action` emitted before the free-text field; `target` required with a `no_target` sentinel; no reasoning field | §2.3, Appendix A |
-| DR-005 | Grounding guard in code rather than relying on model scale | §2.5, Appendix A |
+| DR-005 | Grounding guard in code rather than relying on model scale; how it decides is DR-016 | §2.5, Appendix A, DR-016 |
 | DR-006 | Evaluation harness (Phase 4) built before editor tooling and demos | §3 |
 | DR-007 | License MIT, pending the university IP check | §1.8 |
 | DR-008 | No speaking-character assumption and no input taxonomy: the free-text field is `statement`, not `dialogue`; the developer decides when an agent is asked and passes a free-form stimulus, label and observations; the framework never classifies the call. Rename unmeasured — early Phase 4 A/B | §2.1, §2.3, issues #2, #8, #17, #18 |
@@ -1715,7 +1844,7 @@ boolean — a change to the scheduler, not to the API shape.
 | Generated few-shot block (isolated) | **+35.3 pts** — largest single lever |
 | Reasoning field before action (tried, rejected) | **35.3%** vs 41.2% unmodified baseline — made it worse |
 | `target` optional → required + `no_target` sentinel | 4B target-naming 0/5 → **5/5**; 2B 3/5 → 5/5 |
-| Lexical grounding guard (~10 lines, post-hoc) | 2B 60% → **95%**; 4B 65% → **100%** (20-prompt focused suite of player commands); impossible-request refusals 1/6 → 6/6 on 2B |
+| Lexical grounding guard (~10 lines, post-hoc) | 2B 60% → **95%**; 4B 65% → **100%** (20-prompt focused suite of player commands); impossible-request refusals 1/6 → 6/6 on 2B. The "after" runs also made `target` required with `no_target`: the 4B's target naming went 0/5 → 5/5 between them, which a guard cannot do. The guard's own share is the refusals. Replaced by a confidence check (DR-016) |
 | 2B + guards vs 4B without | **95% vs 65%** — scaffolding beats scale |
 | Residual only model scale fixed | "That's an interesting sword you have." → 2B picks it up (target IS in text; guard correctly passes); 4B refuses. The honest boundary of code-side fixing |
 | Gemini schema dialect | rejects `""` in enums (HTTP 400); supports `propertyOrdering`; `gemini-2.5-flash-lite` 404s for new keys → use `gemini-3.5-flash-lite`; free tier ≈15 RPM / 1,000 req-day |
@@ -1726,8 +1855,9 @@ boolean — a change to the scheduler, not to the API shape.
 | Regressions caught by the A/B harness | Run 1: 47.2% (dialogue-first + none-biased prompt); Run 2: 52.8% (bias removed, order still wrong) — both *below* baseline; methodology caught both |
 
 **Not established, inherited as open**: generalization beyond one model family / one
-scene / one annotator; statistical power below ~10 pts at n=53; the in-Unity vs
-standalone latency discrepancy; how conversation history (§2.9) affects accuracy, which no
+scene / one annotator; statistical power below ~10 pts at n=53; the in-Unity latency,
+not re-measured since the standalone scripts' extra ~2 s was traced to `localhost` (§4); how
+conversation history (§2.9) affects accuracy, which no
 measurement here covers; how accuracy holds on game-triggered decisions (events, reports,
 turns), since these measurements centred on player commands.
 

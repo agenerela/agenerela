@@ -170,7 +170,8 @@ canyon_shortcut takes about 9 seconds; about 1 in 4 racers wreck there.
 The stimulus is `Race: "Fork ahead at Canyon Pass: main_road or canyon_shortcut."`. Its
 label, `Race`, is a free string that the game chooses (DR-008).
 
-- **Route ids appear verbatim**, never paraphrased. The grounding guard is lexical (§2.5).
+- **Route ids appear verbatim**, never paraphrased, so the model maps what it reads straight to
+  the ids it may answer with (build plan §2.8).
 - **A closed route appears in neither the stimulus nor the choices.** A single line says
   "The canyon is closed by a rockfall", without the id.
 - **Keep it short:** six to eight lines. Observations are the last thing the model reads,

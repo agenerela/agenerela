@@ -111,8 +111,8 @@ Selecting a row opens the whole story on the right: the facts the agent was give
 list of options the model was offered, its raw answer, each guard's verdict in order with its
 reason, and the telemetry. The example shown is our safety claim in one row. The player said
 "Attack Godzilla", which is not a registered target; the model tried to attack the training
-dummy instead; the grounding guard noticed the dummy was never mentioned and rewrote the answer
-to `none`. Nothing was attacked, and the log says exactly why.
+dummy instead; the grounding guard saw that only 4% of the model's choice stayed on the target
+list and rewrote the answer to `none` (build plan DR-016). Nothing was attacked, and the log says exactly why.
 
 **What the numbers on the image point to:** ① the live list · ② filters · ③ outcome icons ·
 ④ asked vs. answered · ⑤ the guard pipeline · ⑥ telemetry. *(The data shown is made up for the
