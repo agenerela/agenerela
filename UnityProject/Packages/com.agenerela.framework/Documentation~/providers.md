@@ -51,7 +51,10 @@ the worked example and doubles as the conformance reference for the next vendor.
 
 ### Ollama — development
 
-An HTTP server on `localhost`. The schema goes in the request's `format` field as JSON
+An HTTP server on the developer's machine. Call it at `http://127.0.0.1:11434`, not
+`localhost`: on Windows `localhost` tries IPv6 first, Ollama listens on IPv4 only, and the
+prototype's probes waited about 2 s a request for the failed attempt (build plan §2.4). The
+schema goes in the request's `format` field as JSON
 Schema and Ollama compiles it to a sampling grammar internally, so property order is
 inferred from the schema and needs no separate statement. No quota, no key, no budget.
 
