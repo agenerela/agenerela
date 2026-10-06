@@ -1,0 +1,143 @@
+{
+  "category": "impossible_request",
+  "prompts": [
+    {
+      "id": "impossible_001",
+      "label": "Player",
+      "stimulus": "Attack Godzilla.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Godzilla is not a registered target.",
+      "labelledBy": [
+        "alice",
+        "bob"
+      ]
+    },
+    {
+      "id": "impossible_002",
+      "label": "Player",
+      "stimulus": "Fly to Mars.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Mars is not an available destination.",
+      "labelledBy": [
+        "alice",
+        "bob"
+      ]
+    },
+    {
+      "id": "impossible_003",
+      "label": "Player",
+      "stimulus": "Open the invisible door.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The door is not registered in the world.",
+      "labelledBy": [
+        "alice",
+        "bob"
+      ]
+    },
+    {
+      "id": "impossible_004",
+      "label": "Player",
+      "stimulus": "Pick up the sun.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The sun is not an interactable object.",
+      "labelledBy": [
+        "alice"
+      ]
+    },
+    {
+      "id": "impossible_005",
+      "label": "Player",
+      "stimulus": "Teleport to the moon.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The moon is not an available destination.",
+      "labelledBy": [
+        "alice"
+      ]
+    },
+    {
+      "id": "impossible_006",
+      "label": "Player",
+      "stimulus": "Talk to the empty air.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "No conversation target is present.",
+      "labelledBy": [
+        "alice"
+      ]
+    },
+    {
+      "id": "impossible_007",
+      "label": "Player",
+      "stimulus": "Destroy the whole world.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The requested action is not registered.",
+      "labelledBy": [
+        "bob"
+      ]
+    },
+    {
+      "id": "impossible_008",
+      "label": "Player",
+      "stimulus": "Enter the locked cave without opening it.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "locked_cave",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The cave cannot be entered while locked.",
+      "labelledBy": [
+        "bob"
+      ]
+    },
+    {
+      "id": "impossible_009",
+      "label": "Player",
+      "stimulus": "Attack an enemy that does not exist.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "No enemy target is available.",
+      "labelledBy": [
+        "bob"
+      ]
+    }
+  ]
+}

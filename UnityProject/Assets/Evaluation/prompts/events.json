@@ -1,0 +1,161 @@
+{
+  "category": "event",
+  "prompts": [
+    {
+      "id": "event_001",
+      "label": "Event",
+      "stimulus": "An enemy was spotted near the bridge.",
+      "observations": [
+        "The bridge is registered",
+        "An enemy is present"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "bridge",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "alice",
+        "bob"
+      ]
+    },
+    {
+      "id": "event_002",
+      "label": "Event",
+      "stimulus": "The player has been attacked.",
+      "observations": [
+        "An enemy is nearby",
+        "The player is under attack"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "nearby_enemy",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "alice",
+        "bob"
+      ]
+    },
+    {
+      "id": "event_003",
+      "label": "Event",
+      "stimulus": "A villager called for help at the gate.",
+      "observations": [
+        "The gate is registered",
+        "The villager is present"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "village_gate",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "alice",
+        "bob"
+      ]
+    },
+    {
+      "id": "event_004",
+      "label": "Event",
+      "stimulus": "The campfire has gone out.",
+      "observations": [
+        "The campfire is registered",
+        "The campfire is extinguished"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "campfire",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "alice"
+      ]
+    },
+    {
+      "id": "event_005",
+      "label": "Event",
+      "stimulus": "A supply delivery arrived at the docks.",
+      "observations": [
+        "The docks are registered",
+        "A supply crate is present"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "docks",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "alice"
+      ]
+    },
+    {
+      "id": "event_006",
+      "label": "Event",
+      "stimulus": "A guard reported movement on the eastern road.",
+      "observations": [
+        "The eastern road is registered",
+        "Movement was reported"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "eastern_road",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "alice"
+      ]
+    },
+    {
+      "id": "event_007",
+      "label": "Event",
+      "stimulus": "A hostile creature entered the market.",
+      "observations": [
+        "The market is registered",
+        "A hostile creature is present"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "hostile_creature",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "bob"
+      ]
+    },
+    {
+      "id": "event_008",
+      "label": "Event",
+      "stimulus": "The bridge has collapsed.",
+      "observations": [
+        "The bridge is unavailable",
+        "No alternate destination was given"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "bob"
+      ]
+    },
+    {
+      "id": "event_009",
+      "label": "Event",
+      "stimulus": "An ally is waiting at the shelter.",
+      "observations": [
+        "The shelter is registered",
+        "An ally is present"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "shelter",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "bob"
+      ]
+    }
+  ]
+}
