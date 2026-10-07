@@ -1821,6 +1821,39 @@ not run, and `PromptBuilder` adds the one-line rule instead.
 - A model family with badly calibrated probabilities is adopted.
 - Confident near misses prove common.
 
+### DR-017 — Plan a playable RPG demo before live framework integration
+
+**Status:** Direction decided with the user, 7 October 2026; game mechanics and
+production choices remain an editable proposal.
+
+**Context.** The user wants a substantial first playable 3D demo centered on talking
+to NPCs, including trade through chat, while Phase 1 is still underway.
+
+**Decision.** Design a single-player third-person medieval fantasy adventure in a
+compact open region, with combat, inventory, quests and leveling. The first adventure
+targets 20–30 minutes of play. Main quests are authored, dialogue and small favors
+allow improvisation, and some generated quests are an optional experiment. Friendly
+NPC combat has consequences, with essential quest characters protected. Initial
+platform is Windows, with no fixed deadline; visual style is selected after an
+asset-generation pilot rather than assumed.
+
+The [RPG demo plan](demos/living-vale.md), [detailed design](demos/living-vale-design.md)
+and [asset pipeline](demos/living-vale-assets.md) carry the proposal. *Living Vale*
+is a working name; whether it becomes #45's CompanionRPG or another demo remains open.
+
+**Consequences.** Gameplay can be built with a clearly labeled scripted adapter before
+the framework is complete. Live decisions wait for Phases 1–3, evaluation precedes major
+polish, and a self-contained local build still requires Phase 6b. Game code owns prices,
+items, quests and validated execution; the existing action/target/statement contract
+is not expanded by this design. ComfyUI/Docker is offline asset production, not a game
+runtime requirement. This changes no other demo's priority: GreyBoxStrategy remains
+required, and no existing game is canceled.
+
+**Revisit if:** the asset pilot, measured inference performance or playtests show the
+region/content budget is too large, or the user chooses to fold it into CompanionRPG.
+Change the proposal before widening scope; do not bypass the framework's evaluation gate.
+
+
 ### Decisions already recorded elsewhere in this plan
 
 | ID | Decision | Where |
