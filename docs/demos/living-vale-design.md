@@ -6,7 +6,8 @@ sketches are editable proposals, not implemented features.
 
 The user confirmed grounded medieval fantasy, third-person single-player play, a
 compact open region, a 20–30 minute first adventure, the RPG systems below, and broad
-roleplay/improvisation. Authored main quests, improvised favors, some generated-quest experiments, friendly-NPC
+roleplay/improvisation. Authored main quests, improvised favors, generated-quest
+experiments, friendly-NPC
 combat with protected essential characters, Windows-only support and no fixed deadline
 are also confirmed. Visual style stays open until an asset-generation pilot is reviewed.
 
@@ -119,6 +120,11 @@ courtyard entry, or both factions give smaller benefits after the divided delive
 Choose affordable visual changes such as actor activation, a changed stall prop,
 greetings and an unlocked gate.
 
+Elra is reachable at the public gate area before permanent courtyard access is earned.
+Brann can issue a temporary delivery permit from the verified parcel/quest stage. Neither
+talking to the steward nor arranging a division requires a reward that is only granted
+after that conversation. Hostility recovery must also preserve this access route.
+
 ### Side quests
 
 | Quest | Objective and alternative | Connection to other systems |
@@ -151,7 +157,9 @@ contract version. Show its exact objective and reward in the same quest card. It
 modify the main quest or invent scene objects. Test at least five generated instances,
 including insufficient reward funds, unavailable recipient and save/load. Narrative
 novelty and mechanical validity are evaluated separately. Richer generated plots remain
-a later experiment with their own acceptance and evaluation work. Broader roleplay can already include asking about customs, arguing
+a later experiment with their own acceptance and evaluation work.
+
+Broader roleplay can already include asking about customs, arguing
 about duty, making jokes, recounting events, seeking advice and negotiating a supported
 solution without procedural world construction.
 
@@ -192,10 +200,18 @@ combat fairly; previously committed quest outcomes persist. The respawn point mu
 remain accessible regardless of chosen ending.
 
 Friendly-NPC combat with consequences and protected quest characters is confirmed.
-Residents are attackable, with deterministic hostility, witnesses and guard intervention. Essential
+Residents are attackable, with deterministic hostility, witnesses and guard intervention.
+Essential
 characters become incapacitated and recover; they cannot permanently remove the only
 way to finish. Drawn weapons alone do not punish a player who has just left a fight.
 No conversation input is allowed to accidentally trigger an attack.
+
+An assault temporarily stops the victim's services and alerts nearby witnesses/guards.
+The player can retreat or surrender; a visible, game-calculated restitution option or
+a recovery period restores essential services. Do not require unavailable gold to remove
+a permanent main-quest lock. Incapacitated essential NPCs return at a reachable settlement
+location after the player disengages. Repeated attacks do not generate loot, XP or
+repeatable quest rewards. Leaving combat invalidates pending quotes and requests.
 
 ## 5. Inventory, equipment and economy
 
@@ -220,7 +236,7 @@ consistently and enforce a minimum of one.
 
 Stock is finite during the first adventure. Save it; no reload restock exploit.
 Required medicine is never gated behind an endlessly sold-out vendor. Haggling selects
-one allowed discount tier, with a per-offer/session limit. Charm may unlock a tier;
+one allowed discount tier, with a per-offer/session limit. Trusted Face may unlock a tier;
 repeating flattery cannot stack discounts.
 
 Currency, item capacity, ownership and availability are checked at commit time.
@@ -231,7 +247,10 @@ Purchases and sales are atomic: all transfers occur together, or none occur.
 Start at level 1. Proposed cumulative XP thresholds are 100 for level 2 and 250 for
 level 3. The main quest's base reward is 120 XP, so any completed route offers at least
 one level-up without grinding. Side quests, discoveries and capped encounter rewards
-make level 3 available to thorough players.
+make level 3 available to thorough players. Starting reward budget: 120 XP for the main
+quest, 50 XP for each side quest and 10 XP for each of three first-time landmark
+discoveries (250 total). Combat grants optional extra XP with one award per encounter.
+Verify both combat and peaceful completion paths in balance playtests.
 
 Each level grants a small health increase and one choice among:
 
@@ -358,7 +377,7 @@ and computes a quote. These are not new framework decision fields.
    revisions; transfers atomically; marks the quote consumed; produces a receipt.
 6. Refresh observations from the resulting state. The following turn knows what happened.
 
-Confirmation is an ordinary in-game control, not an assistant permission question.
+Confirmation remains a compact control inside chat.
 A plain conversational “yes” need not trigger another inference request: optionally
 accept an exact reserved input such as `/confirm` when precisely one visible quote
 is pending. Show that affordance explicitly; do not use a fuzzy parser that interprets
@@ -576,7 +595,8 @@ UI uses ordinary language.
 ## 15. Performance, production risks and expansion
 
 Confirmed target: Windows desktop only, with no fixed deadline. Proposed performance
-goal: 1080p at 60 FPS, with a usable 30 FPS quality fallback. Exact hardware is pending. Measure frame-time percentiles and peak VRAM with runtime
+goal: 1080p at 60 FPS, with a usable 30 FPS quality fallback. Exact hardware is pending.
+Measure frame-time percentiles and peak VRAM with runtime
 inference resident, not only an empty Editor scene. Record queue wait separately from
 generation and execution latency.
 
@@ -625,7 +645,7 @@ These are integration questions, not instructions to change settled framework ru
 
 ## 17. Questions for the next design revision
 
-- Should this become the existing planned `CompanionRPG` or a separate demo under #47?
+This is a separate RPG demo under #47, as the user confirmed; `CompanionRPG` (#45) remains its own idea.
 - How prominent should optional generated quests be after the authored adventure works?
 - Which exact hardware and rig/animation sources are available?
 - Which visual style wins the ComfyUI/Unity asset pilot?

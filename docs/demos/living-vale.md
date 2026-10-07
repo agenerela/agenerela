@@ -1,7 +1,10 @@
 # Living Vale — RPG demo build plan
 
 **Status:** editable design draft, 7 October 2026. No game project or implementation
-exists. *Living Vale* is a working title and folder proposal.
+exists. This is a separate RPG demo; *Living Vale* is a working title and folder proposal.
+
+**Development tracker:** [#69](https://github.com/agenerela/agenerela/issues/69), a
+sub-issue of [Demo games #47](https://github.com/agenerela/agenerela/issues/47).
 
 **Confirmed direction:** medieval fantasy with grounded characters; single-player,
 third-person 3D; a compact open region; a 20–30 minute first adventure; combat,
@@ -78,7 +81,7 @@ player executable without Ollama or a network. Text-only play is the baseline.
 
 ## First implementation tasks
 
-Start with G1 alone, following the [Unity project checklist](../../Demos/README.md).
+Close G0, then implement G1 alone, following the [Unity project checklist](../../Demos/README.md).
 
 1. Create `Demos/LivingVale/` with Unity **6000.3.23f1**, proposed Universal 3D
    pipeline, and the framework's relative `file:` reference.
@@ -136,9 +139,9 @@ EditMode tests and green hygiene before merge.
 
 ## Pending decisions and cut order
 
-Still open: final title/project identity; relation to planned `CompanionRPG` (#45);
+Still open: final title;
 scale of the generated-quest experiment; visual style after the pilot; exact hardware
-and available asset/rig sources. Windows-only support, protected essential characters
+and available asset/rig sources. This is separate from `CompanionRPG` (#45). Windows-only support, protected essential characters
 and no fixed deadline are confirmed. The design contains recommended
 defaults and marks them as provisional. No other demo is canceled by this proposal;
 `GreyBoxStrategy` remains necessary to prove agents can exist without a scene.
@@ -154,3 +157,4 @@ scope discussion.
 | Date | Change |
 |---|---|
 | 2026-10-07 | Initial draft from user direction; separates pre-framework gameplay, live integration, validation and asset production |
+| 2026-10-07 | Confirmed separate demo; refined recovery/access/XP rules; created development tracker #69 under #47 |

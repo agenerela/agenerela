@@ -1839,7 +1839,8 @@ asset-generation pilot rather than assumed.
 
 The [RPG demo plan](demos/living-vale.md), [detailed design](demos/living-vale-design.md)
 and [asset pipeline](demos/living-vale-assets.md) carry the proposal. *Living Vale*
-is a working name; whether it becomes #45's CompanionRPG or another demo remains open.
+is a working name. The user confirmed this is a separate demo from #45's CompanionRPG.
+Development is tracked in [#69](https://github.com/agenerela/agenerela/issues/69), a sub-issue of #47.
 
 **Consequences.** Gameplay can be built with a clearly labeled scripted adapter before
 the framework is complete. Live decisions wait for Phases 1–3, evaluation precedes major
@@ -1850,7 +1851,7 @@ runtime requirement. This changes no other demo's priority: GreyBoxStrategy rema
 required, and no existing game is canceled.
 
 **Revisit if:** the asset pilot, measured inference performance or playtests show the
-region/content budget is too large, or the user chooses to fold it into CompanionRPG.
+region/content budget is too large, or the user changes the agreed demo scope.
 Change the proposal before widening scope; do not bypass the framework's evaluation gate.
 
 
