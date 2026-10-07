@@ -50,7 +50,8 @@ package alone.
 │   ├── design/                        ← sitemap, screen wireframes, the developer walkthrough
 │   └── course/                        ← COMP 490 deliverables, archived
 ├── tools/
-│   └── benchmarks/                    ← standalone Python probes (copy from prototype)
+│   ├── benchmarks/                    ← standalone Python probes (copy from prototype)
+│   └── comfyui/                       ← asset server for the demo games (ComfyUI in Docker on a GPU machine)
 ├── UnityProject/                      ← the framework's dev project (Unity 6000.3+; any render pipeline — framework must not care)
 │   ├── Assets/
 │   │   ├── Evaluation/                ← Phase-4 eval harness + labelled prompt set (see 1.7)

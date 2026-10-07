@@ -1,0 +1,95 @@
+{
+  "description": "Text to sound effect, ambience or one-shot with Stable Audio 3 Medium (stereo MP3).",
+  "source": "Converted from the official ComfyUI template audio_stable_audio_3_medium, without its optional Qwen prompt-rewriting branch: the caller writes the detailed prompt itself. Node ids match the template's subgraph.",
+  "params": {
+    "prompt": {
+      "targets": [["6", "text"]],
+      "required": true,
+      "help": "One or two dense sentences: source, material, space, how it evolves. See README."
+    },
+    "seconds": {
+      "targets": [["11", "seconds"]],
+      "help": "Clip length. Impacts 1-3, actions 3-6, ambience 6-15."
+    },
+    "seed": {
+      "targets": [["3", "seed"]],
+      "random": true,
+      "help": "Random unless set. Reuse a seed to reproduce a sound."
+    },
+    "quality": {
+      "targets": [["57", "quality"]],
+      "help": "MP3 quality: V0, 128k or 320k."
+    },
+    "filename_prefix": {
+      "targets": [["57", "filename_prefix"]],
+      "help": "Server-side name, e.g. sfx/door_creak."
+    }
+  },
+  "prompt": {
+    "25": {
+      "class_type": "CheckpointLoaderSimple",
+      "inputs": {
+        "ckpt_name": "stable_audio_3_medium.safetensors"
+      }
+    },
+    "26": {
+      "class_type": "CLIPLoader",
+      "inputs": {
+        "clip_name": "t5gemma_b_b_ul2.safetensors",
+        "type": "stable_audio",
+        "device": "default"
+      }
+    },
+    "6": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "clip": ["26", 0],
+        "text": ""
+      }
+    },
+    "7": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "clip": ["26", 0],
+        "text": ""
+      }
+    },
+    "11": {
+      "class_type": "EmptyLatentAudio",
+      "inputs": {
+        "seconds": 4.0,
+        "batch_size": 1
+      }
+    },
+    "3": {
+      "class_type": "KSampler",
+      "inputs": {
+        "model": ["25", 0],
+        "positive": ["6", 0],
+        "negative": ["7", 0],
+        "latent_image": ["11", 0],
+        "seed": 0,
+        "steps": 8,
+        "cfg": 1.0,
+        "sampler_name": "lcm",
+        "scheduler": "simple",
+        "denoise": 1.0
+      }
+    },
+    "12": {
+      "class_type": "VAEDecodeAudio",
+      "inputs": {
+        "samples": ["3", 0],
+        "vae": ["25", 2]
+      }
+    },
+    "57": {
+      "class_type": "SaveAudioMP3",
+      "inputs": {
+        "audio": ["12", 0],
+        "filename_prefix": "agenerela/sfx",
+        "quality": "V0"
+      }
+    }
+  }
+}

@@ -53,6 +53,7 @@ The LLM never touches Unity directly.
 | `docs/design/` | Sitemap, screen wireframes and the developer walkthrough — what a developer and a player see |
 | `docs/course/` | COMP 490 deliverables: requirements, interviews, the sketch lab |
 | `tools/benchmarks/` | Standalone probes for fast iteration outside Unity |
+| `tools/comfyui/` | Asset server for the demo games: 3D models, sounds and images from ComfyUI on a separate GPU machine |
 | `AGENTS.md` | Rules for AI coding agents — and the shortest description of how this project works |
 | `CONTRIBUTING.md`, `REVIEWING.md` | Opening a pull request, and reviewing one |
 

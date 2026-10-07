@@ -136,6 +136,21 @@ To use it, open **Window ▸ MCP For Unity** in the project you have open, selec
 the `/mcp` endpoint on that port. Keep **one** Unity project open while a client is
 connected; two editors competing for the same port is the usual reason a connection fails.
 
+## Asset server — ComfyUI (optional)
+
+3D models, sound effects and images for the demo games come from ComfyUI running in Docker
+on a separate machine with an RTX 5080, which also runs the lead's own ComfyUI. The stack
+lives in [`tools/comfyui/`](../../tools/comfyui/README.md) and keeps to its own container,
+ports (8288, 8289), image and volume. Setting that machine up is
+[`tools/comfyui/AGENT_SETUP.md`](../../tools/comfyui/AGENT_SETUP.md), for a person or an
+agent.
+
+To use it from any other machine, copy `tools/comfyui/.env.example` to `tools/comfyui/.env`
+and fill in `COMFY_URL` and `COMFY_API_TOKEN`, then run
+`python tools/comfyui/comfy.py check`. The token is the server's; carry it over by USB stick
+or a password manager, never through a chat. Nothing else is installed: `comfy.py` uses only
+Python's standard library.
+
 ## Cloud provider (optional)
 
 Copy `.env.example` to `.env` and fill in `GEMINI_API_KEY` from

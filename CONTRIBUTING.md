@@ -149,6 +149,7 @@ chat before you open one someone else might be in.
 | `docs/design/` | The sitemap, a wireframe of every screen, and the developer walkthrough ([`docs/design/README.md`](docs/design/README.md)) |
 | `docs/course/` | COMP 490 deliverables, archived ([`docs/course/README.md`](docs/course/README.md)) |
 | `tools/benchmarks/` | Standalone probes, no Unity required |
+| `tools/comfyui/` | Asset server for the demo games' 3D models, sounds and images ([`tools/comfyui/README.md`](tools/comfyui/README.md)) |
 
 If you are about to change how the model is prompted or how the schema is built, read
 **Appendix A** of the build plan first. Several intuitive-sounding changes were measured

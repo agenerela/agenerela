@@ -81,7 +81,10 @@ become sub-issues of the game. The list is not fixed: a new game starts as a sub
 
 Art, audio and models go through Git LFS (patterns in [`.gitattributes`](../.gitattributes)).
 The free quota is small (build plan §6.4), and every teammate who pulls every game's art
-counts against it. To skip the games you do not work on, list them in `lfs.fetchexclude`.
+counts against it. That includes what the asset server in
+[`tools/comfyui/`](../tools/comfyui/README.md) generates: commit only the files a game
+uses. Its `.glb` models import through the glTFast package (`com.unity.cloud.gltfast`),
+added to the game's own `Packages/manifest.json`. To skip the games you do not work on, list them in `lfs.fetchexclude`.
 The setting is per clone, not committed. For someone working on `GreyBox2D`:
 
 ```bash
