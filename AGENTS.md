@@ -69,7 +69,7 @@ they are taken.
 | Path | Contents |
 |---|---|
 | `UnityProject/Packages/com.agenerela.framework/` | The package — everything shippable |
-| `UnityProject/Assets/Evaluation/` | Benchmark harness and labelled prompt set — Phase 4, does not exist yet |
+| `UnityProject/Assets/Evaluation/` | The labelled prompt set, its first 54 prompts so far (#13); the benchmark harness that runs it is Phase 4 |
 | `Demos/<Game>/` | Demo games — one full Unity project each, loading the package by relative path (DR-010) |
 | `docs/` | Build plan, llm-wiki, screen designs and course materials — [`docs/README.md`](docs/README.md) maps them |
 | `tools/benchmarks/` | Standalone Python probes, no Unity required |
@@ -180,6 +180,9 @@ Merged so far:
   Unity project (DR-010).
 - `Demos/GreyBoxVillage` — a playable grey-box scene whose guard still answers from
   placeholder string matching, not a model (#19).
+- The first 54 evaluation prompts (#13, via #65), nine in each of six categories, in
+  `UnityProject/Assets/Evaluation/prompts/`. #66 lists what they still need before Phase 4
+  can run them.
 - `Repo hygiene` checks for the hard rules a script can check, including "only
   `Runtime/Unity/` touches a scene" (#38, #40), and for a changed `.meta` GUID (#41). It
   still compiles no C#, so a green check does not prove `test` builds.
@@ -190,9 +193,9 @@ resolve them per decision.
 **Nothing in the framework calls a model yet** — that starts in Phase 2, so Phase 1 work is
 pure C# with EditMode tests and no Ollama.
 
-Open groundwork beside Phase 1: the evaluation prompt set (#13), and the demo games, one
-sub-issue each under #47, starting with the GreyBoxStrategy grey box (#20). Code two games
-share moves into `Demos/Shared/` once a second game needs it (#14).
+Open groundwork beside Phase 1: the evaluation prompt set's follow-up (#66), and the demo
+games, one sub-issue each under #47, starting with the GreyBoxStrategy grey box (#20). Code
+two games share moves into `Demos/Shared/` once a second game needs it (#14).
 
 What all of this is meant to become, screen by screen, is drawn in
 [`docs/design/`](docs/design/README.md).

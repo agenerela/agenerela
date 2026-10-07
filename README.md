@@ -46,7 +46,7 @@ The LLM never touches Unity directly.
 | Path | Contents |
 |---|---|
 | `UnityProject/Packages/com.agenerela.framework/` | The package — everything shippable |
-| `UnityProject/Assets/Evaluation/` | Accuracy benchmark harness and prompt set — Phase 4, not created yet |
+| `UnityProject/Assets/Evaluation/` | Prompt set, the first 54 prompts so far; the accuracy benchmark harness is Phase 4 |
 | `Demos/` | Demo games, one Unity project each (not shipped to consumers) |
 | `docs/FRAMEWORK_BUILD_PLAN.md` | Architecture, build phases, decision records |
 | `docs/llm-wiki/` | Measured findings and working conventions |
