@@ -1,0 +1,85 @@
+# ComfyUI for Agenerela asset generation: 3D models, sound effects, images.
+#
+# A self-contained stack with its own image, containers, ports and storage. It
+# never mounts anything belonging to another ComfyUI on this machine. Run every
+# command from this folder; README.md walks through setup.
+#
+#   comfyui  ComfyUI itself. Its web UI is published on 127.0.0.1 only, so only a
+#            browser on this machine can open it.
+#   gateway  Caddy in front of ComfyUI's API: the one port other machines can
+#            reach. Every request must carry COMFY_API_TOKEN from .env.
+
+name: agenerela-comfyui
+
+services:
+  comfyui:
+    build:
+      context: .
+      args:
+        COMFYUI_VERSION: v0.39.1        # change together with the tag on the next line
+    image: agenerela-comfyui:v0.39.1
+    container_name: agenerela-comfyui
+    restart: unless-stopped
+    command:
+      - python
+      - main.py
+      - --listen=0.0.0.0                 # inside the container; `ports` decides who can reach it
+      - --port=8188
+      - --base-directory=/data
+      - --database-url=sqlite:////home/comfy/comfyui.db   # SQLite misbehaves on Windows-folder mounts
+      - --disable-auto-launch
+      - --disable-partner-nodes          # no paid cloud nodes
+    volumes:
+      # Models live in a Docker volume (agenerela-comfyui_models): fast to load and
+      # out of the way. Inputs, outputs and UI settings live in a plain folder.
+      - models:/data/models
+      - ${COMFY_DATA_DIR:-./data}/input:/data/input
+      - ${COMFY_DATA_DIR:-./data}/output:/data/output
+      - ${COMFY_DATA_DIR:-./data}/user:/data/user
+      # Read-only tools: the model downloader, and comfy.py with the workflows so the
+      # server can check itself without Python on the host (AGENT_SETUP.md, step 8).
+      - ./models.json:/opt/agenerela/models.json:ro
+      - ./download_models.py:/opt/agenerela/download_models.py:ro
+      - ./comfy.py:/opt/agenerela/comfy.py:ro
+      - ./workflows:/opt/agenerela/workflows:ro
+    ports:
+      # Never change 127.0.0.1 to 0.0.0.0: ComfyUI has no login. Other machines go
+      # through the gateway.
+      - "127.0.0.1:${COMFY_UI_PORT:-8288}:8188"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8188/system_stats', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      start_period: 120s
+      retries: 3
+
+  gateway:
+    image: caddy:2.11.7-alpine
+    container_name: agenerela-comfyui-gateway
+    restart: unless-stopped
+    depends_on:
+      - comfyui
+    environment:
+      COMFY_API_TOKEN: ${COMFY_API_TOKEN:?COMFY_API_TOKEN is empty. Run setup.ps1, which writes one to .env}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if [ "$${#COMFY_API_TOKEN}" -lt 32 ]; then
+          echo "COMFY_API_TOKEN is shorter than 32 characters; refusing to start. Run setup.ps1." >&2
+          exit 1
+        fi
+        exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    ports:
+      - "${COMFY_API_BIND:-0.0.0.0}:${COMFY_API_PORT:-8289}:8080"
+
+volumes:
+  models:
