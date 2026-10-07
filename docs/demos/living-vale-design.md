@@ -653,7 +653,9 @@ This is a separate RPG demo under #47, as the user confirmed; `CompanionRPG` (#4
 - How much fantasy should become mechanics: grounded medicine/folklore first, or magic
   combat already in the first adventure?
 
-The [asset pipeline](living-vale-assets.md) records the planned Docker/ComfyUI setup.
+The [asset pipeline](living-vale-assets.md) records the planned Docker/ComfyUI setup, and
+[suggested features](living-vale-suggested-features.md) collects proposals for the playable
+game that this revision could take up or decline.
 All provisional mechanics can change before G0 closes. Once implementation choices
 cost more than an hour to reverse, record their rationale in the framework build
 plan's §7 as the repository requires.

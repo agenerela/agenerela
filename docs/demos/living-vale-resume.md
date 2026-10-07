@@ -24,6 +24,8 @@ There is no need to open Unity just to read or revise these plans.
 - [Gameplay design](living-vale-design.md): world, NPCs, quests, RPG systems, chat/trade,
   cancellation, persistence and testing.
 - [Asset pipeline](living-vale-assets.md): planned ComfyUI/Docker model and sound workflow.
+- [Suggested features](living-vale-suggested-features.md): proposals for the playable game,
+  none decided, with an alternative first slice that meets the model early.
 - [Framework plan](../FRAMEWORK_BUILD_PLAN.md): architecture and DR-017, the agreed RPG direction.
 - [Demo conventions](../../Demos/README.md): project creation and package-reference rules.
 

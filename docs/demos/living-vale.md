@@ -17,6 +17,8 @@ Content, balance and technical choices below are proposals.
 
 Read the [detailed game design](living-vale-design.md) for systems and scenarios, and
 the [asset pipeline](living-vale-assets.md) for the planned ComfyUI/Docker workflow.
+[Suggested features](living-vale-suggested-features.md) collects proposals for the game as a
+playable product rather than a demo; none is decided.
 The [framework build plan](../FRAMEWORK_BUILD_PLAN.md) and
 [demo conventions](../../Demos/README.md) remain authoritative.
 
