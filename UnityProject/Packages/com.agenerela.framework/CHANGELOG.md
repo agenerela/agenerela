@@ -121,6 +121,18 @@ While the version stays `0.x`, the public API may change in any release.
   `ArgumentNullException`. EditMode tests cover an agent already following (no
   `follow_player`), an idle one (no `stop_following`), an empty target registry, and two
   contexts sharing one registry.
+- Token probabilities in the provider contract, in `Agenerela.Providers` (#67, DR-016) — what
+  the grounding guard will read. `ProviderCapabilities.ReportsTokenProbabilities`, false by
+  default, says every reply carries them, taken before the schema's mask; after the mask they
+  always sit on the target list and the guard would pass everything.
+  `ProviderResult.TokenProbabilities` holds one `TokenProbability` per generated token of
+  `Text`, in order:
+  its text, its log probability, and the likeliest `TokenAlternative`s at that position,
+  likeliest first. It is null when the provider does not report them, and `Text` stays as
+  received beside it. The joined texts equal `Text` except where a character was split across
+  two tokens. No provider fills them yet. EditMode tests cover the defaults, and a hand-built
+  result whose tokens join back into `Text` and whose alternatives keep their order through a
+  Newtonsoft round trip. `Documentation~/providers.md` adds the flag to the capability table.
 
 ### Changed
 - `DecisionTelemetry.TargetsDropped` — the target ids a source found but left out because of

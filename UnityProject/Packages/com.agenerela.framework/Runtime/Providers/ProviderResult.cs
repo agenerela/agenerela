@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Agenerela.Providers
 {
     /// <summary>
@@ -53,6 +55,23 @@ namespace Agenerela.Providers
         /// Tokens generated, as counted by the backend. 0 when it does not report them.
         /// </summary>
         public int CompletionTokens;
+
+        /// <summary>
+        /// The model's probabilities for the reply, one entry per generated token of
+        /// <see cref="Text"/>, in order. Null when the provider does not report them, which
+        /// is always the case when <see cref="ProviderCapabilities.ReportsTokenProbabilities"/>
+        /// is false. Read by the grounding guard (Phase 3, DR-016), which locates the target in
+        /// the reply token by token.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="Text"/> stays exactly as received; this list sits beside it, never
+        /// instead of it. Joined in order, the tokens' texts equal <see cref="Text"/>, except
+        /// where a character was split across two tokens and is missing from both (see
+        /// <see cref="TokenProbability.Text"/>). Anything that maps a token to a position in
+        /// <see cref="Text"/> checks the join first. A provider leaves out entries for
+        /// anything its backend generated but did not put in <see cref="Text"/>.
+        /// </remarks>
+        public IReadOnlyList<TokenProbability> TokenProbabilities;
 
         // Extension point, not now: provider-specific extras (Ollama's eval_duration,
         // a cloud vendor's request id) belong in a string-keyed bag rather than as vendor

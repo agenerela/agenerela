@@ -119,5 +119,31 @@ namespace Agenerela.Providers
         /// only in a comment about Gemini.
         /// </remarks>
         public bool RejectsEmptyEnumValues;
+
+        /// <summary>
+        /// Does every reply carry <see cref="ProviderResult.TokenProbabilities"/>, taken
+        /// <b>before</b> the schema's mask? Set it only then. After the mask the probability
+        /// always sits on the target list, so the grounding guard would pass everything,
+        /// including "Attack Godzilla" carried out on the training dummy (DR-016).
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Ollama: yes. Its <c>logprobs</c> and <c>top_logprobs</c> come from before the mask
+        /// (checked on 0.34.2). The in-process provider: not known yet. LLMUnity's
+        /// <c>LLMClient</c> has an <c>nProbs</c> setting, not yet tried, and whether llama.cpp
+        /// reports them before or after its grammar is unclear. Gemini: on some models only,
+        /// so a Gemini provider sets this from the model it was configured with, and only
+        /// once someone has checked that its numbers come from before the mask.
+        /// </para>
+        /// <para>
+        /// This flag never switches the guard off. The guard reads the probabilities in the
+        /// result, not this flag, and on a reply without them it records that it could not
+        /// run, never that it passed. The flag is read before the request, by
+        /// <c>PromptBuilder</c> (#16), which adds the one-line fallback rule to the prompt
+        /// when it is false (build plan §2.5). So a provider that sets it and then returns
+        /// none leaves that decision with neither the guard nor the fallback.
+        /// </para>
+        /// </remarks>
+        public bool ReportsTokenProbabilities;
     }
 }
