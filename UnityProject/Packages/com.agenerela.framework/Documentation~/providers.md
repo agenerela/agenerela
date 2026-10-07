@@ -26,7 +26,9 @@ Two rules sit above every implementation:
 
 - **A provider is untrusted.** `Capabilities` reports what a backend claims; the validation
   pipeline (Phase 3) runs over every decision regardless. A capability flag must never
-  switch a guard off. A plain-chat backend with no constrained decoding is a legal
+  switch a guard off. The grounding guard reads the token probabilities in the result, not
+  the flag that promises them, and records that it could not run when a reply has none. A
+  plain-chat backend with no constrained decoding is a legal
   provider — it is just likelier to return something unparseable, which the pipeline
   classifies rather than crashes on.
 - **A provider never rewrites the prompt.** The blocks in `DecisionRequest` arrive rendered
@@ -44,10 +46,16 @@ Two rules sit above every implementation:
 | Dialect | `JsonSchema` | `JsonSchema` | **`Gbnf`** |
 | Rate limit | none | **~15/min, 1000/day** | none |
 | Rejects empty enum values | no | **yes** | no |
+| Reports token probabilities | yes | by model | not yet known |
 
-Read as `ProviderCapabilities`, the middle column is the only one that is not all defaults —
-which is the point. Gemini is the vendor whose quirks the prototype actually hit, so it is
-the worked example and doubles as the conformance reference for the next vendor.
+Bold marks where one backend differs from the other two, and most of it falls in the middle
+column — which is the point. Gemini is the vendor whose quirks the prototype actually hit, so
+it is the worked example and doubles as the conformance reference for the next vendor.
+
+The last row is `ReportsTokenProbabilities`, which the grounding guard depends on (build plan
+§2.5, DR-016). A provider sets it only if every reply carries the probabilities taken
+**before** the schema's mask. After the mask they always sit on the target list, so the guard
+would pass everything.
 
 ### Ollama — development
 
@@ -59,12 +67,21 @@ Schema and Ollama compiles it to a sampling grammar internally, so property orde
 inferred from the schema and needs no separate statement. No quota, no key, no budget.
 
 `Capabilities`: constrained decoding yes, explicit ordering no, dialect `JsonSchema`,
-`RateLimit` null, rejects empty enum values no.
+`RateLimit` null, rejects empty enum values no, reports token probabilities yes.
 
 Notes carried over from the prototype's client, for whoever writes this in Phase 2: keep it
 non-blocking, send `think:false` for Qwen-family reasoning modes, make `num_ctx`
 configurable, and read latency and token counts out of the response envelope rather than
 timing from outside where you can.
+
+**Token probabilities.** Send `"logprobs": true, "top_logprobs": 5` on every request. Five
+was enough in the probe, and Ollama refuses more than 20. They come from before the mask
+(checked on 0.34.2) and cost about 0.07 s a decision. Each entry of the response's `logprobs`
+maps onto one `TokenProbability`: `token` to `Text`, `logprob` to `LogProbability`,
+`top_logprobs` to `Alternatives`. A character split across two tokens is missing from both
+tokens' text, so on a reply with such a character the joined texts differ from
+`message.content`. Ollama's `bytes` field does not recover it, because Ollama rebuilds it
+from the already cut text. `Text` is still `message.content`, as received.
 
 Ollama cannot ship in a game — the player would have to install and run a separate server —
 which is why it is the development backend and not the answer.
@@ -74,7 +91,7 @@ which is why it is the development backend and not the answer.
 The goal is not "support Gemini" but "support cloud APIs generally". Gemini is first because
 it is what the prototype measured against.
 
-Gemini takes JSON Schema, and differs from Ollama in three ways that are all visible in
+Gemini takes JSON Schema, and differs from Ollama in four ways that are all visible in
 `ProviderCapabilities`:
 
 - **It rejects `""` as an enum value** with HTTP 400. This is half of why the `no_target`
@@ -87,6 +104,10 @@ Gemini takes JSON Schema, and differs from Ollama in three ways that are all vis
   a dialect that will not infer it must be told.
 - **It is rate-limited**, and a key is involved. Keys go in headers, never URLs, and are
   redacted from error output (hard rule 1).
+- **It reports token probabilities on some models only.** A Gemini provider sets
+  `ReportsTokenProbabilities` from the model it was configured with, and only once someone
+  has checked that Gemini's numbers come from before its schema constraint. Until then, the
+  prompt carries the one-line fallback rule instead of the guard (build plan §2.5).
 
 Budget caps and throttling are enforced in code, not convention — in a shared cloud-provider
 base class rather than per vendor, since the difference between vendors is the numbers.
@@ -106,6 +127,13 @@ that as real work in Phase 6b — roughly a day plus tests — not as a free ada
 
 Keeping `DecisionSchema` provider-neutral is exactly what makes this a second *serializer*
 rather than a second schema *system*. Do not let grammar syntax leak back into the model.
+
+**Token probabilities are not known yet.** LLMUnity's `LLMClient` has an `nProbs` setting,
+0 to 10 in its Inspector, not yet tried. Whether llama.cpp reports the probabilities before
+or after its grammar is unclear, and the grounding guard needs before. So
+`ReportsTokenProbabilities` stays false, and the prompt carries the one-line fallback rule,
+until Phase 6b checks it. This is the provider the framework ships behind, so it is the check
+that matters most (build plan §2.5, DR-016).
 
 LLMUnity is not a hard dependency: it is distributed through OpenUPM, which would force
 every developer to add a scoped registry even if they only ever use Ollama. It ships behind
