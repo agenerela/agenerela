@@ -135,7 +135,11 @@ five checks in #11 pass. See the build plan's phase table for what each phase me
 
 Merged so far:
 
-- The `ILLMProvider` contract and its supporting types (#12).
+- The `ILLMProvider` contract and its supporting types (#12), with its follow-up (#67, via
+  #68): token probabilities for the grounding guard (DR-016).
+  `ProviderCapabilities.ReportsTokenProbabilities` is set only for probabilities taken before
+  the schema's mask, and `ProviderResult.TokenProbabilities` carries them, one per token,
+  with EditMode tests. No provider fills them yet.
 - `TargetRegistry` (#5), with its follow-up (#29, via #55): `no_target` is reserved, and
   lookups return false rather than throw on a malformed id, so a provider's raw output can
   go straight in.
