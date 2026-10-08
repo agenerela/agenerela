@@ -148,8 +148,11 @@ docker compose exec -e COMFY_URL=http://127.0.0.1:8188 -e COMFY_API_TOKEN=local 
 ```
 
 ```powershell
-docker compose exec -e COMFY_URL=http://127.0.0.1:8188 -e COMFY_API_TOKEN=local comfyui python /opt/agenerela/comfy.py run mesh --set image=/tmp/selftest/<the .png printed above> --set faces=5000 --out /tmp/selftest
+docker compose exec -e COMFY_URL=http://127.0.0.1:8188 -e COMFY_API_TOKEN=local comfyui python /opt/agenerela/comfy.py run mesh --set image=/tmp/selftest/<the .png printed above> --set faces=20000 --set decimation=qem --out /tmp/selftest
 ```
+
+A run that prints a path can still hold a broken mesh, so the user should open the `.glb` in a
+glTF viewer or Blender and see that it is still a barrel.
 
 The same files also land in `data\output\agenerela\` on this machine, for the user to look at
 and listen to. If `validate` or a run fails, read its message and
