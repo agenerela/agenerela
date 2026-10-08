@@ -176,9 +176,28 @@ sheets, Z-Image drew the front three times, skipped panels and opened a closed l
 attempts was usable, and inconsistent views make a worse model than one good image.
 
 An agent that generates images itself, such as Codex, may try making the four views with its
-own model, which is likelier to keep one object consistent; nobody has tested that yet. Check
-every view before running: the same object with the same details, the requested side, the
-whole object in frame. If any view disagrees, use `mesh` on the best single view instead.
+own model. The [8 October sword study](../../docs/llm-wiki/asset-quality-2026-10-08.md) tested
+reference-guided views from Codex's image generator. Multiview kept the straight blade and
+hilt closer to those references than the single-view recipes, but did not preserve all fine
+detail. Check every view before running: the same object with the same details, the requested
+side, the whole object in frame. If any view disagrees, use `mesh` on the best single view
+instead.
+
+For **long, thin props with ornate small parts**, check how many pixels those parts retain
+when the reference fits into the generator's 1024 square input. In the sword study, a whole
+sword left the grip about 31 pixels across. New close-up hilt references gave it about 110;
+generating that component separately and fitting it to an authored blade visibly preserved
+more decoration. This changed both source detail and component scope, so it is a tested
+recipe for that sword rather than an isolated cropping result.
+
+The study ran 16 jobs with fresh and repeated controls. Raising normal bake resolution
+from 2K to 4K, doubling texture steps, reducing bake distance or changing smoothing did not
+convincingly recover the whole-sword engraving. A normal map already exists in the exported
+GLB. For the close-up hilt, 2K colour/material maps looked close to 4K at the comparison size
+and reduced the GLB by about 53%; 20K faces with QEM kept the hilt intact but saved only about
+5% of its file size at fixed 4K textures. Choose resolution by actual viewing distance, and
+use the report's conditions and limitations when interpreting these results. Existing
+workflow defaults remain unchanged.
 
 ### A sound effect
 
