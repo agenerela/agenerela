@@ -1,0 +1,6 @@
+{
+  "name": "LivingVale",
+  "rootNamespace": "LivingVale",
+  "references": ["Agenerela"],
+  "autoReferenced": true
+}
