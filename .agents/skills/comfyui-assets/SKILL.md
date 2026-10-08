@@ -39,14 +39,14 @@ error. This file is the procedure. Run every command from the repository root.
 | The user wants | Add to `comfy.py run mesh --set image=<png>` |
 |---|---|
 | A normal prop (default) | nothing: about 50,000 triangles, 2048 px textures |
+| A prop the player sees up close | `--set texture_size=4096`: sharper close-ups, about 2.3 times the file size |
 | A light, low-poly prop | `--set faces=20000 --set decimation=qem --set texture_size=1024` |
 
 Below 50,000 faces, always add `decimation=qem`; without it the mesh breaks into shards.
 
-Higher settings were tested and barely show: 700,000 faces with 4096 px textures and normal
-map looked only slightly crisper up close, at five times the file size, and raising
-`94.target_resolution` to 2048 took 14 minutes and broke the mesh. Don't raise them unless the
-user asks, and then say what it costs.
+Other settings were tested and barely show: 700,000 faces and lighter remesh smoothing looked
+the same as the default, and raising `94.target_resolution` to 2048 took 14 minutes and broke
+the mesh. Don't raise them unless the user asks, and then say what it costs.
 
 ## When a model looks wrong
 

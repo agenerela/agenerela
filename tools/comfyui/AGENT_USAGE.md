@@ -135,10 +135,11 @@ Always two runs, and always look at the image in between.
 
 What to expect, from tests on the RTX 5080: models often lean about 10 degrees in the side view,
 even when the image was taken from a low camera, so the user stands them upright in Blender or
-Unity. Textures look soft up close; that is the generator's limit. 700,000 faces with 4096 px
-textures and normal map (`--set faces=700000 --set texture_size=4096 --set 224.resolution=4096`)
-came out only slightly crisper at five times the file size, and `--set 94.target_resolution=2048`
-took 14 minutes and broke the mesh. Use the defaults unless the user asks for more.
+Unity. Textures look soft up close; that is mostly the generator's limit. For a prop the player
+sees up close, `--set texture_size=4096` makes close-ups a little sharper (the lead preferred it)
+at about 2.3 times the file size. 700,000 faces and lighter remesh smoothing made no visible
+difference, and `--set 94.target_resolution=2048` took 14 minutes and broke the mesh. Use the
+defaults unless the user asks for more.
 
 Other parameters: `seed`, and `remove_background` (on by default; turn it off only for an image
 that already has a transparent background).
