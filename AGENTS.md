@@ -202,6 +202,12 @@ Merged so far:
   `TargetRegistry` is empty, and so is any action whose handler's `IsAvailable` says no.
   Recomputed on every call, never cached. The same pull request added `AgentContext.Actions`
   (#58), the registry it reads. EditMode tests throughout.
+- The few-shot builder (#10, via #74): `FewShotBuilder.Build` assembles the example block
+  from the available actions alone. Each action gets one example, its `{0}` filled with the
+  first of its `PreferredExampleTargets` that is registered, or no example if none is. Then
+  come the profile's idle example, answered with `none`, and a refusal example: a real
+  `ExampleStimulus` filled with an unregistered placeholder (`Atlantis`). EditMode tests
+  throughout; making the "Pick up the Blacksmith" test fail under blind rotation is #75.
 - Newtonsoft as the core's one declared dependency (DR-009), and each demo game as its own
   Unity project (DR-010).
 - `Demos/GreyBoxVillage` — a playable grey-box scene whose guard still answers from
@@ -213,9 +219,8 @@ Merged so far:
   `Runtime/Unity/` touches a scene" (#38, #40), and for a changed `.meta` GUID (#41). It
   still compiles no C#, so a green check does not prove `test` builds.
 
-Not written yet: `DecisionSchema` (#8), its JSON serializer (#9), the few-shot builder (#10),
-`PromptBuilder` (#16), and `Agent` itself (#17), which will hold the target sources and
-resolve them per decision.
+Not written yet: `DecisionSchema` (#8), its JSON serializer (#9), `PromptBuilder` (#16), and
+`Agent` itself (#17), which will hold the target sources and resolve them per decision.
 **Nothing in the framework calls a model yet** — that starts in Phase 2, so Phase 1 work is
 pure C# with EditMode tests and no Ollama.
 
