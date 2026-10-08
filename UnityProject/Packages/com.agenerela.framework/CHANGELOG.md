@@ -133,6 +133,23 @@ While the version stays `0.x`, the public API may change in any release.
   two tokens. No provider fills them yet. EditMode tests cover the defaults, and a hand-built
   result whose tokens join back into `Text` and whose alternatives keep their order through a
   Newtonsoft round trip. `Documentation~/providers.md` adds the flag to the capability table.
+- `FewShotBuilder` in namespace `Agenerela` (#10) — the block of example exchanges sent with
+  every request, built from the developer's own actions, so no example sentence is
+  hardcoded and the same code serves a talking guard and a silent colony.
+  `FewShotBuilder.Build(available, targets, stimulusLabel, idleExampleStimulus)` opens with
+  `Examples of correct decisions:`, then gives one line per available action, in the order
+  given: `<label>: "<stimulus>" -> action: <id>, target: <target>`. An action that takes no
+  target answers `no_target`. One that does fills its `ExampleStimulus`'s `{0}` with the first
+  of its `PreferredExampleTargets` that is registered, written as a display name
+  (`training_dummy` becomes `TrainingDummy`). An action with an empty `ExampleStimulus`, or
+  with no registered preferred target, gets no example rather than an invented one. Two
+  closing examples follow. The idle example answers `idleExampleStimulus` with `none`, and is
+  omitted when that is empty. The refusal example fills the first target-requiring stimulus
+  containing `{0}` with `Atlantis` (`Avalon` if a game registers `atlantis`) and answers
+  `none`, `no_target (not an available target)`; it is omitted when no available action has
+  such a stimulus. `stimulusLabel` defaults to `Player`. EditMode tests cover #10's guard and
+  colony blocks line for line, each omitted example, the placeholder fallback, and the
+  header-only block for no actions.
 
 ### Changed
 - `DecisionTelemetry.TargetsDropped` — the target ids a source found but left out because of
