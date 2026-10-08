@@ -144,6 +144,12 @@ rather than implying the code builds.
 They are gitignored; if one appears in `git status`, something is wrong — investigate
 rather than force-adding.
 
+**Scratch work goes in `.scratch/<topic>/`** at the repository root: experiment scripts,
+renders, downloaded files, logs, drafts. Git ignores the folder, so it stays with the
+checkout where the user can find it, and never in a tracked folder or a system temp
+directory. Give each topic a short `README.md` saying what is there. Anything worth keeping
+moves into the repository proper.
+
 **Unity version is pinned** to 6000.3.23f1 by each project's
 `ProjectSettings/ProjectVersion.txt`, and CI fails if any project differs. Do not upgrade
 it; opening a project in a newer patch rewrites that file for everyone.
