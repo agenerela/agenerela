@@ -17,7 +17,10 @@ error. This file is the procedure. Run every command from the repository root.
    in the chat. For any other error, find it in the guide's troubleshooting table, tell the
    user, and stop.
 2. **Make one asset at a time,** from the user's own description. `comfy.py list` shows each
-   workflow's parameters. Add `--json` to a run to record the seed.
+   workflow's parameters, experimental ones last. Add `--json` to a run to record the seed.
+   **If you can generate images yourself (Codex can), make the image for a 3D model yourself**
+   rather than with the `image` workflow, save it as a PNG, and pass that to `mesh`. Claude
+   Code cannot make images, so it uses the `image` workflow.
 3. **Check it before reporting it:**
    - **Image:** open the PNG and look at it. An image meant for a 3D model must show one whole
      object, centred, on a plain white background, from a three-quarter view. If it does not,
@@ -44,10 +47,11 @@ error. This file is the procedure. Run every command from the repository root.
 
 Below 50,000 faces, always add `decimation=qem`; without it the mesh breaks into shards.
 
-If the user supplies four views of one object (front, left, back, right), use the experimental
-`experimental/mesh_multiview` workflow instead; the guide's "Experimental: a 3D model from four
-views" says how. Never make those views with the `image` workflow: it cannot draw the same
-object consistently from four sides.
+With four views of one object (front, left, back, right), use the experimental `mesh_multiview`
+workflow instead; it rebuilds the unseen sides far better. The guide's "Experimental: a 3D model
+from four views" says how. The views can be the user's, or ones you generate yourself if you
+can, checked to show the same object from the right sides. Never make them with the `image`
+workflow: it cannot draw the same object consistently from four sides.
 
 Other settings were tested and barely show: 700,000 faces and lighter remesh smoothing looked
 the same as the default, and raising `94.target_resolution` to 2048 took 14 minutes and broke

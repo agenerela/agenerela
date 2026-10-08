@@ -75,7 +75,9 @@ everything goes through `comfy.py`.
 ## Making assets
 
 `python tools/comfyui/comfy.py list` prints every workflow's parameters with their defaults;
-it works offline. A run is:
+it works offline. Experimental workflows come last, under their own heading; they run by name
+like the others, and `validate` reports on them without failing when their optional models are
+not downloaded. A run is:
 
 ```bash
 python tools/comfyui/comfy.py run <workflow> --set name=value --set name=value
@@ -100,7 +102,11 @@ Parameters: `prompt` (required), `seed`, `width` and `height` (multiples of 16, 
 Always two runs, and always look at the image in between.
 
 1. Make an image of **one object**: whole object in frame, centred, plain white background,
-   soft even light, three-quarter view, nothing else in the scene.
+   soft even light, three-quarter view, nothing else in the scene. **If you can generate
+   images yourself, as Codex can, do that instead of running the `image` workflow**: the lead
+   prefers it, it saves a server round trip, and those models usually follow a prompt more
+   closely. Save it as a PNG and pass that path to `mesh`. Claude Code cannot make images, so
+   it uses the `image` workflow.
 2. Open the PNG. If the object is cut off, has a busy background, or there is more than one
    object, change the seed or the wording and make another. A mesh run costs as much GPU time
    as dozens of image runs.
@@ -151,7 +157,7 @@ photos or renders, `experimental/mesh_multiview` builds the model from all four 
 guessing the unseen sides:
 
 ```bash
-python tools/comfyui/comfy.py run experimental/mesh_multiview --set front=<png> --set left=<png> --set back=<png> --set right=<png>
+python tools/comfyui/comfy.py run mesh_multiview --set front=<png> --set left=<png> --set back=<png> --set right=<png>
 ```
 
 - `front`: the object facing the camera. `left`: the camera on the left of the front view, so
@@ -161,13 +167,18 @@ python tools/comfyui/comfy.py run experimental/mesh_multiview --set front=<png> 
   horizontal field of view in degrees.
 - `faces`, `decimation`, `texture_size`, `seed` and `filename_prefix` work as for `mesh`.
 - Its model is not in the default download: on a new server, run
-  `download_models.py mesh_multiview` first. `validate experimental/mesh_multiview` checks it.
+  `download_models.py mesh_multiview` first. `validate mesh_multiview` checks it.
 
 Tested on a hand-made model rendered from four sides: the single-view `mesh` invented a second
 crossbar and leaned, while `mesh_multiview` rebuilt the right shape, upright, in 80 s instead of
 127 s. **Do not feed it views made by the `image` workflow.** Asked for four-view turnaround
 sheets, Z-Image drew the front three times, skipped panels and opened a closed lid; none of six
 attempts was usable, and inconsistent views make a worse model than one good image.
+
+An agent that generates images itself, such as Codex, may try making the four views with its
+own model, which is likelier to keep one object consistent; nobody has tested that yet. Check
+every view before running: the same object with the same details, the requested side, the
+whole object in frame. If any view disagrees, use `mesh` on the best single view instead.
 
 ### A sound effect
 

@@ -136,8 +136,9 @@ container, talking to ComfyUI directly, so it needs neither Python on the host n
 docker compose exec -e COMFY_URL=http://127.0.0.1:8188 -e COMFY_API_TOKEN=local comfyui python /opt/agenerela/comfy.py validate
 ```
 
-Every workflow must print `ok`. Then make one of each, smallest first. Each prints the path
-of what it saved:
+Every workflow must print `ok`, except those marked `(experimental)`: their models are an
+optional download, so a problem there is reported but does not fail the check. Then make one
+of each, smallest first. Each prints the path of what it saved:
 
 ```powershell
 docker compose exec -e COMFY_URL=http://127.0.0.1:8188 -e COMFY_API_TOKEN=local comfyui python /opt/agenerela/comfy.py run sfx --set "prompt=Short wooden knock on a door, dry room, close-up. Length: 2 seconds" --set seconds=2 --out /tmp/selftest
