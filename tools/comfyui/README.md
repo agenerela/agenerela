@@ -18,7 +18,8 @@ machine, and lets Claude Code or Codex ask for them from any other machine.
 
 Setting it up with an AI agent on the RTX 5080 machine? Point the agent at
 [AGENT_SETUP.md](AGENT_SETUP.md): the same steps as an exact runbook, with the rules that
-keep your other ComfyUI untouched.
+keep your other ComfyUI untouched. An agent that only asks for assets, on any machine, reads
+[AGENT_USAGE.md](AGENT_USAGE.md) instead.
 
 ## What it makes
 
@@ -306,18 +307,11 @@ Rough lengths: impacts and clicks 1–3 s, actions such as footsteps 3–6 s, am
 
 ### For AI agents
 
+- **Asking for assets** is [AGENT_USAGE.md](AGENT_USAGE.md): connecting a machine, each
+  workflow, judging the results, getting them into a game, and what each error means. Its
+  rules are the ones to follow; this README is the background.
 - **Setting the server up** is [AGENT_SETUP.md](AGENT_SETUP.md), and its ground rules
   apply: the RTX 5080 machine also runs the user's own ComfyUI, and nothing may touch it.
-- Run `comfy.py` as shown above. Never print, echo or log `COMFY_API_TOKEN`, and never put
-  it in a URL.
-- Start with `check`; if it fails, report that rather than retrying in a loop.
-- For a 3D model, always make and inspect the image first, then run `mesh` on it. Below
-  50,000 faces, also set `decimation=qem` (see "Text to 3D model").
-- If a run reports a model "not on the server" or a node that "does not exist", run
-  `validate` and report what it says. Do not swap in model names that are not in
-  `models.json`.
-- Generated assets are drafts. Say where each file was saved and let a person decide what
-  goes into a game.
 
 ## Everyday commands
 
