@@ -96,11 +96,14 @@ version or git URL — and uses only the framework's public API. Framework work 
 `UnityProject/`.
 
 **Generated assets come from the asset server** in [`tools/comfyui/`](tools/comfyui/README.md).
-Ask it for a model, sound or image with `python tools/comfyui/comfy.py run <workflow>`
-(`list` shows the workflows); it needs `COMFY_URL` and `COMFY_API_TOKEN` in
-`tools/comfyui/.env`. For a 3D model, make and look at the image first, then run `mesh` on
-it; below 50,000 faces, add `--set decimation=qem`, or the mesh can break into shards. Never
-print the token or put it in a URL. Setting the server up is its own runbook,
+Before asking it for anything, read
+[`tools/comfyui/AGENT_USAGE.md`](tools/comfyui/AGENT_USAGE.md): connecting a machine, the
+three workflows, judging what comes back, and what to do when a run fails. In short: ask with
+`python tools/comfyui/comfy.py run <workflow>` (`list` shows the workflows), which reads
+`COMFY_URL` and `COMFY_API_TOKEN` from `tools/comfyui/.env`. For a 3D model, make and look at
+the image first, then run `mesh` on it; below 50,000 faces, add `--set decimation=qem`, or
+the mesh can break into shards. Never open or print `.env`, and never put the token in a URL
+or a chat. Setting the server up is its own runbook,
 [`tools/comfyui/AGENT_SETUP.md`](tools/comfyui/AGENT_SETUP.md): that machine also runs the
 user's own ComfyUI, so touch only this stack's containers, image and volume. Never run a
 `docker ... prune`, and never stop, remove or reconfigure another container, or restart WSL
@@ -210,7 +213,8 @@ Open groundwork beside Phase 1: the evaluation prompt set's follow-up (#66), and
 games, one sub-issue each under #47, starting with the GreyBoxStrategy grey box (#20). Code
 two games share moves into `Demos/Shared/` once a second game needs it (#14). The asset
 server those games draw on (`tools/comfyui/`) is set up on the RTX 5080 machine. Its first
-run there found four faults, fixed in #71, and all three workflows have made a test asset.
+run there found four faults, fixed in #71, and all three workflows have made a test asset;
+#72 moved the image workflow to Z-Image Turbo's NVFP4 build, about twice as fast there.
 
 What all of this is meant to become, screen by screen, is drawn in
 [`docs/design/`](docs/design/README.md).
