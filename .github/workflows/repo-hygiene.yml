@@ -713,7 +713,10 @@ jobs:
       - name: Python probes lint, and no API key sits in a URL
         run: |
           # Section 6.3 asks for probe linting before Phase 3. The probes under tools/ must
-          # compile and import only the standard library, as their README promises. And hard
+          # compile and import only the standard library, as their README promises. A file
+          # that imports bpy is also a Blender script (tools/comfyui/preview_glb.py): the
+          # modules Blender itself provides are allowed there, because that part only runs
+          # inside Blender and the plain-Python part still needs no pip install. And hard
           # rule 1 - keys go in headers - is checked across every .py and .cs file.
           python3 - <<'PY'
           import ast, posixpath, re, subprocess, sys
@@ -735,17 +738,18 @@ jobs:
                   continue
               siblings = {posixpath.splitext(posixpath.basename(p))[0] for p in probes
                           if posixpath.dirname(p) == posixpath.dirname(f)}
+              imports = []
               for node in ast.walk(tree):
                   if isinstance(node, ast.Import):
-                      mods = [a.name for a in node.names]
+                      imports += [(node.lineno, a.name) for a in node.names]
                   elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
-                      mods = [node.module]
-                  else:
-                      continue
-                  for mod in mods:
-                      if mod.split(".")[0] not in stdlib | siblings:
-                          errors.append(f"::error file={f},line={node.lineno}::Imports {mod}, which is not in the standard "
-                                        f"library. The probes promise to run with no pip install (tools/benchmarks/README.md).")
+                      imports.append((node.lineno, node.module))
+              tops = {mod.split(".")[0] for _, mod in imports}
+              blender = {"bpy", "bmesh", "bpy_extras", "mathutils"} if "bpy" in tops else set()
+              for lineno, mod in imports:
+                  if mod.split(".")[0] not in stdlib | siblings | blender:
+                      errors.append(f"::error file={f},line={lineno}::Imports {mod}, which is not in the standard "
+                                    f"library. The probes promise to run with no pip install (tools/benchmarks/README.md).")
 
           # Hard rule 1: keys travel in headers. "?key=" is how Gemini's own examples do it, which
           # is exactly why it is worth a check - the key then lands in logs, proxies and history.

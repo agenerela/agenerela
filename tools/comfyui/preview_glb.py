@@ -110,8 +110,9 @@ def launch():
 # --- Inside Blender: render ------------------------------------------------------
 
 def render_all(out_dir, glbs):
+    from array import array
+
     import bpy
-    import numpy as np
     from mathutils import Vector
 
     def engine():
@@ -150,7 +151,8 @@ def render_all(out_dir, glbs):
             scene.collection.objects.link(cam)
             scene.camera = cam
 
-            sheet = np.zeros((CELL * 2, CELL * 3, 4), dtype=np.float32)
+            row_floats, cell_floats = CELL * 3 * 4, CELL * 4  # RGBA floats per sheet row and per cell row
+            sheet = array("f", bytes(4 * row_floats * CELL * 2))
             for k, (_, azimuth, elevation, zoom) in enumerate(VIEWS):
                 dist = radius / math.sin(cam.data.angle / 2) * 1.05 / zoom
                 az, el = math.radians(azimuth), math.radians(elevation)
@@ -162,16 +164,18 @@ def render_all(out_dir, glbs):
                 scene.render.filepath = str(tmp)
                 bpy.ops.render.render(write_still=True)
                 img = bpy.data.images.load(str(tmp))
-                px = np.empty(CELL * CELL * 4, dtype=np.float32)
+                px = array("f", bytes(4 * cell_floats * CELL))
                 img.pixels.foreach_get(px)
                 bpy.data.images.remove(img)
                 tmp.unlink()
                 row, col = divmod(k, 3)  # Blender stores rows bottom-up: grid row 0 is the top
                 y0 = (1 - row) * CELL
-                sheet[y0:y0 + CELL, col * CELL:(col + 1) * CELL] = px.reshape(CELL, CELL, 4)
+                for y in range(CELL):
+                    start = (y0 + y) * row_floats + col * cell_floats
+                    sheet[start:start + cell_floats] = px[y * cell_floats:(y + 1) * cell_floats]
 
             out = bpy.data.images.new(f"{glb.stem}_preview", CELL * 3, CELL * 2, alpha=True)
-            out.pixels.foreach_set(sheet.ravel())
+            out.pixels.foreach_set(sheet)
             png = Path(out_dir) / f"{glb.stem}_preview.png"
             out.filepath_raw = str(png)
             out.file_format = "PNG"
