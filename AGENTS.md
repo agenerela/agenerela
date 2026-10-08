@@ -99,7 +99,8 @@ version or git URL — and uses only the framework's public API. Framework work 
 Ask it for a model, sound or image with `python tools/comfyui/comfy.py run <workflow>`
 (`list` shows the workflows); it needs `COMFY_URL` and `COMFY_API_TOKEN` in
 `tools/comfyui/.env`. For a 3D model, make and look at the image first, then run `mesh` on
-it. Never print the token or put it in a URL. Setting the server up is its own runbook,
+it; below 50,000 faces, add `--set decimation=qem`, or the mesh can break into shards. Never
+print the token or put it in a URL. Setting the server up is its own runbook,
 [`tools/comfyui/AGENT_SETUP.md`](tools/comfyui/AGENT_SETUP.md): that machine also runs the
 user's own ComfyUI, so touch only this stack's containers, image and volume. Never run a
 `docker ... prune`, and never stop, remove or reconfigure another container, or restart WSL
@@ -208,9 +209,8 @@ pure C# with EditMode tests and no Ollama.
 Open groundwork beside Phase 1: the evaluation prompt set's follow-up (#66), and the demo
 games, one sub-issue each under #47, starting with the GreyBoxStrategy grey box (#20). Code
 two games share moves into `Demos/Shared/` once a second game needs it (#14). The asset
-server those games draw on (`tools/comfyui/`) is written and its gateway tested, but has not
-yet run on the RTX 5080 machine: its first `comfy.py validate` there is the test of its
-workflows.
+server those games draw on (`tools/comfyui/`) is set up on the RTX 5080 machine. Its first
+run there found four faults, fixed in #71, and all three workflows have made a test asset.
 
 What all of this is meant to become, screen by screen, is drawn in
 [`docs/design/`](docs/design/README.md).
