@@ -1,6 +1,6 @@
 {
-  "description": "Text to image with Z-Image Turbo (int8, 8 steps). For concept art, and as the input image for the mesh workflow.",
-  "source": "Converted from the official ComfyUI template image_z_image_turbo_int8; node ids match the template's subgraph.",
+  "description": "Text to image with Z-Image Turbo (NVFP4, 8 steps). For concept art, and as the input image for the mesh workflow.",
+  "source": "Converted from the official ComfyUI template image_z_image_turbo_int8; node ids match the template's subgraph. The diffusion model is Comfy-Org's NVFP4 build instead of the template's int8 one: on the RTX 5080 it was about twice as fast with the same quality (README, \"Why NVFP4\").",
   "params": {
     "prompt": {
       "targets": [["27", "text"]],
@@ -33,7 +33,7 @@
     "28": {
       "class_type": "UNETLoader",
       "inputs": {
-        "unet_name": "z_image_turbo_int8_convrot.safetensors",
+        "unet_name": "z_image_turbo_nvfp4.safetensors",
         "weight_dtype": "default"
       }
     },

@@ -24,13 +24,30 @@ keep your other ComfyUI untouched.
 
 | Workflow | Input → output | Models it downloads |
 |---|---|---|
-| `image` | text → PNG | Z-Image Turbo, int8 (12.2 GB) |
+| `image` | text → PNG | Z-Image Turbo, NVFP4 (10.5 GB) |
 | `mesh` | image → `.glb` with PBR textures, AO and a baked normal map | Pixal3D int8 with the TRELLIS.2 VAEs, DINOv3, MoGe-2, BiRefNet (10.0 GB) |
 | `sfx` | text → stereo `.mp3` | Stable Audio 3 Medium (10.4 GB) |
 
 Text to 3D model is two runs: `image`, look at the picture, then `mesh`. All three
 workflows are converted from ComfyUI's own templates and use only nodes built into
 ComfyUI, so there are no custom nodes to install or keep updated.
+
+### Why NVFP4
+
+The image model is Comfy-Org's NVFP4 build of Z-Image Turbo, not the int8 build the template
+uses. RTX 50-series cards run NVFP4 in hardware. On the RTX 5080, with the same prompts and
+seeds, 24 images each:
+
+| Build | Per image, models loaded | Lettering spelled right |
+|---|---|---|
+| int8 | 2.8 to 12.2 s, median about 4.9 s | 14 of 14 |
+| NVFP4 | 2.3 to 2.7 s, median 2.5 s | 13 of 14 |
+
+Props, scenes and a portrait came out equally good to the eye. The one misspelling was a small
+sign in a street scene. The 4-bit text encoder (`qwen_3_4b_fp4_mixed`) was no faster per image
+and drifted from the prompt, so the fp8 one stays. NVFP4 needs an RTX 50-series card to run in
+hardware; on an older card, put `z_image_turbo_int8_convrot.safetensors` back in
+`workflows/image.json`, with its `models.json` entry from git history.
 
 ## Kept apart from your other ComfyUI
 
@@ -61,7 +78,7 @@ every running container, your other ComfyUI included.
 
 Windows 10 or 11 with Docker Desktop (Linux: see [the end](#linux-server)). You need
 roughly 45 GB free on the drive where Docker Desktop keeps its data, which is C: unless you
-move it: about 33 GB of models plus the image.
+move it: about 31 GB of models plus the 12 GB image.
 
 **1. Check the NVIDIA driver.** In PowerShell:
 
@@ -132,7 +149,7 @@ docker compose run --rm comfyui python -c "import torch; print(torch.cuda.get_de
 
 It should print `NVIDIA GeForce RTX 5080`.
 
-**8. Download the models** (about 33 GB). Interrupted downloads resume when you run it
+**8. Download the models** (about 31 GB). Interrupted downloads resume when you run it
 again, and every file is checked against its SHA-256:
 
 ```powershell
@@ -236,8 +253,8 @@ python tools/comfyui/comfy.py run image --set "prompt=..." --set seed=1234
 - After every job the server unloads its models. For a batch, add `--keep-loaded` to every
   run except the last, or run `comfy.py free` at the end.
 - The first job of each workflow after a restart is the slowest: its models load first.
-- On the RTX 5080, with the models unloaded beforehand, an image takes about 10 s, a short
-  sound about 20 s and a mesh about 3 minutes.
+- On the RTX 5080, with the models unloaded beforehand, an image takes about 7 s (2.5 s once
+  they are loaded), a short sound about 20 s and a mesh about 3 minutes.
 
 ### Text to 3D model
 
@@ -361,7 +378,8 @@ entry in `workflows/<name>.json`, or re-export it from the template:
    `3d_pixal3d_trellis2_image_to_model` or `audio_stable_audio_3_medium`) and check it runs.
 2. Use *Workflow → Export (API)*.
 3. Replace the `prompt` object in `workflows/<name>.json` with the export, and update the
-   node ids under `params` to match. Run `validate` again.
+   node ids under `params` to match. For `image`, set the UNETLoader back to
+   `z_image_turbo_nvfp4.safetensors` (see "Why NVFP4"). Run `validate` again.
 
 ## Adding a workflow
 
