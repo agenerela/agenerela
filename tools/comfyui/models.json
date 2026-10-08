@@ -2,14 +2,14 @@
   "about": "Model files for the workflows in workflows/. download_models.py reads this. dir is the folder under ComfyUI's models/. Sizes and SHA-256 are from the Hugging Face API; every file is ungated, so no Hugging Face token is needed.",
   "groups": {
     "image": {
-      "description": "Z-Image Turbo, int8 (workflows/image.json). Apache-2.0.",
+      "description": "Z-Image Turbo, NVFP4 (workflows/image.json), which RTX 50-series cards run in hardware. Apache-2.0.",
       "files": [
         {
           "dir": "diffusion_models",
-          "file": "z_image_turbo_int8_convrot.safetensors",
-          "url": "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/diffusion_models/z_image_turbo_int8_convrot.safetensors",
-          "size": 6201001296,
-          "sha256": "be517ebd47c912a5626a588e1aeea43e6be4a43c0cdcd2b48a2a780d9f358635"
+          "file": "z_image_turbo_nvfp4.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/diffusion_models/z_image_turbo_nvfp4.safetensors",
+          "size": 4509509600,
+          "sha256": "a553c889dbcb910de4c98293237573219a37007c1074a3f04576646a088bd5c8"
         },
         {
           "dir": "text_encoders",
@@ -90,6 +90,19 @@
           "url": "https://huggingface.co/Comfy-Org/stable-audio-3/resolve/main/text_encoders/t5gemma_b_b_ul2.safetensors",
           "size": 1187264003,
           "sha256": "1e1eba25be8872edb0d3c6335c6658fd6388e7b14b60da6e454e404cfcd8150e"
+        }
+      ]
+    },
+    "mesh_multiview": {
+      "description": "EXPERIMENTAL: Pixal3D multiview int8 (workflows/experimental/mesh_multiview.json); needs the mesh group too. MIT, as published by Comfy-Org.",
+      "optional": true,
+      "files": [
+        {
+          "dir": "diffusion_models",
+          "file": "pixal3d_multiview_int8_convrot.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/Pixal3D/resolve/main/diffusion_models/pixal3d_multiview_int8_convrot.safetensors",
+          "size": 5584555824,
+          "sha256": "6b1eb3328930d921d3b57508d9c46cceec1c174dcedeebc14f176ab67d49f477"
         }
       ]
     }

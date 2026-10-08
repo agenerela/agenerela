@@ -156,9 +156,21 @@ def describe_prompt_error(detail):
 # A param may also set "required", "random" (a fresh seed unless given) or
 # "upload" (the value is a local file, uploaded and replaced by its server name).
 # A bare API export without the wrapper works too; set its inputs as node_id.input.
+#
+# Workflows still being tried live in workflows/experimental/. They run by name like the
+# others, `list` shows them under their own heading, and `validate` reports on them without
+# failing, since their models are an optional download.
+
+EXPERIMENTAL = WORKFLOWS / "experimental"
+
 
 def load_workflow(name):
-    path = Path(name) if name.endswith(".json") else WORKFLOWS / f"{name}.json"
+    if name.endswith(".json"):
+        path = Path(name)
+    else:
+        path = WORKFLOWS / f"{name}.json"
+        if not path.is_file() and "/" not in name:
+            path = EXPERIMENTAL / f"{name}.json"
     if not path.is_file():
         raise ComfyError(f"no workflow {name!r}; `list` shows the available ones")
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -301,7 +313,7 @@ def cmd_check(client, args):
 
 
 def cmd_list(args):
-    for path in sorted(WORKFLOWS.glob("*.json")):
+    def show(path):
         name, workflow = load_workflow(str(path))
         print(f"{name}: {workflow.get('description', '')}")
         for pname, spec in workflow.get("params", {}).items():
@@ -313,6 +325,14 @@ def cmd_list(args):
             else:
                 default = json.dumps(workflow["prompt"][node_id]["inputs"][input_name])
             print(f"    {pname:<18} {default:<14} {spec.get('help', '')}")
+
+    for path in sorted(WORKFLOWS.glob("*.json")):
+        show(path)
+    experimental = sorted(EXPERIMENTAL.glob("*.json"))
+    if experimental:
+        print("\nExperimental (run them by name like the others; tools/comfyui/AGENT_USAGE.md says when):")
+        for path in experimental:
+            show(path)
     return 0
 
 
@@ -364,15 +384,23 @@ def check_workflow(workflow, object_info):
 
 def cmd_validate(client, args):
     object_info = client.get_json("/object_info", timeout=120)
-    names = args.workflows or [p.stem for p in sorted(WORKFLOWS.glob("*.json"))]
+    if args.workflows:
+        names, experimental = args.workflows, []
+    else:  # every workflow; the experimental ones are reported but do not fail the check
+        names = [p.stem for p in sorted(WORKFLOWS.glob("*.json"))]
+        experimental = [f"experimental/{p.stem}" for p in sorted(EXPERIMENTAL.glob("*.json"))]
     failed = 0
-    for name in names:
+    for name in names + experimental:
         wf_name, workflow = load_workflow(name)
         problems = list(check_workflow(workflow, object_info))
-        print(f"{wf_name}: {'ok' if not problems else f'{len(problems)} problem(s)'}")
+        label = f"{wf_name} (experimental)" if name in experimental else wf_name
+        print(f"{label}: {'ok' if not problems else f'{len(problems)} problem(s)'}")
         for problem in problems:
             print(f"  {problem}")
-        failed += bool(problems)
+        if problems and name in experimental:
+            print("  not counted as a failure; an experimental model may simply not be downloaded "
+                  "(download_models.py --list names its group)")
+        failed += bool(problems) and name not in experimental
     return 1 if failed else 0
 
 

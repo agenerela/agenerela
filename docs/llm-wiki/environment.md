@@ -148,8 +148,10 @@ agent.
 To use it from any other machine, copy `tools/comfyui/.env.example` to `tools/comfyui/.env`
 and fill in `COMFY_URL` and `COMFY_API_TOKEN`, then run
 `python tools/comfyui/comfy.py check`. The token is the server's; carry it over by USB stick
-or a password manager, never through a chat. Nothing else is installed: `comfy.py` uses only
-Python's standard library.
+or a password manager, never through a chat. On the RTX 5080 machine itself, the server's own
+`.env` already holds the token; set `COMFY_URL=http://127.0.0.1:8289` there. Nothing else is
+installed: `comfy.py` uses only Python's standard library. An agent asking for assets follows
+[`tools/comfyui/AGENT_USAGE.md`](../../tools/comfyui/AGENT_USAGE.md).
 
 ## Cloud provider (optional)
 

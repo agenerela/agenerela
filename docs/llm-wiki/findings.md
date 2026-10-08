@@ -299,3 +299,39 @@ answering "correctly" without constrained decoding is a different (weaker, cheap
 result than one that was actually constrained, and today nothing in the pipeline can tell the
 two apart after the fact.
 
+### Sword asset quality: improve component inputs before raising settings (8 October 2026)
+
+This is an asset-pipeline finding, not a language-model accuracy measurement.
+[Full experiment report](asset-quality-2026-10-08.md) and
+[measurements and hashes](asset-quality-2026-10-08.json).
+
+**Conditions.** Sixteen sequential jobs on the same RTX 5080 server, ComfyUI 0.39.1,
+seed `49081001`, one gothic sword design. Each group keeps its PNGs fixed; controls
+are repeated in this session. Studio renders use Blender 5.2.2 LTS, identical camera
+rules and lighting, 768 px views and 48 Cycles samples. Six-angle exports were inspected.
+
+**Observed.** With full-sword references, 4K versus 2K normal baking, 24 versus 12 texture
+steps, a smaller cage, QEM, lighter smoothing and different crease angles did not
+convincingly recover the smeared engraving. New close-up hilt references plus separate
+component generation preserved silver vines, leather wraps and the solid-looking onyx
+inset much better. Approximate effective grip width increased from 31 to 110 input pixels.
+The single-view full-sword recipe bent the blade in the side view; multiview kept it straight.
+
+**Costs.** Hilt textures at 2K versus 4K looked close at the comparison size and reduced
+the GLB from 26.98 to 12.57 MB (about 53%). Reducing its geometry from 49,986 to 19,934
+triangles with QEM kept it intact but reduced the GLB only to 25.53 MB at fixed 4K textures.
+4K normal baking increased the full-sword GLB about 36% and hilt about 18%, without a
+convincing visible detail gain in these views. Client durations are recorded, but caching
+and transfer make them unsuitable for a cold-inference speed claim.
+
+**Practical choice.** For this ornate thin prop, generate the detailed hilt separately
+and author the straight, beveled blade locally. The revised draft is in the gitignored
+scratch folder, with an editable Blender file. Select texture size by intended viewing
+distance; increasing atlas size cannot reconstruct lost source detail.
+
+**Limits.** One design, qualitative review, no blinded perceptual scores. The close-up
+recipe changes framing, source detail, scope and triangle allocation together; the
+single-view arm changes workflows as well as conditioning. Fixed-seed controls produced
+slightly different meshes, so subtle differences are not established wins. These results
+do not establish a universal best setting or test the other two swords independently.
+

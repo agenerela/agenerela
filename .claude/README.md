@@ -9,7 +9,7 @@ automatically by Claude Code when a session starts in this repository.
 | `settings.local.json` | **no** (gitignored) | Personal overrides. Never commit — it is where machine-specific paths and personal preferences go. |
 | `commands/` | yes | Custom slash commands, one Markdown file per command. None yet. |
 | `agents/` | yes | Custom subagent definitions. None yet. |
-| `skills/` | yes | Project-specific skills. None yet. |
+| `skills/` | yes | Project skills, as pointers: each `SKILL.md` here sends Claude Code to the real one in `../.agents/skills/`, which Codex reads too. `comfyui-assets` makes and checks assets on the ComfyUI server. |
 
 Settings load in order **user → project → local**, so `settings.local.json`
 overrides `settings.json`, which overrides your personal `~/.claude/settings.json`.

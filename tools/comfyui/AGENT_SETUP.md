@@ -42,7 +42,7 @@ This stack has to sit beside it without touching it.
    `COMFY_API_PORT` in this folder's `.env`, never the other container. Never publish the
    web UI on anything but `127.0.0.1`.
 6. **Large downloads need the user's go-ahead**, unless they asked you for the whole setup:
-   the build pulls several GB, and the models are about 33 GB.
+   the build pulls several GB, and the models are about 31 GB.
 7. **Firewall rules are the user's to make.** If one is needed, give them the command from
    the README; do not create it yourself.
 8. Install no custom nodes and leave the workflows alone during setup. A fix found in step 8
@@ -73,7 +73,8 @@ containers.
 nvidia-smi
 ```
 
-`CUDA Version` must be 13.0 or higher. If it is lower, stop: the user updates the driver.
+`CUDA Version` (`CUDA UMD Version` on newer drivers) must be 13.0 or higher. If it is lower,
+stop: the user updates the driver.
 
 **2. Run the setup check:**
 
@@ -110,7 +111,7 @@ docker compose run --rm comfyui python -c "import torch; print(torch.cuda.get_de
 
 It must print `NVIDIA GeForce RTX 5080`.
 
-**6. Download the models** (about 33 GB; background). Running it again resumes:
+**6. Download the models** (about 31 GB; background). Running it again resumes:
 
 ```powershell
 docker compose run --rm comfyui python /opt/agenerela/download_models.py
@@ -135,8 +136,9 @@ container, talking to ComfyUI directly, so it needs neither Python on the host n
 docker compose exec -e COMFY_URL=http://127.0.0.1:8188 -e COMFY_API_TOKEN=local comfyui python /opt/agenerela/comfy.py validate
 ```
 
-Every workflow must print `ok`. Then make one of each, smallest first. Each prints the path
-of what it saved:
+Every workflow must print `ok`, except those marked `(experimental)`: their models are an
+optional download, so a problem there is reported but does not fail the check. Then make one
+of each, smallest first. Each prints the path of what it saved:
 
 ```powershell
 docker compose exec -e COMFY_URL=http://127.0.0.1:8188 -e COMFY_API_TOKEN=local comfyui python /opt/agenerela/comfy.py run sfx --set "prompt=Short wooden knock on a door, dry room, close-up. Length: 2 seconds" --set seconds=2 --out /tmp/selftest
@@ -147,8 +149,11 @@ docker compose exec -e COMFY_URL=http://127.0.0.1:8188 -e COMFY_API_TOKEN=local 
 ```
 
 ```powershell
-docker compose exec -e COMFY_URL=http://127.0.0.1:8188 -e COMFY_API_TOKEN=local comfyui python /opt/agenerela/comfy.py run mesh --set image=/tmp/selftest/<the .png printed above> --set faces=5000 --out /tmp/selftest
+docker compose exec -e COMFY_URL=http://127.0.0.1:8188 -e COMFY_API_TOKEN=local comfyui python /opt/agenerela/comfy.py run mesh --set image=/tmp/selftest/<the .png printed above> --set faces=20000 --set decimation=qem --out /tmp/selftest
 ```
+
+A run that prints a path can still hold a broken mesh, so the user should open the `.glb` in a
+glTF viewer or Blender and see that it is still a barrel.
 
 The same files also land in `data\output\agenerela\` on this machine, for the user to look at
 and listen to. If `validate` or a run fails, read its message and
@@ -197,5 +202,5 @@ not have restarted (its *Up* time keeps growing). Report any difference.
 
 Stop and start only this stack, only from this folder: `docker compose stop` and
 `docker compose up -d`. `docker compose down` removes this stack's containers;
-`docker compose down -v` also deletes its models volume (33 GB to download again), so ask
+`docker compose down -v` also deletes its models volume (31 GB to download again), so ask
 the user before running it.

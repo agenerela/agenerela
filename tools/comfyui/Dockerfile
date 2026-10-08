@@ -19,8 +19,11 @@ ENV PYTHONUNBUFFERED=1 \
     NVIDIA_VISIBLE_DEVICES=all \
     NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
+# gcc and libc6-dev are for Triton, which compiles a small C helper the first time
+# it runs. PyTorch 2.14 routes some ordinary matrix products through Triton
+# kernels, so without a compiler the sfx workflow's text encoder fails.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends git libgomp1 \
+ && apt-get install -y --no-install-recommends git libgomp1 gcc libc6-dev \
  && rm -rf /var/lib/apt/lists/*
 
 RUN pip install torch==${TORCH_VERSION} torchvision==${TORCHVISION_VERSION} --index-url ${TORCH_INDEX_URL}
@@ -34,8 +37,10 @@ RUN git clone --depth 1 --branch ${COMFYUI_VERSION} https://github.com/Comfy-Org
 
 # Run as an ordinary user. /data/models must exist and belong to that user here,
 # because an empty Docker volume copies the ownership of the folder it mounts on.
+# /data/custom_nodes must exist too: with --base-directory=/data, ComfyUI lists it
+# at startup and exits if it is missing. It stays empty (README, "Adding a workflow").
 RUN useradd --create-home --uid 1000 comfy \
- && mkdir -p /data/models /data/input /data/output /data/user /opt/agenerela \
+ && mkdir -p /data/models /data/input /data/output /data/user /data/custom_nodes /opt/agenerela \
  && chown -R comfy:comfy /data /opt/ComfyUI
 
 USER comfy

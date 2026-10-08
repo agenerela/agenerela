@@ -1,0 +1,506 @@
+{
+  "date": "2026-10-08",
+  "base_commit": "b1af744",
+  "server": {
+    "comfyui": "0.39.1",
+    "gpu": "NVIDIA GeForce RTX 5080",
+    "python": "3.13.16",
+    "pytorch": "2.14.1+cu130"
+  },
+  "blender": "5.2.2 LTS",
+  "common_settings": {
+    "seed": 49081001,
+    "faces": 50000,
+    "texture_size": 4096
+  },
+  "workflow_sha256": {
+    "tools/comfyui/workflows/mesh.json": "4eb2ec06ccd5e5e29570b54f92ae8009a3a7bb8984bae7c31a4c2c2fd910d944",
+    "tools/comfyui/workflows/experimental/mesh_multiview.json": "c2b68df5d65c51780d89f43dc48a49e3cd1b47ca26234e669367dd77321a846d"
+  },
+  "reference_sha256": {
+    "full": {
+      "front": "2fe069799d85c36cf020b221857d33b7c73d7ca3da3adda48536d51f059f1ed5",
+      "left": "81eb56bd90f8a10c3a5b9f2e7f8bd466fdf12aa4d18a870f44dffd645813008d",
+      "back": "e27e3db6081d060e573af843818393e53c1ef45a209d835bee8f3824e3719862",
+      "right": "c26149149d29c9ae9636eb55b2aedec5652305bd7e05dd33b3aa4ac64ac9e4e7"
+    },
+    "hilt": {
+      "front": "53d76f1b677189c30b6237de7e8feb575ca1b1fff17189a087d8909129dfc278",
+      "left": "b430938b0305d83017eeeb3232362c24a4886cb120938d41609add0127a2684f",
+      "back": "d92455492754079a5b02d800b9c3dd80b6ac1fff908ffecfcd62d78101ce9b04",
+      "right": "ed4736ee4f439a00249dcaad1f18dadb5f45aff982df67291e4be1062420388d"
+    }
+  },
+  "cases": [
+    {
+      "case": "full-control",
+      "workflow": "mesh_multiview",
+      "changed_settings": {},
+      "prompt_id": "54a20b3b-df6f-4df8-8aed-2fb3c2fe9cae",
+      "client_seconds": 68.5,
+      "glb_sha256": "8adc29490f99c970f9be9c5b00ac4bfa8cfb524806aeaa2cbd85f197115eb4d5",
+      "triangles": 49996,
+      "vertices": 32800,
+      "dimensions": [
+        0.23822021484375,
+        0.0349038764834404,
+        1.0022177696228027
+      ],
+      "mesh_bytes": 14141208,
+      "textures": [
+        [
+          2048,
+          2048
+        ],
+        [
+          4096,
+          4096
+        ]
+      ]
+    },
+    {
+      "case": "full-normal4k",
+      "workflow": "mesh_multiview",
+      "changed_settings": {
+        "224.resolution": 4096
+      },
+      "prompt_id": "29614944-581b-4c02-babd-afe78e52801f",
+      "client_seconds": 69.4,
+      "glb_sha256": "5b3fb5f7f9a4dcca219be7c40d5dc5c5b34ce091135ae7e91f610ba946bbae8d",
+      "triangles": 50000,
+      "vertices": 33068,
+      "dimensions": [
+        0.23820936679840088,
+        0.03494410961866379,
+        1.0021545886993408
+      ],
+      "mesh_bytes": 19223140,
+      "textures": [
+        [
+          4096,
+          4096
+        ]
+      ]
+    },
+    {
+      "case": "full-cage01",
+      "workflow": "mesh_multiview",
+      "changed_settings": {
+        "224.cage_distance": 0.01
+      },
+      "prompt_id": "f153d299-dd28-49a0-a3b8-2a78abb10ecd",
+      "client_seconds": 65.9,
+      "glb_sha256": "e8d9fb14eb13a9a3c2fc00ab8794a9a99f2abf69f35f0fdf81e7b865530f1b17",
+      "triangles": 50000,
+      "vertices": 33232,
+      "dimensions": [
+        0.2383088320493698,
+        0.03492617607116699,
+        1.0024241209030151
+      ],
+      "mesh_bytes": 14527408,
+      "textures": [
+        [
+          2048,
+          2048
+        ],
+        [
+          4096,
+          4096
+        ]
+      ]
+    },
+    {
+      "case": "full-texture24",
+      "workflow": "mesh_multiview",
+      "changed_settings": {
+        "12.steps": 24
+      },
+      "prompt_id": "be29978e-9ae1-45f5-afcc-40e6e501946b",
+      "client_seconds": 64.4,
+      "glb_sha256": "4263798817d27025d5d4f832aa26158e54fc8bc5b39b12106055f1c20b8f1e42",
+      "triangles": 49996,
+      "vertices": 33205,
+      "dimensions": [
+        0.23825600743293762,
+        0.03495391458272934,
+        1.0023378133773804
+      ],
+      "mesh_bytes": 13737148,
+      "textures": [
+        [
+          2048,
+          2048
+        ],
+        [
+          4096,
+          4096
+        ]
+      ]
+    },
+    {
+      "case": "full-qem",
+      "workflow": "mesh_multiview",
+      "changed_settings": {
+        "decimation": "qem"
+      },
+      "prompt_id": "a08ffcad-5e29-4ca1-b67c-d09a680ad6aa",
+      "client_seconds": 70.8,
+      "glb_sha256": "51e9fec9a433dea5ce2e4805cf92cc8ee34e9d94aec45c3875ac2c6e494def3e",
+      "triangles": 49888,
+      "vertices": 32776,
+      "dimensions": [
+        0.23821499943733215,
+        0.03498545289039612,
+        1.0024845600128174
+      ],
+      "mesh_bytes": 14676324,
+      "textures": [
+        [
+          2048,
+          2048
+        ],
+        [
+          4096,
+          4096
+        ]
+      ]
+    },
+    {
+      "case": "full-smooth4",
+      "workflow": "mesh_multiview",
+      "changed_settings": {
+        "241.smooth_iters": 4
+      },
+      "prompt_id": "4cafc194-2444-4481-a6ec-d16674325b6d",
+      "client_seconds": 68.1,
+      "glb_sha256": "8007d180479f40f6dc34187f10ad7eadad94fb5481d6f44607123386d403ec0a",
+      "triangles": 49996,
+      "vertices": 32660,
+      "dimensions": [
+        0.23819586634635925,
+        0.034978605806827545,
+        1.0024539232254028
+      ],
+      "mesh_bytes": 16550760,
+      "textures": [
+        [
+          2048,
+          2048
+        ],
+        [
+          4096,
+          4096
+        ]
+      ]
+    },
+    {
+      "case": "full-crease60",
+      "workflow": "mesh_multiview",
+      "changed_settings": {
+        "238.crease_angle": 60,
+        "260.crease_angle": 60
+      },
+      "prompt_id": "ca5923e4-f158-413d-8d47-bd88db299e80",
+      "client_seconds": 65.6,
+      "glb_sha256": "65375cdc457391e301308f61bd6748c6c650cf3802c04b455596ddaf1d1b30f3",
+      "triangles": 49996,
+      "vertices": 32885,
+      "dimensions": [
+        0.23828363418579102,
+        0.034959759563207626,
+        1.0023059844970703
+      ],
+      "mesh_bytes": 15080612,
+      "textures": [
+        [
+          2048,
+          2048
+        ],
+        [
+          4096,
+          4096
+        ]
+      ]
+    },
+    {
+      "case": "full-control-repeat",
+      "workflow": "mesh_multiview",
+      "changed_settings": {},
+      "prompt_id": "beb02da8-f777-407e-a9a1-2c9afb54068e",
+      "client_seconds": 62.7,
+      "glb_sha256": "1d6a4b08d867f8db359a6f3c7fa4936f8d02cfa77f76365a0a0dd60ee9c595f2",
+      "triangles": 50000,
+      "vertices": 33144,
+      "dimensions": [
+        0.2382766306400299,
+        0.034904345870018005,
+        1.002204418182373
+      ],
+      "mesh_bytes": 15004520,
+      "textures": [
+        [
+          2048,
+          2048
+        ],
+        [
+          4096,
+          4096
+        ]
+      ]
+    },
+    {
+      "case": "full-single",
+      "workflow": "mesh",
+      "changed_settings": {},
+      "prompt_id": "591816c3-4fa7-43de-8f8c-712829017900",
+      "client_seconds": 54.7,
+      "glb_sha256": "3ddd94d1f1067c8c298becd48202b7e7d4c53c3db3ce78db18d7aebc80e51bb9",
+      "triangles": 49896,
+      "vertices": 35498,
+      "dimensions": [
+        0.2311859130859375,
+        0.18912631273269653,
+        0.9083006978034973
+      ],
+      "mesh_bytes": 19053580,
+      "textures": [
+        [
+          2048,
+          2048
+        ],
+        [
+          4096,
+          4096
+        ]
+      ]
+    },
+    {
+      "case": "hilt-control",
+      "workflow": "mesh_multiview",
+      "changed_settings": {},
+      "prompt_id": "2db7aa6a-4035-4f32-8f9e-b2e83e69d29b",
+      "client_seconds": 81.4,
+      "glb_sha256": "41345482c81d461337d470896a406aa02acf51267e8a2e7ad5ff17ff4bae1251",
+      "triangles": 49986,
+      "vertices": 32369,
+      "dimensions": [
+        0.8982440829277039,
+        0.11615650355815887,
+        1.0000611543655396
+      ],
+      "mesh_bytes": 26983852,
+      "textures": [
+        [
+          2048,
+          2048
+        ],
+        [
+          4096,
+          4096
+        ]
+      ]
+    },
+    {
+      "case": "hilt-normal4k",
+      "workflow": "mesh_multiview",
+      "changed_settings": {
+        "224.resolution": 4096
+      },
+      "prompt_id": "57a70339-a197-41fa-b0d6-567be008326c",
+      "client_seconds": 91.9,
+      "glb_sha256": "0618f54f63930fb9e9600ea280c9cfcba9908b368992740f75db8a35a4b9de2e",
+      "triangles": 49998,
+      "vertices": 32352,
+      "dimensions": [
+        0.8983012437820435,
+        0.1162051111459732,
+        1.0001530647277832
+      ],
+      "mesh_bytes": 31735900,
+      "textures": [
+        [
+          4096,
+          4096
+        ]
+      ]
+    },
+    {
+      "case": "hilt-texture24",
+      "workflow": "mesh_multiview",
+      "changed_settings": {
+        "12.steps": 24
+      },
+      "prompt_id": "8dba1ea5-6577-406e-b019-a98e9f4fffb7",
+      "client_seconds": 85.4,
+      "glb_sha256": "5a69324d9c937b694c77ee5c33a81f281bc15a661d7be16429c3eef5e8618c82",
+      "triangles": 49980,
+      "vertices": 32610,
+      "dimensions": [
+        0.8981917500495911,
+        0.11621571332216263,
+        1.0001860857009888
+      ],
+      "mesh_bytes": 26245880,
+      "textures": [
+        [
+          2048,
+          2048
+        ],
+        [
+          4096,
+          4096
+        ]
+      ]
+    },
+    {
+      "case": "hilt-control-repeat",
+      "workflow": "mesh_multiview",
+      "changed_settings": {},
+      "prompt_id": "00ad4186-a0ab-4fe3-b27e-63353d4398a2",
+      "client_seconds": 85.1,
+      "glb_sha256": "201b58b9953454bb921c62af788bc524892b04cf0156e152183156007ba230e3",
+      "triangles": 49988,
+      "vertices": 32670,
+      "dimensions": [
+        0.8983504176139832,
+        0.11618442833423615,
+        1.0001921653747559
+      ],
+      "mesh_bytes": 26766376,
+      "textures": [
+        [
+          2048,
+          2048
+        ],
+        [
+          4096,
+          4096
+        ]
+      ]
+    },
+    {
+      "case": "hilt-texture2k",
+      "workflow": "mesh_multiview",
+      "changed_settings": {
+        "texture_size": 2048
+      },
+      "prompt_id": "4f38c057-34d9-4260-ad25-09d013f650f7",
+      "client_seconds": 76.6,
+      "glb_sha256": "6bdaf19a88f841cc865167fb1299a282168870cd8b0303473ae60254b7e6d8a1",
+      "triangles": 49986,
+      "vertices": 32519,
+      "dimensions": [
+        0.8982270956039429,
+        0.11620652675628662,
+        1.000186562538147
+      ],
+      "mesh_bytes": 12569484,
+      "textures": [
+        [
+          2048,
+          2048
+        ]
+      ]
+    },
+    {
+      "case": "hilt-qem20k",
+      "workflow": "mesh_multiview",
+      "changed_settings": {
+        "faces": 20000,
+        "decimation": "qem"
+      },
+      "prompt_id": "83810eff-d562-4f86-8eea-d38475fb745d",
+      "client_seconds": 83.5,
+      "glb_sha256": "43fa3c4f24e3e02f36c38814c0b3e14f1fe86323c7bd9c622ad12fae09f40b50",
+      "triangles": 19934,
+      "vertices": 14802,
+      "dimensions": [
+        0.8982092142105103,
+        0.1162235215306282,
+        0.9999529123306274
+      ],
+      "mesh_bytes": 25528500,
+      "textures": [
+        [
+          2048,
+          2048
+        ],
+        [
+          4096,
+          4096
+        ]
+      ]
+    },
+    {
+      "case": "hilt-single",
+      "workflow": "mesh",
+      "changed_settings": {},
+      "prompt_id": "346d9283-5cc8-43ef-b06a-a433ff81140f",
+      "client_seconds": 67.4,
+      "glb_sha256": "c968df05630adb11d85a0df7e36d37cea29040fb08b179eacefafe723dfcadbc",
+      "triangles": 49936,
+      "vertices": 33620,
+      "dimensions": [
+        0.802872896194458,
+        0.23349377512931824,
+        0.9154205322265625
+      ],
+      "mesh_bytes": 25467828,
+      "textures": [
+        [
+          2048,
+          2048
+        ],
+        [
+          4096,
+          4096
+        ]
+      ]
+    }
+  ],
+  "reference_budget": {
+    "whole-sword": {
+      "image_size": [
+        1024,
+        1536
+      ],
+      "object_bbox": [
+        351,
+        1502
+      ],
+      "approx_conditioned_guard_width": 217.5,
+      "approx_conditioned_grip_width": 31.0
+    },
+    "close-hilt": {
+      "image_size": [
+        1254,
+        1254
+      ],
+      "object_bbox": [
+        1104,
+        1223
+      ],
+      "approx_conditioned_guard_width": 840.3,
+      "approx_conditioned_grip_width": 110.4
+    }
+  },
+  "revised_sword": {
+    "source_case": "hilt-normal4k",
+    "glb_sha256": "3f6a8b9457ee05d0e0f441562af8c81653415baac1e4f42130ec203c8a781ce6",
+    "triangles": 50606,
+    "vertices": 33471,
+    "dimensions": [
+      0.2963940501213074,
+      0.038341816514730453,
+      1.2300000190734863
+    ],
+    "mesh_bytes": 31460808,
+    "textures": [
+      [
+        4096,
+        4096
+      ]
+    ]
+  }
+}

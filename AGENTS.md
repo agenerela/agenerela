@@ -96,10 +96,18 @@ version or git URL — and uses only the framework's public API. Framework work 
 `UnityProject/`.
 
 **Generated assets come from the asset server** in [`tools/comfyui/`](tools/comfyui/README.md).
-Ask it for a model, sound or image with `python tools/comfyui/comfy.py run <workflow>`
-(`list` shows the workflows); it needs `COMFY_URL` and `COMFY_API_TOKEN` in
-`tools/comfyui/.env`. For a 3D model, make and look at the image first, then run `mesh` on
-it. Never print the token or put it in a URL. Setting the server up is its own runbook,
+Before asking it for anything, read
+[`tools/comfyui/AGENT_USAGE.md`](tools/comfyui/AGENT_USAGE.md): connecting a machine, the
+three workflows, judging what comes back, and what to do when a run fails. In short: ask with
+`python tools/comfyui/comfy.py run <workflow>` (`list` shows the workflows), which reads
+`COMFY_URL` and `COMFY_API_TOKEN` from `tools/comfyui/.env`. For a 3D model, make and look at
+the image first, then run `mesh` on it; below 50,000 faces, add `--set decimation=qem`, or
+the mesh can break into shards. Look at every model before reporting it:
+`python tools/comfyui/preview_glb.py <the .glb>` renders it from six angles with Blender. The
+`comfyui-assets` skill, in [`.agents/skills/`](.agents/skills/comfyui-assets/SKILL.md) for
+Codex with a pointer in `.claude/skills/` for Claude Code, runs this whole procedure. Never
+open or print `.env`, and never put the token in a URL or a chat. Setting the server up is
+its own runbook,
 [`tools/comfyui/AGENT_SETUP.md`](tools/comfyui/AGENT_SETUP.md): that machine also runs the
 user's own ComfyUI, so touch only this stack's containers, image and volume. Never run a
 `docker ... prune`, and never stop, remove or reconfigure another container, or restart WSL
@@ -135,6 +143,12 @@ rather than implying the code builds.
 **Do not** commit `Library/`, `Logs/`, `UserSettings/`, `*.csproj`, `*.slnx`, or `.env`.
 They are gitignored; if one appears in `git status`, something is wrong — investigate
 rather than force-adding.
+
+**Scratch work goes in `.scratch/<topic>/`** at the repository root: experiment scripts,
+renders, downloaded files, logs, drafts. Git ignores the folder, so it stays with the
+checkout where the user can find it, and never in a tracked folder or a system temp
+directory. Give each topic a short `README.md` saying what is there. Anything worth keeping
+moves into the repository proper.
 
 **Unity version is pinned** to 6000.3.23f1 by each project's
 `ProjectSettings/ProjectVersion.txt`, and CI fails if any project differs. Do not upgrade
@@ -208,9 +222,9 @@ pure C# with EditMode tests and no Ollama.
 Open groundwork beside Phase 1: the evaluation prompt set's follow-up (#66), and the demo
 games, one sub-issue each under #47, starting with the GreyBoxStrategy grey box (#20). Code
 two games share moves into `Demos/Shared/` once a second game needs it (#14). The asset
-server those games draw on (`tools/comfyui/`) is written and its gateway tested, but has not
-yet run on the RTX 5080 machine: its first `comfy.py validate` there is the test of its
-workflows.
+server those games draw on (`tools/comfyui/`) is set up on the RTX 5080 machine. Its first
+run there found four faults, fixed in #71, and all three workflows have made a test asset;
+#72 moved the image workflow to Z-Image Turbo's NVFP4 build, about twice as fast there.
 
 What all of this is meant to become, screen by screen, is drawn in
 [`docs/design/`](docs/design/README.md).
@@ -228,3 +242,8 @@ files below.
 If you add an agent that reads a different filename, create a **pointer** to this file
 rather than a copy. Duplicated rule files drift apart, and the drift is invisible until
 two agents behave differently for reasons nobody can explain.
+
+Skills follow the same rule. Each lives once, in `.agents/skills/<name>/`, where Codex reads
+it; Claude Code reads `.claude/skills/`, so each skill there is a pointer `SKILL.md` with the
+same name and description that sends Claude Code to the one in `.agents/skills/`. Use plain
+files, not symlinks: git checks symlinks out as text on many Windows machines.

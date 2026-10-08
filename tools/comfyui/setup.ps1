@@ -57,7 +57,7 @@ if (-not (Get-Command nvidia-smi -ErrorAction SilentlyContinue)) {
     $smi = (nvidia-smi 2>&1 | Out-String).Trim()
     if ($LASTEXITCODE -ne 0) {
         Warn "nvidia-smi failed: $(($smi -split "`n")[0].Trim().TrimEnd('.')). Check the driver (README, step 1)."
-    } elseif ($smi -match 'CUDA Version:\s*(\d+)\.(\d+)') {
+    } elseif ($smi -match 'CUDA (?:UMD )?Version:\s*(\d+)\.(\d+)') {  # newer drivers print "CUDA UMD Version"
         $cuda = [version]"$($Matches[1]).$($Matches[2])"
         if ($cuda -lt [version]'13.0') { Fail "The driver supports CUDA $cuda; the image needs 13.0 or newer. Update the NVIDIA driver." }
         else { Ok "NVIDIA driver supports CUDA $cuda" }

@@ -18,19 +18,37 @@ machine, and lets Claude Code or Codex ask for them from any other machine.
 
 Setting it up with an AI agent on the RTX 5080 machine? Point the agent at
 [AGENT_SETUP.md](AGENT_SETUP.md): the same steps as an exact runbook, with the rules that
-keep your other ComfyUI untouched.
+keep your other ComfyUI untouched. An agent that only asks for assets, on any machine, reads
+[AGENT_USAGE.md](AGENT_USAGE.md) instead.
 
 ## What it makes
 
 | Workflow | Input → output | Models it downloads |
 |---|---|---|
-| `image` | text → PNG | Z-Image Turbo, int8 (12.2 GB) |
+| `image` | text → PNG | Z-Image Turbo, NVFP4 (10.5 GB) |
 | `mesh` | image → `.glb` with PBR textures, AO and a baked normal map | Pixal3D int8 with the TRELLIS.2 VAEs, DINOv3, MoGe-2, BiRefNet (10.0 GB) |
 | `sfx` | text → stereo `.mp3` | Stable Audio 3 Medium (10.4 GB) |
 
 Text to 3D model is two runs: `image`, look at the picture, then `mesh`. All three
 workflows are converted from ComfyUI's own templates and use only nodes built into
 ComfyUI, so there are no custom nodes to install or keep updated.
+
+### Why NVFP4
+
+The image model is Comfy-Org's NVFP4 build of Z-Image Turbo, not the int8 build the template
+uses. RTX 50-series cards run NVFP4 in hardware. On the RTX 5080, with the same prompts and
+seeds, 24 images each:
+
+| Build | Per image, models loaded | Lettering spelled right |
+|---|---|---|
+| int8 | 2.8 to 12.2 s, median about 4.9 s | 14 of 14 |
+| NVFP4 | 2.3 to 2.7 s, median 2.5 s | 13 of 14 |
+
+Props, scenes and a portrait came out equally good to the eye. The one misspelling was a small
+sign in a street scene. The 4-bit text encoder (`qwen_3_4b_fp4_mixed`) was no faster per image
+and drifted from the prompt, so the fp8 one stays. NVFP4 needs an RTX 50-series card to run in
+hardware; on an older card, put `z_image_turbo_int8_convrot.safetensors` back in
+`workflows/image.json`, with its `models.json` entry from git history.
 
 ## Kept apart from your other ComfyUI
 
@@ -61,7 +79,7 @@ every running container, your other ComfyUI included.
 
 Windows 10 or 11 with Docker Desktop (Linux: see [the end](#linux-server)). You need
 roughly 45 GB free on the drive where Docker Desktop keeps its data, which is C: unless you
-move it: about 33 GB of models plus the image.
+move it: about 31 GB of models plus the 12 GB image.
 
 **1. Check the NVIDIA driver.** In PowerShell:
 
@@ -69,8 +87,8 @@ move it: about 33 GB of models plus the image.
 nvidia-smi
 ```
 
-The top right of the table must say `CUDA Version: 13.0` or higher. If it is lower, update
-the driver (NVIDIA App, or nvidia.com).
+The top right of the table must say `CUDA Version: 13.0` or higher (newer drivers label it
+`CUDA UMD Version`). If it is lower, update the driver (NVIDIA App, or nvidia.com).
 
 **2. Install WSL 2 and Docker Desktop.** If Docker Desktop is already installed, for
 example because your other ComfyUI runs in it, skip to step 3. Do not reinstall or update it
@@ -132,7 +150,7 @@ docker compose run --rm comfyui python -c "import torch; print(torch.cuda.get_de
 
 It should print `NVIDIA GeForce RTX 5080`.
 
-**8. Download the models** (about 33 GB). Interrupted downloads resume when you run it
+**8. Download the models** (about 31 GB). Interrupted downloads resume when you run it
 again, and every file is checked against its SHA-256:
 
 ```powershell
@@ -236,6 +254,8 @@ python tools/comfyui/comfy.py run image --set "prompt=..." --set seed=1234
 - After every job the server unloads its models. For a batch, add `--keep-loaded` to every
   run except the last, or run `comfy.py free` at the end.
 - The first job of each workflow after a restart is the slowest: its models load first.
+- On the RTX 5080, with the models unloaded beforehand, an image takes about 7 s (2.5 s once
+  they are loaded), a short sound about 20 s and a mesh about 3 minutes.
 
 ### Text to 3D model
 
@@ -247,9 +267,17 @@ python tools/comfyui/comfy.py run image --set "prompt=..." --set seed=1234
    wrong, change the seed or the wording.
 3. `run mesh --set image=<that png>`. Background removal is on by default.
 
-The result is a `.glb` with base colour, metallic, roughness, AO and normal maps, at 50,000
-triangles. Small props need far fewer: `--set faces=5000`. `--set texture_size=1024` makes
-lighter textures. (The template's own defaults were 700,000 faces and 4096 px textures.)
+The result is a `.glb` with base colour, metallic, roughness, AO and normal maps, at about
+50,000 triangles. For fewer, switch the decimation too:
+`--set faces=20000 --set decimation=qem`. The template's own decimation (`midpoint`) broke the
+mesh into shards at 20,000 and at 5,000 faces, while `qem` kept its shape at both and lands
+under the budget (16,000 to 18,000 triangles for 20,000, about 2,500 for 5,000). That was
+tested on one object, so look at what comes back.
+
+The three textures are most of the file; the face count hardly changes its size.
+`--set texture_size=1024` shrinks the base colour and metallic-roughness textures from about
+3.5 MB to 1.2 MB each; the normal map stays at 2048 px. (The template's own defaults were 700,000 faces and 4096 px
+textures.)
 
 ### Sound prompts
 
@@ -279,17 +307,13 @@ Rough lengths: impacts and clicks 1–3 s, actions such as footsteps 3–6 s, am
 
 ### For AI agents
 
+- **Asking for assets** is [AGENT_USAGE.md](AGENT_USAGE.md): connecting a machine, each
+  workflow, judging the results, getting them into a game, and what each error means. Its
+  rules are the ones to follow; this README is the background. Claude Code and Codex run it
+  as the `comfyui-assets` skill (`.agents/skills/`), and check every model with
+  `preview_glb.py`, which renders it from six angles with Blender.
 - **Setting the server up** is [AGENT_SETUP.md](AGENT_SETUP.md), and its ground rules
   apply: the RTX 5080 machine also runs the user's own ComfyUI, and nothing may touch it.
-- Run `comfy.py` as shown above. Never print, echo or log `COMFY_API_TOKEN`, and never put
-  it in a URL.
-- Start with `check`; if it fails, report that rather than retrying in a loop.
-- For a 3D model, always make and inspect the image first, then run `mesh` on it.
-- If a run reports a model "not on the server" or a node that "does not exist", run
-  `validate` and report what it says. Do not swap in model names that are not in
-  `models.json`.
-- Generated assets are drafts. Say where each file was saved and let a person decide what
-  goes into a game.
 
 ## Everyday commands
 
@@ -350,7 +374,8 @@ entry in `workflows/<name>.json`, or re-export it from the template:
    `3d_pixal3d_trellis2_image_to_model` or `audio_stable_audio_3_medium`) and check it runs.
 2. Use *Workflow → Export (API)*.
 3. Replace the `prompt` object in `workflows/<name>.json` with the export, and update the
-   node ids under `params` to match. Run `validate` again.
+   node ids under `params` to match. For `image`, set the UNETLoader back to
+   `z_image_turbo_nvfp4.safetensors` (see "Why NVFP4"). Run `validate` again.
 
 ## Adding a workflow
 
@@ -363,6 +388,13 @@ entry in `workflows/<name>.json`, or re-export it from the template:
 4. Add its model files to `models.json` (the template lists their URLs) and download them
    with `download_models.py <group>`.
 5. `comfy.py validate <name>`.
+
+A workflow still being tried goes in `workflows/experimental/`. It runs by name like the
+others; `list` shows it under an "Experimental" heading, and a bare `validate` reports on it
+without failing, since its models may not be downloaded. Mark its model group
+`"optional": true` in `models.json`, so a plain `download_models.py` skips it and only
+`download_models.py <group>` fetches it. `mesh_multiview` (four views of an object to a model,
+[AGENT_USAGE.md](AGENT_USAGE.md)) is the first.
 
 There are deliberately no custom nodes. If one is ever needed, install it in the
 `Dockerfile`: packages installed into a running container vanish when it is recreated.
