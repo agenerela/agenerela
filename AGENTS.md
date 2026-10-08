@@ -69,10 +69,11 @@ they are taken.
 | Path | Contents |
 |---|---|
 | `UnityProject/Packages/com.agenerela.framework/` | The package — everything shippable |
-| `UnityProject/Assets/Evaluation/` | Benchmark harness and labelled prompt set — Phase 4, does not exist yet |
+| `UnityProject/Assets/Evaluation/` | The labelled prompt set, its first 54 prompts so far (#13); the benchmark harness that runs it is Phase 4 |
 | `Demos/<Game>/` | Demo games — one full Unity project each, loading the package by relative path (DR-010) |
 | `docs/` | Build plan, llm-wiki, screen designs and course materials — [`docs/README.md`](docs/README.md) maps them |
 | `tools/benchmarks/` | Standalone Python probes, no Unity required |
+| `tools/comfyui/` | The asset server: ComfyUI in Docker on the lead's RTX 5080 machine, making 3D models, sounds and images for the demo games, and `comfy.py`, which agents call it with |
 
 ## Working conventions
 
@@ -93,6 +94,17 @@ in `Runtime/` must sit inside `#if UNITY_EDITOR`. CI enforces both (DR-011, buil
 framework through a relative `file:` path in its `Packages/manifest.json` — never a
 version or git URL — and uses only the framework's public API. Framework work happens in
 `UnityProject/`.
+
+**Generated assets come from the asset server** in [`tools/comfyui/`](tools/comfyui/README.md).
+Ask it for a model, sound or image with `python tools/comfyui/comfy.py run <workflow>`
+(`list` shows the workflows); it needs `COMFY_URL` and `COMFY_API_TOKEN` in
+`tools/comfyui/.env`. For a 3D model, make and look at the image first, then run `mesh` on
+it. Never print the token or put it in a URL. Setting the server up is its own runbook,
+[`tools/comfyui/AGENT_SETUP.md`](tools/comfyui/AGENT_SETUP.md): that machine also runs the
+user's own ComfyUI, so touch only this stack's containers, image and volume. Never run a
+`docker ... prune`, and never stop, remove or reconfigure another container, or restart WSL
+or Docker Desktop, without the user's say-so. Generated files are drafts until a person
+puts them in a game.
 
 **Before opening a pull request:**
 - Unity console clean — no new errors or warnings
@@ -180,6 +192,9 @@ Merged so far:
   Unity project (DR-010).
 - `Demos/GreyBoxVillage` — a playable grey-box scene whose guard still answers from
   placeholder string matching, not a model (#19).
+- The first 54 evaluation prompts (#13, via #65), nine in each of six categories, in
+  `UnityProject/Assets/Evaluation/prompts/`. #66 lists what they still need before Phase 4
+  can run them.
 - `Repo hygiene` checks for the hard rules a script can check, including "only
   `Runtime/Unity/` touches a scene" (#38, #40), and for a changed `.meta` GUID (#41). It
   still compiles no C#, so a green check does not prove `test` builds.
@@ -190,9 +205,12 @@ resolve them per decision.
 **Nothing in the framework calls a model yet** — that starts in Phase 2, so Phase 1 work is
 pure C# with EditMode tests and no Ollama.
 
-Open groundwork beside Phase 1: the evaluation prompt set (#13), and the demo games, one
-sub-issue each under #47, starting with the GreyBoxStrategy grey box (#20). Code two games
-share moves into `Demos/Shared/` once a second game needs it (#14).
+Open groundwork beside Phase 1: the evaluation prompt set's follow-up (#66), and the demo
+games, one sub-issue each under #47, starting with the GreyBoxStrategy grey box (#20). Code
+two games share moves into `Demos/Shared/` once a second game needs it (#14). The asset
+server those games draw on (`tools/comfyui/`) is written and its gateway tested, but has not
+yet run on the RTX 5080 machine: its first `comfy.py validate` there is the test of its
+workflows.
 
 What all of this is meant to become, screen by screen, is drawn in
 [`docs/design/`](docs/design/README.md).

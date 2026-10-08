@@ -6,10 +6,9 @@ changes a confirmed direction in the [build plan](living-vale.md) or the
 the framework as it stands, asking what a player who never read either will need. Where a
 feature changes what the model reads, it is marked **A/B**: it needs a control arm before
 it ships (hard rule 2). The framework-side reasoning behind the dependencies is in the
-[design review](https://github.com/agenerela/agenerela/blob/ccr-0b9abfdf-1b5bog/docs/reviews/2026-10-07-design-review.md)
+[design review](../reviews/2026-10-07-design-review.md)
 and its
-[feature companion](https://github.com/agenerela/agenerela/blob/ccr-0b9abfdf-1b5bog/docs/reviews/2026-10-07-living-vale-features.md),
-on the review branch.
+[feature companion](../reviews/2026-10-07-living-vale-features.md).
 
 ## What changes when it is a game rather than a demo
 

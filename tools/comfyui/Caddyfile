@@ -1,0 +1,36 @@
+# The gateway in front of ComfyUI's API. See README.md, "How it is exposed".
+#
+# ComfyUI has no login of its own, so this is the only door other machines get:
+#   1. every request must carry "Authorization: Bearer <COMFY_API_TOKEN>";
+#   2. only the API routes comfy.py needs are passed through. The web UI, user
+#      settings and everything else answer 403 here, and stay reachable only
+#      from a browser on the server itself, at 127.0.0.1.
+# Caddy's access log redacts the Authorization header.
+
+{
+	admin off
+	auto_https off
+}
+
+:8080 {
+	log {
+		format console
+	}
+
+	@unauthorized not header Authorization "Bearer {$COMFY_API_TOKEN}"
+	handle @unauthorized {
+		respond "Missing or wrong token." 401
+	}
+
+	# ComfyUI serves every route both bare and under /api.
+	@api path_regexp ^/(api/)?(system_stats|object_info(/[^/]+)?|models(/[^/]+)?|prompt|queue|history(/[^/]+)?|view|upload/image|interrupt|free|ws)$
+	handle @api {
+		reverse_proxy comfyui:8188 {
+			header_up -Authorization
+		}
+	}
+
+	handle {
+		respond "Not exposed through the gateway." 403
+	}
+}

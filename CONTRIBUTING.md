@@ -142,13 +142,14 @@ chat before you open one someone else might be in.
 | Path | What |
 |---|---|
 | `UnityProject/Packages/com.agenerela.framework/` | The package — everything shippable |
-| `UnityProject/Assets/Evaluation/` | Benchmark harness and labelled prompts — Phase 4, not created yet |
+| `UnityProject/Assets/Evaluation/` | Labelled prompts, the first 54 so far (#13); the benchmark harness is Phase 4 |
 | `Demos/<Game>/` | Demo games — one Unity project each ([`Demos/README.md`](Demos/README.md)) |
 | `docs/FRAMEWORK_BUILD_PLAN.md` | **The plan of record** — read before building |
 | `docs/llm-wiki/` | Measured findings and conventions |
 | `docs/design/` | The sitemap, a wireframe of every screen, and the developer walkthrough ([`docs/design/README.md`](docs/design/README.md)) |
 | `docs/course/` | COMP 490 deliverables, archived ([`docs/course/README.md`](docs/course/README.md)) |
 | `tools/benchmarks/` | Standalone probes, no Unity required |
+| `tools/comfyui/` | Asset server for the demo games' 3D models, sounds and images ([`tools/comfyui/README.md`](tools/comfyui/README.md)) |
 
 If you are about to change how the model is prompted or how the schema is built, read
 **Appendix A** of the build plan first. Several intuitive-sounding changes were measured

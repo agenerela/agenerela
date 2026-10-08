@@ -1,0 +1,97 @@
+{
+  "about": "Model files for the workflows in workflows/. download_models.py reads this. dir is the folder under ComfyUI's models/. Sizes and SHA-256 are from the Hugging Face API; every file is ungated, so no Hugging Face token is needed.",
+  "groups": {
+    "image": {
+      "description": "Z-Image Turbo, int8 (workflows/image.json). Apache-2.0.",
+      "files": [
+        {
+          "dir": "diffusion_models",
+          "file": "z_image_turbo_int8_convrot.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/diffusion_models/z_image_turbo_int8_convrot.safetensors",
+          "size": 6201001296,
+          "sha256": "be517ebd47c912a5626a588e1aeea43e6be4a43c0cdcd2b48a2a780d9f358635"
+        },
+        {
+          "dir": "text_encoders",
+          "file": "qwen_3_4b_fp8_mixed.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/text_encoders/qwen_3_4b_fp8_mixed.safetensors",
+          "size": 5631994051,
+          "sha256": "72450b19758172c5a7273cf7de729d1c17e7f434a104a00167624cba94f68f15"
+        },
+        {
+          "dir": "vae",
+          "file": "ae.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/vae/ae.safetensors",
+          "size": 335304388,
+          "sha256": "afc8e28272cd15db3919bacdb6918ce9c1ed22e96cb12c4d5ed0fba823529e38"
+        }
+      ]
+    },
+    "mesh": {
+      "description": "Pixal3D int8 with the TRELLIS.2 VAEs, DINOv3, MoGe-2 and BiRefNet (workflows/mesh.json). MIT, as published by Comfy-Org.",
+      "files": [
+        {
+          "dir": "diffusion_models",
+          "file": "pixal3d_int8_convrot.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/Pixal3D/resolve/main/diffusion_models/pixal3d_int8_convrot.safetensors",
+          "size": 5584555824,
+          "sha256": "4621eac3b715484f79303c7152af641fe0b2b14f4d0e3d394fd6922d00f955ec"
+        },
+        {
+          "dir": "vae",
+          "file": "trellis_2_shape_vae_bf16.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/Pixal3D/resolve/main/vae/trellis_2_shape_vae_bf16.safetensors",
+          "size": 1095844024,
+          "sha256": "de0cb4949a76c59ee5c091a995a69bcc8c51d5aeda939f0c641a50d2a72341f4"
+        },
+        {
+          "dir": "vae",
+          "file": "trellis_2_texture_vae_bf16.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/Pixal3D/resolve/main/vae/trellis_2_texture_vae_bf16.safetensors",
+          "size": 948461364,
+          "sha256": "714e5ebf094a610e12a8e3b5175c18a62f37f6ea4218acb6073644456b73ab0e"
+        },
+        {
+          "dir": "clip_vision",
+          "file": "dino_v3_L_naf_fp32.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/Pixal3D/resolve/main/clip_vision/dino_v3_L_naf_fp32.safetensors",
+          "size": 1215214176,
+          "sha256": "4ad2ec4e0879a5b5b04cd97325cc37da954a7b6edca5170b86510f17f2b2290f"
+        },
+        {
+          "dir": "geometry_estimation",
+          "file": "moge_2_vitl_normal_fp16.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/MoGe/resolve/main/geometry_estimation/moge_2_vitl_normal_fp16.safetensors",
+          "size": 661859924,
+          "sha256": "cb1a692d03235671e959e81360d7b4d9f44aefadb1f852d6ca6aa17799d5e31f"
+        },
+        {
+          "dir": "background_removal",
+          "file": "birefnet.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/BiRefNet/resolve/main/background_removal/birefnet.safetensors",
+          "size": 444473596,
+          "sha256": "9ab37426bf4de0567af6b5d21b16151357149139362e6e8992021b8ce356a154"
+        }
+      ]
+    },
+    "sfx": {
+      "description": "Stable Audio 3 Medium with its T5Gemma text encoder (workflows/sfx.json). Stability AI Community License.",
+      "files": [
+        {
+          "dir": "checkpoints",
+          "file": "stable_audio_3_medium.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/stable-audio-3/resolve/main/checkpoints/stable_audio_3_medium.safetensors",
+          "size": 9222116660,
+          "sha256": "48d9c65e290e7bcd5194e0633bfc2424a59ee9683f5c2d58762d997b7d8ce0b5"
+        },
+        {
+          "dir": "text_encoders",
+          "file": "t5gemma_b_b_ul2.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/stable-audio-3/resolve/main/text_encoders/t5gemma_b_b_ul2.safetensors",
+          "size": 1187264003,
+          "sha256": "1e1eba25be8872edb0d3c6335c6658fd6388e7b14b60da6e454e404cfcd8150e"
+        }
+      ]
+    }
+  }
+}
