@@ -133,6 +133,16 @@ While the version stays `0.x`, the public API may change in any release.
   two tokens. No provider fills them yet. EditMode tests cover the defaults, and a hand-built
   result whose tokens join back into `Text` and whose alternatives keep their order through a
   Newtonsoft round trip. `Documentation~/providers.md` adds the flag to the capability table.
+- `JsonSchemaSerializer` in namespace `Agenerela` (#9) — translates a `DecisionSchema` (#8)
+  into the JSON Schema Ollama and the cloud APIs accept. One string property per field in the
+  order given, an `enum` for each field with allowed values, `required`, `propertyOrdering`
+  (always: Gemini needs the order stated and other consumers ignore it) and
+  `additionalProperties: false`. Output is indented with `\n` line endings on every platform.
+  A field that is null, unnamed or named twice, and allowed values that are empty or contain
+  a null, `""` or a duplicate, throw an `ArgumentException`, so no provider ever sends an
+  empty enum string to Gemini. EditMode tests compare the following-agent example against the
+  golden output in #9, and cover a parser round trip, field and enum order, the shape without
+  a target field, and each rejection.
 
 ### Changed
 - `DecisionTelemetry.TargetsDropped` — the target ids a source found but left out because of
