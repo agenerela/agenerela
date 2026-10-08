@@ -5,6 +5,12 @@ assets**: the lead's laptop, a teammate's machine, or the RTX 5080 machine itsel
 connecting, making images, 3D models and sound effects, judging them, and handing them to a
 game. Read all of it before your first request.
 
+Claude Code and Codex also have this as a skill, `comfyui-assets` (`/comfyui-assets` in
+Claude Code, `$comfyui-assets` in Codex), which they pick up by themselves when asked for an
+asset. The skill is the procedure; this guide stays the reference it points to. It lives in
+[`.agents/skills/comfyui-assets/`](../../.agents/skills/comfyui-assets/SKILL.md), with a
+pointer in `.claude/skills/` for Claude Code.
+
 Setting the server up is a different job, on the RTX 5080 machine only:
 [AGENT_SETUP.md](AGENT_SETUP.md). Never follow it from a client machine.
 
@@ -114,9 +120,25 @@ Always two runs, and always look at the image in between.
    Below 50,000 faces without `decimation=qem`, the mesh breaks into shards. With `qem` it lands
    somewhat under the budget (about 16,000 to 18,000 for 20,000). For a smaller file, lower
    the textures: `--set texture_size=1024`; the face count hardly changes the file size.
-4. You cannot see a `.glb`. Tell the user where it is and ask them to open it in a glTF viewer,
-   Blender or Unity before it goes anywhere. A broken mesh looks like a cluster of flat shards
-   instead of the object.
+4. Look at the result before reporting it:
+
+   ```bash
+   python tools/comfyui/preview_glb.py tools/comfyui/out/mesh/<the .glb>
+   ```
+
+   It renders the model with its textures from six angles into one PNG (front, three-quarter
+   and side on top; back, top and a close-up below) and prints its path; open that PNG. It
+   needs Blender, which it finds by itself, Steam installs included. A broken mesh looks like
+   a cluster of flat shards instead of the object. If the script exits with code 3, Blender is
+   not installed: tell the user where the `.glb` is and ask them to open it in a glTF viewer,
+   Blender or Unity.
+
+What to expect, from tests on the RTX 5080: models often lean about 10 degrees in the side view,
+even when the image was taken from a low camera, so the user stands them upright in Blender or
+Unity. Textures look soft up close; that is the generator's limit. 700,000 faces with 4096 px
+textures and normal map (`--set faces=700000 --set texture_size=4096 --set 224.resolution=4096`)
+came out only slightly crisper at five times the file size, and `--set 94.target_resolution=2048`
+took 14 minutes and broke the mesh. Use the defaults unless the user asks for more.
 
 Other parameters: `seed`, and `remove_background` (on by default; turn it off only for an image
 that already has a transparent background).

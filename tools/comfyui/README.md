@@ -309,7 +309,9 @@ Rough lengths: impacts and clicks 1–3 s, actions such as footsteps 3–6 s, am
 
 - **Asking for assets** is [AGENT_USAGE.md](AGENT_USAGE.md): connecting a machine, each
   workflow, judging the results, getting them into a game, and what each error means. Its
-  rules are the ones to follow; this README is the background.
+  rules are the ones to follow; this README is the background. Claude Code and Codex run it
+  as the `comfyui-assets` skill (`.agents/skills/`), and check every model with
+  `preview_glb.py`, which renders it from six angles with Blender.
 - **Setting the server up** is [AGENT_SETUP.md](AGENT_SETUP.md), and its ground rules
   apply: the RTX 5080 machine also runs the user's own ComfyUI, and nothing may touch it.
 

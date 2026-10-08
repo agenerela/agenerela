@@ -102,8 +102,12 @@ three workflows, judging what comes back, and what to do when a run fails. In sh
 `python tools/comfyui/comfy.py run <workflow>` (`list` shows the workflows), which reads
 `COMFY_URL` and `COMFY_API_TOKEN` from `tools/comfyui/.env`. For a 3D model, make and look at
 the image first, then run `mesh` on it; below 50,000 faces, add `--set decimation=qem`, or
-the mesh can break into shards. Never open or print `.env`, and never put the token in a URL
-or a chat. Setting the server up is its own runbook,
+the mesh can break into shards. Look at every model before reporting it:
+`python tools/comfyui/preview_glb.py <the .glb>` renders it from six angles with Blender. The
+`comfyui-assets` skill, in [`.agents/skills/`](.agents/skills/comfyui-assets/SKILL.md) for
+Codex with a pointer in `.claude/skills/` for Claude Code, runs this whole procedure. Never
+open or print `.env`, and never put the token in a URL or a chat. Setting the server up is
+its own runbook,
 [`tools/comfyui/AGENT_SETUP.md`](tools/comfyui/AGENT_SETUP.md): that machine also runs the
 user's own ComfyUI, so touch only this stack's containers, image and volume. Never run a
 `docker ... prune`, and never stop, remove or reconfigure another container, or restart WSL
@@ -232,3 +236,8 @@ files below.
 If you add an agent that reads a different filename, create a **pointer** to this file
 rather than a copy. Duplicated rule files drift apart, and the drift is invisible until
 two agents behave differently for reasons nobody can explain.
+
+Skills follow the same rule. Each lives once, in `.agents/skills/<name>/`, where Codex reads
+it; Claude Code reads `.claude/skills/`, so each skill there is a pointer `SKILL.md` with the
+same name and description that sends Claude Code to the one in `.agents/skills/`. Use plain
+files, not symlinks: git checks symlinks out as text on many Windows machines.
