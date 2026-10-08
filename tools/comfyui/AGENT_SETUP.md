@@ -73,7 +73,8 @@ containers.
 nvidia-smi
 ```
 
-`CUDA Version` must be 13.0 or higher. If it is lower, stop: the user updates the driver.
+`CUDA Version` (`CUDA UMD Version` on newer drivers) must be 13.0 or higher. If it is lower,
+stop: the user updates the driver.
 
 **2. Run the setup check:**
 

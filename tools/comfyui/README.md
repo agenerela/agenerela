@@ -69,8 +69,8 @@ move it: about 33 GB of models plus the image.
 nvidia-smi
 ```
 
-The top right of the table must say `CUDA Version: 13.0` or higher. If it is lower, update
-the driver (NVIDIA App, or nvidia.com).
+The top right of the table must say `CUDA Version: 13.0` or higher (newer drivers label it
+`CUDA UMD Version`). If it is lower, update the driver (NVIDIA App, or nvidia.com).
 
 **2. Install WSL 2 and Docker Desktop.** If Docker Desktop is already installed, for
 example because your other ComfyUI runs in it, skip to step 3. Do not reinstall or update it
