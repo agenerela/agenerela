@@ -1,6 +1,6 @@
 {
   "description": "Image to textured 3D model (GLB with PBR textures and a baked normal map) with Pixal3D and the TRELLIS.2 VAEs.",
-  "source": "Converted from the official ComfyUI template 3d_pixal3d_trellis2_image_to_model, Pixal3D branch only, preview nodes removed, saved with SaveGLB. Node ids match the template. Defaults are lighter than the template's for game use: 50k faces instead of 700k, 2048 px textures instead of 4096.",
+  "source": "Converted from the official ComfyUI template 3d_pixal3d_trellis2_image_to_model, Pixal3D branch only, preview nodes removed, saved with SaveGLB. Node ids match the template. Defaults are lighter than the template's for game use: 50k faces instead of 700k, 2048 px textures instead of 4096. DecimateMesh also carries qem's settings, at their defaults, so the decimation param can switch to it; midpoint ignores them.",
   "params": {
     "image": {
       "targets": [["122", "image"]],
@@ -15,7 +15,11 @@
     },
     "faces": {
       "targets": [["186", "target_face_count"]],
-      "help": "Triangle budget of the final mesh."
+      "help": "Triangle budget of the final mesh. Below 50000, also set decimation=qem."
+    },
+    "decimation": {
+      "targets": [["186", "placement_mode"]],
+      "help": "midpoint (the template's) or qem. midpoint broke the mesh at 20000 and 5000 faces; qem held the shape but lands under the budget."
     },
     "texture_size": {
       "targets": [["288", "value"]],
@@ -312,7 +316,11 @@
       "inputs": {
         "mesh": ["241", 0],
         "target_face_count": 50000,
-        "placement_mode": "midpoint"
+        "placement_mode": "midpoint",
+        "placement_mode.line_quadric_weight": 0.0,
+        "placement_mode.feature_edge_quadric_weight": 0.0,
+        "placement_mode.feature_edge_min_dihedral_deg": 30.0,
+        "placement_mode.clamp_v_to_edge": true
       }
     },
     "238": {

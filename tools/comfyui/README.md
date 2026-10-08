@@ -69,8 +69,8 @@ move it: about 33 GB of models plus the image.
 nvidia-smi
 ```
 
-The top right of the table must say `CUDA Version: 13.0` or higher. If it is lower, update
-the driver (NVIDIA App, or nvidia.com).
+The top right of the table must say `CUDA Version: 13.0` or higher (newer drivers label it
+`CUDA UMD Version`). If it is lower, update the driver (NVIDIA App, or nvidia.com).
 
 **2. Install WSL 2 and Docker Desktop.** If Docker Desktop is already installed, for
 example because your other ComfyUI runs in it, skip to step 3. Do not reinstall or update it
@@ -236,6 +236,8 @@ python tools/comfyui/comfy.py run image --set "prompt=..." --set seed=1234
 - After every job the server unloads its models. For a batch, add `--keep-loaded` to every
   run except the last, or run `comfy.py free` at the end.
 - The first job of each workflow after a restart is the slowest: its models load first.
+- On the RTX 5080, with the models unloaded beforehand, an image takes about 10 s, a short
+  sound about 20 s and a mesh about 3 minutes.
 
 ### Text to 3D model
 
@@ -247,9 +249,17 @@ python tools/comfyui/comfy.py run image --set "prompt=..." --set seed=1234
    wrong, change the seed or the wording.
 3. `run mesh --set image=<that png>`. Background removal is on by default.
 
-The result is a `.glb` with base colour, metallic, roughness, AO and normal maps, at 50,000
-triangles. Small props need far fewer: `--set faces=5000`. `--set texture_size=1024` makes
-lighter textures. (The template's own defaults were 700,000 faces and 4096 px textures.)
+The result is a `.glb` with base colour, metallic, roughness, AO and normal maps, at about
+50,000 triangles. For fewer, switch the decimation too:
+`--set faces=20000 --set decimation=qem`. The template's own decimation (`midpoint`) broke the
+mesh into shards at 20,000 and at 5,000 faces, while `qem` kept its shape at both and lands
+under the budget (16,000 to 18,000 triangles for 20,000, about 2,500 for 5,000). That was
+tested on one object, so look at what comes back.
+
+The three textures are most of the file; the face count hardly changes its size.
+`--set texture_size=1024` shrinks the base colour and metallic-roughness textures from about
+3.5 MB to 1.2 MB each; the normal map stays at 2048 px. (The template's own defaults were 700,000 faces and 4096 px
+textures.)
 
 ### Sound prompts
 
@@ -284,7 +294,8 @@ Rough lengths: impacts and clicks 1–3 s, actions such as footsteps 3–6 s, am
 - Run `comfy.py` as shown above. Never print, echo or log `COMFY_API_TOKEN`, and never put
   it in a URL.
 - Start with `check`; if it fails, report that rather than retrying in a loop.
-- For a 3D model, always make and inspect the image first, then run `mesh` on it.
+- For a 3D model, always make and inspect the image first, then run `mesh` on it. Below
+  50,000 faces, also set `decimation=qem` (see "Text to 3D model").
 - If a run reports a model "not on the server" or a node that "does not exist", run
   `validate` and report what it says. Do not swap in model names that are not in
   `models.json`.
