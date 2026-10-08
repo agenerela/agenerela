@@ -144,6 +144,31 @@ defaults unless the user asks for more.
 Other parameters: `seed`, and `remove_background` (on by default; turn it off only for an image
 that already has a transparent background).
 
+### Experimental: a 3D model from four views
+
+When the user has **four consistent views of the same object**, such as their own drawings,
+photos or renders, `experimental/mesh_multiview` builds the model from all four instead of
+guessing the unseen sides:
+
+```bash
+python tools/comfyui/comfy.py run experimental/mesh_multiview --set front=<png> --set left=<png> --set back=<png> --set right=<png>
+```
+
+- `front`: the object facing the camera. `left`: the camera on the left of the front view, so
+  the object's front points to the image's right edge. `back`: seen from behind. `right`: the
+  camera on the right, the front pointing to the left edge. Each view at camera height, the
+  whole object in frame; backgrounds are removed for you. `fov` (default 20) is the views'
+  horizontal field of view in degrees.
+- `faces`, `decimation`, `texture_size`, `seed` and `filename_prefix` work as for `mesh`.
+- Its model is not in the default download: on a new server, run
+  `download_models.py mesh_multiview` first. `validate experimental/mesh_multiview` checks it.
+
+Tested on a hand-made model rendered from four sides: the single-view `mesh` invented a second
+crossbar and leaned, while `mesh_multiview` rebuilt the right shape, upright, in 80 s instead of
+127 s. **Do not feed it views made by the `image` workflow.** Asked for four-view turnaround
+sheets, Z-Image drew the front three times, skipped panels and opened a closed lid; none of six
+attempts was usable, and inconsistent views make a worse model than one good image.
+
 ### A sound effect
 
 ```bash

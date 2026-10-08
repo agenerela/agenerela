@@ -389,6 +389,12 @@ entry in `workflows/<name>.json`, or re-export it from the template:
    with `download_models.py <group>`.
 5. `comfy.py validate <name>`.
 
+A workflow still being tried goes in `workflows/experimental/`: `list` and a bare `validate`
+leave that folder out, and it runs by path, as `run experimental/<name>`. Mark its model group
+`"optional": true` in `models.json`, so a plain `download_models.py` skips it and only
+`download_models.py <group>` fetches it. `experimental/mesh_multiview` (four views of an object
+to a model, [AGENT_USAGE.md](AGENT_USAGE.md)) is the first.
+
 There are deliberately no custom nodes. If one is ever needed, install it in the
 `Dockerfile`: packages installed into a running container vanish when it is recreated.
 

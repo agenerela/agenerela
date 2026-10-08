@@ -92,6 +92,19 @@
           "sha256": "1e1eba25be8872edb0d3c6335c6658fd6388e7b14b60da6e454e404cfcd8150e"
         }
       ]
+    },
+    "mesh_multiview": {
+      "description": "EXPERIMENTAL: Pixal3D multiview int8 (workflows/experimental/mesh_multiview.json); needs the mesh group too. MIT, as published by Comfy-Org.",
+      "optional": true,
+      "files": [
+        {
+          "dir": "diffusion_models",
+          "file": "pixal3d_multiview_int8_convrot.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/Pixal3D/resolve/main/diffusion_models/pixal3d_multiview_int8_convrot.safetensors",
+          "size": 5584555824,
+          "sha256": "6b1eb3328930d921d3b57508d9c46cceec1c174dcedeebc14f176ab67d49f477"
+        }
+      ]
     }
   }
 }

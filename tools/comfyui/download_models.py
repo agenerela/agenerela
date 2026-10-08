@@ -6,6 +6,9 @@ Runs inside the container, which mounts this file and models.json:
     docker compose run --rm comfyui python /opt/agenerela/download_models.py sfx      # one group
     docker compose run --rm comfyui python /opt/agenerela/download_models.py --list
 
+"Every group" leaves out groups marked "optional" in models.json, such as the models of
+experimental workflows; name one to fetch it.
+
 Safe to re-run. A file already present at the right size is skipped, and an
 interrupted download resumes where it stopped. Each file is checked against its
 SHA-256 before it gets its final name, so ComfyUI never sees a truncated model.
@@ -113,18 +116,20 @@ def download(entry, opener, token):
 def main():
     groups = json.loads(MANIFEST.read_text(encoding="utf-8"))["groups"]
     parser = argparse.ArgumentParser(description="Download the models the workflows need.")
-    parser.add_argument("groups", nargs="*", metavar="GROUP", help=f"any of: {', '.join(groups)} (default: all)")
+    parser.add_argument("groups", nargs="*", metavar="GROUP",
+                        help=f"any of: {', '.join(groups)} (default: every group not marked optional)")
     parser.add_argument("--list", action="store_true", help="show the groups and their sizes, download nothing")
     args = parser.parse_args()
 
     unknown = [g for g in args.groups if g not in groups]
     if unknown:
         parser.error(f"unknown group(s) {', '.join(unknown)}; choose from {', '.join(groups)}")
-    chosen = args.groups or list(groups)
+    chosen = args.groups or [name for name, group in groups.items() if not group.get("optional")]
 
     if args.list:
         for name, group in groups.items():
-            print(f"{name:<6} {gb(sum(f['size'] for f in group['files'])):>9}  {group['description']}")
+            note = "  (optional: only when named)" if group.get("optional") else ""
+            print(f"{name:<14} {gb(sum(f['size'] for f in group['files'])):>9}  {group['description']}{note}")
         return
 
     entries = [f for g in chosen for f in groups[g]["files"]]

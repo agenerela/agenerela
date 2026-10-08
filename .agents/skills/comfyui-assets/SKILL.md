@@ -44,6 +44,11 @@ error. This file is the procedure. Run every command from the repository root.
 
 Below 50,000 faces, always add `decimation=qem`; without it the mesh breaks into shards.
 
+If the user supplies four views of one object (front, left, back, right), use the experimental
+`experimental/mesh_multiview` workflow instead; the guide's "Experimental: a 3D model from four
+views" says how. Never make those views with the `image` workflow: it cannot draw the same
+object consistently from four sides.
+
 Other settings were tested and barely show: 700,000 faces and lighter remesh smoothing looked
 the same as the default, and raising `94.target_resolution` to 2048 took 14 minutes and broke
 the mesh. Don't raise them unless the user asks, and then say what it costs.
