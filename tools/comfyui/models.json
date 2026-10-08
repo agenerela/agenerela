@@ -2,14 +2,14 @@
   "about": "Model files for the workflows in workflows/. download_models.py reads this. dir is the folder under ComfyUI's models/. Sizes and SHA-256 are from the Hugging Face API; every file is ungated, so no Hugging Face token is needed.",
   "groups": {
     "image": {
-      "description": "Z-Image Turbo, int8 (workflows/image.json). Apache-2.0.",
+      "description": "Z-Image Turbo, NVFP4 (workflows/image.json), which RTX 50-series cards run in hardware. Apache-2.0.",
       "files": [
         {
           "dir": "diffusion_models",
-          "file": "z_image_turbo_int8_convrot.safetensors",
-          "url": "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/diffusion_models/z_image_turbo_int8_convrot.safetensors",
-          "size": 6201001296,
-          "sha256": "be517ebd47c912a5626a588e1aeea43e6be4a43c0cdcd2b48a2a780d9f358635"
+          "file": "z_image_turbo_nvfp4.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/diffusion_models/z_image_turbo_nvfp4.safetensors",
+          "size": 4509509600,
+          "sha256": "a553c889dbcb910de4c98293237573219a37007c1074a3f04576646a088bd5c8"
         },
         {
           "dir": "text_encoders",
