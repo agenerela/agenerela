@@ -186,11 +186,11 @@ async function build() {
     text(s, "California State University, Northridge", { x: 0.6, y: 4.56, w: 8.8, h: 0.25, size: 12, color: C.onDark });
     text(s, "October 15, 2026", { x: 0.6, y: 4.95, w: 8.8, h: 0.22, size: S.small, color: C.onDark2 });
     notes(s, [
-      "SPEAKER: Yevhen Mishchenko · about 20 seconds (title and outline together: 40 s)",
+      "SPEAKER: Yevhen Mishchenko · about 20 seconds",
       "",
-      "- Hi everyone, we are Agenerela: Yevhen, Hunter, Tim, Tigran, Hero and Maxim.",
-      "- One sentence: Agenerela is a Unity framework that lets a language model choose what a game agent does next, only from actions the developer registered, while our code checks and runs the choice.",
-      "- Point at the three boxes: the game asks, Agenerela builds and checks the choice, the model only chooses.",
+      "- Hi, we're Agenerela: Yevhen, Hunter, Tim, Tigran, Hero and Maxim.",
+      "- Agenerela is a Unity framework that lets a language model choose what a game agent does next, only from actions the developer registered.",
+      "- Point at the three boxes: the game asks, our framework checks, the model only chooses.",
     ]);
   }
 
@@ -202,7 +202,7 @@ async function build() {
       ["Motivation", "Why this matters, what already exists, and the problem we chose", "Yevhen"],
       ["Goals", "Eight goals, and how we reach each one", "Hunter"],
       ["Architecture", "One decision through the framework, in nine steps", "Hunter"],
-      ["Design models", "A figure for each component", "Hunter · Tim · Tigran · Yevhen · Hero"],
+      ["Design models", "A figure for each component", "All six of us, one each"],
       ["Methods and evaluation", "What our prototype measured, and how we will measure", "Hero · Maxim"],
       ["References, Q&A", "Our sources, then your questions", "Maxim · everyone"],
     ];
@@ -218,8 +218,8 @@ async function build() {
     notes(s, [
       "SPEAKER: Yevhen Mishchenko · about 20 seconds",
       "",
-      "- Six parts. I start with why we are building this; Hunter covers our goals and the architecture; then each of us shows the design of the component we own; Hero and Maxim close with what we measured and how we will measure.",
-      "- Don't read the cards; just point to the order and the names.",
+      "- Six parts: why we're building this, our goals, the architecture, then each of us shows the component we own, and we close with what we measured and how we'll measure.",
+      "- (Point to the order and the names; don't read the cards.)",
     ]);
   }
 
@@ -242,12 +242,12 @@ async function build() {
     figure(s, "02-agents", 0.5, 2.8, 9.0, 4.0, "A guard you talk to and a country with no body, both driven through Agenerela with the same API and the same checks.");
     caption(s, "Figure 1. One framework, two very different agents: our first two demo games. Scenes and moves are illustrative [2].");
     notes(s, [
-      "SPEAKER: Yevhen Mishchenko · about 40 seconds",
+      "SPEAKER: Yevhen Mishchenko · about 35 seconds",
       "",
-      "- Think about a Unity developer building game AI today. The top-level choice, which behaviour runs next, is usually a hand-written condition tree, and it grows with every new situation.",
-      "- And the situations are open-ended: a turn report, a game event, sometimes a player's line. Usually the developer's own code decides it's time to ask; chat is just one way in. Left: our village guard, asked by the game or by the player. 'Attack Godzilla' should be refused in character, because Godzilla isn't there.",
-      "- And agents are not always characters. Right: our strategy demo, where each country is an agent with no body, no NavMesh and no voice. Tools built for talking characters don't fit it.",
-      "- In the middle: one framework drives both, through the same API and the same checks. That is what we're building.",
+      "- Today a developer picks an agent's next behaviour with hand-written condition trees, and every new situation means more branches.",
+      "- And situations are open-ended: a turn report, a game event, sometimes a player's line. Usually the game itself decides it's time to ask.",
+      "- Left, our village guard: 'Attack Godzilla' should be refused, because there is no Godzilla. Right, a country: no body, no voice.",
+      "- One framework drives both, with the same API and the same checks.",
       "",
       "If asked 'Do you replace behaviour trees?': No. A tree ticks in microseconds for free. We replace only the top-level selection node, where hand-written trees grow combinatorially, and a tree can call our agent.",
     ]);
@@ -278,16 +278,16 @@ async function build() {
       { x: 0.5, y: 4.85, w: 9.0, h: 0.3, size: S.body, color: C.ink });
     caption(s, "Sources: [1] build plan §2.4, §5 and Appendix A; [3]–[6] in References.");
     notes(s, [
-      "SPEAKER: Yevhen Mishchenko · about 50 seconds",
+      "SPEAKER: Yevhen Mishchenko · about 45 seconds",
       "",
-      "- Four kinds of existing work, left to right.",
-      "- Behaviour trees: fast, deterministic, free, but someone writes every branch. Kelley's 2024 paper argues trees are good scaffolding around language-model agents, and we agree: a tree can hand its open-ended decision to our agent.",
-      "- AI character platforms like Convai and Inworld: impressive talking characters, but built around characters that talk. A country in a strategy game has no voice and no body.",
-      "- LLMUnity runs a model inside Unity. That's plumbing, and we will use it, but it doesn't decide which actions are legal or check the answer.",
-      "- And doing it by hand: a developer who prompts a model directly gets free text to parse and no guarantees. In our prototype, a small model prompted that way was right about 60% of the time.",
-      "- So the gap, for a developer, is the layer in between: something that plugs a small local model into their own actions safely. That's our project.",
+      "- Four kinds of existing work.",
+      "- Behaviour trees are fast and free, but every branch is hand-written. Kelley's paper uses trees as scaffolding around language models; a tree can hand its open-ended decision to our agent.",
+      "- Convai and Inworld build characters that talk. A country in a strategy game doesn't talk.",
+      "- LLMUnity runs a model inside Unity. That's plumbing we'll use, but it doesn't decide what's legal or check the answer.",
+      "- Prompting a model yourself gives free text and no guarantees: about 60% right in our prototype.",
+      "- The gap is the layer in between, and that's our project.",
       "",
-      "If asked 'Why not just use a bigger model?': Our prototype's 2B model with our checks beat a 4B model without them (95% vs 65%); see the next slide.",
+      "If asked 'Why not just use a bigger model?': On our prototype's 20 player commands, a 2B model with our checks beat a 4B without them, 95% to 65%. On our harder 130-prompt probe the checks helped both, but the 4B alone (113) still beat the 2B with the check (108). So the checks matter, and so does size; the 2B is what fits beside a game on an 8 GB card.",
     ]);
   }
 
@@ -331,17 +331,17 @@ async function build() {
       { x: px + 0.25, y: 4.4, w: pw - 0.5, h: 0.5, size: S.small, color: C.onDark });
     caption(s, "Cost at Flash-Lite pricing, 6 decisions a minute [1, §5]; 60% → 95% on 20 player commands, qwen3.5 2B via Ollama [1, App. A].");
     notes(s, [
-      "SPEAKER: Yevhen Mishchenko · about 45 seconds",
+      "SPEAKER: Yevhen Mishchenko · about 40 seconds",
       "",
-      "- Here is the problem, from the side of the people who will use our framework: Unity developers.",
-      "- They want agents that react to open-ended input, and today they have no safe, reusable way to let a language model decide what those agents do. (Read the blue box once.)",
-      "- Without a framework, every developer has to: write prompts and parse free-text replies for every agent; trust whatever comes back, including actions that are impossible right now and targets that don't exist; pay a cloud API per request, about 165 dollars per player per 100 hours of play at 30 agents, or somehow ship a model server; and start over for each kind of agent.",
-      "- With Agenerela they register actions instead of writing prompts, only legal and grounded answers reach their code, it runs locally even inside the shipped game, and one API covers any agent.",
-      "- The number at the bottom is why we think it works: in our prototype, our checks took a small local model from 60 to 95 percent correct.",
+      "- This is the problem from a Unity developer's side: no safe, reusable way to let a language model decide what their agents do. (Read the blue box once.)",
+      "- Without a framework they write prompts and parse replies, trust whatever comes back, pay per request or ship a server, and start over for each kind of agent.",
+      "- With Agenerela they register actions, only legal answers reach their code, it runs locally, and one API covers any agent.",
+      "- And in our prototype, checks like ours took a small model from 60 to 95 percent.",
       "",
-      "HAND-OFF: \"Hunter will now walk you through our goals and the architecture.\"",
+      "HAND-OFF: \"Hunter will walk you through our goals and the architecture.\"",
       "",
       "If asked about sample size: 20 focused prompts; Phase 4 re-measures on 200+.",
+      "If asked 'Isn't 60 to 95 the word check you reject on slide 16?': Yes. The prototype's check matched the player's words. On our harder 130-prompt probe it refused good requests, so we replaced it with a confidence check that scored higher. Hero shows both.",
     ]);
   }
 
@@ -377,16 +377,11 @@ async function build() {
     notes(s, [
       "SPEAKER: Hunter Hudson · about 55 seconds",
       "",
-      "- Eight goals. Each card says what, then how.",
-      "- 1: anything can be an agent, a guard or a country, because Agent is a plain C# class, not tied to a GameObject.",
-      "- 2: developers define their own actions, as data.",
-      "- 3: the model only sees actions that are legal right now, and our guards re-check every answer.",
-      "- 4, highlighted: agents remember what happened. Each request carries the last few turns, so the guard can follow 'Follow me' with 'Now wait here'. It records what actually happened after the guards, not what the model first said. That's Phase 2 in our build plan.",
-      "- 5: the same agents run on any model backend, including one inside the shipped game.",
-      "- 6: the game never freezes while an agent thinks.",
-      "- 7: every accuracy number we claim comes from a controlled A/B run.",
-      "- 8: a developer new to the framework builds a working agent in under 15 minutes.",
-      "- The blue bar: what we commit to by the end of this semester.",
+      "- Eight goals; each card says what, then how.",
+      "- One: anything can be an agent, a guard or a country, because Agent is plain C#. Two: developers define their own actions, as data. Three: the model only sees what's legal now, and guards check every answer.",
+      "- Four, highlighted: agents remember. Each request carries the last few turns, recorded after the guards, so the guard can follow 'Follow me' with 'Now wait here'. That's Phase 2.",
+      "- Five: any model backend, even one inside the shipped game. Six: the game never freezes while an agent thinks. Seven: every accuracy claim comes from an A/B run. Eight: a working agent in under 15 minutes.",
+      "- The blue bar is what we commit to by December.",
       "",
       "HAND-OFF (to yourself): \"Here is how those pieces fit together.\"",
     ]);
@@ -405,14 +400,13 @@ async function build() {
     ], 4.56, 0.6);
     caption(s, "Figure 2. Who and what Agenerela talks to. Our figure, redrawn from our requirements document [2].");
     notes(s, [
-      "SPEAKER: Hunter Hudson · about 50 seconds",
+      "SPEAKER: Hunter Hudson · about 45 seconds",
       "",
-      "- First from the outside. The black box in the middle is our package, Agenerela.",
-      "- On its left, the developer's game: it decides when to ask an agent and what to tell it, and it runs the chosen action in its own code. The player only ever sees the game.",
-      "- On its right, the model backends: Ollama while developing, a model inside the shipped game, or a cloud API. Dashed, because they're outside our control and we don't trust them.",
-      "- Inside the box, four promises: only legal actions are offered, each agent remembers its recent turns, every answer is checked, and every decision is recorded.",
-      "- Follow the blue arrows: the game asks with a stimulus and observations; we send a prompt and a schema; the model answers with exactly three fields; the game gets a decision plus telemetry.",
-      "- At the top, the game developer: writes the game, configures profiles, actions and providers, and reads our Decision Log and evaluation reports.",
+      "- First from the outside. The black box is our package.",
+      "- Left, the developer's game: it decides when to ask an agent and runs the chosen action in its own code. The player only sees the game.",
+      "- Right, the model backends: Ollama, a model inside the game, or a cloud API. Dashed, because they're outside our control and we don't trust them.",
+      "- Blue arrows: the game asks with a stimulus and observations, we send a prompt and a schema, the model answers with three fields, and the game gets a decision plus telemetry.",
+      "- At the top, the developer configures it and reads our reports.",
       "",
       "HAND-OFF (to yourself): \"Now let's open the black box.\"",
     ]);
@@ -439,15 +433,16 @@ async function build() {
     notes(s, [
       "SPEAKER: Hunter Hudson · about 60 seconds",
       "",
-      "- Same three columns, now with our package opened up. This is my component: the agent and the decision request.",
-      "- Most calls come from the game itself: a timer, an event, a turn report, a behaviour-tree node. A player's line is just one more kind of stimulus.",
-      "- Follow the numbers: (1) the game calls DecideAsync, for example 'Go to the tower'; (2) the agent gathers who it is, what it sees, and what it remembers: its memory adds the last few turns of the conversation, planned for Phase 2 (build plan §2.9); (3) we keep only the actions legal right now and the targets it may name; (4) build the schema and prompt; (5) queue the request, player-facing first, and send it through a provider; (6) the model picks; (7) guards check the answer; (8) the result and telemetry go back; (9) the game's own code carries it out.",
-      "- Two design decisions to point out. Deciding and executing are separate calls, so the game chooses when to act, and Execute re-checks legality because the world may have changed. And a provider failure comes back as a result with outcome PipelineError, never an exception.",
-      "- Status: the decision types and registries this pipeline uses are merged; the Agent class that runs it is next (#17).",
+      "- Same three columns, opened up. This is my component: the agent and the decision request.",
+      "- One: the game calls DecideAsync, usually with an event or a report, sometimes a player's line. Two: the agent gathers who it is, what it sees, and, from Phase 2, what it remembers.",
+      "- Three and four: only the actions legal now and the targets in reach go into the schema and prompt. Five: the request is queued, player-facing first, and sent to a provider. Six: the model picks.",
+      "- Seven: guards check the answer. Eight: the result and telemetry come back. Nine: the game's own code acts, and Execute re-checks first, because the world may have changed.",
+      "- The types and registries are merged; the Agent class itself is next (#17).",
       "",
       "HAND-OFF: \"Tim will show how a developer defines the actions in step 3.\"",
       "",
-      "If asked 'Why split DecideAsync and Execute?': so the game can act at the right moment (after an animation, say) and so execution is validated independently of the model.",
+      "If asked 'Why split DecideAsync and Execute?': so the game can act at the right moment, after an animation say, and execution is validated independently of the model.",
+      "If asked 'What if the provider fails?': it comes back as a result with outcome PipelineError, never an exception.",
     ]);
   }
 
@@ -467,10 +462,10 @@ async function build() {
       "SPEAKER: Timothy Brustinov · about 60 seconds",
       "",
       "- This part is built and merged.",
-      "- An action is data the developer authors, not a fixed list in our code. Two ways in. Left top, the code door: tag a method in your own script with AgentAction, add an Example for the prompt, and Available for when it's legal. Left bottom, the asset door: the same fields as an asset a designer edits in the Inspector, no code.",
-      "- Both produce the same ActionDefinition: an id the model can pick, a one-line description, whether it needs a target, and an example.",
-      "- The ActionRegistry binds each id to exactly one piece of game code. The model only ever picks an id; the registry finds the handler, which answers two questions: is this legal right now, and what happens when it runs. 'none' is reserved and always added last by the framework.",
-      "- If both doors define the same id, the asset's wording wins but the method still runs it, which lets us A/B-test wording without recompiling.",
+      "- Actions are data the developer authors, not a list in our code. Two ways in: tag a method in your own script, top left, or fill in an asset in the Inspector, bottom left, with no code.",
+      "- Both produce the same ActionDefinition: an id the model can pick, a short description, whether it needs a target, and an example for the prompt.",
+      "- The ActionRegistry binds each id to one piece of game code. The model only picks an id; your handler says whether it's legal now and what happens. 'none' is always added last.",
+      "- If both doors define one id, the asset's wording wins and the method still runs it, so we can A/B-test wording without recompiling.",
       "",
       "HAND-OFF (to yourself): \"Here's where a developer or writer edits all of this.\"",
       "",
@@ -504,11 +499,13 @@ async function build() {
     });
     caption(s, "Figure 5. Agent Profile & Actions screen, a wireframe from our sketch lab (17 Sep 2026); sample data [2].");
     notes(s, [
-      "SPEAKER: Timothy Brustinov · about 45 seconds",
+      "SPEAKER: Timothy Brustinov · about 60 seconds",
       "",
-      "- This is the screen design for where an agent is authored, from our sketch lab. The numbers on the screen match the list on the right.",
-      "- (1) Identity: a writer fills in name, role, personality and goals once; we build the prompt from it. (2) The action list: drag in action assets. (3) A length check, because in the prototype one long, emphatic description pulled a small model toward that action. (4) Expand a row to edit its example and the targets it makes sense for. (5) none is added by us, locked and always last. (6) Problems show up right here, not just in the Console.",
-      "- Status: the AgentProfile asset is merged today with those validations; this custom Inspector is Phase 5 work.",
+      "- This is our screen design for authoring an agent, from our sketch lab. The numbers on the screen match the list.",
+      "- One: a writer fills in name, role, personality and goals once, and we build the prompt from them. Two: the action list, everything this agent can ever do; the game decides what's legal at the moment.",
+      "- Three: a length check, because in our prototype one long description pulled a small model toward that action. Four: expand a row to edit its example and the targets it makes sense for.",
+      "- Five: 'none' is added by us, locked and always last. Six: problems show up right here, not just in the Console.",
+      "- The profile asset and its checks are merged; this Inspector is Phase 5 work.",
       "",
       "HAND-OFF: \"Tigran will show how the agent's state decides which of these actions the model actually sees.\"",
     ]);
@@ -529,13 +526,13 @@ async function build() {
     notes(s, [
       "SPEAKER: Tigran Kolsuzyan · about 60 seconds",
       "",
-      "- Top: the same village guard in three situations. Blue chips are the actions the model is offered; gray, crossed-out chips are absent.",
-      "- While it's walking, move_to is absent, because its handler's CanMove check is false while a path is pending. While it's following you, follow_player is absent: it's already following.",
-      "- That's state masking. We never tell the model 'don't do X' in the prompt; X simply isn't in the list, so the model cannot say it.",
-      "- Bottom: how the list is built, and this is merged code. For every registered action, in order: if it needs a target and nothing is in reach, skip it; if its handler says it's not available, skip it; everything else is offered. Then none goes last, because in the prototype an emphasized none pulled a small model toward doing nothing.",
-      "- It's recomputed on every decision, never cached.",
+      "- Top: the same guard in three situations. Blue chips are offered to the model; gray, crossed-out ones are absent.",
+      "- While it's walking, move_to is absent, because its CanMove check is false. While it's following you, follow_player is absent.",
+      "- That's state masking: we never tell the model 'don't do X'. X just isn't on the list, so the model can't say it.",
+      "- Bottom, and this is merged code: for every action, skip it if it needs a target and nothing is in reach, skip it if its handler says no, offer the rest, then 'none' last.",
+      "- 'none' goes last because in our prototype an emphasized 'none' pulled a small model toward doing nothing. The list is rebuilt on every decision.",
       "",
-      "HAND-OFF (to yourself): \"Here is exactly what the model receives in the Following situation.\"",
+      "HAND-OFF (to yourself): \"Here's exactly what the model receives while the guard is following.\"",
     ]);
   }
 
@@ -543,8 +540,8 @@ async function build() {
   {
     const s = pres.addSlide();
     header(s, 12, "DESIGN MODELS · DECISION SCHEMA", "What the model receives", TEAM.tigran);
-    tag(s, "design");
-    figure(s, "05-schema", 0.7, 1.12, 8.6, 2.6087, "The four prompt blocks in order, and the JSON schema built for the guard while following, with the model's three-field answer.");
+    tag(s, "work");
+    figure(s, "05-schema", 0.7, 1.12, 8.6, 2.6087, "The five prompt blocks in order, and the JSON schema built for the guard while following, with the model's three-field answer.");
     chips(s, [
       ["Built fresh for every request.", "From the legal actions, targets in reach and recent turns."],
       ["Field order is measured.", "action → target → statement: +11.7 points in the prototype."],
@@ -554,15 +551,15 @@ async function build() {
     notes(s, [
       "SPEAKER: Tigran Kolsuzyan · about 60 seconds",
       "",
-      "- (The stimulus here is a player's line, but it could just as well be an event or a turn report.)",
-      "- Left: the prompt, in the order the model reads it. A system prompt from the profile's identity; a few-shot block generated from the registered actions, one example per legal action plus an idle example and a refusal; observations, what is true now; history, what happened, which is the agent's memory and arrives in Phase 2; and the stimulus last.",
-      "- History holds what actually happened after the guards, so a refused request is remembered as refused, never as the model's first answer.",
-      "- There is no follow_player example: it isn't legal in this situation.",
-      "- Right: the schema we build for this one request. The action list has only the legal actions with none last; target is required and includes no_target; the order is action, then target, then the free-text statement.",
-      "- Order matters: when the model writes its chat text first, it talks itself into 'no action'. Action first was worth 11.7 points. A reasoning field before the action made it worse, so we don't add one.",
-      "- The same schema becomes JSON Schema for Ollama and cloud APIs, or a GBNF grammar for llama.cpp, so the model literally cannot write an action that isn't on the list.",
+      "- Left: the prompt, in reading order. The system prompt from the profile; examples, one per legal action plus an idle one and a refusal; observations, what's true now; history, the agent's memory, from Phase 2; and the stimulus last.",
+      "- The example builder is merged. Its refusal example puts a made-up name into a real example, so the model sees how to refuse something that isn't there.",
+      "- Right: the schema for this one request. Only legal actions, 'none' last; target required, with no_target; and the order action, target, then statement.",
+      "- Order matters: writing the chat text first made the model talk itself into 'no action'. Action first was worth 11.7 points.",
+      "- The same schema becomes JSON Schema for Ollama and cloud APIs, or a grammar for llama.cpp, so the model can't write an action that isn't listed.",
       "",
       "HAND-OFF: \"Yevhen will show where that model actually runs.\"",
+      "",
+      "If asked 'Why no reasoning field?': we tried one before the action, and it scored worse than no change at all, 35.3 against 41.2 percent.",
     ]);
   }
 
@@ -579,13 +576,12 @@ async function build() {
     ], 4.5, 0.64);
     caption(s, "Figure 8. Where the model runs. Our design [1, §2.4, DR-001]; LLMUnity [4], Qwen [9], Gemini [10].");
     notes(s, [
-      "SPEAKER: Yevhen Mishchenko · about 50 seconds",
+      "SPEAKER: Yevhen Mishchenko · about 45 seconds",
       "",
-      "- Where does the model run? It depends on the job, and all three options plug into one interface, ILLMProvider, which is already merged.",
-      "- In each row, the solid box is our provider class, and the dashed box is what it calls, which we don't control.",
-      "- Build: while developing, the Unity Editor talks to a local Ollama server, so swapping models takes seconds. Our reference laptop has an 8 GB RTX 4060; a 2B model plus a scene used 4.2 GB.",
-      "- Ship: players won't install a server, so the model runs inside the game through llama.cpp, via LLMUnity as an optional package. It adds about 1 GB and needs no network. This is the option that makes 'local-first' real.",
-      "- Compare: cloud APIs, Gemini first. Useful for comparison, but the cost grows with every agent. Keys come from .env, go in a header, never in the build.",
+      "- All three options plug into one interface, ILLMProvider, which is merged. Solid boxes are our classes; dashed boxes are what they call.",
+      "- Build: the Editor talks to a local Ollama server, so swapping models takes seconds. A 2B model plus a scene used 4.2 of 8 GB on our laptop.",
+      "- Ship: players won't install a server, so the model runs inside the game through llama.cpp, via LLMUnity. About 1 GB more, and no network.",
+      "- Compare: cloud APIs, Gemini first. Cost grows with every agent, and keys never ship.",
       "",
       "HAND-OFF: \"Hero will show how targets are found and how the guards check the model's answer.\"",
       "",
@@ -606,13 +602,13 @@ async function build() {
     ], 4.5, 0.64);
     caption(s, "Figure 9. The tag, one way to choose targets, and the result, as merged (#32). Scene layout is illustrative [1, §2.2, DR-014].");
     notes(s, [
-      "SPEAKER: Hero Jaiyen · about 60 seconds",
+      "SPEAKER: Hero Jaiyen · about 55 seconds",
       "",
-      "- Before the model can pick a target, we decide which targets it may name. This part is built and merged.",
-      "- Left, the tag: a developer adds a Targetable component to anything an agent may name, like the tower, the bridge or the training dummy. Its Id is the exact word the model is allowed to answer, set by hand, never taken from the object's name. Description is the one line the agent reads about it, so what it notices and what it may name come from one place. Category lets a source filter, and 'Targetable now' hides an object without deleting it, a sealed gate for example.",
-      "- Middle, one way to choose: the area. ProximityTargetSource looks around the agent for tagged objects within 18 metres, optionally filtered by layer, category and line of sight, nearest first, at most 8. The houses have no tag, so they are scenery; the well is out of range.",
-      "- That area is only one option, and it's used only if the developer adds it. Who may name what, and when, is the developer's call: their own target source can follow what a faction has scouted, a quest stage or the time of day. A strategy game is the clear case: a country has no position, so it simply lists its targets.",
-      "- Right, the result: the TargetRegistry, plus no_target, which is always added. Whichever way it was built, that list becomes the target enum in the schema, so the model can only answer with one of those ids. Anything the cap drops goes to telemetry.",
+      "- Before the model picks a target, we decide what it may name. This part is merged.",
+      "- Left: Targetable is the tag. Its Id is the exact word the model may answer with, set by hand. Its description is the line the agent reads about it.",
+      "- Middle: one way to choose, the area. It finds tagged objects within 18 metres, nearest first, at most 8. Houses have no tag, so they're scenery.",
+      "- That area is only one option, used if the developer adds it. Their own target source can follow what a faction scouted or a quest stage; a country just lists its targets.",
+      "- Right: whichever way it's built, the list plus no_target becomes the schema's target list.",
       "",
       "HAND-OFF (to yourself): \"Now the question everyone asks: what stops 'Attack Godzilla'?\"",
     ]);
@@ -631,22 +627,22 @@ async function build() {
     ], 4.5, 0.64);
     caption(s, "Figure 10. Three guardrails, checked on every decision; results from our probe, Oct 2026 [1, §2.5, DR-016].");
     notes(s, [
-      "SPEAKER: Hero Jaiyen · about 60 seconds",
+      "SPEAKER: Hero Jaiyen · about 65 seconds",
       "",
-      "- Whoever calls the agent, a player's line or the game's own event, the same guardrails run.",
-      "- 'Attack Godzilla': there is no Godzilla in the scene, and the guard should say so. We stop it in three places: two before the model answers, one after.",
-      "- One, the target list: the model can only answer with an id from the list we just built, and 'godzilla' isn't one. On its own that isn't enough: a small model often grabs the closest legal target and attacks the training dummy. That looks like obedience, so it's the worst failure.",
-      "- Two, the prompt: every request includes a refusal example, and no_target gives the model a way to say 'that isn't here'. That already stops most requests for things that aren't there at all. The hard cases are near misses: 'Attack the scarecrow' when there's a training dummy.",
-      "- Three, after the model, on every decision: the legality check, Execute's re-check, and a confidence check. The model's own odds show whether it wanted something that isn't on the list. A real request keeps 99.8% on the list; 'Attack the scarecrow' became the dummy with only 5%. Below 80%, the answer becomes none and the guard refuses in character. When two targets are equally good, the odds split between them but stay on the list, so a free choice passes.",
-      "- We measured it on 130 prompts in three scenes. Today's design: 83 right on the 2B model. A rule that the player must have said the target's name: 97, but it refused 29 good requests like 'Strike the straw man'. The confidence check: 108, with no extra request. On the 4B: 113 to 124.",
-      "- Honest part: the 80% line comes from our own prompts, and a near miss the model takes for the real thing still gets through, like a bucket for the barrel. Phase 4 recalibrates it on 200+ prompts written by other people.",
+      "- There's no Godzilla, so the guard should refuse. Three guardrails stop it, on every call, whoever made it.",
+      "- One, the target list: 'godzilla' isn't an id, so the model can't write it. But a small model often grabs the closest legal target and attacks the training dummy, which looks like obedience.",
+      "- Two, the prompt: a refusal example and no_target show it how to say 'that isn't here'. That stops most requests for things that aren't there at all.",
+      "- Three, after the model: the legality check, Execute's re-check, and a confidence check. The model's own odds show what it wanted. A real request keeps 99.8% on the list; 'Attack the scarecrow' kept 5%. Below 80%, nothing runs.",
+      "- On 130 prompts, the 2B went from 83 to 108 correct. Checking the player's words got 97 and refused 29 good requests.",
+      "- Honest part: the 80% line comes from our own prompts; Phase 4 recalibrates it.",
       "",
-      "HAND-OFF (to yourself): \"How do we know these techniques work? Here's what we measured.\"",
+      "HAND-OFF (to yourself): \"Here's everything we measured.\"",
       "",
-      "If asked 'Why not just tell the model to refuse?': we do, with the refusal example, and a one-line rule helps too (73 to 88 on the 2B). But 'scarecrow' can't be written, so its probability moves onto a legal id, and small models still guess. The confidence check catches what the prompt misses.",
+      "If asked 'Why not just tell the model to refuse?': we do, with the refusal example, and a one-line rule helps too (73 to 88 on the 2B). But 'scarecrow' can't be written, so its probability moves onto a legal id, and small models still guess.",
       "If asked 'What about \"attack the training thing\"?': the model maps it to the training dummy, and if it's sure, it acts. No word lists to maintain.",
-      "If asked 'Why not check the player's words?': we tried. It refused 29 good requests on the 2B, and on the 4B it scored worse than no check at all, 109 against 113.",
-      "If asked 'Does it stop the agent choosing freely?': no. A model torn between two good targets keeps its odds on the list; on our 4B test it passed every free choice.",
+      "If asked 'Does it stop the agent choosing freely?': no. A model torn between two good targets keeps its odds on the list; our 4B test passed every free choice.",
+      "If asked 'What still gets through?': a near miss the model is sure of, like a bucket taken for the barrel on the 4B.",
+      "If asked 'Is it built?': the guard is Phase 3. The interface that carries the model's odds is merged (#68); no provider fills it yet.",
     ]);
   }
 
@@ -685,16 +681,15 @@ async function build() {
     notes(s, [
       "SPEAKER: Hero Jaiyen · about 45 seconds",
       "",
-      "- These are the methods we adopt or reject, and why. Most were measured in our prototype this summer; the two target checks, this month.",
-      "- The schema plus few-shot examples together took accuracy from 58.5 to 84.9%, and the 'wrong but legal' answers, the ones players actually see as bugs, dropped from about 21% to 4%.",
-      "- Few-shot examples alone: plus 35 points, the biggest lever. Action-first ordering: plus 11.7. Making target required: the 4B model went from never naming the target to always.",
-      "- The two target checks from the last slide: the confidence check took the 2B model from 83 to 108 correct out of 130; checking the player's words got 97 and refused 29 good requests, so we rejected it.",
-      "- The last row is just as important: a reasoning field, the 'think step by step' idea, made it worse, so we rejected it.",
-      "- Honest caveat: small samples. That's why Phase 4 re-measures everything on 200+ prompts.",
+      "- These are the methods we adopt or reject. Most were measured in our prototype; the two target checks, this month.",
+      "- Schema plus examples took accuracy from 58.5 to 84.9 percent, and wrong-but-legal answers, the ones players see as bugs, fell from 21 to 4 percent.",
+      "- Examples alone added 35 points, the biggest lever; action first added 11.7.",
+      "- Of the two target checks, the confidence check won; checking the player's words refused too many good requests.",
+      "- A reasoning field made things worse, so it's rejected too. Phase 4 re-measures all of it on 200+ prompts.",
       "",
       "HAND-OFF: \"Maxim will show how every decision is recorded and how we'll measure from here.\"",
       "",
-      "If asked 'Why did reasoning hurt?': the reasoning text came before the action and the model talked itself into 'no action'; same failure as chat-first ordering.",
+      "If asked 'Why did reasoning hurt?': the reasoning text came before the action, and the model talked itself into 'no action'; the same failure as chat-first ordering.",
     ]);
   }
 
@@ -724,12 +719,11 @@ async function build() {
       "SPEAKER: Maxim Goloubitsky · about 50 seconds",
       "",
       "- Every decision produces one record, a DecisionResult. This is merged.",
-      "- The top part is what the model chose: action, target and statement.",
-      "- Then telemetry: latency, tokens in and out, which provider answered, the framework version, which guards fired in order, and which targets the cap left out.",
-      "- The last field, Outcome, is filled in by the evaluation harness, and it is not one accuracy percentage. Five classes, on the right: correct; wrong but legal, the one players see as a bug; contained by a guard, which is our safety layer working; rejected when an action was expected; and pipeline errors.",
-      "- The dashed box lists fields we've planned but not built, such as whether the output was actually enforced by a grammar, and, with memory, how many past turns were sent and how many the cap dropped.",
+      "- Top: what the model chose, action, target and statement. Then telemetry: latency, tokens, provider, framework version, the guards that fired, and the targets the cap left out.",
+      "- Outcome is filled in by the evaluation harness, in five classes rather than one percentage: correct; wrong but legal, the bug players see; contained by a guard, the safety layer working; too cautious; and pipeline errors.",
+      "- The dashed box is planned: whether the output was really enforced, the confidence check's score, and memory's turns sent and dropped.",
       "",
-      "HAND-OFF (to yourself): \"Those outcomes feed our evaluation method.\"",
+      "HAND-OFF (to yourself): \"Those outcomes feed our evaluation.\"",
     ]);
   }
 
@@ -774,15 +768,16 @@ async function build() {
       text(s, label, { x: cx - 0.45, y: ty + 0.25, w: 0.9, h: 0.45, size: S.cap, color: now ? C.blue : C.ink2, bold: now, align: "center" });
     });
     text(s, "WE ARE HERE", { x: x0 + step - 0.6, y: ty - 0.5, w: 1.2, h: 0.2, size: 8.5, bold: true, color: C.blue, cs: 1, align: "center" });
-    text(s, "**Phase 1 so far:** decision types, both action front doors, `ActionRegistry`, target discovery, availability, `AgentProfile` and telemetry are merged with EditMode tests. **Next:** schema, prompt builder and `Agent`; then Phase 2 brings the first real model call and short-term memory.",
+    text(s, "**Phase 1 so far:** decision types, both action front doors, `ActionRegistry`, target discovery, availability, the few-shot builder, `AgentProfile` and telemetry are merged with EditMode tests, and the first 54 evaluation prompts are written. **Next:** schema, prompt builder and `Agent`.",
       { x: 0.5, y: 4.45, w: 9.0, h: 0.5, size: S.small, color: C.ink2 });
     caption(s, "Plan of record: build plan §3, §4 and §6.5 [1]. The demo games run alongside phases 2–8.");
     notes(s, [
       "SPEAKER: Maxim Goloubitsky · about 60 seconds",
       "",
-      "- Top: how every accuracy claim will be made. 200+ labelled prompts, each with the state it needs: 'wait here' only makes sense for a guard that is following. And not mostly player commands: events, reports and turns too, because most calls come from the game. Two configurations, arm A and arm B, on the same model, same machine, same session. Each answer is classified into the five outcomes, and a second person labels a subset so we can report agreement. Results go in our findings log the same day.",
-      "- Why so strict? In the prototype, the baseline alone drifted between 53% and 64% across identical runs. Without a control arm you can't tell an improvement from noise.",
-      "- Bottom: the plan. Phase 0 is done, Phase 1 is underway, and Phase 2 brings the first real model call together with memory. This semester ends at Phase 4, the evaluation harness, deliberately before editor tooling, so our headline number exists by December. Next semester: editor tools, cloud and in-process providers, samples, and polished demo games.",
+      "- Every accuracy claim will come from this method: 200+ labelled prompts, each with the state it needs, and at least half game-triggered, events, reports and turns, because most calls come from the game. We've written the first 54.",
+      "- Arm A against arm B on the same model, machine and session; each answer sorted into the five outcomes; a second person labels a subset; results go in our findings log.",
+      "- Why so strict? In the prototype the baseline alone drifted from 53 to 64 percent between identical runs.",
+      "- Bottom: Phase 0 is done and Phase 1 is underway. Phase 2 brings the first model call and memory. This semester ends at Phase 4, so our headline number exists by December. Next semester: editor tools, more providers, samples and polished demos.",
       "",
       "HAND-OFF (to yourself): \"Our sources are on the next slide.\"",
     ]);
@@ -814,7 +809,7 @@ async function build() {
     notes(s, [
       "SPEAKER: Maxim Goloubitsky · about 10 seconds",
       "",
-      "- Our sources: the build plan and design figures in our repository, the behaviour-tree paper, and the tools and documentation we build on. Every figure in the deck is our own.",
+      "- Our sources: our build plan and design figures, the behaviour-tree paper, and the tools we build on. Every figure is our own.",
       "",
       "HAND-OFF: \"Thank you. We're happy to take questions.\"",
     ]);
@@ -841,17 +836,17 @@ async function build() {
       "EVERYONE · 2 to 3 minutes of questions. Whoever owns the topic answers (see the names on screen).",
       "",
       "Likely questions and short answers:",
-      "- Why not a bigger model? A 2B model with our checks beat a 4B model without them (95% vs 65%), and it fits beside the game on an 8 GB card. (Yevhen)",
+      "- Why not a bigger model? On our prototype's 20 commands, a 2B with our checks beat a 4B without them, 95% to 65%. On our harder 130-prompt probe the 4B alone (113) beat the 2B with the check (108), and the 4B with it got 124. The checks help every model; the 2B is what fits beside a game on an 8 GB card. (Yevhen)",
       "- What if the model ignores the schema? Providers are untrusted: guards re-check every answer, and Execute re-checks again before any handler runs. (Hero / Hunter)",
-      "- How fast is a decision? About 1 to 3 seconds locally; the queue serves player-facing requests first. Known ceiling: about 21 s per round at 30 agents, serialized. (Yevhen)",
+      "- How fast is a decision? About 0.7 seconds for the 2B on our laptop in this month's probe; the queue serves player-facing requests first. With requests one at a time, the prototype estimated about 21 seconds per round at 30 agents. (Yevhen)",
       "- Does this replace behaviour trees? No, only the top-level selection node; a behaviour tree can call our agent. (Hunter)",
       "- Isn't this a chatbot framework? No: most calls come from the game itself, like timers, events, turn reports and behaviour-tree nodes. A player's line is one kind of input. (Hunter)",
       "- What if a player says 'attack the training thing'? The model maps it to the training dummy, and the confidence check lets it through when its odds stay on the list. No word lists to maintain. (Hero)",
       "- Why not just check the player's words? We measured it: 29 good requests refused on the 2B, and worse than no check at all on the 4B. The model's own confidence did better, 83 to 108 correct out of 130. (Hero)",
       "- How does a strategy game choose targets, with no positions? Its own target source, or a list it supplies: the countries it borders or has met. The radius query is just one option for scene agents. (Hero)",
-      "- Does an agent remember earlier turns? Yes: short-term memory is a Phase 2 deliverable. The last few turns, recorded after the guards, one memory per agent and capped by tokens. Long-term memory fits the same interface later (build plan §2.9). (Hunter)",
-      "- What's built today? The Phase 1 decision types, action registry and both front doors, target discovery, availability and telemetry, with EditMode tests; nothing calls a model yet. That starts in Phase 2. (Maxim)",
-      "- How do you know an improvement is real? A/B with a control arm on the same model, machine and session; ~10-point noise floor at n≈50, so Phase 4 uses 200+ prompts. (Maxim)",
+      "- Does an agent remember earlier turns? Short-term memory is a Phase 2 deliverable: the last few turns, recorded after the guards, one memory per agent, capped by tokens. Long-term memory fits the same interface later. (Hunter)",
+      "- What's built today? Phase 1's decision types, action registry and both front doors, target discovery, availability, the few-shot builder and telemetry, with EditMode tests, and the first 54 evaluation prompts. Nothing calls a model yet; that's Phase 2. (Maxim)",
+      "- How do you know an improvement is real? A/B with a control arm on the same model, machine and session; about a 10-point noise floor at 50 prompts, so Phase 4 uses 200+. (Maxim)",
     ]);
   }
 
