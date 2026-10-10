@@ -13,7 +13,7 @@ namespace Agenerela.Providers
     /// side of the request is the non-empty ones of, in this order:
     /// </para>
     /// <list type="number">
-    ///   <item><description><see cref="SystemPrompt"/> — who the agent is, and the fixed instruction lines.</description></item>
+    ///   <item><description><see cref="SystemPrompt"/> — who the agent is, and the fixed instruction line.</description></item>
     ///   <item><description><see cref="FewShotBlock"/> — the worked examples.</description></item>
     ///   <item><description><see cref="Observations"/> — what the agent knows right now.</description></item>
     /// </list>
@@ -38,8 +38,8 @@ namespace Agenerela.Providers
     public sealed class DecisionRequest
     {
         /// <summary>
-        /// The system prompt: agent name, role, personality and goals, plus the two fixed
-        /// instruction lines. Derived from <c>AgentIdentity</c> — nothing else goes in it.
+        /// The system prompt: agent name, role, personality and goals, plus one fixed
+        /// instruction line. Derived from <c>AgentIdentity</c> — nothing else goes in it.
         /// </summary>
         public string SystemPrompt;
 
