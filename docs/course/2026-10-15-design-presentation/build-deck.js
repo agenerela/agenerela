@@ -326,22 +326,22 @@ async function build() {
       await iconDot(s, px + 0.25, y, 0.26, ic.check);
       text(s, gains[i], { x: px + 0.65, y: y - 0.04, w: pw - 0.9, h: 0.46, size: S.body, color: C.white });
     }
-    text(s, "60% → 95%", { x: px + 0.25, y: 3.88, w: pw - 0.5, h: 0.5, size: 28, bold: true, color: C.white });
-    text(s, "correct decisions on player commands, small local model, before and after our checks, in our prototype",
+    text(s, "83 → 108", { x: px + 0.25, y: 3.88, w: pw - 0.5, h: 0.5, size: 28, bold: true, color: C.white });
+    text(s, "correct of 130, small local model, without and with our confidence check",
       { x: px + 0.25, y: 4.4, w: pw - 0.5, h: 0.5, size: S.small, color: C.onDark });
-    caption(s, "Cost at Flash-Lite pricing, 6 decisions a minute [1, §5]; 60% → 95% on 20 player commands, qwen3.5 2B via Ollama [1, App. A].");
+    caption(s, "Cost at Flash-Lite pricing, 6 decisions a minute [1, §5]; 83 → 108 of 130 prompts, qwen3.5 2B via Ollama, Oct 2026 [1, DR-016].");
     notes(s, [
       "SPEAKER: Yevhen Mishchenko · about 40 seconds",
       "",
       "- This is the problem from a Unity developer's side: no safe, reusable way to let a language model decide what their agents do. (Read the blue box once.)",
       "- Without a framework they write prompts and parse replies, trust whatever comes back, pay per request or ship a server, and start over for each kind of agent.",
       "- With Agenerela they register actions, only legal answers reach their code, it runs locally, and one API covers any agent.",
-      "- And in our prototype, checks like ours took a small model from 60 to 95 percent.",
+      "- And it works: in our tests this month, our confidence check took a small local model from 83 to 108 correct out of 130.",
       "",
       "HAND-OFF: \"Hunter will walk you through our goals and the architecture.\"",
       "",
-      "If asked about sample size: 20 focused prompts; Phase 4 re-measures on 200+.",
-      "If asked 'Isn't 60 to 95 the word check you reject on slide 16?': Yes. The prototype's check matched the player's words. On our harder 130-prompt probe it refused good requests, so we replaced it with a confidence check that scored higher. Hero shows both.",
+      "If asked about sample size: 130 prompts in three scenes, written by one of us; Phase 4 re-measures on 200+ written by others.",
+      "If asked 'What is the confidence check?': after the model answers, we read its own odds and refuse if it really wanted a target that isn't on the list. Hero explains it on slide 15.",
     ]);
   }
 
