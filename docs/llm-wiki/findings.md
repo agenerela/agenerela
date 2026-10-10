@@ -335,3 +335,62 @@ single-view arm changes workflows as well as conditioning. Fixed-seed controls p
 slightly different meshes, so subtle differences are not established wins. These results
 do not establish a universal best setting or test the other two swords independently.
 
+
+### Ollama never shows the response schema to the model (10 October 2026)
+
+**What was checked.** Is the text inside the JSON Schema sent as Ollama's `format` read by
+the model as part of its prompt, or used only to build the sampling grammar? That text
+includes the field descriptions and anything written into them. This came up while building
+#8. The prototype put each action's description into the schema's `action` description,
+and the issue for #8 replaced that with one fixed sentence. If the model reads the schema,
+that would have been an unmeasured change.
+
+**How.** `tools/benchmarks/schema_visibility_probe.py` sends one chat four times: a
+one-line system prompt, then `Player: "Go to the tower."`. The four runs: no `format`; the
+decision schema with a one-sentence `action` description; the same with ~300 extra words in
+that description; and the one-sentence schema again. Temperature 0, thinking off, 40 tokens
+out.
+
+| Request | `prompt_eval_count` |
+|---|---|
+| No `format` | 37 |
+| Schema, one-sentence description | 37 |
+| Schema, ~300-word description | 37 |
+| Schema, one-sentence description, repeated | 37 |
+
+Both schema variants also gave byte-identical replies. Without `format`, the model wrote
+free prose. Conditions: Windows 11, Ollama 0.34.2, `qwen3.5:2b` the only model loaded and
+on the GPU, RTX 4060 Laptop on AC power. Run twice, the second time from the committed
+script, with the same result. A token count is deterministic, so one request per run
+settles it.
+
+**What it means.**
+
+- Ollama uses the schema only to constrain sampling. **Nothing written in it reaches the
+  model**: not the three field descriptions #8 defines, and not an action description
+  placed there. The GBNF path (Phase 6b) carries no descriptions at all. Cloud APIs that
+  take a response schema, such as Gemini, are expected to show it to the model, but that was
+  not measured here. So one `DecisionSchema` may tell a cloud model more than a local one.
+- **The prototype was the same.** Its action descriptions sat only in the `format` schema,
+  so Appendix A's Ollama numbers were measured with the model reading action ids, the system
+  prompt and the few-shot block, and never the descriptions. The 84.9% arm is therefore the
+  configuration #8 builds, not a different one. The prototype's Gemini comparison is the
+  one run where descriptions may have been read.
+- **As built in #8 and #16, `ActionDefinition.Description` reaches no local model.** The
+  schema is invisible and the system prompt carries no action list.
+- **The description-symmetry rule (build plan §2.2) rests on weaker evidence than it
+  states.** It credits a regression partly to a long, emphatic `none` description. The
+  prototype's own comment says that description acted together with an "only act when
+  directly asked" system prompt. The description cannot have reached the model through
+  Ollama, so the prompt wording is the likelier cause. Keeping the rule costs nothing; its
+  evidence should not be cited as a measurement of descriptions.
+- #16's fixed line `Use no_target when none of the listed targets applies.` repeats the
+  `target` field's description. For a local model it is the only place that sentence is
+  read, so it is not a duplicate there.
+
+**Owed.** Whether action descriptions should be in the prompt is a Phase 4 A/B. The control
+is action ids only, as measured. The treatment is one `id: description` line per available
+action in the system side of the request.
+
+**What would change this.** An Ollama version or model template that puts the schema into
+the prompt. Re-run the probe after any Ollama upgrade; it takes seconds.
