@@ -21,6 +21,10 @@ namespace Agenerela.Tests
         private readonly List<DecisionRequest> requests = new List<DecisionRequest>();
         private AwaitableCompletionSource<ProviderResult> pending;
 
+        // Disposed on Release, so a token cancelled after the reply was given cannot cancel a
+        // completion source whose pooled Awaitable has already been handed back.
+        private CancellationTokenRegistration pendingCancellation;
+
         /// <param name="reply">The text every request is answered with, until <see cref="Reply"/> changes it.</param>
         /// <param name="name">What <see cref="Name"/> reports, which telemetry records.</param>
         public FakeProvider(string reply = "", string name = "fake")
@@ -51,6 +55,13 @@ namespace Agenerela.Tests
         /// </summary>
         public Exception Failure;
         public bool FailsImmediately;
+
+        /// <summary>
+        /// What a held request fails with when it is cancelled. Null fails it with an
+        /// <c>OperationCanceledException</c>, as the provider contract asks; set it to imitate a
+        /// backend that reports an abort as some other error.
+        /// </summary>
+        public Exception CancelledWith;
 
         /// <summary>How long each request blocks before replying, so a test can check the latency.</summary>
         public int DelayMilliseconds;
@@ -87,7 +98,17 @@ namespace Agenerela.Tests
             if (Hold)
             {
                 pending = source;
-                ct.Register(() => source.TrySetCanceled());
+                pendingCancellation = ct.Register(() =>
+                {
+                    if (CancelledWith != null)
+                    {
+                        source.TrySetException(CancelledWith);
+                    }
+                    else
+                    {
+                        source.TrySetCanceled();
+                    }
+                });
                 return source.Awaitable;
             }
 
@@ -105,6 +126,7 @@ namespace Agenerela.Tests
 
             var source = pending;
             pending = null;
+            pendingCancellation.Dispose();
             Answer(source);
         }
 

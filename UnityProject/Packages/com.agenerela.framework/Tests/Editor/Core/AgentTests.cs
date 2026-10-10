@@ -15,8 +15,8 @@ namespace Agenerela.Tests
     // what Execute lets through. The async tests are [Test] methods returning Task, which the Unity
     // Test Framework awaits, failing the test on an exception; FakeProvider answers within the call
     // unless told to hold. One trap: the framework counts a Task that ends cancelled as passed, so
-    // a test where an OperationCanceledException could escape catches it and fails or passes
-    // explicitly.
+    // every await of DecideAsync goes through Fixtures.NotCancelled, and the tests about
+    // cancellation catch the OperationCanceledException themselves and fail or pass explicitly.
     public sealed class AgentTests
     {
         private const string GoToTheTower = "{\"action\":\"move_to\",\"target\":\"tower\",\"statement\":\"On my way.\"}";
@@ -40,7 +40,7 @@ namespace Agenerela.Tests
             agent.Targets.Register("tower", new object());
             agent.State["isFollowing"] = true;
 
-            var result = await agent.DecideAsync("Wait here.");
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Wait here."));
 
             var actionField = fake.LastRequest.Schema.Fields[0];
             Assert.That(actionField.Name, Is.EqualTo(DecisionSchema.ActionFieldName));
@@ -58,7 +58,7 @@ namespace Agenerela.Tests
             var fake = new FakeProvider(GoToTheTower) { PromptTokens = 143, CompletionTokens = 21, DelayMilliseconds = 20 };
             var agent = Fixtures.VillageGuard(fake);
 
-            var result = await agent.DecideAsync("Go to the tower.");
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
 
             Assert.That(result.Decision.ActionId, Is.EqualTo("move_to"));
             Assert.That(result.Decision.TargetId, Is.EqualTo("tower"));
@@ -80,7 +80,7 @@ namespace Agenerela.Tests
             var fake = new FakeProvider(GoToTheTower);
             var agent = Fixtures.VillageGuard(fake);
 
-            await agent.DecideAsync("Go to the tower.");
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
             var request = fake.LastRequest;
 
             // #16's golden text, now produced by the agent rather than by calling the builders by hand.
@@ -115,7 +115,7 @@ namespace Agenerela.Tests
                 Observations = new List<string> { "It is night", "The gate is open" },
             };
 
-            await agent.DecideAsync("Go to the tower.", options);
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", options));
             var request = fake.LastRequest;
 
             Assert.That(request.Stimulus, Is.EqualTo("Captain: \"Go to the tower.\""));
@@ -137,11 +137,11 @@ namespace Agenerela.Tests
             var agent = Fixtures.VillageGuard(fake);
             const string Idle = "-> action: none, target: no_target";
 
-            await agent.DecideAsync("Go to the tower.");
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
             string fromProfile = fake.LastRequest.FewShotBlock;
-            await agent.DecideAsync("Go to the tower.", new DecideOptions { IdleExampleStimulus = "The bell has not rung." });
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", new DecideOptions { IdleExampleStimulus = "The bell has not rung." }));
             string overridden = fake.LastRequest.FewShotBlock;
-            await agent.DecideAsync("Go to the tower.", new DecideOptions { IdleExampleStimulus = "" });
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", new DecideOptions { IdleExampleStimulus = "" }));
             string omitted = fake.LastRequest.FewShotBlock;
 
             Assert.That(fromProfile, Does.Contain("Player: \"You seem well rested today.\" " + Idle));
@@ -159,7 +159,7 @@ namespace Agenerela.Tests
             var agent = Fixtures.VillageGuard(fake);
             agent.State["vaultCombination"] = "swordfish-7731";
 
-            await agent.DecideAsync("Go to the tower.", new DecideOptions { Observations = { "It is night" } });
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", new DecideOptions { Observations = { "It is night" } }));
 
             string everything = RequestText(fake.LastRequest);
             Assert.That(everything, Does.Not.Contain("swordfish-7731"));
@@ -179,7 +179,7 @@ namespace Agenerela.Tests
             var fake = new FakeProvider(GoToTheTower);
             var agent = Fixtures.VillageGuard(fake);
 
-            await agent.DecideAsync(null);
+            await Fixtures.NotCancelled(agent.DecideAsync(null));
 
             Assert.That(fake.LastRequest.Stimulus, Is.EqualTo("Player: \"\""));
         }
@@ -204,8 +204,8 @@ namespace Agenerela.Tests
             country.Bind("declare_war", new FakeHandler());
             country.TargetSources.Add(new ExplicitTargetSource().Add("eastmarch", new object()));
 
-            var result = await country.DecideAsync("Grain stores fell 12% this winter.",
-                new DecideOptions { StimulusLabel = "Report", Observations = { "eastmarch has 3 armies" } });
+            var result = await Fixtures.NotCancelled(country.DecideAsync("Grain stores fell 12% this winter.",
+                new DecideOptions { StimulusLabel = "Report", Observations = { "eastmarch has 3 armies" } }));
 
             var request = fake.LastRequest;
             Assert.That(request.Stimulus, Is.EqualTo("Report: \"Grain stores fell 12% this winter.\""));
@@ -250,7 +250,7 @@ namespace Agenerela.Tests
             var agent = Fixtures.VillageGuard(fake);
             LogAssert.Expect(LogType.Warning, new Regex("could not decide\\. .*(" + reason + ")"));
 
-            var result = await agent.DecideAsync("Go to the tower.");
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
 
             Assert.That(result.Decision, Is.Null);
             Assert.That(result.Telemetry.Outcome, Is.EqualTo(DecisionOutcome.PipelineError));
@@ -270,22 +270,23 @@ namespace Agenerela.Tests
             var fake = new FakeProvider(reply);
             var agent = Fixtures.VillageGuard(fake);
 
-            var result = await agent.DecideAsync("Go to the tower.");
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
 
             Assert.That(result.Decision.ActionId, Is.EqualTo("move_to"));
             Assert.That(result.Decision.TargetId, Is.EqualTo("tower"));
             Assert.That(result.Decision.Statement, Is.EqualTo(statement));
         }
 
-        [Test]
-        public async Task WithNoTargetsTheReplyNeedsNoTargetAndTheDecisionHasNone()
+        [TestCase("{\"action\":\"follow_player\",\"statement\":\"Right behind you.\"}")]
+        [TestCase("{\"action\":\"follow_player\",\"target\":null,\"statement\":\"Right behind you.\"}")]
+        public async Task WithNoTargetsTheReplyNeedsNoTargetAndTheDecisionHasNone(string reply)
         {
-            var fake = new FakeProvider("{\"action\":\"follow_player\",\"statement\":\"Right behind you.\"}");
+            var fake = new FakeProvider(reply);
             var agent = new Agent(Fixtures.VillageGuardProfile(), fake);
             agent.Bind("follow_player", new FakeHandler());
             agent.Bind("move_to", new FakeHandler());
 
-            var result = await agent.DecideAsync("Come along, then.");
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Come along, then."));
 
             Assert.That(fake.LastRequest.Schema.Fields.Select(f => f.Name), Is.EqualTo(new[] { "action", "statement" }));
             Assert.That(fake.LastRequest.Schema.Fields[0].AllowedValues, Is.EqualTo(new[] { "follow_player", "none" }));
@@ -301,7 +302,7 @@ namespace Agenerela.Tests
             var fake = new FakeProvider("{\"action\":\"follow_player\",\"target\":\"no_target\",\"statement\":\"Lead on.\"}");
             var agent = Fixtures.VillageGuard(fake, isFollowing: true);
 
-            var result = await agent.DecideAsync("Keep me company.");
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Keep me company."));
 
             Assert.That(fake.LastRequest.Schema.Fields[0].AllowedValues, Does.Not.Contain("follow_player"));
             Assert.That(result.Decision.ActionId, Is.EqualTo("follow_player"));
@@ -325,7 +326,7 @@ namespace Agenerela.Tests
             LogAssert.Expect(LogType.Warning,
                 new Regex("could not decide\\. The provider failed\\. InvalidOperationException: model 'qwen3\\.5:2b' not found"));
 
-            var result = await agent.DecideAsync("Go to the tower.");
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
 
             Assert.That(result.Decision, Is.Null);
             Assert.That(result.Telemetry.Outcome, Is.EqualTo(DecisionOutcome.PipelineError));
@@ -366,7 +367,7 @@ namespace Agenerela.Tests
             agent.Bind("follow_player", new FakeHandler(ctx => !(bool)ctx.State["isFollowing"]));
             LogAssert.Expect(LogType.Warning, new Regex("could not decide\\. Preparing the request failed\\. KeyNotFoundException"));
 
-            var result = await agent.DecideAsync("Go to the tower.");
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
 
             Assert.That(result.Telemetry.Outcome, Is.EqualTo(DecisionOutcome.PipelineError));
             Assert.That(fake.Requests, Is.Empty);
@@ -407,6 +408,27 @@ namespace Agenerela.Tests
         }
 
         [Test]
+        public async Task ACancellationTheProviderReportsAsAnotherErrorStillEndsCancelled()
+        {
+            var fake = new FakeProvider(GoToTheTower) { Hold = true, CancelledWith = new InvalidOperationException("Request aborted") };
+            var agent = Fixtures.VillageGuard(fake);
+
+            using (var cts = new CancellationTokenSource())
+            {
+                var pending = agent.DecideAsync("Go to the tower.", null, cts.Token);
+                cts.Cancel();
+                try
+                {
+                    await pending;
+                    Assert.Fail("The caller cancelled, so there is no result, not a pipeline error.");
+                }
+                catch (OperationCanceledException)
+                {
+                }
+            }
+        }
+
+        [Test]
         public async Task CancellingWhileTheProviderThinksThrowsRatherThanReturning()
         {
             var fake = new FakeProvider(GoToTheTower) { Hold = true };
@@ -439,7 +461,7 @@ namespace Agenerela.Tests
             var pending = agent.DecideAsync("Go to the tower.");
             Assert.That(pending.GetAwaiter().IsCompleted, Is.False, "The provider has not answered yet.");
             fake.Release();
-            var result = await pending;
+            var result = await Fixtures.NotCancelled(pending);
 
             Assert.That(result.Decision.ActionId, Is.EqualTo("move_to"));
         }
@@ -454,10 +476,10 @@ namespace Agenerela.Tests
             var scouted = new ExplicitTargetSource().Add("bridge", new object());
             agent.TargetSources.Add(scouted);
 
-            await agent.DecideAsync("Go to the tower.");
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
             var first = fake.LastRequest.Schema.Fields[1].AllowedValues;
             scouted.Add("north_gate", new object());
-            await agent.DecideAsync("Go to the tower.");
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
             var second = fake.LastRequest.Schema.Fields[1].AllowedValues;
 
             Assert.That(first, Is.EqualTo(new[] { "no_target", "tower", "training_dummy", "bridge" }));
@@ -474,7 +496,7 @@ namespace Agenerela.Tests
             agent.TargetSources.Add(new ExplicitTargetSource().Add("tower", new object()));
             LogAssert.Expect(LogType.Warning, new Regex("could not decide\\. .*Target id 'tower'"));
 
-            var result = await agent.DecideAsync("Go to the tower.");
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
 
             Assert.That(result.Telemetry.Outcome, Is.EqualTo(DecisionOutcome.PipelineError));
             Assert.That(fake.Requests, Is.Empty);
@@ -526,7 +548,7 @@ namespace Agenerela.Tests
         {
             var fake = new FakeProvider("{\"action\":\"follow_player\",\"target\":\"no_target\",\"statement\":\"Lead the way.\"}");
             var agent = Fixtures.VillageGuard(fake);
-            var result = await agent.DecideAsync("Keep me company.");
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Keep me company."));
             Assert.That(fake.LastRequest.Schema.Fields[0].AllowedValues, Does.Contain("follow_player"));
 
             agent.State["isFollowing"] = true;
@@ -544,7 +566,7 @@ namespace Agenerela.Tests
             var bridge = new object();
             var scouted = new ExplicitTargetSource().Add("bridge", bridge);
             agent.TargetSources.Add(scouted);
-            var result = await agent.DecideAsync("Cross over the stream.");
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Cross over the stream."));
 
             Assert.That(agent.Execute(result), Is.True);
             Assert.That(Fixtures.Handler(agent, "move_to").Executions[0].Context.Targets.TryGet("bridge", out var given), Is.True);

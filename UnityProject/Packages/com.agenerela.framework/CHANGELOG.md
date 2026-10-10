@@ -195,7 +195,8 @@ While the version stays `0.x`, the public API may change in any release.
 - `Agent` and `DecideOptions` in namespace `Agenerela` (#17) — the class that joins every other
   Phase 1 part, proven end to end against a fake provider. `Agent` is plain C#, not a
   `MonoBehaviour`, so a faction owns one with no GameObject. `new Agent(profile, provider)`
-  takes its identity and idle example from an `AgentProfile`, read when used;
+  takes its identity and idle example from an `AgentProfile` (the identity object is kept,
+  the idle example read on every call);
   `new Agent(identity, actions, provider)` builds one in code with no asset, and has no idle
   example unless a call passes one. `Bind(actionId, handler)` registers the action as the
   profile defines it, and throws an `ArgumentException` for an id the profile does not list or

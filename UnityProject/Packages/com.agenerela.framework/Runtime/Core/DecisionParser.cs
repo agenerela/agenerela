@@ -88,7 +88,9 @@ namespace Agenerela
             }
 
             string target = TargetRegistry.NoTarget;
-            if (answer[DecisionSchema.TargetFieldName] != null || AsksForTarget(schema))
+            // A null target reads like a missing one, as a null statement reads like an empty one.
+            var targetToken = answer[DecisionSchema.TargetFieldName];
+            if ((targetToken != null && targetToken.Type != JTokenType.Null) || AsksForTarget(schema))
             {
                 if (!ReadId(answer, DecisionSchema.TargetFieldName, out target, out problem))
                 {

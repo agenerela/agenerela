@@ -35,9 +35,11 @@ namespace Agenerela
         private readonly List<ActionDefinition> definitions;
 
         /// <summary>
-        /// An agent built from a profile, the asset a developer creates first (#15). Its identity
-        /// and idle example are the profile's, read when used, so editing the profile changes every
-        /// agent built from it. Its actions are registered with <see cref="Bind"/>.
+        /// An agent built from a profile, the asset a developer creates first (#15). It keeps the
+        /// profile's identity object, so editing that identity's fields changes every agent built
+        /// from the profile, but assigning the profile a different identity later does not. The
+        /// idle example is read from the profile on every call. Its actions are registered with
+        /// <see cref="Bind"/>.
         /// </summary>
         /// <exception cref="ArgumentNullException"><paramref name="profile"/> or <paramref name="provider"/> is null.</exception>
         /// <exception cref="ArgumentException">The profile has no identity.</exception>
@@ -335,8 +337,11 @@ namespace Agenerela
                 var ctx = Snapshot(stimulus, observations);
                 var options = new PromptOptions { StimulusLabel = label, IdleExampleStimulus = idleExample };
 
-                var schema = DecisionSchema.Build(ctx);
-                string fewShot = FewShotBuilder.Build(ActionAvailability.For(ctx), ctx.Targets, label, idleExample);
+                // Asked once, so the action enum and the examples come from one answer even when an
+                // availability check is not a pure function of the context, such as a cooldown.
+                var available = ActionAvailability.For(ctx);
+                var schema = DecisionSchema.Build(ctx, available);
+                string fewShot = FewShotBuilder.Build(available, ctx.Targets, label, idleExample);
 
                 // The memory slot (build plan §2.9): Phase 2's IMemoryStrategy recalls the turns
                 // that go here, oldest first. Until then there are none.
@@ -356,6 +361,13 @@ namespace Agenerela
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
                 throw;
+            }
+            catch (Exception) when (ct.IsCancellationRequested)
+            {
+                // A provider that reports the caller's cancellation as some other exception, as an
+                // aborted web request tends to, still ends the call cancelled rather than counting
+                // as a pipeline error.
+                throw new OperationCanceledException(ct);
             }
             catch (Exception e)
             {
