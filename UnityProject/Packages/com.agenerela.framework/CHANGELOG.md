@@ -150,8 +150,52 @@ While the version stays `0.x`, the public API may change in any release.
   such a stimulus. `stimulusLabel` defaults to `Player`. EditMode tests cover #10's guard and
   colony blocks line for line, each omitted example, the placeholder fallback, and the
   header-only block for no actions.
+- `DecisionSchema` and `SchemaField` in namespace `Agenerela` (#8) — the shape of the answer
+  one decision asks for, in the framework's own provider-neutral form: ordered `Fields`, each
+  a `SchemaField` with a `Name`, a `Description`, `AllowedValues` (null for free text) and
+  `Required`. No JSON or grammar syntax lives in either type; each dialect's serializer
+  translates it. `DecisionSchema.Build(ctx)` calls `ActionAvailability.For(ctx)` itself and
+  returns three required fields in the measured order: `action`, whose values are the
+  available actions in registry order followed by `ActionRegistry.None`, injected by the
+  framework and always last; `target`, whose values are `TargetRegistry.NoTarget` followed by
+  the registered ids, and which is left out entirely while no target is registered; and
+  `statement`, free-form and possibly empty. The schema copies what it reads, so a target
+  registered afterwards does not change it, and its lists are read-only. The three field
+  descriptions are constants on `DecisionSchema` (`ActionDescription`, `TargetDescription`,
+  `StatementDescription`), worded with no "player" and no "character", beside the field-name
+  constants and `NoneDescription` (`Take no action`). A public constructor takes a fixed field
+  list for serializer tests, and checks only for nulls. A null context throws an
+  `ArgumentNullException`. EditMode tests cover #8's following-agent example, the field
+  order, the `target` field with and without targets, `none` present once and last in every
+  shape, the action enum following `ActionAvailability.For`'s order, the description strings,
+  and the snapshot; a new `ActionAvailability` test pins that `For` keeps registration order.
+- `PromptBuilder` and `PromptOptions` in namespace `Agenerela` (#16) — the text the model
+  reads, assembled into a `DecisionRequest` with every field filled.
+  `PromptBuilder.Build(ctx, schema, fewShotBlock, history, options)` derives `SystemPrompt`
+  from `ctx.Identity` alone: `You are <name>, <role>. <personality>`, then
+  `Your goals: <goals>` when there are goals, then one fixed instruction line, `Choose exactly
+  one action from the allowed list. Use no_target when none of the listed targets applies.`
+  No action list and no prose rule for anything the schema enforces. An empty name, role or
+  personality is left out of the first sentence, the identity fields are trimmed, and a
+  framed sentence gets a full stop only when the developer's text does not already end one.
+  `FewShotBlock` is the block passed in, unchanged, so an A/B run can swap it alone; the
+  caller builds it with `FewShotBuilder.Build`. `Observations` is `What you know right now:`
+  followed by one `- ` line per observation, verbatim, with blank entries skipped, and is null
+  when there are none. `History` is a copy of the turns passed in, never null. `Stimulus` is
+  `<label>: "<stimulus>"`, the label from `PromptOptions.StimulusLabel` (default `Player`,
+  any free string, rejected only when empty), and `Schema` is the schema passed in.
+  `PromptOptions.IdleExampleStimulus` is carried for the caller to pass to `FewShotBuilder`.
+  Output uses `\n` on every platform and is byte-identical for the same input. A null context
+  or schema throws an `ArgumentNullException`. EditMode tests cover #16's golden file for the
+  village guard, with and without observations, both as fields and composed the way
+  `DecisionRequest`'s remarks tell a provider to; a non-default label reaching both the
+  examples and the stimulus; observations verbatim and absent; determinism; the goals line
+  and each identity part left out when empty; a country reading a report with no "player" or
+  "character" in anything the framework wrote; and the history copy.
 
 ### Changed
+- `DecisionRequest.Schema` — the request's `DecisionSchema`, now on the type. It arrives
+  unserialised, each provider serialising it in its own dialect, and is required (#8).
 - `DecisionTelemetry.TargetsDropped` — the target ids a source found but left out because of
   its cap, so a thin-looking target list can be diagnosed (#32).
 - The package depends on `com.unity.nuget.newtonsoft-json` 3.2.2, which Package Manager

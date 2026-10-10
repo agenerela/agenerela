@@ -18,8 +18,10 @@ public interface ILLMProvider
 }
 ```
 
-A provider takes an assembled request, sends it, and returns text. It does not parse the
-reply, does not know what an action is, and does not decide whether the answer was legal.
+A provider takes a request `PromptBuilder` (#16) has assembled, sends it, and returns text.
+It does not parse the reply, does not know what an action is, and does not decide whether
+the answer was legal. How it composes the request's fields into messages is stated once, in
+the remarks on `DecisionRequest`.
 `Agent` (#17) parses `ProviderResult.Text` and builds `DecisionTelemetry` (#3) from the rest.
 
 Two rules sit above every implementation:
@@ -34,7 +36,10 @@ Two rules sit above every implementation:
 - **A provider never rewrites the prompt.** The blocks in `DecisionRequest` arrive rendered
   and go out unchanged. Prompt wording is measured; two of the three regressions caught by
   the prototype's A/B harness were wording changes, and a provider quietly improving a
-  block would be invisible in the numbers.
+  block would be invisible in the numbers. The one part that arrives unserialised is
+  `DecisionRequest.Schema`, the provider-neutral `DecisionSchema` (#8): the provider runs the
+  serializer for its `Dialect` over it, and treats it as required, since a request without a
+  schema is not a decision request.
 
 ## The three backends
 
@@ -199,9 +204,6 @@ the contract. API keys must never appear in an exception message.
 
 ## Still open
 
-- **`DecisionRequest.Schema`** is not on the type yet — `DecisionSchema` (#8) does not exist.
-  The field is marked with a `TODO(#8)` and lands with that issue. Treat it as required once
-  it does: a request without a schema is not a decision request.
 - **How a turn in `DecisionRequest.History` encodes its speaker** is decided in Phase 2,
   alongside the memory strategy that will fill it. The list is empty until then, so no
   provider can be wrong about it yet — but do not invent an encoding and read it back.
