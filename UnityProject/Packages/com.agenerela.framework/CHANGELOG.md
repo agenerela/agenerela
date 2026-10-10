@@ -150,6 +150,25 @@ While the version stays `0.x`, the public API may change in any release.
   such a stimulus. `stimulusLabel` defaults to `Player`. EditMode tests cover #10's guard and
   colony blocks line for line, each omitted example, the placeholder fallback, and the
   header-only block for no actions.
+- `DecisionSchema` and `SchemaField` in namespace `Agenerela` (#8) — the shape of the answer
+  one decision asks for, in the framework's own provider-neutral form: ordered `Fields`, each
+  a `SchemaField` with a `Name`, a `Description`, `AllowedValues` (null for free text) and
+  `Required`. No JSON or grammar syntax lives in either type; each dialect's serializer
+  translates it. `DecisionSchema.Build(ctx)` calls `ActionAvailability.For(ctx)` itself and
+  returns three required fields in the measured order: `action`, whose values are the
+  available actions in registry order followed by `ActionRegistry.None`, injected by the
+  framework and always last; `target`, whose values are `TargetRegistry.NoTarget` followed by
+  the registered ids, and which is left out entirely while no target is registered; and
+  `statement`, free-form and possibly empty. The schema copies what it reads, so a target
+  registered afterwards does not change it, and its lists are read-only. The three field
+  descriptions are constants on `DecisionSchema` (`ActionDescription`, `TargetDescription`,
+  `StatementDescription`), worded with no "player" and no "character", beside the field-name
+  constants and `NoneDescription` (`Take no action`). A public constructor takes a fixed field
+  list for serializer tests, and checks only for nulls. A null context throws an
+  `ArgumentNullException`. EditMode tests cover #8's following-agent example, the field
+  order, the `target` field with and without targets, `none` present once and last in every
+  shape, the action enum following `ActionAvailability.For`'s order, the description strings,
+  and the snapshot; a new `ActionAvailability` test pins that `For` keeps registration order.
 
 ### Changed
 - `DecisionTelemetry.TargetsDropped` — the target ids a source found but left out because of
