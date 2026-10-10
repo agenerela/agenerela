@@ -171,6 +171,8 @@ While the version stays `0.x`, the public API may change in any release.
   and the snapshot; a new `ActionAvailability` test pins that `For` keeps registration order.
 
 ### Changed
+- `DecisionRequest.Schema` — the request's `DecisionSchema`, now on the type. It arrives
+  unserialised, each provider serialising it in its own dialect, and is required (#8).
 - `DecisionTelemetry.TargetsDropped` — the target ids a source found but left out because of
   its cap, so a thin-looking target list can be diagnosed (#32).
 - The package depends on `com.unity.nuget.newtonsoft-json` 3.2.2, which Package Manager
