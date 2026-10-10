@@ -54,9 +54,13 @@ namespace Agenerela
         /// <summary>Name of the free-text field. The prototype called it <c>dialogue</c> (DR-008).</summary>
         public const string StatementFieldName = "statement";
 
-        // The three descriptions below are read by the model on every call, and are exactly the
-        // strings in #9's golden output. They name no player and no character: the agent may be a
-        // country reading a report.
+        // The three descriptions below are sent with every request and are exactly the strings in
+        // #9's golden output. They name no player and no character: the agent may be a country
+        // reading a report. Only a provider that shows the schema to the model puts them in front
+        // of it (the cloud APIs; unmeasured). Ollama uses the schema only to constrain sampling and
+        // never shows it (findings, 10 October 2026), so a local model never reads these and meets
+        // the no_target rule only in PromptBuilder's instruction line. Rewording one here changes
+        // nothing a local model is told.
 
         /// <summary>Description of the <c>action</c> field.</summary>
         public const string ActionDescription = "The one action to take now, from the allowed list.";
@@ -71,8 +75,9 @@ namespace Agenerela
 
         /// <summary>
         /// The description of <see cref="ActionRegistry.None"/>, for wherever actions are listed
-        /// with their descriptions. One short clause, like every action's (build plan §2.2 rule 2):
-        /// the prototype's long, emphatic <c>none</c> description biased a small model toward it.
+        /// with their descriptions. One short clause, like every action's (build plan §2.2 rule 2).
+        /// That rule's evidence came with a biased system prompt, and the description itself never
+        /// reached the model through Ollama (findings, 10 October 2026); keeping it costs nothing.
         /// </summary>
         public const string NoneDescription = "Take no action";
 
