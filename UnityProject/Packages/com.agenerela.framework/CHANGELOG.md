@@ -192,6 +192,42 @@ While the version stays `0.x`, the public API may change in any release.
   examples and the stimulus; observations verbatim and absent; determinism; the goals line
   and each identity part left out when empty; a country reading a report with no "player" or
   "character" in anything the framework wrote; and the history copy.
+- `Agent` and `DecideOptions` in namespace `Agenerela` (#17) — the class that joins every other
+  Phase 1 part, proven end to end against a fake provider. `Agent` is plain C#, not a
+  `MonoBehaviour`, so a faction owns one with no GameObject. `new Agent(profile, provider)`
+  takes its identity and idle example from an `AgentProfile`, read when used;
+  `new Agent(identity, actions, provider)` builds one in code with no asset, and has no idle
+  example unless a call passes one. `Bind(actionId, handler)` registers the action as the
+  profile defines it, and throws an `ArgumentException` for an id the profile does not list or
+  lists twice; an action nobody binds is never offered. `Actions` is the agent's
+  `ActionRegistry`, `Targets` the targets registered by hand, `TargetSources` the ordered
+  `ITargetSource`s asked on every decision after them (DR-014), and `State` the game's own
+  facts, copied into `AgentContext.State` for the handlers and never sent to the model.
+  `DecideAsync(stimulus, options, ct)` builds the context, the schema from the actions
+  available now, the examples and the request, sends it, and reads the reply into a
+  `DecisionResult` whose telemetry holds the provider's name, the framework version, the
+  request's latency on a monotonic clock, and the token counts the provider reported. History
+  is empty until memory arrives (Phase 2). A target source that fails or offers an id twice, a
+  provider that throws, and a reply that is empty, is not one JSON object, or lacks `action`
+  or a `target` the schema asked for, give a result with no decision and the outcome
+  `PipelineError`, the reason logged as a warning, never an exception. An empty
+  `StimulusLabel` throws an `ArgumentException` at the call, before anything is sent, and a
+  cancelled token an `OperationCanceledException` when the result is awaited. The reply is
+  read with Newtonsoft by the schema's field names, and a reply naming an action or target the
+  request did not offer is still a decision. `Execute(result)` checks it again against the
+  agent as it is now: the action registered and available, the target registered or
+  `no_target`, both recomputed. It runs the bound handler and returns true, returns true for
+  `none` without running anything, and returns false, running nothing, for a pipeline error
+  and for a decision it refuses, logging why. `DecideOptions` is the per-call bag:
+  `StimulusLabel` (default `Player`), `IdleExampleStimulus` (null uses the profile's, empty
+  leaves the example out) and `Observations`. EditMode tests run every decision through
+  `FakeProvider`, which answers with a scripted reply, fails, or holds its reply, and records
+  every request, and `FakeHandler`, which records executions; `Fixtures` holds the shared
+  village guard, whose identity #16's golden test now reads too. They cover #17's composition
+  test, #16's golden request produced by the agent, a reply becoming a decision with its
+  telemetry, each unreadable reply, a failing provider, cancellation, a non-default label and
+  two observations reaching the request, state never reaching it, target sources resolved per
+  decision, and each refusal.
 
 ### Changed
 - `DecisionRequest.Schema` — the request's `DecisionSchema`, now on the type. It arrives
