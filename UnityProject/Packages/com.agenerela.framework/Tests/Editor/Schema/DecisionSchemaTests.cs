@@ -135,7 +135,7 @@ namespace Agenerela.Tests
         [Test]
         public void DescriptionsMatchTheSerializerGoldenFile()
         {
-            // Copied from #9's expected output. These are the strings the model reads.
+            // Copied from #9's expected output, which pins exactly what every provider is sent.
             Assert.That(DecisionSchema.ActionDescription,
                 Is.EqualTo("The one action to take now, from the allowed list."));
             Assert.That(DecisionSchema.TargetDescription,

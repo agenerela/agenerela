@@ -3,8 +3,8 @@ using System.Collections.Generic;
 namespace Agenerela
 {
     /// <summary>
-    /// One field of the answer the model must give: its name, the description the model reads,
-    /// and the values it may take. Provider-neutral, like <see cref="DecisionSchema"/>, which
+    /// One field of the answer the model must give: its name, what it means, and the values it
+    /// may take. Provider-neutral, like <see cref="DecisionSchema"/>, which
     /// holds these in generation order.
     /// </summary>
     public sealed class SchemaField
@@ -12,11 +12,14 @@ namespace Agenerela
         /// <summary>The key the model writes the value under, such as <c>action</c>.</summary>
         public string Name;
 
-        /// <summary>What the field means. The model reads it on every call.</summary>
+        /// <summary>
+        /// What the field means. Sent with the schema, but a model reads it only through a
+        /// provider that shows the schema to it; Ollama never does (findings, 10 October 2026).
+        /// </summary>
         public string Description;
 
         /// <summary>
-        /// The only values the field may take, in the order the model is shown them, or null for
+        /// The only values the field may take, in the order the schema lists them, or null for
         /// a free-form string.
         /// </summary>
         /// <remarks>
