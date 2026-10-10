@@ -153,6 +153,27 @@ namespace Agenerela.Tests
         }
 
         [Test]
+        public async Task TheEnumAndTheExamplesComeFromOneAvailabilityAnswer()
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = new Agent(Fixtures.VillageGuardProfile(), fake);
+
+            // Not a pure function of the context, like a cooldown that counts calls: asked twice in
+            // one decision, it would offer follow_player in one place and not the other.
+            int asked = 0;
+            agent.Bind("follow_player", new FakeHandler(available: ctx => asked++ % 2 == 0));
+            agent.Bind("move_to", new FakeHandler());
+            agent.Targets.Register("tower", new object());
+
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+
+            bool inEnum = fake.LastRequest.Schema.Fields[0].AllowedValues.Contains("follow_player");
+            bool inExamples = fake.LastRequest.FewShotBlock.Contains("action: follow_player");
+            Assert.That(inExamples, Is.EqualTo(inEnum),
+                "The action enum and the few-shot examples must come from one availability answer.");
+        }
+
+        [Test]
         public async Task StateNeverReachesTheModel()
         {
             var fake = new FakeProvider(GoToTheTower);
