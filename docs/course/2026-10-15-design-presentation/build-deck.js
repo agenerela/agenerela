@@ -169,7 +169,7 @@ async function build() {
     const by = 2.3, bh = 0.85;
     s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: 0.6, y: by, w: 2.4, h: bh, rectRadius: 0.08, fill: { color: C.dark2 }, line: { color: "5A5F68", width: 1.25 } });
     text(s, "YOUR GAME", { x: 0.75, y: by + 0.17, w: 2.1, h: 0.25, size: 12, bold: true, color: C.white, cs: 2 });
-    text(s, "asks the agent, then acts", { x: 0.75, y: by + 0.47, w: 2.1, h: 0.25, size: S.small, color: C.onDark });
+    text(s, "asks Agenerela, then acts", { x: 0.75, y: by + 0.47, w: 2.1, h: 0.25, size: S.small, color: C.onDark });
     s.addShape(pres.shapes.LINE, { x: 3.05, y: by + bh / 2, w: 0.45, h: 0, line: { color: C.onDark, width: 1.5, endArrowType: "triangle" } });
     s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: 3.55, y: by, w: 2.9, h: bh, rectRadius: 0.08, fill: { color: C.blue }, line: { color: C.blue } });
     text(s, "AGENERELA", { x: 3.7, y: by + 0.17, w: 2.6, h: 0.25, size: 12, bold: true, color: C.white, cs: 2 });
@@ -189,7 +189,7 @@ async function build() {
       "SPEAKER: Yevhen Mishchenko · about 20 seconds",
       "",
       "- Hi, we're Agenerela: Yevhen, Hunter, Tim, Tigran, Hero and Maxim.",
-      "- Agenerela is a Unity framework that lets a language model choose what a game agent does next, only from actions the developer registered.",
+      "- Agenerela is a Unity framework that lets a language model choose what a game actor does next, only from actions the developer registered.",
       "- Point at the three boxes: the game asks, our framework checks, the model only chooses.",
     ]);
   }
@@ -226,11 +226,11 @@ async function build() {
   // 3 ── Motivation: importance ──────────────────────────────────────────────
   {
     const s = pres.addSlide();
-    header(s, 3, "MOTIVATION · WHY IT MATTERS", "Why game agents need this", TEAM.yevhen);
+    header(s, 3, "MOTIVATION · WHY IT MATTERS", "Why game actors need this", TEAM.yevhen);
     const cols = [
-      [ic.branch, "Hand-built selection doesn't scale", "Developers pick an agent's next behaviour with hand-written condition trees. Every new situation means more branches."],
-      [ic.chat, "Situations are open-ended", "A turn report, a game event or a player's line: no tree has a branch for each, yet the agent must still choose sensibly."],
-      [ic.flag, "Not every agent is a character", "Factions, colonies and countries choose moves too, with no body and no voice. Character tools don't fit them."],
+      [ic.branch, "Hand-built selection doesn't scale", "Developers pick an actor's next behaviour with hand-written condition trees. Every new situation means more branches."],
+      [ic.chat, "Situations are open-ended", "A turn report, a game event or a player's line: no tree has a branch for each, yet the actor must still choose sensibly."],
+      [ic.flag, "Not every actor is a character", "Factions, colonies and countries choose moves too, with no body and no voice. Character tools don't fit them."],
     ];
     for (let i = 0; i < 3; i++) {
       const [img, h, b] = cols[i];
@@ -240,16 +240,16 @@ async function build() {
       text(s, b, { x, y: 1.72, w: 2.85, h: 0.85, size: S.body, color: C.ink2 });
     }
     figure(s, "02-agents", 0.5, 2.8, 9.0, 4.0, "A guard you talk to and a country with no body, both driven through Agenerela with the same API and the same checks.");
-    caption(s, "Figure 1. One framework, two very different agents: our first two demo games. Scenes and moves are illustrative [2].");
+    caption(s, "Figure 1. Two very different actors, each an `Agent` in our code: our first two demo games. Scenes and moves are illustrative [2].");
     notes(s, [
       "SPEAKER: Yevhen Mishchenko · about 35 seconds",
       "",
-      "- Today a developer picks an agent's next behaviour with hand-written condition trees, and every new situation means more branches.",
-      "- And situations are open-ended: a turn report, a game event, sometimes a player's line. Usually the game itself decides it's time to ask.",
-      "- Left, our village guard: 'Attack Godzilla' should be refused, because there is no Godzilla. Right, a country: no body, no voice.",
-      "- One framework drives both, with the same API and the same checks.",
+      "- One word first: anything in a game that decides what to do, a guard or a country, we call an actor. In our code it's the Agent class.",
+      "- Today developers pick an actor's next behaviour with hand-written condition trees, and every new situation means more branches.",
+      "- And situations are open-ended: a turn report, a game event, sometimes a player's line.",
+      "- Left, a guard: 'Attack Godzilla' should be refused, because there is no Godzilla. Right, a country: no body, no voice. One framework drives both.",
       "",
-      "If asked 'Do you replace behaviour trees?': No. A tree ticks in microseconds for free. We replace only the top-level selection node, where hand-written trees grow combinatorially, and a tree can call our agent.",
+      "If asked 'Do you replace behaviour trees?': No. A tree ticks in microseconds for free. We replace only the top-level selection node, where hand-written trees grow combinatorially, and a tree can call Agenerela.",
     ]);
   }
 
@@ -274,14 +274,14 @@ async function build() {
       text(s, stop, { x: x + 0.15, y: y + 2.05, w: w - 0.3, h: 1.0, size: S.small, color: C.ink });
       if (foot) text(s, foot, { x: x + 0.15, y: y + 3.0, w: w - 0.3, h: 0.45, size: S.cap, italic: true, color: C.ink3 });
     });
-    text(s, "**The gap for developers:** nothing lets them plug a small, local model into their own actions safely, for any kind of agent.",
+    text(s, "**The gap for developers:** nothing lets them plug a small, local model into their own actions safely, for any kind of actor.",
       { x: 0.5, y: 4.85, w: 9.0, h: 0.3, size: S.body, color: C.ink });
     caption(s, "Sources: [1] build plan §2.4, §5 and Appendix A; [3]–[6] in References.");
     notes(s, [
       "SPEAKER: Yevhen Mishchenko · about 45 seconds",
       "",
       "- Four kinds of existing work.",
-      "- Behaviour trees are fast and free, but every branch is hand-written. Kelley's paper uses trees as scaffolding around language models; a tree can hand its open-ended decision to our agent.",
+      "- Behaviour trees are fast and free, but every branch is hand-written. Kelley's paper uses trees as scaffolding around language models; a tree can hand its open-ended decision to Agenerela.",
       "- Convai and Inworld build characters that talk. A country in a strategy game doesn't talk.",
       "- LLMUnity runs a model inside Unity. That's plumbing we'll use, but it doesn't decide what's legal or check the answer.",
       "- Prompting a model yourself gives free text and no guarantees: about 60% right in our prototype.",
@@ -296,14 +296,14 @@ async function build() {
     const s = pres.addSlide();
     header(s, 5, "MOTIVATION · THE PROBLEM WE SOLVE", "The problem, for Unity developers", TEAM.yevhen);
     s.addShape(pres.shapes.RECTANGLE, { x: 0.5, y: 1.15, w: 5.3, h: 0.95, fill: { color: C.blueLt }, line: { color: C.blueLt } });
-    text(s, "A Unity developer who wants agents to react to open-ended input has **no safe, reusable way** to let a language model decide what those agents do.",
+    text(s, "A Unity developer who wants actors to react to open-ended input has **no safe, reusable way** to let a language model decide what those actors do.",
       { x: 0.7, y: 1.2, w: 4.95, h: 0.85, size: 14, valign: "middle" });
     text(s, "WITHOUT A FRAMEWORK, EVERY DEVELOPER HAS TO", { x: 0.5, y: 2.3, w: 5.3, h: 0.22, size: 8.5, bold: true, color: C.ink3, cs: 1.5 });
     const pains = [
-      [ic.pen, "Write prompts and parse replies", "for every agent, then turn free text back into game code."],
-      [ic.shield, "Trust whatever comes back", "an action the agent can't do now, or a target that isn't there."],
-      [ic.cloud, "Pay per request, or ship a server", "≈ $165 per player per 100 h at 30 agents; players won't run Ollama."],
-      [ic.repeat, "Start over for each kind of agent", "a guard, a companion and a faction, each wired differently."],
+      [ic.pen, "Write prompts and parse replies", "for every actor, then turn free text back into game code."],
+      [ic.shield, "Trust whatever comes back", "an action the actor can't do now, or a target that isn't there."],
+      [ic.cloud, "Pay per request, or ship a server", "≈ $165 per player per 100 h at 30 actors; players won't run Ollama."],
+      [ic.repeat, "Start over for each kind of actor", "a guard, a companion and a faction, each wired differently."],
     ];
     for (let i = 0; i < 4; i++) {
       const [img, h, b] = pains[i];
@@ -319,7 +319,7 @@ async function build() {
       "Register actions, not prompts",
       "Only legal, grounded answers reach your code",
       "Runs locally, even inside the shipped game",
-      "One API for any agent, with or without a body",
+      "One API for any actor, with or without a body",
     ];
     for (let i = 0; i < 4; i++) {
       const y = 1.78 + i * 0.5;
@@ -333,9 +333,9 @@ async function build() {
     notes(s, [
       "SPEAKER: Yevhen Mishchenko · about 40 seconds",
       "",
-      "- This is the problem from a Unity developer's side: no safe, reusable way to let a language model decide what their agents do. (Read the blue box once.)",
-      "- Without a framework they write prompts and parse replies, trust whatever comes back, pay per request or ship a server, and start over for each kind of agent.",
-      "- With Agenerela they register actions, only legal answers reach their code, it runs locally, and one API covers any agent.",
+      "- This is the problem from a Unity developer's side: no safe, reusable way to let a language model decide what their actors do. (Read the blue box once.)",
+      "- Without a framework they write prompts and parse replies, trust whatever comes back, pay per request or ship a server, and start over for each kind of actor.",
+      "- With Agenerela they register actions, only legal answers reach their code, it runs locally, and one API covers any actor.",
       "- And it works: in our tests this month, our confidence check took a small local model from 83 to 108 correct out of 130.",
       "",
       "HAND-OFF: \"Hunter will walk you through our goals and the architecture.\"",
@@ -350,14 +350,14 @@ async function build() {
     const s = pres.addSlide();
     header(s, 6, "GOALS", "Goals, and how we reach each one", TEAM.hunter);
     const goals = [
-      ["Any game entity can be an agent", "`Agent` is plain C#, so a country with no body uses the same API as a guard."],
+      ["Anything in a game can be an actor", "`Agent` is plain C#, so a country with no body uses the same API as a guard."],
       ["Developers define the actions", "Actions are data, on a C# method or an asset, run by the game's own handler."],
       ["Only legal actions, no made-up targets", "Each request lists only what is legal now; guards turn a bad choice into `none`."],
-      ["Agents remember what happened", "The last few turns go into each request, recorded after the guards. Phase 2."],
+      ["Actors remember what happened", "The last few turns go into each request, recorded after the guards. Phase 2."],
       ["Any model, even inside the game", "One `ILLMProvider`: Ollama to build, llama.cpp to ship, cloud optional."],
       ["The game stays responsive", "Async requests; a queue serves player-facing requests first, with budgets."],
       ["Every accuracy claim is measured", "200+ labelled prompts, A/B runs with a control arm, five outcome classes."],
-      ["A working agent in under 15 minutes", "Editor tools, three small samples, demos that use only the public API."],
+      ["A working actor in under 15 minutes", "Editor tools, three small samples, demos that use only the public API."],
     ];
     const w = 2.1375, ch = 1.6;
     goals.forEach(([h, b], i) => {
@@ -378,9 +378,9 @@ async function build() {
       "SPEAKER: Hunter Hudson · about 55 seconds",
       "",
       "- Eight goals; each card says what, then how.",
-      "- One: anything can be an agent, a guard or a country, because Agent is plain C#. Two: developers define their own actions, as data. Three: the model only sees what's legal now, and guards check every answer.",
-      "- Four, highlighted: agents remember. Each request carries the last few turns, recorded after the guards, so the guard can follow 'Follow me' with 'Now wait here'. That's Phase 2.",
-      "- Five: any model backend, even one inside the shipped game. Six: the game never freezes while an agent thinks. Seven: every accuracy claim comes from an A/B run. Eight: a working agent in under 15 minutes.",
+      "- One: anything can be an actor, a guard or a country, because Agent is plain C#. Two: developers define their own actions, as data. Three: the model only sees what's legal now, and guards check every answer.",
+      "- Four, highlighted: actors remember. Each request carries the last few turns, recorded after the guards, so the guard can follow 'Follow me' with 'Now wait here'. That's Phase 2.",
+      "- Five: any model backend, even one inside the shipped game. Six: the game never freezes while an actor thinks. Seven: every accuracy claim comes from an A/B run. Eight: a working actor in under 15 minutes.",
       "- The blue bar is what we commit to by December.",
       "",
       "HAND-OFF (to yourself): \"Here is how those pieces fit together.\"",
@@ -403,7 +403,7 @@ async function build() {
       "SPEAKER: Hunter Hudson · about 45 seconds",
       "",
       "- First from the outside. The black box is our package.",
-      "- Left, the developer's game: it decides when to ask an agent and runs the chosen action in its own code. The player only sees the game.",
+      "- Left, the developer's game: it decides when to ask for a decision and runs the chosen action in its own code. The player only sees the game.",
       "- Right, the model backends: Ollama, a model inside the game, or a cloud API. Dashed, because they're outside our control and we don't trust them.",
       "- Blue arrows: the game asks with a stimulus and observations, we send a prompt and a schema, the model answers with three fields, and the game gets a decision plus telemetry.",
       "- At the top, the developer configures it and reads our reports.",
@@ -425,7 +425,7 @@ async function build() {
       { x, y: 1.15, w, h: 0.38, size: S.cap, color: C.ink3 });
     points(s, [
       ["The game asks", "`DecideAsync` with an event, a report or a player's line, whenever it decides."],
-      ["The agent remembers", "Step 2: who it is, what it sees, and its last few turns (Phase 2)."],
+      ["The `Agent` remembers", "Step 2: who it is, what it sees, and its last few turns (Phase 2)."],
       ["Only legal options go out", "Actions legal right now and targets in reach become the schema."],
       ["Checked before anything runs", "Three fields come back; guards check them, `Execute` re-checks."],
     ], x, 1.68, w, 0.86);
@@ -433,8 +433,8 @@ async function build() {
     notes(s, [
       "SPEAKER: Hunter Hudson · about 60 seconds",
       "",
-      "- Same three columns, opened up. This is my component: the agent and the decision request.",
-      "- One: the game calls DecideAsync, usually with an event or a report, sometimes a player's line. Two: the agent gathers who it is, what it sees, and, from Phase 2, what it remembers.",
+      "- Same three columns, opened up. This is my component: the Agent class and the decision request.",
+      "- One: the game calls DecideAsync, usually with an event or a report, sometimes a player's line. Two: the Agent class gathers who it is, what it sees, and, from Phase 2, what it remembers.",
       "- Three and four: only the actions legal now and the targets in reach go into the schema and prompt. Five: the request is queued, player-facing first, and sent to a provider. Six: the model picks.",
       "- Seven: guards check the answer. Eight: the result and telemetry come back. Nine: the game's own code acts, and Execute re-checks first, because the world may have changed.",
       "- The types and registries are merged; the Agent class itself is next (#17).",
@@ -476,7 +476,7 @@ async function build() {
   // 10 ── Agent Profile screen (Tim) ─────────────────────────────────────────
   {
     const s = pres.addSlide();
-    header(s, 10, "DESIGN MODELS · UI DESIGN", "Where an agent is authored", TEAM.tim);
+    header(s, 10, "DESIGN MODELS · UI DESIGN", "Where an actor is authored", TEAM.tim);
     tag(s, "design");
     const fh = 3.95, fw = fh * 1.0395;
     s.addImage({ path: PNG("wf-profile"), x: 0.5, y: 1.15, w: fw, h: fh,
@@ -501,13 +501,13 @@ async function build() {
     notes(s, [
       "SPEAKER: Timothy Brustinov · about 60 seconds",
       "",
-      "- This is our screen design for authoring an agent, from our sketch lab. The numbers on the screen match the list.",
-      "- One: a writer fills in name, role, personality and goals once, and we build the prompt from them. Two: the action list, everything this agent can ever do; the game decides what's legal at the moment.",
+      "- This is our screen design for authoring an actor, from our sketch lab. The numbers on the screen match the list.",
+      "- One: a writer fills in name, role, personality and goals once, and we build the prompt from them. Two: the action list, everything this actor can ever do; the game decides what's legal at the moment.",
       "- Three: a length check, because in our prototype one long description pulled a small model toward that action. Four: expand a row to edit its example and the targets it makes sense for.",
       "- Five: 'none' is added by us, locked and always last. Six: problems show up right here, not just in the Console.",
       "- The profile asset and its checks are merged; this Inspector is Phase 5 work.",
       "",
-      "HAND-OFF: \"Tigran will show how the agent's state decides which of these actions the model actually sees.\"",
+      "HAND-OFF: \"Tigran will show how the actor's state decides which of these actions the model actually sees.\"",
     ]);
   }
 
@@ -551,7 +551,7 @@ async function build() {
     notes(s, [
       "SPEAKER: Tigran Kolsuzyan · about 60 seconds",
       "",
-      "- Left: the prompt, in reading order. The system prompt from the profile; examples, one per legal action plus an idle one and a refusal; observations, what's true now; history, the agent's memory, from Phase 2; and the stimulus last.",
+      "- Left: the prompt, in reading order. The system prompt from the profile; examples, one per legal action plus an idle one and a refusal; observations, what's true now; history, the actor's memory, from Phase 2; and the stimulus last.",
       "- The example builder is merged. Its refusal example puts a made-up name into a real example, so the model sees how to refuse something that isn't there.",
       "- Right: the schema for this one request. Only legal actions, 'none' last; target required, with no_target; and the order action, target, then statement.",
       "- Order matters: writing the chat text first made the model talk itself into 'no action'. Action first was worth 11.7 points.",
@@ -581,7 +581,7 @@ async function build() {
       "- All three options plug into one interface, ILLMProvider, which is merged. Solid boxes are our classes; dashed boxes are what they call.",
       "- Build: the Editor talks to a local Ollama server, so swapping models takes seconds. A 2B model plus a scene used 4.2 of 8 GB on our laptop.",
       "- Ship: players won't install a server, so the model runs inside the game through llama.cpp, via LLMUnity. About 1 GB more, and no network.",
-      "- Compare: cloud APIs, Gemini first. Cost grows with every agent, and keys never ship.",
+      "- Compare: cloud APIs, Gemini first. Cost grows with every actor, and keys never ship.",
       "",
       "HAND-OFF: \"Hero will show how targets are found and how the guards check the model's answer.\"",
       "",
@@ -592,12 +592,12 @@ async function build() {
   // 14 ── Targets (Hero) ───────────────────────────────────────────────────
   {
     const s = pres.addSlide();
-    header(s, 14, "DESIGN MODELS · TARGETS", "Targets: what an agent may name", TEAM.hero);
+    header(s, 14, "DESIGN MODELS · TARGETS", "Targets: what an actor may name", TEAM.hero);
     tag(s, "built");
-    figure(s, "07-targets", 0.7, 1.12, 8.6, 2.6087, "The Targetable component on a scene object, the area ProximityTargetSource searches around the agent, and the resulting list of names.");
+    figure(s, "07-targets", 0.7, 1.12, 8.6, 2.6087, "The Targetable component on a scene object, the area ProximityTargetSource searches around the actor, and the resulting list of names.");
     chips(s, [
       ["Targetable is the tag.", "Its id is the exact word the model may answer with."],
-      ["The area is one option.", "A ready-made query for scene agents, used only if you add it."],
+      ["The area is one option.", "A ready-made query for actors in a scene, used only if you add it."],
       ["Or your own rule.", "Your own target source decides; a country lists its targets."],
     ], 4.5, 0.64);
     caption(s, "Figure 9. The tag, one way to choose targets, and the result, as merged (#32). Scene layout is illustrative [1, §2.2, DR-014].");
@@ -605,7 +605,7 @@ async function build() {
       "SPEAKER: Hero Jaiyen · about 55 seconds",
       "",
       "- Before the model picks a target, we decide what it may name. This part is merged.",
-      "- Left: Targetable is the tag. Its Id is the exact word the model may answer with, set by hand. Its description is the line the agent reads about it.",
+      "- Left: Targetable is the tag. Its Id is the exact word the model may answer with, set by hand. Its description is the line the actor reads about it.",
       "- Middle: one way to choose, the area. It finds tagged objects within 18 metres, nearest first, at most 8. Houses have no tag, so they're scenery.",
       "- That area is only one option, used if the developer adds it. Their own target source can follow what a faction scouted or a quest stage; a country just lists its targets.",
       "- Right: whichever way it's built, the list plus no_target becomes the schema's target list.",
@@ -640,7 +640,7 @@ async function build() {
       "",
       "If asked 'Why not just tell the model to refuse?': we do, with the refusal example, and a one-line rule helps too (73 to 88 on the 2B). But 'scarecrow' can't be written, so its probability moves onto a legal id, and small models still guess.",
       "If asked 'What about \"attack the training thing\"?': the model maps it to the training dummy, and if it's sure, it acts. No word lists to maintain.",
-      "If asked 'Does it stop the agent choosing freely?': no. A model torn between two good targets keeps its odds on the list; our 4B test passed every free choice.",
+      "If asked 'Does it stop the actor choosing freely?': no. A model torn between two good targets keeps its odds on the list; our 4B test passed every free choice.",
       "If asked 'What still gets through?': a near miss the model is sure of, like a bucket taken for the barrel on the 4B.",
       "If asked 'Is it built?': the guard is Phase 3. The interface that carries the model's odds is merged (#68); no provider fills it yet.",
     ]);
@@ -838,13 +838,13 @@ async function build() {
       "Likely questions and short answers:",
       "- Why not a bigger model? On our prototype's 20 commands, a 2B with our checks beat a 4B without them, 95% to 65%. On our harder 130-prompt probe the 4B alone (113) beat the 2B with the check (108), and the 4B with it got 124. The checks help every model; the 2B is what fits beside a game on an 8 GB card. (Yevhen)",
       "- What if the model ignores the schema? Providers are untrusted: guards re-check every answer, and Execute re-checks again before any handler runs. (Hero / Hunter)",
-      "- How fast is a decision? About 0.7 seconds for the 2B on our laptop in this month's probe; the queue serves player-facing requests first. With requests one at a time, the prototype estimated about 21 seconds per round at 30 agents. (Yevhen)",
-      "- Does this replace behaviour trees? No, only the top-level selection node; a behaviour tree can call our agent. (Hunter)",
+      "- How fast is a decision? About 0.7 seconds for the 2B on our laptop in this month's probe; the queue serves player-facing requests first. With requests one at a time, the prototype estimated about 21 seconds per round at 30 actors. (Yevhen)",
+      "- Does this replace behaviour trees? No, only the top-level selection node; a behaviour tree can call Agenerela. (Hunter)",
       "- Isn't this a chatbot framework? No: most calls come from the game itself, like timers, events, turn reports and behaviour-tree nodes. A player's line is one kind of input. (Hunter)",
       "- What if a player says 'attack the training thing'? The model maps it to the training dummy, and the confidence check lets it through when its odds stay on the list. No word lists to maintain. (Hero)",
       "- Why not just check the player's words? We measured it: 29 good requests refused on the 2B, and worse than no check at all on the 4B. The model's own confidence did better, 83 to 108 correct out of 130. (Hero)",
-      "- How does a strategy game choose targets, with no positions? Its own target source, or a list it supplies: the countries it borders or has met. The radius query is just one option for scene agents. (Hero)",
-      "- Does an agent remember earlier turns? Short-term memory is a Phase 2 deliverable: the last few turns, recorded after the guards, one memory per agent, capped by tokens. Long-term memory fits the same interface later. (Hunter)",
+      "- How does a strategy game choose targets, with no positions? Its own target source, or a list it supplies: the countries it borders or has met. The radius query is just one option for actors in a scene. (Hero)",
+      "- Does an actor remember earlier turns? Short-term memory is a Phase 2 deliverable: the last few turns, recorded after the guards, one memory per actor, capped by tokens. Long-term memory fits the same interface later. (Hunter)",
       "- What's built today? Phase 1's decision types, action registry and both front doors, target discovery, availability, the few-shot builder and telemetry, with EditMode tests, and the first 54 evaluation prompts. Nothing calls a model yet; that's Phase 2. (Maxim)",
       "- How do you know an improvement is real? A/B with a control arm on the same model, machine and session; about a 10-point noise floor at 50 prompts, so Phase 4 uses 200+. (Maxim)",
     ]);
