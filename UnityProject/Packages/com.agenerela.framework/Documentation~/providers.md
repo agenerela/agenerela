@@ -18,8 +18,10 @@ public interface ILLMProvider
 }
 ```
 
-A provider takes an assembled request, sends it, and returns text. It does not parse the
-reply, does not know what an action is, and does not decide whether the answer was legal.
+A provider takes a request `PromptBuilder` (#16) has assembled, sends it, and returns text.
+It does not parse the reply, does not know what an action is, and does not decide whether
+the answer was legal. How it composes the request's fields into messages is stated once, in
+the remarks on `DecisionRequest`.
 `Agent` (#17) parses `ProviderResult.Text` and builds `DecisionTelemetry` (#3) from the rest.
 
 Two rules sit above every implementation:
