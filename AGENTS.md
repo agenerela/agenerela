@@ -63,6 +63,10 @@ they are taken.
   worst of five variants, below the unmodified baseline.
 - Action availability is derived from agent state, so illegal options are absent from the
   schema rather than forbidden in prose.
+- A model served through Ollama never reads the response schema: it only constrains
+  sampling, so field and action descriptions in it reach no local model (findings,
+  10 October 2026). Anything a local model must read goes in the prompt. Re-run
+  `tools/benchmarks/schema_visibility_probe.py` after an Ollama upgrade.
 
 ## Repo layout
 
@@ -196,7 +200,8 @@ Merged so far:
 - Target discovery (#32, via #61, DR-014): `ITargetSource`, with `ExplicitTargetSource` for a
   hand-supplied set that needs no scene, and in `Runtime/Unity/` the `Targetable` component
   and `ProximityTargetSource`, which offers nearby `Targetable`s nearest first, capped, each
-  registered as its `Transform`. What the cap drops goes in `DecisionTelemetry.TargetsDropped`.
+  registered as its `Transform`. What the cap drops is on its `Dropped`; copying that into
+  `DecisionTelemetry.TargetsDropped` is #81 (Phase 2).
 - State-derived availability (#7, via #63): `ActionAvailability.For(ctx)` returns the actions
   legal for one decision, in registry order. A target-requiring action is left out while the
   `TargetRegistry` is empty, and so is any action whose handler's `IsAvailable` says no.
@@ -208,6 +213,23 @@ Merged so far:
   come the profile's idle example, answered with `none`, and a refusal example: a real
   `ExampleStimulus` filled with an unregistered placeholder (`Atlantis`). EditMode tests
   throughout; making the "Pick up the Blacksmith" test fail under blind rotation is #75.
+- `DecisionSchema` (#8, via #78): the provider-neutral shape of the answer, `action`, then
+  `target`, then `statement`, all required. The action enum is the available actions in
+  registry order with `none` added last; the target enum is `no_target`, then the registered
+  ids, and the `target` field is left out while nothing is registered. `DecisionRequest.Schema`
+  carries it unserialised, for each provider to serialise in its own dialect. One EditMode
+  test per measured rule.
+- `PromptBuilder` (#16, via #79): an agent's context made into the `DecisionRequest` — a
+  system prompt of identity, goals and one fixed instruction line, the few-shot block as
+  given, the observations verbatim, and the labelled stimulus as the final user turn.
+  Deterministic, `\n` only, with golden-file tests.
+- `Agent` (#17, via #80): `DecideAsync` builds the context, asks availability once, builds
+  the schema, examples and request, calls the provider and reads the reply with Newtonsoft.
+  An unreadable reply or a provider failure becomes a `PipelineError` result, never an
+  exception; only an empty label and the caller's own cancellation throw. `Execute` re-checks
+  the action and target and returns false on a refusal. Proven end to end against
+  `FakeProvider`. Every async test awaits through `Fixtures.NotCancelled`, because the Test
+  Framework counts a test whose Task ends cancelled as passed.
 - Newtonsoft as the core's one declared dependency (DR-009), and each demo game as its own
   Unity project (DR-010).
 - `Demos/GreyBoxVillage` — a playable grey-box scene whose guard still answers from
@@ -219,8 +241,9 @@ Merged so far:
   `Runtime/Unity/` touches a scene" (#38, #40), and for a changed `.meta` GUID (#41). It
   still compiles no C#, so a green check does not prove `test` builds.
 
-Not written yet: `DecisionSchema` (#8), its JSON serializer (#9), `PromptBuilder` (#16), and
-`Agent` itself (#17), which will hold the target sources and resolve them per decision.
+Not merged yet: the JSON Schema serializer (#9), written and waiting on a rebase onto the
+merged schema, and the five-check gate (#11), which closes Phase 1. Filling
+`DecisionTelemetry.TargetsDropped` is #81, in Phase 2.
 **Nothing in the framework calls a model yet** — that starts in Phase 2, so Phase 1 work is
 pure C# with EditMode tests and no Ollama.
 
