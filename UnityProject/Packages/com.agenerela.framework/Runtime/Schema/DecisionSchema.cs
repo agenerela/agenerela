@@ -130,7 +130,24 @@ namespace Agenerela
                 throw new ArgumentNullException(nameof(ctx));
             }
 
-            var fields = new List<SchemaField> { ActionField(ActionAvailability.For(ctx)) };
+            return Build(ctx, ActionAvailability.For(ctx));
+        }
+
+        // For a caller that has already asked ActionAvailability about this context, as Agent has
+        // for FewShotBuilder, so the enum and the examples come from one answer.
+        internal static DecisionSchema Build(AgentContext ctx, IReadOnlyList<ActionDefinition> available)
+        {
+            if (ctx == null)
+            {
+                throw new ArgumentNullException(nameof(ctx));
+            }
+
+            if (available == null)
+            {
+                throw new ArgumentNullException(nameof(available));
+            }
+
+            var fields = new List<SchemaField> { ActionField(available) };
 
             if (ctx.Targets.Count > 0)
             {

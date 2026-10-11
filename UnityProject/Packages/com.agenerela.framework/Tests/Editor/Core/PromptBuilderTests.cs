@@ -324,16 +324,10 @@ namespace Agenerela.Tests
         }
 
         // The village guard of #16's golden file: #18's profile, with the goals written as the
-        // golden shows them.
+        // golden shows them. Shared with the agent's tests (#17), so the two cannot drift apart.
         private static AgentIdentity GuardIdentity()
         {
-            return new AgentIdentity
-            {
-                Name = "Village Guard",
-                Role = "a guard at the town gate",
-                Personality = "Loyal, brief, a little suspicious of strangers.",
-                Goals = "keep the gate safe; help the player when asked.",
-            };
+            return Fixtures.VillageGuardIdentity();
         }
 
         private static AgentContext Guard(string stimulus = "Go to the tower.", params string[] observations)

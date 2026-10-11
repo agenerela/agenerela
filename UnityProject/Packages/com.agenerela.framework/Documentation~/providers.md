@@ -4,8 +4,9 @@
 a framework edit. This note explains how each planned backend satisfies it, what a *second*
 cloud vendor would need, and which parts of the contract are deliberately still open.
 
-Nothing here is implemented yet. Phase 1 defines the contract; Phase 2 writes the Ollama
-provider, Phase 6 the cloud ones, Phase 6b the in-process one.
+No backend is implemented yet. Phase 1 defines the contract, and `Agent` (#17) is tested
+against a fake provider; Phase 2 writes the Ollama provider, Phase 6 the cloud ones, Phase 6b
+the in-process one.
 
 ## The interface
 
@@ -22,7 +23,9 @@ A provider takes a request `PromptBuilder` (#16) has assembled, sends it, and re
 It does not parse the reply, does not know what an action is, and does not decide whether
 the answer was legal. How it composes the request's fields into messages is stated once, in
 the remarks on `DecisionRequest`.
-`Agent` (#17) parses `ProviderResult.Text` and builds `DecisionTelemetry` (#3) from the rest.
+`Agent` (#17) parses `ProviderResult.Text` and builds `DecisionTelemetry` (#3) from the rest:
+the provider's `Name`, its token counts, and a latency the agent measures itself around the
+request.
 
 Two rules sit above every implementation:
 
@@ -202,6 +205,14 @@ malformed envelope — all exceptions, so nothing downstream has to tell "no res
 diagnosable error rather than a leaked transport exception; until then, throwing is still
 the contract. API keys must never appear in an exception message.
 
+**What the agent does with each.** `Agent.DecideAsync` (#17) turns a thrown failure into a
+result with no decision and the outcome `PipelineError`, logging the exception's type and
+message as a warning, so a game's decision loop keeps running and the evaluation harness can
+count it. A reply that arrived but cannot be read, empty or not one JSON object, is the same
+outcome. A cancellation propagates only when the caller's own token was cancelled; an
+`OperationCanceledException` the caller did not ask for, such as a transport's own timeout, is
+a failure like any other.
+
 ## Still open
 
 - **How a turn in `DecisionRequest.History` encodes its speaker** is decided in Phase 2,
@@ -222,4 +233,4 @@ them is a change to `ILLMProvider`, which is the test this design has to keep pa
 - **Health and warm-up** (`IsReady`, is the model loaded?). Phase 2, for the Ollama
   provider's missing-model case.
 - **A provider conformance suite** every vendor must pass. Phase 6 deliverable, shaped from
-  the fake provider in #17.
+  the fake provider in #17 (`Tests/Editor/Fakes/FakeProvider.cs`).
