@@ -240,6 +240,12 @@ While the version stays `0.x`, the public API may change in any release.
   golden output in #9, both built by hand and as `DecisionSchema.Build` makes it from the
   agent's actions, state and targets, and cover a parser round trip, field and enum order, the
   shape without a target field, and each rejection.
+- `Phase1GateTests` (#11) — the five checks that close Phase 1, in one file: state masking,
+  `target` required with `no_target`, the field order `action`, `target`, `statement`, few-shot
+  examples that use only registered targets their verbs sensibly apply to, and no `target`
+  field while no target is registered. Each runs `Agent.DecideAsync` against `FakeProvider`
+  and asserts on the request it recorded, both its `DecisionSchema` and that schema as
+  `JsonSchemaSerializer` writes it, and each failure message names the measured rule that broke.
 
 ### Changed
 - `DecisionRequest.Schema` — the request's `DecisionSchema`, now on the type. It arrives

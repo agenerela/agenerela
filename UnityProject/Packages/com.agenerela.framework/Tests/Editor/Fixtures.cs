@@ -78,13 +78,12 @@ namespace Agenerela.Tests
             return (FakeHandler)handler;
         }
 
-        /// <summary>Destroys every asset the fixtures created since the last call.</summary>
         /// <summary>
         /// Awaits a decision and fails the test if it ends cancelled. The Unity Test Framework
         /// counts an async test whose Task ends cancelled as passed, skipping everything after the
         /// await, so a bug that cancelled every decision would leave such tests green. Every await
         /// of <see cref="Agent.DecideAsync"/> goes through this unless cancellation is what the
-        /// test is about; #11's gates should use it too.
+        /// test is about, the Phase 1 gates (#11) included.
         /// </summary>
         public static async Task<DecisionResult> NotCancelled(Awaitable<DecisionResult> decision)
         {
@@ -99,6 +98,7 @@ namespace Agenerela.Tests
             }
         }
 
+        /// <summary>Destroys every asset the fixtures created since the last call.</summary>
         public static void DestroyCreated()
         {
             foreach (var obj in created)
