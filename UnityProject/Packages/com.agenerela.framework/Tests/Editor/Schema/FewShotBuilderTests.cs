@@ -10,8 +10,10 @@ namespace Agenerela.Tests
         {
             // Regression: blind rotation through the registry once produced the
             // demonstration "Pick up the Blacksmith". Every target-requiring example must
-            // come from that action's own PreferredExampleTargets.
-            var targets = Registry("sword", "lantern", "blacksmith", "tower");
+            // come from that action's own PreferredExampleTargets. The unsuitable target is
+            // registered first, so rotation through the registry reaches it before any
+            // preferred one and this test fails.
+            var targets = Registry("blacksmith", "tower", "sword", "lantern");
             var actions = new List<ActionDefinition>
             {
                 Action("pick_up", "Pick up the {0}.", true, "sword", "lantern")

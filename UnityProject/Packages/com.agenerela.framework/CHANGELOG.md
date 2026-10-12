@@ -149,7 +149,8 @@ While the version stays `0.x`, the public API may change in any release.
   `none`, `no_target (not an available target)`; it is omitted when no available action has
   such a stimulus. `stimulusLabel` defaults to `Player`. EditMode tests cover #10's guard and
   colony blocks line for line, each omitted example, the placeholder fallback, and the
-  header-only block for no actions.
+  header-only block for no actions. The "Pick up the Blacksmith" regression test registers
+  the unsuitable target first, so it fails if examples rotate through the registry (#75).
 - `DecisionSchema` and `SchemaField` in namespace `Agenerela` (#8) — the shape of the answer
   one decision asks for, in the framework's own provider-neutral form: ordered `Fields`, each
   a `SchemaField` with a `Name`, a `Description`, `AllowedValues` (null for free text) and
