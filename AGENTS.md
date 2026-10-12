@@ -160,8 +160,10 @@ it; opening a project in a newer patch rewrites that file for everyone.
 
 ## Current state
 
-Phase 0 is complete and **Phase 1 (Core, Actions, Schema) is underway**; it closes when the
-five checks in #11 pass. See the build plan's phase table for what each phase means.
+Phases 0 and 1 are complete: **Phase 1 (Core, Actions, Schema) closed on 11 October**, when
+the five checks in #11 passed. **Phase 2 (Ollama provider, queue, memory) is next**, due 19
+October; apart from #81, its issues are still to be written. See the build plan's phase
+table for what each phase means.
 
 Merged so far:
 
@@ -212,13 +214,20 @@ Merged so far:
   first of its `PreferredExampleTargets` that is registered, or no example if none is. Then
   come the profile's idle example, answered with `none`, and a refusal example: a real
   `ExampleStimulus` filled with an unregistered placeholder (`Atlantis`). EditMode tests
-  throughout; making the "Pick up the Blacksmith" test fail under blind rotation is #75.
+  throughout. The "Pick up the Blacksmith" regression test registers the unsuitable target
+  first, so it fails if examples rotate blindly through the registry (#75, via #83).
 - `DecisionSchema` (#8, via #78): the provider-neutral shape of the answer, `action`, then
   `target`, then `statement`, all required. The action enum is the available actions in
   registry order with `none` added last; the target enum is `no_target`, then the registered
   ids, and the `target` field is left out while nothing is registered. `DecisionRequest.Schema`
   carries it unserialised, for each provider to serialise in its own dialect. One EditMode
   test per measured rule.
+- `JsonSchemaSerializer` (#9, via #82): a `DecisionSchema` written as the JSON Schema Ollama
+  and the cloud APIs accept: one string property per field in order, an `enum` for each
+  field with allowed values, `required`, `propertyOrdering` always (Gemini needs it) and
+  `additionalProperties: false`. A null, unnamed or duplicate field, or an empty, `""` or
+  duplicate allowed value, throws rather than reaching a provider. Golden-file tests,
+  including one through `DecisionSchema.Build`. Phase 2's Ollama provider is its first caller.
 - `PromptBuilder` (#16, via #79): an agent's context made into the `DecisionRequest` — a
   system prompt of identity, goals and one fixed instruction line, the few-shot block as
   given, the observations verbatim, and the labelled stimulus as the final user turn.
@@ -230,6 +239,12 @@ Merged so far:
   the action and target and returns false on a refusal. Proven end to end against
   `FakeProvider`. Every async test awaits through `Fixtures.NotCancelled`, because the Test
   Framework counts a test whose Task ends cancelled as passed.
+- The Phase 1 gate (#11, via #84): `Phase1GateTests`, the build plan's five checks in one
+  file: state masking, `target` required with `no_target`, the field order, few-shot
+  examples that use only sensible registered targets, and no `target` field while nothing is
+  registered. Each runs through `Agent.DecideAsync` and `FakeProvider` and asserts on the
+  recorded request and its serialized JSON, and each failure message names the measured rule
+  that broke. A throwaway probe that switched each rule off failed exactly its own gate.
 - Newtonsoft as the core's one declared dependency (DR-009), and each demo game as its own
   Unity project (DR-010).
 - `Demos/GreyBoxVillage` — a playable grey-box scene whose guard still answers from
@@ -241,18 +256,17 @@ Merged so far:
   `Runtime/Unity/` touches a scene" (#38, #40), and for a changed `.meta` GUID (#41). It
   still compiles no C#, so a green check does not prove `test` builds.
 
-Not merged yet: the JSON Schema serializer (#9), written and waiting on a rebase onto the
-merged schema, and the five-check gate (#11), which closes Phase 1. Filling
-`DecisionTelemetry.TargetsDropped` is #81, in Phase 2.
-**Nothing in the framework calls a model yet** — that starts in Phase 2, so Phase 1 work is
-pure C# with EditMode tests and no Ollama.
+Not written yet: filling `DecisionTelemetry.TargetsDropped` (#81), and the rest of Phase 2.
+**Nothing in the framework calls a model yet.** The first live decision is Phase 2's, through
+an Ollama provider that sends `JsonSchemaSerializer`'s output. Phase 1 was pure C# with
+EditMode tests and no Ollama, on purpose.
 
-Open groundwork beside Phase 1: the evaluation prompt set's follow-up (#66), and the demo
-games, one sub-issue each under #47, starting with the GreyBoxStrategy grey box (#20). Code
-two games share moves into `Demos/Shared/` once a second game needs it (#14). The asset
-server those games draw on (`tools/comfyui/`) is set up on the RTX 5080 machine. Its first
-run there found four faults, fixed in #71, and all three workflows have made a test asset;
-#72 moved the image workflow to Z-Image Turbo's NVFP4 build, about twice as fast there.
+Open groundwork beside Phase 2: the demo games, one sub-issue each under #47, starting with
+the GreyBoxStrategy grey box (#20). Code two games share moves into `Demos/Shared/` once a
+second game needs it (#14). The asset server those games draw on (`tools/comfyui/`) is set up
+on the RTX 5080 machine. Its first run there found four faults, fixed in #71, and all three
+workflows have made a test asset; #72 moved the image workflow to Z-Image Turbo's NVFP4
+build, about twice as fast there.
 
 What all of this is meant to become, screen by screen, is drawn in
 [`docs/design/`](docs/design/README.md).
