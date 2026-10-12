@@ -161,9 +161,9 @@ it; opening a project in a newer patch rewrites that file for everyone.
 ## Current state
 
 Phases 0 and 1 are complete: **Phase 1 (Core, Actions, Schema) closed on 11 October**, when
-the five checks in #11 passed. **Phase 2 (Ollama provider, queue, memory) is next**, due 19
-October; apart from #81, its issues are still to be written. See the build plan's phase
-table for what each phase means.
+the five checks in #11 passed. **Phase 2 (Ollama provider, queue, memory) is underway**, due
+19 October, and closes when the live checks in its gate (#94) pass. See the build plan's
+phase table for what each phase means.
 
 Merged so far:
 
@@ -260,7 +260,12 @@ Merged so far:
   `Runtime/Unity/` touches a scene" (#38, #40), and for a changed `.meta` GUID (#41). It
   still compiles no C#, so a green check does not prove `test` builds.
 
-Not written yet: filling `DecisionTelemetry.TargetsDropped` (#81), and the rest of Phase 2.
+Not written yet, all of it Phase 2: typed provider errors (#87), `OllamaProvider` (#88), the
+request queue with `DecideOptions.Priority` (#89), short-term memory (#90), and the gate, a
+live decision in a sandbox scene with `RequiresOllama` PlayMode tests (#94), which waits on
+those four. Beside them, and not on the gate's path: observation sources (#91), the provider
+config asset (#92), `AgentBehaviour` (#93), and filling `DecisionTelemetry.TargetsDropped`
+(#81).
 **Nothing in the framework calls a model yet.** The first live decision is Phase 2's, through
 an Ollama provider that sends `JsonSchemaSerializer`'s output. Phase 1 was pure C# with
 EditMode tests and no Ollama, on purpose.
