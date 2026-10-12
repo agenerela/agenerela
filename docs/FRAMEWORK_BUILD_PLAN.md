@@ -496,14 +496,17 @@ namespace automatically — small thing, saves constant manual fixing.
 The agent abstraction, deliberately **not** welded to `MonoBehaviour`:
 
 ```csharp
-// Plain class — the brain. Owns identity, memory, registered actions.
+// Plain class — the brain. Owns identity, registered actions, targets and state (#17).
 public sealed class Agent {
-    public AgentIdentity Identity;            // name, role, personality, goals
-    public IMemoryStrategy Memory;            // default: RollingHistory(turns: 6)
-    public ActionRegistry Actions;            // see 2.2
+    public AgentIdentity Identity { get; }               // name, role, personality, goals
+    public ActionRegistry Actions { get; }               // see 2.2; filled by Bind
+    public TargetRegistry Targets { get; }               // hand-registered targets
+    public List<ITargetSource> TargetSources { get; }    // asked on every decision (DR-014)
+    public Dictionary<string, object> State { get; }     // for handlers and guards; never sent
+    // Memory: added in Phase 2 with IMemoryStrategy (§2.9); until then no history is sent.
     public Awaitable<DecisionResult> DecideAsync(string stimulus, DecideOptions options = null,
                                                  CancellationToken ct = default);  // decides only
-    public void Execute(DecisionResult result);   // re-checks legality, then runs the handler
+    public bool Execute(DecisionResult result);   // re-checks legality, runs the handler; false on a refusal
 }
 
 // Thin MonoBehaviour adapter for scene objects, in Runtime/Unity/ (§1.2). A faction
@@ -518,8 +521,9 @@ measurable or the eval harness (Phase 4) can't exist. Deciding and executing are
 calls on purpose: `Execute` re-checks the decision independently before any handler runs
 (hard rule 5, #17).
 
-`Memory` is what lets an agent carry a conversation from one decision to the next. It is an
-empty slot until Phase 2; what it holds, and the rules it follows, are in §2.9.
+Memory is what lets an agent carry a conversation from one decision to the next. It is not
+on `Agent` yet: Phase 2 adds it, and until then `DecideAsync` sends no history. What it
+holds, and the rules it follows, are in §2.9.
 
 ### 2.2 Actions (`Runtime/Actions/`) — the heart of the framework
 
@@ -1019,9 +1023,9 @@ when observations first reach a model; run the comparison in Phase 4 and record 
 
 ### 2.9 Memory (`Runtime/Memory/`) — what an agent remembers between decisions
 
-**Status: planned for Phase 2, nothing built.** The slots exist already: `Agent.Memory`
-(§2.1) and `DecisionRequest.History` (#12), which stays an empty list until a memory strategy
-fills it. This section records what memory is for and the rules it has to follow, so that
+**Status: planned for Phase 2, nothing built.** One slot exists already:
+`DecisionRequest.History` (#12), which stays an empty list until a memory strategy fills it.
+`Agent` (#17) marks where it plugs in, and gains a `Memory` property with the strategy. This section records what memory is for and the rules it has to follow, so that
 Phase 2 designs it rather than bolting it on at the end.
 
 **What it is for.** Without memory every decision starts from nothing. The guard cannot

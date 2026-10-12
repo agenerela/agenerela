@@ -16,15 +16,17 @@ hand-off line to the next person, and likely questions with short answers.
 
 | Presenter | Slides | Time |
 |---|---|---|
-| Yevhen Mishchenko | 1–5 title, outline, motivation, problem · 13 providers | ≈ 2:50 + 0:50 |
-| Hunter Hudson | 6 goals · 7 architecture (black box) · 8 inside the box | ≈ 2:45 |
-| Timothy Brustinov | 9 action vocabulary · 10 Agent Profile screen | ≈ 1:45 |
+| Yevhen Mishchenko | 1–5 title, outline, motivation, problem · 13 providers | ≈ 2:40 + 0:45 |
+| Hunter Hudson | 6 goals · 7 architecture (black box) · 8 inside the box | ≈ 2:40 |
+| Timothy Brustinov | 9 action vocabulary · 10 Agent Profile screen | ≈ 2:00 |
 | Tigran Kolsuzyan | 11 availability · 12 schema and prompt | ≈ 2:00 |
-| Hero Jaiyen | 14 targets · 15 how "Attack Godzilla" is stopped · 16 methods measured | ≈ 2:45 |
+| Hero Jaiyen | 14 targets · 15 guardrails for "Attack Godzilla" · 16 methods measured | ≈ 2:45 |
 | Maxim Goloubitsky | 17 telemetry · 18 evaluation plan · 19 references | ≈ 2:00 |
 | Everyone | 20 questions | 2–3 min |
 
-The estimates come to about 15 minutes, so rehearse the hand-offs tightly.
+The estimates come to about 14 minutes 50 seconds. Each slide's speaker notes give its time,
+and the spoken part is written to fit it at about 140 words a minute; the "If asked" lines
+under it are for questions, not for the talk.
 
 ## Editing in Google Slides
 

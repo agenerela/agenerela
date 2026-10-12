@@ -79,6 +79,21 @@ took about 12 minutes for the 2B and 18 for the 4B on an RTX 4060 laptop on AC p
 `--arms=A0 --no-verify` takes about 3 minutes for both. The results of 5 October 2026, and
 what they led to, are in `docs/llm-wiki/findings.md` and DR-016.
 
+## `schema_visibility_probe.py`
+
+Checks whether Ollama shows the response schema to the model or only builds its sampling
+grammar from it. It sends one short chat without `format`, then with a decision schema whose
+`action` description is one sentence and then ~300 words longer, and compares
+`prompt_eval_count`. On Ollama 0.34.2 the count does not move, so nothing written in the
+schema, including field and action descriptions, is read by a local model.
+
+```bash
+python tools/benchmarks/schema_visibility_probe.py qwen3.5:2b
+```
+
+Takes a few seconds. Re-run it after upgrading Ollama. The result of 10 October 2026 is in
+`docs/llm-wiki/findings.md`.
+
 ## Before trusting any number these print
 
 - Was there a **control arm**? A single before/after run is an anecdote.

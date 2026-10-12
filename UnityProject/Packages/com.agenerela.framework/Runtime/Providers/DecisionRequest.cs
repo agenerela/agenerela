@@ -13,7 +13,7 @@ namespace Agenerela.Providers
     /// side of the request is the non-empty ones of, in this order:
     /// </para>
     /// <list type="number">
-    ///   <item><description><see cref="SystemPrompt"/> — who the agent is, and the fixed instruction lines.</description></item>
+    ///   <item><description><see cref="SystemPrompt"/> — who the agent is, and the fixed instruction line.</description></item>
     ///   <item><description><see cref="FewShotBlock"/> — the worked examples.</description></item>
     ///   <item><description><see cref="Observations"/> — what the agent knows right now.</description></item>
     /// </list>
@@ -38,8 +38,8 @@ namespace Agenerela.Providers
     public sealed class DecisionRequest
     {
         /// <summary>
-        /// The system prompt: agent name, role, personality and goals, plus the two fixed
-        /// instruction lines. Derived from <c>AgentIdentity</c> — nothing else goes in it.
+        /// The system prompt: agent name, role, personality and goals, plus one fixed
+        /// instruction line. Derived from <c>AgentIdentity</c> — nothing else goes in it.
         /// </summary>
         public string SystemPrompt;
 
@@ -97,18 +97,19 @@ namespace Agenerela.Providers
         /// </remarks>
         public string Stimulus;
 
-        // TODO(#8): the provider-neutral DecisionSchema — ordered fields, each with a name,
-        // description and optional enum of allowed values, built per request from the
-        // agent's currently available actions and registered targets.
-        //
-        //     public DecisionSchema Schema;
-        //
-        // It is the last field to land because #8 owns the type and it does not exist yet.
-        // It stays UNSERIALISED here on purpose: a provider reads Capabilities.Dialect and
-        // runs its own serializer over it — JSON Schema for Ollama and cloud APIs (#9),
-        // GBNF for the in-process provider (Phase 6b) — which is what keeps a second
-        // dialect a second serializer rather than a second schema system. Providers written
-        // before #8 lands should treat this field as required, not optional: a request
-        // without a schema is not a decision request.
+        /// <summary>
+        /// The shape the answer must take: ordered fields, each with a name, a description
+        /// and, unless it is free text, the only values it may take. Built per request by
+        /// <see cref="DecisionSchema.Build"/> (#8) from the agent's currently available
+        /// actions and registered targets.
+        /// </summary>
+        /// <remarks>
+        /// Unserialised on purpose: a provider reads <c>Capabilities.Dialect</c> and runs its
+        /// own serializer over it — JSON Schema for Ollama and cloud APIs (#9), GBNF for the
+        /// in-process provider (Phase 6b) — which is what keeps a second dialect a second
+        /// serializer rather than a second schema system. Required, not optional: a request
+        /// without a schema is not a decision request.
+        /// </remarks>
+        public DecisionSchema Schema;
     }
 }

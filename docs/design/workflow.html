@@ -934,6 +934,7 @@ Packages/
       <li><b>The code front door</b> — <span class="mono">[AgentAction]</span>, <span class="mono">[Example]</span> and <span class="mono">[Available]</span> on a game's own methods, the asset winning a shared id, and one fixture run through every door (DR-011; #50, via #59)</li>
       <li><b>Target discovery</b> — <span class="mono">Targetable</span> and <span class="mono">ITargetSource</span>: a capped, nearest-first proximity query for scene agents and a hand-supplied set for agents with no scene (DR-014; #32, via #61)</li>
       <li><b>Availability</b> — <span class="mono">ActionAvailability.For</span> asks every handler's <span class="mono">IsAvailable</span> at each decision and drops target-needing actions when nothing is nameable, plus <b>AgentContext.Actions</b> (#7 and #58, via #63)</li>
+      <li><b>Few-shot builder</b> — one example per available action from its own stimulus and a registered preferred target, then the idle and refusal examples, with tests (#10, via #74; regression test: #75)</li>
       <li><b>Newtonsoft</b> as the core's one declared dependency (DR-009)</li>
       <li><b>GreyBoxVillage</b> — a playable grey-box scene whose guard still answers from string matching, not a model (#19)</li>
       <li><b>Evaluation prompts</b> — the first 54 labelled prompts, nine in each of six categories, for the Evaluation Report (#13, via #65; what they still need: #66)</li>
@@ -941,7 +942,7 @@ Packages/
     <div class="card"><h4>Written down, not written</h4><ul>
       <li><b>Agent</b> itself — the DecideAsync pipeline (#17)</li>
       <li><b>DecisionSchema</b> and its JSON serializer (#8, #9)</li>
-      <li><b>Few-shot builder, PromptBuilder</b> (#10, #16)</li>
+      <li><b>PromptBuilder</b> (#16)</li>
     </ul></div>
     <div class="card"><h4 style="color:var(--warn)">Decided here, not yet built</h4><ul>
       <li><b>DR-012</b> observation sources, capped; summariser as one source</li>

@@ -66,6 +66,27 @@ namespace Agenerela.Tests
         }
 
         [Test]
+        public void AvailableActionsKeepRegistrationOrder()
+        {
+            // The schema's action enum is built from this order (#8), so a reorder here would
+            // change what the model reads. Registered out of alphabetical order so a sort fails.
+            var actions = new ActionRegistry();
+            foreach (var id in new[] { "wave", "guard", "attack", "build" })
+            {
+                var available = id != "guard";
+                actions.Register(
+                    Definition(id),
+                    new DelegateActionHandler(
+                        ctx => available,
+                        (ctx, decision) => { }));
+            }
+
+            var context = ContextWith(actions, isFollowing: false, includeTarget: true);
+
+            Assert.That(Ids(ActionAvailability.For(context)), Is.EqualTo(new[] { "wave", "attack", "build" }));
+        }
+
+        [Test]
         public void ForRejectsNullContext()
         {
             Assert.Throws<ArgumentNullException>(() => ActionAvailability.For(null));

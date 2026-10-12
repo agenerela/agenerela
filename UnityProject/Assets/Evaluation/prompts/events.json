@@ -6,7 +6,6 @@
       "label": "Event",
       "stimulus": "An enemy was spotted near the bridge.",
       "observations": [
-        "The bridge is registered",
         "An enemy is present"
       ],
       "expectedAction": "move_to",
@@ -24,11 +23,11 @@
       "label": "Event",
       "stimulus": "The player has been attacked.",
       "observations": [
-        "An enemy is nearby",
+        "A wolf is nearby",
         "The player is under attack"
       ],
       "expectedAction": "attack_target",
-      "expectedTarget": "nearby_enemy",
+      "expectedTarget": "wolf",
       "preconditionState": {
         "isFollowing": false
       },
@@ -42,7 +41,6 @@
       "label": "Event",
       "stimulus": "A villager called for help at the gate.",
       "observations": [
-        "The gate is registered",
         "The villager is present"
       ],
       "expectedAction": "move_to",
@@ -60,7 +58,6 @@
       "label": "Event",
       "stimulus": "The campfire has gone out.",
       "observations": [
-        "The campfire is registered",
         "The campfire is extinguished"
       ],
       "expectedAction": "move_to",
@@ -77,7 +74,6 @@
       "label": "Event",
       "stimulus": "A supply delivery arrived at the docks.",
       "observations": [
-        "The docks are registered",
         "A supply crate is present"
       ],
       "expectedAction": "move_to",
@@ -94,8 +90,7 @@
       "label": "Event",
       "stimulus": "A guard reported movement on the eastern road.",
       "observations": [
-        "The eastern road is registered",
-        "Movement was reported"
+        "A guard reports movement along the eastern road"
       ],
       "expectedAction": "move_to",
       "expectedTarget": "eastern_road",
@@ -109,13 +104,12 @@
     {
       "id": "event_007",
       "label": "Event",
-      "stimulus": "A hostile creature entered the market.",
+      "stimulus": "A wolf entered the market.",
       "observations": [
-        "The market is registered",
-        "A hostile creature is present"
+        "A wolf is present nearby"
       ],
       "expectedAction": "attack_target",
-      "expectedTarget": "hostile_creature",
+      "expectedTarget": "wolf",
       "preconditionState": {
         "isFollowing": false
       },
@@ -128,8 +122,7 @@
       "label": "Event",
       "stimulus": "The bridge has collapsed.",
       "observations": [
-        "The bridge is unavailable",
-        "No alternate destination was given"
+        "The bridge has collapsed and cannot be crossed"
       ],
       "expectedAction": "none",
       "expectedTarget": "no_target",
@@ -145,8 +138,7 @@
       "label": "Event",
       "stimulus": "An ally is waiting at the shelter.",
       "observations": [
-        "The shelter is registered",
-        "An ally is present"
+        "An ally is waiting at the shelter"
       ],
       "expectedAction": "move_to",
       "expectedTarget": "shelter",

@@ -15,7 +15,6 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "note": "Labelers may disagree about whether to move to the gate; no action is registered.",
       "labelledBy": [
         "alice",
         "bob"
@@ -62,8 +61,7 @@
       "label": "Situation",
       "stimulus": "The road is blocked.",
       "observations": [
-        "A fallen tree blocks the road",
-        "No alternate command was given"
+        "A fallen tree blocks the road"
       ],
       "expectedAction": "none",
       "expectedTarget": "no_target",

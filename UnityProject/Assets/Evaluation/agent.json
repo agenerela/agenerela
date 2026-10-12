@@ -1,0 +1,30 @@
+{
+  "agent": "Village guard",
+  "actions": [
+    { "id": "follow_player", "needsTarget": false },
+    {
+      "id": "stop_following",
+      "needsTarget": false,
+      "onlyWhen": { "isFollowing": true }
+    },
+    { "id": "move_to", "needsTarget": true },
+    { "id": "attack_target", "needsTarget": true },
+    { "id": "none", "needsTarget": false }
+  ],
+  "targets": [
+    { "id": "bridge", "description": "The wooden bridge over the stream" },
+    { "id": "village_gate", "description": "The main gate of the village" },
+    { "id": "campfire", "description": "The campfire at the camp" },
+    { "id": "well", "description": "The village well" },
+    { "id": "north_tower", "description": "The north tower" },
+    { "id": "market", "description": "The village market" },
+    { "id": "docks", "description": "The docks" },
+    { "id": "shelter", "description": "The shelter" },
+    { "id": "eastern_road", "description": "The eastern road" },
+    { "id": "wolf", "description": "A wolf enemy" }
+  ],
+  "targetRules": {
+    "allExpectedTargetsMustBeRegistered": true,
+    "noneActionTarget": "no_target"
+  }
+}
