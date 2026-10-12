@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
@@ -34,10 +35,10 @@ namespace Agenerela.Tests
   ""additionalProperties"": false
 }";
 
-        // The only place these tests construct a DecisionSchema. #8 owns the type and its
-        // description constants, and these tests do not retype the descriptions: the golden
-        // string above is the one place they are written out, which is what proves #8's
-        // constants match it.
+        // Where these tests construct a DecisionSchema by hand, apart from the one test that has
+        // #8 build it. #8 owns the type and its description constants, and these tests do not
+        // retype the descriptions: the golden string above is the one place they are written
+        // out, which is what proves #8's constants match it.
         static DecisionSchema Schema(params SchemaField[] fields) => new DecisionSchema(fields);
 
         static SchemaField Action(params string[] allowed) => new SchemaField
@@ -75,6 +76,32 @@ namespace Agenerela.Tests
         public void FollowingAgentMatchesTheGoldenFile()
         {
             Assert.That(Serialize(FollowingAgent()), Is.EqualTo(FollowingAgentJson.Replace("\r\n", "\n")));
+        }
+
+        [Test]
+        public void TheSchemaDecisionSchemaBuildsMatchesTheGoldenFile()
+        {
+            // The two halves composed: #8 builds the following agent's schema from its actions,
+            // state and targets, and this serializer turns it into exactly the golden file. The
+            // test above feeds in a hand-made schema, which would still pass if Build drifted.
+            var actions = new ActionRegistry();
+            actions.Register(Definition("follow_player", false), Handler(ctx => !IsFollowing(ctx)));
+            actions.Register(Definition("stop_following", false), Handler(IsFollowing));
+            actions.Register(Definition("move_to", true), Handler(ctx => true));
+
+            var targets = new TargetRegistry();
+            targets.Register("bridge", new object());
+            targets.Register("tower", new object());
+
+            var ctx = new AgentContext(
+                new AgentIdentity { Name = "Guard" },
+                "Wait here.",
+                Array.Empty<string>(),
+                new Dictionary<string, object> { { "isFollowing", true } },
+                targets,
+                actions);
+
+            Assert.That(Serialize(DecisionSchema.Build(ctx)), Is.EqualTo(FollowingAgentJson.Replace("\r\n", "\n")));
         }
 
         [Test]
@@ -231,5 +258,17 @@ namespace Agenerela.Tests
 
             Assert.That(parsed["properties"]["statement"]["description"].Value<string>(), Is.EqualTo(field.Description));
         }
+
+        static ActionDefinition Definition(string id, bool requiresTarget) => new ActionDefinition
+        {
+            Id = id,
+            Description = $"Action {id}",
+            RequiresTarget = requiresTarget,
+        };
+
+        static IActionHandler Handler(Func<AgentContext, bool> isAvailable) =>
+            new DelegateActionHandler(isAvailable, (ctx, decision) => { });
+
+        static bool IsFollowing(AgentContext ctx) => (bool)ctx.State["isFollowing"];
     }
 }

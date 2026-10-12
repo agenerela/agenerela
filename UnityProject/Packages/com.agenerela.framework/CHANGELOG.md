@@ -237,8 +237,9 @@ While the version stays `0.x`, the public API may change in any release.
   A field that is null, unnamed or named twice, and allowed values that are empty or contain
   a null, `""` or a duplicate, throw an `ArgumentException`, so no provider ever sends an
   empty enum string to Gemini. EditMode tests compare the following-agent example against the
-  golden output in #9, and cover a parser round trip, field and enum order, the shape without
-  a target field, and each rejection.
+  golden output in #9, both built by hand and as `DecisionSchema.Build` makes it from the
+  agent's actions, state and targets, and cover a parser round trip, field and enum order, the
+  shape without a target field, and each rejection.
 
 ### Changed
 - `DecisionRequest.Schema` — the request's `DecisionSchema`, now on the type. It arrives
