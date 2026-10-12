@@ -15,6 +15,7 @@
       "preconditionState": {
         "isFollowing": false
       },
+      "note": "Labellers may disagree: move_to / village_gate is available, but closing the gate is not a registered action. Record each annotator's own answer before agreeing (#85).",
       "labelledBy": [
         "alice",
         "bob"
@@ -25,7 +26,7 @@
       "label": "Situation",
       "stimulus": "The path ahead is empty.",
       "observations": [
-        "No target is visible",
+        "Nothing is in sight",
         "The player is waiting"
       ],
       "expectedAction": "none",
