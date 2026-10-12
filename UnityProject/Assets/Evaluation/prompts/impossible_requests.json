@@ -115,11 +115,11 @@
       "stimulus": "Enter the locked cave without opening it.",
       "observations": [],
       "expectedAction": "none",
-      "expectedTarget": "locked_cave",
+      "expectedTarget": "no_target",
       "preconditionState": {
         "isFollowing": false
       },
-      "note": "The cave cannot be entered while locked.",
+      "note": "The cave is registered but locked, and no registered action opens or enters it. The agent must refuse, not move_to the cave.",
       "labelledBy": [
         "bob"
       ]

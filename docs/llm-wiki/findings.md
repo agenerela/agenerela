@@ -335,6 +335,39 @@ single-view arm changes workflows as well as conditioning. Fixed-seed controls p
 slightly different meshes, so subtle differences are not established wins. These results
 do not establish a universal best setting or test the other two swords independently.
 
+### Eval prompt set: how annotator disagreements get resolved (8 October 2026)
+
+A procedure, not a measurement. #13 asks for it, and the Phase 4 agreement number depends on
+it: once a disagreement is resolved by overwriting it, agreement can no longer be computed.
+The prompt format is in
+[`UnityProject/Assets/Evaluation/README.md`](../../UnityProject/Assets/Evaluation/README.md).
+
+1. **Label alone.** On the doubly labelled subset, each annotator answers every prompt
+   without seeing the other's answer, against `agent.json` and the prompt's
+   `preconditionState`.
+2. **Record both answers before talking.** Each one goes into the prompt's `labels`, keyed by
+   annotator, as `action/target`. They are never edited afterwards, even when the person who
+   gave one changes their mind. Percent agreement, and Cohen's kappa once the overlap is large
+   enough, are computed from `labels` alone (Phase 4).
+3. **Then settle it, in one of three ways:**
+   - **One answer is right.** It becomes `expectedAction` / `expectedTarget`, and `note`
+     says why the other was rejected, such as "closing the gate is not a registered action".
+   - **Both are right, with the same action and different targets.** Make it an open choice:
+     `expectedTarget` as a list of both.
+   - **Neither side can convince the other.** The prompt is ambiguous, so it measures the
+     prompt rather than the model. Rewrite the stimulus or observations so one answer is
+     right, as a new prompt id, and drop the old one from scoring. Its `labels` stay in the
+     agreement count.
+4. **Don't add an action or target just to settle a prompt.** `agent.json` describes the
+   agent the game has. If the agent cannot do what the stimulus asks, the answer is `none` /
+   `no_target`.
+5. **Never relabel after seeing a model's answer.** A label changed to match a run's output
+   grades the model against itself. A label found wrong later is fixed in its own commit,
+   before any run that is reported, and the commit message says why.
+
+**What would change my mind.** If agreement on the overlap stays low after ambiguous prompts
+are rewritten, the problem is the agent definition or the category, not the prompts, and
+step 3's third case would be hiding it.
 
 ### Ollama never shows the response schema to the model (10 October 2026)
 

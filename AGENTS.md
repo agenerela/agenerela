@@ -73,7 +73,7 @@ they are taken.
 | Path | Contents |
 |---|---|
 | `UnityProject/Packages/com.agenerela.framework/` | The package — everything shippable |
-| `UnityProject/Assets/Evaluation/` | The labelled prompt set, its first 54 prompts so far (#13); the benchmark harness that runs it is Phase 4 |
+| `UnityProject/Assets/Evaluation/` | The labelled prompt set, its first 54 prompts so far (#13), and `agent.json`, the agent they are measured against; its `README.md` documents the format. The benchmark harness that runs it is Phase 4 |
 | `Demos/<Game>/` | Demo games — one full Unity project each, loading the package by relative path (DR-010) |
 | `docs/` | Build plan, llm-wiki, screen designs and course materials — [`docs/README.md`](docs/README.md) maps them |
 | `tools/benchmarks/` | Standalone Python probes, no Unity required |
@@ -250,8 +250,12 @@ Merged so far:
 - `Demos/GreyBoxVillage` — a playable grey-box scene whose guard still answers from
   placeholder string matching, not a model (#19).
 - The first 54 evaluation prompts (#13, via #65), nine in each of six categories, in
-  `UnityProject/Assets/Evaluation/prompts/`. #66 lists what they still need before Phase 4
-  can run them.
+  `UnityProject/Assets/Evaluation/prompts/`. Its follow-up (#66, via #76) added `agent.json`,
+  the guard every prompt is measured against, so every `expectedTarget` is a registered id,
+  and rewrote the observations as facts about the world. The folder's `README.md` documents
+  the format and the category balance, and `findings.md` how annotator disagreements get
+  resolved. Still open, in #85: the real annotators' names and their own answers on the 18
+  doubly labelled prompts, and the next batch of prompts.
 - `Repo hygiene` checks for the hard rules a script can check, including "only
   `Runtime/Unity/` touches a scene" (#38, #40), and for a changed `.meta` GUID (#41). It
   still compiles no C#, so a green check does not prove `test` builds.
@@ -261,10 +265,11 @@ Not written yet: filling `DecisionTelemetry.TargetsDropped` (#81), and the rest 
 an Ollama provider that sends `JsonSchemaSerializer`'s output. Phase 1 was pure C# with
 EditMode tests and no Ollama, on purpose.
 
-Open groundwork beside Phase 2: the demo games, one sub-issue each under #47, starting with
-the GreyBoxStrategy grey box (#20). Code two games share moves into `Demos/Shared/` once a
-second game needs it (#14). The asset server those games draw on (`tools/comfyui/`) is set up
-on the RTX 5080 machine. Its first run there found four faults, fixed in #71, and all three
+Open groundwork beside Phase 2: the evaluation set's real annotators and next batch of
+prompts (#85), and the demo games, one sub-issue each under #47, starting with the
+GreyBoxStrategy grey box (#20). Code two games share moves into `Demos/Shared/` once a second
+game needs it (#14). The asset server those games draw on (`tools/comfyui/`) is set up on the
+RTX 5080 machine. Its first run there found four faults, fixed in #71, and all three
 workflows have made a test asset; #72 moved the image workflow to Z-Image Turbo's NVFP4
 build, about twice as fast there.
 
