@@ -353,8 +353,11 @@ async function build() {
       await iconDot(s, px + 0.25, y, 0.26, ic.check);
       text(s, gains[i], { x: px + 0.65, y: y - 0.04, w: pw - 0.9, h: 0.46, size: S.body, color: C.white });
     }
-    text(s, "83 → 108", { x: px + 0.25, y: 3.88, w: pw - 0.5, h: 0.5, size: 28, bold: true, color: C.white });
-    text(s, "correct of 130, small local model, without and with our confidence check",
+    s.addText([
+      { text: "83 → 108", options: { fontFace: F.sans, fontSize: 28, bold: true, color: C.white } },
+      { text: " of 130", options: { fontFace: F.sans, fontSize: 18, bold: true, color: C.onDark } },
+    ], { x: px + 0.25, y: 3.88, w: pw - 0.3, h: 0.5, margin: 0, valign: "bottom", isTextBox: true });
+    text(s, "prompts correct, small local model, without and with our confidence check",
       { x: px + 0.25, y: 4.4, w: pw - 0.5, h: 0.5, size: S.small, color: C.onDark });
     caption(s, "Cost at Flash-Lite pricing, 6 decisions a minute [1, §5]; 83 → 108 of 130 prompts, qwen3.5 2B via Ollama, Oct 2026 [1, DR-016].");
     notes(s, [
@@ -650,7 +653,7 @@ async function build() {
     chips(s, [
       ["Two guardrails before the model.", "The list limits what it can say; the prompt shows how to refuse."],
       ["One after it, on every decision.", "If under 80% of its choice stayed on the list, nothing runs."],
-      ["Measured on 130 prompts.", "2B: 83 → 108 correct. A name check got 97 and refused 29 good requests."],
+      ["Measured on 130 prompts.", "2B: 83 → 108 correct."],
     ], 4.5, 0.64);
     caption(s, "Figure 10. Three guardrails, checked on every decision; results from our probe, Oct 2026 [1, §2.5, DR-016].");
     notes(s, [
