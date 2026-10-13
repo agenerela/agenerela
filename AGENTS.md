@@ -77,6 +77,7 @@ they are taken.
 | `Demos/<Game>/` | Demo games — one full Unity project each, loading the package by relative path (DR-010) |
 | `docs/` | Build plan, llm-wiki, screen designs and course materials — [`docs/README.md`](docs/README.md) maps them |
 | `tools/benchmarks/` | Standalone Python probes, no Unity required |
+| `tools/branding/` | The logo as 3D-printable pins and signs, 4K stills and a 4K animation with sound, all built in Blender from the logo's traced geometry |
 | `tools/comfyui/` | The asset server: ComfyUI in Docker on the lead's RTX 5080 machine, making 3D models, sounds and images for the demo games, and `comfy.py`, which agents call it with |
 
 ## Working conventions
