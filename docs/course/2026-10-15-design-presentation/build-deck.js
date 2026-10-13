@@ -226,30 +226,57 @@ async function build() {
   // 3 ── Motivation: importance ──────────────────────────────────────────────
   {
     const s = pres.addSlide();
-    header(s, 3, "MOTIVATION · WHY IT MATTERS", "Why game actors need this", TEAM.yevhen);
-    const cols = [
-      [ic.branch, "Hand-built selection doesn't scale", "Developers pick an actor's next behaviour with hand-written condition trees. Every new situation means more branches."],
-      [ic.chat, "Situations are open-ended", "A turn report, a game event or a player's line: no tree has a branch for each, yet the actor must still choose sensibly."],
-      [ic.flag, "Not every actor is a character", "Factions, colonies and countries choose moves too, with no body and no voice. Character tools don't fit them."],
-    ];
-    for (let i = 0; i < 3; i++) {
-      const [img, h, b] = cols[i];
-      const x = 0.5 + i * 3.05;
-      await iconDot(s, x, 1.2, 0.42, img);
-      text(s, h, { x: x + 0.55, y: 1.24, w: 2.4, h: 0.4, size: S.head, bold: true, valign: "middle" });
-      text(s, b, { x, y: 1.72, w: 2.85, h: 0.85, size: S.body, color: C.ink2 });
-    }
-    figure(s, "02-agents", 0.5, 2.8, 9.0, 4.0, "A guard you talk to and a country with no body, both driven through Agenerela with the same API and the same checks.");
-    caption(s, "Figure 1. Two very different actors, each an `Agent` in our code: our first two demo games. Scenes and moves are illustrative [2].");
+    header(s, 3, "MOTIVATION · WHY IT MATTERS", "Why game actors need an LLM", TEAM.yevhen);
+
+    // Figure 1, drawn here: the game asks, the model makes the high-level choice, the game's
+    // own code carries it out.
+    const fx = 0.5, fw = 5.0, cx = fx + fw / 2;
+    const chipRow = (labels, y, w, fill, color, face) => labels.forEach((l, i) => {
+      s.addText(l, {
+        shape: pres.shapes.ROUNDED_RECTANGLE, rectRadius: 0.06, x: fx + 0.2 + i * (w + 0.1), y, w, h: 0.3,
+        fill: { color: fill }, line: { color: fill }, fontFace: face, fontSize: S.cap, color,
+        align: "center", valign: "middle", margin: 0,
+      });
+    });
+    const down = (y, label) => {
+      s.addShape(pres.shapes.LINE, { x: cx, y, w: 0, h: 0.24, line: { color: C.ink3, width: 1.5, endArrowType: "triangle" } });
+      if (label) text(s, label, { x: cx + 0.15, y: y + 0.02, w: 2.2, h: 0.2, size: S.cap, italic: true, color: C.ink3 });
+    };
+
+    s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: fx, y: 1.2, w: fw, h: 0.62, rectRadius: 0.08, fill: { color: C.white }, line: { color: C.ink3, width: 1, dashType: "dash" } });
+    text(s, "THE GAME ASKS", { x: fx + 0.2, y: 1.3, w: 3, h: 0.18, size: 8.5, bold: true, color: C.ink3, cs: 1.5 });
+    text(s, "a player's line  ·  a game event  ·  a turn report", { x: fx + 0.2, y: 1.52, w: fw - 0.4, h: 0.22, size: S.small, color: C.ink2 });
+    down(1.86);
+
+    s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: fx, y: 2.14, w: fw, h: 1.18, rectRadius: 0.08, fill: { color: C.blue }, line: { color: C.blue } });
+    text(s, "HIGH LEVEL · WHAT TO DO NEXT", { x: fx + 0.2, y: 2.26, w: 3, h: 0.18, size: 8.5, bold: true, color: C.white, cs: 1.5 });
+    text(s, "a few times a minute", { x: fx + 2.8, y: 2.26, w: 2.0, h: 0.18, size: S.cap, color: C.blueLt, align: "right" });
+    text(s, "A language model chooses, through Agenerela", { x: fx + 0.2, y: 2.5, w: fw - 0.4, h: 0.28, size: S.head, bold: true, color: C.white });
+    chipRow(["move_to · tower", "attack · bandit", "send_envoy · tal"], 2.9, 1.47, C.white, C.blue, F.mono);
+    down(3.36, "one legal action");
+
+    s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: fx, y: 3.64, w: fw, h: 1.18, rectRadius: 0.08, fill: { color: C.fill }, line: { color: C.fill } });
+    text(s, "LOW LEVEL · HOW TO DO IT", { x: fx + 0.2, y: 3.76, w: 3, h: 0.18, size: 8.5, bold: true, color: C.ink3, cs: 1.5 });
+    text(s, "every frame", { x: fx + 2.8, y: 3.76, w: 2.0, h: 0.18, size: S.cap, color: C.ink3, align: "right" });
+    text(s, "The game's own code carries it out", { x: fx + 0.2, y: 4.0, w: fw - 0.4, h: 0.28, size: S.head, bold: true });
+    chipRow(["behaviour tree", "NavMesh", "animation", "physics"], 4.4, 1.08, C.white, C.ink2, F.sans);
+
+    points(s, [
+      ["Hand-built trees don't scale", "Every new situation needs another branch written by hand, and the top-level choice grows fastest."],
+      ["Situations are open-ended", "No tree has a branch for every player line or turn report. A language model reads the intent."],
+      ["Deciding is the hard part", "Moving and animating are solved. Choosing what to do next, sensibly, is what still takes hand-writing."],
+    ], 5.85, 1.25, 3.65, 1.22);
+    caption(s, "Figure 1. The model makes the high-level choice; the game's own code carries it out. Actions are illustrative [1, §5].");
     notes(s, [
       "SPEAKER: Yevhen Mishchenko · about 35 seconds",
       "",
-      "- One word first: anything in a game that decides what to do, a guard or a country, we call an actor. In our code it's the Agent class.",
-      "- Today developers pick an actor's next behaviour with hand-written condition trees, and every new situation means more branches.",
-      "- And situations are open-ended: a turn report, a game event, sometimes a player's line.",
-      "- Left, a guard: 'Attack Godzilla' should be refused, because there is no Godzilla. Right, a country: no body, no voice. One framework drives both.",
+      "- Today developers script what an actor does next with hand-written trees and state machines, and every new situation means another branch.",
+      "- And situations are open-ended: a player's line, a game event, a turn report. No tree has a branch for each one; a language model can read what's meant.",
+      "- Moving and animating are solved. The hard part is the big choice: what to do next. (Point at the figure.) So the model makes only that choice, a few times a minute, and the game's own code carries it out every frame.",
       "",
       "If asked 'Do you replace behaviour trees?': No. A tree ticks in microseconds for free. We replace only the top-level selection node, where hand-written trees grow combinatorially, and a tree can call Agenerela.",
+      "If asked 'Isn't a model too slow?': It decides a few times a minute, not every frame: about 0.7 seconds a decision for the small model on our laptop this month.",
+      "If asked 'Why not let the model control everything?': It never touches the game. It picks one of the actions the developer registered, and the game checks it and runs it.",
     ]);
   }
 
