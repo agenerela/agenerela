@@ -1,0 +1,18 @@
+# Blank issues stay enabled - with a small team, forcing a form onto every
+# half-formed thought costs more than it saves.
+blank_issues_enabled: true
+
+contact_links:
+  - name: Read the build plan first
+    url: https://github.com/agenerela/agenerela/blob/test/docs/FRAMEWORK_BUILD_PLAN.md
+    about: >
+      Architecture, phases and decision records. Appendix A lists changes that were
+      measured and made things worse - check there before proposing one.
+
+  - name: Measured findings
+    url: https://github.com/agenerela/agenerela/blob/test/docs/llm-wiki/findings.md
+    about: What we have learned so far, including the open questions inherited from the prototype.
+
+  - name: How to contribute
+    url: https://github.com/agenerela/agenerela/blob/test/CONTRIBUTING.md
+    about: Setup order, branch workflow, and the bar for any change that touches accuracy.

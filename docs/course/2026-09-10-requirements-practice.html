@@ -1,0 +1,609 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found]){display:none!important}</style></head><body>
+<title>Agenerela Requirements Practice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+  :root {
+    --ground: #F3F4F8;
+    --surface: #FFFFFF;
+    --ink: #151A2B;
+    --muted: #586074;
+    --rule: #D9DCE6;
+    --code-bg: #ECEEF5;
+    --accent: #2A4BB0;
+    --on-accent: #FFFFFF;
+    --should: #9A5B00;
+    --display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+    --gutter: 64px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0E1018;
+      --surface: #161926;
+      --ink: #E2E5EF;
+      --muted: #9AA0B4;
+      --rule: #2A2E3F;
+      --code-bg: #22263B;
+      --accent: #9DB0F4;
+      --on-accent: #10131F;
+      --should: #E4A94A;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0E1018;
+    --surface: #161926;
+    --ink: #E2E5EF;
+    --muted: #9AA0B4;
+    --rule: #2A2E3F;
+    --code-bg: #22263B;
+    --accent: #9DB0F4;
+    --on-accent: #10131F;
+    --should: #E4A94A;
+  }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 16px;
+    line-height: 1.55;
+  }
+  .page { max-width: 1160px; margin: 0 auto; padding: 44px 28px 88px; }
+
+  /* Masthead */
+  .masthead { display: grid; gap: 14px; max-width: 780px; margin-bottom: 44px; }
+  .eyebrow, .label {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0;
+  }
+  h1 {
+    font-family: var(--display);
+    font-stretch: 76%;
+    font-weight: 700;
+    font-size: clamp(32px, 4.6vw, 48px);
+    line-height: 1.02;
+    letter-spacing: -.012em;
+    text-wrap: balance;
+    margin: 0;
+  }
+  .lede { font-size: 17.5px; color: var(--muted); max-width: 62ch; margin: 0; }
+  .facts {
+    display: flex; flex-wrap: wrap; gap: 10px 28px;
+    margin: 6px 0 0; padding-top: 14px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--mono); font-size: 12.5px; color: var(--muted);
+  }
+  .facts div { display: flex; gap: 8px; align-items: baseline; }
+  .facts dt { color: var(--muted); }
+  .facts dd { margin: 0; color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+  .summary { font-family: var(--mono); font-size: 12.5px; color: var(--muted); margin: 0; font-variant-numeric: tabular-nums; }
+
+  /* Modal verbs: the one encoding that matters on this page */
+  .m {
+    font-weight: 600;
+    text-decoration-line: underline;
+    text-underline-offset: 3px;
+  }
+  .m-shall { color: var(--accent); text-decoration-style: solid; text-decoration-thickness: 1.5px; }
+  .m-should { color: var(--should); text-decoration-style: dotted; text-decoration-thickness: 2px; }
+  code {
+    font-family: var(--mono);
+    font-size: .84em;
+    background: var(--code-bg);
+    padding: .06em .32em;
+    border-radius: 3px;
+    overflow-wrap: anywhere;
+  }
+
+  /* Layout */
+  .layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 52px; align-items: start; }
+  .rail { position: sticky; top: 24px; display: grid; gap: 12px; }
+  .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; position: relative; }
+  .steps::before {
+    content: ""; position: absolute; left: 11px; top: 18px; bottom: 18px;
+    width: 1px; background: var(--rule);
+  }
+  .steps a {
+    display: grid; grid-template-columns: 23px minmax(0, 1fr); gap: 12px;
+    padding: 8px 8px 8px 0; color: inherit; text-decoration: none; border-radius: 6px;
+  }
+  .steps .num {
+    position: relative; z-index: 1;
+    width: 23px; height: 23px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--ground); border: 1px solid var(--rule);
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+  }
+  .steps .stage { display: block; font-family: var(--mono); font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+  .steps .who { display: block; font-family: var(--display); font-stretch: 88%; font-weight: 650; font-size: 16px; line-height: 1.25; }
+  .steps .feat { display: block; font-size: 13.5px; line-height: 1.35; color: var(--muted); }
+  .steps a:hover .who, .steps a[aria-current="true"] .who { color: var(--accent); }
+  .steps a[aria-current="true"] .num { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .steps a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Posts */
+  .posts { display: grid; gap: 60px; min-width: 0; }
+  .post { display: grid; gap: 14px; scroll-margin-top: 24px; }
+  .post-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+  .post-head h2 {
+    font-family: var(--display); font-stretch: 78%; font-weight: 700;
+    font-size: 30px; line-height: 1.08; margin: 3px 0 4px;
+  }
+  .post-head .meta { font-family: var(--mono); font-size: 12.5px; color: var(--muted); margin: 0; }
+  .tools { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }
+  .tally { font-family: var(--mono); font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .copy {
+    font-family: var(--display); font-weight: 600; font-size: 14px; letter-spacing: .01em;
+    padding: 9px 18px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent);
+  }
+  .copy:hover { filter: brightness(1.1); }
+  .copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .copy[data-state="done"] { background: transparent; color: var(--accent); filter: none; }
+  .copy-status { font-family: var(--mono); font-size: 12px; color: var(--muted); flex-basis: 100%; text-align: right; min-height: 0; }
+  .copy-status:empty { display: none; }
+
+  .sheet {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 26px clamp(18px, 4vw, 38px) 10px;
+  }
+  .feature-block { display: grid; gap: 6px; padding-bottom: 20px; }
+  .feature { margin: 0; font-size: 17.5px; max-width: 64ch; }
+  .fname { font-family: var(--display); font-stretch: 86%; font-weight: 700; }
+  .convention { margin: 2px 0 0; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .convention .m { font-family: var(--serif); font-size: 14px; }
+
+  .ur { border-top: 1px solid var(--rule); padding: 20px 0 22px; display: grid; gap: 12px; }
+  .row { display: grid; grid-template-columns: var(--gutter) minmax(0, 1fr); gap: 0; }
+  .rid { font-family: var(--mono); font-size: 12.5px; padding-top: 4px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .ur > .row .rid { color: var(--ink); font-weight: 500; }
+  .ur-name { font-family: var(--display); font-stretch: 88%; font-weight: 650; font-size: 15.5px; margin: 0 0 3px; }
+  .ur-text { margin: 0; font-size: 17px; max-width: 64ch; }
+  .sr-cap { margin: 4px 0 0 var(--gutter); }
+  .srs { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
+  .srs p { margin: 0; font-size: 15.5px; max-width: 66ch; }
+
+  .foot { margin-top: 56px; padding-top: 14px; border-top: 1px solid var(--rule); font-family: var(--mono); font-size: 12px; color: var(--muted); max-width: 90ch; }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; gap: 32px; }
+    .rail { position: static; }
+    .steps { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 4px 16px; }
+    .steps::before { display: none; }
+  }
+  @media (max-width: 560px) {
+    .page { padding: 28px 16px 64px; }
+    :root { --gutter: 52px; }
+    .tools { width: 100%; justify-content: space-between; }
+    .copy-status { text-align: left; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
+    .copy { transition: background-color .15s, color .15s; }
+  }
+</style>
+
+<div class="page">
+  <header class="masthead">
+    <p class="eyebrow">COMP 490 · Section 04 · In-class practice · due end of day</p>
+    <h1>Agenerela requirements, one reply per teammate</h1>
+    <p class="lede">Each of the six features below is the part of the framework that person owns on GitHub. Each reply names its feature, gives three user requirements, and traces each one to the system requirements beneath it. Find your name, press Copy post, and paste it into the Canvas reply box.</p>
+    <dl class="facts">
+      <div><dt>Feature</dt><dd>1 pt</dd></div>
+      <div><dt>User requirements</dt><dd>3 pts</dd></div>
+      <div><dt>System requirements</dt><dd>6 pts</dd></div>
+      <div><dt><span class="m m-shall">shall</span></dt><dd>mandatory</dd></div>
+      <div><dt><span class="m m-should">should</span></dt><dd>desirable</dd></div>
+    </dl>
+    <p class="summary" id="summary"></p>
+  </header>
+
+  <div class="layout">
+    <nav class="rail" aria-label="Teammates">
+      <p class="label">Developer setup path</p>
+      <ol class="steps" id="steps"></ol>
+    </nav>
+    <main class="posts" id="posts"></main>
+  </div>
+
+  <p class="foot">Names and handles come from the GitHub issue assignees on agenerela/agenerela. Requirement details follow docs/FRAMEWORK_BUILD_PLAN.md and the Phase 1 issues. Copy post places formatted text on the clipboard, so bold verbs and lists survive the paste into Canvas.</p>
+</div>
+
+<script>
+const TEAM = [
+  {
+    id: "hunter", stage: "Describe the agent", name: "Hunter", handle: "@Hunaveli",
+    issues: "Owns #2 · related #15, #17",
+    feature: {
+      name: "Agents and decision requests",
+      desc: "The core agent: how a developer describes who an agent is, asks it for a decision at a moment the game chooses, and gets a structured answer back. The same agent type serves a village guard, a companion, a country or a colony."
+    },
+    urs: [
+      {
+        name: "Describe the agent",
+        text: "The framework shall allow a game developer to describe who an agent is (its name, role, personality and goals) as data, without writing behaviour code.",
+        srs: [
+          "`AgentIdentity` shall hold `Name`, `Role`, `Personality` and `Goals` as serializable fields that can be edited in the Unity Inspector.",
+          "The framework shall include the agent’s identity in every decision request it builds for that agent.",
+          "The framework should provide an `AgentProfile` asset so that one identity and its action set can be reused by many agents."
+        ]
+      },
+      {
+        name: "The game decides when and what",
+        text: "The framework shall let the developer’s game decide when an agent makes a decision and what the agent is told, for any kind of agent: a character, a faction or a colony.",
+        srs: [
+          "`Agent` shall be a plain C# class that does not inherit from `MonoBehaviour`, so an agent can exist without a GameObject or Transform; an `AgentBehaviour` component shall be provided for agents that live in a scene.",
+          "`Agent.DecideAsync` shall accept a free-form stimulus string and an optional list of observation sentences; the framework shall not define a fixed list of situation types or decide by itself when an agent is asked.",
+          "Agent state (key/value pairs such as `isFollowing` or `atWar`) shall be readable by action handlers and guards but shall never be sent to the model; only the stimulus and the observations shall reach the prompt.",
+          "The agent should remember its most recent exchanges (by default, the last 6 turns) through a replaceable `IMemoryStrategy`, so that consecutive decisions stay consistent."
+        ]
+      },
+      {
+        name: "One predictable answer",
+        text: "The framework shall return every decision in one predictable form that the game can act on directly.",
+        srs: [
+          "`DecideAsync` shall return a `DecisionResult` that carries the `AgentDecision` together with its `DecisionTelemetry`.",
+          "`AgentDecision` shall contain exactly `ActionId`, `TargetId` and `Statement`, and shall be immutable once constructed.",
+          "`TargetId` shall be `no_target` when no target applies, and `Statement` (what the agent says or announces) shall be allowed to be empty for agents that act without speaking."
+        ]
+      }
+    ]
+  },
+  {
+    id: "tim", stage: "Author its actions", name: "Tim", handle: "@TimBrustinov",
+    issues: "Owns #4 · related #10",
+    feature: {
+      name: "Developer-authored action vocabulary",
+      desc: "The Action Definition asset a developer creates in the Unity Editor to describe one thing their agents can do (“follow the player”, “build”, “declare war”), and the worked examples the framework generates from those assets to guide the model."
+    },
+    urs: [
+      {
+        name: "Define actions without editing the framework",
+        text: "The framework shall let a game developer define the actions their agents can take, for any genre of game, without modifying the framework’s source code.",
+        srs: [
+          "The framework shall provide an `ActionDefinition` ScriptableObject that can be created from the Unity menu Create → Agenerela → Action.",
+          "Each `ActionDefinition` shall have the fields `Id` (lower_snake_case), `Description`, `RequiresTarget`, `ExampleStimulus` and `PreferredExampleTargets`.",
+          "The action vocabulary shall be data, not a compiled enum: adding an action shall require only creating an asset and registering it with a handler."
+        ]
+      },
+      {
+        name: "Catch mistakes in the Editor",
+        text: "The framework shall warn the developer in the Unity Editor when an action is defined incorrectly.",
+        srs: [
+          "`ActionDefinition` shall log a warning, linked to the asset, whenever its `Id` is empty or contains spaces or uppercase letters.",
+          "Every field shall show an Inspector tooltip; the `Description` tooltip shall tell the developer to keep it to one short clause of similar length to their other actions.",
+          "The Editor should warn when an action’s `Description` is more than twice the average length of the other actions’ descriptions, because a long description measurably biases small models toward that action."
+        ]
+      },
+      {
+        name: "Examples built from the developer’s actions",
+        text: "The framework shall use the developer’s action definitions to show the model worked examples of when each action applies, with no extra authoring.",
+        srs: [
+          "For each request, the framework shall build a few-shot example block from every currently available action’s `ExampleStimulus`, filling its `{0}` placeholder with one of that action’s `PreferredExampleTargets`.",
+          "Example targets shall be drawn only from an action’s `PreferredExampleTargets` that are currently registered, never from arbitrary targets, which prevents nonsense such as “Pick up the Blacksmith”.",
+          "The block shall include one negative example that refuses an impossible request with action `none` and target `no_target`.",
+          "The framework should automatically check that no example stimulus repeats a prompt from the evaluation prompt set, since reusing evaluation prompts as examples invalidates accuracy results."
+        ]
+      }
+    ]
+  },
+  {
+    id: "jay", stage: "Bind and gate actions", name: "Jay", handle: "@JaySlifer",
+    issues: "Owns #6, #7, #8",
+    feature: {
+      name: "Action availability and the decision schema",
+      desc: "Connecting each action to the game code that performs it, working out which actions are legal at this moment, and describing the allowed answer to the model so that an illegal choice cannot even be expressed."
+    },
+    urs: [
+      {
+        name: "Connect actions to game code",
+        text: "The framework shall let a developer connect each action to the game code that performs it, and let that code decide when the action is allowed.",
+        srs: [
+          "The framework shall define an `IActionHandler` interface with two methods: `IsAvailable(AgentContext)` and `Execute(AgentContext, AgentDecision)`.",
+          "`ActionRegistry.Register(ActionDefinition, IActionHandler)` shall reject a duplicate action id or a null handler with a clear error message, and the registry shall list its actions in a stable order.",
+          "The framework shall call a handler’s `Execute` only after every validation guard has passed, including a re-check that the returned action id is registered and currently available, because the model’s output is treated as untrusted."
+        ]
+      },
+      {
+        name: "Offer only what makes sense now",
+        text: "The framework shall only offer the model actions that make sense in the agent’s current situation.",
+        srs: [
+          "The list of available actions shall be recomputed for every decision by calling each handler’s `IsAvailable`, and shall never be cached between decisions.",
+          "An unavailable action shall be left out of the action list sent to the model entirely, rather than forbidden by a written instruction; for example, an agent that is already following the player shall never be offered `follow_player`.",
+          "Every action whose `RequiresTarget` is true shall be unavailable while the agent has no registered targets."
+        ]
+      },
+      {
+        name: "One answer format for every model",
+        text: "The framework shall describe the answer it expects from the model in one provider-independent format that follows the team’s measured accuracy rules.",
+        srs: [
+          "`DecisionSchema` shall contain no JSON Schema or GBNF syntax; separate serializers shall translate it for each kind of provider.",
+          "The schema’s fields shall be ordered `action`, then `target`, then `statement`, with no reasoning or chain-of-thought field before `action`.",
+          "The framework shall add a `none` action (“Take no action”) to every schema automatically and always list it last.",
+          "The developer should be able to override the default field descriptions that are sent to the model."
+        ]
+      }
+    ]
+  },
+  {
+    id: "hero", stage: "Register targets", name: "Hero", handle: "@phupanawat",
+    issues: "Owns #5 · grounding guard is Phase 3",
+    feature: {
+      name: "Target registry and target grounding",
+      desc: "The list of things an agent is allowed to refer to (objects, characters, places, or abstract things such as a rival faction), plus the check that stops an agent from acting on something that was never actually mentioned."
+    },
+    urs: [
+      {
+        name: "Manage what an agent can refer to",
+        text: "The framework shall let game code add and remove, while the game is running, the things an agent is allowed to refer to, including things that are not scene objects, such as a faction or a trade route.",
+        srs: [
+          "`TargetRegistry` shall provide `Register(id, target)`, `Unregister(id)`, `TryGet(id, out target)`, `Contains(id)` and `Count`.",
+          "The registry shall store targets as `object` rather than `Transform`, so that targets with no scene presence can be registered.",
+          "The registry shall return ids in stable insertion order and shall reject duplicate or malformed ids with a clear error message."
+        ]
+      },
+      {
+        name: "Unregistered targets cannot be chosen",
+        text: "The framework shall make it impossible for the model to choose a target that is not currently registered.",
+        srs: [
+          "The schema’s `target` field shall be an enumeration built from the registry’s current ids plus a `no_target` sentinel value.",
+          "Whenever at least one target is registered, `target` shall be a required field; “nothing applies” shall be expressed as `no_target`, never as an empty string or a missing field.",
+          "When the registry is empty, the `target` field shall be left out of the schema entirely."
+        ]
+      },
+      {
+        name: "No acting on what was never mentioned",
+        text: "The framework shall stop an agent from acting on a target that the stimulus never mentioned; for example, an agent told to “attack the dragon” in a scene with no dragon shall not attack the training dummy instead.",
+        srs: [
+          "For an action that requires a target, `TargetGroundingGuard` shall pass the decision only if the target’s id appears in the stimulus text (as an exact match, or after splitting snake_case and camelCase into words); otherwise it shall rewrite the decision to `none`.",
+          "A grounding rewrite shall be recorded in the decision’s telemetry, naming the guard that fired, and shall count as a contained refusal rather than an error.",
+          "With the grounding guard enabled, a 2-billion-parameter model shall pass at least 95% of the impossible-request test suite.",
+          "Each target should accept optional aliases (for example, “the dummy” for `training_dummy`) that the grounding guard also recognizes."
+        ]
+      }
+    ]
+  },
+  {
+    id: "yevhen", stage: "Connect a model", name: "Yevhen", handle: "@Draganoider",
+    issues: "Owns #12 · merged in PR #21",
+    feature: {
+      name: "Swappable language-model providers",
+      desc: "The layer that sends each decision request to a language model and brings the answer back, whether the model runs on a local server during development, on a cloud service, or inside the shipped game itself."
+    },
+    urs: [
+      {
+        name: "Switch backends without code changes",
+        text: "The framework shall allow a game developer to change which language-model service their agents use without changing their agents or their game code.",
+        srs: [
+          "The framework shall route every model request through a single `ILLMProvider` interface (`RequestAsync(DecisionRequest, CancellationToken)`); agent and game code shall depend only on this interface.",
+          "Each provider shall declare its `ProviderCapabilities` (constrained decoding, property ordering, empty-string enum support), and the framework shall adapt each request to those capabilities rather than assume one schema dialect.",
+          "Adding a new backend shall require only a new provider class and its configuration, with no change to framework source code, and every provider shall pass a shared provider conformance test suite.",
+          "A cloud provider shall read its API key from a git-ignored `.env` file, send it only in an HTTP header (never in a URL), and redact it from all log and error output."
+        ]
+      },
+      {
+        name: "Game stays responsive, failures are reported",
+        text: "The framework shall keep the game running smoothly while an agent waits for the model, and shall report a backend problem to the developer instead of crashing the game.",
+        srs: [
+          "`RequestAsync` shall run asynchronously using Unity’s `Awaitable` and shall not block the main thread while a request is in flight.",
+          "Requests from several agents shall pass through a request queue that delivers each response only to the agent that asked, and each request shall be cancellable through its `CancellationToken`.",
+          "A backend failure (server not running, model not installed, timeout, malformed response) shall be returned as a typed error result, never as an unhandled exception.",
+          "On the team’s reference machine (8 GB laptop GPU, 2-billion-parameter model through Ollama), one decision round-trip shall complete in under 5 seconds."
+        ]
+      },
+      {
+        name: "Ship without a server",
+        text: "The framework shall allow a finished game to run its agents entirely on the player’s computer, with no internet connection and no separately installed AI server.",
+        srs: [
+          "The framework shall provide an in-process provider, `LLMUnityProvider`, that runs a local GGUF model inside the built game through the LLMUnity library.",
+          "A `GbnfSerializer` shall translate the same `DecisionSchema` into a GBNF grammar that enforces the same constraints as the JSON Schema path (allowed actions, the `no_target` sentinel, field order), verified against shared test fixtures.",
+          "LLMUnity shall be an optional dependency, compiled only when it is installed and pinned to an exact version, so developers who use only Ollama or a cloud service install nothing extra.",
+          "In-process decisions should score within the measured noise floor (about 10 percentage points) of the Ollama provider on the same evaluation subset."
+        ]
+      }
+    ]
+  },
+  {
+    id: "maxim", stage: "Watch and measure", name: "Maxim", handle: "@MaximGolubitsky",
+    issues: "Owns #3 · merged in PR #23",
+    feature: {
+      name: "Decision telemetry and outcome classification",
+      desc: "Recording how every agent decision was made (time taken, tokens used, provider, which safety checks fired) and classifying evaluated decisions by the kind of result they were, so the team can measure accuracy honestly and developers can debug their agents."
+    },
+    urs: [
+      {
+        name: "A record of every decision",
+        text: "The framework shall record how every agent decision was made, so a developer can find out why an agent did what it did.",
+        srs: [
+          "Every call to `DecideAsync` shall produce a `DecisionTelemetry` record, including calls that fail.",
+          "`DecisionTelemetry` shall contain the latency in seconds, prompt and completion token counts, the provider name, the framework version (`AgenerelaInfo.Version`) and the names of the guards that fired, in the order they ran.",
+          "Telemetry shall be returned together with the decision in `DecisionResult`, and recording it shall not be optional."
+        ]
+      },
+      {
+        name: "Classify results, not just right or wrong",
+        text: "The framework shall classify each evaluated decision by the kind of result it was, not only as right or wrong.",
+        srs: [
+          "`DecisionOutcome` shall have exactly five documented values: `Correct`, `WrongLegalAction`, `ContainedByGuard`, `RejectedWhenActionExpected` and `PipelineError`.",
+          "The outcome shall be empty (null) during normal gameplay and shall be set only by the evaluation harness, by comparing the decision against a labelled test prompt.",
+          "A transport or parse failure shall be classified as `PipelineError` and shall carry no decision.",
+          "Evaluation reports shall show results for each outcome category separately, never as a single accuracy percentage."
+        ]
+      },
+      {
+        name: "Watch and export decisions",
+        text: "The framework should let a developer watch agent decisions live in the Unity Editor and export them for later analysis.",
+        srs: [
+          "The Editor package should provide a Decision Log window that lists each decision as it happens: agent, stimulus, chosen action and target, guard verdicts, latency and token counts.",
+          "The Decision Log should let the developer filter entries by agent and by outcome.",
+          "Telemetry records should be exportable to CSV or JSON so that two evaluation runs (an A/B comparison) can be compared outside Unity."
+        ]
+      }
+    ]
+  }
+];
+
+const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const codeHtml = s => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>");
+const showInline = s => codeHtml(s).replace(/\b(shall|should)\b/g, '<span class="m m-$1">$1</span>');
+const pasteInline = s => codeHtml(s).replace(/\b(shall|should)\b/g, "<strong>$1</strong>");
+const plainInline = s => s.replace(/`([^`]+)`/g, "$1");
+const modalOf = s => (s.match(/\b(shall|should)\b/) || [, "shall"])[1];
+
+function tally(m) {
+  const all = m.urs.flatMap(u => [u.text, ...u.srs]);
+  const should = all.filter(t => modalOf(t) === "should").length;
+  return { shall: all.length - should, should, srs: m.urs.reduce((n, u) => n + u.srs.length, 0) };
+}
+
+/* What lands on the clipboard: class-free HTML that Canvas keeps, plus a plain-text twin. */
+function pasteHtml(m) {
+  let h = `<p><strong>Feature: ${esc(m.feature.name)}.</strong> ${pasteInline(m.feature.desc)}</p>`;
+  h += `<p><em>Convention: <strong>shall</strong> = mandatory requirement; <strong>should</strong> = desirable requirement.</em></p>`;
+  m.urs.forEach((u, i) => {
+    const n = i + 1;
+    h += `<p><strong>UR${n}. ${esc(u.name)}.</strong> ${pasteInline(u.text)}</p>`;
+    h += `<p>System requirements for UR${n}:</p><ul>`;
+    u.srs.forEach((s, j) => { h += `<li><strong>SR${n}.${j + 1}</strong> ${pasteInline(s)}</li>`; });
+    h += `</ul>`;
+  });
+  return h;
+}
+function pasteText(m) {
+  const lines = [`Feature: ${m.feature.name}. ${plainInline(m.feature.desc)}`, "",
+    "Convention: shall = mandatory requirement; should = desirable requirement.", ""];
+  m.urs.forEach((u, i) => {
+    const n = i + 1;
+    lines.push(`UR${n}. ${u.name}. ${plainInline(u.text)}`, `System requirements for UR${n}:`);
+    u.srs.forEach((s, j) => lines.push(`  SR${n}.${j + 1} ${plainInline(s)}`));
+    lines.push("");
+  });
+  return lines.join("\n").trim();
+}
+
+function renderSheet(m) {
+  let h = `<div class="feature-block">
+    <p class="label">Feature</p>
+    <p class="feature"><strong class="fname">${esc(m.feature.name)}.</strong> ${showInline(m.feature.desc)}</p>
+    <p class="convention">Convention: <span class="m m-shall">shall</span> = mandatory requirement · <span class="m m-should">should</span> = desirable requirement</p>
+  </div>`;
+  m.urs.forEach((u, i) => {
+    const n = i + 1;
+    h += `<section class="ur" aria-label="User requirement ${n}">
+      <div class="row"><span class="rid">UR${n}</span><div>
+        <p class="ur-name">${esc(u.name)}</p>
+        <p class="ur-text">${showInline(u.text)}</p>
+      </div></div>
+      <p class="label sr-cap">System requirements for UR${n}</p>
+      <ol class="srs">${u.srs.map((s, j) =>
+        `<li class="row"><span class="rid">SR${n}.${j + 1}</span><p>${showInline(s)}</p></li>`).join("")}</ol>
+    </section>`;
+  });
+  return h;
+}
+
+const stepsEl = document.getElementById("steps");
+const postsEl = document.getElementById("posts");
+let totalSr = 0, totalShall = 0, totalShould = 0;
+
+TEAM.forEach((m, i) => {
+  const t = tally(m);
+  totalSr += t.srs; totalShall += t.shall; totalShould += t.should;
+
+  const li = document.createElement("li");
+  li.innerHTML = `<a href="#${m.id}" data-id="${m.id}">
+    <span class="num">${i + 1}</span>
+    <span><span class="stage">${esc(m.stage)}</span><span class="who">${esc(m.name)}</span><span class="feat">${esc(m.feature.name)}</span></span>
+  </a>`;
+  stepsEl.appendChild(li);
+
+  const sec = document.createElement("section");
+  sec.className = "post";
+  sec.id = m.id;
+  sec.innerHTML = `<header class="post-head">
+      <div>
+        <p class="label">Step ${i + 1} · ${esc(m.stage)}</p>
+        <h2>${esc(m.name)}</h2>
+        <p class="meta">${esc(m.handle)} · ${esc(m.issues)}</p>
+      </div>
+      <div class="tools">
+        <span class="tally">${t.shall} shall · ${t.should} should</span>
+        <button type="button" class="copy">Copy post</button>
+        <span class="copy-status" aria-live="polite"></span>
+      </div>
+    </header>
+    <article class="sheet">${renderSheet(m)}</article>`;
+  postsEl.appendChild(sec);
+
+  const btn = sec.querySelector(".copy");
+  const status = sec.querySelector(".copy-status");
+  const sheet = sec.querySelector(".sheet");
+  btn.addEventListener("click", () => copyPost(m, btn, status, sheet));
+});
+
+document.getElementById("summary").textContent =
+  `${TEAM.length} features · ${TEAM.length * 3} user requirements · ${totalSr} system requirements · ${totalShall} shall · ${totalShould} should`;
+
+async function copyPost(m, btn, status, sheet) {
+  const html = pasteHtml(m), text = pasteText(m);
+  let ok = false;
+  try {
+    if (navigator.clipboard && window.ClipboardItem) {
+      await navigator.clipboard.write([new ClipboardItem({
+        "text/html": new Blob([html], { type: "text/html" }),
+        "text/plain": new Blob([text], { type: "text/plain" })
+      })]);
+      ok = true;
+    }
+  } catch (e) { ok = false; }
+
+  if (!ok) {
+    const holder = document.createElement("div");
+    holder.innerHTML = html;
+    holder.style.cssText = "position:fixed;left:-10000px;top:0;font:16px Arial,sans-serif;color:#000;background:#fff;";
+    document.body.appendChild(holder);
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(holder);
+    sel.removeAllRanges(); sel.addRange(range);
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    sel.removeAllRanges();
+    holder.remove();
+  }
+
+  if (ok) {
+    btn.textContent = "Copied";
+    btn.dataset.state = "done";
+    status.textContent = "";
+    setTimeout(() => { btn.textContent = "Copy post"; delete btn.dataset.state; }, 2200);
+  } else {
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(sheet);
+    sel.removeAllRanges(); sel.addRange(range);
+    status.textContent = "Clipboard access is blocked here. The post is selected: press Ctrl+C (Cmd+C on Mac).";
+  }
+}
+
+/* Mark the teammate whose post is in view. */
+const links = [...stepsEl.querySelectorAll("a")];
+const setCurrent = id => links.forEach(a => a.setAttribute("aria-current", String(a.dataset.id === id)));
+setCurrent(TEAM[0].id);
+if ("IntersectionObserver" in window) {
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) setCurrent(e.target.id); });
+  }, { rootMargin: "-25% 0px -65% 0px" });
+  document.querySelectorAll(".post").forEach(s => io.observe(s));
+}
+</script>
+
+</body></html>

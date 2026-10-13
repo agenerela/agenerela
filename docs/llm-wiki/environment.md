@@ -2,31 +2,96 @@
 
 ## Unity
 
-**6000.3.23f1** — pinned. `UnityProject/ProjectSettings/ProjectVersion.txt` is committed
-and is what enforces this. Nobody upgrades unilaterally: opening the project in a newer
-patch release rewrites that file and can silently upgrade serialized assets for everyone.
+**6000.3.23f1** — pinned. Every project's `ProjectSettings/ProjectVersion.txt` is
+committed and is what enforces this; CI fails if a project differs from `UnityProject/`.
+Nobody upgrades unilaterally: opening a project in a newer patch release rewrites that
+file and can silently upgrade serialized assets for everyone.
 
-Open `UnityProject/`. The framework is an *embedded* package under
+Open `UnityProject/` for framework work. The framework is an *embedded* package under
 `UnityProject/Packages/com.agenerela.framework/`, so it compiles automatically with no
 install step.
 
-## Per-machine git setup (each teammate does this once)
+Each demo game is its own Unity project under `Demos/`, loading the same package from
+disk by relative path. [`Demos/README.md`](../../Demos/README.md) covers creating one, and
+how to skip downloading the art of games you don't work on.
 
-The repo's `.gitattributes` routes Unity YAML through `unityyamlmerge`, but **that merge
-driver only works if it is also configured locally** — the attribute names a driver, git
-needs to know where it lives. Without this, scene and prefab conflicts fall back to a
-plain text merge and become unmergeable.
+### Running the EditMode tests without the editor
+
+The same run as *Test Runner → EditMode → Run All*, from a shell. It is useful for checking a
+branch, and it is how an agent reviewing a pull request can compile it (`REVIEWING.md`,
+step 4). Close any editor that has the same project folder open first: Unity lets one
+editor at a time open a project.
 
 ```bash
-git config merge.unityyamlmerge.name "Unity SmartMerge"
-git config merge.unityyamlmerge.driver '"C:/Program Files/Unity/Hub/Editor/6000.3.23f1/Editor/Data/Tools/UnityYAMLMerge.exe" merge -p "$BASE" "$REMOTE" "$LOCAL" "$MERGED"'
-git config merge.unityyamlmerge.recursive binary
+"C:/Program Files/Unity/Hub/Editor/6000.3.23f1/Editor/Unity.exe" -batchmode -nographics -projectPath <checkout>/UnityProject -runTests -testPlatform EditMode -testResults results.xml -logFile unity.log
 ```
 
-On macOS the tool is at
-`/Applications/Unity/Hub/Editor/6000.3.23f1/Unity.app/Contents/Tools/UnityYAMLMerge`.
+- Exit code 0 means every test passed and 2 means at least one failed. Any other code means
+  the run itself failed, most often on a compile error. The counts are on the `<test-run>`
+  element of `results.xml`; compiler problems are the `error CS` and `warning CS` lines in
+  `unity.log`.
+- Do not add `-quit`: `-runTests` quits on its own.
+- Give `-testResults` and `-logFile` paths with no `..` in them. Unity rejects each one
+  with `.. is not a valid directory name`; use an absolute path instead.
+- The first run in a fresh checkout imports every package and takes several minutes. Runs
+  after that are much faster.
+- To test a branch without touching your own checkout, run it in a worktree:
+  `git worktree add --detach <short path> origin/<branch>`. Remove it afterwards with
+  `git worktree remove <path>`.
+- **Keep that path short on Windows.** Under a deep folder, such as a temp directory, paths
+  in `Library/PackageCache` pass 260 characters and third-party package assets (URP, Shader
+  Graph, Input System) fail to import with `DirectoryNotFoundException`. The C# still
+  compiles and the tests still run, but the log fills with errors that are not the branch's.
+  Turning on Windows long paths does not help.
 
-Also ensure Git LFS is active (`git lfs install`) before pulling any binary assets.
+## Per-machine setup — do this BEFORE cloning
+
+Order matters for the first command.
+
+```bash
+# 1. Git LFS. Run this BEFORE `git clone`: it installs the filters that fetch real
+#    binaries during checkout. Clone without it and you get pointer files instead.
+#    Already cloned? Run `git lfs install` then `git lfs pull` to repair.
+git lfs install
+
+# 2. Unity's YAML merge driver (see note below).
+git config --global merge.unityyamlmerge.name "Unity SmartMerge"
+git config --global merge.unityyamlmerge.driver '"C:/Program Files/Unity/Hub/Editor/6000.3.23f1/Editor/Data/Tools/UnityYAMLMerge.exe" merge -p "$BASE" "$REMOTE" "$LOCAL" "$MERGED"'
+git config --global merge.unityyamlmerge.recursive binary
+```
+
+Then clone, and verify LFS worked:
+
+```bash
+git clone https://github.com/agenerela/agenerela.git
+cd agenerela && git lfs ls-files      # must list URP.png; empty means LFS was inactive
+```
+
+**Why the merge driver needs local config.** The committed `.gitattributes` says
+`*.unity merge=unityyamlmerge` — that names a driver but does not say where the
+executable is, and the path differs per machine and OS, so it cannot be committed. Each
+person configures it once. Scenes and prefabs are YAML with `fileID` cross-references;
+git's line-based merge interleaves them into files Unity cannot open or that silently
+lose objects. UnityYAMLMerge merges at the object level instead.
+
+**A wrong path fails silently** — git falls back to the line merge with no error. Verify
+with `git config --global --get merge.unityyamlmerge.driver` and check the file exists.
+
+Paths by platform:
+- Windows: `C:/Program Files/Unity/Hub/Editor/6000.3.23f1/Editor/Data/Tools/UnityYAMLMerge.exe`
+- macOS: `/Applications/Unity/Hub/Editor/6000.3.23f1/Unity.app/Contents/Tools/UnityYAMLMerge`
+
+The tool helps, but is not magic. The social rule still applies: **one person owns a
+scene at a time.** Talking prevents more conflicts than any tool resolves.
+
+## Branch workflow
+
+`test` is the default and integration branch; `main` is protected and restricted.
+
+- Branch off `test`, open pull requests **into `test`**.
+- Do not target `main` — pushes are restricted to the repository owner, and merges
+  additionally require a Code Owner review.
+- Promotion from `test` to `main` is done by the owner when `test` is in good shape.
 
 ## Local models — Ollama
 
@@ -53,6 +118,40 @@ ollama stop <other-model>
 
 Two models on one card share compute and flatten every latency measurement toward the
 same value. This has caught people out already; see the build plan Appendix A.
+
+## MCP for Unity (optional)
+
+The dev project depends on [MCP for Unity](https://github.com/CoplayDev/unity-mcp), pinned
+to one git revision (`2fcc179`) in `UnityProject/Packages/manifest.json`, so an AI agent can
+drive the editor — create objects, run tests, read the console — instead of describing what
+it would do. `Demos/GreyBoxVillage` pins the same revision.
+
+It is a development convenience, not a dependency of the framework: nothing in
+`com.agenerela.framework` references it, and it never ships to anyone installing the package.
+Only the version bump matters to everyone, so treat it like the Unity version — nobody
+changes the pin alone.
+
+To use it, open **Window ▸ MCP For Unity** in the project you have open, select local HTTP at
+`http://127.0.0.1:8080`, start the server if it is not running, and connect your client to
+the `/mcp` endpoint on that port. Keep **one** Unity project open while a client is
+connected; two editors competing for the same port is the usual reason a connection fails.
+
+## Asset server — ComfyUI (optional)
+
+3D models, sound effects and images for the demo games come from ComfyUI running in Docker
+on a separate machine with an RTX 5080, which also runs the lead's own ComfyUI. The stack
+lives in [`tools/comfyui/`](../../tools/comfyui/README.md) and keeps to its own container,
+ports (8288, 8289), image and volume. Setting that machine up is
+[`tools/comfyui/AGENT_SETUP.md`](../../tools/comfyui/AGENT_SETUP.md), for a person or an
+agent.
+
+To use it from any other machine, copy `tools/comfyui/.env.example` to `tools/comfyui/.env`
+and fill in `COMFY_URL` and `COMFY_API_TOKEN`, then run
+`python tools/comfyui/comfy.py check`. The token is the server's; carry it over by USB stick
+or a password manager, never through a chat. On the RTX 5080 machine itself, the server's own
+`.env` already holds the token; set `COMFY_URL=http://127.0.0.1:8289` there. Nothing else is
+installed: `comfy.py` uses only Python's standard library. An agent asking for assets follows
+[`tools/comfyui/AGENT_USAGE.md`](../../tools/comfyui/AGENT_USAGE.md).
 
 ## Cloud provider (optional)
 

@@ -1,0 +1,27 @@
+/* Shared look for the presentation's figures: the style of the SRS system-context figure and
+   docs/design/src/07-framework-design.html. Pages are drawn at 133.3 px per slide inch
+   (1200 px = the 9 in content width), so 18 px type lands near 10 pt on the slide. */
+html, body { margin: 0; padding: 0; background: #fff; overflow: hidden; }
+svg { display: block; }
+text { font-family: "Segoe UI", Arial, sans-serif; fill: #1c1c1c; }
+.mono { font-family: Consolas, "Cascadia Mono", monospace; }
+.cap { font-size: 13px; letter-spacing: 2px; font-weight: 700; fill: #666; }
+.h { font-size: 22px; font-weight: 700; }
+.h2 { font-size: 18px; font-weight: 700; }
+.b { font-size: 17px; fill: #333; }
+.s { font-size: 15px; fill: #555; }
+.xs { font-size: 13px; fill: #666; }
+.lbl { font-size: 15px; fill: #444; }
+.blbl { font-size: 16px; fill: #1f5bd6; font-weight: 600; }
+.bartxt { font-size: 15px; font-weight: 700; letter-spacing: 2px; fill: #fff; }
+.box { fill: #fff; stroke: #2a2a2a; stroke-width: 2.5; }
+.soft { fill: #f3f4f6; stroke: #2a2a2a; stroke-width: 2.5; }
+.dash { fill: none; stroke: #2a2a2a; stroke-width: 2.5; stroke-dasharray: 10 8; }
+.dashw { fill: #fff; stroke: #2a2a2a; stroke-width: 2.5; stroke-dasharray: 10 8; }
+.blue { stroke: #1f5bd6; stroke-width: 5; fill: none; }
+.grey { stroke: #777; stroke-width: 2.5; fill: none; }
+.greyd { stroke: #777; stroke-width: 2.5; fill: none; stroke-dasharray: 8 6; }
+.chip { fill: #fff; stroke: #1f5bd6; stroke-width: 2; }
+.chipx { fill: #f0f0f0; stroke: #aaa; stroke-width: 1.5; stroke-dasharray: 4 3; }
+.bluet { fill: #1f5bd6; }
+.w { fill: #fff; }

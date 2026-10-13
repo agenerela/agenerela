@@ -1,0 +1,12 @@
+{
+  "name": "Demos.GreyBoxVillage.Editor",
+  "references": [
+    "GreyBoxVillage",
+    "Demos.Shared"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "overrideReferences": true,
+  "precompiledReferences": []
+}

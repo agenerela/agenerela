@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Stopping Attack Godzilla</title>
+<link rel="stylesheet" href="fig.css">
+<style>body{width:1200px;height:460px}
+.d { font-size: 16px; fill: #333; }
+.lim { font-size: 13px; fill: #666; }
+</style></head>
+<body>
+<!-- Guards (Hero Jaiyen): three guardrails against "Attack Godzilla", two before the model and
+     one after it. 1, the target enum holds only registered ids plus no_target (build plan 2.3,
+     rule 2). 2, the few-shot block includes a refusal with no_target (2.3, rule 4); the example
+     is slide 12's. 3, the guards of 2.5: the legality check, Execute's re-check, and the
+     grounding guard, on every decision: at each token of the target, the share of the model's
+     probability that could still lead to a listed target, the lowest one, below 0.8 -> none
+     (DR-016, designed, Phase 3). Measured on 130 prompts (findings, 5 Oct 2026, second run):
+     2B 83 correct with today's design, 97 with the name check (29 good requests refused), 108
+     with the confidence check; scarecrow -> dummy kept 0.05 on the list, a real request
+     0.998; a bucket for the barrel still passed (4B). The 4% on the card is illustrative,
+     matching the Decision Log mockup. The refusal line is what FewShotBuilder (#10) writes: a real example filled with a made-up name. -->
+<svg width="1200" height="460" viewBox="0 0 1200 460" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="ab" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4.2" markerHeight="4.2" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f5bd6"/></marker>
+</defs>
+
+<!-- the request, and what should come of it -->
+<rect x="2" y="2" width="1196" height="54" rx="10" fill="#f3f4f6"/>
+<text x="20" y="35" class="cap">THE PLAYER SAYS</text>
+<text x="190" y="36" class="h2">"Attack Godzilla."</text>
+<line x1="380" y1="29" x2="446" y2="29" class="blue" marker-end="url(#ab)"/>
+<text x="466" y="35" class="cap">THE GOAL</text>
+<text x="572" y="36" class="h2">"Godzilla? Nothing like that here."</text>
+<text x="914" y="35" class="xs">and nothing is attacked</text>
+
+<!-- before and after the model -->
+<text x="2" y="86" class="cap">BEFORE THE MODEL</text>
+<line x1="180" y1="81" x2="762" y2="81" stroke="#ddd" stroke-width="2"/>
+<rect x="772" y="68" width="58" height="26" rx="13" class="dashw" style="stroke-width:2;stroke-dasharray:5 4"/>
+<text x="801" y="86" text-anchor="middle" class="xs">model</text>
+<text x="840" y="86" class="cap">AFTER THE MODEL</text>
+<line x1="1008" y1="81" x2="1198" y2="81" stroke="#ddd" stroke-width="2"/>
+
+<!-- 1: the target list -->
+<rect x="2" y="98" width="360" height="244" rx="12" class="box"/>
+<rect x="14" y="110" width="336" height="34" rx="7" fill="#1c1c1c"/>
+<circle cx="36" cy="127" r="12" fill="#1f5bd6"/>
+<text x="36" y="132" text-anchor="middle" style="font-size:14px;font-weight:700;fill:#fff">1</text>
+<text x="58" y="133" class="bartxt">THE TARGET LIST</text>
+<text x="338" y="132" text-anchor="end" style="font-size:13px;fill:#ccc">the schema</text>
+<rect x="14" y="154" width="336" height="94" rx="8" fill="#f7f8fa"/>
+<rect x="30" y="168" width="70" height="26" rx="13" class="chip"/><text x="65" y="186" text-anchor="middle" class="mono" style="font-size:14px">bridge</text>
+<rect x="108" y="168" width="136" height="26" rx="13" class="chip"/><text x="176" y="186" text-anchor="middle" class="mono" style="font-size:14px">training_dummy</text>
+<rect x="252" y="168" width="62" height="26" rx="13" class="chip"/><text x="283" y="186" text-anchor="middle" class="mono" style="font-size:14px">tower</text>
+<rect x="30" y="206" width="96" height="26" rx="13" fill="#e8effc" stroke="#1f5bd6" stroke-width="2"/><text x="78" y="224" text-anchor="middle" class="mono" style="font-size:14px">no_target</text>
+<rect x="134" y="206" width="88" height="26" rx="13" class="chipx"/><text x="178" y="224" text-anchor="middle" class="mono" style="font-size:14px;fill:#999" text-decoration="line-through">godzilla</text>
+<text x="234" y="224" class="xs">not an id</text>
+<text x="18" y="272" class="d">The model can only answer with an id</text>
+<text x="18" y="292" class="d">from this list. "godzilla" is not one.</text>
+<text x="18" y="318" class="lim">Alone, a small model then picks the closest</text>
+<text x="18" y="335" class="lim">legal target: it attacks the training dummy.</text>
+
+<line x1="366" y1="220" x2="400" y2="220" class="blue" marker-end="url(#ab)"/>
+
+<!-- 2: the prompt -->
+<rect x="404" y="98" width="360" height="244" rx="12" class="box"/>
+<rect x="416" y="110" width="336" height="34" rx="7" fill="#1c1c1c"/>
+<circle cx="438" cy="127" r="12" fill="#1f5bd6"/>
+<text x="438" y="132" text-anchor="middle" style="font-size:14px;font-weight:700;fill:#fff">2</text>
+<text x="460" y="133" class="bartxt">THE PROMPT</text>
+<text x="740" y="132" text-anchor="end" style="font-size:13px;fill:#ccc">few-shot block</text>
+<rect x="416" y="154" width="336" height="94" rx="8" fill="#f7f8fa"/>
+<text x="432" y="178" class="cap" style="font-size:11.5px">A REFUSAL EXAMPLE</text>
+<text x="432" y="206" class="mono" style="font-size:16px">"Head over to the Atlantis."</text>
+<text x="432" y="234" class="mono bluet" style="font-size:16px;font-weight:700">→ none · no_target</text>
+<text x="420" y="272" class="d">Shows the model how to refuse, and</text>
+<text x="420" y="292" class="d"><tspan class="mono" style="font-size:15px">no_target</tspan> lets it say "that isn't here".</text>
+<text x="420" y="318" class="lim">Soft: the model can still ignore it, and</text>
+<text x="420" y="335" class="lim">small models often do.</text>
+
+<line x1="768" y1="220" x2="834" y2="220" class="blue" marker-end="url(#ab)"/>
+
+<!-- 3: checks in code -->
+<rect x="838" y="98" width="360" height="244" rx="12" class="box"/>
+<rect x="850" y="110" width="336" height="34" rx="7" fill="#1c1c1c"/>
+<circle cx="872" cy="127" r="12" fill="#1f5bd6"/>
+<text x="872" y="132" text-anchor="middle" style="font-size:14px;font-weight:700;fill:#fff">3</text>
+<text x="894" y="133" class="bartxt">CHECKS IN CODE</text>
+<text x="1174" y="132" text-anchor="end" style="font-size:13px;fill:#ccc">the guards</text>
+<rect x="850" y="154" width="336" height="94" rx="8" fill="#f7f8fa"/>
+<text x="866" y="178" class="xs">if the model still guesses</text>
+<text x="866" y="206" class="mono" style="font-size:16px;font-weight:700">attack_target · training_dummy</text>
+<text x="866" y="234" style="font-size:15px;fill:#333">on the list: only <tspan font-weight="700">4%</tspan></text>
+<rect x="1018" y="219" width="154" height="22" rx="11" fill="#1f5bd6"/>
+<text x="1095" y="235" text-anchor="middle" style="font-size:12.5px;font-weight:700;fill:#fff">BELOW 80% → none</text>
+<text x="854" y="272" class="d">Before anything runs: the legality check,</text>
+<text x="854" y="292" class="d">and did it want a target not on the list?</text>
+<text x="854" y="318" class="lim">Limit: a near miss the model takes for a</text>
+<text x="854" y="335" class="lim">listed thing passes, like a bucket for a barrel.</text>
+
+<!-- now, measured, open -->
+<line x1="2" y1="358" x2="1198" y2="358" stroke="#ddd" stroke-width="2"/>
+<text x="2" y="386" class="h2">What we measured</text>
+<text x="2" y="410" class="s">130 prompts, 2B model: today's design got</text>
+<text x="2" y="430" class="s">83 right. A name check: 97, but it refused</text>
+<text x="2" y="450" class="s">29 good requests, like "Strike the straw man."</text>
+
+<text x="410" y="386" class="h2">The confidence check: 108</text>
+<text x="410" y="410" class="s">A guess shows in the model's own odds:</text>
+<text x="410" y="430" class="s">scarecrow → dummy kept 5% on the list,</text>
+<text x="410" y="450" class="s">a real request 99.8%. No extra request.</text>
+
+<text x="820" y="386" class="h2">On every decision</text>
+<text x="820" y="410" class="s">Two equally good targets stay on the list,</text>
+<text x="820" y="430" class="s">so free choices pass. Phase 4 recalibrates</text>
+<text x="820" y="450" class="s">the 80% line on 200+ prompts by others.</text>
+</svg>
+</body></html>

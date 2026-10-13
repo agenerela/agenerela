@@ -1,0 +1,126 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Screen 2 - Agent Behaviour</title>
+<link rel="stylesheet" href="wf.css">
+<style>
+body{width:1600px;height:1000px}
+.win{overflow:visible}.bar{border-radius:5px 5px 0 0}
+.rel{position:relative}
+.tool{position:absolute;left:0;top:0;width:1126px;height:40px;border:2px solid var(--ink2);border-radius:7px;background:var(--fill2);display:flex;align-items:center;justify-content:space-between;padding:0 14px}
+.play{display:flex;gap:4px}
+.pb{width:34px;height:26px;border:1.5px solid var(--line);border-radius:4px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:12px}
+.pb.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.tree{padding:6px 0;font-size:12.5px}
+.tree div{height:25px;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.tree .sel{background:var(--fill3);font-weight:600}
+.gohdr{display:flex;align-items:center;gap:10px;height:44px;padding:0 12px;border-bottom:1.5px solid var(--line3)}
+.cb{width:15px;height:15px;border:1.5px solid var(--ink2);border-radius:3px;font-size:11px;line-height:12px;text-align:center}
+.comps{display:flex;gap:26px;height:28px;align-items:center;padding:0 12px;font-size:12.5px;color:var(--ink3);border-bottom:1.5px solid var(--line3)}
+.chdr{display:flex;align-items:center;gap:8px;height:32px;padding:0 12px;background:var(--fill2);border-bottom:1.5px solid var(--line);font-weight:700;font-size:13px}
+.ag{display:grid;grid-template-columns:150px 1fr 236px;align-items:center;column-gap:10px;min-height:29px;padding:1px 12px;font-size:12.5px}
+.ok{font-weight:600}
+.warn{font-weight:600;border:1.5px dashed var(--ink2);border-radius:4px;padding:1px 6px}
+.box{position:absolute;top:0;border:2px solid var(--ink2);border-radius:7px;background:var(--fill0);padding:10px 12px}
+.box h5{margin:0 0 8px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+.chips{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.lab{width:62px;flex:none;font-size:12px;color:var(--ink2)}
+.stack{margin-bottom:8px}.stack .lab{display:block;width:auto;margin-bottom:3px}
+.line{display:flex;gap:8px;align-items:center;margin-bottom:7px}
+.dotg{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--ink)}
+.result{margin-top:8px;border:1.5px solid var(--ink2);border-radius:5px;background:#fff;padding:7px 10px;font-size:12.5px;line-height:1.5}
+</style></head>
+<body><div class="page">
+
+<div class="hdr">
+  <div>
+    <div class="kicker">Screen 2 of 6 · Unity Editor</div>
+    <div class="title">Agent Behaviour</div>
+    <div class="sub">The component that puts an agent into a scene: its profile, the model it uses, its game code and its targets</div>
+  </div>
+  <div class="meta">Agenerela · COMP 490 · Section 04<br>Opened from <b>select a GameObject ▸ Add Component ▸ Agent Behaviour</b><br><span class="pill">Phase 2 component · Phase 5 Inspector polish</span> <span class="pill dash">Partly superseded · notes 2–4</span></div>
+</div>
+
+<div class="wf">
+  <div class="tool">
+    <span class="hint" style="font-size:12.5px">Scene: <b style="color:var(--ink2)">GreyBoxVillage</b></span>
+    <div class="play"><span class="pb on">▶</span><span class="pb">❚❚</span><span class="pb">▶❚</span></div>
+    <span class="pill dark">Play mode: live sections are active</span>
+  </div>
+
+  <!-- Hierarchy -->
+  <div class="win" style="left:0;top:52px;width:250px;height:776px">
+    <div class="bar"><div class="tabx">Hierarchy</div></div>
+    <div class="tree">
+      <div style="padding-left:10px">▾ GreyBoxVillage</div>
+      <div style="padding-left:30px">Main Camera</div>
+      <div style="padding-left:30px">Directional Light</div>
+      <div style="padding-left:30px">Player</div>
+      <div class="sel" style="padding-left:30px">Guard (Gate)</div>
+      <div style="padding-left:30px">Guard (Bridge)</div>
+      <div style="padding-left:26px">▾ Landmarks</div>
+      <div style="padding-left:46px">Tower</div>
+      <div style="padding-left:46px">Bridge</div>
+      <div style="padding-left:46px">TrainingDummy</div>
+      <div style="padding-left:26px">▸ VillageGeometry</div>
+    </div>
+    <div class="hint" style="position:absolute;left:12px;right:12px;top:330px;line-height:1.45">Both guards use the same VillageGuard profile, but each has its own component, targets and state.</div>
+  </div>
+
+  <!-- Inspector -->
+  <div class="win" style="left:278px;top:52px;width:848px;height:776px">
+    <div class="bar"><div class="tabx">Inspector</div></div>
+    <div class="gohdr"><span class="cb">✓</span><div class="f" style="flex:none;width:240px;font-weight:600">Guard (Gate)</div><span class="comps" style="margin-left:auto;border:none;padding:0;gap:18px"><span>▸ Transform</span><span>▸ Nav Mesh Agent</span><span>▸ Capsule Collider</span></span></div>
+    <div class="chdr"><span>▾</span><span class="cb">✓</span>Agent Behaviour<span class="muted" style="margin-left:auto">⋮</span></div>
+
+    <div class="r rel" style="margin-top:4px"><span class="k">Profile</span><div class="f obj">◆ VillageGuard (Agent Profile)</div><span class="btn">Open</span>
+      <span class="c" style="left:-27px;top:5px">1</span></div>
+
+    <div class="sub2 rel">Model provider<span class="c" style="left:-27px;top:-1px">2</span></div>
+    <div class="r"><span class="k">Provider</span><div class="f dd">Ollama · local model, for development</div></div>
+    <div class="r"><span class="k">Model</span><div class="f dd" style="flex:none;width:210px">qwen3.5:2b</div>
+      <span style="display:flex;align-items:center;gap:6px;margin-left:8px;font-weight:600"><span class="dotg"></span>Connected · model loaded</span><span class="btn" style="margin-left:auto">Test connection</span></div>
+    <div class="r" style="min-height:22px;padding-top:0"><span class="k"></span><span class="hint">Later phases add to this list: Gemini (cloud API) and an in-game model the player doesn't have to install.</span></div>
+
+    <div class="sub2 rel">Actions → game code<span class="c" style="left:-27px;top:-1px">3</span></div>
+    <div class="ag"><span class="mono">follow_player</span><div class="f dd">FollowHandler</div><span class="ok">✓ bound</span></div>
+    <div class="ag"><span class="mono">move_to</span><div class="f dd">MoveToHandler</div><span class="ok">✓ bound</span></div>
+    <div class="ag"><span class="mono">attack_target</span><div class="f dd muted">None: pick a handler</div><span><span class="warn">⚠ not bound, never offered</span></span></div>
+    <div class="ag"><span class="mono muted">none</span><span class="muted">built in: does nothing</span><span class="muted">always offered</span></div>
+
+    <div class="sub2 rel">Targets<span class="c" style="left:-27px;top:-1px">4</span></div>
+    <div class="ag" style="grid-template-columns:150px 1fr 236px"><span class="mono">tower</span><div class="f obj">Tower (Transform)</div><span class="hint">door approach point</span></div>
+    <div class="ag" style="grid-template-columns:150px 1fr 236px"><span class="mono">bridge</span><div class="f obj">Bridge (Transform)</div><span class="hint">on the bridge deck</span></div>
+    <div class="ag" style="grid-template-columns:150px 1fr 236px"><span class="mono">training_dummy</span><div class="f obj">TrainingDummy (Transform)</div><span class="hint">in front of the dummy</span></div>
+    <div class="r"><span class="btn">+ Add target</span><span class="hint"><span class="mono">no_target</span> is always offered too, so the model can say “that isn't here”.</span></div>
+
+    <div class="rel" style="height:210px;margin:8px 12px 0">
+      <div class="box" style="left:0;width:400px;height:204px">
+        <span class="c" style="left:-28px;top:8px">5</span>
+        <h5>Offered to the model right now</h5>
+        <div class="stack"><span class="lab">Actions</span><div class="chips"><span class="chip solid">follow_player</span><span class="chip solid">move_to</span><span class="chip solid">none</span><span class="chip off">attack_target</span></div></div>
+        <div class="stack"><span class="lab">Targets</span><div class="chips"><span class="chip solid">no_target</span><span class="chip solid">tower</span><span class="chip solid">bridge</span><span class="chip solid">training_dummy</span></div></div>
+        <div class="hint" style="line-height:1.45;margin-top:4px">Changes with game state. While this guard is following the player, <span class="mono">follow_player</span> disappears from the list.</div>
+        <div style="margin-top:6px;font-size:12.5px;font-weight:600">▸ Show the schema sent to the model (JSON)</div>
+      </div>
+      <div class="box" style="left:414px;width:406px;height:204px">
+        <span class="c" style="right:-28px;top:8px">6</span>
+        <h5>Try a decision</h5>
+        <div class="line"><span class="lab">Label</span><div class="f" style="flex:none;width:90px">Player</div><span class="hint">any text: Player, Report, Event…</span></div>
+        <div class="line"><span class="lab">Stimulus</span><div class="f">Go to the tower.</div><span class="btn pri">Decide ▶</span></div>
+        <div class="line"><span class="lab">Facts</span><div class="chips"><span class="chip" style="font-family:inherit">It is daytime.</span><span class="chip" style="font-family:inherit">The gate is open.</span><span class="btn">+</span></div></div>
+        <div class="result"><b class="mono">move_to · tower</b> &nbsp;“On my way.”<br><span class="hint">1.31 s · all guards passed · </span><span style="font-size:12px;font-weight:600">Open in Decision Log ↗</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="notes">
+  <h4>What the numbers point to</h4>
+  <div class="note"><span class="n">1</span><div><b>Profile</b><p>Points to the shared Agent Profile from screen 1. Ten guards can use one profile.</p></div></div>
+  <div class="note"><span class="n">2</span><div><b>Model provider</b><p>Where the model runs: Ollama while developing, a cloud API or an in-game model later. Shows whether it's connected.</p><div class="now"><b>Now (DR-013):</b> a provider config asset. This field is only an optional override; blank means the project default.</div></div></div>
+  <div class="note"><span class="n">3</span><div><b>Actions → game code</b><p>Each action is bound to a handler: the developer's own C#. An action with no handler is flagged and never offered to the model.</p><div class="now"><b>Now (DR-011):</b> only asset-authored actions are bound here; a code-authored action's method is its own handler.</div></div></div>
+  <div class="note"><span class="n">4</span><div><b>Targets</b><p>The scene objects this agent may refer to. The model can only name ids from this list.</p><div class="now"><b>Now (DR-014):</b> discovered each decision from nearby <span class="mono">Targetable</span> components, not typed per agent.</div></div></div>
+  <div class="note"><span class="n">5</span><div><b>Live menu (Play mode)</b><p>Exactly what the model is offered at this moment. Illegal options are left out entirely, not forbidden in the prompt.</p></div></div>
+  <div class="note"><span class="n">6</span><div><b>Try a decision</b><p>Type a stimulus, press Decide, and see the action, target, reply and latency, without writing any test code.</p></div></div>
+</div>
+
+</div></body></html>

@@ -1,0 +1,9 @@
+{
+  "name": "GreyBoxVillage",
+  "rootNamespace": "Demos.GreyBoxVillage",
+  "references": [
+    "Demos.Shared"
+  ],
+  "overrideReferences": true,
+  "precompiledReferences": []
+}

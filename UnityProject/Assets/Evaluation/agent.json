@@ -1,0 +1,31 @@
+{
+  "agent": "Village guard",
+  "actions": [
+    { "id": "follow_player", "needsTarget": false },
+    {
+      "id": "stop_following",
+      "needsTarget": false,
+      "onlyWhen": { "isFollowing": true }
+    },
+    { "id": "move_to", "needsTarget": true },
+    { "id": "attack_target", "needsTarget": true },
+    { "id": "none", "needsTarget": false }
+  ],
+  "targets": [
+    { "id": "bridge", "description": "The wooden bridge over the stream" },
+    { "id": "village_gate", "description": "The main gate in the village wall" },
+    { "id": "campfire", "description": "The campfire in the guards' camp" },
+    { "id": "well", "description": "The stone well in the village square" },
+    { "id": "north_tower", "description": "The tower on the north side of the village" },
+    { "id": "market", "description": "The open-air market where villagers trade" },
+    { "id": "docks", "description": "The docks where supply boats unload" },
+    { "id": "shelter", "description": "The shelter where villagers take cover" },
+    { "id": "eastern_road", "description": "The road leaving the village to the east" },
+    { "id": "wolf", "description": "A wolf that came out of the woods" },
+    { "id": "locked_cave", "description": "A cave whose entrance is locked" }
+  ],
+  "targetRules": {
+    "allExpectedTargetsMustBeRegistered": true,
+    "noneActionTarget": "no_target"
+  }
+}

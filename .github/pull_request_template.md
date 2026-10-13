@@ -12,6 +12,8 @@
 - [ ] EditMode tests pass (`Window → General → Test Runner`)
 - [ ] No secrets, keys or `.env` contents included
 - [ ] No generated files committed (`Library/`, `Logs/`, `*.csproj`)
+- [ ] Every new file and folder has its `.meta` committed (open the project in Unity before committing)
+- [ ] If the framework's public API changed: every game project under `Demos/` still compiles
 
 ## If this touches accuracy or performance
 
@@ -27,3 +29,7 @@ Control: __ %  →  Treatment: __ %  (n = __, model = __)
 ## Notes for the reviewer
 
 <!-- Anything you're unsure about, or want a second opinion on. -->
+
+---
+
+Reviewing this? [`REVIEWING.md`](https://github.com/agenerela/agenerela/blob/test/REVIEWING.md) has the checks, in order, and the summary template.

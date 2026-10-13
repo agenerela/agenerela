@@ -1,0 +1,69 @@
+/* Shared grayscale wireframe kit. One accent colour, used only for annotations. */
+:root{
+  --ink:#1c1c1c; --ink2:#4a4a4a; --ink3:#7f7f7f; --ink4:#a6a6a6;
+  --line:#8c8c8c; --line2:#c2c2c2; --line3:#dcdcdc;
+  --fill0:#fafafa; --fill:#f0f0f0; --fill2:#e2e2e2; --fill3:#cfcfcf; --fill4:#b5b5b5;
+  --accent:#1f5fd1;
+  --mono:Consolas,"Cascadia Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:#fff;color:var(--ink);font-family:"Segoe UI",system-ui,sans-serif;overflow:hidden}
+.page{position:relative;width:100%;height:100%}
+
+/* page header */
+.hdr{position:absolute;left:32px;right:32px;top:24px;display:flex;justify-content:space-between;align-items:flex-end;gap:24px;padding-bottom:12px;border-bottom:2.5px solid var(--ink)}
+.kicker{font-size:12.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+.title{font-size:31px;font-weight:700;letter-spacing:-.01em;line-height:1.1;margin:4px 0 5px}
+.sub{font-size:15.5px;color:var(--ink2)}
+.meta{text-align:right;font-size:12.5px;color:var(--ink2);line-height:1.75;white-space:nowrap}
+.pill{display:inline-block;border:1.5px solid var(--ink2);border-radius:999px;padding:0 9px;font-size:12px;font-weight:600;color:var(--ink2);background:#fff;line-height:19px}
+.pill.dash{border-style:dashed}
+.pill.dark{background:var(--ink);border-color:var(--ink);color:#fff}
+/* A decision made after the lab changed this part of the drawing. Grayscale on purpose:
+   blue stays reserved for the callouts. */
+.now{margin-top:5px;padding:3px 7px;border:1.5px dashed var(--ink3);border-radius:4px;font-size:12px;line-height:1.35;color:var(--ink2);background:#fff}
+.note .now b{display:inline;font-size:12px;margin:0}
+
+/* wireframe + notes columns (member screens) */
+.wf{position:absolute;left:32px;top:146px;width:1126px;height:828px}
+.notes{position:absolute;left:1184px;top:146px;width:384px;height:828px;border-left:1.5px solid var(--line3);padding-left:22px}
+.notes h4{margin:0 0 14px;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+.note{display:flex;gap:12px;margin-bottom:16px}
+.note b{display:block;font-size:14.5px;margin-bottom:2px}
+.note p{margin:0;font-size:13.5px;line-height:1.42;color:var(--ink2)}
+.n,.c{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;font:700 14px/26px "Segoe UI",sans-serif;text-align:center}
+.n{flex:none}
+.c{position:absolute;box-shadow:0 0 0 3px #fff;z-index:20}
+.hl{position:absolute;border:2px dashed var(--accent);border-radius:7px;z-index:19;pointer-events:none}
+
+/* editor window chrome */
+.win{position:absolute;background:#fff;border:2px solid var(--ink2);border-radius:7px;overflow:hidden}
+.bar{height:30px;background:var(--fill2);border-bottom:1.5px solid var(--line);display:flex;align-items:flex-end;padding:0 8px;gap:4px}
+.tabx{height:24px;padding:0 12px;display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;background:#fff;border:1.5px solid var(--line);border-bottom:none;border-radius:5px 5px 0 0}
+.tabx.off{background:var(--fill);color:var(--ink3);font-weight:500}
+
+/* inspector parts */
+.sec{display:flex;align-items:center;gap:7px;height:28px;padding:0 10px;background:var(--fill);border-top:1.5px solid var(--line3);border-bottom:1.5px solid var(--line3);font-weight:700;font-size:12.5px}
+.sub2{display:flex;align-items:center;gap:8px;height:24px;padding:0 12px;margin-top:4px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+.r{display:flex;align-items:center;gap:8px;min-height:30px;padding:3px 12px;font-size:12.5px}
+.k{width:132px;flex:none;color:var(--ink2)}
+.f{flex:1;min-height:23px;border:1.5px solid var(--line2);border-radius:3px;background:#fff;padding:1px 8px;display:flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap;overflow:hidden}
+.f.dd::after{content:"\25BE";margin-left:auto;padding-left:8px;color:var(--ink3)}
+.f.obj::after{content:"\2299";margin-left:auto;padding-left:8px;color:var(--ink3)}
+.btn{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 10px;border:1.5px solid var(--line);border-radius:4px;background:var(--fill);font-weight:600;font-size:12px;white-space:nowrap;color:var(--ink)}
+.btn.pri{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn.off{border-style:dashed;color:var(--ink4);background:#fff}
+.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border:1.5px solid var(--line);border-radius:999px;font-size:12px;font-family:var(--mono);background:#fff;white-space:nowrap}
+.chip.off{color:var(--ink4);border-style:dashed;text-decoration:line-through}
+.chip.solid{background:var(--fill2)}
+.mono{font-family:var(--mono)}
+.muted{color:var(--ink3)}
+.hint{font-size:11.5px;color:var(--ink3)}
+.help{display:flex;gap:10px;align-items:center;padding:8px 12px;border:1.5px solid var(--line);border-radius:4px;background:var(--fill);font-size:12.5px}
+.ico{font-size:15px;line-height:1}
+
+/* tables */
+table.t{border-collapse:collapse;width:100%;font-size:12.5px}
+.t th{text-align:left;font-weight:600;color:var(--ink3);font-size:11.5px;padding:5px 8px;border-bottom:1.5px solid var(--line2);white-space:nowrap}
+.t td{padding:5px 8px;border-bottom:1px solid var(--line3);vertical-align:middle}
+.t tr.sel td{background:var(--fill2)}

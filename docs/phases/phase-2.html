@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agenerela Phase 2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* A plan sheet: prose in one reading column, widening for the two figures, the tables and the
+   issue grid. Same tokens and faces as docs/design/workflow.html, so the team's pages read as
+   one set. */
+:root{
+  --ground:#f5f6f8; --surface:#ffffff; --panel:#fafbfc; --fill:#eef0f3; --fill2:#e1e4e9;
+  --ink:#1b1d21; --ink2:#494d54; --ink3:#7c828b; --ink4:#a6acb5;
+  --line:#8b9199; --line2:#c6cbd2; --line3:#e0e3e8;
+  --accent:#1f5fd1; --accent-soft:#e8eefb; --accent-ink:#1f5fd1;
+  --ok:#1c6b45; --ok-soft:#e4f1ea;
+  --warn:#8a5a10; --warn-soft:#f7efdf;
+  --sans:"IBM Plex Sans",-apple-system,"Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",Consolas,"Cascadia Mono",monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#121417; --surface:#1b1e23; --panel:#20242a; --fill:#272c33; --fill2:#333941;
+    --ink:#e9ebee; --ink2:#b5bac1; --ink3:#878d96; --ink4:#6a7078;
+    --line:#5d646d; --line2:#3d434b; --line3:#2c3138;
+    --accent:#77a6f7; --accent-soft:#1c2c47; --accent-ink:#9dc0fb;
+    --ok:#6fcf9b; --ok-soft:#18342a;
+    --warn:#e0b169; --warn-soft:#352a17;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#121417; --surface:#1b1e23; --panel:#20242a; --fill:#272c33; --fill2:#333941;
+  --ink:#e9ebee; --ink2:#b5bac1; --ink3:#878d96; --ink4:#6a7078;
+  --line:#5d646d; --line2:#3d434b; --line3:#2c3138;
+  --accent:#77a6f7; --accent-soft:#1c2c47; --accent-ink:#9dc0fb;
+  --ok:#6fcf9b; --ok-soft:#18342a;
+  --warn:#e0b169; --warn-soft:#352a17;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:20px}
+a{color:var(--accent-ink)}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+.mono{font-family:var(--mono);font-size:.92em}
+p{margin:0 0 14px}
+.body{max-width:70ch}
+
+/* top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--ground);border-bottom:1.5px solid var(--line3)}
+.topin{max-width:1120px;margin:0 auto;padding-inline:20px;padding-block:6px;display:flex;align-items:center;gap:8px 18px;flex-wrap:wrap;min-height:46px}
+.brand{font-weight:700;font-size:14.5px;white-space:nowrap}
+.brand em{color:var(--ink3);font-style:normal;font-weight:500}
+.topnav{display:flex;gap:6px 14px;flex-wrap:wrap;margin-left:auto;font-size:13px}
+.topnav a{color:var(--ink2);text-decoration:none;border-bottom:1.5px solid transparent}
+.topnav a:hover{color:var(--accent-ink);border-bottom-color:var(--accent)}
+
+/* hero */
+.hero{padding-block:42px 30px;border-bottom:2.5px solid var(--ink)}
+.kicker{font-size:11.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3)}
+h1{font-size:clamp(30px,5vw,44px);line-height:1.06;letter-spacing:-.025em;margin:10px 0 0;font-weight:700;text-wrap:balance}
+.lede{font-size:clamp(16px,2.2vw,18.5px);color:var(--ink2);max-width:64ch;margin:14px 0 0;line-height:1.5}
+.facts{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.pill{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--line2);border-radius:999px;padding:2px 11px;font-size:12px;font-weight:600;color:var(--ink2);background:var(--surface);white-space:nowrap}
+.pill.dark{background:var(--ink);border-color:var(--ink);color:var(--ground)}
+.pill.ok{border-color:var(--ok);color:var(--ok);background:var(--ok-soft)}
+.pill.warn{border-color:var(--warn);color:var(--warn);background:var(--warn-soft)}
+.pill.acc{border-color:var(--accent);color:var(--accent-ink);background:var(--accent-soft)}
+
+/* sections */
+.sec{padding-block:44px;border-top:1.5px solid var(--line3);scroll-margin-top:52px}
+.sec:first-of-type{border-top:none}
+.sechead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+h2{font-size:clamp(22px,3.2vw,29px);letter-spacing:-.02em;line-height:1.15;margin:0;font-weight:700;text-wrap:balance}
+h3{font-size:17px;margin:0;font-weight:600;letter-spacing:-.01em;text-wrap:balance}
+.seclede{color:var(--ink2);max-width:70ch;font-size:16px;margin-bottom:24px}
+
+/* tables */
+.scrollx{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:640px}
+th{text-align:left;font-weight:600;color:var(--ink3);font-size:11px;letter-spacing:.09em;text-transform:uppercase;padding:7px 10px;border-bottom:2px solid var(--line2);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--line3);vertical-align:top;color:var(--ink2)}
+td b{color:var(--ink);font-weight:600}
+tbody tr:last-child td{border-bottom:none}
+td a{white-space:nowrap}
+
+/* figures */
+figure{margin:0}
+.fig{border:2px solid var(--ink2);border-radius:10px;background:var(--panel);overflow:hidden}
+.figbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:7px 12px;background:var(--fill2);border-bottom:1.5px solid var(--line);font-size:12px;font-weight:600;color:var(--ink2)}
+.figscroll{overflow-x:auto;padding:16px}
+.figscroll svg{display:block;width:100%;min-width:760px;height:auto;color:var(--ink)}
+figcaption{font-size:13px;color:var(--ink3);margin-top:9px;line-height:1.45;max-width:80ch}
+svg .box{fill:var(--surface);stroke:currentColor;stroke-width:1.6}
+svg .box.side{stroke-dasharray:6 4;fill:var(--panel)}
+svg .box.new{stroke:var(--accent);stroke-width:2.2;fill:var(--accent-soft)}
+svg .box.gate{stroke-width:2.4}
+svg .t{fill:currentColor;font-family:var(--sans);font-size:13px;font-weight:600}
+svg .s{fill:var(--ink2);font-family:var(--sans);font-size:12px}
+svg .m{fill:var(--ink2);font-family:var(--mono);font-size:11.5px}
+svg .n{fill:currentColor;font-family:var(--mono);font-size:13px;font-weight:600}
+svg .lbl{fill:var(--ink3);font-family:var(--sans);font-size:11px}
+svg .grp{fill:var(--ink3);font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.08em}
+svg .ready{fill:var(--ok);font-family:var(--sans);font-size:11px;font-weight:600}
+svg .blocked{fill:var(--warn);font-family:var(--sans);font-size:11px;font-weight:600}
+svg .wire{fill:none;stroke:currentColor;stroke-width:1.5}
+svg .wire.fail{stroke:var(--warn);stroke-dasharray:5 4}
+svg .fail-t{fill:var(--warn);font-family:var(--sans);font-size:11px}
+svg .head{fill:currentColor}
+svg .head.fail{fill:var(--warn)}
+
+/* issues */
+.group{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:6px 0 14px}
+.group h3{font-size:15px}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));align-items:start;margin-bottom:30px}
+.issue{border:1.5px solid var(--line2);border-radius:9px;background:var(--surface);padding:15px 16px 14px;min-width:0;display:flex;flex-direction:column;gap:9px}
+.issue.gate{border:2px solid var(--ink)}
+.ihead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.inum{font-family:var(--mono);font-weight:600;font-size:15px;color:var(--accent-ink);text-decoration:none}
+.inum:hover{text-decoration:underline}
+.ihead h3{flex:1 1 180px;font-size:15.5px}
+.issue p{margin:0;font-size:14px;color:var(--ink2)}
+.issue p b{color:var(--ink)}
+.done{margin:0;padding-left:18px;font-size:13.5px;color:var(--ink2)}
+.done li{margin-bottom:3px}
+.lab{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+.files{font-family:var(--mono);font-size:12px;color:var(--ink3);overflow-wrap:anywhere}
+.links{font-size:12.5px;color:var(--ink3)}
+
+/* lists of rules */
+.rules{list-style:none;margin:0;padding:0;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.rules li{border-left:3px solid var(--line2);padding:2px 0 2px 13px;font-size:14px;color:var(--ink2)}
+.rules li b{color:var(--ink);display:block;font-size:14.5px;margin-bottom:2px}
+.rules.calls li{border-left-color:var(--accent)}
+.rules.out li{border-left-style:dashed}
+
+footer{border-top:2.5px solid var(--ink);padding-block:24px 44px;font-size:13px;color:var(--ink3)}
+footer p{max-width:78ch}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="top"><div class="topin">
+  <div class="brand">Agenerela <em>· Phase 2</em></div>
+  <nav class="topnav" aria-label="Sections">
+    <a href="#done">Done means</a>
+    <a href="#decision">One decision</a>
+    <a href="#order">Order of work</a>
+    <a href="#issues">The issues</a>
+    <a href="#telemetry">Telemetry</a>
+    <a href="#rules">Rules</a>
+    <a href="#calls">Open calls</a>
+  </nav>
+</div></div>
+
+<div class="wrap">
+<header class="hero">
+  <div class="kicker">Agenerela · COMP 490 / 491 · plan for the team</div>
+  <h1>Phase 2: the first live decision</h1>
+  <p class="lede">Phase 1 built every part of a decision and proved it against a fake model. Phase 2 connects a real one: a local Ollama server, a queue in front of it, and a memory that carries one exchange into the next. It is done when an agent with five actions decides in under five seconds against a live model, with its telemetry filled in.</p>
+  <div class="facts">
+    <span class="pill dark">Due 19 October 2026</span>
+    <span class="pill">Gate: #94</span>
+    <span class="pill">8 new issues, plus #81</span>
+    <span class="pill acc">All in Iteration 3, unassigned</span>
+  </div>
+</header>
+
+<!-- ============ DONE MEANS ============ -->
+<section class="sec" id="done">
+  <div class="sechead"><h2>What "done" means</h2><span class="pill">build plan §3, Phase 2 row</span></div>
+  <p class="seclede">The build plan sets six checks. Each one has an issue that proves it. Nothing here measures accuracy: that is Phase 4, with a control arm.</p>
+  <div class="scrollx">
+    <table>
+      <thead><tr><th>The build plan asks for</th><th>Proven by</th></tr></thead>
+      <tbody>
+        <tr><td><b>A PlayMode test tagged <span class="mono">RequiresOllama</span>:</b> one agent, five actions, a live decision round trip under 5 s</td><td><a href="https://github.com/agenerela/agenerela/issues/94">#94</a>, over the provider (<a href="https://github.com/agenerela/agenerela/issues/88">#88</a>) and the queue (<a href="https://github.com/agenerela/agenerela/issues/89">#89</a>)</td></tr>
+        <tr><td><b>Telemetry fields populated</b></td><td><a href="https://github.com/agenerela/agenerela/issues/94">#94</a>, reading the fields <a href="https://github.com/agenerela/agenerela/issues/87">#87</a> to <a href="https://github.com/agenerela/agenerela/issues/90">#90</a> add</td></tr>
+        <tr><td><b>A provider failure (missing model) surfaces as a typed error</b>, not an exception leak</td><td><a href="https://github.com/agenerela/agenerela/issues/87">#87</a>, checked live in <a href="https://github.com/agenerela/agenerela/issues/94">#94</a></td></tr>
+        <tr><td><b><span class="mono">RollingHistory</span> fills <span class="mono">DecisionRequest.History</span></b> oldest first, within a token cap</td><td><a href="https://github.com/agenerela/agenerela/issues/90">#90</a></td></tr>
+        <tr><td><b>It records the decision <span class="mono">DecideAsync</span> returns</b>, not the provider's raw answer, so a Phase 3 guard's rewrite is what gets remembered</td><td><a href="https://github.com/agenerela/agenerela/issues/90">#90</a></td></tr>
+        <tr><td><b>One memory per agent instance</b></td><td><a href="https://github.com/agenerela/agenerela/issues/90">#90</a></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ ONE DECISION ============ -->
+<section class="sec" id="decision">
+  <div class="sechead"><h2>One decision, end to end</h2><span class="pill">where each issue sits</span></div>
+  <p class="seclede">Today <span class="mono">Agent</span> hands its request straight to a fake provider. Phase 2 puts two new hops between the agent and the model, a queue and the Ollama provider, and adds memory on both ends: recalled into the request, and written after the result.</p>
+
+  <figure>
+    <div class="fig">
+      <div class="figbar">Figure 1 · "Go to the tower." through the Phase 2 pipeline</div>
+      <div class="figscroll">
+        <svg viewBox="0 0 1040 420" role="img" aria-label="A decision goes from the game to the agent, which builds the request with observations and recalled history, then through the queue and the Ollama provider to Ollama. The reply comes back through the provider to a DecisionResult that memory records; a provider failure comes back as a typed pipeline error.">
+          <defs>
+            <marker id="p2a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0,0 L10,5 L0,10 z"/></marker>
+            <marker id="p2f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head fail" d="M0,0 L10,5 L0,10 z"/></marker>
+          </defs>
+
+          <!-- beside the gate's path -->
+          <rect class="box side" x="20" y="20" width="400" height="56" rx="7"/>
+          <text class="t" x="34" y="43">#93 AgentBehaviour</text>
+          <text class="s" x="34" y="63">owns the Agent on a GameObject · cancels on destroy</text>
+          <rect class="box side" x="460" y="20" width="380" height="56" rx="7"/>
+          <text class="t" x="474" y="43">#92 Provider config</text>
+          <text class="s" x="474" y="63">one provider instance per config · sets MaxInFlight</text>
+
+          <path class="wire" d="M315,76 V138" marker-end="url(#p2a)"/>
+          <text class="lbl" x="322" y="112">builds</text>
+          <path class="wire" d="M530,76 V138" marker-end="url(#p2a)"/>
+          <text class="lbl" x="537" y="112">MaxInFlight</text>
+          <path class="wire" d="M745,76 V138" marker-end="url(#p2a)"/>
+          <text class="lbl" x="752" y="112">creates once</text>
+
+          <!-- request path -->
+          <rect class="box" x="20" y="140" width="150" height="96" rx="7"/>
+          <text class="t" x="34" y="164">Your game</text>
+          <text class="m" x="34" y="186">DecideAsync(</text>
+          <text class="m" x="34" y="203">  stimulus,</text>
+          <text class="m" x="34" y="220">  Priority)</text>
+
+          <rect class="box" x="210" y="140" width="210" height="96" rx="7"/>
+          <text class="t" x="224" y="164">Agent builds the request</text>
+          <text class="s" x="224" y="186">targets · observations #91</text>
+          <text class="s" x="224" y="203">history recalled #90</text>
+          <text class="s" x="224" y="220">PromptBuilder (Phase 1)</text>
+
+          <rect class="box new" x="460" y="140" width="140" height="96" rx="7"/>
+          <text class="t" x="474" y="164">Queue #89</text>
+          <text class="s" x="474" y="186">player-facing first</text>
+          <text class="s" x="474" y="203">one in flight</text>
+          <text class="s" x="474" y="220">wait is timed</text>
+
+          <rect class="box new" x="640" y="140" width="200" height="96" rx="7"/>
+          <text class="t" x="654" y="164">OllamaProvider #88</text>
+          <text class="m" x="654" y="186">POST /api/chat</text>
+          <text class="s" x="654" y="203">format: JSON Schema (#9)</text>
+          <text class="s" x="654" y="220">temp 0 · think off · logprobs</text>
+
+          <rect class="box" x="880" y="140" width="140" height="96" rx="7"/>
+          <text class="t" x="894" y="164">Ollama</text>
+          <text class="m" x="894" y="186">127.0.0.1:11434</text>
+          <text class="s" x="894" y="203">qwen3.5:2b</text>
+          <text class="s" x="894" y="220">on your machine</text>
+
+          <path class="wire" d="M170,188 H208" marker-end="url(#p2a)"/>
+          <text class="lbl" x="189" y="180" text-anchor="middle">call</text>
+          <path class="wire" d="M420,188 H458" marker-end="url(#p2a)"/>
+          <text class="lbl" x="439" y="180" text-anchor="middle">request</text>
+          <path class="wire" d="M600,188 H638" marker-end="url(#p2a)"/>
+          <text class="lbl" x="619" y="180" text-anchor="middle">send</text>
+          <path class="wire" d="M840,176 H878" marker-end="url(#p2a)"/>
+          <text class="lbl" x="859" y="168" text-anchor="middle">POST</text>
+          <path class="wire" d="M878,206 H842" marker-end="url(#p2a)"/>
+          <text class="lbl" x="859" y="222" text-anchor="middle">reply</text>
+
+          <!-- result path -->
+          <rect class="box" x="210" y="296" width="210" height="76" rx="7"/>
+          <text class="t" x="224" y="320">DecisionResult</text>
+          <text class="s" x="224" y="341">decision + telemetry</text>
+          <text class="s" x="224" y="360">remembered by #90</text>
+
+          <path class="wire" d="M720,236 V322 H422" marker-end="url(#p2a)"/>
+          <text class="lbl" x="571" y="314" text-anchor="middle">text · tokens · logprobs · model</text>
+
+          <path class="wire fail" d="M790,236 V398 H315 V374" marker-end="url(#p2f)"/>
+          <text class="fail-t" x="553" y="390" text-anchor="middle">failure: ProviderException #87 → PipelineError with a kind</text>
+
+          <path class="wire" d="M210,334 H95 V238" marker-end="url(#p2a)"/>
+          <text class="lbl" x="152" y="326" text-anchor="middle">result</text>
+        </svg>
+      </div>
+    </div>
+    <figcaption>One decision in Phase 2. Blue boxes are the two hops Phase 2 adds between the agent and the model. Dashed boxes (#92, #93) are Phase 2 work the gate does not wait for: until they land, a game builds the agent and the provider in code. Execute, the re-check before any game code runs, is unchanged from Phase 1.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ ORDER OF WORK ============ -->
+<section class="sec" id="order">
+  <div class="sechead"><h2>The order of work</h2><span class="pill ok">6 ready now</span><span class="pill warn">3 waiting</span></div>
+  <p class="seclede">Six issues can start today, in parallel. The gate waits on four of them. Only one chain is longer than a step: the provider, then its config asset, then the component that uses it.</p>
+
+  <figure>
+    <div class="fig">
+      <div class="figbar">Figure 2 · What waits on what, as of 12 October</div>
+      <div class="figscroll">
+        <svg viewBox="0 0 1000 310" role="img" aria-label="Issues 88, 87, 89 and 90 are ready and the gate, 94, waits on all four. Issue 92 waits on 88, and 93 waits on 92. Issues 91 and 81 are ready and nothing waits on them.">
+          <defs>
+            <marker id="p2d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0,0 L10,5 L0,10 z"/></marker>
+          </defs>
+          <text class="grp" x="10" y="14">ON THE GATE'S PATH</text>
+          <text class="grp" x="690" y="14">BESIDE IT</text>
+
+          <rect class="box" x="10" y="24" width="150" height="58" rx="7"/>
+          <text class="n" x="22" y="46">#88</text><text class="ready" x="150" y="46" text-anchor="end">ready</text>
+          <text class="s" x="22" y="68">OllamaProvider</text>
+          <rect class="box" x="176" y="24" width="150" height="58" rx="7"/>
+          <text class="n" x="188" y="46">#87</text><text class="ready" x="316" y="46" text-anchor="end">ready</text>
+          <text class="s" x="188" y="68">Typed errors</text>
+          <rect class="box" x="342" y="24" width="150" height="58" rx="7"/>
+          <text class="n" x="354" y="46">#89</text><text class="ready" x="482" y="46" text-anchor="end">ready</text>
+          <text class="s" x="354" y="68">Queue + priority</text>
+          <rect class="box" x="508" y="24" width="150" height="58" rx="7"/>
+          <text class="n" x="520" y="46">#90</text><text class="ready" x="648" y="46" text-anchor="end">ready</text>
+          <text class="s" x="520" y="68">Short-term memory</text>
+
+          <rect class="box side" x="690" y="24" width="150" height="58" rx="7"/>
+          <text class="n" x="702" y="46">#91</text><text class="ready" x="830" y="46" text-anchor="end">ready</text>
+          <text class="s" x="702" y="68">Observation sources</text>
+          <rect class="box side" x="846" y="24" width="150" height="58" rx="7"/>
+          <text class="n" x="858" y="46">#81</text><text class="ready" x="986" y="46" text-anchor="end">ready</text>
+          <text class="s" x="858" y="68">TargetsDropped</text>
+          <text class="lbl" x="843" y="104" text-anchor="middle">nothing waits on these two</text>
+
+          <rect class="box side" x="10" y="150" width="150" height="58" rx="7"/>
+          <text class="n" x="22" y="172">#92</text><text class="blocked" x="150" y="172" text-anchor="end">waiting</text>
+          <text class="s" x="22" y="194">Provider config</text>
+
+          <rect class="box gate" x="176" y="150" width="482" height="58" rx="7"/>
+          <text class="n" x="190" y="172">#94  Phase 2 gate</text><text class="blocked" x="646" y="172" text-anchor="end">waiting</text>
+          <text class="s" x="190" y="194">live decision under 5 s · RequiresOllama PlayMode tests · sandbox scene</text>
+
+          <rect class="box side" x="10" y="240" width="150" height="58" rx="7"/>
+          <text class="n" x="22" y="262">#93</text><text class="blocked" x="150" y="262" text-anchor="end">waiting</text>
+          <text class="s" x="22" y="284">AgentBehaviour</text>
+
+          <path class="wire" d="M85,82 V148" marker-end="url(#p2d)"/>
+          <path class="wire" d="M85,116 H205 V148" marker-end="url(#p2d)"/>
+          <path class="wire" d="M251,82 V148" marker-end="url(#p2d)"/>
+          <path class="wire" d="M417,82 V148" marker-end="url(#p2d)"/>
+          <path class="wire" d="M583,82 V148" marker-end="url(#p2d)"/>
+          <path class="wire" d="M85,208 V238" marker-end="url(#p2d)"/>
+        </svg>
+      </div>
+    </div>
+    <figcaption>An arrow points from an issue to the one that waits for it. Dashed boxes are Phase 2 work the gate does not need. #88 can start before #87 merges: the request body and the reply come first, and the typed exception slots in after.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ THE ISSUES ============ -->
+<section class="sec" id="issues">
+  <div class="sechead"><h2>What each issue does</h2><span class="pill">the issue is the spec; this is the short version</span></div>
+  <p class="seclede">Every issue has a <b>Files you own</b> list and a <b>Definition of done</b>, and those are what a pull request is reviewed against. To take one, assign yourself on GitHub and branch off <span class="mono">test</span> with the issue number in the name, for example <span class="mono">88-ollama-provider</span>.</p>
+
+  <div class="group"><h3>On the gate's path</h3><span class="pill">the gate waits on these four</span></div>
+  <div class="grid">
+
+    <article class="issue">
+      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/87">#87</a><h3>Typed provider errors</h3><span class="pill ok">ready</span></div>
+      <p>When the model call fails, the agent already returns a <span class="mono">PipelineError</span> instead of crashing, but the reason only appears in a log line. This adds <span class="mono">ProviderException</span> with a kind: unreachable, model not found, timeout, rejected, server error or malformed response. The kind and a message go on the result, so code can tell the player "run <span class="mono">ollama pull qwen3.5:2b</span>".</p>
+      <div><div class="lab">Done when</div><ul class="done">
+        <li>Every pipeline error carries a kind and a message, with one test per kind</li>
+        <li>Any other exception maps to "provider failed"; the caller's cancellation still throws</li>
+      </ul></div>
+      <div class="files">Runtime/Providers/ProviderException.cs · DecisionTelemetry · Agent</div>
+      <div class="links">Feeds #88 and #94</div>
+    </article>
+
+    <article class="issue">
+      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/88">#88</a><h3>OllamaProvider</h3><span class="pill ok">ready</span><span class="pill">design-rule</span></div>
+      <p>The first real model. It sends the agent's request to Ollama's <span class="mono">/api/chat</span> the way the prototype's measurements were taken: the schema in <span class="mono">format</span>, temperature 0, thinking off, token probabilities on, and <span class="mono">127.0.0.1</span> rather than <span class="mono">localhost</span>. It reads back the reply, token counts, probabilities and the model's name, which telemetry gains as <span class="mono">Model</span>.</p>
+      <div><div class="lab">Done when</div><ul class="done">
+        <li>#16's village guard request produces a golden JSON body</li>
+        <li>Each failure throws its #87 kind; tests pass with no Ollama running</li>
+        <li>Checked once by hand against a real server</li>
+      </ul></div>
+      <div class="files">Runtime/Providers/Ollama/ · ProviderResult · providers.md</div>
+      <div class="links">Blocks #92 and #94</div>
+    </article>
+
+    <article class="issue">
+      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/89">#89</a><h3>Request queue and priority</h3><span class="pill ok">ready</span></div>
+      <p>A local model answers one request at a time. Five requests at once took about 3.5 s in the prototype, which puts thirty agents near 21 s. This adds one queue per model connection, shared by every agent using it. Each call can be marked player-facing, the default, or background, and player-facing calls go first. Telemetry records the wait, so a slow answer can be pinned on the model or on the queue.</p>
+      <div><div class="lab">Done when</div><ul class="done">
+        <li>Background then player-facing queued: the player-facing one is sent next</li>
+        <li>A request cancelled while queued never reaches the provider</li>
+        <li><span class="mono">LatencySeconds</span> excludes the time spent waiting</li>
+      </ul></div>
+      <div class="files">Runtime/Scheduling/ · DecideOptions.Priority · Agent</div>
+      <div class="links">Blocks #94 · DR-015</div>
+    </article>
+
+    <article class="issue">
+      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/90">#90</a><h3>Short-term memory</h3><span class="pill ok">ready</span></div>
+      <p>The last few exchanges go back into each request, oldest first and within a token budget, so "Now wait here." can follow "Follow me.". Each exchange is stored as the stimulus plus the decision as JSON. What is remembered is the decision the agent actually made, never the model's raw text.</p>
+      <div><div class="lab">Done when</div><ul class="done">
+        <li>The second request carries the first exchange</li>
+        <li>Past the cap, the oldest exchanges drop whole</li>
+        <li>Two agents from one profile never share memory; failures remember nothing</li>
+      </ul></div>
+      <div class="files">Runtime/Memory/ · Agent · DecisionRequest.History</div>
+      <div class="links">Blocks #94 · build plan §2.9</div>
+    </article>
+
+    <article class="issue gate">
+      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/94">#94</a><h3>Phase 2 gate</h3><span class="pill warn">waits on #87–#90</span></div>
+      <p>Live PlayMode tests tagged <span class="mono">RequiresOllama</span>, skipped with a message when Ollama is not running, and a sandbox scene where you type a command and watch the decision and its telemetry. It records the first in-Unity latency since the prototype in <span class="mono">findings.md</span>.</p>
+      <div><div class="lab">Done when</div><ul class="done">
+        <li>A five-action agent decides in under 5 s after warm-up</li>
+        <li>Telemetry is filled in, and a missing model is a typed error</li>
+        <li>Memory reaches the second request</li>
+      </ul></div>
+      <div class="files">Tests/Runtime/ (new PlayMode assembly) · UnityProject/Assets/Sandbox/</div>
+      <div class="links">Closes Phase 2's definition of done</div>
+    </article>
+
+  </div>
+
+  <div class="group"><h3>Beside it</h3><span class="pill">Phase 2 work the gate does not wait for</span></div>
+  <div class="grid">
+
+    <article class="issue">
+      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/91">#91</a><h3>Observation sources</h3><span class="pill ok">ready</span></div>
+      <p>Agents gather their own facts at decision time. The one for scene agents reads the <span class="mono">Description</span> of nearby <span class="mono">Targetable</span>s, so "The watchtower door stands open." reaches the guard by the tower. Facts passed for the call are kept first, gathered lines fill the rest of a hard cap, and what was cut is recorded.</p>
+      <div><div class="lab">Done when</div><ul class="done">
+        <li>Sources are asked in order on every decision; nothing carries over</li>
+        <li>The cap and its dropped lines behave as specified</li>
+        <li>The scene source is tested with GameObjects</li>
+      </ul></div>
+      <div class="files">Runtime/Observations/ · Runtime/Unity/ProximityObservationSource.cs</div>
+      <div class="links">DR-012</div>
+    </article>
+
+    <article class="issue">
+      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/92">#92</a><h3>Provider config asset</h3><span class="pill warn">waits on #88</span></div>
+      <p>Set the model connection up once, as an asset (<b>Create → Agenerela → Ollama Provider</b>), with a project default under <b>Project Settings → Agenerela</b>. An agent with no config of its own uses the default. One config means one provider instance, so one queue, and telemetry records which config was used.</p>
+      <div><div class="lab">Done when</div><ul class="done">
+        <li>The default resolves in Play mode with no <span class="mono">AssetDatabase</span></li>
+        <li>With no default, the error says how to create one</li>
+      </ul></div>
+      <div class="files">Runtime/Providers/ProviderConfig.cs · Editor/ settings page</div>
+      <div class="links">Blocks #93 · DR-013</div>
+    </article>
+
+    <article class="issue">
+      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/93">#93</a><h3>AgentBehaviour</h3><span class="pill warn">waits on #92</span></div>
+      <p>Drop it on a GameObject and assign a profile. It builds the agent, registers the <span class="mono">[AgentAction]</span> methods on the same object, binds the listed handlers, finds targets nearby, and cancels the agent's requests when the object is destroyed. No manager object in the scene.</p>
+      <div><div class="lab">Done when</div><ul class="done">
+        <li>A decision in flight when the object is destroyed ends cancelled</li>
+        <li>The Inspector warns about a missing profile or an action with no handler</li>
+      </ul></div>
+      <div class="files">Runtime/Unity/AgentBehaviour.cs</div>
+      <div class="links">GreyBox2D and CompanionRPG start on this</div>
+    </article>
+
+    <article class="issue">
+      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/81">#81</a><h3>TargetsDropped</h3><span class="pill ok">ready</span></div>
+      <p>A proximity target source drops the targets past its cap, and the telemetry field meant to list them is always empty. This fills it through a small interface beside <span class="mono">ITargetSource</span>, without the core referencing a Unity type. Then "the guard ignored the well" can be told apart from "the well was never offered".</p>
+      <div><div class="lab">Done when</div><ul class="done">
+        <li>Dropped ids appear in the result's telemetry, in the source's order</li>
+        <li><span class="mono">Runtime/Core/</span> still references nothing in <span class="mono">Runtime/Unity/</span></li>
+      </ul></div>
+      <div class="files">Runtime/Actions/ · ProximityTargetSource · Agent</div>
+      <div class="links">Follows #32 and #17</div>
+    </article>
+
+  </div>
+</section>
+
+<!-- ============ TELEMETRY ============ -->
+<section class="sec" id="telemetry">
+  <div class="sechead"><h2>What every decision will record</h2><span class="pill">names as proposed in the issues</span></div>
+  <p class="seclede">Phase 1 left <span class="mono">DecisionTelemetry</span> with latency, tokens, provider name and version. Phase 2 adds the fields that answer the questions a live model raises. These are what #94 checks, what the Phase 4 harness scores with, and what the Phase 5 Decision Log will show.</p>
+  <div class="scrollx">
+    <table>
+      <thead><tr><th>Field</th><th>Issue</th><th>The question it answers</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">ErrorKind, ErrorMessage</td><td>#87</td><td>Why did this decision fail: a missing model, a stopped server, a timeout, an unreadable reply?</td></tr>
+        <tr><td class="mono">Model</td><td>#88</td><td>Which model answered? <span class="mono">ProviderName</span> names only the provider.</td></tr>
+        <tr><td class="mono">Priority, QueueWaitSeconds, QueuedAhead</td><td>#89</td><td>Was a slow answer the model, or four background requests ahead of it?</td></tr>
+        <tr><td class="mono">HistoryTurnsSent, HistoryTurnsDropped</td><td>#90</td><td>How much memory reached the prompt, and how much the budget cut?</td></tr>
+        <tr><td class="mono">ObservationsDropped</td><td>#91</td><td>Which facts did the cap leave out?</td></tr>
+        <tr><td class="mono">ProviderConfig</td><td>#92</td><td>Which configuration resolved: the agent's own, or the project default?</td></tr>
+        <tr><td class="mono">TargetsDropped</td><td>#81</td><td>Was the thing the player named ever offered, or past the cap?</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ RULES ============ -->
+<section class="sec" id="rules">
+  <div class="sechead"><h2>Rules carried in from measurement</h2><span class="pill">do not change without new evidence</span></div>
+  <p class="seclede">Phase 2 is the first code that talks to a model, so it is where measured settings are easiest to lose by accident.</p>
+  <ul class="rules">
+    <li><b><span class="mono">127.0.0.1</span>, never <span class="mono">localhost</span></b>On Windows, <span class="mono">localhost</span> tries IPv6 first and Ollama listens on IPv4 only. The same tiny request took 2.26 s against 0.14 s (findings, 5 October).</li>
+    <li><b>Temperature 0, thinking off</b>Appendix A's numbers were measured with greedy decoding and Qwen's reasoning mode off.</li>
+    <li><b>The schema constrains; it is not read</b>Ollama compiles <span class="mono">format</span> into the sampling grammar and never shows it to the model: the prompt was 37 tokens with or without it (findings, 10 October).</li>
+    <li><b>Providers never rewrite a block</b>Two of the three regressions the prototype's A/B harness caught were prompt wording changes. Blocks arrive rendered and leave unchanged.</li>
+    <li><b>One model resident when timing</b>Two models on an 8 GB card flatten every latency number (hard rule 3). Check with <span class="mono">ollama ps</span> before #94's measurement.</li>
+    <li><b>No accuracy claims from Phase 2</b>A live decision proves the pipeline, not the model's judgement. Accuracy needs an A/B run with a control arm (hard rule 2), which is Phase 4.</li>
+  </ul>
+</section>
+
+<!-- ============ CALLS ============ -->
+<section class="sec" id="calls">
+  <div class="sechead"><h2>Calls made in the issues</h2><span class="pill acc">open to argument before the code lands</span></div>
+  <p class="seclede">Four choices the build plan left open were settled in the issue text so work could start. Each issue says what to do if building it shows a better answer.</p>
+  <ul class="rules calls">
+    <li><b>#88 · <span class="mono">HttpClient</span> over <span class="mono">UnityWebRequest</span></b>The prototype used <span class="mono">UnityWebRequest</span>, which lives in a Unity module the package would have to declare, and CI allows only Newtonsoft. <span class="mono">HttpClient</span> needs nothing. The other route is to declare the module and widen the CI rule to Unity's built-in modules in the same PR.</li>
+    <li><b>#90 · How a remembered exchange is written</b>Two entries per exchange: the stimulus as sent, then the decision as JSON in schema order, sent as a user and an assistant message. The model sees its earlier answers in the form it must give now. The prototype kept only the spoken line, which drops the action.</li>
+    <li><b>#91 · Which observations the cap keeps</b>Facts passed for this call are kept first, and gathered lines fill the rest in source order. The build plan says only that per-call lines go last in the prompt and that a cap applies.</li>
+    <li><b>#92 · Two levels of provider config, not three</b>The agent's own config, then the project default. DR-013's middle level, a scene override, waits until a demo needs it, which DR-013's revisit clause allows.</li>
+  </ul>
+</section>
+
+<!-- ============ OUT ============ -->
+<section class="sec" id="out">
+  <div class="sechead"><h2>Not in Phase 2</h2></div>
+  <ul class="rules out">
+    <li><b>Guards</b>The grounding guard and the legality pipeline are Phase 3. Phase 2 asks Ollama for token probabilities so Phase 3 has them.</li>
+    <li><b>Accuracy and the evaluation harness</b>Phase 4. The prompt set's next batch and real annotators are #85, ready now beside Phase 2.</li>
+    <li><b>Cloud providers, budgets and rate limits</b>Phase 6, behind the same <span class="mono">ILLMProvider</span>.</li>
+    <li><b>The ticker, the summariser, long-term memory</b>Each is an extension point in its issue (#89, #91, #90), waiting for a demo or a Phase 4 measurement.</li>
+  </ul>
+</section>
+
+<footer>
+  <p><b>Agenerela</b> — a Unity framework that lets a language model drive game agents by choosing from actions the developer registered. CSUN COMP 490 / 491.</p>
+  <p style="margin-top:10px">Written 12 October 2026 from the <a href="https://github.com/agenerela/agenerela/blob/test/docs/FRAMEWORK_BUILD_PLAN.md">build plan</a> (§2.4 to §2.9, the Phase 2 row of §3, DR-012 to DR-015) and the issues in the <a href="https://github.com/agenerela/agenerela/milestone/3">Phase 2 milestone</a>. Where this page and an issue disagree, the issue is current. The developer's whole path through the framework is the <a href="https://github.com/agenerela/agenerela/blob/test/docs/design/workflow.html">walkthrough</a>.</p>
+</footer>
+</div>
+</body>
+</html>

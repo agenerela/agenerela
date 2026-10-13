@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Agenerela System Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+  :root{
+    --bg:#f4f6f8; --surface:#ffffff; --sunken:#eceef2; --paper:#ffffff;
+    --ink:#14171d; --ink-2:#3d4350; --muted:#646b7a;
+    --rule:#dbdfe6; --rule-2:#eceef2;
+    --accent:#1f5fd1; --accent-ink:#1f5fd1; --accent-soft:#e6eefc; --on-accent:#ffffff;
+    --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+    --cond:"IBM Plex Sans Condensed","IBM Plex Sans","Arial Narrow",system-ui,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --bg:#0f1116; --surface:#171a21; --sunken:#1d212a;
+      --ink:#e9ebf0; --ink-2:#c3c8d2; --muted:#98a0b0;
+      --rule:#2a2f3a; --rule-2:#222732;
+      --accent:#7ea6f5; --accent-ink:#9dbbf8; --accent-soft:#1a2740; --on-accent:#0f1116;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --bg:#0f1116; --surface:#171a21; --sunken:#1d212a;
+    --ink:#e9ebf0; --ink-2:#c3c8d2; --muted:#98a0b0;
+    --rule:#2a2f3a; --rule-2:#222732;
+    --accent:#7ea6f5; --accent-ink:#9dbbf8; --accent-soft:#1a2740; --on-accent:#0f1116;
+  }
+
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.6;margin:0;padding:0 20px 72px}
+  .wrap{max-width:1160px;margin:0 auto}
+  a{color:var(--accent-ink)}
+  code{font-family:var(--mono);font-size:.86em;background:var(--sunken);border-radius:4px;padding:1px 5px;overflow-wrap:anywhere}
+
+  /* masthead */
+  header.top{padding-block:40px 30px;border-bottom:2px solid var(--ink)}
+  .kicker,.label{font-family:var(--mono);font-size:11.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin:0}
+  h1{font-family:var(--cond);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.02;letter-spacing:-.015em;margin:10px 0 12px;text-wrap:balance}
+  .lede{font-size:17px;color:var(--ink-2);max-width:64ch;margin:0}
+  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin:24px 0 0;padding:0;list-style:none}
+  .steps li{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:13px 15px;font-size:14.5px;line-height:1.5;color:var(--ink-2)}
+  .steps b{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-ink);margin-bottom:4px}
+
+  /* sections */
+  section{padding-block:44px}
+  section + section{border-top:1px solid var(--rule)}
+  .sec-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px 24px;margin-bottom:22px}
+  .sec-head .label{margin-bottom:6px}
+  h2{font-family:var(--cond);font-weight:700;font-size:clamp(26px,3.6vw,34px);line-height:1.08;letter-spacing:-.01em;margin:0;text-wrap:balance}
+  .tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+  .status{font-family:var(--mono);font-size:12px;color:var(--muted);flex-basis:100%;text-align:right}
+  .status:empty{display:none}
+
+  .btn{display:inline-flex;align-items:center;font-family:var(--sans);font-size:14px;font-weight:600;line-height:1.3;color:var(--ink);background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:8px 14px;cursor:pointer;text-decoration:none}
+  .btn:hover{border-color:var(--accent);color:var(--accent-ink)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+  .btn.primary:hover{color:var(--on-accent);filter:brightness(1.08)}
+  .btn[data-state="done"]{background:transparent;color:var(--accent-ink);filter:none}
+  .btn:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  /* figure */
+  .fig-grid{display:grid;grid-template-columns:minmax(0,1fr) 322px;gap:32px;align-items:start}
+  .main-fig{margin:0}
+  .main-fig img{display:block;width:100%;height:auto;background:var(--paper);border:1px solid var(--rule);border-radius:12px}
+  .fig-side{display:grid;gap:28px}
+  .fig-side .label{margin-bottom:10px}
+  .thumb{display:block;width:320px;max-width:100%;height:auto;background:var(--paper);border:1px solid var(--rule)}
+  .note{font-size:13.5px;line-height:1.5;color:var(--muted);margin:10px 0 0}
+  .alt-text{font-size:14px;line-height:1.55;color:var(--ink-2);background:var(--sunken);border:1px solid var(--rule);border-radius:8px;padding:12px 14px;margin:0 0 10px}
+  .specs{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+  .specs dd{margin:0;color:var(--ink);font-variant-numeric:tabular-nums}
+  .save-hint{font-size:13px;color:var(--muted);margin:0}
+
+  /* post */
+  .post-grid{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:32px;align-items:start}
+  .sheet{min-width:0;background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:30px clamp(18px,4vw,42px) 14px}
+  .sheet p,.sheet li{max-width:70ch}
+  .sheet p{margin:0 0 16px}
+  .sheet h3{font-family:var(--cond);font-weight:700;font-size:25px;line-height:1.15;margin:34px 0 16px;padding-top:24px;border-top:1px solid var(--rule)}
+  .sheet ol,.sheet ul{margin:0 0 20px;padding-left:1.5em}
+  .sheet li{margin:0 0 9px}
+  .sheet li::marker{color:var(--muted);font-family:var(--mono);font-size:.85em}
+  .sheet .fig-slot{font-family:var(--mono);font-size:13.5px;color:var(--accent-ink);background:var(--accent-soft);border:1.5px dashed var(--accent);border-radius:8px;padding:12px 14px}
+
+  .checks{position:sticky;top:calc(env(safe-area-inset-top, 0px) + 24px);display:grid;gap:12px}
+  ol.pts{margin:0 0 14px;padding:0;list-style:none;counter-reset:pt}
+  ol.pts li{counter-increment:pt;display:flex;gap:10px;font-size:14px;line-height:1.5;color:var(--ink-2);padding:9px 0;border-bottom:1px solid var(--rule-2)}
+  ol.pts li:last-child{border-bottom:none}
+  ol.pts li::before{content:counter(pt);flex:none;width:20px;height:20px;margin-top:1px;border-radius:50%;background:var(--accent-soft);color:var(--accent-ink);font-family:var(--mono);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center}
+  ul.src{margin:0;padding:0;list-style:none;font-size:13.5px;line-height:1.5;color:var(--muted)}
+  ul.src li{padding:5px 0;border-bottom:1px solid var(--rule-2)}
+  ul.src li:last-child{border-bottom:none}
+
+  footer{border-top:1px solid var(--rule);padding-top:20px;font-size:13.5px;line-height:1.6;color:var(--muted)}
+  footer p{margin:0 0 8px;max-width:90ch}
+
+  @media (max-width:940px){
+    .fig-grid,.post-grid{grid-template-columns:1fr}
+    .checks{position:static}
+  }
+  @media (max-width:560px){
+    body{padding:0 16px 56px}
+    .status{text-align:left}
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .btn{transition:background-color .15s,color .15s,border-color .15s}
+  }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <p class="kicker">COMP 490 · Section 04 · In-class practice · System design · due tonight</p>
+  <h1>System design reply, ready to post</h1>
+  <p class="lede">The group leader’s reply: group name, members, what we decided for Part 1, and the framework figure for Part 2. Everything in it comes from the build plan, the requirements practice and the GitHub issues.</p>
+  <ol class="steps">
+    <li><b>1 · Copy the post</b>Paste it into the Canvas reply box. Bold text, lists, links and code formatting survive the paste.</li>
+    <li><b>2 · Insert the figure</b>Save the PNG, click the <code>[Figure]</code> line in your reply, then Images → Upload Image.</li>
+    <li><b>3 · Set it to Medium</b>In Image Options choose Size: Medium and paste the alt text. Medium caps the longest side at 320 px; the figure is drawn to read at that size.</li>
+  </ol>
+</header>
+
+<section id="figure" aria-labelledby="figure-title">
+  <div class="sec-head">
+    <div>
+      <p class="label">Part 2 · the figure to upload</p>
+      <h2 id="figure-title">Agenerela framework design</h2>
+    </div>
+    <div class="tools">
+      <button type="button" class="btn primary" id="save-png">Save PNG</button>
+      <a class="btn" href="../design/png/07-framework-design.png" target="_blank" rel="noopener">Open full size</a>
+      <span class="status" id="save-status" aria-live="polite"></span>
+    </div>
+  </div>
+
+  <div class="fig-grid">
+    <figure class="main-fig">
+      <img src="../design/png/07-framework-design.png" width="1280" height="1280" id="fig-img" alt="">
+    </figure>
+    <aside class="fig-side">
+      <div>
+        <p class="label">What Canvas shows at Medium</p>
+        <img class="thumb" src="../design/png/07-framework-design.png" width="320" height="320" alt="The same figure at 320 by 320 pixels.">
+        <p class="note">320 × 320 px. The title, the three zones, the six module names and the blue path still read at this size. Class names and examples are there for anyone who opens the image full size.</p>
+      </div>
+      <div>
+        <p class="label">Alt text for Image Options</p>
+        <p class="alt-text" id="alt-text"></p>
+        <button type="button" class="btn" id="copy-alt">Copy alt text</button>
+      </div>
+      <dl class="specs">
+        <dt>File</dt><dd>agenerela-framework-design.png</dd>
+        <dt>Pixels</dt><dd>2560 × 2560 (drawn at 1280, rendered 2×)</dd>
+        <dt>Style</dt><dd>grayscale, one blue for the path, like the lab figures</dd>
+      </dl>
+      <p class="save-hint" id="save-hint" hidden>Saving from this view is unavailable. Use Open full size, then right-click the image and choose Save image as.</p>
+    </aside>
+  </div>
+</section>
+
+<section id="post" aria-labelledby="post-title">
+  <div class="sec-head">
+    <div>
+      <p class="label">Parts 1 and 2 · the reply text</p>
+      <h2 id="post-title">The post</h2>
+    </div>
+    <div class="tools">
+      <button type="button" class="btn primary" id="copy-post">Copy post</button>
+      <span class="status" id="post-status" aria-live="polite"></span>
+    </div>
+  </div>
+
+  <div class="post-grid">
+    <article class="sheet" id="sheet"></article>
+    <aside class="checks" aria-label="Before you post">
+      <p class="label">Before you post</p>
+      <ol class="pts">
+        <li><span>The reply asks for the members who took part. All six are listed; take out anyone who missed the discussion.</span></li>
+        <li><span>Owners and diagram assignments follow the GitHub issue assignees and the features each person took in the requirements practice. Change any the team split differently.</span></li>
+        <li><span>The <code>[Figure]</code> line marks where the image goes. Delete it once the image is in.</span></li>
+      </ol>
+      <p class="label">Where each part comes from</p>
+      <ul class="src">
+        <li>Goals, hardware, software: build plan §1–§6 and Appendix A</li>
+        <li>Owners: issues #2–#53 and the 10 September requirements practice</li>
+        <li>User stories: the six features, and the stories teammates wrote</li>
+        <li>Figure: build plan §2 modules, drawn as one decision</li>
+      </ul>
+    </aside>
+  </div>
+</section>
+
+<footer>
+  <p>The figure is a hand-drawn SVG page rendered at 2× by headless Edge, the same way <code>docs/design/render.ps1</code> renders the wireframes. It draws the modules the build plan already specifies; nothing in it is a new decision.</p>
+  <p>Every accuracy number in the post is a prototype measurement from the build plan’s Appendix A, quoted with the conditions it was measured under. None of them is new.</p>
+</footer>
+</div>
+
+<script>
+/* Where the figure is served from, and the name a viewer saves it under. */
+const PNG_URL = "../design/png/07-framework-design.png";
+const PNG_NAME = "agenerela-framework-design.png";
+
+const ALT = "Agenerela framework design. Three columns: the developer’s game on the left, the Agenerela Unity package in the middle, and the language model on the right. One decision runs through nine numbered steps: the game asks the agent; the package gathers the agent’s context, keeps only the actions legal right now plus the targets it may name, builds the schema and prompt, and queues the request to a provider; the model chooses, running on Ollama, an in-process model or a cloud API; guards re-check the answer; the result and its telemetry return to the game, whose own handler carries it out. The model has no connection to the game. Along the bottom: the Unity adapter, the Editor tools and the evaluation harness.";
+
+/* What lands on the clipboard: class-free HTML that Canvas keeps. */
+const POST_HTML = `
+<p><strong>Group name:</strong> Agenerela</p>
+<p><strong>Participating members:</strong> Yevhen (team lead), Hunter, Tim, Jay, Hero, Maxim</p>
+
+<h3>Part 1: Goals of our project</h3>
+<p><strong>Design document.</strong> Our design document is the build plan in our GitHub repository, which all six of us work from: the architecture, build phases with a definition of done for each, testing standards, and decision records explaining each choice. We track work in GitHub Issues and a GitHub Projects board rather than JIRA, so our design pages live in the repository: <a href="https://github.com/agenerela/agenerela/blob/test/docs/FRAMEWORK_BUILD_PLAN.md">docs/FRAMEWORK_BUILD_PLAN.md</a>.</p>
+<p><strong>What we hope to accomplish.</strong> A Unity framework that lets a language model drive game agents (NPCs, companions, enemies, factions, colonies) by choosing only from actions the game developer registered. The model decides; validated game code executes. Our prototype showed that the engineering around the model matters more than its size: on a focused 20-prompt test, one ten-line check took a 2-billion-parameter model from 60% to 95% correct, ahead of a 4-billion-parameter model without it (65%). That scaffolding is the product we are building.</p>
+
+<p><strong>Goals, and how we will accomplish each</strong></p>
+<ol>
+<li><strong>Any game entity can be an agent</strong>, whether a guard, a companion or a country with no body at all. <em>How:</em> <code>Agent</code> is a plain C# class rather than a Unity component, only one folder of the package touches a scene, and the game passes free-form text and observations whenever it chooses to ask. Our GreyBoxStrategy demo tests this: countries decide through the same API as a talking NPC.</li>
+<li><strong>Developers define actions without editing the framework.</strong> <em>How:</em> actions are data (<code>ActionDefinition</code>), written as an asset or on a C# method, and each is registered with a handler (<code>IActionHandler</code>) that runs the developer’s own code.</li>
+<li><strong>Agents choose only legal actions, and never act on things nobody mentioned.</strong> <em>How:</em> every request carries a schema listing only the actions legal in the agent’s current state, with a required <code>target</code> that can be <code>no_target</code>, and the model’s output is constrained to it. A guard pipeline then re-checks legality and grounding and turns a bad choice into <code>none</code>. The model never touches Unity.</li>
+<li><strong>The same agents run on any model backend, including one inside the shipped game.</strong> <em>How:</em> one <code>ILLMProvider</code> interface, with Ollama for development, an in-process model (llama.cpp through LLMUnity) so players need no server or internet, and cloud APIs, Gemini first, as an option. Adding a backend takes one class and a config asset.</li>
+<li><strong>The game stays responsive while agents think.</strong> <em>How:</em> asynchronous requests (Unity’s <code>Awaitable</code>) and a queue that serves player-facing requests before background ones, with cancellation and request budgets.</li>
+<li><strong>Every accuracy claim is measured.</strong> <em>How:</em> an evaluation harness with 200+ labelled prompts, A/B runs against a control arm on the same model, machine and session, and results reported as five outcome types rather than one percentage.</li>
+<li><strong>A developer new to the framework builds a working agent in under 15 minutes.</strong> <em>How:</em> Unity Editor tools (Agent Profile inspector, Decision Log, Evaluation Report), three small samples, and demo games that use only the public API.</li>
+</ol>
+
+<p><strong>Special hardware</strong></p>
+<ul>
+<li>Nothing beyond ordinary PCs.</li>
+<li>For development and testing, a GPU with 8 GB of video memory runs a 2B to 4B model beside the Unity Editor. Our reference machine is a laptop with an RTX 4060, where a 2B model plus a minimal scene used 4.2 GB.</li>
+<li>Players need an ordinary gaming PC; the in-process model adds about 1 GB to a game’s download. The cloud option needs an internet connection instead of a GPU.</li>
+<li>Our CI runs on GitHub’s servers, which have no GPU, so tests that need a model are tagged and never run there.</li>
+</ul>
+
+<p><strong>Software</strong></p>
+<ul>
+<li>Unity 6 (6000.3.23f1, pinned in every project) and C#, with the Unity Test Framework for EditMode and PlayMode tests</li>
+<li>Newtonsoft JSON, the framework core’s only third-party dependency</li>
+<li>Ollama running Qwen 3.5 models (2B and 4B, Apache-2.0) during development</li>
+<li>LLMUnity (embedded llama.cpp) for the in-process provider, as an optional dependency</li>
+<li>Google Gemini API as the first cloud provider (optional)</li>
+<li>Python for standalone benchmark scripts</li>
+<li>GitHub for the repository, Issues and Projects board, pull requests, Actions CI, and Git LFS for game art</li>
+</ul>
+
+<p><strong>Special algorithms and techniques</strong></p>
+<ul>
+<li><strong>Constrained decoding:</strong> each request’s schema becomes a sampling grammar (Ollama builds it from JSON Schema; for llama.cpp we emit GBNF), so the model cannot write an action or target that is not on the list.</li>
+<li><strong>State masking:</strong> every action’s <code>IsAvailable</code> runs on every decision, and illegal actions are left out of the schema instead of forbidden in prose.</li>
+<li><strong>Generated few-shot examples:</strong> one worked example per available action with a sensible target, plus one refusal. This was the largest single accuracy lever in our prototype (+35 points).</li>
+<li><strong>Target grounding guard:</strong> the chosen target must be named in the request, as an exact word or after splitting <code>snake_case</code> and <code>camelCase</code>, or the choice becomes <code>none</code>.</li>
+<li><strong>Priority scheduling</strong> of model requests, and an <strong>A/B evaluation method</strong> with a control arm, five outcome classes and a second annotator.</li>
+</ul>
+
+<p><strong>User stories</strong></p>
+<p><em>Players</em></p>
+<ol>
+<li>As a player, I want characters whose behaviour fits the game’s setting and story, so that the world feels alive and I stay immersed in it.</li>
+<li>As a player, I want enemies, allies and other characters to notice what is happening in the game and react to it, so that they feel intelligent and responsive rather than scripted.</li>
+<li>As a player, I want characters to answer within a few seconds and to stay in character when I ask for something impossible, so that the game never freezes or breaks.</li>
+</ol>
+<p><em>Game developers and writers</em></p>
+<ol start="4">
+<li>As a game writer, I want to describe a character’s role, personality and goals once, so that I can focus on the story and setting while its choices follow what I wrote, without writing a prompt by hand.</li>
+<li>As a game developer, I want to add an action by creating an asset or tagging a method, so that my agents can do new things without my editing the framework.</li>
+<li>As a game developer, I want actions that make no sense right now to be left out of the model’s options, so that a guard already following the player is never offered “follow the player”.</li>
+<li>As a game developer, I want an agent to refuse requests about things that were never mentioned or do not exist, so that “Attack Godzilla” never makes my guard hit the training dummy.</li>
+<li>As a racing-game developer, I want to ask each driver for a decision at points I place on the track, with the routes ahead as its targets and a profile saying how much risk it likes, so that every driver picks a route that fits both the conditions and its personality.</li>
+<li>As a strategy-game developer, I want a faction with no body or position to decide through the same API as a talking NPC, so that one framework runs all my AI.</li>
+<li>As a game developer, I want to build against Ollama and ship with a model inside the game, so that players install nothing and can play offline.</li>
+<li>As a game developer, I want to see what my agent was offered, what it answered, which checks fired and how long it took, so that I can find out why it did something.</li>
+<li>As a game developer tuning an agent, I want to run two versions of its actions against the same labelled prompts, so that I know whether my change helped.</li>
+</ol>
+
+<h3>Part 2: Visualizing our design</h3>
+<p><strong>Major modules.</strong> Everything below except the evaluation harness and the demo games ships in one Unity package, <code>com.agenerela.framework</code>. Names in brackets are the teammates who own that feature.</p>
+<ul>
+<li><strong>Core:</strong> <code>Agent</code>, its identity and memory, and the decision types. (Hunter)</li>
+<li><strong>Actions:</strong> action definitions, the registry, and which actions are legal right now. (Tim, Jay)</li>
+<li><strong>Targets:</strong> what an agent may refer to, discovered from <code>Targetable</code> objects in the scene. (Hero)</li>
+<li><strong>Schema and prompt:</strong> the provider-neutral <code>DecisionSchema</code>, its JSON Schema and GBNF serializers, few-shot examples and the prompt builder. (Jay, Hunter, Yevhen)</li>
+<li><strong>Providers and queue:</strong> <code>ILLMProvider</code> for Ollama, in-process and cloud backends, and the request queue. (Yevhen)</li>
+<li><strong>Validation:</strong> the guard pipeline, covering legality, target grounding and the developer’s own rules. (Hero, Jay)</li>
+<li><strong>Telemetry:</strong> a record of every decision, with five outcome classes for evaluation. (Maxim)</li>
+<li><strong>Unity adapter:</strong> <code>AgentBehaviour</code> and <code>Targetable</code>, the only code that touches a scene.</li>
+<li><strong>Editor tools:</strong> the Agent Profile inspector and the Decision Log and Evaluation Report windows (Phase 5).</li>
+<li><strong>Evaluation harness:</strong> labelled prompts and A/B runs, kept in our development project rather than the package. (Maxim)</li>
+<li><strong>Demo games:</strong> GreyBoxVillage, GreyBoxStrategy, CompanionRPG and GreyBox2D, each its own Unity project using only the public API.</li>
+</ul>
+
+<p><strong>Draft framework design</strong></p>
+<p>[Figure: insert agenerela-framework-design.png here, size Medium]</p>
+<p>The left column is the developer’s game, the middle is our package, and the right is the language model. One decision runs through nine steps: (1) the game asks the agent; (2) the agent gathers who it is and what it remembers and sees; (3) the framework keeps only the actions legal right now, by asking the game’s handlers, plus the targets it may name; (4) it builds the schema and prompt; (5) it queues the request and sends it through a provider; (6) the model picks from the legal options; (7) guards re-check the answer; (8) the result and its telemetry go back to the game; and (9) the game’s own handler carries it out. No arrow runs from the model to the game: the model only ever sees ids such as <code>tower</code> and returns three fields. Dashed lines read state or report telemetry, and the small circles mark extension points, interfaces a developer implements.</p>
+
+<p><strong>Other diagrams and models, assigned by the feature each person owns</strong></p>
+<ul>
+<li><strong>Hunter</strong> (agents and decision requests): UML sequence diagram of one decision, from <code>DecideAsync</code> to <code>Execute</code>, including the path when a provider fails.</li>
+<li><strong>Tim</strong> (action vocabulary): UML class diagram of <code>ActionDefinition</code>, its asset wrapper, <code>AgentProfile</code> and the two ways to author an action.</li>
+<li><strong>Jay</strong> (action availability and the schema): UML state machine for the village guard, showing which actions each state offers, with the <code>DecisionSchema</code> each state produces.</li>
+<li><strong>Hero</strong> (targets and grounding): UML activity diagram of the guard pipeline (pass, rewrite to <code>none</code>, or reject), and of how <code>Targetable</code> objects become a target list.</li>
+<li><strong>Yevhen</strong> (model providers): UML deployment diagram of where the model runs (the Unity Editor with Ollama, a shipped game with an in-process model, a cloud API), plus the component figure above.</li>
+<li><strong>Maxim</strong> (telemetry and evaluation): a data model of one decision record, and the evaluation charts: outcome bars for each A/B arm, accuracy per prompt category with our 10-point noise floor marked, and a latency distribution.</li>
+</ul>
+<p>Already drawn: the sitemap and six screen wireframes from the sketch lab, and a nine-step walkthrough of how a developer builds an agent, in <a href="https://github.com/agenerela/agenerela/tree/test/docs/design">docs/design</a>.</p>
+`;
+
+const sheet = document.getElementById("sheet");
+sheet.innerHTML = POST_HTML;
+sheet.querySelectorAll("p").forEach(p => {
+  if (p.textContent.trim().startsWith("[Figure")) p.classList.add("fig-slot");
+});
+document.getElementById("alt-text").textContent = ALT;
+document.getElementById("fig-img").alt = ALT;
+
+function flash(btn, text, ms) {
+  const old = btn.dataset.label || btn.textContent;
+  btn.dataset.label = old;
+  btn.textContent = text;
+  btn.dataset.state = "done";
+  clearTimeout(btn._t);
+  btn._t = setTimeout(() => { btn.textContent = old; delete btn.dataset.state; }, ms || 2200);
+}
+
+function selectNode(node) {
+  const sel = window.getSelection();
+  const range = document.createRange();
+  range.selectNodeContents(node);
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+/* Copy post: rich HTML plus a plain-text twin; falls back to a selection copy, then to a manual selection. */
+document.getElementById("copy-post").addEventListener("click", async (ev) => {
+  const btn = ev.currentTarget;
+  const status = document.getElementById("post-status");
+  const text = sheet.innerText.replace(/\n{3,}/g, "\n\n").trim();
+  let ok = false;
+  try {
+    if (navigator.clipboard && window.ClipboardItem) {
+      await navigator.clipboard.write([new ClipboardItem({
+        "text/html": new Blob([POST_HTML], { type: "text/html" }),
+        "text/plain": new Blob([text], { type: "text/plain" })
+      })]);
+      ok = true;
+    }
+  } catch (e) { ok = false; }
+
+  if (!ok) {
+    const holder = document.createElement("div");
+    holder.innerHTML = POST_HTML;
+    holder.style.cssText = "position:fixed;left:-10000px;top:0;font:16px Arial,sans-serif;color:#000;background:#fff;";
+    document.body.appendChild(holder);
+    selectNode(holder);
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    window.getSelection().removeAllRanges();
+    holder.remove();
+  }
+
+  if (ok) {
+    status.textContent = "";
+    flash(btn, "Copied");
+  } else {
+    selectNode(sheet);
+    status.textContent = "Clipboard access is blocked here. The post is selected: press Ctrl+C (Cmd+C on a Mac).";
+  }
+});
+
+document.getElementById("copy-alt").addEventListener("click", async (ev) => {
+  const btn = ev.currentTarget;
+  try {
+    await navigator.clipboard.writeText(ALT);
+    flash(btn, "Copied");
+  } catch (e) {
+    selectNode(document.getElementById("alt-text"));
+    flash(btn, "Selected: press Ctrl+C", 3200);
+  }
+});
+
+/* Save PNG goes through the downloads capability; without it, point at Open full size. */
+const saveBtn = document.getElementById("save-png");
+const saveStatus = document.getElementById("save-status");
+let downloads = null;
+let downloadsReady = false;
+
+function noSaving() {
+  saveBtn.hidden = true;
+  document.getElementById("save-hint").hidden = false;
+}
+
+if (window.claude && typeof window.claude.use === "function") {
+  window.claude.use("downloads")
+    .then(d => { downloads = d; downloadsReady = true; if (!d) noSaving(); })
+    .catch(() => { downloadsReady = true; noSaving(); });
+} else {
+  noSaving();
+}
+
+saveBtn.addEventListener("click", async () => {
+  if (!downloads) {
+    saveStatus.textContent = downloadsReady ? "Saving is unavailable here. Use Open full size." : "One moment, then try again.";
+    return;
+  }
+  saveBtn.disabled = true;
+  saveStatus.textContent = "";
+  try {
+    const blob = await fetch(PNG_URL).then(r => {
+      if (!r.ok) throw new Error("fetch " + r.status);
+      return r.blob();
+    });
+    await downloads.save({ filename: PNG_NAME, data: blob });
+    flash(saveBtn, "Saved");
+  } catch (err) {
+    const code = err && err.code;
+    if (code === "declined") saveStatus.textContent = "Save cancelled.";
+    else if (code === "rate_limited") saveStatus.textContent = "A save prompt is already open.";
+    else saveStatus.textContent = "Could not save here. Use Open full size, then Save image as.";
+  } finally {
+    saveBtn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

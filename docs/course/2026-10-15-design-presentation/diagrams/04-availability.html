@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Action availability</title>
+<link rel="stylesheet" href="fig.css">
+<style>body{width:1200px;height:460px}</style></head>
+<body>
+<!-- Action availability (Tigran Kolsuzyan). Top: the village guard in three situations and the
+     actions it is offered (illustrative states; masking rules from build plan 2.2 and the
+     walkthrough's CanMove). Bottom: ActionAvailability.For as merged in #7 (via #63), plus
+     none, which DecisionSchema (#8) appends last. -->
+<svg width="1200" height="460" viewBox="0 0 1200 460" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="ab" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4.2" markerHeight="4.2" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f5bd6"/></marker>
+  <marker id="ag" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#777"/></marker>
+  <g id="c-follow"><rect width="126" height="28" rx="14" class="chip"/><text x="63" y="19" text-anchor="middle" class="mono" style="font-size:15px">follow_player</text></g>
+  <g id="c-move"><rect width="82" height="28" rx="14" class="chip"/><text x="41" y="19" text-anchor="middle" class="mono" style="font-size:15px">move_to</text></g>
+  <g id="c-attack"><rect width="126" height="28" rx="14" class="chip"/><text x="63" y="19" text-anchor="middle" class="mono" style="font-size:15px">attack_target</text></g>
+  <g id="c-none"><rect width="56" height="28" rx="14" class="chip"/><text x="28" y="19" text-anchor="middle" class="mono" style="font-size:15px">none</text></g>
+  <g id="x-follow"><rect width="126" height="28" rx="14" class="chipx"/><text x="63" y="19" text-anchor="middle" class="mono" style="font-size:15px;fill:#999" text-decoration="line-through">follow_player</text></g>
+  <g id="x-move"><rect width="82" height="28" rx="14" class="chipx"/><text x="41" y="19" text-anchor="middle" class="mono" style="font-size:15px;fill:#999" text-decoration="line-through">move_to</text></g>
+  <!-- little scene pieces -->
+  <g id="tower"><rect x="-15" y="-15" width="30" height="30" fill="#fff" stroke="#2a2a2a" stroke-width="2"/><circle r="8" fill="#fff" stroke="#2a2a2a" stroke-width="2"/></g>
+  <g id="guard"><circle r="11" fill="#2a2a2a"/></g>
+  <g id="you"><circle r="9" fill="#fff" stroke="#2a2a2a" stroke-width="2.5"/></g>
+</defs>
+
+<!-- ===== three situations ===== -->
+<g>
+  <rect x="2" y="2" width="374" height="290" rx="12" class="box"/>
+  <rect x="14" y="14" width="350" height="34" rx="7" fill="#1c1c1c"/>
+  <text x="28" y="37" class="bartxt">AT POST</text>
+  <text x="350" y="37" text-anchor="end" style="font-size:13px;fill:#ccc">idle at the gate</text>
+  <rect x="14" y="58" width="350" height="92" rx="8" fill="#f7f8fa"/>
+  <line x1="40" y1="122" x2="160" y2="122" stroke="#aaa" stroke-width="5"/><line x1="200" y1="122" x2="340" y2="122" stroke="#aaa" stroke-width="5"/>
+  <use href="#guard" x="180" y="112"/><use href="#you" x="110" y="96"/><use href="#tower" x="300" y="84"/>
+  <text x="180" y="144" text-anchor="middle" class="xs">guard</text><text x="110" y="78" text-anchor="middle" class="xs">you</text><text x="300" y="116" text-anchor="middle" class="xs">tower</text>
+  <text x="26" y="176" class="cap" style="font-size:11.5px">OFFERED TO THE MODEL</text>
+  <use href="#c-follow" x="26" y="186"/><use href="#c-move" x="160" y="186"/>
+  <use href="#c-attack" x="26" y="222"/><use href="#c-none" x="160" y="222"/>
+  <text x="26" y="276" class="s">every verb is legal; <tspan class="mono">none</tspan> comes last</text>
+</g>
+
+<g>
+  <rect x="412" y="2" width="374" height="290" rx="12" class="box"/>
+  <rect x="424" y="14" width="350" height="34" rx="7" fill="#1c1c1c"/>
+  <text x="438" y="37" class="bartxt">WALKING</text>
+  <text x="760" y="37" text-anchor="end" style="font-size:13px;fill:#ccc">on its way somewhere</text>
+  <rect x="424" y="58" width="350" height="92" rx="8" fill="#f7f8fa"/>
+  <line x1="450" y1="122" x2="570" y2="122" stroke="#aaa" stroke-width="5"/><line x1="610" y1="122" x2="750" y2="122" stroke="#aaa" stroke-width="5"/>
+  <path d="M590,112 C620,104 650,96 690,90" class="greyd" marker-end="url(#ag)"/>
+  <use href="#guard" x="626" y="102"/><use href="#you" x="520" y="96"/><use href="#tower" x="710" y="84"/>
+  <text x="626" y="145" text-anchor="middle" class="xs">walking to the tower</text>
+  <text x="436" y="176" class="cap" style="font-size:11.5px">OFFERED TO THE MODEL</text>
+  <use href="#c-follow" x="436" y="186"/><use href="#x-move" x="570" y="186"/>
+  <use href="#c-attack" x="436" y="222"/><use href="#c-none" x="570" y="222"/>
+  <text x="436" y="276" class="s"><tspan class="mono">move_to</tspan> hidden: <tspan class="mono">CanMove()</tspan> is false</text>
+</g>
+
+<g>
+  <rect x="822" y="2" width="374" height="290" rx="12" class="box"/>
+  <rect x="834" y="14" width="350" height="34" rx="7" fill="#1c1c1c"/>
+  <text x="848" y="37" class="bartxt">FOLLOWING</text>
+  <text x="1170" y="37" text-anchor="end" style="font-size:13px;fill:#ccc">walking with the player</text>
+  <rect x="834" y="58" width="350" height="92" rx="8" fill="#f7f8fa"/>
+  <line x1="860" y1="122" x2="980" y2="122" stroke="#aaa" stroke-width="5"/><line x1="1020" y1="122" x2="1160" y2="122" stroke="#aaa" stroke-width="5"/>
+  <use href="#you" x="1010" y="90"/><use href="#guard" x="978" y="96"/><use href="#tower" x="1120" y="84"/>
+  <line x1="988" y1="94" x2="1000" y2="92" stroke="#777" stroke-width="2" stroke-dasharray="2 3"/>
+  <text x="994" y="72" text-anchor="middle" class="xs">you</text><text x="970" y="145" text-anchor="middle" class="xs">guard, behind you</text>
+  <text x="846" y="176" class="cap" style="font-size:11.5px">OFFERED TO THE MODEL</text>
+  <use href="#x-follow" x="846" y="186"/><use href="#c-move" x="980" y="186"/>
+  <use href="#c-attack" x="846" y="222"/><use href="#c-none" x="980" y="222"/>
+  <text x="846" y="276" class="s"><tspan class="mono">follow_player</tspan> hidden: already following</text>
+</g>
+
+<!-- ===== how the list is built ===== -->
+<text x="2" y="326" class="cap">HOW THE LIST IS BUILT, ON EVERY DECISION</text>
+<g>
+  <rect x="2" y="340" width="230" height="70" rx="10" class="soft"/>
+  <text x="20" y="370" class="h2">Every registered action</text>
+  <text x="20" y="394" class="s">in the registry's order</text>
+
+  <line x1="236" y1="375" x2="270" y2="375" class="blue" marker-end="url(#ab)"/>
+  <rect x="276" y="340" width="270" height="70" rx="10" class="box"/>
+  <text x="294" y="368" class="b">Needs a target, but nothing</text>
+  <text x="294" y="392" class="b">is in reach? <tspan font-weight="700">Skip it.</tspan></text>
+
+  <line x1="550" y1="375" x2="584" y2="375" class="blue" marker-end="url(#ab)"/>
+  <rect x="590" y="340" width="270" height="70" rx="10" class="box"/>
+  <text x="608" y="368" class="b">Handler's <tspan class="mono" style="font-size:16px">IsAvailable(ctx)</tspan></text>
+  <text x="608" y="392" class="b">says no? <tspan font-weight="700">Skip it.</tspan></text>
+
+  <line x1="864" y1="375" x2="898" y2="375" class="blue" marker-end="url(#ab)"/>
+  <rect x="904" y="340" width="292" height="70" rx="10" fill="#e8effc" stroke="#1f5bd6" stroke-width="2.5"/>
+  <text x="922" y="368" class="h2">Offered to the model</text>
+  <text x="922" y="392" class="s">then <tspan class="mono">none</tspan>, always last</text>
+</g>
+<text x="276" y="438" class="s">Skipped actions are absent from the schema, so the model cannot even say them.</text>
+<text x="276" y="458" class="xs">Recomputed every decision, never cached: the agent's state and surroundings change.</text>
+</svg>
+</body></html>

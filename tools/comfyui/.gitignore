@@ -1,0 +1,5 @@
+# Generated inputs and outputs on the server, and downloads on the client.
+# .env is already ignored by the repository's root .gitignore.
+/data/
+/out/
+__pycache__/

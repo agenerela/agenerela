@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Agenerela framework design</title>
+<!--
+  Part 2 figure for the COMP 490 system-design practice, 24 September 2026. Fixed 1280 x 1280;
+  render.ps1 carries the same size, so keep the two in step.
+  Canvas "Medium" scales an image to 320 px on its longest side, so the headline layer
+  (title, the three zones, the six module names, the blue path) is sized to read at 1/4 scale;
+  everything smaller is detail for a reader who opens the image full size.
+-->
+<style>
+  html,body{margin:0;background:#fff}
+  body{width:1280px;height:1280px;overflow:hidden}
+  svg{display:block}
+  text{font-family:"Segoe UI",system-ui,sans-serif}
+  .m{font-family:"Cascadia Mono",Consolas,monospace}
+</style></head><body>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1280" viewBox="0 0 1280 1280" role="img"
+  aria-label="Agenerela framework design: the developer's game on the left, the Agenerela package in the middle, the language model on the right, and one decision running through them in nine steps.">
+<defs>
+  <marker id="hb" viewBox="0 0 20 20" refX="1" refY="10" markerWidth="20" markerHeight="20" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L20,10 L0,20 z" fill="#1f5fd1"/></marker>
+  <marker id="hs" viewBox="0 0 14 14" refX="1" refY="7" markerWidth="14" markerHeight="14" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L14,7 L0,14 z" fill="#1f5fd1"/></marker>
+  <marker id="hg" viewBox="0 0 13 13" refX="1" refY="6.5" markerWidth="13" markerHeight="13" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L13,6.5 L0,13 z" fill="#7f7f7f"/></marker>
+  <symbol id="lol" viewBox="0 0 26 14"><line x1="1" y1="7" x2="14" y2="7" stroke="#4a4a4a" stroke-width="2"/><circle cx="19" cy="7" r="5.2" fill="#fff" stroke="#4a4a4a" stroke-width="2"/></symbol>
+</defs>
+
+<!-- ============ header ============ -->
+<text x="48" y="64" font-size="15.5" font-weight="700" letter-spacing="2.2" fill="#7f7f7f">COMP 490 · SECTION 04 · SYSTEM DESIGN · PART 2 · DRAFT</text>
+<text x="46" y="128" font-size="56" font-weight="700" letter-spacing="-0.5" fill="#1c1c1c">Agenerela framework design</text>
+<text x="48" y="176" font-size="30" fill="#4a4a4a">The model <tspan font-weight="700" fill="#1c1c1c">decides</tspan>. Validated code <tspan font-weight="700" fill="#1c1c1c">executes</tspan>.</text>
+
+<!-- legend -->
+<line x1="912" y1="70" x2="943" y2="70" stroke="#1f5fd1" stroke-width="6" marker-end="url(#hb)"/>
+<text x="976" y="75.5" font-size="15" fill="#4a4a4a">one decision, steps 1–9</text>
+<line x1="912" y1="102" x2="950" y2="102" stroke="#7f7f7f" stroke-width="2.5" stroke-dasharray="7 5" marker-end="url(#hg)"/>
+<text x="976" y="107.5" font-size="15" fill="#4a4a4a">reads state · reports</text>
+<use href="#lol" x="928" y="127" width="26" height="14"/>
+<text x="976" y="139.5" font-size="15" fill="#4a4a4a">extension point you implement</text>
+<rect x="912" y="157" width="50" height="22" rx="5" fill="none" stroke="#4a4a4a" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="976" y="173" font-size="15" fill="#4a4a4a">untrusted: checked, never obeyed</text>
+
+<line x1="48" y1="206" x2="1232" y2="206" stroke="#1c1c1c" stroke-width="3"/>
+
+<!-- ============ zones ============ -->
+<rect x="48" y="236" width="260" height="880" rx="16" fill="#fff" stroke="#4a4a4a" stroke-width="2"/>
+<rect x="400" y="236" width="480" height="880" rx="16" fill="#f1f3f7" stroke="#1c1c1c" stroke-width="3"/>
+<rect x="972" y="236" width="260" height="880" rx="16" fill="#fff" stroke="#4a4a4a" stroke-width="2" stroke-dasharray="12 8"/>
+
+<rect x="64" y="252" width="228" height="54" rx="8" fill="#1c1c1c"/>
+<text x="84" y="290" font-size="30" font-weight="700" letter-spacing="1.5" fill="#fff">YOUR GAME</text>
+<rect x="416" y="252" width="448" height="54" rx="8" fill="#1c1c1c"/>
+<text x="436" y="290" font-size="30" font-weight="700" letter-spacing="1.5" fill="#fff">AGENERELA</text>
+<rect x="988" y="252" width="228" height="54" rx="8" fill="#1c1c1c"/>
+<text x="1008" y="290" font-size="30" font-weight="700" letter-spacing="1.5" fill="#fff">THE MODEL</text>
+
+<text x="64" y="338" font-size="18" fill="#4a4a4a">the developer's C# code</text>
+<text x="416" y="338" font-size="18" fill="#4a4a4a">Unity package · <tspan class="m" font-size="16.5">com.agenerela.framework</tspan></text>
+<text x="988" y="338" font-size="18" fill="#4a4a4a">untrusted · swappable</text>
+
+<!-- ============ blue spine between pipeline boxes (drawn first; boxes sit on top) ============ -->
+<g stroke="#1f5fd1" stroke-width="4" marker-end="url(#hs)">
+  <line x1="452" y1="464" x2="452" y2="476"/>
+  <line x1="452" y1="589" x2="452" y2="601"/>
+  <line x1="452" y1="714" x2="452" y2="726"/>
+  <line x1="452" y1="964" x2="452" y2="976"/>
+</g>
+
+<!-- ============ pipeline: the Agenerela package ============ -->
+<g>
+  <!-- 2 · Agent -->
+  <rect x="416" y="364" width="448" height="100" rx="10" fill="#fff" stroke="#1c1c1c" stroke-width="2.5"/>
+  <circle cx="452" cy="414" r="21" fill="#1f5fd1"/><text x="452" y="422" text-anchor="middle" font-size="23" font-weight="700" fill="#fff">2</text>
+  <text x="492" y="405" font-size="35" font-weight="700" fill="#1c1c1c">Agent</text>
+  <text x="492" y="432" font-size="17" fill="#4a4a4a">who it is · what it remembers and sees</text>
+  <use href="#lol" x="492" y="443" width="26" height="14"/>
+  <text x="522" y="454" class="m" font-size="14.5" fill="#4a4a4a">IMemoryStrategy</text>
+  <use href="#lol" x="664" y="443" width="26" height="14"/>
+  <text x="694" y="454" class="m" font-size="14.5" fill="#4a4a4a">IObservationSource</text>
+
+  <!-- 3 · Actions & targets -->
+  <rect x="416" y="489" width="448" height="100" rx="10" fill="#fff" stroke="#1c1c1c" stroke-width="2.5"/>
+  <circle cx="452" cy="539" r="21" fill="#1f5fd1"/><text x="452" y="547" text-anchor="middle" font-size="23" font-weight="700" fill="#fff">3</text>
+  <text x="492" y="530" font-size="35" font-weight="700" fill="#1c1c1c">Actions &amp; targets</text>
+  <text x="492" y="557" font-size="17" fill="#4a4a4a">only actions legal right now + targets</text>
+  <text x="492" y="579" class="m" font-size="14.5" fill="#4a4a4a">ActionRegistry</text>
+  <text x="622" y="579" font-size="15" fill="#7f7f7f">·</text>
+  <use href="#lol" x="636" y="568" width="26" height="14"/>
+  <text x="666" y="579" class="m" font-size="14.5" fill="#4a4a4a">ITargetSource</text>
+
+  <!-- 4 · Schema & prompt -->
+  <rect x="416" y="614" width="448" height="100" rx="10" fill="#fff" stroke="#1c1c1c" stroke-width="2.5"/>
+  <circle cx="452" cy="664" r="21" fill="#1f5fd1"/><text x="452" y="672" text-anchor="middle" font-size="23" font-weight="700" fill="#fff">4</text>
+  <text x="492" y="655" font-size="35" font-weight="700" fill="#1c1c1c">Schema &amp; prompt</text>
+  <text x="492" y="682" font-size="17" fill="#4a4a4a">action → target → statement · examples</text>
+  <text x="492" y="704" class="m" font-size="14.5" fill="#4a4a4a">DecisionSchema → JSON Schema / GBNF</text>
+
+  <!-- 5 · Queue & provider -->
+  <rect x="416" y="739" width="448" height="100" rx="10" fill="#fff" stroke="#1c1c1c" stroke-width="2.5"/>
+  <circle cx="452" cy="789" r="21" fill="#1f5fd1"/><text x="452" y="797" text-anchor="middle" font-size="23" font-weight="700" fill="#fff">5</text>
+  <text x="492" y="780" font-size="35" font-weight="700" fill="#1c1c1c">Queue &amp; provider</text>
+  <text x="492" y="807" font-size="17" fill="#4a4a4a">player-facing first · cancel · budget</text>
+  <use href="#lol" x="492" y="818" width="26" height="14"/>
+  <text x="522" y="829" class="m" font-size="14.5" fill="#4a4a4a">ILLMProvider</text>
+  <text x="632" y="829" font-size="15" fill="#4a4a4a">· config asset per backend</text>
+
+  <!-- 7 · Guards -->
+  <rect x="416" y="864" width="448" height="100" rx="10" fill="#fff" stroke="#1c1c1c" stroke-width="2.5"/>
+  <circle cx="452" cy="914" r="21" fill="#1f5fd1"/><text x="452" y="922" text-anchor="middle" font-size="23" font-weight="700" fill="#fff">7</text>
+  <text x="492" y="905" font-size="35" font-weight="700" fill="#1c1c1c">Guards</text>
+  <text x="492" y="932" font-size="17" fill="#4a4a4a">legal? target named? if not → <tspan class="m" font-size="16">none</tspan></text>
+  <use href="#lol" x="492" y="943" width="26" height="14"/>
+  <text x="522" y="954" class="m" font-size="14.5" fill="#4a4a4a">IDecisionGuard</text>
+  <text x="648" y="954" font-size="15" fill="#4a4a4a">· plus your own rules</text>
+
+  <!-- 8 · Result & telemetry -->
+  <rect x="416" y="989" width="448" height="100" rx="10" fill="#fff" stroke="#1c1c1c" stroke-width="2.5"/>
+  <circle cx="452" cy="1039" r="21" fill="#1f5fd1"/><text x="452" y="1047" text-anchor="middle" font-size="23" font-weight="700" fill="#fff">8</text>
+  <text x="492" y="1030" font-size="35" font-weight="700" fill="#1c1c1c">Result &amp; telemetry</text>
+  <text x="492" y="1057" font-size="17" fill="#4a4a4a">decision + latency, tokens, guards fired</text>
+  <text x="492" y="1079" class="m" font-size="14.5" fill="#4a4a4a">DecisionResult · DecisionTelemetry</text>
+</g>
+
+<!-- ============ your game ============ -->
+<g>
+  <!-- 1 · asks -->
+  <rect x="64" y="364" width="228" height="100" rx="10" fill="#fff" stroke="#4a4a4a" stroke-width="2"/>
+  <circle cx="92" cy="393" r="19" fill="#1f5fd1"/><text x="92" y="400.5" text-anchor="middle" font-size="21" font-weight="700" fill="#fff">1</text>
+  <text x="120" y="400" font-size="20" font-weight="700" fill="#1c1c1c">Asks the agent</text>
+  <text x="80" y="430" class="m" font-size="14.5" fill="#4a4a4a">DecideAsync(</text>
+  <text x="80" y="452" class="m" font-size="14.5" fill="#4a4a4a" xml:space="preserve">  "Go to the tower.")</text>
+
+  <!-- game state: read by step 3 -->
+  <rect x="64" y="489" width="228" height="225" rx="10" fill="#fff" stroke="#4a4a4a" stroke-width="2"/>
+  <text x="80" y="520" font-size="20" font-weight="700" fill="#1c1c1c">Game state</text>
+  <use href="#lol" x="80" y="539" width="26" height="14"/>
+  <text x="110" y="550" class="m" font-size="14.5" fill="#4a4a4a">IActionHandler</text>
+  <text x="80" y="575" class="m" font-size="14.5" fill="#4a4a4a">IsAvailable()</text>
+  <text x="198" y="575" font-size="15" fill="#7f7f7f">legal now?</text>
+  <text x="80" y="599" class="m" font-size="14.5" fill="#4a4a4a">Execute()</text>
+  <text x="164" y="599" font-size="15" fill="#7f7f7f">runs it</text>
+  <text x="80" y="636" font-size="15.5" font-weight="700" fill="#4a4a4a">Targetable objects</text>
+  <text x="80" y="660" class="m" font-size="14.5" fill="#4a4a4a">tower · bridge ·</text>
+  <text x="80" y="682" class="m" font-size="14.5" fill="#4a4a4a">training_dummy</text>
+
+  <!-- the demo games are instances of "your game" -->
+  <rect x="64" y="739" width="228" height="225" rx="10" fill="none" stroke="#c2c2c2" stroke-width="1.5" stroke-dasharray="6 5"/>
+  <text x="80" y="766" font-size="13" font-weight="700" letter-spacing="1.6" fill="#7f7f7f">OUR DEMO GAMES</text>
+  <text x="80" y="794" font-size="17" font-weight="700" fill="#4a4a4a">GreyBoxVillage</text>
+  <text x="80" y="816" font-size="15" fill="#4a4a4a">a guard you talk to</text>
+  <text x="80" y="848" font-size="17" font-weight="700" fill="#4a4a4a">GreyBoxStrategy</text>
+  <text x="80" y="870" font-size="15" fill="#4a4a4a">countries as agents</text>
+  <text x="80" y="902" font-size="15" fill="#7f7f7f">CompanionRPG · GreyBox2D</text>
+  <text x="80" y="932" font-size="14" fill="#7f7f7f">each its own Unity project,</text>
+  <text x="80" y="952" font-size="14" fill="#7f7f7f">public API only</text>
+
+  <!-- 9 · acts -->
+  <rect x="64" y="989" width="228" height="100" rx="10" fill="#fff" stroke="#4a4a4a" stroke-width="2"/>
+  <circle cx="92" cy="1018" r="19" fill="#1f5fd1"/><text x="92" y="1025.5" text-anchor="middle" font-size="21" font-weight="700" fill="#fff">9</text>
+  <text x="120" y="1025" font-size="20" font-weight="700" fill="#1c1c1c">Acts on it</text>
+  <text x="80" y="1055" class="m" font-size="14.5" fill="#4a4a4a">Execute(result)</text>
+  <text x="80" y="1077" font-size="15" fill="#4a4a4a">handler walks to the tower</text>
+</g>
+
+<!-- ============ the model ============ -->
+<g>
+  <text x="988" y="384" font-size="13" font-weight="700" letter-spacing="1.6" fill="#7f7f7f">IT GETS</text>
+  <text x="988" y="410" font-size="16" fill="#4a4a4a">a prompt, plus a grammar</text>
+  <text x="988" y="432" font-size="16" fill="#4a4a4a">that lets it write only</text>
+  <text x="988" y="454" font-size="16" fill="#4a4a4a">the legal options</text>
+
+  <text x="988" y="500" font-size="13" font-weight="700" letter-spacing="1.6" fill="#7f7f7f">IT RETURNS</text>
+  <text x="988" y="526" class="m" font-size="14.5" fill="#4a4a4a">{"action": "move_to",</text>
+  <text x="988" y="548" class="m" font-size="14.5" fill="#4a4a4a" xml:space="preserve"> "target": "tower",</text>
+  <text x="988" y="570" class="m" font-size="14.5" fill="#4a4a4a" xml:space="preserve"> "statement":</text>
+  <text x="988" y="592" class="m" font-size="14.5" fill="#4a4a4a" xml:space="preserve">   "On my way."}</text>
+
+  <!-- 6 · chooses, on one of three backends -->
+  <rect x="988" y="728" width="228" height="256" rx="10" fill="#fff" stroke="#4a4a4a" stroke-width="2"/>
+  <circle cx="1016" cy="757" r="19" fill="#1f5fd1"/><text x="1016" y="764.5" text-anchor="middle" font-size="21" font-weight="700" fill="#fff">6</text>
+  <text x="1044" y="764" font-size="20" font-weight="700" fill="#1c1c1c">Chooses</text>
+  <line x1="1000" y1="782" x2="1204" y2="782" stroke="#dcdcdc" stroke-width="1.5"/>
+  <text x="1004" y="808" font-size="18" font-weight="700" fill="#4a4a4a">Ollama</text>
+  <text x="1004" y="830" font-size="15" fill="#4a4a4a">local server · development</text>
+  <line x1="1000" y1="848" x2="1204" y2="848" stroke="#dcdcdc" stroke-width="1.5"/>
+  <text x="1004" y="874" font-size="18" font-weight="700" fill="#4a4a4a">In-process</text>
+  <text x="1004" y="896" font-size="15" fill="#4a4a4a">llama.cpp inside the game</text>
+  <line x1="1000" y1="914" x2="1204" y2="914" stroke="#dcdcdc" stroke-width="1.5"/>
+  <text x="1004" y="940" font-size="18" font-weight="700" fill="#4a4a4a">Cloud API</text>
+  <text x="1004" y="962" font-size="15" fill="#4a4a4a">Gemini first · optional</text>
+
+  <text x="988" y="1024" font-size="13" font-weight="700" letter-spacing="1.6" fill="#7f7f7f">IT NEVER</text>
+  <text x="988" y="1050" font-size="16" fill="#4a4a4a">touches the game</text>
+  <text x="988" y="1072" font-size="16" fill="#4a4a4a">or the scene</text>
+</g>
+
+<!-- ============ arrows between zones ============ -->
+<g font-size="15" text-anchor="middle">
+  <line x1="292" y1="414" x2="396" y2="414" stroke="#1f5fd1" stroke-width="6" marker-end="url(#hb)"/>
+  <text x="354" y="401" fill="#4a4a4a">asks</text>
+
+  <line x1="292" y1="539" x2="403" y2="539" stroke="#7f7f7f" stroke-width="2.5" stroke-dasharray="7 5" marker-end="url(#hg)"/>
+  <text x="354" y="527" fill="#7f7f7f">state</text>
+
+  <line x1="864" y1="789" x2="968" y2="789" stroke="#1f5fd1" stroke-width="6" marker-end="url(#hb)"/>
+  <text x="926" y="776" fill="#4a4a4a">request</text>
+
+  <line x1="988" y1="914" x2="884" y2="914" stroke="#1f5fd1" stroke-width="6" marker-end="url(#hb)"/>
+  <text x="926" y="901" fill="#4a4a4a">answer</text>
+
+  <line x1="416" y1="1039" x2="312" y2="1039" stroke="#1f5fd1" stroke-width="6" marker-end="url(#hb)"/>
+  <text x="354" y="1026" fill="#4a4a4a">result</text>
+</g>
+
+<!-- telemetry feeds the tools -->
+<line x1="640" y1="1089" x2="640" y2="1123" stroke="#7f7f7f" stroke-width="2.5" stroke-dasharray="7 5" marker-end="url(#hg)"/>
+<text x="652" y="1109" font-size="14" fill="#7f7f7f">telemetry</text>
+
+<!-- ============ around the pipeline ============ -->
+<g>
+  <rect x="48" y="1136" width="384" height="96" rx="10" fill="#fff" stroke="#4a4a4a" stroke-width="2"/>
+  <text x="64" y="1166" font-size="20" font-weight="700" fill="#1c1c1c">Unity adapter</text>
+  <text x="64" y="1192" class="m" font-size="14.5" fill="#4a4a4a">AgentBehaviour · Targetable</text>
+  <text x="64" y="1215" font-size="15" fill="#4a4a4a">the only code that touches a scene</text>
+
+  <rect x="448" y="1136" width="384" height="96" rx="10" fill="#fff" stroke="#4a4a4a" stroke-width="2"/>
+  <text x="464" y="1166" font-size="20" font-weight="700" fill="#1c1c1c">Editor tools</text>
+  <text x="464" y="1192" font-size="15" fill="#4a4a4a">Agent Profile inspector</text>
+  <text x="464" y="1215" font-size="15" fill="#4a4a4a">Decision Log · Evaluation Report</text>
+
+  <rect x="848" y="1136" width="384" height="96" rx="10" fill="#fff" stroke="#4a4a4a" stroke-width="2"/>
+  <text x="864" y="1166" font-size="20" font-weight="700" fill="#1c1c1c">Evaluation harness</text>
+  <text x="864" y="1192" font-size="15" fill="#4a4a4a">200+ labelled prompts · A/B runs</text>
+  <text x="864" y="1215" font-size="15" fill="#4a4a4a">five outcome types, not one score</text>
+</g>
+</svg>
+</body></html>

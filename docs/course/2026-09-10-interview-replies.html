@@ -1,0 +1,563 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found]){display:none!important}</style></head><body>
+<title>Agenerela Interview Replies</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+  :root {
+    --ground: #F3F4F8;
+    --surface: #FFFFFF;
+    --ink: #151A2B;
+    --muted: #586074;
+    --rule: #D9DCE6;
+    --code-bg: #ECEEF5;
+    --accent: #2A4BB0;
+    --on-accent: #FFFFFF;
+    --should: #9A5B00;
+    --ok: #2B7A4B;
+    --display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+    --gutter: 52px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0E1018;
+      --surface: #161926;
+      --ink: #E2E5EF;
+      --muted: #9AA0B4;
+      --rule: #2A2E3F;
+      --code-bg: #22263B;
+      --accent: #9DB0F4;
+      --on-accent: #10131F;
+      --should: #E4A94A;
+      --ok: #74CC96;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0E1018;
+    --surface: #161926;
+    --ink: #E2E5EF;
+    --muted: #9AA0B4;
+    --rule: #2A2E3F;
+    --code-bg: #22263B;
+    --accent: #9DB0F4;
+    --on-accent: #10131F;
+    --should: #E4A94A;
+    --ok: #74CC96;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  body { background: var(--ground); color: var(--ink); font-family: var(--serif); font-size: 16px; line-height: 1.55; }
+  .page { max-width: 1160px; margin: 0 auto; padding: 44px 28px 88px; }
+
+  .label, .eyebrow {
+    font-family: var(--mono); font-size: 11.5px; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--muted); margin: 0;
+  }
+
+  /* Masthead */
+  .masthead { display: grid; gap: 14px; max-width: 780px; margin-bottom: 44px; }
+  h1 {
+    font-family: var(--display); font-stretch: 76%; font-weight: 700;
+    font-size: clamp(32px, 4.6vw, 48px); line-height: 1.02; letter-spacing: -.012em;
+    text-wrap: balance; margin: 0;
+  }
+  .lede { font-size: 17.5px; color: var(--muted); max-width: 62ch; margin: 0; }
+  .facts {
+    display: flex; flex-wrap: wrap; gap: 10px 28px; margin: 6px 0 0; padding-top: 14px;
+    border-top: 1px solid var(--rule); font-family: var(--mono); font-size: 12.5px; color: var(--muted);
+  }
+  .facts div { display: flex; gap: 8px; align-items: baseline; }
+  .facts dd { margin: 0; color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+  .summary { font-family: var(--mono); font-size: 12.5px; color: var(--muted); margin: 0; font-variant-numeric: tabular-nums; }
+
+  .m { font-weight: 600; text-decoration-line: underline; text-underline-offset: 3px; }
+  .m-shall { color: var(--accent); text-decoration-style: solid; text-decoration-thickness: 1.5px; }
+  .m-should { color: var(--should); text-decoration-style: dotted; text-decoration-thickness: 2px; }
+  code { font-family: var(--mono); font-size: .84em; background: var(--code-bg); padding: .06em .32em; border-radius: 3px; overflow-wrap: anywhere; }
+
+  /* Layout */
+  .layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 52px; align-items: start; }
+  .rail { position: sticky; top: 24px; display: grid; gap: 12px; }
+  .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; position: relative; }
+  .steps::before { content: ""; position: absolute; left: 11px; top: 18px; bottom: 18px; width: 1px; background: var(--rule); }
+  .steps a { display: grid; grid-template-columns: 23px minmax(0, 1fr); gap: 12px; padding: 8px 8px 8px 0; color: inherit; text-decoration: none; border-radius: 6px; }
+  .steps .num {
+    position: relative; z-index: 1; width: 23px; height: 23px; border-radius: 50%;
+    display: grid; place-items: center; background: var(--ground); border: 1px solid var(--rule);
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+  }
+  .steps .stage { display: block; font-family: var(--mono); font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+  .steps .who { display: block; font-family: var(--display); font-stretch: 88%; font-weight: 650; font-size: 16px; line-height: 1.25; }
+  .steps .feat { display: block; font-size: 13.5px; line-height: 1.35; color: var(--muted); }
+  .steps a:hover .who, .steps a[aria-current="true"] .who { color: var(--accent); }
+  .steps a[aria-current="true"] .num { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .steps a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Posts */
+  .posts { display: grid; gap: 60px; min-width: 0; }
+  .post { display: grid; gap: 14px; scroll-margin-top: 24px; }
+  .post-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+  .post-head h2 { font-family: var(--display); font-stretch: 78%; font-weight: 700; font-size: 30px; line-height: 1.08; margin: 3px 0 4px; }
+  .post-head .meta { font-family: var(--mono); font-size: 12.5px; color: var(--muted); margin: 0; }
+  .tools { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px 16px; }
+  .tally { font-family: var(--mono); font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .copy {
+    font: inherit; font-family: var(--display); font-weight: 600; font-size: 14px; letter-spacing: .01em;
+    padding: 9px 18px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent);
+  }
+  .copy:hover { filter: brightness(1.1); }
+  .copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .copy[data-state="done"] { background: transparent; color: var(--accent); filter: none; }
+  .copy-status { font-family: var(--mono); font-size: 12px; color: var(--muted); flex-basis: 100%; text-align: right; }
+  .copy-status:empty { display: none; }
+
+  .sheet { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 26px clamp(18px, 4vw, 38px) 28px; display: grid; gap: 26px; }
+  .part { display: grid; gap: 14px; }
+  .part + .part { border-top: 1px solid var(--rule); padding-top: 24px; }
+  .part-title { font-family: var(--display); font-stretch: 86%; font-weight: 700; font-size: 19px; line-height: 1.2; margin: 0; }
+
+  .row { display: grid; grid-template-columns: var(--gutter) minmax(0, 1fr); }
+  .rid { font-family: var(--mono); font-size: 12.5px; padding-top: 3px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .qlist, .alist, .rlist { list-style: none; margin: 0; padding: 0; display: grid; }
+  .qlist { gap: 9px; }
+  .qlist p { margin: 0; font-size: 16.5px; max-width: 64ch; }
+  .hint { display: block; font-family: var(--mono); font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  .alist { gap: 16px; }
+  .qline { margin: 0 0 3px; font-size: 14.5px; color: var(--muted); max-width: 64ch; }
+  .answer { margin: 0; font-size: 16.5px; max-width: 62ch; }
+  .answer.none { font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+  .sugg { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+  .sugg li { font-size: 16px; max-width: 62ch; }
+
+  .rlist { gap: 20px; }
+  .rev-body { display: grid; gap: 6px; }
+  .badge {
+    display: inline-block; margin-left: 8px; vertical-align: 2px;
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase;
+    padding: 0 6px; border-radius: 3px; border: 1px solid currentColor;
+  }
+  .badge-revised { color: var(--accent); }
+  .badge-new { color: var(--ok); }
+  .rev-text { margin: 0; font-size: 16.5px; max-width: 64ch; }
+  .rev-note { margin: 0; font-size: 14.5px; color: var(--muted); max-width: 66ch; display: grid; grid-template-columns: 3.2em minmax(0, 1fr); }
+  .rev-note b { font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: .07em; text-transform: uppercase; padding-top: 3px; }
+
+  /* Leader reply */
+  .doc p { margin: 0 0 10px; max-width: 66ch; }
+  .doc ul, .doc ol { margin: 0 0 18px; padding-left: 22px; display: grid; gap: 6px; max-width: 68ch; }
+  .doc strong { font-weight: 600; }
+  .doc > p > strong:first-child { font-family: var(--display); font-stretch: 88%; font-weight: 700; font-size: 16.5px; }
+
+  .foot { margin-top: 56px; padding-top: 14px; border-top: 1px solid var(--rule); font-family: var(--mono); font-size: 12px; color: var(--muted); max-width: 90ch; }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; gap: 32px; }
+    .rail { position: static; }
+    .steps { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 4px 16px; }
+    .steps::before { display: none; }
+  }
+  @media (max-width: 560px) {
+    .page { padding: 28px 16px 64px; }
+    :root { --gutter: 40px; }
+    .tools { width: 100%; justify-content: space-between; }
+    .copy-status { text-align: left; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
+    .copy { transition: background-color .15s, color .15s; }
+  }
+</style>
+
+<div class="page">
+  <header class="masthead">
+    <p class="eyebrow">COMP 490 · Section 04 · Requirements interviews</p>
+    <h1>Interview replies, ready to post</h1>
+    <p class="lede">One reply per teammate, leader included: the questions they wrote, the answers from their interviews, and the one or two requirement changes those answers led to. Each change points back to a requirement ID from the first post. Press Copy post and paste it into Canvas.</p>
+    <dl class="facts">
+      <div><dt>Questions</dt><dd>3 pts</dd></div>
+      <div><dt>Responses received</dt><dd>5 pts</dd></div>
+      <div><dt>Revised requirements</dt><dd>5 pts</dd></div>
+      <div><dt><span class="m m-shall">shall</span></dt><dd>mandatory</dd></div>
+      <div><dt><span class="m m-should">should</span></dt><dd>desirable</dd></div>
+    </dl>
+    <p class="summary" id="summary"></p>
+  </header>
+
+  <div class="layout">
+    <nav class="rail" aria-label="Replies">
+      <p class="label">Replies</p>
+      <ol class="steps" id="steps"></ol>
+    </nav>
+    <main class="posts" id="posts">
+      <section class="post" id="leader">
+        <header class="post-head">
+          <div>
+            <p class="label">Group reply · posted once by the leader</p>
+            <h2>Yevhen, for the group</h2>
+            <p class="meta">@Draganoider · project, stakeholders, method, sources, features</p>
+          </div>
+          <div class="tools">
+            <button type="button" class="copy" id="leader-copy">Copy post</button>
+            <span class="copy-status" id="leader-status" aria-live="polite"></span>
+          </div>
+        </header>
+        <article class="sheet"><div class="doc" id="leader-doc"></div></article>
+      </section>
+    </main>
+  </div>
+
+  <p class="foot">Answers are the ones recorded in the interview notes, with spelling tidied and the meaning unchanged. Revisions keep the requirement IDs from the first discussion post: “revised” rewrites an existing requirement and shows the old wording, “new” adds one. Copy post puts formatted text on the clipboard, so bold words and lists survive the paste into Canvas.</p>
+</div>
+
+<script>
+const LEADER_HTML = `
+<p><strong>Project name:</strong> Agenerela, an AI agent framework for Unity</p>
+<p><strong>Stakeholders</strong></p>
+<ul>
+<li><strong>Unity game developers (primary users):</strong> indie, student and small-studio developers who install Agenerela so a language model can choose actions for NPCs, companions, enemies, factions or colonies.</li>
+<li><strong>Players (indirect users):</strong> people who play those games. They care that characters respond quickly, behave sensibly, and work without an internet connection.</li>
+<li><strong>Our team:</strong> six developers who build, test and maintain the framework and its demo games.</li>
+<li><strong>Course instructor and project advisor:</strong> set the scope and evaluate the project (CSUN COMP 490/491).</li>
+<li><strong>External providers:</strong> Ollama, LLMUnity and cloud AI services such as Google Gemini. Their APIs, licenses and rate limits constrain our design.</li>
+</ul>
+<p><strong>How we are collecting requirements:</strong> Interviews. Each team member runs short one-on-one interviews (about 10 minutes) using the questions for the feature they own, and writes down the answers.</p>
+<p><strong>Who we plan to collect requirements from</strong></p>
+<ul>
+<li>Students in our class (COMP 490, Section 04), especially groups building games or Unity projects</li>
+<li>Other CSUN students who have used Unity in courses, clubs or personal projects</li>
+<li>Game developers outside CSUN whom team members know, including some who use Godot or Unreal, for comparison</li>
+</ul>
+<p><strong>Major features</strong></p>
+<ol>
+<li><strong>Agents and decision requests:</strong> describe an agent (name, role, personality, goals) and ask it to decide whenever the game chooses. This works for characters and also for non-character agents such as factions.</li>
+<li><strong>Developer-authored actions:</strong> define what agents can do as Unity assets, without editing framework code.</li>
+<li><strong>Action availability and the decision schema:</strong> the model is offered only the actions that make sense right now, so it cannot choose an illegal one.</li>
+<li><strong>Targets and grounding:</strong> control what agents can refer to, and block actions on things that were never mentioned.</li>
+<li><strong>Swappable model providers:</strong> run the same agents on a local model during development, on a cloud service, or on a model built into the shipped game that needs no internet.</li>
+<li><strong>Decision telemetry and evaluation:</strong> record time, tokens and safety-check results for every decision, and measure accuracy by type of outcome.</li>
+</ol>`;
+
+/* a: the recorded answer (null = none recorded). */
+const TEAM = [
+  {
+    id: "hunter", stage: "Describe the agent", name: "Hunter", handle: "@Hunaveli",
+    feature: "Agents and decision requests",
+    qs: [
+      { q: "What kinds of characters or groups in your game act on their own?", hint: "enemies / companions / shopkeepers / factions / other",
+        a: "Companions, and the economy." },
+      { q: "What should make a character decide to do something?", hint: "player talks to it / something happens in the game / a timer / other",
+        a: "It depends." },
+      { q: "What should a character know about itself when it decides?", hint: "short answer",
+        a: "The basic background of the game, and its role attributes if it’s an ally." },
+      { q: "Should characters remember earlier conversations, and for how long?", hint: "short answer",
+        a: "Yes, but it depends on the amount of interaction (for NPCs)." }
+    ],
+    suggestions: [],
+    revs: [
+      { id: "SR2.4", kind: "revised",
+        was: "The agent should remember its most recent exchanges (by default, the last 6 turns) through a replaceable `IMemoryStrategy`, so that consecutive decisions stay consistent.",
+        text: "The agent should remember its most recent exchanges through a replaceable `IMemoryStrategy`, with the number of remembered turns set per agent (default: 6), so that a character the player talks to often can remember more than one met in passing.",
+        why: "The interviewee said how long a character remembers depends on the amount of interaction, so one fixed length for every agent is not enough." },
+      { id: "SR1.4", kind: "new",
+        text: "The framework should let the developer write one shared description of the game’s world and background that is included in every agent’s decision request, alongside that agent’s own identity.",
+        why: "The interviewee said a character should know the basic background of the game, not only its own role." }
+    ]
+  },
+  {
+    id: "tim", stage: "Author its actions", name: "Tim", handle: "@TimBrustinov",
+    feature: "Developer-authored action vocabulary",
+    qs: [
+      { q: "Name three things you’d want an AI character in your game to be able to do.", hint: "short answer",
+        a: "Hold conversations, and know when to start and end a conversation." },
+      { q: "How would you prefer to add a new action?", hint: "fill in fields in the Unity Inspector / write a C# script / both",
+        a: "Both, but C# would be better." },
+      { q: "How long would you spend setting up your first AI character before giving up?", hint: "5 min / 15 min / 1 hour / longer",
+        a: "1 hour. It needs instructions for sure." }
+    ],
+    suggestions: [],
+    revs: [
+      { id: "SR1.4", kind: "new",
+        text: "The framework shall let a developer create and register an action entirely in C#, with the same fields as an `ActionDefinition` asset, without creating an asset in the Inspector.",
+        why: "The interviewee would use both ways of adding actions, but said C# would be better." },
+      { id: "SR1.5", kind: "new",
+        text: "The package shall include a step-by-step quick-start guide and a sample agent that starts and ends a conversation, so that a developer new to the framework can get a working agent in under one hour.",
+        why: "The interviewee would spend about an hour and said it “needs instructions for sure”. The first things they wanted an AI character to do were hold a conversation and know when to start and end it." }
+    ]
+  },
+  {
+    id: "jay", stage: "Bind and gate actions", name: "Jay", handle: "@JaySlifer",
+    feature: "Action availability and the decision schema",
+    qs: [
+      { q: "What should an AI character never be allowed to do in your game?", hint: "short answer",
+        a: "Close the game, or take over the game." },
+      { q: "How do you stop characters from doing things that make no sense at the moment today?", hint: "short answer",
+        a: null },
+      { q: "Should your game code get the final say before an AI’s chosen action happens?", hint: "yes / no / depends",
+        a: "Depends, mostly no." }
+    ],
+    suggestions: ["Think about letting developers define what the C# guardrails are."],
+    revs: [
+      { id: "SR1.3", kind: "revised",
+        was: "The framework shall call a handler’s `Execute` only after every validation guard has passed, including a re-check that the returned action id is registered and currently available, because the model’s output is treated as untrusted.",
+        text: "The framework shall call a handler’s `Execute` only after every validation guard has passed, including a built-in re-check that the returned action id is registered and currently available; the developer shall be able to add their own guards written in C#, which run after the built-in ones.",
+        why: "Asked whether game code should get the final say, the interviewee said “depends, mostly no” and suggested letting developers define the C# guardrails themselves. The built-in check stays, and any extra checking is the developer’s choice." },
+      { id: "SR1.4", kind: "new",
+        text: "The framework shall provide no built-in action that can close the application, load scenes or change game settings; an agent shall only be able to trigger actions the developer has registered.",
+        why: "The interviewee said an AI character must never be able to close the game or take over the game." }
+    ]
+  },
+  {
+    id: "hero", stage: "Register targets", name: "Hero", handle: "@phupanawat",
+    feature: "Target registry and target grounding",
+    qs: [
+      { q: "What should an AI character be able to act on?", hint: "objects / other characters / places / whole groups or factions",
+        a: "All of those. The developer should be able to define them too." },
+      { q: "If a player asks for something impossible, like “attack the dragon” when there is no dragon, what should the character do?", hint: "refuse and say why / ignore it / do something close / other",
+        a: "It should let the developer design what happens in that case." },
+      { q: "How important is it that players can say “it” or “over there” instead of exact names?", hint: "1–5 scale",
+        a: "Very important, but it would be nice to steer players away from this as much as possible. Maybe some kind of confirmation." }
+    ],
+    suggestions: [
+      "Let the developer define what agents can act on, and design what happens when a request is impossible.",
+      "Add some kind of confirmation when a player uses a vague reference."
+    ],
+    revs: [
+      { id: "SR3.1", kind: "revised",
+        was: "For an action that requires a target, `TargetGroundingGuard` shall pass the decision only if the target’s id appears in the stimulus text (as an exact match, or after splitting snake_case and camelCase into words); otherwise it shall rewrite the decision to `none`.",
+        text: "For an action that requires a target, `TargetGroundingGuard` shall pass the decision only if the target’s id appears in the stimulus text (as an exact match, or after splitting snake_case and camelCase into words); otherwise it shall rewrite the decision to `none` by default, and the developer shall be able to replace that default with their own handling.",
+        why: "Asked what a character should do with an impossible request, the interviewee said the developer should design what happens." },
+      { id: "SR3.5", kind: "new",
+        text: "When a stimulus refers to a target only indirectly (for example “it” or “over there”), the framework should let the game ask the player to confirm which registered target is meant before the action runs, instead of guessing.",
+        why: "The interviewee rated indirect references as very important but wanted players steered away from them, suggesting “maybe some kind of confirmation”." }
+    ]
+  },
+  {
+    id: "yevhen", stage: "Connect a model", name: "Yevhen", handle: "@Draganoider",
+    feature: "Swappable language-model providers",
+    qs: [
+      { q: "How long can a character take to respond before it feels broken?", hint: "under 1 s / 1–3 s / 3–10 s / longer is fine",
+        a: "Worst case: longer than a minute. Individual answers: 5 s, 10 s, 10 s, under 10 s, and 5 s." },
+      { q: "Would it be okay if your game needed internet for the AI to work?", hint: "yes / no / only for some features",
+        a: "About 80% said okay and 20% said no, but it also depends." },
+      { q: "How much bigger could your game’s download get to include an AI model?", hint: "under 100 MB / about 500 MB / about 1 GB / more",
+        a: "Don’t care, as long as it’s not a terabyte." },
+      { q: "Would you pay for an online AI service, or must it be free to run?", hint: "would pay / free only / depends on price",
+        a: "Free, from all five. No paying in the middle of the game." }
+    ],
+    suggestions: ["No paying in the middle of the game."],
+    revs: [
+      { id: "SR2.4", kind: "revised",
+        was: "On the team’s reference machine (8 GB laptop GPU, 2-billion-parameter model through Ollama), one decision round-trip shall complete in under 5 seconds.",
+        text: "On the team’s reference machine (8 GB laptop GPU, 2-billion-parameter model through Ollama), one decision round-trip shall complete in under 5 seconds, and any request still waiting after 10 seconds shall be cancelled and return a timeout result the game can handle.",
+        why: "Five interviewees gave 5, 10, 10, under 10 and 5 seconds as the longest acceptable wait, so 5 seconds stays the target and 10 seconds becomes the hard limit." },
+      { id: "SR3.5", kind: "new",
+        text: "The framework shall use a local provider by default, so agents cost nothing per request to run; a paid cloud provider shall be used only when the developer configures one.",
+        why: "All five interviewees said the AI must be free to run, with no paying in the middle of the game. Most would accept needing internet, so cloud stays available as an option." }
+    ]
+  },
+  {
+    id: "maxim", stage: "Watch and measure", name: "Maxim", handle: "@MaximGolubitsky",
+    feature: "Decision telemetry and outcome classification",
+    qs: [
+      { q: "When a character does something wrong, how do you find out why today?", hint: "short answer",
+        a: "Errors, weird behaviour and bugs." },
+      { q: "What would you need to see before trusting the AI’s choices?", hint: "a log of decisions / the reason for each / test scores / other",
+        a: "The reason." },
+      { q: "Which details would you want for each decision?", hint: "response time / cost / which safety check stopped it / success rate",
+        a: "All of them would be nice." }
+    ],
+    suggestions: [],
+    revs: [
+      { id: "SR1.2", kind: "revised",
+        was: "`DecisionTelemetry` shall contain the latency in seconds, prompt and completion token counts, the provider name, the framework version (`AgenerelaInfo.Version`) and the names of the guards that fired, in the order they ran.",
+        text: "`DecisionTelemetry` shall contain the latency in seconds, prompt and completion token counts, the estimated cost of the request (zero for local providers), the provider name, the framework version (`AgenerelaInfo.Version`) and the names of the guards that fired, in the order they ran.",
+        why: "The interviewee wanted every detail offered: response time, cost, safety checks and success rate. Cost was the only one the telemetry did not cover." },
+      { id: "SR1.4", kind: "new",
+        text: "The framework should offer an optional short `reason` field, turned off by default and placed after `action`, `target` and `statement`, so the Decision Log can show why the agent chose an action.",
+        why: "The interviewee said they would need to see the reason before trusting the AI’s choices. It goes last and stays optional because a reasoning field placed before the action measurably lowered accuracy in our prototype." }
+    ]
+  }
+];
+
+const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const codeHtml = s => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>");
+const showInline = s => codeHtml(s).replace(/\b(shall|should)\b/g, '<span class="m m-$1">$1</span>');
+const pasteInline = s => codeHtml(s).replace(/\b(shall|should)\b/g, "<strong>$1</strong>");
+const plain = s => String(s).replace(/`([^`]+)`/g, "$1");
+const NO_ANSWER = "No answer recorded.";
+
+/* What lands on the clipboard: class-free HTML Canvas keeps, plus a plain-text twin. */
+function pasteHtml(m) {
+  let h = `<p><strong>Questions I composed for our interview</strong></p><ol>` +
+    m.qs.map(q => `<li>${pasteInline(q.q)} (${esc(q.hint)})</li>`).join("") + `</ol>`;
+  h += `<p><strong>Responses and suggestions I received</strong></p>`;
+  m.qs.forEach((q, i) => {
+    h += `<p><strong>Q${i + 1}. ${pasteInline(q.q)}</strong><br>${q.a ? pasteInline(q.a) : `<em>${NO_ANSWER}</em>`}</p>`;
+  });
+  if (m.suggestions.length) {
+    h += `<p><strong>Suggestions they made</strong></p><ul>` +
+      m.suggestions.map(s => `<li>${pasteInline(s)}</li>`).join("") + `</ul>`;
+  }
+  h += `<p><strong>Revised requirements based on the responses</strong></p><ul>`;
+  m.revs.forEach(r => {
+    h += `<li><strong>${r.id} (${r.kind})</strong> ${pasteInline(r.text)}` +
+      (r.was ? `<br>Was: ${pasteInline(r.was)}` : "") +
+      `<br>Why: ${pasteInline(r.why)}</li>`;
+  });
+  return h + `</ul>`;
+}
+function pasteText(m) {
+  const t = ["Questions I composed for our interview",
+    ...m.qs.map((q, i) => `${i + 1}. ${plain(q.q)} (${q.hint})`), "",
+    "Responses and suggestions I received", ""];
+  m.qs.forEach((q, i) => t.push(`Q${i + 1}. ${plain(q.q)}`, `  ${q.a ? plain(q.a) : NO_ANSWER}`, ""));
+  if (m.suggestions.length) t.push("Suggestions they made", ...m.suggestions.map(s => `- ${plain(s)}`), "");
+  t.push("Revised requirements based on the responses");
+  m.revs.forEach(r => {
+    t.push(`${r.id} (${r.kind}): ${plain(r.text)}`);
+    if (r.was) t.push(`  Was: ${plain(r.was)}`);
+    t.push(`  Why: ${plain(r.why)}`);
+  });
+  return t.join("\n");
+}
+
+function renderSheet(m) {
+  let h = `<div class="part">
+    <p class="part-title">Questions I composed for our interview</p>
+    <ol class="qlist">${m.qs.map((q, i) =>
+      `<li class="row"><span class="rid">Q${i + 1}</span><p>${showInline(q.q)}<span class="hint">${esc(q.hint)}</span></p></li>`).join("")}</ol>
+  </div>`;
+
+  h += `<div class="part">
+    <p class="part-title">Responses and suggestions I received</p>
+    <ol class="alist">${m.qs.map((q, i) => `
+      <li class="row"><span class="rid">Q${i + 1}</span><div>
+        <p class="qline">${showInline(q.q)}</p>
+        ${q.a ? `<p class="answer">${showInline(q.a)}</p>` : `<p class="answer none">${NO_ANSWER}</p>`}
+      </div></li>`).join("")}
+      ${m.suggestions.length ? `<li class="row"><span class="rid">+</span><div>
+        <p class="qline">Suggestions they made</p>
+        <ul class="sugg">${m.suggestions.map(s => `<li>${showInline(s)}</li>`).join("")}</ul>
+      </div></li>` : ""}
+    </ol>
+  </div>`;
+
+  h += `<div class="part">
+    <p class="part-title">Revised requirements based on the responses</p>
+    <ol class="rlist">${m.revs.map(r => `
+      <li class="row"><span class="rid">${r.id}</span><div class="rev-body">
+        <p class="rev-text">${showInline(r.text)}<span class="badge badge-${r.kind}">${r.kind}</span></p>
+        ${r.was ? `<p class="rev-note"><b>Was</b><span>${showInline(r.was)}</span></p>` : ""}
+        <p class="rev-note"><b>Why</b><span>${showInline(r.why)}</span></p>
+      </div></li>`).join("")}</ol>
+  </div>`;
+  return h;
+}
+
+const stepsEl = document.getElementById("steps");
+const postsEl = document.getElementById("posts");
+document.getElementById("leader-doc").innerHTML = LEADER_HTML;
+
+const lead = document.createElement("li");
+lead.innerHTML = `<a href="#leader" data-id="leader"><span class="num">G</span>
+  <span><span class="stage">Group reply</span><span class="who">Leader post</span><span class="feat">Project, stakeholders, method, features</span></span></a>`;
+stepsEl.appendChild(lead);
+
+let nQ = 0, nRev = 0, nNew = 0;
+TEAM.forEach((m, i) => {
+  nQ += m.qs.length;
+  nRev += m.revs.filter(r => r.kind === "revised").length;
+  nNew += m.revs.filter(r => r.kind === "new").length;
+
+  const li = document.createElement("li");
+  li.innerHTML = `<a href="#${m.id}" data-id="${m.id}"><span class="num">${i + 1}</span>
+    <span><span class="stage">${esc(m.stage)}</span><span class="who">${esc(m.name)}</span><span class="feat">${esc(m.feature)}</span></span></a>`;
+  stepsEl.appendChild(li);
+
+  const sec = document.createElement("section");
+  sec.className = "post";
+  sec.id = m.id;
+  sec.innerHTML = `<header class="post-head">
+      <div>
+        <p class="label">Step ${i + 1} · ${esc(m.stage)}</p>
+        <h2>${esc(m.name)}</h2>
+        <p class="meta">${esc(m.handle)} · ${esc(m.feature)}</p>
+      </div>
+      <div class="tools">
+        <span class="tally">${m.qs.length} questions · ${m.revs.length} changes</span>
+        <button type="button" class="copy">Copy post</button>
+        <span class="copy-status" aria-live="polite"></span>
+      </div>
+    </header>
+    <article class="sheet">${renderSheet(m)}</article>`;
+  postsEl.appendChild(sec);
+
+  sec.querySelector(".copy").addEventListener("click", e =>
+    copyRich(pasteHtml(m), pasteText(m), e.currentTarget, sec.querySelector(".copy-status"), sec.querySelector(".sheet")));
+});
+
+document.getElementById("summary").textContent =
+  `${TEAM.length} member replies · ${nQ} questions · ${nRev + nNew} requirement changes (${nRev} revised, ${nNew} new)`;
+
+document.getElementById("leader-copy").addEventListener("click", e => {
+  const doc = document.getElementById("leader-doc");
+  copyRich(LEADER_HTML, doc.innerText, e.currentTarget, document.getElementById("leader-status"), doc);
+});
+
+async function copyRich(html, text, btn, status, selectable) {
+  let ok = false;
+  try {
+    if (navigator.clipboard && window.ClipboardItem) {
+      await navigator.clipboard.write([new ClipboardItem({
+        "text/html": new Blob([html], { type: "text/html" }),
+        "text/plain": new Blob([text], { type: "text/plain" })
+      })]);
+      ok = true;
+    }
+  } catch (e) { ok = false; }
+
+  if (!ok) {
+    const holder = document.createElement("div");
+    holder.innerHTML = html;
+    holder.style.cssText = "position:fixed;left:-10000px;top:0;font:16px Arial,sans-serif;color:#000;background:#fff;";
+    document.body.appendChild(holder);
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(holder);
+    sel.removeAllRanges(); sel.addRange(range);
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    sel.removeAllRanges();
+    holder.remove();
+  }
+
+  if (ok) {
+    btn.textContent = "Copied";
+    btn.dataset.state = "done";
+    status.textContent = "";
+    setTimeout(() => { btn.textContent = "Copy post"; delete btn.dataset.state; }, 2200);
+  } else {
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(selectable);
+    sel.removeAllRanges(); sel.addRange(range);
+    status.textContent = "Clipboard access is blocked here. The post is selected: press Ctrl+C (Cmd+C on Mac).";
+  }
+}
+
+/* Mark the reply in view. */
+const links = [...stepsEl.querySelectorAll("a")];
+const setCurrent = id => links.forEach(a => a.setAttribute("aria-current", String(a.dataset.id === id)));
+setCurrent("leader");
+if ("IntersectionObserver" in window) {
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) setCurrent(e.target.id); });
+  }, { rootMargin: "-25% 0px -65% 0px" });
+  document.querySelectorAll(".post").forEach(s => io.observe(s));
+}
+</script>
+
+</body></html>

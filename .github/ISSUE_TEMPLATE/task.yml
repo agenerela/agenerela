@@ -1,0 +1,88 @@
+name: Task
+description: A piece of work to build
+title: "Short imperative title - what will exist when this is done"
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Match the shape of the existing Phase 1 issues: a plain-language opener anyone can
+        read, then the detail. If someone has to read the whole issue to decide whether to
+        claim it, the opener is not doing its job.
+
+  - type: textarea
+    id: plain
+    attributes:
+      label: In plain terms
+      description: >
+        Three or four sentences, no jargon. What is this, why do we need it, and what does
+        finished look like? Write it for a teammate who has not read the build plan.
+      placeholder: |
+        An agent needs a list of things it is allowed to interact with...
+
+        Done looks like: game code can add and remove targets at runtime, with tests.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it matters
+      description: >
+        The deeper reasoning. If this implements a measured finding, **quote the numbers**
+        and link the build plan section - that is what stops someone "simplifying" it later.
+    validations:
+      required: false
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: What to build
+      description: The technical scope. Be specific enough that two people would build the same thing.
+    validations:
+      required: true
+
+  - type: textarea
+    id: sketch
+    attributes:
+      label: What it should look like
+      description: >
+        A code sketch, expected output, or folder layout. Does not need to compile - it
+        needs to remove ambiguity about the shape of the answer. Use fenced code blocks;
+        mixing C#, JSON and folder trees in one field is fine and often clearer.
+    validations:
+      required: false
+
+  - type: textarea
+    id: files
+    attributes:
+      label: Files you own
+      description: >
+        List the files this issue owns. This is how we avoid merge conflicts with several
+        people working at once - stick to your list.
+      placeholder: |
+        - Runtime/Actions/TargetRegistry.cs
+        - Tests/Editor/Actions/TargetRegistryTests.cs
+    validations:
+      required: true
+
+  - type: textarea
+    id: dod
+    attributes:
+      label: Definition of done
+      description: Checkboxes. Tests belong here, not in a separate issue.
+      value: |
+        - [ ]
+        - [ ] EditMode tests cover the above
+        - [ ] Unity console clean - no new errors or warnings
+    validations:
+      required: true
+
+  - type: input
+    id: deps
+    attributes:
+      label: Dependencies
+      description: What blocks this, and what it blocks. Write "none - ready to start" if nothing.
+      placeholder: "Blocked by #4. Blocks #8."
+    validations:
+      required: true

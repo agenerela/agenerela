@@ -1,0 +1,134 @@
+{
+  "category": "simple_command",
+  "prompts": [
+    {
+      "id": "simple_001",
+      "label": "Player",
+      "stimulus": "Come with me.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "alice",
+        "bob"
+      ]
+    },
+    {
+      "id": "simple_002",
+      "label": "Player",
+      "stimulus": "Stop following me.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "alice",
+        "bob"
+      ]
+    },
+    {
+      "id": "simple_003",
+      "label": "Player",
+      "stimulus": "Wait here.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "alice",
+        "bob"
+      ]
+    },
+    {
+      "id": "simple_004",
+      "label": "Player",
+      "stimulus": "Stay where you are.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "alice"
+      ]
+    },
+    {
+      "id": "simple_005",
+      "label": "Player",
+      "stimulus": "Follow me.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "alice"
+      ]
+    },
+    {
+      "id": "simple_006",
+      "label": "Player",
+      "stimulus": "Keep close.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "alice"
+      ]
+    },
+    {
+      "id": "simple_007",
+      "label": "Player",
+      "stimulus": "Do not move.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "bob"
+      ]
+    },
+    {
+      "id": "simple_008",
+      "label": "Player",
+      "stimulus": "Stay with me.",
+      "observations": [],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": [
+        "bob"
+      ]
+    },
+    {
+      "id": "simple_009",
+      "label": "Player",
+      "stimulus": "Hold position.",
+      "observations": [],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": [
+        "bob"
+      ]
+    }
+  ]
+}
