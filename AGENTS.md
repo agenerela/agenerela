@@ -203,8 +203,8 @@ Merged so far:
 - Target discovery (#32, via #61, DR-014): `ITargetSource`, with `ExplicitTargetSource` for a
   hand-supplied set that needs no scene, and in `Runtime/Unity/` the `Targetable` component
   and `ProximityTargetSource`, which offers nearby `Targetable`s nearest first, capped, each
-  registered as its `Transform`. What the cap drops is on its `Dropped`; copying that into
-  `DecisionTelemetry.TargetsDropped` is #81 (Phase 2).
+  registered as its `Transform`. What the cap drops is on its `Dropped`, which `Agent` copies
+  into `DecisionTelemetry.TargetsDropped` (#81, below).
 - State-derived availability (#7, via #63): `ActionAvailability.For(ctx)` returns the actions
   legal for one decision, in registry order. A target-requiring action is left out while the
   `TargetRegistry` is empty, and so is any action whose handler's `IsAvailable` says no.
@@ -246,6 +246,11 @@ Merged so far:
   registered. Each runs through `Agent.DecideAsync` and `FakeProvider` and asserts on the
   recorded request and its serialized JSON, and each failure message names the measured rule
   that broke. A throwaway probe that switched each rule off failed exactly its own gate.
+- `TargetsDropped` filled (#81, via #96), the first Phase 2 merge: `IReportsDroppedTargets`,
+  an optional interface beside `ITargetSource`, which `ProximityTargetSource` implements.
+  `Agent` copies each such source's `Dropped` into the decision's telemetry right after its
+  `Collect`, sources in order; `Execute` resolves the targets again without touching a
+  returned result. EditMode tests, including a capped proximity source end to end.
 - Newtonsoft as the core's one declared dependency (DR-009), and each demo game as its own
   Unity project (DR-010).
 - `Demos/GreyBoxVillage` — a playable grey-box scene whose guard still answers from
@@ -265,8 +270,7 @@ Not written yet, all of it Phase 2: typed provider errors (#87), `OllamaProvider
 request queue with `DecideOptions.Priority` (#89), short-term memory (#90), and the gate, a
 live decision in a sandbox scene with `RequiresOllama` PlayMode tests (#94), which waits on
 those four. Beside them, and not on the gate's path: observation sources (#91), the provider
-config asset (#92), `AgentBehaviour` (#93), and filling `DecisionTelemetry.TargetsDropped`
-(#81).
+config asset (#92) and `AgentBehaviour` (#93).
 **Nothing in the framework calls a model yet.** The first live decision is Phase 2's, through
 an Ollama provider that sends `JsonSchemaSerializer`'s output. Phase 1 was pure C# with
 EditMode tests and no Ollama, on purpose.
