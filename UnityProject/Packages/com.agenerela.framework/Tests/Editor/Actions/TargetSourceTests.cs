@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -26,6 +27,7 @@ namespace Agenerela.Tests
             }
 
             created.Clear();
+            Fixtures.DestroyCreated();
         }
 
         private static AgentContext Context()
@@ -203,6 +205,37 @@ namespace Agenerela.Tests
             source.Collect(Context(), new TargetRegistry());
 
             Assert.That(source.Dropped, Is.Empty);
+        }
+
+        [Test]
+        public void ProximityReportsWhatItDrops()
+        {
+            MakeTargetable("near", new Vector3(1f, 0f, 0f));
+            MakeTargetable("far", new Vector3(2f, 0f, 0f));
+            IReportsDroppedTargets source = Proximity(cap: 1);
+
+            ((ITargetSource)source).Collect(Context(), new TargetRegistry());
+
+            Assert.That(source.Dropped, Is.EqualTo(new[] { "far" }));
+        }
+
+        [Test]
+        public async Task AnAgentWithACappedProximitySourceRecordsWhatTheCapDropped()
+        {
+            MakeTargetable("well", new Vector3(4f, 0f, 0f));
+            MakeTargetable("bridge", new Vector3(1f, 0f, 0f));
+            MakeTargetable("mill", new Vector3(3f, 0f, 0f));
+            MakeTargetable("north_gate", new Vector3(2f, 0f, 0f));
+            var fake = new FakeProvider("{\"action\":\"move_to\",\"target\":\"bridge\",\"statement\":\"\"}");
+            var agent = Fixtures.VillageGuard(fake);
+            agent.TargetSources.Add(Proximity(cap: 2));
+
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the well."));
+
+            Assert.That(fake.LastRequest.Schema.Fields[1].AllowedValues,
+                Is.EqualTo(new[] { "no_target", "tower", "training_dummy", "bridge", "north_gate" }));
+            Assert.That(result.Telemetry.TargetsDropped, Is.EqualTo(new[] { "mill", "well" }),
+                "The well was there, past the cap: the telemetry says so.");
         }
 
         [Test]

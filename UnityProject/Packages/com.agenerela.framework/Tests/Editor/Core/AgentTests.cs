@@ -523,6 +523,51 @@ namespace Agenerela.Tests
             Assert.That(fake.Requests, Is.Empty);
         }
 
+        [Test]
+        public async Task WhatASourceDropsIsInTheTelemetryInTheOrderItGivesThem()
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = Fixtures.VillageGuard(fake);
+            agent.TargetSources.Add(new DroppingSource("bridge", "well", "mill"));
+            agent.TargetSources.Add(new ExplicitTargetSource().Add("north_gate", new object()));
+            agent.TargetSources.Add(new DroppingSource("mill_road", "orchard"));
+
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the well."));
+
+            Assert.That(result.Telemetry.TargetsDropped, Is.EqualTo(new[] { "well", "mill", "orchard" }),
+                "Each source's drops, sources in order, each in its own order.");
+            Assert.That(fake.LastRequest.Schema.Fields[1].AllowedValues, Does.Not.Contain("well"));
+        }
+
+        [Test]
+        public async Task ASourceThatReportsNothingLeavesTargetsDroppedEmpty()
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = Fixtures.VillageGuard(fake);
+            agent.TargetSources.Add(new ExplicitTargetSource().Add("bridge", new object()));
+
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+
+            Assert.That(result.Decision.ActionId, Is.EqualTo("move_to"));
+            Assert.That(result.Telemetry.TargetsDropped, Is.Empty);
+        }
+
+        [Test]
+        public async Task ExecuteResolvingTheTargetsAgainLeavesTheReturnedDropsAlone()
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = Fixtures.VillageGuard(fake);
+            var source = new DroppingSource("bridge", "well");
+            agent.TargetSources.Add(source);
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+
+            source.NextDrops = new[] { "mill" };
+            Assert.That(agent.Execute(result), Is.True);
+
+            Assert.That(source.Collects, Is.EqualTo(2), "Execute does resolve the targets again.");
+            Assert.That(result.Telemetry.TargetsDropped, Is.EqualTo(new[] { "well" }));
+        }
+
         // ---- Execute ------------------------------------------------------------------------
 
         [TestCase("move_to", "tower")]
@@ -716,6 +761,32 @@ namespace Agenerela.Tests
             }
 
             return all;
+        }
+
+        // A source with a cap of one, as far as the agent can tell: it offers its first id and
+        // reports the rest as dropped. NextDrops, once set, is what the following Collect reports.
+        private sealed class DroppingSource : ITargetSource, IReportsDroppedTargets
+        {
+            private readonly string offered;
+            private string[] drops;
+
+            public DroppingSource(string offered, params string[] drops)
+            {
+                this.offered = offered;
+                this.drops = drops;
+            }
+
+            public string[] NextDrops;
+            public int Collects { get; private set; }
+            public IReadOnlyList<string> Dropped { get; private set; } = Array.Empty<string>();
+
+            public void Collect(AgentContext ctx, TargetRegistry into)
+            {
+                Collects++;
+                drops = NextDrops ?? drops;
+                into.Register(offered, new object());
+                Dropped = (string[])drops.Clone();
+            }
         }
 
         // Every string in the request, schema included: all a provider could possibly send.

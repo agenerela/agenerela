@@ -228,7 +228,9 @@ namespace Agenerela
         /// targets resolved now, the stimulus and the observations; the schema from the actions
         /// available now (#7, #8); the examples (#10); the request (#16); the provider (#12); the
         /// parse. Telemetry records the latency of the provider's request on a monotonic clock, the
-        /// provider's name, the framework version and the token counts the provider reported.
+        /// provider's name, the framework version, the token counts the provider reported, and
+        /// the target ids each <see cref="IReportsDroppedTargets"/> source left out, in source
+        /// order (#81).
         /// </remarks>
         public Awaitable<DecisionResult> DecideAsync(string stimulus, DecideOptions options = null, CancellationToken ct = default)
         {
@@ -302,7 +304,9 @@ namespace Agenerela
                 return Refuse(decision, "the action is not registered.");
             }
 
-            var ctx = Snapshot("", Array.Empty<string>());
+            // No telemetry to fill: this Collect overwrites a source's Dropped, but the result
+            // already holds its own copy from the decision.
+            var ctx = Snapshot("", Array.Empty<string>(), dropped: null);
 
             if (decision.TargetId != TargetRegistry.NoTarget && !ctx.Targets.Contains(decision.TargetId))
             {
@@ -329,12 +333,10 @@ namespace Agenerela
                 FrameworkVersion = AgenerelaInfo.Version,
             };
 
-            // TargetsDropped is not filled: ITargetSource has no way to say what a cap left out.
-            // ProximityTargetSource.Dropped has it, for a developer to copy in.
             DecisionRequest request;
             try
             {
-                var ctx = Snapshot(stimulus, observations);
+                var ctx = Snapshot(stimulus, observations, telemetry.TargetsDropped);
                 var options = new PromptOptions { StimulusLabel = label, IdleExampleStimulus = idleExample };
 
                 // Asked once, so the action enum and the examples come from one answer even when an
@@ -398,8 +400,9 @@ namespace Agenerela
 
         // One decision's view of the agent. State is copied, so a context is what the agent knew at
         // one instant. Targets are resolved afresh: the hand-registered ones, then each source's, in
-        // order (DR-014).
-        private AgentContext Snapshot(string stimulus, IReadOnlyList<string> observations)
+        // order (DR-014). What a source reports dropping is copied into dropped, when given, right
+        // after its Collect and before the next source runs, since its list lasts only until then.
+        private AgentContext Snapshot(string stimulus, IReadOnlyList<string> observations, List<string> dropped)
         {
             var targets = new TargetRegistry();
             var state = new Dictionary<string, object>(State, State.Comparer);
@@ -421,6 +424,11 @@ namespace Agenerela
 
                 // Handed the context whose registry it is filling, so it sees what came before it.
                 source.Collect(ctx, targets);
+
+                if (dropped != null && source is IReportsDroppedTargets reports && reports.Dropped != null)
+                {
+                    dropped.AddRange(reports.Dropped);
+                }
             }
 
             return ctx;
