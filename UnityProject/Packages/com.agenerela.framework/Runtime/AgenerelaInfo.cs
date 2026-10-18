@@ -11,9 +11,10 @@ namespace Agenerela
         public const string PackageName = "com.agenerela.framework";
 
         /// <summary>
-        /// Package version. Kept in sync with <c>package.json</c> by hand for now;
-        /// the smoke test asserts it is non-empty, not that it matches, because
-        /// reading the manifest at runtime would pull in the Package Manager API.
+        /// Package version, matching <c>package.json</c>. The smoke test asserts it is
+        /// non-empty, not that it matches, because reading the manifest at runtime would
+        /// pull in the Package Manager API; the hygiene check <c>version</c> compares the
+        /// two instead, and <c>tools/ci/release.py prepare</c> changes both at once.
         /// </summary>
         public const string Version = "0.1.0";
     }

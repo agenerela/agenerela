@@ -3,5 +3,29 @@
   "attribution": {
     "commit": "",
     "pr": ""
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git fetch:*)",
+      "Bash(git ls-files:*)",
+      "Bash(git branch --list:*)",
+      "Bash(git worktree list:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(gh pr checks:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh issue list:*)",
+      "Bash(python tools/ci/hygiene.py:*)",
+      "Bash(python3 tools/ci/hygiene.py:*)"
+    ],
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.env.local)"
+    ]
   }
 }

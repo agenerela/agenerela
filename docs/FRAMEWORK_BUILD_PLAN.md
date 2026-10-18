@@ -1255,7 +1255,8 @@ week-long time sink. Recommended sequencing:
 
 1. **Phase 0–2:** CI runs only the non-Unity parts — markdown link check, Python probe
    linting. Run Unity EditMode tests locally before pushing. (Both checks are in
-   `repo-hygiene.yml`, beside the ones for the hard rules a machine can check.)
+   `tools/ci/hygiene.py`, which `repo-hygiene.yml` runs, beside the ones for the hard rules
+   a machine can check.)
 2. **Phase 3+**, once the test suite is worth protecting: add GameCI with EditMode tests.
    Keep PlayMode/Ollama tests **out** of CI permanently — no runner has a GPU or a model,
    and tagging them `RequiresOllama` (per §4) exists exactly so CI can skip them.
