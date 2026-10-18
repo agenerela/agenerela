@@ -17,6 +17,8 @@ Tool configuration lives in [`.claude/`](.claude/README.md):
 
 - `.claude/settings.json` — committed, team-wide. Sets `attribution.commit` and
   `attribution.pr` to empty strings, which is how hard rule 7 (no attribution trailers)
-  is enforced for Claude Code specifically. Other agents must honour the same rule by
-  convention.
+  is enforced for Claude Code specifically; other agents must honour the same rule by
+  convention, and CI checks it. Its `permissions` deny reading any `.env` (hard rule 1)
+  and let read-only git, `gh` and hygiene-check commands run without a prompt.
+- `.claude/skills/` — pointers to the shared skills in `.agents/skills/`.
 - `.claude/settings.local.json` — gitignored, personal overrides.

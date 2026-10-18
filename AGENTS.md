@@ -145,7 +145,9 @@ reference to the asset stays broken.
 **Reviewing a pull request** follows [`REVIEWING.md`](REVIEWING.md): the checks in order,
 the four finding labels, and the summary template. A green check is not a review, because
 CI never compiles C# or runs a test. An agent that cannot open Unity says so in the review
-rather than implying the code builds.
+rather than implying the code builds. The `review-pull-request` skill, in
+[`.agents/skills/`](.agents/skills/review-pull-request/SKILL.md), is the procedure an agent
+follows to meet it.
 
 **Do not** commit `Library/`, `Logs/`, `UserSettings/`, `*.csproj`, `*.slnx`, or `.env`.
 They are gitignored; if one appears in `git status`, something is wrong — investigate
