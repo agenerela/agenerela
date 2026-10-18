@@ -8,6 +8,13 @@ While the version stays `0.x`, the public API may change in any release.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-18
+
+Phase 1: Core, Actions, Schema. The whole decision pipeline, from registered actions and
+targets through state masking, the schema, few-shot examples and the prompt to a validated
+`AgentDecision`, proven end to end against a fake provider. No provider calls a model yet;
+the first, for Ollama, is Phase 2's.
+
 ### Added
 - `ActionDefinition` and `ActionDefinitionAsset` in namespace `Agenerela` — the
   developer-authored action vocabulary (#4). `ActionDefinition` is the plain serializable type
