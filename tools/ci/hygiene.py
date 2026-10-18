@@ -518,6 +518,36 @@ def check_unity_version():
     return not fail
 
 
+def check_version():
+    """The framework's version agrees with itself.
+
+    package.json is what Unity's Package Manager reads; AgenerelaInfo.Version is what every
+    decision's telemetry is stamped with, so a benchmark run can be traced to the framework
+    that produced it. A release changes both, and the changelog, at once (tools/ci/release.py
+    prepare); one changed by hand drifts from the others with no compile error. Between
+    releases the version stays at the last one, so it always has a dated changelog section.
+    """
+    manifest = json.load(open(f"{FRAMEWORK}/package.json", encoding="utf-8"))["version"]
+    info_path = f"{FRAMEWORK}/Runtime/AgenerelaInfo.cs"
+    m = re.search(r'public const string Version = "([^"]*)"', read(info_path))
+    info = m.group(1) if m else None
+    changelog = f"{FRAMEWORK}/CHANGELOG.md"
+    fail = False
+    if info != manifest:
+        error(f"AgenerelaInfo.Version is {info}, but package.json says {manifest}. Change the version with "
+              f"python tools/ci/release.py prepare <version>, which moves both and the changelog together.",
+              file=info_path)
+        fail = True
+    if not re.search(rf"^## \[{re.escape(manifest)}\] - \d{{4}}-\d{{2}}-\d{{2}}", read(changelog), re.M):
+        error(f"package.json says {manifest}, but CHANGELOG.md has no '## [{manifest}] - <date>' section. "
+              f"Between releases the version stays at the last release; docs/RELEASING.md says how to cut one.",
+              file=changelog)
+        fail = True
+    if not fail:
+        print(f"OK: package.json, AgenerelaInfo.Version and CHANGELOG.md agree on {manifest}")
+    return not fail
+
+
 def check_framework_ref():
     """Demo projects load the framework from this repo.
 
@@ -884,6 +914,7 @@ CHECKS = {
     "lfs": check_lfs,
     "gitignore": check_gitignore,
     "unity-version": check_unity_version,
+    "version": check_version,
     "framework-ref": check_framework_ref,
     "scene": check_scene,
     "dependency": check_dependency,

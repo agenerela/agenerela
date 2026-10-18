@@ -1,0 +1,35 @@
+name: Release
+
+# Pushing a v* tag publishes a GitHub release of the framework package, with the tag's
+# changelog section as its notes. tools/ci/release.py check refuses a tag that is not on
+# main, or whose version package.json, AgenerelaInfo.Version and CHANGELOG.md do not all
+# carry, so a tag pushed by mistake fails here and publishes nothing. docs/RELEASING.md is
+# the whole process.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write   # gh release create
+
+jobs:
+  release:
+    name: Publish the release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the check needs origin/main to see the tag is on it
+
+      - name: The tag is on main and matches the package version
+        run: python3 tools/ci/release.py check "$GITHUB_REF_NAME"
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 tools/ci/release.py notes "$GITHUB_REF_NAME" > "$RUNNER_TEMP/notes.md"
+          gh release create "$GITHUB_REF_NAME" --verify-tag \
+            --title "Agenerela ${GITHUB_REF_NAME#v}" \
+            --notes-file "$RUNNER_TEMP/notes.md"

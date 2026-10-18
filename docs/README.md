@@ -5,6 +5,7 @@ Everything written down about Agenerela that is not source code.
 | Where | What is in it | Read it when |
 |---|---|---|
 | [`FRAMEWORK_BUILD_PLAN.md`](FRAMEWORK_BUILD_PLAN.md) | **The plan of record.** Architecture, the eight build phases with their definitions of done, testing standards, decision records, and Appendix A's measurements carried from the prototype | Before doing any work here — especially before re-trying something Appendix A already measured |
+| [`RELEASING.md`](RELEASING.md) | When a version is cut, which number it gets, and the steps from version bump to published release | Closing a phase, or installing a released version |
 | [`STATUS.md`](STATUS.md) | Where the build stands: what has merged, what is still to write, and the groundwork beside the phases | Picking up work, or before saying what exists |
 | [`llm-wiki/`](llm-wiki/README.md) | What we have learned since: [`findings.md`](llm-wiki/findings.md) for measurements taken in this repo, [`environment.md`](llm-wiki/environment.md) for setting a machine up | Setting up, or the day you measure something |
 | [`design/`](design/README.md) | The sitemap, a wireframe of every screen with the HTML it is rendered from, the framework design figure, and the developer walkthrough that strings them together | Building editor tooling or a demo's UI, or arguing with a screen |

@@ -72,6 +72,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: python3 tools/ci/hygiene.py unity-version
 
+      - name: The framework's version agrees with itself
+        if: ${{ !cancelled() }}
+        run: python3 tools/ci/hygiene.py version
+
       - name: Demo projects load the framework from this repo
         if: ${{ !cancelled() }}
         run: python3 tools/ci/hygiene.py framework-ref

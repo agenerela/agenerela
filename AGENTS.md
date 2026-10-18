@@ -77,7 +77,7 @@ they are taken.
 | `Demos/<Game>/` | Demo games — one full Unity project each, loading the package by relative path (DR-010) |
 | `docs/` | Build plan, llm-wiki, screen designs and course materials — [`docs/README.md`](docs/README.md) maps them |
 | `tools/benchmarks/` | Standalone Python probes, no Unity required |
-| `tools/ci/` | `hygiene.py`, every check CI runs, runnable on your machine and as a pre-commit hook |
+| `tools/ci/` | `hygiene.py`, every check CI runs, runnable on your machine and as a pre-commit hook; `release.py`, the mechanical steps of a release |
 | `tools/comfyui/` | The asset server: ComfyUI in Docker on the lead's RTX 5080 machine, making 3D models, sounds and images for the demo games, and `comfy.py`, which agents call it with |
 
 ## Working conventions
@@ -85,6 +85,12 @@ they are taken.
 **Branches.** `test` is the default and integration branch; `main` is protected and
 restricted. Branch off `test`, open pull requests **into `test`**. Never target `main` —
 pushes there are restricted to the repository owner.
+
+**Releases** are tags on `main`, one minor version per closed phase, published by the
+`Release` workflow; [`docs/RELEASING.md`](docs/RELEASING.md) is the process. Never change
+the version in `package.json` or `AgenerelaInfo.Version` by hand:
+`tools/ci/release.py prepare` moves both and the changelog together, and CI fails the two
+disagreeing. Never push a tag unless the repository owner asked for that release.
 
 **Commits.** Explain *why*, not just *what*. No attribution trailers (rule 7).
 
