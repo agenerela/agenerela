@@ -823,7 +823,16 @@ def check_probes():
     modules Blender itself provides are allowed there, because that part only runs inside
     Blender and the plain-Python part still needs no pip install. And hard rule 1 - keys go
     in headers - is checked across every .py and .cs file.
+
+    One folder may import more, named module by module below: tools/branding/ holds scripts
+    a person runs by hand to make the logo's prints, stills, animation and sound, and its
+    README lists what they need. They are not probes, nothing imports them, and they must
+    still compile. A module missing from the list still fails, so a new dependency there is
+    a deliberate change to this file and to that README.
     """
+    extra_imports = {
+        "tools/branding/": {"numpy", "scipy"},  # sfx.py, the logo animation's sound
+    }
     errors = []
     probes = tracked("tools/*.py")
     stdlib = set(sys.stdlib_module_names)
@@ -845,8 +854,9 @@ def check_probes():
                 imports.append((node.lineno, node.module))
         tops = {mod.split(".")[0] for _, mod in imports}
         blender = {"bpy", "bmesh", "bpy_extras", "mathutils"} if "bpy" in tops else set()
+        extra = set().union(*(mods for folder, mods in extra_imports.items() if f.startswith(folder)))
         for lineno, mod in imports:
-            if mod.split(".")[0] not in stdlib | siblings | blender:
+            if mod.split(".")[0] not in stdlib | siblings | blender | extra:
                 errors.append((f"Imports {mod}, which is not in the standard library. The probes promise to run "
                                f"with no pip install (tools/benchmarks/README.md).", f, lineno))
 
