@@ -77,6 +77,7 @@ they are taken.
 | `Demos/<Game>/` | Demo games — one full Unity project each, loading the package by relative path (DR-010) |
 | `docs/` | Build plan, llm-wiki, screen designs and course materials — [`docs/README.md`](docs/README.md) maps them |
 | `tools/benchmarks/` | Standalone Python probes, no Unity required |
+| `tools/ci/` | `hygiene.py`, every check CI runs, runnable on your machine and as a pre-commit hook |
 | `tools/comfyui/` | The asset server: ComfyUI in Docker on the lead's RTX 5080 machine, making 3D models, sounds and images for the demo games, and `comfy.py`, which agents call it with |
 
 ## Working conventions
@@ -131,13 +132,15 @@ puts them in a game.
 
 **Never merge a pull request with a failing CI check.** `Repo hygiene` catches missing
 `.meta` files, a committed `.meta` whose GUID changed in place or when its asset moved,
-broken JSON and committed generated files in every Unity project, plus a `.gitignore` rule
-that ignores tracked files, a project on the wrong Unity version or a game not loading the
-framework from this repo; a red check is a blocker, not a warning. When it reports a missing
-or changed `.meta` for an asset that already existed, restore the committed one
-(`git checkout origin/test -- <path>.meta`; for a moved asset, its message gives the two
-commands). Never commit the copy Unity regenerates: its GUID is new, so every reference to
-the asset stays broken.
+broken JSON and committed generated files in every Unity project, plus a binary file that
+bypassed Git LFS, a `.gitignore` rule that ignores tracked files, a project on the wrong
+Unity version or a game not loading the framework from this repo; a red check is a blocker,
+not a warning. Run the same checks before committing with `python tools/ci/hygiene.py`,
+which reads what is staged; every check, and why it exists, is in that file. When it
+reports a missing or changed `.meta` for an asset that already existed, restore the
+committed one (`git checkout origin/test -- <path>.meta`; for a moved asset, its message
+gives the two commands). Never commit the copy Unity regenerates: its GUID is new, so every
+reference to the asset stays broken.
 
 **Reviewing a pull request** follows [`REVIEWING.md`](REVIEWING.md): the checks in order,
 the four finding labels, and the summary template. A green check is not a review, because
