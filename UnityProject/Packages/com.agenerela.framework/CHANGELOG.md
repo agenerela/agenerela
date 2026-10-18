@@ -8,6 +8,13 @@ While the version stays `0.x`, the public API may change in any release.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-18
+
+Phase 1: Core, Actions, Schema. The whole decision pipeline, from registered actions and
+targets through state masking, the schema, few-shot examples and the prompt to a validated
+`AgentDecision`, proven end to end against a fake provider. No provider calls a model yet;
+the first, for Ollama, is Phase 2's.
+
 ### Added
 - `ActionDefinition` and `ActionDefinitionAsset` in namespace `Agenerela` — the
   developer-authored action vocabulary (#4). `ActionDefinition` is the plain serializable type
@@ -106,7 +113,8 @@ While the version stays `0.x`, the public API may change in any release.
   `Runtime/Unity/`, offers every enabled `Targetable` within `Radius` of `Origin`, filtered by
   layer, category and optionally line of sight, and never one on the agent itself. It sorts
   nearest first, ties broken by id, and keeps at most `Cap` (8 by default); the ids the cap
-  left out are in `Dropped`, for `DecisionTelemetry.TargetsDropped`. A missing, malformed or
+  left out are in `Dropped`, which an `Agent` copies into `DecisionTelemetry.TargetsDropped`
+  (#81). A missing, malformed or
   duplicate id in the resolved set throws an `InvalidOperationException` naming the
   GameObjects. Each `Targetable` is registered as its `Transform`, so an `[AgentAction]` method
   taking a `Transform` target needs no conversion. EditMode tests cover each rule, including
@@ -247,6 +255,18 @@ While the version stays `0.x`, the public API may change in any release.
   field while no target is registered. Each runs `Agent.DecideAsync` against `FakeProvider`
   and asserts on the request it recorded, both its `DecisionSchema` and that schema as
   `JsonSchemaSerializer` writes it, and each failure message names the measured rule that broke.
+- `IReportsDroppedTargets` in namespace `Agenerela` (#81) — an optional interface beside
+  `ITargetSource` for a source that can say which targets it found but did not offer: one
+  member, `Dropped`, the ids the last `Collect` left out, in the source's own order, empty and
+  never null when it dropped nothing. `ProximityTargetSource` implements it. On the decision
+  path, `Agent` copies each such source's `Dropped` into `DecisionTelemetry.TargetsDropped`
+  right after that source's `Collect`, sources in order, so a target list that lost the thing
+  the player named can be told apart from a model that ignored a listed target. `Execute`
+  resolves the targets again without touching telemetry, so a returned result keeps the drops
+  of its own decision. A source that does not implement the interface adds nothing. EditMode
+  tests cover the order across several sources, a source that reports nothing, `Execute`
+  leaving a returned result alone, and a capped `ProximityTargetSource` end to end through
+  `DecideAsync`.
 
 ### Changed
 - `DecisionRequest.Schema` — the request's `DecisionSchema`, now on the type. It arrives

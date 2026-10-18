@@ -12,7 +12,7 @@ namespace Agenerela
     /// that takes a <c>Transform</c> target receives it with no conversion (#50).
     /// </summary>
     [Serializable]
-    public sealed class ProximityTargetSource : ITargetSource
+    public sealed class ProximityTargetSource : ITargetSource, IReportsDroppedTargets
     {
         [Tooltip("Where distance is measured from, normally the agent itself. Targetables on " +
                  "this object or its children are never offered: an agent does not name itself.")]
@@ -40,8 +40,10 @@ namespace Agenerela
 
         /// <summary>
         /// Ids the last <see cref="Collect"/> found but left out because of the cap, nearest
-        /// first. Copy this into <see cref="DecisionTelemetry.TargetsDropped"/>, so a
-        /// thin-looking target list can be diagnosed.
+        /// first. An <c>Agent</c> copies them into <see cref="DecisionTelemetry.TargetsDropped"/>
+        /// on every decision (#81), so a thin-looking target list can be diagnosed. Targetables
+        /// outside the radius, layers, categories or line of sight were never found, so they are
+        /// not here.
         /// </summary>
         public IReadOnlyList<string> Dropped => (IReadOnlyList<string>)dropped ?? Array.Empty<string>();
 

@@ -87,12 +87,27 @@ Each issue lists the **files it owns**. Stick to them and merge conflicts mostly
 
 CI runs automatically and checks the mechanical things, in every Unity project: JSON
 validity, `.meta` file parity, that no committed `.meta` changed its GUID in place or in a
-move, that no generated files slipped in, that `.gitignore` ignores no tracked file, that
+move, that no generated files slipped in, that every binary file went through Git LFS, that
+`.gitignore` ignores no tracked file, that
 every project is on the pinned Unity version, and that each game loads the framework from
 this repo. It also checks the rules a machine can: scene code only in `Runtime/Unity/`, no
 dependency beyond Newtonsoft, doc links that resolve, Python probes that lint, no API key in
 a URL, and no attribution line in any commit or pull request description. **A red check
 blocks the merge** — fix it rather than merging past it.
+
+Every check lives in [`tools/ci/hygiene.py`](tools/ci/hygiene.py), so you can run them
+before you push, on what you have staged:
+
+```bash
+python tools/ci/hygiene.py
+```
+
+To have them run before every commit, install the hook once per clone. It goes in
+`.git/hooks/`, beside Git LFS's own hooks, and `git commit --no-verify` skips it once:
+
+```bash
+python tools/ci/hygiene.py --install-hook
+```
 
 If it names a missing or changed `.meta` for an asset that already existed, restore the
 committed one with `git checkout origin/test -- <path>.meta`. Do not commit the copy Unity

@@ -285,14 +285,14 @@ footer p{max-width:78ch}
 
 <!-- ============ ORDER OF WORK ============ -->
 <section class="sec" id="order">
-  <div class="sechead"><h2>The order of work</h2><span class="pill ok">6 ready now</span><span class="pill warn">3 waiting</span></div>
+  <div class="sechead"><h2>The order of work</h2><span class="pill ok">5 ready now</span><span class="pill warn">3 waiting</span><span class="pill dark">1 merged</span></div>
   <p class="seclede">Six issues can start today, in parallel. The gate waits on four of them. Only one chain is longer than a step: the provider, then its config asset, then the component that uses it.</p>
 
   <figure>
     <div class="fig">
       <div class="figbar">Figure 2 · What waits on what, as of 12 October</div>
       <div class="figscroll">
-        <svg viewBox="0 0 1000 310" role="img" aria-label="Issues 88, 87, 89 and 90 are ready and the gate, 94, waits on all four. Issue 92 waits on 88, and 93 waits on 92. Issues 91 and 81 are ready and nothing waits on them.">
+        <svg viewBox="0 0 1000 310" role="img" aria-label="Issues 88, 87, 89 and 90 are ready and the gate, 94, waits on all four. Issue 92 waits on 88, and 93 waits on 92. Issue 91 is ready and 81 is merged, and nothing waits on them.">
           <defs>
             <marker id="p2d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0,0 L10,5 L0,10 z"/></marker>
           </defs>
@@ -316,7 +316,7 @@ footer p{max-width:78ch}
           <text class="n" x="702" y="46">#91</text><text class="ready" x="830" y="46" text-anchor="end">ready</text>
           <text class="s" x="702" y="68">Observation sources</text>
           <rect class="box side" x="846" y="24" width="150" height="58" rx="7"/>
-          <text class="n" x="858" y="46">#81</text><text class="ready" x="986" y="46" text-anchor="end">ready</text>
+          <text class="n" x="858" y="46">#81</text><text class="ready" x="986" y="46" text-anchor="end">merged</text>
           <text class="s" x="858" y="68">TargetsDropped</text>
           <text class="lbl" x="843" y="104" text-anchor="middle">nothing waits on these two</text>
 
@@ -452,7 +452,7 @@ footer p{max-width:78ch}
     </article>
 
     <article class="issue">
-      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/81">#81</a><h3>TargetsDropped</h3><span class="pill ok">ready</span></div>
+      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/81">#81</a><h3>TargetsDropped</h3><span class="pill dark">merged, #96</span></div>
       <p>A proximity target source drops the targets past its cap, and the telemetry field meant to list them is always empty. This fills it through a small interface beside <span class="mono">ITargetSource</span>, without the core referencing a Unity type. Then "the guard ignored the well" can be told apart from "the well was never offered".</p>
       <div><div class="lab">Done when</div><ul class="done">
         <li>Dropped ids appear in the result's telemetry, in the source's order</li>

@@ -77,6 +77,7 @@ they are taken.
 | `Demos/<Game>/` | Demo games — one full Unity project each, loading the package by relative path (DR-010) |
 | `docs/` | Build plan, llm-wiki, screen designs and course materials — [`docs/README.md`](docs/README.md) maps them |
 | `tools/benchmarks/` | Standalone Python probes, no Unity required |
+| `tools/ci/` | `hygiene.py`, every check CI runs, runnable on your machine and as a pre-commit hook; `release.py`, the mechanical steps of a release |
 | `tools/comfyui/` | The asset server: ComfyUI in Docker on the lead's RTX 5080 machine, making 3D models, sounds and images for the demo games, and `comfy.py`, which agents call it with |
 
 ## Working conventions
@@ -84,6 +85,12 @@ they are taken.
 **Branches.** `test` is the default and integration branch; `main` is protected and
 restricted. Branch off `test`, open pull requests **into `test`**. Never target `main` —
 pushes there are restricted to the repository owner.
+
+**Releases** are tags on `main`, one minor version per closed phase, published by the
+`Release` workflow; [`docs/RELEASING.md`](docs/RELEASING.md) is the process. Never change
+the version in `package.json` or `AgenerelaInfo.Version` by hand:
+`tools/ci/release.py prepare` moves both and the changelog together, and CI fails the two
+disagreeing. Never push a tag unless the repository owner asked for that release.
 
 **Commits.** Explain *why*, not just *what*. No attribution trailers (rule 7).
 
@@ -131,18 +138,22 @@ puts them in a game.
 
 **Never merge a pull request with a failing CI check.** `Repo hygiene` catches missing
 `.meta` files, a committed `.meta` whose GUID changed in place or when its asset moved,
-broken JSON and committed generated files in every Unity project, plus a `.gitignore` rule
-that ignores tracked files, a project on the wrong Unity version or a game not loading the
-framework from this repo; a red check is a blocker, not a warning. When it reports a missing
-or changed `.meta` for an asset that already existed, restore the committed one
-(`git checkout origin/test -- <path>.meta`; for a moved asset, its message gives the two
-commands). Never commit the copy Unity regenerates: its GUID is new, so every reference to
-the asset stays broken.
+broken JSON and committed generated files in every Unity project, plus a binary file that
+bypassed Git LFS, a `.gitignore` rule that ignores tracked files, a project on the wrong
+Unity version or a game not loading the framework from this repo; a red check is a blocker,
+not a warning. Run the same checks before committing with `python tools/ci/hygiene.py`,
+which reads what is staged; every check, and why it exists, is in that file. When it
+reports a missing or changed `.meta` for an asset that already existed, restore the
+committed one (`git checkout origin/test -- <path>.meta`; for a moved asset, its message
+gives the two commands). Never commit the copy Unity regenerates: its GUID is new, so every
+reference to the asset stays broken.
 
 **Reviewing a pull request** follows [`REVIEWING.md`](REVIEWING.md): the checks in order,
 the four finding labels, and the summary template. A green check is not a review, because
 CI never compiles C# or runs a test. An agent that cannot open Unity says so in the review
-rather than implying the code builds.
+rather than implying the code builds. The `review-pull-request` skill, in
+[`.agents/skills/`](.agents/skills/review-pull-request/SKILL.md), is the procedure an agent
+follows to meet it.
 
 **Do not** commit `Library/`, `Logs/`, `UserSettings/`, `*.csproj`, `*.slnx`, or `.env`.
 They are gitignored; if one appears in `git status`, something is wrong — investigate
@@ -160,127 +171,18 @@ it; opening a project in a newer patch rewrites that file for everyone.
 
 ## Current state
 
-Phases 0 and 1 are complete: **Phase 1 (Core, Actions, Schema) closed on 11 October**, when
-the five checks in #11 passed. **Phase 2 (Ollama provider, queue, memory) is underway**, due
-19 October, and closes when the live checks in its gate (#94) pass. See the build plan's
-phase table for what each phase means, and [`docs/phases/phase-2.html`](docs/phases/phase-2.html)
-for what each Phase 2 issue does.
+**Phase 1 (Core, Actions, Schema) is complete**, closed on 11 October when the five checks
+in #11 passed. **Phase 2 (Ollama provider, queue, memory) is underway**, due 19 October, and
+closes when the live checks in its gate (#94) pass. **Nothing in the framework calls a model
+yet**: the first live decision is Phase 2's, through an Ollama provider that sends
+`JsonSchemaSerializer`'s output.
 
-Merged so far:
-
-- The `ILLMProvider` contract and its supporting types (#12), with its follow-up (#67, via
-  #68): token probabilities for the grounding guard (DR-016).
-  `ProviderCapabilities.ReportsTokenProbabilities` is set only for probabilities taken before
-  the schema's mask, and `ProviderResult.TokenProbabilities` carries them, one per token,
-  with EditMode tests. No provider fills them yet.
-- `TargetRegistry` (#5), with its follow-up (#29, via #55): `no_target` is reserved, and
-  lookups return false rather than throw on a malformed id, so a provider's raw output can
-  go straight in.
-- `ActionDefinition` and its `ActionDefinitionAsset` wrapper (#4, via #35 and #37), with its
-  follow-up (#49, via #54): the `Description` and `ExampleStimulus` tooltips and the
-  `ValidateId` tests.
-- Decision telemetry (#3, via #36): `DecisionOutcome` and `DecisionTelemetry`, with EditMode
-  tests, and `DecisionResult`, which pairs a decision with its telemetry. Its follow-up (#43,
-  via #60) added `DecisionResult`'s EditMode tests.
-- The core decision types `AgentIdentity`, `AgentContext` and `AgentDecision` (#2, via #39),
-  with input validation and EditMode tests. `AgentContext.Actions` followed with
-  availability (#58, via #63).
-- `AgentProfile` (#15, via #56) — the asset a developer creates first: an `AgentIdentity`,
-  the `ActionDefinitionAsset`s the agent can ever use, and the idle few-shot example. It
-  warns in the Inspector about an empty name, a missing entry or a duplicate action id, with
-  EditMode tests.
-- `ActionRegistry` and `IActionHandler` (#6, via #57) — each action id bound to the game code
-  that runs it, listed in a stable order for the schema enum. `Register` rejects a null,
-  duplicate, malformed or reserved id (`none`, which #8 adds to every agent); lookups return
-  false rather than throw. Two adapters come with it: `DelegateActionHandler` for a pair of
-  lambdas, and `ActionHandlerBehaviour`, the first file in `Runtime/Unity/`. EditMode tests
-  throughout.
-- The `[AgentAction]` code front door (#50, via #59) — an action defined by the method that
-  runs it, with `[Example]` for its few-shot example and `[Available]` for state masking.
-  `ActionRegistry.RegisterMethods` registers every such method on an object; where an asset
-  shares the id, the asset's definition wins and the method still runs it (DR-011). One
-  parameterized fixture runs the same assertions through every way an action is registered.
-- Target discovery (#32, via #61, DR-014): `ITargetSource`, with `ExplicitTargetSource` for a
-  hand-supplied set that needs no scene, and in `Runtime/Unity/` the `Targetable` component
-  and `ProximityTargetSource`, which offers nearby `Targetable`s nearest first, capped, each
-  registered as its `Transform`. What the cap drops is on its `Dropped`; copying that into
-  `DecisionTelemetry.TargetsDropped` is #81 (Phase 2).
-- State-derived availability (#7, via #63): `ActionAvailability.For(ctx)` returns the actions
-  legal for one decision, in registry order. A target-requiring action is left out while the
-  `TargetRegistry` is empty, and so is any action whose handler's `IsAvailable` says no.
-  Recomputed on every call, never cached. The same pull request added `AgentContext.Actions`
-  (#58), the registry it reads. EditMode tests throughout.
-- The few-shot builder (#10, via #74): `FewShotBuilder.Build` assembles the example block
-  from the available actions alone. Each action gets one example, its `{0}` filled with the
-  first of its `PreferredExampleTargets` that is registered, or no example if none is. Then
-  come the profile's idle example, answered with `none`, and a refusal example: a real
-  `ExampleStimulus` filled with an unregistered placeholder (`Atlantis`). EditMode tests
-  throughout. The "Pick up the Blacksmith" regression test registers the unsuitable target
-  first, so it fails if examples rotate blindly through the registry (#75, via #83).
-- `DecisionSchema` (#8, via #78): the provider-neutral shape of the answer, `action`, then
-  `target`, then `statement`, all required. The action enum is the available actions in
-  registry order with `none` added last; the target enum is `no_target`, then the registered
-  ids, and the `target` field is left out while nothing is registered. `DecisionRequest.Schema`
-  carries it unserialised, for each provider to serialise in its own dialect. One EditMode
-  test per measured rule.
-- `JsonSchemaSerializer` (#9, via #82): a `DecisionSchema` written as the JSON Schema Ollama
-  and the cloud APIs accept: one string property per field in order, an `enum` for each
-  field with allowed values, `required`, `propertyOrdering` always (Gemini needs it) and
-  `additionalProperties: false`. A null, unnamed or duplicate field, or an empty, `""` or
-  duplicate allowed value, throws rather than reaching a provider. Golden-file tests,
-  including one through `DecisionSchema.Build`. Phase 2's Ollama provider is its first caller.
-- `PromptBuilder` (#16, via #79): an agent's context made into the `DecisionRequest` — a
-  system prompt of identity, goals and one fixed instruction line, the few-shot block as
-  given, the observations verbatim, and the labelled stimulus as the final user turn.
-  Deterministic, `\n` only, with golden-file tests.
-- `Agent` (#17, via #80): `DecideAsync` builds the context, asks availability once, builds
-  the schema, examples and request, calls the provider and reads the reply with Newtonsoft.
-  An unreadable reply or a provider failure becomes a `PipelineError` result, never an
-  exception; only an empty label and the caller's own cancellation throw. `Execute` re-checks
-  the action and target and returns false on a refusal. Proven end to end against
-  `FakeProvider`. Every async test awaits through `Fixtures.NotCancelled`, because the Test
-  Framework counts a test whose Task ends cancelled as passed.
-- The Phase 1 gate (#11, via #84): `Phase1GateTests`, the build plan's five checks in one
-  file: state masking, `target` required with `no_target`, the field order, few-shot
-  examples that use only sensible registered targets, and no `target` field while nothing is
-  registered. Each runs through `Agent.DecideAsync` and `FakeProvider` and asserts on the
-  recorded request and its serialized JSON, and each failure message names the measured rule
-  that broke. A throwaway probe that switched each rule off failed exactly its own gate.
-- Newtonsoft as the core's one declared dependency (DR-009), and each demo game as its own
-  Unity project (DR-010).
-- `Demos/GreyBoxVillage` — a playable grey-box scene whose guard still answers from
-  placeholder string matching, not a model (#19).
-- The first 54 evaluation prompts (#13, via #65), nine in each of six categories, in
-  `UnityProject/Assets/Evaluation/prompts/`. Its follow-up (#66, via #76) added `agent.json`,
-  the guard every prompt is measured against, so every `expectedTarget` is a registered id,
-  and rewrote the observations as facts about the world. The folder's `README.md` documents
-  the format and the category balance, and `findings.md` how annotator disagreements get
-  resolved. Still open, in #85: the real annotators' names and their own answers on the 18
-  doubly labelled prompts, and the next batch of prompts.
-- `Repo hygiene` checks for the hard rules a script can check, including "only
-  `Runtime/Unity/` touches a scene" (#38, #40), and for a changed `.meta` GUID (#41). It
-  still compiles no C#, so a green check does not prove `test` builds.
-
-Not written yet, all of it Phase 2: typed provider errors (#87), `OllamaProvider` (#88), the
-request queue with `DecideOptions.Priority` (#89), short-term memory (#90), and the gate, a
-live decision in a sandbox scene with `RequiresOllama` PlayMode tests (#94), which waits on
-those four. Beside them, and not on the gate's path: observation sources (#91), the provider
-config asset (#92), `AgentBehaviour` (#93), and filling `DecisionTelemetry.TargetsDropped`
-(#81).
-**Nothing in the framework calls a model yet.** The first live decision is Phase 2's, through
-an Ollama provider that sends `JsonSchemaSerializer`'s output. Phase 1 was pure C# with
-EditMode tests and no Ollama, on purpose.
-
-Open groundwork beside Phase 2: the evaluation set's real annotators and next batch of
-prompts (#85), and the demo games, one sub-issue each under #47, starting with the
-GreyBoxStrategy grey box (#20). Code two games share moves into `Demos/Shared/` once a second
-game needs it (#14). The asset server those games draw on (`tools/comfyui/`) is set up on the
-RTX 5080 machine. Its first run there found four faults, fixed in #71, and all three
-workflows have made a test asset; #72 moved the image workflow to Z-Image Turbo's NVFP4
-build, about twice as fast there.
-
-What all of this is meant to become, screen by screen, is drawn in
-[`docs/design/`](docs/design/README.md).
+What has merged, what is still to write and the groundwork beside the phases are in
+[`docs/STATUS.md`](docs/STATUS.md); the package's API changes are in its
+[`CHANGELOG.md`](UnityProject/Packages/com.agenerela.framework/CHANGELOG.md). Read the one
+you need. Neither is loaded into every session, which is why they are not here. When a
+pull request merges, update `docs/STATUS.md`, and this section only when a phase opens or
+closes.
 
 ## Agent-specific configuration
 

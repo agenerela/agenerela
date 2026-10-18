@@ -262,19 +262,21 @@ async function build() {
     chipRow(["behaviour tree", "NavMesh", "animation", "physics"], 4.4, 1.08, C.white, C.ink2, F.sans);
 
     points(s, [
-      ["Hand-built trees don't scale", "Every new situation needs another branch written by hand, and the top-level choice grows fastest."],
+      ["Big trees are hard to maintain", "Every new situation is another hand-written branch. In a tree with hundreds of them, one change can quietly break another."],
+      ["Trees are predictable", "They're deterministic: same situation, same reaction, so players learn the pattern. A model weighs the whole situation and reacts more like a person."],
       ["Situations are open-ended", "No tree has a branch for every player line or turn report. A language model reads the intent."],
-      ["Deciding is the hard part", "Moving and animating are solved. Choosing what to do next, sensibly, is what still takes hand-writing."],
     ], 5.85, 1.25, 3.65, 1.22);
     caption(s, "Figure 1. The model makes the high-level choice; the game's own code carries it out. Actions are illustrative [1, §5].");
     notes(s, [
       "SPEAKER: Yevhen Mishchenko · about 35 seconds",
       "",
-      "- Today developers script what an actor does next with hand-written trees and state machines, and every new situation means another branch.",
-      "- And situations are open-ended: a player's line, a game event, a turn report. No tree has a branch for each one; a language model can read what's meant.",
-      "- Moving and animating are solved. The hard part is the big choice: what to do next. (Point at the figure.) So the model makes only that choice, a few times a minute, and the game's own code carries it out every frame.",
+      "- Today an actor's choices come from a behaviour tree, and big trees are hard to maintain: every new situation is another branch, and one change can break another.",
+      "- A tree is also deterministic: same situation, same reaction. Players learn the pattern. A model weighs the whole situation, so it reacts more like a person.",
+      "- And no tree covers every player line. (Point at the figure.) So the model makes only the high-level choice, a few times a minute, and the game's own code carries it out every frame.",
       "",
       "If asked 'Do you replace behaviour trees?': No. A tree ticks in microseconds for free. We replace only the top-level selection node, where hand-written trees grow combinatorially, and a tree can call Agenerela.",
+      "If asked 'Isn't unpredictable bad for a game?': The model only picks an action the developer registered, and the game checks it before running it. So it can surprise the player, but never break the game's rules. Where a designer wants the same reaction every time, a tree still does that.",
+      "If asked 'How do you know it's more human-like?': We haven't measured that. We measure whether it picks the right action (slide 18); human-likeness would need a player study, which isn't in our plan.",
       "If asked 'Isn't a model too slow?': It decides a few times a minute, not every frame: about 0.7 seconds a decision for the small model on our laptop this month.",
       "If asked 'Why not let the model control everything?': It never touches the game. It picks one of the actions the developer registered, and the game checks it and runs it.",
     ]);
