@@ -102,6 +102,14 @@ for what each Phase 2 issue does.
   `Agent` copies each such source's `Dropped` into the decision's telemetry right after its
   `Collect`, sources in order; `Execute` resolves the targets again without touching a
   returned result. EditMode tests, including a capped proximity source end to end.
+- Typed provider errors (#87, via #101): a provider throws `ProviderException` with a
+  `ProviderErrorKind` (`Unreachable`, `ModelNotFound`, `Timeout`, `Rejected`, `ServerError`,
+  `MalformedResponse`) and its `ProviderName`. Every `PipelineError` result now records why
+  in `DecisionTelemetry.ErrorKind`, a `PipelineErrorKind` that maps each provider kind one to
+  one, plus `RequestPreparation`, `UnreadableReply`, and `ProviderFailed` for any other
+  exception or no result. `ErrorMessage` holds the warning `Agent` logged. EditMode tests,
+  one per kind, through `Agent.DecideAsync`. Still to do, in #88: `ILLMProvider`'s remarks and
+  `providers.md` still describe the typed exception as coming.
 - Newtonsoft as the core's one declared dependency (DR-009), and each demo game as its own
   Unity project (DR-010).
 - `Demos/GreyBoxVillage` — a playable grey-box scene whose guard still answers from
@@ -121,10 +129,9 @@ for what each Phase 2 issue does.
 
 ## Not written yet
 
-All of it Phase 2: typed provider errors (#87), `OllamaProvider` (#88), the
-request queue with `DecideOptions.Priority` (#89), short-term memory (#90), and the gate, a
-live decision in a sandbox scene with `RequiresOllama` PlayMode tests (#94), which waits on
-those four. Beside them, and not on the gate's path: observation sources (#91), the provider
+All of it Phase 2: `OllamaProvider` (#88), the request queue with `DecideOptions.Priority`
+(#89), short-term memory (#90), and the gate, a live decision in a sandbox scene with
+`RequiresOllama` PlayMode tests (#94), which waits on those three and on #87, now merged. Beside them, and not on the gate's path: observation sources (#91), the provider
 config asset (#92) and `AgentBehaviour` (#93).
 **Nothing in the framework calls a model yet.** The first live decision is Phase 2's, through
 an Ollama provider that sends `JsonSchemaSerializer`'s output. Phase 1 was pure C# with
