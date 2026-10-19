@@ -8,6 +8,21 @@ While the version stays `0.x`, the public API may change in any release.
 
 ## [Unreleased]
 
+### Added
+- `ProviderException` and `ProviderErrorKind` in `Agenerela.Providers` (#87) — what a provider
+  throws when a request fails, with a `Kind` (`Unreachable`, `ModelNotFound`, `Timeout`,
+  `Rejected`, `ServerError`, `MalformedResponse`) and the failing provider's `ProviderName`, so
+  a model that was never pulled is told apart from a server that is not running. Its message
+  says what to do next where the provider can tell, and never contains an API key.
+- `PipelineErrorKind` in namespace `Agenerela`, and `DecisionTelemetry.ErrorKind` and
+  `DecisionTelemetry.ErrorMessage` (#87). Every `PipelineError` result now says why it failed:
+  `RequestPreparation`, `ProviderUnreachable`, `ModelNotFound`, `ProviderTimeout`,
+  `ProviderRejected`, `ProviderServerError`, `ProviderMalformedResponse`, `ProviderFailed` or
+  `UnreadableReply`, with the warning `Agent` logged as its message. Each `ProviderErrorKind`
+  maps to its own kind; `ProviderFailed` means only an exception that is not a
+  `ProviderException`, or a provider returning no result. Both fields are null on a decision,
+  and round-trip through Newtonsoft.
+
 ## [0.2.0] - 2026-10-18
 
 Phase 1: Core, Actions, Schema. The whole decision pipeline, from registered actions and
