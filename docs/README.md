@@ -11,6 +11,7 @@ Everything written down about Agenerela that is not source code.
 | [`design/`](design/README.md) | The sitemap, a wireframe of every screen with the HTML it is rendered from, the framework design figure, and the developer walkthrough that strings them together | Building editor tooling or a demo's UI, or arguing with a screen |
 | [`demos/`](demos/) | Design write-ups for demo games: what each one proves, when its agents are asked, and the steps to build it. So far [`risk-race.md`](demos/risk-race.md) | Starting a demo game, or deciding what one should prove |
 | [`phases/`](phases/) | One page per phase in flight: what it is for, how its issues fit together, and what each one does. So far [`phase-2.html`](phases/phase-2.html), also published for the team [as an artifact](https://claude.ai/artifact/EvDVRcbNAfS2i3bdG8j3Mu) | Picking up an issue in that phase, or explaining the phase to someone new |
+| [`assets/readme/`](assets/readme/) | The front page's images: the animated hero, the how-it-works figure and the roadmap, with `hero.py` and `roadmap.py`, which generate them | Changing the README's look, or moving the roadmap on when a phase closes |
 | [`course/`](course/README.md) | COMP 490 deliverables built as shared pages: requirements, interviews, the sketch lab, system design | Preparing a class deliverable, or looking up what we told the class |
 
 Rules for working in this repo — branches, hard rules, conventions — are in
