@@ -213,7 +213,10 @@ namespace Agenerela
         /// throws; a provider that throws; and a reply that is empty, is not one JSON object, or
         /// lacks a field the schema asked for. A reply naming an action or target the request did
         /// not offer is still a decision, for <see cref="Execute"/> to refuse (see
-        /// <c>DecisionParser</c>).
+        /// <c>DecisionParser</c>). The telemetry says which of these it was in
+        /// <see cref="DecisionTelemetry.ErrorKind"/>, from the <see cref="ProviderException.Kind"/>
+        /// when a provider threw one, and holds the warning in
+        /// <see cref="DecisionTelemetry.ErrorMessage"/> (#87).
         /// </returns>
         /// <exception cref="ArgumentException">
         /// <see cref="DecideOptions.StimulusLabel"/> is null, empty or whitespace. Thrown by the call
@@ -351,7 +354,8 @@ namespace Agenerela
             }
             catch (Exception e)
             {
-                return Failed(telemetry, $"Preparing the request failed. {e.GetType().Name}: {e.Message}");
+                return Failed(telemetry, PipelineErrorKind.RequestPreparation,
+                    $"Preparing the request failed. {e.GetType().Name}: {e.Message}");
             }
 
             ProviderResult reply;
@@ -374,7 +378,7 @@ namespace Agenerela
             catch (Exception e)
             {
                 telemetry.LatencySeconds = (float)clock.Elapsed.TotalSeconds;
-                return Failed(telemetry, $"The provider failed. {e.GetType().Name}: {e.Message}");
+                return Failed(telemetry, KindOf(e), $"The provider failed. {e.GetType().Name}: {e.Message}");
             }
 
             telemetry.LatencySeconds = (float)clock.Elapsed.TotalSeconds;
@@ -384,7 +388,7 @@ namespace Agenerela
 
             if (reply == null)
             {
-                return Failed(telemetry, "The provider returned no result.");
+                return Failed(telemetry, PipelineErrorKind.ProviderFailed, "The provider returned no result.");
             }
 
             telemetry.PromptTokens = reply.PromptTokens;
@@ -392,7 +396,7 @@ namespace Agenerela
 
             if (!DecisionParser.TryParse(reply.Text, request.Schema, out var decision, out string problem))
             {
-                return Failed(telemetry, $"{problem} The reply was: {Excerpt(reply.Text)}");
+                return Failed(telemetry, PipelineErrorKind.UnreadableReply, $"{problem} The reply was: {Excerpt(reply.Text)}");
             }
 
             return new DecisionResult(decision, telemetry);
@@ -471,11 +475,39 @@ namespace Agenerela
             }
         }
 
-        private DecisionResult Failed(DecisionTelemetry telemetry, string reason)
+        private DecisionResult Failed(DecisionTelemetry telemetry, PipelineErrorKind kind, string reason)
         {
+            string message = $"{Who()} could not decide. {reason}";
             telemetry.Outcome = DecisionOutcome.PipelineError;
-            Debug.LogWarning($"{Who()} could not decide. {reason}");
+            telemetry.ErrorKind = kind;
+            telemetry.ErrorMessage = message;
+            Debug.LogWarning(message);
             return new DecisionResult(null, telemetry);
+        }
+
+        // A provider says why it failed by throwing a ProviderException. A server error and an
+        // unreadable envelope have no kind of their own here: to the game, as to any other
+        // exception a provider throws, the provider failed, and the message says how.
+        private static PipelineErrorKind KindOf(Exception e)
+        {
+            if (!(e is ProviderException failure))
+            {
+                return PipelineErrorKind.ProviderFailed;
+            }
+
+            switch (failure.Kind)
+            {
+                case ProviderErrorKind.Unreachable:
+                    return PipelineErrorKind.ProviderUnreachable;
+                case ProviderErrorKind.ModelNotFound:
+                    return PipelineErrorKind.ModelNotFound;
+                case ProviderErrorKind.Timeout:
+                    return PipelineErrorKind.ProviderTimeout;
+                case ProviderErrorKind.Rejected:
+                    return PipelineErrorKind.ProviderRejected;
+                default:
+                    return PipelineErrorKind.ProviderFailed;
+            }
         }
 
         private bool Refuse(AgentDecision decision, string reason)

@@ -57,6 +57,12 @@ namespace Agenerela.Tests
         public bool FailsImmediately;
 
         /// <summary>
+        /// When true, the request completes with no <c>ProviderResult</c> at all, which the
+        /// provider contract never allows: what a broken provider would do.
+        /// </summary>
+        public bool ReturnsNoResult;
+
+        /// <summary>
         /// What a held request fails with when it is cancelled. Null fails it with an
         /// <c>OperationCanceledException</c>, as the provider contract asks; set it to imitate a
         /// backend that reports an abort as some other error.
@@ -68,6 +74,18 @@ namespace Agenerela.Tests
 
         /// <summary>When true, the reply stays pending until <see cref="Release"/> or cancellation.</summary>
         public bool Hold;
+
+        /// <summary>
+        /// Makes every request fail as a real provider says why: with a <see cref="ProviderException"/>
+        /// of <paramref name="kind"/>, carrying this provider's <see cref="Name"/>. Sets
+        /// <see cref="Failure"/>, so <see cref="FailsImmediately"/> still applies. Returns the exception.
+        /// </summary>
+        public ProviderException FailWith(ProviderErrorKind kind, string message = null)
+        {
+            var failure = new ProviderException(kind, Name, message ?? $"The fake provider failed: {kind}.");
+            Failure = failure;
+            return failure;
+        }
 
         /// <summary>Every request received, oldest first.</summary>
         public IReadOnlyList<DecisionRequest> Requests => requests;
@@ -135,6 +153,12 @@ namespace Agenerela.Tests
             if (Failure != null)
             {
                 source.TrySetException(Failure);
+                return;
+            }
+
+            if (ReturnsNoResult)
+            {
+                source.TrySetResult(null);
                 return;
             }
 

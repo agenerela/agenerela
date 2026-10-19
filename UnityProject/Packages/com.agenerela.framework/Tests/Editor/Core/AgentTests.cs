@@ -71,6 +71,8 @@ namespace Agenerela.Tests
             Assert.That(result.Telemetry.CompletionTokens, Is.EqualTo(21));
             Assert.That(result.Telemetry.Outcome, Is.Null,
                 "Only a pipeline error is classified when deciding; whether the answer was right is the eval harness's call.");
+            Assert.That(result.Telemetry.ErrorKind, Is.Null, "A decision has no error to explain.");
+            Assert.That(result.Telemetry.ErrorMessage, Is.Null);
             Assert.That(fake.Requests, Has.Count.EqualTo(1));
         }
 
@@ -277,6 +279,8 @@ namespace Agenerela.Tests
             Assert.That(result.Telemetry.Outcome, Is.EqualTo(DecisionOutcome.PipelineError));
             Assert.That(result.Telemetry.ProviderName, Is.EqualTo("fake"));
             Assert.That(result.Telemetry.FrameworkVersion, Is.EqualTo(AgenerelaInfo.Version));
+            Assert.That(result.Telemetry.ErrorKind, Is.EqualTo(PipelineErrorKind.UnreadableReply));
+            Assert.That(result.Telemetry.ErrorMessage, Does.Match("^Agent 'Village Guard' could not decide\\. .*(" + reason + ")"));
             Assert.That(agent.Execute(result), Is.False);
             Assert.That(Executions(agent), Is.Empty);
         }
@@ -351,8 +355,54 @@ namespace Agenerela.Tests
 
             Assert.That(result.Decision, Is.Null);
             Assert.That(result.Telemetry.Outcome, Is.EqualTo(DecisionOutcome.PipelineError));
+            Assert.That(result.Telemetry.ErrorKind, Is.EqualTo(PipelineErrorKind.ProviderFailed),
+                "An exception that is not a ProviderException says nothing more than that the provider failed.");
+            Assert.That(result.Telemetry.ErrorMessage, Is.EqualTo(
+                "Agent 'Village Guard' could not decide. The provider failed. InvalidOperationException: model 'qwen3.5:2b' not found"));
             Assert.That(result.Telemetry.ProviderName, Is.EqualTo("fake"));
             Assert.That(fake.Requests, Has.Count.EqualTo(1));
+        }
+
+        [TestCase(ProviderErrorKind.Unreachable, PipelineErrorKind.ProviderUnreachable, false)]
+        [TestCase(ProviderErrorKind.ModelNotFound, PipelineErrorKind.ModelNotFound, false)]
+        [TestCase(ProviderErrorKind.ModelNotFound, PipelineErrorKind.ModelNotFound, true)]
+        [TestCase(ProviderErrorKind.Timeout, PipelineErrorKind.ProviderTimeout, false)]
+        [TestCase(ProviderErrorKind.Rejected, PipelineErrorKind.ProviderRejected, false)]
+        [TestCase(ProviderErrorKind.ServerError, PipelineErrorKind.ProviderFailed, false)]
+        [TestCase(ProviderErrorKind.MalformedResponse, PipelineErrorKind.ProviderFailed, false)]
+        public async Task AProviderExceptionsKindIsOnTheResult(ProviderErrorKind kind, PipelineErrorKind expected, bool failsImmediately)
+        {
+            var fake = new FakeProvider(GoToTheTower) { FailsImmediately = failsImmediately };
+            var failure = fake.FailWith(kind, "Model 'qwen3.5:2b' is not installed. Run `ollama pull qwen3.5:2b`.");
+            var agent = Fixtures.VillageGuard(fake);
+            const string Warning = "Agent 'Village Guard' could not decide. The provider failed. "
+                + "ProviderException: Model 'qwen3.5:2b' is not installed. Run `ollama pull qwen3.5:2b`.";
+            LogAssert.Expect(LogType.Warning, Warning);
+
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+
+            Assert.That(failure.Kind, Is.EqualTo(kind));
+            Assert.That(failure.ProviderName, Is.EqualTo("fake"));
+            Assert.That(result.Decision, Is.Null);
+            Assert.That(result.Telemetry.Outcome, Is.EqualTo(DecisionOutcome.PipelineError));
+            Assert.That(result.Telemetry.ErrorKind, Is.EqualTo(expected));
+            Assert.That(result.Telemetry.ErrorMessage, Is.EqualTo(Warning),
+                "The result carries the warning's own text, so the game can show what to do next.");
+            Assert.That(agent.Execute(result), Is.False);
+        }
+
+        [Test]
+        public async Task AProviderThatReturnsNoResultIsAProviderFailure()
+        {
+            var fake = new FakeProvider(GoToTheTower) { ReturnsNoResult = true };
+            var agent = Fixtures.VillageGuard(fake);
+            LogAssert.Expect(LogType.Warning, "Agent 'Village Guard' could not decide. The provider returned no result.");
+
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+
+            Assert.That(result.Telemetry.Outcome, Is.EqualTo(DecisionOutcome.PipelineError));
+            Assert.That(result.Telemetry.ErrorKind, Is.EqualTo(PipelineErrorKind.ProviderFailed));
+            Assert.That(result.Telemetry.ErrorMessage, Is.EqualTo("Agent 'Village Guard' could not decide. The provider returned no result."));
         }
 
         [Test]
@@ -377,6 +427,8 @@ namespace Agenerela.Tests
             }
 
             Assert.That(result.Telemetry.Outcome, Is.EqualTo(DecisionOutcome.PipelineError));
+            Assert.That(result.Telemetry.ErrorKind, Is.EqualTo(PipelineErrorKind.ProviderFailed),
+                "Only a ProviderException's Timeout is a ProviderTimeout: a bare cancellation is not a ProviderException.");
         }
 
         [Test]
@@ -391,6 +443,8 @@ namespace Agenerela.Tests
             var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
 
             Assert.That(result.Telemetry.Outcome, Is.EqualTo(DecisionOutcome.PipelineError));
+            Assert.That(result.Telemetry.ErrorKind, Is.EqualTo(PipelineErrorKind.RequestPreparation));
+            Assert.That(result.Telemetry.ErrorMessage, Does.Match("could not decide\\. Preparing the request failed\\. KeyNotFoundException"));
             Assert.That(fake.Requests, Is.Empty);
         }
 
@@ -428,10 +482,16 @@ namespace Agenerela.Tests
             Assert.That(fake.Requests, Is.Empty);
         }
 
-        [Test]
-        public async Task ACancellationTheProviderReportsAsAnotherErrorStillEndsCancelled()
+        [TestCase(false)]
+        [TestCase(true)]
+        public async Task ACancellationTheProviderReportsAsAnotherErrorStillEndsCancelled(bool asProviderException)
         {
-            var fake = new FakeProvider(GoToTheTower) { Hold = true, CancelledWith = new InvalidOperationException("Request aborted") };
+            // A provider that maps every failed request to a ProviderException, even an abort the
+            // caller asked for, still ends the call cancelled rather than as a timeout.
+            Exception abort = asProviderException
+                ? new ProviderException(ProviderErrorKind.Timeout, "fake", "Request aborted")
+                : new InvalidOperationException("Request aborted");
+            var fake = new FakeProvider(GoToTheTower) { Hold = true, CancelledWith = abort };
             var agent = Fixtures.VillageGuard(fake);
 
             using (var cts = new CancellationTokenSource())
@@ -520,6 +580,7 @@ namespace Agenerela.Tests
             var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
 
             Assert.That(result.Telemetry.Outcome, Is.EqualTo(DecisionOutcome.PipelineError));
+            Assert.That(result.Telemetry.ErrorKind, Is.EqualTo(PipelineErrorKind.RequestPreparation));
             Assert.That(fake.Requests, Is.Empty);
         }
 
