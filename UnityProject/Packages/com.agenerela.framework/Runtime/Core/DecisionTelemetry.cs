@@ -54,8 +54,13 @@ namespace Agenerela{
         // The server refused the request (ProviderErrorKind.Rejected)
         ProviderRejected,
 
-        // Any other provider failure: a server error or an envelope that could not be read, an
-        // exception that is not a ProviderException, or no result at all
+        // The server failed while answering (ProviderErrorKind.ServerError)
+        ProviderServerError,
+
+        // A reply arrived but its envelope could not be read (ProviderErrorKind.MalformedResponse)
+        ProviderMalformedResponse,
+
+        // The provider failed with an exception that is not a ProviderException, or no result at all
         ProviderFailed,
 
         // A reply arrived, but it is empty, not one JSON object, or lacks a field the schema asked for

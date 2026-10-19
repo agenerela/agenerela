@@ -485,9 +485,8 @@ namespace Agenerela
             return new DecisionResult(null, telemetry);
         }
 
-        // A provider says why it failed by throwing a ProviderException. A server error and an
-        // unreadable envelope have no kind of their own here: to the game, as to any other
-        // exception a provider throws, the provider failed, and the message says how.
+        // A provider says why it failed by throwing a ProviderException, whose kind maps one to
+        // one. Any other exception says only that the provider failed.
         private static PipelineErrorKind KindOf(Exception e)
         {
             if (!(e is ProviderException failure))
@@ -505,7 +504,12 @@ namespace Agenerela
                     return PipelineErrorKind.ProviderTimeout;
                 case ProviderErrorKind.Rejected:
                     return PipelineErrorKind.ProviderRejected;
+                case ProviderErrorKind.ServerError:
+                    return PipelineErrorKind.ProviderServerError;
+                case ProviderErrorKind.MalformedResponse:
+                    return PipelineErrorKind.ProviderMalformedResponse;
                 default:
+                    // A kind added to ProviderErrorKind before it has one here.
                     return PipelineErrorKind.ProviderFailed;
             }
         }

@@ -19,13 +19,14 @@ namespace Agenerela.Tests
         }
 
         [Test]
-        public void PipelineErrorKindHasItsSevenKindsInOrder()
+        public void PipelineErrorKindHasItsNineKindsInOrder()
         {
             // Serialized as positions too, so a new kind goes at the end (#87).
             Assert.That(Enum.GetNames(typeof(PipelineErrorKind)), Is.EqualTo(new[]
             {
                 "RequestPreparation", "ProviderUnreachable", "ModelNotFound", "ProviderTimeout",
-                "ProviderRejected", "ProviderFailed", "UnreadableReply",
+                "ProviderRejected", "ProviderServerError", "ProviderMalformedResponse",
+                "ProviderFailed", "UnreadableReply",
             }));
         }
 
