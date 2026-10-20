@@ -172,7 +172,7 @@ it; opening a project in a newer patch rewrites that file for everyone.
 ## Current state
 
 **Phase 1 (Core, Actions, Schema) is complete**, closed on 11 October when the five checks
-in #11 passed. **Phase 2 (Ollama provider, queue, memory) is underway**, due 19 October, and
+in #11 passed. **Phase 2 (Ollama provider, queue, memory) is underway**, due 29 October, and
 closes when the live checks in its gate (#94) pass. **Nothing in the framework calls a model
 yet**: the first live decision is Phase 2's, through an Ollama provider that sends
 `JsonSchemaSerializer`'s output.

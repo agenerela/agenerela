@@ -13,7 +13,7 @@ phase table.
 
 Phases 0 and 1 are complete: **Phase 1 (Core, Actions, Schema) closed on 11 October**, when
 the five checks in #11 passed. **Phase 2 (Ollama provider, queue, memory) is underway**, due
-19 October, and closes when the live checks in its gate (#94) pass. See the build plan's
+29 October, and closes when the live checks in its gate (#94) pass. See the build plan's
 phase table for what each phase means, and [`docs/phases/phase-2.html`](phases/phase-2.html)
 for what each Phase 2 issue does.
 
