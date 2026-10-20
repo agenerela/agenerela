@@ -92,8 +92,9 @@ namespace Agenerela.Providers
                 || (chatUri.Scheme != Uri.UriSchemeHttp && chatUri.Scheme != Uri.UriSchemeHttps)
                 || chatUri.Query.Length > 0 || chatUri.Fragment.Length > 0)
             {
+                // The address itself is left out: it may carry a password (hard rule 1).
                 throw new ArgumentException(
-                    $"OllamaSettings.Endpoint '{settings.Endpoint}' is not an http address such as http://127.0.0.1:11434.",
+                    "OllamaSettings.Endpoint is not an http address with no query, such as http://127.0.0.1:11434.",
                     nameof(settings));
             }
 
@@ -415,7 +416,22 @@ namespace Agenerela.Providers
                 throw Malformed($"its {field} is not a whole number", text);
             }
 
-            return (int)token;
+            long count;
+            try
+            {
+                count = (long)token;
+            }
+            catch (OverflowException)
+            {
+                count = -1;
+            }
+
+            if (count < 0 || count > int.MaxValue)
+            {
+                throw Malformed($"its {field} is negative or too large to be a token count", text);
+            }
+
+            return (int)count;
         }
 
         // Each logprobs entry onto one TokenProbability: token to Text, logprob to LogProbability,

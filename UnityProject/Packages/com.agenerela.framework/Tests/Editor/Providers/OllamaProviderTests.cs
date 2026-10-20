@@ -508,6 +508,9 @@ namespace Agenerela.Tests
         [TestCase("[{\"message\":{\"content\":\"\"}}]")]
         [TestCase("{\"message\":{\"content\":\"a\"},\"done\":false}\n{\"message\":{\"content\":\"b\"},\"done\":true}")]
         [TestCase("{\"message\":{\"content\":\"\"},\"eval_count\":\"many\"}")]
+        [TestCase("{\"message\":{\"content\":\"\"},\"eval_count\":2147483648}")]
+        [TestCase("{\"message\":{\"content\":\"\"},\"prompt_eval_count\":99999999999999999999}")]
+        [TestCase("{\"message\":{\"content\":\"\"},\"prompt_eval_count\":-1}")]
         [TestCase("{\"message\":{\"content\":\"\"},\"logprobs\":{}}")]
         [TestCase("{\"message\":{\"content\":\"\"},\"logprobs\":[{\"token\":\"a\"}]}")]
         [TestCase("{\"message\":{\"content\":\"\"},\"logprobs\":[{\"token\":\"a\",\"logprob\":0,\"top_logprobs\":5}]}")]
@@ -644,6 +647,18 @@ namespace Agenerela.Tests
                 Assert.Throws<ArgumentException>(() => new OllamaProvider(settings),
                     $"Endpoint '{settings.Endpoint}', model '{settings.Model}', context {settings.ContextSize}, " +
                     $"temperature {settings.Temperature}, timeout {settings.TimeoutSeconds}");
+            }
+        }
+
+        [Test]
+        public void ARefusedEndpointIsNotEchoedWithItsPassword()
+        {
+            foreach (string endpoint in new[] { "http://user:hunter2@127.0.0.1:11434/?model=x", "ftp://user:hunter2@127.0.0.1:11434" })
+            {
+                var refused = Assert.Throws<ArgumentException>(() => new OllamaProvider(new OllamaSettings { Endpoint = endpoint }));
+
+                Assert.That(refused.Message, Does.Not.Contain("hunter2"));
+                Assert.That(refused.Message, Does.Contain("OllamaSettings.Endpoint"));
             }
         }
 
