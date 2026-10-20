@@ -1,10 +1,11 @@
-# Writes hero.svg: the README banner. hero-bg.jpg (the painted scene with the wordmark) is embedded,
-# and the agent's one decision plays over it on a loop: it hears, sees, remembers, thinks, acts.
-# Run it from this folder after changing hero-bg.jpg or the timings below.
+# Writes hero.svg: the README banner. hero-bg.jpg (the painted scene with the wordmark, no guard)
+# and guard.png (the guard cut out of the same painting) are embedded, and the agent's one decision
+# plays over them on a loop: it hears, sees, remembers, thinks, acts, then walks to the tower.
+# Run it after changing either image or the timings below.
 import base64, os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-T = 14.0  # seconds per loop
+T = 16.0  # seconds per loop
 
 
 def pct(t):
@@ -16,10 +17,34 @@ def appear(name, t, dur=0.45, start="opacity:0;transform:translateY(6px)", end="
     return f"@keyframes {name}{{0%,{pct(t)}{{{start}}}{pct(t + dur)},100%{{{end}}}}}"
 
 
+def appear_until(name, t, out, dur=0.45, start="opacity:0;transform:translateY(6px)", end="opacity:1;transform:none"):
+    """Eases in at t and out again at out, before the guard walks through where it stood."""
+    return (f"@keyframes {name}{{0%,{pct(t)}{{{start}}}{pct(t + dur)},{pct(out)}{{{end}}}"
+            f"{pct(out + 0.4)},100%{{opacity:0}}}}")
+
+
 # When each beat starts, in seconds.
-HEAR, SEE, RECALL, THINK, MENU, MASK, PICK, PATH, DONE, FADE = 0.6, 1.9, 3.1, 4.2, 5.4, 6.4, 7.6, 8.1, 9.2, 12.4
+HEAR, SEE, RECALL, THINK, MENU, MASK, PICK, PATH, DONE = 0.6, 1.9, 3.1, 4.2, 5.4, 6.4, 7.6, 8.1, 9.2
+CLEAR, WALK, ARRIVE, FADE = 10.2, 10.5, 13.3, 14.0
+
+# Where the guard's feet are, where they end up on the bridge, and how much smaller he is there.
+FEET, DEST, FAR = (939, 472), (1080, 415), 0.8
+STEP = 0.35  # seconds per step
 
 bg = base64.b64encode(open(os.path.join(HERE, "hero-bg.jpg"), "rb").read()).decode()
+guard = base64.b64encode(open(os.path.join(HERE, "guard.png"), "rb").read()).decode()
+
+ARRIVED = f"translate({DEST[0] - FEET[0]}px,{DEST[1] - FEET[1]}px) scale({FAR})"
+# Each step plants a foot (a slight lean one way, then the other) with a lift between.
+bob = [f"0%,{pct(WALK)}{{transform:none}}"]
+n = int((ARRIVE - WALK) / STEP)
+for i in range(1, n):
+    t = WALK + i * STEP
+    bob.append(f"{pct(t - STEP / 2)}{{transform:translateY(-5px)}}")
+    bob.append(f"{pct(t)}{{transform:rotate({1.4 if i % 2 else -1.4}deg)}}")
+bob.append(f"{pct(ARRIVE)},100%{{transform:none}}")
+BOB = "@keyframes bob{{" + "".join(bob) + "}}"
+BOB = BOB.replace("{{", "{").replace("}}", "}")
 
 css = f"""
 text{{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif}}
@@ -31,17 +56,19 @@ text{{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,'Helvetica Neue',A
 .reticle{{fill:none;stroke:#ffffff;stroke-width:3;stroke-linecap:round}}
 .tag{{fill:#0b1222;fill-opacity:.85}}
 .step{{fill:#6f7f99}}
-.ret,.glow,.ring,.feed,.card,.r1,.r2,.r3,.menu,.done{{transform-box:fill-box}}
+.ret,.ret-out,.glow,.ring,.feed,.card,.r1,.r2,.r3,.menu,.done{{transform-box:fill-box}}
 
 .cycle{{animation:cycle {T}s infinite both}}
 @keyframes cycle{{0%,{pct(FADE)}{{opacity:1}}{pct(FADE + 0.8)},100%{{opacity:0}}}}
 
 .card{{animation:card {T}s infinite both}}
-{appear("card", HEAR - 0.3)}
+{appear_until("card", HEAR - 0.3, CLEAR)}
 .r1{{animation:r1 {T}s infinite both}}  {appear("r1", HEAR)}
 .r2{{animation:r2 {T}s infinite both}}  {appear("r2", SEE)}
 .r3{{animation:r3 {T}s infinite both}}  {appear("r3", RECALL)}
 .ret{{transform-origin:center;animation:ret {T}s infinite both}}
+.ret-out{{transform-origin:center;animation:ret-out {T}s infinite both}}
+{appear_until("ret-out", SEE, CLEAR, 0.5, "opacity:0;transform:scale(1.5)", "opacity:1;transform:scale(1)")}
 {appear("ret", SEE, 0.5, "opacity:0;transform:scale(1.5)", "opacity:1;transform:scale(1)")}
 .feed{{animation:feed {T}s infinite both}}
 @keyframes feed{{0%,{pct(THINK - 0.6)}{{opacity:0;transform:translateX(0)}}{pct(THINK - 0.5)}{{opacity:1;transform:translateX(0)}}{pct(THINK)}{{opacity:1;transform:translateX(-58px)}}{pct(THINK + 0.1)},100%{{opacity:0;transform:translateX(-58px)}}}}
@@ -53,18 +80,22 @@ text{{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,'Helvetica Neue',A
 .lobes{{animation:lobes {T}s infinite both}}
 @keyframes lobes{{0%,{pct(THINK)}{{stroke:#7f9cc9}}{pct(THINK + 0.4)},{pct(PICK + 1.2)}{{stroke:#cfe0ff}}{pct(PICK + 1.8)},100%{{stroke:#7f9cc9}}}}
 
-.menu{{animation:menu {T}s infinite both}} {appear("menu", MENU)}
+.menu{{animation:menu {T}s infinite both}} {appear_until("menu", MENU, CLEAR)}
 .masked{{opacity:.4;animation:masked {T}s infinite both}}
 @keyframes masked{{0%,{pct(MASK)}{{opacity:1}}{pct(MASK + 0.4)},100%{{opacity:.4}}}}
 .strike{{animation:strike {T}s infinite both}} {appear("strike", MASK, 0.4, "opacity:0", "opacity:1")}
 .pick{{animation:pick {T}s infinite both}}
 @keyframes pick{{0%,{pct(PICK)}{{fill:#ffffff;fill-opacity:.06}}{pct(PICK + 0.3)},100%{{fill:#1f5bd8;fill-opacity:1}}}}
 .path{{stroke-dasharray:120;animation:path {T}s infinite both}}
-@keyframes path{{0%,{pct(PATH)}{{stroke-dashoffset:120}}{pct(PATH + 0.7)},100%{{stroke-dashoffset:0}}}}
+@keyframes path{{0%,{pct(PATH)}{{stroke-dashoffset:120;opacity:1}}{pct(PATH + 0.7)},{pct(CLEAR)}{{stroke-dashoffset:0;opacity:1}}{pct(CLEAR + 0.4)},100%{{stroke-dashoffset:0;opacity:0}}}}
 .hit{{animation:hit {T}s infinite both}}
 @keyframes hit{{0%,{pct(PATH + 0.6)}{{stroke:#ffffff}}{pct(PATH + 0.9)},100%{{stroke:#4d8eff}}}}
 .done{{animation:done {T}s infinite both}} {appear("done", DONE)}
 
+.walker{{transform-box:view-box;transform-origin:{FEET[0]}px {FEET[1]}px;animation:walk {T}s infinite both linear}}
+@keyframes walk{{0%{{opacity:0;transform:none}}{pct(0.5)},{pct(WALK)}{{opacity:1;transform:none}}{pct(ARRIVE)},{pct(FADE)}{{opacity:1;transform:{ARRIVED}}}{pct(FADE + 0.6)},100%{{opacity:0;transform:{ARRIVED}}}}}
+.bob{{transform-box:view-box;transform-origin:{FEET[0]}px {FEET[1]}px;animation:bob {T}s infinite both linear}}
+{BOB}
 .s1{{animation:s1 {T}s infinite both}} .s2{{animation:s2 {T}s infinite both}} .s3{{animation:s3 {T}s infinite both}} .s4{{animation:s4 {T}s infinite both}} .s5{{animation:s5 {T}s infinite both}}
 """
 for i, (a, b) in enumerate([(HEAR, SEE), (SEE, RECALL), (RECALL, THINK), (THINK, PICK), (PICK, FADE)], 1):
@@ -87,14 +118,16 @@ folds = "M-24,-12 C-17,-15 -12,-9 -15,-2 M-29,7 C-22,3 -13,7 -13,14 M-12,-24 C-9
 svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 533" width="1600" height="533" role="img" aria-labelledby="t d">
   <!-- Generated by hero.py from hero-bg.jpg. Edit those, not this file. -->
   <title id="t">Agenerela. The model decides. Validated code executes.</title>
-  <desc id="d">A village guard at night, with a glowing brain above him standing for the language model. He hears the player say "Go to the tower.", sees the tower and the bridge as targets, and recalls that the night watch began. His brain thinks; a menu offers move_to, talk and follow_player, with attack struck out as not legal now. He picks move_to, a line runs to the tower, and the game's MoveTo(tower) runs after a second check.</desc>
+  <desc id="d">A village guard at night, with a glowing brain above him standing for the language model. He hears the player say "Go to the tower.", sees the tower and the bridge as targets, and recalls that the night watch began. His brain thinks; a menu offers move_to, talk and follow_player, with attack struck out as not legal now. He picks move_to, a line runs to the tower, the game's MoveTo(tower) runs after a second check, and he walks onto the bridge toward the tower.</desc>
   <style>{css}</style>
   <defs>
     <radialGradient id="halo"><stop offset="0" stop-color="#4d8eff" stop-opacity=".75"/><stop offset=".55" stop-color="#1f5bd8" stop-opacity=".25"/><stop offset="1" stop-color="#1f5bd8" stop-opacity="0"/></radialGradient>
   </defs>
   <image width="1600" height="533" href="data:image/jpeg;base64,{bg}"/>
 
-  <!-- The model, as the guard's brain -->
+  <!-- The guard, with the model as his brain; he walks to the tower once the game runs MoveTo -->
+  <g class="walker"><g class="bob">
+  <image x="847" y="88" width="184" height="392" href="data:image/png;base64,{guard}"/>
   <line x1="917" y1="134" x2="930" y2="186" stroke="#7f9cc9" stroke-width="2" stroke-dasharray="3 6" stroke-linecap="round"/>
   <circle cx="915" cy="90" r="62" fill="url(#halo)" class="glow"/>
   <circle cx="915" cy="90" r="40" fill="none" stroke="#4d8eff" stroke-width="2" class="ring"/>
@@ -106,6 +139,7 @@ svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 533" width="
   </g>
   <rect x="893" y="128" width="44" height="22" rx="11" class="tag"/>
   <text x="915" y="144" text-anchor="middle" font-size="14" font-weight="700" letter-spacing="1" fill="#cfe0ff">LLM</text>
+  </g></g>
 
   <g class="cycle">
     <!-- What it hears, sees and remembers -->
@@ -123,7 +157,7 @@ svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 533" width="
       <rect x="1384" y="268" width="60" height="24" rx="6" class="tag"/>
       <text x="1414" y="285" text-anchor="middle" font-size="15" class="mono val">tower</text>
     </g>
-    <g class="ret">
+    <g class="ret-out">
       <path class="reticle" d="M1066,384 v-12 h14 M1176,372 h14 v12 M1190,412 v12 h-14 M1080,424 h-14 v-12"/>
       <rect x="1096" y="430" width="64" height="24" rx="6" class="tag"/>
       <text x="1128" y="447" text-anchor="middle" font-size="15" class="mono val">bridge</text>
