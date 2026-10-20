@@ -22,6 +22,22 @@ While the version stays `0.x`, the public API may change in any release.
   maps to its own kind; `ProviderFailed` means only an exception that is not a
   `ProviderException`, or a provider returning no result. Both fields are null on a decision,
   and round-trip through Newtonsoft.
+- `OllamaProvider` and `OllamaSettings` in `Agenerela.Providers` (#88) — the first provider
+  that calls a model: Ollama's `/api/chat` on the developer's machine, at
+  `http://127.0.0.1:11434` by default, sending the schema in `format`, greedy decoding,
+  `think: false`, `num_ctx` 4096 and `logprobs` with five alternatives, as every number in
+  Appendix A was measured. It returns `message.content` exactly as received, the token
+  counts, the token probabilities and the model that answered, and throws
+  `ProviderException` with the kind that fits. Built on `System.Net.Http.HttpClient`, so it
+  needs no new package; it does not work in a WebGL player.
+- `ProviderResult.Model` and `DecisionTelemetry.Model` (#88): the model that produced a
+  reply, which `Agent` copies from the one to the other. Empty in telemetry when the provider
+  does not say.
+
+### Changed
+- `ILLMProvider.RequestAsync`'s remarks and `Documentation~/providers.md` now point at
+  `ProviderException` (#87) as what a provider throws; providers.md's Ollama section says what
+  was built (#88).
 
 ## [0.2.0] - 2026-10-18
 
