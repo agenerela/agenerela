@@ -14,7 +14,7 @@ namespace Agenerela
         // A guard refused a request that should have produced an action
         RejectedWhenActionExpected,
 
-        // Transport or parse failure; not a semantic result
+        // Transport or parse failure; not a semantic result (not 1+1=2)
         PipelineError
     }
 }

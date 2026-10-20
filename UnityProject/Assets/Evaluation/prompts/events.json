@@ -13,10 +13,7 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": [
-        "alice",
-        "bob"
-      ]
+      "labelledBy": ["Maxim"]
     },
     {
       "id": "event_002",
@@ -31,10 +28,7 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": [
-        "alice",
-        "bob"
-      ]
+      "labelledBy": ["Maxim"]
     },
     {
       "id": "event_003",
@@ -48,10 +42,7 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": [
-        "alice",
-        "bob"
-      ]
+      "labelledBy": ["Maxim"]
     },
     {
       "id": "event_004",
@@ -65,9 +56,7 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": [
-        "alice"
-      ]
+      "labelledBy": ["Maxim"]
     },
     {
       "id": "event_005",
@@ -81,9 +70,7 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": [
-        "alice"
-      ]
+      "labelledBy": ["Maxim"]
     },
     {
       "id": "event_006",
@@ -97,9 +84,7 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": [
-        "alice"
-      ]
+      "labelledBy": ["Maxim"]
     },
     {
       "id": "event_007",
@@ -113,9 +98,7 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": [
-        "bob"
-      ]
+      "labelledBy": ["Maxim"]
     },
     {
       "id": "event_008",
@@ -129,9 +112,7 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": [
-        "bob"
-      ]
+      "labelledBy": ["Maxim"]
     },
     {
       "id": "event_009",
@@ -145,9 +126,7 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": [
-        "bob"
-      ]
+      "labelledBy": ["Maxim"]
     }
   ]
 }

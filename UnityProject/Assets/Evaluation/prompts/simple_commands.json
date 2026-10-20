@@ -11,10 +11,7 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": [
-        "alice",
-        "bob"
-      ]
+      "labelledBy": ["Maxim"]
     },
     {
       "id": "simple_002",
@@ -26,10 +23,7 @@
       "preconditionState": {
         "isFollowing": true
       },
-      "labelledBy": [
-        "alice",
-        "bob"
-      ]
+      "labelledBy": ["Maxim"]
     },
     {
       "id": "simple_003",
@@ -41,10 +35,7 @@
       "preconditionState": {
         "isFollowing": true
       },
-      "labelledBy": [
-        "alice",
-        "bob"
-      ]
+      "labelledBy": ["Maxim"]
     },
     {
       "id": "simple_004",
@@ -56,9 +47,7 @@
       "preconditionState": {
         "isFollowing": true
       },
-      "labelledBy": [
-        "alice"
-      ]
+      "labelledBy": ["Maxim"]
     },
     {
       "id": "simple_005",
@@ -70,9 +59,7 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": [
-        "alice"
-      ]
+      "labelledBy": ["Maxim"]
     },
     {
       "id": "simple_006",
@@ -84,9 +71,7 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": [
-        "alice"
-      ]
+      "labelledBy": ["Maxim"]
     },
     {
       "id": "simple_007",
@@ -98,9 +83,7 @@
       "preconditionState": {
         "isFollowing": true
       },
-      "labelledBy": [
-        "bob"
-      ]
+      "labelledBy": ["Maxim"]
     },
     {
       "id": "simple_008",
@@ -112,9 +95,7 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": [
-        "bob"
-      ]
+      "labelledBy": ["Maxim"]
     },
     {
       "id": "simple_009",
@@ -126,9 +107,7 @@
       "preconditionState": {
         "isFollowing": true
       },
-      "labelledBy": [
-        "bob"
-      ]
+      "labelledBy": ["Maxim"]
     }
   ]
 }

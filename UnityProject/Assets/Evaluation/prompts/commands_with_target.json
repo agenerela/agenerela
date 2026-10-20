@@ -8,7 +8,7 @@
     "expectedAction":"move_to",
     "expectedTarget":"bridge",
     "preconditionState":{"isFollowing":false},
-    "labelledBy":["alice","bob"]},
+    "labelledBy":["Maxim"]},
 
     {"id":"target_002",
     "label":"Player",
@@ -17,7 +17,7 @@
     "expectedAction":"move_to",
     "expectedTarget":"village_gate",
     "preconditionState":{"isFollowing":false},
-    "labelledBy":["alice","bob"]},
+    "labelledBy":["Maxim"]},
 
     {"id":"target_003",
     "label":"Player",
@@ -26,7 +26,7 @@
     "expectedAction":"move_to",
     "expectedTarget":"campfire",
     "preconditionState":{"isFollowing":false},
-    "labelledBy":["alice","bob"]},
+    "labelledBy":["Maxim"]},
 
     {"id":"target_004",
     "label":"Player",
@@ -35,7 +35,7 @@
     "expectedAction":"move_to",
     "expectedTarget":"well",
     "preconditionState":{"isFollowing":false},
-    "labelledBy":["alice"]},
+    "labelledBy":["Maxim"]},
 
     {"id":"target_005",
     "label":"Player",
@@ -44,7 +44,7 @@
     "expectedAction":"move_to",
     "expectedTarget":"north_tower",
     "preconditionState":{"isFollowing":false},
-    "labelledBy":["alice"]},
+    "labelledBy":["Maxim"]},
 
     {"id":"target_006",
     "label":"Player",
@@ -53,7 +53,7 @@
     "expectedAction":"move_to",
     "expectedTarget":"market",
     "preconditionState":{"isFollowing":false},
-    "labelledBy":["alice"]},
+    "labelledBy":["Maxim"]},
 
     {"id":"target_007",
     "label":"Player",
@@ -62,7 +62,7 @@
     "expectedAction":"move_to",
     "expectedTarget":"docks",
     "preconditionState":{"isFollowing":false},
-    "labelledBy":["bob"]},
+    "labelledBy":["Maxim"]},
 
     {"id":"target_008",
     "label":"Player",
@@ -71,7 +71,7 @@
     "expectedAction":"move_to",
     "expectedTarget":"shelter",
     "preconditionState":{"isFollowing":false},
-    "labelledBy":["bob"]},
+    "labelledBy":["Mxaim"]},
 
     {"id":"target_009",
     "label":"Player",
@@ -80,6 +80,6 @@
     "expectedAction":"move_to",
     "expectedTarget":"eastern_road",
     "preconditionState":{"isFollowing":false},
-    "labelledBy":["bob"]}
+    "labelledBy":["Maxim"]}
   ]
 }
