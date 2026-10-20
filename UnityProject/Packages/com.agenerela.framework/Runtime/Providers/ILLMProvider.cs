@@ -68,10 +68,12 @@ namespace Agenerela.Providers
         /// <remarks>
         /// Transport and protocol failures — server down, model not pulled, HTTP 429,
         /// malformed envelope — are thrown, not returned. <see cref="ProviderResult"/>
-        /// describes a reply that arrived. Phase 2 introduces the typed provider exception
-        /// so that a missing model surfaces as a diagnosable error rather than a leaked
-        /// <c>HttpRequestException</c>; until then, throwing is still the contract.
-        /// API keys must never appear in an exception message (hard rule 1).
+        /// describes a reply that arrived. Throw <see cref="ProviderException"/>, whose
+        /// <see cref="ProviderException.Kind"/> says why, so that a missing model surfaces as a
+        /// diagnosable error rather than a leaked <c>HttpRequestException</c>; <c>Agent</c>
+        /// records the kind in its telemetry (#87). Any other exception still counts as a
+        /// failure, with no reason given. API keys must never appear in an exception message
+        /// (hard rule 1).
         /// </remarks>
         Awaitable<ProviderResult> RequestAsync(DecisionRequest req, CancellationToken ct);
     }

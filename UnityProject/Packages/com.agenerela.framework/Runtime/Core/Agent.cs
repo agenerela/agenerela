@@ -391,6 +391,7 @@ namespace Agenerela
                 return Failed(telemetry, PipelineErrorKind.ProviderFailed, "The provider returned no result.");
             }
 
+            telemetry.Model = reply.Model ?? "";
             telemetry.PromptTokens = reply.PromptTokens;
             telemetry.CompletionTokens = reply.CompletionTokens;
 

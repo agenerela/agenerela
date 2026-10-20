@@ -10,6 +10,7 @@ namespace Agenerela{
         public int PromptTokens; // Come from provider response (when available)
         public int CompletionTokens; 
         public string ProviderName = string.Empty; // Checks provider name, such as Ollama 
+        public string Model = string.Empty; // The model that answered, as the provider reported it, such as qwen3.5:2b; empty when it did not say (#88)
         public string FrameworkVersion = string.Empty; // AgenerelaInfo.version
         public List<string> GuardsFired = new List<string>();
         public List<string> TargetsDropped = new List<string>(); // Target ids a source found but left out because of its cap (#32)
@@ -23,6 +24,7 @@ namespace Agenerela{
             PromptTokens = 0;
             CompletionTokens = 0;
             ProviderName = string.Empty;
+            Model = string.Empty;
             FrameworkVersion = string.Empty;
             GuardsFired = new List<string>();
             TargetsDropped = new List<string>();
