@@ -108,8 +108,18 @@ for what each Phase 2 issue does.
   in `DecisionTelemetry.ErrorKind`, a `PipelineErrorKind` that maps each provider kind one to
   one, plus `RequestPreparation`, `UnreadableReply`, and `ProviderFailed` for any other
   exception or no result. `ErrorMessage` holds the warning `Agent` logged. EditMode tests,
-  one per kind, through `Agent.DecideAsync`. Still to do, in #88: `ILLMProvider`'s remarks and
-  `providers.md` still describe the typed exception as coming.
+  one per kind, through `Agent.DecideAsync`.
+- `OllamaProvider` (#88, via #102), the first provider that calls a model: `POST /api/chat`
+  over `HttpClient` with `JsonSchemaSerializer`'s output in `format`, greedy decoding,
+  `think: false`, `num_ctx` 4096 and five top log-probabilities, at `http://127.0.0.1:11434`
+  by default (`OllamaSettings`). The reply's text, token counts and token probabilities fill
+  `ProviderResult`, and its model fills the new `ProviderResult.Model` and
+  `DecisionTelemetry.Model`. Each failure throws its #87 `ProviderException` kind. 47 EditMode
+  tests run with no Ollama installed, through an `HttpMessageHandler` seam; one live decision
+  on `qwen3.5:2b` with Ollama 0.34.2 was checked by hand. WebGL players are not supported. Open
+  for later issues: `DecisionTelemetry.LatencySeconds` still comes from `Agent`'s stopwatch,
+  not the provider's (#89 must keep queue wait out of it), and the provider is not
+  `IDisposable` (#92 creates and replaces providers).
 - Newtonsoft as the core's one declared dependency (DR-009), and each demo game as its own
   Unity project (DR-010).
 - `Demos/GreyBoxVillage` — a playable grey-box scene whose guard still answers from
@@ -129,13 +139,14 @@ for what each Phase 2 issue does.
 
 ## Not written yet
 
-All of it Phase 2: `OllamaProvider` (#88), the request queue with `DecideOptions.Priority`
-(#89), short-term memory (#90), and the gate, a live decision in a sandbox scene with
-`RequiresOllama` PlayMode tests (#94), which waits on those three and on #87, now merged. Beside them, and not on the gate's path: observation sources (#91), the provider
-config asset (#92) and `AgentBehaviour` (#93).
-**Nothing in the framework calls a model yet.** The first live decision is Phase 2's, through
-an Ollama provider that sends `JsonSchemaSerializer`'s output. Phase 1 was pure C# with
-EditMode tests and no Ollama, on purpose.
+All of it Phase 2: the request queue with `DecideOptions.Priority` (#89), short-term memory
+(#90), and the gate, a live decision in a sandbox scene with `RequiresOllama` PlayMode tests
+(#94), which waits on those two and on #87 and #88, both merged. Beside them, and not on the
+gate's path: observation sources (#91), the provider config asset (#92) and `AgentBehaviour`
+(#93).
+**The framework can now call a model**, through `OllamaProvider` (#88), but no test does yet:
+the first live decision under test is the gate's PlayMode test (#94). Phase 1 was pure C#
+with EditMode tests and no Ollama, on purpose.
 
 ## Groundwork beside the phases
 
