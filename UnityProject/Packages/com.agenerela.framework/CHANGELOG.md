@@ -33,8 +33,20 @@ While the version stays `0.x`, the public API may change in any release.
 - `ProviderResult.Model` and `DecisionTelemetry.Model` (#88): the model that produced a
   reply, which `Agent` copies from the one to the other. Empty in telemetry when the provider
   does not say.
+- Short-term memory (#90, build plan §2.9): `IMemoryStrategy`, with `Recall(ctx)` and
+  `Remember(ctx, request, result)`, and its default, `RollingHistory(turns: 6, maxTokens: 256)`,
+  the last exchanges oldest first. Past either cap the oldest exchange goes first, a whole one at
+  a time; tokens are estimated as characters over four. `Agent.Memory` is a new `RollingHistory`
+  for each agent, never one on the profile, and null turns memory off. The agent recalls into
+  `DecisionRequest.History` while it prepares a request and remembers the decision it returns,
+  as parsed, never the raw reply; a pipeline error or a cancelled call remembers nothing.
+- `DecisionTelemetry.HistoryTurnsSent` and `HistoryTurnsDropped` (#90), and the optional
+  `IReportsDroppedTurns` a memory strategy implements to fill the second.
 
 ### Changed
+- `DecisionRequest.History` now documents its encoding (#90): two entries per exchange, the
+  stimulus as it was sent and then the decision as the schema's JSON on one line.
+  `OllamaProvider` already sent it this way, as `user` then `assistant` messages.
 - `ILLMProvider.RequestAsync`'s remarks and `Documentation~/providers.md` now point at
   `ProviderException` (#87) as what a provider throws; providers.md's Ollama section says what
   was built (#88).

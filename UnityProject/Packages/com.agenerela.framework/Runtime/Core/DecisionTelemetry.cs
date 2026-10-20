@@ -14,6 +14,8 @@ namespace Agenerela{
         public string FrameworkVersion = string.Empty; // AgenerelaInfo.version
         public List<string> GuardsFired = new List<string>();
         public List<string> TargetsDropped = new List<string>(); // Target ids a source found but left out because of its cap (#32)
+        public int HistoryTurnsSent; // Exchanges of memory sent in DecisionRequest.History, two entries each (#90)
+        public int HistoryTurnsDropped; // Exchanges the memory held or had forgotten but did not send, from IReportsDroppedTurns; 0 when it cannot say (#90)
         public DecisionOutcome? Outcome; // Outcome == null during normal runtime orperations
         public PipelineErrorKind? ErrorKind; // Why there is no decision: null unless Outcome is PipelineError (#87)
         public string ErrorMessage; // The warning Agent logged for that error, word for word; null unless Outcome is PipelineError
@@ -28,6 +30,8 @@ namespace Agenerela{
             FrameworkVersion = string.Empty;
             GuardsFired = new List<string>();
             TargetsDropped = new List<string>();
+            HistoryTurnsSent = 0;
+            HistoryTurnsDropped = 0;
             Outcome = null;
             ErrorKind = null;
             ErrorMessage = null;
