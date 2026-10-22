@@ -6,7 +6,7 @@ namespace Agenerela{
     [System.Serializable]
     public sealed class DecisionTelemetry
     {
-        public float LatencySeconds; // Measured around proviced request
+        public float LatencySeconds; // Measured around the provider's request, from the send: its time alone, never the queue's (#89)
         public int PromptTokens; // Come from provider response (when available)
         public int CompletionTokens; 
         public string ProviderName = string.Empty; // Checks provider name, such as Ollama 
@@ -17,6 +17,9 @@ namespace Agenerela{
         public DecisionOutcome? Outcome; // Outcome == null during normal runtime orperations
         public PipelineErrorKind? ErrorKind; // Why there is no decision: null unless Outcome is PipelineError (#87)
         public string ErrorMessage; // The warning Agent logged for that error, word for word; null unless Outcome is PipelineError
+        public DecisionPriority Priority; // DecideOptions.Priority, as the call declared it (DR-015)
+        public float QueueWaitSeconds; // From joining the provider's queue to being sent; 0 when it never reached the queue (#89)
+        public int QueuedAhead; // Requests ahead when it joined: those in flight, and those queued that go before it (#89)
 
         public DecisionTelemetry()
         {
@@ -31,7 +34,9 @@ namespace Agenerela{
             Outcome = null;
             ErrorKind = null;
             ErrorMessage = null;
-
+            Priority = DecisionPriority.PlayerFacing;
+            QueueWaitSeconds = 0f;
+            QueuedAhead = 0;
 
         }
     }
