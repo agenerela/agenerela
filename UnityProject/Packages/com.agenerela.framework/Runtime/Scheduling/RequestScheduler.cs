@@ -313,18 +313,20 @@ namespace Agenerela
             {
                 Registration.Dispose();
 
+                // Decided in one critical section, so a slot granted on another thread between
+                // looking and acting can never be left held by a ticket nobody will dispose again.
                 bool freed;
                 lock (scheduler.gate)
                 {
-                    if (stage == Stage.Queued)
-                    {
-                        freed = false;
-                    }
-                    else if (stage == Stage.Ready)
+                    if (stage == Stage.Ready)
                     {
                         stage = Stage.Finished;
                         scheduler.inFlight--;
                         freed = true;
+                    }
+                    else if (LeaveQueue())
+                    {
+                        freed = false;
                     }
                     else
                     {
@@ -339,7 +341,7 @@ namespace Agenerela
                 }
                 else
                 {
-                    Withdraw();
+                    Source.TrySetException(new OperationCanceledException(token));
                 }
             }
 
@@ -356,18 +358,28 @@ namespace Agenerela
             {
                 lock (scheduler.gate)
                 {
-                    if (stage != Stage.Queued)
+                    if (!LeaveQueue())
                     {
                         return;
                     }
-
-                    stage = Stage.Withdrawn;
-                    Node.List.Remove(Node);
                 }
 
                 // Taken off the queue, not out of a slot, so nothing new can be sent: the requests
                 // behind it simply move up.
                 Source.TrySetException(new OperationCanceledException(token));
+            }
+
+            // Called under the scheduler's lock. True when it was still queued and has now left.
+            private bool LeaveQueue()
+            {
+                if (stage != Stage.Queued)
+                {
+                    return false;
+                }
+
+                stage = Stage.Withdrawn;
+                Node.List.Remove(Node);
+                return true;
             }
         }
     }

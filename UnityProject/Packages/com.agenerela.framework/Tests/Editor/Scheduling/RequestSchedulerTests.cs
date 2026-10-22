@@ -258,9 +258,19 @@ namespace Agenerela.Tests
             }
 
             head.Dispose();
-            foreach (var waiter in waiters)
+
+            // Caught, since the test framework counts an async test whose Task ends cancelled as
+            // passed, which would skip the assertions below unseen (see Fixtures.NotCancelled).
+            try
             {
-                await waiter;
+                foreach (var waiter in waiters)
+                {
+                    await waiter;
+                }
+            }
+            catch (OperationCanceledException e)
+            {
+                Assert.Fail($"A waiter ended cancelled, though nothing cancelled it: {e.Message}");
             }
 
             Assert.That(order, Is.EqualTo(System.Linq.Enumerable.Range(0, Count)));
