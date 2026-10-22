@@ -9,7 +9,7 @@ namespace Agenerela.Tests
 {
     // The scheduler on its own (#89): which ticket gets the next slot, what it records, and what
     // cancelling and disposing do. No provider is involved, so every test controls the order of
-    // events by hand, never by timing; only WaitSeconds sleeps, and only to have a wait to measure.
+    // events by hand, never by timing.
     public sealed class RequestSchedulerTests
     {
         private const DecisionPriority PlayerFacing = DecisionPriority.PlayerFacing;
@@ -225,21 +225,6 @@ namespace Agenerela.Tests
             Assert.That(second.IsReady, Is.True);
             Assert.That(third.IsQueued, Is.True, "A second Dispose must not free a slot it no longer holds.");
             Assert.That(scheduler.InFlight, Is.EqualTo(1));
-        }
-
-        [Test]
-        public void WaitSecondsRunsFromJoiningToItsTurn()
-        {
-            var scheduler = new RequestScheduler();
-            var first = scheduler.Enqueue(PlayerFacing, CancellationToken.None);
-            var second = scheduler.Enqueue(PlayerFacing, CancellationToken.None);
-
-            Assert.That(second.WaitSeconds, Is.EqualTo(0f), "Its turn has not come.");
-            Thread.Sleep(60);
-            first.Dispose();
-
-            Assert.That(second.WaitSeconds, Is.GreaterThanOrEqualTo(0.05f));
-            Assert.That(first.WaitSeconds, Is.LessThan(0.05f), "It never waited.");
         }
 
         [Test]

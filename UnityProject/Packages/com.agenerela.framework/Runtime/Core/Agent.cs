@@ -381,6 +381,7 @@ namespace Agenerela
             // The provider's queue, shared with every agent on this provider instance (DR-015).
             // Disposing the ticket frees the slot for the next request, whether the provider
             // answered, failed or was cancelled.
+            var waited = System.Diagnostics.Stopwatch.StartNew();
             using (var ticket = scheduler.Enqueue(priority, ct))
             {
                 telemetry.QueuedAhead = ticket.QueuedAhead;
@@ -394,13 +395,14 @@ namespace Agenerela
                 // LLMUnity has to be called. Free when already there. The cancelled path needs no
                 // hop: Unity brings the caller of an Awaitable started on the main thread back to it.
                 await Awaitable.MainThreadAsync();
-                telemetry.QueueWaitSeconds = ticket.WaitSeconds;
 
                 // Its turn came just as the caller cancelled: still never sent.
                 ct.ThrowIfCancellationRequested();
 
-                // Started at the send, not the enqueue, so LatencySeconds is the provider's time
-                // alone and a long queue shows in QueueWaitSeconds instead.
+                // Enqueue to send, the wait for the main thread included, and the latency from the
+                // send, so the two cover the whole call between them: LatencySeconds is the
+                // provider's time alone and a long queue shows in QueueWaitSeconds instead.
+                telemetry.QueueWaitSeconds = (float)waited.Elapsed.TotalSeconds;
                 var clock = System.Diagnostics.Stopwatch.StartNew();
                 try
                 {

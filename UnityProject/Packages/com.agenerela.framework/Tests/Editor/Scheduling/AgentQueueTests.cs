@@ -256,7 +256,7 @@ namespace Agenerela.Tests
                 // Awaiting before the cancellation, so the caller really is suspended when it comes.
                 var caller = Outcome(agent.DecideAsync("Walk away from me.", null, cts.Token));
                 int cancelledOn = OnAnotherThread(cts.Cancel);
-                var (cancelled, resumedOn) = await caller;
+                var (cancelled, resumedOn, _) = await caller;
 
                 Assert.That(cancelledOn, Is.Not.EqualTo(main), "The cancellation must come from another thread for this to test anything.");
                 Assert.That(cancelled, Is.True, "Cancelled while queued, the decision ends cancelled.");
@@ -284,6 +284,10 @@ namespace Agenerela.Tests
             var caller = Outcome(agent.DecideAsync("Go to the tower."));
 
             int answeredOn = OnAnotherThread(fake.Release);
+
+            // The main thread stays busy after the slot is granted, so the send waits for it. That
+            // wait is the queue's, not the provider's: it belongs in QueueWaitSeconds.
+            Thread.Sleep(150);
             await Fixtures.NotCancelled(first);
 
             // The send was posted to the main thread, so it runs once the test yields to it. A
@@ -298,9 +302,12 @@ namespace Agenerela.Tests
             Assert.That(fake.RequestThreads[1], Is.EqualTo(main), "Sent from the main thread, not the provider's.");
 
             fake.Release();
-            var (cancelled, resumedOn) = await caller;
+            var (cancelled, resumedOn, result) = await caller;
             Assert.That(cancelled, Is.False);
             Assert.That(resumedOn, Is.EqualTo(main));
+            Assert.That(result.Telemetry.QueueWaitSeconds, Is.GreaterThanOrEqualTo(0.14f),
+                "Enqueue to send, the wait for the main thread included.");
+            Assert.That(result.Telemetry.LatencySeconds, Is.LessThan(0.1f), "Released as soon as it was sent.");
         }
 
         [Test]
@@ -326,19 +333,19 @@ namespace Agenerela.Tests
             Assert.That(result.Telemetry.Priority, Is.EqualTo(DecisionPriority.Background));
         }
 
-        // The caller's side of a decision: whether it ended cancelled, and the thread the caller's
-        // own code resumed on. Awaits the Awaitable directly, since awaiting a Task would bring the
-        // test back to the main thread whatever happened inside.
-        private static async Awaitable<(bool cancelled, int thread)> Outcome(Awaitable<DecisionResult> decision)
+        // The caller's side of a decision: whether it ended cancelled, the thread the caller's own
+        // code resumed on, and the result. Awaits the Awaitable directly, since awaiting a Task
+        // would bring the test back to the main thread whatever happened inside.
+        private static async Awaitable<(bool cancelled, int thread, DecisionResult result)> Outcome(Awaitable<DecisionResult> decision)
         {
             try
             {
-                await decision;
-                return (false, Thread.CurrentThread.ManagedThreadId);
+                var result = await decision;
+                return (false, Thread.CurrentThread.ManagedThreadId, result);
             }
             catch (OperationCanceledException)
             {
-                return (true, Thread.CurrentThread.ManagedThreadId);
+                return (true, Thread.CurrentThread.ManagedThreadId, null);
             }
         }
 

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Agenerela.Providers;
@@ -236,8 +235,6 @@ namespace Agenerela
 
             private readonly RequestScheduler scheduler;
             private readonly CancellationToken token;
-            private readonly long enqueuedAt;
-            private long readyAt;
             private Stage stage;
 
             internal Ticket(RequestScheduler scheduler, DecisionPriority priority, CancellationToken token)
@@ -245,7 +242,6 @@ namespace Agenerela
                 this.scheduler = scheduler;
                 this.token = token;
                 Priority = priority;
-                enqueuedAt = Stopwatch.GetTimestamp();
             }
 
             /// <summary>The priority it was queued with.</summary>
@@ -263,18 +259,6 @@ namespace Agenerela
             /// once: Unity pools an <c>Awaitable</c> once it has been awaited.
             /// </summary>
             internal Awaitable Ready => Source.Awaitable;
-
-            /// <summary>Seconds from being queued to its turn; until then, 0.</summary>
-            internal float WaitSeconds
-            {
-                get
-                {
-                    lock (scheduler.gate)
-                    {
-                        return readyAt == 0 ? 0f : (float)((readyAt - enqueuedAt) / (double)Stopwatch.Frequency);
-                    }
-                }
-            }
 
             /// <summary>Still waiting for a slot.</summary>
             internal bool IsQueued
@@ -349,7 +333,6 @@ namespace Agenerela
             internal void MarkReady()
             {
                 stage = Stage.Ready;
-                readyAt = Stopwatch.GetTimestamp();
             }
 
             // The cancellation callback: a queued request leaves the queue at once and its waiter
