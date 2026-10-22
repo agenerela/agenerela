@@ -80,6 +80,16 @@
     "expectedAction":"move_to",
     "expectedTarget":"eastern_road",
     "preconditionState":{"isFollowing":false},
+    "labelledBy":["Maxim"]},
+
+    {"id":"target_011",
+    "label":"Player",
+    "stimulus":"Approach the eastern road.",
+    "observations":[],
+    "expectedAction":"move_to",
+    "expectedTarget":"eastern_road",
+    "preconditionState":{"isFollowing":false},
     "labelledBy":["Maxim"]}
+    
   ]
 }
