@@ -237,6 +237,65 @@ namespace Agenerela.Tests
             }
         }
 
+        // ---- Threads -------------------------------------------------------------------------
+        // A token can be cancelled, and a provider can answer, on any thread. The game's code after
+        // `await agent.DecideAsync(...)` and every provider call still happen on the main thread.
+
+        [Test]
+        public async Task ACancellationFromAnotherThreadWhileQueuedReachesTheCallerOnTheMainThread()
+        {
+            Assert.That(SynchronizationContext.Current, Is.Not.Null,
+                "The test needs Unity's main-thread context to prove anything.");
+            int main = Thread.CurrentThread.ManagedThreadId;
+            var fake = new FakeProvider(GoToTheTower) { Hold = true };
+            var agent = Fixtures.VillageGuard(fake);
+            var inFlight = agent.DecideAsync("The bell rings once.");
+
+            using (var cts = new CancellationTokenSource())
+            {
+                // Awaiting before the cancellation, so the caller really is suspended when it comes.
+                var caller = Outcome(agent.DecideAsync("Walk away from me.", null, cts.Token));
+                int cancelledOn = OnAnotherThread(cts.Cancel);
+                var (cancelled, resumedOn) = await caller;
+
+                Assert.That(cancelledOn, Is.Not.EqualTo(main), "The cancellation must come from another thread for this to test anything.");
+                Assert.That(cancelled, Is.True, "Cancelled while queued, the decision ends cancelled.");
+                Assert.That(resumedOn, Is.EqualTo(main), "The caller carries on where it called from.");
+                Assert.That(fake.Requests, Has.Count.EqualTo(1), "It never reached the provider.");
+            }
+
+            fake.Release();
+            await Fixtures.NotCancelled(inFlight);
+        }
+
+        [Test]
+        public async Task AQueuedRequestFreedByAnAnswerFromAnotherThreadIsSentFromTheMainThread()
+        {
+            // As a provider of the developer's own might answer, completing its Awaitable on a
+            // worker thread. Its slot frees there, and the request queued behind it must still
+            // reach the provider from the main thread: a provider built on UnityWebRequest or
+            // LLMUnity can only be called there.
+            Assert.That(SynchronizationContext.Current, Is.Not.Null,
+                "The test needs Unity's main-thread context to prove anything.");
+            int main = Thread.CurrentThread.ManagedThreadId;
+            var fake = new FakeProvider(GoToTheTower) { Hold = true };
+            var agent = Fixtures.VillageGuard(fake);
+            var first = agent.DecideAsync("The bell rings once.");
+            var caller = Outcome(agent.DecideAsync("Go to the tower."));
+
+            int answeredOn = OnAnotherThread(fake.Release);
+            await Fixtures.NotCancelled(first);
+
+            Assert.That(answeredOn, Is.Not.EqualTo(main), "The answer must arrive off the main thread for this to test anything.");
+            Assert.That(fake.Requests, Has.Count.EqualTo(2), "The slot went to the request behind it.");
+            Assert.That(fake.RequestThreads[1], Is.EqualTo(main), "Sent from the main thread, not the provider's.");
+
+            fake.Release();
+            var (cancelled, resumedOn) = await caller;
+            Assert.That(cancelled, Is.False);
+            Assert.That(resumedOn, Is.EqualTo(main));
+        }
+
         [Test]
         public async Task ThePriorityIsReadWhenTheCallIsMade()
         {
@@ -258,6 +317,51 @@ namespace Agenerela.Tests
             await Fixtures.NotCancelled(question);
             var result = await Fixtures.NotCancelled(ambient);
             Assert.That(result.Telemetry.Priority, Is.EqualTo(DecisionPriority.Background));
+        }
+
+        // The caller's side of a decision: whether it ended cancelled, and the thread the caller's
+        // own code resumed on. Awaits the Awaitable directly, since awaiting a Task would bring the
+        // test back to the main thread whatever happened inside.
+        private static async Awaitable<(bool cancelled, int thread)> Outcome(Awaitable<DecisionResult> decision)
+        {
+            try
+            {
+                await decision;
+                return (false, Thread.CurrentThread.ManagedThreadId);
+            }
+            catch (OperationCanceledException)
+            {
+                return (true, Thread.CurrentThread.ManagedThreadId);
+            }
+        }
+
+        // Runs action on a thread of its own and waits for it, returning that thread's id. Whatever
+        // the action posts back to the main thread runs once the test awaits again.
+        private static int OnAnotherThread(Action action)
+        {
+            int id = 0;
+            Exception failure = null;
+            var thread = new Thread(() =>
+            {
+                id = Thread.CurrentThread.ManagedThreadId;
+                try
+                {
+                    action();
+                }
+                catch (Exception e)
+                {
+                    failure = e;
+                }
+            });
+            thread.Start();
+            thread.Join();
+
+            if (failure != null)
+            {
+                throw new AggregateException(failure);
+            }
+
+            return id;
         }
     }
 }

@@ -20,6 +20,7 @@ namespace Agenerela.Tests
     public sealed class FakeProvider : ILLMProvider
     {
         private readonly List<DecisionRequest> requests = new List<DecisionRequest>();
+        private readonly List<int> requestThreads = new List<int>();
 
         // The requests Hold kept pending, oldest first. One leaves the list when it is released or
         // cancelled, so neither can complete it twice once its pooled Awaitable has been handed back.
@@ -96,12 +97,16 @@ namespace Agenerela.Tests
         /// <summary>The last request received, or null if none was sent.</summary>
         public DecisionRequest LastRequest => requests.Count > 0 ? requests[requests.Count - 1] : null;
 
+        /// <summary>The managed thread each request was sent from, in the order of <see cref="Requests"/>.</summary>
+        public IReadOnlyList<int> RequestThreads => requestThreads;
+
         /// <summary>The cancellation token the last request was sent with.</summary>
         public CancellationToken LastToken { get; private set; }
 
         public Awaitable<ProviderResult> RequestAsync(DecisionRequest req, CancellationToken ct)
         {
             requests.Add(req);
+            requestThreads.Add(Thread.CurrentThread.ManagedThreadId);
             LastToken = ct;
 
             if (Failure != null && FailsImmediately)

@@ -387,6 +387,13 @@ namespace Agenerela
 
                 // Cancelled while queued, the decision ends here and never reaches the provider.
                 await ticket.Ready;
+
+                // The turn comes on whichever thread freed the slot, such as the worker thread a
+                // provider of the developer's own answered on, and this code resumes there. Every
+                // provider call starts on the main thread, where one built on UnityWebRequest or
+                // LLMUnity has to be called. Free when already there. The cancelled path needs no
+                // hop: Unity brings the caller of an Awaitable started on the main thread back to it.
+                await Awaitable.MainThreadAsync();
                 telemetry.QueueWaitSeconds = ticket.WaitSeconds;
 
                 // Its turn came just as the caller cancelled: still never sent.
