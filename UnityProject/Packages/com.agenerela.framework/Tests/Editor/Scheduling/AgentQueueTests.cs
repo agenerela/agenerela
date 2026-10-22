@@ -286,6 +286,13 @@ namespace Agenerela.Tests
             int answeredOn = OnAnotherThread(fake.Release);
             await Fixtures.NotCancelled(first);
 
+            // The send was posted to the main thread, so it runs once the test yields to it. A
+            // condition, not a delay: each yield lets Unity run what is queued for the main thread.
+            for (int i = 0; i < 100 && fake.Requests.Count < 2; i++)
+            {
+                await Task.Yield();
+            }
+
             Assert.That(answeredOn, Is.Not.EqualTo(main), "The answer must arrive off the main thread for this to test anything.");
             Assert.That(fake.Requests, Has.Count.EqualTo(2), "The slot went to the request behind it.");
             Assert.That(fake.RequestThreads[1], Is.EqualTo(main), "Sent from the main thread, not the provider's.");
