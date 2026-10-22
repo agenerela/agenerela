@@ -547,6 +547,80 @@ namespace Agenerela.Tests
             Assert.That(result.Decision.ActionId, Is.EqualTo("move_to"));
         }
 
+        // ---- The provider's queue (#89, DR-015) ---------------------------------------------
+        // How the telemetry records the queue. The queue's own behaviour is in Scheduling/.
+
+        [Test]
+        public async Task TheDefaultPriorityIsPlayerFacing()
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = Fixtures.VillageGuard(fake);
+
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+
+            Assert.That(new DecideOptions().Priority, Is.EqualTo(DecisionPriority.PlayerFacing));
+            Assert.That(result.Telemetry.Priority, Is.EqualTo(DecisionPriority.PlayerFacing),
+                "A developer who never sets a priority gets the responsive behaviour (DR-015).");
+            Assert.That(result.Telemetry.QueuedAhead, Is.EqualTo(0));
+            Assert.That(result.Telemetry.QueueWaitSeconds, Is.LessThan(1f), "Nothing was ahead of it.");
+        }
+
+        [Test]
+        public async Task ABackgroundCallIsRecordedAsBackground()
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = Fixtures.VillageGuard(fake);
+
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("A cart rolls past.",
+                new DecideOptions { Priority = DecisionPriority.Background }));
+
+            Assert.That(result.Telemetry.Priority, Is.EqualTo(DecisionPriority.Background));
+        }
+
+        [Test]
+        public async Task LatencyIsTheProvidersTimeAloneAndTheWaitIsRecordedBesideIt()
+        {
+            // The first request holds the provider for at least 150 ms while the second waits in
+            // the queue; the second is then answered at once. A slow model and a long queue have to
+            // be told apart (DR-015), so the wait is the second's QueueWaitSeconds, never its latency.
+            var fake = new FakeProvider(GoToTheTower) { Hold = true };
+            var agent = Fixtures.VillageGuard(fake);
+            var first = agent.DecideAsync("The bell rings once.");
+            var queued = agent.DecideAsync("Go to the tower.");
+
+            Thread.Sleep(150);
+            fake.Hold = false;
+            fake.Release();
+
+            var sentFirst = await Fixtures.NotCancelled(first);
+            var waited = await Fixtures.NotCancelled(queued);
+
+            Assert.That(waited.Telemetry.QueueWaitSeconds, Is.GreaterThanOrEqualTo(0.14f));
+            Assert.That(waited.Telemetry.LatencySeconds, Is.LessThan(0.1f),
+                "Answered the moment it was sent: the 150 ms it queued is not the provider's.");
+            Assert.That(waited.Telemetry.QueuedAhead, Is.EqualTo(1));
+            Assert.That(sentFirst.Telemetry.LatencySeconds, Is.GreaterThanOrEqualTo(0.14f), "The provider held it that long.");
+            Assert.That(sentFirst.Telemetry.QueueWaitSeconds, Is.LessThan(0.1f), "It was sent at once.");
+        }
+
+        [Test]
+        public async Task ARequestThatFailsBeforeTheQueueRecordsNoWait()
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = new Agent(Fixtures.VillageGuardProfile(), fake);
+            agent.Bind("follow_player", new FakeHandler(ctx => !(bool)ctx.State["isFollowing"]));
+            LogAssert.Expect(LogType.Warning, new Regex("could not decide\\. Preparing the request failed\\."));
+
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("A cart rolls past.",
+                new DecideOptions { Priority = DecisionPriority.Background }));
+
+            Assert.That(result.Telemetry.ErrorKind, Is.EqualTo(PipelineErrorKind.RequestPreparation));
+            Assert.That(result.Telemetry.Priority, Is.EqualTo(DecisionPriority.Background), "The call's priority is known before anything fails.");
+            Assert.That(result.Telemetry.QueueWaitSeconds, Is.EqualTo(0f));
+            Assert.That(result.Telemetry.QueuedAhead, Is.EqualTo(0));
+            Assert.That(RequestScheduler.For(fake).InFlight + RequestScheduler.For(fake).Queued, Is.EqualTo(0), "It never joined the queue.");
+        }
+
         // ---- Targets (DR-014) ---------------------------------------------------------------
 
         [Test]
