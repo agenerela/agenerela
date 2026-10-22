@@ -8,7 +8,7 @@
     "expectedAction":"move_to",
     "expectedTarget":"bridge",
     "preconditionState":{"isFollowing":false},
-    "labelledBy":["Maxim"]},
+    "labelledBy":["alice","bob"]},
 
     {"id":"target_002",
     "label":"Player",
@@ -17,7 +17,7 @@
     "expectedAction":"move_to",
     "expectedTarget":"village_gate",
     "preconditionState":{"isFollowing":false},
-    "labelledBy":["Maxim"]},
+    "labelledBy":["alice","bob"]},
 
     {"id":"target_003",
     "label":"Player",
@@ -26,7 +26,7 @@
     "expectedAction":"move_to",
     "expectedTarget":"campfire",
     "preconditionState":{"isFollowing":false},
-    "labelledBy":["Maxim"]},
+    "labelledBy":["alice","bob"]},
 
     {"id":"target_004",
     "label":"Player",
@@ -35,7 +35,7 @@
     "expectedAction":"move_to",
     "expectedTarget":"well",
     "preconditionState":{"isFollowing":false},
-    "labelledBy":["Maxim"]},
+    "labelledBy":["alice"]},
 
     {"id":"target_005",
     "label":"Player",
@@ -44,7 +44,7 @@
     "expectedAction":"move_to",
     "expectedTarget":"north_tower",
     "preconditionState":{"isFollowing":false},
-    "labelledBy":["Maxim"]},
+    "labelledBy":["alice"]},
 
     {"id":"target_006",
     "label":"Player",
@@ -53,7 +53,7 @@
     "expectedAction":"move_to",
     "expectedTarget":"market",
     "preconditionState":{"isFollowing":false},
-    "labelledBy":["Maxim"]},
+    "labelledBy":["alice"]},
 
     {"id":"target_007",
     "label":"Player",
@@ -62,7 +62,7 @@
     "expectedAction":"move_to",
     "expectedTarget":"docks",
     "preconditionState":{"isFollowing":false},
-    "labelledBy":["Maxim"]},
+    "labelledBy":["bob"]},
 
     {"id":"target_008",
     "label":"Player",
@@ -71,7 +71,7 @@
     "expectedAction":"move_to",
     "expectedTarget":"shelter",
     "preconditionState":{"isFollowing":false},
-    "labelledBy":["Mxaim"]},
+    "labelledBy":["bob"]},
 
     {"id":"target_009",
     "label":"Player",
@@ -80,16 +80,33 @@
     "expectedAction":"move_to",
     "expectedTarget":"eastern_road",
     "preconditionState":{"isFollowing":false},
+    "labelledBy":["bob"]},
+    
+    {"id":"target_010",
+    "label":"Player",
+    "stimulus":"Go to the watchtower.",
+    "observations":[],
+    "expectedAction":"move_to",
+    "expectedTarget":"watchtower",
+    "preconditionState":{"isFollowing":false},
     "labelledBy":["Maxim"]},
 
     {"id":"target_011",
     "label":"Player",
-    "stimulus":"Approach the eastern road.",
+    "stimulus":"Head to the north gate.",
     "observations":[],
     "expectedAction":"move_to",
-    "expectedTarget":"eastern_road",
+    "expectedTarget":"docks",
+    "preconditionState":{"isFollowing":false},
+    "labelledBy":["Maxim"]},
+
+    {"id":"target_012",
+    "label":"Player",
+    "stimulus":"Make your way to the river crossing.",
+    "observations":[],
+    "expectedAction":"move_to",
+    "expectedTarget":"river_ford",
     "preconditionState":{"isFollowing":false},
     "labelledBy":["Maxim"]}
-    
   ]
 }

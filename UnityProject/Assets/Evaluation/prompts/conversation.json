@@ -108,6 +108,43 @@
         "isFollowing": false
       },
       "labelledBy": ["Maxim"]
+    },
+
+        {
+      "id": "conversation_010",
+      "label": "Player",
+      "stimulus": "I could use some company.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": ["Maxim"]
+    },
+        {
+      "id": "conversation_011",
+      "label": "Player",
+      "stimulus": "Have you lived here long?",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": ["Maxim"]
+    },
+        {
+      "id": "conversation_012",
+      "label": "Player",
+      "stimulus": "Let's take a rest.",
+      "observations": [],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": ["Maxim"]
     }
   ]
 }

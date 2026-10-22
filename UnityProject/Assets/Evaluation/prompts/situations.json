@@ -136,6 +136,51 @@
         "isFollowing": false
       },
       "labelledBy": ["Maxim"]
+    },
+    {
+      "id": "situation_010",
+      "label": "Situation",
+      "stimulus": "The river is running high.",
+      "observations": [
+        "The water is above the stepping stones",
+        "No safe crossing is visible"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": ["Maxim"]
+    },
+    {
+      "id": "situation_011",
+      "label": "Situation",
+      "stimulus": "The market is closing for the night.",
+      "observations": [
+        "The stalls are empty",
+        "No one has asked for help"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": ["Maxim"]
+    },
+    {
+      "id": "situation_012",
+      "label": "Situation",
+      "stimulus": "A cold wind moves through the village.",
+      "observations": [
+        "No danger is visible",
+        "No one is calling for assistance"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": ["Maxim"]
     }
   ]
 }

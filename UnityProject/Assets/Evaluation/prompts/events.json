@@ -127,6 +127,51 @@
         "isFollowing": false
       },
       "labelledBy": ["Maxim"]
+    },
+    {
+    "id": "event_010",
+    "label": "Event",
+    "stimulus": "A scout spotted movement near the north tower.",
+    "observations": [
+      "The north tower is reachable",
+      "An unknown figure was seen nearby"
+    ],
+    "expectedAction": "move_to",
+    "expectedTarget": "north_tower",
+    "preconditionState": {
+      "isFollowing": false
+    },
+    "labelledBy": ["Maxim"]
+    },
+    {
+    "id": "event_011",
+    "label": "Event",
+    "stimulus": "A villager is trapped inside the locked cave.",
+    "observations": [
+      "A villager is calling for help from inside the cave",
+      "The locked cave entrance is reachable"
+    ],
+    "expectedAction": "move_to",
+    "expectedTarget": "locked_cave",
+    "preconditionState": {
+      "isFollowing": false
+    },
+    "labelledBy": ["Maxim"]
+    },
+    {
+    "id": "event_012",
+    "label": "Event",
+    "stimulus": "A fire has broken out near the market.",
+    "observations": [
+      "The market is burning",
+      "Villagers are moving away from the fire"
+    ],
+    "expectedAction": "move_to",
+    "expectedTarget": "market",
+    "preconditionState": {
+      "isFollowing": false
+    },
+    "labelledBy": ["Maxim"]
     }
   ]
 }
