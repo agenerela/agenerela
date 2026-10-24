@@ -255,7 +255,17 @@ namespace Agenerela
         /// request on a monotonic clock, from the send and not the enqueue; the priority, the time
         /// spent queued and how many requests were ahead; the provider's name, the framework
         /// version, the token counts the provider reported, and the target ids each
-        /// <see cref="IReportsDroppedTargets"/> source left out, in source order (#81).
+        /// <see cref="IReportsDroppedTargets"/> source left out, in source order (#81), and the
+        /// exchanges of history sent and left out (#90).
+        /// </para>
+        /// <para>
+        /// <see cref="Memory"/> is recalled while the request is prepared, into
+        /// <see cref="DecisionRequest.History"/>, and so fails as preparing it does, including on a
+        /// history that is not whole exchanges. The decision is remembered just before it is
+        /// returned, as parsed, so whitespace or extra fields in the reply are not. A pipeline
+        /// error or a cancelled call remembers nothing; a <see cref="ActionRegistry.None"/>
+        /// decision is remembered, because it happened. If remembering throws, the warning is
+        /// logged and the decision still returned.
         /// </para>
         /// <para>
         /// Every agent given the same provider instance shares one queue, which sends at most one

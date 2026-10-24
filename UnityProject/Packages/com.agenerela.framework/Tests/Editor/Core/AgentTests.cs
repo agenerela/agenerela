@@ -621,6 +621,236 @@ namespace Agenerela.Tests
             Assert.That(RequestScheduler.For(fake).InFlight + RequestScheduler.For(fake).Queued, Is.EqualTo(0), "It never joined the queue.");
         }
 
+        // ---- Memory (§2.9, #90) -------------------------------------------------------------
+
+        private const string FollowMe = "{\"action\":\"follow_player\",\"target\":\"no_target\",\"statement\":\"Lead the way.\"}";
+
+        [Test]
+        public async Task TheSecondDecisionSendsTheFirstExchangeInHistory()
+        {
+            var fake = new FakeProvider(FollowMe);
+            var agent = Fixtures.VillageGuard(fake);
+
+            var first = await Fixtures.NotCancelled(agent.DecideAsync("Follow me."));
+            agent.State["isFollowing"] = true;
+            fake.Reply = "{\"action\":\"stop_following\",\"target\":\"no_target\",\"statement\":\"I'll hold here.\"}";
+            var second = await Fixtures.NotCancelled(agent.DecideAsync("Now wait here."));
+            await Fixtures.NotCancelled(agent.DecideAsync("Still there?"));
+
+            Assert.That(fake.Requests[0].History, Is.Empty, "Nothing has happened before the first decision.");
+            Assert.That(first.Telemetry.HistoryTurnsSent, Is.Zero);
+            Assert.That(fake.Requests[1].History, Is.EqualTo(new[] { "Player: \"Follow me.\"", FollowMe }),
+                "The stimulus as it was sent, then the decision as the schema's JSON (DecisionRequest.History).");
+            Assert.That(second.Telemetry.HistoryTurnsSent, Is.EqualTo(1));
+            Assert.That(second.Telemetry.HistoryTurnsDropped, Is.Zero);
+            Assert.That(fake.Requests[2].History, Is.EqualTo(new[]
+            {
+                "Player: \"Follow me.\"", FollowMe,
+                "Player: \"Now wait here.\"", "{\"action\":\"stop_following\",\"target\":\"no_target\",\"statement\":\"I'll hold here.\"}",
+            }), "Oldest first.");
+        }
+
+        [Test]
+        public async Task TheHistoryKeepsEachStimulusLabelAsItWasSent()
+        {
+            var fake = new FakeProvider("{\"action\":\"none\",\"target\":\"no_target\",\"statement\":\"\"}");
+            var agent = Fixtures.VillageGuard(fake);
+
+            await Fixtures.NotCancelled(agent.DecideAsync("Grain stores fell.", new DecideOptions { StimulusLabel = "Report" }));
+            await Fixtures.NotCancelled(agent.DecideAsync("Hello."));
+
+            Assert.That(fake.LastRequest.History[0], Is.EqualTo("Report: \"Grain stores fell.\""));
+            Assert.That(fake.LastRequest.History[1], Is.EqualTo("{\"action\":\"none\",\"target\":\"no_target\",\"statement\":\"\"}"),
+                "A none decision is remembered: it happened.");
+        }
+
+        [Test]
+        public async Task TheDecisionIsRememberedNotTheRawReply()
+        {
+            // Whitespace, the fields out of order and one the schema never asked for: what the
+            // model said, which must not get back in through the side door (§2.9, rule 1).
+            var fake = new FakeProvider("  \n{ \"statement\" : \"Lead the way.\", \"mood\":\"calm\",\n \"target\":\"no_target\", \"action\":\"follow_player\" }\n");
+            var agent = Fixtures.VillageGuard(fake);
+
+            await Fixtures.NotCancelled(agent.DecideAsync("Follow me."));
+            fake.Reply = GoToTheTower;
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+
+            Assert.That(fake.LastRequest.History[1], Is.EqualTo(FollowMe));
+        }
+
+        [Test]
+        public async Task PastTheWindowTheOldestExchangesAreDroppedWholeAndCounted()
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = Fixtures.VillageGuard(fake);
+            agent.Memory = new RollingHistory(turns: 2);
+
+            for (int i = 1; i <= 3; i++)
+            {
+                await Fixtures.NotCancelled(agent.DecideAsync($"Order {i}."));
+            }
+
+            var fourth = await Fixtures.NotCancelled(agent.DecideAsync("Order 4."));
+
+            Assert.That(fake.LastRequest.History.Where((entry, i) => i % 2 == 0),
+                Is.EqualTo(new[] { "Player: \"Order 2.\"", "Player: \"Order 3.\"" }));
+            Assert.That(fake.LastRequest.History, Has.Count.EqualTo(4));
+            Assert.That(fourth.Telemetry.HistoryTurnsSent, Is.EqualTo(2));
+            Assert.That(fourth.Telemetry.HistoryTurnsDropped, Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task PastTheTokenBudgetTheOldestExchangesAreDroppedWholeAndCounted()
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = Fixtures.VillageGuard(fake);
+            int exchange = RollingHistory.EstimateTokens("Player: \"Order 1.\"".Length + GoToTheTower.Length);
+            agent.Memory = new RollingHistory(turns: 6, maxTokens: exchange * 2);
+
+            for (int i = 1; i <= 4; i++)
+            {
+                await Fixtures.NotCancelled(agent.DecideAsync($"Order {i}."));
+            }
+
+            var fifth = await Fixtures.NotCancelled(agent.DecideAsync("Order 5."));
+
+            Assert.That(fake.LastRequest.History, Is.EqualTo(new[]
+            {
+                "Player: \"Order 3.\"", GoToTheTower,
+                "Player: \"Order 4.\"", GoToTheTower,
+            }));
+            Assert.That(fifth.Telemetry.HistoryTurnsSent, Is.EqualTo(2));
+            Assert.That(fifth.Telemetry.HistoryTurnsDropped, Is.EqualTo(2));
+        }
+
+        [Test]
+        public async Task TwoAgentsBuiltFromOneProfileDoNotShareMemory()
+        {
+            var profile = Fixtures.VillageGuardProfile();
+            var fakeA = new FakeProvider(GoToTheTower);
+            var fakeB = new FakeProvider(GoToTheTower);
+            var guardA = new Agent(profile, fakeA);
+            var guardB = new Agent(profile, fakeB);
+            guardA.Bind("move_to", new FakeHandler());
+            guardB.Bind("move_to", new FakeHandler());
+            guardA.Targets.Register("tower", new object());
+            guardB.Targets.Register("tower", new object());
+
+            await Fixtures.NotCancelled(guardA.DecideAsync("Go to the tower."));
+            await Fixtures.NotCancelled(guardA.DecideAsync("Go to the tower again."));
+            await Fixtures.NotCancelled(guardB.DecideAsync("Go to the tower."));
+
+            Assert.That(guardA.Memory, Is.Not.SameAs(guardB.Memory));
+            Assert.That(fakeA.LastRequest.History, Has.Count.EqualTo(2));
+            Assert.That(fakeB.LastRequest.History, Is.Empty, "Guard B never heard what guard A was told (§2.9, rule 2).");
+        }
+
+        [Test]
+        public async Task APipelineErrorRemembersNothing()
+        {
+            var fake = new FakeProvider("Sure, I'll go to the tower!");
+            var agent = Fixtures.VillageGuard(fake);
+            LogAssert.Expect(LogType.Warning, new Regex("could not decide"));
+
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+            fake.Reply = GoToTheTower;
+            var next = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+
+            Assert.That(fake.LastRequest.History, Is.Empty);
+            Assert.That(next.Telemetry.HistoryTurnsDropped, Is.Zero, "Nothing was remembered, so nothing was dropped.");
+        }
+
+        [Test]
+        public async Task ACancelledDecisionRemembersNothing()
+        {
+            var fake = new FakeProvider(GoToTheTower) { Hold = true };
+            var agent = Fixtures.VillageGuard(fake);
+
+            using (var cts = new CancellationTokenSource())
+            {
+                var pending = agent.DecideAsync("Go to the tower.", null, cts.Token);
+                cts.Cancel();
+                try
+                {
+                    await pending;
+                    Assert.Fail("A cancelled decision has no result.");
+                }
+                catch (OperationCanceledException)
+                {
+                }
+            }
+
+            fake.Hold = false;
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+
+            Assert.That(fake.LastRequest.History, Is.Empty);
+        }
+
+        [Test]
+        public async Task WithNoMemoryNoHistoryIsSentAndNothingRemembered()
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = Fixtures.VillageGuard(fake);
+            agent.Memory = null;
+
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+            var second = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower again."));
+
+            Assert.That(fake.LastRequest.History, Is.Not.Null.And.Empty);
+            Assert.That(second.Telemetry.HistoryTurnsSent, Is.Zero);
+            Assert.That(second.Telemetry.HistoryTurnsDropped, Is.Zero);
+        }
+
+        [Test]
+        public async Task TheMemoryIsHandedTheContextAndTheRequestItRecalledInto()
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = Fixtures.VillageGuard(fake);
+            var spy = new SpyMemory();
+            agent.Memory = spy;
+
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+
+            Assert.That(spy.Recalled, Has.Count.EqualTo(1));
+            Assert.That(spy.Remembered, Has.Count.EqualTo(1));
+            Assert.That(spy.Remembered[0].Ctx, Is.SameAs(spy.Recalled[0]), "One decision, one context.");
+            Assert.That(spy.Remembered[0].Request, Is.SameAs(fake.LastRequest));
+            Assert.That(spy.Remembered[0].Result, Is.SameAs(result));
+            Assert.That(result.Telemetry.HistoryTurnsDropped, Is.Zero, "A strategy that cannot say what it dropped reports none.");
+        }
+
+        [TestCase(1)]
+        [TestCase(3)]
+        public async Task AHistoryThatIsNotWholeExchangesIsAPipelineErrorAndNothingIsSent(int entries)
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = Fixtures.VillageGuard(fake);
+            var spy = new SpyMemory { History = Enumerable.Repeat("Player: \"Hi.\"", entries).ToArray() };
+            agent.Memory = spy;
+            LogAssert.Expect(LogType.Warning, new Regex("Preparing the request failed\\. InvalidOperationException: Memory recalled " + entries + " entries"));
+
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+
+            Assert.That(result.Telemetry.ErrorKind, Is.EqualTo(PipelineErrorKind.RequestPreparation));
+            Assert.That(fake.Requests, Is.Empty);
+            Assert.That(spy.Remembered, Is.Empty);
+        }
+
+        [Test]
+        public async Task AMemoryThatFailsToRememberStillReturnsTheDecision()
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = Fixtures.VillageGuard(fake);
+            agent.Memory = new SpyMemory { FailsToRemember = true };
+            LogAssert.Expect(LogType.Warning, new Regex("decided, but its memory could not remember it\\. InvalidOperationException"));
+
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+
+            Assert.That(result.Decision.ActionId, Is.EqualTo("move_to"));
+            Assert.That(result.Telemetry.Outcome, Is.Null);
+        }
+
         // ---- Targets (DR-014) ---------------------------------------------------------------
 
         [Test]
