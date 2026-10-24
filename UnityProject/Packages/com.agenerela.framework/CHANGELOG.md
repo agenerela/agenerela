@@ -33,15 +33,16 @@ While the version stays `0.x`, the public API may change in any release.
 - `ProviderResult.Model` and `DecisionTelemetry.Model` (#88): the model that produced a
   reply, which `Agent` copies from the one to the other. Empty in telemetry when the provider
   does not say.
-- Short-term memory (#90, build plan §2.9): `IMemoryStrategy`, with `Recall(ctx)` and
-  `Remember(ctx, request, result)`, and its default, `RollingHistory(turns: 6, maxTokens: 256)`,
-  the last exchanges oldest first. Past either cap the oldest exchange goes first, a whole one at
-  a time; tokens are estimated as characters over four. `Agent.Memory` is a new `RollingHistory`
-  for each agent, never one on the profile, and null turns memory off. The agent recalls into
-  `DecisionRequest.History` while it prepares a request and remembers the decision it returns,
-  as parsed, never the raw reply; a pipeline error or a cancelled call remembers nothing.
-- `DecisionTelemetry.HistoryTurnsSent` and `HistoryTurnsDropped` (#90), and the optional
-  `IReportsDroppedTurns` a memory strategy implements to fill the second.
+- `DecisionPriority` (`PlayerFacing`, `Background`) and `DecideOptions.Priority` in namespace
+  `Agenerela` (#89, DR-015). Every `Agent` now sends through a queue in front of its provider
+  instance, shared by every agent given that instance: one request in flight at a time,
+  player-facing before background, first come, first served within each. Player-facing is the
+  default, so nothing changes for a caller who never sets it. A request already sent is never
+  aborted; one cancelled while queued leaves the queue at once and never reaches the provider;
+  a failed request frees its place, and nothing is retried. Agents on different provider
+  instances never wait on each other.
+- `DecisionTelemetry.Priority`, `QueueWaitSeconds` (from joining the queue to being sent) and
+  `QueuedAhead` (requests in flight or queued ahead of it when it joined) (#89).
 
 ### Changed
 - `DecisionRequest.History` now documents its encoding (#90): two entries per exchange, the
@@ -50,6 +51,8 @@ While the version stays `0.x`, the public API may change in any release.
 - `ILLMProvider.RequestAsync`'s remarks and `Documentation~/providers.md` now point at
   `ProviderException` (#87) as what a provider throws; providers.md's Ollama section says what
   was built (#88).
+- `DecisionTelemetry.LatencySeconds` is timed from the moment the request is sent, so it stays
+  the provider's time alone and a wait in the queue shows in `QueueWaitSeconds` instead (#89).
 
 ## [0.2.0] - 2026-10-18
 

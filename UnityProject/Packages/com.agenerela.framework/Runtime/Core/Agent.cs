@@ -29,6 +29,10 @@ namespace Agenerela
     {
         private readonly ILLMProvider provider;
 
+        // The provider's queue, found by the provider instance, so every agent given that
+        // instance shares it (DR-013, DR-015).
+        private readonly RequestScheduler scheduler;
+
         // Where Bind finds definitions: the profile, read when Bind is called, or the list a
         // code-only agent was given. Exactly one is set.
         private readonly AgentProfile profile;
@@ -105,6 +109,7 @@ namespace Agenerela
             }
 
             this.provider = provider;
+            scheduler = RequestScheduler.For(provider);
             Actions = new ActionRegistry();
             Targets = new TargetRegistry();
             TargetSources = new List<ITargetSource>();
@@ -215,8 +220,9 @@ namespace Agenerela
         /// </param>
         /// <param name="options">Null uses the defaults.</param>
         /// <param name="ct">
-        /// Cancels the decision. Passed to the provider, which stops its request; a decision
-        /// cancelled at any point has no result.
+        /// Cancels the decision. While it waits in the provider's queue, it leaves the queue and is
+        /// never sent; once sent, the token is passed to the provider, which stops its request. A
+        /// decision cancelled at any point has no result.
         /// </param>
         /// <returns>
         /// The decision, or, when there is none to be had, a result whose
@@ -241,21 +247,22 @@ namespace Agenerela
         /// was read.
         /// </exception>
         /// <remarks>
+        /// <para>
         /// The pipeline, in order: a context from the identity, a copy of <see cref="State"/>, the
         /// targets resolved now, the stimulus and the observations; the schema from the actions
-        /// available now (#7, #8); the examples (#10); the request (#16); the provider (#12); the
-        /// parse. Telemetry records the latency of the provider's request on a monotonic clock, the
-        /// provider's name, the framework version, the token counts the provider reported, the
-        /// target ids each <see cref="IReportsDroppedTargets"/> source left out, in source
-        /// order (#81), and the exchanges of history sent and left out (#90).
+        /// available now (#7, #8); the examples (#10); the request (#16); the provider's queue
+        /// (#89); the provider (#12); the parse. Telemetry records the latency of the provider's
+        /// request on a monotonic clock, from the send and not the enqueue; the priority, the time
+        /// spent queued and how many requests were ahead; the provider's name, the framework
+        /// version, the token counts the provider reported, and the target ids each
+        /// <see cref="IReportsDroppedTargets"/> source left out, in source order (#81).
+        /// </para>
         /// <para>
-        /// <see cref="Memory"/> is recalled while the request is prepared, into
-        /// <see cref="DecisionRequest.History"/>, and so fails as preparing it does, including on a
-        /// history that is not whole exchanges. The decision is remembered just before it is
-        /// returned, as parsed, so whitespace or extra fields in the reply are not. A pipeline
-        /// error or a cancelled call remembers nothing; a <see cref="ActionRegistry.None"/>
-        /// decision is remembered, because it happened. If remembering throws, the warning is
-        /// logged and the decision still returned.
+        /// Every agent given the same provider instance shares one queue, which sends at most one
+        /// request at a time: player-facing ones first, then background ones, each in the order
+        /// they were made (<see cref="DecideOptions.Priority"/>, DR-015). Agents on different
+        /// provider instances never wait on each other. A failed request frees its place like an
+        /// answered one, and nothing is retried.
         /// </para>
         /// </remarks>
         public Awaitable<DecisionResult> DecideAsync(string stimulus, DecideOptions options = null, CancellationToken ct = default)
@@ -276,7 +283,7 @@ namespace Agenerela
                 options.Observations == null ? new List<string>() : new List<string>(options.Observations));
             string idleExample = options.IdleExampleStimulus ?? (profile != null ? profile.IdleExampleStimulus : null);
 
-            return Decide(stimulus, options.StimulusLabel, idleExample, observations, ct);
+            return Decide(stimulus, options.StimulusLabel, idleExample, observations, options.Priority, ct);
         }
 
         /// <summary>
@@ -349,7 +356,8 @@ namespace Agenerela
         }
 
         private async Awaitable<DecisionResult> Decide(
-            string stimulus, string label, string idleExample, IReadOnlyList<string> observations, CancellationToken ct)
+            string stimulus, string label, string idleExample, IReadOnlyList<string> observations,
+            DecisionPriority priority, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
 
@@ -358,6 +366,7 @@ namespace Agenerela
             {
                 ProviderName = provider.Name ?? "",
                 FrameworkVersion = AgenerelaInfo.Version,
+                Priority = priority,
             };
 
             AgentContext ctx;
@@ -383,29 +392,56 @@ namespace Agenerela
             }
 
             ProviderResult reply;
-            var clock = System.Diagnostics.Stopwatch.StartNew();
-            try
-            {
-                reply = await provider.RequestAsync(request, ct);
-            }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception) when (ct.IsCancellationRequested)
-            {
-                // A provider that reports the caller's cancellation as some other exception, as an
-                // aborted web request tends to, still ends the call cancelled rather than counting
-                // as a pipeline error.
-                throw new OperationCanceledException(ct);
-            }
-            catch (Exception e)
-            {
-                telemetry.LatencySeconds = (float)clock.Elapsed.TotalSeconds;
-                return Failed(telemetry, KindOf(e), $"The provider failed. {e.GetType().Name}: {e.Message}");
-            }
 
-            telemetry.LatencySeconds = (float)clock.Elapsed.TotalSeconds;
+            // The provider's queue, shared with every agent on this provider instance (DR-015).
+            // Disposing the ticket frees the slot for the next request, whether the provider
+            // answered, failed or was cancelled.
+            var waited = System.Diagnostics.Stopwatch.StartNew();
+            using (var ticket = scheduler.Enqueue(priority, ct))
+            {
+                telemetry.QueuedAhead = ticket.QueuedAhead;
+
+                // Cancelled while queued, the decision ends here and never reaches the provider.
+                await ticket.Ready;
+
+                // The turn comes on whichever thread freed the slot, such as the worker thread a
+                // provider of the developer's own answered on, and this code resumes there. Every
+                // provider call starts on the main thread, where one built on UnityWebRequest or
+                // LLMUnity has to be called. Free when already there. The cancelled path needs no
+                // hop: Unity brings the caller of an Awaitable started on the main thread back to it.
+                await Awaitable.MainThreadAsync();
+
+                // Its turn came just as the caller cancelled: still never sent.
+                ct.ThrowIfCancellationRequested();
+
+                // Enqueue to send, the wait for the main thread included, and the latency from the
+                // send, so the two cover the whole call between them: LatencySeconds is the
+                // provider's time alone and a long queue shows in QueueWaitSeconds instead.
+                telemetry.QueueWaitSeconds = (float)waited.Elapsed.TotalSeconds;
+                var clock = System.Diagnostics.Stopwatch.StartNew();
+                try
+                {
+                    reply = await provider.RequestAsync(request, ct);
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception) when (ct.IsCancellationRequested)
+                {
+                    // A provider that reports the caller's cancellation as some other exception, as an
+                    // aborted web request tends to, still ends the call cancelled rather than counting
+                    // as a pipeline error.
+                    throw new OperationCanceledException(ct);
+                }
+                catch (Exception e)
+                {
+                    telemetry.LatencySeconds = (float)clock.Elapsed.TotalSeconds;
+                    return Failed(telemetry, KindOf(e), $"The provider failed. {e.GetType().Name}: {e.Message}");
+                }
+
+                telemetry.LatencySeconds = (float)clock.Elapsed.TotalSeconds;
+            }
 
             // Also for a provider that finished without noticing the cancellation.
             ct.ThrowIfCancellationRequested();

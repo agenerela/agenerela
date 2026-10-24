@@ -10,8 +10,9 @@ namespace Agenerela
     /// Open on purpose (DR-008): free strings and switches the developer sets per call, never an
     /// enum of situations. Whether this call is a player's line, a timer or a report is the
     /// developer's knowledge, and the framework never asks. What comes later goes here as more
-    /// switches of the same kind: Phase 3's per-call guard settings, starting with
-    /// <c>CheckTarget</c> (DR-016), and the scheduler's <c>Priority</c> (DR-015).
+    /// switches of the same kind, such as Phase 3's per-call guard settings, starting with
+    /// <c>CheckTarget</c> (DR-016). <see cref="Priority"/> is one already: it says whether anyone
+    /// is waiting, never why the agent is asked (DR-015).
     /// </remarks>
     public sealed class DecideOptions
     {
@@ -38,5 +39,17 @@ namespace Agenerela
         /// not: it stays with the developer's handlers and never reaches the prompt.
         /// </remarks>
         public IList<string> Observations = new List<string>();
+
+        /// <summary>
+        /// Whether anyone is waiting on this decision (DR-015). Every agent on one provider shares
+        /// its queue, which sends a <see cref="DecisionPriority.PlayerFacing"/> request before any
+        /// <see cref="DecisionPriority.Background"/> one. Player-facing by default; set it to
+        /// background for ambient behaviour, a timer or anything else nobody is waiting for.
+        /// </summary>
+        /// <remarks>
+        /// Going first means jumping the queue: a background request already sent is not aborted.
+        /// The decision's telemetry records the priority, how long it waited and behind how many.
+        /// </remarks>
+        public DecisionPriority Priority = DecisionPriority.PlayerFacing;
     }
 }

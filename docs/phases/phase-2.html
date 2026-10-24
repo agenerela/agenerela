@@ -285,14 +285,14 @@ footer p{max-width:78ch}
 
 <!-- ============ ORDER OF WORK ============ -->
 <section class="sec" id="order">
-  <div class="sechead"><h2>The order of work</h2><span class="pill ok">4 ready now</span><span class="pill warn">2 waiting</span><span class="pill dark">3 merged</span></div>
+  <div class="sechead"><h2>The order of work</h2><span class="pill ok">3 ready now</span><span class="pill warn">2 waiting</span><span class="pill dark">4 merged</span></div>
   <p class="seclede">Six issues can start today, in parallel. The gate waits on four of them. Only one chain is longer than a step: the provider, then its config asset, then the component that uses it.</p>
 
   <figure>
     <div class="fig">
       <div class="figbar">Figure 2 · What waits on what, as of 12 October</div>
       <div class="figscroll">
-        <svg viewBox="0 0 1000 310" role="img" aria-label="Issues 87 and 88 are merged, issues 89 and 90 are ready, and the gate, 94, waits on all four. Issue 92 is ready now that 88 is merged, and 93 waits on 92. Issue 91 is ready and 81 is merged, and nothing waits on them.">
+        <svg viewBox="0 0 1000 310" role="img" aria-label="Issues 87, 88 and 89 are merged, issue 90 is ready, and the gate, 94, waits on all four. Issue 92 is ready now that 88 is merged, and 93 waits on 92. Issue 91 is ready and 81 is merged, and nothing waits on them.">
           <defs>
             <marker id="p2d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0,0 L10,5 L0,10 z"/></marker>
           </defs>
@@ -306,7 +306,7 @@ footer p{max-width:78ch}
           <text class="n" x="188" y="46">#87</text><text class="ready" x="316" y="46" text-anchor="end">merged</text>
           <text class="s" x="188" y="68">Typed errors</text>
           <rect class="box" x="342" y="24" width="150" height="58" rx="7"/>
-          <text class="n" x="354" y="46">#89</text><text class="ready" x="482" y="46" text-anchor="end">ready</text>
+          <text class="n" x="354" y="46">#89</text><text class="ready" x="482" y="46" text-anchor="end">merged</text>
           <text class="s" x="354" y="68">Queue + priority</text>
           <rect class="box" x="508" y="24" width="150" height="58" rx="7"/>
           <text class="n" x="520" y="46">#90</text><text class="ready" x="648" y="46" text-anchor="end">ready</text>
@@ -377,7 +377,7 @@ footer p{max-width:78ch}
     </article>
 
     <article class="issue">
-      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/89">#89</a><h3>Request queue and priority</h3><span class="pill ok">ready</span></div>
+      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/89">#89</a><h3>Request queue and priority</h3><span class="pill dark">merged, #103</span></div>
       <p>A local model answers one request at a time. Five requests at once took about 3.5 s in the prototype, which puts thirty agents near 21 s. This adds one queue per model connection, shared by every agent using it. Each call can be marked player-facing, the default, or background, and player-facing calls go first. Telemetry records the wait, so a slow answer can be pinned on the model or on the queue.</p>
       <div><div class="lab">Done when</div><ul class="done">
         <li>Background then player-facing queued: the player-facing one is sent next</li>

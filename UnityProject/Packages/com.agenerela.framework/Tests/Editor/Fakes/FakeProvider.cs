@@ -14,16 +14,17 @@ namespace Agenerela.Tests
     /// <remarks>
     /// By default it answers at once, so <c>await agent.DecideAsync(...)</c> completes within the
     /// call. <see cref="Hold"/> leaves the reply pending, the way a real backend's does, until
-    /// <see cref="Release"/> or cancellation.
+    /// <see cref="Release"/> or cancellation. Several can be held at once, released oldest first,
+    /// which is how the queue tests (#89) let one request through at a time.
     /// </remarks>
     public sealed class FakeProvider : ILLMProvider
     {
         private readonly List<DecisionRequest> requests = new List<DecisionRequest>();
-        private AwaitableCompletionSource<ProviderResult> pending;
+        private readonly List<int> requestThreads = new List<int>();
 
-        // Disposed on Release, so a token cancelled after the reply was given cannot cancel a
-        // completion source whose pooled Awaitable has already been handed back.
-        private CancellationTokenRegistration pendingCancellation;
+        // The requests Hold kept pending, oldest first. One leaves the list when it is released or
+        // cancelled, so neither can complete it twice once its pooled Awaitable has been handed back.
+        private readonly List<HeldRequest> held = new List<HeldRequest>();
 
         /// <param name="reply">The text every request is answered with, until <see cref="Reply"/> changes it.</param>
         /// <param name="name">What <see cref="Name"/> reports, which telemetry records.</param>
@@ -75,6 +76,9 @@ namespace Agenerela.Tests
         /// <summary>When true, the reply stays pending until <see cref="Release"/> or cancellation.</summary>
         public bool Hold;
 
+        /// <summary>How many requests <see cref="Hold"/> is keeping pending now.</summary>
+        public int HeldCount => held.Count;
+
         /// <summary>
         /// Makes every request fail as a real provider says why: with a <see cref="ProviderException"/>
         /// of <paramref name="kind"/>, carrying this provider's <see cref="Name"/>. Sets
@@ -93,12 +97,16 @@ namespace Agenerela.Tests
         /// <summary>The last request received, or null if none was sent.</summary>
         public DecisionRequest LastRequest => requests.Count > 0 ? requests[requests.Count - 1] : null;
 
+        /// <summary>The managed thread each request was sent from, in the order of <see cref="Requests"/>.</summary>
+        public IReadOnlyList<int> RequestThreads => requestThreads;
+
         /// <summary>The cancellation token the last request was sent with.</summary>
         public CancellationToken LastToken { get; private set; }
 
         public Awaitable<ProviderResult> RequestAsync(DecisionRequest req, CancellationToken ct)
         {
             requests.Add(req);
+            requestThreads.Add(Thread.CurrentThread.ManagedThreadId);
             LastToken = ct;
 
             if (Failure != null && FailsImmediately)
@@ -115,9 +123,15 @@ namespace Agenerela.Tests
 
             if (Hold)
             {
-                pending = source;
-                pendingCancellation = ct.Register(() =>
+                var entry = new HeldRequest { Source = source };
+                held.Add(entry);
+                entry.Cancellation = ct.Register(() =>
                 {
+                    if (!held.Remove(entry))
+                    {
+                        return;
+                    }
+
                     if (CancelledWith != null)
                     {
                         source.TrySetException(CancelledWith);
@@ -134,18 +148,20 @@ namespace Agenerela.Tests
             return source.Awaitable;
         }
 
-        /// <summary>Answers the request <see cref="Hold"/> kept pending, with the reply as scripted now.</summary>
+        /// <summary>
+        /// Answers the oldest request <see cref="Hold"/> kept pending, with the reply as scripted now.
+        /// </summary>
         public void Release()
         {
-            if (pending == null)
+            if (held.Count == 0)
             {
                 throw new InvalidOperationException("No request is pending.");
             }
 
-            var source = pending;
-            pending = null;
-            pendingCancellation.Dispose();
-            Answer(source);
+            var entry = held[0];
+            held.RemoveAt(0);
+            entry.Cancellation.Dispose();
+            Answer(entry.Source);
         }
 
         private void Answer(AwaitableCompletionSource<ProviderResult> source)
@@ -169,6 +185,12 @@ namespace Agenerela.Tests
                 CompletionTokens = CompletionTokens,
             };
             source.TrySetResult(result);
+        }
+
+        private sealed class HeldRequest
+        {
+            public AwaitableCompletionSource<ProviderResult> Source;
+            public CancellationTokenRegistration Cancellation;
         }
     }
 }

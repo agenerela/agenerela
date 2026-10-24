@@ -118,8 +118,19 @@ for what each Phase 2 issue does.
   tests run with no Ollama installed, through an `HttpMessageHandler` seam; one live decision
   on `qwen3.5:2b` with Ollama 0.34.2 was checked by hand. WebGL players are not supported. Open
   for later issues: `DecisionTelemetry.LatencySeconds` still comes from `Agent`'s stopwatch,
-  not the provider's (#89 must keep queue wait out of it), and the provider is not
+  not the provider's (#89 starts it at the send), and the provider is not
   `IDisposable` (#92 creates and replaces providers).
+- The request queue and `DecideOptions.Priority` (#89, via #103, DR-015): every provider call
+  goes through an internal `RequestScheduler`, one per provider instance, found by the instance
+  itself, so agents sharing a provider share its queue and agents on different providers never
+  wait on each other. At most one request in flight (`MaxInFlight`, internal until #92 sets it),
+  `PlayerFacing` (the default) before `Background`, first come, first served within a tier.
+  Nothing already sent is aborted, and nothing is retried. A request cancelled while queued is
+  never sent, and a failed one frees its slot. Telemetry adds `Priority`, `QueueWaitSeconds` and
+  `QueuedAhead`, and `LatencySeconds` is timed from the send, so it stays the provider's time
+  alone. Every provider call starts on the main thread, even when the slot was freed on a
+  worker thread. 36 EditMode tests, all holding and releasing requests by hand rather than
+  timing them.
 - Newtonsoft as the core's one declared dependency (DR-009), and each demo game as its own
   Unity project (DR-010).
 - `Demos/GreyBoxVillage` — a playable grey-box scene whose guard still answers from
@@ -139,9 +150,9 @@ for what each Phase 2 issue does.
 
 ## Not written yet
 
-All of it Phase 2: the request queue with `DecideOptions.Priority` (#89), short-term memory
-(#90), and the gate, a live decision in a sandbox scene with `RequiresOllama` PlayMode tests
-(#94), which waits on those two and on #87 and #88, both merged. Beside them, and not on the
+All of it Phase 2: short-term memory (#90), and the gate, a live decision in a sandbox scene
+with `RequiresOllama` PlayMode tests (#94), which waits on it and on #87, #88 and #89, all
+merged. Beside them, and not on the
 gate's path: observation sources (#91), the provider config asset (#92) and `AgentBehaviour`
 (#93).
 **The framework can now call a model**, through `OllamaProvider` (#88), but no test does yet:
