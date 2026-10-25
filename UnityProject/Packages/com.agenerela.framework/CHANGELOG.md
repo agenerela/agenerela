@@ -33,6 +33,18 @@ While the version stays `0.x`, the public API may change in any release.
 - `ProviderResult.Model` and `DecisionTelemetry.Model` (#88): the model that produced a
   reply, which `Agent` copies from the one to the other. Empty in telemetry when the provider
   does not say.
+- Short-term memory (#90, build plan §2.9): `IMemoryStrategy`, with `Recall(ctx)` and
+  `Remember(ctx, request, result)`, and its default, `RollingHistory(turns: 6, maxTokens: 256)`,
+  the last exchanges oldest first. Past either cap the oldest exchange goes first, a whole one at
+  a time; tokens are estimated as characters over four. `Agent.Memory` is a new `RollingHistory`
+  for each agent, never one on the profile, and null turns memory off. The agent recalls into
+  `DecisionRequest.History` while it prepares a request and remembers the decision it returns,
+  as parsed, never the raw reply; a pipeline error or a cancelled call remembers nothing. It
+  remembers on the main thread, even when the provider answered on another.
+- `DecisionTelemetry.HistoryTurnsSent`, `HistoryTurnsDropped` and `HistoryTurnsForgotten`
+  (#90), and the optional `IReportsDroppedTurns` a memory strategy implements to fill the other
+  two. Dropped is what this request's token cap left out of the exchanges still held, so above
+  0 means the budget is binding; Forgotten is the rising total the turn cap let go of.
 - `DecisionPriority` (`PlayerFacing`, `Background`) and `DecideOptions.Priority` in namespace
   `Agenerela` (#89, DR-015). Every `Agent` now sends through a queue in front of its provider
   instance, shared by every agent given that instance: one request in flight at a time,
@@ -45,6 +57,9 @@ While the version stays `0.x`, the public API may change in any release.
   `QueuedAhead` (requests in flight or queued ahead of it when it joined) (#89).
 
 ### Changed
+- `DecisionRequest.History` now documents its encoding (#90): two entries per exchange, the
+  stimulus as it was sent and then the decision as the schema's JSON on one line.
+  `OllamaProvider` already sent it this way, as `user` then `assistant` messages.
 - `ILLMProvider.RequestAsync`'s remarks and `Documentation~/providers.md` now point at
   `ProviderException` (#87) as what a provider throws; providers.md's Ollama section says what
   was built (#88).

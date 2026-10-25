@@ -114,6 +114,7 @@ namespace Agenerela
             Targets = new TargetRegistry();
             TargetSources = new List<ITargetSource>();
             State = new Dictionary<string, object>();
+            Memory = new RollingHistory();
         }
 
         /// <summary>Who this agent is. The model reads it on every call.</summary>
@@ -151,6 +152,19 @@ namespace Agenerela
         /// <see cref="DecideOptions.Observations"/> instead.
         /// </summary>
         public Dictionary<string, object> State { get; }
+
+        /// <summary>
+        /// What this agent remembers between decisions (build plan §2.9): a new
+        /// <see cref="RollingHistory"/> of its own by default, the last six exchanges within its
+        /// token budget. Null means no memory: no history is sent and nothing is remembered.
+        /// </summary>
+        /// <remarks>
+        /// Each agent has its own, never one on <see cref="AgentProfile"/>, because agents built from
+        /// one profile never share their memories (§2.9, rule 2). Read once per decision, when it
+        /// starts, so replacing it while a decision is in flight leaves that decision with the one
+        /// it recalled from. Giving two agents the same instance makes them share it.
+        /// </remarks>
+        public IMemoryStrategy Memory { get; set; }
 
         /// <summary>
         /// Registers the action <paramref name="actionId"/>, as the profile defines it, with the game
@@ -241,7 +255,18 @@ namespace Agenerela
         /// request on a monotonic clock, from the send and not the enqueue; the priority, the time
         /// spent queued and how many requests were ahead; the provider's name, the framework
         /// version, the token counts the provider reported, and the target ids each
-        /// <see cref="IReportsDroppedTargets"/> source left out, in source order (#81).
+        /// <see cref="IReportsDroppedTargets"/> source left out, in source order (#81), and the
+        /// exchanges of history sent, left out and forgotten (#90).
+        /// </para>
+        /// <para>
+        /// <see cref="Memory"/> is recalled while the request is prepared, into
+        /// <see cref="DecisionRequest.History"/>, and so fails as preparing it does, including on a
+        /// history that is not whole exchanges. The decision is remembered just before it is
+        /// returned, as parsed, so whitespace or extra fields in the reply are not. A pipeline
+        /// error or a cancelled call remembers nothing; a <see cref="ActionRegistry.None"/>
+        /// decision is remembered, because it happened. If remembering throws, the warning is
+        /// logged and the decision still returned. Remembering happens on the main thread, even
+        /// when the provider answered on another.
         /// </para>
         /// <para>
         /// Every agent given the same provider instance shares one queue, which sends at most one
@@ -347,6 +372,7 @@ namespace Agenerela
         {
             ct.ThrowIfCancellationRequested();
 
+            var memory = Memory;
             var telemetry = new DecisionTelemetry
             {
                 ProviderName = provider.Name ?? "",
@@ -354,10 +380,11 @@ namespace Agenerela
                 Priority = priority,
             };
 
+            AgentContext ctx;
             DecisionRequest request;
             try
             {
-                var ctx = Snapshot(stimulus, observations, telemetry.TargetsDropped);
+                ctx = Snapshot(stimulus, observations, telemetry.TargetsDropped);
                 var options = new PromptOptions { StimulusLabel = label, IdleExampleStimulus = idleExample };
 
                 // Asked once, so the action enum and the examples come from one answer even when an
@@ -366,9 +393,8 @@ namespace Agenerela
                 var schema = DecisionSchema.Build(ctx, available);
                 string fewShot = FewShotBuilder.Build(available, ctx.Targets, label, idleExample);
 
-                // The memory slot (build plan §2.9): Phase 2's IMemoryStrategy recalls the turns
-                // that go here, oldest first. Until then there are none.
-                request = PromptBuilder.Build(ctx, schema, fewShot, history: null, options);
+                var history = Recall(memory, ctx, telemetry);
+                request = PromptBuilder.Build(ctx, schema, fewShot, history, options);
             }
             catch (Exception e)
             {
@@ -428,6 +454,11 @@ namespace Agenerela
                 telemetry.LatencySeconds = (float)clock.Elapsed.TotalSeconds;
             }
 
+            // Back on the main thread, as for the send: a provider that answered on a worker thread
+            // resumed this code there, and the memory below is no more thread-safe than the rest of
+            // the agent. Free when already there.
+            await Awaitable.MainThreadAsync();
+
             // Also for a provider that finished without noticing the cancellation.
             ct.ThrowIfCancellationRequested();
 
@@ -445,7 +476,57 @@ namespace Agenerela
                 return Failed(telemetry, PipelineErrorKind.UnreadableReply, $"{problem} The reply was: {Excerpt(reply.Text)}");
             }
 
-            return new DecisionResult(decision, telemetry);
+            var result = new DecisionResult(decision, telemetry);
+
+            if (memory != null)
+            {
+                try
+                {
+                    memory.Remember(ctx, request, result);
+                }
+                catch (Exception e)
+                {
+                    // The decision was made; a memory that cannot record it does not undo it.
+                    Debug.LogWarning($"{Who()} decided, but its memory could not remember it. {e.GetType().Name}: {e.Message}");
+                }
+            }
+
+            return result;
+        }
+
+        // The history for one request, as DecisionRequest.History encodes it: whole exchanges of
+        // two entries, none null, or the request is not sent. Counted into the telemetry here.
+        private static IReadOnlyList<string> Recall(IMemoryStrategy memory, AgentContext ctx, DecisionTelemetry telemetry)
+        {
+            if (memory == null)
+            {
+                return null;
+            }
+
+            var history = memory.Recall(ctx) ?? Array.Empty<string>();
+
+            if (history.Count % 2 != 0)
+            {
+                throw new InvalidOperationException(
+                    $"Memory recalled {history.Count} entries. History is whole exchanges, a stimulus then a decision, so the count must be even.");
+            }
+
+            for (int i = 0; i < history.Count; i++)
+            {
+                if (history[i] == null)
+                {
+                    throw new InvalidOperationException($"Memory recalled a null entry at {i}.");
+                }
+            }
+
+            telemetry.HistoryTurnsSent = history.Count / 2;
+            if (memory is IReportsDroppedTurns reports)
+            {
+                telemetry.HistoryTurnsDropped = reports.Dropped;
+                telemetry.HistoryTurnsForgotten = reports.Forgotten;
+            }
+
+            return history;
         }
 
         // One decision's view of the agent. State is copied, so a context is what the agent knew at

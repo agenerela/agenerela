@@ -96,9 +96,9 @@ measurement in Appendix A depends on it:
 | `options` | `temperature` from the settings, `num_ctx` from the settings |
 | `logprobs`, `top_logprobs` | `true`, `5` |
 
-`History` is sent as #90 proposes: entries alternate `user` and `assistant`, starting with
-`user`, each exchange being the stimulus as it was sent and the decision as JSON. The list is
-empty until #90 merges.
+`History` is sent in the encoding `DecisionRequest.History` documents (#90): entries alternate
+`user` and `assistant`, starting with `user`, each exchange being the stimulus as it was sent
+and the decision as JSON.
 
 From the reply, `message.content` becomes `Text` exactly as received, `prompt_eval_count` and
 `eval_count` the token counts (0 when Ollama leaves them out), `logprobs` the token
@@ -265,11 +265,6 @@ a failure like any other.
 
 ## Still open
 
-- **How a turn in `DecisionRequest.History` encodes its speaker** is decided by #90,
-  alongside the memory strategy that will fill it. `OllamaProvider` sends #90's proposal, a
-  `user` message then an `assistant` one per exchange, and follows #90 if it settles
-  differently. The list is empty until then, so no provider can be wrong about it yet — but do
-  not invent another encoding and read it back.
 - **Token-based rate limits**, above. Phase 6.
 
 ## Extension points — where the next things go

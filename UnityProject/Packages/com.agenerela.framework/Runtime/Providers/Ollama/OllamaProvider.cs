@@ -170,7 +170,7 @@ namespace Agenerela.Providers
         /// joined by a blank line, left out if all three are empty; then
         /// <see cref="DecisionRequest.History"/>, its entries alternating <c>user</c> and
         /// <c>assistant</c> from a <c>user</c> one, each exchange being the stimulus as it was sent
-        /// and the decision as JSON (#90's proposal; the list is empty until #90 merges); then
+        /// and the decision as JSON, as <see cref="DecisionRequest.History"/> encodes it (#90); then
         /// <see cref="DecisionRequest.Stimulus"/> as the last <c>user</c> message. Nothing is
         /// rewritten, reordered or trimmed.
         /// </para>
