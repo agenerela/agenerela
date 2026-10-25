@@ -1023,10 +1023,10 @@ when observations first reach a model; run the comparison in Phase 4 and record 
 
 ### 2.9 Memory (`Runtime/Memory/`) — what an agent remembers between decisions
 
-**Status: planned for Phase 2, nothing built.** One slot exists already:
-`DecisionRequest.History` (#12), which stays an empty list until a memory strategy fills it.
-`Agent` (#17) marks where it plugs in, and gains a `Memory` property with the strategy. This section records what memory is for and the rules it has to follow, so that
-Phase 2 designs it rather than bolting it on at the end.
+**Status: short-term memory built in Phase 2 (#90, via #104).** `Agent.Memory` holds a
+`RollingHistory` of its own by default, which fills `DecisionRequest.History`; the rules below
+are the ones it was built to. Long-term memory and saving memory with the game are still
+open. This section records what memory is for and the rules it has to follow.
 
 **What it is for.** Without memory every decision starts from nothing. The guard cannot
 follow "Follow me." with "Now wait here.", and it forgets that the player threatened it a
@@ -1035,14 +1035,15 @@ kept apart on purpose: §2.8 forbids anything accumulating between decisions, an
 the one deliberate exception, bounded and owned by a single agent.
 
 ```csharp
-// Sketch only. Phase 2 settles the shape.
+// The shape #90 settled.
 public interface IMemoryStrategy {
     IReadOnlyList<string> Recall(AgentContext ctx);            // turns for this request, oldest first
-    void Remember(AgentContext ctx, DecisionResult result);    // after the guards have run
+    void Remember(AgentContext ctx, DecisionRequest request,   // after the guards have run; the
+                  DecisionResult result);                      // request holds the stimulus as sent
 }
 ```
 
-**The default is short-term:** `RollingHistory(turns: 6)` (§2.1), the last six exchanges,
+**The default is short-term:** `RollingHistory(turns: 6, maxTokens: 256)` (§2.1), the last six exchanges,
 oldest first. Where they go in the prompt is already fixed by `DecisionRequest`: after the
 system side (system prompt, few-shot block, observations) and before the stimulus, which
 stays the final user turn.
@@ -1063,8 +1064,9 @@ stays the final user turn.
    the queue's ceiling is ≈21 s for 30 agents (§2.6). So the window gets a token cap, and
    telemetry records how many turns were sent and how many were dropped. #16 already lists
    truncating history to `num_ctx` as Phase 2 work.
-4. **How a turn names its speaker is decided once, in Phase 2.** The remarks on
-   `DecisionRequest.History` forbid inventing an encoding before then.
+4. **How a turn names its speaker is decided once, in Phase 2.** #90 decided it, and the
+   remarks on `DecisionRequest.History` hold it: two entries per exchange, the stimulus as it
+   was sent, label included, then the decision as the schema's JSON.
 5. **Memory works with the grounding guard, not around it.** The guard reads where the
    model's probability went (§2.5, DR-016). So "Attack it." after "Do you see the training
    dummy?" passes when the model resolves "it" to a target on the list, and is refused when it

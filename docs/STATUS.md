@@ -131,6 +131,19 @@ for what each Phase 2 issue does.
   alone. Every provider call starts on the main thread, even when the slot was freed on a
   worker thread. 36 EditMode tests, all holding and releasing requests by hand rather than
   timing them.
+- Short-term memory (#90, via #104, build plan §2.9): `IMemoryStrategy` (`Recall(ctx)`,
+  `Remember(ctx, request, result)`) and its default, `RollingHistory(turns: 6, maxTokens: 256)`,
+  on `Agent.Memory`, a new one for each agent and never one on the profile; null turns memory
+  off. `DecisionRequest.History` now carries the newest exchanges that fit, oldest first, two
+  entries each: the stimulus as it was sent, then the decision as the schema's JSON. Its remarks
+  document that encoding, which `OllamaProvider` already sent. Tokens are estimated as
+  characters over four, and the oldest exchange goes first, whole, under either cap. What is
+  remembered is the decision `DecideAsync` returns, never the raw reply; a pipeline error or a
+  cancelled call remembers nothing, and remembering happens on the main thread even when the
+  provider answered on another. Telemetry adds `HistoryTurnsSent`, `HistoryTurnsDropped` (what
+  this request's token cap left out) and `HistoryTurnsForgotten` (the rising total the turn cap
+  let go of), filled through the optional `IReportsDroppedTurns`. 30 EditMode tests. The
+  256-token default is a starting point for Phase 4 to measure.
 - Newtonsoft as the core's one declared dependency (DR-009), and each demo game as its own
   Unity project (DR-010).
 - `Demos/GreyBoxVillage` — a playable grey-box scene whose guard still answers from
@@ -150,11 +163,10 @@ for what each Phase 2 issue does.
 
 ## Not written yet
 
-All of it Phase 2: short-term memory (#90), and the gate, a live decision in a sandbox scene
-with `RequiresOllama` PlayMode tests (#94), which waits on it and on #87, #88 and #89, all
-merged. Beside them, and not on the
-gate's path: observation sources (#91), the provider config asset (#92) and `AgentBehaviour`
-(#93).
+All of it Phase 2: the gate, a live decision in a sandbox scene with `RequiresOllama`
+PlayMode tests (#94), which can start now that #87, #88, #89 and #90 have all merged. Beside
+it, and not on the gate's path: observation sources (#91), the provider config asset (#92)
+and `AgentBehaviour` (#93).
 **The framework can now call a model**, through `OllamaProvider` (#88), but no test does yet:
 the first live decision under test is the gate's PlayMode test (#94). Phase 1 was pure C#
 with EditMode tests and no Ollama, on purpose.
