@@ -751,16 +751,20 @@ namespace Agenerela.Tests
         [Test]
         public async Task APipelineErrorRemembersNothing()
         {
+            // A spy, not RollingHistory, which would itself ignore a result with no decision: this
+            // is Agent's side of IMemoryStrategy's contract, that Remember never sees one.
             var fake = new FakeProvider("Sure, I'll go to the tower!");
             var agent = Fixtures.VillageGuard(fake);
+            var spy = new SpyMemory();
+            agent.Memory = spy;
             LogAssert.Expect(LogType.Warning, new Regex("could not decide"));
 
             await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
             fake.Reply = GoToTheTower;
             var next = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
 
-            Assert.That(fake.LastRequest.History, Is.Empty);
-            Assert.That(next.Telemetry.HistoryTurnsDropped, Is.Zero, "Nothing was remembered, so nothing was dropped.");
+            Assert.That(spy.Recalled, Has.Count.EqualTo(2), "Both decisions recalled.");
+            Assert.That(spy.Remembered.Select(r => r.Result), Is.EqualTo(new[] { next }), "Only the decision was remembered.");
         }
 
         [Test]
@@ -768,6 +772,8 @@ namespace Agenerela.Tests
         {
             var fake = new FakeProvider(GoToTheTower) { Hold = true };
             var agent = Fixtures.VillageGuard(fake);
+            var spy = new SpyMemory();
+            agent.Memory = spy;
 
             using (var cts = new CancellationTokenSource())
             {
@@ -784,9 +790,10 @@ namespace Agenerela.Tests
             }
 
             fake.Hold = false;
-            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+            var next = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
 
-            Assert.That(fake.LastRequest.History, Is.Empty);
+            Assert.That(spy.Recalled, Has.Count.EqualTo(2), "Both decisions recalled.");
+            Assert.That(spy.Remembered.Select(r => r.Result), Is.EqualTo(new[] { next }), "Only the decision was remembered.");
         }
 
         [Test]
