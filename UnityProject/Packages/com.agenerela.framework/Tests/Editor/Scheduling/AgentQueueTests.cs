@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -311,6 +312,27 @@ namespace Agenerela.Tests
         }
 
         [Test]
+        public async Task AnAnswerFromAnotherThreadIsRememberedOnTheMainThread()
+        {
+            // The answer resumes the decision on the provider's thread, and a memory is no more
+            // thread-safe than the agent: a Remember there would race the next Recall (#90).
+            Assert.That(SynchronizationContext.Current, Is.Not.Null,
+                "The test needs Unity's main-thread context to prove anything.");
+            int main = Thread.CurrentThread.ManagedThreadId;
+            var fake = new FakeProvider(GoToTheTower) { Hold = true };
+            var agent = Fixtures.VillageGuard(fake);
+            var memory = new ThreadRecordingMemory();
+            agent.Memory = memory;
+            var pending = agent.DecideAsync("Go to the tower.");
+
+            int answeredOn = OnAnotherThread(fake.Release);
+            await Fixtures.NotCancelled(pending);
+
+            Assert.That(answeredOn, Is.Not.EqualTo(main), "The answer must arrive off the main thread for this to test anything.");
+            Assert.That(memory.RememberedOn, Is.EqualTo(new[] { main }));
+        }
+
+        [Test]
         public async Task ThePriorityIsReadWhenTheCallIsMade()
         {
             var fake = new FakeProvider(GoToTheTower) { Hold = true };
@@ -376,6 +398,22 @@ namespace Agenerela.Tests
             }
 
             return id;
+        }
+
+        // A memory that recalls nothing and records the thread each Remember ran on.
+        private sealed class ThreadRecordingMemory : IMemoryStrategy
+        {
+            public readonly List<int> RememberedOn = new List<int>();
+
+            public IReadOnlyList<string> Recall(AgentContext ctx)
+            {
+                return Array.Empty<string>();
+            }
+
+            public void Remember(AgentContext ctx, DecisionRequest request, DecisionResult result)
+            {
+                RememberedOn.Add(Thread.CurrentThread.ManagedThreadId);
+            }
         }
     }
 }

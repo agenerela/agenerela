@@ -265,7 +265,8 @@ namespace Agenerela
         /// returned, as parsed, so whitespace or extra fields in the reply are not. A pipeline
         /// error or a cancelled call remembers nothing; a <see cref="ActionRegistry.None"/>
         /// decision is remembered, because it happened. If remembering throws, the warning is
-        /// logged and the decision still returned.
+        /// logged and the decision still returned. Remembering happens on the main thread, even
+        /// when the provider answered on another.
         /// </para>
         /// <para>
         /// Every agent given the same provider instance shares one queue, which sends at most one
@@ -452,6 +453,11 @@ namespace Agenerela
 
                 telemetry.LatencySeconds = (float)clock.Elapsed.TotalSeconds;
             }
+
+            // Back on the main thread, as for the send: a provider that answered on a worker thread
+            // resumed this code there, and the memory below is no more thread-safe than the rest of
+            // the agent. Free when already there.
+            await Awaitable.MainThreadAsync();
 
             // Also for a provider that finished without noticing the cancellation.
             ct.ThrowIfCancellationRequested();

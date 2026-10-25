@@ -32,7 +32,7 @@ namespace Agenerela
     /// rising over a long conversation: it says how much of the agent's past the request lacks.
     /// </para>
     /// <para>
-    /// Not thread-safe, like the rest of <c>Agent</c>: Unity calls it on the main thread. Two
+    /// Not thread-safe, like the rest of <c>Agent</c>, which calls it only on the main thread. Two
     /// decisions in flight at once on one agent both recall before either remembers, and are
     /// remembered in the order they finish.
     /// </para>

@@ -21,6 +21,12 @@ namespace Agenerela
     /// JSON. <c>Agent</c> rejects an odd number of entries, or a null one, as a pipeline error,
     /// because a provider with chat roles alternates <c>user</c> and <c>assistant</c> from them.
     /// </para>
+    /// <para>
+    /// <c>Agent</c> calls <see cref="Recall"/> on the thread that called <c>DecideAsync</c>, the
+    /// main thread in a game, and <see cref="Remember"/> on the main thread, even when the
+    /// provider answered on another. A strategy used that way needs no locking and may use
+    /// Unity's objects.
+    /// </para>
     /// </remarks>
     public interface IMemoryStrategy
     {
