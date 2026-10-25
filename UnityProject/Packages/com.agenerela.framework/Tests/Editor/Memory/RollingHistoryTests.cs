@@ -20,6 +20,7 @@ namespace Agenerela.Tests
 
             Assert.That(memory.Recall(Ctx), Is.Not.Null.And.Empty);
             Assert.That(memory.Dropped, Is.Zero);
+            Assert.That(memory.Forgotten, Is.Zero);
             Assert.That(memory.Turns, Is.EqualTo(6), "§2.1 sets the default window at six exchanges.");
             Assert.That(memory.MaxTokens, Is.EqualTo(RollingHistory.DefaultMaxTokens));
         }
@@ -77,7 +78,7 @@ namespace Agenerela.Tests
         }
 
         [Test]
-        public void PastTheTurnCapTheOldestExchangeIsForgottenAndCountedAsDropped()
+        public void PastTheTurnCapTheOldestExchangeIsForgottenAndCounted()
         {
             var memory = new RollingHistory(turns: 2);
             memory.Remember(Ctx, Request("Player: \"One.\""), Decided("none", "no_target", ""));
@@ -88,7 +89,36 @@ namespace Agenerela.Tests
 
             Assert.That(Stimuli(history), Is.EqualTo(new[] { "Player: \"Two.\"", "Player: \"Three.\"" }));
             Assert.That(memory.Count, Is.EqualTo(2));
+            Assert.That(memory.Forgotten, Is.EqualTo(1));
+            Assert.That(memory.Dropped, Is.Zero, "Everything still held was sent; the token cap cut nothing.");
+        }
+
+        [Test]
+        public void DroppedIsThisRecallsCutAndForgottenKeepsRising()
+        {
+            // Both caps at once: three held, two fit. Dropped stays the token cap's cut however
+            // long the conversation runs, so it says whether the budget is binding; Forgotten is
+            // the total the turn cap let go of. Neither counts an exchange the other does.
+            var exchange = Decided("none", "no_target", "");
+            var memory = new RollingHistory(turns: 3, maxTokens: Estimate("Player: \"Order 1.\"", exchange) * 2);
+
+            for (int i = 1; i <= 5; i++)
+            {
+                memory.Remember(Ctx, Request($"Player: \"Order {i}.\""), exchange);
+            }
+
+            Assert.That(Stimuli(memory.Recall(Ctx)), Is.EqualTo(new[] { "Player: \"Order 4.\"", "Player: \"Order 5.\"" }));
             Assert.That(memory.Dropped, Is.EqualTo(1));
+            Assert.That(memory.Forgotten, Is.EqualTo(2));
+
+            for (int i = 6; i <= 8; i++)
+            {
+                memory.Remember(Ctx, Request($"Player: \"Order {i}.\""), exchange);
+            }
+
+            memory.Recall(Ctx);
+            Assert.That(memory.Dropped, Is.EqualTo(1));
+            Assert.That(memory.Forgotten, Is.EqualTo(5));
         }
 
         [Test]
@@ -109,6 +139,7 @@ namespace Agenerela.Tests
             Assert.That(history.Count, Is.EqualTo(4), "Never a stimulus without its decision.");
             Assert.That(memory.Count, Is.EqualTo(3), "The token cap leaves an exchange out of a request; it does not forget it.");
             Assert.That(memory.Dropped, Is.EqualTo(1));
+            Assert.That(memory.Forgotten, Is.Zero);
         }
 
         [Test]

@@ -27,9 +27,12 @@ namespace Agenerela
     /// guarantee about <c>num_ctx</c>.
     /// </para>
     /// <para>
-    /// <see cref="Dropped"/> counts every exchange it has remembered that the last recall did not
-    /// send, the ones the turn cap forgot and the ones the token cap left out alike, so it keeps
-    /// rising over a long conversation: it says how much of the agent's past the request lacks.
+    /// Two counts say what a request lacks, and never count one exchange twice.
+    /// <see cref="Dropped"/> is the exchanges still held that the last recall left out for the
+    /// token cap, never more than <see cref="Turns"/>, so anything above 0 means the budget is what
+    /// cut the history short. <see cref="Forgotten"/> is the exchanges the turn cap has let go of
+    /// since this memory was made, and keeps rising over a long conversation. Their sum is all of
+    /// the agent's past the request does not carry.
     /// </para>
     /// <para>
     /// Not thread-safe, like the rest of <c>Agent</c>, which calls it only on the main thread. Two
@@ -55,9 +58,6 @@ namespace Agenerela
         public const int DefaultMaxTokens = 256;
 
         private readonly LinkedList<Exchange> exchanges = new LinkedList<Exchange>();
-
-        // Exchanges the turn cap has forgotten, counted so Dropped covers them too.
-        private int forgotten;
 
         /// <param name="turns">The most exchanges kept, at least one.</param>
         /// <param name="maxTokens">The most estimated tokens one request's history may hold, at least one.</param>
@@ -88,10 +88,16 @@ namespace Agenerela
         public int Count => exchanges.Count;
 
         /// <summary>
-        /// Every exchange remembered so far that the last <see cref="Recall"/> left out. 0 before
-        /// the first.
+        /// The exchanges held now that the last <see cref="Recall"/> left out for the token cap. 0
+        /// before the first.
         /// </summary>
         public int Dropped { get; private set; }
+
+        /// <summary>
+        /// Every exchange the turn cap has forgotten since this memory was made, which no recall
+        /// can send again.
+        /// </summary>
+        public int Forgotten { get; private set; }
 
         /// <summary>
         /// The newest exchanges that fit in <see cref="MaxTokens"/>, oldest first, two entries
@@ -113,7 +119,7 @@ namespace Agenerela
                 sent.Add(node.Value);
             }
 
-            Dropped = forgotten + exchanges.Count - sent.Count;
+            Dropped = exchanges.Count - sent.Count;
 
             var history = new List<string>(sent.Count * 2);
             for (int i = sent.Count - 1; i >= 0; i--)
@@ -155,7 +161,7 @@ namespace Agenerela
             if (exchanges.Count > Turns)
             {
                 exchanges.RemoveFirst();
-                forgotten++;
+                Forgotten++;
             }
         }
 

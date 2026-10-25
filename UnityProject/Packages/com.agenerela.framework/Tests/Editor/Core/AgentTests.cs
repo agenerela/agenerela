@@ -680,7 +680,7 @@ namespace Agenerela.Tests
         }
 
         [Test]
-        public async Task PastTheWindowTheOldestExchangesAreDroppedWholeAndCounted()
+        public async Task PastTheWindowTheOldestExchangesAreForgottenWholeAndCounted()
         {
             var fake = new FakeProvider(GoToTheTower);
             var agent = Fixtures.VillageGuard(fake);
@@ -697,7 +697,8 @@ namespace Agenerela.Tests
                 Is.EqualTo(new[] { "Player: \"Order 2.\"", "Player: \"Order 3.\"" }));
             Assert.That(fake.LastRequest.History, Has.Count.EqualTo(4));
             Assert.That(fourth.Telemetry.HistoryTurnsSent, Is.EqualTo(2));
-            Assert.That(fourth.Telemetry.HistoryTurnsDropped, Is.EqualTo(1));
+            Assert.That(fourth.Telemetry.HistoryTurnsForgotten, Is.EqualTo(1));
+            Assert.That(fourth.Telemetry.HistoryTurnsDropped, Is.Zero, "All it still held was sent.");
         }
 
         [Test]
@@ -722,6 +723,7 @@ namespace Agenerela.Tests
             }));
             Assert.That(fifth.Telemetry.HistoryTurnsSent, Is.EqualTo(2));
             Assert.That(fifth.Telemetry.HistoryTurnsDropped, Is.EqualTo(2));
+            Assert.That(fifth.Telemetry.HistoryTurnsForgotten, Is.Zero, "Held still, just not sent.");
         }
 
         [Test]
@@ -818,6 +820,7 @@ namespace Agenerela.Tests
             Assert.That(spy.Remembered[0].Request, Is.SameAs(fake.LastRequest));
             Assert.That(spy.Remembered[0].Result, Is.SameAs(result));
             Assert.That(result.Telemetry.HistoryTurnsDropped, Is.Zero, "A strategy that cannot say what it dropped reports none.");
+            Assert.That(result.Telemetry.HistoryTurnsForgotten, Is.Zero);
         }
 
         [TestCase(1)]

@@ -256,7 +256,7 @@ namespace Agenerela
         /// spent queued and how many requests were ahead; the provider's name, the framework
         /// version, the token counts the provider reported, and the target ids each
         /// <see cref="IReportsDroppedTargets"/> source left out, in source order (#81), and the
-        /// exchanges of history sent and left out (#90).
+        /// exchanges of history sent, left out and forgotten (#90).
         /// </para>
         /// <para>
         /// <see cref="Memory"/> is recalled while the request is prepared, into
@@ -520,7 +520,12 @@ namespace Agenerela
             }
 
             telemetry.HistoryTurnsSent = history.Count / 2;
-            telemetry.HistoryTurnsDropped = memory is IReportsDroppedTurns reports ? reports.Dropped : 0;
+            if (memory is IReportsDroppedTurns reports)
+            {
+                telemetry.HistoryTurnsDropped = reports.Dropped;
+                telemetry.HistoryTurnsForgotten = reports.Forgotten;
+            }
+
             return history;
         }
 

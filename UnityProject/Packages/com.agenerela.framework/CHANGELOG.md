@@ -39,9 +39,12 @@ While the version stays `0.x`, the public API may change in any release.
   a time; tokens are estimated as characters over four. `Agent.Memory` is a new `RollingHistory`
   for each agent, never one on the profile, and null turns memory off. The agent recalls into
   `DecisionRequest.History` while it prepares a request and remembers the decision it returns,
-  as parsed, never the raw reply; a pipeline error or a cancelled call remembers nothing.
-- `DecisionTelemetry.HistoryTurnsSent` and `HistoryTurnsDropped` (#90), and the optional
-  `IReportsDroppedTurns` a memory strategy implements to fill the second.
+  as parsed, never the raw reply; a pipeline error or a cancelled call remembers nothing. It
+  remembers on the main thread, even when the provider answered on another.
+- `DecisionTelemetry.HistoryTurnsSent`, `HistoryTurnsDropped` and `HistoryTurnsForgotten`
+  (#90), and the optional `IReportsDroppedTurns` a memory strategy implements to fill the other
+  two. Dropped is what this request's token cap left out of the exchanges still held, so above
+  0 means the budget is binding; Forgotten is the rising total the turn cap let go of.
 - `DecisionPriority` (`PlayerFacing`, `Background`) and `DecideOptions.Priority` in namespace
   `Agenerela` (#89, DR-015). Every `Agent` now sends through a queue in front of its provider
   instance, shared by every agent given that instance: one request in flight at a time,
