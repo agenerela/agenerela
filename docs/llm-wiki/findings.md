@@ -101,11 +101,11 @@ arm can swap or drop the block while the rest of the prompt stays byte-identical
 
 ## New findings
 
-The framework itself still measures nothing. Phase 1 is pure C# with no model in the loop,
-settled by EditMode tests, and its first numbers arrive with Phase 2, when a real provider
-answers a real request. Entries below that carry numbers come from the standalone probes in
-`tools/benchmarks/`, which ask a model directly. Everything else comes from the build plan's
-Appendix A, measured in the predecessor prototype.
+Phase 1 is pure C# with no model in the loop, settled by EditMode tests. The framework's
+first number is the Phase 2 gate's in-Unity latency (25 October 2026, the last entry below),
+taken when a real provider answered a real request. Earlier entries that carry numbers come
+from the standalone probes in `tools/benchmarks/`, which ask a model directly. Everything else
+comes from the build plan's Appendix A, measured in the predecessor prototype.
 
 ### Stopping a swapped target: the model's own confidence beats the name check (5 October 2026)
 
@@ -427,3 +427,61 @@ action in the system side of the request.
 
 **What would change this.** An Ollama version or model template that puts the schema into
 the prompt. Re-run the probe after any Ollama upgrade; it takes seconds.
+
+### First in-Unity latency: a warm decision through the framework in under 0.6 s (25 October 2026)
+
+**What was measured.** The Phase 2 gate's `RequiresOllama` PlayMode tests (#94) time each live
+decision two ways: wall-clock around `Agent.DecideAsync` (prompt build, queue, request,
+parse and the hop back to the main thread), and `DecisionTelemetry.LatencySeconds` (the
+provider's request alone, from the send). It is the first latency taken inside Unity since
+the prototype, and the first through this framework.
+
+Five batch-mode runs of the four tests, four timed decisions each, n = 20:
+
+| | Mean | Median | Min | Max | SD |
+|---|---|---|---|---|---|
+| Wall-clock around `DecideAsync` | 0.427 s | 0.463 s | 0.225 s | 0.560 s | 0.120 s |
+| `LatencySeconds` (provider only) | 0.427 s | 0.463 s | 0.225 s | 0.560 s | 0.119 s |
+| `QueueWaitSeconds` | 0.000 s | | | | |
+
+Per decision: 211 to 248 prompt tokens, 24 to 42 completion tokens. The longest, 0.52 to
+0.56 s, wrote the most tokens (42); the shortest, 0.23 to 0.25 s, the fewest (24). Greedy
+decoding made every run give the same four decisions and token counts, so the spread is
+between the four requests, not between runs: each request varied by 0.05 s or less across
+the five runs.
+
+**Conditions.** Windows 11, Unity 6000.3.23f1 PlayMode tests in the Editor in batch mode,
+Ollama 0.33.0, `qwen3.5:2b` (2.4 GB resident, 100% GPU, `num_ctx` 4096, temperature 0,
+`think: false`), NVIDIA RTX 5080 16 GB desktop GPU, driver 617.14. Endpoint
+`http://127.0.0.1:11434`. One model resident, checked with `ollama ps` after every run.
+Warm: three throwaway requests before the first timed one, and the model stayed loaded
+between runs. Two other Unity Editors and ordinary desktop apps were open; no ComfyUI
+container was running. A cold first run took 6.1 s for the warm-up and its first test
+together, so warming matters (build plan §4, item 6).
+
+**What it means.**
+
+- **The Phase 2 budget of 5 s holds with a wide margin on this machine.** The slowest
+  decision was 0.56 s.
+- **Almost all of the time is inside the provider's request.** Wall-clock and
+  `LatencySeconds` agree to the logged millisecond, so what happens outside the provider
+  call (building the prompt and schema, the queue, the parse and the hop back to the main
+  thread) took about a millisecond or less. That is not all of the framework's own work:
+  `LatencySeconds` starts before `OllamaProvider` serialises the request body, so that cost
+  sits inside the provider's time and is not isolated here.
+- **Not comparable with Appendix A's ~1.3 s.** That was an RTX 4060 Laptop with URP
+  rendering a 180-prop scene; this is a desktop RTX 5080 with no scene rendering. Only a
+  run on the same machine compares (§4). The inherited `localhost` question above stays
+  open: this run used `127.0.0.1` only, so it has no `localhost` arm.
+- **No accuracy claim.** The tests check that a decision arrives, not whether it is right.
+  Accuracy is Phase 4's, with a control arm (hard rule 2).
+
+**Reproduce.** With Ollama running and `qwen3.5:2b` pulled, run the PlayMode category
+`RequiresOllama` from the Test Runner, or in batch mode with
+`-runTests -testPlatform PlayMode -testCategory RequiresOllama`. Each timed decision prints a
+`LATENCY` line into the results. `AGENERELA_OLLAMA_MODEL` and `AGENERELA_OLLAMA_URL` choose
+another model or endpoint.
+
+**What would change this.** A slower GPU or a laptop on battery, a second model resident, a
+scene rendering beside the model, or a longer prompt (more targets, more history). Re-run on
+the lead's laptop for the number Appendix A can be compared with.
