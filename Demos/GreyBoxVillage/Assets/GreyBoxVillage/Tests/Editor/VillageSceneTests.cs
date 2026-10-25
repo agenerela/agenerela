@@ -98,7 +98,6 @@ namespace Demos.GreyBoxVillage.Tests
         [TestCase("follow_player", "no_target", "following the player")]
         [TestCase("block_path", "armory", "blocking the way into the armory")]
         [TestCase("warn_player", "no_target", "warning the player")]
-        [TestCase("patrol", "no_target", "patrolling the village")]
         public async Task DecisionIsExecutedOnTheGuard(string action, string target, string activity)
         {
             provider.Reply = FakeVillageProvider.Decision(action, target, "On it.");
@@ -119,12 +118,94 @@ namespace Demos.GreyBoxVillage.Tests
             Assert.That(request.Observations, Does.Contain("You are not following the player."));
             Assert.That(request.Observations, Does.Contain("Off limits to the player: armory, locked_cave, lords_keep."));
             Assert.That(provider.Offered("action"), Is.EqualTo(new[]
-                { "follow_player", "move_to", "attack_target", "warn_player", "block_path", "sound_alarm", "patrol", "none" }));
+                { "follow_player", "move_to", "attack_target", "warn_player", "block_path", "sound_alarm", "none" }));
             foreach (var id in EvaluationTargets)
             {
                 Assert.That(provider.Offered("target"), Does.Contain(id), id);
                 // A local model never reads the schema: the id has to be in the prompt itself.
                 Assert.That(request.Observations, Does.Contain(id + ", "), id);
+            }
+        }
+
+        // The README's "Offered when" column, for a guard standing at its post with the bell silent
+        // and no wolf in sight. A model cannot pick an action that is not offered.
+        [TestCase("player", "follow_player move_to attack_target warn_player block_path sound_alarm none")]
+        [TestCase("zone", "move_to attack_target warn_player block_path none")]
+        [TestCase("wolf", "move_to attack_target warn_player block_path none")]
+        [TestCase("quiet", "move_to attack_target block_path patrol none")]
+        public async Task WhoIsAskingDecidesWhatIsOffered(string source, string offered)
+        {
+            await Ask(source);
+            Assert.That(provider.Offered("action"), Is.EqualTo(offered.Split(' ')));
+            Assert.That(commands.Recorder.Records.Last().OfferedActions, Is.EqualTo(offered.Split(' ')));
+        }
+
+        [Test]
+        public async Task AQuietMomentCanStartAPatrol()
+        {
+            provider.Reply = FakeVillageProvider.Decision("patrol", "no_target", "On my rounds.");
+            await Ask("quiet");
+            Assert.That(commands.Recorder.Records.Last().Outcome, Is.EqualTo("executed"));
+            Assert.That(commands.Guard.IsPatrolling, Is.True);
+            Assert.That(commands.Guard.Activity, Is.EqualTo("patrolling the village"));
+        }
+
+        [TestCase("player")]
+        [TestCase("zone")]
+        [TestCase("wolf")]
+        public async Task AnythingButAQuietMomentBreaksOffAPatrol(string source)
+        {
+            provider.Reply = FakeVillageProvider.Decision("patrol", "no_target");
+            await Ask("quiet");
+            Assert.That(commands.Guard.IsPatrolling, Is.True);
+
+            provider.Reply = FakeVillageProvider.Decision("none", "no_target");
+            await Ask(source);
+            Assert.That(commands.Guard.IsPatrolling, Is.False);
+            Assert.That(commands.Guard.IsMoving, Is.False);
+            Assert.That(provider.LastRequest.Observations, Does.Contain("You are standing still, your patrol broken off."));
+            Assert.That(provider.Offered("action"), Does.Not.Contain("patrol"));
+        }
+
+        [TestCase("zone")]
+        [TestCase("wolf")]
+        public async Task OnlyThePlayerEndsAnEscort(string source)
+        {
+            provider.Reply = FakeVillageProvider.Decision("follow_player", "no_target");
+            await Ask("player");
+            Assert.That(commands.Guard.IsFollowing, Is.True);
+
+            provider.Reply = FakeVillageProvider.Decision("stop_following", "no_target");
+            await Ask(source);
+            Assert.That(provider.Offered("action"), Does.Not.Contain("stop_following"));
+            Assert.That(commands.Recorder.Records.Last().Outcome, Is.EqualTo("refused"));
+            Assert.That(commands.Guard.IsFollowing, Is.True);
+        }
+
+        [Test]
+        public async Task TheBellIsOfferedForAWolfCloseByAndNotForOneFarOff()
+        {
+            var wolf = commands.Senses.Wolf;
+            var start = wolf.transform.position;
+            var guard = commands.Guard.transform.position;
+            try
+            {
+                wolf.transform.position = guard + new Vector3(20, 0, 0);
+                Physics.SyncTransforms();
+                await Ask("wolf");
+                Assert.That(provider.LastRequest.Observations, Does.Contain("A wolf is 20 m from you."), "The guard must see the far wolf.");
+                Assert.That(provider.Offered("action"), Does.Not.Contain("sound_alarm"));
+
+                wolf.transform.position = guard + new Vector3(0, 0, 5);
+                Physics.SyncTransforms();
+                await Ask("wolf");
+                Assert.That(provider.LastRequest.Observations, Does.Contain("A wolf is 5 m from you."), "The guard must see the near wolf.");
+                Assert.That(provider.Offered("action"), Does.Contain("sound_alarm"));
+            }
+            finally
+            {
+                wolf.transform.position = start;
+                Physics.SyncTransforms();
             }
         }
 
@@ -236,7 +317,7 @@ namespace Demos.GreyBoxVillage.Tests
         public async Task TheRecorderKeepsWhatWasSentAndWhatCameBack()
         {
             provider.Reply = FakeVillageProvider.Decision("patrol", "no_target", "I will walk the rounds.");
-            await commands.SubmitAsync("Keep watch.");
+            await Ask("quiet");
             var record = commands.Recorder.Records.Single();
             Assert.That(record.Sent, Is.True);
             Assert.That(record.RawReply, Is.EqualTo(provider.Reply));
@@ -331,6 +412,30 @@ namespace Demos.GreyBoxVillage.Tests
             // The game reaches the framework only through its public assembly; the shared helpers stay framework-free.
             Assert.That(typeof(VillageCommands).Assembly.GetReferencedAssemblies().Any(a => a.Name == "Agenerela"), Is.True);
             Assert.That(typeof(DecisionDebugOverlay).Assembly.GetReferencedAssemblies().Any(a => a.Name.StartsWith("Agenerela")), Is.False);
+        }
+
+        // Asks the guard the way the game does for each source: the player's typed line, or the event
+        // GuardSenses raises.
+        private async Task Ask(string source)
+        {
+            switch (source)
+            {
+                case "player":
+                    await commands.SubmitAsync("Hello");
+                    break;
+                case "zone":
+                    await commands.ReportEventAsync("zone", "Event", "The player has walked into the armory, which is off limits.",
+                        DecisionPriority.PlayerFacing);
+                    break;
+                case "wolf":
+                    await commands.ReportEventAsync("wolf", "Event", "A wolf has come out of the woods.", DecisionPriority.Background);
+                    break;
+                case "quiet":
+                    await commands.ReportEventAsync("quiet", "Time", "Time passes quietly at your post.", DecisionPriority.Background);
+                    break;
+                default:
+                    throw new ArgumentException(source);
+            }
         }
 
         private Targetable[] Targetables() =>

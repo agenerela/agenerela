@@ -63,7 +63,7 @@ only once it can see the player, by a line of sight from its eyes, so a trespass
 armory fence can go unnoticed. The zone also checks each physics step that the player still
 overlaps it, because Unity sends no `OnTriggerExit` for a collider that is disabled or
 teleported out. The quiet timer is how the model shows what it does unprompted: it may choose
-`none`, or `patrol`.
+`none`, or `patrol`, which nothing else is offered for.
 
 The observations sent with every request come from the scene and the guard's state: what it is
 doing, whether it follows the player, how far the player is and whether it can see them, which
@@ -80,15 +80,37 @@ four are the evaluation agent's; the rest are this demo's. No example is an eval
 
 | Action | Target | What it does | Offered when |
 |---|---|---|---|
-| `follow_player` | none | Walks after the player, stopping 2.5 m short | not following |
-| `stop_following` | none | Stops following or patrolling and holds position | following or patrolling |
+| `follow_player` | none | Walks after the player, stopping 2.5 m short | the player speaks, and the guard is not following |
+| `stop_following` | none | Stops following and holds position | the player speaks, and the guard is following |
 | `move_to` | a place | Walks there | always |
 | `attack_target` | any | Walks there and strikes; the wolf flees to its den for 60 s | always |
-| `warn_player` | none | Stops and faces the player; the statement is the warning | always |
+| `warn_player` | none | Stops and faces the player; the statement is the warning | anything but a quiet moment |
 | `block_path` | a zone | Stands in the zone's entrance | always |
-| `sound_alarm` | none | Rings the bell for 30 s; villagers run to the shelter | the bell is silent |
-| `patrol` | none | Walks a loop: gate, camp, market, bridge, well, shelter, armory | not patrolling or following |
+| `sound_alarm` | none | Rings the bell for 30 s; villagers run to the shelter | the bell is silent, and the player speaks or the guard sees a wolf within 15 m |
+| `patrol` | none | Walks a loop: gate, camp, market, bridge, well, shelter, armory | a quiet moment, with the guard not following |
 | `none` | none | Nothing | always |
+
+Who is asking decides most of that column. A model served by Ollama never reads the schema, so
+an action's description never reaches it; what it sees is the ids, one example each, the
+observations and the history. Played live, `qwen3.5:2b` answered "Hello" with `patrol`, the
+greeting perhaps read as `patrol`'s old example of a calm moment, and a wolf 26 m away with `sound_alarm`.
+Wording cannot fix that on Ollama; availability can, because an action that is not offered
+cannot be picked. So before each decision `VillageCommands` puts the stimulus's source
+(`player`, `zone`, `wolf`, `quiet`) and the distance of a wolf the guard can see in the agent's
+`State`, which the `[Available]` checks on `VillageGuard` read:
+
+- `patrol` fills time when nothing is happening, so only the quiet timer offers it, and anything
+  else that asks breaks a patrol off first (`VillageGuard.Attend`). The guard stops to talk, then
+  the quiet timer can send it back on its rounds.
+- Only the player starts or ends an escort; a wolf, a trespass or a quiet moment asks for
+  neither. Every other action but `sound_alarm` ends one anyway.
+- The bell is for a wolf close by (`VillageGuard.AlarmWolfDistance`, 15 m), or for the player,
+  who can report a raid or a fire the game does not model.
+- A quiet moment has nothing to warn the player about.
+
+What the game cannot know it leaves to the model: "Hello sir" from a following player still
+offers `stop_following`, because telling a greeting from "you can go" means reading the text,
+which the game does not do (DR-008).
 
 The statement appears above the guard's head. `Execute` re-checks every decision; a refusal is
 shown on the overlay and in the history with the reason.
@@ -123,9 +145,12 @@ The NavMesh is baked in the editor and stored as JSON (`VillageNavMesh.villagena
 Unity forces native NavMeshData assets to binary; the importer makes the native asset in the
 cache. `Rebuild Village` bakes it; `Rebake Navigation` re-bakes after hand edits.
 
-The 23 EditMode tests run with no Ollama, through a fake provider: each action executes on the
-guard; every evaluation target is offered and named in the observations; following and the alarm
-change which actions are offered; `Execute` refuses an unavailable action and an unregistered
+The 33 EditMode tests run with no Ollama, through a fake provider: each action executes on the
+guard; every evaluation target is offered and named in the observations; who is asking (the
+player, a zone, a wolf, a quiet moment) decides which actions are offered, as the table above
+says; a quiet moment can start a patrol and anything else breaks it off; only the player ends an
+escort; the bell is offered for a wolf 5 m away and not for one 20 m away; following and the
+alarm change which actions are offered; `Execute` refuses an unavailable action and an unregistered
 target; history reaches the second request; an event is labelled and waits for a running
 decision; a quiet moment asks in the background; the recorder keeps the request and reply and
 writes one JSON line; the NavMesh reaches every place and zone entrance, over the bridge; one
@@ -145,3 +170,16 @@ Played live on 25 October 2026, `qwen3.5:2b` on Ollama 0.33.0, warm, each decisi
   so `sound_alarm` was not on offer.
 - "Walk with me for a while" drew `follow_player` in one session and `patrol` as the first, cold
   request of another.
+
+Those runs predate the availability rules above. Checked again the same day with the rules in
+place, through `VillageCommands` in an EditMode run (so the guard never walked), same model, warm,
+one run of each line:
+
+- "Hello" twice, "hello", "Hello sir" (once following, once not) and "Hello guard, what can you
+  see ?" all drew `none`; `patrol` was not offered for any of them.
+- Every quiet moment drew `patrol`.
+- "Walk with me for a while" drew `follow_player`; "Can ou go with me ? I saw a wolf" drew
+  `warn_player`.
+- A wolf seen 20 m away drew `attack_target / wolf`, with the bell not on offer; at 5 m, with the
+  bell offered, `attack_target / wolf` again. The statement was the same word for word each time,
+  the history repeat noted above.

@@ -121,9 +121,8 @@ namespace Demos.GreyBoxVillage
 
             if (Guard.Alarm != null && Guard.Alarm.IsSounding) facts.Add("The alarm bell is ringing.");
 
-            var wolf = FindFirstObjectByType<VillageWolf>();
-            if (wolf != null && !wolf.IsHidden && Senses != null && Senses.CanSee(wolf.transform))
-                facts.Add("A wolf is " + Metres(Vector3.Distance(wolf.transform.position, Guard.transform.position)) + " from you.");
+            float? wolf = VisibleWolfDistance();
+            if (wolf != null) facts.Add("A wolf is " + Metres(wolf.Value) + " from you.");
 
             facts.AddRange(Places());
             return facts;
@@ -140,6 +139,13 @@ namespace Demos.GreyBoxVillage
                 .OrderBy(x => x.d).ThenBy(x => x.t.Id, StringComparer.Ordinal)
                 .Take(TargetCap)
                 .Select(x => x.t.Id + ", " + Metres(x.d) + " away: " + x.t.Description);
+        }
+
+        private float? VisibleWolfDistance()
+        {
+            var wolf = FindFirstObjectByType<VillageWolf>();
+            if (wolf == null || wolf.IsHidden || Senses == null || !Senses.CanSee(wolf.transform)) return null;
+            return Vector3.Distance(wolf.transform.position, Guard.transform.position);
         }
 
         private static string Metres(float d) => d.ToString("0", CultureInfo.InvariantCulture) + " m";
@@ -182,6 +188,13 @@ namespace Demos.GreyBoxVillage
         {
             var agent = EnsureAgent();
             IsDeciding = true;
+            // Who is asking decides what the guard is offered (VillageGuard's availability checks).
+            // It stays set until the next decision, because Execute checks availability again.
+            if (source != "quiet") Guard.Attend();
+            agent.State[VillageGuard.AskedBy] = source;
+            float? wolf = VisibleWolfDistance();
+            if (wolf != null) agent.State[VillageGuard.WolfMetres] = wolf.Value;
+            else agent.State.Remove(VillageGuard.WolfMetres);
             Overlay.ShowThinking(label + ": " + text, ProviderLabel);
             var record = Recorder.Begin(source, label, priority, text);
             try

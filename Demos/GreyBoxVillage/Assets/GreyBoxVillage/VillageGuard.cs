@@ -13,16 +13,29 @@ namespace Demos.GreyBoxVillage
     /// the rest are this demo's own. The few-shot examples are deliberately not phrases from the
     /// evaluation set (hard rule 4). A local model never reads the schema, so these examples are
     /// how it learns each action exists.
+    ///
+    /// For the same reason the availability checks carry most of the weight: an action that is not
+    /// offered cannot be picked, whatever the model makes of a line. They read who is asking from
+    /// the agent's State, which <see cref="VillageCommands"/> sets before each decision: the source
+    /// of the stimulus under <see cref="AskedBy"/> and the distance of a wolf the guard can see under
+    /// <see cref="WolfMetres"/>.
     /// </remarks>
     [RequireComponent(typeof(NavMeshAgent))]
     public sealed class VillageGuard : MonoBehaviour
     {
+        /// <summary>State key: the source of the stimulus being decided, "player", "zone", "wolf" or "quiet".</summary>
+        public const string AskedBy = "askedBy";
+        /// <summary>State key: how far away a wolf the guard can see is, in metres. Absent when it sees none.</summary>
+        public const string WolfMetres = "wolfMetres";
+
         /// <summary>Set by <see cref="VillageCommands"/>.</summary>
         [System.NonSerialized] public Transform Player;
         public VillageAlarm Alarm;
         public Transform[] PatrolRoute;
         public float FollowDistance = 2.5f;
         public float StrikeDistance = 1.8f;
+        [Tooltip("The bell is offered for a wolf the guard can see within this distance, or when the player speaks.")]
+        public float AlarmWolfDistance = 15f;
 
         public bool IsFollowing { get; private set; }
         public bool IsPatrolling { get; private set; }
@@ -52,10 +65,11 @@ namespace Demos.GreyBoxVillage
             Report("Following the player.");
         }
 
+        // Only the player starts or ends an escort: a wolf, a trespass or a quiet moment asks for neither.
         [Available("follow_player")]
-        private bool CanFollow() => !IsFollowing;
+        private bool CanFollow(AgentContext ctx) => !IsFollowing && Asker(ctx) == "player";
 
-        [AgentAction("stop_following", "Stop following or patrolling and stay where you are.")]
+        [AgentAction("stop_following", "Stop following the player and stay where you are.")]
         [Example("You can stay put now.")]
         private void StopFollowing()
         {
@@ -66,7 +80,7 @@ namespace Demos.GreyBoxVillage
         }
 
         [Available("stop_following")]
-        private bool CanStop() => IsFollowing || IsPatrolling;
+        private bool CanStop(AgentContext ctx) => IsFollowing && Asker(ctx) == "player";
 
         [AgentAction("move_to", "Walk to a place.", RequiresTarget = true)]
         [Example("Go and stand by the {0}.", "well", "bridge")]
@@ -103,6 +117,10 @@ namespace Demos.GreyBoxVillage
             Report("Warning the player.");
         }
 
+        // A quiet moment is, by the game's own rule, one with nothing to warn about.
+        [Available("warn_player")]
+        private bool CanWarn(AgentContext ctx) => Asker(ctx) != "quiet";
+
         [AgentAction("block_path", "Stand in the entrance of a place so nobody gets in.", RequiresTarget = true)]
         [Example("Nobody gets into the {0}.", "armory", "lords_keep")]
         private void BlockPath(Transform target)
@@ -122,11 +140,14 @@ namespace Demos.GreyBoxVillage
             Report("Rang the alarm bell.");
         }
 
+        // The game sees a wolf and knows how far away it is; a raid or a fire it does not model, so
+        // the player can still report one.
         [Available("sound_alarm")]
-        private bool CanSoundAlarm() => Alarm != null && !Alarm.IsSounding;
+        private bool CanSoundAlarm(AgentContext ctx) => Alarm != null && !Alarm.IsSounding &&
+            (Asker(ctx) == "player" || ctx.State.TryGetValue(WolfMetres, out var d) && (float)d <= AlarmWolfDistance);
 
         [AgentAction("patrol", "Walk a round of the village, watching for trouble.")]
-        [Example("Keep an eye on the village while it is calm.")]
+        [Example("Your watch at the gate still has hours to run.")]
         private void Patrol()
         {
             Clear();
@@ -138,8 +159,13 @@ namespace Demos.GreyBoxVillage
             Report("Starting a patrol.");
         }
 
+        // Patrol fills the time when nothing is happening, so it is offered on the quiet timer and
+        // nowhere else; anything else that asks breaks a patrol off first (Attend).
         [Available("patrol")]
-        private bool CanPatrol() => !IsPatrolling && !IsFollowing && PatrolRoute != null && PatrolRoute.Length > 0;
+        private bool CanPatrol(AgentContext ctx) =>
+            Asker(ctx) == "quiet" && !IsPatrolling && !IsFollowing && PatrolRoute != null && PatrolRoute.Length > 0;
+
+        private static string Asker(AgentContext ctx) => ctx.State.TryGetValue(AskedBy, out var source) ? source as string : null;
 
         // ---- Body ----------------------------------------------------------------------------
 
@@ -162,6 +188,20 @@ namespace Demos.GreyBoxVillage
             speech.text = Wrap(statement.Trim(), 34);
             speech.gameObject.SetActive(true);
             speechUntil = Time.time + 6f;
+        }
+
+        /// <summary>
+        /// Breaks off a patrol so the guard can attend to whatever is asking. <see cref="VillageCommands"/>
+        /// calls it before every decision but a quiet moment's: a patrol is what the guard does while
+        /// nothing happens, and it stops when something does.
+        /// </summary>
+        public void Attend()
+        {
+            if (!IsPatrolling) return;
+            Clear();
+            Halt();
+            Activity = "standing still, your patrol broken off";
+            Report("Breaking off the patrol.");
         }
 
         /// <summary>Forgets what the guard was doing, without moving it. Used between tests.</summary>
