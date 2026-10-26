@@ -146,8 +146,11 @@ for what each Phase 2 issue does.
   256-token default is a starting point for Phase 4 to measure.
 - Newtonsoft as the core's one declared dependency (DR-009), and each demo game as its own
   Unity project (DR-010).
-- `Demos/GreyBoxVillage` — a playable grey-box scene whose guard still answers from
-  placeholder string matching, not a model (#19).
+- `Demos/GreyBoxVillage` (#19, then via #112) — the evaluation agent's world as a playable
+  grey-box village, whose guard is driven by `qwen3.5:2b` through `OllamaProvider`. The game
+  decides when to ask (a player line, a trespass, a wolf, a quiet moment) and which actions are
+  offered by who is asking, so chat never gets an unprompted `patrol`. A request history panel
+  and a JSONL log show exactly what was sent and what came back. Only the public API is used.
 - The first 54 evaluation prompts (#13, via #65), nine in each of six categories, in
   `UnityProject/Assets/Evaluation/prompts/`. Its follow-up (#66, via #76) added `agent.json`,
   the guard every prompt is measured against, so every `expectedTarget` is a registered id,
