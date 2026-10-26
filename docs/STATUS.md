@@ -152,6 +152,18 @@ build plan's phase table for what each phase means, and
   Ollama they are ignored, with the reason. `UnityProject/Assets/Sandbox/` has a scene where a
   person can type to the guard and watch it decide. The first in-Unity latency since the
   prototype is in `findings.md`: 0.23 to 0.56 s warm, `qwen3.5:2b` on an RTX 5080.
+- The guard pipeline (#106, via #115), the first Phase 3 merge: `IDecisionGuard`,
+  `GuardInput` and `GuardVerdict` (`Pass`, `RewriteToNone`, `Reject`) in `Runtime/Validation/`.
+  Every parsed decision runs through the guards in order inside `DecideAsync`, before memory
+  remembers it, and the first verdict that is not a pass stops them. The first built-in guard,
+  `SchemaLegalityGuard`, holds what `Execute` used to check, plus a new rule: an action that
+  needs a target gets a real one, so `move_to / no_target` is rejected. After a rewrite or a
+  reject, `Decision` is `none / no_target`, `DecisionResult.ModelDecision` keeps the model's
+  answer, and `DecisionResult.Verdict` says which guard and why. Telemetry fills
+  `GuardsFired` and adds `Verdict` and `GuardReason`. `Execute` runs the legality guard again
+  against the world as it is then, recorded as `SchemaLegalityGuard@Execute`. The developer
+  guard list is internal until #108, a guard that throws is not caught yet (#108), and the
+  statement after a refusal is still the model's (#109). 39 EditMode tests.
 - Newtonsoft as the core's one declared dependency (DR-009), and each demo game as its own
   Unity project (DR-010).
 - `Demos/GreyBoxVillage` (#19, then via #112) — the evaluation agent's world as a playable
@@ -174,10 +186,10 @@ build plan's phase table for what each phase means, and
 
 ## Not written yet
 
-Phase 3, the validation pipeline: the guard pipeline and its legality guard (#106), target
-grounding (#105) and its one-line fallback (#107), developer guards (#108), contained
-refusals (#109) and the gate (#110). Until it lands, `Execute` refuses only an unavailable
-action or an unregistered target; a legal answer that is wrong goes through. Still open from
+The rest of Phase 3, which plugs into #106's pipeline: target grounding (#105) and its
+one-line fallback (#107), developer guards (#108), contained refusals (#109) and the gate
+(#110). Until #105 lands, only illegal answers are stopped: a legal answer that is wrong,
+such as a target the model did not mean, still goes through. Still open from
 Phase 2, off its gate's path: observation sources (#91), the provider config asset (#92) and
 `AgentBehaviour` (#93), so an agent is still built in code. No editor UI exists yet
 (Phase 5).
