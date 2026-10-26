@@ -267,10 +267,10 @@ namespace Agenerela
         /// The pipeline, in order: a context from the identity, a copy of <see cref="State"/>, the
         /// targets resolved now, the stimulus and the observations; the schema from the actions
         /// available now (#7, #8); the examples (#10); the request (#16); the provider's queue
-        /// (#89); the provider (#12); the parse; the guards. Telemetry records the latency of the provider's
-        /// request on a monotonic clock, from the send and not the enqueue; the priority, the time
-        /// spent queued and how many requests were ahead; the provider's name, the framework
-        /// version, the token counts the provider reported, and the target ids each
+        /// (#89); the provider (#12); the parse; the guards (#106). Telemetry records the latency of
+        /// the provider's request on a monotonic clock, from the send and not the enqueue; the
+        /// priority, the time spent queued and how many requests were ahead; the provider's name,
+        /// the framework version, the token counts the provider reported, and the target ids each
         /// <see cref="IReportsDroppedTargets"/> source left out, in source order (#81), and the
         /// exchanges of history sent, left out and forgotten (#90).
         /// </para>
