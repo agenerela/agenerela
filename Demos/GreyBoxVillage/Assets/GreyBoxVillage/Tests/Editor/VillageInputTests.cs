@@ -18,6 +18,8 @@ namespace Demos.GreyBoxVillage.Tests
             yield return new EnterPlayMode();
             yield return null;
             var commands = Object.FindFirstObjectByType<VillageCommands>();
+            commands.UseProvider(new FakeVillageProvider(FakeVillageProvider.Decision("move_to", "north_tower")));
+            commands.Senses.QuietTimerEnabled = false;
             var input = commands.Input;
             var field = input.GetComponent<UIDocument>().rootVisualElement.Q<TextField>("VillageCommand");
             field.Focus();
@@ -26,8 +28,10 @@ namespace Demos.GreyBoxVillage.Tests
                 using (var e = KeyDownEvent.GetPooled(character, KeyCode.None, EventModifiers.None)) field.SendEvent(e);
             Assert.That(field.value, Is.EqualTo("Go to the tower"));
             using (var e = KeyDownEvent.GetPooled('\n', KeyCode.Return, EventModifiers.None)) field.SendEvent(e);
+            for (int frame = 0; frame < 300 && commands.IsDeciding; frame++) yield return null;
+            Assert.That(commands.IsDeciding, Is.False, "The decision never finished.");
             Assert.That(commands.Overlay.ActionId, Is.EqualTo("move_to"));
-            Assert.That(commands.Overlay.TargetId, Is.EqualTo("tower"));
+            Assert.That(commands.Overlay.TargetId, Is.EqualTo("north_tower"));
             Assert.That(input.IsTyping, Is.False);
             Assert.That(input.Player.InputBlocked, Is.False);
             Assert.That(field.value, Is.Empty);

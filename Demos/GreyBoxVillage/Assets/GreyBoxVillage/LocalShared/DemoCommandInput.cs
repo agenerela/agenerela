@@ -14,7 +14,7 @@ namespace Demos.Shared
         public bool IsTyping { get; private set; }
         private VisualElement root;
         private TextField command;
-        private Label decision, guards, stimulus, message, help;
+        private Label header, decision, guards, stimulus, message, details, help;
         private int openedTypingFrame = -1;
         private int submittedFrame = -1;
 
@@ -25,11 +25,13 @@ namespace Demos.Shared
             panel.style.left = 16;
             panel.style.right = 16;
             panel.style.bottom = 16;
-            DemoUI.Label(panel, "PLACEHOLDER  |  Provider: none");
+            header = DemoUI.Label(panel, "");
             decision = DemoUI.Label(panel, "");
             guards = DemoUI.Label(panel, "");
             stimulus = DemoUI.Label(panel, "");
             message = DemoUI.Label(panel, "");
+            details = DemoUI.Label(panel, "");
+            details.style.color = new Color(0.65f, 0.72f, 0.75f);
             var row = new VisualElement();
             row.style.flexDirection = FlexDirection.Row;
             row.style.marginTop = 6;
@@ -112,12 +114,14 @@ namespace Demos.Shared
                     SetTyping(false);
                 }
             }
+            header.text = "Provider: " + Overlay.Provider;
+            details.text = Overlay.Details;
             decision.text = "Action: " + Overlay.ActionId + "    Target: " + Overlay.TargetId + "    Latency: " + Overlay.LatencyLabel;
             guards.text = "Guards: " + Overlay.GuardsLabel;
-            stimulus.text = "You: " + Overlay.Stimulus;
+            stimulus.text = Overlay.Stimulus;
             message.text = Overlay.Message;
             help.text = IsTyping ? "Typing: Enter sends / Esc returns to movement" :
-                "WASD / arrows: walk   |   Enter: type   |   Try: Go to the tower";
+                "WASD / arrows: walk   |   Enter: type   |   Say anything, e.g. walk over to the tower";
         }
     }
 }
