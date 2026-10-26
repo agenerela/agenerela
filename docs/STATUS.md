@@ -11,11 +11,12 @@ phase table.
 
 ## Phases
 
-Phases 0 and 1 are complete: **Phase 1 (Core, Actions, Schema) closed on 11 October**, when
-the five checks in #11 passed. **Phase 2 (Ollama provider, queue, memory) is underway**, due
-29 October, and closes when the live checks in its gate (#94) pass. See the build plan's
-phase table for what each phase means, and [`docs/phases/phase-2.html`](phases/phase-2.html)
-for what each Phase 2 issue does.
+Phases 0 to 2 are complete. **Phase 1 (Core, Actions, Schema) closed on 11 October**, when
+the five checks in #11 passed, and was released as 0.2.0. **Phase 2 (Ollama provider, queue,
+memory) closed on 25 October**, when the live checks in its gate (#94) passed, and is released
+as 0.3.0. **Phase 3 (Validation pipeline) is next**, due 9 November (#105 to #110). See the
+build plan's phase table for what each phase means, and
+[`docs/phases/phase-2.html`](phases/phase-2.html) for what each Phase 2 issue does.
 
 ## Merged so far
 
@@ -144,6 +145,13 @@ for what each Phase 2 issue does.
   this request's token cap left out) and `HistoryTurnsForgotten` (the rising total the turn cap
   let go of), filled through the optional `IReportsDroppedTurns`. 30 EditMode tests. The
   256-token default is a starting point for Phase 4 to measure.
+- The Phase 2 gate (#94, via #111): `RequiresOllama` PlayMode tests in a new
+  `Agenerela.Tests.Runtime` assembly, against a live model. One agent with five actions makes
+  a round trip under 5 s after warm-up, with its telemetry filled in; a model that was never
+  pulled is a `ModelNotFound` pipeline error; history reaches the second request. Without
+  Ollama they are ignored, with the reason. `UnityProject/Assets/Sandbox/` has a scene where a
+  person can type to the guard and watch it decide. The first in-Unity latency since the
+  prototype is in `findings.md`: 0.23 to 0.56 s warm, `qwen3.5:2b` on an RTX 5080.
 - Newtonsoft as the core's one declared dependency (DR-009), and each demo game as its own
   Unity project (DR-010).
 - `Demos/GreyBoxVillage` (#19, then via #112) — the evaluation agent's world as a playable
@@ -166,17 +174,17 @@ for what each Phase 2 issue does.
 
 ## Not written yet
 
-All of it Phase 2: the gate, a live decision in a sandbox scene with `RequiresOllama`
-PlayMode tests (#94), which can start now that #87, #88, #89 and #90 have all merged. Beside
-it, and not on the gate's path: observation sources (#91), the provider config asset (#92)
-and `AgentBehaviour` (#93).
-**The framework can now call a model**, through `OllamaProvider` (#88), but no test does yet:
-the first live decision under test is the gate's PlayMode test (#94). Phase 1 was pure C#
-with EditMode tests and no Ollama, on purpose.
+Phase 3, the validation pipeline: the guard pipeline and its legality guard (#106), target
+grounding (#105) and its one-line fallback (#107), developer guards (#108), contained
+refusals (#109) and the gate (#110). Until it lands, `Execute` refuses only an unavailable
+action or an unregistered target; a legal answer that is wrong goes through. Still open from
+Phase 2, off its gate's path: observation sources (#91), the provider config asset (#92) and
+`AgentBehaviour` (#93), so an agent is still built in code. No editor UI exists yet
+(Phase 5).
 
 ## Groundwork beside the phases
 
-Open beside Phase 2: the evaluation set's real annotators and next batch of
+Open beside Phase 3: the evaluation set's real annotators and next batch of
 prompts (#85), and the demo games, one sub-issue each under #47, starting with the
 GreyBoxStrategy grey box (#20). Code two games share moves into `Demos/Shared/` once a second
 game needs it (#14). The asset server those games draw on (`tools/comfyui/`) is set up on the

@@ -171,11 +171,14 @@ it; opening a project in a newer patch rewrites that file for everyone.
 
 ## Current state
 
-**Phase 1 (Core, Actions, Schema) is complete**, closed on 11 October when the five checks
-in #11 passed. **Phase 2 (Ollama provider, queue, memory) is underway**, due 29 October, and
-closes when the live checks in its gate (#94) pass. **Nothing in the framework calls a model
-yet**: the first live decision is Phase 2's, through an Ollama provider that sends
-`JsonSchemaSerializer`'s output.
+**Phases 1 and 2 are complete.** Phase 1 (Core, Actions, Schema) closed on 11 October when
+the five checks in #11 passed. Phase 2 (Ollama provider, queue, memory) closed on 25 October
+when the live checks in its gate (#94) passed, and is released as 0.3.0. **The framework calls
+a model**: `OllamaProvider` sends `JsonSchemaSerializer`'s output to a local Ollama, and the
+gate's `RequiresOllama` PlayMode tests prove the live path. **Phase 3 (Validation pipeline) is
+next**, due 9 November: the guards between the provider and the handler (#105 to #110). Still
+open from Phase 2, off its gate's path: observation sources (#91), the provider config asset
+(#92) and `AgentBehaviour` (#93).
 
 What has merged, what is still to write and the groundwork beside the phases are in
 [`docs/STATUS.md`](docs/STATUS.md); the package's API changes are in its

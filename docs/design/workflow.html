@@ -225,7 +225,7 @@ footer p{max-width:74ch}
   <h1>Building an Agenerela agent, start to finish</h1>
   <p class="lede">What a game developer actually does with our framework: every file they create, every GameObject they add, every window they open, and the exact line where their code takes over from ours. Nine steps, from an empty Unity project to a guard that answers a player.</p>
   <div class="herometa">
-    <span class="pill dark">Phase 1 complete — the core is built; the screens and the model call are not</span>
+    <span class="pill dark">Phase 2 complete — the core and the model call are built; the guards and the screens are not</span>
     <span class="pill">Screens 1–6 come from the 17 Sep sketch lab</span>
     <span class="pill dash">Dashed = proposed, still ours to argue about</span>
   </div>
@@ -669,7 +669,7 @@ footer p{max-width:74ch}
       <div class="help" style="margin:14px 0 0"><span class="ico">◆</span><div><b>The label is a free string you choose per call.</b> The framework passes it through and never reads it. That is deliberate: the moment we ship an enum of situations, every game that does not fit it has to fight us.</div></div>
       <div class="help acc" style="margin:10px 0 0"><span class="ico">⚑</span><div><b>Priority is the one field worth setting deliberately (DR-015).</b> Player-facing by default, so a developer who never thinks about it gets the responsive behaviour. Only ambient work opts into waiting. Without it every call looks identical to the queue, and at ≈21 s for 30 agents the scheduler cannot tell a player's question from background chatter — which is also why <b>a behaviour-tree node calling this is a supported integration</b>, not a workaround: it sets its own priority like anything else.</div></div>
     </div></div>
-    <figcaption>All three go through the same queue, the same schema build, the same guards and the same log. <span class="mono">DecideAsync</span> only decides; <span class="mono">Execute</span> re-checks the answer independently and runs the handler — two calls on purpose (hard rule 5, #17). <span class="mono">DecideOptions</span>' Phase 1 fields, built in #17 (via #80): <span class="mono">StimulusLabel</span> (default <span class="mono">"Player"</span>), <span class="mono">Observations</span> and <span class="mono">IdleExampleStimulus</span>. <span class="mono">Priority</span> (DR-015) is read by the queue, which arrives in Phase 2.</figcaption>
+    <figcaption>All three go through the same queue, the same schema build, the same guards and the same log. <span class="mono">DecideAsync</span> only decides; <span class="mono">Execute</span> re-checks the answer independently and runs the handler — two calls on purpose (hard rule 5, #17). <span class="mono">DecideOptions</span>' Phase 1 fields, built in #17 (via #80): <span class="mono">StimulusLabel</span> (default <span class="mono">"Player"</span>), <span class="mono">Observations</span> and <span class="mono">IdleExampleStimulus</span>. <span class="mono">Priority</span> (DR-015) is read by the queue, which arrived in Phase 2 (#89, via #103).</figcaption>
   </figure>
 </section>
 
@@ -921,7 +921,7 @@ Packages/
 
 <!-- ============ STATUS ============ -->
 <section class="sec">
-  <div class="sechead"><h2>How much of this exists today</h2><span class="pill dark">Phase 1 complete, October 2026</span></div>
+  <div class="sechead"><h2>How much of this exists today</h2><span class="pill dark">Phase 2 complete, October 2026</span></div>
   <div class="cols3">
     <div class="card"><h4 style="color:var(--ok)">Merged and real</h4><ul>
       <li><b>TargetRegistry</b> — id → object, with tests (#5)</li>
@@ -940,28 +940,34 @@ Packages/
       <li><b>Agent</b> — the DecideAsync pipeline, proven end to end against a fake provider, and Execute, which re-checks the decision before any game code runs (#17, via #80)</li>
       <li><b>The Phase 1 gate</b> — the build plan's five checks as EditMode tests through the whole pipeline (#11, via #84)</li>
       <li><b>Newtonsoft</b> as the core's one declared dependency (DR-009)</li>
-      <li><b>GreyBoxVillage</b> — a playable grey-box scene whose guard still answers from string matching, not a model (#19)</li>
+      <li><b>GreyBoxVillage</b> — a playable grey-box village whose guard is driven by <span class="mono">qwen3.5:2b</span>, offered its actions by who is asking (#19, then via #112)</li>
       <li><b>Evaluation prompts</b> — the first 54 labelled prompts, nine in each of six categories, for the Evaluation Report (#13, via #65; follow-up: #66, via #76)</li>
       <li><b>TargetsDropped</b> filled from any target source that reports what its cap left out, such as a capped proximity source (#81, via #96)</li>
+      <li><b>Typed provider errors</b> — a failed decision says why, such as a model that was never pulled (#87, via #101)</li>
+      <li><b>OllamaProvider</b> — the first provider that calls a model (#88, via #102)</li>
+      <li><b>The request queue</b> and <span class="mono">DecideOptions.Priority</span> — one request in flight per provider, the player's question first (DR-015; #89, via #103)</li>
+      <li><b>Short-term memory</b> — <span class="mono">IMemoryStrategy</span> and <span class="mono">RollingHistory</span>, the last exchanges in every request (#90, via #104)</li>
+      <li><b>The Phase 2 gate</b> — <span class="mono">RequiresOllama</span> PlayMode tests against a live model, and a sandbox scene to watch it decide (#94, via #111)</li>
     </ul></div>
     <div class="card"><h4>Written down, not written</h4><ul>
-      <li><b>Phase 2</b> — typed provider errors, the Ollama provider, the request queue and short-term memory, then a live decision in a sandbox scene (#87, #88, #89, #90, gate #94); beside them observation sources, the provider config asset and <span class="mono">AgentBehaviour</span> (#91, #92, #93)</li>
+      <li><b>Phase 3</b> — the guard pipeline, target grounding and its fallback, developer guards and contained refusals, then the gate (#105 to #110)</li>
+      <li><b>Still open from Phase 2</b> — observation sources, the provider config asset and <span class="mono">AgentBehaviour</span> (#91, #92, #93)</li>
     </ul></div>
     <div class="card"><h4 style="color:var(--warn)">Decided here, not yet built</h4><ul>
       <li><b>DR-012</b> observation sources, capped; summariser as one source</li>
       <li><b>DR-013</b> provider config asset + resolution chain</li>
-      <li><b>DR-015</b> priority on the call; optional ticker</li>
+      <li><b>DR-015</b>'s optional ticker (priority on the call is built, #89)</li>
       <li>Still only proposed: the <b>New Agent wizard</b> (figure 12) and the on-demand runtime service (figure 10)</li>
     </ul></div>
   </div>
   <div class="callbox" style="margin-top:20px">
-    <p style="margin:0;font-size:14px"><b>Nothing in the framework calls a model yet.</b> Phase 1 was pure C# with EditMode tests and no Ollama, on purpose: state masking, required target with the <span class="mono">no_target</span> sentinel, field order and the few-shot block are all testable without a model running, and all five now pass as one gate (#11). The first live decision is Phase 2. Every accuracy number quoted on this page is carried from the predecessor prototype (Appendix A) and was measured against Ollama specifically — it is not a claim about this framework until we re-measure it here, with a control arm, and write it into the findings log.</p>
+    <p style="margin:0;font-size:14px"><b>The framework calls a model now, but nothing yet checks its answer.</b> Phase 2 made the first live decisions, through Ollama, proven by its gate's PlayMode tests (#94); a warm one took under 0.6 s on an RTX 5080. Until the Phase 3 guards land, <span class="mono">Execute</span> refuses only an unavailable action or an unregistered target, so a legal answer that is wrong goes through. Every accuracy number quoted on this page is carried from the predecessor prototype (Appendix A) and was measured against Ollama specifically — it is not a claim about this framework until we re-measure it here, with a control arm, and write it into the findings log.</p>
   </div>
 </section>
 
 <footer>
   <p><b>Agenerela</b> — a Unity framework that lets a language model drive game agents by choosing from actions the developer registered. CSUN COMP 490 / 491.</p>
-  <p style="margin-top:10px">This page walks the developer's path; the six sketch-lab wireframes it refers to are the screens themselves. Rules cited here come from <span class="mono">docs/FRAMEWORK_BUILD_PLAN.md</span> and its decision records — DR-008 (no input taxonomy), DR-009 (one dependency), DR-010 (demos as separate projects) — and the measurements come from Appendix A. Where this page proposes something the plan does not settle, it says so on the figure. Last brought in step with the plan and the issues on 11 October 2026, after Phase 1 closed with its five-check gate (#11, via #84); where the page and the plan disagree, the plan is current.</p>
+  <p style="margin-top:10px">This page walks the developer's path; the six sketch-lab wireframes it refers to are the screens themselves. Rules cited here come from <span class="mono">docs/FRAMEWORK_BUILD_PLAN.md</span> and its decision records — DR-008 (no input taxonomy), DR-009 (one dependency), DR-010 (demos as separate projects) — and the measurements come from Appendix A. Where this page proposes something the plan does not settle, it says so on the figure. Last brought in step with the plan and the issues on 25 October 2026, after Phase 2 closed with its live gate (#94, via #111); where the page and the plan disagree, the plan is current.</p>
 </footer>
 </div>
 </body>
