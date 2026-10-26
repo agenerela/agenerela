@@ -21,6 +21,14 @@ on:
   push:
     branches: [test, main]
 
+# A newer push to, or edit of, the same pull request makes its older runs pointless: cancel
+# them, so a busy queue runs only the latest. A push to test or main gets a group of its own
+# (its run id), because GitHub also cancels a pending run that shares a group, and every
+# merged commit should keep its own result.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 

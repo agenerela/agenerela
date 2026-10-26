@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Agenerela — GitHub Project Roadmap and Insights</title>
+<style>
+  @page { size: letter landscape; margin: 0.45in 0.55in; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; color: #1f2328; margin: 0; }
+  section { page-break-after: always; height: 7.55in; display: flex; flex-direction: column; }
+  section:last-child { page-break-after: auto; }
+  h1 { font-size: 30pt; margin: 1.6in 0 0.15in; }
+  h2 { font-size: 17pt; margin: 0 0 4pt; }
+  .num { color: #59636e; font-weight: 400; margin-right: 6pt; }
+  p { font-size: 11pt; line-height: 1.4; margin: 0 0 8pt; }
+  .sub { font-size: 14pt; color: #59636e; margin-bottom: 0.4in; }
+  .figure { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; gap: 8pt; }
+  .figure img { max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #d0d7de; border-radius: 4px; }
+  .figure.pair { flex-direction: column; }
+  .figure.pair img { max-height: 49%; }
+  table { border-collapse: collapse; font-size: 11pt; }
+  td { padding: 3pt 14pt 3pt 0; vertical-align: top; }
+  td:first-child { color: #59636e; }
+</style>
+</head>
+<body>
+
+<section>
+  <h1>Agenerela — GitHub Project Roadmap and Insights</h1>
+  <p class="sub">CSUN COMP 490 / 491 · Senior Design · 20 October 2026</p>
+  <table>
+    <tr><td>Project</td><td>github.com/orgs/agenerela/projects/1 — 44 issues</td></tr>
+    <tr><td>Figures</td><td>1 Roadmap · 2 Burnup · 3 Issues by assignee · 4 Status by assignee · 5 Issues by label · 6 Priority by label</td></tr>
+    <tr><td>Also submitted</td><td>Agenerela - Roadmap.csv — the roadmap's data, one row per issue</td></tr>
+    <tr><td>Filter</td><td>Every chart uses <b>is:issue</b> (44 items)</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2><span class="num">1</span>Roadmap</h2>
+  <p>All 44 issues on a timeline from their start date to their target date, with the phase milestones as markers.
+     Phase 1 closed in early October; Phase 2 is due 29 October; the Phase 4 evaluation harness follows in December,
+     and the demo games run to April 2027.</p>
+  <div class="figure pair">
+    <img src="figures/1-roadmap-top.png" alt="Roadmap, issues 1 to 28">
+    <img src="figures/1-roadmap-bottom.png" alt="Roadmap, issues 18 to 44">
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">2</span>Burnup</h2>
+  <p>Completed and open issues over the whole project, from 6 September. Completed work climbs steadily to 27 by
+     19 October, while open work stays between 15 and 19 as new issues are written for the next phase.</p>
+  <div class="figure"><img src="figures/2-burnup.png" alt="Burnup chart"></div>
+</section>
+
+<section>
+  <h2><span class="num">3</span>Issues by assignee</h2>
+  <p>How many issues each team member owns. The 12 without an assignee are demo-game ideas and Phase 2 work
+     still being handed out.</p>
+  <div class="figure"><img src="figures/3-issue-size.png" alt="Issues by assignee"></div>
+</section>
+
+<section>
+  <h2><span class="num">4</span>Status by assignee</h2>
+  <p>Each status split by who owns the issue: 28 Done, 6 Todo, 4 Blocked, 4 Ideas and 2 In progress.</p>
+  <div class="figure"><img src="figures/4-issue-status.png" alt="Status by assignee"></div>
+</section>
+
+<section>
+  <h2><span class="num">5</span>Issues by label</h2>
+  <p>How many issues carry each label. An issue with several labels is counted under each, so the bars add up to
+     more than 44.</p>
+  <div class="figure"><img src="figures/5-labels.png" alt="Issues by label"></div>
+</section>
+
+<section>
+  <h2><span class="num">6</span>Priority by label</h2>
+  <p>Issues by priority, split by label. Most work is Low; the two High issues are the phase gates — #11 (Phase 1)
+     and #94 (Phase 2) — each counted once per label.</p>
+  <div class="figure"><img src="figures/6-priority.png" alt="Priority by label"></div>
+</section>
+
+</body>
+</html>

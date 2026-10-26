@@ -72,16 +72,36 @@ namespace Agenerela.Providers
         public string Observations;
 
         /// <summary>
-        /// Previous turns, oldest first. Empty in Phase 1; Phase 2's
-        /// <c>IMemoryStrategy</c> fills it, defaulting to a rolling window of the last few
-        /// turns. Never null — an empty list, so providers need no null check.
+        /// What happened before this request, oldest first: the exchanges the agent's memory
+        /// recalls, two entries each (#90). Never null — an empty list, so providers need no null
+        /// check — and empty when the agent has no memory or nothing to recall.
         /// </summary>
         /// <remarks>
-        /// Deliberately a flat list of strings so that memory can be added in Phase 2
-        /// without changing this type or #16's signature. How a turn encodes its speaker is
-        /// the one thing here left open: it is decided in Phase 2 alongside the memory
-        /// strategy, and until then the list is always empty, so no provider can be wrong
-        /// about it yet. Do not invent an encoding and read it back.
+        /// <para>
+        /// <b>The encoding</b>, decided once (build plan §2.9, rule 4). Each exchange is two
+        /// entries, in this order:
+        /// </para>
+        /// <list type="number">
+        ///   <item><description>The stimulus exactly as it was sent then, label included:
+        ///   <c>Player: "Follow me."</c></description></item>
+        ///   <item><description>The decision the agent made, as the JSON object the schema asks
+        ///   for, in schema field order, on one line:
+        ///   <c>{"action":"follow_player","target":"no_target","statement":"Lead the way."}</c></description></item>
+        /// </list>
+        /// <para>
+        /// So the count is always even, and entry <c>i</c> is a stimulus when <c>i</c> is even. A
+        /// provider with chat roles sends each stimulus as a <c>user</c> message and each decision
+        /// as an <c>assistant</c> message; one without roles writes them into the user turn in
+        /// the same order, before <see cref="Stimulus"/>. Either way they go in verbatim, like
+        /// every other field.
+        /// </para>
+        /// <para>
+        /// The decision is the one <c>DecideAsync</c> returned, written by the framework, never
+        /// the provider's raw reply (§2.9, rule 1): the model sees its earlier answers in exactly
+        /// the form it must give now, and what it reads is what the agent did. A provider must
+        /// not parse the entries back or branch on their contents; the label in a stimulus is the
+        /// developer's free string (DR-008).
+        /// </para>
         /// </remarks>
         public IReadOnlyList<string> History = new List<string>();
 

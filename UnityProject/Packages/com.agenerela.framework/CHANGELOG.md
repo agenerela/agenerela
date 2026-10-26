@@ -8,6 +8,95 @@ While the version stays `0.x`, the public API may change in any release.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-25
+
+Phase 2: Ollama provider, queue, memory. The first release that calls a model: an agent
+decides through `OllamaProvider` against a local Ollama, one request at a time per provider
+with the player's question first, remembering its last few exchanges, and a failed request
+comes back as a typed reason rather than an exception. The Phase 2 gate's `RequiresOllama`
+PlayMode tests prove the live path (#94); a warm decision on `qwen3.5:2b` took 0.23 to 0.56 s
+on the machine they ran on. In the repository, not the package, `Demos/GreyBoxVillage` is a
+playable village whose guard this release drives.
+
+**Early development: not ready for a game yet.** Major parts are still missing:
+
+- **The validation guards** (Phase 3, #105 to #110). `Execute` already refuses an action that
+  is not available and a target that is not registered, but nothing yet catches a legal
+  answer that is wrong: a substituted target, an action that needs a target answered without
+  one, or a low-confidence pick.
+- **Any measured accuracy** (Phase 4). No number from this framework says how often it chooses
+  right; the ones in the docs are the predecessor prototype's.
+- **All editor UI** (Phase 5): agent setup, the New Agent wizard and the Decision Log window.
+- **Setup without code**: the provider config asset (#92), `AgentBehaviour` (#93) and
+  observation sources (#91). An agent is still built in code.
+- **Any provider but Ollama** (Phases 6 and 6b), so Ollama must be running, and a built
+  player cannot decide on its own.
+
+The public API will change in the releases to come.
+
+### Added
+- `ProviderException` and `ProviderErrorKind` in `Agenerela.Providers` (#87) — what a provider
+  throws when a request fails, with a `Kind` (`Unreachable`, `ModelNotFound`, `Timeout`,
+  `Rejected`, `ServerError`, `MalformedResponse`) and the failing provider's `ProviderName`, so
+  a model that was never pulled is told apart from a server that is not running. Its message
+  says what to do next where the provider can tell, and never contains an API key.
+- `PipelineErrorKind` in namespace `Agenerela`, and `DecisionTelemetry.ErrorKind` and
+  `DecisionTelemetry.ErrorMessage` (#87). Every `PipelineError` result now says why it failed:
+  `RequestPreparation`, `ProviderUnreachable`, `ModelNotFound`, `ProviderTimeout`,
+  `ProviderRejected`, `ProviderServerError`, `ProviderMalformedResponse`, `ProviderFailed` or
+  `UnreadableReply`, with the warning `Agent` logged as its message. Each `ProviderErrorKind`
+  maps to its own kind; `ProviderFailed` means only an exception that is not a
+  `ProviderException`, or a provider returning no result. Both fields are null on a decision,
+  and round-trip through Newtonsoft.
+- `OllamaProvider` and `OllamaSettings` in `Agenerela.Providers` (#88) — the first provider
+  that calls a model: Ollama's `/api/chat` on the developer's machine, at
+  `http://127.0.0.1:11434` by default, sending the schema in `format`, greedy decoding,
+  `think: false`, `num_ctx` 4096 and `logprobs` with five alternatives, as every number in
+  Appendix A was measured. It returns `message.content` exactly as received, the token
+  counts, the token probabilities and the model that answered, and throws
+  `ProviderException` with the kind that fits. Built on `System.Net.Http.HttpClient`, so it
+  needs no new package; it does not work in a WebGL player.
+- `ProviderResult.Model` and `DecisionTelemetry.Model` (#88): the model that produced a
+  reply, which `Agent` copies from the one to the other. Empty in telemetry when the provider
+  does not say.
+- Short-term memory (#90, build plan §2.9): `IMemoryStrategy`, with `Recall(ctx)` and
+  `Remember(ctx, request, result)`, and its default, `RollingHistory(turns: 6, maxTokens: 256)`,
+  the last exchanges oldest first. Past either cap the oldest exchange goes first, a whole one at
+  a time; tokens are estimated as characters over four. `Agent.Memory` is a new `RollingHistory`
+  for each agent, never one on the profile, and null turns memory off. The agent recalls into
+  `DecisionRequest.History` while it prepares a request and remembers the decision it returns,
+  as parsed, never the raw reply; a pipeline error or a cancelled call remembers nothing. It
+  remembers on the main thread, even when the provider answered on another.
+- `DecisionTelemetry.HistoryTurnsSent`, `HistoryTurnsDropped` and `HistoryTurnsForgotten`
+  (#90), and the optional `IReportsDroppedTurns` a memory strategy implements to fill the other
+  two. Dropped is what this request's token cap left out of the exchanges still held, so above
+  0 means the budget is binding; Forgotten is the rising total the turn cap let go of.
+- `DecisionPriority` (`PlayerFacing`, `Background`) and `DecideOptions.Priority` in namespace
+  `Agenerela` (#89, DR-015). Every `Agent` now sends through a queue in front of its provider
+  instance, shared by every agent given that instance: one request in flight at a time,
+  player-facing before background, first come, first served within each. Player-facing is the
+  default, so nothing changes for a caller who never sets it. A request already sent is never
+  aborted; one cancelled while queued leaves the queue at once and never reaches the provider;
+  a failed request frees its place, and nothing is retried. Agents on different provider
+  instances never wait on each other.
+- `DecisionTelemetry.Priority`, `QueueWaitSeconds` (from joining the queue to being sent) and
+  `QueuedAhead` (requests in flight or queued ahead of it when it joined) (#89).
+- `RequiresOllama` PlayMode tests in a new `Agenerela.Tests.Runtime` assembly (#94): a live
+  round trip under 5 s after warm-up, its telemetry filled in, a model that was never pulled
+  reported as `ModelNotFound`, and history reaching the second request. They are ignored,
+  with the reason, when Ollama is not reachable. `AGENERELA_OLLAMA_MODEL` and
+  `AGENERELA_OLLAMA_URL` choose the model and endpoint.
+
+### Changed
+- `DecisionRequest.History` now documents its encoding (#90): two entries per exchange, the
+  stimulus as it was sent and then the decision as the schema's JSON on one line.
+  `OllamaProvider` already sent it this way, as `user` then `assistant` messages.
+- `ILLMProvider.RequestAsync`'s remarks and `Documentation~/providers.md` now point at
+  `ProviderException` (#87) as what a provider throws; providers.md's Ollama section says what
+  was built (#88).
+- `DecisionTelemetry.LatencySeconds` is timed from the moment the request is sent, so it stays
+  the provider's time alone and a wait in the queue shows in `QueueWaitSeconds` instead (#89).
+
 ## [0.2.0] - 2026-10-18
 
 Phase 1: Core, Actions, Schema. The whole decision pipeline, from registered actions and

@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 400" width="1280" height="400" role="img" aria-labelledby="t d">
+  <title id="t">How one decision works</title>
+  <desc id="d">One decision in four steps. 1: the game asks the agent, here a guard told to go to the tower. 2: of the actions move_to, talk, follow_player and attack, attack is not legal right now and is never offered. 3: the model answers with move_to the tower. 4: Execute checks the decision again, then the game's MoveTo method runs.</desc>
+  <style>
+    text{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif}
+    .mono{font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',Menlo,monospace}
+    .chip{fill:#21262d;stroke:#30363d}
+    .pick{fill:#1f5bd8;stroke:#4d8eff}
+    .cover{fill:#161b22}
+
+    .cycle{animation:cycle 12s infinite both}
+    .c-cmd{animation:wipe-cmd 12s infinite both}
+    .chips{animation:chips 12s infinite both}
+    .pick{animation:pick 12s infinite both}
+    .masked{opacity:.35;animation:masked 12s infinite both}
+    .strike{animation:show-strike 12s infinite both}
+    .why{animation:why 12s infinite both}
+    .c-j1{animation:wipe-j1 12s infinite both}
+    .c-j2{animation:wipe-j2 12s infinite both}
+    .c-j3{animation:wipe-j3 12s infinite both}
+    .run{animation:run 12s infinite both}
+    .cursor{animation:blink 1s steps(1) infinite}
+
+    @keyframes cycle{0%,93%{opacity:1}98%,100%{opacity:0}}
+    @keyframes wipe-cmd{0%,3%{transform:translateX(0);animation-timing-function:steps(38)}12%,100%{transform:translateX(440px)}}
+    @keyframes chips{0%,14%{opacity:0}16%,100%{opacity:1}}
+    @keyframes masked{0%,22%{opacity:1}25%,100%{opacity:.35}}
+    @keyframes show-strike{0%,22%{opacity:0}25%,100%{opacity:1}}
+    @keyframes why{0%,24%{opacity:0}27%,100%{opacity:1}}
+    @keyframes wipe-j1{0%,29%{transform:translateX(0);animation-timing-function:steps(21)}35%,100%{transform:translateX(250px)}}
+    @keyframes pick{0%,33%{fill:#21262d;stroke:#30363d}35%,100%{fill:#1f5bd8;stroke:#4d8eff}}
+    @keyframes wipe-j2{0%,35%{transform:translateX(0);animation-timing-function:steps(19)}41%,100%{transform:translateX(250px)}}
+    @keyframes wipe-j3{0%,41%{transform:translateX(0);animation-timing-function:steps(27)}49%,100%{transform:translateX(320px)}}
+    @keyframes run{0%,54%{opacity:0}57%,100%{opacity:1}}
+    @keyframes blink{0%{opacity:1}50%{opacity:0}}
+
+    .dot{fill:#30363d}
+    .step{opacity:.4}
+    .s1{animation:s1 12s infinite both}.s2{animation:s2 12s infinite both}.s3{animation:s3 12s infinite both}.s4{animation:s4 12s infinite both}
+    .s1 .dot{animation:d1 12s infinite both}.s2 .dot{animation:d2 12s infinite both}.s3 .dot{animation:d3 12s infinite both}.s4 .dot{animation:d4 12s infinite both}
+    @keyframes s1{0%{opacity:.4}2%,93%{opacity:1}98%,100%{opacity:.4}}
+    @keyframes s2{0%,14%{opacity:.4}16%,93%{opacity:1}98%,100%{opacity:.4}}
+    @keyframes s3{0%,29%{opacity:.4}31%,93%{opacity:1}98%,100%{opacity:.4}}
+    @keyframes s4{0%,54%{opacity:.4}56%,93%{opacity:1}98%,100%{opacity:.4}}
+    @keyframes d1{0%{fill:#30363d}2%,93%{fill:#1f5bd8}98%,100%{fill:#30363d}}
+    @keyframes d2{0%,14%{fill:#30363d}16%,93%{fill:#1f5bd8}98%,100%{fill:#30363d}}
+    @keyframes d3{0%,29%{fill:#30363d}31%,93%{fill:#1f5bd8}98%,100%{fill:#30363d}}
+    @keyframes d4{0%,54%{fill:#30363d}56%,93%{fill:#1f5bd8}98%,100%{fill:#30363d}}
+    @media (prefers-reduced-motion: reduce){
+      .cycle,.c-cmd,.chips,.pick,.masked,.strike,.why,.c-j1,.c-j2,.c-j3,.run,.cursor,.step,.dot{animation:none}
+      .step{opacity:1}.dot{fill:#1f5bd8}
+      .cover{display:none}
+    }
+  </style>
+  <defs>
+    <clipPath id="screen"><rect x="622" y="80" width="616" height="286"/></clipPath>
+  </defs>
+
+  <rect x="1" y="1" width="1278" height="398" rx="14" fill="#0d1117" stroke="#30363d" stroke-width="2"/>
+
+  <!-- The four steps, lit in turn -->
+  <g class="step s1">
+    <circle cx="74" cy="84" r="19" class="dot"/>
+    <text x="74" y="91" text-anchor="middle" font-size="19" font-weight="800" fill="#ffffff">1</text>
+    <text x="110" y="88" font-size="23" font-weight="700" fill="#ffffff">You ask</text>
+    <text x="110" y="113" font-size="15" fill="#9198a1">DecideAsync with anything: a line, an event, a turn</text>
+  </g>
+  <g class="step s2">
+    <circle cx="74" cy="162" r="19" class="dot"/>
+    <text x="74" y="169" text-anchor="middle" font-size="19" font-weight="800" fill="#ffffff">2</text>
+    <text x="110" y="166" font-size="23" font-weight="700" fill="#ffffff">Only legal actions are offered</text>
+    <text x="110" y="191" font-size="15" fill="#9198a1">what is not allowed right now never reaches the model</text>
+  </g>
+  <g class="step s3">
+    <circle cx="74" cy="240" r="19" class="dot"/>
+    <text x="74" y="247" text-anchor="middle" font-size="19" font-weight="800" fill="#ffffff">3</text>
+    <text x="110" y="244" font-size="23" font-weight="700" fill="#ffffff">The model picks one</text>
+    <text x="110" y="269" font-size="15" fill="#9198a1">its output can only name an action that was offered</text>
+  </g>
+  <g class="step s4">
+    <circle cx="74" cy="318" r="19" class="dot"/>
+    <text x="74" y="325" text-anchor="middle" font-size="19" font-weight="800" fill="#ffffff">4</text>
+    <text x="110" y="322" font-size="23" font-weight="700" fill="#ffffff">Your code runs it</text>
+    <text x="110" y="347" font-size="15" fill="#9198a1">Execute checks it again; the model never touches Unity</text>
+  </g>
+
+  <!-- Terminal -->
+  <rect x="620" y="32" width="620" height="336" rx="10" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <circle cx="646" cy="56" r="6" fill="#ff5f57"/>
+  <circle cx="666" cy="56" r="6" fill="#febc2e"/>
+  <circle cx="686" cy="56" r="6" fill="#28c840"/>
+  <text x="930" y="61" text-anchor="middle" font-size="14" class="mono" fill="#6e7681">Guard.cs</text>
+  <line x1="621" y1="80" x2="1239" y2="80" stroke="#30363d" stroke-width="2"/>
+
+  <g clip-path="url(#screen)">
+    <g class="cycle">
+      <text x="648" y="118" font-size="18" class="mono" fill="#e6edf3"><tspan fill="#4d8eff">›</tspan> agent.DecideAsync(<tspan fill="#a5d6ff">"Go to the tower."</tspan>)</text>
+      <rect x="664" y="96" width="440" height="30" class="cover c-cmd"/>
+
+      <g class="chips">
+        <text x="648" y="161" font-size="14" fill="#6e7681">legal now</text>
+        <rect x="730" y="139" width="88" height="30" rx="6" class="chip pick" stroke-width="1.5"/>
+        <text x="774" y="159" text-anchor="middle" font-size="15" class="mono" fill="#ffffff">move_to</text>
+        <rect x="828" y="139" width="62" height="30" rx="6" class="chip" stroke-width="1.5"/>
+        <text x="859" y="159" text-anchor="middle" font-size="15" class="mono" fill="#e6edf3">talk</text>
+        <rect x="900" y="139" width="142" height="30" rx="6" class="chip" stroke-width="1.5"/>
+        <text x="971" y="159" text-anchor="middle" font-size="15" class="mono" fill="#e6edf3">follow_player</text>
+        <g class="masked">
+          <rect x="1052" y="139" width="80" height="30" rx="6" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-dasharray="5 4"/>
+          <text x="1092" y="159" text-anchor="middle" font-size="15" class="mono" fill="#e6edf3">attack</text>
+        </g>
+        <line x1="1062" y1="154" x2="1122" y2="154" stroke="#f85149" stroke-width="2" class="strike"/>
+        <text x="1092" y="190" text-anchor="middle" font-size="13" font-style="italic" fill="#f85149" class="why">not legal now</text>
+      </g>
+
+      <text x="648" y="228" font-size="18" class="mono" fill="#e6edf3">{<tspan fill="#79c0ff">"action"</tspan>: <tspan fill="#a5d6ff">"move_to"</tspan>,</text>
+      <rect x="646" y="206" width="250" height="30" class="cover c-j1"/>
+      <text x="659" y="258" font-size="18" class="mono" fill="#e6edf3"><tspan fill="#79c0ff">"target"</tspan>: <tspan fill="#a5d6ff">"tower"</tspan>,</text>
+      <rect x="646" y="236" width="250" height="30" class="cover c-j2"/>
+      <text x="659" y="288" font-size="18" class="mono" fill="#e6edf3"><tspan fill="#79c0ff">"statement"</tspan>: <tspan fill="#a5d6ff">"On my way."</tspan>}</text>
+      <rect x="646" y="266" width="320" height="30" class="cover c-j3"/>
+
+      <g class="run">
+        <text x="648" y="336" font-size="17" class="mono" fill="#3fb950">✓ Execute(result)<tspan fill="#6e7681">  re-checked, then</tspan> MoveTo(tower)</text>
+        <rect x="1104" y="321" width="10" height="20" fill="#3fb950" class="cursor"/>
+      </g>
+    </g>
+  </g>
+</svg>

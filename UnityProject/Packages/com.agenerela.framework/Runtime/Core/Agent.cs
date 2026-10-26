@@ -29,6 +29,10 @@ namespace Agenerela
     {
         private readonly ILLMProvider provider;
 
+        // The provider's queue, found by the provider instance, so every agent given that
+        // instance shares it (DR-013, DR-015).
+        private readonly RequestScheduler scheduler;
+
         // Where Bind finds definitions: the profile, read when Bind is called, or the list a
         // code-only agent was given. Exactly one is set.
         private readonly AgentProfile profile;
@@ -105,10 +109,12 @@ namespace Agenerela
             }
 
             this.provider = provider;
+            scheduler = RequestScheduler.For(provider);
             Actions = new ActionRegistry();
             Targets = new TargetRegistry();
             TargetSources = new List<ITargetSource>();
             State = new Dictionary<string, object>();
+            Memory = new RollingHistory();
         }
 
         /// <summary>Who this agent is. The model reads it on every call.</summary>
@@ -146,6 +152,19 @@ namespace Agenerela
         /// <see cref="DecideOptions.Observations"/> instead.
         /// </summary>
         public Dictionary<string, object> State { get; }
+
+        /// <summary>
+        /// What this agent remembers between decisions (build plan §2.9): a new
+        /// <see cref="RollingHistory"/> of its own by default, the last six exchanges within its
+        /// token budget. Null means no memory: no history is sent and nothing is remembered.
+        /// </summary>
+        /// <remarks>
+        /// Each agent has its own, never one on <see cref="AgentProfile"/>, because agents built from
+        /// one profile never share their memories (§2.9, rule 2). Read once per decision, when it
+        /// starts, so replacing it while a decision is in flight leaves that decision with the one
+        /// it recalled from. Giving two agents the same instance makes them share it.
+        /// </remarks>
+        public IMemoryStrategy Memory { get; set; }
 
         /// <summary>
         /// Registers the action <paramref name="actionId"/>, as the profile defines it, with the game
@@ -201,8 +220,9 @@ namespace Agenerela
         /// </param>
         /// <param name="options">Null uses the defaults.</param>
         /// <param name="ct">
-        /// Cancels the decision. Passed to the provider, which stops its request; a decision
-        /// cancelled at any point has no result.
+        /// Cancels the decision. While it waits in the provider's queue, it leaves the queue and is
+        /// never sent; once sent, the token is passed to the provider, which stops its request. A
+        /// decision cancelled at any point has no result.
         /// </param>
         /// <returns>
         /// The decision, or, when there is none to be had, a result whose
@@ -213,7 +233,10 @@ namespace Agenerela
         /// throws; a provider that throws; and a reply that is empty, is not one JSON object, or
         /// lacks a field the schema asked for. A reply naming an action or target the request did
         /// not offer is still a decision, for <see cref="Execute"/> to refuse (see
-        /// <c>DecisionParser</c>).
+        /// <c>DecisionParser</c>). The telemetry says which of these it was in
+        /// <see cref="DecisionTelemetry.ErrorKind"/>, from the <see cref="ProviderException.Kind"/>
+        /// when a provider threw one, and holds the warning in
+        /// <see cref="DecisionTelemetry.ErrorMessage"/> (#87).
         /// </returns>
         /// <exception cref="ArgumentException">
         /// <see cref="DecideOptions.StimulusLabel"/> is null, empty or whitespace. Thrown by the call
@@ -224,13 +247,34 @@ namespace Agenerela
         /// was read.
         /// </exception>
         /// <remarks>
+        /// <para>
         /// The pipeline, in order: a context from the identity, a copy of <see cref="State"/>, the
         /// targets resolved now, the stimulus and the observations; the schema from the actions
-        /// available now (#7, #8); the examples (#10); the request (#16); the provider (#12); the
-        /// parse. Telemetry records the latency of the provider's request on a monotonic clock, the
-        /// provider's name, the framework version, the token counts the provider reported, and
-        /// the target ids each <see cref="IReportsDroppedTargets"/> source left out, in source
-        /// order (#81).
+        /// available now (#7, #8); the examples (#10); the request (#16); the provider's queue
+        /// (#89); the provider (#12); the parse. Telemetry records the latency of the provider's
+        /// request on a monotonic clock, from the send and not the enqueue; the priority, the time
+        /// spent queued and how many requests were ahead; the provider's name, the framework
+        /// version, the token counts the provider reported, and the target ids each
+        /// <see cref="IReportsDroppedTargets"/> source left out, in source order (#81), and the
+        /// exchanges of history sent, left out and forgotten (#90).
+        /// </para>
+        /// <para>
+        /// <see cref="Memory"/> is recalled while the request is prepared, into
+        /// <see cref="DecisionRequest.History"/>, and so fails as preparing it does, including on a
+        /// history that is not whole exchanges. The decision is remembered just before it is
+        /// returned, as parsed, so whitespace or extra fields in the reply are not. A pipeline
+        /// error or a cancelled call remembers nothing; a <see cref="ActionRegistry.None"/>
+        /// decision is remembered, because it happened. If remembering throws, the warning is
+        /// logged and the decision still returned. Remembering happens on the main thread, even
+        /// when the provider answered on another.
+        /// </para>
+        /// <para>
+        /// Every agent given the same provider instance shares one queue, which sends at most one
+        /// request at a time: player-facing ones first, then background ones, each in the order
+        /// they were made (<see cref="DecideOptions.Priority"/>, DR-015). Agents on different
+        /// provider instances never wait on each other. A failed request frees its place like an
+        /// answered one, and nothing is retried.
+        /// </para>
         /// </remarks>
         public Awaitable<DecisionResult> DecideAsync(string stimulus, DecideOptions options = null, CancellationToken ct = default)
         {
@@ -250,7 +294,7 @@ namespace Agenerela
                 options.Observations == null ? new List<string>() : new List<string>(options.Observations));
             string idleExample = options.IdleExampleStimulus ?? (profile != null ? profile.IdleExampleStimulus : null);
 
-            return Decide(stimulus, options.StimulusLabel, idleExample, observations, ct);
+            return Decide(stimulus, options.StimulusLabel, idleExample, observations, options.Priority, ct);
         }
 
         /// <summary>
@@ -323,20 +367,24 @@ namespace Agenerela
         }
 
         private async Awaitable<DecisionResult> Decide(
-            string stimulus, string label, string idleExample, IReadOnlyList<string> observations, CancellationToken ct)
+            string stimulus, string label, string idleExample, IReadOnlyList<string> observations,
+            DecisionPriority priority, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
 
+            var memory = Memory;
             var telemetry = new DecisionTelemetry
             {
                 ProviderName = provider.Name ?? "",
                 FrameworkVersion = AgenerelaInfo.Version,
+                Priority = priority,
             };
 
+            AgentContext ctx;
             DecisionRequest request;
             try
             {
-                var ctx = Snapshot(stimulus, observations, telemetry.TargetsDropped);
+                ctx = Snapshot(stimulus, observations, telemetry.TargetsDropped);
                 var options = new PromptOptions { StimulusLabel = label, IdleExampleStimulus = idleExample };
 
                 // Asked once, so the action enum and the examples come from one answer even when an
@@ -345,57 +393,140 @@ namespace Agenerela
                 var schema = DecisionSchema.Build(ctx, available);
                 string fewShot = FewShotBuilder.Build(available, ctx.Targets, label, idleExample);
 
-                // The memory slot (build plan §2.9): Phase 2's IMemoryStrategy recalls the turns
-                // that go here, oldest first. Until then there are none.
-                request = PromptBuilder.Build(ctx, schema, fewShot, history: null, options);
+                var history = Recall(memory, ctx, telemetry);
+                request = PromptBuilder.Build(ctx, schema, fewShot, history, options);
             }
             catch (Exception e)
             {
-                return Failed(telemetry, $"Preparing the request failed. {e.GetType().Name}: {e.Message}");
+                return Failed(telemetry, PipelineErrorKind.RequestPreparation,
+                    $"Preparing the request failed. {e.GetType().Name}: {e.Message}");
             }
 
             ProviderResult reply;
-            var clock = System.Diagnostics.Stopwatch.StartNew();
-            try
+
+            // The provider's queue, shared with every agent on this provider instance (DR-015).
+            // Disposing the ticket frees the slot for the next request, whether the provider
+            // answered, failed or was cancelled.
+            var waited = System.Diagnostics.Stopwatch.StartNew();
+            using (var ticket = scheduler.Enqueue(priority, ct))
             {
-                reply = await provider.RequestAsync(request, ct);
-            }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception) when (ct.IsCancellationRequested)
-            {
-                // A provider that reports the caller's cancellation as some other exception, as an
-                // aborted web request tends to, still ends the call cancelled rather than counting
-                // as a pipeline error.
-                throw new OperationCanceledException(ct);
-            }
-            catch (Exception e)
-            {
+                telemetry.QueuedAhead = ticket.QueuedAhead;
+
+                // Cancelled while queued, the decision ends here and never reaches the provider.
+                await ticket.Ready;
+
+                // The turn comes on whichever thread freed the slot, such as the worker thread a
+                // provider of the developer's own answered on, and this code resumes there. Every
+                // provider call starts on the main thread, where one built on UnityWebRequest or
+                // LLMUnity has to be called. Free when already there. The cancelled path needs no
+                // hop: Unity brings the caller of an Awaitable started on the main thread back to it.
+                await Awaitable.MainThreadAsync();
+
+                // Its turn came just as the caller cancelled: still never sent.
+                ct.ThrowIfCancellationRequested();
+
+                // Enqueue to send, the wait for the main thread included, and the latency from the
+                // send, so the two cover the whole call between them: LatencySeconds is the
+                // provider's time alone and a long queue shows in QueueWaitSeconds instead.
+                telemetry.QueueWaitSeconds = (float)waited.Elapsed.TotalSeconds;
+                var clock = System.Diagnostics.Stopwatch.StartNew();
+                try
+                {
+                    reply = await provider.RequestAsync(request, ct);
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception) when (ct.IsCancellationRequested)
+                {
+                    // A provider that reports the caller's cancellation as some other exception, as an
+                    // aborted web request tends to, still ends the call cancelled rather than counting
+                    // as a pipeline error.
+                    throw new OperationCanceledException(ct);
+                }
+                catch (Exception e)
+                {
+                    telemetry.LatencySeconds = (float)clock.Elapsed.TotalSeconds;
+                    return Failed(telemetry, KindOf(e), $"The provider failed. {e.GetType().Name}: {e.Message}");
+                }
+
                 telemetry.LatencySeconds = (float)clock.Elapsed.TotalSeconds;
-                return Failed(telemetry, $"The provider failed. {e.GetType().Name}: {e.Message}");
             }
 
-            telemetry.LatencySeconds = (float)clock.Elapsed.TotalSeconds;
+            // Back on the main thread, as for the send: a provider that answered on a worker thread
+            // resumed this code there, and the memory below is no more thread-safe than the rest of
+            // the agent. Free when already there.
+            await Awaitable.MainThreadAsync();
 
             // Also for a provider that finished without noticing the cancellation.
             ct.ThrowIfCancellationRequested();
 
             if (reply == null)
             {
-                return Failed(telemetry, "The provider returned no result.");
+                return Failed(telemetry, PipelineErrorKind.ProviderFailed, "The provider returned no result.");
             }
 
+            telemetry.Model = reply.Model ?? "";
             telemetry.PromptTokens = reply.PromptTokens;
             telemetry.CompletionTokens = reply.CompletionTokens;
 
             if (!DecisionParser.TryParse(reply.Text, request.Schema, out var decision, out string problem))
             {
-                return Failed(telemetry, $"{problem} The reply was: {Excerpt(reply.Text)}");
+                return Failed(telemetry, PipelineErrorKind.UnreadableReply, $"{problem} The reply was: {Excerpt(reply.Text)}");
             }
 
-            return new DecisionResult(decision, telemetry);
+            var result = new DecisionResult(decision, telemetry);
+
+            if (memory != null)
+            {
+                try
+                {
+                    memory.Remember(ctx, request, result);
+                }
+                catch (Exception e)
+                {
+                    // The decision was made; a memory that cannot record it does not undo it.
+                    Debug.LogWarning($"{Who()} decided, but its memory could not remember it. {e.GetType().Name}: {e.Message}");
+                }
+            }
+
+            return result;
+        }
+
+        // The history for one request, as DecisionRequest.History encodes it: whole exchanges of
+        // two entries, none null, or the request is not sent. Counted into the telemetry here.
+        private static IReadOnlyList<string> Recall(IMemoryStrategy memory, AgentContext ctx, DecisionTelemetry telemetry)
+        {
+            if (memory == null)
+            {
+                return null;
+            }
+
+            var history = memory.Recall(ctx) ?? Array.Empty<string>();
+
+            if (history.Count % 2 != 0)
+            {
+                throw new InvalidOperationException(
+                    $"Memory recalled {history.Count} entries. History is whole exchanges, a stimulus then a decision, so the count must be even.");
+            }
+
+            for (int i = 0; i < history.Count; i++)
+            {
+                if (history[i] == null)
+                {
+                    throw new InvalidOperationException($"Memory recalled a null entry at {i}.");
+                }
+            }
+
+            telemetry.HistoryTurnsSent = history.Count / 2;
+            if (memory is IReportsDroppedTurns reports)
+            {
+                telemetry.HistoryTurnsDropped = reports.Dropped;
+                telemetry.HistoryTurnsForgotten = reports.Forgotten;
+            }
+
+            return history;
         }
 
         // One decision's view of the agent. State is copied, so a context is what the agent knew at
@@ -471,11 +602,43 @@ namespace Agenerela
             }
         }
 
-        private DecisionResult Failed(DecisionTelemetry telemetry, string reason)
+        private DecisionResult Failed(DecisionTelemetry telemetry, PipelineErrorKind kind, string reason)
         {
+            string message = $"{Who()} could not decide. {reason}";
             telemetry.Outcome = DecisionOutcome.PipelineError;
-            Debug.LogWarning($"{Who()} could not decide. {reason}");
+            telemetry.ErrorKind = kind;
+            telemetry.ErrorMessage = message;
+            Debug.LogWarning(message);
             return new DecisionResult(null, telemetry);
+        }
+
+        // A provider says why it failed by throwing a ProviderException, whose kind maps one to
+        // one. Any other exception says only that the provider failed.
+        private static PipelineErrorKind KindOf(Exception e)
+        {
+            if (!(e is ProviderException failure))
+            {
+                return PipelineErrorKind.ProviderFailed;
+            }
+
+            switch (failure.Kind)
+            {
+                case ProviderErrorKind.Unreachable:
+                    return PipelineErrorKind.ProviderUnreachable;
+                case ProviderErrorKind.ModelNotFound:
+                    return PipelineErrorKind.ModelNotFound;
+                case ProviderErrorKind.Timeout:
+                    return PipelineErrorKind.ProviderTimeout;
+                case ProviderErrorKind.Rejected:
+                    return PipelineErrorKind.ProviderRejected;
+                case ProviderErrorKind.ServerError:
+                    return PipelineErrorKind.ProviderServerError;
+                case ProviderErrorKind.MalformedResponse:
+                    return PipelineErrorKind.ProviderMalformedResponse;
+                default:
+                    // A kind added to ProviderErrorKind before it has one here.
+                    return PipelineErrorKind.ProviderFailed;
+            }
         }
 
         private bool Refuse(AgentDecision decision, string reason)

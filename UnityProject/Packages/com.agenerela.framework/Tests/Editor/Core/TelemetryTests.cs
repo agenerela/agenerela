@@ -19,12 +19,26 @@ namespace Agenerela.Tests
         }
 
         [Test]
+        public void PipelineErrorKindHasItsNineKindsInOrder()
+        {
+            // Serialized as positions too, so a new kind goes at the end (#87).
+            Assert.That(Enum.GetNames(typeof(PipelineErrorKind)), Is.EqualTo(new[]
+            {
+                "RequestPreparation", "ProviderUnreachable", "ModelNotFound", "ProviderTimeout",
+                "ProviderRejected", "ProviderServerError", "ProviderMalformedResponse",
+                "ProviderFailed", "UnreadableReply",
+            }));
+        }
+
+        [Test]
         public void NewTelemetryIsReadyToFill()
         {
             var t = new DecisionTelemetry();
             Assert.That(t.Outcome, Is.Null, "Only the eval harness knows the right answer.");
             Assert.That(t.GuardsFired, Is.Not.Null.And.Empty);
             Assert.That(t.TargetsDropped, Is.Not.Null.And.Empty);
+            Assert.That(t.ErrorKind, Is.Null, "No error until a decision fails.");
+            Assert.That(t.ErrorMessage, Is.Null);
         }
 
         [Test]
@@ -39,6 +53,27 @@ namespace Agenerela.Tests
             Assert.That(back.Outcome, Is.EqualTo(DecisionOutcome.ContainedByGuard));
             Assert.That(back.GuardsFired, Is.EqualTo(new[] { "SchemaLegalityGuard", "TargetGroundingGuard" }));
             Assert.That(back.PromptTokens, Is.EqualTo(143));
+            Assert.That(back.ErrorKind, Is.Null);
+            Assert.That(back.ErrorMessage, Is.Null);
+        }
+
+        [Test]
+        public void ThePipelineErrorSurvivesANewtonsoftRoundTrip()
+        {
+            const string Message = "Agent 'Village Guard' could not decide. The provider failed. "
+                + "ProviderException: Model 'qwen3.5:2b' is not installed. Run `ollama pull qwen3.5:2b`.";
+            var t = new DecisionTelemetry
+            {
+                Outcome = DecisionOutcome.PipelineError,
+                ErrorKind = PipelineErrorKind.ModelNotFound,
+                ErrorMessage = Message,
+            };
+
+            var back = JsonConvert.DeserializeObject<DecisionTelemetry>(JsonConvert.SerializeObject(t));
+
+            Assert.That(back.Outcome, Is.EqualTo(DecisionOutcome.PipelineError));
+            Assert.That(back.ErrorKind, Is.EqualTo(PipelineErrorKind.ModelNotFound));
+            Assert.That(back.ErrorMessage, Is.EqualTo(Message));
         }
     }
 }

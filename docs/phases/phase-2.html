@@ -164,7 +164,7 @@ footer p{max-width:78ch}
   <h1>Phase 2: the first live decision</h1>
   <p class="lede">Phase 1 built every part of a decision and proved it against a fake model. Phase 2 connects a real one: a local Ollama server, a queue in front of it, and a memory that carries one exchange into the next. It is done when an agent with five actions decides in under five seconds against a live model, with its telemetry filled in.</p>
   <div class="facts">
-    <span class="pill dark">Due 19 October 2026</span>
+    <span class="pill dark">Due 29 October 2026</span>
     <span class="pill">Gate: #94</span>
     <span class="pill">8 new issues, plus #81</span>
     <span class="pill acc">All in Iteration 3, unassigned</span>
@@ -285,14 +285,14 @@ footer p{max-width:78ch}
 
 <!-- ============ ORDER OF WORK ============ -->
 <section class="sec" id="order">
-  <div class="sechead"><h2>The order of work</h2><span class="pill ok">5 ready now</span><span class="pill warn">3 waiting</span><span class="pill dark">1 merged</span></div>
+  <div class="sechead"><h2>The order of work</h2><span class="pill ok">3 ready now</span><span class="pill warn">1 waiting</span><span class="pill dark">5 merged</span></div>
   <p class="seclede">Six issues can start today, in parallel. The gate waits on four of them. Only one chain is longer than a step: the provider, then its config asset, then the component that uses it.</p>
 
   <figure>
     <div class="fig">
       <div class="figbar">Figure 2 · What waits on what, as of 12 October</div>
       <div class="figscroll">
-        <svg viewBox="0 0 1000 310" role="img" aria-label="Issues 88, 87, 89 and 90 are ready and the gate, 94, waits on all four. Issue 92 waits on 88, and 93 waits on 92. Issue 91 is ready and 81 is merged, and nothing waits on them.">
+        <svg viewBox="0 0 1000 310" role="img" aria-label="Issues 87, 88, 89 and 90 are merged, so the gate, 94, which waited on all four, is ready. Issue 92 is ready now that 88 is merged, and 93 waits on 92. Issue 91 is ready and 81 is merged, and nothing waits on them.">
           <defs>
             <marker id="p2d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0,0 L10,5 L0,10 z"/></marker>
           </defs>
@@ -300,16 +300,16 @@ footer p{max-width:78ch}
           <text class="grp" x="690" y="14">BESIDE IT</text>
 
           <rect class="box" x="10" y="24" width="150" height="58" rx="7"/>
-          <text class="n" x="22" y="46">#88</text><text class="ready" x="150" y="46" text-anchor="end">ready</text>
+          <text class="n" x="22" y="46">#88</text><text class="ready" x="150" y="46" text-anchor="end">merged</text>
           <text class="s" x="22" y="68">OllamaProvider</text>
           <rect class="box" x="176" y="24" width="150" height="58" rx="7"/>
-          <text class="n" x="188" y="46">#87</text><text class="ready" x="316" y="46" text-anchor="end">ready</text>
+          <text class="n" x="188" y="46">#87</text><text class="ready" x="316" y="46" text-anchor="end">merged</text>
           <text class="s" x="188" y="68">Typed errors</text>
           <rect class="box" x="342" y="24" width="150" height="58" rx="7"/>
-          <text class="n" x="354" y="46">#89</text><text class="ready" x="482" y="46" text-anchor="end">ready</text>
+          <text class="n" x="354" y="46">#89</text><text class="ready" x="482" y="46" text-anchor="end">merged</text>
           <text class="s" x="354" y="68">Queue + priority</text>
           <rect class="box" x="508" y="24" width="150" height="58" rx="7"/>
-          <text class="n" x="520" y="46">#90</text><text class="ready" x="648" y="46" text-anchor="end">ready</text>
+          <text class="n" x="520" y="46">#90</text><text class="ready" x="648" y="46" text-anchor="end">merged</text>
           <text class="s" x="520" y="68">Short-term memory</text>
 
           <rect class="box side" x="690" y="24" width="150" height="58" rx="7"/>
@@ -321,11 +321,11 @@ footer p{max-width:78ch}
           <text class="lbl" x="843" y="104" text-anchor="middle">nothing waits on these two</text>
 
           <rect class="box side" x="10" y="150" width="150" height="58" rx="7"/>
-          <text class="n" x="22" y="172">#92</text><text class="blocked" x="150" y="172" text-anchor="end">waiting</text>
+          <text class="n" x="22" y="172">#92</text><text class="ready" x="150" y="172" text-anchor="end">ready</text>
           <text class="s" x="22" y="194">Provider config</text>
 
           <rect class="box gate" x="176" y="150" width="482" height="58" rx="7"/>
-          <text class="n" x="190" y="172">#94  Phase 2 gate</text><text class="blocked" x="646" y="172" text-anchor="end">waiting</text>
+          <text class="n" x="190" y="172">#94  Phase 2 gate</text><text class="ready" x="646" y="172" text-anchor="end">ready</text>
           <text class="s" x="190" y="194">live decision under 5 s · RequiresOllama PlayMode tests · sandbox scene</text>
 
           <rect class="box side" x="10" y="240" width="150" height="58" rx="7"/>
@@ -354,7 +354,7 @@ footer p{max-width:78ch}
   <div class="grid">
 
     <article class="issue">
-      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/87">#87</a><h3>Typed provider errors</h3><span class="pill ok">ready</span></div>
+      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/87">#87</a><h3>Typed provider errors</h3><span class="pill dark">merged, #101</span></div>
       <p>When the model call fails, the agent already returns a <span class="mono">PipelineError</span> instead of crashing, but the reason only appears in a log line. This adds <span class="mono">ProviderException</span> with a kind: unreachable, model not found, timeout, rejected, server error or malformed response. The kind and a message go on the result, so code can tell the player "run <span class="mono">ollama pull qwen3.5:2b</span>".</p>
       <div><div class="lab">Done when</div><ul class="done">
         <li>Every pipeline error carries a kind and a message, with one test per kind</li>
@@ -365,7 +365,7 @@ footer p{max-width:78ch}
     </article>
 
     <article class="issue">
-      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/88">#88</a><h3>OllamaProvider</h3><span class="pill ok">ready</span><span class="pill">design-rule</span></div>
+      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/88">#88</a><h3>OllamaProvider</h3><span class="pill dark">merged, #102</span><span class="pill">design-rule</span></div>
       <p>The first real model. It sends the agent's request to Ollama's <span class="mono">/api/chat</span> the way the prototype's measurements were taken: the schema in <span class="mono">format</span>, temperature 0, thinking off, token probabilities on, and <span class="mono">127.0.0.1</span> rather than <span class="mono">localhost</span>. It reads back the reply, token counts, probabilities and the model's name, which telemetry gains as <span class="mono">Model</span>.</p>
       <div><div class="lab">Done when</div><ul class="done">
         <li>#16's village guard request produces a golden JSON body</li>
@@ -377,7 +377,7 @@ footer p{max-width:78ch}
     </article>
 
     <article class="issue">
-      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/89">#89</a><h3>Request queue and priority</h3><span class="pill ok">ready</span></div>
+      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/89">#89</a><h3>Request queue and priority</h3><span class="pill dark">merged, #103</span></div>
       <p>A local model answers one request at a time. Five requests at once took about 3.5 s in the prototype, which puts thirty agents near 21 s. This adds one queue per model connection, shared by every agent using it. Each call can be marked player-facing, the default, or background, and player-facing calls go first. Telemetry records the wait, so a slow answer can be pinned on the model or on the queue.</p>
       <div><div class="lab">Done when</div><ul class="done">
         <li>Background then player-facing queued: the player-facing one is sent next</li>
@@ -389,7 +389,7 @@ footer p{max-width:78ch}
     </article>
 
     <article class="issue">
-      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/90">#90</a><h3>Short-term memory</h3><span class="pill ok">ready</span></div>
+      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/90">#90</a><h3>Short-term memory</h3><span class="pill dark">merged, #104</span></div>
       <p>The last few exchanges go back into each request, oldest first and within a token budget, so "Now wait here." can follow "Follow me.". Each exchange is stored as the stimulus plus the decision as JSON. What is remembered is the decision the agent actually made, never the model's raw text.</p>
       <div><div class="lab">Done when</div><ul class="done">
         <li>The second request carries the first exchange</li>
@@ -401,7 +401,7 @@ footer p{max-width:78ch}
     </article>
 
     <article class="issue gate">
-      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/94">#94</a><h3>Phase 2 gate</h3><span class="pill warn">waits on #87–#90</span></div>
+      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/94">#94</a><h3>Phase 2 gate</h3><span class="pill ok">ready</span></div>
       <p>Live PlayMode tests tagged <span class="mono">RequiresOllama</span>, skipped with a message when Ollama is not running, and a sandbox scene where you type a command and watch the decision and its telemetry. It records the first in-Unity latency since the prototype in <span class="mono">findings.md</span>.</p>
       <div><div class="lab">Done when</div><ul class="done">
         <li>A five-action agent decides in under 5 s after warm-up</li>
@@ -430,7 +430,7 @@ footer p{max-width:78ch}
     </article>
 
     <article class="issue">
-      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/92">#92</a><h3>Provider config asset</h3><span class="pill warn">waits on #88</span></div>
+      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/92">#92</a><h3>Provider config asset</h3><span class="pill ok">ready</span></div>
       <p>Set the model connection up once, as an asset (<b>Create → Agenerela → Ollama Provider</b>), with a project default under <b>Project Settings → Agenerela</b>. An agent with no config of its own uses the default. One config means one provider instance, so one queue, and telemetry records which config was used.</p>
       <div><div class="lab">Done when</div><ul class="done">
         <li>The default resolves in Play mode with no <span class="mono">AssetDatabase</span></li>
@@ -476,7 +476,7 @@ footer p{max-width:78ch}
         <tr><td class="mono">ErrorKind, ErrorMessage</td><td>#87</td><td>Why did this decision fail: a missing model, a stopped server, a timeout, an unreadable reply?</td></tr>
         <tr><td class="mono">Model</td><td>#88</td><td>Which model answered? <span class="mono">ProviderName</span> names only the provider.</td></tr>
         <tr><td class="mono">Priority, QueueWaitSeconds, QueuedAhead</td><td>#89</td><td>Was a slow answer the model, or four background requests ahead of it?</td></tr>
-        <tr><td class="mono">HistoryTurnsSent, HistoryTurnsDropped</td><td>#90</td><td>How much memory reached the prompt, and how much the budget cut?</td></tr>
+        <tr><td class="mono">HistoryTurnsSent, HistoryTurnsDropped, HistoryTurnsForgotten</td><td>#90</td><td>How much memory reached the prompt, how much the budget cut, and how much the window has let go of?</td></tr>
         <tr><td class="mono">ObservationsDropped</td><td>#91</td><td>Which facts did the cap leave out?</td></tr>
         <tr><td class="mono">ProviderConfig</td><td>#92</td><td>Which configuration resolved: the agent's own, or the project default?</td></tr>
         <tr><td class="mono">TargetsDropped</td><td>#81</td><td>Was the thing the player named ever offered, or past the cap?</td></tr>
@@ -504,7 +504,7 @@ footer p{max-width:78ch}
   <div class="sechead"><h2>Calls made in the issues</h2><span class="pill acc">open to argument before the code lands</span></div>
   <p class="seclede">Four choices the build plan left open were settled in the issue text so work could start. Each issue says what to do if building it shows a better answer.</p>
   <ul class="rules calls">
-    <li><b>#88 · <span class="mono">HttpClient</span> over <span class="mono">UnityWebRequest</span></b>The prototype used <span class="mono">UnityWebRequest</span>, which lives in a Unity module the package would have to declare, and CI allows only Newtonsoft. <span class="mono">HttpClient</span> needs nothing. The other route is to declare the module and widen the CI rule to Unity's built-in modules in the same PR.</li>
+    <li><b>#88 · <span class="mono">HttpClient</span> over <span class="mono">UnityWebRequest</span></b>The prototype used <span class="mono">UnityWebRequest</span>, which lives in a Unity module the package would have to declare, and CI allows only Newtonsoft. <span class="mono">HttpClient</span> needs nothing. The other route is to declare the module and widen the CI rule to Unity's built-in modules in the same PR. <b>Settled:</b> <span class="mono">HttpClient</span>, merged in #102. WebGL players are not supported, since <span class="mono">HttpClient</span> has no sockets there.</li>
     <li><b>#90 · How a remembered exchange is written</b>Two entries per exchange: the stimulus as sent, then the decision as JSON in schema order, sent as a user and an assistant message. The model sees its earlier answers in the form it must give now. The prototype kept only the spoken line, which drops the action.</li>
     <li><b>#91 · Which observations the cap keeps</b>Facts passed for this call are kept first, and gathered lines fill the rest in source order. The build plan says only that per-call lines go last in the prompt and that a cap applies.</li>
     <li><b>#92 · Two levels of provider config, not three</b>The agent's own config, then the project default. DR-013's middle level, a scene override, waits until a demo needs it, which DR-013's revisit clause allows.</li>

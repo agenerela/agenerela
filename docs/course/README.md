@@ -13,6 +13,7 @@ what the class asked of us and what we said.
 | 2026-09-17 | [`2026-09-17-lab-kit.html`](2026-09-17-lab-kit.html) | Sketch/mockup lab: the sitemap and the six screen wireframes, with the text posted alongside each figure |
 | 2026-09-24 | [`2026-09-24-system-design.html`](2026-09-24-system-design.html) | System design: the group leader's reply, with our goals and how we reach each, hardware, software, algorithms and user stories, and the framework figure sized for Canvas's Medium image |
 | 2026-10-15 | [`2026-10-15-design-presentation/`](2026-10-15-design-presentation/README.md) | Project design presentation: the 20-slide deck (a .pptx for Google Slides and a PDF preview), its figures with their HTML sources, the script that builds it, and who presents what |
+| 2026-10-20 | [`2026-10-20-github-roadmap/`](2026-10-20-github-roadmap/README.md) | GitHub Project roadmap and Insights: the submitted PDF of six figures, the roadmap's data as a CSV, and how the board's dates and priorities were filled in |
 
 Open any of them by double-clicking the file; they are self-contained pages that need no
 server. The lab kit and the system-design page load their figures from

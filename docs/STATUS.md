@@ -11,11 +11,12 @@ phase table.
 
 ## Phases
 
-Phases 0 and 1 are complete: **Phase 1 (Core, Actions, Schema) closed on 11 October**, when
-the five checks in #11 passed. **Phase 2 (Ollama provider, queue, memory) is underway**, due
-19 October, and closes when the live checks in its gate (#94) pass. See the build plan's
-phase table for what each phase means, and [`docs/phases/phase-2.html`](phases/phase-2.html)
-for what each Phase 2 issue does.
+Phases 0 to 2 are complete. **Phase 1 (Core, Actions, Schema) closed on 11 October**, when
+the five checks in #11 passed, and was released as 0.2.0. **Phase 2 (Ollama provider, queue,
+memory) closed on 25 October**, when the live checks in its gate (#94) passed, and is released
+as 0.3.0. **Phase 3 (Validation pipeline) is next**, due 9 November (#105 to #110). See the
+build plan's phase table for what each phase means, and
+[`docs/phases/phase-2.html`](phases/phase-2.html) for what each Phase 2 issue does.
 
 ## Merged so far
 
@@ -102,10 +103,62 @@ for what each Phase 2 issue does.
   `Agent` copies each such source's `Dropped` into the decision's telemetry right after its
   `Collect`, sources in order; `Execute` resolves the targets again without touching a
   returned result. EditMode tests, including a capped proximity source end to end.
+- Typed provider errors (#87, via #101): a provider throws `ProviderException` with a
+  `ProviderErrorKind` (`Unreachable`, `ModelNotFound`, `Timeout`, `Rejected`, `ServerError`,
+  `MalformedResponse`) and its `ProviderName`. Every `PipelineError` result now records why
+  in `DecisionTelemetry.ErrorKind`, a `PipelineErrorKind` that maps each provider kind one to
+  one, plus `RequestPreparation`, `UnreadableReply`, and `ProviderFailed` for any other
+  exception or no result. `ErrorMessage` holds the warning `Agent` logged. EditMode tests,
+  one per kind, through `Agent.DecideAsync`.
+- `OllamaProvider` (#88, via #102), the first provider that calls a model: `POST /api/chat`
+  over `HttpClient` with `JsonSchemaSerializer`'s output in `format`, greedy decoding,
+  `think: false`, `num_ctx` 4096 and five top log-probabilities, at `http://127.0.0.1:11434`
+  by default (`OllamaSettings`). The reply's text, token counts and token probabilities fill
+  `ProviderResult`, and its model fills the new `ProviderResult.Model` and
+  `DecisionTelemetry.Model`. Each failure throws its #87 `ProviderException` kind. 47 EditMode
+  tests run with no Ollama installed, through an `HttpMessageHandler` seam; one live decision
+  on `qwen3.5:2b` with Ollama 0.34.2 was checked by hand. WebGL players are not supported. Open
+  for later issues: `DecisionTelemetry.LatencySeconds` still comes from `Agent`'s stopwatch,
+  not the provider's (#89 starts it at the send), and the provider is not
+  `IDisposable` (#92 creates and replaces providers).
+- The request queue and `DecideOptions.Priority` (#89, via #103, DR-015): every provider call
+  goes through an internal `RequestScheduler`, one per provider instance, found by the instance
+  itself, so agents sharing a provider share its queue and agents on different providers never
+  wait on each other. At most one request in flight (`MaxInFlight`, internal until #92 sets it),
+  `PlayerFacing` (the default) before `Background`, first come, first served within a tier.
+  Nothing already sent is aborted, and nothing is retried. A request cancelled while queued is
+  never sent, and a failed one frees its slot. Telemetry adds `Priority`, `QueueWaitSeconds` and
+  `QueuedAhead`, and `LatencySeconds` is timed from the send, so it stays the provider's time
+  alone. Every provider call starts on the main thread, even when the slot was freed on a
+  worker thread. 36 EditMode tests, all holding and releasing requests by hand rather than
+  timing them.
+- Short-term memory (#90, via #104, build plan §2.9): `IMemoryStrategy` (`Recall(ctx)`,
+  `Remember(ctx, request, result)`) and its default, `RollingHistory(turns: 6, maxTokens: 256)`,
+  on `Agent.Memory`, a new one for each agent and never one on the profile; null turns memory
+  off. `DecisionRequest.History` now carries the newest exchanges that fit, oldest first, two
+  entries each: the stimulus as it was sent, then the decision as the schema's JSON. Its remarks
+  document that encoding, which `OllamaProvider` already sent. Tokens are estimated as
+  characters over four, and the oldest exchange goes first, whole, under either cap. What is
+  remembered is the decision `DecideAsync` returns, never the raw reply; a pipeline error or a
+  cancelled call remembers nothing, and remembering happens on the main thread even when the
+  provider answered on another. Telemetry adds `HistoryTurnsSent`, `HistoryTurnsDropped` (what
+  this request's token cap left out) and `HistoryTurnsForgotten` (the rising total the turn cap
+  let go of), filled through the optional `IReportsDroppedTurns`. 30 EditMode tests. The
+  256-token default is a starting point for Phase 4 to measure.
+- The Phase 2 gate (#94, via #111): `RequiresOllama` PlayMode tests in a new
+  `Agenerela.Tests.Runtime` assembly, against a live model. One agent with five actions makes
+  a round trip under 5 s after warm-up, with its telemetry filled in; a model that was never
+  pulled is a `ModelNotFound` pipeline error; history reaches the second request. Without
+  Ollama they are ignored, with the reason. `UnityProject/Assets/Sandbox/` has a scene where a
+  person can type to the guard and watch it decide. The first in-Unity latency since the
+  prototype is in `findings.md`: 0.23 to 0.56 s warm, `qwen3.5:2b` on an RTX 5080.
 - Newtonsoft as the core's one declared dependency (DR-009), and each demo game as its own
   Unity project (DR-010).
-- `Demos/GreyBoxVillage` — a playable grey-box scene whose guard still answers from
-  placeholder string matching, not a model (#19).
+- `Demos/GreyBoxVillage` (#19, then via #112) — the evaluation agent's world as a playable
+  grey-box village, whose guard is driven by `qwen3.5:2b` through `OllamaProvider`. The game
+  decides when to ask (a player line, a trespass, a wolf, a quiet moment) and which actions are
+  offered by who is asking, so chat never gets an unprompted `patrol`. A request history panel
+  and a JSONL log show exactly what was sent and what came back. Only the public API is used.
 - The first 54 evaluation prompts (#13, via #65), nine in each of six categories, in
   `UnityProject/Assets/Evaluation/prompts/`. Its follow-up (#66, via #76) added `agent.json`,
   the guard every prompt is measured against, so every `expectedTarget` is a registered id,
@@ -121,18 +174,17 @@ for what each Phase 2 issue does.
 
 ## Not written yet
 
-All of it Phase 2: typed provider errors (#87), `OllamaProvider` (#88), the
-request queue with `DecideOptions.Priority` (#89), short-term memory (#90), and the gate, a
-live decision in a sandbox scene with `RequiresOllama` PlayMode tests (#94), which waits on
-those four. Beside them, and not on the gate's path: observation sources (#91), the provider
-config asset (#92) and `AgentBehaviour` (#93).
-**Nothing in the framework calls a model yet.** The first live decision is Phase 2's, through
-an Ollama provider that sends `JsonSchemaSerializer`'s output. Phase 1 was pure C# with
-EditMode tests and no Ollama, on purpose.
+Phase 3, the validation pipeline: the guard pipeline and its legality guard (#106), target
+grounding (#105) and its one-line fallback (#107), developer guards (#108), contained
+refusals (#109) and the gate (#110). Until it lands, `Execute` refuses only an unavailable
+action or an unregistered target; a legal answer that is wrong goes through. Still open from
+Phase 2, off its gate's path: observation sources (#91), the provider config asset (#92) and
+`AgentBehaviour` (#93), so an agent is still built in code. No editor UI exists yet
+(Phase 5).
 
 ## Groundwork beside the phases
 
-Open beside Phase 2: the evaluation set's real annotators and next batch of
+Open beside Phase 3: the evaluation set's real annotators and next batch of
 prompts (#85), and the demo games, one sub-issue each under #47, starting with the
 GreyBoxStrategy grey box (#20). Code two games share moves into `Demos/Shared/` once a second
 game needs it (#14). The asset server those games draw on (`tools/comfyui/`) is set up on the

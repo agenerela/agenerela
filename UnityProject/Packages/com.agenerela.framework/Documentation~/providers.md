@@ -4,9 +4,9 @@
 a framework edit. This note explains how each planned backend satisfies it, what a *second*
 cloud vendor would need, and which parts of the contract are deliberately still open.
 
-No backend is implemented yet. Phase 1 defines the contract, and `Agent` (#17) is tested
-against a fake provider; Phase 2 writes the Ollama provider, Phase 6 the cloud ones, Phase 6b
-the in-process one.
+One backend is implemented: `OllamaProvider` (#88), the development backend. Phase 1 defined
+the contract, and `Agent` (#17) is tested against a fake provider; Phase 6 writes the cloud
+providers, Phase 6b the in-process one.
 
 ## The interface
 
@@ -24,8 +24,9 @@ It does not parse the reply, does not know what an action is, and does not decid
 the answer was legal. How it composes the request's fields into messages is stated once, in
 the remarks on `DecisionRequest`.
 `Agent` (#17) parses `ProviderResult.Text` and builds `DecisionTelemetry` (#3) from the rest:
-the provider's `Name`, its token counts, and a latency the agent measures itself around the
-request.
+the provider's `Name`, the model the reply reports (`ProviderResult.Model`, copied into
+`DecisionTelemetry.Model`), its token counts, and a latency the agent measures itself around
+the request.
 
 Two rules sit above every implementation:
 
@@ -77,10 +78,57 @@ inferred from the schema and needs no separate statement. No quota, no key, no b
 `Capabilities`: constrained decoding yes, explicit ordering no, dialect `JsonSchema`,
 `RateLimit` null, rejects empty enum values no, reports token probabilities yes.
 
-Notes carried over from the prototype's client, for whoever writes this in Phase 2: keep it
-non-blocking, send `think:false` for Qwen-family reasoning modes, make `num_ctx`
-configurable, and read latency and token counts out of the response envelope rather than
-timing from outside where you can.
+**What was built (#88).** `new Agent(profile, new OllamaProvider(new OllamaSettings()))`
+decides against `qwen3.5:2b` at `http://127.0.0.1:11434`. `OllamaSettings` is a plain class
+with `Endpoint`, `Model`, `ContextSize` (4096), `Temperature` (0) and `TimeoutSeconds` (30);
+the provider copies it when built. The asset that builds one from a project's configuration
+is #92 (DR-013).
+
+Each decision is one `POST {Endpoint}/api/chat`, sending what the prototype sent wherever a
+measurement in Appendix A depends on it:
+
+| Field | Value |
+|---|---|
+| `model` | `OllamaSettings.Model` |
+| `messages` | One `system` message, the non-empty system-side blocks joined by a blank line (left out if there are none); then `History`; then `Stimulus` as the last `user` message |
+| `format` | `JsonSchemaSerializer`'s output (#9), embedded as a JSON object exactly as written |
+| `stream`, `think` | `false`, `false` |
+| `options` | `temperature` from the settings, `num_ctx` from the settings |
+| `logprobs`, `top_logprobs` | `true`, `5` |
+
+`History` is sent in the encoding `DecisionRequest.History` documents (#90): entries alternate
+`user` and `assistant`, starting with `user`, each exchange being the stimulus as it was sent
+and the decision as JSON.
+
+From the reply, `message.content` becomes `Text` exactly as received, `prompt_eval_count` and
+`eval_count` the token counts (0 when Ollama leaves them out), `logprobs` the token
+probabilities (null when it sends none), and `model` the new `ProviderResult.Model`.
+`LatencySeconds` is wall-clock time from sending to the reply.
+
+Failures throw `ProviderException`:
+
+| What happened | Kind |
+|---|---|
+| Connection refused, or no server at that address | `Unreachable`, naming the endpoint |
+| HTTP 404 with an `error` saying the model was not found, as 0.34.2 answers: `{"error":"model 'x' not found"}` | `ModelNotFound`, with the `ollama pull` command |
+| No reply within `TimeoutSeconds`, and the caller did not cancel | `Timeout` |
+| Any other 4xx, including a 404 without that `error`, which is not Ollama's chat endpoint | `Rejected`, with the status code and Ollama's `error` |
+| Any 5xx | `ServerError` |
+| A 2xx whose body is not one JSON object with a `message.content` string, or whose counts or `logprobs` are the wrong shape | `MalformedResponse` |
+
+The caller's cancellation aborts the HTTP request and throws `OperationCanceledException`,
+even if the timeout has also run out. An address with a user name or password in it is named
+in messages without them.
+
+**Transport.** `System.Net.Http.HttpClient`, one per provider, behind an
+`HttpMessageHandler` the EditMode tests replace to capture the body and script Ollama's
+replies, so they run with no server. It needs no package, so `package.json`, CI and DR-009
+are unchanged. Call `RequestAsync` from the main thread: nothing on the way back uses
+`ConfigureAwait(false)`, so the reply is read there and `Agent` carries on there.
+
+**WebGL is not supported.** `HttpClient` has no sockets in a WebGL player, so the provider
+fails there. Ollama is the development backend and cannot ship in a game anyway; in the Editor
+it works whatever the build target.
 
 **Token probabilities.** Send `"logprobs": true, "top_logprobs": 5` on every request. Five
 was enough in the probe, and Ollama refuses more than 20. They come from before the mask
@@ -201,9 +249,11 @@ would be scored as a wrong answer.
 
 **Failures throw; results mean a reply arrived.** Server down, model not pulled, HTTP 429,
 malformed envelope — all exceptions, so nothing downstream has to tell "no result" from
-"empty result". Phase 2 adds the typed provider exception, so a missing model surfaces as a
-diagnosable error rather than a leaked transport exception; until then, throwing is still
-the contract. API keys must never appear in an exception message.
+"empty result". Throw `ProviderException` (#87), whose `Kind` says why — `Unreachable`,
+`ModelNotFound`, `Timeout`, `Rejected`, `ServerError` or `MalformedResponse` — so a missing
+model surfaces as a diagnosable error rather than a leaked transport exception. Any other
+exception still counts as a failure, with no reason given. API keys must never appear in an
+exception message.
 
 **What the agent does with each.** `Agent.DecideAsync` (#17) turns a thrown failure into a
 result with no decision and the outcome `PipelineError`, logging the exception's type and
@@ -215,9 +265,6 @@ a failure like any other.
 
 ## Still open
 
-- **How a turn in `DecisionRequest.History` encodes its speaker** is decided in Phase 2,
-  alongside the memory strategy that will fill it. The list is empty until then, so no
-  provider can be wrong about it yet — but do not invent an encoding and read it back.
 - **Token-based rate limits**, above. Phase 6.
 
 ## Extension points — where the next things go
@@ -232,5 +279,9 @@ them is a change to `ILLMProvider`, which is the test this design has to keep pa
   class. Phase 6.
 - **Health and warm-up** (`IsReady`, is the model loaded?). Phase 2, for the Ollama
   provider's missing-model case.
+- **`keep_alive` and unloading a model** in `OllamaProvider`, as the prototype's client could,
+  for the Phase 4 harness's one-model-resident rule (hard rule 3).
+- **A setting for a model that rejects `think`**, when one is adopted. `OllamaProvider` always
+  sends `think: false`.
 - **A provider conformance suite** every vendor must pass. Phase 6 deliverable, shaped from
   the fake provider in #17 (`Tests/Editor/Fakes/FakeProvider.cs`).

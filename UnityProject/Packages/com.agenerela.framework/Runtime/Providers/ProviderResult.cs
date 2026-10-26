@@ -27,7 +27,7 @@ namespace Agenerela.Providers
         /// The model's reply, exactly as received and not parsed, trimmed or repaired.
         /// Expected to be the JSON object the schema asked for, but a provider must hand
         /// over whatever actually arrived: the parse failures are data. A provider whose
-        /// envelope wraps the reply (Ollama's <c>response</c>, a cloud vendor's candidate
+        /// envelope wraps the reply (Ollama's <c>message.content</c>, a cloud vendor's candidate
         /// list) unwraps to the text and no further.
         /// </summary>
         public string Text;
@@ -72,6 +72,18 @@ namespace Agenerela.Providers
         /// anything its backend generated but did not put in <see cref="Text"/>.
         /// </remarks>
         public IReadOnlyList<TokenProbability> TokenProbabilities;
+
+        /// <summary>
+        /// The model that produced the reply, as the backend names it, such as
+        /// <c>"qwen3.5:2b"</c>. Null when the provider cannot say. <c>Agent</c> copies it into
+        /// <c>DecisionTelemetry.Model</c> (#88).
+        /// </summary>
+        /// <remarks>
+        /// Separate from <see cref="ILLMProvider.Name"/>, which names the provider: two providers
+        /// may run the same weights, one provider runs whichever model it was configured with, and
+        /// no measurement means anything without the model.
+        /// </remarks>
+        public string Model;
 
         // Extension point, not now: provider-specific extras (Ollama's eval_duration,
         // a cloud vendor's request id) belong in a string-keyed bag rather than as vendor
