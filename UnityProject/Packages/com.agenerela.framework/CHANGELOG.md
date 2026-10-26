@@ -8,6 +8,32 @@ While the version stays `0.x`, the public API may change in any release.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-25
+
+Phase 2: Ollama provider, queue, memory. The first release that calls a model: an agent
+decides through `OllamaProvider` against a local Ollama, one request at a time per provider
+with the player's question first, remembering its last few exchanges, and a failed request
+comes back as a typed reason rather than an exception. The Phase 2 gate's `RequiresOllama`
+PlayMode tests prove the live path (#94); a warm decision on `qwen3.5:2b` took 0.23 to 0.56 s
+on the machine they ran on. In the repository, not the package, `Demos/GreyBoxVillage` is a
+playable village whose guard this release drives.
+
+**Early development: not ready for a game yet.** Major parts are still missing:
+
+- **The validation guards** (Phase 3, #105 to #110). `Execute` already refuses an action that
+  is not available and a target that is not registered, but nothing yet catches a legal
+  answer that is wrong: a substituted target, an action that needs a target answered without
+  one, or a low-confidence pick.
+- **Any measured accuracy** (Phase 4). No number from this framework says how often it chooses
+  right; the ones in the docs are the predecessor prototype's.
+- **All editor UI** (Phase 5): agent setup, the New Agent wizard and the Decision Log window.
+- **Setup without code**: the provider config asset (#92), `AgentBehaviour` (#93) and
+  observation sources (#91). An agent is still built in code.
+- **Any provider but Ollama** (Phases 6 and 6b), so Ollama must be running, and a built
+  player cannot decide on its own.
+
+The public API will change in the releases to come.
+
 ### Added
 - `ProviderException` and `ProviderErrorKind` in `Agenerela.Providers` (#87) — what a provider
   throws when a request fails, with a `Kind` (`Unreachable`, `ModelNotFound`, `Timeout`,
@@ -55,6 +81,11 @@ While the version stays `0.x`, the public API may change in any release.
   instances never wait on each other.
 - `DecisionTelemetry.Priority`, `QueueWaitSeconds` (from joining the queue to being sent) and
   `QueuedAhead` (requests in flight or queued ahead of it when it joined) (#89).
+- `RequiresOllama` PlayMode tests in a new `Agenerela.Tests.Runtime` assembly (#94): a live
+  round trip under 5 s after warm-up, its telemetry filled in, a model that was never pulled
+  reported as `ModelNotFound`, and history reaching the second request. They are ignored,
+  with the reason, when Ollama is not reachable. `AGENERELA_OLLAMA_MODEL` and
+  `AGENERELA_OLLAMA_URL` choose the model and endpoint.
 
 ### Changed
 - `DecisionRequest.History` now documents its encoding (#90): two entries per exchange, the
