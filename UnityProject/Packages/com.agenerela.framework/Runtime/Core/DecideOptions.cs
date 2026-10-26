@@ -51,5 +51,16 @@ namespace Agenerela
         /// The decision's telemetry records the priority, how long it waited and behind how many.
         /// </remarks>
         public DecisionPriority Priority = DecisionPriority.PlayerFacing;
+
+        // The options one call keeps, taken when it is made, so changing the caller's object
+        // afterwards changes nothing, the guards' view included (#106). A memberwise copy, so a
+        // switch added later is copied without being listed here; only a field holding a mutable
+        // object needs copying by hand.
+        internal DecideOptions Copy()
+        {
+            var copy = (DecideOptions)MemberwiseClone();
+            copy.Observations = Observations == null ? null : new List<string>(Observations);
+            return copy;
+        }
     }
 }

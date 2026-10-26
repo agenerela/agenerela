@@ -320,22 +320,25 @@ namespace Agenerela.Tests
         }
 
         [Test]
-        public async Task AnActionTheRequestDidNotOfferIsStillADecisionForExecuteToRefuse()
+        public async Task AnActionTheRequestDidNotOfferIsStillADecisionWhichTheGuardsReject()
         {
             // An untrusted provider can answer outside the schema. That answer was read fine, it is
-            // just wrong, so it is a decision rather than a pipeline error, and Execute stops it.
+            // just wrong, so it is a decision rather than a pipeline error. Since #106 the guards
+            // stop it inside DecideAsync, and Execute refuses it without saying so twice.
             var fake = new FakeProvider("{\"action\":\"follow_player\",\"target\":\"no_target\",\"statement\":\"Lead on.\"}");
             var agent = Fixtures.VillageGuard(fake, isFollowing: true);
+            LogAssert.Expect(LogType.Warning, new Regex("SchemaLegalityGuard rejected 'follow_player' on 'no_target': the action was not offered"));
 
             var result = await Fixtures.NotCancelled(agent.DecideAsync("Keep me company."));
 
             Assert.That(fake.LastRequest.Schema.Fields[0].AllowedValues, Does.Not.Contain("follow_player"));
-            Assert.That(result.Decision.ActionId, Is.EqualTo("follow_player"));
+            Assert.That(result.ModelDecision.ActionId, Is.EqualTo("follow_player"));
+            Assert.That(result.Decision.ActionId, Is.EqualTo(ActionRegistry.None));
             Assert.That(result.Telemetry.Outcome, Is.Null);
 
-            LogAssert.Expect(LogType.Warning, new Regex("did not execute 'follow_player' on 'no_target': the action is not available right now"));
             Assert.That(agent.Execute(result), Is.False);
             Assert.That(Executions(agent), Is.Empty);
+            LogAssert.NoUnexpectedReceived();
         }
 
         [TestCase(false)]
@@ -975,13 +978,17 @@ namespace Agenerela.Tests
         [TestCase("move_to", "godzilla", "the target is not registered")]
         [TestCase("move_to", "no_target ", "the target is not registered")]
         [TestCase("stop_following", "no_target", "the action is not available right now")]
+        [TestCase("move_to", "no_target", "the action needs a target, and the decision has none")]
         public void ExecuteRefusesAndRunsNothing(string action, string target, string reason)
         {
             var agent = Fixtures.VillageGuard(new FakeProvider());
             LogAssert.Expect(LogType.Warning, new Regex($"did not execute '{action}' on '{target}': {reason}"));
+            var decided = Decided(action, target);
 
-            Assert.That(agent.Execute(Decided(action, target)), Is.False);
+            Assert.That(agent.Execute(decided), Is.False);
             Assert.That(Executions(agent), Is.Empty);
+            Assert.That(decided.Telemetry.GuardsFired, Is.EqualTo(new[] { "SchemaLegalityGuard@Execute" }));
+            Assert.That(decided.Telemetry.GuardReason, Does.StartWith(reason));
         }
 
         [Test]

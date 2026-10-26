@@ -8,6 +8,34 @@ While the version stays `0.x`, the public API may change in any release.
 
 ## [Unreleased]
 
+### Added
+
+- **The guard pipeline** (#106, build plan §2.5). Every decision `DecideAsync` parses now
+  passes through ordered guards before it is returned or remembered. `IDecisionGuard` judges
+  a `GuardInput` (the context, request, reply, decision, the call's options and the
+  telemetry) and returns a `GuardVerdict`: `Pass`, `RewriteToNone(reason)` or
+  `Reject(reason)`. The first verdict that is not `Pass` stops the pipeline, and the decision
+  becomes `none` with `no_target`. A reject is logged as a warning, and a rewrite is not.
+- **`SchemaLegalityGuard`**, the first built-in guard. It checks that the action is registered
+  and was offered, and that the target is registered or `no_target`. It also adds a new rule:
+  an action that needs a target got a real one. `move_to / no_target` used to run with no
+  target, and is now rejected.
+- `DecisionResult.ModelDecision` (what the model answered) and `DecisionResult.Verdict` (the
+  guard's name, the kind and the reason), beside `Decision`, which is what the agent will do.
+- `DecisionTelemetry.Verdict` and `DecisionTelemetry.GuardReason`. `GuardsFired` is now
+  filled in.
+
+### Changed
+
+- `Execute`'s re-check is now `SchemaLegalityGuard`, run against the agent as it is when
+  `Execute` is called. A refusal there adds `SchemaLegalityGuard@Execute` to `GuardsFired`, and
+  sets `Verdict` and `GuardReason`. It still returns false and logs a warning saying why.
+  `Execute` also returns false for a decision a guard rejected inside `DecideAsync`, without
+  logging it a second time.
+- An answer naming an action that was not offered, or a target that is not registered, is now
+  rejected inside `DecideAsync`. Before, it came back as that decision and only `Execute`
+  refused it. Memory remembers it as `none`.
+
 ## [0.3.0] - 2026-10-25
 
 Phase 2: Ollama provider, queue, memory. The first release that calls a model: an agent

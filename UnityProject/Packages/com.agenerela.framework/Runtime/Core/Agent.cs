@@ -15,9 +15,10 @@ namespace Agenerela
     /// <remarks>
     /// <para>
     /// Deciding and executing are two calls on purpose (hard rule 5). <see cref="DecideAsync"/> asks
-    /// the provider and returns what it chose. <see cref="Execute"/> checks that choice again, on its
-    /// own, against the agent as it is at that moment, and only then runs the game's code. The
-    /// provider is untrusted (build plan §2.4), and the world can change while the model thinks.
+    /// the provider, passes its answer through the guards (build plan §2.5), and returns what is
+    /// left. <see cref="Execute"/> checks that choice again, on its own, against the agent as it is
+    /// at that moment, and only then runs the game's code. The provider is untrusted (§2.4), and
+    /// the world can change while the model thinks.
     /// </para>
     /// <para>
     /// The developer decides when to call <see cref="DecideAsync"/> and what to pass: a player's
@@ -27,6 +28,15 @@ namespace Agenerela
     /// </remarks>
     public sealed class Agent
     {
+        // The only guard Execute runs again: legality is what can change between deciding and
+        // acting. Grounding judged the reply, which Execute does not have.
+        private static readonly SchemaLegalityGuard Legality = new SchemaLegalityGuard();
+
+        // The built-in guards, in the order §2.5 fixes. They run before Guards and are never in it.
+        // TargetGroundingGuard (#105) goes after Legality.
+        private static readonly IDecisionGuard[] BuiltInGuards = { Legality };
+        private static readonly IDecisionGuard[] ExecuteGuards = { Legality };
+
         private readonly ILLMProvider provider;
 
         // The provider's queue, found by the provider instance, so every agent given that
@@ -167,6 +177,12 @@ namespace Agenerela
         public IMemoryStrategy Memory { get; set; }
 
         /// <summary>
+        /// Guards that run after the built-in ones, in list order, inside <see cref="DecideAsync"/>
+        /// only. Empty by default. Internal until #108 makes it the developer's list.
+        /// </summary>
+        internal List<IDecisionGuard> Guards { get; } = new List<IDecisionGuard>();
+
+        /// <summary>
         /// Registers the action <paramref name="actionId"/>, as the profile defines it, with the game
         /// code that runs it, so the developer never fetches the definition from the asset by hand.
         /// An action the profile lists but nobody binds is never offered: nothing could run it.
@@ -232,8 +248,8 @@ namespace Agenerela
         /// prepared, such as a target source offering an id twice or an availability check that
         /// throws; a provider that throws; and a reply that is empty, is not one JSON object, or
         /// lacks a field the schema asked for. A reply naming an action or target the request did
-        /// not offer is still a decision, for <see cref="Execute"/> to refuse (see
-        /// <c>DecisionParser</c>). The telemetry says which of these it was in
+        /// not offer is still a decision, which the guards reject (see <c>DecisionParser</c> and
+        /// <see cref="SchemaLegalityGuard"/>). The telemetry says which of these it was in
         /// <see cref="DecisionTelemetry.ErrorKind"/>, from the <see cref="ProviderException.Kind"/>
         /// when a provider threw one, and holds the warning in
         /// <see cref="DecisionTelemetry.ErrorMessage"/> (#87).
@@ -251,18 +267,33 @@ namespace Agenerela
         /// The pipeline, in order: a context from the identity, a copy of <see cref="State"/>, the
         /// targets resolved now, the stimulus and the observations; the schema from the actions
         /// available now (#7, #8); the examples (#10); the request (#16); the provider's queue
-        /// (#89); the provider (#12); the parse. Telemetry records the latency of the provider's
-        /// request on a monotonic clock, from the send and not the enqueue; the priority, the time
-        /// spent queued and how many requests were ahead; the provider's name, the framework
-        /// version, the token counts the provider reported, and the target ids each
+        /// (#89); the provider (#12); the parse; the guards (#106). Telemetry records the latency of
+        /// the provider's request on a monotonic clock, from the send and not the enqueue; the
+        /// priority, the time spent queued and how many requests were ahead; the provider's name,
+        /// the framework version, the token counts the provider reported, and the target ids each
         /// <see cref="IReportsDroppedTargets"/> source left out, in source order (#81), and the
         /// exchanges of history sent, left out and forgotten (#90).
+        /// </para>
+        /// <para>
+        /// The guards (build plan §2.5) run on every decision, never on a pipeline error: first
+        /// <see cref="SchemaLegalityGuard"/>, then the grounding guard (#105), then the developer's
+        /// (#108). The first that does not pass stops them, and the result's
+        /// <see cref="DecisionResult.Decision"/> becomes <see cref="ActionRegistry.None"/> with
+        /// <see cref="TargetRegistry.NoTarget"/>, keeping the model's statement until #109 decides
+        /// what to say instead. The model's own answer stays on
+        /// <see cref="DecisionResult.ModelDecision"/>, the verdict on
+        /// <see cref="DecisionResult.Verdict"/>, and the guard's name, the verdict's kind and its
+        /// reason in <see cref="DecisionTelemetry.GuardsFired"/>,
+        /// <see cref="DecisionTelemetry.Verdict"/> and <see cref="DecisionTelemetry.GuardReason"/>.
+        /// A <see cref="GuardVerdict.Reject"/>, the provider breaking the contract, is logged as a
+        /// warning; a <see cref="GuardVerdict.RewriteToNone"/>, a contained refusal, is not.
         /// </para>
         /// <para>
         /// <see cref="Memory"/> is recalled while the request is prepared, into
         /// <see cref="DecisionRequest.History"/>, and so fails as preparing it does, including on a
         /// history that is not whole exchanges. The decision is remembered just before it is
-        /// returned, as parsed, so whitespace or extra fields in the reply are not. A pipeline
+        /// returned, as the guards left it, never as the model answered: whitespace or extra fields
+        /// in the reply are not remembered, and neither is an action a guard stopped. A pipeline
         /// error or a cancelled call remembers nothing; a <see cref="ActionRegistry.None"/>
         /// decision is remembered, because it happened. If remembering throws, the warning is
         /// logged and the decision still returned. Remembering happens on the main thread, even
@@ -278,7 +309,9 @@ namespace Agenerela
         /// </remarks>
         public Awaitable<DecisionResult> DecideAsync(string stimulus, DecideOptions options = null, CancellationToken ct = default)
         {
-            options = options ?? new DecideOptions();
+            // Copied now, so changing the options after the call changes nothing, including what
+            // the guards read from them.
+            options = options == null ? new DecideOptions() : options.Copy();
 
             // Checked here, outside the async body, so the mistake throws at the call rather than
             // becoming a PipelineError.
@@ -289,12 +322,12 @@ namespace Agenerela
                     nameof(options));
             }
 
-            // Copied now, so changing the options after the call changes nothing.
+            // A list of the context's own, apart from the options' copy a guard may read.
             var observations = new ReadOnlyCollection<string>(
                 options.Observations == null ? new List<string>() : new List<string>(options.Observations));
             string idleExample = options.IdleExampleStimulus ?? (profile != null ? profile.IdleExampleStimulus : null);
 
-            return Decide(stimulus, options.StimulusLabel, idleExample, observations, options.Priority, ct);
+            return Decide(stimulus, options, idleExample, observations, ct);
         }
 
         /// <summary>
@@ -303,18 +336,23 @@ namespace Agenerela
         /// </summary>
         /// <returns>
         /// True when the handler ran, or when the decision was <see cref="ActionRegistry.None"/>,
-        /// which runs no handler. False, with no handler run, for a result with no decision (a
-        /// pipeline error, already logged), and for a decision the check refuses, logged as a
-        /// warning saying why.
+        /// which runs no handler: a decision a guard rewrote to <c>none</c> included. False, with no
+        /// handler run, for a result with no decision (a pipeline error, already logged), for one a
+        /// guard rejected inside <see cref="DecideAsync"/> (already logged), and for a decision the
+        /// check refuses, logged as a warning saying why.
         /// </returns>
         /// <remarks>
         /// <para>
-        /// The check (hard rule 5): the action is registered, and available right now, recomputed
-        /// here rather than taken from the request it was chosen from; the target is registered
-        /// right now, or is <see cref="TargetRegistry.NoTarget"/>. The targets are resolved again
-        /// for it, so one a source no longer offers is refused. Phase 3 makes this check the first
-        /// guard of a pipeline that runs inside this call, and adds the rule that an action needing
-        /// a target gets a real one.
+        /// The check (hard rule 5) is <see cref="SchemaLegalityGuard"/>, run again against the agent
+        /// as it is right now: the action is registered; the target is registered, or is
+        /// <see cref="TargetRegistry.NoTarget"/>; an action that needs a target got a real one; and
+        /// the action is available, recomputed here rather than taken from the request it was
+        /// chosen from. The targets are resolved again for it, so one a source no longer offers is
+        /// refused. No other guard runs again: grounding judged the reply, which this call does not
+        /// have. A refusal is added to the result's telemetry, as
+        /// <c>"SchemaLegalityGuard@Execute"</c> in <see cref="DecisionTelemetry.GuardsFired"/>, with
+        /// <see cref="DecisionTelemetry.Verdict"/> and <see cref="DecisionTelemetry.GuardReason"/>;
+        /// <see cref="DecisionResult.Verdict"/> stays what <see cref="DecideAsync"/> made it.
         /// </para>
         /// <para>
         /// A refusal returns false rather than throwing: the provider is untrusted, so an answer to
@@ -338,40 +376,43 @@ namespace Agenerela
                 return false;
             }
 
+            // Its Decision is none, but the provider broke the contract, and DecideAsync said so.
+            if (result.Verdict.HasValue && result.Verdict.Value.Kind == GuardVerdictKind.Reject)
+            {
+                return false;
+            }
+
             if (decision.ActionId == ActionRegistry.None)
             {
                 return true;
             }
 
-            if (!Actions.TryGet(decision.ActionId, out var definition, out var handler))
-            {
-                return Refuse(decision, "the action is not registered.");
-            }
-
-            // No telemetry to fill: this Collect overwrites a source's Dropped, but the result
+            // No dropped targets to fill: this Collect overwrites a source's Dropped, but the result
             // already holds its own copy from the decision.
             var ctx = Snapshot("", Array.Empty<string>(), dropped: null);
 
-            if (decision.TargetId != TargetRegistry.NoTarget && !ctx.Targets.Contains(decision.TargetId))
+            // No request and no reply: only the agent as it is now. The options are the defaults,
+            // and no guard that runs here reads them.
+            var input = new GuardInput(ctx, null, null, decision, new DecideOptions(), result.Telemetry);
+            var verdict = GuardPipeline.Run(ExecuteGuards, input, "@Execute");
+            if (verdict.Kind != GuardVerdictKind.Pass)
             {
-                return Refuse(decision, "the target is not registered.");
+                return Refuse(decision, verdict.Reason);
             }
 
-            if (!IsAvailable(definition, ctx))
-            {
-                return Refuse(decision, "the action is not available right now.");
-            }
-
+            ctx.Actions.TryGet(decision.ActionId, out _, out var handler);
             handler.Execute(ctx, decision);
             return true;
         }
 
         private async Awaitable<DecisionResult> Decide(
-            string stimulus, string label, string idleExample, IReadOnlyList<string> observations,
-            DecisionPriority priority, CancellationToken ct)
+            string stimulus, DecideOptions call, string idleExample, IReadOnlyList<string> observations,
+            CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
 
+            string label = call.StimulusLabel;
+            var priority = call.Priority;
             var memory = Memory;
             var telemetry = new DecisionTelemetry
             {
@@ -476,8 +517,9 @@ namespace Agenerela
                 return Failed(telemetry, PipelineErrorKind.UnreadableReply, $"{problem} The reply was: {Excerpt(reply.Text)}");
             }
 
-            var result = new DecisionResult(decision, telemetry);
+            var result = Guard(new GuardInput(ctx, request, reply, decision, call, telemetry));
 
+            // After the guards, so what is remembered is what the agent will do (§2.9, rule 1).
             if (memory != null)
             {
                 try
@@ -492,6 +534,43 @@ namespace Agenerela
             }
 
             return result;
+        }
+
+        // The guards over one parsed decision: the built-in ones, then Guards. A decision none of
+        // them stopped is returned as it is; one they stopped becomes none, beside the model's own.
+        private DecisionResult Guard(GuardInput input)
+        {
+            var verdict = GuardPipeline.Run(AllGuards(), input);
+            var decision = input.Decision;
+
+            if (verdict.Kind == GuardVerdictKind.Pass)
+            {
+                return new DecisionResult(decision, input.Telemetry);
+            }
+
+            if (verdict.Kind == GuardVerdictKind.Reject)
+            {
+                // Once, here: Execute returns false for it without saying so again.
+                Debug.LogWarning($"{Who()} will do nothing: {verdict.Guard} rejected '{decision.ActionId}' on '{decision.TargetId}': {verdict.Reason}");
+            }
+
+            // The statement is the model's until #109 decides what an agent says after a refusal.
+            var none = new AgentDecision(ActionRegistry.None, TargetRegistry.NoTarget, decision.Statement);
+            return new DecisionResult(none, input.Telemetry, decision, verdict);
+        }
+
+        private IEnumerable<IDecisionGuard> AllGuards()
+        {
+            foreach (var guard in BuiltInGuards)
+            {
+                yield return guard;
+            }
+
+            // A copy, so a guard that edits the list while it runs cannot break the loop.
+            foreach (var guard in Guards.ToArray())
+            {
+                yield return guard;
+            }
         }
 
         // The history for one request, as DecisionRequest.History encodes it: whole exchanges of
@@ -563,21 +642,6 @@ namespace Agenerela
             }
 
             return ctx;
-        }
-
-        // Asks ActionAvailability, the same rule the schema was built by, rather than the handler
-        // alone, so the two can never disagree about what "available" means.
-        private static bool IsAvailable(ActionDefinition definition, AgentContext ctx)
-        {
-            foreach (var available in ActionAvailability.For(ctx))
-            {
-                if (available == definition)
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         private IEnumerable<ActionDefinition> Definitions()
