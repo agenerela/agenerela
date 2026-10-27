@@ -110,8 +110,11 @@ Without the GitHub CLI: `git fetch origin pull/<number>/head:pr-<number>`, then
    there, nothing there that is not mentioned. `Closes #n` only when every
    Definition-of-done item is met; otherwise `Part of #n`, so merging does not close
    unfinished work. An accuracy claim needs a control arm and an entry in
-   [`findings.md`](docs/llm-wiki/findings.md). If the commit messages do not say why, ask
-   for a squash merge with one good message rather than a history rewrite.
+   [`findings.md`](docs/llm-wiki/findings.md). The changelog entry says what changed and
+   why, in the right one of the two changelogs (CI only checks that there is one), and every
+   doc or wiki page that describes what changed was updated with it; a stale page is a
+   **Should fix**. If the commit messages do not say why, ask for a squash merge with one
+   good message rather than a history rewrite.
 
 A pull request that changes only docs skips steps 4 to 8; say so under *How I reviewed*.
 

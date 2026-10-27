@@ -24,8 +24,8 @@ per demo game under Demos/ (DR-010 in the build plan). Every check finds them al
 so a new game project is covered the moment its ProjectSettings/ is committed. Nothing here
 needs editing when a game is added.
 
-What a run compares against. Two checks ask what changed (guids, attribution) and one
-words its advice by it (meta):
+What a run compares against. Three checks ask what changed (guids, attribution, changelog)
+and one words its advice by it (meta):
 - On GitHub, a pull request counts from where it left its target branch, and a push from
   the commit the branch pointed at before. A new branch has nothing to count from.
 - On your machine, it counts from where HEAD left origin/test (pass --base to choose),
@@ -914,6 +914,48 @@ def check_attribution():
     return not errors
 
 
+CHANGELOGS = ("CHANGELOG.md", f"{FRAMEWORK}/CHANGELOG.md")
+NO_CHANGELOG = re.compile(r"^\s*No changelog:\s*\S", re.I | re.M)
+
+
+def check_changelog():
+    """A change outside the docs comes with a changelog entry.
+
+    Each pull request writes its own entry under [Unreleased]: in the package's CHANGELOG.md
+    for a change to its public API, in the root one for everything else (AGENTS.md, "Where
+    knowledge lives"). This replaced a status page that was updated after every merge, and
+    fell behind whenever nobody did. A pull request that touches only Markdown and docs/
+    needs no entry. Any other may opt out with a line "No changelog: <reason>" in its
+    description, for a change nobody would look for, such as a CI tweak or a typo in code.
+    On your machine there is no description to read, so a missing entry is only a warning;
+    the pre-commit hook skips this check, because a feature usually spans several commits.
+    """
+    if not RANGE.base:
+        print("OK: no earlier commit to compare with, so no change to need an entry")
+        return True
+    to = [RANGE.head] if RANGE.head else []
+    cached = [] if RANGE.head else ["--cached"]
+    changed = [f for f in git("diff", *cached, "--name-only", "--no-renames", "-z", RANGE.base, *to).split("\0") if f]
+    needs = [f for f in changed if not (f.startswith("docs/") or f.endswith(".md"))]
+    if not needs:
+        print(f"OK: {len(changed)} changed file(s), all docs, so no entry is needed")
+        return True
+    if any(f in changed for f in CHANGELOGS):
+        print(f"OK: {len(needs)} changed file(s) outside the docs, and a changelog entry with them")
+        return True
+    if NO_CHANGELOG.search(RANGE.pr_body or ""):
+        print(f"OK: {len(needs)} changed file(s) outside the docs; the description says why no entry is needed")
+        return True
+    msg = (f"{len(needs)} file(s) outside the docs changed (first: {needs[0]}), but neither CHANGELOG.md nor "
+           f"{FRAMEWORK}/CHANGELOG.md did. Add an entry under [Unreleased] in the package's for a public API "
+           f"change and the root one otherwise, or put a line 'No changelog: <reason>' in the description.")
+    if not RANGE.pr_base:
+        warning(msg)
+        return True
+    error(msg)
+    return False
+
+
 CHECKS = {
     "generated": check_generated,
     "json": check_json,
@@ -931,6 +973,7 @@ CHECKS = {
     "links": check_links,
     "probes": check_probes,
     "attribution": check_attribution,
+    "changelog": check_changelog,
 }
 
 
@@ -989,8 +1032,9 @@ def main():
         ap.error(f"unknown check(s): {', '.join(unknown)}. --list names them.")
     names = args.checks or list(CHECKS)
     if args.hook:
-        # The commit message does not exist yet; the pull request checks it.
-        names = [n for n in names if n != "attribution"]
+        # The commit message does not exist yet, and a feature's changelog entry may land in a
+        # later commit than its code; the pull request checks both.
+        names = [n for n in names if n not in ("attribution", "changelog")]
 
     find_range(args.base)
     if not RANGE.base and "guids" in names:
