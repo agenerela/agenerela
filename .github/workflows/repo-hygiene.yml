@@ -107,3 +107,7 @@ jobs:
       - name: No attribution lines in commits or the description
         if: ${{ !cancelled() && github.event_name == 'pull_request' }}
         run: python3 tools/ci/hygiene.py attribution
+
+      - name: A change outside the docs comes with a changelog entry
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        run: python3 tools/ci/hygiene.py changelog

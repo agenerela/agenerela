@@ -27,6 +27,14 @@ phase table and the open issues, not here.
   (#107), developer guards (#108), contained refusals (#109) and the gate (#110) are not.
   See the package's [`[Unreleased]`](UnityProject/Packages/com.agenerela.framework/CHANGELOG.md#unreleased).
 
+### Added
+
+- **A `changelog` hygiene check, as a reminder.** A pull request that changes anything
+  outside `docs/` and Markdown but neither changelog gets a warning, never a failure, unless
+  its description says why with a line `No changelog: <reason>`. The pre-commit hook skips
+  it. The pull request template asks for the entry and for the wiki pages the change
+  touches, and the reviewer checks both.
+
 ### Changed
 
 - This changelog replaces `docs/STATUS.md`. Its per-merge history duplicated the package

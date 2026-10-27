@@ -142,6 +142,12 @@ puts them in a game.
 - If the framework's public API changed, every game project under `Demos/` still
   compiles. CI cannot check this yet; open each one
 - Any accuracy claim has a control arm and is recorded in `docs/llm-wiki/findings.md`
+- An entry under `[Unreleased]` in the root `CHANGELOG.md`, or the package's for a public
+  API change. CI warns on a pull request that changes anything outside `docs/` and
+  Markdown without one, and the reviewer asks for it; a line `No changelog: <reason>` in
+  the description says why there is none
+- Every doc and `docs/llm-wiki/` page that describes what you changed is updated in the same
+  pull request. No check can see this one, so the reviewer asks
 
 **Never merge a pull request with a failing CI check.** `Repo hygiene` catches missing
 `.meta` files, a committed `.meta` whose GUID changed in place or when its asset moved,
