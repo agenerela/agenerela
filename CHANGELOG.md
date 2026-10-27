@@ -29,6 +29,9 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Branding in `tools/branding/`.** The logo as 3D-printable pins, a keychain and a sign
+  (STL, in one- and two-colour versions), 4K stills and a 4K animation with sound, each
+  rebuilt in Blender by the scripts beside it. STL, 3MF and WebP now go through Git LFS.
 - **A `changelog` hygiene check, as a reminder.** A pull request that changes anything
   outside `docs/` and Markdown but neither changelog gets a warning, never a failure, unless
   its description says why with a line `No changelog: <reason>`. The pre-commit hook skips
