@@ -37,6 +37,8 @@ Conditions: Windows 11, Ollama 0.34.2, RTX 4060 Laptop on AC power, one model re
 ~2.1 s offset matches the old gap. Unity was not re-measured, so this is the likely cause,
 not a proven one. If `UnityWebRequest` resolves `localhost` the same way and Unity still
 measures ~1.3 s, there is a second cause.
+The 25 October gate used `127.0.0.1` only, so `localhost` from Unity is still untested. A
+2.1 s delay on an unreachable `127.0.0.1` (19 October) is a different thing; see that entry.
 
 What changed: the probes in `tools/benchmarks/` now call `127.0.0.1`. `OllamaProvider`'s
 default endpoint should be `127.0.0.1` too (build plan §2.4). Absolute latencies from the old
@@ -101,11 +103,12 @@ arm can swap or drop the block while the rest of the prompt stays byte-identical
 
 ## New findings
 
-The framework itself still measures nothing. Phase 1 is pure C# with no model in the loop,
-settled by EditMode tests, and its first numbers arrive with Phase 2, when a real provider
-answers a real request. Entries below that carry numbers come from the standalone probes in
-`tools/benchmarks/`, which ask a model directly. Everything else comes from the build plan's
-Appendix A, measured in the predecessor prototype.
+Phase 1 is pure C# with no model in the loop, settled by EditMode tests. The framework's
+first repeated measurement is the Phase 2 gate's in-Unity latency (25 October 2026), taken
+when a real provider answered a real request; the entries after the first `OllamaProvider`
+call (19 October) are what it showed. Entries are in date order. Earlier entries that carry numbers come
+from the standalone probes in `tools/benchmarks/`, which ask a model directly. Everything else
+comes from the build plan's Appendix A, measured in the predecessor prototype.
 
 ### Stopping a swapped target: the model's own confidence beats the name check (5 October 2026)
 
@@ -299,6 +302,27 @@ answering "correctly" without constrained decoding is a different (weaker, cheap
 result than one that was actually constrained, and today nothing in the pipeline can tell the
 two apart after the fact.
 
+### What a provider can get from Ollama's and LLMUnity's token probabilities (7 October 2026)
+
+Facts the grounding guard (DR-016) and the providers depend on, found while writing the
+contract in #67 (PR #68). Only the first row was measured; the rest come from reading
+Ollama's source and LLMUnity's Inspector, and are labelled as that.
+
+| Fact | Basis |
+|---|---|
+| Ollama's `logprobs` are taken **before** the schema's mask, so they show what the model wanted to write | Measured on 0.34.2, the 5 October entry above; cost 0.06–0.08 s a decision |
+| `top_logprobs` is capped at **20**: Ollama refuses a larger number. The probe sent 5, and `OllamaProvider` sends 5 | Read in Ollama's `server/routes.go` (PR #68). Not tried against a live server |
+| **A character split across two tokens is missing from both tokens' text.** llama.cpp's server cuts the unfinished bytes off, and Ollama rebuilds its `bytes` field from the text it already cut, so `bytes` does not recover it | Read in Ollama's source (PR #68). The unit test uses a fixture, not a live reply |
+| LLMUnity's `LLMClient.nProbs` exists, **0 to 10** in its Inspector, so the in-process provider can keep at most ten alternatives | Read from the Inspector. Not tried, and whether llama.cpp reports before or after its grammar is still unknown (`providers.md`) |
+
+What follows from the split-character row: the token texts only join back into the reply
+when no such character is in it, so anything mapping tokens to positions in `Text` checks the
+join first. ASCII replies are unaffected, but target ids may contain non-ASCII letters, so
+the Phase 3 guard needs the check. `ProviderResult.TokenProbabilities` carries that rule.
+
+**What would change this.** A different Ollama version: the cap, the split-character
+handling and the "before the mask" behaviour were all checked on 0.34.2 only.
+
 ### Sword asset quality: improve component inputs before raising settings (8 October 2026)
 
 This is an asset-pipeline finding, not a language-model accuracy measurement.
@@ -369,6 +393,30 @@ The prompt format is in
 are rewritten, the problem is the agent definition or the category, not the prompts, and
 step 3's third case would be hiding it.
 
+### Asset server: face count barely changes the time; NVFP4 is steadier than int8 (8 October 2026)
+
+An asset-pipeline result, not a language-model accuracy one. The tables and commands are in
+[`tools/comfyui/README.md`](../../tools/comfyui/README.md) ("Why NVFP4", "Text to 3D model"),
+which stays the one place that holds them in full. Source: PRs #71 and #72, on the RTX 5080
+machine. The sword trials that followed are in
+[`asset-quality-2026-10-08.md`](asset-quality-2026-10-08.md).
+
+- **Image, NVFP4 against int8 (Z-Image Turbo).** Same prompts and seeds, 24 images each, models
+  loaded: int8 took 2.8–12.2 s (median about 4.9 s), NVFP4 2.3–2.7 s (median 2.5 s). int8 was
+  erratic, about 3 s in one block and 5–12 s in the next two, and PR #72 did not find out why.
+  Lettering spelled right: int8 14 of 14, NVFP4 13 of 14. "Equally good to the eye" for props,
+  scenes and a portrait is one person's judgement, not a measurement.
+- **Mesh, the face count hardly changes the time.** The default run (47,825 triangles) took
+  175 s and the `faces=20000 decimation=qem` run (18,267 triangles) took 171 s. One run each,
+  so an anecdote; a 4 s gap on a three-minute job is small.
+- **Mesh, the textures are most of the file.** `texture_size=1024` takes the base colour and
+  metallic-roughness maps from about 3.5 MB to 1.2 MB each; the normal map stays at 2048 px.
+- **Mesh decimation.** The template's `midpoint` broke the mesh into shards at 20,000 and 5,000
+  faces and `qem` did not. Tested on one object (README).
+
+**What would change this.** A different GPU: NVFP4 runs in hardware only on RTX 50-series
+cards. A second workload on the card would also move every time here.
+
 ### Ollama never shows the response schema to the model (10 October 2026)
 
 **What was checked.** Is the text inside the JSON Schema sent as Ollama's `format` read by
@@ -427,3 +475,128 @@ action in the system side of the request.
 
 **What would change this.** An Ollama version or model template that puts the schema into
 the prompt. Re-run the probe after any Ollama upgrade; it takes seconds.
+
+### The Phase 1 gate was shown able to fail, one break at a time (12 October 2026)
+
+PR #84 added the five definition-of-done checks (#11). A check that has never failed proves
+nothing, so a throwaway probe (not committed) switched each measured rule off in the runtime
+code, one at a time, and ran all five gates under each break. Each break failed exactly its own
+gate and no other: `IsAvailable` ignored → Gate 1; `target` optional with no `no_target` →
+Gate 2; `statement` moved first → Gate 3; examples rotating through the registry → Gate 4;
+`target` kept with no targets → Gate 5. With no break all five pass.
+
+Each failure message cites only what Appendix A measured. Gate 1 cites the constrained schema
+together with the few-shot block (58.5% → 84.9%), because state masking was never measured
+alone; Gate 5 cites the build plan and #7/#8 rather than a number. At that point 354 of 354
+EditMode tests passed. The method suits any later gate: break the rule on purpose before
+trusting the check.
+
+### `OllamaProvider`'s live check: what a real server showed that tests could not (19 October 2026)
+
+PR #102 (merged 20 October, #88). Each number is one reading by hand, through `Agent` and
+`OllamaProvider` in batch mode, so they are anecdotes (hard rule 2). Conditions: Ollama 0.34.2,
+`qwen3.5:2b`, the lead's laptop on AC power, no other model resident. The Phase 2 gate's
+measurement (25 October, below) is the one with a repeat count.
+
+- **One decision on the laptop.** The first request took 9.4 s, mostly loading the model; the
+  second took 0.59 s, with 193 prompt and 33 completion tokens. n = 1, and Appendix A's ~1.3 s
+  had Unity rendering a 180-prop scene, so the two do not compare. It is the only
+  through-the-framework number from the laptop so far; the gate's 0.427 s is another machine.
+- **Ollama stopped: `ProviderUnreachable` came back after 2.1 s.** The PR says Windows retries
+  a refused loopback connection; that explanation was not tested. The endpoint was
+  `127.0.0.1`, so this is **not** the `localhost` delay of 5 October, though it is the same
+  size. A 2 s unreachable result is not proof that the address was `localhost`.
+- **Mono's "connection refused" message ends in a line break and a run of NUL characters** on
+  Windows. They reached the warning log and telemetry, which is how the live run found them;
+  the provider now cuts the transport's message at its first line break.
+- **How Ollama 0.34.2 answers a missing model and a wrong path.** A model it lacks gives
+  `404` with `{"error":"model 'nosuchmodel:1b' not found"}`; a path it does not serve gives a
+  plain-text `404 page not found`. The provider tells them apart so a wrong endpoint does not
+  send the developer to `ollama pull`. Other versions were not checked.
+- **"The reply comes back on the main thread" cannot be tested by checking the main thread.**
+  A mutation run in PR #102 showed that a test asserting the *result* arrives there still
+  passes with `ConfigureAwait(false)` added, because Unity's `Awaitable` resumes its awaiter on
+  the main thread anyway. Only a test that watches the provider's own continuation failed the
+  mutant (thread 16 instead of 1).
+- **DR-016's case, live, once.** For "Attack the scarecrow." the first token of the target was
+  `"sc"` (−0.060) against `"training"` (−4.0), and the 42 token texts joined to exactly `Text`.
+  One prompt: a demonstration of the mechanism, not a rate.
+
+### First in-Unity latency: a warm decision through the framework in under 0.6 s (25 October 2026)
+
+**What was measured.** The Phase 2 gate's `RequiresOllama` PlayMode tests (#94) time each live
+decision two ways: wall-clock around `Agent.DecideAsync` (prompt build, queue, request,
+parse and the hop back to the main thread), and `DecisionTelemetry.LatencySeconds` (the
+provider's request alone, from the send). It is the first latency taken inside Unity since
+the prototype, and the first through this framework.
+
+Five batch-mode runs of the four tests, four timed decisions each, n = 20:
+
+| | Mean | Median | Min | Max | SD |
+|---|---|---|---|---|---|
+| Wall-clock around `DecideAsync` | 0.427 s | 0.463 s | 0.225 s | 0.560 s | 0.120 s |
+| `LatencySeconds` (provider only) | 0.427 s | 0.463 s | 0.225 s | 0.560 s | 0.119 s |
+| `QueueWaitSeconds` | 0.000 s | | | | |
+
+Per decision: 211 to 248 prompt tokens, 24 to 42 completion tokens. The longest, 0.52 to
+0.56 s, wrote the most tokens (42); the shortest, 0.23 to 0.25 s, the fewest (24). Greedy
+decoding made every run give the same four decisions and token counts, so the spread is
+between the four requests, not between runs: each request varied by 0.05 s or less across
+the five runs.
+
+**Conditions.** Windows 11, Unity 6000.3.23f1 PlayMode tests in the Editor in batch mode,
+Ollama 0.33.0, `qwen3.5:2b` (2.4 GB resident, 100% GPU, `num_ctx` 4096, temperature 0,
+`think: false`), NVIDIA RTX 5080 16 GB desktop GPU, driver 617.14. Endpoint
+`http://127.0.0.1:11434`. One model resident, checked with `ollama ps` after every run.
+Warm: three throwaway requests before the first timed one, and the model stayed loaded
+between runs. Two other Unity Editors and ordinary desktop apps were open; no ComfyUI
+container was running. A cold first run took 6.1 s for the warm-up and its first test
+together, so warming matters (build plan §4, item 6).
+
+**What it means.**
+
+- **The Phase 2 budget of 5 s holds with a wide margin on this machine.** The slowest
+  decision was 0.56 s.
+- **Almost all of the time is inside the provider's request.** Wall-clock and
+  `LatencySeconds` agree to the logged millisecond, so what happens outside the provider
+  call (building the prompt and schema, the queue, the parse and the hop back to the main
+  thread) took about a millisecond or less. That is not all of the framework's own work:
+  `LatencySeconds` starts before `OllamaProvider` serialises the request body, so that cost
+  sits inside the provider's time and is not isolated here.
+- **Not comparable with Appendix A's ~1.3 s.** That was an RTX 4060 Laptop with URP
+  rendering a 180-prop scene; this is a desktop RTX 5080 with no scene rendering. Only a
+  run on the same machine compares (§4). The inherited `localhost` question above stays
+  open: this run used `127.0.0.1` only, so it has no `localhost` arm.
+- **No accuracy claim.** The tests check that a decision arrives, not whether it is right.
+  Accuracy is Phase 4's, with a control arm (hard rule 2).
+
+**Reproduce.** With Ollama running and `qwen3.5:2b` pulled, run the PlayMode category
+`RequiresOllama` from the Test Runner, or in batch mode with
+`-runTests -testPlatform PlayMode -testCategory RequiresOllama`. Each timed decision prints a
+`LATENCY` line into the results. `AGENERELA_OLLAMA_MODEL` and `AGENERELA_OLLAMA_URL` choose
+another model or endpoint.
+
+**What would change this.** A slower GPU or a laptop on battery, a second model resident, a
+scene rendering beside the model, or a longer prompt (more targets, more history). Re-run on
+the lead's laptop for the number Appendix A can be compared with.
+
+
+### GreyBoxVillage played live: availability fixed what wording could not (25 October 2026)
+
+Single runs by hand, `qwen3.5:2b`, Ollama 0.33.0, warm, each decision about 0.4 s. Anecdotes,
+not measurements (hard rule 2). The full list is under "Played live" in
+[`Demos/GreyBoxVillage/README.md`](../../Demos/GreyBoxVillage/README.md) (PRs #111 and #112).
+
+- **Before the availability rules**, "Hello" drew `patrol`, and a wolf 26 m away drew
+  `sound_alarm`, once with the statement "The wolf is too far away to be a threat": the action
+  contradicting the words. The README's reading is that the model took the greeting for
+  `patrol`'s old example of a calm moment; that reading is a guess.
+- **With the rules**, the game derives availability from who is asking (player, zone, wolf,
+  quiet timer) and from the wolf's distance. The same lines then drew `none` or
+  `attack_target / wolf`, and `patrol` was not offered for a greeting. This is the settled
+  rule that illegal options are absent from the schema, seen live. Since Ollama never shows
+  action descriptions (10 October), availability is the lever a developer has, and wording is not.
+- **Left for Phases 3 and 4 on purpose:** a repeated statement copied word for word from the
+  history, wrong-but-legal picks on free chat, and "Walk with me" drawing `follow_player` in
+  one session and `patrol` as a cold first request in another. None is measured; the Phase 4
+  runner is where to count them.

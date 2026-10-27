@@ -12,8 +12,13 @@ namespace Agenerela{
         public string ProviderName = string.Empty; // Checks provider name, such as Ollama 
         public string Model = string.Empty; // The model that answered, as the provider reported it, such as qwen3.5:2b; empty when it did not say (#88)
         public string FrameworkVersion = string.Empty; // AgenerelaInfo.version
-        public List<string> GuardsFired = new List<string>();
+        public List<string> GuardsFired = new List<string>(); // Each guard that did not pass the decision, in order: at most one from DecideAsync, then "SchemaLegalityGuard@Execute" for each refusal by Execute's re-check (#106)
+        public GuardVerdictKind? Verdict; // The verdict of the guard that stopped the decision, or of Execute's re-check when it refused; null when every guard passed (#106)
+        public string GuardReason; // That guard's reason, word for word; null when every guard passed (#106)
         public List<string> TargetsDropped = new List<string>(); // Target ids a source found but left out because of its cap (#32)
+        public int HistoryTurnsSent; // Exchanges of memory sent in DecisionRequest.History, two entries each (#90)
+        public int HistoryTurnsDropped; // Exchanges the memory still held but left out of this request, from IReportsDroppedTurns; 0 when it cannot say (#90)
+        public int HistoryTurnsForgotten; // Exchanges the memory has let go of since it was made, a rising total, from IReportsDroppedTurns; 0 when it cannot say (#90)
         public DecisionOutcome? Outcome; // Outcome == null during normal runtime orperations
         public PipelineErrorKind? ErrorKind; // Why there is no decision: null unless Outcome is PipelineError (#87)
         public string ErrorMessage; // The warning Agent logged for that error, word for word; null unless Outcome is PipelineError
@@ -30,7 +35,12 @@ namespace Agenerela{
             Model = string.Empty;
             FrameworkVersion = string.Empty;
             GuardsFired = new List<string>();
+            Verdict = null;
+            GuardReason = null;
             TargetsDropped = new List<string>();
+            HistoryTurnsSent = 0;
+            HistoryTurnsDropped = 0;
+            HistoryTurnsForgotten = 0;
             Outcome = null;
             ErrorKind = null;
             ErrorMessage = null;

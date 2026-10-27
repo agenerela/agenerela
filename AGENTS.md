@@ -21,8 +21,15 @@ carries measured results from the predecessor prototype** — several intuitive-
 changes were tried there and made accuracy *worse*. The appendix says which, so they are
 not repeated.
 
-New measurements go in [`docs/llm-wiki/findings.md`](docs/llm-wiki/findings.md) the day
-they are taken.
+## Where knowledge lives
+
+| What | Where | Write to it when |
+|---|---|---|
+| Goals, phases and their gates, design decisions | [`docs/FRAMEWORK_BUILD_PLAN.md`](docs/FRAMEWORK_BUILD_PLAN.md) | A phase opens or closes, or a decision costs more than an hour to reverse (a decision record, §7) |
+| What changed | [`CHANGELOG.md`](CHANGELOG.md) for the repository, the package's [`CHANGELOG.md`](UnityProject/Packages/com.agenerela.framework/CHANGELOG.md) for its public API | In the pull request that makes the change, under `[Unreleased]` in whichever file it belongs, never both |
+| What we measured and learned, and how to set a machine up | [`docs/llm-wiki/`](docs/llm-wiki/README.md) | The day you measure something, negative results included, in [`findings.md`](docs/llm-wiki/findings.md) |
+
+Neither changelog nor the wiki is loaded into every session; read the one you need.
 
 ## Hard rules
 
@@ -77,6 +84,7 @@ they are taken.
 | `Demos/<Game>/` | Demo games — one full Unity project each, loading the package by relative path (DR-010) |
 | `docs/` | Build plan, llm-wiki, screen designs and course materials — [`docs/README.md`](docs/README.md) maps them |
 | `tools/benchmarks/` | Standalone Python probes, no Unity required |
+| `tools/branding/` | The logo as 3D-printable pins and signs, 4K stills and a 4K animation with sound, all built in Blender from the logo's traced geometry |
 | `tools/ci/` | `hygiene.py`, every check CI runs, runnable on your machine and as a pre-commit hook; `release.py`, the mechanical steps of a release |
 | `tools/comfyui/` | The asset server: ComfyUI in Docker on the lead's RTX 5080 machine, making 3D models, sounds and images for the demo games, and `comfy.py`, which agents call it with |
 
@@ -135,6 +143,12 @@ puts them in a game.
 - If the framework's public API changed, every game project under `Demos/` still
   compiles. CI cannot check this yet; open each one
 - Any accuracy claim has a control arm and is recorded in `docs/llm-wiki/findings.md`
+- An entry under `[Unreleased]` in the root `CHANGELOG.md`, or the package's for a public
+  API change. CI warns on a pull request that changes anything outside `docs/` and
+  Markdown without one, and the reviewer asks for it; a line `No changelog: <reason>` in
+  the description says why there is none
+- Every doc and `docs/llm-wiki/` page that describes what you changed is updated in the same
+  pull request. No check can see this one, so the reviewer asks
 
 **Never merge a pull request with a failing CI check.** `Repo hygiene` catches missing
 `.meta` files, a committed `.meta` whose GUID changed in place or when its asset moved,
@@ -169,20 +183,45 @@ moves into the repository proper.
 `ProjectSettings/ProjectVersion.txt`, and CI fails if any project differs. Do not upgrade
 it; opening a project in a newer patch rewrites that file for everyone.
 
+## Lessons
+
+Mistakes that cost real time here, each with the habit that prevents it. Add one when a
+one-line habit would have saved an hour; a measurement goes in `findings.md` instead. When a
+CI check or a test starts enforcing a lesson, delete it from this list.
+
+- **Prove a new test can fail.** Break the rule it guards once and watch it go red. A target
+  test in #61 could not fail, and was caught only in review; the Phase 1 gate (#84) was
+  checked this way, one rule switched off at a time.
+- **Await every async test through `Fixtures.NotCancelled`.** The Test Framework counts a
+  test whose `Task` ends cancelled as passed, so a cancelled decision hides a failure.
+- **After merging `test` into a branch, diff it against the branch's head before the merge.**
+  A merge with `test` silently dropped #90's memory tests and docs; c9d6160 restored them.
+- **Check a pull request is still open before pushing to it** (`gh pr view <n> --json state`).
+  Green pull requests merge fast: a commit pushed to #37 after its merge never reached `test`
+  and had to become #38.
+- **Call Ollama at `http://127.0.0.1:11434`, never `localhost`.** On Windows `localhost`
+  tries IPv6 first, which costs about 2 s per request (findings, 5 October). The `ollama` CLI
+  hangs in Git Bash; use the HTTP API there.
+- **Unity batch-mode test runs take no `-quit`**, and a fresh worktree spends 3 to 4 minutes
+  importing before the first test runs. Give it time before calling it hung.
+
 ## Current state
 
-**Phase 1 (Core, Actions, Schema) is complete**, closed on 11 October when the five checks
-in #11 passed. **Phase 2 (Ollama provider, queue, memory) is underway**, due 29 October, and
-closes when the live checks in its gate (#94) pass. **Nothing in the framework calls a model
-yet**: the first live decision is Phase 2's, through an Ollama provider that sends
-`JsonSchemaSerializer`'s output.
+**Phases 1 and 2 are complete.** Phase 1 (Core, Actions, Schema) closed on 11 October when
+the five checks in #11 passed. Phase 2 (Ollama provider, queue, memory) closed on 25 October
+when the live checks in its gate (#94) passed, and is released as 0.3.0. **The framework calls
+a model**: `OllamaProvider` sends `JsonSchemaSerializer`'s output to a local Ollama, and the
+gate's `RequiresOllama` PlayMode tests prove the live path. **Phase 3 (Validation pipeline) is
+under way**, due 9 November: the guards between the provider and the handler (#105 to #110),
+of which the pipeline itself (#106) has merged. Still
+open from Phase 2, off its gate's path: observation sources (#91), the provider config asset
+(#92) and `AgentBehaviour` (#93).
 
-What has merged, what is still to write and the groundwork beside the phases are in
-[`docs/STATUS.md`](docs/STATUS.md); the package's API changes are in its
-[`CHANGELOG.md`](UnityProject/Packages/com.agenerela.framework/CHANGELOG.md). Read the one
-you need. Neither is loaded into every session, which is why they are not here. When a
-pull request merges, update `docs/STATUS.md`, and this section only when a phase opens or
-closes.
+Beside the phases: the evaluation set's real annotators and next prompts (#85), and the demo
+games, one sub-issue each under #47, starting with GreyBoxStrategy (#20).
+
+What has merged is in the two changelogs (see "Where knowledge lives"). Update this section
+only when a phase opens or closes.
 
 ## Agent-specific configuration
 

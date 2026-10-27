@@ -1023,10 +1023,10 @@ when observations first reach a model; run the comparison in Phase 4 and record 
 
 ### 2.9 Memory (`Runtime/Memory/`) — what an agent remembers between decisions
 
-**Status: planned for Phase 2, nothing built.** One slot exists already:
-`DecisionRequest.History` (#12), which stays an empty list until a memory strategy fills it.
-`Agent` (#17) marks where it plugs in, and gains a `Memory` property with the strategy. This section records what memory is for and the rules it has to follow, so that
-Phase 2 designs it rather than bolting it on at the end.
+**Status: short-term memory built in Phase 2 (#90, via #104).** `Agent.Memory` holds a
+`RollingHistory` of its own by default, which fills `DecisionRequest.History`; the rules below
+are the ones it was built to. Long-term memory and saving memory with the game are still
+open. This section records what memory is for and the rules it has to follow.
 
 **What it is for.** Without memory every decision starts from nothing. The guard cannot
 follow "Follow me." with "Now wait here.", and it forgets that the player threatened it a
@@ -1035,14 +1035,15 @@ kept apart on purpose: §2.8 forbids anything accumulating between decisions, an
 the one deliberate exception, bounded and owned by a single agent.
 
 ```csharp
-// Sketch only. Phase 2 settles the shape.
+// The shape #90 settled.
 public interface IMemoryStrategy {
     IReadOnlyList<string> Recall(AgentContext ctx);            // turns for this request, oldest first
-    void Remember(AgentContext ctx, DecisionResult result);    // after the guards have run
+    void Remember(AgentContext ctx, DecisionRequest request,   // after the guards have run; the
+                  DecisionResult result);                      // request holds the stimulus as sent
 }
 ```
 
-**The default is short-term:** `RollingHistory(turns: 6)` (§2.1), the last six exchanges,
+**The default is short-term:** `RollingHistory(turns: 6, maxTokens: 256)` (§2.1), the last six exchanges,
 oldest first. Where they go in the prompt is already fixed by `DecisionRequest`: after the
 system side (system prompt, few-shot block, observations) and before the stimulus, which
 stays the final user turn.
@@ -1063,8 +1064,9 @@ stays the final user turn.
    the queue's ceiling is ≈21 s for 30 agents (§2.6). So the window gets a token cap, and
    telemetry records how many turns were sent and how many were dropped. #16 already lists
    truncating history to `num_ctx` as Phase 2 work.
-4. **How a turn names its speaker is decided once, in Phase 2.** The remarks on
-   `DecisionRequest.History` forbid inventing an encoding before then.
+4. **How a turn names its speaker is decided once, in Phase 2.** #90 decided it, and the
+   remarks on `DecisionRequest.History` hold it: two entries per exchange, the stimulus as it
+   was sent, label included, then the decision as the schema's JSON.
 5. **Memory works with the grounding guard, not around it.** The guard reads where the
    model's probability went (§2.5, DR-016). So "Attack it." after "Do you see the training
    dummy?" passes when the model resolves "it" to a target on the list, and is refused when it
@@ -1096,7 +1098,7 @@ strategy interface is where that would go. Wait until a demo needs it.
 |---|---|---|
 | **0. Skeleton** | Repo + package layout of §1 | Checklist §1.3 all green |
 | **1. Core + Actions + Schema** (pure C#, no LLM, no scene) | `Agent`, `ActionDefinition`, registries, `DecisionSchema` builder + Ollama-dialect serializer | EditMode tests prove: state masking (following agent's schema omits `follow_player`); `target` required w/ `no_target`; field order action→target→statement; few-shot block matches registered actions and rotates only sensible example targets; empty target-registry removes `target` property entirely. **All testable without any model running — this is why Phase 1 has no LLM.** |
-| **2. OllamaProvider + queue + memory** | End-to-end decision in a sandbox scene, with short-term memory (§2.9) | PlayMode test (tagged `RequiresOllama`): one agent, five actions, live decision round-trip < 5s; telemetry fields populated; provider failure (missing model) surfaces as a typed error, not an exception leak. EditMode tests for `RollingHistory`: it fills `DecisionRequest.History` oldest first within a token cap, records the decision `DecideAsync` returns rather than the provider's raw answer (so a Phase 3 guard's rewrite is what gets remembered), and keeps one memory per agent instance |
+| **2. OllamaProvider + queue + memory** | End-to-end decision in a sandbox scene, with short-term memory (§2.9) | PlayMode test (tagged `RequiresOllama`): one agent, five actions, live decision round-trip < 5s; telemetry fields populated; provider failure (missing model) surfaces as a typed error, not an exception leak. EditMode tests for `RollingHistory`: it fills `DecisionRequest.History` oldest first within a token cap, records the decision `DecideAsync` returns rather than the provider's raw answer (so a Phase 3 guard's rewrite is what gets remembered), and keeps one memory per agent instance. **Passed 25 October 2026** (#94, via #111): a warm decision took 0.23 to 0.56 s on `qwen3.5:2b`, an RTX 5080 (findings, 25 October) |
 | **3. Validation pipeline** | Guards of §2.5 wired between provider and handler | EditMode tests with hand-built fake decisions: substitution attack rewritten to `none`; unavailable action rejected; an action that needs a target, answered with `no_target`, rejected; guard verdicts appear in telemetry. With `CheckTarget` on (the default), a decision where less than the threshold of the model's probability stayed on the target list is rewritten to `none`, and one split between two listed targets passes; with it off for a call, the guard does not run on that call; a provider that reports no probabilities is recorded as such rather than passing silently. Integration: prototype's "impossible request" suite passes ≥ 95% on a 2B model |
 | **4. Evaluation harness** | The measurement instrument — **before more features** | 200+ labelled prompts (grow from the prototype's 53), each declaring its required precondition state, and covering game-triggered stimuli (events, reports, turns) as well as player commands rather than mostly commands; runner executes A/B (two configs, same model/session) and writes a classified report (correct / wrong-legal / contained / rejected / pipeline-error); second annotator labels a subset, agreement reported. Methodology checklist (§4) committed to the wiki |
 | **5. Editor tooling** | §2.7 | A developer with zero framework knowledge builds a working 3-action agent in an empty scene in < 15 min without editing framework source (actually run this test on a teammate) |

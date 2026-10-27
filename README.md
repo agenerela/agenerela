@@ -27,9 +27,9 @@
 
 > [!NOTE]
 > **Early development.** The core is built and tested: registered actions, availability from
-> state, the decision schema, prompts and the `Agent` that joins them, proven end to end against
-> a fake provider. Nothing calls a real model until Phase 2 adds the Ollama provider, now under
-> way. [`docs/STATUS.md`](docs/STATUS.md) has the detail.
+> state, the decision schema, prompts and the `Agent` that joins them. Since 0.3.0 it calls a
+> local model through Ollama, with a request queue and short-term memory; the guards that stop
+> a wrong answer are Phase 3, now under way. The [changelog](CHANGELOG.md) has the detail.
 
 ## A quick look
 
@@ -105,9 +105,10 @@ arrives in Phase 4.
   <img src="docs/assets/readme/roadmap.svg" alt="Roadmap: phases 0 Skeleton and 1 Core are done; phase 2, Ollama, queue and memory, is in progress; then Guards, Evaluation, Editor tools, Cloud providers, In-process, Samples and Demo games." width="100%">
 </p>
 
-Each phase closes with a release. What has merged and what is next is in
-[`docs/STATUS.md`](docs/STATUS.md); the API changes are in the package
-[changelog](UnityProject/Packages/com.agenerela.framework/CHANGELOG.md).
+Each phase closes with a release. What has changed is in the [changelog](CHANGELOG.md), and
+the API changes in the package's own
+[changelog](UnityProject/Packages/com.agenerela.framework/CHANGELOG.md); what each phase must
+do to close is in the build plan's phase table.
 
 ## Developing
 

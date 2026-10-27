@@ -44,6 +44,32 @@ editor at a time open a project.
   compiles and the tests still run, but the log fills with errors that are not the branch's.
   Turning on Windows long paths does not help.
 
+### Running the PlayMode tests that need a model
+
+The Phase 2 gate's tests (`RequiresOllama`) call a real Ollama, so they need it running with
+the model pulled; they are the only tests that do. The same command with the other platform
+and a category:
+
+```bash
+"C:/Program Files/Unity/Hub/Editor/6000.3.23f1/Editor/Unity.exe" -batchmode -nographics -projectPath <checkout>/UnityProject -runTests -testPlatform PlayMode -testCategory RequiresOllama -testResults results.xml -logFile unity.log
+```
+
+Each timed decision prints a `LATENCY` line. `AGENERELA_OLLAMA_MODEL` and
+`AGENERELA_OLLAMA_URL` choose another model or endpoint; the findings entry of 25 October 2026
+has the conditions to match before comparing a run with its numbers.
+
+### The Unity CLI (optional)
+
+Unity's own command line, `unity`, is installed on the lead's laptop (1.0.0-beta.8 when
+checked on 26 October 2026, a beta that may change). Two commands are useful with no project
+change: `unity status` lists the open editors, and `unity test <project> --mode EditMode
+--output <xml>` runs the same EditMode tests as the raw command above, choosing the editor
+from `ProjectVersion.txt`. Set `UNITY_NO_BANNER=1` and `UNITY_NON_INTERACTIVE=1` when an
+agent calls it. Its live editor control (`unity command`, `unity list`) needs the
+experimental `com.unity.pipeline` package, which no project here has added: it would change a
+committed manifest and overlaps MCP for Unity, below. The `unity-cli` skill is installed per
+user, not in this repository.
+
 ## Per-machine setup — do this BEFORE cloning
 
 Order matters for the first command.
@@ -101,7 +127,21 @@ The development provider. Install [Ollama](https://ollama.com), then:
 ollama pull qwen3.5:4b
 ```
 
-Models used in prototype measurements: `qwen3.5:0.8b`, `qwen3.5:2b`, `qwen3.5:4b`.
+**What the framework uses.** `OllamaSettings` defaults to `http://127.0.0.1:11434`,
+`qwen3.5:2b`, a 4096-token context, temperature 0 and a 30 s timeout. Always `127.0.0.1`,
+never `localhost`: on Windows `localhost` tries IPv6 first, Ollama listens on IPv4 only, and
+each request waited about 2 s (findings, 5 October 2026). Check a server with
+`curl http://127.0.0.1:11434/api/version`.
+
+**Versions seen.** Ollama 0.34.2 on the lead's laptop (the 5 and 10 October findings, and
+the live check of `OllamaProvider`) and 0.33.0 on the RTX 5080 desktop (the Phase 2 gate).
+The token-probability behaviour, the 404 bodies and the schema probe were all checked on
+0.34.2 only. After an upgrade, re-run
+`python tools/benchmarks/schema_visibility_probe.py` (seconds); it settles whether the
+response schema has started reaching the model, which would change what a local model reads.
+
+Models used in prototype measurements: `qwen3.5:0.8b`, `qwen3.5:2b`, `qwen3.5:4b`. The
+5 October probes ran `2b` as Q8_0 and `4b` as Q4_K_M.
 All Apache-2.0 (verified September 2026 — re-check per release, model licences vary a
 lot and some families carry real commercial restrictions).
 
@@ -118,6 +158,17 @@ ollama stop <other-model>
 
 Two models on one card share compute and flatten every latency measurement toward the
 same value. This has caught people out already; see the build plan Appendix A.
+
+Running out of VRAM does not fail, it quietly slows: the part of the model that does not fit
+runs on the CPU. `curl http://127.0.0.1:11434/api/ps` reports `size` and `size_vram` for each
+model; `size_vram` of 0 means the model is not on the GPU at all (build plan §4 describes the
+check). On the lead's laptop the `ollama` command line was seen to hang in Git Bash, even
+`ollama --version`, so scripts there use the HTTP API; unload a model with
+`{"model": "<name>", "keep_alive": 0, "messages": []}` posted to `/api/chat`. That was seen
+on one machine and not investigated further. On a laptop, `size_vram` of 0 was once the sign that the discrete GPU was off when Ollama
+started; restarting Ollama after the GPU woke fixed it (seen once, not investigated). Run on
+AC power: one 5 October session was run on battery (findings), and a battery run is not
+comparable with an AC one.
 
 ## MCP for Unity (optional)
 
@@ -151,7 +202,11 @@ and fill in `COMFY_URL` and `COMFY_API_TOKEN`, then run
 or a password manager, never through a chat. On the RTX 5080 machine itself, the server's own
 `.env` already holds the token; set `COMFY_URL=http://127.0.0.1:8289` there. Nothing else is
 installed: `comfy.py` uses only Python's standard library. An agent asking for assets follows
-[`tools/comfyui/AGENT_USAGE.md`](../../tools/comfyui/AGENT_USAGE.md).
+[`tools/comfyui/AGENT_USAGE.md`](../../tools/comfyui/AGENT_USAGE.md). That machine's GPU
+is also where Ollama ran for the Phase 2 gate, so the two share its 16 GB; the gate was
+measured with no ComfyUI container running. Checking a generated model needs Blender
+(`tools/comfyui/preview_glb.py` finds it). Measured times and sizes are summarised in
+[`findings.md`](findings.md) (8 October 2026) and kept in full in the ComfyUI README.
 
 ## Cloud provider (optional)
 
@@ -168,5 +223,13 @@ has access to before picking one.
 
 ## Hardware the numbers came from
 
-RTX 4060 Laptop, **8 GB VRAM**. Absolute latency and VRAM figures in Appendix A are
-specific to it. On different hardware, re-measure rather than assuming they transfer.
+Two machines, and numbers from one do not transfer to the other.
+
+| Machine | Used for |
+|---|---|
+| RTX 4060 Laptop, **8 GB VRAM**, Windows 11 | Appendix A's prototype figures, the 5 and 10 October probes (Ollama 0.34.2), the live check of `OllamaProvider` (19 October) |
+| Desktop with an **RTX 5080, 16 GB**, driver 617.14, Windows 11 | The Phase 2 gate's latency (25 October, Ollama 0.33.0), the asset server (`tools/comfyui/`) |
+
+Absolute latency and VRAM figures are specific to the machine that took them. On different
+hardware, re-measure rather than assuming they transfer; the gate's findings entry asks for
+a re-run on the laptop for a number Appendix A can be compared with.

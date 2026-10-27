@@ -285,14 +285,14 @@ footer p{max-width:78ch}
 
 <!-- ============ ORDER OF WORK ============ -->
 <section class="sec" id="order">
-  <div class="sechead"><h2>The order of work</h2><span class="pill ok">3 ready now</span><span class="pill warn">2 waiting</span><span class="pill dark">4 merged</span></div>
+  <div class="sechead"><h2>The order of work</h2><span class="pill ok">3 ready now</span><span class="pill warn">1 waiting</span><span class="pill dark">5 merged</span></div>
   <p class="seclede">Six issues can start today, in parallel. The gate waits on four of them. Only one chain is longer than a step: the provider, then its config asset, then the component that uses it.</p>
 
   <figure>
     <div class="fig">
       <div class="figbar">Figure 2 · What waits on what, as of 12 October</div>
       <div class="figscroll">
-        <svg viewBox="0 0 1000 310" role="img" aria-label="Issues 87, 88 and 89 are merged, issue 90 is ready, and the gate, 94, waits on all four. Issue 92 is ready now that 88 is merged, and 93 waits on 92. Issue 91 is ready and 81 is merged, and nothing waits on them.">
+        <svg viewBox="0 0 1000 310" role="img" aria-label="Issues 87, 88, 89 and 90 are merged, so the gate, 94, which waited on all four, is ready. Issue 92 is ready now that 88 is merged, and 93 waits on 92. Issue 91 is ready and 81 is merged, and nothing waits on them.">
           <defs>
             <marker id="p2d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0,0 L10,5 L0,10 z"/></marker>
           </defs>
@@ -309,7 +309,7 @@ footer p{max-width:78ch}
           <text class="n" x="354" y="46">#89</text><text class="ready" x="482" y="46" text-anchor="end">merged</text>
           <text class="s" x="354" y="68">Queue + priority</text>
           <rect class="box" x="508" y="24" width="150" height="58" rx="7"/>
-          <text class="n" x="520" y="46">#90</text><text class="ready" x="648" y="46" text-anchor="end">ready</text>
+          <text class="n" x="520" y="46">#90</text><text class="ready" x="648" y="46" text-anchor="end">merged</text>
           <text class="s" x="520" y="68">Short-term memory</text>
 
           <rect class="box side" x="690" y="24" width="150" height="58" rx="7"/>
@@ -325,7 +325,7 @@ footer p{max-width:78ch}
           <text class="s" x="22" y="194">Provider config</text>
 
           <rect class="box gate" x="176" y="150" width="482" height="58" rx="7"/>
-          <text class="n" x="190" y="172">#94  Phase 2 gate</text><text class="blocked" x="646" y="172" text-anchor="end">waiting</text>
+          <text class="n" x="190" y="172">#94  Phase 2 gate</text><text class="ready" x="646" y="172" text-anchor="end">ready</text>
           <text class="s" x="190" y="194">live decision under 5 s · RequiresOllama PlayMode tests · sandbox scene</text>
 
           <rect class="box side" x="10" y="240" width="150" height="58" rx="7"/>
@@ -389,7 +389,7 @@ footer p{max-width:78ch}
     </article>
 
     <article class="issue">
-      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/90">#90</a><h3>Short-term memory</h3><span class="pill ok">ready</span></div>
+      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/90">#90</a><h3>Short-term memory</h3><span class="pill dark">merged, #104</span></div>
       <p>The last few exchanges go back into each request, oldest first and within a token budget, so "Now wait here." can follow "Follow me.". Each exchange is stored as the stimulus plus the decision as JSON. What is remembered is the decision the agent actually made, never the model's raw text.</p>
       <div><div class="lab">Done when</div><ul class="done">
         <li>The second request carries the first exchange</li>
@@ -401,7 +401,7 @@ footer p{max-width:78ch}
     </article>
 
     <article class="issue gate">
-      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/94">#94</a><h3>Phase 2 gate</h3><span class="pill warn">waits on #87–#90</span></div>
+      <div class="ihead"><a class="inum" href="https://github.com/agenerela/agenerela/issues/94">#94</a><h3>Phase 2 gate</h3><span class="pill ok">ready</span></div>
       <p>Live PlayMode tests tagged <span class="mono">RequiresOllama</span>, skipped with a message when Ollama is not running, and a sandbox scene where you type a command and watch the decision and its telemetry. It records the first in-Unity latency since the prototype in <span class="mono">findings.md</span>.</p>
       <div><div class="lab">Done when</div><ul class="done">
         <li>A five-action agent decides in under 5 s after warm-up</li>
@@ -476,7 +476,7 @@ footer p{max-width:78ch}
         <tr><td class="mono">ErrorKind, ErrorMessage</td><td>#87</td><td>Why did this decision fail: a missing model, a stopped server, a timeout, an unreadable reply?</td></tr>
         <tr><td class="mono">Model</td><td>#88</td><td>Which model answered? <span class="mono">ProviderName</span> names only the provider.</td></tr>
         <tr><td class="mono">Priority, QueueWaitSeconds, QueuedAhead</td><td>#89</td><td>Was a slow answer the model, or four background requests ahead of it?</td></tr>
-        <tr><td class="mono">HistoryTurnsSent, HistoryTurnsDropped</td><td>#90</td><td>How much memory reached the prompt, and how much the budget cut?</td></tr>
+        <tr><td class="mono">HistoryTurnsSent, HistoryTurnsDropped, HistoryTurnsForgotten</td><td>#90</td><td>How much memory reached the prompt, how much the budget cut, and how much the window has let go of?</td></tr>
         <tr><td class="mono">ObservationsDropped</td><td>#91</td><td>Which facts did the cap leave out?</td></tr>
         <tr><td class="mono">ProviderConfig</td><td>#92</td><td>Which configuration resolved: the agent's own, or the project default?</td></tr>
         <tr><td class="mono">TargetsDropped</td><td>#81</td><td>Was the thing the player named ever offered, or past the cap?</td></tr>
