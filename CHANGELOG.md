@@ -29,11 +29,11 @@ phase table and the open issues, not here.
 
 ### Added
 
-- **A `changelog` hygiene check.** A pull request that changes anything outside `docs/` and
-  Markdown must also change one of the two changelogs, or say why not with a line
-  `No changelog: <reason>` in its description. On a laptop it only warns, and the pre-commit
-  hook skips it. The pull request template asks for the entry and for the wiki pages the
-  change touches.
+- **A `changelog` hygiene check, as a reminder.** A pull request that changes anything
+  outside `docs/` and Markdown but neither changelog gets a warning, never a failure, unless
+  its description says why with a line `No changelog: <reason>`. The pre-commit hook skips
+  it. The pull request template asks for the entry and for the wiki pages the change
+  touches, and the reviewer checks both.
 
 ### Changed
 

@@ -919,16 +919,17 @@ NO_CHANGELOG = re.compile(r"^\s*No changelog:\s*\S", re.I | re.M)
 
 
 def check_changelog():
-    """A change outside the docs comes with a changelog entry.
+    """A change outside the docs comes with a changelog entry (a reminder; it never fails).
 
     Each pull request writes its own entry under [Unreleased]: in the package's CHANGELOG.md
     for a change to its public API, in the root one for everything else (AGENTS.md, "Where
     knowledge lives"). This replaced a status page that was updated after every merge, and
     fell behind whenever nobody did. A pull request that touches only Markdown and docs/
-    needs no entry. Any other may opt out with a line "No changelog: <reason>" in its
-    description, for a change nobody would look for, such as a CI tweak or a typo in code.
-    On your machine there is no description to read, so a missing entry is only a warning;
-    the pre-commit hook skips this check, because a feature usually spans several commits.
+    needs no entry. For any other, a missing entry is a warning on the pull request, never a
+    failure: the entry is a rule, but writing a good one takes a teammate without an agent
+    longer than a red check should wait, and the reviewer asks for it (REVIEWING.md). A
+    line "No changelog: <reason>" in the description silences the warning. The pre-commit
+    hook skips this check, because a feature usually spans several commits.
     """
     if not RANGE.base:
         print("OK: no earlier commit to compare with, so no change to need an entry")
@@ -949,11 +950,8 @@ def check_changelog():
     msg = (f"{len(needs)} file(s) outside the docs changed (first: {needs[0]}), but neither CHANGELOG.md nor "
            f"{FRAMEWORK}/CHANGELOG.md did. Add an entry under [Unreleased] in the package's for a public API "
            f"change and the root one otherwise, or put a line 'No changelog: <reason>' in the description.")
-    if not RANGE.pr_base:
-        warning(msg)
-        return True
-    error(msg)
-    return False
+    warning(msg)
+    return True
 
 
 CHECKS = {

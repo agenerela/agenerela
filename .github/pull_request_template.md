@@ -14,7 +14,7 @@
 - [ ] No generated files committed (`Library/`, `Logs/`, `*.csproj`)
 - [ ] Every new file and folder has its `.meta` committed (open the project in Unity before committing)
 - [ ] If the framework's public API changed: every game project under `Demos/` still compiles
-- [ ] An entry under `[Unreleased]` in `CHANGELOG.md`, or the package's for a public API change (CI checks it; a line `No changelog: <reason>` here opts out)
+- [ ] An entry under `[Unreleased]` in `CHANGELOG.md`, or the package's for a public API change (CI warns when there is none; a line `No changelog: <reason>` here says why)
 - [ ] Any `docs/llm-wiki/` page or doc that describes what this changes is updated with it
 
 ## If this touches accuracy or performance
