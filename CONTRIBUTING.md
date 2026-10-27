@@ -72,6 +72,11 @@ when you start. A new issue lands on the board by itself; check that its Status 
 label. Demo games are sub-issues of #47, one per game. To change the board with `gh`, add
 the `project` scope once: `gh auth refresh -h github.com -s project`.
 
+Some areas have an owner who researches and builds in them, listed in the build plan's
+[§6.6](docs/FRAMEWORK_BUILD_PLAN.md#research-areas). Their issues carry the `research`
+label and stay **In progress** while the area is worked on. Work in someone else's area
+starts with a word to its owner.
+
 Each issue lists the **files it owns**. Stick to them and merge conflicts mostly disappear.
 
 ## Before opening a pull request

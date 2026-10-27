@@ -1318,6 +1318,20 @@ has to explain their own API to a teammate, the API needs work. And **one person
 scene at a time** — with six people, scene conflicts are the failure mode most likely to
 cost a day.
 
+#### Research areas
+
+From 27 October 2026, besides the phase work, each area below has one owner who researches
+and builds in it: what to explore is the owner's call. Each area has one open issue,
+labelled `research`, that stays open while the area is worked on; every piece that lands
+gets its own issue or pull request, linked back to it.
+
+| Area | Owner | Extension point | Issue |
+|---|---|---|---|
+| Memory | Hero Jaiyen (@phupanawat) | `IMemoryStrategy` (§2.9) | #119 |
+| Targets | Maxim Goloubitsky (@MaximGolubitsky) | `ITargetSource` (DR-014) | #120 |
+| Evaluation | Timothy Brustinov (@TimBrustinov) | The prompt set, `tools/benchmarks/` and model comparisons (§4) | #121 |
+| Observations | Open | `IObservationSource` (§2.8, #91) | None yet |
+
 ---
 
 ## 7. Decision records
