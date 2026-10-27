@@ -176,6 +176,28 @@ moves into the repository proper.
 `ProjectSettings/ProjectVersion.txt`, and CI fails if any project differs. Do not upgrade
 it; opening a project in a newer patch rewrites that file for everyone.
 
+## Lessons
+
+Mistakes that cost real time here, each with the habit that prevents it. Add one when a
+one-line habit would have saved an hour; a measurement goes in `findings.md` instead. When a
+CI check or a test starts enforcing a lesson, delete it from this list.
+
+- **Prove a new test can fail.** Break the rule it guards once and watch it go red. A target
+  test in #61 could not fail, and was caught only in review; the Phase 1 gate (#84) was
+  checked this way, one rule switched off at a time.
+- **Await every async test through `Fixtures.NotCancelled`.** The Test Framework counts a
+  test whose `Task` ends cancelled as passed, so a cancelled decision hides a failure.
+- **After merging `test` into a branch, diff it against the branch's head before the merge.**
+  A merge with `test` silently dropped #90's memory tests and docs; c9d6160 restored them.
+- **Check a pull request is still open before pushing to it** (`gh pr view <n> --json state`).
+  Green pull requests merge fast: a commit pushed to #37 after its merge never reached `test`
+  and had to become #38.
+- **Call Ollama at `http://127.0.0.1:11434`, never `localhost`.** On Windows `localhost`
+  tries IPv6 first, which costs about 2 s per request (findings, 5 October). The `ollama` CLI
+  hangs in Git Bash; use the HTTP API there.
+- **Unity batch-mode test runs take no `-quit`**, and a fresh worktree spends 3 to 4 minutes
+  importing before the first test runs. Give it time before calling it hung.
+
 ## Current state
 
 **Phases 1 and 2 are complete.** Phase 1 (Core, Actions, Schema) closed on 11 October when
