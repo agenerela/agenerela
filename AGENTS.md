@@ -21,8 +21,15 @@ carries measured results from the predecessor prototype** — several intuitive-
 changes were tried there and made accuracy *worse*. The appendix says which, so they are
 not repeated.
 
-New measurements go in [`docs/llm-wiki/findings.md`](docs/llm-wiki/findings.md) the day
-they are taken.
+## Where knowledge lives
+
+| What | Where | Write to it when |
+|---|---|---|
+| Goals, phases and their gates, design decisions | [`docs/FRAMEWORK_BUILD_PLAN.md`](docs/FRAMEWORK_BUILD_PLAN.md) | A phase opens or closes, or a decision costs more than an hour to reverse (a decision record, §7) |
+| What changed | [`CHANGELOG.md`](CHANGELOG.md) for the repository, the package's [`CHANGELOG.md`](UnityProject/Packages/com.agenerela.framework/CHANGELOG.md) for its public API | In the pull request that makes the change, under `[Unreleased]` in whichever file it belongs, never both |
+| What we measured and learned, and how to set a machine up | [`docs/llm-wiki/`](docs/llm-wiki/README.md) | The day you measure something, negative results included, in [`findings.md`](docs/llm-wiki/findings.md) |
+
+Neither changelog nor the wiki is loaded into every session; read the one you need.
 
 ## Hard rules
 
@@ -176,16 +183,16 @@ the five checks in #11 passed. Phase 2 (Ollama provider, queue, memory) closed o
 when the live checks in its gate (#94) passed, and is released as 0.3.0. **The framework calls
 a model**: `OllamaProvider` sends `JsonSchemaSerializer`'s output to a local Ollama, and the
 gate's `RequiresOllama` PlayMode tests prove the live path. **Phase 3 (Validation pipeline) is
-next**, due 9 November: the guards between the provider and the handler (#105 to #110). Still
+under way**, due 9 November: the guards between the provider and the handler (#105 to #110),
+of which the pipeline itself (#106) has merged. Still
 open from Phase 2, off its gate's path: observation sources (#91), the provider config asset
 (#92) and `AgentBehaviour` (#93).
 
-What has merged, what is still to write and the groundwork beside the phases are in
-[`docs/STATUS.md`](docs/STATUS.md); the package's API changes are in its
-[`CHANGELOG.md`](UnityProject/Packages/com.agenerela.framework/CHANGELOG.md). Read the one
-you need. Neither is loaded into every session, which is why they are not here. When a
-pull request merges, update `docs/STATUS.md`, and this section only when a phase opens or
-closes.
+Beside the phases: the evaluation set's real annotators and next prompts (#85), and the demo
+games, one sub-issue each under #47, starting with GreyBoxStrategy (#20).
+
+What has merged is in the two changelogs (see "Where knowledge lives"). Update this section
+only when a phase opens or closes.
 
 ## Agent-specific configuration
 

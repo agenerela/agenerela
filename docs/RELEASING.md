@@ -30,7 +30,9 @@ owner releases. Every step before the tag is ordinary pull-request work.
    It changes the version in `package.json` and `AgenerelaInfo.Version`, and moves the
    changelog's `[Unreleased]` entries under `## [0.2.0] - <today>`, leaving an empty
    `[Unreleased]` above them. Read the changelog section as a user would, since it becomes
-   the release notes, then open the pull request into `test` as usual.
+   the release notes. Then do the same by hand in the repository's root
+   [`CHANGELOG.md`](../CHANGELOG.md), whose sections are named after the same versions, and
+   open the pull request into `test` as usual.
 2. **Merge `test` into `main`** with a pull request, once the release pull request is in
    `test`.
 3. **Tag the merge on `main` and push the tag:**
