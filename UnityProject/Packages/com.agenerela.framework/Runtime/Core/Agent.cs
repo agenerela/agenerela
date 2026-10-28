@@ -123,6 +123,7 @@ namespace Agenerela
             Actions = new ActionRegistry();
             Targets = new TargetRegistry();
             TargetSources = new List<ITargetSource>();
+            ObservationSources = new List<IObservationSource>();
             State = new Dictionary<string, object>();
             Memory = new RollingHistory();
         }
@@ -156,10 +157,54 @@ namespace Agenerela
         public List<ITargetSource> TargetSources { get; }
 
         /// <summary>
+        /// Where the agent's own observations come from, asked in order on every decision after
+        /// the targets are resolved (DR-012, §2.8): a <c>ProximityObservationSource</c> for a scene
+        /// agent, or the developer's own <see cref="IObservationSource"/>. Empty by default, so an
+        /// agent knows only what each call passes in <see cref="DecideOptions.Observations"/>.
+        /// </summary>
+        /// <remarks>
+        /// Their lines are sent before the call's own, in list order, within
+        /// <see cref="MaxObservations"/>. Nothing is kept between decisions. A source that throws,
+        /// or a null entry, makes the decision a <see cref="DecisionOutcome.PipelineError"/>.
+        /// <see cref="Execute"/> never asks them: observations are an input to deciding, not to
+        /// acting.
+        /// </remarks>
+        public List<IObservationSource> ObservationSources { get; }
+
+        /// <summary>
+        /// The most observation lines one request carries, 8 by default (build plan §2.8). The
+        /// call's own <see cref="DecideOptions.Observations"/> are always sent whole, and count
+        /// against it; <see cref="ObservationSources"/> fill what is left, in order, and their lines
+        /// past it are recorded in <see cref="DecisionTelemetry.ObservationsDropped"/>.
+        /// </summary>
+        /// <remarks>
+        /// Observations are the last thing the model reads, and the measured good prompt was 143
+        /// tokens against a 332-token baseline (Appendix A): an unbounded gatherer is the easiest
+        /// way to lose that while it looks like a model problem. Blank lines take no place. 0 means
+        /// the sources add nothing. Read once per decision, when it starts.
+        /// </remarks>
+        /// <exception cref="ArgumentOutOfRangeException">Set below 0.</exception>
+        public int MaxObservations
+        {
+            get => maxObservations;
+            set
+            {
+                if (value < 0)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "MaxObservations cannot be negative.");
+                }
+
+                maxObservations = value;
+            }
+        }
+
+        private int maxObservations = 8;
+
+        /// <summary>
         /// The game's own facts about this agent, such as <c>State["isFollowing"] = true</c>. Copied
         /// into <see cref="AgentContext.State"/> for each decision, where the handlers' availability
-        /// checks read it. It never reaches the model, which reads
-        /// <see cref="DecideOptions.Observations"/> instead.
+        /// checks read it. It never reaches the model, which reads the observations instead:
+        /// <see cref="DecideOptions.Observations"/> and the lines of <see cref="ObservationSources"/>.
         /// </summary>
         public Dictionary<string, object> State { get; }
 
@@ -245,8 +290,8 @@ namespace Agenerela
         /// <see cref="DecisionResult.Decision"/> is null and whose telemetry's
         /// <see cref="DecisionTelemetry.Outcome"/> is <see cref="DecisionOutcome.PipelineError"/>,
         /// with the reason logged as a warning. That covers anything failing while the request is
-        /// prepared, such as a target source offering an id twice or an availability check that
-        /// throws; a provider that throws; and a reply that is empty, is not one JSON object, or
+        /// prepared, such as a target source offering an id twice, an observation source or an
+        /// availability check that throws; a provider that throws; and a reply that is empty, is not one JSON object, or
         /// lacks a field the schema asked for. A reply naming an action or target the request did
         /// not offer is still a decision, which the guards reject (see <c>DecisionParser</c> and
         /// <see cref="SchemaLegalityGuard"/>). The telemetry says which of these it was in
@@ -265,14 +310,17 @@ namespace Agenerela
         /// <remarks>
         /// <para>
         /// The pipeline, in order: a context from the identity, a copy of <see cref="State"/>, the
-        /// targets resolved now, the stimulus and the observations; the schema from the actions
+        /// targets resolved now, the stimulus and the observations, those of
+        /// <see cref="ObservationSources"/> first and the call's own last, within
+        /// <see cref="MaxObservations"/> (#91); the schema from the actions
         /// available now (#7, #8); the examples (#10); the request (#16); the provider's queue
         /// (#89); the provider (#12); the parse; the guards (#106). Telemetry records the latency of
         /// the provider's request on a monotonic clock, from the send and not the enqueue; the
         /// priority, the time spent queued and how many requests were ahead; the provider's name,
         /// the framework version, the token counts the provider reported, and the target ids each
-        /// <see cref="IReportsDroppedTargets"/> source left out, in source order (#81), and the
-        /// exchanges of history sent, left out and forgotten (#90).
+        /// <see cref="IReportsDroppedTargets"/> source left out, in source order (#81); the
+        /// observation lines left out, by the cap or by a source's own (#91); and the exchanges of
+        /// history sent, left out and forgotten (#90).
         /// </para>
         /// <para>
         /// The guards (build plan §2.5) run on every decision, never on a pipeline error: first
@@ -322,9 +370,9 @@ namespace Agenerela
                     nameof(options));
             }
 
-            // A list of the context's own, apart from the options' copy a guard may read.
-            var observations = new ReadOnlyCollection<string>(
-                options.Observations == null ? new List<string>() : new List<string>(options.Observations));
+            // A list of the context's own, apart from the options' copy a guard may read. Blank
+            // lines are not something the agent knows, so they take no place under the cap.
+            var observations = new ReadOnlyCollection<string>(NotBlank(options.Observations));
             string idleExample = options.IdleExampleStimulus ?? (profile != null ? profile.IdleExampleStimulus : null);
 
             return Decide(stimulus, options, idleExample, observations, ct);
@@ -425,7 +473,7 @@ namespace Agenerela
             DecisionRequest request;
             try
             {
-                ctx = Snapshot(stimulus, observations, telemetry.TargetsDropped);
+                ctx = Observe(Snapshot(stimulus, observations, telemetry.TargetsDropped), telemetry.ObservationsDropped);
                 var options = new PromptOptions { StimulusLabel = label, IdleExampleStimulus = idleExample };
 
                 // Asked once, so the action enum and the examples come from one answer even when an
@@ -642,6 +690,79 @@ namespace Agenerela
             }
 
             return ctx;
+        }
+
+        // The decision's context with its observations complete: each source's lines, in source
+        // order, then the call's own, which ctx already holds. The call's lines are always sent and
+        // count against the cap, and the sources fill what is left. What a source returns past it
+        // goes into dropped, then what the source reports its own cap left out, so the list is
+        // every unsent line in the order the sources ranked them. Each source is read in full and
+        // its report copied before the next one runs, since its list lasts only until then.
+        private AgentContext Observe(AgentContext ctx, List<string> dropped)
+        {
+            int room = Math.Max(0, MaxObservations - ctx.Observations.Count);
+            var lines = new List<string>();
+
+            for (int i = 0; i < ObservationSources.Count; i++)
+            {
+                var source = ObservationSources[i];
+                if (source == null)
+                {
+                    throw new InvalidOperationException($"ObservationSources[{i}] is null.");
+                }
+
+                // Handed ctx, whose observations are the call's own: a source never sees another's
+                // lines, so none depends on the order of the others.
+                foreach (string line in NotBlank(source.Observe(ctx)))
+                {
+                    if (lines.Count < room)
+                    {
+                        lines.Add(line);
+                    }
+                    else
+                    {
+                        dropped.Add(line);
+                    }
+                }
+
+                if (source is IReportsDroppedObservations reports)
+                {
+                    dropped.AddRange(NotBlank(reports.Dropped));
+                }
+            }
+
+            if (lines.Count == 0)
+            {
+                return ctx;
+            }
+
+            lines.AddRange(ctx.Observations);
+
+            // The same state and targets, so everything after this reads one snapshot.
+            return new AgentContext(ctx.Identity, ctx.Stimulus, new ReadOnlyCollection<string>(lines),
+                ctx.State, ctx.Targets, ctx.Actions);
+        }
+
+        // The lines that say something, in order. Enumerated here, in full, so a lazy source runs,
+        // and throws, while its decision is being prepared.
+        private static List<string> NotBlank(IEnumerable<string> lines)
+        {
+            var kept = new List<string>();
+
+            if (lines == null)
+            {
+                return kept;
+            }
+
+            foreach (string line in lines)
+            {
+                if (!string.IsNullOrWhiteSpace(line))
+                {
+                    kept.Add(line);
+                }
+            }
+
+            return kept;
         }
 
         private IEnumerable<ActionDefinition> Definitions()

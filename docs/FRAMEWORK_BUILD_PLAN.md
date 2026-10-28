@@ -983,8 +983,9 @@ becomes a subscribe-and-accumulate blackboard we inherit every blackboard proble
 the ability to say what an agent knew at one instant.
 
 **Composition and budget.** An agent holds an ordered list of sources; per-call
-observations append last. The framework then applies a **hard cap** and records what it
-dropped in telemetry. The cap is not tidiness — the measured good arm ran a 143-token
+observations append last. The framework then applies a **hard cap** to what the sources add
+and records what it dropped in telemetry. The per-call lines, which the developer chose for
+this call, are always sent and count against the cap. The sources fill what is left (#91). The cap is not tidiness — the measured good arm ran a 143-token
 prompt against a 332-token prose baseline, and an unbounded gatherer is the easiest way to
 regress accuracy while looking like a model problem.
 
