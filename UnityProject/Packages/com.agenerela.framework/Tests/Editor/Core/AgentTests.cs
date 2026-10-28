@@ -1070,13 +1070,16 @@ namespace Agenerela.Tests
             var agent = Fixtures.VillageGuard(fake);
             agent.MaxObservations = 2;
             agent.ObservationSources.Add(new FakeObservationSource { Lines = null });
-            agent.ObservationSources.Add(new FakeObservationSource("", null, "   ", "The watchtower door stands open.", "\t"));
+            agent.ObservationSources.Add(new FakeObservationSource("", null, "   ", "The watchtower door stands open.", "\t")
+            {
+                Drops = new[] { null, "", "  " },
+            });
             var options = new DecideOptions { Observations = new List<string> { "", "It is night.", null } };
 
             var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", options));
 
             Assert.That(fake.LastRequest.Observations, Is.EqualTo(Block("The watchtower door stands open.", "It is night.")));
-            Assert.That(result.Telemetry.ObservationsDropped, Is.Empty);
+            Assert.That(result.Telemetry.ObservationsDropped, Is.Empty, "Nor is a blank line a source reports dropping recorded.");
         }
 
         [Test]

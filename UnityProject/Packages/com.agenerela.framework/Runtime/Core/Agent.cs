@@ -725,9 +725,9 @@ namespace Agenerela
                     }
                 }
 
-                if (source is IReportsDroppedObservations reports && reports.Dropped != null)
+                if (source is IReportsDroppedObservations reports)
                 {
-                    dropped.AddRange(reports.Dropped);
+                    dropped.AddRange(NotBlank(reports.Dropped));
                 }
             }
 

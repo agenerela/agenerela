@@ -14,8 +14,10 @@ namespace Agenerela
     /// <remarks>
     /// <para>
     /// The same query, with the same options, as <see cref="ProximityTargetSource"/>: given the
-    /// same settings, the two describe and name the same objects, and a line the agent reads
-    /// comes from the object whose id it may answer with (DR-014).
+    /// same settings, the two find the same objects in the same order, and a line the agent reads
+    /// comes from an object it can notice and name (DR-014). What each keeps under its cap can
+    /// still differ: an object with no description takes no line here, so a farther one may be
+    /// described past the target source's cap, though it is not offered as a target.
     /// </para>
     /// <para>
     /// Each description is sent verbatim, with no id or distance added. A Targetable with no
