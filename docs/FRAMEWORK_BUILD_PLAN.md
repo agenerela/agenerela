@@ -1332,6 +1332,19 @@ gets its own issue or pull request, linked back to it.
 | Evaluation | Timothy Brustinov (@TimBrustinov) | The prompt set, `tools/benchmarks/` and model comparisons (§4) | #121 |
 | Observations | Hunter Hudson (@Hunaveli) | `IObservationSource` (§2.8, #91) | #122 |
 
+Before the research areas, each person owned one requirements feature (the SRS of 10
+September) and built framework pieces through Phases 1 and 2. That work stays theirs. They
+have since moved on to the areas above, and the framework core (the interfaces, `Agent`, the
+schema, the prompt, the guards and the providers) is maintained by the lead.
+
+| Person | Requirements feature (SRS) | Built in Phases 1 and 2 |
+|---|---|---|
+| Hero Jaiyen (@phupanawat) | Target registry and target grounding (3.4) | `TargetRegistry` (#5, #29); target discovery with `Targetable`, `ITargetSource` and `ProximityTargetSource` (#32); `TargetsDropped` (#81); short-term memory, `IMemoryStrategy` and `RollingHistory` (#90) |
+| Maxim Goloubitsky (@MaximGolubitsky) | Decision telemetry and outcome classification (3.6) | `DecisionOutcome` and `DecisionTelemetry` (#3) with `DecisionResult`'s tests (#43); the evaluation prompt set (#13, #66) |
+| Timothy Brustinov (@TimBrustinov) | Developer-authored action vocabulary (3.2) | `ActionDefinition` and its asset (#4, #49); `AgentProfile` (#15); `FewShotBuilder` (#10) |
+| Hunter Hudson (@Hunaveli) | Agents and decision requests (3.1) | The core decision types `AgentIdentity`, `AgentContext` and `AgentDecision` (#2) |
+| Tigran Kolsuzyan (@JaySlifer) | Action availability and the decision schema (3.3) | `ActionRegistry` and `IActionHandler` (#6); state-derived action availability (#7) |
+
 ---
 
 ## 7. Decision records
