@@ -41,6 +41,10 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **The repository is MIT-licensed** (DR-007), in `LICENSE.md` at the root, settled once the
+  team confirmed it owns the work. What the asset server generates is not covered: the models'
+  own terms apply, which `Demos/README.md` sums up, and a game that commits a generated asset
+  lists it in a `GENERATED.md`. The README says how to install the package from its git URL.
 - **The evaluation set's second batch** (part of #85, via #118): 76 prompts, 38 of them
   game-triggered. It adds situations where acting is right, more targets found only in the
   observations, three open choices with a list `expectedTarget`, and three `checkTarget: false`

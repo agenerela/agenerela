@@ -90,6 +90,9 @@ While the version stays `0.x`, the public API may change in any release.
   neither the rule nor the guard.
 - `PromptOptions.TargetRule`, off by default, which `Agent` sets, and
   `DecisionTelemetry.TargetRuleSent`, true exactly when the line was sent.
+- **An MIT licence.** `LICENSE.md` ships in the package folder, so a git-URL install carries it,
+  and `package.json` says `"license": "MIT"`. Keep the notice with the package when you ship a
+  game; nothing else is asked.
 
 ### Changed
 

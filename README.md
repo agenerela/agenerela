@@ -7,7 +7,7 @@
   <a href="https://github.com/agenerela/agenerela/actions/workflows/repo-hygiene.yml"><img alt="Repo hygiene" src="https://github.com/agenerela/agenerela/actions/workflows/repo-hygiene.yml/badge.svg?branch=test"></a>
   <img alt="Unity 6000.3" src="https://img.shields.io/badge/Unity-6000.3-222222?logo=unity&logoColor=white">
   <img alt="Runs locally with Ollama" src="https://img.shields.io/badge/runs%20locally-Ollama-222222?logo=ollama&logoColor=white">
-  <img alt="License pending" src="https://img.shields.io/badge/license-pending-lightgrey">
+  <a href="LICENSE.md"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-1f5bd8"></a>
 </p>
 
 <p align="center">
@@ -190,8 +190,8 @@ below this framework, not alongside it.
 
 ## License
 
-To be confirmed — MIT intended, pending a university IP review. Until a `LICENSE` file is added,
-all rights are reserved and this code is published for review only.
+[MIT](LICENSE.md). Assets generated for the demo games keep the terms of the model that made
+them; [`Demos/README.md`](Demos/README.md#licences-of-generated-assets) says which.
 
 ---
 

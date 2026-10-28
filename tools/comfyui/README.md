@@ -428,6 +428,11 @@ the firewall from your own network only.
 - Z-Image Turbo: Apache-2.0.
 - Pixal3D, TRELLIS.2, MoGe-2 and BiRefNet: MIT, as published by Comfy-Org. The DINOv3
   encoder comes from Meta, under its own licence.
-- Stable Audio 3: the Stability AI Community License, linked from its model card.
+- Stable Audio 3: the Stability AI Community License, linked from its model card. You own
+  what it makes and may use it commercially while you and your affiliates earn under
+  USD 1 million a year, after registering with Stability AI; above that the licence ends and
+  an enterprise licence is needed. No output may be used to train or improve another
+  generative model.
 
-Fine for a course project. Read each licence before shipping a game commercially.
+The repository's own MIT licence does not cover what these models make. A game that commits a
+generated asset records it in its `GENERATED.md` ([`Demos/README.md`](../../Demos/README.md#licences-of-generated-assets)).

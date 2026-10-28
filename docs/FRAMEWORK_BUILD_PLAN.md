@@ -1869,7 +1869,7 @@ not run, and `PromptBuilder` adds the one-line rule instead.
 | DR-004 | `action` emitted before the free-text field; `target` required with a `no_target` sentinel; no reasoning field | §2.3, Appendix A |
 | DR-005 | Grounding guard in code rather than relying on model scale; how it decides is DR-016 | §2.5, Appendix A, DR-016 |
 | DR-006 | Evaluation harness (Phase 4) built before editor tooling and demos | §3 |
-| DR-007 | License MIT, pending the university IP check | §1.8 |
+| DR-007 | License MIT, settled 28 October 2026: the team owns the work and agreed. `LICENSE.md` at the root and in the package; generated demo assets keep their models' terms (`Demos/README.md`) | §1.8 |
 | DR-008 | No speaking-character assumption and no input taxonomy: the free-text field is `statement`, not `dialogue`; the developer decides when an agent is asked and passes a free-form stimulus, label and observations; the framework never classifies the call. Rename unmeasured — early Phase 4 A/B | §2.1, §2.3, issues #2, #8, #17, #18 |
 
 ---
