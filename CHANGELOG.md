@@ -27,13 +27,17 @@ phase table and the open issues, not here.
   DR-016): `TargetGroundingGuard` reads the model's token probabilities at the target, and turns
   a decision into `none` when the model wanted something not on the list ("Attack the
   scarecrow." beside a training dummy). A live hand check on Ollama 0.34.2 read 0.051 there,
-  recorded in `docs/llm-wiki/findings.md`. Its prompt fallback (#107), developer guards (#108),
+  recorded in `docs/llm-wiki/findings.md`. Its fallback is in too (#107, via #130): when a
+  provider reports no token probabilities, the system prompt carries one line naming the
+  targets that are here, an unmeasured wording owed a Phase 4 A/B. Developer guards (#108),
   contained refusals (#109) and the gate (#110) are not in yet.
   See the package's [`[Unreleased]`](UnityProject/Packages/com.agenerela.framework/CHANGELOG.md#unreleased).
 - From Phase 2's leftovers, observation sources are in (#91, via #123): `IObservationSource`,
   the extension point for the Observations research area (#122), with one built-in source,
-  `ProximityObservationSource`. The provider config asset (#92) and `AgentBehaviour` (#93)
-  are not.
+  `ProximityObservationSource`. So is the provider config asset (#92, via #129, DR-013): the
+  model is chosen once as an asset (**Create → Agenerela → Ollama Provider**), with a project
+  default under **Project Settings → Agenerela**, and `ProviderConfig` is where other
+  providers will plug in. `AgentBehaviour` (#93) is not in yet.
 
 ### Added
 
