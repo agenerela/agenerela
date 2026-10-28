@@ -474,7 +474,7 @@ namespace Agenerela
             try
             {
                 ctx = Observe(Snapshot(stimulus, observations, telemetry.TargetsDropped), telemetry.ObservationsDropped);
-                var options = new PromptOptions { StimulusLabel = label, IdleExampleStimulus = idleExample };
+                var options = new PromptOptions { StimulusLabel = label, IdleExampleStimulus = idleExample, TargetRule = call.CheckTarget && provider.Capabilities?.ReportsTokenProbabilities != true };
 
                 // Asked once, so the action enum and the examples come from one answer even when an
                 // availability check is not a pure function of the context, such as a cooldown.
@@ -484,6 +484,7 @@ namespace Agenerela
 
                 var history = Recall(memory, ctx, telemetry);
                 request = PromptBuilder.Build(ctx, schema, fewShot, history, options);
+                telemetry.TargetRuleSent = PromptBuilder.SendsTargetRule(schema, options);
             }
             catch (Exception e)
             {

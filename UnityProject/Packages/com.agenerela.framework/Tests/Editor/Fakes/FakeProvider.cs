@@ -36,10 +36,17 @@ namespace Agenerela.Tests
 
         public string Name { get; }
 
+        /// <summary>
+        /// Ollama's, by default, as far as the request is concerned: it claims token probabilities,
+        /// so the prompt is the one Ollama is sent, without the target rule (#107). Its replies still
+        /// carry none unless <see cref="TokenProbabilities"/> is set, which is the gap
+        /// <see cref="ProviderCapabilities.ReportsTokenProbabilities"/> documents.
+        /// </summary>
         public ProviderCapabilities Capabilities { get; set; } = new ProviderCapabilities
         {
             SupportsConstrainedDecoding = true,
             Dialect = SchemaDialect.JsonSchema,
+            ReportsTokenProbabilities = true,
         };
 
         /// <summary>The text of the next reply, sent as received: it may be anything, or null.</summary>

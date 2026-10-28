@@ -60,7 +60,9 @@ namespace Agenerela
         /// </summary>
         /// <remarks>
         /// Off, the guard does not run on that call, and the decision's telemetry records
-        /// <see cref="GroundingStatus.Off"/>.
+        /// <see cref="GroundingStatus.Off"/>. It also turns off the guard's fallback: on a provider
+        /// that reports no token probabilities, the prompt carries the one-line target rule only
+        /// while this is on (<see cref="PromptOptions.TargetRule"/>, #107).
         /// </remarks>
         public bool CheckTarget = true;
 
