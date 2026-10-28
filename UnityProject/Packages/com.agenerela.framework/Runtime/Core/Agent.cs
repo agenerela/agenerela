@@ -464,6 +464,7 @@ namespace Agenerela
             var telemetry = new DecisionTelemetry
             {
                 ProviderName = provider.Name ?? "",
+                ProviderConfig = ProviderConfig.NameOf(provider),
                 FrameworkVersion = AgenerelaInfo.Version,
                 Priority = priority,
             };

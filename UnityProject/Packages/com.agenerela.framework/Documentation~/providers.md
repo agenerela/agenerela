@@ -81,8 +81,8 @@ inferred from the schema and needs no separate statement. No quota, no key, no b
 **What was built (#88).** `new Agent(profile, new OllamaProvider(new OllamaSettings()))`
 decides against `qwen3.5:2b` at `http://127.0.0.1:11434`. `OllamaSettings` is a plain class
 with `Endpoint`, `Model`, `ContextSize` (4096), `Temperature` (0) and `TimeoutSeconds` (30);
-the provider copies it when built. The asset that builds one from a project's configuration
-is #92 (DR-013).
+the provider copies it when built. An `OllamaProviderConfig` asset holds the same fields, and
+is how most games choose one: see [Provider config assets](#provider-config-assets) below.
 
 Each decision is one `POST {Endpoint}/api/chat`, sending what the prototype sent wherever a
 measurement in Appendix A depends on it:
@@ -201,6 +201,62 @@ a version define or as a separate package, pinned to an exact version.
 decision through Ollama. Same model, same schema, different transport — if they disagree,
 the bug is in the GBNF serializer or the provider wrapper, not in the framework.
 
+## Provider config assets
+
+A provider can be built in code, as above, but most games choose one once, as an asset
+(DR-013, #92). **Create → Agenerela → Ollama Provider** makes an `OllamaProviderConfig`, named
+`OllamaLocal` by default, holding `OllamaSettings`' fields with the same defaults, plus
+`MaxInFlight`. **Project Settings → Agenerela** names the project default, saved in
+`Assets/Agenerela/Resources/AgenerelaSettings.asset`, which the page creates the first time a
+default is set. Several configs can coexist, such as `OllamaLocal` and `GeminiFlash`; Phase 4's
+A/B runs need two alive at once.
+
+```csharp
+// The agent's own config if it has one, otherwise the project default.
+var agent = new Agent(profile, ProviderConfig.Resolve(ownConfig).Provider);
+
+// The project default alone.
+var guard = new Agent(profile, ProviderConfig.Resolve().Provider);
+```
+
+- **One provider per config.** `ProviderConfig.Provider` builds the provider the first time it
+  is read and returns that same instance after, so every agent on one config shares one
+  provider, and so one queue (#89). `MaxInFlight` (default 1) is that queue's limit.
+- **Resolution** is the agent's own config, then the project default. A destroyed config counts
+  as none. With neither, `Resolve` throws `InvalidOperationException`: "Create one with Create →
+  Agenerela → Ollama Provider, and set it in Project Settings → Agenerela". DR-013's middle
+  level, a scene override, is left out until a demo needs one.
+- **A built player finds the default** with `Resources.Load`, with no scene and no
+  `AssetDatabase`, and the build carries the config it names.
+- **Telemetry** records the config's asset name in `DecisionTelemetry.ProviderConfig`, however
+  the provider reached the agent; it is empty for a provider built in code.
+- **Edits.** Outside Play mode, an Inspector edit drops the built provider, and the next read
+  builds one with the new values. During Play, a new `MaxInFlight` reaches the live queue at
+  once, and every other field waits for the next Play: rebuilding mid-Play would split one
+  config's agents across two queues. The provider is dropped as Play mode starts and as it ends.
+- **An invalid config** (an empty model, `MaxInFlight` 0) throws `InvalidOperationException`
+  naming the config and the setting when its provider is first read.
+
+### Adding a provider config
+
+A config for another backend is one class:
+
+1. Derive from `ProviderConfig`, sealed, with
+   `[CreateAssetMenu(menuName = "Agenerela/<Backend> Provider", fileName = "<Name>")]`.
+2. Add the backend's settings as public serialized fields, each with a `[Tooltip]`, defaulting to
+   the provider's own defaults (`OllamaProviderConfig` reads them from a `new OllamaSettings()`).
+3. Override `CreateProvider()` to return a **new** `ILLMProvider` built from those fields, and
+   throw `ArgumentException` for a setting out of range; `Provider` reports it with the config's
+   name.
+
+The base does the rest: it builds the provider once, applies `MaxInFlight` to its queue,
+records the config's name for telemetry, and drops the provider after edits as above. A
+subclass that needs `OnValidate` overrides it and calls `base.OnValidate()`.
+
+**Never serialize an API key** (hard rule 1): a config asset is committed, and ships inside the
+build. Serialize where the key is read from, such as an environment variable's name, and read
+the key in `CreateProvider()`. Nor may a key appear in an exception message.
+
 ## The question that proves the interface works
 
 *What would OpenAI or Anthropic need that is not already in the table?* If the answer
@@ -287,3 +343,9 @@ them is a change to `ILLMProvider`, which is the test this design has to keep pa
   sends `think: false`.
 - **A provider conformance suite** every vendor must pass. Phase 6 deliverable, shaped from
   the fake provider in #17 (`Tests/Editor/Fakes/FakeProvider.cs`).
+- **A scene override** between an agent's own config and the project default, DR-013's middle
+  level: a field `ProviderConfig.Resolve` reads second. Add it when a demo needs one.
+- **The two evaluation arms** on Project Settings → Agenerela, as two more `ProviderConfig`
+  fields on `AgenerelaSettings`. Phase 4, with the harness that reads them.
+- **A session budget and rate limits** per config, beside `MaxInFlight`, applied to the same
+  queue. Phase 6, with the first cloud config.
