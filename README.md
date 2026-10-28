@@ -21,6 +21,7 @@
   <a href="#how-it-works">How it works</a> ·
   <a href="#does-it-work">Does it work?</a> ·
   <a href="#roadmap">Roadmap</a> ·
+  <a href="#installing">Installing</a> ·
   <a href="#developing">Developing</a> ·
   <a href="docs/FRAMEWORK_BUILD_PLAN.md">Build plan</a>
 </p>
@@ -109,6 +110,26 @@ Each phase closes with a release. What has changed is in the [changelog](CHANGEL
 the API changes in the package's own
 [changelog](UnityProject/Packages/com.agenerela.framework/CHANGELOG.md); what each phase must
 do to close is in the build plan's phase table.
+
+## Installing
+
+In Unity 6 (6000.0 or later), open *Window → Package Manager → + → Install package from git
+URL* and paste:
+
+```
+https://github.com/agenerela/agenerela.git?path=UnityProject/Packages/com.agenerela.framework#v0.3.0
+```
+
+The part after `#` is the release tag. Use the one on the release badge above for the latest
+release, and change it to upgrade. Each [release](https://github.com/agenerela/agenerela/releases)
+says what it adds and what is still missing.
+
+Newtonsoft JSON, the package's one dependency, installs with it: no scoped registry, no native
+binaries. Scripts outside any assembly definition see the API straight away; if your game code
+has its own `.asmdef`, add `Agenerela` to its references.
+
+Today the only provider is [Ollama](https://ollama.com), so it must be running with a model
+pulled (for example `ollama pull qwen3.5:4b`) before an agent can decide.
 
 ## Developing
 
