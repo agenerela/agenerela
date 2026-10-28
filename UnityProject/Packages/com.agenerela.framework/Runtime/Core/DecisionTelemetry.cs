@@ -11,6 +11,7 @@ namespace Agenerela{
         public int CompletionTokens; 
         public string ProviderName = string.Empty; // Checks provider name, such as Ollama 
         public string Model = string.Empty; // The model that answered, as the provider reported it, such as qwen3.5:2b; empty when it did not say (#88)
+        public string ProviderConfig = string.Empty; // The name of the provider config asset whose provider answered, such as OllamaLocal; empty when the provider was built in code (#92, DR-013)
         public string FrameworkVersion = string.Empty; // AgenerelaInfo.version
         public List<string> GuardsFired = new List<string>(); // Each guard that did not pass the decision, in order: at most one from DecideAsync, then "SchemaLegalityGuard@Execute" for each refusal by Execute's re-check (#106)
         public GuardVerdictKind? Verdict; // The verdict of the guard that stopped the decision, or of Execute's re-check when it refused; null when every guard passed (#106)
@@ -36,6 +37,7 @@ namespace Agenerela{
             CompletionTokens = 0;
             ProviderName = string.Empty;
             Model = string.Empty;
+            ProviderConfig = string.Empty;
             FrameworkVersion = string.Empty;
             GuardsFired = new List<string>();
             Verdict = null;

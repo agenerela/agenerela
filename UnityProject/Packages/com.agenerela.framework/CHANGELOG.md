@@ -10,6 +10,22 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **Provider config assets** (#92, DR-013). A provider is now chosen once, as an asset, rather
+  than built in every agent's code. `ProviderConfig` is the abstract `ScriptableObject` every
+  backend's config derives from: `Provider` builds its provider once and returns the same
+  instance after, so every agent on one config shares one provider and one queue, and
+  `MaxInFlight` (default 1) sets that queue's limit. `OllamaProviderConfig`, made with
+  **Create → Agenerela → Ollama Provider**, holds `OllamaSettings`' fields with the same
+  defaults, `127.0.0.1` included.
+- **The project default.** **Project Settings → Agenerela** names the provider config every agent
+  without one of its own uses, saved in `AgenerelaSettings`, which the page creates at
+  `Assets/Agenerela/Resources/AgenerelaSettings.asset` and a built player loads with
+  `Resources.Load`. `ProviderConfig.Resolve(own)` returns the agent's own config, else the
+  default, else throws `InvalidOperationException` saying how to make one:
+  `new Agent(profile, ProviderConfig.Resolve().Provider)`. A scene override, DR-013's middle
+  level, is left out until a demo needs one.
+- `DecisionTelemetry.ProviderConfig`: the name of the config whose provider answered, empty for a
+  provider built in code.
 - **The guard pipeline** (#106, build plan §2.5). Every decision `DecideAsync` parses now
   passes through ordered guards before it is returned or remembered. `IDecisionGuard` judges
   a `GuardInput` (the context, request, reply, decision, the call's options and the
