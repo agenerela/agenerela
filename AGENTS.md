@@ -219,7 +219,7 @@ open from Phase 2, off its gate's path: observation sources (#91), the provider 
 
 Beside the phases: the evaluation set's real annotators and next prompts (#85), the demo
 games, one sub-issue each under #47, starting with GreyBoxStrategy (#20), and research areas
-with one owner each (memory, targets, evaluation), listed in build plan §6.6.
+with one owner each (memory, targets, observations, evaluation), listed in build plan §6.6.
 
 What has merged is in the two changelogs (see "Where knowledge lives"). Update this section
 only when a phase opens or closes.

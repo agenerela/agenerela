@@ -1330,7 +1330,7 @@ gets its own issue or pull request, linked back to it.
 | Memory | Hero Jaiyen (@phupanawat) | `IMemoryStrategy` (§2.9) | #119 |
 | Targets | Maxim Goloubitsky (@MaximGolubitsky) | `ITargetSource` (DR-014) | #120 |
 | Evaluation | Timothy Brustinov (@TimBrustinov) | The prompt set, `tools/benchmarks/` and model comparisons (§4) | #121 |
-| Observations | Open | `IObservationSource` (§2.8, #91) | None yet |
+| Observations | Hunter Hudson (@Hunaveli) | `IObservationSource` (§2.8, #91) | #122 |
 
 ---
 
