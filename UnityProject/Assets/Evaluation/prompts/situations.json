@@ -140,47 +140,162 @@
     {
       "id": "situation_010",
       "label": "Situation",
-      "stimulus": "The river is running high.",
+      "stimulus": "Nobody is keeping watch from the north tower.",
       "observations": [
-        "The water is above the stepping stones",
-        "No safe crossing is visible"
+        "You are on watch duty",
+        "The north tower is empty"
       ],
-      "expectedAction": "none",
-      "expectedTarget": "no_target",
+      "expectedAction": "move_to",
+      "expectedTarget": "north_tower",
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "note": "#85's example of a situation where acting is right. Unlike situation_009, the guard is on watch duty.",
+      "labelledBy": ["Yevhen"]
     },
     {
       "id": "situation_011",
       "label": "Situation",
-      "stimulus": "The market is closing for the night.",
+      "stimulus": "The player is heading off on their own.",
       "observations": [
-        "The stalls are empty",
-        "No one has asked for help"
+        "The player is walking toward the woods",
+        "Wolves have been seen in the woods this week"
       ],
-      "expectedAction": "none",
+      "expectedAction": "follow_player",
       "expectedTarget": "no_target",
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": ["Yevhen"]
     },
     {
       "id": "situation_012",
       "label": "Situation",
-      "stimulus": "A cold wind moves through the village.",
+      "stimulus": "The player has gone inside to sleep.",
       "observations": [
-        "No danger is visible",
-        "No one is calling for assistance"
+        "The player is in a house on the village square",
+        "The house door is shut"
+      ],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": ["Yevhen"]
+    },
+    {
+      "id": "situation_013",
+      "label": "Situation",
+      "stimulus": "Something is wrong down by the water.",
+      "observations": [
+        "A supply boat is drifting loose from the docks",
+        "Nobody is at the docks"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "docks",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The target is named only in the observations.",
+      "labelledBy": ["Yevhen"]
+    },
+    {
+      "id": "situation_014",
+      "label": "Situation",
+      "stimulus": "The square has gone quiet.",
+      "observations": [
+        "A villager is lying beside the well",
+        "Nobody has gone to help them"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "well",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The target is named only in the observations.",
+      "labelledBy": ["Yevhen"]
+    },
+    {
+      "id": "situation_015",
+      "label": "Situation",
+      "stimulus": "The animals at the market are restless.",
+      "observations": [
+        "A wolf is circling the animal pens",
+        "Villagers are backing away from the pens"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "checkTarget": false,
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The target is named only in the observations. Run with the grounding guard off (DR-016).",
+      "labelledBy": ["Yevhen"]
+    },
+    {
+      "id": "situation_016",
+      "label": "Situation",
+      "stimulus": "Night has fallen and no one is watching the gates.",
+      "observations": [
+        "The village gate has no guard",
+        "The north gate has no guard",
+        "You are the only guard on duty"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": ["north_gate", "village_gate"],
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "An open choice: either gate is right, and the grounding guard must not turn it away.",
+      "labelledBy": ["Yevhen"]
+    },
+    {
+      "id": "situation_017",
+      "label": "Situation",
+      "stimulus": "Rain has started to fall.",
+      "observations": [
+        "Villagers are going indoors",
+        "The gates are shut"
       ],
       "expectedAction": "none",
       "expectedTarget": "no_target",
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": ["Yevhen"]
+    },
+    {
+      "id": "situation_018",
+      "label": "Situation",
+      "stimulus": "Traders will be crossing the river at dusk.",
+      "observations": [
+        "Traders cross at the bridge and at the ford",
+        "Neither crossing has a guard"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": ["bridge", "river_ford"],
+      "checkTarget": false,
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "An open choice, run with the grounding guard off (DR-016). situation_016 is one with it on.",
+      "labelledBy": ["Yevhen"]
+    },
+    {
+      "id": "situation_019",
+      "label": "Situation",
+      "stimulus": "Shouting has broken out among the stalls.",
+      "observations": [
+        "Two traders are fighting in the market",
+        "A crowd is gathering around them"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "market",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The target is named only in the observations.",
+      "labelledBy": ["Yevhen"]
     }
   ]
 }

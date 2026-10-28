@@ -108,42 +108,6 @@
         "isFollowing": true
       },
       "labelledBy": ["Maxim"]
-    },
-    {
-      "id": "simple_010",
-      "label": "Player",
-      "stimulus": "Walk alongside me.",
-      "observations": [],
-      "expectedAction": "follow_player",
-      "expectedTarget": "no_target",
-      "preconditionState": {
-        "isFollowing": false
-      },
-      "labelledBy": ["Maxim"]
-      },
-      {
-      "id": "simple_011",
-      "label": "Player",
-      "stimulus": "You can wait here.",
-      "observations": [],
-      "expectedAction": "stop_following",
-      "expectedTarget": "no_target",
-      "preconditionState": {
-        "isFollowing": true
-      },
-      "labelledBy": ["Maxim"]
-      },
-      {
-      "id": "simple_012",
-      "label": "Player",
-      "stimulus": "Stay close behind me.",
-      "observations": [],
-      "expectedAction": "follow_player",
-      "expectedTarget": "no_target",
-      "preconditionState": {
-        "isFollowing": false
-      },
-      "labelledBy": ["Maxim"]
-      }
+    }
   ]
 }

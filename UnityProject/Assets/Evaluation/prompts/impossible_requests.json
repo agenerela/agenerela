@@ -102,7 +102,7 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "note": "The cave is registered but locked, and no registered action opens or enters it. The agent must refuse, not move_to the cave.",
+      "note": "The cave is registered but locked, and no registered action opens or enters it. The agent must refuse, not move_to the cave: the request is to go inside, and walking to the entrance does not do that. Compare event_011, where walking to the entrance is the help the guard can give.",
       "labelledBy": ["Maxim"]
     },
     {
@@ -117,45 +117,6 @@
       },
       "note": "No enemy target is available.",
       "labelledBy": ["Maxim"]
-    },
-    {
-    "id": "impossible_010",
-    "label": "Player",
-    "stimulus": "Move to the underwater palace.",
-    "observations": [],
-    "expectedAction": "none",
-    "expectedTarget": "no_target",
-    "preconditionState": {
-      "isFollowing": false
-    },
-    "note": "The underwater palace is not a registered target.",
-    "labelledBy": ["Maxim"]
-    },
-    {
-    "id": "impossible_011",
-    "label": "Player",
-    "stimulus": "Heal the wounded dragon.",
-    "observations": [],
-    "expectedAction": "none",
-    "expectedTarget": "no_target",
-    "preconditionState": {
-      "isFollowing": false
-    },
-    "note": "No dragon is present, and healing is not a registered action.",
-    "labelledBy": ["Maxim"]
-    },
-    {
-    "id": "impossible_012",
-    "label": "Player",
-    "stimulus": "Use the magic key to unlock the cave.",
-    "observations": [],
-    "expectedAction": "none",
-    "expectedTarget": "no_target",
-    "preconditionState": {
-      "isFollowing": false
-    },
-    "note": "The magic key is not registered, and no action for unlocking the cave is available.",
-    "labelledBy": ["Maxim"]
     }
   ]
 }

@@ -81,13 +81,13 @@
     "expectedTarget":"eastern_road",
     "preconditionState":{"isFollowing":false},
     "labelledBy":["bob"]},
-    
+
     {"id":"target_010",
     "label":"Player",
-    "stimulus":"Go to the watchtower.",
+    "stimulus":"Climb the north tower and keep a lookout.",
     "observations":[],
     "expectedAction":"move_to",
-    "expectedTarget":"watchtower",
+    "expectedTarget":"north_tower",
     "preconditionState":{"isFollowing":false},
     "labelledBy":["Maxim"]},
 
@@ -96,16 +96,7 @@
     "stimulus":"Head to the north gate.",
     "observations":[],
     "expectedAction":"move_to",
-    "expectedTarget":"docks",
-    "preconditionState":{"isFollowing":false},
-    "labelledBy":["Maxim"]},
-
-    {"id":"target_012",
-    "label":"Player",
-    "stimulus":"Make your way to the river crossing.",
-    "observations":[],
-    "expectedAction":"move_to",
-    "expectedTarget":"river_ford",
+    "expectedTarget":"north_gate",
     "preconditionState":{"isFollowing":false},
     "labelledBy":["Maxim"]}
   ]

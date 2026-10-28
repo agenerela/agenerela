@@ -56,14 +56,14 @@ namespace Agenerela
         {
             if (telemetry == null)
             {
-                throw new ArgumentNullException(nameof(telemetry));  // If telemetry == null --> record 'telemetry' into the exception
+                throw new ArgumentNullException(nameof(telemetry));
             }
 
             if (decision == null &&
                 telemetry.Outcome != DecisionOutcome.PipelineError)
             {
                 throw new ArgumentException(
-                    "Decision can be null only when the outcome is PipelineError.",  // decision can equal to null only if there is pipline error
+                    "Decision can be null only when the outcome is PipelineError.",
                     nameof(decision));
             }
 
