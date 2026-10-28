@@ -24,6 +24,26 @@ While the version stays `0.x`, the public API may change in any release.
   guard's name, the kind and the reason), beside `Decision`, which is what the agent will do.
 - `DecisionTelemetry.Verdict` and `DecisionTelemetry.GuardReason`. `GuardsFired` is now
   filled in.
+- **Observation sources** (#91, DR-012, build plan §2.8). An agent can now notice its
+  surroundings rather than only be told. `IObservationSource.Observe(AgentContext)` returns
+  short lines. `Agent.ObservationSources`, an ordered list that is empty by default, is asked
+  on every decision after the targets are resolved, and nothing is kept between decisions. The
+  sources' lines are sent verbatim, before the call's own `DecideOptions.Observations`. While a
+  source runs, its context holds the call's own lines, never another source's. A source that
+  throws, or a null entry, makes the decision a `PipelineError` of kind `RequestPreparation`,
+  as a target source does. `Execute` never asks the sources.
+- **`Agent.MaxObservations`**, the cap in lines, 8 by default. The call's own observations are
+  always sent whole and count against it, and the sources fill what is left, in order. Blank
+  lines take no place. An agent with no sources sends exactly what it sent before.
+- `DecisionTelemetry.ObservationsDropped`: the lines a source had but the request does not
+  carry, in source order. For each source, it lists the lines the cap cut, then the lines that
+  source's own cap left out, which a source reports through the optional
+  `IReportsDroppedObservations`, the same shape as #81's `IReportsDroppedTargets`.
+- **`ProximityObservationSource`**, in `Runtime/Unity/`. It returns the `Description` of each
+  `Targetable` within a radius, nearest first, with its own `Cap` (8). A `Targetable` that is
+  not currently targetable, or has an empty description, adds nothing. It takes the same
+  options as `ProximityTargetSource` and shares its query, so given the same settings the two
+  find the same objects.
 
 ### Changed
 

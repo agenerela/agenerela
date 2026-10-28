@@ -16,6 +16,7 @@ namespace Agenerela{
         public GuardVerdictKind? Verdict; // The verdict of the guard that stopped the decision, or of Execute's re-check when it refused; null when every guard passed (#106)
         public string GuardReason; // That guard's reason, word for word; null when every guard passed (#106)
         public List<string> TargetsDropped = new List<string>(); // Target ids a source found but left out because of its cap (#32)
+        public List<string> ObservationsDropped = new List<string>(); // Observation lines a source had but the request does not carry, in source order: for each source, its lines Agent.MaxObservations cut, then those its own cap left out, from IReportsDroppedObservations (#91)
         public int HistoryTurnsSent; // Exchanges of memory sent in DecisionRequest.History, two entries each (#90)
         public int HistoryTurnsDropped; // Exchanges the memory still held but left out of this request, from IReportsDroppedTurns; 0 when it cannot say (#90)
         public int HistoryTurnsForgotten; // Exchanges the memory has let go of since it was made, a rising total, from IReportsDroppedTurns; 0 when it cannot say (#90)
@@ -38,6 +39,7 @@ namespace Agenerela{
             Verdict = null;
             GuardReason = null;
             TargetsDropped = new List<string>();
+            ObservationsDropped = new List<string>();
             HistoryTurnsSent = 0;
             HistoryTurnsDropped = 0;
             HistoryTurnsForgotten = 0;

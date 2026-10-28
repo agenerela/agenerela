@@ -946,6 +946,261 @@ namespace Agenerela.Tests
             Assert.That(result.Telemetry.TargetsDropped, Is.EqualTo(new[] { "well" }));
         }
 
+        // ---- Observations (§2.8, DR-012, #91) -----------------------------------------------
+
+        [Test]
+        public async Task SourcesAreAskedInOrderAndTheirLinesComeBeforeTheCallsOwn()
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = Fixtures.VillageGuard(fake);
+            var first = new FakeObservationSource("The watchtower door stands open.");
+            var second = new FakeObservationSource("A cart blocks the bridge.", "It is raining.");
+            agent.ObservationSources.Add(first);
+            agent.ObservationSources.Add(second);
+            var options = new DecideOptions { Observations = new List<string> { "It is night." } };
+
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", options));
+
+            Assert.That(fake.LastRequest.Observations, Is.EqualTo(Block(
+                "The watchtower door stands open.", "A cart blocks the bridge.", "It is raining.", "It is night.")),
+                "Verbatim, sources in order, the call's own last: the last thing the model reads.");
+            Assert.That(first.Seen, Has.Count.EqualTo(1));
+            Assert.That(second.Seen, Has.Count.EqualTo(1));
+        }
+
+        [Test]
+        public async Task SourcesAreAskedOnEveryDecisionAndNothingCarriesOver()
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = Fixtures.VillageGuard(fake);
+            var source = new FakeObservationSource("The watchtower door stands open.");
+            agent.ObservationSources.Add(source);
+
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+            string first = fake.LastRequest.Observations;
+            source.Lines = Array.Empty<string>();
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+
+            Assert.That(source.Seen, Has.Count.EqualTo(2));
+            Assert.That(first, Is.EqualTo(Block("The watchtower door stands open.")));
+            Assert.That(fake.LastRequest.Observations, Is.Null,
+                "The door was the source's answer last time, not something the agent keeps.");
+        }
+
+        [Test]
+        public async Task TheCapKeepsTheCallsLinesAndFillsWhatIsLeftFromTheSourcesInOrder()
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = Fixtures.VillageGuard(fake);
+            agent.MaxObservations = 4;
+            agent.ObservationSources.Add(new FakeObservationSource("The well is dry.", "The mill is quiet.", "The orchard is in bloom."));
+            agent.ObservationSources.Add(new FakeObservationSource("A cart blocks the bridge."));
+            var options = new DecideOptions { Observations = new List<string> { "It is night.", "The gate is open." } };
+
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", options));
+
+            Assert.That(fake.LastRequest.Observations, Is.EqualTo(Block(
+                "The well is dry.", "The mill is quiet.", "It is night.", "The gate is open.")));
+            Assert.That(result.Telemetry.ObservationsDropped, Is.EqualTo(new[] { "The orchard is in bloom.", "A cart blocks the bridge." }),
+                "What the cap cut, in source order: the end of the first source, then all of the second.");
+        }
+
+        [Test]
+        public async Task TheCallsOwnLinesAreSentWholeEvenPastTheCap()
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = Fixtures.VillageGuard(fake);
+            agent.MaxObservations = 1;
+            agent.ObservationSources.Add(new FakeObservationSource("The watchtower door stands open."));
+            var options = new DecideOptions { Observations = new List<string> { "It is night.", "The gate is open." } };
+
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", options));
+
+            Assert.That(fake.LastRequest.Observations, Is.EqualTo(Block("It is night.", "The gate is open.")),
+                "The developer passed these for this call: the cap bounds what the agent gathers, never them.");
+            Assert.That(result.Telemetry.ObservationsDropped, Is.EqualTo(new[] { "The watchtower door stands open." }));
+        }
+
+        [Test]
+        public async Task WhatASourcesOwnCapLeftOutFollowsItsLinesTheAgentsCapCut()
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = Fixtures.VillageGuard(fake);
+            agent.MaxObservations = 2;
+            agent.ObservationSources.Add(new FakeObservationSource("The well is dry.", "The mill is quiet.", "The orchard is in bloom.")
+            {
+                Drops = new[] { "The far hill is green." },
+            });
+            agent.ObservationSources.Add(new FakeObservationSource("A cart blocks the bridge.")
+            {
+                Drops = new[] { "Smoke rises over the forest." },
+            });
+
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+
+            Assert.That(fake.LastRequest.Observations, Is.EqualTo(Block("The well is dry.", "The mill is quiet.")));
+            Assert.That(result.Telemetry.ObservationsDropped, Is.EqualTo(new[]
+            {
+                "The orchard is in bloom.", "The far hill is green.",
+                "A cart blocks the bridge.", "Smoke rises over the forest.",
+            }), "Every unsent line, in the order the sources ranked them.");
+        }
+
+        [Test]
+        public async Task ALazySourcesDropsAreReadOnceItsLinesAre()
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = Fixtures.VillageGuard(fake);
+            agent.ObservationSources.Add(new FakeObservationSource("The well is dry.")
+            {
+                Lazy = true,
+                Drops = new[] { "The far hill is green." },
+            });
+
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+
+            Assert.That(fake.LastRequest.Observations, Is.EqualTo(Block("The well is dry.")));
+            Assert.That(result.Telemetry.ObservationsDropped, Is.EqualTo(new[] { "The far hill is green." }));
+        }
+
+        [Test]
+        public async Task BlankLinesTakeNoPlaceUnderTheCap()
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = Fixtures.VillageGuard(fake);
+            agent.MaxObservations = 2;
+            agent.ObservationSources.Add(new FakeObservationSource { Lines = null });
+            agent.ObservationSources.Add(new FakeObservationSource("", null, "   ", "The watchtower door stands open.", "\t"));
+            var options = new DecideOptions { Observations = new List<string> { "", "It is night.", null } };
+
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", options));
+
+            Assert.That(fake.LastRequest.Observations, Is.EqualTo(Block("The watchtower door stands open.", "It is night.")));
+            Assert.That(result.Telemetry.ObservationsDropped, Is.Empty);
+        }
+
+        [Test]
+        public async Task WithNoSourcesTheCallsLinesAreSentAsBefore()
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = Fixtures.VillageGuard(fake);
+            var many = Enumerable.Range(1, 12).Select(i => $"Fact {i}.").ToList();
+
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", new DecideOptions { Observations = many }));
+
+            Assert.That(fake.LastRequest.Observations, Is.EqualTo(Block(many.ToArray())),
+                "Twelve lines past a cap of eight: an agent with no sources changes nothing a caller sees.");
+            Assert.That(result.Telemetry.ObservationsDropped, Is.Empty);
+        }
+
+        [Test]
+        public async Task SourcesSeeTheResolvedTargetsAndOnlyTheCallsObservations()
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = Fixtures.VillageGuard(fake);
+            agent.TargetSources.Add(new ExplicitTargetSource().Add("bridge", new object()));
+            var first = new FakeObservationSource("A cart blocks the bridge.");
+            var second = new FakeObservationSource("It is raining.");
+            agent.ObservationSources.Add(first);
+            agent.ObservationSources.Add(second);
+            var options = new DecideOptions { Observations = new List<string> { "It is night." } };
+
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", options));
+
+            Assert.That(first.Seen[0].Targets.Ids, Is.EqualTo(new[] { "tower", "training_dummy", "bridge" }),
+                "Asked after the targets are resolved, so a source may describe what is offered.");
+            Assert.That(second.Seen[0].Observations, Is.EqualTo(new[] { "It is night." }),
+                "The call's own lines, never the first source's: no source depends on the order of the others.");
+        }
+
+        [Test]
+        public async Task EverythingAfterTheSourcesReadsTheFinalList()
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = Fixtures.VillageGuard(fake);
+            var guard = new FakeGuard("Spy");
+            agent.Guards.Add(guard);
+            var memory = new SpyMemory();
+            agent.Memory = memory;
+            agent.ObservationSources.Add(new FakeObservationSource("A cart blocks the bridge."));
+            var options = new DecideOptions { Observations = new List<string> { "It is night." } };
+            var expected = new[] { "A cart blocks the bridge.", "It is night." };
+
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", options));
+
+            Assert.That(Fixtures.Handler(agent, "move_to").AvailabilityChecks.Last().Observations, Is.EqualTo(expected));
+            Assert.That(memory.Recalled[0].Observations, Is.EqualTo(expected));
+            Assert.That(guard.Inputs[0].Context.Observations, Is.EqualTo(expected), "The guards judge the context that was sent.");
+            Assert.That(guard.Inputs[0].Request.Observations, Is.EqualTo(Block(expected)));
+            Assert.That(memory.Remembered[0].Ctx, Is.SameAs(guard.Inputs[0].Context));
+            Assert.That(guard.Inputs[0].Options.Observations, Is.EqualTo(new[] { "It is night." }),
+                "The options stay the call's own, as it passed them.");
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public async Task ASourceThatThrowsIsAPipelineErrorAndNothingIsSent(bool lazily)
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = Fixtures.VillageGuard(fake);
+            agent.ObservationSources.Add(new FakeObservationSource("A cart blocks the bridge.")
+            {
+                Failure = new InvalidOperationException("The well is haunted."),
+                Lazy = lazily,
+            });
+            LogAssert.Expect(LogType.Warning,
+                new Regex("could not decide\\. Preparing the request failed\\. InvalidOperationException: The well is haunted\\."));
+
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+
+            Assert.That(result.Decision, Is.Null);
+            Assert.That(result.Telemetry.Outcome, Is.EqualTo(DecisionOutcome.PipelineError));
+            Assert.That(result.Telemetry.ErrorKind, Is.EqualTo(PipelineErrorKind.RequestPreparation),
+                "The same kind a target source that throws gives.");
+            Assert.That(fake.Requests, Is.Empty);
+        }
+
+        [Test]
+        public async Task ANullSourceIsAPipelineErrorAndNothingIsSent()
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = Fixtures.VillageGuard(fake);
+            agent.ObservationSources.Add(null);
+            LogAssert.Expect(LogType.Warning, new Regex("could not decide\\. .*ObservationSources\\[0\\] is null"));
+
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+
+            Assert.That(result.Telemetry.ErrorKind, Is.EqualTo(PipelineErrorKind.RequestPreparation));
+            Assert.That(fake.Requests, Is.Empty);
+        }
+
+        [Test]
+        public async Task ExecuteNeverAsksTheObservationSources()
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = Fixtures.VillageGuard(fake);
+            var source = new FakeObservationSource("A cart blocks the bridge.");
+            agent.ObservationSources.Add(source);
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+
+            Assert.That(agent.Execute(result), Is.True);
+
+            Assert.That(source.Seen, Has.Count.EqualTo(1), "Observations are an input to deciding, not to acting.");
+        }
+
+        [Test]
+        public void AnAgentStartsWithNoSourcesAndACapOfEightThatCannotBeNegative()
+        {
+            var agent = Fixtures.VillageGuard(new FakeProvider());
+
+            Assert.That(agent.ObservationSources, Is.Not.Null.And.Empty);
+            Assert.That(agent.MaxObservations, Is.EqualTo(8));
+            Assert.Throws<ArgumentOutOfRangeException>(() => agent.MaxObservations = -1);
+            Assert.That(agent.MaxObservations, Is.EqualTo(8));
+            agent.MaxObservations = 0;
+            Assert.That(agent.MaxObservations, Is.EqualTo(0), "0 is a cap: the sources add nothing.");
+        }
+
         // ---- Execute ------------------------------------------------------------------------
 
         [TestCase("move_to", "tower")]
@@ -1195,6 +1450,12 @@ namespace Agenerela.Tests
 
                 Remembered.Add((ctx, request, result));
             }
+        }
+
+        // A request's observations block, as PromptBuilder writes it.
+        private static string Block(params string[] lines)
+        {
+            return "What you know right now:\n" + string.Join("\n", lines.Select(line => "- " + line));
         }
 
         // Every string in the request, schema included: all a provider could possibly send.
