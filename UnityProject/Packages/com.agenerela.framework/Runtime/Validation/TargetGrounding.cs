@@ -28,6 +28,13 @@ namespace Agenerela
     /// alone passed "spear" as <c>sword</c>. Any change to it needs an A/B run with a control arm
     /// (build plan §2.5, Limits).
     /// </para>
+    /// <para>
+    /// Ids are compared lower-cased, as the probe did, but with <c>ToLowerInvariant</c> rather than
+    /// Python's <c>str.lower()</c>. The two agree on every ASCII id, which is every id DR-016
+    /// measured. They differ for the Greek capital sigma, which Python lower-cases to a final "ς"
+    /// or "σ" by context, and for the Turkish "İ". So for an id containing either, the reading can
+    /// differ from the probe's: an id "ΟΣ" that the model writes as "ος" reads as off the list.
+    /// </para>
     /// </remarks>
     public static class TargetGrounding
     {

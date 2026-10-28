@@ -53,7 +53,9 @@ While the version stays `0.x`, the public API may change in any release.
   every decision. A reply without token probabilities passes, recorded as not checked.
 - `TargetGrounding.Read`, the reading on its own, as a pure function returning a
   `GroundingReading` (`Status`, `Share`, `LowestAt`, `Wanted`). It matches the probe's
-  `target_swap_score.py` number for number.
+  `target_swap_score.py` number for number on ASCII ids, which are all DR-016 measured. An id
+  containing the Greek capital sigma or the Turkish "İ" can read differently, because the
+  probe used Python's lower-casing.
 - `DecideOptions.CheckTarget`, `true` by default. Set it to `false` to skip the grounding
   guard for one call.
 - `DecisionTelemetry.TargetGrounding` (the share, or null when it was not read) and
