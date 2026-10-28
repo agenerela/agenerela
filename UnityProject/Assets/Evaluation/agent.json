@@ -22,9 +22,7 @@
     { "id": "shelter", "description": "The shelter where villagers take cover" },
     { "id": "eastern_road", "description": "The road leaving the village to the east" },
     { "id": "wolf", "description": "A wolf that came out of the woods" },
-    { "id": "locked_cave", "description": "A cave whose entrance is locked" },
-    { "id": "north_gate", "description": "The smaller gate on the north side of the village" },
-    { "id": "river_ford", "description": "The shallow crossing where the road passes through the river" }
+    { "id": "locked_cave", "description": "A cave whose entrance is locked" }
   ],
   "targetRules": {
     "allExpectedTargetsMustBeRegistered": true,

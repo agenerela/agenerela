@@ -209,33 +209,34 @@
     {
       "id": "event_015",
       "label": "Event",
-      "stimulus": "The captain wants one of the gates checked before dark.",
+      "stimulus": "The captain wants a guard by the water before the boats arrive.",
       "observations": [
-        "The village gate and the north gate both close at sunset"
+        "Boats tie up at the docks",
+        "Smaller boats also stop beside the bridge"
       ],
       "expectedAction": "move_to",
-      "expectedTarget": ["north_gate", "village_gate"],
+      "expectedTarget": ["bridge", "docks"],
       "preconditionState": {
         "isFollowing": false
       },
-      "note": "An open choice: either gate is right, and the grounding guard must not turn it away.",
+      "note": "An open choice: either place is right, and the grounding guard must not turn it away.",
       "labelledBy": ["Yevhen"]
     },
     {
       "id": "event_016",
       "label": "Event",
-      "stimulus": "Lights were seen at the north gate.",
+      "stimulus": "Lights were seen in the north tower.",
       "observations": [
-        "The north gate is shut",
+        "The north tower should be empty tonight",
         "It is after midnight"
       ],
       "expectedAction": "move_to",
-      "expectedTarget": "north_gate",
+      "expectedTarget": "north_tower",
       "checkTarget": false,
       "preconditionState": {
         "isFollowing": false
       },
-      "note": "A near miss: north_gate and north_tower start alike. Run with the grounding guard off (DR-016).",
+      "note": "Run with the grounding guard off (DR-016).",
       "labelledBy": ["Yevhen"]
     },
     {

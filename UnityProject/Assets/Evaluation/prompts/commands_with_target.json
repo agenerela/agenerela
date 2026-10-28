@@ -93,10 +93,10 @@
 
     {"id":"target_011",
     "label":"Player",
-    "stimulus":"Head to the north gate.",
+    "stimulus":"Head over to the well in the square.",
     "observations":[],
     "expectedAction":"move_to",
-    "expectedTarget":"north_gate",
+    "expectedTarget":"well",
     "preconditionState":{"isFollowing":false},
     "labelledBy":["Maxim"]}
   ]

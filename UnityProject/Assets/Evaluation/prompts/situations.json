@@ -235,18 +235,18 @@
     {
       "id": "situation_016",
       "label": "Situation",
-      "stimulus": "Night has fallen and no one is watching the gates.",
+      "stimulus": "Night has fallen and no one is watching the ways into the village.",
       "observations": [
-        "The village gate has no guard",
-        "The north gate has no guard",
+        "Nobody is guarding the village gate",
+        "Nobody is watching the eastern road",
         "You are the only guard on duty"
       ],
       "expectedAction": "move_to",
-      "expectedTarget": ["north_gate", "village_gate"],
+      "expectedTarget": ["eastern_road", "village_gate"],
       "preconditionState": {
         "isFollowing": false
       },
-      "note": "An open choice: either gate is right, and the grounding guard must not turn it away.",
+      "note": "An open choice: either way in is right, and the grounding guard must not turn it away.",
       "labelledBy": ["Yevhen"]
     },
     {
@@ -267,13 +267,13 @@
     {
       "id": "situation_018",
       "label": "Situation",
-      "stimulus": "Traders will be crossing the river at dusk.",
+      "stimulus": "Villagers are gathering in the square tonight.",
       "observations": [
-        "Traders cross at the bridge and at the ford",
-        "Neither crossing has a guard"
+        "Crowds are expected at the market and around the well",
+        "No guard is in the square"
       ],
       "expectedAction": "move_to",
-      "expectedTarget": ["bridge", "river_ford"],
+      "expectedTarget": ["market", "well"],
       "checkTarget": false,
       "preconditionState": {
         "isFollowing": false

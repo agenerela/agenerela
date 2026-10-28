@@ -30,10 +30,9 @@ with the targets the prompts name.
 | `targets[].description` | One line saying what the target is. It may reach the prompt, so it describes the world, not the test |
 | `targetRules` | Checks a harness should run on the set before scoring it: every expected target registered, and `none` always paired with `no_target` |
 
-GreyBoxVillage is built from this list, so a prompt can be played in the demo. The two agree on
-`north_tower`. The demo has three targets of its own (`training_dummy`, `armory`,
-`lords_keep`), and lacks two of the set's: `north_gate` and `river_ford`, added in #85's second
-batch. Until the village has them, prompts that use those two cannot be checked there.
+GreyBoxVillage is built from this list, so any prompt here can be played in the demo. It has
+every target in `agent.json`, and three of its own (`training_dummy`, `armory`, `lords_keep`)
+that the set does not use. A new target here needs adding to the village too.
 
 ## A prompt
 
@@ -57,7 +56,7 @@ Fields #13 and #66 define for some prompts only:
 | Field | Meaning |
 |---|---|
 | `checkTarget` | Optional, `true` when left out. `false` only for a case that tests a decision with the grounding guard off (DR-016) |
-| `expectedTarget` as a list | An open choice, where either target is right: `["north_gate", "village_gate"]` |
+| `expectedTarget` as a list | An open choice, where either target is right: `["bridge", "docks"]` |
 | `labels` | On a doubly labelled prompt, each annotator's own answer from before they agreed: `{ "<annotator>": "move_to/village_gate", ... }`. Agreement is computed from these. No prompt has it yet |
 
 ## Rules for writing one
