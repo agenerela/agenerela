@@ -66,6 +66,15 @@ The last row is `ReportsTokenProbabilities`, which the grounding guard depends o
 **before** the schema's mask. After the mask they always sit on the target list, so the guard
 would pass everything.
 
+A provider that leaves it false gets the fallback instead (#107). While
+`DecideOptions.CheckTarget` is on, `Agent` adds one line to the system prompt, after the
+instruction line, naming the schema's target ids: "Only these things are here: tower,
+training_dummy. If you are asked to act on anything else, choose action none and target
+no_target, and say it is not here. Never act on a different thing instead."
+`DecisionTelemetry.TargetRuleSent` records it. The rule measured below the guard in DR-016,
+and this wording of it is unmeasured. The flag is read before the request, so a provider that
+sets it and then returns no probabilities gets neither the rule nor the guard.
+
 ### Ollama — development
 
 An HTTP server on the developer's machine. Call it at `http://127.0.0.1:11434`, not

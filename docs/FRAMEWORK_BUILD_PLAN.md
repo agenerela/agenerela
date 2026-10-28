@@ -892,7 +892,10 @@ Built-ins, in order:
    that it could not run. The fallback is the next best option that costs nothing: one line
    in the system prompt, saying that only the listed things are here and the model must never
    act on a different one. `PromptBuilder` adds it when `CheckTarget` is on and the provider
-   reports no probabilities. Measured: 2B 73 → 88, 4B 98 → 101 (DR-016).
+   reports no probabilities. The probe's form of it, a rule pointing at an "Around you" list of
+   the targets, measured 2B 73 → 88, 4B 98 → 101 (DR-016). The line as built (#107) carries the
+   target ids itself and names no player, since the prompt has no such list (DR-008). That
+   wording is unmeasured until Phase 4 runs it against the probe's form.
 
    **Limits.** A near miss the model takes for the listed thing passes: Excalibur for the
    sword on the 2B, a bucket for the barrel and a lantern for the torch on the 4B. So does a

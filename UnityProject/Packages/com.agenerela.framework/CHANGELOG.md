@@ -62,6 +62,18 @@ While the version stays `0.x`, the public API may change in any release.
   `DecisionTelemetry.TargetGroundingStatus` (a `GroundingStatus`: `Scored`,
   `NoProbabilities`, `NoTargetField`, `Unreadable` or `Off`; null when the decision never
   reached the guard).
+- **The target rule**, the grounding guard's fallback for a provider that reports no token
+  probabilities (#107, DR-016). When `DecideOptions.CheckTarget` is on and the provider's
+  `Capabilities.ReportsTokenProbabilities` is false, the system prompt gains one line after
+  the instruction line: "Only these things are here: tower, training_dummy. If you are asked
+  to act on anything else, choose action none and target no_target, and say it is not here.
+  Never act on a different thing instead." It names the schema's target ids in order, and is
+  left out when the schema has no target field. The wording adapts the measured rule and is
+  itself unmeasured; Phase 4 owes the A/B. With Ollama, which reports probabilities, the
+  prompt is unchanged. A provider that claims probabilities and then returns none still gets
+  neither the rule nor the guard.
+- `PromptOptions.TargetRule`, off by default, which `Agent` sets, and
+  `DecisionTelemetry.TargetRuleSent`, true exactly when the line was sent.
 
 ### Changed
 

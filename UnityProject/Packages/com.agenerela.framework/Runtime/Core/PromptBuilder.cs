@@ -30,6 +30,12 @@ namespace Agenerela
     /// Deterministic: <c>\n</c> line endings on every platform, and the same input gives
     /// byte-identical output, which the golden-file test depends on.
     /// </para>
+    /// <para>
+    /// One line is added only on request: the target rule, the fallback for a provider that
+    /// cannot report token probabilities, so that <see cref="TargetGroundingGuard"/> cannot run
+    /// (build plan §2.5, DR-016). With <see cref="PromptOptions.TargetRule"/> off, the default and
+    /// what <c>Agent</c> sends to Ollama, the prompt is exactly what it was without it.
+    /// </para>
     /// </remarks>
     public static class PromptBuilder
     {
@@ -38,6 +44,17 @@ namespace Agenerela
         private const string InstructionLine =
             "Choose exactly one action from the allowed list. Use " + TargetRegistry.NoTarget +
             " when none of the listed targets applies.";
+
+        // The target rule around its list of ids (#107). The probe's RULE, which DR-016 measured,
+        // pointed at an "Around you" block this prompt does not have, and said "the player", which
+        // DR-008 rules out. So this line carries the list itself and names no one: an adaptation,
+        // and unmeasured.
+        private const string TargetRuleStart = "Only these things are here: ";
+
+        private const string TargetRuleEnd =
+            ". If you are asked to act on anything else, choose action " + ActionRegistry.None +
+            " and target " + TargetRegistry.NoTarget +
+            ", and say it is not here. Never act on a different thing instead.";
 
         private const string ObservationsHeader = "What you know right now:";
 
@@ -88,7 +105,7 @@ namespace Agenerela
 
             return new DecisionRequest
             {
-                SystemPrompt = SystemPrompt(ctx.Identity),
+                SystemPrompt = SystemPrompt(ctx.Identity, options.TargetRule ? TargetRuleLine(schema) : null),
                 FewShotBlock = fewShotBlock,
                 Observations = ObservationsBlock(ctx.Observations),
                 // Copied, so a memory strategy changing its list afterwards does not change a
@@ -99,10 +116,43 @@ namespace Agenerela
             };
         }
 
-        // Who the agent is, its goals if it has any, then the fixed instruction line.
-        private static string SystemPrompt(AgentIdentity identity)
+        // Whether Build, given these options and this schema, puts the target rule in the system
+        // prompt. Agent records the answer in DecisionTelemetry.TargetRuleSent, so the two cannot
+        // disagree.
+        internal static bool SendsTargetRule(DecisionSchema schema, PromptOptions options)
         {
-            var lines = new List<string>(3);
+            return options != null && options.TargetRule && TargetRuleLine(schema) != null;
+        }
+
+        // The target rule, naming the schema's target ids in its order, no_target left out. Null
+        // when the schema has no target field, since there is nothing to ground, or when that
+        // field offers nothing but no_target, which DecisionSchema.Build never makes.
+        private static string TargetRuleLine(DecisionSchema schema)
+        {
+            foreach (var field in schema.Fields)
+            {
+                if (field.Name != DecisionSchema.TargetFieldName || field.AllowedValues == null) continue;
+
+                var ids = new List<string>(field.AllowedValues.Count);
+                foreach (string id in field.AllowedValues)
+                {
+                    if (id != TargetRegistry.NoTarget)
+                    {
+                        ids.Add(id);
+                    }
+                }
+
+                return ids.Count > 0 ? TargetRuleStart + string.Join(", ", ids) + TargetRuleEnd : null;
+            }
+
+            return null;
+        }
+
+        // Who the agent is, its goals if it has any, then the fixed instruction line, then the
+        // target rule when there is one.
+        private static string SystemPrompt(AgentIdentity identity, string targetRule)
+        {
+            var lines = new List<string>(4);
 
             string who = WhoLine(identity);
             if (who.Length > 0)
@@ -117,6 +167,12 @@ namespace Agenerela
             }
 
             lines.Add(InstructionLine);
+
+            if (targetRule != null)
+            {
+                lines.Add(targetRule);
+            }
+
             return string.Join("\n", lines);
         }
 

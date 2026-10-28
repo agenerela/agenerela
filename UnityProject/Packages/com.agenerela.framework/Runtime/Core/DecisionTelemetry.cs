@@ -28,6 +28,7 @@ namespace Agenerela{
         public int QueuedAhead; // Requests ahead when it joined: those in flight, and those queued that go before it (#89)
         public float? TargetGrounding; // The lowest share of the model's probability at the target that stayed on the target list, from TargetGroundingGuard; null unless TargetGroundingStatus is Scored (#105)
         public GroundingStatus? TargetGroundingStatus; // Whether that share was read, or why not, Off included; null when the decision never reached the guard (#105)
+        public bool TargetRuleSent; // Whether the system prompt carried the target rule, the fallback sent when CheckTarget is on and the provider reports no token probabilities; false for a decision made under the guard (#107)
 
         public DecisionTelemetry()
         {
@@ -53,6 +54,7 @@ namespace Agenerela{
             QueuedAhead = 0;
             TargetGrounding = null;
             TargetGroundingStatus = null;
+            TargetRuleSent = false;
 
         }
     }
