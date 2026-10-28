@@ -84,7 +84,7 @@
 
     {"id":"target_010",
     "label":"Player",
-    "stimulus":"Climb the north tower and keep a lookout.",
+    "stimulus":"Walk over to the north tower.",
     "observations":[],
     "expectedAction":"move_to",
     "expectedTarget":"north_tower",
@@ -98,6 +98,6 @@
     "expectedAction":"move_to",
     "expectedTarget":"well",
     "preconditionState":{"isFollowing":false},
-    "labelledBy":["Maxim"]}
+    "labelledBy":["Yevhen"]}
   ]
 }

@@ -94,8 +94,9 @@ As of #85's second batch, 27 October 2026: 76 prompts. Counted by script, not by
 - **Game-triggered** (`situation`, `event`, `turn`): 38 of 76, half, as #13 asks.
 - **Expected actions:** `none` 30, `move_to` 29, `stop_following` 7, `follow_player` 6,
   `attack_target` 4. A model that never acts would score 39%.
-- **Targets found only in the observations:** 7 (`event_002`, `event_013`, `event_014`,
-  `situation_013`, `situation_014`, `situation_015`, `situation_019`).
+- **Targets found only in the observations:** 10 (`event_002`, `event_013`, `event_014`,
+  `situation_013`, `situation_014`, `situation_015`, `situation_019`, and the three open
+  choices below).
 - **Open choices:** 3 (`situation_016`, `situation_018`, `event_015`).
   **`checkTarget: false`:** 3 (`situation_015`, `situation_018`, `event_016`).
 - **Doubly labelled:** 18 on #66's first pass, three in each category; only `target_001` to
