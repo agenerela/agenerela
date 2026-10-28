@@ -58,7 +58,7 @@ namespace Agenerela{
     public enum PipelineErrorKind
     {
         // Building the request failed before anything was sent: a target source offering an id
-        // twice, or an availability check that threw
+        // twice, or an observation source or an availability check that threw
         RequestPreparation,
 
         // The provider reached no server (ProviderErrorKind.Unreachable)

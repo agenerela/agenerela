@@ -290,8 +290,8 @@ namespace Agenerela
         /// <see cref="DecisionResult.Decision"/> is null and whose telemetry's
         /// <see cref="DecisionTelemetry.Outcome"/> is <see cref="DecisionOutcome.PipelineError"/>,
         /// with the reason logged as a warning. That covers anything failing while the request is
-        /// prepared, such as a target source offering an id twice or an availability check that
-        /// throws; a provider that throws; and a reply that is empty, is not one JSON object, or
+        /// prepared, such as a target source offering an id twice, an observation source or an
+        /// availability check that throws; a provider that throws; and a reply that is empty, is not one JSON object, or
         /// lacks a field the schema asked for. A reply naming an action or target the request did
         /// not offer is still a decision, which the guards reject (see <c>DecisionParser</c> and
         /// <see cref="SchemaLegalityGuard"/>). The telemetry says which of these it was in
