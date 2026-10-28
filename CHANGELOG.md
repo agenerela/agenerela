@@ -23,8 +23,12 @@ phase table and the open issues, not here.
 ### Framework
 
 - Phase 3 (Validation pipeline) is under way, due 9 November. The guard pipeline and
-  `SchemaLegalityGuard` (#106, via #115) are in; target grounding (#105) and its fallback
-  (#107), developer guards (#108), contained refusals (#109) and the gate (#110) are not.
+  `SchemaLegalityGuard` (#106, via #115) are in, and so is target grounding (#105, via #124,
+  DR-016): `TargetGroundingGuard` reads the model's token probabilities at the target, and turns
+  a decision into `none` when the model wanted something not on the list ("Attack the
+  scarecrow." beside a training dummy). A live hand check on Ollama 0.34.2 read 0.051 there,
+  recorded in `docs/llm-wiki/findings.md`. Its prompt fallback (#107), developer guards (#108),
+  contained refusals (#109) and the gate (#110) are not in yet.
   See the package's [`[Unreleased]`](UnityProject/Packages/com.agenerela.framework/CHANGELOG.md#unreleased).
 - From Phase 2's leftovers, observation sources are in (#91, via #123): `IObservationSource`,
   the extension point for the Observations research area (#122), with one built-in source,
