@@ -3,8 +3,8 @@ namespace Agenerela.Providers
     /// <summary>
     /// Where <see cref="OllamaProvider"/> finds its server and how it asks: the endpoint, the
     /// model, the context size, the temperature and the timeout. A plain class, so a provider can
-    /// be built in code with no asset; the provider config asset that builds one from a project's
-    /// settings is #92 (DR-013).
+    /// be built in code with no asset. <see cref="OllamaProviderConfig"/> holds the same fields as an
+    /// asset, and builds a provider from them (#92, DR-013).
     /// </summary>
     /// <remarks>
     /// The provider copies these values when it is built, so changing a field afterwards changes

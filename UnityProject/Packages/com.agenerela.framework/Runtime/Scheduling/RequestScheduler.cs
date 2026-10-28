@@ -22,9 +22,10 @@ namespace Agenerela
     /// registered, and a provider written by a developer gets a queue like any other.
     /// </para>
     /// <para>
-    /// Internal for now. The only setting is <see cref="MaxInFlight"/>, which comes from the
-    /// provider config asset once #92 lands; until then it is 1, as the prototype measured safe
-    /// (5 simultaneous requests, 0 cross-talk; about 21 s for 30 agents, Appendix A).
+    /// Internal for now. The only setting is <see cref="MaxInFlight"/>, which a provider config
+    /// asset sets from its own <see cref="ProviderConfig.MaxInFlight"/> when it builds the provider
+    /// (#92). A provider built in code keeps 1, as the prototype measured safe (5 simultaneous
+    /// requests, 0 cross-talk; about 21 s for 30 agents, Appendix A).
     /// </para>
     /// <para>
     /// Jumping the queue is all "player-facing goes first" means: a request already sent is never
