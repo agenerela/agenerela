@@ -29,6 +29,11 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **The evaluation set's second batch** (part of #85, via #118): 76 prompts, 38 of them
+  game-triggered. It adds situations where acting is right, more targets found only in the
+  observations, three open choices with a list `expectedTarget`, and three `checkTarget: false`
+  cases; `none` falls from 52% to 39% of the answers. Every target is one GreyBoxVillage has.
+  Real annotators and their own answers on the doubly labelled subset are still to do.
 - **Branding in `tools/branding/`.** The logo as 3D-printable pins, a keychain and a sign
   (STL, in one- and two-colour versions), 4K stills and a 4K animation with sound, each
   rebuilt in Blender by the scripts beside it. STL, 3MF and WebP now go through Git LFS.

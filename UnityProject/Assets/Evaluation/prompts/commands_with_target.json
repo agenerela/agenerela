@@ -80,6 +80,24 @@
     "expectedAction":"move_to",
     "expectedTarget":"eastern_road",
     "preconditionState":{"isFollowing":false},
-    "labelledBy":["bob"]}
+    "labelledBy":["bob"]},
+
+    {"id":"target_010",
+    "label":"Player",
+    "stimulus":"Walk over to the north tower.",
+    "observations":[],
+    "expectedAction":"move_to",
+    "expectedTarget":"north_tower",
+    "preconditionState":{"isFollowing":false},
+    "labelledBy":["Maxim"]},
+
+    {"id":"target_011",
+    "label":"Player",
+    "stimulus":"Head over to the well in the square.",
+    "observations":[],
+    "expectedAction":"move_to",
+    "expectedTarget":"well",
+    "preconditionState":{"isFollowing":false},
+    "labelledBy":["Yevhen"]}
   ]
 }
