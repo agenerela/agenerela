@@ -44,6 +44,22 @@ While the version stays `0.x`, the public API may change in any release.
   not currently targetable, or has an empty description, adds nothing. It takes the same
   options as `ProximityTargetSource` and shares its query, so given the same settings the two
   find the same objects.
+- **`TargetGroundingGuard`**, the second built-in guard (#105, DR-016). It catches a model
+  that wanted a target not on the list: "Attack the scarecrow." with only a training dummy
+  around now comes back as `none`, not as an attack on the dummy. It reads the reply's token
+  probabilities at the target and keeps the lowest share that could still lead to a listed
+  target. Below 0.8, a decision whose action needs a target is rewritten to `none` with
+  `no_target`, and the reason names the share and what the model wanted to write. It runs on
+  every decision. A reply without token probabilities passes, recorded as not checked.
+- `TargetGrounding.Read`, the reading on its own, as a pure function returning a
+  `GroundingReading` (`Status`, `Share`, `LowestAt`, `Wanted`). It matches the probe's
+  `target_swap_score.py` number for number.
+- `DecideOptions.CheckTarget`, `true` by default. Set it to `false` to skip the grounding
+  guard for one call.
+- `DecisionTelemetry.TargetGrounding` (the share, or null when it was not read) and
+  `DecisionTelemetry.TargetGroundingStatus` (a `GroundingStatus`: `Scored`,
+  `NoProbabilities`, `NoTargetField`, `Unreadable` or `Off`; null when the decision never
+  reached the guard).
 
 ### Changed
 

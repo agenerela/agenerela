@@ -137,7 +137,9 @@ maps onto one `TokenProbability`: `token` to `Text`, `logprob` to `LogProbabilit
 `top_logprobs` to `Alternatives`. A character split across two tokens is missing from both
 tokens' text, so on a reply with such a character the joined texts differ from
 `message.content`. Ollama's `bytes` field does not recover it, because Ollama rebuilds it
-from the already cut text. `Text` is still `message.content`, as received.
+from the already cut text. `Text` is still `message.content`, as received. When such a
+character comes before the end of the target, the grounding guard records the reply as
+`Unreadable` and passes it, rather than guess where the target is.
 
 Ollama cannot ship in a game — the player would have to install and run a separate server —
 which is why it is the development backend and not the answer.

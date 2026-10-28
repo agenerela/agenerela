@@ -50,6 +50,22 @@ namespace Agenerela.Tests
         public int CompletionTokens;
 
         /// <summary>
+        /// The token probabilities the next reply carries, as <see cref="ProviderResult.TokenProbabilities"/>.
+        /// Null, as a provider that reports none. <see cref="Tokens"/> builds them.
+        /// </summary>
+        public IReadOnlyList<TokenProbability> TokenProbabilities;
+
+        /// <summary>
+        /// Scripts the next reply as these tokens: <see cref="Reply"/> becomes their texts joined, and
+        /// <see cref="TokenProbabilities"/> the tokens themselves.
+        /// </summary>
+        public void ReplyWith(IReadOnlyList<TokenProbability> tokens)
+        {
+            Reply = Tokens.Join(tokens);
+            TokenProbabilities = tokens;
+        }
+
+        /// <summary>
         /// When set, the request fails with this instead of replying: through the returned
         /// <c>Awaitable</c>, as a transport error arrives, or thrown by <c>RequestAsync</c> itself
         /// when <see cref="FailsImmediately"/> is set.
@@ -183,6 +199,7 @@ namespace Agenerela.Tests
                 Text = Reply,
                 PromptTokens = PromptTokens,
                 CompletionTokens = CompletionTokens,
+                TokenProbabilities = TokenProbabilities,
             };
             source.TrySetResult(result);
         }
