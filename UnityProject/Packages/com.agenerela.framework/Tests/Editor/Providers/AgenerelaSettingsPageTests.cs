@@ -72,6 +72,16 @@ namespace Agenerela.Tests
         }
 
         [Test]
+        public void SettingsUnderAssetsCanBeChanged()
+        {
+            // A read-only package's copy cannot be made in a test; this guards the other side, so a
+            // check that called everything read-only would fail here.
+            var settings = AgenerelaSettingsPage.SetDefault(ConfigAsset("OllamaLocal"), SettingsAt);
+
+            Assert.That(AgenerelaSettingsPage.IsReadOnly(settings), Is.False);
+        }
+
+        [Test]
         public void ClearingADefaultThatWasNeverSetCreatesNothing()
         {
             Assert.That(AgenerelaSettingsPage.SetDefault(null, SettingsAt), Is.Null);

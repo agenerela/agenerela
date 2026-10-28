@@ -38,12 +38,28 @@ namespace Agenerela.Editor
             var settings = Find();
             var current = settings != null ? settings.DefaultProvider : null;
 
+            bool readOnly = settings != null && IsReadOnly(settings);
+
             EditorGUILayout.Space();
             EditorGUI.BeginChangeCheck();
-            var chosen = (ProviderConfig)EditorGUILayout.ObjectField(DefaultLabel, current, typeof(ProviderConfig), false);
-            if (EditorGUI.EndChangeCheck())
+            ProviderConfig chosen;
+            using (new EditorGUI.DisabledScope(readOnly))
+            {
+                chosen = (ProviderConfig)EditorGUILayout.ObjectField(DefaultLabel, current, typeof(ProviderConfig), false);
+            }
+
+            if (EditorGUI.EndChangeCheck() && !readOnly)
             {
                 settings = SetDefault(chosen, AssetPath);
+            }
+
+            if (readOnly)
+            {
+                EditorGUILayout.HelpBox(
+                    "These settings are in a read-only package, so they cannot be changed here. Move " +
+                    AgenerelaSettings.ResourceName + ".asset into a Resources folder under Assets, and " +
+                    "remove the package's copy: a project keeps exactly one.",
+                    MessageType.Warning);
             }
 
             if (chosen == null)
@@ -72,9 +88,17 @@ namespace Agenerela.Editor
         /// set creates nothing.
         /// </summary>
         /// <returns>The settings, or null when there were none and nothing needed saving.</returns>
+        /// <exception cref="System.InvalidOperationException">The settings found are in a read-only package.</exception>
         internal static AgenerelaSettings SetDefault(ProviderConfig config, string createAt)
         {
             var settings = Find();
+            if (settings != null && IsReadOnly(settings))
+            {
+                // Changed in memory only, it would look saved until the next reload.
+                throw new System.InvalidOperationException(
+                    $"The Agenerela settings at {AssetDatabase.GetAssetPath(settings)} are in a read-only package.");
+            }
+
             if (settings == null)
             {
                 if (config == null)
@@ -92,6 +116,16 @@ namespace Agenerela.Editor
             EditorUtility.SetDirty(settings);
             AssetDatabase.SaveAssetIfDirty(settings);
             return settings;
+        }
+
+        // True for settings inside an immutable package, such as one installed from a registry,
+        // where a change would never reach the disk.
+        internal static bool IsReadOnly(AgenerelaSettings settings)
+        {
+            string folder = Path.GetDirectoryName(AssetDatabase.GetAssetPath(settings));
+            return !string.IsNullOrEmpty(folder)
+                   && AssetDatabase.TryGetAssetFolderInfo(folder.Replace('\\', '/'), out _, out bool immutable)
+                   && immutable;
         }
 
         // AssetDatabase.CreateFolder makes one level at a time.
