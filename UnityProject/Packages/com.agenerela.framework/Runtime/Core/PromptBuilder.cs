@@ -32,8 +32,8 @@ namespace Agenerela
     /// </para>
     /// <para>
     /// One line is added only on request: the target rule, the fallback for a provider that
-    /// cannot report token probabilities, so that <see cref="TargetGroundingGuard"/> cannot run
-    /// (build plan §2.5, DR-016). With <see cref="PromptOptions.TargetRule"/> off, the default and
+    /// cannot report token probabilities, without which <see cref="TargetGroundingGuard"/> cannot
+    /// run (build plan §2.5, DR-016). With <see cref="PromptOptions.TargetRule"/> off, the default and
     /// what <c>Agent</c> sends to Ollama, the prompt is exactly what it was without it.
     /// </para>
     /// </remarks>
