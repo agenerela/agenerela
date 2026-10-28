@@ -132,6 +132,17 @@ namespace Agenerela.Tests
             Assert.That(reading.LowestAt, Is.EqualTo(1));
         }
 
+        [TestCase("\u001Ctower")]
+        [TestCase("\u001F \"tower")]
+        [TestCase("　\"tower")]
+        public void TheFirstTokenIsStrippedOfWhatPythonCallsWhitespace(string alternative)
+        {
+            // str.lstrip() also strips U+001C to U+001F, which .NET's char.IsWhiteSpace does not.
+            var reading = Read(Reply("move_to", T("tower", -0.051, (alternative, -0.051), ("sc", -3.0))), Village);
+
+            Assert.That(reading.Share, Is.EqualTo(0.95).Within(0.001));
+        }
+
         [Test]
         public void WithoutProbabilitiesThereIsNoShare()
         {

@@ -182,7 +182,7 @@ namespace Agenerela
                 string t = alternative.Text ?? "";
                 if (first)
                 {
-                    t = t.TrimStart().TrimStart('"');
+                    t = TrimPythonWhitespace(t).TrimStart('"');
                 }
 
                 int quote = t.IndexOf('"');
@@ -205,6 +205,19 @@ namespace Agenerela
             }
 
             return share;
+        }
+
+        // Python's str.lstrip(): .NET's whitespace, plus the four separators U+001C to U+001F,
+        // which Python counts as whitespace and char.IsWhiteSpace does not.
+        private static string TrimPythonWhitespace(string text)
+        {
+            int start = 0;
+            while (start < text.Length && (char.IsWhiteSpace(text[start]) || (text[start] >= '\u001C' && text[start] <= '\u001F')))
+            {
+                start++;
+            }
+
+            return text.Substring(start);
         }
 
         private static bool StartsAny(List<string> values, string start)
