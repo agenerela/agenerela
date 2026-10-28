@@ -26,6 +26,10 @@ phase table and the open issues, not here.
   `SchemaLegalityGuard` (#106, via #115) are in; target grounding (#105) and its fallback
   (#107), developer guards (#108), contained refusals (#109) and the gate (#110) are not.
   See the package's [`[Unreleased]`](UnityProject/Packages/com.agenerela.framework/CHANGELOG.md#unreleased).
+- From Phase 2's leftovers, observation sources are in (#91, via #123): `IObservationSource`,
+  the extension point for the Observations research area (#122), with one built-in source,
+  `ProximityObservationSource`. The provider config asset (#92) and `AgentBehaviour` (#93)
+  are not.
 
 ### Added
 
