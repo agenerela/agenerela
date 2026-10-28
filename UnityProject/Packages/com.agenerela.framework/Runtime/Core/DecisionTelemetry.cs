@@ -26,6 +26,8 @@ namespace Agenerela{
         public DecisionPriority Priority; // DecideOptions.Priority, as the call declared it (DR-015)
         public float QueueWaitSeconds; // From joining the provider's queue to being sent; 0 when it never reached the queue (#89)
         public int QueuedAhead; // Requests ahead when it joined: those in flight, and those queued that go before it (#89)
+        public float? TargetGrounding; // The lowest share of the model's probability at the target that stayed on the target list, from TargetGroundingGuard; null unless TargetGroundingStatus is Scored (#105)
+        public GroundingStatus? TargetGroundingStatus; // Whether that share was read, or why not, Off included; null when the decision never reached the guard (#105)
 
         public DecisionTelemetry()
         {
@@ -49,6 +51,8 @@ namespace Agenerela{
             Priority = DecisionPriority.PlayerFacing;
             QueueWaitSeconds = 0f;
             QueuedAhead = 0;
+            TargetGrounding = null;
+            TargetGroundingStatus = null;
 
         }
     }

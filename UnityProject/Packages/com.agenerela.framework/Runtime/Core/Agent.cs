@@ -33,8 +33,7 @@ namespace Agenerela
         private static readonly SchemaLegalityGuard Legality = new SchemaLegalityGuard();
 
         // The built-in guards, in the order §2.5 fixes. They run before Guards and are never in it.
-        // TargetGroundingGuard (#105) goes after Legality.
-        private static readonly IDecisionGuard[] BuiltInGuards = { Legality };
+        private static readonly IDecisionGuard[] BuiltInGuards = { Legality, new TargetGroundingGuard() };
         private static readonly IDecisionGuard[] ExecuteGuards = { Legality };
 
         private readonly ILLMProvider provider;

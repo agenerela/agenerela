@@ -600,3 +600,46 @@ not measurements (hard rule 2). The full list is under "Played live" in
   history, wrong-but-legal picks on free chat, and "Walk with me" drawing `follow_player` in
   one session and `patrol` as a cold first request in another. None is measured; the Phase 4
   runner is where to count them.
+
+### The grounding guard's probabilities are still from before the mask on Ollama 0.34.2 (27 October 2026)
+
+The check #105 asked for before shipping `TargetGroundingGuard`. If Ollama reported token
+probabilities from after the schema's mask, they would always sit on the target list, and the
+guard would pass everything. Single runs by hand, greedy, `qwen3.5:2b`, Ollama 0.34.2, RTX 4060
+Laptop on AC power, no other model resident, warm except the first request. These are
+anecdotes that check the plumbing, not measurements of the guard (hard rule 2).
+
+**Through the probe**, with its A0 village prompt, read by `target_info` and the `path` signal
+of `target_swap_score.py` (`.scratch` script, not committed):
+
+| Request | Model answered | Reading | DR-016's probe, 5 October |
+|---|---|---|---|
+| "Attack the scarecrow." | `attack_target / training_dummy` | **0.051**: first-token top "sc" at 0.92 | 0.05 |
+| "Attack the training dummy." | `attack_target / training_dummy` | 0.998 | 0.998 |
+| "Pick up the spear." | `pick_up_item / sword` | 0.0005, at the token after "s" | — |
+| "Attack the dragon." | `attack_target / training_dummy` | 0.61 | — |
+
+The probabilities are still from before the mask. A reading of 0.05 is possible only if the
+model's own "sc" survived into the reported alternatives.
+
+**Through the framework**, `OllamaProvider` and `Agent.DecideAsync` with the Phase 2 gate's
+village guard (`LiveGuard`), in a PlayMode test run once and not committed:
+
+| Request | Targets in the prompt | Model answered | Reading | Agent did |
+|---|---|---|---|---|
+| "Attack the scarecrow." | none | `attack_target / training_dummy` | 0.024 | `none`, wanted "sc…" |
+| "Attack the scarecrow." | one observation per target id, as GreyBoxVillage does | `attack_target / training_dummy` | 0.111 | `none`, wanted "sc…" |
+| "Attack the training dummy." | the same | `attack_target / training_dummy` | 0.997 | attacked the dummy |
+| "Attack the dragon on the hill." | the same | `none / no_target` | 0.96 (on `no_target`) | `none` |
+
+So the C# reading works on a live reply, and the substitution the 25 October demo showed
+("Attack the dragon on the hill" became an attack on the dummy, on Ollama 0.33.0) is the case it
+refuses. This time the 2B answered the dragon with `none` by itself, so that line shows
+nothing about the guard. The two scarecrow rows differ in their prompts, not because of the
+guard, and are one run each.
+
+**What would change this.** A reading near 1 for the scarecrow on a later Ollama would mean
+the probabilities moved after the mask, and the guard would pass everything. Repeat this check
+after an Ollama upgrade, as for `schema_visibility_probe.py`. Whether the guard turns away
+more good requests when the prompt lists no targets (#105, "Known gap") is #110's live run and
+Phase 4's to measure, not this one's.
