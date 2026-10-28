@@ -46,8 +46,9 @@ namespace Agenerela
         /// </param>
         /// <returns>
         /// A reading whose <see cref="GroundingReading.Status"/> is <see cref="GroundingStatus.Scored"/>,
-        /// or says why there is no share: no target field, no probabilities, or a target that could
-        /// not be found in the tokens. Never null, and never <see cref="GroundingStatus.Off"/>.
+        /// or says why there is no share: no target field; no probabilities, or a token of the target
+        /// without alternatives; or a target that could not be found in the tokens. Never null, and
+        /// never <see cref="GroundingStatus.Off"/>.
         /// </returns>
         public static GroundingReading Read(string replyText, IReadOnlyList<TokenProbability> tokens,
                                             IReadOnlyCollection<string> targetIds)
@@ -124,6 +125,13 @@ namespace Agenerela
                 if (inside.Trim('"').Length == 0)
                 {
                     continue;
+                }
+
+                // Without the alternatives there is nothing to read. Counted as off the list, as the
+                // probe would, a provider that reports none would refuse every target.
+                if (tokens[i].Alternatives == null || tokens[i].Alternatives.Count == 0)
+                {
+                    return GroundingReading.Unscored(GroundingStatus.NoProbabilities);
                 }
 
                 double share = OnListShare(tokens[i].Alternatives, prefix, values, position == 0, out string wanted);
@@ -255,7 +263,8 @@ namespace Agenerela
         // A share was read
         Scored,
 
-        // The reply carried no token probabilities: the provider reports none, or sent none this time
+        // The reply carried no token probabilities: the provider reports none, or sent none this
+        // time, or a token of the target came without the alternatives the reading adds up
         NoProbabilities,
 
         // The schema had no target field, because no target was registered

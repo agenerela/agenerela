@@ -140,6 +140,16 @@ namespace Agenerela.Tests
         }
 
         [Test]
+        public void WithoutAlternativesAtTheTargetItPassesAndSaysItCouldNotRun()
+        {
+            var input = Input("attack_target", "training_dummy", Reply("attack_target", T("training", -2.95), T("_dummy", -0.01)));
+
+            Assert.That(guard.Inspect(input).Kind, Is.EqualTo(GuardVerdictKind.Pass), "Nothing to add up is not a share of 0.");
+            Assert.That(input.Telemetry.TargetGroundingStatus, Is.EqualTo(GroundingStatus.NoProbabilities));
+            Assert.That(input.Telemetry.TargetGrounding, Is.Null);
+        }
+
+        [Test]
         public void WithoutAReplyItPassesAndSaysItHadNoProbabilities()
         {
             var ctx = Context();

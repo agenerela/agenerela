@@ -37,7 +37,7 @@ namespace Agenerela.Tests
                 T("_dummy", -0.001, ("_dummy", -0.001))), Village);
 
             Assert.That(reading.Status, Is.EqualTo(GroundingStatus.Scored));
-            Assert.That(reading.Share, Is.EqualTo(0.998).Within(0.001));
+            Assert.That(reading.Share, Is.EqualTo(0.999).Within(0.0005));
             Assert.That(reading.Wanted, Is.EqualTo("dummy"), "Off the list, though too unlikely to matter.");
         }
 
@@ -146,6 +146,21 @@ namespace Agenerela.Tests
                 Assert.That(reading.LowestAt, Is.EqualTo(-1));
                 Assert.That(reading.Wanted, Is.Null);
             }
+        }
+
+        [Test]
+        public void ATargetTokenWithoutAlternativesHasNoShare()
+        {
+            // A provider that reports each token's probability but none of the alternatives. Read as
+            // the probe would, the token's share is 0, and every target would be refused.
+            var empty = Reply("attack_target",
+                T("training", -2.95, ("sc", -0.06), ("training", -2.95)), T("_dummy", -0.01));
+            var missing = Reply("attack_target",
+                T("training", -2.95, ("sc", -0.06), ("training", -2.95)), new TokenProbability { Text = "_dummy", Alternatives = null });
+
+            Assert.That(Read(empty, Village).Status, Is.EqualTo(GroundingStatus.NoProbabilities));
+            Assert.That(Read(missing, Village).Status, Is.EqualTo(GroundingStatus.NoProbabilities));
+            Assert.That(Read(empty, Village).LowestAt, Is.EqualTo(-1));
         }
 
         [Test]
