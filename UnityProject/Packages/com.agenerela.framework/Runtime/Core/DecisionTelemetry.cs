@@ -91,6 +91,9 @@ namespace Agenerela{
         ProviderFailed,
 
         // A reply arrived, but it is empty, not one JSON object, or lacks a field the schema asked for
-        UnreadableReply
+        UnreadableReply,
+
+        // A guard threw while judging the decision, or Agent.Guards held a null entry (#108)
+        GuardFailed
     }
 }
