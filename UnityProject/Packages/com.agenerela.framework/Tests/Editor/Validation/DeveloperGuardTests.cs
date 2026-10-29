@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Agenerela.Providers;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -161,6 +162,8 @@ namespace Agenerela.Tests
         {
             var ran = new List<string>();
             var agent = Fixtures.VillageGuard(new FakeProvider(GoToTheTower));
+            var memory = new CountingMemory();
+            agent.Memory = memory;
             agent.Guards.Add(new DelegateGuard("fine", _ => GuardVerdict.Pass));
             agent.Guards.Add(new DelegateGuard("broken", _ => throw new InvalidOperationException("the wolf is gone.")));
             agent.Guards.Add(new DelegateGuard("later", _ => { ran.Add("later"); return GuardVerdict.Pass; }));
@@ -180,7 +183,7 @@ namespace Agenerela.Tests
 
             Assert.That(agent.Execute(result), Is.False);
             Assert.That(Fixtures.Handler(agent, "move_to").Executions, Is.Empty);
-            Assert.That(((RollingHistory)agent.Memory).Recall(Context(agent, "")), Is.Empty, "A pipeline error remembers nothing.");
+            Assert.That(memory.Remembered, Is.EqualTo(0), "A pipeline error remembers nothing.");
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -336,6 +339,23 @@ namespace Agenerela.Tests
         private static AgentContext Context(Agent agent, string stimulus)
         {
             return new AgentContext(agent.Identity, stimulus, null, null, agent.Targets, agent.Actions);
+        }
+
+        // A memory that only counts what it is asked to remember, so a test can see whether the
+        // agent asked at all, which RollingHistory's own contents cannot show.
+        private sealed class CountingMemory : IMemoryStrategy
+        {
+            public int Remembered { get; private set; }
+
+            public IReadOnlyList<string> Recall(AgentContext ctx)
+            {
+                return Array.Empty<string>();
+            }
+
+            public void Remember(AgentContext ctx, DecisionRequest request, DecisionResult result)
+            {
+                Remembered++;
+            }
         }
 
         // A guard whose Name throws, and which rewrites everything, so the pipeline must read it.
