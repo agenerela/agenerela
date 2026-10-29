@@ -20,9 +20,11 @@ phase table and the open issues, not here.
 
 ## [Unreleased]
 
+## [0.4.0-preview.1] - 2026-10-29
+
 ### Framework
 
-- Phase 3 (Validation pipeline) is under way, due 9 November. The guard pipeline and
+- A preview of 0.4.0, cut before Phase 3 closes and lightly tested. Phase 3 (Validation pipeline) is under way, due 9 November. The guard pipeline and
   `SchemaLegalityGuard` (#106, via #115) are in, and so is target grounding (#105, via #124,
   DR-016): `TargetGroundingGuard` reads the model's token probabilities at the target, and turns
   a decision into `none` when the model wanted something not on the list ("Attack the
@@ -31,7 +33,7 @@ phase table and the open issues, not here.
   provider reports no token probabilities, the system prompt carries one line naming the
   targets that are here, an unmeasured wording owed a Phase 4 A/B. Developer guards (#108),
   contained refusals (#109) and the gate (#110) are not in yet.
-  See the package's [`[Unreleased]`](UnityProject/Packages/com.agenerela.framework/CHANGELOG.md#unreleased).
+  See the package's [`[0.4.0-preview.1]`](UnityProject/Packages/com.agenerela.framework/CHANGELOG.md#040-preview1---2026-10-29).
 - From Phase 2's leftovers, observation sources are in (#91, via #123): `IObservationSource`,
   the extension point for the Observations research area (#122), with one built-in source,
   `ProximityObservationSource`. So is the provider config asset (#92, via #129, DR-013): the
@@ -41,6 +43,11 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Preview releases and release notes written for people.** `tools/ci/release.py` accepts a
+  pre-release version such as `0.4.0-preview.1`, which the release workflow publishes as a
+  GitHub pre-release, so the "latest release" badge stays on the last full one. A release's
+  notes are `docs/releases/<tag>.md` when it exists, in plain terms, followed by the install
+  line and a link to the changelog; the changelog itself stays the detailed record.
 - **The repository is MIT-licensed** (DR-007), in `LICENSE.md` at the root, settled once the
   team confirmed it owns the work. What the asset server generates is not covered: the models'
   own terms apply, which `Demos/README.md` sums up, and a game that commits a generated asset
