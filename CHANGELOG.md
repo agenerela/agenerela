@@ -31,8 +31,9 @@ phase table and the open issues, not here.
   below 0.8 is rewritten while a split between two listed targets passes, `CheckTarget = false`
   skips the guard for one call, and a provider without token probabilities is recorded as such.
   `Phase3LiveSuiteTests` runs the prototype's 20-prompt suite live on a 2B (`RequiresOllama`),
-  guards on against a `CheckTarget = false` control arm in one session, and passes at 19/20.
-  The live run is still to be made.
+  guards on against a `CheckTarget = false` control arm in one session; its bar is 19/20 or
+  better with the guards on. **That live run has not been made yet**, so #110 stays open and
+  Phase 3 does not close until it passes and its result is in `findings.md`.
 
 ### Fixed
 
