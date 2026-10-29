@@ -2,7 +2,7 @@
 
     python tools/ci/release.py prepare 0.2.0     bump the version and date the changelog
     python tools/ci/release.py check v0.2.0      is this tag ready to publish?
-    python tools/ci/release.py notes v0.2.0      the release notes, from the changelog
+    python tools/ci/release.py notes v0.2.0      the release notes
 
 docs/RELEASING.md is the whole process; this file does its mechanical parts. The release
 workflow (.github/workflows/release.yml) runs check and notes when a v* tag is pushed, so
@@ -14,6 +14,13 @@ Manager reads), AgenerelaInfo.Version (what decision telemetry is stamped with, 
 benchmark run can be traced to the framework that produced it), and the newest dated
 section of the package's CHANGELOG.md. The hygiene check "version" keeps the first two
 together on every pull request; this file moves all three at once.
+
+The release notes are docs/releases/<tag>.md when it exists, written for people rather than
+copied from the changelog, followed by the install line and a link to the changelog section.
+Without that file they are the changelog section itself, as releases before 0.4.0 had.
+
+A preview is a version with a pre-release suffix, such as 0.4.0-preview.1. It is published
+as a GitHub pre-release, so the "latest release" badge and link stay on the last full one.
 """
 
 import argparse
@@ -29,7 +36,7 @@ MANIFEST = f"{PACKAGE}/package.json"
 INFO = f"{PACKAGE}/Runtime/AgenerelaInfo.cs"
 CHANGELOG = f"{PACKAGE}/CHANGELOG.md"
 REPO = "https://github.com/agenerela/agenerela"
-SEMVER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
+SEMVER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$")
 INFO_VERSION = re.compile(r'(public const string Version = ")([^"]*)(")')
 
 
@@ -62,13 +69,15 @@ def section(version):
 
 def version_of(tag):
     if not tag.startswith("v") or not SEMVER.match(tag[1:]):
-        sys.exit(f"error: {tag} is not a release tag. Tags are v<major>.<minor>.<patch>, such as v0.2.0.")
+        sys.exit(f"error: {tag} is not a release tag. Tags are v<major>.<minor>.<patch>, such as v0.2.0, "
+                 f"or a preview such as v0.4.0-preview.1.")
     return tag[1:]
 
 
 def prepare(version, date):
     if not SEMVER.match(version):
-        sys.exit(f"error: {version} is not a version. Use <major>.<minor>.<patch>, such as 0.2.0.")
+        sys.exit(f"error: {version} is not a version. Use <major>.<minor>.<patch>, such as 0.2.0, "
+                 f"or a preview such as 0.4.0-preview.1.")
     if section(version):
         sys.exit(f"error: CHANGELOG.md already has a section for {version}.")
     text = read(CHANGELOG)
@@ -118,7 +127,26 @@ def notes(tag):
     found = section(version)
     if not found:
         sys.exit(f"error: CHANGELOG.md has no '## [{version}] - <date>' section.")
-    _, body = found
+    date, body = found
+    written = f"docs/releases/{tag}.md"
+    if os.path.exists(written):
+        anchor = re.sub(r"[^0-9a-z -]", "", f"{version} - {date}".lower()).replace(" ", "-")
+        print(f"""{read(written).strip()}
+
+## Install it
+
+In Unity, open *Window → Package Manager → + → Install package from git URL* and paste:
+
+```
+{REPO}.git?path={PACKAGE}#{tag}
+```
+
+Newtonsoft JSON, the one thing it depends on, comes with it.
+
+Every change in detail, for developers, is in the
+[changelog]({REPO}/blob/{tag}/{CHANGELOG}#{anchor}). Found a problem, or something
+confusing? [Open an issue]({REPO}/issues/new); even a one-liner helps.""")
+        return 0
     print(f"""{body}
 
 ## Installing

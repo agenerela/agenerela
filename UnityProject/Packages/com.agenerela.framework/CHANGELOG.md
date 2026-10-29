@@ -8,6 +8,8 @@ While the version stays `0.x`, the public API may change in any release.
 
 ## [Unreleased]
 
+## [0.4.0-preview.1] - 2026-10-29
+
 ### Added
 
 - **Provider config assets** (#92, DR-013). A provider is now chosen once, as an asset, rather

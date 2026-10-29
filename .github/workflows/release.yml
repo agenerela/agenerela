@@ -1,7 +1,8 @@
 name: Release
 
-# Pushing a v* tag publishes a GitHub release of the framework package, with the tag's
-# changelog section as its notes. tools/ci/release.py check refuses a tag that is not on
+# Pushing a v* tag publishes a GitHub release of the framework package, with notes from
+# tools/ci/release.py notes. A tag with a suffix, such as v0.4.0-preview.1, is published as a
+# pre-release. tools/ci/release.py check refuses a tag that is not on
 # main, or whose version package.json, AgenerelaInfo.Version and CHANGELOG.md do not all
 # carry, so a tag pushed by mistake fails here and publishes nothing. docs/RELEASING.md is
 # the whole process.
@@ -30,6 +31,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           python3 tools/ci/release.py notes "$GITHUB_REF_NAME" > "$RUNNER_TEMP/notes.md"
-          gh release create "$GITHUB_REF_NAME" --verify-tag \
+          preview=()
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then preview=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" --verify-tag "${preview[@]}" \
             --title "Agenerela ${GITHUB_REF_NAME#v}" \
             --notes-file "$RUNNER_TEMP/notes.md"
