@@ -8,6 +8,19 @@ While the version stays `0.x`, the public API may change in any release.
 
 ## [Unreleased]
 
+### Added
+
+- **Developer guards** (#108, build plan §2.5 item 3). `Agent.Guards` is now public: a game's own
+  `IDecisionGuard`s, empty by default, run after the built-in ones in list order inside
+  `DecideAsync`, and their verdicts show in `GuardsFired`, `Verdict` and `GuardReason` like a
+  built-in's. `Execute` does not run them again. `DelegateGuard` makes one from a name and a
+  `Func<GuardInput, GuardVerdict>`.
+- `PipelineErrorKind.GuardFailed`, at the end of the enum: a guard that throws, or a null entry in
+  `Agent.Guards`, makes the decision a pipeline error naming the guard, rather than a refusal.
+- `Documentation~/guards.md`: what each built-in guard checks, the three verdicts, a guard
+  compared with availability, and two worked examples, a per-threat cooldown and the name check
+  DR-016 dropped, both run as tests.
+
 ## [0.4.0-preview.1] - 2026-10-29
 
 ### Added

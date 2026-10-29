@@ -221,10 +221,29 @@ namespace Agenerela
         public IMemoryStrategy Memory { get; set; }
 
         /// <summary>
-        /// Guards that run after the built-in ones, in list order, inside <see cref="DecideAsync"/>
-        /// only. Empty by default. Internal until #108 makes it the developer's list.
+        /// The game's own rules over every decision (build plan §2.5, item 3), such as a cooldown
+        /// or line of sight: guards that run after the built-in ones, in list order, inside
+        /// <see cref="DecideAsync"/>. Empty by default. A <see cref="DelegateGuard"/> makes one
+        /// from a lambda.
         /// </summary>
-        internal List<IDecisionGuard> Guards { get; } = new List<IDecisionGuard>();
+        /// <remarks>
+        /// <para>
+        /// The built-in guards, <see cref="SchemaLegalityGuard"/> and then the grounding guard, are
+        /// never in this list and cannot be removed; <see cref="DecideOptions.CheckTarget"/> turns
+        /// grounding off for one call. Once a guard has stopped a decision, the rest are skipped.
+        /// </para>
+        /// <para>
+        /// <see cref="Execute"/> never runs these again. A rule that must still hold at the moment
+        /// of acting belongs in the handler or its <see cref="IActionHandler.IsAvailable"/>.
+        /// </para>
+        /// <para>
+        /// A guard that throws, or a null entry, does not refuse the decision: it makes it a
+        /// <see cref="DecisionOutcome.PipelineError"/> of kind
+        /// <see cref="PipelineErrorKind.GuardFailed"/>, naming the guard. Read when the guards run,
+        /// after the reply.
+        /// </para>
+        /// </remarks>
+        public List<IDecisionGuard> Guards { get; } = new List<IDecisionGuard>();
 
         /// <summary>
         /// Registers the action <paramref name="actionId"/>, as the profile defines it, with the game
@@ -290,8 +309,9 @@ namespace Agenerela
         /// <see cref="DecisionTelemetry.Outcome"/> is <see cref="DecisionOutcome.PipelineError"/>,
         /// with the reason logged as a warning. That covers anything failing while the request is
         /// prepared, such as a target source offering an id twice, an observation source or an
-        /// availability check that throws; a provider that throws; and a reply that is empty, is not one JSON object, or
-        /// lacks a field the schema asked for. A reply naming an action or target the request did
+        /// availability check that throws; a provider that throws; a reply that is empty, is not one JSON object, or
+        /// lacks a field the schema asked for; and a guard that throws, or a null entry in
+        /// <see cref="Guards"/>. A reply naming an action or target the request did
         /// not offer is still a decision, which the guards reject (see <c>DecisionParser</c> and
         /// <see cref="SchemaLegalityGuard"/>). The telemetry says which of these it was in
         /// <see cref="DecisionTelemetry.ErrorKind"/>, from the <see cref="ProviderException.Kind"/>
@@ -323,8 +343,8 @@ namespace Agenerela
         /// </para>
         /// <para>
         /// The guards (build plan §2.5) run on every decision, never on a pipeline error: first
-        /// <see cref="SchemaLegalityGuard"/>, then the grounding guard (#105), then the developer's
-        /// (#108). The first that does not pass stops them, and the result's
+        /// <see cref="SchemaLegalityGuard"/>, then the grounding guard (#105), then
+        /// <see cref="Guards"/>, the developer's (#108). The first that does not pass stops them, and the result's
         /// <see cref="DecisionResult.Decision"/> becomes <see cref="ActionRegistry.None"/> with
         /// <see cref="TargetRegistry.NoTarget"/>, keeping the model's statement until #109 decides
         /// what to say instead. The model's own answer stays on
@@ -568,8 +588,9 @@ namespace Agenerela
 
             var result = Guard(new GuardInput(ctx, request, reply, decision, call, telemetry));
 
-            // After the guards, so what is remembered is what the agent will do (§2.9, rule 1).
-            if (memory != null)
+            // After the guards, so what is remembered is what the agent will do (§2.9, rule 1). A
+            // guard that failed left no decision, and a pipeline error remembers nothing.
+            if (memory != null && result.Decision != null)
             {
                 try
                 {
@@ -587,9 +608,21 @@ namespace Agenerela
 
         // The guards over one parsed decision: the built-in ones, then Guards. A decision none of
         // them stopped is returned as it is; one they stopped becomes none, beside the model's own.
+        // A guard that throws is the developer's code failing, not a refusal: a pipeline error.
         private DecisionResult Guard(GuardInput input)
         {
-            var verdict = GuardPipeline.Run(AllGuards(), input);
+            string running = null;
+            GuardVerdict verdict;
+            try
+            {
+                verdict = GuardPipeline.Run(AllGuards(name => running = name), input);
+            }
+            catch (Exception e)
+            {
+                return Failed(input.Telemetry, PipelineErrorKind.GuardFailed,
+                    $"The guard {running} failed. {e.GetType().Name}: {e.Message}");
+            }
+
             var decision = input.Decision;
 
             if (verdict.Kind == GuardVerdictKind.Pass)
@@ -608,18 +641,46 @@ namespace Agenerela
             return new DecisionResult(none, input.Telemetry, decision, verdict);
         }
 
-        private IEnumerable<IDecisionGuard> AllGuards()
+        // Each guard in the order they run, telling running how to name it just before it does, so
+        // a guard that throws is named in the warning.
+        private IEnumerable<IDecisionGuard> AllGuards(Action<string> running)
         {
             foreach (var guard in BuiltInGuards)
             {
+                running($"'{NameOf(guard)}'");
                 yield return guard;
             }
 
             // A copy, so a guard that edits the list while it runs cannot break the loop.
-            foreach (var guard in Guards.ToArray())
+            var guards = Guards.ToArray();
+            for (int i = 0; i < guards.Length; i++)
             {
+                var guard = guards[i];
+                if (guard == null)
+                {
+                    running($"Guards[{i}]");
+                    throw new InvalidOperationException($"Guards[{i}] is null.");
+                }
+
+                running($"'{NameOf(guard)}' (Guards[{i}])");
                 yield return guard;
             }
+        }
+
+        // As telemetry records it, or by its type when its Name is blank or itself throws.
+        private static string NameOf(IDecisionGuard guard)
+        {
+            string name;
+            try
+            {
+                name = guard.Name;
+            }
+            catch (Exception)
+            {
+                name = null;
+            }
+
+            return string.IsNullOrWhiteSpace(name) ? guard.GetType().Name : name;
         }
 
         // The history for one request, as DecisionRequest.History encodes it: whole exchanges of
