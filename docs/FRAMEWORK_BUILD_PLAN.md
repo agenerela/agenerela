@@ -54,7 +54,7 @@ package alone.
 │   └── comfyui/                       ← asset server for the demo games (ComfyUI in Docker on a GPU machine)
 ├── UnityProject/                      ← the framework's dev project (Unity 6000.3+; any render pipeline — framework must not care)
 │   ├── Assets/
-│   │   ├── Evaluation/                ← Phase-4 eval harness + labelled prompt set (see 1.7)
+│   │   ├── Evaluation/                ← our labelled prompt set; the harness ships in the package (see 1.7)
 │   │   └── DevSandbox/                ← throwaway test scenes; never referenced by anything
 │   ├── Packages/
 │   │   └── com.<team>.agentframework/ ← THE PACKAGE — everything shippable lives here
@@ -86,6 +86,7 @@ com.<team>.agentframework/
 │   ├── Validation/               ← guard pipeline: whitelist, grounding, state legality
 │   ├── Memory/                   ← IMemoryStrategy, rolling history default
 │   ├── Scheduling/               ← request queue, priorities, cancellation, budgets
+│   ├── Evaluation/               ← prompt set format and the Phase-4 runner (DR-017)
 │   └── Unity/                    ← AgentBehaviour, Targetable, scene sources: the only folder that touches a scene
 ├── Editor/
 │   └── <Team>.AgentFramework.Editor.asmdef   ← references Runtime; nothing references it back
@@ -423,13 +424,15 @@ URL into a *blank* Unity project outside the repo and confirm it compiles and th
 import. Ten minutes; catches packaging mistakes that no project inside the repo
 structurally can.
 
-### 1.7 The evaluation harness lives outside the package (initially)
+### 1.7 The prompt set's tools are in the package; our prompts are not
 
-The Phase-4 eval harness and its labelled prompt set go in `Assets/Evaluation/`, not the
-package — the 200-prompt dataset is specific to your action vocabulary, not to consumers.
-If the *runner* later proves generally useful ("measure your own agents' accuracy" is a
-real selling point for the framework), it can graduate into
-`Runtime/Evaluation/` behind its own asmdef. Don't design for that on day one.
+Our labelled prompt set stays in `Assets/Evaluation/`, not the package: the 200 prompts are
+specific to one agent's actions and targets, not to consumers. What *is* general is the
+means to build and measure one. Every developer using the framework needs their own set to
+know whether their agents choose well, so the prompt set's format, the window that writes
+and labels prompts, and the Phase-4 runner ship in the package (DR-017): the format and the
+runner in `Runtime/Evaluation/`, the windows in `Editor/`. This replaces the earlier plan
+of keeping the runner outside until it proved useful.
 
 ### 1.8 `package.json` and repo hygiene files (easy to forget, annoying to retrofit)
 
@@ -956,6 +959,16 @@ window is not a luxury — it is how a developer debugs "why did my agent do tha
 the framework's main support burden. Built **last** (Phase 5), once the data shapes
 underneath have stopped moving.
 
+**The exception is the Prompt Set window, built in Phase 4** (DR-017), because Phase 4 is
+where the 200 prompts and their second annotator are needed. It writes and labels prompts
+against a chosen agent profile: the expected action is picked from the profile's actions,
+so a prompt cannot name an action the agent lacks, and a stimulus that repeats an action's
+`ExampleStimulus` is flagged (hard rule 4). Labelling is blind: the annotator sees the
+stimulus, observations and state, never the expected answer, anyone else's label or the
+model's reply. Each annotator's answers go to their own file, so two people labelling at
+once never edit the same one. The Evaluation Report (screen 4) reads the same format and
+reports their agreement.
+
 **The profile inspector shows the idle example on the `none` row.** `none` appears as a
 locked last row of the action list (screen 1 of [`docs/design`](design/README.md)). Other
 rows expand to show their action's example stimulus, so the `none` row expands to show and
@@ -1104,7 +1117,7 @@ strategy interface is where that would go. Wait until a demo needs it.
 | **1. Core + Actions + Schema** (pure C#, no LLM, no scene) | `Agent`, `ActionDefinition`, registries, `DecisionSchema` builder + Ollama-dialect serializer | EditMode tests prove: state masking (following agent's schema omits `follow_player`); `target` required w/ `no_target`; field order action→target→statement; few-shot block matches registered actions and rotates only sensible example targets; empty target-registry removes `target` property entirely. **All testable without any model running — this is why Phase 1 has no LLM.** |
 | **2. OllamaProvider + queue + memory** | End-to-end decision in a sandbox scene, with short-term memory (§2.9) | PlayMode test (tagged `RequiresOllama`): one agent, five actions, live decision round-trip < 5s; telemetry fields populated; provider failure (missing model) surfaces as a typed error, not an exception leak. EditMode tests for `RollingHistory`: it fills `DecisionRequest.History` oldest first within a token cap, records the decision `DecideAsync` returns rather than the provider's raw answer (so a Phase 3 guard's rewrite is what gets remembered), and keeps one memory per agent instance. **Passed 25 October 2026** (#94, via #111): a warm decision took 0.23 to 0.56 s on `qwen3.5:2b`, an RTX 5080 (findings, 25 October) |
 | **3. Validation pipeline** | Guards of §2.5 wired between provider and handler | EditMode tests with hand-built fake decisions: substitution attack rewritten to `none`; unavailable action rejected; an action that needs a target, answered with `no_target`, rejected; guard verdicts appear in telemetry. With `CheckTarget` on (the default), a decision where less than the threshold of the model's probability stayed on the target list is rewritten to `none`, and one split between two listed targets passes; with it off for a call, the guard does not run on that call; a provider that reports no probabilities is recorded as such rather than passing silently. Integration: prototype's "impossible request" suite passes ≥ 95% on a 2B model |
-| **4. Evaluation harness** | The measurement instrument — **before more features** | 200+ labelled prompts (grow from the prototype's 53), each declaring its required precondition state, and covering game-triggered stimuli (events, reports, turns) as well as player commands rather than mostly commands; runner executes A/B (two configs, same model/session) and writes a classified report (correct / wrong-legal / contained / rejected / pipeline-error); second annotator labels a subset, agreement reported. Methodology checklist (§4) committed to the wiki |
+| **4. Evaluation harness** | The measurement instrument — **before more features**, and the Prompt Set window that writes and labels its prompts (§2.7, DR-017) | 200+ labelled prompts (grow from the prototype's 53), each declaring its required precondition state, and covering game-triggered stimuli (events, reports, turns) as well as player commands rather than mostly commands; runner executes A/B (two configs, same model/session) and writes a classified report (correct / wrong-legal / contained / rejected / pipeline-error); second annotator labels a subset blind in the Prompt Set window, agreement reported. Methodology checklist (§4) committed to the wiki |
 | **5. Editor tooling** | §2.7 | A developer with zero framework knowledge builds a working 3-action agent in an empty scene in < 15 min without editing framework source (actually run this test on a teammate) |
 | **6. Cloud API providers** | Proof the abstraction is real, and the path to supporting any vendor | At least one cloud provider (Gemini first — it is what the prototype measured) runs the same eval subset through `ILLMProvider` with **zero framework-code changes**: a provider class plus config, nothing more. A **provider conformance test suite** exists that any future vendor must pass, so adding OpenAI or Anthropic later is implementing an interface rather than editing the framework. Budget caps and RPM throttling enforced in code, not convention |
 | **6b. In-process provider** | `GbnfSerializer` (§2.3) + `LLMUnityProvider` — the one a player can actually run (§2.4) | A **built player executable** (not the Editor) runs agent decisions with **no Ollama and no network** — the deliverable that makes "local-first" true rather than aspirational. Also: GBNF serializer emits the same constraints as the JSON-Schema path (unit-tested against the same `DecisionSchema` fixtures); same eval subset passes within noise of the Ollama arm; LLMUnity pinned to an exact version and **not** in `dependencies` (version-defined, so users who don't want it never add OpenUPM's scoped registry); model file's license recorded in the wiki |
@@ -1859,6 +1872,50 @@ not run, and `PromptBuilder` adds the one-line rule instead.
 - Open choices between equally good targets get refused.
 - A model family with badly calibrated probabilities is adopted.
 - Confident near misses prove common.
+
+### DR-017 — The prompt set's format and tools ship in the package
+
+**Status:** Decided, 29 October 2026.
+
+**Context.** Phase 4 needs 200+ labelled prompts, and a second person labelling a subset
+without seeing the first one's answers. Our first 76 prompts were written by hand in JSON,
+and their second labels were gathered in a web page built for the occasion. §1.7 kept the
+whole harness outside the package until the runner proved generally useful.
+
+That framing missed who else needs it. A developer cannot tell whether their own agent
+chooses well without a prompt set of their own, because a set only means something against
+one agent's actions and targets. Writing and labelling one is the same work for them as for
+us, and the Evaluation Report (screen 4) already sits in the Editor.
+
+**Options considered**
+
+| Option | Cost | Verdict |
+|---|---|---|
+| Hand-written JSON, plus a one-off labelling page per batch | Nothing checks a prompt against the agent; the labelling page is rebuilt each time and reaches nobody outside the team | Rejected |
+| A standalone labelling tool under `tools/` | Blind labelling works, but it cannot see the agent's actions or few-shot examples, and only our team gets it | Rejected |
+| **The format and a Prompt Set window in the package, built in Phase 4** | A public data type to keep stable, and an Editor window two phases early | **Chosen** |
+
+**Decision.** The prompt set's format is a public type in `Runtime/Evaluation/`, read by the
+runner and by the Evaluation Report. A Prompt Set window in `Editor/` writes prompts and
+collects blind labels, picking the expected action from an `AgentProfile`'s actions.
+Targets and state conditions stay declared in the set, as `agent.json` declares them now,
+because targets are found in a scene (DR-014) and availability is code. Each annotator's
+labels go to their own file. The window is built in Phase 4, not Phase 5. A game's prompts
+stay in that game's project.
+
+**Consequences**
+- The format is public API from Phase 4: renaming a field needs a package changelog entry
+  and a migration of every set, ours included.
+- The runner goes into the package with the harness, since screen 4 runs it from the Editor.
+- Phase 4 grows by one Editor window. Its first version is writing, blind labelling and
+  agreement; anything more waits for Phase 5.
+- Hard rule 4 gets a check: a stimulus that repeats an action's `ExampleStimulus` is flagged
+  where the prompt is written.
+
+**Revisit if:** a developer's set needs fields ours does not (a second agent for `turn`
+prompts, multi-turn history), in which case the format grows rather than forks; or the window
+is not used for labelling by the end of Phase 4, in which case the format stays and the window
+moves to Phase 5.
 
 ### Decisions already recorded elsewhere in this plan
 
