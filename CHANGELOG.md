@@ -20,6 +20,12 @@ phase table and the open issues, not here.
 
 ## [Unreleased]
 
+### Added
+
+- **The risk management plan** in `docs/course/2026-10-29-risk-management/`: an Excel
+  register of 14 risks, two per member, with a risk matrix and a sprint review log, reviewed
+  once per sprint. XLSX now goes through Git LFS.
+
 ## [0.4.0-preview.1] - 2026-10-29
 
 ### Framework
