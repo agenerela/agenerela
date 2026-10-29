@@ -20,6 +20,14 @@ phase table and the open issues, not here.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Release notes no longer break mid-sentence.** GitHub shows every newline in a release's
+  notes as a line break, so notes copied from wrapped Markdown came out as ragged paragraphs
+  stopping halfway across the page, as 0.2.0, 0.3.0 and 0.4.0-preview.1 did (the last was
+  fixed by hand). `tools/ci/release.py notes` now joins wrapped lines, leaving code, headings,
+  HTML, tables and alert markers alone.
+
 ## [0.4.0-preview.1] - 2026-10-29
 
 ### Framework
