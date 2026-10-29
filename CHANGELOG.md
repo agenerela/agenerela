@@ -25,6 +25,14 @@ phase table and the open issues, not here.
 - **The risk management plan** in `docs/course/2026-10-29-risk-management/`: an Excel
   register of 14 risks, two per member, with a risk matrix and a sprint review log, reviewed
   once per sprint. XLSX now goes through Git LFS.
+- **The Phase 3 gate's checks** (#110). `Phase3GateTests` proves each guard rule in EditMode
+  with no model: a substitution is rewritten to `none`, an unavailable action and a
+  target-needing action with `no_target` are rejected, verdicts reach telemetry, a reading
+  below 0.8 is rewritten while a split between two listed targets passes, `CheckTarget = false`
+  skips the guard for one call, and a provider without token probabilities is recorded as such.
+  `Phase3LiveSuiteTests` runs the prototype's 20-prompt suite live on a 2B (`RequiresOllama`),
+  guards on against a `CheckTarget = false` control arm in one session, and passes at 19/20.
+  The live run is still to be made.
 
 ## [0.4.0-preview.1] - 2026-10-29
 
