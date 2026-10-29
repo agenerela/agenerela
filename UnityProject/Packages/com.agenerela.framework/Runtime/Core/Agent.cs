@@ -309,9 +309,9 @@ namespace Agenerela
         /// <see cref="DecisionTelemetry.Outcome"/> is <see cref="DecisionOutcome.PipelineError"/>,
         /// with the reason logged as a warning. That covers anything failing while the request is
         /// prepared, such as a target source offering an id twice, an observation source or an
-        /// availability check that throws; a provider that throws; a reply that is empty, is not one JSON object, or
-        /// lacks a field the schema asked for; and a guard that throws, or a null entry in
-        /// <see cref="Guards"/>. A reply naming an action or target the request did
+        /// availability check that throws; a provider that throws; a reply that is empty, is not
+        /// one JSON object, or lacks a field the schema asked for; and a guard that throws, or a
+        /// null entry in <see cref="Guards"/>. A reply naming an action or target the request did
         /// not offer is still a decision, which the guards reject (see <c>DecisionParser</c> and
         /// <see cref="SchemaLegalityGuard"/>). The telemetry says which of these it was in
         /// <see cref="DecisionTelemetry.ErrorKind"/>, from the <see cref="ProviderException.Kind"/>
@@ -344,8 +344,8 @@ namespace Agenerela
         /// <para>
         /// The guards (build plan §2.5) run on every decision, never on a pipeline error: first
         /// <see cref="SchemaLegalityGuard"/>, then the grounding guard (#105), then
-        /// <see cref="Guards"/>, the developer's (#108). The first that does not pass stops them, and the result's
-        /// <see cref="DecisionResult.Decision"/> becomes <see cref="ActionRegistry.None"/> with
+        /// <see cref="Guards"/>, the developer's (#108). The first that does not pass stops them,
+        /// and the result's <see cref="DecisionResult.Decision"/> becomes <see cref="ActionRegistry.None"/> with
         /// <see cref="TargetRegistry.NoTarget"/>, keeping the model's statement until #109 decides
         /// what to say instead. The model's own answer stays on
         /// <see cref="DecisionResult.ModelDecision"/>, the verdict on
