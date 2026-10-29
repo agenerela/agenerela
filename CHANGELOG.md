@@ -26,6 +26,14 @@ phase table and the open issues, not here.
   register of 14 risks, two per member, with a risk matrix and a sprint review log, reviewed
   once per sprint. XLSX now goes through Git LFS.
 
+### Fixed
+
+- **GreyBoxVillage reads the guard pipeline's verdict.** Since #106 a guard that stops an answer
+  returns it as `none`, so the demo logged refusals as `none` and four of its tests failed. It now
+  takes the outcome from the verdict and `Execute`: `refused` for a rejected answer, `contained`
+  for one the grounding guard rewrote, with the model's answer, the guard and its reason on the
+  overlay and in the history. A new test covers `contained`.
+
 ## [0.4.0-preview.1] - 2026-10-29
 
 ### Framework
