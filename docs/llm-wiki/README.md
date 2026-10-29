@@ -13,9 +13,13 @@ knowledge that is expensive to rediscover.
 | What was already measured in the prototype? | Build plan, **Appendix A** |
 | What have *we* measured since? | [`findings.md`](findings.md) |
 | How do I set my machine up? | [`environment.md`](environment.md) |
+| What did the 8 October sword trials try, and what did they find? | [`asset-quality-2026-10-08.md`](asset-quality-2026-10-08.md), with its raw data in [`asset-quality-2026-10-08.json`](asset-quality-2026-10-08.json) |
+| What changed, release by release? | [`../../CHANGELOG.md`](../../CHANGELOG.md) at the root for the repository, and the package's [`CHANGELOG.md`](../../UnityProject/Packages/com.agenerela.framework/CHANGELOG.md) for its API |
+| Rules every agent follows | [`../../AGENTS.md`](../../AGENTS.md) |
 
 The build plan is the authority on architecture and phases. This wiki is for what we
-learn while executing it.
+learn while executing it. It holds measurements and lessons, not status: what merged and when
+is in the changelog (the old `docs/STATUS.md` was retired into it on 26 October 2026).
 
 ## The rule that matters most
 

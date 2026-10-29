@@ -36,10 +36,17 @@ namespace Agenerela.Tests
 
         public string Name { get; }
 
+        /// <summary>
+        /// Ollama's, by default, as far as the request is concerned: it claims token probabilities,
+        /// so the prompt is the one Ollama is sent, without the target rule (#107). Its replies still
+        /// carry none unless <see cref="TokenProbabilities"/> is set, which is the gap
+        /// <see cref="ProviderCapabilities.ReportsTokenProbabilities"/> documents.
+        /// </summary>
         public ProviderCapabilities Capabilities { get; set; } = new ProviderCapabilities
         {
             SupportsConstrainedDecoding = true,
             Dialect = SchemaDialect.JsonSchema,
+            ReportsTokenProbabilities = true,
         };
 
         /// <summary>The text of the next reply, sent as received: it may be anything, or null.</summary>
@@ -48,6 +55,22 @@ namespace Agenerela.Tests
         /// <summary>Token counts the next reply reports. 0, as a backend that reports none.</summary>
         public int PromptTokens;
         public int CompletionTokens;
+
+        /// <summary>
+        /// The token probabilities the next reply carries, as <see cref="ProviderResult.TokenProbabilities"/>.
+        /// Null, as a provider that reports none. <see cref="Tokens"/> builds them.
+        /// </summary>
+        public IReadOnlyList<TokenProbability> TokenProbabilities;
+
+        /// <summary>
+        /// Scripts the next reply as these tokens: <see cref="Reply"/> becomes their texts joined, and
+        /// <see cref="TokenProbabilities"/> the tokens themselves.
+        /// </summary>
+        public void ReplyWith(IReadOnlyList<TokenProbability> tokens)
+        {
+            Reply = Tokens.Join(tokens);
+            TokenProbabilities = tokens;
+        }
 
         /// <summary>
         /// When set, the request fails with this instead of replying: through the returned
@@ -183,6 +206,7 @@ namespace Agenerela.Tests
                 Text = Reply,
                 PromptTokens = PromptTokens,
                 CompletionTokens = CompletionTokens,
+                TokenProbabilities = TokenProbabilities,
             };
             source.TrySetResult(result);
         }

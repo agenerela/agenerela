@@ -8,6 +8,105 @@ While the version stays `0.x`, the public API may change in any release.
 
 ## [Unreleased]
 
+## [0.4.0-preview.1] - 2026-10-29
+
+### Added
+
+- **Provider config assets** (#92, DR-013). A provider is now chosen once, as an asset, rather
+  than built in every agent's code. `ProviderConfig` is the abstract `ScriptableObject` every
+  backend's config derives from: `Provider` builds its provider once and returns the same
+  instance after, so every agent on one config shares one provider and one queue, and
+  `MaxInFlight` (default 1) sets that queue's limit. `OllamaProviderConfig`, made with
+  **Create → Agenerela → Ollama Provider**, holds `OllamaSettings`' fields with the same
+  defaults, `127.0.0.1` included.
+- **The project default.** **Project Settings → Agenerela** names the provider config every agent
+  without one of its own uses, saved in `AgenerelaSettings`, which the page creates at
+  `Assets/Agenerela/Resources/AgenerelaSettings.asset` and a built player loads with
+  `Resources.Load`. `ProviderConfig.Resolve(own)` returns the agent's own config, else the
+  default, else throws `InvalidOperationException` saying how to make one:
+  `new Agent(profile, ProviderConfig.Resolve().Provider)`. A scene override, DR-013's middle
+  level, is left out until a demo needs one.
+- `DecisionTelemetry.ProviderConfig`: the name of the config whose provider answered, empty for a
+  provider built in code.
+- **The guard pipeline** (#106, build plan §2.5). Every decision `DecideAsync` parses now
+  passes through ordered guards before it is returned or remembered. `IDecisionGuard` judges
+  a `GuardInput` (the context, request, reply, decision, the call's options and the
+  telemetry) and returns a `GuardVerdict`: `Pass`, `RewriteToNone(reason)` or
+  `Reject(reason)`. The first verdict that is not `Pass` stops the pipeline, and the decision
+  becomes `none` with `no_target`. A reject is logged as a warning, and a rewrite is not.
+- **`SchemaLegalityGuard`**, the first built-in guard. It checks that the action is registered
+  and was offered, and that the target is registered or `no_target`. It also adds a new rule:
+  an action that needs a target got a real one. `move_to / no_target` used to run with no
+  target, and is now rejected.
+- `DecisionResult.ModelDecision` (what the model answered) and `DecisionResult.Verdict` (the
+  guard's name, the kind and the reason), beside `Decision`, which is what the agent will do.
+- `DecisionTelemetry.Verdict` and `DecisionTelemetry.GuardReason`. `GuardsFired` is now
+  filled in.
+- **Observation sources** (#91, DR-012, build plan §2.8). An agent can now notice its
+  surroundings rather than only be told. `IObservationSource.Observe(AgentContext)` returns
+  short lines. `Agent.ObservationSources`, an ordered list that is empty by default, is asked
+  on every decision after the targets are resolved, and nothing is kept between decisions. The
+  sources' lines are sent verbatim, before the call's own `DecideOptions.Observations`. While a
+  source runs, its context holds the call's own lines, never another source's. A source that
+  throws, or a null entry, makes the decision a `PipelineError` of kind `RequestPreparation`,
+  as a target source does. `Execute` never asks the sources.
+- **`Agent.MaxObservations`**, the cap in lines, 8 by default. The call's own observations are
+  always sent whole and count against it, and the sources fill what is left, in order. Blank
+  lines take no place. An agent with no sources sends exactly what it sent before.
+- `DecisionTelemetry.ObservationsDropped`: the lines a source had but the request does not
+  carry, in source order. For each source, it lists the lines the cap cut, then the lines that
+  source's own cap left out, which a source reports through the optional
+  `IReportsDroppedObservations`, the same shape as #81's `IReportsDroppedTargets`.
+- **`ProximityObservationSource`**, in `Runtime/Unity/`. It returns the `Description` of each
+  `Targetable` within a radius, nearest first, with its own `Cap` (8). A `Targetable` that is
+  not currently targetable, or has an empty description, adds nothing. It takes the same
+  options as `ProximityTargetSource` and shares its query, so given the same settings the two
+  find the same objects.
+- **`TargetGroundingGuard`**, the second built-in guard (#105, DR-016). It catches a model
+  that wanted a target not on the list: "Attack the scarecrow." with only a training dummy
+  around now comes back as `none`, not as an attack on the dummy. It reads the reply's token
+  probabilities at the target and keeps the lowest share that could still lead to a listed
+  target. Below 0.8, a decision whose action needs a target is rewritten to `none` with
+  `no_target`, and the reason names the share and what the model wanted to write. It runs on
+  every decision. A reply without token probabilities passes, recorded as not checked.
+- `TargetGrounding.Read`, the reading on its own, as a pure function returning a
+  `GroundingReading` (`Status`, `Share`, `LowestAt`, `Wanted`). It matches the probe's
+  `target_swap_score.py` number for number on ASCII ids, which are all DR-016 measured. An id
+  containing the Greek capital sigma or the Turkish "İ" can read differently, because the
+  probe used Python's lower-casing.
+- `DecideOptions.CheckTarget`, `true` by default. Set it to `false` to skip the grounding
+  guard for one call.
+- `DecisionTelemetry.TargetGrounding` (the share, or null when it was not read) and
+  `DecisionTelemetry.TargetGroundingStatus` (a `GroundingStatus`: `Scored`,
+  `NoProbabilities`, `NoTargetField`, `Unreadable` or `Off`; null when the decision never
+  reached the guard).
+- **The target rule**, the grounding guard's fallback for a provider that reports no token
+  probabilities (#107, DR-016). When `DecideOptions.CheckTarget` is on and the provider's
+  `Capabilities.ReportsTokenProbabilities` is false, the system prompt gains one line after
+  the instruction line: "Only these things are here: tower, training_dummy. If you are asked
+  to act on anything else, choose action none and target no_target, and say it is not here.
+  Never act on a different thing instead." It names the schema's target ids in order, and is
+  left out when the schema has no target field. The wording adapts the measured rule and is
+  itself unmeasured; Phase 4 owes the A/B. With Ollama, which reports probabilities, the
+  prompt is unchanged. A provider that claims probabilities and then returns none still gets
+  neither the rule nor the guard.
+- `PromptOptions.TargetRule`, off by default, which `Agent` sets, and
+  `DecisionTelemetry.TargetRuleSent`, true exactly when the line was sent.
+- **An MIT licence.** `LICENSE.md` ships in the package folder, so a git-URL install carries it,
+  and `package.json` says `"license": "MIT"`. Keep the notice with the package when you ship a
+  game; nothing else is asked.
+
+### Changed
+
+- `Execute`'s re-check is now `SchemaLegalityGuard`, run against the agent as it is when
+  `Execute` is called. A refusal there adds `SchemaLegalityGuard@Execute` to `GuardsFired`, and
+  sets `Verdict` and `GuardReason`. It still returns false and logs a warning saying why.
+  `Execute` also returns false for a decision a guard rejected inside `DecideAsync`, without
+  logging it a second time.
+- An answer naming an action that was not offered, or a target that is not registered, is now
+  rejected inside `DecideAsync`. Before, it came back as that decision and only `Execute`
+  refused it. Memory remembers it as `none`.
+
 ## [0.3.0] - 2026-10-25
 
 Phase 2: Ollama provider, queue, memory. The first release that calls a model: an agent

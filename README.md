@@ -7,7 +7,7 @@
   <a href="https://github.com/agenerela/agenerela/actions/workflows/repo-hygiene.yml"><img alt="Repo hygiene" src="https://github.com/agenerela/agenerela/actions/workflows/repo-hygiene.yml/badge.svg?branch=test"></a>
   <img alt="Unity 6000.3" src="https://img.shields.io/badge/Unity-6000.3-222222?logo=unity&logoColor=white">
   <img alt="Runs locally with Ollama" src="https://img.shields.io/badge/runs%20locally-Ollama-222222?logo=ollama&logoColor=white">
-  <img alt="License pending" src="https://img.shields.io/badge/license-pending-lightgrey">
+  <a href="LICENSE.md"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-1f5bd8"></a>
 </p>
 
 <p align="center">
@@ -21,15 +21,16 @@
   <a href="#how-it-works">How it works</a> ·
   <a href="#does-it-work">Does it work?</a> ·
   <a href="#roadmap">Roadmap</a> ·
+  <a href="#installing">Installing</a> ·
   <a href="#developing">Developing</a> ·
   <a href="docs/FRAMEWORK_BUILD_PLAN.md">Build plan</a>
 </p>
 
 > [!NOTE]
 > **Early development.** The core is built and tested: registered actions, availability from
-> state, the decision schema, prompts and the `Agent` that joins them, proven end to end against
-> a fake provider. Nothing calls a real model until Phase 2 adds the Ollama provider, now under
-> way. [`docs/STATUS.md`](docs/STATUS.md) has the detail.
+> state, the decision schema, prompts and the `Agent` that joins them. Since 0.3.0 it calls a
+> local model through Ollama, with a request queue and short-term memory; the guards that stop
+> a wrong answer are Phase 3, now under way. The [changelog](CHANGELOG.md) has the detail.
 
 ## A quick look
 
@@ -105,9 +106,30 @@ arrives in Phase 4.
   <img src="docs/assets/readme/roadmap.svg" alt="Roadmap: phases 0 Skeleton and 1 Core are done; phase 2, Ollama, queue and memory, is in progress; then Guards, Evaluation, Editor tools, Cloud providers, In-process, Samples and Demo games." width="100%">
 </p>
 
-Each phase closes with a release. What has merged and what is next is in
-[`docs/STATUS.md`](docs/STATUS.md); the API changes are in the package
-[changelog](UnityProject/Packages/com.agenerela.framework/CHANGELOG.md).
+Each phase closes with a release. What has changed is in the [changelog](CHANGELOG.md), and
+the API changes in the package's own
+[changelog](UnityProject/Packages/com.agenerela.framework/CHANGELOG.md); what each phase must
+do to close is in the build plan's phase table.
+
+## Installing
+
+In Unity 6 (6000.0 or later), open *Window → Package Manager → + → Install package from git
+URL* and paste:
+
+```
+https://github.com/agenerela/agenerela.git?path=UnityProject/Packages/com.agenerela.framework#v0.3.0
+```
+
+The part after `#` is the release tag. Use the one on the release badge above for the latest
+release, and change it to upgrade. Each [release](https://github.com/agenerela/agenerela/releases)
+says what it adds and what is still missing.
+
+Newtonsoft JSON, the package's one dependency, installs with it: no scoped registry, no native
+binaries. Scripts outside any assembly definition see the API straight away; if your game code
+has its own `.asmdef`, add `Agenerela` to its references.
+
+Today the only provider is [Ollama](https://ollama.com), so it must be running with a model
+pulled (for example `ollama pull qwen3.5:4b`) before an agent can decide.
 
 ## Developing
 
@@ -168,8 +190,8 @@ below this framework, not alongside it.
 
 ## License
 
-To be confirmed — MIT intended, pending a university IP review. Until a `LICENSE` file is added,
-all rights are reserved and this code is published for review only.
+[MIT](LICENSE.md). Assets generated for the demo games keep the terms of the model that made
+them; [`Demos/README.md`](Demos/README.md#licences-of-generated-assets) says which.
 
 ---
 

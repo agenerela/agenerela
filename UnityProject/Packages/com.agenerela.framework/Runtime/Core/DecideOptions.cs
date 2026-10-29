@@ -11,7 +11,7 @@ namespace Agenerela
     /// enum of situations. Whether this call is a player's line, a timer or a report is the
     /// developer's knowledge, and the framework never asks. What comes later goes here as more
     /// switches of the same kind, such as Phase 3's per-call guard settings, starting with
-    /// <c>CheckTarget</c> (DR-016). <see cref="Priority"/> is one already: it says whether anyone
+    /// <see cref="CheckTarget"/> (DR-016). <see cref="Priority"/> is one too: it says whether anyone
     /// is waiting, never why the agent is asked (DR-015).
     /// </remarks>
     public sealed class DecideOptions
@@ -51,5 +51,30 @@ namespace Agenerela
         /// The decision's telemetry records the priority, how long it waited and behind how many.
         /// </remarks>
         public DecisionPriority Priority = DecisionPriority.PlayerFacing;
+
+        /// <summary>
+        /// Whether <see cref="TargetGroundingGuard"/> checks this call's target: whether the model
+        /// wanted something that is not on the list, and so would act on the nearest listed target
+        /// instead (DR-016). On by default, whoever calls. Turn it off for a call where the agent
+        /// should act on its best guess rather than do nothing.
+        /// </summary>
+        /// <remarks>
+        /// Off, the guard does not run on that call, and the decision's telemetry records
+        /// <see cref="GroundingStatus.Off"/>. It also turns off the guard's fallback: on a provider
+        /// that reports no token probabilities, the prompt carries the one-line target rule only
+        /// while this is on (<see cref="PromptOptions.TargetRule"/>, #107).
+        /// </remarks>
+        public bool CheckTarget = true;
+
+        // The options one call keeps, taken when it is made, so changing the caller's object
+        // afterwards changes nothing, the guards' view included (#106). A memberwise copy, so a
+        // switch added later is copied without being listed here; only a field holding a mutable
+        // object needs copying by hand.
+        internal DecideOptions Copy()
+        {
+            var copy = (DecideOptions)MemberwiseClone();
+            copy.Observations = Observations == null ? null : new List<string>(Observations);
+            return copy;
+        }
     }
 }

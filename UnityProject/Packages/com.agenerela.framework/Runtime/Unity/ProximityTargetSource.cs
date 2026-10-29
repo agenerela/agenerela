@@ -54,21 +54,7 @@ namespace Agenerela
                 throw new ArgumentNullException(nameof(into));
             }
 
-            if (Origin == null)
-            {
-                throw new InvalidOperationException(
-                    "ProximityTargetSource has no Origin, so there is nothing to measure distance from.");
-            }
-
-            if (Radius < 0f)
-            {
-                throw new InvalidOperationException($"ProximityTargetSource.Radius is {Radius}; it cannot be negative.");
-            }
-
-            if (Cap < 1)
-            {
-                throw new InvalidOperationException($"ProximityTargetSource.Cap is {Cap}; it must be at least 1.");
-            }
+            TargetableQuery.Validate(nameof(ProximityTargetSource), Origin, Radius, Cap);
 
             if (dropped == null)
             {
@@ -77,15 +63,9 @@ namespace Agenerela
 
             dropped.Clear();
 
-            var inRange = FindInRange();
-
-            // Nearest first, so the cap cuts the far ones rather than arbitrary ones. Ties break
-            // on id, so the same scene always gives the same enum in the same order.
-            inRange.Sort((a, b) =>
-            {
-                int byDistance = a.SqrDistance.CompareTo(b.SqrDistance);
-                return byDistance != 0 ? byDistance : string.CompareOrdinal(a.Targetable.Id, b.Targetable.Id);
-            });
+            // Nearest first, so the cap cuts the far ones rather than arbitrary ones, and in the same
+            // order every time for the same scene, so the enum is too.
+            var inRange = TargetableQuery.Nearest(Origin, Radius, Layers, Categories, RequireLineOfSight);
 
             // Every candidate is checked before the cap is applied, so whether a scene throws
             // does not depend on where the agent happens to stand.
@@ -130,122 +110,6 @@ namespace Agenerela
                 {
                     dropped.Add(targetable.Id);
                 }
-            }
-        }
-
-        private List<Candidate> FindInRange()
-        {
-            var origin = Origin.position;
-            float sqrRadius = Radius * Radius;
-            var found = new List<Candidate>();
-
-            // A scene search rather than an overlap query, so a Targetable needs no collider.
-            // Decisions are seconds apart, so the cost is paid rarely.
-            var all = UnityEngine.Object.FindObjectsByType<Targetable>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
-
-            foreach (var targetable in all)
-            {
-                // enabled rather than isActiveAndEnabled, which reads false in edit mode for a
-                // component without [ExecuteAlways]; inactive objects are already excluded.
-                if (!targetable.enabled || !targetable.IsCurrentlyTargetable)
-                {
-                    continue;
-                }
-
-                var transform = targetable.transform;
-
-                if (transform.IsChildOf(Origin))
-                {
-                    continue;
-                }
-
-                if ((Layers.value & (1 << targetable.gameObject.layer)) == 0)
-                {
-                    continue;
-                }
-
-                if (!MatchesCategory(targetable.Category))
-                {
-                    continue;
-                }
-
-                float sqrDistance = (transform.position - origin).sqrMagnitude;
-                if (sqrDistance > sqrRadius)
-                {
-                    continue;
-                }
-
-                if (RequireLineOfSight && !CanSee(origin, transform))
-                {
-                    continue;
-                }
-
-                found.Add(new Candidate(targetable, sqrDistance));
-            }
-
-            return found;
-        }
-
-        private bool MatchesCategory(string category)
-        {
-            if (Categories == null || Categories.Length == 0)
-            {
-                return true;
-            }
-
-            foreach (var wanted in Categories)
-            {
-                if (string.Equals(wanted, category, StringComparison.Ordinal))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        // Visible when nothing is in the way, or the first thing in the way is the target itself.
-        // Colliders on the agent's own hierarchy are skipped, so its body never blocks its view.
-        // A hit is attributed by hit.collider rather than hit.transform, which is the attached
-        // Rigidbody's transform and so would miss a Targetable under a Rigidbody parent.
-        private bool CanSee(Vector3 origin, Transform target)
-        {
-            var toTarget = target.position - origin;
-            float distance = toTarget.magnitude;
-
-            if (distance <= 0f)
-            {
-                return true;
-            }
-
-            var hits = Physics.RaycastAll(origin, toTarget / distance, distance,
-                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
-            Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-
-            foreach (var hit in hits)
-            {
-                var hitTransform = hit.collider.transform;
-
-                if (hitTransform.IsChildOf(Origin))
-                {
-                    continue;
-                }
-
-                return hitTransform.IsChildOf(target);
-            }
-
-            return true;
-        }
-
-        private readonly struct Candidate
-        {
-            public readonly Targetable Targetable;
-            public readonly float SqrDistance;
-
-            public Candidate(Targetable targetable, float sqrDistance)
-            {
-                Targetable = targetable;
-                SqrDistance = sqrDistance;
             }
         }
     }

@@ -13,10 +13,7 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": [
-        "alice",
-        "bob"
-      ]
+      "labelledBy": ["Maxim"]
     },
     {
       "id": "event_002",
@@ -31,10 +28,7 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": [
-        "alice",
-        "bob"
-      ]
+      "labelledBy": ["Maxim"]
     },
     {
       "id": "event_003",
@@ -48,10 +42,7 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": [
-        "alice",
-        "bob"
-      ]
+      "labelledBy": ["Maxim"]
     },
     {
       "id": "event_004",
@@ -65,9 +56,7 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": [
-        "alice"
-      ]
+      "labelledBy": ["Maxim"]
     },
     {
       "id": "event_005",
@@ -81,9 +70,7 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": [
-        "alice"
-      ]
+      "labelledBy": ["Maxim"]
     },
     {
       "id": "event_006",
@@ -97,9 +84,7 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": [
-        "alice"
-      ]
+      "labelledBy": ["Maxim"]
     },
     {
       "id": "event_007",
@@ -113,9 +98,7 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": [
-        "bob"
-      ]
+      "labelledBy": ["Maxim"]
     },
     {
       "id": "event_008",
@@ -129,9 +112,7 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": [
-        "bob"
-      ]
+      "labelledBy": ["Maxim"]
     },
     {
       "id": "event_009",
@@ -145,9 +126,162 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": [
-        "bob"
-      ]
+      "labelledBy": ["Maxim"]
+    },
+    {
+      "id": "event_010",
+      "label": "Event",
+      "stimulus": "A scout spotted movement near the north tower.",
+      "observations": [
+        "The north tower is reachable",
+        "An unknown figure was seen nearby"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "north_tower",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": ["Maxim"]
+    },
+    {
+      "id": "event_011",
+      "label": "Event",
+      "stimulus": "A villager is trapped inside the locked cave.",
+      "observations": [
+        "A villager is calling for help from inside the cave",
+        "The locked cave entrance is reachable"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "locked_cave",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Unlike impossible_008, nobody asks the guard to enter the cave. Walking to its locked entrance, where the villager can be heard, is the help the guard can give.",
+      "labelledBy": ["Maxim"]
+    },
+    {
+      "id": "event_012",
+      "label": "Event",
+      "stimulus": "A fire has broken out near the market.",
+      "observations": [
+        "The market is burning",
+        "Villagers are moving away from the fire"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "market",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": ["Maxim"]
+    },
+    {
+      "id": "event_013",
+      "label": "Event",
+      "stimulus": "The player has been knocked down.",
+      "observations": [
+        "A wolf is standing over the player",
+        "The player is near the bridge"
+      ],
+      "expectedAction": "attack_target",
+      "expectedTarget": "wolf",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The target is named only in the observations.",
+      "labelledBy": ["Yevhen"]
+    },
+    {
+      "id": "event_014",
+      "label": "Event",
+      "stimulus": "A cart has overturned outside the village.",
+      "observations": [
+        "Barrels are scattered across the eastern road",
+        "The driver is hurt"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "eastern_road",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "The target is named only in the observations.",
+      "labelledBy": ["Yevhen"]
+    },
+    {
+      "id": "event_015",
+      "label": "Event",
+      "stimulus": "The captain wants a guard by the water before the boats arrive.",
+      "observations": [
+        "Boats tie up at the docks",
+        "Smaller boats also stop beside the bridge"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": ["bridge", "docks"],
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "An open choice: either place is right, and the grounding guard must not turn it away.",
+      "labelledBy": ["Yevhen"]
+    },
+    {
+      "id": "event_016",
+      "label": "Event",
+      "stimulus": "Lights were seen in the north tower.",
+      "observations": [
+        "The north tower should be empty tonight",
+        "It is after midnight"
+      ],
+      "expectedAction": "move_to",
+      "expectedTarget": "north_tower",
+      "checkTarget": false,
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "note": "Run with the grounding guard off (DR-016).",
+      "labelledBy": ["Yevhen"]
+    },
+    {
+      "id": "event_017",
+      "label": "Event",
+      "stimulus": "The player is leaving through the east wall.",
+      "observations": [
+        "Bandits were seen on the road this morning",
+        "The player is alone"
+      ],
+      "expectedAction": "follow_player",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": ["Yevhen"]
+    },
+    {
+      "id": "event_018",
+      "label": "Event",
+      "stimulus": "The player has reached the shelter.",
+      "observations": [
+        "The player is inside the shelter",
+        "Villagers inside are asking for the door to be shut"
+      ],
+      "expectedAction": "stop_following",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": true
+      },
+      "labelledBy": ["Yevhen"]
+    },
+    {
+      "id": "event_019",
+      "label": "Event",
+      "stimulus": "A villager waves from across the square.",
+      "observations": [
+        "The villager is carrying a basket of bread"
+      ],
+      "expectedAction": "none",
+      "expectedTarget": "no_target",
+      "preconditionState": {
+        "isFollowing": false
+      },
+      "labelledBy": ["Yevhen"]
     }
   ]
 }

@@ -66,6 +66,7 @@
 *.psd   filter=lfs diff=lfs merge=lfs -text
 *.exr   filter=lfs diff=lfs merge=lfs -text
 *.hdr   filter=lfs diff=lfs merge=lfs -text
+*.webp  filter=lfs diff=lfs merge=lfs -text
 
 # 3D models
 *.fbx   filter=lfs diff=lfs merge=lfs -text
@@ -74,6 +75,8 @@
 *.dae   filter=lfs diff=lfs merge=lfs -text
 *.3ds   filter=lfs diff=lfs merge=lfs -text
 *.glb   filter=lfs diff=lfs merge=lfs -text
+*.stl   filter=lfs diff=lfs merge=lfs -text
+*.3mf   filter=lfs diff=lfs merge=lfs -text
 
 # Audio and video
 *.wav   filter=lfs diff=lfs merge=lfs -text

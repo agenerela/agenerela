@@ -892,7 +892,10 @@ Built-ins, in order:
    that it could not run. The fallback is the next best option that costs nothing: one line
    in the system prompt, saying that only the listed things are here and the model must never
    act on a different one. `PromptBuilder` adds it when `CheckTarget` is on and the provider
-   reports no probabilities. Measured: 2B 73 → 88, 4B 98 → 101 (DR-016).
+   reports no probabilities. The probe's form of it, a rule pointing at an "Around you" list of
+   the targets, measured 2B 73 → 88, 4B 98 → 101 (DR-016). The line as built (#107) carries the
+   target ids itself and names no player, since the prompt has no such list (DR-008). That
+   wording is unmeasured until Phase 4 runs it against the probe's form.
 
    **Limits.** A near miss the model takes for the listed thing passes: Excalibur for the
    sword on the 2B, a bucket for the barrel and a lantern for the torch on the 4B. So does a
@@ -983,8 +986,9 @@ becomes a subscribe-and-accumulate blackboard we inherit every blackboard proble
 the ability to say what an agent knew at one instant.
 
 **Composition and budget.** An agent holds an ordered list of sources; per-call
-observations append last. The framework then applies a **hard cap** and records what it
-dropped in telemetry. The cap is not tidiness — the measured good arm ran a 143-token
+observations append last. The framework then applies a **hard cap** to what the sources add
+and records what it dropped in telemetry. The per-call lines, which the developer chose for
+this call, are always sent and count against the cap. The sources fill what is left (#91). The cap is not tidiness — the measured good arm ran a 143-token
 prompt against a 332-token prose baseline, and an unbounded gatherer is the easiest way to
 regress accuracy while looking like a model problem.
 
@@ -1317,6 +1321,33 @@ own subsystem**: handing it to someone else is a free API usability test, and if
 has to explain their own API to a teammate, the API needs work. And **one person owns a
 scene at a time** — with six people, scene conflicts are the failure mode most likely to
 cost a day.
+
+#### Research areas
+
+From 27 October 2026, besides the phase work, each area below has one owner who researches
+and builds in it: what to explore is the owner's call. Each area has one open issue,
+labelled `research`, that stays open while the area is worked on; every piece that lands
+gets its own issue or pull request, linked back to it.
+
+| Area | Owner | Extension point | Issue |
+|---|---|---|---|
+| Memory | Hero Jaiyen (@phupanawat) | `IMemoryStrategy` (§2.9) | #119 |
+| Targets | Maxim Goloubitsky (@MaximGolubitsky) | `ITargetSource` (DR-014) | #120 |
+| Evaluation | Timothy Brustinov (@TimBrustinov) | The prompt set, `tools/benchmarks/` and model comparisons (§4) | #121 |
+| Observations | Hunter Hudson (@Hunaveli) | `IObservationSource` (§2.8, #91) | #122 |
+
+Before the research areas, each person owned one requirements feature (the SRS of 10
+September) and built framework pieces through Phases 1 and 2. That work stays theirs. They
+have since moved on to the areas above, and the framework core (the interfaces, `Agent`, the
+schema, the prompt, the guards and the providers) is maintained by the lead.
+
+| Person | Requirements feature (SRS) | Built in Phases 1 and 2 |
+|---|---|---|
+| Hero Jaiyen (@phupanawat) | Target registry and target grounding (3.4) | `TargetRegistry` (#5, #29); target discovery with `Targetable`, `ITargetSource` and `ProximityTargetSource` (#32); `TargetsDropped` (#81); short-term memory, `IMemoryStrategy` and `RollingHistory` (#90) |
+| Maxim Goloubitsky (@MaximGolubitsky) | Decision telemetry and outcome classification (3.6) | `DecisionOutcome` and `DecisionTelemetry` (#3) with `DecisionResult`'s tests (#43); the evaluation prompt set (#13, #66) |
+| Timothy Brustinov (@TimBrustinov) | Developer-authored action vocabulary (3.2) | `ActionDefinition` and its asset (#4, #49); `AgentProfile` (#15); `FewShotBuilder` (#10) |
+| Hunter Hudson (@Hunaveli) | Agents and decision requests (3.1) | The core decision types `AgentIdentity`, `AgentContext` and `AgentDecision` (#2) |
+| Tigran Kolsuzyan (@JaySlifer) | Action availability and the decision schema (3.3) | `ActionRegistry` and `IActionHandler` (#6); state-derived action availability (#7) |
 
 ---
 
@@ -1838,7 +1869,7 @@ not run, and `PromptBuilder` adds the one-line rule instead.
 | DR-004 | `action` emitted before the free-text field; `target` required with a `no_target` sentinel; no reasoning field | §2.3, Appendix A |
 | DR-005 | Grounding guard in code rather than relying on model scale; how it decides is DR-016 | §2.5, Appendix A, DR-016 |
 | DR-006 | Evaluation harness (Phase 4) built before editor tooling and demos | §3 |
-| DR-007 | License MIT, pending the university IP check | §1.8 |
+| DR-007 | License MIT, settled 28 October 2026: the team owns the work and agreed. `LICENSE.md` at the root and in the package; generated demo assets keep their models' terms (`Demos/README.md`) | §1.8 |
 | DR-008 | No speaking-character assumption and no input taxonomy: the free-text field is `statement`, not `dialogue`; the developer decides when an agent is asked and passes a free-form stimulus, label and observations; the framework never classifies the call. Rename unmeasured — early Phase 4 A/B | §2.1, §2.3, issues #2, #8, #17, #18 |
 
 ---

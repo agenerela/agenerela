@@ -138,9 +138,9 @@ namespace Agenerela.Providers
         /// <para>
         /// This flag never switches the guard off. The guard reads the probabilities in the
         /// result, not this flag, and on a reply without them it records that it could not
-        /// run, never that it passed. The flag is read before the request, by
-        /// <c>PromptBuilder</c> (#16), which adds the one-line fallback rule to the prompt
-        /// when it is false (build plan §2.5). So a provider that sets it and then returns
+        /// run, never that it passed. The flag is read before the request, by <c>Agent</c>,
+        /// which has <c>PromptBuilder</c> add the one-line fallback rule to the prompt when it is
+        /// false and <c>DecideOptions.CheckTarget</c> is on (build plan §2.5, #107). So a provider that sets it and then returns
         /// none leaves that decision with neither the guard nor the fallback.
         /// </para>
         /// </remarks>

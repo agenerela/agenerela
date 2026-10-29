@@ -109,3 +109,19 @@ To skip them from the very first clone, pass the setting to `git clone`:
 ```bash
 git clone -c lfs.fetchexclude="Demos/CompanionRPG/**,Demos/GreyBoxStrategy/**" https://github.com/agenerela/agenerela.git
 ```
+
+## Licences of generated assets
+
+The games' code is MIT, like the rest of the repository ([`LICENSE.md`](../LICENSE.md)). An
+asset made on the asset server is not covered by that: it keeps the terms of the model that
+made it, which [`tools/comfyui/README.md`](../tools/comfyui/README.md#licences) lists. Images
+(Z-Image Turbo, Apache-2.0) and 3D models (Pixal3D and TRELLIS.2, MIT) come from permissively
+licensed models.
+Sounds from Stable Audio 3 are under the Stability AI Community License: the output is yours
+and free to use commercially while you and your affiliates earn under USD 1 million a year,
+after registering with Stability AI; above that the licence ends and an enterprise one is
+needed.
+
+When you commit a generated asset, add it to a `GENERATED.md` in your game's folder: the file,
+the workflow and model that made it, and the prompt. Then anyone who later ships the game can
+see which terms apply, and replace what they cannot ship.
