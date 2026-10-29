@@ -24,9 +24,11 @@ Inside `Agent.DecideAsync`, after the reply has been parsed:
    a `Reject`.
 2. **`TargetGroundingGuard`.** Did the model want a target that is not on the list? From the
    reply's token probabilities, it reads how much of the model's probability could still lead
-   to a listed target, at every token of the target it chose. Below 0.8 it rewrites the
-   decision to `none`: "Attack the scarecrow." with no scarecrow listed is refused rather than
-   turned into an attack on the training dummy. A provider that reports no probabilities
+   to a listed target, at every token of the target it chose, and records it in the telemetry.
+   Below 0.8, for an action that requires a target, it rewrites the decision to `none`:
+   "Attack the scarecrow." with no scarecrow listed is refused rather than turned into an
+   attack on the training dummy. An action whose target is optional is scored but never
+   rewritten. A provider that reports no probabilities
    cannot be checked, and the guard records that and passes. `DecideOptions.CheckTarget =
    false` turns it off for one call. DR-016 has the measurements.
 3. **`Agent.Guards`**, the game's own, in list order.
