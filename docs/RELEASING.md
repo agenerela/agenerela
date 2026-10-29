@@ -44,7 +44,8 @@ owner releases. Every step before the tag is ordinary pull-request work.
    an example, what is still missing, and what to change when upgrading. Leave out issue
    numbers, type names and measurements; the changelog has those, and the published notes
    end with the install line and a link to it. Absolute links only, since the notes are read
-   on the release page. [`v0.4.0-preview.1.md`](releases/v0.4.0-preview.1.md) is an example.
+   on the release page. Wrap lines as in any other doc: GitHub shows every newline in a
+   release's notes as a line break, so `release.py notes` joins them first. [`v0.4.0-preview.1.md`](releases/v0.4.0-preview.1.md) is an example.
 2. **Merge `test` into `main`** with a pull request, once the release pull request is in
    `test`.
 3. **Tag the merge on `main` and push the tag:**
