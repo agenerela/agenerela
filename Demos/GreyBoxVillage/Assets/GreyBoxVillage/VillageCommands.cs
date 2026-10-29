@@ -219,17 +219,19 @@ namespace Demos.GreyBoxVillage
                     return;
                 }
 
-                var d = result.Decision;
+                // What the model answered. A guard that stopped it inside DecideAsync left
+                // result.Decision as none, so the outcome comes from the verdict, not from that.
+                var d = result.ModelDecision;
                 bool executed = agent.Execute(result);
-                string outcome = d.ActionId == ActionRegistry.None ? "none" : executed ? "executed" : "refused";
-                string refusal = executed ? "" : RefusalReason(record, d);
-                if (executed) Guard.Say(d.Statement);
-                Recorder.Complete(record, result, outcome, refusal);
+                string outcome = Outcome(result, executed);
+                string reason = outcome == "refused" || outcome == "contained" ? StopReason(record, result, outcome) : "";
+                if (outcome == "executed" || outcome == "none") Guard.Say(d.Statement);
+                Recorder.Complete(record, result, outcome, reason);
 
                 string details = string.Format(CultureInfo.InvariantCulture,
                     "{0} / {1}  |  {2:0.00} s, queued {3:0.00} s  |  tokens {4} in, {5} out  |  history sent {6}{7}",
                     t.ProviderName, t.Model, t.LatencySeconds, t.QueueWaitSeconds, t.PromptTokens,
-                    t.CompletionTokens, t.HistoryTurnsSent, executed ? "" : "  |  REFUSED by Execute: " + refusal);
+                    t.CompletionTokens, t.HistoryTurnsSent, reason == "" ? "" : "  |  " + outcome.ToUpperInvariant() + ": " + reason);
                 Overlay.ShowDecision(label + ": " + text, d.ActionId, d.TargetId, d.Statement, details,
                     t.LatencySeconds, t.GuardsFired, ProviderLabel);
             }
@@ -251,11 +253,27 @@ namespace Demos.GreyBoxVillage
             }
         }
 
-        private static string RefusalReason(DecisionRecord record, AgentDecision d)
+        // refused: a guard rejected the answer inside DecideAsync (the provider broke the contract),
+        // or Execute's re-check did. contained: a guard judged a legal answer wrong and made it none.
+        private static string Outcome(DecisionResult result, bool executed)
         {
-            if (!record.OfferedActions.Contains(d.ActionId)) return "the action was not offered";
-            if (d.TargetId != TargetRegistry.NoTarget && !record.OfferedTargets.Contains(d.TargetId)) return "the target was not offered";
-            return "the action or target stopped being available before it ran";
+            if (!executed) return "refused";
+            if (result.Verdict != null) return "contained";
+            return result.ModelDecision.ActionId == ActionRegistry.None ? "none" : "executed";
+        }
+
+        // The game's own reading of a refusal, from what the request offered, then the words of the
+        // guard that stopped it: the last in GuardsFired, which is Execute's re-check when it refused.
+        private static string StopReason(DecisionRecord record, DecisionResult result, string outcome)
+        {
+            var d = result.ModelDecision;
+            var t = result.Telemetry;
+            string guard = t.GuardsFired.Count > 0 ? t.GuardsFired[t.GuardsFired.Count - 1] : "a guard";
+            string said = guard + " said: " + t.GuardReason;
+            if (outcome == "contained") return said;
+            if (!record.OfferedActions.Contains(d.ActionId)) return "the action was not offered; " + said;
+            if (d.TargetId != TargetRegistry.NoTarget && !record.OfferedTargets.Contains(d.TargetId)) return "the target was not offered; " + said;
+            return "the action or target stopped being available before it ran; " + said;
         }
 
         private void OnGUI()
