@@ -46,7 +46,7 @@ editor at a time open a project.
 
 ### Running the PlayMode tests that need a model
 
-The Phase 2 gate's tests (`RequiresOllama`) call a real Ollama, so they need it running with
+The Phase 2 and Phase 3 gates' live tests (`RequiresOllama`) call a real Ollama, so they need it running with
 the model pulled; they are the only tests that do. The same command with the other platform
 and a category:
 
@@ -57,6 +57,17 @@ and a category:
 Each timed decision prints a `LATENCY` line. `AGENERELA_OLLAMA_MODEL` and
 `AGENERELA_OLLAMA_URL` choose another model or endpoint; the findings entry of 25 October 2026
 has the conditions to match before comparing a run with its numbers.
+
+**The Phase 3 live suite** (`Phase3LiveSuiteTests`, same category and variables) decides the
+prototype's 20 prompts on `qwen3.5:2b` twice in one session, guards on and then
+`CheckTarget = false` as the control arm. Before a run:
+
+- Ollama at `http://127.0.0.1:11434`, `qwen3.5:2b` pulled, and **no other model loaded**
+  (`ollama stop <model>`; hard rule 3). The suite reads `/api/ps` after its warm-up and fails
+  unless the model under test is the only one resident, and prints the Ollama version.
+- On a laptop, plug in first.
+- Read the results from the `PHASE3-RUN`, `PHASE3`, `PHASE3-ARM` and `PHASE3-WRONG` lines in
+  the results file or log. Without Ollama the suite is ignored, not failed.
 
 ### The Unity CLI (optional)
 
