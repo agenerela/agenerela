@@ -209,13 +209,15 @@ CI check or a test starts enforcing a lesson, delete it from this list.
 
 **Phases 1 and 2 are complete.** Phase 1 (Core, Actions, Schema) closed on 11 October when
 the five checks in #11 passed. Phase 2 (Ollama provider, queue, memory) closed on 25 October
-when the live checks in its gate (#94) passed, and is released as 0.3.0. **The framework calls
-a model**: `OllamaProvider` sends `JsonSchemaSerializer`'s output to a local Ollama, and the
-gate's `RequiresOllama` PlayMode tests prove the live path. **Phase 3 (Validation pipeline) is
-under way**, due 9 November: the guards between the provider and the handler (#105 to #110),
-of which the pipeline itself (#106) has merged. Still
-open from Phase 2, off its gate's path: observation sources (#91), the provider config asset
-(#92) and `AgentBehaviour` (#93).
+when the live checks in its gate (#94) passed, and is released as 0.3.0. Its issues off the
+gate's path, observation sources (#91), the provider config asset (#92) and `AgentBehaviour`
+(#93), merged later, and its milestone closed on 2 November. **The framework calls a model**:
+`OllamaProvider` sends `JsonSchemaSerializer`'s output to a local Ollama, and the gate's
+`RequiresOllama` PlayMode tests prove the live path. **Phase 3 (Validation pipeline) is under
+way**, due 9 November: the guards between the provider and the handler. The pipeline (#106),
+target grounding (#105), its fallback rule (#107), developer guards (#108) and the gate's
+checks have merged. Left: the gate's live 20-prompt run on a 2B, not yet made (#110), and
+contained refusals (#109).
 
 Beside the phases: the evaluation set's real annotators and next prompts (#85), the demo
 games, one sub-issue each under #47, starting with GreyBoxStrategy (#20), and research areas
