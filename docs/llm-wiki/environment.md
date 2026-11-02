@@ -77,9 +77,10 @@ change: `unity status` lists the open editors, and `unity test <project> --mode 
 --output <xml>` runs the same EditMode tests as the raw command above, choosing the editor
 from `ProjectVersion.txt`. Set `UNITY_NO_BANNER=1` and `UNITY_NON_INTERACTIVE=1` when an
 agent calls it. Its live editor control (`unity command`, `unity list`) needs the
-experimental `com.unity.pipeline` package, which no project here has added: it would change a
-committed manifest and overlaps MCP for Unity, below. The `unity-cli` skill is installed per
-user, not in this repository.
+experimental `com.unity.pipeline` package. Only `Demos/GreyBoxVillage` has it (0.9.1-exp.1; its
+README says how it is driven). `UnityProject` does not: the package would change a committed
+manifest and overlaps MCP for Unity, below. The `unity-cli` skill is installed per user, not in
+this repository.
 
 ## Per-machine setup — do this BEFORE cloning
 
