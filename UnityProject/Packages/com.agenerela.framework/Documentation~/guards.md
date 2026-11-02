@@ -9,8 +9,9 @@ ten seconds ago.
 agent.Guards.Add(new DelegateGuard("bell_cooldown", input => …));
 ```
 
-This note says what the built-in guards check, what a guard can answer, when to write one at
-all, and gives two worked examples. Both examples run as tests in
+This note says what the built-in guards check, what a guard can answer, what the agent says
+after one stops it, when to write one at all, and gives two worked examples. Both examples run
+as tests in
 `Tests/Editor/Validation/DeveloperGuardTests.cs`, so the code here cannot quietly stop working.
 
 ## The order guards run in

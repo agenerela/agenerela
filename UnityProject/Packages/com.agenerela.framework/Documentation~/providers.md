@@ -43,7 +43,9 @@ Two rules sit above every implementation:
   block would be invisible in the numbers. The one part that arrives unserialised is
   `DecisionRequest.Schema`, the provider-neutral `DecisionSchema` (#8): the provider runs the
   serializer for its `Dialect` over it, and treats it as required, since a request without a
-  schema is not a decision request.
+  schema is not a decision request. Not every schema has an `action`: the request for a refusal
+  line (#109, [guards.md](guards.md)) has only `statement`, and its `Stimulus` carries no label.
+  A provider sends it like any other.
 
 ## The three backends
 
