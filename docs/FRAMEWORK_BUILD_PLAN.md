@@ -1348,11 +1348,12 @@ gets its own issue or pull request, linked back to it.
 | Targets | Maxim Goloubitsky (@MaximGolubitsky) | `ITargetSource` (DR-014) | #120 |
 | Evaluation | Timothy Brustinov (@TimBrustinov) | The prompt set, `tools/benchmarks/` and model comparisons (§4) | #121 |
 | Observations | Hunter Hudson (@Hunaveli) | `IObservationSource` (§2.8, #91) | #122 |
+| Guards | Tigran Kolsuzyan (@JaySlifer) | `IDecisionGuard`, the developer's own guards (§2.5, #108) | #138 |
 
 Before the research areas, each person owned one requirements feature (the SRS of 10
 September) and built framework pieces through Phases 1 and 2. That work stays theirs. They
 have since moved on to the areas above, and the framework core (the interfaces, `Agent`, the
-schema, the prompt, the guards and the providers) is maintained by the lead.
+schema, the prompt, the built-in guards and the providers) is maintained by the lead.
 
 | Person | Requirements feature (SRS) | Built in Phases 1 and 2 |
 |---|---|---|
