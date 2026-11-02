@@ -514,7 +514,21 @@ public sealed class Agent {
 
 // Thin MonoBehaviour adapter for scene objects, in Runtime/Unity/ (§1.2). A faction
 // manager or colony sim can own Agent instances directly with no GameObject involved.
-public class AgentBehaviour : MonoBehaviour { public Agent Agent { get; } ... }
+// Documentation~/agents-in-a-scene.md has the whole of it (#93).
+public sealed class AgentBehaviour : MonoBehaviour
+{
+    public AgentProfile Profile;                 // required
+    public ProviderConfig Provider;              // empty: the project default (DR-013)
+    public bool FindTargetsNearby = true;        // Targets, around this transform (DR-014)
+    public ProximityTargetSource Targets;
+    public bool NoticeNearby = true;             // Observations, around this transform (§2.8)
+    public ProximityObservationSource Observations;
+    public List<ActionHandlerBinding> Handlers;  // for asset actions no method here runs
+
+    public Agent Agent { get; }                  // built in Awake, or by the first read
+    public Awaitable<DecisionResult> DecideAsync(string stimulus, DecideOptions options = null);
+                                                 // cancelled when the GameObject is destroyed
+}
 ```
 
 `AgentDecision` is the bare answer, `{ actionId, targetId, statement }`. `DecideAsync`

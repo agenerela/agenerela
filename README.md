@@ -66,7 +66,10 @@ agent.Execute(result);   // checked again, then Guard.MoveTo runs
 ```
 
 The agent is plain C#, not a `MonoBehaviour`, so a faction or a whole country can be one too,
-with no GameObject at all.
+with no GameObject at all. For a character in a scene, `AgentBehaviour` does this setup: put it
+beside `Guard`, assign the profile, and call `DecideAsync` on it. It finds targets nearby and
+cancels the request if the GameObject is destroyed
+([how](UnityProject/Packages/com.agenerela.framework/Documentation~/agents-in-a-scene.md)).
 
 ## How it works
 
