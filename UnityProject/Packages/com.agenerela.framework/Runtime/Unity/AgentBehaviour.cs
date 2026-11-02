@@ -64,6 +64,7 @@ namespace Agenerela
         public List<ActionHandlerBinding> Handlers = new List<ActionHandlerBinding>();
 
         private Agent agent;
+        private bool warningQueued;
 
         /// <summary>
         /// The agent this component built, the same one every time. Built by this read if
@@ -133,7 +134,11 @@ namespace Agenerela
                 {
                     foreach (var (definition, _) in AgentActionReader.Read(component))
                     {
-                        bound.Add(definition.Id);
+                        if (!bound.Add(definition.Id))
+                        {
+                            problem = $"{component.GetType().Name} declares the action '{definition.Id}', which another component on this GameObject also declares";
+                            return false;
+                        }
                     }
                 }
                 catch (ArgumentException e)
@@ -210,11 +215,30 @@ namespace Agenerela
             }
         }
 
-        // Not during Play, where code adding this component would hear about the profile it is
-        // about to set.
+        // Unity may call this on its loading thread, where GetComponents is not allowed, so the
+        // check waits for the editor's main thread. Several calls before then make one check.
         private void OnValidate()
         {
-            if (!Application.isPlaying && !Validate(out string problem))
+#if UNITY_EDITOR
+            if (warningQueued)
+            {
+                return;
+            }
+
+            warningQueued = true;
+            UnityEditor.EditorApplication.delayCall += () =>
+            {
+                warningQueued = false;
+                WarnIfInvalid();
+            };
+#endif
+        }
+
+        // Not during Play, where code adding this component would hear about the profile it is
+        // about to set. Destroyed is Unity's null: the object can go before the check comes.
+        internal void WarnIfInvalid()
+        {
+            if (this != null && !Application.isPlaying && !Validate(out string problem))
             {
                 Debug.LogWarning($"{name}: {problem}", this);
             }

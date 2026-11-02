@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -428,7 +429,7 @@ namespace Agenerela.Tests
             });
 
             Assert.That(guard.Validate(out string problem), Is.True, problem);
-            InvokePrivate(guard, "OnValidate");
+            guard.WarnIfInvalid();
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -441,7 +442,7 @@ namespace Agenerela.Tests
             Assert.That(problem, Does.Contain("Profile is empty"));
 
             LogAssert.Expect(LogType.Warning, new Regex("Guard: Profile is empty"));
-            InvokePrivate(guard, "OnValidate");
+            guard.WarnIfInvalid();
         }
 
         [Test]
@@ -455,7 +456,44 @@ namespace Agenerela.Tests
             Assert.That(problem, Does.Not.Contain("move_to"), "A method is a handler.");
 
             LogAssert.Expect(LogType.Warning, new Regex("No handler for follow_player, attack_target"));
+            guard.WarnIfInvalid();
+        }
+
+        [Test]
+        public void TwoComponentsDeclaringOneActionWarnInTheInspector()
+        {
+            var guard = Guard(Profile("move_to"), Config());
+            guard.gameObject.AddComponent<GuardMoves>();
+            guard.gameObject.AddComponent<GuardMoves>();
+
+            Assert.That(guard.Validate(out string problem), Is.False);
+            Assert.That(problem, Does.Contain("also declares"));
+            Assert.Throws<InvalidOperationException>(() => _ = guard.Agent, "Build refuses what Validate warned about.");
+        }
+
+        // Unity may call OnValidate on its loading thread, so nothing scene-related happens in it.
+        [UnityTest]
+        public IEnumerator OnValidateChecksOnALaterEditorTick()
+        {
+            var guard = Guard(null, Config());
+
             InvokePrivate(guard, "OnValidate");
+            LogAssert.NoUnexpectedReceived();
+
+            LogAssert.Expect(LogType.Warning, new Regex("Guard: Profile is empty"));
+            yield return NextDelayCall();
+        }
+
+        [UnityTest]
+        public IEnumerator AGuardDestroyedBeforeItsCheckComesIsSkipped()
+        {
+            var guard = Guard(null, Config());
+            InvokePrivate(guard, "OnValidate");
+            Object.DestroyImmediate(guard.gameObject);
+
+            yield return NextDelayCall();
+
+            LogAssert.NoUnexpectedReceived();
         }
 
         [Test]
@@ -490,6 +528,21 @@ namespace Agenerela.Tests
 
         // ---- Helpers --------------------------------------------------------------------------
 
+        // Until the calls queued so far have run: delayCall runs them in order, and any number of
+        // yields can pass before it does.
+        private static IEnumerator NextDelayCall()
+        {
+            bool ran = false;
+            UnityEditor.EditorApplication.delayCall += () => ran = true;
+
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            while (!ran)
+            {
+                Assert.That(clock.Elapsed.TotalSeconds, Is.LessThan(10), "delayCall never ran.");
+                yield return null;
+            }
+        }
+
         private GameObject NewObject(string objectName, Vector3 position)
         {
             var obj = new GameObject(objectName);
@@ -502,20 +555,10 @@ namespace Agenerela.Tests
         {
             var obj = NewObject("Guard", Here);
 
-            // AddComponent runs OnValidate before the fields are set, which would warn that the
-            // profile is empty. That warning is about the helper, not the test.
-            Debug.unityLogger.logEnabled = false;
-            try
-            {
-                var guard = obj.AddComponent<AgentBehaviour>();
-                guard.Profile = profile;
-                guard.Provider = config;
-                return guard;
-            }
-            finally
-            {
-                Debug.unityLogger.logEnabled = true;
-            }
+            var guard = obj.AddComponent<AgentBehaviour>();
+            guard.Profile = profile;
+            guard.Provider = config;
+            return guard;
         }
 
         private Targetable Target(string id, Vector3 position, string description = null)

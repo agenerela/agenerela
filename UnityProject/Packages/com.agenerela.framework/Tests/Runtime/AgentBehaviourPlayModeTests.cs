@@ -85,6 +85,22 @@ namespace Agenerela.Tests
         }
 
         [UnityTest]
+        public IEnumerator CodeCanAddTheComponentAndThenSetTheProfile()
+        {
+            guardObject = new GameObject("Guard");
+            var guard = guardObject.AddComponent<AgentBehaviour>();
+
+            // Long enough for the Inspector's check, which waits for the editor, to have come.
+            yield return new WaitForSecondsRealtime(0.5f);
+
+            LogAssert.NoUnexpectedReceived();
+
+            guard.Profile = profile;
+            guard.Provider = config;
+            Assert.That(guard.Agent.Identity, Is.SameAs(profile.Identity));
+        }
+
+        [UnityTest]
         public IEnumerator ADecisionInFlightWhenTheGameObjectIsDestroyedEndsCancelled()
         {
             var guard = InactiveGuard();

@@ -86,6 +86,7 @@ In the Console, each time the component changes outside Play mode:
 - A row of **Handlers** with no handler, naming an action the profile does not list, or binding
   an action that already has a handler.
 - A malformed `[AgentAction]` method on this GameObject.
+- Two components on this GameObject declaring one action.
 
 `AgentBehaviour.Validate(out string problem)` runs the same checks from code. An empty
 **Provider** is not one of them: it is the normal case.
