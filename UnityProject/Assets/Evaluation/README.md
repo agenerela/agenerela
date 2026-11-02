@@ -6,7 +6,7 @@ not written yet; this folder is its input. It sits outside the package because t
 specific to one game's actions and targets (build plan §1.7).
 
 Started in #13, with its first 54 prompts merged in #65 and their format fixed in #66.
-What is still to do is #85.
+What is still to do is in *Still to do*.
 
 | File | Contents |
 |---|---|
@@ -99,17 +99,20 @@ As of #85's second batch, 27 October 2026: 76 prompts. Counted by script, not by
   choices below).
 - **Open choices:** 3 (`situation_016`, `situation_018`, `event_015`).
   **`checkTarget: false`:** 3 (`situation_015`, `situation_018`, `event_016`).
-- **Doubly labelled:** 18 on #66's first pass, three in each category; only `target_001` to
-  `target_003` still name two annotators. Restoring the rest is in *Still to do*.
+- **Doubly labelled:** none in practice. `target_001` to `target_003` name two people, but those
+  are the placeholders in *Still to do*, and no prompt has `labels`.
 - **`turn`:** none yet. They wait for #20 to settle GreyBoxStrategy's moves, and will need a
   second agent definition.
 
 Update this section whenever prompts are added.
 
-## Still to do (#85)
+## Still to do
 
-- `labelledBy` must name the real annotators on every prompt. `target_001` to `target_009`
-  still hold the placeholder names `alice` and `bob`.
-- The 18 doubly labelled prompts need both annotators back in `labelledBy`, and `labels` with
-  each person's own answer, settled as `findings.md` describes. `situation_001` is the first
-  check.
+#85 closed on 2 November 2026. Maxim says he labelled the prompts himself, so there are no two
+people's separate answers to restore, and agreement cannot be computed from this set yet.
+
+- `target_001` to `target_009` still hold the placeholder names `alice` and `bob` in
+  `labelledBy`.
+- Blind second labels, which Phase 4's gate requires, and the next prompts come from the Prompt
+  Set window (#134). Each person's own answer goes in `labels`, and a split is settled as
+  `findings.md` describes. `situation_001` is the first check.

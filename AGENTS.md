@@ -219,7 +219,8 @@ target grounding (#105), its fallback rule (#107), developer guards (#108) and t
 checks have merged. Left: the gate's live 20-prompt run on a 2B, not yet made (#110), and
 contained refusals (#109).
 
-Beside the phases: the evaluation set's real annotators and next prompts (#85), the demo
+Beside the phases: the Prompt Set window, where the evaluation set's next prompts and second
+labels will come from (#134), the demo
 games, one sub-issue each under #47, starting with GreyBoxStrategy (#20), and research areas
 with one owner each (memory, targets, observations, evaluation, guards), listed in build
 plan §6.6.
