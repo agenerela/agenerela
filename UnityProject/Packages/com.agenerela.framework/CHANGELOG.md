@@ -10,6 +10,16 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **Contained refusals** (#109, build plan §2.5). A decision a guard stopped now has an empty
+  statement, where it kept the model's; the model's words stay on `ModelDecision`, and memory holds
+  what was actually said. `Agent.RefusalStatement`, a
+  `Func<GuardVerdict, AgentContext, string>`, gives the developer's line when a guard stops a
+  decision. `DecideOptions.AskForRefusalLine`, off by default, asks the model for one in a second,
+  short request through the same queue at the call's priority, made only when a guard fired and no
+  developer line was given. `DecisionTelemetry` records it apart from the decision:
+  `RefusalLineSeconds`, `RefusalLinePromptTokens`, `RefusalLineCompletionTokens`, and
+  `RefusalLineError` when it fails, which leaves the decision standing. The request's wording is
+  unmeasured. `Documentation~/guards.md` has the rules.
 - **`AgentBehaviour`** (#93): an agent on a GameObject, with no manager object. Drop it on the
   guard and assign a `Profile`. It builds the `Agent` with its own `Provider` or the project
   default, registers the `[AgentAction]` methods of every component on the GameObject, binds the

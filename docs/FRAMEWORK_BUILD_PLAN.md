@@ -936,8 +936,10 @@ A guard rewriting to `none` is a **contained refusal**, not an error — telemet
 which guard fired so the eval harness can distinguish "model right", "model wrong but
 contained", and "model wrong and executed". After a rewrite, the agent's `statement` no
 longer matches what it does: it says "Attacking the dummy!" while nothing happens. So the
-guard's reason travels with the result, and the developer supplies the line, or asks the
-model for one in a second, short request only when a guard fires.
+guard's reason travels with the result, and the developer supplies the line
+(`Agent.RefusalStatement`), or asks the model for one in a second, short request only when a
+guard fires (`DecideOptions.AskForRefusalLine`, its wording unmeasured). With neither, the
+statement is empty: honest, where the model's original is not (#109).
 
 **Still open, for Phase 4.** The threshold comes from 130 prompts that one person wrote for
 three invented scenes, eight of them open choices. Phase 4 calibrates it on the 200+ prompt
