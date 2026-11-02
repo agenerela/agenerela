@@ -69,6 +69,16 @@ prototype's 20 prompts on `qwen3.5:2b` twice in one session, guards on and then
 - Read the results from the `PHASE3-RUN`, `PHASE3`, `PHASE3-ARM` and `PHASE3-WRONG` lines in
   the results file or log. Without Ollama the suite is ignored, not failed.
 
+### Testing a component's destruction: `destroyCancellationToken` needs PlayMode
+
+Found while building `AgentBehaviour` (#93). `DestroyImmediate` in an EditMode test does not
+raise a component's `destroyCancellationToken`, so "destroying the GameObject cancels its
+pending request" cannot be shown there; `AgentBehaviourPlayModeTests` does it in PlayMode, with
+a provider that holds its request. EditMode can only check that the provider was handed the
+token. Unity also raises the token only for a component that has woken: a request asked of a
+component whose GameObject was never active is not cancelled by destroying it. The package
+documents that limit and a test pins it.
+
 ### The Unity CLI (optional)
 
 Unity's own command line, `unity`, is installed on the lead's laptop (1.0.0-beta.8 when
