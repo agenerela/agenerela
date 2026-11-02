@@ -84,7 +84,7 @@ As of #85's second batch, 27 October 2026: 76 prompts. Counted by script, not by
 | Category | Prompts | Doubly labelled |
 |---|---|---|
 | `simple_command` | 9 | 0 |
-| `command_with_target` | 11 | 3 |
+| `command_with_target` | 11 | 0 |
 | `impossible_request` | 9 | 0 |
 | `conversation` | 9 | 0 |
 | `situation` | 19 | 0 |
@@ -99,8 +99,7 @@ As of #85's second batch, 27 October 2026: 76 prompts. Counted by script, not by
   choices below).
 - **Open choices:** 3 (`situation_016`, `situation_018`, `event_015`).
   **`checkTarget: false`:** 3 (`situation_015`, `situation_018`, `event_016`).
-- **Doubly labelled:** none in practice. `target_001` to `target_003` name two people, but those
-  are the placeholders in *Still to do*, and no prompt has `labels`.
+- **Doubly labelled:** none. Every prompt names one annotator, and no prompt has `labels`.
 - **`turn`:** none yet. They wait for #20 to settle GreyBoxStrategy's moves, and will need a
   second agent definition.
 
@@ -111,8 +110,6 @@ Update this section whenever prompts are added.
 #85 closed on 2 November 2026. Maxim says he labelled the prompts himself, so there are no two
 people's separate answers to restore, and agreement cannot be computed from this set yet.
 
-- `target_001` to `target_009` still hold the placeholder names `alice` and `bob` in
-  `labelledBy`.
 - Blind second labels, which Phase 4's gate requires, and the next prompts come from the Prompt
   Set window (#134). Each person's own answer goes in `labels`, and a split is settled as
   `findings.md` describes. `situation_001` is the first check.
