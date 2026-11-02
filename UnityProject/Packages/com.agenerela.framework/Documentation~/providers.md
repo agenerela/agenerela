@@ -231,8 +231,9 @@ var guard = new Agent(profile, ProviderConfig.Resolve().Provider);
 - **One provider per config.** `ProviderConfig.Provider` builds the provider the first time it
   is read and returns that same instance after, so every agent on one config shares one
   provider, and so one queue (#89). `MaxInFlight` (default 1) is that queue's limit.
-- **Resolution** is the agent's own config, then the project default. A destroyed config counts
-  as none. With neither, `Resolve` throws `InvalidOperationException`: "Create one with Create →
+- **Resolution** is the agent's own config, then the project default. `AgentBehaviour`'s
+  **Provider** field is that own config ([agents-in-a-scene.md](agents-in-a-scene.md)). A destroyed
+  config counts as none. With neither, `Resolve` throws `InvalidOperationException`: "Create one with Create →
   Agenerela → Ollama Provider, and set it in Project Settings → Agenerela". DR-013's middle
   level, a scene override, is left out until a demo needs one.
 - **A built player finds the default** with `Resources.Load`, with no scene and no

@@ -10,6 +10,19 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **`AgentBehaviour`** (#93): an agent on a GameObject, with no manager object. Drop it on the
+  guard and assign a `Profile`. It builds the `Agent` with its own `Provider` or the project
+  default, registers the `[AgentAction]` methods of every component on the GameObject, binds the
+  rows of `Handlers`, and finds targets and observations around this transform: `Targets` and
+  `Observations` are a `ProximityTargetSource` and a `ProximityObservationSource`, each with an
+  `Origin` that defaults to this transform and switched by `FindTargetsNearby` and `NoticeNearby`,
+  both on by default. `DecideAsync(stimulus, options)` passes `destroyCancellationToken`, so a
+  destroyed guard's decision ends cancelled and the provider stops its request. The agent is built
+  in `Awake` or by the first read of `Agent`, whichever comes first, and a bad setup throws
+  `InvalidOperationException` saying why. The Inspector warns about a missing profile, an action
+  with no handler, and a row of `Handlers` that cannot be bound, through a public `Validate`.
+- `Documentation~/agents-in-a-scene.md`: setting one up, each field, when it is built, and what
+  destroying the GameObject does.
 - **Developer guards** (#108, build plan §2.5 item 3). `Agent.Guards` is now public: a game's own
   `IDecisionGuard`s, empty by default, run after the built-in ones in list order inside
   `DecideAsync`, and their verdicts show in `GuardsFired`, `Verdict` and `GuardReason` like a
