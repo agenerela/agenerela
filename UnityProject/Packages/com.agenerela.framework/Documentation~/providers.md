@@ -329,7 +329,10 @@ exception message.
 result with no decision and the outcome `PipelineError`, logging the exception's type and
 message as a warning, so a game's decision loop keeps running and the evaluation harness can
 count it. A reply that arrived but cannot be read, empty or not one JSON object, is the same
-outcome. A cancellation propagates only when the caller's own token was cancelled; an
+outcome. Either way the result carries the request sent in `DecisionResult.Request`, and a
+reply that arrived in `DecisionResult.Reply`, so a game can show why it could not be read (#142);
+a request that could not be prepared was never sent, and leaves both null. A cancellation
+propagates only when the caller's own token was cancelled; an
 `OperationCanceledException` the caller did not ask for, such as a transport's own timeout, is
 a failure like any other.
 

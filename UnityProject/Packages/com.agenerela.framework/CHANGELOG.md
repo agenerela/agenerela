@@ -10,6 +10,14 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **`DecisionResult.Request` and `DecisionResult.Reply`** (#142): the `DecisionRequest` a decision
+  sent and the provider's `ProviderResult` for it, so a game can tell its agents' exchanges apart
+  when several share one provider's queue, without wrapping the provider. Both are read-only and
+  set on every result whose request was sent, pipeline errors included: a reply that could not be
+  read, or a guard that threw, keeps the reply. `Reply` is null when the provider failed or
+  returned nothing, and both are null when preparing the request failed. A guard-stopped decision
+  keeps the model's original reply, never the refusal line's. A cancelled call still has no
+  result. The public constructor sets neither.
 - **Contained refusals** (#109, build plan §2.5). A decision a guard stopped now has an empty
   statement, where it kept the model's; the model's words stay on `ModelDecision`, and memory holds
   what was actually said. `Agent.RefusalStatement`, a
