@@ -32,8 +32,9 @@ phase table and the open issues, not here.
   skips the guard for one call, and a provider without token probabilities is recorded as such.
   `Phase3LiveSuiteTests` runs the prototype's 20-prompt suite live on a 2B (`RequiresOllama`),
   guards on against a `CheckTarget = false` control arm in one session; its bar is 19/20 or
-  better with the guards on. **That live run has not been made yet**, so #110 stays open and
-  Phase 3 does not close until it passes and its result is in `findings.md`.
+  better with the guards on. **It passed on 3 November**: 19/20 with the guards on, 18/20 in
+  the control, on `qwen3.5:2b` and Ollama 0.40.14, recorded in `findings.md`. At n = 20 that
+  says the gate passed, not by how much the guard helps.
 
 ### Fixed
 
