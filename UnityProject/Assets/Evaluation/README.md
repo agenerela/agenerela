@@ -10,8 +10,14 @@ What is still to do is in *Still to do*.
 
 | File | Contents |
 |---|---|
-| `agent.json` | The agent every prompt here is measured against: its actions and registered targets |
+| `agent.json` | The set file: the agent every prompt here is measured against, its actions and registered targets, and the categories |
 | `prompts/<category>.json` | One file per category, so two people can label different files without conflicting |
+| `labels/<annotator>/<category>.json` | Each annotator's blind answers, written by the Prompt Set window. None yet |
+
+Open the set in **Window → Agenerela → Prompt Set** (#134): choose `agent.json` as the set. The
+format and the window ship in the package, and
+[`Documentation~/evaluation.md`](../../Packages/com.agenerela.framework/Documentation~/evaluation.md)
+documents both for any game. This page is about our own set.
 
 ## The agent: `agent.json`
 
@@ -28,7 +34,8 @@ with the targets the prompts name.
 | `actions[].onlyWhen` | Optional. The state in which the action is available, in the same shape as a prompt's `preconditionState`. `stop_following` needs `{ "isFollowing": true }` |
 | `targets[].id` | A registered target id, the only values `expectedTarget` may hold besides `no_target` |
 | `targets[].description` | One line saying what the target is. It may reach the prompt, so it describes the world, not the test |
-| `targetRules` | Checks a harness should run on the set before scoring it: every expected target registered, and `none` always paired with `no_target` |
+| `categories[]` | Each category's `id`, its `file`, and `idPrefix`, what its prompt ids start with when that is not the id: `command_with_target`'s are `target_001` |
+| `targetRules` | Checks a harness should run on the set before scoring it: every expected target registered, and `none` always paired with `no_target`. `PromptSetChecks` runs them, and the window shows them |
 
 GreyBoxVillage is built from this list, so any prompt here can be played in the demo. It has
 every target in `agent.json`, and three of its own (`training_dummy`, `armory`, `lords_keep`)
@@ -57,9 +64,12 @@ Fields #13 and #66 define for some prompts only:
 |---|---|
 | `checkTarget` | Optional, `true` when left out. `false` only for a case that tests a decision with the grounding guard off (DR-016) |
 | `expectedTarget` as a list | An open choice, where either target is right: `["bridge", "docks"]` |
-| `labels` | On a doubly labelled prompt, each annotator's own answer from before they agreed: `{ "<annotator>": "move_to/village_gate", ... }`. Agreement is computed from these. No prompt has it yet |
+| `labels` | On a doubly labelled prompt, each annotator's own answer from before they agreed: `{ "<annotator>": "move_to/village_gate", ... }`. Agreement is computed from these. The window writes it when a person settles a split. No prompt has it yet |
 
 ## Rules for writing one
+
+The window checks every rule here but the one about observations, under the prompt as it is
+written. A test checks that our set breaks none of them.
 
 - **Never reuse a prompt as a few-shot example** (hard rule 4). An action's `ExampleStimulus`
   must not match any `stimulus` here.
@@ -111,5 +121,7 @@ Update this section whenever prompts are added.
 people's separate answers to restore, and agreement cannot be computed from this set yet.
 
 - Blind second labels, which Phase 4's gate requires, and the next prompts come from the Prompt
-  Set window (#134). Each person's own answer goes in `labels`, and a split is settled as
-  `findings.md` describes. `situation_001` is the first check.
+  Set window (#134). Label mode writes each person's answers to their own file under `labels/`;
+  until a prompt is settled, its expected answer counts as Maxim's. Agreement mode lists the
+  splits, and a split is settled as `findings.md` describes, which writes both answers into the
+  prompt's `labels`. `situation_001` is the first check.

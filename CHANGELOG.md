@@ -29,6 +29,13 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **The evaluation set opens in the Prompt Set window** (#134). `agent.json` now lists its six
+  categories, each with its file and the prefix its ids use (`command_with_target`'s are
+  `target_001`, ...), so the window and the Phase 4 runner find every prompt. No prompt changed:
+  a test loads and saves all 76 and compares them. Blind second labels go to
+  `Assets/Evaluation/labels/<annotator>/<category>.json`; the README says how.
+- **Screen 8, the Prompt Set window**, in `docs/design/`: the wireframe drawn for #134 before the
+  window was built, with its notes.
 - **The risk management plan** in `docs/course/2026-10-29-risk-management/`: an Excel
   register of 14 risks, two per member, with a risk matrix and a sprint review log, reviewed
   once per sprint. XLSX now goes through Git LFS.

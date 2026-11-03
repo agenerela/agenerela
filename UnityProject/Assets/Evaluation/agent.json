@@ -24,6 +24,14 @@
     { "id": "wolf", "description": "A wolf that came out of the woods" },
     { "id": "locked_cave", "description": "A cave whose entrance is locked" }
   ],
+  "categories": [
+    { "id": "simple_command", "file": "prompts/simple_commands.json", "idPrefix": "simple" },
+    { "id": "command_with_target", "file": "prompts/commands_with_target.json", "idPrefix": "target" },
+    { "id": "impossible_request", "file": "prompts/impossible_requests.json", "idPrefix": "impossible" },
+    { "id": "conversation", "file": "prompts/conversation.json" },
+    { "id": "situation", "file": "prompts/situations.json" },
+    { "id": "event", "file": "prompts/events.json" }
+  ],
   "targetRules": {
     "allExpectedTargetsMustBeRegistered": true,
     "noneActionTarget": "no_target"
