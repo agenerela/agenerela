@@ -20,6 +20,13 @@ phase table and the open issues, not here.
 
 ## [Unreleased]
 
+### Framework
+
+- **Phase 3 (Validation pipeline) closed** on 3 November when its gate (#110) passed: the
+  guard pipeline and `SchemaLegalityGuard` (#106), target grounding (#105), its one-line
+  fallback (#107), developer guards (#108) and contained refusals (#109, via #141), which keep
+  an agent from saying what it will not do. See the package's `[Unreleased]` section.
+
 ### Added
 
 - **The risk management plan** in `docs/course/2026-10-29-risk-management/`: an Excel
