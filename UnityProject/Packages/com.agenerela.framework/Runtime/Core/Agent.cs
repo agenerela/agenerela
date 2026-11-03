@@ -246,6 +246,25 @@ namespace Agenerela
         public List<IDecisionGuard> Guards { get; } = new List<IDecisionGuard>();
 
         /// <summary>
+        /// What the agent says when a guard stops a decision (build plan §2.5): the developer's own
+        /// line, made from the verdict, which names the guard and its reason, and the decision's
+        /// context. Null by default. Runs on the main thread, read each time a guard fires.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Its return value becomes the statement of the <see cref="ActionRegistry.None"/> decision.
+        /// A null return gives no line: the statement stays empty, or the model is asked for one
+        /// when the call set <see cref="DecideOptions.AskForRefusalLine"/>. An empty string is a
+        /// line, saying nothing, so no request follows it.
+        /// </para>
+        /// <para>
+        /// A callback that throws is logged as a warning and treated as a null return. The decision
+        /// still stands.
+        /// </para>
+        /// </remarks>
+        public Func<GuardVerdict, AgentContext, string> RefusalStatement { get; set; }
+
+        /// <summary>
         /// Registers the action <paramref name="actionId"/>, as the profile defines it, with the game
         /// code that runs it, so the developer never fetches the definition from the asset by hand.
         /// An action the profile lists but nobody binds is never offered: nothing could run it.
@@ -346,8 +365,7 @@ namespace Agenerela
         /// <see cref="SchemaLegalityGuard"/>, then the grounding guard (#105), then
         /// <see cref="Guards"/>, the developer's (#108). The first that does not pass stops them,
         /// and the result's <see cref="DecisionResult.Decision"/> becomes <see cref="ActionRegistry.None"/> with
-        /// <see cref="TargetRegistry.NoTarget"/>, keeping the model's statement until #109 decides
-        /// what to say instead. The model's own answer stays on
+        /// <see cref="TargetRegistry.NoTarget"/>. The model's own answer stays on
         /// <see cref="DecisionResult.ModelDecision"/>, the verdict on
         /// <see cref="DecisionResult.Verdict"/>, and the guard's name, the verdict's kind and its
         /// reason in <see cref="DecisionTelemetry.GuardsFired"/>,
@@ -356,11 +374,21 @@ namespace Agenerela
         /// warning; a <see cref="GuardVerdict.RewriteToNone"/>, a contained refusal, is not.
         /// </para>
         /// <para>
+        /// A stopped decision's statement is never the model's (#109). It is
+        /// <see cref="RefusalStatement"/>'s line when that gives one; otherwise, with
+        /// <see cref="DecideOptions.AskForRefusalLine"/>, what the model answers to one more short
+        /// request, sent through the same queue at the call's priority; otherwise empty. That request
+        /// runs no guard and cannot change the action. If it fails, a warning is logged, the kind goes
+        /// in <see cref="DecisionTelemetry.RefusalLineError"/>, and the decision stands with an empty
+        /// statement. Cancelling during it cancels the decision, as at any other point.
+        /// </para>
+        /// <para>
         /// <see cref="Memory"/> is recalled while the request is prepared, into
         /// <see cref="DecisionRequest.History"/>, and so fails as preparing it does, including on a
         /// history that is not whole exchanges. The decision is remembered just before it is
         /// returned, as the guards left it, never as the model answered: whitespace or extra fields
-        /// in the reply are not remembered, and neither is an action a guard stopped. A pipeline
+        /// in the reply are not remembered, and neither is an action a guard stopped, nor its
+        /// statement: the history holds the line actually said, or an empty one. A pipeline
         /// error or a cancelled call remembers nothing; a <see cref="ActionRegistry.None"/>
         /// decision is remembered, because it happened. If remembering throws, the warning is
         /// logged and the decision still returned. Remembering happens on the main thread, even
@@ -512,66 +540,17 @@ namespace Agenerela
                     $"Preparing the request failed. {e.GetType().Name}: {e.Message}");
             }
 
-            ProviderResult reply;
+            var sent = await Send(request, priority, ct);
+            telemetry.QueuedAhead = sent.QueuedAhead;
+            telemetry.QueueWaitSeconds = sent.QueueWaitSeconds;
+            telemetry.LatencySeconds = sent.Seconds;
 
-            // The provider's queue, shared with every agent on this provider instance (DR-015).
-            // Disposing the ticket frees the slot for the next request, whether the provider
-            // answered, failed or was cancelled.
-            var waited = System.Diagnostics.Stopwatch.StartNew();
-            using (var ticket = scheduler.Enqueue(priority, ct))
+            if (sent.Failure != null)
             {
-                telemetry.QueuedAhead = ticket.QueuedAhead;
-
-                // Cancelled while queued, the decision ends here and never reaches the provider.
-                await ticket.Ready;
-
-                // The turn comes on whichever thread freed the slot, such as the worker thread a
-                // provider of the developer's own answered on, and this code resumes there. Every
-                // provider call starts on the main thread, where one built on UnityWebRequest or
-                // LLMUnity has to be called. Free when already there. The cancelled path needs no
-                // hop: Unity brings the caller of an Awaitable started on the main thread back to it.
-                await Awaitable.MainThreadAsync();
-
-                // Its turn came just as the caller cancelled: still never sent.
-                ct.ThrowIfCancellationRequested();
-
-                // Enqueue to send, the wait for the main thread included, and the latency from the
-                // send, so the two cover the whole call between them: LatencySeconds is the
-                // provider's time alone and a long queue shows in QueueWaitSeconds instead.
-                telemetry.QueueWaitSeconds = (float)waited.Elapsed.TotalSeconds;
-                var clock = System.Diagnostics.Stopwatch.StartNew();
-                try
-                {
-                    reply = await provider.RequestAsync(request, ct);
-                }
-                catch (OperationCanceledException) when (ct.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (Exception) when (ct.IsCancellationRequested)
-                {
-                    // A provider that reports the caller's cancellation as some other exception, as an
-                    // aborted web request tends to, still ends the call cancelled rather than counting
-                    // as a pipeline error.
-                    throw new OperationCanceledException(ct);
-                }
-                catch (Exception e)
-                {
-                    telemetry.LatencySeconds = (float)clock.Elapsed.TotalSeconds;
-                    return Failed(telemetry, KindOf(e), $"The provider failed. {e.GetType().Name}: {e.Message}");
-                }
-
-                telemetry.LatencySeconds = (float)clock.Elapsed.TotalSeconds;
+                return Failed(telemetry, KindOf(sent.Failure), $"The provider failed. {sent.Failure.GetType().Name}: {sent.Failure.Message}");
             }
 
-            // Back on the main thread, as for the send: a provider that answered on a worker thread
-            // resumed this code there, and the memory below is no more thread-safe than the rest of
-            // the agent. Free when already there.
-            await Awaitable.MainThreadAsync();
-
-            // Also for a provider that finished without noticing the cancellation.
-            ct.ThrowIfCancellationRequested();
-
+            var reply = sent.Reply;
             if (reply == null)
             {
                 return Failed(telemetry, PipelineErrorKind.ProviderFailed, "The provider returned no result.");
@@ -587,9 +566,14 @@ namespace Agenerela
             }
 
             var result = Guard(new GuardInput(ctx, request, reply, decision, call, telemetry));
+            if (result.Verdict.HasValue)
+            {
+                result = await SayWhatWasStopped(result, ctx, request, call, ct);
+            }
 
-            // After the guards, so what is remembered is what the agent will do (§2.9, rule 1). A
-            // guard that failed left no decision, and a pipeline error remembers nothing.
+            // After the guards and the line, so what is remembered is what the agent will do and
+            // say (§2.9, rule 1). A guard that failed left no decision, and a pipeline error
+            // remembers nothing.
             if (memory != null && result.Decision != null)
             {
                 try
@@ -636,9 +620,164 @@ namespace Agenerela
                 Debug.LogWarning($"{Who()} will do nothing: {verdict.Guard} rejected '{decision.ActionId}' on '{decision.TargetId}': {verdict.Reason}");
             }
 
-            // The statement is the model's until #109 decides what an agent says after a refusal.
-            var none = new AgentDecision(ActionRegistry.None, TargetRegistry.NoTarget, decision.Statement);
+            // Empty, never the model's: it no longer matches what the agent does (#109).
+            var none = new AgentDecision(ActionRegistry.None, TargetRegistry.NoTarget, "");
             return new DecisionResult(none, input.Telemetry, decision, verdict);
+        }
+
+        // The stopped decision with what the agent says about it: the developer's line, else the
+        // model's when the call asked for one, else as it came, empty.
+        private async Awaitable<DecisionResult> SayWhatWasStopped(
+            DecisionResult stopped, AgentContext ctx, DecisionRequest request, DecideOptions call, CancellationToken ct)
+        {
+            var verdict = stopped.Verdict.Value;
+
+            string line = DevelopersLine(verdict, ctx);
+            if (line == null && call.AskForRefusalLine)
+            {
+                line = await ModelsLine(verdict, ctx, request, call.Priority, stopped.Telemetry, ct);
+            }
+
+            if (line == null)
+            {
+                return stopped;
+            }
+
+            var none = new AgentDecision(ActionRegistry.None, TargetRegistry.NoTarget, line);
+            return new DecisionResult(none, stopped.Telemetry, stopped.ModelDecision, verdict);
+        }
+
+        // RefusalStatement's answer, or null. One that throws is the developer's code failing, but
+        // the decision has already been made, so it costs only the line.
+        private string DevelopersLine(GuardVerdict verdict, AgentContext ctx)
+        {
+            var refusalStatement = RefusalStatement;
+            if (refusalStatement == null)
+            {
+                return null;
+            }
+
+            try
+            {
+                return refusalStatement(verdict, ctx);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"{Who()} has no line for what {verdict.Guard} stopped: RefusalStatement failed. {e.GetType().Name}: {e.Message}");
+                return null;
+            }
+        }
+
+        // The second request (#109), or null when it gives no line. Its numbers go in fields of
+        // their own, so the decision's still mean the decision alone.
+        private async Awaitable<string> ModelsLine(
+            GuardVerdict verdict, AgentContext ctx, DecisionRequest decided, DecisionPriority priority,
+            DecisionTelemetry telemetry, CancellationToken ct)
+        {
+            var sent = await Send(PromptBuilder.BuildRefusalLine(decided, ctx, verdict), priority, ct);
+            telemetry.RefusalLineSeconds = sent.Seconds;
+
+            if (sent.Failure != null)
+            {
+                return NoLine(telemetry, KindOf(sent.Failure), $"The provider failed. {sent.Failure.GetType().Name}: {sent.Failure.Message}");
+            }
+
+            var reply = sent.Reply;
+            if (reply == null)
+            {
+                return NoLine(telemetry, PipelineErrorKind.ProviderFailed, "The provider returned no result.");
+            }
+
+            telemetry.RefusalLinePromptTokens = reply.PromptTokens;
+            telemetry.RefusalLineCompletionTokens = reply.CompletionTokens;
+
+            if (!DecisionParser.TryParseStatement(reply.Text, out string line, out string problem))
+            {
+                return NoLine(telemetry, PipelineErrorKind.UnreadableReply, $"{problem} The reply was: {Excerpt(reply.Text)}");
+            }
+
+            return line;
+        }
+
+        private string NoLine(DecisionTelemetry telemetry, PipelineErrorKind kind, string reason)
+        {
+            telemetry.RefusalLineError = kind;
+            Debug.LogWarning($"{Who()} still decided, but has no refusal line. {reason}");
+            return null;
+        }
+
+        // One request through the provider's queue, shared with every agent on this provider
+        // instance (DR-015), ending back on the main thread. A provider's failure is returned for
+        // the caller to judge; only cancellation throws. Disposing the ticket frees the slot for the
+        // next request, whether the provider answered, failed or was cancelled.
+        private async Awaitable<SentRequest> Send(DecisionRequest request, DecisionPriority priority, CancellationToken ct)
+        {
+            var sent = new SentRequest();
+
+            var waited = System.Diagnostics.Stopwatch.StartNew();
+            using (var ticket = scheduler.Enqueue(priority, ct))
+            {
+                sent.QueuedAhead = ticket.QueuedAhead;
+
+                // Cancelled while queued, the decision ends here and never reaches the provider.
+                await ticket.Ready;
+
+                // The turn comes on whichever thread freed the slot, such as the worker thread a
+                // provider of the developer's own answered on, and this code resumes there. Every
+                // provider call starts on the main thread, where one built on UnityWebRequest or
+                // LLMUnity has to be called. Free when already there. The cancelled path needs no
+                // hop: Unity brings the caller of an Awaitable started on the main thread back to it.
+                await Awaitable.MainThreadAsync();
+
+                // Its turn came just as the caller cancelled: still never sent.
+                ct.ThrowIfCancellationRequested();
+
+                // Enqueue to send, the wait for the main thread included, and the latency from the
+                // send, so the two cover the whole call between them: Seconds is the provider's time
+                // alone and a long queue shows in QueueWaitSeconds instead.
+                sent.QueueWaitSeconds = (float)waited.Elapsed.TotalSeconds;
+                var clock = System.Diagnostics.Stopwatch.StartNew();
+                try
+                {
+                    sent.Reply = await provider.RequestAsync(request, ct);
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception) when (ct.IsCancellationRequested)
+                {
+                    // A provider that reports the caller's cancellation as some other exception, as an
+                    // aborted web request tends to, still ends the call cancelled rather than counting
+                    // as a failure.
+                    throw new OperationCanceledException(ct);
+                }
+                catch (Exception e)
+                {
+                    sent.Failure = e;
+                }
+
+                sent.Seconds = (float)clock.Elapsed.TotalSeconds;
+            }
+
+            // Back on the main thread, as for the send: a provider that answered on a worker thread
+            // resumed this code there, and the guards and the memory after it are no more
+            // thread-safe than the rest of the agent. Free when already there.
+            await Awaitable.MainThreadAsync();
+
+            // Also for a provider that finished without noticing the cancellation.
+            ct.ThrowIfCancellationRequested();
+
+            return sent;
+        }
+
+        private sealed class SentRequest
+        {
+            public int QueuedAhead;
+            public float QueueWaitSeconds;
+            public float Seconds;
+            public ProviderResult Reply;
+            public Exception Failure;
         }
 
         // Each guard in the order they run, telling running how to name it just before it does, so

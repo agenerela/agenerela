@@ -46,39 +46,8 @@ namespace Agenerela
         {
             decision = null;
 
-            if (string.IsNullOrWhiteSpace(reply))
+            if (!TryReadObject(reply, out var answer, out problem))
             {
-                problem = "The reply was empty.";
-                return false;
-            }
-
-            JObject answer;
-            try
-            {
-                // DateParseHandling.None, or a statement such as "2026-10-10" would come back as a
-                // DateTime and be rewritten when read as a string.
-                using (var reader = new JsonTextReader(new StringReader(reply)) { DateParseHandling = DateParseHandling.None })
-                {
-                    var root = JToken.ReadFrom(reader, Settings);
-
-                    // Anything after the object is a second answer, or chatter around the first.
-                    if (reader.Read())
-                    {
-                        problem = "The reply has more after its JSON object.";
-                        return false;
-                    }
-
-                    answer = root as JObject;
-                    if (answer == null)
-                    {
-                        problem = $"The reply is JSON, but {root.Type} rather than an object.";
-                        return false;
-                    }
-                }
-            }
-            catch (JsonException e)
-            {
-                problem = "The reply is not one JSON object. " + e.Message;
                 return false;
             }
 
@@ -112,6 +81,83 @@ namespace Agenerela
             }
 
             decision = new AgentDecision(action, target, statement);
+            problem = null;
+            return true;
+        }
+
+        /// <summary>
+        /// Reads the reply to a refusal line's request (#109), by the same rules as
+        /// <see cref="TryParse"/>. Unlike a decision's, <c>statement</c> is all this reply is for,
+        /// so missing or null it is a problem. An empty one is an answer. Any other field is ignored.
+        /// </summary>
+        /// <param name="problem">Why the reply was rejected, or null.</param>
+        public static bool TryParseStatement(string reply, out string statement, out string problem)
+        {
+            statement = null;
+
+            if (!TryReadObject(reply, out var answer, out problem))
+            {
+                return false;
+            }
+
+            var token = answer[DecisionSchema.StatementFieldName];
+            if (token == null || token.Type == JTokenType.Null)
+            {
+                problem = $"The reply has no '{DecisionSchema.StatementFieldName}'.";
+                return false;
+            }
+
+            if (token.Type != JTokenType.String)
+            {
+                problem = $"'{DecisionSchema.StatementFieldName}' is not a string.";
+                return false;
+            }
+
+            statement = (string)token;
+            problem = null;
+            return true;
+        }
+
+        // The reply as one JSON object, with nothing but whitespace around it.
+        private static bool TryReadObject(string reply, out JObject answer, out string problem)
+        {
+            answer = null;
+
+            if (string.IsNullOrWhiteSpace(reply))
+            {
+                problem = "The reply was empty.";
+                return false;
+            }
+
+            try
+            {
+                // DateParseHandling.None, or a statement such as "2026-10-10" would come back as a
+                // DateTime and be rewritten when read as a string.
+                using (var reader = new JsonTextReader(new StringReader(reply)) { DateParseHandling = DateParseHandling.None })
+                {
+                    var root = JToken.ReadFrom(reader, Settings);
+
+                    // Anything after the object is a second answer, or chatter around the first.
+                    if (reader.Read())
+                    {
+                        problem = "The reply has more after its JSON object.";
+                        return false;
+                    }
+
+                    answer = root as JObject;
+                    if (answer == null)
+                    {
+                        problem = $"The reply is JSON, but {root.Type} rather than an object.";
+                        return false;
+                    }
+                }
+            }
+            catch (JsonException e)
+            {
+                problem = "The reply is not one JSON object. " + e.Message;
+                return false;
+            }
+
             problem = null;
             return true;
         }

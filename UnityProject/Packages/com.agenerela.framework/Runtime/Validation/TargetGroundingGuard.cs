@@ -69,7 +69,7 @@ namespace Agenerela
                 return GuardVerdict.Pass;
             }
 
-            return GuardVerdict.RewriteToNone(Reason(reading));
+            return GuardVerdict.RewriteToNone(Reason(reading), NotHere);
         }
 
         // The target enum the model was offered, or null when the schema had no target field.
@@ -97,6 +97,10 @@ namespace Agenerela
             return input.Context.Actions.TryGet(input.Decision.ActionId, out var definition, out _)
                 && definition.RequiresTarget;
         }
+
+        // What a refusal line's request says instead of Reason, whose probabilities are for a
+        // developer reading telemetry (#109). Unmeasured, and it changes only what is said.
+        private const string NotHere = "nothing like that is here.";
 
         private string Reason(GroundingReading reading)
         {

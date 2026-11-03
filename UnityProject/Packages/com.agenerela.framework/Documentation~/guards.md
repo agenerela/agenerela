@@ -9,8 +9,9 @@ ten seconds ago.
 agent.Guards.Add(new DelegateGuard("bell_cooldown", input => …));
 ```
 
-This note says what the built-in guards check, what a guard can answer, when to write one at
-all, and gives two worked examples. Both examples run as tests in
+This note says what the built-in guards check, what a guard can answer, what the agent says
+after one stops it, when to write one at all, and gives two worked examples. Both examples run
+as tests in
 `Tests/Editor/Validation/DeveloperGuardTests.cs`, so the code here cannot quietly stop working.
 
 ## The order guards run in
@@ -58,8 +59,57 @@ Either way, the result keeps the model's own answer in `DecisionResult.ModelDeci
 verdict in `DecisionResult.Verdict`. The telemetry records the guard's name in `GuardsFired`,
 the verdict's kind in `Verdict` and its reason in `GuardReason`, for a game's guard exactly as
 for a built-in one. Write the reason for a developer reading telemetry: what was wrong, not
-what the player should hear. Until #109, the agent's statement is still the model's, so an
-agent may say "To arms!" while doing nothing.
+what the player should hear. The one exception is below: a call that asks the model for a line
+shows it your reason.
+
+## What the agent says when a guard stops it
+
+The model's statement goes with the action it was written for. An agent must not say "To arms!"
+while doing nothing, so `DecisionResult.Decision.Statement` is **empty** after a rewrite or a
+reject, and the model's words stay on `DecisionResult.ModelDecision`. Two things can supply a line
+instead, and the first that gives one wins.
+
+**Your own line.** `Agent.RefusalStatement` is a `Func<GuardVerdict, AgentContext, string>`, null
+by default. The verdict names the guard and its reason, so a game can answer each differently:
+
+```csharp
+agent.RefusalStatement = (verdict, ctx) =>
+    verdict.Guard == "TargetGroundingGuard" ? "There's no such thing here."
+    : verdict.Guard == "bell_cooldown" ? "I just rang it."
+    : null;
+```
+
+A null return gives no line. An empty string is a line that says nothing, so no request follows
+it. A callback that throws is logged as a warning and counts as a null return; the decision still
+stands.
+
+**The model's line.** `DecideOptions.AskForRefusalLine`, off by default, sends one more short
+request when a guard fired and your callback gave no line. It is per call, because only the caller
+knows whether anyone is listening. A decision that passed never costs a second request.
+
+- It carries the same system prompt as the decision, one user turn saying what was asked and why
+  it will not be done, and a schema with only `statement`. No examples, observations or history.
+- It goes through the same queue at the call's `Priority`, so it waits behind whatever is ahead
+  of it. Agents on a busy provider wait for the line as well as the decision.
+- The model reads the guard's reason, so a game's guard used with this option needs a reason that
+  makes sense to the model. The grounding guard's reason holds probabilities, so the model reads
+  "nothing like that is here." instead, and telemetry keeps the numbers.
+- Its time and tokens are recorded in `RefusalLineSeconds`, `RefusalLinePromptTokens` and
+  `RefusalLineCompletionTokens`, never added to the decision's own: `LatencySeconds` is still the
+  decision alone. Its wait in the queue is not recorded.
+- If it fails, through a provider error or a reply with no readable `statement`, a warning is
+  logged, the kind goes in `RefusalLineError`, and the decision stands with an empty statement. It
+  is never a pipeline error. Cancelling the call during it cancels the decision.
+- No guard judges the line, and it cannot change the action: an action in the reply is ignored.
+
+The wording of this request is new and unmeasured. It affects only what is said after a refusal,
+never which action runs.
+
+**Memory** holds what happened: `none`, with the line actually said or an empty statement. It
+never holds the model's original words.
+
+`Execute`'s own re-check is different: it refuses a decision that passed, at the moment of acting,
+and never rewrites it, so that decision keeps its statement.
 
 ## A guard, or availability?
 
