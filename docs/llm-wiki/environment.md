@@ -156,10 +156,12 @@ never `localhost`: on Windows `localhost` tries IPv6 first, Ollama listens on IP
 each request waited about 2 s (findings, 5 October 2026). Check a server with
 `curl http://127.0.0.1:11434/api/version`.
 
-**Versions seen.** Ollama 0.34.2 on the lead's laptop (the 5 and 10 October findings, and
-the live check of `OllamaProvider`) and 0.33.0 on the RTX 5080 desktop (the Phase 2 gate).
-The token-probability behaviour, the 404 bodies and the schema probe were all checked on
-0.34.2 only. After an upgrade, re-run
+**Versions seen.** The lead's laptop now runs Ollama **0.40.14**; it ran 0.34.2 until the
+Phase 3 gate's live run (the 5 and 10 October findings, the live check of `OllamaProvider` and
+the 27 October grounding check were all on 0.34.2). The RTX 5080 desktop ran 0.33.0 for the
+Phase 2 gate. On 0.40.14 the schema still never reaches the model and the probabilities are
+still from before the mask, but a forced target now comes back in small pieces (findings, the
+Phase 3 gate's entry). The 404 bodies were checked on 0.34.2 only. After an upgrade, re-run
 `python tools/benchmarks/schema_visibility_probe.py` (seconds); it settles whether the
 response schema has started reaching the model, which would change what a local model reads.
 
@@ -250,7 +252,7 @@ Two machines, and numbers from one do not transfer to the other.
 
 | Machine | Used for |
 |---|---|
-| RTX 4060 Laptop, **8 GB VRAM**, Windows 11 | Appendix A's prototype figures, the 5 and 10 October probes (Ollama 0.34.2), the live check of `OllamaProvider` (19 October) |
+| RTX 4060 Laptop, **8 GB VRAM**, Windows 11 | Appendix A's prototype figures, the 5 and 10 October probes (Ollama 0.34.2), the live check of `OllamaProvider` (19 October), the Phase 3 gate's live run (Ollama 0.40.14) |
 | Desktop with an **RTX 5080, 16 GB**, driver 617.14, Windows 11 | The Phase 2 gate's latency (25 October, Ollama 0.33.0), the asset server (`tools/comfyui/`) |
 
 Absolute latency and VRAM figures are specific to the machine that took them. On different
