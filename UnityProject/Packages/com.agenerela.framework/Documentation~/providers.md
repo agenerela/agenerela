@@ -43,7 +43,9 @@ Two rules sit above every implementation:
   block would be invisible in the numbers. The one part that arrives unserialised is
   `DecisionRequest.Schema`, the provider-neutral `DecisionSchema` (#8): the provider runs the
   serializer for its `Dialect` over it, and treats it as required, since a request without a
-  schema is not a decision request.
+  schema is not a decision request. Not every schema has an `action`: the request for a refusal
+  line (#109, [guards.md](guards.md)) has only `statement`, and its `Stimulus` carries no label.
+  A provider sends it like any other.
 
 ## The three backends
 
@@ -231,8 +233,9 @@ var guard = new Agent(profile, ProviderConfig.Resolve().Provider);
 - **One provider per config.** `ProviderConfig.Provider` builds the provider the first time it
   is read and returns that same instance after, so every agent on one config shares one
   provider, and so one queue (#89). `MaxInFlight` (default 1) is that queue's limit.
-- **Resolution** is the agent's own config, then the project default. A destroyed config counts
-  as none. With neither, `Resolve` throws `InvalidOperationException`: "Create one with Create →
+- **Resolution** is the agent's own config, then the project default. `AgentBehaviour`'s
+  **Provider** field is that own config ([agents-in-a-scene.md](agents-in-a-scene.md)). A destroyed
+  config counts as none. With neither, `Resolve` throws `InvalidOperationException`: "Create one with Create →
   Agenerela → Ollama Provider, and set it in Project Settings → Agenerela". DR-013's middle
   level, a scene override, is left out until a demo needs one.
 - **A built player finds the default** with `Resources.Load`, with no scene and no

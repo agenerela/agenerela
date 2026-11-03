@@ -643,3 +643,82 @@ the probabilities moved after the mask, and the guard would pass everything. Rep
 after an Ollama upgrade, as for `schema_visibility_probe.py`. Whether the guard turns away
 more good requests when the prompt lists no targets (#105, "Known gap") is #110's live run and
 Phase 4's to measure, not this one's.
+
+### The Phase 3 gate passed live: 19/20 with the guards on, 18/20 without (3 November 2026)
+
+#110's live check: the prototype's 20-prompt suite (`tools/benchmarks/compare_2b_4b.py`, prompts
+word for word), run through the framework's own pipeline by `Phase3LiveSuiteTests` in PlayMode.
+Each prompt was decided twice in a row, first with the guards on and then with
+`CheckTarget = false` as the control, on one warm model in one session. Greedy decoding, no
+memory, so no prompt saw another. The gate's bar is 19/20 or better with the guards on.
+
+**Result: the gate passed.**
+
+| Group | Guards on | Control (`CheckTarget = false`) |
+|---|---|---|
+| 1. Simple commands | 5/5 | 5/5 |
+| 2. Commands with a target | 5/5 | 5/5 |
+| 3. Impossible requests | **6/6** | 5/6 |
+| 4. Chat | 3/4 | 3/4 |
+| **Total** | **19/20** | **18/20** |
+| Wrong actions carried out | 1 | 2 |
+| Good requests refused | 0 | 0 |
+| Grounding guard rewrites | 1 | — |
+
+- **"Pick up Excalibur."** The model answered `pick_up_item / sword` in both arms. With the
+  guards on, the reading was 0.717, below 0.8, so the decision was rewritten to `none`. In the
+  control it picked up the sword. This was the only rewrite.
+- **"That's an interesting sword you have."** Picked up the sword in both arms, at a reading of
+  0.999. This is Appendix A's residual, a wrong action on the right target, which no target
+  check can catch.
+- No good request was refused. The lowest reading on a command the model got right was 0.77,
+  on "Stay close." (`follow_player`). The guard acts only on actions that need a target, so it
+  passed.
+- The other five impossible requests the model answered with `none` by itself in both arms,
+  with readings between 0.82 and 0.99 on `no_target`.
+
+**At n = 20 this says the gate passed, not how much the guard helps** (hard rule 2). The arms
+differ by one prompt, well inside the noise floor. That measurement is Phase 4's, at 200+
+prompts.
+
+**Excalibur differs from DR-016's probe.** There the 2B took Excalibur for the sword with
+confidence, and §2.5 lists it as a near miss that passes. Here it read 0.717 and was caught.
+The prompt differs (Marcus, five targets given as observations, new examples), and so does the
+Ollama version. It is one reading, not a change to that limit.
+
+**How the targets reached the prompt.** `PromptBuilder` lists no targets, and Ollama never
+shows the schema. So each decision carried them as observations, one line per target with its
+id and a short description (`bridge: the stone bridge over the river.`), the way GreyBoxVillage
+does. It also carried one line saying whether the guard is following the player, which the
+prototype put in its system prompt. DR-016's numbers came from a prompt that listed every
+target as well, so the two are not directly comparable.
+
+**The agent.** "Marcus, a village guard", with the prototype's five targets as ids (`bridge`,
+`tower`, `blacksmith`, `training_dummy`, `sword`), its five actions plus `none`, and
+`already_following` set for each prompt. The few-shot examples are new. The prototype's own
+share the frame "<verb> the <target>." with the suite, which hard rule 4 forbids. A test checks
+the rendered block against all 20 prompts, and the examples are written down in the test file.
+
+**Checks after the Ollama upgrade (0.34.2 → 0.40.14), made first:**
+
+- `schema_visibility_probe.py`: `prompt_eval_count` was 37 in all four arms. **The schema still
+  never reaches the model.**
+- One "Attack the scarecrow." request with `format`, `logprobs` and `top_logprobs`. The
+  alternatives at the target's first token were `sc` -0.13, `Sc` -2.52 and `The` -4.54. The
+  schema forced `t` at -11.6. **The probabilities are still from before the mask.** One change:
+  the forced target now comes back in small pieces (`t`, `rain`, `ing`, `_d`, `u`, `mm`, `y`),
+  where 0.34.2 gave "training" as one token (27 October). The guard reads every token, and the
+  suite's readings on right targets (0.997–0.999) show it still reads them correctly.
+
+**Conditions.**
+- `test` at 727558c, Unity 6000.3.23f1, PlayMode in batch mode.
+- `qwen3.5:2b` (Q8_0) on Ollama 0.40.14, at `http://127.0.0.1:11434`.
+- RTX 4060 Laptop 8 GB on AC power, `qwen3.5:2b` the only model loaded (the test's `/api/ps`
+  check).
+- Warmed up before the first scored prompt.
+- Another session's Unity batch tests were running on the CPU at the same time. Per-decision
+  latency was 0.75–1.09 s. That is not a latency measurement.
+
+**What would change this.** A guards-on run below 19/20 on the same suite and model. Or a
+later Ollama whose probabilities are from after the mask: the scarecrow check would then read
+near 1, and the guard would pass everything.

@@ -8,6 +8,42 @@ While the version stays `0.x`, the public API may change in any release.
 
 ## [Unreleased]
 
+### Added
+
+- **Contained refusals** (#109, build plan §2.5). A decision a guard stopped now has an empty
+  statement, where it kept the model's; the model's words stay on `ModelDecision`, and memory holds
+  what was actually said. `Agent.RefusalStatement`, a
+  `Func<GuardVerdict, AgentContext, string>`, gives the developer's line when a guard stops a
+  decision. `DecideOptions.AskForRefusalLine`, off by default, asks the model for one in a second,
+  short request through the same queue at the call's priority, made only when a guard fired and no
+  developer line was given. `DecisionTelemetry` records it apart from the decision:
+  `RefusalLineSeconds`, `RefusalLinePromptTokens`, `RefusalLineCompletionTokens`, and
+  `RefusalLineError` when it fails, which leaves the decision standing. The request's wording is
+  unmeasured. `Documentation~/guards.md` has the rules.
+- **`AgentBehaviour`** (#93): an agent on a GameObject, with no manager object. Drop it on the
+  guard and assign a `Profile`. It builds the `Agent` with its own `Provider` or the project
+  default, registers the `[AgentAction]` methods of every component on the GameObject, binds the
+  rows of `Handlers`, and finds targets and observations around this transform: `Targets` and
+  `Observations` are a `ProximityTargetSource` and a `ProximityObservationSource`, each with an
+  `Origin` that defaults to this transform and switched by `FindTargetsNearby` and `NoticeNearby`,
+  both on by default. `DecideAsync(stimulus, options)` passes `destroyCancellationToken`, so a
+  destroyed guard's decision ends cancelled and the provider stops its request. The agent is built
+  in `Awake` or by the first read of `Agent`, whichever comes first, and a bad setup throws
+  `InvalidOperationException` saying why. The Inspector warns about a missing profile, an action
+  with no handler, and a row of `Handlers` that cannot be bound, through a public `Validate`.
+- `Documentation~/agents-in-a-scene.md`: setting one up, each field, when it is built, and what
+  destroying the GameObject does.
+- **Developer guards** (#108, build plan §2.5 item 3). `Agent.Guards` is now public: a game's own
+  `IDecisionGuard`s, empty by default, run after the built-in ones in list order inside
+  `DecideAsync`, and their verdicts show in `GuardsFired`, `Verdict` and `GuardReason` like a
+  built-in's. `Execute` does not run them again. `DelegateGuard` makes one from a name and a
+  `Func<GuardInput, GuardVerdict>`.
+- `PipelineErrorKind.GuardFailed`, at the end of the enum: a guard that throws, or a null entry in
+  `Agent.Guards`, makes the decision a pipeline error naming the guard, rather than a refusal.
+- `Documentation~/guards.md`: what each built-in guard checks, the three verdicts, a guard
+  compared with availability, and two worked examples, a per-threat cooldown and the name check
+  DR-016 dropped, both run as tests.
+
 ## [0.4.0-preview.1] - 2026-10-29
 
 ### Added

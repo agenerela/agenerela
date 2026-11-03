@@ -514,7 +514,21 @@ public sealed class Agent {
 
 // Thin MonoBehaviour adapter for scene objects, in Runtime/Unity/ (§1.2). A faction
 // manager or colony sim can own Agent instances directly with no GameObject involved.
-public class AgentBehaviour : MonoBehaviour { public Agent Agent { get; } ... }
+// Documentation~/agents-in-a-scene.md has the whole of it (#93).
+public sealed class AgentBehaviour : MonoBehaviour
+{
+    public AgentProfile Profile;                 // required
+    public ProviderConfig Provider;              // empty: the project default (DR-013)
+    public bool FindTargetsNearby = true;        // Targets, around this transform (DR-014)
+    public ProximityTargetSource Targets;
+    public bool NoticeNearby = true;             // Observations, around this transform (§2.8)
+    public ProximityObservationSource Observations;
+    public List<ActionHandlerBinding> Handlers;  // for asset actions no method here runs
+
+    public Agent Agent { get; }                  // built in Awake, or by the first read
+    public Awaitable<DecisionResult> DecideAsync(string stimulus, DecideOptions options = null);
+                                                 // cancelled when the GameObject is destroyed
+}
 ```
 
 `AgentDecision` is the bare answer, `{ actionId, targetId, statement }`. `DecideAsync`
@@ -922,8 +936,10 @@ A guard rewriting to `none` is a **contained refusal**, not an error — telemet
 which guard fired so the eval harness can distinguish "model right", "model wrong but
 contained", and "model wrong and executed". After a rewrite, the agent's `statement` no
 longer matches what it does: it says "Attacking the dummy!" while nothing happens. So the
-guard's reason travels with the result, and the developer supplies the line, or asks the
-model for one in a second, short request only when a guard fires.
+guard's reason travels with the result, and the developer supplies the line
+(`Agent.RefusalStatement`), or asks the model for one in a second, short request only when a
+guard fires (`DecideOptions.AskForRefusalLine`, its wording unmeasured). With neither, the
+statement is empty: honest, where the model's original is not (#109).
 
 **Still open, for Phase 4.** The threshold comes from 130 prompts that one person wrote for
 three invented scenes, eight of them open choices. Phase 4 calibrates it on the 200+ prompt
@@ -1116,7 +1132,7 @@ strategy interface is where that would go. Wait until a demo needs it.
 | **0. Skeleton** | Repo + package layout of §1 | Checklist §1.3 all green |
 | **1. Core + Actions + Schema** (pure C#, no LLM, no scene) | `Agent`, `ActionDefinition`, registries, `DecisionSchema` builder + Ollama-dialect serializer | EditMode tests prove: state masking (following agent's schema omits `follow_player`); `target` required w/ `no_target`; field order action→target→statement; few-shot block matches registered actions and rotates only sensible example targets; empty target-registry removes `target` property entirely. **All testable without any model running — this is why Phase 1 has no LLM.** |
 | **2. OllamaProvider + queue + memory** | End-to-end decision in a sandbox scene, with short-term memory (§2.9) | PlayMode test (tagged `RequiresOllama`): one agent, five actions, live decision round-trip < 5s; telemetry fields populated; provider failure (missing model) surfaces as a typed error, not an exception leak. EditMode tests for `RollingHistory`: it fills `DecisionRequest.History` oldest first within a token cap, records the decision `DecideAsync` returns rather than the provider's raw answer (so a Phase 3 guard's rewrite is what gets remembered), and keeps one memory per agent instance. **Passed 25 October 2026** (#94, via #111): a warm decision took 0.23 to 0.56 s on `qwen3.5:2b`, an RTX 5080 (findings, 25 October) |
-| **3. Validation pipeline** | Guards of §2.5 wired between provider and handler | EditMode tests with hand-built fake decisions: substitution attack rewritten to `none`; unavailable action rejected; an action that needs a target, answered with `no_target`, rejected; guard verdicts appear in telemetry. With `CheckTarget` on (the default), a decision where less than the threshold of the model's probability stayed on the target list is rewritten to `none`, and one split between two listed targets passes; with it off for a call, the guard does not run on that call; a provider that reports no probabilities is recorded as such rather than passing silently. Integration: prototype's "impossible request" suite passes ≥ 95% on a 2B model |
+| **3. Validation pipeline** | Guards of §2.5 wired between provider and handler | EditMode tests with hand-built fake decisions: substitution attack rewritten to `none`; unavailable action rejected; an action that needs a target, answered with `no_target`, rejected; guard verdicts appear in telemetry. With `CheckTarget` on (the default), a decision where less than the threshold of the model's probability stayed on the target list is rewritten to `none`, and one split between two listed targets passes; with it off for a call, the guard does not run on that call; a provider that reports no probabilities is recorded as such rather than passing silently. Integration: prototype's "impossible request" suite passes ≥ 95% on a 2B model. **Passed 3 November 2026** (#110, via #137): the suite's 20 prompts scored 19/20 on `qwen3.5:2b` with the guards on and 18/20 with the target check off, in one session on an RTX 4060 Laptop and Ollama 0.40.14; its six impossible requests scored 6/6 against 5/6 (findings, 3 November) |
 | **4. Evaluation harness** | The measurement instrument — **before more features**, and the Prompt Set window that writes and labels its prompts (§2.7, DR-017) | 200+ labelled prompts (grow from the prototype's 53), each declaring its required precondition state, and covering game-triggered stimuli (events, reports, turns) as well as player commands rather than mostly commands; runner executes A/B (two configs, same model/session) and writes a classified report (correct / wrong-legal / contained / rejected / pipeline-error); second annotator labels a subset blind in the Prompt Set window, agreement reported. Methodology checklist (§4) committed to the wiki |
 | **5. Editor tooling** | §2.7 | A developer with zero framework knowledge builds a working 3-action agent in an empty scene in < 15 min without editing framework source (actually run this test on a teammate) |
 | **6. Cloud API providers** | Proof the abstraction is real, and the path to supporting any vendor | At least one cloud provider (Gemini first — it is what the prototype measured) runs the same eval subset through `ILLMProvider` with **zero framework-code changes**: a provider class plus config, nothing more. A **provider conformance test suite** exists that any future vendor must pass, so adding OpenAI or Anthropic later is implementing an interface rather than editing the framework. Budget caps and RPM throttling enforced in code, not convention |
@@ -1348,11 +1364,12 @@ gets its own issue or pull request, linked back to it.
 | Targets | Maxim Goloubitsky (@MaximGolubitsky) | `ITargetSource` (DR-014) | #120 |
 | Evaluation | Timothy Brustinov (@TimBrustinov) | The prompt set, `tools/benchmarks/` and model comparisons (§4) | #121 |
 | Observations | Hunter Hudson (@Hunaveli) | `IObservationSource` (§2.8, #91) | #122 |
+| Guards | Tigran Kolsuzyan (@JaySlifer) | `IDecisionGuard`, the developer's own guards (§2.5, #108) | #138 |
 
 Before the research areas, each person owned one requirements feature (the SRS of 10
 September) and built framework pieces through Phases 1 and 2. That work stays theirs. They
 have since moved on to the areas above, and the framework core (the interfaces, `Agent`, the
-schema, the prompt, the guards and the providers) is maintained by the lead.
+schema, the prompt, the built-in guards and the providers) is maintained by the lead.
 
 | Person | Requirements feature (SRS) | Built in Phases 1 and 2 |
 |---|---|---|

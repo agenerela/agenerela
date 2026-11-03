@@ -30,6 +30,10 @@ namespace Agenerela{
         public float? TargetGrounding; // The lowest share of the model's probability at the target that stayed on the target list, from TargetGroundingGuard; null unless TargetGroundingStatus is Scored (#105)
         public GroundingStatus? TargetGroundingStatus; // Whether that share was read, or why not, Off included; null when the decision never reached the guard (#105)
         public bool TargetRuleSent; // Whether the system prompt carried the target rule, the fallback sent when CheckTarget is on and the provider reports no token probabilities; false for a decision made under the guard (#107)
+        public float RefusalLineSeconds; // Measured around the provider's request for a refusal line, from the send, as LatencySeconds is; 0 when none was sent. Never part of LatencySeconds, and its wait in the queue is not recorded (#109)
+        public int RefusalLinePromptTokens; // That request's tokens, as the provider reported them. Never added to PromptTokens or CompletionTokens (#109)
+        public int RefusalLineCompletionTokens;
+        public PipelineErrorKind? RefusalLineError; // Why that request gave no line: a provider's failure or an unreadable reply. The decision still stands, so Outcome and ErrorKind stay as they were; null when no request failed (#109)
 
         public DecisionTelemetry()
         {
@@ -57,6 +61,10 @@ namespace Agenerela{
             TargetGrounding = null;
             TargetGroundingStatus = null;
             TargetRuleSent = false;
+            RefusalLineSeconds = 0f;
+            RefusalLinePromptTokens = 0;
+            RefusalLineCompletionTokens = 0;
+            RefusalLineError = null;
 
         }
     }
@@ -91,6 +99,9 @@ namespace Agenerela{
         ProviderFailed,
 
         // A reply arrived, but it is empty, not one JSON object, or lacks a field the schema asked for
-        UnreadableReply
+        UnreadableReply,
+
+        // A guard threw while judging the decision, or Agent.Guards held a null entry (#108)
+        GuardFailed
     }
 }

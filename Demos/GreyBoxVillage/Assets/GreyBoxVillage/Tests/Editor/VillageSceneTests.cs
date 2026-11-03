@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -22,6 +23,8 @@ namespace Demos.GreyBoxVillage.Tests
     internal sealed class FakeVillageProvider : ILLMProvider
     {
         public string Reply;
+        /// <summary>The token probabilities the reply carries, as Ollama reports them; null for none.</summary>
+        public IReadOnlyList<TokenProbability> TokenProbabilities;
         public DecisionRequest LastRequest;
         public int Calls;
         public bool Hold;
@@ -48,7 +51,7 @@ namespace Demos.GreyBoxVillage.Tests
 
         public void Release() => held.SetResult(Result());
 
-        private ProviderResult Result() => new ProviderResult { Text = Reply, Model = "fake-model" };
+        private ProviderResult Result() => new ProviderResult { Text = Reply, Model = "fake-model", TokenProbabilities = TokenProbabilities };
 
         public static string Decision(string action, string target, string statement = "Understood.") =>
             "{\"action\":\"" + action + "\",\"target\":\"" + target + "\",\"statement\":\"" + statement + "\"}";
@@ -178,7 +181,10 @@ namespace Demos.GreyBoxVillage.Tests
             provider.Reply = FakeVillageProvider.Decision("stop_following", "no_target");
             await Ask(source);
             Assert.That(provider.Offered("action"), Does.Not.Contain("stop_following"));
-            Assert.That(commands.Recorder.Records.Last().Outcome, Is.EqualTo("refused"));
+            // The schema guard rejects it inside DecideAsync, and Execute runs nothing.
+            var record = commands.Recorder.Records.Last();
+            Assert.That(record.Outcome, Is.EqualTo("refused"));
+            Assert.That(record.Action, Is.EqualTo("stop_following"));
             Assert.That(commands.Guard.IsFollowing, Is.True);
         }
 
@@ -236,10 +242,13 @@ namespace Demos.GreyBoxVillage.Tests
         {
             provider.Reply = FakeVillageProvider.Decision("follow_player", "no_target");
             await commands.SubmitAsync("first");
-            // Already following, so follow_player is unavailable: Execute must refuse it (hard rule 5).
+            // Already following, so follow_player is not offered. The schema guard rejects it inside
+            // DecideAsync, and Execute returns false (hard rule 5).
             await commands.SubmitAsync("second");
-            Assert.That(commands.Overlay.Details, Does.Contain("REFUSED"));
-            Assert.That(commands.Recorder.Records.Last().Outcome, Is.EqualTo("refused"));
+            Assert.That(commands.Overlay.Details, Does.Contain("REFUSED: the action was not offered; SchemaLegalityGuard said:"));
+            var record = commands.Recorder.Records.Last();
+            Assert.That(record.Outcome, Is.EqualTo("refused"));
+            Assert.That(record.Action, Is.EqualTo("follow_player"));
         }
 
         [Test]
@@ -247,7 +256,29 @@ namespace Demos.GreyBoxVillage.Tests
         {
             provider.Reply = FakeVillageProvider.Decision("attack_target", "godzilla");
             await commands.SubmitAsync("Attack the thing behind the hill");
-            Assert.That(commands.Overlay.Details, Does.Contain("the target was not offered"));
+            Assert.That(commands.Overlay.Details, Does.Contain("REFUSED: the target was not offered; SchemaLegalityGuard said:"));
+            Assert.That(commands.Recorder.Records.Last().Outcome, Is.EqualTo("refused"));
+            Assert.That(commands.Guard.Activity, Is.EqualTo("standing at the village_gate"));
+        }
+
+        [Test]
+        public async Task ATargetTheModelWantedButWasNotOfferedIsContained()
+        {
+            // "Attack the scarecrow": the schema forces a listed target, so the model writes
+            // training_dummy while nearly all its probability went to "sc...", which is on no list.
+            provider.Reply = FakeVillageProvider.Decision("attack_target", "training_dummy", "Charging!");
+            provider.TokenProbabilities = new[]
+            {
+                Token("{\"action\":\"attack_target\",\"target\":\""),
+                Token("training", -2.95f, ("sc", -0.06f), ("str", -3.4f), ("training", -2.95f), ("the", -4.1f)),
+                Token("_dummy", -0.01f, ("_dummy", -0.01f)),
+                Token("\",\"statement\":\"Charging!\"}")
+            };
+            await commands.SubmitAsync("Attack the scarecrow");
+            var record = commands.Recorder.Records.Last();
+            Assert.That(record.Outcome, Is.EqualTo("contained"));
+            Assert.That(record.Action, Is.EqualTo("attack_target"));
+            Assert.That(commands.Overlay.Details, Does.Contain("CONTAINED: TargetGroundingGuard said:"));
             Assert.That(commands.Guard.Activity, Is.EqualTo("standing at the village_gate"));
         }
 
@@ -437,6 +468,15 @@ namespace Demos.GreyBoxVillage.Tests
                     throw new ArgumentException(source);
             }
         }
+
+        private static TokenProbability Token(string text, float logProbability = 0f,
+            params (string Text, float LogProbability)[] alternatives) =>
+            new TokenProbability
+            {
+                Text = text,
+                LogProbability = logProbability,
+                Alternatives = alternatives.Select(a => new TokenAlternative { Text = a.Text, LogProbability = a.LogProbability }).ToList()
+            };
 
         private Targetable[] Targetables() =>
             scene.GetRootGameObjects().SelectMany(g => g.GetComponentsInChildren<Targetable>(true)).ToArray();
