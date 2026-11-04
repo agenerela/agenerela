@@ -188,6 +188,8 @@ namespace Demos.GreyBoxVillage
 
         private async Awaitable DecideAsync(string source, string label, string text, DecisionPriority priority)
         {
+            // A mind destroyed while an event waited for it asks nothing more.
+            if (this == null) return;
             var agent = Agent;
             IsDeciding = true;
             // Who is asking decides what the agent is offered (its body's availability checks). It
@@ -201,6 +203,7 @@ namespace Demos.GreyBoxVillage
             Village.Overlay.ShowThinking(asked, Village.ProviderLabel, Name + " is thinking...");
             var record = Village.Recorder.Begin(Name, source, label, priority, text);
             Last = record;
+            bool gone = false;
             try
             {
                 var options = new DecideOptions
@@ -212,65 +215,75 @@ namespace Demos.GreyBoxVillage
                 };
                 var token = Application.isPlaying ? destroyCancellationToken : CancellationToken.None;
                 var result = await agent.DecideAsync(text, options, token);
-                var t = result.Telemetry;
+                // Destroyed while the model thought (in Edit mode nothing cancels the call).
+                if (this == null) { gone = true; return; }
                 Village.Recorder.Attach(record, result);
                 // A decision that says nothing, or fails, must not leave the last one's line standing.
                 Body.Hush();
-
-                if (result.Decision == null)
-                {
-                    string error = "No decision: " + t.ErrorKind + ". " + t.ErrorMessage;
-                    Village.Recorder.Complete(record, result, "error", error);
-                    Village.Overlay.ShowDecision(asked, "none", "no_target", "", error,
-                        t.LatencySeconds, t.GuardsFired, Village.ProviderLabel);
-                    return;
-                }
-
-                // What the model answered. A guard that stopped it inside DecideAsync left
-                // result.Decision as none, with the refusal line as its statement, so the outcome
-                // comes from the verdict, not from that.
-                var d = result.ModelDecision;
-                bool executed = agent.Execute(result);
-                string outcome = Outcome(result, executed);
-                string reason = outcome == "refused" || outcome == "contained" ? StopReason(record, result, outcome) : "";
-                string guard = t.GuardsFired.Count > 0 ? t.GuardsFired[t.GuardsFired.Count - 1] : null;
-                string said = "";
-                if (outcome == "executed" || outcome == "none")
-                {
-                    said = d.Statement;
-                    Body.Say(said);
-                }
-                else if (result.Verdict != null && !string.IsNullOrWhiteSpace(result.Decision.Statement))
-                {
-                    // Only a guard inside DecideAsync supplies a line; Execute's re-check never does.
-                    said = result.Decision.Statement;
-                    Body.Say(said, SpeechKind.Refusal, guard);
-                }
-                Village.Recorder.Complete(record, result, outcome, reason, said);
-
-                string details = string.Format(CultureInfo.InvariantCulture,
-                    "{0} / {1}  |  {2:0.00} s, queued {3:0.00} s  |  tokens {4} in, {5} out  |  history sent {6}{7}",
-                    t.ProviderName, t.Model, t.LatencySeconds, t.QueueWaitSeconds, t.PromptTokens,
-                    t.CompletionTokens, t.HistoryTurnsSent, reason == "" ? "" : "  |  " + outcome.ToUpperInvariant() + ": " + reason);
-                Village.Overlay.ShowDecision(asked, d.ActionId, d.TargetId, said, details,
-                    t.LatencySeconds, t.GuardsFired, Village.ProviderLabel);
+                if (result.Decision == null) ShowError(record, result, asked);
+                else Settle(agent, record, result, asked);
             }
             catch (OperationCanceledException)
             {
-                // The scene is closing; nothing to show.
+                // Destroyed in Play mode, which cancels the call: nothing to show, and nothing more to ask.
+                gone = true;
             }
             finally
             {
                 IsDeciding = false;
                 LastActivityTime = Time.time;
+                if (gone) pending = null;
             }
 
-            if (pending != null)
+            // An event that came in meanwhile is asked now, whatever became of this decision.
+            if (!gone && pending != null)
             {
                 var next = pending;
                 pending = null;
                 await DecideAsync(next.Source, next.Label, next.Text, next.Priority);
             }
+        }
+
+        private void ShowError(DecisionRecord record, DecisionResult result, string asked)
+        {
+            var t = result.Telemetry;
+            string error = "No decision: " + t.ErrorKind + ". " + t.ErrorMessage;
+            Village.Recorder.Complete(record, result, "error", error);
+            Village.Overlay.ShowDecision(asked, "none", "no_target", "", error,
+                t.LatencySeconds, t.GuardsFired, Village.ProviderLabel);
+        }
+
+        private void Settle(Agent agent, DecisionRecord record, DecisionResult result, string asked)
+        {
+            var t = result.Telemetry;
+            // What the model answered. A guard that stopped it inside DecideAsync left
+            // result.Decision as none, with the refusal line as its statement, so the outcome
+            // comes from the verdict, not from that.
+            var d = result.ModelDecision;
+            bool executed = agent.Execute(result);
+            string outcome = Outcome(result, executed);
+            string reason = outcome == "refused" || outcome == "contained" ? StopReason(record, result, outcome) : "";
+            string guard = t.GuardsFired.Count > 0 ? t.GuardsFired[t.GuardsFired.Count - 1] : null;
+            string said = "";
+            if (outcome == "executed" || outcome == "none")
+            {
+                said = d.Statement;
+                Body.Say(said);
+            }
+            else if (result.Verdict != null && !string.IsNullOrWhiteSpace(result.Decision.Statement))
+            {
+                // Only a guard inside DecideAsync supplies a line; Execute's re-check never does.
+                said = result.Decision.Statement;
+                Body.Say(said, SpeechKind.Refusal, guard);
+            }
+            Village.Recorder.Complete(record, result, outcome, reason, said);
+
+            string details = string.Format(CultureInfo.InvariantCulture,
+                "{0} / {1}  |  {2:0.00} s, queued {3:0.00} s  |  tokens {4} in, {5} out  |  history sent {6}{7}",
+                t.ProviderName, t.Model, t.LatencySeconds, t.QueueWaitSeconds, t.PromptTokens,
+                t.CompletionTokens, t.HistoryTurnsSent, reason == "" ? "" : "  |  " + outcome.ToUpperInvariant() + ": " + reason);
+            Village.Overlay.ShowDecision(asked, d.ActionId, d.TargetId, said, details,
+                t.LatencySeconds, t.GuardsFired, Village.ProviderLabel);
         }
 
         // refused: a guard rejected the answer inside DecideAsync (the provider broke the contract),

@@ -479,6 +479,47 @@ namespace Demos.GreyBoxVillage.Tests
         }
 
         [Test]
+        public async Task AnEventStillRunsWhenTheDecisionBeforeItFails()
+        {
+            provider.Hold = true;
+            var first = commands.SubmitAsync("first");
+            for (int i = 0; i < 50 && provider.Calls == 0; i++) await Task.Delay(10);
+            await bram.ReportEventAsync("wolf", "Event", "A wolf has come out of the woods.", DecisionPriority.Background);
+            Assert.That(bram.HasPending, Is.True);
+            provider.Reply = "this is not json";
+            provider.Release();
+            await first;
+            Assert.That(provider.Calls, Is.EqualTo(2), "The waiting event must be asked after the failed decision.");
+            Assert.That(bram.HasPending, Is.False, "A stranded event would silence the quiet timer for good.");
+            Assert.That(Records("Bram").Select(r => r.Outcome), Is.EqualTo(new[] { "error", "error" }));
+        }
+
+        [Test]
+        public async Task AGuardDestroyedMidDecisionAsksNothingMore()
+        {
+            // A copy of Wren, so the scene, open in the Editor or not, keeps its guards.
+            var copy = UnityEngine.Object.Instantiate(wren.gameObject, wren.transform.position, wren.transform.rotation);
+            try
+            {
+                var mind = copy.GetComponent<AgentMind>();
+                mind.UseProvider(config);
+                provider.Hold = true;
+                var first = mind.ReportEventAsync("quiet", "Time", "Time passes quietly at your post.", DecisionPriority.Background);
+                for (int i = 0; i < 50 && provider.Calls == 0; i++) await Task.Delay(10);
+                await mind.ReportEventAsync("wolf", "Event", "A wolf is by the river.", DecisionPriority.Background);
+                Assert.That(mind.HasPending, Is.True);
+                UnityEngine.Object.DestroyImmediate(copy);
+                provider.Release();
+                await first;
+                Assert.That(provider.Calls, Is.EqualTo(1), "A destroyed guard must not ask its waiting event.");
+            }
+            finally
+            {
+                if (copy != null) UnityEngine.Object.DestroyImmediate(copy);
+            }
+        }
+
+        [Test]
         public async Task AQuietMomentAsksInTheBackgroundWithTheTimeLabel()
         {
             var senses = bram.Senses;
@@ -533,8 +574,25 @@ namespace Demos.GreyBoxVillage.Tests
         public async Task NoFewShotExampleIsAnEvaluationPrompt()
         {
             // Hard rule 4: demonstrating a phrase and then scoring on it invalidates the result.
-            await Ask("player");
-            await wren.ReportEventAsync("quiet", "Time", "Time passes quietly at your post.", DecisionPriority.Background);
+            // Every action's examples are only built while it is offered, so ask each guard in each
+            // state: a quiet moment at its post (patrol), then the player, then following the player
+            // (stop_following).
+            var start = commands.Player.position;
+            try
+            {
+                foreach (var mind in commands.Minds)
+                {
+                    await mind.ReportEventAsync("quiet", "Time", "Time passes quietly at your post.", DecisionPriority.Background);
+                    Assert.That(Records(mind.Name).Last().OfferedActions, Does.Contain("patrol"), mind.Name);
+                    commands.Player.position = mind.transform.position + new Vector3(0, 0, -3);
+                    provider.Reply = FakeVillageProvider.Decision("follow_player", "no_target");
+                    await commands.SubmitAsync("Hello");
+                    provider.Reply = FakeVillageProvider.Decision("none", "no_target");
+                    await commands.SubmitAsync("Hello again");
+                    Assert.That(Records(mind.Name).Last().OfferedActions, Does.Contain("stop_following"), mind.Name);
+                }
+            }
+            finally { commands.Player.position = start; }
             string folder = Path.GetFullPath(Path.Combine(Application.dataPath, "../../../UnityProject/Assets/Evaluation/prompts"));
             var prompts = Directory.GetFiles(folder, "*.json")
                 .SelectMany(f => JsonUtility.FromJson<PromptFile>(File.ReadAllText(f)).prompts)

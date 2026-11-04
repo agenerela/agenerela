@@ -226,8 +226,10 @@ fair game; history reaches the second request; each guard remembers only its own
 two guards share one queue, and each record keeps its own agent's request when priorities mix;
 an event reaches only the agents that hear it, and the bell reaches Wren but not Bram, who rang
 it; the player speaks to the nearer guard; no few-shot example is an evaluation prompt (hard
-rule 4); an event is labelled and waits for a running decision; a quiet moment asks in the background; the recorder keeps the request and reply and
-writes one JSON line; the NavMesh reaches every place and zone entrance from both posts, over the
+rule 4), with every action's examples, `stop_following` and `patrol` included; an event is
+labelled and waits for a running decision, and still runs when that decision fails, but not once
+its guard is destroyed; a quiet moment asks in the background; the recorder keeps the request and
+reply and writes one JSON line; the NavMesh reaches every place and zone entrance from both posts, over the
 bridge; both guards in the saved scene ask the same provider config; one test enters Play mode
 and types through the UI.
 
