@@ -38,7 +38,7 @@ namespace Demos.GreyBoxVillage
         public string RawReply;
         public string ProviderError;
 
-        // What the game did with it.
+        // What the model chose, and what the game did with it: executed, none, refused or contained.
         public string Action;
         public string Target;
         public string Statement;
@@ -146,7 +146,9 @@ namespace Demos.GreyBoxVillage
         public void Complete(DecisionRecord record, DecisionResult result, string outcome, string detail)
         {
             var t = result?.Telemetry;
-            var d = result?.Decision;
+            // The model's answer, so a refused or contained one still shows what it asked for;
+            // the outcome says whether it ran.
+            var d = result?.ModelDecision;
             record.Action = d?.ActionId ?? "";
             record.Target = d?.TargetId ?? "";
             record.Statement = d?.Statement ?? "";

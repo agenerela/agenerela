@@ -1,10 +1,12 @@
 using System;
+using Agenerela.Providers;
 
 namespace Agenerela
 {
     /// <summary>
     /// What <see cref="Agent.DecideAsync"/> returns: the decision the agent will act on, what the
-    /// model itself answered, the guard verdict between the two, and the telemetry of the request.
+    /// model itself answered, the guard verdict between the two, the request and reply they came
+    /// from, and the telemetry of the request.
     /// </summary>
     public sealed class DecisionResult
     {
@@ -32,6 +34,24 @@ namespace Agenerela
         public DecisionTelemetry Telemetry { get; }
 
         /// <summary>
+        /// The request this decision sent to the provider, so a game can tell its own request
+        /// from another agent's on a shared queue (#142). Set whenever the request was sent, a
+        /// pipeline error after it included; null when it never was, because preparing it
+        /// failed, and for a result made with the public constructor. A call cancelled before
+        /// the send has no result at all.
+        /// </summary>
+        public DecisionRequest Request { get; }
+
+        /// <summary>
+        /// What the provider answered <see cref="Request"/> with: the model's original reply,
+        /// before any guard, even when one stopped it, and also when it could not be parsed or a
+        /// guard failed. Null when the provider failed or returned nothing, and whenever
+        /// <see cref="Request"/> is null. Never the reply to the refusal-line request
+        /// (<see cref="DecideOptions.AskForRefusalLine"/>).
+        /// </summary>
+        public ProviderResult Reply { get; }
+
+        /// <summary>
         /// A result no guard stopped: <see cref="ModelDecision"/> is <paramref name="decision"/>
         /// and <see cref="Verdict"/> is null.
         /// </summary>
@@ -42,17 +62,20 @@ namespace Agenerela
         public DecisionResult(
             AgentDecision decision,
             DecisionTelemetry telemetry)
-            : this(decision, telemetry, decision, null)
+            : this(decision, telemetry, decision, null, null, null)
         {
         }
 
-        // A result a guard stopped, or none did when verdict is null. The guards' own rule, that a
-        // stopped decision becomes none, is Agent's; this only keeps the pair consistent.
+        // A result a guard stopped, or none did when verdict is null, with the exchange it came
+        // from. The guards' own rule, that a stopped decision becomes none, is Agent's; this only
+        // keeps the parts consistent.
         internal DecisionResult(
             AgentDecision decision,
             DecisionTelemetry telemetry,
             AgentDecision modelDecision,
-            GuardVerdict? verdict)
+            GuardVerdict? verdict,
+            DecisionRequest request,
+            ProviderResult reply)
         {
             if (telemetry == null)
             {
@@ -74,10 +97,17 @@ namespace Agenerela
                     nameof(verdict));
             }
 
+            if (reply != null && request == null)
+            {
+                throw new ArgumentException("A reply is recorded only with the request it answered.", nameof(reply));
+            }
+
             Decision = decision;
             ModelDecision = modelDecision;
             Verdict = verdict;
             Telemetry = telemetry;
+            Request = request;
+            Reply = reply;
         }
     }
 }

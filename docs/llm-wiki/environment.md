@@ -46,7 +46,7 @@ editor at a time open a project.
 
 ### Running the PlayMode tests that need a model
 
-The Phase 2 gate's tests (`RequiresOllama`) call a real Ollama, so they need it running with
+The Phase 2 and Phase 3 gates' live tests (`RequiresOllama`) call a real Ollama, so they need it running with
 the model pulled; they are the only tests that do. The same command with the other platform
 and a category:
 
@@ -58,6 +58,27 @@ Each timed decision prints a `LATENCY` line. `AGENERELA_OLLAMA_MODEL` and
 `AGENERELA_OLLAMA_URL` choose another model or endpoint; the findings entry of 25 October 2026
 has the conditions to match before comparing a run with its numbers.
 
+**The Phase 3 live suite** (`Phase3LiveSuiteTests`, same category and variables) decides the
+prototype's 20 prompts on `qwen3.5:2b` twice in one session, guards on and then
+`CheckTarget = false` as the control arm. Before a run:
+
+- Ollama at `http://127.0.0.1:11434`, `qwen3.5:2b` pulled, and **no other model loaded**
+  (`ollama stop <model>`; hard rule 3). The suite reads `/api/ps` after its warm-up and fails
+  unless the model under test is the only one resident, and prints the Ollama version.
+- On a laptop, plug in first.
+- Read the results from the `PHASE3-RUN`, `PHASE3`, `PHASE3-ARM` and `PHASE3-WRONG` lines in
+  the results file or log. Without Ollama the suite is ignored, not failed.
+
+### Testing a component's destruction: `destroyCancellationToken` needs PlayMode
+
+Found while building `AgentBehaviour` (#93). `DestroyImmediate` in an EditMode test does not
+raise a component's `destroyCancellationToken`, so "destroying the GameObject cancels its
+pending request" cannot be shown there; `AgentBehaviourPlayModeTests` does it in PlayMode, with
+a provider that holds its request. EditMode can only check that the provider was handed the
+token. Unity also raises the token only for a component that has woken: a request asked of a
+component whose GameObject was never active is not cancelled by destroying it. The package
+documents that limit and a test pins it.
+
 ### The Unity CLI (optional)
 
 Unity's own command line, `unity`, is installed on the lead's laptop (1.0.0-beta.8 when
@@ -66,9 +87,10 @@ change: `unity status` lists the open editors, and `unity test <project> --mode 
 --output <xml>` runs the same EditMode tests as the raw command above, choosing the editor
 from `ProjectVersion.txt`. Set `UNITY_NO_BANNER=1` and `UNITY_NON_INTERACTIVE=1` when an
 agent calls it. Its live editor control (`unity command`, `unity list`) needs the
-experimental `com.unity.pipeline` package, which no project here has added: it would change a
-committed manifest and overlaps MCP for Unity, below. The `unity-cli` skill is installed per
-user, not in this repository.
+experimental `com.unity.pipeline` package. Only `Demos/GreyBoxVillage` has it (0.9.1-exp.1; its
+README says how it is driven). `UnityProject` does not: the package would change a committed
+manifest and overlaps MCP for Unity, below. The `unity-cli` skill is installed per user, not in
+this repository.
 
 ## Per-machine setup — do this BEFORE cloning
 
@@ -134,10 +156,12 @@ never `localhost`: on Windows `localhost` tries IPv6 first, Ollama listens on IP
 each request waited about 2 s (findings, 5 October 2026). Check a server with
 `curl http://127.0.0.1:11434/api/version`.
 
-**Versions seen.** Ollama 0.34.2 on the lead's laptop (the 5 and 10 October findings, and
-the live check of `OllamaProvider`) and 0.33.0 on the RTX 5080 desktop (the Phase 2 gate).
-The token-probability behaviour, the 404 bodies and the schema probe were all checked on
-0.34.2 only. After an upgrade, re-run
+**Versions seen.** The lead's laptop now runs Ollama **0.40.14**; it ran 0.34.2 until the
+Phase 3 gate's live run (the 5 and 10 October findings, the live check of `OllamaProvider` and
+the 27 October grounding check were all on 0.34.2). The RTX 5080 desktop ran 0.33.0 for the
+Phase 2 gate. On 0.40.14 the schema still never reaches the model and the probabilities are
+still from before the mask, but a forced target now comes back in small pieces (findings, the
+Phase 3 gate's entry). The 404 bodies were checked on 0.34.2 only. After an upgrade, re-run
 `python tools/benchmarks/schema_visibility_probe.py` (seconds); it settles whether the
 response schema has started reaching the model, which would change what a local model reads.
 
@@ -228,7 +252,7 @@ Two machines, and numbers from one do not transfer to the other.
 
 | Machine | Used for |
 |---|---|
-| RTX 4060 Laptop, **8 GB VRAM**, Windows 11 | Appendix A's prototype figures, the 5 and 10 October probes (Ollama 0.34.2), the live check of `OllamaProvider` (19 October) |
+| RTX 4060 Laptop, **8 GB VRAM**, Windows 11 | Appendix A's prototype figures, the 5 and 10 October probes (Ollama 0.34.2), the live check of `OllamaProvider` (19 October), the Phase 3 gate's live run (Ollama 0.40.14) |
 | Desktop with an **RTX 5080, 16 GB**, driver 617.14, Windows 11 | The Phase 2 gate's latency (25 October, Ollama 0.33.0), the asset server (`tools/comfyui/`) |
 
 Absolute latency and VRAM figures are specific to the machine that took them. On different

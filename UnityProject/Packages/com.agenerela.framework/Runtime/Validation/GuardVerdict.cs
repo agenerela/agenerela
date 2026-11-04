@@ -24,11 +24,14 @@ namespace Agenerela
     /// </remarks>
     public readonly struct GuardVerdict
     {
-        private GuardVerdict(GuardVerdictKind kind, string reason, string guard)
+        private readonly string modelReason;
+
+        private GuardVerdict(GuardVerdictKind kind, string reason, string guard, string modelReason = null)
         {
             Kind = kind;
             Reason = reason;
             Guard = guard;
+            this.modelReason = modelReason;
         }
 
         /// <summary>The decision may go on to the next guard. Also what <c>default</c> is.</summary>
@@ -43,6 +46,14 @@ namespace Agenerela
         public static GuardVerdict RewriteToNone(string reason)
         {
             return new GuardVerdict(GuardVerdictKind.RewriteToNone, Required(reason), null);
+        }
+
+        // A rewrite whose reason is telemetry, not something to tell a model, with the words a
+        // refusal line's request uses instead (#109). A built-in guard's only, for now; a public
+        // form of this is the extension point if a game's guard needs one.
+        internal static GuardVerdict RewriteToNone(string reason, string modelReason)
+        {
+            return new GuardVerdict(GuardVerdictKind.RewriteToNone, Required(reason), null, Required(modelReason));
         }
 
         /// <summary>
@@ -70,10 +81,14 @@ namespace Agenerela
         /// </summary>
         public string Guard { get; }
 
+        // What the request for a refusal line tells the model: the reason itself, unless the guard
+        // gave other words for it.
+        internal string ModelReason => modelReason ?? Reason;
+
         // The pipeline's stamp: the same verdict, naming the guard that returned it.
         internal GuardVerdict From(string guard)
         {
-            return new GuardVerdict(Kind, Reason, guard);
+            return new GuardVerdict(Kind, Reason, guard, modelReason);
         }
 
         private static string Required(string reason)

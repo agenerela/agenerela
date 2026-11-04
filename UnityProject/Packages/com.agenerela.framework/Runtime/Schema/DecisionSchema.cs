@@ -158,6 +158,13 @@ namespace Agenerela
             return new DecisionSchema(fields);
         }
 
+        // The shape of a refusal line's reply (#109): the one free-text field, so it serializes as
+        // any other schema does. Not a decision: it offers no action and no target.
+        internal static DecisionSchema StatementOnly()
+        {
+            return new DecisionSchema(new[] { StatementField() });
+        }
+
         // The available actions in registry order, then none. ActionRegistry.Register rejects
         // none, so it is never already in the list and appears exactly once.
         private static SchemaField ActionField(IReadOnlyList<ActionDefinition> available)

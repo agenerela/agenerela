@@ -10,7 +10,8 @@ namespace Agenerela
     /// <remarks>
     /// The first verdict that is not <see cref="GuardVerdictKind.Pass"/> stops the pipeline: once
     /// the decision is <c>none</c>, every later guard would pass it anyway. So a run fires at most
-    /// one guard. A guard that throws is not caught here; #108 decides what that means.
+    /// one guard. A guard that throws is not caught here: <see cref="Agent"/> turns it into a
+    /// pipeline error of kind <see cref="PipelineErrorKind.GuardFailed"/>.
     /// </remarks>
     internal static class GuardPipeline
     {

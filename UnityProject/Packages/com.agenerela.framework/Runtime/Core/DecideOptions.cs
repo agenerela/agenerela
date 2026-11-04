@@ -66,6 +66,21 @@ namespace Agenerela
         /// </remarks>
         public bool CheckTarget = true;
 
+        /// <summary>
+        /// Whether to ask the model what to say when a guard stops this decision and
+        /// <see cref="Agent.RefusalStatement"/> gave no line (#109). Off by default, so a stopped
+        /// decision's statement is empty. Per call, because only the caller knows whether anyone is
+        /// listening (DR-008).
+        /// </summary>
+        /// <remarks>
+        /// It sends one more short request through the same provider and queue, at this call's
+        /// <see cref="Priority"/>, and only when a guard fired. It never changes which action runs,
+        /// and if it fails the decision stands with an empty statement. Its cost is recorded apart
+        /// from the decision's, in <see cref="DecisionTelemetry.RefusalLineSeconds"/> and the fields
+        /// beside it. The wording of that request is unmeasured.
+        /// </remarks>
+        public bool AskForRefusalLine;
+
         // The options one call keeps, taken when it is made, so changing the caller's object
         // afterwards changes nothing, the guards' view included (#106). A memberwise copy, so a
         // switch added later is copied without being listed here; only a field holding a mutable

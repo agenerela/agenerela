@@ -948,14 +948,16 @@ Packages/
       <li><b>The request queue</b> and <span class="mono">DecideOptions.Priority</span> — one request in flight per provider, the player's question first (DR-015; #89, via #103)</li>
       <li><b>Short-term memory</b> — <span class="mono">IMemoryStrategy</span> and <span class="mono">RollingHistory</span>, the last exchanges in every request (#90, via #104)</li>
       <li><b>The Phase 2 gate</b> — <span class="mono">RequiresOllama</span> PlayMode tests against a live model, and a sandbox scene to watch it decide (#94, via #111)</li>
+      <li><b>Observation sources</b> — <span class="mono">IObservationSource</span> and <span class="mono">ProximityObservationSource</span>, pulled and capped (DR-012; #91, via #123)</li>
+      <li><b>Provider config assets</b> and the project default (DR-013; #92, via #129)</li>
+      <li><b><span class="mono">AgentBehaviour</span></b> — an agent on a GameObject, with no manager object (figure 10, pattern A; #93, via #139)</li>
     </ul></div>
     <div class="card"><h4>Written down, not written</h4><ul>
       <li><b>Phase 3</b> — the guard pipeline, target grounding and its fallback, developer guards and contained refusals, then the gate (#105 to #110)</li>
-      <li><b>Still open from Phase 2</b> — observation sources, the provider config asset and <span class="mono">AgentBehaviour</span> (#91, #92, #93)</li>
     </ul></div>
     <div class="card"><h4 style="color:var(--warn)">Decided here, not yet built</h4><ul>
-      <li><b>DR-012</b> observation sources, capped; summariser as one source</li>
-      <li><b>DR-013</b> provider config asset + resolution chain</li>
+      <li><b>DR-012</b>'s summariser, as one source; the observation sources themselves are built</li>
+      <li><b>DR-013</b>'s scene override, left out until a demo needs one</li>
       <li><b>DR-015</b>'s optional ticker (priority on the call is built, #89)</li>
       <li>Still only proposed: the <b>New Agent wizard</b> (figure 12) and the on-demand runtime service (figure 10)</li>
     </ul></div>

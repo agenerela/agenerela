@@ -20,6 +20,29 @@ phase table and the open issues, not here.
 
 ## [Unreleased]
 
+### Framework
+
+- **Phase 3 (Validation pipeline) closed** on 3 November when its gate (#110) passed: the
+  guard pipeline and `SchemaLegalityGuard` (#106), target grounding (#105), its one-line
+  fallback (#107), developer guards (#108) and contained refusals (#109, via #141), which keep
+  an agent from saying what it will not do. See the package's `[Unreleased]` section.
+
+### Added
+
+- **The risk management plan** in `docs/course/2026-10-29-risk-management/`: an Excel
+  register of 14 risks, two per member, with a risk matrix and a sprint review log, reviewed
+  once per sprint. XLSX now goes through Git LFS.
+- **The Phase 3 gate's checks** (#110). `Phase3GateTests` proves each guard rule in EditMode
+  with no model: a substitution is rewritten to `none`, an unavailable action and a
+  target-needing action with `no_target` are rejected, verdicts reach telemetry, a reading
+  below 0.8 is rewritten while a split between two listed targets passes, `CheckTarget = false`
+  skips the guard for one call, and a provider without token probabilities is recorded as such.
+  `Phase3LiveSuiteTests` runs the prototype's 20-prompt suite live on a 2B (`RequiresOllama`),
+  guards on against a `CheckTarget = false` control arm in one session; its bar is 19/20 or
+  better with the guards on. **It passed on 3 November**: 19/20 with the guards on, 18/20 in
+  the control, on `qwen3.5:2b` and Ollama 0.40.14, recorded in `findings.md`. At n = 20 that
+  says the gate passed, not by how much the guard helps.
+
 ### Fixed
 
 - **Release notes no longer break mid-sentence.** GitHub shows every newline in a release's
@@ -27,6 +50,14 @@ phase table and the open issues, not here.
   stopping halfway across the page, as 0.2.0, 0.3.0 and 0.4.0-preview.1 did (the last was
   fixed by hand). `tools/ci/release.py notes` now joins wrapped lines, leaving code, headings,
   HTML, tables and alert markers alone.
+- **The evaluation set names its real annotator on `target_001` to `target_009`.** They held
+  #13's placeholder names, `alice` and `bob`; Maxim labelled them. No prompt is doubly labelled
+  now, so Phase 4's second labels are still to come, from the Prompt Set window (#134).
+- **GreyBoxVillage reads the guard pipeline's verdict.** Since #106 a guard that stops an answer
+  returns it as `none`, so the demo logged refusals as `none` and four of its tests failed. It now
+  takes the outcome from the verdict and `Execute`: `refused` for a rejected answer, `contained`
+  for one the grounding guard rewrote, with the model's answer, the guard and its reason on the
+  overlay and in the history. A new test covers `contained`.
 
 ## [0.4.0-preview.1] - 2026-10-29
 

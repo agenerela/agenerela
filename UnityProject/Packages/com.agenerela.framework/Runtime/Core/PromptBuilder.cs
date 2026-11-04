@@ -58,6 +58,12 @@ namespace Agenerela
 
         private const string ObservationsHeader = "What you know right now:";
 
+        // The user turn of a refusal line's request (#109): {0} is the stimulus, {1} the guard's
+        // reason. New and unmeasured. It changes only what is said after a refusal, never which
+        // action runs, and is here alone so Phase 4 can change it in one place.
+        private const string RefusalLineTemplate =
+            "You were asked: \"{0}\" You will not do it, because {1} Say so in one short sentence, in character.";
+
         /// <summary>
         /// The request for one decision, every field filled: the system prompt from
         /// <c>ctx.Identity</c>, <paramref name="fewShotBlock"/> as given, the observations block
@@ -113,6 +119,20 @@ namespace Agenerela
                 History = new ReadOnlyCollection<string>(new List<string>(history ?? Array.Empty<string>())),
                 Stimulus = $"{options.StimulusLabel}: \"{ctx.Stimulus}\"",
                 Schema = schema,
+            };
+        }
+
+        // The second, short request a guard's verdict can lead to (#109, build plan §2.5): the same
+        // system prompt as the decision's, one user turn saying what was asked and why it will not
+        // be done, and a schema with only the statement. No examples, observations or history, so
+        // it stays short.
+        internal static DecisionRequest BuildRefusalLine(DecisionRequest decided, AgentContext ctx, GuardVerdict verdict)
+        {
+            return new DecisionRequest
+            {
+                SystemPrompt = decided.SystemPrompt,
+                Stimulus = string.Format(RefusalLineTemplate, ctx.Stimulus, EndSentence(verdict.ModelReason.Trim())),
+                Schema = DecisionSchema.StatementOnly(),
             };
         }
 

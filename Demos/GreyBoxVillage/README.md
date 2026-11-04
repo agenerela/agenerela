@@ -112,8 +112,13 @@ What the game cannot know it leaves to the model: "Hello sir" from a following p
 offers `stop_following`, because telling a greeting from "you can go" means reading the text,
 which the game does not do (DR-008).
 
-The statement appears above the guard's head. `Execute` re-checks every decision; a refusal is
-shown on the overlay and in the history with the reason.
+The statement appears above the guard's head. Every answer passes the framework's guards before
+it runs. `refused` means a guard rejected it, inside `DecideAsync` (an action that was not offered,
+a target that is not registered) or in `Execute`'s re-check (something stopped being available
+while the model thought). `contained` means the grounding guard judged a legal answer wrong, such
+as a target the model wanted but was not offered, and the guard does nothing. Either way the guard
+says nothing, and the overlay and the history show the model's answer, the guard that stopped it
+and its reason.
 
 ## Request history and the decision log
 
@@ -145,13 +150,14 @@ The NavMesh is baked in the editor and stored as JSON (`VillageNavMesh.villagena
 Unity forces native NavMeshData assets to binary; the importer makes the native asset in the
 cache. `Rebuild Village` bakes it; `Rebake Navigation` re-bakes after hand edits.
 
-The 33 EditMode tests run with no Ollama, through a fake provider: each action executes on the
+The 34 EditMode tests run with no Ollama, through a fake provider: each action executes on the
 guard; every evaluation target is offered and named in the observations; who is asking (the
 player, a zone, a wolf, a quiet moment) decides which actions are offered, as the table above
 says; a quiet moment can start a patrol and anything else breaks it off; only the player ends an
 escort; the bell is offered for a wolf 5 m away and not for one 20 m away; following and the
-alarm change which actions are offered; `Execute` refuses an unavailable action and an unregistered
-target; history reaches the second request; an event is labelled and waits for a running
+alarm change which actions are offered; the schema guard refuses an action that was not offered
+and an unregistered target, and the grounding guard contains a target the model wanted but was
+not offered; history reaches the second request; an event is labelled and waits for a running
 decision; a quiet moment asks in the background; the recorder keeps the request and reply and
 writes one JSON line; the NavMesh reaches every place and zone entrance, over the bridge; one
 test enters Play mode and types through the UI.
