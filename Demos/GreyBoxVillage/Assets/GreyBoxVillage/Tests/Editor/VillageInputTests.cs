@@ -11,6 +11,8 @@ namespace Demos.GreyBoxVillage.Tests
 {
     public sealed class VillageInputTests
     {
+        private FakeVillageConfig config;
+
         [UnityTest]
         public IEnumerator TypingSubmitAndCancelUseTheRuntimeUI()
         {
@@ -18,8 +20,12 @@ namespace Demos.GreyBoxVillage.Tests
             yield return new EnterPlayMode();
             yield return null;
             var commands = Object.FindFirstObjectByType<VillageCommands>();
-            commands.UseProvider(new FakeVillageProvider(FakeVillageProvider.Decision("move_to", "north_tower")));
-            commands.Senses.QuietTimerEnabled = false;
+            // The agents built their Ollama agents in Awake; replace them before anything can ask.
+            config = ScriptableObject.CreateInstance<FakeVillageConfig>();
+            config.Fake = new FakeVillageProvider(FakeVillageProvider.Decision("move_to", "north_tower"));
+            commands.UseProvider(config);
+            foreach (var mind in commands.Minds) mind.Senses.enabled = false;
+            commands.GetComponent<VillageEvents>().enabled = false;
             var input = commands.Input;
             var field = input.GetComponent<UIDocument>().rootVisualElement.Q<TextField>("VillageCommand");
             field.Focus();
@@ -46,6 +52,7 @@ namespace Demos.GreyBoxVillage.Tests
         public IEnumerator LeavePlayModeAfterFailure()
         {
             if (EditorApplication.isPlaying) yield return new ExitPlayMode();
+            if (config != null) Object.DestroyImmediate(config);
         }
     }
 }

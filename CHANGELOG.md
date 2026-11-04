@@ -29,6 +29,19 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **GreyBoxVillage has two guards and an agent board** (#143), the first slice of the demo's
+  upgrade.
+  - Bram at the gate and Wren at the bridge are each an `AgentBehaviour` with a profile asset.
+    Both ask one `OllamaProviderConfig`, so they share one queue.
+  - The player speaks to the nearest guard. The bell is heard by every agent except the one who
+    rang it.
+  - A game guard, `never_attack_villagers`, contains an attack on the village's people, and each
+    guard says its own refusal line.
+  - The board shows each agent's stimulus, offered actions, decision, the guard that stopped it,
+    and its queue wait. The request history can be filtered by agent.
+  - The recorder reads `DecisionResult.Request` and `Reply` (#142) instead of wrapping the
+    provider.
+
 - **The risk management plan** in `docs/course/2026-10-29-risk-management/`: an Excel
   register of 14 risks, two per member, with a risk matrix and a sprint review log, reviewed
   once per sprint. XLSX now goes through Git LFS.
