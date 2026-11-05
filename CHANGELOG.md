@@ -51,6 +51,14 @@ phase table and the open issues, not here.
   `Assets/Evaluation/labels/<annotator>/<category>.json`; the README says how.
 - **Screen 8, the Prompt Set window**, in `docs/design/`: the wireframe drawn for #134 before the
   window was built, with its notes.
+- **Living Vale, milestone G5 "connect real decisions", for conversation** (#69), on
+  `69-living-vale`: `AgenerelaNpcDecisionDriver` makes each speaking NPC a framework `Agent`,
+  built in code from its persona (Mara and Iven so far), with the player's line as the stimulus,
+  the NPC's own knowledge as observations and the framework's rolling memory per NPC. Only
+  `none` is registered; a per-NPC callback is where trade actions will be registered. The model
+  answers by default; F6 (or `ValeBootstrap`'s Inspector) switches to the scripted replies, and
+  with Ollama down a turn fails with the game's own line. A small headless comparison of four
+  local models for the NPCs is in `findings.md` (5 November).
 - **Living Vale, milestone G1 "Walk and talk"** (#69), on the game's own branch
   `69-living-vale`: the URP project in `Demos/LivingVale/`, a third-person player and orbit
   camera, a grey-box village built by `VillageSceneBuilder`, two NPCs (Mara and Iven) with focus

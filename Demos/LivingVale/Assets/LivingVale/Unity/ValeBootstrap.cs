@@ -1,4 +1,5 @@
 using System;
+using LivingVale.Agenerela;
 using LivingVale.Interaction;
 using LivingVale.UI;
 using UnityEngine;
@@ -12,6 +13,10 @@ namespace LivingVale.Unity
         [SerializeField] private ThirdPersonPlayer player;
         [SerializeField] private ChatOverlay overlay;
         [SerializeField, Min(0.1f)] private float turnTimeout = 8f;
+        [Tooltip("The NPC reply driver selected when the game starts. F6 switches drivers.")]
+        [SerializeField] private NpcDriverChoice driver = NpcDriverChoice.Agenerela;
+        [Tooltip("The local Ollama model used by the Agenerela NPC driver.")]
+        [SerializeField] private string ollamaModel = "qwen3.5:2b";
 
         private InputActionMap actions;
         private InputAction move;
@@ -20,11 +25,14 @@ namespace LivingVale.Unity
         private InputAction talk;
         private InputAction close;
         private InputAction[] fixtures;
+        private InputAction switchDriver;
         private bool capturedTextFocus;
         private int blockedFrame = -1;
 
         public ConversationCoordinator Coordinator { get; private set; }
         public ScriptedNpcDecisionDriver Driver { get; private set; }
+        public AgenerelaNpcDecisionDriver ModelDriver { get; private set; }
+        public SwitchableNpcDecisionDriver Drivers { get; private set; }
         public bool WorldInputBlocked => !Application.isFocused || capturedTextFocus ||
             blockedFrame == Time.frameCount || (overlay != null && overlay.InputHasFocus);
         public Vector2 Movement => WorldInputBlocked ? Vector2.zero : move.ReadValue<Vector2>();
@@ -41,7 +49,14 @@ namespace LivingVale.Unity
         private void Awake()
         {
             Driver = new ScriptedNpcDecisionDriver();
-            Coordinator = new ConversationCoordinator(Driver, new ConversationSettings
+            ModelDriver = AgenerelaNpcDecisionDriver.ForOllama(ollamaModel);
+            Drivers = new SwitchableNpcDecisionDriver(Driver, ModelDriver, driver);
+            if (driver == NpcDriverChoice.Agenerela)
+            {
+                ModelDriver.WarmUp();
+            }
+
+            Coordinator = new ConversationCoordinator(Drivers, new ConversationSettings
             {
                 TurnTimeout = TimeSpan.FromSeconds(Mathf.Max(0.1f, turnTimeout))
             });
@@ -61,6 +76,7 @@ namespace LivingVale.Unity
             {
                 fixtures[i] = actions.AddAction($"Fixture{i + 1}", InputActionType.Button, $"<Keyboard>/f{i + 1}");
             }
+            switchDriver = actions.AddAction("SwitchDriver", InputActionType.Button, "<Keyboard>/f6");
 
             overlay.Initialize(this);
             foreach (var speaker in FindObjectsByType<NpcSpeaker>(FindObjectsSortMode.None))
@@ -104,6 +120,17 @@ namespace LivingVale.Unity
                     Driver.Fixture = (ScriptedFixture)i;
                     overlay.Render();
                 }
+            }
+
+            if (switchDriver.WasPressedThisFrame())
+            {
+                Drivers.Next();
+                if (ReferenceEquals(Drivers.Current, ModelDriver))
+                {
+                    ModelDriver.WarmUp();
+                }
+
+                overlay.Render();
             }
         }
 
