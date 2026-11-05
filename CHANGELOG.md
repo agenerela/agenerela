@@ -29,6 +29,19 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **An editor UI kit** (#167) in the package's `Editor/UI/`, for the Phase 5 screens to share.
+  It is internal to `Agenerela.Editor`, so it adds no public API.
+  - `Agenerela.uss` holds colour, spacing and type variables (`--ag-*`) built on Unity's own
+    theme colours, so they suit both editor skins.
+  - `Chip` shows an action or target id in monospace, struck through with a dashed outline when
+    it is not offered.
+  - `OutcomeIcon` shows Executed, No action, Contained or Error with Unity's built-in icons.
+  - `ProblemBox` shows a message with an optional fix button.
+  - `EditorUiFixtures` in `Tests/Editor/UI/` builds a hosted element, an inspector or a window
+    in an EditMode test, and finds its parts by name.
+  - USS has no muted text colour that reaches an editor window and no dashed border, so the
+    kit sets the first itself and draws the second. A test catches a variable that silently
+    fails to resolve.
 - **GreyBoxVillage has two guards and an agent board** (#143), the first slice of the demo's
   upgrade.
   - Bram at the gate and Wren at the bridge are each an `AgentBehaviour` with a profile asset.

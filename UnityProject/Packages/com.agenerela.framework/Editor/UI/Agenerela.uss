@@ -1,0 +1,148 @@
+/*
+ * Agenerela's editor stylesheet (#167): the one stylesheet every Agenerela editor screen uses.
+ *
+ * Colours come from Unity's own theme variables (--unity-colors-*), which change with the light
+ * and dark editor skins. Only the ones Unity defines at :root reach an editor window's elements:
+ * Unity has no muted text colour there, so --ag-text-muted is set here for each skin, and its font
+ * sizes sit under a class an editor window's root does not carry, so the sizes are written out.
+ * A screen adds the "ag" class to its root (AgenerelaStyles.Apply does it, with "ag--light" in the
+ * light skin) and then uses the --ag-* variables in its own layout stylesheet; it never sets a
+ * colour of its own.
+ *
+ * USS has no dashed border and no text-decoration: the chip that is not offered draws its dashed
+ * outline in Chip.cs and strikes its text with a rich-text <s> tag.
+ */
+
+.ag {
+    /* Colour */
+    --ag-text: var(--unity-colors-default-text);
+    --ag-text-muted: #9a9a9a;
+    --ag-line: var(--unity-colors-default-border);
+    --ag-surface: var(--unity-colors-helpbox-background);
+    --ag-surface-line: var(--unity-colors-helpbox-border);
+    --ag-warning: var(--unity-colors-warning-text);
+    --ag-error: var(--unity-colors-error-text);
+
+    /* Spacing: a 4 px scale */
+    --ag-space-xs: 2px;
+    --ag-space-s: 4px;
+    --ag-space-m: 8px;
+    --ag-space-l: 12px;
+    --ag-space-xl: 16px;
+    --ag-radius: 3px;
+
+    /* Type */
+    --ag-font-size: 12px;
+    --ag-font-size-small: 11px;
+    --ag-font-size-big: 14px;
+    --ag-font-mono: resource("Fonts/RobotoMono/RobotoMono-Regular SDF.asset");
+}
+
+/* The light skin's muted text: about 4:1 against its window background, as #9a9a9a is in dark */
+.ag--light {
+    --ag-text-muted: #5a5a5a;
+}
+
+/* Helpers a screen's layout uses */
+
+.ag-mono {
+    -unity-font-definition: var(--ag-font-mono);
+}
+
+.ag-muted {
+    color: var(--ag-text-muted);
+}
+
+.ag-chips {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.ag-card {
+    padding: var(--ag-space-l);
+    margin-bottom: var(--ag-space-m);
+    border-width: 1px;
+    border-color: var(--ag-surface-line);
+    border-radius: var(--ag-radius);
+    background-color: var(--ag-surface);
+}
+
+/* Chip: an action or target id (Chip.cs) */
+
+.ag-chip {
+    -unity-font-definition: var(--ag-font-mono);
+    font-size: var(--ag-font-size-small);
+    -unity-text-align: middle-center;
+    color: var(--ag-text);
+    height: 18px;
+    padding-left: 7px;
+    padding-right: 7px;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-left: 0;
+    margin-top: 0;
+    margin-right: var(--ag-space-s);
+    margin-bottom: var(--ag-space-s);
+    border-width: 1px;
+    border-color: var(--ag-line);
+    border-radius: 9px;
+    background-color: var(--ag-surface);
+    flex-shrink: 0;
+}
+
+/* Not offered: no fill, muted text, and Chip.cs strokes the dashed outline in --ag-line */
+.ag-chip--off {
+    color: var(--ag-text-muted);
+    border-width: 0;
+    background-color: rgba(0, 0, 0, 0);
+}
+
+/* Outcome icon (OutcomeIcon.cs) */
+
+.ag-outcome {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+/* Problem box: a message and an optional fix button (ProblemBox.cs) */
+
+.ag-problem {
+    flex-direction: row;
+    align-items: center;
+    padding: var(--ag-space-m);
+    margin-bottom: var(--ag-space-s);
+    border-width: 1px;
+    border-left-width: 3px;
+    border-color: var(--ag-surface-line);
+    border-radius: var(--ag-radius);
+    background-color: var(--ag-surface);
+}
+
+.ag-problem--warning {
+    border-left-color: var(--ag-warning);
+}
+
+.ag-problem--error {
+    border-left-color: var(--ag-error);
+}
+
+.ag-problem__icon {
+    width: 16px;
+    height: 16px;
+    margin-right: var(--ag-space-m);
+    flex-shrink: 0;
+}
+
+.ag-problem__message {
+    flex-grow: 1;
+    flex-shrink: 1;
+    white-space: normal;
+    color: var(--ag-text);
+}
+
+.ag-problem__fix {
+    margin-left: var(--ag-space-m);
+    flex-shrink: 0;
+}
