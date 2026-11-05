@@ -37,7 +37,7 @@ namespace Agenerela.Editor.Evaluation
         private const string ProfileTip = "The AgentProfile the set is measured against: every prompt is asked of an agent built from it.";
         private const string ConfigTip = "The provider config this arm's decisions go through. Project Settings → Agenerela names a default arm A and arm B.";
         private const string NameTip = "How the report names this arm, such as control or guards-on. The two must differ.";
-        private const string CheckTargetTip = "The grounding guard: on, a target the request never named is stopped. Off is the usual control arm.";
+        private const string CheckTargetTip = "The target-grounding guard (DecideOptions.CheckTarget). On, a decision whose target the model's own token probabilities show it swapped in for one not on the list becomes none. Off is the usual control arm.";
         private const string OrderTip = "Interleaved asks each prompt in A, then in B, so drift hits both alike. One after the other runs all of A, unloads its model, then all of B: the only choice for arms on two models.";
         private const string DefaultsTip = "Opens the project's agent.json, the profile beside it, and the arm A and arm B configs from Project Settings → Agenerela.";
 
@@ -137,12 +137,22 @@ namespace Agenerela.Editor.Evaluation
             running?.Cancel();
         }
 
-        // The set's prompts may have changed in the Prompt Set window meanwhile.
+        // The set's prompts, and its label files, may have changed in the Prompt Set window meanwhile.
         private void OnFocus()
         {
-            if (!Running && setAsset != null)
+            if (Running)
+            {
+                return;
+            }
+
+            if (setAsset != null)
             {
                 LoadSet();
+            }
+
+            if (view != null)
+            {
+                ReadAgreement(view.Report);
             }
         }
 
