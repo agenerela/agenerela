@@ -145,5 +145,6 @@ other than Ollama.
 | Ollama's version unchanged since the run you compare with | Records it, does not compare | Compare the versions; if it changed, re-run the control |
 | The result written down | Writes the report | Put it in `findings.md` the same day, negative results too |
 
-Rule 7 is not a before-you-run check: the live tests carry the `RequiresOllama` category, so
-without a model they are ignored, not failed.
+Rule 7 is not a before-you-run check: the live tests carry the `RequiresOllama` category and are
+ignored, not failed, when Ollama is unreachable. A reachable server still needs the configured
+model pulled, or the run fails at warm-up.
