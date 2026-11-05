@@ -826,11 +826,15 @@ commands against 23.6, are marked beyond noise. Every other category is within n
 field order differing between the arms, the difference cannot be put down to the model. The A/B
 that can is a rerun with the 4B writing the fields in the framework's order.
 
-**Latency, the first run only** (no other Unity process ran during it; one did during part of
-the swapped run). Median 0.80 s for the 2B and 0.72 s for the 4B; 90th percentile 0.93 s and
-0.81 s. Prompts were 345–405 tokens on the 2B and 325–383 on the 4B, answers 25–44 and 25–41
-tokens, and the 4B's lines were shorter (median 29 characters against 46). No reasoning came back
-from either model. One sequential run on one laptop: not a latency claim.
+**Latency, the first run only.** Median 0.80 s for the 2B and 0.72 s for the 4B; 90th
+percentile 0.93 s and 0.81 s. Another session's Unity EditMode batch run loaded the CPU from
+"about 11:29 to 11:31" local time by its own account. A sampler (one reading about every 6 s)
+first saw its process at 11:31:12, during the swapped run. If it did start at 11:29, it overlapped
+the last minute of the 4B's arm (about 11:28:50–11:29:51); the 4B's median was 0.718 s over its
+first 38 prompts and 0.728 s over its last 38. In the proxy run (raw responses, 79 requests per
+model, warm-ups included), prompts were 345–405 tokens on the 2B and 325–383 on the 4B, answers
+25–44 and 25–41 tokens, and the 4B's lines were shorter (median 29 characters against 46). No
+reasoning came back from either model. One sequential run on one laptop: not a latency claim.
 
 **Conditions.**
 - `test` at 3f0a87c (framework 0.4.0-preview.1), Unity 6000.3.23f1, PlayMode in batch mode, from
