@@ -56,7 +56,8 @@ Use **`Reject`** only when the answer should never have been possible, the kind 
 `SchemaLegalityGuard` catches. A game rarely needs it.
 
 Either way, the result keeps the model's own answer in `DecisionResult.ModelDecision` and the
-verdict in `DecisionResult.Verdict`. The telemetry records the guard's name in `GuardsFired`,
+verdict in `DecisionResult.Verdict`, and the exchange it came from in `DecisionResult.Request`
+and `DecisionResult.Reply`: the model's original reply, not the refusal line's (#142). The telemetry records the guard's name in `GuardsFired`,
 the verdict's kind in `Verdict` and its reason in `GuardReason`, for a game's guard exactly as
 for a built-in one. Write the reason for a developer reading telemetry: what was wrong, not
 what the player should hear. The one exception is below: a call that asks the model for a line

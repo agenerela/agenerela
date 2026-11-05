@@ -13,7 +13,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "event_002",
@@ -28,7 +30,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "event_003",
@@ -42,7 +46,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "event_004",
@@ -56,7 +62,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "event_005",
@@ -70,7 +78,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "event_006",
@@ -84,7 +94,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "event_007",
@@ -98,7 +110,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "event_008",
@@ -112,7 +126,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "event_009",
@@ -126,7 +142,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "event_010",
@@ -141,7 +159,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "event_011",
@@ -157,7 +177,9 @@
         "isFollowing": false
       },
       "note": "Unlike impossible_008, nobody asks the guard to enter the cave. Walking to its locked entrance, where the villager can be heard, is the help the guard can give.",
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "event_012",
@@ -172,7 +194,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "event_013",
@@ -188,7 +212,9 @@
         "isFollowing": false
       },
       "note": "The target is named only in the observations.",
-      "labelledBy": ["Yevhen"]
+      "labelledBy": [
+        "Yevhen"
+      ]
     },
     {
       "id": "event_014",
@@ -204,7 +230,9 @@
         "isFollowing": false
       },
       "note": "The target is named only in the observations.",
-      "labelledBy": ["Yevhen"]
+      "labelledBy": [
+        "Yevhen"
+      ]
     },
     {
       "id": "event_015",
@@ -215,12 +243,17 @@
         "Smaller boats also stop beside the bridge"
       ],
       "expectedAction": "move_to",
-      "expectedTarget": ["bridge", "docks"],
+      "expectedTarget": [
+        "bridge",
+        "docks"
+      ],
       "preconditionState": {
         "isFollowing": false
       },
       "note": "An open choice: either place is right, and the grounding guard must not turn it away.",
-      "labelledBy": ["Yevhen"]
+      "labelledBy": [
+        "Yevhen"
+      ]
     },
     {
       "id": "event_016",
@@ -232,12 +265,14 @@
       ],
       "expectedAction": "move_to",
       "expectedTarget": "north_tower",
-      "checkTarget": false,
       "preconditionState": {
         "isFollowing": false
       },
+      "checkTarget": false,
       "note": "Run with the grounding guard off (DR-016).",
-      "labelledBy": ["Yevhen"]
+      "labelledBy": [
+        "Yevhen"
+      ]
     },
     {
       "id": "event_017",
@@ -252,7 +287,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Yevhen"]
+      "labelledBy": [
+        "Yevhen"
+      ]
     },
     {
       "id": "event_018",
@@ -267,7 +304,9 @@
       "preconditionState": {
         "isFollowing": true
       },
-      "labelledBy": ["Yevhen"]
+      "labelledBy": [
+        "Yevhen"
+      ]
     },
     {
       "id": "event_019",
@@ -281,7 +320,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Yevhen"]
+      "labelledBy": [
+        "Yevhen"
+      ]
     }
   ]
 }

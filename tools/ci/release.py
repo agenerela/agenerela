@@ -122,6 +122,37 @@ def check(tag):
     return 0
 
 
+# A line that starts its own block in Markdown, so it is never joined to the line above.
+BLOCK_START = re.compile(r"\s*([-*+]\s|\d+[.)]\s|#|<|\||```|>\s*\[!)")
+
+
+def unwrap(text):
+    """Join hard-wrapped lines into one line per paragraph or list item.
+
+    The changelog and the notes files wrap at about 95 characters, as every doc here does, but
+    GitHub renders each newline of a release's notes as a line break, so wrapped notes show
+    ragged paragraphs that stop halfway across the page. Fenced code is left as it is, and so
+    are headings, HTML, tables, alert markers and lines ending in a hard break.
+    """
+    out, fenced = [], False
+    for line in text.splitlines():
+        if line.lstrip().startswith("```"):
+            fenced = not fenced
+            out.append(line)
+            continue
+        prev = out[-1] if out else ""
+        joinable = (not fenced and line.strip() and prev.strip() and not BLOCK_START.match(line)
+                    and not re.match(r"\s*(#|<|\||```|>\s*\[!)", prev)
+                    and not prev.endswith(("  ", "\\")))
+        if joinable:
+            if prev.lstrip().startswith(">") and line.lstrip().startswith(">"):
+                line = line.lstrip()[1:]
+            out[-1] = prev.rstrip() + " " + line.strip()
+        else:
+            out.append(line)
+    return "\n".join(out)
+
+
 def notes(tag):
     version = version_of(tag)
     found = section(version)
@@ -131,7 +162,7 @@ def notes(tag):
     written = f"docs/releases/{tag}.md"
     if os.path.exists(written):
         anchor = re.sub(r"[^0-9a-z -]", "", f"{version} - {date}".lower()).replace(" ", "-")
-        print(f"""{read(written).strip()}
+        print(unwrap(f"""{read(written).strip()}
 
 ## Install it
 
@@ -145,9 +176,9 @@ Newtonsoft JSON, the one thing it depends on, comes with it.
 
 Every change in detail, for developers, is in the
 [changelog]({REPO}/blob/{tag}/{CHANGELOG}#{anchor}). Found a problem, or something
-confusing? [Open an issue]({REPO}/issues/new); even a one-liner helps.""")
+confusing? [Open an issue]({REPO}/issues/new); even a one-liner helps."""))
         return 0
-    print(f"""{body}
+    print(unwrap(f"""{body}
 
 ## Installing
 
@@ -157,7 +188,7 @@ In Unity, *Window → Package Manager → + → Install package from git URL*, t
 {REPO}.git?path={PACKAGE}#{tag}
 ```
 
-The package's one dependency, Newtonsoft JSON, installs with it.""")
+The package's one dependency, Newtonsoft JSON, installs with it."""))
     return 0
 
 

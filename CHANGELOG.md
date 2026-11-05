@@ -29,6 +29,28 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **GreyBoxVillage has two guards and an agent board** (#143), the first slice of the demo's
+  upgrade.
+  - Bram at the gate and Wren at the bridge are each an `AgentBehaviour` with a profile asset.
+    Both ask one `OllamaProviderConfig`, so they share one queue.
+  - The player speaks to the nearest guard. The bell is heard by every agent except the one who
+    rang it.
+  - A game guard, `never_attack_villagers`, contains an attack on the village's people, and each
+    guard says its own refusal line.
+  - The board shows each agent's stimulus, offered actions, decision, the guard that stopped it,
+    and its queue wait. The request history can be filtered by agent.
+  - The recorder reads `DecisionResult.Request` and `Reply` (#142) instead of wrapping the
+    provider.
+
+- **The evaluation set opens in the Prompt Set window** (#134). `agent.json` now lists its six
+  categories, each with its file and the prefix its ids use (`command_with_target`'s are
+  `target_001`, ...), so the window and the Phase 4 runner find every prompt. No prompt changed:
+  a test loads and saves all 76 and compares them. The files are now in the layout the window
+  writes, which a test keeps them in, so the first save from the window shows only what it
+  changed rather than reflowing every line. Blind second labels go to
+  `Assets/Evaluation/labels/<annotator>/<category>.json`; the README says how.
+- **Screen 8, the Prompt Set window**, in `docs/design/`: the wireframe drawn for #134 before the
+  window was built, with its notes.
 - **The risk management plan** in `docs/course/2026-10-29-risk-management/`: an Excel
   register of 14 risks, two per member, with a risk matrix and a sprint review log, reviewed
   once per sprint. XLSX now goes through Git LFS.
@@ -45,6 +67,11 @@ phase table and the open issues, not here.
 
 ### Fixed
 
+- **Release notes no longer break mid-sentence.** GitHub shows every newline in a release's
+  notes as a line break, so notes copied from wrapped Markdown came out as ragged paragraphs
+  stopping halfway across the page, as 0.2.0, 0.3.0 and 0.4.0-preview.1 did (the last was
+  fixed by hand). `tools/ci/release.py notes` now joins wrapped lines, leaving code, headings,
+  HTML, tables and alert markers alone.
 - **The evaluation set names its real annotator on `target_001` to `target_009`.** They held
   #13's placeholder names, `alice` and `bob`; Maxim labelled them. No prompt is doubly labelled
   now, so Phase 4's second labels are still to come, from the Prompt Set window (#134).

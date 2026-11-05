@@ -1162,6 +1162,8 @@ claim, and never cut Phase 4.
 
 ## 4. Testing and measurement standards (settled — copy into the new wiki verbatim)
 
+> **The rules below now live in [`llm-wiki/measuring.md`](llm-wiki/measuring.md)**, with what has been learned since and a before-you-run checklist. Update them there; this text is left as the plan first wrote it.
+
 Before writing down any accuracy number:
 1. **Control arm.** Baseline vs treatment on the identical prompt set, same model, same
    machine, same session. Single before/after runs are anecdotes — the prototype's

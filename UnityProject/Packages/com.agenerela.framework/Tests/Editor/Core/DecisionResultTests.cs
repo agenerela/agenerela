@@ -82,5 +82,25 @@ namespace Agenerela.Tests
             Assert.That(result.Decision, Is.Null);
             Assert.That(result.Telemetry, Is.SameAs(telemetry));
         }
+
+        // A result built outside an agent sent nothing, so it carries no exchange (#142)
+        [Test]
+        public void ThePublicConstructorCarriesNoRequestOrReply()
+        {
+            var result = new DecisionResult(new AgentDecision("move_to", "player", ""), new DecisionTelemetry());
+
+            Assert.That(result.Request, Is.Null);
+            Assert.That(result.Reply, Is.Null);
+        }
+
+        // A reply answers a request, so one never comes without the other
+        [Test]
+        public void AReplyWithoutItsRequestIsRejected()
+        {
+            var decision = new AgentDecision("move_to", "player", "");
+            var reply = new Agenerela.Providers.ProviderResult { Text = "{}" };
+
+            Assert.Throws<ArgumentException>(() => new DecisionResult(decision, new DecisionTelemetry(), decision, null, null, reply));
+        }
     }
 }

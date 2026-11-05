@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Agenerela;
 using UnityEngine;
 using UnityEngine.AI;
@@ -16,20 +17,20 @@ namespace Demos.GreyBoxVillage
     ///
     /// For the same reason the availability checks carry most of the weight: an action that is not
     /// offered cannot be picked, whatever the model makes of a line. They read who is asking from
-    /// the agent's State, which <see cref="VillageCommands"/> sets before each decision: the source
-    /// of the stimulus under <see cref="AskedBy"/> and the distance of a wolf the guard can see under
-    /// <see cref="WolfMetres"/>.
+    /// the agent's State, which <see cref="AgentMind"/> sets before each decision: the source
+    /// of the stimulus under <see cref="AgentMind.AskedBy"/> and the distance of a wolf the guard can see under
+    /// <see cref="AgentMind.WolfMetres"/>.
+    ///
+    /// Bram and Wren are both guards: the same body, each with its own post, patrol and profile.
     /// </remarks>
     [RequireComponent(typeof(NavMeshAgent))]
-    public sealed class VillageGuard : MonoBehaviour
+    public sealed class VillageGuard : VillageBody
     {
-        /// <summary>State key: the source of the stimulus being decided, "player", "zone", "wolf" or "quiet".</summary>
-        public const string AskedBy = "askedBy";
-        /// <summary>State key: how far away a wolf the guard can see is, in metres. Absent when it sees none.</summary>
-        public const string WolfMetres = "wolfMetres";
+        /// <summary>The game guard that keeps a guard from attacking the village's own people.</summary>
+        public const string NeverAttackVillagers = "never_attack_villagers";
 
-        /// <summary>Set by <see cref="VillageCommands"/>.</summary>
-        [System.NonSerialized] public Transform Player;
+        /// <summary>Where the guard stands when nothing else is going on: Bram's gate, Wren's bridge.</summary>
+        public Transform Post;
         public VillageAlarm Alarm;
         public Transform[] PatrolRoute;
         public float FollowDistance = 2.5f;
@@ -40,9 +41,12 @@ namespace Demos.GreyBoxVillage
         public bool IsFollowing { get; private set; }
         public bool IsPatrolling { get; private set; }
         public bool IsMoving => destination != null || chase != null || IsPatrolling;
+        public override bool IsBusy => IsFollowing || IsMoving;
 
         /// <summary>What the guard is doing, as a clause the observations can use.</summary>
-        public string Activity { get; private set; } = "standing at the village_gate";
+        public override string Activity => activity ??= AtPost;
+
+        private string activity;
 
         private NavMeshAgent navigation;
         private Transform destination;
@@ -50,8 +54,6 @@ namespace Demos.GreyBoxVillage
         private Transform chase;
         private bool attacking;
         private int patrolIndex;
-        private TextMesh speech;
-        private float speechUntil;
 
         // ---- The evaluation agent's actions --------------------------------------------------
 
@@ -61,7 +63,7 @@ namespace Demos.GreyBoxVillage
         {
             Clear();
             IsFollowing = true;
-            Activity = "following the player";
+            activity = "following the player";
             Report("Following the player.");
         }
 
@@ -75,7 +77,7 @@ namespace Demos.GreyBoxVillage
         {
             Clear();
             Halt();
-            Activity = "standing still";
+            activity = "standing still";
             Report("Holding position.");
         }
 
@@ -88,7 +90,7 @@ namespace Demos.GreyBoxVillage
         {
             Clear();
             Walk(target, IdOf(target));
-            Activity = "walking to the " + destinationId;
+            activity = "walking to the " + destinationId;
             Report("Walking to the " + destinationId + ".");
         }
 
@@ -100,7 +102,7 @@ namespace Demos.GreyBoxVillage
             attacking = true;
             if (target.GetComponent<VillageWolf>() != null) chase = target;
             Walk(target, IdOf(target));
-            Activity = "charging the " + destinationId;
+            activity = "charging the " + destinationId;
             Report("Charging the " + destinationId + ".");
         }
 
@@ -113,7 +115,7 @@ namespace Demos.GreyBoxVillage
             Clear();
             Halt();
             if (Player != null) Face(Player.position);
-            Activity = "warning the player";
+            activity = "warning the player";
             Report("Warning the player.");
         }
 
@@ -128,7 +130,7 @@ namespace Demos.GreyBoxVillage
             Clear();
             var zone = target.GetComponent<RestrictedZone>();
             Walk(zone != null && zone.Entrance != null ? zone.Entrance : target, IdOf(target));
-            Activity = "blocking the way into the " + destinationId;
+            activity = "blocking the way into the " + destinationId;
             Report("Blocking the way into the " + destinationId + ".");
         }
 
@@ -136,7 +138,7 @@ namespace Demos.GreyBoxVillage
         [Example("Raiders are coming over the hill!")]
         private void SoundAlarm()
         {
-            if (Alarm != null) Alarm.Ring();
+            if (Alarm != null) Alarm.Ring(this);
             Report("Rang the alarm bell.");
         }
 
@@ -144,7 +146,7 @@ namespace Demos.GreyBoxVillage
         // the player can still report one.
         [Available("sound_alarm")]
         private bool CanSoundAlarm(AgentContext ctx) => Alarm != null && !Alarm.IsSounding &&
-            (Asker(ctx) == "player" || ctx.State.TryGetValue(WolfMetres, out var d) && (float)d <= AlarmWolfDistance);
+            (Asker(ctx) == "player" || ctx.State.TryGetValue(AgentMind.WolfMetres, out var d) && (float)d <= AlarmWolfDistance);
 
         [AgentAction("patrol", "Walk a round of the village, watching for trouble.")]
         [Example("Your watch at the gate still has hours to run.")]
@@ -155,7 +157,7 @@ namespace Demos.GreyBoxVillage
             IsPatrolling = true;
             patrolIndex = NearestPatrolPoint();
             Walk(PatrolRoute[patrolIndex], IdOf(PatrolRoute[patrolIndex]));
-            Activity = "patrolling the village";
+            activity = "patrolling the village";
             Report("Starting a patrol.");
         }
 
@@ -165,52 +167,62 @@ namespace Demos.GreyBoxVillage
         private bool CanPatrol(AgentContext ctx) =>
             Asker(ctx) == "quiet" && !IsPatrolling && !IsFollowing && PatrolRoute != null && PatrolRoute.Length > 0;
 
-        private static string Asker(AgentContext ctx) => ctx.State.TryGetValue(AskedBy, out var source) ? source as string : null;
+        private static string Asker(AgentContext ctx) => ctx.State.TryGetValue(AgentMind.AskedBy, out var source) ? source as string : null;
 
-        // ---- Body ----------------------------------------------------------------------------
+        // ---- What only the guard knows ------------------------------------------------------
 
-        /// <summary>Shows the guard's statement above its head for a few seconds.</summary>
-        public void Say(string statement)
+        public override IEnumerable<string> Facts()
         {
-            if (string.IsNullOrWhiteSpace(statement)) return;
-            if (speech == null)
-            {
-                var go = new GameObject("speech");
-                go.transform.SetParent(transform, false);
-                go.transform.localPosition = new Vector3(0, 3.1f, 0);
-                speech = go.AddComponent<TextMesh>();
-                speech.anchor = TextAnchor.LowerCenter;
-                speech.alignment = TextAlignment.Center;
-                speech.fontSize = 48;
-                speech.characterSize = 0.11f;
-                speech.color = new Color(1f, 0.92f, 0.6f);
-            }
-            speech.text = Wrap(statement.Trim(), 34);
-            speech.gameObject.SetActive(true);
-            speechUntil = Time.time + 6f;
+            yield return IsFollowing ? "You are following the player." : "You are not following the player.";
+            if (Alarm != null && Alarm.IsSounding) yield return "The alarm bell is ringing.";
         }
 
         /// <summary>
-        /// Breaks off a patrol so the guard can attend to whatever is asking. <see cref="VillageCommands"/>
-        /// calls it before every decision but a quiet moment's: a patrol is what the guard does while
-        /// nothing happens, and it stops when something does.
+        /// Breaks off a patrol so the guard can attend to whatever is asking. A patrol is what the
+        /// guard does while nothing happens, so anything but a quiet moment stops it.
         /// </summary>
-        public void Attend()
+        public override void Attend(string source)
         {
-            if (!IsPatrolling) return;
+            if (source == "quiet" || !IsPatrolling) return;
             Clear();
             Halt();
-            Activity = "standing still, your patrol broken off";
+            activity = "standing still, your patrol broken off";
             Report("Breaking off the patrol.");
         }
 
-        /// <summary>Forgets what the guard was doing, without moving it. Used between tests.</summary>
-        public void ResetState()
+        /// <summary>
+        /// A guard never attacks the village's own people: a guard rule, not availability, because it
+        /// depends on the target the model picks. <c>attack_target</c> stays offered for the wolf and
+        /// the training dummy, and an attack on a villager or the other guard is contained.
+        /// </summary>
+        public override IEnumerable<IDecisionGuard> Guards()
+        {
+            yield return new DelegateGuard(NeverAttackVillagers, input =>
+            {
+                var d = input.Decision;
+                if (d.ActionId != "attack_target" || !input.Context.Targets.TryGet(d.TargetId, out var target)) return GuardVerdict.Pass;
+                var targetable = (target as Component)?.GetComponentInParent<Targetable>();
+                return targetable != null && targetable.Category == "person"
+                    ? GuardVerdict.RewriteToNone(d.TargetId + " is one of the village's people, and guards never attack them.")
+                    : GuardVerdict.Pass;
+            });
+        }
+
+        public override string RefusalLine(GuardVerdict verdict) =>
+            verdict.Guard == NeverAttackVillagers ? "I won't raise my sword against our own."
+            : verdict.Guard == "TargetGroundingGuard" ? "There's no such thing here."
+            : null;
+
+        // ---- Body ----------------------------------------------------------------------------
+
+        public override void ResetState()
         {
             Clear();
             Halt();
-            Activity = "standing at the village_gate";
+            activity = AtPost;
         }
+
+        private string AtPost => "standing at the " + (Post != null ? IdOf(Post) : "village_gate");
 
         private NavMeshAgent Navigation => navigation != null ? navigation : navigation = GetComponent<NavMeshAgent>();
 
@@ -244,14 +256,9 @@ namespace Demos.GreyBoxVillage
             }
         }
 
-        private void Update()
+        protected override void Update()
         {
-            if (speech != null && speech.gameObject.activeSelf)
-            {
-                speech.transform.rotation = Camera.main != null ? Camera.main.transform.rotation : Quaternion.identity;
-                if (Time.time > speechUntil) speech.gameObject.SetActive(false);
-            }
-
+            base.Update();
             if (!Navigation.isOnNavMesh) return;
 
             if (IsFollowing && Player != null)
@@ -267,7 +274,7 @@ namespace Demos.GreyBoxVillage
                 var wolf = chase.GetComponent<VillageWolf>();
                 if (wolf == null || wolf.IsHidden)
                 {
-                    Activity = "standing where the wolf fled";
+                    activity = "standing where the wolf fled";
                     Clear();
                     Halt();
                     return;
@@ -276,7 +283,7 @@ namespace Demos.GreyBoxVillage
                 if (Vector3.Distance(transform.position, chase.position) <= StrikeDistance + 0.5f)
                 {
                     wolf.Flee();
-                    Activity = "standing where the wolf fled";
+                    activity = "standing where the wolf fled";
                     Report("Struck the wolf; it runs for the woods.");
                     Clear();
                     Halt();
@@ -294,7 +301,7 @@ namespace Demos.GreyBoxVillage
                     return;
                 }
                 if (attacking) Report("Struck the " + destinationId + ".");
-                Activity = attacking ? "standing by the " + destinationId + " after striking it"
+                activity = attacking ? "standing by the " + destinationId + " after striking it"
                     : Activity.StartsWith("blocking") ? Activity.Replace("blocking the way", "standing in the entrance, blocking the way")
                     : "standing at the " + destinationId;
                 destination = null;
@@ -320,28 +327,5 @@ namespace Demos.GreyBoxVillage
             flat.y = 0;
             if (flat.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(flat);
         }
-
-        private static string IdOf(Transform target)
-        {
-            var targetable = target.GetComponentInParent<Targetable>();
-            return targetable != null && !string.IsNullOrEmpty(targetable.Id) ? targetable.Id : target.name;
-        }
-
-        private static string Wrap(string text, int width)
-        {
-            var words = text.Split(' ');
-            var result = new System.Text.StringBuilder();
-            int line = 0;
-            foreach (var word in words)
-            {
-                if (line > 0 && line + word.Length + 1 > width) { result.Append('\n'); line = 0; }
-                else if (line > 0) { result.Append(' '); line++; }
-                result.Append(word);
-                line += word.Length;
-            }
-            return result.ToString();
-        }
-
-        private void Report(string message) => Debug.Log("[GreyBoxVillage guard] " + message, this);
     }
 }

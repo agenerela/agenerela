@@ -10,6 +10,55 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **`DecisionResult.Request` and `DecisionResult.Reply`** (#142): the `DecisionRequest` a decision
+  sent and the provider's `ProviderResult` for it, so a game can tell its agents' exchanges apart
+  when several share one provider's queue, without wrapping the provider. Both are read-only and
+  set on every result whose request was sent, pipeline errors included: a reply that could not be
+  read, or a guard that threw, keeps the reply. `Reply` is null when the provider failed or
+  returned nothing, and both are null when preparing the request failed. A guard-stopped decision
+  keeps the model's original reply, never the refusal line's. A cancelled call still has no
+  result. The public constructor sets neither.
+
+- **Prompt sets** (#134, DR-017): the labelled prompts an agent is measured against, as public
+  types in `Agenerela.Evaluation`. `PromptSet` is the set file (`Agent`, `Actions`, `Targets`,
+  `Categories`) and its prompts, with `Load`, `Save`, `SaveCategory`, `CreateFor(profile, path)`,
+  `NextId`, `TryFind` and `FindAction`. `EvalPrompt` holds a prompt's fields under their JSON
+  names, `ExpectedTarget` one target or an open choice, and `DeclaredAction` (with
+  `IsAvailableIn(state)`), `DeclaredTarget` and `PromptCategory` the set file's parts. A field
+  the format does not know is kept in `Extra` and written back. Files are read and written with
+  Newtonsoft only, indented, with LF line ends. `ValidateCategoryId` and `ValidateCategory` keep
+  a category's id a plain name and its file inside the set's folder, so neither can redirect a
+  write onto the set file, a label file or anywhere else; `Load` refuses a set that breaks
+  them, or has a list that is null, with an `InvalidDataException`.
+- **The writing rules in code.** `PromptSetChecks.Check` and `CheckPrompt` return a
+  `PromptProblem` for each `PromptRule` a prompt breaks: an unregistered target, `none` without
+  `no_target`, a target-needing action with `no_target` or a targetless one with a target, a
+  state that does not match the action's `onlyWhen`, a stimulus that is a few-shot example
+  (hard rule 4, `MatchesExample`), an id that is malformed or used twice, an undeclared action, a
+  missing field. `CompareWithProfile` lists where an `AgentProfile` and the set disagree.
+- **Blind labels and agreement.** `PromptSet.RecordLabel` writes one annotator's answer, a
+  `LabelAnswer` (`action/target`), to `labels/<annotator>/<category>.json`, an `AnnotatorLabels`,
+  and never replaces one. `BlindPrompt.Queue` gives the prompts an annotator still has to label
+  with nothing that shows an answer, and `LabelChoices` the actions their state allows.
+  `AgreementReport.Compute` counts per prompt (`PromptAgreement`: `Answered`, `Agreeing`,
+  `IsSplit`) and overall, and lists the splits; `PromptSet.Settle` writes a person's decision and
+  keeps everyone's answer in the prompt's `labels`.
+- **Window → Agenerela → Prompt Set** (`PromptSetWindow`): Write mode edits prompts with the
+  expected answer picked from dropdowns and the rules shown inline; Label mode asks one
+  annotator blind; Agreement mode shows the counts and settles a split when a person clicks.
+- **A Prompt Set window that explains itself** (#158). Until a set and a profile are chosen, the
+  tabs are greyed out with the reason, and the window shows three numbered steps: choose the
+  set, choose the profile, type your name. **Open the project's evaluation set** opens the
+  `agent.json` under `Assets/` (`Assets/Evaluation/` first) and the `AgentProfile` beside it in
+  one click; **New set from this profile…** stays as the second way in. A line under the tabs
+  says what the current one is for, every toolbar field has a tooltip, **You** is now **Your
+  name**, and Label mode shows "12 of 40 left to label" and says why once nothing is left. The
+  set, the profile and the name are remembered in `EditorPrefs`, keyed per project: a name or set
+  chosen in #134's window is asked for once more. agenerela's own set now has its profile,
+  `Assets/Evaluation/VillageGuard.asset`, so the few-shot check runs on it.
+- `Documentation~/evaluation.md`: the set's layout, writing prompts, labelling blind, and reading
+  and settling agreement.
+
 - **Contained refusals** (#109, build plan §2.5). A decision a guard stopped now has an empty
   statement, where it kept the model's; the model's words stay on `ModelDecision`, and memory holds
   what was actually said. `Agent.RefusalStatement`, a

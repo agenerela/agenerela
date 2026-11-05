@@ -12,7 +12,9 @@
         "isFollowing": false
       },
       "note": "Godzilla is not a registered target.",
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "impossible_002",
@@ -25,7 +27,9 @@
         "isFollowing": false
       },
       "note": "Mars is not an available destination.",
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "impossible_003",
@@ -38,7 +42,9 @@
         "isFollowing": false
       },
       "note": "The door is not registered in the world.",
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "impossible_004",
@@ -51,7 +57,9 @@
         "isFollowing": false
       },
       "note": "The sun is not an interactable object.",
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "impossible_005",
@@ -64,7 +72,9 @@
         "isFollowing": false
       },
       "note": "The moon is not an available destination.",
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "impossible_006",
@@ -77,7 +87,9 @@
         "isFollowing": false
       },
       "note": "No conversation target is present.",
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "impossible_007",
@@ -90,7 +102,9 @@
         "isFollowing": false
       },
       "note": "The requested action is not registered.",
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "impossible_008",
@@ -103,7 +117,9 @@
         "isFollowing": false
       },
       "note": "The cave is registered but locked, and no registered action opens or enters it. The agent must refuse, not move_to the cave: the request is to go inside, and walking to the entrance does not do that. Compare event_011, where walking to the entrance is the help the guard can give.",
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "impossible_009",
@@ -116,7 +132,9 @@
         "isFollowing": false
       },
       "note": "No enemy target is available.",
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     }
   ]
 }
