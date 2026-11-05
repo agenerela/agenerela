@@ -98,6 +98,8 @@ namespace Agenerela.Editor.Evaluation
 
         public override void SaveChanges()
         {
+            // Also how the close dialog saves, so it lets the window close; a draft still waiting
+            // is named in that dialog's message. Saving from inside the window recomputes the flag.
             writeView?.SaveAll();
             hasUnsavedChanges = false;
             base.SaveChanges();
@@ -260,13 +262,15 @@ namespace Agenerela.Editor.Evaluation
                 }
             }
 
-            if (mode != Mode.Write && hasUnsavedChanges)
+            // Only edits block the other modes: a waiting draft cannot be saved, and stays offered above.
+            if (mode != Mode.Write && writeView != null && writeView.HasUnsavedChanges)
             {
                 EditorGUILayout.HelpBox("Save the prompts you changed in Write mode first.", MessageType.Info);
                 if (GUILayout.Button("Save", GUILayout.Width(80)))
                 {
                     SaveChanges();
                     Reload();
+                    hasUnsavedChanges = Unsaved;
                 }
 
                 return;
