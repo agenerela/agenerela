@@ -47,7 +47,7 @@ namespace Agenerela.Editor.Evaluation
             .Select((name, i) => new GUIContent(name, char.ToUpperInvariant(ModeDescriptions[i][0]) + ModeDescriptions[i].Substring(1) + "."))
             .ToArray();
 
-        private const string SetTip = "The set file: the agent.json beside a folder of prompts. Drag one in, or use the button below the toolbar.";
+        private const string SetTip = "The set file: the agent.json beside a folder of prompts. Drag one in, or click Open the project's evaluation set while no set is open.";
         private const string ProfileTip = "The AgentProfile the set is measured against. Write offers its actions, and every prompt is checked against its few-shot examples (hard rule 4).";
         private const string NameTip = "Your name. It goes on the prompts you write, and your answers in Label are saved under it.";
         private const string NamesTip = "Pick a name already in the set.";
@@ -333,15 +333,16 @@ namespace Agenerela.Editor.Evaluation
             using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
             {
                 ToolbarLabel("Set", SetTip, 26);
-                var chosenSet = (TextAsset)EditorGUILayout.ObjectField(setAsset, typeof(TextAsset), false, GUILayout.Width(160));
+                var chosenSet = (TextAsset)EditorGUILayout.ObjectField(setAsset, typeof(TextAsset), false, GUILayout.Width(140));
                 Tooltip(SetTip);
                 ToolbarLabel("Profile", ProfileTip, 44);
-                var chosenProfile = (AgentProfile)EditorGUILayout.ObjectField(profile, typeof(AgentProfile), false, GUILayout.Width(160));
+                var chosenProfile = (AgentProfile)EditorGUILayout.ObjectField(profile, typeof(AgentProfile), false, GUILayout.Width(140));
                 Tooltip(ProfileTip);
 
                 if (chosenSet != setAsset)
                 {
-                    // What is drawn below the toolbar changes with the set, so this pass ends here.
+                    // What is drawn below the toolbar changes with the set, so this pass ends here. The
+                    // fields' widths leave Reload room at the window's 640 px minimum.
                     OpenSet(chosenSet);
                     GUIUtility.ExitGUI();
                 }
@@ -354,7 +355,7 @@ namespace Agenerela.Editor.Evaluation
 
                 ToolbarLabel("Your name", NameTip, 64);
                 EditorGUI.BeginChangeCheck();
-                you = EditorGUILayout.TextField(you, EditorStyles.toolbarTextField, GUILayout.Width(100));
+                you = EditorGUILayout.TextField(you, EditorStyles.toolbarTextField, GUILayout.Width(90));
                 Tooltip(NameTip);
                 if (GUILayout.Button(new GUIContent("▾", NamesTip), EditorStyles.toolbarDropDown, GUILayout.Width(18)))
                 {
