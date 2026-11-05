@@ -58,7 +58,8 @@ namespace LivingVale.Unity
 
             overlay.SetFocusPrompt(bootstrap.WorldInputBlocked || focused == null
                 ? "" : $"E — Talk to {focused.Descriptor.DisplayName}");
-            if (focused != null && bootstrap.TalkPressed)
+            // Design §8: chat refuses to open while an enemy is fighting the player.
+            if (focused != null && bootstrap.TalkPressed && !LivingVale.Combat.CombatDirector.EnemyEngaged)
             {
                 bootstrap.Coordinator.Open(focused.Descriptor);
             }

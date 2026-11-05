@@ -66,6 +66,15 @@ phase table and the open issues, not here.
   never applies a reply that arrives after the player cancelled, closed or switched speaker.
   NPC replies come from a scripted driver, labelled as such, behind the same boundary the real
   `Agent` will use at G5. 26 EditMode tests; the Windows player was play-checked.
+- **Living Vale, milestone G2 "Fight and collect", the combat half** (#69), on
+  `69-living-vale`: attack, block and dodge with health and stamina, as plain-C# rules
+  (`Combatant`: 20 damage, 10 stamina, one hit per swing per victim, a dodge window, a block
+  that stops the swing) and a raider and a lunging wolf, each a small state machine
+  (`EnemyBrain`), in a meadow south of the village. Taking damage closes the chat and an
+  engaged enemy keeps it from opening; a defeat respawns the player in the village and resets
+  the fight. Loot (`item_wolf_pelt`, `item_iron_scrap`) and the defeat penalty go through
+  `ILootSink` and `IDefeatPenalty`, logged and free until G3's inventory takes them. 74
+  EditMode tests in all. Not play-checked yet.
 - **The risk management plan** in `docs/course/2026-10-29-risk-management/`: an Excel
   register of 14 risks, two per member, with a risk matrix and a sprint review log, reviewed
   once per sprint. XLSX now goes through Git LFS.

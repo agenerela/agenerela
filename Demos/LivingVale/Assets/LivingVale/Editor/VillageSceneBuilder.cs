@@ -105,6 +105,7 @@ namespace LivingVale.Editor
             player.Configure(bootstrap, cameraObject.transform);
             playerObject.AddComponent<NpcInteraction>().Configure(bootstrap, overlay);
             bootstrap.Configure(player, overlay);
+            CombatSceneBuilder.Build(bootstrap, playerObject, body); // G2: player combat, the meadow encounter, HUD.
 
             Speaker("npc_mara", "Mara", "General trader", new Vector3(-5f, 0f, 4.5f), timber);
             // Between 6 and 9 m apart permits an explicit switch before leaving the old speaker's range.

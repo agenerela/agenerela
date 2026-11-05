@@ -21,15 +21,23 @@ Replies come from the local model through Agenerela by default (Ollama at `127.0
 model set on `ValeBootstrap`); **F6** switches between the model and scripted replies.
 With Ollama unreachable, a turn fails with a game-authored line and the game stays playable.
 
+**Combat (G2):** left mouse attacks, right mouse blocks, Space dodges. A raider and a wolf wait in
+the meadow south of the village. Combat input is ignored while typing, while a chat is open and
+while the pointer is over UI. Taking damage closes the open chat, and nobody will talk while an
+enemy is fighting you. When you fall you respawn where you started, and the enemies that were
+fighting you go home at full health; a defeated enemy stays down and drops its loot once
+(`item_wolf_pelt`, `item_iron_scrap`, logged until the inventory takes it).
+
 ## Layout
 
 | Folder | What | Scene? |
 |---|---|---|
 | `Assets/LivingVale/Interaction/` | Conversations: `ConversationCoordinator`, the `INpcDecisionDriver` boundary, `ScriptedNpcDecisionDriver` | No: plain C#, EditMode-tested |
+| `Assets/LivingVale/Combat/` | Combat: `Combatant` and `EnemyBrain` rules (plain C#, EditMode-tested), the player's and enemies' behaviours, `CombatDirector` (chat, loot and respawn hooks: `ILootSink`, `IDefeatPenalty`) and the HUD | Rules no; behaviours yes |
 | `Assets/LivingVale/Unity/` | Bootstrap, player, orbit camera, NPC speakers, focus and range | Yes |
 | `Assets/LivingVale/UI/` | The chat overlay, built from code with uGUI | Yes |
 | `Assets/LivingVale/Agenerela/` | Real NPC decisions: `AgenerelaNpcDecisionDriver` (one framework `Agent` per NPC, personas in `NpcPersona.cs`) and `SwitchableNpcDecisionDriver`, behind F6 | No: plain C#, EditMode-tested with a fake provider |
-| `Assets/LivingVale/Editor/` | `VillageSceneBuilder` and `LivingValeBuild`, also runnable in batch mode | Editor only |
+| `Assets/LivingVale/Editor/` | `VillageSceneBuilder` (which calls `CombatSceneBuilder`) and `LivingValeBuild`, also runnable in batch mode | Editor only |
 | `Assets/LivingVale/Tests/Editor/` | EditMode tests | — |
 
 NPC replies use Agenerela's `Agent` by default; the overlay's badge says which driver is
