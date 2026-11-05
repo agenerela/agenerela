@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Agenerela;
 using Agenerela.Providers;
+using LivingVale.Game;
 using LivingVale.Interaction;
 using UnityEngine;
 
@@ -19,16 +20,17 @@ namespace LivingVale.Agenerela
     /// <remarks>
     /// <para>
     /// <b>Memory.</b> Each agent keeps the framework's own <see cref="RollingHistory"/>, not the
-    /// coordinator's chat log. The framework remembers what the agent actually decided, as the
-    /// guards left it, in the encoding its prompt builder expects, and a cancelled or failed turn
-    /// remembers nothing, which matches the coordinator dropping it. Design §11 asks for exactly
-    /// this: keep the framework's memory contract rather than invent another history encoding. The
-    /// cost: lines the scripted driver gave before an F6 switch are not in it.
+    /// coordinator's chat log, so the model reads its earlier answers in the encoding the framework
+    /// defines (design §11). It is wrapped in <see cref="CommittedHistory"/>, so a decision is
+    /// remembered only once <see cref="Execute"/> carried it out: a reply the coordinator dropped
+    /// as stale, or one the game refused, never enters it. The cost: lines the scripted driver gave
+    /// before an F6 switch are not in it.
     /// </para>
     /// <para>
-    /// <b>Actions.</b> Only <see cref="ActionRegistry.None"/>, which every agent has, until the
-    /// trade session's quote actions merge. <see cref="ConfigureAgent"/> runs once per NPC when
-    /// its agent is built, and is where the game registers more: <c>agent.Actions.Register(...)</c>.
+    /// <b>Actions.</b> <see cref="ActionRegistry.None"/>, which every agent has, and, given an
+    /// <see cref="NpcActionExecutor"/>, the trade actions through <see cref="TradeActionBinding"/>,
+    /// recomputed from the executor on every turn. The <c>configureAgent</c> callback runs once
+    /// per NPC when its agent is built, and is where the game registers anything else.
     /// </para>
     /// <para>
     /// Call from the main thread, as the coordinator does: the framework's <c>Awaitable</c>
@@ -47,15 +49,28 @@ namespace LivingVale.Agenerela
         private readonly Dictionary<string, NpcPersona> personas = new Dictionary<string, NpcPersona>();
         private readonly Dictionary<string, Agent> agents = new Dictionary<string, Agent>();
         private readonly Action<NpcDescriptor, Agent> configureAgent;
+        private readonly NpcActionExecutor executor;
+        private readonly Dictionary<string, TradeActionBinding> trade = new Dictionary<string, TradeActionBinding>();
+        private readonly Dictionary<string, TradeReceipt> lastReceipts = new Dictionary<string, TradeReceipt>();
         private Task warmUp;
 
         /// <param name="provider">Shared by every NPC, so their requests share one queue (DR-015).</param>
         /// <param name="modelLabel">What <see cref="Label"/> names, such as <c>qwen3.5:2b</c>.</param>
         /// <param name="personas">The authored NPCs; null uses <see cref="ValeNpcPersonas.All"/>. An NPC without one is built from its descriptor.</param>
         /// <param name="configureAgent">Runs once per NPC, right after its agent is built: register its actions, guards or observation sources here.</param>
+        /// <param name="executor">The game's executor, shared with the scripted driver; null registers no trade actions.</param>
         public AgenerelaNpcDecisionDriver(ILLMProvider provider, string modelLabel,
-            IEnumerable<NpcPersona> personas = null, Action<NpcDescriptor, Agent> configureAgent = null)
+            IEnumerable<NpcPersona> personas = null, Action<NpcDescriptor, Agent> configureAgent = null,
+            NpcActionExecutor executor = null)
         {
+            this.executor = executor;
+            if (executor != null)
+            {
+                // From the start, not when an NPC's agent is first built: a trade the scripted
+                // driver made before an F6 switch must still reach the model's next turn.
+                executor.Trade.Confirmed += OnConfirmed;
+            }
+
             this.provider = provider ?? throw new ArgumentNullException(nameof(provider));
             ModelLabel = string.IsNullOrWhiteSpace(modelLabel) ? provider.Name : modelLabel.Trim();
             this.configureAgent = configureAgent;
@@ -70,7 +85,7 @@ namespace LivingVale.Agenerela
         }
 
         /// <summary>A driver over a local Ollama at <c>127.0.0.1:11434</c> (never <c>localhost</c>, AGENTS.md).</summary>
-        public static AgenerelaNpcDecisionDriver ForOllama(string model, Action<NpcDescriptor, Agent> configureAgent = null)
+        public static AgenerelaNpcDecisionDriver ForOllama(string model, NpcActionExecutor executor = null, Action<NpcDescriptor, Agent> configureAgent = null)
         {
             var settings = new OllamaSettings();
             if (!string.IsNullOrWhiteSpace(model))
@@ -78,7 +93,7 @@ namespace LivingVale.Agenerela
                 settings.Model = model.Trim();
             }
 
-            return new AgenerelaNpcDecisionDriver(new OllamaProvider(settings), settings.Model, null, configureAgent);
+            return new AgenerelaNpcDecisionDriver(new OllamaProvider(settings), settings.Model, null, configureAgent, executor);
         }
 
         public string ModelLabel { get; }
@@ -90,6 +105,9 @@ namespace LivingVale.Agenerela
 
         /// <summary>How many decisions <see cref="Execute"/> was asked to carry out. Tests read it.</summary>
         public int ExecutedCount { get; private set; }
+
+        /// <summary>The executor's outcome for the last trade action executed, or null. Tests and tools read it.</summary>
+        public ActionOutcome LastOutcome { get; private set; }
 
         /// <summary>This NPC's agent, built on first use.</summary>
         public Agent AgentFor(NpcDescriptor npc)
@@ -107,8 +125,14 @@ namespace LivingVale.Agenerela
             var persona = PersonaFor(npc);
             agent = new Agent(persona.ToIdentity(), Array.Empty<ActionDefinition>(), provider)
             {
-                RefusalStatement = (verdict, context) => RefusalLine
+                RefusalStatement = (verdict, context) => RefusalLine,
+                Memory = new CommittedHistory()
             };
+
+            if (executor != null)
+            {
+                trade[npc.Id] = TradeActionBinding.Bind(agent, npc.Id, executor);
+            }
 
             configureAgent?.Invoke(npc, agent);
             agents[npc.Id] = agent;
@@ -121,10 +145,19 @@ namespace LivingVale.Agenerela
             return personas.TryGetValue(npc.Id, out var persona) ? persona : NpcPersona.FromDescriptor(npc);
         }
 
-        /// <summary>The observations a turn sends: the persona's knowledge, then <see cref="TurnObservations"/>.</summary>
+        /// <summary>The observations a turn sends: the persona's knowledge, what it can offer now, then <see cref="TurnObservations"/>.</summary>
         public List<string> ObservationsFor(NpcTurn turn)
         {
             var lines = new List<string>(PersonaFor(turn.Npc).Knowledge);
+            if (trade.TryGetValue(turn.Npc.Id, out var binding))
+            {
+                var options = binding.Options();
+                binding.RefreshExamples(options);
+                lines.AddRange(TradeActionBinding.PromptLines(options));
+                lastReceipts.TryGetValue(turn.Npc.Id, out var receipt);
+                lines.AddRange(binding.StatusLines(receipt));
+            }
+
             var extra = TurnObservations?.Invoke(turn);
             if (extra != null)
             {
@@ -132,6 +165,15 @@ namespace LivingVale.Agenerela
             }
 
             return lines;
+        }
+
+        private void OnConfirmed(TradeReceipt receipt)
+        {
+            var quote = receipt == null ? null : executor.Trade.FindQuote(receipt.QuoteId);
+            if (quote?.NpcId != null)
+            {
+                lastReceipts[quote.NpcId] = receipt;
+            }
         }
 
         public async Task<NpcReply> DecideAsync(NpcTurn turn, CancellationToken ct)
@@ -144,6 +186,7 @@ namespace LivingVale.Agenerela
             ct.ThrowIfCancellationRequested();
 
             var agent = AgentFor(turn.Npc);
+            agent.State[TradeActionBinding.GenerationKey] = turn.Generation;
             var options = new DecideOptions
             {
                 StimulusLabel = StimulusLabel,
@@ -194,7 +237,27 @@ namespace LivingVale.Agenerela
             }
 
             ExecutedCount++;
-            return agent.Execute(result);
+            LastOutcome = null;
+            trade.TryGetValue(turn.Npc.Id, out var binding);
+            binding?.ClearOutcome();
+
+            // The handlers read the generation from the state Agent.Execute copies into their context.
+            agent.State[TradeActionBinding.GenerationKey] = turn.Generation;
+            bool executed = agent.Execute(result);
+
+            // Agent.Execute is true once the handler ran; the executor may still have refused the quote.
+            if (executed && binding?.LastOutcome != null)
+            {
+                LastOutcome = binding.LastOutcome;
+                executed = LastOutcome.Executed;
+            }
+
+            if (executed && agent.Memory is CommittedHistory memory)
+            {
+                memory.Commit(result);
+            }
+
+            return executed;
         }
 
         /// <summary>

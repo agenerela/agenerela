@@ -81,11 +81,10 @@ namespace LivingVale.Agenerela
             new[]
             {
                 "You are at your market stall in Briar Glen, talking with a traveler.",
-                "You sell healing potions at 10 gold each, and you only have a few left.",
+                "You sell healing potions, bread and herb bundles, and buy wolf pelts, iron scrap and herbs from travelers.",
                 "The medicine wagon from Ashwatch Castle never reached the vale, and trade has been slow since the Old Road went quiet.",
                 "Iven, the healer on the porch nearby, was waiting on that wagon more than anyone.",
-                "Sella at the inn hears travelers' news; you hear the rest.",
-                "Your stall is not taking sales through talk yet; if asked to sell, say the traveler must wait until it opens properly."
+                "Sella at the inn hears travelers' news; you hear the rest."
             });
 
         public static readonly NpcPersona Iven = new NpcPersona(

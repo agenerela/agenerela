@@ -73,7 +73,7 @@ namespace LivingVale.Unity
             Trade = new TradeService(Inventory, new[] { VendorStock.CreateMara(catalog) }, tradeLink);
             Executor = new NpcActionExecutor(Trade);
             Driver = new ScriptedNpcDecisionDriver(executor: Executor);
-            ModelDriver = AgenerelaNpcDecisionDriver.ForOllama(ollamaModel);
+            ModelDriver = AgenerelaNpcDecisionDriver.ForOllama(ollamaModel, Executor);
             Drivers = new SwitchableNpcDecisionDriver(Driver, ModelDriver, driver);
             if (driver == NpcDriverChoice.Agenerela)
             {

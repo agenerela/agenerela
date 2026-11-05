@@ -51,6 +51,13 @@ phase table and the open issues, not here.
   `Assets/Evaluation/labels/<annotator>/<category>.json`; the README says how.
 - **Screen 8, the Prompt Set window**, in `docs/design/`: the wireframe drawn for #134 before the
   window was built, with its notes.
+- **Living Vale G5b: Mara trades through the model** (#69): the `Agent` driver registers G3's
+  `quote_purchase` and `quote_sale` with targets from `NpcActionExecutor.AvailableFor`, asked again
+  each turn, so an action with nothing to offer is absent from the schema. Both drivers now
+  execute through the one executor. The actions and target ids are written into the prompt, a
+  guard contains a quote that names the other action's target, and an NPC remembers a reply only
+  once it is executed, so a reply dropped as late is not in its memory. A six-line live check is in
+  `findings.md` (5 November).
 - **Living Vale, milestone G5 "connect real decisions", for conversation** (#69), on
   `69-living-vale`: `AgenerelaNpcDecisionDriver` makes each speaking NPC a framework `Agent`,
   built in code from its persona (Mara and Iven so far), with the player's line as the stimulus,

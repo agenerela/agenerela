@@ -65,7 +65,7 @@ namespace LivingVale.Tests
             StringAssert.Contains("What happened to the wagon?", request.Stimulus);
             StringAssert.StartsWith(AgenerelaNpcDecisionDriver.StimulusLabel, request.Stimulus);
             StringAssert.Contains("Mara", request.SystemPrompt);
-            StringAssert.Contains("10 gold", request.Observations);
+            StringAssert.Contains("healing potions", request.Observations);
         }
 
         [Test]
@@ -217,7 +217,8 @@ namespace LivingVale.Tests
         public async Task EachNpcRemembersItsOwnEarlierTurns()
         {
             provider.Reply = FakeLlmProvider.Json("none", "no_target", "Ten gold a potion.");
-            await Decide(Turn(Mara, "How much is a potion?"));
+            var first = Turn(Mara, "How much is a potion?");
+            Assert.IsTrue(driver.Execute(first, await Decide(first)), "Only an executed decision is remembered.");
 
             provider.Reply = FakeLlmProvider.Json("none", "no_target", "Fine.");
             await Decide(Turn(Mara, "And two of them?"));
