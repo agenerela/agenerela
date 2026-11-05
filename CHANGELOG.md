@@ -44,6 +44,21 @@ phase table and the open issues, not here.
     `ITargetSource`.
   - **New game guards:** `cannot_afford`, `no_free_gifts`, `quest_not_ready` and
     `target_fits_action`.
+- **GreyBoxVillage is ready to present** (#153, polish slice).
+  - **Play mode changes no file:** the day and night cycle drives copies of the palette and sky,
+    and the default volume profile no longer names two scripts the project lacks.
+  - **No static state** outlives a play session, so it plays the same with the domain reload off;
+    a test checks every static field.
+  - **With no model running**, a HUD banner and a red bubble say so, and the agents stop asking on
+    their own until it answers.
+  - **The scene file went from 4.96 MB to about 1.2 MB:** the palette comes with the FBX import,
+    the nature scatter is drawn with GPU instancing (`ScatterField`), and the particle effects are
+    prefabs. The bushes, flowers and grass inside the walls now appear: the builder's check for
+    buildings in the way had always found the ground.
+  - **The capture tool draws the UI** (`CaptureUiFromCommandLine`) and measures the frame time.
+    The layout fixes it found: the agent list clear of the purse, key hints on a panel of their
+    own, at most three toasts, a card title that wraps, and the book and menu above the toasts.
+  - **Portraits** lit from the viewer's side, so Odile's face reads, and a title screen backdrop.
 - **GreyBoxVillage has two guards and an agent board** (#143), the first slice of the demo's
   upgrade.
   - Bram at the gate and Wren at the bridge are each an `AgentBehaviour` with a profile asset.

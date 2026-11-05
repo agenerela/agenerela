@@ -37,6 +37,16 @@ namespace Demos.GreyBoxVillage
         public float SpeakingDistance = 6f;
         [Tooltip("Append every decision to Logs/agenerela-decisions-<time>.jsonl.")]
         public bool WriteLogFile = true;
+        [Tooltip("After the model fails to answer, how long the village waits before it asks again on its own. The player's lines are always sent.")]
+        public float ModelRetrySeconds = 20f;
+
+        /// <summary>
+        /// What is wrong with the model, in words for the HUD, while the last decision failed because
+        /// no model answered (Ollama stopped, the model not pulled, a timeout); null while it answers.
+        /// </summary>
+        public string ModelProblem { get; private set; }
+        /// <summary>When the model last failed to answer, in game time.</summary>
+        public float ModelFailedAt { get; private set; } = float.NegativeInfinity;
 
         private DecisionRecorder recorder;
         private bool writeLog = true;
@@ -64,6 +74,63 @@ namespace Demos.GreyBoxVillage
             recorder ??= new DecisionRecorder(WriteLogFile && writeLog ? DecisionRecorder.DefaultFilePath() : null);
 
         public bool IsDeciding => Minds.Any(m => m != null && m.IsDeciding);
+
+        /// <summary>
+        /// Whether something the game noticed by itself (a quiet moment, a trespass, the wolf, the
+        /// bell) goes to the model now. Not while the model is down, until <see cref="ModelRetrySeconds"/>
+        /// has passed: four agents asking a stopped server every few seconds would fill the console
+        /// and change nothing. The player's own lines are always sent.
+        /// </summary>
+        public bool MayAskOnItsOwn => ModelProblem == null || Time.time - ModelFailedAt >= ModelRetrySeconds;
+
+        /// <summary>Called by every mind when a decision ends: a failure to reach the model sets <see cref="ModelProblem"/>, an answer clears it.</summary>
+        public void ReportModel(DecisionResult result)
+        {
+            if (result == null) return;
+            if (result.Decision != null)
+            {
+                if (ModelProblem != null && Hud != null) Hud.Toast("The model is answering again.");
+                ModelProblem = null;
+                return;
+            }
+            string problem = Describe(result.Telemetry.ErrorKind);
+            if (problem != null) ReportModel(problem);
+        }
+
+        /// <summary>Records that the model cannot be asked, in words for the HUD, such as a provider config that is not valid.</summary>
+        public void ReportModel(string problem)
+        {
+            ModelFailedAt = Time.time;
+            ModelProblem = problem;
+        }
+
+        // The HUD's words for a failure that means no model answered; null for the others (an
+        // unreadable reply, a guard that threw), which are about one decision, not the model.
+        private string Describe(PipelineErrorKind? kind)
+        {
+            string model = "the model", where = "Ollama";
+            var config = Minds.Length > 0 && Minds[0] != null ? Minds[0].Behaviour.Provider : null;
+            if (config is OllamaProviderConfig ollama)
+            {
+                model = ollama.Model;
+                where = "Ollama at " + ollama.Endpoint;
+            }
+            switch (kind)
+            {
+                case PipelineErrorKind.ProviderUnreachable:
+                    return "No model is running: " + where + " cannot be reached. Start Ollama; the agents answer once it is back.";
+                case PipelineErrorKind.ModelNotFound:
+                    return "Ollama does not have " + model + ". Run \"ollama pull " + model + "\"; the agents answer once it is there.";
+                case PipelineErrorKind.ProviderTimeout:
+                    return "The model did not answer in time. It may still be loading; the agents try again shortly.";
+                case PipelineErrorKind.ProviderRejected:
+                case PipelineErrorKind.ProviderServerError:
+                case PipelineErrorKind.ProviderFailed:
+                    return "The model failed to answer (" + kind + "). The village keeps running; the agents try again shortly.";
+                default:
+                    return null;
+            }
+        }
 
         private void OnEnable()
         {
@@ -116,6 +183,8 @@ namespace Demos.GreyBoxVillage
         {
             writeLog = writeLogFile;
             recorder = null;
+            ModelProblem = null;
+            ModelFailedAt = float.NegativeInfinity;
             foreach (var mind in Minds) mind.UseProvider(config);
         }
 
@@ -181,7 +250,8 @@ namespace Demos.GreyBoxVillage
                 if (Book != null && keyboard.jKey.wasPressedThisFrame) { Book.Toggle("journal"); bookVersion++; }
             }
             if (Input != null)
-                Input.Converse(listener?.Name, listener?.Role, listener == null ? null : listener.IsDeciding ? "thinking..." : "listening",
+                Input.Converse(listener?.Name, listener?.Role,
+                    listener == null ? null : listener.IsDeciding ? "thinking..." : ModelProblem != null ? "no model" : "listening",
                     listener?.Conversation, listener?.Body.Suggestions);
             ShowBoard(listener);
             ShowHud(listener, typing, pickup);
@@ -225,7 +295,9 @@ namespace Demos.GreyBoxVillage
             var camera = Camera.main;
             if (Day != null) Hud.SetClock(Day.Clock, Day.Phase, Day.Day, Day.IsNight);
             Hud.SetHints(Keys);
+            Hud.SetCovered(Input != null && Input.IsOpen, (Book != null && Book.IsOpen) || (Menu != null && Menu.IsOpen));
             Hud.SetCoins(Inventory != null ? Inventory.Coins : -1);
+            Hud.SetAlert(ModelProblem);
             Hud.SetPrompt("E", typing ? null : pickup != null ? "Pick up " + pickup.Name
                 : listener != null && !Input.IsOpen ? "Talk to " + listener.Name : null);
             if (Quests != null)
@@ -245,7 +317,8 @@ namespace Demos.GreyBoxVillage
                     bubbles.Add(new BubbleInfo
                     {
                         World = head, Text = m.Body.SpeechText,
-                        Kind = m.Body.SpeechType == SpeechKind.Refusal ? "refusal" : "say", Tag = m.Body.SpeechGuard
+                        Kind = m.Body.SpeechType == SpeechKind.Refusal ? "refusal" : m.Body.SpeechType == SpeechKind.Error ? "error" : "say",
+                        Tag = m.Body.SpeechGuard
                     });
                 else if (m.IsDeciding)
                     bubbles.Add(new BubbleInfo { World = head, Text = "...", Kind = "thinking" });

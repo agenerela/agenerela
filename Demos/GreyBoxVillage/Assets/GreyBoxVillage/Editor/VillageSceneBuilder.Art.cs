@@ -22,6 +22,7 @@ namespace Demos.GreyBoxVillage.Editor
     {
         public const string ArtFolder = Root + "/Art";
         public const string ModelsFolder = ArtFolder + "/Models";
+        public const string EffectsFolder = ArtFolder + "/Effects";
         public const string PalettePath = ArtFolder + "/VillagePalette.mat";
 
         // The houses: position, footprint, model and which way the door faces (for the chimney smoke).
@@ -115,17 +116,74 @@ namespace Demos.GreyBoxVillage.Editor
             go.transform.localPosition = position;
             go.transform.localRotation = Quaternion.Euler(0, 180f + yaw, 0);
             go.transform.localScale = Vector3.one * scale;
+            // The import gives every model the palette (VillageArtImporter), so a placed model
+            // overrides nothing: an override per renderer is what made the scene file 5 MB.
             foreach (var r in go.GetComponentsInChildren<MeshRenderer>(true))
             {
-                r.sharedMaterial = palette;
-                r.shadowCastingMode = ShadowCastingMode.On;
+                if (r.sharedMaterial != palette) r.sharedMaterial = palette;
+                if (r.shadowCastingMode != ShadowCastingMode.On) r.shadowCastingMode = ShadowCastingMode.On;
             }
             if (isStatic)
                 foreach (var t in go.GetComponentsInChildren<Transform>(true))
+                {
                     GameObjectUtility.SetStaticEditorFlags(t.gameObject,
                         StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccluderStatic | StaticEditorFlags.OccludeeStatic);
+                }
+            // Placing is recorded as overrides once the whole village is built (RecordPlacedModels).
             return go.transform;
         }
+
+        // The copies DressRiver and DressNature place, by model, made into ScatterFields at the end.
+        private static readonly Dictionary<string, List<(Vector3 position, float yaw, float scale)>> scattered =
+            new Dictionary<string, List<(Vector3, float, float)>>();
+
+        /// <summary>
+        /// Places a copy of a small kit model as <see cref="Model"/> would, but as one entry in a
+        /// <see cref="ScatterField"/> rather than a GameObject: the grass, rocks and trees that fill
+        /// the world are hundreds of copies of a dozen models.
+        /// </summary>
+        private static void Scatter(string name, Vector3 position, float yaw = 0f, float scale = 1f)
+        {
+            if (!scattered.TryGetValue(name, out var list)) scattered[name] = list = new List<(Vector3, float, float)>();
+            list.Add((position, 180f + yaw, scale));
+        }
+
+        /// <summary>Turns what <see cref="Scatter"/> collected into one <see cref="ScatterField"/> under <paramref name="parent"/>.</summary>
+        private static ScatterField FinishScatter(Transform parent, string name)
+        {
+            var field = new GameObject(name).AddComponent<ScatterField>();
+            field.transform.SetParent(parent, false);
+            field.Material = palette;
+            var kinds = new List<ScatterField.Kind>();
+            foreach (var model in scattered.Keys.OrderBy(k => k, System.StringComparer.Ordinal))
+            {
+                var asset = AssetDatabase.LoadAssetAtPath<GameObject>(ModelsFolder + "/" + model + ".fbx");
+                if (asset == null) throw new System.InvalidOperationException("Missing kit model " + model + ": run ArtSource/build_kit.py.");
+                var root = asset.transform;
+                var parts = new List<ScatterField.Part>();
+                foreach (var filter in asset.GetComponentsInChildren<MeshFilter>(true))
+                {
+                    if (filter.sharedMesh == null) continue;
+                    var local = root.worldToLocalMatrix * filter.transform.localToWorldMatrix;
+                    for (int sub = 0; sub < filter.sharedMesh.subMeshCount; sub++)
+                        parts.Add(new ScatterField.Part { Mesh = filter.sharedMesh, SubMesh = sub, Local = local });
+                }
+                var copies = scattered[model];
+                kinds.Add(new ScatterField.Kind
+                {
+                    Model = model,
+                    Parts = parts.ToArray(),
+                    Placements = copies.Select(c => new Vector4(Round(c.position.x), Round(c.position.y), Round(c.position.z), Round(c.yaw))).ToArray(),
+                    Scales = copies.Select(c => Round(c.scale)).ToArray()
+                });
+            }
+            field.Kinds = kinds.ToArray();
+            scattered.Clear();
+            return field;
+        }
+
+        // Hundredths of a metre, a degree and a size are plenty, and keep the scene's numbers short.
+        private static float Round(float v) => Mathf.Round(v * 100f) / 100f;
 
         /// <summary>Gives a character or creature its segmented figure, animated by <see cref="SegmentedFigure"/>.</summary>
         private static void Figure(GameObject owner, string model)
@@ -147,6 +205,7 @@ namespace Demos.GreyBoxVillage.Editor
         {
             lamps.Clear();
             nightOnly.Clear();
+            effects.Clear();
             var geometry = GameObject.Find("VillageGeometry").transform;
             foreach (var r in geometry.GetComponentsInChildren<MeshRenderer>(true)) r.enabled = false;
             foreach (var r in GameObject.Find("RestrictedZones").GetComponentsInChildren<MeshRenderer>(true)) r.enabled = false;
@@ -192,8 +251,12 @@ namespace Demos.GreyBoxVillage.Editor
             var props = Group("Props");
             DressMarket(props, market);
             DressStreets(props);
+            scattered.Clear();
             DressRiver(props);
-            DressNature(Group("Nature"));
+            FinishScatter(props, "RiverbankScatter");
+            var nature = Group("Nature");
+            DressNature(nature);
+            FinishScatter(nature, "NatureScatter");
             Smoke(props);
             Fireflies(props);
 
@@ -297,9 +360,9 @@ namespace Demos.GreyBoxVillage.Editor
                 {
                     float jitter = (float)rng.NextDouble() * 0.6f - 0.3f;
                     double roll = rng.NextDouble();
-                    if (roll < 0.45) Model("rock_" + rng.Next(0, 2), parent, new Vector3(x, -0.25f, z + jitter), rng.Next(0, 360), 0.6f + (float)rng.NextDouble() * 0.5f);
-                    else if (roll < 0.8) Model("reeds", parent, new Vector3(x, -0.3f, z + (z < 23 ? 0.6f : -0.6f)), rng.Next(0, 360));
-                    else Model("grass_1", parent, new Vector3(x, 0, z + (z < 23 ? -0.8f : 0.8f)), rng.Next(0, 360));
+                    if (roll < 0.45) Scatter("rock_" + rng.Next(0, 2), new Vector3(x, -0.25f, z + jitter), rng.Next(0, 360), 0.6f + (float)rng.NextDouble() * 0.5f);
+                    else if (roll < 0.8) Scatter("reeds", new Vector3(x, -0.3f, z + (z < 23 ? 0.6f : -0.6f)), rng.Next(0, 360));
+                    else Scatter("grass_1", new Vector3(x, 0, z + (z < 23 ? -0.8f : 0.8f)), rng.Next(0, 360));
                 }
             }
         }
@@ -313,12 +376,12 @@ namespace Demos.GreyBoxVillage.Editor
             // woods, and a forest round the edge of the world so it never ends in a wall.
             int i = 0;
             foreach (var t in trees)
-                Model(i++ % 3 == 0 ? "oak_" + rng.Next(0, 2) : "pine_" + rng.Next(0, 3), parent, new Vector3(t.x, 0, t.z), R(0, 360), R(0.9f, 1.25f));
+                Scatter(i++ % 3 == 0 ? "oak_" + rng.Next(0, 2) : "pine_" + rng.Next(0, 3), new Vector3(t.x, 0, t.z), R(0, 360), R(0.9f, 1.25f));
             for (int k = 0; k < 26; k++)
             {
                 var p = new Vector3(R(24, 49), 0, R(28, 49));
                 if (NearPath(p, 2.5f) || Near(p, new[] { V(32, 33), V(39, 34), V(44, 44), V(34, 44), V(38, 39), V(47, 47) }, 2.2f)) continue;
-                Model(rng.NextDouble() < 0.7 ? "pine_" + rng.Next(0, 3) : "oak_" + rng.Next(0, 2), parent, p, R(0, 360), R(0.8f, 1.3f));
+                Scatter(rng.NextDouble() < 0.7 ? "pine_" + rng.Next(0, 3) : "oak_" + rng.Next(0, 2), p, R(0, 360), R(0.8f, 1.3f));
             }
             for (int k = 0; k < 700; k++)
             {
@@ -326,7 +389,7 @@ namespace Demos.GreyBoxVillage.Editor
                 bool inside = p.x > -52 && p.x < 52 && p.z > -32 && p.z < 52;
                 if (inside || (p.z > 18 && p.z < 28) || NearPath(p, 3f)) continue;
                 float h = TerrainHeight(p.x, p.z);
-                Model(rng.NextDouble() < 0.65 ? "pine_" + rng.Next(0, 3) : "oak_" + rng.Next(0, 2), parent, new Vector3(p.x, h - 0.2f, p.z), R(0, 360), R(0.9f, 1.6f));
+                Scatter(rng.NextDouble() < 0.65 ? "pine_" + rng.Next(0, 3) : "oak_" + rng.Next(0, 2), new Vector3(p.x, h - 0.2f, p.z), R(0, 360), R(0.9f, 1.6f));
             }
             // Inside the walls and on the north bank: bushes, flowers, grass and rocks, off the roads.
             for (int k = 0; k < 420; k++)
@@ -336,7 +399,7 @@ namespace Demos.GreyBoxVillage.Editor
                 double roll = rng.NextDouble();
                 string model = roll < 0.12 ? "bush_" + rng.Next(0, 2) : roll < 0.3 ? "flowers_" + rng.Next(0, 2)
                     : roll < 0.9 ? "grass_" + rng.Next(0, 2) : roll < 0.96 ? "rock_0" : "stump";
-                Model(model, parent, p, R(0, 360), R(0.8f, 1.2f));
+                Scatter(model, p, R(0, 360), R(0.8f, 1.2f));
             }
         }
 
@@ -357,11 +420,13 @@ namespace Demos.GreyBoxVillage.Editor
             return false;
         }
 
-        // Anything solid nearby: a building, a wall, a tree trunk, a stall.
+        // Anything solid nearby: a building, a wall, a tree trunk, a stall. The sphere sits clear of
+        // the ground boxes: one that reached into them found the ground every time, so nothing
+        // inside the walls was ever placed.
         private static bool Blocked(Vector3 p, float radius)
         {
             Physics.SyncTransforms();
-            foreach (var c in Physics.OverlapSphere(p + Vector3.up * 0.6f, radius))
+            foreach (var c in Physics.OverlapSphere(p + Vector3.up * (radius + 0.1f), radius))
                 if (!c.isTrigger) return true;
             return false;
         }
@@ -402,42 +467,66 @@ namespace Demos.GreyBoxVillage.Editor
 
         private static void Fire(Transform parent, Vector3 position, float size, float lightIntensity, float lightRange, bool nightOnly)
         {
-            var go = new GameObject("fire");
-            go.transform.SetParent(parent, false);
-            go.transform.position = position;
-            var ps = go.AddComponent<ParticleSystem>();
-            var main = ps.main;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(0.5f, 0.9f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(0.6f * size, 1.4f * size);
-            main.startSize = new ParticleSystem.MinMaxCurve(0.25f * size, 0.5f * size);
-            main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 0.55f, 0.15f), new Color(1f, 0.85f, 0.3f));
-            main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.maxParticles = 80;
-            var emission = ps.emission;
-            emission.rateOverTime = 26f * size;
-            var shape = ps.shape;
-            shape.shapeType = ParticleSystemShapeType.Cone;
-            shape.angle = 8f;
-            shape.radius = 0.22f * size;
-            shape.rotation = new Vector3(-90, 0, 0);
-            var size_ = ps.sizeOverLifetime;
-            size_.enabled = true;
-            size_.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0, 1, 1, 0));
-            var color = ps.colorOverLifetime;
-            color.enabled = true;
-            var g = new Gradient();
-            g.SetKeys(new[] { new GradientColorKey(new Color(1f, 0.9f, 0.5f), 0), new GradientColorKey(new Color(1f, 0.35f, 0.08f), 1) },
-                new[] { new GradientAlphaKey(1, 0), new GradientAlphaKey(0.9f, 0.6f), new GradientAlphaKey(0, 1) });
-            color.color = g;
-            var renderer = go.GetComponent<ParticleSystemRenderer>();
-            renderer.sharedMaterial = FireMaterial();
-            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            Effect(size >= 1f ? "CampFire" : "TorchFire", parent, position, ps =>
+            {
+                var main = ps.main;
+                main.startLifetime = new ParticleSystem.MinMaxCurve(0.5f, 0.9f);
+                main.startSpeed = new ParticleSystem.MinMaxCurve(0.6f * size, 1.4f * size);
+                main.startSize = new ParticleSystem.MinMaxCurve(0.25f * size, 0.5f * size);
+                main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 0.55f, 0.15f), new Color(1f, 0.85f, 0.3f));
+                main.simulationSpace = ParticleSystemSimulationSpace.World;
+                main.maxParticles = 80;
+                var emission = ps.emission;
+                emission.rateOverTime = 26f * size;
+                var shape = ps.shape;
+                shape.shapeType = ParticleSystemShapeType.Cone;
+                shape.angle = 8f;
+                shape.radius = 0.22f * size;
+                shape.rotation = new Vector3(-90, 0, 0);
+                var size_ = ps.sizeOverLifetime;
+                size_.enabled = true;
+                size_.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0, 1, 1, 0));
+                var color = ps.colorOverLifetime;
+                color.enabled = true;
+                var g = new Gradient();
+                g.SetKeys(new[] { new GradientColorKey(new Color(1f, 0.9f, 0.5f), 0), new GradientColorKey(new Color(1f, 0.35f, 0.08f), 1) },
+                    new[] { new GradientAlphaKey(1, 0), new GradientAlphaKey(0.9f, 0.6f), new GradientAlphaKey(0, 1) });
+                color.color = g;
+                var renderer = ps.GetComponent<ParticleSystemRenderer>();
+                renderer.sharedMaterial = FireMaterial();
+                renderer.shadowCastingMode = ShadowCastingMode.Off;
+            });
             var light = PointLight(parent, position + Vector3.up * 0.6f, new Color(1f, 0.6f, 0.28f), lightIntensity, lightRange);
             var flicker = light.gameObject.AddComponent<FlickerLight>();
             flicker.Amount = 0.3f;
             flicker.Speed = 8f;
             flicker.OnlyAtNight = nightOnly;
             lamps.Add(flicker);
+        }
+
+        // The effect prefabs made in this build, by name.
+        private static readonly Dictionary<string, GameObject> effects = new Dictionary<string, GameObject>();
+
+        /// <summary>
+        /// A particle effect, saved once per build as a prefab under <c>Art/Effects</c> and placed as
+        /// an instance, so the scene stores only where each one stands: one particle system written
+        /// out in full is about 100 KB of YAML.
+        /// </summary>
+        private static ParticleSystem Effect(string name, Transform parent, Vector3 position, System.Action<ParticleSystem> make)
+        {
+            if (!effects.TryGetValue(name, out var prefab))
+            {
+                EnsureFolder(EffectsFolder);
+                var made = new GameObject(name);
+                make(made.AddComponent<ParticleSystem>());
+                prefab = PrefabUtility.SaveAsPrefabAsset(made, EffectsFolder + "/" + name + ".prefab");
+                Object.DestroyImmediate(made);
+                effects[name] = prefab;
+            }
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            go.transform.SetParent(parent, false);
+            go.transform.position = position;
+            return go.GetComponent<ParticleSystem>();
         }
 
         private static Material FireMaterial() => Asset(ArtFolder + "/VillageFire.mat", () =>
@@ -488,42 +577,41 @@ namespace Demos.GreyBoxVillage.Editor
             {
                 // The chimney sits as build_kit.py put it: on the east or west end, a little north.
                 var top = new Vector3(x + (east ? 1 : -1) * (w / 2f - 0.8f), 4.75f, z + d / 8f);
-                var go = new GameObject("chimney_smoke");
-                go.transform.SetParent(parent, false);
-                go.transform.position = top;
-                var ps = go.AddComponent<ParticleSystem>();
-                var main = ps.main;
-                main.startLifetime = new ParticleSystem.MinMaxCurve(3f, 5f);
-                main.startSpeed = new ParticleSystem.MinMaxCurve(0.5f, 0.9f);
-                main.startSize = new ParticleSystem.MinMaxCurve(0.5f, 0.9f);
-                main.startColor = new Color(0.9f, 0.9f, 0.92f, 0.45f);
-                main.simulationSpace = ParticleSystemSimulationSpace.World;
-                main.maxParticles = 40;
-                var emission = ps.emission;
-                emission.rateOverTime = 3.5f;
-                var shape = ps.shape;
-                shape.shapeType = ParticleSystemShapeType.Cone;
-                shape.angle = 6f;
-                shape.radius = 0.15f;
-                shape.rotation = new Vector3(-90, 0, 0);
-                var velocity = ps.velocityOverLifetime;
-                velocity.enabled = true;
-                velocity.space = ParticleSystemSimulationSpace.World;
-                velocity.x = new ParticleSystem.MinMaxCurve(0.3f, 0.6f);
-                velocity.y = new ParticleSystem.MinMaxCurve(0f, 0f);
-                velocity.z = new ParticleSystem.MinMaxCurve(0.1f, 0.2f);
-                var sizeOver = ps.sizeOverLifetime;
-                sizeOver.enabled = true;
-                sizeOver.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0, 0.6f, 1, 2.6f));
-                var color = ps.colorOverLifetime;
-                color.enabled = true;
-                var g = new Gradient();
-                g.SetKeys(new[] { new GradientColorKey(Color.white, 0), new GradientColorKey(Color.white, 1) },
-                    new[] { new GradientAlphaKey(0, 0), new GradientAlphaKey(0.5f, 0.2f), new GradientAlphaKey(0, 1) });
-                color.color = g;
-                var renderer = go.GetComponent<ParticleSystemRenderer>();
-                renderer.sharedMaterial = SmokeMaterial();
-                renderer.shadowCastingMode = ShadowCastingMode.Off;
+                Effect("ChimneySmoke", parent, top, ps =>
+                {
+                    var main = ps.main;
+                    main.startLifetime = new ParticleSystem.MinMaxCurve(3f, 5f);
+                    main.startSpeed = new ParticleSystem.MinMaxCurve(0.5f, 0.9f);
+                    main.startSize = new ParticleSystem.MinMaxCurve(0.5f, 0.9f);
+                    main.startColor = new Color(0.9f, 0.9f, 0.92f, 0.45f);
+                    main.simulationSpace = ParticleSystemSimulationSpace.World;
+                    main.maxParticles = 40;
+                    var emission = ps.emission;
+                    emission.rateOverTime = 3.5f;
+                    var shape = ps.shape;
+                    shape.shapeType = ParticleSystemShapeType.Cone;
+                    shape.angle = 6f;
+                    shape.radius = 0.15f;
+                    shape.rotation = new Vector3(-90, 0, 0);
+                    var velocity = ps.velocityOverLifetime;
+                    velocity.enabled = true;
+                    velocity.space = ParticleSystemSimulationSpace.World;
+                    velocity.x = new ParticleSystem.MinMaxCurve(0.3f, 0.6f);
+                    velocity.y = new ParticleSystem.MinMaxCurve(0f, 0f);
+                    velocity.z = new ParticleSystem.MinMaxCurve(0.1f, 0.2f);
+                    var sizeOver = ps.sizeOverLifetime;
+                    sizeOver.enabled = true;
+                    sizeOver.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0, 0.6f, 1, 2.6f));
+                    var color = ps.colorOverLifetime;
+                    color.enabled = true;
+                    var g = new Gradient();
+                    g.SetKeys(new[] { new GradientColorKey(Color.white, 0), new GradientColorKey(Color.white, 1) },
+                        new[] { new GradientAlphaKey(0, 0), new GradientAlphaKey(0.5f, 0.2f), new GradientAlphaKey(0, 1) });
+                    color.color = g;
+                    var renderer = ps.GetComponent<ParticleSystemRenderer>();
+                    renderer.sharedMaterial = SmokeMaterial();
+                    renderer.shadowCastingMode = ShadowCastingMode.Off;
+                });
             }
         }
 
@@ -531,36 +619,35 @@ namespace Demos.GreyBoxVillage.Editor
         {
             foreach (var centre in new[] { new Vector3(37, 1.2f, 39), new Vector3(-10, 1.2f, 31), new Vector3(12, 1f, 20.5f), new Vector3(-30, 1f, 21f) })
             {
-                var go = new GameObject("fireflies");
-                go.transform.SetParent(parent, false);
-                go.transform.position = centre;
-                var ps = go.AddComponent<ParticleSystem>();
-                var main = ps.main;
-                main.startLifetime = new ParticleSystem.MinMaxCurve(4f, 7f);
-                main.startSpeed = 0.15f;
-                main.startSize = new ParticleSystem.MinMaxCurve(0.06f, 0.12f);
-                main.startColor = new Color(0.75f, 1f, 0.55f, 1f);
-                main.maxParticles = 60;
-                var emission = ps.emission;
-                emission.rateOverTime = 7f;
-                emission.enabled = false;
-                var shape = ps.shape;
-                shape.shapeType = ParticleSystemShapeType.Box;
-                shape.scale = new Vector3(14, 2, 10);
-                var noise = ps.noise;
-                noise.enabled = true;
-                noise.strength = 0.5f;
-                noise.frequency = 0.4f;
-                var color = ps.colorOverLifetime;
-                color.enabled = true;
-                var g = new Gradient();
-                g.SetKeys(new[] { new GradientColorKey(Color.white, 0), new GradientColorKey(Color.white, 1) },
-                    new[] { new GradientAlphaKey(0, 0), new GradientAlphaKey(1, 0.3f), new GradientAlphaKey(0.2f, 0.6f), new GradientAlphaKey(1, 0.8f), new GradientAlphaKey(0, 1) });
-                color.color = g;
-                var renderer = go.GetComponent<ParticleSystemRenderer>();
-                renderer.sharedMaterial = FireMaterial();
-                renderer.shadowCastingMode = ShadowCastingMode.Off;
-                nightOnly.Add(ps);
+                var fireflies = Effect("Fireflies", parent, centre, ps =>
+                {
+                    var main = ps.main;
+                    main.startLifetime = new ParticleSystem.MinMaxCurve(4f, 7f);
+                    main.startSpeed = 0.15f;
+                    main.startSize = new ParticleSystem.MinMaxCurve(0.06f, 0.12f);
+                    main.startColor = new Color(0.75f, 1f, 0.55f, 1f);
+                    main.maxParticles = 60;
+                    var emission = ps.emission;
+                    emission.rateOverTime = 7f;
+                    emission.enabled = false;
+                    var shape = ps.shape;
+                    shape.shapeType = ParticleSystemShapeType.Box;
+                    shape.scale = new Vector3(14, 2, 10);
+                    var noise = ps.noise;
+                    noise.enabled = true;
+                    noise.strength = 0.5f;
+                    noise.frequency = 0.4f;
+                    var color = ps.colorOverLifetime;
+                    color.enabled = true;
+                    var g = new Gradient();
+                    g.SetKeys(new[] { new GradientColorKey(Color.white, 0), new GradientColorKey(Color.white, 1) },
+                        new[] { new GradientAlphaKey(0, 0), new GradientAlphaKey(1, 0.3f), new GradientAlphaKey(0.2f, 0.6f), new GradientAlphaKey(1, 0.8f), new GradientAlphaKey(0, 1) });
+                    color.color = g;
+                    var renderer = ps.GetComponent<ParticleSystemRenderer>();
+                    renderer.sharedMaterial = FireMaterial();
+                    renderer.shadowCastingMode = ShadowCastingMode.Off;
+                });
+                nightOnly.Add(fireflies);
             }
             // The gate's torches burn every night.
             foreach (var sx in new[] { -1f, 1f })

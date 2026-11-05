@@ -220,3 +220,24 @@
     -unity-text-outline-width: 1px;
     -unity-text-outline-color: rgb(0, 0, 0);
 }
+
+.bubble--error {
+    background-color: rgba(120, 28, 28, 0.95);
+    border-color: rgb(230, 110, 100);
+    color: rgb(255, 236, 230);
+}
+
+/* A problem the whole village has, such as no model running: top centre, until it is fixed. */
+.alert {
+    background-color: rgba(110, 26, 24, 0.94);
+    border-color: rgb(236, 120, 104);
+    border-width: 1px;
+    border-radius: 8px;
+    padding: 7px 14px;
+    color: rgb(255, 236, 228);
+    font-size: 13px;
+    -unity-font-style: bold;
+    white-space: normal;
+    -unity-text-align: middle-center;
+    max-width: 620px;
+}

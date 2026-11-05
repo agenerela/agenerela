@@ -16,7 +16,7 @@ namespace Demos.GreyBoxVillage.Editor
     /// Demos.GreyBoxVillage.Editor.VillageCapture.CaptureFromCommandLine -captureOut DIR [-captureRebuild]
     /// [-captureOnly name,name] -quit</c>. Needs a GPU, so leave out <c>-nographics</c>.
     /// </summary>
-    public static class VillageCapture
+    public static partial class VillageCapture
     {
         private readonly struct Shot
         {
@@ -47,29 +47,66 @@ namespace Demos.GreyBoxVillage.Editor
             new Shot("overview_dusk", new Vector3(0, 40, -64), new Vector3(0, 0, 8), 18.2f),
             new Shot("square_night", new Vector3(-10, 6, -10), new Vector3(8, 1.5f, 4), 22.5f),
             new Shot("gate_night", new Vector3(7, 4, -27), new Vector3(0, 2.5f, -14), 23f),
+            // The title screen's backdrop (TitleBackdropFromCommandLine), not one of the review views.
+            new Shot("backdrop", new Vector3(-30, 13, -46), new Vector3(4, 3, 6), 18.4f, 42f),
         };
+
+        /// <summary>The title screen's backdrop, made by <see cref="TitleBackdropFromCommandLine"/>.</summary>
+        public const string TitleBackdropPath = "Assets/GreyBoxVillage/Resources/TitleBackdrop.jpg";
+
+        /// <summary>
+        /// Renders the village at dusk into <see cref="TitleBackdropPath"/>, the title screen's backdrop:
+        /// <c>-executeMethod Demos.GreyBoxVillage.Editor.VillageCapture.TitleBackdropFromCommandLine -quit</c>.
+        /// </summary>
+        public static void TitleBackdropFromCommandLine()
+        {
+            EditorSceneManager.OpenScene(DemoLauncher.VillagePath, OpenSceneMode.Single);
+            string folder = Path.GetFullPath("Temp/backdrop");
+            Capture(folder, new[] { "backdrop" }, 1920, 1080);
+            var texture = new Texture2D(2, 2);
+            texture.LoadImage(File.ReadAllBytes(Path.Combine(folder, "backdrop.png")));
+            File.WriteAllBytes(TitleBackdropPath, texture.EncodeToJPG(88));
+            UnityEngine.Object.DestroyImmediate(texture);
+            AssetDatabase.ImportAsset(TitleBackdropPath);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(TitleBackdropPath);
+            importer.mipmapEnabled = false;
+            importer.npotScale = TextureImporterNPOTScale.None;
+            importer.textureCompression = TextureImporterCompression.CompressedHQ;
+            importer.SaveAndReimport();
+        }
 
         public static void CaptureFromCommandLine()
         {
             var args = Environment.GetCommandLineArgs();
-            string Arg(string name)
-            {
-                int i = Array.IndexOf(args, name);
-                return i >= 0 && i + 1 < args.Length ? args[i + 1] : null;
-            }
             string folder = Arg("-captureOut") ?? Path.GetFullPath("Logs/captures");
             if (args.Contains("-captureRebuild")) VillageSceneBuilder.RebuildFromCommandLine();
             else EditorSceneManager.OpenScene(DemoLauncher.VillagePath, OpenSceneMode.Single);
             var only = Arg("-captureOnly")?.Split(',');
+            // Extra views, for trying a framing: -captureViews "name:x,y,z:x,y,z:hour[:fov];..."
+            var extra = Arg("-captureViews");
+            if (extra != null)
+            {
+                float[] F(string v) => v.Split(',').Select(x => float.Parse(x, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+                var views = extra.Split(';').Select(v => v.Split(':')).Select(p =>
+                {
+                    float[] a = F(p[1]), b = F(p[2]);
+                    return new Shot(p[0], new Vector3(a[0], a[1], a[2]), new Vector3(b[0], b[1], b[2]), F(p[3])[0], p.Length > 4 ? F(p[4])[0] : 50f);
+                }).ToArray();
+                Capture(folder, views.Select(v => v.Name).ToArray(), 1600, 900, views);
+                return;
+            }
             Capture(folder, only);
         }
 
-        public static void Capture(string folder, string[] only = null)
+        public static void Capture(string folder, string[] only = null, int width = 1600, int height = 900) =>
+            Capture(folder, only, width, height, Shots);
+
+        private static void Capture(string folder, string[] only, int width, int height, Shot[] shots)
         {
             Directory.CreateDirectory(folder);
             var cycle = UnityEngine.Object.FindFirstObjectByType<DayNightCycle>();
             var main = Camera.main;
-            var rt = new RenderTexture(1600, 900, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB) { antiAliasing = 1 };
+            var rt = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB) { antiAliasing = 1 };
             var go = new GameObject("capture camera");
             var camera = go.AddComponent<Camera>();
             camera.CopyFrom(main);
@@ -80,9 +117,9 @@ namespace Demos.GreyBoxVillage.Editor
             var read = new Texture2D(rt.width, rt.height, TextureFormat.RGB24, false);
             try
             {
-                foreach (var shot in Shots)
+                foreach (var shot in shots)
                 {
-                    if (only != null && !only.Contains(shot.Name)) continue;
+                    if (only != null ? !only.Contains(shot.Name) : shot.Name == "backdrop") continue;
                     if (cycle != null)
                     {
                         cycle.TimeOfDay = shot.Hour / 24f;

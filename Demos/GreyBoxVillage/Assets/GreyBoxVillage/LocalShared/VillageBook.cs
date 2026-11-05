@@ -42,6 +42,8 @@ namespace Demos.Shared
             panel.style.left = Length.Percent(18);
             panel.style.top = Length.Percent(14);
             panel.style.bottom = Length.Percent(20);
+            // Opaque: even a few per cent of a bright bubble behind it shows through its dark wood.
+            panel.style.backgroundColor = new Color(0.1f, 0.08f, 0.06f, 1f);
             panel.pickingMode = PickingMode.Position;
             var tabs = DemoUI.Row(panel);
             inventoryTab = DemoUI.Button(tabs, "Inventory  (I)", () => Open("inventory"));

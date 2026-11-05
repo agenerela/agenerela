@@ -39,6 +39,7 @@ namespace Demos.Shared
             panel.style.top = Length.Percent(18);
             panel.style.paddingTop = 16;
             panel.style.paddingBottom = 16;
+            panel.style.backgroundColor = new Color(0.1f, 0.08f, 0.06f, 1f);
             panel.pickingMode = PickingMode.Position;
             var title = DemoUI.Label(panel, "ASHFORD", "vui-title");
             title.style.fontSize = 24;

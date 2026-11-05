@@ -31,6 +31,17 @@ Or start from `LocalShared/DemoLauncher.unity`, the title screen.
   guard stopped what they chose.
 - The first request after Ollama starts can time out while the model loads (30 s); the overlay
   shows the typed `ProviderTimeout`. Say it again.
+- **With no model,** because Ollama is stopped or the model is not pulled, the village stays
+  playable. A red banner at the top of the HUD says what is wrong and what to do, and the agent
+  you asked says "No answer" in a red bubble rather than thinking forever. Until the model
+  answers again, the agents stop asking it on their own (a quiet moment, a trespass, the wolf, the
+  bell) for 20 s at a time (`VillageCommands.ModelRetrySeconds`), so the console gets one
+  warning, not one per agent every few seconds. Your own lines are always sent, and the first
+  answer clears the banner.
+- **Play mode leaves no trace.** The day and night cycle writes only to copies of the palette and
+  the sky that it makes when Play starts, so pressing Play changes no file. The game keeps no
+  static state that a play session changes (a test checks every static field), so it plays the
+  same with Enter Play Mode Options set to skip the domain reload.
 - The model and endpoint are in `Assets/GreyBoxVillage/Agents/VillageOllama.asset`, the one
   provider config both guards ask.
 
@@ -76,20 +87,43 @@ Everything you see is built by scripts, so it can be rebuilt and changed in code
   - Characters are separate parts at their joints. `SegmentedFigure` animates their walk, idle
     and talking with no rig.
 - **`ArtSource/render_icons.py`** renders the inventory icons (`Resources/Icons`) and the
-  dialogue portraits (`Resources/Portraits`) from the same models.
+  dialogue portraits (`Resources/Portraits`) from the same models, lit from the viewer's side by
+  a key and a fill light, with the sun as a rim, so no face is in its own shadow.
+- **`Editor/VillageArtImporter.cs`** imports the kit with the palette material already on every
+  model (the water gets its own), so a model placed in the scene overrides nothing.
 - **`ArtSource/preview_kit.py`** renders contact sheets of the kit for review.
 - **The scene builder** (`Editor/VillageSceneBuilder.Art.cs`) keeps every grey box exactly
   where it was, as an invisible collider. The NavMesh is baked from those boxes, so every path,
   place and line of sight the tests check is unchanged, and the models are visual-only children
   of `VillageArt`.
   - It also adds the sky, fog, URP post-processing, water (`Art/Shaders/VillageWater.shader`),
-    lamps, campfire and torches, chimney smoke and fireflies.
+    lamps, campfire and torches, chimney smoke and fireflies. Fire, smoke and fireflies are
+    prefabs under `Art/Effects`, written once per rebuild, so the scene stores only where each
+    one stands.
+  - The grass, flowers, bushes, rocks, reeds and the trees of the woods, 880 copies of 15
+    models, are not GameObjects. A **`ScatterField`** stores where each copy stands, its turn and
+    its size, and draws them with GPU instancing, one call per mesh per 120 m cell, culled by each
+    cell's bounds. They have no colliders, like every model. The scene file went from 4.96 MB to
+    about 1.2 MB. The bushes, flowers and grass inside the walls were never placed before: the
+    builder's check for buildings in the way always found the ground.
   - **`DayNightCycle`** turns all of that through a day: ten minutes by default, changeable in
     the menu. Windows and lamps glow at night.
 - **`Editor/VillageCapture.cs`** renders fixed views to PNGs with no window: `Unity -batchmode
   -projectPath Demos/GreyBoxVillage -executeMethod
   Demos.GreyBoxVillage.Editor.VillageCapture.CaptureFromCommandLine -captureOut <dir>
   [-captureRebuild] -quit`, without `-nographics`.
+  - **With the UI**, `...VillageCapture.CaptureUiFromCommandLine -captureOut <dir>
+    [-captureSizes 1280x720,1920x1080]`, with no `-quit`: it enters Play mode, and captures the
+    HUD, the dialogue panel, a speech bubble, an amber refusal, the framework view, the pack, the
+    journal, the menu and the no-model warning, by day and at night, then the title screen. The
+    panels draw into a RenderTexture (`PanelSettings.targetTexture`), laid over the camera's. The
+    agents answer from a scripted provider, never a model. `Tools > GreyBoxVillage > Capture the
+    UI` does the same from the editor, into `Logs/captures`.
+  - `...VillageCapture.MeasureFromCommandLine -captureOut <dir>`, also with no `-quit`, holds the
+    camera on three fixed views at 1920x1080 and writes the frame time and draw calls of each to
+    `frame-time.txt`.
+  - `...VillageCapture.TitleBackdropFromCommandLine -quit` renders the title screen's backdrop,
+    `Resources/TitleBackdrop.jpg`, the village at dusk.
 
 No asset in this game comes from the asset server, so there is no `GENERATED.md` yet.
 
@@ -320,6 +354,16 @@ They cover:
 - A pickup within reach goes into the pack.
 - The guards are never offered the stall's wares.
 - Every new agent's few-shot examples stay clear of the evaluation prompts.
+- Playing through a night, in Play mode, changes no saved asset: the materials, the volume
+  profiles, the agents' profiles, the provider config and the panel settings.
+- Every static field in the game's two assemblies is reset by a `SubsystemRegistration` method
+  before each play session. There are none today, so the test is a guard for the next one.
+- The default volume profile holds no component whose script is missing.
+- With no model (unreachable, or the model not pulled), the village says so on the HUD and in a
+  red bubble, stops asking on its own, still sends the player's lines, and clears it all at the
+  first answer. An unreadable reply is not taken for a missing model.
+- The scatter is instanced, no placed model overrides the palette, and the scene stays under
+  1.5 MB.
 
 And from before:
 each action executes on the guard; every evaluation target is offered and named in the observations; who is asking (the

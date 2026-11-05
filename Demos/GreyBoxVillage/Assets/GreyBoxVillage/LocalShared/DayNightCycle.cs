@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Demos.Shared
 {
@@ -11,8 +12,12 @@ namespace Demos.Shared
     /// to any hour.
     /// </summary>
     /// <remarks>
-    /// The palette material is shared by every model, so its window glow is changed on a copy made at
-    /// start, never on the asset: a play session leaves no change behind in the project.
+    /// The palette and the sky are assets, shared by every model and every scene that uses them, so
+    /// in Play mode the cycle writes only to copies it makes in <c>Awake</c>
+    /// (<see cref="UseRuntimeCopies"/>): the palette's copy goes on every renderer and every
+    /// <see cref="ScatterField"/> that used the asset, and the sky's becomes the scene's skybox. A play
+    /// session leaves no change behind in the project. In Edit mode, without copies, it writes to the
+    /// assets themselves, which is how the scene builder sets their starting look.
     /// </remarks>
     public sealed class DayNightCycle : MonoBehaviour
     {
@@ -65,8 +70,13 @@ namespace Demos.Shared
         /// <summary>Raised when night falls (true) and when it ends (false).</summary>
         public event Action<bool> NightChanged;
 
-        private Material glow;
+        private Material glow, sky;
         private bool wasNight;
+
+        /// <summary>The material the window glow is written to: the palette's copy once there is one.</summary>
+        public Material PaletteInUse => glow != null ? glow : Palette;
+        /// <summary>The skybox the sky colours are written to: the sky's copy once there is one.</summary>
+        public Material SkyInUse => sky != null ? sky : Sky;
 
         // Key colours for noon, dusk and night; everything between is blended by the sun's height.
         private static readonly Color SunNoon = new Color(1f, 0.95f, 0.86f), SunDusk = new Color(1f, 0.6f, 0.36f), Moon = new Color(0.55f, 0.66f, 1f);
@@ -77,10 +87,23 @@ namespace Demos.Shared
 
         private void Awake()
         {
-            if (Palette != null)
+            if (Application.isPlaying) UseRuntimeCopies();
+            Apply();
+            wasNight = IsNight;
+        }
+
+        /// <summary>
+        /// Copies the palette and the sky, and puts the copies where the assets were: on every
+        /// renderer and <see cref="ScatterField"/> using the palette, and as the scene's skybox. Every
+        /// later <see cref="Apply()"/> writes to the copies. Play mode does this in <c>Awake</c>.
+        /// Calling it again does nothing.
+        /// </summary>
+        public void UseRuntimeCopies()
+        {
+            if (Palette != null && glow == null)
             {
-                glow = new Material(Palette) { name = Palette.name + " (runtime)" };
-                foreach (var r in FindObjectsByType<Renderer>(FindObjectsSortMode.None))
+                glow = new Material(Palette) { name = Palette.name + " (runtime)", hideFlags = HideFlags.DontSave };
+                foreach (var r in FindObjectsByType<Renderer>(FindObjectsInactive.Include, FindObjectsSortMode.None))
                 {
                     var shared = r.sharedMaterials;
                     bool changed = false;
@@ -88,9 +111,36 @@ namespace Demos.Shared
                         if (shared[i] == Palette) { shared[i] = glow; changed = true; }
                     if (changed) r.sharedMaterials = shared;
                 }
+                foreach (var field in FindObjectsByType<ScatterField>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                    if (field.Material == Palette) field.Material = glow;
             }
-            Apply();
-            wasNight = IsNight;
+            if (Sky != null && sky == null)
+            {
+                sky = new Material(Sky) { name = Sky.name + " (runtime)", hideFlags = HideFlags.DontSave };
+                if (RenderSettings.skybox == Sky || RenderSettings.skybox == null) RenderSettings.skybox = sky;
+            }
+        }
+
+        private void OnDestroy()
+        {
+            // Whatever outlives this component gets the assets back.
+            if (sky != null)
+            {
+                if (RenderSettings.skybox == sky) RenderSettings.skybox = Sky;
+                Release(sky);
+            }
+            if (glow != null)
+            {
+                foreach (var field in FindObjectsByType<ScatterField>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                    if (field.Material == glow) field.Material = Palette;
+                Release(glow);
+            }
+        }
+
+        private static void Release(Material m)
+        {
+            if (Application.isPlaying) Object.Destroy(m);
+            else DestroyImmediate(m);
         }
 
         private void Update()
@@ -113,7 +163,7 @@ namespace Demos.Shared
         }
 
         /// <summary>Sets every light, colour and effect for <see cref="TimeOfDay"/>. Works in Edit mode too.</summary>
-        public void Apply() => Apply(glow != null ? glow : Palette);
+        public void Apply() => Apply(PaletteInUse);
 
         /// <summary>As <see cref="Apply()"/>, writing the glow to the given material.</summary>
         public void Apply(Material glowTarget)
@@ -142,13 +192,15 @@ namespace Demos.Shared
             RenderSettings.ambientGroundColor = Blend(GroundNoon, GroundDusk, GroundNight);
             RenderSettings.fogColor = Blend(FogNoon, FogDusk, FogNight);
 
-            if (Sky != null)
+            var skyTarget = SkyInUse;
+            // Never an asset during Play: without its copy, the sky is left as it is.
+            if (skyTarget != null && (sky != null || !Application.isPlaying))
             {
-                Sky.SetFloat("_Exposure", Mathf.Lerp(0.12f, 1.25f, Mathf.Clamp01(height * 2f + 0.25f)));
-                Sky.SetColor("_SkyTint", Blend(new Color(0.5f, 0.6f, 0.75f), new Color(0.75f, 0.5f, 0.45f), new Color(0.2f, 0.25f, 0.45f)));
+                skyTarget.SetFloat("_Exposure", Mathf.Lerp(0.12f, 1.25f, Mathf.Clamp01(height * 2f + 0.25f)));
+                skyTarget.SetColor("_SkyTint", Blend(new Color(0.5f, 0.6f, 0.75f), new Color(0.75f, 0.5f, 0.45f), new Color(0.2f, 0.25f, 0.45f)));
             }
 
-            if (glowTarget != null)
+            if (glowTarget != null && (glowTarget != Palette || !Application.isPlaying))
                 glowTarget.SetColor("_EmissionColor", Color.white * Mathf.Lerp(0.12f, 2.4f, Darkness));
 
             foreach (var lamp in Lamps)

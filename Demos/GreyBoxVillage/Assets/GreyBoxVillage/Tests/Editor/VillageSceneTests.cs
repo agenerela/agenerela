@@ -31,6 +31,8 @@ namespace Demos.GreyBoxVillage.Tests
         public readonly List<DecisionRequest> Requests = new List<DecisionRequest>();
         public int Calls;
         public bool Hold;
+        /// <summary>While set, every request fails as a provider fails when no model answers: Ollama stopped, the model missing.</summary>
+        public ProviderErrorKind? Fail;
         private AwaitableCompletionSource<ProviderResult> held;
 
         public FakeVillageProvider(string reply) => Reply = reply;
@@ -44,7 +46,8 @@ namespace Demos.GreyBoxVillage.Tests
             Requests.Add(req);
             Calls++;
             var source = new AwaitableCompletionSource<ProviderResult>();
-            if (Hold)
+            if (Fail != null) source.SetException(new ProviderException(Fail.Value, Name, "The fake provider is set to fail: " + Fail.Value + "."));
+            else if (Hold)
             {
                 Hold = false;
                 held = source;
@@ -496,6 +499,51 @@ namespace Demos.GreyBoxVillage.Tests
             Assert.That(provider.Calls, Is.EqualTo(2), "The waiting event must be asked after the failed decision.");
             Assert.That(bram.HasPending, Is.False, "A stranded event would silence the quiet timer for good.");
             Assert.That(Records("Bram").Select(r => r.Outcome), Is.EqualTo(new[] { "error", "error" }));
+        }
+
+        [TestCase(ProviderErrorKind.Unreachable, "cannot be reached")]
+        [TestCase(ProviderErrorKind.ModelNotFound, "ollama pull")]
+        public async Task WithNoModelTheVillageSaysSoAndStopsAskingOnItsOwn(ProviderErrorKind failure, string told)
+        {
+            provider.Fail = failure;
+            await bram.HearPlayerAsync("Open the gate.");
+            Assert.That(Records("Bram").Last().Outcome, Is.EqualTo("error"));
+            Assert.That(commands.ModelProblem, Does.Contain(told), "The HUD must say what is wrong with the model.");
+            Assert.That(bram.Body.SpeechType, Is.EqualTo(SpeechKind.Error), "Bram must say no answer came, not stay silent.");
+            Assert.That(bram.Body.Speech, Does.Contain("No answer"));
+            Assert.That(bram.IsDeciding, Is.False, "Bram must not stay thinking.");
+
+            // What the game notices by itself waits for the model; four agents asking a stopped
+            // server every few seconds would fill the console.
+            int calls = provider.Calls;
+            await wren.ReportEventAsync("wolf", "Event", "A wolf is by the river.", DecisionPriority.Background);
+            var senses = bram.Senses;
+            float quiet = senses.QuietSeconds;
+            try
+            {
+                senses.QuietSeconds = -1f;
+                senses.Sense();
+                for (int i = 0; i < 20; i++) await Task.Delay(5);
+            }
+            finally { senses.QuietSeconds = quiet; }
+            Assert.That(provider.Calls, Is.EqualTo(calls), "An agent asked a model that is down, on its own.");
+            Assert.That(commands.MayAskOnItsOwn, Is.False);
+
+            // The player can always ask, and an answer ends it.
+            provider.Fail = null;
+            await bram.HearPlayerAsync("Hello?");
+            Assert.That(commands.ModelProblem, Is.Null);
+            Assert.That(commands.MayAskOnItsOwn, Is.True);
+        }
+
+        [Test]
+        public async Task AnUnreadableReplyIsNotTakenForAMissingModel()
+        {
+            provider.Reply = "this is not json";
+            await bram.HearPlayerAsync("Open the gate.");
+            Assert.That(Records("Bram").Last().Outcome, Is.EqualTo("error"));
+            Assert.That(commands.ModelProblem, Is.Null);
+            Assert.That(commands.MayAskOnItsOwn, Is.True);
         }
 
         [Test]
