@@ -58,5 +58,11 @@ model, and anything that changed since the quote (the conversation, the holdings
 clock) refuses it: a new price needs a new card. `NpcActionExecutor.AvailableFor(npcId)` lists the
 actions with at least one eligible target, which is what the G5 driver registers with its `Agent`.
 
-Only the scripted driver (F6) trades so far: the `Agent` driver does not yet register
-`quote_purchase` and `quote_sale`, so with it Mara talks but makes no offer.
+Both drivers trade through that one executor. The `Agent` driver registers `quote_purchase` and
+`quote_sale` through `TradeActionBinding`, asking `AvailableFor` again on every turn, so an action
+with nothing to offer is absent from the schema. Because a local model never reads the schema,
+the actions and their target ids are also written into the prompt as observations. A guard turns
+a quote naming the other action's target into `none`, and `Agent.Execute` refuses a target that
+went stale before the reply was executed. Each turn also tells the model about its offer still
+waiting for the player and the receipt of the last trade. An NPC remembers a reply only once it has been executed
+(`CommittedHistory`), so a reply dropped as late is never part of its memory.

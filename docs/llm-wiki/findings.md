@@ -771,3 +771,50 @@ trim of a leading `Name:` fixes its prefix.
 **What would change this.** A larger set (n ≥ 50) with judged labels, scored blind, in which
 `qwen3.5:4b` is no better than `qwen3.5:2b`; latency with the game rendering beside it; or a
 repeat of this run that disagrees, since the arms ran sequentially and n is 12.
+
+### Mara's trade actions live: the right quote 5/6 on qwen3.5:4b, 4/6 on qwen3.5:2b (5 November 2026)
+
+**A small live check, not an accuracy claim** (hard rule 2): six labelled lines per model and no
+control arm. It shows that G5b's trade binding works against a real model, and which mistakes
+show up first.
+
+**What ran.** `MaraTradeLiveCheck`, an explicit `RequiresOllama` EditMode test that sends each
+line through the real `AgenerelaNpcDecisionDriver` and executes the result through G3's
+`NpcActionExecutor`. Each case was staged on its own: a fresh driver and game state, no memory,
+and the player carrying one wolf pelt and one iron scrap, so both `quote_purchase` (three stock
+entries) and `quote_sale` (two bundles) were offered. Targets reached the prompt as observation
+lines, one per id with its price, plus one line per action and one rule line. There was no state
+line. The few-shot block had one example per action, on its first target ("I'll take healing
+potion ×1, please." and "Would you buy my wolf pelt ×1?"). None of the six lines repeats that
+wording, but lines 1 and 4 ask for the same targets as the examples, which favours them. The
+lines were five buy or sell requests and one browsing line labelled `none`.
+
+**Conditions.** As in the entry above: RTX 4060 Laptop, AC power, Ollama 0.40.14, temperature 0,
+the two models run one after the other under the shared Ollama lock, each warmed with three
+throwaway requests and resident alone, fully on the GPU. A Codex review was running at the same
+time.
+
+| Outcome (measuring.md, rule 5) | `qwen3.5:4b` | `qwen3.5:2b` |
+|---|---|---|
+| Correct action and target | 5 | 4 |
+| Wrong but legal | 1 | 1 |
+| Contained by a guard | 0 | 1 |
+| Rejected when expected | 0 | 0 |
+| Pipeline error | 0 | 0 |
+
+- **Wrong but legal**: on the browsing line ("Just looking around. How is business today?") both
+  models made an offer, a potion and bread. Nothing moves until the player confirms the card, but
+  an unasked offer is the visible mistake. A `none` example in the few-shot block
+  (`IdleExampleStimulus`) is the obvious candidate fix. It would need an A/B run.
+- **Contained**: `qwen3.5:2b` asked to buy the player's iron scrap with `quote_purchase` instead
+  of `quote_sale`. The pair guard rewrote it to `none`, the player saw the refusal line, and no
+  quote was made.
+- **Statements**: every price named in a statement matched the target's own price. One
+  `qwen3.5:2b` line about buying the pelt read as if Mara were selling it.
+- **Latency**: p50 1.8 s on `qwen3.5:4b` and 1.2 s on `qwen3.5:2b` (n = 6), longer than the chat-only
+  entry above because the prompt is longer. One `qwen3.5:4b` turn took 14.9 s, which is over the
+  game's 8 s turn timeout. It happened once, was not investigated, and may have come from the
+  load beside it.
+
+**What would change this.** A larger labelled trade set with a control arm. Repeating the 14.9 s
+turn would make the turn timeout a real risk for `qwen3.5:4b`.
