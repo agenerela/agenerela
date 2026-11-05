@@ -28,7 +28,8 @@ the meadow south of the village. Combat input is ignored while typing, while a c
 while the pointer is over UI. Taking damage closes the open chat, and nobody will talk while an
 enemy is fighting you. When you fall you respawn where you started, and the enemies that were
 fighting you go home at full health; a defeated enemy stays down and drops its loot once
-(`item_wolf_pelt`, `item_iron_scrap`, logged until the inventory takes it).
+(`item_wolf_pelt`, `item_iron_scrap`) straight into your inventory, once per enemy; a defeat
+costs a tenth of your gold, never items. `CombatInventoryBridge` joins the two.
 
 ## Layout
 

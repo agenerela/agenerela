@@ -66,6 +66,10 @@ phase table and the open issues, not here.
   never applies a reply that arrives after the player cancelled, closed or switched speaker.
   NPC replies come from a scripted driver, labelled as such, behind the same boundary the real
   `Agent` will use at G5. 26 EditMode tests; the Windows player was play-checked.
+- **Living Vale's combat and inventory are joined** (#69): a defeated enemy's loot goes into the
+  player's inventory once (`CombatInventoryBridge`, keyed by enemy and item, so a repeat is
+  refused), and a defeat costs a tenth of the player's gold, at least one, never items. The help
+  panel now lists the combat keys and F6.
 - **Living Vale, milestone G2 "Fight and collect", the combat half** (#69), on
   `69-living-vale`: attack, block and dodge with health and stamina, as plain-C# rules
   (`Combatant`: 20 damage, 10 stamina, one hit per swing per victim, a dodge window, a block

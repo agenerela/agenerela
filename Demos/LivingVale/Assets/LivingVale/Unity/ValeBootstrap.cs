@@ -121,6 +121,18 @@ namespace LivingVale.Unity
             RefreshCursor();
         }
 
+        // After every Awake and OnEnable, so the scene's CombatDirector has registered itself.
+        private void Start()
+        {
+            var combat = LivingVale.Combat.CombatDirector.Active;
+            if (combat != null)
+            {
+                var bridge = new CombatInventoryBridge(Inventory);
+                combat.LootSink = bridge;
+                combat.DefeatPenalty = bridge;
+            }
+        }
+
         private void Update()
         {
             // Capture before the EventSystem can deselect the field on Enter, Esc or a click.
