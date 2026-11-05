@@ -43,7 +43,9 @@ namespace Demos.GreyBoxVillage.Tests
         {
             var b = new StringBuilder();
             foreach (var o in AssetDatabase.LoadAllAssetsAtPath(path).Where(o => o != null).OrderBy(o => o.name, StringComparer.Ordinal).ThenBy(o => o.GetType().Name))
-                b.Append(o.GetType().Name).Append(EditorUtility.IsDirty(o) ? " dirty " : " ").Append(EditorJsonUtility.ToJson(o)).Append('\n');
+                // Content only: Unity marks the panel settings dirty when a document attaches to
+                // them, which changes nothing on disk.
+                b.Append(o.GetType().Name).Append(' ').Append(EditorJsonUtility.ToJson(o)).Append('\n');
             return b.ToString();
         }
 
@@ -88,16 +90,20 @@ namespace Demos.GreyBoxVillage.Tests
         [Test]
         public void TheDefaultVolumeProfileListsNoComponentWithAMissingScript()
         {
-            // URP drops a listed component whose script is missing the first time it loads the
-            // profile, which dirtied the asset in every checkout that pressed Play. A missing script
-            // loads as null. (The profile also keeps a few unlisted test components from URP's
-            // template, which URP leaves alone.)
+            // URP drops a listed component whose script is missing when it loads the profile, which
+            // dirtied the asset in every checkout that pressed Play. It does so in memory, before any
+            // test runs, so the file itself is read. (The profile also keeps a few unlisted test
+            // components from URP's template, which URP leaves alone.)
             const string path = "Assets/Settings/DefaultVolumeProfile.asset";
-            var list = new SerializedObject(AssetDatabase.LoadMainAssetAtPath(path)).FindProperty("components");
-            Assert.That(list, Is.Not.Null.And.Property("isArray").True);
-            Assert.That(list.arraySize, Is.GreaterThan(0));
-            var missing = Enumerable.Range(0, list.arraySize).Where(i => list.GetArrayElementAtIndex(i).objectReferenceValue == null).ToList();
-            Assert.That(missing, Is.Empty, path + " lists components whose scripts this project does not have, at these indices.");
+            string text = File.ReadAllText(path).Replace("\r\n", "\n");
+            var scripts = Regex.Matches(text, @"^--- !u!114 &(-?\d+)\n(?:(?!--- ).*\n)*?  m_Script: \{fileID: \d+, guid: ([0-9a-f]{32})", RegexOptions.Multiline)
+                .Cast<Match>().ToDictionary(m => m.Groups[1].Value, m => m.Groups[2].Value);
+            var list = Regex.Match(text, @"^  components:\n((?:  - \{fileID: -?\d+\}\n)+)", RegexOptions.Multiline);
+            Assert.That(list.Success, Is.True, "No components list in " + path);
+            var listed = Regex.Matches(list.Groups[1].Value, @"fileID: (-?\d+)").Cast<Match>().Select(m => m.Groups[1].Value).ToList();
+            Assert.That(listed, Is.Not.Empty);
+            var missing = listed.Where(id => !scripts.TryGetValue(id, out var guid) || string.IsNullOrEmpty(AssetDatabase.GUIDToAssetPath(guid))).ToList();
+            Assert.That(missing, Is.Empty, path + " lists components whose scripts this project does not have.");
         }
 
         // ---- Static state ------------------------------------------------------------------------

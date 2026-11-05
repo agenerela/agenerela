@@ -48,7 +48,7 @@ namespace Demos.GreyBoxVillage.Editor
             new Shot("square_night", new Vector3(-10, 6, -10), new Vector3(8, 1.5f, 4), 22.5f),
             new Shot("gate_night", new Vector3(7, 4, -27), new Vector3(0, 2.5f, -14), 23f),
             // The title screen's backdrop (TitleBackdropFromCommandLine), not one of the review views.
-            new Shot("backdrop", new Vector3(-30, 13, -46), new Vector3(4, 3, 6), 18.4f, 42f),
+            new Shot("backdrop", new Vector3(30, 14, -30), new Vector3(0, 1, 6), 18.8f, 45f),
         };
 
         /// <summary>The title screen's backdrop, made by <see cref="TitleBackdropFromCommandLine"/>.</summary>
