@@ -16,7 +16,9 @@ some generated-quest experiments; friendly-NPC combat with protected essential c
 Windows only; no fixed deadline. Art style will be chosen through a ComfyUI/Unity pilot.
 Content, balance and technical choices below are proposals.
 
-Read the [detailed game design](living-vale-design.md) for systems and scenarios, and
+The [first slice's content](living-vale-content.md) freezes the IDs, NPCs, items and quest
+states (G0, awaiting sign-off). Read the [detailed game design](living-vale-design.md) for
+systems and scenarios, and
 the [asset pipeline](living-vale-assets.md) for the planned ComfyUI/Docker workflow.
 [Suggested features](living-vale-suggested-features.md) collects proposals for the game as a
 playable product rather than a demo; none is decided.
