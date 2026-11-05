@@ -6,13 +6,14 @@ using UnityEngine;
 namespace Demos.GreyBoxVillage
 {
     /// <summary>
-    /// The game's own rules for when the guard is asked something nobody typed (DR-008): the
+    /// The game's own rules for when a guard is asked something nobody typed (DR-008): the
     /// player in a restricted zone the guard can see, a wolf it can see, and a quiet moment at its
     /// post. The framework classifies none of this; it only receives the stimulus and its label.
+    /// Each guard has its own, so each notices with its own eyes and keeps its own timers.
     /// </summary>
     public sealed class GuardSenses : MonoBehaviour
     {
-        public VillageCommands Commands;
+        public AgentMind Mind;
         public VillageGuard Guard;
         public Transform Player;
         public VillageWolf Wolf;
@@ -34,7 +35,7 @@ namespace Demos.GreyBoxVillage
         [Tooltip("Seconds of nothing happening, with the guard standing still, before it is asked what to do.")]
         public float QuietSeconds = 30f;
 
-        /// <summary>One line for the heads-up display: zone and timer state.</summary>
+        /// <summary>One line for the agent board: zone and timer state.</summary>
         public string Status { get; private set; } = "";
 
         private RestrictedZone[] zones = new RestrictedZone[0];
@@ -68,7 +69,7 @@ namespace Demos.GreyBoxVillage
         /// <summary>One look around: zones, the wolf, the quiet timer. Public so tests can step it.</summary>
         public void Sense()
         {
-            if (Commands == null || Guard == null || Player == null) return;
+            if (Mind == null || Guard == null || Player == null) return;
             WatchZones();
             WatchWolf();
             WatchQuiet();
@@ -82,7 +83,7 @@ namespace Demos.GreyBoxVillage
             {
                 if (!zone.PlayerInside) continue;
                 bool seen = CanSee(Player);
-                inside = "In " + zone.Id + (seen ? " (the guard sees you)" : " (unseen)");
+                inside = "you are in " + zone.Id + (seen ? ", seen" : ", unseen");
                 if (!reportedAt.TryGetValue(zone, out float at))
                 {
                     if (!seen) continue;
@@ -120,22 +121,22 @@ namespace Demos.GreyBoxVillage
         // The model may choose none, or patrol, or anything else it is offered.
         private void WatchQuiet()
         {
-            if (!QuietTimerEnabled || Commands.IsDeciding || Guard.IsFollowing || Guard.IsMoving) return;
-            if (Time.time - Commands.LastActivityTime < QuietSeconds) return;
+            if (!QuietTimerEnabled || Mind.IsDeciding || Mind.HasPending || Guard.IsBusy) return;
+            if (Time.time - Mind.LastActivityTime < QuietSeconds) return;
             Raise("quiet", "Time", "Time passes quietly at your post.", DecisionPriority.Background);
         }
 
         private string QuietStatus()
         {
-            if (!QuietTimerEnabled) return "Quiet timer off";
-            if (Guard.IsFollowing || Guard.IsMoving) return "Quiet timer waits while the guard is busy";
-            float left = QuietSeconds - (Time.time - Commands.LastActivityTime);
-            return "Quiet moment in " + Mathf.Max(0, left).ToString("0", CultureInfo.InvariantCulture) + " s";
+            if (!QuietTimerEnabled) return "quiet timer off";
+            if (Guard.IsBusy) return "quiet timer waits while busy";
+            float left = QuietSeconds - (Time.time - Mind.LastActivityTime);
+            return "quiet moment in " + Mathf.Max(0, left).ToString("0", CultureInfo.InvariantCulture) + " s";
         }
 
         private async void Raise(string source, string label, string text, DecisionPriority priority)
         {
-            await Commands.ReportEventAsync(source, label, text, priority);
+            await Mind.ReportEventAsync(source, label, text, priority);
         }
     }
 }

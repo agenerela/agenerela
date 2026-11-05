@@ -8,7 +8,7 @@ namespace Demos.Shared
     {
         public string ActionId { get; private set; } = "none";
         public string TargetId { get; private set; } = "no_target";
-        public string Message { get; private set; } = "Walk up to the guard, press Enter and say anything.";
+        public string Message { get; private set; } = "Walk up to a guard, press Enter and say anything.";
         public string Stimulus { get; private set; } = "Player: (waiting)";
         public string Statement { get; private set; } = "";
         public string Details { get; private set; } = "";
@@ -37,13 +37,13 @@ namespace Demos.Shared
 
         public void ShowNote(string message) => Message = message;
 
-        public void ShowThinking(string stimulus, string provider)
+        public void ShowThinking(string stimulus, string provider, string message = "The guard is thinking...")
         {
             Stimulus = stimulus;
             Provider = provider;
             Statement = "";
             Details = "";
-            Message = "The guard is thinking...";
+            Message = message;
             Show("...", "...", -1, null);
         }
 
@@ -54,7 +54,7 @@ namespace Demos.Shared
             Statement = statement ?? "";
             Details = details ?? "";
             Provider = provider;
-            Message = string.IsNullOrEmpty(statement) ? "" : "Guard: \"" + statement + "\"";
+            Message = string.IsNullOrEmpty(statement) ? "" : "\"" + statement + "\"";
             Show(actionId, targetId, latencySeconds, guardsFired);
         }
 

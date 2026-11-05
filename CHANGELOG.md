@@ -29,6 +29,19 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **GreyBoxVillage has two guards and an agent board** (#143), the first slice of the demo's
+  upgrade.
+  - Bram at the gate and Wren at the bridge are each an `AgentBehaviour` with a profile asset.
+    Both ask one `OllamaProviderConfig`, so they share one queue.
+  - The player speaks to the nearest guard. The bell is heard by every agent except the one who
+    rang it.
+  - A game guard, `never_attack_villagers`, contains an attack on the village's people, and each
+    guard says its own refusal line.
+  - The board shows each agent's stimulus, offered actions, decision, the guard that stopped it,
+    and its queue wait. The request history can be filtered by agent.
+  - The recorder reads `DecisionResult.Request` and `Reply` (#142) instead of wrapping the
+    provider.
+
 - **The evaluation set opens in the Prompt Set window** (#134). `agent.json` now lists its six
   categories, each with its file and the prefix its ids use (`command_with_target`'s are
   `target_001`, ...), so the window and the Phase 4 runner find every prompt. No prompt changed:

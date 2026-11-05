@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Agenerela;
+using Agenerela.Providers;
 using Demos.Shared;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -16,7 +17,9 @@ namespace Demos.GreyBoxVillage.Editor
     {
         public const string Root = "Assets/GreyBoxVillage";
         public const string NavPath = Root + "/VillageNavMesh.villagenavmesh";
-        private static Material ground, stone, dark, blue, gold, water, restricted, leaf, villagerGreen, wolfGrey;
+        public const string AgentsFolder = Root + "/Agents";
+        public const string ProviderPath = AgentsFolder + "/VillageOllama.asset";
+        private static Material ground, stone, dark, blue, gold, silver, water, restricted, leaf, villagerGreen, wolfGrey;
 
         [MenuItem("Tools/Demos/GreyBoxVillage/Create Initial Scenes")]
         public static void CreateInitialScenes()
@@ -69,6 +72,17 @@ namespace Demos.GreyBoxVillage.Editor
             AssetDatabase.SaveAssets();
         }
 
+        /// <summary>
+        /// Rebuild Village from the command line, for an agent or CI with the editor closed:
+        /// <c>Unity -batchmode -projectPath Demos/GreyBoxVillage -executeMethod
+        /// Demos.GreyBoxVillage.Editor.VillageSceneBuilder.RebuildFromCommandLine -quit</c>.
+        /// </summary>
+        public static void RebuildFromCommandLine()
+        {
+            EditorSceneManager.OpenScene(DemoLauncher.VillagePath, OpenSceneMode.Single);
+            RebuildVillage();
+        }
+
         [MenuItem("Tools/Demos/GreyBoxVillage/Rebake Navigation")]
         public static void RebakeNavigation()
         {
@@ -89,6 +103,7 @@ namespace Demos.GreyBoxVillage.Editor
             dark = Material("DarkStone", new Color(0.27f, 0.30f, 0.32f));
             blue = Material("PlayerBlue", new Color(0.22f, 0.49f, 0.73f));
             gold = Material("GuardGold", new Color(0.75f, 0.58f, 0.25f));
+            silver = Material("GuardSilver", new Color(0.62f, 0.68f, 0.76f));
             water = Material("River", new Color(0.24f, 0.38f, 0.43f));
             restricted = Material("Restricted", new Color(0.72f, 0.22f, 0.2f));
             leaf = Material("Leaf", new Color(0.2f, 0.36f, 0.22f));
@@ -264,26 +279,13 @@ namespace Demos.GreyBoxVillage.Editor
             Capsule("player_body", player.transform, blue, 1f);
             Label("player", player.transform, new Vector3(0, 2.4f, 0));
 
-            var guardObject = new GameObject("VillageGuard");
-            guardObject.transform.position = new Vector3(-2.5f, 0, -13);
-            var nav = guardObject.AddComponent<NavMeshAgent>();
-            nav.radius = 0.4f;
-            nav.height = 1.8f;
-            nav.speed = 3.5f;
-            nav.stoppingDistance = 0.8f;
-            var guard = guardObject.AddComponent<VillageGuard>();
-            Capsule("guard_body", guardObject.transform, gold, 1f);
-            var guardCollider = guardObject.AddComponent<CapsuleCollider>();
-            guardCollider.center = new Vector3(0, 0.9f, 0);
-            guardCollider.height = 1.8f;
-            guardCollider.radius = 0.4f;
-            Label("guard", guardObject.transform, new Vector3(0, 2.4f, 0));
-            guard.PatrolRoute = new[] { gate, campfire, market, bridge, well, shelter, armory.Entrance };
-
+            // The scripted crowd. Each villager is a person a guard can name, and so one the
+            // never_attack_villagers guard protects.
             var villagers = new List<Villager>();
-            for (int i = 0; i < 4; i++)
+            var names = new[] { "tomas", "ada", "pell", "mira" };
+            for (int i = 0; i < names.Length; i++)
             {
-                var v = new GameObject("villager_" + (i + 1));
+                var v = new GameObject("villager_" + names[i]);
                 v.transform.position = square[i + 2].position;
                 var vnav = v.AddComponent<NavMeshAgent>();
                 vnav.radius = 0.3f;
@@ -291,16 +293,17 @@ namespace Demos.GreyBoxVillage.Editor
                 vnav.speed = 2f;
                 vnav.stoppingDistance = 0.4f;
                 Capsule("villager_body", v.transform, villagerGreen, 0.85f);
+                AddTargetable(v, names[i], char.ToUpperInvariant(names[i][0]) + names[i].Substring(1) + ", a villager", "person");
                 var villager = v.AddComponent<Villager>();
                 villager.WanderPoints = square;
                 villagers.Add(villager);
+                Label(names[i], v.transform, new Vector3(0, 2.1f, 0));
             }
 
             var alarm = bellPost.gameObject.AddComponent<VillageAlarm>();
             alarm.Bell = bell.GetComponent<Renderer>();
             alarm.Villagers = villagers.ToArray();
             alarm.Shelter = shelter;
-            guard.Alarm = alarm;
 
             var wolfObject = new GameObject("wolf");
             wolfObject.transform.position = new Vector3(38, 0, 40);
@@ -318,6 +321,26 @@ namespace Demos.GreyBoxVillage.Editor
             wolf.Den = den;
             Label("wolf", wolfObject.transform, new Vector3(0, 1.8f, 0));
 
+            // The agents. Both guards ask the same provider config, so they share one provider and
+            // one queue (DR-013, DR-015).
+            var provider = ProviderConfig();
+            var bram = Guard("Bram", new AgentIdentity
+            {
+                Name = "Bram",
+                Role = "the guard of the village gate",
+                Personality = "Brief and dutiful. Speaks in one short sentence.",
+                Goals = "Keep the village safe, keep people out of places that are off limits, and help the player."
+            }, "Bram, the guard at the village gate", new Vector3(-2.5f, 0, -13), gold, gate,
+                new[] { gate, campfire, market, bridge, well, shelter, armory.Entrance }, 30f, provider, alarm, wolf, player.transform);
+            var wren = Guard("Wren", new AgentIdentity
+            {
+                Name = "Wren",
+                Role = "the guard of the bridge",
+                Personality = "Watchful and dry. Speaks in one short sentence.",
+                Goals = "Keep the bridge and the river safe, back up the other guard, and help the player."
+            }, "Wren, the guard on the bridge", new Vector3(2, 0, 17), silver, bridge,
+                new[] { bridge, docks, market, well }, 37f, provider, alarm, wolf, player.transform);
+
             var camera = CreateCamera();
             camera.orthographic = false;
             camera.fieldOfView = 50;
@@ -331,6 +354,9 @@ namespace Demos.GreyBoxVillage.Editor
             RenderSettings.ambientLight = new Color(0.7f, 0.7f, 0.7f);
             RenderSettings.skybox = null;
 
+            var boardObject = new GameObject("AgentBoard");
+            var board = boardObject.AddComponent<AgentBoard>();
+
             var ui = new GameObject("CommandUI");
             var overlay = ui.AddComponent<DecisionDebugOverlay>();
             var input = ui.AddComponent<DemoCommandInput>();
@@ -341,16 +367,88 @@ namespace Demos.GreyBoxVillage.Editor
             var commands = ui.AddComponent<VillageCommands>();
             commands.Input = input;
             commands.Overlay = overlay;
+            commands.Board = board;
             commands.Player = player.transform;
-            commands.Guard = guard;
-            var senses = ui.AddComponent<GuardSenses>();
-            senses.Commands = commands;
-            senses.Guard = guard;
-            senses.Player = player.transform;
-            senses.Wolf = wolf;
-            commands.Senses = senses;
+            commands.Minds = new[] { bram, wren };
+            foreach (var mind in commands.Minds) mind.Village = commands;
+            var events = ui.AddComponent<VillageEvents>();
+            events.Village = commands;
+            events.Alarm = alarm;
             ui.AddComponent<DecisionHistoryPanel>().Commands = commands;
             ui.SetActive(true);
+        }
+
+        // A guard: its body, the AgentBehaviour that builds its agent from its profile, its mind and
+        // its senses, and a Targetable so the other agents can name it.
+        private static AgentMind Guard(string name, AgentIdentity identity, string description, Vector3 position,
+            Material material, Transform post, Transform[] route, float quietSeconds, ProviderConfig provider,
+            VillageAlarm alarm, VillageWolf wolf, Transform player)
+        {
+            var go = new GameObject(name);
+            go.transform.position = position;
+            var nav = go.AddComponent<NavMeshAgent>();
+            nav.radius = 0.4f;
+            nav.height = 1.8f;
+            nav.speed = 3.5f;
+            nav.stoppingDistance = 0.8f;
+            var guard = go.AddComponent<VillageGuard>();
+            guard.Post = post;
+            guard.PatrolRoute = route;
+            guard.Alarm = alarm;
+            Capsule(name.ToLowerInvariant() + "_body", go.transform, material, 1f);
+            var collider = go.AddComponent<CapsuleCollider>();
+            collider.center = new Vector3(0, 0.9f, 0);
+            collider.height = 1.8f;
+            collider.radius = 0.4f;
+            AddTargetable(go, name.ToLowerInvariant(), description, "person");
+            Label(name + " (guard)", go.transform, new Vector3(0, 2.4f, 0));
+
+            var behaviour = go.AddComponent<AgentBehaviour>();
+            behaviour.Provider = provider;
+            behaviour.FindTargetsNearby = true;
+            // Every place in the village, the evaluation set's included, fits under the cap.
+            behaviour.Targets = new ProximityTargetSource { Radius = 90f, Cap = 24 };
+            // The game writes its own observations, ids and distances included, which already pass
+            // the agent's eight-line budget, so a proximity source would add nothing (README).
+            behaviour.NoticeNearby = false;
+            behaviour.Profile = Profile(name, identity);
+
+            var mind = go.AddComponent<AgentMind>();
+            mind.Body = guard;
+            var senses = go.AddComponent<GuardSenses>();
+            senses.Mind = mind;
+            senses.Guard = guard;
+            senses.Player = player;
+            senses.Wolf = wolf;
+            senses.QuietSeconds = quietSeconds;
+            mind.Senses = senses;
+            return mind;
+        }
+
+        // Kept between rebuilds, so a reference to the asset never breaks and a local change survives.
+        private static AgentProfile Profile(string name, AgentIdentity identity)
+        {
+            EnsureFolder(AgentsFolder);
+            string path = AgentsFolder + "/" + name + ".asset";
+            var profile = AssetDatabase.LoadAssetAtPath<AgentProfile>(path);
+            if (profile != null) return profile;
+            profile = ScriptableObject.CreateInstance<AgentProfile>();
+            profile.Identity = identity;
+            profile.IdleExampleStimulus = "Fine day for it.";
+            AssetDatabase.CreateAsset(profile, path);
+            return profile;
+        }
+
+        private static ProviderConfig ProviderConfig()
+        {
+            EnsureFolder(AgentsFolder);
+            var config = AssetDatabase.LoadAssetAtPath<OllamaProviderConfig>(ProviderPath);
+            if (config != null) return config;
+            config = ScriptableObject.CreateInstance<OllamaProviderConfig>();
+            config.Endpoint = "http://127.0.0.1:11434";
+            config.Model = "qwen3.5:2b";
+            AssetDatabase.CreateAsset(config, ProviderPath);
+            return config;
         }
 
         private static void Bake(VillageNavigation navigation, Transform geometry)
