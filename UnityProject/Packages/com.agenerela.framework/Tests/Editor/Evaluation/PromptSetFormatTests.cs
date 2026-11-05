@@ -14,21 +14,16 @@ namespace Agenerela.Tests.Evaluation
     /// </summary>
     /// <remarks>
     /// Our set lives in this repository's <c>UnityProject/Assets</c>, not in the package, so the
-    /// tests that read it are ignored in a project that has none. The rest use fixtures.
+    /// tests that read it run only there (<see cref="EvalFixtures.OurSetFolder"/>). The rest use fixtures.
     /// </remarks>
     public sealed class PromptSetFormatTests
     {
         private string copy;
 
-        private static string Ours => Path.Combine(Application.dataPath, "Evaluation");
+        private static string Ours => EvalFixtures.OurSetFolder();
 
         private void CopyOurSet()
         {
-            if (!File.Exists(Path.Combine(Ours, "agent.json")))
-            {
-                Assert.Ignore($"This project has no prompt set at {Ours}; only agenerela's own UnityProject has one.");
-            }
-
             copy = Path.Combine(Path.GetTempPath(), "agenerela-ourset-" + System.Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Path.Combine(copy, "prompts"));
             File.Copy(Path.Combine(Ours, "agent.json"), Path.Combine(copy, "agent.json"));
@@ -167,6 +162,23 @@ namespace Agenerela.Tests.Evaluation
                 File.WriteAllText(fixture.SetPath, EvalFixtures.SetJson.Replace("prompts/situations.json", file));
 
                 Assert.That(() => fixture.Load(), Throws.TypeOf<InvalidDataException>());
+            }
+        }
+
+        [Test]
+        public void TwoCategoriesCannotShareAFile()
+        {
+            using (var fixture = new EvalFixtures())
+            {
+                var set = fixture.Load();
+                var thief = new PromptCategory { Id = "situations", File = "prompts/situations.json" };
+                string before = File.ReadAllText(Path.Combine(fixture.Folder, "prompts", "situations.json"));
+
+                Assert.That(set.ValidateCategory(thief, out _), Is.False, "situation already owns that file.");
+                set.Categories.Add(thief);
+                Assert.That(() => set.Save(), Throws.InvalidOperationException, "The set file is not written with two owners for one file.");
+                Assert.That(() => set.SaveCategory(thief), Throws.InvalidOperationException);
+                Assert.That(File.ReadAllText(Path.Combine(fixture.Folder, "prompts", "situations.json")), Is.EqualTo(before));
             }
         }
 

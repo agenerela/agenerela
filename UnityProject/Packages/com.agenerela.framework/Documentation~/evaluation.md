@@ -55,7 +55,7 @@ file, and a merge never has to choose between their answers.
 | `actions[].onlyWhen` | Optional. The state in which the action is available, in the shape of a prompt's `preconditionState` |
 | `targets` | Every target the agent has registered, the only values besides `no_target` an expected target may hold |
 | `categories[].id` | Lower-case letters, digits and `_`. It names each annotator's label file, so it can never hold a path |
-| `categories[].file` | The category's prompts: a `.json` path relative to the set file, inside its folder, and neither the set file nor under `labels/`. Created on the first prompt you add |
+| `categories[].file` | The category's prompts: a `.json` path relative to the set file, inside its folder, and neither the set file, under `labels/`, nor another category's file. Created on the first prompt you add |
 | `categories[].idPrefix` | Optional. What its prompt ids start with; the category id when left out |
 
 **Why the actions come from a profile but the targets do not.** An action's id, whether it
@@ -129,7 +129,9 @@ Two rules no check can make: observations describe the world, not the framework 
 ("A wolf is at the bridge", not "The bridge is registered"); and a prompt that has been labelled
 or scored is rewritten as a new id rather than edited in place.
 
-Changes stay in the window until you click **Save**, and survive a script recompiling. Each category you changed is written whole;
+Changes stay in the window until you click **Save**, and survive a script recompiling. If a
+category's file changed on disk meanwhile, say a teammate's commit you pulled, your draft is not
+applied over it: the window offers to keep it or discard it. Each category you changed is written whole;
 `PromptSetChecks` is the same set of rules in code, for a script or a CI step.
 
 ## Labelling blind

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using Agenerela.Evaluation;
 using Newtonsoft.Json;
 using UnityEditor;
@@ -43,8 +44,12 @@ namespace Agenerela.Editor.Evaluation
 
         // Unsaved prompts, one category's list as JSON per entry, kept through a domain reload: a
         // script recompiling would otherwise drop them, since the set itself is not serialized.
+        // Each keeps its file's fingerprint from before the edits. A draft is applied only onto the
+        // file it was made from; one whose file changed, or that could not be applied, stays here
+        // until a person keeps or discards it, through any number of reloads.
         [SerializeField] private List<string> draftCategories = new List<string>();
         [SerializeField] private List<string> draftPrompts = new List<string>();
+        [SerializeField] private List<string> draftBaselines = new List<string>();
 
         private static readonly JsonSerializerSettings DraftSettings = new JsonSerializerSettings
         {
@@ -95,13 +100,27 @@ namespace Agenerela.Editor.Evaluation
         {
             writeView?.SaveAll();
             hasUnsavedChanges = false;
-            ClearDraft();
             base.SaveChanges();
+        }
+
+        /// <summary>A category file's content hash, or "" when it does not exist yet.</summary>
+        internal static string Fingerprint(PromptSet set, PromptCategory category)
+        {
+            string path = set.CategoryPath(category);
+            if (!File.Exists(path))
+            {
+                return "";
+            }
+
+            using (var sha = SHA256.Create())
+            {
+                return Convert.ToBase64String(sha.ComputeHash(File.ReadAllBytes(path)));
+            }
         }
 
         private void StashDraft()
         {
-            ClearDraft();
+            // Drafts still waiting for a decision stay; the edits made since are added to them.
             if (set == null || writeView == null)
             {
                 return;
@@ -111,40 +130,111 @@ namespace Agenerela.Editor.Evaluation
             {
                 draftCategories.Add(category.Id);
                 draftPrompts.Add(JsonConvert.SerializeObject(category.Prompts, DraftSettings));
+                draftBaselines.Add(writeView.BaselineOf(category));
             }
         }
 
         private void RestoreDraft()
         {
-            if (set != null && writeView != null)
+            if (set == null || writeView == null)
             {
-                for (int i = 0; i < draftCategories.Count && i < draftPrompts.Count; i++)
-                {
-                    var category = set.FindCategory(draftCategories[i]);
-                    var prompts = JsonConvert.DeserializeObject<List<EvalPrompt>>(draftPrompts[i], DraftSettings);
-                    if (category != null && prompts != null)
-                    {
-                        category.Prompts.Clear();
-                        category.Prompts.AddRange(prompts.Where(p => p != null));
-                        writeView.MarkChanged(category);
-                    }
-                }
-
-                hasUnsavedChanges = writeView.HasUnsavedChanges;
+                return;
             }
 
-            ClearDraft();
+            for (int i = draftCategories.Count - 1; i >= 0; i--)
+            {
+                var category = set.FindCategory(draftCategories[i]);
+                if (category != null && Fingerprint(set, category) == draftBaselines[i] && ApplyDraft(i, category, draftBaselines[i]))
+                {
+                    RemoveDraft(i);
+                }
+            }
+
+            hasUnsavedChanges = writeView.HasUnsavedChanges;
+        }
+
+        private bool ApplyDraft(int i, PromptCategory category, string baseline)
+        {
+            List<EvalPrompt> prompts;
+            try
+            {
+                prompts = JsonConvert.DeserializeObject<List<EvalPrompt>>(draftPrompts[i], DraftSettings);
+            }
+            catch (JsonException)
+            {
+                return false;
+            }
+
+            if (prompts == null)
+            {
+                return false;
+            }
+
+            category.Prompts.Clear();
+            category.Prompts.AddRange(prompts.Where(p => p != null));
+            writeView.MarkChanged(category, baseline);
+            return true;
+        }
+
+        private void RemoveDraft(int i)
+        {
+            draftCategories.RemoveAt(i);
+            draftPrompts.RemoveAt(i);
+            draftBaselines.RemoveAt(i);
         }
 
         private void ClearDraft()
         {
             draftCategories.Clear();
             draftPrompts.Clear();
+            draftBaselines.Clear();
+        }
+
+        /// <summary>
+        /// Drafts from before a reload that were not applied: their file changed on disk since the
+        /// edits, their category is gone, or the set did not load. Never applied without a click.
+        /// </summary>
+        private void DrawWaitingDrafts()
+        {
+            for (int i = draftCategories.Count - 1; i >= 0; i--)
+            {
+                var category = set != null ? set.FindCategory(draftCategories[i]) : null;
+                string why = set == null ? "the set did not load"
+                    : category == null ? "the set no longer has this category"
+                    : "its file changed on disk since you edited it";
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                {
+                    EditorGUILayout.LabelField(
+                        $"Unsaved prompts for '{draftCategories[i]}' from before a reload were not applied: {why}. " +
+                        "Keeping them replaces that category's prompts in the window with your draft; nothing is written until you save.",
+                        EditorStyles.wordWrappedLabel);
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        using (new EditorGUI.DisabledScope(category == null || writeView == null))
+                        {
+                            if (GUILayout.Button("Keep my draft", GUILayout.Width(120)) && ApplyDraft(i, category, Fingerprint(set, category)))
+                            {
+                                RemoveDraft(i);
+                                hasUnsavedChanges = writeView.HasUnsavedChanges;
+                                GUIUtility.ExitGUI();
+                            }
+                        }
+
+                        if (GUILayout.Button("Discard it", GUILayout.Width(100))
+                            && EditorUtility.DisplayDialog("Discard the draft?", $"Your unsaved prompts for '{draftCategories[i]}' are lost.", "Discard", "Cancel"))
+                        {
+                            RemoveDraft(i);
+                            GUIUtility.ExitGUI();
+                        }
+                    }
+                }
+            }
         }
 
         private void OnGUI()
         {
             DrawToolbar();
+            DrawWaitingDrafts();
 
             if (set == null)
             {
@@ -199,7 +289,8 @@ namespace Agenerela.Editor.Evaluation
                 // Nothing changes until the switch is confirmed: a cancelled switch leaves the
                 // window showing, and saving to, the set it was editing.
                 if (chosenSet != setAsset
-                    && (!hasUnsavedChanges || EditorUtility.DisplayDialog("Open another set?", "Your unsaved changes are lost.", "Open", "Cancel")))
+                    && (!hasUnsavedChanges && draftCategories.Count == 0
+                        || EditorUtility.DisplayDialog("Open another set?", "Your unsaved changes are lost.", "Open", "Cancel")))
                 {
                     setAsset = chosenSet;
                     hasUnsavedChanges = false;
@@ -238,8 +329,9 @@ namespace Agenerela.Editor.Evaluation
                 {
                     if (!hasUnsavedChanges || EditorUtility.DisplayDialog("Reload the prompt set?", "Your unsaved changes are lost.", "Reload", "Cancel"))
                     {
+                        // Drafts still waiting from a reload stay offered: a reload is how a
+                        // fixed file is read again.
                         hasUnsavedChanges = false;
-                        ClearDraft();
                         Reload();
                     }
                 }

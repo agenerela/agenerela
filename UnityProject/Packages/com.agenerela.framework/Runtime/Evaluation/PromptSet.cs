@@ -136,9 +136,18 @@ namespace Agenerela.Evaluation
         }
 
         /// <summary>Writes the set file. Category files are written by <see cref="SaveCategory"/>.</summary>
+        /// <exception cref="InvalidOperationException">A category's id or file is not one <see cref="ValidateCategory"/> accepts.</exception>
         public void Save()
         {
             RequirePath();
+            foreach (var category in Categories)
+            {
+                if (!ValidateCategory(category, out string problem))
+                {
+                    throw new InvalidOperationException(problem);
+                }
+            }
+
             PromptSetJson.WriteFile(FilePath, this);
         }
 
@@ -362,7 +371,8 @@ namespace Agenerela.Evaluation
         /// <summary>
         /// True when <paramref name="category"/> can be read and written: its id passes
         /// <see cref="ValidateCategoryId"/>, and its file is a relative <c>.json</c> path inside the
-        /// set's folder that is neither the set file nor under <see cref="LabelsFolder"/>.
+        /// set's folder that is neither the set file, under <see cref="LabelsFolder"/>, nor another
+        /// category's file.
         /// </summary>
         public bool ValidateCategory(PromptCategory category, out string problem)
         {
@@ -388,6 +398,14 @@ namespace Agenerela.Evaluation
                 || path.StartsWith(labels, StringComparison.OrdinalIgnoreCase))
             {
                 problem = $"Category '{category.Id}''s file '{category.File}' must be inside the set's folder, and be neither the set file nor under {LabelsFolder}/";
+                return false;
+            }
+
+            var other = Categories.FirstOrDefault(c => c != null && c != category && !string.IsNullOrWhiteSpace(c.File)
+                && string.Equals(Path.GetFullPath(Path.Combine(Folder, c.File)), path, StringComparison.OrdinalIgnoreCase));
+            if (other != null)
+            {
+                problem = $"Category '{category.Id}''s file '{category.File}' is already category '{other.Id}''s";
                 return false;
             }
 

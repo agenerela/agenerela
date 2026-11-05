@@ -22,6 +22,10 @@ namespace Agenerela.Editor.Evaluation
         private readonly Func<string> you;
         private readonly Action onFilesWritten;
         private readonly HashSet<PromptCategory> changed = new HashSet<PromptCategory>();
+
+        // Each changed category's file as it was on disk when the first unsaved edit was made, so a
+        // draft kept through a domain reload can tell whether someone changed the file since.
+        private readonly Dictionary<PromptCategory, string> baselines = new Dictionary<PromptCategory, string>();
         private readonly HashSet<string> open = new HashSet<string>();
 
         private IReadOnlyList<AnnotatorLabels> labels = Array.Empty<AnnotatorLabels>();
@@ -45,8 +49,21 @@ namespace Agenerela.Editor.Evaluation
         /// <summary>The categories edited since they were last saved.</summary>
         internal IEnumerable<PromptCategory> Changed => changed;
 
-        /// <summary>Marks <paramref name="category"/> as edited, for a draft restored after a domain reload.</summary>
-        internal void MarkChanged(PromptCategory category) => changed.Add(category);
+        /// <summary>The fingerprint of <paramref name="category"/>'s file from before its unsaved edits.</summary>
+        internal string BaselineOf(PromptCategory category) =>
+            baselines.TryGetValue(category, out string baseline) ? baseline : PromptSetWindow.Fingerprint(set, category);
+
+        /// <summary>
+        /// Marks <paramref name="category"/> as edited. <paramref name="baseline"/> is its file's
+        /// fingerprint from before the edits; null takes the file as it is now.
+        /// </summary>
+        internal void MarkChanged(PromptCategory category, string baseline = null)
+        {
+            if (changed.Add(category))
+            {
+                baselines[category] = baseline ?? PromptSetWindow.Fingerprint(set, category);
+            }
+        }
 
         internal void SetLabels(IReadOnlyList<AnnotatorLabels> files) => labels = files;
 
@@ -58,6 +75,7 @@ namespace Agenerela.Editor.Evaluation
             }
 
             changed.Clear();
+            baselines.Clear();
             onFilesWritten();
         }
 
@@ -135,11 +153,14 @@ namespace Agenerela.Editor.Evaluation
             using (new EditorGUILayout.HorizontalScope())
             {
                 newCategory = EditorGUILayout.TextField(newCategory);
-                using (new EditorGUI.DisabledScope(!PromptSet.ValidateCategoryId(newCategory, out _) || set.FindCategory(newCategory) != null))
+                var candidate = new PromptCategory { Id = newCategory, File = $"prompts/{newCategory}.json" };
+                bool valid = PromptSet.ValidateCategoryId(newCategory, out _) && set.FindCategory(newCategory) == null
+                             && set.ValidateCategory(candidate, out _);
+                using (new EditorGUI.DisabledScope(!valid))
                 {
                     if (GUILayout.Button("+ Category", GUILayout.Width(90)))
                     {
-                        set.Categories.Add(new PromptCategory { Id = newCategory, File = $"prompts/{newCategory}.json" });
+                        set.Categories.Add(candidate);
                         set.Save();
                         open.Add(newCategory);
                         newCategory = "";
@@ -211,7 +232,7 @@ namespace Agenerela.Editor.Evaluation
 
             if (EditorGUI.EndChangeCheck())
             {
-                changed.Add(selectedCategory);
+                MarkChanged(selectedCategory);
             }
 
             EditorGUILayout.Space();
@@ -236,7 +257,7 @@ namespace Agenerela.Editor.Evaluation
                         "A prompt that has been labelled or scored is better rewritten as a new id than removed. Remove it anyway?", "Remove", "Cancel"))
                 {
                     selectedCategory.Prompts.Remove(prompt);
-                    changed.Add(selectedCategory);
+                    MarkChanged(selectedCategory);
                     selected = null;
                     GUIUtility.ExitGUI();
                 }
@@ -384,8 +405,8 @@ namespace Agenerela.Editor.Evaluation
                 LabelledBy = new List<string> { you() },
             };
 
+            MarkChanged(category);
             category.Prompts.Add(prompt);
-            changed.Add(category);
             Select(prompt, category);
         }
 
