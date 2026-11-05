@@ -46,6 +46,16 @@ While the version stays `0.x`, the public API may change in any release.
 - **Window → Agenerela → Prompt Set** (`PromptSetWindow`): Write mode edits prompts with the
   expected answer picked from dropdowns and the rules shown inline; Label mode asks one
   annotator blind; Agreement mode shows the counts and settles a split when a person clicks.
+- **A Prompt Set window that explains itself** (#158). Until a set and a profile are chosen, the
+  tabs are greyed out with the reason, and the window shows three numbered steps: choose the
+  set, choose the profile, type your name. **Open the project's evaluation set** opens the
+  `agent.json` under `Assets/` (`Assets/Evaluation/` first) and the `AgentProfile` beside it in
+  one click; **New set from this profile…** stays as the second way in. A line under the tabs
+  says what the current one is for, every toolbar field has a tooltip, **You** is now **Your
+  name**, and Label mode shows "12 of 40 left to label" and says why once nothing is left. The
+  set, the profile and the name are remembered in `EditorPrefs`, keyed per project: a name or set
+  chosen in #134's window is asked for once more. agenerela's own set now has its profile,
+  `Assets/Evaluation/VillageGuard.asset`, so the few-shot check runs on it.
 - `Documentation~/evaluation.md`: the set's layout, writing prompts, labelling blind, and reading
   and settling agreement.
 

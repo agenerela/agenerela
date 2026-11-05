@@ -183,7 +183,7 @@ namespace Agenerela.Editor.Evaluation
 
             if (!PromptSet.ValidateAnnotator(you(), out _))
             {
-                EditorGUILayout.HelpBox("Type your name in the toolbar to add prompts.", MessageType.None);
+                EditorGUILayout.HelpBox("Type your name into Your name in the toolbar to add prompts.", MessageType.None);
             }
 
             EditorGUILayout.EndScrollView();
