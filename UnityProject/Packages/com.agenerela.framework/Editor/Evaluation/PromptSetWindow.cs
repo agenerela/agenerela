@@ -109,6 +109,10 @@ namespace Agenerela.Editor.Evaluation
 
             AssemblyReloadEvents.beforeAssemblyReload += StashDraft;
             Reload();
+
+            // A remembered set with no profile remembered for it takes the one beside it, then
+            // the last one chosen.
+            FillMissingProfile();
             if (profile == null)
             {
                 profile = LoadByGuid<AgentProfile>(prefs.LastProfileGuid);
@@ -559,15 +563,16 @@ namespace Agenerela.Editor.Evaluation
         }
 
         /// <summary>
-        /// Switches to <paramref name="chosen"/>, with the profile it was last measured against on
-        /// this machine, or else the one beside it, or else the one already chosen. Nothing changes
-        /// until a switch that loses unsaved changes is confirmed: a cancelled one leaves the window
-        /// showing, and saving to, the set it was editing.
+        /// Switches to <paramref name="chosen"/>, with the profile <see cref="PromptSetStart.ProfileWhenOpening"/>
+        /// picks. Nothing changes until a switch that loses unsaved changes is confirmed: a
+        /// cancelled one leaves the window showing, and saving to, the set it was editing. The set
+        /// already open is not reloaded, so nothing unsaved is lost; only a missing profile is filled.
         /// </summary>
         private void OpenSet(TextAsset chosen)
         {
             if (chosen == setAsset)
             {
+                FillMissingProfile();
                 return;
             }
 
@@ -586,11 +591,31 @@ namespace Agenerela.Editor.Evaluation
             Reload();
             if (setAsset != null)
             {
-                profile = remembered ?? PromptSetStart.FindProfileBeside(AssetDatabase.GetAssetPath(setAsset), set) ?? profile;
+                profile = PromptSetStart.ProfileWhenOpening(false, profile, remembered, ProfileBesideSet);
             }
 
             RememberProfile();
             GUI.FocusControl(null);
+        }
+
+        /// <summary>For the set already open and no profile: the remembered one, or the one beside it.</summary>
+        private void FillMissingProfile()
+        {
+            if (setAsset == null || profile != null)
+            {
+                return;
+            }
+
+            profile = PromptSetStart.ProfileWhenOpening(true, null, LoadByGuid<AgentProfile>(prefs.ProfileGuidFor(GuidOf(setAsset))), ProfileBesideSet);
+            if (profile != null)
+            {
+                RememberProfile();
+            }
+        }
+
+        private AgentProfile ProfileBesideSet()
+        {
+            return setAsset == null ? null : PromptSetStart.FindProfileBeside(AssetDatabase.GetAssetPath(setAsset), set);
         }
 
         private void DrawLabel()

@@ -69,6 +69,23 @@ namespace Agenerela.Editor.Evaluation
             return agreeing.Count == 1 ? agreeing[0] : null;
         }
 
+        /// <summary>
+        /// The profile the window uses once a set is opened. For another set: the one remembered
+        /// for it on this machine, else the one beside it, else the one already chosen. For the set
+        /// already open, the one chosen stays, and only a missing one is filled the same way, so
+        /// opening a set whose profile was cleared still makes the window ready.
+        /// </summary>
+        /// <param name="beside">Looked up only when needed: it searches the project.</param>
+        internal static AgentProfile ProfileWhenOpening(bool sameSet, AgentProfile current, AgentProfile remembered, Func<AgentProfile> beside)
+        {
+            if (sameSet && current != null)
+            {
+                return current;
+            }
+
+            return remembered ?? beside() ?? current;
+        }
+
         /// <summary><see cref="ProfileBeside(string, PromptSet, IEnumerable{KeyValuePair{string, AgentProfile}})"/> over the project's assets.</summary>
         internal static AgentProfile FindProfileBeside(string setAssetPath, PromptSet set)
         {

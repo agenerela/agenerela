@@ -102,6 +102,29 @@ namespace Agenerela.Tests.Evaluation
         }
 
         [Test]
+        public void AnotherSetTakesItsRememberedProfileThenTheOneBesideIt()
+        {
+            var current = Profile("current");
+            var remembered = Profile("remembered");
+            var beside = Profile("beside");
+
+            Assert.That(PromptSetStart.ProfileWhenOpening(false, current, remembered, () => beside), Is.SameAs(remembered));
+            Assert.That(PromptSetStart.ProfileWhenOpening(false, current, null, () => beside), Is.SameAs(beside));
+            Assert.That(PromptSetStart.ProfileWhenOpening(false, current, null, () => null), Is.SameAs(current));
+        }
+
+        [Test]
+        public void OpeningTheSetAlreadyOpenFillsOnlyAMissingProfile()
+        {
+            // The set chosen, its profile cleared: the start button still makes the window ready.
+            var current = Profile("current");
+            var beside = Profile("beside");
+
+            Assert.That(PromptSetStart.ProfileWhenOpening(true, null, null, () => beside), Is.SameAs(beside));
+            Assert.That(PromptSetStart.ProfileWhenOpening(true, current, null, () => beside), Is.SameAs(current));
+        }
+
+        [Test]
         public void OurProjectsButtonOpensOurSetAndItsProfile()
         {
             string folder = EvalFixtures.OurSetFolder();
