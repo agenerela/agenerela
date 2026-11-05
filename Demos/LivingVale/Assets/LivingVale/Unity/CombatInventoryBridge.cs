@@ -47,7 +47,8 @@ namespace LivingVale.Unity
         /// <summary>The gold a defeat costs with <paramref name="gold"/> on hand: a tenth, at least one, never more than there is.</summary>
         public static int PenaltyFor(int gold)
         {
-            return gold <= 0 ? 0 : Mathf.Max(1, gold * DefeatPenaltyPercent / 100);
+            // In long: a large balance times the percentage would overflow an int.
+            return gold <= 0 ? 0 : Mathf.Max(1, (int)((long)gold * DefeatPenaltyPercent / 100));
         }
 
         public void Apply(string playerId)

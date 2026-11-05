@@ -74,6 +74,13 @@ namespace LivingVale.Tests
         }
 
         [Test]
+        public void DefeatPenalty_OnALargeBalance_DoesNotOverflow()
+        {
+            Assert.That(CombatInventoryBridge.PenaltyFor(300_000_000), Is.EqualTo(30_000_000));
+            Assert.That(CombatInventoryBridge.PenaltyFor(int.MaxValue), Is.EqualTo(int.MaxValue / 10));
+        }
+
+        [Test]
         public void DefeatPenalty_TakesNoItems()
         {
             var starting = PlayerInventory.CreateStarting(ItemCatalog.CreateDefault());
