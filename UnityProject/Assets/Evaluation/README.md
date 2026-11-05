@@ -11,10 +11,12 @@ What is still to do is in *Still to do*.
 | File | Contents |
 |---|---|
 | `agent.json` | The set file: the agent every prompt here is measured against, its actions and registered targets, and the categories |
+| `VillageGuard.asset`, `Actions/` | The set's `AgentProfile` and its four action assets (#158): what the window offers in Write, and the few-shot examples hard rule 4 checks every prompt against |
 | `prompts/<category>.json` | One file per category, so two people can label different files without conflicting |
 | `labels/<annotator>/<category>.json` | Each annotator's blind answers, written by the Prompt Set window. None yet |
 
-Open the set in **Window → Agenerela → Prompt Set** (#134): choose `agent.json` as the set. The
+Open the set in **Window → Agenerela → Prompt Set** (#134): click **Open the project's evaluation
+set**, which opens `agent.json` and `VillageGuard.asset` beside it, and type your name. The
 format and the window ship in the package, and
 [`Documentation~/evaluation.md`](../../Packages/com.agenerela.framework/Documentation~/evaluation.md)
 documents both for any game. This page is about our own set.
@@ -72,7 +74,9 @@ The window checks every rule here but the one about observations, under the prom
 written. A test checks that our set breaks none of them.
 
 - **Never reuse a prompt as a few-shot example** (hard rule 4). An action's `ExampleStimulus`
-  must not match any `stimulus` here.
+  must not match any `stimulus` here. `VillageGuard.asset`'s examples are GreyBoxVillage's
+  guard's, the four actions' and its idle line, so the set is measured with the examples the demo
+  plays with; `PromptSetStartTests` checks that none matches a prompt.
 - **Targets are registered ids, not descriptions.** Name a concrete `wolf`, not
   `nearby_enemy`. A new target goes into `agent.json` first.
 - **Observations describe the world, not the framework or the test.** "A wolf is at the
