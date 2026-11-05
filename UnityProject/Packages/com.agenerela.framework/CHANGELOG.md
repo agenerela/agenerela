@@ -151,6 +151,26 @@ While the version stays `0.x`, the public API may change in any release.
   within noise) and every `EvalAnswer`, with the model's own decision and the guard's reason.
   `Save(folder)` writes `report.json` and a Markdown `report.md` into a folder named for the run;
   `FromJson` reads one back.
+- **A run's progress and a cancelled run's report** (#146). `EvalRunner.Progress` is told, on
+  the main thread, each `EvalPhase` (`Checking`, `WarmUp`, `Asking`, `Unloading`) and, as an
+  `EvalProgress`, the arm and the answers so far out of the run's total. A cancelled run now
+  throws `EvalCancelledException`, an `OperationCanceledException`, so every existing catch still
+  catches it, whose `Partial` is the report as far as it got: `EvalReport.Cancelled` true, every
+  answer given, and a noise check only where both arms were asked the same prompts. `report.md`
+  opens with "Cancelled after n of m answers"; a finished report's JSON is unchanged.
+- **Window → Agenerela → Evaluation Report** (#146, screen 4): runs an A/B from the Editor
+  without blocking it, and reads the report in six numbered parts: the run set-up
+  with its conditions in plain words, the five outcomes per arm, the noise check, accuracy per
+  category, the answers that were not correct (each opening its whole record), and the
+  labellers' agreement, counted as the Prompt Set window counts it, with a summary to copy into
+  findings.md. Each finished run is saved to `Logs/Evaluation/`, and **Open report…** reads any
+  saved `report.json` back, showing the same as when it ran. Until it can run it shows the steps
+  to start and why **Run A/B** is greyed out; **Use the project's set, profile and arms** fills
+  them from the project's `agent.json`, the profile beside it and Project Settings. Each arm has
+  a name and a grounding-guard switch, one config twice starting as `control` (off) against
+  `guards-on`; arms on two Ollama models always run one after the other. Its choices are
+  remembered per project in `EditorPrefs`. A run shows its progress, and a cancelled run's
+  partial report is saved and shown, marked cancelled.
 - **The evaluation arms on Project Settings → Agenerela** (DR-013): `AgenerelaSettings` gains
   `EvaluationArmA` and `EvaluationArmB`, which agents never read.
 - `Documentation~/evaluation.md`: running an A/B and reading its report.

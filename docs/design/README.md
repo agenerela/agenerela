@@ -13,7 +13,8 @@ Beside them sits one figure that is not a screen: the **framework design**, the 
 modules with one decision passing through them, drawn for the system-design practice on
 24 September 2026.
 
-> **These are proposals, not a spec.** Nothing here is built yet. Where a wireframe encodes a
+> **These are proposals, not a spec.** Most of it is not built yet; where a screen is, the
+> notes below say how the built one differs. Where a wireframe encodes a
 > rule that *is* settled — state-masked action lists, the built-in `none`, `no_target`, the
 > five decision outcomes, field order — the rule comes from
 > [the build plan](../FRAMEWORK_BUILD_PLAN.md) and its decision records, not from the
@@ -29,7 +30,7 @@ modules with one decision passing through them, drawn for the system-design prac
 | [`png/01-agent-profile.png`](png/01-agent-profile.png) | **Agent Profile & Actions** — Inspector for the profile asset | Assets in Phase 1 (#4, #15); Inspector polish in Phase 5 |
 | [`png/02-agent-behaviour.png`](png/02-agent-behaviour.png) | **Agent Behaviour** — the component that puts an agent in a scene | Component in Phase 2; polish in Phase 5 |
 | [`png/03-decision-log.png`](png/03-decision-log.png) | **Decision Log** — why an agent did what it did | Phase 5, over the Phase 1 telemetry types (#3) |
-| [`png/04-evaluation-report.png`](png/04-evaluation-report.png) | **Evaluation Report** — A/B over the labelled prompt set | Phase 4 (#13) |
+| [`png/04-evaluation-report.png`](png/04-evaluation-report.png) | **Evaluation Report** — A/B over the labelled prompt set | Phase 4: built in #146 |
 | [`png/05-village.png`](png/05-village.png) | **GreyBoxVillage play screen** — talking to the guard | Grey box today (#19); real decisions in Phase 2 |
 | [`png/06-strategy.png`](png/06-strategy.png) | **GreyBoxStrategy turn screen** — countries as agents | Grey box next (#20); real decisions in Phase 3 |
 | [`png/07-framework-design.png`](png/07-framework-design.png) | **Framework design** — the game, the package and the model, with one decision through them in nine steps | — |
@@ -38,6 +39,11 @@ modules with one decision passing through them, drawn for the system-design prac
 **Screen 1 has one planned change.** The idle example moves from its own section onto the
 locked `none` row of the action list, which expands like the other rows (build plan §2.7).
 The figure still draws the separate section.
+
+**Screen 4 is built, as one column** (#146). The window keeps the figure's six numbered parts
+but stacks them, takes the model from each arm's provider config instead of a Model field, and
+expands a failure in place rather than jumping to the Decision Log. The figure is unchanged;
+[the screen notes](screen-notes.md#screen-4--evaluation-report) list every difference.
 
 **Screen 2 is partly superseded.** Three decisions made after the lab changed it: the model is
 configured in a provider config asset that the component only overrides (DR-013), targets are

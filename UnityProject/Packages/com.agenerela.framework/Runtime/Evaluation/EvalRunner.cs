@@ -45,7 +45,9 @@ namespace Agenerela.Evaluation
     /// what the agent chose, not what it said.
     /// </para>
     /// <para>
-    /// Run it from the main thread. Cancelling stops it between or during decisions, and throws.
+    /// Run it from the main thread. <see cref="Progress"/> says how far it has come. Cancelling
+    /// stops it between or during decisions and throws an <see cref="EvalCancelledException"/>,
+    /// an <see cref="OperationCanceledException"/> carrying the report as far as it got.
     /// </para>
     /// </remarks>
     public sealed class EvalRunner
@@ -102,6 +104,15 @@ namespace Agenerela.Evaluation
         /// player." Null tells the model nothing about the state. Every answer records the lines.
         /// </summary>
         public Func<JObject, IEnumerable<string>> DescribeState = PlainStateLines;
+
+        /// <summary>
+        /// Told how far the run has come, on the main thread: <see cref="EvalPhase.Checking"/> once
+        /// for both servers and again before each arm, <see cref="EvalPhase.WarmUp"/> before each
+        /// arm's warm-up, <see cref="EvalPhase.Asking"/> after every answer, and
+        /// <see cref="EvalPhase.Unloading"/> before a sequential run unloads arm A's model. Null by
+        /// default. An exception it throws stops the run.
+        /// </summary>
+        public Action<EvalProgress> Progress;
 
         // How long a sequential run waits for arm A's model to leave memory; shorter in tests.
         internal float UnloadWaitSeconds = 15f;
@@ -169,7 +180,8 @@ namespace Agenerela.Evaluation
         /// says which.
         /// </exception>
         /// <exception cref="ProviderException">An Ollama server could not be read.</exception>
-        /// <exception cref="OperationCanceledException"><paramref name="ct"/> was cancelled.</exception>
+        /// <exception cref="EvalCancelledException"><paramref name="ct"/> was cancelled once the run had begun: an
+        /// <see cref="OperationCanceledException"/> whose <see cref="EvalCancelledException.Partial"/> is the report so far.</exception>
         public async Awaitable<EvalReport> RunAsync(CancellationToken ct = default)
         {
             if (WarmUpRequests < 0)
@@ -201,19 +213,42 @@ namespace Agenerela.Evaluation
             report.Arms.Add(a.Result);
             report.Arms.Add(b.Result);
 
+            try
+            {
+                await RunArms(report, a, b, prompts, ct);
+            }
+            catch (OperationCanceledException e) when (ct.IsCancellationRequested && !(e is EvalCancelledException))
+            {
+                // The report as far as it got, marked so nobody mistakes it for a result.
+                report.Cancelled = true;
+                Finish(report, a, b);
+                throw new EvalCancelledException(report, e, ct);
+            }
+
+            Finish(report, a, b);
+            return report;
+        }
+
+        private async Awaitable RunArms(EvalReport report, ArmRun a, ArmRun b, List<(string Category, EvalPrompt Prompt)> prompts, CancellationToken ct)
+        {
+            int total = prompts.Count * 2;
+
             // Both servers' state before anything is sent. Only arm A's model may be resident on
             // its server, since A runs first; on a server of B's own, only B's.
+            ReportProgress(EvalPhase.Checking, null, 0, total);
             await RefuseStrangers(a, a, ct);
             await RefuseStrangers(b, b.Ollama != null && a.Ollama != null && b.Ollama.Endpoint == a.Ollama.Endpoint ? a : b, ct);
 
             if (Order == EvalArmOrder.Interleaved)
             {
-                await Prepare(a, prompts, ct);
-                await Prepare(b, prompts, ct);
+                await Prepare(a, prompts, 0, total, ct);
+                await Prepare(b, prompts, 0, total, ct);
                 foreach (var (category, prompt) in prompts)
                 {
                     report.Answers.Add(await Ask(a, category, prompt, ct));
+                    ReportProgress(EvalPhase.Asking, a.Arm.Name, report.Answers.Count, total);
                     report.Answers.Add(await Ask(b, category, prompt, ct));
+                    ReportProgress(EvalPhase.Asking, b.Arm.Name, report.Answers.Count, total);
                 }
 
                 await Read(a, AtEnd, ct);
@@ -221,38 +256,59 @@ namespace Agenerela.Evaluation
             }
             else
             {
-                await Prepare(a, prompts, ct);
+                await Prepare(a, prompts, 0, total, ct);
                 foreach (var (category, prompt) in prompts)
                 {
                     report.Answers.Add(await Ask(a, category, prompt, ct));
+                    ReportProgress(EvalPhase.Asking, a.Arm.Name, report.Answers.Count, total);
                 }
 
                 await Read(a, AtEnd, ct);
+                ReportProgress(EvalPhase.Unloading, a.Arm.Name, report.Answers.Count, total);
                 await Unload(a, UnloadWaitSeconds, ct);
 
-                await Prepare(b, prompts, ct);
+                await Prepare(b, prompts, report.Answers.Count, total, ct);
                 foreach (var (category, prompt) in prompts)
                 {
                     report.Answers.Add(await Ask(b, category, prompt, ct));
+                    ReportProgress(EvalPhase.Asking, b.Arm.Name, report.Answers.Count, total);
                 }
 
                 await Read(b, AtEnd, ct);
             }
+        }
 
+        // The warnings, the noise check and the finish time, for a whole run or a cancelled one.
+        private void Finish(EvalReport report, ArmRun a, ArmRun b)
+        {
             foreach (var run in new[] { a, b })
             {
                 Warn(report.Conditions, run);
             }
 
-            report.Noise.Add(NoiseCheck.Of("all", a.Result.Overall, b.Result.Overall));
-            // In the set's order; a category with no prompts has nothing to compare.
-            foreach (var category in Set.Categories.Where(c => a.Result.Category(c.Id) != null))
+            // A cancelled run compares only where both arms were asked the same prompts: in an
+            // interleaved run, when the cancel fell between two prompts.
+            if (a.Result.Overall.Total > 0 && a.Result.Overall.Total == b.Result.Overall.Total)
             {
-                report.Noise.Add(NoiseCheck.Of(category.Id, a.Result.Category(category.Id), b.Result.Category(category.Id)));
+                report.Noise.Add(NoiseCheck.Of("all", a.Result.Overall, b.Result.Overall));
+                // In the set's order; a category with no prompts has nothing to compare.
+                foreach (var category in Set.Categories.Where(c => a.Result.Category(c.Id) != null))
+                {
+                    var countsA = a.Result.Category(category.Id);
+                    var countsB = b.Result.Category(category.Id);
+                    if (countsB != null && countsA.Total == countsB.Total)
+                    {
+                        report.Noise.Add(NoiseCheck.Of(category.Id, countsA, countsB));
+                    }
+                }
             }
 
             report.Conditions.FinishedUtc = Iso(DateTime.UtcNow);
-            return report;
+        }
+
+        private void ReportProgress(EvalPhase phase, string arm, int answered, int total)
+        {
+            Progress?.Invoke(new EvalProgress(phase, arm, answered, total));
         }
 
         // ---- Before the run --------------------------------------------------------------------
@@ -376,8 +432,9 @@ namespace Agenerela.Evaluation
         }
 
         // The version, the residency check, the warm-up and the reading after it.
-        private async Awaitable Prepare(ArmRun run, List<(string Category, EvalPrompt Prompt)> prompts, CancellationToken ct)
+        private async Awaitable Prepare(ArmRun run, List<(string Category, EvalPrompt Prompt)> prompts, int answered, int total, CancellationToken ct)
         {
+            ReportProgress(EvalPhase.Checking, run.Arm.Name, answered, total);
             run.Conditions.WarmUpRequests = WarmUpRequests;
             if (run.Ollama != null)
             {
@@ -400,6 +457,7 @@ namespace Agenerela.Evaluation
                 });
             }
 
+            ReportProgress(EvalPhase.WarmUp, run.Arm.Name, answered, total);
             await WarmUp(run, prompts, ct);
             await Read(run, AfterWarmUp, ct);
         }
