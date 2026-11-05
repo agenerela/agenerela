@@ -129,7 +129,11 @@ the free text before the target breaks a settled rule (Appendix A), and the runn
 it, because the report keeps parsed fields, not the raw text. Before a model's first A/B, read
 the field order of a few raw responses (`/api/chat` with the framework's schema); if it differs,
 the A/B compares two designs, not two models. Source: findings, "First model A/B"
-(5 November 2026).
+(5 November 2026). The cause is in Ollama: a model served through its own GGUF chat template has
+the schema's keys sorted on the way to llama.cpp. The server log says which way a model went:
+a "template selection" line with `selected=gguf_chat_template` means the order is lost, and
+`renderer_parser` or `go_template` means it is kept. Source: findings, "Why
+`qwen3:4b-instruct-2507` wrote `statement` before `target`" (5 November 2026).
 
 ## Before you run
 

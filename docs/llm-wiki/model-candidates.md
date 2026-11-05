@@ -374,7 +374,9 @@ All benchmarks are makers' claims unless marked. Sizes are Ollama's unless marke
   length); the scarecrow logprobs check; VRAM from `/api/ps` with `size_vram` equal to
   `size`; and that its raw replies keep the schema's field order, `action`, `target`,
   `statement`, which `Qwen3-4B-Instruct-2507` did not on Ollama 0.40.14 (findings, 5 November
-  2026). `AGENERELA_OLLAMA_MODEL` already lets the Phase 3 live suite run another model, as a
+  2026). Ollama sorts the schema's keys for a model it serves through the GGUF chat template;
+  the server log's "template selection" line shows which (`gguf_chat_template` loses the order,
+  and `MiniCPM5-2B` logged it too). `AGENERELA_OLLAMA_MODEL` already lets the Phase 3 live suite run another model, as a
   20-prompt smoke test.
 - **The grounding threshold is per model until shown otherwise.** 0.8 was set on Qwen's
   tokenizer. Another tokenizer splits target ids differently, so a candidate that loses only

@@ -866,3 +866,115 @@ and 31–37. The 2B answered `none` to all three. The 4B acted on two: "Is the r
 **What would change this.** A 4B arm whose raw responses keep `action`, `target`, `statement`,
 on the same set: if it still scores above the 2B beyond noise, that is a model result. Or a later
 Ollama that holds the order for the 4B.
+
+### Why `qwen3:4b-instruct-2507` wrote `statement` before `target`: Ollama's native chat path sorts the schema's keys (5 November 2026)
+
+A follow-up to the entry above, from the raw replies already captured, Ollama's and llama.cpp's
+source, and Ollama's own server log. No new request was sent to a model. It is a finding about
+how the response schema reaches the sampler, not an accuracy claim, and it says nothing about
+which model chooses better.
+
+**Result: the order is lost in Ollama, not in our schema and not in the model.** Ollama 0.40.14
+has two ways to serve a chat. Through the one `qwen3:4b-instruct-2507` takes, Ollama reads our
+schema into a Go map and writes it out again, and Go writes a map's keys in sorted order. So
+llama.cpp is handed `properties` as `action`, `statement`, `target`, alphabetical, and builds its
+grammar in that order. `qwen3.5:2b` takes the other way, where the schema is passed on as the
+bytes we sent.
+
+**1. Which replies kept the order.** From the proxy capture of the first A/B's third run (raw
+`/api/chat` replies, scored prompts only):
+
+| Model | Scored replies | `action`, `target`, `statement` | Out of order |
+|---|---:|---:|---:|
+| `qwen3.5:2b` | 76 | 76 | 0 |
+| `qwen3:4b-instruct-2507` | 76 | 0 | 76, all `action`, `statement`, `target` |
+
+The 3 warm-ups per model, not part of the run, had the same orders. With the schema's properties
+reversed (`statement`, `target`, `action`; `order_probe_reversed.log`), the 2B followed the
+reversed order on all 3 stimuli and the 4B still wrote `action`, `statement`, `target`.
+
+**2. Where Ollama 0.40.14 loses it.** Read in the source at the v0.40.14 tag (commit 9a3e817,
+2 November 2026):
+
+- `chatModeForModel` (`server/routes.go`) sends a chat down Ollama's own rendered path when the
+  model's manifest names a `renderer` or `parser`, uses harmony, or is served through its Go
+  template. Otherwise the chat goes down the native path, which hands the model's own GGUF chat
+  template to llama-server. `/api/generate` makes the same choice.
+- On the rendered path, `llm/llama_server.go` passes `format` on to llama-server's
+  `/completion` unchanged, as `json_schema` (a `json.RawMessage`), so the key order survives.
+- On the native path, `llamaServerChatResponseFormat` (`llm/llama_server.go`) unmarshals the
+  schema into `map[string]any` and puts it in an OpenAI-style `response_format`. Go's
+  `encoding/json` writes map keys sorted ([`encoding/json` Marshal](https://pkg.go.dev/encoding/json#Marshal):
+  "The map keys are sorted"), so `properties` comes out alphabetical. `required` is an array and
+  keeps its order, but that does not help (next point).
+- llama.cpp b11963 (28 October 2026, the version in Ollama's `LLAMA_CPP_VERSION`) builds an object
+  rule in `common/json-schema-to-grammar.cpp`, `_build_object_rule`, by walking `properties` in
+  the order given and putting each required one in the grammar in that order. `required` is read
+  as an unordered set, for membership only. `propertyOrdering` appears nowhere in that file, so it
+  is ignored.
+
+Ollama's own server log says which way each model went, in its "template selection" line. During
+the run, `qwen3.5:2b` logged `selected=renderer_parser` (its manifest has `renderer: qwen3.5` and
+`parser: qwen3.5`). `qwen3:4b-instruct-2507` logged `selected=gguf_chat_template`. Its manifest has
+neither a renderer nor a parser, only a Go template, and Ollama prefers the GGUF template when it
+advertises more capabilities than the Go one (`shouldPreferChatTemplate` in `server/images.go`;
+here `tools thinking completion` against `completion tools`).
+
+**Not new in 0.40.14.** v0.34.2 (15 September 2026) has the same `llamaServerChatResponseFormat`,
+the same two paths and the same rule for preferring the GGUF template. None of the release notes
+from v0.34.0 to v0.40.14 mentions key order in `format`. What we cannot say is how 0.34.2 served
+this 4B: it was pulled on 4 November, already on 0.40.14.
+
+**Unverified.** That the native path sorted *this* request is read from the code, not seen: the
+server log does not print the schema or grammar that reached llama-server. The rest of the chain
+was observed: the path in the log, and the alphabetical order in the replies even when the schema
+was reversed. Not read at all: Ollama's OpenAI-compatible `/v1/chat/completions` endpoint.
+
+**3. Is it our schema?** `JsonSchemaSerializer` emits, as the capture shows, an object with
+`properties` in the order `action`, `target`, `statement`, each a string with a description and,
+for the first two, an `enum`; `required` in the same order; `propertyOrdering` in the same order;
+and `additionalProperties: false`. That is correct, and the rendered path honours it. No object
+schema can survive the native path, because a JSON object's keys have no order by definition and
+the path treats the schema as a map. The only shapes that would survive are field names that sort
+into the right order, which would mean renaming fields and touches DR-008, or a reply that is an
+array instead of an object (`prefixItems`, which llama.cpp supports), which changes the reply's
+format. Neither is proposed here.
+
+**4. The two results run on 0.40.14.**
+
+- **The first A/B (65/76 against 56/76).** The 2B arm ran in the framework's order: 76 of 76
+  in the capture, which repeated the scored run answer for answer. The 4B arm ran with
+  `statement` before `target` on all 76. That is why the entry above makes no model claim.
+- **The Phase 3 gate run (19/20, 3 November).** It ran only `qwen3.5:2b`, and the 3 November
+  server log shows `selected=renderer_parser` for every load that day. That is the path that keeps
+  the order, and the 2B followed the schema's order in every capture today. Its raw replies were
+  not captured, so "in order" is inferred, not counted, but nothing points the other way.
+
+**The other models, from the "template selection" lines in the server logs** (most from the
+4 November smoke test of the candidates). `granite4.1:3b` (`go_template`), and
+`nemotron-3-nano:4b`, `lfm3:1.7b` and `qwen3.5:4b` (`renderer_parser`), take the path that keeps
+the order. **`MiniCPM5-2B`
+(`hf.co/openbmb/MiniCPM5-2B-GGUF:Q4_K_M`) logged `gguf_chat_template`**, so by the same code it
+should come back alphabetical too. That is a prediction, not a count.
+
+**A possible link to the guard, unverified.** On the 4B, 32 of 34 grounding readings were 1.000
+(entry above). With `statement` written first, the line usually names the place ("Go to the
+well.") before `target` is sampled, so the target may be close to certain by then. That would
+blind the grounding guard on any model served this way. It needs an A/B with the order restored
+to check.
+
+**What a fix could look like.** Nothing in the framework is changed here.
+
+- **Detect it (no measurement needed).** `OllamaProvider` reads the raw reply's key order and
+  records whether it was `action`, `target`, `statement`. The runner counts it per arm and
+  warns, or refuses, when the warm-ups already come back out of order. Today nothing can see it,
+  because the report keeps only parsed fields.
+- **Restore it (each needs a live check first).** Upstream, the native path could pass the schema
+  on as raw bytes instead of a map, which would be a report to Ollama. On the lead's machine,
+  setting `OLLAMA_GO_TEMPLATE=1` should send a model that has a Go template, the 4B included, down
+  the rendered path. But that also changes which chat template formats the prompt, a second
+  variable for an A/B.
+
+**What would change this.** A server log or llama-server request showing the 4B's schema in our
+order, which would mean another step reorders it. Or an Ollama release whose native path keeps
+the schema as sent.
