@@ -115,30 +115,32 @@ running all of arm A, unloading the model (`{"model": "<name>", "keep_alive": 0,
 The cost is that drift over the session no longer hits both arms alike, so say in the result
 that the arms ran sequentially, and repeat a close result. Two arms on one model (guards on
 against off) interleave instead. This follows from rule 2 and the note in
-[environment.md](environment.md#local-models--ollama), and is how the runner in #145 is
-specified. It has no findings entry of its own yet.
+[environment.md](environment.md#local-models--ollama), and is what the runner's
+`Sequential` order does. That unload has been run only against a stand-in server, not live (#145), and
+the order has no findings entry of its own yet.
 
 ## Before you run
 
-The A/B runner is [#145](https://github.com/agenerela/agenerela/issues/145), being built in
-Phase 4. The middle column says what that issue specifies the runner will check for you. It
-is not a promise that the code is merged: until it is, and for any provider it does not
-cover, every row is yours to check by hand. The runner reports "not checked" for a provider
-other than Ollama.
+The A/B runner is `EvalRunner` ([#145](https://github.com/agenerela/agenerela/issues/145),
+merged 5 November 2026; [`evaluation.md`](../../UnityProject/Packages/com.agenerela.framework/Documentation~/evaluation.md)
+documents it). The middle column says what it checks for you. For a provider other than
+Ollama it reports "not checked", and for a probe or script that does not use it, every row is
+yours to check by hand. Where the runner "refuses", it throws before sending anything and says
+why.
 
 | Check | Runner (#145) | By hand |
 |---|---|---|
 | A control arm on the same set, model, machine and session (rule 1) | Runs both arms, interleaved on one model | Decide what the control is; a result without one is an anecdote |
-| Enough prompts for the difference you claim (rule 1) | Marks a difference smaller than the noise floor "within noise" | Grow n; the floor is about 10 points at n≈50 |
-| Only one model resident (rule 2) | Reads `/api/ps` and refuses to start if another is loaded (Ollama) | `ollama stop <other>`; note that `ollama` hangs in Git Bash on the lead's laptop, so use the HTTP API there |
-| The model is on the GPU | Records `size` and `size_vram`, flags a model not fully on the GPU | Look at the server log's "inference compute" line; check `nvidia-smi` if latency is odd |
+| Enough prompts for the difference you claim (rule 1) | Marks a difference smaller than the noise floor "within noise" (floor = 10 × √(50 / n) points, so 10 at n = 50), over the whole set and per category | Grow n; the floor is about 10 points at n≈50 |
+| Only one model resident (rule 2) | Reads `/api/ps` on both servers and refuses to start if a model other than the arm's is loaded, and checks again before each arm's warm-up (Ollama) | `ollama stop <other>`; note that `ollama` hangs in Git Bash on the lead's laptop, so use the HTTP API there |
+| The model is on the GPU | Records `size` and `size_vram` before the warm-up, after it and at the arm's end, and warns when the model is not fully on the GPU (a warning, not a refusal). The GPU name in the report is Unity's, not necessarily Ollama's device | Look at the server log's "inference compute" line; check `nvidia-smi` if latency is odd |
 | Provider version recorded | Records Ollama's `/api/version` | For any other provider, write it down yourself |
-| No few-shot and evaluation overlap (rule 3) | Not checked | Compare your examples with the prompt set; partial phrasings count |
-| Preconditions staged per case (rule 4) | Stages `preconditionState`, binds every declared action, and tells the model the state as an observation | Check the set's labels use the right preconditions |
-| Outcomes classified, not one percentage (rule 5) | Sorts every answer into the five outcomes | Read the wrong answers, not only the counts |
-| Warm-up (rule 6) | 2 to 3 throwaway requests per arm, never in the report | Warm up yourself for a probe or script |
-| Arms of two models run one after the other | The sequential option unloads between arms | Choose it, and say so in the result |
-| How targets and state reached the prompt | Records the choice in the report | Compare only with results fed the same way |
+| No few-shot and evaluation overlap (rule 3) | Refuses an example stimulus (the profile's, or an arm's own idle example) that is exactly a prompt. Partial phrasings are not checked | Compare your examples with the prompt set; partial phrasings count |
+| Preconditions staged per case (rule 4) | Stages `preconditionState`, binds every declared action (offered exactly when its `onlyWhen` holds, and always when it has none), and tells the model the state as an observation | Check the set's labels use the right preconditions, and that `onlyWhen` is declared for every action the game restricts |
+| Outcomes classified, not one percentage (rule 5) | Sorts every answer into the five outcomes. A guard stopping an answer counts as contained only when the label was `none`, else as rejected-when-expected. Pipeline errors stay in the accuracy denominator | Read the wrong answers, not only the counts (the Markdown report lists every answer that was not correct) |
+| Warm-up (rule 6) | 3 throwaway requests per arm, never in the report; refuses if none of them produced a decision | Warm up yourself for a probe or script |
+| Arms of two models run one after the other | `EvalArmOrder.Sequential` unloads the first arm's model (`keep_alive: 0`), waits until `/api/ps` drops it, and refuses if it stays. Interleaved arms on two Ollama models are refused | Choose it, and say so in the result |
+| How targets and state reached the prompt | Records the choice in the report, with the set's last commit and whether it has uncommitted changes | Compare only with results fed the same way |
 | `127.0.0.1`, not `localhost` | Not checked | Use `http://127.0.0.1:11434` everywhere |
 | Plugged in (a laptop) | Not checked | A battery run is not comparable with an AC one |
 | Nothing else heavy on the machine | Not checked | Another session's Unity batch tests ran on the CPU during the 3 November run, so its latencies are "not a latency measurement" (findings) |
@@ -148,3 +150,10 @@ other than Ollama.
 Rule 7 is not a before-you-run check: the live tests carry the `RequiresOllama` category and are
 ignored, not failed, when Ollama is unreachable. A reachable server still needs the configured
 model pulled, or the run fails at warm-up.
+
+**The runner's own live check is not a result.** On 5 November 2026 its `RequiresOllama` test
+ran both arms, interleaved, on `qwen3.5:2b`, Ollama 0.40.14, RTX 4060 Laptop on mains power,
+nothing else resident: the model was 2254 of 2254 MB in VRAM after each warm-up, no warnings, no
+pipeline errors, 90 s. Both arms answered all 8 fixture prompts correctly, "within noise" at
+n = 8 (floor 25 points). It shows the runner works against a real server. It says nothing
+about accuracy (hard rule 2).
