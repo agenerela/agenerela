@@ -29,6 +29,13 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Living Vale, milestone G1 "Walk and talk"** (#69), on the game's own branch
+  `69-living-vale`: the URP project in `Demos/LivingVale/`, a third-person player and orbit
+  camera, a grey-box village built by `VillageSceneBuilder`, two NPCs (Mara and Iven) with focus
+  and a chat overlay, and a conversation layer that keeps one turn in flight, times out, and
+  never applies a reply that arrives after the player cancelled, closed or switched speaker.
+  NPC replies come from a scripted driver, labelled as such, behind the same boundary the real
+  `Agent` will use at G5. 26 EditMode tests; the Windows player was play-checked.
 - **The risk management plan** in `docs/course/2026-10-29-risk-management/`: an Excel
   register of 14 risks, two per member, with a risk matrix and a sprint review log, reviewed
   once per sprint. XLSX now goes through Git LFS.
