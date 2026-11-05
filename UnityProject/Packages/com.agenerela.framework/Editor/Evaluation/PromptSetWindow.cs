@@ -75,7 +75,7 @@ namespace Agenerela.Editor.Evaluation
 
         private void OnEnable()
         {
-            saveChangesMessage = "The prompt set has unsaved changes. Save them?";
+            saveChangesMessage = SaveMessage;
             if (setAsset == null)
             {
                 setAsset = LoadByGuid<TextAsset>(EditorPrefs.GetString(SetPref, ""));
@@ -118,6 +118,11 @@ namespace Agenerela.Editor.Evaluation
             }
         }
 
+        /// <summary>Unsaved edits, or drafts from before a reload still waiting for a decision.</summary>
+        private bool Unsaved => (writeView != null && writeView.HasUnsavedChanges) || draftCategories.Count > 0;
+
+        private const string SaveMessage = "The prompt set has unsaved changes. Save them?";
+
         private void StashDraft()
         {
             // Drafts still waiting for a decision stay; the edits made since are added to them.
@@ -150,7 +155,7 @@ namespace Agenerela.Editor.Evaluation
                 }
             }
 
-            hasUnsavedChanges = writeView.HasUnsavedChanges;
+            hasUnsavedChanges = Unsaved;
         }
 
         private bool ApplyDraft(int i, PromptCategory category, string baseline)
@@ -215,7 +220,7 @@ namespace Agenerela.Editor.Evaluation
                             if (GUILayout.Button("Keep my draft", GUILayout.Width(120)) && ApplyDraft(i, category, Fingerprint(set, category)))
                             {
                                 RemoveDraft(i);
-                                hasUnsavedChanges = writeView.HasUnsavedChanges;
+                                hasUnsavedChanges = Unsaved;
                                 GUIUtility.ExitGUI();
                             }
                         }
@@ -224,6 +229,7 @@ namespace Agenerela.Editor.Evaluation
                             && EditorUtility.DisplayDialog("Discard the draft?", $"Your unsaved prompts for '{draftCategories[i]}' are lost.", "Discard", "Cancel"))
                         {
                             RemoveDraft(i);
+                            hasUnsavedChanges = Unsaved;
                             GUIUtility.ExitGUI();
                         }
                     }
@@ -233,6 +239,10 @@ namespace Agenerela.Editor.Evaluation
 
         private void OnGUI()
         {
+            // A waiting draft cannot be saved, only kept or discarded, so closing the window says so.
+            saveChangesMessage = draftCategories.Count == 0 ? SaveMessage
+                : SaveMessage + $" {draftCategories.Count} draft(s) from before a reload are still waiting to be kept or discarded, and are lost when the window closes.";
+
             DrawToolbar();
             DrawWaitingDrafts();
 
@@ -266,7 +276,7 @@ namespace Agenerela.Editor.Evaluation
             {
                 case Mode.Write:
                     writeView.Draw(position);
-                    hasUnsavedChanges = writeView.HasUnsavedChanges;
+                    hasUnsavedChanges = Unsaved;
                     break;
                 case Mode.Label:
                     DrawLabel();
@@ -331,8 +341,8 @@ namespace Agenerela.Editor.Evaluation
                     {
                         // Drafts still waiting from a reload stay offered: a reload is how a
                         // fixed file is read again.
-                        hasUnsavedChanges = false;
                         Reload();
+                        hasUnsavedChanges = Unsaved;
                     }
                 }
 
@@ -447,7 +457,7 @@ namespace Agenerela.Editor.Evaluation
         private void OnFilesWritten()
         {
             AssetDatabase.Refresh();
-            hasUnsavedChanges = writeView.HasUnsavedChanges;
+            hasUnsavedChanges = Unsaved;
         }
 
         private void CreateSet()

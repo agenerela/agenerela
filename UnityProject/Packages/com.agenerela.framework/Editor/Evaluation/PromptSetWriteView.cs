@@ -23,8 +23,10 @@ namespace Agenerela.Editor.Evaluation
         private readonly Action onFilesWritten;
         private readonly HashSet<PromptCategory> changed = new HashSet<PromptCategory>();
 
-        // Each changed category's file as it was on disk when the first unsaved edit was made, so a
-        // draft kept through a domain reload can tell whether someone changed the file since.
+        // Each category file's fingerprint as this view last read or wrote it, so a draft kept
+        // through a domain reload can tell whether someone changed the file since. Taken when the
+        // view is made, right after the set loads, not at the first edit: by then the file may
+        // already hold a teammate's newer prompts that the window never read.
         private readonly Dictionary<PromptCategory, string> baselines = new Dictionary<PromptCategory, string>();
         private readonly HashSet<string> open = new HashSet<string>();
 
@@ -42,6 +44,10 @@ namespace Agenerela.Editor.Evaluation
             this.profile = profile;
             this.you = you;
             this.onFilesWritten = onFilesWritten;
+            foreach (var category in set.Categories)
+            {
+                baselines[category] = PromptSetWindow.Fingerprint(set, category);
+            }
         }
 
         internal bool HasUnsavedChanges => changed.Count > 0;
@@ -54,14 +60,20 @@ namespace Agenerela.Editor.Evaluation
             baselines.TryGetValue(category, out string baseline) ? baseline : PromptSetWindow.Fingerprint(set, category);
 
         /// <summary>
-        /// Marks <paramref name="category"/> as edited. <paramref name="baseline"/> is its file's
-        /// fingerprint from before the edits; null takes the file as it is now.
+        /// Marks <paramref name="category"/> as edited. <paramref name="baseline"/> is the
+        /// fingerprint of the file the edits were made from; null keeps the one this view read.
         /// </summary>
         internal void MarkChanged(PromptCategory category, string baseline = null)
         {
-            if (changed.Add(category))
+            changed.Add(category);
+            if (baseline != null)
             {
-                baselines[category] = baseline ?? PromptSetWindow.Fingerprint(set, category);
+                baselines[category] = baseline;
+            }
+            else if (!baselines.ContainsKey(category))
+            {
+                // A category added in this view: its file does not exist yet.
+                baselines[category] = PromptSetWindow.Fingerprint(set, category);
             }
         }
 
@@ -72,10 +84,10 @@ namespace Agenerela.Editor.Evaluation
             foreach (var category in changed)
             {
                 set.SaveCategory(category);
+                baselines[category] = PromptSetWindow.Fingerprint(set, category);
             }
 
             changed.Clear();
-            baselines.Clear();
             onFilesWritten();
         }
 

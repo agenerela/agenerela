@@ -73,16 +73,17 @@ namespace Agenerela.Tests.Evaluation
 
         /// <summary>
         /// Our own set, <c>Assets/Evaluation</c> in agenerela's <c>UnityProject</c>, or an ignored
-        /// test anywhere else. That project is the one that embeds the package; a game loads it
-        /// from a path or a registry, and any set it has at that folder is its own, not ours.
+        /// test anywhere else. The project counts as ours when it sits in the agenerela repository,
+        /// beside <c>tools/ci/hygiene.py</c>: any other project's set at that folder is its own,
+        /// and is not held to our layout or our guard's examples.
         /// </summary>
         public static string OurSetFolder()
         {
             string folder = Path.Combine(UnityEngine.Application.dataPath, "Evaluation");
-            bool embedded = Directory.Exists(Path.Combine(UnityEngine.Application.dataPath, "..", "Packages", "com.agenerela.framework"));
-            if (!embedded || !File.Exists(Path.Combine(folder, "agent.json")))
+            bool ours = File.Exists(Path.Combine(UnityEngine.Application.dataPath, "..", "..", "tools", "ci", "hygiene.py"));
+            if (!ours || !File.Exists(Path.Combine(folder, "agent.json")))
             {
-                NUnit.Framework.Assert.Ignore("Only agenerela's own UnityProject, which embeds the package, has our prompt set.");
+                NUnit.Framework.Assert.Ignore("Only agenerela's own UnityProject has our prompt set.");
             }
 
             return folder;
