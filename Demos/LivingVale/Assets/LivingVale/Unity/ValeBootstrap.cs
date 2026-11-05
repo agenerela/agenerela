@@ -121,8 +121,29 @@ namespace LivingVale.Unity
             RefreshCursor();
         }
 
+        private CombatInventoryBridge combatBridge;
+        private LivingVale.Combat.CombatDirector bridgedDirector;
+
+        // Checked every frame rather than once at Start, so a director enabled later (or a new
+        // one) also gets the bridge instead of logging loot and charging nothing.
+        private void BridgeCombatToInventory()
+        {
+            var combat = LivingVale.Combat.CombatDirector.Active;
+            if (combat == null || combat == bridgedDirector)
+            {
+                return;
+            }
+
+            combatBridge ??= new CombatInventoryBridge(Inventory);
+            combat.LootSink = combatBridge;
+            combat.DefeatPenalty = combatBridge;
+            bridgedDirector = combat;
+        }
+
         private void Update()
         {
+            BridgeCombatToInventory();
+
             // Capture before the EventSystem can deselect the field on Enter, Esc or a click.
             // Every gameplay component sees the same focus decision for the entire frame.
             capturedTextFocus = overlay.InputHasFocus;

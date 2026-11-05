@@ -74,9 +74,9 @@ namespace LivingVale.UI
                 new Vector2(14f, -14f), new Vector2(580f, 102f), new Color(0.04f, 0.06f, 0.08f, 0.88f));
             Label("Help", help,
                 "WASD move · Shift sprint · Mouse orbit · E talk · Esc close · I inventory\n" +
-                "F1 Normal · F2 Slow · F3 NeverAnswers · F4 Malformed · F5 Throws\n" +
-                "Typing captures gameplay keys. Return to world releases input.\n" +
-                "Chat frees the cursor. Click the input to type again.",
+                "Left mouse attack · Right mouse block · Space dodge · F6 model/scripted\n" +
+                "Scripted: F1 Normal · F2 Slow · F3 NeverAnswers · F4 Malformed · F5 Throws\n" +
+                "Typing captures gameplay keys; Return to world releases them.",
                 new Vector2(10f, -8f), new Vector2(560f, 86f), 15, Color.white);
             badge = Label("Driver badge", transform, "", new Vector2(14f, -124f),
                 new Vector2(560f, 28f), 18, new Color(1f, 0.86f, 0.35f));
