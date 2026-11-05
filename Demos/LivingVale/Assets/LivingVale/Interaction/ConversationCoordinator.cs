@@ -42,7 +42,10 @@ namespace LivingVale.Interaction
         TurnCancelled,
 
         /// <summary>The backend finished (answered, failed or cancelled) a turn that had already ended; nothing was applied. Diagnostic only.</summary>
-        StaleReplyDropped
+        StaleReplyDropped,
+
+        /// <summary>Game code added a system line, such as a trade receipt (<see cref="ConversationCoordinator.AddSystemLine"/>).</summary>
+        SystemLine
     }
 
     /// <summary>One change to the conversation. Re-render from the coordinator's state; the event only says what changed.</summary>
@@ -198,7 +201,7 @@ namespace LivingVale.Interaction
             var npc = ActiveNpc;
             var history = Lines(npc.Id);
             int from = Math.Max(0, history.Count - settings.MaxHistoryForDriver);
-            var turn = new NpcTurn(++nextRequestId, npc, text, history.GetRange(from, history.Count - from).AsReadOnly());
+            var turn = new NpcTurn(++nextRequestId, npc, text, history.GetRange(from, history.Count - from).AsReadOnly(), Generation);
 
             history.Add(new ChatLine(ChatSpeaker.Player, text));
 
@@ -222,6 +225,22 @@ namespace LivingVale.Interaction
             // The deadline starts when the backend is asked, after the subscribers ran.
             cts.CancelAfter(settings.TurnTimeout);
             LastTurn = RunTurn(turn, generation, cts);
+            return true;
+        }
+
+        /// <summary>
+        /// Adds a game-authored line to the open conversation, such as a trade receipt, so the
+        /// player sees it and the next turn's history says what happened. False when none is open.
+        /// </summary>
+        public bool AddSystemLine(string text)
+        {
+            if (ActiveNpc == null || string.IsNullOrWhiteSpace(text))
+            {
+                return false;
+            }
+
+            Lines(ActiveNpc.Id).Add(new ChatLine(ChatSpeaker.System, text.Trim()));
+            Raise(new ConversationEvent(ConversationEventKind.SystemLine, ActiveNpc.Id));
             return true;
         }
 

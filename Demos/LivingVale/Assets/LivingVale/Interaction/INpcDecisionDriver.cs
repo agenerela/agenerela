@@ -16,12 +16,25 @@ namespace LivingVale.Interaction
         /// <summary>The conversation before this turn, oldest first. Excludes <see cref="PlayerLine"/>.</summary>
         public IReadOnlyList<ChatLine> History { get; }
 
+        /// <summary>
+        /// The conversation generation the turn started in (<see cref="ConversationCoordinator.Generation"/>).
+        /// Game handlers pass it on, so a quote made from this turn belongs to this conversation only.
+        /// Zero when the turn was made without one, as G1 code did.
+        /// </summary>
+        public long Generation { get; }
+
         public NpcTurn(long requestId, NpcDescriptor npc, string playerLine, IReadOnlyList<ChatLine> history)
+            : this(requestId, npc, playerLine, history, 0)
+        {
+        }
+
+        public NpcTurn(long requestId, NpcDescriptor npc, string playerLine, IReadOnlyList<ChatLine> history, long generation)
         {
             RequestId = requestId;
             Npc = npc;
             PlayerLine = playerLine;
             History = history;
+            Generation = generation;
         }
     }
 
