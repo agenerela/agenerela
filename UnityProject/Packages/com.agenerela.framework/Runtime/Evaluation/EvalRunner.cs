@@ -266,6 +266,8 @@ namespace Agenerela.Evaluation
         {
             var problems = PromptSetChecks.Check(Set, Profile).Select(p => $"{p.PromptId}: {p.Message}")
                 .Concat(PromptSetChecks.CompareWithProfile(Set, Profile))
+                .Concat(IdleExampleProblems(ArmA, prompts))
+                .Concat(IdleExampleProblems(ArmB, prompts))
                 .ToList();
             if (problems.Count > 0)
             {
@@ -277,6 +279,26 @@ namespace Agenerela.Evaluation
             if (prompts.Count == 0)
             {
                 throw new InvalidOperationException("The set has no prompts.");
+            }
+        }
+
+        // An arm's own idle example replaces the profile's, which PromptSetChecks has checked, so it
+        // is checked here: scoring a prompt the model was shown as an example measures nothing
+        // (hard rule 4).
+        private IEnumerable<string> IdleExampleProblems(EvalArm arm, List<(string Category, EvalPrompt Prompt)> prompts)
+        {
+            string idle = arm.Options.IdleExampleStimulus;
+            if (string.IsNullOrWhiteSpace(idle))
+            {
+                yield break;
+            }
+
+            foreach (var (_, prompt) in prompts)
+            {
+                if (PromptSetChecks.MatchesExample(prompt.Stimulus, idle))
+                {
+                    yield return $"{prompt.Id}: the stimulus is arm '{arm.Name}''s idle example \"{idle}\": never score on a few-shot example (hard rule 4)";
+                }
             }
         }
 
@@ -626,22 +648,47 @@ namespace Agenerela.Evaluation
                         return null;
                     }
 
-                    // Drained as it comes, so a long error cannot fill the pipe and stall git.
+                    // Both pipes drained as they come, so the deadline below holds even while git
+                    // writes nothing, and a long error cannot fill a pipe and stall it.
+                    var output = new System.Text.StringBuilder();
+                    git.OutputDataReceived += (_, line) =>
+                    {
+                        if (line.Data != null)
+                        {
+                            lock (output)
+                            {
+                                output.Append(line.Data).Append('\n');
+                            }
+                        }
+                    };
                     git.ErrorDataReceived += (_, __) => { };
+                    git.BeginOutputReadLine();
                     git.BeginErrorReadLine();
-                    string output = git.StandardOutput.ReadToEnd();
                     if (!git.WaitForExit(5000))
                     {
-                        git.Kill();
+                        try
+                        {
+                            git.Kill();
+                        }
+                        catch (InvalidOperationException)
+                        {
+                            // It exited after all.
+                        }
+
                         return null;
                     }
 
+                    // The overload without a timeout returns once the redirected output is read.
+                    git.WaitForExit();
                     if (git.ExitCode != 0)
                     {
                         return null;
                     }
 
-                    return output.Trim();
+                    lock (output)
+                    {
+                        return output.ToString().Trim();
+                    }
                 }
             }
             catch (Exception e) when (e is System.ComponentModel.Win32Exception || e is InvalidOperationException

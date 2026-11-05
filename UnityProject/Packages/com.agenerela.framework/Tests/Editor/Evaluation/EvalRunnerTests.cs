@@ -359,6 +359,21 @@ namespace Agenerela.Tests.Evaluation
         }
 
         [Test]
+        public async Task AnArmsIdleExampleThatIsAPromptIsRefused()
+        {
+            // The arm's idle example replaces the profile's, so the model would be shown "The
+            // square is empty." -> none and then scored on it (hard rule 4).
+            var provider = new FakeProvider(Reply("none", "no_target"));
+            var runner = Runner(new[] { Bridge }, new[] { Quiet }, provider, provider,
+                optionsB: new DecideOptions { IdleExampleStimulus = "the square is empty!" });
+
+            var e = await Refused(runner);
+
+            Assert.That(e.Message, Does.Contain("situation_001").And.Contain("arm 'B'").And.Contain("hard rule 4"));
+            Assert.That(provider.Requests, Is.Empty);
+        }
+
+        [Test]
         public void TwoArmsCannotShareAName()
         {
             var config = fixtures.Config(new FakeProvider(), "Fake");
