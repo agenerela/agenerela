@@ -38,7 +38,7 @@ Neither changelog nor the wiki is loaded into every session; read the one you ne
    error output.
 2. **Never claim an accuracy change without an A/B run** — same model, same machine, same
    prompt set, same session. Single before/after runs are anecdotes. At n≈50 the observed
-   noise floor was about 10 points.
+   noise floor was about 10 points. The checklist is [`docs/llm-wiki/measuring.md`](docs/llm-wiki/measuring.md).
 3. **Unload other models before timing one** (`ollama stop <model>`). Two models resident
    on an 8GB card share compute and flatten every latency measurement.
 4. **Few-shot examples must never reuse evaluation prompts.** Demonstrating a phrase and

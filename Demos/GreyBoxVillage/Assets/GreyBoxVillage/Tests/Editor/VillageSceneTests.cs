@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Agenerela;
@@ -18,7 +19,8 @@ namespace Demos.GreyBoxVillage.Tests
 {
     /// <summary>
     /// Answers every request with <see cref="Reply"/>, so the scene is tested with no model. With
-    /// <see cref="Hold"/> set, the next request waits until <see cref="Release"/>.
+    /// <see cref="Hold"/> set, the next request waits until <see cref="Release"/>. Every agent in the
+    /// village shares one instance, through <see cref="FakeVillageConfig"/>.
     /// </summary>
     internal sealed class FakeVillageProvider : ILLMProvider
     {
@@ -26,6 +28,7 @@ namespace Demos.GreyBoxVillage.Tests
         /// <summary>The token probabilities the reply carries, as Ollama reports them; null for none.</summary>
         public IReadOnlyList<TokenProbability> TokenProbabilities;
         public DecisionRequest LastRequest;
+        public readonly List<DecisionRequest> Requests = new List<DecisionRequest>();
         public int Calls;
         public bool Hold;
         private AwaitableCompletionSource<ProviderResult> held;
@@ -38,6 +41,7 @@ namespace Demos.GreyBoxVillage.Tests
         public Awaitable<ProviderResult> RequestAsync(DecisionRequest req, CancellationToken ct)
         {
             LastRequest = req;
+            Requests.Add(req);
             Calls++;
             var source = new AwaitableCompletionSource<ProviderResult>();
             if (Hold)
@@ -56,8 +60,10 @@ namespace Demos.GreyBoxVillage.Tests
         public static string Decision(string action, string target, string statement = "Understood.") =>
             "{\"action\":\"" + action + "\",\"target\":\"" + target + "\",\"statement\":\"" + statement + "\"}";
 
-        public string[] Offered(string field) =>
-            LastRequest.Schema.Fields.Single(f => f.Name == field).AllowedValues.ToArray();
+        public string[] Offered(string field) => Offered(LastRequest, field);
+
+        public static string[] Offered(DecisionRequest request, string field) =>
+            request.Schema.Fields.Single(f => f.Name == field).AllowedValues.ToArray();
     }
 
     public sealed class VillageSceneTests
@@ -73,7 +79,11 @@ namespace Demos.GreyBoxVillage.Tests
         private Scene scene;
         private bool openedScene;
         private VillageCommands commands;
+        private AgentMind bram, wren;
+        private VillageGuard guard;
         private FakeVillageProvider provider;
+        private FakeVillageConfig config;
+        private ProviderConfig original;
 
         [SetUp]
         public void SetUp()
@@ -82,17 +92,26 @@ namespace Demos.GreyBoxVillage.Tests
             openedScene = !scene.isLoaded;
             if (openedScene) scene = EditorSceneManager.OpenScene(DemoLauncher.VillagePath, OpenSceneMode.Additive);
             commands = scene.GetRootGameObjects().SelectMany(g => g.GetComponentsInChildren<VillageCommands>()).Single();
+            bram = commands.Mind("Bram");
+            wren = commands.Mind("Wren");
+            guard = (VillageGuard)bram.Body;
+            original = bram.Behaviour.Provider;
             provider = new FakeVillageProvider(FakeVillageProvider.Decision("none", "no_target"));
-            commands.UseProvider(provider);
-            // The scene can stay loaded between tests, and the guard's state with it.
-            commands.Guard.ResetState();
-            commands.Guard.Alarm.Silence();
+            config = ScriptableObject.CreateInstance<FakeVillageConfig>();
+            config.Fake = provider;
+            commands.UseProvider(config);
+            // The scene can stay loaded between tests, and the guards' state with it.
+            foreach (var mind in commands.Minds) mind.Body.ResetState();
+            guard.Alarm.Silence();
         }
 
         [TearDown]
         public void TearDown()
         {
             if (openedScene) EditorSceneManager.CloseScene(scene, true);
+            // A scene that was already open goes back to the real provider config.
+            else commands.UseProvider(original);
+            UnityEngine.Object.DestroyImmediate(config);
         }
 
         [TestCase("move_to", "north_tower", "walking to the north_tower")]
@@ -109,7 +128,8 @@ namespace Demos.GreyBoxVillage.Tests
             Assert.That(commands.Overlay.TargetId, Is.EqualTo(target));
             Assert.That(commands.Overlay.Statement, Is.EqualTo("On it."));
             Assert.That(commands.Overlay.Details, Does.Not.Contain("REFUSED"));
-            Assert.That(commands.Guard.Activity, Is.EqualTo(activity));
+            Assert.That(guard.Activity, Is.EqualTo(activity));
+            Assert.That(bram.Last.Agent, Is.EqualTo("Bram"), "The player stands by the gate, so Bram is the one listening.");
         }
 
         [Test]
@@ -128,6 +148,11 @@ namespace Demos.GreyBoxVillage.Tests
                 // A local model never reads the schema: the id has to be in the prompt itself.
                 Assert.That(request.Observations, Does.Contain(id + ", "), id);
             }
+            // The village's people and the other guard are on top of the evaluation world, and its
+            // targets still fit under the cap.
+            Assert.That(provider.Offered("target"), Does.Contain("wren").And.Contain("tomas"));
+            Assert.That(provider.Offered("target"), Does.Not.Contain("bram"), "An agent never names itself.");
+            Assert.That(bram.Last.TargetsDropped, Is.Empty);
         }
 
         // The README's "Offered when" column, for a guard standing at its post with the bell silent
@@ -149,8 +174,8 @@ namespace Demos.GreyBoxVillage.Tests
             provider.Reply = FakeVillageProvider.Decision("patrol", "no_target", "On my rounds.");
             await Ask("quiet");
             Assert.That(commands.Recorder.Records.Last().Outcome, Is.EqualTo("executed"));
-            Assert.That(commands.Guard.IsPatrolling, Is.True);
-            Assert.That(commands.Guard.Activity, Is.EqualTo("patrolling the village"));
+            Assert.That(guard.IsPatrolling, Is.True);
+            Assert.That(guard.Activity, Is.EqualTo("patrolling the village"));
         }
 
         [TestCase("player")]
@@ -160,12 +185,12 @@ namespace Demos.GreyBoxVillage.Tests
         {
             provider.Reply = FakeVillageProvider.Decision("patrol", "no_target");
             await Ask("quiet");
-            Assert.That(commands.Guard.IsPatrolling, Is.True);
+            Assert.That(guard.IsPatrolling, Is.True);
 
             provider.Reply = FakeVillageProvider.Decision("none", "no_target");
             await Ask(source);
-            Assert.That(commands.Guard.IsPatrolling, Is.False);
-            Assert.That(commands.Guard.IsMoving, Is.False);
+            Assert.That(guard.IsPatrolling, Is.False);
+            Assert.That(guard.IsMoving, Is.False);
             Assert.That(provider.LastRequest.Observations, Does.Contain("You are standing still, your patrol broken off."));
             Assert.That(provider.Offered("action"), Does.Not.Contain("patrol"));
         }
@@ -176,7 +201,7 @@ namespace Demos.GreyBoxVillage.Tests
         {
             provider.Reply = FakeVillageProvider.Decision("follow_player", "no_target");
             await Ask("player");
-            Assert.That(commands.Guard.IsFollowing, Is.True);
+            Assert.That(guard.IsFollowing, Is.True);
 
             provider.Reply = FakeVillageProvider.Decision("stop_following", "no_target");
             await Ask(source);
@@ -185,24 +210,24 @@ namespace Demos.GreyBoxVillage.Tests
             var record = commands.Recorder.Records.Last();
             Assert.That(record.Outcome, Is.EqualTo("refused"));
             Assert.That(record.Action, Is.EqualTo("stop_following"));
-            Assert.That(commands.Guard.IsFollowing, Is.True);
+            Assert.That(guard.IsFollowing, Is.True);
         }
 
         [Test]
         public async Task TheBellIsOfferedForAWolfCloseByAndNotForOneFarOff()
         {
-            var wolf = commands.Senses.Wolf;
+            var wolf = bram.Senses.Wolf;
             var start = wolf.transform.position;
-            var guard = commands.Guard.transform.position;
+            var at = bram.transform.position;
             try
             {
-                wolf.transform.position = guard + new Vector3(20, 0, 0);
+                wolf.transform.position = at + new Vector3(20, 0, 0);
                 Physics.SyncTransforms();
                 await Ask("wolf");
                 Assert.That(provider.LastRequest.Observations, Does.Contain("A wolf is 20 m from you."), "The guard must see the far wolf.");
                 Assert.That(provider.Offered("action"), Does.Not.Contain("sound_alarm"));
 
-                wolf.transform.position = guard + new Vector3(0, 0, 5);
+                wolf.transform.position = at + new Vector3(0, 0, 5);
                 Physics.SyncTransforms();
                 await Ask("wolf");
                 Assert.That(provider.LastRequest.Observations, Does.Contain("A wolf is 5 m from you."), "The guard must see the near wolf.");
@@ -231,10 +256,12 @@ namespace Demos.GreyBoxVillage.Tests
         {
             provider.Reply = FakeVillageProvider.Decision("sound_alarm", "no_target");
             await commands.SubmitAsync("first");
-            Assert.That(commands.Guard.Alarm.IsSounding, Is.True);
+            Assert.That(guard.Alarm.IsSounding, Is.True);
             await commands.SubmitAsync("second");
-            Assert.That(provider.Offered("action"), Does.Not.Contain("sound_alarm"));
-            Assert.That(commands.Overlay.Details, Does.Contain("REFUSED"));
+            await Idle();
+            var second = Records("Bram").Last();
+            Assert.That(second.OfferedActions, Does.Not.Contain("sound_alarm"));
+            Assert.That(second.Outcome, Is.EqualTo("refused"));
         }
 
         [Test]
@@ -258,7 +285,8 @@ namespace Demos.GreyBoxVillage.Tests
             await commands.SubmitAsync("Attack the thing behind the hill");
             Assert.That(commands.Overlay.Details, Does.Contain("REFUSED: the target was not offered; SchemaLegalityGuard said:"));
             Assert.That(commands.Recorder.Records.Last().Outcome, Is.EqualTo("refused"));
-            Assert.That(commands.Guard.Activity, Is.EqualTo("standing at the village_gate"));
+            Assert.That(guard.Activity, Is.EqualTo("standing at the village_gate"));
+            Assert.That(guard.Speech, Is.Null, "The schema guard has no line: a broken contract says nothing.");
         }
 
         [Test]
@@ -278,8 +306,33 @@ namespace Demos.GreyBoxVillage.Tests
             var record = commands.Recorder.Records.Last();
             Assert.That(record.Outcome, Is.EqualTo("contained"));
             Assert.That(record.Action, Is.EqualTo("attack_target"));
+            Assert.That(record.Said, Is.EqualTo("There's no such thing here."));
             Assert.That(commands.Overlay.Details, Does.Contain("CONTAINED: TargetGroundingGuard said:"));
-            Assert.That(commands.Guard.Activity, Is.EqualTo("standing at the village_gate"));
+            Assert.That(guard.Activity, Is.EqualTo("standing at the village_gate"));
+        }
+
+        [Test]
+        public async Task AGuardWillNotAttackTheVillagersAndSaysSo()
+        {
+            provider.Reply = FakeVillageProvider.Decision("attack_target", "tomas", "Have at you!");
+            await commands.SubmitAsync("Attack Tomas!");
+            var record = bram.Last;
+            Assert.That(record.Outcome, Is.EqualTo("contained"));
+            Assert.That(record.Guard, Is.EqualTo(VillageGuard.NeverAttackVillagers));
+            Assert.That(record.Statement, Is.EqualTo("Have at you!"), "The record keeps the model's own words.");
+            Assert.That(record.Said, Is.EqualTo("I won't raise my sword against our own."));
+            // The bubble wraps its lines, so read it as one.
+            Assert.That(guard.Speech.Replace('\n', ' '), Does.Contain("I won't raise my sword against our own.").And.Contain("stopped by never_attack_villagers"));
+            Assert.That(guard.Activity, Is.EqualTo("standing at the village_gate"));
+
+            // The other guard is one of the village's people too; the wolf is not.
+            provider.Reply = FakeVillageProvider.Decision("attack_target", "wren");
+            await commands.SubmitAsync("Attack Wren!");
+            Assert.That(bram.Last.Outcome, Is.EqualTo("contained"));
+            provider.Reply = FakeVillageProvider.Decision("attack_target", "wolf");
+            await commands.SubmitAsync("Drive the wolf off!");
+            Assert.That(bram.Last.Outcome, Is.EqualTo("executed"));
+            Assert.That(guard.Activity, Is.EqualTo("charging the wolf"));
         }
 
         [Test]
@@ -291,7 +344,90 @@ namespace Demos.GreyBoxVillage.Tests
         }
 
         [Test]
-        public async Task DistantPlayerCannotSpeakToTheGuard()
+        public async Task EachGuardRemembersOnlyItsOwnExchanges()
+        {
+            await commands.SubmitAsync("Bram, first words.");
+            await wren.ReportEventAsync("wolf", "Event", "A wolf is by the river.", DecisionPriority.Background);
+            await commands.SubmitAsync("Bram, second words.");
+            var bramHistory = string.Join("\n", provider.LastRequest.History);
+            Assert.That(bramHistory, Does.Contain("Bram, first words."));
+            Assert.That(bramHistory, Does.Not.Contain("A wolf is by the river."));
+
+            await wren.ReportEventAsync("wolf", "Event", "The wolf is back.", DecisionPriority.Background);
+            var wrenHistory = string.Join("\n", provider.LastRequest.History);
+            Assert.That(provider.LastRequest.SystemPrompt, Does.Contain("Wren"));
+            Assert.That(wrenHistory, Does.Contain("A wolf is by the river."));
+            Assert.That(wrenHistory, Does.Not.Contain("Bram, first words."));
+        }
+
+        [Test]
+        public async Task TheGuardsShareOneQueue()
+        {
+            Assert.That(bram.Agent, Is.Not.SameAs(wren.Agent));
+            provider.Hold = true;
+            var first = wren.ReportEventAsync("quiet", "Time", "Time passes quietly at your post.", DecisionPriority.Background);
+            var second = bram.ReportEventAsync("quiet", "Time", "Time passes quietly at your post.", DecisionPriority.Background);
+            for (int i = 0; i < 50 && provider.Calls == 0; i++) await Task.Delay(10);
+            await Task.Delay(50);
+            Assert.That(provider.Calls, Is.EqualTo(1), "Bram's request must wait while Wren's is with the provider.");
+            provider.Release();
+            await first;
+            await second;
+            Assert.That(provider.Calls, Is.EqualTo(2));
+            Assert.That(wren.Last.QueuedAhead, Is.EqualTo(0));
+            Assert.That(bram.Last.QueuedAhead, Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task EachRecordKeepsItsOwnAgentsRequestUnderMixedPriorities()
+        {
+            provider.Hold = true;
+            var background = wren.ReportEventAsync("wolf", "Event", "Something moves across the river.", DecisionPriority.Background);
+            var playerFacing = commands.SubmitAsync("Bram, are you there?");
+            for (int i = 0; i < 50 && provider.Calls == 0; i++) await Task.Delay(10);
+            provider.Release();
+            await background;
+            await playerFacing;
+            var w = Records("Wren").Single();
+            var b = Records("Bram").Single();
+            Assert.That(w.SystemPrompt, Does.Contain("Wren").And.Not.Contain("Bram"));
+            Assert.That(w.StimulusTurn, Does.Contain("Something moves across the river."));
+            Assert.That(w.Priority, Is.EqualTo("Background"));
+            Assert.That(b.SystemPrompt, Does.Contain("Bram").And.Not.Contain("Wren"));
+            Assert.That(b.StimulusTurn, Does.Contain("Bram, are you there?"));
+            Assert.That(b.Priority, Is.EqualTo("PlayerFacing"));
+        }
+
+        [Test]
+        public async Task AnEventReachesOnlyTheAgentsThatSenseIt()
+        {
+            var events = commands.GetComponent<VillageEvents>();
+            var told = events.Raise(new VillageEvent
+            {
+                Text = "A cart has tipped over by the gate.",
+                Where = bram.transform.position,
+                HearingRadius = 5f
+            });
+            Assert.That(told, Is.EqualTo(new[] { bram }));
+            await Idle();
+            Assert.That(commands.Recorder.Records.Select(r => r.Agent), Is.EqualTo(new[] { "Bram" }));
+        }
+
+        [Test]
+        public async Task TheBellReachesTheOtherGuardButNotTheOneWhoRangIt()
+        {
+            provider.Reply = FakeVillageProvider.Decision("sound_alarm", "no_target", "To arms!");
+            await commands.SubmitAsync("Raiders at the wall!");
+            await Idle();
+            Assert.That(Records("Bram"), Has.Count.EqualTo(1));
+            var heard = Records("Wren").Single();
+            Assert.That(heard.Source, Is.EqualTo("bell"));
+            Assert.That(heard.Stimulus, Is.EqualTo("The alarm bell is ringing. Bram rang it."));
+            Assert.That(heard.OfferedActions, Does.Contain("move_to").And.Not.Contain("sound_alarm"));
+        }
+
+        [Test]
+        public async Task DistantPlayerCannotSpeakToAGuard()
         {
             var start = commands.Player.position;
             try
@@ -305,9 +441,23 @@ namespace Demos.GreyBoxVillage.Tests
         }
 
         [Test]
+        public async Task ThePlayerSpeaksToTheNearestGuard()
+        {
+            var start = commands.Player.position;
+            try
+            {
+                commands.Player.position = wren.transform.position + new Vector3(0, 0, -3);
+                await commands.SubmitAsync("Quiet night?");
+                Assert.That(Records("Wren").Single().Label, Is.EqualTo("Player"));
+                Assert.That(Records("Bram"), Is.Empty);
+            }
+            finally { commands.Player.position = start; }
+        }
+
+        [Test]
         public async Task AnEventIsAskedWithItsOwnLabelAndPriority()
         {
-            await commands.ReportEventAsync("zone", "Event", "The player has walked into the armory, which is off limits.",
+            await bram.ReportEventAsync("zone", "Event", "The player has walked into the armory, which is off limits.",
                 DecisionPriority.PlayerFacing);
             Assert.That(provider.LastRequest.Stimulus, Is.EqualTo("Event: \"The player has walked into the armory, which is off limits.\""));
             var record = commands.Recorder.Records.Single();
@@ -320,7 +470,7 @@ namespace Demos.GreyBoxVillage.Tests
         {
             provider.Hold = true;
             var first = commands.SubmitAsync("first");
-            await commands.ReportEventAsync("wolf", "Event", "A wolf has come out of the woods.", DecisionPriority.Background);
+            await bram.ReportEventAsync("wolf", "Event", "A wolf has come out of the woods.", DecisionPriority.Background);
             Assert.That(provider.Calls, Is.EqualTo(1), "The event must not be sent while the first decision runs.");
             provider.Release();
             await first;
@@ -329,15 +479,56 @@ namespace Demos.GreyBoxVillage.Tests
         }
 
         [Test]
+        public async Task AnEventStillRunsWhenTheDecisionBeforeItFails()
+        {
+            provider.Hold = true;
+            var first = commands.SubmitAsync("first");
+            for (int i = 0; i < 50 && provider.Calls == 0; i++) await Task.Delay(10);
+            await bram.ReportEventAsync("wolf", "Event", "A wolf has come out of the woods.", DecisionPriority.Background);
+            Assert.That(bram.HasPending, Is.True);
+            provider.Reply = "this is not json";
+            provider.Release();
+            await first;
+            Assert.That(provider.Calls, Is.EqualTo(2), "The waiting event must be asked after the failed decision.");
+            Assert.That(bram.HasPending, Is.False, "A stranded event would silence the quiet timer for good.");
+            Assert.That(Records("Bram").Select(r => r.Outcome), Is.EqualTo(new[] { "error", "error" }));
+        }
+
+        [Test]
+        public async Task AGuardDestroyedMidDecisionAsksNothingMore()
+        {
+            // A copy of Wren, so the scene, open in the Editor or not, keeps its guards.
+            var copy = UnityEngine.Object.Instantiate(wren.gameObject, wren.transform.position, wren.transform.rotation);
+            try
+            {
+                var mind = copy.GetComponent<AgentMind>();
+                mind.UseProvider(config);
+                provider.Hold = true;
+                var first = mind.ReportEventAsync("quiet", "Time", "Time passes quietly at your post.", DecisionPriority.Background);
+                for (int i = 0; i < 50 && provider.Calls == 0; i++) await Task.Delay(10);
+                await mind.ReportEventAsync("wolf", "Event", "A wolf is by the river.", DecisionPriority.Background);
+                Assert.That(mind.HasPending, Is.True);
+                UnityEngine.Object.DestroyImmediate(copy);
+                provider.Release();
+                await first;
+                Assert.That(provider.Calls, Is.EqualTo(1), "A destroyed guard must not ask its waiting event.");
+            }
+            finally
+            {
+                if (copy != null) UnityEngine.Object.DestroyImmediate(copy);
+            }
+        }
+
+        [Test]
         public async Task AQuietMomentAsksInTheBackgroundWithTheTimeLabel()
         {
-            var senses = commands.Senses;
+            var senses = bram.Senses;
             float quiet = senses.QuietSeconds;
             try
             {
                 senses.QuietSeconds = -1f;
                 senses.Sense();
-                for (int i = 0; i < 200 && (commands.IsDeciding || provider.Calls == 0); i++) await Task.Delay(10);
+                for (int i = 0; i < 200 && (bram.IsDeciding || provider.Calls == 0); i++) await Task.Delay(10);
                 Assert.That(provider.LastRequest.Stimulus, Is.EqualTo("Time: \"Time passes quietly at your post.\""));
                 Assert.That(commands.Recorder.Records.Last().Priority, Is.EqualTo("Background"));
             }
@@ -351,33 +542,84 @@ namespace Demos.GreyBoxVillage.Tests
             await Ask("quiet");
             var record = commands.Recorder.Records.Single();
             Assert.That(record.Sent, Is.True);
+            Assert.That(record.Agent, Is.EqualTo("Bram"));
             Assert.That(record.RawReply, Is.EqualTo(provider.Reply));
             Assert.That(record.SystemPrompt, Does.Contain("Bram"));
             Assert.That(record.Observations, Does.Contain("village_gate"));
             Assert.That(record.OfferedActions, Does.Contain("patrol"));
             Assert.That(record.SchemaJson, Does.Contain("\"patrol\""));
             Assert.That(record.Outcome, Is.EqualTo("executed"));
-            Assert.That(DecisionHistoryPanel.Describe(record), Does.Contain("== RAW REPLY"));
+            Assert.That(DecisionHistoryPanel.Describe(record), Does.Contain("== RAW REPLY").And.Contain("agent Bram"));
         }
 
         [Test]
         public async Task TheRecorderWritesOneJsonLinePerDecision()
         {
-            string path = Path.Combine(Path.GetTempPath(), "agenerela-test-" + Guid.NewGuid().ToString("N") + ".jsonl");
+            commands.UseProvider(config, writeLogFile: true);
+            string path = commands.Recorder.FilePath;
             try
             {
-                var recorder = new DecisionRecorder(provider, path);
-                var record = recorder.Begin("player", "Player", DecisionPriority.PlayerFacing, "hello");
-                await recorder.RequestAsync(new DecisionRequest { SystemPrompt = "system", Stimulus = "Player: \"hello\"" },
-                    CancellationToken.None);
-                recorder.Complete(record, null, "none", "");
+                await commands.SubmitAsync("hello");
                 var lines = File.ReadAllLines(path);
                 Assert.That(lines, Has.Length.EqualTo(1));
                 var read = JsonUtility.FromJson<DecisionRecord>(lines[0]);
+                Assert.That(read.Agent, Is.EqualTo("Bram"));
                 Assert.That(read.RawReply, Is.EqualTo(provider.Reply));
-                Assert.That(read.SystemPrompt, Is.EqualTo("system"));
+                Assert.That(read.SystemPrompt, Does.Contain("Bram"));
             }
             finally { File.Delete(path); }
+        }
+
+        [Test]
+        public async Task NoFewShotExampleIsAnEvaluationPrompt()
+        {
+            // Hard rule 4: demonstrating a phrase and then scoring on it invalidates the result.
+            // Every action's examples are only built while it is offered, so ask each guard in each
+            // state: a quiet moment at its post (patrol), then the player, then following the player
+            // (stop_following).
+            var start = commands.Player.position;
+            try
+            {
+                foreach (var mind in commands.Minds)
+                {
+                    await mind.ReportEventAsync("quiet", "Time", "Time passes quietly at your post.", DecisionPriority.Background);
+                    Assert.That(Records(mind.Name).Last().OfferedActions, Does.Contain("patrol"), mind.Name);
+                    commands.Player.position = mind.transform.position + new Vector3(0, 0, -3);
+                    provider.Reply = FakeVillageProvider.Decision("follow_player", "no_target");
+                    await commands.SubmitAsync("Hello");
+                    provider.Reply = FakeVillageProvider.Decision("none", "no_target");
+                    await commands.SubmitAsync("Hello again");
+                    Assert.That(Records(mind.Name).Last().OfferedActions, Does.Contain("stop_following"), mind.Name);
+                }
+            }
+            finally { commands.Player.position = start; }
+            string folder = Path.GetFullPath(Path.Combine(Application.dataPath, "../../../UnityProject/Assets/Evaluation/prompts"));
+            var prompts = Directory.GetFiles(folder, "*.json")
+                .SelectMany(f => JsonUtility.FromJson<PromptFile>(File.ReadAllText(f)).prompts)
+                .Select(p => p.stimulus.Trim().TrimEnd('.', '!', '?').ToLowerInvariant())
+                .Where(p => p.Length > 0)
+                .ToList();
+            Assert.That(prompts.Count, Is.GreaterThan(40), "The evaluation prompts were not found at " + folder);
+            foreach (var record in commands.Recorder.Records)
+            {
+                string examples = record.FewShotBlock.ToLowerInvariant();
+                Assert.That(examples, Is.Not.Empty, record.Agent);
+                foreach (var prompt in prompts)
+                    Assert.That(Regex.IsMatch(examples, @"\b" + Regex.Escape(prompt) + @"\b"), Is.False,
+                        record.Agent + "'s examples contain the evaluation prompt \"" + prompt + "\"");
+            }
+        }
+
+        [Serializable]
+        private sealed class PromptFile
+        {
+            public List<Prompt> prompts = new List<Prompt>();
+        }
+
+        [Serializable]
+        private sealed class Prompt
+        {
+            public string stimulus = "";
         }
 
         [Test]
@@ -390,21 +632,24 @@ namespace Demos.GreyBoxVillage.Tests
             {
                 var places = Targetables().Where(t => t.Category == "place").ToList();
                 Assert.That(places.Count, Is.GreaterThanOrEqualTo(10));
-                var start = commands.Guard.transform.position;
-                foreach (var place in places)
+                foreach (var mind in commands.Minds)
                 {
-                    var path = new NavMeshPath();
-                    Assert.That(NavMesh.CalculatePath(start, place.transform.position, NavMesh.AllAreas, path), Is.True, place.Id);
-                    Assert.That(path.status, Is.EqualTo(NavMeshPathStatus.PathComplete), place.Id);
-                    if (place.Id == "north_tower")
-                        Assert.That(path.corners.Any(p => Mathf.Abs(p.x) < 3 && p.z > 19 && p.z < 27), Is.True,
-                            "The route to the north bank must use the bridge.");
-                }
-                foreach (var zone in Zones())
-                {
-                    var path = new NavMeshPath();
-                    Assert.That(NavMesh.CalculatePath(start, zone.Entrance.position, NavMesh.AllAreas, path), Is.True, zone.Id);
-                    Assert.That(path.status, Is.EqualTo(NavMeshPathStatus.PathComplete), zone.Id + " entrance");
+                    var start = mind.transform.position;
+                    foreach (var place in places)
+                    {
+                        var path = new NavMeshPath();
+                        Assert.That(NavMesh.CalculatePath(start, place.transform.position, NavMesh.AllAreas, path), Is.True, mind.Name + " to " + place.Id);
+                        Assert.That(path.status, Is.EqualTo(NavMeshPathStatus.PathComplete), mind.Name + " to " + place.Id);
+                        if (mind == bram && place.Id == "north_tower")
+                            Assert.That(path.corners.Any(p => Mathf.Abs(p.x) < 3 && p.z > 19 && p.z < 27), Is.True,
+                                "The route to the north bank must use the bridge.");
+                    }
+                    foreach (var zone in Zones())
+                    {
+                        var path = new NavMeshPath();
+                        Assert.That(NavMesh.CalculatePath(start, zone.Entrance.position, NavMesh.AllAreas, path), Is.True, zone.Id);
+                        Assert.That(path.status, Is.EqualTo(NavMeshPathStatus.PathComplete), mind.Name + " to the " + zone.Id + " entrance");
+                    }
                 }
             }
             finally { instance.Remove(); }
@@ -417,6 +662,8 @@ namespace Demos.GreyBoxVillage.Tests
             foreach (var id in EvaluationTargets)
                 Assert.That(ids.Count(x => x == id), Is.EqualTo(1), id);
             Assert.That(ids, Is.Unique);
+            Assert.That(Targetables().Where(t => t.Category == "person").Select(t => t.Id),
+                Is.EquivalentTo(new[] { "bram", "wren", "tomas", "ada", "pell", "mira" }));
             var zones = Zones();
             Assert.That(zones.Select(z => z.Id), Is.EquivalentTo(new[] { "armory", "lords_keep", "locked_cave" }));
             foreach (var zone in zones)
@@ -432,20 +679,46 @@ namespace Demos.GreyBoxVillage.Tests
         {
             Assert.That(commands.Input.Player.transform, Is.EqualTo(commands.Player));
             Assert.That(commands.Input.Overlay, Is.EqualTo(commands.Overlay));
-            Assert.That(commands.Senses, Is.Not.Null);
-            Assert.That(commands.Senses.Wolf, Is.Not.Null);
+            Assert.That(commands.Board, Is.Not.Null);
             Assert.That(commands.GetComponent<DecisionHistoryPanel>().Commands, Is.EqualTo(commands));
-            Assert.That(commands.Guard.GetComponent<NavMeshAgent>(), Is.Not.Null);
-            Assert.That(commands.Guard.Alarm.Villagers, Has.Length.EqualTo(4));
-            Assert.That(commands.Guard.PatrolRoute, Has.All.Not.Null);
+            Assert.That(commands.GetComponent<VillageEvents>().Alarm, Is.EqualTo(guard.Alarm));
+            Assert.That(commands.Minds.Select(m => m.Name), Is.EqualTo(new[] { "Bram", "Wren" }));
+            foreach (var mind in commands.Minds)
+            {
+                var body = (VillageGuard)mind.Body;
+                Assert.That(mind.Village, Is.EqualTo(commands), mind.Name);
+                Assert.That(mind.Senses.Mind, Is.EqualTo(mind), mind.Name);
+                Assert.That(mind.Senses.Wolf, Is.Not.Null, mind.Name);
+                Assert.That(body.GetComponent<NavMeshAgent>(), Is.Not.Null, mind.Name);
+                Assert.That(body.Alarm, Is.EqualTo(guard.Alarm), mind.Name);
+                Assert.That(body.Post, Is.Not.Null, mind.Name);
+                Assert.That(body.PatrolRoute, Has.All.Not.Null, mind.Name);
+                Assert.That(mind.Behaviour.Validate(out string problem), Is.True, mind.Name + ": " + problem);
+            }
+            // Both guards ask one provider config asset, so they share one queue.
+            Assert.That(original, Is.Not.Null);
+            Assert.That(AssetDatabase.GetAssetPath(original), Is.Not.Empty);
+            Assert.That(guard.Alarm.Villagers, Has.Length.EqualTo(4));
             foreach (var path in new[] { DemoLauncher.VillagePath, DemoLauncher.LauncherPath })
                 Assert.That(EditorBuildSettings.scenes.Any(s => s.enabled && s.path == path), Is.True, path);
             // The game reaches the framework only through its public assembly; the shared helpers stay framework-free.
             Assert.That(typeof(VillageCommands).Assembly.GetReferencedAssemblies().Any(a => a.Name == "Agenerela"), Is.True);
+            Assert.That(typeof(AgentBoard).Assembly, Is.EqualTo(typeof(DecisionDebugOverlay).Assembly));
             Assert.That(typeof(DecisionDebugOverlay).Assembly.GetReferencedAssemblies().Any(a => a.Name.StartsWith("Agenerela")), Is.False);
         }
 
-        // Asks the guard the way the game does for each source: the player's typed line, or the event
+        [Test]
+        public void BothGuardsInTheSceneAskTheSameProviderConfig()
+        {
+            var scenePath = scene.path;
+            Assert.That(scenePath, Is.EqualTo(DemoLauncher.VillagePath));
+            // UseProvider in SetUp replaced the components, so read the asset the scene was saved with.
+            var saved = File.ReadAllText(Path.Combine(Path.GetDirectoryName(Application.dataPath), scenePath));
+            string guid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(original));
+            Assert.That(Regex.Matches(saved, "Provider: \\{fileID: \\d+, guid: " + guid).Count, Is.EqualTo(2));
+        }
+
+        // Asks Bram the way the game does for each source: the player's typed line, or the event
         // GuardSenses raises.
         private async Task Ask(string source)
         {
@@ -455,19 +728,28 @@ namespace Demos.GreyBoxVillage.Tests
                     await commands.SubmitAsync("Hello");
                     break;
                 case "zone":
-                    await commands.ReportEventAsync("zone", "Event", "The player has walked into the armory, which is off limits.",
+                    await bram.ReportEventAsync("zone", "Event", "The player has walked into the armory, which is off limits.",
                         DecisionPriority.PlayerFacing);
                     break;
                 case "wolf":
-                    await commands.ReportEventAsync("wolf", "Event", "A wolf has come out of the woods.", DecisionPriority.Background);
+                    await bram.ReportEventAsync("wolf", "Event", "A wolf has come out of the woods.", DecisionPriority.Background);
                     break;
                 case "quiet":
-                    await commands.ReportEventAsync("quiet", "Time", "Time passes quietly at your post.", DecisionPriority.Background);
+                    await bram.ReportEventAsync("quiet", "Time", "Time passes quietly at your post.", DecisionPriority.Background);
                     break;
                 default:
                     throw new ArgumentException(source);
             }
         }
+
+        // Until no agent is deciding or waiting: an event the game raised runs on by itself.
+        private async Task Idle()
+        {
+            for (int i = 0; i < 300 && commands.Minds.Any(m => m.IsDeciding || m.HasPending); i++) await Task.Delay(10);
+            Assert.That(commands.IsDeciding, Is.False, "An agent never finished deciding.");
+        }
+
+        private List<DecisionRecord> Records(string agent) => commands.Recorder.Records.Where(r => r.Agent == agent).ToList();
 
         private static TokenProbability Token(string text, float logProbability = 0f,
             params (string Text, float LogProbability)[] alternatives) =>
