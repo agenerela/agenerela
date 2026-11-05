@@ -26,6 +26,7 @@ namespace Agenerela.Editor.Evaluation
         private readonly List<BlindPrompt> queue;
         private readonly LabelChoices choices;
         private readonly Func<BlindPrompt, LabelAnswer, bool> record;
+        private readonly int total;
 
         private int current;
         private int answeredNow;
@@ -33,31 +34,32 @@ namespace Agenerela.Editor.Evaluation
         private string target;
         private Vector2 scroll;
 
-        internal PromptSetLabelView(string annotator, IReadOnlyList<BlindPrompt> queue, LabelChoices choices, Func<BlindPrompt, LabelAnswer, bool> record)
+        /// <param name="total">How many prompts <paramref name="annotator"/> is asked to label in all, <see cref="LabelProgress.TotalFor"/>: a count, not the set.</param>
+        internal PromptSetLabelView(string annotator, IReadOnlyList<BlindPrompt> queue, LabelChoices choices, Func<BlindPrompt, LabelAnswer, bool> record, int total)
         {
             Annotator = annotator;
             this.queue = Shuffled(annotator, queue);
             this.choices = choices;
             this.record = record;
+            this.total = total;
         }
 
         internal string Annotator { get; }
+
+        /// <summary>Answered ones are no longer left; skipped ones still are.</summary>
+        internal LabelProgress Progress => new LabelProgress(total, queue.Count - answeredNow, current - answeredNow);
 
         internal void Draw()
         {
             if (current >= queue.Count)
             {
-                EditorGUILayout.HelpBox(
-                    answeredNow > 0
-                        ? $"Done: {answeredNow} answered. Nothing left for {Annotator} to label."
-                        : $"Nothing left for {Annotator} to label: every prompt is one you wrote or have answered.",
-                    MessageType.Info);
+                EditorGUILayout.HelpBox(Progress.NothingLeft(Annotator), MessageType.Info);
                 return;
             }
 
             var prompt = queue[current];
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField($"{queue.Count - current} left to label", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(Progress.Heading, EditorStyles.boldLabel);
 
             scroll = EditorGUILayout.BeginScrollView(scroll);
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
@@ -124,7 +126,7 @@ namespace Agenerela.Editor.Evaluation
             using (new EditorGUILayout.HorizontalScope())
             {
                 GUILayout.FlexibleSpace();
-                if (GUILayout.Button("Skip", GUILayout.Width(80)))
+                if (GUILayout.Button(new GUIContent("Skip", "Leave this prompt for later. It comes back when you open Label mode again."), GUILayout.Width(80)))
                 {
                     Next();
                 }
