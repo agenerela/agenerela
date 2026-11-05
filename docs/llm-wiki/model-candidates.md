@@ -60,6 +60,9 @@ this feeds Phase 4" below).
    `statement`. The Q4 file is smaller than `qwen3.5:4b`'s (3.3 GB). Its architecture has been
    in llama.cpp since 2025. It is the safest first arm, and the closest test of "is the 2B the
    weak link?". It is older (2025) and text-only.
+   **Measured since (5 November 2026):** see [`findings.md`](findings.md), "First model A/B". On
+   Ollama 0.40.14 it wrote `statement` before `target`, so that run does not yet answer the
+   question.
 2. **`Granite 4.1 3B`** (`granite4.1:3b`, 2.1 GB). A dense instruct model with no thinking
    mode (Ollama lists tools only). Apache-2.0. IBM reports IFEval 82.30 and BFCL v3 60.80. Its
    architecture is plain dense Granite, long supported by llama.cpp, so it should load in
@@ -366,10 +369,12 @@ All benchmarks are makers' claims unless marked. Sizes are Ollama's unless marke
   on the same prompt set, machine and session, one model resident at a time (hard rule 3), on
   AC power, temperature 0, `think: false`. The arms differ by model, so "same model" in hard
   rule 2 becomes "same everything else". Record each arm's exact tag and digest.
-- **Before a candidate's first run**, three cheap checks, none of them an accuracy claim:
+- **Before a candidate's first run**, four cheap checks, none of them an accuracy claim:
   that `think: false` really yields no reasoning tokens (`eval_count` against the reply's
-  length); the scarecrow logprobs check; and VRAM from `/api/ps` with `size_vram` equal to
-  `size`. `AGENERELA_OLLAMA_MODEL` already lets the Phase 3 live suite run another model, as a
+  length); the scarecrow logprobs check; VRAM from `/api/ps` with `size_vram` equal to
+  `size`; and that its raw replies keep the schema's field order, `action`, `target`,
+  `statement`, which `Qwen3-4B-Instruct-2507` did not on Ollama 0.40.14 (findings, 5 November
+  2026). `AGENERELA_OLLAMA_MODEL` already lets the Phase 3 live suite run another model, as a
   20-prompt smoke test.
 - **The grounding threshold is per model until shown otherwise.** 0.8 was set on Qwen's
   tokenizer. Another tokenizer splits target ids differently, so a candidate that loses only
@@ -391,7 +396,8 @@ All benchmarks are makers' claims unless marked. Sizes are Ollama's unless marke
 - How to turn MiniCPM5-2B's thinking off; its card shows only `enable_thinking=True`.
 - Whether LLMUnity v3.0.3's llama.cpp (b8209) loads LFM3, Gemma 4 or Nemotron-H GGUFs. Its notes
   name only Qwen 3.5.
-- Whether Ollama's `logprobs` are from before the mask for any model but `qwen3.5:2b`.
+- Whether Ollama's `logprobs` are from before the mask for any model but `qwen3.5:2b` and, since
+  5 November 2026, `Qwen3-4B-Instruct-2507` (findings, "First model A/B").
 - Release dates that only third parties give (MiniCPM5-2B, LFM2.5-2.6B, LFM3-1.7B), and whether
   all six LFM3 models carry the LFM license (one third-party table lists three as Apache-2.0).
 - Sizes marked *est.*, which are arithmetic, not downloads.

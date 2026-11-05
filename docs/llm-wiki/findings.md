@@ -722,3 +722,134 @@ the rendered block against all 20 prompts, and the examples are written down in 
 **What would change this.** A guards-on run below 19/20 on the same suite and model. Or a
 later Ollama whose probabilities are from after the mask: the scarecrow check would then read
 near 1, and the guard would pass everything.
+
+### First model A/B: `qwen3:4b-instruct-2507` 65/76, `qwen3.5:2b` 56/76, but the 4B wrote its fields in another order (5 November 2026)
+
+The first of #151's runs through the A/B runner (#145), and the first live run of its
+`Sequential` order. The control arm was `qwen3.5:2b`, the treatment `qwen3:4b-instruct-2507-q4_K_M`,
+the first pick on the 8 GB shortlist in [`model-candidates.md`](model-candidates.md). Both arms
+had the guards on. The set was our 76 prompts (`UnityProject/Assets/Evaluation/`, last changed in
+87d1e4d) against the `VillageGuard` profile. All of the 2B's arm ran, then its model was unloaded,
+then all of the 4B's.
+
+**Result: the runner marks the difference beyond noise, but it is not a clean comparison of two
+models.** Ollama kept the schema's field order (`action`, `target`, `statement`) for the 2B but not
+for the 4B, which wrote `statement` before `target` on every request (below). The arms differ in
+the model *and* in the field order, so this says nothing about which model chooses better (hard
+rule 2).
+
+| Outcome | `qwen3.5:2b` | `qwen3:4b-instruct-2507` |
+|---|---:|---:|
+| Correct | 56 | 65 |
+| Wrong legal action | 16 | 10 |
+| Contained by a guard | 1 | 0 |
+| Rejected when an action was expected | 3 | 1 |
+| Pipeline error | 0 | 0 |
+| **Accuracy** | **73.7%** | **85.5%** |
+
+| Category (n) | `qwen3.5:2b` | `qwen3:4b-instruct-2507` | 4B − 2B, points (floor) |
+|---|---|---|---|
+| Simple commands (9) | 5 correct, 4 wrong | 9 correct | +44.4, **beyond noise** (23.6) |
+| Commands with a target (11) | 10 correct, 1 wrong | 11 correct | +9.1, within noise (21.3) |
+| Impossible requests (9) | 9 correct | 9 correct | 0, within noise (23.6) |
+| Conversation (9) | 8 correct, 1 wrong | 8 correct, 1 wrong | 0, within noise (23.6) |
+| Situations (19) | 13 correct, 5 wrong, 1 contained | 15 correct, 4 wrong | +10.5, within noise (16.2) |
+| Events (19) | 11 correct, 5 wrong, 3 rejected | 13 correct, 5 wrong, 1 rejected | +10.5, within noise (16.2) |
+| **All (76)** | **56** | **65** | **+11.8, beyond noise (8.1)** |
+
+**The 4B wrote `statement` before `target`, on every request.** A pass-through proxy logged the
+raw responses of a repeat run: all 79 of the 4B's (76 prompts and 3 warm-ups) came back as
+`action`, `statement`, `target`, and all 79 of the 2B's as `action`, `target`, `statement`. The
+request was the same for both, with `required` and `propertyOrdering` in that order and
+`additionalProperties: false`. Two probes outside the framework (`.scratch/151-first-ab/`)
+narrowed it down. Given a schema in the order `statement`, `target`, `action`, the 2B followed
+it on all 3 stimuli, so Ollama does hold the order for the 2B. The 4B still wrote `action`,
+`statement`, `target`, which is alphabetical. So on Ollama 0.40.14 the schema's order is lost for
+this model, perhaps because its keys are sorted somewhere on its path; that was not investigated.
+This matters because the field order is a settled rule (Appendix A, DR-008): free text written
+before the target is the order measured to make the model rationalise its own reply. The 4B's arm
+therefore did not run the framework's design, and the framework cannot tell: the report holds
+parsed fields, not the raw text.
+
+**The 4B's probabilities are from before the mask too, and the guard caught nothing on it.** The
+scarecrow check (3 November entry) on the 4B: at the target's first token it wanted `sc` at
+−0.00, and the schema forced `t` at −26.5 (`tower`). On the 2B it wanted `sc` at −0.01 and was
+forced to `br` at −15.0. So the readings mean the same on both models, but they behave
+differently. On the 4B, 32 of the 34 readings on a registered target were 1.000, wrong answers
+included, so the grounding guard had little to act on:
+
+- 2B: the guard stopped 4 answers, all of them wrong. "The watchtower is unattended."
+  (`move_to/north_tower`, 0.592) was contained. Three events whose answer had the wrong action or
+  target count as rejected, because their label was an action: "An enemy was spotted near the
+  bridge." (`attack_target/wolf`, 0.583, the model wanted "enemy"), "A scout spotted movement near
+  the north tower." (`attack_target/wolf`, 0.53, wanted "unknown") and "A cart has overturned
+  outside the village." (`move_to/bridge`, 0.43, wanted "bar…"). Its lowest reading on a right
+  answer with a target was 0.885.
+- 4B: one stop, and it was a right answer refused. "A cart has overturned outside the village."
+  was `move_to/eastern_road` as labelled, at 0.368: it wanted "cart". "The watchtower is
+  unattended." went through to `move_to/north_tower` at 1.000, where the 2B's was contained.
+  "An enemy was spotted near the bridge." went through to `attack_target/wolf` at 0.863.
+
+**Answers worth reading.**
+
+- **The 2B answered `none` to all four "stay" commands while following** ("Wait here.", "Stay
+  where you are.", "Do not move.", "Hold position."), with lines like "I will wait for you to make
+  your move." It understood and still chose `none`. That is the whole simple-command gap; the 4B
+  got all four.
+- **The 4B acts on situations that need no action.** "Good morning." → `follow_player`
+  ("Good morning. Following you."). "Rain has started to fall." → `move_to/village_gate`. "A
+  villager waves from across the square." → `move_to/well`. "The road is blocked." →
+  `move_to/eastern_road` (the 2B said `move_to/bridge`).
+- **The 4B missed a state change.** "The player has reached the shelter.", while following, was
+  `move_to/shelter`, not `stop_following`.
+- **Both models attack the wolf on enemy reports.** "An enemy was spotted near the bridge." (both)
+  and "Lights were seen in the north tower." (4B) were answered with `attack_target/wolf`, the
+  only enemy the agent knows of, where the label is `move_to`.
+- **"The animals at the market are restless."** The 4B answered `move_to/wolf`: a legal pair,
+  since `move_to` takes any target, but the wrong action.
+
+**Sequential mode worked against the real server.** After the 2B's last prompt the runner
+unloaded it (`keep_alive: 0`) and recorded `unloaded: true`, and the 4B's reading before its
+warm-up showed nothing resident. Each arm's model was the only one listed after its warm-up and
+at its end, fully in VRAM: 2254 of 2254 MB for the 2B, 3032 of 3032 MB for the 4B. No warnings,
+no pipeline errors, 137 s for the run. One gap: the runner does not unload the last arm's model,
+so the 4B stayed resident (Ollama's default five minutes) until it was unloaded by hand.
+
+**The repeat.** With the arms swapped (4B first), and once more through the proxy, all 152
+answers were identical to the first run: same action, target, statement and reading. At
+temperature 0 the run is deterministic on this machine, so the repeat shows that the arm order
+did not matter here. It does not shrink the noise floor, which stands for drift between sessions
+and prompt sets, not for sampling.
+
+**What the noise check allows.** +11.8 points overall against a floor of 8.1, and +44.4 on simple
+commands against 23.6, are marked beyond noise. Every other category is within noise. With the
+field order differing between the arms, the difference cannot be put down to the model. The A/B
+that can is a rerun with the 4B writing the fields in the framework's order.
+
+**Latency, the first run only** (no other Unity process ran during it; one did during part of
+the swapped run). Median 0.80 s for the 2B and 0.72 s for the 4B; 90th percentile 0.93 s and
+0.81 s. Prompts were 345–405 tokens on the 2B and 325–383 on the 4B, answers 25–44 and 25–41
+tokens, and the 4B's lines were shorter (median 29 characters against 46). No reasoning came back
+from either model. One sequential run on one laptop: not a latency claim.
+
+**Conditions.**
+- `test` at 3f0a87c (framework 0.4.0-preview.1), Unity 6000.3.23f1, PlayMode in batch mode, from
+  a throwaway test whose text is in `.scratch/151-first-ab/README.md` on the lead's laptop.
+- Ollama 0.40.14 at `http://127.0.0.1:11434`, on CUDA on the RTX 4060 Laptop 8 GB (the server
+  log's "inference compute" line). The report's "Null Device" is Unity's `-nographics` device,
+  not Ollama's.
+- `qwen3.5:2b` Q8_0 (digest 324d162b…) and `qwen3:4b-instruct-2507-q4_K_M` Q4_K_M (0edcdef3…).
+  Temperature 0, 4096 context, `think: false`, logprobs on.
+- Mains power. Nothing else resident before either arm, and the Ollama lock held for the run.
+- Three warm-up requests per arm. Targets as observations (`id: description.`). The state as one
+  observation, "You are following the player." or "You are not following the player." (the
+  Phase 3 wording), and on `Agent.State`. Idle example "Fine day for it.". `CheckTarget` on.
+- The arms ran sequentially, the 2B first.
+- Few-shot overlap, checked by hand as `measuring.md` asks: one prompt, `target_005` "Go stand
+  at the north tower.", is a partial phrasing of `move_to`'s example "Go and stand by the {0}."
+  (rule 3). Both arms answered it correctly, so it does not move the difference, but the set
+  should replace it.
+
+**What would change this.** A 4B arm whose raw responses keep `action`, `target`, `statement`,
+on the same set: if it still scores above the 2B beyond noise, that is a model result. Or a later
+Ollama that holds the order for the 4B.

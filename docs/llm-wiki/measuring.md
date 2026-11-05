@@ -69,7 +69,7 @@ Appendix A is at the end of [the build plan](../FRAMEWORK_BUILD_PLAN.md).
 
 ## What has been learned since
 
-Four things, each from the work after §4 was written. Where a source is in
+Five things, each from the work after §4 was written. Where a source is in
 [`findings.md`](findings.md), the entry is named. Where it is not, this page says so.
 
 **1. Ollama updates itself, so record its version with every result.** The lead's laptop went
@@ -116,8 +116,20 @@ The cost is that drift over the session no longer hits both arms alike, so say i
 that the arms ran sequentially, and repeat a close result. Two arms on one model (guards on
 against off) interleave instead. This follows from rule 2 and the note in
 [environment.md](environment.md#local-models--ollama), and is what the runner's
-`Sequential` order does. That unload has been run only against a stand-in server, not live (#145), and
-the order has no findings entry of its own yet.
+`Sequential` order does. It first ran live on 5 November 2026, `qwen3.5:2b` against
+`qwen3:4b-instruct-2507`: the unload worked and the second arm started with nothing resident.
+The runner leaves the last arm's model loaded, so unload it yourself afterwards. At temperature 0
+the swapped repeat gave identical answers, so a repeat on one machine checks the arm order, not
+sampling noise. Source: findings, "First model A/B" (5 November 2026).
+
+**5. A new model may not write the fields in the schema's order.** In the same run, Ollama
+0.40.14 held `action`, `target`, `statement` for `qwen3.5:2b`, but `qwen3:4b-instruct-2507`
+wrote `action`, `statement`, `target` on every request, whatever order the schema gave. Writing
+the free text before the target breaks a settled rule (Appendix A), and the runner cannot see
+it, because the report keeps parsed fields, not the raw text. Before a model's first A/B, read
+the field order of a few raw responses (`/api/chat` with the framework's schema); if it differs,
+the A/B compares two designs, not two models. Source: findings, "First model A/B"
+(5 November 2026).
 
 ## Before you run
 
@@ -140,6 +152,7 @@ why.
 | Outcomes classified, not one percentage (rule 5) | Sorts every answer into the five outcomes. A guard stopping an answer counts as contained only when the label was `none`, else as rejected-when-expected. Pipeline errors stay in the accuracy denominator | Read the wrong answers, not only the counts (the Markdown report lists every answer that was not correct) |
 | Warm-up (rule 6) | 3 throwaway requests per arm, never in the report; refuses if none of them produced a decision | Warm up yourself for a probe or script |
 | Arms of two models run one after the other | `EvalArmOrder.Sequential` unloads the first arm's model (`keep_alive: 0`), waits until `/api/ps` drops it, and refuses if it stays. Interleaved arms on two Ollama models are refused | Choose it, and say so in the result |
+| The model writes the fields in the schema's order | Not checked: the report keeps parsed fields, not the raw text | For a model's first A/B, read a few raw `/api/chat` responses (point 5 above) |
 | How targets and state reached the prompt | Records the choice in the report, with the set's last commit and whether it has uncommitted changes | Compare only with results fed the same way |
 | `127.0.0.1`, not `localhost` | Not checked | Use `http://127.0.0.1:11434` everywhere |
 | Plugged in (a laptop) | Not checked | A battery run is not comparable with an AC one |
