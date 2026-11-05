@@ -115,7 +115,8 @@ namespace Demos.Shared
             IReadOnlyList<string> suggestions)
         {
             if (panel == null) return;
-            IsOpen = who != null;
+            // Hidden behind a menu: nothing can be typed or sent to an agent while the game is paused.
+            IsOpen = who != null && !(Player != null && Player.Paused);
             DemoUI.Show(panel, IsOpen);
             if (!IsOpen)
             {
@@ -182,6 +183,7 @@ namespace Demos.Shared
 
         public void Submit(string text)
         {
+            if (Player != null && Player.Paused) return;
             if (!string.IsNullOrWhiteSpace(text)) Submitted?.Invoke(text.Trim());
         }
 

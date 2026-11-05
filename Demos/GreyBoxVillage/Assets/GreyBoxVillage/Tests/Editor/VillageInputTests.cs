@@ -63,6 +63,18 @@ namespace Demos.GreyBoxVillage.Tests
             var log = input.GetComponent<UIDocument>().rootVisualElement.Q("DialogueLog");
             var newest = log[log.childCount - 1].Query<Label>().ToList();
             Assert.That(newest.Any(l => l.text == "the newest line"), Is.True, "The log stopped refreshing at its cap.");
+
+            // Behind the open menu, nothing reaches an agent: the dialogue hides and a line goes nowhere.
+            commands.Menu.Open();
+            yield return null;
+            Assert.That(input.IsOpen, Is.False);
+            int calls = config.Fake.Calls;
+            input.Submit("Ring the bell!");
+            for (int frame = 0; frame < 10; frame++) yield return null;
+            Assert.That(config.Fake.Calls, Is.EqualTo(calls), "A line was sent to an agent behind the menu.");
+            commands.Menu.Close();
+            yield return null;
+            Assert.That(input.IsOpen, Is.True);
             yield return new ExitPlayMode();
             LeaveTheVillage();
         }

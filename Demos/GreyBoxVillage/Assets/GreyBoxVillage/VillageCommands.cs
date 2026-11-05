@@ -139,7 +139,7 @@ namespace Demos.GreyBoxVillage
         /// <summary>The player's typed line, to the nearest agent in earshot. Completes when it has been executed.</summary>
         public async Awaitable SubmitAsync(string text)
         {
-            if (string.IsNullOrWhiteSpace(text)) return;
+            if (string.IsNullOrWhiteSpace(text) || (Menu != null && Menu.IsOpen)) return;
             text = text.Trim();
             var listener = Nearest();
             if (listener == null)
