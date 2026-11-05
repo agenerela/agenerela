@@ -758,8 +758,9 @@ rule 2).
 | **All (76)** | **56** | **65** | **+11.8, beyond noise (8.1)** |
 
 **The 4B wrote `statement` before `target`, on every request.** A pass-through proxy logged the
-raw responses of a repeat run: all 79 of the 4B's (76 prompts and 3 warm-ups) came back as
-`action`, `statement`, `target`, and all 79 of the 2B's as `action`, `target`, `statement`. The
+raw responses of a repeat run: all 76 of the 4B's scored responses came back as `action`,
+`statement`, `target`, and all 76 of the 2B's as `action`, `target`, `statement` (each arm's 3
+warm-ups, not part of the run, were in the same order as its scored responses). The
 request was the same for both, with `required` and `propertyOrdering` in that order and
 `additionalProperties: false`. Two probes outside the framework (`.scratch/151-first-ab/`)
 narrowed it down. Given a schema in the order `statement`, `target`, `action`, the 2B followed
@@ -831,10 +832,18 @@ percentile 0.93 s and 0.81 s. Another session's Unity EditMode batch run loaded 
 "about 11:29 to 11:31" local time by its own account. A sampler (one reading about every 6 s)
 first saw its process at 11:31:12, during the swapped run. If it did start at 11:29, it overlapped
 the last minute of the 4B's arm (about 11:28:50–11:29:51); the 4B's median was 0.718 s over its
-first 38 prompts and 0.728 s over its last 38. In the proxy run (raw responses, 79 requests per
-model, warm-ups included), prompts were 345–405 tokens on the 2B and 325–383 on the 4B, answers
-25–44 and 25–41 tokens, and the 4B's lines were shorter (median 29 characters against 46). No
-reasoning came back from either model. One sequential run on one laptop: not a latency claim.
+first 38 prompts and 0.728 s over its last 38. These latencies are the 76 scored prompts per arm
+only; the runner never reports its warm-ups. In the proxy run's raw responses, again the 76
+scored prompts per model only, prompts were 354–405 tokens on the 2B and 333–383 on the 4B,
+answers 27–44 and 25–41 tokens, and the 4B's lines were shorter (median 28 characters against
+46.5). No reasoning came back from either model. One sequential run on one laptop: not a latency
+claim.
+
+Warm-ups, for information only, not part of the run: each arm's first 3 requests, told apart from
+the scored prompts both by position and by their stimuli ("Good evening.", "Is the road quiet
+tonight?", "Stay sharp."). Prompts 345–348 tokens on the 2B and 325–328 on the 4B, answers 25–36
+and 31–37. The 2B answered `none` to all three. The 4B acted on two: "Is the road quiet tonight?"
+→ `move_to/eastern_road` and "Stay sharp." → `follow_player`, which fits its over-acting above.
 
 **Conditions.**
 - `test` at 3f0a87c (framework 0.4.0-preview.1), Unity 6000.3.23f1, PlayMode in batch mode, from
