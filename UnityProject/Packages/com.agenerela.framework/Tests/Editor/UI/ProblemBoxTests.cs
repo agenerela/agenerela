@@ -7,6 +7,9 @@ namespace Agenerela.Tests.UI
     /// <summary>The problem box: a message and an optional fix button (screen 1 ⑥, #167).</summary>
     public sealed class ProblemBoxTests
     {
+        [TearDown]
+        public void CloseWindows() => EditorUiFixtures.CloseAll();
+
         [Test]
         public void ItShowsItsMessage()
         {

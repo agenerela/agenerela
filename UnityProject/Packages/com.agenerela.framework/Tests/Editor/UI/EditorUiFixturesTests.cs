@@ -8,6 +8,9 @@ namespace Agenerela.Tests.UI
     /// <summary>The stylesheet, and the fixtures every Phase 5 UI test builds its tree with (#167).</summary>
     public sealed class EditorUiFixturesTests
     {
+        [TearDown]
+        public void CloseWindows() => EditorUiFixtures.CloseAll();
+
         [Test]
         public void TheStylesheetImportsCleanly()
         {

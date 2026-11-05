@@ -37,10 +37,17 @@ phase table and the open issues, not here.
     it is not offered.
   - `OutcomeIcon` shows Executed, No action, Contained or Error with Unity's built-in icons.
   - `ProblemBox` shows a message with an optional fix button.
+  - `SectionTitle` heads a section in small, spaced, muted capitals, such as "EXPECTED ANSWER".
+  - `AgenerelaButtons` adds two styles to Unity's plain button: a filled primary button for
+    the one action a screen is for (**Save answer**), and a dashed one for an open choice
+    (**Open choice**).
   - `EditorUiFixtures` in `Tests/Editor/UI/` builds a hosted element, an inspector or a window
-    in an EditMode test, and finds its parts by name.
-  - USS has no muted text colour that reaches an editor window and no dashed border, so the
-    kit sets the first itself and draws the second. A test catches a variable that silently
+    in an EditMode test, and finds its parts by name. **Window → Agenerela → Tests → UI Kit
+    Gallery** shows every piece on one page, for checking both skins by hand. It is in the test
+    assembly, so it does not ship in the package.
+  - USS has no muted text colour that reaches an editor window, no dashed border and no
+    `text-transform`. The kit sets the colour itself, draws dashed outlines in
+    `DashedOutline`, and upper-cases titles in code. A test catches a variable that silently
     fails to resolve.
 - **GreyBoxVillage has two guards and an agent board** (#143), the first slice of the demo's
   upgrade.

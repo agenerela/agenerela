@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using UnityEditor;
@@ -25,11 +26,36 @@ namespace Agenerela.Tests.UI
     /// reads <c>resolvedStyle</c> is a <c>[UnityTest]</c> that yields <see cref="Until"/> first.
     /// Classes, text and children can be checked straight away, with no window at all.
     /// </para>
+    /// <para>
+    /// A <c>[UnityTest]</c> that fails while it yields is dropped without its <c>using</c> block
+    /// ending, so its window stays open. Every test class that opens one calls
+    /// <see cref="CloseAll"/> in its <c>[TearDown]</c>, which runs however the test ends.
+    /// </para>
     /// </remarks>
     public static class EditorUiFixtures
     {
         /// <summary>The size a window opens at unless a test asks for another: the Prompt Set window's minimum.</summary>
         public static readonly Vector2 DefaultSize = new Vector2(640, 420);
+
+        private static readonly List<EditorWindow> opened = new List<EditorWindow>();
+
+        /// <summary>
+        /// Closes every window these fixtures opened, including any a failed test left behind.
+        /// Call it in <c>[TearDown]</c>.
+        /// </summary>
+        public static void CloseAll()
+        {
+            // Host windows are also found by type, so ones left from before a domain reload close too.
+            foreach (var window in opened.Concat(Resources.FindObjectsOfTypeAll<HostWindow>()).Distinct().ToList())
+            {
+                if (window != null)
+                {
+                    window.Close();
+                }
+            }
+
+            opened.Clear();
+        }
 
         /// <summary>Puts <paramref name="element"/> in a shown window, so it receives events and resolves styles.</summary>
         public static UiTree Host(VisualElement element, Vector2? size = null)
@@ -122,6 +148,7 @@ namespace Agenerela.Tests.UI
         private static void Show(EditorWindow window, Vector2? size)
         {
             var wanted = size ?? DefaultSize;
+            opened.Add(window);
             window.ShowUtility();
             window.minSize = wanted;
             window.maxSize = wanted;

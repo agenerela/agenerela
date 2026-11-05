@@ -9,12 +9,15 @@
  * light skin) and then uses the --ag-* variables in its own layout stylesheet; it never sets a
  * colour of its own.
  *
- * USS has no dashed border and no text-decoration: the chip that is not offered draws its dashed
- * outline in Chip.cs and strikes its text with a rich-text <s> tag.
+ * USS has no dashed border, no text-decoration and no text-transform. A dashed outline is drawn
+ * by DashedOutline.cs in the element's border colour, so its rule sets border-width: 0 and keeps
+ * border-color and border-radius; the chip that is not offered strikes its text with a rich-text
+ * <s> tag; a section title upper-cases its own text.
  */
 
 .ag {
     /* Colour */
+    --ag-background: var(--unity-colors-window-background);
     --ag-text: var(--unity-colors-default-text);
     --ag-text-muted: #9a9a9a;
     --ag-line: var(--unity-colors-default-border);
@@ -91,11 +94,63 @@
     flex-shrink: 0;
 }
 
-/* Not offered: no fill, muted text, and Chip.cs strokes the dashed outline in --ag-line */
+/* Not offered: no fill, muted text, and a dashed outline in the muted colour (DashedOutline.cs) */
 .ag-chip--off {
     color: var(--ag-text-muted);
     border-width: 0;
+    border-color: var(--ag-text-muted);
     background-color: rgba(0, 0, 0, 0);
+}
+
+/* Section title: small spaced capitals (SectionTitle.cs upper-cases the text) */
+
+.ag-section-title {
+    font-size: var(--ag-font-size-small);
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+    color: var(--ag-text-muted);
+    margin-top: var(--ag-space-m);
+    margin-bottom: var(--ag-space-s);
+    padding-left: 0;
+}
+
+/*
+ * Buttons (AgenerelaButtons.cs). Unity's own button rules carry :hover:enabled and
+ * :active:enabled, which outrank one class, so each state is restated here.
+ */
+
+/* Primary: the one action a screen is for, filled in the text colour so it inverts with the skin */
+.ag-button--primary,
+.ag-button--primary:hover:enabled,
+.ag-button--primary:focus:enabled {
+    background-color: var(--ag-text);
+    border-color: var(--ag-text);
+    color: var(--ag-background);
+    -unity-font-style: bold;
+}
+
+.ag-button--primary:hover:enabled {
+    opacity: 0.85;
+}
+
+.ag-button--primary:active:enabled {
+    background-color: var(--ag-text);
+    opacity: 0.7;
+}
+
+/* Dashed: a choice that is open but not suggested; no fill, a dashed muted outline */
+.ag-button--dashed,
+.ag-button--dashed:hover:enabled,
+.ag-button--dashed:focus:enabled,
+.ag-button--dashed:active:enabled {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    border-color: var(--ag-text-muted);
+    color: var(--ag-text-muted);
+}
+
+.ag-button--dashed:hover:enabled {
+    color: var(--ag-text);
 }
 
 /* Outcome icon (OutcomeIcon.cs) */

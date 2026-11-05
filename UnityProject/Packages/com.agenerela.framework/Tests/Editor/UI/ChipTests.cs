@@ -8,6 +8,9 @@ namespace Agenerela.Tests.UI
     /// <summary>The chip: an action or target id, struck through when it is not offered (#167).</summary>
     public sealed class ChipTests
     {
+        [TearDown]
+        public void CloseWindows() => EditorUiFixtures.CloseAll();
+
         [Test]
         public void AnOfferedChipShowsItsIdAsWritten()
         {
@@ -28,6 +31,7 @@ namespace Agenerela.Tests.UI
             Assert.That(chip.text, Is.EqualTo("<s><noparse>attack_target</noparse></s>"));
             Assert.That(chip.enableRichText, Is.True);
             Assert.That(chip.ClassListContains(Chip.OffUssClassName), Is.True);
+            Assert.That(chip.ClassListContains(DashedOutline.UssClassName), Is.True);
         }
 
         [Test]
@@ -38,6 +42,7 @@ namespace Agenerela.Tests.UI
             Assert.That(chip.text, Is.EqualTo("attack_target"));
             Assert.That(chip.enableRichText, Is.False);
             Assert.That(chip.ClassListContains(Chip.OffUssClassName), Is.False);
+            Assert.That(chip.ClassListContains(DashedOutline.UssClassName), Is.False);
         }
 
         [Test]
