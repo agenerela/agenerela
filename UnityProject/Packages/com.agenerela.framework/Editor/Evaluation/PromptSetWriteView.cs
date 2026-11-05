@@ -42,6 +42,12 @@ namespace Agenerela.Editor.Evaluation
 
         internal bool HasUnsavedChanges => changed.Count > 0;
 
+        /// <summary>The categories edited since they were last saved.</summary>
+        internal IEnumerable<PromptCategory> Changed => changed;
+
+        /// <summary>Marks <paramref name="category"/> as edited, for a draft restored after a domain reload.</summary>
+        internal void MarkChanged(PromptCategory category) => changed.Add(category);
+
         internal void SetLabels(IReadOnlyList<AnnotatorLabels> files) => labels = files;
 
         internal void SaveAll()
@@ -129,7 +135,7 @@ namespace Agenerela.Editor.Evaluation
             using (new EditorGUILayout.HorizontalScope())
             {
                 newCategory = EditorGUILayout.TextField(newCategory);
-                using (new EditorGUI.DisabledScope(!ActionDefinition.ValidateId(newCategory, out _) || set.FindCategory(newCategory) != null))
+                using (new EditorGUI.DisabledScope(!PromptSet.ValidateCategoryId(newCategory, out _) || set.FindCategory(newCategory) != null))
                 {
                     if (GUILayout.Button("+ Category", GUILayout.Width(90)))
                     {

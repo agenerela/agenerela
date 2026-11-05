@@ -106,6 +106,20 @@ namespace Agenerela.Tests.Evaluation
         }
 
         [Test]
+        public void SettlingAPromptWhoseLabelledByIsNullStillKeepsEveryAnswer()
+        {
+            fixture.WriteLabels("Bo", "command_with_target", "{ \"target_002\": \"move_to/wolf\" }");
+            var set = fixture.Load();
+            set.TryFind("target_002", out var prompt, out _);
+            var split = AgreementReport.Compute(set, set.LoadLabels()).For("target_002");
+            prompt.LabelledBy = null;
+
+            set.Settle(split, "move_to", new ExpectedTarget("wolf"));
+
+            Assert.That(prompt.LabelledBy, Is.EqualTo(new[] { "Bo", "Maxim" }));
+        }
+
+        [Test]
         public void SettlingAsAnOpenChoiceWritesAList()
         {
             fixture.WriteLabels("Bo", "command_with_target", "{ \"target_001\": \"move_to/docks\" }");

@@ -100,6 +100,14 @@ namespace Agenerela.Editor.Evaluation
 
                     EditorGUILayout.LabelField("    Expected now", $"{prompt.ExpectedAction}/{prompt.ExpectedTarget}");
 
+                    if (prompt.Labels != null)
+                    {
+                        // Settled already: the split still counts against agreement, but the
+                        // decision is made. Changing it is an edit in Write mode, never a click here.
+                        EditorGUILayout.LabelField("    Settled", "The answers above are kept in the prompt's labels.");
+                        continue;
+                    }
+
                     notes.TryGetValue(prompt.Id, out string note);
                     notes[prompt.Id] = EditorGUILayout.TextField("    Note (why)", note ?? "");
 

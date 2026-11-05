@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Agenerela.Evaluation;
+using Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
 
@@ -40,6 +41,17 @@ namespace Agenerela.Editor.Evaluation
         [SerializeField] private string you = "";
         [SerializeField] private Mode mode;
 
+        // Unsaved prompts, one category's list as JSON per entry, kept through a domain reload: a
+        // script recompiling would otherwise drop them, since the set itself is not serialized.
+        [SerializeField] private List<string> draftCategories = new List<string>();
+        [SerializeField] private List<string> draftPrompts = new List<string>();
+
+        private static readonly JsonSerializerSettings DraftSettings = new JsonSerializerSettings
+        {
+            DateParseHandling = DateParseHandling.None,
+            FloatParseHandling = FloatParseHandling.Decimal,
+        };
+
         private PromptSet set;
         private string loadError;
         private IReadOnlyList<AnnotatorLabels> labels = Array.Empty<AnnotatorLabels>();
@@ -69,14 +81,65 @@ namespace Agenerela.Editor.Evaluation
                 you = EditorPrefs.GetString(YouPref, "");
             }
 
+            AssemblyReloadEvents.beforeAssemblyReload += StashDraft;
             Reload();
+            RestoreDraft();
+        }
+
+        private void OnDisable()
+        {
+            AssemblyReloadEvents.beforeAssemblyReload -= StashDraft;
         }
 
         public override void SaveChanges()
         {
             writeView?.SaveAll();
             hasUnsavedChanges = false;
+            ClearDraft();
             base.SaveChanges();
+        }
+
+        private void StashDraft()
+        {
+            ClearDraft();
+            if (set == null || writeView == null)
+            {
+                return;
+            }
+
+            foreach (var category in writeView.Changed)
+            {
+                draftCategories.Add(category.Id);
+                draftPrompts.Add(JsonConvert.SerializeObject(category.Prompts, DraftSettings));
+            }
+        }
+
+        private void RestoreDraft()
+        {
+            if (set != null && writeView != null)
+            {
+                for (int i = 0; i < draftCategories.Count && i < draftPrompts.Count; i++)
+                {
+                    var category = set.FindCategory(draftCategories[i]);
+                    var prompts = JsonConvert.DeserializeObject<List<EvalPrompt>>(draftPrompts[i], DraftSettings);
+                    if (category != null && prompts != null)
+                    {
+                        category.Prompts.Clear();
+                        category.Prompts.AddRange(prompts.Where(p => p != null));
+                        writeView.MarkChanged(category);
+                    }
+                }
+
+                hasUnsavedChanges = writeView.HasUnsavedChanges;
+            }
+
+            ClearDraft();
+        }
+
+        private void ClearDraft()
+        {
+            draftCategories.Clear();
+            draftPrompts.Clear();
         }
 
         private void OnGUI()
@@ -128,31 +191,31 @@ namespace Agenerela.Editor.Evaluation
         {
             using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
             {
-                EditorGUI.BeginChangeCheck();
                 GUILayout.Label("Set", GUILayout.Width(26));
-                setAsset = (TextAsset)EditorGUILayout.ObjectField(setAsset, typeof(TextAsset), false, GUILayout.Width(150));
+                var chosenSet = (TextAsset)EditorGUILayout.ObjectField(setAsset, typeof(TextAsset), false, GUILayout.Width(150));
                 GUILayout.Label("Profile", GUILayout.Width(44));
                 var chosenProfile = (AgentProfile)EditorGUILayout.ObjectField(profile, typeof(AgentProfile), false, GUILayout.Width(150));
-                if (EditorGUI.EndChangeCheck())
-                {
-                    if (chosenProfile != profile)
-                    {
-                        profile = chosenProfile;
-                        RememberProfile();
-                    }
-                    else
-                    {
-                        // A set remembers the profile it was last measured against on this machine.
-                        EditorPrefs.SetString(SetPref, GuidOf(setAsset));
-                        profile = LoadByGuid<AgentProfile>(EditorPrefs.GetString(ProfilePref + GuidOf(setAsset), "")) ?? profile;
-                        RememberProfile();
-                    }
 
-                    if (!hasUnsavedChanges || EditorUtility.DisplayDialog("Open another set?", "Your unsaved changes are lost.", "Open", "Cancel"))
-                    {
-                        hasUnsavedChanges = false;
-                        Reload();
-                    }
+                // Nothing changes until the switch is confirmed: a cancelled switch leaves the
+                // window showing, and saving to, the set it was editing.
+                if (chosenSet != setAsset
+                    && (!hasUnsavedChanges || EditorUtility.DisplayDialog("Open another set?", "Your unsaved changes are lost.", "Open", "Cancel")))
+                {
+                    setAsset = chosenSet;
+                    hasUnsavedChanges = false;
+                    ClearDraft();
+
+                    // A set remembers the profile it was last measured against on this machine.
+                    EditorPrefs.SetString(SetPref, GuidOf(setAsset));
+                    profile = LoadByGuid<AgentProfile>(EditorPrefs.GetString(ProfilePref + GuidOf(setAsset), "")) ?? profile;
+                    RememberProfile();
+                    Reload();
+                }
+                else if (chosenProfile != profile)
+                {
+                    // Only the checks depend on the profile, so nothing is reloaded and nothing unsaved is lost.
+                    profile = chosenProfile;
+                    RememberProfile();
                 }
 
                 GUILayout.Label("You", GUILayout.Width(28));
@@ -176,6 +239,7 @@ namespace Agenerela.Editor.Evaluation
                     if (!hasUnsavedChanges || EditorUtility.DisplayDialog("Reload the prompt set?", "Your unsaved changes are lost.", "Reload", "Cancel"))
                     {
                         hasUnsavedChanges = false;
+                        ClearDraft();
                         Reload();
                     }
                 }

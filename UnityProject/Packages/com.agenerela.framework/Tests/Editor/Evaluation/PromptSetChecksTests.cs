@@ -44,9 +44,17 @@ namespace Agenerela.Tests.Evaluation
         [Test]
         public void OurSetBreaksNoRule()
         {
-            var ours = PromptSet.Load(Path.Combine(Application.dataPath, "Evaluation", "agent.json"));
+            string path = Path.Combine(Application.dataPath, "Evaluation", "agent.json");
+            if (!File.Exists(path))
+            {
+                Assert.Ignore($"This project has no prompt set at {path}; only agenerela's own UnityProject has one.");
+            }
 
-            Assert.That(PromptSetChecks.Check(ours).Select(p => p.ToString()), Is.Empty);
+            // With the guard's profile, so hard rule 4 is checked too: no prompt of ours is one of
+            // its few-shot examples.
+            var ours = PromptSet.Load(path);
+
+            Assert.That(PromptSetChecks.Check(ours, profile).Select(p => p.ToString()), Is.Empty);
         }
 
         [Test]

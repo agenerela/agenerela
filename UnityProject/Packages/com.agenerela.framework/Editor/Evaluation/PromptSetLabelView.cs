@@ -14,7 +14,10 @@ namespace Agenerela.Editor.Evaluation
     /// <remarks>
     /// Blind by construction rather than by care. The view holds <see cref="BlindPrompt"/>s and
     /// <see cref="LabelChoices"/>, never the <see cref="PromptSet"/>, so no expected answer, note or
-    /// other person's label is within its reach; <c>PromptSetLabelViewTests</c> checks its fields.
+    /// other person's label is within its reach; <c>BlindLabellingTests</c> checks its fields. It
+    /// never shows a prompt's category either, since <c>impossible_request</c> gives the answer
+    /// away, and it asks in an order of its own for each annotator, so prompts of one category do
+    /// not arrive together.
     /// Its one way back to the set is <c>record</c>, which files an answer and returns nothing of
     /// the prompt.
     /// </remarks>
@@ -33,7 +36,7 @@ namespace Agenerela.Editor.Evaluation
         internal PromptSetLabelView(string annotator, IReadOnlyList<BlindPrompt> queue, LabelChoices choices, Func<BlindPrompt, LabelAnswer, bool> record)
         {
             Annotator = annotator;
-            this.queue = queue.ToList();
+            this.queue = Shuffled(annotator, queue);
             this.choices = choices;
             this.record = record;
         }
@@ -54,7 +57,7 @@ namespace Agenerela.Editor.Evaluation
 
             var prompt = queue[current];
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField($"{queue.Count - current} left to label · {prompt.CategoryId}", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField($"{queue.Count - current} left to label", EditorStyles.boldLabel);
 
             scroll = EditorGUILayout.BeginScrollView(scroll);
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
@@ -135,8 +138,29 @@ namespace Agenerela.Editor.Evaluation
             }
 
             EditorGUILayout.LabelField(
-                $"Saved to labels/{Annotator}/{prompt.CategoryId}.json beside the set. An answer once saved is not changed.",
+                $"Saved under labels/{Annotator}/ beside the set. An answer once saved is not changed.",
                 EditorStyles.wordWrappedMiniLabel);
+        }
+
+        /// <summary>
+        /// The queue in an order fixed for each annotator: the same on every reopen, so skipping
+        /// stays predictable, and different from the set's, which groups prompts by category.
+        /// </summary>
+        internal static List<BlindPrompt> Shuffled(string annotator, IReadOnlyList<BlindPrompt> queue)
+        {
+            return queue.OrderBy(p => Fnv1a(annotator + "\n" + p.Id)).ThenBy(p => p.Id, StringComparer.Ordinal).ToList();
+        }
+
+        // string.GetHashCode is randomised per process, so it would reorder the queue on every reload.
+        private static uint Fnv1a(string text)
+        {
+            uint hash = 2166136261;
+            foreach (char c in text)
+            {
+                hash = (hash ^ c) * 16777619;
+            }
+
+            return hash;
         }
 
         private void Next()

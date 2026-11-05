@@ -26,7 +26,10 @@ While the version stays `0.x`, the public API may change in any release.
   names, `ExpectedTarget` one target or an open choice, and `DeclaredAction` (with
   `IsAvailableIn(state)`), `DeclaredTarget` and `PromptCategory` the set file's parts. A field
   the format does not know is kept in `Extra` and written back. Files are read and written with
-  Newtonsoft only, indented, with LF line ends.
+  Newtonsoft only, indented, with LF line ends. `ValidateCategoryId` and `ValidateCategory` keep
+  a category's id a plain name and its file inside the set's folder, so neither can redirect a
+  write onto the set file, a label file or anywhere else; `Load` refuses a set that breaks
+  them, or has a list that is null, with an `InvalidDataException`.
 - **The writing rules in code.** `PromptSetChecks.Check` and `CheckPrompt` return a
   `PromptProblem` for each `PromptRule` a prompt breaks: an unregistered target, `none` without
   `no_target`, a target-needing action with `no_target` or a targetless one with a target, a

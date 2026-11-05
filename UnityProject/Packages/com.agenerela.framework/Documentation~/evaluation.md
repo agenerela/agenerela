@@ -54,7 +54,8 @@ file, and a merge never has to choose between their answers.
 | `actions[].needsTarget` | `true` if the action takes a registered target, `false` if it always takes `no_target` |
 | `actions[].onlyWhen` | Optional. The state in which the action is available, in the shape of a prompt's `preconditionState` |
 | `targets` | Every target the agent has registered, the only values besides `no_target` an expected target may hold |
-| `categories[].file` | The category's prompts, relative to the set file. Created on the first prompt you add |
+| `categories[].id` | Lower-case letters, digits and `_`. It names each annotator's label file, so it can never hold a path |
+| `categories[].file` | The category's prompts: a `.json` path relative to the set file, inside its folder, and neither the set file nor under `labels/`. Created on the first prompt you add |
 | `categories[].idPrefix` | Optional. What its prompt ids start with; the category id when left out |
 
 **Why the actions come from a profile but the targets do not.** An action's id, whether it
@@ -128,7 +129,7 @@ Two rules no check can make: observations describe the world, not the framework 
 ("A wolf is at the bridge", not "The bridge is registered"); and a prompt that has been labelled
 or scored is rewritten as a new id rather than edited in place.
 
-Changes stay in the window until you click **Save**. Each category you changed is written whole;
+Changes stay in the window until you click **Save**, and survive a script recompiling. Each category you changed is written whole;
 `PromptSetChecks` is the same set of rules in code, for a script or a CI step.
 
 ## Labelling blind
@@ -138,9 +139,11 @@ A label from someone who has seen the expected answer is not a second opinion. S
 nor answered, one at a time, and shows only its label, stimulus, observations and state. The
 actions offered are the ones the state allows, as the agent would be offered them. No expected
 answer, note or other person's label is shown, and the view is given none of them
-(`BlindPrompt`, `LabelChoices`).
+(`BlindPrompt`, `LabelChoices`). Neither is the prompt's category, since a prompt among the
+impossible requests is half answered by that, and the prompts come in an order of your own
+rather than the set's, which groups them by category.
 
-**Save answer** writes your answer to `labels/<you>/<category>.json` and moves on. An answer once
+**Save answer** writes your answer to your own file under `labels/<you>/` and moves on. An answer once
 saved is never replaced, even if you change your mind: agreement is measured on first answers.
 **Skip** leaves a prompt for later. Commit your label files like any other.
 
@@ -163,7 +166,8 @@ Settling a split is a person's decision, never the window's. Talk it over, then:
 
 Settling writes the chosen answer into the prompt, keeps every person's own answer in its
 `labels` and adds them to `labelledBy`. The label files are not touched, and agreement is still
-computed from the answers, so a settled split still counts as a split.
+computed from the answers, so a settled split still counts as a split. It stays in the list,
+marked settled and without the buttons: changing a settled answer is an edit in Write mode.
 
 Do not add an action or a target just to settle a prompt; the set describes the agent the game
 has. And never relabel after seeing a model's answer: a label changed to match a run grades the

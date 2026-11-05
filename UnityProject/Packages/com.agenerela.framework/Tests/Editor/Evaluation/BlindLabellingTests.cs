@@ -108,6 +108,30 @@ namespace Agenerela.Tests.Evaluation
         }
 
         [Test]
+        public void TheLabelViewAsksInAnOrderOfItsOwnForEachAnnotator()
+        {
+            // Sixty prompts in four categories: the set's order groups them, which tells an
+            // annotator a prompt sits among the impossible requests.
+            var queue = Enumerable.Range(1, 60).Select(i => $"c{i / 15}_{i:000}").ToList();
+            var set = fixture.Load();
+            var category = set.FindCategory("situation");
+            category.Prompts.Clear();
+            foreach (string id in queue)
+            {
+                category.Prompts.Add(new EvalPrompt { Id = id, Label = "Situation", Stimulus = id });
+            }
+
+            var blind = BlindPrompt.Queue(set, Array.Empty<AnnotatorLabels>(), "Bo", "situation");
+            var forBo = PromptSetLabelView.Shuffled("Bo", blind).Select(p => p.Id).ToList();
+            var forAna = PromptSetLabelView.Shuffled("Ana", blind).Select(p => p.Id).ToList();
+
+            Assert.That(forBo, Is.EquivalentTo(queue), "Every prompt is still asked once.");
+            Assert.That(forBo, Is.Not.EqualTo(queue), "The set's order would group prompts by category.");
+            Assert.That(forBo, Is.EqualTo(PromptSetLabelView.Shuffled("Bo", blind).Select(p => p.Id).ToList()), "Reopening keeps the order.");
+            Assert.That(forAna, Is.Not.EqualTo(forBo));
+        }
+
+        [Test]
         public void TheChoicesAreTheActionsTheStateAllowsWithNoneLast()
         {
             var choices = LabelChoices.From(fixture.Load());

@@ -12,16 +12,23 @@ namespace Agenerela.Tests.Evaluation
     /// The format reads and writes our own set without changing a word of it (#134): every file
     /// in <c>Assets/Evaluation/prompts/</c> is loaded, saved to a copy, and compared as JSON.
     /// </summary>
+    /// <remarks>
+    /// Our set lives in this repository's <c>UnityProject/Assets</c>, not in the package, so the
+    /// tests that read it are ignored in a project that has none. The rest use fixtures.
+    /// </remarks>
     public sealed class PromptSetFormatTests
     {
         private string copy;
 
         private static string Ours => Path.Combine(Application.dataPath, "Evaluation");
 
-        [SetUp]
-        public void CopyOurSet()
+        private void CopyOurSet()
         {
-            Assert.That(Directory.Exists(Ours), Is.True, $"Our prompt set is not at {Ours}.");
+            if (!File.Exists(Path.Combine(Ours, "agent.json")))
+            {
+                Assert.Ignore($"This project has no prompt set at {Ours}; only agenerela's own UnityProject has one.");
+            }
+
             copy = Path.Combine(Path.GetTempPath(), "agenerela-ourset-" + System.Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Path.Combine(copy, "prompts"));
             File.Copy(Path.Combine(Ours, "agent.json"), Path.Combine(copy, "agent.json"));
@@ -43,6 +50,7 @@ namespace Agenerela.Tests.Evaluation
         [Test]
         public void EveryPromptFileIsACategoryOfTheSet()
         {
+            CopyOurSet();
             var set = PromptSet.Load(Path.Combine(copy, "agent.json"));
             var listed = set.Categories.Select(c => Path.GetFullPath(set.CategoryPath(c))).ToList();
 
@@ -55,6 +63,7 @@ namespace Agenerela.Tests.Evaluation
         [Test]
         public void EveryPromptFileRoundTripsWithNoChangeToItsContent()
         {
+            CopyOurSet();
             var set = PromptSet.Load(Path.Combine(copy, "agent.json"));
             int prompts = 0;
 
@@ -77,6 +86,7 @@ namespace Agenerela.Tests.Evaluation
         [Test]
         public void TheSetFileRoundTripsWithNoChangeToItsContent()
         {
+            CopyOurSet();
             string path = Path.Combine(copy, "agent.json");
             var before = Parse(File.ReadAllText(path));
 
@@ -88,6 +98,7 @@ namespace Agenerela.Tests.Evaluation
         [Test]
         public void ASecondSaveWritesTheSameBytes()
         {
+            CopyOurSet();
             var set = PromptSet.Load(Path.Combine(copy, "agent.json"));
             var category = set.Categories[0];
             set.SaveCategory(category);
@@ -99,6 +110,103 @@ namespace Agenerela.Tests.Evaluation
             Assert.That(File.ReadAllText(set.CategoryPath(category)), Is.EqualTo(first));
             Assert.That(first, Does.Not.Contain("\r"), "Saved files use LF on every machine.");
             Assert.That(first, Does.EndWith("}\n"));
+        }
+
+        /// <summary>
+        /// Our files are kept in the layout the window writes, so a save in the window shows only
+        /// what changed rather than reflowing the whole file.
+        /// </summary>
+        [Test]
+        public void OurFilesAreInTheLayoutTheWindowWrites()
+        {
+            CopyOurSet();
+            string setPath = Path.Combine(copy, "agent.json");
+            var set = PromptSet.Load(setPath);
+            var before = set.Categories.ToDictionary(c => c.Id, c => Lf(File.ReadAllText(set.CategoryPath(c))));
+            string setBefore = Lf(File.ReadAllText(setPath));
+
+            set.Save();
+            foreach (var category in set.Categories)
+            {
+                set.SaveCategory(category);
+            }
+
+            Assert.That(File.ReadAllText(setPath), Is.EqualTo(setBefore), "agent.json is not in the layout PromptSet.Save writes.");
+            foreach (var category in set.Categories)
+            {
+                Assert.That(File.ReadAllText(set.CategoryPath(category)), Is.EqualTo(before[category.Id]),
+                    $"{category.File} is not in the layout PromptSet.SaveCategory writes.");
+            }
+        }
+
+        [TestCase("../agent")]
+        [TestCase("a/b")]
+        [TestCase("..")]
+        [TestCase("Situation")]
+        [TestCase("")]
+        public void ACategoryIdThatIsNotAFileNameIsRefused(string id)
+        {
+            Assert.That(PromptSet.ValidateCategoryId(id, out _), Is.False);
+            using (var fixture = new EvalFixtures())
+            {
+                File.WriteAllText(fixture.SetPath, EvalFixtures.SetJson.Replace("\"id\": \"situation\"", $"\"id\": \"{id}\""));
+
+                Assert.That(() => fixture.Load(), Throws.TypeOf<InvalidDataException>());
+            }
+        }
+
+        [TestCase("prompts/../agent.json")]
+        [TestCase("agent.json")]
+        [TestCase("../outside.json")]
+        [TestCase("labels/ana/situation.json")]
+        [TestCase("prompts/situations.txt")]
+        public void ACategoryFileOutsideItsPlaceIsRefused(string file)
+        {
+            using (var fixture = new EvalFixtures())
+            {
+                File.WriteAllText(fixture.SetPath, EvalFixtures.SetJson.Replace("prompts/situations.json", file));
+
+                Assert.That(() => fixture.Load(), Throws.TypeOf<InvalidDataException>());
+            }
+        }
+
+        [Test]
+        public void ACategoryAddedInCodeWithABadFileIsNotWritten()
+        {
+            using (var fixture = new EvalFixtures())
+            {
+                var set = fixture.Load();
+                var category = new PromptCategory { Id = "overwrite", File = "prompts/../agent.json" };
+                set.Categories.Add(category);
+                string before = File.ReadAllText(fixture.SetPath);
+
+                Assert.That(() => set.SaveCategory(category), Throws.InvalidOperationException);
+                Assert.That(File.ReadAllText(fixture.SetPath), Is.EqualTo(before));
+            }
+        }
+
+        [TestCase("\"categories\": [", "\"categories\": null, \"x\": [")]
+        [TestCase("\"actions\": [", "\"actions\": null, \"x\": [")]
+        public void ANullListInTheSetFileIsInvalidData(string from, string to)
+        {
+            using (var fixture = new EvalFixtures())
+            {
+                File.WriteAllText(fixture.SetPath, EvalFixtures.SetJson.Replace(from, to));
+
+                Assert.That(() => fixture.Load(), Throws.TypeOf<InvalidDataException>());
+            }
+        }
+
+        [Test]
+        public void NullPromptsInACategoryFileAreInvalidData()
+        {
+            using (var fixture = new EvalFixtures())
+            {
+                File.WriteAllText(Path.Combine(fixture.Folder, "prompts", "situations.json"),
+                    "{ \"category\": \"situation\", \"prompts\": null }");
+
+                Assert.That(() => fixture.Load(), Throws.TypeOf<InvalidDataException>());
+            }
         }
 
         [Test]
@@ -169,6 +277,9 @@ namespace Agenerela.Tests.Evaluation
                 Assert.That(answer.ToString(), Is.EqualTo(text));
             }
         }
+
+        // Git may check our files out with CRLF (core.autocrlf); the layout is what is compared.
+        private static string Lf(string text) => text.Replace("\r\n", "\n");
 
         private static JToken Parse(string json)
         {

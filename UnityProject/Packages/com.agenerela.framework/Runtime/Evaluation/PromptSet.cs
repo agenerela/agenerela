@@ -57,7 +57,10 @@ namespace Agenerela.Evaluation
         /// Reads the set file at <paramref name="path"/> and every category file it lists. A
         /// category file that does not exist yet is an empty category.
         /// </summary>
-        /// <exception cref="InvalidDataException">A file is not valid JSON, or a category file names another category.</exception>
+        /// <exception cref="InvalidDataException">
+        /// A file is not valid JSON, a list in it is null, a category's id or file is not one
+        /// <see cref="ValidateCategory"/> accepts, or a category file names another category.
+        /// </exception>
         public static PromptSet Load(string path)
         {
             string fullPath = Path.GetFullPath(path);
@@ -76,9 +79,30 @@ namespace Agenerela.Evaluation
                 throw new InvalidDataException($"{fullPath} is empty.");
             }
 
+            if (set.Actions == null || set.Targets == null || set.Categories == null)
+            {
+                throw new InvalidDataException($"{fullPath}: actions, targets and categories must each be a list.");
+            }
+
             set.FilePath = fullPath;
+            var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var category in set.Categories)
             {
+                if (category == null)
+                {
+                    throw new InvalidDataException($"{fullPath}: a category is null.");
+                }
+
+                if (!set.ValidateCategory(category, out string problem))
+                {
+                    throw new InvalidDataException($"{fullPath}: {problem}.");
+                }
+
+                if (!files.Add(set.CategoryPath(category)) || set.FindCategory(category.Id) != category)
+                {
+                    throw new InvalidDataException($"{fullPath}: two categories share the id '{category.Id}' or the file '{category.File}'.");
+                }
+
                 set.LoadCategory(category);
             }
 
@@ -119,9 +143,15 @@ namespace Agenerela.Evaluation
         }
 
         /// <summary>Writes one category's file, creating it and its folder when they do not exist.</summary>
+        /// <exception cref="InvalidOperationException">The category's id or file is not one <see cref="ValidateCategory"/> accepts.</exception>
         public void SaveCategory(PromptCategory category)
         {
             RequirePath();
+            if (!ValidateCategory(category, out string problem))
+            {
+                throw new InvalidOperationException(problem);
+            }
+
             var file = new PromptSetJson.CategoryFile
             {
                 Category = category.Id,
@@ -244,8 +274,11 @@ namespace Agenerela.Evaluation
         }
 
         /// <summary>The full path of <paramref name="annotator"/>'s file for one category.</summary>
+        /// <exception cref="ArgumentException">The annotator's name or the category id cannot be a file name.</exception>
         public string LabelPath(string annotator, string categoryId)
         {
+            if (!ValidateAnnotator(annotator, out string problem)) throw new ArgumentException(problem, nameof(annotator));
+            if (!ValidateCategoryId(categoryId, out problem)) throw new ArgumentException(problem, nameof(categoryId));
             return Path.Combine(LabelsPath(), annotator, categoryId + ".json");
         }
 
@@ -266,6 +299,7 @@ namespace Agenerela.Evaluation
             }
 
             prompt.Labels = prompt.Labels ?? new Dictionary<string, string>();
+            prompt.LabelledBy = prompt.LabelledBy ?? new List<string>();
             foreach (var answer in agreement.Answers)
             {
                 if (!prompt.Labels.ContainsKey(answer.Key))
@@ -312,6 +346,54 @@ namespace Agenerela.Evaluation
             return problem == null;
         }
 
+        /// <summary>
+        /// True when <paramref name="id"/> can be a category id: lower-case letters, digits and
+        /// underscores, starting with a letter or digit. It names a label file, so it can never
+        /// hold a path.
+        /// </summary>
+        public static bool ValidateCategoryId(string id, out string problem)
+        {
+            problem = id != null && System.Text.RegularExpressions.Regex.IsMatch(id, "^[a-z0-9][a-z0-9_]*$")
+                ? null
+                : $"'{id}' cannot be a category id: use lower-case letters, digits and _";
+            return problem == null;
+        }
+
+        /// <summary>
+        /// True when <paramref name="category"/> can be read and written: its id passes
+        /// <see cref="ValidateCategoryId"/>, and its file is a relative <c>.json</c> path inside the
+        /// set's folder that is neither the set file nor under <see cref="LabelsFolder"/>.
+        /// </summary>
+        public bool ValidateCategory(PromptCategory category, out string problem)
+        {
+            RequirePath();
+            if (category == null) throw new ArgumentNullException(nameof(category));
+            if (!ValidateCategoryId(category.Id, out problem))
+            {
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(category.File) || Path.IsPathRooted(category.File)
+                || !category.File.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            {
+                problem = $"Category '{category.Id}' needs a relative .json file, not '{category.File}'";
+                return false;
+            }
+
+            string folder = Path.GetFullPath(Folder).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            string path = Path.GetFullPath(Path.Combine(Folder, category.File));
+            string labels = Path.GetFullPath(LabelsPath()) + Path.DirectorySeparatorChar;
+            if (!path.StartsWith(folder, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(path, FilePath, StringComparison.OrdinalIgnoreCase)
+                || path.StartsWith(labels, StringComparison.OrdinalIgnoreCase))
+            {
+                problem = $"Category '{category.Id}''s file '{category.File}' must be inside the set's folder, and be neither the set file nor under {LabelsFolder}/";
+                return false;
+            }
+
+            return true;
+        }
+
         // Path.GetInvalidFileNameChars differs by platform; a name made on a Mac must open on Windows.
         private static readonly char[] UnsafeNameChars = "/\\:*?\"<>|".ToCharArray();
 
@@ -343,6 +425,11 @@ namespace Agenerela.Evaluation
             if (file == null)
             {
                 return;
+            }
+
+            if (file.Prompts == null)
+            {
+                throw new InvalidDataException($"{path}: prompts must be a list.");
             }
 
             if (file.Category != category.Id)
