@@ -113,6 +113,23 @@ namespace Agenerela.Tests
             }
         }
 
+        /// <summary>
+        /// Awaits anything else the framework returns as an <c>Awaitable</c>, such as an evaluation
+        /// run (#145), and fails the test if it ends cancelled, for the same reason.
+        /// </summary>
+        public static async Task<T> NotCancelled<T>(Awaitable<T> awaitable)
+        {
+            try
+            {
+                return await awaitable;
+            }
+            catch (OperationCanceledException e)
+            {
+                Assert.Fail($"It ended cancelled, though nothing cancelled it: {e.Message}");
+                return default;
+            }
+        }
+
         // Ollama's /api/version, on a worker thread so the blocking wait cannot deadlock against
         // Unity's synchronization context.
         private static bool Answers(string endpoint)

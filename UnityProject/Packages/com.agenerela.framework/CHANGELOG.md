@@ -10,6 +10,34 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **The A/B runner** (#145): `EvalRunner` asks every prompt of a `PromptSet` through a fresh
+  `Agent` per prompt in two `EvalArm`s, each a name, a `ProviderConfig` and the `DecideOptions`
+  its calls start from, and returns an `EvalReport`. `EvalArmOrder.Interleaved` (the default)
+  asks each prompt in A, then in B; `Sequential` runs all of A, unloads its Ollama model and
+  waits until it has left memory, then runs all of B, for arms on two models. Before the run it
+  refuses a set that breaks a `PromptSetChecks` rule or disagrees with the profile, an Ollama
+  server holding a model other than the arms', and interleaved arms on two models, with an
+  `InvalidOperationException` saying why; it records Ollama's version, sends `WarmUpRequests`
+  (3) throwaway decisions per arm that never reach the report, and records `size` and
+  `size_vram` from `/api/ps`, warning when the model is not fully on the GPU. Each prompt's
+  `preconditionState` goes into `Agent.State`, every profile action is bound to a do-nothing
+  handler available exactly when the state holds its `onlyWhen`, the set's targets come from an
+  `ExplicitTargetSource`, and the state and targets are also told to the model as observations,
+  the state through `DescribeState` (`PlainStateLines` by default). `EvalRunner.Classify` sorts
+  an answer into the five `DecisionOutcome`s, any guard verdict counting as the guard firing,
+  and the outcome is written to the decision's `Telemetry.Outcome`.
+- **The report.** `EvalReport` holds `Conditions` (`EvalConditions`, `EvalArmConditions`,
+  `ResidencyReading`, `ResidentModel`: dates, framework version, the set's last commit, the
+  graphics device, how targets and state reached the model, and per arm its config, provider,
+  model, version, options and residency), `Arms` (`EvalArmResult`, `OutcomeCounts` overall and
+  per category), `Noise` (`NoiseCheck`: a difference smaller than `10 × √(50 / n)` points is
+  within noise) and every `EvalAnswer`, with the model's own decision and the guard's reason.
+  `Save(folder)` writes `report.json` and a Markdown `report.md` into a folder named for the run;
+  `FromJson` reads one back.
+- **The evaluation arms on Project Settings → Agenerela** (DR-013): `AgenerelaSettings` gains
+  `EvaluationArmA` and `EvaluationArmB`, which agents never read.
+- `Documentation~/evaluation.md`: running an A/B and reading its report.
+
 - **`DecisionResult.Request` and `DecisionResult.Reply`** (#142): the `DecisionRequest` a decision
   sent and the provider's `ProviderResult` for it, so a game can tell its agents' exchanges apart
   when several share one provider's queue, without wrapping the provider. Both are read-only and

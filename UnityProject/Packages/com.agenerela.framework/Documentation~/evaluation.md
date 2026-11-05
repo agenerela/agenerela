@@ -7,9 +7,9 @@ north tower." is a command in a village with a north tower and an impossible req
 one. So every game writes its own.
 
 **Window → Agenerela → Prompt Set** writes one, and collects a second person's answers to it
-without showing them yours. This page says how a set is laid out, how to write prompts, how to
-label them blind, and how to read and settle agreement. The runner that scores a model against
-the set is still to come (Phase 4); it reads the same files.
+without showing them yours. `EvalRunner` scores a model against it, in two arms side by side.
+This page says how a set is laid out, how to write prompts, how to label them blind, how to read
+and settle agreement, and how to run an A/B and read its report.
 
 ## A set on disk
 
@@ -175,6 +175,100 @@ Do not add an action or a target just to settle a prompt; the set describes the 
 has. And never relabel after seeing a model's answer: a label changed to match a run grades the
 model against itself.
 
+## Running an A/B
+
+An accuracy number means nothing alone: the prototype's baseline drifted ten points across three
+identical runs. `EvalRunner` asks every prompt of a set in two arms, in one session, and reports
+them side by side. An arm is a name, a provider config and the options its calls start from:
+
+```csharp
+var set = PromptSet.Load("Assets/Evaluation/agent.json");
+var runner = new EvalRunner(set, guardProfile,
+    new EvalArm("guards-on", ollamaLocal, new DecideOptions { CheckTarget = true }),
+    new EvalArm("control", ollamaLocal, new DecideOptions { CheckTarget = false }));
+
+EvalReport report = await runner.RunAsync();
+string folder = report.Save("Logs/Evaluation");   // report.json and report.md
+```
+
+Run it from the main thread, in the Editor or in a PlayMode test; nothing in it needs a scene.
+**Project Settings → Agenerela** names an **Arm A** and an **Arm B** beside the default provider,
+saved on `AgenerelaSettings` as `EvaluationArmA` and `EvaluationArmB`. Agents never read them.
+
+**Before the first prompt** the runner refuses to start, with an `InvalidOperationException`
+saying why, when:
+
+- the set breaks a writing rule (`PromptSetChecks.Check`, a stimulus that is a few-shot example
+  included) or disagrees with the profile (`CompareWithProfile`);
+- an Ollama server holds a model other than the arms' (hard rule 3: two models on one card share
+  compute and flatten every latency). Unload it with `ollama stop <model>`;
+- the arms are interleaved but on two Ollama models.
+
+Then, for each arm, it records Ollama's `/api/version`, sends `WarmUpRequests` throwaway
+decisions (3 by default) whose stimuli are no prompt's, and reads `/api/ps` again to record how
+much of the model is in GPU memory. A model not fully on the GPU, or not resident at all, is a
+warning at the top of the report. For any provider other than Ollama, the version and the
+residency say "not checked".
+
+**Two orders.** `Interleaved`, the default, asks each prompt in A and then in B, so drift over
+the session hits both alike; both arms must be on one model. `Sequential` runs all of A,
+unloads its model (`keep_alive: 0`) and waits until it has left memory, then runs all of B: for
+arms on two models, a 2B against a 4B. Drift is then not shared, and the report says the arms
+ran one after the other; repeat a close result.
+
+**Each prompt** gets a fresh agent per arm, with no memory, so no prompt sees another:
+
+- Every action of the profile is bound to a handler that does nothing and is available exactly
+  when the prompt's `preconditionState` holds the action's `onlyWhen`. An action with no
+  `onlyWhen` is always offered, whatever your game's own handler would say, so declare one for
+  every action your game hides.
+- `preconditionState` goes into `Agent.State`. The model never reads `Agent.State`, so the
+  state is also told to it, by `DescribeState`: one `isFollowing: true.` line per value by
+  default (`PlainStateLines`). Give it your game's own wording, such as "You are following the
+  player.", or null to tell the model nothing.
+- The set's targets are offered through an `ExplicitTargetSource`, and each is told to the model
+  as a line, `bridge: The wooden bridge over the stream.`, because the prompt lists no targets
+  and Ollama never shows the model the schema.
+- The observations are, in order: the arm's own `DecideOptions.Observations`, the state's
+  lines, the targets', then the prompt's own. The prompt's `label` is the stimulus label.
+  `CheckTarget` is on only when both the arm and the prompt's `checkTarget` leave it on.
+
+The warm-up's requests are shaped like a prompt's, with the arm's and the targets' lines, but no
+state. Nothing is executed: the runner scores what the agent chose, not what it said.
+
+## Reading the report
+
+Every answer is sorted into one of five outcomes, never one percentage, because each needs a
+different fix. The outcome is also written to the decision's `Telemetry.Outcome`.
+
+| Outcome | When | What it means |
+|---|---|---|
+| `Correct` | No guard fired, and the action and target are the label's; any target of an open choice counts | |
+| `WrongLegalAction` | No guard fired, and the answer differs from the label, `none` for an action included | The agent visibly misbehaves: the bad one |
+| `ContainedByGuard` | A guard stopped the model's answer, whatever its verdict, and the label was `none` | The safety layer working |
+| `RejectedWhenActionExpected` | A guard stopped the model's answer, and the label was an action | A good request refused |
+| `PipelineError` | No decision: the provider failed or the reply could not be read | Not a semantic result |
+
+`report.md` has, in order: any warnings; the conditions (dates, framework version, the set's
+last commit and whether it has uncommitted changes, the profile, the graphics device Unity
+reports, how targets and state reached the model, and per arm its config, provider, model,
+version, `checkTarget`, warm-up and what was in VRAM); the five outcomes per arm, with accuracy
+as correct out of every prompt asked, pipeline errors included; the noise check; the outcomes
+per category; and every answer that was not correct, with what the model said and the guard's
+reason. `report.json` holds all of that and every answer, correct ones too, and reads back with
+`EvalReport.FromJson`.
+
+**The noise check.** A difference between the arms smaller than the noise floor is marked
+"within noise", and is no result. The floor is estimated from the one drift we measured, about
+10 points at n ≈ 50, scaled as a proportion's standard error scales: `10 × √(50 / n)`, about 16
+points at n = 20 and 5 at n = 200. It is checked over the whole set and per category, each with
+its own n, so a category of six prompts needs a very large difference before it says anything.
+
+The runner checks some of the rules for a fair measurement; the rest are yours. Read
+[Measuring](https://github.com/agenerela/agenerela/blob/test/docs/llm-wiki/measuring.md) before
+writing a number down: plugged in, nothing else heavy running, the same Ollama version as the run
+you compare with.
+
 ## In code
 
 | Type | What it is |
@@ -186,6 +280,10 @@ model against itself.
 | `BlindPrompt`, `LabelChoices` | Everything Label mode is given |
 | `AnnotatorLabels`, `LabelAnswer` | One person's label file, and one `action/target` answer |
 | `AgreementReport`, `PromptAgreement` | Agreement overall and per prompt |
+| `EvalRunner`, `EvalArm`, `EvalArmOrder` | An A/B run: `RunAsync`, `Classify`, `DescribeState`, `PlainStateLines`, `WarmUpRequests`, `Order` |
+| `EvalReport` | What a run found: `Conditions`, `Arms`, `Noise`, `Answers`, `NotCorrect`; `Save`, `ToJson`, `FromJson`, `ToMarkdown` |
+| `EvalConditions`, `EvalArmConditions`, `ResidencyReading`, `ResidentModel` | What it ran under |
+| `EvalArmResult`, `OutcomeCounts`, `NoiseCheck`, `EvalAnswer` | Its counts, noise check and answers |
 
 All of it is in the `Agenerela.Evaluation` namespace, under `Runtime/Evaluation/`, and reads and
 writes JSON with Newtonsoft only.
