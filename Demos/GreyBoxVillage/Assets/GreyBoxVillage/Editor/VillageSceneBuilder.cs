@@ -408,7 +408,9 @@ namespace Demos.GreyBoxVillage.Editor
             events.Village = commands;
             events.Alarm = alarm;
             ui.AddComponent<DecisionHistoryPanel>().Commands = commands;
-            var menu = ui.AddComponent<DemoMenu>();
+            // Its own GameObject: DemoUI.Create owns one UIDocument per GameObject, and clears it.
+            var menu = new GameObject("Menu").AddComponent<DemoMenu>();
+            commands.Menu = menu;
             menu.Input = input;
             menu.Board = board;
             menu.Day = day;

@@ -90,14 +90,14 @@ namespace Demos.Shared
             IsOpen = true;
             Refresh();
             DemoUI.Show(panel, true);
-            if (Input != null && Input.Player != null) Input.Player.InputBlocked = true;
+            if (Input != null && Input.Player != null) Input.Player.Paused = true;
         }
 
         public void Close()
         {
             IsOpen = false;
             DemoUI.Show(panel, false);
-            if (Input != null && Input.Player != null && !Input.IsTyping) Input.Player.InputBlocked = false;
+            if (Input != null && Input.Player != null) Input.Player.Paused = false;
         }
 
         private void Update()

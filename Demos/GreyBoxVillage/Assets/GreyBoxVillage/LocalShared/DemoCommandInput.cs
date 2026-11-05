@@ -40,6 +40,7 @@ namespace Demos.Shared
         private Label who, role, status, hint;
         private TextField command;
         private int openedTypingFrame = -1, submittedFrame = -1, shownLines = -1;
+        private DialogueLine shownLast;
         private string shownFor;
         private IReadOnlyList<string> shownChips;
 
@@ -126,10 +127,12 @@ namespace Demos.Shared
             status.text = state ?? "";
             DemoUI.Show(status, !string.IsNullOrEmpty(state));
             int count = lines?.Count ?? 0;
-            if (who != shownFor || count != shownLines)
+            var last = count > 0 ? lines[count - 1] : null;
+            if (who != shownFor || count != shownLines || !ReferenceEquals(last, shownLast))
             {
                 shownFor = who;
                 shownLines = count;
+                shownLast = last;
                 log.Clear();
                 for (int i = Mathf.Max(0, count - 5); i < count; i++) log.Add(Line(lines[i]));
                 if (count == 0) DemoUI.Label(log, "Say anything. " + who + " decides what to do, from what the game allows.", "vui-muted");
@@ -174,7 +177,7 @@ namespace Demos.Shared
         private void SetTyping(bool value)
         {
             IsTyping = value;
-            if (Player != null) Player.InputBlocked = value;
+            if (Player != null) Player.Typing = value;
         }
 
         public void Submit(string text)

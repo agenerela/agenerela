@@ -28,6 +28,8 @@ namespace Demos.GreyBoxVillage
         public PlayerInventory Inventory;
         public QuestBook Quests;
         public VillageBook Book;
+        [Tooltip("While it is open, no gameplay key does anything.")]
+        public DemoMenu Menu;
         [Tooltip("How close the player must be to pick something up, in metres.")]
         public float ReachDistance = 2.2f;
         public Transform Player;
@@ -166,7 +168,8 @@ namespace Demos.GreyBoxVillage
             var keyboard = UnityEngine.InputSystem.Keyboard.current;
             bool typing = Input != null && Input.IsTyping;
             var pickup = NearestPickup();
-            if (keyboard != null && !typing)
+            bool paused = Menu != null && Menu.IsOpen;
+            if (keyboard != null && !typing && !paused)
             {
                 if (keyboard.tabKey.wasPressedThisFrame && Board != null) Board.Toggle();
                 if (keyboard.eKey.wasPressedThisFrame)

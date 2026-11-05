@@ -10,7 +10,12 @@ namespace Demos.Shared
     [RequireComponent(typeof(CharacterController))]
     public sealed class DemoPlayerController : MonoBehaviour
     {
-        public bool InputBlocked { get; set; }
+        /// <summary>Set while the player types into the dialogue.</summary>
+        public bool Typing { get; set; }
+        /// <summary>Set while a menu is open over the game.</summary>
+        public bool Paused { get; set; }
+        /// <summary>Whether movement is suspended: while typing or while a menu is open.</summary>
+        public bool InputBlocked => Typing || Paused;
         public float Speed = 4.2f;
         public float RunSpeed = 7.5f;
         public float TurnSharpness = 12f;
