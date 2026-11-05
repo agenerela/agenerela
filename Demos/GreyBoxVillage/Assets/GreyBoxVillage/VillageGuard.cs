@@ -173,6 +173,7 @@ namespace Demos.GreyBoxVillage
 
         public override IEnumerable<string> Facts()
         {
+            foreach (var fact in base.Facts()) yield return fact;
             yield return IsFollowing ? "You are following the player." : "You are not following the player.";
             if (Alarm != null && Alarm.IsSounding) yield return "The alarm bell is ringing.";
         }
@@ -197,6 +198,7 @@ namespace Demos.GreyBoxVillage
         /// </summary>
         public override IEnumerable<IDecisionGuard> Guards()
         {
+            foreach (var guard in base.Guards()) yield return guard;
             yield return new DelegateGuard(NeverAttackVillagers, input =>
             {
                 var d = input.Decision;
@@ -208,10 +210,15 @@ namespace Demos.GreyBoxVillage
             });
         }
 
-        public override string RefusalLine(GuardVerdict verdict) =>
-            verdict.Guard == NeverAttackVillagers ? "I won't raise my sword against our own."
+        private static readonly string[] SuggestedLines =
+            { "Walk with me.", "What's going on?", "Head to the market.", "Ring the alarm!", "Wait here." };
+
+        public override IReadOnlyList<string> Suggestions => SuggestedLines;
+
+        public override string RefusalLine(GuardVerdict verdict) => base.RefusalLine(verdict) ??
+            (verdict.Guard == NeverAttackVillagers ? "I won't raise my sword against our own."
             : verdict.Guard == "TargetGroundingGuard" ? "There's no such thing here."
-            : null;
+            : null);
 
         // ---- Body ----------------------------------------------------------------------------
 

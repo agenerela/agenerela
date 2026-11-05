@@ -13,13 +13,13 @@ using UnityEngine.SceneManagement;
 namespace Demos.GreyBoxVillage.Editor
 {
     /// <summary>Authoring utility. The saved scene and baked data work without this assembly.</summary>
-    public static class VillageSceneBuilder
+    public static partial class VillageSceneBuilder
     {
         public const string Root = "Assets/GreyBoxVillage";
         public const string NavPath = Root + "/VillageNavMesh.villagenavmesh";
         public const string AgentsFolder = Root + "/Agents";
         public const string ProviderPath = AgentsFolder + "/VillageOllama.asset";
-        private static Material ground, stone, dark, blue, gold, silver, water, restricted, leaf, villagerGreen, wolfGrey;
+        private static Material ground, stone, dark, gold, silver, water, restricted, leaf;
 
         [MenuItem("Tools/Demos/GreyBoxVillage/Create Initial Scenes")]
         public static void CreateInitialScenes()
@@ -35,6 +35,7 @@ namespace Demos.GreyBoxVillage.Editor
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,
                 string.IsNullOrEmpty(active.path) ? NewSceneMode.Single : NewSceneMode.Additive);
             SceneManager.SetActiveScene(scene);
+            LoadArt();
             BuildWorld();
             EditorSceneManager.SaveScene(scene, DemoLauncher.VillagePath);
 
@@ -65,6 +66,7 @@ namespace Demos.GreyBoxVillage.Editor
             if (scene.path != DemoLauncher.VillagePath || Application.isPlaying)
                 throw new InvalidOperationException("Open GreyBoxVillage in Edit mode first.");
             LoadMaterials();
+            LoadArt();
             foreach (var root in scene.GetRootGameObjects()) UnityEngine.Object.DestroyImmediate(root);
             BuildWorld();
             EditorSceneManager.MarkSceneDirty(scene);
@@ -101,14 +103,11 @@ namespace Demos.GreyBoxVillage.Editor
             ground = Material("Ground", new Color(0.43f, 0.46f, 0.43f));
             stone = Material("Stone", new Color(0.64f, 0.65f, 0.63f));
             dark = Material("DarkStone", new Color(0.27f, 0.30f, 0.32f));
-            blue = Material("PlayerBlue", new Color(0.22f, 0.49f, 0.73f));
             gold = Material("GuardGold", new Color(0.75f, 0.58f, 0.25f));
             silver = Material("GuardSilver", new Color(0.62f, 0.68f, 0.76f));
             water = Material("River", new Color(0.24f, 0.38f, 0.43f));
             restricted = Material("Restricted", new Color(0.72f, 0.22f, 0.2f));
             leaf = Material("Leaf", new Color(0.2f, 0.36f, 0.22f));
-            villagerGreen = Material("VillagerGreen", new Color(0.45f, 0.7f, 0.4f));
-            wolfGrey = Material("WolfGrey", new Color(0.5f, 0.5f, 0.52f));
         }
 
         // ---- The world ---------------------------------------------------------------------------
@@ -118,6 +117,8 @@ namespace Demos.GreyBoxVillage.Editor
 
         private static void BuildWorld()
         {
+            walls.Clear();
+            trees.Clear();
             var geometry = new GameObject("VillageGeometry").transform;
 
             // Ground, river and banks. The river bed is solid, so nothing falls out of the world.
@@ -149,12 +150,10 @@ namespace Demos.GreyBoxVillage.Editor
             Box("left_pier", gate, new Vector3(-3.8f, 1.8f, 0), new Vector3(1.6f, 3.6f, 1.5f), stone);
             Box("right_pier", gate, new Vector3(3.8f, 1.8f, 0), new Vector3(1.6f, 3.6f, 1.5f), stone);
             Box("lintel", gate, new Vector3(0, 4, 0), new Vector3(9.2f, 0.8f, 1.5f), dark);
-            Label("village_gate", gate, new Vector3(0, 5.1f, 0));
 
             var well = Place("well", "The stone well in the village square", geometry, new Vector3(0, 0, -2.4f));
             Box("well_ring", well, new Vector3(0, 0.5f, 2.4f), new Vector3(2.4f, 1, 2.4f), stone);
             NoCollider(Box("well_water", well, new Vector3(0, 1.01f, 2.4f), new Vector3(1.6f, 0.02f, 1.6f), water));
-            Label("well", well, new Vector3(0, 2.2f, 2.4f));
 
             var market = Place("market", "The open-air market where villagers trade", geometry, new Vector3(16, 0, -0.5f));
             foreach (float x in new[] { -4f, 0f, 4f })
@@ -162,41 +161,34 @@ namespace Demos.GreyBoxVillage.Editor
                 Box("stall", market, new Vector3(x, 0.6f, 4), new Vector3(3, 1.2f, 2), dark);
                 NoCollider(Box("awning", market, new Vector3(x, 2.4f, 4), new Vector3(3.2f, 0.15f, 2.4f), gold));
             }
-            Label("market", market, new Vector3(0, 3.6f, 4));
 
             var campfire = Place("campfire", "The campfire in the guards' camp", geometry, new Vector3(14, 0, -8.2f));
             Box("fire", campfire, new Vector3(0, 0.25f, -1.8f), new Vector3(1, 0.5f, 1), gold);
             Box("log", campfire, new Vector3(0, 0.2f, -3.2f), new Vector3(2.2f, 0.4f, 0.5f), dark);
-            Label("campfire", campfire, new Vector3(0, 1.8f, -1.8f));
 
             var bellPost = Landmark("alarm_bell", geometry, new Vector3(8.5f, 0, -10.5f));
             Box("bell_post", bellPost, new Vector3(0, 1.5f, 0), new Vector3(0.3f, 3, 0.3f), dark);
             var bell = Box("bell", bellPost, new Vector3(0, 2.9f, 0.45f), new Vector3(0.8f, 0.8f, 0.8f), gold);
             bell.isStatic = false;
-            Label("alarm bell", bellPost, new Vector3(0, 4, 0));
 
             var dummy = Place("training_dummy", "A straw training dummy in the guards' camp", geometry, new Vector3(21, 0, -12.3f));
             Box("dummy_post", dummy, new Vector3(0, 1.3f, 1.3f), new Vector3(0.4f, 2.6f, 0.4f), dark);
             Box("dummy_body", dummy, new Vector3(0, 1.8f, 1.3f), new Vector3(1.2f, 1, 0.6f), gold);
             Box("dummy_arms", dummy, new Vector3(0, 2.1f, 1.3f), new Vector3(2.2f, 0.3f, 0.3f), dark);
-            Label("training_dummy", dummy, new Vector3(0, 3.7f, 1.3f));
 
             var shelter = Place("shelter", "The shelter where villagers take cover", geometry, new Vector3(-18, 0, 10));
             Box("shelter_roof", shelter, new Vector3(0, 3, 1), new Vector3(8.4f, 0.4f, 6.4f), dark);
             Box("shelter_back", shelter, new Vector3(0, 1.5f, 4), new Vector3(8, 3, 0.4f), stone);
             Box("shelter_left", shelter, new Vector3(-4, 1.5f, 1), new Vector3(0.4f, 3, 6), stone);
             Box("shelter_right", shelter, new Vector3(4, 1.5f, 1), new Vector3(0.4f, 3, 6), stone);
-            Label("shelter", shelter, new Vector3(0, 4.2f, 1));
 
             var road = Place("eastern_road", "The road leaving the village to the east", geometry, new Vector3(47, 0, 0));
             NoCollider(Box("road_surface", geometry, new Vector3(33, 0.01f, 0), new Vector3(34, 0.02f, 4), dark));
-            Label("eastern_road", road, new Vector3(0, 2, 0));
 
             var bridge = Place("bridge", "The wooden bridge over the stream", geometry, new Vector3(0, 0, 23));
             Box("bridge_deck", bridge, new Vector3(0, -0.15f, 0), new Vector3(6, 0.3f, 7.6f), stone);
             foreach (float x in new[] { -2.9f, 2.9f })
                 Box("bridge_rail", bridge, new Vector3(x, 0.6f, 0), new Vector3(0.25f, 1.2f, 7.6f), dark);
-            Label("bridge", bridge, new Vector3(0, 2, 0));
 
             var docks = Place("docks", "The docks where supply boats unload", geometry, new Vector3(30, 0, 21.5f));
             Box("dock_deck", docks, new Vector3(0, -0.15f, 0.5f), new Vector3(8, 0.3f, 4), stone);
@@ -204,19 +196,13 @@ namespace Demos.GreyBoxVillage.Editor
                 Box("dock_rail", docks, new Vector3(x, 0.6f, 0.5f), new Vector3(0.25f, 1.2f, 4), dark);
             Box("dock_rail", docks, new Vector3(0, 0.6f, 2.4f), new Vector3(8, 1.2f, 0.25f), dark);
             Box("crate", docks, new Vector3(2.4f, 0.5f, 1.4f), new Vector3(1, 1, 1), gold);
-            Label("docks", docks, new Vector3(0, 2, 0.5f));
 
             var tower = Place("north_tower", "The tower on the north side of the village", geometry, new Vector3(-20, 0, 34.5f));
             Box("tower_block", tower, new Vector3(0, 3.5f, 3.5f), new Vector3(4, 7, 4), stone);
             Box("tower_cap", tower, new Vector3(0, 7.25f, 3.5f), new Vector3(4.7f, 0.5f, 4.7f), dark);
             Box("tower_door", tower, new Vector3(0, 1, 1.46f), new Vector3(1.3f, 2, 0.08f), dark);
-            Label("north_tower", tower, new Vector3(0, 8.5f, 3.5f));
 
-            foreach (var (x, z, w, d) in new[]
-            {
-                (-8f, 8f, 5f, 4f), (8f, 10f, 5f, 4f), (-32f, 6f, 6f, 5f),
-                (31f, 9f, 5f, 5f), (-6f, -9f, 4f, 4f), (32f, -9f, 5f, 4f)
-            })
+            foreach (var (x, z, w, d, _, _) in Houses)
                 Box("house", geometry, new Vector3(x, 1.5f, z), new Vector3(w, 3, d), stone);
 
             // The woods, north-east of the river, where the wolf lives.
@@ -276,8 +262,9 @@ namespace Demos.GreyBoxVillage.Editor
             controller.center = new Vector3(0, 0.9f, 0);
             controller.stepOffset = 0.25f;
             var movement = player.AddComponent<DemoPlayerController>();
-            Capsule("player_body", player.transform, blue, 1f);
-            Label("player", player.transform, new Vector3(0, 2.4f, 0));
+            var inventory = player.AddComponent<PlayerInventory>();
+            inventory.Coins = 8;
+            Figure(player, "char_player");
 
             // The scripted crowd. Each villager is a person a guard can name, and so one the
             // never_attack_villagers guard protects.
@@ -292,12 +279,12 @@ namespace Demos.GreyBoxVillage.Editor
                 vnav.height = 1.6f;
                 vnav.speed = 2f;
                 vnav.stoppingDistance = 0.4f;
-                Capsule("villager_body", v.transform, villagerGreen, 0.85f);
+                Figure(v, "char_villager_" + names[i]);
+                Tag(v, char.ToUpperInvariant(names[i][0]) + names[i].Substring(1), "villager");
                 AddTargetable(v, names[i], char.ToUpperInvariant(names[i][0]) + names[i].Substring(1) + ", a villager", "person");
                 var villager = v.AddComponent<Villager>();
                 villager.WanderPoints = square;
                 villagers.Add(villager);
-                Label(names[i], v.transform, new Vector3(0, 2.1f, 0));
             }
 
             var alarm = bellPost.gameObject.AddComponent<VillageAlarm>();
@@ -312,14 +299,13 @@ namespace Demos.GreyBoxVillage.Editor
             wnav.height = 1f;
             wnav.speed = 3f;
             wnav.stoppingDistance = 0.5f;
-            NoCollider(Box("wolf_body", wolfObject.transform, new Vector3(0, 0.55f, 0), new Vector3(0.6f, 0.6f, 1.3f), wolfGrey)).isStatic = false;
-            NoCollider(Box("wolf_head", wolfObject.transform, new Vector3(0, 0.8f, 0.8f), new Vector3(0.45f, 0.45f, 0.5f), wolfGrey)).isStatic = false;
+            Figure(wolfObject, "wolf");
+            Tag(wolfObject, "Wolf", "", 1.5f);
             AddTargetable(wolfObject, "wolf", "A wolf that came out of the woods", "creature");
             var wolf = wolfObject.AddComponent<VillageWolf>();
             wolf.WanderPoints = woods;
             wolf.ProwlPoints = prowl;
             wolf.Den = den;
-            Label("wolf", wolfObject.transform, new Vector3(0, 1.8f, 0));
 
             // The agents. Both guards ask the same provider config, so they share one provider and
             // one queue (DR-013, DR-015).
@@ -341,6 +327,45 @@ namespace Demos.GreyBoxVillage.Editor
             }, "Wren, the guard on the bridge", new Vector3(2, 0, 17), silver, bridge,
                 new[] { bridge, docks, market, well }, 37f, provider, alarm, wolf, player.transform);
 
+            var odile = Townsfolk<VillageMerchant>("Odile", new AgentIdentity
+            {
+                Name = "Odile",
+                Role = "the merchant at the market",
+                Personality = "Warm, shrewd and talkative. Calls people love. Speaks in one or two short sentences.",
+                Goals = "Sell her goods at a fair price, keep her stall safe, and find someone to gather moonpetals for her."
+            }, "Odile, the merchant at the market", new Vector3(16, 0, 5.4f), 180f, "char_odile", provider,
+                new[] { "item", "person", "place" });
+            var stock = new List<Targetable>();
+            var counter = new Vector3(16, 1.1f, 3.3f);
+            string[] wares = { "bread", "apple", "rope", "torch", "lantern" };
+            for (int i = 0; i < wares.Length; i++)
+            {
+                var ware = new GameObject("stock_" + wares[i]);
+                ware.transform.position = counter + new Vector3(-1.1f + i * 0.55f, 0, 0);
+                Model("item_" + wares[i], ware.transform, Vector3.zero, 15f * i, 0.8f, isStatic: false);
+                var item = ItemCatalog.Get(wares[i]);
+                AddTargetable(ware, wares[i], item.Name + " on Odile's counter, " + item.Price + (item.Price == 1 ? " coin" : " coins"), "item");
+                stock.Add(ware.GetComponent<Targetable>());
+            }
+            ((VillageMerchant)odile.Body).Stock = stock.ToArray();
+            var hale = Townsfolk<VillageCaptain>("Hale", new AgentIdentity
+            {
+                Name = "Hale",
+                Role = "the captain of the guard",
+                Personality = "Gruff, fair and brief. Gives orders in one short sentence.",
+                Goals = "Keep the village safe through his guards, see the wolf dealt with, and reward those who help."
+            }, "Captain Hale, before the lord's keep", new Vector3(18, 0, 30.4f), 180f, "char_hale", provider,
+                new[] { "place", "person", "restricted" });
+
+            // Things to find: moonpetals in the woods, Wren's lantern at the docks, and the pelt the
+            // wolf leaves when a guard drives it off during the wolf quest.
+            var finds = new GameObject("Pickups").transform;
+            foreach (var p in new[] { new Vector3(33, 0, 36.5f), new Vector3(41.5f, 0, 42), new Vector3(-9, 0, 31.5f), new Vector3(-27, 0, 29.5f) })
+                Pickup(finds, "moonpetal", p);
+            Pickup(finds, "old_lantern", P("docks") + new Vector3(3.2f, 0, -0.6f));
+            var pelt = Pickup(finds, "pelt", Vector3.zero);
+            pelt.gameObject.SetActive(false);
+
             var camera = CreateCamera();
             camera.orthographic = false;
             camera.fieldOfView = 50;
@@ -349,14 +374,13 @@ namespace Demos.GreyBoxVillage.Editor
             rig.Player = player.transform;
             camera.transform.position = new Vector3(0, 14.8f, -29.6f);
             camera.transform.LookAt(new Vector3(0, 1, -18));
-            CreateLight();
-            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.7f, 0.7f, 0.7f);
-            RenderSettings.skybox = null;
+            var sun = CreateLight();
+            var day = Dress(camera, sun, alarm);
 
             var boardObject = new GameObject("AgentBoard");
             var board = boardObject.AddComponent<AgentBoard>();
 
+            var hud = new GameObject("HUD").AddComponent<VillageHud>();
             var ui = new GameObject("CommandUI");
             var overlay = ui.AddComponent<DecisionDebugOverlay>();
             var input = ui.AddComponent<DemoCommandInput>();
@@ -368,13 +392,27 @@ namespace Demos.GreyBoxVillage.Editor
             commands.Input = input;
             commands.Overlay = overlay;
             commands.Board = board;
+            commands.Hud = hud;
+            commands.Day = day;
             commands.Player = player.transform;
-            commands.Minds = new[] { bram, wren };
+            commands.Minds = new[] { bram, wren, odile, hale };
+            commands.Inventory = inventory;
+            var quests = ui.AddComponent<QuestBook>();
+            quests.Inventory = inventory;
+            commands.Quests = quests;
+            commands.Book = new GameObject("Book").AddComponent<VillageBook>();
+            wolf.Pelt = pelt;
+            wolf.Quests = quests;
             foreach (var mind in commands.Minds) mind.Village = commands;
             var events = ui.AddComponent<VillageEvents>();
             events.Village = commands;
             events.Alarm = alarm;
             ui.AddComponent<DecisionHistoryPanel>().Commands = commands;
+            var menu = ui.AddComponent<DemoMenu>();
+            menu.Input = input;
+            menu.Board = board;
+            menu.Day = day;
+            menu.Book = commands.Book;
             ui.SetActive(true);
         }
 
@@ -395,19 +433,19 @@ namespace Demos.GreyBoxVillage.Editor
             guard.Post = post;
             guard.PatrolRoute = route;
             guard.Alarm = alarm;
-            Capsule(name.ToLowerInvariant() + "_body", go.transform, material, 1f);
+            Figure(go, "char_" + name.ToLowerInvariant());
+            Tag(go, name, identity.Role.Replace("the ", ""));
             var collider = go.AddComponent<CapsuleCollider>();
             collider.center = new Vector3(0, 0.9f, 0);
             collider.height = 1.8f;
             collider.radius = 0.4f;
             AddTargetable(go, name.ToLowerInvariant(), description, "person");
-            Label(name + " (guard)", go.transform, new Vector3(0, 2.4f, 0));
 
             var behaviour = go.AddComponent<AgentBehaviour>();
             behaviour.Provider = provider;
             behaviour.FindTargetsNearby = true;
             // Every place in the village, the evaluation set's included, fits under the cap.
-            behaviour.Targets = new ProximityTargetSource { Radius = 90f, Cap = 24 };
+            behaviour.Targets = new ProximityTargetSource { Radius = 90f, Cap = 24, Categories = GuardCategories };
             // The game writes its own observations, ids and distances included, which already pass
             // the agent's eight-line budget, so a proximity source would add nothing (README).
             behaviour.NoticeNearby = false;
@@ -423,6 +461,59 @@ namespace Demos.GreyBoxVillage.Editor
             senses.QuietSeconds = quietSeconds;
             mind.Senses = senses;
             return mind;
+        }
+
+        private static readonly string[] GuardCategories = { "place", "person", "creature", "restricted" };
+
+        // An agent who is not a guard: the merchant and the captain. Same AgentBehaviour and shared
+        // provider config; a body of its own; no guard senses.
+        private static AgentMind Townsfolk<T>(string name, AgentIdentity identity, string description, Vector3 position,
+            float yaw, string model, ProviderConfig provider, string[] categories) where T : VillageBody
+        {
+            var go = new GameObject(name);
+            go.transform.SetPositionAndRotation(position, Quaternion.Euler(0, yaw, 0));
+            var nav = go.AddComponent<NavMeshAgent>();
+            nav.radius = 0.4f;
+            nav.height = 1.8f;
+            nav.speed = 3f;
+            var body = go.AddComponent<T>();
+            Figure(go, model);
+            Tag(go, name, identity.Role.Replace("the ", ""));
+            var collider = go.AddComponent<CapsuleCollider>();
+            collider.center = new Vector3(0, 0.9f, 0);
+            collider.height = 1.8f;
+            collider.radius = 0.4f;
+            AddTargetable(go, name.ToLowerInvariant(), description, "person");
+            var behaviour = go.AddComponent<AgentBehaviour>();
+            behaviour.Provider = provider;
+            behaviour.FindTargetsNearby = true;
+            behaviour.Targets = new ProximityTargetSource { Radius = 90f, Cap = 24, Categories = categories };
+            behaviour.NoticeNearby = false;
+            behaviour.Profile = Profile(name, identity);
+            var mind = go.AddComponent<AgentMind>();
+            mind.Body = body;
+            return mind;
+        }
+
+        private static Pickup Pickup(Transform parent, string item, Vector3 position)
+        {
+            var go = new GameObject("pickup_" + item);
+            go.transform.SetParent(parent, false);
+            go.transform.position = position;
+            var pickup = go.AddComponent<Pickup>();
+            pickup.ItemId = item;
+            pickup.Visual = Model("item_" + (item == "old_lantern" ? "lantern" : item), go.transform, Vector3.zero, isStatic: false);
+            if (item == "moonpetal")
+            {
+                var glow = new GameObject("glow").AddComponent<Light>();
+                glow.transform.SetParent(go.transform, false);
+                glow.transform.localPosition = Vector3.up * 0.6f;
+                glow.type = LightType.Point;
+                glow.color = new Color(0.6f, 0.95f, 1f);
+                glow.range = 3f;
+                glow.intensity = 1.2f;
+            }
+            return pickup;
         }
 
         // Kept between rebuilds, so a reference to the asset never breaks and a local change survives.
@@ -502,7 +593,6 @@ namespace Demos.GreyBoxVillage.Editor
             zone.Entrance = Landmark(id + "_entrance", parent, entrance);
             var floor = NoCollider(Box(id + "_floor", go.transform, new Vector3(0, -0.98f, 0), new Vector3(size.x, 0.02f, size.z), restricted));
             floor.isStatic = false;
-            Label(id + " / off limits", go.transform, new Vector3(0, 2.6f, 0));
             return zone;
         }
 
@@ -525,6 +615,7 @@ namespace Demos.GreyBoxVillage.Editor
         // A straight wall from a to b along one axis, at the given position on the other.
         private static void Wall(string name, Transform parent, float a, float b, float at, float height, Material material, bool alongX)
         {
+            walls.Add((name, a, b, at, height, alongX));
             float mid = (a + b) / 2, length = Mathf.Abs(b - a);
             var position = alongX ? new Vector3(mid, height / 2, at) : new Vector3(at, height / 2, mid);
             var scale = alongX ? new Vector3(length, height, 0.6f) : new Vector3(0.6f, height, length);
@@ -533,6 +624,7 @@ namespace Demos.GreyBoxVillage.Editor
 
         private static void Tree(Transform parent, Vector3 position)
         {
+            trees.Add(position);
             var trunk = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             trunk.name = "tree";
             trunk.transform.SetParent(parent, false);
@@ -568,31 +660,12 @@ namespace Demos.GreyBoxVillage.Editor
             return go;
         }
 
-        private static void Capsule(string name, Transform parent, Material material, float size)
+        private static void Tag(GameObject go, string text, string detail, float height = 2.15f)
         {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            go.name = name;
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = new Vector3(0, 0.9f * size, 0);
-            go.transform.localScale = new Vector3(0.7f, 0.9f, 0.7f) * size;
-            go.GetComponent<Renderer>().sharedMaterial = material;
-            UnityEngine.Object.DestroyImmediate(go.GetComponent<Collider>());
-        }
-
-        private static void Label(string text, Transform parent, Vector3 position)
-        {
-            var go = new GameObject("label_" + text);
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = position;
-            go.transform.rotation = Quaternion.Euler(45, 0, 0);
-            var label = go.AddComponent<TextMesh>();
-            label.text = text;
-            label.anchor = TextAnchor.MiddleCenter;
-            label.alignment = TextAlignment.Center;
-            label.fontSize = 48;
-            label.characterSize = 0.16f;
-            label.color = Color.white;
-            go.AddComponent<DemoBillboard>();
+            var tag = go.AddComponent<NameTag>();
+            tag.Text = text;
+            tag.Detail = detail;
+            tag.Height = height;
         }
 
         private static Camera CreateCamera()
@@ -609,13 +682,14 @@ namespace Demos.GreyBoxVillage.Editor
             return camera;
         }
 
-        private static void CreateLight()
+        private static Light CreateLight()
         {
             var light = new GameObject("Directional Light").AddComponent<Light>();
             light.type = LightType.Directional;
             light.intensity = 1.2f;
             light.shadows = LightShadows.Soft;
             light.transform.rotation = Quaternion.Euler(50, -30, 0);
+            return light;
         }
 
         private static Material Material(string name, Color color)

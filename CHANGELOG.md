@@ -29,6 +29,21 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **GreyBoxVillage became Ashford, a village worth exploring** (#153).
+  - **Art:** low-poly art built by a Blender script in `Demos/GreyBoxVillage/ArtSource/`, 77
+    models on one palette. The grey boxes stay as invisible colliders, so the NavMesh and the
+    tests are unchanged.
+  - **Atmosphere:** sky, fog, post-processing, water, lamps, fire, smoke and a day and night
+    cycle.
+  - **Controls:** a third-person camera, running, and E to talk or pick up.
+  - **UI Toolkit:** one theme for the HUD, dialogue panel, speech bubbles, framework view (Tab,
+    with target ids over places and the request queue), pack (I), journal (J), menu and title
+    screen.
+  - **Two more agents:** Odile the merchant and Captain Hale, on the same provider config.
+  - **Quests and an inventory:** quests reach the model as targets through a custom
+    `ITargetSource`.
+  - **New game guards:** `cannot_afford`, `no_free_gifts`, `quest_not_ready` and
+    `target_fits_action`.
 - **GreyBoxVillage has two guards and an agent board** (#143), the first slice of the demo's
   upgrade.
   - Bram at the gate and Wren at the bridge are each an `AgentBehaviour` with a profile asset.

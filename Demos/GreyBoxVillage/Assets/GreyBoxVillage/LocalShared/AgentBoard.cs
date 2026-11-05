@@ -18,18 +18,23 @@ namespace Demos.Shared
     }
 
     /// <summary>
-    /// The always-on panel that makes the framework visible: one card per agent with what it was
-    /// asked, what it was offered, what it chose, whether a guard stopped it, and what that cost.
-    /// UI Toolkit, on a GameObject of its own, because <see cref="DemoUI.Create"/> owns its document.
+    /// The framework view. Collapsed, a strip of one pill per agent with its last outcome, so the
+    /// framework is always visible without covering the village. Expanded (Tab), the full board: per
+    /// agent what it was asked, what it was offered, what it chose, whether a guard stopped it and
+    /// what that cost, above a lane of the requests waiting for the model.
     /// </summary>
     public sealed class AgentBoard : MonoBehaviour
     {
-        private VisualElement root, column;
+        private VisualElement root, strip, board, cardsColumn, lane, laneItems;
         private Label title, subtitle;
         private readonly List<CardView> views = new List<CardView>();
+        private readonly List<Label> pills = new List<Label>();
 
         /// <summary>The cards as last shown, for tests.</summary>
         public IReadOnlyList<AgentCard> Cards { get; private set; } = new List<AgentCard>();
+
+        /// <summary>Whether the full board is open.</summary>
+        public bool Expanded { get; private set; }
 
         private sealed class CardView
         {
@@ -39,36 +44,91 @@ namespace Demos.Shared
 
         private void OnEnable()
         {
-            root = DemoUI.Create(gameObject);
-            column = new VisualElement();
-            column.style.position = Position.Absolute;
-            column.style.left = 16;
-            column.style.top = 16;
-            column.style.width = 430;
-            column.pickingMode = PickingMode.Ignore;
-            root.Add(column);
+            root = DemoUI.Create(gameObject, 5);
 
-            var header = Panel(column);
-            title = Text(header, "", 17, Color.white);
-            title.style.unityFontStyleAndWeight = FontStyle.Bold;
-            subtitle = Text(header, "", 11, Muted);
-            Text(header, "Blue: you   ·   Gold: Bram   ·   Silver: Wren   ·   Green: villagers   ·   Grey: wolf   ·   Red: off limits", 11, Muted);
+            strip = new VisualElement { name = "AgentStrip", pickingMode = PickingMode.Ignore };
+            strip.style.position = Position.Absolute;
+            strip.style.left = 14;
+            strip.style.top = 62;
+            root.Add(strip);
+            var stripHead = DemoUI.Label(strip, "AGENTS   ·   Tab: framework view", "vui-muted");
+            stripHead.style.marginBottom = 3;
+
+            board = DemoUI.Panel(root);
+            board.name = "FrameworkView";
+            board.style.position = Position.Absolute;
+            board.style.left = 14;
+            board.style.top = 62;
+            board.style.bottom = 54;
+            board.style.width = 420;
+            board.pickingMode = PickingMode.Ignore;
+            title = DemoUI.Label(board, "", "vui-title");
+            subtitle = DemoUI.Label(board, "", "vui-subtitle");
+            lane = DemoUI.Row(board);
+            lane.style.marginTop = 6;
+            lane.style.marginBottom = 6;
+            DemoUI.Label(lane, "Waiting for the model:", "vui-muted").style.marginRight = 6;
+            laneItems = DemoUI.Row(lane);
+            laneItems.style.flexWrap = Wrap.Wrap;
+            laneItems.style.flexShrink = 1;
+            var scroll = new ScrollView(ScrollViewMode.Vertical) { pickingMode = PickingMode.Ignore };
+            scroll.style.flexGrow = 1;
+            board.Add(scroll);
+            cardsColumn = scroll.contentContainer;
+            DemoUI.Label(board, "Tab closes   ·   H shows each request in full", "vui-muted").style.marginTop = 4;
             views.Clear();
+            pills.Clear();
+            Apply();
         }
 
         private void OnDisable()
         {
             root?.Clear();
             views.Clear();
+            pills.Clear();
+        }
+
+        public void Toggle()
+        {
+            Expanded = !Expanded;
+            Apply();
+        }
+
+        private void Apply()
+        {
+            if (board == null) return;
+            DemoUI.Show(board, Expanded);
+            DemoUI.Show(strip, !Expanded);
         }
 
         /// <summary>Updates the board. Cheap to call every frame: elements are made once per card.</summary>
-        public void Show(string heading, string detail, IReadOnlyList<AgentCard> cards)
+        /// <param name="queue">The requests waiting for the model, oldest first, as "name|priority".</param>
+        public void Show(string heading, string detail, IReadOnlyList<AgentCard> cards, IReadOnlyList<string> queue = null)
         {
             Cards = cards;
-            if (column == null) return;
+            if (board == null) return;
             title.text = heading;
             subtitle.text = detail;
+
+            while (pills.Count < cards.Count)
+            {
+                var pill = DemoUI.Label(strip, "", "vui-chip");
+                pill.style.alignSelf = Align.FlexStart;
+                pill.style.marginBottom = 3;
+                pills.Add(pill);
+            }
+            for (int i = 0; i < pills.Count; i++)
+            {
+                bool shown = i < cards.Count;
+                DemoUI.Show(pills[i], shown);
+                if (!shown) continue;
+                var c = cards[i];
+                string outcome = c.Thinking ? "thinking" : c.Outcome;
+                pills[i].text = c.Name + (string.IsNullOrEmpty(outcome) ? "" : "  ·  " + outcome) + (c.Listening ? "  ·  listening" : "");
+                SetOutcome(pills[i], outcome);
+            }
+
+            if (!Expanded) return;
             while (views.Count < cards.Count) views.Add(MakeCard());
             for (int i = 0; i < views.Count; i++)
             {
@@ -77,11 +137,22 @@ namespace Demos.Shared
                 view.Box.style.display = shown ? DisplayStyle.Flex : DisplayStyle.None;
                 if (shown) Fill(view, cards[i]);
             }
+
+            laneItems.Clear();
+            if (queue == null || queue.Count == 0) DemoUI.Label(laneItems, "nothing", "vui-muted");
+            else
+                foreach (var item in queue)
+                {
+                    var parts = item.Split('|');
+                    var chip = DemoUI.Label(laneItems, parts[0], "vui-chip");
+                    chip.style.backgroundColor = parts.Length > 1 && parts[1] == "PlayerFacing"
+                        ? new Color(0.27f, 0.51f, 0.78f) : new Color(0.42f, 0.36f, 0.5f);
+                }
         }
 
         private void Fill(CardView view, AgentCard card)
         {
-            view.Title.text = card.Name + (string.IsNullOrEmpty(card.Role) ? "" : "  —  " + card.Role) + (card.Listening ? "   ◂ listening" : "");
+            view.Title.text = card.Name + (string.IsNullOrEmpty(card.Role) ? "" : "  —  " + card.Role) + (card.Listening ? "   (listening)" : "");
             view.Activity.text = card.Activity;
             view.Stimulus.text = card.Stimulus;
             Set(view.Offered, card.Offered);
@@ -91,79 +162,55 @@ namespace Demos.Shared
             string outcome = card.Thinking ? "thinking" : card.Outcome;
             view.Chip.text = outcome.ToUpperInvariant();
             view.Chip.style.display = string.IsNullOrEmpty(outcome) ? DisplayStyle.None : DisplayStyle.Flex;
-            var colour = ColourOf(outcome);
-            view.Chip.style.backgroundColor = colour;
-            view.Box.style.borderLeftColor = colour;
+            SetOutcome(view.Chip, outcome);
+            view.Box.style.borderLeftColor = ColourOf(outcome);
+        }
+
+        private static readonly string[] Outcomes = { "executed", "none", "contained", "refused", "error", "thinking" };
+
+        private static void SetOutcome(VisualElement element, string outcome)
+        {
+            foreach (var o in Outcomes) element.EnableInClassList("outcome-" + o, o == outcome);
         }
 
         private CardView MakeCard()
         {
-            var box = Panel(column);
+            var box = DemoUI.Panel(cardsColumn, "vui-panel--soft");
+            box.pickingMode = PickingMode.Ignore;
+            box.style.marginBottom = 6;
             box.style.borderLeftWidth = 4;
-            box.style.borderLeftColor = Muted;
-            var top = new VisualElement();
-            top.style.flexDirection = FlexDirection.Row;
+            var top = DemoUI.Row(box);
             top.style.justifyContent = Justify.SpaceBetween;
-            box.Add(top);
             var view = new CardView { Box = box };
-            view.Title = Text(top, "", 14, Color.white);
-            view.Title.style.unityFontStyleAndWeight = FontStyle.Bold;
+            view.Title = DemoUI.Label(top, "", "vui-title");
+            view.Title.style.fontSize = 13;
             view.Title.style.flexShrink = 1;
-            view.Chip = Text(top, "", 10, new Color(0.08f, 0.09f, 0.09f));
-            view.Chip.style.unityFontStyleAndWeight = FontStyle.Bold;
-            view.Chip.style.paddingLeft = view.Chip.style.paddingRight = 6;
-            view.Chip.style.paddingTop = view.Chip.style.paddingBottom = 2;
-            view.Chip.style.borderTopLeftRadius = view.Chip.style.borderTopRightRadius =
-                view.Chip.style.borderBottomLeftRadius = view.Chip.style.borderBottomRightRadius = 8;
-            view.Chip.style.alignSelf = Align.FlexStart;
-            view.Activity = Text(box, "", 11, Muted);
-            view.Stimulus = Text(box, "", 12, new Color(0.85f, 0.88f, 0.9f));
-            view.Offered = Text(box, "", 11, Muted);
-            view.Decision = Text(box, "", 13, new Color(0.96f, 0.93f, 0.82f));
-            view.Guard = Text(box, "", 11, Amber);
-            view.Numbers = Text(box, "", 10, Muted);
+            view.Chip = DemoUI.Label(top, "", "vui-chip");
+            view.Activity = DemoUI.Label(box, "", "vui-muted");
+            view.Stimulus = DemoUI.Label(box, "", "vui-text");
+            view.Offered = DemoUI.Label(box, "", "vui-muted");
+            view.Decision = DemoUI.Label(box, "", "vui-text");
+            view.Decision.style.color = new Color(0.97f, 0.9f, 0.7f);
+            view.Guard = DemoUI.Label(box, "", "vui-text");
+            view.Guard.style.color = new Color(1f, 0.74f, 0.32f);
+            view.Numbers = DemoUI.Label(box, "", "vui-muted");
+            view.Numbers.style.fontSize = 10;
             return view;
         }
 
-        private static readonly Color Muted = new Color(0.62f, 0.68f, 0.7f);
-        private static readonly Color Amber = new Color(1f, 0.74f, 0.32f);
-
         private static Color ColourOf(string outcome) =>
-            outcome == "executed" ? new Color(0.55f, 0.85f, 0.5f)
-            : outcome == "none" ? new Color(0.7f, 0.74f, 0.76f)
-            : outcome == "contained" ? Amber
-            : outcome == "refused" || outcome == "error" ? new Color(0.95f, 0.45f, 0.4f)
-            : outcome == "thinking" ? new Color(0.55f, 0.75f, 0.95f)
-            : Muted;
+            outcome == "executed" ? new Color(0.33f, 0.59f, 0.33f)
+            : outcome == "none" ? new Color(0.43f, 0.49f, 0.57f)
+            : outcome == "contained" ? new Color(0.84f, 0.59f, 0.17f)
+            : outcome == "refused" ? new Color(0.77f, 0.32f, 0.24f)
+            : outcome == "error" ? new Color(0.67f, 0.17f, 0.17f)
+            : outcome == "thinking" ? new Color(0.27f, 0.51f, 0.78f)
+            : new Color(0.5f, 0.45f, 0.38f);
 
         private static void Set(Label label, string text)
         {
             label.text = text ?? "";
             label.style.display = string.IsNullOrEmpty(text) ? DisplayStyle.None : DisplayStyle.Flex;
-        }
-
-        private static VisualElement Panel(VisualElement parent)
-        {
-            var box = new VisualElement();
-            box.pickingMode = PickingMode.Ignore;
-            box.style.backgroundColor = new Color(0.06f, 0.08f, 0.09f, 0.9f);
-            box.style.paddingLeft = box.style.paddingRight = 10;
-            box.style.paddingTop = box.style.paddingBottom = 7;
-            box.style.marginBottom = 6;
-            box.style.borderTopLeftRadius = box.style.borderTopRightRadius =
-                box.style.borderBottomLeftRadius = box.style.borderBottomRightRadius = 4;
-            parent.Add(box);
-            return box;
-        }
-
-        private static Label Text(VisualElement parent, string text, int size, Color colour)
-        {
-            var label = DemoUI.Label(parent, text);
-            label.pickingMode = PickingMode.Ignore;
-            label.style.fontSize = size;
-            label.style.color = colour;
-            label.style.marginBottom = 1;
-            return label;
         }
     }
 }

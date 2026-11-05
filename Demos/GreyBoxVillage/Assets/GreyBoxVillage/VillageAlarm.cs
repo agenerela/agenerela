@@ -10,6 +10,8 @@ namespace Demos.GreyBoxVillage
     public sealed class VillageAlarm : MonoBehaviour
     {
         public Renderer Bell;
+        [Tooltip("Swings while the bell rings; the bell hangs from it.")]
+        public Transform BellPivot;
         public Villager[] Villagers;
         public Transform Shelter;
         public float RingSeconds = 30f;
@@ -35,16 +37,21 @@ namespace Demos.GreyBoxVillage
         /// <summary>Stops the bell at once. Used between tests.</summary>
         public void Silence() => stopAt = -1f;
 
+        private Quaternion restRotation;
+
         private void Start()
         {
             if (Bell != null) restColor = Bell.material.color;
+            if (BellPivot != null) restRotation = BellPivot.localRotation;
         }
 
         private void Update()
         {
             bool sounding = IsSounding;
             if (Bell != null && (sounding || wasSounding))
-                Bell.material.color = sounding && Mathf.Repeat(Time.time * 4f, 1f) < 0.5f ? Color.red : restColor;
+                Bell.material.color = sounding && Mathf.Repeat(Time.time * 4f, 1f) < 0.5f ? new Color(1f, 0.45f, 0.4f) : restColor;
+            if (BellPivot != null)
+                BellPivot.localRotation = restRotation * Quaternion.Euler(sounding ? Mathf.Sin(Time.time * 7f) * 28f : 0f, 0, 0);
             if (wasSounding && !sounding)
                 foreach (var villager in Villagers)
                     if (villager != null) villager.AllClear();

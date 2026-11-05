@@ -24,7 +24,8 @@ namespace Demos.GreyBoxVillage.Tests
             config = ScriptableObject.CreateInstance<FakeVillageConfig>();
             config.Fake = new FakeVillageProvider(FakeVillageProvider.Decision("move_to", "north_tower"));
             commands.UseProvider(config);
-            foreach (var mind in commands.Minds) mind.Senses.enabled = false;
+            foreach (var mind in commands.Minds)
+                if (mind.Senses != null) mind.Senses.enabled = false;
             commands.GetComponent<VillageEvents>().enabled = false;
             var input = commands.Input;
             var field = input.GetComponent<UIDocument>().rootVisualElement.Q<TextField>("VillageCommand");

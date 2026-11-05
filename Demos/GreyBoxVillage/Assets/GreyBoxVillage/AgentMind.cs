@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using Agenerela;
 using Agenerela.Providers;
+using Demos.Shared;
 using UnityEngine;
 
 namespace Demos.GreyBoxVillage
@@ -49,6 +50,8 @@ namespace Demos.GreyBoxVillage
         public DecisionRecord Last { get; private set; }
         /// <summary>True while an event waits for this agent's running decision to finish.</summary>
         public bool HasPending => pending != null;
+        /// <summary>The conversation the dialogue panel shows: the player's lines, the agent's, and what it did.</summary>
+        public readonly List<DialogueLine> Conversation = new List<DialogueLine>();
 
         private AgentBehaviour behaviour;
         private Agent configured;
@@ -78,7 +81,10 @@ namespace Demos.GreyBoxVillage
         {
             configured = agent;
             Body.Player = Village.Player;
+            Body.Quests = Village.Quests;
+            Body.Inventory = Village.Inventory;
             foreach (var guard in Body.Guards()) agent.Guards.Add(guard);
+            foreach (var source in Body.TargetSources()) agent.TargetSources.Add(source);
             agent.RefusalStatement = (verdict, ctx) => Body.RefusalLine(verdict);
             LastActivityTime = Time.time;
         }
@@ -106,6 +112,7 @@ namespace Demos.GreyBoxVillage
             behaviour.Profile = profile;
             configured = null;
             pending = null;
+            Conversation.Clear();
             IsDeciding = false;
             Last = null;
         }
@@ -146,6 +153,7 @@ namespace Demos.GreyBoxVillage
             var source = Behaviour.Targets;
             return FindObjectsByType<Targetable>(FindObjectsSortMode.None)
                 .Where(t => t.enabled && t.IsCurrentlyTargetable && !t.transform.IsChildOf(transform))
+                .Where(t => source.Categories == null || source.Categories.Length == 0 || source.Categories.Contains(t.Category))
                 .Select(t => (t, d: Vector3.Distance(origin, t.transform.position)))
                 .Where(x => x.d <= source.Radius)
                 .OrderBy(x => x.d).ThenBy(x => x.t.Id, StringComparer.Ordinal)
@@ -172,7 +180,15 @@ namespace Demos.GreyBoxVillage
                 Village.Overlay.ShowNote(Name + " is still answering. Say it again in a moment.");
                 return;
             }
+            Log("You", text, DialogueLine.Kinds.Player);
             await DecideAsync("player", "Player", text, DecisionPriority.PlayerFacing);
+        }
+
+        private void Log(string speaker, string text, DialogueLine.Kinds kind)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return;
+            Conversation.Add(new DialogueLine(speaker, text, kind));
+            if (Conversation.Count > 30) Conversation.RemoveAt(0);
         }
 
         /// <summary>Something the agent noticed. Waits its turn when a decision is already running.</summary>
@@ -249,6 +265,7 @@ namespace Demos.GreyBoxVillage
             var t = result.Telemetry;
             string error = "No decision: " + t.ErrorKind + ". " + t.ErrorMessage;
             Village.Recorder.Complete(record, result, "error", error);
+            Log(Name, "(no answer: " + t.ErrorKind + ")", DialogueLine.Kinds.Note);
             Village.Overlay.ShowDecision(asked, "none", "no_target", "", error,
                 t.LatencySeconds, t.GuardsFired, Village.ProviderLabel);
         }
@@ -277,6 +294,13 @@ namespace Demos.GreyBoxVillage
                 Body.Say(said, SpeechKind.Refusal, guard);
             }
             Village.Recorder.Complete(record, result, outcome, reason, said);
+            if (record.Source != "player") Log(record.Label, record.Stimulus, DialogueLine.Kinds.Note);
+            Log(Name, said, outcome == "executed" || outcome == "none" ? DialogueLine.Kinds.Agent : DialogueLine.Kinds.Refusal);
+            if (outcome == "executed")
+            {
+                Log(Name, "(" + Body.Activity + ")", DialogueLine.Kinds.Note);
+                Body.AfterAction(d.ActionId, d.Statement);
+            }
 
             string details = string.Format(CultureInfo.InvariantCulture,
                 "{0} / {1}  |  {2:0.00} s, queued {3:0.00} s  |  tokens {4} in, {5} out  |  history sent {6}{7}",

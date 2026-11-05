@@ -16,6 +16,9 @@ namespace Demos.GreyBoxVillage
         public Transform Den;
         [Range(0, 1)] public float ProwlChance = 0.35f;
         public float HiddenSeconds = 60f;
+        [Tooltip("Left behind the first time the wolf is driven off while the wolf quest is on.")]
+        public Pickup Pelt;
+        public QuestBook Quests;
 
         public bool IsHidden { get; private set; }
 
@@ -33,11 +36,23 @@ namespace Demos.GreyBoxVillage
             targetable = GetComponent<Targetable>();
         }
 
+        /// <summary>Back to roaming, seen and targetable. Used between tests.</summary>
+        public void ResetState()
+        {
+            fleeing = false;
+            IsHidden = false;
+            if (targetable == null) targetable = GetComponent<Targetable>();
+            if (targetable != null) targetable.IsCurrentlyTargetable = true;
+        }
+
         /// <summary>Runs to the den, then hides.</summary>
         public void Flee()
         {
             if (IsHidden || fleeing) return;
             fleeing = true;
+            var quest = Quests != null ? Quests.Get("quest_wolf") : null;
+            if (Pelt != null && !Pelt.gameObject.activeSelf && quest != null && quest.State == QuestState.Active)
+                Pelt.Drop(transform.position);
             navigation.speed = 7f;
             if (navigation.isOnNavMesh && Den != null) navigation.SetDestination(Den.position);
             if (targetable == null) targetable = GetComponent<Targetable>();
