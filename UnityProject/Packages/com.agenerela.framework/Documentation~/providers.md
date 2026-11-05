@@ -219,8 +219,10 @@ A provider can be built in code, as above, but most games choose one once, as an
 `OllamaLocal` by default, holding `OllamaSettings`' fields with the same defaults, plus
 `MaxInFlight`. **Project Settings → Agenerela** names the project default, saved in
 `Assets/Agenerela/Resources/AgenerelaSettings.asset`, which the page creates the first time a
-default is set. Several configs can coexist, such as `OllamaLocal` and `GeminiFlash`; Phase 4's
-A/B runs need two alive at once.
+default is set. Several configs can coexist, such as `OllamaLocal` and `GeminiFlash`; an A/B
+run needs two alive at once, and the same page names them as **Arm A** and **Arm B**
+(`AgenerelaSettings.EvaluationArmA` and `EvaluationArmB`), which agents never read
+([evaluation.md](evaluation.md#running-an-ab)).
 
 ```csharp
 // The agent's own config if it has one, otherwise the project default.
@@ -352,15 +354,14 @@ them is a change to `ILLMProvider`, which is the test this design has to keep pa
   class. Phase 6.
 - **Health and warm-up** (`IsReady`, is the model loaded?). Phase 2, for the Ollama
   provider's missing-model case.
-- **`keep_alive` and unloading a model** in `OllamaProvider`, as the prototype's client could,
-  for the Phase 4 harness's one-model-resident rule (hard rule 3).
+- **`keep_alive` and unloading a model** as public API on `OllamaProvider`. The A/B runner
+  (#145) already reads `/api/version` and `/api/ps` and unloads a model (`keep_alive: 0`)
+  through internal methods, for hard rule 3; make them public when a game needs them.
 - **A setting for a model that rejects `think`**, when one is adopted. `OllamaProvider` always
   sends `think: false`.
 - **A provider conformance suite** every vendor must pass. Phase 6 deliverable, shaped from
   the fake provider in #17 (`Tests/Editor/Fakes/FakeProvider.cs`).
 - **A scene override** between an agent's own config and the project default, DR-013's middle
   level: a field `ProviderConfig.Resolve` reads second. Add it when a demo needs one.
-- **The two evaluation arms** on Project Settings → Agenerela, as two more `ProviderConfig`
-  fields on `AgenerelaSettings`. Phase 4, with the harness that reads them.
 - **A session budget and rate limits** per config, beside `MaxInFlight`, applied to the same
   queue. Phase 6, with the first cloud config.
