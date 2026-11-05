@@ -16,7 +16,9 @@
         "isFollowing": false
       },
       "note": "Labellers may disagree: move_to / village_gate is available, but closing the gate is not a registered action. Record each annotator's own answer before agreeing (#85).",
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "situation_002",
@@ -31,7 +33,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "situation_003",
@@ -46,7 +50,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "situation_004",
@@ -60,7 +66,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "situation_005",
@@ -75,7 +83,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "situation_006",
@@ -90,7 +100,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "situation_007",
@@ -105,7 +117,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "situation_008",
@@ -120,7 +134,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "situation_009",
@@ -135,7 +151,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Maxim"]
+      "labelledBy": [
+        "Maxim"
+      ]
     },
     {
       "id": "situation_010",
@@ -151,7 +169,9 @@
         "isFollowing": false
       },
       "note": "#85's example of a situation where acting is right. Unlike situation_009, the guard is on watch duty.",
-      "labelledBy": ["Yevhen"]
+      "labelledBy": [
+        "Yevhen"
+      ]
     },
     {
       "id": "situation_011",
@@ -166,7 +186,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Yevhen"]
+      "labelledBy": [
+        "Yevhen"
+      ]
     },
     {
       "id": "situation_012",
@@ -181,7 +203,9 @@
       "preconditionState": {
         "isFollowing": true
       },
-      "labelledBy": ["Yevhen"]
+      "labelledBy": [
+        "Yevhen"
+      ]
     },
     {
       "id": "situation_013",
@@ -197,7 +221,9 @@
         "isFollowing": false
       },
       "note": "The target is named only in the observations.",
-      "labelledBy": ["Yevhen"]
+      "labelledBy": [
+        "Yevhen"
+      ]
     },
     {
       "id": "situation_014",
@@ -213,7 +239,9 @@
         "isFollowing": false
       },
       "note": "The target is named only in the observations.",
-      "labelledBy": ["Yevhen"]
+      "labelledBy": [
+        "Yevhen"
+      ]
     },
     {
       "id": "situation_015",
@@ -225,12 +253,14 @@
       ],
       "expectedAction": "attack_target",
       "expectedTarget": "wolf",
-      "checkTarget": false,
       "preconditionState": {
         "isFollowing": false
       },
+      "checkTarget": false,
       "note": "The target is named only in the observations. Run with the grounding guard off (DR-016).",
-      "labelledBy": ["Yevhen"]
+      "labelledBy": [
+        "Yevhen"
+      ]
     },
     {
       "id": "situation_016",
@@ -242,12 +272,17 @@
         "You are the only guard on duty"
       ],
       "expectedAction": "move_to",
-      "expectedTarget": ["eastern_road", "village_gate"],
+      "expectedTarget": [
+        "eastern_road",
+        "village_gate"
+      ],
       "preconditionState": {
         "isFollowing": false
       },
       "note": "An open choice: either way in is right, and the grounding guard must not turn it away.",
-      "labelledBy": ["Yevhen"]
+      "labelledBy": [
+        "Yevhen"
+      ]
     },
     {
       "id": "situation_017",
@@ -262,7 +297,9 @@
       "preconditionState": {
         "isFollowing": false
       },
-      "labelledBy": ["Yevhen"]
+      "labelledBy": [
+        "Yevhen"
+      ]
     },
     {
       "id": "situation_018",
@@ -273,13 +310,18 @@
         "No guard is in the square"
       ],
       "expectedAction": "move_to",
-      "expectedTarget": ["market", "well"],
-      "checkTarget": false,
+      "expectedTarget": [
+        "market",
+        "well"
+      ],
       "preconditionState": {
         "isFollowing": false
       },
+      "checkTarget": false,
       "note": "An open choice, run with the grounding guard off (DR-016). situation_016 is one with it on.",
-      "labelledBy": ["Yevhen"]
+      "labelledBy": [
+        "Yevhen"
+      ]
     },
     {
       "id": "situation_019",
@@ -295,7 +337,9 @@
         "isFollowing": false
       },
       "note": "The target is named only in the observations.",
-      "labelledBy": ["Yevhen"]
+      "labelledBy": [
+        "Yevhen"
+      ]
     }
   ]
 }

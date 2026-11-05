@@ -5,6 +5,10 @@ Unity Editor tools a game developer uses, and the two demo games a player and ou
 panel see. Drawn for the COMP 490 Section 04 sketch/mockup practice on 17 September 2026,
 and kept here because they are also the first picture of the framework's user-facing surface.
 
+Screen 8, the **Prompt Set** window, was added on 3 November 2026 for #134, before the window
+was built, and is drawn in the same style. Unlike the other screens it was not part of the lab,
+so the sitemap does not show it yet.
+
 Beside them sits one figure that is not a screen: the **framework design**, the package's
 modules with one decision passing through them, drawn for the system-design practice on
 24 September 2026.
@@ -29,6 +33,7 @@ modules with one decision passing through them, drawn for the system-design prac
 | [`png/05-village.png`](png/05-village.png) | **GreyBoxVillage play screen** — talking to the guard | Grey box today (#19); real decisions in Phase 2 |
 | [`png/06-strategy.png`](png/06-strategy.png) | **GreyBoxStrategy turn screen** — countries as agents | Grey box next (#20); real decisions in Phase 3 |
 | [`png/07-framework-design.png`](png/07-framework-design.png) | **Framework design** — the game, the package and the model, with one decision through them in nine steps | — |
+| [`png/08-prompt-set.png`](png/08-prompt-set.png) | **Prompt Set** — writing labelled prompts, labelling them blind, and agreement | Phase 4 (#134, DR-017) |
 
 **Screen 1 has one planned change.** The idle example moves from its own section onto the
 locked `none` row of the action list, which expands like the other rows (build plan §2.7).
@@ -76,7 +81,7 @@ No accuracy number is real until it comes out of a Phase-4 run with a control ar
 ## Changing a figure
 
 Each figure is one self-contained HTML file in [`src/`](src), laid out at a fixed pixel
-size — 1600 × 1000 for the six screen sheets, 1800 × 1125 for the sitemap, 1280 × 1280 for
+size — 1600 × 1000 for the screen sheets, 1800 × 1125 for the sitemap, 1280 × 1280 for
 the framework figure. The wireframes share [`src/wf.css`](src/wf.css); the framework figure is
 one inline SVG. It is square because Canvas shows an image at Medium with its longest side at
 320 px, and a square keeps the most of it readable at that size. Open the file in any browser
