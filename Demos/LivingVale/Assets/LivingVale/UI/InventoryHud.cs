@@ -41,8 +41,10 @@ namespace LivingVale.UI
         private void BuildInterface()
         {
             // This component shares ChatOverlay's GameObject, so transform is its canvas.
-            RectTransform inventory = Box("Inventory", transform, new Vector2(14f, -162f),
-                new Vector2(448f, 540f), new Color(0.045f, 0.06f, 0.08f, 0.96f));
+            // Ends 610 px down the 720 px reference, just above the combat vitals panel in the
+            // bottom-left corner (18 px margin, 92 px tall), so the two never overlap.
+            RectTransform inventory = Box("Inventory", transform, new Vector2(14f, -158f),
+                new Vector2(448f, 450f), new Color(0.045f, 0.06f, 0.08f, 0.96f));
             panel = inventory.gameObject;
             Label("Title", inventory, "Inventory", new Vector2(14f, -10f), new Vector2(420f, 28f), 21);
             gold = Label("Gold", inventory, "", new Vector2(14f, -42f), new Vector2(420f, 24f), 18);
@@ -62,18 +64,18 @@ namespace LivingVale.UI
             for (int i = 0; i < slots.Length; i++)
             {
                 RectTransform cell = Box($"Slot {i + 1}", inventory,
-                    new Vector2(14f + (i % 4) * 105f, -206f - (i / 4) * 50f),
-                    new Vector2(98f, 44f), new Color(0.12f, 0.17f, 0.2f));
-                slots[i] = Label("Item", cell, "", new Vector2(5f, -3f), new Vector2(88f, 38f), 15);
+                    new Vector2(14f + (i % 4) * 105f, -206f - (i / 4) * 46f),
+                    new Vector2(98f, 42f), new Color(0.12f, 0.17f, 0.2f));
+                slots[i] = Label("Item", cell, "", new Vector2(5f, -2f), new Vector2(88f, 38f), 15);
                 slots[i].alignment = TextAnchor.MiddleCenter;
             }
 
-            Label("Quest heading", inventory, "Quest items · protected storage", new Vector2(14f, -410f),
+            Label("Quest heading", inventory, "Quest items · protected storage", new Vector2(14f, -394f),
                 new Vector2(420f, 22f), 17);
-            RectTransform viewport = Box("Quest viewport", inventory, new Vector2(14f, -438f),
-                new Vector2(420f, 60f), new Color(0.02f, 0.03f, 0.04f, 0.6f));
+            RectTransform viewport = Box("Quest viewport", inventory, new Vector2(14f, -418f),
+                new Vector2(420f, 26f), new Color(0.02f, 0.03f, 0.04f, 0.6f));
             viewport.gameObject.AddComponent<RectMask2D>();
-            questItems = Label("Quest items", viewport, "", new Vector2(6f, 0f), new Vector2(408f, 60f), 16);
+            questItems = Label("Quest items", viewport, "", new Vector2(6f, -2f), new Vector2(408f, 24f), 16);
             var content = questItems.rectTransform;
             questItems.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             questScroll = viewport.gameObject.AddComponent<ScrollRect>();
@@ -82,7 +84,7 @@ namespace LivingVale.UI
             questScroll.horizontal = false;
             questScroll.movementType = ScrollRect.MovementType.Clamped;
             questScroll.scrollSensitivity = 24f;
-            Label("Footer", inventory, "I closes", new Vector2(14f, -510f), new Vector2(420f, 22f), 14)
+            Label("Footer", inventory, "I closes", new Vector2(340f, -14f), new Vector2(94f, 22f), 14)
                 .color = new Color(0.75f, 0.8f, 0.85f);
         }
 
