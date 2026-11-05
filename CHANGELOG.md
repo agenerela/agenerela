@@ -36,6 +36,17 @@ phase table and the open issues, not here.
   never applies a reply that arrives after the player cancelled, closed or switched speaker.
   NPC replies come from a scripted driver, labelled as such, behind the same boundary the real
   `Agent` will use at G5. 26 EditMode tests; the Windows player was play-checked.
+- **Living Vale, milestone G3 "Trade through chat"** (#69), on `69-living-vale`: the game-state
+  core in `Assets/LivingVale/Game/` (design §5's twelve items with stable IDs, a 16-slot
+  inventory with equipment, quick-use and protected quest storage, 40 starting gold, Mara's
+  finite stock) and chat trading (design §9). Mara's `quote_purchase` and `quote_sale`
+  decisions only make an exact `TradeQuote`; an inline card shows it, and its button calls
+  `TradeService.Confirm`, which re-checks conversation, expiry, revisions, gold, room and stock
+  and moves everything together or nothing. Replayed, expired, stale or unaffordable
+  confirmations change nothing, and closing, switching or leaving range invalidates the quote.
+  Both NPC drivers share one game-side `NpcActionExecutor`, which also lists each NPC's
+  available actions and targets for G5 to register. **I** opens a read-only inventory panel.
+  Loot enters through `ILootSink`, idempotent per event ID, for G2.
 - **The risk management plan** in `docs/course/2026-10-29-risk-management/`: an Excel
   register of 14 risks, two per member, with a risk matrix and a sprint review log, reviewed
   once per sprint. XLSX now goes through Git LFS.

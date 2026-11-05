@@ -1,4 +1,5 @@
 using System;
+using LivingVale.Game;
 using LivingVale.Interaction;
 using LivingVale.UI;
 using UnityEngine;
@@ -19,18 +20,32 @@ namespace LivingVale.Unity
         private InputAction look;
         private InputAction talk;
         private InputAction close;
+        private InputAction inventoryKey;
         private InputAction[] fixtures;
         private bool capturedTextFocus;
+        private ConversationTradeLink tradeLink;
+        private InventoryHud inventoryHud;
         private int blockedFrame = -1;
 
         public ConversationCoordinator Coordinator { get; private set; }
         public ScriptedNpcDecisionDriver Driver { get; private set; }
+
+        /// <summary>The player's holdings. G2 hands loot in through it as an <see cref="ILootSink"/>.</summary>
+        public PlayerInventory Inventory { get; private set; }
+        public TradeService Trade { get; private set; }
+
+        /// <summary>The executor every NPC driver shares; G5's driver registers <see cref="NpcActionExecutor.AvailableFor"/>.</summary>
+        public NpcActionExecutor Executor { get; private set; }
+        public ILootSink Loot => Inventory;
         public bool WorldInputBlocked => !Application.isFocused || capturedTextFocus ||
             blockedFrame == Time.frameCount || (overlay != null && overlay.InputHasFocus);
         public Vector2 Movement => WorldInputBlocked ? Vector2.zero : move.ReadValue<Vector2>();
         public bool Sprinting => !WorldInputBlocked && sprint.IsPressed();
         public Vector2 OrbitDelta => WorldInputBlocked || Coordinator.IsOpen ? Vector2.zero : look.ReadValue<Vector2>();
         public bool TalkPressed => !WorldInputBlocked && talk.WasPressedThisFrame();
+
+        /// <summary>I toggles the inventory, except while typing.</summary>
+        public bool InventoryPressed => !WorldInputBlocked && inventoryKey.WasPressedThisFrame();
 
         public void Configure(ThirdPersonPlayer scenePlayer, ChatOverlay sceneOverlay)
         {
@@ -40,11 +55,21 @@ namespace LivingVale.Unity
 
         private void Awake()
         {
-            Driver = new ScriptedNpcDecisionDriver();
+            GameEvents.ReportSubscriberError = Debug.LogException;
+            var catalog = ItemCatalog.CreateDefault();
+            Inventory = PlayerInventory.CreateStarting(catalog);
+
+            // The coordinator needs the driver, the driver the executor, the executor the trade
+            // service, and the trade service the conversation: the link is attached last.
+            tradeLink = new ConversationTradeLink();
+            Trade = new TradeService(Inventory, new[] { VendorStock.CreateMara(catalog) }, tradeLink);
+            Executor = new NpcActionExecutor(Trade);
+            Driver = new ScriptedNpcDecisionDriver(executor: Executor);
             Coordinator = new ConversationCoordinator(Driver, new ConversationSettings
             {
                 TurnTimeout = TimeSpan.FromSeconds(Mathf.Max(0.1f, turnTimeout))
             });
+            tradeLink.Attach(Coordinator, Trade);
 
             actions = new InputActionMap("Living Vale");
             move = actions.AddAction("Move", InputActionType.Value);
@@ -56,6 +81,7 @@ namespace LivingVale.Unity
             look = actions.AddAction("Look", InputActionType.Value, "<Mouse>/delta");
             talk = actions.AddAction("Talk", InputActionType.Button, "<Keyboard>/e");
             close = actions.AddAction("Close", InputActionType.Button, "<Keyboard>/escape");
+            inventoryKey = actions.AddAction("Inventory", InputActionType.Button, "<Keyboard>/i");
             fixtures = new InputAction[5];
             for (int i = 0; i < fixtures.Length; i++)
             {
@@ -63,6 +89,8 @@ namespace LivingVale.Unity
             }
 
             overlay.Initialize(this);
+            inventoryHud = overlay.gameObject.AddComponent<InventoryHud>();
+            inventoryHud.Initialize(this);
             foreach (var speaker in FindObjectsByType<NpcSpeaker>(FindObjectsSortMode.None))
             {
                 speaker.Bind(this, player.transform);
@@ -95,6 +123,11 @@ namespace LivingVale.Unity
             if (WorldInputBlocked)
             {
                 return;
+            }
+
+            if (InventoryPressed)
+            {
+                inventoryHud.Toggle();
             }
 
             for (int i = 0; i < fixtures.Length; i++)
@@ -151,6 +184,8 @@ namespace LivingVale.Unity
             {
                 Coordinator.Changed -= OnConversationChanged;
             }
+
+            tradeLink?.Dispose();
 
             actions?.Dispose();
         }

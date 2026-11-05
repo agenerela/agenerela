@@ -1,3 +1,4 @@
+using LivingVale.Game;
 using LivingVale.Interaction;
 using LivingVale.Unity;
 using UnityEngine;
@@ -20,6 +21,15 @@ namespace LivingVale.UI
         private Button send;
         private ScrollRect scroll;
         private RectTransform history;
+        private GameObject tradeCard;
+        private Text tradeSummary;
+        private Text tradeGold;
+        private Text tradeWarning;
+        private Button tradeConfirm;
+        private Button tradeDecline;
+        private string confirmedQuoteId;
+        private RectTransform tradeOffer;
+        private string buttonsQuoteId;
         private string displayedNpcId;
         private bool scrollToBottom;
         private bool focusRequested;
@@ -34,6 +44,8 @@ namespace LivingVale.UI
             font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             BuildInterface();
             bootstrap.Coordinator.Changed += OnChanged;
+            bootstrap.Trade.QuotesChanged += RenderTradeCard;
+            bootstrap.Inventory.Changed += RenderTradeCard;
             Render();
         }
 
@@ -61,7 +73,7 @@ namespace LivingVale.UI
             RectTransform help = Box("Controls", transform, new Vector2(0f, 1f),
                 new Vector2(14f, -14f), new Vector2(580f, 102f), new Color(0.04f, 0.06f, 0.08f, 0.88f));
             Label("Help", help,
-                "WASD move · Shift sprint · Mouse orbit · E talk · Esc close\n" +
+                "WASD move · Shift sprint · Mouse orbit · E talk · Esc close · I inventory\n" +
                 "F1 Normal · F2 Slow · F3 NeverAnswers · F4 Malformed · F5 Throws\n" +
                 "Typing captures gameplay keys. Return to world releases input.\n" +
                 "Chat frees the cursor. Click the input to type again.",
@@ -132,6 +144,18 @@ namespace LivingVale.UI
             ButtonAt("Return to world", chat, new Vector2(16f, -376f), new Vector2(160f, 26f), ReleaseInput);
             Label("Footer", chat, "Esc closes · Enter sends · Scroll to read history", new Vector2(188f, -378f),
                 new Vector2(356f, 26f), 14, new Color(0.75f, 0.8f, 0.85f));
+
+            RectTransform offer = Box("Trade card", transform, new Vector2(1f, 0f),
+                new Vector2(-18f, 488f), new Vector2(560f, 96f), new Color(0.045f, 0.06f, 0.08f, 0.96f));
+            tradeCard = offer.gameObject;
+            tradeOffer = offer;
+            tradeSummary = Label("Offer", offer, "", new Vector2(16f, -8f),
+                new Vector2(528f, 26f), 17, Color.white);
+            tradeGold = Label("Your gold", offer, "", new Vector2(16f, -34f),
+                new Vector2(180f, 22f), 16, Color.white);
+            tradeWarning = Label("Affordability", offer, "", new Vector2(204f, -34f),
+                new Vector2(340f, 22f), 16, new Color(1f, 0.82f, 0.45f));
+            tradeCard.SetActive(false);
         }
 
         public void Render()
@@ -139,6 +163,7 @@ namespace LivingVale.UI
             var coordinator = bootstrap.Coordinator;
             badge.text = coordinator.DriverLabel;
             panel.SetActive(coordinator.IsOpen);
+            RenderTradeCard();
             if (!coordinator.IsOpen)
             {
                 ReleaseInput();
@@ -187,6 +212,72 @@ namespace LivingVale.UI
         private void OnChanged(ConversationEvent change)
         {
             Render();
+        }
+
+        private void RenderTradeCard()
+        {
+            var coordinator = bootstrap.Coordinator;
+            TradeQuote quote = bootstrap.Trade.ActiveQuote;
+            bool visible = quote != null && coordinator.IsOpen && coordinator.ActiveNpc != null &&
+                quote.NpcId == coordinator.ActiveNpc.Id && quote.ConversationGeneration == coordinator.Generation;
+            tradeCard.SetActive(visible);
+            if (!visible)
+            {
+                return;
+            }
+
+            string item = bootstrap.Inventory.Catalog.Get(quote.ItemId).DisplayName;
+            bool sale = quote.Direction == TradeDirection.Sale;
+            tradeSummary.text = sale
+                ? $"Sell {item} ×{quote.Quantity} — you receive {quote.Total} gold"
+                : $"{item} ×{quote.Quantity} — {quote.Total} gold";
+            tradeGold.text = $"Your gold: {bootstrap.Inventory.Gold}";
+            bool affordable = sale || bootstrap.Inventory.Gold >= quote.Total;
+            tradeWarning.text = affordable ? "" : "Not enough gold";
+            if (buttonsQuoteId != quote.Id)
+            {
+                BuildTradeButtons(quote.Id);
+            }
+
+            tradeConfirm.GetComponentInChildren<Text>().text = sale
+                ? $"Sell for {quote.Total} gold" : $"Buy for {quote.Total} gold";
+            tradeConfirm.interactable = affordable && confirmedQuoteId != quote.Id;
+        }
+
+        // New buttons for every quote, never relabelled ones: uGUI fires onClick on release, so a
+        // press that began on the old card would otherwise confirm the offer that replaced it.
+        private void BuildTradeButtons(string quoteId)
+        {
+            if (tradeConfirm != null)
+            {
+                tradeConfirm.gameObject.SetActive(false);
+                Destroy(tradeConfirm.gameObject);
+                tradeDecline.gameObject.SetActive(false);
+                Destroy(tradeDecline.gameObject);
+            }
+
+            buttonsQuoteId = quoteId;
+            Button confirm = null;
+            confirm = ButtonAt("Confirm", tradeOffer, new Vector2(16f, -60f), new Vector2(240f, 28f), () =>
+            {
+                bootstrap.BlockWorldInputForFrame();
+                if (confirmedQuoteId == quoteId)
+                {
+                    return;
+                }
+
+                confirmedQuoteId = quoteId;
+                confirm.interactable = false;
+                // Inventory and receipt events can render synchronously inside Confirm. Keep this
+                // quote disabled across those renders, even when the service refuses the purchase.
+                bootstrap.Trade.Confirm(quoteId);
+            });
+            tradeConfirm = confirm;
+            tradeDecline = ButtonAt("Decline", tradeOffer, new Vector2(268f, -60f), new Vector2(100f, 28f), () =>
+            {
+                bootstrap.BlockWorldInputForFrame();
+                bootstrap.Trade.Decline(quoteId);
+            });
         }
 
         private void LateUpdate()
@@ -295,6 +386,16 @@ namespace LivingVale.UI
             if (bootstrap != null && bootstrap.Coordinator != null)
             {
                 bootstrap.Coordinator.Changed -= OnChanged;
+            }
+
+            if (bootstrap != null && bootstrap.Trade != null)
+            {
+                bootstrap.Trade.QuotesChanged -= RenderTradeCard;
+            }
+
+            if (bootstrap != null && bootstrap.Inventory != null)
+            {
+                bootstrap.Inventory.Changed -= RenderTradeCard;
             }
         }
     }
