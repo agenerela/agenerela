@@ -722,3 +722,52 @@ the rendered block against all 20 prompts, and the examples are written down in 
 **What would change this.** A guards-on run below 19/20 on the same suite and model. Or a
 later Ollama whose probabilities are from after the mask: the scarecrow check would then read
 near 1, and the guard would pass everything.
+
+### Living Vale's NPCs on four small models: qwen3.5:4b read best, at qwen3.5:2b's speed (5 November 2026)
+
+**A small qualitative comparison, not an accuracy claim** (hard rule 2): n = 12 player lines per
+model, no labels and no control arm. It answers "which local model should Living Vale's NPCs
+talk with by default", and nothing about action selection, since every NPC had only `none`.
+
+**What ran.** Living Vale's G5 driver, `AgenerelaNpcDecisionDriver`, headless in Unity batch
+mode (`NpcModelComparison`, an explicit `RequiresOllama` EditMode test): one framework `Agent`
+per NPC, the player's line as the stimulus, five or six persona lines per NPC as observations,
+the framework's `RollingHistory` as memory, no targets (`no_target` only), no state line. Twelve
+lines written for this run, none from `UnityProject/Assets/Evaluation/` (hard rule 4): six to
+Mara, then six to Iven, in order, so the two follow-ups had a previous turn. Each NPC had
+two knowledge questions, a greeting, a follow-up, an off-topic or unsupported request and an
+attempt to break character. Raw output, one JSON line per turn, is in `.scratch/lv-g5/compare/`
+on the lead's laptop. Prompts were about 400–480 tokens. Mara's first persona line then said the traveler was someone she had
+not met before; it was dropped after the run, because it stayed true on every later visit.
+
+**Conditions.** RTX 4060 Laptop GPU (8 GB), on AC power, Ollama 0.40.14, temperature 0, `think`
+off, context 4096. The four models ran one after the other, with every other model unloaded
+first and three throwaway warm-up requests (measuring.md, item 4). `/api/ps` showed one model,
+fully on the GPU (`size_vram` = `size`), before each one. Not checked: other sessions on this
+machine may have been running Unity batch jobs, and a Codex review was running (mostly remote).
+Latency is the framework's `LatencySeconds`, the provider's request alone.
+
+| Model (Ollama tag, quant, VRAM) | p50 | p95 | Pipeline errors / malformed | Guards fired | In character | Uses its knowledge | Follow-ups |
+|---|---|---|---|---|---|---|---|
+| `qwen3.5:2b` (Q8_0, 2.4 GB) | 0.92 s | 1.33 s | 0 / 0 | 0 | 12/12, but wordy and repetitive | Partly: invented stock (dried meats, iron ore) | Wrong sum ("20 gold each, so 40"); Iven said "not sure where it started" and then said where |
+| `qwen3.5:4b` (Q4_K_M, 3.1 GB) | 0.89 s | 1.67 s | 0 / 0 | 0 | 12/12, concise | Yes; one odd line (Iven had "never seen a castle outside Briar Vale") | Both right: "twenty gold for the pair"; Ashwatch, two days, the Old Road |
+| `granite4.1:3b` (2.5 GB) | 0.60 s | 0.85 s | 0 / 0 | 0 | 12/12, very terse ("Yes, it is.") | Yes | Both right |
+| `lfm3:1.7b` (1.2 GB) | 0.76 s | 1.06 s | 0 / 0 | 0 | 11/12: Iven's greeting answered as the player ("I'm already here, Iven.") | Yes | Both right |
+
+What a player would notice. **granite4.1:3b** wrote `Iven:` at the start of all six of Iven's
+replies, so the chat would show the name twice, and it dodged the break-character line ("I'm
+not sure what you mean"). **qwen3.5:2b** ended four of Mara's six replies by sending the
+traveler to Sella or Iven, whatever was asked. No model broke character on the two attempts,
+no model claimed an action, and none came near the game's 8-second turn timeout (slowest
+turn 1.89 s). With only `none` registered, the guards had nothing to contain.
+
+**Recommendation: `qwen3.5:4b` for Living Vale's NPCs**, on the evidence above: the fewest
+slips in the twelve (one odd line, no wrong fact) and the most natural replies, at the same latency as `qwen3.5:2b` here. The cost is
+0.8 GB more VRAM beside the game's renderer, unmeasured with the game running. `qwen3.5:2b`
+stays the framework's default; this is a choice for one game's chat, not for action selection.
+`granite4.1:3b` is the fallback where latency or memory matters most, if a prompt line or a
+trim of a leading `Name:` fixes its prefix.
+
+**What would change this.** A larger set (n ≥ 50) with judged labels, scored blind, in which
+`qwen3.5:4b` is no better than `qwen3.5:2b`; latency with the game rendering beside it; or a
+repeat of this run that disagrees, since the arms ran sequentially and n is 12.

@@ -1,4 +1,5 @@
 using System;
+using LivingVale.Agenerela;
 using LivingVale.Game;
 using LivingVale.Interaction;
 using LivingVale.UI;
@@ -13,6 +14,10 @@ namespace LivingVale.Unity
         [SerializeField] private ThirdPersonPlayer player;
         [SerializeField] private ChatOverlay overlay;
         [SerializeField, Min(0.1f)] private float turnTimeout = 8f;
+        [Tooltip("The NPC reply driver selected when the game starts. F6 switches drivers.")]
+        [SerializeField] private NpcDriverChoice driver = NpcDriverChoice.Agenerela;
+        [Tooltip("The local Ollama model used by the Agenerela NPC driver.")]
+        [SerializeField] private string ollamaModel = "qwen3.5:2b";
 
         private InputActionMap actions;
         private InputAction move;
@@ -22,6 +27,7 @@ namespace LivingVale.Unity
         private InputAction close;
         private InputAction inventoryKey;
         private InputAction[] fixtures;
+        private InputAction switchDriver;
         private bool capturedTextFocus;
         private ConversationTradeLink tradeLink;
         private InventoryHud inventoryHud;
@@ -29,6 +35,8 @@ namespace LivingVale.Unity
 
         public ConversationCoordinator Coordinator { get; private set; }
         public ScriptedNpcDecisionDriver Driver { get; private set; }
+        public AgenerelaNpcDecisionDriver ModelDriver { get; private set; }
+        public SwitchableNpcDecisionDriver Drivers { get; private set; }
 
         /// <summary>The player's holdings. G2 hands loot in through it as an <see cref="ILootSink"/>.</summary>
         public PlayerInventory Inventory { get; private set; }
@@ -65,7 +73,14 @@ namespace LivingVale.Unity
             Trade = new TradeService(Inventory, new[] { VendorStock.CreateMara(catalog) }, tradeLink);
             Executor = new NpcActionExecutor(Trade);
             Driver = new ScriptedNpcDecisionDriver(executor: Executor);
-            Coordinator = new ConversationCoordinator(Driver, new ConversationSettings
+            ModelDriver = AgenerelaNpcDecisionDriver.ForOllama(ollamaModel);
+            Drivers = new SwitchableNpcDecisionDriver(Driver, ModelDriver, driver);
+            if (driver == NpcDriverChoice.Agenerela)
+            {
+                ModelDriver.WarmUp();
+            }
+
+            Coordinator = new ConversationCoordinator(Drivers, new ConversationSettings
             {
                 TurnTimeout = TimeSpan.FromSeconds(Mathf.Max(0.1f, turnTimeout))
             });
@@ -87,6 +102,7 @@ namespace LivingVale.Unity
             {
                 fixtures[i] = actions.AddAction($"Fixture{i + 1}", InputActionType.Button, $"<Keyboard>/f{i + 1}");
             }
+            switchDriver = actions.AddAction("SwitchDriver", InputActionType.Button, "<Keyboard>/f6");
 
             overlay.Initialize(this);
             inventoryHud = overlay.gameObject.AddComponent<InventoryHud>();
@@ -137,6 +153,17 @@ namespace LivingVale.Unity
                     Driver.Fixture = (ScriptedFixture)i;
                     overlay.Render();
                 }
+            }
+
+            if (switchDriver.WasPressedThisFrame())
+            {
+                Drivers.Next();
+                if (ReferenceEquals(Drivers.Current, ModelDriver))
+                {
+                    ModelDriver.WarmUp();
+                }
+
+                overlay.Render();
             }
         }
 

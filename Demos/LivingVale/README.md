@@ -19,6 +19,10 @@ in the chat, and only its button moves gold and items. Walking more than 6 m awa
 scripted replies between normal, slow, never answering, malformed and throwing, so the failure
 paths can be tried by hand.
 
+Replies come from the local model through Agenerela by default (Ollama at `127.0.0.1:11434`,
+model set on `ValeBootstrap`); **F6** switches between the model and scripted replies.
+With Ollama unreachable, a turn fails with a game-authored line and the game stays playable.
+
 ## Layout
 
 | Folder | What | Scene? |
@@ -27,13 +31,13 @@ paths can be tried by hand.
 | `Assets/LivingVale/Interaction/` | Conversations: `ConversationCoordinator`, the `INpcDecisionDriver` boundary, `ScriptedNpcDecisionDriver`, and `ConversationTradeLink`, which ties quotes to the open conversation | No: plain C#, EditMode-tested |
 | `Assets/LivingVale/Unity/` | Bootstrap, player, orbit camera, NPC speakers, focus and range | Yes |
 | `Assets/LivingVale/UI/` | The chat overlay with its inline trade card, and the inventory panel, built from code with uGUI | Yes |
+| `Assets/LivingVale/Agenerela/` | Real NPC decisions: `AgenerelaNpcDecisionDriver` (one framework `Agent` per NPC, personas in `NpcPersona.cs`) and `SwitchableNpcDecisionDriver`, behind F6 | No: plain C#, EditMode-tested with a fake provider |
 | `Assets/LivingVale/Editor/` | `VillageSceneBuilder` and `LivingValeBuild`, also runnable in batch mode | Editor only |
 | `Assets/LivingVale/Tests/Editor/` | EditMode tests | — |
 
-NPC replies are **scripted** until milestone G5 swaps in a driver over the framework's
-`Agent`; the overlay's badge says which driver is answering, so a scripted reply is never
-mistaken for a model's. The scene is generated: change `VillageSceneBuilder` and rebuild rather
-than editing `Village.unity` by hand.
+NPC replies use Agenerela's `Agent` by default; the overlay's badge says which driver is
+selected, so a scripted reply is never mistaken for a model's. The scene is generated: change
+`VillageSceneBuilder` and rebuild rather than editing `Village.unity` by hand.
 
 ## Trading (G3)
 
@@ -45,3 +49,6 @@ revisions, and the card shows it. Confirming calls `TradeService.Confirm` direct
 model, and anything that changed since the quote (the conversation, the holdings, the stock, the
 clock) refuses it: a new price needs a new card. `NpcActionExecutor.AvailableFor(npcId)` lists the
 actions with at least one eligible target, which is what the G5 driver registers with its `Agent`.
+
+Only the scripted driver (F6) trades so far: the `Agent` driver does not yet register
+`quote_purchase` and `quote_sale`, so with it Mara talks but makes no offer.

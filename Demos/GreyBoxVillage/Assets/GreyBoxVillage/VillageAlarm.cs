@@ -1,9 +1,12 @@
+using System;
 using UnityEngine;
-using UnityEngine.AI;
 
 namespace Demos.GreyBoxVillage
 {
-    /// <summary>The bell in the guards' camp. While it rings, every villager runs to the shelter.</summary>
+    /// <summary>
+    /// The bell in the guards' camp. While it rings, every villager runs to the shelter, and
+    /// <see cref="VillageEvents"/> tells every agent in earshot.
+    /// </summary>
     public sealed class VillageAlarm : MonoBehaviour
     {
         public Renderer Bell;
@@ -13,16 +16,20 @@ namespace Demos.GreyBoxVillage
 
         public bool IsSounding => Time.time < stopAt;
 
+        /// <summary>Raised when the bell starts ringing, with whoever rang it; null when no agent did.</summary>
+        public event Action<VillageBody> Rang;
+
         private float stopAt = -1f;
         private Color restColor;
         private bool wasSounding;
 
-        public void Ring()
+        public void Ring(VillageBody ringer = null)
         {
             stopAt = Time.time + RingSeconds;
             foreach (var villager in Villagers)
                 if (villager != null) villager.TakeCover(Shelter);
             Debug.Log("[GreyBoxVillage] The alarm bell is ringing.", this);
+            Rang?.Invoke(ringer);
         }
 
         /// <summary>Stops the bell at once. Used between tests.</summary>

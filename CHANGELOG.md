@@ -29,6 +29,36 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **GreyBoxVillage has two guards and an agent board** (#143), the first slice of the demo's
+  upgrade.
+  - Bram at the gate and Wren at the bridge are each an `AgentBehaviour` with a profile asset.
+    Both ask one `OllamaProviderConfig`, so they share one queue.
+  - The player speaks to the nearest guard. The bell is heard by every agent except the one who
+    rang it.
+  - A game guard, `never_attack_villagers`, contains an attack on the village's people, and each
+    guard says its own refusal line.
+  - The board shows each agent's stimulus, offered actions, decision, the guard that stopped it,
+    and its queue wait. The request history can be filtered by agent.
+  - The recorder reads `DecisionResult.Request` and `Reply` (#142) instead of wrapping the
+    provider.
+
+- **The evaluation set opens in the Prompt Set window** (#134). `agent.json` now lists its six
+  categories, each with its file and the prefix its ids use (`command_with_target`'s are
+  `target_001`, ...), so the window and the Phase 4 runner find every prompt. No prompt changed:
+  a test loads and saves all 76 and compares them. The files are now in the layout the window
+  writes, which a test keeps them in, so the first save from the window shows only what it
+  changed rather than reflowing every line. Blind second labels go to
+  `Assets/Evaluation/labels/<annotator>/<category>.json`; the README says how.
+- **Screen 8, the Prompt Set window**, in `docs/design/`: the wireframe drawn for #134 before the
+  window was built, with its notes.
+- **Living Vale, milestone G5 "connect real decisions", for conversation** (#69), on
+  `69-living-vale`: `AgenerelaNpcDecisionDriver` makes each speaking NPC a framework `Agent`,
+  built in code from its persona (Mara and Iven so far), with the player's line as the stimulus,
+  the NPC's own knowledge as observations and the framework's rolling memory per NPC. Only
+  `none` is registered; a per-NPC callback is where trade actions will be registered. The model
+  answers by default; F6 (or `ValeBootstrap`'s Inspector) switches to the scripted replies, and
+  with Ollama down a turn fails with the game's own line. A small headless comparison of four
+  local models for the NPCs is in `findings.md` (5 November).
 - **Living Vale, milestone G1 "Walk and talk"** (#69), on the game's own branch
   `69-living-vale`: the URP project in `Demos/LivingVale/`, a third-person player and orbit
   camera, a grey-box village built by `VillageSceneBuilder`, two NPCs (Mara and Iven) with focus

@@ -1,6 +1,6 @@
 # What each screen shows
 
-Plain-English notes on the eight figures in this folder — see [`README.md`](README.md) for
+Plain-English notes on the nine figures in this folder — see [`README.md`](README.md) for
 what they are and how to re-render them. Written as the text we posted with each figure for
 the COMP 490 Section 04 sketch/mockup practice, and for the last one the system-design
 practice, so it reads as prose, not as a specification.
@@ -217,3 +217,28 @@ evaluation harness.
 **What the numbers on the image point to:** ① the game asks · ② the agent · ③ actions and
 targets · ④ schema and prompt · ⑤ queue and provider · ⑥ the model chooses · ⑦ guards ·
 ⑧ result and telemetry · ⑨ the game acts on it.
+
+---
+
+## Screen 8 — Prompt Set
+
+**Image:** `png/08-prompt-set.png`
+**Feature / screen:** writing the prompt set an agent is measured against, and labelling it
+blind. Added for #134, after the lab; drawn before the window was built.
+
+The Evaluation Report (screen 4) needs a labelled prompt set, and every developer has to write
+one for their own agent. This window is where they do it. In **Write** mode the developer picks
+a set and the agent profile it is measured against, then writes prompts category by category.
+The expected action and target are dropdowns, so a prompt cannot name an action the agent lacks
+or a target nobody registered, and the README's rules show under the prompt as it is typed,
+including the one that matters most: a prompt must never be one of the agent's own few-shot
+examples.
+
+In **Label** mode a second person answers the same prompts without seeing the first answer: the
+window shows the stimulus, the observations and the state, and nothing else. Each person's
+answers go to their own file. **Agreement** then counts how often they matched and lists the
+prompts where they split, and a person settles each one; the window never does it on its own.
+
+**What the numbers on the image point to:** ① set, profile and your name · ② a profile that
+disagrees with the set · ③ prompts by category · ④ dropdowns for the answer · ⑤ the rules,
+inline · ⑥ labelling blind · ⑦ one file per person · ⑧ agreement · ⑨ settling stays human.
