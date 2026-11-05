@@ -13,6 +13,7 @@ knowledge that is expensive to rediscover.
 | What was already measured in the prototype? | Build plan, **Appendix A** |
 | What have *we* measured since? | [`findings.md`](findings.md) |
 | How do I set my machine up? | [`environment.md`](environment.md) |
+| What do I check before I write down an accuracy or latency number? | [`measuring.md`](measuring.md) — build plan §4's seven rules, and what has been learned since |
 | Which other models might beat `qwen3.5:2b`, and which to A/B first, for 8 GB cards and for 12, 16 and 24 GB and up? | [`model-candidates.md`](model-candidates.md) — researched 4 November 2026, nothing on it measured by us |
 | What did the 8 October sword trials try, and what did they find? | [`asset-quality-2026-10-08.md`](asset-quality-2026-10-08.md), with its raw data in [`asset-quality-2026-10-08.json`](asset-quality-2026-10-08.json) |
 | What changed, release by release? | [`../../CHANGELOG.md`](../../CHANGELOG.md) at the root for the repository, and the package's [`CHANGELOG.md`](../../UnityProject/Packages/com.agenerela.framework/CHANGELOG.md) for its API |
