@@ -52,6 +52,11 @@ phase table and the open issues, not here.
 
 ### Fixed
 
+- **Release notes no longer break mid-sentence.** GitHub shows every newline in a release's
+  notes as a line break, so notes copied from wrapped Markdown came out as ragged paragraphs
+  stopping halfway across the page, as 0.2.0, 0.3.0 and 0.4.0-preview.1 did (the last was
+  fixed by hand). `tools/ci/release.py notes` now joins wrapped lines, leaving code, headings,
+  HTML, tables and alert markers alone.
 - **The evaluation set names its real annotator on `target_001` to `target_009`.** They held
   #13's placeholder names, `alice` and `bob`; Maxim labelled them. No prompt is doubly labelled
   now, so Phase 4's second labels are still to come, from the Prompt Set window (#134).

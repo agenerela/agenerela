@@ -335,7 +335,9 @@ namespace Agenerela
         /// <see cref="SchemaLegalityGuard"/>). The telemetry says which of these it was in
         /// <see cref="DecisionTelemetry.ErrorKind"/>, from the <see cref="ProviderException.Kind"/>
         /// when a provider threw one, and holds the warning in
-        /// <see cref="DecisionTelemetry.ErrorMessage"/> (#87).
+        /// <see cref="DecisionTelemetry.ErrorMessage"/> (#87). Every result whose request was sent
+        /// carries it in <see cref="DecisionResult.Request"/>, and the model's reply, when one
+        /// arrived, in <see cref="DecisionResult.Reply"/>, pipeline errors included (#142).
         /// </returns>
         /// <exception cref="ArgumentException">
         /// <see cref="DecideOptions.StimulusLabel"/> is null, empty or whitespace. Thrown by the call
@@ -547,13 +549,13 @@ namespace Agenerela
 
             if (sent.Failure != null)
             {
-                return Failed(telemetry, KindOf(sent.Failure), $"The provider failed. {sent.Failure.GetType().Name}: {sent.Failure.Message}");
+                return Failed(telemetry, KindOf(sent.Failure), $"The provider failed. {sent.Failure.GetType().Name}: {sent.Failure.Message}", request);
             }
 
             var reply = sent.Reply;
             if (reply == null)
             {
-                return Failed(telemetry, PipelineErrorKind.ProviderFailed, "The provider returned no result.");
+                return Failed(telemetry, PipelineErrorKind.ProviderFailed, "The provider returned no result.", request);
             }
 
             telemetry.Model = reply.Model ?? "";
@@ -562,7 +564,7 @@ namespace Agenerela
 
             if (!DecisionParser.TryParse(reply.Text, request.Schema, out var decision, out string problem))
             {
-                return Failed(telemetry, PipelineErrorKind.UnreadableReply, $"{problem} The reply was: {Excerpt(reply.Text)}");
+                return Failed(telemetry, PipelineErrorKind.UnreadableReply, $"{problem} The reply was: {Excerpt(reply.Text)}", request, reply);
             }
 
             var result = Guard(new GuardInput(ctx, request, reply, decision, call, telemetry));
@@ -604,14 +606,14 @@ namespace Agenerela
             catch (Exception e)
             {
                 return Failed(input.Telemetry, PipelineErrorKind.GuardFailed,
-                    $"The guard {running} failed. {e.GetType().Name}: {e.Message}");
+                    $"The guard {running} failed. {e.GetType().Name}: {e.Message}", input.Request, input.Reply);
             }
 
             var decision = input.Decision;
 
             if (verdict.Kind == GuardVerdictKind.Pass)
             {
-                return new DecisionResult(decision, input.Telemetry);
+                return new DecisionResult(decision, input.Telemetry, decision, null, input.Request, input.Reply);
             }
 
             if (verdict.Kind == GuardVerdictKind.Reject)
@@ -622,11 +624,12 @@ namespace Agenerela
 
             // Empty, never the model's: it no longer matches what the agent does (#109).
             var none = new AgentDecision(ActionRegistry.None, TargetRegistry.NoTarget, "");
-            return new DecisionResult(none, input.Telemetry, decision, verdict);
+            return new DecisionResult(none, input.Telemetry, decision, verdict, input.Request, input.Reply);
         }
 
         // The stopped decision with what the agent says about it: the developer's line, else the
-        // model's when the call asked for one, else as it came, empty.
+        // model's when the call asked for one, else as it came, empty. Its request and reply stay
+        // the decision's own, never the refusal line's.
         private async Awaitable<DecisionResult> SayWhatWasStopped(
             DecisionResult stopped, AgentContext ctx, DecisionRequest request, DecideOptions call, CancellationToken ct)
         {
@@ -644,7 +647,7 @@ namespace Agenerela
             }
 
             var none = new AgentDecision(ActionRegistry.None, TargetRegistry.NoTarget, line);
-            return new DecisionResult(none, stopped.Telemetry, stopped.ModelDecision, verdict);
+            return new DecisionResult(none, stopped.Telemetry, stopped.ModelDecision, verdict, stopped.Request, stopped.Reply);
         }
 
         // RefusalStatement's answer, or null. One that throws is the developer's code failing, but
@@ -988,14 +991,17 @@ namespace Agenerela
             }
         }
 
-        private DecisionResult Failed(DecisionTelemetry telemetry, PipelineErrorKind kind, string reason)
+        // With the request when it was sent, and the reply when one arrived (#142).
+        private DecisionResult Failed(
+            DecisionTelemetry telemetry, PipelineErrorKind kind, string reason,
+            DecisionRequest request = null, ProviderResult reply = null)
         {
             string message = $"{Who()} could not decide. {reason}";
             telemetry.Outcome = DecisionOutcome.PipelineError;
             telemetry.ErrorKind = kind;
             telemetry.ErrorMessage = message;
             Debug.LogWarning(message);
-            return new DecisionResult(null, telemetry);
+            return new DecisionResult(null, telemetry, null, null, request, reply);
         }
 
         // A provider says why it failed by throwing a ProviderException, whose kind maps one to
