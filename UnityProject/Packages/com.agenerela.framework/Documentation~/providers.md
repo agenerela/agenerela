@@ -521,7 +521,8 @@ if (provider is IModelLifecycle models)
   out behind them (DR-015, as amended).
 - **Failures throw `ProviderException`**, as `RequestAsync` does: `Unreachable` when nothing
   answers, `ModelNotFound` with the `ollama pull` command when the server lacks the model,
-  `Timeout` after `TimeoutSeconds`, and `MalformedResponse` for a reply that is not Ollama's.
+  `Timeout` after `TimeoutSeconds`, `ServerError` for a 5xx, `Rejected` for any other refusal,
+  and `MalformedResponse` for a reply that is not Ollama's.
   They do not report to `ProviderHealth`, which follows decisions.
 - **Cancelling** the token aborts the request and throws `OperationCanceledException`. That is
   how a warm-up a newer one replaces is stopped: the framework keeps no list of warm-ups.
