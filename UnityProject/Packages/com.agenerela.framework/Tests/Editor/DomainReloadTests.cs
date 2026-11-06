@@ -102,12 +102,10 @@ namespace Agenerela.Tests
                     var check = Dirty(field);
                     if (check == null)
                     {
-                        // Nothing to set it to here, so the most the test can ask is that its type resets something.
-                        if (!resets.Any(r => r.DeclaringType == field.DeclaringType))
-                        {
-                            problems.Add(name + " is static state with no SubsystemRegistration reset in its type.");
-                        }
-
+                        // A reset in its type proves nothing about this field, so the test will not guess.
+                        problems.Add(name + " is static state this test cannot put a value in, so it cannot tell whether " +
+                                     "anything resets it. List it in Kept with why it needs no reset, and a Check if " +
+                                     "something else clears it.");
                         continue;
                     }
 
@@ -140,6 +138,26 @@ namespace Agenerela.Tests
             }
 
             Assert.That(problems, Is.Empty);
+        }
+
+        [Test]
+        public void CheckingBuiltLeavesEveryOtherConfigItsProvider()
+        {
+            var other = ScriptableObject.CreateInstance<FakeProviderConfig>();
+            try
+            {
+                var provider = other.Provider;
+
+                Assert.That(BuiltIsEmptiedByForgetAll(), Is.Null);
+
+                Assert.That(other.Provider, Is.SameAs(provider), "An agent on it would otherwise share a config with a second provider.");
+                Assert.That(other.Builds, Is.EqualTo(1));
+            }
+            finally
+            {
+                ProviderConfig.ForgetAll();
+                Object.DestroyImmediate(other);
+            }
         }
 
         [Test]
@@ -206,21 +224,7 @@ namespace Agenerela.Tests
 
             if (field.IsInitOnly)
             {
-                // A readonly collection: give it an element, which the reset must clear.
-                var add = current?.GetType().GetMethods().FirstOrDefault(m => m.Name == "Add" && m.GetParameters().Length == 1);
-                var count = current?.GetType().GetProperty("Count");
-                if (add == null || count == null)
-                {
-                    return null;
-                }
-
-                var elementType = add.GetParameters()[0].ParameterType;
-                object element = elementType == typeof(string) ? "dirty" : elementType.IsValueType ? Activator.CreateInstance(elementType) : null;
-                add.Invoke(current, new[] { element });
-                var remove = current.GetType().GetMethods().FirstOrDefault(m => m.Name == "Remove" && m.GetParameters().Length == 1);
-                return new Dirtied(
-                    () => (int)count.GetValue(current) > 0,
-                    () => remove?.Invoke(current, new[] { element }));
+                return current == null ? null : DirtyCollection(current);
             }
 
             object dirty;
@@ -244,13 +248,9 @@ namespace Agenerela.Tests
             else if (typeof(Delegate).IsAssignableFrom(type))
             {
                 var invoke = type.GetMethod("Invoke");
-                if (invoke.ReturnType != typeof(void))
-                {
-                    return null;
-                }
-
                 var parameters = invoke.GetParameters().Select(p => Expression.Parameter(p.ParameterType)).ToArray();
-                dirty = Expression.Lambda(type, Expression.Empty(), parameters).Compile();
+                Expression body = invoke.ReturnType == typeof(void) ? Expression.Empty() : (Expression)Expression.Default(invoke.ReturnType);
+                dirty = Expression.Lambda(type, body, parameters).Compile();
             }
             else if (typeof(ScriptableObject).IsAssignableFrom(type) && !type.IsAbstract)
             {
@@ -279,10 +279,82 @@ namespace Agenerela.Tests
                 () => destroy?.Invoke());
         }
 
+        /// <summary>
+        /// Gives a readonly collection an element of the test's own, which a reset must remove: through
+        /// a two-argument <c>Add</c> or <c>TryAdd</c> for a dictionary, or a one-argument <c>Add</c>,
+        /// <c>Enqueue</c> or <c>Push</c> for the rest. Null when it has none, or when no element can
+        /// be made for it, such as a key of an interface type.
+        /// </summary>
+        private static Dirtied DirtyCollection(object collection)
+        {
+            var methods = collection.GetType().GetMethods(BindingFlags.Instance | BindingFlags.Public);
+            var pair = methods.FirstOrDefault(m => (m.Name == "Add" || m.Name == "TryAdd") && m.GetParameters().Length == 2);
+            if (pair != null)
+            {
+                var types = pair.GetParameters().Select(p => p.ParameterType).ToArray();
+                var containsKey = methods.FirstOrDefault(m => m.Name == "ContainsKey" && m.GetParameters().Length == 1);
+                if (containsKey == null || !TrySample(types[0], out object key) || key == null || !TrySample(types[1], out object value))
+                {
+                    return null;
+                }
+
+                var removeKey = methods.FirstOrDefault(m => m.Name == "Remove" && m.GetParameters().Length == 1);
+                pair.Invoke(collection, new[] { key, value });
+                return new Dirtied(
+                    () => (bool)containsKey.Invoke(collection, new[] { key }),
+                    () => removeKey?.Invoke(collection, new[] { key }));
+            }
+
+            var single = methods.FirstOrDefault(m => (m.Name == "Add" || m.Name == "Enqueue" || m.Name == "Push") && m.GetParameters().Length == 1);
+            if (single == null || !(collection is IEnumerable items) || !TrySample(single.GetParameters()[0].ParameterType, out object element))
+            {
+                return null;
+            }
+
+            single.Invoke(collection, new[] { element });
+            var remove = methods.FirstOrDefault(m => m.Name == "Remove" && m.GetParameters().Length == 1);
+            return new Dirtied(
+                () => items.Cast<object>().Any(e => ReferenceEquals(e, element) || Equals(e, element)),
+                () => remove?.Invoke(collection, new[] { element }));
+        }
+
+        // A value of this type that no other code holds, where one can be made: a fresh string, a
+        // default struct, an uninitialised object. False for an interface, an abstract type or a
+        // Unity object.
+        private static bool TrySample(Type type, out object sample)
+        {
+            sample = null;
+            if (type == typeof(string))
+            {
+                sample = "dirty " + Guid.NewGuid().ToString("N");
+                return true;
+            }
+
+            if (type.IsValueType)
+            {
+                sample = Activator.CreateInstance(type);
+                return true;
+            }
+
+            if (type.IsClass && !type.IsAbstract && !typeof(Object).IsAssignableFrom(type) && !type.ContainsGenericParameters)
+            {
+                sample = RuntimeHelpers.GetUninitializedObject(type);
+                return true;
+            }
+
+            return false;
+        }
+
         // Null when ProviderConfig.ForgetAll empties Built and the config builds again; otherwise what went wrong.
         private static string BuiltIsEmptiedByForgetAll()
         {
             var built = (HashSet<ProviderConfig>)typeof(ProviderConfig).GetField("Built", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
+            var providerField = typeof(ProviderConfig).GetField("provider", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            // ForgetAll drops every config's provider, so keep the ones built before this check and put
+            // them back after it: an agent still on one must not find its config building a second.
+            // A list, not a dictionary: two destroyed Unity objects compare equal.
+            var before = built.Select(c => (Config: c, Provider: providerField.GetValue(c))).ToList();
             var config = ScriptableObject.CreateInstance<FakeProviderConfig>();
             try
             {
@@ -305,6 +377,11 @@ namespace Agenerela.Tests
             {
                 ProviderConfig.ForgetAll();
                 Object.DestroyImmediate(config);
+                foreach (var (kept, provider) in before)
+                {
+                    providerField.SetValue(kept, provider);
+                    built.Add(kept);
+                }
             }
         }
 

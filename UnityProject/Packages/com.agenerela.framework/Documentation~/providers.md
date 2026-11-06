@@ -309,7 +309,8 @@ takes the first of:
 4. `Callback`, when it returns a reply rather than null;
 5. `Otherwise(…)`, which is `When(null, null, …)`.
 
-Several replies for one key answer in order, and the last keeps answering. Scripting a key again
+A request with no agent name or an empty stimulus skips the stages that need one, so the callback
+still comes before `Otherwise`. Several replies for one key answer in order, and the last keeps answering. Scripting a key again
 replaces it and starts it over; `Clear()` forgets every key. A request nothing answers fails with
 a `ProviderException` of `Rejected` that names the agent and the stimulus, so a test that asks
 something it did not script finds out at once.

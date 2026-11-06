@@ -132,6 +132,28 @@ namespace Agenerela.Tests
         }
 
         [Test]
+        public async Task WithNoAgentOrNoStimulusTheCallbackStillAnswersBeforeOtherwise()
+        {
+            // A blank agent or stimulus means "any" in a key, so a request that has none must skip
+            // the stages that need one, not land on Otherwise ahead of the callback (Codex, #194).
+            var scripted = new ScriptedProvider
+            {
+                Callback = _ => ScriptedReply.Decide("none", statement: "callback"),
+            }.Otherwise(ScriptedReply.Decide("none", statement: "otherwise"));
+            var unnamed = Named("", scripted);
+            var guard = Named(Guard, scripted);
+
+            var emptyStimulus = await Fixtures.NotCancelled(guard.DecideAsync(""));
+            var noName = await Fixtures.NotCancelled(unnamed.DecideAsync(GoToTheTower));
+            var byHand = scripted.RequestAsync(new DecisionRequest { Stimulus = "Player: \"Go to the tower.\"" }, CancellationToken.None);
+
+            Assert.That(emptyStimulus.Decision.Statement, Is.EqualTo("callback"), "An empty stimulus.");
+            Assert.That(noName.Decision.Statement, Is.EqualTo("callback"), "An agent with no name.");
+            Assert.That(byHand.GetAwaiter().GetResult().Text, Is.EqualTo(ScriptedReply.Decide("none", statement: "callback").Text),
+                "A request built by hand.");
+        }
+
+        [Test]
         public async Task TheStimulusIsMatchedExactlyWithoutItsLabel()
         {
             var scripted = new ScriptedProvider()

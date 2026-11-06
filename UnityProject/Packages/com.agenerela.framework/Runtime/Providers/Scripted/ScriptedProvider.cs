@@ -275,15 +275,19 @@ namespace Agenerela.Providers
                 return Callback?.Invoke(request) ?? RefusalLine;
             }
 
-            return Take(new Key(request.Agent, request.Stimulus))
-                   ?? Take(new Key(null, request.Stimulus))
-                   ?? Take(new Key(request.Agent, null))
+            // A stage that needs the agent or the stimulus is skipped when the request has none: an
+            // agent with no name, an empty stimulus, or a request built by hand. Its key would
+            // otherwise be the wildcard, and Otherwise would answer ahead of the callback.
+            bool agent = !string.IsNullOrEmpty(request.Agent);
+            bool stimulus = !string.IsNullOrEmpty(request.Stimulus);
+            return (agent && stimulus ? Take(new Key(request.Agent, request.Stimulus)) : null)
+                   ?? (stimulus ? Take(new Key(null, request.Stimulus)) : null)
+                   ?? (agent ? Take(new Key(request.Agent, null)) : null)
                    ?? Callback?.Invoke(request)
                    ?? Take(new Key(null, null));
         }
 
-        // The key's next reply, or null when nothing is scripted for it. A key with a null agent or
-        // stimulus is a wildcard, so a request with no agent or stimulus takes only those.
+        // The key's next reply, or null when nothing is scripted for it.
         private ScriptedReply Take(Key key)
         {
             return scripts.TryGetValue(key, out var script) ? script.Next() : null;
