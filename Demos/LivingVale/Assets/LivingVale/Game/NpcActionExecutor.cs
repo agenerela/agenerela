@@ -18,6 +18,18 @@ namespace LivingVale.Game
 
         /// <summary>Puts an authored quest contract on an inline card (G4). Accepting is the card's job, never the model's.</summary>
         public const string OfferQuest = "offer_quest";
+
+        /// <summary>G4c: tells the traveler a fact (a <see cref="KnowledgeCard"/>), which records its clue. Executes at once.</summary>
+        public const string ShareInformation = "share_information";
+
+        /// <summary>G4c: proposes a deal with fixed terms on a card (Kest's release, a division agreement).</summary>
+        public const string OfferExchange = "offer_exchange";
+
+        /// <summary>G4c: proposes handing a quest item over on a card (the parcel's three dispositions, the side quests' hand-ins).</summary>
+        public const string ResolveDelivery = "resolve_delivery";
+
+        /// <summary>G4c: grants one access flag (Brann's delivery permit). Executes at once.</summary>
+        public const string GrantAccess = "grant_access";
     }
 
     /// <summary>A target as a driver would show it to a model: stable ID, short name, one-line description.</summary>
@@ -70,6 +82,12 @@ namespace LivingVale.Game
         /// <summary>Why an <c>offer_quest</c> was refused; <see cref="QuestRejection.None"/> otherwise.</summary>
         public QuestRejection QuestReason { get; }
 
+        /// <summary>The card a G4c <c>offer_quest</c>, <c>offer_exchange</c> or <c>resolve_delivery</c> made, or null.</summary>
+        public RouteProposal Proposal { get; private set; }
+
+        internal static ActionOutcome ForRoute(string actionId, QuestRejection questReason, RouteProposal proposal) =>
+            new ActionOutcome(actionId, questReason, (QuestOffer)null) { Proposal = proposal };
+
         internal ActionOutcome(bool executed, string actionId, TradeRejection reason, TradeQuote quote)
         {
             Executed = executed;
@@ -105,13 +123,24 @@ namespace LivingVale.Game
     {
         private readonly TradeService trade;
         private readonly QuestLog quests;
+        private readonly QuestRoutes routes;
 
         /// <param name="quests">The quest log behind <c>offer_quest</c>; null leaves G3's trade-only executor.</param>
-        public NpcActionExecutor(TradeService trade, QuestLog quests = null)
+        /// <param name="routes">G4c's routes and side quests over the same quest log; null leaves G4a's executor.</param>
+        public NpcActionExecutor(TradeService trade, QuestLog quests = null, QuestRoutes routes = null)
         {
             this.trade = trade ?? throw new ArgumentNullException(nameof(trade));
             this.quests = quests;
+            if (routes != null && routes.Quests != quests)
+            {
+                throw new ArgumentException("The routes must wrap the same quest log.", nameof(routes));
+            }
+
+            this.routes = routes;
         }
+
+        /// <summary>G4c's routes, or null when built without them.</summary>
+        public QuestRoutes Routes => routes;
 
         public TradeService Trade => trade;
 
@@ -127,6 +156,7 @@ namespace LivingVale.Game
         {
             var result = new List<GameActionOption>();
             AddQuestOffers(npcId, result);
+            AddRouteActions(npcId, result);
             if (!trade.IsVendor(npcId))
             {
                 return result;
@@ -195,9 +225,35 @@ namespace LivingVale.Game
                         return new ActionOutcome(actionId, QuestRejection.UnknownOffer, null);
                     }
 
+                    if (routes != null && routes.Owns(actionId, targetId))
+                    {
+                        var routed = routes.TryPropose(npcId, actionId, targetId, generation, out var proposal);
+                        return ActionOutcome.ForRoute(actionId, routed, proposal);
+                    }
+
                     var rejection = quests.TryOffer(npcId, targetId, generation, out var offer);
                     return new ActionOutcome(actionId, rejection, offer);
                 }
+
+                case GameActions.OfferExchange:
+                case GameActions.ResolveDelivery:
+                {
+                    if (routes == null)
+                    {
+                        return ActionOutcome.ForRoute(actionId, QuestRejection.UnknownOffer, null);
+                    }
+
+                    var rejection = routes.TryPropose(npcId, actionId, targetId, generation, out var proposal);
+                    return ActionOutcome.ForRoute(actionId, rejection, proposal);
+                }
+
+                case GameActions.ShareInformation:
+                    return ActionOutcome.ForRoute(actionId,
+                        routes == null ? QuestRejection.UnknownOffer : routes.TryShare(npcId, targetId, generation), null);
+
+                case GameActions.GrantAccess:
+                    return ActionOutcome.ForRoute(actionId,
+                        routes == null ? QuestRejection.UnknownOffer : routes.TryGrant(npcId, targetId, generation), null);
 
                 default:
                     return new ActionOutcome(false, actionId, TradeRejection.WrongTarget, null);
@@ -217,10 +273,70 @@ namespace LivingVale.Game
                 targets.Add(new GameTargetOption(offer.Id, offer.Title, $"Ask the traveler to take on \"{offer.Title}\": {offer.Summary}"));
             }
 
+            // G4c's side-quest offers join the same action, so one offer_quest covers every quest an NPC gives.
+            if (routes != null)
+            {
+                foreach (var contract in routes.ContractsFor(npcId, GameActions.OfferQuest))
+                {
+                    targets.Add(new GameTargetOption(contract.Id, contract.Title, $"Ask the traveler to take on \"{contract.Title}\": {contract.Description}"));
+                }
+            }
+
             if (targets.Count > 0)
             {
                 result.Add(new GameActionOption(GameActions.OfferQuest,
                     "Ask the traveler for help with your task. The traveler decides on the card; nothing is agreed until they accept.", targets));
+            }
+        }
+        // G4c: the route actions, each listed only with the targets this NPC can use now.
+        private void AddRouteActions(string npcId, List<GameActionOption> result)
+        {
+            if (routes == null)
+            {
+                return;
+            }
+
+            var share = new List<GameTargetOption>();
+            foreach (var card in routes.KnowledgeFor(npcId))
+            {
+                share.Add(new GameTargetOption(card.Id, card.Title, card.Description));
+            }
+
+            if (share.Count > 0)
+            {
+                result.Add(new GameActionOption(GameActions.ShareInformation,
+                    "Tell the traveler something you saw or know, when they ask about it. Telling it is what makes it count.", share));
+            }
+
+            AddContracts(npcId, GameActions.OfferExchange,
+                "Propose a deal with fixed terms; the traveler accepts or declines on a card. Nothing is agreed until they do.", result);
+            AddContracts(npcId, GameActions.ResolveDelivery,
+                "Take something the traveler brings you; they confirm the hand-over on a card. Nothing changes hands until they do.", result);
+
+            var access = new List<GameTargetOption>();
+            foreach (var grant in routes.GrantsFor(npcId))
+            {
+                access.Add(new GameTargetOption(grant.Id, grant.Title, grant.Description));
+            }
+
+            if (access.Count > 0)
+            {
+                result.Add(new GameActionOption(GameActions.GrantAccess,
+                    "Let the traveler through: grant the access below. Only when they have earned it.", access));
+            }
+        }
+
+        private void AddContracts(string npcId, string actionId, string description, List<GameActionOption> result)
+        {
+            var targets = new List<GameTargetOption>();
+            foreach (var contract in routes.ContractsFor(npcId, actionId))
+            {
+                targets.Add(new GameTargetOption(contract.Id, contract.Title, $"{contract.Description} Terms: {contract.Terms}"));
+            }
+
+            if (targets.Count > 0)
+            {
+                result.Add(new GameActionOption(actionId, description, targets));
             }
         }
     }

@@ -42,6 +42,18 @@ level, XP and the quest's state. **F9** saves and **F10** loads (closing any ope
 save is `livingvale_save.json` under `Application.persistentDataPath`, and the save before it is
 kept as `livingvale_save.bak.json`.
 
+**Quest routes and endings (G4c):** **E** also uses quest objects when no NPC is in front of
+you. At the Old Road you can investigate the wagon wreck (a clue and 10 XP) and take Brann's lost
+badge, Herb Hollow has three marked herbs, and the medical parcel at Broken Watch can only be taken
+once its three camp defenders are down. There are three ways to recover the parcel: fight for it,
+pay Kest 20 gold or have Iven's herb favour done, or tell Kest what Fen saw, which works only after
+Fen has actually told you. You then deliver it to Iven, or to Elra once Brann has given you a
+delivery permit, or divide it after both have agreed on their own cards. Every deal and hand-over
+shows a card in the chat, and only its button acts. When the quest is resolved, the patients leave
+Iven's porch, the castle gate opens, or one patient leaves and supplies arrive at the gate. The
+journal at the top right follows the quest. Fen, Kest, Brann and Elra stand in the region built
+by G4b; until that is merged, their actions can be reached only from the tests.
+
 ## Layout
 
 | Folder | What | Scene? |
@@ -81,6 +93,34 @@ both applied-event sets into a versioned `SaveSnapshot`, written to a temporary 
 with `File.Replace`. Loading validates the whole snapshot before restoring anything, so a corrupt
 or future-version save changes nothing. Quotes, offers and requests are never saved; loading
 invalidates the pending ones.
+
+## Quest routes, endings and side quests (G4c)
+
+`QuestRoutes` (in `Game/`) turns `QuestLog`'s steps into authored contracts that NPCs act on,
+always through `NpcActionExecutor`, from either driver:
+
+| Action | NPC → targets | Effect |
+|---|---|---|
+| `share_information` | Fen → `knowledge_fen_raid` | Records `clue_fen_testimony` and `clue_camp_located` at once |
+| `offer_exchange` | Kest → `exchange_kest_payment` (20 gold), `exchange_kest_favour` (herb quest done), `exchange_kest_testimony` (Fen's clue recorded); Iven and Elra → `exchange_division_*` | A card. Confirming recovers the parcel (negotiation or investigation) or records that party's agreement |
+| `resolve_delivery` | Iven → `delivery_parcel_iven`, `delivery_division_iven`, `delivery_herbs_iven`; Elra → `delivery_parcel_elra`, `delivery_division_elra` (both need the permit); Brann → `delivery_badge_brann` | A card. Confirming resolves the quest (healer, garrison, division) or hands a side quest in |
+| `grant_access` | Brann → `access_delivery_permit`, once the parcel is recovered | Sets the permit at once |
+| `offer_quest` | Iven → `offer_iven_herbs`; Brann → `offer_brann_badge` | A card; Accept starts the side quest |
+
+A target is listed only while its conditions hold. "I have proof" therefore reaches Kest's
+testimony deal only after Fen has told it, and `Confirm` checks every condition again. Claims in
+chat record nothing. A route card belongs to the conversation it was made in, and opening,
+closing or loading takes it away.
+The `Agent` driver registers the four new actions through `RouteActionBinding`. That writes each
+action, its targets and their terms into the prompt, plus status lines that say what the game has
+verified (for Kest: whether a witness account exists). The side-quest offers join G4a's
+`offer_quest`. The scripted driver's rules are in `ScriptedNpcDecisionDriver.Routes.cs`.
+
+World pickups (`QuestPickupPoint`, used with E through `QuestWorldInteraction`) call
+`QuestRoutes.TryPickUp`. Herbs and the badge are inventory event IDs (`pickup_herb_1`…), and the
+wreck, the cleared camp and the permit are clue IDs, so saves carry all of them and nothing pays
+twice. `QuestWorldView` reports defeated defenders (`enemy_camp_defender_1`–`3`) and switches the
+ending's objects. `QuestSceneBuilder` places all of it, called in one line from the village build.
 
 ## Trading (G3)
 

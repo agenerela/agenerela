@@ -51,6 +51,15 @@ phase table and the open issues, not here.
   `Assets/Evaluation/labels/<annotator>/<category>.json`; the README says how.
 - **Screen 8, the Prompt Set window**, in `docs/design/`: the wireframe drawn for #134 before the
   window was built, with its notes.
+- **Living Vale G4c: the main quest's routes and endings, and both side quests** (#69), on
+  `69-living-vale`. The parcel at Broken Watch can be recovered three ways: by defeating three
+  camp defenders, by paying Kest or having done Iven's herb favour, or with Fen's witness clue,
+  which counts only once Fen tells it through `share_information`. It can then be delivered to
+  Iven, to Elra with Brann's permit, or divided once both have agreed. There are new NPC actions
+  (`share_information`, `offer_exchange`, `resolve_delivery`, `grant_access`), and both side
+  quests can be offered and handed in. **E** uses world pickups, and each ending changes the scene.
+  Every deal goes on a card. All of it runs through `QuestRoutes` and the shared executor, from
+  both drivers. Framework gaps 13–16 are recorded.
 - **Living Vale G4, part 1: quests, progression and saves** (#69), on `69-living-vale`: plain C#
   in `Game/` with EditMode tests. `QuestLog` holds *The Missing Wagon* (states Undiscovered →
   Offered → Active → ParcelRecovered → Resolved, early discovery skipping ahead, clues kept apart,

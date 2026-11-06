@@ -69,7 +69,10 @@ namespace LivingVale.Game
         NoAgreement,
 
         /// <summary>The step's event ID was already applied; nothing happened twice.</summary>
-        DuplicateEvent
+        DuplicateEvent,
+
+        /// <summary>The step costs gold the player does not have (G4c: Kest's payment).</summary>
+        NotEnoughGold
     }
 
     /// <summary>
@@ -173,6 +176,12 @@ namespace LivingVale.Game
         public const string AgreementHealer = "agreement_division_iven";
         public const string AgreementGarrison = "agreement_division_elra";
 
+        /// <summary>G4c: every camp defender at Broken Watch is down, so the parcel can be taken (combat route).</summary>
+        public const string ClueCampCleared = "clue_camp_cleared";
+
+        /// <summary>G4c: Brann's delivery permit, an access flag stored with the clues so saves carry it.</summary>
+        public const string AccessDeliveryPermit = "access_delivery_permit";
+
         public const int MainQuestXp = 120;
         public const int SideQuestXp = 50;
         public const int HerbsNeeded = 3;
@@ -188,7 +197,8 @@ namespace LivingVale.Game
 
         public static readonly IReadOnlyList<string> KnownClues = new[]
         {
-            ClueWreckSeen, ClueFenTestimony, ClueCampLocated, AgreementHealer, AgreementGarrison
+            ClueWreckSeen, ClueFenTestimony, ClueCampLocated, AgreementHealer, AgreementGarrison,
+            ClueCampCleared, AccessDeliveryPermit
         };
 
         private readonly PlayerInventory inventory;
@@ -395,9 +405,10 @@ namespace LivingVale.Game
 
         /// <summary>
         /// The parcel reaches the player by one of the routes: Undiscovered, Offered or Active →
-        /// ParcelRecovered, with the parcel put in protected quest storage once.
+        /// ParcelRecovered, with the parcel put in protected quest storage once. A negative
+        /// <paramref name="goldDelta"/> is a price paid in the same step (Kest's payment), all or nothing.
         /// </summary>
-        public QuestReceipt TryRecoverParcel(RecoveryRoute route)
+        public QuestReceipt TryRecoverParcel(RecoveryRoute route, int goldDelta = 0)
         {
             const string eventId = ParcelEvent;
             if (route == RecoveryRoute.None || !Enum.IsDefined(typeof(RecoveryRoute), route))
@@ -411,10 +422,12 @@ namespace LivingVale.Game
             }
 
             var effective = MainState == MainQuestState.Active ? route : RecoveryRoute.FoundEarly;
-            var rejection = Map(inventory.TryApplyQuestEvent(eventId, 0, new[] { new ItemChange(ItemCatalog.MedicalParcel, 1) }));
+            var rejection = Map(inventory.TryApplyQuestEvent(eventId, goldDelta, new[] { new ItemChange(ItemCatalog.MedicalParcel, 1) }));
             if (rejection != QuestRejection.None)
             {
-                return Report(MainQuestId, eventId, rejection, "You could not take the parcel.");
+                return Report(MainQuestId, eventId, rejection, rejection == QuestRejection.NotEnoughGold
+                    ? $"Not enough gold: the price is {-goldDelta}. Nothing changed."
+                    : "You could not take the parcel.");
             }
 
             ivenOffer.State = ivenOffer.State == QuestOfferState.Pending ? QuestOfferState.Invalidated : ivenOffer.State;
@@ -709,6 +722,7 @@ namespace LivingVale.Game
                 case InventoryRejection.None: return QuestRejection.None;
                 case InventoryRejection.NoRoom: return QuestRejection.NoRoom;
                 case InventoryRejection.DuplicateEvent: return QuestRejection.DuplicateEvent;
+                case InventoryRejection.NotEnoughGold: return QuestRejection.NotEnoughGold;
                 default: return QuestRejection.MissingItem;
             }
         }

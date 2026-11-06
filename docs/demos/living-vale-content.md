@@ -102,6 +102,12 @@ stateDiagram-v2
 There are three recovery routes (combat, negotiation after a verified favor or payment, and an
 investigation clue from Fen) and three authored dispositions. No branch can block completion.
 
+**Recovery and endings, as G4c built them:** Kest releases the parcel for a fixed **20 gold**
+(affordable from the starting 40), or free once *Herbs Before Sundown* is done, or free once Fen
+has told her witness clue. The combat route needs three camp defenders down
+(`enemy_camp_defender_1`–`3`). Elra takes the parcel only with Brann's delivery permit, which he
+grants once the parcel is recovered. The division needs Iven's and Elra's recorded agreements.
+
 **Side quests:** *Herbs Before Sundown* (`quest_herbs`, three herbs to Iven, no real timer)
 and *A Dented Badge* (`quest_badge`, the badge back to Brann).
 

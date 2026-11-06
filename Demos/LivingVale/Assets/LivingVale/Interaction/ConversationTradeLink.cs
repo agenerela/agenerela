@@ -18,6 +18,7 @@ namespace LivingVale.Interaction
         private ConversationCoordinator coordinator;
         private TradeService trade;
         private QuestLog quests;
+        private QuestRoutes routes;
 
         public long Generation => coordinator?.Generation ?? -1;
 
@@ -51,8 +52,29 @@ namespace LivingVale.Interaction
             quests.Completed += OnQuestStep;
         }
 
+        /// <summary>
+        /// Also ties G4c's routes to the conversation: a route card goes away whenever a conversation
+        /// opens or closes, and every route receipt (a clue told, a permit granted) is written into the chat.
+        /// </summary>
+        public void AttachRoutes(QuestRoutes questRoutes)
+        {
+            if (routes != null)
+            {
+                throw new InvalidOperationException("Routes already attached.");
+            }
+
+            routes = questRoutes ?? throw new ArgumentNullException(nameof(questRoutes));
+            routes.Completed += OnQuestStep;
+        }
+
         public void Dispose()
         {
+            if (routes != null)
+            {
+                routes.Completed -= OnQuestStep;
+                routes = null;
+            }
+
             if (quests != null)
             {
                 quests.Completed -= OnQuestStep;
@@ -101,6 +123,7 @@ namespace LivingVale.Interaction
             {
                 trade.InvalidatePending();
                 quests?.InvalidatePending();
+                routes?.InvalidatePending();
             }
         }
 

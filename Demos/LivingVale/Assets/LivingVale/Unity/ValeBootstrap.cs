@@ -61,6 +61,9 @@ namespace LivingVale.Unity
         /// <summary>The main and side quests (G4). Iven's <c>offer_quest</c> goes through it via the executor.</summary>
         public QuestLog Quests { get; private set; }
 
+        /// <summary>G4c: the recovery routes, endings, side quests and world pickups, over <see cref="Quests"/>.</summary>
+        public QuestRoutes Routes { get; private set; }
+
         /// <summary>F9 saves and F10 loads through it, under <see cref="Application.persistentDataPath"/>.</summary>
         public SaveGame Saves { get; private set; }
 
@@ -96,7 +99,8 @@ namespace LivingVale.Unity
             Progression = new Progression();
             Quests = new QuestLog(Inventory, Progression, tradeLink);
             Saves = new SaveGame(Inventory, Trade, Quests, Progression, SaveGame.DefaultDirectory);
-            Executor = new NpcActionExecutor(Trade, Quests);
+            Routes = new QuestRoutes(Quests, tradeLink);
+            Executor = new NpcActionExecutor(Trade, Quests, Routes);
             Driver = new ScriptedNpcDecisionDriver(executor: Executor);
             ModelDriver = AgenerelaNpcDecisionDriver.ForOllama(ollamaModel, Executor);
             Drivers = new SwitchableNpcDecisionDriver(Driver, ModelDriver, driver);
@@ -107,6 +111,7 @@ namespace LivingVale.Unity
             });
             tradeLink.Attach(Coordinator, Trade);
             tradeLink.AttachQuests(Quests);
+            tradeLink.AttachRoutes(Routes);
             var ollama = new OllamaModelCatalog();
             Models = new ModelCycle(Coordinator, Drivers,
                 new ModelSelector(ollamaModels, ollamaModel, ollama), ModelDriver, loader: ollama);

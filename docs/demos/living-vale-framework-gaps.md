@@ -39,6 +39,10 @@ Give each entry the next number and these parts:
 | 10 | Grounding guard rejects some correct choices on some models | Medium | Research |
 | 11 | Memory cannot be saved and restored with the game | Medium | Small |
 | 12 | Decisions carry no parameters (quantity, price) | Low for now | Large |
+| 13 | No "propose, then the player confirms" step; every game builds its own cards | High | Medium |
+| 14 | Knowledge an NPC holds cannot be tied to the action that reveals it | High (quest integrity) | Medium |
+| 15 | The model cannot tell a player's claim from a game-verified fact | High | Small to medium |
+| 16 | Per-target conditions live outside the framework; an absent action cannot say why | Medium | Medium |
 
 ## Entries
 
@@ -198,3 +202,80 @@ Give each entry the next number and these parts:
 - **Workaround:** bundle targets (`stock_mara_potion_one`), exactly as design §9 planned.
 - **Proposal:** none yet. Parameters would change the decision schema, which is measured and
   settled (AGENTS.md). Keep the bundle pattern until there is evidence.
+
+### 13. No "propose, then the player confirms" step; every game builds its own cards
+
+- **Needed:** most of G4c's actions must not take effect when the NPC chooses them. Kest's
+  release, a division agreement, handing over the parcel and accepting a side quest all go on a
+  card first, and only the player's button carries them out, after every condition is checked
+  again.
+- **Workaround:** a third copy of the same machinery. `Game/QuestRoutes.cs` has `RouteProposal`,
+  next to G3's `TradeQuote` and G4a's `QuestOffer`. Each records the conversation generation it was
+  made in, is invalidated by `ConversationTradeLink` when a conversation opens or closes, and
+  re-checks its conditions on `Confirm`. Each card in `UI/` rebuilds its buttons for every new
+  proposal, so a click started on the old card cannot confirm the new one. `Agent.Execute` reports
+  only that a handler ran, so the drivers read `LastOutcome.Proposal` to learn that a card exists.
+- **Proposal:** an optional framework primitive for a pending effect. A handler returns a
+  proposal (ID, payload, a re-check delegate) instead of acting. `Agent.Confirm(id)` or
+  `Agent.Decline(id)` resolves it, re-running the check. The framework invalidates it when the
+  agent's context moves on, and memory records "proposed" and "confirmed" as different events.
+- **Payoff:** about 200 lines per card type here, and the confirm-time re-check becomes a
+  framework guarantee. Memory and telemetry could separate "the NPC offered" from "the player
+  accepted", which evaluation needs.
+- **Size and risk:** medium, a new public API that builds on #2 (receipts). It touches no
+  settled schema rule.
+- **Research area:** guards.
+
+### 14. Knowledge an NPC holds cannot be tied to the action that reveals it
+
+- **Needed:** Fen's clue counts only once she tells it (design §3). The game has to know the fact
+  was told, not just that her reply mentioned it.
+- **Workaround:** the fact is a `KnowledgeCard` target of `share_information` in
+  `Game/QuestRoutes.cs`. Executing it records the clue, and once recorded the action disappears.
+  Fen's persona could still put the whole fact in her `statement` under `none`, and the game
+  would never know. Nothing in the framework links a persona's knowledge lines to an action.
+- **Proposal:** knowledge entries with IDs on the agent's identity, each optionally marked as
+  "revealed only through action X". The prompt then tells the model to share it through that
+  action, and an optional guard flags a `none` reply whose statement reveals it.
+- **Payoff:** quest-critical information becomes a first-class, testable event in any game: a
+  detective's clue, a password, a secret.
+- **Size and risk:** medium. The guard part is research: it needs a way to detect paraphrase.
+- **Research area:** observations, and guards for the detection.
+
+### 15. The model cannot tell a player's claim from a game-verified fact
+
+- **Needed:** "I have proof, Fen saw you" must not persuade Kest when Fen never told the
+  player anything. The schema already omits the testimony deal, but the model can still *say* it
+  is persuaded.
+- **Workaround:** `Agenerela/RouteActionBinding.cs` `StatusLines` writes per-NPC lines from game
+  state into the observations, for example "No witness account of your raid has reached the
+  traveler. Claims of proof are only words." The stimulus label `Player:` is all that marks the
+  player's own line.
+- **Proposal:** a separate observation channel for game-verified facts (`DecideOptions.Facts`),
+  rendered apart from the stimulus and from free observations, with one framework-owned
+  instruction that facts outrank anything the player claims. It belongs with the
+  prompt-rendering work in #1.
+- **Payoff:** every game with persuasion, deception or evidence needs it. Without it, each game
+  writes its own trust prose and nobody measures it.
+- **Size and risk:** small in code, but it changes the prompt, so it needs an A/B run (hard
+  rule 2). The settled field order is untouched.
+- **Research area:** observations, with evaluation for the A/B.
+
+### 16. Per-target conditions live outside the framework; an absent action cannot say why
+
+- **Needed:** Elra takes the parcel only once Brann has granted the permit. Kest's favour deal
+  needs the herb quest done. Division needs two recorded agreements. Each condition belongs to a
+  target, not to an action.
+- **Workaround:** each `RouteContract` in `Game/QuestRoutes.cs` carries its own `Available`
+  predicate. `NpcActionExecutor.AvailableFor` filters with it every turn, and `Confirm` checks it
+  again. The framework's `IActionHandler.IsAvailable` is per action only. When a condition is
+  false the target is absent, which is the settled rule. The model is then never told *why*, so
+  Elra cannot say "get a permit from Brann" unless the game also writes that into a status line.
+- **Proposal:** targets that carry an availability predicate, which the framework checks while
+  building the schema and again at `Execute`. Optionally, an "unavailable because …" line per
+  absent target, for the prompt only and never for the schema.
+- **Payoff:** removes the filtering and re-checking code from every binding, and lets NPCs explain
+  refusals consistently.
+- **Size and risk:** medium. The prompt line runs against "illegal options are absent, not
+  forbidden in prose", so it needs evidence before it is adopted. Builds on #4.
+- **Research area:** targets.
