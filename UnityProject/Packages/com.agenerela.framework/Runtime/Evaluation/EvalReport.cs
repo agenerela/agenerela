@@ -27,6 +27,12 @@ namespace Agenerela.Evaluation
         /// <summary>The run's name, which its folder is named for: when it started, then the arms.</summary>
         [JsonProperty("name")] public string Name;
 
+        /// <summary>
+        /// True when the run was cancelled before it finished: the report holds only the answers
+        /// given until then, and is no accuracy result. Written to JSON only when true.
+        /// </summary>
+        [JsonProperty("cancelled", DefaultValueHandling = DefaultValueHandling.Ignore)] public bool Cancelled;
+
         [JsonProperty("conditions")] public EvalConditions Conditions = new EvalConditions();
 
         /// <summary>Arm A's result, then arm B's.</summary>
@@ -99,6 +105,13 @@ namespace Agenerela.Evaluation
 
             Line($"# Evaluation run {Name}");
             Line();
+            if (Cancelled)
+            {
+                Line($"**Cancelled after {Answers.Count} of {c.Prompts * 2} answers.** The set was not asked whole, so nothing here is an "
+                   + "accuracy result" + (Noise.Count == 0 ? ", and there is no noise check: the arms were not asked the same prompts." : "."));
+                Line();
+            }
+
             Line($"{c.Prompts} prompts from `{c.SetPath}` ({c.SetAgent}), asked in two arms "
                + (c.Order == EvalArmOrder.Interleaved
                    ? "interleaved: each prompt in A, then in B."
