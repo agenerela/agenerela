@@ -538,6 +538,40 @@ namespace Demos.GreyBoxVillage.Tests
             Assert.That(bram.Last, Is.Null, "The fresh agent has asked nothing yet.");
         }
 
+        // The landing review of #157: F1 cancels what the old agents still have with the model, so
+        // the one shared slot is free at once. Before, the next stage waited for the old answer.
+        [Test]
+        public async Task AResetFreesTheQueueWithoutWaitingForTheOldAnswer()
+        {
+            provider.Reply = FakeVillageProvider.Decision("follow_player", "no_target");
+            provider.Hold = true;
+            var stale = bram.HearPlayerAsync("Walk with me.");
+            for (int i = 0; i < 50 && provider.Calls == 0; i++) await Task.Delay(10);
+            Assert.That(provider.Calls, Is.EqualTo(1), "The first line never reached the provider.");
+            commands.ResetAgents();
+
+            provider.Reply = FakeVillageProvider.Decision("none", "no_target", "Morning.");
+            var fresh = bram.HearPlayerAsync("Hello?").GetAwaiter();
+            for (int i = 0; i < 200 && !fresh.IsCompleted; i++) await Task.Delay(10);
+            Assert.That(fresh.IsCompleted, Is.True, "The fresh line waited behind the old agent's request, which was never released.");
+            Assert.That(provider.Calls, Is.EqualTo(2));
+            Assert.That(bram.Last.Outcome, Is.EqualTo("none"));
+            await stale;
+            Assert.That(bramBody.IsFollowing, Is.False, "The old agent's answer ran after the reset.");
+        }
+
+        // F3 pressed again while a thief runs with a ware puts the ware back before the next one comes.
+        [Test]
+        public void SendingAThiefAgainPutsBackWhatTheFirstTook()
+        {
+            var bread = merchant.Stock.Single(t => t.Id == "bread");
+            thief.Begin();
+            thief.Grab();
+            Assert.That(bread.gameObject.activeSelf, Is.False, "The first thief took nothing.");
+            thief.Begin();
+            Assert.That(bread.gameObject.activeSelf, Is.True, "The ware the first thief held is lost until the stall restocks.");
+        }
+
         [Test]
         public void TheSituationsAreInTheSceneAndWired()
         {
