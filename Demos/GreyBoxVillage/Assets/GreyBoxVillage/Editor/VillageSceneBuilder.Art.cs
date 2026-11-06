@@ -803,8 +803,104 @@ namespace Demos.GreyBoxVillage.Editor
             cycle.Lamps = lamps.ToArray();
             cycle.NightOnly = nightOnly.ToArray();
             cycle.TimeOfDay = 0.36f;
+            cycle.FogDensity = RenderSettings.fogDensity;
             cycle.Apply();
             return cycle;
+        }
+
+        // ---- Weather --------------------------------------------------------------------------
+
+        /// <summary>
+        /// The weather and its rig: rain falling around the camera and mist drifting low, both saved
+        /// with no emission, which <see cref="VillageWeather"/> turns up. The rig follows the camera
+        /// over the ground and never turns with it, so the rain always falls straight down.
+        /// </summary>
+        private static VillageWeather DressWeather(Camera camera, DayNightCycle day)
+        {
+            var rig = new GameObject("Weather");
+            var weather = rig.AddComponent<VillageWeather>();
+            weather.Day = day;
+            weather.Follow = camera.transform;
+            var at = new Vector3(camera.transform.position.x, 0, camera.transform.position.z);
+            rig.transform.position = at;
+            weather.Rain = Effect("Rain", rig.transform, at + new Vector3(0, 16f, 4f), ps =>
+            {
+                var main = ps.main;
+                main.playOnAwake = false;
+                main.startLifetime = 1.1f;
+                main.startSpeed = 17f;
+                main.startSize = new ParticleSystem.MinMaxCurve(0.045f, 0.07f);
+                main.startColor = new Color(0.8f, 0.86f, 0.94f, 0.6f);
+                main.simulationSpace = ParticleSystemSimulationSpace.World;
+                main.maxParticles = 1400;
+                var emission = ps.emission;
+                emission.rateOverTime = 0f;
+                var shape = ps.shape;
+                shape.shapeType = ParticleSystemShapeType.Box;
+                // A flat box turned to emit straight down.
+                shape.scale = new Vector3(44f, 44f, 0.5f);
+                shape.rotation = new Vector3(90f, 0, 0);
+                var renderer = ps.GetComponent<ParticleSystemRenderer>();
+                renderer.renderMode = ParticleSystemRenderMode.Stretch;
+                renderer.velocityScale = 0.045f;
+                renderer.lengthScale = 1f;
+                renderer.sharedMaterial = SmokeMaterial();
+                renderer.shadowCastingMode = ShadowCastingMode.Off;
+            });
+            // The cloud dome: a sphere seen from inside, far out but within the camera's reach, drawn
+            // over the skybox in the fog's colour as the weather closes in. Saved hidden.
+            var dome = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            dome.name = "SkyDome";
+            Object.DestroyImmediate(dome.GetComponent<Collider>());
+            dome.transform.SetParent(rig.transform, false);
+            dome.transform.position = at;
+            dome.transform.localScale = Vector3.one * 460f;
+            var domeRenderer = dome.GetComponent<MeshRenderer>();
+            domeRenderer.sharedMaterial = Asset(ArtFolder + "/WeatherSky.mat", () =>
+            {
+                var m = new Material(Shader.Find("Universal Render Pipeline/Unlit")) { name = "WeatherSky" };
+                // Transparent, both faces, no depth: the inside of the sphere over the sky.
+                m.SetFloat("_Surface", 1f);
+                m.SetFloat("_Blend", 0f);
+                m.SetFloat("_Cull", 0f);
+                m.SetFloat("_ZWrite", 0f);
+                m.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+                m.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+                m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                m.renderQueue = (int)RenderQueue.Transparent - 50;
+                m.color = new Color(0.7f, 0.72f, 0.75f, 0f);
+                return m;
+            });
+            domeRenderer.shadowCastingMode = ShadowCastingMode.Off;
+            domeRenderer.receiveShadows = false;
+            domeRenderer.enabled = false;
+            weather.SkyDome = domeRenderer;
+            weather.Mist = Effect("Mist", rig.transform, at + new Vector3(0, 0.8f, 0), ps =>
+            {
+                var main = ps.main;
+                main.playOnAwake = false;
+                main.startLifetime = new ParticleSystem.MinMaxCurve(9f, 13f);
+                main.startSpeed = 0.25f;
+                main.startSize = new ParticleSystem.MinMaxCurve(9f, 15f);
+                main.startColor = new Color(0.86f, 0.88f, 0.9f, 0.16f);
+                main.simulationSpace = ParticleSystemSimulationSpace.World;
+                main.maxParticles = 90;
+                var emission = ps.emission;
+                emission.rateOverTime = 0f;
+                var shape = ps.shape;
+                shape.shapeType = ParticleSystemShapeType.Box;
+                shape.scale = new Vector3(56f, 1.2f, 56f);
+                var color = ps.colorOverLifetime;
+                color.enabled = true;
+                var g = new Gradient();
+                g.SetKeys(new[] { new GradientColorKey(Color.white, 0), new GradientColorKey(Color.white, 1) },
+                    new[] { new GradientAlphaKey(0, 0), new GradientAlphaKey(1, 0.3f), new GradientAlphaKey(1, 0.7f), new GradientAlphaKey(0, 1) });
+                color.color = g;
+                var renderer = ps.GetComponent<ParticleSystemRenderer>();
+                renderer.sharedMaterial = SmokeMaterial();
+                renderer.shadowCastingMode = ShadowCastingMode.Off;
+            });
+            return weather;
         }
     }
 }

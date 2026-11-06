@@ -190,6 +190,25 @@ namespace Demos.GreyBoxVillage.Tests
             Assert.That(wren.Last.Action, Is.EqualTo("close_gate"));
             Assert.That(watch.Gate.IsOpen, Is.False);
             Assert.That(((VillageGuard)bram.Body).CurrentPost, Is.EqualTo(watch.RelievedPost), "Bram is off watch by the campfire.");
+            // The villagers skipped the hours F5 jumped: they are at the campfire, inside the gate.
+            var routine = commands.Routine;
+            foreach (var v in routine.Villagers)
+            {
+                Assert.That(v.Place, Is.EqualTo(VillageRoutine.Campfire), v.name + " at dusk.");
+                Assert.That(routine.SpotOf(v)?.Id, Is.EqualTo(VillageRoutine.Campfire), v.name + " is not by the campfire after F5.");
+            }
+
+            // 5. F6, the weather: round to fog, which shortens a guard's sight and every agent is told.
+            var weather = presenter.Weather;
+            Assert.That(weather.Current, Is.EqualTo(WeatherKind.Clear), "The weather changed during the script.");
+            for (int i = 0; i < 3; i++) Assert.That(presenter.Press(Key.F6), Is.True, "F6 must work with the framework view open.");
+            Assert.That(weather.Current, Is.EqualTo(WeatherKind.Fog));
+            Assert.That(presenter.Status, Does.Contain("fog"));
+            yield return Say("Can you see anything out there?");
+            Assert.That(wren.Last.Observations, Does.Contain("Fog lies over the village; you can see about 15 m."));
+            Assert.That(presenter.Press(Key.F1), Is.True);
+            Assert.That(weather.Current, Is.EqualTo(WeatherKind.Clear), "F1 left the fog in.");
+            yield return null;
 
             // Every decision of the run, every stage's, followed the script: nothing was refused or failed.
             Keep();

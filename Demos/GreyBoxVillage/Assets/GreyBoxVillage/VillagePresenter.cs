@@ -9,9 +9,10 @@ using UnityEngine.UIElements;
 namespace Demos.GreyBoxVillage
 {
     /// <summary>
-    /// The presenter's keys: F1 resets the village, F2 brings the wolf, F3 the thief, F4 a fire and
-    /// F5 jumps to dusk. F12 shows or hides the small panel that lists them. Each situation ends where
-    /// an agent is asked within a few seconds, so a talk never waits on the village.
+    /// The presenter's keys: F1 resets the village, F2 brings the wolf, F3 the thief, F4 a fire,
+    /// F5 jumps to dusk and F6 changes the weather. F12 shows or hides the small panel that lists them.
+    /// Each situation ends where an agent is asked within a few seconds, so a talk never waits on the
+    /// village; the weather asks nobody, and is in the next request's observations.
     /// </summary>
     /// <remarks>
     /// The keys work while the framework view is open, and not while the player is typing or the
@@ -27,6 +28,8 @@ namespace Demos.GreyBoxVillage
         public VillageFire Fire;
         public NightWatch Watch;
         public VillageAlarm Alarm;
+        public VillageWeather Weather;
+        public VillageRoutine Routine;
         [Tooltip("Where the wolf comes out for F2, and where it walks to: outside the gate, in the gate guard's sight and within reach of the bell.")]
         public Transform WolfFrom;
         public Transform WolfTo;
@@ -41,10 +44,10 @@ namespace Demos.GreyBoxVillage
         public static readonly IReadOnlyList<(string key, string what)> Keys = System.Array.AsReadOnly(new[]
         {
             ("F1", "Reset the village"), ("F2", "The wolf"), ("F3", "The thief"), ("F4", "A fire"), ("F5", "Jump to dusk"),
-            ("F12", "Hide this panel")
+            ("F6", "Change the weather"), ("F12", "Hide this panel")
         });
 
-        private static readonly Key[] Listened = { Key.F1, Key.F2, Key.F3, Key.F4, Key.F5, Key.F12 };
+        private static readonly Key[] Listened = { Key.F1, Key.F2, Key.F3, Key.F4, Key.F5, Key.F6, Key.F12 };
 
         /// <summary>The last key's result, as the panel shows it; empty before the first.</summary>
         public string Status { get; private set; } = "";
@@ -125,6 +128,7 @@ namespace Demos.GreyBoxVillage
                 case Key.F3: SendThief(); return true;
                 case Key.F4: StartFire(); return true;
                 case Key.F5: JumpToDusk(); return true;
+                case Key.F6: ChangeWeather(); return true;
                 case Key.F12: TogglePanel(); return true;
                 default: return false;
             }
@@ -151,9 +155,9 @@ namespace Demos.GreyBoxVillage
         // ---- The keys ----------------------------------------------------------------------------
 
         /// <summary>
-        /// F1: the village as Play started it, morning, with fresh agents whose memories are empty,
-        /// and the wolf resting in its den for a minute. A decision still with the model is dropped
-        /// when it comes back.
+        /// F1: the village as Play started it, a clear morning, with fresh agents whose memories are
+        /// empty, the villagers back at the start of their day, and the wolf resting in its den for a
+        /// minute. A decision still with the model is dropped when it comes back.
         /// </summary>
         public void ResetVillage()
         {
@@ -178,6 +182,11 @@ namespace Demos.GreyBoxVillage
             {
                 Village.Day.TimeOfDay = MorningTimeOfDay;
                 Village.Day.Apply();
+            }
+            if (Weather != null)
+            {
+                Weather.Set(WeatherKind.Clear);
+                Weather.Snap();
             }
             if (Village.Inventory != null) Village.Inventory.Reset(8);
             if (Village.Quests != null) Village.Quests.Define();
@@ -243,7 +252,27 @@ namespace Demos.GreyBoxVillage
             }
             Village.Day.TimeOfDay = DuskTimeOfDay;
             Village.Day.Apply();
+            // The villagers do not walk the hours that were skipped: they are at the campfire, inside
+            // the walls, before the gate shuts.
+            if (Routine != null) Routine.CatchUp();
             Say("F5: dusk. The gate shuts for the night, and Wren takes the watch.");
+        }
+
+        /// <summary>
+        /// F6: the next weather, clear, overcast, rain, fog and round again. It asks nobody: the
+        /// agents are told it, and how far they can see, in their next request.
+        /// </summary>
+        public void ChangeWeather()
+        {
+            if (Weather == null) return;
+            string M(float m) => m.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " m";
+            switch (Weather.Cycle())
+            {
+                case WeatherKind.Clear: Say("F6: clear skies."); break;
+                case WeatherKind.Overcast: Say("F6: overcast."); break;
+                case WeatherKind.Rain: Say("F6: rain. A guard sees about " + M(Weather.RainSight) + "."); break;
+                default: Say("F6: fog. A guard sees about " + M(Weather.FogSight) + ", so the wolf is seen later."); break;
+            }
         }
 
         private void Return(Transform t)

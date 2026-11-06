@@ -35,6 +35,18 @@ namespace Demos.Shared
         public float TimeOfDay = 0.36f;
         public bool Running = true;
         public float SunYaw = -35f;
+        [Tooltip("The fog's density in clear weather; the weather adds its own haze to it.")]
+        public float FogDensity = 0.0085f;
+
+        /// <summary>
+        /// How much the weather dims the day: 0 in sunshine, 1 under the darkest sky. Set by the game's
+        /// weather each frame and never saved, like <see cref="Haze"/> and <see cref="Wetness"/>.
+        /// </summary>
+        [NonSerialized] public float Gloom;
+        /// <summary>Fog the weather adds to <see cref="FogDensity"/>.</summary>
+        [NonSerialized] public float Haze;
+        /// <summary>How wet everything looks, 0 to 1: it darkens the palette's runtime copy.</summary>
+        [NonSerialized] public float Wetness;
 
         /// <summary>Which day it is, from 1.</summary>
         public int Day { get; private set; } = 1;
@@ -184,6 +196,13 @@ namespace Demos.Shared
             Color Blend(Color noon, Color dusk, Color night) => height >= 0
                 ? Color.Lerp(dusk, noon, Mathf.Clamp01(height * 2.2f))
                 : Color.Lerp(dusk, night, Mathf.Clamp01(-height * 4f));
+            // The weather greys a colour toward its own brightness, a little darker.
+            float gloom = Mathf.Clamp01(Gloom), haze = Mathf.Max(0f, Haze);
+            Color Grey(Color c, float amount, float brightness = 0.82f)
+            {
+                float l = c.grayscale * brightness;
+                return Color.Lerp(c, new Color(l, l, l, c.a), amount);
+            }
 
             if (Sun != null)
             {
@@ -191,26 +210,34 @@ namespace Demos.Shared
                 float pitch = day ? Mathf.Clamp(elevation, 4f, 176f) : Mathf.Clamp(elevation - 180f, 20f, 160f);
                 Sun.transform.rotation = Quaternion.Euler(pitch, SunYaw + (day ? 0 : 60), 0);
                 Sun.color = day ? Color.Lerp(SunDusk, SunNoon, Mathf.Clamp01(height * 2.5f)) : Moon;
-                Sun.intensity = day ? Mathf.Lerp(0.45f, 1.35f, Mathf.Clamp01(height * 2f)) : Mathf.Lerp(0.12f, 0.32f, Mathf.Clamp01(-height * 3f));
-                Sun.shadowStrength = day ? 0.85f : 0.55f;
+                Sun.intensity = (day ? Mathf.Lerp(0.45f, 1.35f, Mathf.Clamp01(height * 2f)) : Mathf.Lerp(0.12f, 0.32f, Mathf.Clamp01(-height * 3f)))
+                    * (1f - 0.55f * gloom);
+                Sun.shadowStrength = (day ? 0.85f : 0.55f) * (1f - 0.75f * gloom);
             }
 
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = Blend(SkyNoon, SkyDusk, SkyNight);
-            RenderSettings.ambientEquatorColor = Blend(EqNoon, EqDusk, EqNight);
-            RenderSettings.ambientGroundColor = Blend(GroundNoon, GroundDusk, GroundNight);
-            RenderSettings.fogColor = Blend(FogNoon, FogDusk, FogNight);
+            RenderSettings.ambientSkyColor = Grey(Blend(SkyNoon, SkyDusk, SkyNight), gloom * 0.7f);
+            RenderSettings.ambientEquatorColor = Grey(Blend(EqNoon, EqDusk, EqNight), gloom * 0.6f);
+            RenderSettings.ambientGroundColor = Grey(Blend(GroundNoon, GroundDusk, GroundNight), gloom * 0.5f);
+            // Fog and rain wash the fog colour out to a pale grey by day, a dark one by night.
+            RenderSettings.fogColor = Grey(Blend(FogNoon, FogDusk, FogNight), Mathf.Max(gloom * 0.8f, Mathf.Clamp01(haze * 20f)), 1.05f);
+            RenderSettings.fogDensity = FogDensity + haze;
 
             var skyTarget = SkyInUse;
             // Never an asset during Play: without its copy, the sky is left as it is.
             if (skyTarget != null && (sky != null || !Application.isPlaying))
             {
-                skyTarget.SetFloat("_Exposure", Mathf.Lerp(0.12f, 1.25f, Mathf.Clamp01(height * 2f + 0.25f)));
-                skyTarget.SetColor("_SkyTint", Blend(new Color(0.5f, 0.6f, 0.75f), new Color(0.75f, 0.5f, 0.45f), new Color(0.2f, 0.25f, 0.45f)));
+                skyTarget.SetFloat("_Exposure", Mathf.Lerp(0.12f, 1.25f, Mathf.Clamp01(height * 2f + 0.25f)) * (1f - 0.45f * gloom));
+                skyTarget.SetColor("_SkyTint", Grey(Blend(new Color(0.5f, 0.6f, 0.75f), new Color(0.75f, 0.5f, 0.45f), new Color(0.2f, 0.25f, 0.45f)), gloom * 0.85f, 1f));
             }
 
             if (glowTarget != null && (glowTarget != Palette || !Application.isPlaying))
+            {
                 glowTarget.SetColor("_EmissionColor", Color.white * Mathf.Lerp(0.12f, 2.4f, Darkness));
+                // Wet ground and roofs read darker. Weather is only ever set in Play mode, so the
+                // asset itself always gets plain white.
+                glowTarget.SetColor("_BaseColor", Color.Lerp(Color.white, new Color(0.68f, 0.7f, 0.74f), Mathf.Clamp01(Wetness)));
+            }
 
             foreach (var lamp in Lamps)
                 if (lamp != null) lamp.Darkness = Darkness;

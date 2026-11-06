@@ -6,8 +6,10 @@ model through the framework, in the world the evaluation set is written for. In 
 **Ashford**, a walled village of four model-driven agents: Bram at the gate and Wren at the
 bridge (#143), Odile the merchant and Captain Hale (#153). It has low-poly art, a day and night
 cycle, quests and an inventory, and the framework view (Tab) shows every decision being made.
-Presenter keys stage four situations that chain one agent's decision into another's: the wolf,
-a thief, a fire and night at the gate. A five-minute script for showing it is at the end
+The villagers keep a daily routine and the weather turns, and both reach the agents as
+observations ([A day in Ashford](#a-day-in-ashford)). Presenter keys stage four situations that
+chain one agent's decision into another's: the wolf, a thief, a fire and night at the gate. A
+five-minute script for showing it is at the end
 ([Presenting it](#presenting-it-a-five-minute-script)).
 
 ## Open and run
@@ -28,7 +30,7 @@ Or start from `LocalShared/DemoLauncher.unity`, the title screen.
 | **Tab** | The framework view: every agent's last request, the queue, and the target id over every place |
 | **H** | The request history: every decision, with exactly what was sent and what came back |
 | **Esc** | The menu: the framework view, how fast the day runs, the controls, restart, the title |
-| **F1** to **F5** | Presenter keys: reset the village, the wolf, the thief, a fire, jump to dusk ([The situations](#the-situations)) |
+| **F1** to **F6** | Presenter keys: reset the village, the wolf, the thief, a fire, jump to dusk, change the weather ([The situations](#the-situations)) |
 | **F12** | Show or hide the presenter panel, which lists those keys |
 
 - **Talking:** the dialogue panel opens when someone is in earshot. Type anything, or pick a
@@ -68,7 +70,7 @@ north bank holds the tower, the lord's keep, the woods and a locked cave.
 | `north_tower` | Across the river |
 | `wolf` | Roams the woods and sometimes prowls toward the village |
 | `bram`, `wren`, `odile`, `hale` | The four agents, so each can name the others |
-| `tomas`, `ada`, `pell`, `mira` | The villagers who wander the square |
+| `tomas`, `ada`, `pell`, `mira` | The villagers, who keep a daily routine ([A day in Ashford](#a-day-in-ashford)) |
 | `thief` | A hooded thief, category `stranger`, out only after **F3** |
 | `armory`, `lords_keep`, `locked_cave` | **Off limits** to the player: red zones |
 
@@ -139,11 +141,73 @@ Everything you see is built by scripts, so it can be rebuilt and changed in code
     the presenter keys in Play mode, with the agents answering from the presenter script's replies,
     and captures the wolf at the gate, the thief chased and caught, the fire and its end, and the
     shut gate at night, opened. `CaptureUiFromCommandLine` takes them too, after the UI views.
+  - `...VillageCapture.CaptureExploreFromCommandLine -captureOut <dir>`, with no `-quit`, captures
+    the villagers' routine at four hours (the morning's work, midday, dusk and night) and the
+    village in each weather, in Play mode.
   - `...VillageCapture.PresenterLiveFromCommandLine -captureOut <dir>`, with no `-quit`, plays the
     same script with the real model and writes `live-run.md`, every decision with its guard and
     latency, and `live-run.jsonl`. Take the shared Ollama lock first.
 
 No asset in this game comes from the asset server, so there is no `GENERATED.md` yet.
+
+## A day in Ashford
+
+### The villagers' routine
+
+Tomas, Ada, Pell and Mira are scripted villagers, not agents: each a `Villager`, with the day in
+`VillageRoutine`. Through `DayNightCycle`'s day (ten minutes by default) each goes:
+
+| Hours | Where |
+|---|---|
+| 05:45 to 07:00 | The well |
+| 07:00 to 11:00 | Work: Tomas and Pell to the fields outside the gate, Ada and Mira to the market |
+| 11:00 to 14:00 | The square |
+| 14:00 to 17:00 | Work again |
+| 17:00 to 19:30 | The campfire in the guards' camp |
+| 19:30 to 05:45 | Home: each walks to its cottage door and goes in, and the lamp by its door comes on |
+
+- **The bell** sends them running for the shelter, from indoors too. When it stops, each goes back
+  to where the hour has it.
+- **F1** puts them back where Play started, and they set off for the morning's work. **F5** puts
+  them straight at the campfire, as dusk has them, so the field workers are not left outside the
+  gate it shuts.
+- **Indoors** a villager is out of sight but still a person the guards can name, so Bram's targets
+  never change with the hour (a test checks).
+- **Every agent is told who is where,** in one line of its observations, read from where the
+  villagers stand: "In the village: the market is busy (ada, mira), the square is empty, tomas and
+  pell are working the fields outside the gate." At night: "In the village: everyone is at home for
+  the night, and the streets are empty." While the bell rings: "In the village: the villagers are
+  taking cover in the shelter."
+- **The agents keep their posts,** as before: only Wren's night watch and Bram's evening at the
+  campfire move them.
+
+### Weather
+
+`VillageWeather` turns through clear, overcast, rain and fog: by itself every five game hours,
+about every two minutes at the normal day length, and on **F6**. The look blends in over a few
+seconds: rain falls around the camera, wet ground and roofs darken, mist drifts low in fog, and the
+sky, the sun and the fog colour grey over. Like the day and night cycle, it writes only to the
+runtime copies of the palette and the sky, so a rainy session changes no file.
+
+It changes what the agents notice, and nothing else:
+
+| Weather | How far a guard sees | Every agent is told |
+|---|---|---|
+| Clear | 32 m, 26 m for the wolf, 45 m for smoke | Nothing |
+| Overcast | The same | "The sky is overcast." |
+| Rain | 22 m at most | "It is raining; you can see about 22 m." |
+| Fog | 15 m at most | "Fog lies over the village; you can see about 15 m." |
+
+- **The limit is in `GuardSenses.CanSee`,** so it reaches everything a guard watches for: the wolf
+  is seen later, a thief lost sooner, and a trespass in fog may go unseen. A wolf 20 m off is
+  reported in clear weather and in rain, and in fog only once it comes within 15 m.
+- **The weather is never an availability input.** It offers no action and takes none away: in fog a
+  guard is offered what it would be offered in sunshine for what it can see. A test checks that for
+  Bram, whoever asks.
+- **Clear weather adds nothing to the prompt,** so a clear day's requests read as the earlier live
+  runs' did, apart from the village's line.
+- **Only the running clock changes it,** never a jump in time, so F5 to dusk keeps the weather, and
+  F1 brings back clear skies.
 
 ## The agents
 
@@ -236,10 +300,10 @@ teleported out. The quiet timer is how the model shows what it does unprompted: 
 Each guard sees with its own eyes and keeps its own timers, so a trespass Bram cannot see may
 still reach Wren. `VillageEvents` is for what everyone in range notices: the bell, and the smoke of a fire.
 
-The observations sent with every request come from the scene and the guard's state: what it is
-doing, whether it follows the player, how far the player is and whether it can see them, which
-zone the player is in, the alarm, the wolf, and every place it can name, as `id, distance:
-description`. A model served by Ollama never reads the schema, so the ids have to be in the
+The observations sent with every request come from the scene and the guard's state: day or night,
+the weather when it is not clear, what it is doing, whether it follows the player, how far the
+player is and whether it can see them, which zone the player is in, the alarm, the wolf, who is
+where in the village, and every place it can name, as `id, distance: description`. A model served by Ollama never reads the schema, so the ids have to be in the
 prompt to be chosen deliberately. They already pass the agent's eight-line observation budget, so
 the guards' `AgentBehaviour`s leave **Notice Nearby** off: a proximity source would add nothing.
 
@@ -339,11 +403,12 @@ the bottom right corner; world labels keep out from under it.
 
 | Key | What it does |
 |---|---|
-| **F1** | Resets the village: morning, everyone back where Play started, the bell silent, the thief gone, the fire out, the gate open, the pack and quests as new, and fresh agents with empty memories on the same provider config. A decision still with the model when F1 is pressed is dropped when it comes back |
+| **F1** | Resets the village: a clear morning, everyone back where Play started (the villagers set off for the morning's work), the bell silent, the thief gone, the fire out, the gate open, the pack and quests as new, and fresh agents with empty memories on the same provider config. A decision still with the model when F1 is pressed is dropped when it comes back |
 | **F2** | The wolf comes up the road outside the south gate, 14 m from Bram, close enough for the bell |
 | **F3** | A hooded thief slips up to Odile's counter, takes the first ware and runs for the eastern road |
 | **F4** | The bread stall, beside Odile's, catches fire |
-| **F5** | Jumps to dusk, just as night falls: the gate shuts and the watch changes hands |
+| **F5** | Jumps to dusk, just as night falls: the gate shuts and the watch changes hands, and the villagers are at the campfire |
+| **F6** | The next weather: clear, overcast, rain, fog, and round again. It asks nobody; the next request of every agent says it, and in rain or fog how far the agent can see ([Weather](#weather)) |
 
 ### The wolf (F2)
 
@@ -505,7 +570,21 @@ They cover:
   [the script](#presenting-it-a-five-minute-script) below, with everything walking, running and
   burning, against the scripted replies in `Editor/PresenterScript.cs`. Each key must leave an
   agent asked within 6 s, the keys work with the framework view open but not while the player
-  types, and no decision in the run is refused or fails. It takes about 15 s.
+  types, and no decision in the run is refused or fails. After F5 the villagers are at the
+  campfire; F6 goes round to fog, which Wren's next request carries, and F1 brings clear skies back.
+  It takes about 15 s.
+- The day and the weather (`VillageExploreTests`): each villager goes where its schedule says at
+  every hour, goes indoors after dark with the lamp by its door lit, still a target, and comes out
+  in the morning; the bell sends it to the shelter, the hour cannot move it while the bell rings,
+  and it goes back to its day when the bell stops; every agent is told who is where, at work, at
+  midday, at night and under the bell; every place of the routine and every door is on the
+  NavMesh. Fog shortens a guard's sight, so a wolf reported 20 m off in clear weather and in rain is
+  not reported in fog until it is close, and the player 20 m off is out of sight; every agent is
+  told the weather and how far it can see, and clear weather adds nothing; the weather never adds
+  or takes away any of Bram's actions or targets, whoever asks; it changes by itself a few times a
+  day, through all four, and F6 goes round them; slice 3 adds no target to the village, and Bram is
+  offered the same targets at every hour in every weather; and the routine and the weather are in
+  the scene and wired, the rain saved not falling.
 
 And from before:
 each action executes on the guard; every evaluation target is offered and named in the observations; who is asking (the
@@ -575,6 +654,7 @@ stops answering, a red banner says so and the village stays playable (press **F1
 | 4:00 | **F1**, then walk out through the south gate and turn round | **F5** | Dusk. The gate shuts, Wren hurries to it and takes the watch (her card now says "the night watch at the gate"), Bram goes off to the campfire. Wren's card: `open_gate` is not offered, because nobody has asked |
 | 4:20 | Outside the shut gate, facing Wren | "Wren, it's me. Let me in, please!" | Wren is offered `open_gate`, only now and only her; the doors swing open |
 | 4:35 | Walk in | "Thank you. Shut it behind me." | `close_gate`. Then walk to Bram at the campfire and ask "Quiet night, Bram?": his card offers exactly what it offered by day. He is the evaluation agent: neither night, nor the wolf, the thief or the fire, gives him an action he did not have |
+| 4:50 | Anywhere, the board open | **F6** three times, to fog (optional) | The clock says fog, and the next card of whoever you speak to shows "Fog lies over the village; you can see about 15 m." in its observations. The weather never changes what an agent is offered, only what it sees: a wolf 20 m off would go unreported. **F1** clears it |
 | 5:00 | | | End on the board: every decision, and why each one could or could not be made |
 
 What to say while it plays: the model never moves anyone. It picks from the actions it is offered,

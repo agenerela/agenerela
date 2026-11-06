@@ -86,6 +86,22 @@ phase table and the open issues, not here.
   - **Two kit models,** `gate_door` and `bucket`, and `KIT_ONLY` to rebuild only the models named.
   - **Fixes the live run found:** a guard attacking a running thief now runs after it, and a wolf
     running for its den is no longer reported. Agents are told when it is night.
+- **GreyBoxVillage's day and its weather** (#153, explore slice, first part).
+  - **A daily routine:** the four villagers go to the well at dawn, to work (the fields outside the
+    gate, or the market), to the square at midday, to the campfire at dusk, and home after dark,
+    where the lamp by each door comes on. The bell sends them to the shelter, and they go back to
+    their day when it stops. F5 puts them at the campfire, inside the gate it shuts.
+  - **Every agent is told who is where,** such as "In the village: the market is busy (ada, mira),
+    the square is empty, tomas and pell are working the fields outside the gate."
+  - **Weather:** clear, overcast, rain and fog, changing by itself a few times a day and on a new
+    presenter key, **F6**. Rain falls round the camera, the ground darkens, mist drifts and the sky
+    greys, all on the runtime copies of the palette and the sky.
+  - **It changes what the agents notice:** rain and fog shorten a guard's sight to 22 m and 15 m,
+    so the wolf is seen later and a thief lost sooner, and every agent is told the weather and how
+    far it can see. It never changes what an agent is offered.
+  - **Bram keeps his actions and targets:** tests check that no hour and no weather gives him or
+    takes from him an action or a target, and that the slice adds no target to the village.
+  - `CaptureExploreFromCommandLine` captures the routine at four hours and each weather.
 - **An editor UI kit** (#167) in the package's `Editor/UI/`, for the Phase 5 screens to share.
   It is internal to `Agenerela.Editor`, so it adds no public API.
   - `Agenerela.uss` holds colour, spacing and type variables (`--ag-*`) built on Unity's own

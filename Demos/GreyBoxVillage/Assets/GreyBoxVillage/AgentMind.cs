@@ -133,7 +133,11 @@ namespace Demos.GreyBoxVillage
         public List<string> Observations()
         {
             bool night = Village.Day != null && Village.Day.IsNight;
-            var facts = new List<string> { night ? "It is night." : "It is daytime.", "You are " + Body.Activity + "." };
+            var facts = new List<string> { night ? "It is night." : "It is daytime." };
+            // Nothing in clear weather; in rain and fog, how far anyone can see.
+            string weather = Village.Weather != null ? Village.Weather.Observation : null;
+            if (weather != null) facts.Add(weather);
+            facts.Add("You are " + Body.Activity + ".");
             facts.AddRange(Body.Facts());
 
             var player = Village.Player;
@@ -151,6 +155,9 @@ namespace Demos.GreyBoxVillage
             if (wolf != null) facts.Add("A wolf is " + Metres(wolf.Value) + " from you.");
             float? thief = VisibleThiefDistance();
             if (thief != null) facts.Add("A thief is running for the eastern_road, " + Metres(thief.Value) + " from you.");
+            // Who is where in the village, so the model sees the day go by.
+            string crowd = Village.Routine != null ? Village.Routine.Describe() : null;
+            if (crowd != null) facts.Add(crowd);
 
             facts.AddRange(Places());
             return facts;
