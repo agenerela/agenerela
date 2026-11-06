@@ -36,10 +36,57 @@ namespace LivingVale.Tests
             ("Just looking around. How is business today?", ActionRegistry.None, TargetRegistry.NoTarget),
         };
 
+        // G5f: lines that ask for nothing, so any offer is unasked. New, and none repeats a line
+        // above, a few-shot example (including the negative one below) or the evaluation set.
+        private static readonly string[] NonTradeLines =
+        {
+            "Evening, Mara. Heard anything new from the travelers lately?",
+            "How long have you kept this stall?",
+            "Which way is the inn from here?",
+            "You look tired today. Is everything all right?",
+            "Do you ever miss the days when the road was busy?",
+            "Who is that healer on the porch over there?",
+            "Your stall smells of herbs. Do you dry them yourself?",
+            "Is it safe to walk the Old Road at night?",
+            "What do people in Briar Glen do for fun?",
+            "Did you know the wagon's driver?",
+            "I'm only passing through on my way to the castle.",
+            "Thanks for the chat, Mara. Take care.",
+        };
+
+        /// <summary>G5f's negative example: a line the few-shot block shows answered with none.</summary>
+        public const string NegativeExample = AgenerelaNpcDecisionDriver.DefaultIdleExample;
+
+        // The arms of G5f's A/B, by name: control (G5b's prompt), example (a negative few-shot
+        // example), rule (a stricter rule line). LV_ARMS picks them, comma-separated.
+        private static void Configure(AgenerelaNpcDecisionDriver driver, string arm)
+        {
+            switch (arm)
+            {
+                case "control":
+                    driver.TradeRule = TradeActionBinding.DefaultRule;
+                    driver.IdleExampleStimulus = null;
+                    break;
+                case "example":
+                    driver.TradeRule = TradeActionBinding.DefaultRule;
+                    driver.IdleExampleStimulus = NegativeExample;
+                    break;
+                case "rule":
+                    driver.TradeRule = TradeActionBinding.OnlyWhenAskedRule;
+                    driver.IdleExampleStimulus = null;
+                    break;
+                case "default":
+                    break;
+                default:
+                    throw new ArgumentException("Unknown arm " + arm);
+            }
+        }
+
         [Serializable]
         private sealed class Row
         {
             public string model;
+            public string arm;
             public int index;
             public string line;
             public string expectedAction;
@@ -74,19 +121,33 @@ namespace LivingVale.Tests
             }
 
             var mara = new NpcDescriptor(VendorStock.MaraId, "Mara", "General trader");
+            string[] arms = (Environment.GetEnvironmentVariable("LV_ARMS") ?? "default").Split(',');
+            var cases = new System.Collections.Generic.List<(string line, string action, string target)>(Cases);
+            if (arms.Length > 1 || arms[0] != "default")
+            {
+                foreach (var line in NonTradeLines)
+                {
+                    cases.Add((line, ActionRegistry.None, TargetRegistry.NoTarget));
+                }
+            }
+
             Directory.CreateDirectory(Path.GetDirectoryName(output));
             using (var writer = new StreamWriter(output, false))
             {
-                for (int i = 0; i < Cases.Length; i++)
+                // Two arms on one model interleave, line by line (measuring.md, item 4).
+                for (int c = 0; c < cases.Count * arms.Length; c++)
                 {
-                    var (line, action, target) = Cases[i];
+                    int i = c / arms.Length;
+                    string arm = arms[c % arms.Length].Trim();
+                    var (line, action, target) = cases[i];
                     var catalog = ItemCatalog.CreateDefault();
                     var inventory = new PlayerInventory(catalog);
                     inventory.TryApply(0, new[] { new ItemChange(ItemCatalog.WolfPelt, 1), new ItemChange(ItemCatalog.IronScrap, 1) }, out _);
                     var trade = new TradeService(inventory, new[] { VendorStock.CreateMara(catalog) }, new Session());
                     var driver = AgenerelaNpcDecisionDriver.ForOllama(model, new NpcActionExecutor(trade));
+                    Configure(driver, arm);
 
-                    var row = new Row { model = model, index = i + 1, line = line, expectedAction = action, expectedTarget = target };
+                    var row = new Row { model = model, arm = arm, index = i + 1, line = line, expectedAction = action, expectedTarget = target };
                     var turn = new NpcTurn(i + 1, mara, line, Array.Empty<ChatLine>(), 1);
                     var decide = driver.DecideAsync(turn, CancellationToken.None);
                     await Run.NotCancelled(decide);

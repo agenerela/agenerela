@@ -131,7 +131,9 @@ namespace LivingVale.Agenerela
         {
             var next = new AgenerelaNpcDecisionDriver(newProvider, modelLabel, personas.Values, configureAgent, executor, memories, lastReceipts)
             {
-                TurnObservations = TurnObservations
+                TurnObservations = TurnObservations,
+                TradeRule = TradeRule,
+                IdleExampleStimulus = IdleExampleStimulus
             };
             Detach();
             return next;
@@ -229,6 +231,22 @@ namespace LivingVale.Agenerela
             return personas.TryGetValue(npc.Id, out var persona) ? persona : NpcPersona.FromDescriptor(npc);
         }
 
+        /// <summary>The rule line before the trade actions; null uses <see cref="TradeActionBinding.DefaultRule"/>.</summary>
+        public string TradeRule { get; set; }
+
+        /// <summary>
+        /// The negative example the driver shows by default. In G5f's A/B it cut unasked trade
+        /// offers to none on both models measured without costing an asked one (findings,
+        /// 5 November). New wording: it repeats no evaluation prompt and no measured line (hard rule 4).
+        /// </summary>
+        public const string DefaultIdleExample = "Good to see a friendly face again.";
+
+        /// <summary>
+        /// A line the few-shot block shows answered with <c>none</c> (<see cref="DecideOptions.IdleExampleStimulus"/>):
+        /// a negative example, so a model sees that not every line is a request. Null shows none.
+        /// </summary>
+        public string IdleExampleStimulus { get; set; } = DefaultIdleExample;
+
         /// <summary>The observations a turn sends: the persona's knowledge, what it can offer now, then <see cref="TurnObservations"/>.</summary>
         public List<string> ObservationsFor(NpcTurn turn)
         {
@@ -237,7 +255,7 @@ namespace LivingVale.Agenerela
             {
                 var options = binding.Options();
                 binding.RefreshExamples(options);
-                lines.AddRange(TradeActionBinding.PromptLines(options));
+                lines.AddRange(TradeActionBinding.PromptLines(options, TradeRule));
                 lastReceipts.TryGetValue(turn.Npc.Id, out var receipt);
                 lines.AddRange(binding.StatusLines(receipt));
             }
@@ -283,7 +301,8 @@ namespace LivingVale.Agenerela
             {
                 StimulusLabel = StimulusLabel,
                 Observations = ObservationsFor(turn),
-                Priority = DecisionPriority.PlayerFacing
+                Priority = DecisionPriority.PlayerFacing,
+                IdleExampleStimulus = IdleExampleStimulus
             };
 
             // A cancelled decision throws OperationCanceledException here; the coordinator owns

@@ -125,7 +125,21 @@ namespace LivingVale.Agenerela
         /// The observation lines that tell the model what it can offer now, from
         /// <paramref name="options"/>. With nothing to offer, one line says so.
         /// </summary>
-        public static List<string> PromptLines(IReadOnlyList<GameActionOption> options)
+        /// <summary>The rule line written before the trade actions, as G5b wrote it: the control arm of G5f's A/B.</summary>
+        public const string DefaultRule =
+            "When the traveler asks to buy or sell, choose the matching action with one of its exact target ids below; otherwise choose none. " +
+            "Nothing changes hands until the traveler confirms your offer.";
+
+        /// <summary>G5f's stricter rule line: an offer only when asked, and what "not asked" looks like.</summary>
+        public const string OnlyWhenAskedRule =
+            "Make an offer (quote_purchase or quote_sale) only when the traveler asks to buy something from you or to sell you something. " +
+            "For greetings, questions, rumours and small talk, choose none and just answer. " +
+            "Nothing changes hands until the traveler confirms your offer.";
+
+        public static List<string> PromptLines(IReadOnlyList<GameActionOption> options) => PromptLines(options, null);
+
+        /// <param name="rule">The rule line; null uses <see cref="DefaultRule"/>.</param>
+        public static List<string> PromptLines(IReadOnlyList<GameActionOption> options, string rule)
         {
             var lines = new List<string>();
             if (options == null || options.Count == 0)
@@ -134,8 +148,7 @@ namespace LivingVale.Agenerela
                 return lines;
             }
 
-            lines.Add("When the traveler asks to buy or sell, choose the matching action with one of its exact target ids below; otherwise choose none. " +
-                "Nothing changes hands until the traveler confirms your offer.");
+            lines.Add(string.IsNullOrWhiteSpace(rule) ? DefaultRule : rule);
             foreach (var option in options)
             {
                 lines.Add($"Action {option.ActionId}: {option.Description}");
