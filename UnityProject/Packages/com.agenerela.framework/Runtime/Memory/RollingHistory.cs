@@ -40,10 +40,16 @@ namespace Agenerela
     /// remembered in the order they finish.
     /// </para>
     /// </remarks>
-    public sealed class RollingHistory : IMemoryStrategy, IReportsDroppedTurns
+    public sealed class RollingHistory : IMemoryStrategy, IReportsDroppedTurns, IExportsMemory
     {
         /// <summary>How many exchanges are kept by default: six, as §2.1 sets.</summary>
         public const int DefaultTurns = 6;
+
+        /// <summary>The <see cref="MemorySnapshot.Format"/> this strategy writes.</summary>
+        public const string SnapshotFormat = "agenerela.rolling-history";
+
+        /// <summary>The <see cref="MemorySnapshot.Version"/> this strategy writes.</summary>
+        public const int SnapshotVersion = 1;
 
         /// <summary>
         /// The default token budget for the history of one request: 256 estimated tokens.
@@ -162,6 +168,79 @@ namespace Agenerela
             {
                 exchanges.RemoveFirst();
                 Forgotten++;
+            }
+        }
+
+        /// <summary>
+        /// Every exchange held now, oldest first, the ones the token cap leaves out of a request
+        /// included, as <see cref="SnapshotFormat"/> version <see cref="SnapshotVersion"/>, with no
+        /// <see cref="MemorySnapshot.Data"/>.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="Dropped"/> and <see cref="Forgotten"/> are not saved: they count what this
+        /// object did, for telemetry, not what the agent remembers.
+        /// </remarks>
+        public MemorySnapshot Export()
+        {
+            var snapshot = new MemorySnapshot { Format = SnapshotFormat, Version = SnapshotVersion };
+
+            foreach (var exchange in exchanges)
+            {
+                snapshot.Exchanges.Add(new MemoryExchange(exchange.Stimulus, exchange.Decision));
+            }
+
+            return snapshot;
+        }
+
+        /// <summary>
+        /// Replaces every exchange held with <paramref name="snapshot"/>'s, oldest first, keeping the
+        /// newest <see cref="Turns"/> of them. Reads the exchanges of any strategy's snapshot, since
+        /// every strategy writes them the same way, and ignores <see cref="MemorySnapshot.Data"/>.
+        /// </summary>
+        /// <remarks>
+        /// The exchanges past <see cref="Turns"/> are let go of as the turn cap always does, and count
+        /// in <see cref="Forgotten"/>. A null <see cref="MemorySnapshot.Exchanges"/> imports none,
+        /// which leaves the memory empty.
+        /// </remarks>
+        /// <exception cref="ArgumentNullException"><paramref name="snapshot"/> is null.</exception>
+        /// <exception cref="ArgumentException">
+        /// An exchange, its stimulus or its decision is null. Nothing is imported, and the memory
+        /// keeps what it held.
+        /// </exception>
+        public void Import(MemorySnapshot snapshot)
+        {
+            if (snapshot == null)
+            {
+                throw new ArgumentNullException(nameof(snapshot));
+            }
+
+            var imported = new List<Exchange>();
+            var source = snapshot.Exchanges ?? new List<MemoryExchange>();
+            for (int i = 0; i < source.Count; i++)
+            {
+                var exchange = source[i];
+                if (exchange == null || exchange.Stimulus == null || exchange.Decision == null)
+                {
+                    // A null would reach DecisionRequest.History, which Agent refuses as a pipeline
+                    // error on every later decision, so it is refused here, before anything changes.
+                    throw new ArgumentException(
+                        $"Exchanges[{i}] is null or has a null stimulus or decision, so the snapshot cannot be imported.",
+                        nameof(snapshot));
+                }
+
+                imported.Add(new Exchange(exchange.Stimulus, exchange.Decision,
+                    EstimateTokens(exchange.Stimulus.Length + exchange.Decision.Length)));
+            }
+
+            exchanges.Clear();
+            foreach (var exchange in imported)
+            {
+                exchanges.AddLast(exchange);
+                if (exchanges.Count > Turns)
+                {
+                    exchanges.RemoveFirst();
+                    Forgotten++;
+                }
             }
         }
 

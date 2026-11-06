@@ -20,6 +20,15 @@ namespace Agenerela
         public ActionRegistry Actions{ get; }
 
         /// <summary>
+        /// The caller's own object for the call this context belongs to, from
+        /// <see cref="DecideOptions.Correlation"/>: which conversation, turn or request a decision
+        /// answers. The framework never reads it (DR-018). The same object on every context made
+        /// for one decision, the one <c>Agent.Execute</c> hands the handler included; null when the
+        /// call set none.
+        /// </summary>
+        public object Correlation{ get; }
+
+        /// <summary>
         /// Creates a snapshot of what the agent knows for one decision.
         /// Identity, Targets, and Actions cannot be null.
         /// Null stimulus becomes empty.
@@ -31,6 +40,22 @@ namespace Agenerela
             IReadOnlyDictionary<string, object> state,
             TargetRegistry targets,
             ActionRegistry actions)
+            : this(identity, stimulus, observations, state, targets, actions, null)
+        {
+        }
+
+        /// <summary>
+        /// A snapshot as the constructor above makes it, carrying the call's
+        /// <paramref name="correlation"/>, which may be null.
+        /// </summary>
+        public AgentContext(
+            AgentIdentity identity,
+            string stimulus,
+            IReadOnlyList<string> observations,
+            IReadOnlyDictionary<string, object> state,
+            TargetRegistry targets,
+            ActionRegistry actions,
+            object correlation)
         {
             if (identity == null)
             {
@@ -68,6 +93,7 @@ namespace Agenerela
             State = state;
             Targets = targets;
             Actions = actions;
+            Correlation = correlation;
         }
     }
 }

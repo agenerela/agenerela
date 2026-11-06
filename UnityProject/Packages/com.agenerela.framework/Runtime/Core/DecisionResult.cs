@@ -52,6 +52,19 @@ namespace Agenerela
         public ProviderResult Reply { get; }
 
         /// <summary>
+        /// The call's <see cref="DecideOptions.Correlation"/>, the caller's own object, so a result
+        /// says which call it answers wherever it travels (DR-018). Set on every result
+        /// <see cref="Agent.DecideAsync"/> returns, pipeline errors included; null when the call set
+        /// none, and for a result made with the public constructor. <see cref="Agent.Execute(DecisionResult)"/>
+        /// sets it on the context it hands the handler.
+        /// </summary>
+        public object Correlation { get; }
+
+        // The decision waiting to be remembered, under MemoryCommit.OnExecute; null otherwise, and
+        // once settled it stays, marked, so nothing remembers it twice (DR-018).
+        internal PendingMemory Pending { get; set; }
+
+        /// <summary>
         /// A result no guard stopped: <see cref="ModelDecision"/> is <paramref name="decision"/>
         /// and <see cref="Verdict"/> is null.
         /// </summary>
@@ -75,7 +88,8 @@ namespace Agenerela
             AgentDecision modelDecision,
             GuardVerdict? verdict,
             DecisionRequest request,
-            ProviderResult reply)
+            ProviderResult reply,
+            object correlation = null)
         {
             if (telemetry == null)
             {
@@ -108,6 +122,39 @@ namespace Agenerela
             Telemetry = telemetry;
             Request = request;
             Reply = reply;
+            Correlation = correlation;
+        }
+    }
+
+    // A decision held back from memory until the game settles it (MemoryCommit.OnExecute,
+    // DR-018): everything IMemoryStrategy.Remember needs, as the decision had it, and the memory
+    // it recalled from, so replacing Agent.Memory meanwhile changes nothing.
+    internal sealed class PendingMemory
+    {
+        public PendingMemory(Agent owner, IMemoryStrategy memory, AgentContext context, DecisionRequest request)
+        {
+            Owner = owner;
+            Memory = memory;
+            Context = context;
+            Request = request;
+        }
+
+        public Agent Owner { get; }
+        public IMemoryStrategy Memory { get; private set; }
+        public AgentContext Context { get; private set; }
+        public DecisionRequest Request { get; private set; }
+
+        // Committed or discarded: either way, never remembered again.
+        public bool Settled { get; private set; }
+
+        // Marks it settled and lets go of the context, whose targets may be scene objects, so a
+        // result the game keeps, in a log say, does not keep them alive.
+        public void Settle()
+        {
+            Settled = true;
+            Memory = null;
+            Context = null;
+            Request = null;
         }
     }
 }

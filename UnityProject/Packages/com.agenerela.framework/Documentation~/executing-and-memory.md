@@ -1,0 +1,178 @@
+# Acting on a decision — what it did, which call it was, and what the agent remembers
+
+`DecideAsync` asks the model and returns a decision. `Execute` checks it again and runs the
+game's code. This page covers what happens around that second call (DR-018): how a handler says
+what it did, how a decision carries the caller's own context to the handler, how memory can wait
+until the game has acted, and how memory is saved with the game.
+
+All of it is opt-in. A handler, a call and a memory written before it work as they did, and
+`agent.Execute(result)` still returns `true` or `false`.
+
+Every rule here runs as a test, in `Tests/Editor/Core/ExecutionResultTests.cs`,
+`Tests/Editor/Memory/MemoryCommitTests.cs` and `Tests/Editor/Memory/MemorySnapshotTests.cs`.
+
+## What a handler did: `ActionResult`
+
+`Execute` returning `true` means the handler ran. It cannot say that the game then refused: the
+quote had gone stale, the purse was short. A handler that knows that returns an `ActionResult`:
+
+```csharp
+agent.Bind("quote_sale", DelegateActionHandler.WithResult(
+    ctx => shop.IsOpen,
+    (ctx, decision) =>
+    {
+        if (!shop.TryQuote(decision.TargetId, out var quote))
+            return ActionResult.Failed("That stock is gone.");
+        return ActionResult.Done(quote);
+    }));
+
+if (!agent.Execute(result, out var outcome))
+    ui.Say(outcome.Reason);                       // "That stock is gone."
+else if (outcome.TryGetPayload(out Quote quote))
+    ui.ShowQuote(quote);
+```
+
+There are three ways to return one:
+
+| Front door | How |
+|---|---|
+| A delegate | `DelegateActionHandler.WithResult(isAvailable, execute)`, whose `execute` returns an `ActionResult`. The constructor still takes a plain `Action` |
+| An attributed method | An `[AgentAction]` method returns `ActionResult` instead of `void` |
+| A class | Implement `IActionHandlerWithResult`, and keep `IActionHandler.Execute` as a one-line forward |
+
+```csharp
+public sealed class Shopkeeper : IActionHandlerWithResult
+{
+    public bool IsAvailable(AgentContext ctx) => shop.IsOpen;
+    public void Execute(AgentContext ctx, AgentDecision decision) => ExecuteWithResult(ctx, decision);
+    public ActionResult ExecuteWithResult(AgentContext ctx, AgentDecision decision) => …;
+}
+```
+
+A scene component deriving from `ActionHandlerBehaviour` adds `IActionHandlerWithResult` the same
+way, its `Execute` override forwarding to `ExecuteWithResult`.
+
+`Execute` calls `ExecuteWithResult` when a handler has it, once, and never both methods. A
+handler that reports nothing counts as `Done` whenever it returns, so nothing written before this
+changes.
+
+### The four statuses
+
+| `outcome.Status` | Means | `Execute` returns |
+|---|---|---|
+| `Done` | The handler ran and did it; `Payload` is what it made, or null | `true` |
+| `Failed` | The handler ran and could not; `Reason` says why, in its own words | `false` |
+| `NoAction` | The decision was `none`, a guard's rewrite included: nothing to run | `true` |
+| `Refused` | No handler ran: a pipeline error, a guard's `Reject`, or the re-check at `Execute` refused it; `Reason` says which | `false` |
+
+A handler makes only `Done` and `Failed`. `Failed` needs a reason. `default(ActionResult)` is
+`Done` with no payload. A `Failed` is the game's own answer, so it is not logged; a `Refused` is
+logged as it always was. A handler that throws still throws out of `Execute`, and records
+nothing.
+
+The status and the reason go into the result's telemetry, in `Telemetry.Execution` and
+`Telemetry.ExecutionReason`, so the evaluation can tell "chose the right action" from "the
+action worked". The payload does not: it is the game's object, and telemetry is plain data. Each
+`Execute` of a result replaces the last one's.
+
+## Which call a decision belongs to: `Correlation`
+
+A handler sometimes needs to know which call it is acting for: the conversation a quote belongs
+to, the turn number, a request id. Writing it into `Agent.State` before `Execute` works only
+while one call is in flight, because every call on the agent shares that state. Put it on the
+call instead:
+
+```csharp
+var result = await agent.DecideAsync(line, new DecideOptions { Correlation = conversation });
+// …later, perhaps after another call has started:
+agent.Execute(result);
+
+// In the handler:
+var conversation = (Conversation)ctx.Correlation;
+```
+
+The framework never reads it. It is kept, never copied, on `DecisionResult.Correlation`, pipeline
+errors included, and on every `AgentContext` made for the decision: the ones the availability
+checks, target and observation sources, guards and memory see while deciding, and the one
+`Execute` hands the handler. It never reaches the model or the telemetry. It says which call this
+is, never why the agent is asked, so it stays inside DR-008.
+
+A guard reads it from `input.Context.Correlation`, which is how a game's guard could refuse a
+decision that belongs to a conversation it has moved past.
+
+## Memory that waits for the game: `MemoryCommit`
+
+By default an agent remembers each decision as `DecideAsync` returns it. A game that may drop a
+reply after it arrives (it timed out, the player walked away, another speaker took over) would
+then have an agent that remembers saying something nobody heard. Set the agent to wait:
+
+```csharp
+agent.MemoryCommit = MemoryCommit.OnExecute;
+```
+
+Now a decision is held on its own result:
+
+- `Execute` remembers it when it carries it out: `Done` or `NoAction`. Executing it again does
+  not remember it twice.
+- One that `Execute` refuses, or whose handler reports `Failed`, keeps waiting. The game may
+  still `agent.Commit(result)`, say because the agent's line was shown anyway, or
+  `agent.Discard(result)` so that nothing remembers it later.
+- One the game simply drops is never remembered. It needs no clean-up: it is held on the
+  result, not on the agent.
+
+`Commit` and `Discard` return whether the decision was waiting. Only the agent that made a
+decision can settle it; another agent's `Commit` or `Discard` throws, and its `Execute` may carry
+the decision out without touching the first agent's memory.
+
+What is remembered is exactly what `OnDecide` would have remembered, with the same context and
+request, into the memory the decision recalled from. The difference is order: decisions are
+remembered in the order they are settled. The mode is read when a decision starts, as
+`Agent.Memory` is. It works with any `IMemoryStrategy`, since a strategy only sees `Remember`,
+called later.
+
+## Saving memory with the game: `IExportsMemory`
+
+A strategy that can be saved implements `IExportsMemory` beside `IMemoryStrategy`.
+`RollingHistory`, the default, does. Its snapshot is plain data, public fields and lists, so it
+goes straight into a save object for `JsonUtility` or Newtonsoft:
+
+```csharp
+[Serializable]
+public sealed class SaveGame
+{
+    public int gold;
+    public MemorySnapshot guardMemory;
+}
+
+// Saving:
+if (guard.Memory is IExportsMemory saved) save.guardMemory = saved.Export();
+
+// Loading:
+if (guard.Memory is IExportsMemory loaded) loaded.Import(save.guardMemory);
+```
+
+A `MemorySnapshot` holds:
+
+| Field | Holds |
+|---|---|
+| `Format`, `Version` | Which strategy wrote it, such as `RollingHistory.SnapshotFormat`, and its version |
+| `Exchanges` | Every exchange remembered, oldest first, as `DecisionRequest.History` encodes it: the stimulus as sent, label included, then the decision as JSON |
+| `Data` | Anything else the strategy keeps, in its own encoding; null or empty when nothing |
+
+`RollingHistory.Export` holds every exchange it keeps, those the token cap leaves out of a
+request included. `Import` replaces what it holds, keeps the newest `Turns` of the snapshot's
+exchanges, and reads the exchanges of any strategy's snapshot, since they are all written the same
+way. A snapshot with a missing exchange, stimulus or decision is refused with an
+`ArgumentException`, and the memory keeps what it had. `Dropped` and `Forgotten` are counts for
+telemetry, so they are not saved.
+
+A decision still waiting under `MemoryCommit.OnExecute` is not in the memory yet, so it is not in
+the snapshot either.
+
+## Extension points
+
+- **Memory (#119).** A new strategy implements `IExportsMemory` to be saved, with what it keeps
+  beyond exchanges in `Data`. `MemoryCommit` needs nothing from it.
+- **Guards (#138).** A guard reads `Correlation` from its input's context. The re-check at
+  `Execute` is the one place a rule is checked at the moment of acting; until a guard can run
+  there too, such a rule belongs in the handler, which can now say why with `ActionResult.Failed`.

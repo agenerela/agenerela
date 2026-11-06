@@ -110,6 +110,27 @@ namespace Agenerela
         /// </remarks>
         public bool AskForRefusalLine;
 
+        /// <summary>
+        /// The caller's own object for this call, which the framework carries and never reads
+        /// (DR-018): the conversation a reply belongs to, a turn number, a request id. Null by
+        /// default.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// It is set on <see cref="AgentContext.Correlation"/> of every context made for this
+        /// decision, so availability checks, target and observation sources, guards and memory see
+        /// it, and on <see cref="DecisionResult.Correlation"/>, pipeline errors included. When the
+        /// result is executed, the context <see cref="Agent.Execute(DecisionResult)"/> hands the
+        /// handler carries it too, so a handler knows which call it is acting for without anything
+        /// written to <see cref="Agent.State"/>, which every call on the agent shares.
+        /// </para>
+        /// <para>
+        /// The object itself is kept, never copied, and never reaches the model or the telemetry.
+        /// It says which call this is, never why the agent is asked (DR-008).
+        /// </para>
+        /// </remarks>
+        public object Correlation;
+
         // The options one call keeps, taken when it is made, so changing the caller's object
         // afterwards changes nothing, the guards' view included (#106). A memberwise copy, so a
         // switch added later is copied without being listed here; only a field holding a mutable
