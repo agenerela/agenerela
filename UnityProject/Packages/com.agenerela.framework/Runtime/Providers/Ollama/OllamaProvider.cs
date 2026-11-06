@@ -257,6 +257,170 @@ namespace Agenerela.Providers
             }
         }
 
+        // ---- For the evaluation runner (#145) --------------------------------------------------
+        // Internal, so Runtime/Evaluation knows no Ollama address: it asks the provider, and the
+        // provider knows its server. Each failure throws a ProviderException, as RequestAsync does.
+
+        /// <summary>The model this provider asks for, as its settings name it.</summary>
+        internal string Model => model;
+
+        /// <summary>The server's address, without any user name or password it carried.</summary>
+        internal string Endpoint => endpoint;
+
+        /// <summary>The server's own version, from <c>/api/version</c>, such as <c>0.40.14</c>.</summary>
+        internal async Awaitable<string> ReadVersionAsync(CancellationToken ct)
+        {
+            var root = await GetObject("/api/version", ct);
+            return root["version"] is JValue version && version.Type == JTokenType.String
+                ? (string)version
+                : throw Malformed("its /api/version has no version text", root.ToString(Formatting.None));
+        }
+
+        /// <summary>
+        /// Every model the server holds in memory now, from <c>/api/ps</c>: its name, its whole size
+        /// and how much of that is in GPU memory, both in bytes. Hard rule 3 is checked against it.
+        /// </summary>
+        internal async Awaitable<List<(string Name, long Size, long SizeVram)>> ReadResidentAsync(CancellationToken ct)
+        {
+            var root = await GetObject("/api/ps", ct);
+            var resident = new List<(string, long, long)>();
+            if (root["models"] == null || root["models"].Type == JTokenType.Null)
+            {
+                return resident;
+            }
+
+            if (!(root["models"] is JArray models))
+            {
+                throw Malformed("its /api/ps models is not a list", root.ToString(Formatting.None));
+            }
+
+            foreach (var entry in models)
+            {
+                if (!(entry is JObject fields) || !(fields["name"] is JValue name) || name.Type != JTokenType.String)
+                {
+                    throw Malformed("an /api/ps entry has no name", root.ToString(Formatting.None));
+                }
+
+                resident.Add(((string)name, Bytes(fields["size"]), Bytes(fields["size_vram"])));
+            }
+
+            return resident;
+        }
+
+        /// <summary>
+        /// Asks the server to unload this provider's model now (<c>keep_alive: 0</c>), then waits
+        /// until <c>/api/ps</c> no longer lists it, at most <paramref name="waitSeconds"/>. Returns
+        /// false when it is still listed after that.
+        /// </summary>
+        internal async Awaitable<bool> UnloadAsync(CancellationToken ct, float waitSeconds = 15f)
+        {
+            string body = new JObject { ["model"] = model, ["keep_alive"] = 0 }.ToString(Formatting.None);
+            await Call(HttpMethod.Post, "/api/generate", body, ct);
+
+            var clock = Stopwatch.StartNew();
+            while (true)
+            {
+                bool listed = false;
+                foreach (var resident in await ReadResidentAsync(ct))
+                {
+                    listed |= SameModel(resident.Name, model);
+                }
+
+                if (!listed)
+                {
+                    return true;
+                }
+
+                if (clock.Elapsed.TotalSeconds >= waitSeconds)
+                {
+                    return false;
+                }
+
+                await System.Threading.Tasks.Task.Delay(250, ct);
+            }
+        }
+
+        /// <summary>
+        /// True when two model names are one model as Ollama lists it: <c>qwen3.5</c> is
+        /// <c>qwen3.5:latest</c>. Case is ignored, as Ollama's own names are lower case.
+        /// </summary>
+        internal static bool SameModel(string a, string b)
+        {
+            string Tagged(string n) => n == null ? "" : (n.Trim().IndexOf(':') < 0 ? n.Trim() + ":latest" : n.Trim());
+            return string.Equals(Tagged(a), Tagged(b), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private async Awaitable<JObject> GetObject(string path, CancellationToken ct)
+        {
+            string text = await Call(HttpMethod.Get, path, null, ct);
+            try
+            {
+                return ParseObject(text);
+            }
+            catch (JsonException e)
+            {
+                throw Malformed($"its {path} is not one JSON object ({e.Message})", text, e);
+            }
+        }
+
+        // One short request to another endpoint than /api/chat, failing as Send does.
+        private async Awaitable<string> Call(HttpMethod method, string path, string body, CancellationToken ct)
+        {
+            // Beside /api/chat, so a server under a path prefix keeps it.
+            string chat = chatUri.AbsoluteUri;
+            var uri = new Uri(chat.Substring(0, chat.Length - "api/chat".Length) + path.TrimStart('/'));
+            using (var timeout = new CancellationTokenSource())
+            using (var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeout.Token))
+            using (var message = new HttpRequestMessage(method, uri))
+            {
+                if (body != null)
+                {
+                    message.Content = new StringContent(body, Utf8, "application/json");
+                }
+
+                timeout.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
+                int status;
+                string text;
+                try
+                {
+                    using (var response = await client.SendAsync(message, linked.Token))
+                    {
+                        status = (int)response.StatusCode;
+                        text = Utf8.GetString(await response.Content.ReadAsByteArrayAsync());
+                    }
+                }
+                catch (Exception e) when (ct.IsCancellationRequested)
+                {
+                    throw new OperationCanceledException($"The caller cancelled the request to Ollama's {path}.", e, ct);
+                }
+                catch (Exception e) when (timeout.IsCancellationRequested)
+                {
+                    throw new ProviderException(ProviderErrorKind.Timeout, Name,
+                        $"Ollama at {endpoint} sent no reply to {path} within {Seconds(timeoutSeconds)} s.", e);
+                }
+                catch (Exception e) when (e is HttpRequestException || e is IOException || e is System.Net.WebException
+                                          || e is System.Net.Sockets.SocketException)
+                {
+                    throw new ProviderException(ProviderErrorKind.Unreachable, Name,
+                        $"Nothing answered at {endpoint}. Is Ollama running there? " +
+                        $"({Excerpt(FirstLine(e.GetBaseException().Message))})", e);
+                }
+
+                if (status < 200 || status > 299)
+                {
+                    throw Refusal(status, text);
+                }
+
+                return text;
+            }
+        }
+
+        // A byte count /api/ps may leave out, which then reads as 0.
+        private static long Bytes(JToken token)
+        {
+            return token != null && token.Type == JTokenType.Integer ? Math.Max(0L, (long)token) : 0L;
+        }
+
         // The request body, its fields in the order the issue tables them (#88).
         private string Body(DecisionRequest req)
         {
