@@ -116,6 +116,24 @@ namespace Agenerela.Tests
             }
         }
 
+        /// <summary>
+        /// Awaits a <c>Task</c> the framework returns, such as a <see cref="ConversationTurn.Completion"/>
+        /// (#190, Living Vale #8), and fails the test if it ends cancelled, for the same reason as
+        /// the overloads above.
+        /// </summary>
+        public static async Task<T> NotCancelled<T>(Task<T> task)
+        {
+            try
+            {
+                return await task;
+            }
+            catch (System.OperationCanceledException e)
+            {
+                Assert.Fail($"It ended cancelled, though nothing cancelled it: {e.Message}");
+                return default;
+            }
+        }
+
         /// <summary>Destroys every asset the fixtures created since the last call.</summary>
         public static void DestroyCreated()
         {

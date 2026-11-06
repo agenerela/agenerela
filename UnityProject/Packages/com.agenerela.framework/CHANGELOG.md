@@ -43,6 +43,20 @@ While the version stays `0.x`, the public API may change in any release.
   rule and an agent's own actions.
 - A test that our evaluation set's schema, as `EvalRunner` sends it with every option off, is
   byte-identical to the shape every measurement so far was scored against.
+- **`Conversation`, an optional helper for asking one agent one thing at a time** (#190,
+  Living Vale #8). `new Conversation(agent)`; `Start(stimulus, options, ct)` asks the agent and
+  returns a `ConversationTurn` at once, or null while another turn is waiting;
+  `Replace(...)` ends the waiting turn as `Replaced` first. `Timeout`, infinite by default, ends
+  a turn as `TimedOut` on time even when the provider ignores cancellation, and the caller's
+  token ends it as `Cancelled`. `Cancel()` ends the current turn. Only the current turn's answer
+  runs: `Execute(result)` and `Execute(result, out ActionResult)` refuse any other with
+  `ExecutionStatus.Refused`, recorded in its telemetry, and a turn's answer is discarded from
+  memory when the turn stops being current. `Start` throws for an agent with memory unless
+  `MemoryCommit` is `OnExecute`. It tells a stale result by reference and never touches
+  `DecideOptions.Correlation`. `ConversationTurn` has `Number`, `Status` (`TurnStatus`:
+  `Waiting`, `Answered`, `TimedOut`, `Cancelled`, `Replaced`, `Failed`), `Result`,
+  `IsCurrent` and `Completion`, a `Task<TurnStatus>` that never ends cancelled. The game still
+  decides when a turn starts (DR-008). `Documentation~/conversations.md` describes it.
 
 - **What executing a decision did** (#190 C, DR-018): `ActionResult`, a value type made by
   `ActionResult.Done(payload)` and `ActionResult.Failed(reason, payload)`, with `Status`

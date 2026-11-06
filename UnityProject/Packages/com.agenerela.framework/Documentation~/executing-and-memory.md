@@ -126,6 +126,10 @@ Now a decision is held on its own result:
 - One the game simply drops is never remembered. It needs no clean-up: it is held on the
   result, not on the agent.
 
+A game that asks an agent one thing at a time, such as a chat, can leave this bookkeeping to an
+optional `Conversation` ([conversations.md](conversations.md)): it refuses a stale reply at
+`Execute` and discards it from memory.
+
 `Commit` and `Discard` return whether the decision was waiting. Only the agent that made a
 decision can settle it; another agent's `Commit` or `Discard` throws, and its `Execute` may carry
 the decision out without touching the first agent's memory.
