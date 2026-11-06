@@ -174,8 +174,8 @@ namespace Agenerela.Editor.Evaluation
             return lines;
         }
 
-        // What the arm's prompt held besides the profile's examples (#190), in words. A report from
-        // before #190 has neither field and reads as both off, which is what its prompts held.
+        // What the arm's prompt and schema held besides the profile's examples (#190), in words. A
+        // report from before #190 has none of these fields and reads as all off, which is what it ran.
         internal static IEnumerable<string> PromptOptions(EvalArmConditions arm)
         {
             // Only the system prompt's extra list: the runner tells the model every target as an
@@ -184,6 +184,7 @@ namespace Agenerela.Editor.Evaluation
                 ? $"system-prompt list of actions and targets on (at most {arm.MaxListedTargets} targets in it)"
                 : "system-prompt list of actions and targets off";
             yield return arm.CounterExamples ? "counter-examples shown" : "no counter-examples";
+            yield return arm.PairTargetsWithActions ? "schema pairs each action with its targets" : "schema does not pair actions with targets";
         }
 
         // One residency reading in words: who was loaded and how much of the arm's model was in VRAM.

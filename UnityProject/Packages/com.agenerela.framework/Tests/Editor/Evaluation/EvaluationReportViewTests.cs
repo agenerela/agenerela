@@ -260,14 +260,15 @@ namespace Agenerela.Tests.Evaluation
             report.Conditions.Arms[1].ListActionsAndTargets = true;
             report.Conditions.Arms[1].MaxListedTargets = 12;
             report.Conditions.Arms[1].CounterExamples = true;
+            report.Conditions.Arms[1].PairTargetsWithActions = true;
 
             var lines = new EvaluationReportView(report).ConditionLines();
 
             Assert.That(lines[0], Does.StartWith("Interleaved"));
             Assert.That(lines, Has.Some.EqualTo("Arm A, control: OllamaLocal, qwen3.5:2b, Ollama 0.40.14, grounding guard off, "
-                                                + "system-prompt list of actions and targets off, no counter-examples, 3 warm-up requests."));
+                                                + "system-prompt list of actions and targets off, no counter-examples, schema does not pair actions with targets, 3 warm-up requests."));
             Assert.That(lines, Has.Some.EqualTo("Arm B, guards-on: OllamaLocal, qwen3.5:2b, Ollama 0.40.14, grounding guard on, "
-                                                + "system-prompt list of actions and targets on (at most 12 targets in it), counter-examples shown, 3 warm-up requests."));
+                                                + "system-prompt list of actions and targets on (at most 12 targets in it), counter-examples shown, schema pairs each action with its targets, 3 warm-up requests."));
             Assert.That(lines, Has.Some.EqualTo("    Before warm-up: no model loaded."));
             Assert.That(lines, Has.Some.EqualTo("    After warm-up: qwen3.5:2b fully on the GPU, 2048 of 2048 MB."));
             Assert.That(lines, Has.Some.Contains("only 1024 of 2048 MB on the GPU, so its latencies are not comparable"));
@@ -347,7 +348,7 @@ namespace Agenerela.Tests.Evaluation
             string summary = new EvaluationReportView(report).FindingsSummary("Logs/Evaluation/run/report.md");
 
             Assert.That(summary, Does.Contain("20 prompts from `Evaluation/agent.json` at abcdef1"));
-            Assert.That(summary, Does.Contain("Arm A `control`: OllamaLocal, qwen3.5:2b, Ollama 0.40.14, grounding guard off, system-prompt list of actions and targets off, no counter-examples, 3 warm-up."));
+            Assert.That(summary, Does.Contain("Arm A `control`: OllamaLocal, qwen3.5:2b, Ollama 0.40.14, grounding guard off, system-prompt list of actions and targets off, no counter-examples, schema does not pair actions with targets, 3 warm-up."));
             Assert.That(summary, Does.Contain("| Correct | 12 (60%) | 17 (85%) |"));
             Assert.That(summary, Does.Contain("| Contained by a guard | 0 (0%) | 2 (10%) |"));
             Assert.That(summary, Does.Contain("+25.0 points"));
