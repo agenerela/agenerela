@@ -129,16 +129,19 @@ namespace Agenerela
         /// Starting a turn makes the answered turn before it stale: its result is discarded from
         /// memory, and <see cref="Execute(DecisionResult)"/> refuses it. Settle that result first,
         /// with <see cref="Execute(DecisionResult)"/> or <see cref="Agent.Commit"/>, if it should be
-        /// remembered. The new turn is current before the agent runs any of the game's code, so a
-        /// turn started from inside that code, from an observation source say, comes after this one.
+        /// remembered. The new turn is current, and the turn before it has ended, before the agent
+        /// runs any of the game's code for it, so that code finds the previous answer already stale,
+        /// and a turn started from inside it, from an observation source say, comes after this one.
         /// </remarks>
         /// <exception cref="InvalidOperationException">
         /// The agent has a <see cref="Agent.Memory"/> and its <see cref="Agent.MemoryCommit"/> is not
         /// <see cref="Agenerela.MemoryCommit.OnExecute"/>. Nothing is asked.
         /// </exception>
         /// <exception cref="ArgumentException">
-        /// What <see cref="Agent.DecideAsync"/> throws at the call, such as for an empty
-        /// <see cref="DecideOptions.StimulusLabel"/>. Nothing changes: the turn before stays as it was.
+        /// What <see cref="Agent.DecideAsync"/> throws at the call: an empty
+        /// <see cref="DecideOptions.StimulusLabel"/>, or an <see cref="ArgumentOutOfRangeException"/>
+        /// for a negative <see cref="DecideOptions.MaxListedTargets"/>. Both are checked before
+        /// anything changes, so the turn before stays as it was.
         /// </exception>
         public ConversationTurn Start(string stimulus, DecideOptions options = null, CancellationToken ct = default)
         {

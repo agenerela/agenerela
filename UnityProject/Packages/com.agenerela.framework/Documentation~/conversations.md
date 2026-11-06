@@ -130,16 +130,19 @@ it changes nothing; `Cancel()` is what makes an answer stale.
 
 ## Order and threads
 
-A new turn is current before the agent runs any of the game's code for it, so a turn started from
-inside that code, from an observation source say, comes after it and ends it. Each turn's
+A new turn is current, and the turn before it has ended, before the agent runs any of the game's
+code for it: the previous request is already cancelled, and the previous answer already stale and
+out of memory's reach, so that code cannot commit or complete it. A turn started from inside that
+code, from an observation source say, comes after the new one and ends it. Each turn's
 cancellation and deadline are its own: one turn ending never ends another.
 
 Call a conversation from the main thread, as an agent is. The deadline and the end of a turn come
 back to the main thread through Unity's synchronisation context, and code awaiting
 `turn.Completion` never runs inside the conversation's own bookkeeping.
 
-A mistake in the call, such as an empty `StimulusLabel`, throws from `Start` or `Replace` as it
-does from `DecideAsync`, and changes nothing: the turn before stays as it was.
+A mistake in the call, an empty `StimulusLabel` or a negative `MaxListedTargets`, throws from
+`Start` or `Replace` as it does from `DecideAsync`, and changes nothing: the turn before stays as
+it was.
 
 ## What it does not do
 
