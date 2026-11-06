@@ -6,7 +6,9 @@ cloud vendor would need, and which parts of the contract are deliberately still 
 
 One backend is implemented: `OllamaProvider` (#88), the development backend. Phase 1 defined
 the contract, and `Agent` (#17) is tested against a fake provider; Phase 6 writes the cloud
-providers, Phase 6b the in-process one.
+providers, Phase 6b the in-process one. Beside them ships `ScriptedProvider` (#190), which has
+no model behind it at all: for tests, headless captures and presenting a game with the model
+off ([below](#the-scripted-provider--no-model-at-all)).
 
 ## The interface
 
@@ -250,6 +252,11 @@ var guard = new Agent(profile, ProviderConfig.Resolve().Provider);
   config's agents across two queues. The provider is dropped as Play mode starts and as it ends.
 - **An invalid config** (an empty model, `MaxInFlight` 0) throws `InvalidOperationException`
   naming the config and the setting when its provider is first read.
+- **Play mode without a domain reload** (Enter Play Mode Options) keeps every static field as
+  the last session left it. The framework resets its own as Play mode starts:
+  `AgenerelaSettings` forgets the settings asset it found, and the built providers are dropped
+  as above. Each static that needs no reset says why in `Tests/Editor/DomainReloadTests.cs`,
+  which fails on any new static field nothing resets (#190, G8).
 
 ### Adding a provider config
 
@@ -270,6 +277,112 @@ subclass that needs `OnValidate` overrides it and calls `base.OnValidate()`.
 **Never serialize an API key** (hard rule 1): a config asset is committed, and ships inside the
 build. Serialize where the key is read from, such as an environment variable's name, and read
 the key in `CreateProvider()`. Nor may a key appear in an exception message.
+
+## The scripted provider — no model at all
+
+`ScriptedProvider` answers each request with a reply the developer scripted, after a latency of
+their choosing (#190, G6). It is for tests, headless captures, and presenting a game with the
+model off. Every game built on the framework had written its own before it existed.
+
+```csharp
+var scripted = new ScriptedProvider()
+    .When("Bram", "Follow me.", ScriptedReply.Decide("follow_player", statement: "Right behind you."))
+    .When("Wren", "Follow me.", ScriptedReply.Decide("none", statement: "I stay at the well.").After(1.2f))
+    .When(null, "Thief!", ScriptedReply.Decide("chase", "thief"))   // any agent
+    .Otherwise(ScriptedReply.Decide("none", statement: "Hm."));       // anything else
+
+var bram = new Agent(bramProfile, scripted);
+```
+
+**It never passes for a model.** Its `Name` is always `"scripted"`, and so is every reply's
+`ProviderResult.Model`, so `DecisionTelemetry.ProviderName` and `Model`, an evaluation report and
+any HUD say "scripted" wherever they would name the model, even when a reply replays a model's
+text word for word. A `ScriptedReply` has no model and no token counts to set.
+
+**Which reply answers.** The agent is matched by `AgentIdentity.Name`, and the stimulus by the
+exact text passed to `DecideAsync`, without its label, both case-sensitive. A decision request
+takes the first of:
+
+1. the replies scripted for this agent and this stimulus, `When(agent, stimulus, …)`;
+2. those for this stimulus from any agent, `When(null, stimulus, …)`;
+3. those for this agent with any stimulus, `When(agent, null, …)`;
+4. `Callback`, when it returns a reply rather than null;
+5. `Otherwise(…)`, which is `When(null, null, …)`.
+
+A request with no agent name or an empty stimulus skips the stages that need one, so the callback
+still comes before `Otherwise`. Several replies for one key answer in order, and the last keeps answering. Scripting a key again
+replaces it and starts it over; `Clear()` forgets every key. A request nothing answers fails with
+a `ProviderException` of `Rejected` that names the agent and the stimulus, so a test that asks
+something it did not script finds out at once.
+
+**The callback** is for rules rather than a table, such as a game's keyword lines. It is given a
+`ScriptedRequest`: the agent, the stimulus and its label, `OfferedActions` and `OfferedTargets`
+from the schema (so a rule can answer only with what the agent may do now), and the
+`DecisionRequest` itself. Returning null leaves the request to `Otherwise`.
+
+**Replies.** `ScriptedReply.Decide(action, target, statement)` writes the schema's JSON object,
+fields in their order, the statement escaped. Nothing checks that the action is one the agent
+offers: an illegal reply shows a guard stopping it. `Raw(text)` sends text exactly, a reply
+that does not parse included. `Fail(kind)` fails as a provider does: `Unreachable` for a
+stopped server, `Timeout` for a slow one. `Never()` stays pending until the request is
+cancelled, for testing a game's own timeout. `After(seconds)` adds a latency to any of them, and
+`WithTokens(…)` gives a reply token probabilities for the grounding guard to read.
+
+**Latency** is wall-clock time, waited before the reply arrives, so `DecisionTelemetry.LatencySeconds`
+records it as it would a model's. It arrives on the main thread. Cancelling the request ends the
+wait at once. A reply with no latency answers within `RequestAsync`, so
+`await agent.DecideAsync(…)` completes in the call.
+
+**A refusal line** (`DecideOptions.AskForRefusalLine`, [guards.md](guards.md)) takes no keyed
+reply, so it never uses up a key's next one: `Callback` answers it (`ScriptedRequest.IsRefusalLine`
+is true), then `RefusalLine`, usually a `ScriptedReply.Statement(…)`. With neither, it fails and
+the decision stands without a line.
+
+**Capabilities.** By default it claims only what a script can honestly do: no constrained
+decoding and no token probabilities, so with `CheckTarget` on the prompt carries the target rule,
+as for any provider without them (#107). Pass Ollama's capabilities to
+`new ScriptedProvider(capabilities)` to receive exactly Ollama's prompt.
+
+### As an asset
+
+**Create → Agenerela → Scripted Provider** makes a `ScriptedProviderConfig`, which a scene, an
+`AgentBehaviour` or Project Settings → Agenerela selects like any provider config. Each entry
+of **Replies** answers an agent and a stimulus with one decision and a latency; a blank agent
+answers every agent and a blank stimulus every stimulus, so an entry with both blank is the
+fallback, and a new asset has one that does nothing and says nothing. Entries for the same agent
+and stimulus answer in list order. **Refusal Line** answers refusal-line requests. Anything an
+entry cannot say, such as a failure or a callback, goes through `config.Scripted`, the
+`ScriptedProvider` the config built:
+
+```csharp
+var config = (ScriptedProviderConfig)settings.DefaultProvider;
+config.Scripted.Otherwise(ScriptedReply.Fail(ProviderErrorKind.Unreachable));   // "Ollama is down"
+```
+
+Inspector edits reach it as for any config: outside Play mode at once, during Play at the next
+Play. Code scripting `config.Scripted` reaches it at once.
+
+### Testing with the scripted provider
+
+- **Script exactly what the test asks**, with `When` for each agent and stimulus, and no
+  `Otherwise`: anything else fails with the agent and stimulus named, rather than answering
+  quietly.
+- **Every agent on one provider shares its queue**, as on a real config. To test a request that
+  stays with the provider while something else happens, set `Hold`; each request then waits,
+  its reply chosen, until `Release()` lets the oldest go on. `HeldCount`, `RequestCount` and
+  `LastRequest` say what reached it.
+- **Failures and timeouts** are replies: `Fail(ProviderErrorKind.Unreachable)` for a stopped
+  server, `Never()` for a hung one, `.After(seconds)` for a slow one.
+- **A test agent's name is its key.** Two agents with the same `AgentIdentity.Name` share their
+  scripts; rename one in the test, as the framework's own tests do.
+
+### Replaying a decision log
+
+Not built yet: it comes with the runtime decision log (#190, G7). A log line holds an agent, a
+stimulus, the reply's text and its latency, which is exactly a `When` entry, so a replay reads
+the log and scripts `When(agent, stimulus, ScriptedReply.Raw(text).After(latency), …)` with each
+pair's lines in log order. Nothing in the provider has to change for it, and the replay says
+"scripted" in telemetry like every other scripted reply.
 
 ## The question that proves the interface works
 

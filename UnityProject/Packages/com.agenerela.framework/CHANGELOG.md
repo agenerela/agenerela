@@ -147,6 +147,31 @@ While the version stays `0.x`, the public API may change in any release.
 - `Documentation~/guards.md`: what each built-in guard checks, the three verdicts, a guard
   compared with availability, and two worked examples, a per-threat cooldown and the name check
   DR-016 dropped, both run as tests.
+- **The scripted provider** (#190, G6): `ScriptedProvider`, an `ILLMProvider` with no model
+  behind it, for tests, headless captures and presenting a game with the model off. Replies are
+  scripted with `When(agent, stimulus, replies…)`, matched by `AgentIdentity.Name` and the exact
+  stimulus without its label, a null agent or stimulus matching any, with `Otherwise(…)` for
+  everything else and a `Callback` given a `ScriptedRequest` (the agent, the stimulus and its
+  label, the schema's `OfferedActions` and `OfferedTargets`, the request) for rules. Several
+  replies for one key answer in order, the last repeating; a request nothing answers fails with
+  `ProviderErrorKind.Rejected`, naming the agent and stimulus. A `ScriptedReply` is `Decide`,
+  `Statement`, `Raw`, `Fail(kind)` or `Never()`, with `After(seconds)` for a wall-clock latency
+  that telemetry records, and `WithTokens` for the grounding guard. Refusal lines take
+  `RefusalLine` or the callback, never a key's next reply. `Hold` and `Release()` keep replies
+  back for queue tests. `Name` and every reply's `Model` are always `"scripted"`, so telemetry
+  never names a model. `ScriptedProviderConfig` (**Create → Agenerela → Scripted Provider**) makes
+  one an asset whose `Replies` entries a scene can select, with `Scripted` for scripting it
+  further in code.
+- `Documentation~/providers.md`: the scripted provider, as an asset, testing with it, and how a
+  decision log will replay through it (G7).
+
+### Fixed
+
+- **Play mode without a domain reload** (#190, G8): `AgenerelaSettings` forgets the settings it
+  found, and a test's override, as Play mode starts, so Enter Play Mode Options with the domain
+  reload off no longer carries them into the next session. A new EditMode test fails on any static
+  field in the framework's runtime assembly that nothing resets; the three that need no reset
+  (`ProviderConfig`'s provider names and built configs, and the queues) say why in it.
 
 ## [0.4.0-preview.1] - 2026-10-29
 
