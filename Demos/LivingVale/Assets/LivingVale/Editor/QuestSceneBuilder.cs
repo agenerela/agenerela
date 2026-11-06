@@ -165,6 +165,17 @@ namespace LivingVale.Editor
 
                 patients[i] = Primitive($"Quest porch patient {i + 1}", PrimitiveType.Capsule,
                     feet + new Vector3(0f, 1.05f, 0f), new Vector3(0.5f, 0.55f, 0.5f), cloth);
+
+                // G7c: a seated patient on the bench, facing the square (south). Its hips are 0.22 m behind
+                // its pivot, so the pivot goes 0.22 m in front of the bench's centre. QuestWorldView only
+                // switches the patients on and off, so the model takes the capsule's place in the array.
+                GameObject seated = ArtKit.Place("humanoid_patient_seated", feet + new Vector3(0f, 0f, -0.22f), 180f);
+                if (seated != null)
+                {
+                    seated.name = $"Quest porch patient {i + 1}";
+                    UnityEngine.Object.DestroyImmediate(patients[i]);
+                    patients[i] = seated;
+                }
             }
 
             return patients;

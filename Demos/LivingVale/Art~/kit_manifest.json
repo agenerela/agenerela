@@ -493,6 +493,91 @@
           0.87
         ]
       }
+    },
+    "humanoid_patient_seated": {
+      "triangles": 702,
+      "vertices": 411,
+      "height": 1.39,
+      "bounds": {
+        "min": [
+          -0.332,
+          0.0,
+          -0.369
+        ],
+        "max": [
+          0.332,
+          1.39,
+          0.4
+        ]
+      }
+    },
+    "mountain_a": {
+      "triangles": 100,
+      "vertices": 54,
+      "height": 109.826,
+      "bounds": {
+        "min": [
+          -50.602,
+          0.0,
+          -37.213
+        ],
+        "max": [
+          52.968,
+          109.826,
+          47.39
+        ]
+      }
+    },
+    "mountain_b": {
+      "triangles": 100,
+      "vertices": 54,
+      "height": 79.841,
+      "bounds": {
+        "min": [
+          -62.554,
+          0.0,
+          -64.278
+        ],
+        "max": [
+          79.71,
+          79.841,
+          60.402
+        ]
+      }
+    },
+    "cliff": {
+      "triangles": 150,
+      "vertices": 93,
+      "height": 23.71,
+      "bounds": {
+        "min": [
+          -10.8,
+          0.0,
+          -5.0
+        ],
+        "max": [
+          10.8,
+          23.71,
+          7.827
+        ]
+      }
+    },
+    "cobbles": {
+      "triangles": 1452,
+      "vertices": 968,
+      "height": 0.079,
+      "bounds": {
+        "min": [
+          -5.0,
+          0.0,
+          -5.0
+        ],
+        "max": [
+          5.0,
+          0.079,
+          5.0
+        ]
+      }
     }
   }
 }

@@ -80,10 +80,17 @@ namespace LivingVale.Editor.Region
             float half = ValePlaces.GroundHalfExtent;
             const float thickness = 10f, height = 22f;
             float length = half * 2f + thickness * 2f;
-            RegionKit.Block(edge, "Cliff north", 0f, half + thickness * 0.5f, length, thickness, height, RegionKit.Rock);
-            RegionKit.Block(edge, "Cliff south", 0f, -half - thickness * 0.5f, length, thickness, height, RegionKit.Rock);
-            RegionKit.Block(edge, "Cliff east", half + thickness * 0.5f, 0f, thickness, length, height, RegionKit.Rock);
-            RegionKit.Block(edge, "Cliff west", -half - thickness * 0.5f, 0f, thickness, length, height, RegionKit.Rock);
+            GameObject north = RegionKit.Block(edge, "Cliff north", 0f, half + thickness * 0.5f, length, thickness, height, RegionKit.Rock);
+            GameObject south = RegionKit.Block(edge, "Cliff south", 0f, -half - thickness * 0.5f, length, thickness, height, RegionKit.Rock);
+            GameObject east = RegionKit.Block(edge, "Cliff east", half + thickness * 0.5f, 0f, thickness, length, height, RegionKit.Rock);
+            GameObject west = RegionKit.Block(edge, "Cliff west", -half - thickness * 0.5f, 0f, thickness, length, height, RegionKit.Rock);
+
+            // G7c: kit cliff modules along each wall, rock face inward; each module's pivot sits on the
+            // wall's centre line, which puts its face on the wall's inner face. The blocks keep their colliders.
+            CliffRun(edge, north, -length * 0.5f, half + thickness * 0.5f, length, true, 180f);
+            CliffRun(edge, south, -length * 0.5f, -half - thickness * 0.5f, length, true, 0f);
+            CliffRun(edge, east, -length * 0.5f, half + thickness * 0.5f, length, false, -90f);
+            CliffRun(edge, west, -length * 0.5f, -half - thickness * 0.5f, length, false, 90f);
 
             // Broken crests along each cliff, so the edge is not one flat wall.
             var random = new System.Random(4031);
@@ -95,8 +102,13 @@ namespace LivingVale.Editor.Region
                 int side = i % 4;
                 float x = side == 0 ? along : side == 1 ? along : side == 2 ? half + 6f : -half - 6f;
                 float z = side == 0 ? half + 6f : side == 1 ? -half - 6f : along;
-                RegionKit.Block(edge, $"Cliff crest {i}", x, z, side < 2 ? w : 12f, side < 2 ? 12f : w, h,
-                    RegionKit.Rock, yaw: (float)random.NextDouble() * 20f - 10f);
+                float crestYaw = (float)random.NextDouble() * 20f - 10f;
+                GameObject crest = RegionKit.Block(edge, $"Cliff crest {i}", x, z, side < 2 ? w : 12f, side < 2 ? 12f : w, h,
+                    RegionKit.Rock, yaw: crestYaw);
+                // A taller cliff module over each crest, stretched to its width and height.
+                float faceYaw = side == 0 ? 180f : side == 1 ? 0f : side == 2 ? -90f : 90f;
+                ArtDressing.Dress(crest, "cliff", new Vector3(x, 0f, z), faceYaw + crestYaw,
+                    new Vector3(w / 21.6f, h / 23.7f, 1f));
             }
         }
 
@@ -111,11 +123,38 @@ namespace LivingVale.Editor.Region
                 float distance = 430f + (float)random.NextDouble() * 140f;
                 float width = 120f + (float)random.NextDouble() * 120f;
                 float height = 90f + (float)random.NextDouble() * 150f;
-                RegionKit.Primitive(far, $"Mountain {i}", PrimitiveType.Sphere,
-                    new Vector3(Mathf.Cos(angle) * distance, 0f, Mathf.Sin(angle) * distance),
-                    new Vector3(width, height * 2f, width * 0.8f), RegionKit.Mountain,
-                    yaw: (float)random.NextDouble() * 180f, collider: false);
+                float yaw = (float)random.NextDouble() * 180f;
+                var position = new Vector3(Mathf.Cos(angle) * distance, 0f, Mathf.Sin(angle) * distance);
+                GameObject egg = RegionKit.Primitive(far, $"Mountain {i}", PrimitiveType.Sphere, position,
+                    new Vector3(width, height * 2f, width * 0.8f), RegionKit.Mountain, yaw: yaw, collider: false);
+                // G7c: a craggy kit peak of the same size (mountain_a is 104 x 85 x 110 m, mountain_b 142 x 125 x 80).
+                bool tall = i % 3 != 0;
+                ArtDressing.Dress(egg, tall ? "mountain_a" : "mountain_b", position, yaw,
+                    new Vector3(width / (tall ? 104f : 142f), height / (tall ? 110f : 80f), width * 0.8f / (tall ? 85f : 125f)));
             }
+        }
+
+        // Kit cliff modules along one boundary wall, stretched so a whole number of them fills it.
+        private static void CliffRun(Transform parent, GameObject wall, float start, float line, float length,
+            bool alongX, float yaw)
+        {
+            int count = Mathf.Max(1, Mathf.RoundToInt(length / 20f));
+            float module = length / count;
+            for (int i = 0; i < count; i++)
+            {
+                float along = start + (i + 0.5f) * module;
+                var position = alongX ? new Vector3(along, 0f, line) : new Vector3(line, 0f, along);
+                GameObject piece = ArtDressing.Decorate(parent, "cliff", position, yaw + (i % 2) * 2f - 1f);
+                if (piece == null)
+                {
+                    return;
+                }
+
+                piece.transform.localScale = new Vector3(module / 21.6f, 0.9f + (i * 7 % 5) * 0.06f, 1f);
+                piece.name = $"{wall.name} module {i + 1}";
+            }
+
+            ArtDressing.HideLook(wall);
         }
 
         // G7b: trees and rocks along the paths and near the cliffs, off every path, yard, the river and the

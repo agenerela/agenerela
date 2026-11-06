@@ -17,12 +17,13 @@ namespace LivingVale.Combat
         [SerializeField] private bool isPlayer;
         [SerializeField] private Transform visual;
         [SerializeField] private Renderer[] flashRenderers = Array.Empty<Renderer>();
-        [SerializeField, Min(0f)] private float flashSeconds = 0.12f;
+        [SerializeField, Min(0f)] private float flashSeconds = 0.2f;
         [SerializeField, Min(0f)] private float overheadHeight = 2.4f;
 
-        // A warm red, not white: the art kit's palette material is already white, so a flash toward
-        // white would not show on it (G7b).
-        private static readonly Color FlashTint = new Color(1f, 0.45f, 0.4f);
+        // A strong red, not white: the art kit's palette material is already white, so a flash toward
+        // white would not show on it (G7b); G7c made it redder and longer so it reads at a glance.
+        // (Emission was tried in G7c: URP's material validation drops the palette's _EMISSION keyword.)
+        private static readonly Color FlashTint = new Color(1f, 0.25f, 0.2f);
 
         private MaterialPropertyBlock block;
         private Color[] baseColors = Array.Empty<Color>();

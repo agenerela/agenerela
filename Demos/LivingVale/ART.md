@@ -103,6 +103,11 @@ both, plus height, pivot, one material and colliders.
 | `humanoid_guard` | 758 | 1.85 | Ashwatch tabard, helmet, pauldrons | — |
 | `sword` | 90 | 0.97 long | Pivot at the grip | — |
 | `wolf` | 334 | 0.99 | Head toward +Z | — |
+| `humanoid_patient_seated` | 702 | 1.39 | Seated on a 0.5 m seat, blanket on the lap (Iven's porch); hips 0.22 m behind the pivot (G7c) | — |
+| `cobbles` | 1452 | 0.08 | 10 × 10 m of flagstones; tile every 10 m (G7c) | — |
+| `cliff` | 150 | 23.71 | 20 m boundary-cliff module, rock face to the front (G7c) | — |
+| `mountain_a` | 100 | 109.83 | Distant peak with snow (G7c) | — |
+| `mountain_b` | 100 | 79.84 | Broad distant ridge (G7c) | — |
 
 `Art~/kit_manifest.json` has the exact numbers and bounds after every rebuild.
 
@@ -160,11 +165,25 @@ the primitive, looks belong to the kit.**
 
 ![Briar Glen in the game, from behind the player](Art~/previews/scene_glen.png)
 
+### G7c: ground, mountains, cliffs and patients
+
+- Briar Glen's ground is packed earth (`GlenEarth`) instead of grey stone, with four `cobbles`
+  patches over the square; Ashwatch's forecourt is cobbled too. Cobbles have no colliders and are
+  8 cm high, so nobody's footing changes.
+- The 28 distant egg-shaped mountains are `mountain_a` and `mountain_b`, scaled to each egg's size.
+- The four boundary walls are lined with `cliff` modules facing inward, their faces on the walls'
+  inner faces, and each of the 48 cliff crests carries a stretched module. The walls and crests keep
+  their colliders.
+- Iven's three porch patients sit on their benches as `humanoid_patient_seated` (cream tunic, grey
+  shawl and blanket). `QuestWorldView` still hides them when the healer gets the parcel.
+
 Notes for the swap:
 
 - `CombatBody`'s hit flash used to lerp `_BaseColor` toward near-white, which does not show on
   the palette material (its base colour is already white). Since G7b it lerps toward a warm red,
-  which shows on kit models and primitives alike.
+  and since G7c toward a stronger red, for 0.2 s instead of 0.12 s. An emission pulse was tried
+  and dropped: URP's material validation turns the palette material's `_EMISSION` keyword off again
+  on the next editor start, and a property block cannot turn it on.
 - The kit's own mesh colliders are switched off wherever a model dresses a primitive; only the
   scattered trees and rocks keep theirs. Where they apply, trees collide on the canopy too, which
   the player cannot reach.

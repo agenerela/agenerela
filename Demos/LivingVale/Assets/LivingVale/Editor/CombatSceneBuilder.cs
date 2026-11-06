@@ -29,8 +29,10 @@ namespace LivingVale.Editor
             Material wolfFur = MaterialFor("WolfFur", new Color(0.36f, 0.34f, 0.31f));
 
             // The village ground ends at z = -18; the meadow continues south of it.
+            // G7c: the meadow is grass-coloured like the vale around it, not the Glen's grey stone.
+            Material meadow = MaterialFor("SouthMeadow", new Color(0.38f, 0.49f, 0.29f));
             Primitive("South meadow", PrimitiveType.Cube, new Vector3(0f, -0.5f, -30f),
-                new Vector3(40f, 1f, 24f), stone, keepCollider: true);
+                new Vector3(40f, 1f, 24f), meadow, keepCollider: true);
             Primitive("Meadow marker", PrimitiveType.Cube, new Vector3(-3f, 0.9f, -19.5f),
                 new Vector3(0.25f, 1.8f, 0.25f), timber, keepCollider: true);
             Primitive("Meadow rock", PrimitiveType.Cube, new Vector3(7f, 0.4f, -31f),
