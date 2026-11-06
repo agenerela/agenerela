@@ -845,6 +845,11 @@ Each model had one turn of each kind per line, so n = 24, at temperature 0. Raw 
   model was warmed with three throwaway requests. `/api/ps` showed it alone and fully on the GPU.
 - **Not checked:** two model pulls (Stheno, gemma) were downloading during the first six arms,
   and a Codex review was running.
+- **CPU side load:** another session's Unity EditMode run took the CPU from 16:29:08 to 16:29:49,
+  overlapping the `granite4.1:3b` arm and the start of `nemotron-3-nano:4b`'s. Both arms were run
+  again at 16:46 with nothing beside them. The p50s were the same (0.59 s and 0.55 s), granite's
+  p95 went from 0.89 to 0.84 s and nemotron's from 1.28 to 1.09 s, and the trade outcomes were
+  identical. The table keeps the first run, whose replies were the ones judged.
 - **Gemma's size:** `gemma4:e2b-it-qat` showed 1.66 GB resident, although its file is 4.3 GB.
   Ollama may keep its per-layer embeddings off the GPU. That was not investigated.
 - **Not run:** `gemma4:e4b` (6.1 GB or more) and `ministral-3:8b` (6.0 GB) leave too little room
