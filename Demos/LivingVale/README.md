@@ -18,7 +18,9 @@ WASD moves, Shift sprints, the mouse orbits the camera, **E** talks to the NPC i
 herbs, or to sell her a wolf pelt, iron scrap or herbs: her answer puts an exact offer on a card
 in the chat, and only its button moves gold and items. Walking more than 6 m away also closes it. F1–F5 switch the
 scripted replies between normal, slow, never answering, malformed and throwing, so the failure
-paths can be tried by hand.
+paths can be tried by hand. Since G5g the scripted replies decide through the framework's `Agent` too, with
+`ScriptedProvider` (`Agenerela/ScriptedAgentDriver.cs`), so the scripted and model paths share
+the same bindings, guards, executor and memory.
 
 Replies come from the local model through Agenerela by default (Ollama at `127.0.0.1:11434`).
 The model is set on `ValeBootstrap`, and since 5 November it defaults to `gemma4:e2b-it-qat`,
@@ -174,6 +176,8 @@ the actions and their target ids are also written into the prompt as observation
 a quote naming the other action's target into `none`, and `Agent.Execute` refuses a target that
 went stale before the reply was executed. Each turn also tells the model about its offer still
 waiting for the player and the receipt of the last trade. An NPC remembers a reply only once it has been executed
-(`CommittedHistory`), so a reply dropped as late is never part of its memory. The few-shot block also shows one line
-answered with `none` (`AgenerelaNpcDecisionDriver.DefaultIdleExample`). In G5f's A/B, that alone
+(`CommittedHistory`), so a reply dropped as late is never part of its memory. Since G5g the framework writes the choices into the prompt: its list of actions and described targets
+(`ListActionsAndTargets`, with `GameTargetOption` as `IDescribedTarget`), a counter-example per
+action, and one line answered with `none` (`Agent.IdleExampleStimulus`,
+`AgenerelaNpcDecisionDriver.DefaultIdleExample`). In G5f's A/B, that alone
 stopped Mara making offers nobody asked for, on both models measured.

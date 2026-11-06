@@ -1350,3 +1350,73 @@ harness bugs, each fixed before the next run, so the runs did not all run the sa
 **What would change this.** A Phase 4 run of the wolf prompts with and without `chase` in the
 offered set, on the same model. If the bell's share does not fall with `chase` offered, this was
 noise.
+
+### The framework's prompt features: as good as Living Vale's own on gemma, better on qwen3.5:2b (5 November 2026)
+
+**What changed.**
+
+- **Treatment (framework arm):** #193's features, all off by default in the framework.
+  - `DecideOptions.ListActionsAndTargets`, so the system prompt lists the offered actions with
+    their descriptions and the offered targets with their `IDescribedTarget` line;
+  - `DecideOptions.CounterExamples`, with a new `CounterExampleStimulus` on every Living Vale
+    action, each a line near the action's subject that asks for nothing;
+  - G5f's idle example, set as `Agent.IdleExampleStimulus` instead of per call.
+- **What the framework arm still had:** the game's per-action rule lines, its status lines and the
+  per-turn example rewriting (`RefreshExamples`).
+- **Control (shipped arm):** the game's own prompt as shipped after G5f. The bindings write every
+  action, description and target as observation lines (`PromptLines`), with the idle example
+  passed per call.
+
+**The set.** One run of `MaraTradeLiveCheck` and `QuestRouteLiveCheck` per model.
+
+- **Trade:** G5b's five asked trades.
+- **Talk:** G5f's 12 lines asking for nothing, plus the browsing line, so 13.
+- **Quest routes:** G4c's seven route lines (Fen, Kest twice, Kest's claim without proof, Brann,
+  Elra, Iven).
+- **Wording:** the counter-examples are new, and none appears in the evaluation set or any
+  measured line (checked by search; hard rule 4).
+- **Staging:** each case was staged alone, with a fresh driver and game state.
+
+**Conditions.**
+
+- **Arms:** interleaved line by line on one model (measuring.md, item 4).
+- **Models:** `gemma4:e2b-it-qat`, then `qwen3.5:2b`, one resident at a time, each warmed with
+  three requests, under the Ollama lock.
+- **Setup:** RTX 4060 Laptop, AC power, Ollama 0.40.14, temperature 0, 22:56–23:01. No CPU side
+  load was recorded.
+
+| Model | Arm | Asked trades (of 5) | Unasked offers (of 13) | Quest routes (of 7) | p50 |
+|---|---|---|---|---|---|
+| `gemma4:e2b-it-qat` | shipped (control) | 5 | 0 | 7 | 0.85 s |
+| | **framework** | 5 | 0 | 7 | 0.80 s |
+| `qwen3.5:2b` | shipped (control) | 4 (1 contained by the pair guard) | 0 | 4 (3 chose `none`) | 1.15 s |
+| | **framework** | **5** | 0 | **6** (1 wrong but legal) | 1.20 s |
+
+**Classified, `qwen3.5:2b`.**
+
+- **The shipped arm's missed trade** is G5b's known iron-scrap mix-up: a purchase quote on a sale
+  bundle, which the pair guard contained. The framework arm got it right.
+- **The shipped arm's three route misses** chose `none` where an action was expected:
+  - Fen's raid account;
+  - Kest's testimony exchange;
+  - Kest's payment exchange.
+- **The framework arm's one route miss** was wrong but legal: on the testimony line it offered
+  the payment exchange.
+- **No pipeline errors** in either arm.
+
+**How much to trust it.** It is small n and one run.
+
+- **gemma:** the two arms are identical, so the run cannot tell them apart; "no worse" is all it
+  shows.
+- **qwen:** the framework arm got 3 more lines right out of 11 lines that asked for an action (5 trades, 6 routes), and lost none. That
+  is suggestive, not significant.
+- **What it does not show:** the arm changed three things together, so it cannot say which one
+  helped.
+
+**Kept:** the framework arm, now the game's only prompt. It was no worse on correct actions or
+unasked offers, which was the condition for switching. The game's `PromptLines` listing is
+deleted; its rule and status lines and `RefreshExamples` stay (framework gaps 20).
+
+**What would change this.** The evaluation-set A/B owed by #151 showing the list or the
+counter-examples costing command accuracy, or a repeat on a larger Living Vale set reversing the
+qwen gain.

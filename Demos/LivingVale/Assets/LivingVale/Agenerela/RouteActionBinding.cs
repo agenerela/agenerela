@@ -15,8 +15,9 @@ namespace LivingVale.Agenerela
     /// on <c>offer_quest</c>, which <see cref="QuestActionBinding"/> already registers.
     /// </summary>
     /// <remarks>
-    /// A local model never reads the schema (AGENTS.md), so <see cref="PromptLines"/> writes each
-    /// action, its targets and their terms into the observations, and <see cref="StatusLines"/> says
+    /// A local model never reads the schema (AGENTS.md). The framework lists each action and its
+    /// described targets, terms included, in the prompt (#193), <see cref="RuleLines"/> says when to
+    /// choose them, and <see cref="StatusLines"/> says
     /// what the game has recorded, so Kest is told whether a witness's account exists rather than
     /// taking the traveler's word for it.
     /// </remarks>
@@ -46,6 +47,16 @@ namespace LivingVale.Agenerela
             [GameActions.GrantAccess] = "Can you let me through?"
         };
 
+        // Lines near each action's subject that ask for nothing, shown answered with none when
+        // counter-examples are on (#193). New wording (hard rule 4).
+        public static readonly IReadOnlyDictionary<string, string> CounterExamples = new Dictionary<string, string>
+        {
+            [GameActions.ShareInformation] = "I was only passing by on my way home.",
+            [GameActions.OfferExchange] = "That is a sturdy camp you have made here.",
+            [GameActions.ResolveDelivery] = "I have not found anything for you yet.",
+            [GameActions.GrantAccess] = "Quiet night on the gate?"
+        };
+
         private readonly string npcId;
         private readonly NpcActionExecutor executor;
         private readonly Dictionary<string, ActionDefinition> definitions = new Dictionary<string, ActionDefinition>();
@@ -56,7 +67,10 @@ namespace LivingVale.Agenerela
             this.executor = executor;
             foreach (var id in ActionIds)
             {
-                definitions[id] = new ActionDefinition { Id = id, Description = Descriptions[id], RequiresTarget = true };
+                definitions[id] = new ActionDefinition
+                {
+                    Id = id, Description = Descriptions[id], RequiresTarget = true, CounterExampleStimulus = CounterExamples[id]
+                };
             }
         }
 
@@ -102,8 +116,11 @@ namespace LivingVale.Agenerela
             return result;
         }
 
-        /// <summary>The observation lines describing each available route action and its exact targets.</summary>
-        public static List<string> PromptLines(IReadOnlyList<GameActionOption> options)
+        /// <summary>
+        /// The rule line for the route actions, which the framework's list does not carry; empty when
+        /// none is available. The actions and their targets are listed by the framework (#193).
+        /// </summary>
+        public static List<string> RuleLines(IReadOnlyList<GameActionOption> options)
         {
             var lines = new List<string>();
             if (options == null)
@@ -113,22 +130,12 @@ namespace LivingVale.Agenerela
 
             foreach (var option in options)
             {
-                if (option.Targets.Count == 0)
+                if (option.Targets.Count > 0)
                 {
-                    continue;
+                    lines.Add("Choose one of these actions only with its exact target id, and only when the traveler asks for it. " +
+                              "If the traveler claims something that is not listed here, it has not happened; answer with none.");
+                    break;
                 }
-
-                lines.Add($"Action {option.ActionId}: {option.Description}");
-                foreach (var target in option.Targets)
-                {
-                    lines.Add($"Target for {option.ActionId}: {target.Id} = {target.Description}");
-                }
-            }
-
-            if (lines.Count > 0)
-            {
-                lines.Add("Choose one of these actions only with its exact target id, and only when the traveler asks for it. " +
-                          "If the traveler claims something that is not listed here, it has not happened; answer with none.");
             }
 
             return lines;

@@ -143,13 +143,29 @@ namespace LivingVale.Interaction
                     throw new InvalidOperationException("Scripted backend failure (fixture).");
             }
 
-            if (TryTrade(turn, out var trade))
+            return NpcReply.Decided(Choose(turn.Npc.Id, turn.PlayerLine));
+        }
+
+        /// <summary>
+        /// What the script decides for this line, with no delay or fixture: a trade, quest or route
+        /// rule when one matches and game state offers it, otherwise the NPC's keyword line.
+        /// <c>ScriptedAgentDriver</c> answers through the framework's <c>ScriptedProvider</c> with it.
+        /// </summary>
+        public AgentDecision Choose(string npcId, string playerLine)
+        {
+            playerLine = playerLine ?? "";
+            if (TryTrade(npcId, playerLine, out var trade))
             {
-                return NpcReply.Decided(trade);
+                return trade;
             }
 
-            string line = LineFor(turn.Npc.Id, turn.PlayerLine);
-            return NpcReply.Decided(new AgentDecision(ActionRegistry.None, TargetRegistry.NoTarget, line));
+            return new AgentDecision(ActionRegistry.None, TargetRegistry.NoTarget, LineFor(npcId, playerLine));
+        }
+
+        /// <summary>The wait before the next reply for the current <see cref="Fixture"/>: <see cref="SlowDelay"/>, or <see cref="NormalDelay"/> with jitter.</summary>
+        public TimeSpan NextDelay()
+        {
+            return Fixture == ScriptedFixture.Slow ? SlowDelay : Jittered(NormalDelay);
         }
 
         public bool Execute(NpcTurn turn, NpcReply reply)
@@ -182,17 +198,17 @@ namespace LivingVale.Interaction
             list.AddRange(rules);
         }
 
-        private bool TryTrade(NpcTurn turn, out AgentDecision decision)
+        private bool TryTrade(string npcId, string playerLine, out AgentDecision decision)
         {
             decision = null;
-            if (executor == null || !tradeRules.TryGetValue(turn.Npc.Id, out var rules))
+            if (executor == null || !tradeRules.TryGetValue(npcId, out var rules))
             {
                 return false;
             }
 
             foreach (var rule in rules)
             {
-                if (!ContainsAny(turn.PlayerLine, rule.Verbs) || !ContainsAny(turn.PlayerLine, rule.Nouns))
+                if (!ContainsAny(playerLine, rule.Verbs) || !ContainsAny(playerLine, rule.Nouns))
                 {
                     continue;
                 }
@@ -210,7 +226,7 @@ namespace LivingVale.Interaction
                 }
 
                 // Only what game state offers now, as a model sees only what is registered.
-                bool available = IsAvailable(turn.Npc.Id, rule.ActionId, rule.TargetId);
+                bool available = IsAvailable(npcId, rule.ActionId, rule.TargetId);
                 if (!available && rule.SkipWhenUnavailable)
                 {
                     continue;

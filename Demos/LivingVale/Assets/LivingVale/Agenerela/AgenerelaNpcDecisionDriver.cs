@@ -261,7 +261,7 @@ namespace LivingVale.Agenerela
             {
                 var options = binding.Options();
                 binding.RefreshExamples(options);
-                lines.AddRange(TradeActionBinding.PromptLines(options, TradeRule));
+                lines.AddRange(TradeActionBinding.RuleLines(options, TradeRule));
                 lastReceipts.TryGetValue(turn.Npc.Id, out var receipt);
                 lines.AddRange(binding.StatusLines(receipt));
             }
@@ -270,7 +270,7 @@ namespace LivingVale.Agenerela
             {
                 var option = quest.Option();
                 quest.RefreshExample(option);
-                lines.AddRange(QuestActionBinding.PromptLines(option));
+                lines.AddRange(QuestActionBinding.RuleLines(option));
                 lines.AddRange(quest.StatusLines());
             }
 
@@ -278,7 +278,7 @@ namespace LivingVale.Agenerela
             {
                 var routeOptions = route.Options();
                 route.RefreshExamples(routeOptions);
-                lines.AddRange(RouteActionBinding.PromptLines(routeOptions));
+                lines.AddRange(RouteActionBinding.RuleLines(routeOptions));
                 lines.AddRange(route.StatusLines());
             }
 
@@ -311,12 +311,17 @@ namespace LivingVale.Agenerela
 
             var agent = AgentFor(turn.Npc);
             agent.State[TradeActionBinding.GenerationKey] = turn.Generation;
+            // The framework writes the choices into the prompt (#193, adopted in G5g after an A/B):
+            // its list of actions and described targets, each action's counter-example, and the
+            // agent's idle example. A local model never reads the schema, so this is what it reads.
+            agent.IdleExampleStimulus = IdleExampleStimulus;
             var options = new DecideOptions
             {
                 StimulusLabel = StimulusLabel,
                 Observations = ObservationsFor(turn),
                 Priority = DecisionPriority.PlayerFacing,
-                IdleExampleStimulus = IdleExampleStimulus
+                ListActionsAndTargets = true,
+                CounterExamples = true
             };
 
             // A cancelled decision throws OperationCanceledException here; the coordinator owns

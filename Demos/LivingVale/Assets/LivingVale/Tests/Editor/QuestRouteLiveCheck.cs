@@ -55,6 +55,7 @@ namespace LivingVale.Tests
         private sealed class Row
         {
             public string model;
+            public string arm;
             public int index;
             public string npc;
             public string line;
@@ -89,11 +90,15 @@ namespace LivingVale.Tests
                 Assert.Ignore("Set LV_MODEL and LV_ROUTES_OUT to run the live check.");
             }
 
+            // LV_ARMS interleaves arms line by line (measuring.md, item 4); only "default" is left.
+            string[] arms = (Environment.GetEnvironmentVariable("LV_ARMS") ?? "default").Split(',');
             Directory.CreateDirectory(Path.GetDirectoryName(output));
             using (var writer = new StreamWriter(output, false))
             {
-                for (int i = 0; i < Cases.Length; i++)
+                for (int c = 0; c < Cases.Length * arms.Length; c++)
                 {
+                    int i = c / arms.Length;
+                    string arm = arms[c % arms.Length].Trim();
                     var (npcId, stage, line, action, target) = Cases[i];
                     var session = new Session { ActiveNpcId = QuestLog.IvenId };
                     var catalog = ItemCatalog.CreateDefault();
@@ -120,8 +125,13 @@ namespace LivingVale.Tests
 
                     session.ActiveNpcId = npcId;
                     var driver = AgenerelaNpcDecisionDriver.ForOllama(model, new NpcActionExecutor(trade, quests, routes));
+                    if (arm != "default")
+                    {
+                        // G5g's shipped/framework arms were measured with a switch the game no longer has.
+                        throw new ArgumentException("Unknown arm " + arm);
+                    }
                     var npc = new NpcDescriptor(npcId, npcId.Substring(4), "Villager");
-                    var row = new Row { model = model, index = i + 1, npc = npcId, line = line, expectedAction = action, expectedTarget = target };
+                    var row = new Row { model = model, arm = arm, index = i + 1, npc = npcId, line = line, expectedAction = action, expectedTarget = target };
                     var turn = new NpcTurn(i + 1, npc, line, Array.Empty<ChatLine>(), 1);
                     var decide = driver.DecideAsync(turn, CancellationToken.None);
                     await Run.NotCancelled(decide);

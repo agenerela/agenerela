@@ -378,7 +378,7 @@ namespace LivingVale.Tests
             var request = rig.Built[0].provider.LastRequest;
             Assert.AreEqual(2, request.History.Count, "Mara remembers the exchange from the previous model.");
             StringAssert.Contains("Ten gold a potion.", request.History[1]);
-            StringAssert.Contains(GameActions.QuotePurchase, request.Observations, "The trade actions come with the rebuilt driver.");
+            StringAssert.Contains(GameActions.QuotePurchase, request.SystemPrompt, "The trade actions come with the rebuilt driver.");
             Assert.AreEqual(1, rig.First.Requests.Count, "The old model is asked nothing more.");
         }
 

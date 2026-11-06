@@ -33,7 +33,7 @@ namespace LivingVale.Game
     }
 
     /// <summary>A target as a driver would show it to a model: stable ID, short name, one-line description.</summary>
-    public sealed class GameTargetOption
+    public sealed class GameTargetOption : global::Agenerela.IDescribedTarget
     {
         public string Id { get; }
         public string Name { get; }
