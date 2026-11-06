@@ -1010,7 +1010,7 @@ wording measured elsewhere.
 or an evaluation-set A/B showing a `none` example costs command accuracy. Appendix A warns that
 plausible prompt changes have hurt before.
 
-### Living Vale's quest routes on gemma4:e2b-it-qat: the right action six times in seven, and two kinds of slip (5 November 2026)
+### Living Vale's quest routes on gemma4:e2b-it-qat: six of seven, then seven of seven on the merged branch; a statement can contradict its action (5 November 2026)
 
 **A smoke check, not an accuracy claim.** It was one run of seven lines, with no labels and no
 control arm (hard rule 2). It asks whether G4c's new route actions are reachable from a local
@@ -1037,5 +1037,22 @@ came only from the target descriptions and status lines.
 action on this model. The two slips are what the game's cards and receipts are for: a wrong
 offer still needs the player's button, and the receipt line says what really happened. Whether
 the status lines ("Claims of proof are only words") help is unmeasured. That needs an A/B run with
-and without them (gap 18). The run predates G5f's `none` example (entry above), which may well remove the bluff's unasked offer. Rows are in `.scratch/g4c/live/routes.jsonl` in the G4c worktree.
+and without them (gap 18). Rows are in `.scratch/g4c/live/routes.jsonl` in the G4c worktree.
+
+**Re-run the same evening, on the merged branch: seven of seven.** This was the same check with
+the same seven lines and model, on `69-living-vale` at 7c2d34e. Two things had changed since the
+first run, so it cannot say which one helped. One was G5f's `none` example (entry above). The
+other was G4b's authored personas for Fen, Kest, Brann and Elra (`RegionNpcPersonas`), which
+replaced the descriptor-built ones.
+- The bluff now gets `none` / `no_target` and no card. Kest's line is "I do not care what you
+  claim. If you have proof, show it to me". The unasked payment offer is gone.
+- The other six picked the same action and target as before. Fen's line now carries the clue in
+  her own words ("grey cloaks… toward Broken Watch"). Warm turns took 0.9 to 1.3 s, and Fen's cold
+  load 19.6 s.
+- Brann's statement still contradicts his action. He chose `grant_access` and said "Show me the
+  permit." So the mismatch did not come from the missing persona. It stays open, and the receipt
+  line is still what tells the player the truth.
+
+This is one run of each, not an A/B, so it is no evidence that either change improves accuracy
+(hard rule 2). The rows are in `.scratch/g4c/live/routes2.jsonl` in the G4c worktree.
 
