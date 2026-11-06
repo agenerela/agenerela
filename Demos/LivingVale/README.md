@@ -8,6 +8,10 @@ when the lead calls it done.
 
 ## Play it
 
+**Hands-on checkpoint:** [`PLAYTEST.md`](PLAYTEST.md) has the start-up steps, the controls, a
+guided run through the whole adventure and the known issues.
+
+
 1. Open this folder in Unity Hub with the pinned editor.
 2. Run **Living Vale → Build Village Scene** (or open `Assets/LivingVale/Scenes/Village.unity`
    if it is already built) and press Play. **Living Vale → Build Windows Player** writes
@@ -49,8 +53,8 @@ kept as `livingvale_save.bak.json`.
 and on to Reedbank, Ashwatch Castle and Broken Watch; the HUD names the place you are in, and the
 first visit to each pays 10 XP once, saved with the rest. Sella stands at the inn in the Glen, Toma
 and Fen at Reedbank, Brann and Elra at Ashwatch's gate, Kest at Broken Watch. They walk short
-routines and stop to face you while you talk. They only talk for now; their quest actions come
-with the quest routes. At walking pace each neighbour is 45 to 90 seconds away.
+routines and stop to face you while you talk; their quest actions are in the quest routes below.
+At walking pace each neighbour is 45 to 90 seconds away.
 
 **Quest routes and endings (G4c):** **E** also uses quest objects when no NPC is in front of
 you. At the Old Road you can investigate the wagon wreck (a clue and 10 XP) and take Brann's lost
@@ -62,7 +66,7 @@ delivery permit, or divide it after both have agreed on their own cards. Every d
 shows a card in the chat, and only its button acts. When the quest is resolved, the patients leave
 Iven's porch, the castle gate opens, or one patient leaves and supplies arrive at the gate. The
 journal at the top right follows the quest. Fen, Kest, Brann and Elra stand in the region built
-by G4b; until that is merged, their actions can be reached only from the tests.
+by G4b.
 
 ## Layout
 
