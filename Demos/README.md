@@ -9,6 +9,7 @@ in general: §1.6.
 | Game | What it proves | Starts after | Render pipeline |
 |---|---|---|---|
 | `GreyBoxVillage/` (#19) | The village guard playground; placeholder commands before Phase 2 | groundwork now | Universal 3D (URP) |
+| `LivingVale/` (#69) | A third-person RPG where every NPC is talked to in typed chat, with the first adventure (*The Missing Wagon*) playable end to end | First adventure built: G0–G5, G7, G8; the rest of G4 (perks, relationships) open | Universal 3D (URP) |
 | `GreyBox2D/` (#44) | The API works from outside the package, in a second genre | Phase 2 | not created yet |
 | `GreyBoxStrategy/` (#20) | A faction agent with no Transform — an agent is not an NPC. **Never cut** | Phase 3 | not created yet |
 | `CompanionRPG/` (#45) | A companion built with the Inspector tooling | Phase 5 | not created yet |

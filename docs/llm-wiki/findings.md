@@ -723,6 +723,339 @@ the rendered block against all 20 prompts, and the examples are written down in 
 later Ollama whose probabilities are from after the mask: the scarecrow check would then read
 near 1, and the guard would pass everything.
 
+### Living Vale's NPCs on four small models: qwen3.5:4b read best, at qwen3.5:2b's speed (5 November 2026)
+
+**A small qualitative comparison, not an accuracy claim** (hard rule 2): n = 12 player lines per
+model, no labels and no control arm. It answers "which local model should Living Vale's NPCs
+talk with by default", and nothing about action selection, since every NPC had only `none`.
+
+**What ran.** Living Vale's G5 driver, `AgenerelaNpcDecisionDriver`, headless in Unity batch
+mode (`NpcModelComparison`, an explicit `RequiresOllama` EditMode test): one framework `Agent`
+per NPC, the player's line as the stimulus, five or six persona lines per NPC as observations,
+the framework's `RollingHistory` as memory, no targets (`no_target` only), no state line. Twelve
+lines written for this run, none from `UnityProject/Assets/Evaluation/` (hard rule 4): six to
+Mara, then six to Iven, in order, so the two follow-ups had a previous turn. Each NPC had
+two knowledge questions, a greeting, a follow-up, an off-topic or unsupported request and an
+attempt to break character. Raw output, one JSON line per turn, is in `.scratch/lv-g5/compare/`
+on the lead's laptop. Prompts were about 400–480 tokens. Mara's first persona line then said the traveler was someone she had
+not met before; it was dropped after the run, because it stayed true on every later visit.
+
+**Conditions.** RTX 4060 Laptop GPU (8 GB), on AC power, Ollama 0.40.14, temperature 0, `think`
+off, context 4096. The four models ran one after the other, with every other model unloaded
+first and three throwaway warm-up requests (measuring.md, item 4). `/api/ps` showed one model,
+fully on the GPU (`size_vram` = `size`), before each one. Not checked: other sessions on this
+machine may have been running Unity batch jobs, and a Codex review was running (mostly remote).
+Latency is the framework's `LatencySeconds`, the provider's request alone.
+
+| Model (Ollama tag, quant, VRAM) | p50 | p95 | Pipeline errors / malformed | Guards fired | In character | Uses its knowledge | Follow-ups |
+|---|---|---|---|---|---|---|---|
+| `qwen3.5:2b` (Q8_0, 2.4 GB) | 0.92 s | 1.33 s | 0 / 0 | 0 | 12/12, but wordy and repetitive | Partly: invented stock (dried meats, iron ore) | Wrong sum ("20 gold each, so 40"); Iven said "not sure where it started" and then said where |
+| `qwen3.5:4b` (Q4_K_M, 3.1 GB) | 0.89 s | 1.67 s | 0 / 0 | 0 | 12/12, concise | Yes; one odd line (Iven had "never seen a castle outside Briar Vale") | Both right: "twenty gold for the pair"; Ashwatch, two days, the Old Road |
+| `granite4.1:3b` (2.5 GB) | 0.60 s | 0.85 s | 0 / 0 | 0 | 12/12, very terse ("Yes, it is.") | Yes | Both right |
+| `lfm3:1.7b` (1.2 GB) | 0.76 s | 1.06 s | 0 / 0 | 0 | 11/12: Iven's greeting answered as the player ("I'm already here, Iven.") | Yes | Both right |
+
+What a player would notice. **granite4.1:3b** wrote `Iven:` at the start of all six of Iven's
+replies, so the chat would show the name twice, and it dodged the break-character line ("I'm
+not sure what you mean"). **qwen3.5:2b** ended four of Mara's six replies by sending the
+traveler to Sella or Iven, whatever was asked. No model broke character on the two attempts,
+no model claimed an action, and none came near the game's 8-second turn timeout (slowest
+turn 1.89 s). With only `none` registered, the guards had nothing to contain.
+
+**Recommendation: `qwen3.5:4b` for Living Vale's NPCs**, on the evidence above: the fewest
+slips in the twelve (one odd line, no wrong fact) and the most natural replies, at the same latency as `qwen3.5:2b` here. The cost is
+0.8 GB more VRAM beside the game's renderer, unmeasured with the game running. `qwen3.5:2b`
+stays the framework's default; this is a choice for one game's chat, not for action selection.
+`granite4.1:3b` is the fallback where latency or memory matters most, if a prompt line or a
+trim of a leading `Name:` fixes its prefix.
+
+**What would change this.** A larger set (n ≥ 50) with judged labels, scored blind, in which
+`qwen3.5:4b` is no better than `qwen3.5:2b`; latency with the game rendering beside it; or a
+repeat of this run that disagrees, since the arms ran sequentially and n is 12.
+
+### Mara's trade actions live: the right quote 5/6 on qwen3.5:4b, 4/6 on qwen3.5:2b (5 November 2026)
+
+**A small live check, not an accuracy claim** (hard rule 2): six labelled lines per model and no
+control arm. It shows that G5b's trade binding works against a real model, and which mistakes
+show up first.
+
+**What ran.** `MaraTradeLiveCheck`, an explicit `RequiresOllama` EditMode test that sends each
+line through the real `AgenerelaNpcDecisionDriver` and executes the result through G3's
+`NpcActionExecutor`. Each case was staged on its own: a fresh driver and game state, no memory,
+and the player carrying one wolf pelt and one iron scrap, so both `quote_purchase` (three stock
+entries) and `quote_sale` (two bundles) were offered. Targets reached the prompt as observation
+lines, one per id with its price, plus one line per action and one rule line. There was no state
+line. The few-shot block had one example per action, on its first target ("I'll take healing
+potion ×1, please." and "Would you buy my wolf pelt ×1?"). None of the six lines repeats that
+wording, but lines 1 and 4 ask for the same targets as the examples, which favours them. The
+lines were five buy or sell requests and one browsing line labelled `none`.
+
+**Conditions.** As in the entry above: RTX 4060 Laptop, AC power, Ollama 0.40.14, temperature 0,
+the two models run one after the other under the shared Ollama lock, each warmed with three
+throwaway requests and resident alone, fully on the GPU. A Codex review was running at the same
+time.
+
+| Outcome (measuring.md, rule 5) | `qwen3.5:4b` | `qwen3.5:2b` |
+|---|---|---|
+| Correct action and target | 5 | 4 |
+| Wrong but legal | 1 | 1 |
+| Contained by a guard | 0 | 1 |
+| Rejected when expected | 0 | 0 |
+| Pipeline error | 0 | 0 |
+
+- **Wrong but legal**: on the browsing line ("Just looking around. How is business today?") both
+  models made an offer, a potion and bread. Nothing moves until the player confirms the card, but
+  an unasked offer is the visible mistake. A `none` example in the few-shot block
+  (`IdleExampleStimulus`) is the obvious candidate fix. It would need an A/B run.
+- **Contained**: `qwen3.5:2b` asked to buy the player's iron scrap with `quote_purchase` instead
+  of `quote_sale`. The pair guard rewrote it to `none`, the player saw the refusal line, and no
+  quote was made.
+- **Statements**: every price named in a statement matched the target's own price. One
+  `qwen3.5:2b` line about buying the pelt read as if Mara were selling it.
+- **Latency**: p50 1.8 s on `qwen3.5:4b` and 1.2 s on `qwen3.5:2b` (n = 6), longer than the chat-only
+  entry above because the prompt is longer. One `qwen3.5:4b` turn took 14.9 s, which is over the
+  game's 8 s turn timeout. It happened once, was not investigated, and may have come from the
+  load beside it.
+
+**What would change this.** A larger labelled trade set with a control arm. Repeating the 14.9 s
+turn would make the turn timeout a real risk for `qwen3.5:4b`.
+
+### Non-Qwen small models for Living Vale's NPCs: gemma4:e2b wrote best, qwen3.5:2b near the bottom (5 November 2026)
+
+**A small comparison with one judge, not an accuracy claim** (hard rule 2). Each model got 24
+lines, there was one blind judge, and there are no human labels. `qwen3.5:2b` is the control arm.
+It ran in the same session, on the same machine, with the same lines.
+
+**What ran.** For each model, the real `AgenerelaNpcDecisionDriver` in Unity batch mode was sent:
+
+- the 12 conversation lines from the first entry today (`NpcModelComparison`);
+- 6 new writing lines that need voice more than facts (`NpcModelComparison.RunTheWritingLines`):
+  the night the wagon left, the news of its wreck, how Iven will tell his patients, a market
+  rumour and who told it, and a market day described. None repeats a line above, a few-shot
+  example or the evaluation set (hard rule 4);
+- the 6 trade lines from G5b (`MaraTradeLiveCheck`).
+
+Each model had one turn of each kind per line, so n = 24, at temperature 0. Raw output is in
+`.scratch/lv-g5/g5c/` on the lead's laptop.
+
+**Conditions.**
+
+- **Hardware and software:** RTX 4060 Laptop (8 GB), on AC power, Ollama 0.40.14, under the
+  shared Ollama lock.
+- **Arms:** run one after the other, 16:28–16:37. Every other model was unloaded first, and each
+  model was warmed with three throwaway requests. `/api/ps` showed it alone and fully on the GPU.
+- **Not checked:** two model pulls (Stheno, gemma) were downloading during the first six arms,
+  and a Codex review was running.
+- **CPU side load:** another session's Unity EditMode run took the CPU from 16:29:08 to 16:29:49,
+  overlapping the `granite4.1:3b` arm and the start of `nemotron-3-nano:4b`'s. Both arms were run
+  again at 16:46 with nothing beside them. The p50s were the same (0.59 s and 0.55 s), granite's
+  p95 went from 0.89 to 0.84 s and nemotron's from 1.28 to 1.09 s, and the trade outcomes were
+  identical. The table keeps the first run, whose replies were the ones judged.
+- **Gemma's size:** `gemma4:e2b-it-qat` showed 1.66 GB resident, although its file is 4.3 GB.
+  The later check below explains the gap.
+- **Not run:** `gemma4:e4b` (6.1 GB or more) and `ministral-3:8b` (6.0 GB) leave too little room
+  for the game. `llama3.1:8b` was dropped because pulls were slow; the 8B slot went to the Stheno
+  fine-tune.
+
+**Writing quality, judged blind.** Codex (gpt-6.1-sol, high effort, read-only) scored each of the
+162 chat and writing replies 1–5 on four things: voice, staying within the NPC's knowledge
+(given to it as the persona's fact list), prose, and coherence with the previous turn. The replies
+were shuffled per line under letters that changed per line, and unblinded afterwards. The trade
+lines were not judged.
+
+| Model | Resident VRAM | p50 | p95 | > 8 s | Errors | Trade (6) | Voice | Knowledge | Prose | Coherence | Chat (12) | Writing (6) | **Overall** |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `gemma4:e2b-it-qat` | 1.66 GB* | 0.70 s | 4.14 s | 0 | 0 | 5 correct, 1 wrong-legal | 4.11 | 4.22 | 4.17 | 4.17 | 4.31 | 3.88 | **4.17** |
+| `L3-8B-Stheno-v3.2` Q4_K_M | 5.28 GB | 1.49 s | 2.20 s | 0 | 0 | 5 correct, 1 rejected-when-expected | 3.72 | 3.72 | 3.33 | 4.56 | 3.94 | 3.62 | 3.83 |
+| `nemotron-3-nano:4b` | 2.82 GB | 0.55 s | 1.28 s | 0 | 0 | 3 correct, 3 stopped by a guard | 3.61 | 4.50 | 3.28 | 3.89 | 3.96 | 3.54 | 3.82 |
+| `llama3.2:3b` | 2.56 GB | 0.96 s | 1.38 s | 0 | 0 | 4, 1 contained, 1 wrong-legal | 3.78 | 3.33 | 3.61 | 4.28 | 3.77 | 3.71 | 3.75 |
+| `granite4.1:3b` | 2.51 GB | 0.59 s | 0.89 s | 0 | 0 | 6 correct | 3.22 | 4.11 | 3.50 | 4.11 | 3.67 | 3.88 | 3.74 |
+| `lfm3:1.7b` | 1.17 GB | 0.55 s | 0.89 s | 0 | 0 | 5, 1 wrong-legal | 3.28 | 3.50 | 3.22 | 3.61 | 3.56 | 3.08 | 3.40 |
+| `MiniCPM5-2B` Q4_K_M | 1.64 GB | 0.64 s | 0.84 s | 0 | 0 | 4, 1 contained, 1 wrong-legal | 3.00 | 3.56 | 2.78 | 2.83 | 2.73 | 3.67 | 3.04 |
+| **`qwen3.5:2b` (control)** | 2.36 GB | 0.95 s | 1.35 s | 0 | 0 | 4, 1 contained, 1 wrong-legal | 3.06 | 3.17 | 3.06 | 2.83 | 3.15 | 2.79 | 3.03 |
+| `ministral-3:3b` | 2.73 GB | 1.20 s | 1.50 s | 0 | 0 | 5, 1 wrong-legal | 3.06 | 1.61 | 3.11 | 3.61 | 2.81 | 2.92 | 2.85 |
+
+Latency is the framework's `LatencySeconds` over all 24 turns. No turn of any model reached the
+game's 8 s turn timeout, and no turn was a pipeline error or malformed. \*As reported by
+`/api/ps`; see Conditions.
+
+What the numbers do not show:
+
+- **The grounding guard stopped correct trade choices.** Every "rejected when expected" and
+  "stopped by a guard" above is `TargetGroundingGuard`: two of `nemotron-3-nano:4b`'s three, and
+  `Stheno`'s one, rewrote a correct quote to `none`. The guard's confidence check was set on
+  Qwen's token probabilities (findings, 5 October). That it is too strict for other models'
+  probabilities is a hypothesis for the Guards research area. It is not measured here.
+- **The browsing line still draws an unasked offer** from most models, as in G5b.
+- **Gemma is short and safe, and once wrong about what it knows.** Iven answered "the night the
+  wagon left" with "I do not know anything about a wagon leaving a castle" and named someone who
+  does not exist. The judge still scored its knowledge high overall.
+- **Stheno reads richest**, and is best at following on from the previous turn (coherence 4.56).
+  It is the heaviest by far (5.28 GB beside the game) and the slowest, and its licence is
+  CC BY-NC 4.0, non-commercial only.
+- **`ministral-3:3b` invents the most** (knowledge 1.61).
+
+**Recommendation: try `gemma4:e2b-it-qat` as Living Vale's default.** The lead adopted it as
+the game's default on 5 November (G5e). `qwen3.5:2b` stays the framework's default and is
+second in F7's list.
+On this evidence it beat the `qwen3.5:2b` control by more than a point on every judged axis (4.17
+against 3.03 overall), matched the best trade result, and stayed fast, at under 2 GB as Ollama
+reports it. Before switching:
+
+- repeat the run, because it is one judge, n = 18 judged replies per model, and sequential arms;
+- check gemma's real memory use with the game rendering;
+- check its four slower trade turns, about 4 s each.
+
+`qwen3.5:4b`, recommended in the first entry today, was not in this run, so the two cannot be
+ranked against each other here. Every model in the table, and `qwen3.5:4b`, can be picked in the
+game with F7.
+
+**What would change this.** A second judge or human ratings that disagree; a repeat in which
+gemma's lead falls inside the run-to-run spread; or gemma failing to fit beside the game's
+renderer.
+
+**Gemma's memory, checked the same evening.** The GPU was empty (0 MiB) when `gemma4:e2b-it-qat`
+was loaded alone under the lock with a 4096-token context.
+
+- **What `/api/ps` reports:** `size` and `size_vram` were both 1.66 GB.
+- **What the card shows:** `nvidia-smi` showed **2.78 GB** used, all of it Ollama's `llama-server`.
+- **Where the 4.3 GB file goes,** from the server log:
+  - 1.34 GB of model weights on the GPU, all 36 layers offloaded;
+  - **2.15 GB in pinned system memory** (`CUDA_Host`): gemma's per-layer embeddings, which
+    llama.cpp keeps off the card by design;
+  - its vision and audio projectors (`gemma4v`, `gemma4a`), loaded although the game sends
+    neither;
+  - KV cache and compute buffers.
+- **Cold load:** 10.3 s, which the startup notice and the warm-up cover.
+- **Measured once, nothing else running, not repeated.**
+
+So `/api/ps` undercounts gemma's GPU use by about 1.1 GB, and gemma also takes about 2 GB of
+system RAM. It still fits: 2.8 GB beside the game leaves room on the 8 GB card. During the
+coordinator's play-check, the game, gemma and a leftover `llama3.2:3b` together used 5.5 GB, and
+G5d's unload on switching now removes that leftover.
+
+### Unasked offers: one negative example cut them to none on both models (5 November 2026)
+
+**What changed.** The treatment is a **negative few-shot example**. `AgenerelaNpcDecisionDriver` passes
+`DecideOptions.IdleExampleStimulus`, so the few-shot block shows one line answered with `none`
+alongside the trade examples. The control is G5b's prompt, which has no such line. A second
+treatment was a stricter rule line ("Make an offer … only when the traveler asks to buy something
+from you or to sell you something. For greetings, questions, rumours and small talk, choose none
+and just answer.").
+
+**The set.**
+
+- **Lines asking for nothing:** 12 new lines to Mara (rumours, small talk, directions, feelings,
+  a question about her stall that is not a purchase), plus G5b's browsing line, so 13 in all.
+- **Asked trades:** G5b's five buy and sell lines.
+- **Overlap:** none repeats an evaluation prompt or any example in the prompt (hard rule 4). The
+  first negative example, "Fine weather for the market, isn't it?", was dropped after run 1 because
+  "The weather is changing." is an evaluation prompt. Run 2 measured the line now shipped, "Good to
+  see a friendly face again."
+
+**Conditions.**
+
+- **Staging:** each case was staged alone, with a fresh driver and trade state, and the player
+  carrying a pelt and iron scrap, so both trade actions were offered.
+- **Arms:** interleaved line by line on one model (measuring.md, item 4).
+- **Models:** `gemma4:e2b-it-qat`, then `qwen3.5:2b`, one resident at a time, warmed with three
+  throwaway requests, under the Ollama lock.
+- **Setup:** RTX 4060 Laptop, AC power, Ollama 0.40.14, temperature 0, `MaraTradeLiveCheck` with
+  `LV_ARMS`. Run 1 was 17:27–17:33, run 2 17:34–17:39. No CPU side load was recorded in the
+  window.
+
+| Model | Arm | Unasked offers shown (of 13) | Asked trades correct (of 5) | p50 |
+|---|---|---|---|---|
+| `gemma4:e2b-it-qat` | control (run 1 / run 2) | **7 / 6** | 5 / 5 | 0.85 / 0.95 s |
+| | negative example, weather (run 1) | 0 | 5 | 0.85 s |
+| | **negative example, shipped (run 2)** | **0** | 5 | 0.90 s |
+| | stricter rule (run 1) | 0 | 5 | 0.85 s |
+| `qwen3.5:2b` | control (run 1 / run 2) | **10 / 10** | 4 / 4 | 1.13 / 1.15 s |
+| | negative example, weather (run 1) | 0 | 4 | 1.10 s |
+| | **negative example, shipped (run 2)** | **0** | 4 | 1.12 s |
+| | stricter rule (run 1) | 1 | 4 | 1.15 s |
+
+**Classified.**
+
+- **Asked trades:** `qwen3.5:2b`'s one miss is the same in every arm. It quoted a *purchase* of
+  the player's iron scrap, and the pair guard contained it (contained by a guard, not
+  wrong-but-legal).
+- **Unasked offers:** every one shown in a control arm was a legal quote on a line that asked for
+  none (wrong but legal). In its control arms `qwen3.5:2b` chose an offer on all 13 lines; guards
+  contained 3 of them.
+- **The rule arm on `qwen3.5:2b`:** it left an offer on 1 line, and gave 9 of its `none` answers
+  a target id. That is harmless, since `none` executes nothing, but it is a sign the model was
+  confused.
+- **Pipeline errors:** none.
+
+**How much to trust it.**
+
+- **Size and repetition:** n = 13 per arm, one set of lines, and two runs. The control arms
+  repeated closely: 7 then 6 on gemma (so temperature 0 is not fully deterministic here), and 10
+  then 10 on qwen.
+- **The gaps:** 6/13 against 0/13 and 10/13 against 0/13 are far outside that spread. Each line
+  ran in both arms, so the test is paired. In run 2 the example improved 6 lines and worsened none
+  on gemma, and improved 10 and worsened none on qwen. An exact McNemar test gives two-sided
+  p = 0.031 and p = 0.002.
+- **Why it is not an accuracy claim:** the lines are hand-written, the classification is by the
+  expected label alone, and the negative example has been measured only on Living Vale's trade
+  prompt.
+- **Not measured:** the example reaches every NPC, Iven and the quest NPCs included, beside their
+  own action examples. How they behave with it was not measured here.
+
+**Kept:** the negative example, now the driver's default (`DefaultIdleExample`). The rule line
+stays as it was, because it did no better on gemma, did worse on `qwen3.5:2b`, and changes
+wording measured elsewhere.
+
+**What would change this.** A larger set on which the example makes a model miss asked trades,
+or an evaluation-set A/B showing a `none` example costs command accuracy. Appendix A warns that
+plausible prompt changes have hurt before.
+
+### Living Vale's quest routes on gemma4:e2b-it-qat: six of seven, then seven of seven on the merged branch; a statement can contradict its action (5 November 2026)
+
+**A smoke check, not an accuracy claim.** It was one run of seven lines, with no labels and no
+control arm (hard rule 2). It asks whether G4c's new route actions are reachable from a local
+model that sees them only through the prompt lines `RouteActionBinding` writes.
+
+**What ran.** `QuestRouteLiveCheck` in Unity batch mode, through the `Agent` driver, against a
+local Ollama 0.40.14 with `gemma4:e2b-it-qat`, taken under the shared lock and nothing else
+loaded. Each line was staged on fresh game state at the quest stage it needs. Fen, Kest, Brann
+and Elra had no authored persona yet, so each was built from its descriptor, and what they knew
+came only from the target descriptions and status lines.
+
+**What it showed.**
+- Six of seven picked the expected action and target. These were Fen's `share_information`
+  (13.7 s, a cold load), Kest's testimony and payment deals, Brann's permit, and both deliveries.
+  The warm turns took 1.0 to 1.7 s.
+- The bluff ("I have proof. A witness watched your people…", with no clue recorded): the
+  testimony deal was absent from the schema, so it could not be chosen. Kest picked
+  `exchange_kest_payment` instead, an unrequested offer of the kind framework gap 9 describes. His
+  line refused the proof. Nothing was unlocked, and the card still needed the player's 20 gold.
+- Brann chose `grant_access` correctly, but said "You must first earn a delivery permit". The
+  statement contradicted the action, and nothing checks that the two agree.
+
+**What it means.** The prompt-line workaround (framework gap 1) is enough to reach every new
+action on this model. The two slips are what the game's cards and receipts are for: a wrong
+offer still needs the player's button, and the receipt line says what really happened. Whether
+the status lines ("Claims of proof are only words") help is unmeasured. That needs an A/B run with
+and without them (gap 18). Rows are in `.scratch/g4c/live/routes.jsonl` in the G4c worktree.
+
+**Re-run the same evening, on the merged branch: seven of seven.** This was the same check with
+the same seven lines and model, on `69-living-vale` at 7c2d34e. Two things had changed since the
+first run, so it cannot say which one helped. One was G5f's `none` example (entry above). The
+other was G4b's authored personas for Fen, Kest, Brann and Elra (`RegionNpcPersonas`), which
+replaced the descriptor-built ones.
+- The bluff now gets `none` / `no_target` and no card. Kest's line is "I do not care what you
+  claim. If you have proof, show it to me". The unasked payment offer is gone.
+- The other six picked the same action and target as before. Fen's line now carries the clue in
+  her own words ("grey cloaks… toward Broken Watch"). Warm turns took 0.9 to 1.3 s, and Fen's cold
+  load 19.6 s.
+- Brann's statement still contradicts his action. He chose `grant_access` and said "Show me the
+  permit." So the mismatch did not come from the missing persona. It stays open, and the receipt
+  line is still what tells the player the truth.
+
+This is one run of each, not an A/B, so it is no evidence that either change improves accuracy
+(hard rule 2). The rows are in `.scratch/g4c/live/routes2.jsonl` in the G4c worktree.
+
 ### First model A/B: `qwen3:4b-instruct-2507` 65/76, `qwen3.5:2b` 56/76, but the 4B wrote its fields in another order (5 November 2026)
 
 The first of #151's runs through the A/B runner (#145), and the first live run of its
@@ -1017,6 +1350,76 @@ harness bugs, each fixed before the next run, so the runs did not all run the sa
 **What would change this.** A Phase 4 run of the wolf prompts with and without `chase` in the
 offered set, on the same model. If the bell's share does not fall with `chase` offered, this was
 noise.
+
+### The framework's prompt features: no worse than Living Vale's own on gemma or qwen3.5:2b (5 November 2026)
+
+**What changed.**
+
+- **Treatment (framework arm):** #193's features, all off by default in the framework.
+  - `DecideOptions.ListActionsAndTargets`, so the system prompt lists the offered actions with
+    their descriptions and the offered targets with their `IDescribedTarget` line;
+  - `DecideOptions.CounterExamples`, with a new `CounterExampleStimulus` on every Living Vale
+    action, each a line near the action's subject that asks for nothing;
+  - G5f's idle example, set as `Agent.IdleExampleStimulus` instead of per call.
+- **What the framework arm still had:** the game's per-action rule lines, its status lines and the
+  per-turn example rewriting (`RefreshExamples`).
+- **Control (shipped arm):** the game's own prompt as shipped after G5f. The bindings write every
+  action, description and target as observation lines (`PromptLines`), with the idle example
+  passed per call.
+
+**The set.** One run of `MaraTradeLiveCheck` and `QuestRouteLiveCheck` per model.
+
+- **Trade:** G5b's five asked trades.
+- **Talk:** G5f's 12 lines asking for nothing, plus the browsing line, so 13.
+- **Quest routes:** G4c's seven route lines (Fen, Kest twice, Kest's claim without proof, Brann,
+  Elra, Iven).
+- **Wording:** the counter-examples are new, and none appears in the evaluation set or any
+  measured line (checked by search; hard rule 4).
+- **Staging:** each case was staged alone, with a fresh driver and game state.
+
+**Conditions.**
+
+- **Arms:** interleaved line by line on one model (measuring.md, item 4).
+- **Models:** `gemma4:e2b-it-qat`, then `qwen3.5:2b`, one resident at a time, each warmed with
+  three requests, under the Ollama lock.
+- **Setup:** RTX 4060 Laptop, AC power, Ollama 0.40.14, temperature 0, 22:56–23:01. No CPU side
+  load was recorded.
+
+| Model | Arm | Asked trades (of 5) | Unasked offers (of 13) | Quest routes (of 7) | p50 |
+|---|---|---|---|---|---|
+| `gemma4:e2b-it-qat` | shipped (control) | 5 | 0 | 7 | 0.85 s |
+| | **framework** | 5 | 0 | 7 | 0.80 s |
+| `qwen3.5:2b` | shipped (control) | 4 (1 contained by the pair guard) | 0 | 4 (3 chose `none`) | 1.15 s |
+| | **framework** | **5** | 0 | **6** (1 wrong but legal) | 1.20 s |
+
+**Classified, `qwen3.5:2b`.**
+
+- **The shipped arm's missed trade** is G5b's known iron-scrap mix-up: a purchase quote on a sale
+  bundle, which the pair guard contained. The framework arm got it right.
+- **The shipped arm's three route misses** chose `none` where an action was expected:
+  - Fen's raid account;
+  - Kest's testimony exchange;
+  - Kest's payment exchange.
+- **The framework arm's one route miss** was wrong but legal: on the testimony line it offered
+  the payment exchange.
+- **No pipeline errors** in either arm.
+
+**How much to trust it.** It is small n and one run.
+
+- **gemma:** the two arms are identical, so the run cannot tell them apart; "no worse" is all it
+  shows.
+- **qwen:** the framework arm got 3 more lines right out of 11 lines that asked for an action (5 trades, 6 routes), and lost none. That
+  is suggestive, not significant.
+- **What it does not show:** the arm changed three things together, so it cannot say which one
+  helped.
+
+**Kept:** the framework arm, now the game's only prompt. It was no worse on correct actions or
+unasked offers, which was the condition for switching. The game's `PromptLines` listing is
+deleted; its rule and status lines and `RefreshExamples` stay (framework gaps 20).
+
+**What would change this.** The evaluation-set A/B owed by #151 showing the list or the
+counter-examples costing command accuracy, or a repeat on a larger Living Vale set reversing the
+qwen gain.
 
 ### Model lifecycle calls against a real Ollama: a warm-up is an empty `/api/generate` (5 November 2026)
 
