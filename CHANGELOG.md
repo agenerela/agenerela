@@ -61,6 +61,11 @@ phase table and the open issues, not here.
   drivers, on a card whose Accept button alone makes it Active. `SaveGame` writes a versioned
   snapshot atomically (keeping the previous save), validates before restoring, and never saves a
   quote or offer; F9 saves and F10 loads.
+- **Living Vale G5d: F7 loads only the model the player stops on** (#69): pressing through the
+  list no longer queues a warm-up per model. A model is loaded once the key has rested for a
+  second, the one before it is unloaded so two never share the 8 GB card beside the game, and a
+  superseded warm-up is cancelled out of the queue. The notice says "loading …" until the model
+  answers, and the help line fits 1280×720.
 - **Living Vale G5c: pick the NPCs' model in the game** (#69): **F7** moves the `Agent` driver to
   the next model in `ValeBootstrap`'s list that Ollama has, and skips any it lacks with a
   game-authored notice beside the badge. It closes the open chat first, and keeps the executor,

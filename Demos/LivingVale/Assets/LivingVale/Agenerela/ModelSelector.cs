@@ -13,11 +13,18 @@ namespace LivingVale.Agenerela
         Task<IReadOnlyCollection<string>> InstalledAsync(CancellationToken ct);
     }
 
+    /// <summary>Takes a model out of the server's memory, so two never sit beside the game on the card.</summary>
+    public interface IModelLoader
+    {
+        /// <summary>Asks the server to unload <paramref name="model"/>. Never throws for a server problem.</summary>
+        Task UnloadAsync(string model, CancellationToken ct);
+    }
+
     /// <summary>
     /// Ollama's <c>/api/tags</c> at <c>127.0.0.1</c>, with a short timeout of its own, so a server
     /// that is down or slow never holds the game: the answer is then null.
     /// </summary>
-    public sealed class OllamaModelCatalog : IModelCatalog
+    public sealed class OllamaModelCatalog : IModelCatalog, IModelLoader
     {
         private static readonly HttpClient Client = new HttpClient();
 
@@ -73,6 +80,39 @@ namespace LivingVale.Agenerela
                 {
                     Debug.LogWarning($"[LivingVale] Could not list Ollama's models at {endpoint}: {e.Message}");
                     return null;
+                }
+            }
+        }
+
+        /// <summary>
+        /// <c>keep_alive: 0</c> on an empty chat, which Ollama documents as unloading the model.
+        /// Answers within the same short timeout, or gives up with a warning.
+        /// </summary>
+        public async Task UnloadAsync(string model, CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(model))
+            {
+                return;
+            }
+
+            using (var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct))
+            {
+                deadline.CancelAfter(timeout);
+                try
+                {
+                    var body = new StringContent("{\"model\":\"" + model.Replace("\\", "\\\\").Replace("\"", "\\\"") +
+                        "\",\"keep_alive\":0,\"messages\":[]}", System.Text.Encoding.UTF8, "application/json");
+                    using (var response = await Client.PostAsync(endpoint + "/api/chat", body, deadline.Token))
+                    {
+                        if (!response.IsSuccessStatusCode)
+                        {
+                            Debug.LogWarning($"[LivingVale] Ollama did not unload {model}: HTTP {(int)response.StatusCode}.");
+                        }
+                    }
+                }
+                catch (Exception e) when (!ct.IsCancellationRequested)
+                {
+                    Debug.LogWarning($"[LivingVale] Could not unload {model} from Ollama at {endpoint}: {e.Message}");
                 }
             }
         }
