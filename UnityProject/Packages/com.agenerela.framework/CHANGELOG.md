@@ -275,22 +275,6 @@ While the version stays `0.x`, the public API may change in any release.
 - `Documentation~/providers.md`: the scripted provider, as an asset, testing with it, and how a
   decision log will replay through it (G7).
 
-### Changed
-
-- **The same target from two sources is one target** (#190 B, G13, DR-020). `ExplicitTargetSource`
-  and `ProximityTargetSource` skip an id an earlier source, or `Agent.Targets`, already registered
-  for the same object, which they used to refuse; the first registration, its category included,
-  is kept, and a Targetable skipped this way still counts toward the proximity cap. Another object
-  under the id is still an error. `ITargetSource`'s contract says so, and `TargetRegistry.Register`
-  is unchanged: it throws for any id already present.
-
-### Fixed
-
-- **Play mode without a domain reload** (#190, G8): `AgenerelaSettings` forgets the settings it
-  found, and a test's override, as Play mode starts, so Enter Play Mode Options with the domain
-  reload off no longer carries them into the next session. A new EditMode test fails on any static
-  field in the framework's runtime assembly that nothing resets; the three that need no reset
-  (`ProviderConfig`'s provider names and built configs, and the queues) say why in it.
 - **Provider health** (#190 G1, DR-015 as amended). `ProviderHealth.For(provider)`, one per
   provider instance like its queue, says whether the provider is answering: `IsDown`, `Reason`
   (a `PipelineErrorKind`), `Message`, `DownSinceUtc`, `RetryAtUtc`, `ConsecutiveFailures`, and a
@@ -321,6 +305,23 @@ While the version stays `0.x`, the public API may change in any release.
   full one. Each ends with no decision before anything is sent, and logs nothing.
 - `Documentation~/providers.md`: provider health, model lifecycle, switching an agent's provider,
   and the backlog.
+
+### Changed
+
+- **The same target from two sources is one target** (#190 B, G13, DR-020). `ExplicitTargetSource`
+  and `ProximityTargetSource` skip an id an earlier source, or `Agent.Targets`, already registered
+  for the same object, which they used to refuse; the first registration, its category included,
+  is kept, and a Targetable skipped this way still counts toward the proximity cap. Another object
+  under the id is still an error. `ITargetSource`'s contract says so, and `TargetRegistry.Register`
+  is unchanged: it throws for any id already present.
+
+### Fixed
+
+- **Play mode without a domain reload** (#190, G8): `AgenerelaSettings` forgets the settings it
+  found, and a test's override, as Play mode starts, so Enter Play Mode Options with the domain
+  reload off no longer carries them into the next session. A new EditMode test fails on any static
+  field in the framework's runtime assembly that nothing resets; the three that need no reset
+  (`ProviderConfig`'s provider names and built configs, and the queues) say why in it.
 
 ## [0.4.0-preview.1] - 2026-10-29
 
