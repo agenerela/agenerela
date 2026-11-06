@@ -18,7 +18,7 @@ Start Ollama with `qwen3.5:2b` pulled (`ollama pull qwen3.5:2b`). Open this fold
 Hub, or with `unity open Demos/GreyBoxVillage`. Open `Assets/GreyBoxVillage/GreyBoxVillage.unity`
 and enter Play mode.
 
-Or start from `LocalShared/DemoLauncher.unity`, the title screen.
+Or start from `Assets/GreyBoxVillage/LocalShared/DemoLauncher.unity`, the title screen.
 
 | Key | Does |
 |---|---|
@@ -50,7 +50,7 @@ Or start from `LocalShared/DemoLauncher.unity`, the title screen.
   static state that a play session changes (a test checks every static field), so it plays the
   same with Enter Play Mode Options set to skip the domain reload.
 - The model and endpoint are in `Assets/GreyBoxVillage/Agents/VillageOllama.asset`, the one
-  provider config both guards ask.
+  provider config all four agents ask.
 
 ## The world
 
@@ -267,7 +267,7 @@ The player starts with 8 coins (`PlayerInventory`). Things lying in the world ar
 taken with E.
 
 An `AgentBehaviour` builds its agent once, so `AgentMind.UseProvider` replaces the component with
-one carrying a new config. That is how the tests give both guards a fake provider.
+one carrying a new config. That is how the tests give all four agents a fake provider.
 
 ## When the game asks a guard
 
@@ -403,7 +403,7 @@ the bottom right corner; world labels keep out from under it.
 
 | Key | What it does |
 |---|---|
-| **F1** | Resets the village: a clear morning, everyone back where Play started (the villagers set off for the morning's work), the bell silent, the thief gone, the fire out, the gate open, the pack and quests as new, and fresh agents with empty memories on the same provider config. A decision still with the model when F1 is pressed is dropped when it comes back |
+| **F1** | Resets the village: a clear morning, everyone back where Play started (the villagers set off for the morning's work), the bell silent, the thief gone, the fire out, the gate open, the pack and quests as new, and fresh agents with empty memories on the same provider config. A decision still with the model when F1 is pressed is cancelled, so the next stage never waits for it, and the guards' quiet timers start again |
 | **F2** | The wolf comes up the road outside the south gate, 14 m from Bram, close enough for the bell |
 | **F3** | A hooded thief slips up to Odile's counter, takes the first ware and runs for the eastern road |
 | **F4** | The bread stall, beside Odile's, catches fire |
@@ -573,6 +573,12 @@ They cover:
   types, and no decision in the run is refused or fails. After F5 the villagers are at the
   campfire; F6 goes round to fog, which Wren's next request carries, and F1 brings clear skies back.
   It takes about 15 s.
+- The reset, from #157's landing review: F1 cancels what the old agents still have queued or with
+  the model, so a fresh line goes through without the old answer ever coming back
+  (`VillageSituationTests`); in Play mode, F1 restarts a guard's quiet timer, so a guard that was
+  busy past its quiet time is not asked at once, and a player typing to a guard who walks out of
+  earshot is freed when the panel hides (`VillageResetTests`); and a second F3 puts back the ware
+  the running thief holds.
 - The day and the weather (`VillageExploreTests`): each villager goes where its schedule says at
   every hour, goes indoors after dark with the lamp by its door lit, still a target, and comes out
   in the morning; the bell sends it to the shelter, the hour cannot move it while the bell rings,
@@ -602,7 +608,7 @@ rule 4), with every action's examples, `stop_following` and `patrol` included; a
 labelled and waits for a running decision, and still runs when that decision fails, but not once
 its guard is destroyed; a quiet moment asks in the background; the recorder keeps the request and
 reply and writes one JSON line; the NavMesh reaches every place and zone entrance from both posts, over the
-bridge; both guards in the saved scene ask the same provider config; one test enters Play mode
+bridge; all four agents in the saved scene ask the same provider config; one test enters Play mode
 and types through the UI.
 
 Played live on 25 October 2026, with Bram the only guard, `qwen3.5:2b` on Ollama 0.33.0, warm, each decision in about

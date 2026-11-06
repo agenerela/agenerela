@@ -71,6 +71,8 @@ namespace Demos.GreyBoxVillage
         /// <summary>Appears at <see cref="Entry"/> and heads for the counter. The presenter's F3.</summary>
         public void Begin()
         {
+            // A thief sent again while one runs: the ware it holds goes back on the counter first.
+            if (State == Phase.Running && Loot != null && Merchant != null) Merchant.Recover(Loot);
             ResetState();
             // Placed before it wakes, so its NavMeshAgent lands on the NavMesh there.
             if (Entry != null) transform.position = Entry.position;

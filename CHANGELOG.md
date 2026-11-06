@@ -102,6 +102,10 @@ phase table and the open issues, not here.
   - **Bram keeps his actions and targets:** tests check that no hour and no weather gives him or
     takes from him an action or a target, and that the slice adds no target to the village.
   - `CaptureExploreFromCommandLine` captures the routine at four hours and each weather.
+- **GreyBoxVillage's reset, after #157's landing review** (#153). F1 now cancels what the old
+  agents still have queued or with the model, so the next stage never waits behind an answer nobody
+  will use, and it restarts the guards' quiet timers, so nobody is asked about a quiet moment the
+  moment the village resets. F3 pressed while a thief runs puts its ware back first.
 - **An editor UI kit** (#167) in the package's `Editor/UI/`, for the Phase 5 screens to share.
   It is internal to `Agenerela.Editor`, so it adds no public API.
   - `Agenerela.uss` holds colour, spacing and type variables (`--ag-*`) built on Unity's own

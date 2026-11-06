@@ -62,6 +62,10 @@ namespace Demos.GreyBoxVillage
         private PendingEvent pending;
         // Bumped by UseProvider: a decision begun before it belongs to an agent that is gone.
         private int generation;
+        // Cancels this generation's requests: UseProvider cancels it, so what the old agent still has
+        // queued or with the model leaves the provider's shared queue at once. Linked to
+        // destroyCancellationToken in Play mode, so destroying the mind cancels them as before.
+        private CancellationTokenSource requests;
 
         private sealed class PendingEvent
         {
@@ -119,10 +123,35 @@ namespace Demos.GreyBoxVillage
             configured = null;
             pending = null;
             generation++;
+            // The old agent's requests give up their place in the queue, and its slot with the model:
+            // the next stage must not wait for an answer nobody will use (#157's landing review).
+            CancelRequests();
             Conversation.Clear();
             IsDeciding = false;
             Last = null;
+            // A fresh agent starts its quiet timer now, not from the old one's last decision: a guard
+            // that was busy or idle past its quiet time is not asked about a quiet moment at once.
+            LastActivityTime = Time.time;
         }
+
+        private CancellationToken RequestToken()
+        {
+            requests ??= Application.isPlaying
+                ? CancellationTokenSource.CreateLinkedTokenSource(destroyCancellationToken)
+                : new CancellationTokenSource();
+            return requests.Token;
+        }
+
+        private void CancelRequests()
+        {
+            if (requests == null) return;
+            var cancelling = requests;
+            requests = null;
+            cancelling.Cancel();
+            cancelling.Dispose();
+        }
+
+        private void OnDestroy() => CancelRequests();
 
         // ---- What the agent knows ------------------------------------------------------------
 
@@ -277,10 +306,10 @@ namespace Demos.GreyBoxVillage
                     Observations = Observations(),
                     Priority = priority
                 };
-                var token = Application.isPlaying ? destroyCancellationToken : CancellationToken.None;
-                var result = await agent.DecideAsync(text, options, token);
+                var result = await agent.DecideAsync(text, options, RequestToken());
                 // Destroyed while the model thought (in Edit mode nothing cancels the call), or given
-                // a new agent (the presenter's reset): the answer is for an agent that is gone.
+                // a new agent (the presenter's reset, which cancels the call too, though a provider
+                // may still answer it): the answer is for an agent that is gone.
                 if (this == null || generation != asking) { gone = true; return; }
                 Village.Recorder.Attach(record, result);
                 Village.ReportModel(result);

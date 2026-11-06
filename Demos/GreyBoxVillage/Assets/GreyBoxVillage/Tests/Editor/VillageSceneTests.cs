@@ -54,6 +54,8 @@ namespace Demos.GreyBoxVillage.Tests
                 Hold = false;
                 held = source;
                 heldRequest = req;
+                // As OllamaProvider does: a cancelled caller gets OperationCanceledException.
+                if (ct.CanBeCanceled) ct.Register(() => source.TrySetCanceled());
             }
             else source.SetResult(Result(req));
             return source.Awaitable;
@@ -61,7 +63,8 @@ namespace Demos.GreyBoxVillage.Tests
 
         private DecisionRequest heldRequest;
 
-        public void Release() => held.SetResult(Result(heldRequest));
+        /// <summary>Answers the held request, unless its caller cancelled it.</summary>
+        public void Release() => held.TrySetResult(Result(heldRequest));
 
         private ProviderResult Result(DecisionRequest req) =>
             new ProviderResult { Text = Script != null ? Script(req) : Reply, Model = "fake-model", TokenProbabilities = TokenProbabilities };
