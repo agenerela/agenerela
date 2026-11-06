@@ -217,7 +217,8 @@ The real agents are allowed to surprise us, and the demo is better when they do.
 ## The placeholder brain (before Phase 2)
 
 The grey box needs a decision at the point where the real call will go, just as the
-village's placeholder string matching sits where the guard's call will go.
+village's placeholder string matching once sat where the guard's call now goes (#19, before
+#112 gave it a live model).
 `PlaceholderRacerBrain` answers from fixed rules:
 
 - **Vex:** always the risky route.
@@ -339,8 +340,8 @@ steps by hand:
    `com.coplaydev.unity-mcp` line from `Demos/GreyBoxVillage/Packages/manifest.json`, so
    both games use the same MCP revision.
 3. **Reopen the project** and open MCP for Unity's window. Select local HTTP at
-   `http://127.0.0.1:8080`, start the server if needed, and connect. This is the same setup
-   as the village's README.
+   `http://127.0.0.1:8080`, start the server if needed, and connect. The village now drives the
+   Editor through the Unity CLI instead, and only notes that MCP is installed.
 4. **Keep only this project open** while the agent works on it.
 
 Then give the agent step 1 one piece at a time, and check the console after each piece.

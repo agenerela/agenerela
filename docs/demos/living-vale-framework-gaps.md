@@ -150,6 +150,8 @@ cancel and refusal tests pass unchanged on the framework path.
 
 ### 4. One target list per agent; no action→target pairing
 
+**Status:** in the framework since #208 and #210 (DR-020): target categories, `ActionDefinition.TargetCategories`, `TargetCategoryGuard`, and the opt-in paired schema, `DecideOptions.PairTargetsWithActions`. The game still uses its own pair guards until it adopts them.
+
 - **Needed:** `quote_purchase` takes stock entries; `quote_sale` takes sale bundles; `offer_quest`
   takes quest offers. One flat target list lets the model pair an action with another action's
   target.
@@ -180,6 +182,8 @@ and `TradeActionBinding.GenerationKey` are gone. A test checks the state stays e
 
 ### 6. Model lifecycle is the developer's problem
 
+**Status:** in the framework since #198 (DR-019): `IModelLifecycle` (`ListModelsAsync`, `WarmUpAsync`, `UnloadAsync`), implemented by `OllamaProvider`, and a settable `Agent.Provider` that keeps the agent's memory. The game still uses `ModelSelector` until it adopts them.
+
 - **Needed:** list the installed models, warm one up, unload the one left behind, and switch an
   NPC's model at runtime without losing its memory.
 - **Workaround:**
@@ -196,6 +200,8 @@ and `TradeActionBinding.GenerationKey` are gone. A test checks the state stays e
 
 ### 7. Background requests in the shared queue delay player-facing turns
 
+**Status:** mostly in the framework since #198 (DR-015 as amended): model warm-ups and unloads no longer go through the decision queue, and `Agent.Backlog` drops or refuses an agent's queued calls, background ones first. A request already in flight is never aborted. The game has not adopted it yet.
+
 - **Needed:** a player's turn must not wait behind warm-ups or other background work.
 - **Workaround:** G5d debounces F7, cancels a superseded warm-up and unloads the old model. The
   bug it fixed: rapid presses queued about nine warm-ups, each up to 30 s, and the player's turns
@@ -208,6 +214,8 @@ and `TradeActionBinding.GenerationKey` are gone. A test checks the state stays e
 - **Size and risk:** medium. DR-015 (priority tiers) is the starting point.
 
 ### 8. No built-in "this reply is stale" handling for real-time conversations
+
+**Status:** in the framework since #209: `Conversation` and `ConversationTurn` (`Documentation~/conversations.md`). The game still uses `ConversationCoordinator` until it adopts them.
 
 - **Needed:** one turn in flight per conversation, a timeout owned by the caller, and any reply
   that arrives after a cancel, close or switch dropped unexecuted.

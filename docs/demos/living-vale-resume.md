@@ -1,7 +1,9 @@
 # Living Vale — resume planning on another machine
 
-**Status:** design draft complete; game implementation has not started.
-**Branch:** `codex/rpg-demo-plan`, based on `test`.
+**Status:** historical. This page was written before the game was built. Living Vale is now
+`Demos/LivingVale/`, in `test` since #206 (6 November 2026); `Demos/LivingVale/README.md` and
+`PLAYTEST.md` are current.
+**Branch, when this was written:** `codex/rpg-demo-plan`, based on `test`.
 **Tracker:** [#69](https://github.com/agenerela/agenerela/issues/69), a real sub-issue of
 [Demo games #47](https://github.com/agenerela/agenerela/issues/47).
 
