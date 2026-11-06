@@ -99,13 +99,13 @@ Takes a few seconds. Re-run it after upgrading Ollama. The result of 10 October 
 Checks that Ollama compiles a paired schema (DR-020), a root `anyOf` with one complete object per
 action group, into a grammar that keeps every reply to a pair it offers. It sends ten stimuli that
 tempt `complete_quest` on a place, with the flat schema and the paired one, and again with both
-stripped of `none` so the model has to act, and records each reply's pair and key order.
+stripped of `none` and `no_target` so the model has to act, and records each reply's pair and key order.
 
 ```bash
 python tools/benchmarks/paired_schema_probe.py qwen3.5:2b .scratch/paired/probe.jsonl
 ```
 
-Takes about a minute per model. Re-run it after upgrading Ollama, and unload other models first. The result of 6 November 2026 is in
+Takes about a minute per model. It appends to the output file and does not create its folder. Re-run it after upgrading Ollama, and unload other models first. The result of 6 November 2026 is in
 `docs/llm-wiki/findings.md`.
 
 ## Before trusting any number these print
