@@ -1017,3 +1017,33 @@ harness bugs, each fixed before the next run, so the runs did not all run the sa
 **What would change this.** A Phase 4 run of the wolf prompts with and without `chase` in the
 offered set, on the same model. If the bell's share does not fall with `chase` offered, this was
 noise.
+
+### Model lifecycle calls against a real Ollama: a warm-up is an empty `/api/generate` (5 November 2026)
+
+**What was checked.** `OllamaProvider`'s new `IModelLifecycle` calls (#190 workstream D,
+DR-018), once, through the framework's own code: the `RequiresOllama` PlayMode test
+`ModelLifecycleLiveTests`. EditMode tests script the same shapes; this is the check that the
+server answers as they assume. Not an accuracy or latency claim, and no control arm is needed for
+one.
+
+**Conditions.** Ollama 0.40.14 on the lead's laptop (RTX 4060 Laptop, 8 GB), on AC power,
+`qwen3.5:2b`, nothing resident before or after (`/api/ps` empty), the shared Ollama lock held,
+one run.
+
+**Result.**
+- `ListModelsAsync` (`GET /api/tags`) listed 11 models, each with a size, `qwen3.5:2b` among them.
+- `UnloadAsync` (`keep_alive: 0` on `/api/generate`, then `/api/ps` polled) returned true both
+  times, the first time for a model that was not loaded, so the unload neither loads nor fails.
+- `WarmUpAsync` (`POST /api/generate` with only `model`): **7.08 s cold**, then **0.01 s** with
+  the model loaded. So the empty generate does load the model, and a second warm-up costs nothing.
+- A model that was never pulled answered 404 with Ollama's "not found" error, which the provider
+  reports as `ModelNotFound`.
+
+**What it means.** A game can warm the next model up before moving its agents onto it, and the
+first decision then skips the load, about 7 s for this model on this card. The warm-up takes no
+slot in the decision queue (DR-015, as amended), so it never delays a player's turn on the
+provider the agents are still using.
+
+**What would change this.** An Ollama release where an empty generate stops loading the model, or
+where `keep_alive: 0` on a model that is not loaded starts loading it. Re-run the test after an
+Ollama upgrade, as for the schema probe.

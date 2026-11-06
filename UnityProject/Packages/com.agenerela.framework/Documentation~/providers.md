@@ -451,6 +451,134 @@ propagates only when the caller's own token was cancelled; an
 `OperationCanceledException` the caller did not ask for, such as a transport's own timeout, is
 a failure like any other.
 
+## Provider health
+
+Whether a provider is answering is something every game ends up showing ("the model is not
+running"), and GreyBoxVillage and Living Vale both built it for themselves. `ProviderHealth`
+does it once, per provider instance, like the queue (#190 G1, DR-015 as amended):
+
+```csharp
+var health = ProviderHealth.For(agent.Provider);
+health.Changed += h => hud.ModelProblem = h.IsDown ? h.Message : null;
+health.BackOff = true;   // optional: hold background requests while it is down
+```
+
+- **What moves it.** `Agent` reports every request it sends. Any reply marks the provider up,
+  even one that cannot be read, because a model answered. A provider failure marks it down:
+  `Reason` is the `PipelineErrorKind`, `Message` the provider's own words, `DownSinceUtc` when
+  the run of failures began, `ConsecutiveFailures` how many in a row. A cancelled request reports
+  nothing, and neither do the model lifecycle calls below.
+- **The retry time.** `RetryAtUtc` is 5 s after the first failure, doubling with each one after
+  it, up to 60 s (`FirstRetrySeconds`, `LongestRetrySeconds`). It is set whether or not the
+  back-off is on, so a HUD can show it.
+- **`BackOff`, off by default.** When on, a background request whose turn in the queue comes
+  while the provider is down, before the retry time, is not sent. Its result has no decision, with
+  `ErrorKind` `ProviderDown`, and nothing is logged: the failure that put the provider down
+  logged already. The first background request after the retry time is sent and finds out. A
+  player-facing request is always sent, because someone is waiting for its answer or its error.
+  It is off by default because one timeout would otherwise cost the next few seconds of
+  background work, such as a country's turn in a strategy game.
+- **`Changed`** is raised after any report that changes the state: going down, failing again
+  while down (a new reason or retry time), coming back. `Agent` raises it on the main thread,
+  so a handler may touch the scene; a handler that throws is logged and the decision goes on.
+  `Reset()` marks the provider up by hand, such as when the player says the server is back.
+- **`IsProviderFault(kind)`**, an extension on `PipelineErrorKind`, tells a game which failures
+  to show as "the model is not answering" and which belong to one decision. True for no
+  server, no model, a timeout, a refusal, a server error, an unreadable envelope, any other
+  provider failure, and `ProviderDown`. False for a request that could not be prepared, a reply
+  that cannot be read, a guard that threw, and a call the backlog dropped or refused.
+
+The outcome is recorded before the request's slot in the queue is freed, so the request that
+slot goes to is judged by it, even when the provider answered on another thread.
+
+## Model lifecycle
+
+A game that offers a choice of model has to list what the server has, load the chosen one,
+and unload the one left behind. A provider that can do this implements `IModelLifecycle`
+(DR-018); `OllamaProvider` does. A provider that does not has nothing to manage, so a game
+asks first:
+
+```csharp
+if (provider is IModelLifecycle models)
+{
+    var installed = await models.ListModelsAsync(ct);   // ModelInfo: Name, SizeBytes
+    await models.WarmUpAsync(ct);                        // loads this provider's model now
+    bool unloaded = await models.UnloadAsync(ct);        // out of memory now
+}
+```
+
+| Call | Ollama | Returns |
+|---|---|---|
+| `ListModelsAsync` | `GET /api/tags` | The pulled models, named with their tags (`qwen3.5` lists as `qwen3.5:latest`), sizes on disk in bytes |
+| `WarmUpAsync` | `POST /api/generate` with only `model`, which loads it and generates nothing | When the model is in memory |
+| `UnloadAsync` | `POST /api/generate` with `keep_alive: 0`, then `GET /api/ps` every 0.25 s | True once the model is no longer listed, false if it still is after 15 s |
+
+- **None of them is a decision**, so none goes through the decision queue: a warm-up does only
+  what the first decision on that model would have to do anyway, so it never holds a slot a
+  decision is waiting for. Living Vale's warm-ups were decisions, and the player's turns timed
+  out behind them (DR-015, as amended).
+- **Failures throw `ProviderException`**, as `RequestAsync` does: `Unreachable` when nothing
+  answers, `ModelNotFound` with the `ollama pull` command when the server lacks the model,
+  `Timeout` after `TimeoutSeconds`, and `MalformedResponse` for a reply that is not Ollama's.
+  They do not report to `ProviderHealth`, which follows decisions.
+- **Cancelling** the token aborts the request and throws `OperationCanceledException`. That is
+  how a warm-up a newer one replaces is stopped: the framework keeps no list of warm-ups.
+- **Each call acts on the provider's own model.** Its settings are copied when it is built, so
+  a provider never changes model, and its telemetry and its queue never mix two.
+
+Phase 5's provider inspector (#173) fills its model dropdown from `ListModelsAsync`. Its
+connection check is its own.
+
+## Switching an agent's provider
+
+`Agent.Provider` can be set (DR-018). The next decision goes to the new provider, and the agent
+keeps everything else: its memory, actions, targets, sources, guards and state. A decision
+already under way finishes on the provider it started with, its refusal line included. To move
+a village of NPCs to another Ollama model:
+
+```csharp
+var next = new OllamaProvider(new OllamaSettings { Model = "gemma4:e2b-it-qat" });
+await next.WarmUpAsync(ct);                       // before anyone has to wait for it
+foreach (var npc in agents) npc.Provider = next;  // one instance, so one queue for all of them
+await ((IModelLifecycle)previous).UnloadAsync(ct);
+```
+
+The new provider has its own queue and its own health, shared by every agent given that same
+instance. A request already queued on the old one is sent there. For a scene agent, set
+`AgentBehaviour.Agent.Provider`; its **Provider** field is read once, when the agent is built.
+
+## Busy agents: the backlog
+
+By default an agent decides every call at once, side by side: two perception events in a row
+send two requests, and the second is prepared before the first is remembered. A game that wants
+one decision per agent at a time sets `Agent.Backlog` (#190 G5, DR-015 as amended):
+
+```csharp
+guard.Backlog = DecisionBacklog.LatestWins;      // one may wait; a newer call takes its place
+guard.Backlog = DecisionBacklog.DropOldest(3);   // three may wait; the oldest makes way
+guard.Backlog = DecisionBacklog.QueueWithCap(3); // three may wait; the newest is refused
+guard.Backlog = new DecisionBacklog(0, BacklogOverflow.RefuseNewest); // none while it decides
+```
+
+- **One at a time.** A call made while the agent decides waits in the agent, not in the
+  provider's queue, player-facing before background and first come, first served within each.
+  It is prepared only when its turn comes, so it sees the targets and state of that moment and
+  the memory of the decision before it.
+- **When it is full**, `DropOldest` drops the oldest waiting call that is not more urgent than the
+  new one, a background one before any player-facing one; a background call never pushes out a
+  player-facing one, and is refused instead. `RefuseNewest` refuses the new call. A dropped call
+  ends with `ErrorKind` `Superseded`, a refused one with `BacklogFull`; both have no decision,
+  were never sent, and log nothing.
+- **The decision under way is never dropped.** Its own token stops it, while it waits in the
+  provider's queue or once it is sent, and the next call's turn comes at once. A cancelled
+  waiting call leaves the backlog.
+- **What it records.** `Agent.IsDeciding` is true while a decision is under way, `Agent.Waiting`
+  counts the calls behind it, and `DecisionTelemetry.BacklogWaitSeconds` is how long a call
+  waited for its turn, apart from `QueueWaitSeconds`, its wait in the provider's queue.
+- **It counts only calls made while it is set**, and is read when each call is made. It never
+  asks why the agent was called (DR-008): what it keeps or drops follows only the order of the
+  calls and their `Priority`.
+
 ## Still open
 
 - **Token-based rate limits**, above. Phase 6.
@@ -465,11 +593,11 @@ them is a change to `ILLMProvider`, which is the test this design has to keep pa
 - **Batching** several agents' requests into one call. Strategy-demo scale, Phase 6+.
 - **Token budgets and cost tracking** per session, enforced in the cloud provider base
   class. Phase 6.
-- **Health and warm-up** (`IsReady`, is the model loaded?). Phase 2, for the Ollama
-  provider's missing-model case.
-- **`keep_alive` and unloading a model** as public API on `OllamaProvider`. The A/B runner
-  (#145) already reads `/api/version` and `/api/ps` and unloads a model (`keep_alive: 0`)
-  through internal methods, for hard rule 3; make them public when a game needs them.
+- **A `keep_alive` setting** for how long Ollama keeps a model after the last request. Every
+  request leaves Ollama's default of five minutes; `UnloadAsync` is the way to free it sooner.
+  The A/B runner's reads of `/api/version` and `/api/ps` stay internal until a game needs them.
+- **`ProviderHealth` from lifecycle calls.** A warm-up that succeeds could mark a provider up.
+  Left out so health follows decisions alone; add it if a game warms up to recover.
 - **A setting for a model that rejects `think`**, when one is adopted. `OllamaProvider` always
   sends `think: false`.
 - **A provider conformance suite** every vendor must pass. Phase 6 deliverable, shaped from
