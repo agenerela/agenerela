@@ -204,8 +204,8 @@ one, read what it is for.
   also fails on a changed GUID. The changed-files list still catches what no check knows to
   look for, such as a scene the author does not own or a setting Unity rewrote.
 - **Compile it yourself.** CI never compiles C#, so a duplicate class, a missing `using` or a
-  misspelled type all pass it. Until GameCI arrives in Phase 3 (build plan §6.3), the
-  reviewer's Unity is the only compiler between a branch and `test`.
+  misspelled type all pass it. Until GameCI arrives (build plan §6.3 planned it from Phase 3,
+  which closed without it), the reviewer's Unity is the only compiler between a branch and `test`.
 - **Tests as if the code were wrong.** An empty test file compiles, and so does a test that
   only constructs its subject. Both count as "tests" in a description, and neither can fail.
 - **Prompt text is specification.** A reworded description or tooltip changes what the model

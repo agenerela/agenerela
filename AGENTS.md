@@ -80,7 +80,7 @@ Neither changelog nor the wiki is loaded into every session; read the one you ne
 | Path | Contents |
 |---|---|
 | `UnityProject/Packages/com.agenerela.framework/` | The package — everything shippable |
-| `UnityProject/Assets/Evaluation/` | The labelled prompt set, its first 54 prompts so far (#13), and `agent.json`, the agent they are measured against; its `README.md` documents the format. The benchmark harness that runs it is Phase 4 |
+| `UnityProject/Assets/Evaluation/` | The labelled prompt set, its 76 prompts so far (#13, #85), and `agent.json`, the agent they are measured against; its `README.md` documents the format. The package's `EvalRunner` (#145) scores it in an A/B run, and the Prompt Set window (#134) writes and labels it |
 | `Demos/<Game>/` | Demo games — one full Unity project each, loading the package by relative path (DR-010) |
 | `docs/` | Build plan, llm-wiki, screen designs and course materials — [`docs/README.md`](docs/README.md) maps them |
 | `tools/benchmarks/` | Standalone Python probes, no Unity required |

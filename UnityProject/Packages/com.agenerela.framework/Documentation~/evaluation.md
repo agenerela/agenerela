@@ -79,7 +79,7 @@ file, and a merge never has to choose between their answers.
 | `actions[].needsTarget` | `true` if the action takes a registered target, `false` if it always takes `no_target` |
 | `actions[].onlyWhen` | Optional. The state in which the action is available, in the shape of a prompt's `preconditionState` |
 | `targets` | Every target the agent has registered, the only values besides `no_target` an expected target may hold |
-| `categories[].id` | Lower-case letters, digits and `_`. It names each annotator's label file, so it can never hold a path |
+| `categories[].id` | Lower-case letters, digits and `_`, starting with a letter or digit. It names each annotator's label file, so it can never hold a path |
 | `categories[].file` | The category's prompts: a `.json` path relative to the set file, inside its folder, and neither the set file, under `labels/`, nor another category's file. Created on the first prompt you add |
 | `categories[].idPrefix` | Optional. What its prompt ids start with; the category id when left out |
 
@@ -95,6 +95,9 @@ writes the profile's actions and `none`. Add the targets and `onlyWhen` conditio
 categories with **+ Category**.
 
 ### A prompt
+
+A category file holds `{ "category": "<id>", "prompts": [ ... ] }`, and loading the set fails
+when its `category` is not the id `agent.json` gives that file. Each prompt in it:
 
 ```json
 {
@@ -167,8 +170,9 @@ A label from someone who has seen the expected answer is not a second opinion. S
 nor answered, one at a time, and shows only its label, stimulus, observations and state. The
 actions offered are the ones the state allows, as the agent would be offered them. No expected
 answer, note or other person's label is shown, and the view is given none of them
-(`BlindPrompt`, `LabelChoices`). Neither is the prompt's category, since a prompt among the
-impossible requests is half answered by that, and the prompts come in an order of your own
+(`BlindPrompt`, `LabelChoices`). Nor does it show the prompt's category, which `BlindPrompt`
+carries only so the answer can be filed: a prompt among the impossible requests is half
+answered by that. The prompts come in an order of your own
 rather than the set's, which groups them by category.
 
 **Save answer** writes your answer to your own file under `labels/<you>/` and moves on. An answer once

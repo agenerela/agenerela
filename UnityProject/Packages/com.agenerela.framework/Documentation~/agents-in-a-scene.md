@@ -62,7 +62,7 @@ public class GuardEars : MonoBehaviour
 
 The fields are read once, when the agent is built. After that, change the agent itself:
 `guard.Agent` is the plain `Agent`, with its `Execute`, `State`, `Guards`, `Memory`,
-`TargetSources` and `MaxObservations`.
+`TargetSources`, `ObservationSources` and `MaxObservations`.
 
 ## Where an action's handler comes from
 
@@ -131,7 +131,7 @@ The same `Agent`, owned by the game's own class, with nothing in the scene:
 
 ```csharp
 var country = new Agent(profile, ProviderConfig.Resolve().Provider);
-country.Actions.RegisterMethods(handlers);
+country.Actions.RegisterMethods(handlers, profile.Actions);   // the assets' wording wins, as above
 country.TargetSources.Add(new ExplicitTargetSource().Add("north_border", northBorder));
 ```
 
