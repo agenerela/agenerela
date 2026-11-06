@@ -10,6 +10,33 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **The actions and targets, listed in the prompt** (#190 A, Living Vale #1, GreyBoxVillage G9):
+  `DecideOptions.ListActionsAndTargets`, off by default, and `PromptOptions.ListActionsAndTargets`
+  beside it. On, the system prompt gains, after the instruction line, "Allowed actions:" with every
+  action the schema offers as `- id: Description.`, `none` last, and "Targets:" with the schema's
+  targets, without `no_target`, as `- id: Description.` or `- id`. A provider that never reads the
+  schema, such as Ollama, otherwise shows a local model no action list at all. `MaxListedTargets`
+  (12 by default, `PromptOptions.DefaultMaxListedTargets`) caps the target lines, the first in
+  schema order; every action is always listed, and a negative cap throws at the call. Unmeasured:
+  it stays off until the A/B in #151.
+- **`IDescribedTarget`**: a target object implements its `Description` to be listed with it. Any
+  other target, a scene target's `Transform` included, is listed by id.
+- **Counter-examples** (#190 A, Living Vale #9): `ActionDefinition.CounterExampleStimulus` and, for
+  the code front door, `[CounterExample("...")]`. `FewShotBuilder.Build` shows one right after its
+  action's example, answered `action: none, target: no_target`, while the action is offered, its
+  `{0}` filled as the example's is; with `{0}` and no registered preferred target, it is left out.
+  Empty by default, so nothing changes until a developer writes one. `DecideOptions.CounterExamples`
+  (on by default) and `FewShotBuilder.Build`'s new `counterExamples` parameter leave them all out,
+  for an A/B's control arm. `PromptSetChecks` flags a prompt that matches one (hard rule 4).
+- **The idle example on an agent built in code** (#190 A, Living Vale #13): `Agent.IdleExampleStimulus`,
+  null by default. Set, it replaces the profile's for that agent, and a call's
+  `DecideOptions.IdleExampleStimulus` still wins; empty leaves it out. `AgentProfile.DefaultIdleExampleStimulus`
+  is the text a new profile starts with, so a code-built agent can have the same one. Off by
+  default, because whether an idle example helps is still unmeasured.
+- `EvalArmConditions` records each arm's `listActionsAndTargets`, `maxListedTargets` and
+  `counterExamples` in `report.json`.
+- `Documentation~/prompt.md`: what the model reads, and the three switches above.
+
 - **The A/B runner** (#145): `EvalRunner` asks every prompt of a `PromptSet` through a fresh
   `Agent` per prompt in two `EvalArm`s, each a name, a `ProviderConfig` and the `DecideOptions`
   its calls start from, and returns an `EvalReport`. `EvalArmOrder.Interleaved` (the default)

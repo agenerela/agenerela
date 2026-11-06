@@ -28,6 +28,9 @@ namespace Agenerela.Evaluation
         [JsonProperty("checkTarget")] public bool CheckTarget;
         [JsonProperty("askForRefusalLine")] public bool AskForRefusalLine;
         [JsonProperty("idleExampleStimulus")] public string IdleExampleStimulus;
+        [JsonProperty("listActionsAndTargets")] public bool ListActionsAndTargets;
+        [JsonProperty("maxListedTargets")] public int MaxListedTargets;
+        [JsonProperty("counterExamples")] public bool CounterExamples;
         [JsonProperty("priority")] public string Priority;
         [JsonProperty("observations")] public List<string> Observations = new List<string>();
 

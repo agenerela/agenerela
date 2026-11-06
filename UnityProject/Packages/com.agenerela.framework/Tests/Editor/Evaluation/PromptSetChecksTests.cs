@@ -132,6 +132,19 @@ namespace Agenerela.Tests.Evaluation
             AssertBreaks(prompt, PromptRule.StimulusIsExample);
         }
 
+        [TestCase("The wolf looks lovely at dusk.")]
+        [TestCase("you walk too FAST")]
+        public void TheStimulusIsNotAnActionsCounterExample(string stimulus)
+        {
+            // Shown answered with none, so scoring on it measures nothing (hard rule 4, #190).
+            profile.Actions.Find(a => a.Action.Id == "move_to").Action.CounterExampleStimulus = "The {0} looks lovely at dusk.";
+            profile.Actions.Find(a => a.Action.Id == "stop_following").Action.CounterExampleStimulus = "You walk too fast.";
+            var prompt = Valid();
+            prompt.Stimulus = stimulus;
+
+            AssertBreaks(prompt, PromptRule.StimulusIsExample);
+        }
+
         [Test]
         public void ThePlaceholderStandsForAnyText()
         {

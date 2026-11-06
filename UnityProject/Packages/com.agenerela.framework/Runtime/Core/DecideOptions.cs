@@ -25,10 +25,39 @@ namespace Agenerela
 
         /// <summary>
         /// The stimulus of the idle example, the one answered with <c>none</c>, for this call only.
-        /// Null uses the profile's <see cref="AgentProfile.IdleExampleStimulus"/>; empty leaves the
-        /// example out of this call.
+        /// Null uses the agent's <see cref="Agent.IdleExampleStimulus"/>, and when that is null too,
+        /// the profile's <see cref="AgentProfile.IdleExampleStimulus"/>; empty leaves the example out
+        /// of this call.
         /// </summary>
         public string IdleExampleStimulus;
+
+        /// <summary>
+        /// Whether this call's system prompt lists the actions offered with their descriptions, and
+        /// the targets offered with their own lines (#190). Off by default: unmeasured, and owed an
+        /// A/B run before it becomes the default (#151). <see cref="PromptOptions.ListActionsAndTargets"/>
+        /// says what it adds.
+        /// </summary>
+        /// <remarks>
+        /// For a provider that never reads the schema, such as Ollama, where a model otherwise learns
+        /// the actions only from the few-shot examples. A target object says what it is by
+        /// implementing <see cref="IDescribedTarget"/>.
+        /// </remarks>
+        public bool ListActionsAndTargets;
+
+        /// <summary>
+        /// The most targets <see cref="ListActionsAndTargets"/> lists, 12 by default
+        /// (<see cref="PromptOptions.MaxListedTargets"/>). A negative value is a mistake the call
+        /// throws for.
+        /// </summary>
+        public int MaxListedTargets = PromptOptions.DefaultMaxListedTargets;
+
+        /// <summary>
+        /// Whether this call's examples show each action's
+        /// <see cref="ActionDefinition.CounterExampleStimulus"/>, answered with <c>none</c> (#190). On
+        /// by default, which shows only what a developer wrote. False leaves them out of this call, as
+        /// the control arm of an A/B run does.
+        /// </summary>
+        public bool CounterExamples = true;
 
         /// <summary>
         /// What the game wants the agent to know right now, one fact per entry, sent verbatim. The
