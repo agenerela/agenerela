@@ -506,10 +506,14 @@ public sealed class Agent {
     public TargetRegistry Targets { get; }               // hand-registered targets
     public List<ITargetSource> TargetSources { get; }    // asked on every decision (DR-014)
     public Dictionary<string, object> State { get; }     // for handlers and guards; never sent
-    // Memory: added in Phase 2 with IMemoryStrategy (§2.9); until then no history is sent.
+    public IMemoryStrategy Memory { get; set; }          // §2.9; RollingHistory by default
+    public MemoryCommit MemoryCommit { get; set; }       // OnDecide, or OnExecute (DR-018)
     public Awaitable<DecisionResult> DecideAsync(string stimulus, DecideOptions options = null,
                                                  CancellationToken ct = default);  // decides only
     public bool Execute(DecisionResult result);   // re-checks legality, runs the handler; false on a refusal
+    public bool Execute(DecisionResult result, out ActionResult outcome);  // and says what it did (DR-018)
+    public bool Commit(DecisionResult result);    // under OnExecute: remember it now
+    public bool Discard(DecisionResult result);   // under OnExecute: never remember it
 }
 
 // Thin MonoBehaviour adapter for scene objects, in Runtime/Unity/ (§1.2). A faction
@@ -536,10 +540,11 @@ returns it inside a `DecisionResult`, beside its `DecisionTelemetry` — latency
 counts, schema mode, which guards fired (#3). Telemetry is not optional — every decision is
 measurable or the eval harness (Phase 4) can't exist. Deciding and executing are separate
 calls on purpose: `Execute` re-checks the decision independently before any handler runs
-(hard rule 5, #17).
+(hard rule 5, #17). `Execute` can also say what the handler did, and a call can carry the
+caller's own `DecideOptions.Correlation` through to the handler (DR-018).
 
-Memory is what lets an agent carry a conversation from one decision to the next. It is not
-on `Agent` yet: Phase 2 adds it, and until then `DecideAsync` sends no history. What it
+Memory is what lets an agent carry a conversation from one decision to the next. Phase 2
+added it as `Agent.Memory`, and DR-018 let it wait until the game acts on a decision. What it
 holds, and the rules it follows, are in §2.9.
 
 ### 2.2 Actions (`Runtime/Actions/`) — the heart of the framework
@@ -597,7 +602,16 @@ public interface IActionHandler {
     void Execute(AgentContext ctx, AgentDecision decision);   // deterministic Unity code
 }
 agent.Actions.Register(definition, handler);
+
+// Optional (DR-018): a handler that says what it did — Done with a payload, or Failed with a reason.
+public interface IActionHandlerWithResult : IActionHandler {
+    ActionResult ExecuteWithResult(AgentContext ctx, AgentDecision decision);
+}
 ```
+
+A handler that reports nothing counts as done whenever it returns. `DelegateActionHandler.WithResult`
+and an `[AgentAction]` method returning `ActionResult` are the same thing without a class, and
+`Agent.Execute(result, out ActionResult)` hands the result to the caller.
 
 **A handler is not required to be its own file.** The interface is the contract; an
 attributed method, a delegate, a plain class and a `MonoBehaviour` on the same GameObject
@@ -1067,8 +1081,9 @@ when observations first reach a model; run the comparison in Phase 4 and record 
 
 **Status: short-term memory built in Phase 2 (#90, via #104).** `Agent.Memory` holds a
 `RollingHistory` of its own by default, which fills `DecisionRequest.History`; the rules below
-are the ones it was built to. Long-term memory and saving memory with the game are still
-open. This section records what memory is for and the rules it has to follow.
+are the ones it was built to. Saving memory with the game, and memory that waits until the
+game acts on a decision, came with #190 (DR-018); long-term memory is still open. This section
+records what memory is for and the rules it has to follow.
 
 **What it is for.** Without memory every decision starts from nothing. The guard cannot
 follow "Follow me." with "Now wait here.", and it forgets that the player threatened it a
@@ -1128,9 +1143,17 @@ is known yet about how it moves accuracy. Phase 4 owes multi-turn cases in the l
 each with its history staged like any other precondition (§4, item 4), an A/B of history on
 against off, and a comparison of window sizes, all recorded in `docs/llm-wiki/findings.md`.
 
-**Revisit later: saving memory with the game.** Memory lives in the agent object, so it is
-gone when the scene unloads. A save system will want to export and restore it, and the
-strategy interface is where that would go. Wait until a demo needs it.
+**Saving memory with the game (DR-018).** Memory lives in the agent object, so it is gone
+when the scene unloads. Living Vale needed it saved, so a strategy that can be implements
+`IExportsMemory` beside `IMemoryStrategy`: `Export()` gives a plain `MemorySnapshot`, the
+exchanges in the encoding of rule 4 plus a string for the strategy's own data, and
+`Import(snapshot)` restores it. `RollingHistory` does both.
+
+**Remembering only what the game acted on (DR-018).** Rule 1 says memory holds what happened.
+A reply the game drops as stale did not happen, but `DecideAsync` has already remembered it.
+`Agent.MemoryCommit = MemoryCommit.OnExecute` holds each decision on its result until
+`Execute` carries it out, or the game calls `Commit` or `Discard`; the default, `OnDecide`, is
+unchanged. `Documentation~/executing-and-memory.md` has both.
 
 ---
 
@@ -1944,6 +1967,92 @@ stay in that game's project.
 prompts, multi-turn history), in which case the format grows rather than forks; or the window
 is not used for labelling by the end of Phase 4, in which case the format stays and the window
 moves to Phase 5.
+
+### DR-018 — Execution says what happened, and memory can wait for it
+
+**Status:** Decided, 5 November 2026 (#190, workstream C). The lead chose each shape below from
+the options in this table.
+
+**Context.** `Agent.Execute` returns only true or false: true once a handler ran, or for
+`none`. Both demo games, built on the public API alone, had to build the rest themselves
+(#190; Living Vale's gap list, entries 2, 3, 5 and 11):
+
+- **What the handler did.** Living Vale's trade code can refuse a stale quote or a purse
+  without the gold *after* `Execute` returned true, so the game keeps a parallel
+  `ActionOutcome` and reads it after every call. Evaluation cannot tell "chose the right
+  action" from "the action worked" (#69's execution receipts).
+- **Which call a decision belongs to.** A handler has to know the conversation a quote is for,
+  so the game writes `Agent.State["livingvale.generation"]` just before `Execute`: shared
+  mutable state on the agent, unsafe as soon as two calls overlap.
+- **What memory holds.** `DecideAsync` remembers a decision as it returns it. A reply the game
+  then drops as stale (a timeout, a cancel, another speaker) is remembered anyway, so the NPC
+  recalls a line the player never saw. Living Vale wraps `RollingHistory` in its own
+  `CommittedHistory` that waits for the game's word.
+- **Saving it.** Memory lives only in the agent object, so a loaded game keeps the NPCs'
+  memories from after the save (§2.9, "Revisit later").
+
+Every one of these is additive: the existing `bool` path, every handler written so far and the
+default memory behaviour must compile and behave as before.
+
+**Options considered**
+
+| Question | Options | Verdict |
+|---|---|---|
+| How a handler reports | Change `IActionHandler.Execute` to return a result (breaks every handler); an optional interface whose default member implements the old `Execute` (less to write, the codebase's first default interface member, IL2CPP untested here); an optional interface beside it, the old `Execute` a one-line forward; only the delegate and attribute front doors | **An optional interface with a forward, plus both front doors**. A default member can be added later without breaking anyone |
+| How `Execute` returns it | Change its return type, with a conversion to `bool` (compiles, but `Is.True` and logging change meaning); an overload with an `out` result; a new method; a property on the `DecisionResult` | **An overload with an `out` result** |
+| How call context reaches the handler | A parameter of `Execute`; an object set on `DecideOptions`, carried on the result to every context made for it | **Carried from `DecideOptions`** |
+| When memory records a decision | A wrapper strategy like Living Vale's; a per-call switch; a mode on the agent, with explicit `Commit` and `Discard`, where a decision `Execute` does not carry out either waits or is discarded | **A mode on the agent**, and an uncarried decision **waits** for the game |
+| How memory is saved | A JSON string the strategy owns; a plain serialisable snapshot of exchanges plus the strategy's own data | **A plain snapshot**, as an optional interface |
+
+**Decision.**
+
+1. **`ActionResult`**, a small value type: `Done` or `Failed`, a reason and an optional payload,
+   made by `ActionResult.Done(payload)` and `ActionResult.Failed(reason, payload)`. The agent
+   adds two statuses no handler can make: `NoAction` for `none`, and `Refused` when no handler
+   ran (no decision, a rejected one, or the re-check at `Execute` refused it).
+2. **Handlers opt in** through `IActionHandlerWithResult`, an optional interface beside
+   `IActionHandler` that `Execute` calls instead of the old `Execute`, which stays as a one-line
+   forward; through `DelegateActionHandler.WithResult`, a factory taking a function that returns
+   one; or through an `[AgentAction]` method that returns `ActionResult` instead of `void`. A
+   handler that does none of these is `Done` whenever it returns, as today. The delegate door is
+   a factory, not a second constructor, because a second constructor made
+   `new DelegateActionHandler(check, null)` ambiguous, and an existing test calls exactly that.
+3. **`Execute(result, out ActionResult)`** is the new overload, and `Execute(result)` keeps its
+   meaning with one addition: a handler that reports `Failed` makes it false. Telemetry records
+   the status and the reason (`DecisionTelemetry.Execution` and `ExecutionReason`); the payload
+   stays with the caller, since it is the game's own object and telemetry is plain data.
+4. **`DecideOptions.Correlation`**, an object the framework never reads, is carried on the
+   `DecisionResult` and set on every `AgentContext` made for that decision, the one `Execute`
+   hands the handler included. Guards, availability checks, sources and memory see it too.
+5. **`Agent.MemoryCommit`**: `OnDecide`, the default and today's behaviour, or `OnExecute`.
+   Under `OnExecute`, `DecideAsync` holds the decision on its result instead of remembering it;
+   `Execute` remembers it when it carries it out (`Done` or `NoAction`); one it refuses, or whose
+   handler fails, waits; `Agent.Commit(result)` and `Agent.Discard(result)` settle it by hand. A
+   decision never settled is never remembered, and only the agent that made it can settle it.
+6. **`IExportsMemory`**, an optional interface beside `IMemoryStrategy`, with
+   `MemorySnapshot Export()` and `Import(MemorySnapshot)`. The snapshot is public fields and
+   lists, so a save system using `JsonUtility` or Newtonsoft stores it as it is: a format name
+   and version, the exchanges in `DecisionRequest.History`'s encoding, and a string for the
+   strategy's own data. `RollingHistory` implements it.
+
+**Consequences**
+
+- No existing signature changes. `IActionHandler`, `IMemoryStrategy`, `Execute(result)` and
+  `DecideAsync` keep their shapes; every addition is a new type, overload, field or property.
+  `Documentation~/executing-and-memory.md` is the developer's page for all of it.
+- Two extension points for the research areas. **Memory (#119):** `IExportsMemory` is how a
+  strategy is saved, and `MemoryCommit` works with any strategy, so a new one gets it for free.
+  **Guards (#138):** a guard reads `Correlation` from its input's context, which is how one
+  could refuse a decision that belongs to a call the game has moved past.
+- Memory under `OnExecute` records decisions in the order they are settled, not the order they
+  were made.
+- Living Vale can delete `CommittedHistory`, the `ActionOutcome` bookkeeping after `Execute`
+  and the generation key in `Agent.State`; GreyBoxVillage can read the reason from the result
+  instead of working it out after the call.
+
+**Revisit if:** handlers turn out to need the result while deciding (a dry run), or a
+conversation helper (#190, LV #8) needs `Execute` to refuse by correlation itself, in which
+case that rule belongs in the helper, not in `Agent`.
 
 ### Decisions already recorded elsewhere in this plan
 

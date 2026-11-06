@@ -171,9 +171,10 @@ namespace Agenerela
 
         private static void CheckActionMethod(MethodInfo method)
         {
-            if (method.ReturnType != typeof(void))
+            // ActionResult says what the action did (DR-018); void counts as done whenever it returns.
+            if (method.ReturnType != typeof(void) && method.ReturnType != typeof(ActionResult))
             {
-                throw Error($"{Name(method)} returns {method.ReturnType.Name}, but an [AgentAction] method must return void.");
+                throw Error($"{Name(method)} returns {method.ReturnType.Name}, but an [AgentAction] method must return void or ActionResult.");
             }
 
             if (method.ContainsGenericParameters)

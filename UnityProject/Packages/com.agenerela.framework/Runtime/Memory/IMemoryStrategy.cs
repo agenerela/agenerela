@@ -27,6 +27,14 @@ namespace Agenerela
     /// provider answered on another. A strategy used that way needs no locking and may use
     /// Unity's objects.
     /// </para>
+    /// <para>
+    /// Under <see cref="MemoryCommit.OnExecute"/> (DR-018), <see cref="Remember"/> comes later, when
+    /// the game settles the decision through <c>Agent.Execute</c> or <c>Agent.Commit</c>, on the
+    /// thread that calls them, and never for a decision it drops. The arguments are the same.
+    /// </para>
+    /// <para>
+    /// A strategy that can be saved with the game also implements <see cref="IExportsMemory"/>.
+    /// </para>
     /// </remarks>
     public interface IMemoryStrategy
     {
