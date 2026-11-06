@@ -21,10 +21,11 @@ namespace LivingVale.Agenerela
     /// <para>
     /// <b>Memory.</b> Each agent keeps the framework's own <see cref="RollingHistory"/>, not the
     /// coordinator's chat log, so the model reads its earlier answers in the encoding the framework
-    /// defines (design §11). It is wrapped in <see cref="CommittedHistory"/>, so a decision is
-    /// remembered only once <see cref="Execute"/> carried it out: a reply the coordinator dropped
-    /// as stale, or one the game refused, never enters it. The cost: lines the scripted driver gave
-    /// before an F6 switch are not in it.
+    /// defines (design §11). Each agent runs under <see cref="MemoryCommit.OnExecute"/> (DR-018), so a
+    /// decision is remembered only once <see cref="Execute"/> carried it out: a reply the coordinator
+    /// dropped as stale, or one the game refused, never enters it. The memories are saved with the
+    /// game (<see cref="NpcMemoryArchive"/>). The cost: lines the scripted driver gave before an F6
+    /// switch are not in it.
     /// </para>
     /// <para>
     /// <b>Actions.</b> <see cref="ActionRegistry.None"/>, which every agent has, and, given an
@@ -58,7 +59,7 @@ namespace LivingVale.Agenerela
 
         // Each NPC's memory, by NPC id. Kept apart from the agents so a driver rebuilt for another
         // model (WithProvider) carries every NPC's conversation over.
-        private readonly Dictionary<string, CommittedHistory> memories;
+        private readonly Dictionary<string, RollingHistory> memories;
         private Task<bool> warmUp;
 
         // Set when the warm-up was cancelled by its caller, not by Detach: the next call sends it
@@ -79,13 +80,13 @@ namespace LivingVale.Agenerela
             IEnumerable<NpcPersona> personas = null, Action<NpcDescriptor, Agent> configureAgent = null,
             NpcActionExecutor executor = null)
             : this(provider, modelLabel, personas, configureAgent, executor,
-                new Dictionary<string, CommittedHistory>(), new Dictionary<string, TradeReceipt>())
+                new Dictionary<string, RollingHistory>(), new Dictionary<string, TradeReceipt>())
         {
         }
 
         private AgenerelaNpcDecisionDriver(ILLMProvider provider, string modelLabel,
             IEnumerable<NpcPersona> personas, Action<NpcDescriptor, Agent> configureAgent,
-            NpcActionExecutor executor, Dictionary<string, CommittedHistory> memories,
+            NpcActionExecutor executor, Dictionary<string, RollingHistory> memories,
             Dictionary<string, TradeReceipt> lastReceipts)
         {
             this.memories = memories;
@@ -198,7 +199,11 @@ namespace LivingVale.Agenerela
             agent = new Agent(persona.ToIdentity(), Array.Empty<ActionDefinition>(), provider)
             {
                 RefusalStatement = (verdict, context) => RefusalLine,
-                Memory = MemoryFor(npc.Id)
+                Memory = MemoryFor(npc.Id),
+
+                // A decision is remembered only once Execute carries it out (DR-018): a reply the
+                // coordinator drops as stale, or one the game refuses, never enters memory.
+                MemoryCommit = MemoryCommit.OnExecute
             };
 
             if (executor != null)
@@ -220,16 +225,22 @@ namespace LivingVale.Agenerela
             return agent;
         }
 
-        private CommittedHistory MemoryFor(string npcId)
+        private RollingHistory MemoryFor(string npcId)
         {
             if (!memories.TryGetValue(npcId, out var memory))
             {
-                memory = new CommittedHistory();
+                memory = new RollingHistory();
                 memories[npcId] = memory;
             }
 
             return memory;
         }
+
+        /// <summary>Every NPC's memory, by NPC id, as saved with the game; shared with the drivers <see cref="WithProvider"/> made.</summary>
+        public IReadOnlyDictionary<string, RollingHistory> Memories => memories;
+
+        /// <summary>This NPC's memory, made empty if it has none yet, so a load can fill it before the NPC first speaks.</summary>
+        public RollingHistory MemoryOf(string npcId) => MemoryFor(npcId);
 
         /// <summary>The persona the NPC's agent is built from: the authored one, or one made from its descriptor.</summary>
         public NpcPersona PersonaFor(NpcDescriptor npc)
@@ -310,7 +321,6 @@ namespace LivingVale.Agenerela
             ct.ThrowIfCancellationRequested();
 
             var agent = AgentFor(turn.Npc);
-            agent.State[TradeActionBinding.GenerationKey] = turn.Generation;
             // The framework writes the choices into the prompt (#193, adopted in G5g after an A/B):
             // its list of actions and described targets, each action's counter-example, and the
             // agent's idle example. A local model never reads the schema, so this is what it reads.
@@ -321,7 +331,11 @@ namespace LivingVale.Agenerela
                 Observations = ObservationsFor(turn),
                 Priority = DecisionPriority.PlayerFacing,
                 ListActionsAndTargets = true,
-                CounterExamples = true
+                CounterExamples = true,
+
+                // Which conversation the decision belongs to (DR-018): the handlers read its
+                // generation, so the executor refuses a reply that outlived its conversation.
+                Correlation = turn
             };
 
             // A cancelled decision throws OperationCanceledException here; the coordinator owns
@@ -367,31 +381,12 @@ namespace LivingVale.Agenerela
             }
 
             ExecutedCount++;
-            LastOutcome = null;
-            trade.TryGetValue(turn.Npc.Id, out var binding);
-            binding?.ClearOutcome();
-            questBindings.TryGetValue(turn.Npc.Id, out var questBinding);
-            questBinding?.ClearOutcome();
-            routeBindings.TryGetValue(turn.Npc.Id, out var routeBinding);
-            routeBinding?.ClearOutcome();
 
-            // The handlers read the generation from the state Agent.Execute copies into their context.
-            agent.State[TradeActionBinding.GenerationKey] = turn.Generation;
-            bool executed = agent.Execute(result);
-
-            // Agent.Execute is true once the handler ran; the executor may still have refused the quote or offer.
-            var outcome = binding?.LastOutcome ?? questBinding?.LastOutcome ?? routeBinding?.LastOutcome;
-            if (executed && outcome != null)
-            {
-                LastOutcome = outcome;
-                executed = LastOutcome.Executed;
-            }
-
-            if (executed && agent.Memory is CommittedHistory memory)
-            {
-                memory.Commit(result);
-            }
-
+            // The handlers return what the executor did (DR-018): Done with the outcome, or Failed
+            // with the outcome when the executor refused the quote or offer. Under
+            // MemoryCommit.OnExecute the agent remembers the decision only when it succeeds here.
+            bool executed = agent.Execute(result, out var actionResult);
+            LastOutcome = actionResult.TryGetPayload<ActionOutcome>(out var outcome) ? outcome : null;
             return executed;
         }
 

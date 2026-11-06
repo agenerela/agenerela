@@ -24,9 +24,6 @@ namespace LivingVale.Agenerela
     /// </remarks>
     public sealed class TradeActionBinding
     {
-        /// <summary>The <see cref="Agent.State"/> key the driver sets to the turn's generation before executing.</summary>
-        public const string GenerationKey = "livingvale.generation";
-
         public const string PairGuardName = "TradePairGuard";
 
         private readonly string npcId;
@@ -54,9 +51,6 @@ namespace LivingVale.Agenerela
             };
         }
 
-        /// <summary>The executor's outcome for the last trade action executed, or null when none ran since <see cref="ClearOutcome"/>.</summary>
-        public ActionOutcome LastOutcome { get; private set; }
-
         /// <summary>Binds both actions, the target source and the pair guard to <paramref name="agent"/>.</summary>
         public static TradeActionBinding Bind(Agent agent, string npcId, NpcActionExecutor executor)
         {
@@ -77,8 +71,6 @@ namespace LivingVale.Agenerela
             agent.Guards.Add(new DelegateGuard(PairGuardName, binding.CheckPair));
             return binding;
         }
-
-        public void ClearOutcome() => LastOutcome = null;
 
         /// <summary>
         /// What really happened to this NPC's trades, from game state (design §11): its offer still
@@ -235,7 +227,7 @@ namespace LivingVale.Agenerela
                 : GuardVerdict.RewriteToNone($"{decision.TargetId} is not a target of {decision.ActionId}.");
         }
 
-        private sealed class Handler : IActionHandler
+        private sealed class Handler : IActionHandlerWithResult
         {
             private readonly TradeActionBinding binding;
             private readonly string actionId;
@@ -248,11 +240,10 @@ namespace LivingVale.Agenerela
 
             public bool IsAvailable(AgentContext ctx) => binding.Offers(actionId, null);
 
-            public void Execute(AgentContext ctx, AgentDecision decision)
-            {
-                long generation = ctx.State.TryGetValue(GenerationKey, out var value) && value is long g ? g : -1;
-                binding.LastOutcome = binding.executor.Execute(binding.npcId, decision.ActionId, decision.TargetId, generation);
-            }
+            public void Execute(AgentContext ctx, AgentDecision decision) => ExecuteWithResult(ctx, decision);
+
+            public ActionResult ExecuteWithResult(AgentContext ctx, AgentDecision decision) =>
+                ExecutorActions.Execute(binding.executor, binding.npcId, ctx, decision);
         }
 
         private sealed class Targets : ITargetSource

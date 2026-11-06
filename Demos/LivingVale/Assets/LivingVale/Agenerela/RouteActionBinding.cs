@@ -74,7 +74,6 @@ namespace LivingVale.Agenerela
             }
         }
 
-        public ActionOutcome LastOutcome { get; private set; }
 
         public static RouteActionBinding Bind(Agent agent, string npcId, NpcActionExecutor executor)
         {
@@ -99,7 +98,6 @@ namespace LivingVale.Agenerela
             return binding;
         }
 
-        public void ClearOutcome() => LastOutcome = null;
 
         /// <summary>The route actions this NPC can take now, with their targets.</summary>
         public List<GameActionOption> Options()
@@ -279,7 +277,7 @@ namespace LivingVale.Agenerela
                 : GuardVerdict.RewriteToNone($"{decision.TargetId} is not a target of {decision.ActionId}.");
         }
 
-        private sealed class Handler : IActionHandler
+        private sealed class Handler : IActionHandlerWithResult
         {
             private readonly RouteActionBinding binding;
             private readonly string actionId;
@@ -292,11 +290,10 @@ namespace LivingVale.Agenerela
 
             public bool IsAvailable(AgentContext ctx) => binding.Offers(actionId, null);
 
-            public void Execute(AgentContext ctx, AgentDecision decision)
-            {
-                long generation = ctx.State.TryGetValue(TradeActionBinding.GenerationKey, out var value) && value is long g ? g : -1;
-                binding.LastOutcome = binding.executor.Execute(binding.npcId, decision.ActionId, decision.TargetId, generation);
-            }
+            public void Execute(AgentContext ctx, AgentDecision decision) => ExecuteWithResult(ctx, decision);
+
+            public ActionResult ExecuteWithResult(AgentContext ctx, AgentDecision decision) =>
+                ExecutorActions.Execute(binding.executor, binding.npcId, ctx, decision);
         }
 
         private sealed class Targets : ITargetSource

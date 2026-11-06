@@ -64,6 +64,8 @@ Give each entry the next number and these parts:
 | 19 | Per-target conditions live outside the framework; an absent action cannot say why | Medium | Medium |
 | 20 | Few-shot examples name a target by its id, from a fixed list, never by its description | Medium | Small |
 | 21 | `ScriptedProvider` matches the asking agent by display name, not a stable id | Low | Small |
+| 22 | `RollingHistory.Import` accepts any snapshot format and version | Low | Small |
+| 23 | Memory belongs to one agent, so two drivers for one NPC keep two | Low to medium | Small |
 
 ## Entries
 
@@ -104,7 +106,13 @@ target exists this turn, by the name a player would use. That is entry 20.
 
 ### 2. Execution returns only true/false; no receipt of what the game did
 
-**Status:** in the framework since #195 (`ActionResult` through `IActionHandlerWithResult`; `Execute` returns it and telemetry records it; DR-018). Not adopted by the game yet.
+**Status: adopted in the game (G5h).** Every Living Vale handler is an `IActionHandlerWithResult`
+(`Agenerela/ExecutorActions.cs`), returning `Done` or `Failed` with the executor's `ActionOutcome`
+as the payload. The driver reads `Agent.Execute(result, out ActionResult)` instead of each
+binding's `LastOutcome`, which is gone, with `ClearOutcome`. The telemetry now records
+`Execution` and `ExecutionReason`. What it does not cover: the trade and quest *receipts* still
+come from `TradeService.Confirmed`, because they happen when the player confirms a card, after
+`Execute` has returned. That is entry 16's "propose, then confirm" step, not this one.
 
 - **Needed:** after `Agent.Execute`, the game needs to know whether its own handler refused (a
   stale quote, not enough gold) and what it produced (the quote, the offer), to show the right
@@ -123,7 +131,11 @@ target exists this turn, by the name a player would use. That is entry 20.
 
 ### 3. Memory records a decision before the game executes it
 
-**Status:** in the framework since #195 (`MemoryCommit.OnExecute`, `Agent.Commit`/`Discard`; DR-018). Not adopted by the game yet; `CommittedHistory` still runs.
+**Status: adopted in the game (G5h).** Each NPC's agent runs under `MemoryCommit.OnExecute`, and
+`CommittedHistory` (81 lines) is deleted. A reply the coordinator drops as stale is never
+executed, so it is never remembered. One the executor refuses (`Failed`) stays unsettled, and so
+is not remembered either. The game needs neither `Commit` nor `Discard` today. The stale-reply,
+cancel and refusal tests pass unchanged on the framework path.
 
 - **Needed:** a reply dropped as stale (timeout, cancel, speaker switch) must not enter the
   NPC's memory, or the NPC "remembers" saying something the player never saw.
@@ -153,7 +165,9 @@ target exists this turn, by the name a player would use. That is entry 20.
 
 ### 5. No per-call context reaches the handler
 
-**Status:** in the framework since #195 (`DecideOptions.Correlation`, carried to `IsAvailable`, the guards and the handler; DR-018). Not adopted by the game yet; the generation still rides in `Agent.State`.
+**Status: adopted in the game (G5h).** The driver passes the `NpcTurn` as `DecideOptions.Correlation`,
+and the handlers read its generation from `AgentContext.Correlation`. `Agent.State["livingvale.generation"]`
+and `TradeActionBinding.GenerationKey` are gone. A test checks the state stays empty.
 
 - **Needed:** a handler must know which conversation (generation) a decision belongs to, so a
   quote is tied to that conversation alone.
@@ -249,7 +263,18 @@ measures the two together, not the counter-examples alone.
 
 ### 11. Memory cannot be saved and restored with the game
 
-**Status:** in the framework since #195 (`IExportsMemory`, `MemorySnapshot`, implemented by `RollingHistory`; DR-018). Not adopted by the game yet; saves still leave NPC memory out.
+**Status: adopted in the game (G5h).**
+
+- **The save:** `SaveSnapshot` is version 2, with `npcMemories`. Each entry is one NPC's
+  `RollingHistory.Export()` under its stable id, as plain game data (`SavedNpcMemory`).
+  `Agenerela/NpcMemoryArchive.cs` fills it, and `SaveGame` calls it through the game's own
+  `INpcMemoryArchive`, so `Game/` reads no framework type.
+- **Atomic load:** memories are validated on the detached data, by importing each into a
+  throwaway history, before anything changes, and restored last.
+- **Old saves:** a version 1 save still loads, with every NPC's memory cleared. An NPC the save
+  does not mention is cleared too.
+- **What did not fit:** `RollingHistory.Import` reads any strategy's exchanges and ignores
+  `Format` and `Version` (by design), so the archive checks them itself. That is entry 22.
 
 - **Needed:** after F10 (load), NPCs should remember the conversations that led to the saved
   state, or explicitly forget them.
@@ -442,3 +467,28 @@ measurement carries over; the G5g A/B ran with it in both arms' places.
   let `When` take one.
 - **Size and risk:** small and additive.
 - **Research area:** evaluation (headless captures and replay).
+
+### 22. `RollingHistory.Import` accepts any snapshot format and version
+
+- **Observed (G5h):** `Import` reads the exchanges of any strategy's snapshot and ignores
+  `MemorySnapshot.Format` and `Version`, by design (DR-018), and throws only on a null exchange.
+  A save written by a future strategy, or a newer `RollingHistory` version, would load silently.
+- **Workaround:** `NpcMemoryArchive.Validate` refuses any format other than
+  `RollingHistory.SnapshotFormat`, and any version above `SnapshotVersion`.
+- **Proposal:** a strict option (`Import(snapshot, strict: true)`), or a `CanImport(snapshot, out
+  reason)` a game can call first. That would also give the validation a game needs before an
+  atomic load, without a throwaway history.
+- **Size and risk:** small and additive.
+- **Research area:** memory (#119).
+
+### 23. Memory belongs to one agent, so two drivers for one NPC keep two
+
+- **Observed (G5h):** since G5g the scripted replies go through their own `Agent` per NPC
+  (`ScriptedAgentDriver`), with its own `RollingHistory`. An NPC the player talks to with
+  scripted replies and then, after F6, with the model has two memories. Only the model driver's
+  is saved.
+- **Workaround:** none needed for the demo; the scripted path is a development fixture.
+- **Proposal:** none for the framework yet. A game can pass the same `IMemoryStrategy` instance to
+  both agents, which `Agent.Memory` allows. Living Vale may do that if the scripted path ever
+  ships.
+- **Research area:** memory.
