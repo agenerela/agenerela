@@ -161,10 +161,13 @@ namespace Agenerela.Tests
             health.BackOff = true;
             await GoDown(fake, agent);
             now = Start.AddSeconds(1);
+            var cart = new object();
 
-            var result = await Fixtures.NotCancelled(agent.DecideAsync("A cart rolls past.", Background));
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("A cart rolls past.",
+                new DecideOptions { Priority = DecisionPriority.Background, Correlation = cart }));
 
             Assert.That(fake.Requests, Has.Count.EqualTo(1), "Only the request that failed was sent.");
+            Assert.That(result.Correlation, Is.SameAs(cart), "Like every result DecideAsync returns (DR-018).");
             Assert.That(result.Decision, Is.Null);
             Assert.That(result.Request, Is.Null, "Nothing was sent.");
             Assert.That(result.Reply, Is.Null);

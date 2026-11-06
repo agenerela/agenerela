@@ -8,7 +8,7 @@ using UnityEngine.TestTools;
 
 namespace Agenerela.Tests
 {
-    // Switching an agent's provider at runtime (DR-018, #190 workstream D): the next decision goes
+    // Switching an agent's provider at runtime (DR-019, #190 workstream D): the next decision goes
     // to the new one, everything else about the agent stays, and a decision under way finishes
     // where it started. Every await of DecideAsync goes through Fixtures.NotCancelled.
     public sealed class AgentProviderTests

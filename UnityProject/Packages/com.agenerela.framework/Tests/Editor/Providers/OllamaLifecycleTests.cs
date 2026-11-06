@@ -14,7 +14,7 @@ using UnityEngine.TestTools;
 
 namespace Agenerela.Tests
 {
-    // OllamaProvider's model lifecycle (DR-018, #190 workstream D) with no Ollama running: a scripted
+    // OllamaProvider's model lifecycle (DR-019, #190 workstream D) with no Ollama running: a scripted
     // server answers /api/tags, /api/generate and /api/ps in the shapes Ollama 0.40.14 gives. The
     // live check against a real server is done by hand once (the PR says so). Every await that must
     // not end cancelled goes through a helper that fails on OperationCanceledException.
@@ -138,7 +138,7 @@ namespace Agenerela.Tests
         [Test]
         public async Task CancellingAWarmUpAbortsItsRequest()
         {
-            // How a warm-up a newer one replaces is stopped (DR-018): the caller's token.
+            // How a warm-up a newer one replaces is stopped (DR-019): the caller's token.
             var server = new Server();
             server.Hang("/api/generate");
 

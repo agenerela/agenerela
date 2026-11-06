@@ -140,6 +140,31 @@ namespace Agenerela.Tests
         }
 
         [Test]
+        public async Task ACallTheBacklogDropsOrRefusesStillCarriesItsCorrelation()
+        {
+            // Every result DecideAsync returns carries the call's correlation (DR-018), these too.
+            var (fake, agent) = Guard(DecisionBacklog.LatestWins);
+            object older = new object(), refused = new object();
+            var underWay = agent.DecideAsync("The bell rings once.");
+            var dropping = agent.DecideAsync("A cart rolls past.", new DecideOptions { Correlation = older });
+            var newer = agent.DecideAsync("Go to the tower.");
+            var refusing = agent.DecideAsync("A wolf howls.", new DecideOptions { Priority = DecisionPriority.Background, Correlation = refused });
+
+            Assert.That(dropping.GetAwaiter().IsCompleted && refusing.GetAwaiter().IsCompleted, Is.True, "Both ended at once.");
+            var dropped = await Fixtures.NotCancelled(dropping);
+            var turnedAway = await Fixtures.NotCancelled(refusing);
+            Assert.That(dropped.Telemetry.ErrorKind, Is.EqualTo(PipelineErrorKind.Superseded));
+            Assert.That(dropped.Correlation, Is.SameAs(older));
+            Assert.That(turnedAway.Telemetry.ErrorKind, Is.EqualTo(PipelineErrorKind.BacklogFull));
+            Assert.That(turnedAway.Correlation, Is.SameAs(refused));
+
+            fake.Release();
+            fake.Release();
+            await Fixtures.NotCancelled(underWay);
+            await Fixtures.NotCancelled(newer);
+        }
+
+        [Test]
         public async Task ABackgroundCallNeverPushesOutAWaitingPlayerFacingOne()
         {
             var (fake, agent) = Guard(DecisionBacklog.LatestWins);

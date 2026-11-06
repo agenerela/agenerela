@@ -495,7 +495,7 @@ slot goes to is judged by it, even when the provider answered on another thread.
 
 A game that offers a choice of model has to list what the server has, load the chosen one,
 and unload the one left behind. A provider that can do this implements `IModelLifecycle`
-(DR-018); `OllamaProvider` does. A provider that does not has nothing to manage, so a game
+(DR-019); `OllamaProvider` does. A provider that does not has nothing to manage, so a game
 asks first:
 
 ```csharp
@@ -531,7 +531,7 @@ connection check is its own.
 
 ## Switching an agent's provider
 
-`Agent.Provider` can be set (DR-018). The next decision goes to the new provider, and the agent
+`Agent.Provider` can be set (DR-019). The next decision goes to the new provider, and the agent
 keeps everything else: its memory, actions, targets, sources, guards and state. A decision
 already under way finishes on the provider it started with, its refusal line included. To move
 a village of NPCs to another Ollama model:

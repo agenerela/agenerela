@@ -71,7 +71,6 @@ namespace Agenerela{
             Execution = null;
             ExecutionReason = null;
             BacklogWaitSeconds = 0f;
-
         }
     }
 

@@ -7,7 +7,7 @@ namespace Agenerela.Providers
 {
     /// <summary>
     /// What a provider that can manage its server's models adds to <see cref="ILLMProvider"/>
-    /// (DR-018): which models the server has, and loading or unloading this provider's own model
+    /// (DR-019): which models the server has, and loading or unloading this provider's own model
     /// now. Optional: a game asks <c>provider is IModelLifecycle</c>, and a provider that does not
     /// implement it has nothing to manage. <see cref="OllamaProvider"/> implements it.
     /// </summary>

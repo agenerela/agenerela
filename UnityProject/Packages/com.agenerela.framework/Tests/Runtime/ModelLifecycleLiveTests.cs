@@ -12,7 +12,7 @@ using UnityEngine;
 namespace Agenerela.Tests
 {
     /// <summary>
-    /// <see cref="IModelLifecycle"/> against the local Ollama (DR-018, #190 workstream D): the
+    /// <see cref="IModelLifecycle"/> against the local Ollama (DR-019, #190 workstream D): the
     /// shapes <c>OllamaLifecycleTests</c> scripts, checked once against the real server. Ignored
     /// when nothing answers, as every <c>RequiresOllama</c> test is.
     /// </summary>

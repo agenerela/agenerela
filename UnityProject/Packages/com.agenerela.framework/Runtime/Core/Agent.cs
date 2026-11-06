@@ -149,7 +149,7 @@ namespace Agenerela
 
         /// <summary>
         /// The provider this agent asks. Setting it switches the backend or the model the agent
-        /// decides with (DR-018), and keeps everything else: its memory, actions, targets, sources,
+        /// decides with (DR-019), and keeps everything else: its memory, actions, targets, sources,
         /// guards and state. Each decision reads it once, when it starts, so one under way finishes
         /// on the provider it began with. Set it on the main thread.
         /// </summary>

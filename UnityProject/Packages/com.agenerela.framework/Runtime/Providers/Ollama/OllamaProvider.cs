@@ -41,7 +41,7 @@ namespace Agenerela.Providers
     /// envelope.
     /// </para>
     /// <para>
-    /// It manages its server's models too (<see cref="IModelLifecycle"/>, DR-018): the models
+    /// It manages its server's models too (<see cref="IModelLifecycle"/>, DR-019): the models
     /// installed, from <c>/api/tags</c>; a warm-up that loads its model, an <c>/api/generate</c>
     /// with no prompt and the context size its decisions send; and an unload, <c>keep_alive: 0</c>, which waits until
     /// <c>/api/ps</c> no longer lists the model. Each is one short request, with the same
@@ -267,7 +267,7 @@ namespace Agenerela.Providers
             }
         }
 
-        // ---- Model lifecycle (DR-018) -----------------------------------------------------------
+        // ---- Model lifecycle (DR-019) -----------------------------------------------------------
 
         /// <summary>
         /// The models the server has pulled, from <c>/api/tags</c>, with their sizes on disk. Ollama
