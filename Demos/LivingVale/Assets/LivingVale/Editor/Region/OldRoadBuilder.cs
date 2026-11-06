@@ -42,8 +42,13 @@ namespace LivingVale.Editor.Region
                 }
 
                 float size = 1.2f + (float)random.NextDouble() * 1.6f;
-                RegionKit.Block(root, $"Old Road boulder {++placed}", bx, bz, size * 1.3f, size, size,
-                    RegionKit.Rock, yaw: (float)random.NextDouble() * 90f);
+                float yaw = (float)random.NextDouble() * 90f;
+                GameObject boulder = RegionKit.Block(root, $"Old Road boulder {++placed}", bx, bz, size * 1.3f, size, size,
+                    RegionKit.Rock, yaw: yaw);
+                // G7b: a kit rock about the block's size (rock_a is 2.9 x 1.4 x 1.8 m); the block keeps its collider.
+                ArtDressing.Dress(boulder, placed % 2 == 0 ? "rock_b" : "rock_a", new Vector3(bx, 0f, bz), yaw,
+                    new Vector3(size * 1.3f / (placed % 2 == 0 ? 1.6f : 2.9f) * 1.15f, size / (placed % 2 == 0 ? 0.72f : 1.41f),
+                        size / (placed % 2 == 0 ? 1.3f : 1.84f) * 1.15f));
             }
 
             // A milestone where the Glen's road meets the bend, to name the place from the path.

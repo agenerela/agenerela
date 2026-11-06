@@ -43,6 +43,22 @@ namespace LivingVale.Editor.Region
             }
 
             // Reserve empty herb spots at offsets (-7, 10), (7, 10), (-9, -10).
+
+            // G7b: wild feverleaf around the clearing's edge, looks only (no colliders), clear of the quest's
+            // three herb spots near the centre and of the paths.
+            var random = new System.Random(1705);
+            for (int i = 0; i < 40; i++)
+            {
+                float angle = (float)random.NextDouble() * Mathf.PI * 2f;
+                float radius = 6f + (float)random.NextDouble() * 8f;
+                float hx = place.X + Mathf.Cos(angle) * radius, hz = place.Z + Mathf.Sin(angle) * radius;
+                if (RegionKit.NearPath(hx, hz, 3f))
+                {
+                    continue;
+                }
+
+                ArtDressing.Decorate(root, "herb_plant", new Vector3(hx, 0f, hz), angle * 57f, 0.8f + (float)random.NextDouble() * 0.6f);
+            }
         }
     }
 }

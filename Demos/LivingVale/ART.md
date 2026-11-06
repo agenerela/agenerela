@@ -133,6 +133,33 @@ Renderer flash = body != null ? body.GetComponent<Renderer>() : capsule.GetCompo
   `Assets/LivingVale/Scenes/ArtPreview.unity` (not in the build), every asset in labelled rows;
   **Capture Art Preview** renders it to `.scratch/lv-g7/unity-renders/`.
 
+## In the game (G7b)
+
+The Village scene's builders now dress their primitives with the kit through `ArtDressing`
+(`Assets/LivingVale/Editor/Art/`). One rule keeps gameplay where it was: **collision belongs to
+the primitive, looks belong to the kit.**
+
+- `ArtDressing.Dress(primitive, id, position, yaw, scale)` (and `DressAll` for a group) shows the
+  kit model, hides the primitive's mesh and keeps its collider exactly where it was; the model's
+  own mesh colliders are switched off. Walls, talk ranges, sight lines and combat reach therefore
+  cannot move when the art changes. A missing model leaves the primitive untouched.
+- `Attach(parent, id, localPosition, localRotation, layer)` puts moving parts (the raider's and
+  the player's sword, the wolf, the quest wreck and herbs) under their parent, with no collider.
+- `Decorate(parent, id, position, ...)` adds scenery with no primitive behind it: market clutter,
+  wild feverleaf and signposts with no collider, and the trees and rocks scattered along the paths
+  and near the cliffs with their mesh colliders. Those are seeded (the same rebuild plants the same
+  forest) and kept off every path, out of every place's radius plus 10 m, off the river and away
+  from the castle.
+- Bodies: the player, the eight NPCs and the raiders go through `ArtKit.SwapBody`, outfits by role
+  (`ArtDressing.OutfitFor`: Iven healer, Brann and Elra guard, Kest raider, the rest villager); the
+  capsules keep their colliders. The wolf model replaces the wolf's two cubes. `CombatBody` gets
+  the humanoid's or the wolf's renderer for the hit flash.
+- **Living Vale → Art → Capture Village Scene Shots**
+  (`-executeMethod LivingVale.Editor.VillageSceneShots.Capture`, not `-nographics`) renders the
+  built scene from eight fixed viewpoints into `.scratch/lv-g7/scene-shots/`.
+
+![Briar Glen in the game, from behind the player](Art~/previews/scene_glen.png)
+
 Notes for the swap:
 
 - `CombatBody`'s hit flash lerps `_BaseColor` toward near-white. The palette material's base
