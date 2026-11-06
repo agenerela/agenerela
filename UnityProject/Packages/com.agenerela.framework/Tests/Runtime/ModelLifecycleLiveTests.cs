@@ -101,16 +101,31 @@ namespace Agenerela.Tests
             IModelLifecycle models = provider;
             Assert.That(await LiveOllama.NotCancelled(models.UnloadAsync(CancellationToken.None)), Is.True);
 
-            var cold = Stopwatch.StartNew();
-            await Done(models.WarmUpAsync(CancellationToken.None));
-            cold.Stop();
-            long? loaded = await LoadedContextLength();
-            var first = await LiveOllama.NotCancelled(
-                LiveGuard.Build(provider).DecideAsync("Head over to the tower and keep watch.", LiveGuard.Options()));
-            UnityEngine.Debug.Log($"LIFECYCLE {LiveOllama.Model} at num_ctx 8192: loaded at {loaded?.ToString() ?? "?"}, "
-                                + $"cold warm-up {cold.Elapsed.TotalSeconds:F2} s, first decision after it "
-                                + $"{first.Telemetry.LatencySeconds:F2} s");
-            Assert.That(await LiveOllama.NotCancelled(models.UnloadAsync(CancellationToken.None)), Is.True);
+            var cold = new Stopwatch();
+            long? loaded;
+            DecisionResult first;
+            bool unloaded;
+            try
+            {
+                cold.Start();
+                await Done(models.WarmUpAsync(CancellationToken.None));
+                cold.Stop();
+                loaded = await LoadedContextLength();
+                first = await LiveOllama.NotCancelled(
+                    LiveGuard.Build(provider).DecideAsync("Head over to the tower and keep watch.", LiveGuard.Options()));
+                UnityEngine.Debug.Log($"LIFECYCLE {LiveOllama.Model} at num_ctx 8192: loaded at {loaded?.ToString() ?? "?"}, "
+                                    + $"cold warm-up {cold.Elapsed.TotalSeconds:F2} s, first decision after it "
+                                    + $"{first.Telemetry.LatencySeconds:F2} s");
+            }
+            finally
+            {
+                // Whatever happened above, so a failed check never leaves the model resident (Codex
+                // review, F6). An unload that fails here is logged, so it never hides the failure
+                // that brought the test here.
+                unloaded = await UnloadQuietly(models);
+            }
+
+            Assert.That(unloaded, Is.True, "The model was still resident after the test asked to unload it.");
 
             Assert.That(first.Decision, Is.Not.Null, $"{first.Telemetry.ErrorKind}: {first.Telemetry.ErrorMessage}");
             if (loaded == null)
@@ -129,11 +144,38 @@ namespace Agenerela.Tests
             string listed = LiveOllama.Model.Contains(":") ? LiveOllama.Model : LiveOllama.Model + ":latest";
             using (var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) })
             {
-                var ps = JObject.Parse(await client.GetStringAsync(LiveOllama.Endpoint.TrimEnd('/') + "/api/ps"));
+                string text;
+                try
+                {
+                    text = await client.GetStringAsync(LiveOllama.Endpoint.TrimEnd('/') + "/api/ps");
+                }
+                catch (OperationCanceledException e)
+                {
+                    // HttpClient reports its own timeout as a cancellation, which Unity would count as
+                    // a pass (Codex review, F6).
+                    Assert.Fail($"/api/ps did not answer within 5 s: {e.Message}");
+                    return null;
+                }
+
+                var ps = JObject.Parse(text);
                 var entry = (ps["models"] as JArray)?.OfType<JObject>()
                     .FirstOrDefault(m => string.Equals((string)m["name"], listed, StringComparison.OrdinalIgnoreCase));
                 Assert.That(entry, Is.Not.Null, $"{listed} is not resident right after its warm-up: {ps}");
                 return entry["context_length"]?.Type == JTokenType.Integer ? (long)entry["context_length"] : (long?)null;
+            }
+        }
+
+        // Unloads, saying whether the model left memory; a failure is logged and counts as not.
+        private static async Task<bool> UnloadQuietly(IModelLifecycle models)
+        {
+            try
+            {
+                return await models.UnloadAsync(CancellationToken.None);
+            }
+            catch (Exception e)
+            {
+                UnityEngine.Debug.LogWarning($"The test could not unload {LiveOllama.Model}: {e.GetType().Name}: {e.Message}");
+                return false;
             }
         }
 
