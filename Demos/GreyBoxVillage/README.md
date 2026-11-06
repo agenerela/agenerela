@@ -7,7 +7,8 @@ model through the framework, in the world the evaluation set is written for. In 
 bridge (#143), Odile the merchant and Captain Hale (#153). It has low-poly art, a day and night
 cycle, quests and an inventory, and the framework view (Tab) shows every decision being made.
 The villagers keep a daily routine and the weather turns, and both reach the agents as
-observations ([A day in Ashford](#a-day-in-ashford)). Presenter keys stage four situations that
+observations ([A day in Ashford](#a-day-in-ashford)). North of the river the woods hold six places
+to find, and a hermit ([The woods](#the-woods-north-of-the-river)). Presenter keys stage four situations that
 chain one agent's decision into another's: the wolf, a thief, a fire and night at the gate. A
 five-minute script for showing it is at the end
 ([Presenting it](#presenting-it-a-five-minute-script)).
@@ -26,10 +27,10 @@ Or start from `LocalShared/DemoLauncher.unity`, the title screen.
 | Right mouse drag (right stick), wheel | Orbit the camera, zoom |
 | **E** or **Enter** | Pick up what is within reach, or talk to whoever is within 6 m |
 | Enter / Esc while typing | Send the line / go back to walking |
-| **I**, **J** | Your pack, your quest journal |
+| **I**, **J** | Your pack, your journal: quests, and the places found north of the river |
 | **Tab** | The framework view: every agent's last request, the queue, and the target id over every place |
 | **H** | The request history: every decision, with exactly what was sent and what came back |
-| **Esc** | The menu: the framework view, how fast the day runs, the controls, restart, the title |
+| **Esc** | The menu: the framework view, how fast the day runs, the sound's volume and mute, the controls, restart, the title |
 | **F1** to **F6** | Presenter keys: reset the village, the wolf, the thief, a fire, jump to dusk, change the weather ([The situations](#the-situations)) |
 | **F12** | Show or hide the presenter panel, which lists those keys |
 
@@ -88,7 +89,7 @@ Everything you see is built by scripts, so it can be rebuilt and changed in code
 
 - **`ArtSource/build_kit.py`** builds the low-poly kit in Blender (5.x, headless: `blender
   --background --factory-startup --python Demos/GreyBoxVillage/ArtSource/build_kit.py`, about
-  3 s). That is 77 FBX models, plus `Art/Palette.png` and `Art/PaletteEmission.png`: every face is
+  3 s). That is 82 FBX models, plus `Art/Palette.png` and `Art/PaletteEmission.png`: every face is
   UV-mapped to one swatch of one palette, so the whole village is one material.
   - The models: buildings, props and trees, the characters, the wolf, the items, the terrain and
     the water. The gate's doors are their own model, `gate_door`, hung in the scene so the night
@@ -133,8 +134,11 @@ Everything you see is built by scripts, so it can be rebuilt and changed in code
     agents answer from a scripted provider, never a model. `Tools > GreyBoxVillage > Capture the
     UI` does the same from the editor, into `Logs/captures`.
   - `...VillageCapture.MeasureFromCommandLine -captureOut <dir>`, also with no `-quit`, holds the
-    camera on three fixed views at 1920x1080 and writes the frame time and draw calls of each to
-    `frame-time.txt`.
+    camera on six fixed views at 1920x1080, with no frame cap, and writes the frame time and draw
+    calls of each to `frame-time.txt`: the overview, the square and the north bank as slice 1
+    measured them, then the square in rain, the square at night with every lamp lit, and the woods.
+    Measured on 6 November 2026 on an RTX 4060 Laptop GPU, single runs: 3.4 to 4.8 ms in the first
+    three, 4.8 ms for the square in rain, and 5.3 ms for the square at night, the busiest.
   - `...VillageCapture.TitleBackdropFromCommandLine -quit` renders the title screen's backdrop,
     `Resources/TitleBackdrop.jpg`, the village at dusk.
   - `...VillageCapture.CaptureSituationsFromCommandLine -captureOut <dir>`, with no `-quit`, plays
@@ -208,6 +212,55 @@ It changes what the agents notice, and nothing else:
   runs' did, apart from the village's line.
 - **Only the running clock changes it,** never a jump in time, so F5 to dusk keeps the weather, and
   F1 brings back clear skies.
+
+## The woods north of the river
+
+North of the river, past the keep, the woods are a walk worth taking. Paths with signposts leave
+the keep's road and the tower's, and six places are there to find:
+
+| Place | Where |
+|---|---|
+| The old wood path | Its signpost at the edge of the woods, east of the keep |
+| The moonpetal glade | A clearing of moonpetals and blue flowers that glows after dark, with fireflies |
+| The wolf's den | Boulders round a dark hollow in the north-east corner, bones at its mouth |
+| The ruined shrine | Broken pillars behind the keep, and an altar stone that glows at night |
+| The lookout | A woodsman's platform over the river and the docks |
+| The hermit's hut | A turf-roofed cabin west of the keep, where Oswin lives |
+
+- **Finding one** (walking within a few metres) shows a toast, "Found: The moonpetal glade (2 of
+  6)", and records it in the journal (J), under "Places found: 2 of 6". F1 forgets them.
+- **Oswin the hermit** is a scripted villager with fixed lines, said in turn when you press E
+  beside him. He is not an agent: four agents already share one queue, and he adds no request to
+  it.
+- **Nothing here is a target,** nor in any observation. Bram's proximity source reaches 90 m, which
+  is the whole map, so the woods are kept out of his schema by having no `Targetable` at all. A test
+  checks his targets wherever the player walks, and another that the village has no target slice 2
+  did not have.
+- The places, the shrine's floor, the lookout's posts, the den's boulders and the hut stand in the
+  way as grey boxes, so the NavMesh goes round them and the wolf still reaches its den.
+
+## Sound
+
+`VillageSound` only listens to the village and changes nothing in it:
+
+- **Ambience by time and place:** birds by day, crickets and now and then an owl at night, the
+  river by the bridge and the docks, market chatter as loud as the market is busy, the campfire's
+  crackle, and the rain, which hushes the birds and the crickets.
+- **Effects:** the bell while it rings, footsteps on dirt and on the planks of the bridge and the
+  docks, the gate as it opens and shuts, a bucket thrown on the fire, the wolf's howl when it comes
+  out and now and then at night, and the fire while it burns.
+- **The menu (Esc)** has a volume slider and a mute; both scale every sound.
+- Its sources are made when Play starts and never saved. **A clip that is missing stays silent,**
+  so the village plays the same with no sound at all.
+
+**The clips are to come.** They are meant to come from the team's asset server
+([`tools/comfyui/`](../../tools/comfyui/AGENT_USAGE.md), the `comfyui-assets` skill), which could not
+be reached while this was built, so `Assets/GreyBoxVillage/Audio/` does not exist yet and the
+village is silent. `VillageSceneBuilder.LoadSounds` wires whatever it finds there on the next
+rebuild, by name: `birds`, `crickets`, `river`, `market`, `campfire`, `rain` (loops), and `owl`,
+`bell`, `steps_dirt`, `steps_wood`, `gate`, `splash`, `howl`, `fire` (`.mp3`). Keep them short and
+compressed (`--set quality=128k`), put them through Git LFS, list each in a `GENERATED.md` here with
+its prompt and seed, and listen to every one first.
 
 ## The agents
 
@@ -573,6 +626,14 @@ They cover:
   types, and no decision in the run is refused or fails. After F5 the villagers are at the
   campfire; F6 goes round to fog, which Wren's next request carries, and F1 brings clear skies back.
   It takes about 15 s.
+- The woods and the sound (`VillageWoodsTests`): walking to each of the six places records it
+  in the journal once, with one toast; every place, Oswin and the wolf's den are on the NavMesh over
+  the bridge; Oswin says his lines in turn and is neither an agent nor a target; wherever the player
+  walks in the woods, Bram is offered the same targets and none of the woods reaches his
+  observations; birds sing by day, crickets by night, and rain hushes them; the bell is heard only
+  while it rings, from the bell; the menu's slider scales every sound and mute silences them all;
+  footsteps are on planks on the bridge and the docks; and the woods, Oswin and the sound are in the
+  scene and wired.
 - The day and the weather (`VillageExploreTests`): each villager goes where its schedule says at
   every hour, goes indoors after dark with the lamp by its door lit, still a target, and comes out
   in the morning; the bell sends it to the shelter, the hour cannot move it while the bell rings,

@@ -36,6 +36,12 @@ namespace Demos.GreyBoxVillage
         public DemoMenu Menu;
         [Tooltip("The presenter's keys and their panel; world labels keep out from under it.")]
         public VillagePresenter Presenter;
+        [Tooltip("The places found north of the river, for the journal.")]
+        public Exploration Exploration;
+        [Tooltip("Oswin, who says his lines when the player presses E beside him.")]
+        public Hermit Hermit;
+        [Tooltip("The village's sound: the menu's volume and mute reach it.")]
+        public VillageSound Sound;
         [Tooltip("How close the player must be to pick something up, in metres.")]
         public float ReachDistance = 2.2f;
         public Transform Player;
@@ -67,6 +73,8 @@ namespace Demos.GreyBoxVillage
         private int bookVersion;
         private readonly List<VillageBook.Entry> bookItems = new List<VillageBook.Entry>();
         private readonly List<VillageBook.QuestEntry> bookQuests = new List<VillageBook.QuestEntry>();
+        private readonly List<VillageBook.PlaceEntry> bookPlaces = new List<VillageBook.PlaceEntry>();
+        private int placesShown;
         private readonly List<(string, string, bool)> tracker = new List<(string, string, bool)>();
         private Targetable[] targetables;
 
@@ -155,6 +163,17 @@ namespace Demos.GreyBoxVillage
             Input.Submitted -= OnSubmitted;
             if (Inventory != null) Inventory.Changed -= OnInventoryChanged;
             if (Quests != null) Quests.Message -= OnQuestMessage;
+        }
+
+        /// <summary>The journal's places: every place to find, in order, with whether it has been found.</summary>
+        public List<VillageBook.PlaceEntry> JournalPlaces()
+        {
+            bookPlaces.Clear();
+            if (Exploration != null)
+                foreach (var p in Exploration.Places)
+                    if (p != null)
+                        bookPlaces.Add(new VillageBook.PlaceEntry { Title = p.Title, Note = p.Note, Found = Exploration.HasFound(p) });
+            return bookPlaces;
         }
 
         private void OnInventoryChanged(string id, int delta)
@@ -269,6 +288,7 @@ namespace Demos.GreyBoxVillage
                 {
                     if (pickup != null && Inventory != null) pickup.Collect(Inventory);
                     else if (listener != null) Input.StartTyping();
+                    else if (Hermit != null && Hermit.InReach(Player.position)) Hermit.Talk();
                 }
                 if (Book != null && keyboard.iKey.wasPressedThisFrame) { Book.Toggle("inventory"); bookVersion++; }
                 if (Book != null && keyboard.jKey.wasPressedThisFrame) { Book.Toggle("journal"); bookVersion++; }
@@ -296,6 +316,13 @@ namespace Demos.GreyBoxVillage
 
         private void ShowBook()
         {
+            // A place found redraws the journal; Exploration shows its own toast.
+            int places = Exploration != null ? Exploration.Count : 0;
+            if (places != placesShown)
+            {
+                placesShown = places;
+                bookVersion++;
+            }
             if (Book == null || Inventory == null || Quests == null || !Book.IsOpen) return;
             bookItems.Clear();
             foreach (var (id, count) in Inventory.Items)
@@ -310,7 +337,7 @@ namespace Demos.GreyBoxVillage
                     Title = q.Title, Giver = q.Giver, Text = q.Ask, Step = Quests.Step(q),
                     State = q.State == QuestState.Done ? "done" : Quests.IsReady(q) ? "ready" : "active"
                 });
-            Book.Fill(bookVersion, Inventory.Coins, bookItems, bookQuests);
+            Book.Fill(bookVersion, Inventory.Coins, bookItems, bookQuests, JournalPlaces());
         }
 
         private void ShowHud(AgentMind listener, bool typing, Pickup pickup)
@@ -325,7 +352,8 @@ namespace Demos.GreyBoxVillage
             Hud.SetCoins(Inventory != null ? Inventory.Coins : -1);
             Hud.SetAlert(ModelProblem);
             Hud.SetPrompt("E", typing ? null : pickup != null ? "Pick up " + pickup.Name
-                : listener != null && !Input.IsOpen ? "Talk to " + listener.Name : null);
+                : listener != null && !Input.IsOpen ? "Talk to " + listener.Name
+                : listener == null && Hermit != null && Hermit.InReach(Player.position) ? "Talk to Oswin" : null);
             if (Quests != null)
             {
                 tracker.Clear();
@@ -357,6 +385,9 @@ namespace Demos.GreyBoxVillage
                 else if (m.IsDeciding)
                     bubbles.Add(new BubbleInfo { World = head, Text = "...", Kind = "thinking" });
             }
+            // Oswin is no agent, but he talks like one.
+            if (Hermit != null && Hermit.Speech != null)
+                bubbles.Add(new BubbleInfo { World = Hermit.transform.position + Vector3.up * 2.35f, Text = Hermit.Speech, Kind = "say" });
             Hud.SetBubbles(camera, bubbles);
 
             // Inactive ones too: the thief's tag shows only while it is out.

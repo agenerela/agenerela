@@ -357,11 +357,17 @@ namespace Demos.GreyBoxVillage.Editor
 
         // ---- Frame time ----------------------------------------------------------------------
 
-        private static readonly (string name, Vector3 from, Vector3 to)[] Views =
+        // The first three are slice 1's views, so the figures compare. Slice 3 adds the busiest view,
+        // the square, in rain (the rain, the mist of its haze and the cloud dome) and at night (every
+        // lamp and door light), and the woods.
+        private static readonly (string name, Vector3 from, Vector3 to, float hour, WeatherKind weather)[] Views =
         {
-            ("overview", new Vector3(0, 40, -64), new Vector3(0, 0, 8)),
-            ("square", new Vector3(-10, 6, -10), new Vector3(8, 1.5f, 4)),
-            ("north", new Vector3(-4, 8, 20), new Vector3(8, 3, 40)),
+            ("overview", new Vector3(0, 40, -64), new Vector3(0, 0, 8), 11f, WeatherKind.Clear),
+            ("square", new Vector3(-10, 6, -10), new Vector3(8, 1.5f, 4), 11f, WeatherKind.Clear),
+            ("north", new Vector3(-4, 8, 20), new Vector3(8, 3, 40), 11f, WeatherKind.Clear),
+            ("square_rain", new Vector3(-10, 6, -10), new Vector3(8, 1.5f, 4), 11f, WeatherKind.Rain),
+            ("square_night", new Vector3(-10, 6, -10), new Vector3(8, 1.5f, 4), 22.5f, WeatherKind.Clear),
+            ("woods", new Vector3(24, 7, 26), new Vector3(40, 1, 42), 11f, WeatherKind.Clear),
         };
 
         // Holds the camera on fixed views at 1920x1080 with no frame cap, and logs the mean frame
@@ -383,6 +389,7 @@ namespace Demos.GreyBoxVillage.Editor
             camera.targetTexture = rt;
             commands.Day.Running = false;
             commands.Day.TimeOfDay = 11f / 24f;
+            if (commands.Weather != null) commands.Weather.Changes = false;
             var lines = new List<string>();
             using (var mainThread = ProfilerRecorder.StartNew(ProfilerCategory.Internal, "Main Thread", 400))
             using (var drawCalls = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Draw Calls Count"))
@@ -390,11 +397,19 @@ namespace Demos.GreyBoxVillage.Editor
             using (var setPass = ProfilerRecorder.StartNew(ProfilerCategory.Render, "SetPass Calls Count"))
             using (var triangles = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Triangles Count"))
             {
-                foreach (var (name, from, to) in Views)
+                foreach (var (name, from, to, hour, weather) in Views)
                 {
+                    commands.Day.TimeOfDay = hour / 24f;
+                    if (commands.Routine != null) commands.Routine.CatchUp();
+                    if (commands.Weather != null)
+                    {
+                        commands.Weather.Set(weather);
+                        commands.Weather.Snap();
+                    }
                     camera.transform.position = from;
                     camera.transform.LookAt(to);
-                    foreach (var x in Frames(60)) yield return x;
+                    // Long enough for the rain to fill the air round the camera before timing it.
+                    foreach (var x in Frames(weather == WeatherKind.Clear ? 60 : 400)) yield return x;
                     float total = 0;
                     const int n = 300;
                     long thread = 0;
