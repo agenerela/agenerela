@@ -154,7 +154,11 @@ namespace Agenerela
                     // An action without [Example] reads like an asset whose example was left blank.
                     ExampleStimulus = f.Example?.Stimulus ?? "",
                     PreferredExampleTargets = f.Example?.PreferredTargets ?? Array.Empty<string>(),
-                    CounterExampleStimulus = f.CounterExample?.Stimulus ?? ""
+                    CounterExampleStimulus = f.CounterExample?.Stimulus ?? "",
+                    // Copied, so the definition never shares an array with the attribute.
+                    TargetCategories = f.Action.TargetCategories == null
+                        ? Array.Empty<string>()
+                        : (string[])f.Action.TargetCategories.Clone()
                 };
 
                 actions.Add((definition, new MethodActionHandler(owner, f.Method, check)));

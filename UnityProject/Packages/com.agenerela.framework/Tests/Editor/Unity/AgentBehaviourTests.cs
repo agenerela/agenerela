@@ -295,6 +295,135 @@ namespace Agenerela.Tests
             Assert.That(result.Decision.ActionId, Is.EqualTo(ActionRegistry.None));
         }
 
+        // ---- Which categories and actions this agent has (#190 G3, G10) -----------------------
+
+        [Test]
+        public async Task TargetCategoriesKeepOtherCategoriesOutOfTheSchema()
+        {
+            var config = Config(reply: GoToTheTower);
+            var guard = Guard(Profile("move_to"), config);
+            guard.gameObject.AddComponent<GuardMoves>();
+            Target("tower", Here + new Vector3(5f, 0f, 0f)).Category = "place";
+            Target("bread", Here + new Vector3(2f, 0f, 0f)).Category = "ware";
+            Target("odd_stone", Here + new Vector3(3f, 0f, 0f));
+            guard.TargetCategories = new[] { "place", "" };
+
+            await Fixtures.NotCancelled(guard.DecideAsync("Go to the tower."));
+
+            Assert.That(TargetEnum(Fake(config).LastRequest), Is.EqualTo(new[] { TargetRegistry.NoTarget, "tower" }));
+            Assert.That(guard.Agent.TargetCategories, Is.EqualTo(new[] { "place" }), "The blank entry is not copied.");
+        }
+
+        [Test]
+        public void TargetCategoriesAreGivenToAProximitySourceThatNamesNone()
+        {
+            var guard = Guard(Profile("move_to"), Config());
+            guard.TargetCategories = new[] { "place", "person" };
+
+            _ = guard.Agent;
+
+            Assert.That(guard.Targets.Categories, Is.EqualTo(new[] { "place", "person" }), "So its cap counts only what may be offered.");
+        }
+
+        [Test]
+        public void AProximitySourceWithCategoriesOfItsOwnKeepsThem()
+        {
+            var guard = Guard(Profile("move_to"), Config());
+            guard.TargetCategories = new[] { "place", "person" };
+            guard.Targets.Categories = new[] { "place" };
+
+            _ = guard.Agent;
+
+            Assert.That(guard.Targets.Categories, Is.EqualTo(new[] { "place" }));
+            Assert.That(guard.Agent.TargetCategories, Is.EqualTo(new[] { "place", "person" }));
+        }
+
+        [Test]
+        public void NoTargetCategoriesOfferEveryTargetAsBefore()
+        {
+            var guard = Guard(Profile("move_to"), Config());
+
+            _ = guard.Agent;
+
+            Assert.That(guard.Agent.TargetCategories, Is.Empty);
+            Assert.That(guard.Targets.Categories, Is.Null.Or.Empty);
+        }
+
+        [Test]
+        public void OnlyActionsRegistersOnlyTheListedActions()
+        {
+            var guard = Guard(Profile("move_to"), Config());
+            guard.gameObject.AddComponent<GuardMoves>();
+            guard.gameObject.AddComponent<GuardFollows>();
+            guard.OnlyActions = new[] { "move_to" };
+
+            Assert.That(guard.Agent.Actions.TryGet("move_to", out _, out _), Is.True);
+            Assert.That(guard.Agent.Actions.TryGet("follow_player", out _, out _), Is.False);
+            Assert.That(guard.Validate(out string problem), Is.True, problem);
+        }
+
+        [Test]
+        public void EmptyOnlyActionsRegistersEveryAction()
+        {
+            var guard = Guard(Profile("move_to"), Config());
+            guard.gameObject.AddComponent<GuardMoves>();
+            guard.gameObject.AddComponent<GuardFollows>();
+            guard.OnlyActions = new[] { "", " " };
+
+            Assert.That(guard.Agent.Actions.Definitions, Has.Count.EqualTo(2));
+        }
+
+        [Test]
+        public void OnlyActionsLeavesOutAHandlersRowAndTheInspectorSaysSo()
+        {
+            var guard = Guard(Profile("move_to", "attack_target"), Config());
+            guard.gameObject.AddComponent<GuardMoves>();
+            guard.Handlers.Add(new AgentBehaviour.ActionHandlerBinding
+            {
+                ActionId = "attack_target",
+                Handler = guard.gameObject.AddComponent<AttackHandler>(),
+            });
+            guard.OnlyActions = new[] { "move_to" };
+
+            Assert.That(guard.Validate(out string problem), Is.False);
+            Assert.That(problem, Does.Contain("OnlyActions leaves out"));
+            Assert.That(guard.Agent.Actions.TryGet("attack_target", out _, out _), Is.False);
+        }
+
+        [Test]
+        public void AnActionOnlyActionsLeavesOutNeedsNoHandler()
+        {
+            var guard = Guard(Profile("move_to", "attack_target"), Config());
+            guard.gameObject.AddComponent<GuardMoves>();
+            guard.OnlyActions = new[] { "move_to" };
+
+            Assert.That(guard.Validate(out string problem), Is.True, problem);
+        }
+
+        [Test]
+        public void OnlyActionsNamingAnActionNothingProvidesWarnsInTheInspector()
+        {
+            var guard = Guard(Profile("move_to"), Config());
+            guard.gameObject.AddComponent<GuardMoves>();
+            guard.OnlyActions = new[] { "move_to", "open_gate" };
+
+            Assert.That(guard.Validate(out string problem), Is.False);
+            Assert.That(problem, Does.Contain("OnlyActions lists 'open_gate'"));
+        }
+
+        [Test]
+        public void AnActionOnlyActionsLeavesOutCannotClashWithAnother()
+        {
+            var guard = Guard(Profile("move_to"), Config());
+            guard.gameObject.AddComponent<GuardMoves>();
+            guard.gameObject.AddComponent<GuardMoves>();
+            guard.gameObject.AddComponent<GuardFollows>();
+            guard.OnlyActions = new[] { "follow_player" };
+
+            Assert.That(guard.Validate(out string problem), Is.True, problem);
+            Assert.That(guard.Agent.Actions.Definitions, Has.Count.EqualTo(1));
+        }
+
         [Test]
         public void AnOriginAlreadySetIsKept()
         {
@@ -595,6 +724,19 @@ namespace Agenerela.Tests
             config.Reply = reply;
             created.Add(config);
             return config;
+        }
+
+        private static IReadOnlyList<string> TargetEnum(DecisionRequest request)
+        {
+            foreach (var field in request.Schema.Fields)
+            {
+                if (field.Name == DecisionSchema.TargetFieldName)
+                {
+                    return field.AllowedValues;
+                }
+            }
+
+            return null;
         }
 
         private static FakeProvider Fake(ProviderConfig config)

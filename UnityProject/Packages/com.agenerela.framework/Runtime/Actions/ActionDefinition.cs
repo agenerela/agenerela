@@ -53,6 +53,72 @@ namespace Agenerela
                  "reuse an evaluation prompt.")]
         public string CounterExampleStimulus;
 
+        /// <summary>
+        /// The kinds of target this action takes, matched ordinally against the category each
+        /// target was registered in (<see cref="TargetRegistry.CategoryOf"/>), such as <c>quest</c>
+        /// for <c>complete_quest</c> (#190, DR-020). Null or empty, the default, takes any target,
+        /// as every action did before.
+        /// </summary>
+        /// <remarks>
+        /// Declaring them changes nothing the model is sent. <see cref="TargetCategoryGuard"/>, a
+        /// built-in guard, turns a decision that pairs this action with a target of another
+        /// category, or with no category, into <c>none</c>, and <see cref="Agent.Execute"/> refuses
+        /// one. A blank entry is ignored. <see cref="AcceptsCategory"/> is the rule.
+        /// </remarks>
+        [Tooltip("Optional. The target categories this action takes, such as 'quest'. A target in " +
+                 "another category, or in none, is refused for it. Leave empty for any target.")]
+        public string[] TargetCategories;
+
+        /// <summary>
+        /// Whether this action takes a target registered in <paramref name="category"/>: always when
+        /// <see cref="TargetCategories"/> names none, otherwise only for one of them. A null or blank
+        /// category, a target registered without one, is taken only by an action that names none.
+        /// </summary>
+        public bool AcceptsCategory(string category)
+        {
+            if (!DeclaresTargetCategories)
+            {
+                return true;
+            }
+
+            if (string.IsNullOrWhiteSpace(category))
+            {
+                return false;
+            }
+
+            foreach (string accepted in TargetCategories)
+            {
+                if (string.Equals(accepted, category, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>Whether <see cref="TargetCategories"/> names at least one category.</summary>
+        public bool DeclaresTargetCategories
+        {
+            get
+            {
+                if (TargetCategories == null)
+                {
+                    return false;
+                }
+
+                foreach (string accepted in TargetCategories)
+                {
+                    if (!string.IsNullOrWhiteSpace(accepted))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+        }
+
         public static bool ValidateId(string id, out string problem)
         {
             problem = null;

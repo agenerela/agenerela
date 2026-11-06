@@ -19,13 +19,24 @@ namespace Agenerela
         public int Count => targets.Count;
 
         /// <summary>
-        /// Adds a target. Throws for a malformed, reserved or duplicate id and for a null
-        /// target, like <see cref="TargetRegistry.Register"/>. Returns this source, so a set
-        /// can be written as one chain.
+        /// Adds a target with no category. Throws for a malformed, reserved or duplicate id and for
+        /// a null target, like <see cref="TargetRegistry.Register(string, object)"/>. Returns this
+        /// source, so a set can be written as one chain.
         /// </summary>
         public ExplicitTargetSource Add(string id, object target)
         {
             targets.Register(id, target);
+            return this;
+        }
+
+        /// <summary>
+        /// Adds a target in <paramref name="category"/>, which an action's
+        /// <see cref="ActionDefinition.TargetCategories"/> and <see cref="Agent.TargetCategories"/>
+        /// read (DR-020). Throws as <see cref="Add(string, object)"/> does; a blank category is none.
+        /// </summary>
+        public ExplicitTargetSource Add(string id, object target, string category)
+        {
+            targets.Register(id, target, category);
             return this;
         }
 
@@ -44,16 +55,24 @@ namespace Agenerela
 
             foreach (var id in targets.Ids)
             {
-                if (into.Contains(id))
+                targets.TryGet(id, out var target);
+
+                // The same object from an earlier source is one target, kept as that source
+                // registered it (DR-020); another object under the id is still an error.
+                if (into.TryGet(id, out var earlier))
                 {
+                    if (ReferenceEquals(earlier, target))
+                    {
+                        continue;
+                    }
+
                     throw new InvalidOperationException(
                         $"Target id '{id}' is supplied by an ExplicitTargetSource but an earlier " +
-                        "source already added it. Every target in one agent's resolved set needs " +
-                        "its own id.");
+                        "source already added it for another object. Every target in one agent's " +
+                        "resolved set needs its own id.");
                 }
 
-                targets.TryGet(id, out var target);
-                into.Register(id, target);
+                into.Register(id, target, targets.CategoryOf(id));
             }
         }
     }
