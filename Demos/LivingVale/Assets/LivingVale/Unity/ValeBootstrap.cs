@@ -18,7 +18,7 @@ namespace LivingVale.Unity
         [Tooltip("The NPC reply driver selected when the game starts. F6 switches drivers.")]
         [SerializeField] private NpcDriverChoice driver = NpcDriverChoice.Agenerela;
         [Tooltip("The local Ollama model used by the Agenerela NPC driver.")]
-        [SerializeField] private string ollamaModel = "qwen3.5:2b";
+        [SerializeField] private string ollamaModel = "gemma4:e2b-it-qat";
         [Tooltip("The models F7 cycles through, in order, skipping any Ollama does not have. Compared on 5 November 2026 (llm-wiki findings).")]
         [SerializeField] private List<string> ollamaModels = new List<string>(ModelCycleDefaults.Models);
 
@@ -100,10 +100,6 @@ namespace LivingVale.Unity
             Driver = new ScriptedNpcDecisionDriver(executor: Executor);
             ModelDriver = AgenerelaNpcDecisionDriver.ForOllama(ollamaModel, Executor);
             Drivers = new SwitchableNpcDecisionDriver(Driver, ModelDriver, driver);
-            if (driver == NpcDriverChoice.Agenerela)
-            {
-                ModelDriver.WarmUp();
-            }
 
             Coordinator = new ConversationCoordinator(Drivers, new ConversationSettings
             {
@@ -116,6 +112,13 @@ namespace LivingVale.Unity
                 new ModelSelector(ollamaModels, ollamaModel, ollama), ModelDriver, loader: ollama);
             Models.Finished += OnModelCycled;
             Models.NoticeChanged += OnModelCycled;
+
+            // The starting model loads like any other, so the notice says "loading …", and says
+            // so when it does not load (not installed, server down) while F6 and F7 still work.
+            if (driver == NpcDriverChoice.Agenerela)
+            {
+                Models.LoadCurrent(lifetime.Token);
+            }
 
             actions = new InputActionMap("Living Vale");
             move = actions.AddAction("Move", InputActionType.Value);

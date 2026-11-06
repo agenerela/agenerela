@@ -19,8 +19,11 @@ in the chat, and only its button moves gold and items. Walking more than 6 m awa
 scripted replies between normal, slow, never answering, malformed and throwing, so the failure
 paths can be tried by hand.
 
-Replies come from the local model through Agenerela by default (Ollama at `127.0.0.1:11434`,
-model set on `ValeBootstrap`); **F6** switches between the model and scripted replies, and **F7**
+Replies come from the local model through Agenerela by default (Ollama at `127.0.0.1:11434`).
+The model is set on `ValeBootstrap`, and since 5 November it defaults to `gemma4:e2b-it-qat`,
+which wrote best in the blind comparison (llm-wiki findings). Pull it with
+`ollama pull gemma4:e2b-it-qat`; without it the notice says it did not load, and F7 reaches
+`qwen3.5:2b` and the rest of the list. **F6** switches between the model and scripted replies, and **F7**
 moves the model to the next one in `ValeBootstrap`'s list that Ollama has, closing the open chat
 first and keeping what each NPC remembers. A model Ollama lacks is skipped, and the badge says so.
 With Ollama unreachable, a turn fails with a game-authored line and the game stays playable.

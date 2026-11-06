@@ -851,7 +851,7 @@ Each model had one turn of each kind per line, so n = 24, at temperature 0. Raw 
   p95 went from 0.89 to 0.84 s and nemotron's from 1.28 to 1.09 s, and the trade outcomes were
   identical. The table keeps the first run, whose replies were the ones judged.
 - **Gemma's size:** `gemma4:e2b-it-qat` showed 1.66 GB resident, although its file is 4.3 GB.
-  Ollama may keep its per-layer embeddings off the GPU. That was not investigated.
+  The later check below explains the gap.
 - **Not run:** `gemma4:e4b` (6.1 GB or more) and `ministral-3:8b` (6.0 GB) leave too little room
   for the game. `llama3.1:8b` was dropped because pulls were slow; the 8B slot went to the Stheno
   fine-tune.
@@ -894,7 +894,9 @@ What the numbers do not show:
   CC BY-NC 4.0, non-commercial only.
 - **`ministral-3:3b` invents the most** (knowledge 1.61).
 
-**Recommendation, for the lead to decide: try `gemma4:e2b-it-qat` as Living Vale's default.**
+**Recommendation: try `gemma4:e2b-it-qat` as Living Vale's default.** The lead adopted it as
+the game's default on 5 November (G5e). `qwen3.5:2b` stays the framework's default and is
+second in F7's list.
 On this evidence it beat the `qwen3.5:2b` control by more than a point on every judged axis (4.17
 against 3.03 overall), matched the best trade result, and stayed fast, at under 2 GB as Ollama
 reports it. Before switching:
@@ -910,3 +912,23 @@ game with F7.
 **What would change this.** A second judge or human ratings that disagree; a repeat in which
 gemma's lead falls inside the run-to-run spread; or gemma failing to fit beside the game's
 renderer.
+
+**Gemma's memory, checked the same evening.** The GPU was empty (0 MiB) when `gemma4:e2b-it-qat`
+was loaded alone under the lock with a 4096-token context.
+
+- **What `/api/ps` reports:** `size` and `size_vram` were both 1.66 GB.
+- **What the card shows:** `nvidia-smi` showed **2.78 GB** used, all of it Ollama's `llama-server`.
+- **Where the 4.3 GB file goes,** from the server log:
+  - 1.34 GB of model weights on the GPU, all 36 layers offloaded;
+  - **2.15 GB in pinned system memory** (`CUDA_Host`): gemma's per-layer embeddings, which
+    llama.cpp keeps off the card by design;
+  - its vision and audio projectors (`gemma4v`, `gemma4a`), loaded although the game sends
+    neither;
+  - KV cache and compute buffers.
+- **Cold load:** 10.3 s, which the startup notice and the warm-up cover.
+- **Measured once, nothing else running, not repeated.**
+
+So `/api/ps` undercounts gemma's GPU use by about 1.1 GB, and gemma also takes about 2 GB of
+system RAM. It still fits: 2.8 GB beside the game leaves room on the 8 GB card. During the
+coordinator's play-check, the game, gemma and a leftover `llama3.2:3b` together used 5.5 GB, and
+G5d's unload on switching now removes that leftover.
