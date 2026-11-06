@@ -36,6 +36,7 @@ namespace Agenerela{
         public PipelineErrorKind? RefusalLineError; // Why that request gave no line: a provider's failure or an unreadable reply. The decision still stands, so Outcome and ErrorKind stay as they were; null when no request failed (#109)
         public ExecutionStatus? Execution; // What the last Agent.Execute of this decision did: Done, Failed by the handler, NoAction for none, or Refused with no handler run; null until an Execute returns; a handler that throws leaves it as it was (DR-018)
         public string ExecutionReason; // That Execute's reason, word for word: the handler's for Failed, the agent's for Refused; null for Done and NoAction (DR-018)
+        public float BacklogWaitSeconds; // From the call to its turn in the agent's own Agent.Backlog, before it was prepared; 0 with no backlog, and never part of QueueWaitSeconds (#190, G5)
 
         public DecisionTelemetry()
         {
@@ -69,6 +70,7 @@ namespace Agenerela{
             RefusalLineError = null;
             Execution = null;
             ExecutionReason = null;
+            BacklogWaitSeconds = 0f;
         }
     }
 
@@ -105,6 +107,52 @@ namespace Agenerela{
         UnreadableReply,
 
         // A guard threw while judging the decision, or Agent.Guards held a null entry (#108)
-        GuardFailed
+        GuardFailed,
+
+        // Not sent: a background request whose turn came while its provider was down, before the
+        // retry time, with ProviderHealth.BackOff on. Logs no warning (#190, DR-015)
+        ProviderDown,
+
+        // Not sent: dropped from the agent's Backlog for a newer call. Logs no warning (#190, G5)
+        Superseded,
+
+        // Not sent: refused at once, the agent's Backlog being full. Logs no warning (#190, G5)
+        BacklogFull
+    }
+
+    /// <summary>What a <see cref="PipelineErrorKind"/> says about where a failure came from.</summary>
+    public static class PipelineErrorKindExtensions
+    {
+        /// <summary>
+        /// True when the failure is the provider's, not this decision's: no server, no model, no
+        /// reply in time, a refusal, a server error, an envelope that could not be read, any other
+        /// provider failure, or a background request held back while the provider is down
+        /// (<see cref="PipelineErrorKind.ProviderDown"/>). A game shows these as "the model is not
+        /// answering", once, rather than as one agent's mistake.
+        /// </summary>
+        /// <remarks>
+        /// False for what goes wrong with one decision whoever the provider is: a request that
+        /// could not be prepared, a reply that arrived but cannot be read, a guard that threw, and a
+        /// call the agent's backlog dropped or refused. Every kind but those marks the provider's
+        /// <see cref="Agenerela.Providers.ProviderHealth"/> down, except
+        /// <see cref="PipelineErrorKind.ProviderDown"/>, which is the back-off itself.
+        /// </remarks>
+        public static bool IsProviderFault(this PipelineErrorKind kind)
+        {
+            switch (kind)
+            {
+                case PipelineErrorKind.ProviderUnreachable:
+                case PipelineErrorKind.ModelNotFound:
+                case PipelineErrorKind.ProviderTimeout:
+                case PipelineErrorKind.ProviderRejected:
+                case PipelineErrorKind.ProviderServerError:
+                case PipelineErrorKind.ProviderMalformedResponse:
+                case PipelineErrorKind.ProviderFailed:
+                case PipelineErrorKind.ProviderDown:
+                    return true;
+                default:
+                    return false;
+            }
+        }
     }
 }

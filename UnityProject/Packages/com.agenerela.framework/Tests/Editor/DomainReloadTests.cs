@@ -44,6 +44,11 @@ namespace Agenerela.Tests
             ["Agenerela.RequestScheduler.schedulers"] = new KeptField(
                 "Keyed weakly by the provider instance, like ProviderConfig.names. Clearing it would give a " +
                 "provider still in use a second queue, two requests at once on one backend."),
+            ["Agenerela.Providers.ProviderHealth.table"] = new KeptField(
+                "Keyed weakly by the provider instance, like the queues (#190 G1). A provider that outlives a " +
+                "Play session keeps what its last request showed, which is still the best word on it: the next " +
+                "reply marks it up. Clearing it would give that provider a second health, and a game listening " +
+                "to the first one's Changed would never hear from it again."),
             ["Agenerela.Providers.ProviderConfig.Built"] = new KeptField(
                 "Editor only. ProviderConfig.ForgetAll empties it as Play mode starts (ExitingEditMode, before " +
                 "SubsystemRegistration) and as it ends. A second reset at SubsystemRegistration could drop a " +
