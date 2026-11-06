@@ -58,7 +58,15 @@ namespace LivingVale.Agenerela
         // Each NPC's memory, by NPC id. Kept apart from the agents so a driver rebuilt for another
         // model (WithProvider) carries every NPC's conversation over.
         private readonly Dictionary<string, CommittedHistory> memories;
-        private Task warmUp;
+        private Task<bool> warmUp;
+
+        // Set when the warm-up was cancelled by its caller, not by Detach: the next call sends it
+        // again rather than hand back the cancelled result (F6 off and on mid-load).
+        private bool warmUpCancelled;
+
+        // Cancelled by Detach, so a replaced driver's warm-up leaves the queue rather than load a
+        // model nobody will use.
+        private readonly CancellationTokenSource lifetime = new CancellationTokenSource();
         private bool detached;
 
         /// <param name="provider">Shared by every NPC, so their requests share one queue (DR-015).</param>
@@ -150,6 +158,7 @@ namespace LivingVale.Agenerela
             }
 
             detached = true;
+            lifetime.Cancel();
             if (executor != null)
             {
                 executor.Trade.Confirmed -= OnConfirmed;
@@ -356,26 +365,49 @@ namespace LivingVale.Agenerela
             _ = WarmUpAsync();
         }
 
-        /// <summary>The one warm-up request, started on the first call. Never faults: a failure is logged.</summary>
-        public Task WarmUpAsync()
+        /// <summary>
+        /// The one warm-up request, started on the first call; true when the model answered.
+        /// Never faults: a failure is logged and gives false. It is cancelled, and gives false, when
+        /// <paramref name="ct"/> (read on the first call only) is cancelled or the driver is
+        /// detached, and a cancelled request leaves the provider's queue unsent.
+        /// </summary>
+        public Task<bool> WarmUpAsync(CancellationToken ct = default)
         {
-            return warmUp ?? (warmUp = SendWarmUp());
+            if (warmUp == null || (warmUp.IsCompleted && warmUpCancelled && !lifetime.IsCancellationRequested))
+            {
+                warmUpCancelled = false;
+                warmUp = SendWarmUp(ct);
+            }
+
+            return warmUp;
         }
 
-        private async Task SendWarmUp()
+        private async Task<bool> SendWarmUp(CancellationToken ct)
         {
-            try
+            using (var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, lifetime.Token))
             {
-                var agent = new Agent(new AgentIdentity { Name = "Warm-up" }, Array.Empty<ActionDefinition>(), provider) { Memory = null };
-                var result = await agent.DecideAsync("Hello.", new DecideOptions { Priority = DecisionPriority.Background });
-                if (result?.Decision == null)
+                try
                 {
-                    Debug.LogWarning($"[LivingVale] {Label} warm-up got no decision ({result?.Telemetry?.ErrorKind}); NPC turns will fail until the model answers.");
+                    var agent = new Agent(new AgentIdentity { Name = "Warm-up" }, Array.Empty<ActionDefinition>(), provider) { Memory = null };
+                    var result = await agent.DecideAsync("Hello.", new DecideOptions { Priority = DecisionPriority.Background }, linked.Token);
+                    if (result?.Decision == null)
+                    {
+                        Debug.LogWarning($"[LivingVale] {Label} warm-up got no decision ({result?.Telemetry?.ErrorKind}); NPC turns will fail until the model answers.");
+                        return false;
+                    }
+
+                    return true;
                 }
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"[LivingVale] {Label} warm-up failed: {e.Message}");
+                catch (OperationCanceledException) when (linked.IsCancellationRequested)
+                {
+                    warmUpCancelled = true;
+                    return false;
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"[LivingVale] {Label} warm-up failed: {e.Message}");
+                    return false;
+                }
             }
         }
     }

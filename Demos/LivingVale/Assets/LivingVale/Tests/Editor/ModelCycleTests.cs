@@ -90,9 +90,49 @@ namespace LivingVale.Tests
             Assert.Less(next.Result.Notice.Length, 40, "The notice shares one line with the badge.");
         }
 
+        // Continuations resume on the editor's context, a frame later; wait for them, boundedly.
+        private static async Task WaitUntil(Func<bool> condition)
+        {
+            for (int i = 0; i < 200 && !condition(); i++)
+            {
+                await Task.Yield();
+            }
+
+            Assert.IsTrue(condition(), "Timed out waiting for the condition.");
+        }
+
+        private sealed class FakeLoader : IModelLoader
+        {
+            public readonly List<string> Unloaded = new List<string>();
+
+            /// <summary>When set, each unload stays out until the test releases it.</summary>
+            public bool Hold;
+            public readonly List<TaskCompletionSource<bool>> Pending = new List<TaskCompletionSource<bool>>();
+
+            public Task UnloadAsync(string model, CancellationToken ct)
+            {
+                Unloaded.Add(model);
+                if (!Hold)
+                {
+                    return Task.CompletedTask;
+                }
+
+                var unload = new TaskCompletionSource<bool>();
+                Pending.Add(unload);
+                return unload.Task;
+            }
+        }
+
         private sealed class Rig
         {
             public readonly FakeLlmProvider First = new FakeLlmProvider();
+            public readonly FakeLoader Loader = new FakeLoader();
+
+            // Each settle delay, released by hand; one cancelled by a later press ends cancelled.
+            public readonly List<TaskCompletionSource<bool>> Delays = new List<TaskCompletionSource<bool>>();
+
+            /// <summary>Whether the providers built from now on hold their requests until cancelled.</summary>
+            public bool NewProvidersHold;
             public readonly List<(string model, FakeLlmProvider provider)> Built = new List<(string, FakeLlmProvider)>();
             public readonly FakeCatalog Catalog = new FakeCatalog { Installed = List };
             public readonly TradeService Trade;
@@ -111,11 +151,175 @@ namespace LivingVale.Tests
                 Cycle = new ModelCycle(Coordinator, Drivers, new ModelSelector(List, "qwen3.5:2b", Catalog), Driver,
                     (driver, model) =>
                     {
-                        var provider = new FakeLlmProvider();
+                        var provider = new FakeLlmProvider { Hold = NewProvidersHold };
                         Built.Add((model, provider));
                         return driver.WithProvider(provider, model);
+                    },
+                    Loader,
+                    (wait, ct) =>
+                    {
+                        var delay = new TaskCompletionSource<bool>();
+                        ct.Register(() => delay.TrySetCanceled());
+                        Delays.Add(delay);
+                        return delay.Task;
                     });
             }
+
+            public async Task Press()
+            {
+                var press = Cycle.NextAsync();
+                await Run.NotCancelled(press);
+                Assert.IsTrue(press.Result);
+            }
+
+            public async Task Settle(int delay)
+            {
+                Delays[delay].SetResult(true);
+                await Run.NotCancelled(Cycle.Loading);
+            }
+        }
+
+        [Test]
+        public async Task RapidPresses_OnlyTheModelThePlayerSettlesOnIsLoaded()
+        {
+            var rig = new Rig();
+            await rig.Press();
+            await rig.Press();
+            await rig.Press();
+
+            Assert.IsTrue(rig.Delays[0].Task.IsCanceled && rig.Delays[1].Task.IsCanceled, "Each press cancels the one before it.");
+            Assert.AreEqual(0, rig.Built[2].provider.Requests.Count, "Nothing is loaded until the key rests.");
+
+            await rig.Settle(2);
+
+            Assert.AreEqual(0, rig.Built[0].provider.Requests.Count);
+            Assert.AreEqual(0, rig.Built[1].provider.Requests.Count);
+            Assert.AreEqual(1, rig.Built[2].provider.Requests.Count, "One warm-up, for the model the player stopped on.");
+        }
+
+        [Test]
+        public async Task ANewPressCancelsAWarmUpAlreadySent()
+        {
+            var rig = new Rig { NewProvidersHold = true };
+            await rig.Press();
+            rig.Delays[0].SetResult(true);
+            await WaitUntil(() => rig.Built[0].provider.Requests.Count == 1);
+            Assert.IsFalse(rig.Built[0].provider.LastToken.IsCancellationRequested);
+
+            await rig.Press();
+
+            Assert.IsTrue(rig.Built[0].provider.LastToken.IsCancellationRequested, "A superseded warm-up does not stay queued.");
+        }
+
+        [Test]
+        public async Task ReplacingTheDriverCancelsItsOwnWarmUp()
+        {
+            // The startup and F6 warm-up, which no settle owns: only Detach can cancel it.
+            var rig = new Rig();
+            rig.First.Hold = true;
+            rig.Driver.WarmUp();
+            await WaitUntil(() => rig.First.Requests.Count == 1);
+
+            await rig.Press();
+
+            Assert.IsTrue(rig.First.LastToken.IsCancellationRequested, "The replaced model's warm-up leaves the queue.");
+        }
+
+        [Test]
+        public async Task ASettleReplacedDuringItsUnloadDoesNotRewriteWhatIsLoaded()
+        {
+            var rig = new Rig();
+            rig.Catalog.Installed = new[] { "qwen3.5:2b", "gemma4:e2b-it-qat" };
+            rig.Loader.Hold = true;
+
+            await rig.Press();                       // to gemma
+            rig.Delays[0].SetResult(true);
+            await WaitUntil(() => rig.Loader.Pending.Count == 1);   // unloading qwen, held
+
+            await rig.Press();                       // back to qwen
+            rig.Delays[1].SetResult(true);
+            rig.Loader.Pending[0].SetResult(true);   // the stale unload lands
+            await WaitUntil(() => rig.Built[1].provider.Requests.Count == 1);   // qwen warmed
+
+            rig.Loader.Hold = false;
+            await rig.Press();                       // to gemma again
+            await rig.Settle(2);
+
+            CollectionAssert.AreEqual(new[] { "qwen3.5:2b", "qwen3.5:2b" }, rig.Loader.Unloaded,
+                "qwen was loaded again, so leaving it unloads it again.");
+        }
+
+        [Test]
+        public async Task AModelLoadedThroughF6IsUnloadedByTheNextSwitch()
+        {
+            var rig = new Rig();
+            rig.Drivers.Select(NpcDriverChoice.Scripted);
+            await rig.Press();                       // to gemma while scripted replies are on
+            await rig.Settle(0);
+            CollectionAssert.AreEqual(new[] { "qwen3.5:2b" }, rig.Loader.Unloaded);
+            Assert.AreEqual(0, rig.Built[0].provider.Requests.Count, "Nothing is loaded while the scripted driver answers.");
+
+            rig.Drivers.Select(NpcDriverChoice.Agenerela);   // F6
+            rig.Cycle.LoadCurrent();
+            await rig.Settle(1);
+            Assert.AreEqual(1, rig.Built[0].provider.Requests.Count, "F6 loads gemma.");
+
+            await rig.Press();                       // to llama
+            await rig.Settle(2);
+            CollectionAssert.AreEqual(new[] { "qwen3.5:2b", rig.Built[0].model }, rig.Loader.Unloaded, "gemma leaves the card.");
+        }
+
+        [Test]
+        public async Task F6OffAndOnDuringAWarmUp_SendsItAgain()
+        {
+            var rig = new Rig { NewProvidersHold = true };
+            await rig.Press();
+            rig.Delays[0].SetResult(true);
+            await WaitUntil(() => rig.Built[0].provider.Requests.Count == 1);
+
+            rig.Drivers.Select(NpcDriverChoice.Scripted);    // F6 off
+            rig.Drivers.Select(NpcDriverChoice.Agenerela);   // and on
+            rig.Cycle.LoadCurrent();
+            rig.Built[0].provider.Hold = false;
+            await rig.Settle(1);
+
+            Assert.AreEqual(2, rig.Built[0].provider.Requests.Count, "The cancelled warm-up is sent again, not reused.");
+            Assert.AreEqual("", rig.Cycle.Notice, "The model loaded.");
+        }
+
+        [Test]
+        public async Task Settling_UnloadsTheModelLoadedBeforeAndNeverAPassedOne()
+        {
+            var rig = new Rig();
+            await rig.Press();
+            await rig.Settle(0);
+            CollectionAssert.AreEqual(new[] { "qwen3.5:2b" }, rig.Loader.Unloaded, "The starting model leaves the card.");
+
+            await rig.Press();
+            await rig.Press();
+            await rig.Settle(2);
+
+            CollectionAssert.AreEqual(new[] { "qwen3.5:2b", rig.Built[0].model }, rig.Loader.Unloaded,
+                "Only the model actually loaded is unloaded; the one pressed past never was.");
+        }
+
+        [Test]
+        public async Task TheNoticeSaysWhileTheModelLoads()
+        {
+            var rig = new Rig { NewProvidersHold = true };
+            int changes = 0;
+            rig.Cycle.NoticeChanged += () => changes++;
+            await rig.Press();
+            rig.Delays[0].SetResult(true);
+            await WaitUntil(() => changes == 1);
+
+            StringAssert.Contains("loading " + rig.Built[0].model, rig.Cycle.Notice);
+
+            var firstLoad = rig.Cycle.Loading;
+            await rig.Press();
+            await Run.NotCancelled(firstLoad);
+            Assert.AreEqual(1, changes, "A superseded load says nothing more.");
+            Assert.IsFalse(rig.Cycle.Notice.Contains(rig.Built[0].model), "The old model's loading line is gone.");
         }
 
         [Test]

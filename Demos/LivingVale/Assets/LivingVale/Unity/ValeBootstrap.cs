@@ -111,9 +111,11 @@ namespace LivingVale.Unity
             });
             tradeLink.Attach(Coordinator, Trade);
             tradeLink.AttachQuests(Quests);
+            var ollama = new OllamaModelCatalog();
             Models = new ModelCycle(Coordinator, Drivers,
-                new ModelSelector(ollamaModels, ollamaModel, new OllamaModelCatalog()), ModelDriver);
+                new ModelSelector(ollamaModels, ollamaModel, ollama), ModelDriver, loader: ollama);
             Models.Finished += OnModelCycled;
+            Models.NoticeChanged += OnModelCycled;
 
             actions = new InputActionMap("Living Vale");
             move = actions.AddAction("Move", InputActionType.Value);
@@ -213,7 +215,7 @@ namespace LivingVale.Unity
                 Drivers.Next();
                 if (ReferenceEquals(Drivers.Current, ModelDriver))
                 {
-                    ModelDriver.WarmUp();
+                    Models.LoadCurrent(lifetime.Token);
                 }
 
                 overlay.Render();
@@ -344,6 +346,7 @@ namespace LivingVale.Unity
             if (Models != null)
             {
                 Models.Finished -= OnModelCycled;
+                Models.NoticeChanged -= OnModelCycled;
             }
 
             if (Coordinator != null)
