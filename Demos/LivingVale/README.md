@@ -140,4 +140,6 @@ the actions and their target ids are also written into the prompt as observation
 a quote naming the other action's target into `none`, and `Agent.Execute` refuses a target that
 went stale before the reply was executed. Each turn also tells the model about its offer still
 waiting for the player and the receipt of the last trade. An NPC remembers a reply only once it has been executed
-(`CommittedHistory`), so a reply dropped as late is never part of its memory.
+(`CommittedHistory`), so a reply dropped as late is never part of its memory. The few-shot block also shows one line
+answered with `none` (`AgenerelaNpcDecisionDriver.DefaultIdleExample`). In G5f's A/B, that alone
+stopped Mara making offers nobody asked for, on both models measured.

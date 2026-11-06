@@ -933,6 +933,83 @@ system RAM. It still fits: 2.8 GB beside the game leaves room on the 8 GB card. 
 coordinator's play-check, the game, gemma and a leftover `llama3.2:3b` together used 5.5 GB, and
 G5d's unload on switching now removes that leftover.
 
+### Unasked offers: one negative example cut them to none on both models (5 November 2026)
+
+**What changed.** The treatment is a **negative few-shot example**. `AgenerelaNpcDecisionDriver` passes
+`DecideOptions.IdleExampleStimulus`, so the few-shot block shows one line answered with `none`
+alongside the trade examples. The control is G5b's prompt, which has no such line. A second
+treatment was a stricter rule line ("Make an offer … only when the traveler asks to buy something
+from you or to sell you something. For greetings, questions, rumours and small talk, choose none
+and just answer.").
+
+**The set.**
+
+- **Lines asking for nothing:** 12 new lines to Mara (rumours, small talk, directions, feelings,
+  a question about her stall that is not a purchase), plus G5b's browsing line, so 13 in all.
+- **Asked trades:** G5b's five buy and sell lines.
+- **Overlap:** none repeats an evaluation prompt or any example in the prompt (hard rule 4). The
+  first negative example, "Fine weather for the market, isn't it?", was dropped after run 1 because
+  "The weather is changing." is an evaluation prompt. Run 2 measured the line now shipped, "Good to
+  see a friendly face again."
+
+**Conditions.**
+
+- **Staging:** each case was staged alone, with a fresh driver and trade state, and the player
+  carrying a pelt and iron scrap, so both trade actions were offered.
+- **Arms:** interleaved line by line on one model (measuring.md, item 4).
+- **Models:** `gemma4:e2b-it-qat`, then `qwen3.5:2b`, one resident at a time, warmed with three
+  throwaway requests, under the Ollama lock.
+- **Setup:** RTX 4060 Laptop, AC power, Ollama 0.40.14, temperature 0, `MaraTradeLiveCheck` with
+  `LV_ARMS`. Run 1 was 17:27–17:33, run 2 17:34–17:39. No CPU side load was recorded in the
+  window.
+
+| Model | Arm | Unasked offers shown (of 13) | Asked trades correct (of 5) | p50 |
+|---|---|---|---|---|
+| `gemma4:e2b-it-qat` | control (run 1 / run 2) | **7 / 6** | 5 / 5 | 0.85 / 0.95 s |
+| | negative example, weather (run 1) | 0 | 5 | 0.85 s |
+| | **negative example, shipped (run 2)** | **0** | 5 | 0.90 s |
+| | stricter rule (run 1) | 0 | 5 | 0.85 s |
+| `qwen3.5:2b` | control (run 1 / run 2) | **10 / 10** | 4 / 4 | 1.13 / 1.15 s |
+| | negative example, weather (run 1) | 0 | 4 | 1.10 s |
+| | **negative example, shipped (run 2)** | **0** | 4 | 1.12 s |
+| | stricter rule (run 1) | 1 | 4 | 1.15 s |
+
+**Classified.**
+
+- **Asked trades:** `qwen3.5:2b`'s one miss is the same in every arm. It quoted a *purchase* of
+  the player's iron scrap, and the pair guard contained it (contained by a guard, not
+  wrong-but-legal).
+- **Unasked offers:** every one shown in a control arm was a legal quote on a line that asked for
+  none (wrong but legal). In its control arms `qwen3.5:2b` chose an offer on all 13 lines; guards
+  contained 3 of them.
+- **The rule arm on `qwen3.5:2b`:** it left an offer on 1 line, and gave 9 of its `none` answers
+  a target id. That is harmless, since `none` executes nothing, but it is a sign the model was
+  confused.
+- **Pipeline errors:** none.
+
+**How much to trust it.**
+
+- **Size and repetition:** n = 13 per arm, one set of lines, and two runs. The control arms
+  repeated closely: 7 then 6 on gemma (so temperature 0 is not fully deterministic here), and 10
+  then 10 on qwen.
+- **The gaps:** 6/13 against 0/13 and 10/13 against 0/13 are far outside that spread. Each line
+  ran in both arms, so the test is paired. In run 2 the example improved 6 lines and worsened none
+  on gemma, and improved 10 and worsened none on qwen. An exact McNemar test gives two-sided
+  p = 0.031 and p = 0.002.
+- **Why it is not an accuracy claim:** the lines are hand-written, the classification is by the
+  expected label alone, and the negative example has been measured only on Living Vale's trade
+  prompt.
+- **Not measured:** the example reaches every NPC, Iven and the quest NPCs included, beside their
+  own action examples. How they behave with it was not measured here.
+
+**Kept:** the negative example, now the driver's default (`DefaultIdleExample`). The rule line
+stays as it was, because it did no better on gemma, did worse on `qwen3.5:2b`, and changes
+wording measured elsewhere.
+
+**What would change this.** A larger set on which the example makes a model miss asked trades,
+or an evaluation-set A/B showing a `none` example costs command accuracy. Appendix A warns that
+plausible prompt changes have hurt before.
+
 ### Living Vale's quest routes on gemma4:e2b-it-qat: the right action six times in seven, and two kinds of slip (5 November 2026)
 
 **A smoke check, not an accuracy claim.** It was one run of seven lines, with no labels and no
@@ -960,5 +1037,5 @@ came only from the target descriptions and status lines.
 action on this model. The two slips are what the game's cards and receipts are for: a wrong
 offer still needs the player's button, and the receipt line says what really happened. Whether
 the status lines ("Claims of proof are only words") help is unmeasured. That needs an A/B run with
-and without them (gap 15). Rows are in `.scratch/g4c/live/routes.jsonl` in the G4c worktree.
+and without them (gap 16). The run predates G5f's `none` example (entry above), which may well remove the bluff's unasked offer. Rows are in `.scratch/g4c/live/routes.jsonl` in the G4c worktree.
 
