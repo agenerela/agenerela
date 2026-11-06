@@ -1044,6 +1044,15 @@ first decision then skips the load, about 7 s for this model on this card. The w
 slot in the decision queue (DR-015, as amended), so it never delays a player's turn on the
 provider the agents are still using.
 
+**The warm-up must send the decisions' context size (same evening, after the Codex review).** The
+run above warmed the model up at Ollama's default context size, which happens to be what the
+decisions sent too. With a provider set to `num_ctx` 8192, the first decision after that warm-up
+took **7.46 s**: Ollama loaded the model again at the new size. The warm-up now sends the
+decisions' `num_ctx`, and the same check took **1.18 s** (cold warm-up 9.04 s before the fix,
+7.98 s after; one run each, same conditions, the old warm-up first, then the fix). The 1.18 s is
+an ordinary first decision; Phase 2's warm decisions were under 0.6 s.
+
 **What would change this.** An Ollama release where an empty generate stops loading the model, or
-where `keep_alive: 0` on a model that is not loaded starts loading it. Re-run the test after an
-Ollama upgrade, as for the schema probe.
+where `keep_alive: 0` on a model that is not loaded starts loading it, or where a request at a new
+context size no longer reloads the model. Re-run `ModelLifecycleLiveTests` after an Ollama
+upgrade, as for the schema probe.

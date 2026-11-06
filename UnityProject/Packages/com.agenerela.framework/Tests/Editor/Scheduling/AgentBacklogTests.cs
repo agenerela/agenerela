@@ -390,6 +390,42 @@ namespace Agenerela.Tests
         }
 
         [Test]
+        public async Task ASmallerBacklogSetBetweenCallsHoldsTheNextCallToItsOwnCapacity()
+        {
+            // Codex review, F2: one drop is not always enough once the backlog has been made smaller.
+            var (fake, agent) = Guard(DecisionBacklog.QueueWithCap(3));
+            var underWay = agent.DecideAsync("The bell rings once.");
+            var waiting = new[]
+            {
+                agent.DecideAsync("A cart rolls past."),
+                agent.DecideAsync("A wolf howls."),
+                agent.DecideAsync("Go to the tower."),
+            };
+
+            agent.Backlog = DecisionBacklog.DropOldest(0);
+            var turnedAway = agent.DecideAsync("Follow me.");
+            Assert.That(turnedAway.GetAwaiter().IsCompleted, Is.True, "Room for none while it decides.");
+            Assert.That((await Fixtures.NotCancelled(turnedAway)).Telemetry.ErrorKind, Is.EqualTo(PipelineErrorKind.BacklogFull));
+            Assert.That(agent.Waiting, Is.EqualTo(3), "The calls already waiting keep their places.");
+
+            agent.Backlog = DecisionBacklog.LatestWins;
+            var latest = agent.DecideAsync("Stand your ground.");
+            foreach (var older in waiting)
+            {
+                Assert.That(older.GetAwaiter().IsCompleted, Is.True, "Every older call made way at once.");
+                Assert.That((await Fixtures.NotCancelled(older)).Telemetry.ErrorKind, Is.EqualTo(PipelineErrorKind.Superseded));
+            }
+
+            Assert.That(agent.Waiting, Is.EqualTo(1));
+            fake.Release();
+            fake.Release();
+            await Fixtures.NotCancelled(underWay);
+            await Fixtures.NotCancelled(latest);
+            Assert.That(fake.Requests, Has.Count.EqualTo(2));
+            Assert.That(fake.Requests[1].Stimulus, Does.Contain("Stand your ground."));
+        }
+
+        [Test]
         public async Task TheBacklogIsReadWhenEachCallIsMadeAndCountsOnlyCallsMadeUnderIt()
         {
             var (fake, agent) = Guard(null);

@@ -72,13 +72,43 @@ namespace Agenerela.Tests
 
             try
             {
-                await missing.WarmUpAsync(CancellationToken.None);
+                // Through Done, so a cancellation fails the test instead of passing it (Codex review, F4).
+                await Done(missing.WarmUpAsync(CancellationToken.None));
                 Assert.Fail("The warm-up succeeded for a model no machine has.");
             }
             catch (ProviderException e)
             {
                 Assert.That(e.Kind, Is.EqualTo(ProviderErrorKind.ModelNotFound), e.Message);
             }
+        }
+
+        [Test]
+        public async Task AWarmUpLoadsTheModelAtTheContextSizeTheDecisionsUse()
+        {
+            // Not the server's default: Ollama reloads a model asked for at another context size, so
+            // a warm-up at the default would leave this decision to load it again (Codex review, F1).
+            // Seen live on 5 November: 7.46 s for this decision without the fix, 1.18 s with it.
+            var provider = new OllamaProvider(new OllamaSettings
+            {
+                Endpoint = LiveOllama.Endpoint,
+                Model = LiveOllama.Model,
+                ContextSize = 8192,
+            });
+            IModelLifecycle models = provider;
+            Assert.That(await LiveOllama.NotCancelled(models.UnloadAsync(CancellationToken.None)), Is.True);
+
+            var cold = Stopwatch.StartNew();
+            await Done(models.WarmUpAsync(CancellationToken.None));
+            cold.Stop();
+            var result = await LiveOllama.NotCancelled(
+                LiveGuard.Build(provider).DecideAsync("Head over to the tower and keep watch.", LiveGuard.Options()));
+            UnityEngine.Debug.Log($"LIFECYCLE {LiveOllama.Model} at num_ctx 8192: cold warm-up {cold.Elapsed.TotalSeconds:F2} s, "
+                                + $"first decision after it {result.Telemetry.LatencySeconds:F2} s");
+
+            Assert.That(result.Decision, Is.Not.Null, $"{result.Telemetry.ErrorKind}: {result.Telemetry.ErrorMessage}");
+            Assert.That(result.Telemetry.LatencySeconds, Is.LessThan(cold.Elapsed.TotalSeconds / 2),
+                "The first decision after the warm-up took as long as a load: the model was loaded again.");
+            Assert.That(await LiveOllama.NotCancelled(models.UnloadAsync(CancellationToken.None)), Is.True);
         }
 
         private static async Task Done(Awaitable pending)

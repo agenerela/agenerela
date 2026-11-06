@@ -94,6 +94,45 @@ namespace Agenerela.Tests
         }
 
         [Test]
+        public void ASmallerCapacityDropsAsManyAsTheQueueIsOverOrNoneAtAll()
+        {
+            // The capacity is the caller's on each call, so it can be smaller than when the others
+            // joined (Codex review, F2).
+            var scheduler = new RequestScheduler();
+            var inFlight = scheduler.Enqueue(Background, CancellationToken.None);
+            var first = scheduler.Enqueue(Background, CancellationToken.None, 3, BacklogOverflow.DropOldest);
+            var second = scheduler.Enqueue(Background, CancellationToken.None, 3, BacklogOverflow.DropOldest);
+            var third = scheduler.Enqueue(Background, CancellationToken.None, 3, BacklogOverflow.DropOldest);
+
+            Assert.That(scheduler.Enqueue(Background, CancellationToken.None, 0, BacklogOverflow.DropOldest), Is.Null,
+                "With room for none, the newcomer cannot wait however many make way, so nothing is dropped.");
+            Assert.That(first.IsQueued && second.IsQueued && third.IsQueued, Is.True);
+
+            var newest = scheduler.Enqueue(Background, CancellationToken.None, 1, BacklogOverflow.DropOldest);
+
+            Assert.That(first.IsQueued || second.IsQueued || third.IsQueued, Is.False, "All three made way, not just the oldest.");
+            Assert.That(newest.IsQueued, Is.True);
+            Assert.That(scheduler.Queued, Is.EqualTo(1), "Within the capacity it was called with.");
+            inFlight.Dispose();
+            Assert.That(newest.IsReady, Is.True);
+        }
+
+        [Test]
+        public void TooFewThatMayBePushedOutMeansNoneIs()
+        {
+            var scheduler = new RequestScheduler();
+            var inFlight = scheduler.Enqueue(PlayerFacing, CancellationToken.None);
+            var question = scheduler.Enqueue(PlayerFacing, CancellationToken.None, 2, BacklogOverflow.DropOldest);
+            var ambient = scheduler.Enqueue(Background, CancellationToken.None, 2, BacklogOverflow.DropOldest);
+
+            Assert.That(scheduler.Enqueue(Background, CancellationToken.None, 0, BacklogOverflow.DropOldest), Is.Null);
+
+            Assert.That(ambient.IsQueued, Is.True, "Not dropped for a newcomer that was refused anyway.");
+            Assert.That(question.IsQueued, Is.True);
+            inFlight.Dispose();
+        }
+
+        [Test]
         public void AnAlreadyCancelledTokenThrowsBeforeAnythingIsDropped()
         {
             var scheduler = new RequestScheduler();

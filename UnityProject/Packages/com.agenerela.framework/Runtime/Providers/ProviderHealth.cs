@@ -58,6 +58,10 @@ namespace Agenerela.Providers
         private float firstRetrySeconds = 5f;
         private float longestRetrySeconds = 60f;
 
+        // The longest either retry setting may be, one day: long enough for any game, and short
+        // enough that a retry time can always be written as a DateTime.
+        private const float MostRetrySeconds = 86400f;
+
         // The time now, in UTC. Replaced by tests, so a retry time can pass without waiting for it.
         internal Func<DateTime> Clock = () => DateTime.UtcNow;
 
@@ -193,7 +197,7 @@ namespace Agenerela.Providers
         /// doubles the wait, and no wait is longer than <see cref="LongestRetrySeconds"/>, the first
         /// included. Applies from the next failure.
         /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">Not above 0, or not finite.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Not above 0, or above a day (86,400 s).</exception>
         public float FirstRetrySeconds
         {
             get
@@ -206,9 +210,9 @@ namespace Agenerela.Providers
             set
             {
                 // Not checked against LongestRetrySeconds, so the two can be set in either order.
-                if (!(value > 0f) || float.IsInfinity(value))
+                if (!(value > 0f) || value > MostRetrySeconds)
                 {
-                    throw new ArgumentOutOfRangeException(nameof(value), value, "FirstRetrySeconds must be above 0 and finite.");
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "FirstRetrySeconds must be above 0 and at most a day (86400).");
                 }
 
                 lock (gate)
@@ -219,7 +223,7 @@ namespace Agenerela.Providers
         }
 
         /// <summary>The longest wait between retries, 60 s by default. Applies from the next failure.</summary>
-        /// <exception cref="ArgumentOutOfRangeException">Not above 0, or not finite.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Not above 0, or above a day (86,400 s).</exception>
         public float LongestRetrySeconds
         {
             get
@@ -231,9 +235,9 @@ namespace Agenerela.Providers
             }
             set
             {
-                if (!(value > 0f) || float.IsInfinity(value))
+                if (!(value > 0f) || value > MostRetrySeconds)
                 {
-                    throw new ArgumentOutOfRangeException(nameof(value), value, "LongestRetrySeconds must be above 0 and finite.");
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "LongestRetrySeconds must be above 0 and at most a day (86400).");
                 }
 
                 lock (gate)
@@ -319,24 +323,26 @@ namespace Agenerela.Providers
 
             lock (gate)
             {
+                // Everything worked out first, so nothing below can throw half way through a change.
                 var now = Clock();
-                if (failures < int.MaxValue)
-                {
-                    failures++;
-                }
+                int count = failures < int.MaxValue ? failures + 1 : failures;
 
-                // First * 2^(failures - 1), capped, with the exponent kept small enough not to overflow.
-                double wait = Math.Min(longestRetrySeconds, firstRetrySeconds * Math.Pow(2, Math.Min(failures - 1, 30)));
+                // First * 2^(count - 1), capped, with the exponent kept small enough not to overflow.
+                double wait = Math.Min(longestRetrySeconds, firstRetrySeconds * Math.Pow(2, Math.Min(count - 1, 30)));
+
+                // At most a day, so only a clock within a day of DateTime.MaxValue could pass the end.
+                var retry = wait >= (DateTime.MaxValue - now).TotalSeconds ? DateTime.MaxValue : now.AddSeconds(wait);
 
                 if (!isDown)
                 {
                     downSince = now;
                 }
 
+                failures = count;
                 isDown = true;
                 reason = kind;
                 message = why ?? "";
-                retryAt = now.AddSeconds(wait);
+                retryAt = retry;
                 return true;
             }
         }

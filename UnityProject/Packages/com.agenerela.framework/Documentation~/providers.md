@@ -469,8 +469,8 @@ health.BackOff = true;   // optional: hold background requests while it is down
   the run of failures began, `ConsecutiveFailures` how many in a row. A cancelled request reports
   nothing, and neither do the model lifecycle calls below.
 - **The retry time.** `RetryAtUtc` is 5 s after the first failure, doubling with each one after
-  it, up to 60 s (`FirstRetrySeconds`, `LongestRetrySeconds`). It is set whether or not the
-  back-off is on, so a HUD can show it.
+  it, up to 60 s (`FirstRetrySeconds`, `LongestRetrySeconds`, each at most a day). It is set
+  whether or not the back-off is on, so a HUD can show it.
 - **`BackOff`, off by default.** When on, a background request whose turn in the queue comes
   while the provider is down, before the retry time, is not sent. Its result has no decision, with
   `ErrorKind` `ProviderDown`, and nothing is logged: the failure that put the provider down
@@ -510,7 +510,7 @@ if (provider is IModelLifecycle models)
 | Call | Ollama | Returns |
 |---|---|---|
 | `ListModelsAsync` | `GET /api/tags` | The pulled models, named with their tags (`qwen3.5` lists as `qwen3.5:latest`), sizes on disk in bytes |
-| `WarmUpAsync` | `POST /api/generate` with only `model`, which loads it and generates nothing | When the model is in memory |
+| `WarmUpAsync` | `POST /api/generate` with `model` and no prompt, which loads it and generates nothing, and `options.num_ctx` the decisions send: Ollama reloads a model asked for at another context size, so a warm-up at the server's default would leave the first decision to load it again | When the model is in memory |
 | `UnloadAsync` | `POST /api/generate` with `keep_alive: 0`, then `GET /api/ps` every 0.25 s | True once the model is no longer listed, false if it still is after 15 s |
 
 - **None of them is a decision**, so none goes through the decision queue: a warm-up does only
@@ -569,6 +569,9 @@ guard.Backlog = new DecisionBacklog(0, BacklogOverflow.RefuseNewest); // none wh
   player-facing one, and is refused instead. `RefuseNewest` refuses the new call. A dropped call
   ends with `ErrorKind` `Superseded`, a refused one with `BacklogFull`; both have no decision,
   were never sent, and log nothing.
+- **A smaller backlog** set while calls wait keeps them. The next call finds it over capacity:
+  under `DropOldest`, as many waiting calls make way as it is over, or, when too few may, none
+  does and the new call is refused. A capacity of 0 always turns the new call away.
 - **The decision under way is never dropped.** Its own token stops it, while it waits in the
   provider's queue or once it is sent, and the next call's turn comes at once. A cancelled
   waiting call leaves the backlog.

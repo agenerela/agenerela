@@ -147,10 +147,12 @@ namespace Agenerela
         /// Queues one request as <see cref="Enqueue(DecisionPriority, CancellationToken)"/> does,
         /// unless that would leave more than <paramref name="capacity"/> waiting for a slot. Then
         /// <paramref name="whenFull"/> decides. <see cref="BacklogOverflow.DropOldest"/> drops the
-        /// oldest waiting request that is not more urgent than this one, a background one before
-        /// any player-facing one, and that one's <see cref="Ticket.Ready"/> throws
-        /// <see cref="SupersededException"/>. With none to drop, or with
-        /// <see cref="BacklogOverflow.RefuseNewest"/>, nothing is queued and this returns null.
+        /// oldest waiting requests that are not more urgent than this one, background ones before
+        /// any player-facing one, as many as the queue would be over: more than one when the
+        /// capacity is smaller than when they joined. Each dropped one's <see cref="Ticket.Ready"/>
+        /// throws <see cref="SupersededException"/>. When too few may be dropped, or with
+        /// <see cref="BacklogOverflow.RefuseNewest"/>, nothing is dropped or queued and this returns
+        /// null.
         /// </summary>
         /// <exception cref="OperationCanceledException"><paramref name="ct"/> is already cancelled; nothing is queued or dropped.</exception>
         internal Ticket Enqueue(DecisionPriority priority, CancellationToken ct, int capacity, BacklogOverflow whenFull)
@@ -158,7 +160,7 @@ namespace Agenerela
             ct.ThrowIfCancellationRequested();
 
             var ticket = new Ticket(this, priority, ct);
-            Ticket dropped = null;
+            List<Ticket> dropped = null;
             lock (gate)
             {
                 // How many would wait once this one joins: those queued and this one, less what the
@@ -166,15 +168,18 @@ namespace Agenerela
                 int waiting = playerFacing.Count + background.Count + 1 - Math.Max(0, maxInFlight - inFlight);
                 if (waiting > capacity)
                 {
-                    dropped = whenFull == BacklogOverflow.DropOldest ? OldestNotAbove(priority) : null;
+                    dropped = whenFull == BacklogOverflow.DropOldest ? OldestNotAbove(priority, waiting - capacity) : null;
                     if (dropped == null)
                     {
                         return null;
                     }
 
                     // In the same critical section as the choice, so a cancellation on another
-                    // thread can neither withdraw it twice nor be lost.
-                    dropped.LeaveForNewer();
+                    // thread can neither withdraw one twice nor be lost.
+                    foreach (var older in dropped)
+                    {
+                        older.LeaveForNewer();
+                    }
                 }
 
                 // Everything that goes before it: what holds a slot, the player-facing queue, and
@@ -184,8 +189,14 @@ namespace Agenerela
                 ticket.Node = QueueFor(priority).AddLast(ticket);
             }
 
-            // Outside the lock, as a cancellation is: its waiter may resume right here.
-            dropped?.Source.TrySetException(new SupersededException());
+            // Outside the lock, as a cancellation is: each waiter may resume right here.
+            if (dropped != null)
+            {
+                foreach (var older in dropped)
+                {
+                    older.Source.TrySetException(new SupersededException());
+                }
+            }
 
             // Registered outside the lock, since a token cancelled meanwhile runs the callback
             // right here, and the callback takes the lock.
@@ -198,17 +209,22 @@ namespace Agenerela
             return ticket;
         }
 
-        // The oldest waiting request a newer one of this priority may push out: a background one,
-        // or for a player-facing newcomer, with no background one waiting, a player-facing one. A
-        // background request never pushes out a player-facing one. Called under the lock.
-        private Ticket OldestNotAbove(DecisionPriority priority)
+        // The count oldest waiting requests a newer one of this priority may push out: background
+        // ones first, then, for a player-facing newcomer, player-facing ones. A background request
+        // never pushes out a player-facing one. Null when fewer than count may go, so either all of
+        // them make way or none does. Called under the lock.
+        private List<Ticket> OldestNotAbove(DecisionPriority priority, int count)
         {
-            if (background.Count > 0)
+            var chosen = new List<Ticket>(count);
+            foreach (var queue in priority == DecisionPriority.PlayerFacing ? new[] { background, playerFacing } : new[] { background })
             {
-                return background.First.Value;
+                for (var node = queue.First; node != null && chosen.Count < count; node = node.Next)
+                {
+                    chosen.Add(node.Value);
+                }
             }
 
-            return priority == DecisionPriority.PlayerFacing && playerFacing.Count > 0 ? playerFacing.First.Value : null;
+            return chosen.Count == count ? chosen : null;
         }
 
         // Hands free slots to the head of the queue until either runs out.

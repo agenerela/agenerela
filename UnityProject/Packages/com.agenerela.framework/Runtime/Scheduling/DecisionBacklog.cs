@@ -11,7 +11,9 @@ namespace Agenerela
         /// The oldest waiting call that is not more urgent than the new one makes way: a background
         /// one first, then, for a player-facing newcomer, a player-facing one. It ends with no
         /// decision, as <see cref="PipelineErrorKind.Superseded"/>. A background call never pushes
-        /// out a player-facing one; when only those wait, it is refused instead.
+        /// out a player-facing one; when only those wait, it is refused instead. After the backlog
+        /// was made smaller, as many make way as it is over, or, if too few may, none do and the
+        /// new call is refused.
         /// </summary>
         DropOldest,
 
@@ -32,7 +34,8 @@ namespace Agenerela
     /// its turn comes, so it sees the targets and state of that moment, and the memory of the
     /// decision before it. When the backlog is full, <see cref="WhenFull"/> drops a waiting call or
     /// refuses the new one; either ends with no decision, before anything is sent, and logs
-    /// nothing. The decision under way is never dropped: its own token is how to stop it, while it
+    /// nothing. Replacing the backlog with a smaller one keeps the calls already waiting; the next
+    /// call made finds it over capacity, and the rule applies to all of them at once. The decision under way is never dropped: its own token is how to stop it, while it
     /// waits in the provider's queue or once it is sent.
     /// </para>
     /// <para>

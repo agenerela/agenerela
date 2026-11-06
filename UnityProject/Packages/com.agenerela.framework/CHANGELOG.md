@@ -203,7 +203,7 @@ While the version stays `0.x`, the public API may change in any release.
   (a `PipelineErrorKind`), `Message`, `DownSinceUtc`, `RetryAtUtc`, `ConsecutiveFailures`, and a
   `Changed` event, raised on the main thread. `Agent` reports every request: any reply marks it
   up, a provider failure down, with a retry time 5 s after the first failure, doubling to 60 s
-  (`FirstRetrySeconds`, `LongestRetrySeconds`). `Reset()` marks it up by hand. **`BackOff`**, off
+  (`FirstRetrySeconds`, `LongestRetrySeconds`, each at most a day). `Reset()` marks it up by hand. **`BackOff`**, off
   by default: when on, a background request whose turn comes while the provider is down, before
   the retry time, is not sent; player-facing requests always are.
 - `PipelineErrorKindExtensions.IsProviderFault(kind)`: true for a failure that is the provider's,
@@ -212,8 +212,8 @@ While the version stays `0.x`, the public API may change in any release.
   implements to manage its server's models: `ListModelsAsync` (a list of `ModelInfo`: `Name`,
   `SizeBytes`), `WarmUpAsync` and `UnloadAsync` for the provider's own model. None goes through
   the decision queue, and failures throw `ProviderException`. `OllamaProvider` implements it with
-  `/api/tags`, an empty `/api/generate`, and `keep_alive: 0` that waits until `/api/ps` no longer
-  lists the model.
+  `/api/tags`, an `/api/generate` with no prompt at the decisions' `num_ctx`, and `keep_alive: 0`
+  that waits until `/api/ps` no longer lists the model.
 - **`Agent.Provider` can be set** (DR-018), to switch an agent to another backend or model at
   runtime. It keeps its memory, actions, targets, sources, guards and state; a decision under way
   finishes on the provider it started with, its refusal line included.

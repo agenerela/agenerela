@@ -42,8 +42,8 @@ namespace Agenerela.Providers
     /// </para>
     /// <para>
     /// It manages its server's models too (<see cref="IModelLifecycle"/>, DR-018): the models
-    /// installed, from <c>/api/tags</c>; a warm-up that loads its model, an empty
-    /// <c>/api/generate</c>; and an unload, <c>keep_alive: 0</c>, which waits until
+    /// installed, from <c>/api/tags</c>; a warm-up that loads its model, an <c>/api/generate</c>
+    /// with no prompt and the context size its decisions send; and an unload, <c>keep_alive: 0</c>, which waits until
     /// <c>/api/ps</c> no longer lists the model. Each is one short request, with the same
     /// <see cref="OllamaSettings.TimeoutSeconds"/> and the same failures.
     /// </para>
@@ -309,13 +309,22 @@ namespace Agenerela.Providers
         /// Loads this provider's model now: an <c>/api/generate</c> naming it with no prompt, which
         /// Ollama answers once the model is in memory. A model already loaded answers at once.
         /// </summary>
+        /// <remarks>
+        /// It sends the same <c>num_ctx</c> as every decision (<see cref="OllamaSettings.ContextSize"/>).
+        /// Ollama loads a model for one context size, and reloads it when a request asks for another,
+        /// so a warm-up at the server's default would leave the first decision to load it again.
+        /// </remarks>
         /// <exception cref="ProviderException">
         /// <see cref="ProviderErrorKind.ModelNotFound"/> when the server has not pulled it, and the
         /// failures <see cref="RequestAsync"/> has, within the same timeout.
         /// </exception>
         public async Awaitable WarmUpAsync(CancellationToken ct)
         {
-            string body = new JObject { ["model"] = model }.ToString(Formatting.None);
+            string body = new JObject
+            {
+                ["model"] = model,
+                ["options"] = new JObject { ["num_ctx"] = contextSize },
+            }.ToString(Formatting.None);
             string text = await Call(HttpMethod.Post, "/api/generate", body, ct);
             try
             {

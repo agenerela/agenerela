@@ -97,16 +97,19 @@ namespace Agenerela.Tests
         // ---- WarmUpAsync ----------------------------------------------------------------------
 
         [Test]
-        public async Task AWarmUpAsksApiGenerateForTheProvidersModelWithNoPrompt()
+        public async Task AWarmUpAsksApiGenerateForTheProvidersModelWithNoPromptAtItsContextSize()
         {
             var server = new Server();
             server.Answer("/api/generate", "{\"model\":\"qwen3.5:2b\",\"response\":\"\",\"done\":true,\"done_reason\":\"load\"}");
+            var provider = new OllamaProvider(new OllamaSettings { ContextSize = 8192 }, server);
 
-            await Done(Provider(server).WarmUpAsync(CancellationToken.None));
+            await Done(provider.WarmUpAsync(CancellationToken.None));
 
             Assert.That(server.Log, Is.EqualTo(new[] { "POST /api/generate" }));
-            Assert.That(JToken.DeepEquals(JObject.Parse(server.Bodies[0]), new JObject { ["model"] = "qwen3.5:2b" }), Is.True,
-                $"Only the model, so Ollama loads it and generates nothing. Sent: {server.Bodies[0]}");
+            var expected = new JObject { ["model"] = "qwen3.5:2b", ["options"] = new JObject { ["num_ctx"] = 8192 } };
+            Assert.That(JToken.DeepEquals(JObject.Parse(server.Bodies[0]), expected), Is.True,
+                "No prompt, so Ollama loads the model and generates nothing; the decisions' num_ctx, so the first "
+              + $"decision does not load it again at another size (Codex review, F1). Sent: {server.Bodies[0]}");
         }
 
         [Test]

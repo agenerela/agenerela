@@ -116,8 +116,29 @@ namespace Agenerela.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => health.FirstRetrySeconds = float.PositiveInfinity);
             Assert.Throws<ArgumentOutOfRangeException>(() => health.LongestRetrySeconds = -1f);
             Assert.Throws<ArgumentOutOfRangeException>(() => health.LongestRetrySeconds = float.PositiveInfinity);
+            Assert.Throws<ArgumentOutOfRangeException>(() => health.FirstRetrySeconds = 1e12f, "Finite, but past what a DateTime can hold (Codex review, F3).");
+            Assert.Throws<ArgumentOutOfRangeException>(() => health.LongestRetrySeconds = 86401f, "More than a day.");
             Assert.That(health.FirstRetrySeconds, Is.EqualTo(5f));
             Assert.That(health.LongestRetrySeconds, Is.EqualTo(60f));
+        }
+
+        [Test]
+        public void TheLongestRetrySettingsStillGiveARetryTimeAndChangeTheStateWhole()
+        {
+            var health = Health();
+            health.LongestRetrySeconds = 86400f;
+            health.FirstRetrySeconds = 86400f;
+
+            Assert.DoesNotThrow(() => health.ReportFailure(PipelineErrorKind.ProviderTimeout, "No reply."));
+            Assert.That(health.RetryAtUtc, Is.EqualTo(Start.AddDays(1)));
+            health.BackOff = true;
+            Assert.That(health.HoldsBack(DecisionPriority.Background, out _), Is.True);
+
+            now = DateTime.MaxValue.AddHours(-1);
+            Assert.DoesNotThrow(() => health.ReportFailure(PipelineErrorKind.ProviderTimeout, "No reply."),
+                "A clock near the end of time saturates rather than throwing half way through a change.");
+            Assert.That(health.RetryAtUtc, Is.EqualTo(DateTime.MaxValue));
+            Assert.That(health.ConsecutiveFailures, Is.EqualTo(2));
         }
 
         [Test]
