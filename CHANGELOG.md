@@ -68,13 +68,15 @@ phase table and the open issues, not here.
   Each situation chains one agent's decision into another's, through the game alone.
   - **The thief:** it takes a ware from Odile's counter and runs for the eastern road. Odile can
     `call_guard`, whose target is a guard from a custom `ITargetSource`, and her call becomes that
-    guard's `Merchant` stimulus. A guard who sees the thief running can `chase` it; caught, it
-    drops the ware back on the counter.
+    guard's `Merchant` stimulus. Wren can `chase` the thief, and Bram goes after it with
+    `attack_target`; caught, it drops the ware back on the counter.
   - **Night at the gate:** nightfall shuts the gate. Wren takes the night watch and alone gets
     `open_gate` and `close_gate`, and Bram goes off watch. A test checks that Bram, the evaluation
     agent, is offered the same actions by night as by day.
-  - **A fire** at the bread stall: whoever sees the smoke is asked, and guards `fetch_water` from
-    the well until three buckets put it out.
+  - **A fire** at the bread stall: whoever sees the smoke is asked, and Wren can `fetch_water`
+    from the well until three buckets put it out.
+  - **Bram keeps his actions:** `chase`, `fetch_water` and the gate's actions sit on components only
+    Wren carries, and a test checks that whatever happens Bram is offered nothing new.
   - **No `bell_cooldown` guard:** availability already keeps the bell from ringing twice within
     30 s, and a test checks two guards answering at once ring it once.
   - **Presenter keys** F1 to F5 (reset, the wolf, the thief, a fire, dusk) and a panel (F12).

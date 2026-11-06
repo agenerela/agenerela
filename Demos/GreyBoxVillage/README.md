@@ -261,12 +261,18 @@ four are the evaluation agent's; the rest are this demo's. No example is an eval
 | `block_path` | a zone | Stands in the zone's entrance | always |
 | `sound_alarm` | none | Rings the bell for 30 s; villagers run to the shelter | the bell is silent, and the player speaks or the guard sees a wolf within 15 m |
 | `patrol` | none | Walks the guard's loop (above) | a quiet moment, with the guard not following and not on the night watch |
-| `chase` | the thief or the wolf | Runs after it at 7 m/s; a caught thief drops what it took, the wolf flees | a running thief or the wolf is in sight, but not a wolf already running for its den |
-| `fetch_water` | none | Fills a bucket at the well and throws it on the fire, again and again until it is out | a fire burns |
 | `none` | none | Nothing | always |
 
-Wren has two more, on her own `NightWatch` component, so they are never Bram's (below):
-`open_gate` and `close_gate`.
+**Wren has four more,** on components only she carries, so they are never Bram's. Bram is the
+evaluation agent, and #153 keeps his actions; a test checks that whatever happens he is offered
+nothing outside the table above.
+
+| Action | Component | Target | What it does | Offered when |
+|---|---|---|---|---|
+| `chase` | `Responder` | the thief or the wolf | Runs after it at 7 m/s; a caught thief drops what it took, the wolf flees | a running thief or the wolf is in sight, but not a wolf already running for its den |
+| `fetch_water` | `Responder` | none | Fills a bucket at the well and throws it on the fire, again and again until it is out | a fire burns |
+| `open_gate` | `NightWatch` | none | Opens the village gate | she has the night watch, the gate is shut, and the player or the captain asks |
+| `close_gate` | `NightWatch` | none | Shuts it | she has the night watch and the gate is open |
 
 Who is asking decides most of that column. A model served by Ollama never reads the schema, so
 an action's description never reaches it; what it sees is the ids, one example each, the
@@ -343,7 +349,10 @@ the bottom right corner; world labels keep out from under it.
 
 Bram sees the wolf within 15 m, so `sound_alarm` is offered. The bell reaches Wren, Odile and Hale,
 who has `send_guard`: the nearest guard who is free is then ordered to the place he names, labelled
-`Captain`. A guard who can see the wolf may `chase` it, and it flees to its den.
+`Captain`. Bram can drive the wolf off with `attack_target`, and Wren, if she sees it, with `chase`.
+Bram used to be offered `chase` beside the bell too, and played live he chose it over the bell in
+four runs of four, so the chain to Hale never began on its own; with his own actions only, it may
+again, but that has not been played live yet.
 
 ### The thief (F3)
 
@@ -356,21 +365,23 @@ out. Once it has taken a ware:
   and places, not people, so no villager is among her targets. Her call becomes that guard's
   stimulus, with her own words, labelled `Merchant`, the same way Hale's `send_guard` works.
   `call_guard` is offered while a thief runs or a fire burns, and `target_fits_action` contains a
-  call at anything but a guard.
-- **A guard who sees it running** is asked, once per theft, and offered **`chase`**. A called guard
-  who cannot see it yet is offered no chase; it can go to the eastern road, and is asked again when
-  it sees the thief. The thief runs at 2.5 m/s and a chasing guard at 7 m/s. `attack_target` at a
-  running thief runs after it too: played live, the model picked it as often as `chase`, and a
-  guard that walked to where the thief had been let it get away.
+  call at anything but a guard. For a thief she may call either guard; for a fire alone, only one
+  who can carry water (Wren), so the call never goes to a guard with nothing to do about it.
+- **A guard who sees it running** is asked, once per theft. Wren is offered **`chase`**; Bram goes
+  after it with **`attack_target`**, which runs after a running thief: played live, the model picked
+  `attack_target` as often as `chase`, and a guard that walked to where the thief had been let it
+  get away. A called guard who cannot see the thief yet can go to the eastern road, and is asked
+  again when it sees it. The thief runs at 2.5 m/s and a guard after it at 7 m/s.
 - **Caught,** the thief drops the ware, which goes back on the counter at once. If it reaches the
   far end of the road it is gone, and the ware with it until the stall restocks it, 90 s later.
 
 ### A fire (F4)
 
 Every guard who can see the smoke above the stall, and every agent within 10 m (Odile), is asked.
-**`fetch_water`** is offered only while the fire burns. A guard who takes it runs to the well, fills
-a bucket, carries it to the stall and throws it, and goes back for more, until three buckets have
-put the fire out. Two guards put it out twice as fast. Odile can `call_guard` for the fire too.
+**`fetch_water`** is Wren's, offered only while the fire burns. She runs to the well, fills a bucket,
+carries it to the stall and throws it, and goes back for more, until three buckets have put the fire
+out. Odile can `call_guard` for the fire, and is offered Wren alone. Bram is told of the fire, and
+can go there or warn the player, but carrying water is not one of his actions.
 
 ### Night at the gate (F5)
 
@@ -385,10 +396,12 @@ sees the wolf or a visitor through the bars.
 - Only Wren has **`open_gate`** and **`close_gate`**, available from the gate's state while she has
   the watch: `close_gate` while it is open, `open_gate` while it is shut and the player or the
   captain asks. A quiet moment never opens it, and the watch does not patrol.
-- **Bram's action set never changes, day or night.** He is the evaluation agent, and a test checks
+- **Bram's action set never changes, day or night.** He is the evaluation agent. One test checks
   that whoever asks him (the player, a zone, the wolf, a quiet moment) he is offered the same
-  actions at night as by day. Only his observations change: every agent is told "It is night."
-  instead of "It is daytime.".
+  actions at night as by day; another, that with the wolf close, a thief running and the stall on
+  fire, by day and by night, whoever asks, he is offered nothing outside his own actions and
+  registers no new one. Only his observations change: every agent is told "It is night." instead
+  of "It is daytime.". Wren's card and name tag say "the night watch" while she has it.
 - At dawn the gate opens, Wren goes back to the bridge and Bram to the gate.
 
 ### The bell: no `bell_cooldown` guard
@@ -479,10 +492,11 @@ They cover:
   1.5 MB.
 - The situations (`VillageSituationTests`): a thief robs Odile, who is offered `call_guard` only
   while there is trouble, aimed only at a guard, and her call reaches the guard she named with her
-  words; `chase` is offered only while a thief or the wolf is in sight; a caught thief's ware goes
-  back on the counter, and one that gets away takes it; nightfall shuts the gate and hands the
-  watch to Wren, who alone opens and shuts it, and never on a quiet moment; Bram is offered the
-  same actions by night as by day, whoever asks; the watch sees through the shut gate; whoever
+  words, and for a fire only a guard who can carry water; `chase` is offered only while a thief
+  or the wolf is in sight; a caught thief's ware goes back on the counter, and one that gets away
+  takes it; nightfall shuts the gate and hands the watch to Wren, who alone opens and shuts it, and
+  never on a quiet moment; Bram is offered the same actions by night as by day, whoever asks, and
+  nothing outside his own actions whatever happens; the watch sees through the shut gate; whoever
   sees the smoke is asked, `fetch_water` is offered only while the fire burns, and three buckets put
   it out; two guards answering the bell at once ring it once; a reset drops a decision still with
   the model; the new actions' few-shot examples are not evaluation prompts; and the scene is wired
@@ -555,12 +569,12 @@ stops answering, a red banner says so and the village stays playable (press **F1
 | 0:15 | Walk up to Bram at the south gate and press **E** | "Hello. Anything to report?" | Bram's card: `Player`, PlayerFacing, the seven actions he is offered, and his answer above his head |
 | 0:45 | Beside Bram | "Walk with me for a bit." | `follow_player`, and he follows you. On the next line his card offers `stop_following` in its place |
 | 1:05 | A few steps on | "Thanks, you can stay here now." | `stop_following`. Only the player starts or ends an escort |
-| 1:20 | Inside the gate, by the camp, facing the road (press **Esc** to stop typing first) | **F2** | The wolf comes up the road. Bram's card: `Event`, "A wolf has come out of the woods, 14 m from you", `sound_alarm` offered because it is within 15 m. The bell rings, the villagers run for the shelter, three bell requests queue in the lane, and Hale sends a guard to the gate with a `Captain` order. Bram is offered `chase` too, and live he chose it over the bell: then walk up to him and say "Ring the bell, Bram! Warn the village!", since the player can always ask for the bell |
-| 2:10 | **F1**, then walk to the market, south of Odile's stall | **F3** | The thief takes the bread. Odile's card: `call_guard` offered, Wren called with her words; Wren's card shows a `Merchant` stimulus. The guard who sees it running chases it (`chase`, offered only now); caught, the bread goes back on the counter |
-| 3:10 | **F1**, then stand between the well and the market | **F4** | The bread stall burns. Whoever sees the smoke is asked, and `fetch_water` is offered only now. Guards run between the well and the stall with buckets; three buckets put it out. Odile calls a guard too |
-| 4:00 | **F1**, then walk out through the south gate and turn round | **F5** | Dusk. The gate shuts, Wren hurries to it and takes the watch, Bram goes off to the campfire. Wren's card: `open_gate` is not offered, because nobody has asked |
+| 1:20 | Inside the gate, by the camp, facing the road (press **Esc** to stop typing first) | **F2** | The wolf comes up the road. Bram's card: `Event`, "A wolf has come out of the woods, 14 m from you", `sound_alarm` offered because it is within 15 m. If he rings it, the villagers run for the shelter, three bell requests queue in the lane, and Hale sends a guard to the gate with a `Captain` order. He may drive the wolf off instead (`attack_target`): then walk up to him and say "Ring the bell, Bram! Warn the village!", since the player can always ask for the bell |
+| 2:10 | **F1**, then walk to the market, south of Odile's stall | **F3** | The thief takes the bread. Odile's card: `call_guard` offered, Wren called with her words; Wren's card shows a `Merchant` stimulus. A guard who sees it running goes after it (Wren's `chase`, offered only now, or Bram's `attack_target`); caught, the bread goes back on the counter |
+| 3:10 | **F1**, then stand between the well and the market | **F4** | The bread stall burns. Whoever sees the smoke is asked. Wren is offered `fetch_water`, only now, and runs between the well and the stall with buckets; three put it out. Odile calls her too, the only guard she is offered for a fire. Bram's card offers nothing new |
+| 4:00 | **F1**, then walk out through the south gate and turn round | **F5** | Dusk. The gate shuts, Wren hurries to it and takes the watch (her card now says "the night watch at the gate"), Bram goes off to the campfire. Wren's card: `open_gate` is not offered, because nobody has asked |
 | 4:20 | Outside the shut gate, facing Wren | "Wren, it's me. Let me in, please!" | Wren is offered `open_gate`, only now and only her; the doors swing open |
-| 4:35 | Walk in | "Thank you. Shut it behind me." | `close_gate`. Then walk to Bram at the campfire and ask "Quiet night, Bram?": his card offers exactly what it offered by day. He is the evaluation agent, and night never changes his actions |
+| 4:35 | Walk in | "Thank you. Shut it behind me." | `close_gate`. Then walk to Bram at the campfire and ask "Quiet night, Bram?": his card offers exactly what it offered by day. He is the evaluation agent: neither night, nor the wolf, the thief or the fire, gives him an action he did not have |
 | 5:00 | | | End on the board: every decision, and why each one could or could not be made |
 
 What to say while it plays: the model never moves anyone. It picks from the actions it is offered,

@@ -146,6 +146,23 @@ namespace Demos.GreyBoxVillage.Tests
         }
 
         [Test]
+        public async Task ForAFireOdileCanCallOnlyAGuardWhoCanCarryWater()
+        {
+            fire.Ignite();
+            await Idle();
+            var call = Records("Odile").Single(r => r.Source == "fire");
+            Assert.That(call.OfferedActions, Does.Contain("call_guard"));
+            Assert.That(call.OfferedTargets, Does.Contain("wren").And.Not.Contain("bram"), "Bram cannot fetch water, so he is not offered for a fire.");
+            Assert.That(call.Observations, Does.Contain("Guards you can call: wren (").And.Not.Contain("bram ("));
+
+            // With a thief running too, every guard can be called: Bram catches one with attack_target.
+            thief.Begin();
+            thief.Grab();
+            await Idle();
+            Assert.That(Records("Odile").Last().OfferedTargets, Does.Contain("wren").And.Contain("bram"));
+        }
+
+        [Test]
         public async Task CallGuardTakesOnlyAGuard()
         {
             thief.Begin();
@@ -162,34 +179,34 @@ namespace Demos.GreyBoxVillage.Tests
         [Test]
         public async Task ChaseIsOfferedOnlyWhileAThiefOrTheWolfIsInSight()
         {
-            await bram.HearPlayerAsync("Hello.");
-            Assert.That(bram.Last.OfferedActions, Does.Not.Contain("chase"));
+            await wren.HearPlayerAsync("Hello.");
+            Assert.That(wren.Last.OfferedActions, Does.Not.Contain("chase"));
 
             thief.Begin();
             thief.Grab();
             await Idle();
-            // Behind the cottage by the gate: running, but out of Bram's sight.
-            thief.transform.position = new Vector3(-6f, 0, -5.8f);
+            // Behind the cottage south of the bridge: running, but out of Wren's sight.
+            thief.transform.position = new Vector3(10f, 0, 6.5f);
             Physics.SyncTransforms();
-            await bram.HearPlayerAsync("Hello?");
-            Assert.That(bram.Last.OfferedActions, Does.Not.Contain("chase"), "The thief is behind the cottage.");
+            await wren.HearPlayerAsync("Hello?");
+            Assert.That(wren.Last.OfferedActions, Does.Not.Contain("chase"), "The thief is behind the cottage.");
 
-            thief.transform.position = bram.transform.position + new Vector3(0, 0, 8f);
+            thief.transform.position = wren.transform.position + new Vector3(0, 0, -8f);
             Physics.SyncTransforms();
-            await bram.HearPlayerAsync("Look!");
-            Assert.That(bram.Last.OfferedActions, Does.Contain("chase"), "The thief is in plain sight.");
-            Assert.That(bram.Last.OfferedTargets, Does.Contain("thief"));
-            Assert.That(bram.Last.Observations, Does.Contain("A thief is running for the eastern_road, 8 m from you."));
+            await wren.HearPlayerAsync("Look!");
+            Assert.That(wren.Last.OfferedActions, Does.Contain("chase"), "The thief is in plain sight.");
+            Assert.That(wren.Last.OfferedTargets, Does.Contain("thief"));
+            Assert.That(wren.Last.Observations, Does.Contain("A thief is running for the eastern_road, 8 m from you."));
 
             thief.ResetState();
-            var wolf = bram.Senses.Wolf;
+            var wolf = wren.Senses.Wolf;
             var start = wolf.transform.position;
             try
             {
-                wolf.transform.position = bram.transform.position + new Vector3(0, 0, 5f);
+                wolf.transform.position = wren.transform.position + new Vector3(0, 0, 5f);
                 Physics.SyncTransforms();
-                await bram.HearPlayerAsync("A wolf!");
-                Assert.That(bram.Last.OfferedActions, Does.Contain("chase"), "The wolf is in sight.");
+                await wren.HearPlayerAsync("A wolf!");
+                Assert.That(wren.Last.OfferedActions, Does.Contain("chase"), "The wolf is in sight.");
             }
             finally
             {
@@ -204,17 +221,17 @@ namespace Demos.GreyBoxVillage.Tests
             thief.Begin();
             thief.Grab();
             await Idle();
-            thief.transform.position = bram.transform.position + new Vector3(0, 0, 8f);
+            thief.transform.position = wren.transform.position + new Vector3(0, 0, -8f);
             Physics.SyncTransforms();
             provider.Reply = FakeVillageProvider.Decision("chase", "thief", "Stop, thief!");
-            await bram.HearPlayerAsync("After him!");
-            Assert.That(bram.Last.Outcome, Is.EqualTo("executed"));
-            Assert.That(bramBody.IsChasing, Is.True);
-            Assert.That(bramBody.Activity, Is.EqualTo("chasing the thief"));
+            await wren.HearPlayerAsync("After him!");
+            Assert.That(wren.Last.Outcome, Is.EqualTo("executed"));
+            Assert.That(wrenBody.IsChasing, Is.True);
+            Assert.That(wrenBody.Activity, Is.EqualTo("chasing the thief"));
 
-            thief.Catch(bramBody);
+            thief.Catch(wrenBody);
             Assert.That(thief.State, Is.EqualTo(VillageThief.Phase.Caught));
-            Assert.That(thief.CaughtBy, Is.EqualTo(bramBody));
+            Assert.That(thief.CaughtBy, Is.EqualTo(wrenBody));
             Assert.That(thief.Loot, Is.Null);
             Assert.That(Stock("bread").gameObject.activeSelf, Is.True, "The ware is back on the counter.");
             Assert.That(commands.Hud.ToastLog.Last(), Does.Contain("caught the thief"));
@@ -302,6 +319,52 @@ namespace Demos.GreyBoxVillage.Tests
             Assert.That(bram.Agent.Actions.Definitions.Select(d => d.Id), Does.Not.Contain("open_gate").And.Not.Contain("close_gate"));
         }
 
+        // #153 keeps Bram's actions: whatever happens, he is offered nothing he could not be offered
+        // before the situations, and he registers no new action at all. Wren carries chase,
+        // fetch_water and the gate (Responder, NightWatch).
+        private static readonly string[] BramsOwnActions =
+            { "follow_player", "stop_following", "move_to", "attack_target", "warn_player", "block_path", "sound_alarm", "patrol", "none" };
+
+        [Test]
+        public async Task BramIsOfferedNothingOutsideHisOwnActionsWhateverHappens()
+        {
+            Assert.That(bram.Agent.Actions.Definitions.Select(d => d.Id),
+                Is.EquivalentTo(BramsOwnActions.Where(a => a != "none").Concat(new[] { "offer_quest", "complete_quest" })),
+                "Bram registers an action he did not have before the situations.");
+            var wolf = bram.Senses.Wolf;
+            var start = wolf.transform.position;
+            try
+            {
+                // Everything at once: the wolf close, a thief running past, the stall on fire.
+                wolf.transform.position = bram.transform.position + new Vector3(0, 0, 5f);
+                thief.Begin();
+                thief.Grab();
+                thief.transform.position = bram.transform.position + new Vector3(3f, 0, 8f);
+                Physics.SyncTransforms();
+                fire.Ignite();
+                await Idle();
+                foreach (bool night in new[] { false, true })
+                {
+                    Night(night);
+                    foreach (var source in new[] { "player", "zone", "wolf", "quiet", "thief", "merchant", "fire", "bell", "captain" })
+                    {
+                        if (source == "player") await bram.HearPlayerAsync("What now?");
+                        else await bram.ReportEventAsync(source, "Event", "Something is happening (" + source + ").", DecisionPriority.Background);
+                        await Idle();
+                        var offered = bram.Last.OfferedActions;
+                        Assert.That(offered, Is.SubsetOf(BramsOwnActions), (night ? "night, " : "day, ") + source);
+                        if (source == "thief") Assert.That(bram.Last.OfferedTargets, Does.Contain("thief"), "He can still go after the thief.");
+                    }
+                }
+            }
+            finally
+            {
+                wolf.ResetState();
+                wolf.transform.position = start;
+                Physics.SyncTransforms();
+            }
+        }
+
         [Test]
         public void NightfallShutsTheGateAndHandsTheWatchToWren()
         {
@@ -314,6 +377,9 @@ namespace Demos.GreyBoxVillage.Tests
             Assert.That(wrenBody.CurrentPost, Is.EqualTo(watch.WatchPost));
             Assert.That(wrenBody.Activity, Does.Contain("take the night watch"));
             Assert.That(bramBody.CurrentPost, Is.EqualTo(watch.RelievedPost), "Bram goes off watch, so he is not the one at the gate.");
+            Assert.That(wren.RoleNow, Is.EqualTo("the night watch at the gate"), "Her card says what she keeps at night.");
+            Assert.That(wren.GetComponent<NameTag>().Detail, Is.EqualTo("night watch"));
+            Assert.That(bram.RoleNow, Is.EqualTo(bram.Role));
 
             Night(false);
             Assert.That(gate.IsOpen, Is.True);
@@ -321,6 +387,8 @@ namespace Demos.GreyBoxVillage.Tests
             Assert.That(watch.OnWatch, Is.False);
             Assert.That(wrenBody.CurrentPost, Is.EqualTo(wrenBody.Post));
             Assert.That(bramBody.CurrentPost, Is.EqualTo(bramBody.Post));
+            Assert.That(wren.RoleNow, Is.EqualTo(wren.Role));
+            Assert.That(wren.GetComponent<NameTag>().Detail, Is.Not.EqualTo("night watch"));
         }
 
         [Test]
@@ -374,10 +442,10 @@ namespace Demos.GreyBoxVillage.Tests
         [Test]
         public async Task WhoeverSeesTheSmokeIsAskedAndFetchWaterIsOfferedOnlyWhileItBurns()
         {
-            await bram.HearPlayerAsync("Hello.");
-            Assert.That(bram.Last.OfferedActions, Does.Not.Contain("fetch_water"));
+            await wren.HearPlayerAsync("Hello.");
+            Assert.That(wren.Last.OfferedActions, Does.Not.Contain("fetch_water"));
 
-            provider.Script = r => r.SystemPrompt.Contains("You are Bram")
+            provider.Script = r => r.SystemPrompt.Contains("You are Wren")
                 ? FakeVillageProvider.Decision("fetch_water", "no_target", "Water!")
                 : FakeVillageProvider.Decision("none", "no_target");
             fire.Ignite();
@@ -387,12 +455,14 @@ namespace Demos.GreyBoxVillage.Tests
             Assert.That(told, Does.Contain("Odile"), "Odile stands by the stall and hears it.");
             Assert.That(told, Does.Contain("Bram").And.Contain("Wren"), "Both guards see the smoke from their posts.");
             Assert.That(told, Does.Not.Contain("Hale"), "The captain, behind the keep's wall, neither sees nor hears it.");
-            var guard = Records("Bram").Single(r => r.Source == "fire");
+            var guard = Records("Wren").Single(r => r.Source == "fire");
             Assert.That(guard.Stimulus, Is.EqualTo(fire.Stimulus));
             Assert.That(guard.OfferedActions, Does.Contain("fetch_water"));
             Assert.That(guard.Outcome, Is.EqualTo("executed"));
-            Assert.That(bramBody.IsFetchingWater, Is.True);
-            Assert.That(bramBody.Activity, Is.EqualTo("running to the well for water"));
+            Assert.That(wrenBody.IsFetchingWater, Is.True);
+            Assert.That(wrenBody.Activity, Is.EqualTo("running to the well for water"));
+            Assert.That(Records("Bram").Single(r => r.Source == "fire").OfferedActions, Does.Not.Contain("fetch_water"),
+                "Bram is told of the fire, but carrying water is not his.");
         }
 
         [Test]
@@ -408,8 +478,8 @@ namespace Demos.GreyBoxVillage.Tests
             Assert.That(fire.Douse(), Is.True);
             Assert.That(fire.IsBurning, Is.False);
             Assert.That(fire.Effects.All(e => !e.activeSelf), Is.True, "The flames and smoke go out with it.");
-            await bram.HearPlayerAsync("Is it out?");
-            Assert.That(bram.Last.OfferedActions, Does.Not.Contain("fetch_water"));
+            await wren.HearPlayerAsync("Is it out?");
+            Assert.That(wren.Last.OfferedActions, Does.Not.Contain("fetch_water"));
         }
 
         // ---- The bell ------------------------------------------------------------------------------
@@ -478,13 +548,15 @@ namespace Demos.GreyBoxVillage.Tests
                 Has.All.Not.Null);
             Assert.That(VillagePresenter.Keys.Select(k => k.key), Is.EqualTo(new[] { "F1", "F2", "F3", "F4", "F5", "F12" }));
             Assert.That(commands.Minds.Where(m => m.GetComponent<NightWatch>() != null), Is.EqualTo(new[] { wren }), "Wren alone keeps the night watch.");
+            Assert.That(commands.Minds.Where(m => m.GetComponent<Responder>() != null), Is.EqualTo(new[] { wren }), "Wren alone chases and carries water.");
+            Assert.That(wren.GetComponent<Responder>().Guard, Is.EqualTo(wrenBody));
+            Assert.That(wrenBody.Bucket, Is.Not.Null);
             Assert.That(watch.Relieved, Is.EqualTo(bramBody));
             Assert.That(watch.Day, Is.EqualTo(commands.Day));
             Assert.That(gate.gameObject.layer, Is.EqualTo(2), "The gate's blocker must not hide anything from a guard's sight.");
             foreach (var guard in new[] { bramBody, wrenBody })
             {
                 Assert.That(guard.Fire, Is.EqualTo(fire), guard.name);
-                Assert.That(guard.Bucket, Is.Not.Null, guard.name);
                 Assert.That(guard.GetComponent<GuardSenses>().Thief, Is.EqualTo(thief), guard.name);
                 Assert.That(guard.GetComponent<GuardSenses>().Fire, Is.EqualTo(fire), guard.name);
             }
@@ -505,9 +577,9 @@ namespace Demos.GreyBoxVillage.Tests
             thief.Begin();
             thief.Grab();
             await Idle();
-            thief.transform.position = bram.transform.position + new Vector3(0, 0, 8f);
+            thief.transform.position = wren.transform.position + new Vector3(0, 0, -8f);
             Physics.SyncTransforms();
-            await bram.HearPlayerAsync("Look!");
+            await wren.HearPlayerAsync("Look!");
             fire.Ignite();
             await Idle();
             Night(true);

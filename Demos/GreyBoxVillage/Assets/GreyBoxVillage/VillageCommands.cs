@@ -267,7 +267,7 @@ namespace Demos.GreyBoxVillage
                 if (Book != null && keyboard.jKey.wasPressedThisFrame) { Book.Toggle("journal"); bookVersion++; }
             }
             if (Input != null)
-                Input.Converse(listener?.Name, listener?.Role,
+                Input.Converse(listener?.Name, listener?.RoleNow,
                     listener == null ? null : listener.IsDeciding ? "thinking..." : ModelProblem != null ? "no model" : "listening",
                     listener?.Conversation, listener?.Body.Suggestions);
             ShowBoard(listener);
@@ -374,7 +374,7 @@ namespace Demos.GreyBoxVillage
         {
             float distance = Vector3.Distance(Player.position, mind.transform.position);
             card.Name = mind.Name;
-            card.Role = mind.Role;
+            card.Role = mind.RoleNow;
             card.Listening = listening;
             card.Thinking = mind.IsDeciding;
             card.Activity = mind.Body.Activity + "   ·   " + distance.ToString("0", CultureInfo.InvariantCulture) + " m from you" +

@@ -458,7 +458,8 @@ namespace Demos.GreyBoxVillage.Editor
             camera.transform.LookAt(new Vector3(0, 1, -18));
             var sun = CreateLight();
             var day = Dress(camera, sun, alarm);
-            DressSituations(villageGate, fire, new[] { (VillageGuard)bram.Body, (VillageGuard)wren.Body });
+            // Only Wren fetches water, so only she has a bucket.
+            DressSituations(villageGate, fire, new[] { (VillageGuard)wren.Body });
 
             // The night watch is Wren's alone, so only she is ever offered the gate (NightWatch).
             var watch = wren.gameObject.AddComponent<NightWatch>();
@@ -469,6 +470,8 @@ namespace Demos.GreyBoxVillage.Editor
             watch.WatchPost = watchPost;
             watch.Relieved = (VillageGuard)bram.Body;
             watch.RelievedPost = offWatch;
+            // So are chase and fetch_water: Bram, the evaluation agent, keeps the actions he had.
+            wren.gameObject.AddComponent<Responder>().Guard = (VillageGuard)wren.Body;
 
             var boardObject = new GameObject("AgentBoard");
             var board = boardObject.AddComponent<AgentBoard>();

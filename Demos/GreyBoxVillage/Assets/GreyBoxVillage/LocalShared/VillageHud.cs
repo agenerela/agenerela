@@ -256,7 +256,7 @@ namespace Demos.Shared
             for (int i = 0; i < bubbles.Count; i++)
             {
                 var b = bubbles[i];
-                if (i >= list.Count || !Place(b, camera, list[i].World, true) || UnderPanel(b))
+                if (i >= list.Count || !Place(b, camera, list[i].World, true, clamp: true) || UnderPanel(b))
                 {
                     DemoUI.Show(b, false);
                     continue;
@@ -355,7 +355,9 @@ namespace Demos.Shared
         // Puts an element over a world point; false when the point is behind the camera. From the
         // viewport and the panel's own size, not the screen's: a panel drawn into a RenderTexture
         // (the capture tool's) has its size, not the screen's, and the two agree on a screen.
-        private bool Place(VisualElement element, Camera camera, Vector3 worldPoint, bool above)
+        // With clamp, the element is kept wholly on screen: a bubble whose speaker stands at the edge
+        // was cut off there.
+        private bool Place(VisualElement element, Camera camera, Vector3 worldPoint, bool above, bool clamp = false)
         {
             var viewport = camera.WorldToViewportPoint(worldPoint);
             if (viewport.z <= 0.1f) return false;
@@ -366,9 +368,17 @@ namespace Demos.Shared
             float w = element.resolvedStyle.width, h = element.resolvedStyle.height;
             if (float.IsNaN(w)) w = 0;
             if (float.IsNaN(h)) h = 0;
-            element.style.left = panelPoint.x - w / 2f;
+            float left = panelPoint.x - w / 2f;
             // A bubble rises clear of the name tag under it.
-            element.style.top = panelPoint.y - (above ? h + BubbleLift : h / 2f);
+            float top = panelPoint.y - (above ? h + BubbleLift : h / 2f);
+            if (clamp)
+            {
+                const float margin = 6f;
+                left = Mathf.Clamp(left, margin, Mathf.Max(margin, size.x - w - margin));
+                top = Mathf.Clamp(top, margin, Mathf.Max(margin, size.y - h - margin));
+            }
+            element.style.left = left;
+            element.style.top = top;
             return true;
         }
 

@@ -46,20 +46,22 @@ namespace Demos.GreyBoxVillage.Editor
                 return Decision("sound_alarm", "no_target", "Wolf at the gate! Ring the bell!");
             if (who == "Hale" && s.Contains("alarm bell is ringing") && Can("send_guard"))
                 return Decision("send_guard", "village_gate", "To the gate, and drive that wolf off!");
-            if (s.StartsWith("Captain:") && Can("chase") && targets.Contains("wolf"))
-                return Decision("chase", "wolf", "After it, before it gets in!");
+            // A guard sent after the wolf runs at it: Wren chases, Bram (who has no chase) attacks.
+            if (s.StartsWith("Captain:") && targets.Contains("wolf") && (Can("chase") || Can("attack_target")))
+                return Decision(Can("chase") ? "chase" : "attack_target", "wolf", "After it, before it gets in!");
 
-            // The thief: Odile calls Wren, and whoever sees it running gives chase.
+            // The thief: Odile calls Wren, and whoever sees it running goes after it: Wren with
+            // chase, Bram with attack_target, which runs after a running thief.
             if (who == "Odile" && Can("call_guard") && s.Contains("snatched"))
                 return Decision("call_guard", "wren", "Wren! Stop that thief, he's got my bread!");
-            if (Can("chase") && targets.Contains("thief"))
-                return Decision("chase", "thief", "Stop, thief!");
+            if (targets.Contains("thief") && (Can("chase") || Can("attack_target")))
+                return Decision(Can("chase") ? "chase" : "attack_target", "thief", "Stop, thief!");
             if (s.StartsWith("Merchant:") && s.Contains("thief") && Can("move_to"))
                 return Decision("move_to", "eastern_road", "Coming, Odile! Which way did he go?");
 
-            // The fire: Odile calls Bram, and every guard who sees the smoke fetches water.
+            // The fire: Odile calls Wren, the only guard she is offered for it, and Wren fetches water.
             if (who == "Odile" && Can("call_guard") && s.Contains("on fire"))
-                return Decision("call_guard", "bram", "Bram! Water, quick, the stall's alight!");
+                return Decision("call_guard", "wren", "Wren! Water, quick, the stall's alight!");
             if (Can("fetch_water"))
                 return Decision("fetch_water", "no_target", "Buckets! Get water from the well!");
 

@@ -59,20 +59,31 @@ namespace Demos.GreyBoxVillage
                 yield return "A thief is running for the eastern_road with your " + Thief.Loot.Id + ".";
             if (Fire != null && Fire.IsBurning) yield return "There is a fire at " + Fire.Where + ".";
             // The guards are offered by their own source, so the local model needs their ids here.
-            var commands = Village();
-            if (commands != null)
-            {
-                var guards = commands.Minds.Where(m => m != null && m.Body is VillageGuard)
-                    .Select(m => IdOf(m.transform) + " (" + Vector3.Distance(m.transform.position, transform.position).ToString("0", System.Globalization.CultureInfo.InvariantCulture) +
-                                 " m away, " + m.Body.Activity + ")").ToList();
-                if (guards.Count > 0) yield return "Guards you can call: " + string.Join(", ", guards) + ".";
-            }
+            var guards = CallableGuards()
+                .Select(g => IdOf(g.transform) + " (" + Vector3.Distance(g.transform.position, transform.position).ToString("0", System.Globalization.CultureInfo.InvariantCulture) +
+                             " m away, " + g.Activity + ")").ToList();
+            if (guards.Count > 0) yield return "Guards you can call: " + string.Join(", ", guards) + ".";
         }
 
         public override IEnumerable<ITargetSource> TargetSources()
         {
             foreach (var source in base.TargetSources()) yield return source;
-            yield return new GuardTargetSource(Village());
+            yield return new GuardTargetSource(this);
+        }
+
+        /// <summary>
+        /// The guards <c>call_guard</c> may name: every guard while a thief runs (Bram catches one
+        /// with <c>attack_target</c>), but for a fire alone only those who can carry water (a
+        /// <see cref="Responder"/>), so the call never goes to a guard with nothing to do about it.
+        /// </summary>
+        public IEnumerable<VillageGuard> CallableGuards()
+        {
+            var commands = Village();
+            if (commands == null) yield break;
+            bool fireOnly = Fire != null && Fire.IsBurning && !(Thief != null && Thief.IsRunning);
+            foreach (var mind in commands.Minds)
+                if (mind != null && mind.Body is VillageGuard guard && (!fireOnly || guard.GetComponent<Responder>() != null))
+                    yield return guard;
         }
 
         private VillageCommands Village()

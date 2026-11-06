@@ -45,6 +45,8 @@ namespace Demos.GreyBoxVillage
         public AgentBehaviour Behaviour => behaviour != null ? behaviour : behaviour = GetComponent<AgentBehaviour>();
         public string Name => Behaviour.Profile != null && !string.IsNullOrEmpty(Behaviour.Profile.Identity.Name) ? Behaviour.Profile.Identity.Name : name;
         public string Role => Behaviour.Profile != null ? Behaviour.Profile.Identity.Role : "";
+        /// <summary>The role the board and the dialogue panel show: the body's duty while it has one (the night watch), else <see cref="Role"/>.</summary>
+        public string RoleNow => Body != null && Body.Duty != null ? Body.Duty : Role;
         public bool IsDeciding { get; private set; }
         /// <summary>When the last decision finished, in game time. The quiet timer counts from here.</summary>
         public float LastActivityTime { get; private set; }

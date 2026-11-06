@@ -40,6 +40,7 @@ namespace Demos.GreyBoxVillage
         public bool OnWatch { get; private set; }
 
         private bool reportOnArrival;
+        private string dayDetail;
 
         private void OnEnable()
         {
@@ -67,6 +68,7 @@ namespace Demos.GreyBoxVillage
                 if (Relieved != null && RelievedPost != null)
                     Relieved.GoToPost(RelievedPost, "going off watch to the campfire", "off watch, sitting by the campfire");
                 reportOnArrival = true;
+                Label(true);
                 Report("Night falls: the gate is shut, and " + Mind.Name + " takes the watch.");
             }
             else
@@ -75,6 +77,7 @@ namespace Demos.GreyBoxVillage
                 Guard.GoToPost(Guard.Post, null, null);
                 if (Relieved != null) Relieved.GoToPost(Relieved.Post, null, null);
                 reportOnArrival = false;
+                Label(false);
                 Report("Dawn: the gate is open, and the watch is over.");
             }
         }
@@ -84,7 +87,18 @@ namespace Demos.GreyBoxVillage
         {
             OnWatch = false;
             reportOnArrival = false;
+            Label(false);
             if (Gate != null) Gate.ResetState();
+        }
+
+        // The name tag over the guard says what she keeps: the night watch, or her day post.
+        private void Label(bool night)
+        {
+            var tag = GetComponent<NameTag>();
+            if (tag == null) return;
+            if (dayDetail == null && !night) return;
+            dayDetail ??= tag.Detail;
+            tag.Detail = night ? "night watch" : dayDetail;
         }
 
         private void Update()

@@ -127,8 +127,8 @@ namespace Demos.GreyBoxVillage.Tests
             Assert.That(call.Target, Is.EqualTo("wren"));
             Assert.That(call.Outcome, Is.EqualTo("executed"));
             Assert.That(Asked(wren, "merchant"), Is.True, "Odile's call became Wren's stimulus.");
-            Assert.That(commands.Recorder.Records.Any(r => r.Action == "chase" && r.Target == "thief" && r.Outcome == "executed"), Is.True,
-                "No guard chased the thief.");
+            Assert.That(commands.Recorder.Records.Any(r => (r.Action == "chase" || r.Action == "attack_target") && r.Target == "thief" && r.Outcome == "executed"), Is.True,
+                "No guard went after the thief.");
             Assert.That(merchant.Thief.State, Is.EqualTo(VillageThief.Phase.Caught).Or.EqualTo(VillageThief.Phase.Hidden),
                 "The thief got away: " + merchant.Thief.State);
             Assert.That(merchant.Thief.CaughtBy, Is.Not.Null, "The thief got away.");
