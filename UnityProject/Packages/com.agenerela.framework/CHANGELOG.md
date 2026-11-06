@@ -10,6 +10,40 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **Target categories** (#190 B, DR-020): `TargetRegistry.Register(id, target, category)`, beside
+  the two-argument overload, and `TargetRegistry.CategoryOf(id)`, null for a target with no
+  category and never throwing. `ExplicitTargetSource.Add(id, target, category)` does the same for a
+  hand-made set, and `ProximityTargetSource` now registers each `Targetable` in its
+  `Targetable.Category`. The model never reads a category.
+- **Which targets an action takes** (#190 B, GreyBoxVillage G2, Living Vale #4):
+  `ActionDefinition.TargetCategories`, `[AgentAction(TargetCategories = new[] { ... })]`,
+  `ActionDefinition.AcceptsCategory(category)` and `DeclaresTargetCategories`. Empty, the default,
+  takes any target. **`TargetCategoryGuard`**, a third built-in guard, runs in `DecideAsync` after
+  `TargetGroundingGuard` and before `Agent.Guards`, and turns an action paired with a target of
+  another category, or of none, into `none` (`RewriteToNone`); `Agent.Execute` runs it again after
+  `SchemaLegalityGuard` and refuses a mismatch. It passes every action that names no category, so
+  nothing changes until a developer declares one, and the request is unchanged either way.
+- **`Agent.TargetCategories`** (#190 B, G3): the only target categories an agent is offered,
+  whichever source finds them, applied after every source on each decision and at `Execute`'s
+  re-check. Empty, the default, offers every target; set, a target in another category or in none
+  is left out.
+- **`TargetRegistry.Offer(id, target, category)`** (#190 B, G13): registers a target unless the
+  same object is already registered under the id, and returns whether it added it; another object
+  under the id throws. It is the merge rule for target sources below.
+- **`ActionRegistry.RegisterMethods(owner, assets, only)`** (#190 B, G10): registers only the
+  listed action ids of one owner; null registers all of them, an empty list none. Every method is
+  still checked.
+- **`AgentBehaviour.OnlyActions`** (#190 B, G10): the action ids the agent registers, of its
+  GameObject's `[AgentAction]` methods and its `Handlers` rows. Empty, the default, registers every
+  one. The Inspector warns about an id nothing provides and a `Handlers` row it leaves out.
+- **`AgentBehaviour.TargetCategories`** (#190 B, G3): copied to `Agent.TargetCategories`, and to the
+  proximity source's `Categories` when that names none, so the source's cap counts only what can
+  be offered.
+- `Documentation~/targets.md`: categories, the category guard, an agent's categories, the merge
+  rule and an agent's own actions.
+- A test that our evaluation set's schema, as `EvalRunner` sends it with every option off, is
+  byte-identical to the shape every measurement so far was scored against.
+
 - **What executing a decision did** (#190 C, DR-018): `ActionResult`, a value type made by
   `ActionResult.Done(payload)` and `ActionResult.Failed(reason, payload)`, with `Status`
   (`ExecutionStatus`: `Done`, `Failed`, `NoAction`, `Refused`), `Reason`, `Payload`,
@@ -32,8 +66,11 @@ While the version stays `0.x`, the public API may change in any release.
 - **Saving memory** (#190 C): `IExportsMemory`, an optional interface beside `IMemoryStrategy`,
   with `Export()` and `Import(MemorySnapshot)`. `MemorySnapshot` (`Format`, `Version`,
   `Exchanges` of `MemoryExchange`, `Data`) is public fields and lists, for `JsonUtility` and
-  Newtonsoft. `RollingHistory` implements it, as `RollingHistory.SnapshotFormat` version 1, and
-  imports any strategy's exchanges.
+  Newtonsoft. `RollingHistory` implements it, as `RollingHistory.SnapshotFormat` version 1.
+  `RollingHistory.Import` takes only that format at a version from 1 to `SnapshotVersion`, and
+  throws an `ArgumentException` for another format, a newer version or a null exchange, leaving
+  the memory as it was (#190, Living Vale #22). `RollingHistory.CanImport(snapshot, out reason)`
+  gives the same answer without importing, so a game can check a whole save first.
 - `Documentation~/executing-and-memory.md`: handler results, correlation, memory that waits, and
   saving memory.
 - **The actions and targets, listed in the prompt** (#190 A, Living Vale #1, GreyBoxVillage G9):
@@ -191,6 +228,15 @@ While the version stays `0.x`, the public API may change in any release.
 - `Documentation~/providers.md`: the scripted provider, as an asset, testing with it, and how a
   decision log will replay through it (G7).
 
+### Changed
+
+- **The same target from two sources is one target** (#190 B, G13, DR-020). `ExplicitTargetSource`
+  and `ProximityTargetSource` skip an id an earlier source, or `Agent.Targets`, already registered
+  for the same object, which they used to refuse; the first registration, its category included,
+  is kept, and a Targetable skipped this way still counts toward the proximity cap. Another object
+  under the id is still an error. `ITargetSource`'s contract says so, and `TargetRegistry.Register`
+  is unchanged: it throws for any id already present.
+
 ### Fixed
 
 - **Play mode without a domain reload** (#190, G8): `AgenerelaSettings` forgets the settings it
@@ -198,6 +244,36 @@ While the version stays `0.x`, the public API may change in any release.
   reload off no longer carries them into the next session. A new EditMode test fails on any static
   field in the framework's runtime assembly that nothing resets; the three that need no reset
   (`ProviderConfig`'s provider names and built configs, and the queues) say why in it.
+- **Provider health** (#190 G1, DR-015 as amended). `ProviderHealth.For(provider)`, one per
+  provider instance like its queue, says whether the provider is answering: `IsDown`, `Reason`
+  (a `PipelineErrorKind`), `Message`, `DownSinceUtc`, `RetryAtUtc`, `ConsecutiveFailures`, and a
+  `Changed` event, raised on the main thread. `Agent` reports every request: any reply marks it
+  up, a provider failure down, with a retry time 5 s after the first failure, doubling to 60 s
+  (`FirstRetrySeconds`, `LongestRetrySeconds`, each at most a day). `Reset()` marks it up by hand. **`BackOff`**, off
+  by default: when on, a background request whose turn comes while the provider is down, before
+  the retry time, is not sent; player-facing requests always are.
+- `PipelineErrorKindExtensions.IsProviderFault(kind)`: true for a failure that is the provider's,
+  false for one decision's own (preparation, an unreadable reply, a guard, the backlog).
+- **Model lifecycle** (#190 LV #6, DR-019). `IModelLifecycle`, an optional interface a provider
+  implements to manage its server's models: `ListModelsAsync` (a list of `ModelInfo`: `Name`,
+  `SizeBytes`), `WarmUpAsync` and `UnloadAsync` for the provider's own model. None goes through
+  the decision queue, and failures throw `ProviderException`. `OllamaProvider` implements it with
+  `/api/tags`, an `/api/generate` with no prompt at the decisions' `num_ctx`, and `keep_alive: 0`
+  that waits until `/api/ps` no longer lists the model.
+- **`Agent.Provider` can be set** (DR-019), to switch an agent to another backend or model at
+  runtime. It keeps its memory, actions, targets, sources, guards and state; a decision under way
+  finishes on the provider it started with, its refusal line included.
+- **`Agent.Backlog`** (#190 G5, DR-015 as amended), null by default. A `DecisionBacklog` makes the
+  agent decide one call at a time; calls made meanwhile wait, player-facing first, and are
+  prepared when their turn comes. Presets `DecisionBacklog.LatestWins`, `DropOldest(n)` and
+  `QueueWithCap(n)`, or `new DecisionBacklog(capacity, BacklogOverflow)`. `Agent.IsDeciding` and
+  `Agent.Waiting` say what it is doing; `DecisionTelemetry.BacklogWaitSeconds` records how long a
+  call waited for its turn.
+- `PipelineErrorKind.ProviderDown`, `Superseded` and `BacklogFull`, at the end of the enum: a call
+  held back by `ProviderHealth.BackOff`, dropped from a backlog for a newer one, or refused by a
+  full one. Each ends with no decision before anything is sent, and logs nothing.
+- `Documentation~/providers.md`: provider health, model lifecycle, switching an agent's provider,
+  and the backlog.
 
 ## [0.4.0-preview.1] - 2026-10-29
 

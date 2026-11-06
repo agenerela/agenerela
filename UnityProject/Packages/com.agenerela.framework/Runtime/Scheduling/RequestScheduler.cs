@@ -38,6 +38,12 @@ namespace Agenerela
     /// one, more than two tiers, and the session budget and per-minute pacing a cloud provider
     /// needs (<see cref="ProviderCapabilities.RateLimit"/>, Phase 6) all go here.
     /// </para>
+    /// <para>
+    /// An <see cref="Agent"/> with a <see cref="Agent.Backlog"/> keeps one more of its own, in
+    /// front of its provider's, with one slot: its decisions take turns there, and the backlog's
+    /// capacity and overflow rule are the capacity-aware <see cref="Enqueue(DecisionPriority, CancellationToken, int, BacklogOverflow)"/>
+    /// (#190, G5).
+    /// </para>
     /// </remarks>
     internal sealed class RequestScheduler
     {
@@ -133,16 +139,63 @@ namespace Agenerela
         /// <exception cref="OperationCanceledException"><paramref name="ct"/> is already cancelled; nothing is queued.</exception>
         internal Ticket Enqueue(DecisionPriority priority, CancellationToken ct)
         {
+            // No limit on how many wait, so never refused.
+            return Enqueue(priority, ct, int.MaxValue, BacklogOverflow.RefuseNewest);
+        }
+
+        /// <summary>
+        /// Queues one request as <see cref="Enqueue(DecisionPriority, CancellationToken)"/> does,
+        /// unless that would leave more than <paramref name="capacity"/> waiting for a slot. Then
+        /// <paramref name="whenFull"/> decides. <see cref="BacklogOverflow.DropOldest"/> drops the
+        /// oldest waiting requests that are not more urgent than this one, background ones before
+        /// any player-facing one, as many as the queue would be over: more than one when the
+        /// capacity is smaller than when they joined. Each dropped one's <see cref="Ticket.Ready"/>
+        /// throws <see cref="SupersededException"/>. When too few may be dropped, or with
+        /// <see cref="BacklogOverflow.RefuseNewest"/>, nothing is dropped or queued and this returns
+        /// null.
+        /// </summary>
+        /// <exception cref="OperationCanceledException"><paramref name="ct"/> is already cancelled; nothing is queued or dropped.</exception>
+        internal Ticket Enqueue(DecisionPriority priority, CancellationToken ct, int capacity, BacklogOverflow whenFull)
+        {
             ct.ThrowIfCancellationRequested();
 
             var ticket = new Ticket(this, priority, ct);
+            List<Ticket> dropped = null;
             lock (gate)
             {
+                // How many would wait once this one joins: those queued and this one, less what the
+                // free slots take at once, oldest first.
+                int waiting = playerFacing.Count + background.Count + 1 - Math.Max(0, maxInFlight - inFlight);
+                if (waiting > capacity)
+                {
+                    dropped = whenFull == BacklogOverflow.DropOldest ? OldestNotAbove(priority, waiting - capacity) : null;
+                    if (dropped == null)
+                    {
+                        return null;
+                    }
+
+                    // In the same critical section as the choice, so a cancellation on another
+                    // thread can neither withdraw one twice nor be lost.
+                    foreach (var older in dropped)
+                    {
+                        older.LeaveForNewer();
+                    }
+                }
+
                 // Everything that goes before it: what holds a slot, the player-facing queue, and
                 // for a background request the background queue too.
                 ticket.QueuedAhead = inFlight + playerFacing.Count
                     + (priority == DecisionPriority.Background ? background.Count : 0);
                 ticket.Node = QueueFor(priority).AddLast(ticket);
+            }
+
+            // Outside the lock, as a cancellation is: each waiter may resume right here.
+            if (dropped != null)
+            {
+                foreach (var older in dropped)
+                {
+                    older.Source.TrySetException(new SupersededException());
+                }
             }
 
             // Registered outside the lock, since a token cancelled meanwhile runs the callback
@@ -154,6 +207,24 @@ namespace Agenerela
 
             GrantWhileFree();
             return ticket;
+        }
+
+        // The count oldest waiting requests a newer one of this priority may push out: background
+        // ones first, then, for a player-facing newcomer, player-facing ones. A background request
+        // never pushes out a player-facing one. Null when fewer than count may go, so either all of
+        // them make way or none does. Called under the lock.
+        private List<Ticket> OldestNotAbove(DecisionPriority priority, int count)
+        {
+            var chosen = new List<Ticket>(count);
+            foreach (var queue in priority == DecisionPriority.PlayerFacing ? new[] { background, playerFacing } : new[] { background })
+            {
+                for (var node = queue.First; node != null && chosen.Count < count; node = node.Next)
+                {
+                    chosen.Add(node.Value);
+                }
+            }
+
+            return chosen.Count == count ? chosen : null;
         }
 
         // Hands free slots to the head of the queue until either runs out.
@@ -353,6 +424,13 @@ namespace Agenerela
                 Source.TrySetException(new OperationCanceledException(token));
             }
 
+            // Called under the scheduler's lock, for a ticket still queued, as a newer one takes its
+            // place. Its waiter is told by the caller, outside the lock.
+            internal void LeaveForNewer()
+            {
+                LeaveQueue();
+            }
+
             // Called under the scheduler's lock. True when it was still queued and has now left.
             private bool LeaveQueue()
             {
@@ -365,6 +443,19 @@ namespace Agenerela
                 Node.List.Remove(Node);
                 return true;
             }
+        }
+    }
+
+    /// <summary>
+    /// What a queued ticket's <see cref="RequestScheduler.Ticket.Ready"/> throws when a newer
+    /// request took its place (<see cref="BacklogOverflow.DropOldest"/>). Never a cancellation:
+    /// nobody cancelled it, so <see cref="Agent"/> turns it into a result, not an exception.
+    /// </summary>
+    internal sealed class SupersededException : Exception
+    {
+        internal SupersededException()
+            : base("A newer request took this one's place in the queue.")
+        {
         }
     }
 }

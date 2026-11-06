@@ -63,6 +63,26 @@ namespace Agenerela
         [Tooltip("Handlers for actions the profile lists that no [AgentAction] method on this GameObject runs.")]
         public List<ActionHandlerBinding> Handlers = new List<ActionHandlerBinding>();
 
+        /// <summary>
+        /// The only actions this agent registers, by id (#190 G10): of the <c>[AgentAction]</c>
+        /// methods on this GameObject and the rows of <see cref="Handlers"/>, the rest are left out,
+        /// so a body class several agents share can carry actions only some of them take. Empty, the
+        /// default, registers every one, as before.
+        /// </summary>
+        [Tooltip("Only these actions are registered, by id. Leave empty for every [AgentAction] on " +
+                 "this GameObject and every row of Handlers.")]
+        public string[] OnlyActions;
+
+        /// <summary>
+        /// The only target categories this agent is ever offered, whichever source finds them
+        /// (<see cref="Agenerela.Agent.TargetCategories"/>, #190 G3). Empty, the default, offers every
+        /// target. When <see cref="Targets"/> names no categories of its own, it is given these, so
+        /// its cap counts only what this agent may be offered.
+        /// </summary>
+        [Tooltip("Only targets in these categories are ever offered, from any source. Leave empty " +
+                 "for every target. A Targets source with no categories of its own gets these.")]
+        public string[] TargetCategories;
+
         private Agent agent;
         private bool warningQueued;
 
@@ -106,8 +126,10 @@ namespace Agenerela
 
         /// <summary>
         /// Checks what can be seen before Play mode: a missing profile, a row of
-        /// <see cref="Handlers"/> that cannot be bound, a malformed <c>[AgentAction]</c> method, and
-        /// an action in the profile with no handler, which is never offered. The provider is not
+        /// <see cref="Handlers"/> that cannot be bound, a malformed <c>[AgentAction]</c> method, an
+        /// id in <see cref="OnlyActions"/> that nothing provides or a row of <see cref="Handlers"/> it
+        /// leaves out, and an action in the profile with no handler, which is never offered, unless
+        /// <see cref="OnlyActions"/> leaves it out. The provider is not
         /// checked: an empty one is the normal case, and its default is read when the agent is built.
         /// </summary>
         public bool Validate(out string problem)
@@ -121,6 +143,8 @@ namespace Agenerela
             }
 
             var bound = new HashSet<string>(StringComparer.Ordinal);
+            var only = Only();
+            var provided = new HashSet<string>(StringComparer.Ordinal);
 
             foreach (var component in GetComponents<MonoBehaviour>())
             {
@@ -134,6 +158,12 @@ namespace Agenerela
                 {
                     foreach (var (definition, _) in AgentActionReader.Read(component))
                     {
+                        provided.Add(definition.Id);
+                        if (only != null && !only.Contains(definition.Id))
+                        {
+                            continue;
+                        }
+
                         if (!bound.Add(definition.Id))
                         {
                             problem = $"{component.GetType().Name} declares the action '{definition.Id}', which another component on this GameObject also declares";
@@ -173,6 +203,13 @@ namespace Agenerela
                     return false;
                 }
 
+                provided.Add(id);
+                if (only != null && !only.Contains(id))
+                {
+                    problem = $"Handlers[{i}] binds the action '{id}', which OnlyActions leaves out, so it is never registered";
+                    return false;
+                }
+
                 if (!bound.Add(id))
                 {
                     problem = $"Handlers[{i}] binds the action '{id}', which already has a handler";
@@ -180,10 +217,23 @@ namespace Agenerela
                 }
             }
 
+            if (only != null)
+            {
+                foreach (string id in only)
+                {
+                    if (!provided.Contains(id))
+                    {
+                        problem = $"OnlyActions lists '{id}', which no [AgentAction] method on this GameObject and no row of Handlers provides";
+                        return false;
+                    }
+                }
+            }
+
+            // An action OnlyActions leaves out is meant to be absent, so its missing handler is not a problem.
             var unbound = new List<string>();
             foreach (string id in listed)
             {
-                if (!bound.Contains(id))
+                if (!bound.Contains(id) && (only == null || only.Contains(id)))
                 {
                     unbound.Add(id);
                 }
@@ -244,6 +294,30 @@ namespace Agenerela
             }
         }
 
+        // OnlyActions as a set, or null when it lists nothing, which registers every action.
+        private HashSet<string> Only()
+        {
+            var ids = NotBlank(OnlyActions);
+            return ids.Count > 0 ? new HashSet<string>(ids, StringComparer.Ordinal) : null;
+        }
+
+        private static List<string> NotBlank(string[] values)
+        {
+            var kept = new List<string>();
+            if (values != null)
+            {
+                foreach (string value in values)
+                {
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        kept.Add(value);
+                    }
+                }
+            }
+
+            return kept;
+        }
+
         // The whole agent or an exception, never half of one: it is only kept once this returns.
         private Agent Build()
         {
@@ -260,25 +334,39 @@ namespace Agenerela
             try
             {
                 var built = new Agent(Profile, ProviderConfig.Resolve(Provider).Provider);
+                var only = Only();
 
                 foreach (var component in GetComponents<MonoBehaviour>())
                 {
                     // RegisterMethods refuses an owner with no actions, which most components are.
                     if (component != null && AgentActionReader.Read(component).Count > 0)
                     {
-                        built.Actions.RegisterMethods(component, Profile.Actions);
+                        built.Actions.RegisterMethods(component, Profile.Actions, only);
                     }
                 }
 
                 foreach (var binding in Handlers)
                 {
-                    built.Bind(binding.ActionId, binding.Handler);
+                    if (only == null || (binding.ActionId != null && only.Contains(binding.ActionId)))
+                    {
+                        built.Bind(binding.ActionId, binding.Handler);
+                    }
                 }
+
+                var categories = NotBlank(TargetCategories);
+                built.TargetCategories.AddRange(categories);
 
                 if (FindTargetsNearby)
                 {
                     Targets ??= new ProximityTargetSource();
                     Targets.Origin = Targets.Origin != null ? Targets.Origin : transform;
+
+                    // The agent's filter runs after the source's cap, so the source is given it first.
+                    if (categories.Count > 0 && NotBlank(Targets.Categories).Count == 0)
+                    {
+                        Targets.Categories = categories.ToArray();
+                    }
+
                     built.TargetSources.Add(Targets);
                 }
 

@@ -55,14 +55,16 @@ public class GuardEars : MonoBehaviour
 | Field | What it does |
 |---|---|
 | **Profile** | Who this agent is and what it can do. Ten guards can share one |
-| **Provider** | This agent's own `ProviderConfig`. Empty uses the project default. Telemetry records which one resolved |
+| **Provider** | This agent's own `ProviderConfig`. Empty uses the project default. Telemetry records which one resolved. Read once, when the agent is built: to switch at runtime, set `Agent.Provider` ([providers.md](providers.md#switching-an-agents-provider)) |
 | **Find Targets Nearby**, **Targets** | On by default. Offers the `Targetable`s around this agent as targets, through a `ProximityTargetSource`. An empty **Origin** means this transform |
 | **Notice Nearby**, **Observations** | On by default. Tells the agent the `Description` of the `Targetable`s around it, through a `ProximityObservationSource`. A `Targetable` with no description adds nothing. An empty **Origin** means this transform. The two sources have separate settings, so an agent can notice farther than it can name |
 | **Handlers** | Pairs of an action id and an `ActionHandlerBehaviour`, for actions the profile lists that no method on this GameObject runs. The handler can be on another GameObject |
+| **Only Actions** | The action ids this agent registers, of the methods on this GameObject and the rows of **Handlers**. Empty, the default, registers every one, so a body class several agents share can carry actions only some of them take ([targets.md](targets.md)) |
+| **Target Categories** | The only target categories this agent is offered, from any source (`Agent.TargetCategories`). Empty, the default, offers every target. When **Targets** names no categories of its own it is given these, so its cap counts only what can be offered ([targets.md](targets.md)) |
 
 The fields are read once, when the agent is built. After that, change the agent itself:
 `guard.Agent` is the plain `Agent`, with its `Execute`, `State`, `Guards`, `Memory`,
-`TargetSources`, `ObservationSources` and `MaxObservations`.
+`TargetSources`, `TargetCategories`, `ObservationSources` and `MaxObservations`.
 
 ## Where an action's handler comes from
 
@@ -87,6 +89,9 @@ In the Console, each time the component changes outside Play mode:
   an action that already has a handler.
 - A malformed `[AgentAction]` method on this GameObject.
 - Two components on this GameObject declaring one action.
+- An id in **Only Actions** that no method on this GameObject and no row of **Handlers**
+  provides, and a row of **Handlers** that **Only Actions** leaves out. An action the profile lists
+  but **Only Actions** leaves out needs no handler.
 
 `AgentBehaviour.Validate(out string problem)` runs the same checks from code. An empty
 **Provider** is not one of them: it is the normal case.
@@ -112,8 +117,8 @@ it; the Inspector warns about it, and reading `Agent` throws.
 ## When the GameObject is destroyed
 
 `DecideAsync` passes the component's `destroyCancellationToken`, so a guard destroyed mid-request
-does not leave the request running. A decision still in the provider's queue leaves it and is
-never sent; one already sent has its request stopped. Either way the `await` throws
+does not leave the request running. A decision still in the provider's queue, or waiting in the
+agent's `Backlog`, leaves it and is never sent; one already sent has its request stopped. Either way the `await` throws
 `OperationCanceledException` and there is no result, which is why the trigger above catches it.
 A call made after the destruction ends the same way.
 

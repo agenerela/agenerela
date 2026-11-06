@@ -57,7 +57,7 @@ namespace Agenerela.Tests
         {
             var memory = new RollingHistory();
             Remember(memory, "Player: \"Before the save.\"", "none");
-            var snapshot = new MemorySnapshot();
+            var snapshot = Own();
             snapshot.Exchanges.Add(new MemoryExchange("Player: \"From the save.\"", "{\"action\":\"follow_player\"}"));
 
             memory.Import(snapshot);
@@ -69,7 +69,7 @@ namespace Agenerela.Tests
         public void ImportKeepsTheNewestTurnsAndCountsTheRestForgotten()
         {
             var memory = new RollingHistory(turns: 2);
-            var snapshot = new MemorySnapshot();
+            var snapshot = Own();
             for (int i = 1; i <= 5; i++)
             {
                 snapshot.Exchanges.Add(new MemoryExchange($"Player: \"Order {i}.\"", "{}"));
@@ -82,17 +82,49 @@ namespace Agenerela.Tests
             Assert.That(memory.Forgotten, Is.EqualTo(3));
         }
 
-        [Test]
-        public void ImportReadsAnotherStrategysExchangesAndIgnoresItsData()
+        // LV #22: a save that names another strategy, or a version this one cannot read, is refused
+        // outright, as Living Vale's own check refused it, and CanImport says so first.
+        [TestCase("someone.facts", 1, "format 'someone.facts'")]
+        [TestCase(null, 1, "no format")]
+        [TestCase("", 1, "no format")]
+        [TestCase(RollingHistory.SnapshotFormat, 0, "version 0")]
+        [TestCase(RollingHistory.SnapshotFormat, RollingHistory.SnapshotVersion + 1, "reads versions 1 to")]
+        public void ImportRefusesAnotherFormatOrAVersionItCannotRead(string format, int version, string said)
         {
             var memory = new RollingHistory();
-            var snapshot = new MemorySnapshot { Format = "someone.facts", Version = 9, Data = "{\"facts\":[\"the player lied\"]}" };
+            Remember(memory, "Player: \"Kept.\"", "none");
+            var snapshot = new MemorySnapshot { Format = format, Version = version };
             snapshot.Exchanges.Add(new MemoryExchange("Player: \"Hello.\"", "{}"));
 
-            memory.Import(snapshot);
+            Assert.That(memory.CanImport(snapshot, out string reason), Is.False);
+            Assert.That(reason, Does.Contain(said));
+            var thrown = Assert.Throws<ArgumentException>(() => memory.Import(snapshot));
+            Assert.That(thrown.Message, Does.StartWith(reason), "Import refuses it for the reason CanImport gives.");
+            Assert.That(memory.Recall(null), Is.EqualTo(new[] { "Player: \"Kept.\"", Written("none") }), "Nothing was imported.");
+        }
 
-            Assert.That(memory.Count, Is.EqualTo(1));
-            Assert.That(memory.Export().Data, Is.Null, "Only that strategy reads its own data.");
+        [Test]
+        public void CanImportSaysYesWithoutChangingAnything()
+        {
+            var memory = new RollingHistory();
+            Remember(memory, "Player: \"Kept.\"", "none");
+            var snapshot = Own(new MemoryExchange("Player: \"From the save.\"", "{}"));
+            snapshot.Data = "{\"anything\":true}";
+
+            Assert.That(memory.CanImport(snapshot, out string reason), Is.True);
+            Assert.That(reason, Is.Null);
+            Assert.That(memory.Recall(null), Is.EqualTo(new[] { "Player: \"Kept.\"", Written("none") }), "Checking imports nothing.");
+
+            memory.Import(snapshot);
+            Assert.That(memory.Recall(null), Is.EqualTo(new[] { "Player: \"From the save.\"", "{}" }));
+            Assert.That(memory.Export().Data, Is.Null, "Data is not read.");
+        }
+
+        [Test]
+        public void CanImportRefusesNoSnapshotWithoutThrowing()
+        {
+            Assert.That(new RollingHistory().CanImport(null, out string reason), Is.False);
+            Assert.That(reason, Is.EqualTo("There is no snapshot."));
         }
 
         [TestCase(0)]
@@ -102,15 +134,17 @@ namespace Agenerela.Tests
         {
             var memory = new RollingHistory();
             Remember(memory, "Player: \"Kept.\"", "none");
-            var snapshot = new MemorySnapshot();
+            var snapshot = Own();
             snapshot.Exchanges.Add(new MemoryExchange("Player: \"Fine.\"", "{}"));
             snapshot.Exchanges.Add(broken == 0 ? null
                 : broken == 1 ? new MemoryExchange(null, "{}")
                 : new MemoryExchange("Player: \"Half.\"", null));
 
+            Assert.That(memory.CanImport(snapshot, out string reason), Is.False);
             var thrown = Assert.Throws<ArgumentException>(() => memory.Import(snapshot));
 
-            Assert.That(thrown.Message, Does.Contain("Exchanges[1]"));
+            Assert.That(reason, Does.Contain("Exchanges[1]"));
+            Assert.That(thrown.Message, Does.StartWith(reason));
             Assert.That(memory.Recall(null), Is.EqualTo(new[] { "Player: \"Kept.\"", Written("none") }), "Nothing was imported.");
         }
 
@@ -123,7 +157,9 @@ namespace Agenerela.Tests
             Assert.Throws<ArgumentNullException>(() => memory.Import(null));
             Assert.That(memory.Count, Is.EqualTo(1));
 
-            memory.Import(new MemorySnapshot { Exchanges = null });
+            var none = Own();
+            none.Exchanges = null;
+            memory.Import(none);
             Assert.That(memory.Count, Is.Zero, "No exchanges is an empty memory.");
         }
 
@@ -181,6 +217,14 @@ namespace Agenerela.Tests
             var request = new DecisionRequest { Stimulus = stimulus };
             var result = new DecisionResult(new AgentDecision(action, TargetRegistry.NoTarget, ""), new DecisionTelemetry());
             memory.Remember(null, request, result);
+        }
+
+        // An empty snapshot in RollingHistory's own format, the one Import takes, with these exchanges.
+        private static MemorySnapshot Own(params MemoryExchange[] exchanges)
+        {
+            var snapshot = new MemorySnapshot { Format = RollingHistory.SnapshotFormat, Version = RollingHistory.SnapshotVersion };
+            snapshot.Exchanges.AddRange(exchanges);
+            return snapshot;
         }
 
         private static string Written(string action)

@@ -192,7 +192,9 @@ runs on the CPU. `curl http://127.0.0.1:11434/api/ps` reports `size` and `size_v
 model; `size_vram` of 0 means the model is not on the GPU at all (build plan §4 describes the
 check). On the lead's laptop the `ollama` command line was seen to hang in Git Bash, even
 `ollama --version`, so scripts there use the HTTP API; unload a model with
-`{"model": "<name>", "keep_alive": 0, "messages": []}` posted to `/api/chat`. That was seen
+`{"model": "<name>", "keep_alive": 0, "messages": []}` posted to `/api/chat`. From code,
+`OllamaProvider.UnloadAsync` does the same through `/api/generate` and waits until `/api/ps` no
+longer lists the model (`Documentation~/providers.md`). The CLI hang was seen
 on one machine and not investigated further. On a laptop, `size_vram` of 0 was once the sign that the discrete GPU was off when Ollama
 started; restarting Ollama after the GPU woke fixed it (seen once, not investigated). Run on
 AC power: one 5 October session was run on battery (findings), and a battery run is not
