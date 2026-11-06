@@ -546,7 +546,7 @@ namespace Demos.GreyBoxVillage.Tests
             Assert.That(presenter.Village, Is.EqualTo(commands));
             Assert.That(new object[] { presenter.Wolf, presenter.Thief, presenter.Fire, presenter.Watch, presenter.Alarm, presenter.WolfFrom, presenter.WolfTo },
                 Has.All.Not.Null);
-            Assert.That(VillagePresenter.Keys.Select(k => k.key), Is.EqualTo(new[] { "F1", "F2", "F3", "F4", "F5", "F12" }));
+            Assert.That(VillagePresenter.Keys.Select(k => k.key), Is.EqualTo(new[] { "F1", "F2", "F3", "F4", "F5", "F6", "F12" }));
             Assert.That(commands.Minds.Where(m => m.GetComponent<NightWatch>() != null), Is.EqualTo(new[] { wren }), "Wren alone keeps the night watch.");
             Assert.That(commands.Minds.Where(m => m.GetComponent<Responder>() != null), Is.EqualTo(new[] { wren }), "Wren alone chases and carries water.");
             Assert.That(wren.GetComponent<Responder>().Guard, Is.EqualTo(wrenBody));

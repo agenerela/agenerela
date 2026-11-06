@@ -45,13 +45,24 @@ namespace Demos.GreyBoxVillage
             if (BellPivot != null) restRotation = BellPivot.localRotation;
         }
 
-        private void Update()
+        private void Update() => Tick();
+
+        /// <summary>
+        /// One frame of the bell: it swings and flashes while it rings, and the villagers are told
+        /// the all-clear on the first frame after it stops. Public so the EditMode tests can step it.
+        /// </summary>
+        public void Tick()
         {
             bool sounding = IsSounding;
-            if (Bell != null && (sounding || wasSounding))
-                Bell.material.color = sounding && Mathf.Repeat(Time.time * 4f, 1f) < 0.5f ? new Color(1f, 0.45f, 0.4f) : restColor;
-            if (BellPivot != null)
-                BellPivot.localRotation = restRotation * Quaternion.Euler(sounding ? Mathf.Sin(Time.time * 7f) * 28f : 0f, 0, 0);
+            // Only in Play mode: Start has not taken the bell's rest pose in Edit mode, and
+            // renderer.material there would leak a copy into the scene.
+            if (Application.isPlaying)
+            {
+                if (Bell != null && (sounding || wasSounding))
+                    Bell.material.color = sounding && Mathf.Repeat(Time.time * 4f, 1f) < 0.5f ? new Color(1f, 0.45f, 0.4f) : restColor;
+                if (BellPivot != null)
+                    BellPivot.localRotation = restRotation * Quaternion.Euler(sounding ? Mathf.Sin(Time.time * 7f) * 28f : 0f, 0, 0);
+            }
             if (wasSounding && !sounding)
                 foreach (var villager in Villagers)
                     if (villager != null) villager.AllClear();

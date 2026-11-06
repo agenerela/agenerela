@@ -287,7 +287,30 @@ namespace Demos.GreyBoxVillage.Editor
             Figure(player, "char_player");
 
             // The scripted crowd. Each villager is a person a guard can name, and so one the
-            // never_attack_villagers guard protects.
+            // never_attack_villagers guard protects. Each follows the routine's day: the well at
+            // dawn, its work (the fields outside the gate, or the market), the square at midday,
+            // the campfire at dusk and home after dark, where the light by its door comes on.
+            var routine = new GameObject("VillageRoutine").AddComponent<VillageRoutine>();
+            var homes = new Dictionary<string, (Vector3 door, Vector3 inward)>
+            {
+                // Just outside each cottage's front door (build_kit.py: a and b face south, d west, e north).
+                ["tomas"] = (new Vector3(-6f, 0, -6.0f), Vector3.back),
+                ["ada"] = (new Vector3(8f, 0, 7.0f), Vector3.forward),
+                ["pell"] = (new Vector3(-8f, 0, 5.0f), Vector3.forward),
+                ["mira"] = (new Vector3(27.5f, 0, 9f), Vector3.right),
+            };
+            var jobs = new Dictionary<string, string>
+                { ["tomas"] = VillageRoutine.Fields, ["ada"] = VillageRoutine.Market, ["pell"] = VillageRoutine.Fields, ["mira"] = VillageRoutine.Market };
+            var homeRoot = new GameObject("Homes").transform;
+            routine.Spots = new[]
+            {
+                Spot(geometry, VillageRoutine.Well, "drawing water at the well", (-2.2f, -1.2f), (2.2f, -1.0f), (0.6f, -3.6f)),
+                Spot(geometry, VillageRoutine.Market, "at the market", (11.5f, 1.0f), (15f, 0.6f), (19.5f, 1.2f), (17.5f, -2.2f)),
+                Spot(geometry, VillageRoutine.Fields, "working the fields outside the gate", (-8.5f, -20.5f), (-10f, -25f), (8.5f, -21f), (10f, -25.5f)),
+                Spot(geometry, VillageRoutine.Square, "in the square", (6f, 4f), (-6f, 2f), (10f, -4f), (-4f, -6f), (-2.4f, 1.4f)),
+                Spot(geometry, VillageRoutine.Campfire, "at the campfire", (16.2f, -9.6f), (15.6f, -11.9f), (12.2f, -11.6f)),
+                new VillageRoutine.Spot { Id = VillageRoutine.Home, Words = "at home", Points = new Transform[0] },
+            };
             var villagers = new List<Villager>();
             var names = new[] { "tomas", "ada", "pell", "mira" };
             for (int i = 0; i < names.Length; i++)
@@ -303,9 +326,17 @@ namespace Demos.GreyBoxVillage.Editor
                 Tag(v, char.ToUpperInvariant(names[i][0]) + names[i].Substring(1), "villager");
                 AddTargetable(v, names[i], char.ToUpperInvariant(names[i][0]) + names[i].Substring(1) + ", a villager", "person");
                 var villager = v.AddComponent<Villager>();
-                villager.WanderPoints = square;
+                villager.Routine = routine;
+                villager.Job = jobs[names[i]];
+                var (door, inward) = homes[names[i]];
+                villager.Home = Landmark("home_" + names[i], homeRoot, door);
+                villager.HomeLight = PointLight(homeRoot, door + inward * 0.6f + Vector3.up * 2.2f, new Color(1f, 0.72f, 0.4f), 1.5f, 5.5f);
+                villager.HomeLight.name = "home_light_" + names[i];
+                villager.HomeLight.enabled = false;
                 villagers.Add(villager);
             }
+            routine.Villagers = villagers.ToArray();
+            routine.Spots[routine.Spots.Length - 1].Points = villagers.Select(v => v.Home).ToArray();
 
             var alarm = bellPost.gameObject.AddComponent<VillageAlarm>();
             alarm.Bell = bell.GetComponent<Renderer>();
@@ -490,6 +521,11 @@ namespace Demos.GreyBoxVillage.Editor
             commands.Board = board;
             commands.Hud = hud;
             commands.Day = day;
+            routine.Day = day;
+            commands.Routine = routine;
+            var weather = DressWeather(camera, day);
+            commands.Weather = weather;
+            foreach (var mind in new[] { bram, wren }) mind.Senses.Weather = weather;
             commands.Player = player.transform;
             commands.Minds = new[] { bram, wren, odile, hale };
             commands.Inventory = inventory;
@@ -523,6 +559,8 @@ namespace Demos.GreyBoxVillage.Editor
             presenter.Fire = fire;
             presenter.Watch = watch;
             presenter.Alarm = alarm;
+            presenter.Weather = weather;
+            presenter.Routine = routine;
             // Up the road outside the gate, within the gate guard's sight and the bell's 15 m, and
             // clear of the player's line from the start.
             presenter.WolfFrom = Point(geometry, "wolf_from", 6f, -24.5f);
@@ -728,6 +766,15 @@ namespace Demos.GreyBoxVillage.Editor
         }
 
         private static Transform Point(Transform parent, string name, float x, float z) => Landmark(name, parent, new Vector3(x, 0, z));
+
+        // A place of the villagers' routine and its points. Not a target: only where they stand.
+        private static VillageRoutine.Spot Spot(Transform parent, string id, string words, params (float x, float z)[] points) =>
+            new VillageRoutine.Spot
+            {
+                Id = id,
+                Words = words,
+                Points = points.Select((p, i) => Point(parent, "routine_" + id + "_" + i, p.x, p.z)).ToArray()
+            };
 
         // A straight wall from a to b along one axis, at the given position on the other.
         private static void Wall(string name, Transform parent, float a, float b, float at, float height, Material material, bool alongX)

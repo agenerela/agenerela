@@ -25,10 +25,39 @@ namespace Agenerela
 
         /// <summary>
         /// The stimulus of the idle example, the one answered with <c>none</c>, for this call only.
-        /// Null uses the profile's <see cref="AgentProfile.IdleExampleStimulus"/>; empty leaves the
-        /// example out of this call.
+        /// Null uses the agent's <see cref="Agent.IdleExampleStimulus"/>, and when that is null too,
+        /// the profile's <see cref="AgentProfile.IdleExampleStimulus"/>; empty leaves the example out
+        /// of this call.
         /// </summary>
         public string IdleExampleStimulus;
+
+        /// <summary>
+        /// Whether this call's system prompt lists the actions offered with their descriptions, and
+        /// the targets offered with their own lines (#190). Off by default: unmeasured, and owed an
+        /// A/B run before it becomes the default (#151). <see cref="PromptOptions.ListActionsAndTargets"/>
+        /// says what it adds.
+        /// </summary>
+        /// <remarks>
+        /// For a provider that never reads the schema, such as Ollama, where a model otherwise learns
+        /// the actions only from the few-shot examples. A target object says what it is by
+        /// implementing <see cref="IDescribedTarget"/>.
+        /// </remarks>
+        public bool ListActionsAndTargets;
+
+        /// <summary>
+        /// The most targets <see cref="ListActionsAndTargets"/> lists, 12 by default
+        /// (<see cref="PromptOptions.MaxListedTargets"/>). A negative value is a mistake the call
+        /// throws for.
+        /// </summary>
+        public int MaxListedTargets = PromptOptions.DefaultMaxListedTargets;
+
+        /// <summary>
+        /// Whether this call's examples show each action's
+        /// <see cref="ActionDefinition.CounterExampleStimulus"/>, answered with <c>none</c> (#190). On
+        /// by default, which shows only what a developer wrote. False leaves them out of this call, as
+        /// the control arm of an A/B run does.
+        /// </summary>
+        public bool CounterExamples = true;
 
         /// <summary>
         /// What the game wants the agent to know right now, one fact per entry, sent verbatim. The
@@ -80,6 +109,27 @@ namespace Agenerela
         /// beside it. The wording of that request is unmeasured.
         /// </remarks>
         public bool AskForRefusalLine;
+
+        /// <summary>
+        /// The caller's own object for this call, which the framework carries and never reads
+        /// (DR-018): the conversation a reply belongs to, a turn number, a request id. Null by
+        /// default.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// It is set on <see cref="AgentContext.Correlation"/> of every context made for this
+        /// decision, so availability checks, target and observation sources, guards and memory see
+        /// it, and on <see cref="DecisionResult.Correlation"/>, pipeline errors included. When the
+        /// result is executed, the context <see cref="Agent.Execute(DecisionResult)"/> hands the
+        /// handler carries it too, so a handler knows which call it is acting for without anything
+        /// written to <see cref="Agent.State"/>, which every call on the agent shares.
+        /// </para>
+        /// <para>
+        /// The object itself is kept, never copied, and never reaches the model or the telemetry.
+        /// It says which call this is, never why the agent is asked (DR-008).
+        /// </para>
+        /// </remarks>
+        public object Correlation;
 
         // The options one call keeps, taken when it is made, so changing the caller's object
         // afterwards changes nothing, the guards' view included (#106). A memberwise copy, so a

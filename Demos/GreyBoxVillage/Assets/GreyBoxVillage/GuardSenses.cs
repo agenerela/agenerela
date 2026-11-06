@@ -20,6 +20,8 @@ namespace Demos.GreyBoxVillage
         public VillageWolf Wolf;
         public VillageThief Thief;
         public VillageFire Fire;
+        [Tooltip("Rain and fog shorten every range below to the weather's sight limit.")]
+        public VillageWeather Weather;
 
         [Header("Sight")]
         public float SightRange = 32f;
@@ -62,7 +64,8 @@ namespace Demos.GreyBoxVillage
         }
 
         /// <summary>
-        /// Unblocked line of sight from the guard's eyes, within range. Ignore Raycast colliders, the
+        /// Unblocked line of sight from the guard's eyes, within range, and within the weather's sight
+        /// limit: in fog the wolf is seen later and the thief lost sooner. Ignore Raycast colliders, the
         /// shut gate's, block nothing: a guard sees through the bars.
         /// </summary>
         public bool CanSee(Transform target, float range = -1f)
@@ -71,6 +74,10 @@ namespace Demos.GreyBoxVillage
             var eye = Guard.transform.position + Vector3.up * EyeHeight;
             var point = target.position + Vector3.up * 1f;
             if (Vector3.Distance(eye, point) > (range < 0 ? SightRange : range)) return false;
+            // The weather's limit is on the distance along the ground between the two, the one the
+            // availability checks measure (AgentMind.VisibleWolfDistance): so a wolf near enough for
+            // the bell in sunshine is never lost to fog's limit by the height of the guard's eyes.
+            if (Weather != null && Vector3.Distance(Guard.transform.position, target.position) > Weather.SightLimit) return false;
             if (!Physics.Linecast(eye, point, out var hit, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)) return true;
             return hit.transform == target || hit.transform.IsChildOf(target) || hit.transform.IsChildOf(Guard.transform);
         }

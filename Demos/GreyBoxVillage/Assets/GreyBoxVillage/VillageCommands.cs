@@ -25,6 +25,10 @@ namespace Demos.GreyBoxVillage
         public AgentBoard Board;
         public VillageHud Hud;
         public DayNightCycle Day;
+        [Tooltip("The villagers' day; every agent is told who is where.")]
+        public VillageRoutine Routine;
+        [Tooltip("The weather; every agent is told it, and rain and fog shorten the guards' sight.")]
+        public VillageWeather Weather;
         public PlayerInventory Inventory;
         public QuestBook Quests;
         public VillageBook Book;
@@ -313,7 +317,9 @@ namespace Demos.GreyBoxVillage
         {
             if (Hud == null) return;
             var camera = Camera.main;
-            if (Day != null) Hud.SetClock(Day.Clock, Day.Phase, Day.Day, Day.IsNight);
+            if (Day != null)
+                Hud.SetClock(Day.Clock, Weather != null && Weather.Current != WeatherKind.Clear ? Day.Phase + ", " + Weather.Word : Day.Phase,
+                    Day.Day, Day.IsNight);
             Hud.SetHints(Keys);
             Hud.SetCovered(Input != null && Input.IsOpen, (Book != null && Book.IsOpen) || (Menu != null && Menu.IsOpen));
             Hud.SetCoins(Inventory != null ? Inventory.Coins : -1);

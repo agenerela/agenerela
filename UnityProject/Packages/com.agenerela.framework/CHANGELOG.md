@@ -10,6 +10,87 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **What executing a decision did** (#190 C, DR-018): `ActionResult`, a value type made by
+  `ActionResult.Done(payload)` and `ActionResult.Failed(reason, payload)`, with `Status`
+  (`ExecutionStatus`: `Done`, `Failed`, `NoAction`, `Refused`), `Reason`, `Payload`,
+  `Succeeded`, `HandlerRan` and `TryGetPayload<T>`. A handler returns one through
+  `IActionHandlerWithResult`, an optional interface beside `IActionHandler`; through
+  `DelegateActionHandler.WithResult`; or from an `[AgentAction]` method that returns
+  `ActionResult` instead of `void`. The new overload `Agent.Execute(result, out ActionResult)`
+  hands it to the caller, with `NoAction` for `none` and `Refused`, with the reason, whenever no
+  handler ran. `Execute(result)` is unchanged except that a handler reporting `Failed` makes it
+  false; a handler that reports nothing is `Done` whenever it returns. `DecisionTelemetry` gains
+  `Execution` and `ExecutionReason`, written by every `Execute`.
+- **`DecideOptions.Correlation`** (#190 C): the caller's own object for a call, which the
+  framework never reads, carried on `DecisionResult.Correlation`, pipeline errors included, and
+  on `AgentContext.Correlation` of every context made for the decision, the one `Execute` hands the
+  handler included. `AgentContext` gains a constructor that takes it.
+- **`Agent.MemoryCommit`** (#190 C): `MemoryCommit.OnDecide`, the default and the behaviour so
+  far, or `MemoryCommit.OnExecute`, under which a decision is held on its result until
+  `Execute` carries it out or the game calls `Agent.Commit(result)` or `Agent.Discard(result)`,
+  so a reply dropped as stale is never remembered.
+- **Saving memory** (#190 C): `IExportsMemory`, an optional interface beside `IMemoryStrategy`,
+  with `Export()` and `Import(MemorySnapshot)`. `MemorySnapshot` (`Format`, `Version`,
+  `Exchanges` of `MemoryExchange`, `Data`) is public fields and lists, for `JsonUtility` and
+  Newtonsoft. `RollingHistory` implements it, as `RollingHistory.SnapshotFormat` version 1, and
+  imports any strategy's exchanges.
+- `Documentation~/executing-and-memory.md`: handler results, correlation, memory that waits, and
+  saving memory.
+- **The actions and targets, listed in the prompt** (#190 A, Living Vale #1, GreyBoxVillage G9):
+  `DecideOptions.ListActionsAndTargets`, off by default, and `PromptOptions.ListActionsAndTargets`
+  beside it. On, the system prompt gains, after the instruction line, "Allowed actions:" with every
+  action the schema offers as `- id: Description.`, `none` last, and "Targets:" with the schema's
+  targets, without `no_target`, as `- id: Description.` or `- id`. A provider that never reads the
+  schema, such as Ollama, otherwise shows a local model no action list at all. `MaxListedTargets`
+  (12 by default, `PromptOptions.DefaultMaxListedTargets`) caps the target lines, the first in
+  schema order; every action is always listed, and a negative cap throws at the call. Unmeasured:
+  it stays off until the A/B in #151.
+- **`IDescribedTarget`**: a target object implements its `Description` to be listed with it. Any
+  other target, a scene target's `Transform` included, is listed by id.
+- **Counter-examples** (#190 A, Living Vale #9): `ActionDefinition.CounterExampleStimulus` and, for
+  the code front door, `[CounterExample("...")]`. `FewShotBuilder.Build` shows one right after its
+  action's example, answered `action: none, target: no_target`, while the action is offered, its
+  `{0}` filled as the example's is; with `{0}` and no registered preferred target, it is left out.
+  Empty by default, so nothing changes until a developer writes one. `DecideOptions.CounterExamples`
+  (on by default) and `FewShotBuilder.Build`'s new `counterExamples` parameter leave them all out,
+  for an A/B's control arm. `PromptSetChecks` flags a prompt that matches one (hard rule 4).
+- **The idle example on an agent built in code** (#190 A, Living Vale #13): `Agent.IdleExampleStimulus`,
+  null by default. Set, it replaces the profile's for that agent, and a call's
+  `DecideOptions.IdleExampleStimulus` still wins; empty leaves it out. `AgentProfile.DefaultIdleExampleStimulus`
+  is the text a new profile starts with, so a code-built agent can have the same one. Off by
+  default, because whether an idle example helps is still unmeasured.
+- `EvalArmConditions` records each arm's `listActionsAndTargets`, `maxListedTargets` and
+  `counterExamples` in `report.json`.
+- `Documentation~/prompt.md`: what the model reads, and the three switches above.
+
+- **The A/B runner** (#145): `EvalRunner` asks every prompt of a `PromptSet` through a fresh
+  `Agent` per prompt in two `EvalArm`s, each a name, a `ProviderConfig` and the `DecideOptions`
+  its calls start from, and returns an `EvalReport`. `EvalArmOrder.Interleaved` (the default)
+  asks each prompt in A, then in B; `Sequential` runs all of A, unloads its Ollama model and
+  waits until it has left memory, then runs all of B, for arms on two models. Before the run it
+  refuses a set that breaks a `PromptSetChecks` rule or disagrees with the profile, an Ollama
+  server holding a model other than the arms', and interleaved arms on two models, with an
+  `InvalidOperationException` saying why; it records Ollama's version, sends `WarmUpRequests`
+  (3) throwaway decisions per arm that never reach the report, and records `size` and
+  `size_vram` from `/api/ps`, warning when the model is not fully on the GPU. Each prompt's
+  `preconditionState` goes into `Agent.State`, every profile action is bound to a do-nothing
+  handler available exactly when the state holds its `onlyWhen`, the set's targets come from an
+  `ExplicitTargetSource`, and the state and targets are also told to the model as observations,
+  the state through `DescribeState` (`PlainStateLines` by default). `EvalRunner.Classify` sorts
+  an answer into the five `DecisionOutcome`s, any guard verdict counting as the guard firing,
+  and the outcome is written to the decision's `Telemetry.Outcome`.
+- **The report.** `EvalReport` holds `Conditions` (`EvalConditions`, `EvalArmConditions`,
+  `ResidencyReading`, `ResidentModel`: dates, framework version, the set's last commit, the
+  graphics device, how targets and state reached the model, and per arm its config, provider,
+  model, version, options and residency), `Arms` (`EvalArmResult`, `OutcomeCounts` overall and
+  per category), `Noise` (`NoiseCheck`: a difference smaller than `10 × √(50 / n)` points is
+  within noise) and every `EvalAnswer`, with the model's own decision and the guard's reason.
+  `Save(folder)` writes `report.json` and a Markdown `report.md` into a folder named for the run;
+  `FromJson` reads one back.
+- **The evaluation arms on Project Settings → Agenerela** (DR-013): `AgenerelaSettings` gains
+  `EvaluationArmA` and `EvaluationArmB`, which agents never read.
+- `Documentation~/evaluation.md`: running an A/B and reading its report.
+
 - **`DecisionResult.Request` and `DecisionResult.Reply`** (#142): the `DecisionRequest` a decision
   sent and the provider's `ProviderResult` for it, so a game can tell its agents' exchanges apart
   when several share one provider's queue, without wrapping the provider. Both are read-only and
@@ -92,6 +173,31 @@ While the version stays `0.x`, the public API may change in any release.
 - `Documentation~/guards.md`: what each built-in guard checks, the three verdicts, a guard
   compared with availability, and two worked examples, a per-threat cooldown and the name check
   DR-016 dropped, both run as tests.
+- **The scripted provider** (#190, G6): `ScriptedProvider`, an `ILLMProvider` with no model
+  behind it, for tests, headless captures and presenting a game with the model off. Replies are
+  scripted with `When(agent, stimulus, replies…)`, matched by `AgentIdentity.Name` and the exact
+  stimulus without its label, a null agent or stimulus matching any, with `Otherwise(…)` for
+  everything else and a `Callback` given a `ScriptedRequest` (the agent, the stimulus and its
+  label, the schema's `OfferedActions` and `OfferedTargets`, the request) for rules. Several
+  replies for one key answer in order, the last repeating; a request nothing answers fails with
+  `ProviderErrorKind.Rejected`, naming the agent and stimulus. A `ScriptedReply` is `Decide`,
+  `Statement`, `Raw`, `Fail(kind)` or `Never()`, with `After(seconds)` for a wall-clock latency
+  that telemetry records, and `WithTokens` for the grounding guard. Refusal lines take
+  `RefusalLine` or the callback, never a key's next reply. `Hold` and `Release()` keep replies
+  back for queue tests. `Name` and every reply's `Model` are always `"scripted"`, so telemetry
+  never names a model. `ScriptedProviderConfig` (**Create → Agenerela → Scripted Provider**) makes
+  one an asset whose `Replies` entries a scene can select, with `Scripted` for scripting it
+  further in code.
+- `Documentation~/providers.md`: the scripted provider, as an asset, testing with it, and how a
+  decision log will replay through it (G7).
+
+### Fixed
+
+- **Play mode without a domain reload** (#190, G8): `AgenerelaSettings` forgets the settings it
+  found, and a test's override, as Play mode starts, so Enter Play Mode Options with the domain
+  reload off no longer carries them into the next session. A new EditMode test fails on any static
+  field in the framework's runtime assembly that nothing resets; the three that need no reset
+  (`ProviderConfig`'s provider names and built configs, and the queues) say why in it.
 
 ## [0.4.0-preview.1] - 2026-10-29
 

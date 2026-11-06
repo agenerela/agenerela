@@ -9,7 +9,7 @@ namespace Agenerela
     /// its [Available] check. Built only by <see cref="AgentActionReader"/>, which has already
     /// checked both methods' shape.
     /// </summary>
-    internal sealed class MethodActionHandler : IActionHandler
+    internal sealed class MethodActionHandler : IActionHandlerWithResult
     {
         private readonly object owner;
         private readonly MethodInfo action;
@@ -48,6 +48,12 @@ namespace Agenerela
 
         public void Execute(AgentContext ctx, AgentDecision decision)
         {
+            ExecuteWithResult(ctx, decision);
+        }
+
+        // The method's own ActionResult when it returns one; done whenever a void method returns.
+        public ActionResult ExecuteWithResult(AgentContext ctx, AgentDecision decision)
+        {
             // Each parameter is filled by its type; the reader allows at most one of each kind.
             var args = new object[parameterTypes.Length];
             for (int i = 0; i < args.Length; i++)
@@ -67,7 +73,8 @@ namespace Agenerela
                 }
             }
 
-            Call(action, args);
+            object returned = Call(action, args);
+            return returned is ActionResult result ? result : ActionResult.Done();
         }
 
         // The object registered under the decision's target id, as the method's own parameter type.

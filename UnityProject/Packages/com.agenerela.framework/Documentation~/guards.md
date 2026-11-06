@@ -44,7 +44,7 @@ reaches a guard.
 
 | Verdict | Means | The agent | `Execute` returns | Logged |
 |---|---|---|---|---|
-| `GuardVerdict.Pass` | Nothing wrong; the next guard looks at it | does what the model chose | whether the handler ran | no |
+| `GuardVerdict.Pass` | Nothing wrong; the next guard looks at it | does what the model chose | whether the handler ran and did not report `Failed` | no |
 | `GuardVerdict.RewriteToNone(reason)` | The answer is legal, but wrong for the game right now | does `none` with `no_target` | `true` | no |
 | `GuardVerdict.Reject(reason)` | The provider broke the contract | does `none` with `no_target` | `false` | a warning |
 
@@ -146,7 +146,9 @@ change while the model thinks. That re-check is `SchemaLegalityGuard` alone. A g
 judged the answer once, inside `DecideAsync`, and are not run again.
 
 If a game rule must still hold at the moment of acting, put it in the handler, or in the action's
-`IsAvailable`, which `Execute` does ask again.
+`IsAvailable`, which `Execute` does ask again. A handler can say why it did not act by returning
+`ActionResult.Failed(reason)`, which `Execute(result, out ActionResult)` hands back and the
+telemetry records ([executing-and-memory.md](executing-and-memory.md)).
 
 ## Writing one
 
@@ -155,7 +157,7 @@ A guard implements `IDecisionGuard`: a `Name`, which telemetry records, and
 function, as `DelegateActionHandler` does for an action.
 
 `GuardInput` holds everything a guard may read: the `Context` the decision was made from (state,
-targets, stimulus, observations), the `Request` sent, the provider's `Reply`, the parsed
+targets, stimulus, observations, and the call's `Correlation`), the `Request` sent, the provider's `Reply`, the parsed
 `Decision`, the call's `Options` and the `Telemetry` the result will carry. A guard may write its
 own numbers into the telemetry. It never changes the decision itself.
 

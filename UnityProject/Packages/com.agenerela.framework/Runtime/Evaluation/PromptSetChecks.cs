@@ -189,6 +189,13 @@ namespace Agenerela.Evaluation
                     add(PromptRule.StimulusIsExample,
                         $"The stimulus is {action.Id}'s example \"{action.ExampleStimulus}\": never score on a few-shot example (hard rule 4)");
                 }
+
+                // Shown answered with none, so scoring on it measures nothing either (#190).
+                if (action != null && MatchesExample(prompt.Stimulus, action.CounterExampleStimulus))
+                {
+                    add(PromptRule.StimulusIsExample,
+                        $"The stimulus is {action.Id}'s counter-example \"{action.CounterExampleStimulus}\": never score on a few-shot example (hard rule 4)");
+                }
             }
 
             if (MatchesExample(prompt.Stimulus, profile.IdleExampleStimulus))

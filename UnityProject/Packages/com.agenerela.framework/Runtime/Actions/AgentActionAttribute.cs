@@ -8,8 +8,10 @@ namespace Agenerela
     /// <see cref="ActionDefinition"/> and a handler that calls the method.
     /// </summary>
     /// <remarks>
-    /// The method returns void. Each parameter is filled by its type: an <see cref="AgentContext"/>
-    /// receives the context, an <see cref="AgentDecision"/> the decision, and at most one parameter
+    /// The method returns void, or an <see cref="ActionResult"/> saying what it did (DR-018): void
+    /// counts as <see cref="ExecutionStatus.Done"/> whenever it returns. Each parameter is filled
+    /// by its type: an <see cref="AgentContext"/> receives the context, an
+    /// <see cref="AgentDecision"/> the decision, and at most one parameter
     /// of any other type the target. That is the object registered under the decision's target id,
     /// passed as registered, or null for <see cref="TargetRegistry.NoTarget"/>, which a parameter
     /// that cannot hold null, such as an int, refuses. Pair it with <see cref="ExampleAttribute"/>
