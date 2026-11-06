@@ -329,18 +329,22 @@ namespace Demos.GreyBoxVillage.Tests
             foreach (var kind in new[] { WeatherKind.Clear, WeatherKind.Overcast, WeatherKind.Rain, WeatherKind.Fog })
             {
                 weather.Set(kind);
-                foreach (var source in new[] { "player", "zone", "wolf", "quiet", "bell" })
+                // A wolf out of sight in any weather, or close enough to see in any weather and for the
+                // bell: at 5 m, and at 14.99 m, just inside the bell's 15 m. From a guard's eyes that wolf
+                // is 15.002 m off, so a fog limit measured from the eyes would hide it.
+                foreach (var (source, metres) in new[] { ("player", 60f), ("zone", 60f), ("wolf", 5f), ("wolf", 14.99f), ("quiet", 60f), ("bell", 60f) })
                 {
-                    // A wolf close enough to see in any weather, and for the bell.
-                    wolf.transform.position = bram.transform.position + new Vector3(0, 0, source == "wolf" ? 5f : 60f);
+                    wolf.transform.position = bram.transform.position + new Vector3(metres, 0, 0);
                     Physics.SyncTransforms();
                     if (source == "player") await bram.HearPlayerAsync("What now?");
                     else await bram.ReportEventAsync(source, "Event", "Something is happening (" + source + ").", DecisionPriority.Background);
                     await Idle();
                     var offered = bram.Last.OfferedActions;
-                    if (kind == WeatherKind.Clear) clear[source] = offered;
-                    else Assert.That(offered, Is.EqualTo(clear[source]), kind + ", " + source);
-                    Assert.That(bram.Last.OfferedTargets, Is.EquivalentTo(BramsTargets), kind + ", " + source);
+                    string key = source + " " + metres + " m";
+                    if (kind == WeatherKind.Clear) clear[key] = offered;
+                    else Assert.That(offered, Is.EqualTo(clear[key]), kind + ", " + key);
+                    if (source == "wolf") Assert.That(offered, Does.Contain("sound_alarm"), kind + ", " + key + ": the bell is for a wolf this close.");
+                    Assert.That(bram.Last.OfferedTargets, Is.EquivalentTo(BramsTargets), kind + ", " + key);
                 }
             }
             Assert.That(bram.Agent.Actions.Definitions.Select(d => d.Id), Is.EqualTo(registered));

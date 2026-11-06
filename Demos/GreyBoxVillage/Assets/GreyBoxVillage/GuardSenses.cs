@@ -73,16 +73,13 @@ namespace Demos.GreyBoxVillage
             if (target == null) return false;
             var eye = Guard.transform.position + Vector3.up * EyeHeight;
             var point = target.position + Vector3.up * 1f;
-            if (Vector3.Distance(eye, point) > Range(range)) return false;
+            if (Vector3.Distance(eye, point) > (range < 0 ? SightRange : range)) return false;
+            // The weather's limit is on the distance along the ground between the two, the one the
+            // availability checks measure (AgentMind.VisibleWolfDistance): so a wolf near enough for
+            // the bell in sunshine is never lost to fog's limit by the height of the guard's eyes.
+            if (Weather != null && Vector3.Distance(Guard.transform.position, target.position) > Weather.SightLimit) return false;
             if (!Physics.Linecast(eye, point, out var hit, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)) return true;
             return hit.transform == target || hit.transform.IsChildOf(target) || hit.transform.IsChildOf(Guard.transform);
-        }
-
-        /// <summary>How far the guard sees for a range (its <see cref="SightRange"/> when negative), in this weather.</summary>
-        public float Range(float range = -1f)
-        {
-            float r = range < 0 ? SightRange : range;
-            return Weather != null ? Mathf.Min(r, Weather.SightLimit) : r;
         }
 
         private void Update() => Sense();
