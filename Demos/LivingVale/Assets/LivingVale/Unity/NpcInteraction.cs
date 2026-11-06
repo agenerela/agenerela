@@ -12,6 +12,8 @@ namespace LivingVale.Unity
 
         private NpcSpeaker[] speakers;
 
+        public bool HasFocus { get; private set; }
+
         public void Configure(ValeBootstrap owner, ChatOverlay sceneOverlay)
         {
             bootstrap = owner;
@@ -56,6 +58,7 @@ namespace LivingVale.Unity
                     ? ConversationCloseReason.Interrupted : ConversationCloseReason.LeftRange);
             }
 
+            HasFocus = focused != null && !bootstrap.WorldInputBlocked;
             overlay.SetFocusPrompt(bootstrap.WorldInputBlocked || focused == null
                 ? "" : $"E — Talk to {focused.Descriptor.DisplayName}");
             // Design §8: chat refuses to open while an enemy is fighting the player.

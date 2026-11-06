@@ -37,7 +37,7 @@ namespace LivingVale.Editor
                 new Vector3(2.2f, 0.8f, 1.6f), stone, keepCollider: true);
 
             AddPlayerCombat(bootstrap, player, playerBody, steel);
-            Raider(new Vector3(-1f, 0f, -27f), raiderCloth, steel);
+            Raider("enemy_raider_1", new Vector3(-1f, 0f, -27f), raiderCloth, steel);
             Wolf(new Vector3(4f, 0f, -29f), wolfFur);
 
             var respawn = new GameObject("Respawn point").transform;
@@ -62,7 +62,15 @@ namespace LivingVale.Editor
             player.AddComponent<PlayerCombat>().Configure(bootstrap, pivot);
         }
 
-        private static void Raider(Vector3 feet, Material cloth, Material steel)
+        /// <summary>Builds a raider with a stable quest or encounter ID using the meadow raider's materials.</summary>
+        public static GameObject SpawnRaider(string id, Vector3 feet)
+        {
+            Material steel = MaterialFor("Steel", new Color(0.72f, 0.75f, 0.78f));
+            Material cloth = MaterialFor("RaiderCloth", new Color(0.55f, 0.16f, 0.13f));
+            return Raider(id, feet, cloth, steel);
+        }
+
+        private static GameObject Raider(string id, Vector3 feet, Material cloth, Material steel)
         {
             GameObject root = FighterRoot("Raider", feet, 1.9f, 0.4f);
             Transform visual = Visual(root);
@@ -72,8 +80,9 @@ namespace LivingVale.Editor
             GameObject blade = Primitive("Raider blade", PrimitiveType.Cube, new Vector3(0.45f, 1.1f, 0.45f),
                 new Vector3(0.07f, 0.04f, 0.9f), steel);
             blade.transform.SetParent(visual, false);
-            Finish(root, visual, EnemyArchetype.Raider, "enemy_raider_1", 2.4f,
+            Finish(root, visual, EnemyArchetype.Raider, id, 2.4f,
                 body.GetComponent<Renderer>(), blade.GetComponent<Renderer>());
+            return root;
         }
 
         private static void Wolf(Vector3 feet, Material fur)

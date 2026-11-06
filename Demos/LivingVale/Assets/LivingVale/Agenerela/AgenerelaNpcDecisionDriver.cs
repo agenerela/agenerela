@@ -53,6 +53,7 @@ namespace LivingVale.Agenerela
         private readonly NpcActionExecutor executor;
         private readonly Dictionary<string, TradeActionBinding> trade = new Dictionary<string, TradeActionBinding>();
         private readonly Dictionary<string, QuestActionBinding> questBindings = new Dictionary<string, QuestActionBinding>();
+        private readonly Dictionary<string, RouteActionBinding> routeBindings = new Dictionary<string, RouteActionBinding>();
         private readonly Dictionary<string, TradeReceipt> lastReceipts;
 
         // Each NPC's memory, by NPC id. Kept apart from the agents so a driver rebuilt for another
@@ -207,6 +208,11 @@ namespace LivingVale.Agenerela
                 {
                     questBindings[npc.Id] = QuestActionBinding.Bind(agent, npc.Id, executor);
                 }
+
+                if (executor.Routes != null)
+                {
+                    routeBindings[npc.Id] = RouteActionBinding.Bind(agent, npc.Id, executor);
+                }
             }
 
             configureAgent?.Invoke(npc, agent);
@@ -266,6 +272,14 @@ namespace LivingVale.Agenerela
                 quest.RefreshExample(option);
                 lines.AddRange(QuestActionBinding.PromptLines(option));
                 lines.AddRange(quest.StatusLines());
+            }
+
+            if (routeBindings.TryGetValue(turn.Npc.Id, out var route))
+            {
+                var routeOptions = route.Options();
+                route.RefreshExamples(routeOptions);
+                lines.AddRange(RouteActionBinding.PromptLines(routeOptions));
+                lines.AddRange(route.StatusLines());
             }
 
             var extra = TurnObservations?.Invoke(turn);
@@ -353,13 +367,15 @@ namespace LivingVale.Agenerela
             binding?.ClearOutcome();
             questBindings.TryGetValue(turn.Npc.Id, out var questBinding);
             questBinding?.ClearOutcome();
+            routeBindings.TryGetValue(turn.Npc.Id, out var routeBinding);
+            routeBinding?.ClearOutcome();
 
             // The handlers read the generation from the state Agent.Execute copies into their context.
             agent.State[TradeActionBinding.GenerationKey] = turn.Generation;
             bool executed = agent.Execute(result);
 
             // Agent.Execute is true once the handler ran; the executor may still have refused the quote or offer.
-            var outcome = binding?.LastOutcome ?? questBinding?.LastOutcome;
+            var outcome = binding?.LastOutcome ?? questBinding?.LastOutcome ?? routeBinding?.LastOutcome;
             if (executed && outcome != null)
             {
                 LastOutcome = outcome;

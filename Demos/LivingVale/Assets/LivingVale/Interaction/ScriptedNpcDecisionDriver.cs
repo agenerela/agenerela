@@ -40,8 +40,13 @@ namespace LivingVale.Interaction
         public string Line { get; }
         public string UnavailableLine { get; }
 
-        public ScriptedTradeRule(string[] verbs, string[] nouns, string actionId, string targetId, string line, string unavailableLine)
+        /// <summary>When the pair is not available now, try the next rule instead of saying <see cref="UnavailableLine"/> (G4c).</summary>
+        public bool SkipWhenUnavailable { get; }
+
+        public ScriptedTradeRule(string[] verbs, string[] nouns, string actionId, string targetId, string line, string unavailableLine,
+            bool skipWhenUnavailable = false)
         {
+            SkipWhenUnavailable = skipWhenUnavailable;
             Verbs = verbs;
             Nouns = nouns;
             ActionId = actionId;
@@ -58,7 +63,7 @@ namespace LivingVale.Interaction
     /// the same <see cref="NpcActionExecutor"/> a model-backed driver uses. It is not a model and
     /// must never be presented as one, hence <see cref="Label"/>.
     /// </summary>
-    public sealed class ScriptedNpcDecisionDriver : INpcDecisionDriver
+    public sealed partial class ScriptedNpcDecisionDriver : INpcDecisionDriver
     {
         private readonly Dictionary<string, NpcScript> scripts = new Dictionary<string, NpcScript>();
         private readonly Dictionary<string, List<ScriptedTradeRule>> tradeRules = new Dictionary<string, List<ScriptedTradeRule>>();
@@ -74,6 +79,7 @@ namespace LivingVale.Interaction
             AddG1Scripts();
             RegionNpcScripts.AddTo(this); // G4b: the six region NPCs, general conversation only.
             AddG3TradeRules();
+            AddG4cRouteRules(); // Before G4's offer rule, so "here is the parcel" is a delivery, not a new offer.
             AddG4QuestRules();
         }
 
@@ -197,8 +203,20 @@ namespace LivingVale.Interaction
                     continue;
                 }
 
+                // Likewise G4c's route rules without the routes.
+                if (IsRouteRule(rule) && executor.Routes == null)
+                {
+                    continue;
+                }
+
                 // Only what game state offers now, as a model sees only what is registered.
-                decision = IsAvailable(turn.Npc.Id, rule.ActionId, rule.TargetId)
+                bool available = IsAvailable(turn.Npc.Id, rule.ActionId, rule.TargetId);
+                if (!available && rule.SkipWhenUnavailable)
+                {
+                    continue;
+                }
+
+                decision = available
                     ? new AgentDecision(rule.ActionId, rule.TargetId, rule.Line)
                     : new AgentDecision(ActionRegistry.None, TargetRegistry.NoTarget, rule.UnavailableLine);
                 return true;

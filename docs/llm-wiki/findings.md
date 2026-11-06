@@ -1009,3 +1009,33 @@ wording measured elsewhere.
 **What would change this.** A larger set on which the example makes a model miss asked trades,
 or an evaluation-set A/B showing a `none` example costs command accuracy. Appendix A warns that
 plausible prompt changes have hurt before.
+
+### Living Vale's quest routes on gemma4:e2b-it-qat: the right action six times in seven, and two kinds of slip (5 November 2026)
+
+**A smoke check, not an accuracy claim.** It was one run of seven lines, with no labels and no
+control arm (hard rule 2). It asks whether G4c's new route actions are reachable from a local
+model that sees them only through the prompt lines `RouteActionBinding` writes.
+
+**What ran.** `QuestRouteLiveCheck` in Unity batch mode, through the `Agent` driver, against a
+local Ollama 0.40.14 with `gemma4:e2b-it-qat`, taken under the shared lock and nothing else
+loaded. Each line was staged on fresh game state at the quest stage it needs. Fen, Kest, Brann
+and Elra had no authored persona yet, so each was built from its descriptor, and what they knew
+came only from the target descriptions and status lines.
+
+**What it showed.**
+- Six of seven picked the expected action and target. These were Fen's `share_information`
+  (13.7 s, a cold load), Kest's testimony and payment deals, Brann's permit, and both deliveries.
+  The warm turns took 1.0 to 1.7 s.
+- The bluff ("I have proof. A witness watched your people…", with no clue recorded): the
+  testimony deal was absent from the schema, so it could not be chosen. Kest picked
+  `exchange_kest_payment` instead, an unrequested offer of the kind framework gap 9 describes. His
+  line refused the proof. Nothing was unlocked, and the card still needed the player's 20 gold.
+- Brann chose `grant_access` correctly, but said "You must first earn a delivery permit". The
+  statement contradicted the action, and nothing checks that the two agree.
+
+**What it means.** The prompt-line workaround (framework gap 1) is enough to reach every new
+action on this model. The two slips are what the game's cards and receipts are for: a wrong
+offer still needs the player's button, and the receipt line says what really happened. Whether
+the status lines ("Claims of proof are only words") help is unmeasured. That needs an A/B run with
+and without them (gap 18). The run predates G5f's `none` example (entry above), which may well remove the bluff's unasked offer. Rows are in `.scratch/g4c/live/routes.jsonl` in the G4c worktree.
+

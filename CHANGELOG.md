@@ -61,6 +61,15 @@ phase table and the open issues, not here.
   and a two- or three-stop routine that holds while their chat is open; all of them only talk for
   now. Entering a place for the first time pays 10 XP once (`discover_<place id>`, saved with the
   progression) with a HUD notice, and the HUD names the current place. Framework gaps 14 and 15.
+- **Living Vale G4c: the main quest's routes and endings, and both side quests** (#69), on
+  `69-living-vale`. The parcel at Broken Watch can be recovered three ways: by defeating three
+  camp defenders, by paying Kest or having done Iven's herb favour, or with Fen's witness clue,
+  which counts only once Fen tells it through `share_information`. It can then be delivered to
+  Iven, to Elra with Brann's permit, or divided once both have agreed. There are new NPC actions
+  (`share_information`, `offer_exchange`, `resolve_delivery`, `grant_access`), and both side
+  quests can be offered and handed in. **E** uses world pickups, and each ending changes the scene.
+  Every deal goes on a card. All of it runs through `QuestRoutes` and the shared executor, from
+  both drivers. Framework gaps 16–19 are recorded.
 - **Living Vale G4, part 1: quests, progression and saves** (#69), on `69-living-vale`: plain C#
   in `Game/` with EditMode tests. `QuestLog` holds *The Missing Wagon* (states Undiscovered →
   Offered → Active → ParcelRecovered → Resolved, early discovery skipping ahead, clues kept apart,
