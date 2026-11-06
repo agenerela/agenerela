@@ -35,6 +35,8 @@ namespace Demos.Shared
         public bool IsTyping { get; private set; }
         /// <summary>Whether the panel is showing, which it does while someone is in earshot.</summary>
         public bool IsOpen { get; private set; }
+        /// <summary>Where the dialogue panel sits, in panel pixels, while it is open.</summary>
+        public Rect? Bounds => IsOpen && panel != null ? panel.worldBound : (Rect?)null;
 
         private VisualElement root, panel, log, chips;
         private Label who, role, status, hint;

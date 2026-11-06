@@ -47,9 +47,15 @@ namespace Demos.Shared
             root = DemoUI.Create(gameObject, 5);
 
             strip = new VisualElement { name = "AgentStrip", pickingMode = PickingMode.Ignore };
+            // On a soft panel, like the key hints, so its heading reads over bright ground.
+            strip.AddToClassList("vui-panel");
+            strip.AddToClassList("vui-panel--soft");
+            strip.style.paddingTop = strip.style.paddingBottom = 6;
+            strip.style.paddingLeft = strip.style.paddingRight = 8;
             strip.style.position = Position.Absolute;
             strip.style.left = 14;
-            strip.style.top = 62;
+            // Below the HUD's clock and purse.
+            strip.style.top = 104;
             root.Add(strip);
             var stripHead = DemoUI.Label(strip, "AGENTS   ·   Tab: framework view", "vui-muted");
             stripHead.style.marginBottom = 3;
@@ -58,9 +64,11 @@ namespace Demos.Shared
             board.name = "FrameworkView";
             board.style.position = Position.Absolute;
             board.style.left = 14;
-            board.style.top = 62;
+            board.style.top = 104;
             board.style.bottom = 54;
             board.style.width = 420;
+            // Opaque, so no world label shows through it.
+            board.style.backgroundColor = new Color(0.1f, 0.08f, 0.06f, 1f);
             board.pickingMode = PickingMode.Ignore;
             title = DemoUI.Label(board, "", "vui-title");
             subtitle = DemoUI.Label(board, "", "vui-subtitle");
@@ -87,6 +95,9 @@ namespace Demos.Shared
             views.Clear();
             pills.Clear();
         }
+
+        /// <summary>Where the board sits over the world, in panel pixels: the framework view when open, the agent list when not.</summary>
+        public Rect? Bounds => board == null ? (Rect?)null : Expanded ? board.worldBound : strip.worldBound;
 
         public void Toggle()
         {
@@ -185,7 +196,11 @@ namespace Demos.Shared
             view.Title = DemoUI.Label(top, "", "vui-title");
             view.Title.style.fontSize = 13;
             view.Title.style.flexShrink = 1;
+            view.Title.style.whiteSpace = WhiteSpace.Normal;
             view.Chip = DemoUI.Label(top, "", "vui-chip");
+            view.Chip.style.flexShrink = 0;
+            view.Chip.style.marginLeft = 6;
+            view.Chip.style.alignSelf = Align.FlexStart;
             view.Activity = DemoUI.Label(box, "", "vui-muted");
             view.Stimulus = DemoUI.Label(box, "", "vui-text");
             view.Offered = DemoUI.Label(box, "", "vui-muted");

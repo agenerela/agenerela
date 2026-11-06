@@ -11,6 +11,31 @@ without showing them yours. This page says how a set is laid out, how to write p
 label them blind, and how to read and settle agreement. The runner that scores a model against
 the set is still to come (Phase 4); it reads the same files.
 
+## First time
+
+Open **Window → Agenerela → Prompt Set**. Until it has a set and a profile, its tabs are greyed
+out and it shows three steps:
+
+1. **Choose the set.** Click **Open the project's evaluation set**. It opens the `agent.json`
+   under `Assets/`, `Assets/Evaluation/agent.json` first and a menu when there are several, and
+   the `AgentProfile` in the same folder. No set yet? Choose your profile and click **New set
+   from this profile…**, or drag a set file into **Set**.
+2. **Choose the profile**, if the first step did not find one: drag the agent's `AgentProfile`
+   into **Profile**. Write offers its actions, and every prompt is checked against its few-shot
+   examples.
+3. **Type your name** into **Your name**, or pick it from **▾**. It goes on the prompts you
+   write, and your answers in Label are saved under it.
+
+Then pick a tab. The line under the tabs says what the one you are on is for:
+
+- **Write**: add prompts, each with the answer it should get.
+- **Label**: answer other people's prompts without seeing their answers.
+- **Agreement**: compare everyone's answers and settle the splits.
+
+The window remembers the set, the profile and your name on this machine, per project, in
+`EditorPrefs`. Nothing about you goes into the set's files except your name on what you write
+and label.
+
 ## A set on disk
 
 ```

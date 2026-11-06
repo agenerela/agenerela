@@ -191,9 +191,18 @@ namespace Demos.GreyBoxVillage
             if (Conversation.Count > 30) Conversation.RemoveAt(0);
         }
 
-        /// <summary>Something the agent noticed. Waits its turn when a decision is already running.</summary>
+        /// <summary>
+        /// Something the agent noticed. Waits its turn when a decision is already running, and is
+        /// dropped while the model is down (<see cref="VillageCommands.MayAskOnItsOwn"/>).
+        /// </summary>
         public async Awaitable ReportEventAsync(string source, string label, string text, DecisionPriority priority)
         {
+            if (!Village.MayAskOnItsOwn)
+            {
+                // Nobody can answer it. The quiet timer counts from now, so it does not ask at once.
+                LastActivityTime = Time.time;
+                return;
+            }
             if (IsDeciding)
             {
                 pending = new PendingEvent { Source = source, Label = label, Text = text, Priority = priority };
@@ -206,7 +215,17 @@ namespace Demos.GreyBoxVillage
         {
             // A mind destroyed while an event waited for it asks nothing more.
             if (this == null) return;
-            var agent = Agent;
+            Agent agent;
+            try { agent = Agent; }
+            catch (InvalidOperationException e)
+            {
+                // No agent can be built, such as from a provider config that is not valid: say so, and stay playable.
+                Village.ReportModel("No agent could be built: " + e.Message);
+                Body.Say("No answer: there is no model to ask.", SpeechKind.Error);
+                LastActivityTime = Time.time;
+                pending = null;
+                return;
+            }
             IsDeciding = true;
             // Who is asking decides what the agent is offered (its body's availability checks). It
             // stays set until the next decision, because Execute checks availability again.
@@ -234,6 +253,7 @@ namespace Demos.GreyBoxVillage
                 // Destroyed while the model thought (in Edit mode nothing cancels the call).
                 if (this == null) { gone = true; return; }
                 Village.Recorder.Attach(record, result);
+                Village.ReportModel(result);
                 // A decision that says nothing, or fails, must not leave the last one's line standing.
                 Body.Hush();
                 if (result.Decision == null) ShowError(record, result, asked);
@@ -251,12 +271,13 @@ namespace Demos.GreyBoxVillage
                 if (gone) pending = null;
             }
 
-            // An event that came in meanwhile is asked now, whatever became of this decision.
+            // An event that came in meanwhile is asked now, whatever became of this decision, unless
+            // the model is down and nobody could answer it.
             if (!gone && pending != null)
             {
                 var next = pending;
                 pending = null;
-                await DecideAsync(next.Source, next.Label, next.Text, next.Priority);
+                if (Village.MayAskOnItsOwn) await DecideAsync(next.Source, next.Label, next.Text, next.Priority);
             }
         }
 
@@ -265,7 +286,13 @@ namespace Demos.GreyBoxVillage
             var t = result.Telemetry;
             string error = "No decision: " + t.ErrorKind + ". " + t.ErrorMessage;
             Village.Recorder.Complete(record, result, "error", error);
-            Log(Name, "(no answer: " + t.ErrorKind + ")", DialogueLine.Kinds.Note);
+            // Said where the player is looking, so a failure never looks like an agent thinking
+            // forever, and the same words in the dialogue log. The error kind is in the recorder.
+            string why = Village.ModelProblem != null ? "no model is answering"
+                : t.ErrorKind == PipelineErrorKind.UnreadableReply ? "the reply could not be read"
+                : "something went wrong (" + t.ErrorKind + ")";
+            Log(Name, "(no answer: " + why + ")", DialogueLine.Kinds.Note);
+            Body.Say("No answer: " + why + ".", SpeechKind.Error);
             Village.Overlay.ShowDecision(asked, "none", "no_target", "", error,
                 t.LatencySeconds, t.GuardsFired, Village.ProviderLabel);
         }

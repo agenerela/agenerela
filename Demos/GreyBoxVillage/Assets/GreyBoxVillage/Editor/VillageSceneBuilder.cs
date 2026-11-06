@@ -37,6 +37,7 @@ namespace Demos.GreyBoxVillage.Editor
             SceneManager.SetActiveScene(scene);
             LoadArt();
             BuildWorld();
+            RecordPlacedModels(scene);
             EditorSceneManager.SaveScene(scene, DemoLauncher.VillagePath);
 
             var launcher = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
@@ -69,8 +70,9 @@ namespace Demos.GreyBoxVillage.Editor
             LoadArt();
             foreach (var root in scene.GetRootGameObjects()) UnityEngine.Object.DestroyImmediate(root);
             BuildWorld();
+            RecordPlacedModels(scene);
             EditorSceneManager.MarkSceneDirty(scene);
-            EditorSceneManager.SaveScene(scene);
+            EditorSceneManager.SaveScene(SceneManager.GetActiveScene());
             AssetDatabase.SaveAssets();
         }
 
@@ -83,6 +85,24 @@ namespace Demos.GreyBoxVillage.Editor
         {
             EditorSceneManager.OpenScene(DemoLauncher.VillagePath, OpenSceneMode.Single);
             RebuildVillage();
+        }
+
+        /// <summary>
+        /// Records every change the builder made to a placed model (where it stands, its turn and
+        /// size, its static flags) as a prefab override. A change made by script to a prefab
+        /// instance is saved only once recorded: without this, every model was saved at the
+        /// origin and none of them batched.
+        /// </summary>
+        private static void RecordPlacedModels(Scene scene)
+        {
+            foreach (var root in scene.GetRootGameObjects())
+                foreach (var t in root.GetComponentsInChildren<Transform>(true))
+                {
+                    if (!PrefabUtility.IsPartOfPrefabInstance(t)) continue;
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(t);
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(t.gameObject);
+                    foreach (var r in t.GetComponents<Renderer>()) PrefabUtility.RecordPrefabInstancePropertyModifications(r);
+                }
         }
 
         [MenuItem("Tools/Demos/GreyBoxVillage/Rebake Navigation")]

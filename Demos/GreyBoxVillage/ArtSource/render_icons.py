@@ -54,11 +54,21 @@ def stage(transparent, background=(0.2, 0.17, 0.13)):
     world.node_tree.nodes["Background"].inputs[0].default_value = (*background, 1)
     world.node_tree.nodes["Background"].inputs[1].default_value = 1.0
     scene.world = world
+    # The sun is the rim light; the key and the fill come with the camera (see camera()).
     sun = bpy.data.objects.new("sun", bpy.data.lights.new("sun", "SUN"))
-    sun.data.energy = 4.0
+    sun.data.energy = 2.5
     sun.rotation_euler = (math.radians(45), math.radians(15), math.radians(-35))
     scene.collection.objects.link(sun)
     return scene
+
+
+def light(scene, name, energy, pitch, yaw):
+    """A sun shining the way a camera at this pitch and yaw would look."""
+    sun = bpy.data.objects.new(name, bpy.data.lights.new(name, "SUN"))
+    sun.data.energy = energy
+    sun.data.angle = math.radians(20)  # soft shadows
+    sun.rotation_euler = (math.radians(pitch), 0, math.radians(yaw))
+    scene.collection.objects.link(sun)
 
 
 def load(name, mat):
@@ -90,6 +100,11 @@ def camera(scene, target, size, pitch, yaw):
     cam.location = target + (cam.rotation_euler.to_matrix() @ Vector((0, 0, 1))) * 30
     cam.data.clip_end = 100
     scene.camera = cam
+    # Lit from the viewer's side, so a face turned to the camera is never in its own shadow (the
+    # sun alone left Odile's face too dark to read): a key a little to one side and above, and a
+    # weaker fill from the other side.
+    light(scene, "key", 3.2, max(pitch - 25, 20), yaw - 35)
+    light(scene, "fill", 1.3, max(pitch - 10, 30), yaw + 55)
 
 
 def render(scene, path):

@@ -5,11 +5,12 @@ using UnityEngine;
 
 namespace Demos.GreyBoxVillage
 {
-    /// <summary>How a line above an agent's head reads: its own words, or a guard's refusal.</summary>
+    /// <summary>How a line above an agent's head reads: its own words, a guard's refusal, or the game saying no answer came.</summary>
     public enum SpeechKind
     {
         Statement,
-        Refusal
+        Refusal,
+        Error
     }
 
     /// <summary>
@@ -121,7 +122,7 @@ namespace Demos.GreyBoxVillage
         /// <summary>Forgets what the agent was doing, without moving it. Used between tests.</summary>
         public abstract void ResetState();
 
-        /// <summary>Shows a line above the agent's head for a few seconds. A refusal reads in amber, tagged with the guard.</summary>
+        /// <summary>Shows a line above the agent's head for a few seconds. A refusal reads in amber, tagged with the guard; an error in red.</summary>
         public void Say(string statement, SpeechKind kind = SpeechKind.Statement, string guard = null)
         {
             if (string.IsNullOrWhiteSpace(statement)) return;
@@ -131,7 +132,7 @@ namespace Demos.GreyBoxVillage
             speechUntil = Time.time + 6f;
             speaking = true;
             var figure = GetComponent<Demos.Shared.SegmentedFigure>();
-            if (figure != null) figure.Talk(Mathf.Clamp(SpeechText.Length * 0.06f, 1f, 4f));
+            if (figure != null && kind != SpeechKind.Error) figure.Talk(Mathf.Clamp(SpeechText.Length * 0.06f, 1f, 4f));
         }
 
         /// <summary>Takes down the line above its head, so an older one never stands for a newer decision.</summary>

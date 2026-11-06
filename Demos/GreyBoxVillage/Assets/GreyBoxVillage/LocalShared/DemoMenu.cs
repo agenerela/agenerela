@@ -18,6 +18,8 @@ namespace Demos.Shared
         public VillageBook Book;
 
         public bool IsOpen { get; private set; }
+        /// <summary>Where the menu sits, in panel pixels, while it is open.</summary>
+        public Rect? Bounds => IsOpen && panel != null ? panel.worldBound : (Rect?)null;
 
         private VisualElement root, panel, controls;
         private Button dayButton, boardButton;
@@ -39,6 +41,7 @@ namespace Demos.Shared
             panel.style.top = Length.Percent(18);
             panel.style.paddingTop = 16;
             panel.style.paddingBottom = 16;
+            panel.style.backgroundColor = new Color(0.1f, 0.08f, 0.06f, 1f);
             panel.pickingMode = PickingMode.Position;
             var title = DemoUI.Label(panel, "ASHFORD", "vui-title");
             title.style.fontSize = 24;
@@ -49,7 +52,7 @@ namespace Demos.Shared
             DemoUI.Button(panel, "Resume", Close, "Resume");
             boardButton = DemoUI.Button(panel, "", () => { Board?.Toggle(); Refresh(); }, "ToggleBoard");
             dayButton = DemoUI.Button(panel, "", CycleDay, "DaySpeed");
-            DemoUI.Button(panel, "Controls", () => DemoUI.Show(controls, controls.style.display == DisplayStyle.None), "Controls");
+            DemoUI.Button(panel, "Controls", () => ShowControls(controls.style.display == DisplayStyle.None), "Controls");
             controls = DemoUI.Panel(panel, "vui-panel--soft");
             foreach (var (key, what) in new[]
             {
@@ -83,6 +86,12 @@ namespace Demos.Shared
             if (dayButton == null) return;
             dayButton.text = "Day: " + DaySpeeds[daySpeed].label;
             boardButton.text = Board != null && Board.Expanded ? "Hide the framework view" : "Show the framework view";
+        }
+
+        /// <summary>Shows or hides the list of controls under the menu's buttons.</summary>
+        public void ShowControls(bool shown)
+        {
+            if (controls != null) DemoUI.Show(controls, shown);
         }
 
         public void Open()

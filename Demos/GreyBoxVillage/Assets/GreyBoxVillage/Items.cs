@@ -8,23 +8,32 @@ namespace Demos.GreyBoxVillage
     /// <summary>Everything a player can carry: its name, a line about it, and what Odile asks for it.</summary>
     public static class ItemCatalog
     {
+        /// <summary>One item. Read-only, because <see cref="All"/> is static: a change made in one play session would outlive it when the editor skips the domain reload.</summary>
         public sealed class Item
         {
-            public string Id, Name, Description;
-            public int Price;
+            public readonly string Id, Name, Description;
+            public readonly int Price;
+
+            public Item(string id, string name, string description, int price)
+            {
+                Id = id;
+                Name = name;
+                Description = description;
+                Price = price;
+            }
         }
 
-        public static readonly Item[] All =
+        public static readonly IReadOnlyList<Item> All = Array.AsReadOnly(new[]
         {
-            new Item { Id = "bread", Name = "Bread", Description = "A round loaf, still warm.", Price = 2 },
-            new Item { Id = "apple", Name = "Apple", Description = "Red and crisp.", Price = 1 },
-            new Item { Id = "rope", Name = "Rope", Description = "Ten metres of good hemp rope.", Price = 6 },
-            new Item { Id = "torch", Name = "Torch", Description = "Pitch-soaked; burns for an hour.", Price = 3 },
-            new Item { Id = "lantern", Name = "Lantern", Description = "Iron and glass, with a fresh wick.", Price = 12 },
-            new Item { Id = "moonpetal", Name = "Moonpetal", Description = "A pale flower from the woods that glows after dark.", Price = 0 },
-            new Item { Id = "pelt", Name = "Wolf pelt", Description = "Grey fur, left behind by the wolf.", Price = 8 },
-            new Item { Id = "old_lantern", Name = "Wren's lantern", Description = "Dented, with W scratched into the base.", Price = 0 },
-        };
+            new Item("bread", "Bread", "A round loaf, still warm.", 2),
+            new Item("apple", "Apple", "Red and crisp.", 1),
+            new Item("rope", "Rope", "Ten metres of good hemp rope.", 6),
+            new Item("torch", "Torch", "Pitch-soaked; burns for an hour.", 3),
+            new Item("lantern", "Lantern", "Iron and glass, with a fresh wick.", 12),
+            new Item("moonpetal", "Moonpetal", "A pale flower from the woods that glows after dark.", 0),
+            new Item("pelt", "Wolf pelt", "Grey fur, left behind by the wolf.", 8),
+            new Item("old_lantern", "Wren's lantern", "Dented, with W scratched into the base.", 0),
+        });
 
         public static Item Get(string id) => All.FirstOrDefault(i => i.Id == id);
     }

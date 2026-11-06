@@ -9,7 +9,7 @@ namespace Demos.Shared
     {
         public Vector3 World;
         public string Text;
-        /// <summary>"say", "refusal" or "thinking".</summary>
+        /// <summary>"say", "refusal", "error" or "thinking".</summary>
         public string Kind;
         /// <summary>For a refusal: the guard that stopped the decision.</summary>
         public string Tag;
@@ -30,14 +30,19 @@ namespace Demos.Shared
     /// </summary>
     public sealed class VillageHud : MonoBehaviour
     {
-        private VisualElement root, world, quests, toasts, hints;
-        private Label clock, coins, prompt, promptKey;
+        private VisualElement root, world, quests, toasts, hints, clockPanel, column;
+        private Label clock, coins, prompt, promptKey, alert;
         private VisualElement phase;
         private VisualElement promptRow, coinsRow;
         private readonly List<VisualElement> bubbles = new List<VisualElement>();
         private readonly List<Label> nameTags = new List<Label>();
         private readonly List<Label> placeTags = new List<Label>();
         private readonly List<(VisualElement element, float until)> liveToasts = new List<(VisualElement, float)>();
+        private readonly List<int> order = new List<int>();
+        private readonly List<Rect> taken = new List<Rect>();
+        private readonly List<Rect> covered = new List<Rect>();
+        // Panel pixels between a speaker's bubble and the name tag beneath it.
+        private const float BubbleLift = 18f;
 
         /// <summary>The toasts shown so far, newest last, for tests.</summary>
         public List<string> ToastLog { get; } = new List<string>();
@@ -51,7 +56,7 @@ namespace Demos.Shared
             world.style.left = world.style.right = world.style.top = world.style.bottom = 0;
             root.Add(world);
 
-            var time = DemoUI.Panel(root, "vui-panel--soft");
+            var time = clockPanel = DemoUI.Panel(root, "vui-panel--soft");
             time.style.position = Position.Absolute;
             time.style.left = 14;
             time.style.top = 12;
@@ -72,23 +77,34 @@ namespace Demos.Shared
             coinsRow = DemoUI.Row(times);
             coins = DemoUI.Label(coinsRow, "", "vui-subtitle");
 
-            quests = DemoUI.Panel(root, "vui-panel--soft");
+            // The right-hand column: the quest tracker, and the toasts under it, out of the top
+            // centre where speech bubbles rise.
+            column = new VisualElement { name = "RightColumn", pickingMode = PickingMode.Ignore };
+            column.style.position = Position.Absolute;
+            column.style.right = 14;
+            column.style.top = 12;
+            column.style.width = 250;
+            column.style.alignItems = Align.FlexEnd;
+            root.Add(column);
+            quests = DemoUI.Panel(column, "vui-panel--soft");
             quests.name = "QuestTracker";
-            quests.style.position = Position.Absolute;
-            quests.style.right = 14;
-            quests.style.top = 12;
-            quests.style.width = 250;
+            quests.style.alignSelf = Align.Stretch;
+            quests.style.marginBottom = 8;
             quests.pickingMode = PickingMode.Ignore;
             DemoUI.Show(quests, false);
 
+            alert = DemoUI.Label(root, "", "alert");
+            alert.name = "Alert";
+            alert.style.position = Position.Absolute;
+            alert.style.top = 12;
+            alert.style.alignSelf = Align.Center;
+            DemoUI.Show(alert, false);
+
             toasts = new VisualElement { name = "Toasts" };
             toasts.pickingMode = PickingMode.Ignore;
-            toasts.style.position = Position.Absolute;
-            toasts.style.top = 70;
-            toasts.style.left = 0;
-            toasts.style.right = 0;
-            toasts.style.alignItems = Align.Center;
-            root.Add(toasts);
+            toasts.style.alignItems = Align.FlexEnd;
+            toasts.style.alignSelf = Align.Stretch;
+            column.Add(toasts);
 
             promptRow = DemoUI.Panel(root, "vui-panel--soft");
             promptRow.style.position = Position.Absolute;
@@ -101,11 +117,28 @@ namespace Demos.Shared
             prompt = DemoUI.Label(promptRow, "", "vui-text");
             DemoUI.Show(promptRow, false);
 
-            hints = DemoUI.Row(root);
+            // On a soft panel of its own, so it reads over bright grass and snow alike.
+            hints = DemoUI.Panel(root, "vui-panel--soft");
+            hints.name = "KeyHints";
+            hints.AddToClassList("vui-row");
             hints.style.position = Position.Absolute;
             hints.style.left = 14;
             hints.style.bottom = 10;
-            hints.style.opacity = 0.85f;
+            hints.style.paddingTop = hints.style.paddingBottom = 4;
+            hints.style.paddingLeft = hints.style.paddingRight = 8;
+            hints.pickingMode = PickingMode.Ignore;
+        }
+
+        /// <summary>
+        /// What else is on screen, so the HUD keeps out of its way: the key hints step aside for the
+        /// dialogue panel, and the toasts and the quest tracker for the book and the menu.
+        /// </summary>
+        public void SetCovered(bool dialogue, bool overlay)
+        {
+            if (hints == null) return;
+            hints.style.visibility = dialogue || overlay ? Visibility.Hidden : Visibility.Visible;
+            toasts.style.visibility = overlay ? Visibility.Hidden : Visibility.Visible;
+            quests.style.visibility = overlay ? Visibility.Hidden : Visibility.Visible;
         }
 
         private void OnDisable() => root?.Clear();
@@ -117,6 +150,17 @@ namespace Demos.Shared
             phase.style.borderRightWidth = night ? 5 : 0;
             phase.style.borderRightColor = new Color(0.1f, 0.1f, 0.15f, 0.9f);
             clock.text = time + "   " + Cap(dayPhase) + ", day " + day;
+        }
+
+        /// <summary>What the HUD shows about a problem the whole village has, such as no model running; null hides it.</summary>
+        public string Alert => alert != null && alert.style.display != DisplayStyle.None ? alert.text : null;
+
+        /// <summary>A problem the whole village has, shown top centre until it is cleared with null.</summary>
+        public void SetAlert(string text)
+        {
+            if (alert == null) return;
+            DemoUI.Show(alert, !string.IsNullOrEmpty(text));
+            alert.text = text ?? "";
         }
 
         /// <summary>The player's purse; a negative amount hides it.</summary>
@@ -145,11 +189,22 @@ namespace Demos.Shared
             prompt.text = text ?? "";
         }
 
+        /// <summary>How many toasts show at once; a new one pushes out the oldest.</summary>
+        public const int MaxToasts = 3;
+
         public void Toast(string text, float seconds = 3.5f)
         {
             ToastLog.Add(text);
             if (toasts == null) return;
+            while (liveToasts.Count >= MaxToasts)
+            {
+                liveToasts[0].element.RemoveFromHierarchy();
+                liveToasts.RemoveAt(0);
+            }
             var label = DemoUI.Label(toasts, text, "toast");
+            // Wraps inside the column rather than running off the screen.
+            label.style.whiteSpace = WhiteSpace.Normal;
+            label.style.maxWidth = Length.Percent(100);
             liveToasts.Add((label, Time.unscaledTime + seconds));
         }
 
@@ -188,7 +243,10 @@ namespace Demos.Shared
                 var b = new VisualElement();
                 b.AddToClassList("bubble");
                 b.pickingMode = PickingMode.Ignore;
-                b.Add(new Label { pickingMode = PickingMode.Ignore });
+                // Wraps inside the bubble's max-width; a long line otherwise ran out of the bubble.
+                var line = new Label { pickingMode = PickingMode.Ignore };
+                line.style.whiteSpace = WhiteSpace.Normal;
+                b.Add(line);
                 var tag = new Label { pickingMode = PickingMode.Ignore };
                 tag.AddToClassList("bubble__tag");
                 b.Add(tag);
@@ -210,14 +268,37 @@ namespace Demos.Shared
                 DemoUI.Show(b[1], !string.IsNullOrEmpty(info.Tag));
                 b.EnableInClassList("bubble--refusal", info.Kind == "refusal");
                 b.EnableInClassList("bubble--thinking", info.Kind == "thinking");
+                b.EnableInClassList("bubble--error", info.Kind == "error");
             }
         }
 
-        public void SetNameTags(Camera camera, IReadOnlyList<TagInfo> list) => Tags(nameTags, "nametag", camera, list, 22f);
+        /// <summary>
+        /// Where other documents' panels sit over the world this frame, in panel pixels: the agent
+        /// list or the framework view, the dialogue, the book, the menu. A world label that would
+        /// fall under one of them, or under the HUD's own panels, is hidden.
+        /// </summary>
+        public void SetCoveredRects(IEnumerable<Rect> rects)
+        {
+            covered.Clear();
+            covered.AddRange(rects);
+            foreach (var own in new[] { clockPanel, column, hints })
+                if (own != null && own.resolvedStyle.display != DisplayStyle.None && own.resolvedStyle.visibility == Visibility.Visible)
+                    covered.Add(own.worldBound);
+        }
+
+        /// <summary>The name tags. Call before <see cref="SetPlaceTags"/>, which keeps clear of them.</summary>
+        public void SetNameTags(Camera camera, IReadOnlyList<TagInfo> list)
+        {
+            taken.Clear();
+            Tags(nameTags, "nametag", camera, list, 22f);
+        }
 
         /// <summary>The framework view's place labels: every target id the agents can name.</summary>
         public void SetPlaceTags(Camera camera, IReadOnlyList<TagInfo> list) => Tags(placeTags, "placetag", camera, list, 120f);
 
+        // Nearest first: where two labels would overlap, the nearer one is shown and the other hidden,
+        // as is any label under an open panel. Hidden by visibility, not display, so each keeps its
+        // size and the choice does not flicker from frame to frame.
         private void Tags(List<Label> pool, string cls, Camera camera, IReadOnlyList<TagInfo> list, float maxDistance)
         {
             if (world == null || camera == null) return;
@@ -229,31 +310,51 @@ namespace Demos.Shared
                 world.Add(l);
                 pool.Add(l);
             }
-            for (int i = 0; i < pool.Count; i++)
+            for (int i = list.Count; i < pool.Count; i++) DemoUI.Show(pool[i], false);
+            var from = camera.transform.position;
+            order.Clear();
+            for (int i = 0; i < list.Count; i++) order.Add(i);
+            order.Sort((a, b) => Vector3.Distance(from, list[a].World).CompareTo(Vector3.Distance(from, list[b].World)));
+            foreach (int i in order)
             {
                 var l = pool[i];
-                bool shown = i < list.Count && Vector3.Distance(camera.transform.position, list[i].World) < maxDistance
-                             && Place(l, camera, list[i].World, false);
-                DemoUI.Show(l, shown);
-                if (!shown) continue;
+                bool placed = Vector3.Distance(from, list[i].World) < maxDistance && Place(l, camera, list[i].World, false);
+                DemoUI.Show(l, placed);
+                if (!placed) continue;
                 var info = list[i];
                 l.text = string.IsNullOrEmpty(info.Detail) ? info.Text
                     : info.Text + "\n<size=9>" + info.Detail + "</size>";
                 if (cls == "placetag") l.EnableInClassList("placetag--restricted", info.Warning);
+                var r = RectOf(l);
+                bool clear = !covered.Exists(c => c.Overlaps(r)) && !taken.Exists(t => t.Overlaps(r));
+                l.style.visibility = clear ? Visibility.Visible : Visibility.Hidden;
+                if (clear) taken.Add(r);
             }
         }
 
-        // Puts an element over a world point; false when the point is behind the camera.
+        private static Rect RectOf(VisualElement e)
+        {
+            float w = e.resolvedStyle.width, h = e.resolvedStyle.height;
+            return new Rect(e.style.left.value.value, e.style.top.value.value, float.IsNaN(w) ? 0 : w, float.IsNaN(h) ? 0 : h);
+        }
+
+        // Puts an element over a world point; false when the point is behind the camera. From the
+        // viewport and the panel's own size, not the screen's: a panel drawn into a RenderTexture
+        // (the capture tool's) has its size, not the screen's, and the two agree on a screen.
         private bool Place(VisualElement element, Camera camera, Vector3 worldPoint, bool above)
         {
             var viewport = camera.WorldToViewportPoint(worldPoint);
             if (viewport.z <= 0.1f) return false;
-            var panelPoint = RuntimePanelUtils.CameraTransformWorldToPanel(root.panel, worldPoint, camera);
+            var size = root.layout.size;
+            if (float.IsNaN(size.x) || size.x <= 0) return false;
+            var rect = camera.rect;
+            var panelPoint = new Vector2((rect.x + viewport.x * rect.width) * size.x, (1f - (rect.y + viewport.y * rect.height)) * size.y);
             float w = element.resolvedStyle.width, h = element.resolvedStyle.height;
             if (float.IsNaN(w)) w = 0;
             if (float.IsNaN(h)) h = 0;
             element.style.left = panelPoint.x - w / 2f;
-            element.style.top = panelPoint.y - (above ? h : h / 2f);
+            // A bubble rises clear of the name tag under it.
+            element.style.top = panelPoint.y - (above ? h + BubbleLift : h / 2f);
             return true;
         }
 
