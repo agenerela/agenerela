@@ -15,6 +15,9 @@ namespace LivingVale.Game
 
         public const string QuotePurchase = "quote_purchase";
         public const string QuoteSale = "quote_sale";
+
+        /// <summary>Puts an authored quest contract on an inline card (G4). Accepting is the card's job, never the model's.</summary>
+        public const string OfferQuest = "offer_quest";
     }
 
     /// <summary>A target as a driver would show it to a model: stable ID, short name, one-line description.</summary>
@@ -61,6 +64,12 @@ namespace LivingVale.Game
         /// <summary>The quote a <c>quote_*</c> action made, or null.</summary>
         public TradeQuote Quote { get; }
 
+        /// <summary>The offer an <c>offer_quest</c> action put on a card, or null.</summary>
+        public QuestOffer Offer { get; }
+
+        /// <summary>Why an <c>offer_quest</c> was refused; <see cref="QuestRejection.None"/> otherwise.</summary>
+        public QuestRejection QuestReason { get; }
+
         internal ActionOutcome(bool executed, string actionId, TradeRejection reason, TradeQuote quote)
         {
             Executed = executed;
@@ -69,7 +78,17 @@ namespace LivingVale.Game
             Quote = quote;
         }
 
-        public override string ToString() => Executed ? $"{ActionId} executed" : $"{ActionId} refused: {Reason}";
+        internal ActionOutcome(string actionId, QuestRejection questReason, QuestOffer offer)
+        {
+            Executed = questReason == QuestRejection.None;
+            ActionId = actionId;
+            Reason = Executed ? TradeRejection.None : TradeRejection.WrongTarget;
+            QuestReason = questReason;
+            Offer = offer;
+        }
+
+        public override string ToString() => Executed ? $"{ActionId} executed"
+            : QuestReason != QuestRejection.None ? $"{ActionId} refused: {QuestReason}" : $"{ActionId} refused: {Reason}";
     }
 
     /// <summary>
@@ -85,13 +104,19 @@ namespace LivingVale.Game
     public sealed class NpcActionExecutor
     {
         private readonly TradeService trade;
+        private readonly QuestLog quests;
 
-        public NpcActionExecutor(TradeService trade)
+        /// <param name="quests">The quest log behind <c>offer_quest</c>; null leaves G3's trade-only executor.</param>
+        public NpcActionExecutor(TradeService trade, QuestLog quests = null)
         {
             this.trade = trade ?? throw new ArgumentNullException(nameof(trade));
+            this.quests = quests;
         }
 
         public TradeService Trade => trade;
+
+        /// <summary>The quest log, or null when built without one.</summary>
+        public QuestLog Quests => quests;
 
         /// <summary>
         /// The actions this NPC can take now and their targets, from game state at the time of the
@@ -101,6 +126,7 @@ namespace LivingVale.Game
         public IReadOnlyList<GameActionOption> AvailableFor(string npcId)
         {
             var result = new List<GameActionOption>();
+            AddQuestOffers(npcId, result);
             if (!trade.IsVendor(npcId))
             {
                 return result;
@@ -162,8 +188,39 @@ namespace LivingVale.Game
                     return new ActionOutcome(rejection == TradeRejection.None, actionId, rejection, quote);
                 }
 
+                case GameActions.OfferQuest:
+                {
+                    if (quests == null)
+                    {
+                        return new ActionOutcome(actionId, QuestRejection.UnknownOffer, null);
+                    }
+
+                    var rejection = quests.TryOffer(npcId, targetId, generation, out var offer);
+                    return new ActionOutcome(actionId, rejection, offer);
+                }
+
                 default:
                     return new ActionOutcome(false, actionId, TradeRejection.WrongTarget, null);
+            }
+        }
+
+        private void AddQuestOffers(string npcId, List<GameActionOption> result)
+        {
+            if (quests == null)
+            {
+                return;
+            }
+
+            var targets = new List<GameTargetOption>();
+            foreach (var offer in quests.OffersFor(npcId))
+            {
+                targets.Add(new GameTargetOption(offer.Id, offer.Title, $"Ask the traveler to take on \"{offer.Title}\": {offer.Summary}"));
+            }
+
+            if (targets.Count > 0)
+            {
+                result.Add(new GameActionOption(GameActions.OfferQuest,
+                    "Ask the traveler for help with your task. The traveler decides on the card; nothing is agreed until they accept.", targets));
             }
         }
     }

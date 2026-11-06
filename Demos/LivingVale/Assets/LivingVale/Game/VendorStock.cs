@@ -147,6 +147,47 @@ namespace LivingVale.Game
 
         public SaleBundle FindBundle(string id) => buying.Find(b => b.Id == id);
 
+        /// <summary>Why <see cref="TryRestoreRemaining"/> would refuse these counts, or null. Changes nothing.</summary>
+        public string ValidateRemaining(IReadOnlyDictionary<string, int> remaining)
+        {
+            if (remaining == null)
+            {
+                return $"{VendorId}: missing stock";
+            }
+
+            foreach (var pair in remaining)
+            {
+                if (FindEntry(pair.Key) == null || pair.Value < 0)
+                {
+                    return $"{VendorId}: bad stock entry {pair.Key}";
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Sets remaining stock from a save, entry ID → units, checking every entry before changing
+        /// any. Entries the save does not name keep their count. <see cref="Revision"/> goes up, so a
+        /// quote made before the load is refused after it.
+        /// </summary>
+        public bool TryRestoreRemaining(IReadOnlyDictionary<string, int> remaining, out string error)
+        {
+            error = ValidateRemaining(remaining);
+            if (error != null)
+            {
+                return false;
+            }
+
+            foreach (var pair in remaining)
+            {
+                FindEntry(pair.Key).Remaining = pair.Value;
+            }
+
+            Revision++;
+            return true;
+        }
+
         internal void Take(StockEntry entry, int units)
         {
             if (units < 0 || entry.Remaining < units)

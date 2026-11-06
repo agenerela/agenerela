@@ -73,6 +73,7 @@ namespace LivingVale.Interaction
             this.executor = executor;
             AddG1Scripts();
             AddG3TradeRules();
+            AddG4QuestRules();
         }
 
         /// <summary>The last executor outcome, or null. Tests and tools read it.</summary>
@@ -185,6 +186,12 @@ namespace LivingVale.Interaction
             foreach (var rule in rules)
             {
                 if (!ContainsAny(turn.PlayerLine, rule.Verbs) || !ContainsAny(turn.PlayerLine, rule.Nouns))
+                {
+                    continue;
+                }
+
+                // Without a quest log, quest rules do not apply, and the NPC keeps its G1 lines.
+                if (rule.ActionId == GameActions.OfferQuest && executor.Quests == null)
                 {
                     continue;
                 }
@@ -312,6 +319,19 @@ namespace LivingVale.Interaction
                     "Fresh this morning. One loaf?", "No bread left today."),
                 new ScriptedTradeRule(buyVerbs, new[] { "herb" }, GameActions.QuotePurchase, "stock_mara_herb_one",
                     "A bundle of herbs, then.", "I've sold the last of my herbs.")
+            });
+        }
+
+        // Iven offers the main quest on any wagon or medicine line while it can still be offered (G4).
+        // Once it is accepted the offer is no longer available, and he answers with a status line.
+        private void AddG4QuestRules()
+        {
+            var topics = new[] { "wagon", "medicine", "parcel", "help" };
+            AddTradeRules(QuestLog.IvenId, new[]
+            {
+                new ScriptedTradeRule(topics, topics, GameActions.OfferQuest, QuestLog.IvenOfferId,
+                    "The medicine wagon never arrived. Will you find it for me?",
+                    "The wagon is still out there. Bring back whatever you find of it.")
             });
         }
 

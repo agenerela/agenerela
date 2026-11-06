@@ -51,6 +51,16 @@ phase table and the open issues, not here.
   `Assets/Evaluation/labels/<annotator>/<category>.json`; the README says how.
 - **Screen 8, the Prompt Set window**, in `docs/design/`: the wireframe drawn for #134 before the
   window was built, with its notes.
+- **Living Vale G4, part 1: quests, progression and saves** (#69), on `69-living-vale`: plain C#
+  in `Game/` with EditMode tests. `QuestLog` holds *The Missing Wagon* (states Undiscovered →
+  Offered → Active → ParcelRecovered → Resolved, early discovery skipping ahead, clues kept apart,
+  three authored dispositions with the division needing both recorded agreements) and the side
+  quests `quest_herbs` and `quest_badge`; every transition checks the current state, and every
+  reward applies once per event ID. `Progression` gives levels at 100 and 250 XP and one perk per
+  level-up. Iven offers the quest with `offer_quest` through the shared executor, from both
+  drivers, on a card whose Accept button alone makes it Active. `SaveGame` writes a versioned
+  snapshot atomically (keeping the previous save), validates before restoring, and never saves a
+  quote or offer; F9 saves and F10 loads.
 - **Living Vale G5b: Mara trades through the model** (#69): the `Agent` driver registers G3's
   `quote_purchase` and `quote_sale` with targets from `NpcActionExecutor.AvailableFor`, asked again
   each turn, so an action with nothing to offer is absent from the schema. Both drivers now
