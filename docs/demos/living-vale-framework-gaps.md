@@ -295,6 +295,12 @@ Give each entry the next number and these parts:
 - **Workaround:** none yet: each persona's first fact states where the NPC usually is, and the
   routine never leaves that place, so the line stays true. `World/NpcRoutine.cs` knows the current
   stop but nothing reports it to the model.
+- **G8a, the same gap from the HUDs side:** the compass, the map and the name tags need every
+  speaking agents position now, and there is no list of a scenes agents to ask. `Unity/NavigationTargets.cs`
+  finds every `NpcSpeaker` once at start and reads its Transform each frame, and works out each NPCs
+  home place from the games own `RegionNpcs` table. A small `Runtime/Unity/` registry of live agents
+  with their Transform (opt-in, a component on the agents GameObject) would serve both the
+  observation source above and any marker or tag UI, without the core knowing about scenes.
 - **Proposal:** not a core change: `IObservationSource` already covers it, and the framework
   must not assume a scene or a speaking character (DR-008, DR-011). Possibly a small sample source
   in `Runtime/Unity/` that names the registered zone a Transform is in, so a developer has a

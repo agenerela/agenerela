@@ -111,10 +111,11 @@ namespace LivingVale.Combat
                 new Vector2(12f, -54f), new Vector2(276f, 30f), 13);
 
             // Top right: the chat overlay owns the top left (help) and the bottom right (chat).
-            RectTransform statusRect = Box("Combat status", root, Vector2.one, new Vector2(-18f, -16f),
+            // G8a: bottom centre, above the talk prompt, clear of the compass and journal (HudLayout).
+            RectTransform statusRect = Box("Combat status", root, new Vector2(0.5f, 0f), new Vector2(0f, LivingVale.UI.HudLayout.CombatStatusBottom),
                 new Vector2(480f, 32f), Color.clear);
             status = Label("Status", statusRect, "", Vector2.zero, new Vector2(480f, 32f), 19);
-            status.alignment = TextAnchor.MiddleRight;
+            status.alignment = TextAnchor.MiddleCenter;
             status.color = new Color(1f, 0.8f, 0.5f);
         }
 

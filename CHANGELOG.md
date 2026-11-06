@@ -77,6 +77,18 @@ phase table and the open issues, not here.
   `Assets/Evaluation/labels/<annotator>/<category>.json`; the README says how.
 - **Screen 8, the Prompt Set window**, in `docs/design/`: the wireframe drawn for #134 before the
   window was built, with its notes.
+- **Living Vale G8a: finding your way** (#69), on `69-living-vale`: a compass strip at the top
+  centre with the compass points, discovered places and a gold marker for the next quest goal with
+  its distance, worked out in plain C# from quest state by `Game/QuestGuide.cs` (talk to Iven, the
+  wreck, Fen, Kest, the parcel, the delivery or division, then the side quests). Name and role over
+  each speaking NPC within 15 m, fading from 10 m, hidden behind walls and while chatting with them.
+  **M** opens a map of the valley drawn from `ValePlaces` and its paths, with undiscovered places as
+  "?", the player's position and facing, the goal, and known NPCs where they are now on their
+  routines. One HUD layout (`UI/HudLayout.cs`): the place name, discoveries, quest receipts and the
+  model notice queue in one notice area under the compass instead of overlapping, the journal gains
+  a "Next:" line, and the inventory, controls, driver badge, vitals and combat status each have a
+  fixed slot that holds at 1280 × 720 and 1920 × 1080, checked with the player's new
+  `-lvHudShot` screenshot option. The framework gap is noted under entry 15.
 - **Living Vale G4b: the region and six more NPCs** (#69), on `69-living-vale`: the grey-box
   valley around the village, built by one builder per place under `Editor/Region/` and called from
   `VillageSceneBuilder.Build`: a 600 × 600 ground, flat paths along `ValePlaces.Paths`, the Old

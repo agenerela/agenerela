@@ -15,7 +15,6 @@ namespace LivingVale.UI
         private GameObject panel;
         private Text header;
         private Text badge;
-        private Text driverNotice;
         private Text prompt;
         private GameObject waiting;
         private InputField input;
@@ -83,20 +82,19 @@ namespace LivingVale.UI
                 events.transform.SetParent(transform, false);
             }
 
-            RectTransform help = Box("Controls", transform, new Vector2(0f, 1f),
-                new Vector2(14f, -14f), new Vector2(580f, 102f), new Color(0.04f, 0.06f, 0.08f, 0.88f));
+            // G8a: the left column's bottom slots (HudLayout): controls above the vitals, the driver
+            // badge above them, the inventory over both. The model notice moved to the notice area.
+            RectTransform help = Box("Controls", transform, Vector2.zero,
+                new Vector2(14f, HudLayout.HelpBottom), new Vector2(580f, 102f), new Color(0.04f, 0.06f, 0.08f, 0.88f));
             Label("Help", help,
-                "WASD move · Shift sprint · Mouse orbit · E talk · Esc close · I inventory\n" +
+                "WASD move · Shift sprint · Mouse orbit · E talk · Esc close · I items · M map\n" +
                 "LMB attack · RMB block · Space dodge · F6/F7 model · F9/F10 save/load\n" +
                 "Scripted: F1 Normal · F2 Slow · F3 NeverAnswers · F4 Malformed · F5 Throws\n" +
                 "Typing captures gameplay keys; Return to world releases them.",
                 new Vector2(10f, -8f), new Vector2(560f, 86f), 15, Color.white);
-            badge = Label("Driver badge", transform, "", new Vector2(14f, -124f),
-                new Vector2(560f, 28f), 18, new Color(1f, 0.86f, 0.35f));
-            // The model key's notice, on its own beside the help box, so a long model name in the
-            // badge never pushes it out of sight.
-            driverNotice = Label("Driver notice", transform, "", new Vector2(604f, -14f),
-                new Vector2(420f, 44f), 15, new Color(1f, 0.86f, 0.35f));
+            badge = Label("Driver badge", transform, "", Vector2.zero, new Vector2(560f, 26f), 18,
+                new Color(1f, 0.86f, 0.35f));
+            Place(badge.rectTransform, Vector2.zero, new Vector2(14f, HudLayout.BadgeBottom), new Vector2(560f, 26f));
 
             RectTransform promptRect = Box("Talk prompt", transform, new Vector2(0.5f, 0f),
                 new Vector2(0f, 22f), new Vector2(320f, 38f), Color.clear);
@@ -191,7 +189,6 @@ namespace LivingVale.UI
         {
             var coordinator = bootstrap.Coordinator;
             badge.text = coordinator.DriverLabel;
-            driverNotice.text = bootstrap.DriverNotice;
             panel.SetActive(coordinator.IsOpen);
             RenderTradeCard();
             RenderQuestCard();

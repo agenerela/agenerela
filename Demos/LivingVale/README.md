@@ -14,7 +14,7 @@ when the lead calls it done.
    `Builds/Windows/LivingVale.exe` (gitignored).
 
 WASD moves, Shift sprints, the mouse orbits the camera, **E** talks to the NPC in front of you
-(within 3 m), Esc closes the chat, **I** opens the inventory. Ask Mara to buy a potion, bread or
+(within 3 m), Esc closes the chat, **I** opens the inventory and **M** the map (G8a). The compass strip at the top points at the next quest goal with its distance, the journal names it on its "Next:" line, and a name tag shows over each NPC within 15 m. To check the HUD layout without the Editor, start the built player with `-lvHudShot <folder> -screen-fullscreen 0 -screen-width 1280 -screen-height 720`: it runs on scripted replies, writes `hud-<width>.png` and `map-<width>.png` there and quits. Ask Mara to buy a potion, bread or
 herbs, or to sell her a wolf pelt, iron scrap or herbs: her answer puts an exact offer on a card
 in the chat, and only its button moves gold and items. Walking more than 6 m away also closes it. F1–F5 switch the
 scripted replies between normal, slow, never answering, malformed and throwing, so the failure
