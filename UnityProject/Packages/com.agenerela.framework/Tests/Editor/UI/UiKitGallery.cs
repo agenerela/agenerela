@@ -12,8 +12,9 @@ namespace Agenerela.Tests.UI
     /// the test assembly, so it never ships in the package.
     /// </summary>
     /// <remarks>
-    /// The page is built for the skin it opens in: after switching skins, close and reopen it.
-    /// Add a piece here when the kit gains one.
+    /// The first title's "dark skin" or "light skin" is written when the page is built, so reopen
+    /// the page after switching skins to check the other one. Add a piece here when the kit gains
+    /// one.
     /// </remarks>
     internal sealed class UiKitGallery : EditorWindow
     {

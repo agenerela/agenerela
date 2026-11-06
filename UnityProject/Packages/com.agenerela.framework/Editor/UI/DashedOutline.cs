@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -20,10 +21,24 @@ namespace Agenerela.Editor.UI
         private const float DashLength = 3f;
         private const float DashGap = 2f;
 
-        /// <summary>Lets <paramref name="element"/> draw the outline while it has the <c>ag-dashed</c> class.</summary>
-        internal static void Attach(VisualElement element)
+        // The elements already drawing an outline, held weakly so a discarded element is collected.
+        private static readonly ConditionalWeakTable<VisualElement, object> attached = new ConditionalWeakTable<VisualElement, object>();
+
+        /// <summary>
+        /// Lets <paramref name="element"/> draw the outline while it has the <c>ag-dashed</c> class.
+        /// Attaching again does nothing, so the outline is never drawn twice.
+        /// </summary>
+        /// <returns>False if <paramref name="element"/> was already attached.</returns>
+        internal static bool Attach(VisualElement element)
         {
+            if (attached.TryGetValue(element, out _))
+            {
+                return false;
+            }
+
+            attached.Add(element, null);
             element.generateVisualContent += context => Draw(element, context);
+            return true;
         }
 
         /// <summary>Turns the outline on or off.</summary>

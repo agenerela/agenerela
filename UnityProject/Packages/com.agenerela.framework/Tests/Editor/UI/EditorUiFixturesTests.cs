@@ -1,6 +1,8 @@
+using System.Collections;
 using Agenerela.Editor.UI;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 
 namespace Agenerela.Tests.UI
@@ -31,6 +33,29 @@ namespace Agenerela.Tests.UI
 
             Assert.That(root.styleSheets.count, Is.EqualTo(1));
             Assert.That(root.ClassListContains(AgenerelaStyles.RootClass), Is.True);
+        }
+
+        // A screen left open across a skin switch must not keep the other skin's muted colour. The
+        // test stands in for the switch by giving the element the wrong skin's class, then checks the
+        // restyle that follows puts it right.
+        [UnityTest]
+        public IEnumerator TheSkinClassIsPutRightWheneverStylesResolve()
+        {
+            bool light = !EditorGUIUtility.isProSkin;
+            var box = new VisualElement();
+            AgenerelaStyles.Apply(box);
+            int resolved = 0;
+            box.RegisterCallback<CustomStyleResolvedEvent>(_ => resolved++);
+            using (EditorUiFixtures.Host(box))
+            {
+                yield return EditorUiFixtures.Until(() => resolved > 0, "the box's styles resolve");
+
+                box.EnableInClassList(AgenerelaStyles.LightClass, !light);
+
+                yield return EditorUiFixtures.Until(
+                    () => box.ClassListContains(AgenerelaStyles.LightClass) == light,
+                    "the light-skin class matches the editor's skin again");
+            }
         }
 
         [Test]
