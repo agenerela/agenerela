@@ -1,8 +1,8 @@
 # Evaluation prompt set
 
-The labelled prompts the Phase 4 harness will score the framework against: things an agent
-is told or shown, each with the action and target it *should* choose. The harness itself is
-not written yet; this folder is its input. It sits outside the package because the set is
+The labelled prompts the Phase 4 harness scores the framework against: things an agent is
+told or shown, each with the action and target it *should* choose. The package's `EvalRunner`
+(#145) runs them in an A/B; this folder is its input. It sits outside the package because the set is
 specific to one game's actions and targets (build plan §1.7).
 
 Started in #13, with its first 54 prompts merged in #65 and their format fixed in #66.
@@ -37,7 +37,7 @@ with the targets the prompts name.
 | `targets[].id` | A registered target id, the only values `expectedTarget` may hold besides `no_target` |
 | `targets[].description` | One line saying what the target is. It may reach the prompt, so it describes the world, not the test |
 | `categories[]` | Each category's `id`, its `file`, and `idPrefix`, what its prompt ids start with when that is not the id: `command_with_target`'s are `target_001` |
-| `targetRules` | Checks a harness should run on the set before scoring it: every expected target registered, and `none` always paired with `no_target`. `PromptSetChecks` runs them, and the window shows them |
+| `targetRules` | Checks a harness should run on the set before scoring it: every expected target registered, and `none` always paired with `no_target`. No code reads this field: `PromptSetChecks` runs the same checks on every set, and the window shows them |
 
 GreyBoxVillage is built from this list, so any prompt here can be played in the demo. It has
 every target in `agent.json`, and three of its own (`training_dummy`, `armory`, `lords_keep`)
@@ -50,7 +50,7 @@ has these fields:
 
 | Field | Meaning |
 |---|---|
-| `id` | Unique across the set, `<category>_<nnn>` |
+| `id` | Unique across the set, `<idPrefix>_<nnn>`, the category id when it has no `idPrefix` |
 | `label` | The free-form label the stimulus arrives with: `Player`, `Event`, `Situation`, and later `Report` |
 | `stimulus` | What the agent is told or shown |
 | `observations` | Short facts about the world the agent is given alongside it. Empty for most player commands |
@@ -127,6 +127,7 @@ people's separate answers to restore, and agreement cannot be computed from this
 
 - Blind second labels, which Phase 4's gate requires, and the next prompts come from the Prompt
   Set window (#134). Label mode writes each person's answers to their own file under `labels/`;
-  until a prompt is settled, its expected answer counts as Maxim's. Agreement mode lists the
+  until a prompt is settled, its expected answer counts as its writer's, the one person its
+  `labelledBy` names: Maxim on 58 prompts, Yevhen on 18. Agreement mode lists the
   splits, and a split is settled as `findings.md` describes, which writes both answers into the
   prompt's `labels`. `situation_001` is the first check.
