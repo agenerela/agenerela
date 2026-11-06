@@ -167,6 +167,9 @@ namespace Demos.GreyBoxVillage
             if (Hud != null) Hud.Toast(text, 5f);
         }
 
+        /// <summary>Redraws the pack and the journal from the inventory and the quests, as after the presenter's reset.</summary>
+        public void RefreshBook() => bookVersion++;
+
         /// <summary>The pickup the player could take now: the nearest active one within reach, or null.</summary>
         public Pickup NearestPickup()
         {

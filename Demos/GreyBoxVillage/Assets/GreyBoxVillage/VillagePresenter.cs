@@ -56,6 +56,8 @@ namespace Demos.GreyBoxVillage
         private Label status;
         private readonly Dictionary<Transform, (Vector3 position, Quaternion rotation)> starts =
             new Dictionary<Transform, (Vector3, Quaternion)>();
+        // Every pickup, where it lay and whether it was out when Play started (the pelt is not).
+        private readonly List<(Pickup pickup, Vector3 position, bool active)> pickups = new List<(Pickup, Vector3, bool)>();
 
         private void OnEnable()
         {
@@ -95,6 +97,9 @@ namespace Demos.GreyBoxVillage
             if (Alarm != null) people.AddRange(Alarm.Villagers.Where(v => v != null).Select(v => v.transform));
             if (Wolf != null) people.Add(Wolf.transform);
             foreach (var t in people) starts[t] = (t.position, t.rotation);
+            pickups.Clear();
+            foreach (var p in FindObjectsByType<Pickup>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                pickups.Add((p, p.transform.position, p.gameObject.activeSelf));
         }
 
         /// <summary>Whether a key does anything now: not while the player types, nor behind the menu. The framework view may be open.</summary>
@@ -176,6 +181,16 @@ namespace Demos.GreyBoxVillage
             }
             if (Village.Inventory != null) Village.Inventory.Reset(8);
             if (Village.Quests != null) Village.Quests.Define();
+            // What was picked up lies where it lay again, or a restarted quest could not be finished
+            // (there is one lost lantern); the pelt, out only during the wolf quest, is put away.
+            foreach (var (pickup, position, active) in pickups)
+            {
+                if (pickup == null) continue;
+                pickup.transform.position = position;
+                pickup.gameObject.SetActive(active);
+            }
+            // An open pack or journal shows the reset, not what it showed before.
+            Village.RefreshBook();
             if (Village.Player != null) Return(Village.Player);
             Say("F1: the village is reset. Morning, and every agent starts afresh.");
         }

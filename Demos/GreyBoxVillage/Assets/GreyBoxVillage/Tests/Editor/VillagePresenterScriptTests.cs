@@ -73,6 +73,13 @@ namespace Demos.GreyBoxVillage.Tests
             var odile = commands.Mind("Odile");
             var hale = commands.Mind("Hale");
             var merchant = (VillageMerchant)odile.Body;
+            // Every F1 starts a new recorder, so each stage's records are kept before the next F1.
+            var all = new System.Collections.Generic.List<DecisionRecord>();
+            void Keep()
+            {
+                foreach (var r in commands.Recorder.Records)
+                    if (!all.Contains(r)) all.Add(r);
+            }
 
             // 0. The framework view is open for the whole talk, and the keys still work.
             commands.Board.Toggle();
@@ -96,8 +103,17 @@ namespace Demos.GreyBoxVillage.Tests
             yield return null;
             Assert.That(commands.Input.IsTyping, Is.False);
 
+            // F1 puts back what the player picked up, or a restarted quest could not be finished.
+            var lantern = UnityEngine.Object.FindObjectsByType<Pickup>(FindObjectsSortMode.None).Single(p => p.ItemId == "old_lantern");
+            var lanternAt = lantern.transform.position;
+            lantern.Collect(commands.Inventory);
+            Assert.That(commands.Inventory.Count("old_lantern"), Is.EqualTo(1));
+
             // 1. F2, the wolf: Bram sees it close and rings the bell, Hale hears it and sends a guard.
             Assert.That(presenter.Press(Key.F1), Is.True);
+            Assert.That(commands.Inventory.Count("old_lantern"), Is.Zero);
+            Assert.That(lantern.gameObject.activeSelf, Is.True, "F1 left the lantern picked up, and Wren's quest could not be finished again.");
+            Assert.That(Vector3.Distance(lantern.transform.position, lanternAt), Is.LessThan(0.01f));
             yield return null;
             int before = commands.Recorder.Records.Count;
             presenter.Press(Key.F2);
@@ -112,6 +128,7 @@ namespace Demos.GreyBoxVillage.Tests
             Assert.That(order.Label, Is.EqualTo("Captain"));
             Assert.That(order.Stimulus, Does.Contain("village_gate"));
             yield return Idle();
+            Keep();
 
             // 2. F3, the thief: Odile calls Wren, a guard who sees it running chases it, and the
             // bread goes back on the counter.
@@ -134,6 +151,7 @@ namespace Demos.GreyBoxVillage.Tests
             Assert.That(merchant.Thief.CaughtBy, Is.Not.Null, "The thief got away.");
             Assert.That(merchant.Stock.Single(t => t.Id == "bread").gameObject.activeSelf, Is.True, "The bread is back on the counter.");
             yield return Idle();
+            Keep();
 
             // 3. F4, a fire: whoever sees the smoke fetches water until it is out.
             presenter.Press(Key.F1);
@@ -148,6 +166,7 @@ namespace Demos.GreyBoxVillage.Tests
             Assert.That(commands.Recorder.Records.Any(r => r.Action == "fetch_water" && r.Outcome == "executed"), Is.True);
             Assert.That(Asked(odile, "fire", "call_guard"), Is.True, "Odile called a guard to the fire.");
             yield return Idle();
+            Keep();
 
             // 4. F5, dusk: the gate shuts, Wren hurries to take the watch and is asked there, then lets
             // the player in and shuts it again. Bram goes off watch.
@@ -172,8 +191,10 @@ namespace Demos.GreyBoxVillage.Tests
             Assert.That(watch.Gate.IsOpen, Is.False);
             Assert.That(((VillageGuard)bram.Body).CurrentPost, Is.EqualTo(watch.RelievedPost), "Bram is off watch by the campfire.");
 
-            // Every decision of the run followed the script: nothing was refused or failed.
-            var bad = commands.Recorder.Records.Where(r => r.Outcome == "refused" || r.Outcome == "error").Select(r => r.Agent + " " + r.Source + " " + r.Action).ToList();
+            // Every decision of the run, every stage's, followed the script: nothing was refused or failed.
+            Keep();
+            Assert.That(all.Count, Is.GreaterThan(10), "The run kept too few records to check.");
+            var bad = all.Where(r => r.Outcome == "refused" || r.Outcome == "error").Select(r => r.Agent + " " + r.Source + " " + r.Action).ToList();
             Assert.That(bad, Is.Empty);
         }
 
