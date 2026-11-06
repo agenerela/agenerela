@@ -45,6 +45,8 @@ phase table and the open issues, not here.
     in an EditMode test, and finds its parts by name. **Window → Agenerela → Tests → UI Kit
     Gallery** shows every piece on one page, for checking both skins by hand. It is in the test
     assembly, so it does not ship in the package.
+    A test that opens a window needs a graphics device, so under `-nographics` it is reported as
+    ignored rather than failed.
   - USS has no muted text colour that reaches an editor window, no dashed border and no
     `text-transform`. The kit sets the colour itself, draws dashed outlines in
     `DashedOutline`, and upper-cases titles in code. A test catches a variable that silently

@@ -5,6 +5,7 @@ using System.Linq;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.UIElements;
 
 namespace Agenerela.Tests.UI
@@ -30,6 +31,10 @@ namespace Agenerela.Tests.UI
     /// A <c>[UnityTest]</c> that fails while it yields is dropped without its <c>using</c> block
     /// ending, so its window stays open. Every test class that opens one calls
     /// <see cref="CloseAll"/> in its <c>[TearDown]</c>, which runs however the test ends.
+    /// </para>
+    /// <para>
+    /// A window needs a graphics device. In a run with none (<c>-nographics</c>), every test that
+    /// opens one is reported as ignored rather than failed; run without that flag to include them.
     /// </para>
     /// </remarks>
     public static class EditorUiFixtures
@@ -60,6 +65,7 @@ namespace Agenerela.Tests.UI
         /// <summary>Puts <paramref name="element"/> in a shown window, so it receives events and resolves styles.</summary>
         public static UiTree Host(VisualElement element, Vector2? size = null)
         {
+            RequireGraphics();
             var window = ScriptableObject.CreateInstance<HostWindow>();
             Show(window, size);
             window.rootVisualElement.Add(element);
@@ -73,6 +79,7 @@ namespace Agenerela.Tests.UI
         public static UiTree Inspector(UnityEngine.Object target, Vector2? size = null)
         {
             Assert.That(target, Is.Not.Null, "No object to build an inspector for.");
+            RequireGraphics();
             var editor = UnityEditor.Editor.CreateEditor(target);
             var root = editor.CreateInspectorGUI();
             if (root == null)
@@ -93,6 +100,7 @@ namespace Agenerela.Tests.UI
         /// </summary>
         public static UiTree Window<TWindow>(Vector2? size = null) where TWindow : EditorWindow
         {
+            RequireGraphics();
             var window = ScriptableObject.CreateInstance<TWindow>();
             Show(window, size);
             return new UiTree(window.rootVisualElement, window, null);
@@ -143,6 +151,17 @@ namespace Agenerela.Tests.UI
             }
 
             Assert.That(condition(), Is.True, $"Still not true after {ticks} editor ticks: {what}.");
+        }
+
+        // Without a graphics device ShowUtility logs an error and the window never draws, so the
+        // test could prove nothing. Skip it visibly, before anything is built, instead of failing
+        // on the log.
+        private static void RequireGraphics()
+        {
+            if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null)
+            {
+                Assert.Ignore("Needs a graphics device to show a window; run without -nographics to include this test.");
+            }
         }
 
         private static void Show(EditorWindow window, Vector2? size)
