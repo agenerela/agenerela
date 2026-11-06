@@ -78,6 +78,12 @@ queued.
 The status changes once. Whether the turn's result may still run is `turn.IsCurrent`, a separate
 question: an answered turn stays `Answered` after a newer turn starts, and its result goes stale.
 
+The conversation says the same from its side: `chat.Current` is the turn waiting or whose result
+may still run, null before the first turn and after one ends unanswered or is cancelled;
+`chat.IsWaiting` is whether that turn is still waiting, when `Start` returns null; and
+`chat.IsCurrent(result)` is whether a result is the one `chat.Execute` would run. `Cancel()`
+returns whether there was a current turn, and `turn.Number` counts the conversation's turns from 1.
+
 ## `Start` or `Replace`
 
 What to do with a line that arrives while a turn waits is the caller's choice, per call:
