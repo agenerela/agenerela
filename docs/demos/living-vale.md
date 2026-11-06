@@ -1,8 +1,10 @@
 # Living Vale — RPG demo build plan
 
-**Status:** G1 (walk and talk) built on branch `69-living-vale`, 5 November 2026; the rest
-is an editable design draft from 7 October. The game develops on its own branch and merges
-`test` in as needed. This is a separate RPG demo; *Living Vale* is a working title and folder proposal.
+**Status:** on branch `69-living-vale` as of 5 November 2026: G0–G3 built, G4 part built (the
+quest core, the region with all eight NPCs, three recovery routes, the endings and the side
+quests), G5 (real NPC decisions on gemma4:e2b-it-qat), and the G7 art pilot. The rest is the
+editable design draft from 7 October. The game develops on its own branch, merges `test` in
+regularly, and lands in `test` through one pull request when the lead calls it done.
 
 **Development tracker:** [#69](https://github.com/agenerela/agenerela/issues/69), a
 sub-issue of [Demo games #47](https://github.com/agenerela/agenerela/issues/47).
