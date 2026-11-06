@@ -51,7 +51,7 @@ namespace LivingVale.Editor
             Material steel)
         {
             player.AddComponent<CombatBody>().Configure("player", true, EnemyArchetype.Raider, playerBody.transform,
-                new[] { playerBody.GetComponent<Renderer>() }, 2.4f);
+                new[] { playerBody.GetComponentInChildren<Renderer>() }, 2.4f);
             var pivot = new GameObject("Blade pivot").transform;
             pivot.SetParent(player.transform, false);
             pivot.localPosition = new Vector3(0.38f, 1.2f, 0.15f);
@@ -59,6 +59,12 @@ namespace LivingVale.Editor
             blade.transform.SetParent(pivot, false);
             blade.transform.localPosition = new Vector3(0f, 0f, 0.55f);
             blade.layer = FighterLayer;
+            // G7b: the kit sword, grip at the pivot and blade forward (+Y turned onto +Z); the cube stays the fallback.
+            if (ArtDressing.Attach(pivot, "sword", new Vector3(0f, 0f, 0.05f), Quaternion.Euler(90f, 0f, 0f), FighterLayer) != null)
+            {
+                ArtDressing.HideLook(blade);
+            }
+
             player.AddComponent<PlayerCombat>().Configure(bootstrap, pivot);
         }
 
@@ -80,8 +86,18 @@ namespace LivingVale.Editor
             GameObject blade = Primitive("Raider blade", PrimitiveType.Cube, new Vector3(0.45f, 1.1f, 0.45f),
                 new Vector3(0.07f, 0.04f, 0.9f), steel);
             blade.transform.SetParent(visual, false);
+            // G7b: a raider-outfit humanoid with a sword in the right hand, angled forward; capsule and cube are the fallback.
+            GameObject look = ArtKit.SwapBody(body, ArtOutfit.Raider);
+            GameObject sword = ArtDressing.Attach(visual, "sword", new Vector3(0.3f, 0.85f, 0.12f),
+                Quaternion.Euler(70f, 0f, 0f), FighterLayer);
+            if (sword != null)
+            {
+                ArtDressing.HideLook(blade);
+            }
+
             Finish(root, visual, EnemyArchetype.Raider, id, 2.4f,
-                body.GetComponent<Renderer>(), blade.GetComponent<Renderer>());
+                (look != null ? look : body).GetComponentInChildren<Renderer>(),
+                (sword != null ? sword : blade).GetComponentInChildren<Renderer>());
             return root;
         }
 
@@ -95,6 +111,16 @@ namespace LivingVale.Editor
             GameObject head = Primitive("Wolf head", PrimitiveType.Cube, new Vector3(0f, 0.7f, 0.78f),
                 new Vector3(0.4f, 0.35f, 0.45f), fur);
             head.transform.SetParent(visual, false);
+            // G7b: the kit wolf, head to +Z like the cube head; the two cubes are the fallback.
+            GameObject wolf = ArtDressing.Attach(visual, "wolf", Vector3.zero, Quaternion.identity, FighterLayer);
+            if (wolf != null)
+            {
+                ArtDressing.HideLook(body);
+                ArtDressing.HideLook(head);
+                Finish(root, visual, EnemyArchetype.Wolf, "enemy_wolf_1", 1.4f, wolf.GetComponentInChildren<Renderer>());
+                return;
+            }
+
             Finish(root, visual, EnemyArchetype.Wolf, "enemy_wolf_1", 1.4f,
                 body.GetComponent<Renderer>(), head.GetComponent<Renderer>());
         }

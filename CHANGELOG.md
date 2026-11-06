@@ -96,6 +96,17 @@ phase table and the open issues, not here.
   quests can be offered and handed in. **E** uses world pickups, and each ending changes the scene.
   Every deal goes on a card. All of it runs through `QuestRoutes` and the shared executor, from
   both drivers. Framework gaps 16–19 are recorded.
+- **Living Vale G7b: the art kit is in the game** (#69), on `69-living-vale`: the Village scene's
+  builders dress their primitives with the kit through `ArtDressing`, which keeps each primitive's
+  collider and switches the model's off, so walls, talk ranges and sight lines stay where they were.
+  The Glen's cottages, stall, well and fences, Reedbank's buildings, Ashwatch's walls and gatehouse,
+  Broken Watch's ruins, tents and fire, the Old Road wreck, every tree and boulder, the quest herbs,
+  seeded trees and rocks along the paths and cliffs, and signposts where paths leave places. The
+  player, all eight NPCs (outfit by role) and the raiders wear the humanoid, the wolf is the kit's
+  wolf, and the player and raiders hold the kit sword. `VillageSceneShots` renders the built scene
+  from eight viewpoints for review. The hit flash now tints toward red instead of white, so it shows
+  on the white-based palette material. Two kit fixes from Codex's review: `fence_segment`'s post is
+  at its −X end as documented, and `tree_pine` rebuilds identically.
 - **Living Vale G7a: an art pilot kit** (#69), on `69-living-vale`: 29 low-poly, flat-shaded
   models (cottages, stall, well, fences, props, the intact and the wrecked wagon, trees, rocks,
   feverleaf, Ashwatch's gate and wall, Broken Watch's ruin, tent and campfire, one humanoid in

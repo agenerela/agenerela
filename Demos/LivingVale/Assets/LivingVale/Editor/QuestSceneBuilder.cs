@@ -58,8 +58,16 @@ namespace LivingVale.Editor
             GameObject wheel = Piece("Quest upright wagon wheel", wreck, PrimitiveType.Cylinder,
                 new Vector3(-1f, 0.65f, -1.1f), new Vector3(1.25f, 0.12f, 1.25f), timber);
             wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            Piece("Quest fallen wagon wheel", wreck, PrimitiveType.Cylinder,
+            GameObject fallenWheel = Piece("Quest fallen wagon wheel", wreck, PrimitiveType.Cylinder,
                 new Vector3(1.6f, 0.12f, 1.4f), new Vector3(1.25f, 0.1f, 1.25f), timber);
+            // G7b: the kit's wrecked wagon under the pickup's visual, so taking the wreck's clue hides it too.
+            // The bed keeps its collider; the wheels had none.
+            if (ArtDressing.Attach(wreck, "wagon_wrecked", Vector3.zero, Quaternion.Euler(0f, 102f, 0f), 0) != null)
+            {
+                ArtDressing.HideLook(bed);
+                ArtDressing.HideLook(wheel);
+                ArtDressing.HideLook(fallenWheel);
+            }
 
             Transform badge = Pickup("Quest dented badge", road + new Vector3(2.5f, 0f, 0f),
                 bootstrap, QuestRoutes.PickupBadge);
@@ -80,12 +88,22 @@ namespace LivingVale.Editor
             for (int i = 0; i < ids.Length; i++)
             {
                 Transform spot = Pickup($"Quest herb spot {i + 1}", hollow + offsets[i], bootstrap, ids[i]);
+                var clusters = new GameObject[3];
                 for (int leaf = 0; leaf < 3; leaf++)
                 {
                     float angle = leaf * Mathf.PI * 2f / 3f;
-                    Piece($"Quest herb cluster {leaf + 1}", spot, PrimitiveType.Capsule,
+                    clusters[leaf] = Piece($"Quest herb cluster {leaf + 1}", spot, PrimitiveType.Capsule,
                         new Vector3(Mathf.Cos(angle) * 0.23f, 0.27f, Mathf.Sin(angle) * 0.23f),
                         new Vector3(0.32f, 0.27f, 0.32f), green);
+                }
+
+                // G7b: a feverleaf clump, a little larger than life so it reads as the quest's herb.
+                if (ArtDressing.Attach(spot, "herb_plant", Vector3.zero, Quaternion.Euler(0f, i * 50f, 0f), 0, 1.6f) != null)
+                {
+                    foreach (GameObject cluster in clusters)
+                    {
+                        ArtDressing.HideLook(cluster);
+                    }
                 }
 
                 Piece("Quest herb marker post", spot, PrimitiveType.Cube,
@@ -104,10 +122,13 @@ namespace LivingVale.Editor
             Piece("Quest parcel cross along", parcel, PrimitiveType.Cube,
                 new Vector3(0f, 0.815f, 0f), new Vector3(0.15f, 0.025f, 0.5f), red);
 
-            Primitive("Quest Broken Watch west ruin", PrimitiveType.Cube, watch + new Vector3(-8f, 1f, 1f),
+            GameObject westRuin = Primitive("Quest Broken Watch west ruin", PrimitiveType.Cube, watch + new Vector3(-8f, 1f, 1f),
                 new Vector3(0.8f, 2f, 5f), stone, keepCollider: true);
-            Primitive("Quest Broken Watch north ruin", PrimitiveType.Cube, watch + new Vector3(1f, 0.8f, 8f),
+            GameObject northRuin = Primitive("Quest Broken Watch north ruin", PrimitiveType.Cube, watch + new Vector3(1f, 0.8f, 8f),
                 new Vector3(5f, 1.6f, 0.8f), stone, keepCollider: true);
+            // G7b: ruin_wall is 5 m long and 2.67 m high; scaled to each block's height, colliders kept.
+            ArtDressing.Dress(westRuin, "ruin_wall", watch + new Vector3(-8f, 0f, 1f), 90f, new Vector3(1f, 0.75f, 1f));
+            ArtDressing.Dress(northRuin, "ruin_wall", watch + new Vector3(1f, 0f, 8f), 180f, new Vector3(1f, 0.6f, 1f));
             GameObject fallen = Primitive("Quest Broken Watch fallen wall", PrimitiveType.Cube,
                 watch + new Vector3(7f, 0.4f, -3f), new Vector3(2.5f, 0.8f, 1.2f), stone, keepCollider: true);
             fallen.transform.rotation = Quaternion.Euler(0f, 25f, 8f);

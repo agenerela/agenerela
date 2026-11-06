@@ -286,10 +286,13 @@ def main():
                               "height": round(height, 3), "bounds": unity_bounds(st)}
         print(f"ASSET {asset_id:18s} tris {st['triangles']:5d}  height {height:5.2f}  "
               f"size x {st['max'][0] - st['min'][0]:5.2f} depth {st['max'][1] - st['min'][1]:5.2f}")
-    if not opts["only"]:
-        with open(MANIFEST, "w", encoding="utf-8", newline="\n") as f:
-            json.dump({"palette": "Assets/LivingVale/Art/Textures/LV_Palette.png", "assets": manifest}, f, indent=2)
-            f.write("\n")
+    if opts["only"] and os.path.exists(MANIFEST):   # --only updates just those entries
+        with open(MANIFEST, encoding="utf-8") as f:
+            manifest = {**json.load(f)["assets"], **manifest}
+        manifest = {asset_id: manifest[asset_id] for asset_id, _, _ in assets.ASSETS if asset_id in manifest}
+    with open(MANIFEST, "w", encoding="utf-8", newline="\n") as f:
+        json.dump({"palette": "Assets/LivingVale/Art/Textures/LV_Palette.png", "assets": manifest}, f, indent=2)
+        f.write("\n")
     if opts["render"]:
         render_all(opts["render"], objects, stats)
 

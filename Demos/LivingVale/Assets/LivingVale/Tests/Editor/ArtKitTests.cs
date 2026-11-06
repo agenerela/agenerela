@@ -332,6 +332,33 @@ namespace LivingVale.Tests
             Assert.That(furthest, Is.GreaterThan(0f), id + " faces -Z");
         }
 
+        /// <summary>
+        /// A fence run chains segments every 2.5 m along +X and ends with a fence_post, so each
+        /// segment's own post must be at its -X end: the only part above the rails' top.
+        /// </summary>
+        [Test]
+        public void FenceSegmentPostIsAtItsMinusXEnd()
+        {
+            float minX = float.PositiveInfinity, maxX = float.NegativeInfinity;
+            int above = 0;
+            foreach (MeshFilter filter in RequireModel("fence_segment").GetComponentsInChildren<MeshFilter>(true))
+            {
+                foreach (Vector3 vertex in filter.sharedMesh.vertices)
+                {
+                    if (vertex.y > 1.05f)
+                    {
+                        above++;
+                        minX = Mathf.Min(minX, vertex.x);
+                        maxX = Mathf.Max(maxX, vertex.x);
+                    }
+                }
+            }
+
+            Assert.That(above, Is.GreaterThan(0), "no vertex above the rails: the post is missing or too short");
+            Assert.That(maxX, Is.LessThan(-1f), "the post's top should sit near x = -1.25");
+            Assert.That(minX, Is.GreaterThan(-1.5f));
+        }
+
         private GameObject Track(GameObject instance)
         {
             created.Add(instance);

@@ -97,8 +97,18 @@ namespace LivingVale.Editor.Region
         /// <summary>A grey-box tree: a trunk with a collider and a crown without one.</summary>
         public static void Tree(Transform parent, string name, float x, float z, float height, Material trunk, Material crown)
         {
-            Primitive(parent, $"{name} trunk", PrimitiveType.Cylinder, new Vector3(x, height * 0.3f, z),
+            GameObject stem = Primitive(parent, $"{name} trunk", PrimitiveType.Cylinder, new Vector3(x, height * 0.3f, z),
                 new Vector3(0.5f, height * 0.3f, 0.5f), trunk);
+            // G7b: a kit tree of about the same height; the trunk keeps its collider, the crown never had one.
+            // The species and turn come from the position, so a rebuild plants the same tree.
+            int hash = Mathf.Abs(Mathf.RoundToInt(x * 7.3f) * 31 + Mathf.RoundToInt(z * 3.7f));
+            bool pine = hash % 3 != 0;
+            if (ArtDressing.Dress(stem, pine ? "tree_pine" : "tree_broadleaf", new Vector3(x, 0f, z), hash % 360,
+                    height / (pine ? 7f : 6.2f)) != null)
+            {
+                return;
+            }
+
             Primitive(parent, $"{name} crown", PrimitiveType.Sphere, new Vector3(x, height * 0.75f, z),
                 new Vector3(height * 0.45f, height * 0.55f, height * 0.45f), crown, collider: false);
         }
