@@ -203,8 +203,9 @@ namespace Demos.GreyBoxVillage
             Report("Rang the alarm bell.");
         }
 
-        // The game sees a wolf and knows how far away it is; a raid or a fire it does not model, so
-        // the player can still report one.
+        // The game sees a wolf and knows how far away it is; a raid, or a fire anywhere but the
+        // stall, it does not model, so the player can still report one. The stall's fire asks for
+        // water (fetch_water), not the bell.
         [Available("sound_alarm")]
         private bool CanSoundAlarm(AgentContext ctx) => Alarm != null && !Alarm.IsSounding &&
             (Asker(ctx) == "player" || ctx.State.TryGetValue(AgentMind.WolfMetres, out var d) && (float)d <= AlarmWolfDistance);

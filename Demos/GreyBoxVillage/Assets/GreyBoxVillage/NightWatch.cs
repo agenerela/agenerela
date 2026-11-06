@@ -53,7 +53,8 @@ namespace Demos.GreyBoxVillage
 
         /// <summary>
         /// Night falls (true) or ends (false): the gate is shut or opened, and the watch changes hands.
-        /// <see cref="DayNightCycle.NightChanged"/> calls it; tests call it directly.
+        /// <see cref="DayNightCycle.NightChanged"/> calls it; tests call it directly. The handover
+        /// comes first: a guard chasing or carrying water when it comes drops that and goes.
         /// </summary>
         public void Nightfall(bool night)
         {

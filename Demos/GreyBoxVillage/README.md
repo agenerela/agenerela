@@ -234,7 +234,7 @@ teleported out. The quiet timer is how the model shows what it does unprompted: 
 `none`, or `patrol`, which nothing else is offered for.
 
 Each guard sees with its own eyes and keeps its own timers, so a trespass Bram cannot see may
-still reach Wren. `VillageEvents` is for what everyone in range notices; for now the bell.
+still reach Wren. `VillageEvents` is for what everyone in range notices: the bell, and the smoke of a fire.
 
 The observations sent with every request come from the scene and the guard's state: what it is
 doing, whether it follows the player, how far the player is and whether it can see them, which

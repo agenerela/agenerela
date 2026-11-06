@@ -115,6 +115,7 @@ namespace Demos.GreyBoxVillage.Tests
             Assert.That(seen.OfferedTargets, Does.Not.Contain("tomas"), "Odile offers no villager: her proximity source leaves people out.");
             Assert.That(seen.Outcome, Is.EqualTo("executed"));
 
+            Assert.That(Records("Wren"), Has.Count.EqualTo(1), "Odile's call never reached Wren.");
             var called = Records("Wren").Single();
             Assert.That(called.Source, Is.EqualTo("merchant"));
             Assert.That(called.Label, Is.EqualTo("Merchant"));
