@@ -119,6 +119,9 @@ namespace Agenerela
                 History = new ReadOnlyCollection<string>(new List<string>(history ?? Array.Empty<string>())),
                 Stimulus = $"{options.StimulusLabel}: \"{ctx.Stimulus}\"",
                 Schema = schema,
+                AgentName = ctx.Identity?.Name,
+                StimulusText = ctx.Stimulus,
+                StimulusLabel = options.StimulusLabel,
             };
         }
 
@@ -133,6 +136,9 @@ namespace Agenerela
                 SystemPrompt = decided.SystemPrompt,
                 Stimulus = string.Format(RefusalLineTemplate, ctx.Stimulus, EndSentence(verdict.ModelReason.Trim())),
                 Schema = DecisionSchema.StatementOnly(),
+                AgentName = decided.AgentName,
+                StimulusText = decided.StimulusText,
+                StimulusLabel = decided.StimulusLabel,
             };
         }
 
