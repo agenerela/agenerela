@@ -81,8 +81,8 @@ namespace LivingVale.Tests
             var reply = await Decide(Turn("Hello."));
 
             var request = ((DecisionResult)reply.DriverState).Request;
-            StringAssert.Contains(GameActions.QuotePurchase, request.Observations);
-            StringAssert.Contains(Potion, request.Observations);
+            StringAssert.Contains(GameActions.QuotePurchase, request.SystemPrompt);
+            StringAssert.Contains(Potion, request.SystemPrompt);
             StringAssert.Contains(Potion, request.FewShotBlock, "The example names a real target.");
             CollectionAssert.Contains(Allowed(reply, DecisionSchema.ActionFieldName), GameActions.QuotePurchase);
             CollectionAssert.Contains(Allowed(reply, DecisionSchema.TargetFieldName), Potion);
@@ -218,6 +218,24 @@ namespace LivingVale.Tests
 
             StringAssert.DoesNotContain(AgenerelaNpcDecisionDriver.DefaultIdleExample, provider.LastRequest.FewShotBlock);
             StringAssert.Contains(TradeActionBinding.OnlyWhenAskedRule, provider.LastRequest.Observations);
+        }
+
+        [Test]
+        public async Task ThePromptIsTheFrameworksListWithDescribedTargetsAndCounterExamples()
+        {
+            GivePelt(1);
+
+            var reply = await Decide(Turn("Hello."));
+            var request = ((DecisionResult)reply.DriverState).Request;
+
+            StringAssert.Contains("- " + Potion + ": ", request.SystemPrompt, "The framework lists the targets.");
+            StringAssert.Contains("for 10 gold", request.SystemPrompt, "Each with its IDescribedTarget line.");
+            StringAssert.Contains("Offer the traveler an exact price", request.SystemPrompt, "And each action with its description.");
+            StringAssert.DoesNotContain("Target for ", request.Observations, "The game's own listing is gone (G5g).");
+            StringAssert.Contains(TradeActionBinding.DefaultRule, request.Observations, "The rule line is game policy and stays.");
+            StringAssert.Contains(TradeActionBinding.PurchaseCounterExample, request.FewShotBlock);
+            StringAssert.Contains(TradeActionBinding.SaleCounterExample, request.FewShotBlock);
+            StringAssert.Contains(AgenerelaNpcDecisionDriver.DefaultIdleExample, request.FewShotBlock, "Through Agent.IdleExampleStimulus.");
         }
 
         [Test]

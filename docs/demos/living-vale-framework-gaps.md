@@ -62,12 +62,21 @@ Give each entry the next number and these parts:
 | 17 | Knowledge an NPC holds cannot be tied to the action that reveals it | High (quest integrity) | Medium |
 | 18 | The model cannot tell a player's claim from a game-verified fact | High | Small to medium |
 | 19 | Per-target conditions live outside the framework; an absent action cannot say why | Medium | Medium |
+| 20 | Few-shot examples name a target by its id, from a fixed list, never by its description | Medium | Small |
+| 21 | `ScriptedProvider` matches the asking agent by display name, not a stable id | Low | Small |
 
 ## Entries
 
 ### 1. Actions and targets are invisible to a local model unless the developer writes them into the prompt
 
-**Status:** in the framework since #193 (`DecideOptions.ListActionsAndTargets`, `IDescribedTarget`), off by default and owing an A/B run (#151). The game still uses its own `PromptLines`; switching needs a same-session A/B on the trade and quest lines.
+**Status: adopted in the game (G5g).** The driver now sends `DecideOptions.ListActionsAndTargets`,
+and `GameTargetOption` implements `IDescribedTarget`. In a same-session A/B (G5g, findings 5 November: "The framework's prompt features"), on 18 trade and talk lines and 7 quest-route lines per arm, the framework arm was as good on `gemma4:e2b-it-qat` (asked trades 5/5, unasked offers 0/13, routes 7/7 in both arms) and better on `qwen3.5:2b` (asked trades 5/5 against 4/5, routes 6/7 against 4/7, unasked offers 0/13 in both). The game's own action and
+target lines (`PromptLines`) are deleted. What stays in the observations is game policy, one rule
+line per action family (`RuleLines`), and game state (`StatusLines`), which the framework's list
+does not carry. **Not replaced:** the per-turn example rewriting (`RefreshExamples`). The
+framework fills an example's target with a name made from its id ("Stock Mara Potion One"), and
+only from a fixed `PreferredExampleTargets` list, so it cannot point an example at whichever
+target exists this turn, by the name a player would use. That is entry 20.
 
 - **Needed:** for Mara to choose `quote_purchase` on `stock_mara_bread_one`, the model has to
   know the action exists, what it does, which targets it takes, and what each target is (item,
@@ -192,7 +201,10 @@ Give each entry the next number and these parts:
 
 ### 9. The model makes offers nobody asked for
 
-**Status:** in the framework since #193 (`ActionDefinition.CounterExampleStimulus`, `[CounterExample]`). The game's G5f fix (an idle `none` example) still runs; moving to the framework's counter example is a small follow-up with its own A/B.
+**Status: adopted in the game (G5g).** Every Living Vale action now has a
+`CounterExampleStimulus`, new wording, and the driver sends `DecideOptions.CounterExamples`. In a same-session A/B (G5g, findings 5 November: "The framework's prompt features"), on 18 trade and talk lines and 7 quest-route lines per arm, the framework arm was as good on `gemma4:e2b-it-qat` (asked trades 5/5, unasked offers 0/13, routes 7/7 in both arms) and better on `qwen3.5:2b` (asked trades 5/5 against 4/5, routes 6/7 against 4/7, unasked offers 0/13 in both).
+The arm also kept G5f's idle example, moved to `Agent.IdleExampleStimulus` (entry 13), so the A/B
+measures the two together, not the counter-examples alone.
 
 - **Needed:** "Any rumours about the wagon?" should not produce a potion quote card.
 - **Observed:** qwen3.5:2b and gemma4:e2b-it-qat both open unasked quotes, in the G5b and G5c
@@ -250,7 +262,9 @@ Give each entry the next number and these parts:
 
 ### 13. A code-built agent shows the model no `none` example
 
-**Status:** in the framework since #193 (`Agent.IdleExampleStimulus` for code-built agents). The game can drop its own default once it adopts it.
+**Status: adopted in the game (G5g).** The driver sets `Agent.IdleExampleStimulus` to G5f's line
+instead of passing `DecideOptions.IdleExampleStimulus` on every call. Same text, so G5f's
+measurement carries over; the G5g A/B ran with it in both arms' places.
 
 - **Needed:** a demonstration that not every line is a request, which G5f found cuts unasked
   actions sharply on two small models (entry 9).
@@ -385,3 +399,32 @@ Give each entry the next number and these parts:
 - **Size and risk:** medium. The prompt line runs against "illegal options are absent, not
   forbidden in prose", so it needs evidence before it is adopted. Builds on #4.
 - **Research area:** targets.
+
+### 20. Few-shot examples name a target by its id, from a fixed list, never by its description
+
+- **Needed:** an example per available action that names a target the player could ask for
+  now, as they would say it: "I'll take healing potion ×1, please."
+- **Observed (G5g):** `FewShotBuilder` picks the first registered id from the action's
+  `PreferredExampleTargets` and fills `{0}` with a display name made from the id ("Stock Mara
+  Potion One"). Living Vale's targets change every turn (stock runs out, the player's pack
+  changes, quest stages move), so a fixed list is either stale or has to be rewritten per turn.
+  The framework's `IDescribedTarget` line is used by the list (#193), but not by the examples.
+- **Workaround:** `RefreshExamples` in each binding rewrites `ExampleStimulus` and
+  `PreferredExampleTargets` before every decision. It is still in the game after G5g.
+- **Proposal:** let an example fall back to the first registered target its action can take
+  when `PreferredExampleTargets` is empty. Fill `{0}` from an optional short name on
+  `IDescribedTarget` (or a sibling `INamedTarget`) when the target has one.
+- **Payoff:** deletes the last per-turn prompt plumbing in this game's bindings.
+- **Size and risk:** small. It changes example text, so it needs the evaluation A/B (#151).
+- **Research area:** evaluation.
+
+### 21. `ScriptedProvider` matches the asking agent by display name, not a stable id
+
+- **Observed (G5g):** `ScriptedProvider` keys replies, and names the asker in `ScriptedRequest.Agent`,
+  by `AgentIdentity.Name` ("Mara"). Living Vale keys NPCs by stable id (`npc_mara`), so
+  `ScriptedAgentDriver` keeps a name-to-id map, filled as each turn starts. Two NPCs with the
+  same display name would be indistinguishable to a script.
+- **Proposal:** carry an optional stable agent id in the request (`ScriptedRequest.AgentId`), or
+  let `When` take one.
+- **Size and risk:** small and additive.
+- **Research area:** evaluation (headless captures and replay).

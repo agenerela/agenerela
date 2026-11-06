@@ -107,7 +107,8 @@ namespace LivingVale.Unity
             Executor = new NpcActionExecutor(Trade, Quests, Routes);
             Driver = new ScriptedNpcDecisionDriver(executor: Executor);
             ModelDriver = AgenerelaNpcDecisionDriver.ForOllama(ollamaModel, Executor);
-            Drivers = new SwitchableNpcDecisionDriver(Driver, ModelDriver, driver);
+            // The scripted replies decide through Agent with ScriptedProvider (#194), so both paths share one pipeline.
+            Drivers = new SwitchableNpcDecisionDriver(new ScriptedAgentDriver(Driver, Executor), ModelDriver, driver);
 
             Coordinator = new ConversationCoordinator(Drivers, new ConversationSettings
             {

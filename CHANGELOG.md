@@ -125,6 +125,15 @@ phase table and the open issues, not here.
   drivers, on a card whose Accept button alone makes it Active. `SaveGame` writes a versioned
   snapshot atomically (keeping the previous save), validates before restoring, and never saves a
   quote or offer; F9 saves and F10 loads.
+- **Living Vale G5g: the framework's prompt features and scripted provider in use** (#69).
+  - **Prompt:** the Agenerela driver now lets the framework list the actions and described targets
+    (`ListActionsAndTargets`, `IDescribedTarget`), show each action's counter-example, and send the
+    idle example through `Agent.IdleExampleStimulus` (#193). The game's own action and target lines
+    are deleted. A same-session A/B found it as good on `gemma4:e2b-it-qat` and better on
+    `qwen3.5:2b` (`findings.md`, 5 November).
+  - **Scripted replies:** they now decide through `Agent` with `ScriptedProvider` (#194), so both
+    drivers share one pipeline. F1–F5 still work.
+  - **Framework gaps:** entries 1, 9 and 13 are adopted; 20 and 21 are new.
 - **Living Vale G5f: NPCs stop making trade offers nobody asked for** (#69). The Agenerela
   driver now shows the model one negative example by default: a line answered with `none`. In an
   A/B on 13 lines asking for nothing, unasked offers fell from 6/13 to 0/13 on

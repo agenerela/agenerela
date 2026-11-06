@@ -14,8 +14,8 @@ namespace LivingVale.Agenerela
     /// on a card; the player's Accept button moves the quest, never the model.
     /// </summary>
     /// <remarks>
-    /// A local model never reads the schema (AGENTS.md), so <see cref="PromptLines"/> describes the
-    /// action and its target, and <see cref="StatusLines"/> tells the model where the quest stands, from
+    /// A local model never reads the schema (AGENTS.md). The framework lists the action and its
+    /// described target in the prompt (#193), <see cref="RuleLines"/> says when to choose it, and <see cref="StatusLines"/> tells the model where the quest stands, from
     /// game state, so it does not offer what the traveler already accepted or claim an agreement
     /// nobody made.
     /// </remarks>
@@ -36,7 +36,8 @@ namespace LivingVale.Agenerela
             {
                 Id = GameActions.OfferQuest,
                 Description = "Ask the traveler to take on your task; they accept or decline on a card.",
-                RequiresTarget = true
+                RequiresTarget = true,
+                CounterExampleStimulus = CounterExample
             };
         }
 
@@ -77,8 +78,14 @@ namespace LivingVale.Agenerela
             return null;
         }
 
-        /// <summary>The observation lines that describe <c>offer_quest</c> and its targets; empty when it is not available.</summary>
-        public static List<string> PromptLines(GameActionOption option)
+        /// <summary>A line near the quest's subject that asks for nothing, shown answered with <c>none</c> when counter-examples are on (#193).</summary>
+        public const string CounterExample = "Your patients look like they are in good hands.";
+
+        /// <summary>
+        /// The rule line for <c>offer_quest</c>, which the framework's list does not carry; empty when
+        /// it is not available. The action and its targets are listed by the framework (#193).
+        /// </summary>
+        public static List<string> RuleLines(GameActionOption option)
         {
             var lines = new List<string>();
             if (option == null || option.Targets.Count == 0)
@@ -88,12 +95,6 @@ namespace LivingVale.Agenerela
 
             lines.Add($"When the traveler asks about your trouble or offers to help, choose {option.ActionId} with its exact target id below. " +
                 "The traveler accepts or declines on a card; nothing is agreed until they do.");
-            lines.Add($"Action {option.ActionId}: {option.Description}");
-            foreach (var target in option.Targets)
-            {
-                lines.Add($"Target for {option.ActionId}: {target.Id} = {target.Description}");
-            }
-
             return lines;
         }
 

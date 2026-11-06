@@ -18,8 +18,8 @@ namespace LivingVale.Agenerela
     /// </list>
     /// </summary>
     /// <remarks>
-    /// A local model never reads the schema (AGENTS.md), so <see cref="PromptLines"/> describes the
-    /// actions and lists the targets as observations, and <see cref="RefreshExamples"/> gives each
+    /// A local model never reads the schema (AGENTS.md). The framework lists the actions and their
+    /// described targets in the prompt (#193), <see cref="RuleLines"/> says when to choose them, and <see cref="RefreshExamples"/> gives each
     /// available action a one-line example on a real target, which the few-shot block shows.
     /// </remarks>
     public sealed class TradeActionBinding
@@ -42,13 +42,15 @@ namespace LivingVale.Agenerela
             {
                 Id = GameActions.QuotePurchase,
                 Description = "Offer the traveler an exact price for one of your stock entries.",
-                RequiresTarget = true
+                RequiresTarget = true,
+                CounterExampleStimulus = PurchaseCounterExample
             };
             sale = new ActionDefinition
             {
                 Id = GameActions.QuoteSale,
                 Description = "Offer to buy something the traveler carries, at an exact price.",
-                RequiresTarget = true
+                RequiresTarget = true,
+                CounterExampleStimulus = SaleCounterExample
             };
         }
 
@@ -136,29 +138,24 @@ namespace LivingVale.Agenerela
             "For greetings, questions, rumours and small talk, choose none and just answer. " +
             "Nothing changes hands until the traveler confirms your offer.";
 
-        public static List<string> PromptLines(IReadOnlyList<GameActionOption> options) => PromptLines(options, null);
+        /// <summary>Lines that mention trade and ask for nothing, shown answered with <c>none</c> when counter-examples are on (#193).</summary>
+        public const string PurchaseCounterExample = "Your stall looks well stocked today.";
+        public const string SaleCounterExample = "Iron and pelts must be hard to come by these days.";
 
+        /// <summary>
+        /// The rule line that goes before the choices: game policy, which the framework's own list of
+        /// actions and described targets (<c>DecideOptions.ListActionsAndTargets</c>, #193) does not
+        /// carry. With nothing to offer, one line says so.
+        /// </summary>
         /// <param name="rule">The rule line; null uses <see cref="DefaultRule"/>.</param>
-        public static List<string> PromptLines(IReadOnlyList<GameActionOption> options, string rule)
+        public static List<string> RuleLines(IReadOnlyList<GameActionOption> options, string rule = null)
         {
-            var lines = new List<string>();
             if (options == null || options.Count == 0)
             {
-                lines.Add("You cannot make a trade offer right now.");
-                return lines;
+                return new List<string> { "You cannot make a trade offer right now." };
             }
 
-            lines.Add(string.IsNullOrWhiteSpace(rule) ? DefaultRule : rule);
-            foreach (var option in options)
-            {
-                lines.Add($"Action {option.ActionId}: {option.Description}");
-                foreach (var target in option.Targets)
-                {
-                    lines.Add($"Target for {option.ActionId}: {target.Id} = {target.Description}.");
-                }
-            }
-
-            return lines;
+            return new List<string> { string.IsNullOrWhiteSpace(rule) ? DefaultRule : rule };
         }
 
         /// <summary>

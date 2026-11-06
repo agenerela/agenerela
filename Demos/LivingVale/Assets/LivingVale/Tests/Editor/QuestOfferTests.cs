@@ -168,9 +168,8 @@ namespace LivingVale.Tests
             CollectionAssert.Contains(Allowed(reply, DecisionSchema.ActionFieldName), GameActions.OfferQuest);
             CollectionAssert.Contains(Allowed(reply, DecisionSchema.TargetFieldName), QuestLog.IvenOfferId);
             CollectionAssert.DoesNotContain(Allowed(reply, DecisionSchema.ActionFieldName), GameActions.QuotePurchase, "Iven trades nothing.");
-            var observations = provider.LastRequest.Observations;
-            StringAssert.Contains("Target for offer_quest: offer_iven_missing_wagon", observations,
-                "A local model never reads the schema, so the target is in the prompt.");
+            StringAssert.Contains("- offer_iven_missing_wagon", provider.LastRequest.SystemPrompt,
+                "A local model never reads the schema, so the framework lists the target in the prompt.");
 
             Assert.IsTrue(model.Execute(turn, reply));
             Assert.AreEqual(GameActions.OfferQuest, model.LastOutcome.ActionId);

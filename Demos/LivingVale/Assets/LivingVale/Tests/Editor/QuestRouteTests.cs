@@ -548,8 +548,8 @@ namespace LivingVale.Tests
             UseModel(Fen);
             var (turn, reply) = await Decide(Fen, "What did you see?", GameActions.ShareInformation, QuestRoutes.KnowledgeFenRaid);
             CollectionAssert.Contains(Allowed(reply, DecisionSchema.ActionFieldName), GameActions.ShareInformation);
-            StringAssert.Contains($"Target for share_information: {QuestRoutes.KnowledgeFenRaid}", provider.LastRequest.Observations,
-                "A local model never reads the schema, so the target is in the prompt.");
+            StringAssert.Contains($"- {QuestRoutes.KnowledgeFenRaid}", provider.LastRequest.SystemPrompt,
+                "A local model never reads the schema, so the framework lists the target in the prompt.");
             Assert.IsTrue(model.Execute(turn, reply));
             Assert.AreEqual(GameActions.ShareInformation, model.LastOutcome.ActionId);
             Assert.IsTrue(quests.HasClue(QuestLog.ClueFenTestimony));
