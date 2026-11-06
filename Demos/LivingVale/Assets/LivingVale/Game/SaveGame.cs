@@ -42,6 +42,9 @@ namespace LivingVale.Game
             this.directory = Path.GetFullPath(directory);
         }
 
+        /// <summary>The NPCs' conversation memories, saved and loaded with the rest (G5h); null saves none and leaves them alone on load.</summary>
+        public INpcMemoryArchive Memories { get; set; }
+
         public static string DefaultDirectory => Application.persistentDataPath;
         public string SavePath => Path.Combine(directory, "livingvale_save.json");
         public string BackupPath => Path.Combine(directory, "livingvale_save.bak.json");
@@ -69,7 +72,8 @@ namespace LivingVale.Game
                 clues = quests.Clues.OrderBy(id => id, StringComparer.Ordinal).ToList(),
                 xp = progression.Xp,
                 perks = progression.Perks.Select(PerkId).ToList(),
-                awardedEvents = progression.AwardedEvents.OrderBy(id => id, StringComparer.Ordinal).ToList()
+                awardedEvents = progression.AwardedEvents.OrderBy(id => id, StringComparer.Ordinal).ToList(),
+                npcMemories = Memories?.Capture() ?? new List<SavedNpcMemory>()
             };
 
             foreach (var vendor in trade.Vendors.OrderBy(v => v.VendorId, StringComparer.Ordinal))
@@ -191,6 +195,9 @@ namespace LivingVale.Game
                 progression.Restore(state.Xp, state.Perks, state.AwardedEvents);
             }
 
+            // Last, after everything else restored, and already validated in Prepare: a load that
+            // failed above leaves every NPC's memory as it was.
+            Memories?.Restore(state.Memories);
             return true;
         }
 
@@ -270,9 +277,22 @@ namespace LivingVale.Game
                 return "Missing save data.";
             }
 
-            if (snapshot.version != SaveSnapshot.CurrentVersion)
+            if (snapshot.version < SaveSnapshot.OldestVersion || snapshot.version > SaveSnapshot.CurrentVersion)
             {
                 return $"Unsupported save version {snapshot.version}.";
+            }
+
+            // Version 2 must carry its memories, even an empty list; version 1 has none to carry.
+            if (snapshot.version >= 2 && snapshot.npcMemories == null)
+            {
+                return "Missing save collection.";
+            }
+
+            var memories = snapshot.version >= 2 ? snapshot.npcMemories : null;
+            string memoryError = Memories?.Validate(memories);
+            if (memoryError != null)
+            {
+                return memoryError;
             }
 
             if (snapshot.slots == null || snapshot.questItems == null || snapshot.quickUse == null ||
@@ -295,7 +315,8 @@ namespace LivingVale.Game
                 Clues = snapshot.clues.ToArray(),
                 Xp = snapshot.xp,
                 Perks = new List<Perk>(),
-                AwardedEvents = snapshot.awardedEvents.ToArray()
+                AwardedEvents = snapshot.awardedEvents.ToArray(),
+                Memories = memories
             };
 
             for (int i = 0; i < snapshot.slots.Count; i++)
@@ -485,6 +506,7 @@ namespace LivingVale.Game
 
         private sealed class RestoreState
         {
+            public List<SavedNpcMemory> Memories;
             public int Gold;
             public ItemStack[] Slots;
             public Dictionary<string, int> QuestItems;

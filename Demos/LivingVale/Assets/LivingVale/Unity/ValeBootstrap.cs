@@ -136,6 +136,9 @@ namespace LivingVale.Unity
             Models.Finished += OnModelCycled;
             Models.NoticeChanged += OnModelCycled;
 
+            // NPC memories save and load with the game (G5h), from whichever model driver F7 left in place.
+            Saves.Memories = new NpcMemoryArchive(() => Models.Driver);
+
             // The starting model loads like any other, so the notice says "loading …", and says
             // so when it does not load (not installed, server down) while F6 and F7 still work.
             if (driver == NpcDriverChoice.Agenerela)

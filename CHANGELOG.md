@@ -147,6 +147,16 @@ phase table and the open issues, not here.
   drivers, on a card whose Accept button alone makes it Active. `SaveGame` writes a versioned
   snapshot atomically (keeping the previous save), validates before restoring, and never saves a
   quote or offer; F9 saves and F10 loads.
+- **Living Vale G5h: execution results, correlation, commit-on-execute and saved memory from
+  the framework** (#69, DR-018, #195).
+  - **Execution results:** the handlers return `ActionResult` carrying the executor's outcome.
+  - **Correlation:** the turn travels as `DecideOptions.Correlation`.
+  - **Memory:** each NPC's memory runs under `MemoryCommit.OnExecute`, which replaces the game's
+    own `CommittedHistory`.
+  - **Saves:** NPC memories now save and load with the game (save version 2; version 1 saves
+    still load, with memory cleared). A failed load leaves memory untouched.
+  - **Framework gaps:** entries 2, 3, 5 and 11 are adopted; 22 and 23 are new. About 145 lines of
+    workaround are deleted.
 - **Living Vale G5g: the framework's prompt features and scripted provider in use** (#69).
   - **Prompt:** the Agenerela driver now lets the framework list the actions and described targets
     (`ListActionsAndTargets`, `IDescribedTarget`), show each action's counter-example, and send the

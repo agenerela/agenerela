@@ -177,7 +177,9 @@ the actions and their target ids are also written into the prompt as observation
 a quote naming the other action's target into `none`, and `Agent.Execute` refuses a target that
 went stale before the reply was executed. Each turn also tells the model about its offer still
 waiting for the player and the receipt of the last trade. An NPC remembers a reply only once it has been executed
-(`CommittedHistory`), so a reply dropped as late is never part of its memory. Since G5g the framework writes the choices into the prompt: its list of actions and described targets
+(the framework's `MemoryCommit.OnExecute`), so a reply dropped as late is never part of its memory.
+F9 saves each NPC's memory with the game, and F10 restores it (save version 2; an older save
+loads with memories cleared). Since G5g the framework writes the choices into the prompt: its list of actions and described targets
 (`ListActionsAndTargets`, with `GameTargetOption` as `IDescribedTarget`), a counter-example per
 action, and one line answered with `none` (`Agent.IdleExampleStimulus`,
 `AgenerelaNpcDecisionDriver.DefaultIdleExample`). In G5f's A/B, that alone
