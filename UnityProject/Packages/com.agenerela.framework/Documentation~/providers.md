@@ -250,6 +250,11 @@ var guard = new Agent(profile, ProviderConfig.Resolve().Provider);
   config's agents across two queues. The provider is dropped as Play mode starts and as it ends.
 - **An invalid config** (an empty model, `MaxInFlight` 0) throws `InvalidOperationException`
   naming the config and the setting when its provider is first read.
+- **Play mode without a domain reload** (Enter Play Mode Options) keeps every static field as
+  the last session left it. The framework resets its own as Play mode starts:
+  `AgenerelaSettings` forgets the settings asset it found, and the built providers are dropped
+  as above. Each static that needs no reset says why in `Tests/Editor/DomainReloadTests.cs`,
+  which fails on any new static field nothing resets (#190, G8).
 
 ### Adding a provider config
 

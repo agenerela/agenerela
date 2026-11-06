@@ -58,5 +58,15 @@ namespace Agenerela
         {
             loaded = null;
         }
+
+        // Before anything else as Play mode starts. Without a domain reload (Enter Play Mode Options)
+        // statics keep their values from the session before, so a test's Override, or the asset
+        // found last time, would otherwise carry into this one (#190, G8).
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetForPlaySession()
+        {
+            loaded = null;
+            Override = null;
+        }
     }
 }

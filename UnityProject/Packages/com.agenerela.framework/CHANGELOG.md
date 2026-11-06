@@ -121,6 +121,14 @@ While the version stays `0.x`, the public API may change in any release.
   compared with availability, and two worked examples, a per-threat cooldown and the name check
   DR-016 dropped, both run as tests.
 
+### Fixed
+
+- **Play mode without a domain reload** (#190, G8): `AgenerelaSettings` forgets the settings it
+  found, and a test's override, as Play mode starts, so Enter Play Mode Options with the domain
+  reload off no longer carries them into the next session. A new EditMode test fails on any static
+  field in the framework's runtime assembly that nothing resets; the three that need no reset
+  (`ProviderConfig`'s provider names and built configs, and the queues) say why in it.
+
 ## [0.4.0-preview.1] - 2026-10-29
 
 ### Added
