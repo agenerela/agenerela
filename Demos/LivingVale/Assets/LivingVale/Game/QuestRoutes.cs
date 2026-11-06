@@ -669,7 +669,7 @@ namespace LivingVale.Game
             contracts.Add(new RouteContract(DeliveryParcelElra, ElraId, GameActions.ResolveDelivery, RouteProposalKind.Delivery,
                 "Deliver the parcel to the garrison",
                 "Take the whole medical parcel for the castle garrison.",
-                $"The parcel goes to the garrison. +{QuestLog.GarrisonGold} gold, +{QuestLog.MainQuestXp} XP, courtyard access.", "Give Elra the parcel",
+                $"The parcel goes to the garrison. +{QuestLog.GarrisonGold} gold, +{QuestLog.MainQuestXp} XP.", "Give Elra the parcel",
                 () => Recovered && HasPermit,
                 () => quests.TryResolve(ParcelDisposition.Garrison)));
             Func<bool> divisionReady = () => Recovered && quests.HasClue(QuestLog.AgreementHealer) && quests.HasClue(QuestLog.AgreementGarrison);

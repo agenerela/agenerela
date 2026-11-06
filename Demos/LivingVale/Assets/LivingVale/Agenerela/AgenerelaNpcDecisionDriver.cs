@@ -302,6 +302,15 @@ namespace LivingVale.Agenerela
             return lines;
         }
 
+        /// <summary>
+        /// Forgets the last trade per NPC, for a loaded save: the load may have reversed it, and the
+        /// prompt must not report a trade the game no longer holds (#206 review).
+        /// </summary>
+        public void ForgetReceipts()
+        {
+            lastReceipts.Clear();
+        }
+
         private void OnConfirmed(TradeReceipt receipt)
         {
             var quote = receipt == null ? null : executor.Trade.FindQuote(receipt.QuoteId);

@@ -1,10 +1,10 @@
 # Living Vale — RPG demo build plan
 
-**Status:** on branch `69-living-vale` as of 5 November 2026: G0–G3 built, G4 part built (the
-quest core, the region with all eight NPCs, three recovery routes, the endings and the side
-quests), G5 (real NPC decisions on gemma4:e2b-it-qat), and the G7 art pilot. The rest is the
-editable design draft from 7 October. The game develops on its own branch, merges `test` in
-regularly, and lands in `test` through one pull request when the lead calls it done.
+**Status:** the first adventure is built and lands in `test` with #206 (6 November 2026): G0–G3,
+G5 (real NPC decisions, default model gemma4:e2b-it-qat), G7 (art) and G8 (navigation), and G4
+except perk effects, relationships and protected-NPC hostility recovery. The rest of this page is
+the design plan from 7 October; [`PLAYTEST.md`](../../Demos/LivingVale/PLAYTEST.md) says how to
+play what exists.
 
 **Development tracker:** [#69](https://github.com/agenerela/agenerela/issues/69), a
 sub-issue of [Demo games #47](https://github.com/agenerela/agenerela/issues/47).

@@ -77,162 +77,29 @@ phase table and the open issues, not here.
   `Assets/Evaluation/labels/<annotator>/<category>.json`; the README says how.
 - **Screen 8, the Prompt Set window**, in `docs/design/`: the wireframe drawn for #134 before the
   window was built, with its notes.
-- **Living Vale G8b: the map is opaque** (#69), on `69-living-vale`: the project renders in linear
-  colour space, where uGUI blends alpha in linear light, so the map panel at alpha 0.96 still let
-  the stall behind it show through and the 0.55 backdrop barely dimmed the scene. The panel is now
-  opaque and the backdrop 0.8, and a test pins both.
-- **Living Vale G8a: finding your way** (#69), on `69-living-vale`: a compass strip at the top
-  centre with the compass points, discovered places and a gold marker for the next quest goal with
-  its distance, worked out in plain C# from quest state by `Game/QuestGuide.cs` (talk to Iven, the
-  wreck, Fen, Kest, the parcel, the delivery or division, then the side quests). Name and role over
-  each speaking NPC within 15 m, fading from 10 m, hidden behind walls and while chatting with them.
-  **M** opens a map of the valley drawn from `ValePlaces` and its paths, with undiscovered places as
-  "?", the player's position and facing, the goal, and known NPCs where they are now on their
-  routines. One HUD layout (`UI/HudLayout.cs`): the place name, discoveries, quest receipts and the
-  model notice queue in one notice area under the compass instead of overlapping, the journal gains
-  a "Next:" line, and the inventory, controls, driver badge, vitals and combat status each have a
-  fixed slot that holds at 1280 × 720 and 1920 × 1080, checked with the player's new
-  `-lvHudShot` screenshot option. The framework gap is noted under entry 15.
-- **Living Vale G4b: the region and six more NPCs** (#69), on `69-living-vale`: the grey-box
-  valley around the village, built by one builder per place under `Editor/Region/` and called from
-  `VillageSceneBuilder.Build`: a 600 × 600 ground, flat paths along `ValePlaces.Paths`, the Old
-  Road bend with an empty wreck site, Reedbank (workshop, fields, and the bridge over the river
-  that is the only way to Ashwatch), Ashwatch's forecourt and closed gate before a walled keep,
-  Broken Watch's ruined camp, Herb Hollow's clearing and standing stone, boundary cliffs and
-  distant mountains. Sella, Toma, Fen, Brann, Elra and Kest each have a persona, scripted lines
-  and a two- or three-stop routine that holds while their chat is open; all of them only talk for
-  now. Entering a place for the first time pays 10 XP once (`discover_<place id>`, saved with the
-  progression) with a HUD notice, and the HUD names the current place. Framework gaps 14 and 15.
-- **Living Vale G4c: the main quest's routes and endings, and both side quests** (#69), on
-  `69-living-vale`. The parcel at Broken Watch can be recovered three ways: by defeating three
-  camp defenders, by paying Kest or having done Iven's herb favour, or with Fen's witness clue,
-  which counts only once Fen tells it through `share_information`. It can then be delivered to
-  Iven, to Elra with Brann's permit, or divided once both have agreed. There are new NPC actions
-  (`share_information`, `offer_exchange`, `resolve_delivery`, `grant_access`), and both side
-  quests can be offered and handed in. **E** uses world pickups, and each ending changes the scene.
-  Every deal goes on a card. All of it runs through `QuestRoutes` and the shared executor, from
-  both drivers. Framework gaps 16–19 are recorded.
-- **Living Vale G7c: visual polish** (#69), on `69-living-vale`: Briar Glen stands on packed
-  earth with a cobbled square, Ashwatch's forecourt is cobbled, the distant mountains and the
-  boundary cliffs are low-poly kit models, Iven's porch patients sit on their benches as a seated
-  humanoid, and the hit flash is a stronger, longer red (0.2 s) so it reads on the palette material. Five new
-  kit models (`humanoid_patient_seated`, `cobbles`, `cliff`, `mountain_a`, `mountain_b`); colliders
-  are unchanged.
-- **Living Vale G7b: the art kit is in the game** (#69), on `69-living-vale`: the Village scene's
-  builders dress their primitives with the kit through `ArtDressing`, which keeps each primitive's
-  collider and switches the model's off, so walls, talk ranges and sight lines stay where they were.
-  The Glen's cottages, stall, well and fences, Reedbank's buildings, Ashwatch's walls and gatehouse,
-  Broken Watch's ruins, tents and fire, the Old Road wreck, every tree and boulder, the quest herbs,
-  seeded trees and rocks along the paths and cliffs, and signposts where paths leave places. The
-  player, all eight NPCs (outfit by role) and the raiders wear the humanoid, the wolf is the kit's
-  wolf, and the player and raiders hold the kit sword. `VillageSceneShots` renders the built scene
-  from eight viewpoints for review. The hit flash now tints toward red instead of white, so it shows
-  on the white-based palette material. Two kit fixes from Codex's review: `fence_segment`'s post is
-  at its −X end as documented, and `tree_pine` rebuilds identically.
-- **Living Vale G7a: an art pilot kit** (#69), on `69-living-vale`: 29 low-poly, flat-shaded
-  models (cottages, stall, well, fences, props, the intact and the wrecked wagon, trees, rocks,
-  feverleaf, Ashwatch's gate and wall, Broken Watch's ruin, tent and campfire, one humanoid in
-  five outfits, a sword and a wolf), all generated by our own Blender scripts in
-  `Demos/LivingVale/Art~/blender/` and sharing one palette texture and one URP material. An
-  `AssetPostprocessor` fixes their import, `ArtKit` places them and swaps a capsule body for the
-  humanoid with a fallback when a model is missing, and an Art Preview scene shows them all.
-  The scene builders do not use it yet; `Demos/LivingVale/ART.md` covers rebuilding and style.
-- **Living Vale G4, part 1: quests, progression and saves** (#69), on `69-living-vale`: plain C#
-  in `Game/` with EditMode tests. `QuestLog` holds *The Missing Wagon* (states Undiscovered →
-  Offered → Active → ParcelRecovered → Resolved, early discovery skipping ahead, clues kept apart,
-  three authored dispositions with the division needing both recorded agreements) and the side
-  quests `quest_herbs` and `quest_badge`; every transition checks the current state, and every
-  reward applies once per event ID. `Progression` gives levels at 100 and 250 XP and one perk per
-  level-up. Iven offers the quest with `offer_quest` through the shared executor, from both
-  drivers, on a card whose Accept button alone makes it Active. `SaveGame` writes a versioned
-  snapshot atomically (keeping the previous save), validates before restoring, and never saves a
-  quote or offer; F9 saves and F10 loads.
-- **Living Vale G5h: execution results, correlation, commit-on-execute and saved memory from
-  the framework** (#69, DR-018, #195).
-  - **Execution results:** the handlers return `ActionResult` carrying the executor's outcome.
-  - **Correlation:** the turn travels as `DecideOptions.Correlation`.
-  - **Memory:** each NPC's memory runs under `MemoryCommit.OnExecute`, which replaces the game's
-    own `CommittedHistory`.
-  - **Saves:** NPC memories now save and load with the game (save version 2; version 1 saves
-    still load, with memory cleared). A failed load leaves memory untouched.
-  - **Framework gaps:** entries 2, 3, 5 and 11 are adopted; 22 and 23 are new. About 145 lines of
-    workaround are deleted.
-- **Living Vale G5g: the framework's prompt features and scripted provider in use** (#69).
-  - **Prompt:** the Agenerela driver now lets the framework list the actions and described targets
-    (`ListActionsAndTargets`, `IDescribedTarget`), show each action's counter-example, and send the
-    idle example through `Agent.IdleExampleStimulus` (#193). The game's own action and target lines
-    are deleted. A same-session A/B found it as good on `gemma4:e2b-it-qat` and better on
-    `qwen3.5:2b` (`findings.md`, 5 November).
-  - **Scripted replies:** they now decide through `Agent` with `ScriptedProvider` (#194), so both
-    drivers share one pipeline. F1–F5 still work.
-  - **Framework gaps:** entries 1, 9 and 13 are adopted; 20 and 21 are new.
-- **Living Vale G5f: NPCs stop making trade offers nobody asked for** (#69). The Agenerela
-  driver now shows the model one negative example by default: a line answered with `none`. In an
-  A/B on 13 lines asking for nothing, unasked offers fell from 6/13 to 0/13 on
-  `gemma4:e2b-it-qat` and from 10/13 to 0/13 on `qwen3.5:2b`, with the asked trades unchanged
-  (`findings.md`, 5 November). The help line fits 1280×720. Framework gap 9 is updated, and gap
-  13 (a code-built agent has no `none` example) is new.
-- **Living Vale G5e: `gemma4:e2b-it-qat` is the game's default model** (#69), adopted by the
-  lead on 5 November after the blind writing comparison. `qwen3.5:2b` is second in F7's list. The
-  starting model now loads through the same settle as F7, so the notice says "loading …" and, if
-  it is not installed, tells the player to press F7 or F6. Its real memory use is in `findings.md`:
-  2.8 GB on the card, against the 1.66 GB `/api/ps` reports.
-- **Living Vale G5d: F7 loads only the model the player stops on** (#69): pressing through the
-  list no longer queues a warm-up per model. A model is loaded once the key has rested for a
-  second, the one before it is unloaded so two never share the 8 GB card beside the game, and a
-  superseded warm-up is cancelled out of the queue. The notice says "loading …" until the model
-  answers, and the help line fits 1280×720.
-- **Living Vale G5c: pick the NPCs' model in the game** (#69): **F7** moves the `Agent` driver to
-  the next model in `ValeBootstrap`'s list that Ollama has, and skips any it lacks with a
-  game-authored notice beside the badge. It closes the open chat first, and keeps the executor,
-  the personas and what each NPC remembers. A comparison of non-Qwen small models against
-  `qwen3.5:2b`, with blind writing scores, is in `findings.md` (5 November).
-- **Living Vale G5b: Mara trades through the model** (#69): the `Agent` driver registers G3's
-  `quote_purchase` and `quote_sale` with targets from `NpcActionExecutor.AvailableFor`, asked again
-  each turn, so an action with nothing to offer is absent from the schema. Both drivers now
-  execute through the one executor. The actions and target ids are written into the prompt, a
-  guard contains a quote that names the other action's target, and an NPC remembers a reply only
-  once it is executed, so a reply dropped as late is not in its memory. A six-line live check is in
-  `findings.md` (5 November).
-- **Living Vale, milestone G5 "connect real decisions", for conversation** (#69), on
-  `69-living-vale`: `AgenerelaNpcDecisionDriver` makes each speaking NPC a framework `Agent`,
-  built in code from its persona (Mara and Iven so far), with the player's line as the stimulus,
-  the NPC's own knowledge as observations and the framework's rolling memory per NPC. Only
-  `none` is registered; a per-NPC callback is where trade actions will be registered. The model
-  answers by default; F6 (or `ValeBootstrap`'s Inspector) switches to the scripted replies, and
-  with Ollama down a turn fails with the game's own line. A small headless comparison of four
-  local models for the NPCs is in `findings.md` (5 November).
-- **Living Vale, milestone G1 "Walk and talk"** (#69), on the game's own branch
-  `69-living-vale`: the URP project in `Demos/LivingVale/`, a third-person player and orbit
-  camera, a grey-box village built by `VillageSceneBuilder`, two NPCs (Mara and Iven) with focus
-  and a chat overlay, and a conversation layer that keeps one turn in flight, times out, and
-  never applies a reply that arrives after the player cancelled, closed or switched speaker.
-  NPC replies come from a scripted driver, labelled as such, behind the same boundary the real
-  `Agent` will use at G5. 26 EditMode tests; the Windows player was play-checked.
-- **Living Vale's combat and inventory are joined** (#69): a defeated enemy's loot goes into the
-  player's inventory once (`CombatInventoryBridge`, keyed by enemy and item, so a repeat is
-  refused), and a defeat costs a tenth of the player's gold, at least one, never items. The help
-  panel now lists the combat keys and F6.
-- **Living Vale, milestone G2 "Fight and collect", the combat half** (#69), on
-  `69-living-vale`: attack, block and dodge with health and stamina, as plain-C# rules
-  (`Combatant`: 20 damage, 10 stamina, one hit per swing per victim, a dodge window, a block
-  that stops the swing) and a raider and a lunging wolf, each a small state machine
-  (`EnemyBrain`), in a meadow south of the village. Taking damage closes the chat and an
-  engaged enemy keeps it from opening; a defeat respawns the player in the village and resets
-  the fight. Loot (`item_wolf_pelt`, `item_iron_scrap`) and the defeat penalty go through
-  `ILootSink` and `IDefeatPenalty`, logged and free until G3's inventory takes them. 74
-  EditMode tests in all. Not play-checked yet.
-- **Living Vale, milestone G3 "Trade through chat"** (#69), on `69-living-vale`: the game-state
-  core in `Assets/LivingVale/Game/` (design §5's twelve items with stable IDs, a 16-slot
-  inventory with equipment, quick-use and protected quest storage, 40 starting gold, Mara's
-  finite stock) and chat trading (design §9). Mara's `quote_purchase` and `quote_sale`
-  decisions only make an exact `TradeQuote`; an inline card shows it, and its button calls
-  `TradeService.Confirm`, which re-checks conversation, expiry, revisions, gold, room and stock
-  and moves everything together or nothing. Replayed, expired, stale or unaffordable
-  confirmations change nothing, and closing, switching or leaving range invalidates the quote.
-  Both NPC drivers share one game-side `NpcActionExecutor`, which also lists each NPC's
-  available actions and targets for G5 to register. **I** opens a read-only inventory panel.
-  Loot enters through `ILootSink`, idempotent per event ID, for G2.
+- **Living Vale, a third-person RPG demo built on Agenerela** (#69), in `Demos/LivingVale/`: every
+  NPC is talked to in typed chat, and each reply is a framework decision that the game validates and
+  executes. It uses only the framework's public API and loads it by relative path.
+  - **The first adventure:** *The Missing Wagon*, with three recovery routes (fight the camp, pay
+    Kest or do Iven's herb favour, or bring Fen's account), three endings with visible changes in
+    the valley, and two side quests (herbs, Brann's badge). Every deal and hand-over is a card in the
+    chat, and only its button acts. Claims in chat record nothing.
+  - **Eight NPCs**, each a framework `Agent` on a local model (default `gemma4:e2b-it-qat`; F7 moves
+    to the next model Ollama has, loading only the one the player stops on). F6 switches to scripted
+    replies, which also decide through `Agent`, with `ScriptedProvider`.
+  - **Game systems:** trade with exact quote cards and all-or-nothing transfers; combat with a raider
+    and a wolf, loot and respawn; quests, XP, levels and perks; saves with F9/F10 that include what
+    each NPC remembers. A reply that arrives after the player cancelled, closed, switched or loaded is
+    never applied or remembered.
+  - **The valley:** six places on a 600 m map, routines, discovery, a compass with the quest goal,
+    NPC name tags and a map on M. The art is low-poly, generated by our own Blender scripts
+    (`Demos/LivingVale/ART.md`).
+  - **On the framework:** it uses #193's prompt switches, #194's scripted provider and #195's
+    results, correlation and commit-on-execute memory in place of its own workarounds, after
+    same-session A/B runs where the prompt changed (findings, 5–6 November).
+    `docs/demos/living-vale-framework-gaps.md` lists the 23 gaps the game found. #190 collects
+    them for the framework.
+  - 581 EditMode tests. How to play, and the known issues: `Demos/LivingVale/PLAYTEST.md`.
 - **The risk management plan** in `docs/course/2026-10-29-risk-management/`: an Excel
   register of 14 risks, two per member, with a risk matrix and a sprint review log, reviewed
   once per sprint. XLSX now goes through Git LFS.

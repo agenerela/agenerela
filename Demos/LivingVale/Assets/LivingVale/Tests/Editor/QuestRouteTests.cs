@@ -485,16 +485,17 @@ namespace LivingVale.Tests
         [Test]
         public async Task LoadingTakesThePendingCardAway()
         {
-            var save = new SaveGame(inventory, trade, quests, progression, directory);
+            var save = new SaveGame(inventory, trade, quests, progression, directory) { Routes = routes };
             AcceptMainQuest();
             Assert.IsTrue(save.TrySave(out var error), error);
             await Say(Kest, "Name your price for the parcel.");
             var proposal = routes.ActiveProposal;
             Assert.IsNotNull(proposal);
 
-            // The game closes the conversation before loading (ValeBootstrap.LoadNow).
-            coordinator.Close(ConversationCloseReason.Interrupted);
+            // The conversation stays open on purpose: only the load itself may take the card away
+            // (#206 review: closing first hid a load that left the card live).
             Assert.IsTrue(save.TryLoad(out error), error);
+            Assert.IsNull(routes.ActiveProposal);
             Assert.IsFalse(routes.Confirm(proposal.Id).Applied);
             Assert.AreEqual(MainQuestState.Active, quests.MainState);
         }

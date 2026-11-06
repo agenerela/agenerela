@@ -183,6 +183,21 @@ namespace LivingVale.Tests
             StringAssert.Contains("Last trade with the traveler: Bought Healing potion", provider.LastRequest.Observations);
         }
 
+        // A load may reverse the last trade, so the prompt must stop reporting it (#206 review).
+        [Test]
+        public async Task ForgetReceipts_TheNextTurnNoLongerReportsTheLastTrade()
+        {
+            Assert.AreEqual(TradeRejection.None, trade.TryQuotePurchase(VendorStock.MaraId, Potion, session.Generation, out var quote));
+            Assert.IsTrue(trade.Confirm(quote.Id).Applied);
+            await Decide(Turn("Did that go through?"));
+            StringAssert.Contains("Last trade with the traveler", provider.LastRequest.Observations);
+
+            driver.ForgetReceipts();
+
+            await Decide(Turn("And what did I buy?"));
+            StringAssert.DoesNotContain("Last trade with the traveler", provider.LastRequest.Observations);
+        }
+
         [Test]
         public async Task ATradeMadeBeforeMarasFirstModelTurnStillReachesIt()
         {

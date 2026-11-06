@@ -45,6 +45,9 @@ namespace LivingVale.Game
         /// <summary>The NPCs' conversation memories, saved and loaded with the rest (G5h); null saves none and leaves them alone on load.</summary>
         public INpcMemoryArchive Memories { get; set; }
 
+        /// <summary>The quest route cards (G4c). A load invalidates its pending card with the others; null when there is none.</summary>
+        public QuestRoutes Routes { get; set; }
+
         public static string DefaultDirectory => Application.persistentDataPath;
         public string SavePath => Path.Combine(directory, "livingvale_save.json");
         public string BackupPath => Path.Combine(directory, "livingvale_save.bak.json");
@@ -170,6 +173,7 @@ namespace LivingVale.Game
 
             trade.InvalidatePending();
             quests.InvalidatePending();
+            Routes?.InvalidatePending();
             using (inventory.DeferNotifications())
             {
                 if (!inventory.TryRestore(state.Gold, state.Slots, state.QuestItems, state.Weapon, state.Armor,

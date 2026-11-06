@@ -71,9 +71,11 @@ namespace LivingVale.World
             new RegionNpc(ElraId, "Elra", "Castle steward", ValePlaces.Ashwatch, (0.86f, 0.74f, 0.34f),
                 new RoutineStop(224f, 60f, 6f), new RoutineStop(220f, 64.5f, 5f), new RoutineStop(226.5f, 56f, 5f)),
 
-            // Broken Watch: Kest walks between the camp's centre and its edges.
+            // Broken Watch: Kest meets travellers on the Old Road where it enters the camp, at least
+            // 15 m from every defender, so a player in talk range (3 m) stays out of their aggro
+            // range (9 m, 11 m for a wolf) and the talks can happen before any fight (#206 review).
             new RegionNpc(KestId, "Kest", "Camp leader", ValePlaces.BrokenWatch, (0.2f, 0.53f, 0.55f),
-                new RoutineStop(-80f, -266f, 7f), new RoutineStop(-74.5f, -270f, 5f), new RoutineStop(-84f, -273.5f, 5f))
+                new RoutineStop(-64f, -254f, 7f), new RoutineStop(-63f, -256f, 5f), new RoutineStop(-66f, -254f, 5f))
         };
 
         public static RegionNpc Get(string id)

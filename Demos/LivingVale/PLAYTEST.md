@@ -6,7 +6,7 @@ model, and there is trade, combat, a map and compass, and saves. It is built on 
 `69-living-vale` from commit `aa09373`.
 
 **What has been checked so far:**
-- 579 EditMode tests pass (4 live-model tests skipped).
+- 581 EditMode tests pass (4 live-model tests skipped).
 - Each route was checked live on gemma4 in the tests (7 of 7).
 - The built game was played by the coordinator through chat, trade, combat and loot, Iven's quest
   offer, F6/F7, the map, and F9/F10 with NPC memory.
@@ -19,7 +19,8 @@ this checkpoint is for.
 1. Ollama must be running with the default model: `ollama pull gemma4:e2b-it-qat`. Without it,
    the notice says the model did not load. **F6** switches to scripted replies, and **F7**
    reaches `qwen3.5:2b`.
-2. Run `C:\Unity_Projects\wt-lv\Demos\LivingVale\Builds\Windows\LivingVale.exe`, or open
+2. Build the player with **Living Vale → Build Windows Player** and run
+   `Demos/LivingVale/Builds/Windows/LivingVale.exe` (gitignored, so build it first), or open
    `Demos/LivingVale` in Unity 6000.3.23f1, then `Assets/LivingVale/Scenes/Village.unity`, and
    press Play.
 3. The first reply waits for the model to load, about 10 s, and the notice says "loading…".

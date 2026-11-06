@@ -115,10 +115,6 @@ namespace LivingVale.Agenerela
             return options;
         }
 
-        /// <summary>
-        /// The observation lines that tell the model what it can offer now, from
-        /// <paramref name="options"/>. With nothing to offer, one line says so.
-        /// </summary>
         /// <summary>The rule line written before the trade actions, as G5b wrote it: the control arm of G5f's A/B.</summary>
         public const string DefaultRule =
             "When the traveler asks to buy or sell, choose the matching action with one of its exact target ids below; otherwise choose none. " +

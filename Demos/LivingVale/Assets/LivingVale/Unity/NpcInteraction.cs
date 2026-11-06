@@ -51,6 +51,12 @@ namespace LivingVale.Unity
                 }
             }
 
+            // Design section 8: hostile escalation closes the chat, not only damage (#206 review).
+            if (bootstrap.Coordinator.IsOpen && LivingVale.Combat.CombatDirector.EnemyEngaged)
+            {
+                bootstrap.Coordinator.Close(ConversationCloseReason.Interrupted);
+            }
+
             if (bootstrap.Coordinator.IsOpen &&
                 (active == null || (active.transform.position - transform.position).sqrMagnitude > 36f))
             {

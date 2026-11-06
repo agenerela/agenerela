@@ -41,6 +41,7 @@ namespace LivingVale.Unity
         private InventoryHud inventoryHud;
         private NavigationTargets navigation;
         private MapOverlay map;
+        private ScriptedAgentDriver scriptedAgent;
         private int blockedFrame = -1;
 
         public ConversationCoordinator Coordinator { get; private set; }
@@ -121,7 +122,9 @@ namespace LivingVale.Unity
             Driver = new ScriptedNpcDecisionDriver(executor: Executor);
             ModelDriver = AgenerelaNpcDecisionDriver.ForOllama(ollamaModel, Executor);
             // The scripted replies decide through Agent with ScriptedProvider (#194), so both paths share one pipeline.
-            Drivers = new SwitchableNpcDecisionDriver(new ScriptedAgentDriver(Driver, Executor), ModelDriver, driver);
+            scriptedAgent = new ScriptedAgentDriver(Driver, Executor);
+            Drivers = new SwitchableNpcDecisionDriver(scriptedAgent, ModelDriver, driver);
+            Saves.Routes = Routes;
 
             Coordinator = new ConversationCoordinator(Drivers, new ConversationSettings
             {
@@ -321,6 +324,9 @@ namespace LivingVale.Unity
                 // NPC memory now stands at the save; the chat history on screen must not show
                 // lines said after it (G5h saves memory, the shown history is not saved).
                 Coordinator.ClearHistories();
+                // The load may have reversed the last trades, so neither driver may report them.
+                (Models?.Driver ?? ModelDriver)?.ForgetReceipts();
+                scriptedAgent?.Inner.ForgetReceipts();
                 Debug.Log($"[LivingVale] Loaded {Saves.SavePath}.");
             }
             else

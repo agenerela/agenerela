@@ -10,6 +10,14 @@ namespace LivingVale.Editor
     /// <summary>Builds the quest landmarks, pickups, camp defenders, visible endings and route HUDs.</summary>
     public static class QuestSceneBuilder
     {
+        /// <summary>The camp defenders' homes, from Broken Watch's centre. Public so a test can keep Kest out of their reach.</summary>
+        public static readonly Vector3[] DefenderOffsets =
+        {
+            new Vector3(-5f, 0f, 0f),
+            new Vector3(3f, 0f, 4f),
+            new Vector3(3f, 0f, -4f)
+        };
+
         private const string MaterialFolder = "Assets/LivingVale/Materials";
 
         public static void Build(ValeBootstrap bootstrap, GameObject player)
@@ -133,12 +141,7 @@ namespace LivingVale.Editor
                 watch + new Vector3(7f, 0.4f, -3f), new Vector3(2.5f, 0.8f, 1.2f), stone, keepCollider: true);
             fallen.transform.rotation = Quaternion.Euler(0f, 25f, 8f);
 
-            Vector3[] offsets =
-            {
-                new Vector3(-5f, 0f, 0f),
-                new Vector3(3f, 0f, 4f),
-                new Vector3(3f, 0f, -4f)
-            };
+            Vector3[] offsets = DefenderOffsets;
             var defenders = new GameObject[QuestRoutes.DefenderIds.Count];
             for (int i = 0; i < defenders.Length; i++)
             {

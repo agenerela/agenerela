@@ -1351,7 +1351,7 @@ harness bugs, each fixed before the next run, so the runs did not all run the sa
 offered set, on the same model. If the bell's share does not fall with `chase` offered, this was
 noise.
 
-### The framework's prompt features: as good as Living Vale's own on gemma, better on qwen3.5:2b (5 November 2026)
+### The framework's prompt features: no worse than Living Vale's own on gemma or qwen3.5:2b (5 November 2026)
 
 **What changed.**
 
