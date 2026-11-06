@@ -149,6 +149,6 @@ it was.
 - **Decide when to ask.** It has no opening, closing, speakers or range. The game ends a turn
   with `Cancel()` when its own rules say so: the player walked away, another NPC took over.
 - **Keep the lines said.** The chat log is the game's, and the agent's memory is the agent's.
-- **Queue.** A line that arrives while a turn waits is refused or replaces it. A per-agent policy
-  for events, such as queueing with a cap, would sit beside `Start` and `Replace`
-  (GreyBoxVillage's G5 in #190).
+- **Queue.** A line that arrives while a turn waits is refused or replaces it. An agent whose
+  calls should queue instead, with a cap, has `Agent.Backlog` (GreyBoxVillage's G5 in #190). A
+  conversation does not need it, since it never has two of its own calls in flight.

@@ -43,8 +43,9 @@ namespace Agenerela
     /// <para>
     /// <b>Extension point:</b> what to do with a stimulus that arrives while a turn waits is the
     /// caller's choice between <see cref="Start"/>, which refuses it, and <see cref="Replace"/>,
-    /// which ends the waiting turn. A per-agent policy for events, such as queueing with a cap
-    /// (GreyBoxVillage's G5 in #190), would sit beside these two.
+    /// which ends the waiting turn. An agent that should queue its calls instead, with a cap, has
+    /// <see cref="Agent.Backlog"/> (GreyBoxVillage's G5 in #190), which a conversation does not need:
+    /// it never has two of its own calls in flight.
     /// </para>
     /// </remarks>
     public sealed class Conversation
