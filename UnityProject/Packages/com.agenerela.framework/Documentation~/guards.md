@@ -20,7 +20,8 @@ Inside `Agent.DecideAsync`, after the reply has been parsed:
 
 1. **`SchemaLegalityGuard`.** The decision is one the agent could legally make: the action is
    registered and was offered in this request; the target is registered or `no_target`; an
-   action that needs a target got a real one. The schema's grammar should already have
+   action that needs a target got a real one; and against a paired schema
+   ([`targets.md`](targets.md#the-paired-schema)), the action was offered with that target. The schema's grammar should already have
    enforced all of this. It is checked again because a provider is untrusted. Every refusal is
    a `Reject`.
 2. **`TargetGroundingGuard`.** Did the model want a target that is not on the list? From the
