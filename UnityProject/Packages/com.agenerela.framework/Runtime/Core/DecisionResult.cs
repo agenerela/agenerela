@@ -128,18 +128,23 @@ namespace Agenerela
 
     // A decision held back from memory until the game settles it (MemoryCommit.OnExecute,
     // DR-018): everything IMemoryStrategy.Remember needs, as the decision had it, and the memory
-    // it recalled from, so replacing Agent.Memory meanwhile changes nothing.
+    // it recalled from, so replacing Agent.Memory meanwhile changes nothing. The agent that made
+    // it is named by a token of that agent's, never the agent itself, so a result kept in a log
+    // keeps no agent alive.
     internal sealed class PendingMemory
     {
-        public PendingMemory(Agent owner, IMemoryStrategy memory, AgentContext context, DecisionRequest request)
+        public PendingMemory(object owner, string ownerName, IMemoryStrategy memory, AgentContext context, DecisionRequest request)
         {
             Owner = owner;
+            OwnerName = ownerName;
             Memory = memory;
             Context = context;
             Request = request;
         }
 
-        public Agent Owner { get; }
+        // The deciding agent's token, compared by reference, and its name for messages.
+        public object Owner { get; }
+        public string OwnerName { get; }
         public IMemoryStrategy Memory { get; private set; }
         public AgentContext Context { get; private set; }
         public DecisionRequest Request { get; private set; }

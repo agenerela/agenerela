@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Agenerela.Providers;
@@ -262,6 +263,30 @@ namespace Agenerela.Tests
             Assert.That(kept.Pending.Context, Is.Null);
             Assert.That(kept.Pending.Memory, Is.Null);
             Assert.That(dropped.Pending.Context, Is.Null);
+        }
+
+        [Test]
+        public async Task AHeldDecisionKeepsNoReferenceToItsAgent()
+        {
+            // So a result kept in a log, settled or not, does not keep the agent and all it
+            // reaches alive. Only the agent's token and name are held.
+            var (agent, _, _) = Guard();
+            agent.MemoryCommit = MemoryCommit.OnExecute;
+            var result = await Decide(agent);
+            var fields = typeof(PendingMemory).GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            Assert.That(fields, Is.Not.Empty);
+
+            foreach (var field in fields)
+            {
+                Assert.That(field.GetValue(result.Pending), Is.Not.SameAs(agent), $"{field.Name}, while held");
+            }
+
+            agent.Execute(result);
+
+            foreach (var field in fields)
+            {
+                Assert.That(field.GetValue(result.Pending), Is.Not.SameAs(agent), $"{field.Name}, once settled");
+            }
         }
 
         [Test]

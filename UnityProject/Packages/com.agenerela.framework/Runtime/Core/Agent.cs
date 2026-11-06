@@ -280,6 +280,10 @@ namespace Agenerela
 
         private MemoryCommit memoryCommit = MemoryCommit.OnDecide;
 
+        // What a held decision names as the agent that made it: a token, never the agent itself,
+        // so a result the game keeps after settling it keeps no agent alive.
+        private readonly object holder = new object();
+
         /// <summary>
         /// The game's own rules over every decision (build plan §2.5, item 3), such as a cooldown
         /// or line of sight: guards that run after the built-in ones, in list order, inside
@@ -693,10 +697,10 @@ namespace Agenerela
                 throw new ArgumentNullException(nameof(result));
             }
 
-            if (result.Pending != null && result.Pending.Owner != this)
+            if (result.Pending != null && result.Pending.Owner != holder)
             {
                 throw new ArgumentException(
-                    $"This decision was made by {result.Pending.Owner.Who()}, so only that agent can settle it.",
+                    $"This decision was made by {result.Pending.OwnerName}, so only that agent can settle it.",
                     nameof(result));
             }
         }
@@ -707,7 +711,7 @@ namespace Agenerela
         private bool Settle(DecisionResult result, bool remember)
         {
             var pending = result.Pending;
-            if (pending == null || pending.Settled || pending.Owner != this)
+            if (pending == null || pending.Settled || pending.Owner != holder)
             {
                 return false;
             }
@@ -829,7 +833,7 @@ namespace Agenerela
             {
                 if (commit == MemoryCommit.OnExecute)
                 {
-                    result.Pending = new PendingMemory(this, memory, ctx, request);
+                    result.Pending = new PendingMemory(holder, Who(), memory, ctx, request);
                 }
                 else
                 {
