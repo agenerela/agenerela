@@ -155,9 +155,18 @@ namespace Agenerela.Tests
             }
             finally
             {
-                ProviderConfig.ForgetAll();
+                // Only this test's config: ForgetAll would drop every other config's provider, the
+                // very thing this test checks the helper does not do.
+                other.Forget();
+                Built().Remove(other);
                 Object.DestroyImmediate(other);
             }
+        }
+
+        // ProviderConfig's editor-only set of configs holding a built provider.
+        private static HashSet<ProviderConfig> Built()
+        {
+            return (HashSet<ProviderConfig>)typeof(ProviderConfig).GetField("Built", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
         }
 
         [Test]
@@ -348,7 +357,7 @@ namespace Agenerela.Tests
         // Null when ProviderConfig.ForgetAll empties Built and the config builds again; otherwise what went wrong.
         private static string BuiltIsEmptiedByForgetAll()
         {
-            var built = (HashSet<ProviderConfig>)typeof(ProviderConfig).GetField("Built", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
+            var built = Built();
             var providerField = typeof(ProviderConfig).GetField("provider", BindingFlags.Instance | BindingFlags.NonPublic);
 
             // ForgetAll drops every config's provider, so keep the ones built before this check and put
