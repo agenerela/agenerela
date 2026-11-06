@@ -396,6 +396,30 @@ namespace Agenerela.Tests
         }
 
         [Test]
+        public async Task AvailabilityReadsTheCallsCorrelationWhenDecidingAndAgainAtExecute()
+        {
+            // GreyBoxVillage's G11: who asked decides whether an action is offered, and must still
+            // decide it at the re-check, whatever a later call asked for meanwhile.
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = new Agent(Fixtures.VillageGuardProfile(), fake);
+            var moveTo = new FakeHandler(ctx => (string)ctx.Correlation == "player");
+            agent.Bind("move_to", moveTo);
+            agent.Bind("follow_player", new FakeHandler());
+            agent.Targets.Register("tower", new object());
+
+            var asked = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", new DecideOptions { Correlation = "player" }));
+            Assert.That(fake.LastRequest.Schema.Fields[0].AllowedValues, Does.Contain("move_to"));
+
+            fake.Reply = "{\"action\":\"none\",\"target\":\"no_target\",\"statement\":\"\"}";
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", new DecideOptions { Correlation = "villager" }));
+            Assert.That(fake.LastRequest.Schema.Fields[0].AllowedValues, Does.Not.Contain("move_to"), "Not offered when a villager asks.");
+
+            Assert.That(agent.Execute(asked), Is.True, "The re-check reads the decision's own correlation.");
+            Assert.That(moveTo.AvailabilityChecks.Last().Correlation, Is.EqualTo("player"));
+            Assert.That(moveTo.Executions, Has.Count.EqualTo(1));
+        }
+
+        [Test]
         public async Task AStoppedDecisionKeepsTheCorrelation()
         {
             var conversation = new object();

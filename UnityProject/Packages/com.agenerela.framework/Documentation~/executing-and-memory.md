@@ -100,6 +100,12 @@ is, never why the agent is asked, so it stays inside DR-008.
 A guard reads it from `input.Context.Correlation`, which is how a game's guard could refuse a
 decision that belongs to a conversation it has moved past.
 
+The same goes for availability. An `IsAvailable` that depends on who asked, such as an alarm only
+a player may raise, reads `ctx.Correlation`. It gets the call's own correlation while deciding,
+and again in the re-check at `Execute`, whatever a later call has set meanwhile. Per-call facts
+belong there rather than in `Agent.State`, which every call shares (GreyBoxVillage's G11). The
+framework still decides nothing from it: the developer's own check does.
+
 ## Memory that waits for the game: `MemoryCommit`
 
 By default an agent remembers each decision as `DecideAsync` returns it. A game that may drop a
