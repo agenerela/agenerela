@@ -14,7 +14,7 @@ namespace LivingVale.Tests
     /// <summary>
     /// The G5b live check: buy and sell lines to Mara through the real driver and a local Ollama,
     /// one JSON line per case with the model's choice and what the guards left. Explicit and
-    /// ignored without <c>LV_MODEL</c> and <c>LV_COMPARE_OUT</c>; take the Ollama lock first.
+    /// ignored without <c>LV_MODEL</c> and <c>LV_TRADE_OUT</c>; take the Ollama lock first.
     /// </summary>
     /// <remarks>
     /// Each case is staged on its own: a fresh driver, game state and conversation, with the player
@@ -67,10 +67,10 @@ namespace LivingVale.Tests
         public async Task RunTheTradeLines()
         {
             string model = Environment.GetEnvironmentVariable("LV_MODEL");
-            string output = Environment.GetEnvironmentVariable("LV_COMPARE_OUT");
+            string output = Environment.GetEnvironmentVariable("LV_TRADE_OUT");
             if (string.IsNullOrWhiteSpace(model) || string.IsNullOrWhiteSpace(output))
             {
-                Assert.Ignore("Set LV_MODEL and LV_COMPARE_OUT to run the live check.");
+                Assert.Ignore("Set LV_MODEL and LV_TRADE_OUT to run the live check.");
             }
 
             var mara = new NpcDescriptor(VendorStock.MaraId, "Mara", "General trader");

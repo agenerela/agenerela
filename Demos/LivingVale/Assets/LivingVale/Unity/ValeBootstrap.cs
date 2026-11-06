@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using LivingVale.Agenerela;
 using LivingVale.Game;
 using LivingVale.Interaction;
@@ -18,6 +19,8 @@ namespace LivingVale.Unity
         [SerializeField] private NpcDriverChoice driver = NpcDriverChoice.Agenerela;
         [Tooltip("The local Ollama model used by the Agenerela NPC driver.")]
         [SerializeField] private string ollamaModel = "qwen3.5:2b";
+        [Tooltip("The models F7 cycles through, in order, skipping any Ollama does not have. Compared on 5 November 2026 (llm-wiki findings).")]
+        [SerializeField] private List<string> ollamaModels = new List<string>(ModelCycleDefaults.Models);
 
         private InputActionMap actions;
         private InputAction move;
@@ -30,6 +33,8 @@ namespace LivingVale.Unity
         private InputAction switchDriver;
         private InputAction saveKey;
         private InputAction loadKey;
+        private InputAction switchModel;
+        private readonly System.Threading.CancellationTokenSource lifetime = new System.Threading.CancellationTokenSource();
         private bool capturedTextFocus;
         private ConversationTradeLink tradeLink;
         private InventoryHud inventoryHud;
@@ -39,6 +44,12 @@ namespace LivingVale.Unity
         public ScriptedNpcDecisionDriver Driver { get; private set; }
         public AgenerelaNpcDecisionDriver ModelDriver { get; private set; }
         public SwitchableNpcDecisionDriver Drivers { get; private set; }
+
+        /// <summary>F7: the next installed model for the Agenerela driver.</summary>
+        public ModelCycle Models { get; private set; }
+
+        /// <summary>The model key's last game-authored line, shown beside the driver badge.</summary>
+        public string DriverNotice => Models?.Notice ?? "";
 
         /// <summary>The player's holdings. G2 hands loot in through it as an <see cref="ILootSink"/>.</summary>
         public PlayerInventory Inventory { get; private set; }
@@ -100,6 +111,9 @@ namespace LivingVale.Unity
             });
             tradeLink.Attach(Coordinator, Trade);
             tradeLink.AttachQuests(Quests);
+            Models = new ModelCycle(Coordinator, Drivers,
+                new ModelSelector(ollamaModels, ollamaModel, new OllamaModelCatalog()), ModelDriver);
+            Models.Finished += OnModelCycled;
 
             actions = new InputActionMap("Living Vale");
             move = actions.AddAction("Move", InputActionType.Value);
@@ -120,6 +134,7 @@ namespace LivingVale.Unity
             switchDriver = actions.AddAction("SwitchDriver", InputActionType.Button, "<Keyboard>/f6");
             saveKey = actions.AddAction("Save", InputActionType.Button, "<Keyboard>/f9");
             loadKey = actions.AddAction("Load", InputActionType.Button, "<Keyboard>/f10");
+            switchModel = actions.AddAction("SwitchModel", InputActionType.Button, "<Keyboard>/f7");
 
             overlay.Initialize(this);
             inventoryHud = overlay.gameObject.AddComponent<InventoryHud>();
@@ -213,6 +228,11 @@ namespace LivingVale.Unity
             {
                 LoadNow();
             }
+
+            if (switchModel.WasPressedThisFrame())
+            {
+                CycleModel();
+            }
         }
 
         /// <summary>Writes the save. Nothing in flight is saved: no request, quote or offer.</summary>
@@ -251,6 +271,33 @@ namespace LivingVale.Unity
 
             overlay.Render();
             return loaded;
+        }
+
+        private async void CycleModel()
+        {
+            try
+            {
+                await Models.NextAsync(lifetime.Token);
+            }
+            catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+            {
+                // The scene went away mid-press; nothing to show.
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+        }
+
+        private void OnModelCycled()
+        {
+            if (this == null || overlay == null)
+            {
+                return;
+            }
+
+            ModelDriver = Models.Driver;
+            overlay.Render();
         }
 
         public void BlockWorldInputForFrame()
@@ -293,6 +340,12 @@ namespace LivingVale.Unity
 
         private void OnDestroy()
         {
+            lifetime.Cancel();
+            if (Models != null)
+            {
+                Models.Finished -= OnModelCycled;
+            }
+
             if (Coordinator != null)
             {
                 Coordinator.Changed -= OnConversationChanged;
