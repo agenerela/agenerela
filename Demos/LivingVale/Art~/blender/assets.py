@@ -172,7 +172,8 @@ def well(k):
 def fence_segment(k):
     """A 2.5 m run of split rails with the post at its -X end. Chain segments every 2.5 m along X
     and finish the run with a fence_post at the +X end."""
-    k.box_on("timber_dark", (-1.25, 0, 0), (0.16, 0.16, 1.1))
+    # Blender +X: the export's half turn puts it at Unity -X, the end the docs and builders expect.
+    k.box_on("timber_dark", (1.25, 0, 0), (0.16, 0.16, 1.1))
     k.box("timber", (0, 0, 0.5), (2.5, 0.08, 0.13), r=(0, 1.2, 0))
     k.box("timber_light", (0, 0, 0.92), (2.5, 0.09, 0.12), r=(0, -0.8, 0))
 
@@ -295,11 +296,11 @@ def tree_pine(k):
     k.cyl("bark", (0, 0, 0), 0.2, 2.2, seg=6, top=0.12)
     for base, rad, h in ((1.2, 1.6, 2.6), (2.75, 1.25, 2.4), (4.3, 0.85, 2.7)):
         faces = k.cyl("pine", (0, 0, base), rad, h, seg=7, top=0.0)
-        for f in faces:
-            for v in f.verts:
-                if v.co.z < base + 0.01:
-                    v.co.z -= k.rng.uniform(0.0, 0.2)
-        k.recolour_up_faces(faces, "leaf_dark", min_dot=2.0)
+        # One random drop per rim vertex, in a stable order, so a rebuild makes the same tree.
+        rim = sorted({v for f in faces for v in f.verts if v.co.z < base + 0.01},
+                     key=lambda v: (round(v.co.x, 5), round(v.co.y, 5)))
+        for v in rim:
+            v.co.z -= k.rng.uniform(0.0, 0.2)
 
 
 def tree_broadleaf(k):

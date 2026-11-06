@@ -78,7 +78,9 @@ phase table and the open issues, not here.
   seeded trees and rocks along the paths and cliffs, and signposts where paths leave places. The
   player, all eight NPCs (outfit by role) and the raiders wear the humanoid, the wolf is the kit's
   wolf, and the player and raiders hold the kit sword. `VillageSceneShots` renders the built scene
-  from eight viewpoints for review.
+  from eight viewpoints for review. The hit flash now tints toward red instead of white, so it shows
+  on the white-based palette material. Two kit fixes from Codex's review: `fence_segment`'s post is
+  at its −X end as documented, and `tree_pine` rebuilds identically.
 - **Living Vale G7a: an art pilot kit** (#69), on `69-living-vale`: 29 low-poly, flat-shaded
   models (cottages, stall, well, fences, props, the intact and the wrecked wagon, trees, rocks,
   feverleaf, Ashwatch's gate and wall, Broken Watch's ruin, tent and campfire, one humanoid in

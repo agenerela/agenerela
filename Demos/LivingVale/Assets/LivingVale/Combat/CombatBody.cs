@@ -20,6 +20,10 @@ namespace LivingVale.Combat
         [SerializeField, Min(0f)] private float flashSeconds = 0.12f;
         [SerializeField, Min(0f)] private float overheadHeight = 2.4f;
 
+        // A warm red, not white: the art kit's palette material is already white, so a flash toward
+        // white would not show on it (G7b).
+        private static readonly Color FlashTint = new Color(1f, 0.45f, 0.4f);
+
         private MaterialPropertyBlock block;
         private Color[] baseColors = Array.Empty<Color>();
         private float flashUntil = float.NegativeInfinity;
@@ -76,7 +80,7 @@ namespace LivingVale.Combat
                 }
 
                 flashRenderers[i].GetPropertyBlock(block);
-                block.SetColor(BaseColor, Color.Lerp(baseColors[i], new Color(1f, 0.95f, 0.9f), flash));
+                block.SetColor(BaseColor, Color.Lerp(baseColors[i], FlashTint, flash));
                 flashRenderers[i].SetPropertyBlock(block);
             }
 

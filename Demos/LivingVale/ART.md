@@ -162,12 +162,12 @@ the primitive, looks belong to the kit.**
 
 Notes for the swap:
 
-- `CombatBody`'s hit flash lerps `_BaseColor` toward near-white. The palette material's base
-  colour is already white, so on a kit model the flash is invisible; it needs a tint toward red
-  or an emission pulse instead.
-- Colliders are non-convex mesh colliders on static scenery. Trees collide on the canopy too,
-  which the player cannot reach. The gate's passage is open, so the collider lets a player walk
-  through it.
+- `CombatBody`'s hit flash used to lerp `_BaseColor` toward near-white, which does not show on
+  the palette material (its base colour is already white). Since G7b it lerps toward a warm red,
+  which shows on kit models and primitives alike.
+- The kit's own mesh colliders are switched off wherever a model dresses a primitive; only the
+  scattered trees and rocks keep theirs. Where they apply, trees collide on the canopy too, which
+  the player cannot reach.
 - A model has no LODs yet; at these triangle counts the whole village is a few tens of thousands
   of triangles.
 
