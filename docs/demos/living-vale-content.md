@@ -23,6 +23,25 @@ does not.
 | `place_broken_watch` | Broken Watch | Ruined camp holding the medical parcel |
 | `place_herb_hollow` | Herb Hollow | Herbs, one optional wolf, a landmark |
 
+### Region layout (grey box)
+
+Shared coordinates, so the world, the quests and the art can be built in parallel and still
+meet. These are world positions in metres, with y up and the village square at the origin.
+They are a starting layout to tune by travel time (design §2: 45–90 s between neighbours).
+
+| Place | Centre (x, z) | Footprint | Who is there | Joins |
+|---|---|---|---|---|
+| `place_briar_glen` | (0, 0) | the G1 village block, about 40 × 36 | Mara, Iven, Sella | Old Road, Herb Hollow |
+| South meadow (part of the Glen) | (0, −30) | G2's combat meadow | the raider and the wolf | start of the Old Road |
+| `place_old_road` | (40, −150) | road bend about 60 × 30, the wagon wreck at the centre | — | Glen, Reedbank, Broken Watch |
+| `place_reedbank` | (170, −110) | about 50 × 40, workshop, farm plots, river crossing | Toma, Fen | Old Road, Ashwatch |
+| `place_ashwatch` | (230, 60) | gatehouse and courtyard edge, about 40 × 30 | Brann, Elra | Reedbank |
+| `place_broken_watch` | (−80, −270) | ruined wall and camp, about 40 × 40 | Kest, camp defenders | Old Road, Herb Hollow |
+| `place_herb_hollow` | (−150, −20) | clearing about 30 × 30, three herb spots, a landmark | one optional wolf | Glen, Broken Watch |
+
+Paths are flat strips between neighbours. The ground is a 600 × 600 plane until terrain
+replaces it. The player starts in the Glen. Respawn stays in the Glen (design §4).
+
 ## Speaking NPCs (eight)
 
 | ID | Name | Role | Place | Essential |
