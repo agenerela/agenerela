@@ -279,12 +279,31 @@ namespace Agenerela
                 return null;
             }
 
+            // The two mistakes DecideAsync throws for at the call, checked before anything changes,
+            // so that a mistake costs the previous turn nothing.
+            CheckOptions(options);
+
             var limit = timeout;
             var turn = new ConversationTurn(this, ++turns, ct);
 
             // Current before the agent is asked, so a turn started from inside the game's code the
             // agent runs while preparing the request comes after this one, and ends it.
             Current = turn;
+
+            // The previous turn ends before the agent is asked too (Codex, round 1): preparing the
+            // request runs the game's code, which must find the previous answer already discarded
+            // from memory and the previous request already cancelled.
+            if (previous != null)
+            {
+                if (previous.Status == TurnStatus.Waiting)
+                {
+                    End(previous, TurnStatus.Replaced);
+                }
+                else
+                {
+                    Retire(previous);
+                }
+            }
 
             Awaitable<DecisionResult> decision;
             try
@@ -293,11 +312,11 @@ namespace Agenerela
             }
             catch
             {
-                // A mistake in the call, which DecideAsync throws before it runs any of the game's
-                // code: as if this turn had never been started.
+                // A mistake DecideAsync found that CheckOptions did not, thrown before it runs any of
+                // the game's code. The previous turn has ended all the same.
                 if (Current == turn)
                 {
-                    Current = previous;
+                    Current = null;
                 }
 
                 if (turns == turn.Number)
@@ -318,22 +337,29 @@ namespace Agenerela
                 _ = Deadline(turn, limit);
             }
 
-            // Only once the call is accepted, so a mistake in it costs the previous turn nothing.
-            // Ending a waiting one frees its place in the queue, which may send this turn's
-            // request on the spot.
-            if (previous != null)
+            return turn;
+        }
+
+        // DecideAsync's own checks at the call, repeated so they throw before the previous turn ends.
+        private static void CheckOptions(DecideOptions options)
+        {
+            if (options == null)
             {
-                if (previous.Status == TurnStatus.Waiting)
-                {
-                    End(previous, TurnStatus.Replaced);
-                }
-                else
-                {
-                    Retire(previous);
-                }
+                return;
             }
 
-            return turn;
+            if (string.IsNullOrWhiteSpace(options.StimulusLabel))
+            {
+                throw new ArgumentException(
+                    "DecideOptions.StimulusLabel is empty. It labels the stimulus; the default is \"Player\".",
+                    nameof(options));
+            }
+
+            if (options.MaxListedTargets < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), options.MaxListedTargets,
+                    "DecideOptions.MaxListedTargets cannot be negative. 0 lists no targets.");
+            }
         }
 
         // The whole life of one turn's request, including watching a provider that answers after

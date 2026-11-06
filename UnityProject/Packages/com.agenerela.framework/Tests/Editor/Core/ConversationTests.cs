@@ -108,6 +108,66 @@ namespace Agenerela.Tests
             Assert.That(fake.HeldCount, Is.Zero, "The retry's request was cancelled at its deadline.");
         }
 
+        // The same window from the other side (Codex, round 1 of this pull request): the game's code
+        // the agent runs while preparing the new turn must find the turn before already over, its
+        // answer out of memory's reach, or committing it there would remember a stale answer.
+        [Test]
+        public async Task TheAnswerBeforeIsStaleBeforeTheAgentRunsTheGamesCodeForTheNextTurn()
+        {
+            var (agent, fake, chat) = Guard();
+            var first = chat.Start("Go to the tower.");
+            Assert.That(await Fixtures.NotCancelled(first.Completion), Is.EqualTo(TurnStatus.Answered));
+
+            bool? committed = null;
+            agent.ObservationSources.Add(new OnObserve(() =>
+            {
+                if (committed == null)
+                {
+                    committed = agent.Commit(first.Result);
+                }
+            }));
+            fake.Reply = AttackTheDummy;
+            var second = chat.Start("Attack the dummy.");
+
+            Assert.That(committed, Is.False, "Already discarded when the agent ran the game's code for the next turn.");
+            Assert.That(Remembered(agent), Is.Zero);
+            Assert.That(await Fixtures.NotCancelled(second.Completion), Is.EqualTo(TurnStatus.Answered));
+            Assert.That(chat.Execute(second.Result), Is.True);
+            Assert.That(Remembered(agent), Is.EqualTo(1), "Only the answer that ran.");
+        }
+
+        // And for a waiting turn: its request is cancelled before the agent runs the game's code for
+        // the turn replacing it, so nothing there can complete it into an answer.
+        [Test]
+        public async Task AReplacedTurnsRequestIsCancelledBeforeTheAgentRunsTheGamesCodeForTheNextTurn()
+        {
+            var (agent, fake, chat) = Guard(hold: true);
+            var first = chat.Start("Go to the tower.");
+
+            int? heldDuringPreparation = null;
+            agent.ObservationSources.Add(new OnObserve(() =>
+            {
+                if (heldDuringPreparation == null)
+                {
+                    heldDuringPreparation = fake.HeldCount;
+                    if (fake.HeldCount > 0)
+                    {
+                        fake.Release();
+                    }
+                }
+            }));
+            var second = chat.Replace("Attack the dummy.");
+            await Task.Delay(100);
+
+            Assert.That(heldDuringPreparation, Is.Zero, "The replaced request was cancelled first.");
+            Assert.That(await Fixtures.NotCancelled(first.Completion), Is.EqualTo(TurnStatus.Replaced));
+            Assert.That(first.Status, Is.EqualTo(TurnStatus.Replaced));
+            Assert.That(first.Result, Is.Null);
+            Assert.That(chat.Current, Is.SameAs(second));
+            Assert.That(Fixtures.Handler(agent, "move_to").Executions, Is.Empty);
+            Assert.That(Remembered(agent), Is.Zero);
+        }
+
         // ---- One turn at a time -------------------------------------------------------------
 
         [Test]
@@ -411,6 +471,7 @@ namespace Agenerela.Tests
             fake.Hold = true;
             var waiting = chat.Start("Go to the tower again.");
             Assert.Throws<ArgumentException>(() => chat.Replace("Attack the dummy.", noLabel));
+            Assert.Throws<ArgumentOutOfRangeException>(() => chat.Replace("Attack the dummy.", new DecideOptions { MaxListedTargets = -1 }));
             Assert.That(waiting.Status, Is.EqualTo(TurnStatus.Waiting));
             Assert.That(chat.Current, Is.SameAs(waiting));
             Assert.That(fake.HeldCount, Is.EqualTo(1));
