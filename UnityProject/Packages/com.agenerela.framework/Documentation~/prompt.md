@@ -2,8 +2,11 @@
 
 `PromptBuilder` assembles every request an agent sends: the system prompt, the few-shot
 examples, the observations, the history and the stimulus. The schema travels with it. This
-note is about one gap and the three switches that close it. All three are off until an A/B run
-shows they help (hard rule 2, #151).
+note is about one gap and the three switches that close it. At their defaults, none of them adds
+anything to the prompt. The list and the code-built agent's idle example are off. A
+counter-example is shown as soon as a developer writes one, which is its opt-in, and
+`DecideOptions.CounterExamples = false` leaves it out. None becomes a default until an A/B run
+shows it helps (hard rule 2, #151).
 
 **The gap.** A model served through Ollama never reads the schema. Ollama uses it only to
 constrain sampling (findings, 10 October 2026), so the action list, the descriptions and the
