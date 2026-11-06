@@ -1,6 +1,6 @@
 # Living Vale — gaps in the framework
 
-**Status:** living list, started 5 November 2026. Every Living Vale session adds to it the
+**Status:** living list, started 5 November 2026. Gathered with GreyBoxVillage's list in umbrella issue #190, where the master implementation session ticks what lands. Every Living Vale session adds to it the
 day it works around something. It records what building a real game on Agenerela showed
 the framework is missing: what the game needed, how it worked around it, and what a framework
 feature would change. **None of this is decided.** Each entry becomes an issue, or a decision
@@ -66,6 +66,8 @@ Give each entry the next number and these parts:
 ## Entries
 
 ### 1. Actions and targets are invisible to a local model unless the developer writes them into the prompt
+
+**Status:** in the framework since #193 (`DecideOptions.ListActionsAndTargets`, `IDescribedTarget`), off by default and owing an A/B run (#151). The game still uses its own `PromptLines`; switching needs a same-session A/B on the trade and quest lines.
 
 - **Needed:** for Mara to choose `quote_purchase` on `stock_mara_bread_one`, the model has to
   know the action exists, what it does, which targets it takes, and what each target is (item,
@@ -190,6 +192,8 @@ Give each entry the next number and these parts:
 
 ### 9. The model makes offers nobody asked for
 
+**Status:** in the framework since #193 (`ActionDefinition.CounterExampleStimulus`, `[CounterExample]`). The game's G5f fix (an idle `none` example) still runs; moving to the framework's counter example is a small follow-up with its own A/B.
+
 - **Needed:** "Any rumours about the wagon?" should not produce a potion quote card.
 - **Observed:** qwen3.5:2b and gemma4:e2b-it-qat both open unasked quotes, in the G5b and G5c
   live checks and the 5 November play-check.
@@ -245,6 +249,8 @@ Give each entry the next number and these parts:
   settled (AGENTS.md). Keep the bundle pattern until there is evidence.
 
 ### 13. A code-built agent shows the model no `none` example
+
+**Status:** in the framework since #193 (`Agent.IdleExampleStimulus` for code-built agents). The game can drop its own default once it adopts it.
 
 - **Needed:** a demonstration that not every line is a request, which G5f found cuts unasked
   actions sharply on two small models (entry 9).
