@@ -51,8 +51,13 @@ namespace LivingVale.Agenerela
         private readonly Action<NpcDescriptor, Agent> configureAgent;
         private readonly NpcActionExecutor executor;
         private readonly Dictionary<string, TradeActionBinding> trade = new Dictionary<string, TradeActionBinding>();
-        private readonly Dictionary<string, TradeReceipt> lastReceipts = new Dictionary<string, TradeReceipt>();
+        private readonly Dictionary<string, TradeReceipt> lastReceipts;
+
+        // Each NPC's memory, by NPC id. Kept apart from the agents so a driver rebuilt for another
+        // model (WithProvider) carries every NPC's conversation over.
+        private readonly Dictionary<string, CommittedHistory> memories;
         private Task warmUp;
+        private bool detached;
 
         /// <param name="provider">Shared by every NPC, so their requests share one queue (DR-015).</param>
         /// <param name="modelLabel">What <see cref="Label"/> names, such as <c>qwen3.5:2b</c>.</param>
@@ -62,7 +67,18 @@ namespace LivingVale.Agenerela
         public AgenerelaNpcDecisionDriver(ILLMProvider provider, string modelLabel,
             IEnumerable<NpcPersona> personas = null, Action<NpcDescriptor, Agent> configureAgent = null,
             NpcActionExecutor executor = null)
+            : this(provider, modelLabel, personas, configureAgent, executor,
+                new Dictionary<string, CommittedHistory>(), new Dictionary<string, TradeReceipt>())
         {
+        }
+
+        private AgenerelaNpcDecisionDriver(ILLMProvider provider, string modelLabel,
+            IEnumerable<NpcPersona> personas, Action<NpcDescriptor, Agent> configureAgent,
+            NpcActionExecutor executor, Dictionary<string, CommittedHistory> memories,
+            Dictionary<string, TradeReceipt> lastReceipts)
+        {
+            this.memories = memories;
+            this.lastReceipts = lastReceipts;
             this.executor = executor;
             if (executor != null)
             {
@@ -96,6 +112,48 @@ namespace LivingVale.Agenerela
             return new AgenerelaNpcDecisionDriver(new OllamaProvider(settings), settings.Model, null, configureAgent, executor);
         }
 
+        /// <summary>
+        /// This driver for another model: the same personas, executor, callbacks and every NPC's
+        /// memory and last receipt, with new agents on <paramref name="newProvider"/>. Detaches this
+        /// one, which stops following trade receipts; use the new one from now on.
+        /// </summary>
+        public AgenerelaNpcDecisionDriver WithProvider(ILLMProvider newProvider, string modelLabel)
+        {
+            var next = new AgenerelaNpcDecisionDriver(newProvider, modelLabel, personas.Values, configureAgent, executor, memories, lastReceipts)
+            {
+                TurnObservations = TurnObservations
+            };
+            Detach();
+            return next;
+        }
+
+        /// <summary><see cref="WithProvider"/> with a new Ollama provider at <c>127.0.0.1:11434</c>.</summary>
+        public AgenerelaNpcDecisionDriver WithOllamaModel(string model)
+        {
+            var settings = new OllamaSettings();
+            if (!string.IsNullOrWhiteSpace(model))
+            {
+                settings.Model = model.Trim();
+            }
+
+            return WithProvider(new OllamaProvider(settings), settings.Model);
+        }
+
+        /// <summary>Stops following trade receipts. Called by <see cref="WithProvider"/>; safe to call twice.</summary>
+        public void Detach()
+        {
+            if (detached)
+            {
+                return;
+            }
+
+            detached = true;
+            if (executor != null)
+            {
+                executor.Trade.Confirmed -= OnConfirmed;
+            }
+        }
+
         public string ModelLabel { get; }
 
         public string Label => "Agenerela · " + ModelLabel;
@@ -126,7 +184,7 @@ namespace LivingVale.Agenerela
             agent = new Agent(persona.ToIdentity(), Array.Empty<ActionDefinition>(), provider)
             {
                 RefusalStatement = (verdict, context) => RefusalLine,
-                Memory = new CommittedHistory()
+                Memory = MemoryFor(npc.Id)
             };
 
             if (executor != null)
@@ -137,6 +195,17 @@ namespace LivingVale.Agenerela
             configureAgent?.Invoke(npc, agent);
             agents[npc.Id] = agent;
             return agent;
+        }
+
+        private CommittedHistory MemoryFor(string npcId)
+        {
+            if (!memories.TryGetValue(npcId, out var memory))
+            {
+                memory = new CommittedHistory();
+                memories[npcId] = memory;
+            }
+
+            return memory;
         }
 
         /// <summary>The persona the NPC's agent is built from: the authored one, or one made from its descriptor.</summary>

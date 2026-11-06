@@ -51,6 +51,11 @@ phase table and the open issues, not here.
   `Assets/Evaluation/labels/<annotator>/<category>.json`; the README says how.
 - **Screen 8, the Prompt Set window**, in `docs/design/`: the wireframe drawn for #134 before the
   window was built, with its notes.
+- **Living Vale G5c: pick the NPCs' model in the game** (#69): **F7** moves the `Agent` driver to
+  the next model in `ValeBootstrap`'s list that Ollama has, and skips any it lacks with a
+  game-authored notice beside the badge. It closes the open chat first, and keeps the executor,
+  the personas and what each NPC remembers. A comparison of non-Qwen small models against
+  `qwen3.5:2b`, with blind writing scores, is in `findings.md` (5 November).
 - **Living Vale G5b: Mara trades through the model** (#69): the `Agent` driver registers G3's
   `quote_purchase` and `quote_sale` with targets from `NpcActionExecutor.AvailableFor`, asked again
   each turn, so an action with nothing to offer is absent from the schema. Both drivers now

@@ -20,7 +20,9 @@ scripted replies between normal, slow, never answering, malformed and throwing, 
 paths can be tried by hand.
 
 Replies come from the local model through Agenerela by default (Ollama at `127.0.0.1:11434`,
-model set on `ValeBootstrap`); **F6** switches between the model and scripted replies.
+model set on `ValeBootstrap`); **F6** switches between the model and scripted replies, and **F7**
+moves the model to the next one in `ValeBootstrap`'s list that Ollama has, closing the open chat
+first and keeping what each NPC remembers. A model Ollama lacks is skipped, and the badge says so.
 With Ollama unreachable, a turn fails with a game-authored line and the game stays playable.
 
 **Combat (G2):** left mouse attacks, right mouse blocks, Space dodges. A raider and a wolf wait in

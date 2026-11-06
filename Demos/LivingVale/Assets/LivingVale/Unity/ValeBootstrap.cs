@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using LivingVale.Agenerela;
 using LivingVale.Game;
 using LivingVale.Interaction;
@@ -18,6 +19,8 @@ namespace LivingVale.Unity
         [SerializeField] private NpcDriverChoice driver = NpcDriverChoice.Agenerela;
         [Tooltip("The local Ollama model used by the Agenerela NPC driver.")]
         [SerializeField] private string ollamaModel = "qwen3.5:2b";
+        [Tooltip("The models F7 cycles through, in order, skipping any Ollama does not have. Compared on 5 November 2026 (llm-wiki findings).")]
+        [SerializeField] private List<string> ollamaModels = new List<string>(ModelCycleDefaults.Models);
 
         private InputActionMap actions;
         private InputAction move;
@@ -28,6 +31,8 @@ namespace LivingVale.Unity
         private InputAction inventoryKey;
         private InputAction[] fixtures;
         private InputAction switchDriver;
+        private InputAction switchModel;
+        private readonly System.Threading.CancellationTokenSource lifetime = new System.Threading.CancellationTokenSource();
         private bool capturedTextFocus;
         private ConversationTradeLink tradeLink;
         private InventoryHud inventoryHud;
@@ -37,6 +42,12 @@ namespace LivingVale.Unity
         public ScriptedNpcDecisionDriver Driver { get; private set; }
         public AgenerelaNpcDecisionDriver ModelDriver { get; private set; }
         public SwitchableNpcDecisionDriver Drivers { get; private set; }
+
+        /// <summary>F7: the next installed model for the Agenerela driver.</summary>
+        public ModelCycle Models { get; private set; }
+
+        /// <summary>The model key's last game-authored line, shown beside the driver badge.</summary>
+        public string DriverNotice => Models?.Notice ?? "";
 
         /// <summary>The player's holdings. G2 hands loot in through it as an <see cref="ILootSink"/>.</summary>
         public PlayerInventory Inventory { get; private set; }
@@ -85,6 +96,9 @@ namespace LivingVale.Unity
                 TurnTimeout = TimeSpan.FromSeconds(Mathf.Max(0.1f, turnTimeout))
             });
             tradeLink.Attach(Coordinator, Trade);
+            Models = new ModelCycle(Coordinator, Drivers,
+                new ModelSelector(ollamaModels, ollamaModel, new OllamaModelCatalog()), ModelDriver);
+            Models.Finished += OnModelCycled;
 
             actions = new InputActionMap("Living Vale");
             move = actions.AddAction("Move", InputActionType.Value);
@@ -103,6 +117,7 @@ namespace LivingVale.Unity
                 fixtures[i] = actions.AddAction($"Fixture{i + 1}", InputActionType.Button, $"<Keyboard>/f{i + 1}");
             }
             switchDriver = actions.AddAction("SwitchDriver", InputActionType.Button, "<Keyboard>/f6");
+            switchModel = actions.AddAction("SwitchModel", InputActionType.Button, "<Keyboard>/f7");
 
             overlay.Initialize(this);
             inventoryHud = overlay.gameObject.AddComponent<InventoryHud>();
@@ -186,6 +201,38 @@ namespace LivingVale.Unity
 
                 overlay.Render();
             }
+
+            if (switchModel.WasPressedThisFrame())
+            {
+                CycleModel();
+            }
+        }
+
+        private async void CycleModel()
+        {
+            try
+            {
+                await Models.NextAsync(lifetime.Token);
+            }
+            catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+            {
+                // The scene went away mid-press; nothing to show.
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+        }
+
+        private void OnModelCycled()
+        {
+            if (this == null || overlay == null)
+            {
+                return;
+            }
+
+            ModelDriver = Models.Driver;
+            overlay.Render();
         }
 
         public void BlockWorldInputForFrame()
@@ -228,6 +275,12 @@ namespace LivingVale.Unity
 
         private void OnDestroy()
         {
+            lifetime.Cancel();
+            if (Models != null)
+            {
+                Models.Finished -= OnModelCycled;
+            }
+
             if (Coordinator != null)
             {
                 Coordinator.Changed -= OnConversationChanged;

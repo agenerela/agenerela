@@ -818,3 +818,90 @@ time.
 
 **What would change this.** A larger labelled trade set with a control arm. Repeating the 14.9 s
 turn would make the turn timeout a real risk for `qwen3.5:4b`.
+
+### Non-Qwen small models for Living Vale's NPCs: gemma4:e2b wrote best, qwen3.5:2b near the bottom (5 November 2026)
+
+**A small comparison with one judge, not an accuracy claim** (hard rule 2). Each model got 24
+lines, there was one blind judge, and there are no human labels. `qwen3.5:2b` is the control arm.
+It ran in the same session, on the same machine, with the same lines.
+
+**What ran.** For each model, the real `AgenerelaNpcDecisionDriver` in Unity batch mode was sent:
+
+- the 12 conversation lines from the first entry today (`NpcModelComparison`);
+- 6 new writing lines that need voice more than facts (`NpcModelComparison.RunTheWritingLines`):
+  the night the wagon left, the news of its wreck, how Iven will tell his patients, a market
+  rumour and who told it, and a market day described. None repeats a line above, a few-shot
+  example or the evaluation set (hard rule 4);
+- the 6 trade lines from G5b (`MaraTradeLiveCheck`).
+
+Each model had one turn of each kind per line, so n = 24, at temperature 0. Raw output is in
+`.scratch/lv-g5/g5c/` on the lead's laptop.
+
+**Conditions.**
+
+- **Hardware and software:** RTX 4060 Laptop (8 GB), on AC power, Ollama 0.40.14, under the
+  shared Ollama lock.
+- **Arms:** run one after the other, 16:28–16:37. Every other model was unloaded first, and each
+  model was warmed with three throwaway requests. `/api/ps` showed it alone and fully on the GPU.
+- **Not checked:** two model pulls (Stheno, gemma) were downloading during the first six arms,
+  and a Codex review was running.
+- **Gemma's size:** `gemma4:e2b-it-qat` showed 1.66 GB resident, although its file is 4.3 GB.
+  Ollama may keep its per-layer embeddings off the GPU. That was not investigated.
+- **Not run:** `gemma4:e4b` (6.1 GB or more) and `ministral-3:8b` (6.0 GB) leave too little room
+  for the game. `llama3.1:8b` was dropped because pulls were slow; the 8B slot went to the Stheno
+  fine-tune.
+
+**Writing quality, judged blind.** Codex (gpt-6.1-sol, high effort, read-only) scored each of the
+162 chat and writing replies 1–5 on four things: voice, staying within the NPC's knowledge
+(given to it as the persona's fact list), prose, and coherence with the previous turn. The replies
+were shuffled per line under letters that changed per line, and unblinded afterwards. The trade
+lines were not judged.
+
+| Model | Resident VRAM | p50 | p95 | > 8 s | Errors | Trade (6) | Voice | Knowledge | Prose | Coherence | Chat (12) | Writing (6) | **Overall** |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `gemma4:e2b-it-qat` | 1.66 GB* | 0.70 s | 4.14 s | 0 | 0 | 5 correct, 1 wrong-legal | 4.11 | 4.22 | 4.17 | 4.17 | 4.31 | 3.88 | **4.17** |
+| `L3-8B-Stheno-v3.2` Q4_K_M | 5.28 GB | 1.49 s | 2.20 s | 0 | 0 | 5 correct, 1 rejected-when-expected | 3.72 | 3.72 | 3.33 | 4.56 | 3.94 | 3.62 | 3.83 |
+| `nemotron-3-nano:4b` | 2.82 GB | 0.55 s | 1.28 s | 0 | 0 | 3 correct, 3 stopped by a guard | 3.61 | 4.50 | 3.28 | 3.89 | 3.96 | 3.54 | 3.82 |
+| `llama3.2:3b` | 2.56 GB | 0.96 s | 1.38 s | 0 | 0 | 4, 1 contained, 1 wrong-legal | 3.78 | 3.33 | 3.61 | 4.28 | 3.77 | 3.71 | 3.75 |
+| `granite4.1:3b` | 2.51 GB | 0.59 s | 0.89 s | 0 | 0 | 6 correct | 3.22 | 4.11 | 3.50 | 4.11 | 3.67 | 3.88 | 3.74 |
+| `lfm3:1.7b` | 1.17 GB | 0.55 s | 0.89 s | 0 | 0 | 5, 1 wrong-legal | 3.28 | 3.50 | 3.22 | 3.61 | 3.56 | 3.08 | 3.40 |
+| `MiniCPM5-2B` Q4_K_M | 1.64 GB | 0.64 s | 0.84 s | 0 | 0 | 4, 1 contained, 1 wrong-legal | 3.00 | 3.56 | 2.78 | 2.83 | 2.73 | 3.67 | 3.04 |
+| **`qwen3.5:2b` (control)** | 2.36 GB | 0.95 s | 1.35 s | 0 | 0 | 4, 1 contained, 1 wrong-legal | 3.06 | 3.17 | 3.06 | 2.83 | 3.15 | 2.79 | 3.03 |
+| `ministral-3:3b` | 2.73 GB | 1.20 s | 1.50 s | 0 | 0 | 5, 1 wrong-legal | 3.06 | 1.61 | 3.11 | 3.61 | 2.81 | 2.92 | 2.85 |
+
+Latency is the framework's `LatencySeconds` over all 24 turns. No turn of any model reached the
+game's 8 s turn timeout, and no turn was a pipeline error or malformed. \*As reported by
+`/api/ps`; see Conditions.
+
+What the numbers do not show:
+
+- **The grounding guard stopped correct trade choices.** Every "rejected when expected" and
+  "stopped by a guard" above is `TargetGroundingGuard`: two of `nemotron-3-nano:4b`'s three, and
+  `Stheno`'s one, rewrote a correct quote to `none`. The guard's confidence check was set on
+  Qwen's token probabilities (findings, 5 October). That it is too strict for other models'
+  probabilities is a hypothesis for the Guards research area. It is not measured here.
+- **The browsing line still draws an unasked offer** from most models, as in G5b.
+- **Gemma is short and safe, and once wrong about what it knows.** Iven answered "the night the
+  wagon left" with "I do not know anything about a wagon leaving a castle" and named someone who
+  does not exist. The judge still scored its knowledge high overall.
+- **Stheno reads richest**, and is best at following on from the previous turn (coherence 4.56).
+  It is the heaviest by far (5.28 GB beside the game) and the slowest, and its licence is
+  CC BY-NC 4.0, non-commercial only.
+- **`ministral-3:3b` invents the most** (knowledge 1.61).
+
+**Recommendation, for the lead to decide: try `gemma4:e2b-it-qat` as Living Vale's default.**
+On this evidence it beat the `qwen3.5:2b` control by more than a point on every judged axis (4.17
+against 3.03 overall), matched the best trade result, and stayed fast, at under 2 GB as Ollama
+reports it. Before switching:
+
+- repeat the run, because it is one judge, n = 18 judged replies per model, and sequential arms;
+- check gemma's real memory use with the game rendering;
+- check its four slower trade turns, about 4 s each.
+
+`qwen3.5:4b`, recommended in the first entry today, was not in this run, so the two cannot be
+ranked against each other here. Every model in the table, and `qwen3.5:4b`, can be picked in the
+game with F7.
+
+**What would change this.** A second judge or human ratings that disagree; a repeat in which
+gemma's lead falls inside the run-to-run spread; or gemma failing to fit beside the game's
+renderer.
