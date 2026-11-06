@@ -1147,7 +1147,8 @@ against off, and a comparison of window sizes, all recorded in `docs/llm-wiki/fi
 when the scene unloads. Living Vale needed it saved, so a strategy that can be implements
 `IExportsMemory` beside `IMemoryStrategy`: `Export()` gives a plain `MemorySnapshot`, the
 exchanges in the encoding of rule 4 plus a string for the strategy's own data, and
-`Import(snapshot)` restores it. `RollingHistory` does both.
+`Import(snapshot)` restores it. `RollingHistory` does both, and imports only a snapshot of its own
+format, which `CanImport` checks without importing.
 
 **Remembering only what the game acted on (DR-018).** Rule 1 says memory holds what happened.
 A reply the game drops as stale did not happen, but `DecideAsync` has already remembered it.
@@ -2034,6 +2035,14 @@ default memory behaviour must compile and behave as before.
    lists, so a save system using `JsonUtility` or Newtonsoft stores it as it is: a format name
    and version, the exchanges in `DecisionRequest.History`'s encoding, and a string for the
    strategy's own data. `RollingHistory` implements it.
+
+   *Amended 6 November 2026 (#190, Living Vale #22).* Living Vale, adopting this, had to check a
+   snapshot's format and version itself, and imported into a throwaway history to validate a
+   save before loading it. So `RollingHistory.Import` now takes only its own format, at a version
+   it can read, and `RollingHistory.CanImport(snapshot, out reason)` gives the same answer without
+   importing. That gives up reading another strategy's exchanges, which no game used: a save that
+   names another format is not one this memory can vouch for. The lead chose this, and the method
+   on `RollingHistory` rather than a new interface, so `IExportsMemory` is unchanged.
 
 **Consequences**
 

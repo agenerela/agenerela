@@ -32,8 +32,11 @@ While the version stays `0.x`, the public API may change in any release.
 - **Saving memory** (#190 C): `IExportsMemory`, an optional interface beside `IMemoryStrategy`,
   with `Export()` and `Import(MemorySnapshot)`. `MemorySnapshot` (`Format`, `Version`,
   `Exchanges` of `MemoryExchange`, `Data`) is public fields and lists, for `JsonUtility` and
-  Newtonsoft. `RollingHistory` implements it, as `RollingHistory.SnapshotFormat` version 1, and
-  imports any strategy's exchanges.
+  Newtonsoft. `RollingHistory` implements it, as `RollingHistory.SnapshotFormat` version 1.
+  `RollingHistory.Import` takes only that format at a version from 1 to `SnapshotVersion`, and
+  throws an `ArgumentException` for another format, a newer version or a null exchange, leaving
+  the memory as it was (#190, Living Vale #22). `RollingHistory.CanImport(snapshot, out reason)`
+  gives the same answer without importing, so a game can check a whole save first.
 - `Documentation~/executing-and-memory.md`: handler results, correlation, memory that waits, and
   saving memory.
 - **The actions and targets, listed in the prompt** (#190 A, Living Vale #1, GreyBoxVillage G9):
