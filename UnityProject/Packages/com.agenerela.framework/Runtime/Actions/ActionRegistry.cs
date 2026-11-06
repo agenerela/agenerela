@@ -59,6 +59,29 @@ namespace Agenerela
         /// </remarks>
         public void RegisterMethods(object owner, IEnumerable<ActionDefinitionAsset> assets = null)
         {
+            RegisterMethods(owner, assets, null);
+        }
+
+        /// <summary>
+        /// Registers the [AgentAction] methods on <paramref name="owner"/> whose ids are in
+        /// <paramref name="only"/>, as <see cref="RegisterMethods(object, IEnumerable{ActionDefinitionAsset})"/>
+        /// registers them all (#190 G10): a body class every agent shares can carry actions only
+        /// some agents may take.
+        /// </summary>
+        /// <param name="owner">The object whose methods run the actions.</param>
+        /// <param name="assets">Action assets that win over an attribute with the same id, as in the other overload.</param>
+        /// <param name="only">
+        /// The ids to register, compared ordinally; ids the owner does not declare are ignored, so
+        /// one list can serve several owners. Null registers every action, as the other overload
+        /// does; an empty list registers none.
+        /// </param>
+        /// <remarks>
+        /// Every method is still read and checked, so a malformed one throws whether or not it is
+        /// listed, and an owner with no [AgentAction] methods at all still throws. An owner none of
+        /// whose actions is listed registers nothing, without throwing.
+        /// </remarks>
+        public void RegisterMethods(object owner, IEnumerable<ActionDefinitionAsset> assets, IEnumerable<string> only)
+        {
             if (owner == null)
             {
                 throw new ArgumentNullException(nameof(owner));
@@ -68,6 +91,12 @@ namespace Agenerela
             if (actions.Count == 0)
             {
                 throw new ArgumentException($"{owner.GetType().Name} has no [AgentAction] methods.", nameof(owner));
+            }
+
+            if (only != null)
+            {
+                var listed = new HashSet<string>(only, StringComparer.Ordinal);
+                actions.RemoveAll(action => !listed.Contains(action.Definition.Id));
             }
 
             var candidates = assets == null

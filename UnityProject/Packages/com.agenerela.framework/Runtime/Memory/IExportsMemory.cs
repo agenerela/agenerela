@@ -36,7 +36,9 @@ namespace Agenerela
 
         /// <summary>
         /// Replaces what this memory holds with <paramref name="snapshot"/>'s. A snapshot it cannot
-        /// read throws and leaves the memory as it was.
+        /// read, another strategy's format or a version it does not know included, throws and leaves
+        /// the memory as it was. A strategy may also offer a <c>CanImport</c> check that changes
+        /// nothing, as <see cref="RollingHistory.CanImport"/> does.
         /// </summary>
         /// <exception cref="System.ArgumentNullException"><paramref name="snapshot"/> is null.</exception>
         /// <exception cref="System.ArgumentException">The snapshot is not one this strategy can read.</exception>

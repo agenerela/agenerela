@@ -19,14 +19,16 @@ namespace Agenerela.Tests
         }
 
         [Test]
-        public void PipelineErrorKindHasItsTenKindsInOrder()
+        public void PipelineErrorKindHasItsThirteenKindsInOrder()
         {
-            // Serialized as positions too, so a new kind goes at the end (#87).
+            // Serialized as positions too, so a new kind goes at the end (#87). The last three are
+            // the requests a game's own rule kept from being sent (#190).
             Assert.That(Enum.GetNames(typeof(PipelineErrorKind)), Is.EqualTo(new[]
             {
                 "RequestPreparation", "ProviderUnreachable", "ModelNotFound", "ProviderTimeout",
                 "ProviderRejected", "ProviderServerError", "ProviderMalformedResponse",
                 "ProviderFailed", "UnreadableReply", "GuardFailed",
+                "ProviderDown", "Superseded", "BacklogFull",
             }));
         }
 

@@ -136,6 +136,13 @@ remembered in the order they are settled. The mode is read when a decision start
 `Agent.Memory` is. It works with any `IMemoryStrategy`, since a strategy only sees `Remember`,
 called later.
 
+### One memory per `Agent`, not per character
+
+Memory belongs to an `Agent` object. A game that runs two agents for one character, say a
+scripted one and one the model drives, holds two memories, and each remembers only its own
+decisions. To give them one, set both agents' `Agent.Memory` to the same `IMemoryStrategy`
+instance. Under `MemoryCommit.OnExecute`, each agent still settles only the decisions it made.
+
 ## Saving memory with the game: `IExportsMemory`
 
 A strategy that can be saved implements `IExportsMemory` beside `IMemoryStrategy`.
@@ -166,11 +173,22 @@ A `MemorySnapshot` holds:
 | `Data` | Anything else the strategy keeps, in its own encoding; null or empty when nothing |
 
 `RollingHistory.Export` holds every exchange it keeps, those the token cap leaves out of a
-request included. `Import` replaces what it holds, keeps the newest `Turns` of the snapshot's
-exchanges, and reads the exchanges of any strategy's snapshot, since they are all written the same
-way. A snapshot with a missing exchange, stimulus or decision is refused with an
-`ArgumentException`, and the memory keeps what it had. `Dropped` and `Forgotten` are counts for
-telemetry, so they are not saved.
+request included. `Import` replaces what it holds and keeps the newest `Turns` of the snapshot's
+exchanges. It takes only a snapshot `RollingHistory` wrote: `RollingHistory.SnapshotFormat`, at a
+version from 1 to `RollingHistory.SnapshotVersion`. Another strategy's snapshot, a newer version,
+or a missing exchange, stimulus or decision is refused with an `ArgumentException`, and the memory
+keeps what it had. To move memory between strategies, copy the exchanges into a snapshot of the
+target's format on purpose. `Dropped` and `Forgotten` are counts for telemetry, so they are not
+saved.
+
+To check a whole save before loading any of it, ask `CanImport` first. It changes nothing, and
+gives the same reason `Import` would throw with:
+
+```csharp
+foreach (var saved in save.npcMemories)
+    if (!history.CanImport(saved.memory, out string reason))
+        return $"This save cannot be loaded: {reason}";
+```
 
 A decision still waiting under `MemoryCommit.OnExecute` is not in the memory yet, so it is not in
 the snapshot either.

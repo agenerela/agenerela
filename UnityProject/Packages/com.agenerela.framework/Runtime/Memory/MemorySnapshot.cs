@@ -11,9 +11,10 @@ namespace Agenerela
     /// </summary>
     /// <remarks>
     /// <see cref="Exchanges"/> use the encoding every strategy shares, the one
-    /// <see cref="DecisionRequest.History"/> fixes, so one strategy can read another's. The rest of a
-    /// strategy's state goes in <see cref="Data"/>, named by <see cref="Format"/> and
-    /// <see cref="Version"/>, which only that strategy reads.
+    /// <see cref="DecisionRequest.History"/> fixes. The rest of a strategy's state goes in
+    /// <see cref="Data"/>. <see cref="Format"/> and <see cref="Version"/> name the strategy that
+    /// wrote it, and a strategy imports only its own: <see cref="RollingHistory.Import"/> refuses any
+    /// other, and <see cref="RollingHistory.CanImport"/> says so first.
     /// </remarks>
     [Serializable]
     public sealed class MemorySnapshot

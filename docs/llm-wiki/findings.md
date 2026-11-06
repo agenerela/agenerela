@@ -1420,3 +1420,49 @@ deleted; its rule and status lines and `RefreshExamples` stay (framework gaps 20
 **What would change this.** The evaluation-set A/B owed by #151 showing the list or the
 counter-examples costing command accuracy, or a repeat on a larger Living Vale set reversing the
 qwen gain.
+
+### Model lifecycle calls against a real Ollama: a warm-up is an empty `/api/generate` (5 November 2026)
+
+**What was checked.** `OllamaProvider`'s new `IModelLifecycle` calls (#190 workstream D,
+DR-019), once, through the framework's own code: the `RequiresOllama` PlayMode test
+`ModelLifecycleLiveTests`. EditMode tests script the same shapes; this is the check that the
+server answers as they assume. Not an accuracy or latency claim, and no control arm is needed for
+one.
+
+**Conditions.** Ollama 0.40.14 on the lead's laptop (RTX 4060 Laptop, 8 GB), on AC power,
+`qwen3.5:2b`, nothing resident before or after (`/api/ps` empty), the shared Ollama lock held,
+one run.
+
+**Result.**
+- `ListModelsAsync` (`GET /api/tags`) listed 11 models, each with a size, `qwen3.5:2b` among them.
+- `UnloadAsync` (`keep_alive: 0` on `/api/generate`, then `/api/ps` polled) returned true both
+  times, the first time for a model that was not loaded, so the unload neither loads nor fails.
+- `WarmUpAsync` (`POST /api/generate` with only `model`): **7.08 s cold**, then **0.01 s** with
+  the model loaded. So the empty generate does load the model, and a second warm-up costs nothing.
+- A model that was never pulled answered 404 with Ollama's "not found" error, which the provider
+  reports as `ModelNotFound`.
+
+**What it means.** A game can warm the next model up before moving its agents onto it, and the
+first decision then skips the load, about 7 s for this model on this card. The warm-up takes no
+slot in the decision queue (DR-015, as amended), so it never delays a player's turn on the
+provider the agents are still using.
+
+**The warm-up must send the decisions' context size (same evening, after the Codex review).** The
+run above sent no `num_ctx`, so Ollama loaded the model at its own default, which `/api/ps`
+reports as **16384** on this machine. The decisions send `OllamaSettings.ContextSize`, 4096 by
+default, so the first decision after such a warm-up loads the model again. The run above did
+not see this, because it made no decision after its warm-up. With a provider set to `num_ctx`
+8192, the first decision after the old warm-up took **7.46 s**. The warm-up now sends the
+decisions' `num_ctx`, and the same check took **1.18 s**. The cold warm-up took 9.04 s before the
+fix and 7.98 s after; there was one run each, under the same conditions, the old warm-up first.
+Two more runs followed. The first, after the test was changed to time the same decision twice
+(Codex review, F5), gave 1.12 s and then 0.84 s. The second, after the test was changed again
+to read the loaded size from `/api/ps`, ran the old warm-up and the fix one after the other.
+With the old warm-up, the model was loaded at 16384, and the first decision took 5.99 s. With
+the fix, it was loaded at 8192, and the first decision took 0.99 s. A first decision near 1 s is
+ordinary; Phase 2's warm decisions were under 0.6 s.
+
+**What would change this.** An Ollama release where an empty generate stops loading the model, or
+where `keep_alive: 0` on a model that is not loaded starts loading it, or where a request at a new
+context size no longer reloads the model. Re-run `ModelLifecycleLiveTests` after an Ollama
+upgrade, as for the schema probe.
