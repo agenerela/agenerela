@@ -195,6 +195,32 @@ namespace LivingVale.Tests
         }
 
         [Test]
+        public async Task ByDefault_TheFewShotBlockShowsALineAnsweredWithNone()
+        {
+            var reply = await Decide(Turn("Hello."));
+
+            string examples = ((DecisionResult)reply.DriverState).Request.FewShotBlock;
+            StringAssert.Contains(AgenerelaNpcDecisionDriver.DefaultIdleExample, examples,
+                "The negative example that stops unasked offers (G5f) is on by default.");
+            StringAssert.Contains("action: none", examples);
+            StringAssert.Contains(TradeActionBinding.DefaultRule, provider.LastRequest.Observations);
+        }
+
+        [Test]
+        public async Task TheNegativeExampleAndRuleCanBeChangedAndSurviveAModelSwitch()
+        {
+            driver.IdleExampleStimulus = null;
+            driver.TradeRule = TradeActionBinding.OnlyWhenAskedRule;
+            var next = driver.WithProvider(provider, "other");
+
+            var decide = next.DecideAsync(Turn("Hello."), CancellationToken.None);
+            await Run.NotCancelled(decide);
+
+            StringAssert.DoesNotContain(AgenerelaNpcDecisionDriver.DefaultIdleExample, provider.LastRequest.FewShotBlock);
+            StringAssert.Contains(TradeActionBinding.OnlyWhenAskedRule, provider.LastRequest.Observations);
+        }
+
+        [Test]
         public async Task OnlyExecutedDecisionsAreRemembered()
         {
             provider.Reply = FakeLlmProvider.Json(ActionRegistry.None, "no_target", "A line the player never saw.");
