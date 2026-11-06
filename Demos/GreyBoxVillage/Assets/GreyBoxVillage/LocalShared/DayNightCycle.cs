@@ -40,7 +40,16 @@ namespace Demos.Shared
         public int Day { get; private set; } = 1;
         /// <summary>0 at noon, 1 at midnight.</summary>
         public float Darkness { get; private set; }
-        public bool IsNight => Darkness > 0.6f;
+        /// <summary>
+        /// Whether it is night at <see cref="TimeOfDay"/>: read from the hour itself, so setting the
+        /// hour answers at once, before the next <see cref="Apply()"/> (which, in Edit mode, writes
+        /// to the palette and sky assets).
+        /// </summary>
+        public bool IsNight => DarknessAt(TimeOfDay) > 0.6f;
+
+        /// <summary>How dark it is at this time of day: 0 at noon, 1 at midnight.</summary>
+        public static float DarknessAt(float timeOfDay) =>
+            Mathf.Clamp01(0.5f - Mathf.Sin((timeOfDay - 0.25f) * 360f * Mathf.Deg2Rad) * 1.6f);
         /// <summary>The time as the HUD shows it, such as "07:40".</summary>
         public string Clock
         {
@@ -170,7 +179,7 @@ namespace Demos.Shared
         {
             float elevation = (TimeOfDay - 0.25f) * 360f;
             float height = Mathf.Sin(elevation * Mathf.Deg2Rad);
-            Darkness = Mathf.Clamp01(0.5f - height * 1.6f);
+            Darkness = DarknessAt(TimeOfDay);
 
             Color Blend(Color noon, Color dusk, Color night) => height >= 0
                 ? Color.Lerp(dusk, noon, Mathf.Clamp01(height * 2.2f))

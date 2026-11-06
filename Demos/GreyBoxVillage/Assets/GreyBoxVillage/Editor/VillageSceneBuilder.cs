@@ -327,6 +327,56 @@ namespace Demos.GreyBoxVillage.Editor
             wolf.ProwlPoints = prowl;
             wolf.Den = den;
 
+            // The thief (F3): out of the world until the presenter sends it, so it is saved
+            // inactive. It slips in by the fruit stall, reaches over Odile's counter and runs for
+            // the far end of the eastern road.
+            var thiefObject = new GameObject("thief");
+            thiefObject.transform.position = new Vector3(23f, 0, 2.2f);
+            var tnav = thiefObject.AddComponent<NavMeshAgent>();
+            tnav.radius = 0.3f;
+            tnav.height = 1.7f;
+            tnav.speed = 2.6f;
+            tnav.stoppingDistance = 0.3f;
+            Figure(thiefObject, "char_thief");
+            Tag(thiefObject, "Thief", "stranger");
+            AddTargetable(thiefObject, "thief", "A hooded thief running off with stolen goods", "stranger");
+            var thief = thiefObject.AddComponent<VillageThief>();
+            thief.Entry = Point(geometry, "thief_entry", 23f, 2.2f);
+            thief.Counter = Point(geometry, "thief_counter", 16.2f, 1.7f);
+            thief.Escape = Point(geometry, "thief_escape", 48.5f, 0f);
+
+            // The fire (F4), at the bread stall beside Odile's. Its flames and smoke are dressed
+            // with the art, and saved switched off.
+            var fireObject = new GameObject("stall_fire");
+            fireObject.transform.position = new Vector3(12f, 0, 3.5f);
+            var fire = fireObject.AddComponent<VillageFire>();
+            fire.Well = well;
+            fire.ThrowSpot = Point(geometry, "fire_throw_spot", 12f, 1.6f);
+            fire.Smoke = Landmark("fire_smoke", fireObject.transform, new Vector3(0, 6f, 0));
+
+            // The gate's doors, shut at night by the watch. Not in VillageGeometry, so the bake
+            // never sees them: shut, their obstacle carves the running NavMesh, and their blocker
+            // stops the player. It is on Ignore Raycast, which a guard's sight leaves out.
+            var gateObject = new GameObject("VillageGate");
+            gateObject.transform.position = gate.position;
+            gateObject.layer = 2;
+            var villageGate = gateObject.AddComponent<VillageGate>();
+            var blocker = gateObject.AddComponent<BoxCollider>();
+            blocker.center = new Vector3(0, 1.8f, 0);
+            blocker.size = new Vector3(6.4f, 3.6f, 0.5f);
+            blocker.enabled = false;
+            var obstacle = gateObject.AddComponent<NavMeshObstacle>();
+            obstacle.shape = NavMeshObstacleShape.Box;
+            obstacle.center = new Vector3(0, 1.8f, 0);
+            obstacle.size = new Vector3(6.4f, 3.6f, 0.8f);
+            obstacle.carving = true;
+            obstacle.enabled = false;
+            villageGate.Blocker = blocker;
+            villageGate.Obstacle = obstacle;
+            // Just inside the gate, so a visitor outside it is within speaking distance (6 m).
+            var watchPost = Landmark("night_watch_post", geometry, new Vector3(1.8f, 0, -13.4f));
+            var offWatch = Landmark("off_watch_post", geometry, new Vector3(12.4f, 0, -8.4f));
+
             // The agents. Both guards ask the same provider config, so they share one provider and
             // one queue (DR-013, DR-015).
             var provider = ProviderConfig();
@@ -346,6 +396,13 @@ namespace Demos.GreyBoxVillage.Editor
                 Goals = "Keep the bridge and the river safe, back up the other guard, and help the player."
             }, "Wren, the guard on the bridge", new Vector3(2, 0, 17), silver, bridge,
                 new[] { bridge, docks, market, well }, 37f, provider, alarm, wolf, player.transform);
+            foreach (var mind in new[] { bram, wren })
+            {
+                var body = (VillageGuard)mind.Body;
+                body.Fire = fire;
+                mind.Senses.Thief = thief;
+                mind.Senses.Fire = fire;
+            }
 
             var odile = Townsfolk<VillageMerchant>("Odile", new AgentIdentity
             {
@@ -354,7 +411,8 @@ namespace Demos.GreyBoxVillage.Editor
                 Personality = "Warm, shrewd and talkative. Calls people love. Speaks in one or two short sentences.",
                 Goals = "Sell her goods at a fair price, keep her stall safe, and find someone to gather moonpetals for her."
             }, "Odile, the merchant at the market", new Vector3(16, 0, 5.4f), 180f, "char_odile", provider,
-                new[] { "item", "person", "place" });
+                // No people by proximity: the guards she can call come from GuardTargetSource.
+                new[] { "item", "place" });
             var stock = new List<Targetable>();
             var counter = new Vector3(16, 1.1f, 3.3f);
             string[] wares = { "bread", "apple", "rope", "torch", "lantern" };
@@ -367,7 +425,11 @@ namespace Demos.GreyBoxVillage.Editor
                 AddTargetable(ware, wares[i], item.Name + " on Odile's counter, " + item.Price + (item.Price == 1 ? " coin" : " coins"), "item");
                 stock.Add(ware.GetComponent<Targetable>());
             }
-            ((VillageMerchant)odile.Body).Stock = stock.ToArray();
+            var merchant = (VillageMerchant)odile.Body;
+            merchant.Stock = stock.ToArray();
+            merchant.Thief = thief;
+            merchant.Fire = fire;
+            thief.Merchant = merchant;
             var hale = Townsfolk<VillageCaptain>("Hale", new AgentIdentity
             {
                 Name = "Hale",
@@ -396,6 +458,17 @@ namespace Demos.GreyBoxVillage.Editor
             camera.transform.LookAt(new Vector3(0, 1, -18));
             var sun = CreateLight();
             var day = Dress(camera, sun, alarm);
+            DressSituations(villageGate, fire, new[] { (VillageGuard)bram.Body, (VillageGuard)wren.Body });
+
+            // The night watch is Wren's alone, so only she is ever offered the gate (NightWatch).
+            var watch = wren.gameObject.AddComponent<NightWatch>();
+            watch.Guard = (VillageGuard)wren.Body;
+            watch.Mind = wren;
+            watch.Gate = villageGate;
+            watch.Day = day;
+            watch.WatchPost = watchPost;
+            watch.Relieved = (VillageGuard)bram.Body;
+            watch.RelievedPost = offWatch;
 
             var boardObject = new GameObject("AgentBoard");
             var board = boardObject.AddComponent<AgentBoard>();
@@ -427,6 +500,9 @@ namespace Demos.GreyBoxVillage.Editor
             var events = ui.AddComponent<VillageEvents>();
             events.Village = commands;
             events.Alarm = alarm;
+            thief.Village = commands;
+            fire.Village = commands;
+            fire.Events = events;
             ui.AddComponent<DecisionHistoryPanel>().Commands = commands;
             // Its own GameObject: DemoUI.Create owns one UIDocument per GameObject, and clears it.
             var menu = new GameObject("Menu").AddComponent<DemoMenu>();
@@ -435,7 +511,22 @@ namespace Demos.GreyBoxVillage.Editor
             menu.Board = board;
             menu.Day = day;
             menu.Book = commands.Book;
+
+            // The presenter's keys, F1 to F5, and their panel (F12).
+            var presenter = new GameObject("Presenter").AddComponent<VillagePresenter>();
+            presenter.Village = commands;
+            presenter.Wolf = wolf;
+            presenter.Thief = thief;
+            presenter.Fire = fire;
+            presenter.Watch = watch;
+            presenter.Alarm = alarm;
+            // Up the road outside the gate, within the gate guard's sight and the bell's 15 m, and
+            // clear of the player's line from the start.
+            presenter.WolfFrom = Point(geometry, "wolf_from", 6f, -24.5f);
+            presenter.WolfTo = Point(geometry, "wolf_to", 3f, -19.5f);
+            commands.Presenter = presenter;
             ui.SetActive(true);
+            thiefObject.SetActive(false);
         }
 
         // A guard: its body, the AgentBehaviour that builds its agent from its profile, its mind and
@@ -485,7 +576,8 @@ namespace Demos.GreyBoxVillage.Editor
             return mind;
         }
 
-        private static readonly string[] GuardCategories = { "place", "person", "creature", "restricted" };
+        // "stranger" is the thief, offered only while it is out.
+        private static readonly string[] GuardCategories = { "place", "person", "creature", "restricted", "stranger" };
 
         // An agent who is not a guard: the merchant and the captain. Same AgentBehaviour and shared
         // provider config; a body of its own; no guard senses.

@@ -64,6 +64,26 @@ phase table and the open issues, not here.
     - a card title that wraps;
     - opaque book, menu, framework view and title panels.
   - **Portraits** lit from the viewer's side, so Odile's face reads, and a title screen backdrop.
+- **GreyBoxVillage's situations, and a five-minute presenter script** (#153, situations slice).
+  Each situation chains one agent's decision into another's, through the game alone.
+  - **The thief:** it takes a ware from Odile's counter and runs for the eastern road. Odile can
+    `call_guard`, whose target is a guard from a custom `ITargetSource`, and her call becomes that
+    guard's `Merchant` stimulus. A guard who sees the thief running can `chase` it; caught, it
+    drops the ware back on the counter.
+  - **Night at the gate:** nightfall shuts the gate. Wren takes the night watch and alone gets
+    `open_gate` and `close_gate`, and Bram goes off watch. A test checks that Bram, the evaluation
+    agent, is offered the same actions by night as by day.
+  - **A fire** at the bread stall: whoever sees the smoke is asked, and guards `fetch_water` from
+    the well until three buckets put it out.
+  - **No `bell_cooldown` guard:** availability already keeps the bell from ringing twice within
+    30 s, and a test checks two guards answering at once ring it once.
+  - **Presenter keys** F1 to F5 (reset, the wolf, the thief, a fire, dusk) and a panel (F12).
+    They work with the framework view open, not while typing.
+  - **The presenter script** in the README runs end to end as a Play-mode test against scripted
+    replies, and once live through `PresenterLiveFromCommandLine`.
+  - **Two kit models,** `gate_door` and `bucket`, and `KIT_ONLY` to rebuild only the models named.
+  - **Fixes the live run found:** a guard attacking a running thief now runs after it, and a wolf
+    running for its den is no longer reported. Agents are told when it is night.
 - **GreyBoxVillage has two guards and an agent board** (#143), the first slice of the demo's
   upgrade.
   - Bram at the gate and Wren at the bridge are each an `AgentBehaviour` with a profile asset.

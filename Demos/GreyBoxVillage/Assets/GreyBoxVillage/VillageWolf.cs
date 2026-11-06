@@ -21,6 +21,8 @@ namespace Demos.GreyBoxVillage
         public QuestBook Quests;
 
         public bool IsHidden { get; private set; }
+        /// <summary>True while it runs for its den after being driven off: no longer news to anyone, and not a target.</summary>
+        public bool IsFleeing => fleeing;
 
         private NavMeshAgent agent;
         private Renderer[] renderers;
@@ -43,6 +45,36 @@ namespace Demos.GreyBoxVillage
             IsHidden = false;
             if (targetable == null) targetable = GetComponent<Targetable>();
             if (targetable != null) targetable.IsCurrentlyTargetable = true;
+        }
+
+        /// <summary>
+        /// Comes out of hiding at <paramref name="from"/> and walks toward <paramref name="toward"/>,
+        /// then stands there for <paramref name="holdSeconds"/> before it roams again. The presenter's F2.
+        /// </summary>
+        public void Approach(Vector3 from, Vector3 toward, float holdSeconds)
+        {
+            Place(from);
+            Show(true);
+            if (navigation.isOnNavMesh) navigation.SetDestination(toward);
+            nextMove = Time.time + holdSeconds;
+        }
+
+        /// <summary>
+        /// In its den at <paramref name="den"/>, hidden for <see cref="HiddenSeconds"/>, then roaming
+        /// again. The presenter's reset, so a stage that follows is not interrupted by it.
+        /// </summary>
+        public void Rest(Vector3 den)
+        {
+            Place(den);
+            if (navigation.isOnNavMesh) navigation.ResetPath();
+            Show(false);
+        }
+
+        private void Place(Vector3 at)
+        {
+            fleeing = false;
+            if (navigation.isOnNavMesh) navigation.Warp(at);
+            else transform.position = at;
         }
 
         /// <summary>Runs to the den, then hides.</summary>
@@ -86,6 +118,8 @@ namespace Demos.GreyBoxVillage
 
         private void Show(bool visible)
         {
+            if (renderers == null) renderers = GetComponentsInChildren<Renderer>();
+            if (targetable == null) targetable = GetComponent<Targetable>();
             IsHidden = !visible;
             fleeing = false;
             foreach (var r in renderers) r.enabled = visible;

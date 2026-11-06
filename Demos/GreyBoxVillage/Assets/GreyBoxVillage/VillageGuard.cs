@@ -22,6 +22,8 @@ namespace Demos.GreyBoxVillage
     /// <see cref="AgentMind.WolfMetres"/>.
     ///
     /// Bram and Wren are both guards: the same body, each with its own post, patrol and profile.
+    /// Wren also keeps the night watch, whose gate actions sit on her own <see cref="NightWatch"/>,
+    /// so Bram never has them.
     /// </remarks>
     [RequireComponent(typeof(NavMeshAgent))]
     public sealed class VillageGuard : VillageBody
@@ -29,19 +31,33 @@ namespace Demos.GreyBoxVillage
         /// <summary>The game guard that keeps a guard from attacking the village's own people.</summary>
         public const string NeverAttackVillagers = "never_attack_villagers";
 
-        /// <summary>Where the guard stands when nothing else is going on: Bram's gate, Wren's bridge.</summary>
+        /// <summary>Where the guard stands by day when nothing else is going on: Bram's gate, Wren's bridge.</summary>
         public Transform Post;
         public VillageAlarm Alarm;
         public Transform[] PatrolRoute;
+        [Tooltip("The fire fetch_water is for; offered only while it burns.")]
+        public VillageFire Fire;
+        [Tooltip("Carried while fetching water; hidden otherwise.")]
+        public GameObject Bucket;
         public float FollowDistance = 2.5f;
         public float StrikeDistance = 1.8f;
+        [Tooltip("How close a chased thief must be to be caught.")]
+        public float CatchDistance = 1.6f;
+        [Tooltip("Running speed while chasing; the guard walks at its NavMeshAgent's speed otherwise.")]
+        public float ChaseSpeed = 7f;
+        [Tooltip("Seconds to fill the bucket at the well, and to throw it on the fire.")]
+        public float BucketSeconds = 0.8f;
         [Tooltip("The bell is offered for a wolf the guard can see within this distance, or when the player speaks.")]
         public float AlarmWolfDistance = 15f;
 
         public bool IsFollowing { get; private set; }
         public bool IsPatrolling { get; private set; }
-        public bool IsMoving => destination != null || chase != null || IsPatrolling;
+        public bool IsChasing => chase != null;
+        public bool IsFetchingWater => fetching;
+        public bool IsMoving => destination != null || chase != null || IsPatrolling || fetching;
         public override bool IsBusy => IsFollowing || IsMoving;
+        /// <summary>Where the guard stands now when nothing else is going on: its <see cref="Post"/>, or a night post.</summary>
+        public Transform CurrentPost => post != null ? post : Post;
 
         /// <summary>What the guard is doing, as a clause the observations can use.</summary>
         public override string Activity => activity ??= AtPost;
@@ -54,6 +70,11 @@ namespace Demos.GreyBoxVillage
         private Transform chase;
         private bool attacking;
         private int patrolIndex;
+        private Transform post;
+        private string arrivedActivity;
+        private bool fetching, carrying;
+        private float bucketUntil = -1f;
+        private float walkSpeed = -1f;
 
         // ---- The evaluation agent's actions --------------------------------------------------
 
@@ -100,13 +121,53 @@ namespace Demos.GreyBoxVillage
         {
             Clear();
             attacking = true;
+            // Something that runs is run after: the wolf, and a thief making off, which a guard
+            // must run to catch at all.
             if (target.GetComponent<VillageWolf>() != null) chase = target;
+            if (target.GetComponent<VillageThief>() is VillageThief thief && thief.IsRunning)
+            {
+                chase = target;
+                Run(true);
+            }
             Walk(target, IdOf(target));
             activity = "charging the " + destinationId;
             Report("Charging the " + destinationId + ".");
         }
 
         // ---- This demo's own actions ---------------------------------------------------------
+
+        [AgentAction("chase", "Run after a thief or the wolf until you catch it.", RequiresTarget = true)]
+        [Example("Don't let the {0} get away!", "thief", "wolf")]
+        private void Chase(Transform target)
+        {
+            Clear();
+            chase = target;
+            Run(true);
+            Walk(target, IdOf(target));
+            activity = "chasing the " + destinationId;
+            Report("Chasing the " + destinationId + ".");
+        }
+
+        // Something to run after must be in sight: a thief making off, or the wolf.
+        [Available("chase")]
+        private bool CanChase(AgentContext ctx) =>
+            ctx.State.ContainsKey(AgentMind.WolfMetres) || ctx.State.ContainsKey(AgentMind.ThiefMetres);
+
+        [AgentAction("fetch_water", "Carry buckets from the well to the fire until it is out.")]
+        [Example("Flames are climbing up the side of the barn!")]
+        private void FetchWater()
+        {
+            Clear();
+            if (Fire == null || Fire.Well == null) return;
+            fetching = true;
+            carrying = false;
+            Walk(Fire.Well, IdOf(Fire.Well));
+            activity = "running to the well for water";
+            Report("Fetching water for the fire.");
+        }
+
+        [Available("fetch_water")]
+        private bool CanFetchWater(AgentContext ctx) => Fire != null && Fire.IsBurning;
 
         [AgentAction("warn_player", "Warn the player and stay where you are.")]
         [Example("A stranger is poking around where they should not be.")]
@@ -163,9 +224,19 @@ namespace Demos.GreyBoxVillage
 
         // Patrol fills the time when nothing is happening, so it is offered on the quiet timer and
         // nowhere else; anything else that asks breaks a patrol off first (Attend).
+        // The night watch stays at the gate.
         [Available("patrol")]
         private bool CanPatrol(AgentContext ctx) =>
-            Asker(ctx) == "quiet" && !IsPatrolling && !IsFollowing && PatrolRoute != null && PatrolRoute.Length > 0;
+            Asker(ctx) == "quiet" && !IsPatrolling && !IsFollowing && PatrolRoute != null && PatrolRoute.Length > 0 && !OnNightWatch;
+
+        private bool OnNightWatch
+        {
+            get
+            {
+                var watch = GetComponent<NightWatch>();
+                return watch != null && watch.OnWatch;
+            }
+        }
 
         private static string Asker(AgentContext ctx) => ctx.State.TryGetValue(AgentMind.AskedBy, out var source) ? source as string : null;
 
@@ -176,7 +247,32 @@ namespace Demos.GreyBoxVillage
             foreach (var fact in base.Facts()) yield return fact;
             yield return IsFollowing ? "You are following the player." : "You are not following the player.";
             if (Alarm != null && Alarm.IsSounding) yield return "The alarm bell is ringing.";
+            if (Fire != null && Fire.IsBurning)
+                yield return "There is a fire at " + Fire.Where + ": " + Fire.Trips + " of " + Fire.TripsToPutOut + " buckets thrown.";
+            var watch = GetComponent<NightWatch>();
+            if (watch != null)
+                foreach (var fact in watch.Facts()) yield return fact;
         }
+
+        /// <summary>
+        /// Sends the guard to a post it keeps from now on, such as the gate for the night watch, or
+        /// back to its day <see cref="Post"/>. The activity reads <paramref name="walking"/> on the way
+        /// and <paramref name="there"/> on arrival; null for "walking back to" and "standing at" the post.
+        /// With <paramref name="hurry"/> it runs there.
+        /// </summary>
+        public void GoToPost(Transform target, string walking, string there, bool hurry = false)
+        {
+            if (target == null) return;
+            post = target == Post ? null : target;
+            Clear();
+            Run(hurry);
+            Walk(target, IdOf(target));
+            activity = walking ?? "walking back to the " + destinationId;
+            arrivedActivity = there;
+        }
+
+        /// <summary>Sets what the guard is doing, for an action another component runs (the night watch's gate actions).</summary>
+        public void Doing(string what) => activity = what;
 
         /// <summary>
         /// Breaks off a patrol so the guard can attend to whatever is asking. A patrol is what the
@@ -215,6 +311,12 @@ namespace Demos.GreyBoxVillage
 
         public override IReadOnlyList<string> Suggestions => SuggestedLines;
 
+        // chase runs after something that runs: the thief or the wolf.
+        protected override bool TargetFits(string actionId, object target) =>
+            actionId == "chase"
+                ? target is Component c && (c.GetComponent<VillageThief>() != null || c.GetComponent<VillageWolf>() != null)
+                : base.TargetFits(actionId, target);
+
         public override string RefusalLine(GuardVerdict verdict) => base.RefusalLine(verdict) ??
             (verdict.Guard == NeverAttackVillagers ? "I won't raise my sword against our own."
             : verdict.Guard == "TargetGroundingGuard" ? "There's no such thing here."
@@ -224,12 +326,13 @@ namespace Demos.GreyBoxVillage
 
         public override void ResetState()
         {
+            post = null;
             Clear();
             Halt();
             activity = AtPost;
         }
 
-        private string AtPost => "standing at the " + (Post != null ? IdOf(Post) : "village_gate");
+        private string AtPost => "standing at the " + (CurrentPost != null ? IdOf(CurrentPost) : "village_gate");
 
         private NavMeshAgent Navigation => navigation != null ? navigation : navigation = GetComponent<NavMeshAgent>();
 
@@ -240,6 +343,18 @@ namespace Demos.GreyBoxVillage
             attacking = false;
             chase = null;
             destination = null;
+            arrivedActivity = null;
+            fetching = carrying = false;
+            bucketUntil = -1f;
+            if (Bucket != null && Bucket.activeSelf) Bucket.SetActive(false);
+            Run(false);
+        }
+
+        // Runs while chasing; walks otherwise.
+        private void Run(bool running)
+        {
+            if (walkSpeed < 0) walkSpeed = Navigation.speed;
+            Navigation.speed = running ? ChaseSpeed : walkSpeed;
         }
 
         private void Walk(Transform target, string id)
@@ -278,23 +393,13 @@ namespace Demos.GreyBoxVillage
 
             if (chase != null)
             {
-                var wolf = chase.GetComponent<VillageWolf>();
-                if (wolf == null || wolf.IsHidden)
-                {
-                    activity = "standing where the wolf fled";
-                    Clear();
-                    Halt();
-                    return;
-                }
-                Navigation.SetDestination(chase.position);
-                if (Vector3.Distance(transform.position, chase.position) <= StrikeDistance + 0.5f)
-                {
-                    wolf.Flee();
-                    activity = "standing where the wolf fled";
-                    Report("Struck the wolf; it runs for the woods.");
-                    Clear();
-                    Halt();
-                }
+                UpdateChase();
+                return;
+            }
+
+            if (fetching)
+            {
+                UpdateFetching();
                 return;
             }
 
@@ -309,10 +414,91 @@ namespace Demos.GreyBoxVillage
                 }
                 if (attacking) Report("Struck the " + destinationId + ".");
                 activity = attacking ? "standing by the " + destinationId + " after striking it"
+                    : arrivedActivity != null ? arrivedActivity
                     : Activity.StartsWith("blocking") ? Activity.Replace("blocking the way", "standing in the entrance, blocking the way")
                     : "standing at the " + destinationId;
                 destination = null;
                 attacking = false;
+                arrivedActivity = null;
+                Run(false);
+            }
+        }
+
+        // After the wolf or the thief until it is caught, flees or gets away. The wolf and the
+        // attack_target chase it started both end here.
+        private void UpdateChase()
+        {
+            var wolf = chase.GetComponent<VillageWolf>();
+            var thief = chase.GetComponent<VillageThief>();
+            bool gone = wolf != null ? wolf.IsHidden : thief == null || !thief.IsRunning || !thief.isActiveAndEnabled;
+            if (gone)
+            {
+                activity = wolf != null ? "standing where the wolf fled"
+                    : thief != null && thief.State == VillageThief.Phase.Caught && thief.CaughtBy == this ? "holding the thief you caught"
+                    : thief != null && thief.State == VillageThief.Phase.Caught ? "standing where the thief was caught"
+                    : "standing where the thief got away";
+                Clear();
+                Halt();
+                return;
+            }
+            Navigation.SetDestination(chase.position);
+            float reach = wolf != null ? StrikeDistance + 0.5f : CatchDistance;
+            if (Vector3.Distance(transform.position, chase.position) > reach) return;
+            if (wolf != null)
+            {
+                wolf.Flee();
+                activity = "standing where the wolf fled";
+                Report((attacking ? "Struck" : "Caught up with") + " the wolf; it runs for the woods.");
+            }
+            else
+            {
+                thief.Catch(this);
+                activity = "holding the thief you caught";
+                Report("Caught the thief.");
+            }
+            Clear();
+            Halt();
+        }
+
+        // To the well, fill the bucket, to the fire, throw it; again until the fire is out.
+        private void UpdateFetching()
+        {
+            if (Fire == null || !Fire.IsBurning)
+            {
+                activity = "standing by the market, the fire out";
+                Clear();
+                Halt();
+                return;
+            }
+            if (bucketUntil >= 0)
+            {
+                if (Time.time < bucketUntil) return;
+                bucketUntil = -1f;
+                if (!carrying)
+                {
+                    carrying = true;
+                    if (Bucket != null) Bucket.SetActive(true);
+                    Walk(Fire.ThrowSpot != null ? Fire.ThrowSpot : Fire.transform, "fire");
+                    activity = "carrying a bucket of water to the fire";
+                }
+                else
+                {
+                    carrying = false;
+                    if (Bucket != null) Bucket.SetActive(false);
+                    bool outNow = Fire.Douse();
+                    Report(outNow ? "Threw the last bucket; the fire is out." : "Threw a bucket on the fire.");
+                    if (outNow) return;
+                    Walk(Fire.Well, IdOf(Fire.Well));
+                    activity = "running back to the well for more water";
+                }
+                return;
+            }
+            if (destination != null && !Navigation.pathPending &&
+                Navigation.remainingDistance <= Navigation.stoppingDistance + 0.4f)
+            {
+                destination = null;
+                bucketUntil = Time.time + BucketSeconds;
+                activity = carrying ? "throwing water on the fire" : "filling a bucket at the well";
             }
         }
 

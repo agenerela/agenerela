@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using Agenerela;
 using Agenerela.Providers;
@@ -17,10 +18,14 @@ namespace Demos.GreyBoxVillage.Editor
         protected override ILLMProvider CreateProvider() => Scripted;
     }
 
-    /// <summary>Answers every request with <see cref="Reply"/>; while <see cref="Fail"/> is set, fails with it instead.</summary>
+    /// <summary>
+    /// Answers every request with <see cref="Reply"/>, or with what <see cref="Answer"/> gives for it
+    /// when that is set (the presenter script); while <see cref="Fail"/> is set, fails with it instead.
+    /// </summary>
     internal sealed class CaptureProvider : ILLMProvider
     {
         public string Reply = Decision("none", "no_target", "Good day.");
+        public Func<DecisionRequest, string> Answer;
         public ProviderErrorKind? Fail;
 
         public string Name => "scripted";
@@ -30,7 +35,7 @@ namespace Demos.GreyBoxVillage.Editor
         {
             var source = new AwaitableCompletionSource<ProviderResult>();
             if (Fail != null) source.SetException(new ProviderException(Fail.Value, Name, "The capture tool's provider is set to fail."));
-            else source.SetResult(new ProviderResult { Text = Reply, Model = "capture" });
+            else source.SetResult(new ProviderResult { Text = Answer != null ? Answer(request) : Reply, Model = "capture" });
             return source.Awaitable;
         }
 

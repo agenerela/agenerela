@@ -256,7 +256,7 @@ namespace Demos.Shared
             for (int i = 0; i < bubbles.Count; i++)
             {
                 var b = bubbles[i];
-                if (i >= list.Count || !Place(b, camera, list[i].World, true))
+                if (i >= list.Count || !Place(b, camera, list[i].World, true) || UnderPanel(b))
                 {
                     DemoUI.Show(b, false);
                     continue;
@@ -272,10 +272,24 @@ namespace Demos.Shared
             }
         }
 
+        // A bubble that would fall under a panel is hidden, as a world label is: with four agents
+        // talking at once, the far ones' bubbles otherwise piled over the clock and the agent list.
+        // Its size is last frame's, which is enough to tell.
+        private bool UnderPanel(VisualElement bubble)
+        {
+            float w = bubble.resolvedStyle.width, h = bubble.resolvedStyle.height;
+            if (float.IsNaN(w) || float.IsNaN(h)) return false;
+            var rect = new Rect(bubble.style.left.value.value, bubble.style.top.value.value, w, h);
+            foreach (var c in covered)
+                if (c.Overlaps(rect)) return true;
+            return false;
+        }
+
         /// <summary>
         /// Where other documents' panels sit over the world this frame, in panel pixels: the agent
-        /// list or the framework view, the dialogue, the book, the menu. A world label that would
-        /// fall under one of them, or under the HUD's own panels, is hidden.
+        /// list or the framework view, the dialogue, the book, the menu. A world label or a speech
+        /// bubble that would fall under one of them, or under the HUD's own panels, is hidden. Set it
+        /// before the bubbles and the tags.
         /// </summary>
         public void SetCoveredRects(IEnumerable<Rect> rects)
         {

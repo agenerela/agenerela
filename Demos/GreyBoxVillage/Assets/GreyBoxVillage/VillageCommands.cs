@@ -30,6 +30,8 @@ namespace Demos.GreyBoxVillage
         public VillageBook Book;
         [Tooltip("While it is open, no gameplay key does anything.")]
         public DemoMenu Menu;
+        [Tooltip("The presenter's keys and their panel; world labels keep out from under it.")]
+        public VillagePresenter Presenter;
         [Tooltip("How close the player must be to pick something up, in metres.")]
         public float ReachDistance = 2.2f;
         public Transform Player;
@@ -67,7 +69,7 @@ namespace Demos.GreyBoxVillage
         private static readonly (string key, string what)[] Keys =
         {
             ("WASD", "walk"), ("Shift", "run"), ("RMB", "look"), ("E", "talk / pick up"), ("I", "pack"), ("J", "journal"),
-            ("Tab", "framework view"), ("H", "requests"), ("Esc", "menu")
+            ("Tab", "framework view"), ("H", "requests"), ("Esc", "menu"), ("F12", "presenter")
         };
 
         /// <summary>Every decision this session, from every agent. Made on first use.</summary>
@@ -193,6 +195,16 @@ namespace Demos.GreyBoxVillage
             foreach (var mind in Minds) mind.UseProvider(config);
         }
 
+        /// <summary>
+        /// Fresh agents with empty memories, on the provider config they already ask, and a new
+        /// recorder that keeps the log-file setting. The presenter's reset.
+        /// </summary>
+        public void ResetAgents()
+        {
+            var config = Minds.Length > 0 && Minds[0] != null ? Minds[0].Behaviour.Provider : null;
+            UseProvider(config, writeLog && WriteLogFile);
+        }
+
         /// <summary>The agent with this name, as its profile gives it.</summary>
         public AgentMind Mind(string agentName) => Minds.Single(m => m.Name == agentName);
 
@@ -313,6 +325,14 @@ namespace Demos.GreyBoxVillage
                 Hud.SetQuests(tracker);
             }
 
+            // World labels and bubbles keep out from under every panel drawn over the world.
+            covers.Clear();
+            foreach (var r in new[] { Board != null ? Board.Bounds : null, Input != null ? Input.Bounds : null,
+                         Book != null ? Book.Bounds : null, Menu != null ? Menu.Bounds : null,
+                         Presenter != null ? Presenter.Bounds : null })
+                if (r != null) covers.Add(r.Value);
+            Hud.SetCoveredRects(covers);
+
             bubbles.Clear();
             foreach (var m in Minds)
             {
@@ -330,14 +350,8 @@ namespace Demos.GreyBoxVillage
             }
             Hud.SetBubbles(camera, bubbles);
 
-            // World labels keep out from under every panel drawn over the world.
-            covers.Clear();
-            foreach (var r in new[] { Board != null ? Board.Bounds : null, Input != null ? Input.Bounds : null,
-                         Book != null ? Book.Bounds : null, Menu != null ? Menu.Bounds : null })
-                if (r != null) covers.Add(r.Value);
-            Hud.SetCoveredRects(covers);
-
-            nameTags ??= FindObjectsByType<NameTag>(FindObjectsSortMode.None);
+            // Inactive ones too: the thief's tag shows only while it is out.
+            nameTags ??= FindObjectsByType<NameTag>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             names.Clear();
             foreach (var tag in nameTags)
                 if (tag != null && tag.isActiveAndEnabled)
