@@ -104,6 +104,8 @@ target exists this turn, by the name a player would use. That is entry 20.
 
 ### 2. Execution returns only true/false; no receipt of what the game did
 
+**Status:** in the framework since #195 (`ActionResult` through `IActionHandlerWithResult`; `Execute` returns it and telemetry records it; DR-018). Not adopted by the game yet.
+
 - **Needed:** after `Agent.Execute`, the game needs to know whether its own handler refused (a
   stale quote, not enough gold) and what it produced (the quote, the offer), to show the right
   line and to tell the model next turn what happened.
@@ -120,6 +122,8 @@ target exists this turn, by the name a player would use. That is entry 20.
 - **Research area:** guards, or evaluation.
 
 ### 3. Memory records a decision before the game executes it
+
+**Status:** in the framework since #195 (`MemoryCommit.OnExecute`, `Agent.Commit`/`Discard`; DR-018). Not adopted by the game yet; `CommittedHistory` still runs.
 
 - **Needed:** a reply dropped as stale (timeout, cancel, speaker switch) must not enter the
   NPC's memory, or the NPC "remembers" saying something the player never saw.
@@ -148,6 +152,8 @@ target exists this turn, by the name a player would use. That is entry 20.
 - **Research area:** targets.
 
 ### 5. No per-call context reaches the handler
+
+**Status:** in the framework since #195 (`DecideOptions.Correlation`, carried to `IsAvailable`, the guards and the handler; DR-018). Not adopted by the game yet; the generation still rides in `Agent.State`.
 
 - **Needed:** a handler must know which conversation (generation) a decision belongs to, so a
   quote is tied to that conversation alone.
@@ -242,6 +248,8 @@ measures the two together, not the counter-examples alone.
 - **Research area:** guards (#138).
 
 ### 11. Memory cannot be saved and restored with the game
+
+**Status:** in the framework since #195 (`IExportsMemory`, `MemorySnapshot`, implemented by `RollingHistory`; DR-018). Not adopted by the game yet; saves still leave NPC memory out.
 
 - **Needed:** after F10 (load), NPCs should remember the conversations that led to the saved
   state, or explicitly forget them.
