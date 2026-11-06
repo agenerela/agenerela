@@ -177,6 +177,10 @@ phase table and the open issues, not here.
     `docs/demos/living-vale-framework-gaps.md` lists the 23 gaps the game found. #190 collects
     them for the framework.
   - 581 EditMode tests. How to play, and the known issues: `Demos/LivingVale/PLAYTEST.md`.
+- **`tools/benchmarks/paired_schema_probe.py`** (#190 B, DR-020): checks that Ollama compiles the
+  paired schema into a grammar that keeps every reply to a pair it offers, against the flat schema
+  and both again with `none` removed. Its first run, on 6 November, is in `findings.md`: no paired
+  reply held a wrong pair on either chat path. A grammar check, not an accuracy claim.
 - **The risk management plan** in `docs/course/2026-10-29-risk-management/`: an Excel
   register of 14 risks, two per member, with a risk matrix and a sprint review log, reviewed
   once per sprint. XLSX now goes through Git LFS.
