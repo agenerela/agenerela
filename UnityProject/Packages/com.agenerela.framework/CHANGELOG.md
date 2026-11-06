@@ -10,6 +10,40 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **Target categories** (#190 B, DR-020): `TargetRegistry.Register(id, target, category)`, beside
+  the two-argument overload, and `TargetRegistry.CategoryOf(id)`, null for a target with no
+  category and never throwing. `ExplicitTargetSource.Add(id, target, category)` does the same for a
+  hand-made set, and `ProximityTargetSource` now registers each `Targetable` in its
+  `Targetable.Category`. The model never reads a category.
+- **Which targets an action takes** (#190 B, GreyBoxVillage G2, Living Vale #4):
+  `ActionDefinition.TargetCategories`, `[AgentAction(TargetCategories = new[] { ... })]`,
+  `ActionDefinition.AcceptsCategory(category)` and `DeclaresTargetCategories`. Empty, the default,
+  takes any target. **`TargetCategoryGuard`**, a third built-in guard, runs in `DecideAsync` after
+  `TargetGroundingGuard` and before `Agent.Guards`, and turns an action paired with a target of
+  another category, or of none, into `none` (`RewriteToNone`); `Agent.Execute` runs it again after
+  `SchemaLegalityGuard` and refuses a mismatch. It passes every action that names no category, so
+  nothing changes until a developer declares one, and the request is unchanged either way.
+- **`Agent.TargetCategories`** (#190 B, G3): the only target categories an agent is offered,
+  whichever source finds them, applied after every source on each decision and at `Execute`'s
+  re-check. Empty, the default, offers every target; set, a target in another category or in none
+  is left out.
+- **`TargetRegistry.Offer(id, target, category)`** (#190 B, G13): registers a target unless the
+  same object is already registered under the id, and returns whether it added it; another object
+  under the id throws. It is the merge rule for target sources below.
+- **`ActionRegistry.RegisterMethods(owner, assets, only)`** (#190 B, G10): registers only the
+  listed action ids of one owner; null registers all of them, an empty list none. Every method is
+  still checked.
+- **`AgentBehaviour.OnlyActions`** (#190 B, G10): the action ids the agent registers, of its
+  GameObject's `[AgentAction]` methods and its `Handlers` rows. Empty, the default, registers every
+  one. The Inspector warns about an id nothing provides and a `Handlers` row it leaves out.
+- **`AgentBehaviour.TargetCategories`** (#190 B, G3): copied to `Agent.TargetCategories`, and to the
+  proximity source's `Categories` when that names none, so the source's cap counts only what can
+  be offered.
+- `Documentation~/targets.md`: categories, the category guard, an agent's categories, the merge
+  rule and an agent's own actions.
+- A test that our evaluation set's schema, as `EvalRunner` sends it with every option off, is
+  byte-identical to the shape every measurement so far was scored against.
+
 - **What executing a decision did** (#190 C, DR-018): `ActionResult`, a value type made by
   `ActionResult.Done(payload)` and `ActionResult.Failed(reason, payload)`, with `Status`
   (`ExecutionStatus`: `Done`, `Failed`, `NoAction`, `Refused`), `Reason`, `Payload`,
@@ -193,6 +227,15 @@ While the version stays `0.x`, the public API may change in any release.
   further in code.
 - `Documentation~/providers.md`: the scripted provider, as an asset, testing with it, and how a
   decision log will replay through it (G7).
+
+### Changed
+
+- **The same target from two sources is one target** (#190 B, G13, DR-020). `ExplicitTargetSource`
+  and `ProximityTargetSource` skip an id an earlier source, or `Agent.Targets`, already registered
+  for the same object, which they used to refuse; the first registration, its category included,
+  is kept, and a Targetable skipped this way still counts toward the proximity cap. Another object
+  under the id is still an error. `ITargetSource`'s contract says so, and `TargetRegistry.Register`
+  is unchanged: it throws for any id already present.
 
 ### Fixed
 

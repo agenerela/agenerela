@@ -32,7 +32,12 @@ Inside `Agent.DecideAsync`, after the reply has been parsed:
    rewritten. A provider that reports no probabilities
    cannot be checked, and the guard records that and passes. `DecideOptions.CheckTarget =
    false` turns it off for one call. DR-016 has the measurements.
-3. **`Agent.Guards`**, the game's own, in list order.
+3. **`TargetCategoryGuard`.** The target is a kind the action takes. An action that names
+   `TargetCategories` is held to them: a target in another category, or in none, is rewritten to
+   `none`, so `complete_quest` aimed at the village gate does nothing. An action that names none
+   always passes, so this guard changes nothing until a developer declares a category. DR-020, and
+   [targets.md](targets.md).
+4. **`Agent.Guards`**, the game's own, in list order.
 
 The first guard whose verdict is not `Pass` stops the rest, so a decision fires at most one
 guard. The built-in guards are not in `Agent.Guards` and cannot be removed from it.
@@ -142,8 +147,9 @@ the chosen target's distance.
 ### Not re-checked at `Execute`
 
 `Agent.Execute` checks the decision again before running the handler, because the world can
-change while the model thinks. That re-check is `SchemaLegalityGuard` alone. A game's guards
-judged the answer once, inside `DecideAsync`, and are not run again.
+change while the model thinks. That re-check is `SchemaLegalityGuard`, then
+`TargetCategoryGuard`, against the targets as they are then. A game's guards judged the answer
+once, inside `DecideAsync`, and are not run again.
 
 If a game rule must still hold at the moment of acting, put it in the handler, or in the action's
 `IsAvailable`, which `Execute` does ask again. A handler can say why it did not act by returning

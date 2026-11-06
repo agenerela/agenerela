@@ -564,6 +564,7 @@ public sealed class ActionDefinition {
     public string ExampleStimulus;       // "{0}" placeholder for target; see few-shot rules
     public string[] PreferredExampleTargets;   // targets this verb sensibly applies to
     public string CounterExampleStimulus;      // optional, shown answered with none (#190)
+    public string[] TargetCategories;          // optional, the kinds of target it takes (DR-020)
 }
 ```
 
@@ -672,19 +673,23 @@ another component calls `GetComponent` on it. Revisit if games keep writing that
 `GetComponent`: the fix is a conversion that `Runtime/Unity/` supplies, not scene calls in the
 reader.
 
-**Revisit later — which targets an action accepts.** Proposed in the COMP 490 requirements
-specification (3.4.2.2, October 2026), and not designed: each action declares the target
-categories it accepts, so `give` is offered props and characters but never the tower. Today
-one `target` enum serves every action, so the model can pair `give` with `tower`, which the
-schema allows and the game cannot use. The category already exists as the free-text
-`Category` on `Targetable` (#32); a target from `ExplicitTargetSource` has none, so targets
-with no scene presence would need one too. How to enforce it is open. A separate target list
-per action inside the schema makes the bad pair unexpressible, the same move as state masking
-(rule 1 above), but it changes the request shape the prototype measured, so it needs an A/B
-with a control arm before it ships. A guard (§2.5) leaves the schema alone but only catches
-the pair after the model has chosen it. Revisit when a demo needs it; until then a handler
-given a target it cannot use does nothing with it, and once guards land in Phase 3 a
-developer's own guard can reject the pair.
+**Which targets an action takes (DR-020).** Proposed in the COMP 490 requirements
+specification (3.4.2.2, October 2026), and built when both demos hit it (#190, workstream B): one
+`target` enum serves every action, so a model could pair `complete_quest` with a place or
+`quote_sale` with a stock entry. A target is registered with an optional **category**, a free
+string the model never reads (`TargetRegistry.Register(id, target, category)`;
+`ProximityTargetSource` passes each `Targetable.Category`), and an action names the categories it
+takes in `TargetCategories`. A built-in guard, `TargetCategoryGuard` (§2.5), turns a wrong pair
+into `none`, and `Execute` refuses one. That catches the pair after the model chose it and leaves
+the schema alone, so it is on by default and changes nothing until a category is declared. Making
+the pair unexpressible, the same move as state masking (rule 1 above), is the paired schema: a
+separate target list per action inside the schema, an option that is off until an A/B with a
+control arm shows it helps, because it changes what the model is constrained to.
+
+The same decision gives an agent the categories it may ever be offered (`Agent.TargetCategories`),
+an `AgentBehaviour` the action ids it registers (`OnlyActions`), and target sources a merge rule:
+the same object offered by two sources is one target, and another object under one id is still an
+error. `Documentation~/targets.md` is the developer's page.
 
 ### 2.3 Schema (`Runtime/Schema/`)
 
@@ -960,7 +965,12 @@ Built-ins, in order:
    paraphrases and "it". On the 4B it scored below no check at all, 89 against 98. It is no
    longer built in. A developer who wants strict wording can add it as their own guard
    (item 3).
-3. Developer-supplied guards append here (game-specific rules: line-of-sight, cooldowns…).
+3. **TargetCategoryGuard: is the target a kind the action takes?** (DR-020, #190.) An action
+   that names `TargetCategories` is held to them: a target in another category, or in none, is
+   rewritten to `none`. It runs after grounding, so declaring categories never changes what that
+   guard reads, and `Execute` runs it again after the legality re-check. An action that names no
+   category always passes, which is why it is on by default.
+4. Developer-supplied guards append here (game-specific rules: line-of-sight, cooldowns…).
 
 A guard rewriting to `none` is a **contained refusal**, not an error — telemetry records
 which guard fired so the eval harness can distinguish "model right", "model wrong but
@@ -2141,6 +2151,127 @@ under way finishes on the provider it started with.
 
 **Revisit if:** a backend needs a warm-up that does hold the queue, such as an in-process
 model that cannot load while it generates, in which case that provider queues it itself.
+
+### DR-020 — Targets carry a category; an action names the kinds it takes, and an agent the kinds it is offered
+
+**Status:** Decided, 6 November 2026 (#190, workstream B). The lead chose the shapes in the first
+six rows of the table below from the options given. The paired schema (decision 7) is an option,
+off by default, and owes an A/B run on the evaluation set before it can become the default (#151).
+
+**Context.** Every action shares one flat `target` enum, so the schema lets a model pair any
+action with any target. Both demo games, built on the public API alone, hit it (#190):
+
+- **A wrong pair.** In GreyBoxVillage a quest action aimed at a place threw in `Execute` (the
+  breakage run in #157); the game added its own guard, `target_fits_action`. Living Vale's
+  `quote_purchase`, `quote_sale` and `offer_quest` share one list, and a pair guard in each binding
+  rewrites a mismatch to `none` (its gap 4).
+- **Targets an agent should never see.** The guards must never be offered the stall's wares, so
+  that Bram's evaluation schema stays as measured. GreyBoxVillage restricts each of their target
+  sources by hand (G3).
+- **Actions an agent should never have.** `AgentBehaviour` registers the `[AgentAction]` methods
+  of every component on its GameObject, so a body class every guard shares gives every guard its
+  actions. Offered `chase` beside `sound_alarm`, Bram chose `chase` for the wolf 4 of 4 times
+  (G10). The game now spreads its actions over components added to some guards only.
+- **One target, two sources.** Odile's proximity source found the guards as people, and her own
+  source lists the guards she can call. `ITargetSource`'s contract made that an error, so the game
+  dropped `person` from her proximity categories (G13, designed around rather than seen).
+
+The settled rules hold throughout: `action`, `target`, `statement` in that order, `target` required
+with `no_target`, no `""` in an enum, and illegal options absent from the schema rather than
+forbidden in prose. Every request must stay byte-identical while none of this is used.
+
+**Options considered**
+
+| Question | Options | Verdict |
+|---|---|---|
+| Where a target's category lives | An overload of `TargetRegistry.Register` that takes one; an optional `ICategorizedTarget` on the target object, like `IDescribedTarget` (a scene target is registered as its `Transform`, which cannot implement it); `Targetable.Category` only (a target with no scene presence has none) | **The registry overload**, plus `TargetRegistry.CategoryOf` |
+| How a wrong pair is refused | A new built-in guard that rewrites to `none`; inside `SchemaLegalityGuard` as a `Reject`, like "needs a target, has none"; developer guards only, as today | **A new built-in guard, `TargetCategoryGuard`, rewriting to `none`.** Both demos' own guards rewrote, and the model chose two offered values, so it broke no contract |
+| A target with no category, under an action that names some | Refused; accepted | **Refused**: declaring categories means it |
+| Which categories an agent is offered | An allowlist on `Agent` that also drops targets with no category; the same, keeping them; a wrapper around each source | **An allowlist on `Agent` that drops them**, shown on `AgentBehaviour` |
+| Which actions an `AgentBehaviour` registers | An id list on `AgentBehaviour`; on `AgentProfile`; a runtime filter on `Agent` (registered but never offered) | **An id list on `AgentBehaviour`**, plus a `RegisterMethods` overload for code |
+| The same target from two sources | The same object is one target, another object is still an error; the first source always wins; keep the error | **The same object is one target** |
+| How the schema pairs them (decision 7) | A root `anyOf` of complete objects; `oneOf` (Gemini does not support it); `anyOf` beside the root's own `properties` (llama.cpp drops the siblings); `if`/`then` (llama.cpp ignores it) | **A root `anyOf` of complete objects**, behind an option that is off |
+
+**Decision.**
+
+1. **Categories on targets.** `TargetRegistry.Register(id, target, category)` beside the old
+   overload, which registers with none, and `TargetRegistry.CategoryOf(id)`, null for none and never
+   throwing. A blank category is none; categories compare ordinally and are kept as given, as
+   `Targetable.Category` always was. `ExplicitTargetSource.Add(id, target, category)` and
+   `ProximityTargetSource`, which passes each `Targetable.Category`, use it. The model never reads
+   a category.
+2. **Which targets an action takes.** `ActionDefinition.TargetCategories`, filled from
+   `[AgentAction(TargetCategories = ...)]` on the code front door. Empty takes any target, as before.
+   `ActionDefinition.AcceptsCategory(category)` is the rule, and a target with no category is taken
+   only by an action that names none.
+3. **`TargetCategoryGuard`**, the third built-in guard. Inside `DecideAsync` it runs after
+   `TargetGroundingGuard` and before the developer's guards, so declaring categories never changes
+   what grounding reads or records, and a mismatch is a `RewriteToNone`. `Execute` runs it again
+   after `SchemaLegalityGuard`, against the targets as they are then. It passes `none`, `no_target`
+   and every action that names no category, so it is on by default and changes no decision until a
+   developer declares one.
+4. **`Agent.TargetCategories`**, an allowlist applied after `Agent.Targets` and every source, on
+   each decision and at `Execute`'s re-check. Set, a target in another category or in none is left
+   out; empty, the default, offers every target. `AgentBehaviour.TargetCategories` fills it, and
+   gives its proximity source the same categories when that source names none, because a source's
+   cap is applied before the agent's filter.
+5. **`AgentBehaviour.OnlyActions`**, the action ids the agent registers, of the methods on its
+   GameObject and the rows of `Handlers`; empty registers every one.
+   `ActionRegistry.RegisterMethods(owner, assets, only)` is the same for code: null registers every
+   action, an empty list none, and every method is still checked.
+6. **The merge rule.** The same object under the same id from two sources, or from `Agent.Targets`
+   and a source, is one target, as it was first registered, its category included. Another object
+   under an id already offered is still an error, a pipeline error for the decision. The built-in
+   sources follow it; `TargetRegistry.Offer(id, target, category)` registers by it for a game's own
+   source and says whether it added the target. `TargetRegistry.Register` is unchanged, so a
+   source written before the rule behaves as it did. "The same object" is reference equality.
+7. **The paired schema**, `DecideOptions.PairTargetsWithActions`, off by default, in a second pull
+   request. Each action offered gets the targets it takes, its categories' or every target, and
+   `no_target` only if it does not require a target; `none` gets `no_target` alone. Actions with
+   the same list share one branch. An action that requires a target and takes none of those
+   registered is left out of the schema and the examples, as an action needing a target already is
+   when there are no targets at all. `DecisionSchema` keeps the flat `action` and `target` fields,
+   the union of the branches, so the prompt's list, the target rule, the grounding guard and the
+   parser read exactly what they read today, and carries the pairs beside them. Only
+   `JsonSchemaSerializer` emits them, as a root `anyOf` of complete objects, each with the three
+   fields in the measured order, `required`, `propertyOrdering` and `additionalProperties: false`.
+   `SchemaLegalityGuard` rejects a pair a paired request did not offer, since the grammar should
+   have made it impossible.
+
+**What the grammar does with it.** Read in llama.cpp b11963, the version Ollama 0.40.14 bundles:
+`common/json-schema.cpp` turns `oneOf` and `anyOf` alike into one union, and drops the keywords
+beside them (`properties`, `type`, `required`), which is why each branch is a complete object and
+the root carries nothing else. Each alternative's object rule walks its properties in the order
+given, so the measured field order survives on Ollama's rendered path and is lost on its native
+path exactly as the flat schema's is (findings, 5 November). Unknown keywords, `propertyOrdering`
+and `description`, are ignored. That is read from the source, not seen: no paired request has been
+sent to Ollama yet.
+
+**Limits on other providers.** Gemini's schema subset has `anyOf` and no `oneOf`. Its limit is on a
+schema's overall size and complexity rather than a published enum count, and a paired schema repeats
+each target once per branch that takes it, so it grows with actions times targets. OpenAI's strict
+structured outputs refuse a root `anyOf` altogether. Neither provider exists yet (§2.4); each must
+check its own limit, or send the flat schema, before it sends a paired one.
+
+**Consequences**
+
+- Additive. `ITargetSource`, `IActionHandler` and every existing signature keep their members; the
+  interface's contract now states the merge rule. With nothing declared and every option off, the
+  request is byte-identical, and a test holds our evaluation set's schema, as `EvalRunner` sends
+  it, to the shape every measurement so far was scored against.
+- The demos can delete workarounds. **GreyBoxVillage**: `target_fits_action`, for categories on its
+  quests and actions; the categories restricted by hand on each source, for
+  `AgentBehaviour.TargetCategories`; `NightWatch` and `Responder` as components that exist only to
+  keep actions off Bram, for `OnlyActions`; and the skip in `GuardTargetSource`, which `Offer` does.
+  **Living Vale**: the pair guards in `TradeActionBinding` and `QuestActionBinding`, once its targets
+  are registered in categories and its actions name them.
+- **Extension point: the Targets research area (#120).** A target in several categories, a source
+  that offers by component type, and conditions per target (Living Vale's gap 19) would sit beside
+  the category as more that an action can require of a target.
+
+**Revisit if:** the A/B shows the paired schema costs accuracy on small models, or that it is worth
+making the default; a game needs a target in more than one category; or a cloud provider needs a
+paired form other than a root `anyOf`.
 
 ### Decisions already recorded elsewhere in this plan
 

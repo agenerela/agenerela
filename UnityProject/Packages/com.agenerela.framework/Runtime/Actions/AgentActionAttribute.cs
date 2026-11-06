@@ -38,5 +38,11 @@ namespace Agenerela
 
         /// <summary>Does this action need something to act on?</summary>
         public bool RequiresTarget { get; set; }
+
+        /// <summary>
+        /// The target categories this action takes, such as <c>new[] { "quest" }</c>; null, the
+        /// default, takes any target. Copied to <see cref="ActionDefinition.TargetCategories"/>.
+        /// </summary>
+        public string[] TargetCategories { get; set; }
     }
 }

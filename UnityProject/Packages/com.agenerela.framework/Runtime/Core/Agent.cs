@@ -28,13 +28,17 @@ namespace Agenerela
     /// </remarks>
     public sealed class Agent
     {
-        // The only guard Execute runs again: legality is what can change between deciding and
-        // acting. Grounding judged the reply, which Execute does not have.
+        // The guards Execute runs again: legality, and whether the target is a kind the action
+        // takes, are what can change between deciding and acting. Grounding judged the reply, which
+        // Execute does not have.
         private static readonly SchemaLegalityGuard Legality = new SchemaLegalityGuard();
+        private static readonly TargetCategoryGuard Categories = new TargetCategoryGuard();
 
         // The built-in guards, in the order §2.5 fixes. They run before Guards and are never in it.
-        private static readonly IDecisionGuard[] BuiltInGuards = { Legality, new TargetGroundingGuard() };
-        private static readonly IDecisionGuard[] ExecuteGuards = { Legality };
+        // The category guard comes after grounding, so declaring categories never changes what
+        // grounding reads or records (DR-020).
+        private static readonly IDecisionGuard[] BuiltInGuards = { Legality, new TargetGroundingGuard(), Categories };
+        private static readonly IDecisionGuard[] ExecuteGuards = { Legality, Categories };
 
         // Read once by each decision, which keeps it to the end. Its queue and health are found by
         // the instance, so every agent given it shares them (DR-013, DR-015).
@@ -211,11 +215,34 @@ namespace Agenerela
         /// developer's own for one with no scene. Empty by default.
         /// </summary>
         /// <remarks>
-        /// An id offered twice, by <see cref="Targets"/> and a source or by two sources, makes the
-        /// decision a <see cref="DecisionOutcome.PipelineError"/>: two objects answering to one id
-        /// cannot both be offered (DR-014).
+        /// An id offered for two different objects, by <see cref="Targets"/> and a source or by two
+        /// sources, makes the decision a <see cref="DecisionOutcome.PipelineError"/>: two objects
+        /// answering to one id cannot both be offered (DR-014). The same object offered twice is one
+        /// target, as the first offer registered it (DR-020): the built-in sources skip it, and a
+        /// source of the developer's does the same through <see cref="TargetRegistry.Offer"/>.
         /// </remarks>
         public List<ITargetSource> TargetSources { get; }
+
+        /// <summary>
+        /// The only target categories this agent is ever offered, whichever source finds them (#190
+        /// G3, DR-020): a guard given <c>place</c>, <c>person</c> and <c>creature</c> is never offered
+        /// the market's wares. Empty by default, which offers every target, as before.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Applied on every decision, and at <see cref="Execute"/>'s re-check, after
+        /// <see cref="Targets"/> and every one of <see cref="TargetSources"/> have added theirs: a
+        /// target whose <see cref="TargetRegistry.CategoryOf"/> is not listed, or which has no
+        /// category, is left out, as a <c>Targetable</c> outside a proximity source's radius is. It is
+        /// not recorded as dropped. Categories compare ordinally, and a blank entry is ignored.
+        /// </para>
+        /// <para>
+        /// A source's own cap is applied before this, so a proximity source capped at 8 that finds 3
+        /// wares leaves 5. Give the source the same categories, or let <c>AgentBehaviour</c> copy them
+        /// to its proximity source, which it does when that source names none.
+        /// </para>
+        /// </remarks>
+        public List<string> TargetCategories { get; } = new List<string>();
 
         /// <summary>
         /// Where the agent's own observations come from, asked in order on every decision after
@@ -340,8 +367,8 @@ namespace Agenerela
         /// </summary>
         /// <remarks>
         /// <para>
-        /// The built-in guards, <see cref="SchemaLegalityGuard"/> and then the grounding guard, are
-        /// never in this list and cannot be removed; <see cref="DecideOptions.CheckTarget"/> turns
+        /// The built-in guards, <see cref="SchemaLegalityGuard"/>, the grounding guard and
+        /// <see cref="TargetCategoryGuard"/>, are never in this list and cannot be removed; <see cref="DecideOptions.CheckTarget"/> turns
         /// grounding off for one call. Once a guard has stopped a decision, the rest are skipped.
         /// </para>
         /// <para>
@@ -478,7 +505,7 @@ namespace Agenerela
         /// <para>
         /// The guards (build plan §2.5) run on every decision, never on a pipeline error: first
         /// <see cref="SchemaLegalityGuard"/>, then the grounding guard (#105), then
-        /// <see cref="Guards"/>, the developer's (#108). The first that does not pass stops them,
+        /// <see cref="TargetCategoryGuard"/> (DR-020), then <see cref="Guards"/>, the developer's (#108). The first that does not pass stops them,
         /// and the result's <see cref="DecisionResult.Decision"/> becomes <see cref="ActionRegistry.None"/> with
         /// <see cref="TargetRegistry.NoTarget"/>. The model's own answer stays on
         /// <see cref="DecisionResult.ModelDecision"/>, the verdict on
@@ -583,8 +610,8 @@ namespace Agenerela
         /// <see cref="TargetRegistry.NoTarget"/>; an action that needs a target got a real one; and
         /// the action is available, recomputed here rather than taken from the request it was
         /// chosen from. The targets are resolved again for it, so one a source no longer offers is
-        /// refused. No other guard runs again: grounding judged the reply, which this call does not
-        /// have. A refusal is added to the result's telemetry, as
+        /// refused. <see cref="TargetCategoryGuard"/> runs again after it (DR-020). No other guard
+        /// runs again: grounding judged the reply, which this call does not have. A refusal is added to the result's telemetry, as
         /// <c>"SchemaLegalityGuard@Execute"</c> in <see cref="DecisionTelemetry.GuardsFired"/>, with
         /// <see cref="DecisionTelemetry.Verdict"/> and <see cref="DecisionTelemetry.GuardReason"/>;
         /// <see cref="DecisionResult.Verdict"/> stays what <see cref="DecideAsync"/> made it.
@@ -1309,7 +1336,7 @@ namespace Agenerela
             foreach (string id in Targets.Ids)
             {
                 Targets.TryGet(id, out object target);
-                targets.Register(id, target);
+                targets.Register(id, target, Targets.CategoryOf(id));
             }
 
             for (int i = 0; i < TargetSources.Count; i++)
@@ -1329,7 +1356,36 @@ namespace Agenerela
                 }
             }
 
+            KeepAllowedCategories(targets);
             return ctx;
+        }
+
+        // TargetCategories over the resolved set: with any listed, only targets in one of them stay.
+        private void KeepAllowedCategories(TargetRegistry targets)
+        {
+            HashSet<string> allowed = null;
+            foreach (string category in TargetCategories)
+            {
+                if (!string.IsNullOrWhiteSpace(category))
+                {
+                    (allowed ??= new HashSet<string>(StringComparer.Ordinal)).Add(category);
+                }
+            }
+
+            if (allowed == null)
+            {
+                return;
+            }
+
+            // A copy: Ids is a live view of the registry being changed.
+            foreach (string id in new List<string>(targets.Ids))
+            {
+                string category = targets.CategoryOf(id);
+                if (category == null || !allowed.Contains(category))
+                {
+                    targets.Unregister(id);
+                }
+            }
         }
 
         // The decision's context with its observations complete: each source's lines, in source
