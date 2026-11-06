@@ -216,6 +216,19 @@ namespace LivingVale.Tests
             Assert.AreEqual("1.2 km", NavigationMath.Distance(1240f));
         }
 
+        // ---------- Map ----------
+
+        [Test]
+        public void TheMapPanelIsOpaqueAndItsBackdropDimsInLinearSpace()
+        {
+            // Linear colour space blends alpha in linear light; anything short of 1 shows the scene
+            // through the map (G8b), and a backdrop under about 0.8 barely dims it.
+            Assert.AreEqual(UnityEngine.QualitySettings.activeColorSpace, UnityEngine.ColorSpace.Linear,
+                "these alphas were chosen for linear space");
+            Assert.AreEqual(1f, MapOverlay.PanelColour.a);
+            Assert.GreaterOrEqual(MapOverlay.BackdropColour.a, 0.8f);
+        }
+
         // ---------- Name tags ----------
 
         [Test]
