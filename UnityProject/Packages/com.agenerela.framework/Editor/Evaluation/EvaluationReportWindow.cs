@@ -61,12 +61,23 @@ namespace Agenerela.Editor.Evaluation
         private string runMessage;
         private ProblemSeverity? runSeverity;
 
+        /// <summary>The size the window opens at when it is not already open: wide enough for a report's tables without wrapping.</summary>
+        internal static readonly Vector2 DefaultSize = new Vector2(780, 900);
+
         [MenuItem("Window/Agenerela/Evaluation Report")]
         public static void Open()
         {
+            bool fresh = !HasOpenInstances<EvaluationReportWindow>();
             var window = GetWindow<EvaluationReportWindow>();
             window.titleContent = new GUIContent("Evaluation Report");
             window.minSize = new Vector2(560, 420);
+            if (fresh)
+            {
+                // Unity opens a new window small; one already open keeps the size it was given.
+                float height = Mathf.Min(DefaultSize.y, Screen.currentResolution.height - 120);
+                window.position = new Rect(window.position.x, window.position.y, DefaultSize.x, Mathf.Max(420, height));
+            }
+
             window.Show();
         }
 

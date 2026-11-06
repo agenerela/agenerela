@@ -612,6 +612,7 @@ namespace Agenerela.Editor.Evaluation
                 line.name = "category-" + row.Id;
                 var id = new VisualElement();
                 id.AddToClassList("er-cell");
+                id.AddToClassList("er-cell--chip");
                 id.Add(new Chip(row.Id));
                 line.Add(id);
                 line.Add(Cell(row.N.ToString(), "er-cell--n"));

@@ -314,8 +314,9 @@ While the version stays `0.x`, the public API may change in any release.
   and its primary button. The five outcomes' fills come from the kit's variables, so both editor
   skins read. Two changes the lead approved with the redrawn screen 4: **Run set-up** folds to one
   line, with **Run A/B** on it, while a report is shown; and on first open the one primary
-  button is the **Start here** card's. EditMode tests now build the window's tree and check what
-  it shows, and that nothing runs past the window at its 560 px minimum.
+  button is the **Start here** card's. It opens at 780 × 900 rather than Unity's small default,
+  at the lead's request; its minimum stays 560 px. EditMode tests now build the window's tree and
+  check what it shows, and that nothing runs past the window at its 560 px minimum.
 
 - **The same target from two sources is one target** (#190 B, G13, DR-020). `ExplicitTargetSource`
   and `ProximityTargetSource` skip an id an earlier source, or `Agent.Targets`, already registered

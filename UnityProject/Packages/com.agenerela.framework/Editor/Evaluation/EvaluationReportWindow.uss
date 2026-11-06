@@ -201,8 +201,15 @@
 }
 
 .er-arm-bar__name {
-    width: 110px;
+    width: 140px;
     flex-shrink: 0;
+    padding-right: var(--ag-space-s);
+    overflow: hidden;
+}
+
+/* An arm's name and its model and guard wrap in their column rather than run under the bar */
+.er-arm-bar__name > Label {
+    white-space: normal;
 }
 
 .er-arm-bar__title {
@@ -236,7 +243,7 @@
 
 .er-legend {
     flex-wrap: wrap;
-    margin: 0 0 var(--ag-space-m) 110px;
+    margin: 0 0 var(--ag-space-m) 140px;
 }
 
 .er-legend__item {
@@ -286,8 +293,13 @@
 
 .er-cell--difference {
     flex-grow: 0;
-    flex-basis: 130px;
+    flex-basis: 170px;
     -unity-text-align: middle-right;
+}
+
+/* A cell holding a chip: the chip keeps its own width */
+.er-cell--chip {
+    align-items: flex-start;
 }
 
 .er-cell--accuracy {
