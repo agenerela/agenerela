@@ -10,6 +10,32 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **What executing a decision did** (#190 C, DR-018): `ActionResult`, a value type made by
+  `ActionResult.Done(payload)` and `ActionResult.Failed(reason, payload)`, with `Status`
+  (`ExecutionStatus`: `Done`, `Failed`, `NoAction`, `Refused`), `Reason`, `Payload`,
+  `Succeeded`, `HandlerRan` and `TryGetPayload<T>`. A handler returns one through
+  `IActionHandlerWithResult`, an optional interface beside `IActionHandler`; through
+  `DelegateActionHandler.WithResult`; or from an `[AgentAction]` method that returns
+  `ActionResult` instead of `void`. The new overload `Agent.Execute(result, out ActionResult)`
+  hands it to the caller, with `NoAction` for `none` and `Refused`, with the reason, whenever no
+  handler ran. `Execute(result)` is unchanged except that a handler reporting `Failed` makes it
+  false; a handler that reports nothing is `Done` whenever it returns. `DecisionTelemetry` gains
+  `Execution` and `ExecutionReason`, written by every `Execute`.
+- **`DecideOptions.Correlation`** (#190 C): the caller's own object for a call, which the
+  framework never reads, carried on `DecisionResult.Correlation`, pipeline errors included, and
+  on `AgentContext.Correlation` of every context made for the decision, the one `Execute` hands the
+  handler included. `AgentContext` gains a constructor that takes it.
+- **`Agent.MemoryCommit`** (#190 C): `MemoryCommit.OnDecide`, the default and the behaviour so
+  far, or `MemoryCommit.OnExecute`, under which a decision is held on its result until
+  `Execute` carries it out or the game calls `Agent.Commit(result)` or `Agent.Discard(result)`,
+  so a reply dropped as stale is never remembered.
+- **Saving memory** (#190 C): `IExportsMemory`, an optional interface beside `IMemoryStrategy`,
+  with `Export()` and `Import(MemorySnapshot)`. `MemorySnapshot` (`Format`, `Version`,
+  `Exchanges` of `MemoryExchange`, `Data`) is public fields and lists, for `JsonUtility` and
+  Newtonsoft. `RollingHistory` implements it, as `RollingHistory.SnapshotFormat` version 1, and
+  imports any strategy's exchanges.
+- `Documentation~/executing-and-memory.md`: handler results, correlation, memory that waits, and
+  saving memory.
 - **The actions and targets, listed in the prompt** (#190 A, Living Vale #1, GreyBoxVillage G9):
   `DecideOptions.ListActionsAndTargets`, off by default, and `PromptOptions.ListActionsAndTargets`
   beside it. On, the system prompt gains, after the instruction line, "Allowed actions:" with every
