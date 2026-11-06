@@ -19,6 +19,13 @@ namespace LivingVale.UI
         private static readonly Color Gold = new Color(1f, 0.82f, 0.3f);
         private static readonly Color NpcColour = new Color(0.55f, 0.8f, 0.85f);
 
+        // The project renders in linear colour space, where uGUI blends alpha in linear light: a dark
+        // panel at 0.96 still lets a bright scene through at a fifth of its perceived brightness, so
+        // the stall behind the map stayed readable (G8b). The map is a modal page, so the panel is
+        // opaque, and the backdrop is strong enough to read as a dim in linear space.
+        public static readonly Color PanelColour = new Color(0.05f, 0.07f, 0.06f, 1f);
+        public static readonly Color BackdropColour = new Color(0f, 0f, 0f, 0.8f);
+
         private sealed class Marker
         {
             public RectTransform Root;
@@ -67,10 +74,10 @@ namespace LivingVale.UI
 
             RectTransform backdrop = Rect("Backdrop", root, Vector2.zero, Vector2.zero);
             backdrop.anchorMax = Vector2.one;
-            Paint(backdrop, new Color(0f, 0f, 0f, 0.55f));
+            Paint(backdrop, BackdropColour);
             RectTransform panel = Rect("Map panel", root, Vector2.zero, new Vector2(560f, 560f));
             panel.anchorMin = panel.anchorMax = panel.pivot = new Vector2(0.5f, 0.5f);
-            Paint(panel, new Color(0.05f, 0.07f, 0.06f, 0.96f));
+            Paint(panel, PanelColour);
             Text title = Label("Title", panel, new Vector2(20f, 526f), new Vector2(520f, 28f), 22, Ink);
             title.text = "Map";
             title.alignment = TextAnchor.MiddleCenter;

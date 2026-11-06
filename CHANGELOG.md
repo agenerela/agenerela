@@ -77,6 +77,10 @@ phase table and the open issues, not here.
   `Assets/Evaluation/labels/<annotator>/<category>.json`; the README says how.
 - **Screen 8, the Prompt Set window**, in `docs/design/`: the wireframe drawn for #134 before the
   window was built, with its notes.
+- **Living Vale G8b: the map is opaque** (#69), on `69-living-vale`: the project renders in linear
+  colour space, where uGUI blends alpha in linear light, so the map panel at alpha 0.96 still let
+  the stall behind it show through and the 0.55 backdrop barely dimmed the scene. The panel is now
+  opaque and the backdrop 0.8, and a test pins both.
 - **Living Vale G8a: finding your way** (#69), on `69-living-vale`: a compass strip at the top
   centre with the compass points, discovered places and a gold marker for the next quest goal with
   its distance, worked out in plain C# from quest state by `Game/QuestGuide.cs` (talk to Iven, the
