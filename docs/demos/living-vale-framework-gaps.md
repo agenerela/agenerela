@@ -470,6 +470,8 @@ measurement carries over; the G5g A/B ran with it in both arms' places.
 
 ### 22. `RollingHistory.Import` accepts any snapshot format and version
 
+**Status:** in the framework since #205 (a memory snapshot is checked before loading, and another format is refused).
+
 - **Observed (G5h):** `Import` reads the exchanges of any strategy's snapshot and ignores
   `MemorySnapshot.Format` and `Version`, by design (DR-018), and throws only on a null exchange.
   A save written by a future strategy, or a newer `RollingHistory` version, would load silently.
@@ -482,6 +484,8 @@ measurement carries over; the G5g A/B ran with it in both arms' places.
 - **Research area:** memory (#119).
 
 ### 23. Memory belongs to one agent, so two drivers for one NPC keep two
+
+**Status:** addressed in the framework by #205, per the master's commit for LV #22/#23. The game still keeps separate scripted and model memories until it adopts it.
 
 - **Observed (G5h):** since G5g the scripted replies go through their own `Agent` per NPC
   (`ScriptedAgentDriver`), with its own `RollingHistory`. An NPC the player talks to with
