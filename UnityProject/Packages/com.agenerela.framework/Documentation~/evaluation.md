@@ -145,9 +145,10 @@ Under the prompt, the rules it breaks show as you type:
   nothing else.
 - **The state matches the action's `onlyWhen`**: every `stop_following` prompt starts from
   `{ "isFollowing": true }`.
-- **The stimulus is not a few-shot example**: not any action's `ExampleStimulus`, with any
-  target in its `{0}`, nor the profile's `IdleExampleStimulus`. Scoring a model on a sentence it
-  was shown as an example measures nothing.
+- **The stimulus is not a few-shot example**: not any action's `ExampleStimulus` or
+  `CounterExampleStimulus`, with any target in its `{0}`, nor the profile's
+  `IdleExampleStimulus`. Scoring a model on a sentence it was shown as an example measures
+  nothing.
 - **Ids are unique and follow `<idPrefix>_<nnn>`.**
 
 Two rules no check can make: observations describe the world, not the framework or the test

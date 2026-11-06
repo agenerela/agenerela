@@ -51,8 +51,8 @@ namespace Agenerela
         /// An agent built from a profile, the asset a developer creates first (#15). It keeps the
         /// profile's identity object, so editing that identity's fields changes every agent built
         /// from the profile, but assigning the profile a different identity later does not. The
-        /// idle example is read from the profile on every call. Its actions are registered with
-        /// <see cref="Bind"/>.
+        /// idle example is read from the profile on every call, unless <see cref="IdleExampleStimulus"/>
+        /// is set. Its actions are registered with <see cref="Bind"/>.
         /// </summary>
         /// <exception cref="ArgumentNullException"><paramref name="profile"/> or <paramref name="provider"/> is null.</exception>
         /// <exception cref="ArgumentException">The profile has no identity.</exception>
@@ -76,8 +76,8 @@ namespace Agenerela
         /// <summary>
         /// An agent built in code, with no asset (DR-011). <paramref name="actions"/> are the actions
         /// it can ever take, the code equivalent of a profile's list; <see cref="Bind"/> registers
-        /// them. It has no idle example unless a call passes one in
-        /// <see cref="DecideOptions.IdleExampleStimulus"/>.
+        /// them. It has no idle example unless <see cref="IdleExampleStimulus"/> is set or a call
+        /// passes one in <see cref="DecideOptions.IdleExampleStimulus"/>.
         /// </summary>
         /// <exception cref="ArgumentNullException">An argument is null.</exception>
         /// <exception cref="ArgumentException">An entry of <paramref name="actions"/> is null.</exception>
@@ -129,6 +129,20 @@ namespace Agenerela
 
         /// <summary>Who this agent is. The model reads it on every call.</summary>
         public AgentIdentity Identity { get; }
+
+        /// <summary>
+        /// The stimulus of this agent's idle example, the one answered with <c>none</c>, for every
+        /// call that does not pass its own in <see cref="DecideOptions.IdleExampleStimulus"/>. Null by
+        /// default, which uses the profile's <see cref="AgentProfile.IdleExampleStimulus"/>, so an agent
+        /// built in code has none (#190, Living Vale #13). Empty leaves the example out. Read on every
+        /// call, as the profile's is.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="AgentProfile.DefaultIdleExampleStimulus"/> gives a code-built agent the example a
+        /// new profile has. It stays off by default because turning it on moves what a code-built
+        /// agent sends, and whether an idle example helps is still unmeasured (build plan §2.3, #151).
+        /// </remarks>
+        public string IdleExampleStimulus { get; set; }
 
         /// <summary>
         /// The actions this agent can take, each bound to the code that runs it (#6). Filled by
@@ -340,8 +354,9 @@ namespace Agenerela
         /// arrived, in <see cref="DecisionResult.Reply"/>, pipeline errors included (#142).
         /// </returns>
         /// <exception cref="ArgumentException">
-        /// <see cref="DecideOptions.StimulusLabel"/> is null, empty or whitespace. Thrown by the call
-        /// itself, before anything is sent: it is a mistake in the calling code, not an event.
+        /// <see cref="DecideOptions.StimulusLabel"/> is null, empty or whitespace, or
+        /// <see cref="DecideOptions.MaxListedTargets"/> is negative. Thrown by the call itself, before
+        /// anything is sent: it is a mistake in the calling code, not an event.
         /// </exception>
         /// <exception cref="OperationCanceledException">
         /// Thrown when the result is awaited, if <paramref name="ct"/> was cancelled before the reply
@@ -419,10 +434,16 @@ namespace Agenerela
                     nameof(options));
             }
 
+            if (options.MaxListedTargets < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), options.MaxListedTargets,
+                    "DecideOptions.MaxListedTargets cannot be negative. 0 lists no targets.");
+            }
+
             // A list of the context's own, apart from the options' copy a guard may read. Blank
             // lines are not something the agent knows, so they take no place under the cap.
             var observations = new ReadOnlyCollection<string>(NotBlank(options.Observations));
-            string idleExample = options.IdleExampleStimulus ?? (profile != null ? profile.IdleExampleStimulus : null);
+            string idleExample = options.IdleExampleStimulus ?? IdleExampleStimulus ?? (profile != null ? profile.IdleExampleStimulus : null);
 
             return Decide(stimulus, options, idleExample, observations, ct);
         }
@@ -524,13 +545,21 @@ namespace Agenerela
             try
             {
                 ctx = Observe(Snapshot(stimulus, observations, telemetry.TargetsDropped), telemetry.ObservationsDropped);
-                var options = new PromptOptions { StimulusLabel = label, IdleExampleStimulus = idleExample, TargetRule = call.CheckTarget && provider.Capabilities?.ReportsTokenProbabilities != true };
+                var options = new PromptOptions
+                {
+                    StimulusLabel = label,
+                    IdleExampleStimulus = idleExample,
+                    TargetRule = call.CheckTarget && provider.Capabilities?.ReportsTokenProbabilities != true,
+                    ListActionsAndTargets = call.ListActionsAndTargets,
+                    MaxListedTargets = call.MaxListedTargets,
+                    CounterExamples = call.CounterExamples,
+                };
 
                 // Asked once, so the action enum and the examples come from one answer even when an
                 // availability check is not a pure function of the context, such as a cooldown.
                 var available = ActionAvailability.For(ctx);
                 var schema = DecisionSchema.Build(ctx, available);
-                string fewShot = FewShotBuilder.Build(available, ctx.Targets, label, idleExample);
+                string fewShot = FewShotBuilder.Build(available, ctx.Targets, label, idleExample, options.CounterExamples);
 
                 var history = Recall(memory, ctx, telemetry);
                 request = PromptBuilder.Build(ctx, schema, fewShot, history, options);
