@@ -29,6 +29,83 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **GreyBoxVillage became Ashford, a village worth exploring** (#153).
+  - **Art:** low-poly art built by a Blender script in `Demos/GreyBoxVillage/ArtSource/`, 77
+    models on one palette. The grey boxes stay as invisible colliders, so the NavMesh and the
+    tests are unchanged.
+  - **Atmosphere:** sky, fog, post-processing, water, lamps, fire, smoke and a day and night
+    cycle.
+  - **Controls:** a third-person camera, running, and E to talk or pick up.
+  - **UI Toolkit:** one theme for the HUD, dialogue panel, speech bubbles, framework view (Tab,
+    with target ids over places and the request queue), pack (I), journal (J), menu and title
+    screen.
+  - **Two more agents:** Odile the merchant and Captain Hale, on the same provider config.
+  - **Quests and an inventory:** quests reach the model as targets through a custom
+    `ITargetSource`.
+  - **New game guards:** `cannot_afford`, `no_free_gifts`, `quest_not_ready` and
+    `target_fits_action`.
+- **GreyBoxVillage is ready to present** (#153, polish slice).
+  - **Play mode changes no file:** the day and night cycle drives copies of the palette and sky,
+    and the default volume profile no longer names two scripts the project lacks.
+  - **No static state** outlives a play session, so it plays the same with the domain reload off;
+    a test checks every static field.
+  - **With no model running**, a HUD banner and a red bubble say so, and the agents stop asking on
+    their own until it answers.
+  - **The scene file went from 4.96 MB to about 1.2 MB:** the palette comes with the FBX import,
+    the nature scatter is drawn with GPU instancing (`ScatterField`), and the particle effects are
+    prefabs. The bushes, flowers and grass inside the walls now appear: the builder's check for
+    buildings in the way had always found the ground.
+  - **The capture tool draws the UI** (`CaptureUiFromCommandLine`) and measures the frame time.
+    The layout fixes it found:
+    - the agent list clear of the purse, on a panel of its own, like the key hints;
+    - toasts, at most three, stacked under the quest tracker, away from speech bubbles;
+    - world labels kept out from under every panel and from each other;
+    - bubbles above name tags;
+    - a card title that wraps;
+    - opaque book, menu, framework view and title panels.
+  - **Portraits** lit from the viewer's side, so Odile's face reads, and a title screen backdrop.
+- **GreyBoxVillage's situations, and a five-minute presenter script** (#153, situations slice).
+  Each situation chains one agent's decision into another's, through the game alone.
+  - **The thief:** it takes a ware from Odile's counter and runs for the eastern road. Odile can
+    `call_guard`, whose target is a guard from a custom `ITargetSource`, and her call becomes that
+    guard's `Merchant` stimulus. Wren can `chase` the thief, and Bram goes after it with
+    `attack_target`; caught, it drops the ware back on the counter.
+  - **Night at the gate:** nightfall shuts the gate. Wren takes the night watch and alone gets
+    `open_gate` and `close_gate`, and Bram goes off watch. A test checks that Bram, the evaluation
+    agent, is offered the same actions by night as by day.
+  - **A fire** at the bread stall: whoever sees the smoke is asked, and Wren can `fetch_water`
+    from the well until three buckets put it out.
+  - **Bram keeps his actions:** `chase`, `fetch_water` and the gate's actions sit on components only
+    Wren carries, and a test checks that whatever happens Bram is offered nothing new.
+  - **No `bell_cooldown` guard:** availability already keeps the bell from ringing twice within
+    30 s, and a test checks two guards answering at once ring it once.
+  - **Presenter keys** F1 to F5 (reset, the wolf, the thief, a fire, dusk) and a panel (F12).
+    They work with the framework view open, not while typing.
+  - **The presenter script** in the README runs end to end as a Play-mode test against scripted
+    replies, and once live through `PresenterLiveFromCommandLine`.
+  - **Two kit models,** `gate_door` and `bucket`, and `KIT_ONLY` to rebuild only the models named.
+  - **Fixes the live run found:** a guard attacking a running thief now runs after it, and a wolf
+    running for its den is no longer reported. Agents are told when it is night.
+- **GreyBoxVillage's day and its weather** (#153, explore slice, first part).
+  - **A daily routine:** the four villagers go to the well at dawn, to work (the fields outside the
+    gate, or the market), to the square at midday, to the campfire at dusk, and home after dark,
+    where the lamp by each door comes on. The bell sends them to the shelter, and they go back to
+    their day when it stops. F5 puts them at the campfire, inside the gate it shuts.
+  - **Every agent is told who is where,** such as "In the village: the market is busy (ada, mira),
+    the square is empty, tomas and pell are working the fields outside the gate."
+  - **Weather:** clear, overcast, rain and fog, changing by itself a few times a day and on a new
+    presenter key, **F6**. Rain falls round the camera, the ground darkens, mist drifts and the sky
+    greys, all on the runtime copies of the palette and the sky.
+  - **It changes what the agents notice:** rain and fog shorten a guard's sight to 22 m and 15 m,
+    so the wolf is seen later and a thief lost sooner, and every agent is told the weather and how
+    far it can see. It never changes what an agent is offered.
+  - **Bram keeps his actions and targets:** tests check that no hour and no weather gives him or
+    takes from him an action or a target, and that the slice adds no target to the village.
+  - `CaptureExploreFromCommandLine` captures the routine at four hours and each weather.
+- **GreyBoxVillage's reset, after #157's landing review** (#153). F1 now cancels what the old
+  agents still have queued or with the model, so the next stage never waits behind an answer nobody
+  will use, and it restarts the guards' quiet timers, so nobody is asked about a quiet moment the
+  moment the village resets. F3 pressed while a thief runs puts its ware back first.
 - **An editor UI kit** (#167) in the package's `Editor/UI/`, for the Phase 5 screens to share.
   It is internal to `Agenerela.Editor`, so it adds no public API.
   - `Agenerela.uss` holds colour, spacing and type variables (`--ag-*`) built on Unity's own

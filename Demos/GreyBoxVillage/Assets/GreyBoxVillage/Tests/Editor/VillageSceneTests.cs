@@ -31,6 +31,10 @@ namespace Demos.GreyBoxVillage.Tests
         public readonly List<DecisionRequest> Requests = new List<DecisionRequest>();
         public int Calls;
         public bool Hold;
+        /// <summary>When set, answers each request with what it gives, such as the presenter script; <see cref="Reply"/> otherwise.</summary>
+        public Func<DecisionRequest, string> Script;
+        /// <summary>While set, every request fails as a provider fails when no model answers: Ollama stopped, the model missing.</summary>
+        public ProviderErrorKind? Fail;
         private AwaitableCompletionSource<ProviderResult> held;
 
         public FakeVillageProvider(string reply) => Reply = reply;
@@ -44,18 +48,26 @@ namespace Demos.GreyBoxVillage.Tests
             Requests.Add(req);
             Calls++;
             var source = new AwaitableCompletionSource<ProviderResult>();
-            if (Hold)
+            if (Fail != null) source.SetException(new ProviderException(Fail.Value, Name, "The fake provider is set to fail: " + Fail.Value + "."));
+            else if (Hold)
             {
                 Hold = false;
                 held = source;
+                heldRequest = req;
+                // As OllamaProvider does: a cancelled caller gets OperationCanceledException.
+                if (ct.CanBeCanceled) ct.Register(() => source.TrySetCanceled());
             }
-            else source.SetResult(Result());
+            else source.SetResult(Result(req));
             return source.Awaitable;
         }
 
-        public void Release() => held.SetResult(Result());
+        private DecisionRequest heldRequest;
 
-        private ProviderResult Result() => new ProviderResult { Text = Reply, Model = "fake-model", TokenProbabilities = TokenProbabilities };
+        /// <summary>Answers the held request, unless its caller cancelled it.</summary>
+        public void Release() => held.TrySetResult(Result(heldRequest));
+
+        private ProviderResult Result(DecisionRequest req) =>
+            new ProviderResult { Text = Script != null ? Script(req) : Reply, Model = "fake-model", TokenProbabilities = TokenProbabilities };
 
         public static string Decision(string action, string target, string statement = "Understood.") =>
             "{\"action\":\"" + action + "\",\"target\":\"" + target + "\",\"statement\":\"" + statement + "\"}";
@@ -79,7 +91,7 @@ namespace Demos.GreyBoxVillage.Tests
         private Scene scene;
         private bool openedScene;
         private VillageCommands commands;
-        private AgentMind bram, wren;
+        private AgentMind bram, wren, odile, hale;
         private VillageGuard guard;
         private FakeVillageProvider provider;
         private FakeVillageConfig config;
@@ -102,7 +114,13 @@ namespace Demos.GreyBoxVillage.Tests
             commands.UseProvider(config);
             // The scene can stay loaded between tests, and the guards' state with it.
             foreach (var mind in commands.Minds) mind.Body.ResetState();
+            // And whatever a situation left: the thief, the fire, the night watch.
+            VillageSituationTests.ResetVillage(commands);
             guard.Alarm.Silence();
+            commands.Inventory.Reset(8);
+            commands.Quests.Define();
+            odile = commands.Mind("Odile");
+            hale = commands.Mind("Hale");
         }
 
         [TearDown]
@@ -494,6 +512,67 @@ namespace Demos.GreyBoxVillage.Tests
             Assert.That(Records("Bram").Select(r => r.Outcome), Is.EqualTo(new[] { "error", "error" }));
         }
 
+        [TestCase(ProviderErrorKind.Unreachable, "cannot be reached")]
+        [TestCase(ProviderErrorKind.ModelNotFound, "ollama pull")]
+        public async Task WithNoModelTheVillageSaysSoAndStopsAskingOnItsOwn(ProviderErrorKind failure, string told)
+        {
+            provider.Fail = failure;
+            await bram.HearPlayerAsync("Open the gate.");
+            Assert.That(Records("Bram").Last().Outcome, Is.EqualTo("error"));
+            Assert.That(commands.ModelProblem, Does.Contain(told), "The HUD must say what is wrong with the model.");
+            Assert.That(bram.Body.SpeechType, Is.EqualTo(SpeechKind.Error), "Bram must say no answer came, not stay silent.");
+            Assert.That(bram.Body.Speech, Does.Contain("No answer"));
+            Assert.That(bram.Conversation.Last().Text, Is.EqualTo("(no answer: no model is answering)"),
+                "The dialogue log must say it in the bubble's words, not name an enum.");
+            Assert.That(bram.IsDeciding, Is.False, "Bram must not stay thinking.");
+
+            // What the game notices by itself waits for the model; four agents asking a stopped
+            // server every few seconds would fill the console.
+            int calls = provider.Calls;
+            await wren.ReportEventAsync("wolf", "Event", "A wolf is by the river.", DecisionPriority.Background);
+            var senses = bram.Senses;
+            float quiet = senses.QuietSeconds;
+            try
+            {
+                senses.QuietSeconds = -1f;
+                senses.Sense();
+                for (int i = 0; i < 20; i++) await Task.Delay(5);
+            }
+            finally { senses.QuietSeconds = quiet; }
+            Assert.That(provider.Calls, Is.EqualTo(calls), "An agent asked a model that is down, on its own.");
+            Assert.That(commands.MayAskOnItsOwn, Is.False);
+
+            // The player can always ask, and an answer ends it.
+            provider.Fail = null;
+            await bram.HearPlayerAsync("Hello?");
+            Assert.That(commands.ModelProblem, Is.Null);
+            Assert.That(commands.MayAskOnItsOwn, Is.True);
+        }
+
+        [Test]
+        public async Task AnyReplyEndsTheNoModelWarningEvenAnUnreadableOne()
+        {
+            provider.Fail = ProviderErrorKind.Unreachable;
+            await bram.HearPlayerAsync("Open the gate.");
+            Assert.That(commands.ModelProblem, Is.Not.Null);
+            provider.Fail = null;
+            provider.Reply = "this is not json";
+            await bram.HearPlayerAsync("Open the gate.");
+            Assert.That(commands.ModelProblem, Is.Null, "A model answered, so the warning must go, readable or not.");
+            Assert.That(commands.MayAskOnItsOwn, Is.True);
+            Assert.That(bram.Body.Speech, Does.Contain("could not be read"));
+        }
+
+        [Test]
+        public async Task AnUnreadableReplyIsNotTakenForAMissingModel()
+        {
+            provider.Reply = "this is not json";
+            await bram.HearPlayerAsync("Open the gate.");
+            Assert.That(Records("Bram").Last().Outcome, Is.EqualTo("error"));
+            Assert.That(commands.ModelProblem, Is.Null);
+            Assert.That(commands.MayAskOnItsOwn, Is.True);
+        }
+
         [Test]
         public async Task AGuardDestroyedMidDecisionAsksNothingMore()
         {
@@ -580,7 +659,7 @@ namespace Demos.GreyBoxVillage.Tests
             var start = commands.Player.position;
             try
             {
-                foreach (var mind in commands.Minds)
+                foreach (var mind in commands.Minds.Where(m => m.Body is VillageGuard))
                 {
                     await mind.ReportEventAsync("quiet", "Time", "Time passes quietly at your post.", DecisionPriority.Background);
                     Assert.That(Records(mind.Name).Last().OfferedActions, Does.Contain("patrol"), mind.Name);
@@ -590,6 +669,20 @@ namespace Demos.GreyBoxVillage.Tests
                     provider.Reply = FakeVillageProvider.Decision("none", "no_target");
                     await commands.SubmitAsync("Hello again");
                     Assert.That(Records(mind.Name).Last().OfferedActions, Does.Contain("stop_following"), mind.Name);
+                }
+                // The merchant and the captain, with every quest and stall action they offer.
+                foreach (var mind in new[] { odile, hale })
+                {
+                    commands.Player.position = mind.transform.position + mind.transform.forward * 2.5f;
+                    commands.Inventory.Add("moonpetal", 3);
+                    commands.Inventory.Add("pelt");
+                    provider.Reply = FakeVillageProvider.Decision("none", "no_target");
+                    await commands.SubmitAsync("Hello");
+                    commands.Quests.Get("quest_moonpetals").State = QuestState.Active;
+                    commands.Quests.Get("quest_wolf").State = QuestState.Active;
+                    await commands.SubmitAsync("Hello again");
+                    Assert.That(Records(mind.Name).Last().OfferedActions, Does.Contain("complete_quest"), mind.Name);
+                    commands.Quests.Define();
                 }
             }
             finally { commands.Player.position = start; }
@@ -663,7 +756,7 @@ namespace Demos.GreyBoxVillage.Tests
                 Assert.That(ids.Count(x => x == id), Is.EqualTo(1), id);
             Assert.That(ids, Is.Unique);
             Assert.That(Targetables().Where(t => t.Category == "person").Select(t => t.Id),
-                Is.EquivalentTo(new[] { "bram", "wren", "tomas", "ada", "pell", "mira" }));
+                Is.EquivalentTo(new[] { "bram", "wren", "odile", "hale", "tomas", "ada", "pell", "mira" }));
             var zones = Zones();
             Assert.That(zones.Select(z => z.Id), Is.EquivalentTo(new[] { "armory", "lords_keep", "locked_cave" }));
             foreach (var zone in zones)
@@ -682,8 +775,16 @@ namespace Demos.GreyBoxVillage.Tests
             Assert.That(commands.Board, Is.Not.Null);
             Assert.That(commands.GetComponent<DecisionHistoryPanel>().Commands, Is.EqualTo(commands));
             Assert.That(commands.GetComponent<VillageEvents>().Alarm, Is.EqualTo(guard.Alarm));
-            Assert.That(commands.Minds.Select(m => m.Name), Is.EqualTo(new[] { "Bram", "Wren" }));
+            Assert.That(commands.Minds.Select(m => m.Name), Is.EqualTo(new[] { "Bram", "Wren", "Odile", "Hale" }));
             foreach (var mind in commands.Minds)
+            {
+                Assert.That(mind.Village, Is.EqualTo(commands), mind.Name);
+                Assert.That(mind.Behaviour.Validate(out string problem), Is.True, mind.Name + ": " + problem);
+            }
+            Assert.That(((VillageMerchant)odile.Body).Stock.Select(t => t.Id), Is.EqualTo(new[] { "bread", "apple", "rope", "torch", "lantern" }));
+            Assert.That(commands.Inventory, Is.Not.Null);
+            Assert.That(commands.Quests.Inventory, Is.EqualTo(commands.Inventory));
+            foreach (var mind in commands.Minds.Where(m => m.Body is VillageGuard))
             {
                 var body = (VillageGuard)mind.Body;
                 Assert.That(mind.Village, Is.EqualTo(commands), mind.Name);
@@ -693,7 +794,6 @@ namespace Demos.GreyBoxVillage.Tests
                 Assert.That(body.Alarm, Is.EqualTo(guard.Alarm), mind.Name);
                 Assert.That(body.Post, Is.Not.Null, mind.Name);
                 Assert.That(body.PatrolRoute, Has.All.Not.Null, mind.Name);
-                Assert.That(mind.Behaviour.Validate(out string problem), Is.True, mind.Name + ": " + problem);
             }
             // Both guards ask one provider config asset, so they share one queue.
             Assert.That(original, Is.Not.Null);
@@ -715,7 +815,187 @@ namespace Demos.GreyBoxVillage.Tests
             // UseProvider in SetUp replaced the components, so read the asset the scene was saved with.
             var saved = File.ReadAllText(Path.Combine(Path.GetDirectoryName(Application.dataPath), scenePath));
             string guid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(original));
-            Assert.That(Regex.Matches(saved, "Provider: \\{fileID: \\d+, guid: " + guid).Count, Is.EqualTo(2));
+            Assert.That(Regex.Matches(saved, "Provider: \\{fileID: \\d+, guid: " + guid).Count, Is.EqualTo(commands.Minds.Length));
+        }
+
+        // ---- The market, the captain and the quests -------------------------------------------
+
+        // Stands the player before an agent, so that agent is the one listening.
+        private async Task SayTo(AgentMind mind, string text)
+        {
+            var start = commands.Player.position;
+            try
+            {
+                commands.Player.position = mind.transform.position + mind.transform.forward * 2.5f;
+                await commands.SubmitAsync(text);
+            }
+            finally { commands.Player.position = start; }
+        }
+
+        private Targetable Stock(string id) => ((VillageMerchant)odile.Body).Stock.Single(t => t.Id == id);
+
+        [Test]
+        public async Task OdileSellsWhatIsOnHerCounter()
+        {
+            provider.Reply = FakeVillageProvider.Decision("sell", "bread", "Fresh this morning.");
+            await SayTo(odile, "I'll take a loaf.");
+            Assert.That(odile.Last.Outcome, Is.EqualTo("executed"));
+            Assert.That(commands.Inventory.Count("bread"), Is.EqualTo(1));
+            Assert.That(commands.Inventory.Coins, Is.EqualTo(6));
+            Assert.That(Stock("bread").gameObject.activeSelf, Is.False);
+            // Sold out: the next request no longer offers it.
+            provider.Reply = FakeVillageProvider.Decision("none", "no_target");
+            await SayTo(odile, "Anything else?");
+            Assert.That(provider.Offered("target"), Does.Not.Contain("bread").And.Contain("rope"));
+            Assert.That(provider.LastRequest.Observations, Does.Contain("The player has 6 coins"));
+        }
+
+        [Test]
+        public async Task OdileWillNotSellWhatThePlayerCannotAfford()
+        {
+            commands.Inventory.Reset(3);
+            provider.Reply = FakeVillageProvider.Decision("sell", "lantern", "Twelve coins.");
+            await SayTo(odile, "I want the lantern.");
+            Assert.That(odile.Last.Outcome, Is.EqualTo("contained"));
+            Assert.That(odile.Last.Guard, Is.EqualTo(VillageMerchant.CannotAfford));
+            Assert.That(odile.Last.Said, Is.EqualTo("That costs more than you've got, love."));
+            Assert.That(commands.Inventory.Coins, Is.EqualTo(3));
+            Assert.That(Stock("lantern").gameObject.activeSelf, Is.True);
+        }
+
+        [Test]
+        public async Task OdileGivesAwayOnlyCheapThings()
+        {
+            provider.Reply = FakeVillageProvider.Decision("give", "lantern");
+            await SayTo(odile, "Please, I have nothing.");
+            Assert.That(odile.Last.Outcome, Is.EqualTo("contained"));
+            Assert.That(odile.Last.Guard, Is.EqualTo(VillageMerchant.NoFreeGifts));
+            Assert.That(commands.Inventory.Count("lantern"), Is.Zero);
+            provider.Reply = FakeVillageProvider.Decision("give", "apple", "Here, love.");
+            await SayTo(odile, "Please, I have nothing.");
+            Assert.That(odile.Last.Outcome, Is.EqualTo("executed"));
+            Assert.That(commands.Inventory.Count("apple"), Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task AQuestIsOfferedAndThenCompletedOnlyWhenReady()
+        {
+            provider.Reply = FakeVillageProvider.Decision("offer_quest", "quest_moonpetals", "Bring me three moonpetals.");
+            await SayTo(odile, "Got any work?");
+            var quest = commands.Quests.Get("quest_moonpetals");
+            Assert.That(quest.State, Is.EqualTo(QuestState.Active));
+            // Not ready: completing it is not even offered.
+            provider.Reply = FakeVillageProvider.Decision("none", "no_target");
+            commands.Inventory.Add("moonpetal", 2);
+            await SayTo(odile, "Here they are.");
+            Assert.That(provider.Offered("action"), Does.Not.Contain("complete_quest"));
+            commands.Inventory.Add("moonpetal");
+            provider.Reply = FakeVillageProvider.Decision("complete_quest", "quest_moonpetals", "Lovely, thank you.");
+            await SayTo(odile, "Here they are.");
+            Assert.That(quest.State, Is.EqualTo(QuestState.Done));
+            Assert.That(commands.Inventory.Coins, Is.EqualTo(8 + 15));
+            Assert.That(commands.Inventory.Count("moonpetal"), Is.Zero);
+            Assert.That(commands.Inventory.Count("rope"), Is.EqualTo(1));
+            // Done: the quest leaves the schema.
+            provider.Reply = FakeVillageProvider.Decision("none", "no_target");
+            await SayTo(odile, "Anything else?");
+            Assert.That(provider.Offered("target"), Does.Not.Contain("quest_moonpetals"));
+        }
+
+        [Test]
+        public async Task AQuestTheModelCompletesTooSoonIsContained()
+        {
+            var quest = commands.Quests.Get("quest_moonpetals");
+            quest.State = QuestState.Active;
+            commands.Inventory.Add("moonpetal", 3);
+            provider.Hold = true;
+            provider.Reply = FakeVillageProvider.Decision("complete_quest", "quest_moonpetals");
+            var asking = SayTo(odile, "Here they are.");
+            for (int i = 0; i < 50 && provider.Calls == 0; i++) await Task.Delay(10);
+            // While she thinks, one petal is gone: the guard sees the quest is no longer ready.
+            commands.Inventory.Remove("moonpetal");
+            provider.Release();
+            await asking;
+            Assert.That(odile.Last.Outcome, Is.EqualTo("contained"));
+            Assert.That(odile.Last.Guard, Is.EqualTo(VillageBody.QuestNotReady));
+            Assert.That(quest.State, Is.EqualTo(QuestState.Active));
+            Assert.That(commands.Inventory.Coins, Is.EqualTo(8));
+        }
+
+        [Test]
+        public async Task AnActionAimedAtTheWrongKindOfTargetIsContained()
+        {
+            provider.Reply = FakeVillageProvider.Decision("offer_quest", "market");
+            await SayTo(odile, "Got any work?");
+            Assert.That(odile.Last.Outcome, Is.EqualTo("contained"));
+            Assert.That(odile.Last.Guard, Is.EqualTo(VillageBody.TargetFitsAction));
+            Assert.That(odile.Last.Said, Is.EqualTo("I don't follow you."));
+        }
+
+        [Test]
+        public async Task TheCaptainsOrderBecomesAGuardsStimulus()
+        {
+            provider.Reply = FakeVillageProvider.Decision("send_guard", "docks", "Get down there and look sharp.");
+            await SayTo(hale, "Something is wrong at the docks.");
+            Assert.That(hale.Last.Outcome, Is.EqualTo("executed"));
+            await Idle();
+            var order = commands.Recorder.Records.Single(r => r.Source == "captain");
+            Assert.That(order.Agent, Is.EqualTo("Wren"), "Wren is the nearer free guard to the docks.");
+            Assert.That(order.Label, Is.EqualTo("Captain"));
+            Assert.That(order.Stimulus, Does.Contain("docks").And.Contain("Get down there and look sharp."));
+        }
+
+        [Test]
+        public void TheWolfLeavesItsPeltOnlyDuringTheQuest()
+        {
+            var wolf = bram.Senses.Wolf;
+            Assert.That(wolf.Pelt, Is.Not.Null);
+            var start = wolf.transform.position;
+            try
+            {
+                wolf.Pelt.gameObject.SetActive(false);
+                wolf.Flee();
+                Assert.That(wolf.Pelt.gameObject.activeSelf, Is.False, "No quest, no pelt.");
+                wolf.ResetState();
+                commands.Quests.Get("quest_wolf").State = QuestState.Active;
+                wolf.Flee();
+                Assert.That(wolf.Pelt.gameObject.activeSelf, Is.True);
+                Assert.That(Vector3.Distance(wolf.Pelt.transform.position, wolf.transform.position), Is.LessThan(0.01f));
+            }
+            finally
+            {
+                wolf.Pelt.gameObject.SetActive(false);
+                wolf.ResetState();
+                wolf.transform.position = start;
+            }
+        }
+
+        [Test]
+        public void ThePlayerPicksUpWhatIsWithinReach()
+        {
+            var start = commands.Player.position;
+            var petal = UnityEngine.Object.FindObjectsByType<Pickup>(FindObjectsSortMode.None).First(p => p.ItemId == "moonpetal");
+            try
+            {
+                commands.Player.position = petal.transform.position + new Vector3(1, 0, 0);
+                Assert.That(commands.NearestPickup(), Is.EqualTo(petal));
+                petal.Collect(commands.Inventory);
+                Assert.That(commands.Inventory.Count("moonpetal"), Is.EqualTo(1));
+                Assert.That(commands.NearestPickup(), Is.Null);
+            }
+            finally
+            {
+                petal.gameObject.SetActive(true);
+                commands.Player.position = start;
+            }
+        }
+
+        [Test]
+        public async Task TheGuardsAreNeverOfferedTheStallsWares()
+        {
+            await commands.SubmitAsync("Hello");
+            Assert.That(provider.Offered("target"), Does.Not.Contain("bread").And.Not.Contain("lantern"));
+            Assert.That(provider.Offered("action"), Does.Not.Contain("offer_quest"), "Bram has no quests to give.");
         }
 
         // Asks Bram the way the game does for each source: the player's typed line, or the event

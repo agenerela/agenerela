@@ -28,7 +28,7 @@ namespace Demos.GreyBoxVillage
     /// </summary>
     /// <remarks>
     /// A guard's own senses watch what only it cares about (a trespass, the wolf, its quiet timer).
-    /// This is for what everyone in range notices: for now the bell.
+    /// This is for what everyone in range notices: the bell, and the smoke of a fire.
     ///
     /// <c>[ExecuteAlways]</c> so that <c>OnEnable</c> subscribes to the bell in Edit mode too, where the
     /// EditMode tests ring it; this component has no Update for it to run.
