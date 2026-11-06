@@ -61,6 +61,11 @@ phase table and the open issues, not here.
   drivers, on a card whose Accept button alone makes it Active. `SaveGame` writes a versioned
   snapshot atomically (keeping the previous save), validates before restoring, and never saves a
   quote or offer; F9 saves and F10 loads.
+- **Living Vale G5e: `gemma4:e2b-it-qat` is the game's default model** (#69), adopted by the
+  lead on 5 November after the blind writing comparison. `qwen3.5:2b` is second in F7's list. The
+  starting model now loads through the same settle as F7, so the notice says "loading …" and, if
+  it is not installed, tells the player to press F7 or F6. Its real memory use is in `findings.md`:
+  2.8 GB on the card, against the 1.66 GB `/api/ps` reports.
 - **Living Vale G5d: F7 loads only the model the player stops on** (#69): pressing through the
   list no longer queues a warm-up per model. A model is loaded once the key has rested for a
   second, the one before it is unloaded so two never share the 8 GB card beside the game, and a

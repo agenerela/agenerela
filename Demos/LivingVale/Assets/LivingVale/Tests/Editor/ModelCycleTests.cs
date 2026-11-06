@@ -288,6 +288,30 @@ namespace LivingVale.Tests
         }
 
         [Test]
+        public async Task TheStartingModelLoadsThroughTheSettleAndSaysWhenItCannot()
+        {
+            // As at startup, with the default model missing from the server.
+            var rig = new Rig();
+            rig.First.Failure = new global::Agenerela.Providers.ProviderException(
+                global::Agenerela.Providers.ProviderErrorKind.ModelNotFound, "fake", "Not pulled.");
+
+            rig.Cycle.LoadCurrent();
+            await rig.Settle(0);
+
+            Assert.AreEqual(1, rig.First.Requests.Count, "One warm-up for the starting model.");
+            CollectionAssert.IsEmpty(rig.Loader.Unloaded, "Nothing else was loaded, so nothing is unloaded.");
+            StringAssert.Contains("did not load", rig.Cycle.Notice);
+            StringAssert.Contains("F7", rig.Cycle.Notice, "The notice says how to keep playing.");
+        }
+
+        [Test]
+        public void TheGamesDefaultModelIsFirstAndTheFrameworksIsStillReachable()
+        {
+            Assert.AreEqual("gemma4:e2b-it-qat", ModelCycleDefaults.Models[0]);
+            Assert.AreEqual("qwen3.5:2b", ModelCycleDefaults.Models[1]);
+        }
+
+        [Test]
         public async Task Settling_UnloadsTheModelLoadedBeforeAndNeverAPassedOne()
         {
             var rig = new Rig();

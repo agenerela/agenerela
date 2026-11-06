@@ -221,7 +221,7 @@ namespace LivingVale.Agenerela
             bool ready = await next.WarmUpAsync(token);
             if (!token.IsCancellationRequested && ReferenceEquals(next, Driver))
             {
-                SetNotice(ready ? "" : $"{model} did not load; replies may fail");
+                SetNotice(ready ? "" : $"{model} did not load. F7: another model · F6: scripted");
             }
         }
 
