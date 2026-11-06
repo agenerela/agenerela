@@ -360,7 +360,9 @@ config.Scripted.Otherwise(ScriptedReply.Fail(ProviderErrorKind.Unreachable));   
 ```
 
 Inspector edits reach it as for any config: outside Play mode at once, during Play at the next
-Play. Code scripting `config.Scripted` reaches it at once.
+Play. Code scripting `config.Scripted` reaches it at once, and lasts until the config builds
+a new one: after an Inspector edit outside Play mode, and in the Editor as Play mode starts or
+ends. So script it in Play mode, not from an Edit-mode tool before pressing Play.
 
 ### Testing with the scripted provider
 
