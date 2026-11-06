@@ -2241,7 +2241,7 @@ forbidden in prose. Every request must stay byte-identical while none of this is
 7. **The paired schema**, `DecideOptions.PairTargetsWithActions`, off by default. Each action offered gets the targets it takes, its categories' or every target, and
    `no_target` only if it does not require a target; `none` gets `no_target` alone. Actions with
    the same list share one branch. An action that requires a target and takes none of those
-   registered is left out of the schema and the examples, as an action needing a target already is
+   registered is left out of the schema, the prompt's action list and the examples, as an action needing a target already is
    when there are no targets at all. `DecisionSchema` keeps the flat `action` and `target` fields,
    the union of the branches, so the prompt's list, the target rule, the grounding guard and the
    parser read exactly what they read today, and carries the pairs beside them. Only

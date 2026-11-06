@@ -54,7 +54,7 @@ An action names the categories it takes. Empty, the default, takes any target.
              RequiresTarget = true, TargetCategories = new[] { "quest" })]
 private void Complete(Quest quest) => board.Complete(quest);
 
-// An action asset, or a definition in code: the same field.
+// A definition in code, or an action asset's asset.Action: the same field.
 offerQuest.TargetCategories = new[] { "quest" };
 ```
 
@@ -97,7 +97,9 @@ off until an A/B on the evaluation set shows it helps (hard rule 2, #151). What 
 - An action that requires a target and takes none of those registered is not offered at all, and
   its example is not shown, as an action that needs a target already is when nothing is registered.
 - The system prompt, the action and target list, the target rule and the examples are what they
-  would be without it. Only the schema changes, so an A/B of it measures the schema alone.
+  would be without it, except for an action it leaves out (above), which is gone from the list as
+  well as the schema. When it leaves none out, only the schema changes, so an A/B of it on such a
+  set measures the schema alone.
 - `JsonSchemaSerializer` writes it as a root `anyOf` with one complete object per branch, the
   fields in the measured order. llama.cpp, and so Ollama, compiles that into one grammar.
 - `SchemaLegalityGuard` rejects a reply that pairs an action with a target its branch did not
@@ -117,9 +119,9 @@ be sent the flat schema. None ships yet.
 `Agent.TargetCategories` is an allowlist over everything the agent's sources found:
 
 ```csharp
-guard.TargetCategories.Add("place");
-guard.TargetCategories.Add("person");
-guard.TargetCategories.Add("creature");
+agent.TargetCategories.Add("place");
+agent.TargetCategories.Add("person");
+agent.TargetCategories.Add("creature");
 // The market's wares and the quests are never offered to this guard, whichever source adds them.
 ```
 
@@ -168,7 +170,7 @@ whether or not it is listed.
 | **Only Actions** | The action ids this agent registers. Empty registers every one |
 | **Target Categories** | The only target categories this agent is offered (`Agent.TargetCategories`). Empty offers every target. When **Targets** names no categories of its own, it is given these when the agent is built, so its cap counts only what can be offered |
 
-The Inspector warns about an id in **Only Actions** that no method on the GameObject and no row of
+The Console warns, when the component is validated, about an id in **Only Actions** that no method on the GameObject and no row of
 **Handlers** provides, and about a row of **Handlers** that **Only Actions** leaves out. An action
 the profile lists but **Only Actions** leaves out needs no handler.
 
