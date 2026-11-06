@@ -51,6 +51,10 @@ phase table and the open issues, not here.
     `text-transform`. The kit sets the colour itself, draws dashed outlines in
     `DashedOutline`, and upper-cases titles in code. A test catches a variable that silently
     fails to resolve.
+  - After its review (#181): setting a chip's `text` sets its id, so the strike always follows
+    `Offered`; the light-skin class is checked again whenever an element's styles resolve,
+    not only when it is built; and `DashedOutline.Attach` attaches once, however often it is
+    called.
 - **GreyBoxVillage has two guards and an agent board** (#143), the first slice of the demo's
   upgrade.
   - Bram at the gate and Wren at the bridge are each an `AgentBehaviour` with a profile asset.

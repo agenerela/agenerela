@@ -45,6 +45,17 @@ namespace Agenerela.Tests.UI
         }
 
         [Test]
+        public void ADashedOutlineIsAttachedOnceHoweverOftenItIsAsked()
+        {
+            var open = AgenerelaButtons.Dashed("Open choice", () => { });
+            AgenerelaButtons.MakeDashed(open);
+
+            Assert.That(DashedOutline.Attach(open), Is.False, "the button's outline was attached again");
+            Assert.That(DashedOutline.Attach(new Chip("attack_target")), Is.False, "a chip attaches its own outline");
+            Assert.That(DashedOutline.Attach(new Button()), Is.True);
+        }
+
+        [Test]
         public void AButtonFromUxmlCanBeMadeEither()
         {
             var loaded = new Button { name = "settle" };

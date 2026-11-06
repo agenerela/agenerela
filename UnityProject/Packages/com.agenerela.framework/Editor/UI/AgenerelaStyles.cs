@@ -42,15 +42,38 @@ namespace Agenerela.Editor.UI
         /// children can use the <c>--ag-*</c> variables. A screen calls it on its root; each kit
         /// element calls it on itself, so it looks right wherever it is put.
         /// </summary>
+        /// <remarks>
+        /// The light-skin class is checked again each time the element's styles are resolved, not
+        /// only when it is built, so any restyle after a skin switch (a theme change applied to the
+        /// panel, a window rebuilt or docked elsewhere) brings the muted colour into line.
+        /// </remarks>
         internal static void Apply(VisualElement element)
         {
             element.AddToClassList(RootClass);
-            element.EnableInClassList(LightClass, !EditorGUIUtility.isProSkin);
+            MatchSkin(element);
+
+            // The same static method each time, so applying twice registers it once.
+            element.RegisterCallback<CustomStyleResolvedEvent>(OnStylesResolved);
+
             var found = Sheet;
             if (found != null && !element.styleSheets.Contains(found))
             {
                 element.styleSheets.Add(found);
             }
         }
+
+        // The --ag-* variables are custom properties, so every element with the "ag" class gets this
+        // event whenever its styles are recomputed. Setting the class it already has changes nothing,
+        // so the check never sets off another restyle.
+        private static void OnStylesResolved(CustomStyleResolvedEvent evt)
+        {
+            if (evt.currentTarget is VisualElement element)
+            {
+                MatchSkin(element);
+            }
+        }
+
+        private static void MatchSkin(VisualElement element) =>
+            element.EnableInClassList(LightClass, !EditorGUIUtility.isProSkin);
     }
 }

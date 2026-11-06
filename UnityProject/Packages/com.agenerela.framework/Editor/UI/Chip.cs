@@ -11,7 +11,8 @@ namespace Agenerela.Editor.UI
     /// <remarks>
     /// USS has neither a dashed border nor <c>text-decoration</c>, so the strike is a rich-text
     /// <c>&lt;s&gt;</c> tag and the outline is <see cref="DashedOutline"/>. The id is never parsed
-    /// as rich text.
+    /// as rich text. Setting <see cref="text"/>, in code, from UXML's <c>text</c> attribute or by a
+    /// binding, sets <see cref="Id"/>, so the chip's look always follows <see cref="Offered"/>.
     /// </remarks>
     [UxmlElement]
     internal partial class Chip : Label
@@ -48,6 +49,16 @@ namespace Agenerela.Editor.UI
             }
         }
 
+        /// <summary>
+        /// The text shown, which for a chip not offered includes the strike's markup. Setting it sets
+        /// <see cref="Id"/>, so the markup is never lost or doubled.
+        /// </summary>
+        public override string text
+        {
+            get => base.text;
+            set => Id = value;
+        }
+
         /// <summary>False for an action that is not offered: struck through, outline dashed.</summary>
         [UxmlAttribute]
         internal bool Offered
@@ -68,7 +79,7 @@ namespace Agenerela.Editor.UI
             // Rich text only for the strike, with the id inside <noparse>, so an id is always shown
             // as written.
             enableRichText = !offered;
-            text = offered ? id : "<s><noparse>" + id + "</noparse></s>";
+            base.text = offered ? id : "<s><noparse>" + id + "</noparse></s>";
         }
     }
 }

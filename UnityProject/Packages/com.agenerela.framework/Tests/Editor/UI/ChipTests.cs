@@ -45,6 +45,20 @@ namespace Agenerela.Tests.UI
             Assert.That(chip.ClassListContains(DashedOutline.UssClassName), Is.False);
         }
 
+        // Text set directly, in code, by UXML's text attribute or by a binding, is the id, so the
+        // strike follows Offered rather than being lost on the next change.
+        [Test]
+        public void SettingTheTextSetsTheId()
+        {
+            var chip = new Chip("attack_target", offered: false) { text = "flee" };
+
+            Assert.That(chip.Id, Is.EqualTo("flee"));
+            Assert.That(chip.text, Is.EqualTo("<s><noparse>flee</noparse></s>"));
+
+            chip.Offered = true;
+            Assert.That(chip.text, Is.EqualTo("flee"));
+        }
+
         [Test]
         public void AnIdIsNeverReadAsRichText()
         {
