@@ -173,6 +173,20 @@ namespace Agenerela.Tests.Evaluation
         }
 
         [Test]
+        public void ReportTextIsShownAsWrittenNotAsFormatting()
+        {
+            var report = Report();
+            report.Answers[1].Stimulus = "Say <b>follow</b> to me.";
+            report.Conditions.Warnings.Add("Arm '<i>guards-on</i>': qwen3.5:2b was not fully on the GPU.");
+
+            ui.Show(new EvaluationReportUi.State { Setup = Ready(), View = new EvaluationReportView(Saved(report)) });
+
+            var tagged = ui.Root.Query<Label>().Where(l => l.text.Contains("<b>follow</b>") || l.text.Contains("<i>guards-on</i>")).ToList();
+            Assert.That(tagged, Has.Count.EqualTo(2), "The stimulus in ⑤ and the warning's problem box.");
+            Assert.That(tagged.Select(l => l.enableRichText), Is.All.False);
+        }
+
+        [Test]
         public void SetUpOpensAgainWhenTheReportGoes()
         {
             var state = new EvaluationReportUi.State { Setup = Ready(), View = new EvaluationReportView(Saved(Report())) };

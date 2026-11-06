@@ -204,6 +204,21 @@ namespace Agenerela.Editor.Evaluation
             ShowSetup();
             ShowRun();
             ShowReport();
+            Literal(root);
+        }
+
+        // Report and set text is shown as written: a statement or a stimulus with "<b>" in it is
+        // not formatting. Unity parses rich text by default, so every label is told not to, but a
+        // chip, which marks one not offered with a strike tag of its own and never parses its id.
+        private static void Literal(VisualElement under)
+        {
+            under.Query<Label>().ForEach(label =>
+            {
+                if (!(label is Chip))
+                {
+                    label.enableRichText = false;
+                }
+            });
         }
 
         /// <summary>Only the progress and the time: called every half second while a run goes on.</summary>
@@ -732,6 +747,8 @@ namespace Agenerela.Editor.Evaluation
 
                 list.Add(row);
             }
+
+            Literal(list);
         }
 
         // ⑥ The labellers' agreement on the set now, and the report's export.
