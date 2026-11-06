@@ -18,6 +18,8 @@ namespace LivingVale.UI
         private readonly Text[] quickUse = new Text[PlayerInventory.QuickUseCount];
         private readonly Text[] slots = new Text[PlayerInventory.SlotCount];
         private Text questItems;
+        private Text level;
+        private Text journal;
         private ScrollRect questScroll;
 
         public bool IsVisible => panel != null && panel.activeSelf;
@@ -29,6 +31,11 @@ namespace LivingVale.UI
             BuildInterface();
             panel.SetActive(false);
             bootstrap.Inventory.Changed += Render;
+            if (bootstrap.Quests != null)
+            {
+                bootstrap.Quests.Changed += Render;
+                bootstrap.Progression.Changed += Render;
+            }
         }
 
         public void Toggle()
@@ -49,8 +56,12 @@ namespace LivingVale.UI
             Label("Title", inventory, "Inventory", new Vector2(14f, -10f), new Vector2(420f, 28f), 21);
             gold = Label("Gold", inventory, "", new Vector2(14f, -42f), new Vector2(420f, 24f), 18);
             gold.color = new Color(1f, 0.86f, 0.35f);
-            weapon = Label("Weapon", inventory, "", new Vector2(14f, -70f), new Vector2(420f, 24f), 17);
-            armor = Label("Armor", inventory, "", new Vector2(14f, -96f), new Vector2(420f, 24f), 17);
+            weapon = Label("Weapon", inventory, "", new Vector2(14f, -70f), new Vector2(200f, 24f), 17);
+            armor = Label("Armor", inventory, "", new Vector2(14f, -96f), new Vector2(200f, 24f), 17);
+
+            // G4's journal: the main quest's state and the player's level, enough until a journal screen exists.
+            level = Label("Level", inventory, "", new Vector2(220f, -42f), new Vector2(214f, 24f), 16);
+            journal = Label("Journal", inventory, "", new Vector2(220f, -68f), new Vector2(214f, 54f), 14);
             Label("Quick-use heading", inventory, "Quick-use", new Vector2(14f, -126f),
                 new Vector2(420f, 22f), 17);
             for (int i = 0; i < quickUse.Length; i++)
@@ -122,6 +133,15 @@ namespace LivingVale.UI
             }
 
             questItems.text = text.Length == 0 ? "—" : text.ToString();
+            var quests = bootstrap.Quests;
+            if (quests != null)
+            {
+                var progression = bootstrap.Progression;
+                string next = progression.XpToNextLevel > 0 ? $" · {progression.XpToNextLevel} to next" : "";
+                string perk = progression.PendingPerkChoices > 0 ? " · perk to choose" : "";
+                level.text = $"Level {progression.Level} · {progression.Xp} XP{next}{perk}";
+                journal.text = quests.JournalLine;
+            }
             questScroll.verticalNormalizedPosition = 1f;
         }
 
@@ -169,6 +189,12 @@ namespace LivingVale.UI
             if (bootstrap != null && bootstrap.Inventory != null)
             {
                 bootstrap.Inventory.Changed -= Render;
+            }
+
+            if (bootstrap != null && bootstrap.Quests != null)
+            {
+                bootstrap.Quests.Changed -= Render;
+                bootstrap.Progression.Changed -= Render;
             }
         }
     }

@@ -28,6 +28,8 @@ namespace LivingVale.Unity
         private InputAction inventoryKey;
         private InputAction[] fixtures;
         private InputAction switchDriver;
+        private InputAction saveKey;
+        private InputAction loadKey;
         private bool capturedTextFocus;
         private ConversationTradeLink tradeLink;
         private InventoryHud inventoryHud;
@@ -41,6 +43,15 @@ namespace LivingVale.Unity
         /// <summary>The player's holdings. G2 hands loot in through it as an <see cref="ILootSink"/>.</summary>
         public PlayerInventory Inventory { get; private set; }
         public TradeService Trade { get; private set; }
+
+        /// <summary>XP, levels and perks (G4).</summary>
+        public Progression Progression { get; private set; }
+
+        /// <summary>The main and side quests (G4). Iven's <c>offer_quest</c> goes through it via the executor.</summary>
+        public QuestLog Quests { get; private set; }
+
+        /// <summary>F9 saves and F10 loads through it, under <see cref="Application.persistentDataPath"/>.</summary>
+        public SaveGame Saves { get; private set; }
 
         /// <summary>The executor every NPC driver shares; G5's driver registers <see cref="NpcActionExecutor.AvailableFor"/>.</summary>
         public NpcActionExecutor Executor { get; private set; }
@@ -71,7 +82,10 @@ namespace LivingVale.Unity
             // service, and the trade service the conversation: the link is attached last.
             tradeLink = new ConversationTradeLink();
             Trade = new TradeService(Inventory, new[] { VendorStock.CreateMara(catalog) }, tradeLink);
-            Executor = new NpcActionExecutor(Trade);
+            Progression = new Progression();
+            Quests = new QuestLog(Inventory, Progression, tradeLink);
+            Saves = new SaveGame(Inventory, Trade, Quests, Progression, SaveGame.DefaultDirectory);
+            Executor = new NpcActionExecutor(Trade, Quests);
             Driver = new ScriptedNpcDecisionDriver(executor: Executor);
             ModelDriver = AgenerelaNpcDecisionDriver.ForOllama(ollamaModel, Executor);
             Drivers = new SwitchableNpcDecisionDriver(Driver, ModelDriver, driver);
@@ -85,6 +99,7 @@ namespace LivingVale.Unity
                 TurnTimeout = TimeSpan.FromSeconds(Mathf.Max(0.1f, turnTimeout))
             });
             tradeLink.Attach(Coordinator, Trade);
+            tradeLink.AttachQuests(Quests);
 
             actions = new InputActionMap("Living Vale");
             move = actions.AddAction("Move", InputActionType.Value);
@@ -103,6 +118,8 @@ namespace LivingVale.Unity
                 fixtures[i] = actions.AddAction($"Fixture{i + 1}", InputActionType.Button, $"<Keyboard>/f{i + 1}");
             }
             switchDriver = actions.AddAction("SwitchDriver", InputActionType.Button, "<Keyboard>/f6");
+            saveKey = actions.AddAction("Save", InputActionType.Button, "<Keyboard>/f9");
+            loadKey = actions.AddAction("Load", InputActionType.Button, "<Keyboard>/f10");
 
             overlay.Initialize(this);
             inventoryHud = overlay.gameObject.AddComponent<InventoryHud>();
@@ -186,6 +203,54 @@ namespace LivingVale.Unity
 
                 overlay.Render();
             }
+
+            if (saveKey.WasPressedThisFrame())
+            {
+                SaveNow();
+            }
+
+            if (loadKey.WasPressedThisFrame())
+            {
+                LoadNow();
+            }
+        }
+
+        /// <summary>Writes the save. Nothing in flight is saved: no request, quote or offer.</summary>
+        public bool SaveNow()
+        {
+            bool saved = Saves.TrySave(out string error);
+            if (saved)
+            {
+                Debug.Log($"[LivingVale] Saved to {Saves.SavePath}.");
+            }
+            else
+            {
+                Debug.LogWarning($"[LivingVale] Save failed: {error}");
+            }
+
+            return saved;
+        }
+
+        /// <summary>
+        /// Loads the save. The open conversation closes first, which cancels its request and moves
+        /// the generation on, so a reply still on its way can never execute against the loaded state.
+        /// A failed load leaves the game as it was.
+        /// </summary>
+        public bool LoadNow()
+        {
+            Coordinator.Close(ConversationCloseReason.Interrupted);
+            bool loaded = Saves.TryLoad(out string error);
+            if (loaded)
+            {
+                Debug.Log($"[LivingVale] Loaded {Saves.SavePath}.");
+            }
+            else
+            {
+                Debug.LogWarning($"[LivingVale] Load failed, nothing changed: {error}");
+            }
+
+            overlay.Render();
+            return loaded;
         }
 
         public void BlockWorldInputForFrame()

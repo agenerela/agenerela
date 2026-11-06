@@ -30,6 +30,13 @@ namespace LivingVale.UI
         private string confirmedQuoteId;
         private RectTransform tradeOffer;
         private string buttonsQuoteId;
+        private GameObject questCard;
+        private RectTransform questOffer;
+        private Text questSummary;
+        private Text questReward;
+        private Button questAccept;
+        private Button questDecline;
+        private string buttonsOfferKey;
         private string displayedNpcId;
         private bool scrollToBottom;
         private bool focusRequested;
@@ -46,6 +53,11 @@ namespace LivingVale.UI
             bootstrap.Coordinator.Changed += OnChanged;
             bootstrap.Trade.QuotesChanged += RenderTradeCard;
             bootstrap.Inventory.Changed += RenderTradeCard;
+            if (bootstrap.Quests != null)
+            {
+                bootstrap.Quests.Changed += RenderQuestCard;
+            }
+
             Render();
         }
 
@@ -74,7 +86,7 @@ namespace LivingVale.UI
                 new Vector2(14f, -14f), new Vector2(580f, 102f), new Color(0.04f, 0.06f, 0.08f, 0.88f));
             Label("Help", help,
                 "WASD move · Shift sprint · Mouse orbit · E talk · Esc close · I inventory\n" +
-                "Left mouse attack · Right mouse block · Space dodge · F6 model/scripted\n" +
+                "Left mouse attack · Right mouse block · Space dodge · F6 model/scripted · F9 save · F10 load\n" +
                 "Scripted: F1 Normal · F2 Slow · F3 NeverAnswers · F4 Malformed · F5 Throws\n" +
                 "Typing captures gameplay keys; Return to world releases them.",
                 new Vector2(10f, -8f), new Vector2(560f, 86f), 15, Color.white);
@@ -156,6 +168,18 @@ namespace LivingVale.UI
             tradeWarning = Label("Affordability", offer, "", new Vector2(204f, -34f),
                 new Vector2(340f, 22f), 16, new Color(1f, 0.82f, 0.45f));
             tradeCard.SetActive(false);
+
+            // The quest card (G4) reuses the trade card's pattern: authored text, and buttons that
+            // call game code directly. The model's reply only put the offer here.
+            RectTransform quest = Box("Quest card", transform, new Vector2(1f, 0f),
+                new Vector2(-18f, 592f), new Vector2(560f, 96f), new Color(0.05f, 0.07f, 0.06f, 0.96f));
+            questCard = quest.gameObject;
+            questOffer = quest;
+            questSummary = Label("Quest", quest, "", new Vector2(16f, -6f),
+                new Vector2(528f, 30f), 16, Color.white);
+            questReward = Label("Reward", quest, "", new Vector2(16f, -36f),
+                new Vector2(528f, 22f), 15, new Color(0.75f, 0.95f, 0.7f));
+            questCard.SetActive(false);
         }
 
         public void Render()
@@ -164,6 +188,7 @@ namespace LivingVale.UI
             badge.text = coordinator.DriverLabel;
             panel.SetActive(coordinator.IsOpen);
             RenderTradeCard();
+            RenderQuestCard();
             if (!coordinator.IsOpen)
             {
                 ReleaseInput();
@@ -242,6 +267,54 @@ namespace LivingVale.UI
             tradeConfirm.GetComponentInChildren<Text>().text = sale
                 ? $"Sell for {quote.Total} gold" : $"Buy for {quote.Total} gold";
             tradeConfirm.interactable = affordable && confirmedQuoteId != quote.Id;
+        }
+
+        private void RenderQuestCard()
+        {
+            var coordinator = bootstrap.Coordinator;
+            QuestOffer offer = bootstrap.Quests?.ActiveOffer;
+            bool visible = offer != null && coordinator.IsOpen && coordinator.ActiveNpc != null &&
+                offer.NpcId == coordinator.ActiveNpc.Id && offer.ConversationGeneration == coordinator.Generation;
+            questCard.SetActive(visible);
+            if (!visible)
+            {
+                return;
+            }
+
+            questSummary.text = $"Quest: {offer.Title} — {offer.Summary}";
+            questReward.text = $"Reward: {offer.RewardText}";
+            string key = offer.Id + "#" + offer.ConversationGeneration;
+            if (buttonsOfferKey != key)
+            {
+                BuildQuestButtons(offer.Id, key);
+            }
+        }
+
+        // New buttons per offer and conversation, for the same reason as the trade card's below.
+        private void BuildQuestButtons(string offerId, string key)
+        {
+            if (questAccept != null)
+            {
+                questAccept.gameObject.SetActive(false);
+                Destroy(questAccept.gameObject);
+                questDecline.gameObject.SetActive(false);
+                Destroy(questDecline.gameObject);
+            }
+
+            buttonsOfferKey = key;
+            Button accept = null;
+            accept = ButtonAt("Accept", questOffer, new Vector2(16f, -62f), new Vector2(240f, 28f), () =>
+            {
+                bootstrap.BlockWorldInputForFrame();
+                accept.interactable = false;
+                bootstrap.Quests.AcceptOffer(offerId);
+            });
+            questAccept = accept;
+            questDecline = ButtonAt("Not now", questOffer, new Vector2(268f, -62f), new Vector2(100f, 28f), () =>
+            {
+                bootstrap.BlockWorldInputForFrame();
+                bootstrap.Quests.DeclineOffer(offerId);
+            });
         }
 
         // New buttons for every quote, never relabelled ones: uGUI fires onClick on release, so a
@@ -396,6 +469,10 @@ namespace LivingVale.UI
             if (bootstrap != null && bootstrap.Inventory != null)
             {
                 bootstrap.Inventory.Changed -= RenderTradeCard;
+                if (bootstrap.Quests != null)
+                {
+                    bootstrap.Quests.Changed -= RenderQuestCard;
+                }
             }
         }
     }

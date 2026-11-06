@@ -17,6 +17,7 @@ namespace LivingVale.Interaction
     {
         private ConversationCoordinator coordinator;
         private TradeService trade;
+        private QuestLog quests;
 
         public long Generation => coordinator?.Generation ?? -1;
 
@@ -35,8 +36,29 @@ namespace LivingVale.Interaction
             trade.Confirmed += OnConfirmed;
         }
 
+        /// <summary>
+        /// Also ties the quest log to the conversation (G4): a quest offer's card goes away whenever a
+        /// conversation opens or closes, and every quest receipt is written into the chat.
+        /// </summary>
+        public void AttachQuests(QuestLog questLog)
+        {
+            if (quests != null)
+            {
+                throw new InvalidOperationException("Quests already attached.");
+            }
+
+            quests = questLog ?? throw new ArgumentNullException(nameof(questLog));
+            quests.Completed += OnQuestStep;
+        }
+
         public void Dispose()
         {
+            if (quests != null)
+            {
+                quests.Completed -= OnQuestStep;
+                quests = null;
+            }
+
             if (trade == null)
             {
                 return;
@@ -78,7 +100,13 @@ namespace LivingVale.Interaction
             if (change.Kind == ConversationEventKind.Opened || change.Kind == ConversationEventKind.Closed)
             {
                 trade.InvalidatePending();
+                quests?.InvalidatePending();
             }
+        }
+
+        private void OnQuestStep(QuestReceipt receipt)
+        {
+            coordinator?.AddSystemLine(receipt.Line);
         }
 
         private void OnConfirmed(TradeReceipt receipt)

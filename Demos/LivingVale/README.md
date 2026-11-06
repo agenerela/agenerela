@@ -31,11 +31,17 @@ fighting you go home at full health; a defeated enemy stays down and drops its l
 (`item_wolf_pelt`, `item_iron_scrap`) straight into your inventory, once per enemy; a defeat
 costs a tenth of your gold, never items. `CombatInventoryBridge` joins the two.
 
+**Quests and saves (G4, part 1):** ask Iven about the wagon or the medicine and he offers *The
+Missing Wagon* on a card; only its Accept button starts the quest. The inventory panel shows your
+level, XP and the quest's state. **F9** saves and **F10** loads (closing any open chat first); the
+save is `livingvale_save.json` under `Application.persistentDataPath`, and the save before it is
+kept as `livingvale_save.bak.json`.
+
 ## Layout
 
 | Folder | What | Scene? |
 |---|---|---|
-| `Assets/LivingVale/Game/` | Game state: `ItemCatalog`, `PlayerInventory` (also the `ILootSink`), `VendorStock`, `TradeService` and its quotes and receipts, and `NpcActionExecutor`, which every driver executes through | No: plain C#, EditMode-tested |
+| `Assets/LivingVale/Game/` | Game state: `ItemCatalog`, `PlayerInventory` (also the `ILootSink`), `VendorStock`, `TradeService` and its quotes and receipts, `QuestLog`, `Progression`, `SaveGame`, and `NpcActionExecutor`, which every driver executes through | No: plain C#, EditMode-tested |
 | `Assets/LivingVale/Interaction/` | Conversations: `ConversationCoordinator`, the `INpcDecisionDriver` boundary, `ScriptedNpcDecisionDriver`, and `ConversationTradeLink`, which ties quotes to the open conversation | No: plain C#, EditMode-tested |
 | `Assets/LivingVale/Combat/` | Combat: `Combatant` and `EnemyBrain` rules (plain C#, EditMode-tested), the player's and enemies' behaviours, `CombatDirector` (chat, loot and respawn hooks: `ILootSink`, `IDefeatPenalty`) and the HUD | Rules no; behaviours yes |
 | `Assets/LivingVale/Unity/` | Bootstrap, player, orbit camera, NPC speakers, focus and range | Yes |
@@ -47,6 +53,29 @@ costs a tenth of your gold, never items. `CombatInventoryBridge` joins the two.
 NPC replies use Agenerela's `Agent` by default; the overlay's badge says which driver is
 selected, so a scripted reply is never mistaken for a model's. The scene is generated: change
 `VillageSceneBuilder` and rebuild rather than editing `Village.unity` by hand.
+
+## Quests, progression and saves (G4)
+
+`QuestLog` owns the main quest `quest_missing_wagon` and the side quests `quest_herbs` and
+`quest_badge`. States move only through methods that check the current state (`AcceptOffer`,
+`TryRecoverParcel`, `TryResolve`, `TryCompleteHerbs`, …); clues and agreements are recorded apart
+from the state with `RecordClue`, and never advance it. Each step that pays goes through
+`PlayerInventory.TryApplyQuestEvent` and `Progression.TryAward` with a fixed event ID, so a replay,
+a double click or a reloaded save cannot pay twice. The parcel and badge live in protected quest
+storage. `Progression` holds XP (levels at 100 and 250) and one perk per level-up (Hardy,
+Skirmisher, Trusted Face); the perks' effects are not wired into combat or bargaining yet.
+
+`offer_quest` is the first non-trade NPC action: `NpcActionExecutor` lists it for Iven while the
+quest is Undiscovered or Offered, executing it moves Undiscovered to Offered and puts a
+`QuestOffer` on the chat card, and the card's Accept calls `QuestLog.AcceptOffer`. The scripted
+driver offers it on wagon, medicine, parcel or help lines; the `Agent` driver registers it through
+`QuestActionBinding`, with its description, target and quest status in the observations.
+
+`SaveGame` captures inventory, equipment, gold, vendor stock, quests and clues, XP and perks, and
+both applied-event sets into a versioned `SaveSnapshot`, written to a temporary file and swapped in
+with `File.Replace`. Loading validates the whole snapshot before restoring anything, so a corrupt
+or future-version save changes nothing. Quotes, offers and requests are never saved; loading
+invalidates the pending ones.
 
 ## Trading (G3)
 

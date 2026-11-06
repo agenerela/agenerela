@@ -28,7 +28,8 @@ namespace LivingVale.Agenerela
     /// </para>
     /// <para>
     /// <b>Actions.</b> <see cref="ActionRegistry.None"/>, which every agent has, and, given an
-    /// <see cref="NpcActionExecutor"/>, the trade actions through <see cref="TradeActionBinding"/>,
+    /// <see cref="NpcActionExecutor"/>, the trade actions through <see cref="TradeActionBinding"/>
+    /// and, when the executor has a quest log, <c>offer_quest</c> through <see cref="QuestActionBinding"/>,
     /// recomputed from the executor on every turn. The <c>configureAgent</c> callback runs once
     /// per NPC when its agent is built, and is where the game registers anything else.
     /// </para>
@@ -51,6 +52,7 @@ namespace LivingVale.Agenerela
         private readonly Action<NpcDescriptor, Agent> configureAgent;
         private readonly NpcActionExecutor executor;
         private readonly Dictionary<string, TradeActionBinding> trade = new Dictionary<string, TradeActionBinding>();
+        private readonly Dictionary<string, QuestActionBinding> questBindings = new Dictionary<string, QuestActionBinding>();
         private readonly Dictionary<string, TradeReceipt> lastReceipts = new Dictionary<string, TradeReceipt>();
         private Task warmUp;
 
@@ -132,6 +134,10 @@ namespace LivingVale.Agenerela
             if (executor != null)
             {
                 trade[npc.Id] = TradeActionBinding.Bind(agent, npc.Id, executor);
+                if (executor.Quests != null)
+                {
+                    questBindings[npc.Id] = QuestActionBinding.Bind(agent, npc.Id, executor);
+                }
             }
 
             configureAgent?.Invoke(npc, agent);
@@ -156,6 +162,14 @@ namespace LivingVale.Agenerela
                 lines.AddRange(TradeActionBinding.PromptLines(options));
                 lastReceipts.TryGetValue(turn.Npc.Id, out var receipt);
                 lines.AddRange(binding.StatusLines(receipt));
+            }
+
+            if (questBindings.TryGetValue(turn.Npc.Id, out var quest))
+            {
+                var option = quest.Option();
+                quest.RefreshExample(option);
+                lines.AddRange(QuestActionBinding.PromptLines(option));
+                lines.AddRange(quest.StatusLines());
             }
 
             var extra = TurnObservations?.Invoke(turn);
@@ -240,15 +254,18 @@ namespace LivingVale.Agenerela
             LastOutcome = null;
             trade.TryGetValue(turn.Npc.Id, out var binding);
             binding?.ClearOutcome();
+            questBindings.TryGetValue(turn.Npc.Id, out var questBinding);
+            questBinding?.ClearOutcome();
 
             // The handlers read the generation from the state Agent.Execute copies into their context.
             agent.State[TradeActionBinding.GenerationKey] = turn.Generation;
             bool executed = agent.Execute(result);
 
-            // Agent.Execute is true once the handler ran; the executor may still have refused the quote.
-            if (executed && binding?.LastOutcome != null)
+            // Agent.Execute is true once the handler ran; the executor may still have refused the quote or offer.
+            var outcome = binding?.LastOutcome ?? questBinding?.LastOutcome;
+            if (executed && outcome != null)
             {
-                LastOutcome = binding.LastOutcome;
+                LastOutcome = outcome;
                 executed = LastOutcome.Executed;
             }
 

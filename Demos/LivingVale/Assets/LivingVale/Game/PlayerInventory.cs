@@ -219,6 +219,155 @@ namespace LivingVale.Game
             return InventoryRejection.None;
         }
 
+        /// <summary>Event IDs already applied by <see cref="TryGiveLoot"/> or <see cref="TryApplyQuestEvent"/>, for the save.</summary>
+        public IReadOnlyCollection<string> AppliedEvents => appliedEvents;
+
+        public bool HasApplied(string eventId) => eventId != null && appliedEvents.Contains(eventId);
+
+        /// <summary>
+        /// The quest system's entry point (G4): applies a quest step's gold and item changes once per
+        /// unique event ID, all or nothing. Unlike <see cref="TryApply"/> it may take quest items, such as
+        /// the parcel on delivery; unlike <see cref="TryGiveLoot"/> it may take anything. A refused
+        /// change does not use up the ID, so the step can be retried.
+        /// </summary>
+        public InventoryRejection TryApplyQuestEvent(string eventId, int goldDelta, IReadOnlyList<ItemChange> changes)
+        {
+            if (string.IsNullOrWhiteSpace(eventId))
+            {
+                throw new ArgumentException("A quest step needs a unique event ID.", nameof(eventId));
+            }
+
+            if (appliedEvents.Contains(eventId))
+            {
+                return InventoryRejection.DuplicateEvent;
+            }
+
+            var rejection = Simulate(goldDelta, changes, true, out var newSlots, out var newQuest, out int newGold);
+            if (rejection != InventoryRejection.None)
+            {
+                return rejection;
+            }
+
+            appliedEvents.Add(eventId);
+            Commit(newSlots, newQuest, newGold);
+            return InventoryRejection.None;
+        }
+
+        /// <summary>
+        /// Replaces the whole inventory with a saved one. Every check runs before anything changes, so
+        /// a bad save returns false with the inventory untouched. <see cref="Revision"/> still goes up,
+        /// so no quote made before the load can be confirmed after it.
+        /// </summary>
+        public bool TryRestore(int gold, IReadOnlyList<ItemStack> savedSlots, IReadOnlyDictionary<string, int> savedQuest,
+            string weapon, string armor, IReadOnlyList<string> savedQuickUse, IEnumerable<string> events, out string error)
+        {
+            error = ValidateRestore(gold, savedSlots, savedQuest, weapon, armor, savedQuickUse, events);
+            if (error != null)
+            {
+                return false;
+            }
+
+            var newSlots = new ItemStack[SlotCount];
+            for (int i = 0; i < SlotCount; i++)
+            {
+                newSlots[i] = savedSlots[i];
+            }
+
+            Weapon = weapon;
+            Armor = armor;
+            for (int i = 0; i < QuickUseCount; i++)
+            {
+                quickUse[i] = savedQuickUse[i];
+            }
+
+            appliedEvents.Clear();
+            appliedEvents.UnionWith(events);
+            Commit(newSlots, new Dictionary<string, int>(savedQuest), gold);
+            return true;
+        }
+
+        /// <summary>Why <see cref="TryRestore"/> would refuse this state, or null when it would accept it. Changes nothing.</summary>
+        public string ValidateRestore(int gold, IReadOnlyList<ItemStack> savedSlots, IReadOnlyDictionary<string, int> savedQuest,
+            string weapon, string armor, IReadOnlyList<string> savedQuickUse, IEnumerable<string> events)
+        {
+            if (gold < 0)
+            {
+                return "negative gold";
+            }
+
+            if (savedSlots == null || savedSlots.Count != SlotCount)
+            {
+                return $"expected {SlotCount} slots";
+            }
+
+            foreach (var stack in savedSlots)
+            {
+                if (stack.IsEmpty)
+                {
+                    continue;
+                }
+
+                if (!catalog.TryGet(stack.ItemId, out var item))
+                {
+                    return $"unknown item {stack.ItemId}";
+                }
+
+                if (item.IsProtected || stack.Quantity > item.MaxStack)
+                {
+                    return $"bad stack {stack}";
+                }
+            }
+
+            if (savedQuest == null)
+            {
+                return "missing quest storage";
+            }
+
+            foreach (var pair in savedQuest)
+            {
+                if (!catalog.TryGet(pair.Key, out var item) || !item.IsProtected || pair.Value < 1 || pair.Value > item.MaxStack)
+                {
+                    return $"bad quest item {pair.Key}";
+                }
+            }
+
+            if (!IsWearable(weapon, ItemKind.Weapon) || !IsWearable(armor, ItemKind.Armor))
+            {
+                return "bad equipment";
+            }
+
+            if (savedQuickUse == null || savedQuickUse.Count != QuickUseCount)
+            {
+                return $"expected {QuickUseCount} quick-use slots";
+            }
+
+            foreach (var id in savedQuickUse)
+            {
+                if (id != null && (!catalog.TryGet(id, out var item) || item.Kind != ItemKind.Consumable))
+                {
+                    return $"bad quick-use {id}";
+                }
+            }
+
+            if (events == null)
+            {
+                return "missing event IDs";
+            }
+
+            foreach (var id in events)
+            {
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    return "empty event ID";
+                }
+            }
+
+            return null;
+        }
+
+        private bool IsWearable(string itemId, ItemKind kind) =>
+            itemId == null || (catalog.TryGet(itemId, out var item) && item.Kind == kind);
+
         /// <summary>Equips a weapon or armor from a general slot, moving whatever was worn into its place.</summary>
         public bool TryEquip(string itemId)
         {

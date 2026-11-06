@@ -49,6 +49,9 @@ namespace LivingVale.Game
 
         public bool IsVendor(string npcId) => npcId != null && vendors.ContainsKey(npcId);
 
+        /// <summary>Every vendor this service trades for, so a save can capture and require all of them.</summary>
+        public IEnumerable<VendorStock> Vendors => vendors.Values;
+
         public VendorStock VendorFor(string npcId) => npcId != null && vendors.TryGetValue(npcId, out var v) ? v : null;
 
         /// <summary>Stock entries this NPC can sell right now: the targets of <c>quote_purchase</c>.</summary>

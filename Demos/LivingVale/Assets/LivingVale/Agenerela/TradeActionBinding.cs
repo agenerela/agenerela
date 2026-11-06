@@ -106,8 +106,20 @@ namespace LivingVale.Agenerela
             return lines;
         }
 
-        /// <summary>What the executor offers this NPC now.</summary>
-        public IReadOnlyList<GameActionOption> Options() => executor.AvailableFor(npcId);
+        /// <summary>The trade actions the executor offers this NPC now; other actions, such as <c>offer_quest</c>, have their own binding.</summary>
+        public IReadOnlyList<GameActionOption> Options()
+        {
+            var options = new List<GameActionOption>();
+            foreach (var option in executor.AvailableFor(npcId))
+            {
+                if (option.ActionId == GameActions.QuotePurchase || option.ActionId == GameActions.QuoteSale)
+                {
+                    options.Add(option);
+                }
+            }
+
+            return options;
+        }
 
         /// <summary>
         /// The observation lines that tell the model what it can offer now, from
