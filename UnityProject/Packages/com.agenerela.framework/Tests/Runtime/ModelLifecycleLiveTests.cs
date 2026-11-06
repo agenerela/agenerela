@@ -100,14 +100,22 @@ namespace Agenerela.Tests
             var cold = Stopwatch.StartNew();
             await Done(models.WarmUpAsync(CancellationToken.None));
             cold.Stop();
-            var result = await LiveOllama.NotCancelled(
-                LiveGuard.Build(provider).DecideAsync("Head over to the tower and keep watch.", LiveGuard.Options()));
+            // The same decision twice, each on a fresh agent so no memory lengthens the second. Their
+            // inference costs the same, so what the first takes beyond the second is a reload, however
+            // fast the server infers (Codex review, F5).
+            const string Stimulus = "Head over to the tower and keep watch.";
+            var first = await LiveOllama.NotCancelled(LiveGuard.Build(provider).DecideAsync(Stimulus, LiveGuard.Options()));
+            var second = await LiveOllama.NotCancelled(LiveGuard.Build(provider).DecideAsync(Stimulus, LiveGuard.Options()));
+            double extra = first.Telemetry.LatencySeconds - second.Telemetry.LatencySeconds;
             UnityEngine.Debug.Log($"LIFECYCLE {LiveOllama.Model} at num_ctx 8192: cold warm-up {cold.Elapsed.TotalSeconds:F2} s, "
-                                + $"first decision after it {result.Telemetry.LatencySeconds:F2} s");
+                                + $"first decision after it {first.Telemetry.LatencySeconds:F2} s, the same again "
+                                + $"{second.Telemetry.LatencySeconds:F2} s");
 
-            Assert.That(result.Decision, Is.Not.Null, $"{result.Telemetry.ErrorKind}: {result.Telemetry.ErrorMessage}");
-            Assert.That(result.Telemetry.LatencySeconds, Is.LessThan(cold.Elapsed.TotalSeconds / 2),
-                "The first decision after the warm-up took as long as a load: the model was loaded again.");
+            Assert.That(first.Decision, Is.Not.Null, $"{first.Telemetry.ErrorKind}: {first.Telemetry.ErrorMessage}");
+            Assert.That(second.Decision, Is.Not.Null, $"{second.Telemetry.ErrorKind}: {second.Telemetry.ErrorMessage}");
+            Assert.That(extra, Is.LessThan(cold.Elapsed.TotalSeconds / 2),
+                "The first decision after the warm-up took about a load longer than the same decision again: "
+              + "the model was loaded again.");
             Assert.That(await LiveOllama.NotCancelled(models.UnloadAsync(CancellationToken.None)), Is.True);
         }
 

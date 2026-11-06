@@ -1050,7 +1050,9 @@ decisions sent too. With a provider set to `num_ctx` 8192, the first decision af
 took **7.46 s**: Ollama loaded the model again at the new size. The warm-up now sends the
 decisions' `num_ctx`, and the same check took **1.18 s** (cold warm-up 9.04 s before the fix,
 7.98 s after; one run each, same conditions, the old warm-up first, then the fix). The 1.18 s is
-an ordinary first decision; Phase 2's warm decisions were under 0.6 s.
+an ordinary first decision; Phase 2's warm decisions were under 0.6 s. A third run, after the
+test was changed to time the same decision twice (Codex review, F5), gave 1.12 s and then 0.84 s:
+0.28 s apart, where a reload adds about the cold load's 8 s.
 
 **What would change this.** An Ollama release where an empty generate stops loading the model, or
 where `keep_alive: 0` on a model that is not loaded starts loading it, or where a request at a new
