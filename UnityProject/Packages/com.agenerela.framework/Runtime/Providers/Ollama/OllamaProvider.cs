@@ -40,9 +40,19 @@ namespace Agenerela.Providers
     /// <see cref="ProviderErrorKind.MalformedResponse"/> for a reply that is not Ollama's chat
     /// envelope.
     /// </para>
+    /// <para>
+    /// It manages its server's models too (<see cref="IModelLifecycle"/>, DR-018): the models
+    /// installed, from <c>/api/tags</c>; a warm-up that loads its model, an empty
+    /// <c>/api/generate</c>; and an unload, <c>keep_alive: 0</c>, which waits until
+    /// <c>/api/ps</c> no longer lists the model. Each is one short request, with the same
+    /// <see cref="OllamaSettings.TimeoutSeconds"/> and the same failures.
+    /// </para>
     /// </remarks>
-    public sealed class OllamaProvider : ILLMProvider
+    public sealed class OllamaProvider : ILLMProvider, IModelLifecycle
     {
+        // How long UnloadAsync waits for /api/ps to stop listing the model.
+        private const float UnloadWaitSeconds = 15f;
+
         // How many alternatives each token's probabilities carry. Five was enough in the probe
         // (DR-016), and Ollama refuses more than 20.
         private const int TopLogprobs = 5;
@@ -257,6 +267,79 @@ namespace Agenerela.Providers
             }
         }
 
+        // ---- Model lifecycle (DR-018) -----------------------------------------------------------
+
+        /// <summary>
+        /// The models the server has pulled, from <c>/api/tags</c>, with their sizes on disk. Ollama
+        /// names each with its tag, so <c>qwen3.5</c> is listed as <c>qwen3.5:latest</c>.
+        /// </summary>
+        /// <exception cref="ProviderException">
+        /// Nothing answered (<see cref="ProviderErrorKind.Unreachable"/>), no reply in time, an HTTP
+        /// error, or a reply that is not a list of models (<see cref="ProviderErrorKind.MalformedResponse"/>).
+        /// </exception>
+        public async Awaitable<IReadOnlyList<ModelInfo>> ListModelsAsync(CancellationToken ct)
+        {
+            var root = await GetObject("/api/tags", ct);
+            var installed = new List<ModelInfo>();
+            if (root["models"] == null || root["models"].Type == JTokenType.Null)
+            {
+                return installed;
+            }
+
+            if (!(root["models"] is JArray models))
+            {
+                throw Malformed("its /api/tags models is not a list", root.ToString(Formatting.None));
+            }
+
+            foreach (var entry in models)
+            {
+                if (!(entry is JObject fields) || !(fields["name"] is JValue name) || name.Type != JTokenType.String
+                    || string.IsNullOrWhiteSpace((string)name))
+                {
+                    throw Malformed("an /api/tags entry has no name", root.ToString(Formatting.None));
+                }
+
+                installed.Add(new ModelInfo((string)name, Bytes(fields["size"])));
+            }
+
+            return installed;
+        }
+
+        /// <summary>
+        /// Loads this provider's model now: an <c>/api/generate</c> naming it with no prompt, which
+        /// Ollama answers once the model is in memory. A model already loaded answers at once.
+        /// </summary>
+        /// <exception cref="ProviderException">
+        /// <see cref="ProviderErrorKind.ModelNotFound"/> when the server has not pulled it, and the
+        /// failures <see cref="RequestAsync"/> has, within the same timeout.
+        /// </exception>
+        public async Awaitable WarmUpAsync(CancellationToken ct)
+        {
+            string body = new JObject { ["model"] = model }.ToString(Formatting.None);
+            string text = await Call(HttpMethod.Post, "/api/generate", body, ct);
+            try
+            {
+                ParseObject(text);
+            }
+            catch (JsonException e)
+            {
+                throw Malformed($"its /api/generate is not one JSON object ({e.Message})", text, e);
+            }
+        }
+
+        /// <summary>
+        /// Unloads this provider's model now (<c>keep_alive: 0</c>), then waits until
+        /// <c>/api/ps</c> no longer lists it, at most 15 s. False when it is still listed after that.
+        /// </summary>
+        /// <exception cref="ProviderException">
+        /// <see cref="ProviderErrorKind.ModelNotFound"/> when the server has not pulled it, and the
+        /// failures <see cref="RequestAsync"/> has.
+        /// </exception>
+        public Awaitable<bool> UnloadAsync(CancellationToken ct)
+        {
+            return UnloadAsync(ct, UnloadWaitSeconds);
+        }
+
         // ---- For the evaluation runner (#145) --------------------------------------------------
         // Internal, so Runtime/Evaluation knows no Ollama address: it asks the provider, and the
         // provider knows its server. Each failure throws a ProviderException, as RequestAsync does.
@@ -310,9 +393,9 @@ namespace Agenerela.Providers
         /// <summary>
         /// Asks the server to unload this provider's model now (<c>keep_alive: 0</c>), then waits
         /// until <c>/api/ps</c> no longer lists it, at most <paramref name="waitSeconds"/>. Returns
-        /// false when it is still listed after that.
+        /// false when it is still listed after that. What the public <see cref="UnloadAsync(CancellationToken)"/> calls.
         /// </summary>
-        internal async Awaitable<bool> UnloadAsync(CancellationToken ct, float waitSeconds = 15f)
+        internal async Awaitable<bool> UnloadAsync(CancellationToken ct, float waitSeconds)
         {
             string body = new JObject { ["model"] = model, ["keep_alive"] = 0 }.ToString(Formatting.None);
             await Call(HttpMethod.Post, "/api/generate", body, ct);

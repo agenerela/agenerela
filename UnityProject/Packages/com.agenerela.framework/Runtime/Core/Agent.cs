@@ -36,11 +36,15 @@ namespace Agenerela
         private static readonly IDecisionGuard[] BuiltInGuards = { Legality, new TargetGroundingGuard() };
         private static readonly IDecisionGuard[] ExecuteGuards = { Legality };
 
-        private readonly ILLMProvider provider;
+        // Read once by each decision, which keeps it to the end. Its queue and health are found by
+        // the instance, so every agent given it shares them (DR-013, DR-015).
+        private ILLMProvider provider;
 
-        // The provider's queue, found by the provider instance, so every agent given that
-        // instance shares it (DR-013, DR-015).
-        private readonly RequestScheduler scheduler;
+        // This agent's own turns, one at a time, used only by calls made while Backlog is set (G5).
+        private readonly RequestScheduler turns = new RequestScheduler();
+
+        // Decisions under way: from preparing the request until the result is returned.
+        private int deciding;
 
         // Where Bind finds definitions: the profile, read when Bind is called, or the list a
         // code-only agent was given. Exactly one is set.
@@ -118,7 +122,6 @@ namespace Agenerela
             }
 
             this.provider = provider;
-            scheduler = RequestScheduler.For(provider);
             Actions = new ActionRegistry();
             Targets = new TargetRegistry();
             TargetSources = new List<ITargetSource>();
@@ -143,6 +146,51 @@ namespace Agenerela
         /// agent sends, and whether an idle example helps is still unmeasured (build plan §2.3, #151).
         /// </remarks>
         public string IdleExampleStimulus { get; set; }
+
+        /// <summary>
+        /// The provider this agent asks. Setting it switches the backend or the model the agent
+        /// decides with (DR-018), and keeps everything else: its memory, actions, targets, sources,
+        /// guards and state. Each decision reads it once, when it starts, so one under way finishes
+        /// on the provider it began with. Set it on the main thread.
+        /// </summary>
+        /// <remarks>
+        /// Its queue and <see cref="ProviderHealth"/> are the new provider's, shared with every agent
+        /// given that instance. To switch models on Ollama, build an <see cref="OllamaProvider"/> for
+        /// the new model once and give it to every agent moving, warm it up first through
+        /// <see cref="IModelLifecycle.WarmUpAsync"/>, and unload the old one after.
+        /// </remarks>
+        /// <exception cref="ArgumentNullException">Set to null.</exception>
+        public ILLMProvider Provider
+        {
+            get => provider;
+            set => provider = value ?? throw new ArgumentNullException(nameof(value));
+        }
+
+        /// <summary>
+        /// What happens to a call made while this agent is already deciding (#190, G5). Null, the
+        /// default, starts every call at once, and they decide side by side. A
+        /// <see cref="DecisionBacklog"/> makes the agent decide one call at a time, the others
+        /// waiting within its capacity: <see cref="DecisionBacklog.LatestWins"/>,
+        /// <see cref="DecisionBacklog.DropOldest"/> or <see cref="DecisionBacklog.QueueWithCap"/>.
+        /// Read when each call is made.
+        /// </summary>
+        /// <remarks>
+        /// A call the backlog drops or refuses returns a result with no decision, whose telemetry's
+        /// <see cref="DecisionTelemetry.ErrorKind"/> is <see cref="PipelineErrorKind.Superseded"/>
+        /// or <see cref="PipelineErrorKind.BacklogFull"/>. Nothing is sent and nothing is logged.
+        /// The time a call waited for its turn is in <see cref="DecisionTelemetry.BacklogWaitSeconds"/>.
+        /// </remarks>
+        public DecisionBacklog Backlog { get; set; }
+
+        /// <summary>
+        /// Whether a decision of this agent is under way: being prepared, waiting in the provider's
+        /// queue, with the provider, or being judged. Calls waiting in its <see cref="Backlog"/> are
+        /// not under way yet; <see cref="Waiting"/> counts them.
+        /// </summary>
+        public bool IsDeciding => Volatile.Read(ref deciding) > 0;
+
+        /// <summary>How many calls wait in this agent's <see cref="Backlog"/> for their turn.</summary>
+        public int Waiting => turns.Queued;
 
         /// <summary>
         /// The actions this agent can take, each bound to the code that runs it (#6). Filled by
@@ -475,6 +523,15 @@ namespace Agenerela
         /// provider instances never wait on each other. A failed request frees its place like an
         /// answered one, and nothing is retried.
         /// </para>
+        /// <para>
+        /// Every request's outcome is reported to the provider's <see cref="ProviderHealth"/>: a
+        /// reply marks it up, a provider failure down. With its <see cref="ProviderHealth.BackOff"/>
+        /// on, a background request whose turn comes while it is down, before the retry time, is not
+        /// sent, and its result has no decision, as <see cref="PipelineErrorKind.ProviderDown"/>.
+        /// With a <see cref="Backlog"/>, a call made while the agent is deciding waits for its turn
+        /// before any of this, or is dropped or refused, as <see cref="PipelineErrorKind.Superseded"/>
+        /// or <see cref="PipelineErrorKind.BacklogFull"/>. None of the three is logged (#190).
+        /// </para>
         /// </remarks>
         public Awaitable<DecisionResult> DecideAsync(string stimulus, DecideOptions options = null, CancellationToken ct = default)
         {
@@ -502,7 +559,7 @@ namespace Agenerela
             var observations = new ReadOnlyCollection<string>(NotBlank(options.Observations));
             string idleExample = options.IdleExampleStimulus ?? IdleExampleStimulus ?? (profile != null ? profile.IdleExampleStimulus : null);
 
-            return Decide(stimulus, options, idleExample, observations, ct);
+            return InTurn(Backlog, stimulus, options, idleExample, observations, ct);
         }
 
         /// <summary>
@@ -745,23 +802,84 @@ namespace Agenerela
             }
         }
 
-        private async Awaitable<DecisionResult> Decide(
-            string stimulus, DecideOptions call, string idleExample, IReadOnlyList<string> observations,
-            CancellationToken ct)
+        // One call: with a backlog, its turn among this agent's calls first (G5), then the decision.
+        // Counted as under way from the start of the decision to its result.
+        private async Awaitable<DecisionResult> InTurn(
+            DecisionBacklog backlog, string stimulus, DecideOptions call, string idleExample,
+            IReadOnlyList<string> observations, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
 
+            RequestScheduler.Ticket turn = null;
+            float waitedSeconds = 0f;
+            if (backlog != null)
+            {
+                var waited = System.Diagnostics.Stopwatch.StartNew();
+                turn = turns.Enqueue(call.Priority, ct, backlog.Capacity, backlog.WhenFull);
+                if (turn == null)
+                {
+                    return NotSent(Telemetry(provider, call.Priority), PipelineErrorKind.BacklogFull,
+                        $"{Who()} did not decide: it was deciding already, and its backlog ({backlog}) was full.", call.Correlation);
+                }
+
+                // A call whose turn came at once never waited, and records 0, not the time to queue it.
+                bool waits = turn.IsQueued;
+
+                try
+                {
+                    // Cancelled while waiting, the call ends here, as in the provider's queue.
+                    await turn.Ready;
+                }
+                catch (SupersededException)
+                {
+                    turn.Dispose();
+                    var dropped = Telemetry(provider, call.Priority);
+                    dropped.BacklogWaitSeconds = (float)waited.Elapsed.TotalSeconds;
+                    return NotSent(dropped, PipelineErrorKind.Superseded,
+                        $"{Who()} did not decide: a newer call took this one's place in its backlog ({backlog}).", call.Correlation);
+                }
+                catch
+                {
+                    turn.Dispose();
+                    throw;
+                }
+
+                // The turn comes on whichever thread ended the decision before it.
+                await Awaitable.MainThreadAsync();
+                waitedSeconds = waits ? (float)waited.Elapsed.TotalSeconds : 0f;
+            }
+
+            Interlocked.Increment(ref deciding);
+            try
+            {
+                // Its turn came just as the caller cancelled: still never prepared.
+                ct.ThrowIfCancellationRequested();
+                return await Decide(stimulus, call, idleExample, observations, waitedSeconds, ct);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref deciding);
+
+                // The next call's turn, which may run it right here.
+                turn?.Dispose();
+            }
+        }
+
+        private async Awaitable<DecisionResult> Decide(
+            string stimulus, DecideOptions call, string idleExample, IReadOnlyList<string> observations,
+            float backlogWaitSeconds, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            // Once, so the whole decision, its refusal line included, is on one provider even if
+            // Provider is set meanwhile (DR-019).
+            var provider = this.provider;
             string label = call.StimulusLabel;
             var priority = call.Priority;
             var memory = Memory;
             var commit = MemoryCommit;
-            var telemetry = new DecisionTelemetry
-            {
-                ProviderName = provider.Name ?? "",
-                ProviderConfig = ProviderConfig.NameOf(provider),
-                FrameworkVersion = AgenerelaInfo.Version,
-                Priority = priority,
-            };
+            var telemetry = Telemetry(provider, priority);
+            telemetry.BacklogWaitSeconds = backlogWaitSeconds;
 
             AgentContext ctx;
             DecisionRequest request;
@@ -794,10 +912,15 @@ namespace Agenerela
                     $"Preparing the request failed. {e.GetType().Name}: {e.Message}", call.Correlation);
             }
 
-            var sent = await Send(request, priority, ct);
+            var sent = await Send(provider, request, priority, ct);
             telemetry.QueuedAhead = sent.QueuedAhead;
             telemetry.QueueWaitSeconds = sent.QueueWaitSeconds;
             telemetry.LatencySeconds = sent.Seconds;
+
+            if (sent.HeldBack != null)
+            {
+                return NotSent(telemetry, PipelineErrorKind.ProviderDown, $"{Who()} did not decide. {sent.HeldBack}", call.Correlation);
+            }
 
             if (sent.Failure != null)
             {
@@ -822,7 +945,7 @@ namespace Agenerela
             var result = Guard(new GuardInput(ctx, request, reply, decision, call, telemetry));
             if (result.Verdict.HasValue)
             {
-                result = await SayWhatWasStopped(result, ctx, request, call, ct);
+                result = await SayWhatWasStopped(provider, result, ctx, request, call, ct);
             }
 
             // After the guards and the line, so what is remembered is what the agent will do and
@@ -883,14 +1006,15 @@ namespace Agenerela
         // model's when the call asked for one, else as it came, empty. Its request and reply stay
         // the decision's own, never the refusal line's.
         private async Awaitable<DecisionResult> SayWhatWasStopped(
-            DecisionResult stopped, AgentContext ctx, DecisionRequest request, DecideOptions call, CancellationToken ct)
+            ILLMProvider provider, DecisionResult stopped, AgentContext ctx, DecisionRequest request, DecideOptions call,
+            CancellationToken ct)
         {
             var verdict = stopped.Verdict.Value;
 
             string line = DevelopersLine(verdict, ctx);
             if (line == null && call.AskForRefusalLine)
             {
-                line = await ModelsLine(verdict, ctx, request, call.Priority, stopped.Telemetry, ct);
+                line = await ModelsLine(provider, verdict, ctx, request, call.Priority, stopped.Telemetry, ct);
             }
 
             if (line == null)
@@ -926,11 +1050,18 @@ namespace Agenerela
         // The second request (#109), or null when it gives no line. Its numbers go in fields of
         // their own, so the decision's still mean the decision alone.
         private async Awaitable<string> ModelsLine(
-            GuardVerdict verdict, AgentContext ctx, DecisionRequest decided, DecisionPriority priority,
-            DecisionTelemetry telemetry, CancellationToken ct)
+            ILLMProvider provider, GuardVerdict verdict, AgentContext ctx, DecisionRequest decided,
+            DecisionPriority priority, DecisionTelemetry telemetry, CancellationToken ct)
         {
-            var sent = await Send(PromptBuilder.BuildRefusalLine(decided, ctx, verdict), priority, ct);
+            var sent = await Send(provider, PromptBuilder.BuildRefusalLine(decided, ctx, verdict), priority, ct);
             telemetry.RefusalLineSeconds = sent.Seconds;
+
+            if (sent.HeldBack != null)
+            {
+                // Held back, as the decision would have been: nothing to warn about (#190).
+                telemetry.RefusalLineError = PipelineErrorKind.ProviderDown;
+                return null;
+            }
 
             if (sent.Failure != null)
             {
@@ -964,13 +1095,16 @@ namespace Agenerela
         // One request through the provider's queue, shared with every agent on this provider
         // instance (DR-015), ending back on the main thread. A provider's failure is returned for
         // the caller to judge; only cancellation throws. Disposing the ticket frees the slot for the
-        // next request, whether the provider answered, failed or was cancelled.
-        private async Awaitable<SentRequest> Send(DecisionRequest request, DecisionPriority priority, CancellationToken ct)
+        // next request, whether the provider answered, failed, was cancelled or was held back. The
+        // outcome is reported to the provider's health, which may hold a background request back.
+        private async Awaitable<SentRequest> Send(
+            ILLMProvider provider, DecisionRequest request, DecisionPriority priority, CancellationToken ct)
         {
             var sent = new SentRequest();
+            var health = ProviderHealth.For(provider);
 
             var waited = System.Diagnostics.Stopwatch.StartNew();
-            using (var ticket = scheduler.Enqueue(priority, ct))
+            using (var ticket = RequestScheduler.For(provider).Enqueue(priority, ct))
             {
                 sent.QueuedAhead = ticket.QueuedAhead;
 
@@ -991,6 +1125,15 @@ namespace Agenerela
                 // send, so the two cover the whole call between them: Seconds is the provider's time
                 // alone and a long queue shows in QueueWaitSeconds instead.
                 sent.QueueWaitSeconds = (float)waited.Elapsed.TotalSeconds;
+
+                // Checked at its turn, not when it joined, so a request queued before the provider
+                // went down is held back too. Its slot goes straight to the next request.
+                if (health.HoldsBack(priority, out string heldBack))
+                {
+                    sent.HeldBack = heldBack;
+                    return sent;
+                }
+
                 var clock = System.Diagnostics.Stopwatch.StartNew();
                 try
                 {
@@ -1013,6 +1156,11 @@ namespace Agenerela
                 }
 
                 sent.Seconds = (float)clock.Elapsed.TotalSeconds;
+
+                // Recorded before the slot is freed, so the request it goes to is judged by this
+                // outcome, on whichever thread the provider answered. Changed waits for the main
+                // thread, below.
+                sent.HealthChanged = Record(health, sent);
             }
 
             // Back on the main thread, as for the send: a provider that answered on a worker thread
@@ -1020,10 +1168,40 @@ namespace Agenerela
             // thread-safe than the rest of the agent. Free when already there.
             await Awaitable.MainThreadAsync();
 
+            // On the main thread, where a game's handler can touch the scene. Before the check
+            // below: a reply arrived, or the provider failed, whatever the caller did meanwhile.
+            if (sent.HealthChanged)
+            {
+                health.RaiseChanged();
+            }
+
             // Also for a provider that finished without noticing the cancellation.
             ct.ThrowIfCancellationRequested();
 
             return sent;
+        }
+
+        // What one sent request says about its provider: any reply means it answered, and a
+        // failure is the provider's, since nothing but the provider ran (#190, G1). True when that
+        // changed the provider's health.
+        private static bool Record(ProviderHealth health, SentRequest sent)
+        {
+            if (sent.Reply != null)
+            {
+                return health.RecordReply();
+            }
+
+            if (sent.Failure is ProviderException failure)
+            {
+                return health.RecordFailure(KindOf(failure), failure.Message);
+            }
+
+            if (sent.Failure != null)
+            {
+                return health.RecordFailure(PipelineErrorKind.ProviderFailed, $"{sent.Failure.GetType().Name}: {sent.Failure.Message}");
+            }
+
+            return health.RecordFailure(PipelineErrorKind.ProviderFailed, "The provider returned no result.");
         }
 
         private sealed class SentRequest
@@ -1033,6 +1211,12 @@ namespace Agenerela
             public float Seconds;
             public ProviderResult Reply;
             public Exception Failure;
+
+            // Why ProviderHealth held it back unsent, or null when it was sent.
+            public string HeldBack;
+
+            // Whether its outcome changed the provider's health, so Changed is owed.
+            public bool HealthChanged;
         }
 
         // Each guard in the order they run, telling running how to name it just before it does, so
@@ -1241,6 +1425,31 @@ namespace Agenerela
                     yield return asset.Action;
                 }
             }
+        }
+
+        // A new decision's telemetry, with what is known before anything else happens.
+        private static DecisionTelemetry Telemetry(ILLMProvider provider, DecisionPriority priority)
+        {
+            return new DecisionTelemetry
+            {
+                ProviderName = provider.Name ?? "",
+                ProviderConfig = ProviderConfig.NameOf(provider),
+                FrameworkVersion = AgenerelaInfo.Version,
+                Priority = priority,
+            };
+        }
+
+        // A decision that ended before its request was sent, by a rule the game switched on: the
+        // provider's back-off or the agent's backlog (#190). Recorded as a pipeline error, so a game
+        // reads it where it reads any decision that did not happen, but logged nowhere: it is what
+        // the rule is for, and the telemetry holds the reason. It carries the call's correlation, as
+        // every result DecideAsync returns does (DR-018).
+        private static DecisionResult NotSent(DecisionTelemetry telemetry, PipelineErrorKind kind, string message, object correlation)
+        {
+            telemetry.Outcome = DecisionOutcome.PipelineError;
+            telemetry.ErrorKind = kind;
+            telemetry.ErrorMessage = message;
+            return new DecisionResult(null, telemetry, null, null, null, null, correlation);
         }
 
         // With the request when it was sent, and the reply when one arrived (#142).
