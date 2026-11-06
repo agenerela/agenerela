@@ -148,6 +148,7 @@ namespace Agenerela.Editor.Evaluation
                     ? "provider version not checked"
                     : $"{Capital(arm.Provider)} {arm.ProviderVersion}");
                 said.Add(arm.CheckTarget ? "grounding guard on" : "grounding guard off");
+                said.AddRange(PromptOptions(arm));
                 said.Add($"{arm.WarmUpRequests} warm-up request{(arm.WarmUpRequests == 1 ? "" : "s")}");
                 lines.Add($"Arm {letter}, {arm.Name}: {string.Join(", ", said)}.");
 
@@ -171,6 +172,16 @@ namespace Agenerela.Editor.Evaluation
             if (!string.IsNullOrEmpty(c.State)) lines.Add("State: " + c.State);
             if (!string.IsNullOrEmpty(c.Targets)) lines.Add("Targets: " + c.Targets);
             return lines;
+        }
+
+        // What the arm's prompt held besides the profile's examples (#190), in words. A report from
+        // before #190 has neither field and reads as both off, which is what its prompts held.
+        internal static IEnumerable<string> PromptOptions(EvalArmConditions arm)
+        {
+            yield return arm.ListActionsAndTargets
+                ? $"actions and targets listed in the prompt (at most {arm.MaxListedTargets} targets)"
+                : "actions and targets not listed";
+            yield return arm.CounterExamples ? "counter-examples shown" : "no counter-examples";
         }
 
         // One residency reading in words: who was loaded and how much of the arm's model was in VRAM.
@@ -446,7 +457,7 @@ namespace Agenerela.Editor.Evaluation
                 var arm = c.Arms[i];
                 string version = arm.ProviderVersion == null || arm.ProviderVersion == "not checked" ? "version not checked" : $"{Capital(arm.Provider)} {arm.ProviderVersion}";
                 Line($"- Arm {(i == 0 ? "A" : "B")} `{arm.Name}`: {arm.ProviderConfig}, {arm.Model ?? "model not reported"}, {version}, "
-                   + $"grounding guard {(arm.CheckTarget ? "on" : "off")}, {arm.WarmUpRequests} warm-up.");
+                   + $"grounding guard {(arm.CheckTarget ? "on" : "off")}, {string.Join(", ", PromptOptions(arm))}, {arm.WarmUpRequests} warm-up.");
             }
 
             Line();

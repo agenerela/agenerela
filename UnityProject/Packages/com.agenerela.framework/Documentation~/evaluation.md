@@ -339,7 +339,7 @@ its own n, so a category of six prompts needs a very large difference before it 
 **In the Evaluation Report window** the report reads in screen 4's six numbered parts:
 
 1. **Run set-up**, and under **Conditions this run was measured under** the same conditions in
-   plain words: the order, each arm's model and Ollama version, and what was loaded and how much
+   plain words: the order, each arm's model, Ollama version and prompt options, and what was loaded and how much
    of it was in GPU memory before the warm-up, after it and at the end. Warnings show above.
 2. **Outcomes**: a bar per arm, and each outcome's share in A and B with the difference in
    points. Only the Correct row carries the noise verdict, because the check is on accuracy.
