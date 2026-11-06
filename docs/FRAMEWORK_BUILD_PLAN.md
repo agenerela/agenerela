@@ -547,6 +547,14 @@ Memory is what lets an agent carry a conversation from one decision to the next.
 added it as `Agent.Memory`, and DR-018 let it wait until the game acts on a decision. What it
 holds, and the rules it follows, are in §2.9.
 
+For a game that asks one agent one thing at a time, an optional `Conversation` sits on top
+(#190, Living Vale #8): one turn waiting, a timeout the caller sets that holds even when the
+provider ignores cancellation, and a stale answer refused at its `Execute` and discarded from
+memory under `OnExecute`. Like DR-015's ticker it is a convenience, not a mechanism: the game
+still decides when a turn starts, and removing it changes nothing in `Agent`. It tells a stale
+result by reference, so `Correlation` stays the caller's and DR-018's stale rule lives in the
+helper, as DR-018 asked. `Documentation~/conversations.md` has the whole of it.
+
 ### 2.2 Actions (`Runtime/Actions/`) — the heart of the framework
 
 **Settled rule: the action vocabulary is data, not an enum.** The prototype's fixed
