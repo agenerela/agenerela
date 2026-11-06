@@ -178,9 +178,11 @@ namespace Agenerela.Editor.Evaluation
         // before #190 has neither field and reads as both off, which is what its prompts held.
         internal static IEnumerable<string> PromptOptions(EvalArmConditions arm)
         {
+            // Only the system prompt's extra list: the runner tells the model every target as an
+            // observation either way, and the cap applies to this list alone.
             yield return arm.ListActionsAndTargets
-                ? $"actions and targets listed in the prompt (at most {arm.MaxListedTargets} targets)"
-                : "actions and targets not listed";
+                ? $"system-prompt list of actions and targets on (at most {arm.MaxListedTargets} targets in it)"
+                : "system-prompt list of actions and targets off";
             yield return arm.CounterExamples ? "counter-examples shown" : "no counter-examples";
         }
 
