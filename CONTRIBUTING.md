@@ -47,7 +47,9 @@ and that merge corrupts Unity scenes. Verify with
 - Each demo game is its own Unity project under `Demos/` that loads the same package from
   disk. Open the one you are working on; [`Demos/README.md`](Demos/README.md) covers
   creating one.
-- **Ollama** is only needed once there is code that calls a model — not for Phase 1.
+- **Ollama** is needed only for what calls a live model: the `RequiresOllama` PlayMode tests,
+  an A/B run and the demo games. EditMode tests need none, and the live tests are ignored
+  when Ollama is unreachable.
 
 ## Branches
 
