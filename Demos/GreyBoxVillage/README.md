@@ -364,8 +364,9 @@ The statement appears above the guard's head. Every answer passes the framework'
 it runs, then the game's own:
 
 - **`target_fits_action`**, on every agent: an action aimed at the wrong kind of target, such as
-  a quest offered "at the market", is rewritten to `none`. The schema has one target list for all
-  actions, so only a guard can pair them. Line: "I don't follow you."
+  a quest offered "at the market", is rewritten to `none`. The game sends the flat schema, one
+  target list for all actions. The framework's target categories and `TargetCategoryGuard`
+  (#208), and its paired schema (#210), can pair them now, but the game has not adopted them yet. Line: "I don't follow you."
 - **`quest_not_ready`**, on every agent: `complete_quest` for a quest whose items the player no
   longer holds (they were dropped while the model thought). Line: "You haven't got it all yet.
   Come back when you do."

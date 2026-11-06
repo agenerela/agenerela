@@ -2,9 +2,9 @@
 
 Standalone Unity **6000.3.23f1**, Universal 3D (URP) project for the
 [Living Vale RPG demo](../../docs/demos/living-vale.md), tracked in
-[#69](https://github.com/agenerela/agenerela/issues/69). It develops on its own branch,
-`69-living-vale`, which merges `test` in regularly and lands in `test` through one pull request
-when the lead calls it done.
+[#69](https://github.com/agenerela/agenerela/issues/69). It developed on its own branch,
+`69-living-vale`, and landed in `test` in #206 on 6 November 2026; work on it now branches off
+`test` like any other.
 
 ## Play it
 
