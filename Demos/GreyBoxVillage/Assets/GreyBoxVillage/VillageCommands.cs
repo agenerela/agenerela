@@ -54,6 +54,7 @@ namespace Demos.GreyBoxVillage
         private readonly List<BubbleInfo> bubbles = new List<BubbleInfo>();
         private readonly List<TagInfo> names = new List<TagInfo>();
         private readonly List<TagInfo> places = new List<TagInfo>();
+        private readonly List<Rect> covers = new List<Rect>();
         private readonly List<string> queue = new List<string>();
         private NameTag[] nameTags;
         private Pickup[] pickups;
@@ -83,11 +84,15 @@ namespace Demos.GreyBoxVillage
         /// </summary>
         public bool MayAskOnItsOwn => ModelProblem == null || Time.time - ModelFailedAt >= ModelRetrySeconds;
 
-        /// <summary>Called by every mind when a decision ends: a failure to reach the model sets <see cref="ModelProblem"/>, an answer clears it.</summary>
+        /// <summary>
+        /// Called by every mind when a decision ends: a failure to reach the model sets
+        /// <see cref="ModelProblem"/>, and any reply clears it, even one that could not be read or
+        /// that a guard stopped, because a model answered.
+        /// </summary>
         public void ReportModel(DecisionResult result)
         {
             if (result == null) return;
-            if (result.Decision != null)
+            if (result.Decision != null || result.Reply != null)
             {
                 if (ModelProblem != null && Hud != null) Hud.Toast("The model is answering again.");
                 ModelProblem = null;
@@ -324,6 +329,13 @@ namespace Demos.GreyBoxVillage
                     bubbles.Add(new BubbleInfo { World = head, Text = "...", Kind = "thinking" });
             }
             Hud.SetBubbles(camera, bubbles);
+
+            // World labels keep out from under every panel drawn over the world.
+            covers.Clear();
+            foreach (var r in new[] { Board != null ? Board.Bounds : null, Input != null ? Input.Bounds : null,
+                         Book != null ? Book.Bounds : null, Menu != null ? Menu.Bounds : null })
+                if (r != null) covers.Add(r.Value);
+            Hud.SetCoveredRects(covers);
 
             nameTags ??= FindObjectsByType<NameTag>(FindObjectsSortMode.None);
             names.Clear();

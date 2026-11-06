@@ -19,8 +19,8 @@ namespace Demos.GreyBoxVillage
         public override string Activity => activity ??= "standing watch before the lord's keep";
         public override bool IsBusy => false;
 
-        private static readonly string[] SuggestedLines =
-            { "Any work for me, captain?", "Send a guard to the market.", "I have the wolf's pelt.", "What's the news?" };
+        private static readonly IReadOnlyList<string> SuggestedLines = System.Array.AsReadOnly(new[]
+        { "Any work for me, captain?", "Send a guard to the market.", "I have the wolf's pelt.", "What's the news?" });
 
         public override IReadOnlyList<string> Suggestions => SuggestedLines;
 

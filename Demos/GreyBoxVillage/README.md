@@ -115,7 +115,9 @@ Everything you see is built by scripts, so it can be rebuilt and changed in code
   - **With the UI**, `...VillageCapture.CaptureUiFromCommandLine -captureOut <dir>
     [-captureSizes 1280x720,1920x1080]`, with no `-quit`: it enters Play mode, and captures the
     HUD, the dialogue panel, a speech bubble, an amber refusal, the framework view, the pack, the
-    journal, the menu and the no-model warning, by day and at night, then the title screen. The
+    journal, the menu and its controls, and the no-model warning, by day and at night, then the
+    title screen. The request history (H) is IMGUI, which a window-less editor does not draw, so
+    it is not captured. The
     panels draw into a RenderTexture (`PanelSettings.targetTexture`), laid over the camera's. The
     agents answer from a scripted provider, never a model. `Tools > GreyBoxVillage > Capture the
     UI` does the same from the editor, into `Logs/captures`.
@@ -361,7 +363,11 @@ They cover:
 - The default volume profile holds no component whose script is missing.
 - With no model (unreachable, or the model not pulled), the village says so on the HUD and in a
   red bubble, stops asking on its own, still sends the player's lines, and clears it all at the
-  first answer. An unreadable reply is not taken for a missing model.
+  first answer. Any reply ends it, even one that cannot be read, and an unreadable reply on
+  its own is not taken for a missing model.
+- No static table holds objects that can change: the item catalog and the suggestion lines are
+  read-only.
+- A `ScatterField` follows its transform when it or a parent moves.
 - The scatter is instanced, no placed model overrides the palette, and the scene stays under
   1.5 MB.
 

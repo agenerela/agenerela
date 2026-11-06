@@ -37,6 +37,8 @@ namespace Demos.Shared
             panel.style.top = Length.Percent(26);
             panel.style.paddingTop = 20;
             panel.style.paddingBottom = 18;
+            // Opaque, so the lamps and windows of the backdrop never show through the text.
+            panel.style.backgroundColor = new Color(0.1f, 0.08f, 0.06f, 1f);
             var title = DemoUI.Label(panel, "ASHFORD", "vui-title");
             title.style.fontSize = 34;
             title.style.unityTextAlign = TextAnchor.MiddleCenter;

@@ -32,8 +32,8 @@ namespace Demos.GreyBoxVillage
         public override string Activity => activity ??= "minding your stall at the market";
         public override bool IsBusy => false;
 
-        private static readonly string[] SuggestedLines =
-            { "What are you selling?", "Got any work for me?", "I'll take some bread.", "Could you spare an apple?", "I found your moonpetals." };
+        private static readonly IReadOnlyList<string> SuggestedLines = System.Array.AsReadOnly(new[]
+        { "What are you selling?", "Got any work for me?", "I'll take some bread.", "Could you spare an apple?", "I found your moonpetals." });
 
         public override IReadOnlyList<string> Suggestions => SuggestedLines;
 

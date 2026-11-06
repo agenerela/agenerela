@@ -286,11 +286,13 @@ namespace Demos.GreyBoxVillage
             var t = result.Telemetry;
             string error = "No decision: " + t.ErrorKind + ". " + t.ErrorMessage;
             Village.Recorder.Complete(record, result, "error", error);
-            Log(Name, "(no answer: " + t.ErrorKind + ")", DialogueLine.Kinds.Note);
-            // Shown where the player is looking, so a failure never looks like an agent thinking forever.
-            Body.Say(Village.ModelProblem != null ? "No answer: no model is answering."
-                : t.ErrorKind == PipelineErrorKind.UnreadableReply ? "No answer: the reply could not be read."
-                : "No answer (" + t.ErrorKind + ").", SpeechKind.Error);
+            // Said where the player is looking, so a failure never looks like an agent thinking
+            // forever, and the same words in the dialogue log. The error kind is in the recorder.
+            string why = Village.ModelProblem != null ? "no model is answering"
+                : t.ErrorKind == PipelineErrorKind.UnreadableReply ? "the reply could not be read"
+                : "something went wrong (" + t.ErrorKind + ")";
+            Log(Name, "(no answer: " + why + ")", DialogueLine.Kinds.Note);
+            Body.Say("No answer: " + why + ".", SpeechKind.Error);
             Village.Overlay.ShowDecision(asked, "none", "no_target", "", error,
                 t.LatencySeconds, t.GuardsFired, Village.ProviderLabel);
         }

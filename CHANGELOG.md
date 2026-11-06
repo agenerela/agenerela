@@ -56,8 +56,13 @@ phase table and the open issues, not here.
     prefabs. The bushes, flowers and grass inside the walls now appear: the builder's check for
     buildings in the way had always found the ground.
   - **The capture tool draws the UI** (`CaptureUiFromCommandLine`) and measures the frame time.
-    The layout fixes it found: the agent list clear of the purse, key hints on a panel of their
-    own, at most three toasts, a card title that wraps, and the book and menu above the toasts.
+    The layout fixes it found:
+    - the agent list clear of the purse, on a panel of its own, like the key hints;
+    - toasts, at most three, stacked under the quest tracker, away from speech bubbles;
+    - world labels kept out from under every panel and from each other;
+    - bubbles above name tags;
+    - a card title that wraps;
+    - opaque book, menu, framework view and title panels.
   - **Portraits** lit from the viewer's side, so Odile's face reads, and a title screen backdrop.
 - **GreyBoxVillage has two guards and an agent board** (#143), the first slice of the demo's
   upgrade.

@@ -511,6 +511,8 @@ namespace Demos.GreyBoxVillage.Tests
             Assert.That(commands.ModelProblem, Does.Contain(told), "The HUD must say what is wrong with the model.");
             Assert.That(bram.Body.SpeechType, Is.EqualTo(SpeechKind.Error), "Bram must say no answer came, not stay silent.");
             Assert.That(bram.Body.Speech, Does.Contain("No answer"));
+            Assert.That(bram.Conversation.Last().Text, Is.EqualTo("(no answer: no model is answering)"),
+                "The dialogue log must say it in the bubble's words, not name an enum.");
             Assert.That(bram.IsDeciding, Is.False, "Bram must not stay thinking.");
 
             // What the game notices by itself waits for the model; four agents asking a stopped
@@ -534,6 +536,20 @@ namespace Demos.GreyBoxVillage.Tests
             await bram.HearPlayerAsync("Hello?");
             Assert.That(commands.ModelProblem, Is.Null);
             Assert.That(commands.MayAskOnItsOwn, Is.True);
+        }
+
+        [Test]
+        public async Task AnyReplyEndsTheNoModelWarningEvenAnUnreadableOne()
+        {
+            provider.Fail = ProviderErrorKind.Unreachable;
+            await bram.HearPlayerAsync("Open the gate.");
+            Assert.That(commands.ModelProblem, Is.Not.Null);
+            provider.Fail = null;
+            provider.Reply = "this is not json";
+            await bram.HearPlayerAsync("Open the gate.");
+            Assert.That(commands.ModelProblem, Is.Null, "A model answered, so the warning must go, readable or not.");
+            Assert.That(commands.MayAskOnItsOwn, Is.True);
+            Assert.That(bram.Body.Speech, Does.Contain("could not be read"));
         }
 
         [Test]

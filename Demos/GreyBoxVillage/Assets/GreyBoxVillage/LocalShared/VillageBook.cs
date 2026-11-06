@@ -24,6 +24,8 @@ namespace Demos.Shared
         }
 
         public bool IsOpen { get; private set; }
+        /// <summary>Where the book sits, in panel pixels, while it is open.</summary>
+        public Rect? Bounds => IsOpen && panel != null ? panel.worldBound : (Rect?)null;
         /// <summary>"inventory" or "journal".</summary>
         public string Page { get; private set; } = "inventory";
 

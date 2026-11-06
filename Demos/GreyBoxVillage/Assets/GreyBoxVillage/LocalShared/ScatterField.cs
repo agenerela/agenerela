@@ -56,6 +56,7 @@ namespace Demos.Shared
 
         private readonly List<Batch> batches = new List<Batch>();
         private bool built;
+        private Matrix4x4 builtFor;
 
         /// <summary>How many copies are drawn, over every kind.</summary>
         public int Count
@@ -75,6 +76,19 @@ namespace Demos.Shared
             {
                 Build();
                 return batches.Count;
+            }
+        }
+
+        /// <summary>The world bounds of every copy, as the cameras cull them; empty when there are none.</summary>
+        public Bounds Bounds
+        {
+            get
+            {
+                Build();
+                if (batches.Count == 0) return new Bounds(transform.position, Vector3.zero);
+                var b = batches[0].Bounds;
+                foreach (var batch in batches) b.Encapsulate(batch.Bounds);
+                return b;
             }
         }
 
@@ -100,10 +114,13 @@ namespace Demos.Shared
         /// <summary>Drops the batches, so the next frame builds them again from <see cref="Kinds"/>.</summary>
         public void Rebuild() => built = false;
 
+        // Rebuilt when the copies change (OnValidate, Rebuild) or the field or a parent moves.
         private void Build()
         {
-            if (built) return;
+            var matrix = transform.localToWorldMatrix;
+            if (built && matrix == builtFor) return;
             built = true;
+            builtFor = matrix;
             batches.Clear();
             float cell = Mathf.Max(1f, CellSize);
             foreach (var kind in Kinds)

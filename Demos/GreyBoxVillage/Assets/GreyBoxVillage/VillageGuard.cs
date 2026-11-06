@@ -210,8 +210,8 @@ namespace Demos.GreyBoxVillage
             });
         }
 
-        private static readonly string[] SuggestedLines =
-            { "Walk with me.", "What's going on?", "Head to the market.", "Ring the alarm!", "Wait here." };
+        private static readonly IReadOnlyList<string> SuggestedLines = System.Array.AsReadOnly(new[]
+        { "Walk with me.", "What's going on?", "Head to the market.", "Ring the alarm!", "Wait here." });
 
         public override IReadOnlyList<string> Suggestions => SuggestedLines;
 

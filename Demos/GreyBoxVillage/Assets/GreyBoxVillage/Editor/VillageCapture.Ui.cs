@@ -270,9 +270,13 @@ namespace Demos.GreyBoxVillage.Editor
             foreach (var x in Snap("journal")) yield return x;
             commands.Book.Show(false);
 
-            // The Esc menu.
+            // The Esc menu, and its list of controls. (The request history, H, is IMGUI, which a
+            // headless editor does not draw, so it is not captured.)
             commands.Menu.Open();
             foreach (var x in Snap("menu")) yield return x;
+            commands.Menu.ShowControls(true);
+            foreach (var x in Snap("controls")) yield return x;
+            commands.Menu.ShowControls(false);
             commands.Menu.Close();
 
             // No model: the HUD says so, and so does the agent who was asked.

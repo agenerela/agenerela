@@ -37,6 +37,7 @@ namespace Demos.GreyBoxVillage.Editor
             SceneManager.SetActiveScene(scene);
             LoadArt();
             BuildWorld();
+            RecordPlacedModels(scene);
             EditorSceneManager.SaveScene(scene, DemoLauncher.VillagePath);
 
             var launcher = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);

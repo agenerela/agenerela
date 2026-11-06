@@ -119,10 +119,62 @@ namespace Demos.GreyBoxVillage.Tests
         /// Field-like static events and static auto-properties are fields too.
         /// </summary>
         private static IEnumerable<FieldInfo> MutableStatics(Assembly assembly) =>
+            StaticFields(assembly).Where(f => !f.IsLiteral && (!f.IsInitOnly || IsGrowable(f.FieldType)));
+
+        private static IEnumerable<FieldInfo> StaticFields(Assembly assembly) =>
             assembly.GetTypes()
                 .Where(t => t.GetCustomAttribute<CompilerGeneratedAttribute>() == null && !t.Name.StartsWith("<"))
-                .SelectMany(t => t.GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
-                .Where(f => !f.IsLiteral && (!f.IsInitOnly || IsGrowable(f.FieldType)));
+                .SelectMany(t => t.GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly));
+
+        // Whether a value of this type can be changed in place: anything but a string, a primitive,
+        // an enum, or a struct whose fields are all of those (a tuple of strings, a Color).
+        private static bool IsMutable(Type type) =>
+            !(type == typeof(string) || type.IsPrimitive || type.IsEnum ||
+              type.IsValueType && type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).All(f => !IsMutable(f.FieldType)));
+
+        [Test]
+        public void NoStaticTableHoldsObjectsThatCanChange()
+        {
+            // A readonly array of objects with settable fields is static state all the same: the
+            // catalog's items were exactly that before they became read-only.
+            var tables = GameAssemblies.SelectMany(StaticFields)
+                .Where(f => f.IsInitOnly && f.GetValue(null) is Array a && IsMutable(a.GetType().GetElementType()))
+                .Select(f => f.DeclaringType.FullName + "." + f.Name).ToList();
+            Assert.That(tables, Is.Empty, "Static arrays whose elements can be changed in place.");
+            Assert.That(ItemCatalog.All, Is.Not.InstanceOf<Array>(), "The catalog must not be an array a caller can write to.");
+            Assert.That(typeof(ItemCatalog.Item).GetFields().Where(f => !f.IsInitOnly).Select(f => f.Name), Is.Empty,
+                "An item's fields must be readonly.");
+        }
+
+        [Test]
+        public void TheScatterFollowsItsTransform()
+        {
+            var parent = new GameObject("parent");
+            var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            try
+            {
+                var field = new GameObject("field").AddComponent<ScatterField>();
+                field.transform.SetParent(parent.transform, false);
+                field.Kinds = new[]
+                {
+                    new ScatterField.Kind
+                    {
+                        Model = "cube",
+                        Parts = new[] { new ScatterField.Part { Mesh = cube.GetComponent<MeshFilter>().sharedMesh } },
+                        Placements = new[] { new Vector4(0, 0, 0, 0) },
+                        Scales = new[] { 1f }
+                    }
+                };
+                Assert.That(field.Bounds.center.x, Is.EqualTo(0f).Within(0.01f));
+                parent.transform.position = new Vector3(10, 0, 0);
+                Assert.That(field.Bounds.center.x, Is.EqualTo(10f).Within(0.01f), "The copies stayed where the field was first drawn.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(parent);
+                UnityEngine.Object.DestroyImmediate(cube);
+            }
+        }
 
         private static bool IsGrowable(Type type) =>
             !type.IsArray && type.GetInterfaces().Append(type).Any(i => i.IsGenericType &&
