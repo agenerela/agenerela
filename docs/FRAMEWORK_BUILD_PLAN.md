@@ -995,6 +995,11 @@ an agent is being asked (DR-008): a developer's own `Update` loop, a behaviour-t
 a coroutine all look identical to us otherwise, and at a ceiling of ≈21 s for 30 agents that
 distinction is the difference between a responsive NPC and a queue full of ambient chatter.
 
+**Around the queue (DR-015 as amended, DR-019).** Model warm-ups, unloads and lists skip it.
+Each provider has a `ProviderHealth` the queue's results feed, with an opt-in back-off for
+background requests while it is down. Each agent can hold a backlog in front of it, so it
+decides one call at a time.
+
 ### 2.7 Editor (`Editor/`)
 
 Custom inspectors for `AgentProfile` (identity fields, the drag-in list of action assets —
@@ -1838,6 +1843,28 @@ sets background priority, and cancels when the agent is disabled or off-screen.
 alongside a player-facing NPC, in which case tiers become a small ordered enum rather than a
 boolean — a change to the scheduler, not to the API shape.
 
+**Amended by the lead, 5 November 2026 (#190, workstream D).** The queue's own rules stand:
+player-facing before background, first come, first served within each, nothing in flight
+aborted, nothing retried. Both demos had to build three things around it, now in the
+framework, each outside the queue or off by default:
+- **Model lifecycle calls skip the queue** (DR-019). A warm-up, an unload and a model list are
+  not decisions. Living Vale's warm-ups went through `DecideAsync`, and the player's turns
+  timed out behind them.
+- **Provider health.** `Agent` reports every request's outcome to the provider's
+  `ProviderHealth`: a provider fault marks it down, with the reason and a retry time; any
+  reply marks it up again; `Changed` says so either way. With `BackOff` switched on, a
+  background request whose turn comes while the provider is down, before the retry time, is
+  not sent: it ends with no decision, as `ProviderDown`, and logs nothing. The retry comes
+  5 s after the first failure, doubling to 60 s. A player-facing request is always sent,
+  since someone waits for its answer either way. Off by default, because one timeout would
+  otherwise cost the next few seconds of background work, such as a country's turn.
+- **A per-agent backlog in front of the queue.** `Agent.Backlog`, null by default. Set, the
+  agent decides one call at a time, and calls made meanwhile wait, player-facing first, to be
+  prepared when their turn comes, so each sees the memory of the one before. When it is full,
+  the policy drops the oldest call or refuses the newest, which ends with no decision, as
+  `Superseded` or `BacklogFull`. The call in progress is never dropped: its token still
+  cancels it, in the queue or in flight. It never asks why the agent was called (DR-008).
+
 ### DR-016 — The grounding guard reads the model's confidence, not the player's words
 
 **Status:** Decided for now, 5 October 2026, from a probe ([findings](llm-wiki/findings.md)).
@@ -2060,6 +2087,51 @@ default memory behaviour must compile and behave as before.
 **Revisit if:** handlers turn out to need the result while deciding (a dry run), or a
 conversation helper (#190, LV #8) needs `Execute` to refuse by correlation itself, in which
 case that rule belongs in the helper, not in `Agent`.
+
+### DR-019 — Model lifecycle is an optional provider capability, outside the decision queue
+
+**Status:** Decided by the lead, 5 November 2026 (#190, workstream D).
+
+**Context.** Living Vale lets the player switch the NPCs' model at runtime, so it has to list
+the models the server has, warm the chosen one up, unload the one left behind, and move every
+NPC onto the new one without losing what they remember. None of that is in the framework, so
+the game has about 400 lines for it (`ModelSelector`, `ModelCycle`, a driver that rebuilds
+every agent). It warmed a model up by sending a throwaway decision through `DecideAsync`, and
+that is how its worst bug happened: about nine warm-ups of up to 30 s each, one per press of
+the model key, queued up, and the player's turns timed out behind them (gaps list, #7). The
+Phase 5 provider inspector (#173) needs the same model list for its picker, and the A/B runner
+(#145) already unloads a model through an internal call, for hard rule 3.
+
+**Options considered**
+
+| Option | Cost | Verdict |
+|---|---|---|
+| Add the calls to `ILLMProvider` | Every provider, a developer's own included, must implement calls an in-process or cloud backend has no use for | Rejected: the extension points in `providers.md` are never a change to `ILLMProvider` |
+| Public methods on `OllamaProvider` only | Nothing for #173 or Phase 6 to build on; each game tests for one concrete type | Rejected |
+| A model the provider can change in place | Breaks "settings are copied when the provider is built"; telemetry and the queue would no longer say which model answered | Rejected |
+| **An optional capability interface, acting on the provider's own model** | One more public interface; a game checks for it | **Chosen** |
+
+**Decision.** A provider that can manage its server's models implements `IModelLifecycle`:
+`ListModelsAsync` (what the server has installed), `WarmUpAsync` (load this provider's model
+now) and `UnloadAsync` (take it out of memory now). `OllamaProvider` implements it first;
+a provider that does not is left alone, and a game asks `provider is IModelLifecycle`.
+Failures throw `ProviderException`, as `RequestAsync` does. **None of these is a decision**,
+so none goes through the decision queue: a warm-up does only what the first decision on that
+model would have to do anyway, so holding a slot for it would only make decisions wait.
+Switching an agent's model is giving it the provider for that model: `Agent.Provider` can be
+set, and the agent keeps its memory, actions, targets, guards and state. A decision already
+under way finishes on the provider it started with.
+
+**Consequences**
+- Living Vale's catalogue, loader and rebuilt drivers become three calls and one assignment.
+- #173's model picker reads `ListModelsAsync`; its connection check stays its own.
+- Each model is its own provider instance, so its own queue (DR-013): agents moved onto it
+  share that one, and a request already queued on the old one finishes there.
+- Cancelling a warm-up is the caller's token, which aborts the request. Superseding one is
+  cancelling it and starting the next; the framework keeps no list of warm-ups.
+
+**Revisit if:** a backend needs a warm-up that does hold the queue, such as an in-process
+model that cannot load while it generates, in which case that provider queues it itself.
 
 ### Decisions already recorded elsewhere in this plan
 

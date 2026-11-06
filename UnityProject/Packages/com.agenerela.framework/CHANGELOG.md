@@ -198,6 +198,36 @@ While the version stays `0.x`, the public API may change in any release.
   reload off no longer carries them into the next session. A new EditMode test fails on any static
   field in the framework's runtime assembly that nothing resets; the three that need no reset
   (`ProviderConfig`'s provider names and built configs, and the queues) say why in it.
+- **Provider health** (#190 G1, DR-015 as amended). `ProviderHealth.For(provider)`, one per
+  provider instance like its queue, says whether the provider is answering: `IsDown`, `Reason`
+  (a `PipelineErrorKind`), `Message`, `DownSinceUtc`, `RetryAtUtc`, `ConsecutiveFailures`, and a
+  `Changed` event, raised on the main thread. `Agent` reports every request: any reply marks it
+  up, a provider failure down, with a retry time 5 s after the first failure, doubling to 60 s
+  (`FirstRetrySeconds`, `LongestRetrySeconds`, each at most a day). `Reset()` marks it up by hand. **`BackOff`**, off
+  by default: when on, a background request whose turn comes while the provider is down, before
+  the retry time, is not sent; player-facing requests always are.
+- `PipelineErrorKindExtensions.IsProviderFault(kind)`: true for a failure that is the provider's,
+  false for one decision's own (preparation, an unreadable reply, a guard, the backlog).
+- **Model lifecycle** (#190 LV #6, DR-019). `IModelLifecycle`, an optional interface a provider
+  implements to manage its server's models: `ListModelsAsync` (a list of `ModelInfo`: `Name`,
+  `SizeBytes`), `WarmUpAsync` and `UnloadAsync` for the provider's own model. None goes through
+  the decision queue, and failures throw `ProviderException`. `OllamaProvider` implements it with
+  `/api/tags`, an `/api/generate` with no prompt at the decisions' `num_ctx`, and `keep_alive: 0`
+  that waits until `/api/ps` no longer lists the model.
+- **`Agent.Provider` can be set** (DR-019), to switch an agent to another backend or model at
+  runtime. It keeps its memory, actions, targets, sources, guards and state; a decision under way
+  finishes on the provider it started with, its refusal line included.
+- **`Agent.Backlog`** (#190 G5, DR-015 as amended), null by default. A `DecisionBacklog` makes the
+  agent decide one call at a time; calls made meanwhile wait, player-facing first, and are
+  prepared when their turn comes. Presets `DecisionBacklog.LatestWins`, `DropOldest(n)` and
+  `QueueWithCap(n)`, or `new DecisionBacklog(capacity, BacklogOverflow)`. `Agent.IsDeciding` and
+  `Agent.Waiting` say what it is doing; `DecisionTelemetry.BacklogWaitSeconds` records how long a
+  call waited for its turn.
+- `PipelineErrorKind.ProviderDown`, `Superseded` and `BacklogFull`, at the end of the enum: a call
+  held back by `ProviderHealth.BackOff`, dropped from a backlog for a newer one, or refused by a
+  full one. Each ends with no decision before anything is sent, and logs nothing.
+- `Documentation~/providers.md`: provider health, model lifecycle, switching an agent's provider,
+  and the backlog.
 
 ## [0.4.0-preview.1] - 2026-10-29
 
