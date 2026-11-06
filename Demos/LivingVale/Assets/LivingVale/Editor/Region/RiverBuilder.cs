@@ -57,7 +57,7 @@ namespace LivingVale.Editor.Region
             RegionKit.Blocker(root, "River wall west", new Vector3(WestLegX, 1.5f, SouthLegZ - Width * 0.5f + westLength * 0.5f),
                 new Vector3(Width, 3f, westLength));
 
-            // The bridge: a timber deck a low step above the bank, with rails.
+            // The bridge: a timber deck a low step above the bank, longer than the water, with rails over the water.
             float deckLength = Width + 4f;
             RegionKit.Primitive(root, "Reedbank bridge deck", PrimitiveType.Cube, new Vector3(bridge, 0.1f, SouthLegZ),
                 new Vector3(BridgeWidth, 0.2f, deckLength), RegionKit.Timber);
@@ -65,7 +65,7 @@ namespace LivingVale.Editor.Region
             {
                 RegionKit.Primitive(root, side < 0 ? "Bridge rail west" : "Bridge rail east", PrimitiveType.Cube,
                     new Vector3(bridge + side * (BridgeWidth * 0.5f + 0.1f), 0.7f, SouthLegZ),
-                    new Vector3(0.2f, 1f, deckLength), RegionKit.Timber);
+                    new Vector3(0.2f, 1f, Width), RegionKit.Timber); // Over the water only: the path meets the deck at an angle.
             }
 
             // Reeds along the banks, for the village's name and to mark the water from a distance.
