@@ -31,8 +31,16 @@ namespace LivingVale.Editor
             Material timber = MaterialFor("Timber", new Color(0.43f, 0.28f, 0.17f));
             Material blue = MaterialFor("ValeBlue", new Color(0.2f, 0.48f, 0.7f));
 
+            // G7c: packed earth, not grey stone, so the Glen reads as a village yard on the grass; the
+            // square around the well and the stall is cobbled (looks only, 8 cm high, no colliders).
+            Material earth = MaterialFor("GlenEarth", new Color(0.47f, 0.4f, 0.3f));
             Primitive("Village ground", PrimitiveType.Cube, new Vector3(0f, -0.5f, 0f),
-                new Vector3(40f, 1f, 36f), stone);
+                new Vector3(40f, 1f, 36f), earth);
+            for (int tile = 0; tile < 4; tile++)
+            {
+                ArtDressing.Decorate(null, "cobbles", new Vector3(tile % 2 == 0 ? -5f : 5f, 0f, tile < 2 ? -1f : 9f),
+                    tile * 90f);
+            }
             House("West cottage", new Vector3(-10f, 0f, 6f), stone, timber);
             House("North cottage", new Vector3(0f, 0f, 12f), stone, timber);
             House("East cottage", new Vector3(11f, 0f, 8f), stone, timber);

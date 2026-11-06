@@ -26,7 +26,9 @@ namespace LivingVale.Editor
         /// <summary>Handheld equipment.</summary>
         Gear,
         /// <summary>Non-humanoid creatures.</summary>
-        Creature
+        Creature,
+        /// <summary>Ground cover, cliffs and distant mountains (G7c).</summary>
+        Landscape
     }
 
     /// <summary>Selects a palette-painted humanoid outfit.</summary>
@@ -113,7 +115,12 @@ namespace LivingVale.Editor
             new ArtKitEntry("humanoid_raider", ArtKitCategory.Character, false, true, 1.86f),
             new ArtKitEntry("humanoid_guard", ArtKitCategory.Character, false, true, 1.85f),
             new ArtKitEntry("sword", ArtKitCategory.Gear, false, false, 1.0f),
-            new ArtKitEntry("wolf", ArtKitCategory.Creature, false, true, 0.99f)
+            new ArtKitEntry("wolf", ArtKitCategory.Creature, false, true, 0.99f),
+            new ArtKitEntry("humanoid_patient_seated", ArtKitCategory.Character, false, true, 1.39f),
+            new ArtKitEntry("cobbles", ArtKitCategory.Landscape, false, true, 0.08f),
+            new ArtKitEntry("cliff", ArtKitCategory.Landscape, false, true, 23.71f),
+            new ArtKitEntry("mountain_a", ArtKitCategory.Landscape, false, true, 109.83f),
+            new ArtKitEntry("mountain_b", ArtKitCategory.Landscape, false, true, 79.84f)
         };
 
         /// <summary>The immutable catalog, in placement order.</summary>

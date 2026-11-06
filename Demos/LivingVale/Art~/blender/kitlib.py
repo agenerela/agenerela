@@ -130,6 +130,12 @@ class Kit:
             if f.is_valid and f.normal.z >= min_dot:
                 f.material_index = idx
 
+    def floor(self):
+        """Flatten everything below z = 0 onto it, so finish() does not lift the model to its lowest part."""
+        for v in self.bm.verts:
+            if v.co.z < 0:
+                v.co.z = 0.0
+
     # --- finish -------------------------------------------------------------------
     def finish(self, base_to_zero=True):
         """Write UVs from colours, set every face to material 0 and return stats."""

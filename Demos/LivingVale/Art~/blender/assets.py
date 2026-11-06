@@ -345,6 +345,74 @@ def herb_plant(k):
         k.ico("flower_purple" if i != 1 else "flower_white", (x * 1.5, y * 1.5, 0.38 + i * 0.03), 0.04, subdiv=1)
 
 
+def mountain(k, width, height, seed):
+    """A distant peak: a craggy hull, snow on its high, flat-ish faces. Seen from hundreds of metres."""
+    k.rng.seed(seed)
+    faces = k.ico("stone_dark", (0, 0, 0), 1.0, subdiv=2, s=(width / 2, width * 0.4, height), jitter=0.28)
+    verts = {v for f in faces for v in f.verts}
+    for v in sorted(verts, key=lambda v: (round(v.co.x, 3), round(v.co.y, 3), round(v.co.z, 3))):
+        if v.co.z > height * 0.55:
+            v.co.z += (v.co.z - height * 0.55) * 0.6    # sharpen the summit
+        if v.co.z < 0:
+            v.co.z = 0
+    for f in faces:
+        f.normal_update()
+        c = f.calc_center_median()
+        if c.z > height * 0.72 and f.normal.z > 0.25:
+            k.recolour_up_faces([f], "bone", min_dot=0.25)
+        elif c.z < height * 0.3:
+            k.recolour_up_faces([f], "stone", min_dot=-1.0)
+    k.ico("slate", (width * 0.28, width * 0.1, 0), 0.5, subdiv=1, s=(width * 0.35, width * 0.3, height * 0.5), jitter=0.3)
+    k.floor()   # the foothill dips below the ground; keep the peak's base on it
+
+
+def mountain_a(k):
+    mountain(k, 100.0, 80.0, 21)
+
+
+def mountain_b(k):
+    mountain(k, 130.0, 55.0, 37)
+
+
+def cliff(k):
+    """A 20 m module of the valley's boundary cliff, rock face to the front (-Y), 10 m deep."""
+    k.rng.seed(41)
+    for i in range(5):
+        x = -8.0 + i * 4.0
+        h = 18.0 + k.rng.uniform(0, 7)
+        top = [(x + dx, y + k.rng.uniform(-0.6, 0.6), h + k.rng.uniform(-1.5, 1.5))
+               for dx in (-2.6, 2.6) for y in (-3.0, 4.5)]
+        base = [(x + dx, y, 0.0) for dx in (-2.8, 2.8) for y in (-4.5 - k.rng.uniform(0, 1), 5.0)]
+        mid = [(x + k.rng.uniform(-2.5, 2.5), -4.2 - k.rng.uniform(0, 1.2), h * k.rng.uniform(0.35, 0.7))]
+        faces = k.hull("stone" if i % 2 else "stone_dark", top + base + mid)
+        k.recolour_up_faces(faces, "moss", min_dot=0.7)
+    for i in range(4):
+        k.ico(("stone", "stone_light")[i % 2], (-7.5 + i * 5.0 + k.rng.uniform(-1, 1), -5.5, 0.6), 1.6 + k.rng.uniform(0, 0.8),
+              subdiv=1, s=(1.2, 1.0, 0.8), jitter=0.25)
+    k.floor()   # boulders half-buried, not holding the cliff up
+
+
+def cobbles(k):
+    """A 10 x 10 m patch of irregular flagstones for village squares and forecourts; tile it every 10 m."""
+    k.rng.seed(53)
+    n, size = 11, 10.0 / 11
+    colours = ("stone", "stone", "stone_dark", "earth", "stone")   # low contrast: a square, not a chessboard
+    for i in range(n):
+        for j in range(n):
+            cx = -5.0 + (i + 0.5) * size + k.rng.uniform(-0.06, 0.06)
+            cy = -5.0 + (j + 0.5) * size + k.rng.uniform(-0.06, 0.06)
+            h = k.rng.uniform(0.04, 0.08)
+            half = size * 0.5 - 0.05
+            pts = []
+            for a in range(4):
+                ang = a * 1.5708 + 0.7854 + k.rng.uniform(-0.15, 0.15)
+                r = half * 1.41 * k.rng.uniform(0.9, 1.05)
+                px = max(-5.0, min(5.0, cx + r * math.cos(ang)))
+                py = max(-5.0, min(5.0, cy + r * math.sin(ang)))
+                pts += [(px, py, 0.0), (px * 0.995 + cx * 0.005, py * 0.995 + cy * 0.005, h)]
+            k.hull(colours[k.rng.randrange(len(colours))], pts)
+
+
 # ----------------------------------------------------------------------------------------------
 # Ashwatch
 
@@ -483,20 +551,50 @@ OUTFITS = {
                      belt="rope", hair="hair_grey", skin="skin_dark", accent="robe", accent_col="cloth_teal"),
     "raider":   dict(tunic="cloth_dark", sleeves="leather", legs="cloth_dark", boots="leather_dark",
                      belt="leather_dark", hair="hair_black", skin="skin_light", accent="hood", accent_col="cloth_red"),
+    "patient":  dict(tunic="cloth_cream", sleeves="cloth_cream", legs="cloth_brown", boots="leather_dark",
+                     belt="rope", hair="hair_brown", skin="skin", accent="blanket", accent_col="cloth_grey"),
     "guard":    dict(tunic="tabard", sleeves="steel", legs="cloth_grey", boots="leather_dark",
                      belt="leather_dark", hair="hair_brown", skin="skin", accent="helmet", accent_col="steel"),
 }
 
 
-def humanoid(k, o):
-    """A 1.8 m low-poly person, arms relaxed at the sides (not a T-pose), facing -Y. No rig yet."""
-    # legs and boots
+def humanoid(k, o, seated=False):
+    """A 1.8 m low-poly person, arms relaxed at the sides (not a T-pose), facing -Y. No rig yet.
+    Seated, the hips rest on a 0.5 m seat, thighs forward, shins down, feet on the floor."""
+    # Seated, the whole figure moves 0.22 m back (Blender +Y) so the pivot stays near the middle of
+    # its footprint; the hips sit 0.22 m behind the pivot, which is where a builder puts the seat.
+    with k.group(t=(0, 0.22 if seated else 0.0, 0)):
+        if seated:
+            seated_legs(k, o)
+        else:
+            standing_legs(k, o)
+        with k.group(t=(0, 0, -0.42 if seated else 0.0)):
+            upper_body(k, o)
+
+
+def seated_legs(k, o):
+    for sx in (-1, 1):
+        x = sx * 0.1
+        k.limb(o["legs"], (x, 0.04, 0.5), 0.095, (x, -0.42, 0.5), 0.07, seg=6)
+        k.limb(o["legs"], (x, -0.42, 0.52), 0.065, (x, -0.45, 0.12), 0.06, seg=6)
+        k.limb(o["boots"], (x, -0.45, 0.0), 0.07, (x, -0.45, 0.3), 0.068, seg=6)
+        k.hull(o["boots"], [(x + dx, y - 0.45, z) for dx in (-0.06, 0.06) for (y, z) in
+                            ((-0.17, 0.0), (-0.17, 0.07), (-0.05, 0.12), (0.07, 0.0), (0.07, 0.12))])
+    if o["accent"] == "blanket":   # a blanket over the lap, hanging past the knees
+        k.hull(o["accent_col"], [(x, y, z) for x in (-0.24, 0.24) for (y, z) in
+                                 ((0.02, 0.6), (-0.5, 0.6), (-0.52, 0.32), (0.02, 0.5), (-0.46, 0.56))])
+
+
+def standing_legs(k, o):
     for sx in (-1, 1):
         x = sx * 0.1
         k.limb(o["legs"], (x, 0.0, 0.12), 0.065, (x * 1.05, 0.0, 0.92), 0.095, seg=6)
         k.limb(o["boots"], (x, 0.0, 0.0), 0.07, (x, 0.0, 0.3), 0.068, seg=6)
         k.hull(o["boots"], [(x + dx, y, z) for dx in (-0.06, 0.06) for (y, z) in
                             ((-0.17, 0.0), (-0.17, 0.07), (-0.05, 0.12), (0.07, 0.0), (0.07, 0.12))])
+
+
+def upper_body(k, o):
     # hips and torso
     k.rings(o["legs"], [(0.86, 0.17, 0.11, 0, 0), (1.0, 0.17, 0.11, 0, 0)], seg=8)
     k.rings(o["tunic"], [(0.74, 0.19, 0.13, 0, 0), (0.96, 0.17, 0.115, 0, 0), (1.25, 0.2, 0.13, 0, -0.005),
@@ -553,6 +651,8 @@ def humanoid(k, o):
         k.hull(o["tunic"], hood)
         k.rings(ac, [(1.5, 0.11, 0.11, 0, -0.02), (1.62, 0.1, 0.11, 0, -0.03)], seg=8)   # face scarf
         k.rings(o["tunic"], [(1.38, 0.24, 0.15, 0, 0.0), (1.5, 0.17, 0.12, 0, 0.0)], seg=8)
+    elif accent == "blanket":
+        k.rings(ac, [(1.38, 0.23, 0.15, 0, 0.01), (1.46, 0.15, 0.11, 0, 0.01)], seg=8)   # a shawl
     elif accent == "helmet":
         k.rings(ac, [(1.68, 0.135, 0.135, 0, 0), (1.78, 0.12, 0.12, 0, 0), (1.85, 0.05, 0.05, 0, 0)], seg=8)
         k.rings(ac, [(1.67, 0.15, 0.15, 0, 0), (1.69, 0.15, 0.15, 0, 0)], seg=8)
@@ -562,8 +662,8 @@ def humanoid(k, o):
         k.box("banner_gold", (0, -0.135, 1.22), (0.1, 0.02, 0.1), r=(0, 45, 0))
 
 
-def make_humanoid(outfit):
-    return lambda k: humanoid(k, OUTFITS[outfit])
+def make_humanoid(outfit, seated=False):
+    return lambda k: humanoid(k, OUTFITS[outfit], seated)
 
 
 def sword(k):
@@ -618,6 +718,9 @@ ASSETS = [
     ("humanoid_healer", make_humanoid("healer"), True), ("humanoid_raider", make_humanoid("raider"), True),
     ("humanoid_guard", make_humanoid("guard"), True),
     ("sword", sword, False), ("wolf", wolf, True),
+    ("humanoid_patient_seated", make_humanoid("patient", seated=True), True),
+    ("mountain_a", mountain_a, True), ("mountain_b", mountain_b, True), ("cliff", cliff, True),
+    ("cobbles", cobbles, True),
 ]
 
 ROWS = [
@@ -626,5 +729,6 @@ ROWS = [
     ("nature", ["tree_pine", "tree_broadleaf", "rock_a", "rock_b", "herb_plant"]),
     ("fortifications", ["ashwatch_gate", "ashwatch_wall", "ruin_wall", "camp_tent", "campfire"]),
     ("characters", ["humanoid_player", "humanoid_villager", "humanoid_healer", "humanoid_raider",
-                    "humanoid_guard", "wolf", "sword"]),
+                    "humanoid_guard", "humanoid_patient_seated", "wolf", "sword"]),
+    ("landscape", ["cobbles", "cliff", "mountain_a", "mountain_b"]),
 ]

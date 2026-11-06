@@ -108,6 +108,12 @@ phase table and the open issues, not here.
   quests can be offered and handed in. **E** uses world pickups, and each ending changes the scene.
   Every deal goes on a card. All of it runs through `QuestRoutes` and the shared executor, from
   both drivers. Framework gaps 16–19 are recorded.
+- **Living Vale G7c: visual polish** (#69), on `69-living-vale`: Briar Glen stands on packed
+  earth with a cobbled square, Ashwatch's forecourt is cobbled, the distant mountains and the
+  boundary cliffs are low-poly kit models, Iven's porch patients sit on their benches as a seated
+  humanoid, and the hit flash is a stronger, longer red (0.2 s) so it reads on the palette material. Five new
+  kit models (`humanoid_patient_seated`, `cobbles`, `cliff`, `mountain_a`, `mountain_b`); colliders
+  are unchanged.
 - **Living Vale G7b: the art kit is in the game** (#69), on `69-living-vale`: the Village scene's
   builders dress their primitives with the kit through `ArtDressing`, which keeps each primitive's
   collider and switches the model's off, so walls, talk ranges and sight lines stay where they were.

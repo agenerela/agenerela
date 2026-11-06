@@ -24,6 +24,16 @@ namespace LivingVale.Editor.Region
 
             // The forecourt, open to the south, where the path from Reedbank arrives.
             RegionKit.Yard(root, "Ashwatch forecourt", x, z + 2f, 38f, 20f, paving);
+            // G7c: the forecourt is cobbled (looks only), four kit patches across and two deep.
+            for (int i = 0; i < 8; i++)
+            {
+                GameObject patch = ArtDressing.Decorate(root, "cobbles",
+                    new Vector3(x - 14.25f + (i % 4) * 9.5f, 0f, z - 3f + (i / 4) * 10f), (i % 4) * 90f);
+                if (patch != null)
+                {
+                    patch.transform.localScale = new Vector3(0.95f, 1f, 1f);
+                }
+            }
             RegionKit.Block(root, "Ashwatch forecourt parapet west", x - 19f, z + 2.5f, 1f, 19f, 1.2f, wall);
             RegionKit.Block(root, "Ashwatch forecourt parapet east", x + 19f, z + 2.5f, 1f, 19f, 1.2f, wall);
 
