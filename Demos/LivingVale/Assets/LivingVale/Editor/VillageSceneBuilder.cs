@@ -96,7 +96,7 @@ namespace LivingVale.Editor
             cameraObject.tag = "MainCamera";
             Camera camera = cameraObject.GetComponent<Camera>();
             camera.nearClipPlane = 0.1f;
-            camera.farClipPlane = 100f;
+            camera.farClipPlane = 1000f; // G4b: the region's far side and the mountains beyond it.
             camera.fieldOfView = 60f;
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = new Color(0.38f, 0.5f, 0.6f);
@@ -110,6 +110,7 @@ namespace LivingVale.Editor
             Speaker("npc_mara", "Mara", "General trader", new Vector3(-5f, 0f, 4.5f), timber);
             // Between 6 and 9 m apart permits an explicit switch before leaving the old speaker's range.
             Speaker("npc_iven", "Iven", "Healer", new Vector3(3f, 0f, 3f), blue);
+            Region.RegionBuilder.Build(bootstrap); // G4b: the valley, its five other places and six NPCs.
             if (!EditorSceneManager.SaveScene(scene, ScenePath))
             {
                 throw new InvalidOperationException($"Could not save {ScenePath}.");

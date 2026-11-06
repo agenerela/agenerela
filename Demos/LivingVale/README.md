@@ -42,6 +42,13 @@ level, XP and the quest's state. **F9** saves and **F10** loads (closing any ope
 save is `livingvale_save.json` under `Application.persistentDataPath`, and the save before it is
 kept as `livingvale_save.bak.json`.
 
+**The region (G4b):** paths lead out of the village to the Old Road (south), Herb Hollow (west),
+and on to Reedbank, Ashwatch Castle and Broken Watch; the HUD names the place you are in, and the
+first visit to each pays 10 XP once, saved with the rest. Sella stands at the inn in the Glen, Toma
+and Fen at Reedbank, Brann and Elra at Ashwatch's gate, Kest at Broken Watch. They walk short
+routines and stop to face you while you talk. They only talk for now; their quest actions come
+with the quest routes. At walking pace each neighbour is 45 to 90 seconds away.
+
 ## Layout
 
 | Folder | What | Scene? |
@@ -49,10 +56,11 @@ kept as `livingvale_save.bak.json`.
 | `Assets/LivingVale/Game/` | Game state: `ItemCatalog`, `PlayerInventory` (also the `ILootSink`), `VendorStock`, `TradeService` and its quotes and receipts, `QuestLog`, `Progression`, `SaveGame`, and `NpcActionExecutor`, which every driver executes through | No: plain C#, EditMode-tested |
 | `Assets/LivingVale/Interaction/` | Conversations: `ConversationCoordinator`, the `INpcDecisionDriver` boundary, `ScriptedNpcDecisionDriver`, and `ConversationTradeLink`, which ties quotes to the open conversation | No: plain C#, EditMode-tested |
 | `Assets/LivingVale/Combat/` | Combat: `Combatant` and `EnemyBrain` rules (plain C#, EditMode-tested), the player's and enemies' behaviours, `CombatDirector` (chat, loot and respawn hooks: `ILootSink`, `IDefeatPenalty`) and the HUD | Rules no; behaviours yes |
-| `Assets/LivingVale/Unity/` | Bootstrap, player, orbit camera, NPC speakers, focus and range | Yes |
-| `Assets/LivingVale/UI/` | The chat overlay with its inline trade card, and the inventory panel, built from code with uGUI | Yes |
-| `Assets/LivingVale/Agenerela/` | Real NPC decisions: `AgenerelaNpcDecisionDriver` (one framework `Agent` per NPC, personas in `NpcPersona.cs`) and `SwitchableNpcDecisionDriver`, behind F6 | No: plain C#, EditMode-tested with a fake provider |
-| `Assets/LivingVale/Editor/` | `VillageSceneBuilder` (which calls `CombatSceneBuilder`) and `LivingValeBuild`, also runnable in batch mode | Editor only |
+| `Assets/LivingVale/World/` | The region's rules: `NpcRoutine` (walk and idle), `PlaceDiscovery` (first visits, paid through `Progression`), and `RegionNpcs`, the six region NPCs' IDs, places, routines and colours | No: plain C#, EditMode-tested |
+| `Assets/LivingVale/Unity/` | Bootstrap, player, orbit camera, NPC speakers, focus and range, and `NpcRoutineMover` | Yes |
+| `Assets/LivingVale/UI/` | The chat overlay with its inline trade card, the inventory panel and the place HUD, built from code with uGUI | Yes |
+| `Assets/LivingVale/Agenerela/` | Real NPC decisions: `AgenerelaNpcDecisionDriver` (one framework `Agent` per NPC, personas in `NpcPersona.cs` and `RegionNpcPersonas.cs`) and `SwitchableNpcDecisionDriver`, behind F6 | No: plain C#, EditMode-tested with a fake provider |
+| `Assets/LivingVale/Editor/` | `VillageSceneBuilder` (which calls `CombatSceneBuilder` and `Region/RegionBuilder`, one builder per place) and `LivingValeBuild`, also runnable in batch mode | Editor only |
 | `Assets/LivingVale/Tests/Editor/` | EditMode tests | — |
 
 NPC replies use Agenerela's `Agent` by default; the overlay's badge says which driver is
