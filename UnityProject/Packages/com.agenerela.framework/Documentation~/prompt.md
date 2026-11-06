@@ -130,6 +130,8 @@ has to check that real commands still score, as well as whether unasked actions 
 
 Each switch is an option an `EvalArm` carries, so one run in one session compares an arm with it
 against an arm without it. `report.json` records each arm's `listActionsAndTargets`,
-`maxListedTargets`, `counterExamples` and `idleExampleStimulus`.
+`maxListedTargets`, `counterExamples` and `idleExampleStimulus`, and `pairTargetsWithActions`
+for the paired schema ([targets.md](targets.md#the-paired-schema)), which changes the schema rather
+than the prompt.
 [`evaluation.md`](evaluation.md#running-an-ab) explains how to run an A/B. Until one has been
 run, quote no number for any of these on the evaluation set.

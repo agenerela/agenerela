@@ -41,6 +41,19 @@ While the version stays `0.x`, the public API may change in any release.
   be offered.
 - `Documentation~/targets.md`: categories, the category guard, an agent's categories, the merge
   rule and an agent's own actions.
+- **The paired schema** (#190 B, DR-020): `DecideOptions.PairTargetsWithActions`, off by default.
+  On, the schema offers each action with only the targets it takes, its categories' or every
+  target, with `no_target` only when it does not require one, and `none` with `no_target` alone; an
+  action that requires a target and takes none registered is not offered, nor its example shown.
+  The prompt is unchanged. Unmeasured: it stays off until the A/B in #151.
+- **`DecisionSchema.Pairs`**, a list of **`ActionTargets`** (`Actions`, `Targets`), null for a flat
+  schema; `DecisionSchema.Build(ctx, pairTargets)` and a `DecisionSchema(fields, pairs)` constructor.
+  `JsonSchemaSerializer` writes a schema with pairs as a root `anyOf` of complete objects, and
+  refuses pairs no grammar could honour; a schema without pairs is written exactly as before.
+  `SchemaLegalityGuard` rejects a reply whose action and target a paired request did not offer
+  together.
+- `EvalArmConditions.PairTargetsWithActions`, so `report.json` says which arm paired its targets.
+- A test that an arm pairing targets over our evaluation set changes nothing but the schema.
 - A test that our evaluation set's schema, as `EvalRunner` sends it with every option off, is
   byte-identical to the shape every measurement so far was scored against.
 

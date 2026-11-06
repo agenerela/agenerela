@@ -926,7 +926,14 @@ namespace Agenerela
                 // Asked once, so the action enum and the examples come from one answer even when an
                 // availability check is not a pure function of the context, such as a cooldown.
                 var available = ActionAvailability.For(ctx);
-                var schema = DecisionSchema.Build(ctx, available);
+                bool paired = call.PairTargetsWithActions;
+                if (paired)
+                {
+                    // No example for an action the paired schema cannot offer (DR-020).
+                    available = DecisionSchema.Takeable(available, ctx.Targets);
+                }
+
+                var schema = DecisionSchema.Build(ctx, available, paired);
                 string fewShot = FewShotBuilder.Build(available, ctx.Targets, label, idleExample, options.CounterExamples);
 
                 var history = Recall(memory, ctx, telemetry);

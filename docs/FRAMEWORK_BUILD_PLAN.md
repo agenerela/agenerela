@@ -744,6 +744,10 @@ than a second schema system — do not let provider-specific syntax leak into th
    the target ids reach it unless the prompt carries them. `DecideOptions.ListActionsAndTargets`
    (#190) lists both in the system prompt, the targets capped at `MaxListedTargets`. It is off
    by default and unmeasured, and owed an A/B (#151) before it becomes the default.
+6. **The paired schema** (DR-020): with `DecideOptions.PairTargetsWithActions`, off by default,
+   each action is offered with only the targets it takes, as a root `anyOf` of complete objects
+   that keep the field order above. The flat fields stay as they were, so the prompt is unchanged.
+   Unmeasured on accuracy and owed an A/B (#151).
 
 ### 2.4 Providers (`Runtime/Providers/`)
 
@@ -2157,6 +2161,7 @@ model that cannot load while it generates, in which case that provider queues it
 **Status:** Decided, 6 November 2026 (#190, workstream B). The lead chose the shapes in the first
 six rows of the table below from the options given. The paired schema (decision 7) is an option,
 off by default, and owes an A/B run on the evaluation set before it can become the default (#151).
+Decisions 1 to 6 shipped in #208; decision 7 in the pull request after it.
 
 **Context.** Every action shares one flat `target` enum, so the schema lets a model pair any
 action with any target. Both demo games, built on the public API alone, hit it (#190):
@@ -2225,8 +2230,7 @@ forbidden in prose. Every request must stay byte-identical while none of this is
    sources follow it; `TargetRegistry.Offer(id, target, category)` registers by it for a game's own
    source and says whether it added the target. `TargetRegistry.Register` is unchanged, so a
    source written before the rule behaves as it did. "The same object" is reference equality.
-7. **The paired schema**, `DecideOptions.PairTargetsWithActions`, off by default, in a second pull
-   request. Each action offered gets the targets it takes, its categories' or every target, and
+7. **The paired schema**, `DecideOptions.PairTargetsWithActions`, off by default. Each action offered gets the targets it takes, its categories' or every target, and
    `no_target` only if it does not require a target; `none` gets `no_target` alone. Actions with
    the same list share one branch. An action that requires a target and takes none of those
    registered is left out of the schema and the examples, as an action needing a target already is
@@ -2244,8 +2248,14 @@ beside them (`properties`, `type`, `required`), which is why each branch is a co
 the root carries nothing else. Each alternative's object rule walks its properties in the order
 given, so the measured field order survives on Ollama's rendered path and is lost on its native
 path exactly as the flat schema's is (findings, 5 November). Unknown keywords, `propertyOrdering`
-and `description`, are ignored. That is read from the source, not seen: no paired request has been
-sent to Ollama yet.
+and `description`, are ignored.
+
+Seen live on 6 November (findings), with the lead's go: Ollama 0.40.14 accepted the paired schema,
+and no paired reply paired an action with a target it does not take, on `qwen3.5:2b` (rendered
+path) or `qwen3:4b-instruct-2507` (native path). The flat schema let `complete_quest` onto a place
+2 times in 10 on the 4B, and 3 in 10 on each model when `none` was taken away. The 4B's keys came
+back alphabetical in every reply, as the flat schema's do on that path. Ten made-up stimuli per arm:
+a grammar check, not an accuracy result. `tools/benchmarks/paired_schema_probe.py` repeats it.
 
 **Limits on other providers.** Gemini's schema subset has `anyOf` and no `oneOf`. Its limit is on a
 schema's overall size and complexity rather than a published enum count, and a paired schema repeats
