@@ -13,8 +13,11 @@ namespace Agenerela
     /// <para>
     /// The rules, in order. <see cref="ActionRegistry.None"/> always passes. Otherwise the action
     /// is registered; the target is <see cref="TargetRegistry.NoTarget"/> or registered in the
-    /// context's targets; an action that needs a target got a real one, which the schema cannot
-    /// enforce because all actions share one target enum; and the action is available.
+    /// context's targets; an action that needs a target got a real one, which a flat schema cannot
+    /// enforce because all actions share one target enum; and the action is available. Against a
+    /// request whose schema pairs actions with targets (<see cref="DecisionSchema.Pairs"/>, DR-020),
+    /// the action must also have been offered with that target, which the grammar should have
+    /// enforced.
     /// </para>
     /// <para>
     /// Available means two things, depending on when it runs. Inside <see cref="Agent.DecideAsync"/>,
@@ -69,6 +72,11 @@ namespace Agenerela
                 {
                     return GuardVerdict.Reject("the action was not offered: it was not available for this decision.");
                 }
+
+                if (!OfferedTogether(input.Request, decision.ActionId, decision.TargetId))
+                {
+                    return GuardVerdict.Reject("the target was not offered with this action: the schema paired them apart.");
+                }
             }
             else if (!IsAvailable(definition, ctx))
             {
@@ -99,6 +107,39 @@ namespace Agenerela
                     {
                         return true;
                     }
+                }
+            }
+
+            return false;
+        }
+
+        // In one pair with the target, when the schema paired them; always, when it did not.
+        private static bool OfferedTogether(DecisionRequest request, string actionId, string targetId)
+        {
+            var pairs = request.Schema?.Pairs;
+            if (pairs == null)
+            {
+                return true;
+            }
+
+            foreach (var pair in pairs)
+            {
+                if (Contains(pair.Actions, actionId))
+                {
+                    return Contains(pair.Targets, targetId);
+                }
+            }
+
+            return false;
+        }
+
+        private static bool Contains(System.Collections.Generic.IReadOnlyList<string> values, string id)
+        {
+            foreach (string value in values)
+            {
+                if (string.Equals(value, id, StringComparison.Ordinal))
+                {
+                    return true;
                 }
             }
 

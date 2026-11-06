@@ -1063,3 +1063,53 @@ ordinary; Phase 2's warm decisions were under 0.6 s.
 where `keep_alive: 0` on a model that is not loaded starts loading it, or where a request at a new
 context size no longer reloads the model. Re-run `ModelLifecycleLiveTests` after an Ollama
 upgrade, as for the schema probe.
+
+### Ollama keeps a paired schema's replies to the pairs it offers, on both chat paths (6 November 2026)
+
+A check of the paired schema DR-020 describes (#190 B), before it ships behind
+`DecideOptions.PairTargetsWithActions`: does Ollama accept a root `anyOf` of complete objects as
+`format`, and does the grammar it builds stop an action being sampled with a target of another kind?
+It is a grammar check, **not an accuracy claim**: ten made-up stimuli per arm, one run each.
+
+**Setup.** `tools/benchmarks/paired_schema_probe.py`. A merchant with `move_to` (any target),
+`complete_quest` (the two quests only) and `none`; targets `village_gate` and `well` (places),
+`quest_wolf` and `quest_lantern` (quests). The prompt is laid out as `OllamaProvider` lays one out,
+with the action and target list. Ten stimuli tempt `complete_quest` on a place ("Wrap up the well
+task for me."), a few are plain. Four schemas per stimulus: **flat** and **paired**, the shapes the
+framework sends, and both again without `none` and `no_target` (**forced**), a shape the framework
+never sends, so that the model has to act. Ollama 0.40.14, RTX 4060 Laptop 8 GB, on mains power,
+`temperature` 0.7, `seed` 7, thinking off, one model resident at a time (`/api/ps` empty before
+each). Raw replies: `.scratch/190b/paired_probe.jsonl` in the session's checkout.
+
+| Model (chat path) | Flat | Paired | Flat, forced | Paired, forced | Key order `action`, `target`, `statement` |
+|---|---:|---:|---:|---:|---:|
+| `qwen3.5:2b` (rendered) | 10/10 | 10/10 | 7/10 | 10/10 | 40/40 |
+| `qwen3:4b-instruct-2507-q4_K_M` (native) | 8/10 | 10/10 | 7/10 | 10/10 | 0/40 |
+
+Each cell but the last counts replies whose pair the paired schema offers. Every request was
+answered; Ollama refused no schema.
+
+- **The grammar holds the pairing on both paths.** Every wrong pair, `complete_quest` on
+  `village_gate` or `well`, came from a flat schema: 2 on the 4B with `none` available, 3 on each
+  model forced. No paired reply had one.
+- **What the model chose instead is not always right.** Forced away from the well, the 2B answered
+  "Complete it at the well, I left everything there." with `quest_lantern`, and the 4B answered
+  "Wrap up the well task for me." with `quest_wolf`. Pairing makes the wrong kind of target
+  unsayable; it can still swap one quest for another, which is the grounding guard's job.
+- **The field order is what it was.** The 4B, on Ollama's native path, wrote `action`,
+  `statement`, `target` in all 40 replies, the alphabetical order the entry of 5 November found for
+  the flat schema; each branch's keys are sorted the same way. The 2B kept the framework's order in
+  all 40.
+- **A side note on layout, not pursued.** A first version of the probe put the examples in the user
+  turn rather than the system message. The 2B then answered `none` to all 40 flat and paired
+  requests, over two runs (`paired_probe_layout1.jsonl`), so the prompt layout mattered more than
+  the schema there.
+
+**What it does not show.** Whether pairing helps or hurts the choices: that is #151's A/B on the
+evaluation set, same model, same session. Our set declares no categories, so on it pairing changes
+only the target lists of the actions that need a target (no `no_target`) and of `none`
+(`no_target` alone).
+
+**What would change this.** A paired reply that pairs an action with a target it does not take, on
+any Ollama version; or an Ollama release that rejects a root `anyOf` in `format`. Re-run the probe
+after an upgrade.
