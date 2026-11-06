@@ -29,6 +29,7 @@ namespace LivingVale.Unity
         private InputAction talk;
         private InputAction close;
         private InputAction inventoryKey;
+        private InputAction mapKey;
         private InputAction[] fixtures;
         private InputAction switchDriver;
         private InputAction saveKey;
@@ -38,6 +39,8 @@ namespace LivingVale.Unity
         private bool capturedTextFocus;
         private ConversationTradeLink tradeLink;
         private InventoryHud inventoryHud;
+        private NavigationTargets navigation;
+        private MapOverlay map;
         private int blockedFrame = -1;
 
         public ConversationCoordinator Coordinator { get; private set; }
@@ -83,6 +86,12 @@ namespace LivingVale.Unity
         /// <summary>I toggles the inventory, except while typing.</summary>
         public bool InventoryPressed => !WorldInputBlocked && inventoryKey.WasPressedThisFrame();
 
+        /// <summary>M toggles the map (G8a), except while typing.</summary>
+        public bool MapPressed => !WorldInputBlocked && mapKey.WasPressedThisFrame();
+
+        /// <summary>Where the quest goal and the NPCs are now, for the compass, the map and the name tags (G8a).</summary>
+        public NavigationTargets Navigation => navigation;
+
         public void Configure(ThirdPersonPlayer scenePlayer, ChatOverlay sceneOverlay)
         {
             player = scenePlayer;
@@ -92,6 +101,10 @@ namespace LivingVale.Unity
         private void Awake()
         {
             GameEvents.ReportSubscriberError = Debug.LogException;
+            if (HudShot.RequestedFolder() != null)
+            {
+                driver = NpcDriverChoice.Scripted; // A layout check never loads a model.
+            }
             var catalog = ItemCatalog.CreateDefault();
             Inventory = PlayerInventory.CreateStarting(catalog);
 
@@ -141,6 +154,7 @@ namespace LivingVale.Unity
             talk = actions.AddAction("Talk", InputActionType.Button, "<Keyboard>/e");
             close = actions.AddAction("Close", InputActionType.Button, "<Keyboard>/escape");
             inventoryKey = actions.AddAction("Inventory", InputActionType.Button, "<Keyboard>/i");
+            mapKey = actions.AddAction("Map", InputActionType.Button, "<Keyboard>/m");
             fixtures = new InputAction[5];
             for (int i = 0; i < fixtures.Length; i++)
             {
@@ -160,6 +174,19 @@ namespace LivingVale.Unity
             }
 
             Coordinator.Changed += OnConversationChanged;
+        }
+
+        // G8a: the compass, the name tags and the map are built here at runtime, after every scene
+        // object has woken, so the scene builders need no change for them.
+        private void Start()
+        {
+            navigation = new NavigationTargets(this);
+            Transform feet = player.transform;
+            new GameObject("Compass HUD", typeof(RectTransform)).AddComponent<CompassHud>().Initialize(this, feet, navigation);
+            new GameObject("NPC name tags", typeof(RectTransform)).AddComponent<NpcNameTags>().Initialize(feet, navigation);
+            map = new GameObject("Map", typeof(RectTransform)).AddComponent<MapOverlay>();
+            map.Initialize(this, feet, navigation);
+            HudShot.StartIfRequested(gameObject, map.Toggle);
         }
 
         private void OnEnable()
@@ -200,6 +227,10 @@ namespace LivingVale.Unity
             {
                 BlockWorldInputForFrame();
                 Coordinator.Close(ConversationCloseReason.PlayerClosed);
+                if (map != null)
+                {
+                    map.Hide();
+                }
             }
         }
 
@@ -214,6 +245,11 @@ namespace LivingVale.Unity
             if (InventoryPressed)
             {
                 inventoryHud.Toggle();
+            }
+
+            if (MapPressed && map != null)
+            {
+                map.Toggle();
             }
 
             for (int i = 0; i < fixtures.Length; i++)
@@ -370,6 +406,7 @@ namespace LivingVale.Unity
             }
 
             tradeLink?.Dispose();
+            navigation?.Dispose();
 
             actions?.Dispose();
         }

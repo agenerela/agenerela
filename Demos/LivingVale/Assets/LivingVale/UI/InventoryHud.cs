@@ -50,7 +50,7 @@ namespace LivingVale.UI
             // This component shares ChatOverlay's GameObject, so transform is its canvas.
             // Ends 610 px down the 720 px reference, just above the combat vitals panel in the
             // bottom-left corner (18 px margin, 92 px tall), so the two never overlap.
-            RectTransform inventory = Box("Inventory", transform, new Vector2(14f, -158f),
+            RectTransform inventory = Box("Inventory", transform, new Vector2(14f, -HudLayout.InventoryTop),
                 new Vector2(448f, 450f), new Color(0.045f, 0.06f, 0.08f, 0.96f));
             panel = inventory.gameObject;
             Label("Title", inventory, "Inventory", new Vector2(14f, -10f), new Vector2(420f, 28f), 21);
