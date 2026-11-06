@@ -1,9 +1,11 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Agenerela.Providers;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -86,8 +88,10 @@ namespace Agenerela.Tests
         public async Task AWarmUpLoadsTheModelAtTheContextSizeTheDecisionsUse()
         {
             // Not the server's default: Ollama reloads a model asked for at another context size, so
-            // a warm-up at the default would leave this decision to load it again (Codex review, F1).
-            // Seen live on 5 November: 7.46 s for this decision without the fix, 1.18 s with it.
+            // a warm-up at the default would leave the first decision to load it again (Codex review,
+            // F1). Seen live on 5 November: 7.46 s for that decision without the fix, 1.18 s with it.
+            // Judged by the context size the warm-up loaded, which /api/ps reports, not by timing: a
+            // decision's time also holds prompt processing, which Ollama caches (Codex review, F5).
             var provider = new OllamaProvider(new OllamaSettings
             {
                 Endpoint = LiveOllama.Endpoint,
@@ -100,23 +104,37 @@ namespace Agenerela.Tests
             var cold = Stopwatch.StartNew();
             await Done(models.WarmUpAsync(CancellationToken.None));
             cold.Stop();
-            // The same decision twice, each on a fresh agent so no memory lengthens the second. Their
-            // inference costs the same, so what the first takes beyond the second is a reload, however
-            // fast the server infers (Codex review, F5).
-            const string Stimulus = "Head over to the tower and keep watch.";
-            var first = await LiveOllama.NotCancelled(LiveGuard.Build(provider).DecideAsync(Stimulus, LiveGuard.Options()));
-            var second = await LiveOllama.NotCancelled(LiveGuard.Build(provider).DecideAsync(Stimulus, LiveGuard.Options()));
-            double extra = first.Telemetry.LatencySeconds - second.Telemetry.LatencySeconds;
-            UnityEngine.Debug.Log($"LIFECYCLE {LiveOllama.Model} at num_ctx 8192: cold warm-up {cold.Elapsed.TotalSeconds:F2} s, "
-                                + $"first decision after it {first.Telemetry.LatencySeconds:F2} s, the same again "
-                                + $"{second.Telemetry.LatencySeconds:F2} s");
+            long? loaded = await LoadedContextLength();
+            var first = await LiveOllama.NotCancelled(
+                LiveGuard.Build(provider).DecideAsync("Head over to the tower and keep watch.", LiveGuard.Options()));
+            UnityEngine.Debug.Log($"LIFECYCLE {LiveOllama.Model} at num_ctx 8192: loaded at {loaded?.ToString() ?? "?"}, "
+                                + $"cold warm-up {cold.Elapsed.TotalSeconds:F2} s, first decision after it "
+                                + $"{first.Telemetry.LatencySeconds:F2} s");
+            Assert.That(await LiveOllama.NotCancelled(models.UnloadAsync(CancellationToken.None)), Is.True);
 
             Assert.That(first.Decision, Is.Not.Null, $"{first.Telemetry.ErrorKind}: {first.Telemetry.ErrorMessage}");
-            Assert.That(second.Decision, Is.Not.Null, $"{second.Telemetry.ErrorKind}: {second.Telemetry.ErrorMessage}");
-            Assert.That(extra, Is.LessThan(cold.Elapsed.TotalSeconds / 2),
-                "The first decision after the warm-up took about a load longer than the same decision again: "
-              + "the model was loaded again.");
-            Assert.That(await LiveOllama.NotCancelled(models.UnloadAsync(CancellationToken.None)), Is.True);
+            if (loaded == null)
+            {
+                Assert.Ignore($"Ollama at {LiveOllama.Endpoint} does not report context_length in /api/ps, so which "
+                            + "context size the warm-up loaded cannot be read. The timings above are the only evidence.");
+            }
+
+            Assert.That(loaded, Is.EqualTo(8192), "The warm-up loaded the model at another context size, so the first "
+                                                + "decision has to load it again.");
+        }
+
+        // The context length /api/ps reports for LiveOllama.Model, or null when it reports none.
+        private static async Task<long?> LoadedContextLength()
+        {
+            string listed = LiveOllama.Model.Contains(":") ? LiveOllama.Model : LiveOllama.Model + ":latest";
+            using (var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) })
+            {
+                var ps = JObject.Parse(await client.GetStringAsync(LiveOllama.Endpoint.TrimEnd('/') + "/api/ps"));
+                var entry = (ps["models"] as JArray)?.OfType<JObject>()
+                    .FirstOrDefault(m => string.Equals((string)m["name"], listed, StringComparison.OrdinalIgnoreCase));
+                Assert.That(entry, Is.Not.Null, $"{listed} is not resident right after its warm-up: {ps}");
+                return entry["context_length"]?.Type == JTokenType.Integer ? (long)entry["context_length"] : (long?)null;
+            }
         }
 
         private static async Task Done(Awaitable pending)
