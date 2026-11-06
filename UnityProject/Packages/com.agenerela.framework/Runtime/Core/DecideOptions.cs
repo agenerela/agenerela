@@ -60,6 +60,28 @@ namespace Agenerela
         public bool CounterExamples = true;
 
         /// <summary>
+        /// Whether this call's schema pairs each action with the targets it takes, so the grammar
+        /// cannot sample an action with a target of another kind (#190 B, DR-020). Off by default:
+        /// unmeasured, and owed an A/B run before it becomes the default (#151).
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// On, <see cref="DecisionSchema.Build(AgentContext, bool)"/> says what each action takes: its
+        /// <see cref="ActionDefinition.TargetCategories"/>, or every target when it names none, and
+        /// <c>no_target</c> only when it does not require a target; <c>none</c> takes
+        /// <c>no_target</c> alone. An action that requires a target and takes none of those
+        /// registered is not offered, and its example is not shown. The prompt, its action and target
+        /// list and the target rule are what they would be without it.
+        /// </para>
+        /// <para>
+        /// Through <see cref="JsonSchemaSerializer"/> it is a root <c>anyOf</c>, which llama.cpp, and
+        /// so Ollama, compiles into one grammar. A provider that cannot take a root <c>anyOf</c>, such
+        /// as OpenAI's strict structured outputs, should be sent the flat schema; none ships yet.
+        /// </para>
+        /// </remarks>
+        public bool PairTargetsWithActions;
+
+        /// <summary>
         /// What the game wants the agent to know right now, one fact per entry, sent verbatim. The
         /// list is copied when the call starts, so changing it afterwards changes nothing.
         /// </summary>

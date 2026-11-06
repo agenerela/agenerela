@@ -79,5 +79,42 @@ namespace Agenerela.Tests.Evaluation
             Assert.That(new HashSet<string>(sent), Is.EquivalentTo(new[] { NotFollowing, Following }),
                 "The set has prompts in both states.");
         }
+
+        [Test]
+        public async Task AnArmThatPairsTargetsChangesNothingButTheSchema()
+        {
+            // #151's A/B for DR-020: the same set, arm B with the paired schema. Our set declares no
+            // categories, so pairing narrows only what an action that needs a target and none take.
+            string folder = EvalFixtures.OurSetFolder();
+            var set = PromptSet.Load(Path.Combine(folder, "agent.json"));
+            var profile = AssetDatabase.LoadAssetAtPath<AgentProfile>(OurProfilePath);
+            const string Idle = "{\"action\":\"none\",\"target\":\"no_target\",\"statement\":\"\"}";
+            var a = new FakeProvider(Idle);
+            var b = new FakeProvider(Idle);
+
+            EvalReport report;
+            using (var fixtures = new RunnerFixtures())
+            {
+                var runner = new EvalRunner(set, profile,
+                    new EvalArm("A", fixtures.Config(a, "FakeA")),
+                    new EvalArm("B", fixtures.Config(b, "FakeB"), new DecideOptions { PairTargetsWithActions = true }));
+                report = await Fixtures.NotCancelled(runner.RunAsync());
+            }
+
+            Assert.That((report.Conditions.Arms[0].PairTargetsWithActions, report.Conditions.Arms[1].PairTargetsWithActions), Is.EqualTo((false, true)));
+            Assert.That(b.Requests, Has.Count.EqualTo(a.Requests.Count));
+            for (int i = 0; i < a.Requests.Count; i++)
+            {
+                Assert.That(b.Requests[i].SystemPrompt, Is.EqualTo(a.Requests[i].SystemPrompt));
+                Assert.That(b.Requests[i].FewShotBlock, Is.EqualTo(a.Requests[i].FewShotBlock));
+                Assert.That(b.Requests[i].Observations, Is.EqualTo(a.Requests[i].Observations));
+                Assert.That(b.Requests[i].Stimulus, Is.EqualTo(a.Requests[i].Stimulus));
+                Assert.That(a.Requests[i].Schema.Pairs, Is.Null);
+
+                var pairs = b.Requests[i].Schema.Pairs.Select(p => string.Join(", ", p.Actions) + " -> " + p.Targets.Count).ToList();
+                Assert.That(pairs, Is.EqualTo(new[] { "follow_player -> 12", "move_to, attack_target -> 11", "none -> 1" })
+                    .Or.EqualTo(new[] { "follow_player, stop_following -> 12", "move_to, attack_target -> 11", "none -> 1" }));
+            }
+        }
     }
 }

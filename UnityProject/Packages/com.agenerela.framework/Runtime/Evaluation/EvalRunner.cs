@@ -725,6 +725,7 @@ namespace Agenerela.Evaluation
                     ListActionsAndTargets = arm.Options.ListActionsAndTargets,
                     MaxListedTargets = arm.Options.MaxListedTargets,
                     CounterExamples = arm.Options.CounterExamples,
+                    PairTargetsWithActions = arm.Options.PairTargetsWithActions,
                     Priority = arm.Options.Priority.ToString(),
                     Observations = new List<string>(arm.Options.Observations ?? new List<string>()),
                 };
