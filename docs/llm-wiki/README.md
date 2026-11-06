@@ -12,6 +12,7 @@ knowledge that is expensive to rediscover.
 | Why is the design the way it is? | Build plan §7, Decision Records |
 | What was already measured in the prototype? | Build plan, **Appendix A** |
 | What have *we* measured since? | [`findings.md`](findings.md) |
+| Which developer guards should we explore, and how will we evaluate them? | [`guards-research.md`](guards-research.md) — source review and proposed work for [#138](https://github.com/agenerela/agenerela/issues/138), researched 4 November 2026; no new measurements |
 | How do I set my machine up? | [`environment.md`](environment.md) |
 | What do I check before I write down an accuracy or latency number? | [`measuring.md`](measuring.md) — build plan §4's seven rules, and what has been learned since |
 | Which other models might beat `qwen3.5:2b`, and which to A/B first, for 8 GB cards and for 12, 16 and 24 GB and up? | [`model-candidates.md`](model-candidates.md) — researched 4 November 2026, nothing on it measured by us |

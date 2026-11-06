@@ -86,6 +86,32 @@ phase table and the open issues, not here.
   - **Two kit models,** `gate_door` and `bucket`, and `KIT_ONLY` to rebuild only the models named.
   - **Fixes the live run found:** a guard attacking a running thief now runs after it, and a wolf
     running for its den is no longer reported. Agents are told when it is night.
+- **An editor UI kit** (#167) in the package's `Editor/UI/`, for the Phase 5 screens to share.
+  It is internal to `Agenerela.Editor`, so it adds no public API.
+  - `Agenerela.uss` holds colour, spacing and type variables (`--ag-*`) built on Unity's own
+    theme colours, so they suit both editor skins.
+  - `Chip` shows an action or target id in monospace, struck through with a dashed outline when
+    it is not offered.
+  - `OutcomeIcon` shows Executed, No action, Contained or Error with Unity's built-in icons.
+  - `ProblemBox` shows a message with an optional fix button.
+  - `SectionTitle` heads a section in small, spaced, muted capitals, such as "EXPECTED ANSWER".
+  - `AgenerelaButtons` adds two styles to Unity's plain button: a filled primary button for
+    the one action a screen is for (**Save answer**), and a dashed one for an open choice
+    (**Open choice**).
+  - `EditorUiFixtures` in `Tests/Editor/UI/` builds a hosted element, an inspector or a window
+    in an EditMode test, and finds its parts by name. **Window → Agenerela → Tests → UI Kit
+    Gallery** shows every piece on one page, for checking both skins by hand. It is in the test
+    assembly, so it does not ship in the package.
+    A test that opens a window needs a graphics device, so under `-nographics` it is reported as
+    ignored rather than failed.
+  - USS has no muted text colour that reaches an editor window, no dashed border and no
+    `text-transform`. The kit sets the colour itself, draws dashed outlines in
+    `DashedOutline`, and upper-cases titles in code. A test catches a variable that silently
+    fails to resolve.
+  - After its review (#181): setting a chip's `text` sets its id, so the strike always follows
+    `Offered`; the light-skin class is checked again whenever an element's styles resolve,
+    not only when it is built; and `DashedOutline.Attach` attaches once, however often it is
+    called.
 - **GreyBoxVillage has two guards and an agent board** (#143), the first slice of the demo's
   upgrade.
   - Bram at the gate and Wren at the bridge are each an `AgentBehaviour` with a profile asset.

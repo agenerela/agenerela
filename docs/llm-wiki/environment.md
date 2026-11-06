@@ -31,6 +31,9 @@ editor at a time open a project.
   element of `results.xml`; compiler problems are the `error CS` and `warning CS` lines in
   `unity.log`.
 - Do not add `-quit`: `-runTests` quits on its own.
+- With `-nographics` there is no graphics device, so the editor UI tests that open a window
+  (`EditorUiFixtures`, #167) are reported as ignored, not failed. Leave the flag off to run
+  them as well.
 - Give `-testResults` and `-logFile` paths with no `..` in them. Unity rejects each one
   with `.. is not a valid directory name`; use an absolute path instead.
 - The first run in a fresh checkout imports every package and takes several minutes. Runs
