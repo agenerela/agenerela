@@ -101,6 +101,10 @@ settle it before starting the next turn: `chat.Execute` remembers it when it run
 `agent.Commit` remembers one whose handler failed but whose line was shown anyway. An answer that
 arrives after its turn ended is never handed out at all, and is discarded the same way.
 
+A handler may start the next turn from inside `chat.Execute`, since it is the game's own code. The
+answer being carried out is still remembered when its handler succeeds; one whose handler fails
+goes stale with its turn, as any other.
+
 `agent.Execute` called directly knows nothing of turns: on a stale result it would still run the
 handler, though not remember it. Execute through the conversation.
 

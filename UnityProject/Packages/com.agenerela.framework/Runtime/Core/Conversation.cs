@@ -53,6 +53,9 @@ namespace Agenerela
         private TimeSpan timeout = System.Threading.Timeout.InfiniteTimeSpan;
         private int turns;
 
+        // The result Execute is carrying out, while its handler runs; null otherwise.
+        private DecisionResult executing;
+
         /// <summary>A conversation with <paramref name="agent"/>, which may also be asked outside it.</summary>
         /// <exception cref="ArgumentNullException"><paramref name="agent"/> is null.</exception>
         public Conversation(Agent agent)
@@ -240,7 +243,23 @@ namespace Agenerela
                 return false;
             }
 
-            return Agent.Execute(result, out outcome);
+            // The handler is the game's code, and may start the next turn from inside it. That turn
+            // must not discard the answer being carried out, which Agent remembers only once the
+            // handler returns; one that was not carried out goes the way of any stale answer.
+            var outer = executing;
+            executing = result;
+            try
+            {
+                return Agent.Execute(result, out outcome);
+            }
+            finally
+            {
+                executing = outer;
+                if (!IsCurrent(result) && !ReferenceEquals(result, executing))
+                {
+                    Agent.Discard(result);
+                }
+            }
         }
 
         private ConversationTurn Begin(string stimulus, DecideOptions options, CancellationToken ct, bool replace)
@@ -416,7 +435,8 @@ namespace Agenerela
             turn.End(status, failure);
         }
 
-        // An answered turn stops being current: its result goes stale, and out of memory's reach.
+        // An answered turn stops being current: its result goes stale, and out of memory's reach,
+        // unless Execute is carrying it out right now, in which case Execute settles it after.
         private void Retire(ConversationTurn turn)
         {
             if (Current == turn)
@@ -424,7 +444,7 @@ namespace Agenerela
                 Current = null;
             }
 
-            if (turn.Result != null)
+            if (turn.Result != null && !ReferenceEquals(turn.Result, executing))
             {
                 Agent.Discard(turn.Result);
             }

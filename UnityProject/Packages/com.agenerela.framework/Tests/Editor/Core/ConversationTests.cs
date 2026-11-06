@@ -227,6 +227,43 @@ namespace Agenerela.Tests
             Assert.That(Remembered(agent), Is.Zero);
         }
 
+        // The handler is the game's code, and may start the next turn from inside Execute. The
+        // answer being carried out then is remembered all the same; one whose handler failed goes
+        // stale with its turn, as any other.
+        [TestCase(true)]
+        [TestCase(false)]
+        public async Task AHandlerThatStartsTheNextTurnDoesNotLoseTheAnswerItCarriesOut(bool succeeds)
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var move = new ActionDefinition
+            {
+                Id = "move_to",
+                Description = "Walk to a named place.",
+                RequiresTarget = true,
+                ExampleStimulus = "Proceed to the {0}.",
+                PreferredExampleTargets = new[] { "tower" },
+            };
+            var agent = new Agent(Fixtures.VillageGuardIdentity(), new[] { move }, fake) { MemoryCommit = MemoryCommit.OnExecute };
+            agent.Targets.Register("tower", new object());
+            var chat = new Conversation(agent);
+            ConversationTurn next = null;
+            agent.Bind("move_to", DelegateActionHandler.WithResult(ctx => true, (ctx, decision) =>
+            {
+                next = chat.Start("Anything else?");
+                return succeeds ? ActionResult.Done() : ActionResult.Failed("The gate is shut.");
+            }));
+
+            var first = chat.Start("Go to the tower.");
+            Assert.That(await Fixtures.NotCancelled(first.Completion), Is.EqualTo(TurnStatus.Answered));
+
+            Assert.That(chat.Execute(first.Result), Is.EqualTo(succeeds));
+            Assert.That(next, Is.Not.Null, "The handler started the next turn.");
+            Assert.That(first.IsCurrent, Is.False);
+            Assert.That(Remembered(agent), Is.EqualTo(succeeds ? 1 : 0),
+                succeeds ? "Carried out, so remembered, though its turn went stale while it ran." : "Not carried out, and stale.");
+            Assert.That(agent.Commit(first.Result), Is.False, "Settled either way, so nothing remembers it again.");
+        }
+
         [Test]
         public async Task ExecuteRefusesAResultTheConversationNeverAskedFor()
         {
