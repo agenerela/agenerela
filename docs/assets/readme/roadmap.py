@@ -4,7 +4,7 @@ PHASES = [("0", "Skeleton", "repo, package"), ("1", "Core", "actions, schema"),
           ("4", "Evaluation", "A/B harness"), ("5", "Editor", "inspectors"),
           ("6", "Cloud", "providers"), ("6b", "In-process", "LLMUnity"),
           ("7", "Samples", "in-package"), ("8", "Demos", "three games")]
-CURRENT = 2
+CURRENT = 4
 x0, step, y = 92, 121.8, 104
 out = []
 w = out.append

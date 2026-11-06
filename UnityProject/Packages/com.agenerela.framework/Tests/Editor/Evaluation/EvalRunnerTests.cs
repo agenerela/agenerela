@@ -359,6 +359,26 @@ namespace Agenerela.Tests.Evaluation
         }
 
         [Test]
+        public async Task AnArmCanListTheActionsAndTargetsAndTheReportSaysSo()
+        {
+            // #151's A/B for #190: the same set, one arm with the list and without counter-examples.
+            var a = new FakeProvider(Reply("move_to", "bridge"));
+            var b = new FakeProvider(Reply("move_to", "bridge"));
+            var runner = Runner(new[] { Bridge }, null, a, b,
+                optionsB: new DecideOptions { ListActionsAndTargets = true, MaxListedTargets = 3, CounterExamples = false });
+
+            var report = await Fixtures.NotCancelled(runner.RunAsync());
+
+            var armA = report.Conditions.Arms[0];
+            var armB = report.Conditions.Arms[1];
+            Assert.That((armA.ListActionsAndTargets, armA.MaxListedTargets, armA.CounterExamples), Is.EqualTo((false, 12, true)));
+            Assert.That((armB.ListActionsAndTargets, armB.MaxListedTargets, armB.CounterExamples), Is.EqualTo((true, 3, false)));
+            Assert.That(a.Requests.Select(r => r.SystemPrompt), Has.None.Contains("Allowed actions:"));
+            Assert.That(b.Requests.Select(r => r.SystemPrompt), Has.All.Contains("Allowed actions:"),
+                "Every call of the arm, warm-ups included, starts from its options.");
+        }
+
+        [Test]
         public async Task AnArmsIdleExampleThatIsAPromptIsRefused()
         {
             // The arm's idle example replaces the profile's, so the model would be shown "The

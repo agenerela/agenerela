@@ -154,6 +154,68 @@ namespace Agenerela.Tests
             Assert.That(block, Is.EqualTo("Examples of correct decisions:"));
         }
 
+        // ---- Counter-examples (#190, Living Vale #9) ----------------------------------------------
+
+        [Test]
+        public void ACounterExampleFollowsItsActionsOwnExampleAnsweredWithNone()
+        {
+            var targets = Registry("bread", "tower");
+            var actions = new List<ActionDefinition>
+            {
+                Countered(Action("quote_purchase", "How much for the {0}?", true, "bread"), "That {0} smells good."),
+                Countered(Action("offer_quest", "Got any work for me?", false), "Any rumours about the wagon?"),
+                Action("move_to", "Proceed to the {0}.", true, "tower"),
+            };
+
+            string block = FewShotBuilder.Build(actions, targets, "Player", "Nothing has changed.");
+
+            Assert.That(block, Is.EqualTo(string.Join("\n",
+                "Examples of correct decisions:",
+                "Player: \"How much for the Bread?\" -> action: quote_purchase, target: bread",
+                "Player: \"That Bread smells good.\" -> action: none, target: no_target",
+                "Player: \"Got any work for me?\" -> action: offer_quest, target: no_target",
+                "Player: \"Any rumours about the wagon?\" -> action: none, target: no_target",
+                "Player: \"Proceed to the Tower.\" -> action: move_to, target: tower",
+                "Player: \"Nothing has changed.\" -> action: none, target: no_target",
+                "Player: \"How much for the Atlantis?\" -> action: none, target: no_target (not an available target)")));
+        }
+
+        [Test]
+        public void WithoutCounterExamplesTheBlockIsWhatItWas()
+        {
+            var targets = Registry("bread");
+            var plain = new List<ActionDefinition> { Action("quote_purchase", "How much for the {0}?", true, "bread") };
+            var blank = new List<ActionDefinition> { Countered(Action("quote_purchase", "How much for the {0}?", true, "bread"), "  ") };
+            var countered = new List<ActionDefinition> { Countered(Action("quote_purchase", "How much for the {0}?", true, "bread"), "That {0} smells good.") };
+
+            string without = FewShotBuilder.Build(plain, targets, "Player", "Nothing has changed.");
+
+            Assert.That(FewShotBuilder.Build(blank, targets, "Player", "Nothing has changed."), Is.EqualTo(without),
+                "A blank counter-example adds nothing.");
+            Assert.That(FewShotBuilder.Build(countered, targets, "Player", "Nothing has changed.", counterExamples: false), Is.EqualTo(without),
+                "Off leaves every counter-example out, byte for byte.");
+            Assert.That(Lines(FewShotBuilder.Build(countered, targets, "Player", "Nothing has changed.")), Is.EqualTo(Lines(without) + 1),
+                "On by default: what a developer wrote is shown.");
+        }
+
+        [Test]
+        public void ACounterExampleWithAPlaceholderAndNothingToFillItIsLeftOut()
+        {
+            var targets = Registry("tower");
+            var actions = new List<ActionDefinition>
+            {
+                Countered(Action("give_item", "Hand over the {0}.", true, "sword"), "Nice {0} you have."),   // sword not registered
+                Countered(Action("wave", "Wave at me.", false), "I saw you near the {0} earlier."),        // no preferred target at all
+            };
+
+            string block = FewShotBuilder.Build(actions, targets);
+
+            Assert.That(block, Does.Not.Contain("{0}"), "Never sent with the placeholder in it.");
+            Assert.That(block, Does.Not.Contain("Nice"));
+            Assert.That(block, Does.Not.Contain("I saw you"));
+            Assert.That(block, Does.Contain("\"Wave at me.\" -> action: wave"), "The action's own example is unaffected.");
+        }
+
         private static TargetRegistry Registry(params string[] ids)
         {
             var registry = new TargetRegistry();
@@ -174,6 +236,12 @@ namespace Agenerela.Tests
                 RequiresTarget = requiresTarget,
                 PreferredExampleTargets = preferredTargets
             };
+
+        private static ActionDefinition Countered(ActionDefinition action, string counterExample)
+        {
+            action.CounterExampleStimulus = counterExample;
+            return action;
+        }
 
         private static int Lines(string block) => block.Split('\n').Length;
     }

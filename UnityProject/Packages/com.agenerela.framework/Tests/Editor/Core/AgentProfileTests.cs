@@ -29,6 +29,13 @@ namespace Agenerela.Tests
         }
 
         [Test]
+        public void TheDefaultIdleExampleIsTheOneANewProfileHas()
+        {
+            // So an agent built in code can be given the same one in a single line (#190).
+            Assert.That(NewProfile().IdleExampleStimulus, Is.EqualTo(AgentProfile.DefaultIdleExampleStimulus));
+        }
+
+        [Test]
         public void ValidateAcceptsAWellFormedProfile()
         {
             var profile = NewProfile();

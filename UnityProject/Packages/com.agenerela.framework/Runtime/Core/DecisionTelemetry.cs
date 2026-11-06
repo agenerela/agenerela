@@ -34,6 +34,8 @@ namespace Agenerela{
         public int RefusalLinePromptTokens; // That request's tokens, as the provider reported them. Never added to PromptTokens or CompletionTokens (#109)
         public int RefusalLineCompletionTokens;
         public PipelineErrorKind? RefusalLineError; // Why that request gave no line: a provider's failure or an unreadable reply. The decision still stands, so Outcome and ErrorKind stay as they were; null when no request failed (#109)
+        public ExecutionStatus? Execution; // What the last Agent.Execute of this decision did: Done, Failed by the handler, NoAction for none, or Refused with no handler run; null until an Execute returns; a handler that throws leaves it as it was (DR-018)
+        public string ExecutionReason; // That Execute's reason, word for word: the handler's for Failed, the agent's for Refused; null for Done and NoAction (DR-018)
 
         public DecisionTelemetry()
         {
@@ -65,7 +67,8 @@ namespace Agenerela{
             RefusalLinePromptTokens = 0;
             RefusalLineCompletionTokens = 0;
             RefusalLineError = null;
-
+            Execution = null;
+            ExecutionReason = null;
         }
     }
 

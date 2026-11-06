@@ -51,8 +51,8 @@ namespace Agenerela
         /// An agent built from a profile, the asset a developer creates first (#15). It keeps the
         /// profile's identity object, so editing that identity's fields changes every agent built
         /// from the profile, but assigning the profile a different identity later does not. The
-        /// idle example is read from the profile on every call. Its actions are registered with
-        /// <see cref="Bind"/>.
+        /// idle example is read from the profile on every call, unless <see cref="IdleExampleStimulus"/>
+        /// is set. Its actions are registered with <see cref="Bind"/>.
         /// </summary>
         /// <exception cref="ArgumentNullException"><paramref name="profile"/> or <paramref name="provider"/> is null.</exception>
         /// <exception cref="ArgumentException">The profile has no identity.</exception>
@@ -76,8 +76,8 @@ namespace Agenerela
         /// <summary>
         /// An agent built in code, with no asset (DR-011). <paramref name="actions"/> are the actions
         /// it can ever take, the code equivalent of a profile's list; <see cref="Bind"/> registers
-        /// them. It has no idle example unless a call passes one in
-        /// <see cref="DecideOptions.IdleExampleStimulus"/>.
+        /// them. It has no idle example unless <see cref="IdleExampleStimulus"/> is set or a call
+        /// passes one in <see cref="DecideOptions.IdleExampleStimulus"/>.
         /// </summary>
         /// <exception cref="ArgumentNullException">An argument is null.</exception>
         /// <exception cref="ArgumentException">An entry of <paramref name="actions"/> is null.</exception>
@@ -129,6 +129,20 @@ namespace Agenerela
 
         /// <summary>Who this agent is. The model reads it on every call.</summary>
         public AgentIdentity Identity { get; }
+
+        /// <summary>
+        /// The stimulus of this agent's idle example, the one answered with <c>none</c>, for every
+        /// call that does not pass its own in <see cref="DecideOptions.IdleExampleStimulus"/>. Null by
+        /// default, which uses the profile's <see cref="AgentProfile.IdleExampleStimulus"/>, so an agent
+        /// built in code has none (#190, Living Vale #13). Empty leaves the example out. Read on every
+        /// call, as the profile's is.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="AgentProfile.DefaultIdleExampleStimulus"/> gives a code-built agent the example a
+        /// new profile has. It stays off by default because turning it on moves what a code-built
+        /// agent sends, and whether an idle example helps is still unmeasured (build plan §2.3, #151).
+        /// </remarks>
+        public string IdleExampleStimulus { get; set; }
 
         /// <summary>
         /// The actions this agent can take, each bound to the code that runs it (#6). Filled by
@@ -219,6 +233,56 @@ namespace Agenerela
         /// it recalled from. Giving two agents the same instance makes them share it.
         /// </remarks>
         public IMemoryStrategy Memory { get; set; }
+
+        /// <summary>
+        /// When <see cref="Memory"/> records a decision (DR-018). <see cref="Agenerela.MemoryCommit.OnDecide"/>,
+        /// the default, remembers it as <see cref="DecideAsync"/> returns it, as memory always has.
+        /// <see cref="Agenerela.MemoryCommit.OnExecute"/> holds it on the result until the game settles it:
+        /// <see cref="Execute(DecisionResult)"/> remembers a decision it carries out, and
+        /// <see cref="Commit"/> and <see cref="Discard"/> settle one by hand.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// For a game that may drop a reply after it arrives: a conversation that timed out, was
+        /// cancelled or moved to another speaker. Under <see cref="Agenerela.MemoryCommit.OnDecide"/> the
+        /// agent would remember a line nobody saw. A decision never settled is never remembered, and
+        /// needs no clean-up: it is held on its own result, not on the agent.
+        /// </para>
+        /// <para>
+        /// Read once per decision, when it starts, as <see cref="Memory"/> is, and the held decision
+        /// goes into the memory it recalled from. It is remembered as it would have been on deciding,
+        /// with the same context and request, but in the order decisions are settled, not the order
+        /// they were made. A decision <see cref="Execute(DecisionResult)"/> refuses, or whose handler
+        /// reports <see cref="ExecutionStatus.Failed"/>, is left waiting, for the game to
+        /// <see cref="Commit"/>, say because the agent's line was still shown, or to
+        /// <see cref="Discard"/>.
+        /// </para>
+        /// <para>
+        /// <b>Extension point: the Memory research area (#119).</b> This works with any
+        /// <see cref="IMemoryStrategy"/>: a strategy only ever sees <see cref="IMemoryStrategy.Remember"/>,
+        /// called later.
+        /// </para>
+        /// </remarks>
+        /// <exception cref="ArgumentOutOfRangeException">Set to a value the enum does not define.</exception>
+        public MemoryCommit MemoryCommit
+        {
+            get => memoryCommit;
+            set
+            {
+                if (value != MemoryCommit.OnDecide && value != MemoryCommit.OnExecute)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "MemoryCommit is OnDecide or OnExecute.");
+                }
+
+                memoryCommit = value;
+            }
+        }
+
+        private MemoryCommit memoryCommit = MemoryCommit.OnDecide;
+
+        // What a held decision names as the agent that made it: a token, never the agent itself,
+        // so a result the game keeps after settling it keeps no agent alive.
+        private readonly object holder = new object();
 
         /// <summary>
         /// The game's own rules over every decision (build plan §2.5, item 3), such as a cooldown
@@ -340,8 +404,9 @@ namespace Agenerela
         /// arrived, in <see cref="DecisionResult.Reply"/>, pipeline errors included (#142).
         /// </returns>
         /// <exception cref="ArgumentException">
-        /// <see cref="DecideOptions.StimulusLabel"/> is null, empty or whitespace. Thrown by the call
-        /// itself, before anything is sent: it is a mistake in the calling code, not an event.
+        /// <see cref="DecideOptions.StimulusLabel"/> is null, empty or whitespace, or
+        /// <see cref="DecideOptions.MaxListedTargets"/> is negative. Thrown by the call itself, before
+        /// anything is sent: it is a mistake in the calling code, not an event.
         /// </exception>
         /// <exception cref="OperationCanceledException">
         /// Thrown when the result is awaited, if <paramref name="ct"/> was cancelled before the reply
@@ -394,7 +459,14 @@ namespace Agenerela
         /// error or a cancelled call remembers nothing; a <see cref="ActionRegistry.None"/>
         /// decision is remembered, because it happened. If remembering throws, the warning is
         /// logged and the decision still returned. Remembering happens on the main thread, even
-        /// when the provider answered on another.
+        /// when the provider answered on another. All of this is under
+        /// <see cref="Agenerela.MemoryCommit.OnDecide"/>, the default; under
+        /// <see cref="Agenerela.MemoryCommit.OnExecute"/> the same decision waits on its result until the game
+        /// settles it (<see cref="MemoryCommit"/>, DR-018).
+        /// </para>
+        /// <para>
+        /// <see cref="DecideOptions.Correlation"/> is on every context this call makes and on the
+        /// result, pipeline errors included, and never reaches the provider.
         /// </para>
         /// <para>
         /// Every agent given the same provider instance shares one queue, which sends at most one
@@ -419,24 +491,33 @@ namespace Agenerela
                     nameof(options));
             }
 
+            if (options.MaxListedTargets < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), options.MaxListedTargets,
+                    "DecideOptions.MaxListedTargets cannot be negative. 0 lists no targets.");
+            }
+
             // A list of the context's own, apart from the options' copy a guard may read. Blank
             // lines are not something the agent knows, so they take no place under the cap.
             var observations = new ReadOnlyCollection<string>(NotBlank(options.Observations));
-            string idleExample = options.IdleExampleStimulus ?? (profile != null ? profile.IdleExampleStimulus : null);
+            string idleExample = options.IdleExampleStimulus ?? IdleExampleStimulus ?? (profile != null ? profile.IdleExampleStimulus : null);
 
             return Decide(stimulus, options, idleExample, observations, ct);
         }
 
         /// <summary>
         /// Carries out a decision: checks it again against the agent as it is now, then runs the
-        /// bound handler. Returns whether the decision was carried out.
+        /// bound handler. Returns whether the decision was carried out. The overload with an
+        /// <see cref="ActionResult"/> also says what that did.
         /// </summary>
         /// <returns>
         /// True when the handler ran, or when the decision was <see cref="ActionRegistry.None"/>,
         /// which runs no handler: a decision a guard rewrote to <c>none</c> included. False, with no
         /// handler run, for a result with no decision (a pipeline error, already logged), for one a
         /// guard rejected inside <see cref="DecideAsync"/> (already logged), and for a decision the
-        /// check refuses, logged as a warning saying why.
+        /// check refuses, logged as a warning saying why. False too when the handler ran and
+        /// reported <see cref="ExecutionStatus.Failed"/> (DR-018), which only a handler that reports
+        /// a result can, so a handler written before it never makes this false.
         /// </returns>
         /// <remarks>
         /// <para>
@@ -455,51 +536,213 @@ namespace Agenerela
         /// A refusal returns false rather than throwing: the provider is untrusted, so an answer to
         /// refuse is an expected event, not a mistake in the calling code. Exceptions thrown by the
         /// developer's own code, a handler, an availability check or a target source, propagate.
-        /// The handler gets a context built now, holding the current state and targets; it has no
-        /// stimulus or observations, which were the inputs to deciding, not to acting.
+        /// The handler gets a context built now, holding the current state and targets and the
+        /// decision's <see cref="DecisionResult.Correlation"/>; it has no stimulus or observations,
+        /// which were the inputs to deciding, not to acting.
+        /// </para>
+        /// <para>
+        /// <b>Extension point: the Guards research area (#138).</b> The re-check here is the one place
+        /// a rule is checked at the moment of acting. A guard that must hold then, rather than when
+        /// the model answered, would run beside it; until one does, such a rule belongs in the
+        /// handler, which can now say so with <see cref="ActionResult.Failed"/>.
         /// </para>
         /// </remarks>
         /// <exception cref="ArgumentNullException"><paramref name="result"/> is null.</exception>
         public bool Execute(DecisionResult result)
+        {
+            return Execute(result, out _);
+        }
+
+        /// <summary>
+        /// Carries out a decision as <see cref="Execute(DecisionResult)"/> does, and says what that did
+        /// (DR-018): whether a handler ran, whether it did what was asked, why not, and what it made.
+        /// </summary>
+        /// <param name="result">The decision, as <see cref="DecideAsync"/> returned it.</param>
+        /// <param name="outcome">
+        /// <see cref="ExecutionStatus.Done"/> or <see cref="ExecutionStatus.Failed"/> as the handler
+        /// reported it, through <see cref="IActionHandlerWithResult"/>, a
+        /// <see cref="DelegateActionHandler.WithResult"/> function or an <c>[AgentAction]</c> method
+        /// returning <see cref="ActionResult"/>; <see cref="ExecutionStatus.Done"/> for any other
+        /// handler that returns. <see cref="ExecutionStatus.NoAction"/> for <c>none</c>, and
+        /// <see cref="ExecutionStatus.Refused"/>, with the reason, whenever
+        /// <see cref="Execute(DecisionResult)"/> would return false without running a handler.
+        /// </param>
+        /// <returns><paramref name="outcome"/>'s <see cref="ActionResult.Succeeded"/>, which is what <see cref="Execute(DecisionResult)"/> returns.</returns>
+        /// <remarks>
+        /// <para>
+        /// Everything <see cref="Execute(DecisionResult)"/> says holds here: the re-check, what is
+        /// logged, the context the handler gets, and that exceptions propagate. A handler that
+        /// throws leaves no outcome, since the call throws, and records nothing.
+        /// </para>
+        /// <para>
+        /// The status and reason are written to the result's telemetry, in
+        /// <see cref="DecisionTelemetry.Execution"/> and <see cref="DecisionTelemetry.ExecutionReason"/>,
+        /// each call replacing the last's; the payload is not, being the game's own object. A
+        /// <see cref="ExecutionStatus.Failed"/> is the game's own answer, so it is not logged.
+        /// </para>
+        /// <para>
+        /// Under <see cref="Agenerela.MemoryCommit.OnExecute"/>, a decision this agent made and this call carries
+        /// out is remembered now, once, however often it is executed. One it does not carry out
+        /// stays waiting for <see cref="Commit"/> or <see cref="Discard"/>. A memory that throws is
+        /// logged as a warning, and the decision still counts as carried out.
+        /// </para>
+        /// </remarks>
+        /// <exception cref="ArgumentNullException"><paramref name="result"/> is null.</exception>
+        public bool Execute(DecisionResult result, out ActionResult outcome)
         {
             if (result == null)
             {
                 throw new ArgumentNullException(nameof(result));
             }
 
+            outcome = CarryOut(result);
+            result.Telemetry.Execution = outcome.Status;
+            result.Telemetry.ExecutionReason = outcome.Reason;
+
+            if (outcome.Succeeded)
+            {
+                Settle(result, remember: true);
+            }
+
+            return outcome.Succeeded;
+        }
+
+        /// <summary>
+        /// Remembers a decision held back by <see cref="Agenerela.MemoryCommit.OnExecute"/>, as it would have
+        /// been remembered on deciding. For a decision the game acted on without
+        /// <see cref="Execute(DecisionResult)"/> carrying it out: a line shown although the handler
+        /// failed, say. Returns whether it was waiting; false when it was already settled, or was
+        /// never held, because it was made under <see cref="Agenerela.MemoryCommit.OnDecide"/>, with no memory,
+        /// or is a pipeline error.
+        /// </summary>
+        /// <remarks>
+        /// A memory that throws is logged as a warning, and the decision is settled all the same, so
+        /// it is never remembered twice.
+        /// </remarks>
+        /// <exception cref="ArgumentNullException"><paramref name="result"/> is null.</exception>
+        /// <exception cref="ArgumentException"><paramref name="result"/> was decided by another agent.</exception>
+        public bool Commit(DecisionResult result)
+        {
+            CheckOwnHeld(result);
+            return Settle(result, remember: true);
+        }
+
+        /// <summary>
+        /// Settles a decision held back by <see cref="Agenerela.MemoryCommit.OnExecute"/> without remembering it,
+        /// so that a later <see cref="Execute(DecisionResult)"/> or <see cref="Commit"/> does not
+        /// either: a reply the game drops as stale. Returns whether it was waiting, as
+        /// <see cref="Commit"/> does.
+        /// </summary>
+        /// <remarks>
+        /// Not needed for a result the game simply drops: one never settled is never remembered.
+        /// This is for one that might still reach <see cref="Execute(DecisionResult)"/>.
+        /// </remarks>
+        /// <exception cref="ArgumentNullException"><paramref name="result"/> is null.</exception>
+        /// <exception cref="ArgumentException"><paramref name="result"/> was decided by another agent.</exception>
+        public bool Discard(DecisionResult result)
+        {
+            CheckOwnHeld(result);
+            return Settle(result, remember: false);
+        }
+
+        // What Execute does with one result, without the bookkeeping around it.
+        private ActionResult CarryOut(DecisionResult result)
+        {
             var decision = result.Decision;
             if (decision == null || result.Telemetry.Outcome == DecisionOutcome.PipelineError)
             {
-                return false;
+                return ActionResult.Refused("There is no decision to carry out: deciding failed with a pipeline error.");
             }
 
             // Its Decision is none, but the provider broke the contract, and DecideAsync said so.
             if (result.Verdict.HasValue && result.Verdict.Value.Kind == GuardVerdictKind.Reject)
             {
-                return false;
+                var rejected = result.Verdict.Value;
+                return ActionResult.Refused($"{rejected.Guard} rejected the model's answer inside DecideAsync: {rejected.Reason}");
             }
 
             if (decision.ActionId == ActionRegistry.None)
             {
-                return true;
+                return ActionResult.NoAction();
             }
 
             // No dropped targets to fill: this Collect overwrites a source's Dropped, but the result
             // already holds its own copy from the decision.
-            var ctx = Snapshot("", Array.Empty<string>(), dropped: null);
+            var ctx = Snapshot("", Array.Empty<string>(), dropped: null, result.Correlation);
 
-            // No request and no reply: only the agent as it is now. The options are the defaults,
-            // and no guard that runs here reads them.
-            var input = new GuardInput(ctx, null, null, decision, new DecideOptions(), result.Telemetry);
+            // No request and no reply: only the agent as it is now. The options are the defaults
+            // with the call's correlation, and no guard that runs here reads them.
+            var input = new GuardInput(ctx, null, null, decision, new DecideOptions { Correlation = result.Correlation }, result.Telemetry);
             var verdict = GuardPipeline.Run(ExecuteGuards, input, "@Execute");
             if (verdict.Kind != GuardVerdictKind.Pass)
             {
-                return Refuse(decision, verdict.Reason);
+                Refuse(decision, verdict.Reason);
+                return ActionResult.Refused(verdict.Reason);
             }
 
             ctx.Actions.TryGet(decision.ActionId, out _, out var handler);
+            if (handler is IActionHandlerWithResult reporting)
+            {
+                return ActionResult.FromHandler(reporting.ExecuteWithResult(ctx, decision));
+            }
+
             handler.Execute(ctx, decision);
+            return ActionResult.Done();
+        }
+
+        private void CheckOwnHeld(DecisionResult result)
+        {
+            if (result == null)
+            {
+                throw new ArgumentNullException(nameof(result));
+            }
+
+            if (result.Pending != null && result.Pending.Owner != holder)
+            {
+                throw new ArgumentException(
+                    $"This decision was made by {result.Pending.OwnerName}, so only that agent can settle it.",
+                    nameof(result));
+            }
+        }
+
+        // The decision a result holds back from this agent's memory, remembered or dropped, once.
+        // Nothing for a result held for another agent: Execute may carry out another agent's
+        // decision, but its memory is that agent's to settle.
+        private bool Settle(DecisionResult result, bool remember)
+        {
+            var pending = result.Pending;
+            if (pending == null || pending.Settled || pending.Owner != holder)
+            {
+                return false;
+            }
+
+            var memory = pending.Memory;
+            var ctx = pending.Context;
+            var request = pending.Request;
+
+            // Before remembering, so a memory that settles it again from inside Remember cannot
+            // remember it twice.
+            pending.Settle();
+
+            if (remember)
+            {
+                Remember(memory, ctx, request, result);
+            }
+
             return true;
+        }
+
+        // The decision was made; a memory that cannot record it does not undo it.
+        private void Remember(IMemoryStrategy memory, AgentContext ctx, DecisionRequest request, DecisionResult result)
+        {
+            try
+            {
+                memory.Remember(ctx, request, result);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"{Who()} decided, but its memory could not remember it. {e.GetType().Name}: {e.Message}");
+            }
         }
 
         private async Awaitable<DecisionResult> Decide(
@@ -511,6 +754,7 @@ namespace Agenerela
             string label = call.StimulusLabel;
             var priority = call.Priority;
             var memory = Memory;
+            var commit = MemoryCommit;
             var telemetry = new DecisionTelemetry
             {
                 ProviderName = provider.Name ?? "",
@@ -523,14 +767,22 @@ namespace Agenerela
             DecisionRequest request;
             try
             {
-                ctx = Observe(Snapshot(stimulus, observations, telemetry.TargetsDropped), telemetry.ObservationsDropped);
-                var options = new PromptOptions { StimulusLabel = label, IdleExampleStimulus = idleExample, TargetRule = call.CheckTarget && provider.Capabilities?.ReportsTokenProbabilities != true };
+                ctx = Observe(Snapshot(stimulus, observations, telemetry.TargetsDropped, call.Correlation), telemetry.ObservationsDropped);
+                var options = new PromptOptions
+                {
+                    StimulusLabel = label,
+                    IdleExampleStimulus = idleExample,
+                    TargetRule = call.CheckTarget && provider.Capabilities?.ReportsTokenProbabilities != true,
+                    ListActionsAndTargets = call.ListActionsAndTargets,
+                    MaxListedTargets = call.MaxListedTargets,
+                    CounterExamples = call.CounterExamples,
+                };
 
                 // Asked once, so the action enum and the examples come from one answer even when an
                 // availability check is not a pure function of the context, such as a cooldown.
                 var available = ActionAvailability.For(ctx);
                 var schema = DecisionSchema.Build(ctx, available);
-                string fewShot = FewShotBuilder.Build(available, ctx.Targets, label, idleExample);
+                string fewShot = FewShotBuilder.Build(available, ctx.Targets, label, idleExample, options.CounterExamples);
 
                 var history = Recall(memory, ctx, telemetry);
                 request = PromptBuilder.Build(ctx, schema, fewShot, history, options);
@@ -539,7 +791,7 @@ namespace Agenerela
             catch (Exception e)
             {
                 return Failed(telemetry, PipelineErrorKind.RequestPreparation,
-                    $"Preparing the request failed. {e.GetType().Name}: {e.Message}");
+                    $"Preparing the request failed. {e.GetType().Name}: {e.Message}", call.Correlation);
             }
 
             var sent = await Send(request, priority, ct);
@@ -549,13 +801,13 @@ namespace Agenerela
 
             if (sent.Failure != null)
             {
-                return Failed(telemetry, KindOf(sent.Failure), $"The provider failed. {sent.Failure.GetType().Name}: {sent.Failure.Message}", request);
+                return Failed(telemetry, KindOf(sent.Failure), $"The provider failed. {sent.Failure.GetType().Name}: {sent.Failure.Message}", call.Correlation, request);
             }
 
             var reply = sent.Reply;
             if (reply == null)
             {
-                return Failed(telemetry, PipelineErrorKind.ProviderFailed, "The provider returned no result.", request);
+                return Failed(telemetry, PipelineErrorKind.ProviderFailed, "The provider returned no result.", call.Correlation, request);
             }
 
             telemetry.Model = reply.Model ?? "";
@@ -564,7 +816,7 @@ namespace Agenerela
 
             if (!DecisionParser.TryParse(reply.Text, request.Schema, out var decision, out string problem))
             {
-                return Failed(telemetry, PipelineErrorKind.UnreadableReply, $"{problem} The reply was: {Excerpt(reply.Text)}", request, reply);
+                return Failed(telemetry, PipelineErrorKind.UnreadableReply, $"{problem} The reply was: {Excerpt(reply.Text)}", call.Correlation, request, reply);
             }
 
             var result = Guard(new GuardInput(ctx, request, reply, decision, call, telemetry));
@@ -575,17 +827,17 @@ namespace Agenerela
 
             // After the guards and the line, so what is remembered is what the agent will do and
             // say (§2.9, rule 1). A guard that failed left no decision, and a pipeline error
-            // remembers nothing.
+            // remembers nothing. Under OnExecute it waits on the result for the game to settle it
+            // (DR-018), with what remembering it now would have used.
             if (memory != null && result.Decision != null)
             {
-                try
+                if (commit == MemoryCommit.OnExecute)
                 {
-                    memory.Remember(ctx, request, result);
+                    result.Pending = new PendingMemory(holder, Who(), memory, ctx, request);
                 }
-                catch (Exception e)
+                else
                 {
-                    // The decision was made; a memory that cannot record it does not undo it.
-                    Debug.LogWarning($"{Who()} decided, but its memory could not remember it. {e.GetType().Name}: {e.Message}");
+                    Remember(memory, ctx, request, result);
                 }
             }
 
@@ -606,14 +858,14 @@ namespace Agenerela
             catch (Exception e)
             {
                 return Failed(input.Telemetry, PipelineErrorKind.GuardFailed,
-                    $"The guard {running} failed. {e.GetType().Name}: {e.Message}", input.Request, input.Reply);
+                    $"The guard {running} failed. {e.GetType().Name}: {e.Message}", input.Context.Correlation, input.Request, input.Reply);
             }
 
             var decision = input.Decision;
 
             if (verdict.Kind == GuardVerdictKind.Pass)
             {
-                return new DecisionResult(decision, input.Telemetry, decision, null, input.Request, input.Reply);
+                return new DecisionResult(decision, input.Telemetry, decision, null, input.Request, input.Reply, input.Context.Correlation);
             }
 
             if (verdict.Kind == GuardVerdictKind.Reject)
@@ -624,7 +876,7 @@ namespace Agenerela
 
             // Empty, never the model's: it no longer matches what the agent does (#109).
             var none = new AgentDecision(ActionRegistry.None, TargetRegistry.NoTarget, "");
-            return new DecisionResult(none, input.Telemetry, decision, verdict, input.Request, input.Reply);
+            return new DecisionResult(none, input.Telemetry, decision, verdict, input.Request, input.Reply, input.Context.Correlation);
         }
 
         // The stopped decision with what the agent says about it: the developer's line, else the
@@ -647,7 +899,7 @@ namespace Agenerela
             }
 
             var none = new AgentDecision(ActionRegistry.None, TargetRegistry.NoTarget, line);
-            return new DecisionResult(none, stopped.Telemetry, stopped.ModelDecision, verdict, stopped.Request, stopped.Reply);
+            return new DecisionResult(none, stopped.Telemetry, stopped.ModelDecision, verdict, stopped.Request, stopped.Reply, stopped.Correlation);
         }
 
         // RefusalStatement's answer, or null. One that throws is the developer's code failing, but
@@ -864,11 +1116,11 @@ namespace Agenerela
         // one instant. Targets are resolved afresh: the hand-registered ones, then each source's, in
         // order (DR-014). What a source reports dropping is copied into dropped, when given, right
         // after its Collect and before the next source runs, since its list lasts only until then.
-        private AgentContext Snapshot(string stimulus, IReadOnlyList<string> observations, List<string> dropped)
+        private AgentContext Snapshot(string stimulus, IReadOnlyList<string> observations, List<string> dropped, object correlation)
         {
             var targets = new TargetRegistry();
             var state = new Dictionary<string, object>(State, State.Comparer);
-            var ctx = new AgentContext(Identity, stimulus, observations, state, targets, Actions);
+            var ctx = new AgentContext(Identity, stimulus, observations, state, targets, Actions, correlation);
 
             foreach (string id in Targets.Ids)
             {
@@ -944,7 +1196,7 @@ namespace Agenerela
 
             // The same state and targets, so everything after this reads one snapshot.
             return new AgentContext(ctx.Identity, ctx.Stimulus, new ReadOnlyCollection<string>(lines),
-                ctx.State, ctx.Targets, ctx.Actions);
+                ctx.State, ctx.Targets, ctx.Actions, ctx.Correlation);
         }
 
         // The lines that say something, in order. Enumerated here, in full, so a lazy source runs,
@@ -993,7 +1245,7 @@ namespace Agenerela
 
         // With the request when it was sent, and the reply when one arrived (#142).
         private DecisionResult Failed(
-            DecisionTelemetry telemetry, PipelineErrorKind kind, string reason,
+            DecisionTelemetry telemetry, PipelineErrorKind kind, string reason, object correlation,
             DecisionRequest request = null, ProviderResult reply = null)
         {
             string message = $"{Who()} could not decide. {reason}";
@@ -1001,7 +1253,7 @@ namespace Agenerela
             telemetry.ErrorKind = kind;
             telemetry.ErrorMessage = message;
             Debug.LogWarning(message);
-            return new DecisionResult(null, telemetry, null, null, request, reply);
+            return new DecisionResult(null, telemetry, null, null, request, reply, correlation);
         }
 
         // A provider says why it failed by throwing a ProviderException, whose kind maps one to
@@ -1033,10 +1285,9 @@ namespace Agenerela
             }
         }
 
-        private bool Refuse(AgentDecision decision, string reason)
+        private void Refuse(AgentDecision decision, string reason)
         {
             Debug.LogWarning($"{Who()} did not execute '{decision.ActionId}' on '{decision.TargetId}': {reason}");
-            return false;
         }
 
         private string Who()
