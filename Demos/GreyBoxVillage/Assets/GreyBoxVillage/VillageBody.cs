@@ -44,6 +44,12 @@ namespace Demos.GreyBoxVillage
         /// <summary>True while it walks, follows or chases, so its quiet timer waits.</summary>
         public abstract bool IsBusy { get; }
 
+        /// <summary>
+        /// What the agent is doing in place of its usual role, for the board and the dialogue panel,
+        /// such as the night watch; null for none. The prompt keeps the profile's role.
+        /// </summary>
+        public virtual string Duty => null;
+
         /// <summary>The facts about this body sent with every request, after "You are ...". The base gives its quests.</summary>
         public virtual IEnumerable<string> Facts()
         {

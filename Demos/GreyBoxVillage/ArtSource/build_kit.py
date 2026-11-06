@@ -8,6 +8,11 @@ It writes Assets/GreyBoxVillage/Art/Palette.png, PaletteEmission.png and one FBX
 Assets/GreyBoxVillage/Art/Models/. Everything is generated, so the script is the source: change it
 and run it again rather than editing a model by hand.
 
+An FBX export stamps the time it was made, so every run rewrites all 77 files in a few bytes each.
+To change some models only, name them in KIT_ONLY (comma separated); every other file is left alone:
+
+    KIT_ONLY=gate_house,gate_door blender --background --factory-startup --python ...
+
 Layout convention: models are authored in the village's own coordinates, Blender X = Unity X
 (east), Blender Y = Unity Z (north), Blender Z = up. FBX import turns that half a turn, which the
 scene builder undoes with a 180 degree yaw. A character's front is +Y here, Unity +Z there.
@@ -26,14 +31,23 @@ ART = os.path.normpath(os.path.join(HERE, "..", "Assets", "GreyBoxVillage", "Art
 MODELS = os.path.join(ART, "Models")
 os.makedirs(MODELS, exist_ok=True)
 MADE = []
+ONLY = {n.strip() for n in os.environ.get("KIT_ONLY", "").split(",") if n.strip()}
+
+
+def wanted(name):
+    return not ONLY or name in ONLY
 
 
 def out(name, part):
+    if not wanted(name):
+        return
     kit.single(name, part, MODELS)
     MADE.append(name)
 
 
 def out_rig(name, parts):
+    if not wanted(name):
+        return
     kit.rig(name, parts, MODELS)
     MADE.append(name)
 
@@ -341,12 +355,36 @@ def gate_house():
     p.box((5.4, 0.25, 0.9), "wood", at=(0, -0.95, 2.85), bevel=0.02)
     p.box((1.6, 0.06, 0.5), "banner_blue", at=(0, -1.1, 3.05), bevel=0.0)
     p.box((0.3, 0.06, 0.3), "gold", at=(0, -1.14, 3.15), rot=(0, 45, 0), bevel=0.0)
-    # Open doors, swung inward.
-    for sx in (-1, 1):
-        p.box((2.2, 0.15, 2.7), "wood_dark", at=(sx * 2.55, 1.1, 0), rot=(0, 0, sx * -70), bevel=0.02)
-        p.box((2.2, 0.18, 0.12), "iron_dark", at=(sx * 2.55, 1.1, 0.6), rot=(0, 0, sx * -70), bevel=0.0)
-        p.box((2.2, 0.18, 0.12), "iron_dark", at=(sx * 2.55, 1.1, 2.1), rot=(0, 0, sx * -70), bevel=0.0)
+    # The doors are gate_door, two of them hung in the scene, so the night watch can shut them.
     out("gate_house", p)
+
+
+def gate_door():
+    """One leaf of the village gate, hinged at the origin and reaching east (+X) to the middle of the
+    5.5 m opening. The scene hangs one at each pier, the west one turned half round."""
+    p = Part()
+    w, h = 2.72, 2.9
+    for k in range(5):
+        p.box((w / 5 - 0.03, 0.14, h - 0.08 * (k % 2)), "wood_dark" if k % 2 else "wood", at=((k + 0.5) * w / 5, 0, 0),
+              bevel=0.015)
+    for z in (0.45, 1.45, 2.45):
+        p.box((w - 0.08, 0.2, 0.13), "iron_dark", at=(w / 2, 0, z), bevel=0.0)
+    p.box((0.16, 0.24, h), "wood_darker", at=(0.08, 0, 0), bevel=0.02)
+    p.box((0.14, 0.12, 0.4), "iron_dark", at=(w - 0.3, -0.14, 1.25), bevel=0.0)
+    out("gate_door", p)
+
+
+def bucket():
+    """A wooden pail with an iron rope handle, carried to the fire by whoever fetches water."""
+    p = Part()
+    p.cyl(0.17, 0.32, "wood", segments=10, radius_top=0.21, bevel=0.01)
+    for z in (0.05, 0.24):
+        p.cyl(0.19 + z * 0.12, 0.04, "iron_dark", at=(0, 0, z), segments=10)
+    p.cyl(0.18, 0.02, "water_deep", at=(0, 0, 0.29), segments=10)
+    p.box((0.42, 0.03, 0.03), "iron_dark", at=(0, 0, 0.48), bevel=0.0)
+    for sx in (-1, 1):
+        p.box((0.03, 0.03, 0.2), "iron_dark", at=(sx * 0.2, 0, 0.3), bevel=0.0)
+    out("bucket", p)
 
 
 def well():
@@ -1079,6 +1117,8 @@ def water():
 def main():
     kit.write_palettes(ART)
     gate_house()
+    gate_door()
+    bucket()
     stone_wall("wall_stone")
     palisade("wall_palisade")
     well()

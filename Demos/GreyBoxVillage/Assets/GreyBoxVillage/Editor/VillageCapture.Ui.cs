@@ -155,6 +155,8 @@ namespace Demos.GreyBoxVillage.Editor
                         string when = (hour < 18f ? "day" : "night") + "_" + w + "x" + h;
                         foreach (var x in Village(commands, config, hour, folder, when, world, ui)) yield return x;
                     }
+                    // The presenter's situations (VillageCapture.Situations.cs).
+                    foreach (var x in Situations(commands, config, folder, "_" + w + "x" + h, world, ui)) yield return x;
                     camera.targetTexture = null;
                     Release(world, ui, panel);
                 }

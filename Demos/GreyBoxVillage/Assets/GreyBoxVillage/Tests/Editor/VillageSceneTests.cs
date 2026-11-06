@@ -31,6 +31,8 @@ namespace Demos.GreyBoxVillage.Tests
         public readonly List<DecisionRequest> Requests = new List<DecisionRequest>();
         public int Calls;
         public bool Hold;
+        /// <summary>When set, answers each request with what it gives, such as the presenter script; <see cref="Reply"/> otherwise.</summary>
+        public Func<DecisionRequest, string> Script;
         /// <summary>While set, every request fails as a provider fails when no model answers: Ollama stopped, the model missing.</summary>
         public ProviderErrorKind? Fail;
         private AwaitableCompletionSource<ProviderResult> held;
@@ -51,14 +53,18 @@ namespace Demos.GreyBoxVillage.Tests
             {
                 Hold = false;
                 held = source;
+                heldRequest = req;
             }
-            else source.SetResult(Result());
+            else source.SetResult(Result(req));
             return source.Awaitable;
         }
 
-        public void Release() => held.SetResult(Result());
+        private DecisionRequest heldRequest;
 
-        private ProviderResult Result() => new ProviderResult { Text = Reply, Model = "fake-model", TokenProbabilities = TokenProbabilities };
+        public void Release() => held.SetResult(Result(heldRequest));
+
+        private ProviderResult Result(DecisionRequest req) =>
+            new ProviderResult { Text = Script != null ? Script(req) : Reply, Model = "fake-model", TokenProbabilities = TokenProbabilities };
 
         public static string Decision(string action, string target, string statement = "Understood.") =>
             "{\"action\":\"" + action + "\",\"target\":\"" + target + "\",\"statement\":\"" + statement + "\"}";
@@ -105,6 +111,8 @@ namespace Demos.GreyBoxVillage.Tests
             commands.UseProvider(config);
             // The scene can stay loaded between tests, and the guards' state with it.
             foreach (var mind in commands.Minds) mind.Body.ResetState();
+            // And whatever a situation left: the thief, the fire, the night watch.
+            VillageSituationTests.ResetVillage(commands);
             guard.Alarm.Silence();
             commands.Inventory.Reset(8);
             commands.Quests.Define();

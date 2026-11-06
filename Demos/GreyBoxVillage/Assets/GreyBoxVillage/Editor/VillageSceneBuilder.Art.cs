@@ -263,6 +263,104 @@ namespace Demos.GreyBoxVillage.Editor
             return Atmosphere(camera, sun);
         }
 
+        // ---- The situations ---------------------------------------------------------------------
+
+        /// <summary>
+        /// The gate's two doors, the stall fire's flames, smoke and light, and each guard's bucket.
+        /// None of them is static: the doors swing, and the rest come and go.
+        /// </summary>
+        private static void DressSituations(VillageGate gate, VillageFire fire, VillageGuard[] guards)
+        {
+            // gate_door reaches east from its hinge; the east door is turned to reach west. Each
+            // swings outward, south, to open: inward, the west door would stand where Bram does.
+            var west = Model("gate_door", gate.transform, new Vector3(-2.75f, 0, 0), 0f, 1f, false);
+            var east = Model("gate_door", gate.transform, new Vector3(2.75f, 0, 0), 180f, 1f, false);
+            gate.Leaves = new[] { west, east };
+            gate.ShutYaw = new[] { 180f, 0f };
+            gate.OpenAngles = new[] { 80f, -80f };
+            // Saved open, as the day starts.
+            gate.ResetState();
+
+            var at = fire.transform.position;
+            var flames = Effect("StallFire", fire.transform, at + new Vector3(0, 1.2f, 0), ps =>
+            {
+                var main = ps.main;
+                main.startLifetime = new ParticleSystem.MinMaxCurve(0.6f, 1.1f);
+                main.startSpeed = new ParticleSystem.MinMaxCurve(1.2f, 2.6f);
+                main.startSize = new ParticleSystem.MinMaxCurve(0.5f, 1.1f);
+                main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 0.5f, 0.12f), new Color(1f, 0.82f, 0.3f));
+                main.simulationSpace = ParticleSystemSimulationSpace.World;
+                main.maxParticles = 160;
+                var emission = ps.emission;
+                emission.rateOverTime = 70f;
+                var shape = ps.shape;
+                shape.shapeType = ParticleSystemShapeType.Box;
+                shape.scale = new Vector3(2.6f, 0.4f, 1.6f);
+                shape.rotation = new Vector3(-90, 0, 0);
+                var size = ps.sizeOverLifetime;
+                size.enabled = true;
+                size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0, 1, 1, 0));
+                var color = ps.colorOverLifetime;
+                color.enabled = true;
+                var g = new Gradient();
+                g.SetKeys(new[] { new GradientColorKey(new Color(1f, 0.9f, 0.5f), 0), new GradientColorKey(new Color(1f, 0.3f, 0.06f), 1) },
+                    new[] { new GradientAlphaKey(1, 0), new GradientAlphaKey(0.9f, 0.6f), new GradientAlphaKey(0, 1) });
+                color.color = g;
+                var renderer = ps.GetComponent<ParticleSystemRenderer>();
+                renderer.sharedMaterial = FireMaterial();
+                renderer.shadowCastingMode = ShadowCastingMode.Off;
+            });
+            var smoke = Effect("StallSmoke", fire.transform, at + new Vector3(0, 2.6f, 0), ps =>
+            {
+                var main = ps.main;
+                main.startLifetime = new ParticleSystem.MinMaxCurve(4f, 6f);
+                main.startSpeed = new ParticleSystem.MinMaxCurve(1.2f, 2f);
+                main.startSize = new ParticleSystem.MinMaxCurve(1.2f, 2f);
+                main.startColor = new Color(0.32f, 0.3f, 0.3f, 0.7f);
+                main.simulationSpace = ParticleSystemSimulationSpace.World;
+                main.maxParticles = 90;
+                var emission = ps.emission;
+                emission.rateOverTime = 12f;
+                var shape = ps.shape;
+                shape.shapeType = ParticleSystemShapeType.Cone;
+                shape.angle = 12f;
+                shape.radius = 0.8f;
+                shape.rotation = new Vector3(-90, 0, 0);
+                var velocity = ps.velocityOverLifetime;
+                velocity.enabled = true;
+                velocity.space = ParticleSystemSimulationSpace.World;
+                velocity.x = new ParticleSystem.MinMaxCurve(0.4f, 0.9f);
+                velocity.y = new ParticleSystem.MinMaxCurve(0f, 0f);
+                velocity.z = new ParticleSystem.MinMaxCurve(0.1f, 0.3f);
+                var sizeOver = ps.sizeOverLifetime;
+                sizeOver.enabled = true;
+                sizeOver.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0, 0.7f, 1, 3.2f));
+                var color = ps.colorOverLifetime;
+                color.enabled = true;
+                var g = new Gradient();
+                g.SetKeys(new[] { new GradientColorKey(Color.white, 0), new GradientColorKey(Color.white, 1) },
+                    new[] { new GradientAlphaKey(0, 0), new GradientAlphaKey(0.75f, 0.15f), new GradientAlphaKey(0, 1) });
+                color.color = g;
+                var renderer = ps.GetComponent<ParticleSystemRenderer>();
+                renderer.sharedMaterial = SmokeMaterial();
+                renderer.shadowCastingMode = ShadowCastingMode.Off;
+            });
+            var light = PointLight(fire.transform, at + new Vector3(0, 1.8f, -0.6f), new Color(1f, 0.55f, 0.22f), 6f, 12f);
+            var flicker = light.gameObject.AddComponent<FlickerLight>();
+            flicker.Amount = 0.35f;
+            flicker.Speed = 9f;
+            fire.Flames = flames;
+            fire.Effects = new[] { flames.gameObject, smoke.gameObject, light.gameObject };
+            fire.ResetState();
+
+            foreach (var guard in guards)
+            {
+                var bucket = Model("bucket", guard.transform, new Vector3(0.42f, 0.32f, 0.12f), 0f, 1f, false);
+                bucket.gameObject.SetActive(false);
+                guard.Bucket = bucket.gameObject;
+            }
+        }
+
         private static Transform Group(string name)
         {
             var go = new GameObject(name).transform;

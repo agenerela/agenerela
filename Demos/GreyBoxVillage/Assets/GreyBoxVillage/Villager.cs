@@ -29,6 +29,14 @@ namespace Demos.GreyBoxVillage
             nextMove = Time.time + Random.Range(1f, 4f);
         }
 
+        /// <summary>Back at <paramref name="at"/>, out of cover. The presenter's reset.</summary>
+        public void ResetTo(Vector3 at)
+        {
+            AllClear();
+            if (navigation.isOnNavMesh) navigation.Warp(at);
+            else transform.position = at;
+        }
+
         private void Update()
         {
             if (inCover || !navigation.isOnNavMesh || WanderPoints == null || WanderPoints.Length == 0) return;

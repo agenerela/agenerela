@@ -33,6 +33,8 @@ namespace Demos.GreyBoxVillage
         public const string AskedBy = "askedBy";
         /// <summary>State key: how far away a wolf the agent can see is, in metres. Absent when it sees none.</summary>
         public const string WolfMetres = "wolfMetres";
+        /// <summary>State key: how far away a running thief the agent can see is, in metres. Absent when it sees none.</summary>
+        public const string ThiefMetres = "thiefMetres";
 
         public VillageCommands Village;
         public VillageBody Body;
@@ -43,6 +45,8 @@ namespace Demos.GreyBoxVillage
         public AgentBehaviour Behaviour => behaviour != null ? behaviour : behaviour = GetComponent<AgentBehaviour>();
         public string Name => Behaviour.Profile != null && !string.IsNullOrEmpty(Behaviour.Profile.Identity.Name) ? Behaviour.Profile.Identity.Name : name;
         public string Role => Behaviour.Profile != null ? Behaviour.Profile.Identity.Role : "";
+        /// <summary>The role the board and the dialogue panel show: the body's duty while it has one (the night watch), else <see cref="Role"/>.</summary>
+        public string RoleNow => Body != null && Body.Duty != null ? Body.Duty : Role;
         public bool IsDeciding { get; private set; }
         /// <summary>When the last decision finished, in game time. The quiet timer counts from here.</summary>
         public float LastActivityTime { get; private set; }
@@ -56,6 +60,8 @@ namespace Demos.GreyBoxVillage
         private AgentBehaviour behaviour;
         private Agent configured;
         private PendingEvent pending;
+        // Bumped by UseProvider: a decision begun before it belongs to an agent that is gone.
+        private int generation;
 
         private sealed class PendingEvent
         {
@@ -112,6 +118,7 @@ namespace Demos.GreyBoxVillage
             behaviour.Profile = profile;
             configured = null;
             pending = null;
+            generation++;
             Conversation.Clear();
             IsDeciding = false;
             Last = null;
@@ -125,7 +132,8 @@ namespace Demos.GreyBoxVillage
         /// </summary>
         public List<string> Observations()
         {
-            var facts = new List<string> { "It is daytime.", "You are " + Body.Activity + "." };
+            bool night = Village.Day != null && Village.Day.IsNight;
+            var facts = new List<string> { night ? "It is night." : "It is daytime.", "You are " + Body.Activity + "." };
             facts.AddRange(Body.Facts());
 
             var player = Village.Player;
@@ -141,6 +149,8 @@ namespace Demos.GreyBoxVillage
 
             float? wolf = VisibleWolfDistance();
             if (wolf != null) facts.Add("A wolf is " + Metres(wolf.Value) + " from you.");
+            float? thief = VisibleThiefDistance();
+            if (thief != null) facts.Add("A thief is running for the eastern_road, " + Metres(thief.Value) + " from you.");
 
             facts.AddRange(Places());
             return facts;
@@ -164,8 +174,16 @@ namespace Demos.GreyBoxVillage
         public float? VisibleWolfDistance()
         {
             var wolf = FindFirstObjectByType<VillageWolf>();
-            if (wolf == null || wolf.IsHidden || Senses == null || !Senses.CanSee(wolf.transform)) return null;
+            if (wolf == null || wolf.IsHidden || wolf.IsFleeing || Senses == null || !Senses.CanSee(wolf.transform)) return null;
             return Vector3.Distance(wolf.transform.position, transform.position);
+        }
+
+        /// <summary>How far away a thief running with stolen goods is, if this agent can see it; null otherwise.</summary>
+        public float? VisibleThiefDistance()
+        {
+            var thief = FindFirstObjectByType<VillageThief>();
+            if (thief == null || !thief.IsRunning || Senses == null || !Senses.CanSee(thief.transform)) return null;
+            return Vector3.Distance(thief.transform.position, transform.position);
         }
 
         private static string Metres(float d) => d.ToString("0", CultureInfo.InvariantCulture) + " m";
@@ -227,6 +245,7 @@ namespace Demos.GreyBoxVillage
                 return;
             }
             IsDeciding = true;
+            int asking = generation;
             // Who is asking decides what the agent is offered (its body's availability checks). It
             // stays set until the next decision, because Execute checks availability again.
             Body.Attend(source);
@@ -234,6 +253,9 @@ namespace Demos.GreyBoxVillage
             float? wolf = VisibleWolfDistance();
             if (wolf != null) agent.State[WolfMetres] = wolf.Value;
             else agent.State.Remove(WolfMetres);
+            float? thief = VisibleThiefDistance();
+            if (thief != null) agent.State[ThiefMetres] = thief.Value;
+            else agent.State.Remove(ThiefMetres);
             string asked = Name + " ← " + label + ": " + text;
             Village.Overlay.ShowThinking(asked, Village.ProviderLabel, Name + " is thinking...");
             var record = Village.Recorder.Begin(Name, source, label, priority, text);
@@ -250,8 +272,9 @@ namespace Demos.GreyBoxVillage
                 };
                 var token = Application.isPlaying ? destroyCancellationToken : CancellationToken.None;
                 var result = await agent.DecideAsync(text, options, token);
-                // Destroyed while the model thought (in Edit mode nothing cancels the call).
-                if (this == null) { gone = true; return; }
+                // Destroyed while the model thought (in Edit mode nothing cancels the call), or given
+                // a new agent (the presenter's reset): the answer is for an agent that is gone.
+                if (this == null || generation != asking) { gone = true; return; }
                 Village.Recorder.Attach(record, result);
                 Village.ReportModel(result);
                 // A decision that says nothing, or fails, must not leave the last one's line standing.
@@ -266,9 +289,13 @@ namespace Demos.GreyBoxVillage
             }
             finally
             {
-                IsDeciding = false;
-                LastActivityTime = Time.time;
-                if (gone) pending = null;
+                // A decision from before a reset leaves the new agent's state alone.
+                if (this == null || generation == asking)
+                {
+                    IsDeciding = false;
+                    LastActivityTime = Time.time;
+                    if (gone) pending = null;
+                }
             }
 
             // An event that came in meanwhile is asked now, whatever became of this decision, unless
