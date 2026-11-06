@@ -60,8 +60,9 @@ Targets:
   does, loses the far ones. A target past the cap can still be chosen, but it gets no line. Every
   action is always listed: the developer decides how many there are, and dropping one would hide
   it. 0 lists no targets. A negative value throws at the call.
-- **With the target rule.** On a provider without token probabilities, the target rule
-  (`PromptOptions.TargetRule`, #107) comes after the list, as the last line.
+- **With the target rule.** On a provider without token probabilities, with `CheckTarget` on
+  for the call, the target rule (`PromptOptions.TargetRule`, #107) comes after the list, as the
+  last line.
 
 The list's form follows the "Around you" list that DR-016's probe measured, which listed
 targets the same way, but no actions. It has never been measured on its own.
@@ -96,7 +97,7 @@ on the evaluation set. A counter-example is the same idea tied to one action, an
 unmeasured.
 
 ```csharp
-quote.CounterExampleStimulus = "Any rumours about the wagon?";   // an ActionDefinition or its asset
+quote.CounterExampleStimulus = "Any rumours about the wagon?";   // an ActionDefinition; on its asset, asset.Action
 ```
 
 ```csharp
