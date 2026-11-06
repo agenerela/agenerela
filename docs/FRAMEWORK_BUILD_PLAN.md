@@ -777,6 +777,13 @@ the others cannot do its job:
 | `InProcessProvider` | **Shipping.** Model runs inside the game process; player installs nothing. | The only option that actually ships. |
 | **Cloud API providers** (`GeminiProvider`, `OpenAIProvider`, …) | **Optional / comparison.** Higher quality for low-frequency decisions; a reference labeller when building the eval set. | Per-request cost collapses at many-agent scale (Appendix A), and needs a network. |
 
+**Beside them ships one that is no model at all.** `ScriptedProvider` (#190, workstream E)
+answers with replies the developer scripted, keyed by agent and stimulus or chosen by a
+callback, after a latency of their choosing, and `ScriptedProviderConfig` makes it an asset like
+any other. It is for tests, headless captures and showing a game with the model off, and it
+never passes for a model: its name and every reply's model are `scripted`, so telemetry and
+reports say so. The package's `Documentation~/providers.md` documents it.
+
 **The cloud tier is plural by design.** The goal is not "support Gemini" but "support cloud
 APIs generally", with each vendor behind the same `ILLMProvider`. Gemini is simply the
 first one implemented, because it is what the prototype measured against — so its quirks
