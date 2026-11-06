@@ -60,7 +60,7 @@ phase table and the open issues, not here.
   distant mountains. Sella, Toma, Fen, Brann, Elra and Kest each have a persona, scripted lines
   and a two- or three-stop routine that holds while their chat is open; all of them only talk for
   now. Entering a place for the first time pays 10 XP once (`discover_<place id>`, saved with the
-  progression) with a HUD notice, and the HUD names the current place. Framework gaps 13 and 14.
+  progression) with a HUD notice, and the HUD names the current place. Framework gaps 14 and 15.
 - **Living Vale G4, part 1: quests, progression and saves** (#69), on `69-living-vale`: plain C#
   in `Game/` with EditMode tests. `QuestLog` holds *The Missing Wagon* (states Undiscovered →
   Offered → Active → ParcelRecovered → Resolved, early discovery skipping ahead, clues kept apart,
@@ -71,6 +71,12 @@ phase table and the open issues, not here.
   drivers, on a card whose Accept button alone makes it Active. `SaveGame` writes a versioned
   snapshot atomically (keeping the previous save), validates before restoring, and never saves a
   quote or offer; F9 saves and F10 loads.
+- **Living Vale G5f: NPCs stop making trade offers nobody asked for** (#69). The Agenerela
+  driver now shows the model one negative example by default: a line answered with `none`. In an
+  A/B on 13 lines asking for nothing, unasked offers fell from 6/13 to 0/13 on
+  `gemma4:e2b-it-qat` and from 10/13 to 0/13 on `qwen3.5:2b`, with the asked trades unchanged
+  (`findings.md`, 5 November). The help line fits 1280×720. Framework gap 9 is updated, and gap
+  13 (a code-built agent has no `none` example) is new.
 - **Living Vale G5e: `gemma4:e2b-it-qat` is the game's default model** (#69), adopted by the
   lead on 5 November after the blind writing comparison. `qwen3.5:2b` is second in F7's list. The
   starting model now loads through the same settle as F7, so the notice says "loading …" and, if

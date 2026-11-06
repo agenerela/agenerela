@@ -11,6 +11,22 @@ The game uses the framework's public API only (`Demos/README.md`), so every work
 below lives in `Demos/LivingVale/Assets/LivingVale/`. That is what makes this list
 trustworthy: each entry names code a framework feature would delete.
 
+## The GreyBoxVillage log
+
+GreyBoxVillage keeps its own list in `.scratch/gbv-master/framework-gaps.md` (scratch, so not in
+git), G1–G9. Several entries overlap with this one:
+
+| Here | There | Note |
+|---|---|---|
+| #1 | G9 | Same question. Living Vale's evidence settles it: verified in code, and the game had to add the lines |
+| #4 | G2, G3 | Per-action target lists; G3 adds per-agent filtering |
+| #7 | G5 | Queue behaviour while an agent is busy |
+| #8 | G7 | Each game builds its own conversation and decision plumbing |
+
+The rest are separate: G1 (provider health), G4 (agent-to-agent relay), G6 (scripted provider;
+Living Vale wrote `ScriptedNpcDecisionDriver`), G8 (domain reload). When the lead turns either list
+into issues, merge the overlapping entries.
+
 ## How to add an entry
 
 Give each entry the next number and these parts:
@@ -35,12 +51,13 @@ Give each entry the next number and these parts:
 | 6 | Model lifecycle (list, warm up, unload, switch) is the developer's problem | Medium | Medium |
 | 7 | Background requests in the shared queue delay player-facing turns | Medium | Medium |
 | 8 | No built-in "this reply is stale" handling for real-time conversations | Medium | Medium |
-| 9 | The model makes offers nobody asked for | Medium (game feel) | Research |
+| 9 | The model makes offers nobody asked for (fixed in the game by a negative example, G5f) | Medium (game feel) | Small |
 | 10 | Grounding guard rejects some correct choices on some models | Medium | Research |
 | 11 | Memory cannot be saved and restored with the game | Medium | Small |
 | 12 | Decisions carry no parameters (quantity, price) | Low for now | Large |
-| 13 | An identity has no slot for what the agent knows, or for how it must speak | Medium | Small |
-| 14 | Where an agent is and what it is doing has no standard shape | Low to medium | Small |
+| 13 | A code-built agent shows the model no `none` example unless the developer passes one | Medium | Small |
+| 14 | An identity has no slot for what the agent knows, or for how it must speak | Medium | Small |
+| 15 | Where an agent is and what it is doing has no standard shape | Low to medium | Small |
 
 ## Entries
 
@@ -54,6 +71,11 @@ Give each entry the next number and these parts:
   available action, its description and each target with its price into observation lines on
   every turn (`PromptLines`). `RefreshExamples` rewrites each action's few-shot example every
   turn so it points at a target that exists now.
+- **Verified in code (5 November):** `Core/PromptBuilder.cs`'s system prompt says "Choose exactly
+  one action from the allowed list" but never lists the actions. It names target IDs only when
+  `PromptOptions.TargetRule` is on (off by default), and never gives an action's or a target's
+  description or display name. A local model learns the actions only from the few-shot examples
+  and whatever the developer writes into observations.
 - **Proposal:** a framework option that renders the available actions, their descriptions and
   each target's display name and description into the prompt, consistently and within budget,
   for providers that do not read the schema. Optionally, auto-generated few-shot examples from
@@ -167,11 +189,28 @@ Give each entry the next number and these parts:
 - **Needed:** "Any rumours about the wagon?" should not produce a potion quote card.
 - **Observed:** qwen3.5:2b and gemma4:e2b-it-qat both open unasked quotes, in the G5b and G5c
   live checks and the 5 November play-check.
-- **Workaround:** being worked on in G5f. This entry is updated with whatever is measured to
-  work.
-- **Proposal:** to be decided after G5f. Possibly an action-level "only when asked" description
-  pattern, or a guard. Note DR-008: the framework must not classify the player's input.
-- **Research area:** guards, and evaluation.
+- **Workaround (G5f, measured):** a **negative few-shot example**. `AgenerelaNpcDecisionDriver`
+  passes `DecideOptions.IdleExampleStimulus = "Good to see a friendly face again."`, which the
+  framework's few-shot block shows answered with `action: none`.
+  - **Result:** in an A/B with the same session and interleaved arms, unasked offers on 13 lines
+    asking for nothing fell from 6/13 to 0/13 on `gemma4:e2b-it-qat` and from 10/13 to 0/13 on
+    `qwen3.5:2b`.
+  - **Asked trades:** unchanged at 5/5 and 4/5 (findings, 5 November: "Unasked offers").
+  - **The stricter rule line** was also tested. It worked on gemma (0/13) but left
+    `qwen3.5:2b` at 1/13, and made it put a target on nine of its `none` answers.
+  - **Not tried:** a guard. Telling an asked line from an unasked one means classifying the
+    player's words, which DR-008 keeps out of the framework. A game could still add one as its
+    own `DelegateGuard`, because that is the game's choice, but it would be a brittle keyword
+    match where one example line was enough.
+- **Proposal:** two small framework options, neither of which classifies input.
+  - Give a code-built `Agent` the idle example a profile already has (entry 13), so every agent
+    shows `none` once.
+  - Let an `ActionDefinition` carry a counter-example: a line shown answered with `none`
+    "although it mentions this action's subject". `FewShotBuilder` would add it beside the
+    action's own example.
+  - Either should be A/B-measured on the evaluation set before it becomes a default, because a
+    `none` example could also make a model miss real commands (Appendix A).
+- **Research area:** evaluation, with guards for the DR-008 boundary.
 
 ### 10. The grounding guard rejects some correct choices on some models
 
@@ -201,7 +240,24 @@ Give each entry the next number and these parts:
 - **Proposal:** none yet. Parameters would change the decision schema, which is measured and
   settled (AGENTS.md). Keep the bundle pattern until there is evidence.
 
-### 13. An identity has no slot for what the agent knows, or for how it must speak
+### 13. A code-built agent shows the model no `none` example
+
+- **Needed:** a demonstration that not every line is a request, which G5f found cuts unasked
+  actions sharply on two small models (entry 9).
+- **Observed:** an agent built from an `AgentProfile` gets the profile's `IdleExampleStimulus`
+  ("Nothing has changed since last time."). An agent built in code, as every Living Vale NPC is,
+  gets none unless each call passes `DecideOptions.IdleExampleStimulus`. Its few-shot block then
+  demonstrates only actions, and the model sees `none` nowhere.
+- **Workaround:** `AgenerelaNpcDecisionDriver.IdleExampleStimulus`, sent on every call.
+- **Proposal:** an optional idle example on the code-only `Agent` constructor or as a property,
+  matching what a profile gives. Or, at least, a line in the docs that a code-built agent has none.
+- **Payoff:** every code-built agent, the GreyBoxStrategy countries included, would get the same
+  `none` demonstration a profile-built one does.
+- **Size and risk:** small, and additive. Changing what a code-built agent sends by default would
+  move measured prompts, so it needs an A/B run before it becomes the default (hard rule 2).
+- **Research area:** evaluation.
+
+### 14. An identity has no slot for what the agent knows, or for how it must speak
 
 - **Needed:** eight NPCs, each with a personality, goals, the house rules for the free-text field
   ("one to three short sentences, stay in Briar Vale, never claim to have done what you only talked
@@ -227,7 +283,7 @@ Give each entry the next number and these parts:
   (hard rule 2).
 - **Research area:** observations.
 
-### 14. Where an agent is and what it is doing has no standard shape
+### 15. Where an agent is and what it is doing has no standard shape
 
 - **Needed:** NPCs now walk routines (G4b), so "you are at your workshop" is true at one stop and
   not at the next; later, an NPC should know it is mid-task, or that the traveler found it far
