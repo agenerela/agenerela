@@ -326,6 +326,27 @@ namespace LivingVale.Tests
             Assert.That(driver.ExecutedCount, Is.Zero);
         }
 
+        // After a load the NPCs remember only up to the save, so the shown history must go too.
+        [Test]
+        public async Task ClearHistories_ForgetsEveryNpcsLines_OnlyWhenClosed()
+        {
+            coordinator.Open(Mara);
+            coordinator.Submit("hello");
+            var t = coordinator.LastTurn;
+            driver.Say(0, "Morning.");
+            await Run.NotCancelled(t);
+
+            Assert.Throws<InvalidOperationException>(() => coordinator.ClearHistories());
+            Assert.That(coordinator.HistoryFor(Mara.Id), Is.Not.Empty);
+
+            coordinator.Close(ConversationCloseReason.Interrupted);
+            coordinator.ClearHistories();
+
+            Assert.That(coordinator.HistoryFor(Mara.Id), Is.Empty);
+            coordinator.Open(Mara);
+            Assert.That(coordinator.Submit("hello again"), Is.True);
+        }
+
         [Test]
         public async Task ThrowingSubscriber_DoesNotWedgeTheConversation()
         {

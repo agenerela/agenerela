@@ -141,6 +141,21 @@ namespace LivingVale.Interaction
         }
 
         /// <summary>
+        /// Forgets every NPC's shown history, for a loaded save: the lines on screen must not
+        /// contradict what the NPCs remember, which the save restores to an earlier point.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">A conversation is open; close it first.</exception>
+        public void ClearHistories()
+        {
+            if (ActiveNpc != null)
+            {
+                throw new InvalidOperationException("Close the conversation before clearing histories.");
+            }
+
+            histories.Clear();
+        }
+
+        /// <summary>
         /// Starts talking to <paramref name="npc"/>. Opening the NPC already open does nothing;
         /// opening another closes the current one first, ending its turn.
         /// </summary>

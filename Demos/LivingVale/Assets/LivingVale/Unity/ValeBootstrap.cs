@@ -318,6 +318,9 @@ namespace LivingVale.Unity
             bool loaded = Saves.TryLoad(out string error);
             if (loaded)
             {
+                // NPC memory now stands at the save; the chat history on screen must not show
+                // lines said after it (G5h saves memory, the shown history is not saved).
+                Coordinator.ClearHistories();
                 Debug.Log($"[LivingVale] Loaded {Saves.SavePath}.");
             }
             else
