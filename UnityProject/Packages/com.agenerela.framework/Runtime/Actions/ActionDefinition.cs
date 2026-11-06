@@ -25,6 +25,34 @@ namespace Agenerela
                  "like 'Pick up the Blacksmith'.")]
         public string[] PreferredExampleTargets;
 
+        /// <summary>
+        /// A stimulus that touches this action's subject but asks for nothing, shown to the model
+        /// answered with <c>none</c> beside the action's own example (#190, Living Vale #9). Empty
+        /// by default, which adds nothing to the prompt.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <see cref="FewShotBuilder.Build"/> puts it right after this action's example, as
+        /// <c>Player: "Any rumours about the wagon?" -&gt; action: none, target: no_target</c>, while
+        /// the action is available. A <c>{0}</c> is filled like the example's, with the first
+        /// registered target of <see cref="PreferredExampleTargets"/>, and with none registered the
+        /// line is left out. <see cref="DecideOptions.CounterExamples"/> leaves every action's out
+        /// of one call.
+        /// </para>
+        /// <para>
+        /// <b>Unmeasured.</b> In Living Vale one line answered with <c>none</c>, sent as the idle
+        /// example, cut offers nobody asked for from 6/13 to 0/13 and from 10/13 to 0/13 on two small
+        /// models (its findings on branch <c>69-living-vale</c>, 5 November). A counter-example per
+        /// action has not been measured, and a <c>none</c> example can also make a model miss real
+        /// commands. The evaluation A/B is owed (#151). Like every example, it must never be an
+        /// evaluation prompt (hard rule 4), which <c>PromptSetChecks</c> checks.
+        /// </para>
+        /// </remarks>
+        [Tooltip("Optional. A stimulus that mentions this action's subject but asks for nothing, " +
+                 "shown answered with 'none'. Use {0} for the target, as in the example, and never " +
+                 "reuse an evaluation prompt.")]
+        public string CounterExampleStimulus;
+
         public static bool ValidateId(string id, out string problem)
         {
             problem = null;

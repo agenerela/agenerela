@@ -23,7 +23,9 @@ From the build plan (§2.3 to §2.5, Appendix A, Phase 6b) and [`findings.md`](f
   closest public proxies are instruction following (IFEval, IFBench, Multi-IF), function
   calling with irrelevance detection (BFCL) and character writing (Creative Writing, EQ-Bench).
 - **The model never reads the schema** (findings, 10 October): field and action descriptions do
-  not reach a local model, so it works from the prompt and the examples alone.
+  not reach a local model, so it works from the prompt and the examples alone. A call can list the
+  actions and targets in the prompt (`DecideOptions.ListActionsAndTargets`, #190), but that is off
+  by default and unmeasured.
 - **Thinking must be off.** A reasoning field before `action` measured worst of five variants
   (Appendix A), and a game waits on every token. `OllamaProvider` sends `think: false`. A model
   that always thinks is out.

@@ -131,5 +131,14 @@ namespace Agenerela.Providers
         /// without a schema is not a decision request.
         /// </remarks>
         public DecisionSchema Schema;
+
+        // Who asked and what, as the developer passed them, set by PromptBuilder; null on a request
+        // built any other way. Internal on purpose: they are never sent, and a provider must not
+        // branch on who is asking or how the stimulus is labelled (DR-008). Only ScriptedProvider
+        // (#190, G6) reads them, to find the reply scripted for this agent and stimulus without
+        // parsing the prompt's wording, which is measured and may change.
+        internal string AgentName;
+        internal string StimulusText;
+        internal string StimulusLabel;
     }
 }

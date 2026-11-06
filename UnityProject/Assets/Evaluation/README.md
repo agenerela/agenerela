@@ -73,10 +73,11 @@ Fields #13 and #66 define for some prompts only:
 The window checks every rule here but the one about observations, under the prompt as it is
 written. A test checks that our set breaks none of them.
 
-- **Never reuse a prompt as a few-shot example** (hard rule 4). An action's `ExampleStimulus`
-  must not match any `stimulus` here. `VillageGuard.asset`'s examples are GreyBoxVillage's
-  guard's, the four actions' and its idle line, so the set is measured with the examples the demo
-  plays with; `PromptSetStartTests` checks that none matches a prompt.
+- **Never reuse a prompt as a few-shot example** (hard rule 4). An action's `ExampleStimulus`,
+  or its `CounterExampleStimulus` when it has one, must not match any `stimulus` here.
+  `VillageGuard.asset`'s examples are GreyBoxVillage's guard's, the four actions' and its idle
+  line, so the set is measured with the examples the demo plays with; `PromptSetStartTests`
+  checks that none matches a prompt.
 - **Targets are registered ids, not descriptions.** Name a concrete `wolf`, not
   `nearby_enemy`. A new target goes into `agent.json` first.
 - **Observations describe the world, not the framework or the test.** "A wolf is at the

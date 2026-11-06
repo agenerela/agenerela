@@ -26,6 +26,7 @@ namespace Agenerela
             public MethodInfo Method;
             public AgentActionAttribute Action;
             public ExampleAttribute Example;
+            public CounterExampleAttribute CounterExample;
             public int Depth;
         }
 
@@ -56,7 +57,8 @@ namespace Agenerela
                     bool isAction = method.IsDefined(typeof(AgentActionAttribute), false);
                     bool isCheck = method.IsDefined(typeof(AvailableAttribute), false);
                     bool hasExample = method.IsDefined(typeof(ExampleAttribute), false);
-                    if (!isAction && !isCheck && !hasExample)
+                    bool hasCounterExample = method.IsDefined(typeof(CounterExampleAttribute), false);
+                    if (!isAction && !isCheck && !hasExample && !hasCounterExample)
                     {
                         continue;
                     }
@@ -91,6 +93,7 @@ namespace Agenerela
                             Method = method,
                             Action = action,
                             Example = method.GetCustomAttribute<ExampleAttribute>(false),
+                            CounterExample = method.GetCustomAttribute<CounterExampleAttribute>(false),
                             Depth = depth
                         });
                     }
@@ -98,6 +101,11 @@ namespace Agenerela
                     {
                         throw Error($"{Name(method)} has [Example] but no [AgentAction]. " +
                                     "The example goes on the action's own method.");
+                    }
+                    else if (hasCounterExample)
+                    {
+                        throw Error($"{Name(method)} has [CounterExample] but no [AgentAction]. " +
+                                    "The counter-example goes on the action's own method.");
                     }
 
                     if (isCheck)
@@ -145,7 +153,8 @@ namespace Agenerela
                     RequiresTarget = f.Action.RequiresTarget,
                     // An action without [Example] reads like an asset whose example was left blank.
                     ExampleStimulus = f.Example?.Stimulus ?? "",
-                    PreferredExampleTargets = f.Example?.PreferredTargets ?? Array.Empty<string>()
+                    PreferredExampleTargets = f.Example?.PreferredTargets ?? Array.Empty<string>(),
+                    CounterExampleStimulus = f.CounterExample?.Stimulus ?? ""
                 };
 
                 actions.Add((definition, new MethodActionHandler(owner, f.Method, check)));

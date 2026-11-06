@@ -558,6 +558,7 @@ public sealed class ActionDefinition {
     public bool RequiresTarget;
     public string ExampleStimulus;       // "{0}" placeholder for target; see few-shot rules
     public string[] PreferredExampleTargets;   // targets this verb sensibly applies to
+    public string CounterExampleStimulus;      // optional, shown answered with none (#190)
 }
 ```
 
@@ -713,9 +714,17 @@ than a second schema system — do not let provider-specific syntax leak into th
    idle example answered with `none`, whose stimulus is the profile's `IdleExampleStimulus`
    (#15), and one negative example showing a refusal with `no_target`. The idle example has
    never been measured on its own; with vs without it is owed in Phase 4
-   ([findings](llm-wiki/findings.md)). **Example utterances must never overlap the
-   evaluation prompt set** (see Phase 4). Few-shot was the largest single lever measured:
-   +35 points.
+   ([findings](llm-wiki/findings.md)). An agent built in code has no profile, so it has an idle
+   example only when `Agent.IdleExampleStimulus` or the call gives one (#190). An action may
+   also carry a `CounterExampleStimulus`, a line that touches its subject but asks for nothing,
+   shown answered with `none` right after its own example (#190). Neither is measured, and both
+   stay off until Phase 4's A/B (#151). **Example utterances must never overlap the
+   evaluation prompt set** (see Phase 4), counter-examples included. Few-shot was the largest
+   single lever measured: +35 points.
+5. **A local model reads no schema** (findings, 10 October 2026), so neither the action list nor
+   the target ids reach it unless the prompt carries them. `DecideOptions.ListActionsAndTargets`
+   (#190) lists both in the system prompt, the targets capped at `MaxListedTargets`. It is off
+   by default and unmeasured, and owed an A/B (#151) before it becomes the default.
 
 ### 2.4 Providers (`Runtime/Providers/`)
 
@@ -979,7 +988,7 @@ underneath have stopped moving.
 where the 200 prompts and their second annotator are needed. It writes and labels prompts
 against a chosen agent profile: the expected action is picked from the profile's actions,
 so a prompt cannot name an action the agent lacks, and a stimulus that repeats an action's
-`ExampleStimulus` is flagged (hard rule 4). Labelling is blind: the annotator sees the
+`ExampleStimulus` or `CounterExampleStimulus` is flagged (hard rule 4). Labelling is blind: the annotator sees the
 stimulus, observations and state, never the expected answer, anyone else's label or the
 model's reply. Each annotator's answers go to their own file, so two people labelling at
 once never edit the same one. The Evaluation Report (screen 4) reads the same format and

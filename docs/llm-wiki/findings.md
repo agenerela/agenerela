@@ -1311,3 +1311,42 @@ to check.
 **What would change this.** A server log or llama-server request showing the 4B's schema in our
 order, which would mean another step reorders it. Or an Ollama release whose native path keeps
 the schema as sent.
+
+### GreyBoxVillage's situations played live: a new action took the bell's place (5 November 2026)
+
+#153's situations slice played its presenter script four times on the real model
+(`VillageCapture.PresenterLiveFromCommandLine`): four agents on one queue answering the wolf,
+a thief, a fire and night at the gate. Four runs of one scripted scene are anecdotes, not
+measurements (hard rule 2). The tables are in the PR. Runs 1 to 3 found two game bugs and two
+harness bugs, each fixed before the next run, so the runs did not all run the same code.
+
+- **A wolf 14 m from Bram, with both `chase` and `sound_alarm` offered: `chase`, 4 of 4.** The
+  new action took the bell's place, and so the chain to Captain Hale. Asked by the player, "Ring
+  the bell, Bram! Warn the village!", he rang it once in two runs, and answered `warn_player`
+  the other time, saying the bell was ringing when it was not.
+- **The thief, 12 guard decisions with `chase` offered: `attack_target` 9, `chase` 2,
+  `warn_player` 1.** `attack_target` had walked to where the thief had been, so it got away in
+  run 2. It now runs after a running thief too.
+- **Odile chose `call_guard` in 8 of 8 decisions** (four thieves, four fires), always naming Bram.
+  **Every guard asked about the fire chose `fetch_water`, 12 of 12.** Wren chose `none` on
+  reaching the gate (4 of 4), and `open_gate`, then `close_gate`, when the player asked (run 4).
+- **The grounding guard fired twice.** In run 1 Wren was asked about a wolf already fleeing,
+  which is not a target, and wanted to write "wolf". A fleeing wolf is no longer reported. In
+  run 3, Hale's `send_guard` read 0.736 at the target (it wanted "arms…"), below 0.8.
+- **Bram answered "Quiet night, Bram?" with "Fine day for it.", 4 of 4.** That is the stimulus
+  of the `none` action's few-shot example, copied as the statement, at night. Not measured;
+  Phase 4 is where to count how often an example's text comes back as the answer.
+- **Latency.** 65 warm decisions took 0.48–2.33 s, median 0.95 s. With three agents asked at
+  once, the last waited up to 3.40 s in the queue. The first request of a fresh session took
+  7.1 and 9.9 s (runs 1 and 3), while the model loaded.
+
+**Conditions.**
+- Branch `153-gbv-situations`, Unity 6000.3.23f1, Play mode in batch mode.
+- `qwen3.5:2b` on Ollama 0.40.14, at `http://127.0.0.1:11434`. No other model was loaded
+  (`/api/ps` was empty before the first run).
+- RTX 4060 Laptop on AC power. Taken under the shared Ollama lock, with no Living Vale run.
+- Quiet timers off, so every decision came from the script.
+
+**What would change this.** A Phase 4 run of the wolf prompts with and without `chase` in the
+offered set, on the same model. If the bell's share does not fall with `chase` offered, this was
+noise.

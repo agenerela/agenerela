@@ -722,6 +722,9 @@ namespace Agenerela.Evaluation
                     CheckTarget = arm.Options.CheckTarget,
                     AskForRefusalLine = arm.Options.AskForRefusalLine,
                     IdleExampleStimulus = arm.Options.IdleExampleStimulus,
+                    ListActionsAndTargets = arm.Options.ListActionsAndTargets,
+                    MaxListedTargets = arm.Options.MaxListedTargets,
+                    CounterExamples = arm.Options.CounterExamples,
                     Priority = arm.Options.Priority.ToString(),
                     Observations = new List<string>(arm.Options.Observations ?? new List<string>()),
                 };
