@@ -51,6 +51,16 @@ phase table and the open issues, not here.
   `Assets/Evaluation/labels/<annotator>/<category>.json`; the README says how.
 - **Screen 8, the Prompt Set window**, in `docs/design/`: the wireframe drawn for #134 before the
   window was built, with its notes.
+- **Living Vale G4b: the region and six more NPCs** (#69), on `69-living-vale`: the grey-box
+  valley around the village, built by one builder per place under `Editor/Region/` and called from
+  `VillageSceneBuilder.Build`: a 600 × 600 ground, flat paths along `ValePlaces.Paths`, the Old
+  Road bend with an empty wreck site, Reedbank (workshop, fields, and the bridge over the river
+  that is the only way to Ashwatch), Ashwatch's forecourt and closed gate before a walled keep,
+  Broken Watch's ruined camp, Herb Hollow's clearing and standing stone, boundary cliffs and
+  distant mountains. Sella, Toma, Fen, Brann, Elra and Kest each have a persona, scripted lines
+  and a two- or three-stop routine that holds while their chat is open; all of them only talk for
+  now. Entering a place for the first time pays 10 XP once (`discover_<place id>`, saved with the
+  progression) with a HUD notice, and the HUD names the current place. Framework gaps 14 and 15.
 - **Living Vale G4, part 1: quests, progression and saves** (#69), on `69-living-vale`: plain C#
   in `Game/` with EditMode tests. `QuestLog` holds *The Missing Wagon* (states Undiscovered →
   Offered → Active → ParcelRecovered → Resolved, early discovery skipping ahead, clues kept apart,

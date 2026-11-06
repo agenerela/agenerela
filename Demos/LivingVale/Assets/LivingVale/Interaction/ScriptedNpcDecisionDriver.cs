@@ -72,6 +72,7 @@ namespace LivingVale.Interaction
             random = new Random(seed);
             this.executor = executor;
             AddG1Scripts();
+            RegionNpcScripts.AddTo(this); // G4b: the six region NPCs, general conversation only.
             AddG3TradeRules();
             AddG4QuestRules();
         }
@@ -288,7 +289,7 @@ namespace LivingVale.Interaction
                 {
                     ("medicine", "Without that wagon I have three patients and nothing to give them."),
                     ("wagon", "It left the castle two days ago. It should have been here by now."),
-                    ("herb", "Silverleaf grows by the old mill, but it's no substitute for the real supplies."),
+                    ("herb", "Herbs grow in Herb Hollow, west of the village, but they're no substitute for the real supplies."),
                     ("hello", "Hello. Forgive me, I'm distracted."),
                     ("bye", "Go carefully.")
                 },

@@ -16,6 +16,9 @@ namespace LivingVale.Unity
         public NpcDescriptor Descriptor => descriptor ??= new NpcDescriptor(stableId, displayName, role);
         public Vector3 TalkPoint => transform.position + Vector3.up * 1.5f;
 
+        /// <summary>Whether this NPC's conversation is open; its routine holds still meanwhile (design §7).</summary>
+        public bool IsTalking => bootstrap != null && bootstrap.Coordinator.ActiveNpc?.Id == Descriptor.Id;
+
         public void Configure(string id, string npcName, string npcRole)
         {
             stableId = id;

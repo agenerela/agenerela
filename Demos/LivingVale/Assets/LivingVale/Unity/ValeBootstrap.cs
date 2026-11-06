@@ -58,6 +58,9 @@ namespace LivingVale.Unity
         /// <summary>XP, levels and perks (G4).</summary>
         public Progression Progression { get; private set; }
 
+        /// <summary>First visits to the region's places, paid in XP through <see cref="Progression"/> (G4b).</summary>
+        public LivingVale.World.PlaceDiscovery Discovery { get; private set; }
+
         /// <summary>The main and side quests (G4). Iven's <c>offer_quest</c> goes through it via the executor.</summary>
         public QuestLog Quests { get; private set; }
 
@@ -94,6 +97,7 @@ namespace LivingVale.Unity
             tradeLink = new ConversationTradeLink();
             Trade = new TradeService(Inventory, new[] { VendorStock.CreateMara(catalog) }, tradeLink);
             Progression = new Progression();
+            Discovery = new LivingVale.World.PlaceDiscovery(Progression);
             Quests = new QuestLog(Inventory, Progression, tradeLink);
             Saves = new SaveGame(Inventory, Trade, Quests, Progression, SaveGame.DefaultDirectory);
             Executor = new NpcActionExecutor(Trade, Quests);
@@ -180,6 +184,8 @@ namespace LivingVale.Unity
         private void Update()
         {
             BridgeCombatToInventory();
+            Vector3 feet = player.transform.position;
+            Discovery.Visit(feet.x, feet.z);
 
             // Capture before the EventSystem can deselect the field on Enter, Esc or a click.
             // Every gameplay component sees the same focus decision for the entire frame.

@@ -56,6 +56,8 @@ Give each entry the next number and these parts:
 | 11 | Memory cannot be saved and restored with the game | Medium | Small |
 | 12 | Decisions carry no parameters (quantity, price) | Low for now | Large |
 | 13 | A code-built agent shows the model no `none` example unless the developer passes one | Medium | Small |
+| 14 | An identity has no slot for what the agent knows, or for how it must speak | Medium | Small |
+| 15 | Where an agent is and what it is doing has no standard shape | Low to medium | Small |
 
 ## Entries
 
@@ -254,3 +256,46 @@ Give each entry the next number and these parts:
 - **Size and risk:** small, and additive. Changing what a code-built agent sends by default would
   move measured prompts, so it needs an A/B run before it becomes the default (hard rule 2).
 - **Research area:** evaluation.
+
+### 14. An identity has no slot for what the agent knows, or for how it must speak
+
+- **Needed:** eight NPCs, each with a personality, goals, the house rules for the free-text field
+  ("one to three short sentences, stay in Briar Vale, never claim to have done what you only talked
+  about") and four or five facts of their own (design §7: an NPC knows its own role and local
+  facts, nothing more).
+- **Workaround:** `Agenerela/NpcPersona.cs` and `RegionNpcPersonas.cs` (G4b) keep personas in code.
+  The speaking rules are appended to every `Personality` string, because `AgentIdentity` has only
+  `Name`, `Role`, `Personality` and `Goals`. The facts go out as observation lines on every turn,
+  prepended by `AgenerelaNpcDecisionDriver.ObservationsFor`, so they share `Agent.MaxObservations`
+  with the turn's real observations (quest stage, quote, receipt) and are re-sent as if they were
+  news. Adding one NPC touches four tables keyed by its ID: `World/RegionNpcs.cs`, the persona,
+  `Interaction/RegionNpcScripts.cs` and the scene builder.
+- **Proposal:** two optional `AgentIdentity` fields, carried by `AgentProfile` too: `Knowledge`
+  (standing facts, rendered into the system prompt once, apart from observations) and
+  `SpeakingRules` (or a profile-wide style block shared by many agents). Alternatively, a stock
+  `FixedObservationSource` that returns the same lines every decision, so at least the plumbing is
+  the framework's.
+- **Payoff:** personas become data in an `AgentProfile` asset a designer can edit, the
+  observation budget is left to what changes, and every developer with more than one NPC stops
+  concatenating style rules into a personality string.
+- **Size and risk:** small. Where the facts sit in the prompt may move accuracy (Appendix A has
+  examples of order effects), so the rendering needs an A/B run before it becomes the default
+  (hard rule 2).
+- **Research area:** observations.
+
+### 15. Where an agent is and what it is doing has no standard shape
+
+- **Needed:** NPCs now walk routines (G4b), so "you are at your workshop" is true at one stop and
+  not at the next; later, an NPC should know it is mid-task, or that the traveler found it far
+  from its post.
+- **Workaround:** none yet: each persona's first fact states where the NPC usually is, and the
+  routine never leaves that place, so the line stays true. `World/NpcRoutine.cs` knows the current
+  stop but nothing reports it to the model.
+- **Proposal:** not a core change: `IObservationSource` already covers it, and the framework
+  must not assume a scene or a speaking character (DR-008, DR-011). Possibly a small sample source
+  in `Runtime/Unity/` that names the registered zone a Transform is in, so a developer has a
+  pattern to copy.
+- **Payoff:** low to medium: it saves a few lines, but makes "the model was told where it is" a
+  habit rather than a bug found in play.
+- **Size and risk:** small. A sample, not an API.
+- **Research area:** observations.

@@ -59,8 +59,8 @@ namespace LivingVale.Agenerela
 
     /// <summary>
     /// The authored personas of the first slice's speaking NPCs, from design §7 and the frozen
-    /// content list (docs/demos/living-vale-content.md). Mara and Iven so far; the other six join
-    /// as their scenes are built.
+    /// content list (docs/demos/living-vale-content.md). Mara and Iven here; the other six are
+    /// in RegionNpcPersonas, with the region (G4b).
     /// </summary>
     public static class ValeNpcPersonas
     {
@@ -100,6 +100,12 @@ namespace LivingVale.Agenerela
                 "Mara at the market stall hears every rumor in the village."
             });
 
-        public static IReadOnlyList<NpcPersona> All { get; } = new[] { Mara, Iven };
+        /// <summary>Mara and Iven, then the six the region brings (<see cref="RegionNpcPersonas"/>, G4b).</summary>
+        public static IReadOnlyList<NpcPersona> All { get; } = new[]
+        {
+            Mara, Iven,
+            RegionNpcPersonas.Sella, RegionNpcPersonas.Toma, RegionNpcPersonas.Fen,
+            RegionNpcPersonas.Brann, RegionNpcPersonas.Elra, RegionNpcPersonas.Kest
+        };
     }
 }
