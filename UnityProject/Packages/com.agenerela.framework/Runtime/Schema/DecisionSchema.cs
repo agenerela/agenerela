@@ -259,8 +259,7 @@ namespace Agenerela
 
             void Add(string actionId, List<string> takes)
             {
-                // A unit separator cannot be in an id that reached the schema, so the key is exact.
-                string key = string.Join("\u001f", takes);
+                string key = KeyOf(takes);
                 if (!actions.TryGetValue(key, out var ids))
                 {
                     ids = new List<string>();
@@ -293,6 +292,19 @@ namespace Agenerela
             }
 
             return pairs;
+        }
+
+        // A list of ids as one string that no other list shares: each id with its length in front,
+        // since an id may hold any character a separator could be made of.
+        private static string KeyOf(List<string> ids)
+        {
+            var key = new System.Text.StringBuilder();
+            foreach (string id in ids)
+            {
+                key.Append(id.Length).Append(':').Append(id);
+            }
+
+            return key.ToString();
         }
 
         // The registered targets this action takes, in registration order.

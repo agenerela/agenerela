@@ -167,6 +167,32 @@ namespace Agenerela.Tests
         }
 
         [Test]
+        public void TwoListsThatJoinToTheSameTextAreStillTwoBranches()
+        {
+            // An id may hold any character a separator could be made of (Codex, #190 B review).
+            var agent = new Agent(new AgentIdentity { Name = "Odile" }, new[]
+            {
+                new ActionDefinition { Id = "take_x", Description = "Take an x.", RequiresTarget = true, TargetCategories = new[] { "x" } },
+                new ActionDefinition { Id = "take_y", Description = "Take a y.", RequiresTarget = true, TargetCategories = new[] { "y" } },
+            }, new FakeProvider());
+            agent.Bind("take_x", new FakeHandler());
+            agent.Bind("take_y", new FakeHandler());
+            agent.Targets.Register("a\u001fb", new object(), "x");
+            agent.Targets.Register("a", new object(), "y");
+            agent.Targets.Register("b", new object(), "y");
+
+            var schema = DecisionSchema.Build(Context(agent), pairTargets: true);
+
+            // Joined with a unit separator, both lists read "a\u001fb", and take_y lost its targets.
+            Assert.That(schema.Pairs.Select(p => (string.Join("|", p.Actions), string.Join("|", p.Targets))), Is.EqualTo(new[]
+            {
+                ("take_x", "a\u001fb"),
+                ("take_y", "a|b"),
+                ("none", TargetRegistry.NoTarget),
+            }));
+        }
+
+        [Test]
         public void AnActionThatNeedsATargetItCannotHaveIsLeftOut()
         {
             var agent = QuestGiver(new FakeProvider());
