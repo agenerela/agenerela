@@ -308,6 +308,15 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Changed
 
+- **The Evaluation Report window is built in UI Toolkit on the #167 kit** (#179): the same
+  window as #146 built, now a tree from `EvaluationReportWindow.uxml` and `.uss`, with the kit's
+  section titles, chips for category ids, problem boxes for what the project or the set lacks,
+  and its primary button. The five outcomes' fills come from the kit's variables, so both editor
+  skins read. Two changes the lead approved with the redrawn screen 4: **Run set-up** folds to one
+  line, with **Run A/B** on it, while a report is shown; and on first open the one primary
+  button is the **Start here** card's. EditMode tests now build the window's tree and check what
+  it shows, and that nothing runs past the window at its 560 px minimum.
+
 - **The same target from two sources is one target** (#190 B, G13, DR-020). `ExplicitTargetSource`
   and `ProximityTargetSource` skip an id an earlier source, or `Agent.Targets`, already registered
   for the same object, which they used to refuse; the first registration, its category included,

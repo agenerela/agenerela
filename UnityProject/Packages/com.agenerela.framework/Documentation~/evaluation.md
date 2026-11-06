@@ -241,7 +241,8 @@ saved on `AgenerelaSettings` as `EvaluationArmA` and `EvaluationArmB`. Agents ne
 ### From the Evaluation Report window
 
 **Window → Agenerela → Evaluation Report** does the same without code. Until it can run, it
-shows four steps and, under **Run A/B**, why the button is greyed out:
+shows a **Start here** card with four steps and, under **Run A/B**, why the button is greyed
+out:
 
 1. **Choose the prompt set**, the `agent.json` the Prompt Set window writes.
 2. **Choose the profile** it was written for.
@@ -250,9 +251,10 @@ shows four steps and, under **Run A/B**, why the button is greyed out:
    against `guards-on`; two configs are named after themselves. Names you type are kept.
 4. **Run A/B.** It uses the GPU for a few minutes, so check nobody else is running a model.
 
-**Use the project's set, profile and arms** does steps 1 to 3 at once: the project's
-`agent.json` (a menu when there are several), the profile the Prompt Set window last used with it
-or the one beside it, and Arm A and Arm B from Project Settings. It says what the project lacks.
+**Use the project's set, profile and arms**, the card's button and later in the toolbar, does
+steps 1 to 3 at once: the project's `agent.json` (a menu when there are several), the profile the
+Prompt Set window last used with it or the one beside it, and Arm A and Arm B from Project
+Settings. It says what the project lacks, with a button to Project Settings when that is the arms.
 
 **Order** is interleaved unless you choose otherwise; arms on two Ollama models always run one
 after the other. **What the run checks** says, in plain words, what happens before the first
@@ -338,9 +340,11 @@ its own n, so a category of six prompts needs a very large difference before it 
 
 **In the Evaluation Report window** the report reads in screen 4's six numbered parts:
 
-1. **Run set-up**, and under **Conditions this run was measured under** the same conditions in
-   plain words: the order, each arm's model, Ollama version and prompt options, and what was loaded and how much
-   of it was in GPU memory before the warm-up, after it and at the end. Warnings show above.
+1. **Run set-up**, folded to one line while a report is shown, with **Run A/B** still on it;
+   click it to open the fields. Under the report's name, **Conditions this run was measured
+   under** gives the conditions in plain words: the order, each arm's model, Ollama version and
+   prompt options, and what was loaded and how much of it was in GPU memory before the warm-up,
+   after it and at the end. Warnings show above.
 2. **Outcomes**: a bar per arm, and each outcome's share in A and B with the difference in
    points. Only the Correct row carries the noise verdict, because the check is on accuracy.
 3. **Noise check**, in one sentence.

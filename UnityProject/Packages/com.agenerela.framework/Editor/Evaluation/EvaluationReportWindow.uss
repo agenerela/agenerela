@@ -1,0 +1,411 @@
+/*
+ * The Evaluation Report window's layout (#179). Colour and type come from the kit's variables in
+ * Agenerela.uss (#167); nothing here sets a colour of its own. The five outcomes' fills are kit
+ * variables too, so the bar reads in both editor skins.
+ */
+
+.er {
+    flex-grow: 1;
+}
+
+.er-toolbar {
+    flex-wrap: wrap;
+    flex-shrink: 0;
+}
+
+.er-scroll {
+    flex-grow: 1;
+}
+
+.er-scroll > .unity-scroll-view__content-viewport > .unity-scroll-view__content-container {
+    padding: var(--ag-space-s) var(--ag-space-l) var(--ag-space-l) var(--ag-space-l);
+}
+
+.er-row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.er-grow {
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.er-wrap {
+    white-space: normal;
+}
+
+.er-small {
+    font-size: var(--ag-font-size-small);
+}
+
+.er-bold {
+    -unity-font-style: bold;
+}
+
+.er-note {
+    margin: var(--ag-space-s) 0;
+}
+
+.er-indent {
+    margin-left: 18px;
+}
+
+.er-section {
+    margin-top: var(--ag-space-s);
+}
+
+/* A · First open */
+
+.er-start {
+    margin-top: var(--ag-space-m);
+}
+
+.er-start__title {
+    font-size: var(--ag-font-size-big);
+    -unity-font-style: bold;
+    margin-bottom: var(--ag-space-xs);
+}
+
+.er-start__defaults {
+    flex-wrap: wrap;
+    margin: var(--ag-space-m) 0 var(--ag-space-s) 0;
+}
+
+.er-start__defaults > Button {
+    margin-left: 0;
+    margin-right: var(--ag-space-m);
+    height: 24px;
+}
+
+.er-step {
+    flex-direction: row;
+    margin-top: var(--ag-space-s);
+}
+
+.er-step__mark {
+    width: 20px;
+    height: 20px;
+    margin-right: var(--ag-space-m);
+    border-width: 1px;
+    border-radius: 10px;
+    border-color: var(--ag-text-muted);
+    color: var(--ag-text-muted);
+    -unity-text-align: middle-center;
+    -unity-font-style: bold;
+    font-size: var(--ag-font-size-small);
+    flex-shrink: 0;
+}
+
+.er-step__mark--done {
+    background-color: var(--ag-text);
+    border-color: var(--ag-text);
+    color: var(--ag-background);
+}
+
+.er-step__title {
+    -unity-font-style: bold;
+}
+
+/* ① Run set-up */
+
+.er-setup-header {
+    min-height: 26px;
+    margin-top: var(--ag-space-s);
+}
+
+.er-setup-toggle {
+    -unity-font-style: bold;
+    padding-left: 0;
+    flex-shrink: 0;
+}
+
+.er-setup-summary {
+    flex-grow: 1;
+    flex-shrink: 1;
+    overflow: hidden;
+    -unity-text-overflow-position: end;
+    text-overflow: ellipsis;
+    margin-left: var(--ag-space-s);
+}
+
+.er-field-note {
+    margin-left: 123px;
+    margin-bottom: var(--ag-space-xs);
+    white-space: normal;
+}
+
+.er-arm {
+    margin-top: var(--ag-space-s);
+}
+
+.er-arm-options {
+    margin-left: 120px;
+}
+
+.er-arm-name {
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.er-arm-name > Label {
+    min-width: 40px;
+    width: 40px;
+}
+
+.er-checks {
+    margin-top: var(--ag-space-s);
+}
+
+.er-check {
+    white-space: normal;
+    color: var(--ag-text-muted);
+    margin-bottom: var(--ag-space-xs);
+}
+
+.er-run-row {
+    margin-top: var(--ag-space-m);
+}
+
+.er-run {
+    height: 26px;
+    min-width: 96px;
+    flex-shrink: 0;
+}
+
+.er-run-reason {
+    flex-grow: 1;
+    flex-shrink: 1;
+    margin-left: var(--ag-space-m);
+}
+
+.er-progress-row {
+    margin-top: var(--ag-space-m);
+    align-items: flex-start;
+}
+
+.er-progress-row > Button {
+    height: 26px;
+    min-width: 80px;
+}
+
+/* C, D · The report */
+
+.er-report-name {
+    -unity-font-style: bold;
+    margin-top: var(--ag-space-l);
+}
+
+.er-arm-bar {
+    margin-bottom: var(--ag-space-s);
+}
+
+.er-arm-bar__name {
+    width: 110px;
+    flex-shrink: 0;
+}
+
+.er-arm-bar__title {
+    -unity-font-style: bold;
+}
+
+.er-bar {
+    flex-direction: row;
+    flex-grow: 1;
+    height: 20px;
+    border-width: 1px;
+    border-color: var(--ag-line);
+    border-radius: var(--ag-radius);
+    overflow: hidden;
+}
+
+.er-bar__part {
+    height: 100%;
+    -unity-text-align: middle-center;
+    font-size: var(--ag-font-size-small);
+    -unity-font-style: bold;
+    color: var(--ag-background);
+    overflow: hidden;
+}
+
+.er-outcome--correct { background-color: var(--ag-text); }
+.er-outcome--wrong { background-color: var(--ag-error); }
+.er-outcome--contained { background-color: var(--ag-text-muted); }
+.er-outcome--rejected { background-color: var(--ag-warning); }
+.er-outcome--error { background-color: var(--ag-line); }
+
+.er-legend {
+    flex-wrap: wrap;
+    margin: 0 0 var(--ag-space-m) 110px;
+}
+
+.er-legend__item {
+    flex-direction: row;
+    align-items: center;
+    margin-right: var(--ag-space-l);
+}
+
+.er-swatch {
+    width: 12px;
+    height: 10px;
+    margin-right: var(--ag-space-s);
+    border-radius: 2px;
+}
+
+.er-table-row {
+    flex-direction: row;
+    align-items: center;
+    min-height: 22px;
+    border-bottom-width: 1px;
+    border-color: var(--ag-surface-line);
+}
+
+.er-table-row--head {
+    border-bottom-width: 1px;
+    border-color: var(--ag-line);
+}
+
+.er-table-row--head > Label {
+    color: var(--ag-text-muted);
+    font-size: var(--ag-font-size-small);
+}
+
+.er-cell {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+    white-space: normal;
+    padding: var(--ag-space-xs) var(--ag-space-s);
+}
+
+.er-cell--number {
+    flex-grow: 0;
+    flex-basis: 76px;
+    -unity-text-align: middle-right;
+}
+
+.er-cell--difference {
+    flex-grow: 0;
+    flex-basis: 130px;
+    -unity-text-align: middle-right;
+}
+
+.er-cell--accuracy {
+    flex-grow: 0;
+    flex-basis: 96px;
+    flex-direction: row;
+    align-items: center;
+}
+
+.er-cell--n {
+    flex-grow: 0;
+    flex-basis: 34px;
+    -unity-text-align: middle-right;
+}
+
+.er-mini-bar {
+    width: 44px;
+    height: 7px;
+    margin-right: var(--ag-space-s);
+    border-width: 1px;
+    border-color: var(--ag-line);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.er-mini-bar__fill {
+    height: 100%;
+    background-color: var(--ag-text);
+}
+
+.er-failure-filter {
+    flex-wrap: wrap;
+    margin-bottom: var(--ag-space-s);
+}
+
+.er-segmented > Button {
+    margin-left: 0;
+    margin-right: 0;
+    border-radius: 0;
+}
+
+.er-segmented > Button.er-selected {
+    background-color: var(--ag-text);
+    color: var(--ag-background);
+    -unity-font-style: bold;
+}
+
+.er-failure {
+    border-bottom-width: 1px;
+    border-color: var(--ag-surface-line);
+    padding: var(--ag-space-s) 0;
+}
+
+.er-failure__top {
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+.er-failure__id {
+    width: 100px;
+    flex-shrink: 0;
+    font-size: var(--ag-font-size-small);
+    padding-top: 2px;
+}
+
+.er-failure__open {
+    flex-shrink: 0;
+}
+
+.er-details {
+    margin: var(--ag-space-s) 0 var(--ag-space-xs) 100px;
+}
+
+.er-detail {
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+.er-detail__key {
+    width: 140px;
+    flex-shrink: 0;
+    color: var(--ag-text-muted);
+    -unity-font-style: bold;
+    font-size: var(--ag-font-size-small);
+}
+
+.er-detail__value {
+    flex-grow: 1;
+    flex-shrink: 1;
+    white-space: normal;
+    font-size: var(--ag-font-size-small);
+}
+
+.er-agreement {
+    align-items: flex-start;
+}
+
+.er-big {
+    font-size: 28px;
+    -unity-font-style: bold;
+    margin-right: var(--ag-space-l);
+    min-width: 72px;
+}
+
+.er-buttons {
+    flex-wrap: wrap;
+    margin-top: var(--ag-space-m);
+}
+
+.er-buttons > Button {
+    margin-left: 0;
+    margin-right: var(--ag-space-s);
+    margin-bottom: var(--ag-space-s);
+}
+
+.er-footnote {
+    margin-top: var(--ag-space-m);
+    padding-top: var(--ag-space-m);
+    border-top-width: 1px;
+    border-color: var(--ag-surface-line);
+}
