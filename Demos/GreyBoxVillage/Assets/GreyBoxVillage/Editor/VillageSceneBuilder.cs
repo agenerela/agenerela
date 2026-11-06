@@ -228,8 +228,10 @@ namespace Demos.GreyBoxVillage.Editor
             // The woods, north-east of the river, where the wolf lives.
             foreach (var (x, z) in new[]
             {
-                (30f, 31f), (35f, 29f), (41f, 31f), (46f, 34f), (29f, 37f), (34f, 41f), (42f, 38f),
-                (47f, 42f), (31f, 46f), (38f, 47f), (44f, 47f), (27f, 43f)
+                (30f, 31f), (35f, 29f), (40.5f, 33.2f), (46f, 34f), (29f, 37f), (34f, 41f), (42f, 38f),
+                (47f, 42f), (35f, 48.6f), (38f, 47f), (41.5f, 48.6f), (27f, 43f),
+                // A ring of trees round the hermit's clearing, west of the keep (slice 3).
+                (-12f, 46.5f), (-2.2f, 47.6f), (-11.5f, 40.5f), (-0.5f, 43f), (-14f, 43.5f)
             })
                 Tree(geometry, new Vector3(x, 0, z));
 
@@ -253,6 +255,20 @@ namespace Demos.GreyBoxVillage.Editor
             Box("cave_rock", geometry, new Vector3(-35, 2, 43.5f), new Vector3(3, 4, 7), dark);
             Box("cave_door", geometry, new Vector3(-40, 1.5f, 45.3f), new Vector3(7, 3, 0.4f), restricted);
 
+            // The woods' places (slice 3), as the grey box sees them: only what stands in the way. None
+            // is a target. The shrine's floor is two low steps, which the player and the NavMesh climb.
+            Box("shrine_step", geometry, new Vector3(30.5f, 0.06f, 46.5f), new Vector3(5.2f, 0.12f, 5.2f), stone);
+            Box("shrine_floor", geometry, new Vector3(30.5f, 0.18f, 46.5f), new Vector3(4.4f, 0.12f, 4.4f), stone);
+            foreach (var (x, z) in new[] { (-1.8f, -1.8f), (1.8f, -1.8f), (-1.8f, 1.8f), (1.8f, 1.8f), (0f, 2f), (2f, 0f) })
+                Box("shrine_pillar", geometry, new Vector3(30.5f + x, 1.5f, 46.5f + z), new Vector3(0.6f, 3f, 0.6f), stone);
+            Box("shrine_altar", geometry, new Vector3(30.5f, 0.9f, 47.4f), new Vector3(1.4f, 1.4f, 0.9f), dark);
+            foreach (var (x, z) in new[] { (-1.1f, -1.1f), (1.1f, -1.1f), (-1.1f, 1.1f), (1.1f, 1.1f) })
+                Box("lookout_post", geometry, new Vector3(44.5f + x, 2.35f, 29.8f + z), new Vector3(0.3f, 4.7f, 0.3f), dark);
+            Box("den_back", geometry, new Vector3(47f, 1.5f, 49.4f), new Vector3(6f, 3f, 1.6f), dark);
+            Box("den_side", geometry, new Vector3(44.9f, 1.2f, 48.6f), new Vector3(2.2f, 2.4f, 3f), dark);
+            Box("den_side", geometry, new Vector3(49.1f, 1.2f, 48.6f), new Vector3(2.2f, 2.4f, 3f), dark);
+            Box("hermit_hut", geometry, new Vector3(-7f, 1.25f, 45f), new Vector3(3.3f, 2.5f, 2.9f), stone);
+
             // Points the guard, the villagers and the wolf walk between. Not targets.
             var square = new[] { well, market, Point(geometry, "square_a", 6, 4), Point(geometry, "square_b", -6, 2),
                 Point(geometry, "square_c", 10, -4), Point(geometry, "square_d", -4, -6) };
@@ -260,7 +276,7 @@ namespace Demos.GreyBoxVillage.Editor
                 Point(geometry, "woods_c", 44, 44), Point(geometry, "woods_d", 34, 44), Point(geometry, "woods_e", 38, 39) };
             var prowl = new[] { Point(geometry, "prowl_north_bank", 6, 30), Point(geometry, "prowl_square", 3, 12),
                 Point(geometry, "prowl_docks", 26, 16) };
-            var den = Point(geometry, "wolf_den", 47, 47);
+            var den = Point(geometry, "wolf_den", 47, 46.4f);
 
             var navigation = new GameObject("BakedNavigation").AddComponent<VillageNavigation>();
             Bake(navigation, geometry);
@@ -479,6 +495,28 @@ namespace Demos.GreyBoxVillage.Editor
             var pelt = Pickup(finds, "pelt", Vector3.zero);
             pelt.gameObject.SetActive(false);
 
+            // The woods north of the river (slice 3): six places to find, recorded in the journal, and
+            // Oswin the hermit by his hut. None of it is a target, and none of it an agent.
+            var woodsRoot = new GameObject("Woods").transform;
+            var exploration = woodsRoot.gameObject.AddComponent<Exploration>();
+            exploration.Player = player.transform;
+            exploration.Places = new[]
+            {
+                Find(woodsRoot, "find_woods_path", "The old wood path", "Signposts at the edge of the woods point to the glade, the den and the shrine.", 26.8f, 31.6f, 4f),
+                Find(woodsRoot, "find_glade", "The moonpetal glade", "Moonpetals grow thick here, and glow after dark.", 37f, 39f, 5f),
+                Find(woodsRoot, "find_den", "The wolf's den", "Bones at the mouth of it. Best not to linger.", 47f, 46.4f, 5f),
+                Find(woodsRoot, "find_shrine", "The ruined shrine", "Older than the keep. A stone on its altar still glows.", 30.5f, 45f, 5f),
+                Find(woodsRoot, "find_lookout", "The lookout", "A woodsman's platform over the river and the docks.", 44.5f, 29.8f, 4.5f),
+                Find(woodsRoot, "find_hermit", "The hermit's hut", "Oswin lives here, and talks to anyone who stops.", -6.5f, 43f, 5f),
+            };
+            var hermitObject = new GameObject("hermit_oswin");
+            hermitObject.transform.SetParent(woodsRoot, false);
+            hermitObject.transform.position = new Vector3(-5f, 0, 42.6f);
+            hermitObject.transform.rotation = Quaternion.Euler(0, 200f, 0);
+            Figure(hermitObject, "char_hermit");
+            Tag(hermitObject, "Oswin", "hermit");
+            var hermit = hermitObject.AddComponent<Hermit>();
+
             var camera = CreateCamera();
             camera.orthographic = false;
             camera.fieldOfView = 50;
@@ -566,6 +604,39 @@ namespace Demos.GreyBoxVillage.Editor
             presenter.WolfFrom = Point(geometry, "wolf_from", 6f, -24.5f);
             presenter.WolfTo = Point(geometry, "wolf_to", 3f, -19.5f);
             commands.Presenter = presenter;
+            commands.Exploration = exploration;
+            exploration.Hud = hud;
+            commands.Hermit = hermit;
+            presenter.Exploration = exploration;
+            presenter.Hermit = hermit;
+
+            // The sound only listens to the village; with no clips in Audio/ it stays silent.
+            var sound = new GameObject("Sound").AddComponent<VillageSound>();
+            sound.Menu = menu;
+            sound.Day = day;
+            sound.Weather = weather;
+            sound.Routine = routine;
+            sound.Alarm = alarm;
+            sound.GateDoors = villageGate;
+            sound.StallFire = fire;
+            sound.Wolf = wolf;
+            sound.Player = player.transform;
+            sound.RiverAt = new[]
+            {
+                Landmark("sound_river_bridge", geometry, new Vector3(4f, 0, 23f)),
+                Landmark("sound_river_docks", geometry, new Vector3(30f, 0, 23.5f)),
+                Landmark("sound_river_west", geometry, new Vector3(-26f, 0, 23f)),
+            };
+            sound.MarketAt = market;
+            sound.CampfireAt = campfire;
+            sound.OwlAt = new[] { woods[0], woods[2], woods[3], Point(geometry, "owl_hermit", -10f, 46f) };
+            sound.Wood = new[]
+            {
+                new Bounds(new Vector3(0, 0, 23f), new Vector3(6.4f, 4f, 7.8f)),
+                new Bounds(new Vector3(30f, 0, 22f), new Vector3(8.4f, 4f, 4.4f)),
+            };
+            LoadSounds(sound);
+            commands.Sound = sound;
             ui.SetActive(true);
             thiefObject.SetActive(false);
         }
@@ -766,6 +837,16 @@ namespace Demos.GreyBoxVillage.Editor
         }
 
         private static Transform Point(Transform parent, string name, float x, float z) => Landmark(name, parent, new Vector3(x, 0, z));
+
+        // A place in the woods worth finding. Not a target: it never reaches a schema.
+        private static PlaceToFind Find(Transform parent, string name, string title, string note, float x, float z, float radius)
+        {
+            var place = Landmark(name, parent, new Vector3(x, 0, z)).gameObject.AddComponent<PlaceToFind>();
+            place.Title = title;
+            place.Note = note;
+            place.Radius = radius;
+            return place;
+        }
 
         // A place of the villagers' routine and its points. Not a target: only where they stand.
         private static VillageRoutine.Spot Spot(Transform parent, string id, string words, params (float x, float z)[] points) =>

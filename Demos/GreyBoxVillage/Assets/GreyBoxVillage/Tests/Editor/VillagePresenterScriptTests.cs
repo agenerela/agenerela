@@ -109,8 +109,16 @@ namespace Demos.GreyBoxVillage.Tests
             lantern.Collect(commands.Inventory);
             Assert.That(commands.Inventory.Count("old_lantern"), Is.EqualTo(1));
 
+            // And forgets the places found north of the river.
+            var glade = commands.Exploration.Places.Single(p => p.Title == "The moonpetal glade");
+            Stand(glade.transform.position);
+            yield return null;
+            yield return null;
+            Assert.That(commands.Exploration.HasFound(glade), Is.True, "Walking into the glade did not find it.");
+
             // 1. F2, the wolf: Bram sees it close and rings the bell, Hale hears it and sends a guard.
             Assert.That(presenter.Press(Key.F1), Is.True);
+            Assert.That(commands.Exploration.Count, Is.Zero, "F1 left the places found in the journal.");
             Assert.That(commands.Inventory.Count("old_lantern"), Is.Zero);
             Assert.That(lantern.gameObject.activeSelf, Is.True, "F1 left the lantern picked up, and Wren's quest could not be finished again.");
             Assert.That(Vector3.Distance(lantern.transform.position, lanternAt), Is.LessThan(0.01f));
