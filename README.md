@@ -29,8 +29,9 @@
 > [!NOTE]
 > **Early development.** The core is built and tested: registered actions, availability from
 > state, the decision schema, prompts and the `Agent` that joins them. Since 0.3.0 it calls a
-> local model through Ollama, with a request queue and short-term memory; the guards that stop
-> a wrong answer are Phase 3, now under way. The [changelog](CHANGELOG.md) has the detail.
+> local model through Ollama, with a request queue and short-term memory. The guards that stop
+> a wrong answer (Phase 3) are built on `test`, ahead of the 0.4.0 release, and the evaluation
+> harness (Phase 4) is under way. The [changelog](CHANGELOG.md) has the detail.
 
 ## A quick look
 
@@ -106,7 +107,7 @@ arrives in Phase 4.
 ## Roadmap
 
 <p align="center">
-  <img src="docs/assets/readme/roadmap.svg" alt="Roadmap: phases 0 Skeleton and 1 Core are done; phase 2, Ollama, queue and memory, is in progress; then Guards, Evaluation, Editor tools, Cloud providers, In-process, Samples and Demo games." width="100%">
+  <img src="docs/assets/readme/roadmap.svg" alt="Roadmap: phases 0 Skeleton, 1 Core, 2 Ollama, queue and memory, and 3 Guards are done; phase 4, Evaluation, is in progress; then Editor tools, Cloud providers, In-process, Samples and Demo games." width="100%">
 </p>
 
 Each phase closes with a release. What has changed is in the [changelog](CHANGELOG.md), and
