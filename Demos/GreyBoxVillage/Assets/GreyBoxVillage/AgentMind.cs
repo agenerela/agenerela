@@ -124,24 +124,18 @@ namespace Demos.GreyBoxVillage
         /// <summary>
         /// Gives the agent a new provider config, and so a fresh agent with an empty memory. An
         /// <see cref="AgentBehaviour"/> builds its agent once, so this replaces the component with one
-        /// that has the same settings. Tests pass a config with a fake provider.
+        /// that has the same settings, every serialized field of the old one copied, so a field the
+        /// framework adds later is kept too (G12). Tests pass a config with a scripted provider.
         /// </summary>
         public void UseProvider(ProviderConfig config)
         {
             var old = Behaviour;
-            var profile = old.Profile;
-            bool findTargets = old.FindTargetsNearby, notice = old.NoticeNearby;
-            var targets = old.Targets;
-            var observations = old.Observations;
+            string settings = JsonUtility.ToJson(old);
             DestroyImmediate(old);
             behaviour = gameObject.AddComponent<AgentBehaviour>();
+            // Nothing reads the agent before this, so it is built from these settings on its first read.
+            JsonUtility.FromJsonOverwrite(settings, behaviour);
             behaviour.Provider = config;
-            behaviour.FindTargetsNearby = findTargets;
-            behaviour.Targets = targets;
-            behaviour.NoticeNearby = notice;
-            behaviour.Observations = observations;
-            // Last: an AgentBehaviour with a profile builds its agent on the first read.
-            behaviour.Profile = profile;
             configured = null;
             pending = null;
             generation++;

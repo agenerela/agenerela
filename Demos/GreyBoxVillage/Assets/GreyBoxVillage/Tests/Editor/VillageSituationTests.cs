@@ -519,6 +519,22 @@ namespace Demos.GreyBoxVillage.Tests
 
         // ---- The presenter -------------------------------------------------------------------------
 
+        // G12: the reset replaces each AgentBehaviour, and the new one must keep every setting of the
+        // old, the ones #208 added (Target Categories, Only Actions) and any the framework adds later.
+        [Test]
+        public void AResetKeepsEveryAgentSetting()
+        {
+            var before = commands.Minds.Select(m => JsonUtility.ToJson(m.Behaviour)).ToList();
+            var behaviours = commands.Minds.Select(m => m.Behaviour).ToList();
+            commands.ResetAgents();
+            for (int i = 0; i < commands.Minds.Length; i++)
+            {
+                var mind = commands.Minds[i];
+                Assert.That(mind.Behaviour, Is.Not.SameAs(behaviours[i]), mind.Name + " kept the old component, so its agent and memory.");
+                Assert.That(JsonUtility.ToJson(mind.Behaviour), Is.EqualTo(before[i]), mind.Name + " lost a setting in the reset.");
+            }
+        }
+
         [Test]
         public async Task AResetDropsADecisionStillWithTheModel()
         {
