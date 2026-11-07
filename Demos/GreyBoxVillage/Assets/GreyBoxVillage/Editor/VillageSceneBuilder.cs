@@ -436,6 +436,8 @@ namespace Demos.GreyBoxVillage.Editor
             }, "Bram, the guard at the village gate", new Vector3(-2.5f, 0, -13), gold, gate,
                 new[] { gate, campfire, market, bridge, well, shelter, armory.Entrance }, 30f, provider, alarm, wolf, player.transform,
                 GuardCategories);
+            // Bram is the evaluation agent: exactly these actions, whatever the guard's body carries.
+            bram.Behaviour.OnlyActions = BramsActions;
             var wren = Guard("Wren", new AgentIdentity
             {
                 Name = "Wren",
@@ -542,8 +544,6 @@ namespace Demos.GreyBoxVillage.Editor
             watch.WatchPost = watchPost;
             watch.Relieved = (VillageGuard)bram.Body;
             watch.RelievedPost = offWatch;
-            // So are chase and fetch_water: Bram, the evaluation agent, keeps the actions he had.
-            wren.gameObject.AddComponent<Responder>().Guard = (VillageGuard)wren.Body;
 
             var boardObject = new GameObject("AgentBoard");
             var board = boardObject.AddComponent<AgentBoard>();
@@ -692,6 +692,11 @@ namespace Demos.GreyBoxVillage.Editor
             mind.Senses = senses;
             return mind;
         }
+
+        // The evaluation agent's actions (UnityProject/Assets/Evaluation/agent.json), with patrol for
+        // the quiet moments, and nothing a slice added: chase and fetch_water are Wren's.
+        private static readonly string[] BramsActions =
+            { "follow_player", "stop_following", "move_to", "attack_target", "warn_player", "block_path", "sound_alarm", "patrol" };
 
         // "stranger" is the thief, offered only while it is out.
         private static readonly string[] GuardCategories = { "place", "person", "creature", "restricted", "stranger" };

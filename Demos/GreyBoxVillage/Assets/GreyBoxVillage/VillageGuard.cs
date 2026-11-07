@@ -21,9 +21,11 @@ namespace Demos.GreyBoxVillage
     /// decision: the source of the stimulus and the distance of a wolf the guard can see.
     ///
     /// Bram and Wren are both guards: the same body, each with its own post, patrol and profile.
-    /// Wren also keeps the night watch and answers trouble: those actions sit on her own
-    /// <see cref="NightWatch"/> and <see cref="Responder"/>, so Bram, the evaluation agent, keeps
-    /// exactly the actions he had.
+    /// Wren also answers trouble (<c>chase</c>, <c>fetch_water</c>) and keeps the night watch, on her
+    /// own <see cref="NightWatch"/>. Bram, the evaluation agent, keeps exactly the actions he had: his
+    /// AgentBehaviour's Only Actions lists them, so this body's other actions are never his (#208, G10).
+    /// Offered a new action beside his own, the model took it over the bell for the wolf (four live
+    /// runs, 5 November).
     /// </remarks>
     [RequireComponent(typeof(NavMeshAgent))]
     public sealed class VillageGuard : VillageBody
@@ -35,7 +37,7 @@ namespace Demos.GreyBoxVillage
         public Transform Post;
         public VillageAlarm Alarm;
         public Transform[] PatrolRoute;
-        [Tooltip("The fire the guard knows about, and carries water to when its Responder fetches water.")]
+        [Tooltip("The fire the guard knows about, and carries water to when it fetches water.")]
         public VillageFire Fire;
         [Tooltip("Carried while fetching water; hidden otherwise.")]
         public GameObject Bucket;
@@ -137,9 +139,13 @@ namespace Demos.GreyBoxVillage
         // ---- This demo's own actions ---------------------------------------------------------
 
         /// <summary>
-        /// Runs after a thief or the wolf until it is caught, flees or gets away. Wren's
-        /// <c>chase</c> (<see cref="Responder"/>); Bram has no such action.
+        /// Runs after a thief or the wolf until it is caught, flees or gets away. Wren's; Bram's Only
+        /// Actions leave it out, and he goes after a running thief with <c>attack_target</c>.
         /// </summary>
+        // Something that runs: the thief (a stranger) or the wolf (a creature).
+        [AgentAction("chase", "Run after a thief or the wolf until you catch it.", RequiresTarget = true,
+            TargetCategories = new[] { "stranger", "creature" })]
+        [Example("Don't let the {0} get away!", "thief", "wolf")]
         public void Chase(Transform target)
         {
             Clear();
@@ -150,10 +156,17 @@ namespace Demos.GreyBoxVillage
             Report("Chasing the " + destinationId + ".");
         }
 
+        // Something to run after must be in sight: a thief making off, or the wolf.
+        [Available("chase")]
+        private bool CanChase(AgentContext ctx) =>
+            AgentMind.Moment.Of(ctx) is { } moment && (moment.WolfMetres != null || moment.ThiefMetres != null);
+
         /// <summary>
-        /// Carries buckets from the well to <see cref="Fire"/> until it is out. Wren's
-        /// <c>fetch_water</c> (<see cref="Responder"/>); Bram has no such action.
+        /// Carries buckets from the well to <see cref="Fire"/> until it is out. Wren's; Bram's Only
+        /// Actions leave it out.
         /// </summary>
+        [AgentAction("fetch_water", "Carry buckets from the well to the fire until it is out.")]
+        [Example("Flames are climbing up the side of the barn!")]
         public void FetchWater()
         {
             Clear();
@@ -164,6 +177,9 @@ namespace Demos.GreyBoxVillage
             activity = "running to the well for water";
             Report("Fetching water for the fire.");
         }
+
+        [Available("fetch_water")]
+        private bool CanFetchWater(AgentContext ctx) => Fire != null && Fire.IsBurning;
 
         [AgentAction("warn_player", "Warn the player and stay where you are.")]
         [Example("A stranger is poking around where they should not be.")]

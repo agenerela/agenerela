@@ -532,7 +532,15 @@ MonoBehaviour:
     RequireLineOfSight: 0
     Cap: 8
   Handlers: []
-  OnlyActions: []
+  OnlyActions:
+  - follow_player
+  - stop_following
+  - move_to
+  - attack_target
+  - warn_player
+  - block_path
+  - sound_alarm
+  - patrol
   TargetCategories:
   - place
   - person
@@ -17888,7 +17896,6 @@ GameObject:
   - component: {fileID: 744525013}
   - component: {fileID: 744525014}
   - component: {fileID: 744525017}
-  - component: {fileID: 744525018}
   m_Layer: 0
   m_Name: Wren
   m_TagString: Untagged
@@ -18002,19 +18009,6 @@ MonoBehaviour:
   WatchPost: {fileID: 79818033}
   Relieved: {fileID: 26649337}
   RelievedPost: {fileID: 1327481177}
---- !u!114 &744525018
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 744525012}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4c1cfab8018497e4a96d5d9bb6840ae6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: GreyBoxVillage::Demos.GreyBoxVillage.Responder
-  Guard: {fileID: 744525015}
 --- !u!114 &744525019
 MonoBehaviour:
   m_ObjectHideFlags: 0

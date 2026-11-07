@@ -317,16 +317,17 @@ namespace Demos.GreyBoxVillage.Tests
         }
 
         // #153 keeps Bram's actions: whatever happens, he is offered nothing he could not be offered
-        // before the situations, and he registers no new action at all. Wren carries chase,
-        // fetch_water and the gate (Responder, NightWatch).
+        // before the situations, and he registers no other action at all: his component's Only
+        // Actions are these. Wren alone has chase and fetch_water, and the gate (NightWatch).
         private static readonly string[] BramsOwnActions =
             { "follow_player", "stop_following", "move_to", "attack_target", "warn_player", "block_path", "sound_alarm", "patrol", "none" };
 
         [Test]
         public async Task BramIsOfferedNothingOutsideHisOwnActionsWhateverHappens()
         {
+            Assert.That(bram.Behaviour.OnlyActions, Is.EquivalentTo(BramsOwnActions.Where(a => a != "none")));
             Assert.That(bram.Agent.Actions.Definitions.Select(d => d.Id),
-                Is.EquivalentTo(BramsOwnActions.Where(a => a != "none").Concat(new[] { "offer_quest", "complete_quest" })),
+                Is.EquivalentTo(BramsOwnActions.Where(a => a != "none")),
                 "Bram registers an action he did not have before the situations.");
             var wolf = bram.Senses.Wolf;
             var start = wolf.transform.position;
@@ -597,8 +598,8 @@ namespace Demos.GreyBoxVillage.Tests
                 Has.All.Not.Null);
             Assert.That(VillagePresenter.Keys.Select(k => k.key), Is.EqualTo(new[] { "F1", "F2", "F3", "F4", "F5", "F6", "F12" }));
             Assert.That(commands.Minds.Where(m => m.GetComponent<NightWatch>() != null), Is.EqualTo(new[] { wren }), "Wren alone keeps the night watch.");
-            Assert.That(commands.Minds.Where(m => m.GetComponent<Responder>() != null), Is.EqualTo(new[] { wren }), "Wren alone chases and carries water.");
-            Assert.That(wren.GetComponent<Responder>().Guard, Is.EqualTo(wrenBody));
+            Assert.That(commands.Minds.Where(m => m.Agent.Actions.TryGet("chase", out _, out _)), Is.EqualTo(new[] { wren }), "Wren alone chases.");
+            Assert.That(commands.Minds.Where(m => m.Agent.Actions.TryGet("fetch_water", out _, out _)), Is.EqualTo(new[] { wren }), "Wren alone carries water.");
             Assert.That(wrenBody.Bucket, Is.Not.Null);
             Assert.That(watch.Relieved, Is.EqualTo(bramBody));
             Assert.That(watch.Day, Is.EqualTo(commands.Day));

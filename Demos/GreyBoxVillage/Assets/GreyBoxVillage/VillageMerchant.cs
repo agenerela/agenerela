@@ -74,7 +74,7 @@ namespace Demos.GreyBoxVillage
         /// <summary>
         /// The guards <c>call_guard</c> may name: every guard while a thief runs (Bram catches one
         /// with <c>attack_target</c>), but for a fire alone only those who can carry water (a
-        /// <see cref="Responder"/>), so the call never goes to a guard with nothing to do about it.
+        /// guard whose agent has <c>fetch_water</c>), so the call never goes to a guard with nothing to do about it.
         /// </summary>
         public IEnumerable<VillageGuard> CallableGuards()
         {
@@ -82,7 +82,7 @@ namespace Demos.GreyBoxVillage
             if (commands == null) yield break;
             bool fireOnly = Fire != null && Fire.IsBurning && !(Thief != null && Thief.IsRunning);
             foreach (var mind in commands.Minds)
-                if (mind != null && mind.Body is VillageGuard guard && (!fireOnly || guard.GetComponent<Responder>() != null))
+                if (mind != null && mind.Body is VillageGuard guard && (!fireOnly || mind.Agent.Actions.TryGet("fetch_water", out _, out _)))
                     yield return guard;
         }
 
