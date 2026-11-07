@@ -17,9 +17,8 @@ namespace Demos.GreyBoxVillage
     ///
     /// For the same reason the availability checks carry most of the weight: an action that is not
     /// offered cannot be picked, whatever the model makes of a line. They read who is asking from
-    /// the agent's State, which <see cref="AgentMind"/> sets before each decision: the source
-    /// of the stimulus under <see cref="AgentMind.AskedBy"/> and the distance of a wolf the guard can see under
-    /// <see cref="AgentMind.WolfMetres"/>.
+    /// the call's <see cref="AgentMind.Moment"/>, which <see cref="AgentMind"/> sends with each
+    /// decision: the source of the stimulus and the distance of a wolf the guard can see.
     ///
     /// Bram and Wren are both guards: the same body, each with its own post, patrol and profile.
     /// Wren also keeps the night watch and answers trouble: those actions sit on her own
@@ -91,7 +90,7 @@ namespace Demos.GreyBoxVillage
 
         // Only the player starts or ends an escort: a wolf, a trespass or a quiet moment asks for neither.
         [Available("follow_player")]
-        private bool CanFollow(AgentContext ctx) => !IsFollowing && Asker(ctx) == "player";
+        private bool CanFollow(AgentContext ctx) => !IsFollowing && Asking(ctx) == "player";
 
         [AgentAction("stop_following", "Stop following the player and stay where you are.")]
         [Example("You can stay put now.")]
@@ -104,7 +103,7 @@ namespace Demos.GreyBoxVillage
         }
 
         [Available("stop_following")]
-        private bool CanStop(AgentContext ctx) => IsFollowing && Asker(ctx) == "player";
+        private bool CanStop(AgentContext ctx) => IsFollowing && Asking(ctx) == "player";
 
         [AgentAction("move_to", "Walk to a place.", RequiresTarget = true)]
         [Example("Go and stand by the {0}.", "well", "bridge")]
@@ -179,7 +178,7 @@ namespace Demos.GreyBoxVillage
 
         // A quiet moment is, by the game's own rule, one with nothing to warn about.
         [Available("warn_player")]
-        private bool CanWarn(AgentContext ctx) => Asker(ctx) != "quiet";
+        private bool CanWarn(AgentContext ctx) => Asking(ctx) != "quiet";
 
         [AgentAction("block_path", "Stand in the entrance of a place so nobody gets in.", RequiresTarget = true)]
         [Example("Nobody gets into the {0}.", "armory", "lords_keep")]
@@ -205,7 +204,7 @@ namespace Demos.GreyBoxVillage
         // water (fetch_water), not the bell.
         [Available("sound_alarm")]
         private bool CanSoundAlarm(AgentContext ctx) => Alarm != null && !Alarm.IsSounding &&
-            (Asker(ctx) == "player" || ctx.State.TryGetValue(AgentMind.WolfMetres, out var d) && (float)d <= AlarmWolfDistance);
+            (Asking(ctx) == "player" || AgentMind.Moment.Of(ctx)?.WolfMetres <= AlarmWolfDistance);
 
         [AgentAction("patrol", "Walk a round of the village, watching for trouble.")]
         [Example("Your watch at the gate still has hours to run.")]
@@ -225,7 +224,7 @@ namespace Demos.GreyBoxVillage
         // The night watch stays at the gate.
         [Available("patrol")]
         private bool CanPatrol(AgentContext ctx) =>
-            Asker(ctx) == "quiet" && !IsPatrolling && !IsFollowing && PatrolRoute != null && PatrolRoute.Length > 0 && !OnNightWatch;
+            Asking(ctx) == "quiet" && !IsPatrolling && !IsFollowing && PatrolRoute != null && PatrolRoute.Length > 0 && !OnNightWatch;
 
         public override string Duty => OnNightWatch ? "the night watch at the gate" : null;
 
@@ -237,8 +236,6 @@ namespace Demos.GreyBoxVillage
                 return watch != null && watch.OnWatch;
             }
         }
-
-        private static string Asker(AgentContext ctx) => ctx.State.TryGetValue(AgentMind.AskedBy, out var source) ? source as string : null;
 
         // ---- What only the guard knows ------------------------------------------------------
 

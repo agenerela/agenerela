@@ -104,8 +104,8 @@ namespace Demos.GreyBoxVillage
 
         // ---- Quests, for any agent that has some ----------------------------------------------
 
-        /// <summary>The source of the stimulus being decided, as the mind put it in State.</summary>
-        protected static string Asking(AgentContext ctx) => ctx.State.TryGetValue(AgentMind.AskedBy, out var source) ? source as string : null;
+        /// <summary>The source of the stimulus being decided, from the call's <see cref="AgentMind.Moment"/>.</summary>
+        protected static string Asking(AgentContext ctx) => AgentMind.Moment.Of(ctx)?.AskedBy;
 
         [AgentAction("offer_quest", "Give the player one of your quests.", RequiresTarget = true)]
         [Example("Got any work for a traveller?", "quest_moonpetals", "quest_wolf", "quest_lantern")]

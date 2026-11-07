@@ -140,7 +140,7 @@ namespace Demos.GreyBoxVillage
         [Available("open_gate")]
         private bool CanOpen(AgentContext ctx)
         {
-            string asking = ctx.State.TryGetValue(AgentMind.AskedBy, out var source) ? source as string : null;
+            string asking = AgentMind.Moment.Of(ctx)?.AskedBy;
             return OnWatch && Gate != null && !Gate.IsOpen && (asking == "player" || asking == "captain");
         }
 

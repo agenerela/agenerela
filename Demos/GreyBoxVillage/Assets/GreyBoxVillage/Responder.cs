@@ -33,7 +33,7 @@ namespace Demos.GreyBoxVillage
         // Something to run after must be in sight: a thief making off, or the wolf.
         [Available("chase")]
         private bool CanChase(AgentContext ctx) =>
-            ctx.State.ContainsKey(AgentMind.WolfMetres) || ctx.State.ContainsKey(AgentMind.ThiefMetres);
+            AgentMind.Moment.Of(ctx) is { } moment && (moment.WolfMetres != null || moment.ThiefMetres != null);
 
         [AgentAction("fetch_water", "Carry buckets from the well to the fire until it is out.")]
         [Example("Flames are climbing up the side of the barn!")]
