@@ -30,7 +30,7 @@ namespace Demos.GreyBoxVillage
             order = null;
         }
 
-        [AgentAction("send_guard", "Send one of your guards to a place.", RequiresTarget = true)]
+        [AgentAction("send_guard", "Send one of your guards to a place.", RequiresTarget = true, TargetCategories = new[] { "place", "restricted" })]
         [Example("There's trouble down at the {0}, send someone.", "docks", "well")]
         private void SendGuard(Transform place)
         {
@@ -38,11 +38,6 @@ namespace Demos.GreyBoxVillage
             activity = "giving orders";
             Report("Sending a guard to the " + IdOf(place) + ".");
         }
-
-        protected override bool TargetFits(string actionId, object target) =>
-            actionId == "send_guard"
-                ? target is Component c && c.GetComponent<Targetable>() is Targetable t && (t.Category == "place" || t.Category == "restricted")
-                : base.TargetFits(actionId, target);
 
         /// <summary>Passes an order on, with his words, to the nearest guard who is free.</summary>
         public override void AfterAction(string actionId, string statement)

@@ -105,7 +105,7 @@ namespace Demos.GreyBoxVillage
 
         // ---- Actions ---------------------------------------------------------------------------
 
-        [AgentAction("sell", "Sell the player an item from your counter, for its price.", RequiresTarget = true)]
+        [AgentAction("sell", "Sell the player an item from your counter, for its price.", RequiresTarget = true, TargetCategories = new[] { "item" })]
         [Example("How much for the {0}? I'll have it.", "bread", "apple")]
         private void Sell(Transform target)
         {
@@ -116,7 +116,7 @@ namespace Demos.GreyBoxVillage
             Report("Sold the " + item.Id + ".");
         }
 
-        [AgentAction("give", "Give the player an item from your counter for nothing.", RequiresTarget = true)]
+        [AgentAction("give", "Give the player an item from your counter for nothing.", RequiresTarget = true, TargetCategories = new[] { "item" })]
         [Example("I'm starving and I haven't a coin.", "apple", "bread")]
         private void Give(Transform target)
         {
@@ -139,7 +139,8 @@ namespace Demos.GreyBoxVillage
             Lose(item);
         }
 
-        [AgentAction("call_guard", "Shout for one of the guards to deal with trouble at the market.", RequiresTarget = true)]
+        [AgentAction("call_guard", "Shout for one of the guards to deal with trouble at the market.", RequiresTarget = true,
+            TargetCategories = new[] { GuardTargetSource.Category })]
         [Example("Someone just ran off with a pie from your counter!", "wren", "bram")]
         private void CallGuard(Transform guard)
         {
@@ -188,12 +189,6 @@ namespace Demos.GreyBoxVillage
         }
 
         // ---- Rules -----------------------------------------------------------------------------
-
-        protected override bool TargetFits(string actionId, object target) =>
-            actionId == "sell" || actionId == "give"
-                ? target is Component c && Stock.Contains(c.GetComponent<Targetable>())
-                : actionId == "call_guard" ? target is Component g && g.GetComponent<VillageGuard>() != null
-                : base.TargetFits(actionId, target);
 
         public override IEnumerable<IDecisionGuard> Guards()
         {

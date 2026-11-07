@@ -16,6 +16,9 @@ namespace Demos.GreyBoxVillage
     /// </remarks>
     public sealed class GuardTargetSource : ITargetSource
     {
+        /// <summary>The category the guards are offered in here, the one <c>call_guard</c> takes.</summary>
+        public const string Category = "guard";
+
         private readonly VillageMerchant merchant;
 
         public GuardTargetSource(VillageMerchant merchant) => this.merchant = merchant;
@@ -26,7 +29,7 @@ namespace Demos.GreyBoxVillage
             foreach (var guard in merchant.CallableGuards())
             {
                 var targetable = guard.GetComponent<Targetable>();
-                if (targetable != null && !into.Contains(targetable.Id)) into.Register(targetable.Id, guard.transform);
+                if (targetable != null && !into.Contains(targetable.Id)) into.Register(targetable.Id, guard.transform, Category);
             }
         }
     }

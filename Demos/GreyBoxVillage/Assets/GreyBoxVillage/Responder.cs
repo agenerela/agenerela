@@ -26,7 +26,9 @@ namespace Demos.GreyBoxVillage
     {
         public VillageGuard Guard;
 
-        [AgentAction("chase", "Run after a thief or the wolf until you catch it.", RequiresTarget = true)]
+        // Something that runs: the thief (a stranger) or the wolf (a creature).
+        [AgentAction("chase", "Run after a thief or the wolf until you catch it.", RequiresTarget = true,
+            TargetCategories = new[] { "stranger", "creature" })]
         [Example("Don't let the {0} get away!", "thief", "wolf")]
         private void Chase(Transform target) => Guard.Chase(target);
 

@@ -875,8 +875,21 @@ namespace Demos.GreyBoxVillage.Tests
             provider.Otherwise(ScriptedReply.Decide("offer_quest", "market", "Understood."));
             await SayTo(odile, "Got any work?");
             Assert.That(odile.Last.Outcome, Is.EqualTo("contained"));
-            Assert.That(odile.Last.Guard, Is.EqualTo(VillageBody.TargetFitsAction));
+            Assert.That(odile.Last.Guard, Is.EqualTo(nameof(TargetCategoryGuard)));
             Assert.That(odile.Last.Said, Is.EqualTo("I don't follow you."));
+        }
+
+        // The rule's other half: an action for the world never takes a quest. Wren gives one, so her
+        // move_to is offered with it, and a quest is no place to walk to.
+        [Test]
+        public async Task AQuestIsNoPlaceToWalkTo()
+        {
+            provider.Otherwise(ScriptedReply.Decide("move_to", "quest_lantern", "Understood."));
+            await SayTo(wren, "Go and look for it.");
+            Assert.That(wren.Last.OfferedTargets, Does.Contain("quest_lantern"));
+            Assert.That(wren.Last.Outcome, Is.EqualTo("contained"));
+            Assert.That(wren.Last.Guard, Is.EqualTo(nameof(TargetCategoryGuard)));
+            Assert.That(wren.Last.Said, Is.EqualTo("I don't follow you."));
         }
 
         [Test]

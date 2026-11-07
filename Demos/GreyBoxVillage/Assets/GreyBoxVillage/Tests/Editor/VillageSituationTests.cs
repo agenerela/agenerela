@@ -168,7 +168,7 @@ namespace Demos.GreyBoxVillage.Tests
             await Idle();
             var record = Records("Odile").Single();
             Assert.That(record.Outcome, Is.EqualTo("contained"));
-            Assert.That(record.Guard, Is.EqualTo(VillageBody.TargetFitsAction));
+            Assert.That(record.Guard, Is.EqualTo(nameof(TargetCategoryGuard)));
             Assert.That(record.Said, Is.EqualTo("I don't follow you."));
             Assert.That(Records("Wren").Concat(Records("Bram")), Is.Empty, "A call at no guard calls nobody.");
         }

@@ -16,6 +16,9 @@ namespace Demos.GreyBoxVillage
     /// <summary>A task an agent can give the player: bring a number of one item, for a reward.</summary>
     public sealed class Quest
     {
+        /// <summary>The target category quests are offered in, the one the quest actions take.</summary>
+        public const string Category = "quest";
+
         /// <summary>The target id the model names it by, such as "quest_moonpetals".</summary>
         public string Id;
         /// <summary>The agent who gives it and takes it back, by name.</summary>
@@ -51,7 +54,7 @@ namespace Demos.GreyBoxVillage
         {
             if (book == null) return;
             foreach (var q in book.From(giver))
-                if (q.State != QuestState.Done) into.Register(q.Id, q);
+                if (q.State != QuestState.Done) into.Register(q.Id, q, Quest.Category);
         }
     }
 }

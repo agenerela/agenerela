@@ -105,7 +105,7 @@ namespace Demos.GreyBoxVillage
         [Available("stop_following")]
         private bool CanStop(AgentContext ctx) => IsFollowing && Asking(ctx) == "player";
 
-        [AgentAction("move_to", "Walk to a place.", RequiresTarget = true)]
+        [AgentAction("move_to", "Walk to a place.", RequiresTarget = true, TargetCategories = new[] { "place", "person", "creature", "restricted", "stranger" })]
         [Example("Go and stand by the {0}.", "well", "bridge")]
         private void MoveTo(Transform target)
         {
@@ -115,7 +115,7 @@ namespace Demos.GreyBoxVillage
             Report("Walking to the " + destinationId + ".");
         }
 
-        [AgentAction("attack_target", "Attack something.", RequiresTarget = true)]
+        [AgentAction("attack_target", "Attack something.", RequiresTarget = true, TargetCategories = new[] { "place", "person", "creature", "restricted", "stranger" })]
         [Example("Strike the {0}.", "training_dummy", "wolf")]
         private void Attack(Transform target)
         {
@@ -180,7 +180,7 @@ namespace Demos.GreyBoxVillage
         [Available("warn_player")]
         private bool CanWarn(AgentContext ctx) => Asking(ctx) != "quiet";
 
-        [AgentAction("block_path", "Stand in the entrance of a place so nobody gets in.", RequiresTarget = true)]
+        [AgentAction("block_path", "Stand in the entrance of a place so nobody gets in.", RequiresTarget = true, TargetCategories = new[] { "place", "person", "creature", "restricted", "stranger" })]
         [Example("Nobody gets into the {0}.", "armory", "lords_keep")]
         private void BlockPath(Transform target)
         {
@@ -307,12 +307,6 @@ namespace Demos.GreyBoxVillage
         { "Walk with me.", "What's going on?", "Head to the market.", "Ring the alarm!", "Wait here." });
 
         public override IReadOnlyList<string> Suggestions => SuggestedLines;
-
-        // chase runs after something that runs: the thief or the wolf.
-        protected override bool TargetFits(string actionId, object target) =>
-            actionId == "chase"
-                ? target is Component c && (c.GetComponent<VillageThief>() != null || c.GetComponent<VillageWolf>() != null)
-                : base.TargetFits(actionId, target);
 
         public override string RefusalLine(GuardVerdict verdict) => base.RefusalLine(verdict) ??
             (verdict.Guard == NeverAttackVillagers ? "I won't raise my sword against our own."
