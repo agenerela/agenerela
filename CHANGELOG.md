@@ -106,6 +106,21 @@ phase table and the open issues, not here.
   agents still have queued or with the model, so the next stage never waits behind an answer nobody
   will use, and it restarts the guards' quiet timers, so nobody is asked about a quiet moment the
   moment the village resets. F3 pressed while a thief runs puts its ware back first.
+- **GreyBoxVillage's woods and its sound** (#153, explore slice, second part).
+  - **The woods north of the river** are a walk worth taking: paths with signposts, a moonpetal
+    glade that glows after dark, the wolf's den, a ruined shrine, a lookout over the river and a
+    hermit's hut. Each place found is recorded in the journal ("Places found: 2 of 6").
+  - **Oswin the hermit** says fixed lines in turn, on E. He is not an agent, so he adds nothing to
+    the queue the four agents share.
+  - **Nothing in the woods is a target:** tests check Bram is offered the same targets wherever the
+    player walks.
+  - **Sound** by time and place, and effects for the bell, footsteps, the gate, the bucket, the
+    wolf and the fire, with a volume slider and a mute in the menu. The clips are
+    not in yet: the asset server could not be reached, so the sound is wired and silent until they
+    are added to `Audio/`.
+  - **Five kit models:** `shrine_ruin`, `lookout`, `wolf_den`, `hermit_hut` and `char_hermit`, and the
+    woods' paths on the terrain.
+  - **Frame time** is measured in two more views, the square in rain and at night, and in the woods.
 - **An editor UI kit** (#167) in the package's `Editor/UI/`, for the Phase 5 screens to share.
   It is internal to `Agenerela.Editor`, so it adds no public API.
   - `Agenerela.uss` holds colour, spacing and type variables (`--ag-*`) built on Unity's own

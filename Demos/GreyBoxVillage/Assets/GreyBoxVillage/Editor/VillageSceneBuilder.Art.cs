@@ -47,6 +47,11 @@ namespace Demos.GreyBoxVillage.Editor
             new[] { V(0, -2.4f), V(-18, 8) },
             new[] { V(0, -6), V(14, -8.2f), V(21, -12) },
             new[] { V(16, -0.5f), V(30, 18.5f) },
+            // The woods (slice 3), as in build_kit.py.
+            new[] { V(18, 32.6f), V(26.5f, 30.8f), V(33, 35), V(37, 39), V(42, 43.5f), V(46, 46.2f) },
+            new[] { V(33, 35), V(31, 40), V(30.5f, 43.5f) },
+            new[] { V(26.5f, 30.8f), V(35, 29.6f), V(42.5f, 29.6f) },
+            new[] { V(-3, 30.4f), V(-5, 37), V(-6.5f, 42) },
         };
 
         private static Material palette, waterMaterial, sky, particles;
@@ -255,6 +260,7 @@ namespace Demos.GreyBoxVillage.Editor
             DressRiver(props);
             FinishScatter(props, "RiverbankScatter");
             var nature = Group("Nature");
+            DressWoods(Group("Woods"));
             DressNature(nature);
             FinishScatter(nature, "NatureScatter");
             Smoke(props);
@@ -479,6 +485,8 @@ namespace Demos.GreyBoxVillage.Editor
             {
                 var p = new Vector3(R(24, 49), 0, R(28, 49));
                 if (NearPath(p, 2.5f) || Near(p, new[] { V(32, 33), V(39, 34), V(44, 44), V(34, 44), V(38, 39), V(47, 47) }, 2.2f)) continue;
+                // Clear of the woods' places (slice 3): the glade, the shrine, the lookout and the den.
+                if (Near(p, new[] { V(37, 39), V(30.5f, 46.5f), V(44.5f, 29.8f), V(47, 48.8f) }, 4.4f)) continue;
                 Scatter(rng.NextDouble() < 0.7 ? "pine_" + rng.Next(0, 3) : "oak_" + rng.Next(0, 2), p, R(0, 360), R(0.8f, 1.3f));
             }
             for (int k = 0; k < 700; k++)
@@ -499,6 +507,79 @@ namespace Demos.GreyBoxVillage.Editor
                     : roll < 0.9 ? "grass_" + rng.Next(0, 2) : roll < 0.96 ? "rock_0" : "stump";
                 Scatter(model, p, R(0, 360), R(0.8f, 1.2f));
             }
+        }
+
+        /// <summary>
+        /// The woods north of the river (slice 3): the shrine, the lookout, the den and the hermit's
+        /// hut, signposts where the paths leave the roads, and the moonpetal glade, with soft lights
+        /// that come on after dark. Every model here is visual only; the grey boxes in BuildWorld stand
+        /// in the way.
+        /// </summary>
+        private static void DressWoods(Transform parent)
+        {
+            Model("shrine_ruin", parent, new Vector3(30.5f, 0, 46.5f));
+            Model("lookout", parent, new Vector3(44.5f, 0, 29.8f), 90f);
+            Model("wolf_den", parent, new Vector3(47f, 0, 48.8f));
+            Model("hermit_hut", parent, new Vector3(-7f, 0, 45f));
+            Model("signpost", parent, new Vector3(25.4f, 0, 32.6f), -20f);
+            Model("signpost", parent, new Vector3(34.6f, 0, 34.4f), 40f);
+            Model("signpost", parent, new Vector3(-1.4f, 0, 31.9f), -80f);
+
+            // The glade: moonpetals round the clearing and blue flowers, off the path through it.
+            var rng = new System.Random(17);
+            float R(float a, float b) => a + (float)rng.NextDouble() * (b - a);
+            var glade = new Vector3(37f, 0, 39f);
+            for (int i = 0; i < 30; i++)
+            {
+                float a = R(0, Mathf.PI * 2), r = R(1.2f, 4.2f);
+                var p = glade + new Vector3(Mathf.Cos(a) * r, 0, Mathf.Sin(a) * r);
+                if (NearPath(p, 0.9f)) continue;
+                Scatter("item_moonpetal", p, R(0, 360), R(1.3f, 1.9f));
+            }
+            for (int i = 0; i < 12; i++)
+            {
+                float a = R(0, Mathf.PI * 2), r = R(2f, 5f);
+                var p = glade + new Vector3(Mathf.Cos(a) * r, 0, Mathf.Sin(a) * r);
+                if (NearPath(p, 1.2f)) continue;
+                Scatter("flowers_1", p, R(0, 360), R(0.9f, 1.2f));
+            }
+            // Soft lights after dark: the glade, the shrine's altar stone, the hermit's window.
+            NightLight(parent, glade + Vector3.up * 1.4f, new Color(0.55f, 0.9f, 1f), 1.8f, 10f);
+            NightLight(parent, new Vector3(30.5f, 1.7f, 47.4f), new Color(0.55f, 0.9f, 1f), 1.1f, 4.5f);
+            NightLight(parent, new Vector3(-7.75f, 1.4f, 43.2f), new Color(1f, 0.75f, 0.42f), 1.2f, 5f);
+        }
+
+        private static void NightLight(Transform parent, Vector3 position, Color color, float intensity, float range)
+        {
+            var light = PointLight(parent, position, color, intensity, range);
+            var flicker = light.gameObject.AddComponent<FlickerLight>();
+            flicker.Amount = 0.05f;
+            flicker.Speed = 1.5f;
+            flicker.OnlyAtNight = true;
+            lamps.Add(flicker);
+        }
+
+        /// <summary>
+        /// The sound's clips from <c>Audio/</c>, by name; a missing one stays null, and silent. They
+        /// come from the asset server (<c>GENERATED.md</c>).
+        /// </summary>
+        private static void LoadSounds(VillageSound sound)
+        {
+            AudioClip Clip(string name) => AssetDatabase.LoadAssetAtPath<AudioClip>(Root + "/Audio/" + name + ".mp3");
+            sound.Birds = Clip("birds");
+            sound.Crickets = Clip("crickets");
+            sound.River = Clip("river");
+            sound.Market = Clip("market");
+            sound.Campfire = Clip("campfire");
+            sound.Rain = Clip("rain");
+            sound.Owl = Clip("owl");
+            sound.Bell = Clip("bell");
+            sound.StepsDirt = Clip("steps_dirt");
+            sound.StepsWood = Clip("steps_wood");
+            sound.Gate = Clip("gate");
+            sound.Splash = Clip("splash");
+            sound.Howl = Clip("howl");
+            sound.FireRoar = Clip("fire");
         }
 
         private static bool Near(Vector3 p, Vector2[] points, float distance) =>
