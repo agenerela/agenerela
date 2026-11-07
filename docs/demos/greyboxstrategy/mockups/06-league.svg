@@ -1,0 +1,202 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720" role="img" aria-label="Sundermark Model League: four models play one seeded game">
+<title>Sundermark Model League: four models play one seeded game</title>
+<rect x="0.0" y="0.0" width="1280.0" height="720.0" rx="0" fill="#F3EBDD" stroke="none" stroke-width="1"/>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#2B2622"/></marker><filter id="shadow" x="-5%" y="-5%" width="110%" height="115%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.18"/></filter></defs>
+<rect x="0.0" y="0.0" width="1280.0" height="46.0" rx="0" fill="#FBF7EF" stroke="#B8954A" stroke-width="1"/>
+<rect x="12.0" y="8.0" width="30.0" height="30.0" rx="4" fill="#3B6EA8" stroke="none" stroke-width="1"/>
+<text x="27.0" y="29.0" font-family="Georgia, 'Times New Roman', serif" font-size="16" fill="#fff" font-weight="700" text-anchor="middle">A</text>
+<text x="52.0" y="29.0" font-family="Georgia, 'Times New Roman', serif" font-size="17" fill="#2B2622" font-weight="700" text-anchor="start">Aster</text>
+<text x="150.0" y="20.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#6B625A" font-weight="600" text-anchor="start">GOLD</text>
+<text x="150.0" y="37.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="15" fill="#2B2622" font-weight="700" text-anchor="start">85  (+24)</text>
+<text x="270.0" y="20.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#6B625A" font-weight="600" text-anchor="start">ARMIES</text>
+<text x="270.0" y="37.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="15" fill="#2B2622" font-weight="700" text-anchor="start">9</text>
+<text x="390.0" y="20.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#6B625A" font-weight="600" text-anchor="start">RENOWN</text>
+<text x="390.0" y="37.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="15" fill="#2B2622" font-weight="700" text-anchor="start">7 / 20</text>
+<text x="510.0" y="20.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#6B625A" font-weight="600" text-anchor="start">ENVOYS</text>
+<text x="510.0" y="37.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="15" fill="#2B2622" font-weight="700" text-anchor="start">2 left</text>
+<text x="650.0" y="20.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#6B625A" font-weight="600" text-anchor="start">SEASON</text>
+<text x="650.0" y="37.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="15" fill="#2B2622" font-weight="700" text-anchor="start">Autumn, Year 4</text>
+<rect x="800.0" y="15.0" width="109.7" height="18.0" rx="9.0" fill="#2B2622" stroke="none" stroke-width="1"/><text x="854.9" y="28.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="11" fill="#fff" font-weight="600" text-anchor="middle">Spectator phase</text>
+<rect x="1120.0" y="8.0" width="148.0" height="30.0" rx="5" fill="#B23A3A" stroke="none" stroke-width="1"/>
+<text x="1194.0" y="28.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14" fill="#fff" font-weight="700" text-anchor="middle">Pause League  ›</text>
+<rect x="0.0" y="46.0" width="470.0" height="674.0" rx="0" fill="#9DB3BF" stroke="none" stroke-width="1"/>
+<circle cx="235.0" cy="360.0" r="233.7" fill="#86A0AE" stroke="none" stroke-width="1"/>
+<circle cx="235.0" cy="360.0" r="219.8" fill="#9DB3BF" stroke="none" stroke-width="1"/>
+<polygon points="264.9,318.9 283.4,375.7 235.0,410.8 186.6,375.7 205.1,318.9" fill="#8F8A82" stroke="#FBF7EF" stroke-width="1.64" stroke-linejoin="round"/>
+<polygon points="186.6,375.7 195.9,347.3 118.0,322.0 115.7,360.0 118.0,398.0" fill="#3B6EA8" stroke="#FBF7EF" stroke-width="1.64" stroke-linejoin="round"/>
+<polygon points="195.9,347.3 205.1,318.9 162.7,260.5 138.5,289.9 118.0,322.0" fill="#3B6EA8" stroke="#FBF7EF" stroke-width="1.64" stroke-linejoin="round"/>
+<polygon points="118.0,398.0 115.7,360.0 118.0,322.0 138.5,289.9 162.7,260.5 105.0,220.6 63.1,248.3 34.2,294.8 30.3,349.3 47.9,396.4" fill="#3B6EA8" stroke="#FBF7EF" stroke-width="1.64" stroke-linejoin="round"/>
+<polygon points="205.1,318.9 235.0,318.9 235.0,237.0 198.1,246.5 162.7,260.5" fill="#A8452F" stroke="#FBF7EF" stroke-width="1.64" stroke-linejoin="round"/>
+<polygon points="235.0,318.9 264.9,318.9 307.3,260.5 271.9,246.5 235.0,237.0" fill="#A8452F" stroke="#FBF7EF" stroke-width="1.64" stroke-linejoin="round"/>
+<polygon points="162.7,260.5 198.1,246.5 235.0,237.0 271.9,246.5 307.3,260.5 327.4,193.3 288.1,162.0 235.0,148.8 181.9,162.0 142.6,193.3" fill="#A8452F" stroke="#FBF7EF" stroke-width="1.64" stroke-linejoin="round"/>
+<polygon points="264.9,318.9 274.1,347.3 352.0,322.0 331.5,289.9 307.3,260.5" fill="#2E8C85" stroke="#FBF7EF" stroke-width="1.64" stroke-linejoin="round"/>
+<polygon points="274.1,347.3 283.4,375.7 352.0,398.0 354.3,360.0 352.0,322.0" fill="#C8963A" stroke="#FBF7EF" stroke-width="1.64" stroke-linejoin="round"/>
+<polygon points="307.3,260.5 331.5,289.9 352.0,322.0 354.3,360.0 352.0,398.0 422.1,396.4 439.7,349.3 435.8,294.8 406.9,248.3 365.0,220.6" fill="#2E8C85" stroke="#FBF7EF" stroke-width="1.64" stroke-linejoin="round"/>
+<polygon points="283.4,375.7 259.2,393.3 307.3,459.5 331.5,430.1 352.0,398.0" fill="#C8963A" stroke="#FBF7EF" stroke-width="1.64" stroke-linejoin="round"/>
+<polygon points="259.2,393.3 235.0,410.8 235.0,483.0 271.9,473.5 307.3,459.5" fill="#C8963A" stroke="#FBF7EF" stroke-width="1.64" stroke-linejoin="round"/>
+<polygon points="352.0,398.0 331.5,430.1 307.3,459.5 271.9,473.5 235.0,483.0 258.2,549.2 308.5,551.4 359.1,530.8 394.3,489.0 407.8,440.6" fill="#C8963A" stroke="#FBF7EF" stroke-width="1.64" stroke-linejoin="round"/>
+<polygon points="235.0,410.8 210.8,393.3 162.7,459.5 198.1,473.5 235.0,483.0" fill="#4F7A3A" stroke="#FBF7EF" stroke-width="1.64" stroke-linejoin="round"/>
+<polygon points="210.8,393.3 186.6,375.7 118.0,398.0 138.5,430.1 162.7,459.5" fill="#4F7A3A" stroke="#FBF7EF" stroke-width="1.64" stroke-linejoin="round"/>
+<polygon points="235.0,483.0 198.1,473.5 162.7,459.5 138.5,430.1 118.0,398.0 62.2,440.6 75.7,489.0 110.9,530.8 161.5,551.4 211.8,549.2" fill="#4F7A3A" stroke="#FBF7EF" stroke-width="1.64" stroke-linejoin="round"/>
+<path d="M223.5,348.5 l5,-9 l4,6 l5,-10 l5,10 l4,-6 l5,9 z" fill="#E6C66A" stroke="#2B2622" stroke-width="1"/>
+<circle cx="235.0" cy="373.9" r="7.4" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<text x="235.0" y="377.2" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.02" fill="#2B2622" font-weight="700" text-anchor="middle">3</text>
+<path d="M123.9,363.9 h11 v-6 l-5.5,-4 l-5.5,4 z" fill="#FFE2A0" stroke="#2B2622" stroke-width="0.8"/>
+<circle cx="146.9" cy="374.5" r="7.4" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<text x="146.9" y="377.8" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.02" fill="#2B2622" font-weight="700" text-anchor="middle">2</text>
+<circle cx="164.0" cy="321.6" r="7.4" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<text x="164.0" y="324.9" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.02" fill="#2B2622" font-weight="700" text-anchor="middle">3</text>
+<rect x="87.6" y="292.6" width="11.5" height="9.0" rx="1" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<rect x="85.9" y="290.2" width="3.3" height="3.3" rx="0" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<rect x="97.4" y="290.2" width="3.3" height="3.3" rx="0" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<path d="M106.4,317.2 h12 v-6 h-3 v3 h-2 v-3 h-2 v3 h-2 v-3 h-3 z" fill="#FBF7EF" stroke="#2B2622" stroke-width="0.8"/>
+<circle cx="93.3" cy="327.9" r="7.4" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<text x="93.3" y="331.2" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.02" fill="#2B2622" font-weight="700" text-anchor="middle">4</text>
+<circle cx="207.2" cy="290.3" r="7.4" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<text x="207.2" y="293.6" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.02" fill="#2B2622" font-weight="700" text-anchor="middle">3</text>
+<path d="M275.9,279.6 h12 v-6 h-3 v3 h-2 v-3 h-2 v3 h-2 v-3 h-3 z" fill="#FBF7EF" stroke="#2B2622" stroke-width="0.8"/>
+<circle cx="262.8" cy="290.3" r="7.4" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<text x="262.8" y="293.6" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.02" fill="#2B2622" font-weight="700" text-anchor="middle">2</text>
+<rect x="229.3" y="189.7" width="11.5" height="9.0" rx="1" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<rect x="227.6" y="187.3" width="3.3" height="3.3" rx="0" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<rect x="239.1" y="187.3" width="3.3" height="3.3" rx="0" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<circle cx="235.0" cy="225.0" r="7.4" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<text x="235.0" y="228.3" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.02" fill="#2B2622" font-weight="700" text-anchor="middle">4</text>
+<path d="M283.0,311.0 h11 v-6 l-5.5,-4 l-5.5,4 z" fill="#FFE2A0" stroke="#2B2622" stroke-width="0.8"/>
+<circle cx="306.0" cy="321.6" r="7.4" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<text x="306.0" y="324.9" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.02" fill="#2B2622" font-weight="700" text-anchor="middle">3</text>
+<circle cx="323.1" cy="374.5" r="7.4" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<text x="323.1" y="377.8" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.02" fill="#2B2622" font-weight="700" text-anchor="middle">3</text>
+<rect x="370.9" y="292.6" width="11.5" height="9.0" rx="1" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<rect x="369.3" y="290.2" width="3.3" height="3.3" rx="0" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<rect x="380.8" y="290.2" width="3.3" height="3.3" rx="0" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<path d="M353.7,317.2 h11 v-6 l-5.5,-4 l-5.5,4 z" fill="#FFE2A0" stroke="#2B2622" stroke-width="0.8"/>
+<circle cx="376.7" cy="327.9" r="7.4" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<text x="376.7" y="331.2" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.02" fill="#2B2622" font-weight="700" text-anchor="middle">3</text>
+<circle cx="306.7" cy="425.3" r="7.4" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<text x="306.7" y="428.5" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.02" fill="#2B2622" font-weight="700" text-anchor="middle">4</text>
+<circle cx="261.7" cy="458.0" r="7.4" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<text x="261.7" y="461.2" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.02" fill="#2B2622" font-weight="700" text-anchor="middle">2</text>
+<rect x="316.8" y="459.2" width="11.5" height="9.0" rx="1" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<rect x="315.2" y="456.7" width="3.3" height="3.3" rx="0" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<rect x="326.7" y="456.7" width="3.3" height="3.3" rx="0" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<circle cx="322.6" cy="494.5" r="7.4" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<text x="322.6" y="497.7" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.02" fill="#2B2622" font-weight="700" text-anchor="middle">3</text>
+<circle cx="208.3" cy="458.0" r="7.4" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<text x="208.3" y="461.2" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.02" fill="#2B2622" font-weight="700" text-anchor="middle">2</text>
+<path d="M176.5,414.6 h12 v-6 h-3 v3 h-2 v-3 h-2 v3 h-2 v-3 h-3 z" fill="#FBF7EF" stroke="#2B2622" stroke-width="0.8"/>
+<circle cx="163.3" cy="425.3" r="7.4" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<text x="163.3" y="428.5" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.02" fill="#2B2622" font-weight="700" text-anchor="middle">3</text>
+<rect x="141.7" y="459.2" width="11.5" height="9.0" rx="1" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<rect x="140.1" y="456.7" width="3.3" height="3.3" rx="0" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<rect x="151.5" y="456.7" width="3.3" height="3.3" rx="0" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<circle cx="147.4" cy="494.5" r="7.4" fill="#FBF7EF" stroke="#2B2622" stroke-width="1"/>
+<text x="147.4" y="497.7" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.02" fill="#2B2622" font-weight="700" text-anchor="middle">3</text>
+<rect x="484.0" y="58.0" width="784.0" height="380.0" rx="6" fill="#FBF7EF" stroke="#B8954A" stroke-width="1" filter="url(#shadow)"/>
+<text x="498.0" y="83.0" font-family="Georgia, 'Times New Roman', serif" font-size="15" fill="#2B2622" font-weight="700" text-anchor="start">Model League · seed 2207 · same rules, same prompts, five brains</text>
+<line x1="496.0" y1="92.0" x2="1256.0" y2="92.0" stroke="#B8954A" stroke-width="0.8"/>
+<text x="500.0" y="120.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.5" fill="#6B625A" font-weight="700" text-anchor="start">REALM</text>
+<text x="610.0" y="120.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.5" fill="#6B625A" font-weight="700" text-anchor="start">BRAIN</text>
+<text x="790.0" y="120.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.5" fill="#6B625A" font-weight="700" text-anchor="end">DECISIONS</text>
+<text x="870.0" y="120.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.5" fill="#6B625A" font-weight="700" text-anchor="end">EXECUTED</text>
+<text x="945.0" y="120.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.5" fill="#6B625A" font-weight="700" text-anchor="end">CONTAINED</text>
+<text x="1025.0" y="120.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.5" fill="#6B625A" font-weight="700" text-anchor="end">REFUSED</text>
+<text x="1090.0" y="120.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.5" fill="#6B625A" font-weight="700" text-anchor="end">ERRORS</text>
+<text x="1150.0" y="120.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.5" fill="#6B625A" font-weight="700" text-anchor="end">MEDIAN</text>
+<text x="1222.0" y="120.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.5" fill="#6B625A" font-weight="700" text-anchor="end">RENOWN</text>
+<rect x="494.0" y="128.0" width="764.0" height="30.0" rx="3" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<rect x="500.0" y="136.0" width="12.0" height="12.0" rx="2" fill="#3B6EA8" stroke="none" stroke-width="1"/>
+<text x="518.0" y="147.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="700" text-anchor="start">Aster</text>
+<text x="610.0" y="147.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="12" fill="#2B2622" font-weight="normal" text-anchor="start">qwen3.5:2b, no target check</text>
+<text x="790.0" y="147.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">70</text>
+<text x="870.0" y="147.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">61</text>
+<text x="945.0" y="147.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">0</text>
+<text x="1025.0" y="147.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">2</text>
+<text x="1090.0" y="147.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">0</text>
+<text x="1150.0" y="147.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">0.43 s</text>
+<text x="1222.0" y="147.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">9</text>
+<rect x="494.0" y="162.0" width="764.0" height="30.0" rx="3" fill="#FBF7EF" stroke="none" stroke-width="1"/>
+<rect x="500.0" y="170.0" width="12.0" height="12.0" rx="2" fill="#A8452F" stroke="none" stroke-width="1"/>
+<text x="518.0" y="181.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="700" text-anchor="start">Valen</text>
+<text x="610.0" y="181.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="12" fill="#2B2622" font-weight="normal" text-anchor="start">qwen3.5:4b</text>
+<text x="790.0" y="181.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">71</text>
+<text x="870.0" y="181.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">58</text>
+<text x="945.0" y="181.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#C9821B" font-weight="600" text-anchor="end">6</text>
+<text x="1025.0" y="181.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">1</text>
+<text x="1090.0" y="181.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">0</text>
+<text x="1150.0" y="181.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">0.61 s</text>
+<text x="1222.0" y="181.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">14</text>
+<rect x="494.0" y="196.0" width="764.0" height="30.0" rx="3" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<rect x="500.0" y="204.0" width="12.0" height="12.0" rx="2" fill="#2E8C85" stroke="none" stroke-width="1"/>
+<text x="518.0" y="215.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="700" text-anchor="start">Orm</text>
+<text x="610.0" y="215.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="12" fill="#2B2622" font-weight="normal" text-anchor="start">qwen3.5:2b</text>
+<text x="790.0" y="215.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">74</text>
+<text x="870.0" y="215.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">55</text>
+<text x="945.0" y="215.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#C9821B" font-weight="600" text-anchor="end">11</text>
+<text x="1025.0" y="215.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">2</text>
+<text x="1090.0" y="215.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">1</text>
+<text x="1150.0" y="215.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">0.44 s</text>
+<text x="1222.0" y="215.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">11</text>
+<rect x="494.0" y="230.0" width="764.0" height="30.0" rx="3" fill="#FBF7EF" stroke="none" stroke-width="1"/>
+<rect x="500.0" y="238.0" width="12.0" height="12.0" rx="2" fill="#C8963A" stroke="none" stroke-width="1"/>
+<text x="518.0" y="249.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="700" text-anchor="start">Kharsa</text>
+<text x="610.0" y="249.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="12" fill="#2B2622" font-weight="normal" text-anchor="start">gemma4:e2b</text>
+<text x="790.0" y="249.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">69</text>
+<text x="870.0" y="249.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">57</text>
+<text x="945.0" y="249.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#C9821B" font-weight="600" text-anchor="end">5</text>
+<text x="1025.0" y="249.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">3</text>
+<text x="1090.0" y="249.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">0</text>
+<text x="1150.0" y="249.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">0.83 s</text>
+<text x="1222.0" y="249.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">12</text>
+<rect x="494.0" y="264.0" width="764.0" height="30.0" rx="3" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<rect x="500.0" y="272.0" width="12.0" height="12.0" rx="2" fill="#4F7A3A" stroke="none" stroke-width="1"/>
+<text x="518.0" y="283.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="700" text-anchor="start">Thornwood</text>
+<text x="610.0" y="283.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="12" fill="#2B2622" font-weight="normal" text-anchor="start">Steward (scripted)</text>
+<text x="790.0" y="283.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">62</text>
+<text x="870.0" y="283.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">62</text>
+<text x="945.0" y="283.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">0</text>
+<text x="1025.0" y="283.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">0</text>
+<text x="1090.0" y="283.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">0</text>
+<text x="1150.0" y="283.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">0.00 s</text>
+<text x="1222.0" y="283.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#2B2622" font-weight="600" text-anchor="end">8</text>
+<text x="500.0" y="318.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="11.5" fill="#6B625A" font-weight="normal" text-anchor="start" font-style="italic">A game result is an anecdote, not a measurement: it varies with the seed and the season. Accuracy</text>
+<text x="500.0" y="334.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="11.5" fill="#6B625A" font-weight="normal" text-anchor="start" font-style="italic">claims come only from EvalRunner A/B runs on the captured prompt set (hard rule 2).</text>
+<rect x="500.0" y="352.0" width="230.0" height="30.0" rx="5" fill="#FFFFFF" stroke="#2B2622" stroke-width="1"/>
+<text x="615.0" y="372.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12.5" fill="#2B2622" font-weight="700" text-anchor="middle">Swap a realm’s brain…</text>
+<rect x="742.0" y="352.0" width="250.0" height="30.0" rx="5" fill="#FFFFFF" stroke="#2B2622" stroke-width="1"/>
+<text x="867.0" y="372.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12.5" fill="#2B2622" font-weight="700" text-anchor="middle">Export captured prompts (212)</text>
+<rect x="1004.0" y="352.0" width="250.0" height="30.0" rx="5" fill="#3B6EA8" stroke="none" stroke-width="1"/>
+<text x="1129.0" y="372.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12.5" fill="#fff" font-weight="700" text-anchor="middle">Run 10 seeds headless</text>
+<rect x="484.0" y="452.0" width="784.0" height="256.0" rx="6" fill="#FBF7EF" stroke="#B8954A" stroke-width="1" filter="url(#shadow)"/>
+<text x="498.0" y="477.0" font-family="Georgia, 'Times New Roman', serif" font-size="15" fill="#2B2622" font-weight="700" text-anchor="start">This season through the queue · one request at a time, background priority</text>
+<line x1="496.0" y1="486.0" x2="1256.0" y2="486.0" stroke="#B8954A" stroke-width="0.8"/>
+<text x="500.0" y="514.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" fill="#2B2622" font-weight="700" text-anchor="start">valen</text>
+<line x1="580.0" y1="510.0" x2="1250.0" y2="510.0" stroke="#E4DACA" stroke-width="1"/>
+<rect x="580.0" y="500.0" width="105.4" height="20.0" rx="4" fill="#A8452F" stroke="none" stroke-width="1" fill-opacity="0.9"/>
+<text x="691.4" y="514.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10.5" fill="#6B625A" font-weight="normal" text-anchor="start">council</text>
+<text x="500.0" y="548.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" fill="#2B2622" font-weight="700" text-anchor="start">orm</text>
+<line x1="580.0" y1="544.0" x2="1250.0" y2="544.0" stroke="#E4DACA" stroke-width="1"/>
+<rect x="685.4" y="534.0" width="76.5" height="20.0" rx="4" fill="#2E8C85" stroke="none" stroke-width="1" fill-opacity="0.9"/>
+<text x="767.9" y="548.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10.5" fill="#6B625A" font-weight="normal" text-anchor="start">council</text>
+<rect x="1081.5" y="534.0" width="73.1" height="20.0" rx="4" fill="#2E8C85" stroke="none" stroke-width="1" fill-opacity="0.9"/>
+<text x="1160.6" y="548.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10.5" fill="#6B625A" font-weight="normal" text-anchor="start">envoy from kharsa</text>
+<text x="500.0" y="582.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" fill="#2B2622" font-weight="700" text-anchor="start">kharsa</text>
+<line x1="580.0" y1="578.0" x2="1250.0" y2="578.0" stroke="#E4DACA" stroke-width="1"/>
+<rect x="761.9" y="568.0" width="142.8" height="20.0" rx="4" fill="#C8963A" stroke="none" stroke-width="1" fill-opacity="0.9"/>
+<text x="910.7" y="582.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10.5" fill="#6B625A" font-weight="normal" text-anchor="start">council</text>
+<text x="500.0" y="616.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" fill="#2B2622" font-weight="700" text-anchor="start">thornwood</text>
+<line x1="580.0" y1="612.0" x2="1250.0" y2="612.0" stroke="#E4DACA" stroke-width="1"/>
+<rect x="904.7" y="602.0" width="6.0" height="20.0" rx="4" fill="#4F7A3A" stroke="none" stroke-width="1" fill-opacity="0.9"/>
+<text x="916.7" y="616.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10.5" fill="#6B625A" font-weight="normal" text-anchor="start">council · scripted</text>
+<text x="500.0" y="650.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" fill="#2B2622" font-weight="700" text-anchor="start">aster</text>
+<line x1="580.0" y1="646.0" x2="1250.0" y2="646.0" stroke="#E4DACA" stroke-width="1"/>
+<rect x="908.1" y="636.0" width="88.4" height="20.0" rx="4" fill="#3B6EA8" stroke="none" stroke-width="1" fill-opacity="0.9"/>
+<text x="1002.5" y="650.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10.5" fill="#6B625A" font-weight="normal" text-anchor="start">council</text>
+<rect x="996.5" y="636.0" width="85.0" height="20.0" rx="4" fill="#3B6EA8" stroke="none" stroke-width="1" fill-opacity="0.9"/>
+<text x="1087.5" y="650.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10.5" fill="#6B625A" font-weight="normal" text-anchor="start">envoy from valen</text>
+<text x="580.0" y="688.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#6B625A" font-weight="normal" text-anchor="middle">0 s</text>
+<text x="750.0" y="688.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#6B625A" font-weight="normal" text-anchor="middle">1 s</text>
+<text x="920.0" y="688.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#6B625A" font-weight="normal" text-anchor="middle">2 s</text>
+<text x="1090.0" y="688.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#6B625A" font-weight="normal" text-anchor="middle">3 s</text>
+<text x="1260.0" y="688.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#6B625A" font-weight="normal" text-anchor="middle">4 s</text>
+</svg>

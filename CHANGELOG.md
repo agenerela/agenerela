@@ -194,6 +194,14 @@ phase table and the open issues, not here.
   better with the guards on. **It passed on 3 November**: 19/20 with the guards on, 18/20 in
   the control, on `qwen3.5:2b` and Ollama 0.40.14, recorded in `findings.md`. At n = 20 that
   says the gate passed, not by how much the guard helps.
+- **A design plan for GreyBoxStrategy** (#20), in
+  [`docs/demos/greyboxstrategy.md`](docs/demos/greyboxstrategy.md): *Sundermark*, five realms
+  around a ruined capital, four of them `Agent`s with no GameObject that choose a move each season
+  and answer the player's letters. It answers #20's four questions (when it decides, the literal
+  observations, the actions and handlers, the statement), maps each mechanic to the framework
+  capability it shows, drafts the milestones as sub-issues of #20 and five framework gaps, and has
+  six SVG screen mockups and three pieces of concept art beside it. A proposal: nothing is filed or
+  built.
 
 ### Fixed
 

@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720" role="img" aria-label="Sundermark inspector: why Orm's decision became no action">
+<title>Sundermark inspector: why Orm's decision became no action</title>
+<rect x="0.0" y="0.0" width="1280.0" height="720.0" rx="0" fill="#F3EBDD" stroke="none" stroke-width="1"/>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#2B2622"/></marker><filter id="shadow" x="-5%" y="-5%" width="110%" height="115%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.18"/></filter></defs>
+<rect x="0.0" y="0.0" width="1280.0" height="720.0" rx="0" fill="#1E2328" stroke="none" stroke-width="1"/>
+<rect x="0.0" y="0.0" width="1280.0" height="50.0" rx="0" fill="#161A1E" stroke="none" stroke-width="1"/>
+<text x="20.0" y="32.0" font-family="Georgia, 'Times New Roman', serif" font-size="19" fill="#FFFFFF" font-weight="700" text-anchor="start">Why did Orm do that?</text>
+<text x="250.0" y="32.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12.5" fill="#8C98A4" font-weight="normal" text-anchor="start">Envoy from aster · spring of year 3 · decision 41 of the game</text>
+<rect x="820.0" y="12.0" width="142.0" height="28.0" rx="5" fill="#3B6EA8" stroke="none" stroke-width="1"/>
+<text x="891.0" y="31.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="11.5" fill="#fff" font-weight="600" text-anchor="middle">Capture as prompt</text>
+<rect x="970.0" y="12.0" width="142.0" height="28.0" rx="5" fill="#4A545E" stroke="none" stroke-width="1"/>
+<text x="1041.0" y="31.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="11.5" fill="#fff" font-weight="600" text-anchor="middle">Replay on qwen3.5:4b</text>
+<rect x="1120.0" y="12.0" width="142.0" height="28.0" rx="5" fill="#4A545E" stroke="none" stroke-width="1"/>
+<text x="1191.0" y="31.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="11.5" fill="#fff" font-weight="600" text-anchor="middle">Copy request JSON</text>
+<rect x="20.0" y="62.0" width="145.0" height="26.0" rx="13" fill="#3F8F4F" stroke="none" stroke-width="1" fill-opacity="0.22"/>
+<rect x="20.0" y="62.0" width="145.0" height="26.0" rx="13" fill="none" stroke="#3F8F4F" stroke-width="1.5"/>
+<text x="92.0" y="80.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" fill="#FFFFFF" font-weight="700" text-anchor="middle">1 Asked</text>
+<rect x="175.0" y="62.0" width="145.0" height="26.0" rx="13" fill="#3F8F4F" stroke="none" stroke-width="1" fill-opacity="0.22"/>
+<rect x="175.0" y="62.0" width="145.0" height="26.0" rx="13" fill="none" stroke="#3F8F4F" stroke-width="1.5"/>
+<text x="247.0" y="80.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" fill="#FFFFFF" font-weight="700" text-anchor="middle">2 Gathered</text>
+<rect x="330.0" y="62.0" width="145.0" height="26.0" rx="13" fill="#3F8F4F" stroke="none" stroke-width="1" fill-opacity="0.22"/>
+<rect x="330.0" y="62.0" width="145.0" height="26.0" rx="13" fill="none" stroke="#3F8F4F" stroke-width="1.5"/>
+<text x="402.0" y="80.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" fill="#FFFFFF" font-weight="700" text-anchor="middle">3 Offered</text>
+<rect x="485.0" y="62.0" width="145.0" height="26.0" rx="13" fill="#3F8F4F" stroke="none" stroke-width="1" fill-opacity="0.22"/>
+<rect x="485.0" y="62.0" width="145.0" height="26.0" rx="13" fill="none" stroke="#3F8F4F" stroke-width="1.5"/>
+<text x="557.0" y="80.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" fill="#FFFFFF" font-weight="700" text-anchor="middle">4 Prompt</text>
+<rect x="640.0" y="62.0" width="145.0" height="26.0" rx="13" fill="#3F8F4F" stroke="none" stroke-width="1" fill-opacity="0.22"/>
+<rect x="640.0" y="62.0" width="145.0" height="26.0" rx="13" fill="none" stroke="#3F8F4F" stroke-width="1.5"/>
+<text x="712.0" y="80.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" fill="#FFFFFF" font-weight="700" text-anchor="middle">5 Queue</text>
+<rect x="795.0" y="62.0" width="145.0" height="26.0" rx="13" fill="#3F8F4F" stroke="none" stroke-width="1" fill-opacity="0.22"/>
+<rect x="795.0" y="62.0" width="145.0" height="26.0" rx="13" fill="none" stroke="#3F8F4F" stroke-width="1.5"/>
+<text x="867.0" y="80.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" fill="#FFFFFF" font-weight="700" text-anchor="middle">6 Model</text>
+<rect x="950.0" y="62.0" width="145.0" height="26.0" rx="13" fill="#C9821B" stroke="none" stroke-width="1" fill-opacity="0.22"/>
+<rect x="950.0" y="62.0" width="145.0" height="26.0" rx="13" fill="none" stroke="#C9821B" stroke-width="1.5"/>
+<text x="1022.0" y="80.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" fill="#FFFFFF" font-weight="700" text-anchor="middle">7 Guards</text>
+<rect x="1105.0" y="62.0" width="145.0" height="26.0" rx="13" fill="#3F8F4F" stroke="none" stroke-width="1" fill-opacity="0.22"/>
+<rect x="1105.0" y="62.0" width="145.0" height="26.0" rx="13" fill="none" stroke="#3F8F4F" stroke-width="1.5"/>
+<text x="1177.0" y="80.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" fill="#FFFFFF" font-weight="700" text-anchor="middle">8 Executed</text>
+<rect x="20.0" y="102.0" width="400.0" height="73.0" rx="5" fill="#2A3138" stroke="#3A434C" stroke-width="1"/>
+<text x="30.0" y="119.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#8C98A4" font-weight="700" text-anchor="start">STIMULUS  · label “Envoy from aster” · priority PlayerFacing</text>
+<text x="30.0" y="136.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start" xml:space="preserve">Envoy from aster: &quot;Join us against the Empire of</text>
+<text x="30.0" y="151.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start" xml:space="preserve"> Thule. Their fleets sit fat with silver, and</text>
+<text x="30.0" y="166.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start" xml:space="preserve"> together we would split it evenly. ...&quot;</text>
+<rect x="20.0" y="185.0" width="400.0" height="148.0" rx="5" fill="#2A3138" stroke="#3A434C" stroke-width="1"/>
+<text x="30.0" y="202.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#8C98A4" font-weight="700" text-anchor="start">OBSERVATIONS  · 8 sent, 0 dropped (cap 10)</text>
+<text x="30.0" y="219.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start" xml:space="preserve">- The envoy brings no terms.</text>
+<text x="30.0" y="234.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start" xml:space="preserve">- Treasury: 140 gold, income 30 a season.</text>
+<text x="30.0" y="249.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start" xml:space="preserve">- Armies: tidegate 3, saltmere 3.</text>
+<text x="30.0" y="264.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start" xml:space="preserve">- At war with valen, kharsa. At peace with</text>
+<text x="30.0" y="279.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start" xml:space="preserve">  aster, thornwood.</text>
+<text x="30.0" y="294.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start" xml:space="preserve">- Last season: kharsa took gull_reach from you.</text>
+<text x="30.0" y="309.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start" xml:space="preserve">- Your trust in aster: fair. No broken word.</text>
+<text x="30.0" y="324.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start" xml:space="preserve">- Renown: orm 11, valen 9, aster 7, ...</text>
+<rect x="20.0" y="343.0" width="400.0" height="58.0" rx="5" fill="#2A3138" stroke="#3A434C" stroke-width="1"/>
+<text x="30.0" y="360.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#8C98A4" font-weight="700" text-anchor="start">HISTORY  · RollingHistory, 2 exchanges sent, 4 dropped</text>
+<text x="30.0" y="377.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start" xml:space="preserve">Chancellor: &quot;kharsa's riders are at gull_reach.&quot;</text>
+<text x="30.0" y="392.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#9FD3A7" font-weight="normal" text-anchor="start" xml:space="preserve">{&quot;action&quot;:&quot;raise_levies&quot;,&quot;target&quot;:&quot;no_target&quot;,...}</text>
+<rect x="440.0" y="102.0" width="400.0" height="133.0" rx="5" fill="#2A3138" stroke="#3A434C" stroke-width="1"/>
+<text x="450.0" y="119.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#8C98A4" font-weight="700" text-anchor="start">OFFERED ACTIONS  · 5 of 12 · availability from state</text>
+<text x="450.0" y="136.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start" xml:space="preserve">declare_war        realm</text>
+<text x="450.0" y="151.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start" xml:space="preserve">offer_peace        realm</text>
+<text x="450.0" y="166.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start" xml:space="preserve">propose_alliance   realm</text>
+<text x="450.0" y="181.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start" xml:space="preserve">send_gift          realm</text>
+<text x="450.0" y="196.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#6F7A85" font-weight="normal" text-anchor="start" xml:space="preserve">raise_levies       — council only</text>
+<text x="450.0" y="211.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#6F7A85" font-weight="normal" text-anchor="start" xml:space="preserve">accept_terms       — no terms brought</text>
+<text x="450.0" y="226.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start" xml:space="preserve">none               (last)</text>
+<rect x="440.0" y="245.0" width="400.0" height="103.0" rx="5" fill="#2A3138" stroke="#3A434C" stroke-width="1"/>
+<text x="450.0" y="262.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#8C98A4" font-weight="700" text-anchor="start">TARGETS  · enumerated in the schema, listed in the prompt</text>
+<text x="450.0" y="279.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start" xml:space="preserve">aster       realm   The Free Cities of Aster</text>
+<text x="450.0" y="294.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start" xml:space="preserve">valen       realm   at war with you</text>
+<text x="450.0" y="309.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start" xml:space="preserve">kharsa      realm   at war with you</text>
+<text x="450.0" y="324.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start" xml:space="preserve">thornwood   realm   at peace with you</text>
+<text x="450.0" y="339.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#6F7A85" font-weight="normal" text-anchor="start" xml:space="preserve">no_target</text>
+<rect x="440.0" y="358.0" width="400.0" height="118.0" rx="5" fill="#2A3138" stroke="#3A434C" stroke-width="1"/>
+<text x="450.0" y="375.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#8C98A4" font-weight="700" text-anchor="start">MODEL REPLY  · qwen3.5:2b · 0.47 s · 412 → 61 tokens</text>
+<text x="450.0" y="392.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start" xml:space="preserve">{</text>
+<text x="450.0" y="407.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start" xml:space="preserve">  &quot;action&quot;: &quot;declare_war&quot;,</text>
+<text x="450.0" y="422.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#F2B27A" font-weight="normal" text-anchor="start" xml:space="preserve">  &quot;target&quot;: &quot;thornwood&quot;,</text>
+<text x="450.0" y="437.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start" xml:space="preserve">  &quot;statement&quot;: &quot;Orm will sail against Thule at</text>
+<text x="450.0" y="452.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start" xml:space="preserve">    your side, friend of Aster.&quot;</text>
+<text x="450.0" y="467.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start" xml:space="preserve">}</text>
+<rect x="860.0" y="102.0" width="400.0" height="330.0" rx="5" fill="#2A3138" stroke="#3A434C" stroke-width="1"/>
+<text x="870.0" y="119.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#8C98A4" font-weight="700" text-anchor="start">GUARDS  · in order; the first not to pass stops the rest</text>
+<circle cx="878.0" cy="146.0" r="6.0" fill="#3F8F4F" stroke="none" stroke-width="1"/>
+<text x="892.0" y="150.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="12" fill="#D8DEE4" font-weight="700" text-anchor="start">SchemaLegalityGuard</text>
+<text x="1250.0" y="150.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="11.5" fill="#3F8F4F" font-weight="700" text-anchor="end">pass</text>
+<text x="892.0" y="166.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10.5" fill="#8C98A4" font-weight="normal" text-anchor="start">declare_war offered; thornwood is a realm</text>
+<circle cx="878.0" cy="186.0" r="6.0" fill="#C9821B" stroke="none" stroke-width="1"/>
+<text x="892.0" y="190.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="12" fill="#D8DEE4" font-weight="700" text-anchor="start">TargetGroundingGuard</text>
+<text x="1250.0" y="190.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="11.5" fill="#C9821B" font-weight="700" text-anchor="end">rewrite → none</text>
+<text x="892.0" y="206.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10.5" fill="#8C98A4" font-weight="normal" text-anchor="start">lowest on-list share 0.04 &lt; 0.80</text>
+<circle cx="878.0" cy="226.0" r="6.0" fill="#6F7A85" stroke="none" stroke-width="1"/>
+<text x="892.0" y="230.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="12" fill="#D8DEE4" font-weight="700" text-anchor="start">TargetCategoryGuard</text>
+<text x="1250.0" y="230.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="11.5" fill="#6F7A85" font-weight="700" text-anchor="end">not run</text>
+<circle cx="878.0" cy="266.0" r="6.0" fill="#6F7A85" stroke="none" stroke-width="1"/>
+<text x="892.0" y="270.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="12" fill="#D8DEE4" font-weight="700" text-anchor="start">TruceGuard (game)</text>
+<text x="1250.0" y="270.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="11.5" fill="#6F7A85" font-weight="700" text-anchor="end">not run</text>
+<circle cx="878.0" cy="306.0" r="6.0" fill="#6F7A85" stroke="none" stroke-width="1"/>
+<text x="892.0" y="310.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="12" fill="#D8DEE4" font-weight="700" text-anchor="start">RepeatProposalGuard (game)</text>
+<text x="1250.0" y="310.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="11.5" fill="#6F7A85" font-weight="700" text-anchor="end">not run</text>
+<text x="872.0" y="352.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10.5" fill="#8C98A4" font-weight="700" text-anchor="start">Where the model’s probability went, token by token</text>
+<rect x="872.0" y="362.0" width="118.0" height="14.0" rx="3" fill="#3A434C" stroke="none" stroke-width="1"/>
+<rect x="872.0" y="362.0" width="115.6" height="14.0" rx="3" fill="#3F8F4F" stroke="none" stroke-width="1"/>
+<text x="872.0" y="392.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="10.5" fill="#D8DEE4" font-weight="normal" text-anchor="start">“th” 0.98 on list</text>
+<rect x="1000.0" y="362.0" width="118.0" height="14.0" rx="3" fill="#3A434C" stroke="none" stroke-width="1"/>
+<rect x="1000.0" y="362.0" width="4.7" height="14.0" rx="3" fill="#C9821B" stroke="none" stroke-width="1"/>
+<text x="1000.0" y="392.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="10.5" fill="#D8DEE4" font-weight="normal" text-anchor="start">“orn” 0.04 on list</text>
+<rect x="1128.0" y="362.0" width="118.0" height="14.0" rx="3" fill="#3A434C" stroke="none" stroke-width="1"/>
+<rect x="1128.0" y="362.0" width="116.8" height="14.0" rx="3" fill="#3F8F4F" stroke="none" stroke-width="1"/>
+<text x="1128.0" y="392.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="10.5" fill="#D8DEE4" font-weight="normal" text-anchor="start">“wood” 0.99 on list</text>
+<text x="872.0" y="416.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10.5" fill="#F2B27A" font-weight="normal" text-anchor="start">At “orn”, 96% wanted “ule”: no realm named thule exists.</text>
+<rect x="860.0" y="442.0" width="400.0" height="156.0" rx="5" fill="#2A3138" stroke="#3A434C" stroke-width="1"/>
+<text x="870.0" y="459.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10" fill="#8C98A4" font-weight="700" text-anchor="start">WHAT HAPPENED</text>
+<text x="872.0" y="482.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="12" fill="#F2B27A" font-weight="normal" text-anchor="start" text-decoration="line-through">model:  declare_war → thornwood</text>
+<text x="872.0" y="502.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="12" fill="#9FD3A7" font-weight="700" text-anchor="start">final:  none · no_target</text>
+<text x="872.0" y="524.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="11" fill="#8C98A4" font-weight="normal" text-anchor="start">statement: refusal line (AskForRefusalLine, 0.31 s)</text>
+<text x="872.0" y="542.0" font-family="Georgia, 'Times New Roman', serif" font-size="11.5" fill="#D8DEE4" font-weight="normal" text-anchor="start" font-style="italic">“...no map of ours names a Thule.”</text>
+<text x="872.0" y="566.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="11" fill="#D8DEE4" font-weight="normal" text-anchor="start">Execute: NoAction · memory: committed (OnExecute)</text>
+<text x="872.0" y="584.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="11" fill="#F2C66D" font-weight="700" text-anchor="start">Outcome class: contained by guard</text>
+<rect x="20.0" y="640.0" width="1240.0" height="64.0" rx="5" fill="#161A1E" stroke="#3A434C" stroke-width="1"/>
+<text x="36.0" y="664.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.5" fill="#8C98A4" font-weight="700" text-anchor="start">LATENCY</text>
+<text x="36.0" y="686.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="12.5" fill="#D8DEE4" font-weight="600" text-anchor="start">0.47 s</text>
+<text x="212.0" y="664.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.5" fill="#8C98A4" font-weight="700" text-anchor="start">QUEUE WAIT</text>
+<text x="212.0" y="686.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="12.5" fill="#D8DEE4" font-weight="600" text-anchor="start">0.00 s (jumped 3)</text>
+<text x="388.0" y="664.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.5" fill="#8C98A4" font-weight="700" text-anchor="start">BACKLOG</text>
+<text x="388.0" y="686.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="12.5" fill="#D8DEE4" font-weight="600" text-anchor="start">0.00 s</text>
+<text x="564.0" y="664.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.5" fill="#8C98A4" font-weight="700" text-anchor="start">PROMPT</text>
+<text x="564.0" y="686.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="12.5" fill="#D8DEE4" font-weight="600" text-anchor="start">412 tok</text>
+<text x="740.0" y="664.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.5" fill="#8C98A4" font-weight="700" text-anchor="start">HISTORY</text>
+<text x="740.0" y="686.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="12.5" fill="#D8DEE4" font-weight="600" text-anchor="start">2 sent · 4 dropped</text>
+<text x="916.0" y="664.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.5" fill="#8C98A4" font-weight="700" text-anchor="start">PROVIDER</text>
+<text x="916.0" y="686.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="12.5" fill="#D8DEE4" font-weight="600" text-anchor="start">OrmOllama · qwen3.5:2b</text>
+<text x="1092.0" y="664.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9.5" fill="#8C98A4" font-weight="700" text-anchor="start">FRAMEWORK</text>
+<text x="1092.0" y="686.0" font-family="Consolas, 'Cascadia Mono', Menlo, monospace" font-size="12.5" fill="#D8DEE4" font-weight="600" text-anchor="start">0.4.x</text>
+</svg>

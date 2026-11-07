@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720" role="img" aria-label="Sundermark envoy desk: a letter to Orm, its reply, and Valen's proposal">
+<title>Sundermark envoy desk: a letter to Orm, its reply, and Valen's proposal</title>
+<rect x="0.0" y="0.0" width="1280.0" height="720.0" rx="0" fill="#F3EBDD" stroke="none" stroke-width="1"/>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#2B2622"/></marker><filter id="shadow" x="-5%" y="-5%" width="110%" height="115%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.18"/></filter></defs>
+<rect x="0.0" y="0.0" width="1280.0" height="46.0" rx="0" fill="#FBF7EF" stroke="#B8954A" stroke-width="1"/>
+<rect x="12.0" y="8.0" width="30.0" height="30.0" rx="4" fill="#3B6EA8" stroke="none" stroke-width="1"/>
+<text x="27.0" y="29.0" font-family="Georgia, 'Times New Roman', serif" font-size="16" fill="#fff" font-weight="700" text-anchor="middle">A</text>
+<text x="52.0" y="29.0" font-family="Georgia, 'Times New Roman', serif" font-size="17" fill="#2B2622" font-weight="700" text-anchor="start">Aster</text>
+<text x="150.0" y="20.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#6B625A" font-weight="600" text-anchor="start">GOLD</text>
+<text x="150.0" y="37.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="15" fill="#2B2622" font-weight="700" text-anchor="start">85  (+24)</text>
+<text x="270.0" y="20.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#6B625A" font-weight="600" text-anchor="start">ARMIES</text>
+<text x="270.0" y="37.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="15" fill="#2B2622" font-weight="700" text-anchor="start">9</text>
+<text x="390.0" y="20.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#6B625A" font-weight="600" text-anchor="start">RENOWN</text>
+<text x="390.0" y="37.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="15" fill="#2B2622" font-weight="700" text-anchor="start">7 / 20</text>
+<text x="510.0" y="20.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#6B625A" font-weight="600" text-anchor="start">ENVOYS</text>
+<text x="510.0" y="37.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="15" fill="#2B2622" font-weight="700" text-anchor="start">2 left</text>
+<text x="650.0" y="20.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="9" fill="#6B625A" font-weight="600" text-anchor="start">SEASON</text>
+<text x="650.0" y="37.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="15" fill="#2B2622" font-weight="700" text-anchor="start">Spring, Year 3</text>
+<rect x="800.0" y="15.0" width="96.9" height="18.0" rx="9.0" fill="#2B2622" stroke="none" stroke-width="1"/><text x="848.5" y="28.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="11" fill="#fff" font-weight="600" text-anchor="middle">Council phase</text>
+<rect x="1120.0" y="8.0" width="148.0" height="30.0" rx="5" fill="#B23A3A" stroke="none" stroke-width="1"/>
+<text x="1194.0" y="28.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14" fill="#fff" font-weight="700" text-anchor="middle">End Season  ›</text>
+<rect x="0.0" y="46.0" width="1280.0" height="674.0" rx="0" fill="#E9DFCC" stroke="none" stroke-width="1"/>
+<rect x="24.0" y="66.0" width="600.0" height="420.0" rx="6" fill="#FBF7EF" stroke="#B8954A" stroke-width="1" filter="url(#shadow)"/>
+<text x="38.0" y="91.0" font-family="Georgia, 'Times New Roman', serif" font-size="15" fill="#2B2622" font-weight="700" text-anchor="start">Write to a realm</text>
+<line x1="36.0" y1="100.0" x2="612.0" y2="100.0" stroke="#B8954A" stroke-width="0.8"/>
+<text x="40.0" y="128.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="11" fill="#6B625A" font-weight="700" text-anchor="start">To</text>
+<rect x="70.0" y="112.0" width="118.0" height="28.0" rx="5" fill="#FFFFFF" stroke="#A8452F" stroke-width="2"/>
+<text x="129.0" y="131.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12.5" fill="#A8452F" font-weight="700" text-anchor="middle">Valen</text>
+<rect x="198.0" y="112.0" width="118.0" height="28.0" rx="5" fill="#2E8C85" stroke="#2E8C85" stroke-width="2"/>
+<text x="257.0" y="131.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12.5" fill="#fff" font-weight="700" text-anchor="middle">Orm</text>
+<rect x="326.0" y="112.0" width="118.0" height="28.0" rx="5" fill="#FFFFFF" stroke="#C8963A" stroke-width="2"/>
+<text x="385.0" y="131.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12.5" fill="#C8963A" font-weight="700" text-anchor="middle">Kharsa</text>
+<rect x="454.0" y="112.0" width="118.0" height="28.0" rx="5" fill="#FFFFFF" stroke="#4F7A3A" stroke-width="2"/>
+<text x="513.0" y="131.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12.5" fill="#4F7A3A" font-weight="700" text-anchor="middle">Thornwood</text>
+<text x="40.0" y="172.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="11" fill="#6B625A" font-weight="700" text-anchor="start">Terms</text>
+<rect x="90.0" y="156.0" width="96.0" height="26.0" rx="13" fill="#FFFFFF" stroke="#2B2622" stroke-width="1"/>
+<text x="138.0" y="173.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" fill="#2B2622" font-weight="600" text-anchor="middle">Alliance</text>
+<rect x="194.0" y="156.0" width="96.0" height="26.0" rx="13" fill="#FFFFFF" stroke="#2B2622" stroke-width="1"/>
+<text x="242.0" y="173.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" fill="#2B2622" font-weight="600" text-anchor="middle">Peace</text>
+<rect x="298.0" y="156.0" width="96.0" height="26.0" rx="13" fill="#FFFFFF" stroke="#2B2622" stroke-width="1"/>
+<text x="346.0" y="173.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" fill="#2B2622" font-weight="600" text-anchor="middle">Pact</text>
+<rect x="402.0" y="156.0" width="96.0" height="26.0" rx="13" fill="#FFFFFF" stroke="#2B2622" stroke-width="1"/>
+<text x="450.0" y="173.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" fill="#2B2622" font-weight="600" text-anchor="middle">Tribute</text>
+<rect x="506.0" y="156.0" width="96.0" height="26.0" rx="13" fill="#2B2622" stroke="#2B2622" stroke-width="1"/>
+<text x="554.0" y="173.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" fill="#fff" font-weight="600" text-anchor="middle">No terms</text>
+<text x="40.0" y="208.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="11" fill="#6B625A" font-weight="700" text-anchor="start">Letter</text>
+<rect x="40.0" y="216.0" width="568.0" height="150.0" rx="4" fill="#FFFFFF" stroke="#E4DACA" stroke-width="1"/>
+<text x="56.0" y="240.0" font-family="Georgia, 'Times New Roman', serif" font-size="13" fill="#2B2622" font-weight="normal" text-anchor="start" font-style="italic">Harbour Master Benedek,</text>
+<text x="56.0" y="258.0" font-family="Georgia, 'Times New Roman', serif" font-size="13" fill="#2B2622" font-weight="normal" text-anchor="start" font-style="italic"></text>
+<text x="56.0" y="276.0" font-family="Georgia, 'Times New Roman', serif" font-size="13" fill="#2B2622" font-weight="normal" text-anchor="start" font-style="italic">Join us against the Empire of Thule. Their fleets</text>
+<text x="56.0" y="294.0" font-family="Georgia, 'Times New Roman', serif" font-size="13" fill="#2B2622" font-weight="normal" text-anchor="start" font-style="italic">sit fat with silver, and together we would split it</text>
+<text x="56.0" y="312.0" font-family="Georgia, 'Times New Roman', serif" font-size="13" fill="#2B2622" font-weight="normal" text-anchor="start" font-style="italic">evenly. Say the word and our banners sail with yours.</text>
+<text x="56.0" y="330.0" font-family="Georgia, 'Times New Roman', serif" font-size="13" fill="#2B2622" font-weight="normal" text-anchor="start" font-style="italic"></text>
+<text x="56.0" y="348.0" font-family="Georgia, 'Times New Roman', serif" font-size="13" fill="#2B2622" font-weight="normal" text-anchor="start" font-style="italic">— Aster</text>
+<text x="40.0" y="392.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="11" fill="#6B625A" font-weight="normal" text-anchor="start">One of your 2 envoys this season · Orm reads the letter, its terms, and what it</text>
+<text x="40.0" y="408.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="11" fill="#6B625A" font-weight="normal" text-anchor="start">already knows. It answers with one of its legal moves, and a letter back.</text>
+<rect x="460.0" y="428.0" width="148.0" height="36.0" rx="6" fill="#3B6EA8" stroke="none" stroke-width="1"/>
+<text x="534.0" y="451.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13.5" fill="#fff" font-weight="700" text-anchor="middle">Seal and send</text>
+<rect x="648.0" y="66.0" width="608.0" height="420.0" rx="6" fill="#FBF7EF" stroke="#B8954A" stroke-width="1" filter="url(#shadow)"/>
+<text x="662.0" y="91.0" font-family="Georgia, 'Times New Roman', serif" font-size="15" fill="#2B2622" font-weight="700" text-anchor="start">Reply from Orm</text>
+<line x1="660.0" y1="100.0" x2="1244.0" y2="100.0" stroke="#B8954A" stroke-width="0.8"/>
+<rect x="664.0" y="112.0" width="576.0" height="196.0" rx="4" fill="#FFFDF8" stroke="#E4DACA" stroke-width="1"/>
+<text x="684.0" y="136.0" font-family="Georgia, 'Times New Roman', serif" font-size="13" fill="#2B2622" font-weight="normal" text-anchor="start" font-style="italic">To the court of Aster,</text>
+<text x="684.0" y="155.0" font-family="Georgia, 'Times New Roman', serif" font-size="13" fill="#2B2622" font-weight="normal" text-anchor="start" font-style="italic"></text>
+<text x="684.0" y="174.0" font-family="Georgia, 'Times New Roman', serif" font-size="13" fill="#2B2622" font-weight="normal" text-anchor="start" font-style="italic">We have charted every shore from here to the</text>
+<text x="684.0" y="193.0" font-family="Georgia, 'Times New Roman', serif" font-size="13" fill="#2B2622" font-weight="normal" text-anchor="start" font-style="italic">sunrise, and no map of ours names a Thule. Orm</text>
+<text x="684.0" y="212.0" font-family="Georgia, 'Times New Roman', serif" font-size="13" fill="#2B2622" font-weight="normal" text-anchor="start" font-style="italic">trades in silver, not in ghosts. Write again when</text>
+<text x="684.0" y="231.0" font-family="Georgia, 'Times New Roman', serif" font-size="13" fill="#2B2622" font-weight="normal" text-anchor="start" font-style="italic">your enemies are real.</text>
+<text x="684.0" y="250.0" font-family="Georgia, 'Times New Roman', serif" font-size="13" fill="#2B2622" font-weight="normal" text-anchor="start" font-style="italic"></text>
+<text x="684.0" y="269.0" font-family="Georgia, 'Times New Roman', serif" font-size="13" fill="#2B2622" font-weight="normal" text-anchor="start" font-style="italic">— Benedek of Orm</text>
+<rect x="664.0" y="320.0" width="576.0" height="52.0" rx="5" fill="#FFF4DE" stroke="#C9821B" stroke-width="1"/>
+<text x="680.0" y="342.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#7A4A0A" font-weight="700" text-anchor="start">Contained by the target check</text>
+<text x="680.0" y="360.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="11.5" fill="#2B2622" font-weight="normal" text-anchor="start">Orm reached for “thule”; only 4% of its choice stayed on the list → no action.</text>
+<rect x="664.0" y="384.0" width="180.0" height="30.0" rx="5" fill="#FFFFFF" stroke="#2B2622" stroke-width="1"/>
+<text x="754.0" y="404.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" fill="#2B2622" font-weight="700" text-anchor="middle">Why did Orm do that?</text>
+<text x="860.0" y="404.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="11" fill="#6B625A" font-weight="normal" text-anchor="start" font-style="italic">opens the inspector on this decision</text>
+<rect x="24.0" y="506.0" width="1232.0" height="196.0" rx="6" fill="#FBF7EF" stroke="#B8954A" stroke-width="1" filter="url(#shadow)"/>
+<text x="38.0" y="531.0" font-family="Georgia, 'Times New Roman', serif" font-size="15" fill="#2B2622" font-weight="700" text-anchor="start">A proposal waits for your word</text>
+<line x1="36.0" y1="540.0" x2="1244.0" y2="540.0" stroke="#B8954A" stroke-width="0.8"/>
+<rect x="40.0" y="552.0" width="8.0" height="132.0" rx="2" fill="#A8452F" stroke="none" stroke-width="1"/>
+<text x="62.0" y="572.0" font-family="Georgia, 'Times New Roman', serif" font-size="16" fill="#2B2622" font-weight="700" text-anchor="start">Valen proposes an alliance</text>
+<text x="62.0" y="596.0" font-family="Georgia, 'Times New Roman', serif" font-size="13" fill="#2B2622" font-weight="normal" text-anchor="start" font-style="italic">“Orm’s ships raid us both. Stand with Valen until orm kneels, and ironhold’s</text>
+<text x="62.0" y="614.0" font-family="Georgia, 'Times New Roman', serif" font-size="13" fill="#2B2622" font-weight="normal" text-anchor="start" font-style="italic">smiths will remember the friend who came when called.”</text>
+<text x="62.0" y="642.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="11.5" fill="#6B625A" font-weight="normal" text-anchor="start">If you accept: allied with valen; at war with orm; your truce with valen becomes an alliance.</text>
+<text x="62.0" y="660.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="11.5" fill="#6B625A" font-weight="normal" text-anchor="start">Checked again when you click: valen must still be at war with orm, and you at peace with valen.</text>
+<rect x="1010.0" y="584.0" width="106.0" height="34.0" rx="6" fill="#3F8F4F" stroke="none" stroke-width="1"/>
+<text x="1063.0" y="606.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13.5" fill="#fff" font-weight="700" text-anchor="middle">Accept</text>
+<rect x="1126.0" y="584.0" width="106.0" height="34.0" rx="6" fill="#FFFFFF" stroke="#B23A3A" stroke-width="1.5"/>
+<text x="1179.0" y="606.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13.5" fill="#B23A3A" font-weight="700" text-anchor="middle">Decline</text>
+<text x="1010.0" y="642.0" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="11" fill="#6B625A" font-weight="normal" text-anchor="start">Expires at the end of the season</text>
+</svg>
