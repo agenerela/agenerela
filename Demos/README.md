@@ -9,6 +9,7 @@ in general: §1.6.
 | Game | What it proves | Starts after | Render pipeline |
 |---|---|---|---|
 | `GreyBoxVillage/` (#19, #153) | Ashford, a small village whose four agents decide through a local model: two guards, a merchant and a captain, with quests, situations and game guards | Built; v2 landed in #157 | Universal 3D (URP) |
+| `GreyBoxVillageClassic/` (#19, #143) | The grey-box village from before v2, two guards and an agent board, kept for comparison. Frozen: it changes only to keep compiling | Built; restored from 396f266, the commit before #157 | Universal 3D (URP) |
 | `LivingVale/` (#69) | A third-person RPG where every NPC is talked to in typed chat, with the first adventure (*The Missing Wagon*) playable end to end | First adventure built: G0–G5, G7, G8; the rest of G4 (perks, relationships) open | Universal 3D (URP) |
 | `GreyBox2D/` (#44) | The API works from outside the package, in a second genre | Phase 2 | not created yet |
 | `GreyBoxStrategy/` (#20) | A faction agent with no Transform — an agent is not an NPC. **Never cut** | Phase 3 | not created yet |

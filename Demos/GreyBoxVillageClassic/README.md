@@ -1,4 +1,19 @@
-# GreyBoxVillage
+# GreyBoxVillage Classic
+
+> **This is the old GreyBoxVillage, kept for comparison.** It is the grey-box village as it
+> stood in `test` just before v2 ("Ashford", #153) replaced it: `Demos/GreyBoxVillage` at
+> 396f266, the commit before #157 landed, with the two guards and the agent board of #143
+> (PR #152). The game itself is at [`Demos/GreyBoxVillage`](../GreyBoxVillage/README.md);
+> build new things there.
+>
+> **It is frozen.** It gets no features and no fixes to its play. The one change it takes is
+> what keeps it compiling and its EditMode tests passing against the framework in this repo,
+> which it loads by the same relative path as every demo. Its files, `.meta` GUIDs, scene,
+> assemblies (`GreyBoxVillage`, `Demos.Shared` and their editor and test assemblies) and menus
+> (`Tools > Demos > GreyBoxVillage`) are the old ones, unchanged: it is a separate Unity
+> project, so nothing clashes with v2. Only the product name
+> differs ("GreyBoxVillage Classic"). Everything below is the README as it was then, with this
+> folder's path in its commands; its live runs and dates are from before v2.
 
 Standalone Unity **6000.3.23f1**, Universal 3D (URP) project for
 [issue #19](https://github.com/agenerela/agenerela/issues/19): village agents driven by a local
@@ -9,7 +24,7 @@ and a merchant.
 ## Open and run
 
 Start Ollama with `qwen3.5:2b` pulled (`ollama pull qwen3.5:2b`). Open this folder in Unity
-Hub, or with `unity open Demos/GreyBoxVillage`. Open `Assets/GreyBoxVillage/GreyBoxVillage.unity`
+Hub, or with `unity open Demos/GreyBoxVillageClassic`. Open `Assets/GreyBoxVillage/GreyBoxVillage.unity`
 and enter Play mode.
 
 - **Move** with WASD or the arrow keys. **Camera:** right-drag (or Q/E) orbits, dragging up and
@@ -203,7 +218,7 @@ in `Assets/GreyBoxVillage/LocalShared/` stay framework-free until #14 moves them
 
 The Unity CLI drives the editor through `com.unity.pipeline`: `unity status` shows the connected
 editor, `unity command script eval '<C#>'` runs code in it, Play mode included, and
-`unity test Demos/GreyBoxVillage --mode EditMode` runs the tests in batch mode while the project
+`unity test Demos/GreyBoxVillageClassic --mode EditMode` runs the tests in batch mode while the project
 is closed. MCP for Unity is still installed, pinned to the framework dev project's revision.
 Unity Version Control (`com.unity.collab-proxy`) is not: this repository uses git, and its
 progress dialog blocked the editor after every file change.
