@@ -434,7 +434,8 @@ namespace Demos.GreyBoxVillage.Editor
                 Personality = "Brief and dutiful. Speaks in one short sentence.",
                 Goals = "Keep the village safe, keep people out of places that are off limits, and help the player."
             }, "Bram, the guard at the village gate", new Vector3(-2.5f, 0, -13), gold, gate,
-                new[] { gate, campfire, market, bridge, well, shelter, armory.Entrance }, 30f, provider, alarm, wolf, player.transform);
+                new[] { gate, campfire, market, bridge, well, shelter, armory.Entrance }, 30f, provider, alarm, wolf, player.transform,
+                GuardCategories);
             var wren = Guard("Wren", new AgentIdentity
             {
                 Name = "Wren",
@@ -442,7 +443,9 @@ namespace Demos.GreyBoxVillage.Editor
                 Personality = "Watchful and dry. Speaks in one short sentence.",
                 Goals = "Keep the bridge and the river safe, back up the other guard, and help the player."
             }, "Wren, the guard on the bridge", new Vector3(2, 0, 17), silver, bridge,
-                new[] { bridge, docks, market, well }, 37f, provider, alarm, wolf, player.transform);
+                new[] { bridge, docks, market, well }, 37f, provider, alarm, wolf, player.transform,
+                // And the quest she gives, the lost lantern.
+                GuardCategories.Append(Quest.Category).ToArray());
             foreach (var mind in new[] { bram, wren })
             {
                 var body = (VillageGuard)mind.Body;
@@ -458,8 +461,8 @@ namespace Demos.GreyBoxVillage.Editor
                 Personality = "Warm, shrewd and talkative. Calls people love. Speaks in one or two short sentences.",
                 Goals = "Sell her goods at a fair price, keep her stall safe, and find someone to gather moonpetals for her."
             }, "Odile, the merchant at the market", new Vector3(16, 0, 5.4f), 180f, "char_odile", provider,
-                // No people by proximity: the guards she can call come from GuardTargetSource.
-                new[] { "item", "place" });
+                // No people: the guards she can call come from GuardTargetSource, in a category of their own.
+                new[] { "item", "place", Quest.Category, GuardTargetSource.Category });
             var stock = new List<Targetable>();
             var counter = new Vector3(16, 1.1f, 3.3f);
             string[] wares = { "bread", "apple", "rope", "torch", "lantern" };
@@ -484,7 +487,7 @@ namespace Demos.GreyBoxVillage.Editor
                 Personality = "Gruff, fair and brief. Gives orders in one short sentence.",
                 Goals = "Keep the village safe through his guards, see the wolf dealt with, and reward those who help."
             }, "Captain Hale, before the lord's keep", new Vector3(18, 0, 30.4f), 180f, "char_hale", provider,
-                new[] { "place", "person", "restricted" });
+                new[] { "place", "person", "restricted", Quest.Category });
 
             // Things to find: moonpetals in the woods, Wren's lantern at the docks, and the pelt the
             // wolf leaves when a guard drives it off during the wolf quest.
@@ -645,7 +648,7 @@ namespace Demos.GreyBoxVillage.Editor
         // its senses, and a Targetable so the other agents can name it.
         private static AgentMind Guard(string name, AgentIdentity identity, string description, Vector3 position,
             Material material, Transform post, Transform[] route, float quietSeconds, ProviderConfig provider,
-            VillageAlarm alarm, VillageWolf wolf, Transform player)
+            VillageAlarm alarm, VillageWolf wolf, Transform player, string[] categories)
         {
             var go = new GameObject(name);
             go.transform.position = position;
@@ -669,8 +672,10 @@ namespace Demos.GreyBoxVillage.Editor
             var behaviour = go.AddComponent<AgentBehaviour>();
             behaviour.Provider = provider;
             behaviour.FindTargetsNearby = true;
-            // Every place in the village, the evaluation set's included, fits under the cap.
-            behaviour.Targets = new ProximityTargetSource { Radius = 90f, Cap = 24, Categories = GuardCategories };
+            // Every place in the village, the evaluation set's included, fits under the cap. The agent's
+            // categories apply to every source, and the proximity source is given them (#208).
+            behaviour.Targets = new ProximityTargetSource { Radius = 90f, Cap = 24 };
+            behaviour.TargetCategories = categories;
             // The game writes its own observations, ids and distances included, which already pass
             // the agent's eight-line budget, so a proximity source would add nothing (README).
             behaviour.NoticeNearby = false;
@@ -713,7 +718,8 @@ namespace Demos.GreyBoxVillage.Editor
             var behaviour = go.AddComponent<AgentBehaviour>();
             behaviour.Provider = provider;
             behaviour.FindTargetsNearby = true;
-            behaviour.Targets = new ProximityTargetSource { Radius = 90f, Cap = 24, Categories = categories };
+            behaviour.Targets = new ProximityTargetSource { Radius = 90f, Cap = 24 };
+            behaviour.TargetCategories = categories;
             behaviour.NoticeNearby = false;
             behaviour.Profile = Profile(name, identity);
             var mind = go.AddComponent<AgentMind>();

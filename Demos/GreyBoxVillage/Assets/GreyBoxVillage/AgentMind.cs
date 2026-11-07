@@ -213,9 +213,10 @@ namespace Demos.GreyBoxVillage
         {
             var origin = transform.position;
             var source = Behaviour.Targets;
+            var categories = Agent.TargetCategories;
             return FindObjectsByType<Targetable>(FindObjectsSortMode.None)
                 .Where(t => t.enabled && t.IsCurrentlyTargetable && !t.transform.IsChildOf(transform))
-                .Where(t => source.Categories == null || source.Categories.Length == 0 || source.Categories.Contains(t.Category))
+                .Where(t => categories.Count == 0 || categories.Contains(t.Category))
                 .Select(t => (t, d: Vector3.Distance(origin, t.transform.position)))
                 .Where(x => x.d <= source.Radius)
                 .OrderBy(x => x.d).ThenBy(x => x.t.Id, StringComparer.Ordinal)

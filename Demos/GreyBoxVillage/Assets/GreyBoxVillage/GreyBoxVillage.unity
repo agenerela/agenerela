@@ -518,12 +518,7 @@ MonoBehaviour:
     Layers:
       serializedVersion: 2
       m_Bits: 4294967295
-    Categories:
-    - place
-    - person
-    - creature
-    - restricted
-    - stranger
+    Categories: []
     RequireLineOfSight: 0
     Cap: 24
   NoticeNearby: 0
@@ -537,6 +532,13 @@ MonoBehaviour:
     RequireLineOfSight: 0
     Cap: 8
   Handlers: []
+  OnlyActions: []
+  TargetCategories:
+  - place
+  - person
+  - creature
+  - restricted
+  - stranger
 --- !u!114 &26649339
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5209,9 +5211,7 @@ MonoBehaviour:
     Layers:
       serializedVersion: 2
       m_Bits: 4294967295
-    Categories:
-    - item
-    - place
+    Categories: []
     RequireLineOfSight: 0
     Cap: 24
   NoticeNearby: 0
@@ -5225,6 +5225,12 @@ MonoBehaviour:
     RequireLineOfSight: 0
     Cap: 8
   Handlers: []
+  OnlyActions: []
+  TargetCategories:
+  - item
+  - place
+  - quest
+  - guard
 --- !u!114 &278608664
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -18030,12 +18036,7 @@ MonoBehaviour:
     Layers:
       serializedVersion: 2
       m_Bits: 4294967295
-    Categories:
-    - place
-    - person
-    - creature
-    - restricted
-    - stranger
+    Categories: []
     RequireLineOfSight: 0
     Cap: 24
   NoticeNearby: 0
@@ -18049,6 +18050,14 @@ MonoBehaviour:
     RequireLineOfSight: 0
     Cap: 8
   Handlers: []
+  OnlyActions: []
+  TargetCategories:
+  - place
+  - person
+  - creature
+  - restricted
+  - stranger
+  - quest
 --- !u!114 &744525020
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -32925,10 +32934,7 @@ MonoBehaviour:
     Layers:
       serializedVersion: 2
       m_Bits: 4294967295
-    Categories:
-    - place
-    - person
-    - restricted
+    Categories: []
     RequireLineOfSight: 0
     Cap: 24
   NoticeNearby: 0
@@ -32942,6 +32948,12 @@ MonoBehaviour:
     RequireLineOfSight: 0
     Cap: 8
   Handlers: []
+  OnlyActions: []
+  TargetCategories:
+  - place
+  - person
+  - restricted
+  - quest
 --- !u!114 &1563620967
 MonoBehaviour:
   m_ObjectHideFlags: 0
