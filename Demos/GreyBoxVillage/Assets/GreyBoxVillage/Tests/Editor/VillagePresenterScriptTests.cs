@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Linq;
+using Agenerela.Providers;
 using Demos.GreyBoxVillage.Editor;
 using Demos.Shared;
 using NUnit.Framework;
@@ -24,7 +25,7 @@ namespace Demos.GreyBoxVillage.Tests
         // How long a key may take to get an agent asked, in game seconds ("a few seconds").
         private const float AskedWithin = 6f;
 
-        private FakeVillageConfig config;
+        private ScriptedProviderConfig config;
         private VillageCommands commands;
         private VillagePresenter presenter;
 
@@ -61,8 +62,8 @@ namespace Demos.GreyBoxVillage.Tests
             presenter = commands.Presenter;
             Assert.That(presenter, Is.Not.Null, "The village has no presenter.");
             Assert.That(commands.Minds, NUnit.Framework.Has.All.Not.Null);
-            config = ScriptableObject.CreateInstance<FakeVillageConfig>();
-            config.Fake = new FakeVillageProvider(FakeVillageProvider.Decision("none", "no_target")) { Script = PresenterScript.Answer };
+            config = ScriptableObject.CreateInstance<ScriptedProviderConfig>();
+            config.Scripted.Callback = PresenterScript.Answer;
             commands.UseProvider(config);
             // The quiet timers would only add "none"s between the stages.
             foreach (var mind in commands.Minds)

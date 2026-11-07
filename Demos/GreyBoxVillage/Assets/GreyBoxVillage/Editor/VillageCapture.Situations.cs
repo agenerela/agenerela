@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Agenerela.Providers;
 using Demos.Shared;
 using UnityEditor;
 using UnityEngine;
@@ -33,7 +34,8 @@ namespace Demos.GreyBoxVillage.Editor
             Directory.CreateDirectory(folder);
             Application.targetFrameRate = 30;
             var commands = Object.FindFirstObjectByType<VillageCommands>();
-            var config = ScriptableObject.CreateInstance<CaptureProviderConfig>();
+            var config = ScriptableObject.CreateInstance<ScriptedProviderConfig>();
+            config.Scripted.Otherwise(ScriptedReply.Decide("none", "no_target", "Good day."));
             var panel = Resources.Load<PanelSettings>("VillagePanelSettings");
             var camera = Camera.main;
             var saved = (panel.targetTexture, panel.clearColor, panel.colorClearValue);
@@ -57,13 +59,13 @@ namespace Demos.GreyBoxVillage.Editor
 
         // The wolf at the gate, the thief chased, the fire fought, and night at the shut gate, with
         // the presenter's panel showing throughout.
-        private static IEnumerable<object> Situations(VillageCommands commands, CaptureProviderConfig config, string folder,
+        private static IEnumerable<object> Situations(VillageCommands commands, ScriptedProviderConfig config, string folder,
             string size, RenderTexture world, RenderTexture ui)
         {
             var presenter = commands.Presenter;
             var scripted = config.Scripted;
-            scripted.Fail = null;
-            scripted.Answer = PresenterScript.Answer;
+            scripted.Otherwise(ScriptedReply.Decide("none", "no_target", "Good day."));
+            scripted.Callback = PresenterScript.Answer;
             var events = commands.GetComponent<VillageEvents>();
             if (events != null) events.enabled = true;
             foreach (var mind in commands.Minds)
@@ -131,7 +133,7 @@ namespace Demos.GreyBoxVillage.Editor
 
             presenter.Press(Key.F1);
             if (presenter.PanelShown) presenter.TogglePanel();
-            scripted.Answer = null;
+            scripted.Callback = null;
             foreach (var mind in commands.Minds)
                 if (mind.Senses != null) mind.Senses.enabled = false;
             if (events != null) events.enabled = false;

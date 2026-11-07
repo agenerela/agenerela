@@ -32,8 +32,8 @@ namespace Demos.GreyBoxVillage.Tests
         private VillageFire fire;
         private NightWatch watch;
         private VillageGate gate;
-        private FakeVillageProvider provider;
-        private FakeVillageConfig config;
+        private ScriptedProvider provider;
+        private ScriptedProviderConfig config;
         private ProviderConfig original;
         private float hour;
 
@@ -55,9 +55,8 @@ namespace Demos.GreyBoxVillage.Tests
             watch = wren.GetComponent<NightWatch>();
             gate = watch.Gate;
             original = bram.Behaviour.Provider;
-            provider = new FakeVillageProvider(FakeVillageProvider.Decision("none", "no_target"));
-            config = ScriptableObject.CreateInstance<FakeVillageConfig>();
-            config.Fake = provider;
+            config = ScriptableObject.CreateInstance<ScriptedProviderConfig>();
+            provider = config.Scripted.Otherwise(ScriptedReply.Decide("none", "no_target", "Understood."));
             commands.UseProvider(config);
             hour = commands.Day.TimeOfDay;
             commands.Day.TimeOfDay = 0.45f;
@@ -97,9 +96,7 @@ namespace Demos.GreyBoxVillage.Tests
         [Test]
         public async Task TheThiefRobsOdileWhoCallsAGuardWithHerOwnWords()
         {
-            provider.Script = r => r.SystemPrompt.Contains("You are Odile")
-                ? FakeVillageProvider.Decision("call_guard", "wren", "Wren, he has my bread!")
-                : FakeVillageProvider.Decision("none", "no_target");
+            provider.When("Odile", null, ScriptedReply.Decide("call_guard", "wren", "Wren, he has my bread!"));
             thief.Begin();
             thief.Grab();
             Assert.That(thief.IsRunning, Is.True);
@@ -166,7 +163,7 @@ namespace Demos.GreyBoxVillage.Tests
         public async Task CallGuardTakesOnlyAGuard()
         {
             thief.Begin();
-            provider.Reply = FakeVillageProvider.Decision("call_guard", "apple", "Help!");
+            provider.Otherwise(ScriptedReply.Decide("call_guard", "apple", "Help!"));
             thief.Grab();
             await Idle();
             var record = Records("Odile").Single();
@@ -223,7 +220,7 @@ namespace Demos.GreyBoxVillage.Tests
             await Idle();
             thief.transform.position = wren.transform.position + new Vector3(0, 0, -8f);
             Physics.SyncTransforms();
-            provider.Reply = FakeVillageProvider.Decision("chase", "thief", "Stop, thief!");
+            provider.Otherwise(ScriptedReply.Decide("chase", "thief", "Stop, thief!"));
             await wren.HearPlayerAsync("After him!");
             Assert.That(wren.Last.Outcome, Is.EqualTo("executed"));
             Assert.That(wrenBody.IsChasing, Is.True);
@@ -247,7 +244,7 @@ namespace Demos.GreyBoxVillage.Tests
             await Idle();
             thief.transform.position = bram.transform.position + new Vector3(0, 0, 8f);
             Physics.SyncTransforms();
-            provider.Reply = FakeVillageProvider.Decision("attack_target", "thief", "Stop!");
+            provider.Otherwise(ScriptedReply.Decide("attack_target", "thief", "Stop!"));
             await bram.HearPlayerAsync("Get him!");
             Assert.That(bram.Last.Outcome, Is.EqualTo("executed"));
             Assert.That(bramBody.IsChasing, Is.True, "An attack on a running thief must run after it.");
@@ -425,13 +422,13 @@ namespace Demos.GreyBoxVillage.Tests
             Assert.That(wren.Last.OfferedActions, Does.Not.Contain("patrol"), "The watch stays at the gate.");
             Assert.That(wren.Last.Observations, Does.Contain("The village gate is shut for the night."));
 
-            provider.Reply = FakeVillageProvider.Decision("open_gate", "no_target", "In you come.");
+            provider.Otherwise(ScriptedReply.Decide("open_gate", "no_target", "In you come."));
             await wren.HearPlayerAsync("Let me in!");
             Assert.That(wren.Last.OfferedActions, Does.Contain("open_gate").And.Not.Contain("close_gate"));
             Assert.That(wren.Last.Outcome, Is.EqualTo("executed"));
             Assert.That(gate.IsOpen, Is.True);
 
-            provider.Reply = FakeVillageProvider.Decision("close_gate", "no_target", "Barred.");
+            provider.Otherwise(ScriptedReply.Decide("close_gate", "no_target", "Barred."));
             await wren.HearPlayerAsync("Shut it again.");
             Assert.That(wren.Last.OfferedActions, Does.Contain("close_gate").And.Not.Contain("open_gate"));
             Assert.That(gate.IsOpen, Is.False);
@@ -445,9 +442,7 @@ namespace Demos.GreyBoxVillage.Tests
             await wren.HearPlayerAsync("Hello.");
             Assert.That(wren.Last.OfferedActions, Does.Not.Contain("fetch_water"));
 
-            provider.Script = r => r.SystemPrompt.Contains("You are Wren")
-                ? FakeVillageProvider.Decision("fetch_water", "no_target", "Water!")
-                : FakeVillageProvider.Decision("none", "no_target");
+            provider.When("Wren", null, ScriptedReply.Decide("fetch_water", "no_target", "Water!"));
             fire.Ignite();
             Assert.That(fire.IsBurning, Is.True);
             await Idle();
@@ -498,11 +493,12 @@ namespace Demos.GreyBoxVillage.Tests
             alarm.Rang += Count;
             try
             {
-                provider.Reply = FakeVillageProvider.Decision("sound_alarm", "no_target", "To arms!");
+                provider.Otherwise(ScriptedReply.Decide("sound_alarm", "no_target", "To arms!"));
                 provider.Hold = true;
                 var first = bram.HearPlayerAsync("Raiders!");
-                for (int i = 0; i < 50 && provider.Calls == 0; i++) await Task.Delay(10);
+                for (int i = 0; i < 50 && provider.RequestCount == 0; i++) await Task.Delay(10);
                 var second = wren.HearPlayerAsync("Raiders!");
+                provider.Hold = false;
                 provider.Release();
                 await first;
                 await second;
@@ -526,12 +522,14 @@ namespace Demos.GreyBoxVillage.Tests
         [Test]
         public async Task AResetDropsADecisionStillWithTheModel()
         {
-            provider.Reply = FakeVillageProvider.Decision("follow_player", "no_target");
+            provider.Otherwise(ScriptedReply.Decide("follow_player", "no_target", "Understood."));
             provider.Hold = true;
             var asking = bram.HearPlayerAsync("Walk with me.");
-            for (int i = 0; i < 50 && provider.Calls == 0; i++) await Task.Delay(10);
+            for (int i = 0; i < 50 && provider.RequestCount == 0; i++) await Task.Delay(10);
             commands.ResetAgents();
-            provider.Release();
+            // The reset cancels the old request, so the provider is left nothing to answer.
+            Assert.That(provider.HeldCount, Is.Zero, "The reset left the old agent's request with the model.");
+            provider.Hold = false;
             await asking;
             Assert.That(bramBody.IsFollowing, Is.False, "An answer for the agent before the reset must not run.");
             Assert.That(bram.IsDeciding, Is.False);
@@ -543,18 +541,19 @@ namespace Demos.GreyBoxVillage.Tests
         [Test]
         public async Task AResetFreesTheQueueWithoutWaitingForTheOldAnswer()
         {
-            provider.Reply = FakeVillageProvider.Decision("follow_player", "no_target");
+            provider.Otherwise(ScriptedReply.Decide("follow_player", "no_target", "Understood."));
             provider.Hold = true;
             var stale = bram.HearPlayerAsync("Walk with me.");
-            for (int i = 0; i < 50 && provider.Calls == 0; i++) await Task.Delay(10);
-            Assert.That(provider.Calls, Is.EqualTo(1), "The first line never reached the provider.");
+            for (int i = 0; i < 50 && provider.RequestCount == 0; i++) await Task.Delay(10);
+            Assert.That(provider.RequestCount, Is.EqualTo(1), "The first line never reached the provider.");
             commands.ResetAgents();
 
-            provider.Reply = FakeVillageProvider.Decision("none", "no_target", "Morning.");
+            provider.Hold = false;
+            provider.Otherwise(ScriptedReply.Decide("none", "no_target", "Morning."));
             var fresh = bram.HearPlayerAsync("Hello?").GetAwaiter();
             for (int i = 0; i < 200 && !fresh.IsCompleted; i++) await Task.Delay(10);
             Assert.That(fresh.IsCompleted, Is.True, "The fresh line waited behind the old agent's request, which was never released.");
-            Assert.That(provider.Calls, Is.EqualTo(2));
+            Assert.That(provider.RequestCount, Is.EqualTo(2));
             Assert.That(bram.Last.Outcome, Is.EqualTo("none"));
             await stale;
             Assert.That(bramBody.IsFollowing, Is.False, "The old agent's answer ran after the reset.");
@@ -620,7 +619,7 @@ namespace Demos.GreyBoxVillage.Tests
             await wren.HearPlayerAsync("Let me in!");
             var offered = commands.Recorder.Records.SelectMany(r => r.OfferedActions).ToList();
             Assert.That(offered, Does.Contain("chase").And.Contain("call_guard").And.Contain("fetch_water").And.Contain("open_gate"));
-            provider.Reply = FakeVillageProvider.Decision("open_gate", "no_target");
+            provider.Otherwise(ScriptedReply.Decide("open_gate", "no_target", "Understood."));
             await wren.HearPlayerAsync("Let me in!");
             await wren.HearPlayerAsync("Thanks.");
             Assert.That(wren.Last.OfferedActions, Does.Contain("close_gate"));

@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using Agenerela.Providers;
 using Demos.Shared;
 using NUnit.Framework;
 using UnityEditor;
@@ -37,7 +38,7 @@ namespace Demos.GreyBoxVillage.Tests
             Root + "/Agents/Hale.asset", Root + "/Agents/VillageOllama.asset", Root + "/Resources/VillagePanelSettings.asset"
         };
 
-        private FakeVillageConfig config;
+        private ScriptedProviderConfig config;
 
         private static string Snapshot(string path)
         {
@@ -59,8 +60,8 @@ namespace Demos.GreyBoxVillage.Tests
             yield return new EnterPlayMode();
             yield return null;
             var commands = UnityEngine.Object.FindFirstObjectByType<VillageCommands>();
-            config = ScriptableObject.CreateInstance<FakeVillageConfig>();
-            config.Fake = new FakeVillageProvider(FakeVillageProvider.Decision("none", "no_target"));
+            config = ScriptableObject.CreateInstance<ScriptedProviderConfig>();
+            config.Scripted.Otherwise(ScriptedReply.Decide("none", "no_target", "Understood."));
             commands.UseProvider(config);
             var cycle = UnityEngine.Object.FindFirstObjectByType<DayNightCycle>();
             var sky = AssetDatabase.LoadAssetAtPath<Material>(Watched[0]);

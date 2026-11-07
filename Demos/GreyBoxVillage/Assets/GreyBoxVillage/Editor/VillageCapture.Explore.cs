@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using Agenerela.Providers;
 using Demos.Shared;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -32,7 +33,8 @@ namespace Demos.GreyBoxVillage.Editor
             Directory.CreateDirectory(folder);
             Application.targetFrameRate = 30;
             var commands = Object.FindFirstObjectByType<VillageCommands>();
-            var config = ScriptableObject.CreateInstance<CaptureProviderConfig>();
+            var config = ScriptableObject.CreateInstance<ScriptedProviderConfig>();
+            config.Scripted.Otherwise(ScriptedReply.Decide("none", "no_target", "Good day."));
             commands.UseProvider(config);
             // Nobody is asked anything: these are views of the village, not of decisions.
             foreach (var mind in commands.Minds)

@@ -26,8 +26,8 @@ namespace Demos.GreyBoxVillage.Tests
         private Exploration exploration;
         private Hermit hermit;
         private VillageSound sound;
-        private FakeVillageProvider provider;
-        private FakeVillageConfig config;
+        private ScriptedProvider provider;
+        private ScriptedProviderConfig config;
         private ProviderConfig original;
         private float hour;
         private Vector3 playerAt;
@@ -45,9 +45,8 @@ namespace Demos.GreyBoxVillage.Tests
             hermit = commands.Hermit;
             sound = commands.Sound;
             original = bram.Behaviour.Provider;
-            provider = new FakeVillageProvider(FakeVillageProvider.Decision("none", "no_target"));
-            config = ScriptableObject.CreateInstance<FakeVillageConfig>();
-            config.Fake = provider;
+            config = ScriptableObject.CreateInstance<ScriptedProviderConfig>();
+            provider = config.Scripted.Otherwise(ScriptedReply.Decide("none", "no_target", "Understood."));
             commands.UseProvider(config);
             hour = commands.Day.TimeOfDay;
             playerAt = commands.Player.position;
