@@ -159,6 +159,25 @@ namespace Demos.GreyBoxVillage.Tests
             Assert.That(Records("Odile").Last().OfferedTargets, Does.Contain("wren").And.Contain("bram"));
         }
 
+        // G13: a guard an earlier source already offers is one target, offered once, as that source
+        // offered it; the same id for another object is still refused.
+        [Test]
+        public void AGuardOfferedTwiceIsOneTarget()
+        {
+            var wrenTargetable = wren.GetComponent<Targetable>();
+            var registry = new TargetRegistry();
+            registry.Register(wrenTargetable.Id, wren.transform, wrenTargetable.Category);
+            new GuardTargetSource(merchant).Collect(null, registry);
+            Assert.That(registry.Ids, Is.EquivalentTo(new[] { "wren", "bram" }));
+            Assert.That(registry.CategoryOf("wren"), Is.EqualTo(wrenTargetable.Category), "The first offer is the one kept.");
+            Assert.That(registry.CategoryOf("bram"), Is.EqualTo(GuardTargetSource.Category));
+
+            var other = new TargetRegistry();
+            other.Register("wren", odile.transform);
+            Assert.Throws<System.ArgumentException>(() => new GuardTargetSource(merchant).Collect(null, other),
+                "Two objects answering to one id were both offered.");
+        }
+
         [Test]
         public async Task CallGuardTakesOnlyAGuard()
         {
