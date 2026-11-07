@@ -57,11 +57,19 @@ namespace Demos.GreyBoxVillage
 
         private AudioSource birds, crickets, rain, steps, market, campfire, bell, fire;
         private readonly List<AudioSource> rivers = new List<AudioSource>();
-        private AudioSource oneShot;
         private readonly Dictionary<string, AudioSource> sources = new Dictionary<string, AudioSource>();
+        // The effects play on voices of their own, so two at once never share one source (the second
+        // would move the first), and each keeps its own volume, scaled by the menu every frame.
+        private const int VoiceCount = 4;
+        private readonly List<AudioSource> voices = new List<AudioSource>();
+        private readonly List<float> voiceVolumes = new List<float>();
+        private int nextVoice;
 
         /// <summary>Every looped source by name (birds, crickets, rain, steps, river, market, campfire, bell, fire), once built.</summary>
         public IReadOnlyDictionary<string, AudioSource> Sources => sources;
+
+        /// <summary>The voices the effects play on (the gate, the bucket, the howl, the owl), once built.</summary>
+        public IReadOnlyList<AudioSource> Effects => voices;
         private bool gateWasOpen = true, wolfWasHidden = true;
         private int splashes;
         private float nextOwl, nextHowl;
@@ -88,7 +96,12 @@ namespace Demos.GreyBoxVillage
             campfire = Loop("campfire", Campfire, CampfireAt, 0f, 2f, 16f);
             bell = Loop("bell", Bell, Alarm != null ? Alarm.transform : null, 0f, 8f, 120f);
             fire = Loop("fire", FireRoar, StallFire != null ? StallFire.transform : null, 0f, 4f, 40f);
-            oneShot = Source("one-shots", null, 1f, 3f, 60f);
+            for (int i = 0; i < VoiceCount; i++)
+            {
+                voices.Add(Source("effect " + i, null, 1f, 3f, 60f));
+                voiceVolumes.Add(0f);
+            }
+            nextVoice = 0;
             if (GateDoors != null) gateWasOpen = GateDoors.IsOpen;
             if (Wolf != null) wolfWasHidden = Wolf.IsHidden;
             if (StallFire != null) splashes = StallFire.Trips;
@@ -127,10 +140,13 @@ namespace Demos.GreyBoxVillage
         {
             foreach (var s in sources.Values)
                 if (s != null) Destroy(s.gameObject);
-            if (oneShot != null) Destroy(oneShot.gameObject);
+            foreach (var s in voices)
+                if (s != null) Destroy(s.gameObject);
             sources.Clear();
             rivers.Clear();
-            birds = crickets = rain = steps = market = campfire = bell = fire = oneShot = null;
+            voices.Clear();
+            voiceVolumes.Clear();
+            birds = crickets = rain = steps = market = campfire = bell = fire = null;
         }
 
         private static void Destroy(GameObject go)
@@ -149,11 +165,25 @@ namespace Demos.GreyBoxVillage
             else if (!on && s.isPlaying) s.Stop();
         }
 
+        // An effect on a voice of its own: a free one from the cursor on, or, with all of them
+        // playing, the one started longest ago. It starts even when muted, so unmuting brings it back.
         private void Once(AudioClip clip, Vector3 at, float volume)
         {
-            if (clip == null || oneShot == null || Gain <= 0f) return;
-            oneShot.transform.position = at;
-            oneShot.PlayOneShot(clip, volume * Gain);
+            if (clip == null || voices.Count == 0) return;
+            int pick = nextVoice;
+            for (int i = 0; i < voices.Count; i++)
+            {
+                int k = (nextVoice + i) % voices.Count;
+                if (!voices[k].isPlaying) { pick = k; break; }
+            }
+            nextVoice = (pick + 1) % voices.Count;
+            var s = voices[pick];
+            s.Stop();
+            s.transform.position = at;
+            s.clip = clip;
+            voiceVolumes[pick] = Mathf.Clamp01(volume);
+            s.volume = voiceVolumes[pick] * Gain;
+            s.Play();
         }
 
         private void Update() => Tick();
@@ -211,6 +241,9 @@ namespace Demos.GreyBoxVillage
                 nextOwl = Time.time + Random.Range(18f, 40f);
                 Once(Owl, OwlAt[Random.Range(0, OwlAt.Length)].position, 0.7f * hush);
             }
+            // The menu reaches an effect already playing, as it reaches every loop.
+            for (int i = 0; i < voices.Count; i++)
+                if (voices[i] != null) voices[i].volume = voiceVolumes[i] * Gain;
             Footsteps();
         }
 

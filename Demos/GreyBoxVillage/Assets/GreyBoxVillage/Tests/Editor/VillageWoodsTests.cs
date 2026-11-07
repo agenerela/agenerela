@@ -238,9 +238,83 @@ namespace Demos.GreyBoxVillage.Tests
             commands.Menu.ToggleMute();
             sound.Tick();
             Assert.That(sound.Sources.Values.Select(s => s.volume), Has.All.EqualTo(0f), "Muted, something still plays.");
+            Assert.That(sound.Effects.Select(s => s.volume), Has.All.EqualTo(0f), "Muted, an effect still plays.");
             commands.Menu.ToggleMute();
             sound.Tick();
             Assert.That(Volume("birds"), Is.EqualTo(birds * 0.5f).Within(1e-4f), "Unmuted, the slider's volume comes back.");
+        }
+
+        // #207's Codex review: an effect played through PlayOneShot kept the volume it started with.
+        [Test]
+        public void AnEffectAlreadyPlayingFollowsTheMenusVolumeAndMute()
+        {
+            var gate = sound.Gate;
+            var clip = AudioClip.Create("test gate", 44100 * 3, 1, 44100, false);
+            try
+            {
+                sound.Gate = clip;
+                sound.Build();
+                commands.Menu.Volume = 1f;
+                sound.Tick();
+                sound.GateDoors.Close();
+                sound.Tick();
+                var voice = sound.Effects.Single(s => s.clip == clip);
+                float loud = voice.volume;
+                Assert.That(loud, Is.GreaterThan(0.5f), "The gate is not heard shutting.");
+
+                commands.Menu.ToggleMute();
+                sound.Tick();
+                Assert.That(voice.volume, Is.Zero, "Muted while the gate creaks, it still creaks.");
+                commands.Menu.ToggleMute();
+                commands.Menu.SetVolume(0.5f);
+                sound.Tick();
+                Assert.That(voice.volume, Is.EqualTo(loud * 0.5f).Within(1e-4f), "A new volume never reaches the creak.");
+            }
+            finally
+            {
+                sound.Gate = gate;
+                Object.DestroyImmediate(clip);
+            }
+        }
+
+        // #207's Codex review: every effect moved one shared source to where it was heard.
+        [Test]
+        public void TwoEffectsAtOnceEachPlayFromTheirOwnPlace()
+        {
+            var gate = sound.Gate;
+            var splash = sound.Splash;
+            var creak = AudioClip.Create("test gate", 44100 * 3, 1, 44100, false);
+            var bucket = AudioClip.Create("test splash", 44100 * 2, 1, 44100, false);
+            // Nobody is asked about this fire: only its buckets are wanted.
+            var events = sound.StallFire.Events;
+            try
+            {
+                sound.StallFire.Events = null;
+                sound.Gate = creak;
+                sound.Splash = bucket;
+                sound.Build();
+                sound.Tick();
+                sound.GateDoors.Close();
+                sound.Tick();
+                sound.StallFire.Ignite();
+                sound.StallFire.Douse();
+                sound.Tick();
+
+                var heardGate = sound.Effects.Single(s => s.clip == creak);
+                var heardSplash = sound.Effects.Single(s => s.clip == bucket);
+                Assert.That(heardGate, Is.Not.SameAs(heardSplash), "The splash took the gate's source.");
+                Assert.That(Vector3.Distance(heardGate.transform.position, sound.GateDoors.transform.position), Is.LessThan(0.01f),
+                    "The gate's creak moved to the fire.");
+                Assert.That(Vector3.Distance(heardSplash.transform.position, sound.StallFire.transform.position), Is.LessThan(0.01f));
+            }
+            finally
+            {
+                sound.StallFire.Events = events;
+                sound.Gate = gate;
+                sound.Splash = splash;
+                Object.DestroyImmediate(creak);
+                Object.DestroyImmediate(bucket);
+            }
         }
 
         [Test]
