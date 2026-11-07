@@ -29,6 +29,11 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **GreyBoxVillageClassic keeps the grey-box village from before v2**, in
+  `Demos/GreyBoxVillageClassic/`: `Demos/GreyBoxVillage` as it stood at 396f266, the commit
+  before #157, with its files and `.meta` GUIDs unchanged, as a Unity project of its own named
+  "GreyBoxVillage Classic". It is kept for comparison and frozen, changing only to keep
+  compiling against the framework.
 - **GreyBoxVillage became Ashford, a village worth exploring** (#153).
   - **Art:** low-poly art built by a Blender script in `Demos/GreyBoxVillage/ArtSource/`, 77
     models on one palette. The grey boxes stay as invisible colliders, so the NavMesh and the
