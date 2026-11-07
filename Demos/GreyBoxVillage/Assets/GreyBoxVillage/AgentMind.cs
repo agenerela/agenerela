@@ -117,6 +117,7 @@ namespace Demos.GreyBoxVillage
             foreach (var guard in Body.Guards()) agent.Guards.Add(guard);
             foreach (var source in Body.TargetSources()) agent.TargetSources.Add(source);
             agent.RefusalStatement = (verdict, ctx) => Body.RefusalLine(verdict);
+            Village.Watch(agent.Provider);
             LastActivityTime = Time.time;
         }
 
@@ -295,7 +296,7 @@ namespace Demos.GreyBoxVillage
             catch (InvalidOperationException e)
             {
                 // No agent can be built, such as from a provider config that is not valid: say so, and stay playable.
-                Village.ReportModel("No agent could be built: " + e.Message);
+                Village.ReportAgentProblem("No agent could be built: " + e.Message);
                 Body.Say("No answer: there is no model to ask.", SpeechKind.Error);
                 LastActivityTime = Time.time;
                 pending = null;
@@ -328,7 +329,6 @@ namespace Demos.GreyBoxVillage
                 // may still answer it): the answer is for an agent that is gone.
                 if (this == null || generation != asking) { gone = true; return; }
                 Village.Recorder.Attach(record, result);
-                Village.ReportModel(result);
                 // A decision that says nothing, or fails, must not leave the last one's line standing.
                 Body.Hush();
                 if (result.Decision == null) ShowError(record, result, asked);
