@@ -539,19 +539,35 @@ namespace Demos.GreyBoxVillage.Tests
 
         // ---- The presenter -------------------------------------------------------------------------
 
-        // G12: the reset replaces each AgentBehaviour, and the new one must keep every setting of the
-        // old, the ones #208 added (Target Categories, Only Actions) and any the framework adds later.
+        // G12: the reset replaces an agent's AgentBehaviour, and the new one must keep every setting of
+        // the old, the ones #208 added (Target Categories, Only Actions) and any the framework adds
+        // later. On an agent of its own, every setting away from its default: the scene's agents have
+        // already been through SetUp's reset, so they cannot show what one loses.
         [Test]
         public void AResetKeepsEveryAgentSetting()
         {
-            var before = commands.Minds.Select(m => JsonUtility.ToJson(m.Behaviour)).ToList();
-            var behaviours = commands.Minds.Select(m => m.Behaviour).ToList();
-            commands.ResetAgents();
-            for (int i = 0; i < commands.Minds.Length; i++)
+            var probe = new GameObject("reset probe");
+            try
             {
-                var mind = commands.Minds[i];
-                Assert.That(mind.Behaviour, Is.Not.SameAs(behaviours[i]), mind.Name + " kept the old component, so its agent and memory.");
-                Assert.That(JsonUtility.ToJson(mind.Behaviour), Is.EqualTo(before[i]), mind.Name + " lost a setting in the reset.");
+                var old = probe.AddComponent<AgentBehaviour>();
+                old.Profile = bram.Behaviour.Profile;
+                old.Provider = config;
+                old.FindTargetsNearby = false;
+                old.Targets = new ProximityTargetSource { Radius = 12f, Cap = 3, RequireLineOfSight = true, Categories = new[] { "place" } };
+                old.NoticeNearby = true;
+                old.Observations = new ProximityObservationSource { Radius = 7f, Cap = 2, RequireLineOfSight = true };
+                old.OnlyActions = new[] { "patrol" };
+                old.TargetCategories = new[] { "place", "creature" };
+                var mind = probe.AddComponent<AgentMind>();
+                string before = JsonUtility.ToJson(old);
+
+                mind.UseProvider(config);
+                Assert.That(mind.Behaviour, Is.Not.SameAs(old), "The reset kept the old component, so its agent and memory.");
+                Assert.That(JsonUtility.ToJson(mind.Behaviour), Is.EqualTo(before), "The reset lost a setting.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(probe);
             }
         }
 
