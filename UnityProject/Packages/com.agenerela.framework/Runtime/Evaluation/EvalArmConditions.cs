@@ -37,6 +37,12 @@ namespace Agenerela.Evaluation
         [JsonProperty("priority")] public string Priority;
         [JsonProperty("observations")] public List<string> Observations = new List<string>();
 
+        /// <summary>
+        /// The arm's <see cref="EvalArm.MaxStatementLength"/>, above which a statement is
+        /// <see cref="ReplyFlag.TooLong"/>; 0 in a report written before reply checks existed.
+        /// </summary>
+        [JsonProperty("maxStatementLength")] public int MaxStatementLength;
+
         /// <summary>The throwaway decisions sent before the arm's first prompt, which no count includes.</summary>
         [JsonProperty("warmUpRequests")] public int WarmUpRequests;
 

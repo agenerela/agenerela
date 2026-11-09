@@ -45,6 +45,13 @@ namespace Agenerela.Evaluation
     /// what the agent chose, not what it said.
     /// </para>
     /// <para>
+    /// <b>What it said</b> is a second score: <see cref="ReplyChecks"/> flags each answer's statement
+    /// that repeats a few-shot line, is empty, is longer than the arm's
+    /// <see cref="EvalArm.MaxStatementLength"/>, or leaks the machinery, into
+    /// <see cref="EvalAnswer.ReplyFlags"/> and <see cref="EvalArmResult.Replies"/>. No flag changes
+    /// an outcome or the accuracy.
+    /// </para>
+    /// <para>
     /// Run it from the main thread. <see cref="Progress"/> says how far it has come. Cancelling
     /// stops it between or during decisions and throws an <see cref="EvalCancelledException"/>,
     /// an <see cref="OperationCanceledException"/> carrying the report as far as it got.
@@ -192,8 +199,8 @@ namespace Agenerela.Evaluation
             var prompts = Prompts();
             RefuseABrokenSet(prompts);
 
-            var a = new ArmRun(ArmA, ProviderOf(ArmA));
-            var b = new ArmRun(ArmB, ProviderOf(ArmB));
+            var a = new ArmRun(ArmA, ProviderOf(ArmA), new ReplyChecks.Checker(Set, Profile, ArmA));
+            var b = new ArmRun(ArmB, ProviderOf(ArmB), new ReplyChecks.Checker(Set, Profile, ArmB));
             if (Order == EvalArmOrder.Interleaved && a.Ollama != null && b.Ollama != null
                 && !OllamaProvider.SameModel(a.Ollama.Model, b.Ollama.Model))
             {
@@ -592,6 +599,15 @@ namespace Agenerela.Evaluation
             run.Result.Add(category, outcome);
             run.Answered(result.Telemetry.Model);
 
+            // The reply checks, a second score: they read the statement and change nothing above.
+            var replyFlags = new List<ReplyFinding>();
+            bool replyChecked = outcome != DecisionOutcome.PipelineError && result.ModelDecision != null;
+            if (replyChecked)
+            {
+                replyFlags = run.Replies.Check(result.ModelDecision.Statement, AsksForStatement(result));
+                run.Result.Replies.Add(replyFlags);
+            }
+
             var t = result.Telemetry;
             return new EvalAnswer
             {
@@ -620,8 +636,18 @@ namespace Agenerela.Evaluation
                 ErrorMessage = t.ErrorMessage,
                 Model = t.Model,
                 LatencySeconds = t.LatencySeconds,
+                ReplyChecked = replyChecked,
+                ReplyFlags = replyFlags,
                 Result = result,
             };
+        }
+
+        // Whether the request's schema had a statement field; a decision's always has, so a result
+        // without its request counts as asking.
+        private static bool AsksForStatement(DecisionResult result)
+        {
+            var fields = result.Request?.Schema?.Fields;
+            return fields == null || fields.Any(f => f != null && f.Name == DecisionSchema.StatementFieldName);
         }
 
         // The arm's own lines, the state's, one per target, then the prompt's own.
@@ -772,11 +798,13 @@ namespace Agenerela.Evaluation
             public readonly OllamaProvider Ollama;
             public readonly EvalArmConditions Conditions;
             public readonly EvalArmResult Result;
+            public readonly ReplyChecks.Checker Replies;
 
-            public ArmRun(EvalArm arm, ILLMProvider provider)
+            public ArmRun(EvalArm arm, ILLMProvider provider, ReplyChecks.Checker replies)
             {
                 Arm = arm;
                 Provider = provider;
+                Replies = replies;
                 Ollama = provider as OllamaProvider;
                 Result = new EvalArmResult { Name = arm.Name };
                 Conditions = new EvalArmConditions
@@ -796,6 +824,7 @@ namespace Agenerela.Evaluation
                     PairTargetsWithActions = arm.Options.PairTargetsWithActions,
                     Priority = arm.Options.Priority.ToString(),
                     Observations = new List<string>(arm.Options.Observations ?? new List<string>()),
+                    MaxStatementLength = arm.MaxStatementLength,
                 };
             }
 

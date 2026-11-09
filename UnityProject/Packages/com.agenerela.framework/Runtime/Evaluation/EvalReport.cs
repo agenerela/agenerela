@@ -47,6 +47,9 @@ namespace Agenerela.Evaluation
         /// <summary>Every answer that was not <see cref="DecisionOutcome.Correct"/>.</summary>
         public IEnumerable<EvalAnswer> NotCorrect => Answers.Where(a => a.Outcome != DecisionOutcome.Correct);
 
+        /// <summary>Every answer whose statement a reply check flagged, whatever its outcome (<see cref="ReplyChecks"/>).</summary>
+        public IEnumerable<EvalAnswer> FlaggedReplies => Answers.Where(a => a.ReplyFlags != null && a.ReplyFlags.Count > 0);
+
         /// <summary>The report as indented JSON with LF line ends.</summary>
         public string ToJson() => PromptSetJson.Write(this);
 
@@ -90,13 +93,18 @@ namespace Agenerela.Evaluation
             return folder;
         }
 
+        private static readonly ReplyFlag[] Flags = { ReplyFlag.Echo, ReplyFlag.Empty, ReplyFlag.TooLong, ReplyFlag.Leak };
+
         private static readonly DecisionOutcome[] Outcomes =
         {
             DecisionOutcome.Correct, DecisionOutcome.WrongLegalAction, DecisionOutcome.ContainedByGuard,
             DecisionOutcome.RejectedWhenActionExpected, DecisionOutcome.PipelineError,
         };
 
-        /// <summary>The Markdown summary: conditions, outcomes, noise check, categories, and every answer that was not correct.</summary>
+        /// <summary>
+        /// The Markdown summary: conditions, outcomes, noise check, categories, every answer that was
+        /// not correct, then the reply checks' counts and every answer they flagged.
+        /// </summary>
         public string ToMarkdown()
         {
             var md = new StringBuilder();
@@ -223,7 +231,58 @@ namespace Agenerela.Evaluation
                 }
             }
 
+            Replies(Line);
             return md.ToString();
+        }
+
+        // The second score: what the reply checks found in the statements, apart from the outcomes.
+        private void Replies(Action<string> line)
+        {
+            line("");
+            line("## Reply checks");
+            line("");
+            if (Answers.All(a => !a.ReplyChecked))
+            {
+                line("No statement was checked: the run had no decisions, or the report was written before reply checks existed.");
+                return;
+            }
+
+            line("A second score, apart from the outcomes and the accuracy, which no flag changes: whether each statement repeats a "
+               + "few-shot line, is empty, is too long, or leaks an id, a field label, a JSON brace or an assistant's phrase.");
+            line("");
+            line("| Check | " + string.Join(" | ", Arms.Select(a => Cell(a.Name))) + " |");
+            line("|---|" + string.Concat(Arms.Select(_ => "---:|")));
+            line("| Checked | " + string.Join(" | ", Arms.Select(a => a.Replies.Checked.ToString(CultureInfo.InvariantCulture))) + " |");
+            foreach (var flag in Flags)
+            {
+                string name = flag.ToString();
+                if (flag == ReplyFlag.TooLong)
+                {
+                    var limits = Conditions.Arms.Select(a => a.MaxStatementLength).Distinct().ToList();
+                    name += limits.Count == 1 ? $" (over {limits[0]} characters)" : " (over each arm's limit)";
+                }
+
+                line($"| {name} | " + string.Join(" | ", Arms.Select(a => a.Replies[flag].ToString(CultureInfo.InvariantCulture))) + " |");
+            }
+
+            line("| **Any flag** | " + string.Join(" | ", Arms.Select(a => $"**{a.Replies.Flagged}**")) + " |");
+            line("");
+
+            var flagged = FlaggedReplies.ToList();
+            if (flagged.Count == 0)
+            {
+                line("No statement was flagged.");
+                return;
+            }
+
+            line("| Arm | Prompt | Outcome | Statement | Flags |");
+            line("|---|---|---|---|---|");
+            foreach (var a in flagged)
+            {
+                string said = string.IsNullOrWhiteSpace(a.ModelStatement) ? "*(empty)*" : Cell(a.ModelStatement);
+                line($"| {Cell(a.Arm)} | {Cell(a.PromptId)} | {a.Outcome} | {said} "
+                   + $"| {Cell(string.Join("; ", a.ReplyFlags.Where(f => f != null)))} |");
+            }
         }
 
         // A table cell: no line breaks, and a | that does not end the cell.
