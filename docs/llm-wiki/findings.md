@@ -1520,3 +1520,324 @@ only the target lists of the actions that need a target (no `no_target`) and of 
 **What would change this.** A paired reply that pairs an action with a target it does not take, on
 any Ollama version; or an Ollama release that rejects a root `anyOf` in `format`. Re-run the probe
 after an upgrade.
+
+### `Agent.Reset` aborts a request Ollama is already working on, and the next decision is normal (9 November 2026)
+
+**What was checked.** #190 G12's `Agent.Reset()` (merged as #219) against a real server, because
+its unit tests use a fake provider only. Three things: the call in flight ends cancelled, Ollama
+stops the request and frees its slot, and the next `DecideAsync` on the same agent returns a normal
+decision. A live check, not an accuracy or latency claim, so it needs no control arm.
+
+**Conditions.** Ollama 0.40.14 on the lead's laptop (RTX 4060 Laptop, 8 GB), on AC power,
+`qwen3.5:2b` alone and fully in VRAM (`size_vram` 2254 of 2254 MB), the shared Ollama lock held, no
+other Unity running. `origin/test` at 61a7744. A throwaway PlayMode test on `LiveGuard`, never
+committed: warm-up, three ordinary decisions (656 ms mean), then three times over: start a
+`DecideAsync`, call `Reset()` 263 ms later, await the call, then decide again on the same agent.
+
+**Result: 3 of 3 on every point.**
+
+| Repeat | The call | Ollama (server log) | Generated before the stop | The next decision |
+|---|---|---|---:|---|
+| 1 | `OperationCanceledException` 7 ms after `Reset()` | `[GIN] 500, 265 ms`, then `srv stop: cancel task` | 16 tokens | `move_to`/`tower`, 770 ms |
+| 2 | the same, 1 ms after | `500, 262 ms`, `cancel task` | 15 tokens | `follow_player`, 869 ms |
+| 3 | the same, 1 ms after | `500, 262 ms`, `cancel task` | 15 tokens | `none`, 875 ms |
+
+- **The request was being generated when it was stopped**, not still queued: llama-server had
+  written 15 or 16 tokens of the reply, and released the slot at once.
+- **The slot was free straight away.** The next decision waited 0 ms in the queue, with nothing
+  ahead of it, and took as long as an ordinary one, so nothing was left running.
+- **Its memory was cleared too.** The cancelled request's prompt was 374 tokens, carrying the three
+  earlier exchanges; the next one was 214.
+- The message was "Agent 'Village Guard' was reset, which cancelled this decision."
+
+**Worth knowing.** Ollama logs a chat its client dropped as HTTP 500, not 499. A request log that
+counts 500s as server errors will count every reset as one.
+
+**What would change this.** An Ollama release that keeps generating after the client drops the
+connection, which would show as the next decision waiting in the queue. Raw output:
+`.scratch/live-runs-1109/` in the session's checkout (`run1-*`, `ResetLiveCheck.cs`).
+
+### `OLLAMA_GO_TEMPLATE=1` keeps the field order, for `Qwen3-4B-Instruct-2507` and `MiniCPM5-2B` (9 November 2026)
+
+A live check of the fix the entry of 5 November suggested ("Why `qwen3:4b-instruct-2507` wrote
+`statement` before `target`"). Not an accuracy claim.
+
+**Setup.** The framework's own request, from the 5 November proxy capture (system prompt, schema
+with `action`, `target`, `statement`, options, `logprobs`), with six stimuli per model. The order
+the schema gives is not alphabetical. Ollama 0.40.14, RTX 4060 Laptop on AC power, one model
+resident at a time, each unloaded after its six (`keep_alive: 0`): `qwen3:4b-instruct-2507-q4_K_M`
+3032 of 3032 MB in VRAM, `MiniCPM5-2B` (`hf.co/openbmb/MiniCPM5-2B-GGUF:Q4_K_M`) 1564 of 1564 MB.
+First on the Ollama app as it normally runs, then on `ollama serve` started by hand with
+`OLLAMA_GO_TEMPLATE=1` and the two variables the app adds (`OLLAMA_CONTEXT_LENGTH=16384`,
+`OLLAMA_NO_CLOUD=0`), then the app restored, with the same server config as before.
+
+| Model | As the app runs (variable unset) | `OLLAMA_GO_TEMPLATE=1` |
+|---|---|---|
+| `qwen3:4b-instruct-2507-q4_K_M` | `selected=gguf_chat_template`, 0 of 6 in order | `selected=go_template`, 6 of 6 in order |
+| `MiniCPM5-2B` | `selected=gguf_chat_template`, 0 of 6 in order | `selected=go_template`, 6 of 6 in order |
+
+Every reply out of order was `action`, `statement`, `target`, the sorted order.
+
+- **Only a variable that is set counts.** Every server log since 3 November prints
+  `OLLAMA_GO_TEMPLATE:true`, the 5 November run included. In 0.40.14's source that is only the
+  default printed when the variable is unset. `goTemplateEnvSet()` (`server/images.go`) skips the
+  rule that prefers the GGUF template only when the variable is set.
+- **`MiniCPM5-2B` confirms the 5 November prediction** that it would come back sorted. On the sorted
+  path it twice wrote just the target's name as the statement (`"statement": "bridge"`) before the
+  target. With the order kept, it wrote a line ("I'll be at the bridge.").
+- **The variable changes two things, not one.** The Go template also formats the prompt in place
+  of the GGUF one, and the 4B's replies changed wording between the two paths. So an A/B with the
+  variable set compares another template as well as another order.
+
+**What it means for the 8 GB shortlist.** `MiniCPM5-2B` can be measured in the framework's order
+only with `OLLAMA_GO_TEMPLATE=1` set on the server, and its result is then a result on the Go
+template. Models on `renderer_parser`, `qwen3.5:2b` among them, never take the GGUF path, set or
+not.
+
+**What would change this.** An Ollama release whose native path passes the schema on as sent, or
+that changes when the GGUF template is preferred. Raw replies: `.scratch/live-runs-1109/run2-*`
+in the session's checkout.
+
+### Listing the actions and targets in the prompt: 58/76 against 56/76 on `qwen3.5:2b`, within noise (9 November 2026)
+
+The first of #193's three switches through the runner (#145), for #151: does
+`DecideOptions.ListActionsAndTargets` help a model that never reads the schema?
+
+**Setup.** The evaluation set (`Assets/Evaluation/`, 76 prompts) and its profile `VillageGuard`,
+`origin/test` at 61a7744. Two arms, interleaved, on one model:
+
+- **A, control:** the defaults (`ListActionsAndTargets` off).
+- **B:** `ListActionsAndTargets = true`, cap 12, so all 11 targets were listed. The actions came with
+  their descriptions. The targets came by id only: the runner's `DeclaredTarget` does not implement
+  `IDescribedTarget`, and in both arms each target's description already reached the model as an
+  observation line.
+
+Everything else was the runner's defaults (grounding guard on, temperature 0). State was told with
+the 5 November wording ("You are following the player."). `qwen3.5:2b` on Ollama 0.40.14, RTX 4060
+Laptop on AC power, 2254 of 2254 MB in VRAM before and after each arm's warm-up and at its end,
+nothing else resident, no other Unity running, the Ollama lock held. 130 s for both arms, after a
+12-prompt slice first (31 s). No warnings and no pipeline errors.
+
+| Outcome | A, list off | B, list on |
+|---|---:|---:|
+| Correct | 56 | 58 |
+| WrongLegalAction | 16 | 16 |
+| ContainedByGuard | 1 | 0 |
+| RejectedWhenActionExpected | 3 | 2 |
+| **Accuracy** | **73.7%** | **76.3%** |
+
+**+2.6 points, within noise** (floor 8.1 at n = 76). No category was beyond its floor:
+command_with_target +9.1 (n 11), conversation +11.1 (9), event +5.3 (19), impossible_request −11.1
+(9), simple_command +11.1 (9), situation −5.3 (19). Arm A matched the `qwen3.5:2b` arm of
+5 November, 56 of 76, on the same Ollama version.
+
+**The answers that moved.** 13 prompts changed answer: 6 became correct, 4 stopped being correct.
+
+- Became correct with the list: "Go back to the shelter." (A `none`), "Stay where you are." (A
+  `none`), "A scout spotted movement near the north tower." (A attacked the wolf, refused by the
+  guard), "The bridge has collapsed." (A walked to the gate) and "You look tired." (A walked to the
+  campfire).
+- Stopped being correct: "Enter the locked cave without opening it." came back `none` with the
+  target `locked_cave`, which the flat schema allows. "The player has reached the shelter." became
+  `none`, said as "Fine day for it.", the idle example's line. "Villagers are gathering in the square
+  tonight." became `none`. The `move_to`/`north_tower` that the guard stopped in A for "The
+  watchtower is unattended." went through in B.
+- Not moved at all: "Wait here.", "Do not move." and "Hold position." are `none` in both arms, as
+  are "The player is heading off on their own.", "The player has gone inside to sleep." and "The
+  square has gone quiet.". The list does not get the 2B to `stop_following` or `follow_player` on
+  these.
+
+**A side count, not scored.** Statements that were an example line word for word: 3 in A ("Strike the
+Wolf." twice, "You can stay put now." once), 5 in B ("Strike the Wolf." three times, "Fine day for
+it." twice). This is the echo G14 is about, and too few to say anything.
+
+**Rule 4.** No example matches a prompt exactly; the runner checks that. One partial overlap holds
+in both arms: `move_to`'s example "Go and stand by the {0}." and target_005 "Go stand at the north
+tower." (noted on 5 November). Both arms answered target_005 correctly.
+
+**What it means.** Nothing to change: listing the actions and targets is no measurable help to
+`qwen3.5:2b` on this set, and it stays off. A larger set, or a model that reads the list better,
+would need its own run.
+
+**What would change this.** A repeat that moves outside the noise floor, on more prompts (#147) or
+on another model. Raw report: `.scratch/live-runs-1109/run3a-report/` in the session's checkout.
+
+### Counter-examples on the evaluation set: 56/76 with them and without, on `qwen3.5:2b` (9 November 2026)
+
+The second of #193's switches through the runner, for #151: does an action's counter-example, a
+line about its subject answered with `none`, cut actions nobody asked for?
+
+**Setup.** `VillageGuard` has no counter-examples, so with it as it is the switch changes nothing.
+With the lead's approval, one was written for each of its four actions, on in-memory copies for this
+run only (the asset is unchanged). Both arms used that profile:
+
+- **A, control:** `DecideOptions.CounterExamples = false`.
+- **B:** the defaults, which show the counter-examples.
+
+The lines. Each was checked word by word against all 76 stimuli and their observations. None
+matches one, and the only content words they share are `well` and `wolf`, the targets the actions'
+own examples already show:
+
+| Action | Counter-example (`{0}` is filled as in the action's example) |
+|---|---|
+| `follow_player` | "My brother likes to wander behind the carts." |
+| `stop_following` | "The old miller never budges from his chair." |
+| `move_to` | "The {0} was built by my grandfather." (shown as "The Well …") |
+| `attack_target` | "The {0} howled at sunset yesterday." (shown as "The Wolf …") |
+
+Everything else as in the entry above: the evaluation set at 61a7744, interleaved, runner defaults,
+the 5 November state wording, `qwen3.5:2b` on Ollama 0.40.14, 2254 of 2254 MB in VRAM before and
+after each warm-up and at each arm's end, on AC power, nothing else resident, the lock held. 139 s.
+No warnings and no pipeline errors. This run and the next one ran on `ollama serve`, started by hand
+with the app's server configuration, so the app's updater could not install 0.40.15 mid-batch. The
+control arm gave the same 76 answers as the entry above's control did on the app.
+
+| Outcome | A, counter-examples off | B, on |
+|---|---:|---:|
+| Correct | 56 | 56 |
+| WrongLegalAction | 16 | 15 |
+| ContainedByGuard | 1 | 2 |
+| RejectedWhenActionExpected | 3 | 3 |
+| **Accuracy** | **73.7%** | **73.7%** |
+
+**+0.0 points, within noise** (floor 8.1). Per category, B − A: command_with_target −9.1 (n 11),
+conversation +11.1 (9), event +5.3 (19), situation −5.3 (19), impossible_request and
+simple_command 0. All within noise.
+
+**Unasked actions.** On the 30 prompts labelled `none`, the model chose an action, before any
+guard, 4 times without the counter-examples and 3 times with them. On the 46 prompts that want an
+action, it answered `none` 10 times without and 11 with. Living Vale's 6/13 → 0/13 (5 November) was
+one idle-style line in its own game, not a counter-example per action, and does not carry over here.
+
+**The four answers that moved.** Became correct: "You look tired." (A walked to the campfire) and
+"The bridge has collapsed." (A walked to the gate), both `none` in B. Stopped being correct: "The
+path ahead is empty." became `move_to`/`bridge`, which the guard contained, and "Approach the
+eastern road." became `none` ("I will not follow you into the unknown.").
+
+**What it means.** Counter-examples, as written here, make no measurable difference to
+`qwen3.5:2b` on this set. They stay empty by default, which is what they are. A set with more
+prompts that tempt an unasked action would test them more sharply than 30 `none` prompts do.
+
+**What would change this.** A run outside the noise floor, with other lines, on more prompts or on
+another model. Raw report: `.scratch/live-runs-1109/run3b-report/` in the session's checkout.
+
+### The idle example for a code-built agent: 59/76 unset against 56/76 set, and the line costs `stop_following` (9 November 2026)
+
+The third of #193's switches through the runner, for #151: does `Agent.IdleExampleStimulus` help an
+agent built in code, which has no idle example unless one is set?
+
+**Setup.** The runner always builds its agents from a profile, so a profile agent (`VillageGuard`)
+stood in for a code-built one, and the idle example was set per call:
+
+- **A:** `IdleExampleStimulus = ""`, no idle example, what a code-built agent sends today.
+- **B:** `IdleExampleStimulus = AgentProfile.DefaultIdleExampleStimulus`, "Nothing has changed
+  since last time.", the line a new profile starts with.
+
+A preview of both prompts showed they differ by that one example line and nothing else. Everything
+else as in the two entries above, on the same `ollama serve`: 0.40.14, 2254 of 2254 MB in VRAM
+throughout, interleaved, 138 s, no warnings and no pipeline errors.
+
+**Rule 4.** The default line partly repeats situation_001, "Nothing has happened for a while.",
+which is labelled `none` too. So the result is given with and without that prompt. Both arms
+answered it `none`.
+
+| Outcome | A, no idle example | B, the default idle example |
+|---|---:|---:|
+| Correct | 59 | 56 |
+| WrongLegalAction | 12 | 15 |
+| ContainedByGuard | 2 | 1 |
+| RejectedWhenActionExpected | 3 | 4 |
+| **Accuracy** | **77.6%** | **73.7%** |
+| Without situation_001 | 58/75, 77.3% | 55/75, 73.3% |
+
+**Overall −3.9 points, within noise** (floor 8.1; without situation_001, −4.0, floor 8.2).
+**simple_command −33.3, beyond noise** (88.9% → 55.6%, n = 9, floor 23.6). The other categories
+were within noise: situation −10.5 (−11.1 without situation_001), conversation +11.1,
+impossible_request +11.1, the rest 0.
+
+**What the idle line did.** With it, the 2B answered `none` to commands it had obeyed without it:
+"Wait here.", "Stay where you are.", "Do not move." and "The player has gone inside to sleep.", all
+`stop_following`, and the night-watch situation, a `move_to`. Its statements still said it would
+stay ("I will stand guard here until further notice."). It also fixed two `none` prompts: "You look
+tired." (A walked to the campfire) and "Attack Godzilla." (A attacked the wolf, contained by the
+guard). On the 30 `none` prompts it acted 5 times without the line and 3 times with it. On the 46
+that want an action, it answered `none` 6 times without and 10 times with.
+
+**It was also repeated.** With the line, 10 of the 76 statements were "Nothing has changed since
+last time." word for word, against none without it. That is the echo #190 G14 is about.
+
+**An observation across runs, not a result.** The control arms of the two entries above had the
+profile's own idle example, "Fine day for it.", and scored 56/76 with simple_command at 55.6%, the
+same as B here. At temperature 0 this machine gave identical answers on repeat (both controls
+matched answer for answer). So the cost to `stop_following` may come from any idle `none` example,
+whatever its text. The next entry runs #151's "idle example with vs without" A/B on the profile's
+own line, and it does.
+
+**What it means.** Nothing to switch on. The one difference beyond the noise floor is in favour of
+the default that already holds, a code-built agent with no idle example. It is one category of 9
+prompts, so it is worth repeating on #147's larger set before anyone removes the profile's idle
+example.
+
+**What would change this.** A repeat on more `stop_following` prompts, or on another model, where
+the idle line no longer costs them. Raw report: `.scratch/live-runs-1109/run3c-report/` in the
+session's checkout.
+
+### The idle example on the profile's own line: 56/76 with it against 59/76 without, and `stop_following` 2/7 against 6/7 (9 November 2026)
+
+#151's "idle example with vs without", run the same evening because the entry above suggested the
+cost to `stop_following` came from any idle `none` example, whatever its text.
+
+**Setup.** `VillageGuard` as it is, so the idle example is its own line, "Fine day for it.". Two arms,
+interleaved, on one model:
+
+- **A, control:** the defaults, which show the profile's line.
+- **B:** `IdleExampleStimulus = ""`, which leaves it out.
+
+A preview showed the two prompts differ by that one line. Otherwise as in the entries above: the
+evaluation set at 61a7744, runner defaults, the 5 November state wording, `qwen3.5:2b` on Ollama
+0.40.14 through a hand-started `ollama serve` with the app's server configuration, 2254 of 2254 MB in
+VRAM throughout, on AC power, nothing else resident, no other Unity running, the lock held. 123 s,
+no warnings and no pipeline errors. No example line matches a prompt; "Fine day for it." shares no
+words with any.
+
+| Outcome | A, "Fine day for it." | B, no idle example |
+|---|---:|---:|
+| Correct | 56 | 59 |
+| WrongLegalAction | 16 | 12 |
+| ContainedByGuard | 1 | 2 |
+| RejectedWhenActionExpected | 3 | 3 |
+| **Accuracy** | **73.7%** | **77.6%** |
+
+**Overall +3.9 points without it, within noise** (floor 8.1). **simple_command +33.3, beyond noise**
+(55.6% → 88.9%, n = 9, floor 23.6). The other categories: impossible_request −11.1, situation +5.3,
+the rest 0, all within noise.
+
+**`stop_following`: 2 of 7 right with the idle line, 6 of 7 without.** The five answers that moved
+were all one of two kinds:
+
+- Four commands went from `none` to `stop_following` without the line: "Wait here.", "Stay where you
+  are.", "Do not move." and "The player has gone inside to sleep.". With it, the model said it would
+  stay ("I will wait for your next command.") but chose `none`. "Hold position." is `none` in both.
+- One went the other way: "Attack Godzilla." was `none` with the line and `attack_target`/`wolf`
+  without it, which the grounding guard contained.
+
+On the 30 `none` prompts the model acted 4 times with the line and 5 without (Godzilla). On the 46
+that want an action, it answered `none` 10 times with the line and 6 without. "Fine day for it." was
+never repeated as a statement. Other example lines were, 3 times with the line and once without.
+
+**The same answers as the runs before.** At temperature 0, arm A gave the same 76 answers as the
+controls of the `ListActionsAndTargets` and counter-example runs, and arm B the same 76 as the
+code-built run's unset arm. So the default line, "Nothing has changed since last time.", and the
+profile's line cost `stop_following` the same four prompts. The entry above's observation across
+runs is now this A/B.
+
+**What it means.** On `qwen3.5:2b`, an idle `none` example makes "stay here" commands come back as
+`none`, by a margin beyond the noise floor in that category, while the whole set moves within noise.
+It is the first result of the evening that points at a default, since every profile starts with an
+idle example (`AgentProfile.DefaultIdleExampleStimulus`). Changing that is the lead's decision, in its
+own pull request. The category has 9 prompts, so repeat it on #147's larger set, and on another
+model, before deciding. Nothing here changes code.
+
+**What would change this.** A repeat on more `stop_following` prompts, or on another model, where the
+idle line no longer turns them into `none`. Raw report: `.scratch/live-runs-1109/run3d-report/` in
+the session's checkout.
