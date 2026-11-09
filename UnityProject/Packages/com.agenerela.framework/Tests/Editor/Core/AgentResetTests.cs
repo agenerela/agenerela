@@ -340,6 +340,34 @@ namespace Agenerela.Tests
         }
 
         [Test]
+        public async Task AResetByTheNextCallInTheBacklogCancelsTheCallThatHandedItTheTurn()
+        {
+            // The first call's answer arrives, and ending it hands the backlog turn to the second,
+            // which runs on the spot and is reset by a guard. The first has its decision in hand,
+            // but it has not reached its caller, so it ends cancelled too (Codex, round 1).
+            var fake = Held();
+            var agent = Fixtures.VillageGuard(fake);
+            agent.Backlog = DecisionBacklog.QueueWithCap(3);
+            agent.Guards.Add(new FakeGuard("resets on the second call", input =>
+            {
+                if (input.Context.Stimulus.Contains("Walk away"))
+                {
+                    agent.Reset();
+                }
+
+                return GuardVerdict.Pass;
+            }));
+
+            var first = agent.DecideAsync("Go to the tower.");
+            var second = agent.DecideAsync("Walk away from me.");
+            fake.Hold = false;
+            fake.Release();
+
+            await Cancelled(second);
+            await Cancelled(first);
+        }
+
+        [Test]
         public async Task AMemoryWithoutIClearableMemoryKeepsWhatItHoldsAndAWarningSaysSo()
         {
             var fake = new FakeProvider(GoToTheTower);

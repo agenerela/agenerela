@@ -948,7 +948,13 @@ namespace Agenerela
             var linked = caller.CanBeCanceled ? CancellationTokenSource.CreateLinkedTokenSource(caller, reset) : null;
             try
             {
-                return await InTurn(backlog, stimulus, call, idleExample, observations, linked?.Token ?? reset, reset);
+                var result = await InTurn(backlog, stimulus, call, idleExample, observations, linked?.Token ?? reset, reset);
+
+                // Ending a call hands its backlog turn to the next, which may run on the spot and
+                // reset the agent from a guard before this result reaches the caller: then this call
+                // is a reset one too, and must not hand back a decision from before it.
+                reset.ThrowIfCancellationRequested();
+                return result;
             }
             catch (OperationCanceledException e) when (!caller.IsCancellationRequested && reset.IsCancellationRequested)
             {
