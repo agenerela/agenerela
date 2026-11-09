@@ -165,6 +165,13 @@ namespace Demos.GreyBoxVillage
             Input.Submitted += OnSubmitted;
             if (Inventory != null) Inventory.Changed += OnInventoryChanged;
             if (Quests != null) Quests.Message += OnQuestMessage;
+            // Watched before a disable, followed again after it.
+            if (Health != null)
+            {
+                Health.Changed -= OnHealthChanged;
+                Health.Changed += OnHealthChanged;
+                wasDown = Health.IsDown;
+            }
         }
 
         private void OnDisable()
