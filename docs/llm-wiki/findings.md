@@ -1335,7 +1335,11 @@ harness bugs, each fixed before the next run, so the runs did not all run the sa
   run 3, Hale's `send_guard` read 0.736 at the target (it wanted "arms…"), below 0.8.
 - **Bram answered "Quiet night, Bram?" with "Fine day for it.", 4 of 4.** That is the stimulus
   of the `none` action's few-shot example, copied as the statement, at night. Not measured;
-  Phase 4 is where to count how often an example's text comes back as the answer.
+  Phase 4 is where to count how often an example's text comes back as the answer. Since then #218 (9 November) lets an example
+  carry its own statement (`Statement` on `[Example]` and `[CounterExample]`, `IdleExampleStatement`,
+  `DecideOptions.ExampleStatements`), so an example no longer has to show its stimulus's text as
+  the reply. Written statements and their effect are unmeasured; the A/B is listed under "Waiting"
+  in `docs/live-runs.md`.
 - **Latency.** 65 warm decisions took 0.48–2.33 s, median 0.95 s. With three agents asked at
   once, the last waited up to 3.40 s in the queue. The first request of a fresh session took
   7.1 and 9.9 s (runs 1 and 3), while the model loaded.
