@@ -92,6 +92,12 @@ a control arm on the 200+ prompt set, and each recorded here:
    idle example, with and without the negative example, the number of examples per action,
    and their order. If the idle example does not help, `AgentProfile.IdleExampleStimulus`
    (#15) can go.
+   *Update, 9 November 2026:* the idle example's with-vs-without has now run once, on the 76
+   evaluation prompts and `qwen3.5:2b`: 56/76 with it, 59/76 without, and `stop_following` 2/7
+   against 6/7 (findings, "The idle example on the profile's own line"). That is inside the noise
+   floor overall, from one model, and it does not settle whether the line should go. Counter-examples
+   and the action/target list were run the same evening (both inside the noise floor too). The other
+   rules in this list are still owed.
 4. Levers never tried: examples picked by similarity to the stimulus, and a hand-written
    block per profile (#10's extension points).
 
