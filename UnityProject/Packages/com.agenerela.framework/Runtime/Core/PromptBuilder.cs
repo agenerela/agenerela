@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Text.RegularExpressions;
 using Agenerela.Providers;
 
 namespace Agenerela
@@ -31,10 +32,12 @@ namespace Agenerela
     /// byte-identical output, which the golden-file test depends on.
     /// </para>
     /// <para>
-    /// One line is added only on request: the target rule, the fallback for a provider that
-    /// cannot report token probabilities, without which <see cref="TargetGroundingGuard"/> cannot
-    /// run (build plan §2.5, DR-016). With <see cref="PromptOptions.TargetRule"/> off, the default and
-    /// what <c>Agent</c> sends to Ollama, the prompt is exactly what it was without it.
+    /// Two additions are made only on request. The target rule is one line, the fallback for a
+    /// provider that cannot report token probabilities, without which <see cref="TargetGroundingGuard"/>
+    /// cannot run (build plan §2.5, DR-016). The action and target list is for a provider that never
+    /// reads the schema (#190). With <see cref="PromptOptions.TargetRule"/> and
+    /// <see cref="PromptOptions.ListActionsAndTargets"/> off, the defaults and what <c>Agent</c> sends
+    /// to Ollama, the prompt is exactly what it was without them.
     /// </para>
     /// </remarks>
     public static class PromptBuilder
@@ -57,6 +60,12 @@ namespace Agenerela
             ", and say it is not here. Never act on a different thing instead.";
 
         private const string ObservationsHeader = "What you know right now:";
+
+        // The action and target list's headings (#190). "Allowed" echoes the instruction line's
+        // "from the allowed list"; the target list is the "listed targets" it names. New and
+        // unmeasured, and here alone so the A/B can change them in one place.
+        private const string ActionsHeader = "Allowed actions:";
+        private const string TargetsHeader = "Targets:";
 
         // The user turn of a refusal line's request (#109): {0} is the stimulus, {1} the guard's
         // reason. New and unmeasured. It changes only what is said after a refusal, never which
@@ -83,6 +92,7 @@ namespace Agenerela
         /// <param name="options">Null uses the defaults.</param>
         /// <exception cref="ArgumentNullException"><paramref name="ctx"/> or <paramref name="schema"/> is null.</exception>
         /// <exception cref="ArgumentException"><see cref="PromptOptions.StimulusLabel"/> is null, empty or whitespace.</exception>
+        /// <exception cref="ArgumentOutOfRangeException"><see cref="PromptOptions.MaxListedTargets"/> is negative.</exception>
         public static DecisionRequest Build(
             AgentContext ctx,
             DecisionSchema schema,
@@ -109,9 +119,17 @@ namespace Agenerela
                     nameof(options));
             }
 
+            if (options.MaxListedTargets < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), options.MaxListedTargets,
+                    "PromptOptions.MaxListedTargets cannot be negative. 0 lists no targets.");
+            }
+
+            string choices = options.ListActionsAndTargets ? ChoicesBlock(ctx, schema, options.MaxListedTargets) : null;
+
             return new DecisionRequest
             {
-                SystemPrompt = SystemPrompt(ctx.Identity, options.TargetRule ? TargetRuleLine(schema) : null),
+                SystemPrompt = SystemPrompt(ctx.Identity, choices, options.TargetRule ? TargetRuleLine(schema) : null),
                 FewShotBlock = fewShotBlock,
                 Observations = ObservationsBlock(ctx.Observations),
                 // Copied, so a memory strategy changing its list afterwards does not change a
@@ -119,6 +137,9 @@ namespace Agenerela
                 History = new ReadOnlyCollection<string>(new List<string>(history ?? Array.Empty<string>())),
                 Stimulus = $"{options.StimulusLabel}: \"{ctx.Stimulus}\"",
                 Schema = schema,
+                AgentName = ctx.Identity?.Name,
+                StimulusText = ctx.Stimulus,
+                StimulusLabel = options.StimulusLabel,
             };
         }
 
@@ -133,6 +154,9 @@ namespace Agenerela
                 SystemPrompt = decided.SystemPrompt,
                 Stimulus = string.Format(RefusalLineTemplate, ctx.Stimulus, EndSentence(verdict.ModelReason.Trim())),
                 Schema = DecisionSchema.StatementOnly(),
+                AgentName = decided.AgentName,
+                StimulusText = decided.StimulusText,
+                StimulusLabel = decided.StimulusLabel,
             };
         }
 
@@ -168,11 +192,78 @@ namespace Agenerela
             return null;
         }
 
-        // Who the agent is, its goals if it has any, then the fixed instruction line, then the
-        // target rule when there is one.
-        private static string SystemPrompt(AgentIdentity identity, string targetRule)
+        // The actions the schema offers, each with its description, then the targets it offers,
+        // each with its own line when it has one (#190). Built from the schema rather than from
+        // the registries, so the list and the enum cannot disagree. Every action is listed; the
+        // targets stop at maxTargets.
+        private static string ChoicesBlock(AgentContext ctx, DecisionSchema schema, int maxTargets)
         {
-            var lines = new List<string>(4);
+            var lines = new List<string>();
+
+            foreach (var field in schema.Fields)
+            {
+                if (field.AllowedValues == null) continue;
+
+                if (field.Name == DecisionSchema.ActionFieldName)
+                {
+                    lines.Add(ActionsHeader);
+                    foreach (string id in field.AllowedValues)
+                    {
+                        lines.Add(Entry(id, id == ActionRegistry.None ? DecisionSchema.NoneDescription : DescriptionOf(ctx.Actions, id)));
+                    }
+                }
+                else if (field.Name == DecisionSchema.TargetFieldName)
+                {
+                    var targets = new List<string>();
+                    foreach (string id in field.AllowedValues)
+                    {
+                        if (targets.Count == maxTargets) break;
+                        if (id == TargetRegistry.NoTarget) continue;
+
+                        ctx.Targets.TryGet(id, out object target);
+                        targets.Add(Entry(id, (target as IDescribedTarget)?.Description));
+                    }
+
+                    if (targets.Count > 0)
+                    {
+                        lines.Add(TargetsHeader);
+                        lines.AddRange(targets);
+                    }
+                }
+            }
+
+            return lines.Count > 0 ? string.Join("\n", lines) : null;
+        }
+
+        // The description of the action the schema offers as id. Matched on each definition's Id
+        // as it is now, the value the schema was built from, so an action renamed after it was
+        // registered is still described.
+        private static string DescriptionOf(ActionRegistry actions, string id)
+        {
+            foreach (var definition in actions.Definitions)
+            {
+                if (definition != null && string.Equals(definition.Id, id, StringComparison.Ordinal))
+                {
+                    return definition.Description;
+                }
+            }
+
+            return null;
+        }
+
+        // "- id: Its description." or "- id". The description is the developer's, kept on one line
+        // so it cannot break the list, and ended as a sentence like the other framed lines.
+        private static string Entry(string id, string description)
+        {
+            string text = description == null ? "" : Regex.Replace(description, @"\s+", " ").Trim();
+            return text.Length > 0 ? "- " + id + ": " + EndSentence(text) : "- " + id;
+        }
+
+        // Who the agent is, its goals if it has any, then the fixed instruction line, then the
+        // action and target list and the target rule, each when there is one.
+        private static string SystemPrompt(AgentIdentity identity, string choices, string targetRule)
+        {
+            var lines = new List<string>(5);
 
             string who = WhoLine(identity);
             if (who.Length > 0)
@@ -187,6 +278,11 @@ namespace Agenerela
             }
 
             lines.Add(InstructionLine);
+
+            if (choices != null)
+            {
+                lines.Add(choices);
+            }
 
             if (targetRule != null)
             {

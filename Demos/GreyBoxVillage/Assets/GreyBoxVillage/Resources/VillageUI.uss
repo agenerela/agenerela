@@ -1,0 +1,243 @@
+/* GreyBoxVillage's one theme: dark wood panels with a thin gold edge, parchment text, and one
+   colour per decision outcome. Sizes are in panel pixels at a 720 px tall reference. */
+
+.vui-panel {
+    background-color: rgba(26, 21, 16, 0.9);
+    border-color: rgba(216, 169, 59, 0.5);
+    border-width: 1px;
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: rgb(242, 232, 213);
+}
+
+.vui-panel--soft {
+    background-color: rgba(26, 21, 16, 0.72);
+    border-color: rgba(216, 169, 59, 0.25);
+}
+
+.vui-title {
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: rgb(246, 222, 160);
+    margin-bottom: 2px;
+}
+
+.vui-subtitle {
+    font-size: 11px;
+    color: rgb(191, 175, 146);
+}
+
+.vui-text {
+    font-size: 12px;
+    color: rgb(242, 232, 213);
+    white-space: normal;
+}
+
+.vui-muted {
+    font-size: 11px;
+    color: rgb(170, 156, 130);
+    white-space: normal;
+}
+
+.vui-row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.vui-key {
+    font-size: 11px;
+    -unity-font-style: bold;
+    color: rgb(26, 21, 16);
+    background-color: rgb(232, 200, 120);
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-right: 6px;
+    min-width: 18px;
+    -unity-text-align: middle-center;
+}
+
+.vui-button {
+    background-color: rgba(70, 52, 32, 0.95);
+    border-color: rgba(216, 169, 59, 0.6);
+    border-width: 1px;
+    border-radius: 6px;
+    color: rgb(246, 222, 160);
+    font-size: 13px;
+    -unity-font-style: bold;
+    padding: 6px 14px;
+    margin: 3px;
+    transition-duration: 0.12s;
+}
+
+.vui-button:hover {
+    background-color: rgba(110, 82, 44, 0.98);
+    border-color: rgb(240, 200, 110);
+    color: rgb(255, 240, 200);
+}
+
+.vui-button:active {
+    background-color: rgba(150, 110, 50, 1);
+}
+
+.vui-chip {
+    font-size: 11px;
+    color: rgb(242, 232, 213);
+    background-color: rgba(90, 70, 46, 0.9);
+    border-radius: 10px;
+    padding: 2px 9px;
+    margin: 2px 4px 2px 0;
+    border-width: 0;
+}
+
+.vui-chip:hover {
+    background-color: rgba(130, 98, 56, 1);
+}
+
+.vui-field > .unity-base-text-field__input {
+    background-color: rgba(12, 10, 8, 0.85);
+    border-color: rgba(216, 169, 59, 0.45);
+    border-radius: 6px;
+    color: rgb(250, 240, 220);
+    font-size: 13px;
+    padding: 5px 8px;
+}
+
+.vui-field:focus > .unity-base-text-field__input {
+    border-color: rgb(240, 200, 110);
+}
+
+/* Outcome colours, used by chips and card edges alike. */
+.outcome-executed { background-color: rgb(84, 150, 84); }
+.outcome-none { background-color: rgb(110, 126, 146); }
+.outcome-contained { background-color: rgb(214, 150, 44); }
+.outcome-refused { background-color: rgb(196, 82, 60); }
+.outcome-error { background-color: rgb(170, 44, 44); }
+.outcome-thinking { background-color: rgb(70, 130, 200); }
+
+.bubble {
+    position: absolute;
+    max-width: 240px;
+    background-color: rgba(250, 244, 230, 0.96);
+    border-radius: 10px;
+    padding: 6px 10px;
+    color: rgb(40, 30, 20);
+    font-size: 12px;
+    white-space: normal;
+    -unity-text-align: middle-center;
+    border-color: rgba(120, 90, 50, 0.6);
+    border-width: 1px;
+}
+
+.bubble--refusal {
+    background-color: rgba(255, 214, 140, 0.97);
+    border-color: rgb(214, 150, 44);
+}
+
+.bubble--thinking {
+    background-color: rgba(220, 232, 250, 0.92);
+    color: rgb(40, 60, 90);
+    -unity-font-style: italic;
+}
+
+.bubble__tag {
+    font-size: 9px;
+    color: rgb(130, 80, 20);
+    margin-top: 2px;
+}
+
+.nametag {
+    position: absolute;
+    font-size: 11px;
+    -unity-font-style: bold;
+    color: rgb(255, 248, 230);
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgba(0, 0, 0, 0.75);
+    -unity-text-align: middle-center;
+}
+
+.nametag__role {
+    font-size: 9px;
+    -unity-font-style: normal;
+    color: rgb(230, 215, 180);
+}
+
+.placetag {
+    position: absolute;
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: rgb(30, 22, 12);
+    background-color: rgba(246, 222, 160, 0.92);
+    border-radius: 4px;
+    padding: 1px 5px;
+}
+
+.placetag--restricted {
+    background-color: rgba(230, 120, 100, 0.95);
+}
+
+.toast {
+    background-color: rgba(26, 21, 16, 0.92);
+    border-color: rgb(216, 169, 59);
+    border-width: 1px;
+    border-radius: 8px;
+    padding: 6px 14px;
+    margin-bottom: 6px;
+    color: rgb(246, 222, 160);
+    font-size: 13px;
+    -unity-font-style: bold;
+    transition-duration: 0.3s;
+}
+
+.slot {
+    width: 64px;
+    height: 64px;
+    margin: 4px;
+    background-color: rgba(12, 10, 8, 0.7);
+    border-color: rgba(216, 169, 59, 0.35);
+    border-width: 1px;
+    border-radius: 6px;
+    align-items: center;
+    justify-content: center;
+}
+
+.slot--selected {
+    border-color: rgb(240, 200, 110);
+    border-width: 2px;
+}
+
+.slot__icon {
+    width: 48px;
+    height: 48px;
+}
+
+.slot__count {
+    position: absolute;
+    right: 4px;
+    bottom: 2px;
+    font-size: 11px;
+    -unity-font-style: bold;
+    color: rgb(255, 248, 230);
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgb(0, 0, 0);
+}
+
+.bubble--error {
+    background-color: rgba(120, 28, 28, 0.95);
+    border-color: rgb(230, 110, 100);
+    color: rgb(255, 236, 230);
+}
+
+/* A problem the whole village has, such as no model running: top centre, until it is fixed. */
+.alert {
+    background-color: rgba(110, 26, 24, 0.94);
+    border-color: rgb(236, 120, 104);
+    border-width: 1px;
+    border-radius: 8px;
+    padding: 7px 14px;
+    color: rgb(255, 236, 228);
+    font-size: 13px;
+    -unity-font-style: bold;
+    white-space: normal;
+    -unity-text-align: middle-center;
+    max-width: 620px;
+}

@@ -29,6 +29,109 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **GreyBoxVillage became Ashford, a village worth exploring** (#153).
+  - **Art:** low-poly art built by a Blender script in `Demos/GreyBoxVillage/ArtSource/`, 77
+    models on one palette. The grey boxes stay as invisible colliders, so the NavMesh and the
+    tests are unchanged.
+  - **Atmosphere:** sky, fog, post-processing, water, lamps, fire, smoke and a day and night
+    cycle.
+  - **Controls:** a third-person camera, running, and E to talk or pick up.
+  - **UI Toolkit:** one theme for the HUD, dialogue panel, speech bubbles, framework view (Tab,
+    with target ids over places and the request queue), pack (I), journal (J), menu and title
+    screen.
+  - **Two more agents:** Odile the merchant and Captain Hale, on the same provider config.
+  - **Quests and an inventory:** quests reach the model as targets through a custom
+    `ITargetSource`.
+  - **New game guards:** `cannot_afford`, `no_free_gifts`, `quest_not_ready` and
+    `target_fits_action`.
+- **GreyBoxVillage is ready to present** (#153, polish slice).
+  - **Play mode changes no file:** the day and night cycle drives copies of the palette and sky,
+    and the default volume profile no longer names two scripts the project lacks.
+  - **No static state** outlives a play session, so it plays the same with the domain reload off;
+    a test checks every static field.
+  - **With no model running**, a HUD banner and a red bubble say so, and the agents stop asking on
+    their own until it answers.
+  - **The scene file went from 4.96 MB to about 1.2 MB:** the palette comes with the FBX import,
+    the nature scatter is drawn with GPU instancing (`ScatterField`), and the particle effects are
+    prefabs. The bushes, flowers and grass inside the walls now appear: the builder's check for
+    buildings in the way had always found the ground.
+  - **The capture tool draws the UI** (`CaptureUiFromCommandLine`) and measures the frame time.
+    The layout fixes it found:
+    - the agent list clear of the purse, on a panel of its own, like the key hints;
+    - toasts, at most three, stacked under the quest tracker, away from speech bubbles;
+    - world labels kept out from under every panel and from each other;
+    - bubbles above name tags;
+    - a card title that wraps;
+    - opaque book, menu, framework view and title panels.
+  - **Portraits** lit from the viewer's side, so Odile's face reads, and a title screen backdrop.
+- **GreyBoxVillage's situations, and a five-minute presenter script** (#153, situations slice).
+  Each situation chains one agent's decision into another's, through the game alone.
+  - **The thief:** it takes a ware from Odile's counter and runs for the eastern road. Odile can
+    `call_guard`, whose target is a guard from a custom `ITargetSource`, and her call becomes that
+    guard's `Merchant` stimulus. Wren can `chase` the thief, and Bram goes after it with
+    `attack_target`; caught, it drops the ware back on the counter.
+  - **Night at the gate:** nightfall shuts the gate. Wren takes the night watch and alone gets
+    `open_gate` and `close_gate`, and Bram goes off watch. A test checks that Bram, the evaluation
+    agent, is offered the same actions by night as by day.
+  - **A fire** at the bread stall: whoever sees the smoke is asked, and Wren can `fetch_water`
+    from the well until three buckets put it out.
+  - **Bram keeps his actions:** `chase`, `fetch_water` and the gate's actions sit on components only
+    Wren carries, and a test checks that whatever happens Bram is offered nothing new.
+  - **No `bell_cooldown` guard:** availability already keeps the bell from ringing twice within
+    30 s, and a test checks two guards answering at once ring it once.
+  - **Presenter keys** F1 to F5 (reset, the wolf, the thief, a fire, dusk) and a panel (F12).
+    They work with the framework view open, not while typing.
+  - **The presenter script** in the README runs end to end as a Play-mode test against scripted
+    replies, and once live through `PresenterLiveFromCommandLine`.
+  - **Two kit models,** `gate_door` and `bucket`, and `KIT_ONLY` to rebuild only the models named.
+  - **Fixes the live run found:** a guard attacking a running thief now runs after it, and a wolf
+    running for its den is no longer reported. Agents are told when it is night.
+- **GreyBoxVillage's day and its weather** (#153, explore slice, first part).
+  - **A daily routine:** the four villagers go to the well at dawn, to work (the fields outside the
+    gate, or the market), to the square at midday, to the campfire at dusk, and home after dark,
+    where the lamp by each door comes on. The bell sends them to the shelter, and they go back to
+    their day when it stops. F5 puts them at the campfire, inside the gate it shuts.
+  - **Every agent is told who is where,** such as "In the village: the market is busy (ada, mira),
+    the square is empty, tomas and pell are working the fields outside the gate."
+  - **Weather:** clear, overcast, rain and fog, changing by itself a few times a day and on a new
+    presenter key, **F6**. Rain falls round the camera, the ground darkens, mist drifts and the sky
+    greys, all on the runtime copies of the palette and the sky.
+  - **It changes what the agents notice:** rain and fog shorten a guard's sight to 22 m and 15 m,
+    so the wolf is seen later and a thief lost sooner, and every agent is told the weather and how
+    far it can see. It never changes what an agent is offered.
+  - **Bram keeps his actions and targets:** tests check that no hour and no weather gives him or
+    takes from him an action or a target, and that the slice adds no target to the village.
+  - `CaptureExploreFromCommandLine` captures the routine at four hours and each weather.
+- **GreyBoxVillage's reset, after #157's landing review** (#153). F1 now cancels what the old
+  agents still have queued or with the model, so the next stage never waits behind an answer nobody
+  will use, and it restarts the guards' quiet timers, so nobody is asked about a quiet moment the
+  moment the village resets. F3 pressed while a thief runs puts its ware back first.
+- **An editor UI kit** (#167) in the package's `Editor/UI/`, for the Phase 5 screens to share.
+  It is internal to `Agenerela.Editor`, so it adds no public API.
+  - `Agenerela.uss` holds colour, spacing and type variables (`--ag-*`) built on Unity's own
+    theme colours, so they suit both editor skins.
+  - `Chip` shows an action or target id in monospace, struck through with a dashed outline when
+    it is not offered.
+  - `OutcomeIcon` shows Executed, No action, Contained or Error with Unity's built-in icons.
+  - `ProblemBox` shows a message with an optional fix button.
+  - `SectionTitle` heads a section in small, spaced, muted capitals, such as "EXPECTED ANSWER".
+  - `AgenerelaButtons` adds two styles to Unity's plain button: a filled primary button for
+    the one action a screen is for (**Save answer**), and a dashed one for an open choice
+    (**Open choice**).
+  - `EditorUiFixtures` in `Tests/Editor/UI/` builds a hosted element, an inspector or a window
+    in an EditMode test, and finds its parts by name. **Window → Agenerela → Tests → UI Kit
+    Gallery** shows every piece on one page, for checking both skins by hand. It is in the test
+    assembly, so it does not ship in the package.
+    A test that opens a window needs a graphics device, so under `-nographics` it is reported as
+    ignored rather than failed.
+  - USS has no muted text colour that reaches an editor window, no dashed border and no
+    `text-transform`. The kit sets the colour itself, draws dashed outlines in
+    `DashedOutline`, and upper-cases titles in code. A test catches a variable that silently
+    fails to resolve.
+  - After its review (#181): setting a chip's `text` sets its id, so the strike always follows
+    `Offered`; the light-skin class is checked again whenever an element's styles resolve,
+    not only when it is built; and `DashedOutline.Attach` attaches once, however often it is
+    called.
 - **GreyBoxVillage has two guards and an agent board** (#143), the first slice of the demo's
   upgrade.
   - Bram at the gate and Wren at the bridge are each an `AgentBehaviour` with a profile asset.
@@ -51,6 +154,33 @@ phase table and the open issues, not here.
   `Assets/Evaluation/labels/<annotator>/<category>.json`; the README says how.
 - **Screen 8, the Prompt Set window**, in `docs/design/`: the wireframe drawn for #134 before the
   window was built, with its notes.
+- **Living Vale, a third-person RPG demo built on Agenerela** (#69), in `Demos/LivingVale/`: every
+  NPC is talked to in typed chat, and each reply is a framework decision that the game validates and
+  executes. It uses only the framework's public API and loads it by relative path.
+  - **The first adventure:** *The Missing Wagon*, with three recovery routes (fight the camp, pay
+    Kest or do Iven's herb favour, or bring Fen's account), three endings with visible changes in
+    the valley, and two side quests (herbs, Brann's badge). Every deal and hand-over is a card in the
+    chat, and only its button acts. Claims in chat record nothing.
+  - **Eight NPCs**, each a framework `Agent` on a local model (default `gemma4:e2b-it-qat`; F7 moves
+    to the next model Ollama has, loading only the one the player stops on). F6 switches to scripted
+    replies, which also decide through `Agent`, with `ScriptedProvider`.
+  - **Game systems:** trade with exact quote cards and all-or-nothing transfers; combat with a raider
+    and a wolf, loot and respawn; quests, XP, levels and perks; saves with F9/F10 that include what
+    each NPC remembers. A reply that arrives after the player cancelled, closed, switched or loaded is
+    never applied or remembered.
+  - **The valley:** six places on a 600 m map, routines, discovery, a compass with the quest goal,
+    NPC name tags and a map on M. The art is low-poly, generated by our own Blender scripts
+    (`Demos/LivingVale/ART.md`).
+  - **On the framework:** it uses #193's prompt switches, #194's scripted provider and #195's
+    results, correlation and commit-on-execute memory in place of its own workarounds, after
+    same-session A/B runs where the prompt changed (findings, 5–6 November).
+    `docs/demos/living-vale-framework-gaps.md` lists the 23 gaps the game found. #190 collects
+    them for the framework.
+  - 581 EditMode tests. How to play, and the known issues: `Demos/LivingVale/PLAYTEST.md`.
+- **`tools/benchmarks/paired_schema_probe.py`** (#190 B, DR-020): checks that Ollama compiles the
+  paired schema into a grammar that keeps every reply to a pair it offers, against the flat schema
+  and both again with `none` removed. Its first run, on 6 November, is in `findings.md`: no paired
+  reply held a wrong pair on either chat path. A grammar check, not an accuracy claim.
 - **The risk management plan** in `docs/course/2026-10-29-risk-management/`: an Excel
   register of 14 risks, two per member, with a risk matrix and a sprint review log, reviewed
   once per sprint. XLSX now goes through Git LFS.

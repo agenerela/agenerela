@@ -6,7 +6,9 @@ cloud vendor would need, and which parts of the contract are deliberately still 
 
 One backend is implemented: `OllamaProvider` (#88), the development backend. Phase 1 defined
 the contract, and `Agent` (#17) is tested against a fake provider; Phase 6 writes the cloud
-providers, Phase 6b the in-process one.
+providers, Phase 6b the in-process one. Beside them ships `ScriptedProvider` (#190), which has
+no model behind it at all: for tests, headless captures and presenting a game with the model
+off ([below](#the-scripted-provider--no-model-at-all)).
 
 ## The interface
 
@@ -219,8 +221,10 @@ A provider can be built in code, as above, but most games choose one once, as an
 `OllamaLocal` by default, holding `OllamaSettings`' fields with the same defaults, plus
 `MaxInFlight`. **Project Settings → Agenerela** names the project default, saved in
 `Assets/Agenerela/Resources/AgenerelaSettings.asset`, which the page creates the first time a
-default is set. Several configs can coexist, such as `OllamaLocal` and `GeminiFlash`; Phase 4's
-A/B runs need two alive at once.
+default is set. Several configs can coexist, such as `OllamaLocal` and `GeminiFlash`; an A/B
+run needs two alive at once, and the same page names them as **Arm A** and **Arm B**
+(`AgenerelaSettings.EvaluationArmA` and `EvaluationArmB`), which agents never read
+([evaluation.md](evaluation.md#running-an-ab)).
 
 ```csharp
 // The agent's own config if it has one, otherwise the project default.
@@ -248,6 +252,11 @@ var guard = new Agent(profile, ProviderConfig.Resolve().Provider);
   config's agents across two queues. The provider is dropped as Play mode starts and as it ends.
 - **An invalid config** (an empty model, `MaxInFlight` 0) throws `InvalidOperationException`
   naming the config and the setting when its provider is first read.
+- **Play mode without a domain reload** (Enter Play Mode Options) keeps every static field as
+  the last session left it. The framework resets its own as Play mode starts:
+  `AgenerelaSettings` forgets the settings asset it found, and the built providers are dropped
+  as above. Each static that needs no reset says why in `Tests/Editor/DomainReloadTests.cs`,
+  which fails on any new static field nothing resets (#190, G8).
 
 ### Adding a provider config
 
@@ -268,6 +277,114 @@ subclass that needs `OnValidate` overrides it and calls `base.OnValidate()`.
 **Never serialize an API key** (hard rule 1): a config asset is committed, and ships inside the
 build. Serialize where the key is read from, such as an environment variable's name, and read
 the key in `CreateProvider()`. Nor may a key appear in an exception message.
+
+## The scripted provider — no model at all
+
+`ScriptedProvider` answers each request with a reply the developer scripted, after a latency of
+their choosing (#190, G6). It is for tests, headless captures, and presenting a game with the
+model off. Every game built on the framework had written its own before it existed.
+
+```csharp
+var scripted = new ScriptedProvider()
+    .When("Bram", "Follow me.", ScriptedReply.Decide("follow_player", statement: "Right behind you."))
+    .When("Wren", "Follow me.", ScriptedReply.Decide("none", statement: "I stay at the well.").After(1.2f))
+    .When(null, "Thief!", ScriptedReply.Decide("chase", "thief"))   // any agent
+    .Otherwise(ScriptedReply.Decide("none", statement: "Hm."));       // anything else
+
+var bram = new Agent(bramProfile, scripted);
+```
+
+**It never passes for a model.** Its `Name` is always `"scripted"`, and so is every reply's
+`ProviderResult.Model`, so `DecisionTelemetry.ProviderName` and `Model`, an evaluation report and
+any HUD say "scripted" wherever they would name the model, even when a reply replays a model's
+text word for word. A `ScriptedReply` has no model and no token counts to set.
+
+**Which reply answers.** The agent is matched by `AgentIdentity.Name`, and the stimulus by the
+exact text passed to `DecideAsync`, without its label, both case-sensitive. A decision request
+takes the first of:
+
+1. the replies scripted for this agent and this stimulus, `When(agent, stimulus, …)`;
+2. those for this stimulus from any agent, `When(null, stimulus, …)`;
+3. those for this agent with any stimulus, `When(agent, null, …)`;
+4. `Callback`, when it returns a reply rather than null;
+5. `Otherwise(…)`, which is `When(null, null, …)`.
+
+A request with no agent name or an empty stimulus skips the stages that need one, so the callback
+still comes before `Otherwise`. Several replies for one key answer in order, and the last keeps answering. Scripting a key again
+replaces it and starts it over; `Clear()` forgets every key. A request nothing answers fails with
+a `ProviderException` of `Rejected` that names the agent and the stimulus, so a test that asks
+something it did not script finds out at once.
+
+**The callback** is for rules rather than a table, such as a game's keyword lines. It is given a
+`ScriptedRequest`: the agent, the stimulus and its label, `OfferedActions` and `OfferedTargets`
+from the schema (so a rule can answer only with what the agent may do now), and the
+`DecisionRequest` itself. Returning null leaves the request to `Otherwise`.
+
+**Replies.** `ScriptedReply.Decide(action, target, statement)` writes the schema's JSON object,
+fields in their order, the statement escaped. Nothing checks that the action is one the agent
+offers: an illegal reply shows a guard stopping it. `Raw(text)` sends text exactly, a reply
+that does not parse included. `Fail(kind)` fails as a provider does: `Unreachable` for a
+stopped server, `Timeout` for a slow one. `Never()` stays pending until the request is
+cancelled, for testing a game's own timeout. `After(seconds)` adds a latency to any of them, and
+`WithTokens(…)` gives a reply token probabilities for the grounding guard to read.
+
+**Latency** is wall-clock time, waited before the reply arrives, so `DecisionTelemetry.LatencySeconds`
+records it as it would a model's. It arrives on the main thread. Cancelling the request ends the
+wait at once. A reply with no latency answers within `RequestAsync`, so
+`await agent.DecideAsync(…)` completes in the call.
+
+**A refusal line** (`DecideOptions.AskForRefusalLine`, [guards.md](guards.md)) takes no keyed
+reply, so it never uses up a key's next one: `Callback` answers it (`ScriptedRequest.IsRefusalLine`
+is true), then `RefusalLine`, usually a `ScriptedReply.Statement(…)`. With neither, it fails and
+the decision stands without a line.
+
+**Capabilities.** By default it claims only what a script can honestly do: no constrained
+decoding and no token probabilities, so with `CheckTarget` on the prompt carries the target rule,
+as for any provider without them (#107). Pass Ollama's capabilities to
+`new ScriptedProvider(capabilities)` to receive exactly Ollama's prompt.
+
+### As an asset
+
+**Create → Agenerela → Scripted Provider** makes a `ScriptedProviderConfig`, which a scene, an
+`AgentBehaviour` or Project Settings → Agenerela selects like any provider config. Each entry
+of **Replies** answers an agent and a stimulus with one decision and a latency; a blank agent
+answers every agent and a blank stimulus every stimulus, so an entry with both blank is the
+fallback, and a new asset has one that does nothing and says nothing. Entries for the same agent
+and stimulus answer in list order. **Refusal Line** answers refusal-line requests. Anything an
+entry cannot say, such as a failure or a callback, goes through `config.Scripted`, the
+`ScriptedProvider` the config built:
+
+```csharp
+var config = (ScriptedProviderConfig)settings.DefaultProvider;
+config.Scripted.Otherwise(ScriptedReply.Fail(ProviderErrorKind.Unreachable));   // "Ollama is down"
+```
+
+Inspector edits reach it as for any config: outside Play mode at once, during Play at the next
+Play. Code scripting `config.Scripted` reaches it at once, and lasts until the config builds
+a new one: after an Inspector edit outside Play mode, and in the Editor as Play mode starts or
+ends. So script it in Play mode, not from an Edit-mode tool before pressing Play.
+
+### Testing with the scripted provider
+
+- **Script exactly what the test asks**, with `When` for each agent and stimulus, and no
+  `Otherwise`: anything else fails with the agent and stimulus named, rather than answering
+  quietly.
+- **Every agent on one provider shares its queue**, as on a real config. To test a request that
+  stays with the provider while something else happens, set `Hold`; each request then waits,
+  its reply chosen, until `Release()` lets the oldest go on. `HeldCount`, `RequestCount` and
+  `LastRequest` say what reached it.
+- **Failures and timeouts** are replies: `Fail(ProviderErrorKind.Unreachable)` for a stopped
+  server, `Never()` for a hung one, `.After(seconds)` for a slow one.
+- **A test agent's name is its key.** Two agents with the same `AgentIdentity.Name` share their
+  scripts; rename one in the test, as the framework's own tests do.
+
+### Replaying a decision log
+
+Not built yet: it comes with the runtime decision log (#190, G7). A log line holds an agent, a
+stimulus, the reply's text and its latency, which is exactly a `When` entry, so a replay reads
+the log and scripts `When(agent, stimulus, ScriptedReply.Raw(text).After(latency), …)` with each
+pair's lines in log order. Nothing in the provider has to change for it, and the replay says
+"scripted" in telemetry like every other scripted reply.
 
 ## The question that proves the interface works
 
@@ -336,6 +453,138 @@ propagates only when the caller's own token was cancelled; an
 `OperationCanceledException` the caller did not ask for, such as a transport's own timeout, is
 a failure like any other.
 
+## Provider health
+
+Whether a provider is answering is something every game ends up showing ("the model is not
+running"), and GreyBoxVillage and Living Vale both built it for themselves. `ProviderHealth`
+does it once, per provider instance, like the queue (#190 G1, DR-015 as amended):
+
+```csharp
+var health = ProviderHealth.For(agent.Provider);
+health.Changed += h => hud.ModelProblem = h.IsDown ? h.Message : null;
+health.BackOff = true;   // optional: hold background requests while it is down
+```
+
+- **What moves it.** `Agent` reports every request it sends. Any reply marks the provider up,
+  even one that cannot be read, because a model answered. A provider failure marks it down:
+  `Reason` is the `PipelineErrorKind`, `Message` the provider's own words, `DownSinceUtc` when
+  the run of failures began, `ConsecutiveFailures` how many in a row. A cancelled request reports
+  nothing, and neither do the model lifecycle calls below.
+- **The retry time.** `RetryAtUtc` is 5 s after the first failure, doubling with each one after
+  it, up to 60 s (`FirstRetrySeconds`, `LongestRetrySeconds`, each at most a day). It is set
+  whether or not the back-off is on, so a HUD can show it.
+- **`BackOff`, off by default.** When on, a background request whose turn in the queue comes
+  while the provider is down, before the retry time, is not sent. Its result has no decision, with
+  `ErrorKind` `ProviderDown`, and nothing is logged: the failure that put the provider down
+  logged already. The first background request after the retry time is sent and finds out. A
+  player-facing request is always sent, because someone is waiting for its answer or its error.
+  It is off by default because one timeout would otherwise cost the next few seconds of
+  background work, such as a country's turn in a strategy game.
+- **`Changed`** is raised after any report that changes the state: going down, failing again
+  while down (a new reason or retry time), coming back. `Agent` raises it on the main thread,
+  so a handler may touch the scene; a handler that throws is logged and the decision goes on.
+  `Reset()` marks the provider up by hand, such as when the player says the server is back.
+- **`IsProviderFault(kind)`**, an extension on `PipelineErrorKind`, tells a game which failures
+  to show as "the model is not answering" and which belong to one decision. True for no
+  server, no model, a timeout, a refusal, a server error, an unreadable envelope, any other
+  provider failure, and `ProviderDown`. False for a request that could not be prepared, a reply
+  that cannot be read, a guard that threw, and a call the backlog dropped or refused.
+
+The outcome is recorded before the request's slot in the queue is freed, so the request that
+slot goes to is judged by it, even when the provider answered on another thread.
+
+## Model lifecycle
+
+A game that offers a choice of model has to list what the server has, load the chosen one,
+and unload the one left behind. A provider that can do this implements `IModelLifecycle`
+(DR-019); `OllamaProvider` does. A provider that does not has nothing to manage, so a game
+asks first:
+
+```csharp
+if (provider is IModelLifecycle models)
+{
+    var installed = await models.ListModelsAsync(ct);   // ModelInfo: Name, SizeBytes
+    await models.WarmUpAsync(ct);                        // loads this provider's model now
+    bool unloaded = await models.UnloadAsync(ct);        // out of memory now
+}
+```
+
+| Call | Ollama | Returns |
+|---|---|---|
+| `ListModelsAsync` | `GET /api/tags` | The pulled models, named with their tags (`qwen3.5` lists as `qwen3.5:latest`), sizes on disk in bytes |
+| `WarmUpAsync` | `POST /api/generate` with `model` and no prompt, which loads it and generates nothing, and `options.num_ctx` the decisions send: Ollama reloads a model asked for at another context size, so a warm-up at the server's default would leave the first decision to load it again | When the model is in memory |
+| `UnloadAsync` | `POST /api/generate` with `keep_alive: 0`, then `GET /api/ps` every 0.25 s | True once the model is no longer listed, false if it still is after 15 s |
+
+- **None of them is a decision**, so none goes through the decision queue: a warm-up does only
+  what the first decision on that model would have to do anyway, so it never holds a slot a
+  decision is waiting for. Living Vale's warm-ups were decisions, and the player's turns timed
+  out behind them (DR-015, as amended).
+- **Failures throw `ProviderException`**, as `RequestAsync` does: `Unreachable` when nothing
+  answers, `ModelNotFound` with the `ollama pull` command when the server lacks the model,
+  `Timeout` after `TimeoutSeconds`, `ServerError` for a 5xx, `Rejected` for any other refusal,
+  and `MalformedResponse` for a reply that is not Ollama's.
+  They do not report to `ProviderHealth`, which follows decisions.
+- **Cancelling** the token aborts the request and throws `OperationCanceledException`. That is
+  how a warm-up a newer one replaces is stopped: the framework keeps no list of warm-ups.
+- **Each call acts on the provider's own model.** Its settings are copied when it is built, so
+  a provider never changes model, and its telemetry and its queue never mix two.
+
+Phase 5's provider inspector (#173) fills its model dropdown from `ListModelsAsync`. Its
+connection check is its own.
+
+## Switching an agent's provider
+
+`Agent.Provider` can be set (DR-019). The next decision goes to the new provider, and the agent
+keeps everything else: its memory, actions, targets, sources, guards and state. A decision
+already under way finishes on the provider it started with, its refusal line included. To move
+a village of NPCs to another Ollama model:
+
+```csharp
+var next = new OllamaProvider(new OllamaSettings { Model = "gemma4:e2b-it-qat" });
+await next.WarmUpAsync(ct);                       // before anyone has to wait for it
+foreach (var npc in agents) npc.Provider = next;  // one instance, so one queue for all of them
+await ((IModelLifecycle)previous).UnloadAsync(ct);
+```
+
+The new provider has its own queue and its own health, shared by every agent given that same
+instance. A request already queued on the old one is sent there. For a scene agent, set
+`AgentBehaviour.Agent.Provider`; its **Provider** field is read once, when the agent is built.
+
+## Busy agents: the backlog
+
+By default an agent decides every call at once, side by side: two perception events in a row
+send two requests, and the second is prepared before the first is remembered. A game that wants
+one decision per agent at a time sets `Agent.Backlog` (#190 G5, DR-015 as amended):
+
+```csharp
+guard.Backlog = DecisionBacklog.LatestWins;      // one may wait; a newer call takes its place
+guard.Backlog = DecisionBacklog.DropOldest(3);   // three may wait; the oldest makes way
+guard.Backlog = DecisionBacklog.QueueWithCap(3); // three may wait; the newest is refused
+guard.Backlog = new DecisionBacklog(0, BacklogOverflow.RefuseNewest); // none while it decides
+```
+
+- **One at a time.** A call made while the agent decides waits in the agent, not in the
+  provider's queue, player-facing before background and first come, first served within each.
+  It is prepared only when its turn comes, so it sees the targets and state of that moment and
+  the memory of the decision before it.
+- **When it is full**, `DropOldest` drops the oldest waiting call that is not more urgent than the
+  new one, a background one before any player-facing one; a background call never pushes out a
+  player-facing one, and is refused instead. `RefuseNewest` refuses the new call. A dropped call
+  ends with `ErrorKind` `Superseded`, a refused one with `BacklogFull`; both have no decision,
+  were never sent, and log nothing.
+- **A smaller backlog** set while calls wait keeps them. The next call finds it over capacity:
+  under `DropOldest`, as many waiting calls make way as it is over, or, when too few may, none
+  does and the new call is refused. A capacity of 0 always turns the new call away.
+- **The decision under way is never dropped.** Its own token stops it, while it waits in the
+  provider's queue or once it is sent, and the next call's turn comes at once. A cancelled
+  waiting call leaves the backlog.
+- **What it records.** `Agent.IsDeciding` is true while a decision is under way, `Agent.Waiting`
+  counts the calls behind it, and `DecisionTelemetry.BacklogWaitSeconds` is how long a call
+  waited for its turn, apart from `QueueWaitSeconds`, its wait in the provider's queue.
+- **It counts only calls made while it is set**, and is read when each call is made. It never
+  asks why the agent was called (DR-008): what it keeps or drops follows only the order of the
+  calls and their `Priority`.
+
 ## Still open
 
 - **Token-based rate limits**, above. Phase 6.
@@ -350,17 +599,16 @@ them is a change to `ILLMProvider`, which is the test this design has to keep pa
 - **Batching** several agents' requests into one call. Strategy-demo scale, Phase 6+.
 - **Token budgets and cost tracking** per session, enforced in the cloud provider base
   class. Phase 6.
-- **Health and warm-up** (`IsReady`, is the model loaded?). Phase 2, for the Ollama
-  provider's missing-model case.
-- **`keep_alive` and unloading a model** in `OllamaProvider`, as the prototype's client could,
-  for the Phase 4 harness's one-model-resident rule (hard rule 3).
+- **A `keep_alive` setting** for how long Ollama keeps a model after the last request. Every
+  request leaves Ollama's default of five minutes; `UnloadAsync` is the way to free it sooner.
+  The A/B runner's reads of `/api/version` and `/api/ps` stay internal until a game needs them.
+- **`ProviderHealth` from lifecycle calls.** A warm-up that succeeds could mark a provider up.
+  Left out so health follows decisions alone; add it if a game warms up to recover.
 - **A setting for a model that rejects `think`**, when one is adopted. `OllamaProvider` always
   sends `think: false`.
 - **A provider conformance suite** every vendor must pass. Phase 6 deliverable, shaped from
   the fake provider in #17 (`Tests/Editor/Fakes/FakeProvider.cs`).
 - **A scene override** between an agent's own config and the project default, DR-013's middle
   level: a field `ProviderConfig.Resolve` reads second. Add it when a demo needs one.
-- **The two evaluation arms** on Project Settings → Agenerela, as two more `ProviderConfig`
-  fields on `AgenerelaSettings`. Phase 4, with the harness that reads them.
 - **A session budget and rate limits** per config, beside `MaxInFlight`, applied to the same
   queue. Phase 6, with the first cloud config.

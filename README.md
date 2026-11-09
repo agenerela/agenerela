@@ -29,8 +29,9 @@
 > [!NOTE]
 > **Early development.** The core is built and tested: registered actions, availability from
 > state, the decision schema, prompts and the `Agent` that joins them. Since 0.3.0 it calls a
-> local model through Ollama, with a request queue and short-term memory; the guards that stop
-> a wrong answer are Phase 3, now under way. The [changelog](CHANGELOG.md) has the detail.
+> local model through Ollama, with a request queue and short-term memory. The guards that stop
+> a wrong answer (Phase 3) are built on `test`, ahead of the 0.4.0 release, and the evaluation
+> harness (Phase 4) is under way. The [changelog](CHANGELOG.md) has the detail.
 
 ## A quick look
 
@@ -106,7 +107,7 @@ arrives in Phase 4.
 ## Roadmap
 
 <p align="center">
-  <img src="docs/assets/readme/roadmap.svg" alt="Roadmap: phases 0 Skeleton and 1 Core are done; phase 2, Ollama, queue and memory, is in progress; then Guards, Evaluation, Editor tools, Cloud providers, In-process, Samples and Demo games." width="100%">
+  <img src="docs/assets/readme/roadmap.svg" alt="Roadmap: phases 0 Skeleton, 1 Core, 2 Ollama, queue and memory, and 3 Guards are done; phase 4, Evaluation, is in progress; then Editor tools, Cloud providers, In-process, Samples and Demo games." width="100%">
 </p>
 
 Each phase closes with a release. What has changed is in the [changelog](CHANGELOG.md), and
@@ -170,7 +171,7 @@ git config merge.unityyamlmerge.recursive binary
 | Path | Contents |
 |---|---|
 | `UnityProject/Packages/com.agenerela.framework/` | The package — everything shippable |
-| `UnityProject/Assets/Evaluation/` | Prompt set, the first 54 prompts so far, and the agent they are measured against; the accuracy benchmark harness is Phase 4 |
+| `UnityProject/Assets/Evaluation/` | Prompt set, its 76 prompts so far, and the agent they are measured against; the package's A/B runner scores it, and its Prompt Set window writes and labels it |
 | `Demos/` | Demo games, one Unity project each (not shipped to consumers) |
 | `docs/FRAMEWORK_BUILD_PLAN.md` | Architecture, build phases, decision records |
 | `docs/llm-wiki/` | Measured findings and working conventions |

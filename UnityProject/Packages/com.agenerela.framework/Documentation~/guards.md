@@ -20,7 +20,8 @@ Inside `Agent.DecideAsync`, after the reply has been parsed:
 
 1. **`SchemaLegalityGuard`.** The decision is one the agent could legally make: the action is
    registered and was offered in this request; the target is registered or `no_target`; an
-   action that needs a target got a real one. The schema's grammar should already have
+   action that needs a target got a real one; and against a paired schema
+   ([`targets.md`](targets.md#the-paired-schema)), the action was offered with that target. The schema's grammar should already have
    enforced all of this. It is checked again because a provider is untrusted. Every refusal is
    a `Reject`.
 2. **`TargetGroundingGuard`.** Did the model want a target that is not on the list? From the
@@ -32,7 +33,12 @@ Inside `Agent.DecideAsync`, after the reply has been parsed:
    rewritten. A provider that reports no probabilities
    cannot be checked, and the guard records that and passes. `DecideOptions.CheckTarget =
    false` turns it off for one call. DR-016 has the measurements.
-3. **`Agent.Guards`**, the game's own, in list order.
+3. **`TargetCategoryGuard`.** The target is a kind the action takes. An action that names
+   `TargetCategories` is held to them: a target in another category, or in none, is rewritten to
+   `none`, so `complete_quest` aimed at the village gate does nothing. An action that names none
+   always passes, so this guard changes nothing until a developer declares a category. DR-020, and
+   [targets.md](targets.md).
+4. **`Agent.Guards`**, the game's own, in list order.
 
 The first guard whose verdict is not `Pass` stops the rest, so a decision fires at most one
 guard. The built-in guards are not in `Agent.Guards` and cannot be removed from it.
@@ -44,7 +50,7 @@ reaches a guard.
 
 | Verdict | Means | The agent | `Execute` returns | Logged |
 |---|---|---|---|---|
-| `GuardVerdict.Pass` | Nothing wrong; the next guard looks at it | does what the model chose | whether the handler ran | no |
+| `GuardVerdict.Pass` | Nothing wrong; the next guard looks at it | does what the model chose | whether the handler ran and did not report `Failed` | no |
 | `GuardVerdict.RewriteToNone(reason)` | The answer is legal, but wrong for the game right now | does `none` with `no_target` | `true` | no |
 | `GuardVerdict.Reject(reason)` | The provider broke the contract | does `none` with `no_target` | `false` | a warning |
 
@@ -142,11 +148,14 @@ the chosen target's distance.
 ### Not re-checked at `Execute`
 
 `Agent.Execute` checks the decision again before running the handler, because the world can
-change while the model thinks. That re-check is `SchemaLegalityGuard` alone. A game's guards
-judged the answer once, inside `DecideAsync`, and are not run again.
+change while the model thinks. That re-check is `SchemaLegalityGuard`, then
+`TargetCategoryGuard`, against the targets as they are then. A game's guards judged the answer
+once, inside `DecideAsync`, and are not run again.
 
 If a game rule must still hold at the moment of acting, put it in the handler, or in the action's
-`IsAvailable`, which `Execute` does ask again.
+`IsAvailable`, which `Execute` does ask again. A handler can say why it did not act by returning
+`ActionResult.Failed(reason)`, which `Execute(result, out ActionResult)` hands back and the
+telemetry records ([executing-and-memory.md](executing-and-memory.md)).
 
 ## Writing one
 
@@ -155,7 +164,7 @@ A guard implements `IDecisionGuard`: a `Name`, which telemetry records, and
 function, as `DelegateActionHandler` does for an action.
 
 `GuardInput` holds everything a guard may read: the `Context` the decision was made from (state,
-targets, stimulus, observations), the `Request` sent, the provider's `Reply`, the parsed
+targets, stimulus, observations, and the call's `Correlation`), the `Request` sent, the provider's `Reply`, the parsed
 `Decision`, the call's `Options` and the `Telemetry` the result will carry. A guard may write its
 own numbers into the telemetry. It never changes the decision itself.
 

@@ -941,7 +941,7 @@ Packages/
       <li><b>The Phase 1 gate</b> — the build plan's five checks as EditMode tests through the whole pipeline (#11, via #84)</li>
       <li><b>Newtonsoft</b> as the core's one declared dependency (DR-009)</li>
       <li><b>GreyBoxVillage</b> — a playable grey-box village whose guard is driven by <span class="mono">qwen3.5:2b</span>, offered its actions by who is asking (#19, then via #112)</li>
-      <li><b>Evaluation prompts</b> — the first 54 labelled prompts, nine in each of six categories, for the Evaluation Report (#13, via #65; follow-up: #66, via #76)</li>
+      <li><b>Evaluation prompts</b> — 76 labelled prompts in six categories, half of them game-triggered (#13, via #65; follow-ups: #66, via #76, and #85, via #118)</li>
       <li><b>TargetsDropped</b> filled from any target source that reports what its cap left out, such as a capped proximity source (#81, via #96)</li>
       <li><b>Typed provider errors</b> — a failed decision says why, such as a model that was never pulled (#87, via #101)</li>
       <li><b>OllamaProvider</b> — the first provider that calls a model (#88, via #102)</li>
@@ -951,9 +951,18 @@ Packages/
       <li><b>Observation sources</b> — <span class="mono">IObservationSource</span> and <span class="mono">ProximityObservationSource</span>, pulled and capped (DR-012; #91, via #123)</li>
       <li><b>Provider config assets</b> and the project default (DR-013; #92, via #129)</li>
       <li><b><span class="mono">AgentBehaviour</span></b> — an agent on a GameObject, with no manager object (figure 10, pattern A; #93, via #139)</li>
+      <li><b>The guard pipeline</b> — <span class="mono">IDecisionGuard</span> and <span class="mono">SchemaLegalityGuard</span> (#106, via #115), target grounding on the model's confidence (DR-016; #105, via #124), its one-line fallback (#107, via #130), developer guards (#108, via #136) and contained refusals (#109, via #141)</li>
+      <li><b>The Phase 3 gate</b> — the guard checks in EditMode and the 20-prompt suite live on a 2B, 19/20 with the guards on (#110, via #137)</li>
+      <li><b>Request and reply</b> on <span class="mono">DecisionResult</span>, so a game can show what was sent and what came back (#142, via #144)</li>
+      <li><b>The Prompt Set window</b> — write and blind-label evaluation prompts in the Editor (DR-017; #134, via #154 and #156; its first run, #158, via #159)</li>
+      <li><b>The A/B runner</b> — <span class="mono">EvalRunner</span>: two provider configs, five outcomes, one report (#145, via #161)</li>
+      <li><b>The Evaluation Report window</b> — run an A/B and read it in the Editor (screen 4; #146, via #177)</li>
+      <li><b>The editor UI kit</b> the Phase 5 screens share (#167, via #181 and #187)</li>
+      <li><b>What the demos asked for</b> (#190): the actions and targets listed in the prompt, opt-in, and counter-examples (A, via #193); <span class="mono">ScriptedProvider</span>, a provider with no model (E, via #194); and <span class="mono">ActionResult</span>, with memory that can wait for <span class="mono">Execute</span> (DR-018; C, via #195)</li>
     </ul></div>
     <div class="card"><h4>Written down, not written</h4><ul>
-      <li><b>Phase 3</b> — the guard pipeline, target grounding and its fallback, developer guards and contained refusals, then the gate (#105 to #110)</li>
+      <li><b>The rest of Phase 4</b> — 200+ prompts (#147), a second annotator's blind labels (#148), the A/B runs owed (#151) and the gate (#150)</li>
+      <li><b>Phase 5</b> — the inspectors, the Decision Log and the New Agent wizard (#166 to #176, #179)</li>
     </ul></div>
     <div class="card"><h4 style="color:var(--warn)">Decided here, not yet built</h4><ul>
       <li><b>DR-012</b>'s summariser, as one source; the observation sources themselves are built</li>
@@ -963,13 +972,13 @@ Packages/
     </ul></div>
   </div>
   <div class="callbox" style="margin-top:20px">
-    <p style="margin:0;font-size:14px"><b>The framework calls a model now, but nothing yet checks its answer.</b> Phase 2 made the first live decisions, through Ollama, proven by its gate's PlayMode tests (#94); a warm one took under 0.6 s on an RTX 5080. Until the Phase 3 guards land, <span class="mono">Execute</span> refuses only an unavailable action or an unregistered target, so a legal answer that is wrong goes through. Every accuracy number quoted on this page is carried from the predecessor prototype (Appendix A) and was measured against Ollama specifically — it is not a claim about this framework until we re-measure it here, with a control arm, and write it into the findings log.</p>
+    <p style="margin:0;font-size:14px"><b>The framework calls a model, and its guards check the answer.</b> Phase 2 made the first live decisions, through Ollama (#94); Phase 3 put the guards between the model and the game, and its gate's live suite scored 19/20 on a 2B with them on, 18/20 without (#110). At n = 20 that says the gate passed, not by how much the guards help: measuring that is Phase 4's job, and its A/B runner has merged. Apart from that suite, every accuracy number quoted on this page is carried from the predecessor prototype (Appendix A) and was measured against Ollama specifically — it is not a claim about this framework until we re-measure it here, with a control arm, and write it into the findings log.</p>
   </div>
 </section>
 
 <footer>
   <p><b>Agenerela</b> — a Unity framework that lets a language model drive game agents by choosing from actions the developer registered. CSUN COMP 490 / 491.</p>
-  <p style="margin-top:10px">This page walks the developer's path; the six sketch-lab wireframes it refers to are the screens themselves. Rules cited here come from <span class="mono">docs/FRAMEWORK_BUILD_PLAN.md</span> and its decision records — DR-008 (no input taxonomy), DR-009 (one dependency), DR-010 (demos as separate projects) — and the measurements come from Appendix A. Where this page proposes something the plan does not settle, it says so on the figure. Last brought in step with the plan and the issues on 25 October 2026, after Phase 2 closed with its live gate (#94, via #111); where the page and the plan disagree, the plan is current.</p>
+  <p style="margin-top:10px">This page walks the developer's path; the six sketch-lab wireframes it refers to are the screens themselves. Rules cited here come from <span class="mono">docs/FRAMEWORK_BUILD_PLAN.md</span> and its decision records — DR-008 (no input taxonomy), DR-009 (one dependency), DR-010 (demos as separate projects) — and the measurements come from Appendix A. Where this page proposes something the plan does not settle, it says so on the figure. Last brought in step with the plan and the issues on 6 November 2026, after Phase 3 closed and Phase 4's runner merged; where the page and the plan disagree, the plan is current.</p>
 </footer>
 </div>
 </body>

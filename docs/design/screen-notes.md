@@ -143,6 +143,28 @@ small to trust at this number of prompts.
 check · ④ accuracy per category · ⑤ the failure list · ⑥ labeller agreement and export.
 *(All figures in the mockup are illustrative, not measured results.)*
 
+**As built (#146).** The window keeps the six numbered parts and their order, and differs from
+the figure in these ways:
+
+- **One scrolling column**, ① to ⑥ top to bottom, rather than the figure's two-by-two grid, so it
+  works at any window width. There is no Decision Log tab; that is screen 3, in Phase 5.
+- **No Model field.** The model belongs to each arm's provider config (DR-013), so ① has a
+  **Profile** field instead, and each arm has a config, a name and a **Grounding guard** switch.
+  Arms on two models always run one after the other, and ① says why.
+- **The warm-up is not a checkbox**: the runner always sends three requests. "Only one model
+  loaded" and "No example reuses an evaluation prompt" are checks the run makes rather than ticks
+  on screen: **What the run checks** says so before a run, a set that breaks a rule lists its
+  problems and greys out **Run A/B**, and the report's conditions say what was found.
+- **A start-here state.** Until the set, the profile and both arms are chosen, the window shows
+  four steps and a button that fills the first three from the project.
+- **The noise verdict is on accuracy only** (the Correct row and each category), since that is
+  what the noise check measures; the other outcome rows show the difference in points.
+- **⑤ shows either arm**, filtered by outcome, and **Open** expands the row in place with the
+  whole answer, since the Decision Log it was drawn to jump to is not built yet.
+- **⑥ reads agreement from the set's label files as they are now**, in the Prompt Set window's
+  own counts. **Review disagreements** opens that window, and export has **Show files** and
+  **Save a copy…** beside **Copy summary for findings.md**.
+
 ---
 
 ## Screen 5 — GreyBoxVillage play screen

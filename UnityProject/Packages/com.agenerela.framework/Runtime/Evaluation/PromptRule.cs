@@ -32,7 +32,7 @@ namespace Agenerela.Evaluation
 
         /// <summary>
         /// The stimulus is a few-shot example the agent is shown: an action's <c>ExampleStimulus</c>
-        /// or the profile's <c>IdleExampleStimulus</c> (hard rule 4).
+        /// or <c>CounterExampleStimulus</c>, or the profile's <c>IdleExampleStimulus</c> (hard rule 4).
         /// </summary>
         StimulusIsExample,
     }

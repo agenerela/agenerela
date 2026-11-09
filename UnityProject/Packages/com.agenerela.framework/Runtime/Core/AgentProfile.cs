@@ -16,10 +16,16 @@ namespace Agenerela
                  "is decided by each action's handler, not here.")]
         public List<ActionDefinitionAsset> Actions = new List<ActionDefinitionAsset>();
 
+        /// <summary>
+        /// The idle example a new profile starts with. An agent built in code can have the same one
+        /// through <see cref="Agent.IdleExampleStimulus"/> (#190).
+        /// </summary>
+        public const string DefaultIdleExampleStimulus = "Nothing has changed since last time.";
+
         [Header("Idle example")]
         [Tooltip("A stimulus for which the right answer is 'none'. Shown to the model as " +
                  "the idle example. Leave empty to omit it.")]
-        public string IdleExampleStimulus = "Nothing has changed since last time.";
+        public string IdleExampleStimulus = DefaultIdleExampleStimulus;
 
         public bool Validate(out string problem)
         {

@@ -40,10 +40,16 @@ namespace Agenerela
     /// remembered in the order they finish.
     /// </para>
     /// </remarks>
-    public sealed class RollingHistory : IMemoryStrategy, IReportsDroppedTurns
+    public sealed class RollingHistory : IMemoryStrategy, IReportsDroppedTurns, IExportsMemory
     {
         /// <summary>How many exchanges are kept by default: six, as §2.1 sets.</summary>
         public const int DefaultTurns = 6;
+
+        /// <summary>The <see cref="MemorySnapshot.Format"/> this strategy writes.</summary>
+        public const string SnapshotFormat = "agenerela.rolling-history";
+
+        /// <summary>The <see cref="MemorySnapshot.Version"/> this strategy writes.</summary>
+        public const int SnapshotVersion = 1;
 
         /// <summary>
         /// The default token budget for the history of one request: 256 estimated tokens.
@@ -163,6 +169,140 @@ namespace Agenerela
                 exchanges.RemoveFirst();
                 Forgotten++;
             }
+        }
+
+        /// <summary>
+        /// Every exchange held now, oldest first, the ones the token cap leaves out of a request
+        /// included, as <see cref="SnapshotFormat"/> version <see cref="SnapshotVersion"/>, with no
+        /// <see cref="MemorySnapshot.Data"/>.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="Dropped"/> and <see cref="Forgotten"/> are not saved: they count what this
+        /// object did, for telemetry, not what the agent remembers.
+        /// </remarks>
+        public MemorySnapshot Export()
+        {
+            var snapshot = new MemorySnapshot { Format = SnapshotFormat, Version = SnapshotVersion };
+
+            foreach (var exchange in exchanges)
+            {
+                snapshot.Exchanges.Add(new MemoryExchange(exchange.Stimulus, exchange.Decision));
+            }
+
+            return snapshot;
+        }
+
+        /// <summary>
+        /// Whether <see cref="Import"/> would take <paramref name="snapshot"/>, without changing
+        /// anything: for a game that checks a whole save before it loads any of it. False, with
+        /// <paramref name="reason"/> saying why in words a log can show, for every snapshot
+        /// <see cref="Import"/> would throw for; true, with a null reason, otherwise.
+        /// </summary>
+        /// <remarks>
+        /// It takes only <see cref="SnapshotFormat"/>, at a version from 1 to
+        /// <see cref="SnapshotVersion"/>, whose exchanges each have a stimulus and a decision. A null
+        /// <see cref="MemorySnapshot.Exchanges"/> counts as none. <see cref="MemorySnapshot.Data"/>
+        /// is not read.
+        /// </remarks>
+        public bool CanImport(MemorySnapshot snapshot, out string reason)
+        {
+            return Read(snapshot, out _, out reason);
+        }
+
+        /// <summary>
+        /// Replaces every exchange held with <paramref name="snapshot"/>'s, oldest first, keeping the
+        /// newest <see cref="Turns"/> of them. Takes only a snapshot this strategy wrote:
+        /// <see cref="SnapshotFormat"/>, at a version it can read. <see cref="CanImport"/> checks one
+        /// first without changing anything.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The exchanges past <see cref="Turns"/> are let go of as the turn cap always does, and count
+        /// in <see cref="Forgotten"/>. A null <see cref="MemorySnapshot.Exchanges"/> imports none,
+        /// which leaves the memory empty. <see cref="MemorySnapshot.Data"/> is not read.
+        /// </para>
+        /// <para>
+        /// Another strategy's snapshot is refused even though its exchanges are written the same
+        /// way: a save that names another format, or a newer version of this one, is not one this
+        /// memory can vouch for. To move memory between strategies, copy the exchanges into a
+        /// snapshot of the target's format on purpose.
+        /// </para>
+        /// </remarks>
+        /// <exception cref="ArgumentNullException"><paramref name="snapshot"/> is null.</exception>
+        /// <exception cref="ArgumentException">
+        /// <see cref="CanImport"/> refuses the snapshot: another format, a version this strategy
+        /// cannot read, or an exchange, stimulus or decision that is null. The message is
+        /// <see cref="CanImport"/>'s reason. Nothing is imported, and the memory keeps what it held.
+        /// </exception>
+        public void Import(MemorySnapshot snapshot)
+        {
+            if (snapshot == null)
+            {
+                throw new ArgumentNullException(nameof(snapshot));
+            }
+
+            if (!Read(snapshot, out var imported, out string reason))
+            {
+                throw new ArgumentException(reason, nameof(snapshot));
+            }
+
+            exchanges.Clear();
+            foreach (var exchange in imported)
+            {
+                exchanges.AddLast(exchange);
+                if (exchanges.Count > Turns)
+                {
+                    exchanges.RemoveFirst();
+                    Forgotten++;
+                }
+            }
+        }
+
+        // The exchanges of a snapshot Import can take, or why it cannot, without changing anything.
+        // One check for both CanImport and Import, so they never disagree.
+        private static bool Read(MemorySnapshot snapshot, out List<Exchange> imported, out string reason)
+        {
+            imported = null;
+
+            if (snapshot == null)
+            {
+                reason = "There is no snapshot.";
+                return false;
+            }
+
+            if (!string.Equals(snapshot.Format, SnapshotFormat, StringComparison.Ordinal))
+            {
+                string format = string.IsNullOrEmpty(snapshot.Format) ? "no format" : $"format '{snapshot.Format}'";
+                reason = $"The snapshot has {format}, and RollingHistory reads only '{SnapshotFormat}'.";
+                return false;
+            }
+
+            if (snapshot.Version < 1 || snapshot.Version > SnapshotVersion)
+            {
+                reason = $"The snapshot is version {snapshot.Version} of '{SnapshotFormat}', and RollingHistory reads versions 1 to {SnapshotVersion}.";
+                return false;
+            }
+
+            var read = new List<Exchange>();
+            var source = snapshot.Exchanges ?? new List<MemoryExchange>();
+            for (int i = 0; i < source.Count; i++)
+            {
+                var exchange = source[i];
+                if (exchange == null || exchange.Stimulus == null || exchange.Decision == null)
+                {
+                    // A null would reach DecisionRequest.History, which Agent refuses as a pipeline
+                    // error on every later decision, so it is refused here, before anything changes.
+                    reason = $"Exchanges[{i}] is null or has a null stimulus or decision, so the snapshot cannot be imported.";
+                    return false;
+                }
+
+                read.Add(new Exchange(exchange.Stimulus, exchange.Decision,
+                    EstimateTokens(exchange.Stimulus.Length + exchange.Decision.Length)));
+            }
+
+            imported = read;
+            reason = null;
+            return true;
         }
 
         // Characters over four, rounded up: the rough rule the class remarks describe.
