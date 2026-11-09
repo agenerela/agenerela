@@ -121,6 +121,28 @@ phase table and the open issues, not here.
   - **Five kit models:** `shrine_ruin`, `lookout`, `wolf_den`, `hermit_hut` and `char_hermit`, and the
     woods' paths on the terrain.
   - **Frame time** is measured in two more views, the square in rain and at night, and in the woods.
+  - **Each effect plays on a voice of its own,** so two at once each sound from their own place,
+    and a mute or a new volume reaches an effect already playing (#207's Codex review).
+- **GreyBoxVillage on #190's framework features** (the framework lab, L1). The game deletes the
+  workarounds the framework now replaces, and its tests hold every rule they held, each seen red
+  with the feature's use broken:
+  - **`ScriptedProvider`** (#194) for every test and capture; `FakeVillageProvider`,
+    `FakeVillageConfig` and `CaptureProviderConfig` are gone.
+  - **`DecideOptions.Correlation`** (#195) carries who is asking and what is in sight
+    (`AgentMind.Moment`), in place of three keys written into `Agent.State`.
+  - **`ProviderHealth`** (#198) says when the model is down; the first retry still waits 20 s, and
+    now doubles with each failure.
+  - **Target categories** (#208): each action declares what it takes and `TargetCategoryGuard`
+    holds it, in place of the game's `target_fits_action`; each agent's categories are on its
+    `AgentBehaviour`, in place of a list on each proximity source; `GuardTargetSource` offers
+    through `TargetRegistry.Offer`.
+  - **Only Actions** (#208) state Bram's action set; `Responder` is gone, and `chase` and
+    `fetch_water` are on the guard's body. `NightWatch` stays, since it keeps the watch.
+  - **The reset (F1)** copies every setting of an agent's component, so a field the framework adds
+    is kept.
+  - **Not adopted:** `Agent.Backlog`, since a waiting event must be prepared when its turn comes
+    (framework gap G18). The prompt switches (#193) and the paired schema (#210) stay off, as the
+    lab's experiment variables.
 - **An editor UI kit** (#167) in the package's `Editor/UI/`, for the Phase 5 screens to share.
   It is internal to `Agenerela.Editor`, so it adds no public API.
   - `Agenerela.uss` holds colour, spacing and type variables (`--ag-*`) built on Unity's own
