@@ -9,6 +9,10 @@ Every benchmark number is a maker's or a third party's claim, cited below. No mo
 run or timed for this page, and no ranking here is an accuracy result (hard rule 2). A
 candidate earns a place in [`findings.md`](findings.md) only through an A/B run.
 
+**Measured since.** Every model this page led us to pull was run on the evaluation set on
+9 November 2026: [`findings.md`](findings.md), "Thirteen models on the evaluation set". That entry,
+not this page, is where the scores are.
+
 ## The job a candidate has to do
 
 From the build plan (§2.3 to §2.5, Appendix A, Phase 6b) and [`findings.md`](findings.md):
