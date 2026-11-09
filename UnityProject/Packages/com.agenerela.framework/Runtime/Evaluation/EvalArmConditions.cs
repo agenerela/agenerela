@@ -31,6 +31,8 @@ namespace Agenerela.Evaluation
         [JsonProperty("listActionsAndTargets")] public bool ListActionsAndTargets;
         [JsonProperty("maxListedTargets")] public int MaxListedTargets;
         [JsonProperty("counterExamples")] public bool CounterExamples;
+        [JsonProperty("idleExampleStatement")] public string IdleExampleStatement;
+        [JsonProperty("exampleStatements")] public bool ExampleStatements;
         [JsonProperty("pairTargetsWithActions")] public bool PairTargetsWithActions;
         [JsonProperty("priority")] public string Priority;
         [JsonProperty("observations")] public List<string> Observations = new List<string>();

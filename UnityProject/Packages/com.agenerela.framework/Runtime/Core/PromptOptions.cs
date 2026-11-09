@@ -126,5 +126,20 @@ namespace Agenerela
         /// <see cref="IdleExampleStimulus"/>: the caller passes it as <c>counterExamples</c>.
         /// </remarks>
         public bool CounterExamples = true;
+
+        /// <summary>
+        /// What the agent says in the idle example (#190, G14). <c>Agent</c> fills it from the call,
+        /// the agent or the profile, never from further down than the idle stimulus came from
+        /// (<see cref="DecideOptions.IdleExampleStatement"/>). Null or empty gives no statement. Read by
+        /// <see cref="FewShotBuilder.Build(System.Collections.Generic.IReadOnlyList{ActionDefinition}, TargetRegistry, PromptOptions)"/>.
+        /// </summary>
+        public string IdleExampleStatement;
+
+        /// <summary>
+        /// Whether the examples show the statements developers wrote (#190, G14). On by default, which
+        /// shows only what was written. <c>Agent</c> copies it from <see cref="DecideOptions.ExampleStatements"/>.
+        /// Read by <c>FewShotBuilder.Build</c>.
+        /// </summary>
+        public bool ExampleStatements = true;
     }
 }

@@ -275,6 +275,18 @@ namespace Agenerela.Tests
             public void Wave() { }
         }
 
+        private sealed class Stated
+        {
+            [AgentAction("move_to", "Walk to a named place.", RequiresTarget = true)]
+            [Example("Head over to the {0}.", "tower", Statement = "On my way to the {0}.")]
+            [CounterExample("The {0} looks lovely at dusk.", Statement = "It does, at that.")]
+            public void MoveTo() { }
+
+            [AgentAction("wave", "Wave hello.")]
+            [Example("Give us a wave.")]
+            public void Wave() { }
+        }
+
         private sealed class CheckReturnsVoid
         {
             [AgentAction("wave", "Wave hello.")]
@@ -348,6 +360,21 @@ namespace Agenerela.Tests
                 Is.EqualTo(new[] { "The {0} looks lovely at dusk.", "You wave like a windmill." }),
                 "With or without [Example] beside it, as an asset's field is (DR-011).");
             Assert.That(registry.Definitions[0].ExampleStimulus, Is.EqualTo("Head over to the {0}."));
+        }
+
+        [Test]
+        public void StatementsAreReadFromTheAttributes()
+        {
+            var registry = new ActionRegistry();
+
+            registry.RegisterMethods(new Stated());
+
+            var moveTo = registry.Definitions[0];
+            var wave = registry.Definitions[1];
+            Assert.That(moveTo.ExampleStatement, Is.EqualTo("On my way to the {0}."));
+            Assert.That(moveTo.CounterExampleStatement, Is.EqualTo("It does, at that."));
+            Assert.That((wave.ExampleStatement, wave.CounterExampleStatement), Is.EqualTo(("", "")),
+                "Without one, as an asset left blank: empty (#190, G14).");
         }
 
         [Test]

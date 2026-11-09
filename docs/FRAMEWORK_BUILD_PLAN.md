@@ -571,7 +571,9 @@ public sealed class ActionDefinition {
     public bool RequiresTarget;
     public string ExampleStimulus;       // "{0}" placeholder for target; see few-shot rules
     public string[] PreferredExampleTargets;   // targets this verb sensibly applies to
+    public string ExampleStatement;            // optional, what the agent says in it (#190 G14)
     public string CounterExampleStimulus;      // optional, shown answered with none (#190)
+    public string CounterExampleStatement;     // optional, its statement (#190 G14)
     public string[] TargetCategories;          // optional, the kinds of target it takes (DR-020)
 }
 ```
@@ -744,10 +746,13 @@ than a second schema system — do not let provider-specific syntax leak into th
    ([findings](llm-wiki/findings.md)). An agent built in code has no profile, so it has an idle
    example only when `Agent.IdleExampleStimulus` or the call gives one (#190). An action may
    also carry a `CounterExampleStimulus`, a line that touches its subject but asks for nothing,
-   shown answered with `none` right after its own example (#190). Neither is measured, and both
-   stay off until Phase 4's A/B (#151). **Example utterances must never overlap the
-   evaluation prompt set** (see Phase 4), counter-examples included. Few-shot was the largest
-   single lever measured: +35 points.
+   shown answered with `none` right after its own example (#190). Any example but the refusal
+   can also show a statement, after its target (#190 G14: a guard answered with its idle
+   example's stimulus, the only line it was shown). None of these is measured, and none becomes
+   a default before Phase 4's A/B (#151).
+   **Example utterances must never overlap the evaluation prompt set** (see Phase 4),
+   counter-examples and statements included. Few-shot was the largest single lever measured:
+   +35 points.
 5. **A local model reads no schema** (findings, 10 October 2026), so neither the action list nor
    the target ids reach it unless the prompt carries them. `DecideOptions.ListActionsAndTargets`
    (#190) lists both in the system prompt, the targets capped at `MaxListedTargets`. It is off
@@ -1036,7 +1041,7 @@ underneath have stopped moving.
 where the 200 prompts and their second annotator are needed. It writes and labels prompts
 against a chosen agent profile: the expected action is picked from the profile's actions,
 so a prompt cannot name an action the agent lacks, and a stimulus that repeats an action's
-`ExampleStimulus` or `CounterExampleStimulus` is flagged (hard rule 4). Labelling is blind: the annotator sees the
+`ExampleStimulus`, `CounterExampleStimulus` or a statement is flagged (hard rule 4). Labelling is blind: the annotator sees the
 stimulus, observations and state, never the expected answer, anyone else's label or the
 model's reply. Each annotator's answers go to their own file, so two people labelling at
 once never edit the same one. The Evaluation Report (screen 4) reads the same format and

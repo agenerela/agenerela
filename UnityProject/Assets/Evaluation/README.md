@@ -74,7 +74,8 @@ The window checks every rule here but the one about observations, under the prom
 written. A test checks that our set breaks none of them.
 
 - **Never reuse a prompt as a few-shot example** (hard rule 4). An action's `ExampleStimulus`,
-  or its `CounterExampleStimulus` when it has one, must not match any `stimulus` here.
+  or its `CounterExampleStimulus` or a statement when it has one, must not match any `stimulus`
+  here.
   `VillageGuard.asset`'s examples are GreyBoxVillage's guard's, the four actions' and its idle
   line, so the set is measured with the examples the demo plays with; `PromptSetStartTests`
   checks that none matches a prompt.

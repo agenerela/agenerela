@@ -21,5 +21,11 @@ namespace Agenerela
 
         /// <summary>A stimulus answered with <c>none</c>, with {0} for the target.</summary>
         public string Stimulus { get; }
+
+        /// <summary>
+        /// Optional: what the agent says in the counter-example, the code front door's
+        /// <see cref="ActionDefinition.CounterExampleStatement"/> (#190, G14). Set it by name.
+        /// </summary>
+        public string Statement { get; set; }
     }
 }

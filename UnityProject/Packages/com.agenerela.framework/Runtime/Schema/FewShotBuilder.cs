@@ -35,29 +35,64 @@ namespace Agenerela
         /// </param>
         public static string Build(IReadOnlyList<ActionDefinition> available, TargetRegistry targets, string stimulusLabel = "Player", string idleExampleStimulus = null, bool counterExamples = true)
         {
+            return Build(available, targets, new PromptOptions
+            {
+                StimulusLabel = stimulusLabel,
+                IdleExampleStimulus = idleExampleStimulus,
+                CounterExamples = counterExamples,
+            });
+        }
+
+        /// <summary>
+        /// The example block as <paramref name="options"/> asks for it: the overload <c>Agent</c> uses,
+        /// so every per-call example setting comes from one object.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// It reads <see cref="PromptOptions.StimulusLabel"/>, <see cref="PromptOptions.IdleExampleStimulus"/>
+        /// and <see cref="PromptOptions.CounterExamples"/>, and the statements of #190's G14, which show
+        /// only what a developer wrote.
+        /// </para>
+        /// <list type="bullet">
+        ///   <item><description><see cref="PromptOptions.ExampleStatements"/>: an example whose
+        ///   <see cref="ActionDefinition.ExampleStatement"/> or <see cref="ActionDefinition.CounterExampleStatement"/>
+        ///   is set, and the idle example when <see cref="PromptOptions.IdleExampleStatement"/> is, ends with
+        ///   <c>, statement: "..."</c>. The refusal of a target that is not here never has one: its line would
+        ///   be the framework's own words, sent with every prompt.</description></item>
+        /// </list>
+        /// </remarks>
+        public static string Build(IReadOnlyList<ActionDefinition> available, TargetRegistry targets, PromptOptions options)
+        {
+            options = options ?? new PromptOptions();
+            string label = options.StimulusLabel;
+            bool statements = options.ExampleStatements;
+
             List<string> lines = new List<string> { Header };
 
             foreach (ActionDefinition action in available)
             {
-                string example = ActionExample(action, targets, stimulusLabel);
+                string target = FirstRegisteredPreferred(action, targets);
+
+                string example = ActionExample(action, targets, target, label, statements);
                 if (example != null)
                 {
                     lines.Add(example);
                 }
 
-                string counter = counterExamples ? CounterExample(action, targets, stimulusLabel) : null;
+                string counter = options.CounterExamples ? CounterExample(action, targets, target, label, statements) : null;
                 if (counter != null)
                 {
                     lines.Add(counter);
                 }
             }
 
-            if (!string.IsNullOrWhiteSpace(idleExampleStimulus))
+            if (!string.IsNullOrWhiteSpace(options.IdleExampleStimulus))
             {
-                lines.Add(Example(stimulusLabel, idleExampleStimulus, "none", TargetRegistry.NoTarget));
+                lines.Add(Example(label, options.IdleExampleStimulus, "none", TargetRegistry.NoTarget,
+                                  statements ? options.IdleExampleStatement : null));
             }
 
-            string refusal = RefusalExample(available, targets, stimulusLabel);
+            string refusal = RefusalExample(available, targets, label);
             if (refusal != null)
             {
                 lines.Add(refusal);
@@ -66,41 +101,47 @@ namespace Agenerela
             return string.Join("\n", lines);
         }
 
-        // The action's own example, or null when it has none or none of its preferred targets is
-        // registered.
-        private static string ActionExample(ActionDefinition action, TargetRegistry targets, string stimulusLabel)
+        // The action's own example, or null when it has none, or needs a target and has none to name.
+        private static string ActionExample(ActionDefinition action, TargetRegistry targets, string target,
+                                            string label, bool statements)
         {
             if (string.IsNullOrWhiteSpace(action.ExampleStimulus)) return null;
 
+            string statement = statements ? action.ExampleStatement : null;
+
             if (!action.RequiresTarget)
             {
-                return Example(stimulusLabel, action.ExampleStimulus, action.Id, TargetRegistry.NoTarget);
+                return Example(label, action.ExampleStimulus, action.Id, TargetRegistry.NoTarget, statement);
             }
 
-            string target = FirstRegisteredPreferred(action, targets);
             if (target == null) return null;
 
-            return Example(stimulusLabel, Fill(action.ExampleStimulus, DisplayName(target)), action.Id, target);
+            string name = DisplayName(target);
+            return Example(label, Fill(action.ExampleStimulus, name), action.Id, target, Fill(statement, name));
         }
 
         // A line that touches the action's subject and asks for nothing, answered with none (#190,
-        // Living Vale #9). Its {0} is filled as the example's is; with no preferred target
-        // registered there is nothing to fill it with, so it is left out rather than sent with a
-        // placeholder in it. Without {0} it is sent as written.
-        private static string CounterExample(ActionDefinition action, TargetRegistry targets, string stimulusLabel)
+        // Living Vale #9). Its {0}s, in the stimulus and the statement, name the example's target;
+        // with no target to name, the line is left out rather than sent with a placeholder in it.
+        // Without {0} it is sent as written.
+        private static string CounterExample(ActionDefinition action, TargetRegistry targets, string target,
+                                             string label, bool statements)
         {
             string stimulus = action.CounterExampleStimulus;
             if (string.IsNullOrWhiteSpace(stimulus)) return null;
 
-            if (stimulus.Contains("{0}"))
+            string statement = statements ? action.CounterExampleStatement : null;
+
+            if (HasPlaceholder(stimulus) || HasPlaceholder(statement))
             {
-                string target = FirstRegisteredPreferred(action, targets);
                 if (target == null) return null;
 
-                stimulus = Fill(stimulus, DisplayName(target));
+                string name = DisplayName(target);
+                stimulus = Fill(stimulus, name);
+                statement = Fill(statement, name);
             }
 
-            return Example(stimulusLabel, stimulus, ActionRegistry.None, TargetRegistry.NoTarget);
+            return Example(label, stimulus, ActionRegistry.None, TargetRegistry.NoTarget, statement);
         }
 
         private static string RefusalExample(IReadOnlyList<ActionDefinition> available, TargetRegistry targets, string stimulusLabel)
@@ -113,7 +154,7 @@ namespace Agenerela
                 if (string.IsNullOrWhiteSpace(action.ExampleStimulus)) continue;
                 if (!action.ExampleStimulus.Contains("{0}")) continue;
 
-                return Example(stimulusLabel, Fill(action.ExampleStimulus, placeholder), "none", TargetRegistry.NoTarget + " (not an available target)");
+                return Example(stimulusLabel, Fill(action.ExampleStimulus, placeholder), "none", TargetRegistry.NoTarget + " (not an available target)", null);
             }
 
             return null;
@@ -134,9 +175,24 @@ namespace Agenerela
             return null;
         }
 
-        private static string Example(string label, string stimulus, string actionId, string targetId) => $"{label}: \"{stimulus}\" -> action: {actionId}, target: {targetId}";
+        // "Label: "stimulus" -> action: id, target: id", then ", statement: "..."" when there is one,
+        // in the order the reply's fields come: action, target, statement.
+        private static string Example(string label, string stimulus, string actionId, string targetId, string statement)
+        {
+            string line = $"{label}: {Quoted(stimulus)} -> action: {actionId}, target: {targetId}";
+            return string.IsNullOrWhiteSpace(statement) ? line : line + $", statement: {Quoted(statement)}";
+        }
 
-        private static string Fill(string stimulus, string target) => stimulus.Replace("{0}", target);
+        // Text inside an example's quotes, escaped as JSON escapes it, so a quote the developer wrote
+        // ("He said \"halt\".") cannot end the stimulus or the statement early (#190, G14).
+        private static string Quoted(string text)
+        {
+            return "\"" + (text ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+        }
+
+        private static bool HasPlaceholder(string text) => text != null && text.Contains("{0}");
+
+        private static string Fill(string text, string target) => text?.Replace("{0}", target);
 
         private static string DisplayName(string id)
         {

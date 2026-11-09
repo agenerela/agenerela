@@ -26,6 +26,22 @@ namespace Agenerela
         public string[] PreferredExampleTargets;
 
         /// <summary>
+        /// What the agent says in this action's example, shown after its target as
+        /// <c>statement: "On my way to the Tower."</c> (#190, GreyBoxVillage G14). Empty by default:
+        /// the example then shows no statement, as before.
+        /// </summary>
+        /// <remarks>
+        /// An example with no statement leaves the model only the stimulus to copy: GreyBoxVillage's
+        /// guard answered with its idle example's stimulus in 4 of 4 live tries (findings,
+        /// 5 November). A <c>{0}</c> is filled with the same target as the example's stimulus.
+        /// <see cref="DecideOptions.ExampleStatements"/> leaves every statement out of one call.
+        /// Unmeasured: the A/B is owed (#151). Never an evaluation prompt (hard rule 4).
+        /// </remarks>
+        [Tooltip("Optional. What the agent says in this action's example. Use {0} for the target, " +
+                 "as in the example, and never reuse an evaluation prompt.")]
+        public string ExampleStatement;
+
+        /// <summary>
         /// A stimulus that touches this action's subject but asks for nothing, shown to the model
         /// answered with <c>none</c> beside the action's own example (#190, Living Vale #9). Empty
         /// by default, which adds nothing to the prompt.
@@ -52,6 +68,14 @@ namespace Agenerela
                  "shown answered with 'none'. Use {0} for the target, as in the example, and never " +
                  "reuse an evaluation prompt.")]
         public string CounterExampleStimulus;
+
+        /// <summary>
+        /// What the agent says in this action's counter-example, the line answered with <c>none</c>
+        /// (#190, G14). Empty by default. Shown and filled like <see cref="ExampleStatement"/>.
+        /// </summary>
+        [Tooltip("Optional. What the agent says in the counter-example. Use {0} for the target, and " +
+                 "never reuse an evaluation prompt.")]
+        public string CounterExampleStatement;
 
         /// <summary>
         /// The kinds of target this action takes, matched ordinally against the category each

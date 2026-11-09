@@ -171,6 +171,15 @@ namespace Agenerela
         public string IdleExampleStimulus { get; set; }
 
         /// <summary>
+        /// What the agent says in its idle example, for every call that does not pass its own in
+        /// <see cref="DecideOptions.IdleExampleStatement"/> (#190, G14). Null by default, which uses the
+        /// profile's <see cref="AgentProfile.IdleExampleStatement"/>, but only when the idle stimulus is
+        /// the profile's too: a statement never comes from further down than its stimulus. Empty gives
+        /// no statement. Read on every call.
+        /// </summary>
+        public string IdleExampleStatement { get; set; }
+
+        /// <summary>
         /// The provider this agent asks. Setting it switches the backend or the model the agent
         /// decides with (DR-019), and keeps everything else: its memory, actions, targets, sources,
         /// guards and state. Each decision reads it once, when it starts, so one under way finishes
@@ -606,6 +615,18 @@ namespace Agenerela
             // lines are not something the agent knows, so they take no place under the cap.
             var observations = new ReadOnlyCollection<string>(NotBlank(options.Observations));
             string idleExample = options.IdleExampleStimulus ?? IdleExampleStimulus ?? (profile != null ? profile.IdleExampleStimulus : null);
+
+            // Its statement is looked up the same way, but never from further down than the stimulus
+            // came from, so a profile's is never attached to a line the call or the agent supplied
+            // (#190, G14). Kept on the call's own copy of the options, which Decide reads.
+            if (options.IdleExampleStimulus == null)
+            {
+                options.IdleExampleStatement = options.IdleExampleStatement ?? IdleExampleStatement;
+                if (IdleExampleStimulus == null && profile != null)
+                {
+                    options.IdleExampleStatement = options.IdleExampleStatement ?? profile.IdleExampleStatement;
+                }
+            }
 
             return Call(Backlog, stimulus, options, idleExample, observations, ct);
         }
@@ -1072,6 +1093,8 @@ namespace Agenerela
                     ListActionsAndTargets = call.ListActionsAndTargets,
                     MaxListedTargets = call.MaxListedTargets,
                     CounterExamples = call.CounterExamples,
+                    IdleExampleStatement = call.IdleExampleStatement,
+                    ExampleStatements = call.ExampleStatements,
                 };
 
                 // Asked once, so the action enum and the examples come from one answer even when an
@@ -1085,7 +1108,7 @@ namespace Agenerela
                 }
 
                 var schema = DecisionSchema.Build(ctx, available, paired);
-                string fewShot = FewShotBuilder.Build(available, ctx.Targets, label, idleExample, options.CounterExamples);
+                string fewShot = FewShotBuilder.Build(available, ctx.Targets, options);
 
                 var history = Recall(memory, ctx, telemetry);
                 request = PromptBuilder.Build(ctx, schema, fewShot, history, options);

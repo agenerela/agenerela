@@ -97,6 +97,65 @@ namespace Agenerela.Tests
             Assert.That(new DecideOptions().CounterExamples, Is.True, "On by default, which shows only what a developer wrote.");
         }
 
+        // ---- Statements (#190, G14) --------------------------------------------------------------
+
+        [Test]
+        public async Task AnIdleStatementNeverComesFromFurtherDownThanItsStimulus()
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var profile = Fixtures.VillageGuardProfile();
+            profile.IdleExampleStatement = "Rested and ready.";
+            var agent = new Agent(profile, fake);
+            agent.Bind("move_to", new FakeHandler());
+            agent.Targets.Register("tower", new object());
+            Assert.That(new Agent(Fixtures.VillageGuardProfile(), fake).IdleExampleStatement, Is.Null, "Off by default.");
+
+            async Task<string> Idle(DecideOptions options = null)
+            {
+                await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", options));
+                return IdleLines(fake.LastRequest.FewShotBlock).Single();
+            }
+
+            string profiles = await Idle();
+            string callsStimulus = await Idle(new DecideOptions { IdleExampleStimulus = "The bell has not rung." });
+            string callsBoth = await Idle(new DecideOptions { IdleExampleStimulus = "The bell has not rung.", IdleExampleStatement = "Not yet." });
+            string callsStatement = await Idle(new DecideOptions { IdleExampleStatement = "All quiet here." });
+            agent.IdleExampleStimulus = "All is calm.";
+            string agentsStimulus = await Idle();
+            agent.IdleExampleStimulus = null;
+            agent.IdleExampleStatement = "Well rested, sir.";
+            string agentsStatement = await Idle();
+
+            Assert.That(profiles, Is.EqualTo("Player: \"You seem well rested today.\" -> action: none, target: no_target, statement: \"Rested and ready.\""));
+            Assert.That(callsStimulus, Is.EqualTo("Player: \"The bell has not rung.\" " + AnsweredWithNone),
+                "The profile's statement was written for the profile's line, not the call's.");
+            Assert.That(callsBoth, Does.EndWith(", statement: \"Not yet.\""));
+            Assert.That(callsStatement, Is.EqualTo("Player: \"You seem well rested today.\" -> action: none, target: no_target, statement: \"All quiet here.\""),
+                "A call's statement may go on a stimulus from further down.");
+            Assert.That(agentsStimulus, Is.EqualTo("Player: \"All is calm.\" " + AnsweredWithNone), "Nor on the agent's own line.");
+            Assert.That(agentsStatement, Does.EndWith(", statement: \"Well rested, sir.\""));
+        }
+
+        [Test]
+        public async Task TheCallsSwitchesReachTheExamples()
+        {
+            var fake = new FakeProvider(GoToTheTower);
+            var agent = Fixtures.VillageGuard(fake);
+            Definition(agent, "move_to").ExampleStatement = "Heading for the {0}.";
+
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+            string defaults = fake.LastRequest.FewShotBlock;
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", new DecideOptions { ExampleStatements = false }));
+            string switched = fake.LastRequest.FewShotBlock;
+
+            Assert.That(defaults, Does.Contain("\"Proceed to the Tower.\" -> action: move_to, target: tower, statement: \"Heading for the Tower.\""),
+                "A written statement is shown by default, its {0} filled like the stimulus's.");
+            Assert.That(switched, Does.Not.Contain("statement:"), "ExampleStatements = false leaves them out.");
+            Assert.That(switched, Does.Contain("\"Proceed to the Tower.\" -> action: move_to, target: tower\n"),
+                "Only the statement goes; the example stays.");
+            Assert.That(new DecideOptions().ExampleStatements, Is.True, "On, which shows only what a developer wrote.");
+        }
+
         private static ActionDefinition Definition(Agent agent, string id)
         {
             Assert.That(agent.Actions.TryGet(id, out var definition, out _), Is.True, $"'{id}' is not bound.");
@@ -121,11 +180,14 @@ namespace Agenerela.Tests
             return agent;
         }
 
-        // The idle example's line, or none. The refusal example also answers none, but always ends
-        // with "(not an available target)".
+        // The idle example's line, or none, with its statement when it has one. The refusal example
+        // also answers none, but always ends with "(not an available target)". Only for an agent
+        // with no counter-examples, whose lines answer none too.
         private static string[] IdleLines(string fewShotBlock)
         {
-            return fewShotBlock.Split('\n').Where(line => line.EndsWith(AnsweredWithNone)).ToArray();
+            return fewShotBlock.Split('\n')
+                .Where(line => line.Contains(AnsweredWithNone) && !line.EndsWith("(not an available target)"))
+                .ToArray();
         }
     }
 }
