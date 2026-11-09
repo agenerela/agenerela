@@ -138,6 +138,21 @@ namespace Agenerela
         public AgentIdentity Identity { get; }
 
         /// <summary>
+        /// A stable id for this agent, chosen by the game, such as <c>"npc_mara"</c>, or null for none,
+        /// the default. The model never sees it. It names this agent where a display name cannot:
+        /// two agents may share a name, or be built from one profile and so share one
+        /// <see cref="AgentIdentity"/>. Read as each decision is asked, so a change applies from the
+        /// next one (#190, Living Vale #21).
+        /// </summary>
+        /// <remarks>
+        /// <see cref="Providers.ScriptedProvider"/> matches its scripts by this id before the name,
+        /// and reports it in <see cref="Providers.ScriptedRequest.AgentId"/>. Nothing checks that ids
+        /// are unique. Extension point, not now: a serialized <c>Id</c> field on <c>AgentBehaviour</c>,
+        /// when a scene needs one without code; until then, set <c>behaviour.Agent.Id</c>.
+        /// </remarks>
+        public string Id { get; set; }
+
+        /// <summary>
         /// The stimulus of this agent's idle example, the one answered with <c>none</c>, for every
         /// call that does not pass its own in <see cref="DecideOptions.IdleExampleStimulus"/>. Null by
         /// default, which uses the profile's <see cref="AgentProfile.IdleExampleStimulus"/>, so an agent
@@ -938,6 +953,7 @@ namespace Agenerela
 
                 var history = Recall(memory, ctx, telemetry);
                 request = PromptBuilder.Build(ctx, schema, fewShot, history, options);
+                request.AgentId = Id;
                 telemetry.TargetRuleSent = PromptBuilder.SendsTargetRule(schema, options);
             }
             catch (Exception e)

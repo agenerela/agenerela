@@ -157,6 +157,7 @@ namespace Agenerela
                 AgentName = decided.AgentName,
                 StimulusText = decided.StimulusText,
                 StimulusLabel = decided.StimulusLabel,
+                AgentId = decided.AgentId,
             };
         }
 

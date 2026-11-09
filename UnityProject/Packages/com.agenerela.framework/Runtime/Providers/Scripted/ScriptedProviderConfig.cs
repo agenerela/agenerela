@@ -31,7 +31,8 @@ namespace Agenerela.Providers
         [Serializable]
         public sealed class Entry
         {
-            [Tooltip("The agent this answers, by its identity's Name. Blank answers every agent.")]
+            [Tooltip("The agent this answers, by its Agent.Id or its identity's Name; an id is matched first. " +
+                     "Blank answers every agent.")]
             public string Agent = "";
 
             [Tooltip("The stimulus this answers, exactly as passed to DecideAsync, without its label. " +
