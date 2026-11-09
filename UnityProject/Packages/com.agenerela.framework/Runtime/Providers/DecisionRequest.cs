@@ -140,5 +140,9 @@ namespace Agenerela.Providers
         internal string AgentName;
         internal string StimulusText;
         internal string StimulusLabel;
+
+        // The asking agent's Agent.Id, which Agent sets after PromptBuilder builds the request: the
+        // builder sees the context, not the agent. Null when it has none (#190, Living Vale #21).
+        internal string AgentId;
     }
 }

@@ -20,7 +20,10 @@ namespace Agenerela.Tests
     // branch on who is asking (DR-008), and what reaches the model is measured.
     public sealed class RequestOriginTests
     {
-        private static readonly string[] OriginFields = { "AgentName", "StimulusText", "StimulusLabel" };
+        private static readonly string[] OriginFields = { "AgentName", "StimulusText", "StimulusLabel", "AgentId" };
+
+        // An id that appears nowhere in the prompt, so its absence from a body means something.
+        private const string Id = "guard_north_7";
 
         private const string Reply = "{\"action\":\"move_to\",\"target\":\"tower\",\"statement\":\"On my way.\"}";
 
@@ -31,10 +34,11 @@ namespace Agenerela.Tests
         }
 
         [Test]
-        public async Task PromptBuilderRecordsWhoAskedAndWhat()
+        public async Task TheRequestRecordsWhoAskedAndWhat()
         {
             var fake = new FakeProvider(Reply);
             var agent = Fixtures.VillageGuard(fake);
+            agent.Id = Id;
 
             await Fixtures.NotCancelled(agent.DecideAsync("Walk with me.", new DecideOptions { StimulusLabel = "Traveller" }));
 
@@ -42,6 +46,11 @@ namespace Agenerela.Tests
             Assert.That(sent.AgentName, Is.EqualTo("Village Guard"));
             Assert.That(sent.StimulusText, Is.EqualTo("Walk with me."), "As passed, without its label.");
             Assert.That(sent.StimulusLabel, Is.EqualTo("Traveller"));
+            Assert.That(sent.AgentId, Is.EqualTo(Id), "Agent.Id, which Agent sets after PromptBuilder.");
+
+            agent.Id = null;
+            await Fixtures.NotCancelled(agent.DecideAsync("Walk with me."));
+            Assert.That(fake.LastRequest.AgentId, Is.Null, "Read as each decision is asked.");
         }
 
         [Test]
@@ -49,6 +58,7 @@ namespace Agenerela.Tests
         {
             var fake = new FakeProvider(Reply);
             var agent = Fixtures.VillageGuard(fake);
+            agent.Id = Id;
             agent.Guards.Add(FakeGuard.Rewriting("Stopper"));
 
             await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", new DecideOptions { AskForRefusalLine = true }));
@@ -60,27 +70,32 @@ namespace Agenerela.Tests
             Assert.That(line.AgentName, Is.EqualTo(decided.AgentName).And.EqualTo("Village Guard"));
             Assert.That(line.StimulusText, Is.EqualTo(decided.StimulusText).And.EqualTo("Go to the tower."));
             Assert.That(line.StimulusLabel, Is.EqualTo(decided.StimulusLabel).And.EqualTo("Player"));
+            Assert.That(line.AgentId, Is.EqualTo(decided.AgentId).And.EqualTo(Id));
         }
 
         [Test]
         public async Task NoneOfThemReachesOllamasRequestBody()
         {
-            // The values are in the prompt already, as the system prompt and the stimulus turn, so
-            // the check is that the body does not change with them: the same request with the three
-            // fields cleared must send exactly the same bytes.
+            // The name and the stimulus are in the prompt already, as the system prompt and the
+            // stimulus turn, so the check is that the body does not change with them: the same
+            // request with the four fields cleared must send exactly the same bytes. The id is in
+            // nothing the model is sent, so its value must not appear at all.
             var handler = new CapturingHandler();
             var provider = new OllamaProvider(new OllamaSettings(), handler);
             var agent = Fixtures.VillageGuard(provider);
+            agent.Id = Id;
 
             var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
             var request = result.Request;
             Assert.That(request.AgentName, Is.Not.Null, "The fields must be set for this to test anything.");
             Assert.That(request.StimulusText, Is.Not.Null);
             Assert.That(request.StimulusLabel, Is.Not.Null);
+            Assert.That(request.AgentId, Is.EqualTo(Id));
 
             request.AgentName = null;
             request.StimulusText = null;
             request.StimulusLabel = null;
+            request.AgentId = null;
             await Fixtures.NotCancelled(provider.RequestAsync(request, CancellationToken.None));
 
             Assert.That(handler.Bodies, Has.Count.EqualTo(2));
@@ -88,6 +103,7 @@ namespace Agenerela.Tests
             var keys = KeysOf(JToken.Parse(handler.Bodies[0])).ToList();
             Assert.That(keys, Does.Contain("messages").And.Contain("format"), "The walk must find the body's keys, or this checks nothing.");
             Assert.That(keys.Where(IsOriginField), Is.Empty);
+            Assert.That(handler.Bodies[0], Does.Not.Contain(Id), "The id is never sent to a model.");
         }
 
         [Test]
@@ -119,6 +135,7 @@ namespace Agenerela.Tests
                 AgentName = "Village Guard",
                 StimulusText = "Go to the tower.",
                 StimulusLabel = "Player",
+                AgentId = Id,
             };
         }
 

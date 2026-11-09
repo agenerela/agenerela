@@ -274,6 +274,12 @@ While the version stays `0.x`, the public API may change in any release.
   further in code.
 - `Documentation~/providers.md`: the scripted provider, as an asset, testing with it, and how a
   decision log will replay through it (G7).
+- **`Agent.Id`** (#190, Living Vale #21): an optional stable id the game chooses, such as
+  `"npc_mara"`, null by default and never sent to a model. Two agents that share a name, or are
+  built from one profile and so share one `AgentIdentity`, can be told apart by it.
+  `ScriptedProvider` matches a script by the asking agent's id before its name, within each stage,
+  and reports it in `ScriptedRequest.AgentId`. `When(agent, …)` and a config entry's **Agent** take
+  either, and keying by name works as before when no id is set.
 
 - **Provider health** (#190 G1, DR-015 as amended). `ProviderHealth.For(provider)`, one per
   provider instance like its queue, says whether the provider is answering: `IsDown`, `Reason`

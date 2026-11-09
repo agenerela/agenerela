@@ -299,9 +299,9 @@ var bram = new Agent(bramProfile, scripted);
 any HUD say "scripted" wherever they would name the model, even when a reply replays a model's
 text word for word. A `ScriptedReply` has no model and no token counts to set.
 
-**Which reply answers.** The agent is matched by `AgentIdentity.Name`, and the stimulus by the
-exact text passed to `DecideAsync`, without its label, both case-sensitive. A decision request
-takes the first of:
+**Which reply answers.** The agent is matched by its `Agent.Id` when it has one, then by its
+`AgentIdentity.Name`. The stimulus is matched by the exact text passed to `DecideAsync`, without
+its label. Both are case-sensitive. A decision request takes the first of:
 
 1. the replies scripted for this agent and this stimulus, `When(agent, stimulus, …)`;
 2. those for this stimulus from any agent, `When(null, stimulus, …)`;
@@ -309,7 +309,9 @@ takes the first of:
 4. `Callback`, when it returns a reply rather than null;
 5. `Otherwise(…)`, which is `When(null, null, …)`.
 
-A request with no agent name or an empty stimulus skips the stages that need one, so the callback
+Ids and names share one key, and within stages 1 and 3 an agent's id is tried before its name: a
+script for `"npc_mara"` answers the agent with that id, and one for `"Mara"` answers any Mara that no
+id script answered. A request with no agent name or an empty stimulus skips the stages that need one, so the callback
 still comes before `Otherwise`. Several replies for one key answer in order, and the last keeps answering. Scripting a key again
 replaces it and starts it over; `Clear()` forgets every key. A request nothing answers fails with
 a `ProviderException` of `Rejected` that names the agent and the stimulus, so a test that asks
@@ -375,8 +377,9 @@ ends. So script it in Play mode, not from an Edit-mode tool before pressing Play
   `LastRequest` say what reached it.
 - **Failures and timeouts** are replies: `Fail(ProviderErrorKind.Unreachable)` for a stopped
   server, `Never()` for a hung one, `.After(seconds)` for a slow one.
-- **A test agent's name is its key.** Two agents with the same `AgentIdentity.Name` share their
-  scripts; rename one in the test, as the framework's own tests do.
+- **Give agents that share a name an id.** Two agents with the same `AgentIdentity.Name`, or built
+  from one profile, share their name's scripts. Set `Agent.Id` on each, such as
+  `new Agent(profile, scripted) { Id = "guard_north" }`, and script them by id.
 
 ### Replaying a decision log
 
