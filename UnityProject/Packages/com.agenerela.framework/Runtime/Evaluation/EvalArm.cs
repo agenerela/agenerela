@@ -54,5 +54,35 @@ namespace Agenerela.Evaluation
 
         /// <summary>Whether the arm checks targets, before a prompt's own <c>checkTarget</c>.</summary>
         public bool CheckTarget => Options.CheckTarget;
+
+        /// <summary>
+        /// <see cref="MaxStatementLength"/>'s default, 200 characters. Unmeasured: a guess at where a
+        /// spoken line turns into a speech, well above the longest of 632 statements from
+        /// <c>qwen3.5:2b</c> on 9 November 2026 (81).
+        /// </summary>
+        public const int DefaultMaxStatementLength = 200;
+
+        private int maxStatementLength = DefaultMaxStatementLength;
+
+        /// <summary>
+        /// The longest statement, in characters once trimmed, that is not
+        /// <see cref="ReplyFlag.TooLong"/>; <see cref="DefaultMaxStatementLength"/> unless set. A
+        /// reply check only: it never changes a decision, its outcome or the accuracy.
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">Set to less than 1.</exception>
+        public int MaxStatementLength
+        {
+            get => maxStatementLength;
+            set
+            {
+                if (value < 1)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value,
+                        $"Arm '{Name}': MaxStatementLength must be at least 1; int.MaxValue never flags a statement as too long.");
+                }
+
+                maxStatementLength = value;
+            }
+        }
     }
 }

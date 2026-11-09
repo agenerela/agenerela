@@ -309,7 +309,8 @@ ran one after the other; repeat a close result.
   `CheckTarget` is on only when both the arm and the prompt's `checkTarget` leave it on.
 
 The warm-up's requests are shaped like a prompt's, with the arm's and the targets' lines, but no
-state. Nothing is executed: the runner scores what the agent chose, not what it said.
+state. Nothing is executed: the runner scores what the agent chose, and checks what it said apart
+from that score ([Reply checks](#reply-checks-what-the-agent-said)).
 
 ## Reading the report
 
@@ -329,8 +330,8 @@ last commit and whether it has uncommitted changes, the profile, the graphics de
 reports, how targets and state reached the model, and per arm its config, provider, model,
 version, `checkTarget`, warm-up and what was in VRAM); the five outcomes per arm, with accuracy
 as correct out of every prompt asked, pipeline errors included; the noise check; the outcomes
-per category; and every answer that was not correct, with what the model said and the guard's
-reason. `report.json` holds all of that and every answer, correct ones too, and reads back with
+per category; every answer that was not correct, with what the model said and the guard's
+reason; and the reply checks. `report.json` holds all of that and every answer, correct ones too, and reads back with
 `EvalReport.FromJson`.
 
 **The noise check.** A difference between the arms smaller than the noise floor is marked
@@ -338,6 +339,53 @@ reason. `report.json` holds all of that and every answer, correct ones too, and 
 10 points at n ≈ 50, scaled as a proportion's standard error scales: `10 × √(50 / n)`, about 16
 points at n = 20 and 5 at n = 200. It is checked over the whole set and per category, each with
 its own n, so a category of six prompts needs a very large difference before it says anything.
+
+### Reply checks: what the agent said
+
+The outcomes score the decision; the statement, the line the agent says, is never part of them.
+So every answer's statement is also checked, as a second score beside the outcomes, by four
+mechanical rules that need no judgement (`ReplyChecks`, `ReplyFlag`):
+
+| Flag | When |
+|---|---|
+| `Echo` | The statement is a few-shot line: any action's example or counter-example stimulus or statement, the profile's idle example or its statement, or the arm's own `IdleExampleStimulus` or `IdleExampleStatement`. Matched as the set's own rule matches a stimulus (`PromptSetChecks.MatchesExample`): ignoring case, spacing and end punctuation, a `{0}` standing for any target. Every such line counts, whether or not this arm's switches showed it |
+| `Empty` | The schema asked for a statement, as a decision's always does, and it is empty or only whitespace |
+| `TooLong` | Longer, once trimmed, than the arm's `MaxStatementLength`: 200 characters unless set (`EvalArm.DefaultMaxStatementLength`) |
+| `Leak` | The statement shows the machinery: an action or target id as written (`move_to`, `no_target`, `north_tower`), a schema field used as a label (`action:`, `"target":`), a `{` or `}`, or one of `ReplyChecks.AssistantPhrases` |
+
+They apply to every prompt of a set; nothing in the set's format turns one on or off. What is
+checked is the model's own statement, before any guard, so a guard that stopped a decision does
+not hide what the model wrote. A pipeline error has no statement and is not checked
+(`EvalAnswer.ReplyChecked` is false). An arm sets its own limit:
+
+```csharp
+var arm = new EvalArm("guards-on", ollamaLocal) { MaxStatementLength = 120 };
+```
+
+**The length is unmeasured.** 200 characters is a guess at where one spoken line becomes a
+speech, chosen well above the longest of the 632 statements `qwen3.5:2b` wrote on 9 November 2026,
+81 characters. Set your game's own once you know how long its lines may be.
+
+**An id is a leak only when it is not also a word.** An id with a `_` or a digit, such as `move_to`
+or `tower2`, is nobody's speech; one of letters only, such as `bridge` or `none`, is how anyone would
+say it, so it is never flagged. Ids are matched as whole words, ignoring case.
+
+**The assistant's phrases** are matched as whole words, ignoring case, a typographic apostrophe
+counting as `'`: "as an AI", "I am an AI", "I'm an AI", "AI assistant", "language model". The list
+is short on purpose, each entry a guess at what a model slips into; add one when a run shows it.
+
+`report.json` gives each answer's `replyChecked` and `replyFlags`, one `{ "flag", "detail" }` per
+flag, the detail saying what was found, such as `the id move_to` or the example line repeated; and
+each arm's `replies`, how many answers were checked, carry each flag, and carry any (`flagged`),
+an answer with two flags counting once there. `report.md` ends with a **Reply checks** section:
+those counts per arm, then every flagged answer with its outcome, statement and flags. No flag
+changes an outcome, `Telemetry.Outcome`, the accuracy or the noise check.
+
+**Not checked yet: a statement that contradicts its decision.** "I will stand guard here." with
+`none`, or a promise of an action the agent did not take, needs a judge, a second model or a person
+reading each line. A judge's counts mean nothing until the judge has been validated against
+people's labels of the same statements (hard rule 2), so that check, and any judge model, is the
+next step and is not in the runner.
 
 **In the Evaluation Report window** the report reads in screen 4's six numbered parts:
 
@@ -358,6 +406,8 @@ its own n, so a category of six prompts needs a very large difference before it 
    Agreement tab settles them. **Copy summary for findings.md** copies the arms, the five
    outcomes, the noise check and any warning as Markdown; **Show files** and **Save a copy…**
    reach `report.json` and `report.md`.
+
+The window does not show the reply checks yet; read them in `report.md` or `report.json`.
 
 The runner checks some of the rules for a fair measurement; the rest are yours. Read
 [Measuring](https://github.com/agenerela/agenerela/blob/test/docs/llm-wiki/measuring.md) before
@@ -380,6 +430,7 @@ you compare with.
 | `EvalReport` | What a run found: `Conditions`, `Arms`, `Noise`, `Answers`, `NotCorrect`, `Cancelled`; `Save`, `ToJson`, `FromJson`, `ToMarkdown` |
 | `EvalConditions`, `EvalArmConditions`, `ResidencyReading`, `ResidentModel` | What it ran under |
 | `EvalArmResult`, `OutcomeCounts`, `NoiseCheck`, `EvalAnswer` | Its counts, noise check and answers |
+| `ReplyChecks`, `ReplyFlag`, `ReplyFinding`, `ReplyCounts` | The checks on each statement: `Check`, `AssistantPhrases`; an answer's `ReplyFlags`, an arm's `Replies`, `EvalArm.MaxStatementLength`, `EvalReport.FlaggedReplies` |
 
 All of it is in the `Agenerela.Evaluation` namespace, under `Runtime/Evaluation/`, and reads and
 writes JSON with Newtonsoft only.

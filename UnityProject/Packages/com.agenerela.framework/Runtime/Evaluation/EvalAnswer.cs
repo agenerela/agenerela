@@ -63,6 +63,22 @@ namespace Agenerela.Evaluation
         [JsonProperty("latencySeconds")] public float LatencySeconds;
 
         /// <summary>
+        /// Whether the reply checks looked at <see cref="ModelStatement"/>: true for every answer
+        /// with a decision, false for a pipeline error and in a report written before they existed.
+        /// </summary>
+        [JsonProperty("replyChecked")] public bool ReplyChecked;
+
+        /// <summary>
+        /// What the reply checks found in <see cref="ModelStatement"/>, one finding per
+        /// <see cref="ReplyFlag"/>; empty when it passed them all or was not checked. Never part of
+        /// <see cref="Outcome"/>.
+        /// </summary>
+        [JsonProperty("replyFlags")] public List<ReplyFinding> ReplyFlags = new List<ReplyFinding>();
+
+        /// <summary>Whether <see cref="ReplyFlags"/> holds <paramref name="flag"/>.</summary>
+        public bool HasReplyFlag(ReplyFlag flag) => ReplyFlags != null && ReplyFlags.Exists(f => f != null && f.Flag == flag);
+
+        /// <summary>
         /// The decision itself, its request, reply and telemetry included, whose
         /// <see cref="DecisionTelemetry.Outcome"/> is <see cref="Outcome"/>. Not written to JSON, so
         /// null in a report read back with <see cref="EvalReport.FromJson"/>.

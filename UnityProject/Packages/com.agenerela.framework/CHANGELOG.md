@@ -10,6 +10,20 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **Reply checks in `EvalRunner`** (#145): every answer's statement is checked for four mechanical
+  flags, `ReplyFlag.Echo` (it is a few-shot line, by `PromptSetChecks.MatchesExample`: any action's
+  example or counter-example stimulus or statement, the profile's idle example and its statement,
+  or the arm's own), `Empty` (blank when the schema asked for one), `TooLong` (over the new
+  `EvalArm.MaxStatementLength`, `EvalArm.DefaultMaxStatementLength` = 200 characters, unmeasured)
+  and `Leak` (an action or target id that is not a plain word, such as `move_to` or `no_target`; a
+  schema field used as a label, `action:`; a JSON brace; or one of `ReplyChecks.AssistantPhrases`).
+  Each answer records `EvalAnswer.ReplyChecked` and `ReplyFlags`, a `ReplyFinding` per flag with
+  what it found; each arm `EvalArmResult.Replies`, a `ReplyCounts` per flag and of answers with any
+  flag; each arm's conditions `MaxStatementLength`; and `report.md` ends with a **Reply checks**
+  section listing every flagged answer. `EvalReport.FlaggedReplies` lists them in code and
+  `ReplyChecks.Check` runs the checks on any statement. A second score only: no flag changes an
+  outcome, `Telemetry.Outcome` or the accuracy, and a report written before them reads back with
+  nothing checked. No prompt-set format change.
 - **Inspection seams** (#166): `DecisionFeed.Recorded`, raised once for each result `DecideAsync`
   returns, pipeline errors and guard-stopped decisions included, and once for each `Execute` that
   returns, with a `DecisionFeedEntry` carrying the `Agent`, the `DecisionResult`, its
