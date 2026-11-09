@@ -1661,3 +1661,123 @@ would need its own run.
 
 **What would change this.** A repeat that moves outside the noise floor, on more prompts (#147) or
 on another model. Raw report: `.scratch/live-runs-1109/run3a-report/` in the session's checkout.
+
+### Counter-examples on the evaluation set: 56/76 with them and without, on `qwen3.5:2b` (9 November 2026)
+
+The second of #193's switches through the runner, for #151: does an action's counter-example, a
+line about its subject answered with `none`, cut actions nobody asked for?
+
+**Setup.** `VillageGuard` has no counter-examples, so with it as it is the switch changes nothing.
+With the lead's approval, one was written for each of its four actions, on in-memory copies for this
+run only (the asset is unchanged). Both arms used that profile:
+
+- **A, control:** `DecideOptions.CounterExamples = false`.
+- **B:** the defaults, which show the counter-examples.
+
+The lines. Each was checked word by word against all 76 stimuli and their observations. None
+matches one, and the only content words they share are `well` and `wolf`, the targets the actions'
+own examples already show:
+
+| Action | Counter-example (`{0}` is filled as in the action's example) |
+|---|---|
+| `follow_player` | "My brother likes to wander behind the carts." |
+| `stop_following` | "The old miller never budges from his chair." |
+| `move_to` | "The {0} was built by my grandfather." (shown as "The Well …") |
+| `attack_target` | "The {0} howled at sunset yesterday." (shown as "The Wolf …") |
+
+Everything else as in the entry above: the evaluation set at 61a7744, interleaved, runner defaults,
+the 5 November state wording, `qwen3.5:2b` on Ollama 0.40.14, 2254 of 2254 MB in VRAM before and
+after each warm-up and at each arm's end, on AC power, nothing else resident, the lock held. 139 s.
+No warnings and no pipeline errors. This run and the next one ran on `ollama serve`, started by hand
+with the app's server configuration, so the app's updater could not install 0.40.15 mid-batch. The
+control arm gave the same 76 answers as the entry above's control did on the app.
+
+| Outcome | A, counter-examples off | B, on |
+|---|---:|---:|
+| Correct | 56 | 56 |
+| WrongLegalAction | 16 | 15 |
+| ContainedByGuard | 1 | 2 |
+| RejectedWhenActionExpected | 3 | 3 |
+| **Accuracy** | **73.7%** | **73.7%** |
+
+**+0.0 points, within noise** (floor 8.1). Per category, B − A: command_with_target −9.1 (n 11),
+conversation +11.1 (9), event +5.3 (19), situation −5.3 (19), impossible_request and
+simple_command 0. All within noise.
+
+**Unasked actions.** On the 30 prompts labelled `none`, the model chose an action, before any
+guard, 4 times without the counter-examples and 3 times with them. On the 46 prompts that want an
+action, it answered `none` 10 times without and 11 with. Living Vale's 6/13 → 0/13 (5 November) was
+one idle-style line in its own game, not a counter-example per action, and does not carry over here.
+
+**The four answers that moved.** Became correct: "You look tired." (A walked to the campfire) and
+"The bridge has collapsed." (A walked to the gate), both `none` in B. Stopped being correct: "The
+path ahead is empty." became `move_to`/`bridge`, which the guard contained, and "Approach the
+eastern road." became `none` ("I will not follow you into the unknown.").
+
+**What it means.** Counter-examples, as written here, make no measurable difference to
+`qwen3.5:2b` on this set. They stay empty by default, which is what they are. A set with more
+prompts that tempt an unasked action would test them more sharply than 30 `none` prompts do.
+
+**What would change this.** A run outside the noise floor, with other lines, on more prompts or on
+another model. Raw report: `.scratch/live-runs-1109/run3b-report/` in the session's checkout.
+
+### The idle example for a code-built agent: 59/76 unset against 56/76 set, and the line costs `stop_following` (9 November 2026)
+
+The third of #193's switches through the runner, for #151: does `Agent.IdleExampleStimulus` help an
+agent built in code, which has no idle example unless one is set?
+
+**Setup.** The runner always builds its agents from a profile, so a profile agent (`VillageGuard`)
+stood in for a code-built one, and the idle example was set per call:
+
+- **A:** `IdleExampleStimulus = ""`, no idle example, what a code-built agent sends today.
+- **B:** `IdleExampleStimulus = AgentProfile.DefaultIdleExampleStimulus`, "Nothing has changed
+  since last time.", the line a new profile starts with.
+
+A preview of both prompts showed they differ by that one example line and nothing else. Everything
+else as in the two entries above, on the same `ollama serve`: 0.40.14, 2254 of 2254 MB in VRAM
+throughout, interleaved, 138 s, no warnings and no pipeline errors.
+
+**Rule 4.** The default line partly repeats situation_001, "Nothing has happened for a while.",
+which is labelled `none` too. So the result is given with and without that prompt. Both arms
+answered it `none`.
+
+| Outcome | A, no idle example | B, the default idle example |
+|---|---:|---:|
+| Correct | 59 | 56 |
+| WrongLegalAction | 12 | 15 |
+| ContainedByGuard | 2 | 1 |
+| RejectedWhenActionExpected | 3 | 4 |
+| **Accuracy** | **77.6%** | **73.7%** |
+| Without situation_001 | 58/75, 77.3% | 55/75, 73.3% |
+
+**Overall −3.9 points, within noise** (floor 8.1; without situation_001, −4.0, floor 8.2).
+**simple_command −33.3, beyond noise** (88.9% → 55.6%, n = 9, floor 23.6). The other categories
+were within noise: situation −10.5 (−11.1 without situation_001), conversation +11.1,
+impossible_request +11.1, the rest 0.
+
+**What the idle line did.** With it, the 2B answered `none` to commands it had obeyed without it:
+"Wait here.", "Stay where you are.", "Do not move." and "The player has gone inside to sleep.", all
+`stop_following`, and the night-watch situation, a `move_to`. Its statements still said it would
+stay ("I will stand guard here until further notice."). It also fixed two `none` prompts: "You look
+tired." (A walked to the campfire) and "Attack Godzilla." (A attacked the wolf, contained by the
+guard). On the 30 `none` prompts it acted 5 times without the line and 3 times with it. On the 46
+that want an action, it answered `none` 6 times without and 10 times with.
+
+**It was also repeated.** With the line, 10 of the 76 statements were "Nothing has changed since
+last time." word for word, against none without it. That is the echo #190 G14 is about.
+
+**An observation across runs, not a result.** The control arms of the two entries above had the
+profile's own idle example, "Fine day for it.", and scored 56/76 with simple_command at 55.6%, the
+same as B here. At temperature 0 this machine gave identical answers on repeat (both controls
+matched answer for answer). So the cost to `stop_following` may come from any idle `none` example,
+whatever its text. #151's "idle example with vs without" A/B on the profile's own line is the run
+that would show it.
+
+**What it means.** Nothing to switch on. The one difference beyond the noise floor is in favour of
+the default that already holds, a code-built agent with no idle example. It is one category of 9
+prompts, so it is worth repeating on #147's larger set before anyone removes the profile's idle
+example.
+
+**What would change this.** A repeat on more `stop_following` prompts, or on another model, where
+the idle line no longer costs them. Raw report: `.scratch/live-runs-1109/run3c-report/` in the
+session's checkout.

@@ -24,9 +24,7 @@ in, the machine, and the live checks that aren't A/B runs.
 
 | Run | Kind | Machine | What it checks | From |
 |---|---|---|---|---|
-| Counter-examples on vs off | A/B | Laptop | Do counter-examples cut unasked offers on the evaluation set, as Living Vale saw in its own runs? | #193, #151 |
-| Code-built idle example, set vs unset | A/B | Laptop | Does the idle `none` example help an agent built in code? | #193, #151 |
-| Idle example with vs without | A/B | Laptop | Does the `none` example earn its tokens at all? | #151 |
+| Idle example with vs without | A/B | Laptop | Does the `none` example earn its tokens at all? On the profile's own line, "Fine day for it.": the code-built run on 9 November saw the default line cost `stop_following` commands (findings, 9 November) | #151 |
 | `qwen3.5:2b` vs `qwen3.5:4b` | A/B, sequential arms | Laptop | The prototype's headline, on the framework | #151 |
 | The 8 GB shortlist against `qwen3.5:2b` | A/B, sequential arms, one model each | Laptop | Which small model to use by default. **First check each model keeps the field order**: models on Ollama's GGUF-template path get their keys sorted (findings, 5 November). Today that's `MiniCPM5-2B`, which keeps the order only with `OLLAMA_GO_TEMPLATE=1` set on the server, and then on the Go template (findings, 9 November) | `model-candidates.md`, #151 |
 | The 12 and 16 GB tiers | A/B, sequential arms | 5080 box | A "high-end GPU" option, such as Granite 4.1 8B, Qwen3.5-9B or Gemma 4 12B, against the 2B | `model-candidates.md` |
@@ -57,3 +55,5 @@ in, the machine, and the live checks that aren't A/B runs.
 | `Agent.Reset` with a request already at Ollama, `qwen3.5:2b` | 3 of 3: the call ended cancelled, Ollama cancelled the request mid-reply, and the next decision was normal with no queue wait | `findings.md`, 9 November |
 | Whether Ollama keeps the field order | Set explicitly, `OLLAMA_GO_TEMPLATE=1` moved `Qwen3-4B-Instruct-2507` and `MiniCPM5-2B` onto `go_template`: 6 of 6 in order each, against 0 of 6 unset. It also changes the chat template | `findings.md`, 9 November |
 | `ListActionsAndTargets` on vs off, `qwen3.5:2b` | 58/76 on against 56/76 off, within noise | `findings.md`, 9 November |
+| Counter-examples on vs off, `qwen3.5:2b`, four lines written for the run | 56/76 both, within noise | `findings.md`, 9 November |
+| Code-built idle example, set vs unset, `qwen3.5:2b` (a profile agent standing in) | 59/76 unset against 56/76 set, within noise overall; simple_command −33.3 beyond noise, `stop_following` commands lost to `none` | `findings.md`, 9 November |
