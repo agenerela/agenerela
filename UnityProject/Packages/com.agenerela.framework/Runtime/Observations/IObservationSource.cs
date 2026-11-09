@@ -64,6 +64,8 @@ namespace Agenerela
         /// <remarks>
         /// Read in full straight after the call, so a lazy <c>yield return</c> body runs then,
         /// and an exception it throws fails the decision as one thrown by the call does.
+        /// <c>Agent.Preview</c> calls it too, with no decision after it (#166), so a source should be
+        /// safe to call when nothing follows: it describes, and changes nothing in the game.
         /// </remarks>
         IEnumerable<string> Observe(AgentContext ctx);
     }

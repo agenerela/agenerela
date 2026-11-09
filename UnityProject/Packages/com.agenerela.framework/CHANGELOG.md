@@ -10,6 +10,19 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **Inspection seams** (#166): `DecisionFeed.Recorded`, raised once for each result `DecideAsync`
+  returns, pipeline errors and guard-stopped decisions included, and once for each `Execute` that
+  returns, with a `DecisionFeedEntry` carrying the `Agent`, the `DecisionResult`, its
+  `DecisionStage`, the `Execution` for `Executed`, the UTC time and a sequence number. Cancelled
+  calls, a reset's included, are never in it. A subscriber that throws is logged; with none, raising
+  costs a null check. **`Agent.Preview(stimulus, options)`** returns an `AgentPreview`: the request
+  `DecideAsync` would send next, built by the same method, with the actions offered and left out,
+  the targets and observations per source with what each dropped, and the history. It never calls
+  the provider or remembers anything. **`AgentBehaviour.Find(agent)`** and **`HasAgent`** map an
+  agent back to its component without building one. The package's Editor assembly now sees the
+  runtime's internals. `IMemoryStrategy.Recall`, `ITargetSource.Collect` and
+  `IObservationSource.Observe` now say a preview calls them with no decision after it, so they
+  should change nothing.
 - **Statements in the few-shot examples** (#190 G14): an example can show what the agent says,
   as `-> action: X, target: Y, statement: "..."`, the reply's own field order. Write one in
   `ActionDefinition.ExampleStatement` and `CounterExampleStatement` (or `Statement = "..."` on

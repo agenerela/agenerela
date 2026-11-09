@@ -574,6 +574,11 @@ namespace Agenerela
         /// result, pipeline errors included, and never reaches the provider.
         /// </para>
         /// <para>
+        /// Every result returned is raised on <see cref="DecisionFeed.Recorded"/> just before it is,
+        /// pipeline errors included; a cancelled call is not (#166). <see cref="Preview"/> shows the
+        /// request this would send, without sending it.
+        /// </para>
+        /// <para>
         /// Every agent given the same provider instance shares one queue, which sends at most one
         /// request at a time: player-facing ones first, then background ones, each in the order
         /// they were made (<see cref="DecideOptions.Priority"/>, DR-015). Agents on different
@@ -591,6 +596,60 @@ namespace Agenerela
         /// </para>
         /// </remarks>
         public Awaitable<DecisionResult> DecideAsync(string stimulus, DecideOptions options = null, CancellationToken ct = default)
+        {
+            options = Begin(options, out var observations, out string idleExample);
+            return Call(Backlog, stimulus, options, idleExample, observations, ct);
+        }
+
+        /// <summary>
+        /// What <see cref="DecideAsync"/> would send next for <paramref name="stimulus"/>, worked out
+        /// now and not sent (#166): the actions offered and those left out, the targets and
+        /// observations per source with what each left out, the history, and the request itself.
+        /// </summary>
+        /// <param name="stimulus">As for <see cref="DecideAsync"/>. Null is previewed as empty.</param>
+        /// <param name="options">As for <see cref="DecideAsync"/>. Null uses the defaults.</param>
+        /// <returns>
+        /// The preview. When preparing the request fails, as a source that throws makes it, its
+        /// <see cref="AgentPreview.Request"/> is null and <see cref="AgentPreview.Error"/> holds what
+        /// a decision would log, which a preview does not.
+        /// </returns>
+        /// <exception cref="ArgumentException">The options are a mistake, as for <see cref="DecideAsync"/>.</exception>
+        /// <remarks>
+        /// <para>
+        /// It runs the code <see cref="DecideAsync"/> runs to prepare a request, so the request is the
+        /// one a decision made now with the same stimulus and options would send, field for field. It
+        /// never calls the provider, never waits in a queue, never touches
+        /// <see cref="ProviderHealth"/> or <see cref="Backlog"/>, and never remembers anything.
+        /// </para>
+        /// <para>
+        /// Everything a decision asks still runs, once: every target source, every observation
+        /// source, every availability check, and <see cref="IMemoryStrategy.Recall"/>. A source that
+        /// costs something, such as one that searches the scene, costs it again for each preview, and
+        /// a stateful strategy or source sees the call. Take a preview on the main thread.
+        /// </para>
+        /// </remarks>
+        public AgentPreview Preview(string stimulus = null, DecideOptions options = null)
+        {
+            options = Begin(options, out var observations, out string idleExample);
+
+            var provider = this.provider;
+            var telemetry = Telemetry(provider, options.Priority);
+            var preview = new AgentPreview(stimulus, observations);
+            try
+            {
+                preview.Request = Prepare(provider, Memory, stimulus, options, idleExample, observations, telemetry, preview, out _);
+            }
+            catch (Exception e)
+            {
+                preview.Fail(PipelineErrorKind.RequestPreparation, $"{Who()} could not decide. {PreparationFailed(e)}");
+            }
+
+            return preview;
+        }
+
+        // A call's inputs, shared by DecideAsync and Preview: the options copied and checked, the
+        // call's own observations, and its idle example.
+        private DecideOptions Begin(DecideOptions options, out IReadOnlyList<string> observations, out string idleExample)
         {
             // Copied now, so changing the options after the call changes nothing, including what
             // the guards read from them.
@@ -613,8 +672,8 @@ namespace Agenerela
 
             // A list of the context's own, apart from the options' copy a guard may read. Blank
             // lines are not something the agent knows, so they take no place under the cap.
-            var observations = new ReadOnlyCollection<string>(NotBlank(options.Observations));
-            string idleExample = options.IdleExampleStimulus ?? IdleExampleStimulus ?? (profile != null ? profile.IdleExampleStimulus : null);
+            observations = new ReadOnlyCollection<string>(NotBlank(options.Observations));
+            idleExample = options.IdleExampleStimulus ?? IdleExampleStimulus ?? (profile != null ? profile.IdleExampleStimulus : null);
 
             // Its statement is looked up the same way, but never from further down than the stimulus
             // came from, so a profile's is never attached to a line the call or the agent supplied
@@ -628,7 +687,7 @@ namespace Agenerela
                 }
             }
 
-            return Call(Backlog, stimulus, options, idleExample, observations, ct);
+            return options;
         }
 
         /// <summary>
@@ -712,6 +771,11 @@ namespace Agenerela
         /// stays waiting for <see cref="Commit"/> or <see cref="Discard"/>. A memory that throws is
         /// logged as a warning, and the decision still counts as carried out.
         /// </para>
+        /// <para>
+        /// Each call that returns, refusals included, is raised on <see cref="DecisionFeed.Recorded"/>
+        /// as <see cref="DecisionStage.Executed"/>, with <paramref name="outcome"/> (#166). One whose
+        /// handler throws is not.
+        /// </para>
         /// </remarks>
         /// <exception cref="ArgumentNullException"><paramref name="result"/> is null.</exception>
         public bool Execute(DecisionResult result, out ActionResult outcome)
@@ -730,6 +794,8 @@ namespace Agenerela
                 Settle(result, remember: true);
             }
 
+            // Last, so a subscriber reads the telemetry and memory as this call left them (#166).
+            DecisionFeed.RaiseExecuted(this, result, outcome);
             return outcome.Succeeded;
         }
 
@@ -975,6 +1041,9 @@ namespace Agenerela
                 // reset the agent from a guard before this result reaches the caller: then this call
                 // is a reset one too, and must not hand back a decision from before it.
                 reset.ThrowIfCancellationRequested();
+
+                // Here, where every result passes and no cancelled call does (#166).
+                DecisionFeed.RaiseDecided(this, result);
                 return result;
             }
             catch (OperationCanceledException e) when (!caller.IsCancellationRequested && reset.IsCancellationRequested)
@@ -1073,7 +1142,6 @@ namespace Agenerela
             // Once, so the whole decision, its refusal line included, is on one provider even if
             // Provider is set meanwhile (DR-019).
             var provider = this.provider;
-            string label = call.StimulusLabel;
             var priority = call.Priority;
             var memory = Memory;
             var commit = MemoryCommit;
@@ -1084,41 +1152,11 @@ namespace Agenerela
             DecisionRequest request;
             try
             {
-                ctx = Observe(Snapshot(stimulus, observations, telemetry.TargetsDropped, call.Correlation), telemetry.ObservationsDropped);
-                var options = new PromptOptions
-                {
-                    StimulusLabel = label,
-                    IdleExampleStimulus = idleExample,
-                    TargetRule = call.CheckTarget && provider.Capabilities?.ReportsTokenProbabilities != true,
-                    ListActionsAndTargets = call.ListActionsAndTargets,
-                    MaxListedTargets = call.MaxListedTargets,
-                    CounterExamples = call.CounterExamples,
-                    IdleExampleStatement = call.IdleExampleStatement,
-                    ExampleStatements = call.ExampleStatements,
-                };
-
-                // Asked once, so the action enum and the examples come from one answer even when an
-                // availability check is not a pure function of the context, such as a cooldown.
-                var available = ActionAvailability.For(ctx);
-                bool paired = call.PairTargetsWithActions;
-                if (paired)
-                {
-                    // No example for an action the paired schema cannot offer (DR-020).
-                    available = DecisionSchema.Takeable(available, ctx.Targets);
-                }
-
-                var schema = DecisionSchema.Build(ctx, available, paired);
-                string fewShot = FewShotBuilder.Build(available, ctx.Targets, options);
-
-                var history = Recall(memory, ctx, telemetry);
-                request = PromptBuilder.Build(ctx, schema, fewShot, history, options);
-                request.AgentId = Id;
-                telemetry.TargetRuleSent = PromptBuilder.SendsTargetRule(schema, options);
+                request = Prepare(provider, memory, stimulus, call, idleExample, observations, telemetry, null, out ctx);
             }
             catch (Exception e)
             {
-                return Failed(telemetry, PipelineErrorKind.RequestPreparation,
-                    $"Preparing the request failed. {e.GetType().Name}: {e.Message}", call.Correlation);
+                return Failed(telemetry, PipelineErrorKind.RequestPreparation, PreparationFailed(e), call.Correlation);
             }
 
             var sent = await Send(provider, request, priority, ct, reset);
@@ -1178,6 +1216,70 @@ namespace Agenerela
             }
 
             return result;
+        }
+
+        // The request a decision sends, and the one Preview shows: one method, so the two cannot
+        // drift (#166). Telemetry gets what a decision records of preparing it. With seen, a preview
+        // also gets what each part offered and left out, gathered as it goes, so a failure keeps
+        // what came before it. Throws what failing to prepare it throws.
+        private DecisionRequest Prepare(
+            ILLMProvider provider, IMemoryStrategy memory, string stimulus, DecideOptions call, string idleExample,
+            IReadOnlyList<string> observations, DecisionTelemetry telemetry, AgentPreview seen, out AgentContext ctx)
+        {
+            ctx = Observe(Snapshot(stimulus, observations, telemetry.TargetsDropped, call.Correlation, seen), telemetry.ObservationsDropped, seen);
+            if (seen != null)
+            {
+                seen.Context = ctx;
+            }
+
+            var options = new PromptOptions
+            {
+                StimulusLabel = call.StimulusLabel,
+                IdleExampleStimulus = idleExample,
+                TargetRule = call.CheckTarget && provider.Capabilities?.ReportsTokenProbabilities != true,
+                ListActionsAndTargets = call.ListActionsAndTargets,
+                MaxListedTargets = call.MaxListedTargets,
+                CounterExamples = call.CounterExamples,
+                IdleExampleStatement = call.IdleExampleStatement,
+                ExampleStatements = call.ExampleStatements,
+            };
+
+            // Asked once, so the action enum and the examples come from one answer even when an
+            // availability check is not a pure function of the context, such as a cooldown.
+            var offered = ActionAvailability.For(ctx);
+            var available = offered;
+            bool paired = call.PairTargetsWithActions;
+            if (paired)
+            {
+                // No example for an action the paired schema cannot offer (DR-020).
+                available = DecisionSchema.Takeable(available, ctx.Targets);
+            }
+
+            seen?.SetActions(ctx, Definitions(), offered, available);
+
+            var schema = DecisionSchema.Build(ctx, available, paired);
+            string fewShot = FewShotBuilder.Build(available, ctx.Targets, options);
+
+            var history = Recall(memory, ctx, telemetry);
+            if (seen != null)
+            {
+                seen.Memory = memory;
+                // A copy, as the request's is: a strategy may hand out the list it keeps, and add to
+                // it on remembering.
+                seen.History = history == null ? null : new ReadOnlyCollection<string>(new List<string>(history));
+                seen.HistoryTurnsDropped = telemetry.HistoryTurnsDropped;
+                seen.HistoryTurnsForgotten = telemetry.HistoryTurnsForgotten;
+            }
+
+            var request = PromptBuilder.Build(ctx, schema, fewShot, history, options);
+            request.AgentId = Id;
+            telemetry.TargetRuleSent = PromptBuilder.SendsTargetRule(schema, options);
+            return request;
+        }
+
+        private static string PreparationFailed(Exception e)
+        {
+            return $"Preparing the request failed. {e.GetType().Name}: {e.Message}";
         }
 
         // The guards over one parsed decision: the built-in ones, then Guards. A decision none of
@@ -1514,7 +1616,9 @@ namespace Agenerela
         // one instant. Targets are resolved afresh: the hand-registered ones, then each source's, in
         // order (DR-014). What a source reports dropping is copied into dropped, when given, right
         // after its Collect and before the next source runs, since its list lasts only until then.
-        private AgentContext Snapshot(string stimulus, IReadOnlyList<string> observations, List<string> dropped, object correlation)
+        // A preview, when seen is given, gets each source's own share (#166).
+        private AgentContext Snapshot(string stimulus, IReadOnlyList<string> observations, List<string> dropped, object correlation,
+            AgentPreview seen = null)
         {
             var targets = new TargetRegistry();
             var state = new Dictionary<string, object>(State, State.Comparer);
@@ -1526,6 +1630,8 @@ namespace Agenerela
                 targets.Register(id, target, Targets.CategoryOf(id));
             }
 
+            seen?.AddRegisteredTargets(targets.Ids);
+
             for (int i = 0; i < TargetSources.Count; i++)
             {
                 var source = TargetSources[i];
@@ -1534,21 +1640,38 @@ namespace Agenerela
                     throw new InvalidOperationException($"TargetSources[{i}] is null.");
                 }
 
+                var before = seen != null ? new HashSet<string>(targets.Ids, StringComparer.Ordinal) : null;
+
                 // Handed the context whose registry it is filling, so it sees what came before it.
                 source.Collect(ctx, targets);
 
-                if (dropped != null && source is IReportsDroppedTargets reports && reports.Dropped != null)
+                var reports = source as IReportsDroppedTargets;
+                if (dropped != null && reports != null && reports.Dropped != null)
                 {
                     dropped.AddRange(reports.Dropped);
                 }
+
+                if (seen != null)
+                {
+                    var added = new List<string>();
+                    foreach (string id in targets.Ids)
+                    {
+                        if (!before.Contains(id))
+                        {
+                            added.Add(id);
+                        }
+                    }
+
+                    seen.AddTargetSource(source, added, reports?.Dropped);
+                }
             }
 
-            KeepAllowedCategories(targets);
+            KeepAllowedCategories(targets, seen);
             return ctx;
         }
 
         // TargetCategories over the resolved set: with any listed, only targets in one of them stay.
-        private void KeepAllowedCategories(TargetRegistry targets)
+        private void KeepAllowedCategories(TargetRegistry targets, AgentPreview seen)
         {
             HashSet<string> allowed = null;
             foreach (string category in TargetCategories)
@@ -1571,6 +1694,7 @@ namespace Agenerela
                 if (category == null || !allowed.Contains(category))
                 {
                     targets.Unregister(id);
+                    seen?.AddLeftOutByCategory(id);
                 }
             }
         }
@@ -1581,7 +1705,8 @@ namespace Agenerela
         // goes into dropped, then what the source reports its own cap left out, so the list is
         // every unsent line in the order the sources ranked them. Each source is read in full and
         // its report copied before the next one runs, since its list lasts only until then.
-        private AgentContext Observe(AgentContext ctx, List<string> dropped)
+        // A preview, when seen is given, gets each source's own share (#166).
+        private AgentContext Observe(AgentContext ctx, List<string> dropped, AgentPreview seen = null)
         {
             int room = Math.Max(0, MaxObservations - ctx.Observations.Count);
             var lines = new List<string>();
@@ -1594,6 +1719,9 @@ namespace Agenerela
                     throw new InvalidOperationException($"ObservationSources[{i}] is null.");
                 }
 
+                var sent = seen != null ? new List<string>() : null;
+                var lost = seen != null ? new List<string>() : null;
+
                 // Handed ctx, whose observations are the call's own: a source never sees another's
                 // lines, so none depends on the order of the others.
                 foreach (string line in NotBlank(source.Observe(ctx)))
@@ -1601,17 +1729,23 @@ namespace Agenerela
                     if (lines.Count < room)
                     {
                         lines.Add(line);
+                        sent?.Add(line);
                     }
                     else
                     {
                         dropped.Add(line);
+                        lost?.Add(line);
                     }
                 }
 
                 if (source is IReportsDroppedObservations reports)
                 {
-                    dropped.AddRange(NotBlank(reports.Dropped));
+                    var reported = NotBlank(reports.Dropped);
+                    dropped.AddRange(reported);
+                    lost?.AddRange(reported);
                 }
+
+                seen?.AddObservationSource(source, sent, lost);
             }
 
             if (lines.Count == 0)

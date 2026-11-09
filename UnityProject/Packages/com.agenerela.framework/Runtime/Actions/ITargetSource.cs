@@ -17,6 +17,10 @@ namespace Agenerela
         /// <see cref="TargetRegistry.Register(string, object, string)"/> with a category, which an
         /// action's <see cref="ActionDefinition.TargetCategories"/> reads.
         /// </summary>
+        /// <remarks>
+        /// <c>Agent.Preview</c> calls it too, with no decision after it (#166), so a source should be
+        /// safe to call when nothing follows: it finds targets, and changes nothing in the game.
+        /// </remarks>
         void Collect(AgentContext ctx, TargetRegistry into);
     }
 }

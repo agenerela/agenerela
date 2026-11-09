@@ -44,6 +44,13 @@ namespace Agenerela
         /// there is none.
         /// </summary>
         /// <param name="ctx">The context the request is built from.</param>
+        /// <remarks>
+        /// Must leave the strategy as it was, apart from what it reports through
+        /// <see cref="IReportsDroppedTurns"/>: <c>Agent.Preview</c> calls it once per preview, with no
+        /// decision after it, and a decision may fail after recalling. Only
+        /// <see cref="Remember"/> changes what is remembered. A stateful strategy sees each of those
+        /// calls (#166).
+        /// </remarks>
         IReadOnlyList<string> Recall(AgentContext ctx);
 
         /// <summary>
