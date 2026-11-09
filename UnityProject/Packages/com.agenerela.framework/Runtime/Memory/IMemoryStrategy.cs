@@ -33,7 +33,8 @@ namespace Agenerela
     /// thread that calls them, and never for a decision it drops. The arguments are the same.
     /// </para>
     /// <para>
-    /// A strategy that can be saved with the game also implements <see cref="IExportsMemory"/>.
+    /// A strategy that can be saved with the game also implements <see cref="IExportsMemory"/>, and
+    /// one that <c>Agent.Reset</c> can clear implements <see cref="IClearableMemory"/>.
     /// </para>
     /// </remarks>
     public interface IMemoryStrategy

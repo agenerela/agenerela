@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Agenerela.Providers;
 
 namespace Agenerela
@@ -130,21 +131,27 @@ namespace Agenerela
     // DR-018): everything IMemoryStrategy.Remember needs, as the decision had it, and the memory
     // it recalled from, so replacing Agent.Memory meanwhile changes nothing. The agent that made
     // it is named by a token of that agent's, never the agent itself, so a result kept in a log
-    // keeps no agent alive.
+    // keeps no agent alive. A reset of that agent drops it (#190, G12): Reset is the agent's reset
+    // token from when the decision began, so a decision held across a reset is never remembered.
     internal sealed class PendingMemory
     {
-        public PendingMemory(object owner, string ownerName, IMemoryStrategy memory, AgentContext context, DecisionRequest request)
+        public PendingMemory(object owner, string ownerName, IMemoryStrategy memory, AgentContext context, DecisionRequest request,
+            CancellationToken reset)
         {
             Owner = owner;
             OwnerName = ownerName;
             Memory = memory;
             Context = context;
             Request = request;
+            Reset = reset;
         }
 
         // The deciding agent's token, compared by reference, and its name for messages.
         public object Owner { get; }
         public string OwnerName { get; }
+
+        // Cancelled once the agent has been reset since the decision began.
+        public CancellationToken Reset { get; }
         public IMemoryStrategy Memory { get; private set; }
         public AgentContext Context { get; private set; }
         public DecisionRequest Request { get; private set; }
