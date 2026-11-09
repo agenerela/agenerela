@@ -1264,7 +1264,9 @@ namespace Agenerela
             if (seen != null)
             {
                 seen.Memory = memory;
-                seen.History = history;
+                // A copy, as the request's is: a strategy may hand out the list it keeps, and add to
+                // it on remembering.
+                seen.History = history == null ? null : new ReadOnlyCollection<string>(new List<string>(history));
                 seen.HistoryTurnsDropped = telemetry.HistoryTurnsDropped;
                 seen.HistoryTurnsForgotten = telemetry.HistoryTurnsForgotten;
             }

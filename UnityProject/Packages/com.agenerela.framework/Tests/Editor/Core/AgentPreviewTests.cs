@@ -220,6 +220,20 @@ namespace Agenerela.Tests
         }
 
         [Test]
+        public void ThePreviewsHistoryStaysAsItWasWhenTheMemoryChangesAfter()
+        {
+            var agent = Fixtures.VillageGuard(new FakeProvider(GoToTheTower));
+            var memory = new AppendingMemory();
+            agent.Memory = memory;
+
+            var preview = agent.Preview("Hello.");
+            memory.Remember(null, null, null);
+
+            Assert.That(preview.History, Is.EqualTo(new[] { "Player: Halt.", "{}" }), "A copy, as the request's is.");
+            Assert.That(preview.History, Is.EqualTo(preview.Request.History));
+        }
+
+        [Test]
         public void AnAgentWithNoMemoryPreviewsNoHistory()
         {
             var agent = Fixtures.VillageGuard(new FakeProvider(GoToTheTower));
@@ -258,6 +272,24 @@ namespace Agenerela.Tests
             public void Remember(AgentContext ctx, DecisionRequest request, DecisionResult result)
             {
                 Remembers++;
+            }
+        }
+
+        // A memory that hands out the very list it keeps, and adds to it on remembering, as a
+        // strategy may.
+        private sealed class AppendingMemory : IMemoryStrategy
+        {
+            private readonly List<string> kept = new List<string> { "Player: Halt.", "{}" };
+
+            public IReadOnlyList<string> Recall(AgentContext ctx)
+            {
+                return kept;
+            }
+
+            public void Remember(AgentContext ctx, DecisionRequest request, DecisionResult result)
+            {
+                kept.Add("Player: Later.");
+                kept.Add("{}");
             }
         }
 

@@ -13,6 +13,9 @@ namespace Agenerela
     /// <remarks>
     /// <para>
     /// Built by the same code as a decision, so it cannot drift from what the model is really sent.
+    /// Its lists are its own, but what they hold is the agent's: the action definitions, the
+    /// identity and the sources are the agent's own objects, as <see cref="Agent.Actions"/> and
+    /// <see cref="Agent.Identity"/> give them, not copies.
     /// That also means every target source, observation source and availability check runs, and
     /// <see cref="IMemoryStrategy.Recall"/> is called once, as a decision would call them. Nothing
     /// is sent and nothing is remembered.
