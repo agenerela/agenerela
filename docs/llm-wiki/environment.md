@@ -77,8 +77,9 @@ prototype's 20 prompts on `qwen3.5:2b` twice in one session, guards on and then
 Found while building `AgentBehaviour` (#93). `DestroyImmediate` in an EditMode test does not
 raise a component's `destroyCancellationToken`, so "destroying the GameObject cancels its
 pending request" cannot be shown there; `AgentBehaviourPlayModeTests` does it in PlayMode, with
-a provider that holds its request. EditMode can only check that the provider was handed the
-token. Unity also raises the token only for a component that has woken: a request asked of a
+a provider that holds its request. EditMode can only check that cancelling the caller's token
+reaches the provider: since #219 the provider is sent a token linked to the caller's and to the
+agent's reset token, not the caller's own object. Unity also raises the token only for a component that has woken: a request asked of a
 component whose GameObject was never active is not cancelled by destroying it. The package
 documents that limit and a test pins it.
 
