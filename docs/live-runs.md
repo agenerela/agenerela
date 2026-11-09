@@ -32,6 +32,7 @@ in, the machine, and the live checks that aren't A/B runs.
 | The 8 GB shortlist against `qwen3.5:2b` | A/B, sequential arms, one model each | Laptop | Which small model to use by default. **First check each model keeps the field order**: models on Ollama's GGUF-template path get their keys sorted (findings, 5 November). Today that's `MiniCPM5-2B` | `model-candidates.md`, #151 |
 | Whether Ollama keeps the field order | Live check, about 1 minute | Laptop | Does `OLLAMA_GO_TEMPLATE=1` send `Qwen3-4B-Instruct-2507` down the order-keeping path? About 6 requests, with a schema whose alphabetical order differs from both | findings, 5 November |
 | The 12 and 16 GB tiers | A/B, sequential arms | 5080 box | A "high-end GPU" option, such as Granite 4.1 8B, Qwen3.5-9B or Gemma 4 12B, against the 2B | `model-candidates.md` |
+| `Agent.Reset` with a request already at Ollama | Live check, a few minutes | Laptop | Does a reset abort a request Ollama is already working on, free the slot, and leave the next decision working? Watch the server log for the cancelled request. The unit tests use a fake provider only | #190 G12, #219 |
 
 ## Waiting for something first
 
