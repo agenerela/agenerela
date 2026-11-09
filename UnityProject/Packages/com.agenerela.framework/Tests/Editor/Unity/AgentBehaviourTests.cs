@@ -499,17 +499,50 @@ namespace Agenerela.Tests
         // ---- Destruction ----------------------------------------------------------------------
 
         // A real destruction ending the decision is in AgentBehaviourPlayModeTests: DestroyImmediate
-        // in EditMode does not raise destroyCancellationToken. This is the half EditMode can see.
+        // in EditMode does not raise destroyCancellationToken. The provider is sent a token linked
+        // to it and to the agent's reset (G12), not destroyCancellationToken itself, so EditMode can
+        // see only the reset's half.
         [Test]
-        public void TheProviderIsSentTheTokenThatDestroyingTheGameObjectCancels()
+        public async Task ResetAgentCancelsTheDecisionAndStopsTheProviderButKeepsTheAgent()
         {
             var config = Config(reply: GoToTheTower);
             Fake(config).Hold = true;
             var guard = Guard(Profile("move_to"), config);
+            guard.gameObject.AddComponent<GuardMoves>();
+            Target("tower", Here + new Vector3(5f, 0f, 0f));
+            var agent = guard.Agent;
+            var pending = guard.DecideAsync("Go to the tower.");
+            Assert.That(Fake(config).LastToken.IsCancellationRequested, Is.False);
 
-            _ = guard.DecideAsync("Go to the tower.");
+            guard.ResetAgent();
 
-            Assert.That(Fake(config).LastToken, Is.EqualTo(guard.destroyCancellationToken));
+            Assert.That(Fake(config).LastToken.IsCancellationRequested, Is.True, "The provider's request was stopped.");
+            Assert.That(pending.GetAwaiter().IsCompleted, Is.True);
+            bool cancelled = false;
+            try
+            {
+                await pending;
+            }
+            catch (OperationCanceledException)
+            {
+                cancelled = true;
+            }
+
+            Assert.That(cancelled, Is.True, "A reset decision has no result.");
+            Assert.That(guard.Agent, Is.SameAs(agent), "The same agent, started afresh.");
+            Fake(config).Hold = false;
+            var result = await Fixtures.NotCancelled(guard.DecideAsync("Go to the tower."));
+            Assert.That(result.Decision.ActionId, Is.EqualTo("move_to"));
+        }
+
+        [Test]
+        public void ResetAgentBeforeTheAgentIsBuiltDoesNothing()
+        {
+            // No profile, so building the agent would throw: ResetAgent must not try.
+            var guard = Guard(null, Config());
+
+            Assert.DoesNotThrow(() => guard.ResetAgent());
+            Assert.Throws<InvalidOperationException>(() => _ = guard.Agent, "Still unbuilt, and still unbuildable.");
         }
 
         [Test]

@@ -130,6 +130,16 @@ To also cancel for a reason of the game's own, call
 `guard.Agent.DecideAsync(stimulus, options, token)` with a token linked to
 `guard.destroyCancellationToken`.
 
+## Starting the agent afresh
+
+To start a guard over without destroying anything, after a scene event or a new stage, call
+`guard.ResetAgent()`. It cancels every decision the agent has waiting or under way, and no other
+agent's, then drops the decisions held for memory and clears its memory. The GameObject, the
+component and the agent itself stay, with the guards, sources and state the game added to it.
+Awaiting a cancelled decision throws `OperationCanceledException`, as for a destruction.
+[executing-and-memory.md](executing-and-memory.md#starting-an-agent-afresh-reset) has the whole
+of it, including how to tell a reset from your own cancellation.
+
 ## An agent with no GameObject
 
 The same `Agent`, owned by the game's own class, with nothing in the scene:

@@ -10,6 +10,21 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **`Agent.Reset()`** (#190, G12): starts an agent afresh without destroying it. It cancels this
+  agent's decisions, and no other agent's on the same provider: one waiting in its `Backlog` or in
+  the provider's queue is never sent, and one with the provider is stopped through its token. It
+  drops the decisions held for `MemoryCommit.OnExecute`, so `Commit` and `Discard` return false for
+  them and `Execute` carries them out without remembering them. And it clears memory. A cancelled
+  caller sees a plain `OperationCanceledException` whose token is the agent's own, so a caller whose
+  own token is not cancelled knows the agent was reset. **`AgentBehaviour.ResetAgent()`** does the
+  same for the agent the component built; it is not called `Reset` because Unity calls that in the
+  editor.
+- **`IClearableMemory`** (#190, G12): an optional interface beside `IMemoryStrategy`, with
+  `Clear()`, which `Agent.Reset` calls. `RollingHistory` implements it, setting `Dropped` and
+  `Forgotten` back to 0 as well. A strategy without it keeps its memory on a reset, with a warning.
+- `Documentation~/executing-and-memory.md`: starting an agent afresh, and telling a reset from your
+  own cancellation.
+
 - **Target categories** (#190 B, DR-020): `TargetRegistry.Register(id, target, category)`, beside
   the two-argument overload, and `TargetRegistry.CategoryOf(id)`, null for a target with no
   category and never throwing. `ExplicitTargetSource.Add(id, target, category)` does the same for a
@@ -313,6 +328,11 @@ While the version stays `0.x`, the public API may change in any release.
   and the backlog.
 
 ### Changed
+
+- **A provider is sent a token linked to the caller's** (#190, G12), so that `Agent.Reset` can stop
+  a request already with it. It was the caller's own token object. Cancelling the caller's token
+  cancels it as before, and a caller still sees its own token on the `OperationCanceledException`.
+  Only code that compared the provider's token with the caller's notices.
 
 - **The Evaluation Report window is built in UI Toolkit on the #167 kit** (#179): the same
   window as #146 built, now a tree from `EvaluationReportWindow.uxml` and `.uss`, with the kit's

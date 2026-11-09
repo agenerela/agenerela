@@ -1190,6 +1190,11 @@ A reply the game drops as stale did not happen, but `DecideAsync` has already re
 `Execute` carries it out, or the game calls `Commit` or `Discard`; the default, `OnDecide`, is
 unchanged. `Documentation~/executing-and-memory.md` has both.
 
+**Starting afresh (DR-018, amended).** GreyBoxVillage started an agent over mid-game by
+destroying its `AgentBehaviour` and adding it again. `Agent.Reset()` does it in place: it cancels
+the agent's own decisions wherever they wait, drops those held for `OnExecute`, and clears memory
+through `IClearableMemory`, an optional interface `RollingHistory` implements.
+
 ---
 
 ## 3. Build order — phases, each independently shippable
@@ -2099,6 +2104,29 @@ default memory behaviour must compile and behave as before.
    importing. That gives up reading another strategy's exchanges, which no game used: a save that
    names another format is not one this memory can vouch for. The lead chose this, and the method
    on `RollingHistory` rather than a new interface, so `IExportsMemory` is unchanged.
+
+*Amended 9 November 2026 (#190, GreyBoxVillage G12).* 7. **`Agent.Reset()`** starts an agent
+afresh without destroying it. GreyBoxVillage's F1 reset destroyed and re-added its
+`AgentBehaviour`, which built a new agent and lost the guards, sources and state the game had
+added, and it dropped stale answers with a generation counter of its own. The lead chose from
+the options at each step:
+
+- **Synchronous**, `void Reset()`, rather than an awaitable that waits until the cancelled
+  decisions have ended, which could hang on a provider that ignores cancellation.
+  `AgentBehaviour.ResetAgent()` calls it, since Unity calls a component's `Reset` in the editor.
+- **It cancels through the tokens.** Every call's token is linked to a per-agent reset token, so
+  the queues and the provider stop a reset call exactly as they stop a caller's cancelled one, and
+  `RequestScheduler` is unchanged. Only this agent's calls are cancelled. In consequence a provider
+  is sent the linked token, no longer the caller's own token object.
+- **A caller sees the plain `OperationCanceledException`**, rather than a subclass. Its token is
+  the agent's when a reset cancelled the call, and the caller's own when the caller did, so a
+  caller whose token is not cancelled knows it was a reset.
+- **A decision held for `OnExecute` before the reset is never remembered**: `Commit` and
+  `Discard` return false. `Execute` still carries it out as today, rather than refusing it.
+- **Memory is cleared through `IClearableMemory`**, an optional interface, since
+  `IMemoryStrategy` cannot gain a member that Living Vale's strategy would have to implement. A
+  strategy without it is **skipped with a warning**, rather than replaced by a `RollingHistory` or
+  made to throw. A memory two agents share is cleared for both.
 
 **Consequences**
 

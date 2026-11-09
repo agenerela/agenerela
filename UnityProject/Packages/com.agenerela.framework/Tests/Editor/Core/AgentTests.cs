@@ -521,7 +521,7 @@ namespace Agenerela.Tests
             using (var cts = new CancellationTokenSource())
             {
                 var pending = agent.DecideAsync("Go to the tower.", null, cts.Token);
-                Assert.That(fake.LastToken, Is.EqualTo(cts.Token), "The caller's token reaches the provider.");
+                Assert.That(fake.LastToken.IsCancellationRequested, Is.False);
                 Assert.That(pending.GetAwaiter().IsCompleted, Is.False);
 
                 cts.Cancel();
@@ -533,6 +533,10 @@ namespace Agenerela.Tests
                 catch (OperationCanceledException)
                 {
                 }
+
+                // The provider is given a token linked to the caller's and the agent's reset (G12),
+                // not the caller's own, so what reaches it is the cancellation.
+                Assert.That(fake.LastToken.IsCancellationRequested, Is.True, "The caller's cancellation reaches the provider.");
             }
         }
 
