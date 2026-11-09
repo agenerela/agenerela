@@ -171,7 +171,7 @@ git config merge.unityyamlmerge.recursive binary
 | Path | Contents |
 |---|---|
 | `UnityProject/Packages/com.agenerela.framework/` | The package — everything shippable |
-| `UnityProject/Assets/Evaluation/` | Prompt set, its 76 prompts so far, and the agent they are measured against; the package's A/B runner scores it, and its Prompt Set window writes and labels it |
+| `UnityProject/Assets/Evaluation/` | Prompt set, its 76 prompts so far, and the agent they are measured against; the package's A/B runner scores it, and its Prompt Set window writes and labels it. `Interim/` holds an AI-written set of 389, used until the curated set reaches 200 |
 | `Demos/` | Demo games, one Unity project each (not shipped to consumers) |
 | `docs/FRAMEWORK_BUILD_PLAN.md` | Architecture, build phases, decision records |
 | `docs/llm-wiki/` | Measured findings and working conventions |
