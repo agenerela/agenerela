@@ -14,6 +14,7 @@ What is still to do is in *Still to do*.
 | `VillageGuard.asset`, `Actions/` | The set's `AgentProfile` and its four action assets (#158): what the window offers in Write, and the few-shot examples hard rule 4 checks every prompt against |
 | `prompts/<category>.json` | One file per category, so two people can label different files without conflicting |
 | `labels/<annotator>/<category>.json` | Each annotator's blind answers, written by the Prompt Set window. None yet |
+| `Interim/` | A separate, larger set against the same agent: 391 prompts written and labelled by AI models, used until #147's curated 200+ exists. Its [`README.md`](Interim/README.md) says how it was made |
 
 Open the set in **Window → Agenerela → Prompt Set** (#134): click **Open the project's evaluation
 set**, which opens `agent.json` and `VillageGuard.asset` beside it, and type your name. The

@@ -29,6 +29,14 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **An interim evaluation set of 391 prompts**, in `UnityProject/Assets/Evaluation/Interim/`
+  (#151), for A/B runs until #147's curated 200+ set exists. It is measured against the curated
+  set's agent, with the same actions and 11 targets, and is a set of its own with its own
+  `agent.json` and `int_` ids. It was written and first labelled by Claude, then labelled blind by
+  Codex: they agreed on 391 of 392, and the one split was dropped. `none` is 40% of the expected
+  answers, and each acting action has 46 or more, where the curated set has 4 to 7. Its noise floor
+  is about 3.6 points overall and 9 per category, against 8 and 20 to 30 at 76. It is AI-written
+  and interim, not a replacement for #147; its `README.md` says how it was made and checked.
 - **GreyBoxVillageClassic keeps the grey-box village from before v2**, in
   `Demos/GreyBoxVillageClassic/`: `Demos/GreyBoxVillage` as it stood at 396f266, the commit
   before #157, with its files and `.meta` GUIDs unchanged, as a Unity project of its own named
