@@ -139,28 +139,34 @@ report also breaks accuracy down per category, so the headline number is never m
 player chat alone, lists the prompts that were answered wrongly, and marks any difference too
 small to trust at this number of prompts.
 
-**What the numbers on the image point to:** ① the run set-up · ② five outcomes · ③ the noise
-check · ④ accuracy per category · ⑤ the failure list · ⑥ labeller agreement and export.
-*(All figures in the mockup are illustrative, not measured results.)*
+**What the letters and numbers on the image point to:** Ⓐ first open · Ⓑ a run · ① the run
+set-up · ② five outcomes · ③ the noise check · ④ accuracy per category · ⑤ the failure list ·
+⑥ labeller agreement and export. *(All figures in the mockup are illustrative, not measured
+results.)*
 
-**As built (#146).** The window keeps the six numbered parts and their order, and differs from
-the figure in these ways:
+**Redrawn for #179.** The lab's figure drew a two-by-two dashboard. The window #146 built
+differed from it in several ways, and #179 moved it onto the #167 kit, so the figure now draws
+the window as it is: one window at its 560 px minimum width, in three states side by side (first
+open, a run, and a report seen top and scrolled down). What changed from the lab's drawing, and
+why:
 
-- **One scrolling column**, ① to ⑥ top to bottom, rather than the figure's two-by-two grid, so it
-  works at any window width. There is no Decision Log tab; that is screen 3, in Phase 5.
+- **One scrolling column**, ① to ⑥ top to bottom, so it works at any width. There is no
+  Decision Log tab; that is screen 3, in Phase 5.
 - **No Model field.** The model belongs to each arm's provider config (DR-013), so ① has a
   **Profile** field instead, and each arm has a config, a name and a **Grounding guard** switch.
   Arms on two models always run one after the other, and ① says why.
-- **The warm-up is not a checkbox**: the runner always sends three requests. "Only one model
-  loaded" and "No example reuses an evaluation prompt" are checks the run makes rather than ticks
-  on screen: **What the run checks** says so before a run, a set that breaks a rule lists its
+- **The checks are made, not ticked**: the runner always sends three warm-up requests. **What
+  the run checks** says before a run what it will check. A set that breaks a rule lists its
   problems and greys out **Run A/B**, and the report's conditions say what was found.
-- **A start-here state.** Until the set, the profile and both arms are chosen, the window shows
-  four steps and a button that fills the first three from the project.
+- **A start-here state** (Ⓐ): four steps, and the one primary button that fills the first three
+  from the project. What the project lacks shows as a problem box with its fix.
+- **A run** (Ⓑ) shows its progress per answer and **Cancel**. A cancelled run keeps its partial
+  report, marked as no result.
+- **① folds to one line** once a report is shown, with **Run A/B** still on it (#179).
 - **The noise verdict is on accuracy only** (the Correct row and each category), since that is
   what the noise check measures; the other outcome rows show the difference in points.
 - **⑤ shows either arm**, filtered by outcome, and **Open** expands the row in place with the
-  whole answer, since the Decision Log it was drawn to jump to is not built yet.
+  whole answer, until the Decision Log (#172) can show it.
 - **⑥ reads agreement from the set's label files as they are now**, in the Prompt Set window's
   own counts. **Review disagreements** opens that window, and export has **Show files** and
   **Save a copy…** beside **Copy summary for findings.md**.

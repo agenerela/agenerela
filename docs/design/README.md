@@ -30,7 +30,7 @@ modules with one decision passing through them, drawn for the system-design prac
 | [`png/01-agent-profile.png`](png/01-agent-profile.png) | **Agent Profile & Actions** — Inspector for the profile asset | Assets in Phase 1 (#4, #15); Inspector polish in Phase 5 |
 | [`png/02-agent-behaviour.png`](png/02-agent-behaviour.png) | **Agent Behaviour** — the component that puts an agent in a scene | Component in Phase 2; polish in Phase 5 |
 | [`png/03-decision-log.png`](png/03-decision-log.png) | **Decision Log** — why an agent did what it did | Phase 5, over the Phase 1 telemetry types (#3) |
-| [`png/04-evaluation-report.png`](png/04-evaluation-report.png) | **Evaluation Report** — A/B over the labelled prompt set | Phase 4: built in #146 |
+| [`png/04-evaluation-report.png`](png/04-evaluation-report.png) | **Evaluation Report** — A/B over the labelled prompt set | Phase 4: built in #146; UI Toolkit in #179 |
 | [`png/05-village.png`](png/05-village.png) | **GreyBoxVillage play screen** — talking to the guard | Grey box today (#19); real decisions in Phase 2 |
 | [`png/06-strategy.png`](png/06-strategy.png) | **GreyBoxStrategy turn screen** — countries as agents | Grey box next (#20); real decisions in Phase 3 |
 | [`png/07-framework-design.png`](png/07-framework-design.png) | **Framework design** — the game, the package and the model, with one decision through them in nine steps | — |
@@ -40,10 +40,11 @@ modules with one decision passing through them, drawn for the system-design prac
 locked `none` row of the action list, which expands like the other rows (build plan §2.7).
 The figure still draws the separate section.
 
-**Screen 4 is built, as one column** (#146). The window keeps the figure's six numbered parts
-but stacks them, takes the model from each arm's provider config instead of a Model field, and
-expands a failure in place rather than jumping to the Decision Log. The figure is unchanged;
-[the screen notes](screen-notes.md#screen-4--evaluation-report) list every difference.
+**Screen 4 is redrawn as built** (#146, #179). The window stacks the lab figure's six numbered
+parts in one column, takes the model from each arm's provider config instead of a Model field,
+and expands a failure in place rather than jumping to the Decision Log. #179 moved it onto the
+#167 kit and redrew the figure to match: one window in three states.
+[The screen notes](screen-notes.md#screen-4--evaluation-report) list what changed from the lab.
 
 **Screen 2 is partly superseded.** Three decisions made after the lab changed it: the model is
 configured in a provider config asset that the component only overrides (DR-013), targets are
