@@ -94,8 +94,9 @@ a control arm on the 200+ prompt set, and each recorded here:
    (#15) can go.
    *Update, 9 November 2026:* the idle example's with-vs-without has now run once, on the 76
    evaluation prompts and `qwen3.5:2b`: 56/76 with it, 59/76 without, and `stop_following` 2/7
-   against 6/7 (findings, "The idle example on the profile's own line"). That is inside the noise
-   floor overall, from one model, and it does not settle whether the line should go. Counter-examples
+   against 6/7 (findings, "The idle example on the profile's own line"). Overall that is
+   within the noise floor (8.1 points), but `simple_command` moved 33 points, beyond its own floor.
+   It is one model, and it does not settle whether the line should go. Counter-examples
    and the action/target list were run the same evening (both inside the noise floor too). The other
    rules in this list are still owed.
 4. Levers never tried: examples picked by similarity to the stimulus, and a hand-written
