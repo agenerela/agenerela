@@ -133,7 +133,12 @@ the A/B compares two designs, not two models. Source: findings, "First model A/B
 the schema's keys sorted on the way to llama.cpp. The server log says which way a model went:
 a "template selection" line with `selected=gguf_chat_template` means the order is lost, and
 `renderer_parser` or `go_template` means it is kept. Source: findings, "Why
-`qwen3:4b-instruct-2507` wrote `statement` before `target`" (5 November 2026).
+`qwen3:4b-instruct-2507` wrote `statement` before `target`" (5 November 2026). Setting `OLLAMA_GO_TEMPLATE=1`
+on the server sends a model that has a Go template down `go_template`, the 4B and `MiniCPM5-2B`
+included. That restores the order, but the Go template then formats the prompt too, a second
+difference to name in the result. The `OLLAMA_GO_TEMPLATE:true` every server log prints is only the
+default, shown when the variable is unset. Source: findings, "`OLLAMA_GO_TEMPLATE=1` keeps the field
+order" (9 November 2026).
 
 ## Before you run
 

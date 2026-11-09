@@ -1520,3 +1520,144 @@ only the target lists of the actions that need a target (no `no_target`) and of 
 **What would change this.** A paired reply that pairs an action with a target it does not take, on
 any Ollama version; or an Ollama release that rejects a root `anyOf` in `format`. Re-run the probe
 after an upgrade.
+
+### `Agent.Reset` aborts a request Ollama is already working on, and the next decision is normal (9 November 2026)
+
+**What was checked.** #190 G12's `Agent.Reset()` (merged as #219) against a real server, because
+its unit tests use a fake provider only. Three things: the call in flight ends cancelled, Ollama
+stops the request and frees its slot, and the next `DecideAsync` on the same agent returns a normal
+decision. A live check, not an accuracy or latency claim, so it needs no control arm.
+
+**Conditions.** Ollama 0.40.14 on the lead's laptop (RTX 4060 Laptop, 8 GB), on AC power,
+`qwen3.5:2b` alone and fully in VRAM (`size_vram` 2254 of 2254 MB), the shared Ollama lock held, no
+other Unity running. `origin/test` at 61a7744. A throwaway PlayMode test on `LiveGuard`, never
+committed: warm-up, three ordinary decisions (656 ms mean), then three times over: start a
+`DecideAsync`, call `Reset()` 263 ms later, await the call, then decide again on the same agent.
+
+**Result: 3 of 3 on every point.**
+
+| Repeat | The call | Ollama (server log) | Generated before the stop | The next decision |
+|---|---|---|---:|---|
+| 1 | `OperationCanceledException` 7 ms after `Reset()` | `[GIN] 500, 265 ms`, then `srv stop: cancel task` | 16 tokens | `move_to`/`tower`, 770 ms |
+| 2 | the same, 1 ms after | `500, 262 ms`, `cancel task` | 15 tokens | `follow_player`, 869 ms |
+| 3 | the same, 1 ms after | `500, 262 ms`, `cancel task` | 15 tokens | `none`, 875 ms |
+
+- **The request was being generated when it was stopped**, not still queued: llama-server had
+  written 15 or 16 tokens of the reply, and released the slot at once.
+- **The slot was free straight away.** The next decision waited 0 ms in the queue, with nothing
+  ahead of it, and took as long as an ordinary one, so nothing was left running.
+- **Its memory was cleared too.** The cancelled request's prompt was 374 tokens, carrying the three
+  earlier exchanges; the next one was 214.
+- The message was "Agent 'Village Guard' was reset, which cancelled this decision."
+
+**Worth knowing.** Ollama logs a chat its client dropped as HTTP 500, not 499. A request log that
+counts 500s as server errors will count every reset as one.
+
+**What would change this.** An Ollama release that keeps generating after the client drops the
+connection, which would show as the next decision waiting in the queue. Raw output:
+`.scratch/live-runs-1109/` in the session's checkout (`run1-*`, `ResetLiveCheck.cs`).
+
+### `OLLAMA_GO_TEMPLATE=1` keeps the field order, for `Qwen3-4B-Instruct-2507` and `MiniCPM5-2B` (9 November 2026)
+
+A live check of the fix the entry of 5 November suggested ("Why `qwen3:4b-instruct-2507` wrote
+`statement` before `target`"). Not an accuracy claim.
+
+**Setup.** The framework's own request, from the 5 November proxy capture (system prompt, schema
+with `action`, `target`, `statement`, options, `logprobs`), with six stimuli per model. The order
+the schema gives is not alphabetical. Ollama 0.40.14, RTX 4060 Laptop on AC power, one model
+resident at a time, each unloaded after its six (`keep_alive: 0`): `qwen3:4b-instruct-2507-q4_K_M`
+3032 of 3032 MB in VRAM, `MiniCPM5-2B` (`hf.co/openbmb/MiniCPM5-2B-GGUF:Q4_K_M`) 1564 of 1564 MB.
+First on the Ollama app as it normally runs, then on `ollama serve` started by hand with
+`OLLAMA_GO_TEMPLATE=1` and the two variables the app adds (`OLLAMA_CONTEXT_LENGTH=16384`,
+`OLLAMA_NO_CLOUD=0`), then the app restored, with the same server config as before.
+
+| Model | As the app runs (variable unset) | `OLLAMA_GO_TEMPLATE=1` |
+|---|---|---|
+| `qwen3:4b-instruct-2507-q4_K_M` | `selected=gguf_chat_template`, 0 of 6 in order | `selected=go_template`, 6 of 6 in order |
+| `MiniCPM5-2B` | `selected=gguf_chat_template`, 0 of 6 in order | `selected=go_template`, 6 of 6 in order |
+
+Every reply out of order was `action`, `statement`, `target`, the sorted order.
+
+- **Only a variable that is set counts.** Every server log since 3 November prints
+  `OLLAMA_GO_TEMPLATE:true`, the 5 November run included. In 0.40.14's source that is only the
+  default printed when the variable is unset. `goTemplateEnvSet()` (`server/images.go`) skips the
+  rule that prefers the GGUF template only when the variable is set.
+- **`MiniCPM5-2B` confirms the 5 November prediction** that it would come back sorted. On the sorted
+  path it twice wrote just the target's name as the statement (`"statement": "bridge"`) before the
+  target. With the order kept, it wrote a line ("I'll be at the bridge.").
+- **The variable changes two things, not one.** The Go template also formats the prompt in place
+  of the GGUF one, and the 4B's replies changed wording between the two paths. So an A/B with the
+  variable set compares another template as well as another order.
+
+**What it means for the 8 GB shortlist.** `MiniCPM5-2B` can be measured in the framework's order
+only with `OLLAMA_GO_TEMPLATE=1` set on the server, and its result is then a result on the Go
+template. Models on `renderer_parser`, `qwen3.5:2b` among them, never take the GGUF path, set or
+not.
+
+**What would change this.** An Ollama release whose native path passes the schema on as sent, or
+that changes when the GGUF template is preferred. Raw replies: `.scratch/live-runs-1109/run2-*`
+in the session's checkout.
+
+### Listing the actions and targets in the prompt: 58/76 against 56/76 on `qwen3.5:2b`, within noise (9 November 2026)
+
+The first of #193's three switches through the runner (#145), for #151: does
+`DecideOptions.ListActionsAndTargets` help a model that never reads the schema?
+
+**Setup.** The evaluation set (`Assets/Evaluation/`, 76 prompts) and its profile `VillageGuard`,
+`origin/test` at 61a7744. Two arms, interleaved, on one model:
+
+- **A, control:** the defaults (`ListActionsAndTargets` off).
+- **B:** `ListActionsAndTargets = true`, cap 12, so all 11 targets were listed. The actions came with
+  their descriptions. The targets came by id only: the runner's `DeclaredTarget` does not implement
+  `IDescribedTarget`, and in both arms each target's description already reached the model as an
+  observation line.
+
+Everything else was the runner's defaults (grounding guard on, temperature 0). State was told with
+the 5 November wording ("You are following the player."). `qwen3.5:2b` on Ollama 0.40.14, RTX 4060
+Laptop on AC power, 2254 of 2254 MB in VRAM before and after each arm's warm-up and at its end,
+nothing else resident, no other Unity running, the Ollama lock held. 130 s for both arms, after a
+12-prompt slice first (31 s). No warnings and no pipeline errors.
+
+| Outcome | A, list off | B, list on |
+|---|---:|---:|
+| Correct | 56 | 58 |
+| WrongLegalAction | 16 | 16 |
+| ContainedByGuard | 1 | 0 |
+| RejectedWhenActionExpected | 3 | 2 |
+| **Accuracy** | **73.7%** | **76.3%** |
+
+**+2.6 points, within noise** (floor 8.1 at n = 76). No category was beyond its floor:
+command_with_target +9.1 (n 11), conversation +11.1 (9), event +5.3 (19), impossible_request −11.1
+(9), simple_command +11.1 (9), situation −5.3 (19). Arm A matched the `qwen3.5:2b` arm of
+5 November, 56 of 76, on the same Ollama version.
+
+**The answers that moved.** 13 prompts changed answer: 6 became correct, 4 stopped being correct.
+
+- Became correct with the list: "Go back to the shelter." (A `none`), "Stay where you are." (A
+  `none`), "A scout spotted movement near the north tower." (A attacked the wolf, refused by the
+  guard), "The bridge has collapsed." (A walked to the gate) and "You look tired." (A walked to the
+  campfire).
+- Stopped being correct: "Enter the locked cave without opening it." came back `none` with the
+  target `locked_cave`, which the flat schema allows. "The player has reached the shelter." became
+  `none`, said as "Fine day for it.", the idle example's line. "Villagers are gathering in the square
+  tonight." became `none`. The `move_to`/`north_tower` that the guard stopped in A for "The
+  watchtower is unattended." went through in B.
+- Not moved at all: "Wait here.", "Do not move." and "Hold position." are `none` in both arms, as
+  are "The player is heading off on their own.", "The player has gone inside to sleep." and "The
+  square has gone quiet.". The list does not get the 2B to `stop_following` or `follow_player` on
+  these.
+
+**A side count, not scored.** Statements that were an example line word for word: 3 in A ("Strike the
+Wolf." twice, "You can stay put now." once), 5 in B ("Strike the Wolf." three times, "Fine day for
+it." twice). This is the echo G14 is about, and too few to say anything.
+
+**Rule 4.** No example matches a prompt exactly; the runner checks that. One partial overlap holds
+in both arms: `move_to`'s example "Go and stand by the {0}." and target_005 "Go stand at the north
+tower." (noted on 5 November). Both arms answered target_005 correctly.
+
+**What it means.** Nothing to change: listing the actions and targets is no measurable help to
+`qwen3.5:2b` on this set, and it stays off. A larger set, or a model that reads the list better,
+would need its own run.
+
+**What would change this.** A repeat that moves outside the noise floor, on more prompts (#147) or
+on another model. Raw report: `.scratch/live-runs-1109/run3a-report/` in the session's checkout.
