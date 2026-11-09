@@ -164,7 +164,7 @@ chat before you open one someone else might be in.
 | Path | What |
 |---|---|
 | `UnityProject/Packages/com.agenerela.framework/` | The package — everything shippable |
-| `UnityProject/Assets/Evaluation/` | Labelled prompts, 76 so far (#13, #85); the package's A/B runner (#145) scores them. `Interim/` is an AI-written set of 391, used until #147 |
+| `UnityProject/Assets/Evaluation/` | Labelled prompts, 76 so far (#13, #85); the package's A/B runner (#145) scores them. `Interim/` is an AI-written set of 389, used until #147 |
 | `Demos/<Game>/` | Demo games — one Unity project each ([`Demos/README.md`](Demos/README.md)) |
 | `docs/FRAMEWORK_BUILD_PLAN.md` | **The plan of record** — read before building |
 | `docs/llm-wiki/` | Measured findings and conventions |

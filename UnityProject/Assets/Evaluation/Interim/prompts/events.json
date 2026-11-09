@@ -1304,27 +1304,6 @@
     {
       "id": "int_event_062",
       "label": "Event",
-      "stimulus": "The player sat down to eat at the inn.",
-      "observations": [
-        "The inn is full of friendly villagers"
-      ],
-      "expectedAction": "stop_following",
-      "expectedTarget": "no_target",
-      "preconditionState": {
-        "isFollowing": true
-      },
-      "labelledBy": [
-        "claude",
-        "codex"
-      ],
-      "labels": {
-        "claude": "stop_following/no_target",
-        "codex": "stop_following/no_target"
-      }
-    },
-    {
-      "id": "int_event_063",
-      "label": "Event",
       "stimulus": "The player entered the temple.",
       "observations": [
         "Armed guards must wait outside"
@@ -1344,7 +1323,7 @@
       }
     },
     {
-      "id": "int_event_064",
+      "id": "int_event_063",
       "label": "Event",
       "stimulus": "The player lay down to sleep by the campfire.",
       "observations": [
@@ -1365,7 +1344,7 @@
       }
     },
     {
-      "id": "int_event_065",
+      "id": "int_event_064",
       "label": "Event",
       "stimulus": "The player began a long talk with the mayor.",
       "observations": [
@@ -1386,7 +1365,7 @@
       }
     },
     {
-      "id": "int_event_066",
+      "id": "int_event_065",
       "label": "Event",
       "stimulus": "The player told the captain they no longer need an escort.",
       "observations": [

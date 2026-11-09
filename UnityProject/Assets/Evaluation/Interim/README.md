@@ -10,8 +10,8 @@ noise on a handful of prompts. Here the floor is about 3.6 points overall and 9 
 |---|---|
 | Written | 9 November 2026, for #151, by Claude (`claude-opus-5-5`), which also gave the first label |
 | Second label | Codex (`gpt-6.1-sol`, high effort, through the local Codex CLI), blind |
-| Prompts | 391 in six categories, 64 to 67 each |
-| Agreement | 391 of 392 (99.7%), one prompt dropped |
+| Prompts | 389 in six categories, 64 to 66 each |
+| Agreement | 391 of 392 (99.7%); three prompts dropped, one of them the split |
 | Agent | The curated set's: the same actions, `onlyWhen` and the same 11 targets, none added |
 
 ## Using it
@@ -51,23 +51,24 @@ Counted by script, `validate.py` (see *How it was checked*).
 | Category | Prompts | `none` | `move_to` | `attack_target` | `follow_player` | `stop_following` |
 |---|---:|---:|---:|---:|---:|---:|
 | `simple_command` | 65 | 14 | | | 23 | 28 |
-| `command_with_target` | 67 | | 42 | 25 | | |
+| `command_with_target` | 66 | | 42 | 24 | | |
 | `impossible_request` | 64 | 64 | | | | |
 | `conversation` | 64 | 38 | 7 | | 11 | 8 |
 | `situation` | 65 | 21 | 20 | 10 | 7 | 7 |
-| `event` | 66 | 19 | 20 | 16 | 5 | 6 |
-| **All** | **391** | **156** | **89** | **51** | **46** | **49** |
+| `event` | 65 | 19 | 20 | 16 | 5 | 5 |
+| **All** | **389** | **156** | **89** | **50** | **46** | **48** |
 
-- **`none` is 39.9%** of expected answers, against 39% in the curated set: a model that never acts
+- **`none` is 40.1%** of expected answers, against 39% in the curated set: a model that never acts
   still scores about 40%.
 - **Each acting action has 46 or more**, against the curated set's 7 `stop_following`, 6
   `follow_player` and 4 `attack_target`.
-- **State:** `move_to` 73 not following and 16 following; `attack_target` 39 and 12; `none` 131 and
-  25. `stop_following` is offered only when following, so its 49 all are. `follow_player` is asked
+- **State:** `move_to` 73 not following and 16 following; `attack_target` 39 and 11; `none` 131 and
+  25. `stop_following` is offered only when following, so its 48 all are. `follow_player` is asked
   only of a guard that is not following: told to follow while already following, either `none` or
   `follow_player` is defensible, so such a prompt would measure itself.
-- **Game-triggered** (`situation`, `event`): 131 of 391, a third. The curated set has half.
-- **Targets named only in the observations:** 28. **Open choices:** 5 (`int_target_041`,
+- **Game-triggered** (`situation`, `event`): 130 of 389, a third. The curated set has half.
+- **Targets named only in the observations:** 44, counted from the text: the target's word is in an
+  observation and not in the stimulus. **Open choices:** 5 (`int_target_041`,
   `int_target_042`, `int_situation_037`, `int_situation_038`, `int_event_039`).
 - **`attack_target` always means the wolf**, the only registered creature.
 
@@ -100,8 +101,11 @@ What the prompts cover, in fresh wordings that are not the curated set's:
    says, and **dropped**: "The player has sat down by the campfire to rest." (following), where
    Claude said `stop_following` and Codex `none`. Neither answer breaks one of the README's rules,
    so the prompt measured itself.
+5. Codex's review of the pull request dropped two more, both labelled alike: "The player sat down
+   to eat at the inn.", the same question as the split, and "Attack the wolf.", `attack_target`'s
+   example "Strike the {0}." with one verb swapped, too near it for hard rule 4.
 
-The Prompt Set window's **Agreement** tab counts one more split, 390 of 391: on the open choice
+The Prompt Set window's **Agreement** tab counts one more split, 388 of 389: on the open choice
 `int_target_042` Claude's label is the first listed target, `bridge`, and Codex chose `docks`. Both
 are right; an open choice has no single answer to record.
 
@@ -120,8 +124,12 @@ second labels by people, which #147 and Phase 4's gate need, are still owed.
   normalising, at or above 0.5 word overlap, at or above 0.7 character similarity, or contains any
   few-shot line: every action's example with each target in its `{0}`, counter-examples and
   statements (`VillageGuard` has none), "Fine day for it." and
-  `AgentProfile.DefaultIdleExampleStimulus`, "Nothing has changed since last time.". Targets'
-  words are taken out of both sides first, so a shared target alone does not count.
+  `AgentProfile.DefaultIdleExampleStimulus`, "Nothing has changed since last time.", or is the
+  same short template with one word swapped ("Attack the wolf." against "Strike the {0}."). Targets'
+  words are taken out of both sides first, so a shared target alone does not count. Three
+  impossible requests keep that template on purpose, with a verb no action does ("Unlock the
+  cave.", "Sink the docks.", "Close the gate."): they are `none`, and test that the template alone
+  does not mean attack.
 - **No near-duplicates**, by the same script: no two stimuli here, and none against the curated 76,
   at or above 0.6 word overlap or 0.8 character similarity. One pair is kept on purpose:
   `int_simple_052` "Don't follow me." against the curated "Follow me.", since the negation is the
