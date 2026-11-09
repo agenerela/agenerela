@@ -32,6 +32,7 @@ GROUPS = {
     "items": ["item_bread", "item_rope", "item_torch", "item_lantern", "item_moonpetal", "item_pelt", "item_coins",
               "item_apple"],
     "terrain": ["terrain", "water"],
+    "woods": ["shrine_ruin", "lookout", "wolf_den", "hermit_hut", "char_hermit", "signpost"],
 }
 
 

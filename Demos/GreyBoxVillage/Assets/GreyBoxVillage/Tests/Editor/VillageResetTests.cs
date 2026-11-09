@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Linq;
+using Agenerela.Providers;
 using Demos.Shared;
 using NUnit.Framework;
 using UnityEditor;
@@ -19,7 +20,7 @@ namespace Demos.GreyBoxVillage.Tests
     /// </summary>
     public sealed class VillageResetTests
     {
-        private FakeVillageConfig config;
+        private ScriptedProviderConfig config;
         private VillageCommands commands;
 
         [UnityTest]
@@ -36,13 +37,10 @@ namespace Demos.GreyBoxVillage.Tests
             yield return null;
             commands = UnityEngine.Object.FindFirstObjectByType<VillageCommands>();
             Assert.That(commands, Is.Not.Null, "No village in Play mode.");
-            config = ScriptableObject.CreateInstance<FakeVillageConfig>();
-            config.Fake = new FakeVillageProvider(FakeVillageProvider.Decision("none", "no_target"))
-            {
-                Script = r => r.Stimulus.Contains("Walk with me")
-                    ? FakeVillageProvider.Decision("follow_player", "no_target", "Lead the way.")
-                    : FakeVillageProvider.Decision("none", "no_target", "Quiet.")
-            };
+            config = ScriptableObject.CreateInstance<ScriptedProviderConfig>();
+            config.Scripted.Callback = r => r.Stimulus.Contains("Walk with me")
+                ? ScriptedReply.Decide("follow_player", "no_target", "Lead the way.")
+                : ScriptedReply.Decide("none", "no_target", "Quiet.");
             commands.UseProvider(config);
             var run = body();
             while (true)

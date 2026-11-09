@@ -7,7 +7,8 @@ model through the framework, in the world the evaluation set is written for. In 
 bridge (#143), Odile the merchant and Captain Hale (#153). It has low-poly art, a day and night
 cycle, quests and an inventory, and the framework view (Tab) shows every decision being made.
 The villagers keep a daily routine and the weather turns, and both reach the agents as
-observations ([A day in Ashford](#a-day-in-ashford)). Presenter keys stage four situations that
+observations ([A day in Ashford](#a-day-in-ashford)). North of the river the woods hold six places
+to find, and a hermit ([The woods](#the-woods-north-of-the-river)). Presenter keys stage four situations that
 chain one agent's decision into another's: the wolf, a thief, a fire and night at the gate. A
 five-minute script for showing it is at the end
 ([Presenting it](#presenting-it-a-five-minute-script)).
@@ -26,10 +27,10 @@ Or start from `Assets/GreyBoxVillage/LocalShared/DemoLauncher.unity`, the title 
 | Right mouse drag (right stick), wheel | Orbit the camera, zoom |
 | **E** or **Enter** | Pick up what is within reach, or talk to whoever is within 6 m |
 | Enter / Esc while typing | Send the line / go back to walking |
-| **I**, **J** | Your pack, your quest journal |
+| **I**, **J** | Your pack, your journal: quests, and the places found north of the river |
 | **Tab** | The framework view: every agent's last request, the queue, and the target id over every place |
 | **H** | The request history: every decision, with exactly what was sent and what came back |
-| **Esc** | The menu: the framework view, how fast the day runs, the controls, restart, the title |
+| **Esc** | The menu: the framework view, how fast the day runs, the sound's volume and mute, the controls, restart, the title |
 | **F1** to **F6** | Presenter keys: reset the village, the wolf, the thief, a fire, jump to dusk, change the weather ([The situations](#the-situations)) |
 | **F12** | Show or hide the presenter panel, which lists those keys |
 
@@ -42,9 +43,11 @@ Or start from `Assets/GreyBoxVillage/LocalShared/DemoLauncher.unity`, the title 
   playable. A red banner at the top of the HUD says what is wrong and what to do, and the agent
   you asked says "No answer" in a red bubble rather than thinking forever. Until the model
   answers again, the agents stop asking it on their own (a quiet moment, a trespass, the wolf, the
-  bell) for 20 s at a time (`VillageCommands.ModelRetrySeconds`), so the console gets one
-  warning, not one per agent every few seconds. Your own lines are always sent, and the first
-  answer clears the banner.
+  bell) until the provider's retry time: 20 s after the first failure
+  (`VillageCommands.ModelRetrySeconds`), doubling with each failure after it, up to a minute. So
+  the console gets one warning, not one per agent every few seconds. Your own lines are always
+  sent, and the first answer clears the banner. The framework's `ProviderHealth` (#198) keeps the
+  state, from every request any agent sends; the village only words it and waits for it.
 - **Play mode leaves no trace.** The day and night cycle writes only to copies of the palette and
   the sky that it makes when Play starts, so pressing Play changes no file. The game keeps no
   static state that a play session changes (a test checks every static field), so it plays the
@@ -88,7 +91,7 @@ Everything you see is built by scripts, so it can be rebuilt and changed in code
 
 - **`ArtSource/build_kit.py`** builds the low-poly kit in Blender (5.x, headless: `blender
   --background --factory-startup --python Demos/GreyBoxVillage/ArtSource/build_kit.py`, about
-  3 s). That is 77 FBX models, plus `Art/Palette.png` and `Art/PaletteEmission.png`: every face is
+  3 s). That is 82 FBX models, plus `Art/Palette.png` and `Art/PaletteEmission.png`: every face is
   UV-mapped to one swatch of one palette, so the whole village is one material.
   - The models: buildings, props and trees, the characters, the wolf, the items, the terrain and
     the water. The gate's doors are their own model, `gate_door`, hung in the scene so the night
@@ -133,8 +136,11 @@ Everything you see is built by scripts, so it can be rebuilt and changed in code
     agents answer from a scripted provider, never a model. `Tools > GreyBoxVillage > Capture the
     UI` does the same from the editor, into `Logs/captures`.
   - `...VillageCapture.MeasureFromCommandLine -captureOut <dir>`, also with no `-quit`, holds the
-    camera on three fixed views at 1920x1080 and writes the frame time and draw calls of each to
-    `frame-time.txt`.
+    camera on six fixed views at 1920x1080, with no frame cap, and writes the frame time and draw
+    calls of each to `frame-time.txt`: the overview, the square and the north bank as slice 1
+    measured them, then the square in rain, the square at night with every lamp lit, and the woods.
+    Measured on 6 November 2026 on an RTX 4060 Laptop GPU, single runs: 3.4 to 4.8 ms in the first
+    three, 4.8 ms for the square in rain, and 5.3 ms for the square at night, the busiest.
   - `...VillageCapture.TitleBackdropFromCommandLine -quit` renders the title screen's backdrop,
     `Resources/TitleBackdrop.jpg`, the village at dusk.
   - `...VillageCapture.CaptureSituationsFromCommandLine -captureOut <dir>`, with no `-quit`, plays
@@ -209,6 +215,59 @@ It changes what the agents notice, and nothing else:
 - **Only the running clock changes it,** never a jump in time, so F5 to dusk keeps the weather, and
   F1 brings back clear skies.
 
+## The woods north of the river
+
+North of the river, past the keep, the woods are a walk worth taking. Paths with signposts leave
+the keep's road and the tower's, and six places are there to find:
+
+| Place | Where |
+|---|---|
+| The old wood path | Its signpost at the edge of the woods, east of the keep |
+| The moonpetal glade | A clearing of moonpetals and blue flowers that glows after dark, with fireflies |
+| The wolf's den | Boulders round a dark hollow in the north-east corner, bones at its mouth |
+| The ruined shrine | Broken pillars behind the keep, and an altar stone that glows at night |
+| The lookout | A woodsman's platform over the river and the docks |
+| The hermit's hut | A turf-roofed cabin west of the keep, where Oswin lives |
+
+- **Finding one** (walking within a few metres) shows a toast, "Found: The moonpetal glade (2 of
+  6)", and records it in the journal (J), under "Places found: 2 of 6". F1 forgets them.
+- **Oswin the hermit** is a scripted villager with fixed lines, said in turn when you press E
+  beside him. He is not an agent: four agents already share one queue, and he adds no request to
+  it.
+- **Nothing here is a target,** nor in any observation. Bram's proximity source reaches 90 m, which
+  is the whole map, so the woods are kept out of his schema by having no `Targetable` at all. A test
+  checks his targets wherever the player walks, and another that the village has no target slice 2
+  did not have.
+- The places, the shrine's floor, the lookout's posts, the den's boulders and the hut stand in the
+  way as grey boxes, so the NavMesh goes round them and the wolf still reaches its den.
+
+## Sound
+
+`VillageSound` only listens to the village and changes nothing in it:
+
+- **Ambience by time and place:** birds by day, crickets and now and then an owl at night, the
+  river by the bridge and the docks, market chatter as loud as the market is busy, the campfire's
+  crackle, and the rain, which hushes the birds and the crickets.
+- **Effects:** the bell while it rings, footsteps on dirt and on the planks of the bridge and the
+  docks, the gate as it opens and shuts, a bucket thrown on the fire, the wolf's howl when it comes
+  out and now and then at night, and the fire while it burns.
+- **The menu (Esc)** has a volume slider and a mute; both scale every sound, an effect already
+  playing included.
+- **Each effect plays on a voice of its own** (four of them), so two at once each sound from
+  where they happen: the gate's creak stays at the gate while the bucket splashes at the stall.
+- Its sources are made when Play starts and never saved. **A clip that is missing stays silent,**
+  so the village plays the same with no sound at all.
+
+**The clips are to come.** They are meant to come from the team's asset server
+([`tools/comfyui/`](../../tools/comfyui/AGENT_USAGE.md), the `comfyui-assets` skill), which could not
+be reached while this was built (5 November, nor again on 7 November for the lab), so
+`Assets/GreyBoxVillage/Audio/` does not exist yet and the
+village is silent. `VillageSceneBuilder.LoadSounds` wires whatever it finds there on the next
+rebuild, by name: `birds`, `crickets`, `river`, `market`, `campfire`, `rain` (loops), and `owl`,
+`bell`, `steps_dirt`, `steps_wood`, `gate`, `splash`, `howl`, `fire` (`.mp3`). Keep them short and
+compressed (`--set quality=128k`), put them through Git LFS, list each in a `GENERATED.md` here with
+its prompt and seed, and listen to every one first.
+
 ## The agents
 
 Each guard is a GameObject with an `AgentBehaviour`, its profile (`Agents/Bram.asset`,
@@ -231,6 +290,19 @@ Odile (`VillageMerchant`) stands behind her stall at the market, and Captain Hal
 (`VillageCaptain`) before the lord's keep. They have the same `AgentBehaviour` and provider
 config, so all four agents share one queue, but no guard senses: they are asked when the player
 speaks to them, and when they hear the bell.
+
+Each agent's `AgentBehaviour` lists the only target categories it is ever offered, from any source
+(Target Categories, #208); its proximity source names none of its own and is given these:
+
+| Agent | Target Categories |
+|---|---|
+| Bram | `place`, `person`, `creature`, `restricted`, `stranger` |
+| Wren | the same, and `quest`, for the lantern she asks the player to find |
+| Odile | `item`, `place`, `quest`, `guard` (the guards she can call, from `GuardTargetSource`); no villager |
+| Hale | `place`, `person`, `restricted`, `quest` |
+
+Bram's also lists his actions (Only Actions): the evaluation agent's, with `patrol`, so nothing a
+slice adds to the guard's body is ever his.
 
 ## The market, the captain and the quests
 
@@ -267,7 +339,10 @@ The player starts with 8 coins (`PlayerInventory`). Things lying in the world ar
 taken with E.
 
 An `AgentBehaviour` builds its agent once, so `AgentMind.UseProvider` replaces the component with
-one carrying a new config. That is how the tests give all four agents a fake provider.
+one carrying a new config. It copies every serialized field of the old one, so each agent keeps
+its Target Categories and Only Actions, and any field the framework adds later. That is how the
+tests give all four agents the framework's `ScriptedProvider` (#194), and how the presenter's F1
+gives them fresh memories.
 
 ## When the game asks a guard
 
@@ -327,14 +402,15 @@ four are the evaluation agent's; the rest are this demo's. No example is an eval
 | `patrol` | none | Walks the guard's loop (above) | a quiet moment, with the guard not following and not on the night watch |
 | `none` | none | Nothing | always |
 
-**Wren has four more,** on components only she carries, so they are never Bram's. Bram is the
-evaluation agent, and #153 keeps his actions; a test checks that whatever happens he is offered
-nothing outside the table above.
+**Wren has four more,** which are never Bram's: `chase` and `fetch_water` are on the guard's body,
+and Bram's Only Actions leave them out; the gate's are on `NightWatch`, which only she carries.
+Bram is the evaluation agent, and #153 keeps his actions; a test checks that whatever happens he
+is offered nothing outside the table above, and registers nothing else.
 
 | Action | Component | Target | What it does | Offered when |
 |---|---|---|---|---|
-| `chase` | `Responder` | the thief or the wolf | Runs after it at 7 m/s; a caught thief drops what it took, the wolf flees | a running thief or the wolf is in sight, but not a wolf already running for its den |
-| `fetch_water` | `Responder` | none | Fills a bucket at the well and throws it on the fire, again and again until it is out | a fire burns |
+| `chase` | `VillageGuard` | the thief or the wolf (`stranger`, `creature`) | Runs after it at 7 m/s; a caught thief drops what it took, the wolf flees | a running thief or the wolf is in sight, but not a wolf already running for its den |
+| `fetch_water` | `VillageGuard` | none | Fills a bucket at the well and throws it on the fire, again and again until it is out | a fire burns |
 | `open_gate` | `NightWatch` | none | Opens the village gate | she has the night watch, the gate is shut, and the player or the captain asks |
 | `close_gate` | `NightWatch` | none | Shuts it | she has the night watch and the gate is open |
 
@@ -343,9 +419,10 @@ an action's description never reaches it; what it sees is the ids, one example e
 observations and the history. Played live, `qwen3.5:2b` answered "Hello" with `patrol`, the
 greeting perhaps read as `patrol`'s old example of a calm moment, and a wolf 26 m away with `sound_alarm`.
 Wording cannot fix that on Ollama; availability can, because an action that is not offered
-cannot be picked. So before each decision `AgentMind` puts the stimulus's source
-(`player`, `zone`, `wolf`, `bell`, `quiet`) and the distance of a wolf the guard can see in the agent's
-`State`, which the `[Available]` checks on `VillageGuard` read:
+cannot be picked. So each decision carries an `AgentMind.Moment`: the stimulus's source (`player`,
+`zone`, `wolf`, `bell`, `quiet`) and the distance of a wolf or a running thief the guard can see.
+It is the call's `DecideOptions.Correlation` (#195), which the `[Available]` checks on
+`VillageGuard` read, and which `Execute`'s re-check sees again, unchanged:
 
 - `patrol` fills time when nothing is happening, so only the quiet timer offers it, and anything
   else that asks breaks a patrol off first (`VillageGuard.Attend`). The guard stops to talk, then
@@ -363,10 +440,14 @@ which the game does not do (DR-008).
 The statement appears above the guard's head. Every answer passes the framework's guards before
 it runs, then the game's own:
 
-- **`target_fits_action`**, on every agent: an action aimed at the wrong kind of target, such as
-  a quest offered "at the market", is rewritten to `none`. The game sends the flat schema, one
-  target list for all actions. The framework's target categories and `TargetCategoryGuard`
-  (#208), and its paired schema (#210), can pair them now, but the game has not adopted them yet. Line: "I don't follow you."
+- **`TargetCategoryGuard`**, the framework's (#208), on every agent: each action declares the
+  target categories it takes (`TargetCategories` on `[AgentAction]`), and one aimed at another
+  kind, such as a quest offered "at the market", a call to an apple, or Wren walking to her own
+  quest, is rewritten to `none`. The quest actions take `quest`, `sell` and `give` an `item`,
+  `call_guard` a `guard`, `send_guard` a `place` or `restricted` zone, `chase` a `stranger` or
+  `creature`, and `move_to`, `attack_target` and `block_path` the five categories of the world.
+  The game sends the flat schema, one target list for all actions; the paired schema (#210) stays
+  off, as a lab variable. Line: "I don't follow you."
 - **`quest_not_ready`**, on every agent: `complete_quest` for a quest whose items the player no
   longer holds (they were dropped while the model thought). Line: "You haven't got it all yet.
   Come back when you do."
@@ -388,6 +469,7 @@ does nothing. The agent then says the line `VillageGuard.RefusalLine` gives that
 | Guard | Line |
 |---|---|
 | `never_attack_villagers` | "I won't raise my sword against our own." |
+| `TargetCategoryGuard` | "I don't follow you." |
 | `TargetGroundingGuard` (a target the model wanted that is not here) | "There's no such thing here." |
 | `SchemaLegalityGuard` (the provider broke the contract) | nothing |
 
@@ -427,11 +509,11 @@ The thief (`VillageThief`, a scripted NPC with the kit's `char_thief`, not an ag
 out. Once it has taken a ware:
 
 - **Odile is asked,** and is offered **`call_guard`**, whose target is a guard. The guards reach her
-  schema through `GuardTargetSource`, a custom `ITargetSource`; her proximity source offers wares
-  and places, not people, so no villager is among her targets. Her call becomes that guard's
+  schema through `GuardTargetSource`, a custom `ITargetSource`, in a category of their own,
+  `guard`; her Target Categories leave people out, so no villager is among her targets. Her call becomes that guard's
   stimulus, with her own words, labelled `Merchant`, the same way Hale's `send_guard` works.
-  `call_guard` is offered while a thief runs or a fire burns, and `target_fits_action` contains a
-  call at anything but a guard. For a thief she may call either guard; for a fire alone, only one
+  `call_guard` is offered while a thief runs or a fire burns, and takes only a `guard`, so a call at
+  anything else is contained. For a thief she may call either guard; for a fire alone, only one
   who can carry water (Wren), so the call never goes to a guard with nothing to do about it.
 - **A guard who sees it running** is asked, once per theft. Wren is offered **`chase`**; Bram goes
   after it with **`attack_target`**, which runs after a running thief: played live, the model picked
@@ -529,14 +611,18 @@ The NavMesh is baked in the editor and stored as JSON (`VillageNavMesh.villagena
 Unity forces native NavMeshData assets to binary; the importer makes the native asset in the
 cache. `Rebuild Village` bakes it; `Rebake Navigation` re-bakes after hand edits.
 
-The EditMode tests run with no Ollama, through a fake provider config that all four agents share.
+The EditMode tests run with no Ollama, through the framework's `ScriptedProviderConfig`, whose
+provider all four agents share.
 They cover:
 
 - Odile sells only what is on her counter, and a sold ware leaves her schema.
 - `cannot_afford` and `no_free_gifts` contain what they should and pass the rest.
 - A quest is offered, then completed only when ready, and leaves the schema when done.
 - `quest_not_ready` catches items lost while the model thought.
-- `target_fits_action` contains a quest offered at a place.
+- `TargetCategoryGuard` contains a quest offered at a place, a call at a ware, and Wren walking to
+  her own quest; a guard offered twice, by two sources, is one target; a guard whose agent cannot
+  be built is left out of a fire call rather than stopping Odile; and the observations name the
+  places the proximity source offers, by its own categories when it names some.
 - The captain's order becomes the nearer free guard's `Captain` stimulus.
 - The wolf drops its pelt only during its quest.
 - A pickup within reach goes into the pack.
@@ -579,7 +665,17 @@ They cover:
   (`VillageSituationTests`); in Play mode, F1 restarts a guard's quiet timer, so a guard that was
   busy past its quiet time is not asked at once, and a player typing to a guard who walks out of
   earshot is freed when the panel hides (`VillageResetTests`); and a second F3 puts back the ware
-  the running thief holds.
+  the running thief holds. The reset keeps every setting of an agent's component, Target
+  Categories and Only Actions included (`VillageSituationTests`).
+- The woods and the sound (`VillageWoodsTests`): walking to each of the six places records it
+  in the journal once, with one toast; every place, Oswin and the wolf's den are on the NavMesh over
+  the bridge; Oswin says his lines in turn and is neither an agent nor a target; wherever the player
+  walks in the woods, Bram is offered the same targets and none of the woods reaches his
+  observations; birds sing by day, crickets by night, and rain hushes them; the bell is heard only
+  while it rings, from the bell; the menu's slider scales every sound and mute silences them all,
+  an effect already playing included, and two effects at once each play from their own place;
+  footsteps are on planks on the bridge and the docks; and the woods, Oswin and the sound are in the
+  scene and wired.
 - The day and the weather (`VillageExploreTests`): each villager goes where its schedule says at
   every hour, goes indoors after dark with the lamp by its door lit, still a target, and comes out
   in the morning; the bell sends it to the shelter, the hour cannot move it while the bell rings,
@@ -666,7 +762,7 @@ stops answering, a red banner says so and the village stays playable (press **F1
 
 What to say while it plays: the model never moves anyone. It picks from the actions it is offered,
 and the game decides what to offer from its own state (who is asking, what is in sight, what is
-burning, whose watch it is). The guards (`target_fits_action`, `never_attack_villagers`, the
+burning, whose watch it is). The guards (`TargetCategoryGuard`, `never_attack_villagers`, the
 schema guard's re-check at `Execute`) catch what availability cannot.
 
 The same script runs headless against scripted replies as a test (`VillagePresenterScriptTests`),

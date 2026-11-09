@@ -74,7 +74,7 @@ namespace Demos.GreyBoxVillage
         /// <summary>
         /// The guards <c>call_guard</c> may name: every guard while a thief runs (Bram catches one
         /// with <c>attack_target</c>), but for a fire alone only those who can carry water (a
-        /// <see cref="Responder"/>), so the call never goes to a guard with nothing to do about it.
+        /// guard whose agent has <c>fetch_water</c>), so the call never goes to a guard with nothing to do about it.
         /// </summary>
         public IEnumerable<VillageGuard> CallableGuards()
         {
@@ -82,8 +82,22 @@ namespace Demos.GreyBoxVillage
             if (commands == null) yield break;
             bool fireOnly = Fire != null && Fire.IsBurning && !(Thief != null && Thief.IsRunning);
             foreach (var mind in commands.Minds)
-                if (mind != null && mind.Body is VillageGuard guard && (!fireOnly || guard.GetComponent<Responder>() != null))
+                if (mind != null && mind.Body is VillageGuard guard && (!fireOnly || CanCarryWater(mind)))
                     yield return guard;
+        }
+
+        // A guard whose agent has fetch_water. One whose agent cannot be built (no profile, a provider
+        // config that is not valid) carries nothing, and must not stop Odile deciding.
+        private static bool CanCarryWater(AgentMind mind)
+        {
+            try
+            {
+                return mind.Agent.Actions.TryGet("fetch_water", out _, out _);
+            }
+            catch (System.InvalidOperationException)
+            {
+                return false;
+            }
         }
 
         private VillageCommands Village()
@@ -105,7 +119,7 @@ namespace Demos.GreyBoxVillage
 
         // ---- Actions ---------------------------------------------------------------------------
 
-        [AgentAction("sell", "Sell the player an item from your counter, for its price.", RequiresTarget = true)]
+        [AgentAction("sell", "Sell the player an item from your counter, for its price.", RequiresTarget = true, TargetCategories = new[] { "item" })]
         [Example("How much for the {0}? I'll have it.", "bread", "apple")]
         private void Sell(Transform target)
         {
@@ -116,7 +130,7 @@ namespace Demos.GreyBoxVillage
             Report("Sold the " + item.Id + ".");
         }
 
-        [AgentAction("give", "Give the player an item from your counter for nothing.", RequiresTarget = true)]
+        [AgentAction("give", "Give the player an item from your counter for nothing.", RequiresTarget = true, TargetCategories = new[] { "item" })]
         [Example("I'm starving and I haven't a coin.", "apple", "bread")]
         private void Give(Transform target)
         {
@@ -139,7 +153,8 @@ namespace Demos.GreyBoxVillage
             Lose(item);
         }
 
-        [AgentAction("call_guard", "Shout for one of the guards to deal with trouble at the market.", RequiresTarget = true)]
+        [AgentAction("call_guard", "Shout for one of the guards to deal with trouble at the market.", RequiresTarget = true,
+            TargetCategories = new[] { GuardTargetSource.Category })]
         [Example("Someone just ran off with a pie from your counter!", "wren", "bram")]
         private void CallGuard(Transform guard)
         {
@@ -188,12 +203,6 @@ namespace Demos.GreyBoxVillage
         }
 
         // ---- Rules -----------------------------------------------------------------------------
-
-        protected override bool TargetFits(string actionId, object target) =>
-            actionId == "sell" || actionId == "give"
-                ? target is Component c && Stock.Contains(c.GetComponent<Targetable>())
-                : actionId == "call_guard" ? target is Component g && g.GetComponent<VillageGuard>() != null
-                : base.TargetFits(actionId, target);
 
         public override IEnumerable<IDecisionGuard> Guards()
         {

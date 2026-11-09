@@ -16,6 +16,13 @@ namespace Demos.Shared
             public int Count;
         }
 
+        /// <summary>A place to find, for the journal: its name and note once found.</summary>
+        public struct PlaceEntry
+        {
+            public string Title, Note;
+            public bool Found;
+        }
+
         public struct QuestEntry
         {
             public string Title, Giver, Text, Step;
@@ -102,7 +109,8 @@ namespace Demos.Shared
         }
 
         /// <summary>Refreshes the open page. Rebuilds only when <paramref name="version"/> changes.</summary>
-        public void Fill(int version, int purse, IReadOnlyList<Entry> items, IReadOnlyList<QuestEntry> quests)
+        public void Fill(int version, int purse, IReadOnlyList<Entry> items, IReadOnlyList<QuestEntry> quests,
+            IReadOnlyList<PlaceEntry> places = null)
         {
             if (panel == null || !IsOpen || version == shownVersion) return;
             shownVersion = version;
@@ -115,7 +123,7 @@ namespace Demos.Shared
             DemoUI.Show(grid.parent, inv);
             DemoUI.Show(journal, !inv);
             if (inv) FillInventory(items);
-            else FillJournal(quests);
+            else FillJournal(quests, places);
         }
 
         private void FillInventory(IReadOnlyList<Entry> items)
@@ -145,7 +153,15 @@ namespace Demos.Shared
             }
         }
 
-        private void FillJournal(IReadOnlyList<QuestEntry> quests)
+        /// <summary>"Places found: 4 of 6", as the journal heads its places.</summary>
+        public static string PlacesHeading(IReadOnlyList<PlaceEntry> places)
+        {
+            int found = 0;
+            foreach (var p in places) if (p.Found) found++;
+            return "Places found: " + found + " of " + places.Count;
+        }
+
+        private void FillJournal(IReadOnlyList<QuestEntry> quests, IReadOnlyList<PlaceEntry> places)
         {
             journal.Clear();
             if (quests.Count == 0) DemoUI.Label(journal, "No quests yet. Ask around: \"Got any work?\"", "vui-muted");
@@ -163,6 +179,19 @@ namespace Demos.Shared
                 DemoUI.Label(card, "From " + q.Giver, "vui-subtitle");
                 DemoUI.Label(card, q.Text, "vui-text");
                 if (q.State != "done") DemoUI.Label(card, q.Step, "vui-muted");
+            }
+            if (places == null || places.Count == 0) return;
+            var heading = DemoUI.Label(journal, PlacesHeading(places).ToUpperInvariant(), "vui-subtitle");
+            heading.style.marginTop = 10;
+            heading.style.marginBottom = 4;
+            foreach (var p in places)
+            {
+                var card = DemoUI.Panel(journal, "vui-panel--soft");
+                card.style.marginBottom = 4;
+                card.style.borderLeftWidth = 4;
+                card.style.borderLeftColor = p.Found ? new Color(0.45f, 0.75f, 0.85f) : new Color(0.35f, 0.3f, 0.24f);
+                DemoUI.Label(card, p.Found ? p.Title : "Somewhere north of the river...", p.Found ? "vui-title" : "vui-muted");
+                if (p.Found) DemoUI.Label(card, p.Note, "vui-text");
             }
         }
     }

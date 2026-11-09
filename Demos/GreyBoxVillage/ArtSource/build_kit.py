@@ -8,7 +8,7 @@ It writes Assets/GreyBoxVillage/Art/Palette.png, PaletteEmission.png and one FBX
 Assets/GreyBoxVillage/Art/Models/. Everything is generated, so the script is the source: change it
 and run it again rather than editing a model by hand.
 
-An FBX export stamps the time it was made, so every run rewrites all 77 files in a few bytes each.
+An FBX export stamps the time it was made, so every run rewrites all 82 files in a few bytes each.
 To change some models only, name them in KIT_ONLY (comma separated); every other file is left alone:
 
     KIT_ONLY=gate_house,gate_door blender --background --factory-startup --python ...
@@ -232,6 +232,110 @@ def banner(p=None, at=(0, 0, 0), color="banner_blue", height=3.2):
            [(0, 1, 2, 3, 4), (4, 3, 2, 1, 0)], color, at=(x + 0.02, y + 0.03, z + height - 0.3))
     p.box((0.2, 0.01, 0.2), "gold", at=(x + 0.33, y + 0.05, z + height - 0.75), rot=(0, 45, 0), bevel=0.0)
     return p
+
+
+# ---- The woods north of the river (slice 3) ---------------------------------------------------
+
+def shrine_ruin():
+    """A ruined shrine in the woods: a stepped stone floor, broken pillars, a fallen one, and an altar
+    whose pale stone glows after dark. Authored round its centre; the path arrives from -Y. The floor
+    is two 0.12 m steps, low enough for the player to walk up, as the scene's colliders are."""
+    p = Part()
+    rng = random.Random(31)
+    p.box((5.2, 5.2, 0.12), "stone_dark", bevel=0.03)
+    p.box((4.4, 4.4, 0.12), "stone", at=(0, 0, 0.12), bevel=0.03)
+    pillars = [((-1.8, -1.8), 2.6), ((1.8, -1.8), 1.1), ((-1.8, 1.8), 2.9), ((1.8, 1.8), 1.7),
+               ((0.0, 2.0), 3.1), ((2.0, 0.0), 0.7)]
+    for i, ((x, y), h) in enumerate(pillars):
+        p.cyl(0.36, 0.18, "stone", at=(x, y, 0.24), segments=8)
+        p.cyl(0.28, h, "stone_light", at=(x, y, 0.39), segments=8, radius_top=0.26)
+        if h > 2.0:
+            p.box((0.78, 0.78, 0.2), "stone", at=(x, y, 0.39 + h), bevel=0.03)
+        p.ball(0.3, "moss", at=(x, y, 0.41 + h), scale=(1.2, 1.2, 0.4), subdiv=0, jitter=0.2, seed=70 + i)
+    # The pillar that stood at -X lies broken across the floor's edge.
+    p.cyl(0.27, 1.7, "stone_light", at=(-2.0, -0.4, 0.51), rot=(0, 90, 12), segments=8)
+    p.cyl(0.27, 1.2, "stone_light", at=(-3.7, 0.5, 0.27), rot=(0, 90, 40), segments=8)
+    # A lintel fallen against the short pillar.
+    p.box((2.3, 0.42, 0.34), "stone", at=(0.8, -1.6, 0.24), rot=(0, 16, 0), bevel=0.03)
+    # The altar.
+    p.box((1.3, 0.8, 0.9), "stone_dark", at=(0, 0.9, 0.24), bevel=0.05, taper=0.92)
+    p.box((1.5, 1.0, 0.15), "stone", at=(0, 0.9, 1.14), bevel=0.03)
+    p.ball(0.22, "herb_glow", at=(0, 0.9, 1.31), scale=(1, 1, 1.3), subdiv=1)
+    for i in range(10):
+        rock(p, at=(rng.uniform(-3.0, 3.0), rng.uniform(-3.2, 3.2), 0), s=rng.uniform(0.25, 0.5),
+             seed=80 + i, color=("stone", "stone_dark")[i % 2])
+    for i in range(7):
+        grass_tuft(p, at=(rng.uniform(-2.6, 2.6), rng.uniform(-2.6, 2.6), 0.24), seed=90 + i, color="moss")
+    out("shrine_ruin", p)
+
+
+def lookout():
+    """A woodsman's lookout on four posts: a platform at 3 m with a rail, a thatched roof, and a
+    ladder up its -Y side."""
+    p = Part()
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            p.box((0.5, 0.5, 0.18), "stone_dark", at=(sx * 1.1, sy * 1.1, 0), bevel=0.04)
+            p.cyl(0.13, 4.7, "timber", at=(sx * 1.1, sy * 1.1, 0.1), segments=6)
+    for sx in (-1, 1):
+        p.box((0.1, 2.5, 0.12), "wood_dark", at=(sx * 1.1, 0, 1.2), rot=(28, 0, 0), bevel=0.0)
+        p.box((0.1, 2.5, 0.12), "wood_dark", at=(sx * 1.1, 0, 1.2), rot=(-28, 0, 0), bevel=0.0)
+    p.box((2.7, 2.7, 0.18), "plank", at=(0, 0, 3.0), bevel=0.02)
+    for x, y, w, d in ((0, 1.3, 2.6, 0.08), (1.3, 0, 0.08, 2.6), (-1.3, 0, 0.08, 2.6),
+                       (0.85, -1.3, 0.9, 0.08), (-0.85, -1.3, 0.9, 0.08)):
+        p.box((w, d, 0.08), "wood", at=(x, y, 3.95), bevel=0.0)
+        p.box((w, d, 0.06), "wood", at=(x, y, 3.5), bevel=0.0)
+    p.prism(3.2, 3.2, 1.0, "thatch", at=(0, 0, 4.75), overhang=0.15)
+    for sx in (-0.3, 0.3):
+        p.box((0.08, 0.08, 3.6), "wood_light", at=(sx, -1.45, 0), bevel=0.0)
+    for k in range(8):
+        p.box((0.66, 0.07, 0.06), "wood_light", at=(0, -1.45, 0.35 + k * 0.42), bevel=0.0)
+    barrel(p, at=(0.6, 0.6, 3.18), s=0.6)
+    out("lookout", p)
+
+
+def wolf_den():
+    """The wolf's den: boulders heaped round a dark hollow, its mouth to -Y, with bones outside."""
+    p = Part()
+    rng = random.Random(53)
+    big = [((0, 1.5, 0), 2.2, (1.7, 1.0, 1.1), "rock"), ((-2.1, 0.3, 0), 1.6, (0.9, 1.4, 1.0), "rock_dark"),
+           ((2.1, 0.4, 0), 1.7, (0.9, 1.3, 1.0), "stone_dark"), ((0, 1.1, 1.7), 1.5, (1.4, 0.9, 0.6), "rock_dark"),
+           ((-1.2, 1.9, 1.2), 1.1, (1, 1, 0.8), "rock")]
+    for i, (at, r, sc, c) in enumerate(big):
+        p.ball(r, c, at=at, scale=sc, subdiv=1, jitter=0.15, seed=50 + i)
+    p.box((2.0, 1.0, 1.4), "black", at=(0, 0.2, 0), bevel=0.25)
+    p.cyl(1.7, 0.02, "dirt_dark", at=(0, -1.5, 0), segments=10)
+    for x, y, a in ((-0.8, -1.3, 20), (0.6, -1.6, -35), (0.1, -2.2, 70), (-0.2, -0.9, 110)):
+        p.cyl(0.045, 0.55, "cloth_white", at=(x, y, 0.06), rot=(0, 90, a), segments=5)
+        p.ball(0.07, "cloth_white", at=(x, y, 0.06), subdiv=0)
+    p.ball(0.15, "cloth_white", at=(-1.4, -1.0, 0.1), scale=(1.2, 1, 0.9), subdiv=1)
+    for i in range(6):
+        rock(p, at=(rng.uniform(-3, 3), rng.uniform(-2.6, -0.6), 0), s=rng.uniform(0.2, 0.45), seed=60 + i)
+    for i in range(4):
+        grass_tuft(p, at=(rng.uniform(-2.8, 2.8), rng.uniform(-3.0, -1.8), 0), seed=65 + i, color="grass_dark")
+    out("wolf_den", p)
+
+
+def hermit_hut():
+    """A hermit's hut: a low log cabin with a turf roof, its door to -Y and a lit window beside it,
+    a stove pipe, firewood and a barrel."""
+    p = Part()
+    p.box((3.3, 2.9, 0.3), "stone_dark", bevel=0.04)
+    p.box((3.0, 2.6, 2.0), "wood_dark", at=(0, 0, 0.3), bevel=0.04)
+    for k in range(5):
+        p.box((3.06, 2.66, 0.07), "bark", at=(0, 0, 0.55 + k * 0.38), bevel=0.0)
+    p.box((0.9, 0.12, 1.65), "wood_darker", at=(0.55, -1.32, 0.3), bevel=0.02)
+    p.box((0.08, 0.16, 0.08), "iron", at=(0.85, -1.4, 1.1), bevel=0.0)
+    p.box((0.6, 0.1, 0.5), "window_glow", at=(-0.75, -1.32, 1.15), bevel=0.0)
+    p.box((0.74, 0.14, 0.08), "timber", at=(-0.75, -1.36, 1.38), bevel=0.0)
+    p.box((0.08, 0.14, 0.62), "timber", at=(-0.75, -1.36, 1.1), bevel=0.0)
+    p.prism(3.7, 3.3, 1.2, "moss", at=(0, 0, 2.3), overhang=0.25)
+    for sign in (-1, 1):
+        p.gable_wall(2.6, 1.15, "wood", at=(sign * 1.42, 0, 2.3), rot=(0, 0, 90))
+    p.cyl(0.11, 1.4, "iron_dark", at=(-0.9, 0.6, 2.7), segments=6)
+    woodpile(p, at=(2.1, -0.2, 0))
+    barrel(p, at=(-1.95, -1.1, 0), s=0.8)
+    out("hermit_hut", p)
 
 
 # ---- Buildings ---------------------------------------------------------------------------------
@@ -978,6 +1082,9 @@ def characters():
                                  hat="hood", hood="cloth_green", cape="cloth_green", pack="leather", right="staff"))
     humanoid("char_thief", dict(shirt="cloth_dark", sleeve="cloth_dark", trousers="black", hat="hood",
                                 hood="cloth_dark", mask="black", right="sword"))
+    humanoid("char_hermit", dict(shirt="cloth_brown", sleeve="cloth_brown", skirt="cloth_brown", trousers="cloth_brown",
+                                 hat="hood", hood="cloth_grey", cape="cloth_grey", beard="hair_grey", hair="hair_grey",
+                                 skin="skin_tan", right="staff"))
     looks = [
         ("char_villager_tomas", dict(shirt="cloth_orange", trousers="cloth_brown", hat="straw", beard="hair_brown",
                                      right="basket")),
@@ -1003,6 +1110,12 @@ PATHS = [  # (x, z) polylines the dirt roads follow, in village coordinates
     [(0, -2.4), (-18, 8)],
     [(0, -6), (14, -8.2), (21, -12)],
     [(16, -0.5), (30, 18.5)],
+    # The woods (slice 3): to the den through the glade, a fork to the shrine, along the bank to the
+    # lookout, and off the north road to the hermit's hut. Keep Paths in VillageSceneBuilder.Art.cs in step.
+    [(18, 32.6), (26.5, 30.8), (33, 35), (37, 39), (42, 43.5), (46, 46.2)],
+    [(33, 35), (31, 40), (30.5, 43.5)],
+    [(26.5, 30.8), (35, 29.6), (42.5, 29.6)],
+    [(-3, 30.4), (-5, 37), (-6.5, 42)],
 ]
 
 
@@ -1140,6 +1253,10 @@ def main():
     keep()
     cave()
     signpost()
+    shrine_ruin()
+    lookout()
+    wolf_den()
+    hermit_hut()
     cart()
     weapon_rack()
     cottage("cottage_a", 5, 4, "roof_red", "S", 1)

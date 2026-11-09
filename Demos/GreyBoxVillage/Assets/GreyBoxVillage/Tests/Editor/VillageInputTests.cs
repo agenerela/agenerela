@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Linq;
+using Agenerela.Providers;
 using Demos.Shared;
 using NUnit.Framework;
 using UnityEditor;
@@ -12,7 +13,7 @@ namespace Demos.GreyBoxVillage.Tests
 {
     public sealed class VillageInputTests
     {
-        private FakeVillageConfig config;
+        private ScriptedProviderConfig config;
 
         [UnityTest]
         public IEnumerator TypingSubmitAndCancelUseTheRuntimeUI()
@@ -22,8 +23,8 @@ namespace Demos.GreyBoxVillage.Tests
             yield return null;
             var commands = Object.FindFirstObjectByType<VillageCommands>();
             // The agents built their Ollama agents in Awake; replace them before anything can ask.
-            config = ScriptableObject.CreateInstance<FakeVillageConfig>();
-            config.Fake = new FakeVillageProvider(FakeVillageProvider.Decision("move_to", "north_tower"));
+            config = ScriptableObject.CreateInstance<ScriptedProviderConfig>();
+            config.Scripted.Otherwise(ScriptedReply.Decide("move_to", "north_tower", "Understood."));
             commands.UseProvider(config);
             foreach (var mind in commands.Minds)
                 if (mind.Senses != null) mind.Senses.enabled = false;
@@ -68,10 +69,10 @@ namespace Demos.GreyBoxVillage.Tests
             commands.Menu.Open();
             yield return null;
             Assert.That(input.IsOpen, Is.False);
-            int calls = config.Fake.Calls;
+            int calls = config.Scripted.RequestCount;
             input.Submit("Ring the bell!");
             for (int frame = 0; frame < 10; frame++) yield return null;
-            Assert.That(config.Fake.Calls, Is.EqualTo(calls), "A line was sent to an agent behind the menu.");
+            Assert.That(config.Scripted.RequestCount, Is.EqualTo(calls), "A line was sent to an agent behind the menu.");
             commands.Menu.Close();
             yield return null;
             Assert.That(input.IsOpen, Is.True);

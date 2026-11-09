@@ -6,8 +6,9 @@ using UnityEngine.UIElements;
 namespace Demos.Shared
 {
     /// <summary>
-    /// The Esc menu: resume, the framework view, how fast the day runs, the controls, restart and
-    /// the title screen. Esc while typing only leaves the text field; a second Esc opens this.
+    /// The Esc menu: resume, the framework view, how fast the day runs, the sound's volume and mute,
+    /// the controls, restart and the title screen. Esc while typing only leaves the text field; a
+    /// second Esc opens this.
     /// </summary>
     public sealed class DemoMenu : MonoBehaviour
     {
@@ -16,13 +17,20 @@ namespace Demos.Shared
         public DayNightCycle Day;
         [Tooltip("Esc closes the book first, when it is open.")]
         public VillageBook Book;
+        [Range(0f, 1f), Tooltip("How loud the game's sound is, set with the menu's slider.")]
+        public float Volume = 0.8f;
+        public bool Muted;
+
+        /// <summary>What every sound is scaled by: <see cref="Volume"/>, or nothing while muted.</summary>
+        public float Gain => Muted ? 0f : Mathf.Clamp01(Volume);
 
         public bool IsOpen { get; private set; }
         /// <summary>Where the menu sits, in panel pixels, while it is open.</summary>
         public Rect? Bounds => IsOpen && panel != null ? panel.worldBound : (Rect?)null;
 
         private VisualElement root, panel, controls;
-        private Button dayButton, boardButton;
+        private Button dayButton, boardButton, muteButton;
+        private Slider volumeSlider;
         private int typingEndedFrame = -10;
         private bool wasTyping;
 
@@ -52,6 +60,18 @@ namespace Demos.Shared
             DemoUI.Button(panel, "Resume", Close, "Resume");
             boardButton = DemoUI.Button(panel, "", () => { Board?.Toggle(); Refresh(); }, "ToggleBoard");
             dayButton = DemoUI.Button(panel, "", CycleDay, "DaySpeed");
+            var sound = DemoUI.Row(panel);
+            sound.name = "Sound";
+            sound.style.marginTop = 4;
+            sound.style.marginBottom = 4;
+            DemoUI.Label(sound, "Sound", "vui-text").style.width = 56;
+            volumeSlider = new Slider(0f, 1f) { name = "Volume", value = Volume };
+            volumeSlider.AddToClassList("vui-slider");
+            volumeSlider.style.flexGrow = 1;
+            volumeSlider.RegisterValueChangedCallback(e => SetVolume(e.newValue));
+            sound.Add(volumeSlider);
+            muteButton = DemoUI.Button(sound, "", ToggleMute, "Mute");
+            muteButton.style.width = 84;
             DemoUI.Button(panel, "Controls", () => ShowControls(controls.style.display == DisplayStyle.None), "Controls");
             controls = DemoUI.Panel(panel, "vui-panel--soft");
             foreach (var (key, what) in new[]
@@ -81,8 +101,28 @@ namespace Demos.Shared
             Refresh();
         }
 
+        /// <summary>The slider's volume, 0 to 1.</summary>
+        public void SetVolume(float volume)
+        {
+            Volume = Mathf.Clamp01(volume);
+            Refresh();
+        }
+
+        /// <summary>Mutes the sound, or brings it back at the slider's volume.</summary>
+        public void ToggleMute()
+        {
+            Muted = !Muted;
+            Refresh();
+        }
+
         private void Refresh()
         {
+            if (volumeSlider != null)
+            {
+                volumeSlider.SetValueWithoutNotify(Volume);
+                volumeSlider.SetEnabled(!Muted);
+            }
+            if (muteButton != null) muteButton.text = Muted ? "Unmute" : "Mute";
             if (dayButton == null) return;
             dayButton.text = "Day: " + DaySpeeds[daySpeed].label;
             boardButton.text = Board != null && Board.Expanded ? "Hide the framework view" : "Show the framework view";

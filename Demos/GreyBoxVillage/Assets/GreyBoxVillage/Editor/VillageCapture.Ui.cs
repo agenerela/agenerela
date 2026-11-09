@@ -25,7 +25,7 @@ namespace Demos.GreyBoxVillage.Editor
     /// A window-less editor has no screen for the UI to draw on, so the panels draw into a
     /// RenderTexture instead (<see cref="PanelSettings.targetTexture"/>), the main camera into
     /// another of the same size, and the two are laid over each other. The agents answer from a
-    /// scripted provider (<see cref="CaptureProviderConfig"/>), never a real model.
+    /// scripted provider (the framework's <see cref="ScriptedProviderConfig"/>), never a real model.
     /// </para>
     /// <para>
     /// <c>Unity -batchmode -projectPath Demos/GreyBoxVillage -executeMethod
@@ -137,7 +137,8 @@ namespace Demos.GreyBoxVillage.Editor
             Directory.CreateDirectory(folder);
             Application.targetFrameRate = 30;
             var commands = Object.FindFirstObjectByType<VillageCommands>();
-            var config = ScriptableObject.CreateInstance<CaptureProviderConfig>();
+            var config = ScriptableObject.CreateInstance<ScriptedProviderConfig>();
+            config.Scripted.Otherwise(ScriptedReply.Decide("none", "no_target", "Good day."));
             foreach (var mind in commands.Minds)
                 if (mind.Senses != null) mind.Senses.enabled = false;
             var events = commands.GetComponent<VillageEvents>();
@@ -207,11 +208,11 @@ namespace Demos.GreyBoxVillage.Editor
 
         // One run through the village at one hour: each view the HUD, the dialogue, the bubbles, the
         // framework view, the book, the menu and the no-model warning give.
-        private static IEnumerable<object> Village(VillageCommands commands, CaptureProviderConfig config, float hour,
+        private static IEnumerable<object> Village(VillageCommands commands, ScriptedProviderConfig config, float hour,
             string folder, string when, RenderTexture world, RenderTexture ui)
         {
             var scripted = config.Scripted;
-            scripted.Fail = null;
+            scripted.Otherwise(ScriptedReply.Decide("none", "no_target", "Good day."));
             commands.Day.Running = false;
             commands.Day.TimeOfDay = hour / 24f;
             commands.UseProvider(config);
@@ -223,9 +224,9 @@ namespace Demos.GreyBoxVillage.Editor
             commands.Menu.Close();
 
             IEnumerable<object> Snap(string name) => Shoot(folder, name + "_" + when, world, ui);
-            IEnumerable<object> Ask(string agent, string line, string reply)
+            IEnumerable<object> Ask(string agent, string line, ScriptedReply reply)
             {
-                scripted.Reply = reply;
+                scripted.Otherwise(reply);
                 var awaiter = commands.Mind(agent).HearPlayerAsync(line).GetAwaiter();
                 return Until(() => awaiter.IsCompleted);
             }
@@ -233,18 +234,18 @@ namespace Demos.GreyBoxVillage.Editor
             // Odile offers her quest: the dialogue panel, its chips, the tracker and the toast.
             foreach (var x in Stand(commands, "Odile", 3.2f)) yield return x;
             foreach (var x in Ask("Odile", "Any work for a traveller?",
-                         CaptureProvider.Decision("offer_quest", "quest_moonpetals", "Bring me three moonpetals from the woods past the river. They glow after dark."))) yield return x;
+                         ScriptedReply.Decide("offer_quest", "quest_moonpetals", "Bring me three moonpetals from the woods past the river. They glow after dark."))) yield return x;
             foreach (var x in Snap("dialogue")) yield return x;
 
             // She is asked for what the player cannot afford: a guard contains it, an amber bubble.
             foreach (var x in Ask("Odile", "I'll take the lantern.",
-                         CaptureProvider.Decision("sell", "lantern", "Here you are, love."))) yield return x;
+                         ScriptedReply.Decide("sell", "lantern", "Here you are, love."))) yield return x;
             foreach (var x in Snap("refusal")) yield return x;
 
             // Bram answers in his own words: a speech bubble.
             foreach (var x in Stand(commands, "Bram", 3.5f)) yield return x;
             foreach (var x in Ask("Bram", "Is the road east safe?",
-                         CaptureProvider.Decision("none", "no_target", "Safe enough by day. Keep to the road and don't linger after dark."))) yield return x;
+                         ScriptedReply.Decide("none", "no_target", "Safe enough by day. Keep to the road and don't linger after dark."))) yield return x;
             foreach (var x in Snap("bubble")) yield return x;
 
             // Nobody in earshot: the HUD alone, with the quest tracker, on the road into the square.
@@ -282,11 +283,11 @@ namespace Demos.GreyBoxVillage.Editor
             commands.Menu.Close();
 
             // No model: the HUD says so, and so does the agent who was asked.
-            scripted.Fail = ProviderErrorKind.Unreachable;
             foreach (var x in Stand(commands, "Bram", 3.5f)) yield return x;
-            foreach (var x in Ask("Bram", "Open the gate, please.", null)) yield return x;
+            foreach (var x in Ask("Bram", "Open the gate, please.",
+                         ScriptedReply.Fail(ProviderErrorKind.Unreachable, "The capture tool's provider is set to fail."))) yield return x;
             foreach (var x in Snap("nomodel")) yield return x;
-            scripted.Fail = null;
+            scripted.Otherwise(ScriptedReply.Decide("none", "no_target", "Good day."));
         }
 
         // Puts the player in front of an agent, facing it, with the camera behind the player.
@@ -357,11 +358,17 @@ namespace Demos.GreyBoxVillage.Editor
 
         // ---- Frame time ----------------------------------------------------------------------
 
-        private static readonly (string name, Vector3 from, Vector3 to)[] Views =
+        // The first three are slice 1's views, so the figures compare. Slice 3 adds the busiest view,
+        // the square, in rain (the rain, the mist of its haze and the cloud dome) and at night (every
+        // lamp and door light), and the woods.
+        private static readonly (string name, Vector3 from, Vector3 to, float hour, WeatherKind weather)[] Views =
         {
-            ("overview", new Vector3(0, 40, -64), new Vector3(0, 0, 8)),
-            ("square", new Vector3(-10, 6, -10), new Vector3(8, 1.5f, 4)),
-            ("north", new Vector3(-4, 8, 20), new Vector3(8, 3, 40)),
+            ("overview", new Vector3(0, 40, -64), new Vector3(0, 0, 8), 11f, WeatherKind.Clear),
+            ("square", new Vector3(-10, 6, -10), new Vector3(8, 1.5f, 4), 11f, WeatherKind.Clear),
+            ("north", new Vector3(-4, 8, 20), new Vector3(8, 3, 40), 11f, WeatherKind.Clear),
+            ("square_rain", new Vector3(-10, 6, -10), new Vector3(8, 1.5f, 4), 11f, WeatherKind.Rain),
+            ("square_night", new Vector3(-10, 6, -10), new Vector3(8, 1.5f, 4), 22.5f, WeatherKind.Clear),
+            ("woods", new Vector3(24, 7, 26), new Vector3(40, 1, 42), 11f, WeatherKind.Clear),
         };
 
         // Holds the camera on fixed views at 1920x1080 with no frame cap, and logs the mean frame
@@ -372,7 +379,8 @@ namespace Demos.GreyBoxVillage.Editor
             Application.targetFrameRate = -1;
             QualitySettings.vSyncCount = 0;
             var commands = Object.FindFirstObjectByType<VillageCommands>();
-            var config = ScriptableObject.CreateInstance<CaptureProviderConfig>();
+            var config = ScriptableObject.CreateInstance<ScriptedProviderConfig>();
+            config.Scripted.Otherwise(ScriptedReply.Decide("none", "no_target", "Good day."));
             commands.UseProvider(config);
             foreach (var mind in commands.Minds)
                 if (mind.Senses != null) mind.Senses.enabled = false;
@@ -383,6 +391,7 @@ namespace Demos.GreyBoxVillage.Editor
             camera.targetTexture = rt;
             commands.Day.Running = false;
             commands.Day.TimeOfDay = 11f / 24f;
+            if (commands.Weather != null) commands.Weather.Changes = false;
             var lines = new List<string>();
             using (var mainThread = ProfilerRecorder.StartNew(ProfilerCategory.Internal, "Main Thread", 400))
             using (var drawCalls = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Draw Calls Count"))
@@ -390,11 +399,19 @@ namespace Demos.GreyBoxVillage.Editor
             using (var setPass = ProfilerRecorder.StartNew(ProfilerCategory.Render, "SetPass Calls Count"))
             using (var triangles = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Triangles Count"))
             {
-                foreach (var (name, from, to) in Views)
+                foreach (var (name, from, to, hour, weather) in Views)
                 {
+                    commands.Day.TimeOfDay = hour / 24f;
+                    if (commands.Routine != null) commands.Routine.CatchUp();
+                    if (commands.Weather != null)
+                    {
+                        commands.Weather.Set(weather);
+                        commands.Weather.Snap();
+                    }
                     camera.transform.position = from;
                     camera.transform.LookAt(to);
-                    foreach (var x in Frames(60)) yield return x;
+                    // Long enough for the rain to fill the air round the camera before timing it.
+                    foreach (var x in Frames(weather == WeatherKind.Clear ? 60 : 400)) yield return x;
                     float total = 0;
                     const int n = 300;
                     long thread = 0;

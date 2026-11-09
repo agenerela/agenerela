@@ -30,8 +30,6 @@ namespace Demos.GreyBoxVillage
         [System.NonSerialized] public QuestBook Quests;
         [System.NonSerialized] public PlayerInventory Inventory;
 
-        /// <summary>The game guard that contains an action aimed at the wrong kind of target, such as a quest offered "at the market".</summary>
-        public const string TargetFitsAction = "target_fits_action";
         /// <summary>The game guard that contains completing a quest the player has not finished.</summary>
         public const string QuestNotReady = "quest_not_ready";
 
@@ -71,18 +69,12 @@ namespace Demos.GreyBoxVillage
 
         /// <summary>
         /// The game's own guards over this agent's decisions, added once when its agent is built. The
-        /// base keeps every action to its kind of target, and a quest to being finished before it is
-        /// completed; a body adds its own after these.
+        /// base keeps a quest to being finished before it is completed; a body adds its own after it.
+        /// Each action's kind of target is its declared <c>TargetCategories</c>, which the framework's
+        /// <see cref="TargetCategoryGuard"/> holds it to (DR-020).
         /// </summary>
         public virtual IEnumerable<IDecisionGuard> Guards()
         {
-            yield return new DelegateGuard(TargetFitsAction, input =>
-            {
-                var d = input.Decision;
-                if (d.TargetId == TargetRegistry.NoTarget || !input.Context.Targets.TryGet(d.TargetId, out var target)) return GuardVerdict.Pass;
-                return TargetFits(d.ActionId, target) ? GuardVerdict.Pass
-                    : GuardVerdict.RewriteToNone(d.ActionId + " cannot be done to " + d.TargetId + ".");
-            });
             yield return new DelegateGuard(QuestNotReady, input =>
             {
                 var d = input.Decision;
@@ -92,22 +84,18 @@ namespace Demos.GreyBoxVillage
             });
         }
 
-        /// <summary>Whether an action can be aimed at this target. Quest actions need a quest; nothing else takes one.</summary>
-        protected virtual bool TargetFits(string actionId, object target) =>
-            actionId == "offer_quest" || actionId == "complete_quest" ? target is Quest : !(target is Quest);
-
         /// <summary>What the agent says when a guard stops a decision; null says nothing (<see cref="Agent.RefusalStatement"/>).</summary>
         public virtual string RefusalLine(GuardVerdict verdict) =>
-            verdict.Guard == TargetFitsAction ? "I don't follow you."
+            verdict.Guard == nameof(TargetCategoryGuard) ? "I don't follow you."
             : verdict.Guard == QuestNotReady ? "You haven't got it all yet. Come back when you do."
             : null;
 
         // ---- Quests, for any agent that has some ----------------------------------------------
 
-        /// <summary>The source of the stimulus being decided, as the mind put it in State.</summary>
-        protected static string Asking(AgentContext ctx) => ctx.State.TryGetValue(AgentMind.AskedBy, out var source) ? source as string : null;
+        /// <summary>The source of the stimulus being decided, from the call's <see cref="AgentMind.Moment"/>.</summary>
+        protected static string Asking(AgentContext ctx) => AgentMind.Moment.Of(ctx)?.AskedBy;
 
-        [AgentAction("offer_quest", "Give the player one of your quests.", RequiresTarget = true)]
+        [AgentAction("offer_quest", "Give the player one of your quests.", RequiresTarget = true, TargetCategories = new[] { Quest.Category })]
         [Example("Got any work for a traveller?", "quest_moonpetals", "quest_wolf", "quest_lantern")]
         private void OfferQuest(Quest quest) => Quests.Offer(quest);
 
@@ -115,7 +103,7 @@ namespace Demos.GreyBoxVillage
         private bool CanOffer(AgentContext ctx) =>
             Asking(ctx) == "player" && Quests != null && Quests.From(name).Any(q => q.State == QuestState.Available);
 
-        [AgentAction("complete_quest", "Take what the player brought for a quest and pay the reward.", RequiresTarget = true)]
+        [AgentAction("complete_quest", "Take what the player brought for a quest and pay the reward.", RequiresTarget = true, TargetCategories = new[] { Quest.Category })]
         [Example("Here it is, as promised.", "quest_moonpetals", "quest_wolf", "quest_lantern")]
         private void CompleteQuest(Quest quest) => Quests.Complete(quest);
 

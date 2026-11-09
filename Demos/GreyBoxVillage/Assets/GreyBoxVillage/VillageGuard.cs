@@ -17,14 +17,15 @@ namespace Demos.GreyBoxVillage
     ///
     /// For the same reason the availability checks carry most of the weight: an action that is not
     /// offered cannot be picked, whatever the model makes of a line. They read who is asking from
-    /// the agent's State, which <see cref="AgentMind"/> sets before each decision: the source
-    /// of the stimulus under <see cref="AgentMind.AskedBy"/> and the distance of a wolf the guard can see under
-    /// <see cref="AgentMind.WolfMetres"/>.
+    /// the call's <see cref="AgentMind.Moment"/>, which <see cref="AgentMind"/> sends with each
+    /// decision: the source of the stimulus and the distance of a wolf the guard can see.
     ///
     /// Bram and Wren are both guards: the same body, each with its own post, patrol and profile.
-    /// Wren also keeps the night watch and answers trouble: those actions sit on her own
-    /// <see cref="NightWatch"/> and <see cref="Responder"/>, so Bram, the evaluation agent, keeps
-    /// exactly the actions he had.
+    /// Wren also answers trouble (<c>chase</c>, <c>fetch_water</c>) and keeps the night watch, on her
+    /// own <see cref="NightWatch"/>. Bram, the evaluation agent, keeps exactly the actions he had: his
+    /// AgentBehaviour's Only Actions lists them, so this body's other actions are never his (#208, G10).
+    /// Offered a new action beside his own, the model took it over the bell for the wolf (four live
+    /// runs, 5 November).
     /// </remarks>
     [RequireComponent(typeof(NavMeshAgent))]
     public sealed class VillageGuard : VillageBody
@@ -36,7 +37,7 @@ namespace Demos.GreyBoxVillage
         public Transform Post;
         public VillageAlarm Alarm;
         public Transform[] PatrolRoute;
-        [Tooltip("The fire the guard knows about, and carries water to when its Responder fetches water.")]
+        [Tooltip("The fire the guard knows about, and carries water to when it fetches water.")]
         public VillageFire Fire;
         [Tooltip("Carried while fetching water; hidden otherwise.")]
         public GameObject Bucket;
@@ -91,7 +92,7 @@ namespace Demos.GreyBoxVillage
 
         // Only the player starts or ends an escort: a wolf, a trespass or a quiet moment asks for neither.
         [Available("follow_player")]
-        private bool CanFollow(AgentContext ctx) => !IsFollowing && Asker(ctx) == "player";
+        private bool CanFollow(AgentContext ctx) => !IsFollowing && Asking(ctx) == "player";
 
         [AgentAction("stop_following", "Stop following the player and stay where you are.")]
         [Example("You can stay put now.")]
@@ -104,9 +105,9 @@ namespace Demos.GreyBoxVillage
         }
 
         [Available("stop_following")]
-        private bool CanStop(AgentContext ctx) => IsFollowing && Asker(ctx) == "player";
+        private bool CanStop(AgentContext ctx) => IsFollowing && Asking(ctx) == "player";
 
-        [AgentAction("move_to", "Walk to a place.", RequiresTarget = true)]
+        [AgentAction("move_to", "Walk to a place.", RequiresTarget = true, TargetCategories = new[] { "place", "person", "creature", "restricted", "stranger" })]
         [Example("Go and stand by the {0}.", "well", "bridge")]
         private void MoveTo(Transform target)
         {
@@ -116,7 +117,7 @@ namespace Demos.GreyBoxVillage
             Report("Walking to the " + destinationId + ".");
         }
 
-        [AgentAction("attack_target", "Attack something.", RequiresTarget = true)]
+        [AgentAction("attack_target", "Attack something.", RequiresTarget = true, TargetCategories = new[] { "place", "person", "creature", "restricted", "stranger" })]
         [Example("Strike the {0}.", "training_dummy", "wolf")]
         private void Attack(Transform target)
         {
@@ -138,9 +139,13 @@ namespace Demos.GreyBoxVillage
         // ---- This demo's own actions ---------------------------------------------------------
 
         /// <summary>
-        /// Runs after a thief or the wolf until it is caught, flees or gets away. Wren's
-        /// <c>chase</c> (<see cref="Responder"/>); Bram has no such action.
+        /// Runs after a thief or the wolf until it is caught, flees or gets away. Wren's; Bram's Only
+        /// Actions leave it out, and he goes after a running thief with <c>attack_target</c>.
         /// </summary>
+        // Something that runs: the thief (a stranger) or the wolf (a creature).
+        [AgentAction("chase", "Run after a thief or the wolf until you catch it.", RequiresTarget = true,
+            TargetCategories = new[] { "stranger", "creature" })]
+        [Example("Don't let the {0} get away!", "thief", "wolf")]
         public void Chase(Transform target)
         {
             Clear();
@@ -151,10 +156,17 @@ namespace Demos.GreyBoxVillage
             Report("Chasing the " + destinationId + ".");
         }
 
+        // Something to run after must be in sight: a thief making off, or the wolf.
+        [Available("chase")]
+        private bool CanChase(AgentContext ctx) =>
+            AgentMind.Moment.Of(ctx) is { } moment && (moment.WolfMetres != null || moment.ThiefMetres != null);
+
         /// <summary>
-        /// Carries buckets from the well to <see cref="Fire"/> until it is out. Wren's
-        /// <c>fetch_water</c> (<see cref="Responder"/>); Bram has no such action.
+        /// Carries buckets from the well to <see cref="Fire"/> until it is out. Wren's; Bram's Only
+        /// Actions leave it out.
         /// </summary>
+        [AgentAction("fetch_water", "Carry buckets from the well to the fire until it is out.")]
+        [Example("Flames are climbing up the side of the barn!")]
         public void FetchWater()
         {
             Clear();
@@ -165,6 +177,9 @@ namespace Demos.GreyBoxVillage
             activity = "running to the well for water";
             Report("Fetching water for the fire.");
         }
+
+        [Available("fetch_water")]
+        private bool CanFetchWater(AgentContext ctx) => Fire != null && Fire.IsBurning;
 
         [AgentAction("warn_player", "Warn the player and stay where you are.")]
         [Example("A stranger is poking around where they should not be.")]
@@ -179,9 +194,9 @@ namespace Demos.GreyBoxVillage
 
         // A quiet moment is, by the game's own rule, one with nothing to warn about.
         [Available("warn_player")]
-        private bool CanWarn(AgentContext ctx) => Asker(ctx) != "quiet";
+        private bool CanWarn(AgentContext ctx) => Asking(ctx) != "quiet";
 
-        [AgentAction("block_path", "Stand in the entrance of a place so nobody gets in.", RequiresTarget = true)]
+        [AgentAction("block_path", "Stand in the entrance of a place so nobody gets in.", RequiresTarget = true, TargetCategories = new[] { "place", "person", "creature", "restricted", "stranger" })]
         [Example("Nobody gets into the {0}.", "armory", "lords_keep")]
         private void BlockPath(Transform target)
         {
@@ -205,7 +220,7 @@ namespace Demos.GreyBoxVillage
         // water (fetch_water), not the bell.
         [Available("sound_alarm")]
         private bool CanSoundAlarm(AgentContext ctx) => Alarm != null && !Alarm.IsSounding &&
-            (Asker(ctx) == "player" || ctx.State.TryGetValue(AgentMind.WolfMetres, out var d) && (float)d <= AlarmWolfDistance);
+            (Asking(ctx) == "player" || AgentMind.Moment.Of(ctx)?.WolfMetres <= AlarmWolfDistance);
 
         [AgentAction("patrol", "Walk a round of the village, watching for trouble.")]
         [Example("Your watch at the gate still has hours to run.")]
@@ -225,7 +240,7 @@ namespace Demos.GreyBoxVillage
         // The night watch stays at the gate.
         [Available("patrol")]
         private bool CanPatrol(AgentContext ctx) =>
-            Asker(ctx) == "quiet" && !IsPatrolling && !IsFollowing && PatrolRoute != null && PatrolRoute.Length > 0 && !OnNightWatch;
+            Asking(ctx) == "quiet" && !IsPatrolling && !IsFollowing && PatrolRoute != null && PatrolRoute.Length > 0 && !OnNightWatch;
 
         public override string Duty => OnNightWatch ? "the night watch at the gate" : null;
 
@@ -237,8 +252,6 @@ namespace Demos.GreyBoxVillage
                 return watch != null && watch.OnWatch;
             }
         }
-
-        private static string Asker(AgentContext ctx) => ctx.State.TryGetValue(AgentMind.AskedBy, out var source) ? source as string : null;
 
         // ---- What only the guard knows ------------------------------------------------------
 
@@ -310,12 +323,6 @@ namespace Demos.GreyBoxVillage
         { "Walk with me.", "What's going on?", "Head to the market.", "Ring the alarm!", "Wait here." });
 
         public override IReadOnlyList<string> Suggestions => SuggestedLines;
-
-        // chase runs after something that runs: the thief or the wolf.
-        protected override bool TargetFits(string actionId, object target) =>
-            actionId == "chase"
-                ? target is Component c && (c.GetComponent<VillageThief>() != null || c.GetComponent<VillageWolf>() != null)
-                : base.TargetFits(actionId, target);
 
         public override string RefusalLine(GuardVerdict verdict) => base.RefusalLine(verdict) ??
             (verdict.Guard == NeverAttackVillagers ? "I won't raise my sword against our own."

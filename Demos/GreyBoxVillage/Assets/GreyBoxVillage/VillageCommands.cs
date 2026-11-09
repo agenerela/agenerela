@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -36,6 +37,12 @@ namespace Demos.GreyBoxVillage
         public DemoMenu Menu;
         [Tooltip("The presenter's keys and their panel; world labels keep out from under it.")]
         public VillagePresenter Presenter;
+        [Tooltip("The places found north of the river, for the journal.")]
+        public Exploration Exploration;
+        [Tooltip("Oswin, who says his lines when the player presses E beside him.")]
+        public Hermit Hermit;
+        [Tooltip("The village's sound: the menu's volume and mute reach it.")]
+        public VillageSound Sound;
         [Tooltip("How close the player must be to pick something up, in metres.")]
         public float ReachDistance = 2.2f;
         public Transform Player;
@@ -43,16 +50,26 @@ namespace Demos.GreyBoxVillage
         public float SpeakingDistance = 6f;
         [Tooltip("Append every decision to Logs/agenerela-decisions-<time>.jsonl.")]
         public bool WriteLogFile = true;
-        [Tooltip("After the model fails to answer, how long the village waits before it asks again on its own. The player's lines are always sent.")]
+        [Tooltip("After the model fails to answer, how long the village waits before it asks again on its own; each failure after that doubles it, up to a minute. The player's lines are always sent.")]
         public float ModelRetrySeconds = 20f;
 
         /// <summary>
-        /// What is wrong with the model, in words for the HUD, while the last decision failed because
-        /// no model answered (Ollama stopped, the model not pulled, a timeout); null while it answers.
+        /// Whether the provider every agent here asks is answering (#198, G1), followed from the first
+        /// agent built. Any reply marks it up, even one that cannot be read; a failure that is the
+        /// provider's marks it down, with a retry time.
         /// </summary>
-        public string ModelProblem { get; private set; }
-        /// <summary>When the model last failed to answer, in game time.</summary>
-        public float ModelFailedAt { get; private set; } = float.NegativeInfinity;
+        public ProviderHealth Health { get; private set; }
+
+        /// <summary>
+        /// What is wrong with the model, in words for the HUD, while no model answers (Ollama stopped,
+        /// the model not pulled, a timeout) or no agent could be built; null while it answers.
+        /// </summary>
+        public string ModelProblem => agentProblem ?? (Health != null && Health.IsDown ? Describe(Health.Reason) : null);
+
+        // An agent that could not be built, such as from a provider config that is not valid. No
+        // provider is asked, so its health cannot say so; it lasts until UseProvider.
+        private string agentProblem;
+        private bool wasDown;
 
         private DecisionRecorder recorder;
         private bool writeLog = true;
@@ -67,6 +84,8 @@ namespace Demos.GreyBoxVillage
         private int bookVersion;
         private readonly List<VillageBook.Entry> bookItems = new List<VillageBook.Entry>();
         private readonly List<VillageBook.QuestEntry> bookQuests = new List<VillageBook.QuestEntry>();
+        private readonly List<VillageBook.PlaceEntry> bookPlaces = new List<VillageBook.PlaceEntry>();
+        private int placesShown;
         private readonly List<(string, string, bool)> tracker = new List<(string, string, bool)>();
         private Targetable[] targetables;
 
@@ -84,39 +103,41 @@ namespace Demos.GreyBoxVillage
 
         /// <summary>
         /// Whether something the game noticed by itself (a quiet moment, a trespass, the wolf, the
-        /// bell) goes to the model now. Not while the model is down, until <see cref="ModelRetrySeconds"/>
-        /// has passed: four agents asking a stopped server every few seconds would fill the console
-        /// and change nothing. The player's own lines are always sent.
+        /// bell) goes to the model now. Not while the model is down, until the provider's retry time
+        /// (<see cref="ProviderHealth.RetryAtUtc"/>): four agents asking a stopped server every few
+        /// seconds would fill the console and change nothing. Never while no agent can be built. The
+        /// player's own lines are always sent.
         /// </summary>
-        public bool MayAskOnItsOwn => ModelProblem == null || Time.time - ModelFailedAt >= ModelRetrySeconds;
+        public bool MayAskOnItsOwn => agentProblem == null &&
+            (Health == null || !Health.IsDown || Health.RetryAtUtc is not DateTime retry || DateTime.UtcNow >= retry);
 
         /// <summary>
-        /// Called by every mind when a decision ends: a failure to reach the model sets
-        /// <see cref="ModelProblem"/>, and any reply clears it, even one that could not be read or
-        /// that a guard stopped, because a model answered.
+        /// Called by each mind when its agent is built: the village follows that provider's health,
+        /// lets it hold background requests back while it is down (<see cref="ProviderHealth.BackOff"/>),
+        /// and says when a model answers again.
         /// </summary>
-        public void ReportModel(DecisionResult result)
+        public void Watch(ILLMProvider provider)
         {
-            if (result == null) return;
-            if (result.Decision != null || result.Reply != null)
-            {
-                if (ModelProblem != null && Hud != null) Hud.Toast("The model is answering again.");
-                ModelProblem = null;
-                return;
-            }
-            string problem = Describe(result.Telemetry.ErrorKind);
-            if (problem != null) ReportModel(problem);
+            var health = ProviderHealth.For(provider);
+            if (health == Health) return;
+            if (Health != null) Health.Changed -= OnHealthChanged;
+            Health = health;
+            Health.FirstRetrySeconds = ModelRetrySeconds;
+            Health.BackOff = true;
+            Health.Changed += OnHealthChanged;
+            wasDown = Health.IsDown;
         }
 
-        /// <summary>Records that the model cannot be asked, in words for the HUD, such as a provider config that is not valid.</summary>
-        public void ReportModel(string problem)
+        private void OnHealthChanged(ProviderHealth health)
         {
-            ModelFailedAt = Time.time;
-            ModelProblem = problem;
+            if (wasDown && !health.IsDown && Hud != null) Hud.Toast("The model is answering again.");
+            wasDown = health.IsDown;
         }
 
-        // The HUD's words for a failure that means no model answered; null for the others (an
-        // unreadable reply, a guard that threw), which are about one decision, not the model.
+        /// <summary>Records that no agent could be built, in words for the HUD, such as from a provider config that is not valid.</summary>
+        public void ReportAgentProblem(string problem) => agentProblem = problem;
+
+        // The HUD's words for the reason the provider is down.
         private string Describe(PipelineErrorKind? kind)
         {
             string model = "the model", where = "Ollama";
@@ -134,12 +155,8 @@ namespace Demos.GreyBoxVillage
                     return "Ollama does not have " + model + ". Run \"ollama pull " + model + "\"; the agents answer once it is there.";
                 case PipelineErrorKind.ProviderTimeout:
                     return "The model did not answer in time. It may still be loading; the agents try again shortly.";
-                case PipelineErrorKind.ProviderRejected:
-                case PipelineErrorKind.ProviderServerError:
-                case PipelineErrorKind.ProviderFailed:
-                    return "The model failed to answer (" + kind + "). The village keeps running; the agents try again shortly.";
                 default:
-                    return null;
+                    return "The model failed to answer (" + kind + "). The village keeps running; the agents try again shortly.";
             }
         }
 
@@ -148,13 +165,32 @@ namespace Demos.GreyBoxVillage
             Input.Submitted += OnSubmitted;
             if (Inventory != null) Inventory.Changed += OnInventoryChanged;
             if (Quests != null) Quests.Message += OnQuestMessage;
+            // Watched before a disable, followed again after it.
+            if (Health != null)
+            {
+                Health.Changed -= OnHealthChanged;
+                Health.Changed += OnHealthChanged;
+                wasDown = Health.IsDown;
+            }
         }
 
         private void OnDisable()
         {
+            if (Health != null) Health.Changed -= OnHealthChanged;
             Input.Submitted -= OnSubmitted;
             if (Inventory != null) Inventory.Changed -= OnInventoryChanged;
             if (Quests != null) Quests.Message -= OnQuestMessage;
+        }
+
+        /// <summary>The journal's places: every place to find, in order, with whether it has been found.</summary>
+        public List<VillageBook.PlaceEntry> JournalPlaces()
+        {
+            bookPlaces.Clear();
+            if (Exploration != null)
+                foreach (var p in Exploration.Places)
+                    if (p != null)
+                        bookPlaces.Add(new VillageBook.PlaceEntry { Title = p.Title, Note = p.Note, Found = Exploration.HasFound(p) });
+            return bookPlaces;
         }
 
         private void OnInventoryChanged(string id, int delta)
@@ -197,8 +233,15 @@ namespace Demos.GreyBoxVillage
         {
             writeLog = writeLogFile;
             recorder = null;
-            ModelProblem = null;
-            ModelFailedAt = float.NegativeInfinity;
+            agentProblem = null;
+            // The warning starts afresh with the agents, as before the provider had a health; the
+            // next agent built watches its provider again.
+            if (Health != null)
+            {
+                Health.Changed -= OnHealthChanged;
+                Health.Reset();
+                Health = null;
+            }
             foreach (var mind in Minds) mind.UseProvider(config);
         }
 
@@ -269,6 +312,7 @@ namespace Demos.GreyBoxVillage
                 {
                     if (pickup != null && Inventory != null) pickup.Collect(Inventory);
                     else if (listener != null) Input.StartTyping();
+                    else if (Hermit != null && Hermit.InReach(Player.position)) Hermit.Talk();
                 }
                 if (Book != null && keyboard.iKey.wasPressedThisFrame) { Book.Toggle("inventory"); bookVersion++; }
                 if (Book != null && keyboard.jKey.wasPressedThisFrame) { Book.Toggle("journal"); bookVersion++; }
@@ -296,6 +340,13 @@ namespace Demos.GreyBoxVillage
 
         private void ShowBook()
         {
+            // A place found redraws the journal; Exploration shows its own toast.
+            int places = Exploration != null ? Exploration.Count : 0;
+            if (places != placesShown)
+            {
+                placesShown = places;
+                bookVersion++;
+            }
             if (Book == null || Inventory == null || Quests == null || !Book.IsOpen) return;
             bookItems.Clear();
             foreach (var (id, count) in Inventory.Items)
@@ -310,7 +361,7 @@ namespace Demos.GreyBoxVillage
                     Title = q.Title, Giver = q.Giver, Text = q.Ask, Step = Quests.Step(q),
                     State = q.State == QuestState.Done ? "done" : Quests.IsReady(q) ? "ready" : "active"
                 });
-            Book.Fill(bookVersion, Inventory.Coins, bookItems, bookQuests);
+            Book.Fill(bookVersion, Inventory.Coins, bookItems, bookQuests, JournalPlaces());
         }
 
         private void ShowHud(AgentMind listener, bool typing, Pickup pickup)
@@ -325,7 +376,8 @@ namespace Demos.GreyBoxVillage
             Hud.SetCoins(Inventory != null ? Inventory.Coins : -1);
             Hud.SetAlert(ModelProblem);
             Hud.SetPrompt("E", typing ? null : pickup != null ? "Pick up " + pickup.Name
-                : listener != null && !Input.IsOpen ? "Talk to " + listener.Name : null);
+                : listener != null && !Input.IsOpen ? "Talk to " + listener.Name
+                : listener == null && Hermit != null && Hermit.InReach(Player.position) ? "Talk to Oswin" : null);
             if (Quests != null)
             {
                 tracker.Clear();
@@ -357,6 +409,9 @@ namespace Demos.GreyBoxVillage
                 else if (m.IsDeciding)
                     bubbles.Add(new BubbleInfo { World = head, Text = "...", Kind = "thinking" });
             }
+            // Oswin is no agent, but he talks like one.
+            if (Hermit != null && Hermit.Speech != null)
+                bubbles.Add(new BubbleInfo { World = Hermit.transform.position + Vector3.up * 2.35f, Text = Hermit.Speech, Kind = "say" });
             Hud.SetBubbles(camera, bubbles);
 
             // Inactive ones too: the thief's tag shows only while it is out.

@@ -27,8 +27,8 @@ namespace Demos.GreyBoxVillage.Tests
         private VillageRoutine routine;
         private VillageWeather weather;
         private VillageAlarm alarm;
-        private FakeVillageProvider provider;
-        private FakeVillageConfig config;
+        private ScriptedProvider provider;
+        private ScriptedProviderConfig config;
         private ProviderConfig original;
         private float hour;
         private readonly List<(Transform t, Vector3 at)> moved = new List<(Transform, Vector3)>();
@@ -63,9 +63,8 @@ namespace Demos.GreyBoxVillage.Tests
             weather = commands.Weather;
             alarm = ((VillageGuard)bram.Body).Alarm;
             original = bram.Behaviour.Provider;
-            provider = new FakeVillageProvider(FakeVillageProvider.Decision("none", "no_target"));
-            config = ScriptableObject.CreateInstance<FakeVillageConfig>();
-            config.Fake = provider;
+            config = ScriptableObject.CreateInstance<ScriptedProviderConfig>();
+            provider = config.Scripted.Otherwise(ScriptedReply.Decide("none", "no_target", "Understood."));
             commands.UseProvider(config);
             hour = commands.Day.TimeOfDay;
             VillageSituationTests.ResetVillage(commands);

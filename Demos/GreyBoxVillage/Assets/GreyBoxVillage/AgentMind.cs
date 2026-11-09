@@ -29,12 +29,33 @@ namespace Demos.GreyBoxVillage
     /// </remarks>
     public sealed class AgentMind : MonoBehaviour
     {
-        /// <summary>State key: the source of the stimulus being decided, such as "player", "zone", "wolf", "bell" or "quiet".</summary>
-        public const string AskedBy = "askedBy";
-        /// <summary>State key: how far away a wolf the agent can see is, in metres. Absent when it sees none.</summary>
-        public const string WolfMetres = "wolfMetres";
-        /// <summary>State key: how far away a running thief the agent can see is, in metres. Absent when it sees none.</summary>
-        public const string ThiefMetres = "thiefMetres";
+        /// <summary>
+        /// What the game knows about one call, which only its own checks read: who is asking, and how
+        /// far a wolf or a running thief the agent can see is. Sent as the call's
+        /// <see cref="DecideOptions.Correlation"/>, so the bodies' availability checks see it while
+        /// the call decides, and <see cref="Agent.Execute(DecisionResult)"/>'s re-check sees the same
+        /// call's values, whatever another call on the agent set since (DR-018). It never reaches the
+        /// model, which reads the observations instead.
+        /// </summary>
+        public sealed class Moment
+        {
+            /// <summary>The source of the stimulus, such as "player", "zone", "wolf", "bell", "quiet", "captain" or "merchant".</summary>
+            public readonly string AskedBy;
+            /// <summary>How far away a wolf the agent can see is, in metres; null when it sees none.</summary>
+            public readonly float? WolfMetres;
+            /// <summary>How far away a running thief the agent can see is, in metres; null when it sees none.</summary>
+            public readonly float? ThiefMetres;
+
+            public Moment(string askedBy, float? wolfMetres = null, float? thiefMetres = null)
+            {
+                AskedBy = askedBy;
+                WolfMetres = wolfMetres;
+                ThiefMetres = thiefMetres;
+            }
+
+            /// <summary>The moment a context was made for; null for a call the game did not make through a mind.</summary>
+            public static Moment Of(AgentContext ctx) => ctx?.Correlation as Moment;
+        }
 
         public VillageCommands Village;
         public VillageBody Body;
@@ -96,30 +117,25 @@ namespace Demos.GreyBoxVillage
             foreach (var guard in Body.Guards()) agent.Guards.Add(guard);
             foreach (var source in Body.TargetSources()) agent.TargetSources.Add(source);
             agent.RefusalStatement = (verdict, ctx) => Body.RefusalLine(verdict);
+            Village.Watch(agent.Provider);
             LastActivityTime = Time.time;
         }
 
         /// <summary>
         /// Gives the agent a new provider config, and so a fresh agent with an empty memory. An
         /// <see cref="AgentBehaviour"/> builds its agent once, so this replaces the component with one
-        /// that has the same settings. Tests pass a config with a fake provider.
+        /// that has the same settings, every serialized field of the old one copied, so a field the
+        /// framework adds later is kept too (G12). Tests pass a config with a scripted provider.
         /// </summary>
         public void UseProvider(ProviderConfig config)
         {
             var old = Behaviour;
-            var profile = old.Profile;
-            bool findTargets = old.FindTargetsNearby, notice = old.NoticeNearby;
-            var targets = old.Targets;
-            var observations = old.Observations;
+            string settings = JsonUtility.ToJson(old);
             DestroyImmediate(old);
             behaviour = gameObject.AddComponent<AgentBehaviour>();
+            // Nothing reads the agent before this, so it is built from these settings on its first read.
+            JsonUtility.FromJsonOverwrite(settings, behaviour);
             behaviour.Provider = config;
-            behaviour.FindTargetsNearby = findTargets;
-            behaviour.Targets = targets;
-            behaviour.NoticeNearby = notice;
-            behaviour.Observations = observations;
-            // Last: an AgentBehaviour with a profile builds its agent on the first read.
-            behaviour.Profile = profile;
             configured = null;
             pending = null;
             generation++;
@@ -193,17 +209,24 @@ namespace Demos.GreyBoxVillage
         }
 
         // The Targetables the agent's own target source offers, nearest first, as "id, distance: description".
+        // As the framework offers them: the source's own categories, or the agent's when it names none,
+        // before its cap; then the agent's, which hold for every source.
         private IEnumerable<string> Places()
         {
             var origin = transform.position;
             var source = Behaviour.Targets;
+            var agent = Agent.TargetCategories;
+            var own = source.Categories != null && source.Categories.Any(c => !string.IsNullOrWhiteSpace(c))
+                ? (IReadOnlyCollection<string>)source.Categories
+                : agent;
             return FindObjectsByType<Targetable>(FindObjectsSortMode.None)
                 .Where(t => t.enabled && t.IsCurrentlyTargetable && !t.transform.IsChildOf(transform))
-                .Where(t => source.Categories == null || source.Categories.Length == 0 || source.Categories.Contains(t.Category))
+                .Where(t => own.Count == 0 || own.Contains(t.Category))
                 .Select(t => (t, d: Vector3.Distance(origin, t.transform.position)))
                 .Where(x => x.d <= source.Radius)
                 .OrderBy(x => x.d).ThenBy(x => x.t.Id, StringComparer.Ordinal)
                 .Take(source.Cap)
+                .Where(x => agent.Count == 0 || agent.Contains(x.t.Category))
                 .Select(x => x.t.Id + ", " + Metres(x.d) + " away: " + x.t.Description);
         }
 
@@ -274,7 +297,7 @@ namespace Demos.GreyBoxVillage
             catch (InvalidOperationException e)
             {
                 // No agent can be built, such as from a provider config that is not valid: say so, and stay playable.
-                Village.ReportModel("No agent could be built: " + e.Message);
+                Village.ReportAgentProblem("No agent could be built: " + e.Message);
                 Body.Say("No answer: there is no model to ask.", SpeechKind.Error);
                 LastActivityTime = Time.time;
                 pending = null;
@@ -282,16 +305,10 @@ namespace Demos.GreyBoxVillage
             }
             IsDeciding = true;
             int asking = generation;
-            // Who is asking decides what the agent is offered (its body's availability checks). It
-            // stays set until the next decision, because Execute checks availability again.
+            // Who is asking decides what the agent is offered (its body's availability checks). The
+            // moment rides with the call, so Execute's re-check reads this call's values.
             Body.Attend(source);
-            agent.State[AskedBy] = source;
-            float? wolf = VisibleWolfDistance();
-            if (wolf != null) agent.State[WolfMetres] = wolf.Value;
-            else agent.State.Remove(WolfMetres);
-            float? thief = VisibleThiefDistance();
-            if (thief != null) agent.State[ThiefMetres] = thief.Value;
-            else agent.State.Remove(ThiefMetres);
+            var moment = new Moment(source, VisibleWolfDistance(), VisibleThiefDistance());
             string asked = Name + " ← " + label + ": " + text;
             Village.Overlay.ShowThinking(asked, Village.ProviderLabel, Name + " is thinking...");
             var record = Village.Recorder.Begin(Name, source, label, priority, text);
@@ -304,7 +321,8 @@ namespace Demos.GreyBoxVillage
                     StimulusLabel = label,
                     IdleExampleStimulus = IdleExampleStimulus,
                     Observations = Observations(),
-                    Priority = priority
+                    Priority = priority,
+                    Correlation = moment
                 };
                 var result = await agent.DecideAsync(text, options, RequestToken());
                 // Destroyed while the model thought (in Edit mode nothing cancels the call), or given
@@ -312,7 +330,6 @@ namespace Demos.GreyBoxVillage
                 // may still answer it): the answer is for an agent that is gone.
                 if (this == null || generation != asking) { gone = true; return; }
                 Village.Recorder.Attach(record, result);
-                Village.ReportModel(result);
                 // A decision that says nothing, or fails, must not leave the last one's line standing.
                 Body.Hush();
                 if (result.Decision == null) ShowError(record, result, asked);

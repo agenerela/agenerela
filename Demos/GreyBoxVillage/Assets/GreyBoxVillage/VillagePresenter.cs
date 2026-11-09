@@ -30,6 +30,8 @@ namespace Demos.GreyBoxVillage
         public VillageAlarm Alarm;
         public VillageWeather Weather;
         public VillageRoutine Routine;
+        public Exploration Exploration;
+        public Hermit Hermit;
         [Tooltip("Where the wolf comes out for F2, and where it walks to: outside the gate, in the gate guard's sight and within reach of the bell.")]
         public Transform WolfFrom;
         public Transform WolfTo;
@@ -189,6 +191,9 @@ namespace Demos.GreyBoxVillage
                 Weather.Snap();
             }
             if (Village.Inventory != null) Village.Inventory.Reset(8);
+            // The journal's places are found afresh, and Oswin starts his lines again.
+            if (Exploration != null) Exploration.ResetState();
+            if (Hermit != null) Hermit.ResetState();
             if (Village.Quests != null) Village.Quests.Define();
             // What was picked up lies where it lay again, or a restarted quest could not be finished
             // (there is one lost lantern); the pelt, out only during the wolf quest, is put away.

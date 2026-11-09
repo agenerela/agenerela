@@ -241,3 +241,27 @@
     -unity-text-align: middle-center;
     max-width: 620px;
 }
+
+/* The menu's volume slider: a dark track, a gold fill and handle. */
+.vui-slider {
+    margin-left: 6px;
+    margin-right: 8px;
+    min-height: 22px;
+}
+.vui-slider #unity-tracker {
+    background-color: rgba(12, 10, 8, 0.85);
+    border-color: rgba(216, 169, 59, 0.45);
+    height: 6px;
+    margin-top: -3px;
+}
+.vui-slider #unity-dragger {
+    background-color: rgb(232, 200, 120);
+    border-color: rgb(120, 90, 50);
+    width: 14px;
+    height: 14px;
+    margin-top: -7px;
+    border-top-left-radius: 7px;
+    border-top-right-radius: 7px;
+    border-bottom-left-radius: 7px;
+    border-bottom-right-radius: 7px;
+}
