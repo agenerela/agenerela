@@ -620,7 +620,9 @@ They cover:
 - A quest is offered, then completed only when ready, and leaves the schema when done.
 - `quest_not_ready` catches items lost while the model thought.
 - `TargetCategoryGuard` contains a quest offered at a place, a call at a ware, and Wren walking to
-  her own quest; a guard offered twice, by two sources, is one target.
+  her own quest; a guard offered twice, by two sources, is one target; a guard whose agent cannot
+  be built is left out of a fire call rather than stopping Odile; and the observations name the
+  places the proximity source offers, by its own categories when it names some.
 - The captain's order becomes the nearer free guard's `Captain` stimulus.
 - The wolf drops its pelt only during its quest.
 - A pickup within reach goes into the pack.
