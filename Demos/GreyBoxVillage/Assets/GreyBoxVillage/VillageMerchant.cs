@@ -82,8 +82,22 @@ namespace Demos.GreyBoxVillage
             if (commands == null) yield break;
             bool fireOnly = Fire != null && Fire.IsBurning && !(Thief != null && Thief.IsRunning);
             foreach (var mind in commands.Minds)
-                if (mind != null && mind.Body is VillageGuard guard && (!fireOnly || mind.Agent.Actions.TryGet("fetch_water", out _, out _)))
+                if (mind != null && mind.Body is VillageGuard guard && (!fireOnly || CanCarryWater(mind)))
                     yield return guard;
+        }
+
+        // A guard whose agent has fetch_water. One whose agent cannot be built (no profile, a provider
+        // config that is not valid) carries nothing, and must not stop Odile deciding.
+        private static bool CanCarryWater(AgentMind mind)
+        {
+            try
+            {
+                return mind.Agent.Actions.TryGet("fetch_water", out _, out _);
+            }
+            catch (System.InvalidOperationException)
+            {
+                return false;
+            }
         }
 
         private VillageCommands Village()

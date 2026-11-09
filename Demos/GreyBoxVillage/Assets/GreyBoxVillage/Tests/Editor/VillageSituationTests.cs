@@ -178,6 +178,52 @@ namespace Demos.GreyBoxVillage.Tests
                 "Two objects answering to one id were both offered.");
         }
 
+        // Codex, L1: a guard whose agent cannot be built must not stop Odile deciding about a fire.
+        [Test]
+        public async Task AGuardThatCannotBeBuiltDoesNotStopOdile()
+        {
+            var events = fire.Events;
+            var profile = bram.Behaviour.Profile;
+            try
+            {
+                bram.UseProvider(config);
+                bram.Behaviour.Profile = null;
+                fire.Events = null;
+                fire.Ignite();
+                await SayTo(odile, "Is that smoke?");
+                var record = Records("Odile").Single();
+                Assert.That(record.Outcome, Is.EqualTo("none"), "Odile's decision did not finish.");
+                Assert.That(record.OfferedTargets, Does.Contain("wren").And.Not.Contain("bram"));
+            }
+            finally
+            {
+                fire.Events = events;
+                bram.Behaviour.Profile = profile;
+                bram.UseProvider(config);
+            }
+        }
+
+        // Codex, L1: the observations name what the proximity source offers, by its own categories when
+        // it names some, so they never list a target the schema does not offer.
+        [Test]
+        public async Task TheObservationsNameWhatTheSourceOffers()
+        {
+            var own = wren.Behaviour.Targets.Categories;
+            try
+            {
+                wren.Behaviour.Targets.Categories = new[] { "place" };
+                wren.UseProvider(config);
+                await SayTo(wren, "Anything to report?");
+                Assert.That(wren.Last.OfferedTargets, Does.Contain("bridge").And.Not.Contain("tomas"));
+                Assert.That(wren.Last.Observations, Does.Contain("bridge, ").And.Not.Contain("away: Tomas, a villager"));
+            }
+            finally
+            {
+                wren.Behaviour.Targets.Categories = own;
+                wren.UseProvider(config);
+            }
+        }
+
         [Test]
         public async Task CallGuardTakesOnlyAGuard()
         {

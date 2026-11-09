@@ -209,18 +209,24 @@ namespace Demos.GreyBoxVillage
         }
 
         // The Targetables the agent's own target source offers, nearest first, as "id, distance: description".
+        // As the framework offers them: the source's own categories, or the agent's when it names none,
+        // before its cap; then the agent's, which hold for every source.
         private IEnumerable<string> Places()
         {
             var origin = transform.position;
             var source = Behaviour.Targets;
-            var categories = Agent.TargetCategories;
+            var agent = Agent.TargetCategories;
+            var own = source.Categories != null && source.Categories.Any(c => !string.IsNullOrWhiteSpace(c))
+                ? (IReadOnlyCollection<string>)source.Categories
+                : agent;
             return FindObjectsByType<Targetable>(FindObjectsSortMode.None)
                 .Where(t => t.enabled && t.IsCurrentlyTargetable && !t.transform.IsChildOf(transform))
-                .Where(t => categories.Count == 0 || categories.Contains(t.Category))
+                .Where(t => own.Count == 0 || own.Contains(t.Category))
                 .Select(t => (t, d: Vector3.Distance(origin, t.transform.position)))
                 .Where(x => x.d <= source.Radius)
                 .OrderBy(x => x.d).ThenBy(x => x.t.Id, StringComparer.Ordinal)
                 .Take(source.Cap)
+                .Where(x => agent.Count == 0 || agent.Contains(x.t.Category))
                 .Select(x => x.t.Id + ", " + Metres(x.d) + " away: " + x.t.Description);
         }
 
