@@ -165,7 +165,7 @@ namespace Agenerela
         /// <summary><see cref="Conversation.Timeout"/> passed first. Whatever the agent answers later is dropped.</summary>
         TimedOut,
 
-        /// <summary>The caller's token was cancelled, or <see cref="Conversation.Cancel"/> ended it.</summary>
+        /// <summary>The caller's token was cancelled, <see cref="Conversation.Cancel"/> ended it, or <see cref="Agent.Reset"/> cancelled its decision.</summary>
         Cancelled,
 
         /// <summary><see cref="Conversation.Replace"/> started another turn while this one waited.</summary>

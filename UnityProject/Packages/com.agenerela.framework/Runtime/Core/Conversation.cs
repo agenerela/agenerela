@@ -396,8 +396,9 @@ namespace Agenerela
                     }
                     else
                     {
-                        // Nothing here ended it, so the caller's token did: the request was cancelled,
-                        // is still out, or answered just as the caller gave up on it.
+                        // Nothing here ended it, so the caller's token or a reset of the agent did:
+                        // the request was cancelled, is still out, or answered just as the caller
+                        // gave up on it.
                         End(turn, TurnStatus.Cancelled);
                     }
                 }

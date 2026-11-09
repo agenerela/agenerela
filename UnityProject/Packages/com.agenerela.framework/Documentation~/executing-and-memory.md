@@ -3,13 +3,14 @@
 `DecideAsync` asks the model and returns a decision. `Execute` checks it again and runs the
 game's code. This page covers what happens around that second call (DR-018): how a handler says
 what it did, how a decision carries the caller's own context to the handler, how memory can wait
-until the game has acted, and how memory is saved with the game.
+until the game has acted, how memory is saved with the game, and how to start an agent afresh.
 
 All of it is opt-in. A handler, a call and a memory written before it work as they did, and
 `agent.Execute(result)` still returns `true` or `false`.
 
 Every rule here runs as a test, in `Tests/Editor/Core/ExecutionResultTests.cs`,
-`Tests/Editor/Memory/MemoryCommitTests.cs` and `Tests/Editor/Memory/MemorySnapshotTests.cs`.
+`Tests/Editor/Memory/MemoryCommitTests.cs`, `Tests/Editor/Memory/MemorySnapshotTests.cs` and
+`Tests/Editor/Core/AgentResetTests.cs`.
 
 ## What a handler did: `ActionResult`
 
@@ -197,10 +198,73 @@ foreach (var saved in save.npcMemories)
 A decision still waiting under `MemoryCommit.OnExecute` is not in the memory yet, so it is not in
 the snapshot either.
 
+## Starting an agent afresh: `Reset`
+
+After a scene event, a new stage or a debug key, a game may want an agent to start over: forget
+what it remembers, and stop deciding whatever it was asked before. `Reset` does this without
+destroying anything, so the agent keeps its identity, provider, actions, targets, sources, guards,
+`State`, `Backlog` and `MemoryCommit`:
+
+```csharp
+guard.Agent.Reset();      // a plain Agent
+behaviour.ResetAgent();   // the agent an AgentBehaviour built
+```
+
+It does three things (#190, G12):
+
+- **Cancels this agent's decisions**, and only this agent's: other agents on the same provider
+  keep their places. A call waiting in the agent's `Backlog` or in the provider's queue leaves it
+  at once and is never sent. A call already with the provider is stopped the way a caller's own
+  cancellation stops it, so it ends when the provider honours that; Ollama aborts the request at
+  once. Until it ends, `IsDeciding` stays true. A call made after `Reset`, even one made from the
+  `catch` of a call it cancelled, decides normally.
+- **Drops the decisions held for `MemoryCommit.OnExecute`.** They are never remembered:
+  `Commit` and `Discard` return `false` for them. `Execute` still carries one out if the game asks
+  it to, with its usual re-check, and remembers nothing.
+- **Clears memory**, through `IClearableMemory`, which `RollingHistory` implements. A strategy
+  that does not implement it keeps what it holds, and a warning says so: implement the interface,
+  or give `Agent.Memory` a new instance after the reset. A memory two agents share is cleared for
+  both.
+
+`AgentBehaviour`'s method is `ResetAgent`, not `Reset`, because Unity calls a component's `Reset`
+in the editor. Before `Reset`, a game had to destroy the component and add it again, which built
+a new agent and lost the guards, sources and state the game had added to the old one.
+
+### Telling a reset from your own cancellation
+
+A decision a reset cancels ends as any cancelled decision does: awaiting it throws
+`OperationCanceledException`. **If your own token is not cancelled, the agent was reset.** The
+exception's `CancellationToken` is then the agent's own, and when you cancelled the call
+yourself it is your token, as it always was.
+
+```csharp
+try
+{
+    var result = await agent.DecideAsync(line, options, myToken);
+    agent.Execute(result);
+}
+catch (OperationCanceledException) when (!myToken.IsCancellationRequested)
+{
+    // The agent was reset: this call belonged to the agent before it. Show nothing.
+}
+catch (OperationCanceledException)
+{
+    // You cancelled it yourself.
+}
+```
+
+A game that already catches `OperationCanceledException` around `DecideAsync`, as GreyBoxVillage's
+`AgentMind` does, needs no change to survive a reset. A `Conversation` turn whose decision a reset
+cancels ends `Cancelled`.
+
+To make this work, a provider is sent a token linked to both the caller's and the agent's reset,
+never the caller's own token object. Cancelling either one cancels it.
+
 ## Extension points
 
 - **Memory (#119).** A new strategy implements `IExportsMemory` to be saved, with what it keeps
-  beyond exchanges in `Data`. `MemoryCommit` needs nothing from it.
+  beyond exchanges in `Data`, and `IClearableMemory` to be cleared by `Agent.Reset`, facts or a
+  summary included. `MemoryCommit` needs nothing from it.
 - **Guards (#138).** A guard reads `Correlation` from its input's context. The re-check at
   `Execute` is the one place a rule is checked at the moment of acting; until a guard can run
   there too, such a rule belongs in the handler, which can now say why with `ActionResult.Failed`.

@@ -50,6 +50,10 @@ namespace Agenerela
         // Decisions under way: from preparing the request until the result is returned.
         private int deciding;
 
+        // Cancelled by Reset, then replaced (#190, G12). Every call is linked to the one current when
+        // it was made, so a reset cancels this agent's calls and no one else's, wherever they wait.
+        private CancellationTokenSource resets = new CancellationTokenSource();
+
         // Where Bind finds definitions: the profile, read when Bind is called, or the list a
         // code-only agent was given. Exactly one is set.
         private readonly AgentProfile profile;
@@ -473,8 +477,9 @@ namespace Agenerela
         /// <param name="options">Null uses the defaults.</param>
         /// <param name="ct">
         /// Cancels the decision. While it waits in the provider's queue, it leaves the queue and is
-        /// never sent; once sent, the token is passed to the provider, which stops its request. A
-        /// decision cancelled at any point has no result.
+        /// never sent; once sent, the provider is given a token this one's cancellation cancels, and
+        /// stops its request. A decision cancelled at any point has no result. <see cref="Reset"/>
+        /// cancels it the same way.
         /// </param>
         /// <returns>
         /// The decision, or, when there is none to be had, a result whose
@@ -500,7 +505,8 @@ namespace Agenerela
         /// </exception>
         /// <exception cref="OperationCanceledException">
         /// Thrown when the result is awaited, if <paramref name="ct"/> was cancelled before the reply
-        /// was read.
+        /// was read, with <paramref name="ct"/> as its token; or if the agent was <see cref="Reset"/>
+        /// before the decision was returned, with a token of the agent's own.
         /// </exception>
         /// <remarks>
         /// <para>
@@ -601,7 +607,7 @@ namespace Agenerela
             var observations = new ReadOnlyCollection<string>(NotBlank(options.Observations));
             string idleExample = options.IdleExampleStimulus ?? IdleExampleStimulus ?? (profile != null ? profile.IdleExampleStimulus : null);
 
-            return InTurn(Backlog, stimulus, options, idleExample, observations, ct);
+            return Call(Backlog, stimulus, options, idleExample, observations, ct);
         }
 
         /// <summary>
@@ -710,9 +716,9 @@ namespace Agenerela
         /// Remembers a decision held back by <see cref="Agenerela.MemoryCommit.OnExecute"/>, as it would have
         /// been remembered on deciding. For a decision the game acted on without
         /// <see cref="Execute(DecisionResult)"/> carrying it out: a line shown although the handler
-        /// failed, say. Returns whether it was waiting; false when it was already settled, or was
-        /// never held, because it was made under <see cref="Agenerela.MemoryCommit.OnDecide"/>, with no memory,
-        /// or is a pipeline error.
+        /// failed, say. Returns whether it was waiting; false when it was already settled, was
+        /// dropped by a <see cref="Reset"/> since, or was never held, because it was made under
+        /// <see cref="Agenerela.MemoryCommit.OnDecide"/>, with no memory, or is a pipeline error.
         /// </summary>
         /// <remarks>
         /// A memory that throws is logged as a warning, and the decision is settled all the same, so
@@ -742,6 +748,88 @@ namespace Agenerela
         {
             CheckOwnHeld(result);
             return Settle(result, remember: false);
+        }
+
+        /// <summary>
+        /// Starts this agent afresh without destroying it (#190, G12): cancels every decision it has
+        /// under way or waiting, drops each decision held for <see cref="Agenerela.MemoryCommit.OnExecute"/>,
+        /// and clears <see cref="Memory"/>. Other agents' decisions, on the same provider or not, are
+        /// never touched.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <b>Cancelling.</b> Every call made before the reset ends cancelled: awaiting it throws
+        /// <see cref="OperationCanceledException"/>, as if the caller had cancelled it. The
+        /// exception's token is the agent's own rather than the caller's, so a caller tells a reset
+        /// from its own cancellation by its own token not being cancelled. A call waiting in
+        /// <see cref="Backlog"/> or in the provider's queue leaves it at once and is never sent,
+        /// and the requests behind it move up. One with the provider is stopped through the token
+        /// the provider was given, as a caller's cancellation stops it, so it ends when the provider
+        /// honours that; Ollama aborts the request at once. Until it ends, <see cref="IsDeciding"/>
+        /// stays true, and with a <see cref="Backlog"/> the next call waits for it. A call made after
+        /// the reset is not cancelled, even one made by a cancelled caller resuming before
+        /// <see cref="Reset"/> returns.
+        /// </para>
+        /// <para>
+        /// <b>Held decisions.</b> A decision held for <see cref="Agenerela.MemoryCommit.OnExecute"/>
+        /// before the reset is never remembered: <see cref="Commit"/> and <see cref="Discard"/>
+        /// return false for it, as for one already settled. <see cref="Execute(DecisionResult)"/>
+        /// still carries it out, re-check and all, as it would any decision, and remembers nothing.
+        /// </para>
+        /// <para>
+        /// <b>Memory.</b> Cleared through <see cref="IClearableMemory"/>, which
+        /// <see cref="RollingHistory"/> implements. A strategy without it keeps what it holds, and a
+        /// warning says so: implement the interface, or give <see cref="Memory"/> a new instance after
+        /// the reset. A memory two agents share is cleared for both. Null has nothing to clear.
+        /// </para>
+        /// <para>
+        /// Everything else stays as it is: the identity, provider, actions, targets, sources, guards,
+        /// <see cref="State"/>, <see cref="Backlog"/> and <see cref="MemoryCommit"/>, and the
+        /// provider's queue and health. Call it on the main thread, as <see cref="DecideAsync"/> is
+        /// called.
+        /// </para>
+        /// </remarks>
+        /// <exception cref="Exception">
+        /// Whatever the memory's <see cref="IClearableMemory.Clear"/> throws. The decisions are
+        /// cancelled and dropped all the same.
+        /// </exception>
+        public void Reset()
+        {
+            // Replaced before the old one is cancelled: cancelling resumes cancelled callers right
+            // here, and a call one of them makes now belongs to the agent after the reset.
+            var ending = resets;
+            resets = new CancellationTokenSource();
+
+            try
+            {
+                // Before cancelling, so such a call already recalls the empty memory.
+                ClearMemory();
+            }
+            finally
+            {
+                // Never disposed: a call linked to it may still be unwinding, and with no timer or
+                // wait handle there is nothing for disposing to free.
+                ending.Cancel();
+            }
+        }
+
+        private void ClearMemory()
+        {
+            var memory = Memory;
+            if (memory == null)
+            {
+                return;
+            }
+
+            if (memory is IClearableMemory clearable)
+            {
+                clearable.Clear();
+                return;
+            }
+
+            Debug.LogWarning(
+                $"{Who()} was reset, but its memory, a {memory.GetType().Name}, still holds what it remembered: " +
+                "it does not implement IClearableMemory. Implement it, or give Agent.Memory a new instance after Reset.");
         }
 
         // What Execute does with one result, without the bookkeeping around it.
@@ -806,7 +894,8 @@ namespace Agenerela
 
         // The decision a result holds back from this agent's memory, remembered or dropped, once.
         // Nothing for a result held for another agent: Execute may carry out another agent's
-        // decision, but its memory is that agent's to settle.
+        // decision, but its memory is that agent's to settle. One held across a reset of this agent
+        // was dropped by it (G12): settled here unremembered, and no longer waiting.
         private bool Settle(DecisionResult result, bool remember)
         {
             var pending = result.Pending;
@@ -818,17 +907,18 @@ namespace Agenerela
             var memory = pending.Memory;
             var ctx = pending.Context;
             var request = pending.Request;
+            bool dropped = pending.Reset.IsCancellationRequested;
 
             // Before remembering, so a memory that settles it again from inside Remember cannot
             // remember it twice.
             pending.Settle();
 
-            if (remember)
+            if (remember && !dropped)
             {
                 Remember(memory, ctx, request, result);
             }
 
-            return true;
+            return !dropped;
         }
 
         // The decision was made; a memory that cannot record it does not undo it.
@@ -844,11 +934,57 @@ namespace Agenerela
             }
         }
 
+        // One call as its caller sees it (G12). The caller's token and the agent's reset are linked
+        // into the one token the rest of the call uses, so the queues and the provider stop it for
+        // either, as they always stopped it for the caller's. A cancellation then names the caller's
+        // own token when the caller cancelled, as it always did, and the reset's when a reset did.
+        private async Awaitable<DecisionResult> Call(
+            DecisionBacklog backlog, string stimulus, DecideOptions call, string idleExample,
+            IReadOnlyList<string> observations, CancellationToken caller)
+        {
+            caller.ThrowIfCancellationRequested();
+
+            var reset = resets.Token;
+            var linked = caller.CanBeCanceled ? CancellationTokenSource.CreateLinkedTokenSource(caller, reset) : null;
+            try
+            {
+                var result = await InTurn(backlog, stimulus, call, idleExample, observations, linked?.Token ?? reset, reset);
+
+                // Ending a call hands its backlog turn to the next, which may run on the spot and
+                // reset the agent from a guard before this result reaches the caller: then this call
+                // is a reset one too, and must not hand back a decision from before it.
+                reset.ThrowIfCancellationRequested();
+                return result;
+            }
+            catch (OperationCanceledException e) when (!caller.IsCancellationRequested && reset.IsCancellationRequested)
+            {
+                throw new OperationCanceledException($"{Who()} was reset, which cancelled this decision.", e, reset);
+            }
+            catch (OperationCanceledException e) when (caller.IsCancellationRequested && e.CancellationToken != caller)
+            {
+                throw new OperationCanceledException(e.Message, e, caller);
+            }
+            finally
+            {
+                // Only once the call has ended, so the provider is done with the token.
+                linked?.Dispose();
+            }
+        }
+
+        // A reset cancels the call's token in a callback, and while Reset runs, another call that
+        // ends can hand this one a turn before that callback comes. So each place where a call is
+        // about to go further checks the reset itself too, and a reset call is never sent.
+        private static void ThrowIfCancelled(CancellationToken ct, CancellationToken reset)
+        {
+            ct.ThrowIfCancellationRequested();
+            reset.ThrowIfCancellationRequested();
+        }
+
         // One call: with a backlog, its turn among this agent's calls first (G5), then the decision.
         // Counted as under way from the start of the decision to its result.
         private async Awaitable<DecisionResult> InTurn(
             DecisionBacklog backlog, string stimulus, DecideOptions call, string idleExample,
-            IReadOnlyList<string> observations, CancellationToken ct)
+            IReadOnlyList<string> observations, CancellationToken ct, CancellationToken reset)
         {
             ct.ThrowIfCancellationRequested();
 
@@ -894,9 +1030,9 @@ namespace Agenerela
             Interlocked.Increment(ref deciding);
             try
             {
-                // Its turn came just as the caller cancelled: still never prepared.
-                ct.ThrowIfCancellationRequested();
-                return await Decide(stimulus, call, idleExample, observations, waitedSeconds, ct);
+                // Its turn came just as the caller cancelled, or the agent was reset: still never prepared.
+                ThrowIfCancelled(ct, reset);
+                return await Decide(stimulus, call, idleExample, observations, waitedSeconds, ct, reset);
             }
             finally
             {
@@ -909,7 +1045,7 @@ namespace Agenerela
 
         private async Awaitable<DecisionResult> Decide(
             string stimulus, DecideOptions call, string idleExample, IReadOnlyList<string> observations,
-            float backlogWaitSeconds, CancellationToken ct)
+            float backlogWaitSeconds, CancellationToken ct, CancellationToken reset)
         {
             ct.ThrowIfCancellationRequested();
 
@@ -962,7 +1098,7 @@ namespace Agenerela
                     $"Preparing the request failed. {e.GetType().Name}: {e.Message}", call.Correlation);
             }
 
-            var sent = await Send(provider, request, priority, ct);
+            var sent = await Send(provider, request, priority, ct, reset);
             telemetry.QueuedAhead = sent.QueuedAhead;
             telemetry.QueueWaitSeconds = sent.QueueWaitSeconds;
             telemetry.LatencySeconds = sent.Seconds;
@@ -995,8 +1131,12 @@ namespace Agenerela
             var result = Guard(new GuardInput(ctx, request, reply, decision, call, telemetry));
             if (result.Verdict.HasValue)
             {
-                result = await SayWhatWasStopped(provider, result, ctx, request, call, ct);
+                result = await SayWhatWasStopped(provider, result, ctx, request, call, ct, reset);
             }
+
+            // A reset from inside this decision, by a guard or RefusalStatement, cancels it as any
+            // other reset does, so it is never remembered into the memory just cleared (G12).
+            reset.ThrowIfCancellationRequested();
 
             // After the guards and the line, so what is remembered is what the agent will do and
             // say (§2.9, rule 1). A guard that failed left no decision, and a pipeline error
@@ -1006,7 +1146,7 @@ namespace Agenerela
             {
                 if (commit == MemoryCommit.OnExecute)
                 {
-                    result.Pending = new PendingMemory(holder, Who(), memory, ctx, request);
+                    result.Pending = new PendingMemory(holder, Who(), memory, ctx, request, reset);
                 }
                 else
                 {
@@ -1057,14 +1197,14 @@ namespace Agenerela
         // the decision's own, never the refusal line's.
         private async Awaitable<DecisionResult> SayWhatWasStopped(
             ILLMProvider provider, DecisionResult stopped, AgentContext ctx, DecisionRequest request, DecideOptions call,
-            CancellationToken ct)
+            CancellationToken ct, CancellationToken reset)
         {
             var verdict = stopped.Verdict.Value;
 
             string line = DevelopersLine(verdict, ctx);
             if (line == null && call.AskForRefusalLine)
             {
-                line = await ModelsLine(provider, verdict, ctx, request, call.Priority, stopped.Telemetry, ct);
+                line = await ModelsLine(provider, verdict, ctx, request, call.Priority, stopped.Telemetry, ct, reset);
             }
 
             if (line == null)
@@ -1101,9 +1241,9 @@ namespace Agenerela
         // their own, so the decision's still mean the decision alone.
         private async Awaitable<string> ModelsLine(
             ILLMProvider provider, GuardVerdict verdict, AgentContext ctx, DecisionRequest decided,
-            DecisionPriority priority, DecisionTelemetry telemetry, CancellationToken ct)
+            DecisionPriority priority, DecisionTelemetry telemetry, CancellationToken ct, CancellationToken reset)
         {
-            var sent = await Send(provider, PromptBuilder.BuildRefusalLine(decided, ctx, verdict), priority, ct);
+            var sent = await Send(provider, PromptBuilder.BuildRefusalLine(decided, ctx, verdict), priority, ct, reset);
             telemetry.RefusalLineSeconds = sent.Seconds;
 
             if (sent.HeldBack != null)
@@ -1148,7 +1288,8 @@ namespace Agenerela
         // next request, whether the provider answered, failed, was cancelled or was held back. The
         // outcome is reported to the provider's health, which may hold a background request back.
         private async Awaitable<SentRequest> Send(
-            ILLMProvider provider, DecisionRequest request, DecisionPriority priority, CancellationToken ct)
+            ILLMProvider provider, DecisionRequest request, DecisionPriority priority, CancellationToken ct,
+            CancellationToken reset)
         {
             var sent = new SentRequest();
             var health = ProviderHealth.For(provider);
@@ -1168,8 +1309,8 @@ namespace Agenerela
                 // hop: Unity brings the caller of an Awaitable started on the main thread back to it.
                 await Awaitable.MainThreadAsync();
 
-                // Its turn came just as the caller cancelled: still never sent.
-                ct.ThrowIfCancellationRequested();
+                // Its turn came just as the caller cancelled, or the agent was reset: still never sent.
+                ThrowIfCancelled(ct, reset);
 
                 // Enqueue to send, the wait for the main thread included, and the latency from the
                 // send, so the two cover the whole call between them: Seconds is the provider's time
