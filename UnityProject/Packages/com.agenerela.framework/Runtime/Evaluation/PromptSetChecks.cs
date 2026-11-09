@@ -181,9 +181,25 @@ namespace Agenerela.Evaluation
 
         private static void CheckExamples(EvalPrompt prompt, AgentProfile profile, System.Action<PromptRule, string> add)
         {
+            // Every line an example shows the model: its stimulus, and its statement (#190, G14).
+            void Check(string text, string what)
+            {
+                if (MatchesExample(prompt.Stimulus, text))
+                {
+                    add(PromptRule.StimulusIsExample,
+                        $"The stimulus is {what} \"{text}\": never score on a few-shot example (hard rule 4)");
+                }
+            }
+
             foreach (var asset in profile.Actions)
             {
                 var action = asset != null ? asset.Action : null;
+                if (action != null)
+                {
+                    Check(action.ExampleStatement, $"{action.Id}'s example statement");
+                    Check(action.CounterExampleStatement, $"{action.Id}'s counter-example statement");
+                }
+
                 if (action != null && MatchesExample(prompt.Stimulus, action.ExampleStimulus))
                 {
                     add(PromptRule.StimulusIsExample,
@@ -203,6 +219,8 @@ namespace Agenerela.Evaluation
                 add(PromptRule.StimulusIsExample,
                     $"The stimulus is the profile's idle example \"{profile.IdleExampleStimulus}\": never score on a few-shot example (hard rule 4)");
             }
+
+            Check(profile.IdleExampleStatement, "the profile's idle example statement");
         }
 
         // Lower case, single spaces, no end punctuation or quotes: "Proceed to the Bridge!" is

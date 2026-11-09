@@ -10,6 +10,26 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **Statements in the few-shot examples** (#190 G14): an example can show what the agent says,
+  as `-> action: X, target: Y, statement: "..."`, the reply's own field order. Write one in
+  `ActionDefinition.ExampleStatement` and `CounterExampleStatement` (or `Statement = "..."` on
+  `[Example]` and `[CounterExample]`), its `{0}` filled with the stimulus's target, and for the idle
+  example in `AgentProfile.IdleExampleStatement`, `Agent.IdleExampleStatement` or
+  `DecideOptions.IdleExampleStatement`. The idle statement follows the stimulus's precedence but
+  never comes from further down than the stimulus did, so a profile's statement is never attached
+  to a line a call or an agent supplied. On, but empty: every statement is empty by default, so
+  nothing changes until one is written. `DecideOptions.ExampleStatements = false` (and
+  `PromptOptions.ExampleStatements`) leaves them all out, for an A/B's control arm. The refusal
+  of a target that is not here never has one. A quote or backslash inside an example's stimulus
+  or statement is now escaped as JSON escapes it, so it cannot end the quoted text early; no
+  example the repository ships contains either. Unmeasured: the A/B is owed in #151 and written up
+  in `docs/live-runs.md`.
+- **`FewShotBuilder.Build(available, targets, PromptOptions)`**, the overload `Agent` now uses, so
+  every per-call example setting comes from one object. The old overload is unchanged.
+- `PromptSetChecks` and `EvalRunner` (an arm's own idle statement) refuse a prompt that matches an
+  example's statement, as they do one that matches its stimulus (hard rule 4). `EvalArmConditions`
+  records `idleExampleStatement` and `exampleStatements`.
+- `Documentation~/prompt.md`: a section on statements.
 - **`Agent.Reset()`** (#190, G12): starts an agent afresh without destroying it. It cancels this
   agent's decisions, and no other agent's on the same provider: one waiting in its `Backlog` or in
   the provider's queue is never sent, and one with the provider is stopped through its token. It

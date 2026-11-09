@@ -338,22 +338,30 @@ namespace Agenerela.Evaluation
             }
         }
 
-        // An arm's own idle example replaces the profile's, which PromptSetChecks has checked, so it
-        // is checked here: scoring a prompt the model was shown as an example measures nothing
-        // (hard rule 4).
+        // An arm's own idle example, and its statement (#190, G14), replace the profile's, which
+        // PromptSetChecks has checked, so they are checked here: scoring a prompt the model was
+        // shown in an example measures nothing (hard rule 4).
         private IEnumerable<string> IdleExampleProblems(EvalArm arm, List<(string Category, EvalPrompt Prompt)> prompts)
         {
-            string idle = arm.Options.IdleExampleStimulus;
-            if (string.IsNullOrWhiteSpace(idle))
+            var texts = new[]
             {
-                yield break;
-            }
+                (Text: arm.Options.IdleExampleStimulus, What: "idle example"),
+                (Text: arm.Options.IdleExampleStatement, What: "idle example's statement"),
+            };
 
-            foreach (var (_, prompt) in prompts)
+            foreach (var (text, what) in texts)
             {
-                if (PromptSetChecks.MatchesExample(prompt.Stimulus, idle))
+                if (string.IsNullOrWhiteSpace(text))
                 {
-                    yield return $"{prompt.Id}: the stimulus is arm '{arm.Name}''s idle example \"{idle}\": never score on a few-shot example (hard rule 4)";
+                    continue;
+                }
+
+                foreach (var (_, prompt) in prompts)
+                {
+                    if (PromptSetChecks.MatchesExample(prompt.Stimulus, text))
+                    {
+                        yield return $"{prompt.Id}: the stimulus is arm '{arm.Name}''s {what} \"{text}\": never score on a few-shot example (hard rule 4)";
+                    }
                 }
             }
         }
@@ -783,6 +791,8 @@ namespace Agenerela.Evaluation
                     ListActionsAndTargets = arm.Options.ListActionsAndTargets,
                     MaxListedTargets = arm.Options.MaxListedTargets,
                     CounterExamples = arm.Options.CounterExamples,
+                    IdleExampleStatement = arm.Options.IdleExampleStatement,
+                    ExampleStatements = arm.Options.ExampleStatements,
                     PairTargetsWithActions = arm.Options.PairTargetsWithActions,
                     Priority = arm.Options.Priority.ToString(),
                     Observations = new List<string>(arm.Options.Observations ?? new List<string>()),

@@ -216,6 +216,81 @@ namespace Agenerela.Tests
             Assert.That(block, Does.Contain("\"Wave at me.\" -> action: wave"), "The action's own example is unaffected.");
         }
 
+        // ---- Statements (#190, G14) ----------------------------------------------------------------
+
+        [Test]
+        public void AWrittenStatementFollowsItsExampleAndTheRefusalNeverHasOne()
+        {
+            var targets = Registry("bread", "tower");
+            var quote = Countered(Action("quote_purchase", "How much for the {0}?", true, "bread"), "That {0} smells good.");
+            quote.ExampleStatement = "The {0} is three gold.";
+            quote.CounterExampleStatement = "Baked it this morning.";
+            var offer = Action("offer_quest", "Got any work for me?", false);
+            offer.ExampleStatement = "Rats in the cellar, if you're brave.";
+            var actions = new List<ActionDefinition> { quote, offer, Action("move_to", "Proceed to the {0}.", true, "tower") };
+
+            string block = FewShotBuilder.Build(actions, targets, new PromptOptions
+            {
+                IdleExampleStimulus = "Nothing has changed.",
+                IdleExampleStatement = "Quiet as ever.",
+            });
+
+            Assert.That(block, Is.EqualTo(string.Join("\n",
+                "Examples of correct decisions:",
+                "Player: \"How much for the Bread?\" -> action: quote_purchase, target: bread, statement: \"The Bread is three gold.\"",
+                "Player: \"That Bread smells good.\" -> action: none, target: no_target, statement: \"Baked it this morning.\"",
+                "Player: \"Got any work for me?\" -> action: offer_quest, target: no_target, statement: \"Rats in the cellar, if you're brave.\"",
+                "Player: \"Proceed to the Tower.\" -> action: move_to, target: tower",
+                "Player: \"Nothing has changed.\" -> action: none, target: no_target, statement: \"Quiet as ever.\"",
+                "Player: \"How much for the Atlantis?\" -> action: none, target: no_target (not an available target)")),
+                "The statement comes last, as the reply's field does; the refusal line has none.");
+        }
+
+        [Test]
+        public void AQuoteInsideAStimulusOrAStatementCannotEndItEarly()
+        {
+            var targets = Registry("gate");
+            var shout = Action("shout_warning", "Shout \"halt\" at the {0}.", true, "gate");
+            shout.ExampleStatement = "\"Halt!\" I cried, at the C:\\gate.";
+            var counter = Countered(Action("wave", "Wave at me.", false), "He said \"wave\", didn't he?");
+            counter.CounterExampleStatement = "He did say \"wave\".";
+
+            string block = FewShotBuilder.Build(new List<ActionDefinition> { shout, counter }, targets, new PromptOptions
+            {
+                IdleExampleStimulus = "The sign says \"closed\".",
+                IdleExampleStatement = "So it does.",
+            });
+
+            Assert.That(block.Split('\n'), Is.SupersetOf(new[]
+            {
+                "Player: \"Shout \\\"halt\\\" at the Gate.\" -> action: shout_warning, target: gate, statement: \"\\\"Halt!\\\" I cried, at the C:\\\\gate.\"",
+                "Player: \"He said \\\"wave\\\", didn't he?\" -> action: none, target: no_target, statement: \"He did say \\\"wave\\\".\"",
+                "Player: \"The sign says \\\"closed\\\".\" -> action: none, target: no_target, statement: \"So it does.\"",
+            }), "Quotes and backslashes are escaped as JSON escapes them, so each quoted text ends where it should.");
+        }
+
+        [Test]
+        public void WithStatementsOffOrUnwrittenTheBlockIsWhatItWas()
+        {
+            var targets = Registry("bread");
+            var plain = new List<ActionDefinition> { Countered(Action("quote_purchase", "How much for the {0}?", true, "bread"), "That {0} smells good.") };
+            var stated = Countered(Action("quote_purchase", "How much for the {0}?", true, "bread"), "That {0} smells good.");
+            stated.ExampleStatement = "Three gold.";
+            stated.CounterExampleStatement = "Fresh today.";
+            var withStatements = new List<ActionDefinition> { stated };
+
+            string before = FewShotBuilder.Build(plain, targets, "Player", "Nothing has changed.");
+
+            Assert.That(FewShotBuilder.Build(plain, targets, new PromptOptions { IdleExampleStimulus = "Nothing has changed." }), Is.EqualTo(before),
+                "Both overloads give the same block when nothing new is set.");
+            Assert.That(FewShotBuilder.Build(withStatements, targets, new PromptOptions
+            {
+                IdleExampleStimulus = "Nothing has changed.",
+                IdleExampleStatement = "Quiet as ever.",
+                ExampleStatements = false,
+            }), Is.EqualTo(before), "Off leaves every statement out, byte for byte.");
+        }
+
         private static TargetRegistry Registry(params string[] ids)
         {
             var registry = new TargetRegistry();

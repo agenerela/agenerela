@@ -32,6 +32,27 @@ namespace Agenerela
         public string IdleExampleStimulus;
 
         /// <summary>
+        /// What the agent says in the idle example, for this call only (#190, G14). Null uses the
+        /// agent's <see cref="Agent.IdleExampleStatement"/>, then the profile's
+        /// <see cref="AgentProfile.IdleExampleStatement"/>, but never from further down than the
+        /// idle example's stimulus came from; empty gives the example no statement.
+        /// </summary>
+        /// <remarks>
+        /// So a profile's statement is never attached to a line this call or the agent supplied: set
+        /// <see cref="IdleExampleStimulus"/> here, and its statement comes from here or nowhere.
+        /// </remarks>
+        public string IdleExampleStatement;
+
+        /// <summary>
+        /// Whether this call's examples show the statements developers wrote: each action's
+        /// <see cref="ActionDefinition.ExampleStatement"/> and <see cref="ActionDefinition.CounterExampleStatement"/>,
+        /// and the idle example's (#190, G14). On by default, which shows only what was written: every
+        /// statement is empty unless someone fills it. False leaves them all out, as an A/B run's
+        /// control arm does.
+        /// </summary>
+        public bool ExampleStatements = true;
+
+        /// <summary>
         /// Whether this call's system prompt lists the actions offered with their descriptions, and
         /// the targets offered with their own lines (#190). Off by default: unmeasured, and owed an
         /// A/B run before it becomes the default (#151). <see cref="PromptOptions.ListActionsAndTargets"/>

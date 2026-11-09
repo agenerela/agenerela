@@ -36,6 +36,13 @@ namespace Agenerela.Tests
         }
 
         [Test]
+        public void ANewProfilesIdleExampleHasNoStatement()
+        {
+            // So a profile sends what it always did until someone writes one (#190, G14).
+            Assert.That(NewProfile().IdleExampleStatement, Is.Empty);
+        }
+
+        [Test]
         public void ValidateAcceptsAWellFormedProfile()
         {
             var profile = NewProfile();

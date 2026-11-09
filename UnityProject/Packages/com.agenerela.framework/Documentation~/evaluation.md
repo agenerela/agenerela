@@ -151,8 +151,9 @@ Under the prompt, the rules it breaks show as you type:
   `{ "isFollowing": true }`.
 - **The stimulus is not a few-shot example**: not any action's `ExampleStimulus` or
   `CounterExampleStimulus`, with any target in its `{0}`, nor the profile's
-  `IdleExampleStimulus`. Scoring a model on a sentence it was shown as an example measures
-  nothing.
+  `IdleExampleStimulus`, nor any of their statements (`ExampleStatement`,
+  `CounterExampleStatement`, `IdleExampleStatement`). Scoring a model on a sentence it was shown
+  as an example measures nothing.
 - **Ids are unique and follow `<idPrefix>_<nnn>`.**
 
 Two rules no check can make: observations describe the world, not the framework or the test

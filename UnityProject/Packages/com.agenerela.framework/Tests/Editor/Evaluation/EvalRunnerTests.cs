@@ -394,6 +394,36 @@ namespace Agenerela.Tests.Evaluation
         }
 
         [Test]
+        public async Task AnArmsIdleStatementThatIsAPromptIsRefused()
+        {
+            // A statement is shown in the prompt as an example's is (#190, G14), so the same rule.
+            var provider = new FakeProvider(Reply("none", "no_target"));
+            var runner = Runner(new[] { Bridge }, new[] { Quiet }, provider, provider,
+                optionsB: new DecideOptions { IdleExampleStimulus = "Nothing new.", IdleExampleStatement = "The square is empty." });
+
+            var e = await Refused(runner);
+
+            Assert.That(e.Message, Does.Contain("situation_001").And.Contain("arm 'B'").And.Contain("statement").And.Contain("hard rule 4"));
+            Assert.That(provider.Requests, Is.Empty);
+        }
+
+        [Test]
+        public async Task TheReportSaysWhichArmShowedStatements()
+        {
+            var a = new FakeProvider(Reply("move_to", "bridge"));
+            var b = new FakeProvider(Reply("move_to", "bridge"));
+            var runner = Runner(new[] { Bridge }, null, a, b,
+                optionsB: new DecideOptions { IdleExampleStatement = "Quiet as ever.", ExampleStatements = false });
+
+            var report = await Fixtures.NotCancelled(runner.RunAsync());
+
+            var armA = report.Conditions.Arms[0];
+            var armB = report.Conditions.Arms[1];
+            Assert.That((armA.IdleExampleStatement, armA.ExampleStatements), Is.EqualTo(((string)null, true)));
+            Assert.That((armB.IdleExampleStatement, armB.ExampleStatements), Is.EqualTo(("Quiet as ever.", false)));
+        }
+
+        [Test]
         public void TwoArmsCannotShareAName()
         {
             var config = fixtures.Config(new FakeProvider(), "Fake");
