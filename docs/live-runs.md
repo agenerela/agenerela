@@ -24,7 +24,6 @@ in, the machine, and the live checks that aren't A/B runs.
 
 | Run | Kind | Machine | What it checks | From |
 |---|---|---|---|---|
-| Idle example with vs without | A/B | Laptop | Does the `none` example earn its tokens at all? On the profile's own line, "Fine day for it.": the code-built run on 9 November saw the default line cost `stop_following` commands (findings, 9 November) | #151 |
 | `qwen3.5:2b` vs `qwen3.5:4b` | A/B, sequential arms | Laptop | The prototype's headline, on the framework | #151 |
 | The 8 GB shortlist against `qwen3.5:2b` | A/B, sequential arms, one model each | Laptop | Which small model to use by default. **First check each model keeps the field order**: models on Ollama's GGUF-template path get their keys sorted (findings, 5 November). Today that's `MiniCPM5-2B`, which keeps the order only with `OLLAMA_GO_TEMPLATE=1` set on the server, and then on the Go template (findings, 9 November) | `model-candidates.md`, #151 |
 | The 12 and 16 GB tiers | A/B, sequential arms | 5080 box | A "high-end GPU" option, such as Granite 4.1 8B, Qwen3.5-9B or Gemma 4 12B, against the 2B | `model-candidates.md` |
@@ -57,3 +56,4 @@ in, the machine, and the live checks that aren't A/B runs.
 | `ListActionsAndTargets` on vs off, `qwen3.5:2b` | 58/76 on against 56/76 off, within noise | `findings.md`, 9 November |
 | Counter-examples on vs off, `qwen3.5:2b`, four lines written for the run | 56/76 both, within noise | `findings.md`, 9 November |
 | Code-built idle example, set vs unset, `qwen3.5:2b` (a profile agent standing in) | 59/76 unset against 56/76 set, within noise overall; simple_command −33.3 beyond noise, `stop_following` commands lost to `none` | `findings.md`, 9 November |
+| Idle example with vs without, `qwen3.5:2b`, the profile's own line | 56/76 with "Fine day for it." against 59/76 without, within noise overall; simple_command +33.3 without it, beyond noise, `stop_following` 2/7 with the line against 6/7 | `findings.md`, 9 November |

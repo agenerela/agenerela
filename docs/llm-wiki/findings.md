@@ -1770,8 +1770,8 @@ last time." word for word, against none without it. That is the echo #190 G14 is
 profile's own idle example, "Fine day for it.", and scored 56/76 with simple_command at 55.6%, the
 same as B here. At temperature 0 this machine gave identical answers on repeat (both controls
 matched answer for answer). So the cost to `stop_following` may come from any idle `none` example,
-whatever its text. #151's "idle example with vs without" A/B on the profile's own line is the run
-that would show it.
+whatever its text. The next entry runs #151's "idle example with vs without" A/B on the profile's
+own line, and it does.
 
 **What it means.** Nothing to switch on. The one difference beyond the noise floor is in favour of
 the default that already holds, a code-built agent with no idle example. It is one category of 9
@@ -1781,3 +1781,63 @@ example.
 **What would change this.** A repeat on more `stop_following` prompts, or on another model, where
 the idle line no longer costs them. Raw report: `.scratch/live-runs-1109/run3c-report/` in the
 session's checkout.
+
+### The idle example on the profile's own line: 56/76 with it against 59/76 without, and `stop_following` 2/7 against 6/7 (9 November 2026)
+
+#151's "idle example with vs without", run the same evening because the entry above suggested the
+cost to `stop_following` came from any idle `none` example, whatever its text.
+
+**Setup.** `VillageGuard` as it is, so the idle example is its own line, "Fine day for it.". Two arms,
+interleaved, on one model:
+
+- **A, control:** the defaults, which show the profile's line.
+- **B:** `IdleExampleStimulus = ""`, which leaves it out.
+
+A preview showed the two prompts differ by that one line. Otherwise as in the entries above: the
+evaluation set at 61a7744, runner defaults, the 5 November state wording, `qwen3.5:2b` on Ollama
+0.40.14 through a hand-started `ollama serve` with the app's server configuration, 2254 of 2254 MB in
+VRAM throughout, on AC power, nothing else resident, no other Unity running, the lock held. 123 s,
+no warnings and no pipeline errors. No example line matches a prompt; "Fine day for it." shares no
+words with any.
+
+| Outcome | A, "Fine day for it." | B, no idle example |
+|---|---:|---:|
+| Correct | 56 | 59 |
+| WrongLegalAction | 16 | 12 |
+| ContainedByGuard | 1 | 2 |
+| RejectedWhenActionExpected | 3 | 3 |
+| **Accuracy** | **73.7%** | **77.6%** |
+
+**Overall +3.9 points without it, within noise** (floor 8.1). **simple_command +33.3, beyond noise**
+(55.6% → 88.9%, n = 9, floor 23.6). The other categories: impossible_request −11.1, situation +5.3,
+the rest 0, all within noise.
+
+**`stop_following`: 2 of 7 right with the idle line, 6 of 7 without.** The five answers that moved
+were all one of two kinds:
+
+- Four commands went from `none` to `stop_following` without the line: "Wait here.", "Stay where you
+  are.", "Do not move." and "The player has gone inside to sleep.". With it, the model said it would
+  stay ("I will wait for your next command.") but chose `none`. "Hold position." is `none` in both.
+- One went the other way: "Attack Godzilla." was `none` with the line and `attack_target`/`wolf`
+  without it, which the grounding guard contained.
+
+On the 30 `none` prompts the model acted 4 times with the line and 5 without (Godzilla). On the 46
+that want an action, it answered `none` 10 times with the line and 6 without. "Fine day for it." was
+never repeated as a statement. Other example lines were, 3 times with the line and once without.
+
+**The same answers as the runs before.** At temperature 0, arm A gave the same 76 answers as the
+controls of the `ListActionsAndTargets` and counter-example runs, and arm B the same 76 as the
+code-built run's unset arm. So the default line, "Nothing has changed since last time.", and the
+profile's line cost `stop_following` the same four prompts. The entry above's observation across
+runs is now this A/B.
+
+**What it means.** On `qwen3.5:2b`, an idle `none` example makes "stay here" commands come back as
+`none`, by a margin beyond the noise floor in that category, while the whole set moves within noise.
+It is the first result of the evening that points at a default, since every profile starts with an
+idle example (`AgentProfile.DefaultIdleExampleStimulus`). Changing that is the lead's decision, in its
+own pull request. The category has 9 prompts, so repeat it on #147's larger set, and on another
+model, before deciding. Nothing here changes code.
+
+**What would change this.** A repeat on more `stop_following` prompts, or on another model, where the
+idle line no longer turns them into `none`. Raw report: `.scratch/live-runs-1109/run3d-report/` in
+the session's checkout.
