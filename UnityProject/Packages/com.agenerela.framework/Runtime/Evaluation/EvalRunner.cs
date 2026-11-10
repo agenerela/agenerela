@@ -37,7 +37,12 @@ namespace Agenerela.Evaluation
     /// <see cref="ExplicitTargetSource"/> made from its declaration. The model reads neither the
     /// state nor the schema, so both are also told to it as observations, in this order: the
     /// arm's own lines, the state as <see cref="DescribeState"/> words it, one <c>id: description.</c>
-    /// line per target, then the prompt's own observations.
+    /// line per target, then the prompt's own observations. The prompt's own are the call's
+    /// <see cref="DecideOptions.Observations"/>; the rest, the same on every prompt of the arm, come
+    /// from an observation source of the agent's, so an arm's
+    /// <see cref="DecideOptions.ObservationPlacement"/> moves the prompt's lines alone (#151),
+    /// unless the arm sets <see cref="EvalArm.StandingLinesAsCallObservations"/>, which makes every
+    /// line the call's.
     /// </para>
     /// <para>
     /// <b>The outcome</b> of each answer is <see cref="Classify"/>'s and is written to the
@@ -493,10 +498,9 @@ namespace Agenerela.Evaluation
 
                 // Shaped like a prompt's request, the arm's and the targets' lines included, but with
                 // no state: a DescribeState of the caller's may expect values a set always has.
-                var agent = Build(run, new JObject());
                 var options = run.Arm.Options.Copy();
                 options.StimulusLabel = "Player";
-                options.Observations = Observations(run, new List<string>(), null);
+                var agent = Build(run, new JObject(), Standing(run, new List<string>()), new List<string>(), options);
                 last = await agent.DecideAsync(stimuli[i % stimuli.Count], options, ct);
                 decided |= last.Decision != null;
             }
@@ -582,8 +586,6 @@ namespace Agenerela.Evaluation
         private async Awaitable<EvalAnswer> Ask(ArmRun run, string category, EvalPrompt prompt, CancellationToken ct)
         {
             var state = prompt.PreconditionState ?? new JObject();
-            var agent = Build(run, state);
-
             var stateLines = DescribeState == null
                 ? new List<string>()
                 : (DescribeState(state) ?? Enumerable.Empty<string>()).Where(l => !string.IsNullOrWhiteSpace(l)).ToList();
@@ -591,7 +593,7 @@ namespace Agenerela.Evaluation
             var options = run.Arm.Options.Copy();
             options.StimulusLabel = prompt.Label;
             options.CheckTarget = run.Arm.Options.CheckTarget && prompt.ChecksTarget;
-            options.Observations = Observations(run, stateLines, prompt.Observations);
+            var agent = Build(run, state, Standing(run, stateLines), prompt.Observations ?? new List<string>(), options);
 
             var result = await agent.DecideAsync(prompt.Stimulus, options, ct);
             var outcome = Classify(prompt, result);
@@ -650,21 +652,40 @@ namespace Agenerela.Evaluation
             return fields == null || fields.Any(f => f != null && f.Name == DecisionSchema.StatementFieldName);
         }
 
-        // The arm's own lines, the state's, one per target, then the prompt's own.
-        private List<string> Observations(ArmRun run, List<string> stateLines, IList<string> own)
+        // The lines every prompt of the arm is told whatever it asks: the arm's own, the state's,
+        // then one per target. The prompt's own lines are the call's own observations, after these.
+        private List<string> Standing(ArmRun run, List<string> stateLines)
         {
             var observations = new List<string>(run.Arm.Options.Observations ?? new List<string>());
             observations.AddRange(stateLines);
             observations.AddRange(Set.Targets.Select(TargetLine));
-            observations.AddRange(own ?? new List<string>());
             return observations;
         }
 
         // A fresh agent for one prompt in one arm: the profile's actions, each available exactly
-        // when the state matches its onlyWhen, the set's targets, the state, and no memory.
-        private Agent Build(ArmRun run, JObject state)
+        // when the state matches its onlyWhen, the set's targets, the state, and no memory. Sets
+        // the call's own observations on options: the prompt's own lines. The standing lines reach
+        // the agent through an observation source, so the agent tells them apart from the call's
+        // own (#151), unless the arm sends them with the call, ahead of the prompt's. The cap is
+        // raised to fit every line, so none is dropped. With AfterSources the request is the one
+        // the runner sent when every line was the call's own: the standing lines first, then the
+        // prompt's.
+        private Agent Build(ArmRun run, JObject state, List<string> standing, IList<string> own, DecideOptions options)
         {
             var agent = new Agent(Profile, IdentityOf(run.Arm), run.Provider) { Memory = null };
+            if (run.Arm.StandingLinesAsCallObservations)
+            {
+                var all = new List<string>(standing);
+                all.AddRange(own);
+                options.Observations = all;
+            }
+            else
+            {
+                options.Observations = new List<string>(own);
+                agent.ObservationSources.Add(new StandingLines(standing));
+            }
+
+            agent.MaxObservations = standing.Count + own.Count;
             foreach (var asset in Profile.Actions)
             {
                 var action = asset != null ? asset.Action : null;
@@ -813,6 +834,19 @@ namespace Agenerela.Evaluation
             }
         }
 
+        // The standing lines of one prompt, handed to its agent as an observation source.
+        private sealed class StandingLines : IObservationSource
+        {
+            private readonly List<string> lines;
+
+            public StandingLines(List<string> lines)
+            {
+                this.lines = lines;
+            }
+
+            public IEnumerable<string> Observe(AgentContext ctx) => lines;
+        }
+
         // One arm while it runs: its provider, what Ollama can say about it, and what it has found.
         private sealed class ArmRun
         {
@@ -846,6 +880,8 @@ namespace Agenerela.Evaluation
                     ExampleStatements = arm.Options.ExampleStatements,
                     ExampleTargetFallback = arm.Options.ExampleTargetFallback,
                     PairTargetsWithActions = arm.Options.PairTargetsWithActions,
+                    ObservationPlacement = arm.Options.ObservationPlacement.ToString(),
+                    StandingLinesAsCallObservations = arm.StandingLinesAsCallObservations,
                     Priority = arm.Options.Priority.ToString(),
                     Observations = new List<string>(arm.Options.Observations ?? new List<string>()),
                     Knowledge = new List<string>(arm.Knowledge),

@@ -2643,6 +2643,144 @@ measurement on this server of how far an unrelated change to the prompt moves si
 the stimulus label's wording for a non-spoken event; fold together with the action list; a
 following-policy line; other models than the two; the 2B's misses were not sorted by cause. Raw data:
 the reports, renders, cause table and entry point in the lead's checkout, `.scratch/151-policy-gap/`.
+The next entry, "Where a call's own facts go", takes up the observation order and the
+following-policy line.
+
+### Where a call's own facts go: after the stimulus gains about 21 of 389 on both models, but only when the standing facts stay in the block (10 November 2026)
+
+For #151, following the entry above. Its fold moved a situation's own lines into the stimulus by
+reading the label, and left two readings open: the fact helps because it is in the user turn, or
+because it is no longer behind eleven boilerplate target lines. This run turns it into a framework
+option that never reads the label, `DecideOptions.ObservationPlacement`, and separates the two.
+
+**What moves.** The framework already told two kinds of line apart: an agent's
+`ObservationSources`, gathered on every call, and the call's own `DecideOptions.Observations`.
+`Agent.Observe` puts the sources' lines first and the call's last. Before this change `EvalRunner`
+passed everything as the call's own (the arm's lines, the state line, the 11 `id: description.`
+target lines, then the prompt's own), so the fold's "prompt's own lines" had no name in the
+framework. The runner now sends the standing lines through an observation source, so only a
+prompt's own lines are the call's; with the default placement every one of the interim set's 389
+requests is byte-identical to the entry above's control render. Three placements were built:
+
+- **`AfterSources`**, the default: the call's lines close the "What you know right now:" block,
+  as before.
+- **`BeforeSources`**: the call's lines open that block, ahead of the standing lines.
+- **`WithStimulus`**: the call's lines leave the block and follow the stimulus's closing quote in
+  the user turn, each ended as a sentence: `Event: "The player lay down to sleep by the campfire."
+  Other guards are watching the camp.` The quote stays the developer's text. The fold put the facts
+  inside the quote.
+
+Neither moved arm reads the label, so they also move the 8 player prompts that carry observations
+(6 `command_with_target`, 2 `conversation`); 126 of the 389 requests change, against the fold's 118.
+
+**Setup.** The interim set (389 prompts, `Assets/Evaluation/Interim/`, set commit a24dde9) and the
+curated set (76, `Assets/Evaluation/`, same commit), with `Assets/Evaluation/VillageGuard.asset`
+unchanged and the 9 November state wording. The RTX 5080's Docker Ollama over the network, the 5080
+lock held for each run and released between them, `ps` showing nothing before each, the model 100%
+in VRAM after every arm (`qwen3.5:4b` 3.1 GB, `qwen3.5:2b` 2.4 GB). Interleaved, runner defaults
+(guards on, the profile's idle example), framework 0.4.0-preview.1 with this change. A 24-prompt
+slice first (24 against 24), then each run back to back in one session, 5 to 6 minutes each for the
+389 and about a minute for the 76. Floors: 3.6 points at n = 389, 4.4 at 259, 6.2 at 130, 8.8 at
+65, 8.1 at 76, 11.5 at 38.
+
+**Interim set, 389 prompts.**
+
+| | 4B control | 4B `BeforeSources` | 4B control | 4B `WithStimulus` | 2B control | 2B `WithStimulus` |
+|---|---:|---:|---:|---:|---:|---:|
+| **All, 389** | 330 | 328 (−0.5) | 330 | **351 (+5.4)** | 261 | **283 (+5.7)** |
+| Player lines, 259 | 239 | 239 | 239 | 239 | 197 | 199 |
+| Situations and events, 130 | 91 | 89 (−1.5) | 91 | **112 (+16.2)** | 64 | **84 (+15.4)** |
+| simple_command, 65 | 64 | 64 | 64 | 64 | 48 | 48 |
+| command_with_target, 66 | 66 | 66 | 66 | 66 | 62 | 62 |
+| impossible_request, 64 | 49 | 49 | 49 | 49 | 41 | 41 |
+| conversation, 64 | 60 | 60 | 60 | 60 | 46 | 48 |
+| situation, 65 | 40 | 39 | 40 | **51 (+16.9)** | 26 | **43 (+26.2)** |
+| event, 65 | 51 | 50 | 51 | **61 (+15.4)** | 38 | 41 (+4.6) |
+
+Bold is beyond the floor. The 4B control gave 330 in both runs, as it did in the entry above.
+
+- **`BeforeSources` does nothing.** 7 fixed and 9 broken, all within noise. The order inside the
+  block is not the lever; it was dropped from the option.
+- **`WithStimulus`, `qwen3.5:4b`: 23 fixed, 2 broken**, all on situations and events. Against the
+  entry above's causes, it fixed 7 of 8 place-not-threat, all 5 passive, all 4 calm-scene actions,
+  2 of 4 stop-following, both wrong targets, the guard's false stop, one standing wolf and 1 of 9
+  follows. The 2 it broke walked to the named place instead of the right one (`village_gate` for a
+  road, `campfire` for the camp's smoke). That is the fold's 352 without reading the label.
+- **`WithStimulus`, `qwen3.5:2b`: 28 fixed, 6 broken**, 2 of the fixes conversation lines; the
+  situations move far more than the events.
+
+**The calm scenes.** The fold broke 7 calm scenes on the 2B. Counting the 40 situations and events
+whose expected action is `none`, against the 90 that call for one:
+
+| | over-acted on 40 calm scenes | stayed still on 90 that call for action |
+|---|---:|---:|
+| 4B control / `WithStimulus` | 6 / **2** | 10 / **3** |
+| 2B control / `WithStimulus` | 15 / 14 | 14 / 9 |
+| 4B control / `BeforeSources` | 6 / 10 | 10 / 10 |
+
+`WithStimulus` makes neither model over-act; it is the fold's facts inside the quote that did.
+
+**Curated set, 76 prompts, control against `WithStimulus`.** `qwen3.5:4b` 69 against 68 (−1.3),
+`qwen3.5:2b` 54 against 54; situations and events 31 against 30 and 23 against 23, every category
+within noise (the floor is 11.5 on 38). Calm scenes: 4B 2 of 12 over-acted in both arms, 2B 3
+against 4. This set's 4B control already gets 31 of its 38 situations and events; whatever the
+interim set's gap was, it is not here to close.
+
+**The whole block with the stimulus.** All three demo games pass every fact as the call's own
+(`DecideOptions.Observations`), with no observation source, so `WithStimulus` would move their whole
+block. An eval-only switch, `EvalArm.StandingLinesAsCallObservations`, sends the runner's standing
+lines with the call the same way; with `AfterSources` its 389 requests are byte-identical to the
+control render. Interim set, `AfterSources` against `WithStimulus`, both arms with the switch on:
+
+| | 4B whole, after | 4B whole, with | 2B whole, after | 2B whole, with |
+|---|---:|---:|---:|---:|
+| **All, 389** | 330 | **299 (−8.0)** | 261 | **221 (−10.3)** |
+| Player lines, 259 | 239 | **199 (−15.4)** | 197 | **157 (−15.4)** |
+| Situations and events, 130 | 91 | **100 (+6.9)** | 64 | 64 |
+| simple_command, 65 | 64 | **48** | 48 | **38** |
+| command_with_target, 66 | 66 | **60** | 62 | 59 |
+| impossible_request, 64 | 49 | **42** | 41 | **30** |
+| conversation, 64 | 60 | **49** | 46 | **30** |
+| situation, 65 | 40 | **49** | 26 | 31 |
+| event, 65 | 51 | 51 | 38 | 33 |
+
+A request then reads `Player: "Walk with me." You are not following the player. bridge: The wooden
+bridge over the stream. village_gate: …`, the stimulus followed by twelve standing facts. The 4B
+answered 13 follow commands, "Walk with me." among them, with `none`, and attacked the wolf for impossible
+requests; the 2B over-acted on 34 of the 40 calm scenes (15 in its control) and walked to the gate
+for follow commands.
+
+**Step 4: one following-policy line, report only.** The 4B's 18 misses left after `WithStimulus`
+include 9 follow and stop-following. One line written for this run, as a designer would, was added to
+the profile's knowledge in memory (`EvalArm.Knowledge`, the asset untouched): "When the player sets
+out without you, follow them; once they settle somewhere you cannot go with them, stop following."
+No four-word run of it appears in any prompt file of either set (hard rule 4). Interim set, 4B,
+`WithStimulus` against `WithStimulus` plus the line: 351 against 346 (−1.3, within noise);
+situations +9.2 beyond noise (51 → 57), events 61 → 63, but simple_command −15.4 beyond noise
+(64 → 54) and player lines −5.0 beyond noise. It fixed 7 of the 8 remaining follows and broke 10
+commands to stay put ("Hold here." → `none`, "I'll go on alone from here." →
+`follow_player`). Calm scenes 2 against 3. A following policy is the game's to write, and this one
+costs as much as it fixes.
+
+**What was and was not measured.** Measured: two models, two sets, one session, one run each, with
+the standing lines in an observation source and the prompt's own one to three lines as the call's;
+and, on the interim set, the whole block as the call's. Not measured: a real game's split between
+sources and call lines; other models; other servers; a `WithStimulus` call with memory on, whose
+history then carries the facts.
+
+**What it means.**
+
+- **The deciding fact helps in the user turn, not earlier in the block.** `WithStimulus` gains as
+  much as the fold did, on both models, without reading the label; `BeforeSources` gains nothing.
+- **It helps only for the facts of this moment.** Twelve standing lines after the stimulus cost
+  15 points of player lines on both models. A developer who wants the gain keeps what holds on every
+  call in an `IObservationSource` and passes a moment's own facts with the call.
+- **The default stays `AfterSources`** (the tech lead's decision): every demo game, and probably most
+  developers, pass every fact with the call today, and for them `WithStimulus` is the worst layout
+  measured. Flipping it waits on the demos moving their standing facts into sources.
+
+Raw data: reports, renders, the causes table and the entry point in this branch's
+`.scratch/151-placement/` (gitignored, in the worktree that ran it).
 
 ### Living Vale's adoption of #190: no visible regression, after one fix to the route examples (10 November 2026)
 

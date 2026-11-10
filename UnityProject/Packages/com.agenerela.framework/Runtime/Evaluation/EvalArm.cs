@@ -15,7 +15,10 @@ namespace Agenerela.Evaluation
     /// <see cref="DecideOptions.CheckTarget"/> is on for a prompt only when both the arm and the
     /// prompt's <c>checkTarget</c> leave it on. The arm's own <see cref="DecideOptions.Observations"/>
     /// are sent first on every prompt, before the state, the targets and the prompt's own lines, so
-    /// an arm can test one extra line. Everything else is the arm's, unchanged.
+    /// an arm can test one extra line. Only the prompt's own lines are the call's own observations:
+    /// the arm's, the state's and the targets' reach the agent through an observation source, so
+    /// <see cref="DecideOptions.ObservationPlacement"/> moves the prompt's lines alone (#151), unless
+    /// <see cref="StandingLinesAsCallObservations"/> is set. Everything else is the arm's, unchanged.
     /// </para>
     /// <para>The options are copied when the arm is made: changing them afterwards changes nothing.</para>
     /// </remarks>
@@ -59,6 +62,16 @@ namespace Agenerela.Evaluation
             get => knowledge;
             set => knowledge = value == null ? new List<string>() : new List<string>(value);
         }
+
+        /// <summary>
+        /// Whether the arm's, the state's and the targets' lines are sent as the call's own
+        /// <see cref="DecideOptions.Observations"/>, ahead of the prompt's own, instead of through an
+        /// observation source; false unless set (#151). On, the whole block is the call's, as a
+        /// game that passes every fact with its call sends it, so
+        /// <see cref="DecideOptions.ObservationPlacement"/> moves all of it. With
+        /// <see cref="ObservationPlacement.AfterSources"/> the request is the same either way.
+        /// </summary>
+        public bool StandingLinesAsCallObservations { get; set; }
 
         /// <summary>The arm's name in the report.</summary>
         public string Name { get; }

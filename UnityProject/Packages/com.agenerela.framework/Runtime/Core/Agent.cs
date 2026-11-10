@@ -1280,6 +1280,9 @@ namespace Agenerela
                 ExampleStatements = call.ExampleStatements,
                 ExampleTargetFallback = call.ExampleTargetFallback,
                 Stimulus = stimulus,
+                // Observe keeps the call's own lines last in ctx, after every source's.
+                ObservationPlacement = call.ObservationPlacement,
+                CallObservationCount = observations.Count,
             };
 
             // Asked once, so the action enum, the pairs, the examples, the telemetry and the
