@@ -2130,12 +2130,13 @@ for how far an unrelated change to the prompt moves the score, which this server
 
 **What it means.**
 
-- **Where a standing line goes matters more than whether it is sent.** The same five lines cost
-  7 answers as observations (323 against 330, across two runs, so read it with care) and gained 5
-  as knowledge. Knowledge is the better slot for standing lines, which is what Living Vale #14 asked
-  for; observations are for what is true now.
-- **A policy line helps the case it names.** Line 5 fixed impossible requests; nothing else moved
-  beyond noise.
+- **Overall, the point estimates favour knowledge, but within noise.** The same five lines scored
+  7 answers below no lines as observations (323 against 330, across two runs, so read it with care)
+  and 5 above as knowledge. No accuracy change is claimed: neither overall difference passes the
+  floor. The one category beyond noise against observations, simple_command, is consistent with
+  the observation block's position before the stimulus, not shown by it.
+- **The lines helped impossible requests.** The five lines together moved impossible_request
+  beyond noise; line 5 names that case and is the likely cause, but no run isolated it.
 - **These lines do not close the gap on situations and events.** It stays at about 70% against
   92–94% on player lines in every arm. Most misses there are `follow_player`, `stop_following` and
   `attack_target` answered with `move_to` or `none`, cases no line covered, or covered too loosely
