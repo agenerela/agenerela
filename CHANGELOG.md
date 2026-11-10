@@ -243,6 +243,22 @@ phase table and the open issues, not here.
   the control, on `qwen3.5:2b` and Ollama 0.40.14, recorded in `findings.md`. At n = 20 that
   says the gate passed, not by how much the guard helps.
 
+
+### Changed
+
+- **Living Vale runs on the framework features its own gap list asked for** (#190, #69). One
+  commit per feature replaces the game's workaround with the framework's API: the identity's
+  knowledge and statement rules (#231), target categories (#208) and a per-target check (#235) in
+  place of three pair guards, fixed examples with `INamedTarget` and `ExampleTargetFallback` in
+  place of three `RefreshExamples` (#234), the provider's model list, warm-up and unload and a
+  provider swap in place of the game's Ollama calls and driver rebuilds (#198), one agent per NPC
+  for the script and the model (#194, LV #23), `Conversation` for the chat's turns (#209),
+  `Proposals` for the route cards (#236), `Agent.Id` (#217), `CanImport` (#205) and the decision
+  log (#229). The game's code is 268 lines shorter (blank and comment lines not counted). What did
+  not fit, and why, is in `docs/demos/living-vale-framework-gaps.md`, "The adoption". The model
+  now reads the personas' facts in the system prompt and slightly different examples. Living
+  Vale's EditMode tests: 566 passed, 4 skipped, of 570.
+
 ### Fixed
 
 - **The model-sweep kit no longer takes Unity Hub's CLI server for an Editor.** `sweep_one.sh`
