@@ -2062,3 +2062,83 @@ are kept apart as separate machines (`environment.md`).
 
 **What would change this.** Timing a load with the file already in the page cache against one
 without, after a server restart.
+
+### Few-shot examples as chat turns: better for `qwen3.5:2b` at the noise floor, worse beyond it for `qwen3.5:4b` and `gemma4:e2b-it-qat`, and every statement goes empty (9 November 2026)
+
+**What.** `DecideOptions.ExamplesAsTurns` (#151, this entry's pull request) sends the same few-shot
+examples, in the same order, as `user`/`assistant` turns, each answer the JSON the schema asks for,
+instead of the block of lines in the system prompt
+([`prompt.md`](../../UnityProject/Packages/com.agenerela.framework/Documentation~/prompt.md#examples-as-chat-turns)).
+A review that morning had replayed the curated set's 76 requests against `qwen3.5:2b` outside Unity
+with the examples moved into turns and scored 63/76 against 56/76 (one model, one run, no guard: a
+lead, not a result). This is the A/B that lead asked for.
+
+**Setup.** The interim set, 389 prompts, against `VillageGuard`, through `EvalRunner` with the
+kit in `tools/live-runs/example-turns/`: arm `block` (the defaults) against arm `turns`
+(`ExamplesAsTurns = true`), **interleaved, in one session per model, guards on**, three warm-up
+requests each. The framework was this pull request's branch, off `test` at 17c5184. RTX 5080,
+Docker Ollama 0.40.14, over the network from the lead's laptop on AC power, the 5080 lock held.
+One model resident at a time, each fully in VRAM throughout and unloaded after its run (nothing
+was resident before each). State as one observation line, targets as one observation each, as in
+the sweep. A 20-prompt slice of `qwen3.5:2b` ran first and gave 19/20 against 17/20.
+
+| Correct, of 389 | `block` | `turns` | `turns` − `block` |
+|---|---:|---:|---|
+| **`qwen3.5:2b`** | **263 (67.6%)** | **277 (71.2%)** | +3.6, **beyond noise by a hair** (floor 3.59) |
+| **`qwen3.5:4b`** | **330 (84.8%)** | **291 (74.8%)** | −10.0, **beyond noise** |
+| **`gemma4:e2b-it-qat`** | **290 (74.6%)** | **264 (67.9%)** | −6.7, **beyond noise** |
+
+The two `block` scores of the Qwen models are request 001's two baselines on the same server to the
+prompt (263 and 330), so the server and the set reproduced.
+
+By category (player lines: simple_command, command_with_target, impossible_request, conversation;
+policy cases: situation, event). Floors about 9 points per category, 4.4 for the 259 player lines,
+6.2 for the 130 policy cases:
+
+| | 2B block | 2B turns | 4B block | 4B turns | Gemma block | Gemma turns |
+|---|---:|---:|---:|---:|---:|---:|
+| Player lines, of 259 | 195 | 210 | 239 | 220 | 207 | 192 |
+| Policy cases, of 130 | 68 | 67 | 91 | 71 | 83 | 72 |
+| simple_command, of 65 | 47 | 50 | 64 | 59 | 53 | 41 (−18.5) |
+| command_with_target, of 66 | 62 | 62 | 66 | 63 | 63 | 60 |
+| impossible_request, of 64 | 41 | 42 | 49 | 44 | 41 | 49 (+12.5) |
+| conversation, of 64 | 45 | 56 (+17.2) | 60 | 54 (−9.4) | 50 | 42 (−12.5) |
+| situation, of 65 | 29 | 30 | 40 | 35 | 39 | 36 |
+| event, of 65 | 39 | 37 | 51 | 36 (−23.1) | 44 | 36 (−12.3) |
+| `stop_following`, of 48 | 22 | 28 | 44 | 31 | 29 | 10 |
+| Unasked actions, of 156 `none` prompts | 50 | 38 | 23 | 46 | 32 | 16 |
+| Missed requests, of 233 that want one | 36 | 43 | 12 | 13 | 35 | 74 |
+| Replies flagged (#224) | 13, echoes | 361, **empty** | 0 | 378, **empty** | 0 | 389, **empty** |
+| Median latency | 0.361 s | 0.147 s | 0.443 s | 0.210 s | 0.332 s | 0.149 s |
+| Median prompt tokens | 366 | 419 | 366 | 419 | 368 | 426 |
+| Median completion tokens | 35 | 14 | 37 | 15 | 31 | 16 |
+
+Numbers in brackets are the runner's noise check where it says beyond noise.
+
+- **The 2B's gain is conversation.** 12 of its 49 flips to right are conversation lines: 7 that
+  the block arm answered with an action (`attack_target` on the wolf, `move_to`) and the turns arm
+  rightly with `none`, and 5 where the turns arm chose the right action, `follow_player` or
+  `stop_following`, where the block arm had chosen a wrong one. That is the shape of the morning's replay. It does not carry over to the policy cases,
+  which lose wolf events to `none` or a wrong target.
+- **The 4B loses everywhere**, events most: it doubles its unasked actions (23 to 46, 26 of its 59
+  flips to wrong were `none` prompts answered `move_to`) and loses `stop_following` (44 to 31).
+- **Gemma swings towards `none`**: missed requests double (35 to 74) and `stop_following` falls from
+  29 to 10, which is why impossible requests rise and every other category falls.
+- **Every statement goes empty.** No `VillageGuard` example has a written statement, so every
+  example answer shows `"statement":""`, and all three models copy it: 361, 378 and 389 of 389
+  replies are flagged `Empty`, against 13 echoes, 0 and 0 with the block. The block shows no
+  statement at all, and there each model writes its own line. That is also why the turns arm is
+  faster (half the completion tokens). Accuracy here scores only the action and target, so it does
+  not count this, but a talking NPC would fall silent.
+- **The cost in prompt tokens**: about 53 more per request (366 to 419), the JSON and role overhead
+  of five example pairs.
+
+**What it means.** The morning's +7 on 76 prompts was real for `qwen3.5:2b` in direction but about
+half the size on 389 prompts, and the same change costs the two stronger small models 7 to 10 points.
+It stays off by default. The empty statements are a cost of their own for any agent that speaks.
+
+**What would change this.** Examples with written statements (`ExampleStatements`, #190 G14), which
+would stop the empty copies and might change the accuracy too; an answer that leaves `statement` out
+when none was written; a second run of each model to see whether the 2B's +3.6, on the floor, holds;
+the curated 76 in the Unity path, to compare with the morning's replay. Raw data: the reports and
+`tokens.json` files in the lead's main checkout, `.scratch/151-chat-turns/full/`, with `summarize.py`, which prints these tables.
