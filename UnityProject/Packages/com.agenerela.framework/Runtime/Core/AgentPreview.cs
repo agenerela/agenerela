@@ -35,6 +35,7 @@ namespace Agenerela
         private readonly List<string> registeredTargets = new List<string>();
         private readonly List<PreviewSource> targetSources = new List<PreviewSource>();
         private readonly List<string> leftOutByCategory = new List<string>();
+        private readonly List<UnavailableTarget> unavailable = new List<UnavailableTarget>();
         private readonly List<PreviewSource> observationSources = new List<PreviewSource>();
 
         internal AgentPreview(string stimulus, IReadOnlyList<string> callObservations)
@@ -46,6 +47,7 @@ namespace Agenerela
             RegisteredTargets = registeredTargets.AsReadOnly();
             TargetSources = targetSources.AsReadOnly();
             TargetsLeftOutByCategory = leftOutByCategory.AsReadOnly();
+            TargetsUnavailable = unavailable.AsReadOnly();
             ObservationSources = observationSources.AsReadOnly();
         }
 
@@ -71,10 +73,20 @@ namespace Agenerela
         /// <summary>
         /// The actions not offered, each with why: the profile, or a code-built agent's action list,
         /// names it and nothing binds it; it needs a target and none is offered; its handler's
-        /// <see cref="IActionHandler.IsAvailable"/> says no; or, with
-        /// <see cref="DecideOptions.PairTargetsWithActions"/>, no offered target is one it takes.
+        /// <see cref="IActionHandler.IsAvailable"/> says no; it needs a target, and its per-target
+        /// check (<see cref="ITargetAvailability"/>) allows none of those it takes, each named with the
+        /// check's reason; or, with <see cref="DecideOptions.PairTargetsWithActions"/>, no offered
+        /// target is one it takes.
         /// </summary>
         public IReadOnlyList<LeftOutAction> LeftOut { get; }
+
+        /// <summary>
+        /// Each action and target pair a per-target check (<see cref="ITargetAvailability"/>) rejected,
+        /// with its reason, as <see cref="DecisionTelemetry.TargetsUnavailable"/> records it for a
+        /// decision (#190 LV #19): a pair left out of the paired schema, or one the guard would turn
+        /// into <c>none</c> under a flat one. Empty when no handler has such a check.
+        /// </summary>
+        public IReadOnlyList<UnavailableTarget> TargetsUnavailable { get; }
 
         /// <summary>The targets registered by hand in <see cref="Agent.Targets"/>, by id, before any source.</summary>
         public IReadOnlyList<string> RegisteredTargets { get; }
@@ -154,15 +166,17 @@ namespace Agenerela
             observationSources.Add(new PreviewSource(source, sent, dropped));
         }
 
-        // From what the decision asked once: listed are every action the agent was given, offered
-        // what ActionAvailability allowed, and takeable what pairing left of it. Nothing is asked
-        // again, so an availability check that is not a pure function, a cooldown say, runs once.
-        internal void SetActions(AgentContext ctx, IEnumerable<ActionDefinition> listed, IReadOnlyList<ActionDefinition> offered,
+        // From what the decision asked once: listed are every action the agent was given, answer
+        // what ActionAvailability allowed and why not, and takeable what pairing left of it. Nothing
+        // is asked again, so an availability check that is not a pure function, a cooldown say,
+        // runs once.
+        internal void SetActions(AgentContext ctx, IEnumerable<ActionDefinition> listed, AvailabilityAnswer answer,
             IReadOnlyList<ActionDefinition> takeable)
         {
             available.AddRange(takeable);
+            unavailable.AddRange(answer.Unavailable);
             var kept = new HashSet<ActionDefinition>(takeable);
-            var allowed = new HashSet<ActionDefinition>(offered);
+            var allowed = new HashSet<ActionDefinition>(answer.Offered);
 
             foreach (var definition in listed)
             {
@@ -187,6 +201,13 @@ namespace Agenerela
                 else if (definition.RequiresTarget && ctx.Targets.Count == 0)
                 {
                     reason = "It needs a target, and none is offered.";
+                }
+                else if (answer.TryGetLeftOut(definition, out var because) && because == LeftOutBecause.NoLegalTarget)
+                {
+                    string rejected = answer.RejectedPhrase(definition);
+                    reason = rejected.Length == 0
+                        ? "It needs a target, and none offered is one it takes."
+                        : $"It needs a target, and its per-target check allows none of those it takes: {rejected}.";
                 }
                 else
                 {
