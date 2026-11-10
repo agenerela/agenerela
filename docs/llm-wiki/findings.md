@@ -2062,3 +2062,87 @@ are kept apart as separate machines (`environment.md`).
 
 **What would change this.** Timing a load with the file already in the page cache against one
 without, after a server restart.
+
+### Policy lines as knowledge or as observations: 335/389 against 323/389, and neither helps situations (9 November 2026)
+
+#190's Living Vale #14 added `AgentIdentity.Knowledge`, lines in the system prompt after the goals.
+The design notes owed one A/B: a few policy lines given as knowledge, against the same lines given
+as observations, which is how Living Vale sends its facts today. The question behind it: models
+score far lower on situations and events than on player lines, because the right answer there is
+the designer's policy ("a guard on watch duty goes to an empty tower"). Does stating a policy help,
+and does it matter where it goes?
+
+**The lines.** Five, written for this run by the agent that built the feature, who could see the
+set's six category names (`simple_command` … `event`) and its targets, but not its prompts or
+labels. They are a designer's guess, not tuned to the set, and the entry point refused any that
+overlapped a prompt's stimulus (hard rule 4; none did):
+
+1. When trouble is reported at a place you can reach, go there.
+2. When a wolf or an armed stranger threatens someone nearby, attack it.
+3. When people need to take cover, go to the shelter.
+4. Small talk, questions and quiet moments need no action.
+5. If you are asked for something you cannot do, or a place that is not here, take no action and say so.
+
+None of them says when to follow the player or stop.
+
+**Setup.** The interim set (389 prompts, `Assets/Evaluation/Interim/`, set commit a24dde9) with
+`Assets/Evaluation/VillageGuard.asset`, `qwen3.5:4b`, the RTX 5080's Docker Ollama 0.40.14 over the
+network (home), 2995 of 2995 MB in VRAM after each warm-up, nothing else resident, the laptop on
+mains power, the 5080 lock held. Interleaved, runner defaults (guards on, the profile's idle
+example), the 9 November state wording. Two A/B runs back to back, each 6 minutes, after a 24-prompt
+slice (23 against 24, within noise):
+
+- **Run 1.** A: the lines as `DecideOptions.Observations`, first in the observation block. B: the
+  same lines as `EvalArm.Knowledge`, so under "What you know:" in the system prompt.
+- **Run 2.** A: no lines at all, today's prompt. B: the lines as knowledge again.
+
+| | A: as observations | B: as knowledge | A: no lines | B: as knowledge |
+|---|---:|---:|---:|---:|
+| | run 1 | run 1 | run 2 | run 2 |
+| **All, 389** | 323 (83.0%) | 335 (86.1%) | 330 (84.8%) | 335 (86.1%) |
+| Player lines, 259 | 235 (90.7%) | 244 (94.2%) | 239 (92.3%) | 244 (94.2%) |
+| Situations and events, 130 | 88 (67.7%) | 91 (70.0%) | 91 (70.0%) | 91 (70.0%) |
+| simple_command, 65 | 89.2% | 98.5% | 98.5% | 98.5% |
+| command_with_target, 66 | 98.5% | 98.5% | 100.0% | 98.5% |
+| impossible_request, 64 | 93.8% | 92.2% | 76.6% | 92.2% |
+| conversation, 64 | 81.3% | 87.5% | 93.8% | 87.5% |
+| situation, 65 | 60.0% | 58.5% | 61.5% | 58.5% |
+| event, 65 | 75.4% | 81.5% | 78.5% | 81.5% |
+
+"Player lines" are the four categories a player says; floors are 3.6 points at n = 389, 4.4 at 259,
+6.2 at 130 and 8.8 at 65.
+
+**Run 1, knowledge against observations: +3.1 overall, within noise** (floor 3.6). Beyond noise
+only in simple_command, +9.2: as observations, 6 of the 65 commands to follow ("Come with me" and
+the like) became `none`, as knowledge none did. The most likely reading is line 4, "Small talk …
+need no action", sitting in the observation block right before the stimulus; that was not isolated.
+Situations and events +2.3, within noise.
+
+**Run 2, knowledge against no lines: +1.3 overall, within noise.** Beyond noise only in
+impossible_request, +15.6, which is line 5's subject: without the lines, 15 of the 64 requests for a
+place that is not here or a thing the guard cannot do went wrong (11 acted on, wrong-but-legal, and
+4 contained by the guard), against 5 with them (4 and 1). Conversation −6.3, within noise. Situations and events: 91 and 91.
+
+**The arms are deterministic.** The knowledge arm gave the same 389 answers, statements included,
+in both runs, and the no-lines arm's 330 is what Request 001 measured for this model on this server
+earlier the same day. So repeating an identical prompt adds no noise here; the floor above stands
+for how far an unrelated change to the prompt moves the score, which this server has not measured.
+
+**What it means.**
+
+- **Where a standing line goes matters more than whether it is sent.** The same five lines cost
+  7 answers as observations (323 against 330, across two runs, so read it with care) and gained 5
+  as knowledge. Knowledge is the better slot for standing lines, which is what Living Vale #14 asked
+  for; observations are for what is true now.
+- **A policy line helps the case it names.** Line 5 fixed impossible requests; nothing else moved
+  beyond noise.
+- **These lines do not close the gap on situations and events.** It stays at about 70% against
+  92–94% on player lines in every arm. Most misses there are `follow_player`, `stop_following` and
+  `attack_target` answered with `move_to` or `none`, cases no line covered, or covered too loosely
+  ("someone nearby"). Whether lines written per action would, is the next run, and it needs lines
+  written by someone who has not seen the labels.
+- Nothing becomes a default: both fields stay empty unless a developer writes them.
+
+**What would change this.** Another model, other lines, or a situation set labelled against a
+written policy. Raw reports: `.scratch/lv14/report-full/` and `report-full-none/` in the session's
+checkout (`.claude/worktrees/silly-panini-9d970f`); the entry point is `.scratch/lv14/KnowledgeAbRun.cs.txt` there.

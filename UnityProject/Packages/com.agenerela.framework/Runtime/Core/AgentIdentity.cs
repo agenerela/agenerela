@@ -30,7 +30,8 @@ namespace Agenerela
         /// </summary>
         /// <remarks>
         /// What is true only now belongs in the observations instead, and what happened in the
-        /// conversation in memory. Unmeasured beyond one A/B (findings, 9 November 2026).
+        /// conversation in memory. On the evaluation set, five policy lines did better here than as
+        /// observations, within noise (findings, 9 November 2026).
         /// </remarks>
         [Tooltip("Optional. What this agent always knows, one line each: standing facts and the " +
                  "game's rules for it. Sent on every call. What is true only now goes in observations.")]
