@@ -10,6 +10,16 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **Standing knowledge and statement rules on an identity** (#190, Living Vale #14):
+  `AgentIdentity.Knowledge`, a list of lines, and `AgentIdentity.StatementRules`, one string, both
+  serialized, so an `AgentProfile` carries them and a code-built agent gets them through the
+  identity it is given. `PromptBuilder` renders them in the system prompt after the goals, as
+  `What you know:` with one `- ` line each, then `Your statement: <rules>.`; blank lines are skipped
+  and every line break becomes a space, so neither can add a heading or a line of its own.
+  Knowledge is not an observation and never counts against `Agent.MaxObservations`. Both empty, the
+  default and what every existing asset loads as, sends exactly the prompt sent before them.
+  `EvalRunner` can measure them: `EvalArm.Knowledge` adds lines to the profile's knowledge for one
+  arm's agents without changing the asset, and each arm's conditions record it as `knowledge`.
 - **A decision log file** (#190, G7): `DecisionLog.Start(path)` appends every decision feed
   entry to a JSON-lines file, one `DecisionLogLine` per line with `"version": 1`: the agent, the
   stimulus and label, what the game got, the model's own answer when a guard changed it, the

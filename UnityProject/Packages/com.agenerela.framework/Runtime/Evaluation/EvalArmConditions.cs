@@ -36,6 +36,8 @@ namespace Agenerela.Evaluation
         [JsonProperty("pairTargetsWithActions")] public bool PairTargetsWithActions;
         [JsonProperty("priority")] public string Priority;
         [JsonProperty("observations")] public List<string> Observations = new List<string>();
+        /// <summary>The arm's <see cref="EvalArm.Knowledge"/>, added to the profile's; empty in a report written before it existed.</summary>
+        [JsonProperty("knowledge")] public List<string> Knowledge = new List<string>();
 
         /// <summary>
         /// The arm's <see cref="EvalArm.MaxStatementLength"/>, above which a statement is
