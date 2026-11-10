@@ -195,7 +195,7 @@ ollama pull qwen3.5:4b
 
 **What the framework uses.** `OllamaSettings`, and an `OllamaProviderConfig` asset made with
 Create → Agenerela → Ollama Provider, default to `http://127.0.0.1:11434`,
-`qwen3.5:2b`, a 4096-token context, temperature 0 and a 30 s timeout. Always `127.0.0.1`,
+`qwen3.5:4b` (the 2B until PR #232 on 9 November; a saved config asset keeps the model it was made with), a 4096-token context, temperature 0 and a 30 s timeout. Always `127.0.0.1`,
 never `localhost`: on Windows `localhost` tries IPv6 first, Ollama listens on IPv4 only, and
 each request waited about 2 s (findings, 5 October 2026). Check a server with
 `curl http://127.0.0.1:11434/api/version`.
