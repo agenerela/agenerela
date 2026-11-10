@@ -15,6 +15,9 @@ namespace LivingVale.Agenerela
     {
         private readonly Func<AgenerelaNpcDecisionDriver> driver;
 
+        // CanImport changes nothing, so one history serves every check.
+        private static readonly RollingHistory Checker = new RollingHistory();
+
         /// <param name="driver">The model driver in use now; read on every save and load, since F7 replaces it.</param>
         public NpcMemoryArchive(Func<AgenerelaNpcDecisionDriver> driver)
         {
@@ -55,21 +58,11 @@ namespace LivingVale.Agenerela
                     return "Missing or duplicate NPC memory ID.";
                 }
 
-                // RollingHistory reads any strategy's exchanges and ignores the format, by design. The
-                // game saved its own, so anything else, or a newer version, is a save it cannot trust.
-                if (memory.format != RollingHistory.SnapshotFormat || memory.version < 1 || memory.version > RollingHistory.SnapshotVersion)
+                // The framework's own check (#205): its format, a version it reads, no missing part.
+                // What Restore will import, refused here before anything changes.
+                if (!Checker.CanImport(ToSnapshot(memory), out string reason))
                 {
-                    return $"Unreadable memory for {memory.npcId}: format {memory.format} version {memory.version}.";
-                }
-
-                try
-                {
-                    // Into a throwaway history: what Restore will do, without touching a real one.
-                    new RollingHistory().Import(ToSnapshot(memory));
-                }
-                catch (Exception e) when (e is ArgumentException || e is FormatException || e is InvalidOperationException)
-                {
-                    return $"Unreadable memory for {memory.npcId}: {e.Message}";
+                    return $"Unreadable memory for {memory.npcId}: {reason}";
                 }
             }
 
@@ -92,7 +85,7 @@ namespace LivingVale.Agenerela
             {
                 if (!restored.Contains(pair.Key))
                 {
-                    pair.Value.Import(Empty());
+                    pair.Value.Clear();
                 }
             }
         }
@@ -113,8 +106,5 @@ namespace LivingVale.Agenerela
 
             return snapshot;
         }
-
-        private static MemorySnapshot Empty() =>
-            new MemorySnapshot { Format = RollingHistory.SnapshotFormat, Version = RollingHistory.SnapshotVersion };
     }
 }
