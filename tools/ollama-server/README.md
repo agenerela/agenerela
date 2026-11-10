@@ -137,7 +137,8 @@ start.
   another container to make room without the lead's say-so.
 - **Unload before timing** (hard rule 3): `ollama_remote.py unload --all`.
 - **The first load after a pull or a restart is slow**: 54 s for `qwen3.5:2b` the first time, while
-  Docker read the file from disk, then 1.9 s cold (9 November). The framework's default timeout is
+  Docker read the file from disk, 28.5 s after the containers were recreated, and 1.9 s cold
+  otherwise (9 November). The framework's default timeout is
   30 s, so warm a model first: `ollama_remote.py warm <model>`.
 - **The model-sweep kit's "template selection" line** is in the server's log only:
   `python logs.py --since 3h | grep load`, on the server, gives each load's model, time and template,
@@ -186,8 +187,8 @@ It prints one line per event, in this machine's local time:
 ```
 11-09 16:58:23  start    GPU NVIDIA GeForce RTX 5080, 15.9 GiB total, 14.6 GiB available
 11-09 17:04:37  load     qwen3.5:2b in 35.7 s, template renderer_parser, 14.6 GiB GPU free before
-11-09 17:12:37  problem  401        0ms  POST  /api/generate  wrong or missing key  (via 192.168.1.129)
-11-09 17:36:46  request  200        1ms  GET   /api/ps  (via 192.168.1.129)
+11-09 17:12:37  problem  401       0 ms  POST  /api/generate  wrong or missing key  (via 192.168.1.129)
+11-09 17:36:46  request  200       1 ms  GET   /api/ps  (via 192.168.1.129)
 ```
 
 - **request** is every request the gateway handled: status, duration, method and path. `via

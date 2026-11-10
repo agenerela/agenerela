@@ -41,6 +41,17 @@ def fields(rest):
     return {k: v.strip('"') for k, v in FIELD.findall(rest)}
 
 
+GO_UNITS = {"ns": 1e-9, "us": 1e-6, "µs": 1e-6, "μs": 1e-6, "ms": 1e-3, "s": 1.0, "m": 60.0, "h": 3600.0}
+
+
+def go_seconds(text):
+    """A Go duration as Caddy and Ollama print it ("957.664µs", "1.9s", "1m2.5s"), in seconds."""
+    parts = re.findall(r"([\d.]+)(ns|us|µs|μs|ms|s|m|h)", text or "")
+    if not parts or "".join(n + u for n, u in parts) != text:
+        return None
+    return sum(float(n) * GO_UNITS[u] for n, u in parts)
+
+
 def short_model(name):
     return re.sub(r"^registry\.ollama\.ai/library/", "", name or "?")
 
@@ -114,8 +125,9 @@ class Reader:
                             request.get("uri", "?"), note)
 
     def request(self, status, took, method, path, note):
-        if isinstance(took, (int, float)):  # the gateway's format before it logged durations as text
-            took = f"{took * 1000:.0f}ms" if took < 1 else f"{took:.1f}s"
+        seconds = took if isinstance(took, (int, float)) else go_seconds(took)
+        if seconds is not None:
+            took = f"{seconds * 1000:.0f} ms" if seconds < 1 else f"{seconds:.1f} s"
         why = {401: "  wrong or missing key", 403: "  not exposed through the gateway",
                502: "  Ollama not answering"}.get(status, "")
         line = f"{status}  {took:>9}  {method:<5} {path}{why}{'  (' + note + ')' if note else ''}"

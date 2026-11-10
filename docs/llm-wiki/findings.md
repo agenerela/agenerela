@@ -2045,7 +2045,9 @@ in the laptop session's checkout, `.scratch/model-sweep-interim/`.
 **What.** The Docker server in `tools/ollama-server/` (Ollama 0.40.14, Linux build under WSL2,
 RTX 5080 16 GB, driver 621.14), asked through its gateway from the same machine. `qwen3.5:2b`
 straight after `ollama pull`: the first `/api/chat` took 54.3 s, the second 0.31 s. After an
-unload, two cold loads by `/api/generate` with `num_ctx` 4096 took 1.9 s each. Resident at
+unload, two cold loads by `/api/generate` with `num_ctx` 4096 took 1.9 s each. After both containers
+were recreated (same volume, same machine, no reboot), the first load took 28.5 s by Ollama's log
+and 29.2 s at the client. Resident at
 2254 MB, all of it on the GPU. One run of each, no A/B: a setup note, not a latency result.
 
 **Why it matters.** 54 s is past `OllamaSettings.TimeoutSeconds`' default of 30 s, so the first
