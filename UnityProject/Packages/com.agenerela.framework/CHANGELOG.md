@@ -10,6 +10,14 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **A key for an Ollama server that wants one**: `OllamaSettings.ApiKey`, empty by default, is
+  sent as `Authorization: Bearer <key>` on every request, decisions and lifecycle calls alike, so
+  a project can use an Ollama served from another machine behind a gateway, such as the RTX 5080's
+  in this repository's `tools/ollama-server/`. A key with a space or a control character inside is
+  refused when the provider is built. `OllamaProviderConfig.ApiKeyVariable` (**API Key Variable**)
+  names the environment variable to read it from when the provider is built, so the asset never
+  holds the key; a named variable that is not set fails then, naming it. An HTTP 401 is still
+  `Rejected`, and its message now says whether a key was sent. No message names the key.
 - **Reply checks in `EvalRunner`** (#145): every answer's statement is checked for four mechanical
   flags, `ReplyFlag.Echo` (it is a few-shot line, by `PromptSetChecks.MatchesExample`: any action's
   example or counter-example stimulus or statement, the profile's idle example and its statement,

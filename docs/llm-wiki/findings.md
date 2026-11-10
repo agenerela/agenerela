@@ -2039,3 +2039,24 @@ into its run, at the lead's request, and recorded nothing.
 different result there points at the machine, not the model. Raw data:
 `docs/run-requests/001-interim-model-sweep-5080/laptop-interim-results.json`, and the full report
 in the laptop session's checkout, `.scratch/model-sweep-interim/`.
+
+### The RTX 5080's Docker Ollama: a 54 s first load after a pull, 1.9 s after that (9 November 2026)
+
+**What.** The Docker server in `tools/ollama-server/` (Ollama 0.40.14, Linux build under WSL2,
+RTX 5080 16 GB, driver 621.14), asked through its gateway from the same machine. `qwen3.5:2b`
+straight after `ollama pull`: the first `/api/chat` took 54.3 s, the second 0.31 s. After an
+unload, two cold loads by `/api/generate` with `num_ctx` 4096 took 1.9 s each. Resident at
+2254 MB, all of it on the GPU. One run of each, no A/B: a setup note, not a latency result.
+
+**Why it matters.** 54 s is past `OllamaSettings.TimeoutSeconds`' default of 30 s, so the first
+decision after a pull or a restart can fail as `Timeout`. The first load is most likely Docker
+reading the model from its volume for the first time; that was not separated from the CUDA
+start-up, which the 1.9 s loads also include. Hence `ollama_remote.py warm <model>` before a run.
+
+**What else differs from the Ollama app.** Its log shows `OLLAMA_VULKAN:true` and
+`OLLAMA_FLASH_ATTENTION:false` as the image's defaults, and CUDA 13 libraries. Whether any of
+it moves accuracy or latency against the app on the same card is unmeasured, which is why the two
+are kept apart as separate machines (`environment.md`).
+
+**What would change this.** Timing a load with the file already in the page cache against one
+without, after a server restart.

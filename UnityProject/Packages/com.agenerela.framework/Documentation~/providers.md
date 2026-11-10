@@ -93,9 +93,21 @@ inferred from the schema and needs no separate statement. No quota, no key, no b
 
 **What was built (#88).** `new Agent(profile, new OllamaProvider(new OllamaSettings()))`
 decides against `qwen3.5:2b` at `http://127.0.0.1:11434`. `OllamaSettings` is a plain class
-with `Endpoint`, `Model`, `ContextSize` (4096), `Temperature` (0) and `TimeoutSeconds` (30);
-the provider copies it when built. An `OllamaProviderConfig` asset holds the same fields, and
-is how most games choose one: see [Provider config assets](#provider-config-assets) below.
+with `Endpoint`, `Model`, `ContextSize` (4096), `Temperature` (0), `TimeoutSeconds` (30) and
+`ApiKey` (empty); the provider copies it when built. An `OllamaProviderConfig` asset holds the
+same fields, except that it names the environment variable holding the key rather than the key,
+and is how most games choose one: see [Provider config assets](#provider-config-assets) below.
+
+**A server that wants a key.** A local Ollama has no login. One served to other machines sits
+behind a gateway that wants a key, such as the RTX 5080's in this repository's
+`tools/ollama-server/`. A non-empty `ApiKey` is sent as `Authorization: Bearer <key>` on every
+request, decisions and lifecycle calls alike, and leading or trailing spaces are trimmed. A key
+with a space or a control character inside is refused when the provider is built, since it could
+add a header of its own. No message names the key. In an `OllamaProviderConfig`, **API Key
+Variable** names an environment variable, such as `AGENERELA_OLLAMA_API_KEY`, read when the
+provider is built. A variable that is not set fails then, naming it. The Editor reads its
+environment once, when it starts, so restart it, and Unity Hub if Hub launched it, after setting
+one.
 
 Each decision is one `POST {Endpoint}/api/chat`, sending what the prototype sent wherever a
 measurement in Appendix A depends on it:
@@ -125,6 +137,7 @@ Failures throw `ProviderException`:
 | Connection refused, or no server at that address | `Unreachable`, naming the endpoint |
 | HTTP 404 with an `error` saying the model was not found, as 0.34.2 answers: `{"error":"model 'x' not found"}` | `ModelNotFound`, with the `ollama pull` command |
 | No reply within `TimeoutSeconds`, and the caller did not cancel | `Timeout` |
+| HTTP 401, a gateway wanting a key | `Rejected`, saying whether a key was sent and that `ApiKey` (or the config's API Key Variable) must hold the server's |
 | Any other 4xx, including a 404 without that `error`, which is not Ollama's chat endpoint | `Rejected`, with the status code and Ollama's `error` |
 | Any 5xx | `ServerError` |
 | A 2xx whose body is not one JSON object with a `message.content` string, or whose counts or `logprobs` are the wrong shape | `MalformedResponse` |
@@ -276,7 +289,8 @@ subclass that needs `OnValidate` overrides it and calls `base.OnValidate()`.
 
 **Never serialize an API key** (hard rule 1): a config asset is committed, and ships inside the
 build. Serialize where the key is read from, such as an environment variable's name, and read
-the key in `CreateProvider()`. Nor may a key appear in an exception message.
+the key in `CreateProvider()`, as `OllamaProviderConfig.ApiKeyVariable` does. Nor may a key
+appear in an exception message.
 
 ## The scripted provider — no model at all
 

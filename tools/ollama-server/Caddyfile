@@ -1,0 +1,38 @@
+# The gateway in front of Ollama's API. See README.md, "How it is exposed".
+#
+# Ollama has no login of its own, so this is the only door other machines get:
+#   1. every request must carry "Authorization: Bearer <AGENERELA_OLLAMA_API_KEY>";
+#   2. only the routes the framework, the run kits and ollama_remote.py use are passed
+#      through. Deleting, creating, copying or pushing a model, uploading blobs and the
+#      OpenAI-compatible /v1 routes answer 403. Those stay on the server itself, through
+#      `docker exec agenerela-ollama ollama ...`.
+# Caddy's access log redacts the Authorization header.
+
+{
+	admin off
+	auto_https off
+}
+
+:8080 {
+	log {
+		format console
+	}
+
+	@unauthorized not header Authorization "Bearer {$API_KEY}"
+	handle @unauthorized {
+		respond "Missing or wrong token." 401
+	}
+
+	@api path /api/version /api/tags /api/ps /api/show /api/chat /api/generate /api/embed /api/pull
+	handle @api {
+		reverse_proxy ollama:11434 {
+			header_up -Authorization
+			# Pass streamed replies (a pull's progress) through as they come.
+			flush_interval -1
+		}
+	}
+
+	handle {
+		respond "Not exposed through the gateway." 403
+	}
+}

@@ -111,6 +111,83 @@ namespace Agenerela.Tests
             Assert.That(settings.ContextSize, Is.EqualTo(4096));
             Assert.That(settings.Temperature, Is.EqualTo(0f), "Appendix A was greedy.");
             Assert.That(settings.TimeoutSeconds, Is.EqualTo(30f));
+            Assert.That(settings.ApiKey, Is.Empty, "A local Ollama wants no key.");
+        }
+
+        // ---- A key, for a server behind a gateway (tools/ollama-server/) ----------------------
+
+        private const string Key = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+        [Test]
+        public async Task AKeyIsSentAsABearerHeaderOnEveryRequest()
+        {
+            var handler = ScriptedHandler.Replying(Envelope(GoToTheTower));
+            var provider = Provider(handler, new OllamaSettings { ApiKey = "  " + Key + " " });
+
+            await NotCancelled(provider.RequestAsync(Request(), CancellationToken.None));
+            // A GET with no body, by the lifecycle's own path (Call), not Send's.
+            await NotCancelled(provider.ListModelsAsync(CancellationToken.None));
+
+            Assert.That(handler.Requests, Has.Count.EqualTo(2));
+            Assert.That(handler.Requests[0].Uri.AbsolutePath, Is.EqualTo("/api/chat"));
+            Assert.That(handler.Requests[1].Uri.AbsolutePath, Is.EqualTo("/api/tags"));
+            foreach (var sent in handler.Requests)
+            {
+                Assert.That(sent.Authorization, Is.EqualTo("Bearer " + Key), $"{sent.Uri}: trimmed, on every request.");
+            }
+
+            Assert.That(handler.Requests[0].Body, Does.Not.Contain(Key), "In the header only, never the body.");
+        }
+
+        [Test]
+        public async Task NoKeySendsNoAuthorizationHeader()
+        {
+            var handler = ScriptedHandler.Replying(Envelope(GoToTheTower));
+
+            await NotCancelled(Provider(handler).RequestAsync(Request(), CancellationToken.None));
+
+            Assert.That(handler.Requests[0].Authorization, Is.Null, "A local Ollama is sent nothing it did not ask for.");
+        }
+
+        [Test]
+        public async Task ARefusedKeyIsRejectedAndSaysSoWithoutNamingIt()
+        {
+            // The gateway's exact reply (tools/ollama-server/Caddyfile).
+            var handler = ScriptedHandler.Replying("Missing or wrong token.", HttpStatusCode.Unauthorized, "text/plain");
+            var provider = Provider(handler, new OllamaSettings { ApiKey = Key });
+
+            var failure = await Fails(provider.RequestAsync(Request(), CancellationToken.None));
+
+            Assert.That(failure.Kind, Is.EqualTo(ProviderErrorKind.Rejected));
+            Assert.That(failure.Message, Does.Contain("HTTP 401"));
+            Assert.That(failure.Message, Does.Contain("refused this provider's key"));
+            Assert.That(failure.Message, Does.Not.Contain(Key));
+            Assert.That(failure.Message, Does.Not.Contain(Key.Substring(0, 8)), "Not even part of it.");
+        }
+
+        [Test]
+        public async Task A401WithoutAKeySaysOneIsWanted()
+        {
+            var handler = ScriptedHandler.Replying("Missing or wrong token.", HttpStatusCode.Unauthorized, "text/plain");
+
+            var failure = await Fails(Provider(handler).RequestAsync(Request(), CancellationToken.None));
+
+            Assert.That(failure.Kind, Is.EqualTo(ProviderErrorKind.Rejected));
+            Assert.That(failure.Message, Does.Contain("wants a key"));
+            Assert.That(failure.Message, Does.Contain("OllamaSettings.ApiKey"));
+        }
+
+        [Test]
+        public void AKeyThatCouldAddAHeaderIsRefusedWithoutNamingIt()
+        {
+            foreach (string key in new[] { "abc\r\nX-Injected: 1", "two words", "tab\tinside", "nul\0" })
+            {
+                var refused = Assert.Throws<ArgumentException>(() => new OllamaProvider(new OllamaSettings { ApiKey = key }),
+                    $"Key {JsonConvert.ToString(key)}");
+
+                Assert.That(refused.Message, Does.Contain("OllamaSettings.ApiKey"));
+                Assert.That(refused.Message, Does.Not.Contain(key));
+            }
         }
 
         [Test]
@@ -817,13 +894,14 @@ namespace Agenerela.Tests
 
             protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
             {
-                // StringContent is already in memory, so this completes at once.
-                byte[] bytes = request.Content.ReadAsByteArrayAsync().Result;
+                // StringContent is already in memory, so this completes at once. A GET has none.
+                byte[] bytes = request.Content == null ? new byte[0] : request.Content.ReadAsByteArrayAsync().Result;
                 Requests.Add(new Sent
                 {
                     Method = request.Method,
                     Uri = request.RequestUri,
-                    ContentType = request.Content.Headers.ContentType?.MediaType,
+                    ContentType = request.Content?.Headers.ContentType?.MediaType,
+                    Authorization = request.Headers.Authorization?.ToString(),
                     Bytes = bytes,
                     Body = Encoding.UTF8.GetString(bytes),
                 });
@@ -867,6 +945,7 @@ namespace Agenerela.Tests
             public HttpMethod Method;
             public Uri Uri;
             public string ContentType;
+            public string Authorization;
             public byte[] Bytes;
             public string Body;
         }

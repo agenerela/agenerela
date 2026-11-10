@@ -88,6 +88,7 @@ Neither changelog nor the wiki is loaded into every session; read the one you ne
 | `tools/live-runs/` | Kits that `docs/run-requests/` points to, so any machine repeats a live run exactly: `model-sweep/` runs a list of models through `EvalRunner` |
 | `tools/ci/` | `hygiene.py`, every check CI runs, runnable on your machine and as a pre-commit hook; `release.py`, the mechanical steps of a release |
 | `tools/comfyui/` | The asset server: ComfyUI in Docker on the lead's RTX 5080 machine, making 3D models, sounds and images for the demo games, and `comfy.py`, which agents call it with |
+| `tools/ollama-server/` | Ollama in Docker on the same RTX 5080 machine, behind a gateway that wants a key, so the laptop runs Unity, the live tests and `tools/live-runs/` on that card; `ollama_remote.py` checks it |
 
 ## Working conventions
 
@@ -133,6 +134,16 @@ user's own ComfyUI, so touch only this stack's containers, image and volume. Nev
 `docker ... prune`, and never stop, remove or reconfigure another container, or restart WSL
 or Docker Desktop, without the user's say-so. Generated files are drafts until a person
 puts them in a game.
+
+**Models on the RTX 5080 from another machine** come from the Ollama server in
+[`tools/ollama-server/`](tools/ollama-server/README.md). Before using it, read
+[`tools/ollama-server/AGENT_USAGE.md`](tools/ollama-server/AGENT_USAGE.md): connecting, the
+checks, running the sweep kit and the live tests against it, and what each failure means. In
+short: `python tools/ollama-server/ollama_remote.py check`, which reads
+`AGENERELA_OLLAMA_URL` and `AGENERELA_OLLAMA_API_KEY` from `tools/ollama-server/.env`; Unity reads
+the same two from the environment. As with the asset server, never open or print `.env`, never
+put the key in a URL, a command line or a chat, and never touch the machine's other containers.
+That server runs Ollama's Linux build, so its results are never compared with another Ollama's.
 
 **Before opening a pull request:**
 - Unity console clean — no new errors or warnings

@@ -66,7 +66,47 @@ namespace Agenerela.Tests
 
             Assert.That(settings.Model, Is.EqualTo("llama3.2:3b"));
             Assert.That(settings.TimeoutSeconds, Is.EqualTo(12f));
+            Assert.That(settings.ApiKey, Is.Empty, "No variable named, no key.");
+            Assert.That(config.ApiKeyVariable, Is.Empty);
             Assert.That(config.Provider, Is.TypeOf<OllamaProvider>());
+        }
+
+        [Test]
+        public void TheKeyIsReadFromTheNamedVariableAndNeverStoredInTheAsset()
+        {
+            // Process scope only, removed in finally: nothing outside this test sees it.
+            string variable = "AGENERELA_TEST_KEY_" + Guid.NewGuid().ToString("N");
+            const string key = "fedcba9876543210fedcba9876543210";
+            Environment.SetEnvironmentVariable(variable, key);
+            try
+            {
+                var config = Make<OllamaProviderConfig>("OllamaRemote");
+                config.ApiKeyVariable = variable;
+
+                Assert.That(config.ToSettings().ApiKey, Is.EqualTo(key));
+                Assert.That(config.Provider, Is.TypeOf<OllamaProvider>());
+                string stored = JsonUtility.ToJson(config);
+                Assert.That(stored, Does.Contain(variable), "The asset holds the variable's name...");
+                Assert.That(stored, Does.Not.Contain(key), "...and never the key (hard rule 1).");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(variable, null);
+            }
+        }
+
+        [Test]
+        public void AVariableThatIsNotSetFailsWhenTheProviderIsBuiltAndNamesIt()
+        {
+            string variable = "AGENERELA_TEST_KEY_" + Guid.NewGuid().ToString("N");
+            var config = Make<OllamaProviderConfig>("OllamaRemote");
+            config.ApiKeyVariable = variable;
+
+            var failure = Assert.Throws<InvalidOperationException>(() => _ = config.Provider);
+
+            Assert.That(failure.Message, Does.Contain("'OllamaRemote'"));
+            Assert.That(failure.Message, Does.Contain(variable));
+            Assert.That(failure.Message, Does.Contain("not set"));
         }
 
         [Test]

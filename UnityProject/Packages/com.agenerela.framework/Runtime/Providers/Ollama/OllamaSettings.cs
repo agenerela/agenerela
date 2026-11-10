@@ -2,7 +2,7 @@ namespace Agenerela.Providers
 {
     /// <summary>
     /// Where <see cref="OllamaProvider"/> finds its server and how it asks: the endpoint, the
-    /// model, the context size, the temperature and the timeout. A plain class, so a provider can
+    /// model, the context size, the temperature, the timeout and any key. A plain class, so a provider can
     /// be built in code with no asset. <see cref="OllamaProviderConfig"/> holds the same fields as an
     /// asset, and builds a provider from them (#92, DR-013).
     /// </summary>
@@ -46,5 +46,17 @@ namespace Agenerela.Providers
         /// GPU, checked on Ollama 0.34.2.
         /// </summary>
         public float TimeoutSeconds = 30f;
+
+        /// <summary>
+        /// A key for a server that wants one, sent as <c>Authorization: Bearer &lt;key&gt;</c> on
+        /// every request, or empty to send none. A local Ollama wants none. The team's RTX 5080
+        /// server, behind the gateway in <c>tools/ollama-server/</c>, does.
+        /// </summary>
+        /// <remarks>
+        /// Read it from somewhere outside the project, such as an environment variable, never from
+        /// a committed file (hard rule 1). <see cref="OllamaProviderConfig"/> stores only the
+        /// variable's name. No message the provider writes contains the key.
+        /// </remarks>
+        public string ApiKey = "";
     }
 }

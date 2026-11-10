@@ -25,7 +25,10 @@ so any machine can repeat it.
 Do this once per sweep, then run step 4 once per model. Read
 [`docs/llm-wiki/measuring.md`](../../../docs/llm-wiki/measuring.md) first.
 
-**1. The Ollama server.** Start it with the settings every result so far used:
+**1. The Ollama server.** On the RTX 5080, it is the Docker server in
+[`tools/ollama-server/`](../../ollama-server/README.md), which already runs 0.40.14 with these
+settings: skip to step 2, and leave `OLLAMA_URL` unset in step 3. Anywhere else, start it with the
+settings every result so far used:
 
 - `OLLAMA_GO_TEMPLATE=1`, so no model has its keys sorted (findings, 9 November);
 - `OLLAMA_CONTEXT_LENGTH=16384` and `OLLAMA_NO_CLOUD=0`, the two the Ollama app adds.
@@ -40,7 +43,7 @@ $env:OLLAMA_GO_TEMPLATE = '1'; $env:OLLAMA_CONTEXT_LENGTH = '16384'; $env:OLLAMA
 The app's updater cannot run while it is closed, so the version holds for the whole sweep. For a
 server on another machine, read
 [`environment.md`, "Ollama on another machine"](../../../docs/llm-wiki/environment.md#ollama-on-another-machine-over-the-local-network)
-first.
+first. Results from the Docker server and from the app are never compared with each other.
 
 **2. A detached copy of the repository**, on a short path, with the entry point copied in:
 
@@ -62,7 +65,7 @@ Never commit the copied file. Remove the worktree when the sweep is done
 export SWEEP_OUT=<a folder for this sweep, such as your checkout's .scratch/model-sweep-<date>>
 export UNITY_PROJECT=C:/Unity_Projects/wt-sweep/UnityProject
 export SWEEP_SET=Evaluation/Interim/agent.json      # or Evaluation/agent.json, the curated 76
-export OLLAMA_URL=http://127.0.0.1:11434            # or http://<the server's LAN IP>:11434
+export OLLAMA_URL=http://127.0.0.1:11434            # unset for the RTX 5080's Docker server: read from tools/ollama-server/.env
 export PROBE_REQUESTS=2                             # 6 for a model whose order nobody has checked
 ```
 
@@ -75,7 +78,8 @@ bash tools/live-runs/model-sweep/sweep_one.sh qwen3.5:2b
 Then copy the model's "template selection" line from the server's log into
 `$SWEEP_OUT/template-<model>.txt`, written as `selected=renderer_parser`. In `<model>`, every `/`
 and `:` becomes `_`. That line says which chat path the model took. The script can't read it
-itself when the server is another machine.
+itself when the server is another machine. On the RTX 5080's Docker server, the line is in
+`docker logs agenerela-ollama 2>&1 | grep "template selection"`, run on that machine.
 
 **5. The summary.**
 

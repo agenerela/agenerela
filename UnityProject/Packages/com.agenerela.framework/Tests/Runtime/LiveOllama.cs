@@ -1,5 +1,6 @@
 using System;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Agenerela.Providers;
 using NUnit.Framework;
@@ -15,7 +16,8 @@ namespace Agenerela.Tests
     /// <remarks>
     /// The endpoint and model come from <c>AGENERELA_OLLAMA_URL</c> and
     /// <c>AGENERELA_OLLAMA_MODEL</c>, so a machine with a different port or model runs the same
-    /// tests unchanged. The default endpoint is <c>127.0.0.1</c>, never <c>localhost</c>, which on
+    /// tests unchanged. A server behind the gateway in <c>tools/ollama-server/</c> also needs
+    /// <c>AGENERELA_OLLAMA_API_KEY</c>, its key, which is sent and never logged. The default endpoint is <c>127.0.0.1</c>, never <c>localhost</c>, which on
     /// Windows tries IPv6 first and adds about 2 s to every request (findings, 5 October 2026).
     /// </remarks>
     internal static class LiveOllama
@@ -32,6 +34,12 @@ namespace Agenerela.Tests
 
         public static string Model => FromEnvironment("AGENERELA_OLLAMA_MODEL", "qwen3.5:2b");
 
+        /// <summary>The environment variable holding the server's key, for a config to name.</summary>
+        public const string ApiKeyVariable = "AGENERELA_OLLAMA_API_KEY";
+
+        /// <summary>The server's key, or empty for a local Ollama, which wants none.</summary>
+        public static string ApiKey => FromEnvironment(ApiKeyVariable, "");
+
         /// <summary>
         /// Forgets whether Ollama answered and whether the model was warmed. Called once per test
         /// run, because with domain reload disabled in Enter Play Mode Options these statics
@@ -46,7 +54,7 @@ namespace Agenerela.Tests
         /// <summary>An Ollama provider for <paramref name="model"/>, <see cref="Model"/> when null.</summary>
         public static OllamaProvider Provider(string model = null)
         {
-            return new OllamaProvider(new OllamaSettings { Endpoint = Endpoint, Model = model ?? Model });
+            return new OllamaProvider(new OllamaSettings { Endpoint = Endpoint, Model = model ?? Model, ApiKey = ApiKey });
         }
 
         /// <summary>
@@ -57,7 +65,15 @@ namespace Agenerela.Tests
         {
             if (reachable == null)
             {
-                reachable = Answers(Endpoint);
+                int status = Answers(Endpoint);
+                if (status == 401)
+                {
+                    // A server that answers but wants a key is there: skipping would hide the mistake.
+                    Assert.Fail($"Ollama at {Endpoint} wants a key (HTTP 401). Set {ApiKeyVariable} to the one "
+                              + "in the server's tools/ollama-server/.env.");
+                }
+
+                reachable = status >= 200 && status <= 299;
             }
 
             if (reachable == false)
@@ -130,21 +146,36 @@ namespace Agenerela.Tests
             }
         }
 
-        // Ollama's /api/version, on a worker thread so the blocking wait cannot deadlock against
-        // Unity's synchronization context.
-        private static bool Answers(string endpoint)
+        /// <summary>
+        /// An <see cref="HttpClient"/> for a test's own call to the server, carrying
+        /// <see cref="ApiKey"/> when there is one, so a server behind a gateway answers it too.
+        /// </summary>
+        public static HttpClient Client(TimeSpan timeout)
+        {
+            var client = new HttpClient { Timeout = timeout };
+            if (ApiKey.Length > 0)
+            {
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ApiKey);
+            }
+
+            return client;
+        }
+
+        // The HTTP status of Ollama's /api/version, 0 when nothing answers, on a worker thread so
+        // the blocking wait cannot deadlock against Unity's synchronization context.
+        private static int Answers(string endpoint)
         {
             try
             {
-                using (var client = new HttpClient { Timeout = TimeSpan.FromSeconds(3) })
+                using (var client = Client(TimeSpan.FromSeconds(3)))
                 {
                     var response = Task.Run(() => client.GetAsync(endpoint.TrimEnd('/') + "/api/version")).Result;
-                    return response.IsSuccessStatusCode;
+                    return (int)response.StatusCode;
                 }
             }
             catch (Exception)
             {
-                return false;
+                return 0;
             }
         }
 
