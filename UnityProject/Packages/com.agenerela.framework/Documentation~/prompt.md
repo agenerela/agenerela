@@ -242,12 +242,13 @@ A preferred target that is here is used as before, mentioned or not.
 `NPCGuard` "npc guard". The refusal of a target that is not here drops the article before `{0}`
 where the target ends its phrase (at the end, before punctuation, or before a word such as "for",
 "now" or "please"), so a move_to stimulus of "Go and stand by the {0}." gives "Go and stand by
-Atlantis." rather than "the Atlantis". Where `{0}` runs on into a longer phrase the article stays,
-"a" as "an": "Open the Atlantis gate.", "Bring an Atlantis-shaped token." Off, both read as before.
+Atlantis." rather than "the Atlantis". Where the phrase runs on past `{0}`, the article stays and a
+common noun takes the place of the proper name, "an" as "a": "The sunken city is unstaffed.",
+"Open the sunken city gate.", "Bring a sunken city-shaped token." Off, both read as before.
 
 Whichever switch is set, the refusal never names a place an offered target is called, by its id or
-by the name an example gives it: a target named "Atlantis" makes it "Avalon", and with both taken
-there is no refusal.
+by the name an example gives it: a target named "Atlantis" makes it "Avalon" ("sunken city",
+"lost city"), and with both taken there is no refusal.
 
 **A target's own name.** Either way, a target is called by its `INamedTarget.Name` when it
 implements one, as written:

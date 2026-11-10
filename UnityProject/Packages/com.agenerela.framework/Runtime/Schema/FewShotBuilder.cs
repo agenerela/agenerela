@@ -20,6 +20,11 @@ namespace Agenerela
         private const string UnknownTarget = "Atlantis";
         private const string UnknownTargetFallback = "Avalon";
 
+        // The same, as a common noun, for a spaced refusal whose {0} keeps its article because the
+        // phrase goes on past it ("The {0} is unstaffed."), where a proper name would not read.
+        private const string UnknownThing = "sunken city";
+        private const string UnknownThingFallback = "lost city";
+
         /// <summary>
         /// The example block for the actions available right now: each action's example, then its
         /// counter-example when it has one, then the idle example, then one refusal of a target
@@ -159,24 +164,54 @@ namespace Agenerela
         // One refusal of a target that is not here, worded from the first targeted action's own
         // stimulus, naming a place no offered target is called, by id or by the name an example
         // gives it; with both placeholders taken there is no refusal, rather than one contradicting
-        // an example. Spaced, the stimulus reads as English around the placeholder (FitArticle).
+        // an example.
+        //
+        // Spaced, the stimulus reads as English around the placeholder. An article that ends its
+        // phrase at {0} goes, and a proper name takes its place: "Go and stand by the {0}." gives
+        // "Go and stand by Atlantis.". Where the phrase goes on past {0}, the article stays and a
+        // common noun does: "The {0} is unstaffed." gives "The sunken city is unstaffed.", "Open the
+        // {0} gate." "Open the sunken city gate.", with "an" as "a".
         private static string RefusalExample(IReadOnlyList<ActionDefinition> available, TargetRegistry targets,
                                              string stimulusLabel, bool spaced)
         {
-            string placeholder = IsOffered(UnknownTarget, targets, spaced) ? UnknownTargetFallback : UnknownTarget;
-            if (IsOffered(placeholder, targets, spaced)) return null;
-
             foreach (ActionDefinition action in available)
             {
                 if (!action.RequiresTarget) continue;
                 if (string.IsNullOrWhiteSpace(action.ExampleStimulus)) continue;
                 if (!action.ExampleStimulus.Contains("{0}")) continue;
 
-                string stimulus = spaced ? FitArticle(action.ExampleStimulus) : action.ExampleStimulus;
+                string stimulus = action.ExampleStimulus;
+                string placeholder;
+                if (spaced)
+                {
+                    stimulus = ArticleEndingThePhrase.Replace(stimulus, "{0}");
+                    if (ArticleBeforePlaceholder.IsMatch(stimulus))
+                    {
+                        stimulus = AnBeforePlaceholder.Replace(stimulus, m => (m.Groups[1].Value == "An" ? "A" : "a") + m.Groups[2].Value + "{0}");
+                        placeholder = Unused(UnknownThing, UnknownThingFallback, targets, spaced);
+                    }
+                    else
+                    {
+                        placeholder = Unused(UnknownTarget, UnknownTargetFallback, targets, spaced);
+                    }
+                }
+                else
+                {
+                    placeholder = Unused(UnknownTarget, UnknownTargetFallback, targets, spaced);
+                }
+
+                if (placeholder == null) return null;
                 return Example(stimulusLabel, Fill(stimulus, placeholder), "none", TargetRegistry.NoTarget + " (not an available target)", null);
             }
 
             return null;
+        }
+
+        // The first of two placeholders no offered target is called; null when both are.
+        private static string Unused(string first, string second, TargetRegistry targets, bool spaced)
+        {
+            if (!IsOffered(first, targets, spaced)) return first;
+            return IsOffered(second, targets, spaced) ? null : second;
         }
 
         // Whether an offered target is called placeholder: its id ("atlantis") or the name an example
@@ -186,29 +221,23 @@ namespace Agenerela
             foreach (string id in targets.Ids)
             {
                 if (string.Equals(id, DisplayNameToId(placeholder), StringComparison.OrdinalIgnoreCase)) return true;
+                if (string.Equals(SplitId(id), placeholder, StringComparison.OrdinalIgnoreCase)) return true;
                 if (string.Equals(NameOf(id, targets, spaced), placeholder, StringComparison.OrdinalIgnoreCase)) return true;
             }
 
             return false;
         }
 
-        // The refusal's stimulus with its article fitted to a proper name. An article goes where {0}
-        // ends its noun phrase, at the end, before punctuation or before a short word that starts
-        // something else ("for", "now", "please"): "stand by the {0}." gives "stand by {0}.", "Fetch
-        // an {0} for me." "Fetch {0} for me.". One before a {0} that goes on into a longer phrase
-        // stays, as "an" for the vowel both placeholders start with: "Open the {0} gate." and "Bring
-        // an {0}-shaped token."
-        private static string FitArticle(string text)
-        {
-            text = ArticleEndingThePhrase.Replace(text, "{0}");
-            return ArticleA.Replace(text, m => (m.Groups[1].Value == "A" ? "An" : "an") + m.Groups[2].Value + "{0}");
-        }
-
+        // An article whose phrase ends at {0}: at the end, before punctuation, or before a short word
+        // that starts something else ("for", "now", "please").
         private static readonly Regex ArticleEndingThePhrase = new Regex(
             @"\b(?:the|an|a)\s+\{0\}(?=$|[.,!?;:)""'\u2019]|\s+(?:for|to|at|in|on|by|with|from|and|or|but|so|if|when|now|please|here|there|again|first|then|today|tonight|before|after)\b)",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-        private static readonly Regex ArticleA = new Regex(@"\b([Aa])(\s+)\{0\}", RegexOptions.CultureInvariant);
+        private static readonly Regex ArticleBeforePlaceholder =
+            new Regex(@"\b(?:the|an|a)\s+\{0\}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        private static readonly Regex AnBeforePlaceholder = new Regex(@"\b(An|an)(\s+)\{0\}", RegexOptions.CultureInvariant);
 
         // The first offered target the action takes that the stimulus does not mention (Living Vale
         // #20), so a game whose targets change every turn needs no list kept up to date, and the
@@ -233,14 +262,17 @@ namespace Agenerela
         // towers); or a word of four letters or more that starts it ("dock" for docks). Generous on
         // purpose: a skipped target costs only a different example, a named one shows the answer. A
         // few words any name might hold ("the", "of") never count, unless the name holds nothing
-        // else, and then all of them must be said.
+        // else, and then all of them must be said. The id's words and the name's are read apart, so
+        // one cannot hide the other's.
         private static bool Mentions(HashSet<string> stimulusWords, string id, string name)
         {
             if (stimulusWords.Count == 0) return false;
 
-            var names = Words(SplitId(id));
-            names.UnionWith(Words(name));
+            return SaysAny(stimulusWords, Words(SplitId(id))) || SaysAny(stimulusWords, Words(name));
+        }
 
+        private static bool SaysAny(HashSet<string> stimulusWords, HashSet<string> names)
+        {
             bool anyCounted = false;
             foreach (string word in names)
             {

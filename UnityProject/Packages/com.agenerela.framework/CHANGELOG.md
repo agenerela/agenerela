@@ -28,7 +28,8 @@ While the version stays `0.x`, the public API may change in any release.
   `DecideOptions.SpacedExampleNames` (and `PromptOptions.SpacedExampleNames`): a target is called by
   its id's words, "training dummy" rather than "TrainingDummy", and the refusal of a target that is
   not here drops the article before it where it ends its phrase, "Go and stand by Atlantis." rather
-  than "the Atlantis" (and "an Atlantis gate" where it does not). Either way, the refusal no longer
+  than "the Atlantis", and keeps it with a common noun where the phrase goes on ("The sunken city
+  is unstaffed."). Either way, the refusal no longer
   names a place an offered target is called, by id or by its `INamedTarget` name, and is left out
   when both of its placeholders are.
   `PromptOptions.Stimulus`, which `Agent` sets, is what the fallback reads. **`INamedTarget`**: a

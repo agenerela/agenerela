@@ -400,6 +400,20 @@ namespace Agenerela.Tests
             Assert.That(First("Attack the guard.", ("NPCGuard", new object())), Does.EndWith("target: well"),
                 "NPCGuard's words are 'npc' and 'guard'.");
             Assert.That(First("Hello.", ("NPCGuard", new object())), Does.StartWith("Player: \"Go and stand by the npc guard.\""));
+
+            string Glued(string stimulus, string id, object target)
+            {
+                var targets = new TargetRegistry();
+                targets.Register(id, target);
+                targets.Register("well", new object());
+                return FewShotBuilder.Build(actions, targets, new PromptOptions { ExampleTargetFallback = true, Stimulus = stimulus })
+                    .Split('\n')[1];
+            }
+
+            Assert.That(Glued("Look to the end.", "to_the", new object()), Does.EndWith("target: well"),
+                "Spaced names off: the glued 'ToThe' does not hide the id's little words.");
+            Assert.That(Glued("Fetch From.", "x9", new Named("From")), Does.EndWith("target: well"),
+                "Nor does the id 'x9' hide a name of one little word.");
         }
 
         [Test]
@@ -465,11 +479,19 @@ namespace Agenerela.Tests
             Assert.That(Refusal("Fetch an {0} for me."), Does.StartWith("Player: \"Fetch Atlantis for me.\""));
             Assert.That(Refusal("Take {0} home."), Does.StartWith("Player: \"Take Atlantis home.\""), "Nothing to drop is left alone.");
             Assert.That(Refusal("Bathe {0}."), Does.StartWith("Player: \"Bathe Atlantis.\""), "Only a whole-word article goes.");
-            Assert.That(Refusal("Open the {0} gate."), Does.StartWith("Player: \"Open the Atlantis gate.\""),
-                "A {0} that goes on into a longer phrase keeps its article.");
-            Assert.That(Refusal("Bring a {0}-shaped token."), Does.StartWith("Player: \"Bring an Atlantis-shaped token.\""),
-                "...as 'an', for the vowel.");
             Assert.That(Refusal("Go to the {0} now."), Does.StartWith("Player: \"Go to Atlantis now.\""));
+            Assert.That(Refusal("Open the {0} gate."), Does.StartWith("Player: \"Open the sunken city gate.\""),
+                "Where the phrase goes on past {0}, the article stays and a common noun takes the place.");
+            Assert.That(Refusal("The {0} is unstaffed."), Does.StartWith("Player: \"The sunken city is unstaffed.\""));
+            Assert.That(Refusal("Move to the {0} immediately."), Does.StartWith("Player: \"Move to the sunken city immediately.\""));
+            Assert.That(Refusal("Bring a {0}-shaped token."), Does.StartWith("Player: \"Bring a sunken city-shaped token.\""));
+            Assert.That(Refusal("Fetch an {0} quickly."), Does.StartWith("Player: \"Fetch a sunken city quickly.\""), "'an' becomes 'a'.");
+
+            var taken = new TargetRegistry();
+            taken.Register("sunken_city", new object());
+            string withOne = FewShotBuilder.Build(new List<ActionDefinition> { Action("ask", "The {0} is unstaffed.", true) }, taken,
+                new PromptOptions { SpacedExampleNames = true }).Split('\n').Last();
+            Assert.That(withOne, Does.StartWith("Player: \"The lost city is unstaffed.\""), "A target called sunken city is offered.");
         }
 
         private sealed class Named : INamedTarget
