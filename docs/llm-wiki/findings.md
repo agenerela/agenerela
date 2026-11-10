@@ -2530,7 +2530,7 @@ and the full request as sent (rendered through `Agent.Preview`). One cause per m
 | Attacked the wolf the target list says is about, with none in the scene | 2 | "A brawl started outside the shelter." → `attack_target wolf` |
 | Right answer, stopped by the grounding guard (0.74 against 0.8) | 1 | "A child fell off the railing." → `move_to bridge`, rewritten to `none` |
 
-26 of the 39 are situations, 13 events. 11 are prompts whose own note says the target is named only
+25 of the 39 are situations, 14 events. 11 are prompts whose own note says the target is named only
 in the observations (25 such prompts in the set).
 
 **How much of the gap is the labels.** 4 of 130 labels are arguable: twice the model's answer has the
