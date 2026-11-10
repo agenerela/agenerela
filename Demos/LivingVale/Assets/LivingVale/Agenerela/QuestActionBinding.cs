@@ -21,8 +21,12 @@ namespace LivingVale.Agenerela
     /// </remarks>
     public sealed class QuestActionBinding
     {
-        /// <summary>Rewrites an <c>offer_quest</c> naming a trade target to <c>none</c>: one target list serves every action.</summary>
-        public const string PairGuardName = "QuestPairGuard";
+        /// <summary>
+        /// The target category of the quests an NPC can offer, which <c>offer_quest</c> takes (#208):
+        /// the framework's <c>TargetCategoryGuard</c> rewrites an <c>offer_quest</c> naming a trade or
+        /// route target to <c>none</c>.
+        /// </summary>
+        public const string QuestCategory = "quest";
 
         private readonly string npcId;
         private readonly NpcActionExecutor executor;
@@ -37,6 +41,7 @@ namespace LivingVale.Agenerela
                 Id = GameActions.OfferQuest,
                 Description = "Ask the traveler to take on your task; they accept or decline on a card.",
                 RequiresTarget = true,
+                TargetCategories = new[] { QuestCategory },
                 CounterExampleStimulus = CounterExample
             };
         }
@@ -57,7 +62,6 @@ namespace LivingVale.Agenerela
             var binding = new QuestActionBinding(npcId, executor);
             agent.Actions.Register(binding.offer, new Handler(binding));
             agent.TargetSources.Add(new Targets(binding));
-            agent.Guards.Add(new DelegateGuard(PairGuardName, binding.CheckPair));
             return binding;
         }
 
@@ -169,19 +173,6 @@ namespace LivingVale.Agenerela
             return false;
         }
 
-        private GuardVerdict CheckPair(GuardInput input)
-        {
-            var decision = input.Decision;
-            if (decision == null || decision.ActionId != GameActions.OfferQuest)
-            {
-                return GuardVerdict.Pass;
-            }
-
-            return Offers(decision.TargetId)
-                ? GuardVerdict.Pass
-                : GuardVerdict.RewriteToNone($"{decision.TargetId} is not a target of {decision.ActionId}.");
-        }
-
         private sealed class Handler : IActionHandlerWithResult
         {
             private readonly QuestActionBinding binding;
@@ -214,7 +205,7 @@ namespace LivingVale.Agenerela
                 {
                     if (!into.Contains(target.Id))
                     {
-                        into.Register(target.Id, target);
+                        into.Register(target.Id, target, QuestCategory);
                     }
                 }
             }

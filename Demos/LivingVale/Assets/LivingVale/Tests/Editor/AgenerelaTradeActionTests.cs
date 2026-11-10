@@ -127,7 +127,7 @@ namespace LivingVale.Tests
 
             Assert.AreEqual(ActionRegistry.None, reply.Decision.ActionId);
             Assert.AreEqual(AgenerelaNpcDecisionDriver.RefusalLine, reply.Decision.Statement);
-            CollectionAssert.Contains(((DecisionResult)reply.DriverState).Telemetry.GuardsFired, TradeActionBinding.PairGuardName);
+            CollectionAssert.Contains(((DecisionResult)reply.DriverState).Telemetry.GuardsFired, nameof(TargetCategoryGuard));
             Assert.IsTrue(driver.Execute(turn, reply), "A contained refusal executes as none.");
             Assert.IsNull(trade.ActiveQuote);
         }

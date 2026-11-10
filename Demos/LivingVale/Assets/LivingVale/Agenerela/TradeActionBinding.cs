@@ -13,7 +13,7 @@ namespace LivingVale.Agenerela
     /// <list type="bullet">
     /// <item><description>Availability: each action's handler is available only while the executor lists it, so an action with nothing to offer is absent from the schema.</description></item>
     /// <item><description>Targets: a target source registers the listed target IDs on each decision, and again in <see cref="Agent.Execute"/>, so a target that went stale is refused there.</description></item>
-    /// <item><description>Pairs: one target list serves both actions, so a guard rewrites a quote whose target belongs to the other action to <c>none</c>.</description></item>
+    /// <item><description>Pairs: stock entries and the traveler's sale bundles are registered in their own target categories, which each action declares (#208), so the framework's <c>TargetCategoryGuard</c> rewrites a quote naming the other action's target to <c>none</c>.</description></item>
     /// <item><description>Execution: the handlers call the same <see cref="NpcActionExecutor.Execute"/> the scripted driver does, with the turn's conversation generation, so both drivers share one path.</description></item>
     /// </list>
     /// </summary>
@@ -24,7 +24,11 @@ namespace LivingVale.Agenerela
     /// </remarks>
     public sealed class TradeActionBinding
     {
-        public const string PairGuardName = "TradePairGuard";
+        /// <summary>The target category of this NPC's stock entries, which <c>quote_purchase</c> takes.</summary>
+        public const string StockCategory = "stock";
+
+        /// <summary>The target category of the traveler's sale bundles, which <c>quote_sale</c> takes.</summary>
+        public const string PackCategory = "pack";
 
         private readonly string npcId;
         private readonly NpcActionExecutor executor;
@@ -40,6 +44,7 @@ namespace LivingVale.Agenerela
                 Id = GameActions.QuotePurchase,
                 Description = "Offer the traveler an exact price for one of your stock entries.",
                 RequiresTarget = true,
+                TargetCategories = new[] { StockCategory },
                 CounterExampleStimulus = PurchaseCounterExample
             };
             sale = new ActionDefinition
@@ -47,11 +52,12 @@ namespace LivingVale.Agenerela
                 Id = GameActions.QuoteSale,
                 Description = "Offer to buy something the traveler carries, at an exact price.",
                 RequiresTarget = true,
+                TargetCategories = new[] { PackCategory },
                 CounterExampleStimulus = SaleCounterExample
             };
         }
 
-        /// <summary>Binds both actions, the target source and the pair guard to <paramref name="agent"/>.</summary>
+        /// <summary>Binds both actions and the target source to <paramref name="agent"/>.</summary>
         public static TradeActionBinding Bind(Agent agent, string npcId, NpcActionExecutor executor)
         {
             if (agent == null)
@@ -68,7 +74,6 @@ namespace LivingVale.Agenerela
             agent.Actions.Register(binding.purchase, new Handler(binding, GameActions.QuotePurchase));
             agent.Actions.Register(binding.sale, new Handler(binding, GameActions.QuoteSale));
             agent.TargetSources.Add(new Targets(binding));
-            agent.Guards.Add(new DelegateGuard(PairGuardName, binding.CheckPair));
             return binding;
         }
 
@@ -210,19 +215,6 @@ namespace LivingVale.Agenerela
             return false;
         }
 
-        private GuardVerdict CheckPair(GuardInput input)
-        {
-            var decision = input.Decision;
-            if (decision == null || (decision.ActionId != GameActions.QuotePurchase && decision.ActionId != GameActions.QuoteSale))
-            {
-                return GuardVerdict.Pass;
-            }
-
-            return Offers(decision.ActionId, decision.TargetId)
-                ? GuardVerdict.Pass
-                : GuardVerdict.RewriteToNone($"{decision.TargetId} is not a target of {decision.ActionId}.");
-        }
-
         private sealed class Handler : IActionHandlerWithResult
         {
             private readonly TradeActionBinding binding;
@@ -252,11 +244,12 @@ namespace LivingVale.Agenerela
             {
                 foreach (var option in binding.Options())
                 {
+                    string category = option.ActionId == GameActions.QuotePurchase ? StockCategory : PackCategory;
                     foreach (var target in option.Targets)
                     {
                         if (!into.Contains(target.Id))
                         {
-                            into.Register(target.Id, target);
+                            into.Register(target.Id, target, category);
                         }
                     }
                 }

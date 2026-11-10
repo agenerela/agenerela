@@ -39,6 +39,19 @@ namespace LivingVale.Agenerela
             [GameActions.GrantAccess] = "Grant the traveler an access they have earned."
         };
 
+        /// <summary>
+        /// The target category each route action takes (#208), one per action: a fact to tell, a deal,
+        /// a hand-over, an access. The framework's <c>TargetCategoryGuard</c> rewrites a pair across
+        /// them, or onto a trade or quest target, to <c>none</c>.
+        /// </summary>
+        public static readonly IReadOnlyDictionary<string, string> Categories = new Dictionary<string, string>
+        {
+            [GameActions.ShareInformation] = "fact",
+            [GameActions.OfferExchange] = "deal",
+            [GameActions.ResolveDelivery] = "handover",
+            [GameActions.GrantAccess] = "access"
+        };
+
         private static readonly Dictionary<string, string> Examples = new Dictionary<string, string>
         {
             [GameActions.ShareInformation] = "Did you see what happened on the road?",
@@ -69,7 +82,8 @@ namespace LivingVale.Agenerela
             {
                 definitions[id] = new ActionDefinition
                 {
-                    Id = id, Description = Descriptions[id], RequiresTarget = true, CounterExampleStimulus = CounterExamples[id]
+                    Id = id, Description = Descriptions[id], RequiresTarget = true, CounterExampleStimulus = CounterExamples[id],
+                    TargetCategories = new[] { Categories[id] }
                 };
             }
         }
@@ -310,7 +324,7 @@ namespace LivingVale.Agenerela
                     {
                         if (!into.Contains(target.Id))
                         {
-                            into.Register(target.Id, target);
+                            into.Register(target.Id, target, Categories[option.ActionId]);
                         }
                     }
                 }
