@@ -80,7 +80,11 @@ namespace LivingVale.Agenerela
                 definitions[id] = new ActionDefinition
                 {
                     Id = id, Description = Descriptions[id], RequiresTarget = true, CounterExampleStimulus = CounterExamples[id],
-                    TargetCategories = new[] { Categories[id] }
+                    TargetCategories = new[] { Categories[id] },
+
+                    // Fixed: the framework names the first target of the action's category offered
+                    // this turn (ExampleTargetFallback, #234), and drops the example with the action.
+                    ExampleStimulus = Examples[id]
                 };
             }
         }
@@ -227,25 +231,6 @@ namespace LivingVale.Agenerela
             }
 
             return lines;
-        }
-
-        /// <summary>Points each action's few-shot example at a target that exists now, or clears it.</summary>
-        public void RefreshExamples(IReadOnlyList<GameActionOption> options)
-        {
-            foreach (var definition in definitions.Values)
-            {
-                definition.ExampleStimulus = null;
-                definition.PreferredExampleTargets = null;
-            }
-
-            foreach (var option in options)
-            {
-                if (option.Targets.Count > 0 && definitions.TryGetValue(option.ActionId, out var definition))
-                {
-                    definition.ExampleStimulus = Examples[option.ActionId];
-                    definition.PreferredExampleTargets = new[] { option.Targets[0].Id };
-                }
-            }
         }
 
         private sealed class Targets : ITargetSource

@@ -42,6 +42,10 @@ namespace LivingVale.Agenerela
                 Description = "Ask the traveler to take on your task; they accept or decline on a card.",
                 RequiresTarget = true,
                 TargetCategories = new[] { QuestCategory },
+
+                // A fixed line: the framework names the first quest offered this turn as its target
+                // (ExampleTargetFallback, #234), and leaves the example out with the action.
+                ExampleStimulus = Example,
                 CounterExampleStimulus = CounterExample
             };
         }
@@ -79,6 +83,9 @@ namespace LivingVale.Agenerela
 
             return null;
         }
+
+        /// <summary>The action's few-shot example.</summary>
+        public const string Example = "Is there anything I can do for you?";
 
         /// <summary>A line near the quest's subject that asks for nothing, shown answered with <c>none</c> when counter-examples are on (#193).</summary>
         public const string CounterExample = "Your patients look like they are in good hands.";
@@ -133,20 +140,6 @@ namespace LivingVale.Agenerela
             }
 
             return lines;
-        }
-
-        /// <summary>Points the few-shot example at the real offer id, or clears it when nothing can be offered.</summary>
-        public void RefreshExample(GameActionOption option)
-        {
-            if (option == null || option.Targets.Count == 0)
-            {
-                offer.ExampleStimulus = null;
-                offer.PreferredExampleTargets = null;
-                return;
-            }
-
-            offer.ExampleStimulus = "Is there anything I can do for you?";
-            offer.PreferredExampleTargets = new[] { option.Targets[0].Id };
         }
 
         private sealed class Targets : ITargetSource

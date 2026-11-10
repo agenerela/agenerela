@@ -19,8 +19,10 @@ namespace LivingVale.Agenerela
     /// </summary>
     /// <remarks>
     /// A local model never reads the schema (AGENTS.md). The framework lists the actions and their
-    /// described targets in the prompt (#193), <see cref="RuleLines"/> says when to choose them, and <see cref="RefreshExamples"/> gives each
-    /// available action a one-line example on a real target, which the few-shot block shows.
+    /// described targets in the prompt (#193), and <see cref="RuleLines"/> says when to choose them.
+    /// Each action has a fixed example, <c>"I'll take {0}, please."</c>, whose target the framework
+    /// picks each turn from those its category offers (<c>ExampleTargetFallback</c>, #234) and names
+    /// by the target's own words (<see cref="INamedTarget"/>), so it always points at a real target.
     /// </remarks>
     public sealed class TradeActionBinding
     {
@@ -45,6 +47,7 @@ namespace LivingVale.Agenerela
                 Description = "Offer the traveler an exact price for one of your stock entries.",
                 RequiresTarget = true,
                 TargetCategories = new[] { StockCategory },
+                ExampleStimulus = PurchaseExample,
                 CounterExampleStimulus = PurchaseCounterExample
             };
             sale = new ActionDefinition
@@ -53,6 +56,7 @@ namespace LivingVale.Agenerela
                 Description = "Offer to buy something the traveler carries, at an exact price.",
                 RequiresTarget = true,
                 TargetCategories = new[] { PackCategory },
+                ExampleStimulus = SaleExample,
                 CounterExampleStimulus = SaleCounterExample
             };
         }
@@ -131,6 +135,13 @@ namespace LivingVale.Agenerela
             "For greetings, questions, rumours and small talk, choose none and just answer. " +
             "Nothing changes hands until the traveler confirms your offer.";
 
+        /// <summary>
+        /// Each action's few-shot example. The framework fills <c>{0}</c> with the first target of the
+        /// action's category offered this turn, by its <see cref="INamedTarget"/> name ("healing potion ×1").
+        /// </summary>
+        public const string PurchaseExample = "I'll take {0}, please.";
+        public const string SaleExample = "Would you buy my {0}?";
+
         /// <summary>Lines that mention trade and ask for nothing, shown answered with <c>none</c> when counter-examples are on (#193).</summary>
         public const string PurchaseCounterExample = "Your stall looks well stocked today.";
         public const string SaleCounterExample = "Iron and pelts must be hard to come by these days.";
@@ -150,44 +161,6 @@ namespace LivingVale.Agenerela
 
             return new List<string> { string.IsNullOrWhiteSpace(rule) ? DefaultRule : rule };
         }
-
-        /// <summary>
-        /// Points each action's few-shot example at its first target now, so the example the
-        /// framework shows names a real id. Only an action with targets is offered, so only its
-        /// example appears.
-        /// </summary>
-        public void RefreshExamples(IReadOnlyList<GameActionOption> options)
-        {
-            purchase.ExampleStimulus = null;
-            purchase.PreferredExampleTargets = null;
-            sale.ExampleStimulus = null;
-            sale.PreferredExampleTargets = null;
-
-            foreach (var option in options ?? Array.Empty<GameActionOption>())
-            {
-                if (option.Targets.Count == 0)
-                {
-                    continue;
-                }
-
-                var first = option.Targets[0];
-                if (option.ActionId == GameActions.QuotePurchase)
-                {
-                    purchase.ExampleStimulus = $"I'll take {Lower(first.Name)}, please.";
-                    purchase.PreferredExampleTargets = new[] { first.Id };
-                }
-                else if (option.ActionId == GameActions.QuoteSale)
-                {
-                    sale.ExampleStimulus = $"Would you buy my {Lower(StripOwner(first.Name))}?";
-                    sale.PreferredExampleTargets = new[] { first.Id };
-                }
-            }
-        }
-
-        private static string Lower(string text) => string.IsNullOrEmpty(text) ? "" : char.ToLowerInvariant(text[0]) + text.Substring(1);
-
-        private static string StripOwner(string name) =>
-            name != null && name.StartsWith("Player's ", StringComparison.Ordinal) ? name.Substring("Player's ".Length) : name;
 
         private sealed class Targets : ITargetSource
         {

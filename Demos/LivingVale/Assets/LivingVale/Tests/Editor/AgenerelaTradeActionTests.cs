@@ -254,6 +254,21 @@ namespace LivingVale.Tests
         }
 
         [Test]
+        public async Task EachExampleNamesAnOfferedTargetInItsOwnWordsAndNeverTheOneAskedFor()
+        {
+            GivePelt(1);
+
+            var request = ((DecisionResult)(await Decide(Turn("Hello."))).DriverState).Request;
+            StringAssert.Contains("I'll take healing potion ×1, please.", request.FewShotBlock, "The fixed example, filled with the first stock entry's own name (#234).");
+            StringAssert.Contains("target: " + Potion, request.FewShotBlock);
+            StringAssert.Contains("Would you buy my wolf pelt ×1?", request.FewShotBlock, "The sale example names a pack item, never a stock entry.");
+
+            request = ((DecisionResult)(await Decide(Turn("Do you have a healing potion?"))).DriverState).Request;
+            StringAssert.DoesNotContain("I'll take healing potion", request.FewShotBlock, "An example never shows the answer to the line being asked.");
+            StringAssert.Contains("I'll take bread ×1, please.", request.FewShotBlock);
+        }
+
+        [Test]
         public async Task OnlyExecutedDecisionsAreRemembered()
         {
             provider.Reply = FakeLlmProvider.Json(ActionRegistry.None, "no_target", "A line the player never saw.");

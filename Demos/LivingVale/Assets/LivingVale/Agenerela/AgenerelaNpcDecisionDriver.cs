@@ -278,7 +278,6 @@ namespace LivingVale.Agenerela
             if (trade.TryGetValue(turn.Npc.Id, out var binding))
             {
                 var options = binding.Options();
-                binding.RefreshExamples(options);
                 lines.AddRange(TradeActionBinding.RuleLines(options, TradeRule));
                 lastReceipts.TryGetValue(turn.Npc.Id, out var receipt);
                 lines.AddRange(binding.StatusLines(receipt));
@@ -287,7 +286,6 @@ namespace LivingVale.Agenerela
             if (questBindings.TryGetValue(turn.Npc.Id, out var quest))
             {
                 var option = quest.Option();
-                quest.RefreshExample(option);
                 lines.AddRange(QuestActionBinding.RuleLines(option));
                 lines.AddRange(quest.StatusLines());
             }
@@ -295,7 +293,6 @@ namespace LivingVale.Agenerela
             if (routeBindings.TryGetValue(turn.Npc.Id, out var route))
             {
                 var routeOptions = route.Options();
-                route.RefreshExamples(routeOptions);
                 lines.AddRange(RouteActionBinding.RuleLines(routeOptions));
                 lines.AddRange(route.StatusLines());
             }
@@ -348,6 +345,10 @@ namespace LivingVale.Agenerela
                 Priority = DecisionPriority.PlayerFacing,
                 ListActionsAndTargets = true,
                 CounterExamples = true,
+
+                // Every action declares its target category, so an example with no preferred target
+                // names the first offered target its action takes, never one the line mentions (#234).
+                ExampleTargetFallback = true,
 
                 // Which conversation the decision belongs to (DR-018): the handlers read its
                 // generation, so the executor refuses a reply that outlived its conversation.

@@ -32,19 +32,28 @@ namespace LivingVale.Game
         public const string GrantAccess = "grant_access";
     }
 
-    /// <summary>A target as a driver would show it to a model: stable ID, short name, one-line description.</summary>
-    public sealed class GameTargetOption : global::Agenerela.IDescribedTarget
+    /// <summary>
+    /// A target as a driver would show it to a model: stable ID, short name, one-line description,
+    /// and the words a few-shot example calls it by (<see cref="global::Agenerela.INamedTarget"/>, #234).
+    /// </summary>
+    public sealed class GameTargetOption : global::Agenerela.IDescribedTarget, global::Agenerela.INamedTarget
     {
         public string Id { get; }
         public string Name { get; }
         public string Description { get; }
 
-        public GameTargetOption(string id, string name, string description)
+        /// <summary>What a player would call it inside a sentence: "healing potion ×1", "wolf pelt ×1". Defaults to <see cref="Name"/>.</summary>
+        public string ExampleName { get; }
+
+        public GameTargetOption(string id, string name, string description, string exampleName = null)
         {
             Id = id;
             Name = name;
             Description = description ?? "";
+            ExampleName = string.IsNullOrWhiteSpace(exampleName) ? name : exampleName;
         }
+
+        string global::Agenerela.INamedTarget.Name => ExampleName;
 
         public override string ToString() => Id;
     }
@@ -168,7 +177,8 @@ namespace LivingVale.Game
             {
                 var item = catalog.Get(entry.ItemId);
                 purchase.Add(new GameTargetOption(entry.Id, $"{item.DisplayName} ×{entry.BundleSize}",
-                    $"Buy {item.DisplayName.ToLowerInvariant()} ×{entry.BundleSize} for {entry.BundlePrice} gold ({entry.Remaining} in stock)"));
+                    $"Buy {item.DisplayName.ToLowerInvariant()} ×{entry.BundleSize} for {entry.BundlePrice} gold ({entry.Remaining} in stock)",
+                    $"{LowerFirst(item.DisplayName)} ×{entry.BundleSize}"));
             }
 
             if (purchase.Count > 0)
@@ -182,7 +192,8 @@ namespace LivingVale.Game
             {
                 var item = catalog.Get(bundle.ItemId);
                 sale.Add(new GameTargetOption(bundle.Id, $"Player's {item.DisplayName.ToLowerInvariant()} ×{bundle.BundleSize}",
-                    $"Buy the player's {item.DisplayName.ToLowerInvariant()} ×{bundle.BundleSize} for {bundle.BundlePrice} gold"));
+                    $"Buy the player's {item.DisplayName.ToLowerInvariant()} ×{bundle.BundleSize} for {bundle.BundlePrice} gold",
+                    $"{item.DisplayName.ToLowerInvariant()} ×{bundle.BundleSize}"));
             }
 
             if (sale.Count > 0)
@@ -259,6 +270,8 @@ namespace LivingVale.Game
                     return new ActionOutcome(false, actionId, TradeRejection.WrongTarget, null);
             }
         }
+
+        private static string LowerFirst(string text) => string.IsNullOrEmpty(text) ? "" : char.ToLowerInvariant(text[0]) + text.Substring(1);
 
         private void AddQuestOffers(string npcId, List<GameActionOption> result)
         {
