@@ -2503,5 +2503,5 @@ which name uncategorised fallback targets in place of the hand-picked ones, 317 
 
 **What would change this.** A set whose targets carry categories, to measure the fallback where it
 is meant to be used; #147's curated prompts. Raw data: the four reports, the rendered blocks
-(`lv20-render-*.txt`), the entry point (`Lv20AbRun.cs.txt`) and the logs, in this work's checkout,
+(`lv20-render-*.txt`), the entry point (`Lv20AbRun.cs.txt`) and the test results, in the lead's checkout,
 `.scratch/190-lv20/`.
