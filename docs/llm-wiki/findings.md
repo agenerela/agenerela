@@ -2823,3 +2823,42 @@ offer in 52 non-trade lines per model.
 **What would change it.** A larger, labelled set of the game's lines; the fallback's mention check
 measured on targeted actions with categories (`docs/live-runs.md`, waiting), where a line naming the
 target it wants is the normal case. Raw rows: the lead's checkout, `.scratch/lv-adopt-190/ab/` (not in git).
+
+### GreyBoxVillage on the laptop: `qwen3.5:4b` decides in 1.18 s beside the running game, the 2B in 0.87 s, so the game stays on the 2B (10 November 2026)
+
+The lab's question for the game (lab decision 3, 10 November): switch `VillageOllama.asset` to
+`qwen3.5:4b` only if its median decision beside the running game is under about 1 s, with no
+timeouts. Measured with the new scenario bench (L2, `Demos/GreyBoxVillage/Assets/GreyBoxVillage/Lab/`).
+**A latency measurement, not an accuracy claim.**
+
+**Setup.** RTX 4060 Laptop (8 GB), on mains power, the laptop's Ollama app 0.40.14 at
+`127.0.0.1`, nothing else resident (the bench refuses to start otherwise, unloads between arms and
+warms each model with two throwaway decisions first). GreyBoxVillage in Play mode in Unity batch
+mode with graphics, so the game renders on the same card, at time scale 1. All 80 bench scenarios,
+88 decisions per arm, `baseline` (the game, `qwen3.5:2b` Q8_0) then `4b` (`qwen3.5:4b` Q4_K_M),
+sequential, `num_ctx` 4096, temperature 0, every request about 733 tokens in and 36 out. Other
+sessions' Unity batch runs, one or two, were on the CPU at the time (`-nographics`, so not on the card).
+
+| Model | Decisions | p50 | p95 | Slowest | Timeouts | In VRAM |
+|---|---:|---:|---:|---:|---:|---|
+| `qwen3.5:2b` | 88 | 0.87 s | 1.13 s | 1.29 s | 0 | 2255 of 2255 MB |
+| `qwen3.5:4b` | 88 | 1.18 s | 1.49 s | 2.07 s | 0 | 2993 of 2993 MB |
+
+A first run on 24 of the scenarios gave the same picture (0.83 s and 1.11 s). The 4B's median is
+over the line, so the game stays on the 2B; the framework tech lead takes the numbers to the lead.
+The whole run took 230 s for 176 asked turns, about 2,750 turns an hour with resets, setups and the
+one model switch.
+
+**Accuracy, as a dry run only.** 58/80 exact for the 2B against 62/80 for the 4B, +5 points
+against an 8-point floor, p = 0.45: within noise, one sequential run, so no result (hard rule 2).
+
+**F1 with a request at Ollama, through the game.** The bench asked Bram a line on the 4B and pressed
+F1 0.25 s later. The call ended 0.01 s after F1, the next request went straight through (queued
+0.00 s, 1.02 s against the arm's 1.11 s median), and no late answer reached anyone: the decision
+feed raised nothing for the dropped request. It agrees with the framework's own check of
+9 November, now through `AgentMind`'s reset on `AgentBehaviour.ResetAgent`.
+
+**What would change it.** A faster quantisation of the 4B, a smaller context, or a request under
+about 600 tokens; or a lead's choice that 1.2 s is acceptable for the showcase. Interactive play,
+where the game renders at a full frame rate, may be slower than batch mode. Reports:
+`.scratch/gbv-lab-l2/runs/laptop-timing-80/` and `runs/laptop-timing/` in the session's worktree.
