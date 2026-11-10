@@ -42,7 +42,9 @@ namespace Agenerela
             for (int i = 0; i < fields.Count; i++)
             {
                 var field = fields[i];
+                AppendRule(grammar, "field-" + i, GbnfTerminal(JsonQuote(field.Name)) + " ws " + GbnfTerminal(":") + " ws value-" + i + " ws");
             }
+
         }
     }    
 }
