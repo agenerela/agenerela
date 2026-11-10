@@ -19,6 +19,21 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **How a few-shot example names its target** (#190, Living Vale #20). Two per-call switches, both
+  off, so the block every agent sends is unchanged:
+  `DecideOptions.ExampleTargetFallback` (and `PromptOptions.ExampleTargetFallback`): an example, or
+  a counter-example with `{0}`, whose action has no registered `PreferredExampleTargets` names the
+  first offered target the action takes (`ActionDefinition.AcceptsCategory`) instead of being left
+  out, skipping any target the stimulus mentions, so the example never shows the answer.
+  `DecideOptions.SpacedExampleNames` (and `PromptOptions.SpacedExampleNames`): a target is called by
+  its id's words, "training dummy" rather than "TrainingDummy", and the refusal of a target that is
+  not here drops the article before it, "Go and stand by Atlantis." rather than "the Atlantis".
+  `PromptOptions.Stimulus`, which `Agent` sets, is what the fallback reads. **`INamedTarget`**: a
+  target object implements its `Name` ("healing potion") to be called by it wherever an example
+  writes `{0}`; no target has one until a game writes one. `EvalArmConditions` records
+  `exampleTargetFallback` and `spacedExampleNames`. On the interim set (findings, 9 November), spaced
+  names were within noise of glued on `qwen3.5:4b` and `qwen3.5:2b`; the fallback beat leaving the
+  examples out by 15 to 19 points but, with no target categories, cost impossible requests about 30.
 - **Standing knowledge and statement rules on an identity** (#190, Living Vale #14):
   `AgentIdentity.Knowledge`, a list of lines, and `AgentIdentity.StatementRules`, one string, both
   serialized, so an `AgentProfile` carries them and a code-built agent gets them through the

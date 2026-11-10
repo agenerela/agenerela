@@ -291,6 +291,146 @@ namespace Agenerela.Tests
             }), Is.EqualTo(before), "Off leaves every statement out, byte for byte.");
         }
 
+        // ---- The example's target (#190, Living Vale #20) -----------------------------------------
+
+        [Test]
+        public void WithTheFallbackAnExampleNamesTheFirstTargetItsActionTakes()
+        {
+            var targets = new TargetRegistry();
+            targets.Register("north_tower", new object(), "place");
+            targets.Register("stock_bread_one", new Named("loaf of bread"), "stock");
+            targets.Register("stock_potion_one", new Named("healing potion"), "stock");
+            var buy = Countered(Action("quote_purchase", "How much for the {0}?", true), "That {0} smells good.");
+            buy.TargetCategories = new[] { "stock" };
+            var stale = Action("move_to", "Proceed to the {0}.", true, "old_mill");   // not registered
+            var actions = new List<ActionDefinition> { buy, stale };
+
+            string off = FewShotBuilder.Build(actions, targets);
+            string on = FewShotBuilder.Build(actions, targets, new PromptOptions { ExampleTargetFallback = true });
+
+            Assert.That(off, Does.Not.Contain("quote_purchase").And.Not.Contain("move_to"),
+                "Off, the default: no registered preferred target leaves the example out, as before.");
+            Assert.That(on.Split('\n'), Is.SupersetOf(new[]
+            {
+                "Player: \"How much for the loaf of bread?\" -> action: quote_purchase, target: stock_bread_one",
+                "Player: \"That loaf of bread smells good.\" -> action: none, target: no_target",
+                "Player: \"Proceed to the NorthTower.\" -> action: move_to, target: north_tower",
+            }), "The first target each action takes, called by its INamedTarget name when it has one.");
+        }
+
+        [Test]
+        public void ANamedTargetIsCalledByItsNameAndABlankNameFallsBackToTheId()
+        {
+            var targets = new TargetRegistry();
+            targets.Register("stock_bread_one", new Named("  loaf of bread "));
+            targets.Register("stock_potion_one", new Named("  "));
+            var actions = new List<ActionDefinition>
+            {
+                Action("quote_purchase", "How much for the {0}?", true, "stock_bread_one"),
+                Action("sell_item", "I'd like to sell the {0}.", true, "stock_potion_one"),
+            };
+
+            var lines = FewShotBuilder.Build(actions, targets).Split('\n');
+
+            Assert.That(lines[1], Is.EqualTo("Player: \"How much for the loaf of bread?\" -> action: quote_purchase, target: stock_bread_one"));
+            Assert.That(lines[2], Is.EqualTo("Player: \"I'd like to sell the StockPotionOne.\" -> action: sell_item, target: stock_potion_one"));
+        }
+
+        [Test]
+        public void TheFallbackNeverNamesATargetTheStimulusMentions()
+        {
+            var targets = new TargetRegistry();
+            targets.Register("north_tower", new object());
+            targets.Register("docks", new object());
+            targets.Register("inn", new object());
+            targets.Register("stock_potion_one", new Named("healing potion"));
+            targets.Register("well", new object());
+            var move = Countered(Action("move_to", "Go and stand by the {0}.", true), "The {0} looks quiet.");
+            var actions = new List<ActionDefinition> { move };
+
+            string Block(string stimulus) => FewShotBuilder.Build(actions, targets,
+                new PromptOptions { ExampleTargetFallback = true, SpacedExampleNames = true, Stimulus = stimulus });
+
+            Assert.That(Block("Meet me at the towers by the dock, near the inn. Bring a potion!"), Does.Contain(
+                "Player: \"Go and stand by the well.\" -> action: move_to, target: well\n" +
+                "Player: \"The well looks quiet.\" -> action: none, target: no_target"),
+                "towers mentions north_tower, dock docks, inn inn, and potion the target named healing potion.");
+            Assert.That(Block("Well, the north tower, docks, inn and potions."), Does.Not.Contain("action: move_to")
+                .And.Not.Contain("looks quiet"), "Every target mentioned leaves the example and its counter-example out.");
+
+            var few = new TargetRegistry();
+            few.Register("the_old_mill", new object());
+            few.Register("inn", new object());
+            string First(string stimulus) => FewShotBuilder.Build(actions, few,
+                new PromptOptions { ExampleTargetFallback = true, Stimulus = stimulus }).Split('\n')[1];
+
+            Assert.That(First("Look at the cart."), Does.EndWith("target: the_old_mill"), "'the' is in every name: it mentions nothing.");
+            Assert.That(First("The old cart."), Does.EndWith("target: inn"), "'old', three letters, is said.");
+            Assert.That(First("Oldest carts first."), Does.EndWith("target: inn"), "'oldest' starts with 'old'.");
+            Assert.That(First("Stand in a line, mil."), Does.EndWith("target: the_old_mill"),
+                "'in' is too short to stand for 'inn', and 'mil' for 'mill'.");
+            Assert.That(First("Innkeepers and millers."), Does.Not.Contain("action: move_to"),
+                "'innkeepers' starts with 'inn' and 'millers' with 'mill': both mentioned, the example goes.");
+            Assert.That(First("The dock workers."), Does.EndWith("target: the_old_mill"));
+        }
+
+        [Test]
+        public void SpacedNamesSeparateTheIdsWordsAndTheRefusalDropsItsArticle()
+        {
+            var targets = new TargetRegistry();
+            targets.Register("training_dummy", new object());
+            targets.Register("village-gate", new object());
+            targets.Register("NorthTower", new object());
+            targets.Register("stock_one", new Named("Mara's Potion"));
+            var actions = new List<ActionDefinition>
+            {
+                Action("attack_target", "Engage the {0}.", true, "training_dummy"),
+                Action("open_gate", "Open the {0}.", true, "village-gate"),
+                Action("move_to", "Proceed to the {0}.", true, "NorthTower"),
+                Action("buy", "I'll take {0}.", true, "stock_one"),
+            };
+
+            string glued = FewShotBuilder.Build(actions, targets);
+            string spaced = FewShotBuilder.Build(actions, targets, new PromptOptions { SpacedExampleNames = true });
+
+            Assert.That(glued, Does.Contain("\"Engage the TrainingDummy.\"").And.Contain("\"Proceed to the NorthTower.\"")
+                .And.Contain("\"Engage the Atlantis.\""),
+                "Off, the default, is what every example said before.");
+            Assert.That(spaced.Split('\n'), Is.EqualTo(new[]
+            {
+                "Examples of correct decisions:",
+                "Player: \"Engage the training dummy.\" -> action: attack_target, target: training_dummy",
+                "Player: \"Open the village gate.\" -> action: open_gate, target: village-gate",
+                "Player: \"Proceed to the north tower.\" -> action: move_to, target: NorthTower",
+                "Player: \"I'll take Mara's Potion.\" -> action: buy, target: stock_one",
+                "Player: \"Engage Atlantis.\" -> action: none, target: no_target (not an available target)",
+            }), "Words separated and lowercase; an INamedTarget's name as written; no 'the Atlantis'.");
+        }
+
+        [Test]
+        public void TheSpacedRefusalReadsAsEnglishForAnyArticle()
+        {
+            string Refusal(string stimulus) => FewShotBuilder.Build(
+                new List<ActionDefinition> { Action("ask", stimulus, true) }, new TargetRegistry(),
+                new PromptOptions { SpacedExampleNames = true }).Split('\n')[1];
+
+            Assert.That(Refusal("The {0}, please."), Does.StartWith("Player: \"Atlantis, please.\""));
+            Assert.That(Refusal("Housing is short; we need a {0}."), Does.StartWith("Player: \"Housing is short; we need Atlantis.\""));
+            Assert.That(Refusal("Fetch an {0} for me."), Does.StartWith("Player: \"Fetch Atlantis for me.\""));
+            Assert.That(Refusal("Take {0} home."), Does.StartWith("Player: \"Take Atlantis home.\""), "Nothing to drop is left alone.");
+            Assert.That(Refusal("Bathe {0}."), Does.StartWith("Player: \"Bathe Atlantis.\""), "Only a whole-word article goes.");
+        }
+
+        private sealed class Named : INamedTarget
+        {
+            public Named(string name)
+            {
+                Name = name;
+            }
+
+            public string Name { get; }
+        }
+
         private static TargetRegistry Registry(params string[] ids)
         {
             var registry = new TargetRegistry();

@@ -97,7 +97,7 @@ namespace Agenerela.Tests
             Assert.That(new DecideOptions().CounterExamples, Is.True, "On by default, which shows only what a developer wrote.");
         }
 
-        // ---- Statements (#190, G14) --------------------------------------------------------------
+        // ---- Statements and the example's target (#190, G14 and Living Vale #20) -----------------
 
         [Test]
         public async Task AnIdleStatementNeverComesFromFurtherDownThanItsStimulus()
@@ -142,17 +142,26 @@ namespace Agenerela.Tests
             var fake = new FakeProvider(GoToTheTower);
             var agent = Fixtures.VillageGuard(fake);
             Definition(agent, "move_to").ExampleStatement = "Heading for the {0}.";
+            Definition(agent, "attack_target").PreferredExampleTargets = new[] { "scarecrow" };   // not registered
 
             await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
             string defaults = fake.LastRequest.FewShotBlock;
-            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", new DecideOptions { ExampleStatements = false }));
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", new DecideOptions { ExampleStatements = false, ExampleTargetFallback = true, SpacedExampleNames = true }));
             string switched = fake.LastRequest.FewShotBlock;
 
             Assert.That(defaults, Does.Contain("\"Proceed to the Tower.\" -> action: move_to, target: tower, statement: \"Heading for the Tower.\""),
                 "A written statement is shown by default, its {0} filled like the stimulus's.");
+            Assert.That(defaults, Does.Not.Contain("action: attack_target"), "No fallback by default.");
             Assert.That(switched, Does.Not.Contain("statement:"), "ExampleStatements = false leaves them out.");
-            Assert.That(switched, Does.Contain("\"Proceed to the Tower.\" -> action: move_to, target: tower\n"),
-                "Only the statement goes; the example stays.");
+            Assert.That(switched, Does.Contain("\"Engage the training dummy.\" -> action: attack_target, target: training_dummy"),
+                "ExampleTargetFallback = true names a target the action takes, skipping the tower the stimulus " +
+                "mentions; SpacedExampleNames = true calls it by its id's words.");
+            Assert.That(switched, Does.Contain("\"Proceed to the tower.\" -> action: move_to, target: tower"),
+                "A registered preferred target is still used, mentioned or not.");
+            Assert.That(switched, Does.Contain("\"Proceed to Atlantis.\" -> action: none"), "The spaced refusal drops the article.");
+            Assert.That(defaults, Does.Contain("\"Proceed to the Atlantis.\" -> action: none"), "Not by default.");
+            Assert.That(new DecideOptions().ExampleTargetFallback, Is.False);
+            Assert.That(new DecideOptions().SpacedExampleNames, Is.False);
             Assert.That(new DecideOptions().ExampleStatements, Is.True, "On, which shows only what a developer wrote.");
         }
 

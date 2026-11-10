@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Agenerela
 {
@@ -50,8 +52,8 @@ namespace Agenerela
         /// <remarks>
         /// <para>
         /// It reads <see cref="PromptOptions.StimulusLabel"/>, <see cref="PromptOptions.IdleExampleStimulus"/>
-        /// and <see cref="PromptOptions.CounterExamples"/>, and the statements of #190's G14, which show
-        /// only what a developer wrote.
+        /// and <see cref="PromptOptions.CounterExamples"/>, and the settings of #190's G14 and Living
+        /// Vale #20. Each is off, or shows only what a developer wrote, by default.
         /// </para>
         /// <list type="bullet">
         ///   <item><description><see cref="PromptOptions.ExampleStatements"/>: an example whose
@@ -59,6 +61,15 @@ namespace Agenerela
         ///   is set, and the idle example when <see cref="PromptOptions.IdleExampleStatement"/> is, ends with
         ///   <c>, statement: "..."</c>. The refusal of a target that is not here never has one: its line would
         ///   be the framework's own words, sent with every prompt.</description></item>
+        ///   <item><description><see cref="PromptOptions.ExampleTargetFallback"/>: an example whose action
+        ///   has no registered target among its <see cref="ActionDefinition.PreferredExampleTargets"/> names
+        ///   the first offered target the action takes that <see cref="PromptOptions.Stimulus"/> does not
+        ///   mention, instead of being left out.</description></item>
+        ///   <item><description><see cref="PromptOptions.SpacedExampleNames"/>: a target is called by its
+        ///   id's words ("north tower", not "NorthTower"), and the refusal drops the article before the
+        ///   missing target ("stand by Atlantis", not "stand by the Atlantis").</description></item>
+        ///   <item><description>A target that implements <see cref="INamedTarget"/> is called by its name
+        ///   wherever an example writes <c>{0}</c>; any other by the name made from its id.</description></item>
         /// </list>
         /// </remarks>
         public static string Build(IReadOnlyList<ActionDefinition> available, TargetRegistry targets, PromptOptions options)
@@ -66,20 +77,24 @@ namespace Agenerela
             options = options ?? new PromptOptions();
             string label = options.StimulusLabel;
             bool statements = options.ExampleStatements;
+            bool spaced = options.SpacedExampleNames;
+            HashSet<string> mentioned = options.ExampleTargetFallback ? Words(options.Stimulus) : null;
 
             List<string> lines = new List<string> { Header };
 
             foreach (ActionDefinition action in available)
             {
-                string target = FirstRegisteredPreferred(action, targets);
+                string target = FirstRegisteredPreferred(action, targets)
+                                ?? (mentioned != null ? FallbackTarget(action, targets, mentioned, spaced) : null);
+                string name = target == null ? null : NameOf(target, targets, spaced);
 
-                string example = ActionExample(action, targets, target, label, statements);
+                string example = ActionExample(action, target, name, label, statements);
                 if (example != null)
                 {
                     lines.Add(example);
                 }
 
-                string counter = options.CounterExamples ? CounterExample(action, targets, target, label, statements) : null;
+                string counter = options.CounterExamples ? CounterExample(action, name, label, statements) : null;
                 if (counter != null)
                 {
                     lines.Add(counter);
@@ -92,7 +107,7 @@ namespace Agenerela
                                   statements ? options.IdleExampleStatement : null));
             }
 
-            string refusal = RefusalExample(available, targets, label);
+            string refusal = RefusalExample(available, targets, label, spaced);
             if (refusal != null)
             {
                 lines.Add(refusal);
@@ -102,7 +117,7 @@ namespace Agenerela
         }
 
         // The action's own example, or null when it has none, or needs a target and has none to name.
-        private static string ActionExample(ActionDefinition action, TargetRegistry targets, string target,
+        private static string ActionExample(ActionDefinition action, string target, string name,
                                             string label, bool statements)
         {
             if (string.IsNullOrWhiteSpace(action.ExampleStimulus)) return null;
@@ -116,7 +131,6 @@ namespace Agenerela
 
             if (target == null) return null;
 
-            string name = DisplayName(target);
             return Example(label, Fill(action.ExampleStimulus, name), action.Id, target, Fill(statement, name));
         }
 
@@ -124,8 +138,7 @@ namespace Agenerela
         // Living Vale #9). Its {0}s, in the stimulus and the statement, name the example's target;
         // with no target to name, the line is left out rather than sent with a placeholder in it.
         // Without {0} it is sent as written.
-        private static string CounterExample(ActionDefinition action, TargetRegistry targets, string target,
-                                             string label, bool statements)
+        private static string CounterExample(ActionDefinition action, string name, string label, bool statements)
         {
             string stimulus = action.CounterExampleStimulus;
             if (string.IsNullOrWhiteSpace(stimulus)) return null;
@@ -134,9 +147,8 @@ namespace Agenerela
 
             if (HasPlaceholder(stimulus) || HasPlaceholder(statement))
             {
-                if (target == null) return null;
+                if (name == null) return null;
 
-                string name = DisplayName(target);
                 stimulus = Fill(stimulus, name);
                 statement = Fill(statement, name);
             }
@@ -144,7 +156,11 @@ namespace Agenerela
             return Example(label, stimulus, ActionRegistry.None, TargetRegistry.NoTarget, statement);
         }
 
-        private static string RefusalExample(IReadOnlyList<ActionDefinition> available, TargetRegistry targets, string stimulusLabel)
+        // One refusal of a target that is not here, worded from the first targeted action's own
+        // stimulus. Spaced, the article before {0} goes: "the Atlantis" is not English whatever the
+        // stimulus says, while "stand by Atlantis" and "How much for Atlantis?" are.
+        private static string RefusalExample(IReadOnlyList<ActionDefinition> available, TargetRegistry targets,
+                                             string stimulusLabel, bool spaced)
         {
             string placeholder = targets.Contains(DisplayNameToId(UnknownTarget)) ? UnknownTargetFallback : UnknownTarget;
 
@@ -154,10 +170,87 @@ namespace Agenerela
                 if (string.IsNullOrWhiteSpace(action.ExampleStimulus)) continue;
                 if (!action.ExampleStimulus.Contains("{0}")) continue;
 
-                return Example(stimulusLabel, Fill(action.ExampleStimulus, placeholder), "none", TargetRegistry.NoTarget + " (not an available target)", null);
+                string stimulus = spaced ? ArticleBeforePlaceholder.Replace(action.ExampleStimulus, "{0}") : action.ExampleStimulus;
+                return Example(stimulusLabel, Fill(stimulus, placeholder), "none", TargetRegistry.NoTarget + " (not an available target)", null);
             }
 
             return null;
+        }
+
+        // An article, as a whole word, right before a placeholder: "by the {0}", "The {0}, please",
+        // "an {0}".
+        private static readonly Regex ArticleBeforePlaceholder =
+            new Regex(@"\b(?:the|an|a)\s+\{0\}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        // The first offered target the action takes that the stimulus does not mention (Living Vale
+        // #20), so a game whose targets change every turn needs no list kept up to date, and the
+        // example never shows the model the answer to the request it is sent with. Null when there is
+        // none.
+        private static string FallbackTarget(ActionDefinition action, TargetRegistry targets,
+                                              HashSet<string> mentioned, bool spaced)
+        {
+            foreach (string id in targets.Ids)
+            {
+                if (!action.AcceptsCategory(targets.CategoryOf(id))) continue;
+                if (Mentions(mentioned, id, NameOf(id, targets, spaced))) continue;
+
+                return id;
+            }
+
+            return null;
+        }
+
+        // Whether the stimulus says a word of the target's id or name, of three letters or more: a
+        // word that starts with it ("inn" in innkeeper, "tower" in towers), or one of four letters or
+        // more that it starts with ("dock" for docks). Generous on purpose: a skipped target costs
+        // only a different example, a named one shows the answer. A few words any name might hold
+        // ("the", "and") never count.
+        private static bool Mentions(HashSet<string> stimulusWords, string id, string name)
+        {
+            if (stimulusWords.Count == 0) return false;
+
+            var names = Words(SplitId(id));
+            names.UnionWith(Words(name));
+
+            foreach (string word in names)
+            {
+                if (word.Length < 3 || NeverAMention(word)) continue;
+
+                foreach (string said in stimulusWords)
+                {
+                    if (said.StartsWith(word, StringComparison.Ordinal)) return true;
+                    if (said.Length >= 4 && word.StartsWith(said, StringComparison.Ordinal)) return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool NeverAMention(string word) =>
+            word == "the" || word == "and" || word == "for" || word == "with" || word == "from";
+
+        // The lowercase words of a text, letters and digits only. Empty for null.
+        private static HashSet<string> Words(string text)
+        {
+            var words = new HashSet<string>(StringComparer.Ordinal);
+            if (string.IsNullOrEmpty(text)) return words;
+
+            var word = new StringBuilder();
+            foreach (char c in text)
+            {
+                if (char.IsLetterOrDigit(c))
+                {
+                    word.Append(char.ToLowerInvariant(c));
+                }
+                else if (word.Length > 0)
+                {
+                    words.Add(word.ToString());
+                    word.Clear();
+                }
+            }
+
+            if (word.Length > 0) words.Add(word.ToString());
+            return words;
         }
 
         private static string FirstRegisteredPreferred(ActionDefinition action, TargetRegistry targets)
@@ -173,6 +266,17 @@ namespace Agenerela
             }
 
             return null;
+        }
+
+        // What an example calls a target: its INamedTarget name when it gives one, otherwise the name
+        // made from its id, spaced ("north tower") or run together ("NorthTower").
+        private static string NameOf(string id, TargetRegistry targets, bool spaced)
+        {
+            targets.TryGet(id, out object target);
+            string name = (target as INamedTarget)?.Name;
+            if (!string.IsNullOrWhiteSpace(name)) return name.Trim();
+
+            return spaced ? SplitId(id).ToLowerInvariant() : DisplayName(id);
         }
 
         // "Label: "stimulus" -> action: id, target: id", then ", statement: "..."" when there is one,
@@ -194,6 +298,7 @@ namespace Agenerela
 
         private static string Fill(string text, string target) => text?.Replace("{0}", target);
 
+        // "north_tower" -> "NorthTower": the name every example used before SpacedExampleNames.
         private static string DisplayName(string id)
         {
             var display = new StringBuilder(id.Length);
@@ -212,6 +317,32 @@ namespace Agenerela
             }
 
             return display.ToString();
+        }
+
+        // An id's words with single spaces between them, case kept: "north_tower" -> "north tower",
+        // "village-gate" -> "village gate", "NorthTower" -> "North Tower".
+        private static string SplitId(string id)
+        {
+            var words = new StringBuilder(id.Length + 4);
+            char previous = ' ';
+
+            foreach (char c in id)
+            {
+                bool separator = c == '_' || c == '-' || char.IsWhiteSpace(c);
+                if (separator)
+                {
+                    if (words.Length > 0 && words[words.Length - 1] != ' ') words.Append(' ');
+                    previous = ' ';
+                    continue;
+                }
+
+                if (char.IsUpper(c) && char.IsLower(previous)) words.Append(' ');
+
+                words.Append(c);
+                previous = c;
+            }
+
+            return words.ToString().Trim();
         }
 
         private static string DisplayNameToId(string display) => display.ToLowerInvariant();
