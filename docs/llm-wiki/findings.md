@@ -2141,7 +2141,7 @@ for how far an unrelated change to the prompt moves the score, which this server
   92–94% on player lines in every arm. Most misses there are `follow_player`, `stop_following` and
   `attack_target` answered with `move_to` or `none`, cases no line covered, or covered too loosely
   ("someone nearby"). Whether lines written per action would, is the next run, and it needs lines
-  written by someone who has not seen the labels.
+  written by someone who has not seen the labels. The 10 November entry "Situations and events: the deciding fact sat in the observations" sorts the 4B's misses by cause and tries moving that fact into the stimulus.
 - Nothing becomes a default: both fields stay empty unless a developer writes them.
 
 **What would change this.** Another model, other lines, or a situation set labelled against a
