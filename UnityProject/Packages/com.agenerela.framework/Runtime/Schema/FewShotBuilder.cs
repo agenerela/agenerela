@@ -65,45 +65,118 @@ namespace Agenerela
         {
             options = options ?? new PromptOptions();
             string label = options.StimulusLabel;
-            bool statements = options.ExampleStatements;
 
             List<string> lines = new List<string> { Header };
-
-            foreach (ActionDefinition action in available)
+            foreach (Shot shot in Shots(available, targets, options))
             {
-                string target = FirstRegisteredPreferred(action, targets);
-
-                string example = ActionExample(action, targets, target, label, statements);
-                if (example != null)
-                {
-                    lines.Add(example);
-                }
-
-                string counter = options.CounterExamples ? CounterExample(action, targets, target, label, statements) : null;
-                if (counter != null)
-                {
-                    lines.Add(counter);
-                }
-            }
-
-            if (!string.IsNullOrWhiteSpace(options.IdleExampleStimulus))
-            {
-                lines.Add(Example(label, options.IdleExampleStimulus, "none", TargetRegistry.NoTarget,
-                                  statements ? options.IdleExampleStatement : null));
-            }
-
-            string refusal = RefusalExample(available, targets, label);
-            if (refusal != null)
-            {
-                lines.Add(refusal);
+                // The refusal's note says why there is no target. It never has a statement (see Shots).
+                string target = shot.Refusal ? shot.Target + " (not an available target)" : shot.Target;
+                lines.Add(Example(label, shot.Stimulus, shot.Action, target, shot.Statement));
             }
 
             return string.Join("\n", lines);
         }
 
+        /// <summary>
+        /// The same examples as <see cref="Build(IReadOnlyList{ActionDefinition}, TargetRegistry, PromptOptions)"/>,
+        /// in the same order, as chat turns for <see cref="Providers.DecisionRequest.ExampleTurns"/> (#151):
+        /// two entries per example, encoded as <see cref="Providers.DecisionRequest.History"/> is.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The first entry of each pair is the example's stimulus labelled as the request's own is,
+        /// <c>Player: "Go to the Tower."</c>, its <c>{0}</c> filled with the target's name. The second
+        /// is the answer as the JSON object <paramref name="schema"/> asks for, in its field order, on
+        /// one line, as memory writes the agent's earlier decisions:
+        /// <c>{"action":"move_to","target":"tower","statement":""}</c>. An example with a statement
+        /// (<see cref="PromptOptions.ExampleStatements"/>) carries it; one without carries an empty one.
+        /// </para>
+        /// <para>
+        /// The refusal of a target that is not here is answered <c>none</c> and <c>no_target</c> with an
+        /// empty statement. The prose block's "(not an available target)" note is left out: it is not a
+        /// value the schema allows, and putting it in the statement would teach the model to say the
+        /// framework's own words with every refusal.
+        /// </para>
+        /// </remarks>
+        /// <param name="available">The actions offered in this request, in schema order.</param>
+        /// <param name="targets">The targets offered in this request; examples name only these.</param>
+        /// <param name="options">The same settings <c>Build</c> reads. Null uses the defaults.</param>
+        /// <param name="schema">The request's schema, whose fields the answers are written in. Null writes all three, action first.</param>
+        public static IReadOnlyList<string> BuildTurns(IReadOnlyList<ActionDefinition> available, TargetRegistry targets,
+                                                       PromptOptions options, DecisionSchema schema)
+        {
+            options = options ?? new PromptOptions();
+
+            var turns = new List<string>();
+            foreach (Shot shot in Shots(available, targets, options))
+            {
+                turns.Add(PromptBuilder.Labelled(options.StimulusLabel, shot.Stimulus));
+                turns.Add(RollingHistory.Write(new AgentDecision(shot.Action, shot.Target, shot.Statement ?? ""), schema));
+            }
+
+            return turns;
+        }
+
+        // One example, before it is written as a line or as a turn.
+        private readonly struct Shot
+        {
+            public readonly string Stimulus;
+            public readonly string Action;
+            public readonly string Target;
+            public readonly string Statement;
+            public readonly bool Refusal;
+
+            public Shot(string stimulus, string action, string target, string statement, bool refusal = false)
+            {
+                Stimulus = stimulus;
+                Action = action;
+                Target = target;
+                Statement = statement;
+                Refusal = refusal;
+            }
+        }
+
+        // Every example, in the order both forms send them: each action's example, then its
+        // counter-example, then the idle example, then the refusal.
+        private static List<Shot> Shots(IReadOnlyList<ActionDefinition> available, TargetRegistry targets, PromptOptions options)
+        {
+            bool statements = options.ExampleStatements;
+            var shots = new List<Shot>();
+
+            foreach (ActionDefinition action in available)
+            {
+                string target = FirstRegisteredPreferred(action, targets);
+
+                Shot? example = ActionExample(action, target, statements);
+                if (example.HasValue)
+                {
+                    shots.Add(example.Value);
+                }
+
+                Shot? counter = options.CounterExamples ? CounterExample(action, target, statements) : (Shot?)null;
+                if (counter.HasValue)
+                {
+                    shots.Add(counter.Value);
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(options.IdleExampleStimulus))
+            {
+                shots.Add(new Shot(options.IdleExampleStimulus, ActionRegistry.None, TargetRegistry.NoTarget,
+                                   statements ? options.IdleExampleStatement : null));
+            }
+
+            Shot? refusal = RefusalExample(available, targets);
+            if (refusal.HasValue)
+            {
+                shots.Add(refusal.Value);
+            }
+
+            return shots;
+        }
+
         // The action's own example, or null when it has none, or needs a target and has none to name.
-        private static string ActionExample(ActionDefinition action, TargetRegistry targets, string target,
-                                            string label, bool statements)
+        private static Shot? ActionExample(ActionDefinition action, string target, bool statements)
         {
             if (string.IsNullOrWhiteSpace(action.ExampleStimulus)) return null;
 
@@ -111,21 +184,20 @@ namespace Agenerela
 
             if (!action.RequiresTarget)
             {
-                return Example(label, action.ExampleStimulus, action.Id, TargetRegistry.NoTarget, statement);
+                return new Shot(action.ExampleStimulus, action.Id, TargetRegistry.NoTarget, statement);
             }
 
             if (target == null) return null;
 
             string name = DisplayName(target);
-            return Example(label, Fill(action.ExampleStimulus, name), action.Id, target, Fill(statement, name));
+            return new Shot(Fill(action.ExampleStimulus, name), action.Id, target, Fill(statement, name));
         }
 
         // A line that touches the action's subject and asks for nothing, answered with none (#190,
         // Living Vale #9). Its {0}s, in the stimulus and the statement, name the example's target;
         // with no target to name, the line is left out rather than sent with a placeholder in it.
         // Without {0} it is sent as written.
-        private static string CounterExample(ActionDefinition action, TargetRegistry targets, string target,
-                                             string label, bool statements)
+        private static Shot? CounterExample(ActionDefinition action, string target, bool statements)
         {
             string stimulus = action.CounterExampleStimulus;
             if (string.IsNullOrWhiteSpace(stimulus)) return null;
@@ -141,10 +213,11 @@ namespace Agenerela
                 statement = Fill(statement, name);
             }
 
-            return Example(label, stimulus, ActionRegistry.None, TargetRegistry.NoTarget, statement);
+            return new Shot(stimulus, ActionRegistry.None, TargetRegistry.NoTarget, statement);
         }
 
-        private static string RefusalExample(IReadOnlyList<ActionDefinition> available, TargetRegistry targets, string stimulusLabel)
+        // Never a statement: its line would be the framework's own words, sent with every prompt.
+        private static Shot? RefusalExample(IReadOnlyList<ActionDefinition> available, TargetRegistry targets)
         {
             string placeholder = targets.Contains(DisplayNameToId(UnknownTarget)) ? UnknownTargetFallback : UnknownTarget;
 
@@ -154,7 +227,7 @@ namespace Agenerela
                 if (string.IsNullOrWhiteSpace(action.ExampleStimulus)) continue;
                 if (!action.ExampleStimulus.Contains("{0}")) continue;
 
-                return Example(stimulusLabel, Fill(action.ExampleStimulus, placeholder), "none", TargetRegistry.NoTarget + " (not an available target)", null);
+                return new Shot(Fill(action.ExampleStimulus, placeholder), ActionRegistry.None, TargetRegistry.NoTarget, null, refusal: true);
             }
 
             return null;

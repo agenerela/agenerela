@@ -821,6 +821,7 @@ namespace Agenerela.Evaluation
                     CounterExamples = arm.Options.CounterExamples,
                     IdleExampleStatement = arm.Options.IdleExampleStatement,
                     ExampleStatements = arm.Options.ExampleStatements,
+                    ExamplesAsTurns = arm.Options.ExamplesAsTurns,
                     PairTargetsWithActions = arm.Options.PairTargetsWithActions,
                     Priority = arm.Options.Priority.ToString(),
                     Observations = new List<string>(arm.Options.Observations ?? new List<string>()),

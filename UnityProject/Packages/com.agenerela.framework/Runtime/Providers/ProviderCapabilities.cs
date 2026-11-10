@@ -145,5 +145,16 @@ namespace Agenerela.Providers
         /// </para>
         /// </remarks>
         public bool ReportsTokenProbabilities;
+
+        /// <summary>
+        /// Does the provider send <see cref="DecisionRequest.ExampleTurns"/> (#151)? Set it only when
+        /// it does. <c>Agent</c> reads it before building the request: a call that asks for
+        /// <c>DecideOptions.ExamplesAsTurns</c> gets example turns only from a provider that sets this,
+        /// and the prose <see cref="DecisionRequest.FewShotBlock"/> from any other, so a provider written
+        /// before the field existed never loses its examples. <c>DecisionTelemetry.ExamplesSentAsTurns</c>
+        /// records which form went.
+        /// </summary>
+        /// <remarks>Ollama: yes. False by default.</remarks>
+        public bool SendsExampleTurns;
     }
 }

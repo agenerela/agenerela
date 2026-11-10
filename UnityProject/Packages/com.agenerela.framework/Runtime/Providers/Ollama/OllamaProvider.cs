@@ -184,6 +184,7 @@ namespace Agenerela.Providers
                 RateLimit = null,
                 RejectsEmptyEnumValues = false,
                 ReportsTokenProbabilities = true,
+                SendsExampleTurns = true,
             };
         }
 
@@ -192,8 +193,8 @@ namespace Agenerela.Providers
 
         /// <summary>
         /// Constrained decoding, no explicit property ordering, the <c>JsonSchema</c> dialect, no
-        /// rate limit, empty enum values not rejected, and token probabilities reported, taken
-        /// before the schema's mask (checked on Ollama 0.34.2).
+        /// rate limit, empty enum values not rejected, token probabilities reported, taken
+        /// before the schema's mask (checked on Ollama 0.34.2), and example turns sent (#151).
         /// </summary>
         public ProviderCapabilities Capabilities { get; }
 
@@ -207,7 +208,8 @@ namespace Agenerela.Providers
         /// <c>system</c> message holding the non-empty ones of <see cref="DecisionRequest.SystemPrompt"/>,
         /// <see cref="DecisionRequest.FewShotBlock"/> and <see cref="DecisionRequest.Observations"/>
         /// joined by a blank line, left out if all three are empty; then
-        /// <see cref="DecisionRequest.History"/>, its entries alternating <c>user</c> and
+        /// <see cref="DecisionRequest.ExampleTurns"/>, alternating <c>user</c> and <c>assistant</c>
+        /// from a <c>user</c> one (#151); then <see cref="DecisionRequest.History"/>, its entries alternating <c>user</c> and
         /// <c>assistant</c> from a <c>user</c> one, each exchange being the stimulus as it was sent
         /// and the decision as JSON, as <see cref="DecisionRequest.History"/> encodes it (#90); then
         /// <see cref="DecisionRequest.Stimulus"/> as the last <c>user</c> message. Nothing is
@@ -561,6 +563,14 @@ namespace Agenerela.Providers
                 if (system.Length > 0)
                 {
                     Message(json, "system", system);
+                }
+
+                // The examples before memory, so what the agent did last is still the last
+                // exchange the model reads before the question (#151).
+                var examples = req.ExampleTurns ?? Array.Empty<string>();
+                for (int i = 0; i < examples.Count; i++)
+                {
+                    Message(json, i % 2 == 0 ? "user" : "assistant", examples[i]);
                 }
 
                 var history = req.History ?? Array.Empty<string>();

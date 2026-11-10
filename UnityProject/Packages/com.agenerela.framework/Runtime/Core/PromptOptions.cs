@@ -141,5 +141,18 @@ namespace Agenerela
         /// Read by <c>FewShotBuilder.Build</c>.
         /// </summary>
         public bool ExampleStatements = true;
+
+        /// <summary>
+        /// Whether the examples go as chat turns, <see cref="FewShotBuilder.BuildTurns"/> into
+        /// <see cref="Providers.DecisionRequest.ExampleTurns"/>, rather than as the block in the system
+        /// prompt (#151). Off by default. <c>Agent</c> turns it on when
+        /// <see cref="DecideOptions.ExamplesAsTurns"/> is on and the provider's
+        /// <c>Capabilities.SendsExampleTurns</c> is true.
+        /// </summary>
+        /// <remarks>
+        /// Read by the caller, which builds one form or the other. <see cref="PromptBuilder"/> and
+        /// <see cref="FewShotBuilder"/> never read it.
+        /// </remarks>
+        public bool ExamplesAsTurns;
     }
 }

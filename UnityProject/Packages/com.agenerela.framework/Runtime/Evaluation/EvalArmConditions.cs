@@ -33,6 +33,7 @@ namespace Agenerela.Evaluation
         [JsonProperty("counterExamples")] public bool CounterExamples;
         [JsonProperty("idleExampleStatement")] public string IdleExampleStatement;
         [JsonProperty("exampleStatements")] public bool ExampleStatements;
+        [JsonProperty("examplesAsTurns")] public bool ExamplesAsTurns;
         [JsonProperty("pairTargetsWithActions")] public bool PairTargetsWithActions;
         [JsonProperty("priority")] public string Priority;
         [JsonProperty("observations")] public List<string> Observations = new List<string>();

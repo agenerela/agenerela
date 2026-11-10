@@ -2,7 +2,8 @@
 
 `PromptBuilder` assembles every request an agent sends: the system prompt, the few-shot
 examples, the observations, the history and the stimulus. The schema travels with it. This
-note is about one gap, the switches that close it, and one that shapes the few-shot examples.
+note is about one gap, the switches that close it, and the ones that shape the few-shot examples,
+including one that sends them as chat turns instead of a block.
 At their defaults, none of them adds anything to the prompt. The list and the code-built agent's
 idle example are off. A counter-example and an example's statement are shown as soon as a
 developer writes one, which is their opt-in, and each has a per-call switch that leaves it out. None becomes a default until an A/B run shows
@@ -161,12 +162,53 @@ Player: "Fine day for it." -> action: none, target: no_target, statement: "Aye, 
 The other way out of G14 is an idle stimulus nobody would say back. A statement is the one built
 here. Whether either helps, and whether a statement makes a model copy *it* instead, is the A/B.
 
+## Examples as chat turns
+
+By default the examples are a block of lines in the system prompt. `DecideOptions.ExamplesAsTurns
+= true` sends the same examples, in the same order, as chat turns instead (#151): each example is a
+`user` message with its stimulus, labelled as the question is, and an `assistant` message with its
+answer as the JSON object the schema asks for, so the model sees every answer in exactly the form
+it must give.
+
+```
+system     You are Village Guard, ... Choose exactly one action from the allowed list. ...
+user       Player: "Accompany me on my rounds."
+assistant  {"action":"follow_player","target":"no_target","statement":""}
+user       Player: "Proceed to the Tower."
+assistant  {"action":"move_to","target":"tower","statement":""}
+...
+user       Player: "Proceed to the Atlantis."
+assistant  {"action":"none","target":"no_target","statement":""}
+user       Player: "Go to the tower."          <- the agent's memory, if any, goes just before this
+```
+
+- **Every example carries over**: each action's own, its counter-example, the idle example and the
+  refusal of a target that is not here. A written statement is in the answer's `statement`; an
+  example without one has `""`.
+- **The refusal's note is left out.** The block writes `target: no_target (not an available
+  target)`; a JSON answer can only hold values the schema allows, so its turn answers `none` and
+  `no_target` with an empty statement. The note was never put in the statement either: that would
+  teach the model to say the framework's words with every refusal.
+- **The system prompt then has no example block.** A request carries its examples in one form only:
+  `DecisionRequest.ExampleTurns`, or `FewShotBlock`, never both. Observations stay in the system
+  prompt.
+- **Examples go before memory, and are not memory.** They follow the system message; the agent's
+  remembered exchanges follow them, then the question. Nothing remembers an example, and
+  `HistoryTurnsSent` never counts one.
+- **Only a provider that says it sends them gets them** (`ProviderCapabilities.SendsExampleTurns`,
+  true for Ollama). Any other provider gets the block, as if the switch were off, so it never loses
+  its examples. `DecisionTelemetry.ExamplesSentAsTurns` records which form went, and `Agent.Preview`
+  shows it in its request: `ExampleTurns` filled and `FewShotBlock` null.
+
+Off, every request is byte for byte what it was. It stays off until the tech lead decides from the
+A/B; what was measured is in findings, "Few-shot examples as chat turns" (9 November 2026).
+
 ## Measuring them
 
 Each switch is an option an `EvalArm` carries, so one run in one session compares an arm with it
 against an arm without it. `report.json` records each arm's `listActionsAndTargets`,
-`maxListedTargets`, `counterExamples`, `idleExampleStimulus`, `idleExampleStatement` and
-`exampleStatements`, and `pairTargetsWithActions`
+`maxListedTargets`, `counterExamples`, `idleExampleStimulus`, `idleExampleStatement`,
+`exampleStatements` and `examplesAsTurns`, and `pairTargetsWithActions`
 for the paired schema ([targets.md](targets.md#the-paired-schema)), which changes the schema rather
 than the prompt.
 [`evaluation.md`](evaluation.md#running-an-ab) explains how to run an A/B. Until one has been

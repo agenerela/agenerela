@@ -185,6 +185,10 @@ namespace Agenerela.Editor.Evaluation
                 : "system-prompt list of actions and targets off";
             yield return arm.CounterExamples ? "counter-examples shown" : "no counter-examples";
             yield return arm.PairTargetsWithActions ? "schema pairs each action with its targets" : "schema does not pair actions with targets";
+
+            // Said only when on (#151), so an arm with its examples in the system prompt, and every
+            // report from before the switch, reads as it did.
+            if (arm.ExamplesAsTurns) yield return "examples asked for as chat turns";
         }
 
         // One residency reading in words: who was loaded and how much of the arm's model was in VRAM.

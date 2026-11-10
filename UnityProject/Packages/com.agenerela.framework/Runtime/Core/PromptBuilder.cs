@@ -135,7 +135,7 @@ namespace Agenerela
                 // Copied, so a memory strategy changing its list afterwards does not change a
                 // request already built.
                 History = new ReadOnlyCollection<string>(new List<string>(history ?? Array.Empty<string>())),
-                Stimulus = $"{options.StimulusLabel}: \"{ctx.Stimulus}\"",
+                Stimulus = Labelled(options.StimulusLabel, ctx.Stimulus),
                 Schema = schema,
                 AgentName = ctx.Identity?.Name,
                 StimulusText = ctx.Stimulus,
@@ -159,6 +159,13 @@ namespace Agenerela
                 StimulusLabel = decided.StimulusLabel,
                 AgentId = decided.AgentId,
             };
+        }
+
+        // A stimulus as the request's own is sent, label first: Player: "Go to the tower." The
+        // example turns (#151) use it too, so an example's user turn reads as the question does.
+        internal static string Labelled(string label, string stimulus)
+        {
+            return $"{label}: \"{stimulus}\"";
         }
 
         // Whether Build, given these options and this schema, puts the target rule in the system

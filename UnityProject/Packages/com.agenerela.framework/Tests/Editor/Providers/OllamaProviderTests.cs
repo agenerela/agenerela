@@ -281,6 +281,64 @@ namespace Agenerela.Tests
         }
 
         [Test]
+        public async Task ExampleTurnsGoAfterTheSystemSideAndBeforeTheHistory()
+        {
+            // #151: the examples as user and assistant turns, then memory, then the question.
+            var request = Request();
+            request.ExampleTurns = new List<string>
+            {
+                "Player: \"Proceed to the Bridge.\"",
+                "{\"action\":\"move_to\",\"target\":\"bridge\",\"statement\":\"\"}",
+            };
+            request.History = new List<string>
+            {
+                "Player: \"Follow me.\"",
+                "{\"action\":\"follow_player\",\"target\":\"no_target\",\"statement\":\"Lead on.\"}",
+            };
+            var handler = ScriptedHandler.Replying(Envelope(GoToTheTower));
+
+            await NotCancelled(Provider(handler).RequestAsync(request, CancellationToken.None));
+
+            var messages = Messages(handler.Requests[0].Body);
+            Assert.That(messages.Select(m => m.role),
+                Is.EqualTo(new[] { "system", "user", "assistant", "user", "assistant", "user" }));
+            Assert.That(messages.Skip(1).Take(2).Select(m => m.content), Is.EqualTo(request.ExampleTurns));
+            Assert.That(messages.Skip(3).Take(2).Select(m => m.content), Is.EqualTo(request.History));
+            Assert.That(messages.Last().content, Is.EqualTo(request.Stimulus));
+        }
+
+        [Test]
+        public async Task TheVillageGuardWithExamplesAsTurnsSendsThemAsPairsAndNoBlock()
+        {
+            var handler = ScriptedHandler.Replying(Envelope(GoToTheTower));
+            var agent = Fixtures.VillageGuard(Provider(handler));
+
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", new DecideOptions { ExamplesAsTurns = true }));
+
+            Assert.That(result.Telemetry.ExamplesSentAsTurns, Is.True, "Ollama sends example turns.");
+            var messages = Messages(handler.Requests[0].Body);
+            Assert.That(messages[0], Is.EqualTo(("system",
+                "You are Village Guard, a guard at the town gate. Loyal, brief, a little suspicious of strangers.\n"
+                + "Your goals: keep the gate safe; help the player when asked.\n"
+                + "Choose exactly one action from the allowed list. Use no_target when none of the listed targets applies.")),
+                "The golden's system side with its example block gone, and nothing else changed.");
+            Assert.That(messages.Skip(1).ToList(), Is.EqualTo(new List<(string, string)>
+            {
+                ("user", "Player: \"Accompany me on my rounds.\""),
+                ("assistant", "{\"action\":\"follow_player\",\"target\":\"no_target\",\"statement\":\"\"}"),
+                ("user", "Player: \"Proceed to the Tower.\""),
+                ("assistant", "{\"action\":\"move_to\",\"target\":\"tower\",\"statement\":\"\"}"),
+                ("user", "Player: \"Engage the TrainingDummy.\""),
+                ("assistant", "{\"action\":\"attack_target\",\"target\":\"training_dummy\",\"statement\":\"\"}"),
+                ("user", "Player: \"You seem well rested today.\""),
+                ("assistant", "{\"action\":\"none\",\"target\":\"no_target\",\"statement\":\"\"}"),
+                ("user", "Player: \"Proceed to the Atlantis.\""),
+                ("assistant", "{\"action\":\"none\",\"target\":\"no_target\",\"statement\":\"\"}"),
+                ("user", "Player: \"Go to the tower.\""),
+            }));
+        }
+
+        [Test]
         public async Task SettingsAreCopiedWhenTheProviderIsBuilt()
         {
             var settings = new OllamaSettings { Endpoint = "http://10.0.0.5:8080/ollama/", Model = "qwen3.5:4b", ContextSize = 2048, Temperature = 0.5f };
