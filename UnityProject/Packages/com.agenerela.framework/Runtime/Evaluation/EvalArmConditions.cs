@@ -35,6 +35,12 @@ namespace Agenerela.Evaluation
         [JsonProperty("exampleStatements")] public bool ExampleStatements;
         [JsonProperty("exampleTargetFallback")] public bool ExampleTargetFallback;
         [JsonProperty("pairTargetsWithActions")] public bool PairTargetsWithActions;
+        /// <summary>
+        /// Where the arm put each prompt's own observations, the name of a
+        /// <see cref="Agenerela.ObservationPlacement"/> value (#151); null in a report written before
+        /// it existed, which ran <c>AfterSources</c>.
+        /// </summary>
+        [JsonProperty("observationPlacement")] public string ObservationPlacement;
         [JsonProperty("priority")] public string Priority;
         [JsonProperty("observations")] public List<string> Observations = new List<string>();
         /// <summary>The arm's <see cref="EvalArm.Knowledge"/>, added to the profile's; empty in a report written before it existed.</summary>

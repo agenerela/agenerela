@@ -250,6 +250,21 @@ namespace Agenerela.Tests.Evaluation
         // ---- ① The conditions in plain words ----------------------------------------------------
 
         [Test]
+        public void AnArmsObservationPlacementIsSaidOnlyWhenItIsNotTheDefault()
+        {
+            // #151: a report from before the option, or an arm on the default, reads as it did.
+            var arm = new EvalArmConditions();
+
+            Assert.That(EvaluationReportView.PromptOptions(arm), Has.None.Contains("prompt's own observations"));
+            arm.ObservationPlacement = "AfterSources";
+            Assert.That(EvaluationReportView.PromptOptions(arm), Has.None.Contains("prompt's own observations"));
+            arm.ObservationPlacement = "BeforeSources";
+            Assert.That(EvaluationReportView.PromptOptions(arm), Has.Some.EqualTo("prompt's own observations first in the block"));
+            arm.ObservationPlacement = "WithStimulus";
+            Assert.That(EvaluationReportView.PromptOptions(arm), Has.Some.EqualTo("prompt's own observations after the stimulus"));
+        }
+
+        [Test]
         public void TheConditionsSayTheOrderTheVersionAndHowMuchOfTheModelWasInVram()
         {
             var report = Report(new[] { 12, 8, 0, 0, 0 }, new[] { 17, 1, 2, 0, 0 });

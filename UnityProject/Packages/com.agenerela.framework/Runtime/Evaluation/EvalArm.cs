@@ -15,7 +15,10 @@ namespace Agenerela.Evaluation
     /// <see cref="DecideOptions.CheckTarget"/> is on for a prompt only when both the arm and the
     /// prompt's <c>checkTarget</c> leave it on. The arm's own <see cref="DecideOptions.Observations"/>
     /// are sent first on every prompt, before the state, the targets and the prompt's own lines, so
-    /// an arm can test one extra line. Everything else is the arm's, unchanged.
+    /// an arm can test one extra line. Only the prompt's own lines are the call's own observations:
+    /// the arm's, the state's and the targets' reach the agent through an observation source, so
+    /// <see cref="DecideOptions.ObservationPlacement"/> moves the prompt's lines alone (#151).
+    /// Everything else is the arm's, unchanged.
     /// </para>
     /// <para>The options are copied when the arm is made: changing them afterwards changes nothing.</para>
     /// </remarks>

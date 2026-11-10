@@ -179,6 +179,52 @@ namespace Agenerela.Tests.Evaluation
         }
 
         [Test]
+        public async Task TheDefaultPlacementSendsTheBlockTheRunnerSentBefore()
+        {
+            // #151: the standing lines now come from an observation source; with the default
+            // placement the block is the one written when every line was the call's own.
+            var seen = Prompt("target_001", "Keep an eye on that animal.", "attack_target", "wolf", false, observations: "[\"A wolf is near the sheep\"]");
+            var provider = new FakeProvider(Reply("attack_target", "wolf"));
+            var armA = new DecideOptions();
+            armA.Observations.Add("Arm line.");
+
+            await Run(new[] { seen }, null, provider, provider, armA);
+
+            string observations = Request(provider, "Keep an eye on that animal.").Observations;
+            Assert.That(observations, Is.EqualTo(string.Join("\n",
+                "What you know right now:",
+                "- Arm line.",
+                "- isFollowing: false.",
+                "- bridge: The wooden bridge.",
+                "- docks: The docks.",
+                "- wolf: A wolf.",
+                "- A wolf is near the sheep")));
+            Assert.That(Request(provider, "Keep an eye on that animal.").Stimulus, Is.EqualTo("Player: \"Keep an eye on that animal.\""));
+        }
+
+        [Test]
+        public async Task AnArmsPlacementMovesThePromptsOwnLinesAlone()
+        {
+            var seen = Prompt("target_001", "Keep an eye on that animal.", "attack_target", "wolf", false, observations: "[\"A wolf is near the sheep\"]");
+            var a = new FakeProvider(Reply("attack_target", "wolf"));
+            var b = new FakeProvider(Reply("attack_target", "wolf"));
+            var first = new DecideOptions { ObservationPlacement = ObservationPlacement.BeforeSources };
+            first.Observations.Add("Arm line.");
+            var with = new DecideOptions { ObservationPlacement = ObservationPlacement.WithStimulus };
+
+            var report = await Fixtures.NotCancelled(Runner(new[] { seen }, null, a, b, first, with).RunAsync());
+
+            var inA = Request(a, "Keep an eye on that animal.");
+            Assert.That(inA.Observations, Does.StartWith("What you know right now:\n- A wolf is near the sheep\n- Arm line.\n- isFollowing: false."),
+                "The prompt's line opens the block; the arm's, the state's and the targets' follow in their order.");
+            var inB = Request(b, "Keep an eye on that animal.");
+            Assert.That(inB.Stimulus, Is.EqualTo("Player: \"Keep an eye on that animal.\" A wolf is near the sheep."));
+            Assert.That(inB.Observations, Does.Not.Contain("A wolf is near the sheep"));
+            Assert.That(inB.Observations, Does.Contain("- isFollowing: false."), "The standing lines stay in the block.");
+            Assert.That(report.Conditions.Arms.Select(c => c.ObservationPlacement), Is.EqualTo(new[] { "BeforeSources", "WithStimulus" }));
+        }
+
+        [Test]
         public async Task TheSetsTargetsAreOfferedThroughATargetSource()
         {
             var provider = new FakeProvider(Reply("move_to", "bridge"));

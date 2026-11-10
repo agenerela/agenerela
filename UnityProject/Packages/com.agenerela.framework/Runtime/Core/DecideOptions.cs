@@ -131,6 +131,21 @@ namespace Agenerela
         public IList<string> Observations = new List<string>();
 
         /// <summary>
+        /// Where this call's own <see cref="Observations"/> go in the request (#151):
+        /// <see cref="Agenerela.ObservationPlacement.AfterSources"/> by default, the end of the
+        /// observation block, after every line of <see cref="Agent.ObservationSources"/>, which is
+        /// what every request sent before this option. Off by default: owed an A/B run before
+        /// another becomes the default.
+        /// </summary>
+        /// <remarks>
+        /// Only where the lines are rendered changes. They count against
+        /// <see cref="Agent.MaxObservations"/> the same way, and the context every guard, source and
+        /// handler reads holds the same list in the same order. Nothing here reads
+        /// <see cref="StimulusLabel"/> or the stimulus (DR-008).
+        /// </remarks>
+        public ObservationPlacement ObservationPlacement = ObservationPlacement.AfterSources;
+
+        /// <summary>
         /// Whether anyone is waiting on this decision (DR-015). Every agent on one provider shares
         /// its queue, which sends a <see cref="DecisionPriority.PlayerFacing"/> request before any
         /// <see cref="DecisionPriority.Background"/> one. Player-facing by default; set it to
