@@ -584,6 +584,21 @@ namespace LivingVale.Tests
         }
 
         [Test]
+        public async Task AReplyFromAnEndedConversationMakesNoCardAndIsNotRemembered()
+        {
+            AcceptMainQuest();
+            UseModel(Kest);
+            var (turn, reply) = await Decide(Kest, "Name your price.", GameActions.OfferExchange, QuestRoutes.ExchangeKestPayment);
+            coordinator.Close(ConversationCloseReason.PlayerClosed);
+            coordinator.Open(Kest);
+
+            Assert.IsFalse(model.Execute(turn, reply), "A reply from a closed conversation is refused.");
+            Assert.IsNull(model.PendingProposal, "No card.");
+            await Decide(Kest, "Hello again.", ActionRegistry.None, TargetRegistry.NoTarget);
+            Assert.AreEqual(0, provider.LastRequest.History.Count, "And the offer never entered Kest's memory.");
+        }
+
+        [Test]
         public async Task TheModelDriverRunsTheInvestigationRoute()
         {
             AcceptMainQuest();

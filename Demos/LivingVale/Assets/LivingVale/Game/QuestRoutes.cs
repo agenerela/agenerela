@@ -716,7 +716,8 @@ namespace LivingVale.Game
             return true;
         }
 
-        private bool IsCurrent(string npcId, long generation) => session.ActiveNpcId == npcId && session.Generation == generation;
+        /// <summary>Whether <paramref name="generation"/> is the open conversation, with this NPC: where a card may be made or carried out.</summary>
+        public bool IsCurrent(string npcId, long generation) => session.ActiveNpcId == npcId && session.Generation == generation;
 
         private static string QuestFor(RouteContract contract)
         {

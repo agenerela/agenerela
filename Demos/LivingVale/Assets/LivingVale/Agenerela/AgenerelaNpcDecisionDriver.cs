@@ -484,9 +484,11 @@ namespace LivingVale.Agenerela
         {
             LastOutcome = null;
 
-            // Proposals.Hold runs no re-check, so the game makes a card only for a pair it still
-            // offers; the agent checks again when the player confirms.
-            if (!ExecutorHandler.Offers(executor, turn.Npc.Id, result.Decision.ActionId, result.Decision.TargetId))
+            // Proposals.Hold runs no re-check and remembers the offer at once, so the game makes a
+            // card only in the conversation the turn belongs to and for a pair it still offers, as
+            // TryPropose did; the agent checks again when the player confirms.
+            if (!executor.Routes.IsCurrent(turn.Npc.Id, turn.Generation) ||
+                !ExecutorHandler.Offers(executor, turn.Npc.Id, result.Decision.ActionId, result.Decision.TargetId))
             {
                 return false;
             }
