@@ -187,6 +187,132 @@ namespace Agenerela.Tests
             Assert.That(runs, Is.EqualTo(1));
         }
 
+        // Codex, round 1 of #236: a guard on the innermost confirmation alone let A's handler confirm
+        // B, whose handler confirmed A again.
+        [Test]
+        public async Task NestedConfirmationsNeverRunAnOuterProposalAgain()
+        {
+            var fake = new FakeProvider();
+            var agent = Agent(fake, out _);
+            var proposals = new Proposals(agent);
+            Proposal a = null, b = null;
+            int aRuns = 0, bRuns = 0;
+            bool? again = null;
+            agent.Actions.Register(
+                new ActionDefinition { Id = "offer_a", Description = "Offer A.", RequiresTarget = false },
+                new DelegateActionHandler(_ => true, (_, __) => { if (++aRuns == 1) proposals.Confirm(b); }));
+            agent.Actions.Register(
+                new ActionDefinition { Id = "offer_b", Description = "Offer B.", RequiresTarget = false },
+                new DelegateActionHandler(_ => true, (_, __) => { if (++bRuns == 1) again = proposals.Confirm(a); }));
+            a = proposals.Hold(await Decide(agent, fake, "offer_a", "no_target"));
+            b = proposals.Hold(await Decide(agent, fake, "offer_b", "no_target"));
+
+            Assert.That(proposals.Confirm(a), Is.True);
+
+            Assert.That(aRuns, Is.EqualTo(1), "A ran once.");
+            Assert.That(bRuns, Is.EqualTo(1));
+            Assert.That(again, Is.False, "B's handler could not confirm A, which was being confirmed.");
+            Assert.That(a.Status, Is.EqualTo(ProposalStatus.Accepted));
+            Assert.That(b.Status, Is.EqualTo(ProposalStatus.Accepted));
+        }
+
+        // Codex, round 1 of #236: the telemetry guard looked at the proposal, not the shared result.
+        [Test]
+        public async Task ARefusalNeverOverwritesTheResultsRealExecution()
+        {
+            var (agent, fake, proposals, offered) = Guide();
+            var result = await Decide(agent, fake, "offer_route", "route_mill");
+            var old = proposals.Hold(result);
+            proposals.Decline(old);
+            var current = proposals.Hold(result);
+            Assert.That(current, Is.Not.SameAs(old));
+
+            Assert.That(proposals.Confirm(current), Is.True);
+            Assert.That(proposals.Confirm(old, out var refused), Is.False);
+
+            Assert.That(refused.Status, Is.EqualTo(ExecutionStatus.Refused));
+            Assert.That(result.Telemetry.Execution, Is.EqualTo(ExecutionStatus.Done), "What was done stays recorded.");
+            Assert.That(offered, Has.Count.EqualTo(1));
+        }
+
+        // Codex, round 1 of #236: StillValid is the game's code, and ran before any re-check.
+        [TestCase(true)]
+        [TestCase(false)]
+        public async Task AProposalSettledFromInsideStillValidDoesNotRun(bool reset)
+        {
+            var (agent, fake, proposals, offered) = Guide();
+            var proposal = proposals.Hold(await Decide(agent, fake, "offer_route", "route_mill"));
+            proposals.StillValid = p =>
+            {
+                if (reset) agent.Reset();
+                else proposals.Decline(p);
+                return true;
+            };
+
+            Assert.That(proposals.Confirm(proposal, out var outcome), Is.False);
+
+            Assert.That(offered, Is.Empty);
+            Assert.That(outcome.Status, Is.EqualTo(ExecutionStatus.Refused));
+            Assert.That(proposal.Status, Is.EqualTo(reset ? ProposalStatus.Reset : ProposalStatus.Declined));
+            Assert.That(proposal.Outcome, Is.Null);
+        }
+
+        [Test]
+        public async Task NothingCanBeHeldFromInsideAReset()
+        {
+            var (agent, fake, proposals, _) = Guide();
+            proposals.Hold(await Decide(agent, fake, "offer_route", "route_mill"));
+            var late = await Decide(agent, fake, "offer_route", "route_ford");
+            bool tried = false;
+            proposals.Changed += _ =>
+            {
+                if (!tried)
+                {
+                    tried = true;
+                    proposals.Hold(late);
+                }
+            };
+
+            LogAssert.Expect(LogType.Exception, new Regex("being reset"));
+            agent.Reset();
+
+            Assert.That(tried, Is.True);
+            Assert.That(proposals.Pending, Is.Empty, "Empty when Reset returns.");
+        }
+
+        // Codex, round 2 of #236: a hold from another helper's reset callback moved this helper's
+        // watch to the new token before its own callback ran, so its proposal survived the reset.
+        [Test]
+        public async Task AHoldFromAnotherHelpersResetCallbackLeavesNothingHeld()
+        {
+            var (agent, fake, first, _) = Guide();
+            var second = new Proposals(agent, new[] { "offer_route" });
+            var held = first.Hold(await Decide(agent, fake, "offer_route", "route_mill"));
+            second.Hold(await Decide(agent, fake, "offer_route", "route_ford"));
+            var fresh = await Decide(agent, fake, "offer_route", "route_mill");
+            second.Changed += _ => first.Hold(fresh);
+
+            LogAssert.Expect(LogType.Exception, new Regex("being reset"));
+            agent.Reset();
+
+            Assert.That(held.Status, Is.EqualTo(ProposalStatus.Reset));
+            Assert.That(first.Pending, Is.Empty);
+            Assert.That(second.Pending, Is.Empty);
+        }
+
+        [Test]
+        public async Task AResultFromBeforeAResetIsNotHeldAfterIt()
+        {
+            var (agent, fake, proposals, _) = Guide();
+            agent.MemoryCommit = MemoryCommit.OnExecute;
+            var before = await Decide(agent, fake, "offer_route", "route_mill");
+
+            agent.Reset();
+
+            Assert.Throws<ArgumentException>(() => proposals.Hold(before));
+            Assert.That(proposals.Pending, Is.Empty);
+        }
+
         [Test]
         public async Task ProposalsRefuseAProposalHeldByAnotherHelper()
         {

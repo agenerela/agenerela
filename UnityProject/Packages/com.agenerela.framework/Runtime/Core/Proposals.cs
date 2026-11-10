@@ -60,9 +60,6 @@ namespace Agenerela
         private CancellationTokenRegistration watch;
         private bool watching;
 
-        // The proposal Confirm is carrying out, while its handler runs; null otherwise.
-        private Proposal confirming;
-
         /// <summary>A helper for <paramref name="agent"/>'s proposals.</summary>
         /// <param name="agent">The agent whose decisions are held.</param>
         /// <param name="heldActions">The action ids <see cref="Submit(DecisionResult)"/> holds rather than carries out at once. Null or empty for none.</param>
@@ -136,6 +133,8 @@ namespace Agenerela
         /// </param>
         /// <returns>The proposal when held, or null.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="result"/> is null.</exception>
+        /// <exception cref="ArgumentException">As for <see cref="Hold"/>, for a result it would hold.</exception>
+        /// <exception cref="InvalidOperationException">As for <see cref="Hold"/>, for a result it would hold.</exception>
         public Proposal Submit(DecisionResult result, out ActionResult? outcome)
         {
             if (result == null)
@@ -169,7 +168,14 @@ namespace Agenerela
         /// <exception cref="ArgumentException">
         /// <paramref name="result"/> has nothing to propose: a pipeline error, or a decision of
         /// <c>none</c>, a rejected answer's included. Or it was decided by another agent with memory
-        /// held for it (<see cref="Agent.Commit"/> throws). Nothing is held.
+        /// held for it (<see cref="Agent.Commit"/> throws). Or it was decided before its agent was
+        /// <see cref="Agent.Reset"/>, which the helper can tell only for a result held for memory
+        /// (<see cref="Agenerela.MemoryCommit.OnExecute"/> with a memory): never hold one from before a
+        /// reset. Nothing is held.
+        /// </exception>
+        /// <exception cref="InvalidOperationException">
+        /// Called during a reset of the agent, from a <see cref="Changed"/> handler: a reset leaves
+        /// nothing held, so <see cref="Pending"/> is empty when <see cref="Agent.Reset"/> returns.
         /// </exception>
         public Proposal Hold(DecisionResult result)
         {
@@ -183,6 +189,23 @@ namespace Agenerela
                 throw new ArgumentException(
                     "There is nothing to propose: the result is a pipeline error, or its decision is none.",
                     nameof(result));
+            }
+
+            // Agent-wide, not this helper's own: another helper's reset callback may run first, and a
+            // hold from it would move this helper's watch off the token before its own callback ran.
+            if (Agent.IsResetting)
+            {
+                throw new InvalidOperationException(
+                    "The agent is being reset, which leaves nothing held: a proposal cannot be held from inside the reset.");
+            }
+
+            // A decision from before a reset of its agent, which the reset dropped from memory. Told
+            // only for a result held for memory (OnExecute, with a memory); without one, the helper
+            // cannot tell, and holding such a result is the caller's mistake.
+            if (result.Pending != null && result.Pending.Reset.IsCancellationRequested)
+            {
+                throw new ArgumentException(
+                    "The result was decided before its agent was reset, and a reset leaves nothing held.", nameof(result));
             }
 
             foreach (var waiting in pending)
@@ -240,8 +263,10 @@ namespace Agenerela
         /// <returns><paramref name="outcome"/>'s <see cref="ActionResult.Succeeded"/>.</returns>
         /// <remarks>
         /// <para>
-        /// The proposal leaves <see cref="Pending"/> before its handler runs, so the handler, which is
-        /// the game's code, sees it gone and cannot confirm it twice. Afterwards its
+        /// A proposal runs only while it is in <see cref="Pending"/>, checked again after
+        /// <see cref="StillValid"/>, which is the game's code and may settle it or reset the agent. It
+        /// leaves <see cref="Pending"/> before its handler runs, so no handler, however deeply
+        /// confirmations nest, can confirm it twice. Afterwards its
         /// <see cref="Proposal.Status"/> is <see cref="ProposalStatus.Accepted"/>,
         /// <see cref="ProposalStatus.Failed"/> or <see cref="ProposalStatus.Refused"/>, from the
         /// outcome. A handler that throws leaves it <see cref="ProposalStatus.Failed"/> with no
@@ -249,7 +274,9 @@ namespace Agenerela
         /// </para>
         /// <para>
         /// A refusal here, rather than by the agent, is written to the result's telemetry as the
-        /// agent's own is, unless the decision was already carried out; it is not logged or raised on
+        /// agent's own is, unless the result already has an <see cref="DecisionTelemetry.Execution"/>
+        /// of its own, from any proposal or a direct <see cref="Agent.Execute(DecisionResult)"/>, which
+        /// is never overwritten. It is not logged or raised on
         /// the decision feed, since the game itself moved past it, as <see cref="Conversation"/>'s
         /// refusals are not.
         /// </para>
@@ -260,32 +287,38 @@ namespace Agenerela
         {
             CheckOwn(proposal);
 
-            if (!proposal.IsPending || ReferenceEquals(proposal, confirming))
+            // Membership of Pending is the one test of whether it may still run: a proposal leaves
+            // it before its handler runs, so one being confirmed, at any depth of nesting, is out.
+            if (!pending.Contains(proposal))
             {
-                outcome = ActionResult.Refused(ReferenceEquals(proposal, confirming)
-                    ? "It is being confirmed already."
-                    : $"It is no longer pending: {proposal.Status}. {proposal.Reason}".TrimEnd());
-                if (proposal.Outcome == null && !ReferenceEquals(proposal, confirming))
-                {
-                    WriteRefusal(proposal.Result, outcome);
-                }
-
+                outcome = NotPending(proposal);
                 return false;
             }
 
-            if (StillValid != null && !StillValid(proposal))
+            if (StillValid != null)
             {
-                outcome = ActionResult.Refused("The game's StillValid check says it no longer stands.");
-                pending.Remove(proposal);
-                End(proposal, ProposalStatus.Refused, outcome.Reason);
-                WriteRefusal(proposal.Result, outcome);
-                RaiseChanged();
-                return false;
+                bool valid = StillValid(proposal);
+
+                // The predicate is the game's code, and may itself have declined, confirmed or reset
+                // the proposal (Codex, round 1 of #236).
+                if (!pending.Contains(proposal))
+                {
+                    outcome = NotPending(proposal);
+                    return false;
+                }
+
+                if (!valid)
+                {
+                    outcome = ActionResult.Refused("The game's StillValid check says it no longer stands.");
+                    pending.Remove(proposal);
+                    End(proposal, ProposalStatus.Refused, outcome.Reason);
+                    WriteRefusal(proposal.Result, outcome);
+                    RaiseChanged();
+                    return false;
+                }
             }
 
             pending.Remove(proposal);
-            var outer = confirming;
-            confirming = proposal;
             try
             {
                 Agent.Execute(proposal.Result, out outcome);
@@ -295,10 +328,6 @@ namespace Agenerela
                 End(proposal, ProposalStatus.Failed, "The handler threw.");
                 RaiseChanged();
                 throw;
-            }
-            finally
-            {
-                confirming = outer;
             }
 
             proposal.Outcome = outcome;
@@ -395,8 +424,28 @@ namespace Agenerela
             proposal.Reason = reason;
         }
 
+        // The refusal of a proposal no longer in Pending: settled, or being confirmed right now.
+        private static ActionResult NotPending(Proposal proposal)
+        {
+            if (proposal.IsPending)
+            {
+                return ActionResult.Refused("It is being confirmed already.");
+            }
+
+            var outcome = ActionResult.Refused($"It is no longer pending: {proposal.Status}. {proposal.Reason}".TrimEnd());
+            WriteRefusal(proposal.Result, outcome);
+            return outcome;
+        }
+
+        // Only onto a result never carried out: a real Execute outcome, from this proposal, another
+        // holding the same result, or the agent directly, is never overwritten (Codex, round 1 of #236).
         private static void WriteRefusal(DecisionResult result, ActionResult outcome)
         {
+            if (result.Telemetry.Execution != null)
+            {
+                return;
+            }
+
             result.Telemetry.Execution = outcome.Status;
             result.Telemetry.ExecutionReason = outcome.Reason;
         }

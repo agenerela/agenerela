@@ -84,8 +84,9 @@ void OnConversationClosed()       => offers.DeclineAll();
    refused with the check's reason, for example "'offer_route' cannot be done to 'route_ford'
    right now: the ford is flooded". Then the handler runs.
 
-The proposal leaves `Pending` before its handler runs, so the handler, which is the game's code,
-sees it gone and cannot confirm it twice.
+A proposal runs only while it is in `Pending`, checked again after `StillValid`, since the
+predicate is the game's code and may decline it or reset the agent. It leaves `Pending` before its
+handler runs, so no handler, however deeply confirmations nest, can confirm it twice.
 
 | `proposal.Status` | Means |
 |---|---|
@@ -119,13 +120,18 @@ be one more switch that changes what the model reads.
 **Telemetry tells an offer from an accepted one.** `DecisionTelemetry.Execution` stays null while
 a proposal waits; the `DecisionStage.Executed` record in the decision feed comes only at confirm. A
 refusal by the helper itself (superseded, already settled, `StillValid`) is written to the result's
-telemetry as `Refused` with its reason, unless the decision was already carried out, and is not
+telemetry as `Refused` with its reason, unless the result already has an `Execution` of its own,
+from any proposal or a direct `agent.Execute`, which is never overwritten; it is not
 logged or raised on the feed, as a conversation's refusals are not. A proposal declined,
 superseded or reset is never executed and leaves its telemetry as it was.
 
 **`Agent.Reset()` leaves nothing held.** The helper watches the agent's reset: every pending
 proposal ends as `Reset` during the reset, and `Changed` is raised. A `Changed` handler that throws
-then is logged, so it cannot fail the reset. No call to `DeclineAll` is needed.
+then is logged, so it cannot fail the reset. No call to `DeclineAll` is needed. `Pending` is empty
+when `Reset` returns: `Hold` throws if a `Changed` handler calls it during the reset. A decision made
+before a reset must not be held after it either; `Hold` refuses one it can tell, a result held for
+memory under `OnExecute`, but with no memory the helper cannot tell, so that is the caller's to
+avoid.
 
 ## With a conversation
 
