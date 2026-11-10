@@ -52,6 +52,9 @@ namespace LivingVale.Agenerela
         private readonly Dictionary<string, NpcPersona> personas = new Dictionary<string, NpcPersona>();
         private readonly Dictionary<string, Agent> agents = new Dictionary<string, Agent>();
         private readonly Dictionary<string, Conversation> conversations = new Dictionary<string, Conversation>();
+
+        // Each NPC's route cards (#236): a decision the player confirms before it runs is held here.
+        private readonly Dictionary<string, Proposals> proposals = new Dictionary<string, Proposals>();
         private readonly Action<NpcDescriptor, Agent> configureAgent;
         private readonly NpcActionExecutor executor;
         private readonly Dictionary<string, TradeActionBinding> trade = new Dictionary<string, TradeActionBinding>();
@@ -154,6 +157,9 @@ namespace LivingVale.Agenerela
         /// <summary>The executor's outcome for the last trade action executed, or null. Tests and tools read it.</summary>
         public ActionOutcome LastOutcome { get; private set; }
 
+        /// <summary>The decision <see cref="Execute(NpcTurn, DecisionResult)"/> was last asked to carry out or hold as a card, or null.</summary>
+        public AgentDecision LastDecision { get; private set; }
+
         /// <summary>This NPC's agent, built on first use.</summary>
         public Agent AgentFor(NpcDescriptor npc)
         {
@@ -191,7 +197,11 @@ namespace LivingVale.Agenerela
 
                 if (executor.Routes != null)
                 {
-                    routeBindings[npc.Id] = RouteActionBinding.Bind(agent, npc.Id, executor);
+                    // One card at a time: a new proposal supersedes the one before, as a new card replaces the old.
+                    var held = new Proposals(agent) { OnePending = true };
+                    held.Changed += _ => ProposalsChanged?.Invoke();
+                    proposals[npc.Id] = held;
+                    routeBindings[npc.Id] = RouteActionBinding.Bind(agent, npc.Id, executor, () => held.Latest);
                 }
             }
 
@@ -365,6 +375,19 @@ namespace LivingVale.Agenerela
                 return false;
             }
 
+            LastDecision = result.Decision;
+            if (IsCard(turn, result))
+            {
+                // Held, not carried out: the conversation's own stale check comes first.
+                if (!chat.IsCurrent(result))
+                {
+                    return false;
+                }
+
+                ExecutedCount++;
+                return Hold(turn, result);
+            }
+
             ExecutedCount++;
             bool executed = chat.Execute(result, out var actionResult);
             LastOutcome = actionResult.TryGetPayload<ActionOutcome>(out var outcome) ? outcome : null;
@@ -386,6 +409,11 @@ namespace LivingVale.Agenerela
             }
 
             ExecutedCount++;
+            LastDecision = result.Decision;
+            if (IsCard(turn, result))
+            {
+                return Hold(turn, result);
+            }
 
             // The handlers return what the executor did (DR-018): Done with the outcome, or Failed
             // with the outcome when the executor refused the quote or offer. Under
@@ -393,6 +421,78 @@ namespace LivingVale.Agenerela
             bool executed = agent.Execute(result, out var actionResult);
             LastOutcome = actionResult.TryGetPayload<ActionOutcome>(out var outcome) ? outcome : null;
             return executed;
+        }
+
+        // ---- Route cards (#236) ----
+
+        /// <summary>Raised whenever an NPC's route card is held, confirmed, declined, superseded or reset.</summary>
+        public event Action ProposalsChanged;
+
+        /// <summary>The route card waiting for the player, or null. Cards end with their conversation, so there is at most one.</summary>
+        public Proposal PendingProposal
+        {
+            get
+            {
+                foreach (var held in proposals.Values)
+                {
+                    if (held.Latest != null)
+                    {
+                        return held.Latest;
+                    }
+                }
+
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// The card's confirm button: carries the proposal out through the NPC's agent, whose re-check
+        /// refuses a pair the game no longer offers, then the executor, which checks the contract's
+        /// conditions and the conversation once more. Takes the very proposal the card was made from.
+        /// </summary>
+        public bool Confirm(Proposal proposal, out ActionResult outcome)
+        {
+            var held = Owner(proposal) ?? throw new ArgumentException("Not one of this driver's cards.", nameof(proposal));
+            bool done = held.Confirm(proposal, out outcome);
+            LastOutcome = outcome.TryGetPayload<ActionOutcome>(out var carried) ? carried : null;
+            return done;
+        }
+
+        /// <summary>The card's decline button.</summary>
+        public bool Decline(Proposal proposal) => Owner(proposal)?.Decline(proposal) ?? false;
+
+        /// <summary>Declines every NPC's waiting card: a conversation opened or closed, or a save loaded.</summary>
+        public int DeclineProposals(string reason = null)
+        {
+            int declined = 0;
+            foreach (var held in proposals.Values)
+            {
+                declined += held.DeclineAll(reason);
+            }
+
+            return declined;
+        }
+
+        private Proposals Owner(Proposal proposal) =>
+            proposal?.Correlation is NpcTurn turn && proposals.TryGetValue(turn.Npc.Id, out var held) ? held : null;
+
+        private bool IsCard(NpcTurn turn, DecisionResult result) =>
+            result.Decision != null && proposals.ContainsKey(turn.Npc.Id) &&
+            executor.IsRouteCard(result.Decision.ActionId, result.Decision.TargetId);
+
+        private bool Hold(NpcTurn turn, DecisionResult result)
+        {
+            LastOutcome = null;
+
+            // Proposals.Hold runs no re-check, so the game makes a card only for a pair it still
+            // offers; the agent checks again when the player confirms.
+            if (!ExecutorHandler.Offers(executor, turn.Npc.Id, result.Decision.ActionId, result.Decision.TargetId))
+            {
+                return false;
+            }
+
+            proposals[turn.Npc.Id].Hold(result);
+            return true;
         }
     }
 }

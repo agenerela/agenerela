@@ -137,6 +137,10 @@ namespace LivingVale.Unity
             tradeLink.Attach(Coordinator, Trade);
             tradeLink.AttachQuests(Quests);
             tradeLink.AttachRoutes(Routes);
+
+            // The route cards are the NPCs' proposals (#236): they end with the conversation and with a load.
+            tradeLink.EndPendingCards = () => ModelDriver.DeclineProposals("The conversation moved on.");
+            Saves.EndPendingCards = () => ModelDriver.DeclineProposals("A save was loaded.");
             // The server's own model list, warm-up and unload (#198), through the provider in use.
             Models = new ModelCycle(Coordinator, Drivers,
                 new ModelSelector(ollamaModels, Drivers.ModelLabel, new ProviderModelCatalog(() => Drivers.ModelProvider)),

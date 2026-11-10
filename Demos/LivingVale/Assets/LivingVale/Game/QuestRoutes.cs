@@ -18,8 +18,9 @@ namespace LivingVale.Game
 
     /// <summary>
     /// One authored contract an NPC can put on a card: a side-quest offer, an exchange or a delivery.
-    /// The NPC's decision only puts it on the card; <see cref="QuestRoutes.Confirm"/>, from the card's
-    /// button, carries it out after checking every condition again.
+    /// The NPC's decision only puts it on the card, as a framework proposal (<c>Proposals</c>, #236);
+    /// the card's button carries it out through the agent, which checks the pair again, and
+    /// <see cref="QuestRoutes.TryApply"/> checks every condition once more before anything changes.
     /// </summary>
     public sealed class RouteContract
     {
@@ -57,27 +58,6 @@ namespace LivingVale.Game
         }
 
         public override string ToString() => Id;
-    }
-
-    /// <summary>A contract on the chat card, tied to the conversation it was proposed in, like a trade quote.</summary>
-    public sealed class RouteProposal
-    {
-        public string Id { get; }
-        public RouteContract Contract { get; }
-        public long ConversationGeneration { get; }
-        public QuestOfferState State { get; internal set; }
-
-        public string NpcId => Contract.NpcId;
-
-        internal RouteProposal(string id, RouteContract contract, long generation)
-        {
-            Id = id;
-            Contract = contract;
-            ConversationGeneration = generation;
-            State = QuestOfferState.Pending;
-        }
-
-        public override string ToString() => $"{Id} ({State})";
     }
 
     /// <summary>A fact an NPC can tell through <c>share_information</c>. Telling it records a clue; saying "I know" does not.</summary>
@@ -172,7 +152,8 @@ namespace LivingVale.Game
     /// </summary>
     /// <remarks>
     /// Saved state lives in <see cref="QuestLog"/>: clues, agreements and the permit are clue IDs,
-    /// pickups are inventory event IDs. Cards are never saved; loading invalidates the pending one.
+    /// pickups are inventory event IDs. Cards are the framework's proposals, held by each NPC's
+    /// agent; they are never saved, and a load or a conversation's end declines them.
     /// Plain C#, no scene. Main thread only.
     /// </remarks>
     public sealed class QuestRoutes
@@ -226,8 +207,6 @@ namespace LivingVale.Game
         private readonly List<AccessGrant> grants = new List<AccessGrant>();
         private readonly List<QuestPickup> pickups = new List<QuestPickup>();
         private readonly HashSet<string> defeatedDefenders = new HashSet<string>();
-        private RouteProposal pending;
-        private int proposalCount;
 
         public QuestRoutes(QuestLog quests, ITradeSession session)
         {
@@ -246,12 +225,9 @@ namespace LivingVale.Game
 
         public QuestLog Quests => quests;
 
-        /// <summary>The proposal on the chat card, or null.</summary>
-        public RouteProposal ActiveProposal => pending != null && pending.State == QuestOfferState.Pending ? pending : null;
-
         public IReadOnlyList<QuestPickup> Pickups => pickups;
 
-        /// <summary>Raised after every committed change, a card appearing or ending included.</summary>
+        /// <summary>Raised after every committed change.</summary>
         public event Action Changed;
 
         /// <summary>Raised for every step attempted here, applied or refused: the line the chat or the HUD shows.</summary>
@@ -306,6 +282,9 @@ namespace LivingVale.Game
 
             return result;
         }
+
+        /// <summary>The contract with this id, available or not, or null: what a card shows.</summary>
+        public RouteContract Contract(string contractId) => contracts.Find(c => c.Id == contractId);
 
         /// <summary>True when <paramref name="targetId"/> is one of this class's targets for that action, available or not.</summary>
         public bool Owns(string actionId, string targetId)
@@ -378,97 +357,30 @@ namespace LivingVale.Game
         }
 
         /// <summary>
-        /// <c>offer_quest</c>, <c>offer_exchange</c> or <c>resolve_delivery</c>: puts the contract on a
-        /// card for this conversation, replacing any earlier card. Nothing else changes.
+        /// <c>offer_quest</c>, <c>offer_exchange</c> or <c>resolve_delivery</c>, once the player confirmed
+        /// its card: carries the contract out if it is still this NPC's, in the conversation it was
+        /// proposed in, and its conditions still hold. The effect's own event ID makes a repeat a no-op.
         /// </summary>
-        public QuestRejection TryPropose(string npcId, string actionId, string contractId, long generation, out RouteProposal proposal)
+        public QuestReceipt TryApply(string npcId, string actionId, string contractId, long generation)
         {
-            proposal = null;
             var contract = contracts.Find(c => c.Id == contractId && c.ActionId == actionId);
             if (contract == null || contract.NpcId != npcId)
             {
-                return QuestRejection.UnknownOffer;
+                return Report(QuestLog.MainQuestId, null, QuestRejection.UnknownOffer, "That offer is no longer open.");
             }
 
+            string questId = QuestFor(contract);
             if (!IsCurrent(npcId, generation))
             {
-                return QuestRejection.StaleConversation;
+                return Report(questId, null, QuestRejection.StaleConversation, "That offer is no longer open.");
             }
 
             if (!contract.Available())
             {
-                return QuestRejection.WrongState;
-            }
-
-            if (pending != null && pending.State == QuestOfferState.Pending)
-            {
-                pending.State = QuestOfferState.Invalidated;
-            }
-
-            proposalCount++;
-            pending = new RouteProposal($"{contract.Id}#{proposalCount}", contract, generation);
-            proposal = pending;
-            GameEvents.Raise(Changed);
-            return QuestRejection.None;
-        }
-
-        /// <summary>
-        /// The card's confirm button: carries out the pending proposal if it is still this
-        /// conversation's and its conditions still hold. The effect's own event ID makes a repeat a no-op.
-        /// </summary>
-        public QuestReceipt Confirm(string proposalId)
-        {
-            var proposal = ActiveProposal;
-            string questId = proposal != null ? QuestFor(proposal.Contract) : QuestLog.MainQuestId;
-            if (proposal == null || proposal.Id != proposalId)
-            {
-                return Report(questId, null, QuestRejection.OfferNotPending, "That offer is no longer open.");
-            }
-
-            if (!IsCurrent(proposal.NpcId, proposal.ConversationGeneration))
-            {
-                proposal.State = QuestOfferState.Invalidated;
-                return Report(questId, null, QuestRejection.StaleConversation, "That offer is no longer open.");
-            }
-
-            if (!proposal.Contract.Available())
-            {
-                proposal.State = QuestOfferState.Invalidated;
                 return Report(questId, null, QuestRejection.WrongState, "Things changed; that offer no longer stands.");
             }
 
-            var receipt = proposal.Contract.Apply();
-            if (receipt.Applied)
-            {
-                proposal.State = QuestOfferState.Accepted;
-                GameEvents.Raise(Changed);
-            }
-
-            return receipt;
-        }
-
-        /// <summary>The card's decline button.</summary>
-        public bool Decline(string proposalId)
-        {
-            var proposal = ActiveProposal;
-            if (proposal == null || proposal.Id != proposalId)
-            {
-                return false;
-            }
-
-            proposal.State = QuestOfferState.Declined;
-            GameEvents.Raise(Changed);
-            return true;
-        }
-
-        /// <summary>The conversation opened, closed or a save loaded: the card goes away.</summary>
-        public void InvalidatePending()
-        {
-            if (pending != null && pending.State == QuestOfferState.Pending)
-            {
-                pending.State = QuestOfferState.Invalidated;
-                GameEvents.Raise(Changed);
-            }
+            return contract.Apply();
         }
 
         // ---- World ----

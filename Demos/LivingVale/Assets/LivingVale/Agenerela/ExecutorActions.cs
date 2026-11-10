@@ -51,7 +51,11 @@ namespace LivingVale.Agenerela
         /// <summary>Always: whether there is anything to do it to is the per-target check's, which masks the action when nothing is allowed.</summary>
         public bool IsAvailable(AgentContext ctx) => true;
 
-        public Availability IsAvailableFor(AgentContext ctx, string targetId)
+        public Availability IsAvailableFor(AgentContext ctx, string targetId) =>
+            Offers(executor, npcId, actionId, targetId) ? Availability.Yes : Availability.No("the game does not offer it now");
+
+        /// <summary>Whether the executor offers this NPC <paramref name="actionId"/> on <paramref name="targetId"/> now.</summary>
+        public static bool Offers(NpcActionExecutor executor, string npcId, string actionId, string targetId)
         {
             foreach (var option in executor.AvailableFor(npcId))
             {
@@ -64,12 +68,12 @@ namespace LivingVale.Agenerela
                 {
                     if (target.Id == targetId)
                     {
-                        return Availability.Yes;
+                        return true;
                     }
                 }
             }
 
-            return Availability.No("the game does not offer it now");
+            return false;
         }
 
         public void Execute(AgentContext ctx, AgentDecision decision) => ExecuteWithResult(ctx, decision);

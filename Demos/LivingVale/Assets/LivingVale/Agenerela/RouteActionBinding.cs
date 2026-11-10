@@ -70,11 +70,13 @@ namespace LivingVale.Agenerela
         private readonly string npcId;
         private readonly NpcActionExecutor executor;
         private readonly Dictionary<string, ActionDefinition> definitions = new Dictionary<string, ActionDefinition>();
+        private readonly Func<Proposal> pendingCard;
 
-        private RouteActionBinding(string npcId, NpcActionExecutor executor)
+        private RouteActionBinding(string npcId, NpcActionExecutor executor, Func<Proposal> pendingCard)
         {
             this.npcId = npcId;
             this.executor = executor;
+            this.pendingCard = pendingCard;
             foreach (var id in ActionIds)
             {
                 definitions[id] = new ActionDefinition
@@ -90,7 +92,8 @@ namespace LivingVale.Agenerela
         }
 
 
-        public static RouteActionBinding Bind(Agent agent, string npcId, NpcActionExecutor executor)
+        /// <param name="pendingCard">This NPC's card waiting for the player, from its proposals (#236); null for none.</param>
+        public static RouteActionBinding Bind(Agent agent, string npcId, NpcActionExecutor executor, Func<Proposal> pendingCard = null)
         {
             if (agent == null)
             {
@@ -102,7 +105,7 @@ namespace LivingVale.Agenerela
                 throw new ArgumentException("The executor needs quest routes.", nameof(executor));
             }
 
-            var binding = new RouteActionBinding(npcId, executor);
+            var binding = new RouteActionBinding(npcId, executor, pendingCard);
             foreach (var id in ActionIds)
             {
                 agent.Actions.Register(binding.definitions[id], new ExecutorHandler(executor, npcId, id));
@@ -224,10 +227,10 @@ namespace LivingVale.Agenerela
                     break;
             }
 
-            var proposal = routes.ActiveProposal;
-            if (proposal != null && proposal.NpcId == npcId)
+            var contract = pendingCard?.Invoke() is Proposal waiting ? routes.Contract(waiting.TargetId) : null;
+            if (contract != null)
             {
-                lines.Add($"Your proposal \"{proposal.Contract.Title}\" is on the traveler's card, waiting. Nothing is agreed until they confirm.");
+                lines.Add($"Your proposal \"{contract.Title}\" is on the traveler's card, waiting. Nothing is agreed until they confirm.");
             }
 
             return lines;

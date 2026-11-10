@@ -91,11 +91,14 @@ namespace LivingVale.Game
         /// <summary>Why an <c>offer_quest</c> was refused; <see cref="QuestRejection.None"/> otherwise.</summary>
         public QuestRejection QuestReason { get; }
 
-        /// <summary>The card a G4c <c>offer_quest</c>, <c>offer_exchange</c> or <c>resolve_delivery</c> made, or null.</summary>
-        public RouteProposal Proposal { get; private set; }
+        /// <summary>What a confirmed G4c <c>offer_quest</c>, <c>offer_exchange</c> or <c>resolve_delivery</c> card did, or null.</summary>
+        public QuestReceipt Receipt { get; private set; }
 
-        internal static ActionOutcome ForRoute(string actionId, QuestRejection questReason, RouteProposal proposal) =>
-            new ActionOutcome(actionId, questReason, (QuestOffer)null) { Proposal = proposal };
+        internal static ActionOutcome ForRoute(string actionId, QuestRejection questReason, QuestReceipt receipt = null) =>
+            new ActionOutcome(actionId, questReason, (QuestOffer)null) { Receipt = receipt };
+
+        internal static ActionOutcome ForRoute(string actionId, QuestReceipt receipt) =>
+            ForRoute(actionId, receipt.Applied ? QuestRejection.None : receipt.Reason, receipt);
 
         internal ActionOutcome(bool executed, string actionId, TradeRejection reason, TradeQuote quote)
         {
@@ -207,8 +210,10 @@ namespace LivingVale.Game
 
         /// <summary>
         /// Executes a decision that the conversation layer has already found current. <c>none</c>
-        /// always executes; a <c>quote_*</c> action makes a quote (no holdings change); anything else,
-        /// or a target that does not fit, is refused with nothing changed.
+        /// always executes; a <c>quote_*</c> action makes a quote (no holdings change); a route card's
+        /// action (<see cref="IsRouteCard"/>) carries its contract out, which the driver asks only once
+        /// the player confirmed the card; anything else, or a target that does not fit, is refused
+        /// with nothing changed.
         /// </summary>
         public ActionOutcome Execute(string npcId, string actionId, string targetId, long generation)
         {
@@ -236,10 +241,10 @@ namespace LivingVale.Game
                         return new ActionOutcome(actionId, QuestRejection.UnknownOffer, null);
                     }
 
+                    // A side quest is a route card: this runs once the player confirmed it.
                     if (routes != null && routes.Owns(actionId, targetId))
                     {
-                        var routed = routes.TryPropose(npcId, actionId, targetId, generation, out var proposal);
-                        return ActionOutcome.ForRoute(actionId, routed, proposal);
+                        return ActionOutcome.ForRoute(actionId, routes.TryApply(npcId, actionId, targetId, generation));
                     }
 
                     var rejection = quests.TryOffer(npcId, targetId, generation, out var offer);
@@ -249,22 +254,22 @@ namespace LivingVale.Game
                 case GameActions.OfferExchange:
                 case GameActions.ResolveDelivery:
                 {
+                    // Route cards: this runs once the player confirmed the card.
                     if (routes == null)
                     {
-                        return ActionOutcome.ForRoute(actionId, QuestRejection.UnknownOffer, null);
+                        return ActionOutcome.ForRoute(actionId, QuestRejection.UnknownOffer);
                     }
 
-                    var rejection = routes.TryPropose(npcId, actionId, targetId, generation, out var proposal);
-                    return ActionOutcome.ForRoute(actionId, rejection, proposal);
+                    return ActionOutcome.ForRoute(actionId, routes.TryApply(npcId, actionId, targetId, generation));
                 }
 
                 case GameActions.ShareInformation:
                     return ActionOutcome.ForRoute(actionId,
-                        routes == null ? QuestRejection.UnknownOffer : routes.TryShare(npcId, targetId, generation), null);
+                        routes == null ? QuestRejection.UnknownOffer : routes.TryShare(npcId, targetId, generation));
 
                 case GameActions.GrantAccess:
                     return ActionOutcome.ForRoute(actionId,
-                        routes == null ? QuestRejection.UnknownOffer : routes.TryGrant(npcId, targetId, generation), null);
+                        routes == null ? QuestRejection.UnknownOffer : routes.TryGrant(npcId, targetId, generation));
 
                 default:
                     return new ActionOutcome(false, actionId, TradeRejection.WrongTarget, null);
@@ -272,6 +277,15 @@ namespace LivingVale.Game
         }
 
         private static string LowerFirst(string text) => string.IsNullOrEmpty(text) ? "" : char.ToLowerInvariant(text[0]) + text.Substring(1);
+
+        /// <summary>
+        /// True for a decision that goes on a route card for the player to confirm before it runs:
+        /// <c>offer_exchange</c>, <c>resolve_delivery</c>, and <c>offer_quest</c> on a side quest. Iven's
+        /// main-quest offer has its own card in <see cref="QuestLog"/>.
+        /// </summary>
+        public bool IsRouteCard(string actionId, string targetId) =>
+            routes != null && (actionId == GameActions.OfferExchange || actionId == GameActions.ResolveDelivery ||
+                               (actionId == GameActions.OfferQuest && routes.Owns(actionId, targetId)));
 
         private void AddQuestOffers(string npcId, List<GameActionOption> result)
         {

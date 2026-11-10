@@ -28,8 +28,8 @@ namespace LivingVale.Tests
         private ScriptedNpcDecisionDriver scripted;
         private AgenerelaNpcDecisionDriver npcs;
 
-        // The action the agent last carried out: a none runs no handler, so it leaves no outcome.
-        private string LastAction => npcs.LastOutcome?.ActionId ?? GameActions.None;
+        // The action the NPC last carried out, or held as a card.
+        private string LastAction => npcs.LastDecision?.ActionId ?? GameActions.None;
 
         [SetUp]
         public void SetUp()
