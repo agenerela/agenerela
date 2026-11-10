@@ -338,6 +338,69 @@ namespace Agenerela.Tests
             Assert.That(Availability.No(Claimed).Reason, Is.EqualTo(Claimed));
         }
 
+        // ---- The examples (#235 follow-up) ---------------------------------------------------
+
+        [Test]
+        public void AnExampleSkipsAPreferredTargetTheCheckRejects()
+        {
+            var agent = ExampleWoodcutter(new HashSet<string> { "tree_a" }, "tree_a", "tree_b");
+
+            string block = Examples(agent);
+
+            Assert.That(block, Does.Contain("\"Fell the tree b.\" -> action: chop, target: tree_b"));
+            Assert.That(block, Does.Not.Contain("target: tree_a"), "Never the tree the check says is claimed.");
+        }
+
+        [Test]
+        public void AnExampleWithEveryPreferredTargetRejectedIsLeftOut()
+        {
+            var agent = ExampleWoodcutter(new HashSet<string> { "tree_a" }, "tree_a");
+
+            Assert.That(Examples(agent), Does.Not.Contain("action: chop"));
+        }
+
+        [Test]
+        public void AnExampleSkipsAPreferredTargetOfTheWrongCategoryWhenTheActionHasACheck()
+        {
+            var agent = ExampleWoodcutter(new HashSet<string>(), "well", "tree_b");
+
+            string block = Examples(agent);
+
+            Assert.That(block, Does.Contain("action: chop, target: tree_b"));
+            Assert.That(block, Does.Not.Contain("action: chop, target: well"));
+        }
+
+        [Test]
+        public void TheFallbackTargetSkipsATargetTheCheckRejects()
+        {
+            var agent = ExampleWoodcutter(new HashSet<string> { "tree_a" });
+
+            string block = Examples(agent, new DecideOptions { ExampleTargetFallback = true });
+
+            Assert.That(block, Does.Contain("action: chop, target: tree_b"));
+        }
+
+        [Test]
+        public void AnActionWithoutACheckShowsItsPreferredTargetAsBefore()
+        {
+            // Unchanged on purpose: with no per-target check there is no availability answer to read,
+            // so a wrong-category preferred target is still named, as it always was.
+            var agent = ExampleWoodcutter(claimed: null, "well");
+
+            Assert.That(Examples(agent), Does.Contain("action: chop, target: well"));
+        }
+
+        [Test]
+        public void WithoutACheckTheAvailabilityAnswerChangesNoExampleByte()
+        {
+            var agent = ExampleWoodcutter(claimed: null, "well", "tree_a");
+            var answer = ActionAvailability.Evaluate(Context(agent));
+            var options = new PromptOptions { ExampleTargetFallback = true, Stimulus = "Fell the well." };
+
+            Assert.That(FewShotBuilder.Build(answer.Offered, agent.Targets, options, answer),
+                        Is.EqualTo(FewShotBuilder.Build(answer.Offered, agent.Targets, options, null)));
+        }
+
         // ---- Fixtures ------------------------------------------------------------------------
 
         // A woodcutter with move_to (anything) and chop (trees only), two trees and a well. Its
@@ -373,6 +436,38 @@ namespace Agenerela.Tests
             agent.Targets.Register("tree_b", new object(), "tree");
             agent.Targets.Register("well", new object(), "place");
             return agent;
+        }
+
+        // The woodcutter, its chop with an example preferring the given targets, checked per target
+        // against claimed (null for no check at all).
+        private static Agent ExampleWoodcutter(HashSet<string> claimed, params string[] preferred)
+        {
+            var chop = new DelegateActionHandler(_ => true, (_, __) => { });
+            if (claimed != null)
+            {
+                chop.IsAvailableFor = (_, id) => claimed.Contains(id) ? Availability.No(Claimed) : Availability.Yes;
+            }
+
+            var actions = new[]
+            {
+                new ActionDefinition
+                {
+                    Id = "chop", Description = "Chop a tree.", RequiresTarget = true, TargetCategories = new[] { "tree" },
+                    ExampleStimulus = "Fell the {0}.", PreferredExampleTargets = preferred,
+                },
+            };
+
+            var agent = new Agent(new AgentIdentity { Name = "Bram", Role = "a woodcutter" }, actions, new FakeProvider());
+            agent.Bind("chop", chop);
+            agent.Targets.Register("tree_a", new object(), "tree");
+            agent.Targets.Register("tree_b", new object(), "tree");
+            agent.Targets.Register("well", new object(), "place");
+            return agent;
+        }
+
+        private static string Examples(Agent agent, DecideOptions options = null)
+        {
+            return agent.Preview("What now?", options).Request.FewShotBlock;
         }
 
         private static DelegateActionHandler Chopper(HashSet<string> claimed, out List<string> chopped)

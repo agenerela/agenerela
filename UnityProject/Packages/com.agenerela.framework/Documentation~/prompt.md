@@ -128,6 +128,9 @@ changes and who pays for it.
 - **Observations** are what is true now: the quest stage, what is nearby, a quote just made. They
   share the cap, and the newest sit last, right before the stimulus. A fact that is re-sent as an
   observation every turn takes room from those and reads as news.
+- **A fact that counts only once it is told** (a clue, a password) is none of these: it is a
+  target of the action that tells it, removed by that action's per-target check once told
+  ([targets.md](targets.md#facts-told-through-an-action), #190 Living Vale #17).
 - **Memory** is what was said and done in this conversation (`IMemoryStrategy`). It is never the
   place for a standing fact: a window drops it once the conversation is long enough.
 - **Statement rules** are about the free text only: its length, its voice, what it never says.
