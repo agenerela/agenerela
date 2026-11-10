@@ -75,34 +75,54 @@ namespace LivingVale.Interaction
 
         public static NpcReply Failed(NpcReplyFailure failure) =>
             new NpcReply(null, failure == NpcReplyFailure.None ? NpcReplyFailure.ProviderError : failure, null);
+
+        /// <summary>
+        /// What a framework result is to the game: its decision, or why there is none. An unreadable
+        /// reply is <see cref="NpcReplyFailure.Malformed"/>; every other pipeline error, the server
+        /// being unreachable included, is <see cref="NpcReplyFailure.ProviderError"/>.
+        /// </summary>
+        public static NpcReply From(DecisionResult result)
+        {
+            if (result == null)
+            {
+                return Failed(NpcReplyFailure.ProviderError);
+            }
+
+            var telemetry = result.Telemetry;
+            if (result.Decision == null || (telemetry != null && telemetry.Outcome == DecisionOutcome.PipelineError))
+            {
+                var kind = telemetry?.ErrorKind;
+                bool unreadable = kind == PipelineErrorKind.UnreadableReply || kind == PipelineErrorKind.ProviderMalformedResponse;
+                return Failed(unreadable ? NpcReplyFailure.Malformed : NpcReplyFailure.ProviderError);
+            }
+
+            return Decided(result.Decision, result);
+        }
     }
 
     /// <summary>
-    /// The game's boundary to whatever decides what an NPC does. Deciding and executing are
-    /// separate calls, as in the framework (hard rule 5): the coordinator executes a decision only
-    /// after checking it still belongs to the open conversation.
+    /// The coordinator's boundary to the NPCs' agents. Deciding and executing stay separate calls,
+    /// as in the framework (hard rule 5): each NPC's <see cref="Conversation"/> (#209) asks its agent,
+    /// keeps one turn waiting at a time, races the coordinator's timeout and refuses a stale answer,
+    /// and the coordinator executes an answer only through it.
     /// </summary>
-    /// <remarks>
-    /// <see cref="ScriptedNpcDecisionDriver"/> is the G1–G4 development fixture. The G5 driver
-    /// will wrap <c>Agent.DecideAsync</c> and <c>Agent.Execute</c>, keeping the
-    /// <c>DecisionResult</c> in <see cref="NpcReply.DriverState"/>.
-    /// </remarks>
     public interface INpcDecisionDriver
     {
         /// <summary>Shown in the chat overlay, so scripted replies are never mistaken for a model's.</summary>
         string Label { get; }
 
-        /// <summary>
-        /// Decides this turn. Honour <paramref name="ct"/>: the coordinator cancels it on timeout,
-        /// close, switch or explicit cancel, and ignores whatever arrives afterwards anyway.
-        /// </summary>
-        Task<NpcReply> DecideAsync(NpcTurn turn, CancellationToken ct);
+        /// <summary>This NPC's conversation with its agent, made the first time it is asked for.</summary>
+        Conversation ConversationFor(NpcDescriptor npc);
+
+        /// <summary>What a turn sends with the player's line: the label, the observations, the turn itself as correlation.</summary>
+        DecideOptions OptionsFor(NpcTurn turn);
 
         /// <summary>
-        /// Carries out a decision that is still current. Returns false when the driver's own
-        /// re-check refuses it; the coordinator then shows a game-authored line instead of the
-        /// statement, so the NPC never claims an action that did not happen.
+        /// Carries out the conversation's current answer. False when the conversation refuses it as
+        /// stale, or the agent's re-check or the game's handler refuses it; the coordinator then shows
+        /// a game-authored line instead of the statement, so the NPC never claims an action that did
+        /// not happen.
         /// </summary>
-        bool Execute(NpcTurn turn, NpcReply reply);
+        bool Execute(NpcTurn turn, DecisionResult result);
     }
 }

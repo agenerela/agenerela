@@ -22,17 +22,21 @@ WASD moves, Shift sprints, the mouse orbits the camera, **E** talks to the NPC i
 herbs, or to sell her a wolf pelt, iron scrap or herbs: her answer puts an exact offer on a card
 in the chat, and only its button moves gold and items. Walking more than 6 m away also closes it. F1–F5 switch the
 scripted replies between normal, slow, never answering, malformed and throwing, so the failure
-paths can be tried by hand. Since G5g the scripted replies decide through the framework's `Agent` too, with
-`ScriptedProvider` (`Agenerela/ScriptedAgentDriver.cs`), so the scripted and model paths share
-the same bindings, guards, executor and memory.
+paths can be tried by hand. The scripted replies are a framework `ScriptedProvider`
+(`Agenerela/ScriptedReplies.cs`) given to the same agents as the model's, so the scripted and model
+paths share one agent per NPC: the same bindings, guards, executor and memory. Every NPC decision,
+scripted or model, is written to the framework's decision log, a JSON-lines file in the project's
+`Logs/` folder in the Editor (**Log Decisions** on `ValeBootstrap`).
 
-Replies come from the local model through Agenerela by default (Ollama at `127.0.0.1:11434`).
+Replies come from the local model through Agenerela by default (Ollama at `127.0.0.1:11434`;
+**Ollama Server** on `ValeBootstrap` takes an `OllamaProviderConfig` for another server, such as the
+RTX 5080 one in `tools/ollama-server/`, whose key is read from the environment variable it names).
 The model is set on `ValeBootstrap`, and since 5 November it defaults to `gemma4:e2b-it-qat`,
 which wrote best in the blind comparison (llm-wiki findings). Pull it with
 `ollama pull gemma4:e2b-it-qat`; without it the notice says it did not load, and F7 reaches
 `qwen3.5:2b` and the rest of the list. **F6** switches between the model and scripted replies, and **F7**
 moves the model to the next one in `ValeBootstrap`'s list that Ollama has, closing the open chat
-first and keeping what each NPC remembers. A model Ollama lacks is skipped, and the badge says so.
+first and keeping what each NPC remembers: both only give every NPC's agent another provider. A model Ollama lacks is skipped, and the badge says so.
 With Ollama unreachable, a turn fails with a game-authored line and the game stays playable.
 
 **Combat (G2):** left mouse attacks, right mouse blocks, Space dodges. A raider and a wolf wait in
@@ -73,12 +77,12 @@ by G4b.
 | Folder | What | Scene? |
 |---|---|---|
 | `Assets/LivingVale/Game/` | Game state: `ItemCatalog`, `PlayerInventory` (also the `ILootSink`), `VendorStock`, `TradeService` and its quotes and receipts, `QuestLog`, `Progression`, `SaveGame`, and `NpcActionExecutor`, which every driver executes through | No: plain C#, EditMode-tested |
-| `Assets/LivingVale/Interaction/` | Conversations: `ConversationCoordinator`, the `INpcDecisionDriver` boundary, `ScriptedNpcDecisionDriver`, and `ConversationTradeLink`, which ties quotes to the open conversation | No: plain C#, EditMode-tested |
+| `Assets/LivingVale/Interaction/` | Conversations: `ConversationCoordinator` (who is open, the chat log; each turn is the framework's `Conversation`), the `INpcDecisionDriver` boundary, `ScriptedNpcDecisionDriver` (the script's lines and rules), and `ConversationTradeLink`, which ties quotes and cards to the open conversation | No: plain C#, EditMode-tested |
 | `Assets/LivingVale/Combat/` | Combat: `Combatant` and `EnemyBrain` rules (plain C#, EditMode-tested), the player's and enemies' behaviours, `CombatDirector` (chat, loot and respawn hooks: `ILootSink`, `IDefeatPenalty`) and the HUD | Rules no; behaviours yes |
 | `Assets/LivingVale/World/` | The region's rules: `NpcRoutine` (walk and idle), `PlaceDiscovery` (first visits, paid through `Progression`), and `RegionNpcs`, the six region NPCs' IDs, places, routines and colours | No: plain C#, EditMode-tested |
 | `Assets/LivingVale/Unity/` | Bootstrap, player, orbit camera, NPC speakers, focus and range, and `NpcRoutineMover` | Yes |
 | `Assets/LivingVale/UI/` | The chat overlay with its inline trade card, the inventory panel and the place HUD, built from code with uGUI | Yes |
-| `Assets/LivingVale/Agenerela/` | Real NPC decisions: `AgenerelaNpcDecisionDriver` (one framework `Agent` per NPC, personas in `NpcPersona.cs` and `RegionNpcPersonas.cs`) and `SwitchableNpcDecisionDriver`, behind F6 | No: plain C#, EditMode-tested with a fake provider |
+| `Assets/LivingVale/Agenerela/` | Real NPC decisions: `AgenerelaNpcDecisionDriver` (one framework `Agent`, `Conversation` and `Proposals` per NPC, personas in `NpcPersona.cs` and `RegionNpcPersonas.cs`), `NpcProviderSwitch` behind F6, and `ModelCycle` behind F7 | No: plain C#, EditMode-tested with a fake provider |
 | `Assets/LivingVale/Editor/` | `VillageSceneBuilder` (which calls `CombatSceneBuilder` and `Region/RegionBuilder`, one builder per place) and `LivingValeBuild`, also runnable in batch mode | Editor only |
 | `Assets/LivingVale/Tests/Editor/` | EditMode tests | — |
 

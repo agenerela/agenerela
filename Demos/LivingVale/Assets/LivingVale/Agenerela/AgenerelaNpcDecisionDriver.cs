@@ -21,7 +21,8 @@ namespace LivingVale.Agenerela
     /// <para>
     /// <b>Memory.</b> Each agent keeps the framework's own <see cref="RollingHistory"/>, not the
     /// coordinator's chat log, so the model reads its earlier answers in the encoding the framework
-    /// defines (design §11). Each agent runs under <see cref="MemoryCommit.OnExecute"/> (DR-018), so a
+    /// defines (design §11). A change of model keeps it, since <see cref="UseProvider"/> only gives
+    /// each agent another provider (#198). Each agent runs under <see cref="MemoryCommit.OnExecute"/> (DR-018), so a
     /// decision is remembered only once <see cref="Execute"/> carried it out: a reply the coordinator
     /// dropped as stale, or one the game refused, never enters it. The memories are saved with the
     /// game (<see cref="NpcMemoryArchive"/>). The cost: lines the scripted driver gave before an F6
@@ -47,29 +48,22 @@ namespace LivingVale.Agenerela
         /// <summary>What an NPC says when a guard stops its decision; the model's own line is never used then (design §12).</summary>
         public const string RefusalLine = "I can't help you with that.";
 
-        private readonly ILLMProvider provider;
+        private ILLMProvider provider;
         private readonly Dictionary<string, NpcPersona> personas = new Dictionary<string, NpcPersona>();
         private readonly Dictionary<string, Agent> agents = new Dictionary<string, Agent>();
+        private readonly Dictionary<string, Conversation> conversations = new Dictionary<string, Conversation>();
+
+        // Each NPC's route cards (#236): a decision the player confirms before it runs is held here.
+        private readonly Dictionary<string, Proposals> proposals = new Dictionary<string, Proposals>();
         private readonly Action<NpcDescriptor, Agent> configureAgent;
         private readonly NpcActionExecutor executor;
         private readonly Dictionary<string, TradeActionBinding> trade = new Dictionary<string, TradeActionBinding>();
         private readonly Dictionary<string, QuestActionBinding> questBindings = new Dictionary<string, QuestActionBinding>();
         private readonly Dictionary<string, RouteActionBinding> routeBindings = new Dictionary<string, RouteActionBinding>();
-        private readonly Dictionary<string, TradeReceipt> lastReceipts;
+        private readonly Dictionary<string, TradeReceipt> lastReceipts = new Dictionary<string, TradeReceipt>();
 
-        // Each NPC's memory, by NPC id. Kept apart from the agents so a driver rebuilt for another
-        // model (WithProvider) carries every NPC's conversation over.
-        private readonly Dictionary<string, RollingHistory> memories;
-        private Task<bool> warmUp;
-
-        // Set when the warm-up was cancelled by its caller, not by Detach: the next call sends it
-        // again rather than hand back the cancelled result (F6 off and on mid-load).
-        private bool warmUpCancelled;
-
-        // Cancelled by Detach, so a replaced driver's warm-up leaves the queue rather than load a
-        // model nobody will use.
-        private readonly CancellationTokenSource lifetime = new CancellationTokenSource();
-        private bool detached;
+        // Each NPC's memory, by NPC id, so a load can fill one before the NPC's agent is built.
+        private readonly Dictionary<string, RollingHistory> memories = new Dictionary<string, RollingHistory>();
 
         /// <param name="provider">Shared by every NPC, so their requests share one queue (DR-015).</param>
         /// <param name="modelLabel">What <see cref="Label"/> names, such as <c>qwen3.5:2b</c>.</param>
@@ -79,18 +73,7 @@ namespace LivingVale.Agenerela
         public AgenerelaNpcDecisionDriver(ILLMProvider provider, string modelLabel,
             IEnumerable<NpcPersona> personas = null, Action<NpcDescriptor, Agent> configureAgent = null,
             NpcActionExecutor executor = null)
-            : this(provider, modelLabel, personas, configureAgent, executor,
-                new Dictionary<string, RollingHistory>(), new Dictionary<string, TradeReceipt>())
         {
-        }
-
-        private AgenerelaNpcDecisionDriver(ILLMProvider provider, string modelLabel,
-            IEnumerable<NpcPersona> personas, Action<NpcDescriptor, Agent> configureAgent,
-            NpcActionExecutor executor, Dictionary<string, RollingHistory> memories,
-            Dictionary<string, TradeReceipt> lastReceipts)
-        {
-            this.memories = memories;
-            this.lastReceipts = lastReceipts;
             this.executor = executor;
             if (executor != null)
             {
@@ -112,68 +95,60 @@ namespace LivingVale.Agenerela
             }
         }
 
-        /// <summary>A driver over a local Ollama at <c>127.0.0.1:11434</c> (never <c>localhost</c>, AGENTS.md).</summary>
-        public static AgenerelaNpcDecisionDriver ForOllama(string model, NpcActionExecutor executor = null, Action<NpcDescriptor, Agent> configureAgent = null)
+        /// <summary>A driver over Ollama: <paramref name="server"/>'s endpoint and key, or a local Ollama at <c>127.0.0.1:11434</c>.</summary>
+        public static AgenerelaNpcDecisionDriver ForOllama(string model, NpcActionExecutor executor = null,
+            Action<NpcDescriptor, Agent> configureAgent = null, OllamaProviderConfig server = null)
         {
-            var settings = new OllamaSettings();
-            if (!string.IsNullOrWhiteSpace(model))
-            {
-                settings.Model = model.Trim();
-            }
-
+            var settings = SettingsFor(model, server);
             return new AgenerelaNpcDecisionDriver(new OllamaProvider(settings), settings.Model, null, configureAgent, executor);
         }
 
         /// <summary>
-        /// This driver for another model: the same personas, executor, callbacks and every NPC's
-        /// memory and last receipt, with new agents on <paramref name="newProvider"/>. Detaches this
-        /// one, which stops following trade receipts; use the new one from now on.
+        /// A provider for <paramref name="model"/> on <paramref name="server"/>, an
+        /// <see cref="OllamaProviderConfig"/> whose API Key Variable names the key; null is a local
+        /// Ollama at <c>127.0.0.1:11434</c> (never <c>localhost</c>, AGENTS.md).
         /// </summary>
-        public AgenerelaNpcDecisionDriver WithProvider(ILLMProvider newProvider, string modelLabel)
-        {
-            var next = new AgenerelaNpcDecisionDriver(newProvider, modelLabel, personas.Values, configureAgent, executor, memories, lastReceipts)
-            {
-                TurnObservations = TurnObservations,
-                TradeRule = TradeRule,
-                IdleExampleStimulus = IdleExampleStimulus
-            };
-            Detach();
-            return next;
-        }
+        public static OllamaProvider OllamaFor(string model, OllamaProviderConfig server = null) =>
+            new OllamaProvider(SettingsFor(model, server));
 
-        /// <summary><see cref="WithProvider"/> with a new Ollama provider at <c>127.0.0.1:11434</c>.</summary>
-        public AgenerelaNpcDecisionDriver WithOllamaModel(string model)
+        private static OllamaSettings SettingsFor(string model, OllamaProviderConfig server)
         {
-            var settings = new OllamaSettings();
+            var settings = server != null ? server.ToSettings() : new OllamaSettings();
             if (!string.IsNullOrWhiteSpace(model))
             {
                 settings.Model = model.Trim();
             }
 
-            return WithProvider(new OllamaProvider(settings), settings.Model);
+            return settings;
         }
 
-        /// <summary>Stops following trade receipts. Called by <see cref="WithProvider"/>; safe to call twice.</summary>
-        public void Detach()
+        /// <summary>The provider every NPC's agent asks now.</summary>
+        public ILLMProvider Provider => provider;
+
+        /// <summary>
+        /// Gives every NPC's agent <paramref name="next"/>, for a change of model, and every agent
+        /// built later too (<see cref="Agent.Provider"/>, #198). Each keeps its memory, actions,
+        /// targets and guards; a decision already under way finishes on the provider it started on.
+        /// </summary>
+        /// <param name="label">What <see cref="Label"/> says instead of "Agenerela · model", read each time: the scripted replies name their fixture.</param>
+        public void UseProvider(ILLMProvider next, string modelLabel, Func<string> label = null)
         {
-            if (detached)
+            provider = next ?? throw new ArgumentNullException(nameof(next));
+            ModelLabel = string.IsNullOrWhiteSpace(modelLabel) ? next.Name : modelLabel.Trim();
+            labelSource = label;
+            foreach (var agent in agents.Values)
             {
-                return;
-            }
-
-            detached = true;
-            lifetime.Cancel();
-            if (executor != null)
-            {
-                executor.Trade.Confirmed -= OnConfirmed;
+                agent.Provider = next;
             }
         }
 
-        public string ModelLabel { get; }
+        public string ModelLabel { get; private set; }
 
-        public string Label => "Agenerela · " + ModelLabel;
+        public string Label => labelSource != null ? labelSource() : "Agenerela · " + ModelLabel;
 
-        /// <summary>The game's own observations for a turn, sent after the persona's knowledge: quest stage, a visible quote, the last receipt.</summary>
+        private Func<string> labelSource;
+
+        /// <summary>The game's own observations for a turn, sent after the bindings' lines: quest stage, a visible quote, the last receipt.</summary>
         public Func<NpcTurn, IEnumerable<string>> TurnObservations { get; set; }
 
         /// <summary>How many decisions <see cref="Execute"/> was asked to carry out. Tests read it.</summary>
@@ -181,6 +156,9 @@ namespace LivingVale.Agenerela
 
         /// <summary>The executor's outcome for the last trade action executed, or null. Tests and tools read it.</summary>
         public ActionOutcome LastOutcome { get; private set; }
+
+        /// <summary>The decision <see cref="Execute(NpcTurn, DecisionResult)"/> was last asked to carry out or hold as a card, or null.</summary>
+        public AgentDecision LastDecision { get; private set; }
 
         /// <summary>This NPC's agent, built on first use.</summary>
         public Agent AgentFor(NpcDescriptor npc)
@@ -198,6 +176,9 @@ namespace LivingVale.Agenerela
             var persona = PersonaFor(npc);
             agent = new Agent(persona.ToIdentity(), Array.Empty<ActionDefinition>(), provider)
             {
+                // The NPC's stable id (#217): a scripted provider and the decision log tell NPCs
+                // apart by it, never by the display name two NPCs could share. The model never sees it.
+                Id = npc.Id,
                 RefusalStatement = (verdict, context) => RefusalLine,
                 Memory = MemoryFor(npc.Id),
 
@@ -216,13 +197,30 @@ namespace LivingVale.Agenerela
 
                 if (executor.Routes != null)
                 {
-                    routeBindings[npc.Id] = RouteActionBinding.Bind(agent, npc.Id, executor);
+                    // One card at a time: a new proposal supersedes the one before, as a new card replaces the old.
+                    var held = new Proposals(agent) { OnePending = true };
+                    held.Changed += _ => ProposalsChanged?.Invoke();
+                    proposals[npc.Id] = held;
+                    routeBindings[npc.Id] = RouteActionBinding.Bind(agent, npc.Id, executor, () => held.Latest);
                 }
             }
 
             configureAgent?.Invoke(npc, agent);
             agents[npc.Id] = agent;
             return agent;
+        }
+
+        /// <summary>This NPC's conversation with its agent (#209), which the coordinator asks and executes through.</summary>
+        public Conversation ConversationFor(NpcDescriptor npc)
+        {
+            var agent = AgentFor(npc);
+            if (!conversations.TryGetValue(npc.Id, out var chat))
+            {
+                chat = new Conversation(agent);
+                conversations[npc.Id] = chat;
+            }
+
+            return chat;
         }
 
         private RollingHistory MemoryFor(string npcId)
@@ -236,7 +234,7 @@ namespace LivingVale.Agenerela
             return memory;
         }
 
-        /// <summary>Every NPC's memory, by NPC id, as saved with the game; shared with the drivers <see cref="WithProvider"/> made.</summary>
+        /// <summary>Every NPC's memory, by NPC id, as saved with the game.</summary>
         public IReadOnlyDictionary<string, RollingHistory> Memories => memories;
 
         /// <summary>This NPC's memory, made empty if it has none yet, so a load can fill it before the NPC first speaks.</summary>
@@ -264,14 +262,17 @@ namespace LivingVale.Agenerela
         /// </summary>
         public string IdleExampleStimulus { get; set; } = DefaultIdleExample;
 
-        /// <summary>The observations a turn sends: the persona's knowledge, what it can offer now, then <see cref="TurnObservations"/>.</summary>
+        /// <summary>
+        /// The observations a turn sends: what it can offer now and where things stand, then
+        /// <see cref="TurnObservations"/>. The persona's facts are not among them: they are the
+        /// identity's knowledge (#231), in the system prompt, outside the observation cap.
+        /// </summary>
         public List<string> ObservationsFor(NpcTurn turn)
         {
-            var lines = new List<string>(PersonaFor(turn.Npc).Knowledge);
+            var lines = new List<string>();
             if (trade.TryGetValue(turn.Npc.Id, out var binding))
             {
                 var options = binding.Options();
-                binding.RefreshExamples(options);
                 lines.AddRange(TradeActionBinding.RuleLines(options, TradeRule));
                 lastReceipts.TryGetValue(turn.Npc.Id, out var receipt);
                 lines.AddRange(binding.StatusLines(receipt));
@@ -280,7 +281,6 @@ namespace LivingVale.Agenerela
             if (questBindings.TryGetValue(turn.Npc.Id, out var quest))
             {
                 var option = quest.Option();
-                quest.RefreshExample(option);
                 lines.AddRange(QuestActionBinding.RuleLines(option));
                 lines.AddRange(quest.StatusLines());
             }
@@ -288,7 +288,6 @@ namespace LivingVale.Agenerela
             if (routeBindings.TryGetValue(turn.Npc.Id, out var route))
             {
                 var routeOptions = route.Options();
-                route.RefreshExamples(routeOptions);
                 lines.AddRange(RouteActionBinding.RuleLines(routeOptions));
                 lines.AddRange(route.StatusLines());
             }
@@ -330,11 +329,21 @@ namespace LivingVale.Agenerela
             ct.ThrowIfCancellationRequested();
 
             var agent = AgentFor(turn.Npc);
+
+            // A cancelled decision throws OperationCanceledException here; the caller owns
+            // timeouts and cancellations and tells them apart itself.
+            DecisionResult result = await agent.DecideAsync(turn.PlayerLine, OptionsFor(turn), ct);
+            return ToReply(result);
+        }
+
+        /// <summary>What a turn sends with the player's line, through <see cref="DecideAsync"/> or the NPC's conversation.</summary>
+        public DecideOptions OptionsFor(NpcTurn turn)
+        {
             // The framework writes the choices into the prompt (#193, adopted in G5g after an A/B):
             // its list of actions and described targets, each action's counter-example, and the
             // agent's idle example. A local model never reads the schema, so this is what it reads.
-            agent.IdleExampleStimulus = IdleExampleStimulus;
-            var options = new DecideOptions
+            AgentFor(turn.Npc).IdleExampleStimulus = IdleExampleStimulus;
+            return new DecideOptions
             {
                 StimulusLabel = StimulusLabel,
                 Observations = ObservationsFor(turn),
@@ -342,40 +351,50 @@ namespace LivingVale.Agenerela
                 ListActionsAndTargets = true,
                 CounterExamples = true,
 
+                // Every action declares its target category, so an example with no preferred target
+                // names the first offered target its action takes, never one the line mentions (#234).
+                ExampleTargetFallback = true,
+
                 // Which conversation the decision belongs to (DR-018): the handlers read its
                 // generation, so the executor refuses a reply that outlived its conversation.
                 Correlation = turn
             };
-
-            // A cancelled decision throws OperationCanceledException here; the coordinator owns
-            // timeouts and cancellations and tells them apart itself.
-            DecisionResult result = await agent.DecideAsync(turn.PlayerLine, options, ct);
-            return ToReply(result);
         }
+
+        /// <summary>What a framework result is to the game (<see cref="NpcReply.From"/>).</summary>
+        public static NpcReply ToReply(DecisionResult result) => NpcReply.From(result);
 
         /// <summary>
-        /// What the coordinator gets for a framework result. An unreadable reply is
-        /// <see cref="NpcReplyFailure.Malformed"/>; every other pipeline error, the server being
-        /// unreachable included, is <see cref="NpcReplyFailure.ProviderError"/>.
+        /// Carries out the NPC's conversation's current answer (#209): an answer the conversation no
+        /// longer holds as current, a stale one, is refused and runs nothing.
         /// </summary>
-        public static NpcReply ToReply(DecisionResult result)
+        public bool Execute(NpcTurn turn, DecisionResult result)
         {
-            if (result == null)
+            if (turn == null || result == null || !conversations.TryGetValue(turn.Npc.Id, out var chat))
             {
-                return NpcReply.Failed(NpcReplyFailure.ProviderError);
+                return false;
             }
 
-            var telemetry = result.Telemetry;
-            if (result.Decision == null || (telemetry != null && telemetry.Outcome == DecisionOutcome.PipelineError))
+            LastDecision = result.Decision;
+            if (IsCard(turn, result))
             {
-                var kind = telemetry?.ErrorKind;
-                bool unreadable = kind == PipelineErrorKind.UnreadableReply || kind == PipelineErrorKind.ProviderMalformedResponse;
-                return NpcReply.Failed(unreadable ? NpcReplyFailure.Malformed : NpcReplyFailure.ProviderError);
+                // Held, not carried out: the conversation's own stale check comes first.
+                if (!chat.IsCurrent(result))
+                {
+                    return false;
+                }
+
+                ExecutedCount++;
+                return Hold(turn, result);
             }
 
-            return NpcReply.Decided(result.Decision, result);
+            ExecutedCount++;
+            bool executed = chat.Execute(result, out var actionResult);
+            LastOutcome = actionResult.TryGetPayload<ActionOutcome>(out var outcome) ? outcome : null;
+            return executed;
         }
 
+        /// <summary>Carries out a decision from <see cref="DecideAsync"/>, which no conversation asked for: for tests and tools.</summary>
         public bool Execute(NpcTurn turn, NpcReply reply)
         {
             if (turn == null || reply == null || !(reply.DriverState is DecisionResult result))
@@ -390,6 +409,11 @@ namespace LivingVale.Agenerela
             }
 
             ExecutedCount++;
+            LastDecision = result.Decision;
+            if (IsCard(turn, result))
+            {
+                return Hold(turn, result);
+            }
 
             // The handlers return what the executor did (DR-018): Done with the outcome, or Failed
             // with the outcome when the executor refused the quote or offer. Under
@@ -399,60 +423,78 @@ namespace LivingVale.Agenerela
             return executed;
         }
 
-        /// <summary>
-        /// Loads the model without waiting for it, so the first real turn does not spend the turn
-        /// timeout on loading (about 8 s cold for qwen3.5:2b on an 8 GB laptop GPU). Sent by a
-        /// throwaway agent with no memory, at background priority, so no NPC remembers it. Never throws.
-        /// </summary>
-        public void WarmUp()
-        {
-            _ = WarmUpAsync();
-        }
+        // ---- Route cards (#236) ----
 
-        /// <summary>
-        /// The one warm-up request, started on the first call; true when the model answered.
-        /// Never faults: a failure is logged and gives false. It is cancelled, and gives false, when
-        /// <paramref name="ct"/> (read on the first call only) is cancelled or the driver is
-        /// detached, and a cancelled request leaves the provider's queue unsent.
-        /// </summary>
-        public Task<bool> WarmUpAsync(CancellationToken ct = default)
+        /// <summary>Raised whenever an NPC's route card is held, confirmed, declined, superseded or reset.</summary>
+        public event Action ProposalsChanged;
+
+        /// <summary>The route card waiting for the player, or null. Cards end with their conversation, so there is at most one.</summary>
+        public Proposal PendingProposal
         {
-            if (warmUp == null || (warmUp.IsCompleted && warmUpCancelled && !lifetime.IsCancellationRequested))
+            get
             {
-                warmUpCancelled = false;
-                warmUp = SendWarmUp(ct);
-            }
-
-            return warmUp;
-        }
-
-        private async Task<bool> SendWarmUp(CancellationToken ct)
-        {
-            using (var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, lifetime.Token))
-            {
-                try
+                foreach (var held in proposals.Values)
                 {
-                    var agent = new Agent(new AgentIdentity { Name = "Warm-up" }, Array.Empty<ActionDefinition>(), provider) { Memory = null };
-                    var result = await agent.DecideAsync("Hello.", new DecideOptions { Priority = DecisionPriority.Background }, linked.Token);
-                    if (result?.Decision == null)
+                    if (held.Latest != null)
                     {
-                        Debug.LogWarning($"[LivingVale] {Label} warm-up got no decision ({result?.Telemetry?.ErrorKind}); NPC turns will fail until the model answers.");
-                        return false;
+                        return held.Latest;
                     }
+                }
 
-                    return true;
-                }
-                catch (OperationCanceledException) when (linked.IsCancellationRequested)
-                {
-                    warmUpCancelled = true;
-                    return false;
-                }
-                catch (Exception e)
-                {
-                    Debug.LogWarning($"[LivingVale] {Label} warm-up failed: {e.Message}");
-                    return false;
-                }
+                return null;
             }
+        }
+
+        /// <summary>
+        /// The card's confirm button: carries the proposal out through the NPC's agent, whose re-check
+        /// refuses a pair the game no longer offers, then the executor, which checks the contract's
+        /// conditions and the conversation once more. Takes the very proposal the card was made from.
+        /// </summary>
+        public bool Confirm(Proposal proposal, out ActionResult outcome)
+        {
+            var held = Owner(proposal) ?? throw new ArgumentException("Not one of this driver's cards.", nameof(proposal));
+            bool done = held.Confirm(proposal, out outcome);
+            LastOutcome = outcome.TryGetPayload<ActionOutcome>(out var carried) ? carried : null;
+            return done;
+        }
+
+        /// <summary>The card's decline button.</summary>
+        public bool Decline(Proposal proposal) => Owner(proposal)?.Decline(proposal) ?? false;
+
+        /// <summary>Declines every NPC's waiting card: a conversation opened or closed, or a save loaded.</summary>
+        public int DeclineProposals(string reason = null)
+        {
+            int declined = 0;
+            foreach (var held in proposals.Values)
+            {
+                declined += held.DeclineAll(reason);
+            }
+
+            return declined;
+        }
+
+        private Proposals Owner(Proposal proposal) =>
+            proposal?.Correlation is NpcTurn turn && proposals.TryGetValue(turn.Npc.Id, out var held) ? held : null;
+
+        private bool IsCard(NpcTurn turn, DecisionResult result) =>
+            result.Decision != null && proposals.ContainsKey(turn.Npc.Id) &&
+            executor.IsRouteCard(result.Decision.ActionId, result.Decision.TargetId);
+
+        private bool Hold(NpcTurn turn, DecisionResult result)
+        {
+            LastOutcome = null;
+
+            // Proposals.Hold runs no re-check and remembers the offer at once, so the game makes a
+            // card only in the conversation the turn belongs to and for a pair it still offers, as
+            // TryPropose did; the agent checks again when the player confirms.
+            if (!executor.Routes.IsCurrent(turn.Npc.Id, turn.Generation) ||
+                !ExecutorHandler.Offers(executor, turn.Npc.Id, result.Decision.ActionId, result.Decision.TargetId))
+            {
+                return false;
+            }
+
+            proposals[turn.Npc.Id].Hold(result);
+            return true;
         }
     }
 }

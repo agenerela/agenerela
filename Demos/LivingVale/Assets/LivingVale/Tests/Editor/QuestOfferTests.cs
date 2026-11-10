@@ -26,6 +26,10 @@ namespace LivingVale.Tests
         private ConversationTradeLink link;
         private ConversationCoordinator coordinator;
         private ScriptedNpcDecisionDriver scripted;
+        private AgenerelaNpcDecisionDriver npcs;
+
+        // The action the NPC last carried out, or held as a card.
+        private string LastAction => npcs.LastDecision?.ActionId ?? GameActions.None;
 
         [SetUp]
         public void SetUp()
@@ -37,7 +41,8 @@ namespace LivingVale.Tests
             quests = new QuestLog(inventory, new Progression(), link);
             executor = new NpcActionExecutor(trade, quests);
             scripted = new ScriptedNpcDecisionDriver(seed: 1, executor: executor) { NormalDelay = TimeSpan.FromMilliseconds(5) };
-            coordinator = new ConversationCoordinator(scripted, new ConversationSettings { TurnTimeout = TimeSpan.FromSeconds(2) });
+            npcs = new ScriptedReplies(scripted).Driver(executor);
+            coordinator = new ConversationCoordinator(npcs, new ConversationSettings { TurnTimeout = TimeSpan.FromSeconds(2) });
             link.Attach(coordinator, trade);
             link.AttachQuests(quests);
         }
@@ -95,8 +100,8 @@ namespace LivingVale.Tests
         {
             coordinator.Open(Iven);
             await Say("What happened to the wagon?");
-            Assert.AreEqual(GameActions.OfferQuest, scripted.LastOutcome?.ActionId, string.Join("\n", coordinator.HistoryFor(Iven.Id)));
-            Assert.IsTrue(scripted.LastOutcome.Executed);
+            Assert.AreEqual(GameActions.OfferQuest, LastAction, string.Join("\n", coordinator.HistoryFor(Iven.Id)));
+            Assert.IsTrue(npcs.LastOutcome.Executed);
             Assert.AreEqual(MainQuestState.Offered, quests.MainState, "Offered, not accepted: the model never accepts.");
             Assert.IsNotNull(quests.ActiveOffer);
             Assert.AreEqual(coordinator.Generation, quests.ActiveOffer.ConversationGeneration);
@@ -107,7 +112,7 @@ namespace LivingVale.Tests
             Assert.AreEqual(ChatSpeaker.System, coordinator.HistoryFor(Iven.Id).Last().Speaker, "The receipt is in the chat.");
 
             await Say("Any news of the medicine?");
-            Assert.AreEqual(GameActions.None, scripted.LastOutcome.ActionId, "Accepted: nothing left to offer.");
+            Assert.AreEqual(GameActions.None, LastAction, "Accepted: nothing left to offer.");
             Assert.AreEqual(MainQuestState.Active, quests.MainState);
         }
 
@@ -128,7 +133,7 @@ namespace LivingVale.Tests
         {
             coordinator.Open(Mara);
             await Say("Any news about the wagon?");
-            Assert.AreNotEqual(GameActions.OfferQuest, scripted.LastOutcome?.ActionId);
+            Assert.AreNotEqual(GameActions.OfferQuest, LastAction);
             Assert.AreEqual(MainQuestState.Undiscovered, quests.MainState);
         }
 
