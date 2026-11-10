@@ -145,7 +145,7 @@ Unity -batchmode -projectPath Demos/GreyBoxVillage -executeMethod Demos.GreyBoxV
 | `-labOrder` | `interleaved` | `interleaved`: each scenario in every arm before the next, the first arm alternating; `sequential`: one arm's whole list, then the next |
 | `-labSeed N` | 1 | shuffles the scenarios, the same order for every arm |
 | `-labServer` | `local` | `local` (127.0.0.1:11434), `5080` (`AGENERELA_OLLAMA_URL` and `AGENERELA_OLLAMA_API_KEY` in Unity's environment) or `scripted` (the oracle, no model) |
-| `-labOut DIR` | `Logs/lab/<time>` | where the report goes |
+| `-labOut DIR` | `Logs/lab/<time>` | where the report goes; a folder that already holds a run is refused |
 | `-labResetProbe` | off | at the end, press F1 while a request is with the model, and write down what became of it |
 
 Hard rule 3 is the runner's: it refuses to start while any model is resident, unloads every other

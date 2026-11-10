@@ -53,7 +53,7 @@ namespace Demos.GreyBoxVillage.Lab
                     // The next request, at once: does it wait behind the one F1 dropped?
                     Stand(bram, "");
                     var fresh = bram.HearPlayerAsync(ProbeLines[1]).GetAwaiter();
-                    foreach (var x in Until(() => fresh.IsCompleted, settings.TurnTimeoutSeconds)) yield return x;
+                    foreach (var x in Until(() => fresh.IsCompleted, TimeoutFor(arm))) yield return x;
                     var next = bram.Last;
                     // Anything still to come back for the dropped request comes in this time.
                     foreach (var x in Until(() => false, 5f)) yield return x;

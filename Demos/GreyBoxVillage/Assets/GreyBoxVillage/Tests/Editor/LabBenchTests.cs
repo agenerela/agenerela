@@ -124,6 +124,21 @@ namespace Demos.GreyBoxVillage.Tests
             }
         }
 
+        // One run per folder: a second would append to the first's log, its sequence numbers colliding.
+        [Test]
+        public void AFolderThatHoldsARunIsRefused()
+        {
+            string folder = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "lab-bench-test-" + Guid.NewGuid().ToString("N"));
+            System.IO.Directory.CreateDirectory(folder);
+            try
+            {
+                Assert.That(LabBench.DecisionsPath(folder), Does.EndWith("decisions.jsonl"));
+                System.IO.File.WriteAllText(System.IO.Path.Combine(folder, "decisions.jsonl"), "{}\n");
+                Assert.Throws<InvalidOperationException>(() => LabBench.DecisionsPath(folder));
+            }
+            finally { System.IO.Directory.Delete(folder, true); }
+        }
+
         // ---- Scoring -------------------------------------------------------------------------------
 
         [Test]
@@ -306,6 +321,57 @@ namespace Demos.GreyBoxVillage.Tests
             var commands = UnityEngine.Object.FindFirstObjectByType<VillageCommands>();
             Assert.That(commands.EventsMuted, Is.False);
             Assert.That(commands.Minds.All(m => m.Tune == null), Is.True);
+        }
+
+        // A turn the model never answers is cancelled and settled before anything else is asked, and
+        // the rest of its scenario is not asked (Codex, L2).
+        [UnityTest]
+        public IEnumerator ATurnThatNeverAnswersIsCancelledAndTheRestOfItsScenarioSkipped()
+        {
+            EditorSceneManager.OpenScene(DemoLauncher.VillagePath);
+            yield return new EnterPlayMode();
+            yield return null;
+            var body = Held();
+            while (true)
+            {
+                bool more;
+                try { more = body.MoveNext(); }
+                catch (Exception e)
+                {
+                    Debug.Log("[bench test] " + e);
+                    throw;
+                }
+                if (!more) break;
+                yield return body.Current;
+            }
+            yield return new ExitPlayMode();
+        }
+
+        private IEnumerator Held()
+        {
+            oracle = ScriptableObject.CreateInstance<ScriptedProviderConfig>();
+            oracle.Scripted.Callback = LabScripted.Oracle;
+            oracle.Scripted.Hold = true;
+            var baseline = LabFiles.LoadVariants().variants.Single(v => v.name == "baseline");
+            var settings = new LabBench.Settings
+            {
+                Scenarios = LabFiles.LoadScenarios().scenarios.Where(s => s.id == "bram_mem_01").ToList(),
+                Arms = { new LabBench.Arm { Name = "held", Variant = baseline, Config = oracle } },
+                WarmUpDecisions = 0,
+                TurnTimeoutSeconds = 1f,
+            };
+            var run = new LabBench.Run();
+            var play = LabBench.Play(settings, run);
+            while (play.MoveNext()) yield return play.Current;
+            Assert.That(run.Results.Select(r => r.turn + ": " + r.outcome + ", " + r.error), Is.EqualTo(new[]
+            {
+                "1: error, no answer within 1 s",
+                "2: error, not asked: an earlier turn of this scenario did not finish",
+            }));
+            Assert.That(run.Notes.Any(n => n.Contains("the agent was reset, and the call ended.")), Is.True, string.Join("\n", run.Notes));
+            Assert.That(oracle.Scripted.HeldCount, Is.Zero, "The held request is still with the provider.");
+            var bram = UnityEngine.Object.FindFirstObjectByType<VillageCommands>().Mind("Bram");
+            Assert.That(bram.IsDeciding, Is.False);
         }
 
         [UnityTearDown]

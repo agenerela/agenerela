@@ -84,6 +84,19 @@ namespace Demos.GreyBoxVillage.Lab
             public bool Done;
         }
 
+        /// <summary>
+        /// Where a run's decision log goes in <paramref name="folder"/>, refusing a folder that holds a
+        /// run already: the log appends, and the feed's sequence numbers start again each Play session,
+        /// so two runs in one file could not be told apart (Codex, L2).
+        /// </summary>
+        public static string DecisionsPath(string folder)
+        {
+            string path = Path.Combine(folder, "decisions.jsonl");
+            if (File.Exists(path) || File.Exists(DecisionLog.RolloverPath(path)))
+                throw new InvalidOperationException(folder + " already holds a run. Give -labOut a new folder.");
+            return path;
+        }
+
         /// <summary>Throwaway lines for the warm-up; a test keeps them off every scenario (hard rule 4).</summary>
         public static readonly string[] WarmUpLines = { "Morning to you.", "Long day ahead, I reckon.", "Mind how you go." };
 
@@ -414,8 +427,13 @@ namespace Demos.GreyBoxVillage.Lab
                 DecisionFeed.Recorded += OnFeed;
                 if (settings.Out != null)
                 {
+                    // One run per folder: the log appends, and the feed's sequence numbers start again
+                    // each Play session, so two runs in one file could not be told apart (Codex, L2).
+                    string path = DecisionsPath(settings.Out);
                     Directory.CreateDirectory(settings.Out);
-                    log = DecisionLog.Start(Path.Combine(settings.Out, "decisions.jsonl"), includePrompt: true);
+                    log = DecisionLog.Start(path, includePrompt: true);
+                    // Never rolled over, so no score points at a line the log has dropped.
+                    log.MaxFileBytes = long.MaxValue;
                 }
                 LabRunInfo.Fill(run.Info, settings);
 
@@ -484,21 +502,29 @@ namespace Demos.GreyBoxVillage.Lab
                     {
                         Stand(asked, "");
                         var warm = asked.HearPlayerAsync(WarmUpLines[i % WarmUpLines.Length]).GetAwaiter();
-                        foreach (var x in Until(() => warm.IsCompleted, settings.TurnTimeoutSeconds)) yield return x;
+                        foreach (var x in Until(() => warm.IsCompleted, TimeoutFor(arm))) yield return x;
+                        if (!warm.IsCompleted)
+                        {
+                            foreach (var x in Abandon(asked, arm, warm)) yield return x;
+                            throw new InvalidOperationException(arm.Name + "'s warm-up decision did not finish in " + TimeoutFor(arm) + " s.");
+                        }
                     }
-                    loaded = key;
                     if (ollama != null)
                     {
                         var resident = ollama.ResidentAsync();
                         foreach (var x in Wait(resident)) yield return x;
                         Read("after warm-up", arm.Name, resident.Result);
+                        // Hard rule 3 holds, or nothing of this arm is timed (Codex, L2).
                         var mine = resident.Result.FirstOrDefault(r => LabOllama.Same(r.name, arm.Model));
-                        if (mine == null) run.Notes.Add("Hard rule 3: " + arm.Model + " was not resident after its warm-up.");
-                        else if (mine.size_vram < mine.size) run.Notes.Add(string.Format(CultureInfo.InvariantCulture,
+                        if (mine == null)
+                            throw new InvalidOperationException("Hard rule 3: " + arm.Model + " was not resident after its warm-up, so its first decisions would time its load.");
+                        var others = resident.Result.Where(r => !LabOllama.Same(r.name, arm.Model)).Select(r => r.name).ToList();
+                        if (others.Count > 0)
+                            throw new InvalidOperationException("Hard rule 3: " + string.Join(", ", others) + " resident beside " + arm.Model + " after " + arm.Name + "'s warm-up. Another session may be using the server.");
+                        if (mine.size_vram < mine.size) run.Notes.Add(string.Format(CultureInfo.InvariantCulture,
                             "{0} was not wholly on the GPU after warm-up: {1} of {2} bytes in VRAM, so its latencies are not comparable.", arm.Model, mine.size_vram, mine.size));
-                        if (resident.Result.Any(r => !LabOllama.Same(r.name, arm.Model)))
-                            run.Notes.Add("Hard rule 3: also resident after " + arm.Name + "'s warm-up: " + string.Join(", ", resident.Result.Where(r => !LabOllama.Same(r.name, arm.Model)).Select(r => r.name)) + ".");
                     }
+                    loaded = key;
                 }
             }
 
@@ -523,7 +549,7 @@ namespace Demos.GreyBoxVillage.Lab
 
                 foreach (var x in Setup(scenario, asked)) yield return x;
 
-                bool primerMissed = false;
+                bool primerMissed = false, stopped = false;
                 for (int i = 0; i < scenario.turns.Count; i++)
                 {
                     var turn = scenario.turns[i];
@@ -533,7 +559,23 @@ namespace Demos.GreyBoxVillage.Lab
                         arm = arm.Name, variant = arm.Variant.name, repeat = repeat, scenario = scenario.id, turn = i + 1,
                         primer = turn.primer, agent = scenario.agent, kind = scenario.kind, bait = scenario.bait, difficulty = scenario.difficulty,
                     };
-                    foreach (var x in Ask(asked, scenario, turn, result)) yield return x;
+                    if (stopped)
+                    {
+                        // A turn after one that never finished: what it depends on never happened.
+                        result.outcome = "error";
+                        result.error = "not asked: an earlier turn of this scenario did not finish";
+                        LabScore.Score(result, turn);
+                        run.Results.Add(result);
+                        continue;
+                    }
+                    timedOut = null;
+                    foreach (var x in Ask(asked, arm, scenario, turn, result)) yield return x;
+                    if (timedOut != null)
+                    {
+                        // Cancelled and settled before anything else is asked, or any model switched.
+                        stopped = true;
+                        foreach (var x in Abandon(asked, arm, timedOut.Value)) yield return x;
+                    }
                     LabScore.Score(result, turn);
                     result.primerMissed = !turn.primer && primerMissed;
                     if (turn.primer && result.verdict != "exact") primerMissed = true;
@@ -545,7 +587,23 @@ namespace Demos.GreyBoxVillage.Lab
                 CurrentScenario = null;
             }
 
-            private IEnumerable<object> Ask(AgentMind asked, LabScenario scenario, LabTurn turn, LabTurnResult result)
+            // The awaiter of a turn that did not finish in time; null when it did.
+            private Awaitable.Awaiter? timedOut;
+
+            // A provider's own timeout, plus room for the queue and the game: a turn is given at least that.
+            private float TimeoutFor(Arm arm) =>
+                Mathf.Max(settings.TurnTimeoutSeconds, arm.Config is OllamaProviderConfig o ? o.TimeoutSeconds + 15f : 0f);
+
+            // Resets the agent, which cancels the call it has with the model, and waits for the call to end.
+            private IEnumerable<object> Abandon(AgentMind asked, Arm arm, Awaitable.Awaiter call)
+            {
+                asked.UseProvider(arm.Config);
+                foreach (var x in Until(() => call.IsCompleted, 10f)) yield return x;
+                run.Notes.Add(arm.Name + ": " + asked.Name + "'s call did not finish in " + TimeoutFor(arm) + " s; the agent was reset, and the call " +
+                              (call.IsCompleted ? "ended." : "had still not ended 10 s later."));
+            }
+
+            private IEnumerable<object> Ask(AgentMind asked, Arm arm, LabScenario scenario, LabTurn turn, LabTurnResult result)
             {
                 string source, label, text;
                 DecisionPriority priority;
@@ -572,13 +630,14 @@ namespace Demos.GreyBoxVillage.Lab
                 var before = asked.Last;
                 float started = Time.realtimeSinceStartup;
                 var asking = (turn.IsEvent ? asked.AskAsync(source, label, text, priority) : asked.HearPlayerAsync(text)).GetAwaiter();
-                foreach (var x in Until(() => asking.IsCompleted, settings.TurnTimeoutSeconds)) yield return x;
+                foreach (var x in Until(() => asking.IsCompleted, TimeoutFor(arm))) yield return x;
                 result.wallSeconds = Time.realtimeSinceStartup - started;
                 var r = asked.Last;
+                if (!asking.IsCompleted) timedOut = asking;
                 if (!asking.IsCompleted || r == null || r == before || !r.Done)
                 {
                     result.outcome = "error";
-                    result.error = !asking.IsCompleted ? "no answer within " + settings.TurnTimeoutSeconds + " s" : "the agent was not asked";
+                    result.error = !asking.IsCompleted ? "no answer within " + TimeoutFor(arm) + " s" : "the agent was not asked";
                     yield break;
                 }
                 result.offeredActions = r.OfferedActions.ToList();
