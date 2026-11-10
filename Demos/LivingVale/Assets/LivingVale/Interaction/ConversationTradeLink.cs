@@ -24,6 +24,12 @@ namespace LivingVale.Interaction
 
         public string ActiveNpcId => coordinator?.ActiveNpc?.Id;
 
+        /// <summary>
+        /// Ends the NPCs' pending route cards, the framework's proposals held by their agents (#236),
+        /// whenever a conversation opens or closes, as the quote and offer cards end. Null ends none.
+        /// </summary>
+        public Action EndPendingCards { get; set; }
+
         public void Attach(ConversationCoordinator conversations, TradeService service)
         {
             if (trade != null)
@@ -53,8 +59,9 @@ namespace LivingVale.Interaction
         }
 
         /// <summary>
-        /// Also ties G4c's routes to the conversation: a route card goes away whenever a conversation
-        /// opens or closes, and every route receipt (a clue told, a permit granted) is written into the chat.
+        /// Also writes every G4c route receipt (a clue told, a permit granted, a card carried out) into
+        /// the chat. The route cards themselves are the NPCs' proposals, ended through
+        /// <see cref="EndPendingCards"/>.
         /// </summary>
         public void AttachRoutes(QuestRoutes questRoutes)
         {
@@ -123,7 +130,7 @@ namespace LivingVale.Interaction
             {
                 trade.InvalidatePending();
                 quests?.InvalidatePending();
-                routes?.InvalidatePending();
+                EndPendingCards?.Invoke();
             }
         }
 

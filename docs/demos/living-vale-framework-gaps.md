@@ -1,6 +1,6 @@
 # Living Vale — gaps in the framework
 
-**Status:** living list, started 5 November 2026. Gathered with GreyBoxVillage's list in umbrella issue #190, where the master implementation session ticks what lands. Every Living Vale session adds to it the
+**Status:** living list, started 5 November 2026; the merged features adopted on 10 November (below). Gathered with GreyBoxVillage's list in umbrella issue #190, where the master implementation session ticks what lands. Every Living Vale session adds to it the
 day it works around something. It records what building a real game on Agenerela showed
 the framework is missing: what the game needed, how it worked around it, and what a framework
 feature would change. **None of this is decided.** Each entry becomes an issue, or a decision
@@ -10,6 +10,62 @@ record, only when the lead takes it up. Measured claims link to
 The game uses the framework's public API only (`Demos/README.md`), so every workaround
 below lives in `Demos/LivingVale/Assets/LivingVale/`. That is what makes this list
 trustworthy: each entry names code a framework feature would delete.
+
+## The adoption (10 November 2026)
+
+Living Vale adopted every merged #190 feature in one pull request, branch `69-lv-adopt-190`, one
+commit per feature. The game's own code (not its tests) went from 12,871 to 12,603 lines of code,
+blank and comment lines not counted: **268 fewer**. Each entry's status below says what its
+workaround became. In short:
+
+| Gap | Framework feature | Workaround now |
+|---|---|---|
+| 1, 9, 13 | action and target list, counter-examples, idle example (#193) | adopted in G5g; the last per-turn plumbing, `RefreshExamples`, went with #234 (entry 20) |
+| 2, 3, 5, 11 | execution results, commit on execute, correlation, memory export (#195) | adopted in G5h |
+| 4 | target categories (#208) | deleted: the trade and quest pair guards |
+| 6, 7 | model lifecycle, provider swap (#198) | deleted: `OllamaModelCatalog`, the unload loader, `WithProvider`/`WithOllamaModel`/`Detach`, the throwaway warm-up decision |
+| 8 | `Conversation` (#209) | deleted: the coordinator's cancellation sources, deadline race and stale drop |
+| 14 | identity knowledge and statement rules (#231) | deleted: facts as observations, rules appended to every personality |
+| 16 | `Proposals` (#236) | deleted: `RouteProposal` and its bookkeeping, for route cards; the trade quote and Iven's main-quest offer keep their own cards |
+| 17 | docs only (#236) | the game already had the shape; Fen's persona still states her clue (entry 17) |
+| 19 | per-target availability (#235) | deleted: `RoutePairGuard`, `CheckPair`, the three `Offers` checks and handlers; the sources still filter (entry 19) |
+| 20 | example target fallback, `INamedTarget` (#234) | deleted: the three `RefreshExamples`; the route actions prefer their own targets instead of the fallback (entry 20) |
+| 21 | `Agent.Id` (#217) | deleted: `ScriptedAgentDriver`'s name-to-id map |
+| 22 | `RollingHistory.CanImport` (#205) | deleted: the archive's own format check and throwaway import |
+| 23 | one memory per agent (#205), provider swap (#198) | deleted: the second agent per NPC and `SwitchableNpcDecisionDriver` |
+| G6 | `ScriptedProvider` (#194) | deleted: the scripted driver's own decide-and-execute path |
+| G7 | `DecisionLog` (#229) | the game had no log of its own; it now writes one |
+| 10, 12, 15, 18 | not built | unchanged |
+
+**What did not fit**, each kept as game code and written down at its entry:
+
+- **Entry 19.** A per-target check cannot keep a target out of the prompt's target list, which lists
+  every registered target, check or no check. So the game's target sources still register only
+  what the game offers now; registering every contract would show Kest "Release on Fen's account"
+  before Fen has told anything. The check is kept for what it does add: masking an action with
+  nothing to do, the re-check at `Execute` with its reason, and telemetry.
+- **Entry 16.** `Proposals` belongs to one agent, but the game shows one card at a time across all
+  NPCs, so the driver keeps one `Proposals` per NPC and adds what the card needs on top: the
+  pending card across NPCs, finding a proposal's owner, declining every NPC's cards. It is
+  about 40 lines a game with more than one proposing agent will write.
+- **Entry 16.** `Proposals.Hold` runs no re-check, so a decision that went stale between the
+  decision and the hold still makes a card; the driver asks the executor first.
+- **Entry 16.** A confirm the agent refuses before the handler runs (the pair is no longer
+  offered) produces no line of the game's: `ActionResult.Refused` is internal, and the outcome
+  says only "refused". The card writes its own chat line.
+- **Entry 17.** Fen's persona knowledge still contains what she saw, now as identity knowledge
+  instead of observations. The rule says a revealed fact is never standing knowledge, but the
+  card target leaves once told, so without the lines Fen would no longer know what she saw.
+  Content, for the game-content session.
+- **Entry 20.** On the route actions the example-target fallback made gemma4 miss a delivery,
+  3 of 3, in the same-session check on the RTX 5080: the fallback skips a target the player's line
+  mentions, and a route line names its subject ("the parcel ... for your garrison"), so Elra's only
+  delivery lost its example. The route actions now name their own targets as preferred examples,
+  which the framework uses mentioned or not, as `RefreshExamples` did; the trade actions keep the
+  fallback. Findings, 10 November, "Living Vale's adoption of #190".
+- **Entry 8.** The conversation adoption saved no code: the coordinator's turn machinery went,
+  but the driver now exposes each NPC's conversation and the turn's options, and the result
+  mapping moved with it. What it bought is correctness the framework tests, not lines.
 
 ## The GreyBoxVillage log
 
@@ -75,10 +131,8 @@ Give each entry the next number and these parts:
 and `GameTargetOption` implements `IDescribedTarget`. In a same-session A/B (G5g, findings 5 November: "The framework's prompt features"), on 18 trade and talk lines and 7 quest-route lines per arm, the framework arm was as good on `gemma4:e2b-it-qat` (asked trades 5/5, unasked offers 0/13, routes 7/7 in both arms) and better on `qwen3.5:2b` (asked trades 5/5 against 4/5, routes 6/7 against 4/7, unasked offers 0/13 in both). The game's own action and
 target lines (`PromptLines`) are deleted. What stays in the observations is game policy, one rule
 line per action family (`RuleLines`), and game state (`StatusLines`), which the framework's list
-does not carry. **Not replaced:** the per-turn example rewriting (`RefreshExamples`). The
-framework fills an example's target with a name made from its id ("Stock Mara Potion One"), and
-only from a fixed `PreferredExampleTargets` list, so it cannot point an example at whichever
-target exists this turn, by the name a player would use. That is entry 20.
+does not carry. The per-turn example rewriting (`RefreshExamples`) went in the 10 November
+adoption, with entry 20.
 
 - **Needed:** for Mara to choose `quote_purchase` on `stock_mara_bread_one`, the model has to
   know the action exists, what it does, which targets it takes, and what each target is (item,
@@ -112,7 +166,9 @@ as the payload. The driver reads `Agent.Execute(result, out ActionResult)` inste
 binding's `LastOutcome`, which is gone, with `ClearOutcome`. The telemetry now records
 `Execution` and `ExecutionReason`. What it does not cover: the trade and quest *receipts* still
 come from `TradeService.Confirmed`, because they happen when the player confirms a card, after
-`Execute` has returned. That is entry 16's "propose, then confirm" step, not this one.
+`Execute` has returned. Since the 10 November adoption a route card's receipt does come back
+through `Execute`: confirming the proposal (entry 16) runs the handler then, and its `ActionResult`
+carries the receipt.
 
 - **Needed:** after `Agent.Execute`, the game needs to know whether its own handler refused (a
   stale quote, not enough gold) and what it produced (the quote, the offer), to show the right
@@ -150,7 +206,11 @@ cancel and refusal tests pass unchanged on the framework path.
 
 ### 4. One target list per agent; no action→target pairing
 
-**Status:** in the framework since #208 and #210 (DR-020): target categories, `ActionDefinition.TargetCategories`, `TargetCategoryGuard`, and the opt-in paired schema, `DecideOptions.PairTargetsWithActions`. The game still uses its own pair guards until it adopts them.
+**Status: adopted (10 November).** Every target is registered in a category (stock, pack, quest,
+fact, deal, handover, access) and each action declares its one, so `TargetCategoryGuard` does
+what the trade and quest pair guards did, and both are deleted; the route guard went with entry 19.
+**Not adopted:** the paired schema (`PairTargetsWithActions`, #210). It changes what the model is
+sampled from, so it waits for its A/B (#151).
 
 - **Needed:** `quote_purchase` takes stock entries; `quote_sale` takes sale bundles; `offer_quest`
   takes quest offers. One flat target list lets the model pair an action with another action's
@@ -182,7 +242,13 @@ and `TradeActionBinding.GenerationKey` are gone. A test checks the state stays e
 
 ### 6. Model lifecycle is the developer's problem
 
-**Status:** in the framework since #198 (DR-019): `IModelLifecycle` (`ListModelsAsync`, `WarmUpAsync`, `UnloadAsync`), implemented by `OllamaProvider`, and a settable `Agent.Provider` that keeps the agent's memory. The game still uses `ModelSelector` until it adopts them.
+**Status: adopted (10 November).** F7 now gives every NPC's agent a new provider
+(`AgenerelaNpcDecisionDriver.UseProvider`, `Agent.Provider`), so agents, memories and receipts stay
+put, and `ModelCycle` warms up and unloads through the provider's `IModelLifecycle`; the selector
+lists the server's models with `ListModelsAsync`. Deleted: `OllamaModelCatalog` and `IModelLoader`
+(the game's own `/api/tags` and `keep_alive: 0` calls), `WithProvider`, `WithOllamaModel` and
+`Detach`, and the throwaway warm-up decision. `ModelSelector` (the ordered list and skipping) and
+`ModelCycle`'s debounce stay: they are the game's UX. F6 is a provider switch too (entry 23).
 
 - **Needed:** list the installed models, warm one up, unload the one left behind, and switch an
   NPC's model at runtime without losing its memory.
@@ -200,7 +266,10 @@ and `TradeActionBinding.GenerationKey` are gone. A test checks the state stays e
 
 ### 7. Background requests in the shared queue delay player-facing turns
 
-**Status:** mostly in the framework since #198 (DR-015 as amended): model warm-ups and unloads no longer go through the decision queue, and `Agent.Backlog` drops or refuses an agent's queued calls, background ones first. A request already in flight is never aborted. The game has not adopted it yet.
+**Status: adopted for warm-ups (10 November).** The warm-up is the provider's `WarmUpAsync`, which
+takes no slot in the decision queue, so a player's turn never waits behind it, and a newer press
+aborts it. `Agent.Backlog` is not used: a chat asks one NPC one thing at a time (entry 8), so there
+is no queue of the agent's own to manage.
 
 - **Needed:** a player's turn must not wait behind warm-ups or other background work.
 - **Workaround:** G5d debounces F7, cancels a superseded warm-up and unloads the old model. The
@@ -215,7 +284,13 @@ and `TradeActionBinding.GenerationKey` are gone. A test checks the state stays e
 
 ### 8. No built-in "this reply is stale" handling for real-time conversations
 
-**Status:** in the framework since #209: `Conversation` and `ConversationTurn` (`Documentation~/conversations.md`). The game still uses `ConversationCoordinator` until it adopts them.
+**Status: adopted (10 November).** Each NPC has a `Conversation` over its agent. The coordinator
+starts each turn on it with its timeout, cancels it on close, switch or cancel, and executes the
+answer only through it, so a late or stale answer never runs and never enters memory. Deleted: the
+coordinator's cancellation source per turn, its deadline race and its stale-drop path. Kept, as game
+policy: who is open, the open/close generation that quotes and cards are tied to, the chat log and
+the events. It saved no lines (see "What did not fit"); the coordinator tests now run against the
+real agents.
 
 - **Needed:** one turn in flight per conversation, a timeout owned by the caller, and any reply
   that arrives after a cancel, close or switch dropped unexecuted.
@@ -324,6 +399,12 @@ measurement carries over; the G5g A/B ran with it in both arms' places.
 
 ### 14. An identity has no slot for what the agent knows, or for how it must speak
 
+**Status: adopted (10 November).** `NpcPersona.ToIdentity()` sets `AgentIdentity.Knowledge` to the
+persona's facts and `StatementRules` to the house rules, which the framework renders once in the
+system prompt. The facts no longer go out as observations, so they leave `Agent.MaxObservations`
+to the turn's own lines, and no personality carries the rules any more. This changes what the
+model reads; the framework's A/B (findings, 9 November) found it no worse.
+
 - **Needed:** eight NPCs, each with a personality, goals, the house rules for the free-text field
   ("one to three short sentences, stay in Briar Vale, never claim to have done what you only talked
   about") and four or five facts of their own (design §7: an NPC knows its own role and local
@@ -372,7 +453,16 @@ measurement carries over; the G5g A/B ran with it in both arms' places.
 - **Research area:** observations.
 ### 16. No "propose, then the player confirms" step; every game builds its own cards
 
-**Status:** in the framework with #236, as an optional helper rather than the agent primitive proposed below: `Proposals` holds a `DecisionResult` and on confirm carries it out through `Agent.Execute`, whose re-check (per-target availability included) is the confirm-time check; `Confirm` takes the `Proposal` by reference, with `Decline`, `DeclineAll`, `OnePending`, `StillValid` and `Changed`, and `Agent.Reset` ends every pending one. Memory records it once, at hold; telemetry's `Execution` stays null until confirm (`Documentation~/proposals.md`). The game still uses `RouteProposal` until it adopts it.
+**Status:** in the framework with #236, as an optional helper rather than the agent primitive proposed below: `Proposals` holds a `DecisionResult` and on confirm carries it out through `Agent.Execute`, whose re-check (per-target availability included) is the confirm-time check; `Confirm` takes the `Proposal` by reference, with `Decline`, `DeclineAll`, `OnePending`, `StillValid` and `Changed`, and `Agent.Reset` ends every pending one. Memory records it once, at hold; telemetry's `Execution` stays null until confirm (`Documentation~/proposals.md`).
+
+**Adopted for route cards (10 November).** Each NPC's agent has a `Proposals` with `OnePending`.
+The driver holds a route card's decision instead of carrying it out; the card confirms or declines
+that very `Proposal`; confirming runs `Agent.Execute`, then the executor's new `QuestRoutes.TryApply`,
+which checks the conversation and the contract and applies it. A conversation's end and a load
+decline every card. Deleted: `RouteProposal`, its state, the card replacement in `TryPropose`,
+`Confirm`'s and `Decline`'s bookkeeping, `InvalidatePending`, and `ActionOutcome.Proposal`. Not
+moved: `TradeQuote` (it has expiry and stock revisions of its own) and Iven's main-quest
+`QuestOffer`. Three seams are listed under "What did not fit".
 
 - **Needed:** most of G4c's actions must not take effect when the NPC chooses them. Kest's
   release, a division agreement, handing over the parcel and accepting a side quest all go on a
@@ -397,7 +487,11 @@ measurement carries over; the G5g A/B ran with it in both arms' places.
 
 ### 17. Knowledge an NPC holds cannot be tied to the action that reveals it
 
-**Status:** settled in the framework's docs with #236, with no new API: the game's `KnowledgeCard` shape is the rule. A fact that counts only when revealed is a target of the revealing action, in its own category, never a standing `Knowledge` line, and the action's per-target check (#235) removes it once told (`Documentation~/targets.md`, "Facts told through an action", and `RevealedKnowledgeTests`).
+**Status:** the game already had this shape, and keeps it. One leftover: Fen's persona knowledge
+(entry 14) still states what she saw, so she can still say it under `none`. Taking the lines out
+would make her forget it once told, because the card target leaves; that is a content call.
+
+**Framework:** settled in the framework's docs with #236, with no new API: the game's `KnowledgeCard` shape is the rule. A fact that counts only when revealed is a target of the revealing action, in its own category, never a standing `Knowledge` line, and the action's per-target check (#235) removes it once told (`Documentation~/targets.md`, "Facts told through an action", and `RevealedKnowledgeTests`).
 
 - **Needed:** Fen's clue counts only once she tells it (design §3). The game has to know the fact
   was told, not just that her reply mentioned it.
@@ -434,7 +528,17 @@ measurement carries over; the G5g A/B ran with it in both arms' places.
 
 ### 19. Per-target conditions live outside the framework; an absent action cannot say why
 
-**Status:** in the framework with #235 (DR-020 amended): `ITargetAvailability`, `[AvailableFor]` and `DelegateActionHandler.IsAvailableFor`; the paired schema drops a rejected pair, an action with no legal target is left out, `TargetAvailabilityGuard` and `Execute` hold a decision to it, and the reasons go to telemetry and `Agent.Preview`, never to the prompt (the proposed prompt line was dropped). The game still filters with `RouteContract.Available` until it adopts it.
+**Status:** in the framework with #235 (DR-020 amended): `ITargetAvailability`, `[AvailableFor]` and `DelegateActionHandler.IsAvailableFor`; the paired schema drops a rejected pair, an action with no legal target is left out, `TargetAvailabilityGuard` and `Execute` hold a decision to it, and the reasons go to telemetry and `Agent.Preview`, never to the prompt (the proposed prompt line was dropped).
+
+**Adopted, with one limit (10 November).** One `ExecutorHandler` serves every action, and its
+per-target check allows a target only while the executor offers it. Deleted: `RoutePairGuard` and
+`CheckPair`, and the three bindings' handlers with their `IsAvailable` and `Offers` loops. **Did not
+fit:** the sources still register only what game state allows now. The prompt's target list is every
+registered target whatever the check says, so registering every contract and letting the check
+filter would put "Release on Fen's account" in Kest's prompt before Fen has told anything. So the
+check answers yes for every registered target, and is kept for masking an action with no target,
+the re-check at `Execute` with its reason, and telemetry. The framework would need the listing to
+leave out a target the check rejects for every action.
 
 - **Needed:** Elra takes the parcel only once Brann has granted the permit. Kest's favour deal
   needs the herb quest done. Division needs two recorded agreements. Each condition belongs to a
@@ -455,6 +559,17 @@ measurement carries over; the G5g A/B ran with it in both arms' places.
 
 ### 20. Few-shot examples name a target by its id, from a fixed list, never by its description
 
+**Status: adopted (10 November).** Each action has one fixed `ExampleStimulus` ("I'll take {0},
+please.", "Would you buy my {0}?", and the quest and route lines), the driver sends
+`ExampleTargetFallback`, which suits the game since every action declares its category, and
+`GameTargetOption` implements `INamedTarget` with the words `RefreshExamples` used ("healing potion
+×1"). The three `RefreshExamples` are deleted. One change the model sees: the fallback never names a
+target the player's line mentions, so "Do you have a healing potion?" now gets the bread example
+instead of the potion, which was the answer. **Except on the route actions:** there the skip cost
+gemma4 Elra's delivery, 3 of 3, so each route action prefers its own targets
+(`QuestRoutes.TargetIds`), which the framework names whether or not the line mentions them. With
+that, the same-session check shows no visible regression on either model (findings, 10 November).
+
 - **Needed:** an example per available action that names a target the player could ask for
   now, as they would say it: "I'll take healing potion ×1, please."
 - **Observed (G5g):** `FewShotBuilder` picks the first registered id from the action's
@@ -473,6 +588,9 @@ measurement carries over; the G5g A/B ran with it in both arms' places.
 
 ### 21. `ScriptedProvider` matches the asking agent by display name, not a stable id
 
+**Status: adopted (10 November).** Each NPC's agent has `Agent.Id = npc.Id` (#217), and the script
+reads `ScriptedRequest.AgentId`; the name-to-id map is deleted.
+
 - **Observed (G5g):** `ScriptedProvider` keys replies, and names the asker in `ScriptedRequest.Agent`,
   by `AgentIdentity.Name` ("Mara"). Living Vale keys NPCs by stable id (`npc_mara`), so
   `ScriptedAgentDriver` keeps a name-to-id map, filled as each turn starts. Two NPCs with the
@@ -484,7 +602,9 @@ measurement carries over; the G5g A/B ran with it in both arms' places.
 
 ### 22. `RollingHistory.Import` accepts any snapshot format and version
 
-**Status:** in the framework since #205 (a memory snapshot is checked before loading, and another format is refused).
+**Status: adopted (10 November).** `NpcMemoryArchive.Validate` asks `RollingHistory.CanImport`
+(#205) instead of checking format and version itself and importing into a throwaway history, and an
+NPC the save does not mention is cleared with `Clear()` (#219).
 
 - **Observed (G5h):** `Import` reads the exchanges of any strategy's snapshot and ignores
   `MemorySnapshot.Format` and `Version`, by design (DR-018), and throws only on a null exchange.
@@ -499,7 +619,11 @@ measurement carries over; the G5g A/B ran with it in both arms' places.
 
 ### 23. Memory belongs to one agent, so two drivers for one NPC keep two
 
-**Status:** addressed in the framework by #205, per the master's commit for LV #22/#23. The game still keeps separate scripted and model memories until it adopts it.
+**Status: adopted (10 November).** The scripted replies are a provider of the same agents as the
+model's (F6 is `NpcProviderSwitch`, setting `Agent.Provider`), so each NPC has one agent and one
+memory whichever answers, and the save holds all of it. Deleted: the second agent per NPC inside
+`ScriptedAgentDriver`, `SwitchableNpcDecisionDriver` with its reply routing, and the scripted
+driver's own decide-and-execute path (G6).
 
 - **Observed (G5h):** since G5g the scripted replies go through their own `Agent` per NPC
   (`ScriptedAgentDriver`), with its own `RollingHistory`. An NPC the player talks to with

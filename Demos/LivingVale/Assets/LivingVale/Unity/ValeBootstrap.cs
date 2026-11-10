@@ -21,6 +21,10 @@ namespace LivingVale.Unity
         [SerializeField] private string ollamaModel = "gemma4:e2b-it-qat";
         [Tooltip("The models F7 cycles through, in order, skipping any Ollama does not have. Compared on 5 November 2026 (llm-wiki findings).")]
         [SerializeField] private List<string> ollamaModels = new List<string>(ModelCycleDefaults.Models);
+        [Tooltip("The Ollama server: its endpoint, and the environment variable holding its key. Empty uses a local Ollama at 127.0.0.1:11434. Its model is ignored: the model above and F7 choose it.")]
+        [SerializeField] private global::Agenerela.Providers.OllamaProviderConfig ollamaServer;
+        [Tooltip("Write every NPC decision, and what executing it did, to a JSON-lines file (the framework's DecisionLog, #229). The prompt is never written.")]
+        [SerializeField] private bool logDecisions = true;
 
         private InputActionMap actions;
         private InputAction move;
@@ -41,13 +45,16 @@ namespace LivingVale.Unity
         private InventoryHud inventoryHud;
         private NavigationTargets navigation;
         private MapOverlay map;
-        private ScriptedAgentDriver scriptedAgent;
         private int blockedFrame = -1;
+        private global::Agenerela.DecisionLog decisionLog;
 
         public ConversationCoordinator Coordinator { get; private set; }
         public ScriptedNpcDecisionDriver Driver { get; private set; }
+        /// <summary>Every speaking NPC's agent, answering from the model or, after F6, from the script.</summary>
         public AgenerelaNpcDecisionDriver ModelDriver { get; private set; }
-        public SwitchableNpcDecisionDriver Drivers { get; private set; }
+
+        /// <summary>F6: the script or the model, as the provider of the same agents.</summary>
+        public NpcProviderSwitch Drivers { get; private set; }
 
         /// <summary>F7: the next installed model for the Agenerela driver.</summary>
         public ModelCycle Models { get; private set; }
@@ -102,6 +109,15 @@ namespace LivingVale.Unity
         private void Awake()
         {
             GameEvents.ReportSubscriberError = Debug.LogException;
+
+            // Every NPC's decisions, scripted or model, with the agent's stable id (#217); for play
+            // checks and the Decision Log window. Off writes nothing.
+            if (logDecisions)
+            {
+                decisionLog = global::Agenerela.DecisionLog.Start(global::Agenerela.DecisionLog.DefaultPath());
+                Debug.Log($"[LivingVale] Logging NPC decisions to {decisionLog.Path}.");
+            }
+
             if (HudShot.RequestedFolder() != null)
             {
                 driver = NpcDriverChoice.Scripted; // A layout check never loads a model.
@@ -120,27 +136,32 @@ namespace LivingVale.Unity
             Routes = new QuestRoutes(Quests, tradeLink);
             Executor = new NpcActionExecutor(Trade, Quests, Routes);
             Driver = new ScriptedNpcDecisionDriver(executor: Executor);
-            ModelDriver = AgenerelaNpcDecisionDriver.ForOllama(ollamaModel, Executor);
-            // The scripted replies decide through Agent with ScriptedProvider (#194), so both paths share one pipeline.
-            scriptedAgent = new ScriptedAgentDriver(Driver, Executor);
-            Drivers = new SwitchableNpcDecisionDriver(scriptedAgent, ModelDriver, driver);
+            ModelDriver = AgenerelaNpcDecisionDriver.ForOllama(ollamaModel, Executor, server: ollamaServer);
+            // The scripted replies are a provider of the same agents (#194, #198): one pipeline and
+            // one memory per NPC, whichever answers (LV #23).
+            Drivers = new NpcProviderSwitch(ModelDriver, new ScriptedReplies(Driver), driver);
             Saves.Routes = Routes;
 
-            Coordinator = new ConversationCoordinator(Drivers, new ConversationSettings
+            Coordinator = new ConversationCoordinator(ModelDriver, new ConversationSettings
             {
                 TurnTimeout = TimeSpan.FromSeconds(Mathf.Max(0.1f, turnTimeout))
             });
             tradeLink.Attach(Coordinator, Trade);
             tradeLink.AttachQuests(Quests);
             tradeLink.AttachRoutes(Routes);
-            var ollama = new OllamaModelCatalog();
+
+            // The route cards are the NPCs' proposals (#236): they end with the conversation and with a load.
+            tradeLink.EndPendingCards = () => ModelDriver.DeclineProposals("The conversation moved on.");
+            Saves.EndPendingCards = () => ModelDriver.DeclineProposals("A save was loaded.");
+            // The server's own model list, warm-up and unload (#198), through the provider in use.
             Models = new ModelCycle(Coordinator, Drivers,
-                new ModelSelector(ollamaModels, ollamaModel, ollama), ModelDriver, loader: ollama);
+                new ModelSelector(ollamaModels, Drivers.ModelLabel, new ProviderModelCatalog(() => Drivers.ModelProvider)),
+                model => AgenerelaNpcDecisionDriver.OllamaFor(model, ollamaServer));
             Models.Finished += OnModelCycled;
             Models.NoticeChanged += OnModelCycled;
 
-            // NPC memories save and load with the game (G5h), from whichever model driver F7 left in place.
-            Saves.Memories = new NpcMemoryArchive(() => Models.Driver);
+            // NPC memories save and load with the game (G5h); F7 keeps the same driver and agents.
+            Saves.Memories = new NpcMemoryArchive(() => ModelDriver);
 
             // The starting model loads like any other, so the notice says "loading …", and says
             // so when it does not load (not installed, server down) while F6 and F7 still work.
@@ -270,7 +291,7 @@ namespace LivingVale.Unity
             if (switchDriver.WasPressedThisFrame())
             {
                 Drivers.Next();
-                if (ReferenceEquals(Drivers.Current, ModelDriver))
+                if (Drivers.Choice == NpcDriverChoice.Agenerela)
                 {
                     Models.LoadCurrent(lifetime.Token);
                 }
@@ -325,8 +346,7 @@ namespace LivingVale.Unity
                 // lines said after it (G5h saves memory, the shown history is not saved).
                 Coordinator.ClearHistories();
                 // The load may have reversed the last trades, so neither driver may report them.
-                (Models?.Driver ?? ModelDriver)?.ForgetReceipts();
-                scriptedAgent?.Inner.ForgetReceipts();
+                ModelDriver?.ForgetReceipts();
                 Debug.Log($"[LivingVale] Loaded {Saves.SavePath}.");
             }
             else
@@ -361,7 +381,6 @@ namespace LivingVale.Unity
                 return;
             }
 
-            ModelDriver = Models.Driver;
             overlay.Render();
         }
 
@@ -406,6 +425,7 @@ namespace LivingVale.Unity
         private void OnDestroy()
         {
             lifetime.Cancel();
+            decisionLog?.Stop();
             if (Models != null)
             {
                 Models.Finished -= OnModelCycled;

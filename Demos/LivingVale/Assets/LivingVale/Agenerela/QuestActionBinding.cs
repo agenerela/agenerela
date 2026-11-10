@@ -21,8 +21,12 @@ namespace LivingVale.Agenerela
     /// </remarks>
     public sealed class QuestActionBinding
     {
-        /// <summary>Rewrites an <c>offer_quest</c> naming a trade target to <c>none</c>: one target list serves every action.</summary>
-        public const string PairGuardName = "QuestPairGuard";
+        /// <summary>
+        /// The target category of the quests an NPC can offer, which <c>offer_quest</c> takes (#208):
+        /// the framework's <c>TargetCategoryGuard</c> rewrites an <c>offer_quest</c> naming a trade or
+        /// route target to <c>none</c>.
+        /// </summary>
+        public const string QuestCategory = "quest";
 
         private readonly string npcId;
         private readonly NpcActionExecutor executor;
@@ -37,6 +41,11 @@ namespace LivingVale.Agenerela
                 Id = GameActions.OfferQuest,
                 Description = "Ask the traveler to take on your task; they accept or decline on a card.",
                 RequiresTarget = true,
+                TargetCategories = new[] { QuestCategory },
+
+                // A fixed line: the framework names the first quest offered this turn as its target
+                // (ExampleTargetFallback, #234), and leaves the example out with the action.
+                ExampleStimulus = Example,
                 CounterExampleStimulus = CounterExample
             };
         }
@@ -55,9 +64,8 @@ namespace LivingVale.Agenerela
             }
 
             var binding = new QuestActionBinding(npcId, executor);
-            agent.Actions.Register(binding.offer, new Handler(binding));
+            agent.Actions.Register(binding.offer, new ExecutorHandler(executor, npcId, GameActions.OfferQuest));
             agent.TargetSources.Add(new Targets(binding));
-            agent.Guards.Add(new DelegateGuard(PairGuardName, binding.CheckPair));
             return binding;
         }
 
@@ -75,6 +83,9 @@ namespace LivingVale.Agenerela
 
             return null;
         }
+
+        /// <summary>The action's few-shot example.</summary>
+        public const string Example = "Is there anything I can do for you?";
 
         /// <summary>A line near the quest's subject that asks for nothing, shown answered with <c>none</c> when counter-examples are on (#193).</summary>
         public const string CounterExample = "Your patients look like they are in good hands.";
@@ -131,71 +142,6 @@ namespace LivingVale.Agenerela
             return lines;
         }
 
-        /// <summary>Points the few-shot example at the real offer id, or clears it when nothing can be offered.</summary>
-        public void RefreshExample(GameActionOption option)
-        {
-            if (option == null || option.Targets.Count == 0)
-            {
-                offer.ExampleStimulus = null;
-                offer.PreferredExampleTargets = null;
-                return;
-            }
-
-            offer.ExampleStimulus = "Is there anything I can do for you?";
-            offer.PreferredExampleTargets = new[] { option.Targets[0].Id };
-        }
-
-        private bool Offers(string targetId)
-        {
-            var option = Option();
-            if (option == null)
-            {
-                return false;
-            }
-
-            if (targetId == null)
-            {
-                return true;
-            }
-
-            foreach (var target in option.Targets)
-            {
-                if (target.Id == targetId)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private GuardVerdict CheckPair(GuardInput input)
-        {
-            var decision = input.Decision;
-            if (decision == null || decision.ActionId != GameActions.OfferQuest)
-            {
-                return GuardVerdict.Pass;
-            }
-
-            return Offers(decision.TargetId)
-                ? GuardVerdict.Pass
-                : GuardVerdict.RewriteToNone($"{decision.TargetId} is not a target of {decision.ActionId}.");
-        }
-
-        private sealed class Handler : IActionHandlerWithResult
-        {
-            private readonly QuestActionBinding binding;
-
-            public Handler(QuestActionBinding binding) => this.binding = binding;
-
-            public bool IsAvailable(AgentContext ctx) => binding.Offers(null);
-
-            public void Execute(AgentContext ctx, AgentDecision decision) => ExecuteWithResult(ctx, decision);
-
-            public ActionResult ExecuteWithResult(AgentContext ctx, AgentDecision decision) =>
-                ExecutorActions.Execute(binding.executor, binding.npcId, ctx, decision);
-        }
-
         private sealed class Targets : ITargetSource
         {
             private readonly QuestActionBinding binding;
@@ -214,7 +160,7 @@ namespace LivingVale.Agenerela
                 {
                     if (!into.Contains(target.Id))
                     {
-                        into.Register(target.Id, target);
+                        into.Register(target.Id, target, QuestCategory);
                     }
                 }
             }
