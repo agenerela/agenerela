@@ -758,7 +758,7 @@ namespace Demos.GreyBoxVillage.Tests
         {
             var scenePath = scene.path;
             Assert.That(scenePath, Is.EqualTo(DemoLauncher.VillagePath));
-            // UseProvider in SetUp replaced the components, so read the asset the scene was saved with.
+            // SetUp gave every agent a scripted config, so read the asset the scene was saved with.
             var saved = File.ReadAllText(Path.Combine(Path.GetDirectoryName(Application.dataPath), scenePath));
             string guid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(original));
             Assert.That(Regex.Matches(saved, "Provider: \\{fileID: \\d+, guid: " + guid).Count, Is.EqualTo(commands.Minds.Length));
