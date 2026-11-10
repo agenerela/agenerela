@@ -9,6 +9,11 @@ Every benchmark number is a maker's or a third party's claim, cited below. No mo
 run or timed for this page, and no ranking here is an accuracy result (hard rule 2). A
 candidate earns a place in [`findings.md`](findings.md) only through an A/B run.
 
+**Measured since.** Every model this page led us to pull was run on the evaluation set on
+9 November 2026: [`findings.md`](findings.md), "Thirteen models on the evaluation set". That entry,
+not this page, is where the scores are. The same 13 ran again on the 389-prompt interim set, on the
+RTX 5080: "Thirteen models on the interim set, on the RTX 5080".
+
 ## The job a candidate has to do
 
 From the build plan (§2.3 to §2.5, Appendix A, Phase 6b) and [`findings.md`](findings.md):
@@ -378,7 +383,9 @@ All benchmarks are makers' claims unless marked. Sizes are Ollama's unless marke
   `statement`, which `Qwen3-4B-Instruct-2507` did not on Ollama 0.40.14 (findings, 5 November
   2026). Ollama sorts the schema's keys for a model it serves through the GGUF chat template;
   the server log's "template selection" line shows which (`gguf_chat_template` loses the order,
-  and `MiniCPM5-2B` logged it too). `AGENERELA_OLLAMA_MODEL` already lets the Phase 3 live suite run another model, as a
+  and `MiniCPM5-2B` logged it too). Setting `OLLAMA_GO_TEMPLATE=1` on the server moves both onto
+  `go_template`, which keeps the order, but also formats the prompt with another template, so say so
+  with any result taken that way (findings, 9 November 2026). `AGENERELA_OLLAMA_MODEL` already lets the Phase 3 live suite run another model, as a
   20-prompt smoke test.
 - **The grounding threshold is per model until shown otherwise.** 0.8 was set on Qwen's
   tokenizer. Another tokenizer splits target ids differently, so a candidate that loses only

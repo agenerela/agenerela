@@ -20,7 +20,7 @@ namespace Agenerela.Tests
     // not end cancelled goes through a helper that fails on OperationCanceledException.
     public sealed class OllamaLifecycleTests
     {
-        private const string Chat = "{\"model\":\"qwen3.5:2b\",\"message\":{\"role\":\"assistant\",\"content\":"
+        private const string Chat = "{\"model\":\"qwen3.5:4b\",\"message\":{\"role\":\"assistant\",\"content\":"
             + "\"{\\\"action\\\":\\\"move_to\\\",\\\"target\\\":\\\"tower\\\",\\\"statement\\\":\\\"On my way.\\\"}\"},\"done\":true}";
 
         [TearDown]
@@ -41,14 +41,14 @@ namespace Agenerela.Tests
         public async Task ListModelsReadsTheInstalledModelsFromApiTags()
         {
             var server = new Server();
-            server.Answer("/api/tags", "{\"models\":[{\"name\":\"qwen3.5:2b\",\"model\":\"qwen3.5:2b\",\"size\":2741000000},"
+            server.Answer("/api/tags", "{\"models\":[{\"name\":\"qwen3.5:4b\",\"model\":\"qwen3.5:4b\",\"size\":2741000000},"
                                      + "{\"name\":\"gemma4:e2b-it-qat\",\"size\":4100000000},{\"name\":\"tiny:latest\"}]}");
 
             var models = await Done(Provider(server).ListModelsAsync(CancellationToken.None));
 
             Assert.That(server.Log, Is.EqualTo(new[] { "GET /api/tags" }));
             Assert.That(models, Has.Count.EqualTo(3));
-            Assert.That(models[0].Name, Is.EqualTo("qwen3.5:2b"));
+            Assert.That(models[0].Name, Is.EqualTo("qwen3.5:4b"));
             Assert.That(models[0].SizeBytes, Is.EqualTo(2741000000L));
             Assert.That(models[1].Name, Is.EqualTo("gemma4:e2b-it-qat"));
             Assert.That(models[2].SizeBytes, Is.Zero, "No size given reads as 0.");
@@ -68,7 +68,7 @@ namespace Agenerela.Tests
             Assert.That(models, Is.Empty);
         }
 
-        [TestCase("{\"models\":\"qwen3.5:2b\"}", "models is not a list")]
+        [TestCase("{\"models\":\"qwen3.5:4b\"}", "models is not a list")]
         [TestCase("{\"models\":[{\"size\":12}]}", "entry has no name")]
         [TestCase("{\"models\":[{\"name\":\" \"}]}", "entry has no name")]
         [TestCase("not json", "is not one JSON object")]
@@ -100,13 +100,13 @@ namespace Agenerela.Tests
         public async Task AWarmUpAsksApiGenerateForTheProvidersModelWithNoPromptAtItsContextSize()
         {
             var server = new Server();
-            server.Answer("/api/generate", "{\"model\":\"qwen3.5:2b\",\"response\":\"\",\"done\":true,\"done_reason\":\"load\"}");
+            server.Answer("/api/generate", "{\"model\":\"qwen3.5:4b\",\"response\":\"\",\"done\":true,\"done_reason\":\"load\"}");
             var provider = new OllamaProvider(new OllamaSettings { ContextSize = 8192 }, server);
 
             await Done(provider.WarmUpAsync(CancellationToken.None));
 
             Assert.That(server.Log, Is.EqualTo(new[] { "POST /api/generate" }));
-            var expected = new JObject { ["model"] = "qwen3.5:2b", ["options"] = new JObject { ["num_ctx"] = 8192 } };
+            var expected = new JObject { ["model"] = "qwen3.5:4b", ["options"] = new JObject { ["num_ctx"] = 8192 } };
             Assert.That(JToken.DeepEquals(JObject.Parse(server.Bodies[0]), expected), Is.True,
                 "No prompt, so Ollama loads the model and generates nothing; the decisions' num_ctx, so the first "
               + $"decision does not load it again at another size (Codex review, F1). Sent: {server.Bodies[0]}");
@@ -116,12 +116,12 @@ namespace Agenerela.Tests
         public async Task WarmingUpAModelTheServerHasNotPulledIsModelNotFound()
         {
             var server = new Server();
-            server.Answer("/api/generate", "{\"error\":\"model \\\"qwen3.5:2b\\\" not found, try pulling it first\"}", HttpStatusCode.NotFound);
+            server.Answer("/api/generate", "{\"error\":\"model \\\"qwen3.5:4b\\\" not found, try pulling it first\"}", HttpStatusCode.NotFound);
 
             var failure = await Fails(Provider(server).WarmUpAsync(CancellationToken.None));
 
             Assert.That(failure.Kind, Is.EqualTo(ProviderErrorKind.ModelNotFound));
-            Assert.That(failure.Message, Does.Contain("Run `ollama pull qwen3.5:2b`."));
+            Assert.That(failure.Message, Does.Contain("Run `ollama pull qwen3.5:4b`."));
         }
 
         [Test]
@@ -167,7 +167,7 @@ namespace Agenerela.Tests
             // slot and waits for none.
             var server = new Server();
             server.Hang("/api/chat");
-            server.Answer("/api/generate", "{\"model\":\"qwen3.5:2b\",\"done\":true,\"done_reason\":\"load\"}");
+            server.Answer("/api/generate", "{\"model\":\"qwen3.5:4b\",\"done\":true,\"done_reason\":\"load\"}");
             var provider = Provider(server);
             var agent = Fixtures.VillageGuard(provider);
             var deciding = agent.DecideAsync("Go to the tower.");
@@ -216,10 +216,10 @@ namespace Agenerela.Tests
         public async Task AnUnloadSendsKeepAliveZeroAndWaitsUntilApiPsNoLongerListsTheModel()
         {
             var server = new Server();
-            server.Answer("/api/generate", "{\"model\":\"qwen3.5:2b\",\"done\":true,\"done_reason\":\"unload\"}");
+            server.Answer("/api/generate", "{\"model\":\"qwen3.5:4b\",\"done\":true,\"done_reason\":\"unload\"}");
             int reads = 0;
             server.Answer("/api/ps", () => ++reads < 3
-                ? "{\"models\":[{\"name\":\"qwen3.5:2b\",\"size\":1,\"size_vram\":1}]}"
+                ? "{\"models\":[{\"name\":\"qwen3.5:4b\",\"size\":1,\"size_vram\":1}]}"
                 : "{\"models\":[]}");
 
             bool unloaded = await Done(Provider(server).UnloadAsync(CancellationToken.None));
@@ -227,7 +227,7 @@ namespace Agenerela.Tests
             Assert.That(unloaded, Is.True);
             Assert.That(server.Log, Is.EqualTo(new[] { "POST /api/generate", "GET /api/ps", "GET /api/ps", "GET /api/ps" }),
                 "It waited until the model left /api/ps.");
-            Assert.That(JToken.DeepEquals(JObject.Parse(server.Bodies[0]), new JObject { ["model"] = "qwen3.5:2b", ["keep_alive"] = 0 }), Is.True,
+            Assert.That(JToken.DeepEquals(JObject.Parse(server.Bodies[0]), new JObject { ["model"] = "qwen3.5:4b", ["keep_alive"] = 0 }), Is.True,
                 $"Sent: {server.Bodies[0]}");
         }
 
@@ -235,7 +235,7 @@ namespace Agenerela.Tests
         public async Task UnloadingAModelTheServerHasNotPulledIsModelNotFound()
         {
             var server = new Server();
-            server.Answer("/api/generate", "{\"error\":\"model 'qwen3.5:2b' not found\"}", HttpStatusCode.NotFound);
+            server.Answer("/api/generate", "{\"error\":\"model 'qwen3.5:4b' not found\"}", HttpStatusCode.NotFound);
 
             var failure = await Fails(Provider(server).UnloadAsync(CancellationToken.None));
 

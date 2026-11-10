@@ -185,6 +185,25 @@ namespace Agenerela.Editor.Evaluation
                 : "system-prompt list of actions and targets off";
             yield return arm.CounterExamples ? "counter-examples shown" : "no counter-examples";
             yield return arm.PairTargetsWithActions ? "schema pairs each action with its targets" : "schema does not pair actions with targets";
+            string placement = PlacementWords(arm.ObservationPlacement, arm.StandingLinesAsCallObservations);
+            if (placement != null) yield return placement;
+        }
+
+        // Where the arm put each prompt's own observations (#151), or null for the default, which
+        // every report from before the option ran and which its summary never mentioned. An arm that
+        // sent its standing lines with the call moved them too, so its words say so.
+        private static string PlacementWords(string placement, bool wholeBlock)
+        {
+            string what = wholeBlock ? "every observation, standing lines included," : "prompt's own observations";
+            switch (placement)
+            {
+                case null:
+                case "":
+                case nameof(ObservationPlacement.AfterSources):
+                    return wholeBlock ? "standing lines sent as the call's own, at the end of the block as usual" : null;
+                case nameof(ObservationPlacement.WithStimulus): return what + " after the stimulus";
+                default: return what + " placed " + placement;
+            }
         }
 
         // One residency reading in words: who was loaded and how much of the arm's model was in VRAM.

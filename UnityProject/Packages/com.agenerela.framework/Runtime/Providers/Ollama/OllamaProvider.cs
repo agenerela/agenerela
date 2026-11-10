@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using Newtonsoft.Json;
@@ -15,7 +16,7 @@ namespace Agenerela.Providers
     /// <summary>
     /// The development backend: a model served by Ollama on the developer's own machine, asked
     /// through its <c>/api/chat</c> endpoint. <c>new Agent(profile, new OllamaProvider(new
-    /// OllamaSettings()))</c> decides against <c>qwen3.5:2b</c> at <c>http://127.0.0.1:11434</c>.
+    /// OllamaSettings()))</c> decides against <c>qwen3.5:4b</c> at <c>http://127.0.0.1:11434</c>.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -30,6 +31,12 @@ namespace Agenerela.Providers
     /// beyond Newtonsoft (DR-009). That rules out WebGL, where <see cref="HttpClient"/> has no
     /// sockets. Call <see cref="RequestAsync"/> from the main thread: the reply is read back on
     /// it, so <c>Agent</c> carries on there.
+    /// </para>
+    /// <para>
+    /// A server that wants a key, such as the RTX 5080 behind <c>tools/ollama-server/</c>'s gateway,
+    /// gets <see cref="OllamaSettings.ApiKey"/> as an <c>Authorization: Bearer</c> header on every
+    /// request. An HTTP 401 is <see cref="ProviderErrorKind.Rejected"/>, and its message says
+    /// whether a key was sent; no message names the key.
     /// </para>
     /// <para>
     /// Failures throw <see cref="ProviderException"/>: <see cref="ProviderErrorKind.Unreachable"/>
@@ -69,6 +76,7 @@ namespace Agenerela.Providers
         private readonly int contextSize;
         private readonly float temperature;
         private readonly float timeoutSeconds;
+        private readonly bool sendsKey;
         private readonly JsonSchemaSerializer serializer = new JsonSchemaSerializer();
 
         /// <summary>A provider asking the server and model <paramref name="settings"/> name.</summary>
@@ -110,7 +118,7 @@ namespace Agenerela.Providers
 
             if (string.IsNullOrWhiteSpace(settings.Model))
             {
-                throw new ArgumentException("OllamaSettings.Model is empty. Name a model, such as qwen3.5:2b.", nameof(settings));
+                throw new ArgumentException("OllamaSettings.Model is empty. Name a model, such as qwen3.5:4b.", nameof(settings));
             }
 
             if (settings.ContextSize <= 0)
@@ -130,6 +138,20 @@ namespace Agenerela.Providers
                     $"OllamaSettings.TimeoutSeconds is {settings.TimeoutSeconds}. It must be above 0.", nameof(settings));
             }
 
+            // The key goes into a header, so a line break in it could add a header of its own.
+            // The key itself is never named (hard rule 1).
+            string apiKey = (settings.ApiKey ?? "").Trim();
+            foreach (char c in apiKey)
+            {
+                if (char.IsWhiteSpace(c) || char.IsControl(c))
+                {
+                    throw new ArgumentException(
+                        "OllamaSettings.ApiKey contains a space, a line break or another control character. " +
+                        "A key is one word, such as the 64 hex characters tools/ollama-server/setup.ps1 writes.",
+                        nameof(settings));
+                }
+            }
+
             // Named in messages without any user name or password the address carried, since
             // messages are logged and kept in telemetry (hard rule 1).
             // Authority is the host and port alone.
@@ -146,6 +168,13 @@ namespace Agenerela.Providers
 
             // Without this, a POST can wait for a "100 Continue" before sending its body.
             client.DefaultRequestHeaders.ExpectContinue = false;
+
+            // On every request, the decision and the lifecycle calls alike.
+            sendsKey = apiKey.Length > 0;
+            if (sendsKey)
+            {
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+            }
 
             Capabilities = new ProviderCapabilities
             {
@@ -620,7 +649,12 @@ namespace Agenerela.Providers
                     $"Ollama at {endpoint} failed with HTTP {status}: {said}");
             }
 
-            string hint = status == 404 ? " Is that address an Ollama server?" : "";
+            // 401 is the gateway in tools/ollama-server/ wanting a key; Ollama itself never sends it.
+            string hint = status == 404 ? " Is that address an Ollama server?"
+                : status == 401 && sendsKey ? " The server refused this provider's key: OllamaSettings.ApiKey (an " +
+                                              "OllamaProviderConfig's API Key Variable) must hold the one the server expects."
+                : status == 401 ? " The server wants a key: set OllamaSettings.ApiKey, or an OllamaProviderConfig's API Key Variable."
+                : "";
             return new ProviderException(ProviderErrorKind.Rejected, Name,
                 $"Ollama at {endpoint} refused the request with HTTP {status}: {said}{hint}");
         }

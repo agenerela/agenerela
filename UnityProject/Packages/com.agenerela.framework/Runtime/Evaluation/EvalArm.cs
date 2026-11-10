@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Agenerela.Providers;
 
 namespace Agenerela.Evaluation
@@ -14,7 +15,10 @@ namespace Agenerela.Evaluation
     /// <see cref="DecideOptions.CheckTarget"/> is on for a prompt only when both the arm and the
     /// prompt's <c>checkTarget</c> leave it on. The arm's own <see cref="DecideOptions.Observations"/>
     /// are sent first on every prompt, before the state, the targets and the prompt's own lines, so
-    /// an arm can test one extra line. Everything else is the arm's, unchanged.
+    /// an arm can test one extra line. Only the prompt's own lines are the call's own observations:
+    /// the arm's, the state's and the targets' reach the agent through an observation source, so
+    /// <see cref="DecideOptions.ObservationPlacement"/> moves the prompt's lines alone (#151), unless
+    /// <see cref="StandingLinesAsCallObservations"/> is set. Everything else is the arm's, unchanged.
     /// </para>
     /// <para>The options are copied when the arm is made: changing them afterwards changes nothing.</para>
     /// </remarks>
@@ -43,6 +47,32 @@ namespace Agenerela.Evaluation
             Options = options == null ? new DecideOptions() : options.Copy();
         }
 
+        private List<string> knowledge = new List<string>();
+
+        /// <summary>
+        /// Lines added to the profile's <see cref="AgentIdentity.Knowledge"/> for this arm's agents,
+        /// after the profile's own; empty unless set, which leaves the profile's identity as it is.
+        /// The profile asset itself is never changed. So an arm can test a few lines as knowledge
+        /// against an arm that sends the same lines as <see cref="DecideOptions.Observations"/>
+        /// (#190, Living Vale #14).
+        /// </summary>
+        /// <remarks>Copied when set: changing the list afterwards changes nothing.</remarks>
+        public IReadOnlyList<string> Knowledge
+        {
+            get => knowledge;
+            set => knowledge = value == null ? new List<string>() : new List<string>(value);
+        }
+
+        /// <summary>
+        /// Whether the arm's, the state's and the targets' lines are sent as the call's own
+        /// <see cref="DecideOptions.Observations"/>, ahead of the prompt's own, instead of through an
+        /// observation source; false unless set (#151). On, the whole block is the call's, as a
+        /// game that passes every fact with its call sends it, so
+        /// <see cref="DecideOptions.ObservationPlacement"/> moves all of it. With
+        /// <see cref="ObservationPlacement.AfterSources"/> the request is the same either way.
+        /// </summary>
+        public bool StandingLinesAsCallObservations { get; set; }
+
         /// <summary>The arm's name in the report.</summary>
         public string Name { get; }
 
@@ -54,5 +84,35 @@ namespace Agenerela.Evaluation
 
         /// <summary>Whether the arm checks targets, before a prompt's own <c>checkTarget</c>.</summary>
         public bool CheckTarget => Options.CheckTarget;
+
+        /// <summary>
+        /// <see cref="MaxStatementLength"/>'s default, 200 characters. Unmeasured: a guess at where a
+        /// spoken line turns into a speech, well above the longest of 632 statements from
+        /// <c>qwen3.5:2b</c> on 9 November 2026 (81).
+        /// </summary>
+        public const int DefaultMaxStatementLength = 200;
+
+        private int maxStatementLength = DefaultMaxStatementLength;
+
+        /// <summary>
+        /// The longest statement, in characters once trimmed, that is not
+        /// <see cref="ReplyFlag.TooLong"/>; <see cref="DefaultMaxStatementLength"/> unless set. A
+        /// reply check only: it never changes a decision, its outcome or the accuracy.
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">Set to less than 1.</exception>
+        public int MaxStatementLength
+        {
+            get => maxStatementLength;
+            set
+            {
+                if (value < 1)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value,
+                        $"Arm '{Name}': MaxStatementLength must be at least 1; int.MaxValue never flags a statement as too long.");
+                }
+
+                maxStatementLength = value;
+            }
+        }
     }
 }

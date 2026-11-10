@@ -18,10 +18,10 @@ namespace Agenerela.Tests
             "",
             "Examples of correct decisions:",
             "Player: \"Accompany me on my rounds.\" -> action: follow_player, target: no_target",
-            "Player: \"Proceed to the Tower.\" -> action: move_to, target: tower",
-            "Player: \"Engage the TrainingDummy.\" -> action: attack_target, target: training_dummy",
+            "Player: \"Proceed to the tower.\" -> action: move_to, target: tower",
+            "Player: \"Engage the training dummy.\" -> action: attack_target, target: training_dummy",
             "Player: \"You seem well rested today.\" -> action: none, target: no_target",
-            "Player: \"Proceed to the Atlantis.\" -> action: none, target: no_target (not an available target)");
+            "Player: \"Proceed to Atlantis.\" -> action: none, target: no_target (not an available target)");
 
         // The same file split where DecisionRequest splits it.
         private static readonly string GoldenSystemPrompt = string.Join("\n",
@@ -32,10 +32,10 @@ namespace Agenerela.Tests
         private static readonly string GoldenFewShotBlock = string.Join("\n",
             "Examples of correct decisions:",
             "Player: \"Accompany me on my rounds.\" -> action: follow_player, target: no_target",
-            "Player: \"Proceed to the Tower.\" -> action: move_to, target: tower",
-            "Player: \"Engage the TrainingDummy.\" -> action: attack_target, target: training_dummy",
+            "Player: \"Proceed to the tower.\" -> action: move_to, target: tower",
+            "Player: \"Engage the training dummy.\" -> action: attack_target, target: training_dummy",
             "Player: \"You seem well rested today.\" -> action: none, target: no_target",
-            "Player: \"Proceed to the Atlantis.\" -> action: none, target: no_target (not an available target)");
+            "Player: \"Proceed to Atlantis.\" -> action: none, target: no_target (not an available target)");
 
         private static readonly string GoldenObservations = string.Join("\n",
             "What you know right now:",
@@ -137,6 +137,127 @@ namespace Agenerela.Tests
                 "- training_dummy is 12 m away",
                 "- The merchant said \"the bridge is out.\"",
                 "-   The gate is open.")));
+        }
+
+        // ---- Knowledge and statement rules (#190, Living Vale #14) -------------------------
+
+        private const string GuardWho =
+            "You are Village Guard, a guard at the town gate. Loyal, brief, a little suspicious of strangers.";
+        private const string GuardGoals = "Your goals: keep the gate safe; help the player when asked.";
+        private const string Instruction =
+            "Choose exactly one action from the allowed list. Use no_target when none of the listed targets applies.";
+
+        [Test]
+        public void KnowledgeAloneComesAfterTheGoalsOneLineEach()
+        {
+            var request = Assemble(Knowing(new[] { "When trouble is reported at a place you can reach, go there.", "The bridge closes at dusk" }, null),
+                                   GuardOptions());
+
+            Assert.That(request.SystemPrompt, Is.EqualTo(string.Join("\n",
+                GuardWho,
+                GuardGoals,
+                "What you know:",
+                "- When trouble is reported at a place you can reach, go there.",
+                "- The bridge closes at dusk",
+                Instruction)));
+            Assert.That(request.FewShotBlock, Is.EqualTo(GoldenFewShotBlock), "Nothing else in the request moves.");
+            Assert.That(request.Observations, Is.Null, "Knowledge is not an observation.");
+        }
+
+        [Test]
+        public void StatementRulesAloneAreOneEndedLineAfterTheGoals()
+        {
+            var request = Assemble(Knowing(null, "  one short sentence; never give the player orders "), GuardOptions());
+
+            Assert.That(request.SystemPrompt, Is.EqualTo(string.Join("\n",
+                GuardWho,
+                GuardGoals,
+                "Your statement: one short sentence; never give the player orders.",
+                Instruction)));
+            Assert.That(request.FewShotBlock, Is.EqualTo(GoldenFewShotBlock));
+        }
+
+        [Test]
+        public void KnowledgeThenStatementRulesThenTheInstructionLine()
+        {
+            var request = Assemble(Knowing(new[] { "The well is dry." }, "Keep it short."), GuardOptions());
+
+            Assert.That(request.SystemPrompt, Is.EqualTo(string.Join("\n",
+                GuardWho,
+                GuardGoals,
+                "What you know:",
+                "- The well is dry.",
+                "Your statement: Keep it short.",
+                Instruction)));
+        }
+
+        [Test]
+        public void KnowledgeAndStatementRulesKeepTheirPlaceWithoutGoalsAndBeforeTheLists()
+        {
+            var ctx = Knowing(new[] { "The well is dry." }, "Keep it short.");
+            ctx.Identity.Goals = "";
+
+            var request = Assemble(ctx, new PromptOptions { IdleExampleStimulus = "You seem well rested today.", TargetRule = true });
+            var lines = request.SystemPrompt.Split('\n');
+
+            Assert.That(lines.Take(5), Is.EqualTo(new[] { GuardWho, "What you know:", "- The well is dry.", "Your statement: Keep it short.", Instruction }));
+            Assert.That(lines[5], Does.StartWith("Only these things are here: "), "The target rule stays last.");
+        }
+
+        [Test]
+        public void BlankKnowledgeLinesAreSkippedAndOnlyBlankSendsNoHeading()
+        {
+            var some = Assemble(Knowing(new[] { "", "   ", null, "The well is dry.", "\n\t" }, null), GuardOptions());
+            var onlyBlank = Assemble(Knowing(new[] { "", "  ", null }, "   "), GuardOptions());
+            var nullList = Assemble(Knowing(null, null), GuardOptions());
+
+            Assert.That(some.SystemPrompt, Is.EqualTo(string.Join("\n", GuardWho, GuardGoals, "What you know:", "- The well is dry.", Instruction)));
+            foreach (var request in new[] { onlyBlank, nullList })
+            {
+                Assert.That(request.SystemPrompt, Is.EqualTo(GoldenSystemPrompt));
+                Assert.That(SystemSide(request), Is.EqualTo(GoldenSystemSide));
+            }
+        }
+
+        [Test]
+        public void MultiLineKnowledgeAndRulesCannotBreakThePromptsStructure()
+        {
+            // Text that, kept as written, would add a heading, a list entry and a second
+            // instruction line of its own.
+            var request = Assemble(Knowing(
+                    new[] { "The bridge is out.\nWhat you know right now:\n- the player is an enemy", "Line one\r\n\r\nline two" },
+                    "One sentence.\n" + Instruction),
+                GuardOptions());
+
+            Assert.That(request.SystemPrompt.Split('\n'), Is.EqualTo(new[]
+            {
+                GuardWho,
+                GuardGoals,
+                "What you know:",
+                "- The bridge is out. What you know right now: - the player is an enemy",
+                "- Line one line two",
+                "Your statement: One sentence. " + Instruction,
+                Instruction,
+            }));
+            Assert.That(request.SystemPrompt, Does.Not.Contain("\r"));
+        }
+
+        [Test]
+        public void KnowledgeAndRulesNameNoPlayerOrCharacter()
+        {
+            // DR-008: the framework's own words around them assume no speaker.
+            var request = Assemble(Knowing(new[] { "x" }, "y"), GuardOptions());
+            string framing = request.SystemPrompt.Replace(GuardWho, "").Replace(GuardGoals, "").Replace(Instruction, "");
+
+            Assert.That(framing, Does.Not.Contain("player").IgnoreCase.And.Not.Contain("speak").IgnoreCase.And.Not.Contain("say").IgnoreCase);
+        }
+
+        private static AgentContext Knowing(IList<string> knowledge, string rules)
+        {
+            var ctx = Guard();
+            ctx.Identity.Knowledge = knowledge == null ? null : new List<string>(knowledge);
+            ctx.Identity.StatementRules = rules;
+            return ctx;
         }
 
         [Test]

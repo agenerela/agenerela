@@ -32,6 +32,45 @@ namespace Agenerela
         public string IdleExampleStimulus;
 
         /// <summary>
+        /// What the agent says in the idle example, for this call only (#190, G14). Null uses the
+        /// agent's <see cref="Agent.IdleExampleStatement"/>, then the profile's
+        /// <see cref="AgentProfile.IdleExampleStatement"/>, but never from further down than the
+        /// idle example's stimulus came from; empty gives the example no statement.
+        /// </summary>
+        /// <remarks>
+        /// So a profile's statement is never attached to a line this call or the agent supplied: set
+        /// <see cref="IdleExampleStimulus"/> here, and its statement comes from here or nowhere.
+        /// </remarks>
+        public string IdleExampleStatement;
+
+        /// <summary>
+        /// Whether this call's examples show the statements developers wrote: each action's
+        /// <see cref="ActionDefinition.ExampleStatement"/> and <see cref="ActionDefinition.CounterExampleStatement"/>,
+        /// and the idle example's (#190, G14). On by default, which shows only what was written: every
+        /// statement is empty unless someone fills it. False leaves them all out, as an A/B run's
+        /// control arm does.
+        /// </summary>
+        public bool ExampleStatements = true;
+
+        /// <summary>
+        /// Whether an example whose action has no registered target among its
+        /// <see cref="ActionDefinition.PreferredExampleTargets"/> names the first offered target the
+        /// action takes, rather than being left out (#190, Living Vale #20). Off by default: it changes
+        /// the examples, and is owed an A/B run (#151).
+        /// </summary>
+        /// <remarks>
+        /// For a game whose targets change every turn, so no fixed list stays right. "Takes" is
+        /// <see cref="ActionDefinition.AcceptsCategory"/>: any target, unless the action names its
+        /// categories. A target the stimulus mentions is skipped, by any word of its id or name said
+        /// whole ("ox"), or starting a word of the stimulus from three letters ("inn" in innkeeper), or
+        /// started by one of four or more ("dock" for docks), so the example never shows the answer;
+        /// with every target the action takes
+        /// mentioned, the example is left out. A target that implements <see cref="INamedTarget"/> is
+        /// called by its name. A registered preferred target is used as before, mentioned or not.
+        /// </remarks>
+        public bool ExampleTargetFallback;
+
+        /// <summary>
         /// Whether this call's system prompt lists the actions offered with their descriptions, and
         /// the targets offered with their own lines (#190). Off by default: unmeasured, and owed an
         /// A/B run before it becomes the default (#151). <see cref="PromptOptions.ListActionsAndTargets"/>
@@ -90,6 +129,32 @@ namespace Agenerela
         /// not: it stays with the developer's handlers and never reaches the prompt.
         /// </remarks>
         public IList<string> Observations = new List<string>();
+
+        /// <summary>
+        /// Where this call's own <see cref="Observations"/> go in the request (#151):
+        /// <see cref="Agenerela.ObservationPlacement.AfterSources"/> by default, the end of the
+        /// observation block, after every line of <see cref="Agent.ObservationSources"/>, which is
+        /// what every request sent before this option.
+        /// <see cref="Agenerela.ObservationPlacement.WithStimulus"/> puts them after the stimulus's
+        /// closing quote in its user turn instead.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Choose <see cref="Agenerela.ObservationPlacement.WithStimulus"/> when this call's lines are
+        /// the facts of this one moment (a wolf has cornered a child) and what holds on every call
+        /// (the time of day, the agent's post) comes from an observation source: then it won an
+        /// interleaved A/B run on both models it was measured on (findings, 10 November 2026). With
+        /// every fact passed here and no source, it moves the whole block, which is measured
+        /// separately.
+        /// </para>
+        /// <para>
+        /// Only where the lines are rendered changes. They count against
+        /// <see cref="Agent.MaxObservations"/> the same way, and the context every guard, source and
+        /// handler reads holds the same list in the same order. Nothing here reads
+        /// <see cref="StimulusLabel"/> or the stimulus (DR-008).
+        /// </para>
+        /// </remarks>
+        public ObservationPlacement ObservationPlacement = ObservationPlacement.AfterSources;
 
         /// <summary>
         /// Whether anyone is waiting on this decision (DR-015). Every agent on one provider shares
@@ -152,6 +217,18 @@ namespace Agenerela
         /// </para>
         /// </remarks>
         public object Correlation;
+
+        /// <summary>
+        /// The chain of relayed decisions this call belongs to, or null for none, the default (#190,
+        /// G4). <see cref="DecisionRelay.RelayAsync"/> sets it; set <see cref="DecisionChain.Start"/>
+        /// here to put the decision that begins a chain in it too.
+        /// </summary>
+        /// <remarks>
+        /// Recorded in <see cref="DecisionTelemetry.ChainId"/>, <see cref="DecisionTelemetry.ChainHop"/>
+        /// and <see cref="DecisionTelemetry.ChainSource"/>, pipeline errors included, so the decision
+        /// feed and <see cref="DecisionLog"/> carry it. It never reaches the prompt or the provider.
+        /// </remarks>
+        public DecisionChain Chain;
 
         // The options one call keeps, taken when it is made, so changing the caller's object
         // afterwards changes nothing, the guards' view included (#106). A memberwise copy, so a

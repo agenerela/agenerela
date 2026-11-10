@@ -5,8 +5,8 @@ using System.Runtime.ExceptionServices;
 namespace Agenerela
 {
     /// <summary>
-    /// The handler behind an [AgentAction] method: Execute calls the method, and IsAvailable calls
-    /// its [Available] check. Built only by <see cref="AgentActionReader"/>, which has already
+    /// The handler behind an [AgentAction] method: Execute calls the method, IsAvailable calls its
+    /// [Available] check, and IsAvailableFor its [AvailableFor] check. Built only by <see cref="AgentActionReader"/>, which has already
     /// checked both methods' shape.
     /// </summary>
     internal sealed class MethodActionHandler : IActionHandlerWithResult
@@ -17,10 +17,15 @@ namespace Agenerela
         private readonly Type[] parameterTypes;
         private readonly MethodInfo check;
         private readonly bool checkTakesContext;
+        private readonly MethodInfo targetCheck;
+        private readonly bool targetCheckTakesContext;
 
         /// <param name="check">The [Available] method, or null when the action is always available.</param>
-        public MethodActionHandler(object owner, MethodInfo action, MethodInfo check)
+        /// <param name="targetCheck">The [AvailableFor] method, or null when every target is.</param>
+        public MethodActionHandler(object owner, MethodInfo action, MethodInfo check, MethodInfo targetCheck = null)
         {
+            this.targetCheck = targetCheck;
+            targetCheckTakesContext = targetCheck != null && targetCheck.GetParameters().Length == 2;
             this.owner = owner;
             this.action = action;
             this.check = check;
@@ -44,6 +49,17 @@ namespace Agenerela
             }
 
             return (bool)Call(check, checkTakesContext ? new object[] { ctx } : Array.Empty<object>());
+        }
+
+        // The [AvailableFor] check, or null when the action has none, so that an action without one
+        // is never treated as having a per-target check (TargetChecks.Of).
+        internal System.Func<AgentContext, string, Availability> TargetCheck =>
+            targetCheck == null ? null : (System.Func<AgentContext, string, Availability>)IsAvailableFor;
+
+        private Availability IsAvailableFor(AgentContext ctx, string targetId)
+        {
+            object returned = Call(targetCheck, targetCheckTakesContext ? new object[] { ctx, targetId } : new object[] { targetId });
+            return returned is Availability availability ? availability : (Availability)(bool)returned;
         }
 
         public void Execute(AgentContext ctx, AgentDecision decision)

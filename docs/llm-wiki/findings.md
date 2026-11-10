@@ -92,6 +92,13 @@ a control arm on the 200+ prompt set, and each recorded here:
    idle example, with and without the negative example, the number of examples per action,
    and their order. If the idle example does not help, `AgentProfile.IdleExampleStimulus`
    (#15) can go.
+   *Update, 9 November 2026:* the idle example's with-vs-without has now run once, on the 76
+   evaluation prompts and `qwen3.5:2b`: 56/76 with it, 59/76 without, and `stop_following` 2/7
+   against 6/7 (findings, "The idle example on the profile's own line"). Overall that is
+   within the noise floor (8.1 points), but `simple_command` moved 33 points, beyond its own floor.
+   It is one model, and it does not settle whether the line should go. Counter-examples
+   and the action/target list were run the same evening (both inside the noise floor too). The other
+   rules in this list are still owed.
 4. Levers never tried: examples picked by similarity to the stimulus, and a hand-written
    block per profile (#10's extension points).
 
@@ -1335,7 +1342,11 @@ harness bugs, each fixed before the next run, so the runs did not all run the sa
   run 3, Hale's `send_guard` read 0.736 at the target (it wanted "arms…"), below 0.8.
 - **Bram answered "Quiet night, Bram?" with "Fine day for it.", 4 of 4.** That is the stimulus
   of the `none` action's few-shot example, copied as the statement, at night. Not measured;
-  Phase 4 is where to count how often an example's text comes back as the answer.
+  Phase 4 is where to count how often an example's text comes back as the answer. Since then #218 (9 November) lets an example
+  carry its own statement (`Statement` on `[Example]` and `[CounterExample]`, `IdleExampleStatement`,
+  `DecideOptions.ExampleStatements`), so an example no longer has to show its stimulus's text as
+  the reply. Written statements and their effect are unmeasured; the A/B is listed under "Waiting"
+  in `docs/live-runs.md`.
 - **Latency.** 65 warm decisions took 0.48–2.33 s, median 0.95 s. With three agents asked at
   once, the last waited up to 3.40 s in the queue. The first request of a fresh session took
   7.1 and 9.9 s (runs 1 and 3), while the model loaded.
@@ -1516,3 +1527,1299 @@ only the target lists of the actions that need a target (no `no_target`) and of 
 **What would change this.** A paired reply that pairs an action with a target it does not take, on
 any Ollama version; or an Ollama release that rejects a root `anyOf` in `format`. Re-run the probe
 after an upgrade.
+
+### `Agent.Reset` aborts a request Ollama is already working on, and the next decision is normal (9 November 2026)
+
+**What was checked.** #190 G12's `Agent.Reset()` (merged as #219) against a real server, because
+its unit tests use a fake provider only. Three things: the call in flight ends cancelled, Ollama
+stops the request and frees its slot, and the next `DecideAsync` on the same agent returns a normal
+decision. A live check, not an accuracy or latency claim, so it needs no control arm.
+
+**Conditions.** Ollama 0.40.14 on the lead's laptop (RTX 4060 Laptop, 8 GB), on AC power,
+`qwen3.5:2b` alone and fully in VRAM (`size_vram` 2254 of 2254 MB), the shared Ollama lock held, no
+other Unity running. `origin/test` at 61a7744. A throwaway PlayMode test on `LiveGuard`, never
+committed: warm-up, three ordinary decisions (656 ms mean), then three times over: start a
+`DecideAsync`, call `Reset()` 263 ms later, await the call, then decide again on the same agent.
+
+**Result: 3 of 3 on every point.**
+
+| Repeat | The call | Ollama (server log) | Generated before the stop | The next decision |
+|---|---|---|---:|---|
+| 1 | `OperationCanceledException` 7 ms after `Reset()` | `[GIN] 500, 265 ms`, then `srv stop: cancel task` | 16 tokens | `move_to`/`tower`, 770 ms |
+| 2 | the same, 1 ms after | `500, 262 ms`, `cancel task` | 15 tokens | `follow_player`, 869 ms |
+| 3 | the same, 1 ms after | `500, 262 ms`, `cancel task` | 15 tokens | `none`, 875 ms |
+
+- **The request was being generated when it was stopped**, not still queued: llama-server had
+  written 15 or 16 tokens of the reply, and released the slot at once.
+- **The slot was free straight away.** The next decision waited 0 ms in the queue, with nothing
+  ahead of it, and took as long as an ordinary one, so nothing was left running.
+- **Its memory was cleared too.** The cancelled request's prompt was 374 tokens, carrying the three
+  earlier exchanges; the next one was 214.
+- The message was "Agent 'Village Guard' was reset, which cancelled this decision."
+
+**Worth knowing.** Ollama logs a chat its client dropped as HTTP 500, not 499. A request log that
+counts 500s as server errors will count every reset as one.
+
+**What would change this.** An Ollama release that keeps generating after the client drops the
+connection, which would show as the next decision waiting in the queue. Raw output:
+`.scratch/live-runs-1109/` in the session's checkout (`run1-*`, `ResetLiveCheck.cs`).
+
+### `OLLAMA_GO_TEMPLATE=1` keeps the field order, for `Qwen3-4B-Instruct-2507` and `MiniCPM5-2B` (9 November 2026)
+
+A live check of the fix the entry of 5 November suggested ("Why `qwen3:4b-instruct-2507` wrote
+`statement` before `target`"). Not an accuracy claim.
+
+**Setup.** The framework's own request, from the 5 November proxy capture (system prompt, schema
+with `action`, `target`, `statement`, options, `logprobs`), with six stimuli per model. The order
+the schema gives is not alphabetical. Ollama 0.40.14, RTX 4060 Laptop on AC power, one model
+resident at a time, each unloaded after its six (`keep_alive: 0`): `qwen3:4b-instruct-2507-q4_K_M`
+3032 of 3032 MB in VRAM, `MiniCPM5-2B` (`hf.co/openbmb/MiniCPM5-2B-GGUF:Q4_K_M`) 1564 of 1564 MB.
+First on the Ollama app as it normally runs, then on `ollama serve` started by hand with
+`OLLAMA_GO_TEMPLATE=1` and the two variables the app adds (`OLLAMA_CONTEXT_LENGTH=16384`,
+`OLLAMA_NO_CLOUD=0`), then the app restored, with the same server config as before.
+
+| Model | As the app runs (variable unset) | `OLLAMA_GO_TEMPLATE=1` |
+|---|---|---|
+| `qwen3:4b-instruct-2507-q4_K_M` | `selected=gguf_chat_template`, 0 of 6 in order | `selected=go_template`, 6 of 6 in order |
+| `MiniCPM5-2B` | `selected=gguf_chat_template`, 0 of 6 in order | `selected=go_template`, 6 of 6 in order |
+
+Every reply out of order was `action`, `statement`, `target`, the sorted order.
+
+- **Only a variable that is set counts.** Every server log since 3 November prints
+  `OLLAMA_GO_TEMPLATE:true`, the 5 November run included. In 0.40.14's source that is only the
+  default printed when the variable is unset. `goTemplateEnvSet()` (`server/images.go`) skips the
+  rule that prefers the GGUF template only when the variable is set.
+- **`MiniCPM5-2B` confirms the 5 November prediction** that it would come back sorted. On the sorted
+  path it twice wrote just the target's name as the statement (`"statement": "bridge"`) before the
+  target. With the order kept, it wrote a line ("I'll be at the bridge.").
+- **The variable changes two things, not one.** The Go template also formats the prompt in place
+  of the GGUF one, and the 4B's replies changed wording between the two paths. So an A/B with the
+  variable set compares another template as well as another order.
+
+**What it means for the 8 GB shortlist.** `MiniCPM5-2B` can be measured in the framework's order
+only with `OLLAMA_GO_TEMPLATE=1` set on the server, and its result is then a result on the Go
+template. Models on `renderer_parser`, `qwen3.5:2b` among them, never take the GGUF path, set or
+not.
+
+**What would change this.** An Ollama release whose native path passes the schema on as sent, or
+that changes when the GGUF template is preferred. Raw replies: `.scratch/live-runs-1109/run2-*`
+in the session's checkout.
+
+### Listing the actions and targets in the prompt: 58/76 against 56/76 on `qwen3.5:2b`, within noise (9 November 2026)
+
+The first of #193's three switches through the runner (#145), for #151: does
+`DecideOptions.ListActionsAndTargets` help a model that never reads the schema?
+
+**Setup.** The evaluation set (`Assets/Evaluation/`, 76 prompts) and its profile `VillageGuard`,
+`origin/test` at 61a7744. Two arms, interleaved, on one model:
+
+- **A, control:** the defaults (`ListActionsAndTargets` off).
+- **B:** `ListActionsAndTargets = true`, cap 12, so all 11 targets were listed. The actions came with
+  their descriptions. The targets came by id only: the runner's `DeclaredTarget` does not implement
+  `IDescribedTarget`, and in both arms each target's description already reached the model as an
+  observation line.
+
+Everything else was the runner's defaults (grounding guard on, temperature 0). State was told with
+the 5 November wording ("You are following the player."). `qwen3.5:2b` on Ollama 0.40.14, RTX 4060
+Laptop on AC power, 2254 of 2254 MB in VRAM before and after each arm's warm-up and at its end,
+nothing else resident, no other Unity running, the Ollama lock held. 130 s for both arms, after a
+12-prompt slice first (31 s). No warnings and no pipeline errors.
+
+| Outcome | A, list off | B, list on |
+|---|---:|---:|
+| Correct | 56 | 58 |
+| WrongLegalAction | 16 | 16 |
+| ContainedByGuard | 1 | 0 |
+| RejectedWhenActionExpected | 3 | 2 |
+| **Accuracy** | **73.7%** | **76.3%** |
+
+**+2.6 points, within noise** (floor 8.1 at n = 76). No category was beyond its floor:
+command_with_target +9.1 (n 11), conversation +11.1 (9), event +5.3 (19), impossible_request −11.1
+(9), simple_command +11.1 (9), situation −5.3 (19). Arm A matched the `qwen3.5:2b` arm of
+5 November, 56 of 76, on the same Ollama version.
+
+**The answers that moved.** 13 prompts changed answer: 6 became correct, 4 stopped being correct.
+
+- Became correct with the list: "Go back to the shelter." (A `none`), "Stay where you are." (A
+  `none`), "A scout spotted movement near the north tower." (A attacked the wolf, refused by the
+  guard), "The bridge has collapsed." (A walked to the gate) and "You look tired." (A walked to the
+  campfire).
+- Stopped being correct: "Enter the locked cave without opening it." came back `none` with the
+  target `locked_cave`, which the flat schema allows. "The player has reached the shelter." became
+  `none`, said as "Fine day for it.", the idle example's line. "Villagers are gathering in the square
+  tonight." became `none`. The `move_to`/`north_tower` that the guard stopped in A for "The
+  watchtower is unattended." went through in B.
+- Not moved at all: "Wait here.", "Do not move." and "Hold position." are `none` in both arms, as
+  are "The player is heading off on their own.", "The player has gone inside to sleep." and "The
+  square has gone quiet.". The list does not get the 2B to `stop_following` or `follow_player` on
+  these.
+
+**A side count, not scored.** Statements that were an example line word for word: 3 in A ("Strike the
+Wolf." twice, "You can stay put now." once), 5 in B ("Strike the Wolf." three times, "Fine day for
+it." twice). This is the echo G14 is about, and too few to say anything.
+
+**Rule 4.** No example matches a prompt exactly; the runner checks that. One partial overlap holds
+in both arms: `move_to`'s example "Go and stand by the {0}." and target_005 "Go stand at the north
+tower." (noted on 5 November). Both arms answered target_005 correctly.
+
+**What it means.** Nothing to change: listing the actions and targets is no measurable help to
+`qwen3.5:2b` on this set, and it stays off. A larger set, or a model that reads the list better,
+would need its own run.
+
+**What would change this.** A repeat that moves outside the noise floor, on more prompts (#147) or
+on another model. Raw report: `.scratch/live-runs-1109/run3a-report/` in the session's checkout.
+
+### Counter-examples on the evaluation set: 56/76 with them and without, on `qwen3.5:2b` (9 November 2026)
+
+The second of #193's switches through the runner, for #151: does an action's counter-example, a
+line about its subject answered with `none`, cut actions nobody asked for?
+
+**Setup.** `VillageGuard` has no counter-examples, so with it as it is the switch changes nothing.
+With the lead's approval, one was written for each of its four actions, on in-memory copies for this
+run only (the asset is unchanged). Both arms used that profile:
+
+- **A, control:** `DecideOptions.CounterExamples = false`.
+- **B:** the defaults, which show the counter-examples.
+
+The lines. Each was checked word by word against all 76 stimuli and their observations. None
+matches one, and the only content words they share are `well` and `wolf`, the targets the actions'
+own examples already show:
+
+| Action | Counter-example (`{0}` is filled as in the action's example) |
+|---|---|
+| `follow_player` | "My brother likes to wander behind the carts." |
+| `stop_following` | "The old miller never budges from his chair." |
+| `move_to` | "The {0} was built by my grandfather." (shown as "The Well …") |
+| `attack_target` | "The {0} howled at sunset yesterday." (shown as "The Wolf …") |
+
+Everything else as in the entry above: the evaluation set at 61a7744, interleaved, runner defaults,
+the 5 November state wording, `qwen3.5:2b` on Ollama 0.40.14, 2254 of 2254 MB in VRAM before and
+after each warm-up and at each arm's end, on AC power, nothing else resident, the lock held. 139 s.
+No warnings and no pipeline errors. This run and the next one ran on `ollama serve`, started by hand
+with the app's server configuration, so the app's updater could not install 0.40.15 mid-batch. The
+control arm gave the same 76 answers as the entry above's control did on the app.
+
+| Outcome | A, counter-examples off | B, on |
+|---|---:|---:|
+| Correct | 56 | 56 |
+| WrongLegalAction | 16 | 15 |
+| ContainedByGuard | 1 | 2 |
+| RejectedWhenActionExpected | 3 | 3 |
+| **Accuracy** | **73.7%** | **73.7%** |
+
+**+0.0 points, within noise** (floor 8.1). Per category, B − A: command_with_target −9.1 (n 11),
+conversation +11.1 (9), event +5.3 (19), situation −5.3 (19), impossible_request and
+simple_command 0. All within noise.
+
+**Unasked actions.** On the 30 prompts labelled `none`, the model chose an action, before any
+guard, 4 times without the counter-examples and 3 times with them. On the 46 prompts that want an
+action, it answered `none` 10 times without and 11 with. Living Vale's 6/13 → 0/13 (5 November) was
+one idle-style line in its own game, not a counter-example per action, and does not carry over here.
+
+**The four answers that moved.** Became correct: "You look tired." (A walked to the campfire) and
+"The bridge has collapsed." (A walked to the gate), both `none` in B. Stopped being correct: "The
+path ahead is empty." became `move_to`/`bridge`, which the guard contained, and "Approach the
+eastern road." became `none` ("I will not follow you into the unknown.").
+
+**What it means.** Counter-examples, as written here, make no measurable difference to
+`qwen3.5:2b` on this set. They stay empty by default, which is what they are. A set with more
+prompts that tempt an unasked action would test them more sharply than 30 `none` prompts do.
+
+**What would change this.** A run outside the noise floor, with other lines, on more prompts or on
+another model. Raw report: `.scratch/live-runs-1109/run3b-report/` in the session's checkout.
+
+### The idle example for a code-built agent: 59/76 unset against 56/76 set, and the line costs `stop_following` (9 November 2026)
+
+The third of #193's switches through the runner, for #151: does `Agent.IdleExampleStimulus` help an
+agent built in code, which has no idle example unless one is set?
+
+**Setup.** The runner always builds its agents from a profile, so a profile agent (`VillageGuard`)
+stood in for a code-built one, and the idle example was set per call:
+
+- **A:** `IdleExampleStimulus = ""`, no idle example, what a code-built agent sends today.
+- **B:** `IdleExampleStimulus = AgentProfile.DefaultIdleExampleStimulus`, "Nothing has changed
+  since last time.", the line a new profile starts with.
+
+A preview of both prompts showed they differ by that one example line and nothing else. Everything
+else as in the two entries above, on the same `ollama serve`: 0.40.14, 2254 of 2254 MB in VRAM
+throughout, interleaved, 138 s, no warnings and no pipeline errors.
+
+**Rule 4.** The default line partly repeats situation_001, "Nothing has happened for a while.",
+which is labelled `none` too. So the result is given with and without that prompt. Both arms
+answered it `none`.
+
+| Outcome | A, no idle example | B, the default idle example |
+|---|---:|---:|
+| Correct | 59 | 56 |
+| WrongLegalAction | 12 | 15 |
+| ContainedByGuard | 2 | 1 |
+| RejectedWhenActionExpected | 3 | 4 |
+| **Accuracy** | **77.6%** | **73.7%** |
+| Without situation_001 | 58/75, 77.3% | 55/75, 73.3% |
+
+**Overall −3.9 points, within noise** (floor 8.1; without situation_001, −4.0, floor 8.2).
+**simple_command −33.3, beyond noise** (88.9% → 55.6%, n = 9, floor 23.6). The other categories
+were within noise: situation −10.5 (−11.1 without situation_001), conversation +11.1,
+impossible_request +11.1, the rest 0.
+
+**What the idle line did.** With it, the 2B answered `none` to commands it had obeyed without it:
+"Wait here.", "Stay where you are.", "Do not move." and "The player has gone inside to sleep.", all
+`stop_following`, and the night-watch situation, a `move_to`. Its statements still said it would
+stay ("I will stand guard here until further notice."). It also fixed two `none` prompts: "You look
+tired." (A walked to the campfire) and "Attack Godzilla." (A attacked the wolf, contained by the
+guard). On the 30 `none` prompts it acted 5 times without the line and 3 times with it. On the 46
+that want an action, it answered `none` 6 times without and 10 times with.
+
+**It was also repeated.** With the line, 10 of the 76 statements were "Nothing has changed since
+last time." word for word, against none without it. That is the echo #190 G14 is about.
+
+**An observation across runs, not a result.** The control arms of the two entries above had the
+profile's own idle example, "Fine day for it.", and scored 56/76 with simple_command at 55.6%, the
+same as B here. At temperature 0 this machine gave identical answers on repeat (both controls
+matched answer for answer). So the cost to `stop_following` may come from any idle `none` example,
+whatever its text. The next entry runs #151's "idle example with vs without" A/B on the profile's
+own line, and it does.
+
+**What it means.** Nothing to switch on. The one difference beyond the noise floor is in favour of
+the default that already holds, a code-built agent with no idle example. It is one category of 9
+prompts, so it is worth repeating on #147's larger set before anyone removes the profile's idle
+example.
+
+**What would change this.** A repeat on more `stop_following` prompts, or on another model, where
+the idle line no longer costs them. Raw report: `.scratch/live-runs-1109/run3c-report/` in the
+session's checkout.
+
+### The idle example on the profile's own line: 56/76 with it against 59/76 without, and `stop_following` 2/7 against 6/7 (9 November 2026)
+
+#151's "idle example with vs without", run the same evening because the entry above suggested the
+cost to `stop_following` came from any idle `none` example, whatever its text.
+
+**Setup.** `VillageGuard` as it is, so the idle example is its own line, "Fine day for it.". Two arms,
+interleaved, on one model:
+
+- **A, control:** the defaults, which show the profile's line.
+- **B:** `IdleExampleStimulus = ""`, which leaves it out.
+
+A preview showed the two prompts differ by that one line. Otherwise as in the entries above: the
+evaluation set at 61a7744, runner defaults, the 5 November state wording, `qwen3.5:2b` on Ollama
+0.40.14 through a hand-started `ollama serve` with the app's server configuration, 2254 of 2254 MB in
+VRAM throughout, on AC power, nothing else resident, no other Unity running, the lock held. 123 s,
+no warnings and no pipeline errors. No example line matches a prompt; "Fine day for it." shares no
+words with any.
+
+| Outcome | A, "Fine day for it." | B, no idle example |
+|---|---:|---:|
+| Correct | 56 | 59 |
+| WrongLegalAction | 16 | 12 |
+| ContainedByGuard | 1 | 2 |
+| RejectedWhenActionExpected | 3 | 3 |
+| **Accuracy** | **73.7%** | **77.6%** |
+
+**Overall +3.9 points without it, within noise** (floor 8.1). **simple_command +33.3, beyond noise**
+(55.6% → 88.9%, n = 9, floor 23.6). The other categories: impossible_request −11.1, situation +5.3,
+the rest 0, all within noise.
+
+**`stop_following`: 2 of 7 right with the idle line, 6 of 7 without.** The five answers that moved
+were all one of two kinds:
+
+- Four commands went from `none` to `stop_following` without the line: "Wait here.", "Stay where you
+  are.", "Do not move." and "The player has gone inside to sleep.". With it, the model said it would
+  stay ("I will wait for your next command.") but chose `none`. "Hold position." is `none` in both.
+- One went the other way: "Attack Godzilla." was `none` with the line and `attack_target`/`wolf`
+  without it, which the grounding guard contained.
+
+On the 30 `none` prompts the model acted 4 times with the line and 5 without (Godzilla). On the 46
+that want an action, it answered `none` 10 times with the line and 6 without. "Fine day for it." was
+never repeated as a statement. Other example lines were, 3 times with the line and once without.
+
+**The same answers as the runs before.** At temperature 0, arm A gave the same 76 answers as the
+controls of the `ListActionsAndTargets` and counter-example runs, and arm B the same 76 as the
+code-built run's unset arm. So the default line, "Nothing has changed since last time.", and the
+profile's line cost `stop_following` the same four prompts. The entry above's observation across
+runs is now this A/B.
+
+**What it means.** On `qwen3.5:2b`, an idle `none` example makes "stay here" commands come back as
+`none`, by a margin beyond the noise floor in that category, while the whole set moves within noise.
+It is the first result of the evening that points at a default, since every profile starts with an
+idle example (`AgentProfile.DefaultIdleExampleStimulus`). Changing that is the lead's decision, in its
+own pull request. The category has 9 prompts, so repeat it on #147's larger set, and on another
+model, before deciding. Nothing here changes code. The sweep in the next entry ran this A/B on 13
+models: only `qwen3.5:2b` pays this cost.
+
+**What would change this.** A repeat on more `stop_following` prompts, or on another model, where the
+idle line no longer turns them into `none`. Raw report: `.scratch/live-runs-1109/run3d-report/` in
+the session's checkout.
+
+### Thirteen models on the evaluation set: `qwen3.5:4b` first at 70/76, and the idle example hurts only `qwen3.5:2b` (9 November 2026)
+
+A sweep of every model pulled for [`model-candidates.md`](model-candidates.md), on the lead's
+request: each model's default score on the evaluation set, and the idle-example A/B of the two
+entries above, run again on each. It covers #151's "`qwen3.5:2b` vs `qwen3.5:4b`" row and
+`live-runs.md`'s "8 GB shortlist", with the limits below.
+
+**Setup.**
+- **The set:** the evaluation set at 61a7744, all 76 prompts, and `VillageGuard`. It is the only
+  set there is. #147's 200+ prompts do not exist yet, so every per-category figure below rests on
+  9 to 19 prompts.
+- **The server:** one `ollama serve` for the whole sweep, Ollama 0.40.14, checked before each model.
+  It ran with `OLLAMA_GO_TEMPLATE=1` and the app's two variables (`OLLAMA_CONTEXT_LENGTH=16384`,
+  `OLLAMA_NO_CLOUD=0`), so no model took the key-sorting path (entry of 9 November above).
+- **The machine:** the RTX 4060 Laptop, 8 GB, on AC power, checked before each model. No other Unity
+  was running, the Ollama lock was held, and one model was resident at a time, each unloaded with
+  `keep_alive: 0` before the next.
+- **Before each model's runs:** six raw `/api/chat` requests in the framework's own shape
+  (`think: false`, temperature 0, `num_ctx` 4096, `logprobs`). They checked the field order, any
+  thinking, and `size` and `size_vram`.
+- **Then two arms through the runner, interleaved:**
+  - **On:** the defaults, with the profile's idle example "Fine day for it.". This is also the
+    model's default score.
+  - **Off:** `IdleExampleStimulus = ""`.
+  - Both used the runner's defaults (grounding guard on, temperature 0) and the 5 November state
+    wording.
+
+**What the comparisons are.** The idle on/off pair is an interleaved A/B on one model. The ranking
+between models compares each model's "on" arm with `qwen3.5:2b`'s, which ran first on the same server
+that session. **These are separate runs on one server, not the runner's `Sequential` pairs.** The
+same noise floor is applied to them (8.1 points at n = 76), but drift between runs is not shared.
+At temperature 0 this machine repeated a run answer for answer all evening, and `qwen3.5:2b` gave the
+same 76 answers here as in the two entries above.
+
+**Every model passed the pre-checks.**
+- 6 of 6 replies in the framework's field order on all 13.
+- No thinking came back from any. With `think: false`, which `OllamaProvider` always sends, the
+  replies had no `thinking` field and no `<think>` text, and used 24 to 40 tokens each, `qwen3:8b`
+  included.
+- Every model sat fully in VRAM (`size_vram` equal to `size`), the two 8B models included, so all
+  the latencies are comparable.
+- No warnings and no pipeline errors in any run. The whole sweep took 33 minutes.
+
+**Default score, ranked**, each against `qwen3.5:2b`'s 56/76 (floor 8.1):
+
+| Model | Chat path | VRAM, MB | Default (idle on) | Against the 2B | Median / p90 latency, s |
+|---|---|---:|---:|---|---|
+| `qwen3.5:4b` | renderer_parser | 2993 | **70** (92.1%) | +18.4, beyond noise | 1.00 / 1.09 |
+| `qwen3:4b-instruct-2507-q4_K_M` | go_template | 3032 | 65 (85.5%) | +11.8, beyond noise | 0.62 / 0.67 |
+| `ministral-3:3b` | parser | 2601 | 65 (85.5%) | +11.8, beyond noise | 0.53 / 0.59 |
+| `qwen3:8b` | go_template | 5327 | 65 (85.5%) | +11.8, beyond noise | 0.96 / 1.05 |
+| `gemma4:e2b-it-qat` | renderer_parser | 1578 | 64 (84.2%) | +10.5, beyond noise | 0.70 / 0.84 |
+| `granite4.1:3b` | go_template | 2390 | 62 (81.6%) | +7.9, within noise | 0.46 / 0.52 |
+| `nemotron-3-nano:4b` | renderer_parser | 2693 | 60 (78.9%) | +5.3, within noise | 0.68 / 0.77 |
+| `L3-8B-Stheno-v3.2` Q4_K_M | go_template | 5035 | 60 (78.9%) | +5.3, within noise | 0.85 / 0.93 |
+| `llama3.2:3b` | go_template | 2442 | 59 (77.6%) | +3.9, within noise | 0.46 / 0.55 |
+| `MiniCPM5-2B` Q4_K_M | go_template | 1564 | 58 (76.3%) | +2.6, within noise | 0.36 / 0.42 |
+| `phi4-mini` | go_template | 2956 | 57 (75.0%) | +1.3, within noise | 0.68 / 0.82 |
+| **`qwen3.5:2b`** (the baseline) | renderer_parser | 2254 | 56 (73.7%) | | 0.68 / 0.77 |
+| `lfm3:1.7b` | renderer_parser | 1114 | 46 (60.5%) | −13.2, beyond noise | 0.38 / 0.46 |
+
+Latency is the runner's per-decision time on the "on" arm, warm, one model resident.
+`gemma4:e2b-it-qat`'s VRAM is what `/api/ps` reported; its download is 4135 MB.
+
+**Most of the gap is simple commands.**
+- Every model but `phi4-mini`, `lfm3:1.7b` and the baseline scored 9/9 on simple_command, against
+  the 2B's 5/9: +44.4, beyond noise.
+- Only `qwen3.5:4b` was also beyond noise on situations (17/19 against 13/19) and events (15/19
+  against 11/19).
+- Two models fell beyond noise on situations: `MiniCPM5-2B` (7/19) and `L3-8B-Stheno` (8/19).
+  `lfm3:1.7b` fell beyond noise on events (5/19) and situations (8/19).
+
+**The idle example on and off**, per model (off − on, floor 8.1; with the line / without):
+
+| Model | On | Off | Off − on | simple_command | `stop_following` | Unasked actions (of 30) | Missed requests (of 46) | Echoes |
+|---|---:|---:|---|---|---|---|---|---|
+| `qwen3.5:2b` | 56 | 59 | +3.9, within | 55.6 / **88.9, beyond** | **2/7 / 6/7** | 4 / 5 | 10 / 6 | 3 / 1 |
+| `qwen3.5:4b` | 70 | 66 | −5.3, within | 100 / 100 | 6/7 / 6/7 | 1 / 7 | 2 / 0 | 0 / 0 |
+| `qwen3:4b-instruct-2507` | 65 | 56 | **−11.8, beyond** | 100 / 100 | 6/7 / 6/7 | 5 / 15 | 1 / 0 | 0 / 0 |
+| `ministral-3:3b` | 65 | 61 | −5.3, within | 100 / 100 | 7/7 / 7/7 | 4 / 7 | 0 / 0 | 0 / 0 |
+| `qwen3:8b` | 65 | 61 | −5.3, within | 100 / 100 | 7/7 / 7/7 | 4 / 7 | 1 / 1 | 0 / 0 |
+| `gemma4:e2b-it-qat` | 64 | 62 | −2.6, within | 100 / 100 | 5/7 / 7/7 | 3 / 6 | 5 / 2 | 0 / 0 |
+| `granite4.1:3b` | 62 | 61 | −1.3, within | 100 / 100 | 6/7 / 7/7 | 1 / 2 | 11 / 10 | 0 / 0 |
+| `nemotron-3-nano:4b` | 60 | 63 | +3.9, within | 100 / 100 | 7/7 / 7/7 | 2 / 5 | 8 / 1 | 1 / 0 |
+| `L3-8B-Stheno-v3.2` | 60 | 61 | +1.3, within | 100 / 100 | 7/7 / 7/7 | 11 / 11 | 0 / 0 | 0 / 0 |
+| `llama3.2:3b` | 59 | 51 | **−10.5, beyond** | 100 / 100 | 7/7 / 7/7 | 10 / 19 | 0 / 0 | 0 / 0 |
+| `MiniCPM5-2B` | 58 | 56 | −2.6, within | 100 / 88.9 | 6/7 / 7/7 | 6 / 9 | 7 / 5 | 0 / 0 |
+| `phi4-mini` | 57 | 56 | −1.3, within | 77.8 / 100 | 5/7 / 7/7 | 9 / 14 | 3 / 0 | 1 / 1 |
+| `lfm3:1.7b` | 46 | 47 | +1.3, within | 77.8 / 77.8 | 3/7 / 3/7 | 5 / 3 | 2 / 6 | 0 / 0 |
+
+"Unasked actions" counts an action chosen on a prompt labelled `none`, before any guard. "Missed
+requests" counts `none` answered to a prompt that wants an action. "Echoes" are statements that
+repeat an example line word for word.
+
+**What the idle example does.** It is the line the framework uses to cut unasked actions, and on
+11 of the 13 models taking it away added unasked actions: by 10 on `qwen3:4b-instruct-2507` and 9
+on `llama3.2:3b`, both beyond noise overall. The cost to `stop_following` that the entries above
+found is `qwen3.5:2b`'s alone: it is the only model whose simple commands fall beyond noise with
+the line. On every other model the line costs nothing there, or a prompt or two. So the
+previous entry's pointer at a default does not hold across models. What it does show is that the 2B
+reads the idle line as a reason to answer `none`.
+
+**Limits.**
+- **The model ranking is not a set of A/B results of the runner's kind.** It compares separate
+  runs on one server, at n = 76, on one set written for one agent.
+- **The chat path differs between models**, and it is part of the comparison. Six models ran on
+  Ollama's own renderer or parser. Seven ran on their Go template, because of `OLLAMA_GO_TEMPLATE=1`;
+  two of those, `qwen3:4b-instruct-2507` and `MiniCPM5-2B`, would take the key-sorting GGUF path
+  without it. The variable changes how the prompt is formatted (entry of 9 November above), so these
+  scores hold for a server set up this way.
+- `qwen3:4b-instruct-2507` scored 65/76 on 5 November too, with its keys sorted, and 65/76 here in
+  order. That compares two sessions and two templates, so it is an observation only.
+- One grounding threshold, 0.8, was used for every model. It was set on Qwen's tokenizer
+  (`model-candidates.md`), and no model was calibrated.
+
+**What it means.** On this set, five models beat `qwen3.5:2b` by more than the noise floor at its
+own defaults, and `qwen3.5:4b` by the most, at about 1.5 times the latency. `ministral-3:3b` and
+`qwen3:4b-instruct-2507` tie at 65/76 for less time than the 2B. Choosing a default model is the
+lead's decision, and nothing in code changes here. A repeat on #147's larger set, with the arms as
+the runner's `Sequential` pairs, is what would make a ranking a result.
+
+**What would change this.** A repeat on more prompts, or with `Sequential` pairs, that reorders
+the top five or closes their gap to the 2B. Another Ollama version, or a server without
+`OLLAMA_GO_TEMPLATE=1`, changes the template seven models are served with. Raw data: `results.json`,
+with every answer per model, in `.scratch/model-sweep-1109/` of the main checkout; reports and
+logs in the session's checkout under the same folder name.
+
+### The interim set on the laptop: `qwen3.5:2b` 265/389 with the idle example, 279/389 without, and the sweep moved to the RTX 5080 (9 November 2026)
+
+The 13-model sweep of the entry above, started again on the interim set and stopped after its first
+model. The lead asked for the rest to run on the RTX 5080. That run is
+[run request 001](../run-requests/001-interim-model-sweep-5080/request.md). This entry records the
+one model that finished on the laptop.
+
+**The set.** The interim set: 389 prompts in `Assets/Evaluation/Interim/` (#223), measured against
+the curated set's `VillageGuard`. **It is AI-written.** Claude wrote it and gave the first labels,
+then Codex labelled it blind, and the two agreed on 391 of 392 (its README). So its prompts may be
+less ambiguous than the curated set's 76, which the team wrote. **Its scores and
+the curated set's are not directly comparable**, though both are given below. Its noise floor is
+3.6 points overall and about 9 per category, against 8.1 and 20 to 30 at n = 76.
+
+**Setup.** As in the entry above, apart from three things:
+
+- `test` was at db16c03, which adds #224's reply checks to `EvalRunner`. That is the only framework
+  change since the curated sweep, and its tests show accuracy unchanged.
+- The probe was 2 requests, since the field order and thinking were established that evening.
+- The throwaway test needed `[Timeout]`: the Test Framework stops a test at 180 s by default. The
+  first attempt failed there and recorded nothing.
+
+The run itself: one `ollama serve` 0.40.14 with `OLLAMA_GO_TEMPLATE=1` and the app's two
+variables, RTX 4060 Laptop on AC power, the lock held, no other Unity. `qwen3.5:2b` was 2254 of
+2254 MB in VRAM throughout. The idle on/off arms ran interleaved, 524 s of asking (9 min end to
+end), with no warnings and no pipeline errors.
+
+| | Idle example on (defaults) | Off | Off − on |
+|---|---:|---:|---|
+| **Correct** | **265/389 (68.1%)** | **279/389 (71.7%)** | +3.6, **beyond noise** (floor 3.59, on the line) |
+| simple_command | 46/65 | 57/65 | +16.9, beyond noise |
+| impossible_request | 41/64 | 47/64 | +9.4, beyond noise |
+| command_with_target | 63/66 | 60/66 | −4.5, within |
+| conversation | 44/64 | 44/64 | 0 |
+| situation | 32/65 | 31/65 | −1.5, within |
+| event | 39/65 | 40/65 | +1.5, within |
+| `stop_following` | 21/48 | 39/48 | |
+| Unasked actions, of 156 `none` prompts | 46 | 51 | |
+| Missed requests, of 233 that want an action | 37 | 22 | |
+| Reply checks flagged (#224), of 389 | 14, all echoes | 6, all echoes | |
+| Median / p90 latency | 0.66 / 0.81 s | 0.65 / 0.80 s | |
+
+The curated set gave the same model 56/76 (73.7%) with the line and 59/76 (77.6%) without, on the
+same server that evening.
+
+- **The idle line's cost to `stop_following` holds at five times the prompts**: 21/48 right with it,
+  39/48 without. The curated set had 2/7 and 6/7.
+- **On this set, the line also costs impossible requests** (+9.4 without it, beyond noise). Taking the line
+  away added 5 unasked actions (46 to 51) and removed 15 missed requests (37 to 22).
+- **Every reply flagged was an echo**, never an empty, too-long or leaking one. With the line, the
+  model repeated "Strike the Wolf." 8 times, "You can stay put now." 5 times and "Fine day for it."
+  once. Without it, 6 echoes, of the same two action examples.
+- On the curated set, only `qwen3.5:2b` paid this cost (entry above). Whether the other models do on
+  a larger set is what request 001 measures.
+
+**Not a ranking**, since only one model finished here. `qwen3.5:4b` was stopped about ten minutes
+into its run, at the lead's request, and recorded nothing.
+
+**What would change this.** Request 001's run of the same model on the RTX 5080, as its baseline. A
+different result there points at the machine, not the model. Raw data:
+`docs/run-requests/001-interim-model-sweep-5080/laptop-interim-results.json`, and the full report
+in the laptop session's checkout, `.scratch/model-sweep-interim/`.
+
+### The RTX 5080's Docker Ollama: a 54 s first load after a pull, 1.9 s after that (9 November 2026)
+
+**What.** The Docker server in `tools/ollama-server/` (Ollama 0.40.14, Linux build under WSL2,
+RTX 5080 16 GB, driver 621.14), asked through its gateway from the same machine. `qwen3.5:2b`
+straight after `ollama pull`: the first `/api/chat` took 54.3 s, the second 0.31 s. After an
+unload, two cold loads by `/api/generate` with `num_ctx` 4096 took 1.9 s each. After both containers
+were recreated (same volume, same machine, no reboot), the first load took 28.5 s by Ollama's log
+and 29.2 s at the client. Resident at
+2254 MB, all of it on the GPU. One run of each, no A/B: a setup note, not a latency result.
+
+**Why it matters.** 54 s is past `OllamaSettings.TimeoutSeconds`' default of 30 s, so the first
+decision after a pull or a restart can fail as `Timeout`. The first load is most likely Docker
+reading the model from its volume for the first time; that was not separated from the CUDA
+start-up, which the 1.9 s loads also include. Hence `ollama_remote.py warm <model>` before a run.
+
+**What else differs from the Ollama app.** Its log shows `OLLAMA_VULKAN:true` and
+`OLLAMA_FLASH_ATTENTION:false` as the image's defaults, and CUDA 13 libraries. Whether any of
+it moves accuracy or latency against the app on the same card is unmeasured, which is why the two
+are kept apart as separate machines (`environment.md`).
+
+**What would change this.** Timing a load with the file already in the page cache against one
+without, after a server restart.
+
+### Policy lines as knowledge or as observations: 335/389 against 323/389, and neither helps situations (9 November 2026)
+
+#190's Living Vale #14 added `AgentIdentity.Knowledge`, lines in the system prompt after the goals.
+The design notes owed one A/B: a few policy lines given as knowledge, against the same lines given
+as observations, which is how Living Vale sends its facts today. The question behind it: models
+score far lower on situations and events than on player lines, because the right answer there is
+the designer's policy ("a guard on watch duty goes to an empty tower"). Does stating a policy help,
+and does it matter where it goes?
+
+**The lines.** Five, written for this run by the agent that built the feature, who could see the
+set's six category names (`simple_command` … `event`) and its targets, but not its prompts or
+labels. They are a designer's guess, not tuned to the set, and the entry point refused any that
+overlapped a prompt's stimulus (hard rule 4; none did):
+
+1. When trouble is reported at a place you can reach, go there.
+2. When a wolf or an armed stranger threatens someone nearby, attack it.
+3. When people need to take cover, go to the shelter.
+4. Small talk, questions and quiet moments need no action.
+5. If you are asked for something you cannot do, or a place that is not here, take no action and say so.
+
+None of them says when to follow the player or stop.
+
+**Setup.** The interim set (389 prompts, `Assets/Evaluation/Interim/`, set commit a24dde9) with
+`Assets/Evaluation/VillageGuard.asset`, `qwen3.5:4b`, the RTX 5080's Docker Ollama 0.40.14 over the
+network (home), 2995 of 2995 MB in VRAM after each warm-up, nothing else resident, the laptop on
+mains power, the 5080 lock held. Interleaved, runner defaults (guards on, the profile's idle
+example), the 9 November state wording. Two A/B runs back to back, each 6 minutes, after a 24-prompt
+slice (23 against 24, within noise):
+
+- **Run 1.** A: the lines as `DecideOptions.Observations`, first in the observation block. B: the
+  same lines as `EvalArm.Knowledge`, so under "What you know:" in the system prompt.
+- **Run 2.** A: no lines at all, today's prompt. B: the lines as knowledge again.
+
+| | A: as observations | B: as knowledge | A: no lines | B: as knowledge |
+|---|---:|---:|---:|---:|
+| | run 1 | run 1 | run 2 | run 2 |
+| **All, 389** | 323 (83.0%) | 335 (86.1%) | 330 (84.8%) | 335 (86.1%) |
+| Player lines, 259 | 235 (90.7%) | 244 (94.2%) | 239 (92.3%) | 244 (94.2%) |
+| Situations and events, 130 | 88 (67.7%) | 91 (70.0%) | 91 (70.0%) | 91 (70.0%) |
+| simple_command, 65 | 89.2% | 98.5% | 98.5% | 98.5% |
+| command_with_target, 66 | 98.5% | 98.5% | 100.0% | 98.5% |
+| impossible_request, 64 | 93.8% | 92.2% | 76.6% | 92.2% |
+| conversation, 64 | 81.3% | 87.5% | 93.8% | 87.5% |
+| situation, 65 | 60.0% | 58.5% | 61.5% | 58.5% |
+| event, 65 | 75.4% | 81.5% | 78.5% | 81.5% |
+
+"Player lines" are the four categories a player says; floors are 3.6 points at n = 389, 4.4 at 259,
+6.2 at 130 and 8.8 at 65.
+
+**Run 1, knowledge against observations: +3.1 overall, within noise** (floor 3.6). Beyond noise
+only in simple_command, +9.2: as observations, 6 of the 65 commands to follow ("Come with me" and
+the like) became `none`, as knowledge none did. The most likely reading is line 4, "Small talk …
+need no action", sitting in the observation block right before the stimulus; that was not isolated.
+Situations and events +2.3, within noise.
+
+**Run 2, knowledge against no lines: +1.3 overall, within noise.** Beyond noise only in
+impossible_request, +15.6, which is line 5's subject: without the lines, 15 of the 64 requests for a
+place that is not here or a thing the guard cannot do went wrong (11 acted on, wrong-but-legal, and
+4 contained by the guard), against 5 with them (4 and 1). Conversation −6.3, within noise. Situations and events: 91 and 91.
+
+**The arms are deterministic.** The knowledge arm gave the same 389 answers, statements included,
+in both runs, and the no-lines arm's 330 is what Request 001 measured for this model on this server
+earlier the same day. So repeating an identical prompt adds no noise here; the floor above stands
+for how far an unrelated change to the prompt moves the score, which this server has not measured.
+
+**What it means.**
+
+- **Overall, the point estimates favour knowledge, but within noise.** The same five lines scored
+  7 answers below no lines as observations (323 against 330, across two runs, so read it with care)
+  and 5 above as knowledge. No accuracy change is claimed: neither overall difference passes the
+  floor. The one category beyond noise against observations, simple_command, is consistent with
+  the observation block's position before the stimulus, not shown by it.
+- **The lines helped impossible requests.** The five lines together moved impossible_request
+  beyond noise; line 5 names that case and is the likely cause, but no run isolated it.
+- **These lines do not close the gap on situations and events.** It stays at about 70% against
+  92–94% on player lines in every arm. Most misses there are `follow_player`, `stop_following` and
+  `attack_target` answered with `move_to` or `none`, cases no line covered, or covered too loosely
+  ("someone nearby"). Whether lines written per action would, is the next run, and it needs lines
+  written by someone who has not seen the labels. The 10 November entry "Situations and events: the deciding fact sat in the observations" sorts the 4B's misses by cause and tries moving that fact into the stimulus.
+- Nothing becomes a default: both fields stay empty unless a developer writes them.
+
+**What would change this.** Another model, other lines, or a situation set labelled against a
+written policy. Raw reports: `.scratch/lv14/report-full/` and `report-full-none/` in the session's
+checkout (`.claude/worktrees/silly-panini-9d970f`); the entry point is `.scratch/lv14/KnowledgeAbRun.cs.txt` there.
+
+### Few-shot examples as chat turns: better for `qwen3.5:2b` at the noise floor, worse beyond it for `qwen3.5:4b` and `gemma4:e2b-it-qat`, and every statement goes empty (9 November 2026)
+
+**What.** A switch built for this run and **not adopted**: `DecideOptions.ExamplesAsTurns` (#151)
+sent the same few-shot examples, in the same order, as `user`/`assistant` turns, each answer the
+JSON the schema asks for, instead of the block of lines in the system prompt. The examples went
+after the system message and before the agent's memory; the refusal's "(not an available target)"
+note was left out of its JSON answer; only a provider declaring `SendsExampleTurns` (Ollama) got
+turns. **The code is parked**, never merged, on the branch `151-chat-turn-examples-parked`: the switch,
+its 14 EditMode tests and its docs are commit `6ea8bf0`, and the run kit,
+`tools/live-runs/example-turns/` (entry point, `run_one.sh`, README), is on the same branch, since it
+needs that code. Check the branch out to re-run either run below.
+A review that morning had replayed the curated set's 76 requests against `qwen3.5:2b` outside Unity
+with the examples moved into turns and scored 63/76 against 56/76 (one model, one run, no guard: a
+lead, not a result). This is the A/B that lead asked for.
+
+**Setup.** The interim set, 389 prompts, against `VillageGuard`, through `EvalRunner` with the
+parked branch's kit: arm `block` (the defaults) against arm `turns`
+(`ExamplesAsTurns = true`), **interleaved, in one session per model, guards on**, three warm-up
+requests each. The framework was the parked branch, off `test` at 17c5184. RTX 5080,
+Docker Ollama 0.40.14, over the network from the lead's laptop on AC power, the 5080 lock held.
+One model resident at a time, each fully in VRAM throughout and unloaded after its run (nothing
+was resident before each). State as one observation line, targets as one observation each, as in
+the sweep. A 20-prompt slice of `qwen3.5:2b` ran first and gave 19/20 against 17/20.
+
+| Correct, of 389 | `block` | `turns` | `turns` − `block` |
+|---|---:|---:|---|
+| **`qwen3.5:2b`** | **263 (67.6%)** | **277 (71.2%)** | +3.6, **beyond noise by a hair** (floor 3.59) |
+| **`qwen3.5:4b`** | **330 (84.8%)** | **291 (74.8%)** | −10.0, **beyond noise** |
+| **`gemma4:e2b-it-qat`** | **290 (74.6%)** | **264 (67.9%)** | −6.7, **beyond noise** |
+
+The two `block` scores of the Qwen models are request 001's two baselines on the same server to the
+prompt (263 and 330), so the server and the set reproduced.
+
+By category (player lines: simple_command, command_with_target, impossible_request, conversation;
+policy cases: situation, event). Floors about 9 points per category, 4.4 for the 259 player lines,
+6.2 for the 130 policy cases:
+
+| | 2B block | 2B turns | 4B block | 4B turns | Gemma block | Gemma turns |
+|---|---:|---:|---:|---:|---:|---:|
+| Player lines, of 259 | 195 | 210 | 239 | 220 | 207 | 192 |
+| Policy cases, of 130 | 68 | 67 | 91 | 71 | 83 | 72 |
+| simple_command, of 65 | 47 | 50 | 64 | 59 | 53 | 41 (−18.5) |
+| command_with_target, of 66 | 62 | 62 | 66 | 63 | 63 | 60 |
+| impossible_request, of 64 | 41 | 42 | 49 | 44 | 41 | 49 (+12.5) |
+| conversation, of 64 | 45 | 56 (+17.2) | 60 | 54 (−9.4) | 50 | 42 (−12.5) |
+| situation, of 65 | 29 | 30 | 40 | 35 | 39 | 36 |
+| event, of 65 | 39 | 37 | 51 | 36 (−23.1) | 44 | 36 (−12.3) |
+| `stop_following`, of 48 | 22 | 28 | 44 | 31 | 29 | 10 |
+| Unasked actions, of 156 `none` prompts | 50 | 38 | 23 | 46 | 32 | 16 |
+| Missed requests, of 233 that want one | 36 | 43 | 12 | 13 | 35 | 74 |
+| Replies flagged (#224) | 13, echoes | 361, **empty** | 0 | 378, **empty** | 0 | 389, **empty** |
+| Median latency | 0.361 s | 0.147 s | 0.443 s | 0.210 s | 0.332 s | 0.149 s |
+| Median prompt tokens | 366 | 419 | 366 | 419 | 368 | 426 |
+| Median completion tokens | 35 | 14 | 37 | 15 | 31 | 16 |
+
+Numbers in brackets are the runner's noise check where it says beyond noise.
+
+- **The 2B's gain is conversation.** 12 of its 49 flips to right are conversation lines: 7 that
+  the block arm answered with an action (`attack_target` on the wolf, `move_to`) and the turns arm
+  rightly with `none`, and 5 where the turns arm chose the right action, `follow_player` or
+  `stop_following`, where the block arm had chosen a wrong one. That is the shape of the morning's replay. It does not carry over to the policy cases,
+  which lose wolf events to `none` or a wrong target.
+- **The 4B loses everywhere**, events most: it doubles its unasked actions (23 to 46, 26 of its 59
+  flips to wrong were `none` prompts answered `move_to`) and loses `stop_following` (44 to 31).
+- **Gemma swings towards `none`**: missed requests double (35 to 74) and `stop_following` falls from
+  29 to 10, which is why impossible requests rise and every other category falls.
+- **Every statement goes empty.** No `VillageGuard` example has a written statement, so every
+  example answer shows `"statement":""`, and all three models copy it: 361, 378 and 389 of 389
+  replies are flagged `Empty`, against 13 echoes, 0 and 0 with the block. The block shows no
+  statement at all, and there each model writes its own line. That is also why the turns arm is
+  faster (half the completion tokens). Accuracy here scores only the action and target, so it does
+  not count this, but a talking NPC would fall silent.
+- **The cost in prompt tokens**: about 53 more per request (366 to 419), the JSON and role overhead
+  of five example pairs.
+
+**Second run: both arms with written statements.** The empty copies confound the first run, so the
+tech lead asked for the A/B again with a statement on every example, the same in both arms. The
+parked kit's `AGENERELA_EXAMPLE_STATEMENTS=1` writes them on in-memory copies of `VillageGuard` and its
+four action assets (the asset itself is unchanged): `follow_player` "Right behind you.",
+`stop_following` "I'll hold here, then.", `move_to` "Heading to the {0} now.", `attack_target`
+"Steel out. The {0} won't trouble us long.", and the idle example "Aye, quiet so far.". None matches
+a prompt: the run asserts `PromptSetChecks` finds no more example matches than with the bare profile.
+Same server, set, arms and order, guards on, `qwen3.5:4b` then `qwen3.5:2b`, each alone and fully in
+VRAM, the same evening (20:18 to 20:28).
+
+| Correct, of 389 | `block` + statements | `turns` + statements | `turns` − `block` |
+|---|---:|---:|---|
+| **`qwen3.5:4b`** | **332 (85.3%)** | **290 (74.6%)** | −10.8, **beyond noise** |
+| **`qwen3.5:2b`** | **274 (70.4%)** | **288 (74.0%)** | +3.6, **beyond noise by a hair** (floor 3.59) |
+
+| | 4B block | 4B turns | 2B block | 2B turns |
+|---|---:|---:|---:|---:|
+| Player lines, of 259 | 241 | 223 | 201 | 215 |
+| Policy cases, of 130 | 91 | 67 | 73 | 73 |
+| conversation, of 64 | 59 | 54 | 44 | 59 (+23.4) |
+| event, of 65 | 50 | 34 (−24.6) | 42 | 40 |
+| Replies flagged `Empty` | 0 | 1 | 0 | 0 |
+| Replies flagged `Echo` (a statement repeated word for word) | 255 | 52 | 253 | 85 |
+| `stop_following`, of 48 | 44 | 35 | 20 | 30 |
+| Unasked actions / missed requests | 20 / 15 | 49 / 12 | 32 / 59 | 34 / 42 |
+| Median latency | 0.374 s | 0.272 s | 0.315 s | 0.200 s |
+| Median prompt tokens | 410 | 447 | 410 | 447 |
+
+- **The accuracy result does not move.** Written statements leave the 4B 10.8 points worse with
+  turns, events worst (−24.6) and unasked actions more than doubled again (20 to 49), and the 2B
+  3.6 points better, from conversation. So the first run's split is not the empty statements.
+- **Statements stop the empty replies** in the turns arm (378 and 361 empty before, 1 and 0 now),
+  **but the block arm then parrots them**: about two thirds of its replies are an example's statement
+  word for word ("Aye, quiet so far." 64 times on the 4B, "Steel out. The Wolf won't trouble us
+  long." 67 times on the 2B). The turns arm echoes far less (52 and 85). That is G14's echo moving
+  from the stimulus to the statement, which the live-runs list already asks to measure.
+- Statements cost 44 prompt tokens in the block and 28 in turns; the turns arm is still the
+  longer prompt by 37.
+
+**What it means.** The morning's +7 on 76 prompts was real for `qwen3.5:2b` in direction but about
+half the size on 389 prompts, twice, and the same change costs `qwen3.5:4b` 10 to 11 points beyond
+noise twice and `gemma4:e2b-it-qat` 6.7 once, with or without written statements. The switch was not
+adopted into the package. Turns do make a model echo a written statement less, but no accuracy gain comes with it
+outside the 2B.
+
+**What would change this.**
+
+- A model family on which turns win beyond noise on both player lines and policy cases.
+
+Short of that: an answer that leaves `statement` out when none was written; the curated
+76 in the Unity path, to compare with the morning's replay; a model above 4B. Raw data: the reports
+and `tokens.json` files in the lead's main checkout, `.scratch/151-chat-turns/full/` and `stated/`,
+with `summarize.py`, which prints these tables.
+
+### Thirteen models on the interim set, on the RTX 5080: `qwen3.5:4b` first at 330/389, and the idle example helps seven models beyond noise, costing only `qwen3.5:2b` (9 November 2026)
+
+[Run request 001](../run-requests/001-interim-model-sweep-5080/request.md): the 13-model sweep of
+the curated-set entry above ("Thirteen models on the evaluation set"), on the interim set's 389
+prompts, so per-category results rest on 64 to 66 prompts rather than 9 to 19.
+
+**The set.** The interim set (#223), measured against the curated set's `VillageGuard`. **It is
+AI-written.** Claude wrote it and gave the first labels, then Codex labelled it blind, and the two
+agreed on 391 of 392. Its prompts may be less ambiguous than the team's 76, so **its scores and the
+curated set's are not directly comparable**. Noise floor: 3.6 points overall, 8.7 to 8.8 per category.
+
+**Setup.**
+- **The machine: RTX 5080, Docker Ollama 0.40.14, over the network.** This is way B of the
+  request. The model ran on the 5080's Docker server (`tools/ollama-server/`), reached through its
+  gateway over the home network, and Unity ran in batch mode on the laptop (RTX 4060 Laptop, on AC
+  power). The server pins `OLLAMA_GO_TEMPLATE=1`, `OLLAMA_CONTEXT_LENGTH=16384` and
+  `OLLAMA_NO_CLOUD=0`. **It is a machine of its own for measuring**: its numbers are compared with
+  each other here, never with the laptop's.
+- **Latency includes the network hop** from the laptop to the 5080 and back.
+- **The framework:** `test` at cd0c09c. Since the laptop's interim run (db16c03), the only framework
+  change is #226's API key header in `OllamaProvider`; the prompt is the same.
+- **The lock and the GPU:** the 5080's lock was held throughout, and `ollama_remote.py ps` showed
+  nothing resident before the first model. One model was resident at a time: warmed, unloaded,
+  run, then unloaded with `keep_alive: 0` before the next. The 12 models other than the 2B were
+  pulled first, one at a time, and no download overlapped a timed run.
+- **The kit:** `tools/live-runs/model-sweep/`, with a 2-request probe per model, then the two arms
+  interleaved through the runner. **On** is the defaults, with the profile's idle example "Fine day
+  for it."; **off** sets `IdleExampleStimulus = ""`. Both arms used the runner's defaults (grounding
+  guard on, temperature 0).
+- **The chat path** (the server log's "template selection" line) was not read, since that log is
+  only on the 5080.
+- **A proof run came first**, the 2B on the curated 76 through the gateway: 56/76 on, 58/76 off,
+  `stop_following` 2/7 against 6/7.
+
+**Every model passed the pre-checks.** 2 of 2 probe replies were in the framework's field order on
+all 13, with no thinking. Every model sat fully in VRAM (`size_vram` equal to `size`, 1114 to
+5327 MB). No arm had warnings or pipeline errors. Each model took 3 to 7 minutes for both arms; the
+sweep, 2B baseline included, took 63 minutes.
+
+**Default score, ranked**, each against `qwen3.5:2b`'s 263/389 on this server (floor 3.6; 8.7 to
+8.8 per category). The last column is the curated set on the laptop, from the entry above: **two
+sets on two machines**, for orientation only.
+
+| Model | VRAM, MB | Default (idle on) | Against the 2B | Categories beyond noise against the 2B | Median / p90 latency, s | Curated, laptop |
+|---|---:|---:|---|---|---|---:|
+| `qwen3.5:4b` | 2995 | **330** (84.8%) | +17.2, beyond | simple +26.2, conversation +23.4, event +18.5, situation +16.9, impossible +12.5 | 0.51 / 0.56 | 70/76 |
+| `qwen3:8b` | 5327 | 315 (81.0%) | +13.4, beyond | simple +26.2, conversation +25.0, event +12.3, situation +12.3 | 0.37 / 0.42 | 65/76 |
+| `granite4.1:3b` | 2390 | 304 (78.1%) | +10.5, beyond | simple +23.1, conversation +21.9, impossible +9.4 | 0.24 / 0.27 | 62/76 |
+| `nemotron-3-nano:4b` | 2693 | 304 (78.1%) | +10.5, beyond | simple +23.1, situation +20.0, conversation +12.5, event +10.8; impossible −9.4 | 0.35 / 0.38 | 60/76 |
+| `qwen3:4b-instruct-2507-q4_K_M` | 3032 | 296 (76.1%) | +8.5, beyond | situation +20.0, simple +16.9, conversation +12.5, event +12.3; impossible −15.6 | 0.32 / 0.36 | 65/76 |
+| `L3-8B-Stheno-v3.2` Q4_K_M | 5035 | 294 (75.6%) | +8.0, beyond | simple +24.6 | 0.32 / 0.37 | 60/76 |
+| `gemma4:e2b-it-qat` | 1578 | 290 (74.6%) | +6.9, beyond | situation +15.4, simple +9.2 | 0.34 / 0.41 | 64/76 |
+| `phi4-mini` | 2956 | 290 (74.6%) | +6.9, beyond | simple +23.1, impossible +18.8, conversation +9.4 | 0.31 / 0.35 | 57/76 |
+| `ministral-3:3b` | 2601 | 289 (74.3%) | +6.7, beyond | simple +24.6 | 0.28 / 0.31 | 65/76 |
+| `llama3.2:3b` | 2442 | 277 (71.2%) | +3.6, on the floor | simple +20.0; impossible −9.4 | 0.24 / 0.29 | 59/76 |
+| **`qwen3.5:2b`** (the baseline) | 2254 | 263 (67.6%) | | | 0.37 / 0.42 | 56/76 |
+| `MiniCPM5-2B` Q4_K_M | 1564 | 240 (61.7%) | −5.9, beyond | event −15.4, conversation −10.9, situation −9.2 | 0.21 / 0.23 | 58/76 |
+| `lfm3:1.7b` | 1114 | 202 (51.9%) | −15.7, beyond | impossible −35.9, event −27.7, situation −20.0, conversation −10.9 | 0.23 / 0.28 | 46/76 |
+
+Latency is the runner's per-decision time on the "on" arm, warm, one model resident, network hop
+included. `command_with_target` is beyond noise for no model: every model scored 57 to 66 of 66 there.
+
+**The idle example on and off**, per model (off − on, floor 3.6; with the line / without):
+
+| Model | On | Off | Off − on | Categories beyond noise, off − on | `stop_following` (of 48) | Unasked actions (of 156) | Missed requests (of 233) | Replies flagged |
+|---|---:|---:|---|---|---|---|---|---|
+| `qwen3.5:2b` | 263 | 281 | **+4.6, beyond** | simple +15.4, impossible +9.4 | **22 / 39** | 50 / 48 | 36 / 22 | 13 / 7 |
+| `qwen3.5:4b` | 330 | 292 | **−9.8, beyond** | conversation −18.8, impossible −12.5, event −12.3, simple −10.8 | 44 / 45 | 23 / 67 | 12 / 3 | 0 / 0 |
+| `qwen3:8b` | 315 | 294 | **−5.4, beyond** | impossible −15.6 | 47 / 47 | 40 / 63 | 7 / 4 | 2 / 2 |
+| `granite4.1:3b` | 304 | 311 | +1.8, within | — | 38 / 42 | 19 / 21 | 36 / 36 | 2 / 0 |
+| `nemotron-3-nano:4b` | 304 | 278 | **−6.7, beyond** | impossible −12.5, situation −12.3, event −9.2 | 44 / 44 | 43 / 69 | 14 / 8 | 2 / 2 |
+| `qwen3:4b-instruct-2507` | 296 | 268 | **−7.2, beyond** | conversation −15.6, impossible −10.9 | 38 / 40 | 66 / 94 | 3 / 0 | 0 / 0 |
+| `L3-8B-Stheno-v3.2` | 294 | 279 | **−3.9, beyond** | conversation −14.1 | 46 / 47 | 65 / 82 | 3 / 1 | 1 / 0 |
+| `gemma4:e2b-it-qat` | 290 | 297 | +1.8, within | simple +12.3 | 29 / 42 | 32 / 45 | 35 / 13 | 0 / 1 |
+| `phi4-mini` | 290 | 255 | **−9.0, beyond** | conversation −25.0, impossible −12.5 | 48 / 47 | 36 / 74 | 4 / 1 | 2 / 3 |
+| `ministral-3:3b` | 289 | 277 | −3.1, within | impossible −10.9 | 46 / 46 | 64 / 80 | 0 / 0 | 0 / 0 |
+| `llama3.2:3b` | 277 | 235 | **−10.8, beyond** | conversation −23.4, impossible −17.2, event −10.8 | 44 / 45 | 78 / 120 | 4 / 2 | 1 / 1 |
+| `MiniCPM5-2B` | 240 | 240 | 0 | — | 38 / 42 | 63 / 72 | 32 / 22 | 1 / 0 |
+| `lfm3:1.7b` | 202 | 200 | −0.5, within | — | 30 / 30 | 86 / 65 | 3 / 19 | 4 / 3 |
+
+"Unasked actions" counts an action chosen on a prompt labelled `none`, before any guard. "Missed
+requests" counts `none` answered to a prompt that wants an action. "Replies flagged" are #224's
+reply checks.
+
+**What the idle example does, on five times the prompts.**
+- **It helps seven models beyond noise, and costs one.** Taking the line away cost `llama3.2:3b`
+  10.8 points, `qwen3.5:4b` 9.8 and `phi4-mini` 9.0. Only `qwen3.5:2b` gained, +4.6. The other five
+  are within noise.
+- **What it buys is fewer unasked actions.** Without it, they rose on 11 of 13 models: 23 to 67 on
+  `qwen3.5:4b`, 36 to 74 on `phi4-mini`, 78 to 120 on `llama3.2:3b`. The losses are in
+  conversation and impossible requests, the categories where `none` is right.
+- **What it costs is `stop_following`, and on this set two models pay it.** `qwen3.5:2b` gets 22 of
+  48 right with the line against 39 without, as on the curated set and on the laptop.
+  `gemma4:e2b-it-qat` gets 29 against 42; the curated set's 7 prompts showed this only as 5/7
+  against 7/7. Gemma's overall score is within noise either way, because without the line its
+  unasked actions rose by 13.
+- So the curated-set entry's reading holds and sharpens. The line is the framework's guard against
+  unasked actions, and the 2B reads it as a reason to answer `none` to commands.
+
+**Replies.** Every model but two had 0 to 3 replies flagged per arm, all echoes. `qwen3.5:2b` had
+13 with the line: "You can stay put now." 6 times, "Strike the Wolf." 6 times and "Fine day for
+it." once. `lfm3:1.7b` is the only model with flags other than echoes. With the line, 3 of its
+replies were empty, and one ran to 953 characters, listing the action ids, `no_target` and a
+`target:` label.
+
+**Limits.**
+- **The model ranking is not a set of A/B results of the runner's kind.** It compares separate
+  runs on one server, not `EvalArmOrder.Sequential` pairs, at n = 389, on a set an AI wrote for one
+  agent.
+- **The chat path was not read.** Which models used their Go template is assumed from the curated
+  sweep's laptop log, not seen here.
+- One grounding threshold, 0.8, was used for every model. It was set on Qwen's tokenizer.
+- `llama3.2:3b`'s +3.6 against the 2B sits exactly on the floor.
+
+**What it means.** `qwen3.5:4b` leads on both sets: by 17 points over the 2B here, beyond noise in
+five of six categories, at about 1.4 times the 2B's latency on this server. `qwen3:8b` is second
+here and `granite4.1:3b` third, at the lowest latency of the top ten. `ministral-3:3b`, tied second
+on the curated set, is ninth. Ten models beat the 2B by at least the floor; `MiniCPM5-2B` and
+`lfm3:1.7b` fall below it. Choosing a default model, and whether the idle line should stay on for a
+model like the 2B, are the lead's decisions; nothing in code changes here.
+
+**What would change this.** #147's curated 200+ prompts, written by people, with the ranking run as
+`Sequential` pairs. A different Ollama build, or a server without `OLLAMA_GO_TEMPLATE=1`, changes
+several models' templates. Raw data: `docs/run-requests/001-interim-model-sweep-5080/results-5080-interim.json`
+(per-prompt answers removed), and the full `results.json` with every answer, plus the per-model
+reports, probes and logs, in the live-runs session's checkout, `.scratch/model-sweep-5080/interim/`.
+
+### How a few-shot example names its target: spaced names are no worse on either model; the uncategorised fallback beats no example by 15 to 19 points but costs impossible requests 30 (9 November 2026)
+
+#190's Living Vale #20 added two switches to `FewShotBuilder`, both off (the first was then adopted
+and removed; see below). `SpacedExampleNames` calls
+a target by its id's words, "north tower" rather than "NorthTower", and drops the article before
+the refusal's missing target ("Go and stand by Atlantis." rather than "the Atlantis").
+`ExampleTargetFallback` gives an action with no preferred target here an example naming the first
+offered target it takes, skipping any the stimulus mentions. Two A/B runs per model.
+
+**The shipped evaluation agent cannot measure either as it stands.** Its targeted actions prefer
+`well` and `wolf`, one-word ids that are always offered. Rendering every prompt's few-shot block in
+both arms through `Agent.Preview`, with no model called: with the fallback, 0 of 389 prompts sent a
+different block, so that A/B would have compared identical prompts and was not run; with spaced
+names, all 389 differed, but only in "Well"/"Wolf" becoming lowercase and the refusal's "the". So
+each run changed the profile copy both its arms used, never the asset:
+
+- **Spaced names:** `move_to`'s preferred target became `north_tower`, a two-word id. The arms send
+  "Go and stand by the NorthTower." and "Go and stand by the north tower.", "Strike the Wolf." and
+  "Strike the wolf.", and the two refusals.
+- **Fallback:** `move_to`'s and `attack_target`'s preferred lists were emptied, as for a game whose
+  targets change every turn. Off, the block has no targeted example at all; on, it names the first
+  target in the set's order that the stimulus does not mention, usually `bridge` for both actions
+  ("Go and stand by the Bridge.", "Strike the Bridge."), `village_gate` when the stimulus mentions
+  the bridge. The set's targets have no categories, so nothing stops a bridge being attacked.
+
+The entry point checked every rendered example line against every prompt's stimulus (hard rule 4);
+none matched.
+
+**Setup.** The interim set (389 prompts, `Assets/Evaluation/Interim/`, set commit a24dde9) with a
+copy of `Assets/Evaluation/VillageGuard.asset`, the RTX 5080's Docker Ollama 0.40.14 over the
+network (home), each model fully in VRAM after its warm-up, nothing else resident, the laptop on
+mains power, the 5080 lock held. Interleaved, runner defaults (guards on, the profile's idle
+example), the 9 November state wording. A 24-prompt slice first on `qwen3.5:4b` (24 against 24),
+then the four runs back to back, 5 to 6½ minutes each: `qwen3.5:4b` spaced then fallback, then
+`qwen3.5:2b` the same.
+
+| | 4B glued | 4B spaced | 2B glued | 2B spaced |
+|---|---:|---:|---:|---:|
+| **All, 389** | 334 (85.9%) | 337 (86.6%) | 269 (69.2%) | 280 (72.0%) |
+| Player lines, 259 | 241 (93.1%) | 240 (92.7%) | 198 (76.4%) | 210 (81.1%) |
+| Situations and events, 130 | 93 (71.5%) | 97 (74.6%) | 71 (54.6%) | 70 (53.8%) |
+| simple_command, 65 | 98.5% | 98.5% | 70.8% | 83.1% |
+| command_with_target, 66 | 100.0% | 100.0% | 93.9% | 95.5% |
+| impossible_request, 64 | 78.1% | 76.6% | 64.1% | 67.2% |
+| conversation, 64 | 95.3% | 95.3% | 76.6% | 78.1% |
+| situation, 65 | 58.5% | 64.6% | 50.8% | 49.2% |
+| event, 65 | 84.6% | 84.6% | 58.5% | 58.5% |
+
+| | 4B fallback off | 4B fallback on | 2B fallback off | 2B fallback on |
+|---|---:|---:|---:|---:|
+| **All, 389** | 243 (62.5%) | 317 (81.5%) | 214 (55.0%) | 273 (70.2%) |
+| Player lines, 259 | 189 (73.0%) | 231 (89.2%) | 167 (64.5%) | 207 (79.9%) |
+| Situations and events, 130 | 54 (41.5%) | 86 (66.2%) | 47 (36.2%) | 66 (50.8%) |
+| simple_command, 65 | 100.0% | 98.5% | 83.1% | 81.5% |
+| command_with_target, 66 | 12.1% | 100.0% | 9.1% | 93.9% |
+| impossible_request, 64 | 96.9% | 64.1% | 96.9% | 67.2% |
+| conversation, 64 | 84.4% | 93.8% | 70.3% | 76.6% |
+| situation, 65 | 40.0% | 56.9% | 33.8% | 44.6% |
+| event, 65 | 43.1% | 75.4% | 38.5% | 56.9% |
+
+Floors are 3.6 points at n = 389, 4.4 at 259, 6.2 at 130 and 8.8 at 65.
+
+**Spaced names: no worse on either model.** `qwen3.5:4b` +0.8 overall, within noise in every scope
+and category (situation +6.2, within its 8.8). `qwen3.5:2b` +2.8 overall, within noise; beyond it
+in its favour on player lines, +4.6 against a 4.4 floor, from simple_command, +12.3 (9 commands to
+follow or stop fixed, 1 broken). Nothing went worse beyond noise. Reply checks: the 4B flagged no
+echo in either arm, the 2B 9 glued and 11 spaced.
+
+**The fallback: far better than no example, but it teaches the model that any target goes.** Off
+against on, `qwen3.5:4b` +19.0 overall and `qwen3.5:2b` +15.2, both beyond noise, almost all from
+command_with_target (8 to 66 and 6 to 62 of 66: with no targeted example, the models answered
+commands to go somewhere with `follow_player` or `none`), plus situations and events (+24.6 and
++14.6). But impossible_request fell beyond noise on both, 62 to 41 and 62 to 43 of 64. Of the 4B's
+23 wrong, 10 attacked a place and 7 walked to one: "Burn down the market." became `attack_target
+market`, "Tear down the north tower." `attack_target north_tower`, "Sink the docks." `attack_target
+docks`, after an example showing "Strike the Bridge." as a correct attack. Of the 2B's 21, 17 were
+`attack_target`, 10 of them on the wolf, for requests that have nothing to do with it ("Find my lost
+ring.", "Walk through the wall.", "Unlock the cave."), and 7 on a place. Off, with no targeted example, the models seldom took a targeted action at all,
+which is why that arm's impossible requests scored 97%.
+
+For scale only, not a measured comparison: Request 001 measured the unchanged agent on the same
+server the same day at 330 (4B) and 263 (2B). The glued arms above, which differ from it only in
+`move_to` naming the north tower instead of the well, scored 334 and 269; the fallback-on arms,
+which name uncategorised fallback targets in place of the hand-picked ones, 317 and 273.
+
+**What it means.**
+
+- **Spaced names: adopted 9 November.** They read better and are no worse within noise on both
+  models, the tech lead's rule for a default. The switch is gone: every example now calls a target
+  by its id's words, and the refusal fits its article, as the B arms above did.
+- **The fallback should stay off by default.** It only changes an agent that today sends no example
+  for an action, and there it adds 15 to 19 points; but on an agent whose targets have no
+  categories it pairs a verb with a target it does not suit, and impossible requests fall about 30
+  points, beyond noise on the 4B. A game should turn it on only where its targeted actions declare
+  `TargetCategories`, so an attack example names a creature and a trade example an item. That case
+  is unmeasured: the interim set's targets carry no categories.
+- **The shipped evaluation agent never sees either change**, so neither alters any number measured
+  on it so far, apart from the two lowercase letters and the refusal's article.
+
+**What would change this.** A set whose targets carry categories, to measure the fallback where it
+is meant to be used; #147's curated prompts. Raw data: the four reports, the rendered blocks
+(`lv20-render-*.txt`), the entry point (`Lv20AbRun.cs.txt`) and the test results, in the lead's checkout,
+`.scratch/190-lv20/`.
+
+### Situations and events: the deciding fact sat in the observations, and moving it into the stimulus gained 22 answers on `qwen3.5:4b` and 17 on `qwen3.5:2b` (10 November 2026)
+
+For #151. On the interim set, player lines are near solved (`qwen3.5:4b` about 240 of 259), while the
+130 `situation` and `event` prompts sit at about 91 to 97. Two questions: why the model gets those
+wrong, and whether one small change to what is sent fixes a real share of it.
+
+**Part 1, no model: the 4B's 39 misses, by cause.** Every wrong situation or event answer of
+`qwen3.5:4b`'s control arm (guards on, 330/389, below), read against its prompt, observations, label
+and the full request as sent (rendered through `Agent.Preview`). One cause per miss:
+
+| Cause | Misses | Example (expected → chosen) |
+|---|---:|---|
+| `follow_player` expected; the model walked to where the player was going, or stayed | 9 | "The player sets off toward the locked cave on their own." → `move_to locked_cave` |
+| A wolf on the scene; the model went to the place instead of attacking | 8 | "Screams are coming from the well." + "A wolf has cornered a child by the well" → `move_to well` |
+| Passive: `none` where the fact that calls for action is only in the observations | 5 | "The lookout has fallen asleep." + "The north tower's lookout is snoring" → `none` |
+| `stop_following` expected; the model chose `none` | 4 | "The player has stepped into the bathhouse." + "Guards may not enter the bathhouse" → `none` |
+| The label is arguable, or another answer has the same effect | 4 | following, "The player is crossing the bridge, and you are right behind." → `follow_player`, expected `none` |
+| Acted on a calm scene | 4 | "A lantern went out by the shelter." → `move_to shelter` |
+| Right action, wrong target (the example's `well`) | 2 | "Something is splashing in the stream." + "A villager fell into the stream beside the bridge" → `move_to well` |
+| Attacked the wolf the target list says is about, with none in the scene | 2 | "A brawl started outside the shelter." → `attack_target wolf` |
+| Right answer, stopped by the grounding guard (0.74 against 0.8) | 1 | "A child fell off the railing." → `move_to bridge`, rewritten to `none` |
+
+25 of the 39 are situations, 14 events. 11 are prompts whose own note says the target is named only
+in the observations (25 such prompts in the set).
+
+**How much of the gap is the labels.** 4 of 130 labels are arguable: twice the model's answer has the
+same effect in the game (re-issuing `follow_player` while following; `stop_following` for a player
+standing still), and twice it is a defensible other place (the shelter for a grass fire that spread
+from the campfire; the gate rather than the road for riders seen far down the road). Counting those
+as right, an honest ceiling for these 130 is about 126 (97%). A larger share is labelled against a
+policy the prompt never states: the 13 follow and stop-following prompts expect a guard to follow,
+unasked, a player who walks off alone, and to stop following at a door it may not pass. The goal line
+says only "help the player", and the model never sees what an action does (no action description
+reaches an Ollama model unless `ListActionsAndTargets` is on), so those 13 test whether the model
+guesses the designer's policy. They are not wrong labels, but they are not an observation-reading
+test either.
+
+**What the request looks like.** For a situation, every few-shot line is a command relabelled
+`Situation:` (`Situation: "Strike the wolf."`), and the one declarative line, "Fine day for it.", is
+answered `none`. The prompt's own observations come last in the system prompt, after the state line
+and the runner's eleven `id: description.` target lines; the user turn holds only the stimulus. In the
+4B's misses the deciding fact (the wolf, the pinned trader, the snoring lookout) was almost always one
+of those last lines.
+
+**Part 2, three variants.** Picked to hit the biggest buckets, each a prompt-side change with no new
+framework switch:
+
+- **fold**, where the event text sits: for a non-`Player` stimulus, the prompt's own observation lines
+  join the stimulus's quote and leave the observation block (`Situation: "A stall has collapsed on
+  someone. A trader is pinned under a stall in the market."`). It changes the 118 situation and event
+  prompts that have observations, and nothing else. Done by a provider config in scratch that rewrites
+  the request's text before an ordinary `OllamaProvider` sends it; both arms went through it, the
+  control unchanged. Aimed at the passive and place-not-threat buckets.
+- **list**, the action descriptions: `ListActionsAndTargets = true`, an existing switch (measured
+  before only on the curated 76, on the 2B), so the prompt says "follow_player: Walk behind the player
+  wherever they go." and "stop_following: Stop following the player and stay where you are.". Aimed at
+  the follow and stop-following buckets.
+- **example**, one situation-shaped few-shot line written for this run, after reading the set: "A wolf
+  is tearing at a woodcutter's coat outside the north tower." → `attack_target wolf`, before the `none`
+  lines and labelled like the call. "Woodcutter", "tearing" and "coat" appear in no stimulus or
+  observation of either set (hard rule 4). Aimed at the place-not-threat bucket.
+
+**Setup.** The interim set (389 prompts, set commit a24dde9) with `Assets/Evaluation/VillageGuard.asset`
+unchanged, `origin/test` at 59e11f3, the RTX 5080's Docker Ollama 0.40.14 over the network (home), the
+laptop on mains power, the 5080 lock held, nothing else resident (`ps` before and after: `qwen3.5:4b`
+3.1 GB, then `qwen3.5:2b` 2.4 GB, 100% on the GPU). Interleaved, runner defaults (guards on, the
+profile's idle example), the 9 November state wording. A 24-prompt slice first on each model (fold, 24
+against 24 on both), then the three 4B runs back to back, 6 to 6½ minutes each, then fold on the 2B.
+The wrapped runs' reports say residency "not checked", because the runner reads it only from a plain
+`OllamaProvider`; the `ps` readings stand in for it.
+
+| | 4B control | 4B fold | 4B list | 4B example | 2B control | 2B fold |
+|---|---:|---:|---:|---:|---:|---:|
+| **All, 389** | 330 (84.8%) | **352 (90.5%)** | 323 (83.0%) | 325 (83.5%) | 261 (67.1%) | **278 (71.5%)** |
+| Player lines, 259 | 239 | 239 | 226 | 235 | 197 | 197 |
+| Situations and events, 130 | 91 (70.0%) | **113 (86.9%)** | 97 (74.6%) | 90 (69.2%) | 64 (49.2%) | **81 (62.3%)** |
+| simple_command, 65 | 64 | 64 | 62 | 64 | 48 | 48 |
+| command_with_target, 66 | 66 | 66 | 66 | 66 | 62 | 62 |
+| impossible_request, 64 | 49 | 49 | 43 | 46 | 41 | 41 |
+| conversation, 64 | 60 | 60 | 55 | 59 | 46 | 46 |
+| situation, 65 | 40 | 51 | 48 | 38 | 26 | 39 |
+| event, 65 | 51 | 62 | 49 | 52 | 38 | 42 |
+
+The 4B control gave the same 389 answers in all three runs. Floors: 3.6 points at n = 389, 4.4 at
+259, 6.2 at 130, 8.8 at 65.
+
+- **fold, `qwen3.5:4b`: +5.7 overall, beyond noise; situations and events +16.9, beyond noise**
+  (situation and event +16.9 each). 22 fixed, none broken; player lines identical. Of the 39 misses
+  it fixed all 8 place-not-threat, 4 of 5 passive, all 4 calm-scene actions, 2 of 4 stop-following,
+  the guard's false stop, one wrong target, one standing wolf and 1 of 9 follows.
+- **fold, `qwen3.5:2b`: +4.4 overall, beyond noise; situations and events +13.1, beyond noise**
+  (situation +20.0 beyond, event +6.2 within). 24 fixed, 7 broken, all of the over-acting kind: calm
+  scenes whose place is now in the quote ("Fishermen are mending nets at the docks." → `move_to
+  docks`). The 4B did not over-act on the same prompts.
+- **list, 4B: −1.8 overall, within noise; situations +12.3, beyond noise, but player lines −5.0 and
+  impossible_request −9.4, both beyond noise.** It fixed 4 of 9 follows and 2 of 4 stop-followings,
+  and made the model act on lines that need nothing ("Keep your eyes open." → `follow_player`, "Burn
+  down the market." → `attack_target market`).
+- **example, 4B: −1.3 overall, within noise everywhere.** It fixed none of the eight place-not-threat
+  misses it was written for.
+
+**What is left after fold on the 4B: 17**: the 4 arguable labels, 10 follow and stop-following, and 3
+others (one passive, one wrong target, one standing wolf). Against the ceiling of about 126, fold's
+113 leaves 13, and 10 of those are the unstated following policy.
+
+**An aside on the floor.** The 9 November control (#231, before #234 lowercased "Well" and "Wolf" and
+dropped the refusal's "the") also scored 330, but 14 of its 389 answers differ from tonight's, 10 in
+outcome, 5 each way. Two letters and an article moved 2.6% of answers with no net change: the first
+measurement on this server of how far an unrelated change to the prompt moves single answers.
+
+**What it means.**
+
+- **The gap is mostly where the fact sits, not what the model knows.** Moving the prompt's own lines
+  from the end of the observation block into the stimulus fixed 22 of the 4B's 39 misses and broke
+  none, and fixed 24 of the 2B's 66 for 7 broken; beyond the floor on both models, overall and on
+  situations and events. One run per model, on this set.
+- **It is not yet a framework change, and no default changed.** On this set the fold changes how the
+  runner (or a developer) splits a situation between the stimulus and the observations. Two readings
+  fit the result and were not separated: the fact helps because it is in the user turn, or because it
+  is no longer behind eleven boilerplate target lines. They lead to different changes (guidance to put
+  a situation's facts in its stimulus, or the caller's own observations ahead of the target lines).
+  The tech lead decides.
+- **The set's "named only in the observations" prompts measure this very placement**, so a fold-style
+  change raises the score partly by removing what those prompts were written to test. A game's
+  developer chooses where facts go; the set should keep testing both.
+- **Following needs the policy written down, not more examples.** Action descriptions moved half the
+  follow cases but made the 4B act on player lines that need nothing; one more example did nothing. A
+  goals or knowledge line about following ("follow the player when they leave alone; stop at a place
+  you may not enter") is the obvious next run; #231's lines did not cover it.
+- **The labels are not the problem.** About 4 of 130 are arguable; the ceiling stays near 97%.
+
+**Not tried.** Observation order with the prompt's own lines first (separates the two readings above);
+the stimulus label's wording for a non-spoken event; fold together with the action list; a
+following-policy line; other models than the two; the 2B's misses were not sorted by cause. Raw data:
+the reports, renders, cause table and entry point in the lead's checkout, `.scratch/151-policy-gap/`.
+The next entry, "Where a call's own facts go", takes up the observation order and the
+following-policy line.
+
+### Where a call's own facts go: after the stimulus gains about 21 of 389 on both models, but only when the standing facts stay in the block (10 November 2026)
+
+For #151, following the entry above. Its fold moved a situation's own lines into the stimulus by
+reading the label, and left two readings open: the fact helps because it is in the user turn, or
+because it is no longer behind eleven boilerplate target lines. This run turns it into a framework
+option that never reads the label, `DecideOptions.ObservationPlacement`, and separates the two.
+
+**What moves.** The framework already told two kinds of line apart: an agent's
+`ObservationSources`, gathered on every call, and the call's own `DecideOptions.Observations`.
+`Agent.Observe` puts the sources' lines first and the call's last. Before this change `EvalRunner`
+passed everything as the call's own (the arm's lines, the state line, the 11 `id: description.`
+target lines, then the prompt's own), so the fold's "prompt's own lines" had no name in the
+framework. The runner now sends the standing lines through an observation source, so only a
+prompt's own lines are the call's; with the default placement every one of the interim set's 389
+requests is byte-identical to the entry above's control render. Three placements were built:
+
+- **`AfterSources`**, the default: the call's lines close the "What you know right now:" block,
+  as before.
+- **`BeforeSources`**: the call's lines open that block, ahead of the standing lines.
+- **`WithStimulus`**: the call's lines leave the block and follow the stimulus's closing quote in
+  the user turn, each ended as a sentence: `Event: "The player lay down to sleep by the campfire."
+  Other guards are watching the camp.` The quote stays the developer's text. The fold put the facts
+  inside the quote.
+
+Neither moved arm reads the label, so they also move the 8 player prompts that carry observations
+(6 `command_with_target`, 2 `conversation`); 126 of the 389 requests change, against the fold's 118.
+
+**Setup.** The interim set (389 prompts, `Assets/Evaluation/Interim/`, set commit a24dde9) and the
+curated set (76, `Assets/Evaluation/`, same commit), with `Assets/Evaluation/VillageGuard.asset`
+unchanged and the 9 November state wording. The RTX 5080's Docker Ollama over the network, the 5080
+lock held for each run and released between them, `ps` showing nothing before each, the model 100%
+in VRAM after every arm (`qwen3.5:4b` 3.1 GB, `qwen3.5:2b` 2.4 GB). Interleaved, runner defaults
+(guards on, the profile's idle example), framework 0.4.0-preview.1 with this change. A 24-prompt
+slice first (24 against 24), then each run back to back in one session, 5 to 6 minutes each for the
+389 and about a minute for the 76. Floors: 3.6 points at n = 389, 4.4 at 259, 6.2 at 130, 8.8 at
+65, 8.1 at 76, 11.5 at 38.
+
+**Interim set, 389 prompts.**
+
+| | 4B control | 4B `BeforeSources` | 4B control | 4B `WithStimulus` | 2B control | 2B `WithStimulus` |
+|---|---:|---:|---:|---:|---:|---:|
+| **All, 389** | 330 | 328 (−0.5) | 330 | **351 (+5.4)** | 261 | **283 (+5.7)** |
+| Player lines, 259 | 239 | 239 | 239 | 239 | 197 | 199 |
+| Situations and events, 130 | 91 | 89 (−1.5) | 91 | **112 (+16.2)** | 64 | **84 (+15.4)** |
+| simple_command, 65 | 64 | 64 | 64 | 64 | 48 | 48 |
+| command_with_target, 66 | 66 | 66 | 66 | 66 | 62 | 62 |
+| impossible_request, 64 | 49 | 49 | 49 | 49 | 41 | 41 |
+| conversation, 64 | 60 | 60 | 60 | 60 | 46 | 48 |
+| situation, 65 | 40 | 39 | 40 | **51 (+16.9)** | 26 | **43 (+26.2)** |
+| event, 65 | 51 | 50 | 51 | **61 (+15.4)** | 38 | 41 (+4.6) |
+
+Bold is beyond the floor. The 4B control gave 330 in both runs, as it did in the entry above.
+
+- **`BeforeSources` does nothing.** 7 fixed and 9 broken, all within noise. The order inside the
+  block is not the lever; it was dropped from the option.
+- **`WithStimulus`, `qwen3.5:4b`: 23 fixed, 2 broken**, all on situations and events. Against the
+  entry above's causes, it fixed 7 of 8 place-not-threat, all 5 passive, all 4 calm-scene actions,
+  2 of 4 stop-following, both wrong targets, the guard's false stop, one standing wolf and 1 of 9
+  follows. The 2 it broke walked to the named place instead of the right one (`village_gate` for a
+  road, `campfire` for the camp's smoke). That is the fold's 352 without reading the label.
+- **`WithStimulus`, `qwen3.5:2b`: 28 fixed, 6 broken**, 2 of the fixes conversation lines; the
+  situations move far more than the events.
+
+**The calm scenes.** The fold broke 7 calm scenes on the 2B. Counting the 40 situations and events
+whose expected action is `none`, against the 90 that call for one:
+
+| | over-acted on 40 calm scenes | stayed still on 90 that call for action |
+|---|---:|---:|
+| 4B control / `WithStimulus` | 6 / **2** | 10 / **3** |
+| 2B control / `WithStimulus` | 15 / 14 | 14 / 9 |
+| 4B control / `BeforeSources` | 6 / 10 | 10 / 10 |
+
+`WithStimulus` makes neither model over-act; it is the fold's facts inside the quote that did.
+
+**Curated set, 76 prompts, control against `WithStimulus`.** `qwen3.5:4b` 69 against 68 (−1.3),
+`qwen3.5:2b` 54 against 54; situations and events 31 against 30 and 23 against 23, every category
+within noise (the floor is 11.5 on 38). Calm scenes: 4B 2 of 12 over-acted in both arms, 2B 3
+against 4. This set's 4B control already gets 31 of its 38 situations and events; whatever the
+interim set's gap was, it is not here to close.
+
+**The whole block with the stimulus.** All three demo games pass every fact as the call's own
+(`DecideOptions.Observations`), with no observation source, so `WithStimulus` would move their whole
+block. An eval-only switch, `EvalArm.StandingLinesAsCallObservations`, sends the runner's standing
+lines with the call the same way; with `AfterSources` its 389 requests are byte-identical to the
+control render. Interim set, `AfterSources` against `WithStimulus`, both arms with the switch on:
+
+| | 4B whole, after | 4B whole, with | 2B whole, after | 2B whole, with |
+|---|---:|---:|---:|---:|
+| **All, 389** | 330 | **299 (−8.0)** | 261 | **221 (−10.3)** |
+| Player lines, 259 | 239 | **199 (−15.4)** | 197 | **157 (−15.4)** |
+| Situations and events, 130 | 91 | **100 (+6.9)** | 64 | 64 |
+| simple_command, 65 | 64 | **48** | 48 | **38** |
+| command_with_target, 66 | 66 | **60** | 62 | 59 |
+| impossible_request, 64 | 49 | **42** | 41 | **30** |
+| conversation, 64 | 60 | **49** | 46 | **30** |
+| situation, 65 | 40 | **49** | 26 | 31 |
+| event, 65 | 51 | 51 | 38 | 33 |
+
+A request then reads `Player: "Walk with me." You are not following the player. bridge: The wooden
+bridge over the stream. village_gate: …`, the stimulus followed by twelve standing facts. The 4B
+answered 13 follow commands, "Walk with me." among them, with `none`, and attacked the wolf for impossible
+requests; the 2B over-acted on 34 of the 40 calm scenes (15 in its control) and walked to the gate
+for follow commands.
+
+**Step 4: one following-policy line, report only.** The 4B's 18 misses left after `WithStimulus`
+include 9 follow and stop-following. One line written for this run, as a designer would, was added to
+the profile's knowledge in memory (`EvalArm.Knowledge`, the asset untouched): "When the player sets
+out without you, follow them; once they settle somewhere you cannot go with them, stop following."
+No four-word run of it appears in any prompt file of either set (hard rule 4). Interim set, 4B,
+`WithStimulus` against `WithStimulus` plus the line: 351 against 346 (−1.3, within noise);
+situations +9.2 beyond noise (51 → 57), events 61 → 63, but simple_command −15.4 beyond noise
+(64 → 54) and player lines −5.0 beyond noise. It fixed 7 of the 8 remaining follows and broke 10
+commands to stay put ("Hold here." → `none`, "I'll go on alone from here." →
+`follow_player`). Calm scenes 2 against 3. A following policy is the game's to write, and this one
+costs as much as it fixes.
+
+**What was and was not measured.** Measured: two models, two sets, one session, one run each, with
+the standing lines in an observation source and the prompt's own one to three lines as the call's;
+and, on the interim set, the whole block as the call's. Not measured: a real game's split between
+sources and call lines; other models; other servers; a `WithStimulus` call with memory on, whose
+history then carries the facts.
+
+**What it means.**
+
+- **The deciding fact helps in the user turn, not earlier in the block.** `WithStimulus` gains as
+  much as the fold did, on both models, without reading the label; `BeforeSources` gains nothing.
+- **It helps only for the facts of this moment.** Twelve standing lines after the stimulus cost
+  15 points of player lines on both models. A developer who wants the gain keeps what holds on every
+  call in an `IObservationSource` and passes a moment's own facts with the call.
+- **The default stays `AfterSources`** (the tech lead's decision): every demo game, and probably most
+  developers, pass every fact with the call today, and for them `WithStimulus` is the worst layout
+  measured. Flipping it waits on the demos moving their standing facts into sources.
+
+Raw data: reports, renders, the causes table and the entry point in this branch's
+`.scratch/151-placement/` (gitignored, in the worktree that ran it).
+
+### Living Vale's adoption of #190: no visible regression, after one fix to the route examples (10 November 2026)
+
+**What changed.** Living Vale adopted the merged #190 features (branch `69-lv-adopt-190`). Two of
+them change what the model reads: the personas' facts and speaking rules move from observation
+lines and the personality into `AgentIdentity.Knowledge` and `StatementRules` (#231), and the
+per-turn example rewriting gives way to fixed example lines with `INamedTarget` names and
+`ExampleTargetFallback` (#234). The action and target list, counter-examples and the idle line were
+adopted in G5g and are unchanged; the paired schema was not adopted.
+
+**Conditions.** RTX 5080, Docker Ollama 0.40.14, over the network; one model resident at a time,
+nothing else on the card (the shared lock held). Control is `test` at 2c27289, the arm is the branch,
+each from its own worktree, with the game's own live checks: `MaraTradeLiveCheck` (5 asked trades, 1
+plain line and the 12 non-trade lines, each line twice) and `QuestRouteLiveCheck` (the 7 G4c route
+lines, each twice). Order per run: control gemma4, adopted gemma4, adopted 4B, control 4B.
+
+**Result.** These sets are small: read them as "no visible regression", not as a measurement.
+
+| Run | Arm | Model | Asked trades | Unasked offers | Route lines |
+|---|---|---|---:|---:|---:|
+| 1 (routes once) | control | gemma4:e2b-it-qat | 5/5 | 0/1 | 7/7 |
+| 1 | adopted | gemma4:e2b-it-qat | 5/5 | 0/1 | **6/7** |
+| 2 | control | gemma4:e2b-it-qat | 10/10 | 0/26 | 14/14 |
+| 2 | adopted | gemma4:e2b-it-qat | 10/10 | 0/26 | **12/14** |
+| 2 | control / adopted | qwen3.5:4b | 10/10 / 10/10 | 0/26 / 0/26 | 14/14 / 14/14 |
+| 3, after the fix | control | gemma4:e2b-it-qat | 10/10 | 0/26 | 14/14 |
+| 3, after the fix | adopted | gemma4:e2b-it-qat | 10/10 | 0/26 | 14/14 |
+| 3, after the fix | control / adopted | qwen3.5:4b | 10/10 / 10/10 | 0/26 / 0/26 | 14/14 / 14/14 |
+
+The one miss was one line, 3 of 3 times: Elra, "This is the medical parcel from the wagon, for your
+garrison.", answered `none` ("It never arrived. The garrison is short of medicine."), where control
+delivered. Two diagnostic arms on gemma4, the route lines three times each, both put it right
+(21/21): the persona facts back in the observations, or the route actions' example targets named
+as preferred. The cause is the fallback's mention check: the line says "parcel", so the fallback
+skipped `delivery_parcel_elra`, Elra's only delivery, and her delivery example was left out. The
+game now prefers each route action's own targets, which the framework names mentioned or not, as
+`RefreshExamples` did; run 3 is that code. The idle line's effect survives the adoption: no unasked
+offer in 52 non-trade lines per model.
+
+**What would change it.** A larger, labelled set of the game's lines; the fallback's mention check
+measured on targeted actions with categories (`docs/live-runs.md`, waiting), where a line naming the
+target it wants is the normal case. Raw rows: the lead's checkout, `.scratch/lv-adopt-190/ab/` (not in git).

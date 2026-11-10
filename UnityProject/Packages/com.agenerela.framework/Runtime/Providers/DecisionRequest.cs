@@ -114,6 +114,12 @@ namespace Agenerela.Providers
         /// classifies what kind of stimulus this is (DR-008). A provider must not read the
         /// label, branch on it, or assume a speaking character: an agent may be a country
         /// reading a report, and nothing here is a line of dialogue.
+        /// <para>
+        /// With <see cref="DecideOptions.ObservationPlacement"/> set to
+        /// <see cref="ObservationPlacement.WithStimulus"/>, the call's own observations follow the
+        /// closing quote, each ended as a sentence, and are no longer in <see cref="Observations"/>:
+        /// <c>Situation: "Screams are coming from the well." A wolf has cornered a child.</c> (#151).
+        /// </para>
         /// </remarks>
         public string Stimulus;
 
@@ -140,5 +146,9 @@ namespace Agenerela.Providers
         internal string AgentName;
         internal string StimulusText;
         internal string StimulusLabel;
+
+        // The asking agent's Agent.Id, which Agent sets after PromptBuilder builds the request: the
+        // builder sees the context, not the agent. Null when it has none (#190, Living Vale #21).
+        internal string AgentId;
     }
 }

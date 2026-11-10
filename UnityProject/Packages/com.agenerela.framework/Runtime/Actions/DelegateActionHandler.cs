@@ -55,6 +55,19 @@ namespace Agenerela
             return new DelegateActionHandler(isAvailable, execute, nameof(execute));
         }
 
+        /// <summary>
+        /// Whether the action can be done to one target right now, and why not: the delegate's form of
+        /// <see cref="ITargetAvailability"/> (#190 LV #19, #216 item 5). Null, the default, means every
+        /// target is, and the handler behaves exactly as one built before this existed.
+        /// </summary>
+        /// <remarks>
+        /// Called with the decision's context and a registered target's id, never
+        /// <see cref="TargetRegistry.NoTarget"/>. A bool converts to <see cref="Availability"/>, so
+        /// <c>(ctx, id) =&gt; !claimed.Contains(id)</c> works. What setting it changes is in
+        /// <see cref="ITargetAvailability"/>'s remarks.
+        /// </remarks>
+        public Func<AgentContext, string, Availability> IsAvailableFor { get; set; }
+
         public bool IsAvailable(AgentContext ctx)
         {
             return isAvailable(ctx);

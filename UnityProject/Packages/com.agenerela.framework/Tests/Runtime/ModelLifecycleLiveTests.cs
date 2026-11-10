@@ -97,6 +97,7 @@ namespace Agenerela.Tests
                 Endpoint = LiveOllama.Endpoint,
                 Model = LiveOllama.Model,
                 ContextSize = 8192,
+                ApiKey = LiveOllama.ApiKey,
             });
             IModelLifecycle models = provider;
             Assert.That(await LiveOllama.NotCancelled(models.UnloadAsync(CancellationToken.None)), Is.True);
@@ -142,7 +143,7 @@ namespace Agenerela.Tests
         private static async Task<long?> LoadedContextLength()
         {
             string listed = LiveOllama.Model.Contains(":") ? LiveOllama.Model : LiveOllama.Model + ":latest";
-            using (var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) })
+            using (var client = LiveOllama.Client(TimeSpan.FromSeconds(5)))
             {
                 string text;
                 try

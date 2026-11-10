@@ -1,0 +1,4 @@
+# These files are read inside Linux containers or by Git Bash; keep LF even on a Windows checkout.
+Caddyfile           text eol=lf
+docker-compose.yml  text eol=lf
+*.py                text eol=lf

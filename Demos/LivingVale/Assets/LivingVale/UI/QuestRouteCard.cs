@@ -1,4 +1,4 @@
-using LivingVale.Game;
+using Agenerela;
 using LivingVale.Interaction;
 using LivingVale.Unity;
 using UnityEngine;
@@ -6,7 +6,10 @@ using UnityEngine.UI;
 
 namespace LivingVale.UI
 {
-    /// <summary>Shows the current conversation's authored route contract and explicit consent buttons.</summary>
+    /// <summary>
+    /// Shows the current conversation's route card, the NPC's held proposal (#236), with its authored
+    /// contract and explicit consent buttons, which confirm or decline that very proposal.
+    /// </summary>
     public sealed class QuestRouteCard : MonoBehaviour
     {
         [SerializeField] private ValeBootstrap bootstrap;
@@ -17,7 +20,7 @@ namespace LivingVale.UI
         private Text terms;
         private Button confirm;
         private Button decline;
-        private string buttonsProposalId;
+        private Proposal buttonsProposal;
 
         public void Configure(ValeBootstrap owner)
         {
@@ -41,6 +44,7 @@ namespace LivingVale.UI
             title = Label("Title", card, "", new Vector2(16f, -6f), new Vector2(528f, 22f), 18);
             terms = Label("Terms", card, "", new Vector2(16f, -28f), new Vector2(528f, 34f), 14);
             bootstrap.Routes.Changed += Render;
+            bootstrap.ModelDriver.ProposalsChanged += Render;
             bootstrap.Coordinator.Changed += OnConversationChanged;
             Render();
         }
@@ -52,25 +56,27 @@ namespace LivingVale.UI
 
         private void Render()
         {
-            RouteProposal proposal = bootstrap.Routes.ActiveProposal;
+            Proposal proposal = bootstrap.ModelDriver.PendingProposal;
+            var made = proposal?.Correlation as NpcTurn;
+            var contract = proposal == null ? null : bootstrap.Routes.Contract(proposal.TargetId);
             var coordinator = bootstrap.Coordinator;
-            bool visible = proposal != null && coordinator.IsOpen && coordinator.ActiveNpc != null &&
-                coordinator.ActiveNpc.Id == proposal.NpcId && coordinator.Generation == proposal.ConversationGeneration;
+            bool visible = contract != null && made != null && coordinator.IsOpen && coordinator.ActiveNpc != null &&
+                coordinator.ActiveNpc.Id == made.Npc.Id && coordinator.Generation == made.Generation;
             card.gameObject.SetActive(visible);
             if (!visible)
             {
                 return;
             }
 
-            title.text = proposal.Contract.Title;
-            terms.text = proposal.Contract.Terms;
-            if (buttonsProposalId != proposal.Id)
+            title.text = contract.Title;
+            terms.text = contract.Terms;
+            if (!ReferenceEquals(buttonsProposal, proposal))
             {
-                BuildButtons(proposal.Id, proposal.Contract.ConfirmLabel);
+                BuildButtons(proposal, contract.ConfirmLabel);
             }
         }
 
-        private void BuildButtons(string proposalId, string confirmLabel)
+        private void BuildButtons(Proposal proposal, string confirmLabel)
         {
             // uGUI clicks on release: a press on the previous proposal must never accept its replacement.
             if (confirm != null)
@@ -81,19 +87,24 @@ namespace LivingVale.UI
                 Destroy(decline.gameObject);
             }
 
-            buttonsProposalId = proposalId;
+            buttonsProposal = proposal;
             Button accept = null;
             accept = ButtonAt(confirmLabel, card, new Vector2(16f, -64f), new Vector2(330f, 26f), () =>
             {
                 bootstrap.BlockWorldInputForFrame();
                 accept.interactable = false;
-                bootstrap.Routes.Confirm(proposalId);
+                // The contract writes its own receipt into the chat once it runs. Refused before
+                // it could (the agent's re-check found the pair no longer offered), say so here.
+                if (!bootstrap.ModelDriver.Confirm(proposal, out var outcome) && !outcome.HandlerRan)
+                {
+                    bootstrap.Coordinator.AddSystemLine("Things changed; that offer no longer stands.");
+                }
             });
             confirm = accept;
             decline = ButtonAt("Not now", card, new Vector2(358f, -64f), new Vector2(186f, 26f), () =>
             {
                 bootstrap.BlockWorldInputForFrame();
-                bootstrap.Routes.Decline(proposalId);
+                bootstrap.ModelDriver.Decline(proposal);
             });
         }
 
@@ -152,6 +163,7 @@ namespace LivingVale.UI
             if (bootstrap != null && bootstrap.Routes != null)
             {
                 bootstrap.Routes.Changed -= Render;
+                bootstrap.ModelDriver.ProposalsChanged -= Render;
                 bootstrap.Coordinator.Changed -= OnConversationChanged;
             }
         }

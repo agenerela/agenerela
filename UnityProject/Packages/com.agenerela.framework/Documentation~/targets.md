@@ -4,12 +4,13 @@ An agent's targets are worked out again on every decision (DR-014): the ones reg
 in `Agent.Targets`, then whatever each of `Agent.TargetSources` adds, in order. One flat list
 serves every action, so by default a model can pair any action with any target. That is how a
 quest giver ends up asked to `complete_quest` on the village gate, or a trader to `quote_sale` a
-stock entry (#190, workstream B). This page covers the four tools that keep the pairs and the
+stock entry (#190, workstream B). This page covers the five tools that keep the pairs and the
 lists right. DR-020 in the build plan has the reasoning.
 
 | You want | Use |
 |---|---|
 | An action to refuse a target of the wrong kind | A **category** on each target, and `ActionDefinition.TargetCategories` on the action |
+| An action to take only the targets the game allows right now, and say why not | A **per-target check**: `[AvailableFor]`, `DelegateActionHandler.IsAvailableFor` or `ITargetAvailability` |
 | An agent never to be offered some kinds of target, whichever source finds them | `Agent.TargetCategories`, or **Target Categories** on `AgentBehaviour` |
 | Two sources that both offer the same object | Nothing: the same object twice is one target |
 | An agent to have only some of the actions on its GameObject | **Only Actions** on `AgentBehaviour`, or `RegisterMethods(owner, assets, only)` |
@@ -114,6 +115,142 @@ category it takes, or its example may show a pair the schema then forbids.
 A cloud provider that cannot take a root `anyOf`, such as OpenAI's strict structured outputs, should
 be sent the flat schema. None ships yet.
 
+## Conditions per target
+
+A category says what *kind* of target an action takes, and `[Available]` whether the action is
+legal *at all*. Neither can say "chop any tree nobody has claimed", "attack any country except one
+we have a truce with", or "propose a route whose conditions are met". A **per-target check** can:
+the handler is asked, for each target the action takes, whether it can be done to that one right
+now, and may say why not (#190 LV #19, #216 item 5).
+
+Three front doors, one rule. With `[AgentAction]` methods, mark a method `[AvailableFor("id")]`; it
+takes the target's id as a string, alone or after an `AgentContext`, and returns `bool` or an
+`Availability`. Modelled on Living Vale's `RouteContract.Available`, with illustrative names:
+
+```csharp
+public sealed class Kest
+{
+    private readonly QuestRoutes routes;
+
+    [AgentAction("offer_exchange", "Propose a deal with fixed terms.", RequiresTarget = true,
+                 TargetCategories = new[] { "route" })]
+    private ActionResult OfferExchange(RouteContract contract) => routes.TryPropose(contract);
+
+    // Asked once per decision for each route target, so a route whose conditions are not met
+    // is never offered, and a tool can say why.
+    [AvailableFor("offer_exchange")]
+    private Availability CanOffer(string routeId) =>
+        routes.Contract(routeId).Available() ? Availability.Yes : Availability.No("its conditions are not met");
+}
+```
+
+With a `DelegateActionHandler`, set `IsAvailableFor`; a `bool` converts to `Availability`:
+
+```csharp
+var chop = new DelegateActionHandler(_ => true, (ctx, d) => forest.Chop(d.TargetId))
+{
+    IsAvailableFor = (ctx, treeId) => forest.ClaimedBy(treeId) == null
+        ? Availability.Yes
+        : Availability.No($"claimed by {forest.ClaimedBy(treeId)}"),
+};
+```
+
+Any other handler implements `ITargetAvailability` beside `IActionHandler`.
+
+What it changes, and only for an action whose handler has a check:
+
+- **An action that needs a target and has no target left that it takes and the check allows is
+  left out of the schema, flat or paired.** That is state masking you opt into by giving the
+  check: the option is absent, as one whose `[Available]` says no is, rather than forbidden in
+  prose. "Takes" means its categories as well, so with a check, an action whose categories match
+  no registered target is left out of a flat schema too.
+- **The paired schema** leaves out each pair the check rejects, so the grammar cannot say it.
+- **The flat target enum stays every registered target**, so the grounding guard and the prompt's
+  target list read the same list as without the check. **`TargetAvailabilityGuard`**, a built-in
+  guard that runs after `TargetCategoryGuard`, turns a rejected pair the model names anyway into a
+  `RewriteToNone`, with a reason such as "'chop' cannot be done to 'tree_b' right now: claimed by
+  the miller." Under pairing, the grammar should have stopped it, and `SchemaLegalityGuard` rejects
+  one that comes anyway.
+- **`Agent.Execute` asks again**, against the game as it is then, so a decision that went stale
+  while the model thought (someone claimed the tree) is refused with the check's reason in the
+  `ActionResult`, and no handler runs.
+- **The reasons are recorded**: each rejected pair, with its reason, is in
+  `DecisionTelemetry.TargetsUnavailable` and the decision log's `targetsUnavailable`, and
+  `Agent.Preview` shows them in `TargetsUnavailable`, with an action left out for having no legal
+  target named in `LeftOut` with each target's reason. That is the "left out, because ..." a
+  Decision Log or preview window shows.
+
+The check is asked once per decision for each registered target in the action's categories (every
+target when it names none), never about `no_target`, and only while the action's `IsAvailable`
+says yes. The schema, the examples, the preview and the guard all read that one answer;
+`Execute` asks again. An exception from it fails the decision's preparation, as one from
+`IsAvailable` does.
+
+**Nothing is said to the model about a rejected pair.** A prompt line such as "Not possible right
+now: ..." was considered and dropped: it would forbid in prose what the schema already makes
+absent. A handler without a check, which is every handler written before this, changes nothing:
+the same schema and prompt, byte for byte.
+
+**The examples follow the check too.** For an action whose handler has a check, an example never
+names a target the check rejected, nor one outside the action's categories, even when
+`PreferredExampleTargets` lists it: it takes the next preferred target, or the fallback target
+when `ExampleTargetFallback` is on, or is left out. An action with no check is shown exactly as
+before, a wrong-category preferred target included.
+
+One thing it does not do yet: `[Available]` gives no reason when it leaves a whole action out.
+
+## Facts told through an action
+
+Some knowledge counts only once it is told: the clue an innkeeper gives, the password a guard lets
+slip, the location of the mill key. The rule (#190, Living Vale #17): **a fact that counts only when
+revealed is a target of the action that reveals it**, in its own category, never a standing
+`AgentIdentity.Knowledge` line ([prompt.md](prompt.md#knowledge-and-statement-rules)). The
+revealing action's per-target check removes the fact once it has been told. No API of its own is
+needed:
+
+```csharp
+// A fact as a target: what it is called in examples, and what it says when listed.
+sealed class Fact : IDescribedTarget, INamedTarget
+{
+    public Fact(string name, string description) { Name = name; Description = description; }
+    public string Name { get; }
+    public string Description { get; }
+}
+
+mara.Actions.Register(
+    new ActionDefinition
+    {
+        Id = "share_information", Description = "Tell the traveller something you know.",
+        RequiresTarget = true, TargetCategories = new[] { "fact" },
+    },
+    new DelegateActionHandler(_ => true, (ctx, d) => clues.Record(d.TargetId))
+    {
+        IsAvailableFor = (ctx, factId) => clues.Has(factId) ? Availability.No("already told") : Availability.Yes,
+    });
+
+mara.Targets.Register("fact_mill_key",
+    new Fact("the mill key", "The mill key hangs behind the bakery door."), "fact");
+```
+
+What that gives:
+
+- **Only the action reveals it.** The handler records the clue; a statement under `none` that
+  claims to know it records nothing. The quest's state stays the game's.
+- **Told once.** After the handler runs, the pair is rejected with "already told": left out of the
+  paired schema, turned to `none` by `TargetAvailabilityGuard` in a flat one, refused by
+  `Agent.Execute` for a decision made before it was told, and recorded with its reason in
+  telemetry and the preview. With every fact told, `share_information` itself is left out.
+- **The content travels with the target.** With `ListActionsAndTargets` on, the listed target
+  shows its `Description`, so the model reads the fact as something it can tell, not as something
+  it already said; the handler is where the game shows it to the player.
+
+A standing `Knowledge` line would be sent on every call, so the model could say the fact in any
+statement, under any action, and the game could not tell whether it was revealed. What this
+pattern does not stop is the model paraphrasing the fact under another action; that is a
+game-feel leak, not an integrity one, and a guard for it would need paraphrase detection (#138).
+
+`Tests/Editor/Core/RevealedKnowledgeTests.cs` runs this example end to end.
+
 ## Which categories an agent is offered
 
 `Agent.TargetCategories` is an allowlist over everything the agent's sources found:
@@ -179,6 +316,7 @@ the profile lists but **Only Actions** leaves out needs no handler.
 - **The paired schema** (DR-020) is owed an A/B on the evaluation set before it becomes the default.
   Our set declares no categories, so on it pairing changes only the lists of actions that need a
   target and of `none`; measuring the pairing by category needs categories in the set first.
-- **The Targets research area (#120)** owns target selection: a better ordering for the cap, a
-  source by component type, and conditions per target (Living Vale's gap 19), which would sit
-  beside the category as a second thing an action can require of a target.
+- **The Targets research area (#120)** owns target selection: a better ordering for the cap and a
+  source by component type. Conditions per target (Living Vale's gap 19) now sit beside the
+  category as the second thing an action can require of a target (above), and the examples name
+  only a target the check allows.

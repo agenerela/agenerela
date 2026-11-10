@@ -63,7 +63,7 @@ namespace LivingVale.Interaction
     /// the same <see cref="NpcActionExecutor"/> a model-backed driver uses. It is not a model and
     /// must never be presented as one, hence <see cref="Label"/>.
     /// </summary>
-    public sealed partial class ScriptedNpcDecisionDriver : INpcDecisionDriver
+    public sealed partial class ScriptedNpcDecisionDriver
     {
         private readonly Dictionary<string, NpcScript> scripts = new Dictionary<string, NpcScript>();
         private readonly Dictionary<string, List<ScriptedTradeRule>> tradeRules = new Dictionary<string, List<ScriptedTradeRule>>();
@@ -83,9 +83,6 @@ namespace LivingVale.Interaction
             AddG4QuestRules();
         }
 
-        /// <summary>The last executor outcome, or null. Tests and tools read it.</summary>
-        public ActionOutcome LastOutcome { get; private set; }
-
         public string Label => Fixture == ScriptedFixture.Normal ? "Scripted replies" : $"Scripted replies ({Fixture})";
 
         /// <summary>Applies to every turn started after it is set.</summary>
@@ -95,9 +92,6 @@ namespace LivingVale.Interaction
         public TimeSpan NormalDelay { get; set; } = TimeSpan.FromMilliseconds(600);
 
         public TimeSpan SlowDelay { get; set; } = TimeSpan.FromSeconds(5);
-
-        /// <summary>How many turns this driver was asked to execute. Tests use it to prove a stale reply never ran.</summary>
-        public int ExecutedCount { get; private set; }
 
         /// <summary>Adds or replaces an NPC's script. A keyword matches anywhere in the player's line, ignoring case; the first match wins.</summary>
         public void SetScript(string npcId, IEnumerable<(string keyword, string line)> rules, IEnumerable<string> fallbacks)
@@ -117,39 +111,10 @@ namespace LivingVale.Interaction
             scripts[npcId] = script;
         }
 
-        public async Task<NpcReply> DecideAsync(NpcTurn turn, CancellationToken ct)
-        {
-            var fixture = Fixture;
-            switch (fixture)
-            {
-                case ScriptedFixture.NeverAnswers:
-                    await Task.Delay(Timeout.Infinite, ct);
-                    throw new InvalidOperationException("Unreachable: an infinite delay only ends by cancellation.");
-
-                case ScriptedFixture.Slow:
-                    await Task.Delay(SlowDelay, ct);
-                    break;
-
-                default:
-                    await Task.Delay(Jittered(NormalDelay), ct);
-                    break;
-            }
-
-            switch (fixture)
-            {
-                case ScriptedFixture.Malformed:
-                    return NpcReply.Failed(NpcReplyFailure.Malformed);
-                case ScriptedFixture.Throws:
-                    throw new InvalidOperationException("Scripted backend failure (fixture).");
-            }
-
-            return NpcReply.Decided(Choose(turn.Npc.Id, turn.PlayerLine));
-        }
-
         /// <summary>
         /// What the script decides for this line, with no delay or fixture: a trade, quest or route
         /// rule when one matches and game state offers it, otherwise the NPC's keyword line.
-        /// <c>ScriptedAgentDriver</c> answers through the framework's <c>ScriptedProvider</c> with it.
+        /// <c>ScriptedReplies</c> answers through the framework's <c>ScriptedProvider</c> with it.
         /// </summary>
         public AgentDecision Choose(string npcId, string playerLine)
         {
@@ -166,24 +131,6 @@ namespace LivingVale.Interaction
         public TimeSpan NextDelay()
         {
             return Fixture == ScriptedFixture.Slow ? SlowDelay : Jittered(NormalDelay);
-        }
-
-        public bool Execute(NpcTurn turn, NpcReply reply)
-        {
-            ExecutedCount++;
-            if (reply.Decision == null)
-            {
-                return false;
-            }
-
-            if (executor == null)
-            {
-                // No game state to act on, so "none" is the only legal action.
-                return reply.Decision.ActionId == ActionRegistry.None;
-            }
-
-            LastOutcome = executor.Execute(turn.Npc.Id, reply.Decision.ActionId, reply.Decision.TargetId, turn.Generation);
-            return LastOutcome.Executed;
         }
 
         /// <summary>Adds trade rules for an NPC, checked in order before its keyword lines. Ignored without an executor.</summary>

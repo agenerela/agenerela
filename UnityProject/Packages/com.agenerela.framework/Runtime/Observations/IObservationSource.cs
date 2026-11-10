@@ -17,10 +17,12 @@ namespace Agenerela
     /// cache and refreshes it on the game's events, never once per decision (§2.8).
     /// </para>
     /// <para>
-    /// The lines are sent verbatim, with nothing added, before the call's own
-    /// <see cref="DecideOptions.Observations"/>, and within <see cref="Agent.MaxObservations"/>.
-    /// Observations are the last thing the model reads before the question, so keep each line a
-    /// short fact, and use a target's registered id when a line names one.
+    /// The lines are sent verbatim, with nothing added, in the observation block, within
+    /// <see cref="Agent.MaxObservations"/>, ahead of the call's own
+    /// <see cref="DecideOptions.Observations"/>, which <see cref="ObservationPlacement.WithStimulus"/>
+    /// moves after the stimulus instead. A source is for the standing picture, what holds on every
+    /// call; a fact that decides one moment goes with that call. Keep each line a short fact, and
+    /// use a target's registered id when a line names one.
     /// </para>
     /// <para>
     /// A source that throws makes the decision a <see cref="DecisionOutcome.PipelineError"/>, and
@@ -64,6 +66,8 @@ namespace Agenerela
         /// <remarks>
         /// Read in full straight after the call, so a lazy <c>yield return</c> body runs then,
         /// and an exception it throws fails the decision as one thrown by the call does.
+        /// <c>Agent.Preview</c> calls it too, with no decision after it (#166), so a source should be
+        /// safe to call when nothing follows: it describes, and changes nothing in the game.
         /// </remarks>
         IEnumerable<string> Observe(AgentContext ctx);
     }

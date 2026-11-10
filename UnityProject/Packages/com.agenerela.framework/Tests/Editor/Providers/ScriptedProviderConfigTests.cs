@@ -86,6 +86,27 @@ namespace Agenerela.Tests
         }
 
         [Test]
+        public async Task AnEntryCanNameAnAgentById()
+        {
+            var config = Make("Scripted");
+            config.Replies = new List<ScriptedProviderConfig.Entry>
+            {
+                Entry("", "", "none", "no_target", "Hm."),
+                Entry("guard_north", GoToTheTower, "move_to", "tower", "North goes."),
+            };
+            var north = Fixtures.VillageGuard(config.Provider);
+            north.Id = "guard_north";
+            var south = Fixtures.VillageGuard(config.Provider);
+            south.Id = "guard_south";
+
+            var norths = await Fixtures.NotCancelled(north.DecideAsync(GoToTheTower));
+            var souths = await Fixtures.NotCancelled(south.DecideAsync(GoToTheTower));
+
+            Assert.That(norths.Decision.Statement, Is.EqualTo("North goes."));
+            Assert.That(souths.Decision.Statement, Is.EqualTo("Hm."), "Same name, another id.");
+        }
+
+        [Test]
         public async Task ItsRefusalLineAnswersAStoppedDecision()
         {
             var config = Make("Scripted");

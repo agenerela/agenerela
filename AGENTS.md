@@ -80,13 +80,15 @@ Neither changelog nor the wiki is loaded into every session; read the one you ne
 | Path | Contents |
 |---|---|
 | `UnityProject/Packages/com.agenerela.framework/` | The package — everything shippable |
-| `UnityProject/Assets/Evaluation/` | The labelled prompt set, its 76 prompts so far (#13, #85), and `agent.json`, the agent they are measured against; its `README.md` documents the format. The package's `EvalRunner` (#145) scores it in an A/B run, and the Prompt Set window (#134) writes and labels it |
-| `Demos/<Game>/` | Demo games — one full Unity project each, loading the package by relative path (DR-010). So far `GreyBoxVillage/` (#153) and `LivingVale/` (#69); `Demos/README.md` lists the rest planned |
+| `UnityProject/Assets/Evaluation/` | The labelled prompt set, its 76 prompts so far (#13, #85), and `agent.json`, the agent they are measured against; its `README.md` documents the format. The package's `EvalRunner` (#145) scores it in an A/B run, and the Prompt Set window (#134) writes and labels it. `Interim/` beside it is a 389-prompt set written and labelled by AI models, used until #147's curated set exists |
+| `Demos/<Game>/` | Demo games — one full Unity project each, loading the package by relative path (DR-010). So far `GreyBoxVillage/` (#153), `GreyBoxVillageClassic/` (the pre-v2 village, kept for comparison) and `LivingVale/` (#69); `Demos/README.md` lists the rest planned |
 | `docs/` | Build plan, llm-wiki, screen designs and course materials — [`docs/README.md`](docs/README.md) maps them |
 | `tools/benchmarks/` | Standalone Python probes, no Unity required |
 | `tools/branding/` | The logo as 3D-printable pins and signs, 4K stills and a 4K animation with sound, all built in Blender from the logo's traced geometry |
+| `tools/live-runs/` | Kits that `docs/run-requests/` points to, so any machine repeats a live run exactly: `model-sweep/` runs a list of models through `EvalRunner` |
 | `tools/ci/` | `hygiene.py`, every check CI runs, runnable on your machine and as a pre-commit hook; `release.py`, the mechanical steps of a release |
 | `tools/comfyui/` | The asset server: ComfyUI in Docker on the lead's RTX 5080 machine, making 3D models, sounds and images for the demo games, and `comfy.py`, which agents call it with |
+| `tools/ollama-server/` | Ollama in Docker on the same RTX 5080 machine, behind a gateway that wants a key, so the laptop runs Unity, the live tests and `tools/live-runs/` on that card; `ollama_remote.py` checks it |
 
 ## Working conventions
 
@@ -114,6 +116,15 @@ framework through a relative `file:` path in its `Packages/manifest.json` — ne
 version or git URL — and uses only the framework's public API. Framework work happens in
 `UnityProject/`.
 
+**In-game checks go through the Unity CLI** (`unity`), not computer use. To see a change working
+in a running game — Play mode, the console, a captured frame, a value read with C# — an agent
+opens the game's editor with `unity open` and drives it with `unity command`, so the user keeps
+their mouse and screen. It needs the experimental `com.unity.pipeline` package in the game;
+GreyBoxVillage and Living Vale have it, and every new game adds it. Batch-mode tests
+(`unity test`) need the project closed. Use computer use only for a check the CLI cannot make, and
+say why. The commands, in order, are in
+[`docs/llm-wiki/environment.md`](docs/llm-wiki/environment.md#the-unity-cli-in-game-checks).
+
 **Generated assets come from the asset server** in [`tools/comfyui/`](tools/comfyui/README.md).
 Before asking it for anything, read
 [`tools/comfyui/AGENT_USAGE.md`](tools/comfyui/AGENT_USAGE.md): connecting a machine, the
@@ -132,6 +143,16 @@ user's own ComfyUI, so touch only this stack's containers, image and volume. Nev
 `docker ... prune`, and never stop, remove or reconfigure another container, or restart WSL
 or Docker Desktop, without the user's say-so. Generated files are drafts until a person
 puts them in a game.
+
+**Models on the RTX 5080 from another machine** come from the Ollama server in
+[`tools/ollama-server/`](tools/ollama-server/README.md). Before using it, read
+[`tools/ollama-server/AGENT_USAGE.md`](tools/ollama-server/AGENT_USAGE.md): connecting, the
+checks, running the sweep kit and the live tests against it, and what each failure means. In
+short: `python tools/ollama-server/ollama_remote.py check`, which reads
+`AGENERELA_OLLAMA_URL` and `AGENERELA_OLLAMA_API_KEY` from `tools/ollama-server/.env`; Unity reads
+the same two from the environment. As with the asset server, never open or print `.env`, never
+put the key in a URL, a command line or a chat, and never touch the machine's other containers.
+That server runs Ollama's Linux build, so its results are never compared with another Ollama's.
 
 **Before opening a pull request:**
 - Unity console clean — no new errors or warnings

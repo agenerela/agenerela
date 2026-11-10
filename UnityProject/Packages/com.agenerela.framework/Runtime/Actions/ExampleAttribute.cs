@@ -26,5 +26,12 @@ namespace Agenerela
 
         /// <summary>Target ids this verb sensibly applies to. Never null.</summary>
         public string[] PreferredTargets { get; }
+
+        /// <summary>
+        /// Optional: what the agent says in the example, the code front door's
+        /// <see cref="ActionDefinition.ExampleStatement"/> (#190, G14). Set it by name:
+        /// <c>[Example("Head over to the {0}.", "tower", Statement = "On my way.")]</c>.
+        /// </summary>
+        public string Statement { get; set; }
     }
 }

@@ -77,23 +77,64 @@ prototype's 20 prompts on `qwen3.5:2b` twice in one session, guards on and then
 Found while building `AgentBehaviour` (#93). `DestroyImmediate` in an EditMode test does not
 raise a component's `destroyCancellationToken`, so "destroying the GameObject cancels its
 pending request" cannot be shown there; `AgentBehaviourPlayModeTests` does it in PlayMode, with
-a provider that holds its request. EditMode can only check that the provider was handed the
-token. Unity also raises the token only for a component that has woken: a request asked of a
+a provider that holds its request. EditMode can only check that cancelling the caller's token
+reaches the provider: since #219 the provider is sent a token linked to the caller's and to the
+agent's reset token, not the caller's own object. Unity also raises the token only for a component that has woken: a request asked of a
 component whose GameObject was never active is not cancelled by destroying it. The package
 documents that limit and a test pins it.
 
-### The Unity CLI (optional)
+### The Unity CLI: in-game checks
 
-Unity's own command line, `unity`, is installed on the lead's laptop (1.0.0-beta.8 when
-checked on 26 October 2026, a beta that may change). Two commands are useful with no project
-change: `unity status` lists the open editors, and `unity test <project> --mode EditMode
---output <xml>` runs the same EditMode tests as the raw command above, choosing the editor
-from `ProjectVersion.txt`. Set `UNITY_NO_BANNER=1` and `UNITY_NON_INTERACTIVE=1` when an
-agent calls it. Its live editor control (`unity command`, `unity list`) needs the
-experimental `com.unity.pipeline` package. Only `Demos/GreyBoxVillage` has it (0.9.1-exp.1; its
-README says how it is driven). `UnityProject` does not: the package would change a committed
-manifest and overlaps MCP for Unity, below. The `unity-cli` skill is installed per user, not in
-this repository.
+Unity's own command line, `unity`, is installed on the lead's laptop (1.0.0-beta.13 on
+10 November 2026, a beta that may change). **It is how an agent checks a running game**
+(`AGENTS.md`): it drives an open editor without the mouse or the screen, so the user keeps
+working. Set `UNITY_NO_BANNER=1`, `UNITY_NON_INTERACTIVE=1` and `UNITY_NO_PAGER=1` when an agent
+calls it. The `unity-cli` skill is installed per user, not in this repository.
+
+Two commands need no project change: `unity status` lists the open editors, and
+`unity test <project> --mode EditMode --output <xml>` runs the same EditMode tests as the raw
+command above, choosing the editor from `ProjectVersion.txt`, with the project closed. Live
+control (`unity command`) needs the experimental `com.unity.pipeline` package (0.9.1-exp.1).
+`Demos/GreyBoxVillage`, `Demos/GreyBoxVillageClassic` and `Demos/LivingVale` have it.
+`UnityProject` does not: its tests are the check there, and it has MCP for Unity, below.
+
+The loop, checked on Living Vale on 10 November 2026 from a worktree at a short path. Commands
+are in groups (`editor.playmode start`, not `editor_play`), and a command's own flags go after
+`--`. `unity command --detail compact` lists what the package has.
+
+```bash
+export UNITY_PROJECT_PATH=C:/Unity_Projects/wt-x/Demos/LivingVale   # this worktree's game
+unity open "$UNITY_PROJECT_PATH"
+unity status --until-ready --project-path "$UNITY_PROJECT_PATH"
+unity command scene open -- --path Assets/LivingVale/Scenes/Village.unity
+unity command editor set_auto_tick                    # keeps an unfocused editor running
+unity command editor.playmode set_run_in_background   # the same, for the game loop
+unity command editor.playmode start
+unity status --until-ready --project-path "$UNITY_PROJECT_PATH"
+unity command job wait -- --condition '{"member":"UnityEngine.Time.frameCount","op":"changed"}' --timeout 15
+unity command capture game_view -- --source screen --save_path Logs/check.png
+unity command console get -- --tail 30 --level warn
+unity command script eval -- --code 'return UnityEngine.Time.frameCount;' --timeout 15000
+unity command editor.playmode stop
+unity command editor.playmode set_run_in_background -- --enable false
+unity close "$UNITY_PROJECT_PATH"
+```
+
+- **Open the scene first.** A project the editor opens fresh may start on an empty scene, and
+  Play mode then runs nothing. `scene list_open` says which is loaded.
+- **`job wait` is the proof the game runs.** An unfocused editor can sit on frame 1 while
+  reporting Play mode; `met: true` with frames observed means it is advancing.
+- **`--save_path` is under `Assets/`**: `Logs/check.png` lands in `Assets/Logs/`, which git
+  ignores, but Unity also writes `Assets/Logs.meta`, which it does not. Copy the picture to
+  `.scratch/`, then delete both.
+- **A game that asks a model needs the Ollama lock.** Living Vale loads its model on Play;
+  take the lock, and unload the model after.
+- **One editor per worktree.** An editor open on another checkout answers the same commands, so
+  always pass this worktree's project path.
+- **Restore what an import rewrites.** Opening Living Vale rewrote
+  `Assets/Settings/Mobile_RPAsset.asset`; nothing in a check should be committed from it.
+- The package writes `ProjectSettings/Packages/com.unity.pipeline/EditorPipelineConfig.json`,
+  per-machine state such as whether Run In Background is overridden. Git ignores it.
 
 ## Per-machine setup — do this BEFORE cloning
 
@@ -154,7 +195,7 @@ ollama pull qwen3.5:4b
 
 **What the framework uses.** `OllamaSettings`, and an `OllamaProviderConfig` asset made with
 Create → Agenerela → Ollama Provider, default to `http://127.0.0.1:11434`,
-`qwen3.5:2b`, a 4096-token context, temperature 0 and a 30 s timeout. Always `127.0.0.1`,
+`qwen3.5:4b` (the 2B until PR #232 on 9 November; a saved config asset keeps the model it was made with), a 4096-token context, temperature 0 and a 30 s timeout. Always `127.0.0.1`,
 never `localhost`: on Windows `localhost` tries IPv6 first, Ollama listens on IPv4 only, and
 each request waited about 2 s (findings, 5 October 2026). Check a server with
 `curl http://127.0.0.1:11434/api/version`.
@@ -199,6 +240,39 @@ on one machine and not investigated further. On a laptop, `size_vram` of 0 was o
 started; restarting Ollama after the GPU woke fixed it (seen once, not investigated). Run on
 AC power: one 5 October session was run on battery (findings), and a battery run is not
 comparable with an AC one.
+
+## Ollama on another machine, over the local network
+
+One machine serves the model, and another runs Unity or a probe against it, so the laptop can use
+the RTX 5080's card. Nothing in the framework changes but the address and a key:
+`OllamaSettings.Endpoint` and `ApiKey`, an `OllamaProviderConfig`'s **Endpoint** and **API Key
+Variable**, `AGENERELA_OLLAMA_URL` and `AGENERELA_OLLAMA_API_KEY` for the live tests, and the run
+kits (`tools/live-runs/`), which read both from `tools/ollama-server/.env`.
+
+**The way to do it is the Docker server in [`tools/ollama-server/`](../../tools/ollama-server/README.md)**,
+set up on the RTX 5080 on 9 November 2026: Ollama 0.40.14 pinned by its image tag, with the
+sweep kit's settings, behind a gateway on port 11436 that wants a key on every request and blocks
+deleting or creating models. Its README sets the server up and connects the laptop, Unity
+included; its [`AGENT_USAGE.md`](../../tools/ollama-server/AGENT_USAGE.md) is the same for an
+agent. It replaced opening the Ollama app's own port to the network, written here the same day and
+never tried: Ollama has no login, so anyone on the network could have used the card and pulled or
+deleted models, and the app's updater could change the version under a run.
+
+**Measuring across the network:**
+
+- **It is a machine of its own.** The Docker server runs Ollama's Linux build under WSL2. Never
+  compare its results with the Ollama app's, even on the same card; A/B both arms on it.
+- **The serving machine's GPU is the one measured.** Record its card, driver and Ollama version,
+  and that it was the Docker server, not the asking machine's.
+- **Latency includes the network hop.** About a millisecond at home, more over the VPN. Say which.
+- **Take the 5080's lock, `.scratch/ollama-5080-lock/` on the lead's laptop**, not the laptop's
+  `.scratch/ollama-lock/`, which covers the laptop's own Ollama only. It covers sessions on the
+  laptop; one on the 5080 machine or elsewhere can't see it, so still check nothing else uses the
+  GPU: `ollama_remote.py ps`, and both ComfyUI stacks idle.
+- **Unload models on that server** (`ollama_remote.py unload --all`). The runner's residency
+  checks read that server's `/api/ps` through the gateway, so they work unchanged.
+- **Warm a model after a pull or a restart.** The first load read the file from disk in 54 s,
+  past the framework's 30 s timeout; cold loads after that took 1.9 s (`qwen3.5:2b`, 9 November).
 
 ## MCP for Unity (optional)
 

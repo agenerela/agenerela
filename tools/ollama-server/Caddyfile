@@ -1,0 +1,61 @@
+# The gateway in front of Ollama's API. See README.md, "How it is exposed".
+#
+# Ollama has no login of its own, so this is the only door other machines get:
+#   1. every request must carry "Authorization: Bearer <AGENERELA_OLLAMA_API_KEY>";
+#   2. only the routes the framework, the run kits and ollama_remote.py use are passed
+#      through. Deleting, creating, copying or pushing a model, uploading blobs and the
+#      OpenAI-compatible /v1 routes answer 403. Those stay on the server itself, through
+#      `docker exec agenerela-ollama ollama ...`.
+# Caddy's access log redacts the Authorization header.
+
+{
+	admin off
+	auto_https off
+}
+
+:8080 {
+	# One short line per request: time, status, duration, method, path, and the address the
+	# client called (host), which tells the LAN from this machine. Headers are dropped (the key
+	# is redacted anyway), and so are the client's own address and port: under Docker Desktop
+	# every request arrives from Docker's bridge, so they say nothing. Rejected requests (401,
+	# 403) are logged too, which is how a wrong key shows up.
+	log {
+		output stdout
+		format filter {
+			wrap console {
+				level_format upper
+				time_format wall_milli
+				duration_format string
+			}
+			fields {
+				request>headers delete
+				request>tls delete
+				request>remote_ip delete
+				request>remote_port delete
+				request>client_ip delete
+				request>proto delete
+				resp_headers delete
+				user_id delete
+				bytes_read delete
+			}
+		}
+	}
+
+	@unauthorized not header Authorization "Bearer {$API_KEY}"
+	handle @unauthorized {
+		respond "Missing or wrong token." 401
+	}
+
+	@api path /api/version /api/tags /api/ps /api/show /api/chat /api/generate /api/embed /api/pull
+	handle @api {
+		reverse_proxy ollama:11434 {
+			header_up -Authorization
+			# Pass streamed replies (a pull's progress) through as they come.
+			flush_interval -1
+		}
+	}
+
+	handle {
+		respond "Not exposed through the gateway." 403
+	}
+}
