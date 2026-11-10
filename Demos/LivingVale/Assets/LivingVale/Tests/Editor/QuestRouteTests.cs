@@ -33,6 +33,10 @@ namespace LivingVale.Tests
         private ConversationTradeLink link;
         private ConversationCoordinator coordinator;
         private ScriptedNpcDecisionDriver scripted;
+        private AgenerelaNpcDecisionDriver npcs;
+
+        // The action the agent last carried out: a none runs no handler, so it leaves no outcome.
+        private string LastAction => npcs.LastOutcome?.ActionId ?? GameActions.None;
         private string directory;
 
         [SetUp]
@@ -47,7 +51,8 @@ namespace LivingVale.Tests
             routes = new QuestRoutes(quests, link);
             executor = new NpcActionExecutor(trade, quests, routes);
             scripted = new ScriptedNpcDecisionDriver(seed: 1, executor: executor) { NormalDelay = TimeSpan.FromMilliseconds(5) };
-            coordinator = new ConversationCoordinator(scripted, new ConversationSettings { TurnTimeout = TimeSpan.FromSeconds(2) });
+            npcs = new ScriptedReplies(scripted).Driver(executor);
+            coordinator = new ConversationCoordinator(npcs, new ConversationSettings { TurnTimeout = TimeSpan.FromSeconds(2) });
             link.Attach(coordinator, trade);
             link.AttachQuests(quests);
             link.AttachRoutes(routes);
@@ -127,21 +132,21 @@ namespace LivingVale.Tests
         {
             AcceptMainQuest();
             await Say(Kest, "I have proof, Fen saw you take the wagon.");
-            Assert.AreEqual(GameActions.None, scripted.LastOutcome.ActionId, History(Kest));
+            Assert.AreEqual(GameActions.None, LastAction, History(Kest));
             Assert.IsNull(routes.ActiveProposal);
             Assert.IsFalse(quests.HasClue(QuestLog.ClueFenTestimony), "A claim in chat records nothing.");
             Assert.IsFalse(Lists(QuestRoutes.KestId, GameActions.OfferExchange, QuestRoutes.ExchangeKestTestimony));
             StringAssert.Contains("witness", History(Kest));
 
             await Say(Fen, "What did you see on the road?");
-            Assert.AreEqual(GameActions.ShareInformation, scripted.LastOutcome.ActionId, History(Fen));
+            Assert.AreEqual(GameActions.ShareInformation, LastAction, History(Fen));
             Assert.IsTrue(quests.HasClue(QuestLog.ClueFenTestimony));
             Assert.IsTrue(quests.HasClue(QuestLog.ClueCampLocated));
             StringAssert.Contains("Clue recorded", History(Fen), "The receipt is in the chat.");
             Assert.IsEmpty(routes.KnowledgeFor(QuestRoutes.FenId), "Told once; nothing left to tell.");
 
             await Say(Kest, "Fen saw you. She'll tell the castle.");
-            Assert.AreEqual(GameActions.OfferExchange, scripted.LastOutcome.ActionId, History(Kest));
+            Assert.AreEqual(GameActions.OfferExchange, LastAction, History(Kest));
             Assert.AreEqual(MainQuestState.Active, quests.MainState, "On the card, not yet carried out.");
             Assert.IsTrue(ConfirmCard(QuestRoutes.ExchangeKestTestimony).Applied);
             Assert.AreEqual(MainQuestState.ParcelRecovered, quests.MainState);
@@ -168,7 +173,7 @@ namespace LivingVale.Tests
         {
             AcceptMainQuest();
             await Say(Kest, "How much do you want for the parcel?");
-            Assert.AreEqual(GameActions.OfferExchange, scripted.LastOutcome.ActionId, History(Kest));
+            Assert.AreEqual(GameActions.OfferExchange, LastAction, History(Kest));
             Assert.AreEqual(PlayerInventory.StartingGold, inventory.Gold, "The card alone moves no gold.");
             Assert.IsTrue(ConfirmCard(QuestRoutes.ExchangeKestPayment).Applied);
             Assert.AreEqual(PlayerInventory.StartingGold - QuestRoutes.KestPayment, inventory.Gold);
@@ -195,16 +200,16 @@ namespace LivingVale.Tests
         {
             AcceptMainQuest();
             await Say(Kest, "Iven's herbs, does that count for something?");
-            Assert.AreEqual(GameActions.None, scripted.LastOutcome.ActionId, "No favour done yet.");
+            Assert.AreEqual(GameActions.None, LastAction, "No favour done yet.");
 
             await Say(Iven, "Is there anything else I can do? Herbs, maybe?");
-            Assert.AreEqual(GameActions.OfferQuest, scripted.LastOutcome.ActionId, History(Iven));
+            Assert.AreEqual(GameActions.OfferQuest, LastAction, History(Iven));
             Assert.AreEqual(SideQuestState.Undiscovered, quests.HerbsState, "Offered, not accepted.");
             Assert.IsTrue(ConfirmCard(QuestRoutes.OfferHerbsIven).Applied);
             Assert.AreEqual(SideQuestState.Active, quests.HerbsState);
 
             await Say(Iven, "Here are the herbs.");
-            Assert.AreNotEqual(GameActions.ResolveDelivery, scripted.LastOutcome.ActionId, "Not three bundles yet.");
+            Assert.AreNotEqual(GameActions.ResolveDelivery, LastAction, "Not three bundles yet.");
 
             foreach (var id in new[] { QuestRoutes.PickupHerb1, QuestRoutes.PickupHerb2, QuestRoutes.PickupHerb3 })
             {
@@ -215,7 +220,7 @@ namespace LivingVale.Tests
             Assert.AreEqual(3, inventory.CountOf(ItemCatalog.HerbBundle));
             StringAssert.Contains("herbs 3/3", string.Join("\n", routes.JournalLines()));
             await Say(Iven, "Here are the herbs you asked for.");
-            Assert.AreEqual(GameActions.ResolveDelivery, scripted.LastOutcome.ActionId, History(Iven));
+            Assert.AreEqual(GameActions.ResolveDelivery, LastAction, History(Iven));
             Assert.IsTrue(ConfirmCard(QuestRoutes.DeliveryHerbsIven).Applied);
             Assert.AreEqual(SideQuestState.Completed, quests.HerbsState);
             Assert.AreEqual(0, inventory.CountOf(ItemCatalog.HerbBundle));
@@ -261,7 +266,7 @@ namespace LivingVale.Tests
             AcceptMainQuest();
             await RecoverByCombat();
             await Say(Iven, "Here is the medicine.");
-            Assert.AreEqual(GameActions.ResolveDelivery, scripted.LastOutcome.ActionId, History(Iven));
+            Assert.AreEqual(GameActions.ResolveDelivery, LastAction, History(Iven));
             Assert.AreEqual(MainQuestState.ParcelRecovered, quests.MainState, "On the card, not yet delivered.");
             Assert.IsTrue(ConfirmCard(QuestRoutes.DeliveryParcelIven).Applied);
             Assert.AreEqual(ParcelDisposition.Healer, quests.Disposition);
@@ -278,7 +283,7 @@ namespace LivingVale.Tests
 
             await RecoverByCombat();
             await Say(Elra, "Here is the parcel for the garrison.");
-            Assert.AreEqual(GameActions.None, scripted.LastOutcome.ActionId, "No permit yet.");
+            Assert.AreEqual(GameActions.None, LastAction, "No permit yet.");
             StringAssert.Contains("permit", History(Elra));
             Assert.IsFalse(Lists(QuestRoutes.ElraId, GameActions.ResolveDelivery, QuestRoutes.DeliveryParcelElra));
 
@@ -299,7 +304,7 @@ namespace LivingVale.Tests
             Assert.IsFalse(Lists(QuestLog.IvenId, GameActions.ResolveDelivery, QuestRoutes.DeliveryDivisionIven));
 
             await Say(Iven, "Could we split the medicine with the garrison?");
-            Assert.AreEqual(GameActions.OfferExchange, scripted.LastOutcome.ActionId, History(Iven));
+            Assert.AreEqual(GameActions.OfferExchange, LastAction, History(Iven));
             Assert.IsFalse(quests.HasClue(QuestLog.AgreementHealer), "Proposed, not agreed.");
             Assert.IsTrue(ConfirmCard(QuestRoutes.ExchangeDivisionIven).Applied);
             Assert.IsTrue(quests.HasClue(QuestLog.AgreementHealer));
@@ -310,7 +315,7 @@ namespace LivingVale.Tests
             await Say(Elra, "Would the garrison agree to divide it with Iven?");
             Assert.IsTrue(ConfirmCard(QuestRoutes.ExchangeDivisionElra).Applied, History(Elra));
             await Say(Iven, "Here is your share, as agreed.");
-            Assert.AreEqual(GameActions.ResolveDelivery, scripted.LastOutcome.ActionId, History(Iven));
+            Assert.AreEqual(GameActions.ResolveDelivery, LastAction, History(Iven));
             Assert.IsTrue(ConfirmCard(QuestRoutes.DeliveryDivisionIven).Applied);
             Assert.AreEqual(ParcelDisposition.Division, quests.Disposition);
             Assert.AreEqual(PlayerInventory.StartingGold + QuestLog.DivisionGold, inventory.Gold);
@@ -478,7 +483,7 @@ namespace LivingVale.Tests
         {
             AcceptMainQuest();
             await Say(Kest, "How much gold for Iven's parcel?");
-            Assert.AreEqual(GameActions.OfferExchange, scripted.LastOutcome.ActionId, History(Kest));
+            Assert.AreEqual(GameActions.OfferExchange, LastAction, History(Kest));
             Assert.AreEqual(QuestRoutes.ExchangeKestPayment, routes.ActiveProposal?.Contract.Id);
         }
 

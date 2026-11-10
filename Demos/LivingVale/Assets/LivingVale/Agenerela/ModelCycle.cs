@@ -9,9 +9,8 @@ namespace LivingVale.Agenerela
 {
     /// <summary>
     /// What the model key (F7) does: closes the open conversation, so no turn crosses models, asks
-    /// <see cref="ModelSelector"/> for the next installed model, and gives the model driver a provider
-    /// for it (<see cref="AgenerelaNpcDecisionDriver.UseProvider"/>), so every NPC keeps its agent and
-    /// memory. Loading and unloading are the provider's own <see cref="IModelLifecycle"/> calls (#198),
+    /// <see cref="ModelSelector"/> for the next installed model, and puts a provider for it in the F6
+    /// switch (<see cref="NpcProviderSwitch.UseModel"/>), so every NPC keeps its agent and memory. Loading and unloading are the provider's own <see cref="IModelLifecycle"/> calls (#198),
     /// which never wait in the decision queue.
     /// </summary>
     /// <remarks>
@@ -23,7 +22,7 @@ namespace LivingVale.Agenerela
     public sealed class ModelCycle
     {
         private readonly ConversationCoordinator coordinator;
-        private readonly SwitchableNpcDecisionDriver drivers;
+        private readonly NpcProviderSwitch providers;
         private readonly ModelSelector selector;
         private readonly Func<string, ILLMProvider> makeProvider;
         private readonly Func<TimeSpan, CancellationToken, Task> delay;
@@ -41,21 +40,19 @@ namespace LivingVale.Agenerela
         /// <summary>How long the key must rest before the model it landed on is loaded (the press debounce).</summary>
         public static readonly TimeSpan DefaultSettleDelay = TimeSpan.FromSeconds(1);
 
-        /// <param name="driver">The model driver; it stays the same object, and only its provider changes.</param>
+        /// <param name="providers">The F6 switch, whose model provider a press replaces; the driver stays the same object.</param>
         /// <param name="makeProvider">Makes the provider for a model; null uses a local Ollama (<see cref="AgenerelaNpcDecisionDriver.OllamaFor"/>).</param>
         /// <param name="delay">Waits out the settle delay; null uses <see cref="Task.Delay(TimeSpan, CancellationToken)"/>. Tests replace it.</param>
-        public ModelCycle(ConversationCoordinator coordinator, SwitchableNpcDecisionDriver drivers, ModelSelector selector,
-            AgenerelaNpcDecisionDriver driver, Func<string, ILLMProvider> makeProvider = null,
-            Func<TimeSpan, CancellationToken, Task> delay = null)
+        public ModelCycle(ConversationCoordinator coordinator, NpcProviderSwitch providers, ModelSelector selector,
+            Func<string, ILLMProvider> makeProvider = null, Func<TimeSpan, CancellationToken, Task> delay = null)
         {
             this.coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
-            this.drivers = drivers ?? throw new ArgumentNullException(nameof(drivers));
+            this.providers = providers ?? throw new ArgumentNullException(nameof(providers));
             this.selector = selector ?? throw new ArgumentNullException(nameof(selector));
-            Driver = driver ?? throw new ArgumentNullException(nameof(driver));
             this.makeProvider = makeProvider ?? (model => AgenerelaNpcDecisionDriver.OllamaFor(model));
             this.delay = delay ?? Task.Delay;
-            loaded = driver.Provider;
-            loadedModel = driver.ModelLabel;
+            loaded = providers.ModelProvider;
+            loadedModel = providers.ModelLabel;
         }
 
         public TimeSpan SettleDelay { get; set; } = DefaultSettleDelay;
@@ -69,8 +66,8 @@ namespace LivingVale.Agenerela
         /// <summary>Raised on the caller's context whenever <see cref="Notice"/> changes after a press, as a model starts and finishes loading.</summary>
         public event Action NoticeChanged;
 
-        /// <summary>The model-backed driver.</summary>
-        public AgenerelaNpcDecisionDriver Driver { get; }
+        /// <summary>The NPCs' driver, the same object whatever the model.</summary>
+        public AgenerelaNpcDecisionDriver Driver => providers.Driver;
 
         public ModelSelector Selector => selector;
 
@@ -124,7 +121,7 @@ namespace LivingVale.Agenerela
                     // dropped and no turn starts on one model and lands on another.
                     coordinator.Close(ConversationCloseReason.Interrupted);
                     switchedTo = makeProvider(choice.Model);
-                    Driver.UseProvider(switchedTo, choice.Model);
+                    providers.UseModel(switchedTo, choice.Model);
                 }
 
                 Notice = choice.Notice;
@@ -154,7 +151,7 @@ namespace LivingVale.Agenerela
         /// </summary>
         public void LoadCurrent(CancellationToken ct = default)
         {
-            Settle(Driver.Provider, ct);
+            Settle(providers.ModelProvider, ct);
         }
 
         private void Settle(ILLMProvider next, CancellationToken ct)
@@ -162,11 +159,11 @@ namespace LivingVale.Agenerela
             settling?.Cancel();
             settling?.Dispose();
             settling = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            Loading = SettleThenLoad(next, Driver.ModelLabel, settling.Token);
+            Loading = SettleThenLoad(next, providers.ModelLabel, settling.Token);
         }
 
         private bool Superseded(ILLMProvider next, CancellationToken token) =>
-            token.IsCancellationRequested || !ReferenceEquals(next, Driver.Provider);
+            token.IsCancellationRequested || !ReferenceEquals(next, providers.ModelProvider);
 
         private async Task SettleThenLoad(ILLMProvider next, string model, CancellationToken token)
         {
@@ -211,7 +208,7 @@ namespace LivingVale.Agenerela
                     }
                 }
 
-                if (drivers.Choice != NpcDriverChoice.Agenerela)
+                if (providers.Choice != NpcDriverChoice.Agenerela)
                 {
                     return;
                 }

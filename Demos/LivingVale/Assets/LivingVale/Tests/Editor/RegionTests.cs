@@ -285,7 +285,7 @@ namespace LivingVale.Tests
         [Test]
         public async Task EveryRegionNpcHasScriptedLinesOfItsOwn()
         {
-            var driver = new ScriptedNpcDecisionDriver(seed: 3) { NormalDelay = TimeSpan.Zero };
+            var driver = new ScriptedReplies(new ScriptedNpcDecisionDriver(seed: 3) { NormalDelay = TimeSpan.Zero }).Driver();
             long id = 0;
             foreach (var npc in RegionNpcs.All)
             {

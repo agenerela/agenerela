@@ -126,10 +126,12 @@ namespace LivingVale.Agenerela
         /// built later too (<see cref="Agent.Provider"/>, #198). Each keeps its memory, actions,
         /// targets and guards; a decision already under way finishes on the provider it started on.
         /// </summary>
-        public void UseProvider(ILLMProvider next, string modelLabel)
+        /// <param name="label">What <see cref="Label"/> says instead of "Agenerela · model", read each time: the scripted replies name their fixture.</param>
+        public void UseProvider(ILLMProvider next, string modelLabel, Func<string> label = null)
         {
             provider = next ?? throw new ArgumentNullException(nameof(next));
             ModelLabel = string.IsNullOrWhiteSpace(modelLabel) ? next.Name : modelLabel.Trim();
+            labelSource = label;
             foreach (var agent in agents.Values)
             {
                 agent.Provider = next;
@@ -138,7 +140,9 @@ namespace LivingVale.Agenerela
 
         public string ModelLabel { get; private set; }
 
-        public string Label => "Agenerela · " + ModelLabel;
+        public string Label => labelSource != null ? labelSource() : "Agenerela · " + ModelLabel;
+
+        private Func<string> labelSource;
 
         /// <summary>The game's own observations for a turn, sent after the bindings' lines: quest stage, a visible quote, the last receipt.</summary>
         public Func<NpcTurn, IEnumerable<string>> TurnObservations { get; set; }

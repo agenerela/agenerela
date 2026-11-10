@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Agenerela;
+using LivingVale.Agenerela;
 using LivingVale.Interaction;
 using NUnit.Framework;
 using UnityEngine;
@@ -13,13 +14,15 @@ namespace LivingVale.Tests
     {
         private static readonly NpcDescriptor Mara = new NpcDescriptor("npc_mara", "Mara", "General trader");
 
-        private ScriptedNpcDecisionDriver driver;
+        private ScriptedNpcDecisionDriver script;
+        private AgenerelaNpcDecisionDriver driver;
         private ConversationCoordinator coordinator;
 
         [SetUp]
         public void SetUp()
         {
-            driver = new ScriptedNpcDecisionDriver(seed: 1) { NormalDelay = TimeSpan.FromMilliseconds(5), SlowDelay = TimeSpan.FromMilliseconds(300) };
+            script = new ScriptedNpcDecisionDriver(seed: 1) { NormalDelay = TimeSpan.FromMilliseconds(5), SlowDelay = TimeSpan.FromMilliseconds(300) };
+            driver = new ScriptedReplies(script).Driver();
             coordinator = new ConversationCoordinator(driver, new ConversationSettings { TurnTimeout = TimeSpan.FromMilliseconds(150) });
             coordinator.Open(Mara);
         }
@@ -71,21 +74,21 @@ namespace LivingVale.Tests
         public void Label_SaysScripted_AndNamesTheFixture()
         {
             StringAssert.Contains("Scripted", driver.Label);
-            driver.Fixture = ScriptedFixture.Slow;
+            script.Fixture = ScriptedFixture.Slow;
             StringAssert.Contains("Slow", driver.Label);
         }
 
         [Test]
         public async Task NeverAnswers_EndsInTimeout()
         {
-            driver.Fixture = ScriptedFixture.NeverAnswers;
+            script.Fixture = ScriptedFixture.NeverAnswers;
             Assert.That(await Talk("hello"), Is.EqualTo(TurnFailure.Timeout));
         }
 
         [Test]
         public async Task Slow_PastTheTimeout_IsATimeout_AndNeverExecutes()
         {
-            driver.Fixture = ScriptedFixture.Slow;
+            script.Fixture = ScriptedFixture.Slow;
             Assert.That(await Talk("hello"), Is.EqualTo(TurnFailure.Timeout));
             Assert.That(driver.ExecutedCount, Is.Zero);
         }
@@ -93,24 +96,15 @@ namespace LivingVale.Tests
         [Test]
         public async Task Malformed_IsMalformed()
         {
-            driver.Fixture = ScriptedFixture.Malformed;
+            script.Fixture = ScriptedFixture.Malformed;
             Assert.That(await Talk("hello"), Is.EqualTo(TurnFailure.Malformed));
         }
 
         [Test]
         public async Task Throws_IsAProviderError()
         {
-            driver.Fixture = ScriptedFixture.Throws;
-            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("Scripted backend failure"));
+            script.Fixture = ScriptedFixture.Throws;
             Assert.That(await Talk("hello"), Is.EqualTo(TurnFailure.ProviderError));
-        }
-
-        [Test]
-        public void Execute_AcceptsOnlyNone()
-        {
-            var turn = new NpcTurn(1, Mara, "hi", Array.Empty<ChatLine>());
-            Assert.That(driver.Execute(turn, NpcReply.Decided(new AgentDecision(ActionRegistry.None, TargetRegistry.NoTarget, "ok"))), Is.True);
-            Assert.That(driver.Execute(turn, NpcReply.Decided(new AgentDecision("give_gold", TargetRegistry.NoTarget, "here"))), Is.False);
         }
     }
 }

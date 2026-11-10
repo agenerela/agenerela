@@ -10,13 +10,14 @@ using NUnit.Framework;
 namespace LivingVale.Tests
 {
     /// <summary>The scripted replies decided through Agent with the framework's ScriptedProvider (#194, G5g).</summary>
-    public sealed class ScriptedAgentDriverTests
+    public sealed class ScriptedRepliesTests
     {
         private static readonly NpcDescriptor Mara = new NpcDescriptor(VendorStock.MaraId, "Mara", "General trader");
 
         private ScriptedNpcDecisionDriver script;
         private TradeService trade;
-        private ScriptedAgentDriver driver;
+        private ScriptedReplies replies;
+        private AgenerelaNpcDecisionDriver driver;
         private long nextId;
 
         [SetUp]
@@ -26,7 +27,8 @@ namespace LivingVale.Tests
             trade = new TradeService(new PlayerInventory(catalog), new[] { VendorStock.CreateMara(catalog) }, new FakeTradeSession());
             var executor = new NpcActionExecutor(trade);
             script = new ScriptedNpcDecisionDriver(executor: executor) { NormalDelay = TimeSpan.Zero };
-            driver = new ScriptedAgentDriver(script, executor);
+            replies = new ScriptedReplies(script);
+            driver = replies.Driver(executor);
         }
 
         private NpcTurn Turn(string line) => new NpcTurn(++nextId, Mara, line, Array.Empty<ChatLine>(), 1);
@@ -47,8 +49,9 @@ namespace LivingVale.Tests
             Assert.AreEqual(GameActions.QuotePurchase, reply.Decision.ActionId);
             Assert.AreEqual("stock_mara_potion_one", reply.Decision.TargetId);
             Assert.IsInstanceOf<DecisionResult>(reply.DriverState, "The framework's pipeline decided it.");
-            Assert.AreEqual(1, driver.Provider.RequestCount, "Through ScriptedProvider.");
-            Assert.AreEqual("Mara", driver.Provider.LastRequest.Agent);
+            Assert.AreEqual(1, replies.Provider.RequestCount, "Through ScriptedProvider.");
+            Assert.AreEqual("Mara", replies.Provider.LastRequest.Agent);
+            Assert.AreEqual(VendorStock.MaraId, replies.Provider.LastRequest.AgentId, "The script keys on the agent's stable id (#217).");
 
             Assert.IsTrue(driver.Execute(turn, reply), "Agent.Execute runs the bound handler, then the executor.");
             Assert.IsNotNull(trade.ActiveQuote);

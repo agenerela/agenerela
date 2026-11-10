@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Agenerela;
+using LivingVale.Agenerela;
 using LivingVale.Game;
 using LivingVale.Interaction;
 using NUnit.Framework;
@@ -19,6 +20,10 @@ namespace LivingVale.Tests
         private TradeService trade;
         private NpcActionExecutor executor;
         private ScriptedNpcDecisionDriver driver;
+        private AgenerelaNpcDecisionDriver npcs;
+
+        // The action the agent last carried out: a none runs no handler, so it leaves no outcome.
+        private string LastAction => npcs.LastOutcome?.ActionId ?? GameActions.None;
         private ConversationCoordinator coordinator;
         private ConversationTradeLink link;
 
@@ -31,7 +36,8 @@ namespace LivingVale.Tests
             trade = new TradeService(inventory, new[] { VendorStock.CreateMara(catalog) }, link);
             executor = new NpcActionExecutor(trade);
             driver = new ScriptedNpcDecisionDriver(seed: 1, executor: executor) { NormalDelay = TimeSpan.FromMilliseconds(5) };
-            coordinator = new ConversationCoordinator(driver, new ConversationSettings { TurnTimeout = TimeSpan.FromSeconds(2) });
+            npcs = new ScriptedReplies(driver).Driver(executor);
+            coordinator = new ConversationCoordinator(npcs, new ConversationSettings { TurnTimeout = TimeSpan.FromSeconds(2) });
             link.Attach(coordinator, trade);
         }
 
@@ -64,7 +70,7 @@ namespace LivingVale.Tests
             Assert.That(quote.TargetId, Is.EqualTo("stock_mara_potion_one"));
             Assert.That(quote.Direction, Is.EqualTo(TradeDirection.Purchase));
             Assert.That(quote.ConversationGeneration, Is.EqualTo(coordinator.Generation));
-            Assert.That(driver.LastOutcome.ActionId, Is.EqualTo(GameActions.QuotePurchase));
+            Assert.That(LastAction, Is.EqualTo(GameActions.QuotePurchase));
             Assert.That(inventory.Gold, Is.EqualTo(40), "the decision only quoted");
             Assert.That(LastLine.Speaker, Is.EqualTo(ChatSpeaker.Npc));
 
@@ -82,7 +88,7 @@ namespace LivingVale.Tests
             coordinator.Open(Mara);
             await Say("Can I sell my wolf pelt?");
             Assert.That(trade.ActiveQuote, Is.Null);
-            Assert.That(driver.LastOutcome.ActionId, Is.EqualTo(GameActions.None), "no pelt, so quote_sale was not available");
+            Assert.That(LastAction, Is.EqualTo(GameActions.None), "no pelt, so quote_sale was not available");
             StringAssert.Contains("pelt", LastLine.Text);
 
             inventory.TryGiveLoot("wolf_1", new[] { new ItemChange(ItemCatalog.WolfPelt, 1) }, 0);
@@ -162,12 +168,13 @@ namespace LivingVale.Tests
         public async Task G1Behaviour_WithoutAnExecutor_IsUnchanged()
         {
             var plain = new ScriptedNpcDecisionDriver(seed: 1) { NormalDelay = TimeSpan.FromMilliseconds(5) };
-            var conversations = new ConversationCoordinator(plain);
+            var plainNpcs = new ScriptedReplies(plain).Driver();
+            var conversations = new ConversationCoordinator(plainNpcs);
             conversations.Open(Mara);
             Assert.That(conversations.Submit("buy a potion"), Is.True);
             await Run.NotCancelled(conversations.LastTurn);
             Assert.That(conversations.HistoryFor(Mara.Id).Last().Speaker, Is.EqualTo(ChatSpeaker.Npc));
-            Assert.That(plain.LastOutcome, Is.Null);
+            Assert.That(plainNpcs.LastOutcome?.Executed ?? true, Is.True, "Without an executor only none is registered.");
         }
     }
 }

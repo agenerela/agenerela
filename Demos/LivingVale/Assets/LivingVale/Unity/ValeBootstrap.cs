@@ -43,13 +43,15 @@ namespace LivingVale.Unity
         private InventoryHud inventoryHud;
         private NavigationTargets navigation;
         private MapOverlay map;
-        private ScriptedAgentDriver scriptedAgent;
         private int blockedFrame = -1;
 
         public ConversationCoordinator Coordinator { get; private set; }
         public ScriptedNpcDecisionDriver Driver { get; private set; }
+        /// <summary>Every speaking NPC's agent, answering from the model or, after F6, from the script.</summary>
         public AgenerelaNpcDecisionDriver ModelDriver { get; private set; }
-        public SwitchableNpcDecisionDriver Drivers { get; private set; }
+
+        /// <summary>F6: the script or the model, as the provider of the same agents.</summary>
+        public NpcProviderSwitch Drivers { get; private set; }
 
         /// <summary>F7: the next installed model for the Agenerela driver.</summary>
         public ModelCycle Models { get; private set; }
@@ -123,12 +125,12 @@ namespace LivingVale.Unity
             Executor = new NpcActionExecutor(Trade, Quests, Routes);
             Driver = new ScriptedNpcDecisionDriver(executor: Executor);
             ModelDriver = AgenerelaNpcDecisionDriver.ForOllama(ollamaModel, Executor, server: ollamaServer);
-            // The scripted replies decide through Agent with ScriptedProvider (#194), so both paths share one pipeline.
-            scriptedAgent = new ScriptedAgentDriver(Driver, Executor);
-            Drivers = new SwitchableNpcDecisionDriver(scriptedAgent, ModelDriver, driver);
+            // The scripted replies are a provider of the same agents (#194, #198): one pipeline and
+            // one memory per NPC, whichever answers (LV #23).
+            Drivers = new NpcProviderSwitch(ModelDriver, new ScriptedReplies(Driver), driver);
             Saves.Routes = Routes;
 
-            Coordinator = new ConversationCoordinator(Drivers, new ConversationSettings
+            Coordinator = new ConversationCoordinator(ModelDriver, new ConversationSettings
             {
                 TurnTimeout = TimeSpan.FromSeconds(Mathf.Max(0.1f, turnTimeout))
             });
@@ -137,7 +139,7 @@ namespace LivingVale.Unity
             tradeLink.AttachRoutes(Routes);
             // The server's own model list, warm-up and unload (#198), through the provider in use.
             Models = new ModelCycle(Coordinator, Drivers,
-                new ModelSelector(ollamaModels, ModelDriver.ModelLabel, new ProviderModelCatalog(() => ModelDriver.Provider)), ModelDriver,
+                new ModelSelector(ollamaModels, Drivers.ModelLabel, new ProviderModelCatalog(() => Drivers.ModelProvider)),
                 model => AgenerelaNpcDecisionDriver.OllamaFor(model, ollamaServer));
             Models.Finished += OnModelCycled;
             Models.NoticeChanged += OnModelCycled;
@@ -273,7 +275,7 @@ namespace LivingVale.Unity
             if (switchDriver.WasPressedThisFrame())
             {
                 Drivers.Next();
-                if (ReferenceEquals(Drivers.Current, ModelDriver))
+                if (Drivers.Choice == NpcDriverChoice.Agenerela)
                 {
                     Models.LoadCurrent(lifetime.Token);
                 }
@@ -329,7 +331,6 @@ namespace LivingVale.Unity
                 Coordinator.ClearHistories();
                 // The load may have reversed the last trades, so neither driver may report them.
                 ModelDriver?.ForgetReceipts();
-                scriptedAgent?.Inner.ForgetReceipts();
                 Debug.Log($"[LivingVale] Loaded {Saves.SavePath}.");
             }
             else

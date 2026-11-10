@@ -121,7 +121,7 @@ namespace LivingVale.Tests
             public readonly FakeCatalog Catalog = new FakeCatalog { Installed = List };
             public readonly TradeService Trade;
             public readonly AgenerelaNpcDecisionDriver Driver;
-            public readonly SwitchableNpcDecisionDriver Drivers;
+            public readonly NpcProviderSwitch Drivers;
             public readonly ConversationCoordinator Coordinator;
             public readonly ModelCycle Cycle;
 
@@ -152,9 +152,9 @@ namespace LivingVale.Tests
                 var catalog = ItemCatalog.CreateDefault();
                 Trade = new TradeService(new PlayerInventory(catalog), new[] { VendorStock.CreateMara(catalog) }, new FakeTradeSession());
                 Driver = new AgenerelaNpcDecisionDriver(First, "qwen3.5:2b", executor: new NpcActionExecutor(Trade));
-                Drivers = new SwitchableNpcDecisionDriver(new FakeNpcDriver(), Driver, NpcDriverChoice.Agenerela);
-                Coordinator = new ConversationCoordinator(Drivers);
-                Cycle = new ModelCycle(Coordinator, Drivers, new ModelSelector(List, "qwen3.5:2b", Catalog), Driver,
+                Drivers = new NpcProviderSwitch(Driver, new ScriptedReplies(new ScriptedNpcDecisionDriver()), NpcDriverChoice.Agenerela);
+                Coordinator = new ConversationCoordinator(Driver);
+                Cycle = new ModelCycle(Coordinator, Drivers, new ModelSelector(List, "qwen3.5:2b", Catalog),
                     model =>
                     {
                         var provider = Server(model);
@@ -362,7 +362,7 @@ namespace LivingVale.Tests
 
             Assert.IsFalse(rig.Coordinator.IsOpen, "No turn may cross models.");
             Assert.AreEqual("Agenerela · gemma4:e2b-it-qat", rig.Drivers.Label);
-            Assert.AreSame(rig.Cycle.Driver, rig.Drivers.Current);
+            Assert.AreSame(rig.Built[0].provider, rig.Driver.Provider);
             Assert.AreEqual(1, rig.Built.Count);
         }
 
@@ -442,7 +442,7 @@ namespace LivingVale.Tests
 
             Assert.AreEqual(0, finished);
             Assert.AreEqual(0, rig.Built.Count);
-            Assert.AreSame(rig.Driver, rig.Drivers.Current);
+            Assert.AreSame(rig.First, rig.Driver.Provider);
             Assert.IsFalse(rig.Cycle.Busy);
             Assert.AreEqual("qwen3.5:2b", rig.Cycle.Selector.Current, "The selection stays with the driver in use.");
 
