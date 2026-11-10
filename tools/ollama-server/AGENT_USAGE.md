@@ -128,4 +128,7 @@ environment or the `.env` by the script, never written into the script or its co
 | `ps` shows a model you did not load | someone else is using the GPU | Ask the user before timing anything |
 | `ModelNotFound` | the server has not pulled that model | Ask the user whether to `pull` it (rule 3) |
 
-For anything else, report the exact message. The server's logs are only on the RTX 5080 machine.
+For anything else, report the exact message. The server's logs are only on the RTX 5080 machine:
+to see what the server made of a request, ask the user to run
+`python tools/ollama-server/logs.py --problems` there (or `--since 10m` for everything) and paste
+you the lines. It never shows the key.

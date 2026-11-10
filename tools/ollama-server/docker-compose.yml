@@ -11,6 +11,15 @@
 
 name: agenerela-ollama
 
+# Both containers' logs, kept by Docker and rotated so they cannot fill the disk: Ollama writes
+# about 25 lines per request and a few hundred per model load. `docker logs` reads them; logs.py
+# turns both into one short timeline (README, "Logs").
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
 services:
   ollama:
     # The version every result is tied to. Change it only on purpose, in its own pull
@@ -35,17 +44,22 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+    logging: *logging
+    # Each check is two requests in Ollama's log, so it runs every 5 minutes once up, and every
+    # 5 s only while starting.
     healthcheck:
       test: ["CMD", "ollama", "list"]
-      interval: 30s
+      interval: 5m
       timeout: 10s
-      start_period: 20s
+      start_period: 60s
+      start_interval: 5s
       retries: 3
 
   gateway:
     image: caddy:2.11.7-alpine
     container_name: agenerela-ollama-gateway
     restart: unless-stopped
+    logging: *logging
     depends_on:
       - ollama
     environment:

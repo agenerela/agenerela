@@ -14,6 +14,7 @@ An AI agent on the machine that asks reads [AGENT_USAGE.md](AGENT_USAGE.md) inst
 | Gateway | Caddy on port 11436, every request with `Authorization: Bearer <key>` |
 | Models | a Docker volume of its own, `agenerela-ollama_models`, apart from the Ollama app's |
 | Client helper | `ollama_remote.py`: `check`, `ps`, `warm`, `unload`, `pull`. Python 3.8+, standard library only |
+| Logs | `logs.py` on the server: both containers' logs as one short timeline. Docker keeps 5 files of 20 MB per container |
 
 ## Why Docker, and what it changes
 
@@ -139,7 +140,8 @@ start.
   Docker read the file from disk, then 1.9 s cold (9 November). The framework's default timeout is
   30 s, so warm a model first: `ollama_remote.py warm <model>`.
 - **The model-sweep kit's "template selection" line** is in the server's log only:
-  `docker logs agenerela-ollama 2>&1 | grep "template selection"`, on the server.
+  `python logs.py --since 3h | grep load`, on the server, gives each load's model, time and template,
+  or `docker logs agenerela-ollama 2>&1 | grep "template selection"` for the raw line.
 
 ## Everyday commands
 
@@ -150,7 +152,8 @@ On the server, from this folder:
 | Start, or apply a change to `docker-compose.yml` | `docker compose up -d` |
 | Stop (models stay) | `docker compose stop` |
 | State | `docker compose ps` |
-| Ollama's log | `docker logs -f agenerela-ollama` |
+| What happened, in short | `python logs.py` (see [Logs](#logs)) |
+| Ollama's full log | `docker logs -f agenerela-ollama` |
 | The gateway's log | `docker logs -f agenerela-ollama-gateway` |
 | Pull, list, remove a model | `docker exec agenerela-ollama ollama pull <model>` (`list`, `rm <model>`) |
 
@@ -162,6 +165,44 @@ From any machine with the `.env`:
 | What is in memory, how much on the GPU | `python tools/ollama-server/ollama_remote.py ps` |
 | Load a model before timing it | `python tools/ollama-server/ollama_remote.py warm <model>` |
 | Free the GPU | `python tools/ollama-server/ollama_remote.py unload --all` |
+
+## Logs
+
+Both containers log to Docker, which keeps five files of 20 MB each per container and drops the
+oldest, so the logs never fill the disk. Recreating a container (`docker compose up -d` after a
+change) starts its log afresh.
+
+**Read them with `logs.py`**, on the server, from this folder:
+
+```powershell
+python logs.py                  # the last hour
+python logs.py --since 6h       # further back: 10m, 2h, 1d
+python logs.py -f               # keep printing as things happen; Ctrl+C stops it
+python logs.py --problems       # only what went wrong
+```
+
+It prints one line per event, in this machine's local time:
+
+```
+11-09 16:58:23  start    GPU NVIDIA GeForce RTX 5080, 15.9 GiB total, 14.6 GiB available
+11-09 17:04:37  load     qwen3.5:2b in 35.7 s, template renderer_parser, 14.6 GiB GPU free before
+11-09 17:12:37  problem  401        0ms  POST  /api/generate  wrong or missing key  (via 192.168.1.129)
+11-09 17:36:46  request  200        1ms  GET   /api/ps  (via 192.168.1.129)
+```
+
+- **request** is every request the gateway handled: status, duration, method and path. `via
+  <address>` means another machine called the LAN address; none means this machine. Docker Desktop
+  hides the caller's own address, so that is all the log can say about who called.
+- **load** is a model loading: which, in how long, its chat template (the sweep kit's "template
+  selection" line) and the GPU memory free before it.
+- **pull** and **start** are downloads and the server starting.
+- **problem** is a refused request (401 wrong key, 403 a blocked route), a 5xx, or any warning or
+  error from Ollama or llama.cpp.
+
+`--verbose` adds Ollama's other lines. llama.cpp's detail, about 25 lines a request and a few
+hundred a load, is only in `docker logs agenerela-ollama`: Ollama starts llama.cpp at its highest
+verbosity, and no setting turns that down. The gateway's own log is already one short line per
+request; the key never appears in it.
 
 ## Upgrading Ollama
 
@@ -178,6 +219,6 @@ versions.
 | `error: set AGENERELA_OLLAMA_URL and AGENERELA_OLLAMA_API_KEY` | no `.env`, or a line is empty | [Connect from the laptop](#connect-from-the-laptop) |
 | `cannot reach ...` | the server is off or asleep, Docker Desktop is not running, the stack is down, the VPN is off, or the address is wrong | Check each, in that order |
 | `the gateway rejected the key` | the two `.env` files hold different keys | Copy the key over again |
-| `the gateway is up but Ollama is not answering` | the `ollama` container is starting or stopped | `docker compose ps`, then `docker logs agenerela-ollama` on the server |
+| `the gateway is up but Ollama is not answering` | the `ollama` container is starting or stopped | `docker compose ps`, then `python logs.py --problems` on the server |
 | `... is not exposed through the gateway` | a route the gateway blocks | Do it on the server with `docker exec` |
 | `(docker-compose.yml pins X: results are not comparable)` | the server runs another version than this checkout pins | Bring the server and the checkout to the same commit |

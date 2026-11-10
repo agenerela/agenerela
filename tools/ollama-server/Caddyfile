@@ -14,8 +14,31 @@
 }
 
 :8080 {
+	# One short line per request: time, status, duration, method, path, and the address the
+	# client called (host), which tells the LAN from this machine. Headers are dropped (the key
+	# is redacted anyway), and so are the client's own address and port: under Docker Desktop
+	# every request arrives from Docker's bridge, so they say nothing. Rejected requests (401,
+	# 403) are logged too, which is how a wrong key shows up.
 	log {
-		format console
+		output stdout
+		format filter {
+			wrap console {
+				level_format upper
+				time_format wall_milli
+				duration_format string
+			}
+			fields {
+				request>headers delete
+				request>tls delete
+				request>remote_ip delete
+				request>remote_port delete
+				request>client_ip delete
+				request>proto delete
+				resp_headers delete
+				user_id delete
+				bytes_read delete
+			}
+		}
 	}
 
 	@unauthorized not header Authorization "Bearer {$API_KEY}"
