@@ -238,6 +238,8 @@ namespace Demos.GreyBoxVillage.Lab
         {
             var config = ScriptableObject.CreateInstance<OllamaProviderConfig>();
             config.name = "Lab " + variant.name;
+            // Made in Edit mode, before Play starts: entering Play mode would unload it as unused.
+            config.hideFlags = HideFlags.HideAndDontSave;
             config.Endpoint = server.Endpoint;
             config.ApiKeyVariable = server.ApiKeyVariable;
             var p = variant.provider ?? new LabProvider();

@@ -126,6 +126,7 @@ namespace Demos.GreyBoxVillage.Lab
                 {
                     var config = ScriptableObject.CreateInstance<ScriptedProviderConfig>();
                     config.name = "Lab oracle " + arm.Name;
+                    config.hideFlags = HideFlags.HideAndDontSave;
                     config.Scripted.Callback = LabScripted.Oracle;
                     arm.Config = config;
                     arm.Model = null;
@@ -148,8 +149,11 @@ namespace Demos.GreyBoxVillage.Lab
             var first = terms.FirstOrDefault(t => t.StartsWith("first:"));
             if (first == null) return chosen;
             int n = int.Parse(first.Substring(6), CultureInfo.InvariantCulture);
-            // Round-robin over the agents, so a small slice still asks all four.
-            var byAgent = chosen.GroupBy(s => s.agent).Select(g => new Queue<LabScenario>(g)).ToList();
+            // Round-robin over the agents, and within each over the kinds, so a small slice still asks
+            // all four agents every kind of thing.
+            var byAgent = chosen.GroupBy(s => s.agent).Select(g => new Queue<LabScenario>(
+                g.GroupBy(s => s.kind).SelectMany(k => k.Select((s, i) => (s, i))).OrderBy(x => x.i)
+                 .ThenBy(x => Array.IndexOf(LabFiles.Kinds, x.s.kind)).Select(x => x.s))).ToList();
             var slice = new List<LabScenario>();
             while (slice.Count < n && byAgent.Any(q => q.Count > 0))
                 foreach (var q in byAgent)
@@ -263,18 +267,47 @@ namespace Demos.GreyBoxVillage.Lab
             var commands = Object.FindFirstObjectByType<VillageCommands>();
             if (commands == null) throw new InvalidOperationException("No village in Play mode.");
             var session = new Session(settings, run, commands);
+            Exception failed = null;
             try
             {
-                foreach (var x in session.Prepare()) yield return x;
-                foreach (var item in session.Schedule())
-                    foreach (var x in session.Play(item.arm, item.scenario, item.repeat)) yield return x;
-                if (settings.ResetProbe)
-                    foreach (var x in session.ResetProbe()) yield return x;
-                foreach (var x in session.Finish()) yield return x;
+                foreach (var x in Guarded(Work(session, settings), e => failed = e)) yield return x;
+                // Whatever happened, the models the bench loaded are unloaded and the village reset.
+                foreach (var x in Guarded(session.Finish(), e => failed = failed ?? e)) yield return x;
             }
             finally
             {
                 session.PutBack();
+            }
+            if (failed != null) throw new InvalidOperationException("The bench stopped: " + failed.Message, failed);
+        }
+
+        private static IEnumerable<object> Work(Session session, Settings settings)
+        {
+            foreach (var x in session.Prepare()) yield return x;
+            foreach (var item in session.Schedule())
+                foreach (var x in session.Play(item.arm, item.scenario, item.repeat)) yield return x;
+            if (settings.ResetProbe)
+                foreach (var x in session.ResetProbe()) yield return x;
+        }
+
+        // Steps work, handing an exception to onError and ending there, so the caller can still clean up.
+        private static IEnumerable<object> Guarded(IEnumerable<object> work, Action<Exception> onError)
+        {
+            using (var e = work.GetEnumerator())
+            {
+                while (true)
+                {
+                    try
+                    {
+                        if (!e.MoveNext()) yield break;
+                    }
+                    catch (Exception x)
+                    {
+                        onError(x);
+                        yield break;
+                    }
+                    yield return e.Current;
+                }
             }
         }
 

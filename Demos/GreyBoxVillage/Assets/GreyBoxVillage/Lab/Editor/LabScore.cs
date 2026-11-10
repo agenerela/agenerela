@@ -140,7 +140,6 @@ namespace Demos.GreyBoxVillage.Lab
         public int Scored, Exact, Weaker, ActionRight, Errors;
         public int NoneRight, NoneAnswered, Chatter, ChatterActed, Bait, BaitByModel, BaitByGuard, MustNotAsked, MustNotRan;
         public int PrimersMissed, ScoredAfterPrimer, ExactAfterPrimer;
-        public int Decisions;
         public double P50, P95, MeanQueue, MeanPromptTokens, MeanCompletionTokens;
 
         public static LabArmSummary Of(string arm, IReadOnlyList<LabTurnResult> all, IReadOnlyDictionary<string, LabTurn> turns)
@@ -163,7 +162,6 @@ namespace Demos.GreyBoxVillage.Lab
                 MustNotAsked = mine.Count(r => r.mustNotAsked),
                 MustNotRan = mine.Count(r => r.mustNotRan),
                 PrimersMissed = scored.Count(r => r.primerMissed),
-                Decisions = mine.Count(r => r.verdict != "error" || r.latencySeconds > 0),
             };
             foreach (var r in scored)
             {
