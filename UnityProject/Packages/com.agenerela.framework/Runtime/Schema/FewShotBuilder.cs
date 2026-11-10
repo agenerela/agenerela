@@ -20,7 +20,7 @@ namespace Agenerela
         private const string UnknownTarget = "Atlantis";
         private const string UnknownTargetFallback = "Avalon";
 
-        // The same, as a common noun, for a spaced refusal whose {0} keeps its article because the
+        // The same, as a common noun, for a refusal whose {0} keeps its article because the
         // phrase goes on past it ("The {0} is unstaffed."), where a proper name would not read.
         private const string UnknownThing = "sunken city";
         private const string UnknownThingFallback = "lost city";
@@ -70,9 +70,6 @@ namespace Agenerela
         ///   has no registered target among its <see cref="ActionDefinition.PreferredExampleTargets"/> names
         ///   the first offered target the action takes that <see cref="PromptOptions.Stimulus"/> does not
         ///   mention, instead of being left out.</description></item>
-        ///   <item><description><see cref="PromptOptions.SpacedExampleNames"/>: a target is called by its
-        ///   id's words ("north tower", not "NorthTower"), and the refusal drops the article before the
-        ///   missing target ("stand by Atlantis", not "stand by the Atlantis").</description></item>
         ///   <item><description>A target that implements <see cref="INamedTarget"/> is called by its name
         ///   wherever an example writes <c>{0}</c>; any other by the name made from its id.</description></item>
         /// </list>
@@ -82,7 +79,6 @@ namespace Agenerela
             options = options ?? new PromptOptions();
             string label = options.StimulusLabel;
             bool statements = options.ExampleStatements;
-            bool spaced = options.SpacedExampleNames;
             HashSet<string> mentioned = options.ExampleTargetFallback ? Words(options.Stimulus) : null;
 
             List<string> lines = new List<string> { Header };
@@ -90,8 +86,8 @@ namespace Agenerela
             foreach (ActionDefinition action in available)
             {
                 string target = FirstRegisteredPreferred(action, targets)
-                                ?? (mentioned != null ? FallbackTarget(action, targets, mentioned, spaced) : null);
-                string name = target == null ? null : NameOf(target, targets, spaced);
+                                ?? (mentioned != null ? FallbackTarget(action, targets, mentioned) : null);
+                string name = target == null ? null : NameOf(target, targets);
 
                 string example = ActionExample(action, target, name, label, statements);
                 if (example != null)
@@ -112,7 +108,7 @@ namespace Agenerela
                                   statements ? options.IdleExampleStatement : null));
             }
 
-            string refusal = RefusalExample(available, targets, label, spaced);
+            string refusal = RefusalExample(available, targets, label);
             if (refusal != null)
             {
                 lines.Add(refusal);
@@ -166,13 +162,13 @@ namespace Agenerela
         // gives it; with both placeholders taken there is no refusal, rather than one contradicting
         // an example.
         //
-        // Spaced, the stimulus reads as English around the placeholder. An article that ends its
+        // The stimulus reads as English around the placeholder (#190, Living Vale #20). An article that ends its
         // phrase at {0} goes, and a proper name takes its place: "Go and stand by the {0}." gives
         // "Go and stand by Atlantis.". Where the phrase goes on past {0}, the article stays and a
         // common noun does: "The {0} is unstaffed." gives "The sunken city is unstaffed.", "Open the
         // {0} gate." "Open the sunken city gate.", with "an" as "a".
         private static string RefusalExample(IReadOnlyList<ActionDefinition> available, TargetRegistry targets,
-                                             string stimulusLabel, bool spaced)
+                                             string stimulusLabel)
         {
             foreach (ActionDefinition action in available)
             {
@@ -182,24 +178,17 @@ namespace Agenerela
 
                 string stimulus = action.ExampleStimulus;
                 string placeholder;
-                if (spaced)
+                string stripped = ArticleEndingThePhrase.Replace(stimulus, "{0}");
+                if (ArticleBeforePlaceholder.IsMatch(stripped))
                 {
-                    string stripped = ArticleEndingThePhrase.Replace(stimulus, "{0}");
-                    if (ArticleBeforePlaceholder.IsMatch(stripped))
-                    {
-                        // Every article kept, so a {0} whose phrase ends there reads "the sunken city" too.
-                        stimulus = AnBeforePlaceholder.Replace(stimulus, m => (m.Groups[1].Value == "An" ? "A" : "a") + m.Groups[2].Value + "{0}");
-                        placeholder = Unused(UnknownThing, UnknownThingFallback, targets, spaced);
-                    }
-                    else
-                    {
-                        stimulus = stripped;
-                        placeholder = Unused(UnknownTarget, UnknownTargetFallback, targets, spaced);
-                    }
+                    // Every article kept, so a {0} whose phrase ends there reads "the sunken city" too.
+                    stimulus = AnBeforePlaceholder.Replace(stimulus, m => (m.Groups[1].Value == "An" ? "A" : "a") + m.Groups[2].Value + "{0}");
+                    placeholder = Unused(UnknownThing, UnknownThingFallback, targets);
                 }
                 else
                 {
-                    placeholder = Unused(UnknownTarget, UnknownTargetFallback, targets, spaced);
+                    stimulus = stripped;
+                    placeholder = Unused(UnknownTarget, UnknownTargetFallback, targets);
                 }
 
                 if (placeholder == null) return null;
@@ -210,21 +199,21 @@ namespace Agenerela
         }
 
         // The first of two placeholders no offered target is called; null when both are.
-        private static string Unused(string first, string second, TargetRegistry targets, bool spaced)
+        private static string Unused(string first, string second, TargetRegistry targets)
         {
-            if (!IsOffered(first, targets, spaced)) return first;
-            return IsOffered(second, targets, spaced) ? null : second;
+            if (!IsOffered(first, targets)) return first;
+            return IsOffered(second, targets) ? null : second;
         }
 
         // Whether an offered target is called placeholder: its id ("atlantis") or the name an example
         // would give it, an INamedTarget's included.
-        private static bool IsOffered(string placeholder, TargetRegistry targets, bool spaced)
+        private static bool IsOffered(string placeholder, TargetRegistry targets)
         {
             foreach (string id in targets.Ids)
             {
                 if (string.Equals(id, DisplayNameToId(placeholder), StringComparison.OrdinalIgnoreCase)) return true;
                 if (string.Equals(SplitId(id), placeholder, StringComparison.OrdinalIgnoreCase)) return true;
-                if (string.Equals(NameOf(id, targets, spaced), placeholder, StringComparison.OrdinalIgnoreCase)) return true;
+                if (string.Equals(NameOf(id, targets), placeholder, StringComparison.OrdinalIgnoreCase)) return true;
             }
 
             return false;
@@ -246,12 +235,12 @@ namespace Agenerela
         // example never shows the model the answer to the request it is sent with. Null when there is
         // none.
         private static string FallbackTarget(ActionDefinition action, TargetRegistry targets,
-                                              HashSet<string> mentioned, bool spaced)
+                                              HashSet<string> mentioned)
         {
             foreach (string id in targets.Ids)
             {
                 if (!action.AcceptsCategory(targets.CategoryOf(id))) continue;
-                if (Mentions(mentioned, id, NameOf(id, targets, spaced))) continue;
+                if (Mentions(mentioned, id, NameOf(id, targets))) continue;
 
                 return id;
             }
@@ -349,14 +338,15 @@ namespace Agenerela
         }
 
         // What an example calls a target: its INamedTarget name when it gives one, otherwise the name
-        // made from its id, spaced ("north tower") or run together ("NorthTower").
-        private static string NameOf(string id, TargetRegistry targets, bool spaced)
+        // made from its id's words, lowercase: "north_tower" is "north tower" (#190, Living Vale #20;
+        // before it, the words were run together, "NorthTower").
+        private static string NameOf(string id, TargetRegistry targets)
         {
             targets.TryGet(id, out object target);
             string name = (target as INamedTarget)?.Name;
             if (!string.IsNullOrWhiteSpace(name)) return name.Trim();
 
-            return spaced ? SplitId(id).ToLowerInvariant() : DisplayName(id);
+            return SplitId(id).ToLowerInvariant();
         }
 
         // "Label: "stimulus" -> action: id, target: id", then ", statement: "..."" when there is one,
@@ -376,28 +366,21 @@ namespace Agenerela
 
         private static bool HasPlaceholder(string text) => text != null && text.Contains("{0}");
 
-        private static string Fill(string text, string target) => text?.Replace("{0}", target);
-
-        // "north_tower" -> "NorthTower": the name every example used before SpacedExampleNames.
-        private static string DisplayName(string id)
+        // Each {0} as the target's name, its first letter capitalised where it starts a sentence: at the
+        // start of the text or after ". ", "! " or "? ", an opening quote included ("eastmarch" opens
+        // "Eastmarch massed troops."). Mid-sentence it stays lowercase; a proper noun that must keep
+        // its capital everywhere is what INamedTarget is for.
+        private static string Fill(string text, string target)
         {
-            var display = new StringBuilder(id.Length);
-            bool startOfWord = true;
+            if (text == null || target == null) return text?.Replace("{0}", target);
 
-            foreach (char c in id)
-            {
-                if (c == '_')
-                {
-                    startOfWord = true;
-                    continue;
-                }
-
-                display.Append(startOfWord ? char.ToUpperInvariant(c) : c);
-                startOfWord = false;
-            }
-
-            return display.ToString();
+            string opening = target.Length == 0 ? target : char.ToUpperInvariant(target[0]) + target.Substring(1);
+            text = SentenceStartPlaceholder.Replace(text, m => m.Groups[1].Value + opening);
+            return text.Replace("{0}", target);
         }
+
+        private static readonly Regex SentenceStartPlaceholder =
+            new Regex(@"(^\s*[""'‘“]?|[.!?][""'’”]?\s+[""'‘“]?)\{0\}", RegexOptions.CultureInvariant);
 
         // An id's words with single spaces between them, case kept: "north_tower" -> "north tower",
         // "village-gate" -> "village gate", "NorthTower" -> "North Tower", and an acronym kept whole

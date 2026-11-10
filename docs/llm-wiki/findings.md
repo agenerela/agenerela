@@ -2406,7 +2406,8 @@ reports, probes and logs, in the live-runs session's checkout, `.scratch/model-s
 
 ### How a few-shot example names its target: spaced names are no worse on either model; the uncategorised fallback beats no example by 15 to 19 points but costs impossible requests 30 (9 November 2026)
 
-#190's Living Vale #20 added two switches to `FewShotBuilder`, both off. `SpacedExampleNames` calls
+#190's Living Vale #20 added two switches to `FewShotBuilder`, both off (the first was then adopted
+and removed; see below). `SpacedExampleNames` calls
 a target by its id's words, "north tower" rather than "NorthTower", and drops the article before
 the refusal's missing target ("Go and stand by Atlantis." rather than "the Atlantis").
 `ExampleTargetFallback` gives an action with no preferred target here an example naming the first
@@ -2490,8 +2491,9 @@ which name uncategorised fallback targets in place of the hand-picked ones, 317 
 
 **What it means.**
 
-- **Spaced names meet the tech lead's rule** for a default: they read better and are no worse
-  within noise on both models. Recommended as the default, losing the switch. Not flipped here.
+- **Spaced names: adopted 9 November.** They read better and are no worse within noise on both
+  models, the tech lead's rule for a default. The switch is gone: every example now calls a target
+  by its id's words, and the refusal fits its article, as the B arms above did.
 - **The fallback should stay off by default.** It only changes an agent that today sends no example
   for an action, and there it adds 15 to 19 points; but on an agent whose targets have no
   categories it pairs a verb with a target it does not suit, and impossible requests fall about 30

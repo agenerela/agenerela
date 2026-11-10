@@ -35,7 +35,7 @@ namespace Agenerela.Tests
   ""messages"": [
     {
       ""role"": ""system"",
-      ""content"": ""You are Village Guard, a guard at the town gate. Loyal, brief, a little suspicious of strangers.\nYour goals: keep the gate safe; help the player when asked.\nChoose exactly one action from the allowed list. Use no_target when none of the listed targets applies.\n\nExamples of correct decisions:\nPlayer: \""Accompany me on my rounds.\"" -> action: follow_player, target: no_target\nPlayer: \""Proceed to the Tower.\"" -> action: move_to, target: tower\nPlayer: \""Engage the TrainingDummy.\"" -> action: attack_target, target: training_dummy\nPlayer: \""You seem well rested today.\"" -> action: none, target: no_target\nPlayer: \""Proceed to the Atlantis.\"" -> action: none, target: no_target (not an available target)""
+      ""content"": ""You are Village Guard, a guard at the town gate. Loyal, brief, a little suspicious of strangers.\nYour goals: keep the gate safe; help the player when asked.\nChoose exactly one action from the allowed list. Use no_target when none of the listed targets applies.\n\nExamples of correct decisions:\nPlayer: \""Accompany me on my rounds.\"" -> action: follow_player, target: no_target\nPlayer: \""Proceed to the tower.\"" -> action: move_to, target: tower\nPlayer: \""Engage the training dummy.\"" -> action: attack_target, target: training_dummy\nPlayer: \""You seem well rested today.\"" -> action: none, target: no_target\nPlayer: \""Proceed to Atlantis.\"" -> action: none, target: no_target (not an available target)""
     },
     {
       ""role"": ""user"",

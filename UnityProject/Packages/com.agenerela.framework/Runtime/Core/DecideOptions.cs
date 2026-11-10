@@ -71,15 +71,6 @@ namespace Agenerela
         public bool ExampleTargetFallback;
 
         /// <summary>
-        /// Whether this call's examples call a target by its id's words, "training dummy", rather than
-        /// the words run together, "TrainingDummy", and word the refusal of a target that is not here
-        /// without the article before it, "Go and stand by Atlantis." (#190, Living Vale #20). Off by
-        /// default: it changes the examples, and is owed an A/B run. A target that implements
-        /// <see cref="INamedTarget"/> is called by its own name either way.
-        /// </summary>
-        public bool SpacedExampleNames;
-
-        /// <summary>
         /// Whether this call's system prompt lists the actions offered with their descriptions, and
         /// the targets offered with their own lines (#190). Off by default: unmeasured, and owed an
         /// A/B run before it becomes the default (#151). <see cref="PromptOptions.ListActionsAndTargets"/>

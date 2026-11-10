@@ -445,21 +445,21 @@ namespace Agenerela.Tests.Evaluation
         }
 
         [Test]
-        public async Task TheReportSaysWhichArmShowedStatementsTheFallbackAndSpacedNames()
+        public async Task TheReportSaysWhichArmShowedStatementsAndTheFallback()
         {
             var a = new FakeProvider(Reply("move_to", "bridge"));
             var b = new FakeProvider(Reply("move_to", "bridge"));
             var runner = Runner(new[] { Bridge }, null, a, b,
-                optionsB: new DecideOptions { IdleExampleStatement = "Quiet as ever.", ExampleStatements = false, ExampleTargetFallback = true, SpacedExampleNames = true });
+                optionsB: new DecideOptions { IdleExampleStatement = "Quiet as ever.", ExampleStatements = false, ExampleTargetFallback = true });
 
             var report = await Fixtures.NotCancelled(runner.RunAsync());
 
             var armA = report.Conditions.Arms[0];
             var armB = report.Conditions.Arms[1];
-            Assert.That((armA.IdleExampleStatement, armA.ExampleStatements, armA.ExampleTargetFallback, armA.SpacedExampleNames),
-                Is.EqualTo(((string)null, true, false, false)));
-            Assert.That((armB.IdleExampleStatement, armB.ExampleStatements, armB.ExampleTargetFallback, armB.SpacedExampleNames),
-                Is.EqualTo(("Quiet as ever.", false, true, true)));
+            Assert.That((armA.IdleExampleStatement, armA.ExampleStatements, armA.ExampleTargetFallback),
+                Is.EqualTo(((string)null, true, false)));
+            Assert.That((armB.IdleExampleStatement, armB.ExampleStatements, armB.ExampleTargetFallback),
+                Is.EqualTo(("Quiet as ever.", false, true)));
         }
 
         [Test]

@@ -1252,7 +1252,6 @@ namespace Agenerela
                 IdleExampleStatement = call.IdleExampleStatement,
                 ExampleStatements = call.ExampleStatements,
                 ExampleTargetFallback = call.ExampleTargetFallback,
-                SpacedExampleNames = call.SpacedExampleNames,
                 Stimulus = stimulus,
             };
 

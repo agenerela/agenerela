@@ -22,8 +22,8 @@ namespace Agenerela.Tests
 
             string block = FewShotBuilder.Build(actions, targets);
 
-            Assert.That(block, Does.Not.Contain("Blacksmith"));
-            Assert.That(block, Does.Contain("Pick up the Sword."));
+            Assert.That(block, Does.Not.Contain("blacksmith"));
+            Assert.That(block, Does.Contain("Pick up the sword."));
         }
 
         [Test]
@@ -42,10 +42,10 @@ namespace Agenerela.Tests
             Assert.That(block, Is.EqualTo(string.Join("\n",
                 "Examples of correct decisions:",
                 "Player: \"Accompany me on my rounds.\" -> action: follow_player, target: no_target",
-                "Player: \"Proceed to the Tower.\" -> action: move_to, target: tower",
-                "Player: \"Engage the TrainingDummy.\" -> action: attack_target, target: training_dummy",
+                "Player: \"Proceed to the tower.\" -> action: move_to, target: tower",
+                "Player: \"Engage the training dummy.\" -> action: attack_target, target: training_dummy",
                 "Player: \"You seem well rested today.\" -> action: none, target: no_target",
-                "Player: \"Proceed to the Atlantis.\" -> action: none, target: no_target (not an available target)")));
+                "Player: \"Proceed to Atlantis.\" -> action: none, target: no_target (not an available target)")));
         }
 
         [Test]
@@ -66,11 +66,11 @@ namespace Agenerela.Tests
 
             Assert.That(block, Is.EqualTo(string.Join("\n",
                 "Examples of correct decisions:",
-                "Report: \"Housing is short; we need a House.\" -> action: build, target: house",
-                "Report: \"The Mine is unstaffed.\" -> action: assign_worker, target: mine",
+                "Report: \"Housing is short; we need a house.\" -> action: build, target: house",
+                "Report: \"The mine is unstaffed.\" -> action: assign_worker, target: mine",
                 "Report: \"The harvest came in above target.\" -> action: celebrate, target: no_target",
                 "Report: \"Nothing has changed since last time.\" -> action: none, target: no_target",
-                "Report: \"Housing is short; we need a Atlantis.\" -> action: none, target: no_target (not an available target)")));
+                "Report: \"Housing is short; we need Atlantis.\" -> action: none, target: no_target (not an available target)")));
         }
 
         [Test]
@@ -87,7 +87,7 @@ namespace Agenerela.Tests
 
             Assert.That(block, Does.Contain("move_to"));
             Assert.That(block, Does.Not.Contain("give_item"));
-            Assert.That(block, Does.Not.Contain("Sword"));
+            Assert.That(block, Does.Not.Contain("sword"));
         }
 
         [Test]
@@ -128,7 +128,7 @@ namespace Agenerela.Tests
 
             string block = FewShotBuilder.Build(actions, targets);
 
-            Assert.That(block, Does.Contain("Proceed to the Avalon."));
+            Assert.That(block, Does.Contain("Proceed to Avalon."));
             Assert.That(block, Does.Not.Contain("Atlantis"));
         }
 
@@ -172,13 +172,13 @@ namespace Agenerela.Tests
 
             Assert.That(block, Is.EqualTo(string.Join("\n",
                 "Examples of correct decisions:",
-                "Player: \"How much for the Bread?\" -> action: quote_purchase, target: bread",
-                "Player: \"That Bread smells good.\" -> action: none, target: no_target",
+                "Player: \"How much for the bread?\" -> action: quote_purchase, target: bread",
+                "Player: \"That bread smells good.\" -> action: none, target: no_target",
                 "Player: \"Got any work for me?\" -> action: offer_quest, target: no_target",
                 "Player: \"Any rumours about the wagon?\" -> action: none, target: no_target",
-                "Player: \"Proceed to the Tower.\" -> action: move_to, target: tower",
+                "Player: \"Proceed to the tower.\" -> action: move_to, target: tower",
                 "Player: \"Nothing has changed.\" -> action: none, target: no_target",
-                "Player: \"How much for the Atlantis?\" -> action: none, target: no_target (not an available target)")));
+                "Player: \"How much for Atlantis?\" -> action: none, target: no_target (not an available target)")));
         }
 
         [Test]
@@ -238,12 +238,12 @@ namespace Agenerela.Tests
 
             Assert.That(block, Is.EqualTo(string.Join("\n",
                 "Examples of correct decisions:",
-                "Player: \"How much for the Bread?\" -> action: quote_purchase, target: bread, statement: \"The Bread is three gold.\"",
-                "Player: \"That Bread smells good.\" -> action: none, target: no_target, statement: \"Baked it this morning.\"",
+                "Player: \"How much for the bread?\" -> action: quote_purchase, target: bread, statement: \"The bread is three gold.\"",
+                "Player: \"That bread smells good.\" -> action: none, target: no_target, statement: \"Baked it this morning.\"",
                 "Player: \"Got any work for me?\" -> action: offer_quest, target: no_target, statement: \"Rats in the cellar, if you're brave.\"",
-                "Player: \"Proceed to the Tower.\" -> action: move_to, target: tower",
+                "Player: \"Proceed to the tower.\" -> action: move_to, target: tower",
                 "Player: \"Nothing has changed.\" -> action: none, target: no_target, statement: \"Quiet as ever.\"",
-                "Player: \"How much for the Atlantis?\" -> action: none, target: no_target (not an available target)")),
+                "Player: \"How much for Atlantis?\" -> action: none, target: no_target (not an available target)")),
                 "The statement comes last, as the reply's field does; the refusal line has none.");
         }
 
@@ -264,7 +264,7 @@ namespace Agenerela.Tests
 
             Assert.That(block.Split('\n'), Is.SupersetOf(new[]
             {
-                "Player: \"Shout \\\"halt\\\" at the Gate.\" -> action: shout_warning, target: gate, statement: \"\\\"Halt!\\\" I cried, at the C:\\\\gate.\"",
+                "Player: \"Shout \\\"halt\\\" at the gate.\" -> action: shout_warning, target: gate, statement: \"\\\"Halt!\\\" I cried, at the C:\\\\gate.\"",
                 "Player: \"He said \\\"wave\\\", didn't he?\" -> action: none, target: no_target, statement: \"He did say \\\"wave\\\".\"",
                 "Player: \"The sign says \\\"closed\\\".\" -> action: none, target: no_target, statement: \"So it does.\"",
             }), "Quotes and backslashes are escaped as JSON escapes them, so each quoted text ends where it should.");
@@ -315,7 +315,7 @@ namespace Agenerela.Tests
             {
                 "Player: \"How much for the loaf of bread?\" -> action: quote_purchase, target: stock_bread_one",
                 "Player: \"That loaf of bread smells good.\" -> action: none, target: no_target",
-                "Player: \"Proceed to the NorthTower.\" -> action: move_to, target: north_tower",
+                "Player: \"Proceed to the north tower.\" -> action: move_to, target: north_tower",
             }), "The first target each action takes, called by its INamedTarget name when it has one.");
         }
 
@@ -334,7 +334,7 @@ namespace Agenerela.Tests
             var lines = FewShotBuilder.Build(actions, targets).Split('\n');
 
             Assert.That(lines[1], Is.EqualTo("Player: \"How much for the loaf of bread?\" -> action: quote_purchase, target: stock_bread_one"));
-            Assert.That(lines[2], Is.EqualTo("Player: \"I'd like to sell the StockPotionOne.\" -> action: sell_item, target: stock_potion_one"));
+            Assert.That(lines[2], Is.EqualTo("Player: \"I'd like to sell the stock potion one.\" -> action: sell_item, target: stock_potion_one"));
         }
 
         [Test]
@@ -350,7 +350,7 @@ namespace Agenerela.Tests
             var actions = new List<ActionDefinition> { move };
 
             string Block(string stimulus) => FewShotBuilder.Build(actions, targets,
-                new PromptOptions { ExampleTargetFallback = true, SpacedExampleNames = true, Stimulus = stimulus });
+                new PromptOptions { ExampleTargetFallback = true, Stimulus = stimulus });
 
             Assert.That(Block("Meet me at the towers by the dock, near the inn. Bring a potion!"), Does.Contain(
                 "Player: \"Go and stand by the well.\" -> action: move_to, target: well\n" +
@@ -386,7 +386,7 @@ namespace Agenerela.Tests
                 targets.Register("well", new object());
                 return FewShotBuilder.Build(actions, targets, new PromptOptions
                 {
-                    ExampleTargetFallback = true, SpacedExampleNames = true, Stimulus = stimulus,
+                    ExampleTargetFallback = true, Stimulus = stimulus,
                 }).Split('\n')[1];
             }
 
@@ -400,20 +400,8 @@ namespace Agenerela.Tests
             Assert.That(First("Attack the guard.", ("NPCGuard", new object())), Does.EndWith("target: well"),
                 "NPCGuard's words are 'npc' and 'guard'.");
             Assert.That(First("Hello.", ("NPCGuard", new object())), Does.StartWith("Player: \"Go and stand by the npc guard.\""));
-
-            string Glued(string stimulus, string id, object target)
-            {
-                var targets = new TargetRegistry();
-                targets.Register(id, target);
-                targets.Register("well", new object());
-                return FewShotBuilder.Build(actions, targets, new PromptOptions { ExampleTargetFallback = true, Stimulus = stimulus })
-                    .Split('\n')[1];
-            }
-
-            Assert.That(Glued("Look to the end.", "to_the", new object()), Does.EndWith("target: well"),
-                "Spaced names off: the glued 'ToThe' does not hide the id's little words.");
-            Assert.That(Glued("Fetch From.", "x9", new Named("From")), Does.EndWith("target: well"),
-                "Nor does the id 'x9' hide a name of one little word.");
+            Assert.That(First("Fetch From.", ("x9", new Named("From"))), Does.EndWith("target: well"),
+                "The id's words and the name's are read apart: 'x9' does not hide a name of one little word.");
         }
 
         [Test]
@@ -435,7 +423,7 @@ namespace Agenerela.Tests
         }
 
         [Test]
-        public void SpacedNamesSeparateTheIdsWordsAndTheRefusalDropsItsArticle()
+        public void ATargetIsCalledByItsIdsWordsAndTheRefusalDropsItsArticle()
         {
             var targets = new TargetRegistry();
             targets.Register("training_dummy", new object());
@@ -450,13 +438,7 @@ namespace Agenerela.Tests
                 Action("buy", "I'll take {0}.", true, "stock_one"),
             };
 
-            string glued = FewShotBuilder.Build(actions, targets);
-            string spaced = FewShotBuilder.Build(actions, targets, new PromptOptions { SpacedExampleNames = true });
-
-            Assert.That(glued, Does.Contain("\"Engage the TrainingDummy.\"").And.Contain("\"Proceed to the NorthTower.\"")
-                .And.Contain("\"Engage the Atlantis.\""),
-                "Off, the default, is what every example said before.");
-            Assert.That(spaced.Split('\n'), Is.EqualTo(new[]
+            Assert.That(FewShotBuilder.Build(actions, targets).Split('\n'), Is.EqualTo(new[]
             {
                 "Examples of correct decisions:",
                 "Player: \"Engage the training dummy.\" -> action: attack_target, target: training_dummy",
@@ -464,15 +446,31 @@ namespace Agenerela.Tests
                 "Player: \"Proceed to the north tower.\" -> action: move_to, target: NorthTower",
                 "Player: \"I'll take Mara's Potion.\" -> action: buy, target: stock_one",
                 "Player: \"Engage Atlantis.\" -> action: none, target: no_target (not an available target)",
-            }), "Words separated and lowercase; an INamedTarget's name as written; no 'the Atlantis'.");
+            }), "Words separated and lowercase, never 'TrainingDummy'; an INamedTarget's name as written; " +
+                "no 'the Atlantis' (#190, Living Vale #20).");
         }
 
         [Test]
-        public void TheSpacedRefusalReadsAsEnglishForAnyArticle()
+        public void ANameThatStartsASentenceStartsWithACapital()
+        {
+            var targets = Registry("north_tower");
+            var watch = Action("watch", "{0} is quiet. Is {0} manned? \"{0} first,\" he said.", true, "north_tower");
+            watch.ExampleStatement = "Checked. {0} is clear!  {0} it is.";
+
+            string line = FewShotBuilder.Build(new List<ActionDefinition> { watch }, targets).Split('\n')[1];
+
+            Assert.That(line, Is.EqualTo(
+                "Player: \"North tower is quiet. Is north tower manned? \\\"North tower first,\\\" he said.\" " +
+                "-> action: watch, target: north_tower, statement: \"Checked. North tower is clear!  North tower it is.\""),
+                "At the start, after an opening quote, and after a sentence's end; lowercase mid-sentence.");
+        }
+
+        [Test]
+        public void TheRefusalReadsAsEnglishForAnyArticle()
         {
             string Refusal(string stimulus) => FewShotBuilder.Build(
                 new List<ActionDefinition> { Action("ask", stimulus, true) }, new TargetRegistry(),
-                new PromptOptions { SpacedExampleNames = true }).Split('\n')[1];
+                new PromptOptions()).Split('\n')[1];
 
             Assert.That(Refusal("The {0}, please."), Does.StartWith("Player: \"Atlantis, please.\""));
             Assert.That(Refusal("Housing is short; we need a {0}."), Does.StartWith("Player: \"Housing is short; we need Atlantis.\""));
@@ -493,7 +491,7 @@ namespace Agenerela.Tests
             var taken = new TargetRegistry();
             taken.Register("sunken_city", new object());
             string withOne = FewShotBuilder.Build(new List<ActionDefinition> { Action("ask", "The {0} is unstaffed.", true) }, taken,
-                new PromptOptions { SpacedExampleNames = true }).Split('\n').Last();
+                new PromptOptions()).Split('\n').Last();
             Assert.That(withOne, Does.StartWith("Player: \"The lost city is unstaffed.\""), "A target called sunken city is offered.");
         }
 

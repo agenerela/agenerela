@@ -18,10 +18,10 @@ namespace Agenerela.Tests
             "",
             "Examples of correct decisions:",
             "Player: \"Accompany me on my rounds.\" -> action: follow_player, target: no_target",
-            "Player: \"Proceed to the Tower.\" -> action: move_to, target: tower",
-            "Player: \"Engage the TrainingDummy.\" -> action: attack_target, target: training_dummy",
+            "Player: \"Proceed to the tower.\" -> action: move_to, target: tower",
+            "Player: \"Engage the training dummy.\" -> action: attack_target, target: training_dummy",
             "Player: \"You seem well rested today.\" -> action: none, target: no_target",
-            "Player: \"Proceed to the Atlantis.\" -> action: none, target: no_target (not an available target)");
+            "Player: \"Proceed to Atlantis.\" -> action: none, target: no_target (not an available target)");
 
         // The same file split where DecisionRequest splits it.
         private static readonly string GoldenSystemPrompt = string.Join("\n",
@@ -32,10 +32,10 @@ namespace Agenerela.Tests
         private static readonly string GoldenFewShotBlock = string.Join("\n",
             "Examples of correct decisions:",
             "Player: \"Accompany me on my rounds.\" -> action: follow_player, target: no_target",
-            "Player: \"Proceed to the Tower.\" -> action: move_to, target: tower",
-            "Player: \"Engage the TrainingDummy.\" -> action: attack_target, target: training_dummy",
+            "Player: \"Proceed to the tower.\" -> action: move_to, target: tower",
+            "Player: \"Engage the training dummy.\" -> action: attack_target, target: training_dummy",
             "Player: \"You seem well rested today.\" -> action: none, target: no_target",
-            "Player: \"Proceed to the Atlantis.\" -> action: none, target: no_target (not an available target)");
+            "Player: \"Proceed to Atlantis.\" -> action: none, target: no_target (not an available target)");
 
         private static readonly string GoldenObservations = string.Join("\n",
             "What you know right now:",
