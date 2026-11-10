@@ -2133,12 +2133,52 @@ Numbers in brackets are the runner's noise check where it says beyond noise.
 - **The cost in prompt tokens**: about 53 more per request (366 to 419), the JSON and role overhead
   of five example pairs.
 
-**What it means.** The morning's +7 on 76 prompts was real for `qwen3.5:2b` in direction but about
-half the size on 389 prompts, and the same change costs the two stronger small models 7 to 10 points.
-It stays off by default. The empty statements are a cost of their own for any agent that speaks.
+**Second run: both arms with written statements.** The empty copies confound the first run, so the
+tech lead asked for the A/B again with a statement on every example, the same in both arms. The
+kit's `AGENERELA_EXAMPLE_STATEMENTS=1` writes them on in-memory copies of `VillageGuard` and its
+four action assets (the asset itself is unchanged): `follow_player` "Right behind you.",
+`stop_following` "I'll hold here, then.", `move_to` "Heading to the {0} now.", `attack_target`
+"Steel out. The {0} won't trouble us long.", and the idle example "Aye, quiet so far.". None matches
+a prompt: the run asserts `PromptSetChecks` finds no more example matches than with the bare profile.
+Same server, set, arms and order, guards on, `qwen3.5:4b` then `qwen3.5:2b`, each alone and fully in
+VRAM, the same evening (20:18 to 20:28).
 
-**What would change this.** Examples with written statements (`ExampleStatements`, #190 G14), which
-would stop the empty copies and might change the accuracy too; an answer that leaves `statement` out
-when none was written; a second run of each model to see whether the 2B's +3.6, on the floor, holds;
-the curated 76 in the Unity path, to compare with the morning's replay. Raw data: the reports and
-`tokens.json` files in the lead's main checkout, `.scratch/151-chat-turns/full/`, with `summarize.py`, which prints these tables.
+| Correct, of 389 | `block` + statements | `turns` + statements | `turns` − `block` |
+|---|---:|---:|---|
+| **`qwen3.5:4b`** | **332 (85.3%)** | **290 (74.6%)** | −10.8, **beyond noise** |
+| **`qwen3.5:2b`** | **274 (70.4%)** | **288 (74.0%)** | +3.6, **beyond noise by a hair** (floor 3.59) |
+
+| | 4B block | 4B turns | 2B block | 2B turns |
+|---|---:|---:|---:|---:|
+| Player lines, of 259 | 241 | 223 | 201 | 215 |
+| Policy cases, of 130 | 91 | 67 | 73 | 73 |
+| conversation, of 64 | 59 | 54 | 44 | 59 (+23.4) |
+| event, of 65 | 50 | 34 (−24.6) | 42 | 40 |
+| Replies flagged `Empty` | 0 | 1 | 0 | 0 |
+| Replies flagged `Echo` (a statement repeated word for word) | 255 | 52 | 253 | 85 |
+| `stop_following`, of 48 | 44 | 35 | 20 | 30 |
+| Unasked actions / missed requests | 20 / 15 | 49 / 12 | 32 / 59 | 34 / 42 |
+| Median latency | 0.374 s | 0.272 s | 0.315 s | 0.200 s |
+| Median prompt tokens | 410 | 447 | 410 | 447 |
+
+- **The accuracy result does not move.** Written statements leave the 4B 10.8 points worse with
+  turns, events worst (−24.6) and unasked actions more than doubled again (20 to 49), and the 2B
+  3.6 points better, from conversation. So the first run's split is not the empty statements.
+- **Statements stop the empty replies** in the turns arm (378 and 361 empty before, 1 and 0 now),
+  **but the block arm then parrots them**: about two thirds of its replies are an example's statement
+  word for word ("Aye, quiet so far." 64 times on the 4B, "Steel out. The Wolf won't trouble us
+  long." 67 times on the 2B). The turns arm echoes far less (52 and 85). That is G14's echo moving
+  from the stimulus to the statement, which the live-runs list already asks to measure.
+- Statements cost 44 prompt tokens in the block and 28 in turns; the turns arm is still the
+  longer prompt by 37.
+
+**What it means.** The morning's +7 on 76 prompts was real for `qwen3.5:2b` in direction but about
+half the size on 389 prompts, twice, and the same change costs `qwen3.5:4b` 10 to 11 points beyond
+noise twice and `gemma4:e2b-it-qat` 6.7 once, with or without written statements. It stays off by
+default. Turns do make a model echo a written statement less, but no accuracy gain comes with it
+outside the 2B.
+
+**What would change this.** An answer that leaves `statement` out when none was written; the curated
+76 in the Unity path, to compare with the morning's replay; a model above 4B. Raw data: the reports
+and `tokens.json` files in the lead's main checkout, `.scratch/151-chat-turns/full/` and `stated/`,
+with `summarize.py`, which prints these tables.
