@@ -12,6 +12,8 @@
 #                   else http://127.0.0.1:11434
 #   AGENERELA_OLLAMA_API_KEY  the key of a server behind tools/ollama-server/'s gateway; read from that
 #                   .env when OLLAMA_URL is its address. Sent in headers only, never printed
+#   OLLAMA_SERVER_ENV  that .env, when this copy of the kit is in a worktree without one
+#                   (another checkout's tools/ollama-server/.env); the file is read, never printed
 #   UNITY_EXE       the 6000.3.23f1 editor, the Hub's default path when unset
 #   PROBE_REQUESTS  how many probe requests, 6 when unset (2 once a model's order is known)
 #   OLLAMA_VERSION  the version every model must be served by, 0.40.14 when unset
@@ -22,7 +24,7 @@ UNITY_EXE="${UNITY_EXE:-/c/Program Files/Unity/Hub/Editor/6000.3.23f1/Editor/Uni
 WANT="${OLLAMA_VERSION:-0.40.14}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 # The RTX 5080's gateway (tools/ollama-server/README.md), when this checkout has its .env.
-ENV_FILE="$HERE/../../ollama-server/.env"
+ENV_FILE="${OLLAMA_SERVER_ENV:-$HERE/../../ollama-server/.env}"
 from_env() { [ -f "$ENV_FILE" ] && sed -n "s/^$1=//p" "$ENV_FILE" | tr -d '\r' | head -1; }
 ENV_URL=$(from_env AGENERELA_OLLAMA_URL)
 API="${OLLAMA_URL:-${ENV_URL:-http://127.0.0.1:11434}}"
@@ -50,8 +52,9 @@ case "$V" in *"\"$WANT\""*) ;; *) echo "STOP: the server is not Ollama $WANT"; e
 # Mains power, on the machine running this script (a desktop has no battery: that counts as mains).
 B=$(powershell -NoProfile -Command "(Get-CimInstance Win32_Battery).BatteryStatus" | tr -d '\r')
 [ -z "$B" ] || [ "$B" = "2" ] || { echo "STOP: on battery (BatteryStatus $B)"; exit 3; }
-U=$(powershell -NoProfile -Command "(Get-Process Unity -ErrorAction SilentlyContinue | Measure-Object).Count" | tr -d '\r')
-[ "$U" = "0" ] || { echo "STOP: $U Unity process(es) already running here"; exit 4; }
+# Editors only: Unity Hub's CLI server ("Unity Hub\resources\unity.exe serve") has the same process name.
+U=$(powershell -NoProfile -Command "(Get-Process Unity -ErrorAction SilentlyContinue | Where-Object { \$_.Path -like '*\\Editor\\Unity.exe' } | Measure-Object).Count" | tr -d '\r')
+[ "$U" = "0" ] || { echo "STOP: $U Unity Editor(s) already running here"; exit 4; }
 PS=$(api -s -m 5 "$API/api/ps"); echo "ps before $PS"
 case "$PS" in *'"models":[]'*) ;; *) echo "STOP: a model is already resident on the server"; exit 5;; esac
 

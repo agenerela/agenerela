@@ -34,8 +34,7 @@ in, the machine, and the live checks that aren't A/B runs.
 
 | Run | Kind | Machine | What it checks | From |
 |---|---|---|---|---|
-| The 13-model sweep on the interim set, 389 prompts | A/B per model, idle on vs off; ranking against `qwen3.5:2b` | 5080 box | The 9 November sweep again, on a set big enough for per-category results. The laptop ran `qwen3.5:2b` only (findings, 9 November) | [Request 001](run-requests/001-interim-model-sweep-5080/request.md), #151 |
-| The 12 and 16 GB tiers | A/B, sequential arms | 5080 box | A "high-end GPU" option, such as Granite 4.1 8B, Qwen3.5-9B or Gemma 4 12B, against the 2B | `model-candidates.md` |
+| The 12 and 16 GB tiers | A/B, sequential arms | 5080 box | A "high-end GPU" option, such as Granite 4.1 8B, Qwen3.5-9B or Gemma 4 12B, against the 2B | `model-candidates.md`. Not run with request 001: the lead judged it not needed (9 November) |
 
 ## Waiting for something first
 
@@ -68,3 +67,4 @@ in, the machine, and the live checks that aren't A/B runs.
 | Idle example with vs without, `qwen3.5:2b`, the profile's own line | 56/76 with "Fine day for it." against 59/76 without, within noise overall; simple_command +33.3 without it, beyond noise, `stop_following` 2/7 with the line against 6/7 | `findings.md`, 9 November |
 | `qwen3.5:2b` vs `qwen3.5:4b`, in the model sweep | 70/76 for the 4B against 56/76, +18.4, beyond noise. Separate runs on one server, not `Sequential` pairs | `findings.md`, 9 November |
 | The 8 GB shortlist and every other pulled model against `qwen3.5:2b`, 13 models | All kept the field order on `ollama serve` with `OLLAMA_GO_TEMPLATE=1`, none thought, all fit in VRAM. Five beat the 2B beyond noise: `qwen3.5:4b` 70, `qwen3:4b-instruct-2507`, `ministral-3:3b` and `qwen3:8b` 65, `gemma4:e2b-it-qat` 64; `lfm3:1.7b` fell below it at 46. Separate runs on one server, at n = 76 | `findings.md`, 9 November |
+| The 13-model sweep on the interim set, 389 prompts, on the RTX 5080 (Docker Ollama 0.40.14, over the network) | `qwen3.5:4b` first at 330/389 against the 2B's 263/389, +17.2 beyond noise; the idle example helps 7 models beyond noise and costs only `qwen3.5:2b` (+4.6 without it, `stop_following` 22/48 against 39/48) | `findings.md`, 9 November; [Request 001](run-requests/001-interim-model-sweep-5080/results.md) |

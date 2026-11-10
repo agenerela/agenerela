@@ -2062,3 +2062,130 @@ are kept apart as separate machines (`environment.md`).
 
 **What would change this.** Timing a load with the file already in the page cache against one
 without, after a server restart.
+
+### Thirteen models on the interim set, on the RTX 5080: `qwen3.5:4b` first at 330/389, and the idle example helps every model but `qwen3.5:2b` (9 November 2026)
+
+[Run request 001](../run-requests/001-interim-model-sweep-5080/request.md): the 13-model sweep of
+the curated-set entry above ("Thirteen models on the evaluation set"), on the interim set's 389
+prompts, so per-category results rest on 64 to 66 prompts rather than 9 to 19.
+
+**The set.** The interim set (#223), measured against the curated set's `VillageGuard`. **It is
+AI-written.** Claude wrote it and gave the first labels, then Codex labelled it blind, and the two
+agreed on 391 of 392. Its prompts may be less ambiguous than the team's 76, so **its scores and the
+curated set's are not directly comparable**. Noise floor: 3.6 points overall, 8.7 to 8.8 per category.
+
+**Setup.**
+- **The machine: RTX 5080, Docker Ollama 0.40.14, over the network.** This is way B of the
+  request. The model ran on the 5080's Docker server (`tools/ollama-server/`), reached through its
+  gateway over the home network, and Unity ran in batch mode on the laptop (RTX 4060 Laptop, on AC
+  power). The server pins `OLLAMA_GO_TEMPLATE=1`, `OLLAMA_CONTEXT_LENGTH=16384` and
+  `OLLAMA_NO_CLOUD=0`. **It is a machine of its own for measuring**: its numbers are compared with
+  each other here, never with the laptop's.
+- **Latency includes the network hop** from the laptop to the 5080 and back.
+- **The framework:** `test` at cd0c09c. Since the laptop's interim run (db16c03), the only framework
+  change is #226's API key header in `OllamaProvider`; the prompt is the same.
+- **The lock and the GPU:** the 5080's lock was held throughout, and `ollama_remote.py ps` showed
+  nothing resident before the first model. One model was resident at a time: warmed, unloaded,
+  run, then unloaded with `keep_alive: 0` before the next. The 12 models other than the 2B were
+  pulled first, one at a time, and no download overlapped a timed run.
+- **The kit:** `tools/live-runs/model-sweep/`, with a 2-request probe per model, then the two arms
+  interleaved through the runner. **On** is the defaults, with the profile's idle example "Fine day
+  for it."; **off** sets `IdleExampleStimulus = ""`. Both arms used the runner's defaults (grounding
+  guard on, temperature 0).
+- **The chat path** (the server log's "template selection" line) was not read, since that log is
+  only on the 5080.
+- **A proof run came first**, the 2B on the curated 76 through the gateway: 56/76 on, 58/76 off,
+  `stop_following` 2/7 against 6/7.
+
+**Every model passed the pre-checks.** 2 of 2 probe replies were in the framework's field order on
+all 13, with no thinking. Every model sat fully in VRAM (`size_vram` equal to `size`, 1114 to
+5327 MB). No arm had warnings or pipeline errors. Each model took 3 to 7 minutes for both arms; the
+sweep, 2B baseline included, took 63 minutes.
+
+**Default score, ranked**, each against `qwen3.5:2b`'s 263/389 on this server (floor 3.6; 8.7 to
+8.8 per category). The last column is the curated set on the laptop, from the entry above: **two
+sets on two machines**, for orientation only.
+
+| Model | VRAM, MB | Default (idle on) | Against the 2B | Categories beyond noise against the 2B | Median / p90 latency, s | Curated, laptop |
+|---|---:|---:|---|---|---|---:|
+| `qwen3.5:4b` | 2995 | **330** (84.8%) | +17.2, beyond | simple +26.2, conversation +23.4, event +18.5, situation +16.9, impossible +12.5 | 0.51 / 0.56 | 70/76 |
+| `qwen3:8b` | 5327 | 315 (81.0%) | +13.4, beyond | simple +26.2, conversation +25.0, event +12.3, situation +12.3 | 0.37 / 0.42 | 65/76 |
+| `granite4.1:3b` | 2390 | 304 (78.1%) | +10.5, beyond | simple +23.1, conversation +21.9, impossible +9.4 | 0.24 / 0.27 | 62/76 |
+| `nemotron-3-nano:4b` | 2693 | 304 (78.1%) | +10.5, beyond | simple +23.1, situation +20.0, conversation +12.5, event +10.8; impossible −9.4 | 0.35 / 0.38 | 60/76 |
+| `qwen3:4b-instruct-2507-q4_K_M` | 3032 | 296 (76.1%) | +8.5, beyond | situation +20.0, simple +16.9, conversation +12.5, event +12.3; impossible −15.6 | 0.32 / 0.36 | 65/76 |
+| `L3-8B-Stheno-v3.2` Q4_K_M | 5035 | 294 (75.6%) | +8.0, beyond | simple +24.6 | 0.32 / 0.37 | 60/76 |
+| `gemma4:e2b-it-qat` | 1578 | 290 (74.6%) | +6.9, beyond | situation +15.4, simple +9.2 | 0.34 / 0.41 | 64/76 |
+| `phi4-mini` | 2956 | 290 (74.6%) | +6.9, beyond | simple +23.1, impossible +18.8, conversation +9.4 | 0.31 / 0.35 | 57/76 |
+| `ministral-3:3b` | 2601 | 289 (74.3%) | +6.7, beyond | simple +24.6 | 0.28 / 0.31 | 65/76 |
+| `llama3.2:3b` | 2442 | 277 (71.2%) | +3.6, on the floor | simple +20.0; impossible −9.4 | 0.24 / 0.29 | 59/76 |
+| **`qwen3.5:2b`** (the baseline) | 2254 | 263 (67.6%) | | | 0.37 / 0.42 | 56/76 |
+| `MiniCPM5-2B` Q4_K_M | 1564 | 240 (61.7%) | −5.9, beyond | event −15.4, conversation −10.9, situation −9.2 | 0.21 / 0.23 | 58/76 |
+| `lfm3:1.7b` | 1114 | 202 (51.9%) | −15.7, beyond | impossible −35.9, event −27.7, situation −20.0, conversation −10.9 | 0.23 / 0.28 | 46/76 |
+
+Latency is the runner's per-decision time on the "on" arm, warm, one model resident, network hop
+included. `command_with_target` is beyond noise for no model: every model scored 57 to 66 of 66 there.
+
+**The idle example on and off**, per model (off − on, floor 3.6; with the line / without):
+
+| Model | On | Off | Off − on | Categories beyond noise, off − on | `stop_following` (of 48) | Unasked actions (of 156) | Missed requests (of 233) | Replies flagged |
+|---|---:|---:|---|---|---|---|---|---|
+| `qwen3.5:2b` | 263 | 281 | **+4.6, beyond** | simple +15.4, impossible +9.4 | **22 / 39** | 50 / 48 | 36 / 22 | 13 / 7 |
+| `qwen3.5:4b` | 330 | 292 | **−9.8, beyond** | conversation −18.8, impossible −12.5, event −12.3, simple −10.8 | 44 / 45 | 23 / 67 | 12 / 3 | 0 / 0 |
+| `qwen3:8b` | 315 | 294 | **−5.4, beyond** | impossible −15.6 | 47 / 47 | 40 / 63 | 7 / 4 | 2 / 2 |
+| `granite4.1:3b` | 304 | 311 | +1.8, within | — | 38 / 42 | 19 / 21 | 36 / 36 | 2 / 0 |
+| `nemotron-3-nano:4b` | 304 | 278 | **−6.7, beyond** | impossible −12.5, situation −12.3, event −9.2 | 44 / 44 | 43 / 69 | 14 / 8 | 2 / 2 |
+| `qwen3:4b-instruct-2507` | 296 | 268 | **−7.2, beyond** | conversation −15.6, impossible −10.9 | 38 / 40 | 66 / 94 | 3 / 0 | 0 / 0 |
+| `L3-8B-Stheno-v3.2` | 294 | 279 | **−3.9, beyond** | conversation −14.1 | 46 / 47 | 65 / 82 | 3 / 1 | 1 / 0 |
+| `gemma4:e2b-it-qat` | 290 | 297 | +1.8, within | simple +12.3 | 29 / 42 | 32 / 45 | 35 / 13 | 0 / 1 |
+| `phi4-mini` | 290 | 255 | **−9.0, beyond** | conversation −25.0, impossible −12.5 | 48 / 47 | 36 / 74 | 4 / 1 | 2 / 3 |
+| `ministral-3:3b` | 289 | 277 | −3.1, within | impossible −10.9 | 46 / 46 | 64 / 80 | 0 / 0 | 0 / 0 |
+| `llama3.2:3b` | 277 | 235 | **−10.8, beyond** | conversation −23.4, impossible −17.2, event −10.8 | 44 / 45 | 78 / 120 | 4 / 2 | 1 / 1 |
+| `MiniCPM5-2B` | 240 | 240 | 0 | — | 38 / 42 | 63 / 72 | 32 / 22 | 1 / 0 |
+| `lfm3:1.7b` | 202 | 200 | −0.5, within | — | 30 / 30 | 86 / 65 | 3 / 19 | 4 / 3 |
+
+"Unasked actions" counts an action chosen on a prompt labelled `none`, before any guard. "Missed
+requests" counts `none` answered to a prompt that wants an action. "Replies flagged" are #224's
+reply checks.
+
+**What the idle example does, on five times the prompts.**
+- **It helps seven models beyond noise, and costs one.** Taking the line away cost `llama3.2:3b`
+  10.8 points, `qwen3.5:4b` 9.8 and `phi4-mini` 9.0. Only `qwen3.5:2b` gained, +4.6. The other five
+  are within noise.
+- **What it buys is fewer unasked actions.** Without it, they rose on 11 of 13 models: 23 to 67 on
+  `qwen3.5:4b`, 36 to 74 on `phi4-mini`, 78 to 120 on `llama3.2:3b`. The losses are in
+  conversation and impossible requests, the categories where `none` is right.
+- **What it costs is `stop_following`, and on this set two models pay it.** `qwen3.5:2b` gets 22 of
+  48 right with the line against 39 without, as on the curated set and on the laptop.
+  `gemma4:e2b-it-qat` gets 29 against 42; the curated set's 7 prompts showed this only as 5/7
+  against 7/7. Gemma's overall score is within noise either way, because without the line its
+  unasked actions rose by 13.
+- So the curated-set entry's reading holds and sharpens. The line is the framework's guard against
+  unasked actions, and the 2B reads it as a reason to answer `none` to commands.
+
+**Replies.** Every model but two had 0 to 3 replies flagged per arm, all echoes. `qwen3.5:2b` had
+13 with the line: "You can stay put now." 6 times, "Strike the Wolf." 6 times and "Fine day for
+it." once. `lfm3:1.7b` is the only model with flags other than echoes. With the line, 3 of its
+replies were empty, and one ran to 953 characters, listing the action ids, `no_target` and a
+`target:` label.
+
+**Limits.**
+- **The model ranking is not a set of A/B results of the runner's kind.** It compares separate
+  runs on one server, not `EvalArmOrder.Sequential` pairs, at n = 389, on a set an AI wrote for one
+  agent.
+- **The chat path was not read.** Which models used their Go template is assumed from the curated
+  sweep's laptop log, not seen here.
+- One grounding threshold, 0.8, was used for every model. It was set on Qwen's tokenizer.
+- `llama3.2:3b`'s +3.6 against the 2B sits exactly on the floor.
+
+**What it means.** `qwen3.5:4b` leads on both sets: by 17 points over the 2B here, beyond noise in
+five of six categories, at about 1.4 times the 2B's latency on this server. `qwen3:8b` is second
+here and `granite4.1:3b` third, at the lowest latency of the top ten. `ministral-3:3b`, tied second
+on the curated set, is ninth. Ten models beat the 2B by at least the floor; `MiniCPM5-2B` and
+`lfm3:1.7b` fall below it. Choosing a default model, and whether the idle line should stay on for a
+model like the 2B, are the lead's decisions; nothing in code changes here.
+
+**What would change this.** #147's curated 200+ prompts, written by people, with the ranking run as
+`Sequential` pairs. A different Ollama build, or a server without `OLLAMA_GO_TEMPLATE=1`, changes
+several models' templates. Raw data: `docs/run-requests/001-interim-model-sweep-5080/results-5080-interim.json`
+(per-prompt answers removed), and the full `results.json` with every answer, plus the per-model
+reports, probes and logs, in the live-runs session's checkout, `.scratch/model-sweep-5080/interim/`.

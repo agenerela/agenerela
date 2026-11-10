@@ -67,6 +67,7 @@ export UNITY_PROJECT=C:/Unity_Projects/wt-sweep/UnityProject
 export SWEEP_SET=Evaluation/Interim/agent.json      # or Evaluation/agent.json, the curated 76
 export OLLAMA_URL=http://127.0.0.1:11434            # unset for the RTX 5080's Docker server: read from tools/ollama-server/.env
 export PROBE_REQUESTS=2                             # 6 for a model whose order nobody has checked
+export OLLAMA_SERVER_ENV=C:/Unity_Projects/agenerela/tools/ollama-server/.env  # only when running this kit from a worktree with no .env of its own
 ```
 
 **4. Each model**, `qwen3.5:2b` first, because it is the baseline the others are compared with:
@@ -107,5 +108,8 @@ python tools/live-runs/model-sweep/aggregate.py "$SWEEP_OUT" --compare <an earli
   against the 5080, `.scratch/ollama-lock/` against the laptop's own Ollama. Never
   restart Ollama in the same step as checking the lock: on 9 November that cut off another
   session's run.
+- **Another Editor.** The script stops when a Unity Editor is already running, since two Editors
+  cannot open one project. It ignores Unity Hub's CLI server (`Unity Hub\resources\unity.exe serve`),
+  which has the same process name and which another session's `unity` command can leave running.
 - **Battery.** The script reads `Win32_Battery` on the machine running Unity. A server elsewhere
   must be on mains too; check it there.

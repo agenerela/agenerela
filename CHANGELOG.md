@@ -237,6 +237,10 @@ phase table and the open issues, not here.
 
 ### Fixed
 
+- **The model-sweep kit no longer takes Unity Hub's CLI server for an Editor.** `sweep_one.sh`
+  refused every model while `Unity Hub\resources\unity.exe serve` was running, since it counted
+  any process named Unity. It now counts Editors only. `OLLAMA_SERVER_ENV` points a copy of the kit
+  in a worktree at another checkout's `tools/ollama-server/.env`. Found running request 001.
 - **Release notes no longer break mid-sentence.** GitHub shows every newline in a release's
   notes as a line break, so notes copied from wrapped Markdown came out as ragged paragraphs
   stopping halfway across the page, as 0.2.0, 0.3.0 and 0.4.0-preview.1 did (the last was
