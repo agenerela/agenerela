@@ -67,6 +67,8 @@ namespace Demos.GreyBoxVillage.Lab
             public float TimeScale = 1f;
             /// <summary>Real seconds a turn may take before it is recorded as an error.</summary>
             public float TurnTimeoutSeconds = 90f;
+            /// <summary>Real seconds a call the bench cancelled may take to end before the run stops.</summary>
+            public float CancelWaitSeconds = 10f;
             /// <summary>Press F1 once while a request is with the model, and write down what became of it.</summary>
             public bool ResetProbe;
         }
@@ -82,6 +84,8 @@ namespace Demos.GreyBoxVillage.Lab
             public readonly LabRunInfo Info = new LabRunInfo();
             public int Failures;
             public bool Done;
+            /// <summary>True once the run has its own output folder; a run refused before then writes nothing over another's.</summary>
+            public bool Writable;
         }
 
         /// <summary>
@@ -145,7 +149,12 @@ namespace Demos.GreyBoxVillage.Lab
                     arm.Model = null;
                     arm.ContextSize = 0;
                 }
-            Start(settings, exit: true);
+            try { Start(settings, exit: true); }
+            catch (Exception e)
+            {
+                Debug.LogError("[LabBench] " + e.Message);
+                EditorApplication.Exit(1);
+            }
         }
 
         /// <summary>
@@ -216,6 +225,8 @@ namespace Demos.GreyBoxVillage.Lab
         public static Run Start(Settings settings, bool exit)
         {
             if (running != null) throw new InvalidOperationException("The bench is already running.");
+            // Before anything opens or runs: a refused run must write nothing over the run already there.
+            if (settings.Out != null) DecisionsPath(settings.Out);
             EditorSceneManager.OpenScene(DemoLauncher.VillagePath, OpenSceneMode.Single);
             savedOptionsEnabled = EditorSettings.enterPlayModeOptionsEnabled;
             savedOptions = EditorSettings.enterPlayModeOptions;
@@ -249,7 +260,7 @@ namespace Demos.GreyBoxVillage.Lab
                 yield return work.Current;
             }
             (work as IDisposable)?.Dispose();
-            try { if (settings.Out != null) LabReport.Write(settings, run); }
+            try { if (settings.Out != null && run.Writable) LabReport.Write(settings, run); }
             catch (Exception e)
             {
                 Debug.LogException(e);
@@ -432,6 +443,7 @@ namespace Demos.GreyBoxVillage.Lab
                     string path = DecisionsPath(settings.Out);
                     Directory.CreateDirectory(settings.Out);
                     log = DecisionLog.Start(path, includePrompt: true);
+                    run.Writable = true;
                     // Never rolled over, so no score points at a line the log has dropped.
                     log.MaxFileBytes = long.MaxValue;
                 }
@@ -570,16 +582,17 @@ namespace Demos.GreyBoxVillage.Lab
                     }
                     timedOut = null;
                     foreach (var x in Ask(asked, arm, scenario, turn, result)) yield return x;
+                    LabScore.Score(result, turn);
+                    result.primerMissed = !turn.primer && primerMissed;
+                    if (turn.primer && result.verdict != "exact") primerMissed = true;
+                    // Recorded first, so a run the stuck call then stops still says which turn it was.
+                    run.Results.Add(result);
                     if (timedOut != null)
                     {
                         // Cancelled and settled before anything else is asked, or any model switched.
                         stopped = true;
                         foreach (var x in Abandon(asked, arm, timedOut.Value)) yield return x;
                     }
-                    LabScore.Score(result, turn);
-                    result.primerMissed = !turn.primer && primerMissed;
-                    if (turn.primer && result.verdict != "exact") primerMissed = true;
-                    run.Results.Add(result);
                     // Between turns, what the last one started plays on a moment, as in the game.
                     if (i + 1 < scenario.turns.Count) foreach (var x in Frames(10)) yield return x;
                 }
@@ -598,9 +611,13 @@ namespace Demos.GreyBoxVillage.Lab
             private IEnumerable<object> Abandon(AgentMind asked, Arm arm, Awaitable.Awaiter call)
             {
                 asked.UseProvider(arm.Config);
-                foreach (var x in Until(() => call.IsCompleted, 10f)) yield return x;
+                foreach (var x in Until(() => call.IsCompleted, settings.CancelWaitSeconds)) yield return x;
                 run.Notes.Add(arm.Name + ": " + asked.Name + "'s call did not finish in " + TimeoutFor(arm) + " s; the agent was reset, and the call " +
-                              (call.IsCompleted ? "ended." : "had still not ended 10 s later."));
+                              (call.IsCompleted ? "ended." : "had still not ended " + settings.CancelWaitSeconds + " s later."));
+                // A provider that does not let go keeps the queue's one slot: nothing more can be timed (Codex, L2).
+                if (!call.IsCompleted)
+                    throw new InvalidOperationException(asked.Name + "'s call on " + arm.Name + " was still with the model " + settings.CancelWaitSeconds +
+                                                        " s after it was cancelled, so the run stops: anything asked now would wait behind it.");
             }
 
             private IEnumerable<object> Ask(AgentMind asked, Arm arm, LabScenario scenario, LabTurn turn, LabTurnResult result)

@@ -139,6 +139,25 @@ namespace Demos.GreyBoxVillage.Tests
             finally { System.IO.Directory.Delete(folder, true); }
         }
 
+        // A refused folder keeps everything in it: the refusal comes before anything is opened or written.
+        [Test]
+        public void ARefusedRunWritesNothingOverTheRunThere()
+        {
+            string folder = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "lab-bench-test-" + Guid.NewGuid().ToString("N"));
+            System.IO.Directory.CreateDirectory(folder);
+            try
+            {
+                var names = new[] { "decisions.jsonl", "scores.jsonl", "run.json", "report.md", "statements.md" };
+                foreach (var name in names) System.IO.File.WriteAllText(System.IO.Path.Combine(folder, name), "the first run's " + name);
+                var settings = new LabBench.Settings { Out = folder };
+                Assert.Throws<InvalidOperationException>(() => LabBench.Start(settings, exit: false));
+                Assert.That(EditorApplication.isPlaying, Is.False);
+                foreach (var name in names)
+                    Assert.That(System.IO.File.ReadAllText(System.IO.Path.Combine(folder, name)), Is.EqualTo("the first run's " + name), name);
+            }
+            finally { System.IO.Directory.Delete(folder, true); }
+        }
+
         // ---- Scoring -------------------------------------------------------------------------------
 
         [Test]
@@ -374,6 +393,57 @@ namespace Demos.GreyBoxVillage.Tests
             Assert.That(bram.IsDeciding, Is.False);
         }
 
+        /// <summary>A provider that never answers and ignores being cancelled, as one stuck on a server might.</summary>
+        private sealed class StubbornProvider : ILLMProvider
+        {
+            public string Name => "stubborn";
+            public ProviderCapabilities Capabilities { get; } = new ProviderCapabilities();
+            public Awaitable<ProviderResult> RequestAsync(DecisionRequest req, System.Threading.CancellationToken ct) =>
+                new AwaitableCompletionSource<ProviderResult>().Awaitable;
+        }
+
+        private sealed class StubbornConfig : ProviderConfig
+        {
+            protected override ILLMProvider CreateProvider() => new StubbornProvider();
+        }
+
+        private StubbornConfig stubborn;
+
+        // A call still with the model after it was cancelled holds the queue's one slot, so the run
+        // stops rather than time anything behind it (Codex, L2, round 2).
+        [UnityTest]
+        public IEnumerator ACallThatIgnoresItsCancellationStopsTheRun()
+        {
+            EditorSceneManager.OpenScene(DemoLauncher.VillagePath);
+            yield return new EnterPlayMode();
+            yield return null;
+            stubborn = ScriptableObject.CreateInstance<StubbornConfig>();
+            var baseline = LabFiles.LoadVariants().variants.Single(v => v.name == "baseline");
+            var settings = new LabBench.Settings
+            {
+                Scenarios = LabFiles.LoadScenarios().scenarios.Where(s => s.id == "bram_cmd_01" || s.id == "wren_cmd_01").ToList(),
+                Arms = { new LabBench.Arm { Name = "stubborn", Variant = baseline, Config = stubborn } },
+                WarmUpDecisions = 0,
+                TurnTimeoutSeconds = 1f,
+                CancelWaitSeconds = 1f,
+            };
+            var run = new LabBench.Run();
+            var play = LabBench.Play(settings, run);
+            Exception stopped = null;
+            while (true)
+            {
+                bool more;
+                try { more = play.MoveNext(); }
+                catch (Exception e) { stopped = e; break; }
+                if (!more) break;
+                yield return play.Current;
+            }
+            Assert.That(stopped, Is.Not.Null, "The run went on with a call still with the model.");
+            Assert.That(stopped.Message, Does.Contain("still with the model"));
+            Assert.That(run.Results.Count, Is.EqualTo(1), "A scenario was asked after the stuck one.");
+            yield return new ExitPlayMode();
+        }
+
         [UnityTearDown]
         public IEnumerator LeavePlayMode()
         {
@@ -382,6 +452,7 @@ namespace Demos.GreyBoxVillage.Tests
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             if (oracle != null) UnityEngine.Object.DestroyImmediate(oracle);
             if (contrary != null) UnityEngine.Object.DestroyImmediate(contrary);
+            if (stubborn != null) UnityEngine.Object.DestroyImmediate(stubborn);
         }
     }
 }

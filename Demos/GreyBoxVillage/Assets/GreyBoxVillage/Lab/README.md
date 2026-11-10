@@ -153,6 +153,19 @@ model before an arm's first decision, warms the arm's model up with two throwawa
 F1 then forgets, and reads `/api/ps` after. Interleaved arms on two models swap at every scenario,
 with that warm-up each time; sequential arms swap once.
 
+### How long a run takes
+
+Measured on 10 November, all included (F1, setups, warm-ups, model switches, the report):
+
+| Where | Run | Per decision (p50) | Per asked turn, all in | Turns an hour |
+|---|---|---|---|---|
+| RTX 5080 (Docker Ollama, over the network) | `baseline,baseline,4b`, 24 scenarios, interleaved: a model switch at every scenario | 0.34 s (2B), 0.49 s (4B) | 1.2 s | about 2,950 |
+| RTX 4060 laptop, beside the game | `baseline,4b`, all 80, sequential | 0.87 s (2B), 1.18 s (4B) | 1.3 s | about 2,750 |
+
+A pass over all 80 scenarios is 88 asked turns per arm, so an hour on the 5080 holds about 33
+arm-passes: for example two variants with 15 repeats each, or the noise run `baseline,baseline`
+plus six variants once each, with time to spare. Startup adds about two minutes.
+
 ## Reading a report
 
 `DIR` holds:

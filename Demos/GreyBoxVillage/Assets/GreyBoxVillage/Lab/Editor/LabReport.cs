@@ -206,9 +206,11 @@ namespace Demos.GreyBoxVillage.Lab
 
             sb.AppendLine("### VRAM");
             sb.AppendLine();
-            foreach (var reading in info.residency)
-                sb.AppendLine("- " + reading.when + (string.IsNullOrEmpty(reading.arm) ? "" : " (" + reading.arm + ")") + ": " +
-                              (reading.models.Count == 0 ? "nothing resident" : string.Join("; ", reading.models.Select(m => m.name + " " + Mb(m.size) + " MB, " + Mb(m.sizeVram) + " MB in VRAM, context " + m.contextLength))) + ".");
+            // The same reading after every swap of an interleaved run is said once, with how often.
+            var readings = info.residency.Select(reading => reading.when + (string.IsNullOrEmpty(reading.arm) ? "" : " (" + reading.arm + ")") + ": " +
+                (reading.models.Count == 0 ? "nothing resident" : string.Join("; ", reading.models.Select(m => m.name + " " + Mb(m.size) + " MB, " + Mb(m.sizeVram) + " MB in VRAM, context " + m.contextLength))));
+            foreach (var g in readings.GroupBy(r => r))
+                sb.AppendLine("- " + g.Key + (g.Count() > 1 ? ", " + g.Count() + " times" : "") + ".");
             sb.AppendLine();
 
             sb.AppendLine("## Per pair of arms");
