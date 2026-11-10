@@ -283,6 +283,22 @@ namespace LivingVale.Game
             return result;
         }
 
+        /// <summary>Every target of <paramref name="actionId"/>, available or not, in authored order: facts, contracts or grants.</summary>
+        public IReadOnlyList<string> TargetIds(string actionId)
+        {
+            if (actionId == GameActions.ShareInformation)
+            {
+                return knowledge.ConvertAll(k => k.Id);
+            }
+
+            if (actionId == GameActions.GrantAccess)
+            {
+                return grants.ConvertAll(g => g.Id);
+            }
+
+            return contracts.FindAll(c => c.ActionId == actionId).ConvertAll(c => c.Id);
+        }
+
         /// <summary>The contract with this id, available or not, or null: what a card shows.</summary>
         public RouteContract Contract(string contractId) => contracts.Find(c => c.Id == contractId);
 

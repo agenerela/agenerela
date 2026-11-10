@@ -84,9 +84,13 @@ namespace LivingVale.Agenerela
                     Id = id, Description = Descriptions[id], RequiresTarget = true, CounterExampleStimulus = CounterExamples[id],
                     TargetCategories = new[] { Categories[id] },
 
-                    // Fixed: the framework names the first target of the action's category offered
-                    // this turn (ExampleTargetFallback, #234), and drops the example with the action.
-                    ExampleStimulus = Examples[id]
+                    // Fixed: the framework names the first of these targets offered this turn, and
+                    // drops the example with the action. Preferred, not left to ExampleTargetFallback:
+                    // the fallback skips a target the player's line mentions, and a route line names
+                    // its subject ("the parcel ... for your garrison"), which left Elra's only delivery
+                    // without its example and made gemma4 answer none, 3 of 3 (A/B, 10 November).
+                    ExampleStimulus = Examples[id],
+                    PreferredExampleTargets = new List<string>(executor.Routes.TargetIds(id)).ToArray()
                 };
             }
         }

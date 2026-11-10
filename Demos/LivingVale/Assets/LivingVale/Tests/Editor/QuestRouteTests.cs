@@ -599,6 +599,19 @@ namespace LivingVale.Tests
         }
 
         [Test]
+        public async Task ARouteExampleStaysWhenThePlayersLineNamesItsTarget()
+        {
+            AcceptMainQuest();
+            await RecoverByCombat();
+            await GetPermit();
+            UseModel(Elra);
+            await Decide(Elra, "This is the medical parcel from the wagon, for your garrison.", ActionRegistry.None, TargetRegistry.NoTarget);
+
+            StringAssert.Contains($"action: {GameActions.ResolveDelivery}, target: {QuestRoutes.DeliveryParcelElra}", provider.LastRequest.FewShotBlock,
+                "The delivery's example is shown although the line mentions the parcel (A/B, 10 November).");
+        }
+
+        [Test]
         public async Task TheModelDriverRunsTheInvestigationRoute()
         {
             AcceptMainQuest();
