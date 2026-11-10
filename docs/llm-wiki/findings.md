@@ -2403,3 +2403,105 @@ model like the 2B, are the lead's decisions; nothing in code changes here.
 several models' templates. Raw data: `docs/run-requests/001-interim-model-sweep-5080/results-5080-interim.json`
 (per-prompt answers removed), and the full `results.json` with every answer, plus the per-model
 reports, probes and logs, in the live-runs session's checkout, `.scratch/model-sweep-5080/interim/`.
+
+### How a few-shot example names its target: spaced names are no worse on either model; the uncategorised fallback beats no example by 15 to 19 points but costs impossible requests 30 (9 November 2026)
+
+#190's Living Vale #20 added two switches to `FewShotBuilder`, both off. `SpacedExampleNames` calls
+a target by its id's words, "north tower" rather than "NorthTower", and drops the article before
+the refusal's missing target ("Go and stand by Atlantis." rather than "the Atlantis").
+`ExampleTargetFallback` gives an action with no preferred target here an example naming the first
+offered target it takes, skipping any the stimulus mentions. Two A/B runs per model.
+
+**The shipped evaluation agent cannot measure either as it stands.** Its targeted actions prefer
+`well` and `wolf`, one-word ids that are always offered. Rendering every prompt's few-shot block in
+both arms through `Agent.Preview`, with no model called: with the fallback, 0 of 389 prompts sent a
+different block, so that A/B would have compared identical prompts and was not run; with spaced
+names, all 389 differed, but only in "Well"/"Wolf" becoming lowercase and the refusal's "the". So
+each run changed the profile copy both its arms used, never the asset:
+
+- **Spaced names:** `move_to`'s preferred target became `north_tower`, a two-word id. The arms send
+  "Go and stand by the NorthTower." and "Go and stand by the north tower.", "Strike the Wolf." and
+  "Strike the wolf.", and the two refusals.
+- **Fallback:** `move_to`'s and `attack_target`'s preferred lists were emptied, as for a game whose
+  targets change every turn. Off, the block has no targeted example at all; on, it names the first
+  target in the set's order that the stimulus does not mention, usually `bridge` for both actions
+  ("Go and stand by the Bridge.", "Strike the Bridge."), `village_gate` when the stimulus mentions
+  the bridge. The set's targets have no categories, so nothing stops a bridge being attacked.
+
+The entry point checked every rendered example line against every prompt's stimulus (hard rule 4);
+none matched.
+
+**Setup.** The interim set (389 prompts, `Assets/Evaluation/Interim/`, set commit a24dde9) with a
+copy of `Assets/Evaluation/VillageGuard.asset`, the RTX 5080's Docker Ollama 0.40.14 over the
+network (home), each model fully in VRAM after its warm-up, nothing else resident, the laptop on
+mains power, the 5080 lock held. Interleaved, runner defaults (guards on, the profile's idle
+example), the 9 November state wording. A 24-prompt slice first on `qwen3.5:4b` (24 against 24),
+then the four runs back to back, 5 to 6½ minutes each: `qwen3.5:4b` spaced then fallback, then
+`qwen3.5:2b` the same.
+
+| | 4B glued | 4B spaced | 2B glued | 2B spaced |
+|---|---:|---:|---:|---:|
+| **All, 389** | 334 (85.9%) | 337 (86.6%) | 269 (69.2%) | 280 (72.0%) |
+| Player lines, 259 | 241 (93.1%) | 240 (92.7%) | 198 (76.4%) | 210 (81.1%) |
+| Situations and events, 130 | 93 (71.5%) | 97 (74.6%) | 71 (54.6%) | 70 (53.8%) |
+| simple_command, 65 | 98.5% | 98.5% | 70.8% | 83.1% |
+| command_with_target, 66 | 100.0% | 100.0% | 93.9% | 95.5% |
+| impossible_request, 64 | 78.1% | 76.6% | 64.1% | 67.2% |
+| conversation, 64 | 95.3% | 95.3% | 76.6% | 78.1% |
+| situation, 65 | 58.5% | 64.6% | 50.8% | 49.2% |
+| event, 65 | 84.6% | 84.6% | 58.5% | 58.5% |
+
+| | 4B fallback off | 4B fallback on | 2B fallback off | 2B fallback on |
+|---|---:|---:|---:|---:|
+| **All, 389** | 243 (62.5%) | 317 (81.5%) | 214 (55.0%) | 273 (70.2%) |
+| Player lines, 259 | 189 (73.0%) | 231 (89.2%) | 167 (64.5%) | 207 (79.9%) |
+| Situations and events, 130 | 54 (41.5%) | 86 (66.2%) | 47 (36.2%) | 66 (50.8%) |
+| simple_command, 65 | 100.0% | 98.5% | 83.1% | 81.5% |
+| command_with_target, 66 | 12.1% | 100.0% | 9.1% | 93.9% |
+| impossible_request, 64 | 96.9% | 64.1% | 96.9% | 67.2% |
+| conversation, 64 | 84.4% | 93.8% | 70.3% | 76.6% |
+| situation, 65 | 40.0% | 56.9% | 33.8% | 44.6% |
+| event, 65 | 43.1% | 75.4% | 38.5% | 56.9% |
+
+Floors are 3.6 points at n = 389, 4.4 at 259, 6.2 at 130 and 8.8 at 65.
+
+**Spaced names: no worse on either model.** `qwen3.5:4b` +0.8 overall, within noise in every scope
+and category (situation +6.2, within its 8.8). `qwen3.5:2b` +2.8 overall, within noise; beyond it
+in its favour on player lines, +4.6 against a 4.4 floor, from simple_command, +12.3 (9 commands to
+follow or stop fixed, 1 broken). Nothing went worse beyond noise. Reply checks: the 4B flagged no
+echo in either arm, the 2B 9 glued and 11 spaced.
+
+**The fallback: far better than no example, but it teaches the model that any target goes.** Off
+against on, `qwen3.5:4b` +19.0 overall and `qwen3.5:2b` +15.2, both beyond noise, almost all from
+command_with_target (8 to 66 and 6 to 62 of 66: with no targeted example, the models answered
+commands to go somewhere with `follow_player` or `none`), plus situations and events (+24.6 and
++14.6). But impossible_request fell beyond noise on both, 62 to 41 and 62 to 43 of 64. Of the 4B's
+23 wrong, 10 attacked a place and 7 walked to one: "Burn down the market." became `attack_target
+market`, "Tear down the north tower." `attack_target north_tower`, "Sink the docks." `attack_target
+docks`, after an example showing "Strike the Bridge." as a correct attack. Of the 2B's 21, 17 were
+`attack_target`, 10 of them on the wolf, for requests that have nothing to do with it ("Find my lost
+ring.", "Walk through the wall.", "Unlock the cave."), and 7 on a place. Off, with no targeted example, the models seldom took a targeted action at all,
+which is why that arm's impossible requests scored 97%.
+
+For scale only, not a measured comparison: Request 001 measured the unchanged agent on the same
+server the same day at 330 (4B) and 263 (2B). The glued arms above, which differ from it only in
+`move_to` naming the north tower instead of the well, scored 334 and 269; the fallback-on arms,
+which name uncategorised fallback targets in place of the hand-picked ones, 317 and 273.
+
+**What it means.**
+
+- **Spaced names meet the tech lead's rule** for a default: they read better and are no worse
+  within noise on both models. Recommended as the default, losing the switch. Not flipped here.
+- **The fallback should stay off by default.** It only changes an agent that today sends no example
+  for an action, and there it adds 15 to 19 points; but on an agent whose targets have no
+  categories it pairs a verb with a target it does not suit, and impossible requests fall about 30
+  points, beyond noise on the 4B. A game should turn it on only where its targeted actions declare
+  `TargetCategories`, so an attack example names a creature and a trade example an item. That case
+  is unmeasured: the interim set's targets carry no categories.
+- **The shipped evaluation agent never sees either change**, so neither alters any number measured
+  on it so far, apart from the two lowercase letters and the refusal's article.
+
+**What would change this.** A set whose targets carry categories, to measure the fallback where it
+is meant to be used; #147's curated prompts. Raw data: the four reports, the rendered blocks
+(`lv20-render-*.txt`), the entry point (`Lv20AbRun.cs.txt`) and the logs, in this work's checkout,
+`.scratch/190-lv20/`.
