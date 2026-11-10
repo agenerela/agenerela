@@ -215,6 +215,9 @@ phase table and the open issues, not here.
     event texts are built in one place each, so the bench sends the game's own words.
   - **Fixed:** the target grounding's refusal line answers only the player. Odile no longer says
     "I don't sell that." to a thief.
+  - **The game stays on `qwen3.5:2b`:** on the laptop beside the running game, the 4B's median decision
+    was 1.18 s against the 2B's 0.87 s, over the line of about 1 s the lab set for switching
+    (findings, 10 November).
 - **An editor UI kit** (#167) in the package's `Editor/UI/`, for the Phase 5 screens to share.
   It is internal to `Agenerela.Editor`, so it adds no public API.
   - `Agenerela.uss` holds colour, spacing and type variables (`--ag-*`) built on Unity's own
