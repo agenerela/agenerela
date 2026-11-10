@@ -191,6 +191,30 @@ phase table and the open issues, not here.
   - **Not adopted:** `Agent.Backlog`, since a waiting event must be prepared when its turn comes
     (framework gap G18). The prompt switches (#193) and the paired schema (#210) stay off, as the
     lab's experiment variables.
+- **GreyBoxVillage's scenario bench** (the framework lab, L2), in
+  `Demos/GreyBoxVillage/Assets/GreyBoxVillage/Lab/`, for comparing models and agent recipes in the
+  game itself rather than on a list of prompts.
+  - **80 scenarios** written for it, across Bram, Wren, Odile and Hale: 32 commands, 16 questions
+    and small talk, 12 game events, 12 bait (an unknown target, an unaffordable buy, a quest not
+    ready, a villager to attack, out-of-world asks) and 8 two-turn memory probes. Each sets the
+    village up after F1 (hour, weather, the wolf, a thief, a fire, the bell, the pack, quests) and
+    says which answers are right, weaker or must never happen. A test holds every line to hard
+    rule 4 against both evaluation sets and every agent's few-shot lines.
+  - **Variants** as data: the model, temperature and context, the prompt switches, a persona per
+    agent (#231's knowledge and statement rules), example statements (#218), the observation style
+    and layout (#239), and memory. `baseline` sets nothing, so it is the game.
+  - **The runner,** `LabBench.RunFromCommandLine`, plays them headless in Play mode, interleaved or
+    sequential, through each agent's own mind, unloading every other model and warming each up
+    outside the measurement (hard rule 3). It writes the framework's `DecisionLog` (#229) with the
+    prompt as sent, a score per turn, a report (accuracy, `none` when it is right, bait caught,
+    must-nots, latency p50 and p95, tokens, VRAM, an exact McNemar test per pair against the noise
+    floor) and the statements side by side.
+  - **The game, for the bench:** F1 resets each agent with `AgentBehaviour.ResetAgent` (#219) in
+    place of replacing its component; `AgentMind.OptionsFor`, `Tune` and `AskAsync`; and
+    `VillageCommands.EventsMuted`, so a scenario is exactly the decisions it asks for. The game's
+    event texts are built in one place each, so the bench sends the game's own words.
+  - **Fixed:** the target grounding's refusal line answers only the player. Odile no longer says
+    "I don't sell that." to a thief.
 - **An editor UI kit** (#167) in the package's `Editor/UI/`, for the Phase 5 screens to share.
   It is internal to `Agenerela.Editor`, so it adds no public API.
   - `Agenerela.uss` holds colour, spacing and type variables (`--ag-*`) built on Unity's own

@@ -1,0 +1,2621 @@
+{
+  "scenarios": [
+    {
+      "id": "bram_cmd_01",
+      "purpose": "A plain order to walk to a named place across the river.",
+      "agent": "Bram",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Get yourself over to the north tower.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "move_to north_tower"
+          ],
+          "weaker": [],
+          "mustNot": [
+            "attack_target tomas|ada|pell|mira|wren|odile|hale|bram"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bram_cmd_02",
+      "purpose": "A plain order to walk to the market.",
+      "agent": "Bram",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Take a walk down to the market.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "move_to market"
+          ],
+          "weaker": [
+            "follow_player no_target"
+          ],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "bram_cmd_03",
+      "purpose": "An escort asked for in other words than the examples.",
+      "agent": "Bram",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Come along, I'm heading out.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "follow_player no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "bram_cmd_04",
+      "purpose": "An escort phrased as keeping company on the road.",
+      "agent": "Bram",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Stick with me on the road.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "follow_player no_target"
+          ],
+          "weaker": [
+            "move_to eastern_road"
+          ],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "bram_cmd_05",
+      "purpose": "Blocking a restricted place, named in everyday words.",
+      "agent": "Bram",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Guard the door of the armory.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "block_path armory"
+          ],
+          "weaker": [
+            "move_to armory"
+          ],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "bram_cmd_06",
+      "purpose": "Blocking the keep, named with its apostrophe.",
+      "agent": "Bram",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Don't let anyone into the lord's keep.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "block_path lords_keep"
+          ],
+          "weaker": [
+            "move_to lords_keep"
+          ],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "bram_cmd_07",
+      "purpose": "Attacking the training dummy, called by its words.",
+      "agent": "Bram",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Give that straw dummy a good whack.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "attack_target training_dummy"
+          ],
+          "weaker": [],
+          "mustNot": [
+            "attack_target tomas|ada|pell|mira|wren|odile|hale|bram"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bram_cmd_08",
+      "purpose": "The player asks for the bell outright.",
+      "agent": "Bram",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Sound the bell, now!",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "sound_alarm no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "bram_cmd_09",
+      "purpose": "Walking to the shelter.",
+      "agent": "Bram",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Head for the shelter, Bram.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "move_to shelter"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "wren_cmd_01",
+      "purpose": "A plain order to walk to the docks.",
+      "agent": "Wren",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Run along to the docks, Wren.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "move_to docks"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "wren_cmd_02",
+      "purpose": "An escort with a destination in it: following is the action.",
+      "agent": "Wren",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Keep me company as far as the campfire.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "follow_player no_target"
+          ],
+          "weaker": [
+            "move_to campfire"
+          ],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "wren_cmd_03",
+      "purpose": "Blocking the locked cave.",
+      "agent": "Wren",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Keep people out of the locked cave.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "block_path locked_cave"
+          ],
+          "weaker": [
+            "move_to locked_cave"
+          ],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "wren_cmd_04",
+      "purpose": "Walking to the eastern road.",
+      "agent": "Wren",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Go check the eastern road.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "move_to eastern_road"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "wren_cmd_05",
+      "purpose": "Attacking the dummy, called the practice dummy.",
+      "agent": "Wren",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Hit the practice dummy for me.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "attack_target training_dummy"
+          ],
+          "weaker": [],
+          "mustNot": [
+            "attack_target tomas|ada|pell|mira|wren|odile|hale|bram"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "wren_cmd_06",
+      "purpose": "The bread stall is burning and the player asks for water.",
+      "agent": "Wren",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "fire",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "The bread stall's burning, grab some buckets!",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "fetch_water no_target"
+          ],
+          "weaker": [
+            "move_to market",
+            "sound_alarm no_target"
+          ],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "wren_cmd_07",
+      "purpose": "At night, outside the shut gate, the player asks to be let in.",
+      "agent": "Wren",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "dusk",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Open up, Wren, it's freezing out here.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "open_gate no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "wren_cmd_08",
+      "purpose": "A thief is running and the player shouts for a chase.",
+      "agent": "Wren",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "thief",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "After him, Wren! He's getting away!",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "chase thief",
+            "attack_target thief"
+          ],
+          "weaker": [
+            "move_to eastern_road"
+          ],
+          "mustNot": [
+            "attack_target tomas|ada|pell|mira|wren|odile|hale|bram"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "odile_cmd_01",
+      "purpose": "Buying bread, which the player can afford.",
+      "agent": "Odile",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "I'll take a loaf of bread, please.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "sell bread"
+          ],
+          "weaker": [
+            "give bread"
+          ],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "odile_cmd_02",
+      "purpose": "Buying one apple.",
+      "agent": "Odile",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Sell me one apple.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "sell apple"
+          ],
+          "weaker": [
+            "give apple"
+          ],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "odile_cmd_03",
+      "purpose": "Buying a torch, with the coins counted out.",
+      "agent": "Odile",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "A torch, please. Here's three coins.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "sell torch"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "odile_cmd_04",
+      "purpose": "Buying rope, said as a need rather than an order.",
+      "agent": "Odile",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "I need some rope for the well.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "sell rope"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "odile_cmd_05",
+      "purpose": "Asking for work: her moonpetal quest.",
+      "agent": "Odile",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Any jobs going for someone like me?",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "offer_quest quest_moonpetals"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "odile_cmd_06",
+      "purpose": "Handing in a finished quest.",
+      "agent": "Odile",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [
+          {
+            "id": "moonpetal",
+            "count": 3
+          }
+        ],
+        "quests": [
+          {
+            "id": "quest_moonpetals",
+            "state": "active"
+          }
+        ]
+      },
+      "turns": [
+        {
+          "say": "Here are your three moonpetals.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "complete_quest quest_moonpetals"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "odile_cmd_07",
+      "purpose": "A thief is running and the player tells her to call a guard.",
+      "agent": "Odile",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "thief",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Shout for a guard, quick!",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "call_guard wren|bram"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "odile_cmd_08",
+      "purpose": "A penniless player asks for a cheap gift, which her rule allows.",
+      "agent": "Odile",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": 0,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Hand me an apple, I've no coin left.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "give apple"
+          ],
+          "weaker": [
+            "none no_target"
+          ],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "hale_cmd_01",
+      "purpose": "Sending a guard to the docks.",
+      "agent": "Hale",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Send a guard down to the docks.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "send_guard docks"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "hale_cmd_02",
+      "purpose": "Sending a guard to the well, phrased as posting someone.",
+      "agent": "Hale",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Have someone posted at the well.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "send_guard well"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "hale_cmd_03",
+      "purpose": "Sending a guard to the north tower, said as a man on it.",
+      "agent": "Hale",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Put a man on the north tower tonight.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "send_guard north_tower"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "hale_cmd_04",
+      "purpose": "Sending a guard to a restricted place.",
+      "agent": "Hale",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Get a guard to the armory, quickly.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "send_guard armory"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "hale_cmd_05",
+      "purpose": "Asking the captain for work: the wolf quest.",
+      "agent": "Hale",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "I could use some paid work, captain.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "offer_quest quest_wolf"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "hale_cmd_06",
+      "purpose": "Handing the wolf's pelt in.",
+      "agent": "Hale",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [
+          {
+            "id": "pelt",
+            "count": 1
+          }
+        ],
+        "quests": [
+          {
+            "id": "quest_wolf",
+            "state": "active"
+          }
+        ]
+      },
+      "turns": [
+        {
+          "say": "I've brought you the wolf's pelt.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "complete_quest quest_wolf"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "hale_cmd_07",
+      "purpose": "Sending a guard to watch the road.",
+      "agent": "Hale",
+      "kind": "command",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Order someone to watch the eastern road.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "send_guard eastern_road"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "bram_q_01",
+      "purpose": "A question about the road, in the rain: no action.",
+      "agent": "Bram",
+      "kind": "question",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "rain",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Seen anything odd on the road today?",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "bram_q_02",
+      "purpose": "A question about his years at the gate.",
+      "agent": "Bram",
+      "kind": "question",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "How long have you guarded this gate?",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "bram_talk_01",
+      "purpose": "Small talk about his night.",
+      "agent": "Bram",
+      "kind": "smalltalk",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Rough night on watch?",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "bram_talk_02",
+      "purpose": "A compliment, nothing to do.",
+      "agent": "Bram",
+      "kind": "smalltalk",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Nice boots.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "wren_q_01",
+      "purpose": "A question about the river.",
+      "agent": "Wren",
+      "kind": "question",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Is the river high this time of year?",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "wren_q_02",
+      "purpose": "A question that names a place, without asking to go there.",
+      "agent": "Wren",
+      "kind": "question",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "What's on the far side of the bridge?",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "wren_talk_01",
+      "purpose": "Teasing her for looking tired.",
+      "agent": "Wren",
+      "kind": "smalltalk",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "You look half asleep, Wren.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "wren_talk_02",
+      "purpose": "Small talk at the shut gate at night.",
+      "agent": "Wren",
+      "kind": "smalltalk",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "dusk",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Cold out here tonight, isn't it?",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "odile_q_01",
+      "purpose": "Where her apples come from: a question about a ware, not a sale.",
+      "agent": "Odile",
+      "kind": "question",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Where do your apples come from?",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "odile_q_02",
+      "purpose": "Which ware sells best: no sale.",
+      "agent": "Odile",
+      "kind": "question",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "What's the most popular thing you sell?",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "odile_talk_01",
+      "purpose": "Small talk on an overcast day.",
+      "agent": "Odile",
+      "kind": "smalltalk",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "overcast",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Busy day at the market?",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "odile_talk_02",
+      "purpose": "A compliment on her stall.",
+      "agent": "Odile",
+      "kind": "smalltalk",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "You have a lovely stall.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "hale_q_01",
+      "purpose": "A question about his guards.",
+      "agent": "Hale",
+      "kind": "question",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "How many guards serve under you?",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "hale_q_02",
+      "purpose": "A question about the lord, who lives in a restricted place.",
+      "agent": "Hale",
+      "kind": "question",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Is the lord in today?",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "hale_talk_01",
+      "purpose": "A greeting with his title in it.",
+      "agent": "Hale",
+      "kind": "smalltalk",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Fine morning, captain.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "hale_q_03",
+      "purpose": "A question about the wolf, which tempts a send_guard.",
+      "agent": "Hale",
+      "kind": "question",
+      "bait": "",
+      "difficulty": "hard",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "What happened to the last wolf that came by?",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "bram_ev_01",
+      "purpose": "The wolf stands outside the gate, close: the bell.",
+      "agent": "Bram",
+      "kind": "event",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "wolf_gate",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "",
+          "event": "wolf",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "sound_alarm no_target"
+          ],
+          "weaker": [
+            "attack_target wolf",
+            "block_path village_gate",
+            "warn_player no_target"
+          ],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "bram_ev_02",
+      "purpose": "The wolf down the road in fog, within the bell's reach.",
+      "agent": "Bram",
+      "kind": "event",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "fog",
+        "situation": "wolf_road",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "",
+          "event": "wolf",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "sound_alarm no_target"
+          ],
+          "weaker": [
+            "attack_target wolf",
+            "warn_player no_target"
+          ],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "bram_ev_03",
+      "purpose": "The player walks into the armory in his sight.",
+      "agent": "Bram",
+      "kind": "event",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "zone:armory",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "",
+          "event": "zone",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "warn_player no_target",
+            "block_path armory"
+          ],
+          "weaker": [
+            "move_to armory"
+          ],
+          "mustNot": [
+            "attack_target tomas|ada|pell|mira|wren|odile|hale|bram"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bram_ev_04",
+      "purpose": "A quiet moment: patrol or nothing.",
+      "agent": "Bram",
+      "kind": "event",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "",
+          "event": "quiet",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "patrol no_target",
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "wren_ev_01",
+      "purpose": "She sees a thief running with a ware.",
+      "agent": "Wren",
+      "kind": "event",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "thief",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "",
+          "event": "thief",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "chase thief",
+            "attack_target thief"
+          ],
+          "weaker": [
+            "move_to eastern_road"
+          ],
+          "mustNot": [
+            "attack_target tomas|ada|pell|mira|wren|odile|hale|bram"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "wren_ev_02",
+      "purpose": "Smoke from the bread stall: water.",
+      "agent": "Wren",
+      "kind": "event",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "fire",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "",
+          "event": "fire",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "fetch_water no_target"
+          ],
+          "weaker": [
+            "move_to market"
+          ],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "wren_ev_03",
+      "purpose": "She reaches the shut gate at nightfall: nothing to do.",
+      "agent": "Wren",
+      "kind": "event",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "dusk",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "",
+          "event": "night",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "wren_ev_04",
+      "purpose": "Odile's call about a thief, with her words.",
+      "agent": "Wren",
+      "kind": "event",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "thief",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "",
+          "event": "merchant",
+          "arg": "He's off with my loaf, Wren, run!",
+          "primer": false,
+          "accept": [
+            "chase thief",
+            "attack_target thief"
+          ],
+          "weaker": [
+            "move_to eastern_road",
+            "move_to market"
+          ],
+          "mustNot": [
+            "attack_target tomas|ada|pell|mira|wren|odile|hale|bram"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "wren_ev_05",
+      "purpose": "The captain's order to the docks.",
+      "agent": "Wren",
+      "kind": "event",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "",
+          "event": "captain",
+          "arg": "docks|Down to the docks with you, and look sharp about it.",
+          "primer": false,
+          "accept": [
+            "move_to docks"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "odile_ev_01",
+      "purpose": "A thief snatches a ware from her counter: she calls a guard.",
+      "agent": "Odile",
+      "kind": "event",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "thief",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "",
+          "event": "snatched",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "call_guard wren|bram"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "odile_ev_02",
+      "purpose": "Her stall's fire: she calls the one guard who carries water.",
+      "agent": "Odile",
+      "kind": "event",
+      "bait": "",
+      "difficulty": "easy",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "fire",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "",
+          "event": "fire",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "call_guard wren"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "hale_ev_01",
+      "purpose": "The bell, rung by Bram with the wolf at the gate: a guard to the gate.",
+      "agent": "Hale",
+      "kind": "event",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "wolf_gate",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "",
+          "event": "bell",
+          "arg": "Bram",
+          "primer": false,
+          "accept": [
+            "send_guard village_gate"
+          ],
+          "weaker": [
+            "send_guard eastern_road",
+            "send_guard shelter"
+          ],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "bram_bait_01",
+      "purpose": "Attacking a villager: the model or the guard must stop it.",
+      "agent": "Bram",
+      "kind": "bait",
+      "bait": "villager_attack",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Knock Tomas flat.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [
+            "warn_player no_target"
+          ],
+          "mustNot": [
+            "attack_target tomas|ada|pell|mira|wren|odile|hale|bram"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bram_bait_02",
+      "purpose": "Guarding a place the village does not have.",
+      "agent": "Bram",
+      "kind": "bait",
+      "bait": "unknown_target",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Guard the windmill.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "bram_bait_03",
+      "purpose": "A dragon over the tower: out of the world.",
+      "agent": "Bram",
+      "kind": "bait",
+      "bait": "out_of_world",
+      "difficulty": "hard",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Shoot down that dragon over the tower!",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [
+            "sound_alarm no_target",
+            "warn_player no_target"
+          ],
+          "mustNot": [
+            "attack_target tomas|ada|pell|mira|wren|odile|hale|bram"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "wren_bait_01",
+      "purpose": "Attacking a villager by name.",
+      "agent": "Wren",
+      "kind": "bait",
+      "bait": "villager_attack",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Give Ada a good thump.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": [
+            "attack_target tomas|ada|pell|mira|wren|odile|hale|bram"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "wren_bait_02",
+      "purpose": "A fire the game does not have: fetch_water is not offered.",
+      "agent": "Wren",
+      "kind": "bait",
+      "bait": "not_offered",
+      "difficulty": "hard",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Fetch water, the barn's on fire!",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [
+            "sound_alarm no_target",
+            "move_to well"
+          ],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "wren_bait_03",
+      "purpose": "A ghost on the river: out of the world.",
+      "agent": "Wren",
+      "kind": "bait",
+      "bait": "out_of_world",
+      "difficulty": "hard",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Chase the ghost down the river!",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [
+            "move_to bridge"
+          ],
+          "mustNot": [
+            "attack_target tomas|ada|pell|mira|wren|odile|hale|bram"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "odile_bait_01",
+      "purpose": "Buying the lantern with three coins: she cannot sell it.",
+      "agent": "Odile",
+      "kind": "bait",
+      "bait": "unaffordable",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": 3,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "I'll buy the lantern.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "odile_bait_02",
+      "purpose": "Asking for the rope for free: worth more than she gives away.",
+      "agent": "Odile",
+      "kind": "bait",
+      "bait": "too_dear_gift",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Can I have the rope for nothing?",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [
+            "give apple",
+            "give bread"
+          ],
+          "mustNot": [
+            "give rope"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "odile_bait_03",
+      "purpose": "Buying a sword she does not stock.",
+      "agent": "Odile",
+      "kind": "bait",
+      "bait": "unknown_target",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Sell me a sword.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "odile_bait_04",
+      "purpose": "Handing in one moonpetal of three: the quest is not ready.",
+      "agent": "Odile",
+      "kind": "bait",
+      "bait": "quest_not_ready",
+      "difficulty": "hard",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [
+          {
+            "id": "moonpetal",
+            "count": 1
+          }
+        ],
+        "quests": [
+          {
+            "id": "quest_moonpetals",
+            "state": "active"
+          }
+        ]
+      },
+      "turns": [
+        {
+          "say": "Here, I found your moonpetals.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": [
+            "complete_quest quest_moonpetals"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hale_bait_01",
+      "purpose": "Sending a guard to the moon.",
+      "agent": "Hale",
+      "kind": "bait",
+      "bait": "out_of_world",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Send a guard to the moon.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "hale_bait_02",
+      "purpose": "Claiming the wolf's reward without the pelt.",
+      "agent": "Hale",
+      "kind": "bait",
+      "bait": "quest_not_ready",
+      "difficulty": "hard",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": [
+          {
+            "id": "quest_wolf",
+            "state": "active"
+          }
+        ]
+      },
+      "turns": [
+        {
+          "say": "Here's the wolf pelt, captain.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": [
+            "complete_quest quest_wolf"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bram_mem_01",
+      "purpose": "He follows on the first line, and stops following on the second.",
+      "agent": "Bram",
+      "kind": "memory",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Come along with me for a while.",
+          "event": "",
+          "arg": "",
+          "primer": true,
+          "accept": [
+            "follow_player no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        },
+        {
+          "say": "All right, this is far enough for you.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "stop_following no_target"
+          ],
+          "weaker": [
+            "none no_target"
+          ],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "bram_mem_02",
+      "purpose": "Sent to the market, then sent back where he was: the gate.",
+      "agent": "Bram",
+      "kind": "memory",
+      "bait": "",
+      "difficulty": "hard",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Head over to the market for me.",
+          "event": "",
+          "arg": "",
+          "primer": true,
+          "accept": [
+            "move_to market"
+          ],
+          "weaker": [],
+          "mustNot": []
+        },
+        {
+          "say": "Actually, go back where you were.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "move_to village_gate"
+          ],
+          "weaker": [
+            "stop_following no_target"
+          ],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "wren_mem_01",
+      "purpose": "She follows, then is sent ahead to the docks.",
+      "agent": "Wren",
+      "kind": "memory",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Follow me, I want to show you something.",
+          "event": "",
+          "arg": "",
+          "primer": true,
+          "accept": [
+            "follow_player no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        },
+        {
+          "say": "It's just past here. Go on ahead to the docks.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "move_to docks"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "wren_mem_02",
+      "purpose": "A place named in the first line, then 'it' in the second.",
+      "agent": "Wren",
+      "kind": "memory",
+      "bait": "",
+      "difficulty": "hard",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Someone's been prowling near the north tower.",
+          "event": "",
+          "arg": "",
+          "primer": true,
+          "accept": [
+            "none no_target",
+            "move_to north_tower"
+          ],
+          "weaker": [],
+          "mustNot": []
+        },
+        {
+          "say": "Go and check on it.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "move_to north_tower"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "odile_mem_01",
+      "purpose": "The price of a ware asked, then 'it' bought.",
+      "agent": "Odile",
+      "kind": "memory",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "How much is the torch?",
+          "event": "",
+          "arg": "",
+          "primer": true,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        },
+        {
+          "say": "Fine, I'll take it.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "sell torch"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "odile_mem_02",
+      "purpose": "The bread asked about, then 'one' bought.",
+      "agent": "Odile",
+      "kind": "memory",
+      "bait": "",
+      "difficulty": "hard",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "Is the bread fresh today?",
+          "event": "",
+          "arg": "",
+          "primer": true,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        },
+        {
+          "say": "Then I'll have one.",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "sell bread"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "hale_mem_01",
+      "purpose": "Trouble reported at the docks, then 'there' to send someone to.",
+      "agent": "Hale",
+      "kind": "memory",
+      "bait": "",
+      "difficulty": "medium",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "There's been a fight on the jetty by the docks.",
+          "event": "",
+          "arg": "",
+          "primer": true,
+          "accept": [
+            "none no_target",
+            "send_guard docks"
+          ],
+          "weaker": [],
+          "mustNot": []
+        },
+        {
+          "say": "Will you send someone there now?",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "send_guard docks"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    },
+    {
+      "id": "hale_mem_02",
+      "purpose": "The wolf quest taken, then what it asks for: the statement must remember the pelt.",
+      "agent": "Hale",
+      "kind": "memory",
+      "bait": "",
+      "difficulty": "hard",
+      "setup": {
+        "hour": "",
+        "weather": "",
+        "situation": "",
+        "player": "",
+        "coins": -1,
+        "items": [],
+        "quests": []
+      },
+      "turns": [
+        {
+          "say": "I'll hunt that wolf for you, captain.",
+          "event": "",
+          "arg": "",
+          "primer": true,
+          "accept": [
+            "offer_quest quest_wolf"
+          ],
+          "weaker": [],
+          "mustNot": []
+        },
+        {
+          "say": "What was it you wanted me to bring back?",
+          "event": "",
+          "arg": "",
+          "primer": false,
+          "accept": [
+            "none no_target"
+          ],
+          "weaker": [],
+          "mustNot": []
+        }
+      ]
+    }
+  ]
+}

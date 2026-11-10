@@ -1,0 +1,151 @@
+{
+  "variants": [
+    {
+      "name": "baseline",
+      "description": "The game as it ships: nothing set, so every agent sends exactly what GreyBoxVillage sends."
+    },
+    {
+      "name": "4b",
+      "description": "The game on qwen3.5:4b, the 9 November sweep's leader.",
+      "provider": { "model": "qwen3.5:4b" }
+    },
+    {
+      "name": "4b-instruct",
+      "description": "The game on qwen3:4b-instruct-2507-q4_K_M.",
+      "provider": { "model": "qwen3:4b-instruct-2507-q4_K_M" }
+    },
+    {
+      "name": "warm",
+      "description": "The game at temperature 0.7, for the noise a sampled run has.",
+      "provider": { "temperature": "0.7" }
+    },
+    {
+      "name": "listed",
+      "description": "The actions and targets listed in the system prompt (#193).",
+      "prompt": [ { "name": "ListActionsAndTargets", "value": "true" } ]
+    },
+    {
+      "name": "paired",
+      "description": "Each target paired with the actions that take it (#210).",
+      "prompt": [ { "name": "PairTargetsWithActions", "value": "true" } ]
+    },
+    {
+      "name": "no-counter",
+      "description": "The counter-examples left out of the examples.",
+      "prompt": [ { "name": "CounterExamples", "value": "false" } ]
+    },
+    {
+      "name": "no-statements",
+      "description": "The examples without their statements (#218), the control for 'statements'.",
+      "prompt": [ { "name": "ExampleStatements", "value": "false" } ]
+    },
+    {
+      "name": "statements",
+      "description": "A statement written for each action's example (#218), in each agent's voice.",
+      "statements": [
+        { "agent": "Bram", "action": "follow_player", "statement": "Right behind you." },
+        { "agent": "Bram", "action": "stop_following", "statement": "I'll hold here." },
+        { "agent": "Bram", "action": "move_to", "statement": "On my way." },
+        { "agent": "Bram", "action": "attack_target", "statement": "Have at it!" },
+        { "agent": "Bram", "action": "warn_player", "statement": "You can't be in there." },
+        { "agent": "Bram", "action": "block_path", "statement": "None shall pass." },
+        { "agent": "Bram", "action": "sound_alarm", "statement": "To arms! Ring the bell!" },
+        { "agent": "Bram", "action": "patrol", "statement": "I'll walk the walls." },
+        { "agent": "Wren", "action": "move_to", "statement": "Going." },
+        { "agent": "Wren", "action": "chase", "statement": "Not today, you don't." },
+        { "agent": "Wren", "action": "fetch_water", "statement": "Water, now!" },
+        { "agent": "Odile", "action": "sell", "statement": "That's yours, love. Mind the change." },
+        { "agent": "Odile", "action": "give", "statement": "Go on, take it." },
+        { "agent": "Odile", "action": "call_guard", "statement": "Guard! Over here!" },
+        { "agent": "Hale", "action": "send_guard", "statement": "I'll have a man there at once." }
+      ]
+    },
+    {
+      "name": "terse",
+      "description": "Terse observations: places by id and distance only, and no line on where the villagers are.",
+      "observations": "terse"
+    },
+    {
+      "name": "no-observations",
+      "description": "Nothing passed with the call: only what the framework's own sources add.",
+      "observations": "none"
+    },
+    {
+      "name": "sources",
+      "description": "The standing facts in an observation source, the moment's own facts with the call, both in the observation block (#239's layout, placement off).",
+      "layout": "sources"
+    },
+    {
+      "name": "sources-with-stimulus",
+      "description": "The standing facts in an observation source, the moment's own after the stimulus (#239, #237).",
+      "layout": "sources",
+      "prompt": [ { "name": "ObservationPlacement", "value": "WithStimulus" } ]
+    },
+    {
+      "name": "short-identity",
+      "description": "Each agent as a name and a role only.",
+      "persona": [
+        { "agent": "Bram", "personality": "-", "goals": "-" },
+        { "agent": "Wren", "personality": "-", "goals": "-" },
+        { "agent": "Odile", "personality": "-", "goals": "-" },
+        { "agent": "Hale", "personality": "-", "goals": "-" }
+      ]
+    },
+    {
+      "name": "character-sheet",
+      "description": "Each agent with standing knowledge and statement rules (#231) on top of the profile.",
+      "persona": [
+        {
+          "agent": "Bram",
+          "statementRules": "One short sentence, plain and dutiful. Never give the player orders.",
+          "knowledge": [
+            "The armory, the lord's keep and the locked cave are off limits to the player.",
+            "When the wolf comes close to the gate, the bell warns the village.",
+            "You never raise your sword against the village's own people."
+          ]
+        },
+        {
+          "agent": "Wren",
+          "statementRules": "One short, dry sentence.",
+          "knowledge": [
+            "By night you keep the gate, and open it only when someone asks to come in.",
+            "A thief or the wolf is run down, never left to get away.",
+            "Water from the well puts out a fire."
+          ]
+        },
+        {
+          "agent": "Odile",
+          "statementRules": "One or two short, warm sentences. Call people love.",
+          "knowledge": [
+            "You sell only what lies on your counter, at its price.",
+            "You give nothing away worth more than two coins.",
+            "When there is trouble at the stall, you shout for a guard."
+          ]
+        },
+        {
+          "agent": "Hale",
+          "statementRules": "One short sentence, gruff and fair.",
+          "knowledge": [
+            "You send guards; you do not leave the keep yourself.",
+            "The wolf's pelt is the proof you pay for."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "no-memory",
+      "description": "No memory: each decision sees no history.",
+      "memory": { "historyTurns": "0" }
+    },
+    {
+      "name": "long-memory",
+      "description": "Twelve exchanges of history instead of the framework's six.",
+      "memory": { "historyTurns": "12" }
+    },
+    {
+      "name": "commit-on-execute",
+      "description": "Memory records only what the game executed (MemoryCommit.OnExecute, DR-018).",
+      "memory": { "commit": "OnExecute" }
+    }
+  ]
+}

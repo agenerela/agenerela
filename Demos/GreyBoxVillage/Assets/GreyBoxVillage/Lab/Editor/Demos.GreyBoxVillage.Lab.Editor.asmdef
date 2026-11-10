@@ -1,0 +1,14 @@
+{
+  "name": "Demos.GreyBoxVillage.Lab.Editor",
+  "rootNamespace": "Demos.GreyBoxVillage.Lab",
+  "references": [
+    "GreyBoxVillage",
+    "Agenerela",
+    "Demos.Shared"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "overrideReferences": true,
+  "precompiledReferences": []
+}
