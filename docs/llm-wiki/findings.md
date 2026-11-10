@@ -2063,6 +2063,220 @@ are kept apart as separate machines (`environment.md`).
 **What would change this.** Timing a load with the file already in the page cache against one
 without, after a server restart.
 
+### Policy lines as knowledge or as observations: 335/389 against 323/389, and neither helps situations (9 November 2026)
+
+#190's Living Vale #14 added `AgentIdentity.Knowledge`, lines in the system prompt after the goals.
+The design notes owed one A/B: a few policy lines given as knowledge, against the same lines given
+as observations, which is how Living Vale sends its facts today. The question behind it: models
+score far lower on situations and events than on player lines, because the right answer there is
+the designer's policy ("a guard on watch duty goes to an empty tower"). Does stating a policy help,
+and does it matter where it goes?
+
+**The lines.** Five, written for this run by the agent that built the feature, who could see the
+set's six category names (`simple_command` … `event`) and its targets, but not its prompts or
+labels. They are a designer's guess, not tuned to the set, and the entry point refused any that
+overlapped a prompt's stimulus (hard rule 4; none did):
+
+1. When trouble is reported at a place you can reach, go there.
+2. When a wolf or an armed stranger threatens someone nearby, attack it.
+3. When people need to take cover, go to the shelter.
+4. Small talk, questions and quiet moments need no action.
+5. If you are asked for something you cannot do, or a place that is not here, take no action and say so.
+
+None of them says when to follow the player or stop.
+
+**Setup.** The interim set (389 prompts, `Assets/Evaluation/Interim/`, set commit a24dde9) with
+`Assets/Evaluation/VillageGuard.asset`, `qwen3.5:4b`, the RTX 5080's Docker Ollama 0.40.14 over the
+network (home), 2995 of 2995 MB in VRAM after each warm-up, nothing else resident, the laptop on
+mains power, the 5080 lock held. Interleaved, runner defaults (guards on, the profile's idle
+example), the 9 November state wording. Two A/B runs back to back, each 6 minutes, after a 24-prompt
+slice (23 against 24, within noise):
+
+- **Run 1.** A: the lines as `DecideOptions.Observations`, first in the observation block. B: the
+  same lines as `EvalArm.Knowledge`, so under "What you know:" in the system prompt.
+- **Run 2.** A: no lines at all, today's prompt. B: the lines as knowledge again.
+
+| | A: as observations | B: as knowledge | A: no lines | B: as knowledge |
+|---|---:|---:|---:|---:|
+| | run 1 | run 1 | run 2 | run 2 |
+| **All, 389** | 323 (83.0%) | 335 (86.1%) | 330 (84.8%) | 335 (86.1%) |
+| Player lines, 259 | 235 (90.7%) | 244 (94.2%) | 239 (92.3%) | 244 (94.2%) |
+| Situations and events, 130 | 88 (67.7%) | 91 (70.0%) | 91 (70.0%) | 91 (70.0%) |
+| simple_command, 65 | 89.2% | 98.5% | 98.5% | 98.5% |
+| command_with_target, 66 | 98.5% | 98.5% | 100.0% | 98.5% |
+| impossible_request, 64 | 93.8% | 92.2% | 76.6% | 92.2% |
+| conversation, 64 | 81.3% | 87.5% | 93.8% | 87.5% |
+| situation, 65 | 60.0% | 58.5% | 61.5% | 58.5% |
+| event, 65 | 75.4% | 81.5% | 78.5% | 81.5% |
+
+"Player lines" are the four categories a player says; floors are 3.6 points at n = 389, 4.4 at 259,
+6.2 at 130 and 8.8 at 65.
+
+**Run 1, knowledge against observations: +3.1 overall, within noise** (floor 3.6). Beyond noise
+only in simple_command, +9.2: as observations, 6 of the 65 commands to follow ("Come with me" and
+the like) became `none`, as knowledge none did. The most likely reading is line 4, "Small talk …
+need no action", sitting in the observation block right before the stimulus; that was not isolated.
+Situations and events +2.3, within noise.
+
+**Run 2, knowledge against no lines: +1.3 overall, within noise.** Beyond noise only in
+impossible_request, +15.6, which is line 5's subject: without the lines, 15 of the 64 requests for a
+place that is not here or a thing the guard cannot do went wrong (11 acted on, wrong-but-legal, and
+4 contained by the guard), against 5 with them (4 and 1). Conversation −6.3, within noise. Situations and events: 91 and 91.
+
+**The arms are deterministic.** The knowledge arm gave the same 389 answers, statements included,
+in both runs, and the no-lines arm's 330 is what Request 001 measured for this model on this server
+earlier the same day. So repeating an identical prompt adds no noise here; the floor above stands
+for how far an unrelated change to the prompt moves the score, which this server has not measured.
+
+**What it means.**
+
+- **Overall, the point estimates favour knowledge, but within noise.** The same five lines scored
+  7 answers below no lines as observations (323 against 330, across two runs, so read it with care)
+  and 5 above as knowledge. No accuracy change is claimed: neither overall difference passes the
+  floor. The one category beyond noise against observations, simple_command, is consistent with
+  the observation block's position before the stimulus, not shown by it.
+- **The lines helped impossible requests.** The five lines together moved impossible_request
+  beyond noise; line 5 names that case and is the likely cause, but no run isolated it.
+- **These lines do not close the gap on situations and events.** It stays at about 70% against
+  92–94% on player lines in every arm. Most misses there are `follow_player`, `stop_following` and
+  `attack_target` answered with `move_to` or `none`, cases no line covered, or covered too loosely
+  ("someone nearby"). Whether lines written per action would, is the next run, and it needs lines
+  written by someone who has not seen the labels.
+- Nothing becomes a default: both fields stay empty unless a developer writes them.
+
+**What would change this.** Another model, other lines, or a situation set labelled against a
+written policy. Raw reports: `.scratch/lv14/report-full/` and `report-full-none/` in the session's
+checkout (`.claude/worktrees/silly-panini-9d970f`); the entry point is `.scratch/lv14/KnowledgeAbRun.cs.txt` there.
+
+### Few-shot examples as chat turns: better for `qwen3.5:2b` at the noise floor, worse beyond it for `qwen3.5:4b` and `gemma4:e2b-it-qat`, and every statement goes empty (9 November 2026)
+
+**What.** A switch built for this run and **not adopted**: `DecideOptions.ExamplesAsTurns` (#151)
+sent the same few-shot examples, in the same order, as `user`/`assistant` turns, each answer the
+JSON the schema asks for, instead of the block of lines in the system prompt. The examples went
+after the system message and before the agent's memory; the refusal's "(not an available target)"
+note was left out of its JSON answer; only a provider declaring `SendsExampleTurns` (Ollama) got
+turns. **The code is parked**, never merged, on the branch `151-chat-turn-examples-parked`: the switch,
+its 14 EditMode tests and its docs are commit `6ea8bf0`, and the run kit,
+`tools/live-runs/example-turns/` (entry point, `run_one.sh`, README), is on the same branch, since it
+needs that code. Check the branch out to re-run either run below.
+A review that morning had replayed the curated set's 76 requests against `qwen3.5:2b` outside Unity
+with the examples moved into turns and scored 63/76 against 56/76 (one model, one run, no guard: a
+lead, not a result). This is the A/B that lead asked for.
+
+**Setup.** The interim set, 389 prompts, against `VillageGuard`, through `EvalRunner` with the
+parked branch's kit: arm `block` (the defaults) against arm `turns`
+(`ExamplesAsTurns = true`), **interleaved, in one session per model, guards on**, three warm-up
+requests each. The framework was the parked branch, off `test` at 17c5184. RTX 5080,
+Docker Ollama 0.40.14, over the network from the lead's laptop on AC power, the 5080 lock held.
+One model resident at a time, each fully in VRAM throughout and unloaded after its run (nothing
+was resident before each). State as one observation line, targets as one observation each, as in
+the sweep. A 20-prompt slice of `qwen3.5:2b` ran first and gave 19/20 against 17/20.
+
+| Correct, of 389 | `block` | `turns` | `turns` − `block` |
+|---|---:|---:|---|
+| **`qwen3.5:2b`** | **263 (67.6%)** | **277 (71.2%)** | +3.6, **beyond noise by a hair** (floor 3.59) |
+| **`qwen3.5:4b`** | **330 (84.8%)** | **291 (74.8%)** | −10.0, **beyond noise** |
+| **`gemma4:e2b-it-qat`** | **290 (74.6%)** | **264 (67.9%)** | −6.7, **beyond noise** |
+
+The two `block` scores of the Qwen models are request 001's two baselines on the same server to the
+prompt (263 and 330), so the server and the set reproduced.
+
+By category (player lines: simple_command, command_with_target, impossible_request, conversation;
+policy cases: situation, event). Floors about 9 points per category, 4.4 for the 259 player lines,
+6.2 for the 130 policy cases:
+
+| | 2B block | 2B turns | 4B block | 4B turns | Gemma block | Gemma turns |
+|---|---:|---:|---:|---:|---:|---:|
+| Player lines, of 259 | 195 | 210 | 239 | 220 | 207 | 192 |
+| Policy cases, of 130 | 68 | 67 | 91 | 71 | 83 | 72 |
+| simple_command, of 65 | 47 | 50 | 64 | 59 | 53 | 41 (−18.5) |
+| command_with_target, of 66 | 62 | 62 | 66 | 63 | 63 | 60 |
+| impossible_request, of 64 | 41 | 42 | 49 | 44 | 41 | 49 (+12.5) |
+| conversation, of 64 | 45 | 56 (+17.2) | 60 | 54 (−9.4) | 50 | 42 (−12.5) |
+| situation, of 65 | 29 | 30 | 40 | 35 | 39 | 36 |
+| event, of 65 | 39 | 37 | 51 | 36 (−23.1) | 44 | 36 (−12.3) |
+| `stop_following`, of 48 | 22 | 28 | 44 | 31 | 29 | 10 |
+| Unasked actions, of 156 `none` prompts | 50 | 38 | 23 | 46 | 32 | 16 |
+| Missed requests, of 233 that want one | 36 | 43 | 12 | 13 | 35 | 74 |
+| Replies flagged (#224) | 13, echoes | 361, **empty** | 0 | 378, **empty** | 0 | 389, **empty** |
+| Median latency | 0.361 s | 0.147 s | 0.443 s | 0.210 s | 0.332 s | 0.149 s |
+| Median prompt tokens | 366 | 419 | 366 | 419 | 368 | 426 |
+| Median completion tokens | 35 | 14 | 37 | 15 | 31 | 16 |
+
+Numbers in brackets are the runner's noise check where it says beyond noise.
+
+- **The 2B's gain is conversation.** 12 of its 49 flips to right are conversation lines: 7 that
+  the block arm answered with an action (`attack_target` on the wolf, `move_to`) and the turns arm
+  rightly with `none`, and 5 where the turns arm chose the right action, `follow_player` or
+  `stop_following`, where the block arm had chosen a wrong one. That is the shape of the morning's replay. It does not carry over to the policy cases,
+  which lose wolf events to `none` or a wrong target.
+- **The 4B loses everywhere**, events most: it doubles its unasked actions (23 to 46, 26 of its 59
+  flips to wrong were `none` prompts answered `move_to`) and loses `stop_following` (44 to 31).
+- **Gemma swings towards `none`**: missed requests double (35 to 74) and `stop_following` falls from
+  29 to 10, which is why impossible requests rise and every other category falls.
+- **Every statement goes empty.** No `VillageGuard` example has a written statement, so every
+  example answer shows `"statement":""`, and all three models copy it: 361, 378 and 389 of 389
+  replies are flagged `Empty`, against 13 echoes, 0 and 0 with the block. The block shows no
+  statement at all, and there each model writes its own line. That is also why the turns arm is
+  faster (half the completion tokens). Accuracy here scores only the action and target, so it does
+  not count this, but a talking NPC would fall silent.
+- **The cost in prompt tokens**: about 53 more per request (366 to 419), the JSON and role overhead
+  of five example pairs.
+
+**Second run: both arms with written statements.** The empty copies confound the first run, so the
+tech lead asked for the A/B again with a statement on every example, the same in both arms. The
+parked kit's `AGENERELA_EXAMPLE_STATEMENTS=1` writes them on in-memory copies of `VillageGuard` and its
+four action assets (the asset itself is unchanged): `follow_player` "Right behind you.",
+`stop_following` "I'll hold here, then.", `move_to` "Heading to the {0} now.", `attack_target`
+"Steel out. The {0} won't trouble us long.", and the idle example "Aye, quiet so far.". None matches
+a prompt: the run asserts `PromptSetChecks` finds no more example matches than with the bare profile.
+Same server, set, arms and order, guards on, `qwen3.5:4b` then `qwen3.5:2b`, each alone and fully in
+VRAM, the same evening (20:18 to 20:28).
+
+| Correct, of 389 | `block` + statements | `turns` + statements | `turns` − `block` |
+|---|---:|---:|---|
+| **`qwen3.5:4b`** | **332 (85.3%)** | **290 (74.6%)** | −10.8, **beyond noise** |
+| **`qwen3.5:2b`** | **274 (70.4%)** | **288 (74.0%)** | +3.6, **beyond noise by a hair** (floor 3.59) |
+
+| | 4B block | 4B turns | 2B block | 2B turns |
+|---|---:|---:|---:|---:|
+| Player lines, of 259 | 241 | 223 | 201 | 215 |
+| Policy cases, of 130 | 91 | 67 | 73 | 73 |
+| conversation, of 64 | 59 | 54 | 44 | 59 (+23.4) |
+| event, of 65 | 50 | 34 (−24.6) | 42 | 40 |
+| Replies flagged `Empty` | 0 | 1 | 0 | 0 |
+| Replies flagged `Echo` (a statement repeated word for word) | 255 | 52 | 253 | 85 |
+| `stop_following`, of 48 | 44 | 35 | 20 | 30 |
+| Unasked actions / missed requests | 20 / 15 | 49 / 12 | 32 / 59 | 34 / 42 |
+| Median latency | 0.374 s | 0.272 s | 0.315 s | 0.200 s |
+| Median prompt tokens | 410 | 447 | 410 | 447 |
+
+- **The accuracy result does not move.** Written statements leave the 4B 10.8 points worse with
+  turns, events worst (−24.6) and unasked actions more than doubled again (20 to 49), and the 2B
+  3.6 points better, from conversation. So the first run's split is not the empty statements.
+- **Statements stop the empty replies** in the turns arm (378 and 361 empty before, 1 and 0 now),
+  **but the block arm then parrots them**: about two thirds of its replies are an example's statement
+  word for word ("Aye, quiet so far." 64 times on the 4B, "Steel out. The Wolf won't trouble us
+  long." 67 times on the 2B). The turns arm echoes far less (52 and 85). That is G14's echo moving
+  from the stimulus to the statement, which the live-runs list already asks to measure.
+- Statements cost 44 prompt tokens in the block and 28 in turns; the turns arm is still the
+  longer prompt by 37.
+
+**What it means.** The morning's +7 on 76 prompts was real for `qwen3.5:2b` in direction but about
+half the size on 389 prompts, twice, and the same change costs `qwen3.5:4b` 10 to 11 points beyond
+noise twice and `gemma4:e2b-it-qat` 6.7 once, with or without written statements. The switch was not
+adopted into the package. Turns do make a model echo a written statement less, but no accuracy gain comes with it
+outside the 2B.
+
+**What would change this.**
+
+- A model family on which turns win beyond noise on both player lines and policy cases.
+
+Short of that: an answer that leaves `statement` out when none was written; the curated
+76 in the Unity path, to compare with the morning's replay; a model above 4B. Raw data: the reports
+and `tokens.json` files in the lead's main checkout, `.scratch/151-chat-turns/full/` and `stated/`,
+with `summarize.py`, which prints these tables.
+
 ### Thirteen models on the interim set, on the RTX 5080: `qwen3.5:4b` first at 330/389, and the idle example helps every model but `qwen3.5:2b` (9 November 2026)
 
 [Run request 001](../run-requests/001-interim-model-sweep-5080/request.md): the 13-model sweep of

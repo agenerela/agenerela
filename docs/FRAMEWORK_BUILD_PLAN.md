@@ -501,7 +501,7 @@ The agent abstraction, deliberately **not** welded to `MonoBehaviour`:
 ```csharp
 // Plain class — the brain. Owns identity, registered actions, targets and state (#17).
 public sealed class Agent {
-    public AgentIdentity Identity { get; }               // name, role, personality, goals
+    public AgentIdentity Identity { get; }               // name, role, personality, goals, knowledge, statement rules
     public ActionRegistry Actions { get; }               // see 2.2; filled by Bind
     public TargetRegistry Targets { get; }               // hand-registered targets
     public List<ITargetSource> TargetSources { get; }    // asked on every decision (DR-014)

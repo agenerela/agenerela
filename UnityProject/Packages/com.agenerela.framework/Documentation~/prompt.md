@@ -86,6 +86,56 @@ An empty string at any level leaves the example out. `Agent.IdleExampleStimulus`
 default, so it changes nothing until someone sets it. Whether the idle example helps at all is
 still unmeasured (build plan §2.3).
 
+## Knowledge and statement rules
+
+Two optional fields on `AgentIdentity`, so a profile carries them and a code-built agent gets
+them through the identity it is given (#190, Living Vale #14):
+
+```csharp
+var identity = new AgentIdentity
+{
+    Name = "Mara", Role = "the miller", Personality = "Practical and plain-spoken.",
+    Goals = "keep the mill running",
+    Knowledge = { "The bridge closes at dusk.", "When a customer asks for flour you have, quote a price." },
+    StatementRules = "One to three short sentences. Never claim to have done what you only talked about.",
+};
+```
+
+The system prompt then reads, after the goals and before the instruction line:
+
+```
+Your goals: keep the mill running.
+What you know:
+- The bridge closes at dusk.
+- When a customer asks for flour you have, quote a price.
+Your statement: One to three short sentences. Never claim to have done what you only talked about.
+Choose exactly one action from the allowed list. Use no_target when none of the listed targets applies.
+```
+
+Each knowledge line goes in as written, except that a blank line is skipped and a line's own line
+breaks become spaces; the statement rules are put on one line and end with a full stop. Both
+empty, the default, sends exactly the prompt sent before they existed. The headings are
+constants in `PromptBuilder`, and their wording is unmeasured.
+
+**Which slot a line belongs in.** The model reads all three; what differs is how often a line
+changes and who pays for it.
+
+- **Knowledge** is what stays true for this agent: the game's rules for it ("When trouble is
+  reported at a place you can reach, go there."), facts about its world that never change, and
+  the designer's policy for situations a line from the player would not settle. It is sent on
+  every call in the system prompt and never counts against `Agent.MaxObservations`.
+- **Observations** are what is true now: the quest stage, what is nearby, a quote just made. They
+  share the cap, and the newest sit last, right before the stimulus. A fact that is re-sent as an
+  observation every turn takes room from those and reads as news.
+- **Memory** is what was said and done in this conversation (`IMemoryStrategy`). It is never the
+  place for a standing fact: a window drops it once the conversation is long enough.
+- **Statement rules** are about the free text only: its length, its voice, what it never says.
+  They are named for the `statement` field, not for speech, because the agent may be a country
+  writing a report (DR-008). Before them, a game appended its rules to every `Personality`.
+
+Whether a policy line works better as knowledge than as an observation is in findings,
+9 November 2026, "Policy lines as knowledge or as observations".
+
 ## Counter-examples
 
 A counter-example is a line that touches an action's subject but asks for nothing, shown
@@ -168,6 +218,8 @@ against an arm without it. `report.json` records each arm's `listActionsAndTarge
 `maxListedTargets`, `counterExamples`, `idleExampleStimulus`, `idleExampleStatement` and
 `exampleStatements`, and `pairTargetsWithActions`
 for the paired schema ([targets.md](targets.md#the-paired-schema)), which changes the schema rather
-than the prompt.
+than the prompt. Knowledge is the identity's rather than a call's, so an arm carries it as
+`EvalArm.Knowledge`, lines added to the profile's for that arm's agents without changing the asset,
+and `report.json` records it as each arm's `knowledge`.
 [`evaluation.md`](evaluation.md#running-an-ab) explains how to run an A/B. Until one has been
 run, quote no number for any of these on the evaluation set.

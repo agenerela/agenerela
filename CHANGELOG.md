@@ -29,6 +29,14 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **In-game checks go through the Unity CLI.** Living Vale now has `com.unity.pipeline`
+  0.9.1-exp.1, as GreyBoxVillage does, so `unity command` drives its editor: Play mode, a
+  captured frame, the console and C# run in the game, without taking over the user's screen.
+  `AGENTS.md` makes it the way agents check a running game, with computer use only for what it
+  cannot do. `environment.md` has the loop as checked on Living Vale on 10 November, and
+  `Demos/README.md` adds the package to every new game. Git ignores the package's per-machine
+  `ProjectSettings/Packages/com.unity.pipeline/`. Living Vale's EditMode tests are unchanged:
+  577 passed, 4 skipped.
 - **An Ollama server on the RTX 5080 for other machines**, in `tools/ollama-server/`: Ollama
   0.40.14 in Docker, pinned by its image tag, with the model-sweep kit's settings, behind a Caddy
   gateway on port 11436 that wants a key on every request and passes only the routes the framework

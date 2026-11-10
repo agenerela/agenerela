@@ -664,7 +664,7 @@ namespace Agenerela.Evaluation
         // when the state matches its onlyWhen, the set's targets, the state, and no memory.
         private Agent Build(ArmRun run, JObject state)
         {
-            var agent = new Agent(Profile, run.Provider) { Memory = null };
+            var agent = new Agent(Profile, IdentityOf(run.Arm), run.Provider) { Memory = null };
             foreach (var asset in Profile.Actions)
             {
                 var action = asset != null ? asset.Action : null;
@@ -691,6 +691,29 @@ namespace Agenerela.Evaluation
             }
 
             return agent;
+        }
+
+        // The profile's identity, or for an arm with knowledge of its own a copy of it with that
+        // knowledge after the profile's, so the shared asset is never changed (#190, Living Vale #14).
+        private AgentIdentity IdentityOf(EvalArm arm)
+        {
+            var identity = Profile.Identity;
+            if (arm.Knowledge.Count == 0)
+            {
+                return identity;
+            }
+
+            var knowledge = new List<string>(identity.Knowledge ?? new List<string>());
+            knowledge.AddRange(arm.Knowledge);
+            return new AgentIdentity
+            {
+                Name = identity.Name,
+                Role = identity.Role,
+                Personality = identity.Personality,
+                Goals = identity.Goals,
+                Knowledge = knowledge,
+                StatementRules = identity.StatementRules,
+            };
         }
 
         private static JObject ToJson(IReadOnlyDictionary<string, object> state)
@@ -824,6 +847,7 @@ namespace Agenerela.Evaluation
                     PairTargetsWithActions = arm.Options.PairTargetsWithActions,
                     Priority = arm.Options.Priority.ToString(),
                     Observations = new List<string>(arm.Options.Observations ?? new List<string>()),
+                    Knowledge = new List<string>(arm.Knowledge),
                     MaxStatementLength = arm.MaxStatementLength,
                 };
             }
