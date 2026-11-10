@@ -151,6 +151,64 @@ namespace Agenerela.Tests
             Assert.That(File.ReadAllText(path), Does.Not.Contain("secret"), "Credentials in a URL are masked.");
         }
 
+        [Test]
+        public async Task CredentialsInAnyTextAreMasked()
+        {
+            // A reply that is no decision is kept in the result, and so in the line, as it came.
+            var agent = Fixtures.VillageGuard(new FakeProvider("backend error at https://user:secret@example.com/"));
+            LogAssert.Expect(LogType.Warning, new Regex("could not decide"));
+            log = DecisionLog.Start(path, includePrompt: true);
+
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+
+            var line = Lines().Single();
+            Assert.That(line.Error.Kind, Is.EqualTo(PipelineErrorKind.UnreadableReply));
+            Assert.That(line.Reply, Does.Contain("https://***@example.com/"), "The reply is kept, its credentials masked.");
+            Assert.That(File.ReadAllText(path), Does.Not.Contain("secret"), "Nowhere in the line.");
+        }
+
+        [TestCase("{\"action\":\"none\",\"target\":\"no_target\",\"statement\":\"https:\\/\\/user:secret@example.com\\/\"}",
+            TestName = "CredentialsAreMaskedInAReplyWithEscapedSlashes")]
+        [TestCase("{\"action\":\"none\",\"target\":\"no_target\",\"statement\":\"https://user:sec'ret@example.com/\"}",
+            TestName = "CredentialsAreMaskedWithAnApostropheInThePassword")]
+        [TestCase("{\"action\":\"none\",\"target\":\"no_target\",\"statement\":\"https:\\u002f\\u002fuser:secret@example.com/\"}",
+            TestName = "CredentialsAreMaskedInAReplyWithUnicodeEscapes")]
+        [TestCase("{\"action\":\"none\",\"target\":\"no_target\",/* https://user:comment-secret@example.com/ */\"statement\":\"https://user:statement-secret@example.com/\"}",
+            TestName = "CredentialsAreMaskedInACommentAndAStringOfOneReply")]
+        public async Task CredentialsAreMaskedInAReadableReply(string reply)
+        {
+            var agent = Fixtures.VillageGuard(new FakeProvider(reply));
+            log = DecisionLog.Start(path);
+
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+
+            var line = Lines().Single();
+            Assert.That(line.Decision.Action, Is.EqualTo("none"), "The reply was read.");
+            Assert.That(File.ReadAllText(path), Does.Not.Contain("secret").And.Not.Contain("sec'ret"),
+                "Neither the statement nor the raw reply keeps the password.");
+            Assert.That(JObject.Parse(line.Reply)["statement"], Is.Not.Null, "The masked reply is still JSON.");
+        }
+
+        // Replies the parser refuses, which the result keeps as they came: one whose duplicate key
+        // would hide the first value from anything that reads it into an object, and one cut short.
+        [TestCase("{\"action\":\"none\",\"target\":\"no_target\",\"statement\":\"https:\\u002f\\u002fuser:secret@example.com/\",\"statement\":\"safe\"}",
+            TestName = "CredentialsAreMaskedInADuplicatedProperty")]
+        [TestCase("{\"action\":\"none\",\"target\":\"no_target\",\"statement\":\"https:\\u002f\\u002fuser:secret@example.com/",
+            TestName = "CredentialsAreMaskedInAReplyCutShort")]
+        public async Task CredentialsAreMaskedInAnUnreadableReply(string reply)
+        {
+            var agent = Fixtures.VillageGuard(new FakeProvider(reply));
+            LogAssert.Expect(LogType.Warning, new Regex("could not decide"));
+            log = DecisionLog.Start(path);
+
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+
+            var line = Lines().Single();
+            Assert.That(line.Error.Kind, Is.EqualTo(PipelineErrorKind.UnreadableReply));
+            Assert.That(line.Reply, Is.Not.Null, "The reply is kept.");
+            Assert.That(File.ReadAllText(path), Does.Not.Contain("secret"), "Its password is not.");
+        }
+
         // ---- The prompt ----------------------------------------------------------------------
 
         [Test]
@@ -312,6 +370,59 @@ namespace Agenerela.Tests
             Assert.That(DecisionLogReader.Read(rolled).Single().Stimulus, Is.EqualTo("Go to the tower, 1."),
                 "One rollover file, holding the line before; the oldest is gone.");
             Assert.That(Directory.GetFiles(folder), Has.Length.EqualTo(2));
+        }
+
+        [Test]
+        public async Task ABatchOfLinesNeverTakesAFilePastTheCap()
+        {
+            var agent = Fixtures.VillageGuard(new FakeProvider(GoToTheTower));
+            var result = await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+            log = DecisionLog.Start(path);
+            log.Write(new DecisionFeedEntry(agent, result, DecisionStage.Decided, null, DateTime.UtcNow, 100));
+            Assert.That(log.Flush(Wait), Is.True);
+            var lineBytes = new FileInfo(path).Length;
+            log.MaxFileBytes = lineBytes * 5 / 2;
+
+            // Ten entries queued at once, which the worker writes as one batch.
+            var entries = Enumerable.Range(101, 10)
+                .Select(i => new DecisionFeedEntry(agent, result, DecisionStage.Decided, null, DateTime.UtcNow, i))
+                .ToList();
+            log.Write(entries);
+            Assert.That(log.Flush(Wait), Is.True);
+
+            var rolled = DecisionLog.RolloverPath(path);
+            Assert.That(new FileInfo(path).Length, Is.LessThanOrEqualTo(log.MaxFileBytes), "The file stays under the cap.");
+            Assert.That(new FileInfo(rolled).Length, Is.LessThanOrEqualTo(log.MaxFileBytes), "So does the one it rolled into.");
+            var kept = DecisionLogReader.Read(rolled).Concat(DecisionLogReader.Read(path)).Select(l => l.Sequence).ToList();
+            Assert.That(kept, Is.EqualTo(Enumerable.Range(111 - kept.Count, kept.Count).Select(i => (long)i)),
+                "The newest lines, in order, with none missing between the two files.");
+            Assert.That(log.LinesDropped, Is.Zero);
+        }
+
+        [Test]
+        public async Task AfterAFailedWriteTheNextLineStartsOnANewLine()
+        {
+            var agent = Fixtures.VillageGuard(new FakeProvider(GoToTheTower));
+            log = DecisionLog.Start(path);
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
+            Assert.That(log.Flush(Wait), Is.True);
+
+            // Held open with no sharing, the file cannot be written: this entry is dropped.
+            using (new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            {
+                await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower again."));
+                Assert.That(log.Flush(Wait), Is.True);
+            }
+
+            Assert.That(log.LinesDropped, Is.EqualTo(1));
+
+            // What a write that failed partway leaves: the start of a line, and no newline.
+            File.AppendAllText(path, "{\"version\":1,\"seq");
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower a third time."));
+
+            var lines = Lines();
+            Assert.That(lines.Select(l => l.Stimulus), Is.EqualTo(new[] { "Go to the tower.", "Go to the tower a third time." }),
+                "The line after the failure did not run into the partial one.");
         }
 
         [Test]

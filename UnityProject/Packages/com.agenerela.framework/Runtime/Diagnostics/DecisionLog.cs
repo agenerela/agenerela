@@ -20,8 +20,8 @@ namespace Agenerela
     /// the model's own answer when a guard changed it, the verdict, what <c>Execute</c> did, the
     /// provider, model, latency, waits and tokens, and a pipeline error's kind. The prompt itself is
     /// left out unless <see cref="IncludePrompt"/> is on: it is large, and it may hold the player's
-    /// own words. No key is ever written: telemetry holds none, and credentials in a URL inside an
-    /// error message are masked.
+    /// own words. No key is ever written: telemetry holds none, and credentials in a URL anywhere in
+    /// the line's text, a reply or an error message alike, are masked.
     /// </para>
     /// <para>
     /// <b>It never blocks or throws into the game.</b> The entry is copied into a line on the thread
@@ -44,9 +44,10 @@ namespace Agenerela
     /// on that file starts on a new line, so nothing after it is lost.
     /// </para>
     /// <para>
-    /// <b>File growth.</b> Before a write would take the file past <see cref="MaxFileBytes"/>, the
+    /// <b>File growth.</b> Before a line would take the file past <see cref="MaxFileBytes"/>, the
     /// file is moved to <see cref="RolloverPath"/>, replacing the one there, and a new file starts.
-    /// So at most about twice the cap is kept, the older half in the rollover file.
+    /// Each file stays under the cap, but for a single line larger than it, so at most twice the cap
+    /// is kept, the older half in the rollover file.
     /// </para>
     /// <para>
     /// Extension points, not now: the agent's GameObject name (a game can name its agents through
@@ -59,8 +60,13 @@ namespace Agenerela
         /// <summary>The default <see cref="MaxFileBytes"/>: 16 MiB.</summary>
         public const long DefaultMaxFileBytes = 16L * 1024 * 1024;
 
-        // Masks the user and password of a URL, such as https://user:key@host/, in error messages.
-        private static readonly Regex UrlCredentials = new Regex(@"(?<scheme>[a-zA-Z][a-zA-Z0-9+.\-]*://)[^/\s@]+@", RegexOptions.Compiled);
+        // Masks the user and password of a URL, such as https://user:key@host/, in every text field,
+        // also where the text is JSON, as a raw reply is: there the slashes may be escaped
+        // (https:\/\/user:key@host), and the match stops at a quote or an escaped one, so it never
+        // runs past the end of a JSON string. Any other character, an apostrophe or an escaped
+        // backslash included, can be part of the user and password.
+        private static readonly Regex UrlCredentials = new Regex(
+            @"(?<scheme>[a-zA-Z][a-zA-Z0-9+.\-]*:(?:\\?/){2})(?:[^/\\\s@""]|\\[^/""\s])+@", RegexOptions.Compiled);
 
         private static readonly UTF8Encoding Utf8 = new UTF8Encoding(false);
 
@@ -228,20 +234,38 @@ namespace Agenerela
         // this entry saw, and queue it for the worker. Never throws.
         internal void Write(DecisionFeedEntry entry)
         {
-            string json;
-            try
+            Write(new[] { entry });
+        }
+
+        // Several entries queued at once, so the worker takes them as one batch: the feed's path for
+        // one entry, and the tests' for a batch.
+        internal void Write(IReadOnlyList<DecisionFeedEntry> entries)
+        {
+            var lines = new List<string>(entries.Count);
+            foreach (var entry in entries)
             {
-                json = JsonConvert.SerializeObject(DecisionLogLine.From(entry, includePrompt), DecisionLogFormat.Settings);
+                try
+                {
+                    lines.Add(JsonConvert.SerializeObject(DecisionLogLine.From(entry, includePrompt), DecisionLogFormat.Settings));
+                }
+                catch (Exception e)
+                {
+                    Drop(1, e);
+                }
             }
-            catch (Exception e)
+
+            if (lines.Count == 0)
             {
-                Drop(1, e);
                 return;
             }
 
             lock (gate)
             {
-                pending.Enqueue(json);
+                foreach (var line in lines)
+                {
+                    pending.Enqueue(line);
+                }
+
                 if (draining)
                 {
                     return;
@@ -276,56 +300,83 @@ namespace Agenerela
                     pending.Clear();
                 }
 
+                var written = 0;
                 try
                 {
-                    Append(batch);
-                    Interlocked.Add(ref linesWritten, batch.Length);
+                    Append(batch, ref written);
                 }
                 catch (Exception e)
                 {
-                    Drop(batch.Length, e);
+                    // A failed write may have left part of a line: check the tail again next time.
+                    tailChecked = false;
+                    Drop(batch.Length - written, e);
+                }
+                finally
+                {
+                    Interlocked.Add(ref linesWritten, written);
                 }
             }
         }
 
-        private void Append(string[] batch)
+        // Appends the lines in order, rolling the file over before any line that would take it past
+        // the cap, so only a single line larger than the cap ever passes it. Returns through written
+        // how many lines reached the file, so a failure partway counts only the rest as dropped.
+        private void Append(string[] batch, ref int written)
         {
-            var text = new StringBuilder();
-            foreach (var line in batch)
-            {
-                text.Append(line).Append('\n');
-            }
-
-            var bytes = Utf8.GetBytes(text.ToString());
             var folder = System.IO.Path.GetDirectoryName(Path);
             if (!string.IsNullOrEmpty(folder))
             {
                 Directory.CreateDirectory(folder);
             }
 
-            var file = new FileInfo(Path);
-            if (file.Exists && file.Length > 0 && file.Length + bytes.Length > MaxFileBytes)
+            var cap = MaxFileBytes;
+            var next = 0;
+            while (next < batch.Length)
             {
-                var rolled = RolloverPath(Path);
-                File.Delete(rolled);
-                File.Move(Path, rolled);
-                tailChecked = true;
-            }
-
-            using (var stream = new FileStream(Path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
-            {
-                // The first write checks how the file ends: a line cut short by a process that died
-                // mid-write is closed off, so the next line does not run into it.
-                if (!tailChecked)
+                var file = new FileInfo(Path);
+                var length = file.Exists ? file.Length : 0;
+                var first = Utf8.GetBytes(batch[next] + "\n");
+                if (length > 0 && length + first.Length > cap)
                 {
+                    var rolled = RolloverPath(Path);
+                    File.Delete(rolled);
+                    File.Move(Path, rolled);
+                    length = 0;
                     tailChecked = true;
-                    if (EndsMidLine())
-                    {
-                        stream.WriteByte((byte)'\n');
-                    }
                 }
 
-                stream.Write(bytes, 0, bytes.Length);
+                // Counted as written only once the stream is closed, so lines a failed flush lost are dropped.
+                var inStream = 0;
+                using (var stream = new FileStream(Path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
+                {
+                    // The first write checks how the file ends: a line cut short by a process that
+                    // died mid-write, or by a write that failed, is closed off, so the next line does
+                    // not run into it. Marked checked only once the check and its repair succeed.
+                    if (!tailChecked)
+                    {
+                        if (EndsMidLine())
+                        {
+                            stream.WriteByte((byte)'\n');
+                            length++;
+                        }
+
+                        tailChecked = true;
+                    }
+
+                    // This line, and every one after it that still fits under the cap.
+                    var bytes = first;
+                    do
+                    {
+                        stream.Write(bytes, 0, bytes.Length);
+                        length += bytes.Length;
+                        next++;
+                        inStream++;
+                        bytes = next < batch.Length ? Utf8.GetBytes(batch[next] + "\n") : null;
+                    }
+                    while (bytes != null && length + bytes.Length <= cap);
+                }
+
+                written += inStream;
             }
         }
 

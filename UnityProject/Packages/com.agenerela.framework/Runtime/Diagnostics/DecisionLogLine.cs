@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
@@ -187,8 +189,8 @@ namespace Agenerela
                 Stage = entry.Stage,
                 AgentId = agent?.Id,
                 AgentName = agent?.Identity?.Name,
-                Label = request?.StimulusLabel,
-                Stimulus = request?.StimulusText,
+                Label = Mask(request?.StimulusLabel),
+                Stimulus = Mask(request?.StimulusText),
                 Priority = telemetry.Priority,
                 Decision = DecisionLogDecision.From(result.Decision),
                 Provider = Empty(telemetry.ProviderName),
@@ -206,7 +208,7 @@ namespace Agenerela
                 HistoryTurnsSent = telemetry.HistoryTurnsSent,
                 HistoryTurnsDropped = telemetry.HistoryTurnsDropped,
                 ObservationsDropped = telemetry.ObservationsDropped?.Count ?? 0,
-                Reply = result.Reply?.Text,
+                Reply = MaskReply(result.Reply?.Text),
             };
 
             var model = DecisionLogDecision.From(result.ModelDecision);
@@ -218,7 +220,7 @@ namespace Agenerela
             if (result.Verdict.HasValue)
             {
                 var verdict = result.Verdict.Value;
-                line.Verdict = new DecisionLogVerdict { Guard = verdict.Guard, Kind = verdict.Kind, Reason = verdict.Reason };
+                line.Verdict = new DecisionLogVerdict { Guard = verdict.Guard, Kind = verdict.Kind, Reason = Mask(verdict.Reason) };
             }
 
             if (telemetry.GuardsFired != null && telemetry.GuardsFired.Count > 0)
@@ -233,29 +235,123 @@ namespace Agenerela
 
             if (entry.Execution.HasValue)
             {
-                line.Execution = new DecisionLogExecution { Status = entry.Execution.Value.Status, Reason = entry.Execution.Value.Reason };
+                line.Execution = new DecisionLogExecution { Status = entry.Execution.Value.Status, Reason = Mask(entry.Execution.Value.Reason) };
             }
 
             if (telemetry.ErrorKind.HasValue)
             {
-                line.Error = new DecisionLogError { Kind = telemetry.ErrorKind.Value, Message = DecisionLog.MaskCredentials(telemetry.ErrorMessage) };
+                line.Error = new DecisionLogError { Kind = telemetry.ErrorKind.Value, Message = Mask(telemetry.ErrorMessage) };
             }
 
             if (withPrompt && request != null)
             {
                 line.Request = new DecisionLogRequest
                 {
-                    SystemPrompt = request.SystemPrompt,
-                    FewShotBlock = Empty(request.FewShotBlock),
-                    Observations = Empty(request.Observations),
-                    History = request.History != null ? new List<string>(request.History) : new List<string>(),
-                    StimulusTurn = request.Stimulus,
+                    SystemPrompt = Mask(request.SystemPrompt),
+                    FewShotBlock = Mask(Empty(request.FewShotBlock)),
+                    Observations = Mask(Empty(request.Observations)),
+                    History = request.History != null ? request.History.Select(Mask).ToList() : new List<string>(),
+                    StimulusTurn = Mask(request.Stimulus),
                     Actions = Allowed(request.Schema, DecisionSchema.ActionFieldName),
                     Targets = Allowed(request.Schema, DecisionSchema.TargetFieldName),
                 };
             }
 
             return line;
+        }
+
+        // Any text the line copies may quote a URL with a user and password in it, a provider's
+        // reply or a handler's reason as much as an error, so every free-text field is masked. Text
+        // may also quote JSON, as an error message quotes the reply it could not read, where JSON
+        // escapes can hide the URL: when decoding them reveals one, the decoded text is masked and
+        // written instead.
+        internal static string Mask(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return text;
+            }
+
+            var masked = DecisionLog.MaskCredentials(text);
+            var decoded = DecodeJsonEscapes(masked);
+            var maskedDecoded = DecisionLog.MaskCredentials(decoded);
+            return maskedDecoded != decoded ? maskedDecoded : masked;
+        }
+
+        // A reply is usually JSON, where a URL can be written with escapes (an escaped slash, or a
+        // Unicode escape for any character) that a pattern on the raw text would have to chase one
+        // by one. So a reply that is JSON is read token by token, every string, property name and
+        // comment
+        // decoded and masked, and written again, duplicate properties included, since reading it
+        // into an object would keep only the last of each. It is written again only when a token
+        // changed, so the masked text differs from what the model sent only where it had to. A
+        // reply that is not one JSON value is plain text, and masked as such.
+        internal static string MaskReply(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return text;
+            }
+
+            var changed = false;
+            var output = new StringWriter();
+            try
+            {
+                using (var reader = new JsonTextReader(new StringReader(text)) { DateParseHandling = DateParseHandling.None, FloatParseHandling = FloatParseHandling.Decimal })
+                using (var writer = new JsonTextWriter(output) { Formatting = Formatting.None })
+                {
+                    while (reader.Read())
+                    {
+                        switch (reader.TokenType)
+                        {
+                            case JsonToken.PropertyName:
+                            case JsonToken.String:
+                            case JsonToken.Comment:
+                                var original = (string)reader.Value ?? string.Empty;
+                                var masked = Mask(original);
+                                changed |= masked != original;
+                                if (reader.TokenType == JsonToken.PropertyName)
+                                {
+                                    writer.WritePropertyName(masked);
+                                }
+                                else if (reader.TokenType == JsonToken.Comment)
+                                {
+                                    writer.WriteComment(masked);
+                                }
+                                else
+                                {
+                                    writer.WriteValue(masked);
+                                }
+
+                                break;
+                            default:
+                                writer.WriteToken(reader, false);
+                                break;
+                        }
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+                // Not JSON, or JSON cut short: masked as text, which also sees through its escapes.
+                return Mask(text);
+            }
+
+            // Masked once more as text, whichever it returns: a safety net for any token kind this
+            // rewrite copies as it is.
+            return Mask(changed ? output.ToString() : text);
+        }
+
+        // Decodes the escapes JSON allows in a string (an escaped slash or quote, a Unicode escape),
+        // for masking text that may be or may quote JSON.
+        private static readonly System.Text.RegularExpressions.Regex JsonEscape = new System.Text.RegularExpressions.Regex(
+            @"\\u([0-9a-fA-F]{4})|\\([/\\""])");
+
+        private static string DecodeJsonEscapes(string text)
+        {
+            return JsonEscape.Replace(text, m => m.Groups[1].Success
+                ? ((char)Convert.ToInt32(m.Groups[1].Value, 16)).ToString()
+                : m.Groups[2].Value);
         }
 
         private static string Empty(string text)
@@ -299,7 +395,7 @@ namespace Agenerela
         {
             return decision == null
                 ? null
-                : new DecisionLogDecision { Action = decision.ActionId, Target = decision.TargetId, Statement = decision.Statement };
+                : new DecisionLogDecision { Action = decision.ActionId, Target = decision.TargetId, Statement = DecisionLogLine.Mask(decision.Statement) };
         }
 
         internal bool SameAs(DecisionLogDecision other)

@@ -49,8 +49,10 @@ fields, and the reader ignores fields it does not know. A field that is null is 
 
 The prompt is **off by default**: it is large, and observations and history may hold the player's
 own words. Turn it on with `DecisionLog.Start(path, includePrompt: true)` or `log.IncludePrompt =
-true`, which applies from the next entry. No key is ever written: telemetry holds none, and a URL
-with a user and password in an error message is masked.
+true`, which applies from the next entry. No key is ever written: telemetry holds none, and a URL with a user and password anywhere in
+the line, a reply or an error message alike, is masked, also when JSON escapes spell it. The
+masking is a safety net for model and handler text, not a guarantee: a URL in some other encoding,
+such as percent-encoded or base64, is not recognised.
 
 ## How it behaves
 
@@ -62,9 +64,9 @@ with a user and password in an error message is masked.
   `agentId` and `agentName` tell them apart. Use one log per file.
 - **Play sessions.** The feed drops its subscribers as Play mode starts, so start the log again
   each Play session. Leaving Play mode or quitting stops it and writes what is still queued.
-- **A game that dies mid-line** leaves a partial last line. The reader skips it, counting it in
-  `Read(path, out skipped)`, and the next log on that file starts on a new line.
-- **File growth.** Past `MaxFileBytes` (16 MiB by default), the file moves to
+- **A game that dies mid-line**, or a write that fails partway, leaves a partial line. The reader
+  skips it, counting it in `Read(path, out skipped)`, and the next line written starts on a new line.
+- **File growth.** Before a line would take the file past `MaxFileBytes` (16 MiB by default), it moves to
   `DecisionLog.RolloverPath(path)`, `decisions.1.jsonl` for `decisions.jsonl`, replacing the one
   there, and a new file starts. Read the rollover file first for the older lines.
 - **A list in memory, no file.** `DecisionLogLine.From(entry)` makes the same line from a feed
