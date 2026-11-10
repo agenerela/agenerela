@@ -160,7 +160,7 @@ namespace Agenerela.Tests
             protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
             {
                 Bodies.Add(Encoding.UTF8.GetString(request.Content.ReadAsByteArrayAsync().Result));
-                string envelope = "{\"model\":\"qwen3.5:2b\",\"created_at\":\"2026-11-05T00:00:00Z\","
+                string envelope = "{\"model\":\"qwen3.5:4b\",\"created_at\":\"2026-11-05T00:00:00Z\","
                                   + "\"message\":{\"role\":\"assistant\",\"content\":" + JsonConvert.ToString(Reply) + "},"
                                   + "\"done\":true,\"done_reason\":\"stop\",\"prompt_eval_count\":1,\"eval_count\":1,\"logprobs\":[]}";
                 var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(envelope, new UTF8Encoding(false)) };

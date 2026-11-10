@@ -16,7 +16,7 @@ namespace Agenerela.Providers
     /// <summary>
     /// The development backend: a model served by Ollama on the developer's own machine, asked
     /// through its <c>/api/chat</c> endpoint. <c>new Agent(profile, new OllamaProvider(new
-    /// OllamaSettings()))</c> decides against <c>qwen3.5:2b</c> at <c>http://127.0.0.1:11434</c>.
+    /// OllamaSettings()))</c> decides against <c>qwen3.5:4b</c> at <c>http://127.0.0.1:11434</c>.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -118,7 +118,7 @@ namespace Agenerela.Providers
 
             if (string.IsNullOrWhiteSpace(settings.Model))
             {
-                throw new ArgumentException("OllamaSettings.Model is empty. Name a model, such as qwen3.5:2b.", nameof(settings));
+                throw new ArgumentException("OllamaSettings.Model is empty. Name a model, such as qwen3.5:4b.", nameof(settings));
             }
 
             if (settings.ContextSize <= 0)

@@ -31,7 +31,7 @@ namespace Agenerela.Tests
         // gives: the system side of #16's golden file, the stimulus as the last user message, #9's
         // schema in format, and greedy, thinking off, logprobs on.
         private const string GoldenBody = @"{
-  ""model"": ""qwen3.5:2b"",
+  ""model"": ""qwen3.5:4b"",
   ""messages"": [
     {
       ""role"": ""system"",
@@ -107,7 +107,7 @@ namespace Agenerela.Tests
 
             Assert.That(settings.Endpoint, Is.EqualTo("http://127.0.0.1:11434"),
                 "Not localhost, which costs about 2 s a request on Windows (findings, 5 October).");
-            Assert.That(settings.Model, Is.EqualTo("qwen3.5:2b"));
+            Assert.That(settings.Model, Is.EqualTo("qwen3.5:4b"));
             Assert.That(settings.ContextSize, Is.EqualTo(4096));
             Assert.That(settings.Temperature, Is.EqualTo(0f), "Appendix A was greedy.");
             Assert.That(settings.TimeoutSeconds, Is.EqualTo(30f));
@@ -318,7 +318,7 @@ namespace Agenerela.Tests
             Assert.That(result.Text, Is.EqualTo(Content), "message.content, exactly as received.");
             Assert.That(result.PromptTokens, Is.EqualTo(26));
             Assert.That(result.CompletionTokens, Is.EqualTo(26));
-            Assert.That(result.Model, Is.EqualTo("qwen3.5:2b"));
+            Assert.That(result.Model, Is.EqualTo("qwen3.5:4b"));
             Assert.That(result.LatencySeconds, Is.GreaterThanOrEqualTo(0f).And.LessThan(5f));
 
             var tokens = result.TokenProbabilities;
@@ -663,8 +663,8 @@ namespace Agenerela.Tests
         [Test]
         public async Task AgentRecordsTheKindAndPassesCancellationThrough()
         {
-            var missing = ScriptedHandler.Replying("{\"error\":\"model 'qwen3.5:2b' not found\"}", HttpStatusCode.NotFound);
-            LogAssert.Expect(LogType.Warning, new Regex("could not decide\\. The provider failed\\. ProviderException: .*ollama pull qwen3\\.5:2b"));
+            var missing = ScriptedHandler.Replying("{\"error\":\"model 'qwen3.5:4b' not found\"}", HttpStatusCode.NotFound);
+            LogAssert.Expect(LogType.Warning, new Regex("could not decide\\. The provider failed\\. ProviderException: .*ollama pull qwen3\\.5:4b"));
 
             var failed = await Fixtures.NotCancelled(Fixtures.VillageGuard(Provider(missing)).DecideAsync("Go to the tower."));
 
@@ -777,7 +777,7 @@ namespace Agenerela.Tests
         }
 
         // Ollama's non-streaming chat reply around content.
-        private static string Envelope(string content, string model = "qwen3.5:2b", int promptTokens = 143,
+        private static string Envelope(string content, string model = "qwen3.5:4b", int promptTokens = 143,
                                        int completionTokens = 21, string logprobs = "[]")
         {
             return "{\"model\":" + JsonConvert.ToString(model)

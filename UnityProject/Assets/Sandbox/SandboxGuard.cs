@@ -59,7 +59,7 @@ public sealed class SandboxGuard : MonoBehaviour
     {
         var settings = new OllamaSettings
         {
-            Model = Pick(model, "AGENERELA_OLLAMA_MODEL", "qwen3.5:2b"),
+            Model = Pick(model, "AGENERELA_OLLAMA_MODEL", "qwen3.5:4b"),
             Endpoint = Pick(endpoint, "AGENERELA_OLLAMA_URL", "http://127.0.0.1:11434"),
         };
 
