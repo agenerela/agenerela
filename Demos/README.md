@@ -45,9 +45,12 @@ become sub-issues of the game. The list is not fixed: a new game starts as a sub
 
    ```json
    "com.agenerela.framework": "file:../../../UnityProject/Packages/com.agenerela.framework",
+   "com.unity.pipeline": "0.9.1-exp.1",
    ```
 
-   The path starts from the project's `Packages/` folder, hence three `..`.
+   The path starts from the project's `Packages/` folder, hence three `..`. The second line
+   lets the Unity CLI drive the game's editor, which is how agents check it in Play mode
+   (`AGENTS.md`, "In-game checks go through the Unity CLI").
 4. **Reopen the project.** Package Manager → *In Project* should list
    *Agenerela — AI Agents for Unity*, and the console should be clean.
 5. **Add the game's assembly definition** in `Assets/<Game>/`, named `<Game>`, with

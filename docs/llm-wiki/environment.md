@@ -83,18 +83,58 @@ agent's reset token, not the caller's own object. Unity also raises the token on
 component whose GameObject was never active is not cancelled by destroying it. The package
 documents that limit and a test pins it.
 
-### The Unity CLI (optional)
+### The Unity CLI: in-game checks
 
-Unity's own command line, `unity`, is installed on the lead's laptop (1.0.0-beta.8 when
-checked on 26 October 2026, a beta that may change). Two commands are useful with no project
-change: `unity status` lists the open editors, and `unity test <project> --mode EditMode
---output <xml>` runs the same EditMode tests as the raw command above, choosing the editor
-from `ProjectVersion.txt`. Set `UNITY_NO_BANNER=1` and `UNITY_NON_INTERACTIVE=1` when an
-agent calls it. Its live editor control (`unity command`, `unity list`) needs the
-experimental `com.unity.pipeline` package. Only `Demos/GreyBoxVillage` has it (0.9.1-exp.1; its
-README says how it is driven). `UnityProject` does not: the package would change a committed
-manifest and overlaps MCP for Unity, below. The `unity-cli` skill is installed per user, not in
-this repository.
+Unity's own command line, `unity`, is installed on the lead's laptop (1.0.0-beta.13 on
+10 November 2026, a beta that may change). **It is how an agent checks a running game**
+(`AGENTS.md`): it drives an open editor without the mouse or the screen, so the user keeps
+working. Set `UNITY_NO_BANNER=1`, `UNITY_NON_INTERACTIVE=1` and `UNITY_NO_PAGER=1` when an agent
+calls it. The `unity-cli` skill is installed per user, not in this repository.
+
+Two commands need no project change: `unity status` lists the open editors, and
+`unity test <project> --mode EditMode --output <xml>` runs the same EditMode tests as the raw
+command above, choosing the editor from `ProjectVersion.txt`, with the project closed. Live
+control (`unity command`) needs the experimental `com.unity.pipeline` package (0.9.1-exp.1).
+`Demos/GreyBoxVillage`, `Demos/GreyBoxVillageClassic` and `Demos/LivingVale` have it.
+`UnityProject` does not: its tests are the check there, and it has MCP for Unity, below.
+
+The loop, checked on Living Vale on 10 November 2026 from a worktree at a short path. Commands
+are in groups (`editor.playmode start`, not `editor_play`), and a command's own flags go after
+`--`. `unity command --detail compact` lists what the package has.
+
+```bash
+export UNITY_PROJECT_PATH=C:/Unity_Projects/wt-x/Demos/LivingVale   # this worktree's game
+unity open "$UNITY_PROJECT_PATH"
+unity status --until-ready --project-path "$UNITY_PROJECT_PATH"
+unity command scene open -- --path Assets/LivingVale/Scenes/Village.unity
+unity command editor set_auto_tick                    # keeps an unfocused editor running
+unity command editor.playmode set_run_in_background   # the same, for the game loop
+unity command editor.playmode start
+unity status --until-ready --project-path "$UNITY_PROJECT_PATH"
+unity command job wait -- --condition '{"member":"UnityEngine.Time.frameCount","op":"changed"}' --timeout 15
+unity command capture game_view -- --source screen --save_path Logs/check.png
+unity command console get -- --tail 30 --level warn
+unity command script eval -- --code 'return UnityEngine.Time.frameCount;' --timeout 15000
+unity command editor.playmode stop
+unity command editor.playmode set_run_in_background -- --enable false
+unity close "$UNITY_PROJECT_PATH"
+```
+
+- **Open the scene first.** A project the editor opens fresh may start on an empty scene, and
+  Play mode then runs nothing. `scene list_open` says which is loaded.
+- **`job wait` is the proof the game runs.** An unfocused editor can sit on frame 1 while
+  reporting Play mode; `met: true` with frames observed means it is advancing.
+- **`--save_path` is under `Assets/`**: `Logs/check.png` lands in `Assets/Logs/`, which git
+  ignores, but Unity also writes `Assets/Logs.meta`, which it does not. Copy the picture to
+  `.scratch/`, then delete both.
+- **A game that asks a model needs the Ollama lock.** Living Vale loads its model on Play;
+  take the lock, and unload the model after.
+- **One editor per worktree.** An editor open on another checkout answers the same commands, so
+  always pass this worktree's project path.
+- **Restore what an import rewrites.** Opening Living Vale rewrote
+  `Assets/Settings/Mobile_RPAsset.asset`; nothing in a check should be committed from it.
+- The package writes `ProjectSettings/Packages/com.unity.pipeline/EditorPipelineConfig.json`,
+  per-machine state such as whether Run In Background is overridden. Git ignores it.
 
 ## Per-machine setup — do this BEFORE cloning
 
