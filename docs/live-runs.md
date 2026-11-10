@@ -16,6 +16,10 @@ request.
 - **5080 box:** the RTX 5080 machine, 16 GB, that also runs the asset server. It covers the 12 and
   16 GB tiers in [`llm-wiki/model-candidates.md`](llm-wiki/model-candidates.md).
 
+**A run for another machine, or for later, is written as a request** in
+[`run-requests/`](run-requests/README.md): what to run, step by step, and a results file to fill
+in. Its row here links it.
+
 An **A/B run** compares two arms on the evaluation set through the runner (#145), in one session
 (hard rule 2). The formal list of A/B runs owed is #151. This page adds the order to run them
 in, the machine, and the live checks that aren't A/B runs.
@@ -24,6 +28,7 @@ in, the machine, and the live checks that aren't A/B runs.
 
 | Run | Kind | Machine | What it checks | From |
 |---|---|---|---|---|
+| The 13-model sweep on the interim set, 389 prompts | A/B per model, idle on vs off; ranking against `qwen3.5:2b` | 5080 box | The 9 November sweep again, on a set big enough for per-category results. The laptop ran `qwen3.5:2b` only (findings, 9 November) | [Request 001](run-requests/001-interim-model-sweep-5080/request.md), #151 |
 | The 12 and 16 GB tiers | A/B, sequential arms | 5080 box | A "high-end GPU" option, such as Granite 4.1 8B, Qwen3.5-9B or Gemma 4 12B, against the 2B | `model-candidates.md` |
 
 ## Waiting for something first
