@@ -78,6 +78,8 @@ Desktop.ini
 # Benchmark output is regenerated on every run; archive copies land in docs/.
 /benchmark-output.txt
 *.local
+# Python's bytecode cache, written next to any script that imports a sibling (tools/).
+__pycache__/
 # Scratch work kept with the checkout by people and agents: experiment scripts, renders,
 # downloaded models, logs. Anything worth keeping moves into the repository proper.
 /.scratch/

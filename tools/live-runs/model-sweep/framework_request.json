@@ -1,0 +1,67 @@
+{
+ "_note": "The framework request OllamaProvider sent on 5 November 2026 for the evaluation set (system prompt, schema in the order action, target, statement, think false, temperature 0, num_ctx 4096, logprobs), with the model and the user turn removed. probe.py fills both in.",
+ "request": {
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are Village guard, a guard of the village. Brief and dutiful. Speaks in one short sentence.\nYour goals: Keep the village safe, keep people out of places that are off limits, and help the player.\nChoose exactly one action from the allowed list. Use no_target when none of the listed targets applies.\n\nExamples of correct decisions:\nPlayer: \"Tag along behind me.\" -> action: follow_player, target: no_target\nPlayer: \"Go and stand by the Well.\" -> action: move_to, target: well\nPlayer: \"Strike the Wolf.\" -> action: attack_target, target: wolf\nPlayer: \"Fine day for it.\" -> action: none, target: no_target\nPlayer: \"Go and stand by the Atlantis.\" -> action: none, target: no_target (not an available target)\n\nWhat you know right now:\n- bridge: The wooden bridge over the stream.\n- village_gate: The main gate in the village wall.\n- campfire: The campfire in the guards' camp.\n- well: The stone well in the village square.\n- north_tower: The tower on the north side of the village.\n- market: The open-air market where villagers trade.\n- docks: The docks where supply boats unload.\n- shelter: The shelter where villagers take cover.\n- eastern_road: The road leaving the village to the east.\n- wolf: A wolf that came out of the woods.\n- locked_cave: A cave whose entrance is locked."
+   }
+  ],
+  "format": {
+   "type": "object",
+   "properties": {
+    "action": {
+     "type": "string",
+     "description": "The one action to take now, from the allowed list.",
+     "enum": [
+      "follow_player",
+      "move_to",
+      "attack_target",
+      "none"
+     ]
+    },
+    "target": {
+     "type": "string",
+     "description": "What the action applies to. Use no_target when none of the listed targets applies.",
+     "enum": [
+      "no_target",
+      "bridge",
+      "village_gate",
+      "campfire",
+      "well",
+      "north_tower",
+      "market",
+      "docks",
+      "shelter",
+      "eastern_road",
+      "wolf",
+      "locked_cave"
+     ]
+    },
+    "statement": {
+     "type": "string",
+     "description": "What the agent says or announces. One or two short sentences, or empty."
+    }
+   },
+   "required": [
+    "action",
+    "target",
+    "statement"
+   ],
+   "propertyOrdering": [
+    "action",
+    "target",
+    "statement"
+   ],
+   "additionalProperties": false
+  },
+  "stream": false,
+  "think": false,
+  "options": {
+   "temperature": 0.0,
+   "num_ctx": 4096
+  },
+  "logprobs": true,
+  "top_logprobs": 5
+ }
+}

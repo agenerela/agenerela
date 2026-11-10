@@ -1976,3 +1976,66 @@ the top five or closes their gap to the 2B. Another Ollama version, or a server 
 `OLLAMA_GO_TEMPLATE=1`, changes the template seven models are served with. Raw data: `results.json`,
 with every answer per model, in `.scratch/model-sweep-1109/` of the main checkout; reports and
 logs in the session's checkout under the same folder name.
+
+### The interim set on the laptop: `qwen3.5:2b` 265/389 with the idle example, 279/389 without, and the sweep moved to the RTX 5080 (9 November 2026)
+
+The 13-model sweep of the entry above, started again on the interim set and stopped after its first
+model. The lead asked for the rest to run on the RTX 5080. That run is
+[run request 001](../run-requests/001-interim-model-sweep-5080/request.md). This entry records the
+one model that finished on the laptop.
+
+**The set.** The interim set: 389 prompts in `Assets/Evaluation/Interim/` (#223), measured against
+the curated set's `VillageGuard`. **It is AI-written.** Claude wrote it and gave the first labels,
+then Codex labelled it blind, and the two agreed on 391 of 392 (its README). So its prompts may be
+less ambiguous than the curated set's 76, which the team wrote. **Its scores and
+the curated set's are not directly comparable**, though both are given below. Its noise floor is
+3.6 points overall and about 9 per category, against 8.1 and 20 to 30 at n = 76.
+
+**Setup.** As in the entry above, apart from three things:
+
+- `test` was at db16c03, which adds #224's reply checks to `EvalRunner`. That is the only framework
+  change since the curated sweep, and its tests show accuracy unchanged.
+- The probe was 2 requests, since the field order and thinking were established that evening.
+- The throwaway test needed `[Timeout]`: the Test Framework stops a test at 180 s by default. The
+  first attempt failed there and recorded nothing.
+
+The run itself: one `ollama serve` 0.40.14 with `OLLAMA_GO_TEMPLATE=1` and the app's two
+variables, RTX 4060 Laptop on AC power, the lock held, no other Unity. `qwen3.5:2b` was 2254 of
+2254 MB in VRAM throughout. The idle on/off arms ran interleaved, 524 s of asking (9 min end to
+end), with no warnings and no pipeline errors.
+
+| | Idle example on (defaults) | Off | Off − on |
+|---|---:|---:|---|
+| **Correct** | **265/389 (68.1%)** | **279/389 (71.7%)** | +3.6, **beyond noise** (floor 3.59, on the line) |
+| simple_command | 46/65 | 57/65 | +16.9, beyond noise |
+| impossible_request | 41/64 | 47/64 | +9.4, beyond noise |
+| command_with_target | 63/66 | 60/66 | −4.5, within |
+| conversation | 44/64 | 44/64 | 0 |
+| situation | 32/65 | 31/65 | −1.5, within |
+| event | 39/65 | 40/65 | +1.5, within |
+| `stop_following` | 21/48 | 39/48 | |
+| Unasked actions, of 156 `none` prompts | 46 | 51 | |
+| Missed requests, of 233 that want an action | 37 | 22 | |
+| Reply checks flagged (#224), of 389 | 14, all echoes | 6, all echoes | |
+| Median / p90 latency | 0.66 / 0.81 s | 0.65 / 0.80 s | |
+
+The curated set gave the same model 56/76 (73.7%) with the line and 59/76 (77.6%) without, on the
+same server that evening.
+
+- **The idle line's cost to `stop_following` holds at five times the prompts**: 21/48 right with it,
+  39/48 without. The curated set had 2/7 and 6/7.
+- **On this set, the line also costs impossible requests** (+9.4 without it, beyond noise). Taking the line
+  away added 5 unasked actions (46 to 51) and removed 15 missed requests (37 to 22).
+- **Every reply flagged was an echo**, never an empty, too-long or leaking one. With the line, the
+  model repeated "Strike the Wolf." 8 times, "You can stay put now." 5 times and "Fine day for it."
+  once. Without it, 6 echoes, of the same two action examples.
+- On the curated set, only `qwen3.5:2b` paid this cost (entry above). Whether the other models do on
+  a larger set is what request 001 measures.
+
+**Not a ranking**, since only one model finished here. `qwen3.5:4b` was stopped about ten minutes
+into its run, at the lead's request, and recorded nothing.
+
+**What would change this.** Request 001's run of the same model on the RTX 5080, as its baseline. A
+different result there points at the machine, not the model. Raw data:
+`docs/run-requests/001-interim-model-sweep-5080/laptop-interim-results.json`, and the full report
+in the laptop session's checkout, `.scratch/model-sweep-interim/`.

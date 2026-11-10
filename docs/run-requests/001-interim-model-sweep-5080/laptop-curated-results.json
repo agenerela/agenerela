@@ -1,0 +1,1554 @@
+{
+ "describe": "The lead's laptop (RTX 4060 Laptop 8 GB), 9 November 2026: the curated set, 76 prompts, origin/test 61a7744, ollama serve 0.40.14 with OLLAMA_GO_TEMPLATE=1. findings.md, 'Thirteen models on the evaluation set'. Per-prompt answers left out; the full file is in the laptop's .scratch/model-sweep-1109/results.json.",
+ "baseline": "qwen3.5:2b",
+ "noise_floor": "10 x sqrt(50 / n) points",
+ "models": [
+  {
+   "model": "gemma4:e2b-it-qat",
+   "template": "renderer_parser",
+   "order_kept": "6/6",
+   "thinking_replies": 0,
+   "idle_on": {
+    "correct": 64,
+    "n": 76,
+    "accuracy": 84.2,
+    "categories": {
+     "command_with_target": {
+      "correct": 11,
+      "n": 11,
+      "pct": 100.0
+     },
+     "conversation": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "event": {
+      "correct": 14,
+      "n": 19,
+      "pct": 73.7
+     },
+     "impossible_request": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "simple_command": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "situation": {
+      "correct": 12,
+      "n": 19,
+      "pct": 63.2
+     }
+    },
+    "stop_following": {
+     "correct": 5,
+     "n": 7
+    },
+    "unasked_actions": {
+     "count": 3,
+     "n": 30
+    },
+    "missed_requests": {
+     "count": 5,
+     "n": 46
+    },
+    "latency_s": {
+     "median": 0.701,
+     "p90": 0.842
+    }
+   },
+   "idle_off": {
+    "correct": 62,
+    "n": 76,
+    "accuracy": 81.6,
+    "categories": {
+     "command_with_target": {
+      "correct": 11,
+      "n": 11,
+      "pct": 100.0
+     },
+     "conversation": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "event": {
+      "correct": 13,
+      "n": 19,
+      "pct": 68.4
+     },
+     "impossible_request": {
+      "correct": 8,
+      "n": 9,
+      "pct": 88.9
+     },
+     "simple_command": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "situation": {
+      "correct": 12,
+      "n": 19,
+      "pct": 63.2
+     }
+    },
+    "stop_following": {
+     "correct": 7,
+     "n": 7
+    },
+    "unasked_actions": {
+     "count": 6,
+     "n": 30
+    },
+    "missed_requests": {
+     "count": 2,
+     "n": 46
+    },
+    "latency_s": {
+     "median": 0.713,
+     "p90": 0.872
+    }
+   },
+   "vram": [
+    {
+     "name": "gemma4:e2b-it-qat",
+     "size_mb": 1578,
+     "size_vram_mb": 1578
+    }
+   ]
+  },
+  {
+   "model": "granite4.1:3b",
+   "template": "go_template",
+   "order_kept": "6/6",
+   "thinking_replies": 0,
+   "idle_on": {
+    "correct": 62,
+    "n": 76,
+    "accuracy": 81.6,
+    "categories": {
+     "command_with_target": {
+      "correct": 10,
+      "n": 11,
+      "pct": 90.9
+     },
+     "conversation": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "event": {
+      "correct": 14,
+      "n": 19,
+      "pct": 73.7
+     },
+     "impossible_request": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "simple_command": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "situation": {
+      "correct": 11,
+      "n": 19,
+      "pct": 57.9
+     }
+    },
+    "stop_following": {
+     "correct": 6,
+     "n": 7
+    },
+    "unasked_actions": {
+     "count": 1,
+     "n": 30
+    },
+    "missed_requests": {
+     "count": 11,
+     "n": 46
+    },
+    "latency_s": {
+     "median": 0.46,
+     "p90": 0.519
+    }
+   },
+   "idle_off": {
+    "correct": 61,
+    "n": 76,
+    "accuracy": 80.3,
+    "categories": {
+     "command_with_target": {
+      "correct": 11,
+      "n": 11,
+      "pct": 100.0
+     },
+     "conversation": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "event": {
+      "correct": 13,
+      "n": 19,
+      "pct": 68.4
+     },
+     "impossible_request": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "simple_command": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "situation": {
+      "correct": 10,
+      "n": 19,
+      "pct": 52.6
+     }
+    },
+    "stop_following": {
+     "correct": 7,
+     "n": 7
+    },
+    "unasked_actions": {
+     "count": 2,
+     "n": 30
+    },
+    "missed_requests": {
+     "count": 10,
+     "n": 46
+    },
+    "latency_s": {
+     "median": 0.462,
+     "p90": 0.52
+    }
+   },
+   "vram": [
+    {
+     "name": "granite4.1:3b",
+     "size_mb": 2390,
+     "size_vram_mb": 2390
+    }
+   ]
+  },
+  {
+   "model": "hf.co/QuantFactory/L3-8B-Stheno-v3.2-GGUF:Q4_K_M",
+   "template": "go_template",
+   "order_kept": "6/6",
+   "thinking_replies": 0,
+   "idle_on": {
+    "correct": 60,
+    "n": 76,
+    "accuracy": 78.9,
+    "categories": {
+     "command_with_target": {
+      "correct": 11,
+      "n": 11,
+      "pct": 100.0
+     },
+     "conversation": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "event": {
+      "correct": 15,
+      "n": 19,
+      "pct": 78.9
+     },
+     "impossible_request": {
+      "correct": 8,
+      "n": 9,
+      "pct": 88.9
+     },
+     "simple_command": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "situation": {
+      "correct": 8,
+      "n": 19,
+      "pct": 42.1
+     }
+    },
+    "stop_following": {
+     "correct": 7,
+     "n": 7
+    },
+    "unasked_actions": {
+     "count": 11,
+     "n": 30
+    },
+    "missed_requests": {
+     "count": 0,
+     "n": 46
+    },
+    "latency_s": {
+     "median": 0.845,
+     "p90": 0.932
+    }
+   },
+   "idle_off": {
+    "correct": 61,
+    "n": 76,
+    "accuracy": 80.3,
+    "categories": {
+     "command_with_target": {
+      "correct": 11,
+      "n": 11,
+      "pct": 100.0
+     },
+     "conversation": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "event": {
+      "correct": 15,
+      "n": 19,
+      "pct": 78.9
+     },
+     "impossible_request": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "simple_command": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "situation": {
+      "correct": 8,
+      "n": 19,
+      "pct": 42.1
+     }
+    },
+    "stop_following": {
+     "correct": 7,
+     "n": 7
+    },
+    "unasked_actions": {
+     "count": 11,
+     "n": 30
+    },
+    "missed_requests": {
+     "count": 0,
+     "n": 46
+    },
+    "latency_s": {
+     "median": 0.845,
+     "p90": 0.954
+    }
+   },
+   "vram": [
+    {
+     "name": "hf.co/QuantFactory/L3-8B-Stheno-v3.2-GGUF:Q4_K_M",
+     "size_mb": 5035,
+     "size_vram_mb": 5035
+    }
+   ]
+  },
+  {
+   "model": "hf.co/openbmb/MiniCPM5-2B-GGUF:Q4_K_M",
+   "template": "go_template",
+   "order_kept": "6/6",
+   "thinking_replies": 0,
+   "idle_on": {
+    "correct": 58,
+    "n": 76,
+    "accuracy": 76.3,
+    "categories": {
+     "command_with_target": {
+      "correct": 11,
+      "n": 11,
+      "pct": 100.0
+     },
+     "conversation": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "event": {
+      "correct": 13,
+      "n": 19,
+      "pct": 68.4
+     },
+     "impossible_request": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "simple_command": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "situation": {
+      "correct": 7,
+      "n": 19,
+      "pct": 36.8
+     }
+    },
+    "stop_following": {
+     "correct": 6,
+     "n": 7
+    },
+    "unasked_actions": {
+     "count": 6,
+     "n": 30
+    },
+    "missed_requests": {
+     "count": 7,
+     "n": 46
+    },
+    "latency_s": {
+     "median": 0.362,
+     "p90": 0.418
+    }
+   },
+   "idle_off": {
+    "correct": 56,
+    "n": 76,
+    "accuracy": 73.7,
+    "categories": {
+     "command_with_target": {
+      "correct": 11,
+      "n": 11,
+      "pct": 100.0
+     },
+     "conversation": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "event": {
+      "correct": 13,
+      "n": 19,
+      "pct": 68.4
+     },
+     "impossible_request": {
+      "correct": 8,
+      "n": 9,
+      "pct": 88.9
+     },
+     "simple_command": {
+      "correct": 8,
+      "n": 9,
+      "pct": 88.9
+     },
+     "situation": {
+      "correct": 7,
+      "n": 19,
+      "pct": 36.8
+     }
+    },
+    "stop_following": {
+     "correct": 7,
+     "n": 7
+    },
+    "unasked_actions": {
+     "count": 9,
+     "n": 30
+    },
+    "missed_requests": {
+     "count": 5,
+     "n": 46
+    },
+    "latency_s": {
+     "median": 0.368,
+     "p90": 0.425
+    }
+   },
+   "vram": [
+    {
+     "name": "hf.co/openbmb/MiniCPM5-2B-GGUF:Q4_K_M",
+     "size_mb": 1564,
+     "size_vram_mb": 1564
+    }
+   ]
+  },
+  {
+   "model": "lfm3:1.7b",
+   "template": "renderer_parser",
+   "order_kept": "6/6",
+   "thinking_replies": 0,
+   "idle_on": {
+    "correct": 46,
+    "n": 76,
+    "accuracy": 60.5,
+    "categories": {
+     "command_with_target": {
+      "correct": 10,
+      "n": 11,
+      "pct": 90.9
+     },
+     "conversation": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "event": {
+      "correct": 5,
+      "n": 19,
+      "pct": 26.3
+     },
+     "impossible_request": {
+      "correct": 7,
+      "n": 9,
+      "pct": 77.8
+     },
+     "simple_command": {
+      "correct": 7,
+      "n": 9,
+      "pct": 77.8
+     },
+     "situation": {
+      "correct": 8,
+      "n": 19,
+      "pct": 42.1
+     }
+    },
+    "stop_following": {
+     "correct": 3,
+     "n": 7
+    },
+    "unasked_actions": {
+     "count": 5,
+     "n": 30
+    },
+    "missed_requests": {
+     "count": 2,
+     "n": 46
+    },
+    "latency_s": {
+     "median": 0.383,
+     "p90": 0.461
+    }
+   },
+   "idle_off": {
+    "correct": 47,
+    "n": 76,
+    "accuracy": 61.8,
+    "categories": {
+     "command_with_target": {
+      "correct": 11,
+      "n": 11,
+      "pct": 100.0
+     },
+     "conversation": {
+      "correct": 8,
+      "n": 9,
+      "pct": 88.9
+     },
+     "event": {
+      "correct": 6,
+      "n": 19,
+      "pct": 31.6
+     },
+     "impossible_request": {
+      "correct": 7,
+      "n": 9,
+      "pct": 77.8
+     },
+     "simple_command": {
+      "correct": 7,
+      "n": 9,
+      "pct": 77.8
+     },
+     "situation": {
+      "correct": 8,
+      "n": 19,
+      "pct": 42.1
+     }
+    },
+    "stop_following": {
+     "correct": 3,
+     "n": 7
+    },
+    "unasked_actions": {
+     "count": 3,
+     "n": 30
+    },
+    "missed_requests": {
+     "count": 6,
+     "n": 46
+    },
+    "latency_s": {
+     "median": 0.384,
+     "p90": 0.458
+    }
+   },
+   "vram": [
+    {
+     "name": "lfm3:1.7b",
+     "size_mb": 1114,
+     "size_vram_mb": 1114
+    }
+   ]
+  },
+  {
+   "model": "llama3.2:3b",
+   "template": "go_template",
+   "order_kept": "6/6",
+   "thinking_replies": 0,
+   "idle_on": {
+    "correct": 59,
+    "n": 76,
+    "accuracy": 77.6,
+    "categories": {
+     "command_with_target": {
+      "correct": 11,
+      "n": 11,
+      "pct": 100.0
+     },
+     "conversation": {
+      "correct": 6,
+      "n": 9,
+      "pct": 66.7
+     },
+     "event": {
+      "correct": 13,
+      "n": 19,
+      "pct": 68.4
+     },
+     "impossible_request": {
+      "correct": 8,
+      "n": 9,
+      "pct": 88.9
+     },
+     "simple_command": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "situation": {
+      "correct": 12,
+      "n": 19,
+      "pct": 63.2
+     }
+    },
+    "stop_following": {
+     "correct": 7,
+     "n": 7
+    },
+    "unasked_actions": {
+     "count": 10,
+     "n": 30
+    },
+    "missed_requests": {
+     "count": 0,
+     "n": 46
+    },
+    "latency_s": {
+     "median": 0.462,
+     "p90": 0.552
+    }
+   },
+   "idle_off": {
+    "correct": 51,
+    "n": 76,
+    "accuracy": 67.1,
+    "categories": {
+     "command_with_target": {
+      "correct": 11,
+      "n": 11,
+      "pct": 100.0
+     },
+     "conversation": {
+      "correct": 1,
+      "n": 9,
+      "pct": 11.1
+     },
+     "event": {
+      "correct": 12,
+      "n": 19,
+      "pct": 63.2
+     },
+     "impossible_request": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "simple_command": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "situation": {
+      "correct": 9,
+      "n": 19,
+      "pct": 47.4
+     }
+    },
+    "stop_following": {
+     "correct": 7,
+     "n": 7
+    },
+    "unasked_actions": {
+     "count": 19,
+     "n": 30
+    },
+    "missed_requests": {
+     "count": 0,
+     "n": 46
+    },
+    "latency_s": {
+     "median": 0.47,
+     "p90": 0.549
+    }
+   },
+   "vram": [
+    {
+     "name": "llama3.2:3b",
+     "size_mb": 2442,
+     "size_vram_mb": 2442
+    }
+   ]
+  },
+  {
+   "model": "ministral-3:3b",
+   "template": "parser",
+   "order_kept": "6/6",
+   "thinking_replies": 0,
+   "idle_on": {
+    "correct": 65,
+    "n": 76,
+    "accuracy": 85.5,
+    "categories": {
+     "command_with_target": {
+      "correct": 11,
+      "n": 11,
+      "pct": 100.0
+     },
+     "conversation": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "event": {
+      "correct": 14,
+      "n": 19,
+      "pct": 73.7
+     },
+     "impossible_request": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "simple_command": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "situation": {
+      "correct": 13,
+      "n": 19,
+      "pct": 68.4
+     }
+    },
+    "stop_following": {
+     "correct": 7,
+     "n": 7
+    },
+    "unasked_actions": {
+     "count": 4,
+     "n": 30
+    },
+    "missed_requests": {
+     "count": 0,
+     "n": 46
+    },
+    "latency_s": {
+     "median": 0.53,
+     "p90": 0.592
+    }
+   },
+   "idle_off": {
+    "correct": 61,
+    "n": 76,
+    "accuracy": 80.3,
+    "categories": {
+     "command_with_target": {
+      "correct": 11,
+      "n": 11,
+      "pct": 100.0
+     },
+     "conversation": {
+      "correct": 8,
+      "n": 9,
+      "pct": 88.9
+     },
+     "event": {
+      "correct": 14,
+      "n": 19,
+      "pct": 73.7
+     },
+     "impossible_request": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "simple_command": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "situation": {
+      "correct": 10,
+      "n": 19,
+      "pct": 52.6
+     }
+    },
+    "stop_following": {
+     "correct": 7,
+     "n": 7
+    },
+    "unasked_actions": {
+     "count": 7,
+     "n": 30
+    },
+    "missed_requests": {
+     "count": 0,
+     "n": 46
+    },
+    "latency_s": {
+     "median": 0.54,
+     "p90": 0.622
+    }
+   },
+   "vram": [
+    {
+     "name": "ministral-3:3b",
+     "size_mb": 2601,
+     "size_vram_mb": 2601
+    }
+   ]
+  },
+  {
+   "model": "nemotron-3-nano:4b",
+   "template": "renderer_parser",
+   "order_kept": "6/6",
+   "thinking_replies": 0,
+   "idle_on": {
+    "correct": 60,
+    "n": 76,
+    "accuracy": 78.9,
+    "categories": {
+     "command_with_target": {
+      "correct": 11,
+      "n": 11,
+      "pct": 100.0
+     },
+     "conversation": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "event": {
+      "correct": 11,
+      "n": 19,
+      "pct": 57.9
+     },
+     "impossible_request": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "simple_command": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "situation": {
+      "correct": 11,
+      "n": 19,
+      "pct": 57.9
+     }
+    },
+    "stop_following": {
+     "correct": 7,
+     "n": 7
+    },
+    "unasked_actions": {
+     "count": 2,
+     "n": 30
+    },
+    "missed_requests": {
+     "count": 8,
+     "n": 46
+    },
+    "latency_s": {
+     "median": 0.677,
+     "p90": 0.77
+    }
+   },
+   "idle_off": {
+    "correct": 63,
+    "n": 76,
+    "accuracy": 82.9,
+    "categories": {
+     "command_with_target": {
+      "correct": 11,
+      "n": 11,
+      "pct": 100.0
+     },
+     "conversation": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "event": {
+      "correct": 13,
+      "n": 19,
+      "pct": 68.4
+     },
+     "impossible_request": {
+      "correct": 8,
+      "n": 9,
+      "pct": 88.9
+     },
+     "simple_command": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "situation": {
+      "correct": 13,
+      "n": 19,
+      "pct": 68.4
+     }
+    },
+    "stop_following": {
+     "correct": 7,
+     "n": 7
+    },
+    "unasked_actions": {
+     "count": 5,
+     "n": 30
+    },
+    "missed_requests": {
+     "count": 1,
+     "n": 46
+    },
+    "latency_s": {
+     "median": 0.686,
+     "p90": 0.776
+    }
+   },
+   "vram": [
+    {
+     "name": "nemotron-3-nano:4b",
+     "size_mb": 2693,
+     "size_vram_mb": 2693
+    }
+   ]
+  },
+  {
+   "model": "phi4-mini:latest",
+   "template": "go_template",
+   "order_kept": "6/6",
+   "thinking_replies": 0,
+   "idle_on": {
+    "correct": 57,
+    "n": 76,
+    "accuracy": 75.0,
+    "categories": {
+     "command_with_target": {
+      "correct": 11,
+      "n": 11,
+      "pct": 100.0
+     },
+     "conversation": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "event": {
+      "correct": 12,
+      "n": 19,
+      "pct": 63.2
+     },
+     "impossible_request": {
+      "correct": 8,
+      "n": 9,
+      "pct": 88.9
+     },
+     "simple_command": {
+      "correct": 7,
+      "n": 9,
+      "pct": 77.8
+     },
+     "situation": {
+      "correct": 10,
+      "n": 19,
+      "pct": 52.6
+     }
+    },
+    "stop_following": {
+     "correct": 5,
+     "n": 7
+    },
+    "unasked_actions": {
+     "count": 9,
+     "n": 30
+    },
+    "missed_requests": {
+     "count": 3,
+     "n": 46
+    },
+    "latency_s": {
+     "median": 0.675,
+     "p90": 0.82
+    }
+   },
+   "idle_off": {
+    "correct": 56,
+    "n": 76,
+    "accuracy": 73.7,
+    "categories": {
+     "command_with_target": {
+      "correct": 11,
+      "n": 11,
+      "pct": 100.0
+     },
+     "conversation": {
+      "correct": 7,
+      "n": 9,
+      "pct": 77.8
+     },
+     "event": {
+      "correct": 13,
+      "n": 19,
+      "pct": 68.4
+     },
+     "impossible_request": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "simple_command": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "situation": {
+      "correct": 7,
+      "n": 19,
+      "pct": 36.8
+     }
+    },
+    "stop_following": {
+     "correct": 7,
+     "n": 7
+    },
+    "unasked_actions": {
+     "count": 14,
+     "n": 30
+    },
+    "missed_requests": {
+     "count": 0,
+     "n": 46
+    },
+    "latency_s": {
+     "median": 0.681,
+     "p90": 0.831
+    }
+   },
+   "vram": [
+    {
+     "name": "phi4-mini:latest",
+     "size_mb": 2956,
+     "size_vram_mb": 2956
+    }
+   ]
+  },
+  {
+   "model": "qwen3.5:2b",
+   "template": "renderer_parser",
+   "order_kept": "6/6",
+   "thinking_replies": 0,
+   "idle_on": {
+    "correct": 56,
+    "n": 76,
+    "accuracy": 73.7,
+    "categories": {
+     "command_with_target": {
+      "correct": 10,
+      "n": 11,
+      "pct": 90.9
+     },
+     "conversation": {
+      "correct": 8,
+      "n": 9,
+      "pct": 88.9
+     },
+     "event": {
+      "correct": 11,
+      "n": 19,
+      "pct": 57.9
+     },
+     "impossible_request": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "simple_command": {
+      "correct": 5,
+      "n": 9,
+      "pct": 55.6
+     },
+     "situation": {
+      "correct": 13,
+      "n": 19,
+      "pct": 68.4
+     }
+    },
+    "stop_following": {
+     "correct": 2,
+     "n": 7
+    },
+    "unasked_actions": {
+     "count": 4,
+     "n": 30
+    },
+    "missed_requests": {
+     "count": 10,
+     "n": 46
+    },
+    "latency_s": {
+     "median": 0.676,
+     "p90": 0.769
+    }
+   },
+   "idle_off": {
+    "correct": 59,
+    "n": 76,
+    "accuracy": 77.6,
+    "categories": {
+     "command_with_target": {
+      "correct": 10,
+      "n": 11,
+      "pct": 90.9
+     },
+     "conversation": {
+      "correct": 8,
+      "n": 9,
+      "pct": 88.9
+     },
+     "event": {
+      "correct": 11,
+      "n": 19,
+      "pct": 57.9
+     },
+     "impossible_request": {
+      "correct": 8,
+      "n": 9,
+      "pct": 88.9
+     },
+     "simple_command": {
+      "correct": 8,
+      "n": 9,
+      "pct": 88.9
+     },
+     "situation": {
+      "correct": 14,
+      "n": 19,
+      "pct": 73.7
+     }
+    },
+    "stop_following": {
+     "correct": 6,
+     "n": 7
+    },
+    "unasked_actions": {
+     "count": 5,
+     "n": 30
+    },
+    "missed_requests": {
+     "count": 6,
+     "n": 46
+    },
+    "latency_s": {
+     "median": 0.664,
+     "p90": 0.815
+    }
+   },
+   "vram": [
+    {
+     "name": "qwen3.5:2b",
+     "size_mb": 2254,
+     "size_vram_mb": 2254
+    }
+   ]
+  },
+  {
+   "model": "qwen3.5:4b",
+   "template": "renderer_parser",
+   "order_kept": "6/6",
+   "thinking_replies": 0,
+   "idle_on": {
+    "correct": 70,
+    "n": 76,
+    "accuracy": 92.1,
+    "categories": {
+     "command_with_target": {
+      "correct": 11,
+      "n": 11,
+      "pct": 100.0
+     },
+     "conversation": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "event": {
+      "correct": 15,
+      "n": 19,
+      "pct": 78.9
+     },
+     "impossible_request": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "simple_command": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "situation": {
+      "correct": 17,
+      "n": 19,
+      "pct": 89.5
+     }
+    },
+    "stop_following": {
+     "correct": 6,
+     "n": 7
+    },
+    "unasked_actions": {
+     "count": 1,
+     "n": 30
+    },
+    "missed_requests": {
+     "count": 2,
+     "n": 46
+    },
+    "latency_s": {
+     "median": 1.0,
+     "p90": 1.087
+    }
+   },
+   "idle_off": {
+    "correct": 66,
+    "n": 76,
+    "accuracy": 86.8,
+    "categories": {
+     "command_with_target": {
+      "correct": 11,
+      "n": 11,
+      "pct": 100.0
+     },
+     "conversation": {
+      "correct": 7,
+      "n": 9,
+      "pct": 77.8
+     },
+     "event": {
+      "correct": 16,
+      "n": 19,
+      "pct": 84.2
+     },
+     "impossible_request": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "simple_command": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "situation": {
+      "correct": 14,
+      "n": 19,
+      "pct": 73.7
+     }
+    },
+    "stop_following": {
+     "correct": 6,
+     "n": 7
+    },
+    "unasked_actions": {
+     "count": 7,
+     "n": 30
+    },
+    "missed_requests": {
+     "count": 0,
+     "n": 46
+    },
+    "latency_s": {
+     "median": 1.01,
+     "p90": 1.087
+    }
+   },
+   "vram": [
+    {
+     "name": "qwen3.5:4b",
+     "size_mb": 2993,
+     "size_vram_mb": 2993
+    }
+   ]
+  },
+  {
+   "model": "qwen3:4b-instruct-2507-q4_K_M",
+   "template": "go_template",
+   "order_kept": "6/6",
+   "thinking_replies": 0,
+   "idle_on": {
+    "correct": 65,
+    "n": 76,
+    "accuracy": 85.5,
+    "categories": {
+     "command_with_target": {
+      "correct": 11,
+      "n": 11,
+      "pct": 100.0
+     },
+     "conversation": {
+      "correct": 8,
+      "n": 9,
+      "pct": 88.9
+     },
+     "event": {
+      "correct": 13,
+      "n": 19,
+      "pct": 68.4
+     },
+     "impossible_request": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "simple_command": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "situation": {
+      "correct": 15,
+      "n": 19,
+      "pct": 78.9
+     }
+    },
+    "stop_following": {
+     "correct": 6,
+     "n": 7
+    },
+    "unasked_actions": {
+     "count": 5,
+     "n": 30
+    },
+    "missed_requests": {
+     "count": 1,
+     "n": 46
+    },
+    "latency_s": {
+     "median": 0.616,
+     "p90": 0.668
+    }
+   },
+   "idle_off": {
+    "correct": 56,
+    "n": 76,
+    "accuracy": 73.7,
+    "categories": {
+     "command_with_target": {
+      "correct": 11,
+      "n": 11,
+      "pct": 100.0
+     },
+     "conversation": {
+      "correct": 5,
+      "n": 9,
+      "pct": 55.6
+     },
+     "event": {
+      "correct": 14,
+      "n": 19,
+      "pct": 73.7
+     },
+     "impossible_request": {
+      "correct": 7,
+      "n": 9,
+      "pct": 77.8
+     },
+     "simple_command": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "situation": {
+      "correct": 10,
+      "n": 19,
+      "pct": 52.6
+     }
+    },
+    "stop_following": {
+     "correct": 6,
+     "n": 7
+    },
+    "unasked_actions": {
+     "count": 15,
+     "n": 30
+    },
+    "missed_requests": {
+     "count": 0,
+     "n": 46
+    },
+    "latency_s": {
+     "median": 0.627,
+     "p90": 0.694
+    }
+   },
+   "vram": [
+    {
+     "name": "qwen3:4b-instruct-2507-q4_K_M",
+     "size_mb": 3032,
+     "size_vram_mb": 3032
+    }
+   ]
+  },
+  {
+   "model": "qwen3:8b",
+   "template": "go_template",
+   "order_kept": "6/6",
+   "thinking_replies": 0,
+   "idle_on": {
+    "correct": 65,
+    "n": 76,
+    "accuracy": 85.5,
+    "categories": {
+     "command_with_target": {
+      "correct": 11,
+      "n": 11,
+      "pct": 100.0
+     },
+     "conversation": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "event": {
+      "correct": 13,
+      "n": 19,
+      "pct": 68.4
+     },
+     "impossible_request": {
+      "correct": 8,
+      "n": 9,
+      "pct": 88.9
+     },
+     "simple_command": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "situation": {
+      "correct": 15,
+      "n": 19,
+      "pct": 78.9
+     }
+    },
+    "stop_following": {
+     "correct": 7,
+     "n": 7
+    },
+    "unasked_actions": {
+     "count": 4,
+     "n": 30
+    },
+    "missed_requests": {
+     "count": 1,
+     "n": 46
+    },
+    "latency_s": {
+     "median": 0.957,
+     "p90": 1.05
+    }
+   },
+   "idle_off": {
+    "correct": 61,
+    "n": 76,
+    "accuracy": 80.3,
+    "categories": {
+     "command_with_target": {
+      "correct": 11,
+      "n": 11,
+      "pct": 100.0
+     },
+     "conversation": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "event": {
+      "correct": 12,
+      "n": 19,
+      "pct": 63.2
+     },
+     "impossible_request": {
+      "correct": 7,
+      "n": 9,
+      "pct": 77.8
+     },
+     "simple_command": {
+      "correct": 9,
+      "n": 9,
+      "pct": 100.0
+     },
+     "situation": {
+      "correct": 13,
+      "n": 19,
+      "pct": 68.4
+     }
+    },
+    "stop_following": {
+     "correct": 7,
+     "n": 7
+    },
+    "unasked_actions": {
+     "count": 7,
+     "n": 30
+    },
+    "missed_requests": {
+     "count": 1,
+     "n": 46
+    },
+    "latency_s": {
+     "median": 0.964,
+     "p90": 1.076
+    }
+   },
+   "vram": [
+    {
+     "name": "qwen3:8b",
+     "size_mb": 5327,
+     "size_vram_mb": 5327
+    }
+   ]
+  }
+ ]
+}

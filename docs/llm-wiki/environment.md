@@ -201,6 +201,63 @@ started; restarting Ollama after the GPU woke fixed it (seen once, not investiga
 AC power: one 5 October session was run on battery (findings), and a battery run is not
 comparable with an AC one.
 
+## Ollama on another machine, over the local network
+
+One machine serves the model, and another runs Unity or a probe against it. This lets the laptop
+use the RTX 5080's card, for example. Nothing in the framework changes: `OllamaSettings.Endpoint`,
+an `OllamaProviderConfig`'s **Endpoint**, `AGENERELA_OLLAMA_URL` for the live tests, and
+`OLLAMA_URL` for the run kits (`tools/live-runs/`) all take another machine's address. Written on
+9 November 2026, before it was first tried, so treat the steps as untested until someone runs them
+and corrects this section.
+
+**On the machine that serves the model** (Windows):
+
+1. **Make Ollama listen beyond itself.** By default it answers only `127.0.0.1`. Set a user
+   environment variable `OLLAMA_HOST` to `0.0.0.0:11434` (Settings → System → About → Advanced
+   system settings → Environment Variables, or in PowerShell
+   `[Environment]::SetEnvironmentVariable('OLLAMA_HOST', '0.0.0.0:11434', 'User')`). Then quit and
+   restart the Ollama app, which reads it at start. For a measurement run, start `ollama serve` by
+   hand instead, with the run's other variables; see `tools/live-runs/model-sweep/README.md`.
+2. **Let the port through Windows Firewall, on private networks only.** In an administrator
+   PowerShell:
+   ```powershell
+   New-NetFirewallRule -DisplayName "Ollama (LAN)" -Direction Inbound -Protocol TCP -LocalPort 11434 -Profile Private -Action Allow
+   ```
+   Check that Windows treats the network as Private (Settings → Network & internet → the
+   connection → Network profile type). On a Public network the rule does not apply, which is the
+   point.
+3. **Find its address.** `ipconfig` gives the IPv4 address of the network adapter, such as
+   `192.168.1.42`. Use the IP address, not the machine's name: a name can resolve to IPv6 first,
+   the same 2 s trap as `localhost`.
+
+**On the machine that asks**, check it answers:
+
+```bash
+curl -m 5 http://192.168.1.42:11434/api/version
+curl -m 5 http://192.168.1.42:11434/api/ps
+```
+
+A timeout usually means the firewall rule is missing or the network is Public. A refused
+connection usually means Ollama still listens only on `127.0.0.1`, so go back to step 1 and
+restart it.
+
+**Know what you opened.** Ollama has no password. Anyone on the same network can use the model
+and pull or delete models on that machine while the port is open. Do it on the home network
+only. When you are done, remove the rule
+(`Remove-NetFirewallRule -DisplayName "Ollama (LAN)"`) and set `OLLAMA_HOST` back, or delete it.
+
+**Measuring across the network:**
+
+- **The serving machine's GPU is the one measured.** Record its card, driver and Ollama version, not
+  the asking machine's.
+- **Latency includes the network hop.** That is about a millisecond on a home network, but say
+  so with the result.
+- **The laptop's lock (`.scratch/ollama-lock/`) covers the laptop's Ollama only.** The other
+  machine has none, so make sure nothing else uses its GPU. On the RTX 5080, that means both
+  ComfyUI stacks are idle.
+- **Unload models on that server** (`keep_alive: 0` to its address). The runner's residency
+  checks read that server's `/api/ps`, so they work unchanged.
+
 ## MCP for Unity (optional)
 
 The dev project depends on [MCP for Unity](https://github.com/CoplayDev/unity-mcp), pinned

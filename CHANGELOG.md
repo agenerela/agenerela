@@ -29,6 +29,14 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Run requests**, in `docs/run-requests/`: a run one machine should do, written down for another
+  session or person to pick up. Each is a folder with a `request.md`, what to run step by step, and
+  a `results.md` to fill in, with a status that goes open, claimed, done. Request 001 is the
+  13-model sweep on the interim set, for the RTX 5080. Its kit, `tools/live-runs/model-sweep/`,
+  is the 9 November sweep's scripts made portable: the server, project and set come from
+  environment variables, and the Unity entry point is a file to copy in, not a committed test.
+  `environment.md` gains a section on serving Ollama from another machine over the local network,
+  so the laptop can use the 5080's card. It is untested until someone runs it.
 - **An interim evaluation set of 389 prompts**, in `UnityProject/Assets/Evaluation/Interim/`
   (#151), for A/B runs until #147's curated 200+ set exists. It is measured against the curated
   set's agent, with the same actions and 11 targets, and is a set of its own with its own
