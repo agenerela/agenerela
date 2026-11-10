@@ -53,9 +53,11 @@ namespace Agenerela.Providers
     /// request to stay with the provider while something else happens.
     /// </para>
     /// <para>
-    /// <b>Replaying a decision log</b> (#190, G7, not built yet) goes through this class as it is:
+    /// <b>Replaying a decision log</b> (#190, G7; the helper itself is not built yet) goes through this class as it is:
     /// one <see cref="When"/> per agent and stimulus, with the log's replies in order, each
-    /// <see cref="ScriptedReply.Raw"/> text <see cref="ScriptedReply.After"/> its recorded latency.
+    /// <see cref="ScriptedReply.Raw"/> text <see cref="ScriptedReply.After"/> its recorded latency,
+    /// from each <see cref="DecisionLogLine"/>'s <see cref="DecisionLogLine.Reply"/> and
+    /// <see cref="DecisionLogLine.LatencySeconds"/>.
     /// </para>
     /// <para>
     /// Scripting a key, a callback or the fallback, <see cref="Hold"/> and <see cref="Release"/>
