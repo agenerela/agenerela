@@ -19,6 +19,21 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **Conditions per target** (#190 Living Vale #19, #216 item 5, DR-020 amended): an action can say,
+  for each target, whether it can be done to it right now, and why not. `ITargetAvailability`, an
+  optional addition to `IActionHandler`, returns an `Availability` (`Availability.Yes`, or
+  `Availability.No(reason)`; a bool converts). Its front doors are `[AvailableFor("id")]` on a method
+  taking the target's id (optionally after an `AgentContext`) and returning bool or `Availability`,
+  and the settable `DelegateActionHandler.IsAvailableFor`. For a handler with a check: an action
+  that needs a target and has none left that it takes and the check allows is left out of the
+  schema, flat or paired; the paired schema drops each rejected pair; the flat target enum stays
+  every registered target. `TargetAvailabilityGuard`, a fourth built-in guard after
+  `TargetCategoryGuard`, rewrites a rejected pair to `none`, and `Agent.Execute` runs it again, so a
+  stale pair is refused with the check's reason in the `ActionResult`. Rejected pairs and reasons
+  are in `DecisionTelemetry.TargetsUnavailable` (`UnavailableTarget`), the log line's
+  `targetsUnavailable` and `AgentPreview.TargetsUnavailable`; `AgentPreview.LeftOut` names the
+  reasons for an action left out by it. Nothing is said to the model. A handler without a check
+  sends exactly the request it sent before. See `Documentation~/targets.md`.
 - **Standing knowledge and statement rules on an identity** (#190, Living Vale #14):
   `AgentIdentity.Knowledge`, a list of lines, and `AgentIdentity.StatementRules`, one string, both
   serialized, so an `AgentProfile` carries them and a code-built agent gets them through the

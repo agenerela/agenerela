@@ -187,7 +187,7 @@ builds it.
 
 **The preview.** `agent.Preview(stimulus, options)` returns what `DecideAsync` would send next with
 the same stimulus and options, without sending it: the actions offered and why the others are not,
-the targets of each source with what its cap dropped, the observation lines of each source with
+each action and target pair a per-target check rejected and why (`TargetsUnavailable`), the targets of each source with what its cap dropped, the observation lines of each source with
 what was left out, the history the memory would send, and the `DecisionRequest` itself. It runs
 the same code as a decision, so it never drifts from it. It never calls the provider or remembers
 anything, but every source, availability check and `IMemoryStrategy.Recall` runs once per preview:
