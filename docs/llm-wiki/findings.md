@@ -2684,4 +2684,4 @@ offer in 52 non-trade lines per model.
 
 **What would change it.** A larger, labelled set of the game's lines; the fallback's mention check
 measured on targeted actions with categories (`docs/live-runs.md`, waiting), where a line naming the
-target it wants is the normal case. Raw rows: the branch's `.scratch/lv-adopt/ab/` (not in git).
+target it wants is the normal case. Raw rows: the lead's checkout, `.scratch/lv-adopt-190/ab/` (not in git).
