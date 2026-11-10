@@ -2277,7 +2277,7 @@ Short of that: an answer that leaves `statement` out when none was written; the 
 and `tokens.json` files in the lead's main checkout, `.scratch/151-chat-turns/full/` and `stated/`,
 with `summarize.py`, which prints these tables.
 
-### Thirteen models on the interim set, on the RTX 5080: `qwen3.5:4b` first at 330/389, and the idle example helps every model but `qwen3.5:2b` (9 November 2026)
+### Thirteen models on the interim set, on the RTX 5080: `qwen3.5:4b` first at 330/389, and the idle example helps seven models beyond noise, costing only `qwen3.5:2b` (9 November 2026)
 
 [Run request 001](../run-requests/001-interim-model-sweep-5080/request.md): the 13-model sweep of
 the curated-set entry above ("Thirteen models on the evaluation set"), on the interim set's 389
