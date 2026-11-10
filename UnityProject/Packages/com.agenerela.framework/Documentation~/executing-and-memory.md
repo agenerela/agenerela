@@ -107,6 +107,10 @@ and again in the re-check at `Execute`, whatever a later call has set meanwhile.
 belong there rather than in `Agent.State`, which every call shares (GreyBoxVillage's G11). The
 framework still decides nothing from it: the developer's own check does.
 
+`Correlation` is the caller's alone. To say that one agent's decision led to another's, use
+`RelayAsync` and `DecideOptions.Chain` instead, which the telemetry and the decision log record
+([Chains of relayed decisions](logging-decisions.md#chains-of-relayed-decisions)).
+
 ## Memory that waits for the game: `MemoryCommit`
 
 By default an agent remembers each decision as `DecideAsync` returns it. A game that may drop a

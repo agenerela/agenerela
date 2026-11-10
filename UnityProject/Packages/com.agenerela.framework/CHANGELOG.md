@@ -29,6 +29,18 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **Relayed decisions in one chain** (#190, G4): `odile.RelayAsync(call, wren, stimulus, label)`
+  asks `wren` with that stimulus and label as the next hop of the chain `call` was in, or of a new
+  one, and returns Wren's decision. The chain is `DecisionChain` (`Id`, `Hop`, `SourceAgentId`) on
+  the new `DecideOptions.Chain`, recorded as `DecisionTelemetry.ChainId`, `ChainHop` and
+  `ChainSource`, pipeline errors included, and written by `DecisionLog` as `chainId`, `chainHop` and
+  `chainSource`, so `DecisionLogLine.CurrentVersion` is now 2; version 1 lines still read, with no
+  chain. `DecisionChain.Start()` puts the chain's first decision in it too. A relay past `maxHops`
+  (`DecisionRelay.DefaultMaxHops`, 8) is not sent and returns the new
+  `PipelineErrorKind.ChainTooLong`, logged nowhere and raised on the feed. A call with no chain, the
+  default, records none, and the chain never reaches the prompt: the receiving model reads exactly
+  the stimulus and label passed.
+
 - **An example's target when none of its preferred ones is here** (#190, Living Vale #20):
   `DecideOptions.ExampleTargetFallback` (and `PromptOptions.ExampleTargetFallback`), off. On, an
   example, or a counter-example with `{0}`, whose action has no registered `PreferredExampleTargets`

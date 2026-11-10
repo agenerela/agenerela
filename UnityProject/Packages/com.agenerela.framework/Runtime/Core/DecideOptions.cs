@@ -192,6 +192,18 @@ namespace Agenerela
         /// </remarks>
         public object Correlation;
 
+        /// <summary>
+        /// The chain of relayed decisions this call belongs to, or null for none, the default (#190,
+        /// G4). <see cref="DecisionRelay.RelayAsync"/> sets it; set <see cref="DecisionChain.Start"/>
+        /// here to put the decision that begins a chain in it too.
+        /// </summary>
+        /// <remarks>
+        /// Recorded in <see cref="DecisionTelemetry.ChainId"/>, <see cref="DecisionTelemetry.ChainHop"/>
+        /// and <see cref="DecisionTelemetry.ChainSource"/>, pipeline errors included, so the decision
+        /// feed and <see cref="DecisionLog"/> carry it. It never reaches the prompt or the provider.
+        /// </remarks>
+        public DecisionChain Chain;
+
         // The options one call keeps, taken when it is made, so changing the caller's object
         // afterwards changes nothing, the guards' view included (#106). A memberwise copy, so a
         // switch added later is copied without being listed here; only a field holding a mutable
