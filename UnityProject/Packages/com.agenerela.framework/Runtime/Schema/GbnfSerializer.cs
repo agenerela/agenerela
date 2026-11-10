@@ -30,7 +30,7 @@ namespace Agenerela
 
             if (fields.Count == 0)
             {
-                AppendRule(grammar, "root", GbnfTerminal("{") + " ws " + GbnfTerminal("}") + " ws");
+                AppendRule(grammar, "root", GbnfTerminal("{") + " ws " + GbnfTerminal("}") + " ws"); // Every GBNF grammar need "root"
             }
             else
             {
@@ -43,7 +43,14 @@ namespace Agenerela
             {
                 var field = fields[i];
                 AppendRule(grammar, "field-" + i, GbnfTerminal(JsonQuote(field.Name)) + " ws " + GbnfTerminal(":") + " ws value-" + i + " ws");
+
+                if (field.AllowedValues == null)
+                {
+                    AppendRule(grammar, "value-" + i, "json-string");
+                }
             }
+
+        
 
         }
     }    
