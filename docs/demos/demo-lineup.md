@@ -21,8 +21,8 @@ The demos below follow four rules, so the time goes into the agents instead:
 
 | Demo | Agents | What only it proves | Suggested order |
 |---|---|---|---|
-| **GreyBoxStrategy** (#20), [design](grey-box-strategy.md) | 4 countries | An agent with no body; agent to agent; stale moves within a turn; the eval set's `turn` category | **Now** |
-| **Hearth**, a colony, as GreyBox2D's genre (#44) | 8 to 12 settlers | Many agents in one queue; the Unity adapter in 2D; knowledge shared by a group | After S2 of GreyBoxStrategy |
+| **GreyBoxStrategy** (#20), [design](grey-box-strategy.md) | 5 countries | An agent with no body; agent to agent; stale moves within a turn; the eval set's `turn` category | **Now** |
+| **Hearth**, a colony, as GreyBox2D's genre (#44) | 8 to 12 settlers | Many agents in one queue; the Unity adapter in 2D; knowledge shared by a group | After GreyBoxStrategy's stage 2 |
 | **Risk race, top-down 2D** (#53) | 4 racers | A deadline: the world does not wait for the answer | Any time; its grey box needs no framework |
 | **Bridge crew** (optional) | 4 officers | One line heard by several agents, most of whom must answer `none` | Only if a slot opens |
 

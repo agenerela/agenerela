@@ -95,7 +95,7 @@ Two commands need no project change: `unity status` lists the open editors, and
 `unity test <project> --mode EditMode --output <xml>` runs the same EditMode tests as the raw
 command above, choosing the editor from `ProjectVersion.txt`, with the project closed. Live
 control (`unity command`) needs the experimental `com.unity.pipeline` package (0.9.1-exp.1).
-`Demos/GreyBoxVillage`, `Demos/GreyBoxVillageClassic` and `Demos/LivingVale` have it.
+`Demos/GreyBoxVillage`, `Demos/GreyBoxVillageClassic`, `Demos/LivingVale` and `Demos/GreyBoxStrategy` have it.
 `UnityProject` does not: its tests are the check there, and it has MCP for Unity, below.
 
 The loop, checked on Living Vale on 10 November 2026 from a worktree at a short path. Commands
