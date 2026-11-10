@@ -65,20 +65,22 @@ namespace LivingVale.Tests
             StringAssert.Contains("What happened to the wagon?", request.Stimulus);
             StringAssert.StartsWith(AgenerelaNpcDecisionDriver.StimulusLabel, request.Stimulus);
             StringAssert.Contains("Mara", request.SystemPrompt);
-            StringAssert.Contains("healing potions", request.Observations);
+            StringAssert.Contains("healing potions", request.SystemPrompt);
+            StringAssert.DoesNotContain("healing potions", request.Observations ?? "");
         }
 
         [Test]
-        public async Task TurnObservationsFollowThePersonasKnowledge()
+        public async Task ThePersonasKnowledgeIsInTheSystemPromptAndTurnObservationsAreObservations()
         {
             driver.TurnObservations = turn => new[] { "The traveler carries 40 gold." };
 
             await Decide(Turn(Iven, "Hello."));
 
-            string observations = provider.LastRequest.Observations;
-            StringAssert.Contains("The traveler carries 40 gold.", observations);
-            Assert.Less(observations.IndexOf("Three patients", StringComparison.Ordinal),
-                observations.IndexOf("40 gold", StringComparison.Ordinal));
+            var request = provider.LastRequest;
+            StringAssert.Contains("The traveler carries 40 gold.", request.Observations);
+            StringAssert.Contains("Three patients", request.SystemPrompt);
+            StringAssert.DoesNotContain("Three patients", request.Observations ?? "");
+            StringAssert.Contains(ValeNpcPersonas.SpeakingRules, request.SystemPrompt);
         }
 
         [Test]
@@ -313,12 +315,14 @@ namespace LivingVale.Tests
         }
 
         [Test]
-        public void EveryAuthoredPersonaHasKnowledgeWithinTheObservationCap()
+        public void EveryAuthoredPersonaHasKnowledgeAndTheHouseStatementRules()
         {
             foreach (var persona in ValeNpcPersonas.All)
             {
-                Assert.That(persona.Knowledge.Count, Is.InRange(1, 7), persona.NpcId + " leaves room for one turn observation under the cap of 8.");
-                StringAssert.Contains(ValeNpcPersonas.SpeakingRules, persona.Personality);
+                var identity = persona.ToIdentity();
+                Assert.That(identity.Knowledge.Count, Is.InRange(1, 7), persona.NpcId);
+                Assert.AreEqual(ValeNpcPersonas.SpeakingRules, identity.StatementRules, persona.NpcId);
+                StringAssert.DoesNotContain(ValeNpcPersonas.SpeakingRules, identity.Personality, persona.NpcId + ": the rules are no longer appended to the personality.");
             }
         }
     }

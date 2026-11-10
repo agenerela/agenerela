@@ -253,7 +253,7 @@ namespace LivingVale.Tests
                 Assert.IsNotNull(persona, npc.Id);
                 Assert.AreEqual(npc.Name, persona.Name);
                 Assert.That(persona.Knowledge.Count, Is.InRange(3, 6), npc.Id);
-                StringAssert.Contains(ValeNpcPersonas.SpeakingRules, persona.Personality, npc.Id);
+                Assert.AreEqual(ValeNpcPersonas.SpeakingRules, persona.StatementRules, npc.Id);
             }
         }
 
@@ -274,10 +274,10 @@ namespace LivingVale.Tests
                 var request = provider.LastRequest;
                 StringAssert.Contains(npc.Name, request.SystemPrompt, npc.Id);
                 NpcPersona own = driver.PersonaFor(descriptor);
-                StringAssert.Contains(own.Knowledge[0], request.Observations, npc.Id);
+                StringAssert.Contains(own.Knowledge[0], request.SystemPrompt, npc.Id);
                 foreach (var other in RegionNpcPersonas.All.Where(p => p.NpcId != npc.Id))
                 {
-                    StringAssert.DoesNotContain(other.Knowledge[1], request.Observations, $"{npc.Id} must not know {other.NpcId}'s facts");
+                    StringAssert.DoesNotContain(other.Knowledge[1], request.SystemPrompt + (request.Observations ?? ""), $"{npc.Id} must not know {other.NpcId}'s facts");
                 }
             }
         }

@@ -173,7 +173,7 @@ namespace LivingVale.Agenerela
 
         public string Label => "Agenerela · " + ModelLabel;
 
-        /// <summary>The game's own observations for a turn, sent after the persona's knowledge: quest stage, a visible quote, the last receipt.</summary>
+        /// <summary>The game's own observations for a turn, sent after the bindings' lines: quest stage, a visible quote, the last receipt.</summary>
         public Func<NpcTurn, IEnumerable<string>> TurnObservations { get; set; }
 
         /// <summary>How many decisions <see cref="Execute"/> was asked to carry out. Tests read it.</summary>
@@ -267,10 +267,14 @@ namespace LivingVale.Agenerela
         /// </summary>
         public string IdleExampleStimulus { get; set; } = DefaultIdleExample;
 
-        /// <summary>The observations a turn sends: the persona's knowledge, what it can offer now, then <see cref="TurnObservations"/>.</summary>
+        /// <summary>
+        /// The observations a turn sends: what it can offer now and where things stand, then
+        /// <see cref="TurnObservations"/>. The persona's facts are not among them: they are the
+        /// identity's knowledge (#231), in the system prompt, outside the observation cap.
+        /// </summary>
         public List<string> ObservationsFor(NpcTurn turn)
         {
-            var lines = new List<string>(PersonaFor(turn.Npc).Knowledge);
+            var lines = new List<string>();
             if (trade.TryGetValue(turn.Npc.Id, out var binding))
             {
                 var options = binding.Options();
