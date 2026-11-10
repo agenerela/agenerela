@@ -10,6 +10,14 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **A decision log file** (#190, G7): `DecisionLog.Start(path)` appends every decision feed
+  entry to a JSON-lines file, one `DecisionLogLine` per line with `"version": 1`: the agent, the
+  stimulus and label, what the game got, the model's own answer when a guard changed it, the
+  verdict, what `Execute` did, the provider, model, latency, waits, tokens, a pipeline error's kind
+  and the raw reply. The prompt is written only with `IncludePrompt` on. Lines are written off the
+  main thread; a failed write is reported once and never reaches the game. The file rolls over
+  once past `MaxFileBytes` (16 MiB). `DecisionLogReader.Read(path)` parses a file back, skipping a
+  partial last line. See `Documentation~/logging-decisions.md`.
 - **A key for an Ollama server that wants one**: `OllamaSettings.ApiKey`, empty by default, is
   sent as `Authorization: Bearer <key>` on every request, decisions and lifecycle calls alike, so
   a project can use an Ollama served from another machine behind a gateway, such as the RTX 5080's

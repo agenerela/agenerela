@@ -178,6 +178,9 @@ call that `ResetAgent` cancels. A decision held for memory that the reset drops 
 reload off, every subscriber is removed and the sequence starts again as Play mode starts, so
 subscribe again then.
 
+To keep the feed in a file instead, `DecisionLog.Start(path)` writes one JSON line per entry
+([logging-decisions.md](logging-decisions.md)).
+
 `AgentBehaviour.Find(agent)` gives the component that built an agent, or null. It never builds one;
 `guard.HasAgent` says whether the component has built its agent yet, since reading `guard.Agent`
 builds it.
