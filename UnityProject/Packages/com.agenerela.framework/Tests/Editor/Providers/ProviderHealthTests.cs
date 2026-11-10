@@ -180,6 +180,7 @@ namespace Agenerela.Tests
         [TestCase(PipelineErrorKind.GuardFailed)]
         [TestCase(PipelineErrorKind.Superseded)]
         [TestCase(PipelineErrorKind.BacklogFull)]
+        [TestCase(PipelineErrorKind.ChainTooLong)]
         [TestCase(PipelineErrorKind.ProviderDown)]
         public void AFailureThatIsNotTheProvidersChangesNothing(PipelineErrorKind kind)
         {
@@ -270,6 +271,7 @@ namespace Agenerela.Tests
         [TestCase(PipelineErrorKind.GuardFailed, false)]
         [TestCase(PipelineErrorKind.Superseded, false)]
         [TestCase(PipelineErrorKind.BacklogFull, false)]
+        [TestCase(PipelineErrorKind.ChainTooLong, false)]
         public void IsProviderFaultSaysWhetherTheFailureWasTheProviders(PipelineErrorKind kind, bool expected)
         {
             Assert.That(kind.IsProviderFault(), Is.EqualTo(expected));
@@ -285,7 +287,7 @@ namespace Agenerela.Tests
                 PipelineErrorKind.ProviderTimeout, PipelineErrorKind.ProviderRejected, PipelineErrorKind.ProviderServerError,
                 PipelineErrorKind.ProviderMalformedResponse, PipelineErrorKind.ProviderFailed, PipelineErrorKind.UnreadableReply,
                 PipelineErrorKind.GuardFailed, PipelineErrorKind.ProviderDown, PipelineErrorKind.Superseded,
-                PipelineErrorKind.BacklogFull,
+                PipelineErrorKind.BacklogFull, PipelineErrorKind.ChainTooLong,
             };
 
             Assert.That(Enum.GetValues(typeof(PipelineErrorKind)), Is.EquivalentTo(classified),

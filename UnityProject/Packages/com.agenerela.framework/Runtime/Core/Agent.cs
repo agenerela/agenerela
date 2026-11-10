@@ -580,7 +580,8 @@ namespace Agenerela
         /// </para>
         /// <para>
         /// <see cref="DecideOptions.Correlation"/> is on every context this call makes and on the
-        /// result, pipeline errors included, and never reaches the provider.
+        /// result, pipeline errors included, and never reaches the provider. So is
+        /// <see cref="DecideOptions.Chain"/>, recorded in the telemetry instead (#190, G4).
         /// </para>
         /// <para>
         /// Every result returned is raised on <see cref="DecisionFeed.Recorded"/> just before it is,
@@ -642,7 +643,7 @@ namespace Agenerela
             options = Begin(options, out var observations, out string idleExample);
 
             var provider = this.provider;
-            var telemetry = Telemetry(provider, options.Priority);
+            var telemetry = Telemetry(provider, options);
             var preview = new AgentPreview(stimulus, observations);
             try
             {
@@ -1095,7 +1096,7 @@ namespace Agenerela
                 turn = turns.Enqueue(call.Priority, ct, backlog.Capacity, backlog.WhenFull);
                 if (turn == null)
                 {
-                    return NotSent(Telemetry(provider, call.Priority), PipelineErrorKind.BacklogFull,
+                    return NotSent(Telemetry(provider, call), PipelineErrorKind.BacklogFull,
                         $"{Who()} did not decide: it was deciding already, and its backlog ({backlog}) was full.", call.Correlation);
                 }
 
@@ -1110,7 +1111,7 @@ namespace Agenerela
                 catch (SupersededException)
                 {
                     turn.Dispose();
-                    var dropped = Telemetry(provider, call.Priority);
+                    var dropped = Telemetry(provider, call);
                     dropped.BacklogWaitSeconds = (float)waited.Elapsed.TotalSeconds;
                     return NotSent(dropped, PipelineErrorKind.Superseded,
                         $"{Who()} did not decide: a newer call took this one's place in its backlog ({backlog}).", call.Correlation);
@@ -1154,7 +1155,7 @@ namespace Agenerela
             var priority = call.Priority;
             var memory = Memory;
             var commit = MemoryCommit;
-            var telemetry = Telemetry(provider, priority);
+            var telemetry = Telemetry(provider, call);
             telemetry.BacklogWaitSeconds = backlogWaitSeconds;
 
             AgentContext ctx;
@@ -1814,15 +1815,30 @@ namespace Agenerela
         }
 
         // A new decision's telemetry, with what is known before anything else happens.
-        private static DecisionTelemetry Telemetry(ILLMProvider provider, DecisionPriority priority)
+        // The call's chain is recorded here, so every result carries it, pipeline errors included (#190, G4).
+        private static DecisionTelemetry Telemetry(ILLMProvider provider, DecideOptions call)
         {
             return new DecisionTelemetry
             {
                 ProviderName = provider.Name ?? "",
                 ProviderConfig = ProviderConfig.NameOf(provider),
                 FrameworkVersion = AgenerelaInfo.Version,
-                Priority = priority,
+                Priority = call.Priority,
+                ChainId = call.Chain?.Id,
+                ChainHop = call.Chain?.Hop ?? 0,
+                ChainSource = call.Chain?.SourceAgentId,
             };
+        }
+
+        // A call refused before it was made, by a rule outside the agent: a relay past its chain's
+        // cap (#190, G4). Recorded and raised on the feed as the backlog's refusals are, never sent
+        // and logged nowhere. The options are checked as DecideAsync checks them.
+        internal DecisionResult Refuse(DecideOptions options, PipelineErrorKind kind, string message)
+        {
+            options = Begin(options, out _, out _);
+            var result = NotSent(Telemetry(provider, options), kind, $"{Who()} did not decide. {message}", options.Correlation);
+            DecisionFeed.RaiseDecided(this, result);
+            return result;
         }
 
         // A decision that ended before its request was sent, by a rule the game switched on: the
