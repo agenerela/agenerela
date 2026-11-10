@@ -198,6 +198,9 @@ namespace LivingVale.Agenerela
             var persona = PersonaFor(npc);
             agent = new Agent(persona.ToIdentity(), Array.Empty<ActionDefinition>(), provider)
             {
+                // The NPC's stable id (#217): a scripted provider and the decision log tell NPCs
+                // apart by it, never by the display name two NPCs could share. The model never sees it.
+                Id = npc.Id,
                 RefusalStatement = (verdict, context) => RefusalLine,
                 Memory = MemoryFor(npc.Id),
 

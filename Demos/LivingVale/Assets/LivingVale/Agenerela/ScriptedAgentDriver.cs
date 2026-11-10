@@ -30,9 +30,6 @@ namespace LivingVale.Agenerela
         private readonly ScriptedNpcDecisionDriver script;
         private readonly AgenerelaNpcDecisionDriver inner;
 
-        // ScriptedProvider names the asking agent by its identity's name; the script keys on NPC ids.
-        private readonly Dictionary<string, string> npcByAgentName = new Dictionary<string, string>(StringComparer.Ordinal);
-
         public ScriptedAgentDriver(ScriptedNpcDecisionDriver script, NpcActionExecutor executor, IEnumerable<NpcPersona> personas = null)
         {
             this.script = script ?? throw new ArgumentNullException(nameof(script));
@@ -55,7 +52,6 @@ namespace LivingVale.Agenerela
                 throw new ArgumentNullException(nameof(turn));
             }
 
-            npcByAgentName[inner.PersonaFor(turn.Npc).Name] = turn.Npc.Id;
             return inner.DecideAsync(turn, ct);
         }
 
@@ -83,7 +79,8 @@ namespace LivingVale.Agenerela
                     return ScriptedReply.Fail(ProviderErrorKind.ServerError, "Scripted backend failure (fixture).").After(wait);
             }
 
-            string npcId = request.Agent != null && npcByAgentName.TryGetValue(request.Agent, out var id) ? id : request.Agent;
+            // Each NPC's agent carries its stable id (#217), so the script keys on it, not the display name.
+            string npcId = request.AgentId ?? request.Agent;
             var decision = script.Choose(npcId, request.Stimulus);
             return ScriptedReply.Decide(decision.ActionId, decision.TargetId, decision.Statement).After(wait);
         }
