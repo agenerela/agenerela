@@ -23,6 +23,8 @@ namespace LivingVale.Unity
         [SerializeField] private List<string> ollamaModels = new List<string>(ModelCycleDefaults.Models);
         [Tooltip("The Ollama server: its endpoint, and the environment variable holding its key. Empty uses a local Ollama at 127.0.0.1:11434. Its model is ignored: the model above and F7 choose it.")]
         [SerializeField] private global::Agenerela.Providers.OllamaProviderConfig ollamaServer;
+        [Tooltip("Write every NPC decision, and what executing it did, to a JSON-lines file (the framework's DecisionLog, #229). The prompt is never written.")]
+        [SerializeField] private bool logDecisions = true;
 
         private InputActionMap actions;
         private InputAction move;
@@ -44,6 +46,7 @@ namespace LivingVale.Unity
         private NavigationTargets navigation;
         private MapOverlay map;
         private int blockedFrame = -1;
+        private global::Agenerela.DecisionLog decisionLog;
 
         public ConversationCoordinator Coordinator { get; private set; }
         public ScriptedNpcDecisionDriver Driver { get; private set; }
@@ -106,6 +109,15 @@ namespace LivingVale.Unity
         private void Awake()
         {
             GameEvents.ReportSubscriberError = Debug.LogException;
+
+            // Every NPC's decisions, scripted or model, with the agent's stable id (#217); for play
+            // checks and the Decision Log window. Off writes nothing.
+            if (logDecisions)
+            {
+                decisionLog = global::Agenerela.DecisionLog.Start(global::Agenerela.DecisionLog.DefaultPath());
+                Debug.Log($"[LivingVale] Logging NPC decisions to {decisionLog.Path}.");
+            }
+
             if (HudShot.RequestedFolder() != null)
             {
                 driver = NpcDriverChoice.Scripted; // A layout check never loads a model.
@@ -413,6 +425,7 @@ namespace LivingVale.Unity
         private void OnDestroy()
         {
             lifetime.Cancel();
+            decisionLog?.Stop();
             if (Models != null)
             {
                 Models.Finished -= OnModelCycled;
