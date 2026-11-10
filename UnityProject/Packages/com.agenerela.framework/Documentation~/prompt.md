@@ -141,7 +141,7 @@ changes and who pays for it.
 
   So keep what holds on every call in an observation source, pass a moment's deciding facts with
   the call, and set `WithStimulus`: that split gained about 21 of 389 answers on both models
-  measured, all on situations and events. Passing every fact with the call and setting
+  measured, beyond noise only on situations and events. Passing every fact with the call and setting
   `WithStimulus` moves the whole block after the stimulus, which is measured separately. Findings,
   10 November 2026, "Where a call's own facts go".
 - **A fact that counts only once it is told** (a clue, a password) is none of these: it is a

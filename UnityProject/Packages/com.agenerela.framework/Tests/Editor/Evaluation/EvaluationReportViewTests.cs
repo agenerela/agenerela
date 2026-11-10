@@ -260,6 +260,12 @@ namespace Agenerela.Tests.Evaluation
             Assert.That(EvaluationReportView.PromptOptions(arm), Has.None.Contains("prompt's own observations"));
             arm.ObservationPlacement = "WithStimulus";
             Assert.That(EvaluationReportView.PromptOptions(arm), Has.Some.EqualTo("prompt's own observations after the stimulus"));
+
+            // An arm that sent its standing lines with the call moved the whole block.
+            arm.StandingLinesAsCallObservations = true;
+            Assert.That(EvaluationReportView.PromptOptions(arm), Has.Some.EqualTo("every observation, standing lines included, after the stimulus"));
+            arm.ObservationPlacement = "AfterSources";
+            Assert.That(EvaluationReportView.PromptOptions(arm), Has.Some.EqualTo("standing lines sent as the call's own, at the end of the block as usual"));
         }
 
         [Test]

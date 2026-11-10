@@ -17,8 +17,8 @@ namespace Agenerela
     /// interim set, with the standing lines (state, targets) in an observation source and only each
     /// prompt's own one to three lines as the call's: <see cref="WithStimulus"/> against
     /// <see cref="AfterSources"/> scored 351 against 330 on <c>qwen3.5:4b</c> and 283 against 261 on
-    /// <c>qwen3.5:2b</c>, all of it on situations and events, with player prompts and calm scenes no
-    /// worse; on the curated 76 it was within noise on both. Moving the call's lines to the front of
+    /// <c>qwen3.5:2b</c>, beyond noise only on situations and events, with player prompts and calm
+    /// scenes no worse; on the curated 76 it was within noise on both. Moving the call's lines to the front of
     /// the block instead changed nothing (328 against 330) and was dropped. The default stays
     /// <see cref="AfterSources"/>, because a game that passes every fact with its call, as all three
     /// demo games do, would have its whole block moved, and that layout is measured separately.

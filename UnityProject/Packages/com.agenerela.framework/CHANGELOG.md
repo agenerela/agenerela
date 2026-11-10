@@ -38,7 +38,7 @@ While the version stays `0.x`, the public API may change in any release.
   moves: the context guards, sources and handlers read, and the cap, are unchanged, and nothing
   reads the label (DR-008). With the standing facts in an observation source and a moment's own
   facts passed with the call, `WithStimulus` scored 351 against 330 of 389 on `qwen3.5:4b` and 283
-  against 261 on `qwen3.5:2b`, interleaved on the RTX 5080, all on situations and events, player
+  against 261 on `qwen3.5:2b`, interleaved on the RTX 5080, beyond noise only on situations and events, player
   lines and calm scenes no worse; within noise on the curated 76 (findings, 10 November). The
   default is unchanged, because a game that passes every fact with its call would have its whole
   block moved. `PromptOptions` gains `ObservationPlacement` and `CallObservationCount`, which
