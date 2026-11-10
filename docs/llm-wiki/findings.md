@@ -2643,3 +2643,45 @@ measurement on this server of how far an unrelated change to the prompt moves si
 the stimulus label's wording for a non-spoken event; fold together with the action list; a
 following-policy line; other models than the two; the 2B's misses were not sorted by cause. Raw data:
 the reports, renders, cause table and entry point in the lead's checkout, `.scratch/151-policy-gap/`.
+
+### Living Vale's adoption of #190: no visible regression, after one fix to the route examples (10 November 2026)
+
+**What changed.** Living Vale adopted the merged #190 features (branch `69-lv-adopt-190`). Two of
+them change what the model reads: the personas' facts and speaking rules move from observation
+lines and the personality into `AgentIdentity.Knowledge` and `StatementRules` (#231), and the
+per-turn example rewriting gives way to fixed example lines with `INamedTarget` names and
+`ExampleTargetFallback` (#234). The action and target list, counter-examples and the idle line were
+adopted in G5g and are unchanged; the paired schema was not adopted.
+
+**Conditions.** RTX 5080, Docker Ollama 0.40.14, over the network; one model resident at a time,
+nothing else on the card (the shared lock held). Control is `test` at 2c27289, the arm is the branch,
+each from its own worktree, with the game's own live checks: `MaraTradeLiveCheck` (5 asked trades, 1
+plain line and the 12 non-trade lines, each line twice) and `QuestRouteLiveCheck` (the 7 G4c route
+lines, each twice). Order per run: control gemma4, adopted gemma4, adopted 4B, control 4B.
+
+**Result.** These sets are small: read them as "no visible regression", not as a measurement.
+
+| Run | Arm | Model | Asked trades | Unasked offers | Route lines |
+|---|---|---|---:|---:|---:|
+| 1 (routes once) | control | gemma4:e2b-it-qat | 5/5 | 0/1 | 7/7 |
+| 1 | adopted | gemma4:e2b-it-qat | 5/5 | 0/1 | **6/7** |
+| 2 | control | gemma4:e2b-it-qat | 10/10 | 0/26 | 14/14 |
+| 2 | adopted | gemma4:e2b-it-qat | 10/10 | 0/26 | **12/14** |
+| 2 | control / adopted | qwen3.5:4b | 10/10 / 10/10 | 0/26 / 0/26 | 14/14 / 14/14 |
+| 3, after the fix | control | gemma4:e2b-it-qat | 10/10 | 0/26 | 14/14 |
+| 3, after the fix | adopted | gemma4:e2b-it-qat | 10/10 | 0/26 | 14/14 |
+| 3, after the fix | control / adopted | qwen3.5:4b | 10/10 / 10/10 | 0/26 / 0/26 | 14/14 / 14/14 |
+
+The one miss was one line, 3 of 3 times: Elra, "This is the medical parcel from the wagon, for your
+garrison.", answered `none` ("It never arrived. The garrison is short of medicine."), where control
+delivered. Two diagnostic arms on gemma4, the route lines three times each, both put it right
+(21/21): the persona facts back in the observations, or the route actions' example targets named
+as preferred. The cause is the fallback's mention check: the line says "parcel", so the fallback
+skipped `delivery_parcel_elra`, Elra's only delivery, and her delivery example was left out. The
+game now prefers each route action's own targets, which the framework names mentioned or not, as
+`RefreshExamples` did; run 3 is that code. The idle line's effect survives the adoption: no unasked
+offer in 52 non-trade lines per model.
+
+**What would change it.** A larger, labelled set of the game's lines; the fallback's mention check
+measured on targeted actions with categories (`docs/live-runs.md`, waiting), where a line naming the
+target it wants is the normal case. Raw rows: the branch's `.scratch/lv-adopt/ab/` (not in git).

@@ -257,7 +257,8 @@ phase table and the open issues, not here.
   log (#229). The game's code is 268 lines shorter (blank and comment lines not counted). What did
   not fit, and why, is in `docs/demos/living-vale-framework-gaps.md`, "The adoption". The model
   now reads the personas' facts in the system prompt and slightly different examples. Living
-  Vale's EditMode tests: 566 passed, 4 skipped, of 570.
+  Vale's EditMode tests: 568 passed, 4 skipped, of 572. A same-session check on the RTX 5080
+  (findings, 10 November) found one regression, on the route examples, fixed in the branch.
 
 ### Fixed
 

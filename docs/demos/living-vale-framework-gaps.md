@@ -29,7 +29,7 @@ workaround became. In short:
 | 16 | `Proposals` (#236) | deleted: `RouteProposal` and its bookkeeping, for route cards; the trade quote and Iven's main-quest offer keep their own cards |
 | 17 | docs only (#236) | the game already had the shape; Fen's persona still states her clue (entry 17) |
 | 19 | per-target availability (#235) | deleted: `RoutePairGuard`, `CheckPair`, the three `Offers` checks and handlers; the sources still filter (entry 19) |
-| 20 | example target fallback, `INamedTarget` (#234) | deleted: the three `RefreshExamples` |
+| 20 | example target fallback, `INamedTarget` (#234) | deleted: the three `RefreshExamples`; the route actions prefer their own targets instead of the fallback (entry 20) |
 | 21 | `Agent.Id` (#217) | deleted: `ScriptedAgentDriver`'s name-to-id map |
 | 22 | `RollingHistory.CanImport` (#205) | deleted: the archive's own format check and throwaway import |
 | 23 | one memory per agent (#205), provider swap (#198) | deleted: the second agent per NPC and `SwitchableNpcDecisionDriver` |
@@ -57,6 +57,12 @@ workaround became. In short:
   instead of observations. The rule says a revealed fact is never standing knowledge, but the
   card target leaves once told, so without the lines Fen would no longer know what she saw.
   Content, for the game-content session.
+- **Entry 20.** On the route actions the example-target fallback made gemma4 miss a delivery,
+  3 of 3, in the same-session check on the RTX 5080: the fallback skips a target the player's line
+  mentions, and a route line names its subject ("the parcel ... for your garrison"), so Elra's only
+  delivery lost its example. The route actions now name their own targets as preferred examples,
+  which the framework uses mentioned or not, as `RefreshExamples` did; the trade actions keep the
+  fallback. Findings, 10 November, "Living Vale's adoption of #190".
 - **Entry 8.** The conversation adoption saved no code: the coordinator's turn machinery went,
   but the driver now exposes each NPC's conversation and the turn's options, and the result
   mapping moved with it. What it bought is correctness the framework tests, not lines.
@@ -559,7 +565,10 @@ please.", "Would you buy my {0}?", and the quest and route lines), the driver se
 `GameTargetOption` implements `INamedTarget` with the words `RefreshExamples` used ("healing potion
 ×1"). The three `RefreshExamples` are deleted. One change the model sees: the fallback never names a
 target the player's line mentions, so "Do you have a healing potion?" now gets the bread example
-instead of the potion, which was the answer.
+instead of the potion, which was the answer. **Except on the route actions:** there the skip cost
+gemma4 Elra's delivery, 3 of 3, so each route action prefers its own targets
+(`QuestRoutes.TargetIds`), which the framework names whether or not the line mentions them. With
+that, the same-session check shows no visible regression on either model (findings, 10 November).
 
 - **Needed:** an example per available action that names a target the player could ask for
   now, as they would say it: "I'll take healing potion ×1, please."
