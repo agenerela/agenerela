@@ -52,34 +52,39 @@ for all 13 on 9 November), then the A/B. The `idle-profile` arm uses the default
 
 ## Before you start, on the 5080
 
-1. **Ollama 0.40.14, exactly**, the version of every result so far. Check with
-   `curl http://127.0.0.1:11434/api/version`. To install that version, use
-   `https://github.com/ollama/ollama/releases/download/v0.40.14/OllamaSetup.exe`. Don't let the app
-   update itself during the run: step 4 runs a plain `ollama serve` with the app closed.
-2. **The models.** Pull all 13 (`ollama pull <name>` in PowerShell, about 35 GB), then check them
-   with `curl http://127.0.0.1:11434/api/tags`.
+The server is the Docker Ollama in [`tools/ollama-server/`](../../../tools/ollama-server/README.md),
+set up on the 5080 on 9 November, not the Ollama app. It pins 0.40.14, the version of every result
+so far, with the kit's settings (`OLLAMA_GO_TEMPLATE=1`, `OLLAMA_CONTEXT_LENGTH=16384`,
+`OLLAMA_NO_CLOUD=0`), so the kit's step 1, starting `ollama serve` by hand, is not needed. It is a
+machine of its own for measuring: compare its results with each other, never with the app's.
+
+1. **The server up**, at the right version: `python tools/ollama-server/ollama_remote.py check`
+   prints `ollama 0.40.14`.
+2. **The models.** Pull all 13 on the 5080 (`docker exec agenerela-ollama ollama pull <name>`, about
+   35 GB), or with `ollama_remote.py pull <name>` from the laptop, then check them with `check`.
+   Warm each one before its run (`ollama_remote.py warm <name>`): a first load from disk took 54 s,
+   past the framework's 30 s timeout.
 3. **The GPU free.** That machine also runs the asset server and the lead's own ComfyUI. Both must
    be idle for the whole run, with no render queued. Don't stop, remove or change either
-   container: just don't queue work, and check `nvidia-smi` shows nothing else on the card. The
-   machine is on mains power.
-4. **The server**, as the kit's step 1 says: quit the Ollama app, then start `ollama serve` with
-   `OLLAMA_GO_TEMPLATE=1`, `OLLAMA_CONTEXT_LENGTH=16384` and `OLLAMA_NO_CLOUD=0`. For way B, also
-   set `OLLAMA_HOST=0.0.0.0:11434`.
+   container: just don't queue work, and check `nvidia-smi` shows nothing else on the card and
+   `ollama_remote.py ps` shows no model. The machine is on mains power.
 
 ## Two ways to run it
 
 **Way A: everything on the 5080.** Needs a clone with Git LFS, and Unity 6000.3.23f1
 ([`environment.md`](../../llm-wiki/environment.md)). Follow the kit's README from step 2, with
-`OLLAMA_URL=http://127.0.0.1:11434`.
+`OLLAMA_URL` unset: `sweep_one.sh` reads `http://127.0.0.1:11436` and the key from the 5080's
+`tools/ollama-server/.env`, which `setup.ps1` wrote.
 
-**Way B: the 5080's Ollama, Unity on the laptop.** Needs only Ollama and the models on the 5080.
-Set it up as [`environment.md`, "Ollama on another machine"](../../llm-wiki/environment.md#ollama-on-another-machine-over-the-local-network)
-says, check `curl http://<5080 IP>:11434/api/version` from the laptop, then follow the kit's README
-on the laptop with `OLLAMA_URL=http://<5080 IP>:11434`. The laptop's own Ollama should be idle; the
-laptop's lock is not needed, since its GPU is not used.
+**Way B: the 5080's Ollama, Unity on the laptop.** Connect the laptop as
+[`tools/ollama-server/README.md`, "Connect from the laptop"](../../../tools/ollama-server/README.md#connect-from-the-laptop)
+says, check with `ollama_remote.py check` from the laptop, then follow the kit's README on the
+laptop with `OLLAMA_URL` unset. The laptop's own Ollama should be idle; the laptop's lock is not
+needed, since its GPU is not used.
 
-Either way, write each model's "template selection" line from the server's log into the sweep
-folder, as the kit's step 4 says.
+Either way, write each model's "template selection" line into the sweep folder, as the kit's
+step 4 says. It is in the server's log: on the 5080,
+`docker logs agenerela-ollama 2>&1 | grep "template selection"`.
 
 ## What to record
 

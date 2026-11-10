@@ -29,6 +29,19 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **An Ollama server on the RTX 5080 for other machines**, in `tools/ollama-server/`: Ollama
+  0.40.14 in Docker, pinned by its image tag, with the model-sweep kit's settings, behind a Caddy
+  gateway on port 11436 that wants a key on every request and passes only the routes the framework
+  and the kits use. The laptop runs Unity, the live tests and the kits against the 5080's card,
+  at home or over the VPN. `setup.ps1` prepares the server and writes the key; `ollama_remote.py`
+  checks it, lists and warms models, unloads them and pulls new ones; `AGENT_USAGE.md` is the guide
+  an agent on the laptop follows, and `AGENTS.md` points to it. The kit's `sweep_one.sh` and
+  `probe.py` and its Unity entry point send the key, which `sweep_one.sh` reads from that folder's
+  `.env` when `OLLAMA_URL` is unset, and `LiveOllama` reads `AGENERELA_OLLAMA_API_KEY` for the
+  `RequiresOllama` tests, whose own calls to the server now send it too, and which a 401 fails
+  rather than skips. All nine passed through the gateway from its LAN address on 9 November. `environment.md`'s network
+  section, the sweep README and run request 001 now use it, in place of opening the Ollama app's
+  port, which has no login. The framework's side is the package's new `OllamaSettings.ApiKey`.
 - **Run requests**, in `docs/run-requests/`: a run one machine should do, written down for another
   session or person to pick up. Each is a folder with a `request.md`, what to run step by step, and
   a `results.md` to fill in, with a status that goes open, claimed, done. Request 001 is the

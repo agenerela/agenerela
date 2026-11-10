@@ -247,7 +247,7 @@ namespace Agenerela.Tests
         // On a worker thread, so the blocking wait cannot deadlock against Unity's synchronization context.
         private static string Get(string path)
         {
-            using (var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) })
+            using (var client = LiveOllama.Client(TimeSpan.FromSeconds(10)))
             {
                 return Task.Run(() => client.GetStringAsync(LiveOllama.Endpoint.TrimEnd('/') + path)).Result.Trim();
             }

@@ -10,6 +10,8 @@
 // Read from the environment:
 //   AGENERELA_OLLAMA_MODEL  the model (LiveOllama.Model; qwen3.5:2b when unset)
 //   AGENERELA_OLLAMA_URL    the server (LiveOllama.Endpoint; http://127.0.0.1:11434 when unset)
+//   AGENERELA_OLLAMA_API_KEY the server's key, for one behind tools/ollama-server/'s gateway
+//                           (LiveOllama.ApiKey; none when unset). The config names the variable only.
 //   AGENERELA_SWEEP_SET     the set file under Assets/ (Evaluation/agent.json when unset)
 //   AGENERELA_SWEEP_PROFILE the profile asset (Assets/Evaluation/VillageGuard.asset when unset)
 using System;
@@ -79,6 +81,11 @@ namespace Agenerela.Tests
             config.name = name;
             config.Endpoint = LiveOllama.Endpoint;
             config.Model = LiveOllama.Model;
+            if (LiveOllama.ApiKey.Length > 0)
+            {
+                config.ApiKeyVariable = LiveOllama.ApiKeyVariable;
+            }
+
             created.Add(config);
             return config;
         }

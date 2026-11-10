@@ -7,6 +7,8 @@ size_vram from /api/ps. Leaves the model loaded; the caller unloads it.
 
 Usage: python probe.py <model> <out.json> [requests]   (requests: 1 to 6, default 6)
 The server is OLLAMA_URL, http://127.0.0.1:11434 when unset. Never use localhost on Windows.
+A server behind tools/ollama-server/'s gateway also needs AGENERELA_OLLAMA_API_KEY, sent as a
+Bearer header and never printed.
 Standard library only.
 """
 import json
@@ -17,18 +19,20 @@ import urllib.error
 import urllib.request
 
 BASE = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
+KEY = os.environ.get("AGENERELA_OLLAMA_API_KEY", "").strip()
+AUTH = {"Authorization": "Bearer " + KEY} if KEY else {}
 HERE = os.path.dirname(os.path.abspath(__file__))
 STIMULI = ["Meet me over at the bridge.", "Drive off that wolf!", "Good evening.",
            "Walk with me a while.", "Bring me the king's crown.", "Go and wait by the well."]
 
 
 def post(path, body, timeout=300):
-    req = urllib.request.Request(BASE + path, data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
+    req = urllib.request.Request(BASE + path, data=json.dumps(body).encode(), headers={"Content-Type": "application/json", **AUTH})
     return json.load(urllib.request.urlopen(req, timeout=timeout))
 
 
 def get(path):
-    return json.load(urllib.request.urlopen(BASE + path, timeout=10))
+    return json.load(urllib.request.urlopen(urllib.request.Request(BASE + path, headers=AUTH), timeout=10))
 
 
 def main():
