@@ -116,6 +116,15 @@ framework through a relative `file:` path in its `Packages/manifest.json` — ne
 version or git URL — and uses only the framework's public API. Framework work happens in
 `UnityProject/`.
 
+**In-game checks go through the Unity CLI** (`unity`), not computer use. To see a change working
+in a running game — Play mode, the console, a captured frame, a value read with C# — an agent
+opens the game's editor with `unity open` and drives it with `unity command`, so the user keeps
+their mouse and screen. It needs the experimental `com.unity.pipeline` package in the game;
+GreyBoxVillage and Living Vale have it, and every new game adds it. Batch-mode tests
+(`unity test`) need the project closed. Use computer use only for a check the CLI cannot make, and
+say why. The commands, in order, are in
+[`docs/llm-wiki/environment.md`](docs/llm-wiki/environment.md#the-unity-cli-in-game-checks).
+
 **Generated assets come from the asset server** in [`tools/comfyui/`](tools/comfyui/README.md).
 Before asking it for anything, read
 [`tools/comfyui/AGENT_USAGE.md`](tools/comfyui/AGENT_USAGE.md): connecting a machine, the

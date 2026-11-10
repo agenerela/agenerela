@@ -20,6 +20,11 @@
 [Mm]emoryCaptures/
 [Rr]ecordings/
 
+# --- Unity CLI (com.unity.pipeline) ------------------------------------------
+# Per-machine state the package writes when the editor opens, such as whether Run In
+# Background is overridden right now. Missing, the package uses its defaults.
+**/ProjectSettings/Packages/com.unity.pipeline/
+
 # --- Unity build outputs and crash reports -----------------------------------
 *.apk
 *.aab
