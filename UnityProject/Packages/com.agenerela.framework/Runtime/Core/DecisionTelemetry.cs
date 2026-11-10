@@ -37,6 +37,9 @@ namespace Agenerela{
         public ExecutionStatus? Execution; // What the last Agent.Execute of this decision did: Done, Failed by the handler, NoAction for none, or Refused with no handler run; null until an Execute returns; a handler that throws leaves it as it was (DR-018)
         public string ExecutionReason; // That Execute's reason, word for word: the handler's for Failed, the agent's for Refused; null for Done and NoAction (DR-018)
         public float BacklogWaitSeconds; // From the call to its turn in the agent's own Agent.Backlog, before it was prepared; 0 with no backlog, and never part of QueueWaitSeconds (#190, G5)
+        public string ChainId; // DecideOptions.Chain's id: the chain of relayed decisions this one is in; null for none (#190, G4)
+        public int ChainHop; // That chain's hop: relays from its start, 0 for its first decision; 0 with no chain (#190, G4)
+        public string ChainSource; // The Agent.Id of the agent whose decision was relayed to this one; null at a chain's start, with no chain, or when that agent has no id (#190, G4)
 
         public DecisionTelemetry()
         {
@@ -71,6 +74,9 @@ namespace Agenerela{
             Execution = null;
             ExecutionReason = null;
             BacklogWaitSeconds = 0f;
+            ChainId = null;
+            ChainHop = 0;
+            ChainSource = null;
         }
     }
 
@@ -117,7 +123,10 @@ namespace Agenerela{
         Superseded,
 
         // Not sent: refused at once, the agent's Backlog being full. Logs no warning (#190, G5)
-        BacklogFull
+        BacklogFull,
+
+        // Not sent: a DecisionRelay.RelayAsync past its chain's hop cap. Logs no warning (#190, G4)
+        ChainTooLong
     }
 
     /// <summary>What a <see cref="PipelineErrorKind"/> says about where a failure came from.</summary>

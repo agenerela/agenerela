@@ -16,7 +16,8 @@ namespace Agenerela
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>What a line holds.</b> When, which agent, the stimulus and its label, what the game got,
+    /// <b>What a line holds.</b> When, which agent, the chain of relayed decisions it is in
+    /// (<see cref="DecisionRelay"/>), the stimulus and its label, what the game got,
     /// the model's own answer when a guard changed it, the verdict, what <c>Execute</c> did, the
     /// provider, model, latency, waits and tokens, and a pipeline error's kind. The prompt itself is
     /// left out unless <see cref="IncludePrompt"/> is on: it is large, and it may hold the player's

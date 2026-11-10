@@ -27,13 +27,15 @@ foreach (var line in DecisionLogReader.Read(path))
 
 ## What a line holds
 
-Each line is one JSON object, `DecisionLogLine`, with `"version": 1`. A later version only adds
-fields, and the reader ignores fields it does not know. A field that is null is left out.
+Each line is one JSON object, `DecisionLogLine`, with `"version": 2`. A later version only adds
+fields, and the reader ignores fields it does not know, so version 1 lines, written before the
+chain fields, still read, with no chain. A field that is null is left out.
 
 | Field | What it is |
 |---|---|
 | `version`, `time`, `sequence`, `stage` | The format version; when the feed raised the entry, in UTC; the feed's sequence number, which starts again each Play session; `Decided` or `Executed` |
 | `agentId`, `agentName` | `Agent.Id`, when the game set one, and `AgentIdentity.Name` |
+| `chainId`, `chainHop`, `chainSource` | The chain of relayed decisions the line is in, its hop (0 for the chain's first decision) and the `Agent.Id` it was relayed from: see [Chains of relayed decisions](#chains-of-relayed-decisions). Absent for a decision in no chain |
 | `label`, `stimulus`, `priority` | The call's stimulus label and stimulus, as the game passed them, and its priority |
 | `decision` | What the game got, after the guards: `action`, `target`, `statement`. Absent for a pipeline error |
 | `modelDecision` | What the model answered, only when a guard changed it |
@@ -73,3 +75,39 @@ such as percent-encoded or base64, is not recognised.
   entry without writing it, for a history panel of a game's own. Call it as the entry arrives.
 - **Stopping** unsubscribes from the feed and writes what is queued. `Stop` and `Dispose` are the
   same, and both are safe to call twice.
+
+## Chains of relayed decisions
+
+One agent's decision often becomes another's stimulus: Odile sees a thief and calls a guard, and
+the guard is asked with her words. `RelayAsync` makes that call and puts both in one chain, so the
+log shows the thief, Odile, Wren and the chase together (#190, G4):
+
+```csharp
+// In Odile's call_guard handler, or right after Execute:
+var chase = await odile.RelayAsync(call, wren,
+    "Odile shouts for you from the market: " + trouble + ".", "Merchant");
+wren.Execute(chase);
+```
+
+It is `wren.DecideAsync` with that stimulus and label, plus `DecideOptions.Chain`: the chain
+`call` was in, one hop further, from `odile.Id`, or a new chain at hop 1 when `call` was in none.
+Pass the rest of the call's options as the sixth argument; their `Correlation` is kept and their
+label replaced. The chain is recorded in the telemetry (`ChainId`, `ChainHop`, `ChainSource`), the
+feed carries it, and every line of the receiving decision, its `Executed` line included, has it.
+
+- **The model reads nothing new.** The chain rides beside the call and never reaches the prompt or
+  the provider; the receiving agent is asked exactly the stimulus and label passed.
+- **The first decision.** A chain starts at the first relay, so Odile's own decision, asked by the
+  game, is in none. To put it in the chain, start it there:
+  `new DecideOptions { Chain = DecisionChain.Start() }`, which is hop 0 with no source.
+- **The hop cap.** A relay that would take the chain past `maxHops` (8 by default,
+  `DecisionRelay.DefaultMaxHops`) is not sent: it returns a result with no decision, as
+  `PipelineErrorKind.ChainTooLong`, logged nowhere and raised on the feed as the receiving agent's,
+  so two agents relaying to each other stop, and the log shows where.
+- **Not a scheduler.** The game still decides when to relay, to whom and with what words (DR-008).
+  To tell two agents, relay twice.
+
+Group a file by chain with `DecisionLogReader.Read(path).Where(l => l.ChainId != null).GroupBy(l =>
+l.ChainId)`, and order each group by `sequence`; `chainSource` and `agentId` give each hop's two
+ends. A chain id is unique per chain, not a counter, and a chain restored from a save is made with
+`new DecisionChain(id, hop, sourceAgentId)`.

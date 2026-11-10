@@ -28,8 +28,11 @@ namespace Agenerela
     [Serializable]
     public sealed class DecisionLogLine
     {
-        /// <summary>The format version this package writes. Raised only when a field is added.</summary>
-        public const int CurrentVersion = 1;
+        /// <summary>
+        /// The format version this package writes. Raised only when a field is added: 2 added
+        /// <see cref="ChainId"/>, <see cref="ChainHop"/> and <see cref="ChainSource"/> (#190, G4).
+        /// </summary>
+        public const int CurrentVersion = 2;
 
         /// <summary>
         /// The format version of this line, <see cref="CurrentVersion"/> when this package wrote it. Every
@@ -54,6 +57,22 @@ namespace Agenerela
 
         /// <summary>The agent's <see cref="AgentIdentity.Name"/>.</summary>
         [JsonProperty("agentName")] public string AgentName;
+
+        /// <summary>
+        /// The chain of relayed decisions this one is in (<see cref="DecisionTelemetry.ChainId"/>),
+        /// for grouping a log by chain; left out for a decision in none, and on every version 1 line.
+        /// </summary>
+        [JsonProperty("chainId")] public string ChainId;
+
+        /// <summary>That chain's hop, 0 for its first decision; left out with no <see cref="ChainId"/>.</summary>
+        [JsonProperty("chainHop")] public int? ChainHop;
+
+        /// <summary>
+        /// The <see cref="Agent.Id"/> of the agent whose decision was relayed to this one
+        /// (<see cref="DecisionTelemetry.ChainSource"/>); left out at a chain's start, with no chain,
+        /// and when that agent has no id.
+        /// </summary>
+        [JsonProperty("chainSource")] public string ChainSource;
 
         /// <summary>The call's stimulus label, such as <c>Player</c>, as the game passed it.</summary>
         [JsonProperty("label")] public string Label;
@@ -192,6 +211,9 @@ namespace Agenerela
                 Label = Mask(request?.StimulusLabel),
                 Stimulus = Mask(request?.StimulusText),
                 Priority = telemetry.Priority,
+                ChainId = Empty(telemetry.ChainId),
+                ChainHop = string.IsNullOrEmpty(telemetry.ChainId) ? (int?)null : telemetry.ChainHop,
+                ChainSource = string.IsNullOrEmpty(telemetry.ChainId) ? null : Empty(telemetry.ChainSource),
                 Decision = DecisionLogDecision.From(result.Decision),
                 Provider = Empty(telemetry.ProviderName),
                 ProviderConfig = Empty(telemetry.ProviderConfig),
