@@ -46,6 +46,7 @@ chain fields, still read, with no chain. A field that is null is left out.
 | `latencySeconds`, `queueWaitSeconds`, `backlogWaitSeconds`, `queuedAhead` | How long it took, and how long it waited |
 | `promptTokens`, `completionTokens` | As the provider reported them |
 | `targetGrounding`, `targetGroundingStatus`, `historyTurnsSent`, `historyTurnsDropped`, `targetsDropped`, `observationsDropped` | From the telemetry; `observationsDropped` is a count |
+| `targetsUnavailable` | Each action and target pair a per-target check rejected, as `action`, `target` and `reason` (left out when the check gave none); the line has no such key when none was rejected ([targets.md](targets.md#conditions-per-target)) |
 | `reply` | The model's reply exactly as the provider returned it, which a replay scripts with `ScriptedReply.Raw` |
 | `request` | Only with `IncludePrompt` on: the system prompt, few-shot block, observations, history, stimulus turn, and the actions and targets offered |
 

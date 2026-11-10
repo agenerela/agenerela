@@ -430,6 +430,8 @@ measurement carries over; the G5g A/B ran with it in both arms' places.
 
 ### 19. Per-target conditions live outside the framework; an absent action cannot say why
 
+**Status:** in the framework with #235 (DR-020 amended): `ITargetAvailability`, `[AvailableFor]` and `DelegateActionHandler.IsAvailableFor`; the paired schema drops a rejected pair, an action with no legal target is left out, `TargetAvailabilityGuard` and `Execute` hold a decision to it, and the reasons go to telemetry and `Agent.Preview`, never to the prompt (the proposed prompt line was dropped). The game still filters with `RouteContract.Available` until it adopts it.
+
 - **Needed:** Elra takes the parcel only once Brann has granted the permit. Kest's favour deal
   needs the herb quest done. Division needs two recorded agreements. Each condition belongs to a
   target, not to an action.

@@ -2321,13 +2321,46 @@ check its own limit, or send the flat schema, before it sends a paired one.
   keep actions off Bram, for `OnlyActions`; and the skip in `GuardTargetSource`, which `Offer` does.
   **Living Vale**: the pair guards in `TradeActionBinding` and `QuestActionBinding`, once its targets
   are registered in categories and its actions name them.
-- **Extension point: the Targets research area (#120).** A target in several categories, a source
-  that offers by component type, and conditions per target (Living Vale's gap 19) would sit beside
-  the category as more that an action can require of a target.
+- **Extension point: the Targets research area (#120).** A target in several categories and a
+  source that offers by component type would sit beside the category as more that an action can
+  require of a target. Conditions per target now do (amendment below).
+
+**Amendment, 9 November 2026: conditions per target (#190 LV #19, #216 item 5).** A category says
+what kind of target an action takes; Living Vale's routes and GreyBoxStrategy's truces need "this
+one, right now". The tech lead accepted this shape from the design pass:
+
+| Question | Options | Verdict |
+|---|---|---|
+| Where the condition lives | An optional handler interface asked per target; on the target object (a scene target is its `Transform`, the reason `ICategorizedTarget` was rejected above); a predicate on the registry | **An optional handler interface**, `ITargetAvailability.IsAvailableFor(ctx, targetId)`, returning an `Availability`: yes, or no with an optional reason |
+| Its front doors | As for `IsAvailable` | **`[AvailableFor("id")]`** on a method taking the target's id (and optionally an `AgentContext` first), returning `bool` or `Availability`; a settable **`DelegateActionHandler.IsAvailableFor`** |
+| An action with no legal target left | Left out paired only, as categories are; left out in both modes | **Left out in both modes**: state masking the developer opts into by giving the check |
+| A rejected pair under a flat schema | Narrow the target enum; a guard | **A guard**, `TargetAvailabilityGuard`, after `TargetCategoryGuard`, rewriting to `none`; the flat enum stays every target so grounding reads the same list. Under pairing the pair is dropped from its branch, and `SchemaLegalityGuard` rejects one the grammar let through |
+| Telling the model | A "Not possible right now: ..." prompt line behind an option; nothing | **Nothing.** The line forbids in prose what the schema already makes absent, and would be another off-by-default switch. Considered and dropped |
+
+8. **Per-target checks.** For a handler with a check, `ActionAvailability` asks it once per decision
+   for each registered target in the action's categories (every target when it names none), never
+   for `no_target`, and only while `IsAvailable` says yes. An action that requires a target and has
+   none it takes that the check allows is left out, flat or paired. The paired schema drops each
+   rejected pair. The schema, the examples, the preview and the guard read that one answer.
+   `TargetAvailabilityGuard`, the fourth built-in guard, turns a rejected pair into `none`;
+   `Execute` runs it again after `TargetCategoryGuard`, asking the check against the game as it is
+   then, and refuses a stale pair with the check's reason in the `ActionResult`. Each rejected pair
+   and its reason is in `DecisionTelemetry.TargetsUnavailable`, the decision log's
+   `targetsUnavailable` and `AgentPreview.TargetsUnavailable`; an action left out for it is named in
+   `AgentPreview.LeftOut` with each target's reason. The reason never reaches the model.
+   A handler without a check, every handler written before, changes nothing: the request is
+   byte-identical, and no A/B is owed until a developer gives one. Living Vale can delete
+   `RouteActionBinding.CheckPair` (its `RoutePairGuard`) and the per-target half of `Offers`, and
+   stop filtering route targets in its target source, once each route handler implements
+   `ITargetAvailability` over `RouteContract.Available`; `QuestRoutes`' own re-checks at
+   `TryPropose` and `Confirm` stay the game's. Not done: an example whose preferred
+   target the check rejects is still shown with it, and `[Available]` gives no reason for a whole
+   action.
 
 **Revisit if:** the A/B shows the paired schema costs accuracy on small models, or that it is worth
-making the default; a game needs a target in more than one category; or a cloud provider needs a
-paired form other than a root `anyOf`.
+making the default; a game needs a target in more than one category; a cloud provider needs a
+paired form other than a root `anyOf`; or masking an action per target is seen to hurt a model that
+relied on seeing it.
 
 ### Decisions already recorded elsewhere in this plan
 

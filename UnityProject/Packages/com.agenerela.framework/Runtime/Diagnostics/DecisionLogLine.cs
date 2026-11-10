@@ -162,6 +162,12 @@ namespace Agenerela
         [JsonProperty("targetsDropped")] public List<string> TargetsDropped;
 
         /// <summary>
+        /// Each action and target pair a per-target check rejected, with its reason
+        /// (<see cref="DecisionTelemetry.TargetsUnavailable"/>, #190 LV #19); left out when none was.
+        /// </summary>
+        [JsonProperty("targetsUnavailable")] public List<UnavailableTarget> TargetsUnavailable;
+
+        /// <summary>
         /// How many observation lines the request does not carry
         /// (<see cref="DecisionTelemetry.ObservationsDropped"/>). The count, not the lines: they are
         /// prompt text, written only with the prompt.
@@ -253,6 +259,15 @@ namespace Agenerela
             if (telemetry.TargetsDropped != null && telemetry.TargetsDropped.Count > 0)
             {
                 line.TargetsDropped = new List<string>(telemetry.TargetsDropped);
+            }
+
+            if (telemetry.TargetsUnavailable != null && telemetry.TargetsUnavailable.Count > 0)
+            {
+                line.TargetsUnavailable = new List<UnavailableTarget>();
+                foreach (var pair in telemetry.TargetsUnavailable)
+                {
+                    line.TargetsUnavailable.Add(new UnavailableTarget(pair.Action, pair.Target, Mask(pair.Reason)));
+                }
             }
 
             if (entry.Execution.HasValue)

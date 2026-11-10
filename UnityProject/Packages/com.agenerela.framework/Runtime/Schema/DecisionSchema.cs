@@ -189,6 +189,12 @@ namespace Agenerela
         /// left out of the schema altogether, as one is when no target is registered at all.
         /// </para>
         /// <para>
+        /// A target the action's per-target check (<see cref="ITargetAvailability"/>) rejects is not
+        /// one it takes, so that pair is left out. With pairing off the target enum is every
+        /// registered target whatever the checks say; only an action left with no target its check
+        /// allows is left out, as <see cref="ActionAvailability.For"/> does in both modes.
+        /// </para>
+        /// <para>
         /// With no target registered there is nothing to pair, and the schema is flat whatever
         /// <paramref name="pairTargets"/> says.
         /// </para>
@@ -201,14 +207,18 @@ namespace Agenerela
                 throw new ArgumentNullException(nameof(ctx));
             }
 
-            var available = ActionAvailability.For(ctx);
-            return Build(ctx, pairTargets ? Takeable(available, ctx.Targets) : available, pairTargets);
+            var answer = ActionAvailability.Evaluate(ctx);
+            var available = answer.Offered;
+            return Build(ctx, pairTargets ? Takeable(available, ctx.Targets, answer) : available, pairTargets, answer);
         }
 
         // For a caller that has already asked ActionAvailability about this context, as Agent has
         // for FewShotBuilder, so the enum and the examples come from one answer. Paired, it has
         // passed the answer through Takeable, so the examples show no action the schema leaves out.
-        internal static DecisionSchema Build(AgentContext ctx, IReadOnlyList<ActionDefinition> available, bool pairTargets = false)
+        // The answer, when given, is the one available came from: the paired schema leaves out each
+        // pair a per-target check rejected in it (#190 LV #19).
+        internal static DecisionSchema Build(AgentContext ctx, IReadOnlyList<ActionDefinition> available, bool pairTargets = false,
+            AvailabilityAnswer answer = null)
         {
             if (ctx == null)
             {
@@ -228,18 +238,20 @@ namespace Agenerela
             }
 
             fields.Add(StatementField());
-            return new DecisionSchema(fields, pairTargets && ctx.Targets.Count > 0 ? PairsFor(available, ctx.Targets) : null);
+            return new DecisionSchema(fields, pairTargets && ctx.Targets.Count > 0 ? PairsFor(available, ctx.Targets, answer) : null);
         }
 
         // The actions a paired schema can offer: without an action that requires a target and takes
         // none of those registered, since its branch would have an empty target enum, which allows
-        // no answer at all. In availability order.
-        internal static IReadOnlyList<ActionDefinition> Takeable(IReadOnlyList<ActionDefinition> available, TargetRegistry targets)
+        // no answer at all. In availability order. With an answer, a target its per-target check
+        // rejected is not one it takes.
+        internal static IReadOnlyList<ActionDefinition> Takeable(IReadOnlyList<ActionDefinition> available, TargetRegistry targets,
+            AvailabilityAnswer answer = null)
         {
             var takeable = new List<ActionDefinition>(available.Count);
             foreach (var definition in available)
             {
-                if (!definition.RequiresTarget || TargetsOf(definition, targets).Count > 0)
+                if (!definition.RequiresTarget || TargetsOf(definition, targets, answer).Count > 0)
                 {
                     takeable.Add(definition);
                 }
@@ -251,7 +263,8 @@ namespace Agenerela
         // One branch per distinct target list, in the order each list's first action is offered,
         // none's last unless an action shares its list. Keyed on the list itself, so two actions
         // share a branch exactly when they take the same targets in the same order.
-        private static List<ActionTargets> PairsFor(IReadOnlyList<ActionDefinition> available, TargetRegistry targets)
+        private static List<ActionTargets> PairsFor(IReadOnlyList<ActionDefinition> available, TargetRegistry targets,
+            AvailabilityAnswer answer)
         {
             var order = new List<string>();
             var actions = new Dictionary<string, List<string>>(StringComparer.Ordinal);
@@ -279,7 +292,7 @@ namespace Agenerela
                     takes.Add(TargetRegistry.NoTarget);
                 }
 
-                takes.AddRange(TargetsOf(definition, targets));
+                takes.AddRange(TargetsOf(definition, targets, answer));
                 Add(definition.Id, takes);
             }
 
@@ -307,13 +320,14 @@ namespace Agenerela
             return key.ToString();
         }
 
-        // The registered targets this action takes, in registration order.
-        private static List<string> TargetsOf(ActionDefinition definition, TargetRegistry targets)
+        // The registered targets this action takes, in registration order: in its categories, and
+        // not rejected by its per-target check in the answer, when there is one.
+        private static List<string> TargetsOf(ActionDefinition definition, TargetRegistry targets, AvailabilityAnswer answer)
         {
             var takes = new List<string>();
             foreach (string id in targets.Ids)
             {
-                if (definition.AcceptsCategory(targets.CategoryOf(id)))
+                if (definition.AcceptsCategory(targets.CategoryOf(id)) && (answer == null || answer.Allows(definition, id)))
                 {
                     takes.Add(id);
                 }

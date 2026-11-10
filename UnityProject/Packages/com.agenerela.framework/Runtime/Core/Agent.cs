@@ -37,8 +37,9 @@ namespace Agenerela
         // The built-in guards, in the order §2.5 fixes. They run before Guards and are never in it.
         // The category guard comes after grounding, so declaring categories never changes what
         // grounding reads or records (DR-020).
-        private static readonly IDecisionGuard[] BuiltInGuards = { Legality, new TargetGroundingGuard(), Categories };
-        private static readonly IDecisionGuard[] ExecuteGuards = { Legality, Categories };
+        private static readonly TargetAvailabilityGuard PerTarget = new TargetAvailabilityGuard();
+        private static readonly IDecisionGuard[] BuiltInGuards = { Legality, new TargetGroundingGuard(), Categories, PerTarget };
+        private static readonly IDecisionGuard[] ExecuteGuards = { Legality, Categories, PerTarget };
 
         // Read once by each decision, which keeps it to the end. Its queue and health are found by
         // the instance, so every agent given it shares them (DR-013, DR-015).
@@ -538,13 +539,14 @@ namespace Agenerela
         /// priority, the time spent queued and how many requests were ahead; the provider's name,
         /// the framework version, the token counts the provider reported, and the target ids each
         /// <see cref="IReportsDroppedTargets"/> source left out, in source order (#81); the
-        /// observation lines left out, by the cap or by a source's own (#91); and the exchanges of
+        /// observation lines left out, by the cap or by a source's own (#91); each action and target
+        /// pair a per-target check rejected, with its reason (#190 LV #19); and the exchanges of
         /// history sent, left out and forgotten (#90).
         /// </para>
         /// <para>
         /// The guards (build plan §2.5) run on every decision, never on a pipeline error: first
         /// <see cref="SchemaLegalityGuard"/>, then the grounding guard (#105), then
-        /// <see cref="TargetCategoryGuard"/> (DR-020), then <see cref="Guards"/>, the developer's (#108). The first that does not pass stops them,
+        /// <see cref="TargetCategoryGuard"/> (DR-020), then <see cref="TargetAvailabilityGuard"/> (#190 LV #19), then <see cref="Guards"/>, the developer's (#108). The first that does not pass stops them,
         /// and the result's <see cref="DecisionResult.Decision"/> becomes <see cref="ActionRegistry.None"/> with
         /// <see cref="TargetRegistry.NoTarget"/>. The model's own answer stays on
         /// <see cref="DecisionResult.ModelDecision"/>, the verdict on
@@ -647,7 +649,7 @@ namespace Agenerela
             var preview = new AgentPreview(stimulus, observations);
             try
             {
-                preview.Request = Prepare(provider, Memory, stimulus, options, idleExample, observations, telemetry, preview, out _);
+                preview.Request = Prepare(provider, Memory, stimulus, options, idleExample, observations, telemetry, preview, out _, out _);
             }
             catch (Exception e)
             {
@@ -721,7 +723,10 @@ namespace Agenerela
         /// <see cref="TargetRegistry.NoTarget"/>; an action that needs a target got a real one; and
         /// the action is available, recomputed here rather than taken from the request it was
         /// chosen from. The targets are resolved again for it, so one a source no longer offers is
-        /// refused. <see cref="TargetCategoryGuard"/> runs again after it (DR-020). No other guard
+        /// refused. <see cref="TargetCategoryGuard"/> runs again after it (DR-020), then
+        /// <see cref="TargetAvailabilityGuard"/>, which asks a per-target check
+        /// (<see cref="ITargetAvailability"/>) again and refuses a pair gone stale with the check's
+        /// reason in the <see cref="ActionResult"/> (#190 LV #19). No other guard
         /// runs again: grounding judged the reply, which this call does not have. A refusal is added to the result's telemetry, as
         /// <c>"SchemaLegalityGuard@Execute"</c> in <see cref="DecisionTelemetry.GuardsFired"/>, with
         /// <see cref="DecisionTelemetry.Verdict"/> and <see cref="DecisionTelemetry.GuardReason"/>;
@@ -956,6 +961,8 @@ namespace Agenerela
 
             // No request and no reply: only the agent as it is now. The options are the defaults
             // with the call's correlation, and no guard that runs here reads them.
+            // Availability is asked once, by the first guard that needs it, and the input keeps the
+            // answer, so the legality check and the per-target guard read the same one.
             var input = new GuardInput(ctx, null, null, decision, new DecideOptions { Correlation = result.Correlation }, result.Telemetry);
             var verdict = GuardPipeline.Run(ExecuteGuards, input, "@Execute");
             if (verdict.Kind != GuardVerdictKind.Pass)
@@ -1159,10 +1166,11 @@ namespace Agenerela
             telemetry.BacklogWaitSeconds = backlogWaitSeconds;
 
             AgentContext ctx;
+            AvailabilityAnswer availability;
             DecisionRequest request;
             try
             {
-                request = Prepare(provider, memory, stimulus, call, idleExample, observations, telemetry, null, out ctx);
+                request = Prepare(provider, memory, stimulus, call, idleExample, observations, telemetry, null, out ctx, out availability);
             }
             catch (Exception e)
             {
@@ -1199,7 +1207,7 @@ namespace Agenerela
                 return Failed(telemetry, PipelineErrorKind.UnreadableReply, $"{problem} The reply was: {Excerpt(reply.Text)}", call.Correlation, request, reply);
             }
 
-            var result = Guard(new GuardInput(ctx, request, reply, decision, call, telemetry));
+            var result = Guard(new GuardInput(ctx, request, reply, decision, call, telemetry) { AvailabilityAnswer = availability });
             if (result.Verdict.HasValue)
             {
                 result = await SayWhatWasStopped(provider, result, ctx, request, call, ct, reset);
@@ -1234,7 +1242,8 @@ namespace Agenerela
         // what came before it. Throws what failing to prepare it throws.
         private DecisionRequest Prepare(
             ILLMProvider provider, IMemoryStrategy memory, string stimulus, DecideOptions call, string idleExample,
-            IReadOnlyList<string> observations, DecisionTelemetry telemetry, AgentPreview seen, out AgentContext ctx)
+            IReadOnlyList<string> observations, DecisionTelemetry telemetry, AgentPreview seen, out AgentContext ctx,
+            out AvailabilityAnswer availability)
         {
             ctx = Observe(Snapshot(stimulus, observations, telemetry.TargetsDropped, call.Correlation, seen), telemetry.ObservationsDropped, seen);
             if (seen != null)
@@ -1256,20 +1265,23 @@ namespace Agenerela
                 Stimulus = stimulus,
             };
 
-            // Asked once, so the action enum and the examples come from one answer even when an
-            // availability check is not a pure function of the context, such as a cooldown.
-            var offered = ActionAvailability.For(ctx);
+            // Asked once, so the action enum, the pairs, the examples, the telemetry and the
+            // per-target guard come from one answer even when an availability check is not a pure
+            // function of the context, such as a cooldown.
+            availability = ActionAvailability.Evaluate(ctx);
+            telemetry.TargetsUnavailable.AddRange(availability.Unavailable);
+            var offered = availability.Offered;
             var available = offered;
             bool paired = call.PairTargetsWithActions;
             if (paired)
             {
                 // No example for an action the paired schema cannot offer (DR-020).
-                available = DecisionSchema.Takeable(available, ctx.Targets);
+                available = DecisionSchema.Takeable(available, ctx.Targets, availability);
             }
 
-            seen?.SetActions(ctx, Definitions(), offered, available);
+            seen?.SetActions(ctx, Definitions(), availability, available);
 
-            var schema = DecisionSchema.Build(ctx, available, paired);
+            var schema = DecisionSchema.Build(ctx, available, paired, availability);
             string fewShot = FewShotBuilder.Build(available, ctx.Targets, options);
 
             var history = Recall(memory, ctx, telemetry);
