@@ -48,6 +48,16 @@ namespace LivingVale.Tests
 
         private IEnumerable<ConversationEventKind> Kinds => events.Select(e => e.Kind);
 
+        // The deadline ends the turn through Unity's main loop, which batch mode can run slowly:
+        // wait for the timeout's event itself, boundedly, rather than for a fixed time.
+        private async Task UntilTimedOut()
+        {
+            for (int i = 0; i < 100 && !events.Any(e => e.Kind == ConversationEventKind.TurnFailed && e.Failure == TurnFailure.Timeout); i++)
+            {
+                await Task.Delay(50);
+            }
+        }
+
         private static string[] Lines(IReadOnlyList<ChatLine> history) => history.Select(l => l.ToString()).ToArray();
 
         [Test]
@@ -211,7 +221,7 @@ namespace LivingVale.Tests
             var turn = coordinator.LastTurn;
 
             // The turn must end at the deadline, without waiting for the backend.
-            await Task.Delay(300);
+            await UntilTimedOut();
             Assert.That(events.Single(e => e.Kind == ConversationEventKind.TurnFailed).Failure, Is.EqualTo(TurnFailure.Timeout));
             Assert.That(coordinator.IsAwaitingReply, Is.False);
             Assert.That(turn.IsCompleted, Is.True, "the turn ended at its deadline, with the backend still out");
@@ -348,7 +358,7 @@ namespace LivingVale.Tests
             Assert.That(turns.Select(t => t.PlayerLine), Is.EqualTo(new[] { "retry" }),
                 "the abandoned first turn never reaches the backend");
 
-            await Task.Delay(300);
+            await UntilTimedOut();
             Assert.That(events.Count(e => e.Kind == ConversationEventKind.TurnFailed && e.Failure == TurnFailure.Timeout), Is.EqualTo(1));
             Assert.That(coordinator.IsAwaitingReply, Is.False, "the retry timed out on its own deadline");
 
