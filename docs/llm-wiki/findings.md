@@ -2507,3 +2507,139 @@ which name uncategorised fallback targets in place of the hand-picked ones, 317 
 is meant to be used; #147's curated prompts. Raw data: the four reports, the rendered blocks
 (`lv20-render-*.txt`), the entry point (`Lv20AbRun.cs.txt`) and the test results, in the lead's checkout,
 `.scratch/190-lv20/`.
+
+### Situations and events: the deciding fact sat in the observations, and moving it into the stimulus gained 22 answers on `qwen3.5:4b` and 17 on `qwen3.5:2b` (10 November 2026)
+
+For #151. On the interim set, player lines are near solved (`qwen3.5:4b` about 240 of 259), while the
+130 `situation` and `event` prompts sit at about 91 to 97. Two questions: why the model gets those
+wrong, and whether one small change to what is sent fixes a real share of it.
+
+**Part 1, no model: the 4B's 39 misses, by cause.** Every wrong situation or event answer of
+`qwen3.5:4b`'s control arm (guards on, 330/389, below), read against its prompt, observations, label
+and the full request as sent (rendered through `Agent.Preview`). One cause per miss:
+
+| Cause | Misses | Example (expected → chosen) |
+|---|---:|---|
+| `follow_player` expected; the model walked to where the player was going, or stayed | 9 | "The player sets off toward the locked cave on their own." → `move_to locked_cave` |
+| A wolf on the scene; the model went to the place instead of attacking | 8 | "Screams are coming from the well." + "A wolf has cornered a child by the well" → `move_to well` |
+| Passive: `none` where the fact that calls for action is only in the observations | 5 | "The lookout has fallen asleep." + "The north tower's lookout is snoring" → `none` |
+| `stop_following` expected; the model chose `none` | 4 | "The player has stepped into the bathhouse." + "Guards may not enter the bathhouse" → `none` |
+| The label is arguable, or another answer has the same effect | 4 | following, "The player is crossing the bridge, and you are right behind." → `follow_player`, expected `none` |
+| Acted on a calm scene | 4 | "A lantern went out by the shelter." → `move_to shelter` |
+| Right action, wrong target (the example's `well`) | 2 | "Something is splashing in the stream." + "A villager fell into the stream beside the bridge" → `move_to well` |
+| Attacked the wolf the target list says is about, with none in the scene | 2 | "A brawl started outside the shelter." → `attack_target wolf` |
+| Right answer, stopped by the grounding guard (0.74 against 0.8) | 1 | "A child fell off the railing." → `move_to bridge`, rewritten to `none` |
+
+26 of the 39 are situations, 13 events. 11 are prompts whose own note says the target is named only
+in the observations (25 such prompts in the set).
+
+**How much of the gap is the labels.** 4 of 130 labels are arguable: twice the model's answer has the
+same effect in the game (re-issuing `follow_player` while following; `stop_following` for a player
+standing still), and twice it is a defensible other place (the shelter for a grass fire that spread
+from the campfire; the gate rather than the road for riders seen far down the road). Counting those
+as right, an honest ceiling for these 130 is about 126 (97%). A larger share is labelled against a
+policy the prompt never states: the 13 follow and stop-following prompts expect a guard to follow,
+unasked, a player who walks off alone, and to stop following at a door it may not pass. The goal line
+says only "help the player", and the model never sees what an action does (no action description
+reaches an Ollama model unless `ListActionsAndTargets` is on), so those 13 test whether the model
+guesses the designer's policy. They are not wrong labels, but they are not an observation-reading
+test either.
+
+**What the request looks like.** For a situation, every few-shot line is a command relabelled
+`Situation:` (`Situation: "Strike the wolf."`), and the one declarative line, "Fine day for it.", is
+answered `none`. The prompt's own observations come last in the system prompt, after the state line
+and the runner's eleven `id: description.` target lines; the user turn holds only the stimulus. In the
+4B's misses the deciding fact (the wolf, the pinned trader, the snoring lookout) was almost always one
+of those last lines.
+
+**Part 2, three variants.** Picked to hit the biggest buckets, each a prompt-side change with no new
+framework switch:
+
+- **fold**, where the event text sits: for a non-`Player` stimulus, the prompt's own observation lines
+  join the stimulus's quote and leave the observation block (`Situation: "A stall has collapsed on
+  someone. A trader is pinned under a stall in the market."`). It changes the 118 situation and event
+  prompts that have observations, and nothing else. Done by a provider config in scratch that rewrites
+  the request's text before an ordinary `OllamaProvider` sends it; both arms went through it, the
+  control unchanged. Aimed at the passive and place-not-threat buckets.
+- **list**, the action descriptions: `ListActionsAndTargets = true`, an existing switch (measured
+  before only on the curated 76, on the 2B), so the prompt says "follow_player: Walk behind the player
+  wherever they go." and "stop_following: Stop following the player and stay where you are.". Aimed at
+  the follow and stop-following buckets.
+- **example**, one situation-shaped few-shot line written for this run, after reading the set: "A wolf
+  is tearing at a woodcutter's coat outside the north tower." → `attack_target wolf`, before the `none`
+  lines and labelled like the call. "Woodcutter", "tearing" and "coat" appear in no stimulus or
+  observation of either set (hard rule 4). Aimed at the place-not-threat bucket.
+
+**Setup.** The interim set (389 prompts, set commit a24dde9) with `Assets/Evaluation/VillageGuard.asset`
+unchanged, `origin/test` at 59e11f3, the RTX 5080's Docker Ollama 0.40.14 over the network (home), the
+laptop on mains power, the 5080 lock held, nothing else resident (`ps` before and after: `qwen3.5:4b`
+3.1 GB, then `qwen3.5:2b` 2.4 GB, 100% on the GPU). Interleaved, runner defaults (guards on, the
+profile's idle example), the 9 November state wording. A 24-prompt slice first on each model (fold, 24
+against 24 on both), then the three 4B runs back to back, 6 to 6½ minutes each, then fold on the 2B.
+The wrapped runs' reports say residency "not checked", because the runner reads it only from a plain
+`OllamaProvider`; the `ps` readings stand in for it.
+
+| | 4B control | 4B fold | 4B list | 4B example | 2B control | 2B fold |
+|---|---:|---:|---:|---:|---:|---:|
+| **All, 389** | 330 (84.8%) | **352 (90.5%)** | 323 (83.0%) | 325 (83.5%) | 261 (67.1%) | **278 (71.5%)** |
+| Player lines, 259 | 239 | 239 | 226 | 235 | 197 | 197 |
+| Situations and events, 130 | 91 (70.0%) | **113 (86.9%)** | 97 (74.6%) | 90 (69.2%) | 64 (49.2%) | **81 (62.3%)** |
+| simple_command, 65 | 64 | 64 | 62 | 64 | 48 | 48 |
+| command_with_target, 66 | 66 | 66 | 66 | 66 | 62 | 62 |
+| impossible_request, 64 | 49 | 49 | 43 | 46 | 41 | 41 |
+| conversation, 64 | 60 | 60 | 55 | 59 | 46 | 46 |
+| situation, 65 | 40 | 51 | 48 | 38 | 26 | 39 |
+| event, 65 | 51 | 62 | 49 | 52 | 38 | 42 |
+
+The 4B control gave the same 389 answers in all three runs. Floors: 3.6 points at n = 389, 4.4 at
+259, 6.2 at 130, 8.8 at 65.
+
+- **fold, `qwen3.5:4b`: +5.7 overall, beyond noise; situations and events +16.9, beyond noise**
+  (situation and event +16.9 each). 22 fixed, none broken; player lines identical. Of the 39 misses
+  it fixed all 8 place-not-threat, 4 of 5 passive, all 4 calm-scene actions, 2 of 4 stop-following,
+  the guard's false stop, one wrong target, one standing wolf and 1 of 9 follows.
+- **fold, `qwen3.5:2b`: +4.4 overall, beyond noise; situations and events +13.1, beyond noise**
+  (situation +20.0 beyond, event +6.2 within). 24 fixed, 7 broken, all of the over-acting kind: calm
+  scenes whose place is now in the quote ("Fishermen are mending nets at the docks." → `move_to
+  docks`). The 4B did not over-act on the same prompts.
+- **list, 4B: −1.8 overall, within noise; situations +12.3, beyond noise, but player lines −5.0 and
+  impossible_request −9.4, both beyond noise.** It fixed 4 of 9 follows and 2 of 4 stop-followings,
+  and made the model act on lines that need nothing ("Keep your eyes open." → `follow_player`, "Burn
+  down the market." → `attack_target market`).
+- **example, 4B: −1.3 overall, within noise everywhere.** It fixed none of the eight place-not-threat
+  misses it was written for.
+
+**What is left after fold on the 4B: 17**: the 4 arguable labels, 10 follow and stop-following, and 3
+others (one passive, one wrong target, one standing wolf). Against the ceiling of about 126, fold's
+113 leaves 13, and 10 of those are the unstated following policy.
+
+**An aside on the floor.** The 9 November control (#231, before #234 lowercased "Well" and "Wolf" and
+dropped the refusal's "the") also scored 330, but 14 of its 389 answers differ from tonight's, 10 in
+outcome, 5 each way. Two letters and an article moved 2.6% of answers with no net change: the first
+measurement on this server of how far an unrelated change to the prompt moves single answers.
+
+**What it means.**
+
+- **The gap is mostly where the fact sits, not what the model knows.** Moving the prompt's own lines
+  from the end of the observation block into the stimulus fixed 22 of the 4B's 39 misses and broke
+  none, and fixed 24 of the 2B's 66 for 7 broken; beyond the floor on both models, overall and on
+  situations and events. One run per model, on this set.
+- **It is not yet a framework change, and no default changed.** On this set the fold changes how the
+  runner (or a developer) splits a situation between the stimulus and the observations. Two readings
+  fit the result and were not separated: the fact helps because it is in the user turn, or because it
+  is no longer behind eleven boilerplate target lines. They lead to different changes (guidance to put
+  a situation's facts in its stimulus, or the caller's own observations ahead of the target lines).
+  The tech lead decides.
+- **The set's "named only in the observations" prompts measure this very placement**, so a fold-style
+  change raises the score partly by removing what those prompts were written to test. A game's
+  developer chooses where facts go; the set should keep testing both.
+- **Following needs the policy written down, not more examples.** Action descriptions moved half the
+  follow cases but made the 4B act on player lines that need nothing; one more example did nothing. A
+  goals or knowledge line about following ("follow the player when they leave alone; stop at a place
+  you may not enter") is the obvious next run; #231's lines did not cover it.
+- **The labels are not the problem.** About 4 of 130 are arguable; the ceiling stays near 97%.
+
+**Not tried.** Observation order with the prompt's own lines first (separates the two readings above);
+the stimulus label's wording for a non-spoken event; fold together with the action list; a
+following-policy line; other models than the two; the 2B's misses were not sorted by cause. Raw data:
+the reports, renders, cause table and entry point in the lead's checkout, `.scratch/151-policy-gap/`.
