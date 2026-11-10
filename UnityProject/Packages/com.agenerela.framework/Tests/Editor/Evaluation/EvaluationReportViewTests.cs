@@ -258,8 +258,6 @@ namespace Agenerela.Tests.Evaluation
             Assert.That(EvaluationReportView.PromptOptions(arm), Has.None.Contains("prompt's own observations"));
             arm.ObservationPlacement = "AfterSources";
             Assert.That(EvaluationReportView.PromptOptions(arm), Has.None.Contains("prompt's own observations"));
-            arm.ObservationPlacement = "BeforeSources";
-            Assert.That(EvaluationReportView.PromptOptions(arm), Has.Some.EqualTo("prompt's own observations first in the block"));
             arm.ObservationPlacement = "WithStimulus";
             Assert.That(EvaluationReportView.PromptOptions(arm), Has.Some.EqualTo("prompt's own observations after the stimulus"));
         }

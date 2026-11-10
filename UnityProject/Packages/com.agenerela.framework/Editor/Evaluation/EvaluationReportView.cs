@@ -198,7 +198,6 @@ namespace Agenerela.Editor.Evaluation
                 case null:
                 case "":
                 case nameof(ObservationPlacement.AfterSources): return null;
-                case nameof(ObservationPlacement.BeforeSources): return "prompt's own observations first in the block";
                 case nameof(ObservationPlacement.WithStimulus): return "prompt's own observations after the stimulus";
                 default: return "prompt's own observations placed " + placement;
             }

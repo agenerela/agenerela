@@ -92,8 +92,7 @@ namespace Agenerela
         /// <remarks>
         /// <see cref="PromptOptions.ObservationPlacement"/> says where the last
         /// <see cref="PromptOptions.CallObservationCount"/> observations, the call's own, go: at the
-        /// end of the block (the default), at its start, or after the stimulus's closing quote in the
-        /// user turn (#151).
+        /// end of the block (the default), or after the stimulus's closing quote in the user turn (#151).
         /// </remarks>
         /// <param name="ctx">What the agent knows at this decision.</param>
         /// <param name="schema">The schema <see cref="DecisionSchema.Build"/> made from the same context.</param>
@@ -354,9 +353,8 @@ namespace Agenerela
 
         // Where the call's own observations go (#151). ctx holds the sources' lines first and the
         // call's own last, CallObservationCount of them. AfterSources renders the list as it is, so
-        // the request is byte-identical to one built before the option; BeforeSources moves the
-        // call's lines to the front of the block; WithStimulus takes them out of the block and
-        // returns them as the text that follows the stimulus's closing quote: each on one line,
+        // the request is byte-identical to one built before the option; WithStimulus takes them out of
+        // the block and returns them as the text that follows the stimulus's closing quote: each on one line,
         // ended as a sentence, after a space, so the developer's stimulus stays whole inside the
         // quote and the facts read as what comes after it. Blank lines are skipped, as in the block.
         private static void Place(IReadOnlyList<string> observations, PromptOptions options,
@@ -378,17 +376,10 @@ namespace Agenerela
                 (i < sources ? sourceLines : callLines).Add(observations[i]);
             }
 
-            if (options.ObservationPlacement == ObservationPlacement.BeforeSources)
-            {
-                callLines.AddRange(sourceLines);
-                block = callLines;
-                return;
-            }
-
             if (options.ObservationPlacement != ObservationPlacement.WithStimulus)
             {
                 throw new ArgumentOutOfRangeException(nameof(options), options.ObservationPlacement,
-                    "PromptOptions.ObservationPlacement is not one of AfterSources, BeforeSources or WithStimulus.");
+                    "PromptOptions.ObservationPlacement is not one of AfterSources or WithStimulus.");
             }
 
             block = sourceLines;

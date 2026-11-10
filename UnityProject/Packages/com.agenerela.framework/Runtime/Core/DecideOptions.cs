@@ -134,14 +134,25 @@ namespace Agenerela
         /// Where this call's own <see cref="Observations"/> go in the request (#151):
         /// <see cref="Agenerela.ObservationPlacement.AfterSources"/> by default, the end of the
         /// observation block, after every line of <see cref="Agent.ObservationSources"/>, which is
-        /// what every request sent before this option. Off by default: owed an A/B run before
-        /// another becomes the default.
+        /// what every request sent before this option.
+        /// <see cref="Agenerela.ObservationPlacement.WithStimulus"/> puts them after the stimulus's
+        /// closing quote in its user turn instead.
         /// </summary>
         /// <remarks>
+        /// <para>
+        /// Choose <see cref="Agenerela.ObservationPlacement.WithStimulus"/> when this call's lines are
+        /// the facts of this one moment (a wolf has cornered a child) and what holds on every call
+        /// (the time of day, the agent's post) comes from an observation source: then it won an
+        /// interleaved A/B run on both models it was measured on (findings, 10 November 2026). With
+        /// every fact passed here and no source, it moves the whole block, which is measured
+        /// separately.
+        /// </para>
+        /// <para>
         /// Only where the lines are rendered changes. They count against
         /// <see cref="Agent.MaxObservations"/> the same way, and the context every guard, source and
         /// handler reads holds the same list in the same order. Nothing here reads
         /// <see cref="StimulusLabel"/> or the stimulus (DR-008).
+        /// </para>
         /// </remarks>
         public ObservationPlacement ObservationPlacement = ObservationPlacement.AfterSources;
 

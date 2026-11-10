@@ -29,6 +29,24 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **`DecideOptions.ObservationPlacement`: where a call's own observations go** (#151). An enum,
+  `ObservationPlacement`: `AfterSources`, the default and the request as before, with the call's
+  own `Observations` last in the "What you know right now:" block after every
+  `ObservationSources` line; and `WithStimulus`, the call's lines after the stimulus's closing
+  quote in the user turn (`Situation: "Screams are coming from the well." A wolf has cornered a
+  child.`), each ended as a sentence, the sources' lines left in the block. Only the rendering
+  moves: the context guards, sources and handlers read, and the cap, are unchanged, and nothing
+  reads the label (DR-008). With the standing facts in an observation source and a moment's own
+  facts passed with the call, `WithStimulus` scored 351 against 330 of 389 on `qwen3.5:4b` and 283
+  against 261 on `qwen3.5:2b`, interleaved on the RTX 5080, all on situations and events, player
+  lines and calm scenes no worse; within noise on the curated 76 (findings, 10 November). The
+  default is unchanged, because a game that passes every fact with its call would have its whole
+  block moved. `PromptOptions` gains `ObservationPlacement` and `CallObservationCount`, which
+  `Agent` sets. `EvalRunner` now sends an arm's, the state's and the targets' lines through an
+  observation source, so a prompt's own lines alone are the call's, with every default request
+  byte-identical (the interim set's 389, checked against the 10 November render);
+  `EvalArm.StandingLinesAsCallObservations` sends them with the call instead, and
+  `EvalArmConditions` records both.
 - **`Proposals`, an optional helper for "the agent proposes, the player confirms"** (#190, Living
   Vale #16). It holds a `DecisionResult` instead of carrying it out, for the action ids in
   `HeldActions` (`Submit`) or any decision (`Hold`), and `Confirm(proposal)` carries it out through

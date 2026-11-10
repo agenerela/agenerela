@@ -62,6 +62,8 @@ namespace Agenerela.Tests
             var named = fake.LastRequest;
 
             Assert.That(new DecideOptions().ObservationPlacement, Is.EqualTo(ObservationPlacement.AfterSources));
+            Assert.That(new PromptOptions().ObservationPlacement, Is.EqualTo(ObservationPlacement.AfterSources));
+            Assert.That(default(ObservationPlacement), Is.EqualTo(ObservationPlacement.AfterSources), "An unset value means the default.");
             Assert.That(byDefault.Observations, Is.EqualTo(BeforeTheOption));
             Assert.That(byDefault.Stimulus, Is.EqualTo("Situation: \"Something is wrong up north.\""));
             Assert.That(named.Observations, Is.EqualTo(byDefault.Observations));
@@ -82,22 +84,6 @@ namespace Agenerela.Tests
 
             Assert.That(now.Observations, Is.EqualTo(before.Observations));
             Assert.That(now.Stimulus, Is.EqualTo(before.Stimulus));
-        }
-
-        [Test]
-        public async Task BeforeSourcesPutsTheCallsOwnLinesFirstInTheBlock()
-        {
-            var fake = new FakeProvider(GoToTheTower);
-
-            await Fixtures.NotCancelled(Guard(fake).DecideAsync("Something is wrong up north.", Call(ObservationPlacement.BeforeSources)));
-
-            Assert.That(fake.LastRequest.Observations, Is.EqualTo(string.Join("\n",
-                "What you know right now:",
-                "- A wolf is at the tower",
-                "- The keeper is shouting",
-                "- The gate is open.",
-                "- A cart waits outside.")));
-            Assert.That(fake.LastRequest.Stimulus, Is.EqualTo("Situation: \"Something is wrong up north.\""));
         }
 
         [Test]
@@ -154,26 +140,12 @@ namespace Agenerela.Tests
 
             var after = agent.Preview("Something is wrong up north.", Call());
             var with = agent.Preview("Something is wrong up north.", Call(ObservationPlacement.WithStimulus));
-            var first = agent.Preview("Something is wrong up north.", Call(ObservationPlacement.BeforeSources));
             await Fixtures.NotCancelled(agent.DecideAsync("Something is wrong up north.", Call(ObservationPlacement.WithStimulus)));
 
             var expected = new[] { "The gate is open.", "A cart waits outside.", "A wolf is at the tower", "The keeper is shouting" };
             Assert.That(after.Context.Observations, Is.EqualTo(expected));
             Assert.That(with.Context.Observations, Is.EqualTo(expected), "Guards, sources and handlers read the same list.");
-            Assert.That(first.Context.Observations, Is.EqualTo(expected));
             Assert.That(with.Request.Stimulus, Is.EqualTo(fake.LastRequest.Stimulus), "The preview shows what is sent.");
-        }
-
-        [Test]
-        public void WithNoSourcesBeforeSourcesIsTheDefaultsBlock()
-        {
-            var fake = new FakeProvider(GoToTheTower);
-            var agent = Fixtures.VillageGuard(fake);
-
-            var after = agent.Preview("Something is wrong up north.", Call());
-            var first = agent.Preview("Something is wrong up north.", Call(ObservationPlacement.BeforeSources));
-
-            Assert.That(first.Request.Observations, Is.EqualTo(after.Request.Observations));
         }
 
         [Test]

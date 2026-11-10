@@ -40,7 +40,9 @@ namespace Agenerela.Evaluation
     /// line per target, then the prompt's own observations. The prompt's own are the call's
     /// <see cref="DecideOptions.Observations"/>; the rest, the same on every prompt of the arm, come
     /// from an observation source of the agent's, so an arm's
-    /// <see cref="DecideOptions.ObservationPlacement"/> moves the prompt's lines alone (#151).
+    /// <see cref="DecideOptions.ObservationPlacement"/> moves the prompt's lines alone (#151),
+    /// unless the arm sets <see cref="EvalArm.StandingLinesAsCallObservations"/>, which makes every
+    /// line the call's.
     /// </para>
     /// <para>
     /// <b>The outcome</b> of each answer is <see cref="Classify"/>'s and is written to the
@@ -498,8 +500,7 @@ namespace Agenerela.Evaluation
                 // no state: a DescribeState of the caller's may expect values a set always has.
                 var options = run.Arm.Options.Copy();
                 options.StimulusLabel = "Player";
-                options.Observations = new List<string>();
-                var agent = Build(run, new JObject(), Standing(run, new List<string>()), 0);
+                var agent = Build(run, new JObject(), Standing(run, new List<string>()), new List<string>(), options);
                 last = await agent.DecideAsync(stimuli[i % stimuli.Count], options, ct);
                 decided |= last.Decision != null;
             }
@@ -592,8 +593,7 @@ namespace Agenerela.Evaluation
             var options = run.Arm.Options.Copy();
             options.StimulusLabel = prompt.Label;
             options.CheckTarget = run.Arm.Options.CheckTarget && prompt.ChecksTarget;
-            options.Observations = new List<string>(prompt.Observations ?? new List<string>());
-            var agent = Build(run, state, Standing(run, stateLines), options.Observations.Count);
+            var agent = Build(run, state, Standing(run, stateLines), prompt.Observations ?? new List<string>(), options);
 
             var result = await agent.DecideAsync(prompt.Stimulus, options, ct);
             var outcome = Classify(prompt, result);
@@ -663,16 +663,29 @@ namespace Agenerela.Evaluation
         }
 
         // A fresh agent for one prompt in one arm: the profile's actions, each available exactly
-        // when the state matches its onlyWhen, the set's targets, the state, and no memory. The
-        // standing lines reach it through an observation source, so the agent tells them apart from
-        // the call's own (#151), and its cap is raised to fit every line, so none is dropped. With
-        // the default placement the request is the one the runner sent when every line was the
-        // call's own: the source's lines first, then the call's.
-        private Agent Build(ArmRun run, JObject state, List<string> standing, int own)
+        // when the state matches its onlyWhen, the set's targets, the state, and no memory. Sets
+        // the call's own observations on options: the prompt's own lines. The standing lines reach
+        // the agent through an observation source, so the agent tells them apart from the call's
+        // own (#151), unless the arm sends them with the call, ahead of the prompt's. The cap is
+        // raised to fit every line, so none is dropped. With AfterSources the request is the one
+        // the runner sent when every line was the call's own: the standing lines first, then the
+        // prompt's.
+        private Agent Build(ArmRun run, JObject state, List<string> standing, IList<string> own, DecideOptions options)
         {
             var agent = new Agent(Profile, IdentityOf(run.Arm), run.Provider) { Memory = null };
-            agent.ObservationSources.Add(new StandingLines(standing));
-            agent.MaxObservations = standing.Count + own;
+            if (run.Arm.StandingLinesAsCallObservations)
+            {
+                var all = new List<string>(standing);
+                all.AddRange(own);
+                options.Observations = all;
+            }
+            else
+            {
+                options.Observations = new List<string>(own);
+                agent.ObservationSources.Add(new StandingLines(standing));
+            }
+
+            agent.MaxObservations = standing.Count + own.Count;
             foreach (var asset in Profile.Actions)
             {
                 var action = asset != null ? asset.Action : null;
@@ -868,6 +881,7 @@ namespace Agenerela.Evaluation
                     ExampleTargetFallback = arm.Options.ExampleTargetFallback,
                     PairTargetsWithActions = arm.Options.PairTargetsWithActions,
                     ObservationPlacement = arm.Options.ObservationPlacement.ToString(),
+                    StandingLinesAsCallObservations = arm.StandingLinesAsCallObservations,
                     Priority = arm.Options.Priority.ToString(),
                     Observations = new List<string>(arm.Options.Observations ?? new List<string>()),
                     Knowledge = new List<string>(arm.Knowledge),

@@ -208,20 +208,51 @@ namespace Agenerela.Tests.Evaluation
             var seen = Prompt("target_001", "Keep an eye on that animal.", "attack_target", "wolf", false, observations: "[\"A wolf is near the sheep\"]");
             var a = new FakeProvider(Reply("attack_target", "wolf"));
             var b = new FakeProvider(Reply("attack_target", "wolf"));
-            var first = new DecideOptions { ObservationPlacement = ObservationPlacement.BeforeSources };
-            first.Observations.Add("Arm line.");
+            var after = new DecideOptions();
+            after.Observations.Add("Arm line.");
             var with = new DecideOptions { ObservationPlacement = ObservationPlacement.WithStimulus };
 
-            var report = await Fixtures.NotCancelled(Runner(new[] { seen }, null, a, b, first, with).RunAsync());
+            var report = await Fixtures.NotCancelled(Runner(new[] { seen }, null, a, b, after, with).RunAsync());
 
             var inA = Request(a, "Keep an eye on that animal.");
-            Assert.That(inA.Observations, Does.StartWith("What you know right now:\n- A wolf is near the sheep\n- Arm line.\n- isFollowing: false."),
-                "The prompt's line opens the block; the arm's, the state's and the targets' follow in their order.");
+            Assert.That(inA.Observations, Does.EndWith("- wolf: A wolf.\n- A wolf is near the sheep"),
+                "The prompt's line closes the block, after the arm's, the state's and the targets'.");
+            Assert.That(inA.Stimulus, Is.EqualTo("Player: \"Keep an eye on that animal.\""));
             var inB = Request(b, "Keep an eye on that animal.");
             Assert.That(inB.Stimulus, Is.EqualTo("Player: \"Keep an eye on that animal.\" A wolf is near the sheep."));
             Assert.That(inB.Observations, Does.Not.Contain("A wolf is near the sheep"));
             Assert.That(inB.Observations, Does.Contain("- isFollowing: false."), "The standing lines stay in the block.");
-            Assert.That(report.Conditions.Arms.Select(c => c.ObservationPlacement), Is.EqualTo(new[] { "BeforeSources", "WithStimulus" }));
+            Assert.That(report.Conditions.Arms.Select(c => c.ObservationPlacement), Is.EqualTo(new[] { "AfterSources", "WithStimulus" }));
+        }
+
+        [Test]
+        public async Task AnArmCanSendItsStandingLinesWithTheCallSoThePlacementMovesThemAll()
+        {
+            // #151: how a game that passes every fact with its call is sent. With AfterSources the
+            // request is the same as through the source; with WithStimulus the whole block moves.
+            var seen = Prompt("target_001", "Keep an eye on that animal.", "attack_target", "wolf", false, observations: "[\"A wolf is near the sheep\"]");
+            var viaSource = new FakeProvider(Reply("attack_target", "wolf"));
+            var withCall = new FakeProvider(Reply("attack_target", "wolf"));
+            var moved = new FakeProvider(Reply("attack_target", "wolf"));
+            var none = new FakeProvider(Reply("attack_target", "wolf"));
+
+            await Fixtures.NotCancelled(Runner(new[] { seen }, null, viaSource, none).RunAsync());
+            var runner = Runner(new[] { seen }, null, withCall, moved, null,
+                new DecideOptions { ObservationPlacement = ObservationPlacement.WithStimulus });
+            runner.ArmA.StandingLinesAsCallObservations = true;
+            runner.ArmB.StandingLinesAsCallObservations = true;
+            var report = await Fixtures.NotCancelled(runner.RunAsync());
+
+            var source = Request(viaSource, "Keep an eye on that animal.");
+            var call = Request(withCall, "Keep an eye on that animal.");
+            Assert.That(call.Observations, Is.EqualTo(source.Observations));
+            Assert.That(call.Stimulus, Is.EqualTo(source.Stimulus));
+
+            var all = Request(moved, "Keep an eye on that animal.");
+            Assert.That(all.Observations, Is.Null, "Every line was the call's, so the block is empty and left out.");
+            Assert.That(all.Stimulus, Does.StartWith("Player: \"Keep an eye on that animal.\" isFollowing: false. bridge: The wooden bridge."));
+            Assert.That(all.Stimulus, Does.EndWith(" wolf: A wolf. A wolf is near the sheep."));
+            Assert.That(report.Conditions.Arms.Select(c => c.StandingLinesAsCallObservations), Is.EqualTo(new[] { true, true }));
         }
 
         [Test]

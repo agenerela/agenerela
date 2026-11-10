@@ -305,7 +305,14 @@ ran one after the other; repeat a close result.
   as a line, `bridge: The wooden bridge over the stream.`, because the prompt lists no targets
   and Ollama never shows the model the schema.
 - The observations are, in order: the arm's own `DecideOptions.Observations`, the state's
-  lines, the targets', then the prompt's own. The prompt's `label` is the stimulus label.
+  lines, the targets', then the prompt's own. Only the prompt's own are the call's
+  `DecideOptions.Observations`; the rest reach the agent through an observation source, so the
+  arm's `ObservationPlacement` moves the prompt's lines alone: by default (`AfterSources`) they
+  close the block, as every run before #151 did, and with `WithStimulus` they follow the stimulus
+  in the user turn. An arm with `StandingLinesAsCallObservations` sends every line as the call's
+  own instead, the way a game that passes all its facts with the call does, so its placement
+  moves the whole block. The report's conditions name each arm's placement and that switch. The prompt's
+  `label` is the stimulus label.
   `CheckTarget` is on only when both the arm and the prompt's `checkTarget` leave it on.
 
 The warm-up's requests are shaped like a prompt's, with the arm's and the targets' lines, but no

@@ -8,43 +8,43 @@ namespace Agenerela
     /// <remarks>
     /// <para>
     /// The choice is about where a fact sits, never about what kind of call it is: the framework
-    /// never reads the stimulus or its label to decide it (DR-008). A developer who knows that the
-    /// facts of this one call decide it, such as what a situation is made of, chooses where they go.
+    /// never reads the stimulus or its label to decide it (DR-008). The facts a developer passes
+    /// with one call are what that call is about; the facts that hold on every call belong in an
+    /// observation source.
     /// </para>
     /// <para>
-    /// <b>Measured on 10 November 2026 by rewriting the request</b> (findings): moving a situation's
-    /// own lines out of the end of the observation block and into its stimulus gained 22 of 389
-    /// answers on <c>qwen3.5:4b</c> and 17 on <c>qwen3.5:2b</c>. Which of the two readings that
-    /// result allows is right, the fact being in the user turn or no longer behind the standing
-    /// lines, is what <see cref="BeforeSources"/> and <see cref="WithStimulus"/> separate. The
-    /// default stays <see cref="AfterSources"/> until the A/B run says otherwise.
+    /// <b>Measured on 10 November 2026</b> (findings), interleaved on the RTX 5080 over the 389-prompt
+    /// interim set, with the standing lines (state, targets) in an observation source and only each
+    /// prompt's own one to three lines as the call's: <see cref="WithStimulus"/> against
+    /// <see cref="AfterSources"/> scored 351 against 330 on <c>qwen3.5:4b</c> and 283 against 261 on
+    /// <c>qwen3.5:2b</c>, all of it on situations and events, with player prompts and calm scenes no
+    /// worse; on the curated 76 it was within noise on both. Moving the call's lines to the front of
+    /// the block instead changed nothing (328 against 330) and was dropped. The default stays
+    /// <see cref="AfterSources"/>, because a game that passes every fact with its call, as all three
+    /// demo games do, would have its whole block moved, and that layout is measured separately.
     /// </para>
     /// </remarks>
     public enum ObservationPlacement
     {
         /// <summary>
         /// The default, and what every request was before #151: the observation block holds each
-        /// source's lines, then the call's own, the last thing read before the stimulus.
+        /// source's lines, then the call's own, the last thing read before the stimulus, and the
+        /// stimulus is alone in its turn.
         /// </summary>
         AfterSources = 0,
-
-        /// <summary>
-        /// The call's own lines open the observation block, ahead of every source's. Nothing moves
-        /// out of the block, and the stimulus turn is unchanged.
-        /// </summary>
-        BeforeSources = 1,
 
         /// <summary>
         /// The call's own lines leave the observation block and follow the stimulus in its user
         /// turn, after its closing quote, each on the same line ended as a sentence:
         /// <c>Situation: "Screams are coming from the well." A wolf has cornered a child.</c> The
         /// stimulus inside the quote is the developer's text, unchanged. The sources' lines stay in
-        /// the block; with none, the block is left out.
+        /// the block; with none, the block is left out. Use it when the call's own lines are the
+        /// facts of this one moment and the standing facts come from an observation source.
         /// </summary>
         /// <remarks>
         /// The user turn is what a memory strategy such as <see cref="RollingHistory"/> remembers,
         /// so a later decision's history carries these facts as part of this turn.
         /// </remarks>
-        WithStimulus = 2,
+        WithStimulus = 1,
     }
 }

@@ -126,8 +126,24 @@ changes and who pays for it.
   the designer's policy for situations a line from the player would not settle. It is sent on
   every call in the system prompt and never counts against `Agent.MaxObservations`.
 - **Observations** are what is true now: the quest stage, what is nearby, a quote just made. They
-  share the cap, and the newest sit last, right before the stimulus. A fact that is re-sent as an
-  observation every turn takes room from those and reads as news.
+  share the cap. A fact that is re-sent as an observation every turn takes room from those and
+  reads as news. They come two ways, and the two go to different places:
+  - **An observation source's lines** (`Agent.ObservationSources`) are the standing picture,
+    gathered the same way on every call: what is nearby, the time of day, the agent's post. They
+    go in the "What you know right now:" block.
+  - **The call's own lines** (`DecideOptions.Observations`) are what this one moment is made of:
+    for a situation, the facts that decide it ("A wolf has cornered a child."). By default
+    (`ObservationPlacement.AfterSources`) they close the same block. With
+    `ObservationPlacement.WithStimulus` they follow the stimulus in its turn instead, after its
+    closing quote, each ended as a sentence: `Situation: "Screams are coming from the well." A wolf
+    has cornered a child.` The quote stays the developer's text. Nothing reads the label to choose
+    (DR-008).
+
+  So keep what holds on every call in an observation source, pass a moment's deciding facts with
+  the call, and set `WithStimulus`: that split gained about 21 of 389 answers on both models
+  measured, all on situations and events. Passing every fact with the call and setting
+  `WithStimulus` moves the whole block after the stimulus, which is measured separately. Findings,
+  10 November 2026, "Where a call's own facts go".
 - **A fact that counts only once it is told** (a clue, a password) is none of these: it is a
   target of the action that tells it, removed by that action's per-target check once told
   ([targets.md](targets.md#facts-told-through-an-action), #190 Living Vale #17).
