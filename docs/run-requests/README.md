@@ -51,4 +51,4 @@ restated because a request is often read on its own:
 
 | # | Request | Machine | Status |
 |---|---|---|---|
-| [001](001-interim-model-sweep-5080/request.md) | The 13-model sweep on the interim set (389 prompts), on the RTX 5080 | RTX 5080 box, or its Ollama over the network from the laptop | open |
+| [001](001-interim-model-sweep-5080/request.md) | The 13-model sweep on the interim set (389 prompts), on the RTX 5080 | RTX 5080 box, or its Ollama over the network from the laptop | done |

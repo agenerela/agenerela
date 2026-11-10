@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | open |
+| **Status** | done, 9 November 2026: way B, all 13 models ([`results.md`](results.md)) |
 | **Machine** | The RTX 5080 box (16 GB). Either everything runs there, or only its Ollama does and Unity runs on the laptop over the network (way B below) |
 | **Asked by** | The lead, 9 November 2026, through the implementation master session |
 | **Kit** | [`tools/live-runs/model-sweep/`](../../../tools/live-runs/model-sweep/README.md) |

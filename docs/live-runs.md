@@ -34,8 +34,7 @@ in, the machine, and the live checks that aren't A/B runs.
 
 | Run | Kind | Machine | What it checks | From |
 |---|---|---|---|---|
-| The 13-model sweep on the interim set, 389 prompts | A/B per model, idle on vs off; ranking against `qwen3.5:2b` | 5080 box | The 9 November sweep again, on a set big enough for per-category results. The laptop ran `qwen3.5:2b` only (findings, 9 November) | [Request 001](run-requests/001-interim-model-sweep-5080/request.md), #151 |
-| The 12 and 16 GB tiers | A/B, sequential arms | 5080 box | A "high-end GPU" option, such as Granite 4.1 8B, Qwen3.5-9B or Gemma 4 12B, against the 2B | `model-candidates.md` |
+| The 12 and 16 GB tiers | A/B, sequential arms | 5080 box | A "high-end GPU" option, such as Granite 4.1 8B, Qwen3.5-9B or Gemma 4 12B, against the 2B | `model-candidates.md`. Not run with request 001: the lead judged it not needed (9 November) |
 
 ## Waiting for something first
 
@@ -70,3 +69,5 @@ in, the machine, and the live checks that aren't A/B runs.
 | Policy lines as `AgentIdentity.Knowledge` vs as observations, and vs none, `qwen3.5:4b`, interim set, 5080 box | 335/389 as knowledge against 323/389 as observations (+3.1) and 330/389 with no lines (+1.3), both within noise; beyond noise only simple_command +9.2 against observations and impossible_request +15.6 against none. Situations and events about 70% in every arm | `findings.md`, 9 November, "Policy lines as knowledge or as observations" |
 | The 8 GB shortlist and every other pulled model against `qwen3.5:2b`, 13 models | All kept the field order on `ollama serve` with `OLLAMA_GO_TEMPLATE=1`, none thought, all fit in VRAM. Five beat the 2B beyond noise: `qwen3.5:4b` 70, `qwen3:4b-instruct-2507`, `ministral-3:3b` and `qwen3:8b` 65, `gemma4:e2b-it-qat` 64; `lfm3:1.7b` fell below it at 46. Separate runs on one server, at n = 76 | `findings.md`, 9 November |
 | Few-shot examples as chat turns vs the block (`ExamplesAsTurns`), interim set, guards on, RTX 5080 | `qwen3.5:2b` 277/389 turns against 263 block, +3.6, on the floor; `qwen3.5:4b` 291 against 330, −10.0, and `gemma4:e2b-it-qat` 264 against 290, −6.7, both beyond noise. 361 to 389 of 389 turns replies had an empty statement, copied from the examples. Again with written statements in both arms: 4B 290 against 332, −10.8, 2B 288 against 274, +3.6. Not adopted; the code is parked on `151-chat-turn-examples-parked` | `findings.md`, 9 November |
+
+| The 13-model sweep on the interim set, 389 prompts, on the RTX 5080 (Docker Ollama 0.40.14, over the network) | `qwen3.5:4b` first at 330/389 against the 2B's 263/389, +17.2 beyond noise; the idle example helps 7 models beyond noise and costs only `qwen3.5:2b` (+4.6 without it, `stop_following` 22/48 against 39/48) | `findings.md`, 9 November; [Request 001](run-requests/001-interim-model-sweep-5080/results.md) |

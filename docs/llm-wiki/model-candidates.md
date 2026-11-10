@@ -11,7 +11,8 @@ candidate earns a place in [`findings.md`](findings.md) only through an A/B run.
 
 **Measured since.** Every model this page led us to pull was run on the evaluation set on
 9 November 2026: [`findings.md`](findings.md), "Thirteen models on the evaluation set". That entry,
-not this page, is where the scores are.
+not this page, is where the scores are. The same 13 ran again on the 389-prompt interim set, on the
+RTX 5080: "Thirteen models on the interim set, on the RTX 5080".
 
 ## The job a candidate has to do
 
