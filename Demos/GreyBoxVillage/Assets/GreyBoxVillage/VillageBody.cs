@@ -84,7 +84,18 @@ namespace Demos.GreyBoxVillage
             });
         }
 
-        /// <summary>What the agent says when a guard stops a decision; null says nothing (<see cref="Agent.RefusalStatement"/>).</summary>
+        /// <summary>
+        /// What the agent says when a guard stops a decision in this call (<see cref="Agent.RefusalStatement"/>);
+        /// null says nothing. The target grounding's line ("I don't sell that.", "There's no such thing
+        /// here.") answers what the player asked for, so it is said only when the player asked: a
+        /// thief, a fire or the wolf asked for nothing, and the agent then says nothing, rather than
+        /// "I don't sell that." to a thief (lab decision 4, 10 November). The refusal statement
+        /// cannot see the decision it stops (gap G28), so who asked is what decides.
+        /// </summary>
+        public string RefusalLine(GuardVerdict verdict, AgentContext ctx) =>
+            verdict.Guard == "TargetGroundingGuard" && Asking(ctx) != "player" ? null : RefusalLine(verdict);
+
+        /// <summary>The body's line for what <paramref name="verdict"/>'s guard stopped, whoever asked; null for none.</summary>
         public virtual string RefusalLine(GuardVerdict verdict) =>
             verdict.Guard == nameof(TargetCategoryGuard) ? "I don't follow you."
             : verdict.Guard == QuestNotReady ? "You haven't got it all yet. Come back when you do."

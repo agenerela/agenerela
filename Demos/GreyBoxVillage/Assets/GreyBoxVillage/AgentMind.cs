@@ -117,7 +117,7 @@ namespace Demos.GreyBoxVillage
             Body.Inventory = Village.Inventory;
             foreach (var guard in Body.Guards()) agent.Guards.Add(guard);
             foreach (var source in Body.TargetSources()) agent.TargetSources.Add(source);
-            agent.RefusalStatement = (verdict, ctx) => Body.RefusalLine(verdict);
+            agent.RefusalStatement = (verdict, ctx) => Body.RefusalLine(verdict, ctx);
             Village.Watch(agent.Provider);
             LastActivityTime = Time.time;
         }

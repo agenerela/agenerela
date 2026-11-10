@@ -268,6 +268,51 @@ namespace Demos.GreyBoxVillage.Tests
             Assert.That(guard.Activity, Is.EqualTo("standing at the village_gate"));
         }
 
+        // Lab decision 4 (10 November): Odile said "I don't sell that." to a thief when the grounding
+        // guard contained her call. Its line answers what someone said, so it is said to the player
+        // and to nobody else; asked about a thief, she says nothing.
+        [Test]
+        public async Task AGroundingLineAnswersOnlyThePlayer()
+        {
+            var merchant = (VillageMerchant)odile.Body;
+            // A call whose target the model wanted elsewhere: "the..." was on no list.
+            var unsure = ScriptedReply.Decide("call_guard", "wren", "Wren! Help!").WithTokens(new[]
+            {
+                Token("{\"action\":\"call_guard\",\"target\":\""),
+                Token("wren", -3.2f, ("the", -0.05f), ("wren", -3.2f)),
+                Token("\",\"statement\":\"Wren! Help!\"}")
+            });
+            provider.Otherwise(unsure);
+            // Muted, so the thief's own report does not ask her first: the test asks once, itself.
+            commands.EventsMuted = true;
+            try
+            {
+                merchant.Thief.Begin();
+                merchant.Thief.Grab();
+                await odile.AskAsync("thief", "Event", VillageThief.SnatchedStimulus("bread"), DecisionPriority.Background);
+            }
+            finally { commands.EventsMuted = false; }
+            var record = Records("Odile").Last();
+            Assert.That(record.Source, Is.EqualTo("thief"));
+            Assert.That(record.Outcome, Is.EqualTo("contained"));
+            Assert.That(record.Guard, Is.EqualTo("TargetGroundingGuard"));
+            Assert.That(record.Said, Is.Empty, "Odile answered a thief as if the player had asked for a ware.");
+            Assert.That(odile.Body.Speech, Is.Null);
+
+            // Asked by the player for a ware she does not have, the line is hers again. (The thief
+            // has the bread, so the apple is what the schema forces.)
+            provider.Otherwise(ScriptedReply.Decide("sell", "apple", "Here you are.").WithTokens(new[]
+            {
+                Token("{\"action\":\"sell\",\"target\":\""),
+                Token("apple", -3.2f, ("sw", -0.05f), ("apple", -3.2f)),
+                Token("\",\"statement\":\"Here you are.\"}")
+            }));
+            await odile.HearPlayerAsync("Sell me a cutlass.");
+            record = Records("Odile").Last();
+            Assert.That(record.Outcome, Is.EqualTo("contained"));
+            Assert.That(record.Said, Is.EqualTo("I don't sell that."));
+        }
+
         [Test]
         public async Task AGuardWillNotAttackTheVillagersAndSaysSo()
         {
