@@ -102,6 +102,14 @@ namespace Demos.GreyBoxVillage
         public bool IsDeciding => Minds.Any(m => m != null && m.IsDeciding);
 
         /// <summary>
+        /// While true, nothing the village notices by itself asks an agent: no quiet moment, trespass,
+        /// wolf, thief, smoke or bell, and no call or order one agent passes to another. The player's
+        /// lines and <see cref="AgentMind.AskAsync"/> still ask. False in the game; the lab bench sets
+        /// it, so each scenario is exactly the decisions it asks for.
+        /// </summary>
+        [System.NonSerialized] public bool EventsMuted;
+
+        /// <summary>
         /// Whether something the game noticed by itself (a quiet moment, a trespass, the wolf, the
         /// bell) goes to the model now. Not while the model is down, until the provider's retry time
         /// (<see cref="ProviderHealth.RetryAtUtc"/>): four agents asking a stopped server every few

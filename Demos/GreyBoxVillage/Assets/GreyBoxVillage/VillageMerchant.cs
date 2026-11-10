@@ -174,14 +174,19 @@ namespace Demos.GreyBoxVillage
             var mind = calling.GetComponent<AgentMind>();
             calling = null;
             if (mind == null) return;
-            string trouble = Thief != null && Thief.IsRunning && Thief.Loot != null
-                ? "a thief has taken the " + Thief.Loot.Id + " from her counter and is running for the eastern_road"
-                : Fire != null && Fire.IsBurning ? "there is a fire at " + Fire.Where
-                : "there is trouble at her stall";
-            string words = string.IsNullOrWhiteSpace(statement) ? "" : " She says: \"" + statement.Trim() + "\"";
-            _ = mind.ReportEventAsync("merchant", "Merchant", "Odile shouts for you from the market: " + trouble + "." + words,
-                DecisionPriority.Background);
+            _ = mind.ReportEventAsync("merchant", "Merchant", CallStimulus(Trouble(), statement), DecisionPriority.Background);
         }
+
+        /// <summary>The trouble at her stall now, as a guard she calls is told it.</summary>
+        public string Trouble() => Thief != null && Thief.IsRunning && Thief.Loot != null
+            ? "a thief has taken the " + Thief.Loot.Id + " from her counter and is running for the eastern_road"
+            : Fire != null && Fire.IsBurning ? "there is a fire at " + Fire.Where
+            : "there is trouble at her stall";
+
+        /// <summary>What a guard Odile calls is told: the <paramref name="trouble"/>, and her own words.</summary>
+        public static string CallStimulus(string trouble, string statement) =>
+            "Odile shouts for you from the market: " + trouble + "." +
+            (string.IsNullOrWhiteSpace(statement) ? "" : " She says: \"" + statement.Trim() + "\"");
 
         // ---- The counter -------------------------------------------------------------------------
 

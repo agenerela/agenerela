@@ -63,6 +63,13 @@ namespace Demos.GreyBoxVillage
         [Tooltip("The example the framework shows for the none action.")]
         public string IdleExampleStimulus = "Fine day for it.";
 
+        /// <summary>
+        /// Changes the options of every call this mind makes, after the game has built them: the lab
+        /// bench's variants (prompt switches, the observation layout). Null in the game, which then
+        /// sends exactly what it always sent. Never reaches the model by itself.
+        /// </summary>
+        [System.NonSerialized] public Action<AgentMind, DecideOptions> Tune;
+
         public AgentBehaviour Behaviour => behaviour != null ? behaviour : behaviour = GetComponent<AgentBehaviour>();
         public string Name => Behaviour.Profile != null && !string.IsNullOrEmpty(Behaviour.Profile.Identity.Name) ? Behaviour.Profile.Identity.Name : name;
         public string Role => Behaviour.Profile != null ? Behaviour.Profile.Identity.Role : "";
@@ -250,6 +257,7 @@ namespace Demos.GreyBoxVillage
         /// </summary>
         public async Awaitable ReportEventAsync(string source, string label, string text, DecisionPriority priority)
         {
+            if (Village.EventsMuted) return;
             if (!Village.MayAskOnItsOwn)
             {
                 // Nobody can answer it. The quiet timer counts from now, so it does not ask at once.
@@ -262,6 +270,38 @@ namespace Demos.GreyBoxVillage
                 return;
             }
             await DecideAsync(source, label, text, priority);
+        }
+
+        /// <summary>
+        /// Asks the agent about a moment now, as an event would, whether or not the village's events
+        /// are muted or the model is down: the lab bench's and the tests' way to ask exactly once.
+        /// Turned away, as a player line is, while a decision is running. Completes when the decision
+        /// has been executed.
+        /// </summary>
+        public async Awaitable AskAsync(string source, string label, string text, DecisionPriority priority)
+        {
+            if (IsDeciding) return;
+            await DecideAsync(source, label, text, priority);
+        }
+
+        /// <summary>
+        /// The options a call about this moment sends, built as a decision builds them: the label,
+        /// the idle example, the observations, the priority and the <see cref="Moment"/>, then
+        /// <see cref="Tune"/>. For <see cref="Agent.Preview"/>, so a preview shows what a decision
+        /// would send.
+        /// </summary>
+        public DecideOptions OptionsFor(string source, string label, DecisionPriority priority)
+        {
+            var options = new DecideOptions
+            {
+                StimulusLabel = label,
+                IdleExampleStimulus = IdleExampleStimulus,
+                Observations = Observations(),
+                Priority = priority,
+                Correlation = new Moment(source, VisibleWolfDistance(), VisibleThiefDistance())
+            };
+            Tune?.Invoke(this, options);
+            return options;
         }
 
         private async Awaitable DecideAsync(string source, string label, string text, DecisionPriority priority)
@@ -283,7 +323,6 @@ namespace Demos.GreyBoxVillage
             // Who is asking decides what the agent is offered (its body's availability checks). The
             // moment rides with the call, so Execute's re-check reads this call's values.
             Body.Attend(source);
-            var moment = new Moment(source, VisibleWolfDistance(), VisibleThiefDistance());
             string asked = Name + " ← " + label + ": " + text;
             Village.Overlay.ShowThinking(asked, Village.ProviderLabel, Name + " is thinking...");
             var record = Village.Recorder.Begin(Name, source, label, priority, text);
@@ -293,14 +332,7 @@ namespace Demos.GreyBoxVillage
             var own = Application.isPlaying ? destroyCancellationToken : CancellationToken.None;
             try
             {
-                var options = new DecideOptions
-                {
-                    StimulusLabel = label,
-                    IdleExampleStimulus = IdleExampleStimulus,
-                    Observations = Observations(),
-                    Priority = priority,
-                    Correlation = moment
-                };
+                var options = OptionsFor(source, label, priority);
                 var result = await agent.DecideAsync(text, options, own);
                 // Destroyed while the model thought, in Edit mode, where nothing cancels the call.
                 if (this == null) { gone = true; return; }
