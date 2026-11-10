@@ -60,7 +60,7 @@ namespace LivingVale.Agenerela
             }
 
             var binding = new QuestActionBinding(npcId, executor);
-            agent.Actions.Register(binding.offer, new Handler(binding));
+            agent.Actions.Register(binding.offer, new ExecutorHandler(executor, npcId, GameActions.OfferQuest));
             agent.TargetSources.Add(new Targets(binding));
             return binding;
         }
@@ -147,44 +147,6 @@ namespace LivingVale.Agenerela
 
             offer.ExampleStimulus = "Is there anything I can do for you?";
             offer.PreferredExampleTargets = new[] { option.Targets[0].Id };
-        }
-
-        private bool Offers(string targetId)
-        {
-            var option = Option();
-            if (option == null)
-            {
-                return false;
-            }
-
-            if (targetId == null)
-            {
-                return true;
-            }
-
-            foreach (var target in option.Targets)
-            {
-                if (target.Id == targetId)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private sealed class Handler : IActionHandlerWithResult
-        {
-            private readonly QuestActionBinding binding;
-
-            public Handler(QuestActionBinding binding) => this.binding = binding;
-
-            public bool IsAvailable(AgentContext ctx) => binding.Offers(null);
-
-            public void Execute(AgentContext ctx, AgentDecision decision) => ExecuteWithResult(ctx, decision);
-
-            public ActionResult ExecuteWithResult(AgentContext ctx, AgentDecision decision) =>
-                ExecutorActions.Execute(binding.executor, binding.npcId, ctx, decision);
         }
 
         private sealed class Targets : ITargetSource

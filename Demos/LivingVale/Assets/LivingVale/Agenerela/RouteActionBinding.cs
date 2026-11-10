@@ -23,9 +23,6 @@ namespace LivingVale.Agenerela
     /// </remarks>
     public sealed class RouteActionBinding
     {
-        /// <summary>Rewrites a route action naming another action's target to <c>none</c>: one target list serves every action (gaps #4).</summary>
-        public const string PairGuardName = "RoutePairGuard";
-
         public static readonly IReadOnlyList<string> ActionIds = new[]
         {
             GameActions.ShareInformation, GameActions.OfferExchange, GameActions.ResolveDelivery, GameActions.GrantAccess
@@ -104,11 +101,10 @@ namespace LivingVale.Agenerela
             var binding = new RouteActionBinding(npcId, executor);
             foreach (var id in ActionIds)
             {
-                agent.Actions.Register(binding.definitions[id], new Handler(binding, id));
+                agent.Actions.Register(binding.definitions[id], new ExecutorHandler(executor, npcId, id));
             }
 
             agent.TargetSources.Add(new Targets(binding));
-            agent.Guards.Add(new DelegateGuard(PairGuardName, binding.CheckPair));
             return binding;
         }
 
@@ -250,64 +246,6 @@ namespace LivingVale.Agenerela
                     definition.PreferredExampleTargets = new[] { option.Targets[0].Id };
                 }
             }
-        }
-
-        private bool Offers(string actionId, string targetId)
-        {
-            foreach (var option in Options())
-            {
-                if (option.ActionId != actionId)
-                {
-                    continue;
-                }
-
-                if (targetId == null)
-                {
-                    return true;
-                }
-
-                foreach (var target in option.Targets)
-                {
-                    if (target.Id == targetId)
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        }
-
-        private GuardVerdict CheckPair(GuardInput input)
-        {
-            var decision = input.Decision;
-            if (decision == null || !definitions.ContainsKey(decision.ActionId))
-            {
-                return GuardVerdict.Pass;
-            }
-
-            return Offers(decision.ActionId, decision.TargetId)
-                ? GuardVerdict.Pass
-                : GuardVerdict.RewriteToNone($"{decision.TargetId} is not a target of {decision.ActionId}.");
-        }
-
-        private sealed class Handler : IActionHandlerWithResult
-        {
-            private readonly RouteActionBinding binding;
-            private readonly string actionId;
-
-            public Handler(RouteActionBinding binding, string actionId)
-            {
-                this.binding = binding;
-                this.actionId = actionId;
-            }
-
-            public bool IsAvailable(AgentContext ctx) => binding.Offers(actionId, null);
-
-            public void Execute(AgentContext ctx, AgentDecision decision) => ExecuteWithResult(ctx, decision);
-
-            public ActionResult ExecuteWithResult(AgentContext ctx, AgentDecision decision) =>
-                ExecutorActions.Execute(binding.executor, binding.npcId, ctx, decision);
         }
 
         private sealed class Targets : ITargetSource

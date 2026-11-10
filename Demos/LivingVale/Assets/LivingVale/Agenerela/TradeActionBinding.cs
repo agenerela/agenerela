@@ -11,7 +11,7 @@ namespace LivingVale.Agenerela
     /// <see cref="Agent"/>, all of it through the framework's public API. What the NPC may offer
     /// comes from <see cref="NpcActionExecutor.AvailableFor"/>, asked afresh on every decision:
     /// <list type="bullet">
-    /// <item><description>Availability: each action's handler is available only while the executor lists it, so an action with nothing to offer is absent from the schema.</description></item>
+    /// <item><description>Availability: each handler's per-target check (<see cref="ExecutorHandler"/>, #235) allows only what the executor lists now, so an action with nothing to offer is absent from the schema.</description></item>
     /// <item><description>Targets: a target source registers the listed target IDs on each decision, and again in <see cref="Agent.Execute"/>, so a target that went stale is refused there.</description></item>
     /// <item><description>Pairs: stock entries and the traveler's sale bundles are registered in their own target categories, which each action declares (#208), so the framework's <c>TargetCategoryGuard</c> rewrites a quote naming the other action's target to <c>none</c>.</description></item>
     /// <item><description>Execution: the handlers call the same <see cref="NpcActionExecutor.Execute"/> the scripted driver does, with the turn's conversation generation, so both drivers share one path.</description></item>
@@ -71,8 +71,8 @@ namespace LivingVale.Agenerela
             }
 
             var binding = new TradeActionBinding(npcId, executor);
-            agent.Actions.Register(binding.purchase, new Handler(binding, GameActions.QuotePurchase));
-            agent.Actions.Register(binding.sale, new Handler(binding, GameActions.QuoteSale));
+            agent.Actions.Register(binding.purchase, new ExecutorHandler(executor, npcId, GameActions.QuotePurchase));
+            agent.Actions.Register(binding.sale, new ExecutorHandler(executor, npcId, GameActions.QuoteSale));
             agent.TargetSources.Add(new Targets(binding));
             return binding;
         }
@@ -188,51 +188,6 @@ namespace LivingVale.Agenerela
 
         private static string StripOwner(string name) =>
             name != null && name.StartsWith("Player's ", StringComparison.Ordinal) ? name.Substring("Player's ".Length) : name;
-
-        private bool Offers(string actionId, string targetId)
-        {
-            foreach (var option in Options())
-            {
-                if (option.ActionId != actionId)
-                {
-                    continue;
-                }
-
-                if (targetId == null)
-                {
-                    return true;
-                }
-
-                foreach (var target in option.Targets)
-                {
-                    if (target.Id == targetId)
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        }
-
-        private sealed class Handler : IActionHandlerWithResult
-        {
-            private readonly TradeActionBinding binding;
-            private readonly string actionId;
-
-            public Handler(TradeActionBinding binding, string actionId)
-            {
-                this.binding = binding;
-                this.actionId = actionId;
-            }
-
-            public bool IsAvailable(AgentContext ctx) => binding.Offers(actionId, null);
-
-            public void Execute(AgentContext ctx, AgentDecision decision) => ExecuteWithResult(ctx, decision);
-
-            public ActionResult ExecuteWithResult(AgentContext ctx, AgentDecision decision) =>
-                ExecutorActions.Execute(binding.executor, binding.npcId, ctx, decision);
-        }
 
         private sealed class Targets : ITargetSource
         {
