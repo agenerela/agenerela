@@ -486,6 +486,9 @@ namespace Agenerela.Tests
             Assert.That(Refusal("Move to the {0} immediately."), Does.StartWith("Player: \"Move to the sunken city immediately.\""));
             Assert.That(Refusal("Bring a {0}-shaped token."), Does.StartWith("Player: \"Bring a sunken city-shaped token.\""));
             Assert.That(Refusal("Fetch an {0} quickly."), Does.StartWith("Player: \"Fetch a sunken city quickly.\""), "'an' becomes 'a'.");
+            Assert.That(Refusal("Go to the {0} and inspect the {0} gate."),
+                Does.StartWith("Player: \"Go to the sunken city and inspect the sunken city gate.\""),
+                "With a common noun, every article stays, the one that ended its phrase too.");
 
             var taken = new TargetRegistry();
             taken.Register("sunken_city", new object());

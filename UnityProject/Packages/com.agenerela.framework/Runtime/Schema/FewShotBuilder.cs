@@ -184,14 +184,16 @@ namespace Agenerela
                 string placeholder;
                 if (spaced)
                 {
-                    stimulus = ArticleEndingThePhrase.Replace(stimulus, "{0}");
-                    if (ArticleBeforePlaceholder.IsMatch(stimulus))
+                    string stripped = ArticleEndingThePhrase.Replace(stimulus, "{0}");
+                    if (ArticleBeforePlaceholder.IsMatch(stripped))
                     {
+                        // Every article kept, so a {0} whose phrase ends there reads "the sunken city" too.
                         stimulus = AnBeforePlaceholder.Replace(stimulus, m => (m.Groups[1].Value == "An" ? "A" : "a") + m.Groups[2].Value + "{0}");
                         placeholder = Unused(UnknownThing, UnknownThingFallback, targets, spaced);
                     }
                     else
                     {
+                        stimulus = stripped;
                         placeholder = Unused(UnknownTarget, UnknownTargetFallback, targets, spaced);
                     }
                 }
