@@ -372,7 +372,7 @@ measurement carries over; the G5g A/B ran with it in both arms' places.
 - **Research area:** observations.
 ### 16. No "propose, then the player confirms" step; every game builds its own cards
 
-**Status:** in the framework with #PRNUM, as an optional helper rather than the agent primitive proposed below: `Proposals` holds a `DecisionResult` and on confirm carries it out through `Agent.Execute`, whose re-check (per-target availability included) is the confirm-time check; `Confirm` takes the `Proposal` by reference, with `Decline`, `DeclineAll`, `OnePending`, `StillValid` and `Changed`, and `Agent.Reset` ends every pending one. Memory records it once, at hold; telemetry's `Execution` stays null until confirm (`Documentation~/proposals.md`). The game still uses `RouteProposal` until it adopts it.
+**Status:** in the framework with #236, as an optional helper rather than the agent primitive proposed below: `Proposals` holds a `DecisionResult` and on confirm carries it out through `Agent.Execute`, whose re-check (per-target availability included) is the confirm-time check; `Confirm` takes the `Proposal` by reference, with `Decline`, `DeclineAll`, `OnePending`, `StillValid` and `Changed`, and `Agent.Reset` ends every pending one. Memory records it once, at hold; telemetry's `Execution` stays null until confirm (`Documentation~/proposals.md`). The game still uses `RouteProposal` until it adopts it.
 
 - **Needed:** most of G4c's actions must not take effect when the NPC chooses them. Kest's
   release, a division agreement, handing over the parcel and accepting a side quest all go on a
@@ -397,7 +397,7 @@ measurement carries over; the G5g A/B ran with it in both arms' places.
 
 ### 17. Knowledge an NPC holds cannot be tied to the action that reveals it
 
-**Status:** settled in the framework's docs with #PRNUM, with no new API: the game's `KnowledgeCard` shape is the rule. A fact that counts only when revealed is a target of the revealing action, in its own category, never a standing `Knowledge` line, and the action's per-target check (#235) removes it once told (`Documentation~/targets.md`, "Facts told through an action", and `RevealedKnowledgeTests`).
+**Status:** settled in the framework's docs with #236, with no new API: the game's `KnowledgeCard` shape is the rule. A fact that counts only when revealed is a target of the revealing action, in its own category, never a standing `Knowledge` line, and the action's per-target check (#235) removes it once told (`Documentation~/targets.md`, "Facts told through an action", and `RevealedKnowledgeTests`).
 
 - **Needed:** Fen's clue counts only once she tells it (design §3). The game has to know the fact
   was told, not just that her reply mentioned it.
