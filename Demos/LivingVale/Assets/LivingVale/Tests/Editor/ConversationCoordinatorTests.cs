@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Agenerela;
+using Agenerela.Providers;
+using LivingVale.Agenerela;
 using LivingVale.Interaction;
 using NUnit.Framework;
 using UnityEngine;
@@ -9,19 +12,35 @@ using UnityEngine.TestTools;
 
 namespace LivingVale.Tests
 {
+    /// <summary>The coordinator over the NPCs' real agents and conversations (#209), with a model answered by hand.</summary>
     public sealed class ConversationCoordinatorTests
     {
         private static readonly NpcDescriptor Mara = new NpcDescriptor("npc_mara", "Mara", "General trader");
         private static readonly NpcDescriptor Iven = new NpcDescriptor("npc_iven", "Iven", "Healer");
 
-        private FakeNpcDriver driver;
+        private HandProvider provider;
+        private AgenerelaNpcDecisionDriver driver;
+        private List<NpcTurn> turns;
         private ConversationCoordinator coordinator;
         private List<ConversationEvent> events;
+
+        private AgenerelaNpcDecisionDriver Driver(System.Action<NpcDescriptor, Agent> configure = null)
+        {
+            var built = new AgenerelaNpcDecisionDriver(provider, "hand", configureAgent: configure);
+            built.TurnObservations = turn =>
+            {
+                turns.Add(turn);
+                return null;
+            };
+            return built;
+        }
 
         [SetUp]
         public void SetUp()
         {
-            driver = new FakeNpcDriver();
+            provider = new HandProvider();
+            turns = new List<NpcTurn>();
+            driver = Driver();
             coordinator = new ConversationCoordinator(driver);
             events = new List<ConversationEvent>();
             coordinator.Changed += events.Add;
@@ -39,7 +58,7 @@ namespace LivingVale.Tests
             Assert.That(coordinator.IsAwaitingReply, Is.True);
 
             var turn = coordinator.LastTurn;
-            driver.Say(0, "Morning.");
+            provider.Say(0, "Morning.");
             await Run.NotCancelled(turn);
 
             Assert.That(Lines(coordinator.HistoryFor(Mara.Id)), Is.EqualTo(new[] { "Player: hello", "Npc: Morning." }));
@@ -59,7 +78,7 @@ namespace LivingVale.Tests
             Assert.That(coordinator.Submit("first"), Is.True);
             Assert.That(coordinator.Submit("second"), Is.False);
 
-            Assert.That(driver.Turns, Has.Count.EqualTo(1));
+            Assert.That(turns, Has.Count.EqualTo(1));
             Assert.That(Lines(coordinator.HistoryFor(Mara.Id)), Is.EqualTo(new[] { "Player: first" }));
         }
 
@@ -73,7 +92,7 @@ namespace LivingVale.Tests
             Assert.That(coordinator.Submit("   "), Is.False);
             Assert.That(coordinator.Submit(new string('a', coordinator.Settings.MaxLineLength + 1)), Is.False);
             Assert.That(coordinator.Submit(new string('a', coordinator.Settings.MaxLineLength)), Is.True);
-            Assert.That(driver.Turns, Has.Count.EqualTo(1));
+            Assert.That(turns, Has.Count.EqualTo(1));
         }
 
         // The G1 exit check's "without cross-talk": a reply to Mara that arrives after the player
@@ -81,7 +100,7 @@ namespace LivingVale.Tests
         [Test]
         public async Task SwitchingSpeaker_LateReplyReachesNoOne()
         {
-            driver.IgnoresCancellation = true;
+            provider.IgnoresCancellation = true;
             coordinator.Open(Mara);
             coordinator.Submit("where is the wagon?");
             var maraTurn = coordinator.LastTurn;
@@ -90,7 +109,7 @@ namespace LivingVale.Tests
             Assert.That(coordinator.ActiveNpc, Is.SameAs(Iven));
             Assert.That(coordinator.IsAwaitingReply, Is.False);
 
-            driver.Say(0, "Ask Iven.");
+            provider.Say(0, "Ask Iven.");
             await Run.NotCancelled(maraTurn);
 
             Assert.That(Lines(coordinator.HistoryFor(Mara.Id)), Is.EqualTo(new[] { "Player: where is the wagon?" }));
@@ -118,7 +137,7 @@ namespace LivingVale.Tests
         [Test]
         public async Task ClosingThenReopening_OldReplyStaysDropped_NewOneApplies()
         {
-            driver.IgnoresCancellation = true;
+            provider.IgnoresCancellation = true;
             coordinator.Open(Mara);
             coordinator.Submit("first");
             var oldTurn = coordinator.LastTurn;
@@ -129,11 +148,11 @@ namespace LivingVale.Tests
             var newTurn = coordinator.LastTurn;
 
             // The old answer lands while the new turn, to the same NPC, is pending.
-            driver.Say(0, "Answer to first.");
+            provider.Say(0, "Answer to first.");
             await Run.NotCancelled(oldTurn);
             Assert.That(coordinator.IsAwaitingReply, Is.True, "the old reply must not end the new turn");
 
-            driver.Say(1, "Answer to second.");
+            provider.Say(1, "Answer to second.");
             await Run.NotCancelled(newTurn);
 
             Assert.That(Lines(coordinator.HistoryFor(Mara.Id)),
@@ -144,7 +163,7 @@ namespace LivingVale.Tests
         [Test]
         public async Task CancelPending_DropsTheLateReply_AndAllowsAnotherTry()
         {
-            driver.IgnoresCancellation = true;
+            provider.IgnoresCancellation = true;
             coordinator.Open(Mara);
             coordinator.Submit("hello");
             var turn = coordinator.LastTurn;
@@ -153,7 +172,7 @@ namespace LivingVale.Tests
             Assert.That(coordinator.IsAwaitingReply, Is.False);
             Assert.That(coordinator.IsOpen, Is.True);
 
-            driver.Say(0, "Too late.");
+            provider.Say(0, "Too late.");
             await Run.NotCancelled(turn);
 
             Assert.That(driver.ExecutedCount, Is.Zero);
@@ -184,7 +203,7 @@ namespace LivingVale.Tests
         [Test]
         public async Task Timeout_ReplyArrivingAfterwardsIsNotApplied()
         {
-            driver.IgnoresCancellation = true;
+            provider.IgnoresCancellation = true;
             coordinator = new ConversationCoordinator(driver, new ConversationSettings { TurnTimeout = TimeSpan.FromMilliseconds(50) });
             coordinator.Changed += events.Add;
             coordinator.Open(Mara);
@@ -195,16 +214,16 @@ namespace LivingVale.Tests
             await Task.Delay(300);
             Assert.That(events.Single(e => e.Kind == ConversationEventKind.TurnFailed).Failure, Is.EqualTo(TurnFailure.Timeout));
             Assert.That(coordinator.IsAwaitingReply, Is.False);
-            Assert.That(turn.IsCompleted, Is.False, "the backend is still out");
+            Assert.That(turn.IsCompleted, Is.True, "the turn ended at its deadline, with the backend still out");
             Assert.That(coordinator.Submit("are you there?"), Is.True);
 
-            driver.Say(0, "Sorry, what?");
+            provider.Say(0, "Sorry, what?");
             await Run.NotCancelled(turn);
 
             Assert.That(driver.ExecutedCount, Is.Zero);
             Assert.That(coordinator.HistoryFor(Mara.Id).Any(l => l.Text == "Sorry, what?"), Is.False);
             Assert.That(coordinator.IsAwaitingReply, Is.True, "the late answer must not end the retry");
-            Assert.That(Kinds, Does.Contain(ConversationEventKind.StaleReplyDropped));
+            Assert.That(provider.Requests[1].History.Count, Is.Zero, "and the NPC never remembers it");
         }
 
         [TestCase(NpcReplyFailure.Malformed, TurnFailure.Malformed)]
@@ -214,7 +233,15 @@ namespace LivingVale.Tests
             coordinator.Open(Mara);
             coordinator.Submit("hello");
             var turn = coordinator.LastTurn;
-            driver.Answer(0, NpcReply.Failed(reported));
+            if (reported == NpcReplyFailure.Malformed)
+            {
+                provider.Answer(0, "Not a decision.");
+            }
+            else
+            {
+                provider.Fail(0, new ProviderException(ProviderErrorKind.ServerError, provider.Name, "Backend error."));
+            }
+
             await Run.NotCancelled(turn);
 
             Assert.That(events.Single(e => e.Kind == ConversationEventKind.TurnFailed).Failure, Is.EqualTo(expected));
@@ -227,7 +254,7 @@ namespace LivingVale.Tests
             coordinator.Open(Mara);
             coordinator.Submit("hello");
             var turn = coordinator.LastTurn;
-            driver.Answer(0, null);
+            provider.Answer(0, null);
             await Run.NotCancelled(turn);
 
             Assert.That(events.Single(e => e.Kind == ConversationEventKind.TurnFailed).Failure, Is.EqualTo(TurnFailure.Malformed));
@@ -239,7 +266,7 @@ namespace LivingVale.Tests
             coordinator.Open(Mara);
             coordinator.Submit("hello");
             var turn = coordinator.LastTurn;
-            driver.Throw(0, new InvalidOperationException("backend down"));
+            provider.Fail(0, new ProviderException(ProviderErrorKind.Unreachable, provider.Name, "backend down"));
             await Run.NotCancelled(turn);
 
             Assert.That(events.Single(e => e.Kind == ConversationEventKind.TurnFailed).Failure, Is.EqualTo(TurnFailure.ProviderError));
@@ -250,11 +277,16 @@ namespace LivingVale.Tests
         [Test]
         public async Task RefusedExecution_ShowsTheGameLineNotTheStatement()
         {
-            driver.OnExecute = (turn, reply) => false;
+            // An action the game's own handler refuses, as the executor refuses a stale quote.
+            driver = Driver((npc, agent) => agent.Actions.Register(
+                new ActionDefinition { Id = "give_stock", Description = "Give the traveler your stock." },
+                DelegateActionHandler.WithResult(ctx => true, (ctx, decision) => ActionResult.Failed("The stock is not yours to give."))));
+            coordinator = new ConversationCoordinator(driver);
+            coordinator.Changed += events.Add;
             coordinator.Open(Mara);
             coordinator.Submit("give me your stock");
             var t = coordinator.LastTurn;
-            driver.Say(0, "Here, take everything.");
+            provider.Act(0, "give_stock", "Here, take everything.");
             await Run.NotCancelled(t);
 
             Assert.That(events.Single(e => e.Kind == ConversationEventKind.TurnFailed).Failure, Is.EqualTo(TurnFailure.Refused));
@@ -270,11 +302,11 @@ namespace LivingVale.Tests
             {
                 coordinator.Submit($"line {i}");
                 var t = coordinator.LastTurn;
-                driver.Say(i, $"reply {i}");
+                provider.Say(i, $"reply {i}");
                 await Run.NotCancelled(t);
             }
 
-            var last = driver.Turns[2];
+            var last = turns[2];
             Assert.That(last.PlayerLine, Is.EqualTo("line 2"));
             Assert.That(Lines(last.History), Is.EqualTo(new[] { "Npc: reply 0", "Player: line 1", "Npc: reply 1" }));
         }
@@ -297,7 +329,7 @@ namespace LivingVale.Tests
         [Test]
         public async Task SubscriberCancellingAndRetrying_RetryKeepsItsOwnTimeout()
         {
-            driver.IgnoresCancellation = true;
+            provider.IgnoresCancellation = true;
             coordinator = new ConversationCoordinator(driver, new ConversationSettings { TurnTimeout = TimeSpan.FromMilliseconds(50) });
             coordinator.Changed += events.Add;
             bool retried = false;
@@ -313,7 +345,7 @@ namespace LivingVale.Tests
             coordinator.Open(Mara);
 
             Assert.That(coordinator.Submit("first"), Is.True);
-            Assert.That(driver.Turns.Select(t => t.PlayerLine), Is.EqualTo(new[] { "retry" }),
+            Assert.That(turns.Select(t => t.PlayerLine), Is.EqualTo(new[] { "retry" }),
                 "the abandoned first turn never reaches the backend");
 
             await Task.Delay(300);
@@ -321,7 +353,7 @@ namespace LivingVale.Tests
             Assert.That(coordinator.IsAwaitingReply, Is.False, "the retry timed out on its own deadline");
 
             var retryTurn = coordinator.LastTurn;
-            driver.Say(0, "late");
+            provider.Say(0, "late");
             await Run.NotCancelled(retryTurn);
             Assert.That(driver.ExecutedCount, Is.Zero);
         }
@@ -333,7 +365,7 @@ namespace LivingVale.Tests
             coordinator.Open(Mara);
             coordinator.Submit("hello");
             var t = coordinator.LastTurn;
-            driver.Say(0, "Morning.");
+            provider.Say(0, "Morning.");
             await Run.NotCancelled(t);
 
             Assert.Throws<InvalidOperationException>(() => coordinator.ClearHistories());
@@ -362,7 +394,7 @@ namespace LivingVale.Tests
             var t = coordinator.LastTurn;
 
             LogAssert.Expect(LogType.Exception, new System.Text.RegularExpressions.Regex("broken view"));
-            driver.Say(0, "Morning.");
+            provider.Say(0, "Morning.");
             await Run.NotCancelled(t);
 
             Assert.That(coordinator.IsAwaitingReply, Is.False);

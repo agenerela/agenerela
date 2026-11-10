@@ -51,6 +51,7 @@ namespace LivingVale.Agenerela
         private ILLMProvider provider;
         private readonly Dictionary<string, NpcPersona> personas = new Dictionary<string, NpcPersona>();
         private readonly Dictionary<string, Agent> agents = new Dictionary<string, Agent>();
+        private readonly Dictionary<string, Conversation> conversations = new Dictionary<string, Conversation>();
         private readonly Action<NpcDescriptor, Agent> configureAgent;
         private readonly NpcActionExecutor executor;
         private readonly Dictionary<string, TradeActionBinding> trade = new Dictionary<string, TradeActionBinding>();
@@ -199,6 +200,19 @@ namespace LivingVale.Agenerela
             return agent;
         }
 
+        /// <summary>This NPC's conversation with its agent (#209), which the coordinator asks and executes through.</summary>
+        public Conversation ConversationFor(NpcDescriptor npc)
+        {
+            var agent = AgentFor(npc);
+            if (!conversations.TryGetValue(npc.Id, out var chat))
+            {
+                chat = new Conversation(agent);
+                conversations[npc.Id] = chat;
+            }
+
+            return chat;
+        }
+
         private RollingHistory MemoryFor(string npcId)
         {
             if (!memories.TryGetValue(npcId, out var memory))
@@ -305,11 +319,21 @@ namespace LivingVale.Agenerela
             ct.ThrowIfCancellationRequested();
 
             var agent = AgentFor(turn.Npc);
+
+            // A cancelled decision throws OperationCanceledException here; the caller owns
+            // timeouts and cancellations and tells them apart itself.
+            DecisionResult result = await agent.DecideAsync(turn.PlayerLine, OptionsFor(turn), ct);
+            return ToReply(result);
+        }
+
+        /// <summary>What a turn sends with the player's line, through <see cref="DecideAsync"/> or the NPC's conversation.</summary>
+        public DecideOptions OptionsFor(NpcTurn turn)
+        {
             // The framework writes the choices into the prompt (#193, adopted in G5g after an A/B):
             // its list of actions and described targets, each action's counter-example, and the
             // agent's idle example. A local model never reads the schema, so this is what it reads.
-            agent.IdleExampleStimulus = IdleExampleStimulus;
-            var options = new DecideOptions
+            AgentFor(turn.Npc).IdleExampleStimulus = IdleExampleStimulus;
+            return new DecideOptions
             {
                 StimulusLabel = StimulusLabel,
                 Observations = ObservationsFor(turn),
@@ -325,36 +349,29 @@ namespace LivingVale.Agenerela
                 // generation, so the executor refuses a reply that outlived its conversation.
                 Correlation = turn
             };
-
-            // A cancelled decision throws OperationCanceledException here; the coordinator owns
-            // timeouts and cancellations and tells them apart itself.
-            DecisionResult result = await agent.DecideAsync(turn.PlayerLine, options, ct);
-            return ToReply(result);
         }
+
+        /// <summary>What a framework result is to the game (<see cref="NpcReply.From"/>).</summary>
+        public static NpcReply ToReply(DecisionResult result) => NpcReply.From(result);
 
         /// <summary>
-        /// What the coordinator gets for a framework result. An unreadable reply is
-        /// <see cref="NpcReplyFailure.Malformed"/>; every other pipeline error, the server being
-        /// unreachable included, is <see cref="NpcReplyFailure.ProviderError"/>.
+        /// Carries out the NPC's conversation's current answer (#209): an answer the conversation no
+        /// longer holds as current, a stale one, is refused and runs nothing.
         /// </summary>
-        public static NpcReply ToReply(DecisionResult result)
+        public bool Execute(NpcTurn turn, DecisionResult result)
         {
-            if (result == null)
+            if (turn == null || result == null || !conversations.TryGetValue(turn.Npc.Id, out var chat))
             {
-                return NpcReply.Failed(NpcReplyFailure.ProviderError);
+                return false;
             }
 
-            var telemetry = result.Telemetry;
-            if (result.Decision == null || (telemetry != null && telemetry.Outcome == DecisionOutcome.PipelineError))
-            {
-                var kind = telemetry?.ErrorKind;
-                bool unreadable = kind == PipelineErrorKind.UnreadableReply || kind == PipelineErrorKind.ProviderMalformedResponse;
-                return NpcReply.Failed(unreadable ? NpcReplyFailure.Malformed : NpcReplyFailure.ProviderError);
-            }
-
-            return NpcReply.Decided(result.Decision, result);
+            ExecutedCount++;
+            bool executed = chat.Execute(result, out var actionResult);
+            LastOutcome = actionResult.TryGetPayload<ActionOutcome>(out var outcome) ? outcome : null;
+            return executed;
         }
 
+        /// <summary>Carries out a decision from <see cref="DecideAsync"/>, which no conversation asked for: for tests and tools.</summary>
         public bool Execute(NpcTurn turn, NpcReply reply)
         {
             if (turn == null || reply == null || !(reply.DriverState is DecisionResult result))
