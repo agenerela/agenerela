@@ -65,6 +65,7 @@ namespace Agenerela
                 var check = TargetChecks.Of(handler);
                 if (check != null)
                 {
+                    answer.MarkChecked(definition);
                     bool anyAllowed = false;
                     foreach (string id in ctx.Targets.Ids)
                     {
@@ -121,6 +122,7 @@ namespace Agenerela
         private readonly Dictionary<ActionDefinition, Dictionary<string, string>> rejected =
             new Dictionary<ActionDefinition, Dictionary<string, string>>();
         private readonly List<UnavailableTarget> unavailable = new List<UnavailableTarget>();
+        private readonly HashSet<ActionDefinition> checkedPerTarget = new HashSet<ActionDefinition>();
 
         // The actions offered, in registry order.
         public IReadOnlyList<ActionDefinition> Offered => offered;
@@ -149,6 +151,26 @@ namespace Agenerela
 
             targets[targetId] = reason;
             unavailable.Add(new UnavailableTarget(definition.Id, targetId, reason));
+        }
+
+        // The action's handler has a per-target check, which this answer asked.
+        public void MarkChecked(ActionDefinition definition)
+        {
+            checkedPerTarget.Add(definition);
+        }
+
+        // Whether an example may name this target for this action (#235 follow-up). Always for an
+        // action whose handler has no per-target check, so its examples read exactly as before; for
+        // one with a check, only a target in the action's categories that the check allowed, the
+        // same pairs the schema offers.
+        public bool ExampleMayName(ActionDefinition definition, string targetId, string category)
+        {
+            if (!checkedPerTarget.Contains(definition))
+            {
+                return true;
+            }
+
+            return definition.AcceptsCategory(category) && Allows(definition, targetId);
         }
 
         public bool IsOffered(ActionDefinition definition)

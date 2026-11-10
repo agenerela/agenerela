@@ -55,6 +55,14 @@ namespace Agenerela
         // it was made, so a reset cancels this agent's calls and no one else's, wherever they wait.
         private CancellationTokenSource resets = new CancellationTokenSource();
 
+        // Cancelled by the next Reset: how an optional helper (Proposals, LV #16) learns of one
+        // without a public event. Read on the main thread, as Reset is called.
+        internal CancellationToken ResetToken => resets.Token;
+
+        // True while Reset runs, its cancellation callbacks included, so a helper can refuse to hold
+        // anything then, whichever helper's callback the game's code runs from (Codex, #236 round 2).
+        internal bool IsResetting { get; private set; }
+
         // Where Bind finds definitions: the profile, read when Bind is called, or the list a
         // code-only agent was given. Exactly one is set.
         private readonly AgentProfile profile;
@@ -902,6 +910,8 @@ namespace Agenerela
             var ending = resets;
             resets = new CancellationTokenSource();
 
+            bool outer = IsResetting;
+            IsResetting = true;
             try
             {
                 // Before cancelling, so such a call already recalls the empty memory.
@@ -909,9 +919,16 @@ namespace Agenerela
             }
             finally
             {
-                // Never disposed: a call linked to it may still be unwinding, and with no timer or
-                // wait handle there is nothing for disposing to free.
-                ending.Cancel();
+                try
+                {
+                    // Never disposed: a call linked to it may still be unwinding, and with no timer or
+                    // wait handle there is nothing for disposing to free.
+                    ending.Cancel();
+                }
+                finally
+                {
+                    IsResetting = outer;
+                }
             }
         }
 
@@ -1282,7 +1299,7 @@ namespace Agenerela
             seen?.SetActions(ctx, Definitions(), availability, available);
 
             var schema = DecisionSchema.Build(ctx, available, paired, availability);
-            string fewShot = FewShotBuilder.Build(available, ctx.Targets, options);
+            string fewShot = FewShotBuilder.Build(available, ctx.Targets, options, availability);
 
             var history = Recall(memory, ctx, telemetry);
             if (seen != null)

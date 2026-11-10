@@ -133,7 +133,9 @@ Now a decision is held on its own result:
 
 A game that asks an agent one thing at a time, such as a chat, can leave this bookkeeping to an
 optional `Conversation` ([conversations.md](conversations.md)): it refuses a stale reply at
-`Execute` and discards it from memory.
+`Execute` and discards it from memory. A game where some decisions are offers the player
+confirms can hold them in an optional `Proposals` ([proposals.md](proposals.md)), which remembers
+a proposal once, when it is held, and carries it out through `Execute` on confirm.
 
 `Commit` and `Discard` return whether the decision was waiting. Only the agent that made a
 decision can settle it; another agent's `Commit` or `Discard` throws, and its `Execute` may carry

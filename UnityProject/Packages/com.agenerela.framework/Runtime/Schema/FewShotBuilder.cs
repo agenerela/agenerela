@@ -73,8 +73,26 @@ namespace Agenerela
         ///   <item><description>A target that implements <see cref="INamedTarget"/> is called by its name
         ///   wherever an example writes <c>{0}</c>; any other by the name made from its id.</description></item>
         /// </list>
+        /// <para>
+        /// The block <see cref="Agent"/> builds for a decision also knows that decision's availability:
+        /// for an action whose handler has a per-target check (<see cref="ITargetAvailability"/>), an
+        /// example never names a target the check rejected or one outside the action's
+        /// <see cref="ActionDefinition.TargetCategories"/>, a preferred target included; it takes the
+        /// next preferred one, or the fallback, or is left out. An action with no such check is shown
+        /// exactly as before. This overload has no decision behind it, so it cannot skip them.
+        /// </para>
         /// </remarks>
         public static string Build(IReadOnlyList<ActionDefinition> available, TargetRegistry targets, PromptOptions options)
+        {
+            return Build(available, targets, options, null);
+        }
+
+        // As above, with the decision's availability answer, which Agent passes: an example then never
+        // names a target its action cannot take right now, a preferred one included (#235 follow-up).
+        // Only an action with a per-target check is affected; with no answer, or no check, the block
+        // is what it always was, byte for byte.
+        internal static string Build(IReadOnlyList<ActionDefinition> available, TargetRegistry targets, PromptOptions options,
+                                     AvailabilityAnswer availability)
         {
             options = options ?? new PromptOptions();
             string label = options.StimulusLabel;
@@ -85,8 +103,8 @@ namespace Agenerela
 
             foreach (ActionDefinition action in available)
             {
-                string target = FirstRegisteredPreferred(action, targets)
-                                ?? (mentioned != null ? FallbackTarget(action, targets, mentioned) : null);
+                string target = FirstRegisteredPreferred(action, targets, availability)
+                                ?? (mentioned != null ? FallbackTarget(action, targets, mentioned, availability) : null);
                 string name = target == null ? null : NameOf(target, targets);
 
                 string example = ActionExample(action, target, name, label, statements);
@@ -235,11 +253,12 @@ namespace Agenerela
         // example never shows the model the answer to the request it is sent with. Null when there is
         // none.
         private static string FallbackTarget(ActionDefinition action, TargetRegistry targets,
-                                              HashSet<string> mentioned)
+                                              HashSet<string> mentioned, AvailabilityAnswer availability)
         {
             foreach (string id in targets.Ids)
             {
                 if (!action.AcceptsCategory(targets.CategoryOf(id))) continue;
+                if (!MayName(action, id, targets, availability)) continue;
                 if (Mentions(mentioned, id, NameOf(id, targets))) continue;
 
                 return id;
@@ -322,19 +341,28 @@ namespace Agenerela
             return words;
         }
 
-        private static string FirstRegisteredPreferred(ActionDefinition action, TargetRegistry targets)
+        // The first preferred target that is registered and, for an action with a per-target check,
+        // one the action can take right now; a rejected one is skipped for the next.
+        private static string FirstRegisteredPreferred(ActionDefinition action, TargetRegistry targets,
+                                                       AvailabilityAnswer availability)
         {
             if (action.PreferredExampleTargets == null) return null;
 
             foreach (string candidate in action.PreferredExampleTargets)
             {
-                if (!string.IsNullOrWhiteSpace(candidate) && targets.Contains(candidate))
+                if (!string.IsNullOrWhiteSpace(candidate) && targets.Contains(candidate) &&
+                    MayName(action, candidate, targets, availability))
                 {
                     return candidate;
                 }
             }
 
             return null;
+        }
+
+        private static bool MayName(ActionDefinition action, string id, TargetRegistry targets, AvailabilityAnswer availability)
+        {
+            return availability == null || availability.ExampleMayName(action, id, targets.CategoryOf(id));
         }
 
         // What an example calls a target: its INamedTarget name when it gives one, otherwise the name

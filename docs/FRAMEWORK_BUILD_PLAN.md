@@ -555,6 +555,12 @@ still decides when a turn starts, and removing it changes nothing in `Agent`. It
 result by reference, so `Correlation` stays the caller's and DR-018's stale rule lives in the
 helper, as DR-018 asked. `Documentation~/conversations.md` has the whole of it.
 
+Beside it, an optional `Proposals` (#190, Living Vale #16) holds a decision the player must
+confirm instead of executing it, and on confirm carries it out through `Agent.Execute`, whose
+re-check (legality, categories, per-target availability) is the confirm-time check. It changes
+nothing in `Agent`'s public API, `ActionResult` or `ExecutionStatus`. A held proposal is
+remembered once, at hold; `Agent.Reset` ends every pending one. `Documentation~/proposals.md`.
+
 ### 2.2 Actions (`Runtime/Actions/`) — the heart of the framework
 
 **Settled rule: the action vocabulary is data, not an enum.** The prototype's fixed

@@ -29,6 +29,27 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **`Proposals`, an optional helper for "the agent proposes, the player confirms"** (#190, Living
+  Vale #16). It holds a `DecisionResult` instead of carrying it out, for the action ids in
+  `HeldActions` (`Submit`) or any decision (`Hold`), and `Confirm(proposal)` carries it out through
+  `Agent.Execute`, so the check at confirm is the agent's own re-check, per-target availability
+  included, and a stale pair is refused with its reason. `Confirm` takes the `Proposal` by
+  reference, so a click on a superseded, declined or reset card is refused; `Decline`,
+  `DeclineAll`, `OnePending` (a new proposal supersedes), a caller-supplied `StillValid`
+  predicate and a `Changed` event complete it. `Agent.Reset()` ends every pending proposal as
+  `ProposalStatus.Reset`. A proposal is remembered once, when it is held (committed then under
+  `MemoryCommit.OnExecute`), and `Execute` at confirm does not remember it again;
+  `DecisionTelemetry.Execution` stays null until confirm. No change to `Agent`'s public API,
+  `ActionResult` or `ExecutionStatus`, and nothing the model reads changes.
+  `Documentation~/proposals.md`.
+- **Facts told through an action** (#190, Living Vale #17): no new API, a documented pattern with a
+  test. A fact that counts only when revealed is a target of the revealing action, in its own
+  category, and that action's per-target check removes it once told; never a standing `Knowledge`
+  line. `Documentation~/targets.md`, "Facts told through an action".
+- **Examples follow the per-target check** (follow-up to #235): for an action whose handler has a
+  per-target check, an example no longer names a `PreferredExampleTargets` entry, or a fallback
+  target, that the check rejected or that is outside the action's categories; it takes the next
+  one, or is left out. An action with no such check renders byte for byte as before.
 - **Conditions per target** (#190 Living Vale #19, #216 item 5, DR-020 amended): an action can say,
   for each target, whether it can be done to it right now, and why not. `ITargetAvailability`, an
   optional addition to `IActionHandler`, returns an `Availability` (`Availability.Yes`, or

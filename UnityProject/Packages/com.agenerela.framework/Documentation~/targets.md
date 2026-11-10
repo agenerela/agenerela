@@ -191,9 +191,65 @@ now: ..." was considered and dropped: it would forbid in prose what the schema a
 absent. A handler without a check, which is every handler written before this, changes nothing:
 the same schema and prompt, byte for byte.
 
-Two things it does not do yet. An example whose `PreferredExampleTargets` names a target the check
-rejects is still shown with that target, as one naming a target of the wrong category is; give it a
-target the check allows. And `[Available]` gives no reason when it leaves a whole action out.
+**The examples follow the check too.** For an action whose handler has a check, an example never
+names a target the check rejected, nor one outside the action's categories, even when
+`PreferredExampleTargets` lists it: it takes the next preferred target, or the fallback target
+when `ExampleTargetFallback` is on, or is left out. An action with no check is shown exactly as
+before, a wrong-category preferred target included.
+
+One thing it does not do yet: `[Available]` gives no reason when it leaves a whole action out.
+
+## Facts told through an action
+
+Some knowledge counts only once it is told: the clue an innkeeper gives, the password a guard lets
+slip, the location of the mill key. The rule (#190, Living Vale #17): **a fact that counts only when
+revealed is a target of the action that reveals it**, in its own category, never a standing
+`AgentIdentity.Knowledge` line ([prompt.md](prompt.md#knowledge-and-statement-rules)). The
+revealing action's per-target check removes the fact once it has been told. No API of its own is
+needed:
+
+```csharp
+// A fact as a target: what it is called in examples, and what it says when listed.
+sealed class Fact : IDescribedTarget, INamedTarget
+{
+    public Fact(string name, string description) { Name = name; Description = description; }
+    public string Name { get; }
+    public string Description { get; }
+}
+
+mara.Actions.Register(
+    new ActionDefinition
+    {
+        Id = "share_information", Description = "Tell the traveller something you know.",
+        RequiresTarget = true, TargetCategories = new[] { "fact" },
+    },
+    new DelegateActionHandler(_ => true, (ctx, d) => clues.Record(d.TargetId))
+    {
+        IsAvailableFor = (ctx, factId) => clues.Has(factId) ? Availability.No("already told") : Availability.Yes,
+    });
+
+mara.Targets.Register("fact_mill_key",
+    new Fact("the mill key", "The mill key hangs behind the bakery door."), "fact");
+```
+
+What that gives:
+
+- **Only the action reveals it.** The handler records the clue; a statement under `none` that
+  claims to know it records nothing. The quest's state stays the game's.
+- **Told once.** After the handler runs, the pair is rejected with "already told": left out of the
+  paired schema, turned to `none` by `TargetAvailabilityGuard` in a flat one, refused by
+  `Agent.Execute` for a decision made before it was told, and recorded with its reason in
+  telemetry and the preview. With every fact told, `share_information` itself is left out.
+- **The content travels with the target.** With `ListActionsAndTargets` on, the listed target
+  shows its `Description`, so the model reads the fact as something it can tell, not as something
+  it already said; the handler is where the game shows it to the player.
+
+A standing `Knowledge` line would be sent on every call, so the model could say the fact in any
+statement, under any action, and the game could not tell whether it was revealed. What this
+pattern does not stop is the model paraphrasing the fact under another action; that is a
+game-feel leak, not an integrity one, and a guard for it would need paraphrase detection (#138).
+
+`Tests/Editor/Core/RevealedKnowledgeTests.cs` runs this example end to end.
 
 ## Which categories an agent is offered
 
@@ -262,5 +318,5 @@ the profile lists but **Only Actions** leaves out needs no handler.
   target and of `none`; measuring the pairing by category needs categories in the set first.
 - **The Targets research area (#120)** owns target selection: a better ordering for the cap and a
   source by component type. Conditions per target (Living Vale's gap 19) now sit beside the
-  category as the second thing an action can require of a target (above); choosing an example
-  target the check allows is the open piece.
+  category as the second thing an action can require of a target (above), and the examples name
+  only a target the check allows.
