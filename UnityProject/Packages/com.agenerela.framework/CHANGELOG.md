@@ -10,17 +10,6 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
-- **Few-shot examples as chat turns** (#151), off by default: `DecideOptions.ExamplesAsTurns`
-  sends the same examples, in the same order, as `user`/`assistant` turns, each answer the JSON
-  object the schema asks for, instead of the block of lines in the system prompt. They are
-  `DecisionRequest.ExampleTurns`, encoded as `History` is and sent before it; `FewShotBlock` is
-  then null. `FewShotBuilder.BuildTurns` writes them, statements included; the refusal's
-  "(not an available target)" note is left out of its JSON answer. Only a provider whose new
-  `ProviderCapabilities.SendsExampleTurns` is true gets turns (`OllamaProvider` sets it); any other
-  gets the block. `PromptOptions.ExamplesAsTurns` carries the resolved switch,
-  `DecisionTelemetry.ExamplesSentAsTurns` records which form went, an `EvalArm` switches it through
-  its `DecideOptions`, and `EvalArmConditions.ExamplesAsTurns` records it. With the switch off,
-  every request is byte for byte what it was. Measured on the interim set in findings, 9 November.
 - **A key for an Ollama server that wants one**: `OllamaSettings.ApiKey`, empty by default, is
   sent as `Authorization: Bearer <key>` on every request, decisions and lifecycle calls alike, so
   a project can use an Ollama served from another machine behind a gateway, such as the RTX 5080's

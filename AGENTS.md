@@ -85,7 +85,7 @@ Neither changelog nor the wiki is loaded into every session; read the one you ne
 | `docs/` | Build plan, llm-wiki, screen designs and course materials — [`docs/README.md`](docs/README.md) maps them |
 | `tools/benchmarks/` | Standalone Python probes, no Unity required |
 | `tools/branding/` | The logo as 3D-printable pins and signs, 4K stills and a 4K animation with sound, all built in Blender from the logo's traced geometry |
-| `tools/live-runs/` | Kits that `docs/run-requests/` points to, so any machine repeats a live run exactly: `model-sweep/` runs a list of models through `EvalRunner`, `example-turns/` the examples-as-turns A/B (#151) |
+| `tools/live-runs/` | Kits that `docs/run-requests/` points to, so any machine repeats a live run exactly: `model-sweep/` runs a list of models through `EvalRunner` |
 | `tools/ci/` | `hygiene.py`, every check CI runs, runnable on your machine and as a pre-commit hook; `release.py`, the mechanical steps of a release |
 | `tools/comfyui/` | The asset server: ComfyUI in Docker on the lead's RTX 5080 machine, making 3D models, sounds and images for the demo games, and `comfy.py`, which agents call it with |
 | `tools/ollama-server/` | Ollama in Docker on the same RTX 5080 machine, behind a gateway that wants a key, so the laptop runs Unity, the live tests and `tools/live-runs/` on that card; `ollama_remote.py` checks it |

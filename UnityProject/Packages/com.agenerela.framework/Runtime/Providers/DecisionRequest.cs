@@ -18,7 +18,7 @@ namespace Agenerela.Providers
     ///   <item><description><see cref="Observations"/> — what the agent knows right now.</description></item>
     /// </list>
     /// <para>
-    /// Then <see cref="ExampleTurns"/>, then <see cref="History"/>, then <see cref="Stimulus"/> as the final user turn —
+    /// Then <see cref="History"/>, then <see cref="Stimulus"/> as the final user turn —
     /// never appended to the system text, because the model has to see it as the thing it
     /// is answering. A provider whose API has no system role concatenates the system side
     /// into the first user turn, in that same order.
@@ -55,29 +55,6 @@ namespace Agenerela.Providers
         /// prompt byte-identical.
         /// </remarks>
         public string FewShotBlock;
-
-        /// <summary>
-        /// The few-shot examples as chat turns, when the call asked for them that way
-        /// (<c>DecideOptions.ExamplesAsTurns</c>, #151): the same examples as <see cref="FewShotBlock"/>,
-        /// in the same order, encoded as <see cref="History"/> is, two entries each. Never null, and
-        /// empty unless the call asked for turns and the provider said it sends them
-        /// (<see cref="ProviderCapabilities.SendsExampleTurns"/>); <see cref="FewShotBlock"/> is then
-        /// null, so a request carries its examples in one form only.
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// Each example is a stimulus labelled as <see cref="Stimulus"/> is, <c>Player: "Go to the Tower."</c>,
-        /// then its answer as the JSON object the schema asks for, on one line:
-        /// <c>{"action":"move_to","target":"tower","statement":""}</c>. A provider with chat roles sends
-        /// them as <c>user</c> and <c>assistant</c> messages after the system message and before
-        /// <see cref="History"/>; one without roles writes them into the user turn in the same order.
-        /// </para>
-        /// <para>
-        /// They are not memory. Nothing remembers them, and <c>HistoryTurnsSent</c> never counts them:
-        /// they are written fresh for every request from the actions offered, as the block is.
-        /// </para>
-        /// </remarks>
-        public IReadOnlyList<string> ExampleTurns = new List<string>();
 
         /// <summary>
         /// What the agent knows right now, as a rendered block with its own heading — the

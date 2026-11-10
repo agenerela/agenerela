@@ -1242,7 +1242,6 @@ namespace Agenerela
                 CounterExamples = call.CounterExamples,
                 IdleExampleStatement = call.IdleExampleStatement,
                 ExampleStatements = call.ExampleStatements,
-                ExamplesAsTurns = call.ExamplesAsTurns && provider.Capabilities?.SendsExampleTurns == true,
             };
 
             // Asked once, so the action enum and the examples come from one answer even when an
@@ -1259,9 +1258,7 @@ namespace Agenerela
             seen?.SetActions(ctx, Definitions(), offered, available);
 
             var schema = DecisionSchema.Build(ctx, available, paired);
-            // One form or the other, never both (#151).
-            string fewShot = options.ExamplesAsTurns ? null : FewShotBuilder.Build(available, ctx.Targets, options);
-            var exampleTurns = options.ExamplesAsTurns ? FewShotBuilder.BuildTurns(available, ctx.Targets, options, schema) : null;
+            string fewShot = FewShotBuilder.Build(available, ctx.Targets, options);
 
             var history = Recall(memory, ctx, telemetry);
             if (seen != null)
@@ -1276,12 +1273,6 @@ namespace Agenerela
 
             var request = PromptBuilder.Build(ctx, schema, fewShot, history, options);
             request.AgentId = Id;
-            if (exampleTurns != null)
-            {
-                request.ExampleTurns = new ReadOnlyCollection<string>(new List<string>(exampleTurns));
-            }
-
-            telemetry.ExamplesSentAsTurns = options.ExamplesAsTurns;
             telemetry.TargetRuleSent = PromptBuilder.SendsTargetRule(schema, options);
             return request;
         }

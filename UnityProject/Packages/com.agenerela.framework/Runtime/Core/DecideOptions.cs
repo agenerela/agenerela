@@ -81,25 +81,6 @@ namespace Agenerela
         public bool CounterExamples = true;
 
         /// <summary>
-        /// Whether this call's examples go as chat turns, each a <c>user</c> message with its stimulus
-        /// and an <c>assistant</c> message with its answer as JSON, rather than as a block of lines in
-        /// the system prompt (#151). Off by default: owed an A/B run before it becomes the default.
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// The examples are the same ones, in the same order, statements included
-        /// (<see cref="FewShotBuilder.BuildTurns"/>); the system prompt then has no example block. They
-        /// go after the system message and before the agent's memory, which is never mixed with them.
-        /// </para>
-        /// <para>
-        /// Only a provider whose <c>Capabilities.SendsExampleTurns</c> is true gets them; any other gets
-        /// the block, as if this were off. <see cref="DecisionTelemetry.ExamplesSentAsTurns"/> records
-        /// which form went, and <see cref="Agent.Preview"/> shows it in its request.
-        /// </para>
-        /// </remarks>
-        public bool ExamplesAsTurns;
-
-        /// <summary>
         /// Whether this call's schema pairs each action with the targets it takes, so the grammar
         /// cannot sample an action with a target of another kind (#190 B, DR-020). Off by default:
         /// unmeasured, and owed an A/B run before it becomes the default (#151).

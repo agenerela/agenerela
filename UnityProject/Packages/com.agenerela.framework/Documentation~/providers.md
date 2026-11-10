@@ -115,7 +115,7 @@ measurement in Appendix A depends on it:
 | Field | Value |
 |---|---|
 | `model` | `OllamaSettings.Model` |
-| `messages` | One `system` message, the non-empty system-side blocks joined by a blank line (left out if there are none); then `ExampleTurns`; then `History`; then `Stimulus` as the last `user` message |
+| `messages` | One `system` message, the non-empty system-side blocks joined by a blank line (left out if there are none); then `History`; then `Stimulus` as the last `user` message |
 | `format` | `JsonSchemaSerializer`'s output (#9), embedded as a JSON object exactly as written |
 | `stream`, `think` | `false`, `false` |
 | `options` | `temperature` from the settings, `num_ctx` from the settings |
@@ -123,15 +123,7 @@ measurement in Appendix A depends on it:
 
 `History` is sent in the encoding `DecisionRequest.History` documents (#90): entries alternate
 `user` and `assistant`, starting with `user`, each exchange being the stimulus as it was sent
-and the decision as JSON. `ExampleTurns` (#151) uses the same encoding and goes before it, so the
-agent's last real exchange is still the last one the model reads before the question. It is empty
-unless a call set `DecideOptions.ExamplesAsTurns`; the system message then has no example block.
-
-**Example turns are opt-in for a provider too.** `Agent` sends them only to a provider whose
-`Capabilities.SendsExampleTurns` is true, as Ollama's is; any other gets the examples as the
-system-side block, as before, so a provider written before the field existed never silently loses
-its examples. A new provider that sends `ExampleTurns` sets the flag. One without chat roles writes
-them into the user turn in order, before `History`, as it does `History`.
+and the decision as JSON.
 
 From the reply, `message.content` becomes `Text` exactly as received, `prompt_eval_count` and
 `eval_count` the token counts (0 when Ollama leaves them out), `logprobs` the token

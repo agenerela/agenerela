@@ -2065,18 +2065,23 @@ without, after a server restart.
 
 ### Few-shot examples as chat turns: better for `qwen3.5:2b` at the noise floor, worse beyond it for `qwen3.5:4b` and `gemma4:e2b-it-qat`, and every statement goes empty (9 November 2026)
 
-**What.** `DecideOptions.ExamplesAsTurns` (#151, this entry's pull request) sends the same few-shot
-examples, in the same order, as `user`/`assistant` turns, each answer the JSON the schema asks for,
-instead of the block of lines in the system prompt
-([`prompt.md`](../../UnityProject/Packages/com.agenerela.framework/Documentation~/prompt.md#examples-as-chat-turns)).
+**What.** A switch built for this run and **not adopted**: `DecideOptions.ExamplesAsTurns` (#151)
+sent the same few-shot examples, in the same order, as `user`/`assistant` turns, each answer the
+JSON the schema asks for, instead of the block of lines in the system prompt. The examples went
+after the system message and before the agent's memory; the refusal's "(not an available target)"
+note was left out of its JSON answer; only a provider declaring `SendsExampleTurns` (Ollama) got
+turns. **The code is parked**, never merged, on the branch `151-chat-turn-examples-parked`: the switch,
+its 14 EditMode tests and its docs are commit `6ea8bf0`, and the run kit,
+`tools/live-runs/example-turns/` (entry point, `run_one.sh`, README), is on the same branch, since it
+needs that code. Check the branch out to re-run either run below.
 A review that morning had replayed the curated set's 76 requests against `qwen3.5:2b` outside Unity
 with the examples moved into turns and scored 63/76 against 56/76 (one model, one run, no guard: a
 lead, not a result). This is the A/B that lead asked for.
 
 **Setup.** The interim set, 389 prompts, against `VillageGuard`, through `EvalRunner` with the
-kit in `tools/live-runs/example-turns/`: arm `block` (the defaults) against arm `turns`
+parked branch's kit: arm `block` (the defaults) against arm `turns`
 (`ExamplesAsTurns = true`), **interleaved, in one session per model, guards on**, three warm-up
-requests each. The framework was this pull request's branch, off `test` at 17c5184. RTX 5080,
+requests each. The framework was the parked branch, off `test` at 17c5184. RTX 5080,
 Docker Ollama 0.40.14, over the network from the lead's laptop on AC power, the 5080 lock held.
 One model resident at a time, each fully in VRAM throughout and unloaded after its run (nothing
 was resident before each). State as one observation line, targets as one observation each, as in
@@ -2135,7 +2140,7 @@ Numbers in brackets are the runner's noise check where it says beyond noise.
 
 **Second run: both arms with written statements.** The empty copies confound the first run, so the
 tech lead asked for the A/B again with a statement on every example, the same in both arms. The
-kit's `AGENERELA_EXAMPLE_STATEMENTS=1` writes them on in-memory copies of `VillageGuard` and its
+parked kit's `AGENERELA_EXAMPLE_STATEMENTS=1` writes them on in-memory copies of `VillageGuard` and its
 four action assets (the asset itself is unchanged): `follow_player` "Right behind you.",
 `stop_following` "I'll hold here, then.", `move_to` "Heading to the {0} now.", `attack_target`
 "Steel out. The {0} won't trouble us long.", and the idle example "Aye, quiet so far.". None matches
@@ -2174,11 +2179,15 @@ VRAM, the same evening (20:18 to 20:28).
 
 **What it means.** The morning's +7 on 76 prompts was real for `qwen3.5:2b` in direction but about
 half the size on 389 prompts, twice, and the same change costs `qwen3.5:4b` 10 to 11 points beyond
-noise twice and `gemma4:e2b-it-qat` 6.7 once, with or without written statements. It stays off by
-default. Turns do make a model echo a written statement less, but no accuracy gain comes with it
+noise twice and `gemma4:e2b-it-qat` 6.7 once, with or without written statements. The switch was not
+adopted into the package. Turns do make a model echo a written statement less, but no accuracy gain comes with it
 outside the 2B.
 
-**What would change this.** An answer that leaves `statement` out when none was written; the curated
+**What would change this.**
+
+- A model family on which turns win beyond noise on both player lines and policy cases.
+
+Short of that: an answer that leaves `statement` out when none was written; the curated
 76 in the Unity path, to compare with the morning's replay; a model above 4B. Raw data: the reports
 and `tokens.json` files in the lead's main checkout, `.scratch/151-chat-turns/full/` and `stated/`,
 with `summarize.py`, which prints these tables.

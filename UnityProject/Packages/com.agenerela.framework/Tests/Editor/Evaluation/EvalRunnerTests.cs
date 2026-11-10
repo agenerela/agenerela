@@ -424,30 +424,6 @@ namespace Agenerela.Tests.Evaluation
         }
 
         [Test]
-        public async Task AnArmCanSendItsExamplesAsTurns()
-        {
-            var a = new FakeProvider(Reply("move_to", "bridge"));
-            var b = new FakeProvider(Reply("move_to", "bridge"));
-            b.Capabilities = new ProviderCapabilities
-            {
-                SupportsConstrainedDecoding = true,
-                Dialect = SchemaDialect.JsonSchema,
-                ReportsTokenProbabilities = true,
-                SendsExampleTurns = true,
-            };
-            var runner = Runner(new[] { Bridge }, null, a, b, optionsB: new DecideOptions { ExamplesAsTurns = true });
-
-            var report = await Fixtures.NotCancelled(runner.RunAsync());
-
-            Assert.That(report.Conditions.Arms[0].ExamplesAsTurns, Is.False);
-            Assert.That(report.Conditions.Arms[1].ExamplesAsTurns, Is.True);
-            Assert.That(a.LastRequest.ExampleTurns, Is.Empty);
-            Assert.That(a.LastRequest.FewShotBlock, Is.Not.Null);
-            Assert.That(b.LastRequest.ExampleTurns, Is.Not.Empty);
-            Assert.That(b.LastRequest.FewShotBlock, Is.Null);
-        }
-
-        [Test]
         public void TwoArmsCannotShareAName()
         {
             var config = fixtures.Config(new FakeProvider(), "Fake");

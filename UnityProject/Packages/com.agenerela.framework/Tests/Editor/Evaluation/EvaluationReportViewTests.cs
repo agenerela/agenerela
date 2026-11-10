@@ -42,18 +42,6 @@ namespace Agenerela.Tests.Evaluation
             }
         }
 
-        // ---- An arm's prompt options -------------------------------------------------------------
-
-        [Test]
-        public void AnArmThatAskedForExampleTurnsSaysSoAndOneThatDidNotSaysNothingNew()
-        {
-            var off = EvaluationReportView.PromptOptions(new EvalArmConditions()).ToList();
-            var on = EvaluationReportView.PromptOptions(new EvalArmConditions { ExamplesAsTurns = true }).ToList();
-
-            Assert.That(on, Is.EqualTo(off.Concat(new[] { "examples asked for as chat turns" })));
-            Assert.That(string.Join(", ", off), Does.Not.Contain("turns"), "An arm without it, and every older report, reads as before.");
-        }
-
         // ---- A saved report reopens identically ------------------------------------------------
 
         [Test]
