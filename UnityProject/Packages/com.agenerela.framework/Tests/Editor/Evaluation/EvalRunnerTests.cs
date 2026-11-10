@@ -379,6 +379,43 @@ namespace Agenerela.Tests.Evaluation
         }
 
         [Test]
+        public async Task AnArmsKnowledgeReachesOnlyItsOwnSystemPromptAndLeavesTheProfileAlone()
+        {
+            // #190, Living Vale #14's A/B: the same lines as knowledge in one arm and as
+            // observations in the other.
+            var a = new FakeProvider(Reply("move_to", "bridge"));
+            var b = new FakeProvider(Reply("move_to", "bridge"));
+            var line = "When trouble is reported at a place you can reach, go there.";
+            var set = fixtures.Set(new[] { Bridge }, null);
+            var profile = Fixtures.VillageGuardProfile();
+            var armA = new EvalArm("as-observations", fixtures.Config(a, "FakeA"), new DecideOptions { Observations = new[] { line } });
+            var armB = new EvalArm("as-knowledge", fixtures.Config(b, "FakeB")) { Knowledge = new List<string> { line } };
+            var runner = new EvalRunner(set, profile, armA, armB);
+
+            var report = await Fixtures.NotCancelled(runner.RunAsync());
+
+            Assert.That(a.Requests.Select(r => r.SystemPrompt), Has.None.Contains(line));
+            Assert.That(a.Requests.Select(r => r.Observations), Has.All.Contains("- " + line));
+            Assert.That(b.Requests.Select(r => r.SystemPrompt), Has.All.Contains("What you know:\n- " + line),
+                "Every call of the arm, warm-ups included.");
+            Assert.That(b.Requests.Select(r => r.Observations ?? ""), Has.None.Contains(line));
+            Assert.That(report.Conditions.Arms[0].Knowledge, Is.Empty);
+            Assert.That(report.Conditions.Arms[1].Knowledge, Is.EqualTo(new[] { line }));
+            Assert.That(profile.Identity.Knowledge, Is.Empty, "The shared profile is never changed.");
+        }
+
+        [Test]
+        public void AnArmsKnowledgeIsCopiedWhenSet()
+        {
+            var lines = new List<string> { "The well is dry." };
+            var arm = new EvalArm("A", fixtures.Config(new FakeProvider(Reply("none", "no_target")), "FakeA")) { Knowledge = lines };
+            lines.Add("Added later.");
+
+            Assert.That(arm.Knowledge, Is.EqualTo(new[] { "The well is dry." }));
+            Assert.That(new EvalArm("B", fixtures.Config(new FakeProvider(Reply("none", "no_target")), "FakeB")) { Knowledge = null }.Knowledge, Is.Empty);
+        }
+
+        [Test]
         public async Task AnArmsIdleExampleThatIsAPromptIsRefused()
         {
             // The arm's idle example replaces the profile's, so the model would be shown "The

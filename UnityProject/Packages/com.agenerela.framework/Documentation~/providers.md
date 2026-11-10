@@ -397,9 +397,10 @@ ends. So script it in Play mode, not from an Edit-mode tool before pressing Play
 
 ### Replaying a decision log
 
-Not built yet: it comes with the runtime decision log (#190, G7). A log line holds an agent, a
-stimulus, the reply's text and its latency, which is exactly a `When` entry, so a replay reads
-the log and scripts `When(agent, stimulus, ScriptedReply.Raw(text).After(latency), …)` with each
+The replay helper is not built yet; the log it reads is, `DecisionLog` ([logging-decisions.md](logging-decisions.md),
+#190, G7). A `Decided` line holds an agent (`agentId`, `agentName`), a stimulus, the reply's text
+(`reply`) and its latency (`latencySeconds`), which is exactly a `When` entry, so a replay reads
+the log with `DecisionLogReader.Read` and scripts `When(agent, stimulus, ScriptedReply.Raw(text).After(latency), …)` with each
 pair's lines in log order. Nothing in the provider has to change for it, and the replay says
 "scripted" in telemetry like every other scripted reply.
 
