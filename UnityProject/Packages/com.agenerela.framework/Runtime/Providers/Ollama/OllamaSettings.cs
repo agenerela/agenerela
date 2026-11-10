@@ -25,7 +25,13 @@ namespace Agenerela.Providers
         /// a model it lacks fails with <see cref="ProviderErrorKind.ModelNotFound"/>, whose
         /// message gives the <c>ollama pull</c> command.
         /// </summary>
-        public string Model = "qwen3.5:2b";
+        /// <remarks>
+        /// <c>qwen3.5:4b</c> since 9 November 2026. On the 389-prompt interim set it chose right 330
+        /// times against 263 for <c>qwen3.5:2b</c>, the default until then, for about 0.08 s more a
+        /// decision on an RTX 5080 and about 0.7 GB more memory (findings, 9 November, the
+        /// thirteen-model sweep).
+        /// </remarks>
+        public string Model = "qwen3.5:4b";
 
         /// <summary>
         /// The context window in tokens, sent as <c>options.num_ctx</c>. 4096 is what the

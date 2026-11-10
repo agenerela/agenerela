@@ -92,7 +92,7 @@ inferred from the schema and needs no separate statement. No quota, no key, no b
 `RateLimit` null, rejects empty enum values no, reports token probabilities yes.
 
 **What was built (#88).** `new Agent(profile, new OllamaProvider(new OllamaSettings()))`
-decides against `qwen3.5:2b` at `http://127.0.0.1:11434`. `OllamaSettings` is a plain class
+decides against `qwen3.5:4b` at `http://127.0.0.1:11434`. `OllamaSettings` is a plain class
 with `Endpoint`, `Model`, `ContextSize` (4096), `Temperature` (0), `TimeoutSeconds` (30) and
 `ApiKey` (empty); the provider copies it when built. An `OllamaProviderConfig` asset holds the
 same fields, except that it names the environment variable holding the key rather than the key,

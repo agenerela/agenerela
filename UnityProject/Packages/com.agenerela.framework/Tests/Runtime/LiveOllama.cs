@@ -32,6 +32,9 @@ namespace Agenerela.Tests
 
         public static string Endpoint => FromEnvironment("AGENERELA_OLLAMA_URL", "http://127.0.0.1:11434");
 
+        // qwen3.5:2b on purpose, though OllamaSettings now defaults to the 4B: the Phase 2 and
+        // Phase 3 gates were passed and recorded on the 2B (findings, 25 October and 3 November),
+        // so the live tests keep measuring what those entries describe. Set the variable to try another.
         public static string Model => FromEnvironment("AGENERELA_OLLAMA_MODEL", "qwen3.5:2b");
 
         /// <summary>The environment variable holding the server's key, for a config to name.</summary>

@@ -8,6 +8,15 @@ While the version stays `0.x`, the public API may change in any release.
 
 ## [Unreleased]
 
+### Changed
+
+- **The default Ollama model is `qwen3.5:4b`**, not `qwen3.5:2b`: `new OllamaSettings()` and a new
+  `OllamaProviderConfig` asset name it. On the 389-prompt interim set it chose right 330 times
+  against 263, for about 0.08 s more a decision on an RTX 5080 and about 0.7 GB more memory
+  (findings, 9 November). Pull it with `ollama pull qwen3.5:4b`. An existing config asset keeps the
+  model it was saved with; code that relied on the default now asks the 4B, so name `qwen3.5:2b`
+  in `OllamaSettings.Model` to keep the old one.
+
 ### Added
 
 - **Standing knowledge and statement rules on an identity** (#190, Living Vale #14):
