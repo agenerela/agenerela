@@ -226,13 +226,15 @@ namespace LivingVale.Tests
         {
             driver.IdleExampleStimulus = null;
             driver.TradeRule = TradeActionBinding.OnlyWhenAskedRule;
-            var next = driver.WithProvider(provider, "other");
+            driver.UseProvider(new FakeLlmProvider(), "other");
+            var other = (FakeLlmProvider)driver.Provider;
 
-            var decide = next.DecideAsync(Turn("Hello."), CancellationToken.None);
+            var decide = driver.DecideAsync(Turn("Hello."), CancellationToken.None);
             await Run.NotCancelled(decide);
 
-            StringAssert.DoesNotContain(AgenerelaNpcDecisionDriver.DefaultIdleExample, provider.LastRequest.FewShotBlock);
-            StringAssert.Contains(TradeActionBinding.OnlyWhenAskedRule, provider.LastRequest.Observations);
+            StringAssert.DoesNotContain(AgenerelaNpcDecisionDriver.DefaultIdleExample, other.LastRequest.FewShotBlock);
+            StringAssert.Contains(TradeActionBinding.OnlyWhenAskedRule, other.LastRequest.Observations);
+            Assert.AreEqual("Agenerela · other", driver.Label);
         }
 
         [Test]

@@ -1,55 +1,61 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Agenerela.Providers;
 using LivingVale.Interaction;
+using UnityEngine;
 
 namespace LivingVale.Agenerela
 {
     /// <summary>
     /// What the model key (F7) does: closes the open conversation, so no turn crosses models, asks
-    /// <see cref="ModelSelector"/> for the next installed model, and puts a driver rebuilt for it
-    /// into the switch. The rebuilt driver keeps the executor, personas and every NPC's memory.
+    /// <see cref="ModelSelector"/> for the next installed model, and gives the model driver a provider
+    /// for it (<see cref="AgenerelaNpcDecisionDriver.UseProvider"/>), so every NPC keeps its agent and
+    /// memory. Loading and unloading are the provider's own <see cref="IModelLifecycle"/> calls (#198),
+    /// which never wait in the decision queue.
     /// </summary>
     /// <remarks>
     /// Plain C#: the bootstrap owns the key and the overlay. One press at a time; a press while one
     /// is still asking the server does nothing. A server that is down or slow only leaves a notice.
+    /// What stays the game's is the press debounce: pressing through nine models loads only the one
+    /// the key rests on.
     /// </remarks>
     public sealed class ModelCycle
     {
         private readonly ConversationCoordinator coordinator;
         private readonly SwitchableNpcDecisionDriver drivers;
         private readonly ModelSelector selector;
-        private readonly Func<AgenerelaNpcDecisionDriver, string, AgenerelaNpcDecisionDriver> rebuild;
-        private readonly IModelLoader loader;
+        private readonly Func<string, ILLMProvider> makeProvider;
         private readonly Func<TimeSpan, CancellationToken, Task> delay;
         private CancellationTokenSource settling;
 
-        // The model the server was last asked to load, which a settled switch unloads; null while
-        // an unload is out or after it, when nothing this cycle asked for is loaded.
+        // The provider whose model the server was last asked to load, which a settled switch
+        // unloads, and that model's name; null while an unload is out or after it.
+        private ILLMProvider loaded;
         private string loadedModel;
 
         // The newest settle's unload. Each settle waits for the one before it, so two never read
-        // or write loadedModel at once.
+        // or write what is loaded at once.
         private Task transition = Task.CompletedTask;
 
         /// <summary>How long the key must rest before the model it landed on is loaded (the press debounce).</summary>
         public static readonly TimeSpan DefaultSettleDelay = TimeSpan.FromSeconds(1);
 
-        /// <param name="rebuild">Makes the driver for a model from the current one; null uses <see cref="AgenerelaNpcDecisionDriver.WithOllamaModel"/>.</param>
-        /// <param name="loader">Unloads the model left behind; null unloads nothing.</param>
+        /// <param name="driver">The model driver; it stays the same object, and only its provider changes.</param>
+        /// <param name="makeProvider">Makes the provider for a model; null uses a local Ollama (<see cref="AgenerelaNpcDecisionDriver.OllamaFor"/>).</param>
         /// <param name="delay">Waits out the settle delay; null uses <see cref="Task.Delay(TimeSpan, CancellationToken)"/>. Tests replace it.</param>
         public ModelCycle(ConversationCoordinator coordinator, SwitchableNpcDecisionDriver drivers, ModelSelector selector,
-            AgenerelaNpcDecisionDriver current, Func<AgenerelaNpcDecisionDriver, string, AgenerelaNpcDecisionDriver> rebuild = null,
-            IModelLoader loader = null, Func<TimeSpan, CancellationToken, Task> delay = null)
+            AgenerelaNpcDecisionDriver driver, Func<string, ILLMProvider> makeProvider = null,
+            Func<TimeSpan, CancellationToken, Task> delay = null)
         {
             this.coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
             this.drivers = drivers ?? throw new ArgumentNullException(nameof(drivers));
             this.selector = selector ?? throw new ArgumentNullException(nameof(selector));
-            Driver = current ?? throw new ArgumentNullException(nameof(current));
-            this.rebuild = rebuild ?? ((driver, model) => driver.WithOllamaModel(model));
-            this.loader = loader;
+            Driver = driver ?? throw new ArgumentNullException(nameof(driver));
+            this.makeProvider = makeProvider ?? (model => AgenerelaNpcDecisionDriver.OllamaFor(model));
             this.delay = delay ?? Task.Delay;
-            loadedModel = current.ModelLabel;
+            loaded = driver.Provider;
+            loadedModel = driver.ModelLabel;
         }
 
         public TimeSpan SettleDelay { get; set; } = DefaultSettleDelay;
@@ -63,8 +69,8 @@ namespace LivingVale.Agenerela
         /// <summary>Raised on the caller's context whenever <see cref="Notice"/> changes after a press, as a model starts and finishes loading.</summary>
         public event Action NoticeChanged;
 
-        /// <summary>The model-backed driver in use now.</summary>
-        public AgenerelaNpcDecisionDriver Driver { get; private set; }
+        /// <summary>The model-backed driver.</summary>
+        public AgenerelaNpcDecisionDriver Driver { get; }
 
         public ModelSelector Selector => selector;
 
@@ -110,24 +116,22 @@ namespace LivingVale.Agenerela
                 }
 
                 finished = true;
-                AgenerelaNpcDecisionDriver switchedTo = null;
+                ILLMProvider switchedTo = null;
                 if (choice.Changed)
                 {
                     // Again, right before the swap: the player may have opened a chat and sent a
                     // line while the server was asked. Closing ends that turn, so its reply is
                     // dropped and no turn starts on one model and lands on another.
                     coordinator.Close(ConversationCloseReason.Interrupted);
-                    var next = rebuild(Driver, choice.Model);
-                    drivers.ReplaceAgenerela(next);
-                    Driver = next;
-                    switchedTo = next;
+                    switchedTo = makeProvider(choice.Model);
+                    Driver.UseProvider(switchedTo, choice.Model);
                 }
 
                 Notice = choice.Notice;
                 if (switchedTo != null)
                 {
-                    // Only once the key rests: pressing through nine models must not queue nine
-                    // loads on one card. A newer press cancels this one, warm-up included.
+                    // Only once the key rests: pressing through nine models must not load nine
+                    // models on one card. A newer press cancels this one, warm-up included.
                     Settle(switchedTo, ct);
                 }
 
@@ -145,23 +149,26 @@ namespace LivingVale.Agenerela
 
         /// <summary>
         /// Loads the model in use now, through the same settle as a press: what F6 calls when the
-        /// player turns the model driver back on. A model loaded any other way would be missing
-        /// from what the next switch unloads.
+        /// player turns the model driver back on, and the bootstrap at the start. A model loaded any
+        /// other way would be missing from what the next switch unloads.
         /// </summary>
         public void LoadCurrent(CancellationToken ct = default)
         {
-            Settle(Driver, ct);
+            Settle(Driver.Provider, ct);
         }
 
-        private void Settle(AgenerelaNpcDecisionDriver next, CancellationToken ct)
+        private void Settle(ILLMProvider next, CancellationToken ct)
         {
             settling?.Cancel();
             settling?.Dispose();
             settling = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            Loading = SettleThenLoad(next, settling.Token);
+            Loading = SettleThenLoad(next, Driver.ModelLabel, settling.Token);
         }
 
-        private async Task SettleThenLoad(AgenerelaNpcDecisionDriver next, CancellationToken token)
+        private bool Superseded(ILLMProvider next, CancellationToken token) =>
+            token.IsCancellationRequested || !ReferenceEquals(next, Driver.Provider);
+
+        private async Task SettleThenLoad(ILLMProvider next, string model, CancellationToken token)
         {
             try
             {
@@ -172,12 +179,11 @@ namespace LivingVale.Agenerela
                 return;
             }
 
-            if (token.IsCancellationRequested || !ReferenceEquals(next, Driver))
+            if (Superseded(next, token))
             {
                 return;
             }
 
-            string model = next.ModelLabel;
             var previous = transition;
             var mine = new TaskCompletionSource<bool>();
             transition = mine.Task;
@@ -186,19 +192,20 @@ namespace LivingVale.Agenerela
                 // An earlier settle's unload may still be out; it must land before this one reads
                 // what is loaded.
                 await previous;
-                if (token.IsCancellationRequested || !ReferenceEquals(next, Driver))
+                if (Superseded(next, token))
                 {
                     return;
                 }
 
-                if (loader != null && loadedModel != null && loadedModel != model)
+                if (loaded != null && loadedModel != model)
                 {
-                    string leaving = loadedModel;
+                    var leaving = loaded;
+                    loaded = null;
                     loadedModel = null;
 
                     // Not cancelled with the press: the old model should leave the card either way.
-                    await loader.UnloadAsync(leaving, CancellationToken.None);
-                    if (token.IsCancellationRequested || !ReferenceEquals(next, Driver))
+                    await UnloadAsync(leaving);
+                    if (Superseded(next, token))
                     {
                         return;
                     }
@@ -210,6 +217,7 @@ namespace LivingVale.Agenerela
                 }
 
                 // Recorded as the load is asked for, never by a settle that a newer one replaced.
+                loaded = next;
                 loadedModel = model;
             }
             finally
@@ -218,10 +226,52 @@ namespace LivingVale.Agenerela
             }
 
             SetNotice($"loading {model}…");
-            bool ready = await next.WarmUpAsync(token);
-            if (!token.IsCancellationRequested && ReferenceEquals(next, Driver))
+            bool ready = await WarmUpAsync(next, model, token);
+            if (!Superseded(next, token))
             {
                 SetNotice(ready ? "" : $"{model} did not load. F7: another model · F6: scripted");
+            }
+        }
+
+        // The provider's own warm-up (#198): outside the decision queue, so a player's turn never
+        // waits behind it, and cancelled, unsent or aborted, by a newer press.
+        private static async Task<bool> WarmUpAsync(ILLMProvider provider, string model, CancellationToken token)
+        {
+            if (!(provider is IModelLifecycle lifecycle))
+            {
+                return true;
+            }
+
+            try
+            {
+                await lifecycle.WarmUpAsync(token);
+                return true;
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                return false;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[LivingVale] {model} did not load: {e.Message}");
+                return false;
+            }
+        }
+
+        private static async Task UnloadAsync(ILLMProvider provider)
+        {
+            if (!(provider is IModelLifecycle lifecycle))
+            {
+                return;
+            }
+
+            try
+            {
+                await lifecycle.UnloadAsync(CancellationToken.None);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[LivingVale] The server did not unload the model left behind: {e.Message}");
             }
         }
 

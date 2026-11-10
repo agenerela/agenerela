@@ -296,25 +296,6 @@ namespace LivingVale.Tests
         }
 
         [Test]
-        public async Task WarmUpIsSentOnceAndRemembersNothing()
-        {
-            await Run.NotCancelled(driver.WarmUpAsync());
-            await Run.NotCancelled(driver.WarmUpAsync());
-            Assert.AreEqual(1, provider.Requests.Count);
-
-            await Decide(Turn(Mara, "Hello."));
-            Assert.AreEqual(0, provider.LastRequest.History.Count);
-        }
-
-        [Test]
-        public async Task WarmUpNeverThrows()
-        {
-            provider.Failure = new ProviderException(ProviderErrorKind.Unreachable, provider.Name, "No server.");
-            await Run.NotCancelled(driver.WarmUpAsync());
-            Assert.Pass();
-        }
-
-        [Test]
         public void EveryAuthoredPersonaHasKnowledgeAndTheHouseStatementRules()
         {
             foreach (var persona in ValeNpcPersonas.All)

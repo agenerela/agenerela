@@ -21,7 +21,8 @@ namespace LivingVale.Agenerela
     /// <para>
     /// <b>Memory.</b> Each agent keeps the framework's own <see cref="RollingHistory"/>, not the
     /// coordinator's chat log, so the model reads its earlier answers in the encoding the framework
-    /// defines (design §11). Each agent runs under <see cref="MemoryCommit.OnExecute"/> (DR-018), so a
+    /// defines (design §11). A change of model keeps it, since <see cref="UseProvider"/> only gives
+    /// each agent another provider (#198). Each agent runs under <see cref="MemoryCommit.OnExecute"/> (DR-018), so a
     /// decision is remembered only once <see cref="Execute"/> carried it out: a reply the coordinator
     /// dropped as stale, or one the game refused, never enters it. The memories are saved with the
     /// game (<see cref="NpcMemoryArchive"/>). The cost: lines the scripted driver gave before an F6
@@ -47,7 +48,7 @@ namespace LivingVale.Agenerela
         /// <summary>What an NPC says when a guard stops its decision; the model's own line is never used then (design §12).</summary>
         public const string RefusalLine = "I can't help you with that.";
 
-        private readonly ILLMProvider provider;
+        private ILLMProvider provider;
         private readonly Dictionary<string, NpcPersona> personas = new Dictionary<string, NpcPersona>();
         private readonly Dictionary<string, Agent> agents = new Dictionary<string, Agent>();
         private readonly Action<NpcDescriptor, Agent> configureAgent;
@@ -55,21 +56,10 @@ namespace LivingVale.Agenerela
         private readonly Dictionary<string, TradeActionBinding> trade = new Dictionary<string, TradeActionBinding>();
         private readonly Dictionary<string, QuestActionBinding> questBindings = new Dictionary<string, QuestActionBinding>();
         private readonly Dictionary<string, RouteActionBinding> routeBindings = new Dictionary<string, RouteActionBinding>();
-        private readonly Dictionary<string, TradeReceipt> lastReceipts;
+        private readonly Dictionary<string, TradeReceipt> lastReceipts = new Dictionary<string, TradeReceipt>();
 
-        // Each NPC's memory, by NPC id. Kept apart from the agents so a driver rebuilt for another
-        // model (WithProvider) carries every NPC's conversation over.
-        private readonly Dictionary<string, RollingHistory> memories;
-        private Task<bool> warmUp;
-
-        // Set when the warm-up was cancelled by its caller, not by Detach: the next call sends it
-        // again rather than hand back the cancelled result (F6 off and on mid-load).
-        private bool warmUpCancelled;
-
-        // Cancelled by Detach, so a replaced driver's warm-up leaves the queue rather than load a
-        // model nobody will use.
-        private readonly CancellationTokenSource lifetime = new CancellationTokenSource();
-        private bool detached;
+        // Each NPC's memory, by NPC id, so a load can fill one before the NPC's agent is built.
+        private readonly Dictionary<string, RollingHistory> memories = new Dictionary<string, RollingHistory>();
 
         /// <param name="provider">Shared by every NPC, so their requests share one queue (DR-015).</param>
         /// <param name="modelLabel">What <see cref="Label"/> names, such as <c>qwen3.5:2b</c>.</param>
@@ -79,18 +69,7 @@ namespace LivingVale.Agenerela
         public AgenerelaNpcDecisionDriver(ILLMProvider provider, string modelLabel,
             IEnumerable<NpcPersona> personas = null, Action<NpcDescriptor, Agent> configureAgent = null,
             NpcActionExecutor executor = null)
-            : this(provider, modelLabel, personas, configureAgent, executor,
-                new Dictionary<string, RollingHistory>(), new Dictionary<string, TradeReceipt>())
         {
-        }
-
-        private AgenerelaNpcDecisionDriver(ILLMProvider provider, string modelLabel,
-            IEnumerable<NpcPersona> personas, Action<NpcDescriptor, Agent> configureAgent,
-            NpcActionExecutor executor, Dictionary<string, RollingHistory> memories,
-            Dictionary<string, TradeReceipt> lastReceipts)
-        {
-            this.memories = memories;
-            this.lastReceipts = lastReceipts;
             this.executor = executor;
             if (executor != null)
             {
@@ -112,64 +91,52 @@ namespace LivingVale.Agenerela
             }
         }
 
-        /// <summary>A driver over a local Ollama at <c>127.0.0.1:11434</c> (never <c>localhost</c>, AGENTS.md).</summary>
-        public static AgenerelaNpcDecisionDriver ForOllama(string model, NpcActionExecutor executor = null, Action<NpcDescriptor, Agent> configureAgent = null)
+        /// <summary>A driver over Ollama: <paramref name="server"/>'s endpoint and key, or a local Ollama at <c>127.0.0.1:11434</c>.</summary>
+        public static AgenerelaNpcDecisionDriver ForOllama(string model, NpcActionExecutor executor = null,
+            Action<NpcDescriptor, Agent> configureAgent = null, OllamaProviderConfig server = null)
         {
-            var settings = new OllamaSettings();
-            if (!string.IsNullOrWhiteSpace(model))
-            {
-                settings.Model = model.Trim();
-            }
-
+            var settings = SettingsFor(model, server);
             return new AgenerelaNpcDecisionDriver(new OllamaProvider(settings), settings.Model, null, configureAgent, executor);
         }
 
         /// <summary>
-        /// This driver for another model: the same personas, executor, callbacks and every NPC's
-        /// memory and last receipt, with new agents on <paramref name="newProvider"/>. Detaches this
-        /// one, which stops following trade receipts; use the new one from now on.
+        /// A provider for <paramref name="model"/> on <paramref name="server"/>, an
+        /// <see cref="OllamaProviderConfig"/> whose API Key Variable names the key; null is a local
+        /// Ollama at <c>127.0.0.1:11434</c> (never <c>localhost</c>, AGENTS.md).
         /// </summary>
-        public AgenerelaNpcDecisionDriver WithProvider(ILLMProvider newProvider, string modelLabel)
-        {
-            var next = new AgenerelaNpcDecisionDriver(newProvider, modelLabel, personas.Values, configureAgent, executor, memories, lastReceipts)
-            {
-                TurnObservations = TurnObservations,
-                TradeRule = TradeRule,
-                IdleExampleStimulus = IdleExampleStimulus
-            };
-            Detach();
-            return next;
-        }
+        public static OllamaProvider OllamaFor(string model, OllamaProviderConfig server = null) =>
+            new OllamaProvider(SettingsFor(model, server));
 
-        /// <summary><see cref="WithProvider"/> with a new Ollama provider at <c>127.0.0.1:11434</c>.</summary>
-        public AgenerelaNpcDecisionDriver WithOllamaModel(string model)
+        private static OllamaSettings SettingsFor(string model, OllamaProviderConfig server)
         {
-            var settings = new OllamaSettings();
+            var settings = server != null ? server.ToSettings() : new OllamaSettings();
             if (!string.IsNullOrWhiteSpace(model))
             {
                 settings.Model = model.Trim();
             }
 
-            return WithProvider(new OllamaProvider(settings), settings.Model);
+            return settings;
         }
 
-        /// <summary>Stops following trade receipts. Called by <see cref="WithProvider"/>; safe to call twice.</summary>
-        public void Detach()
+        /// <summary>The provider every NPC's agent asks now.</summary>
+        public ILLMProvider Provider => provider;
+
+        /// <summary>
+        /// Gives every NPC's agent <paramref name="next"/>, for a change of model, and every agent
+        /// built later too (<see cref="Agent.Provider"/>, #198). Each keeps its memory, actions,
+        /// targets and guards; a decision already under way finishes on the provider it started on.
+        /// </summary>
+        public void UseProvider(ILLMProvider next, string modelLabel)
         {
-            if (detached)
+            provider = next ?? throw new ArgumentNullException(nameof(next));
+            ModelLabel = string.IsNullOrWhiteSpace(modelLabel) ? next.Name : modelLabel.Trim();
+            foreach (var agent in agents.Values)
             {
-                return;
-            }
-
-            detached = true;
-            lifetime.Cancel();
-            if (executor != null)
-            {
-                executor.Trade.Confirmed -= OnConfirmed;
+                agent.Provider = next;
             }
         }
 
-        public string ModelLabel { get; }
+        public string ModelLabel { get; private set; }
 
         public string Label => "Agenerela · " + ModelLabel;
 
@@ -239,7 +206,7 @@ namespace LivingVale.Agenerela
             return memory;
         }
 
-        /// <summary>Every NPC's memory, by NPC id, as saved with the game; shared with the drivers <see cref="WithProvider"/> made.</summary>
+        /// <summary>Every NPC's memory, by NPC id, as saved with the game.</summary>
         public IReadOnlyDictionary<string, RollingHistory> Memories => memories;
 
         /// <summary>This NPC's memory, made empty if it has none yet, so a load can fill it before the NPC first speaks.</summary>
@@ -405,62 +372,6 @@ namespace LivingVale.Agenerela
             bool executed = agent.Execute(result, out var actionResult);
             LastOutcome = actionResult.TryGetPayload<ActionOutcome>(out var outcome) ? outcome : null;
             return executed;
-        }
-
-        /// <summary>
-        /// Loads the model without waiting for it, so the first real turn does not spend the turn
-        /// timeout on loading (about 8 s cold for qwen3.5:2b on an 8 GB laptop GPU). Sent by a
-        /// throwaway agent with no memory, at background priority, so no NPC remembers it. Never throws.
-        /// </summary>
-        public void WarmUp()
-        {
-            _ = WarmUpAsync();
-        }
-
-        /// <summary>
-        /// The one warm-up request, started on the first call; true when the model answered.
-        /// Never faults: a failure is logged and gives false. It is cancelled, and gives false, when
-        /// <paramref name="ct"/> (read on the first call only) is cancelled or the driver is
-        /// detached, and a cancelled request leaves the provider's queue unsent.
-        /// </summary>
-        public Task<bool> WarmUpAsync(CancellationToken ct = default)
-        {
-            if (warmUp == null || (warmUp.IsCompleted && warmUpCancelled && !lifetime.IsCancellationRequested))
-            {
-                warmUpCancelled = false;
-                warmUp = SendWarmUp(ct);
-            }
-
-            return warmUp;
-        }
-
-        private async Task<bool> SendWarmUp(CancellationToken ct)
-        {
-            using (var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, lifetime.Token))
-            {
-                try
-                {
-                    var agent = new Agent(new AgentIdentity { Name = "Warm-up" }, Array.Empty<ActionDefinition>(), provider) { Memory = null };
-                    var result = await agent.DecideAsync("Hello.", new DecideOptions { Priority = DecisionPriority.Background }, linked.Token);
-                    if (result?.Decision == null)
-                    {
-                        Debug.LogWarning($"[LivingVale] {Label} warm-up got no decision ({result?.Telemetry?.ErrorKind}); NPC turns will fail until the model answers.");
-                        return false;
-                    }
-
-                    return true;
-                }
-                catch (OperationCanceledException) when (linked.IsCancellationRequested)
-                {
-                    warmUpCancelled = true;
-                    return false;
-                }
-                catch (Exception e)
-                {
-                    Debug.LogWarning($"[LivingVale] {Label} warm-up failed: {e.Message}");
-                    return false;
-                }
-            }
         }
     }
 }

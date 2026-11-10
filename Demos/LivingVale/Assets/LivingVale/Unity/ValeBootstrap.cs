@@ -21,6 +21,8 @@ namespace LivingVale.Unity
         [SerializeField] private string ollamaModel = "gemma4:e2b-it-qat";
         [Tooltip("The models F7 cycles through, in order, skipping any Ollama does not have. Compared on 5 November 2026 (llm-wiki findings).")]
         [SerializeField] private List<string> ollamaModels = new List<string>(ModelCycleDefaults.Models);
+        [Tooltip("The Ollama server: its endpoint, and the environment variable holding its key. Empty uses a local Ollama at 127.0.0.1:11434. Its model is ignored: the model above and F7 choose it.")]
+        [SerializeField] private global::Agenerela.Providers.OllamaProviderConfig ollamaServer;
 
         private InputActionMap actions;
         private InputAction move;
@@ -120,7 +122,7 @@ namespace LivingVale.Unity
             Routes = new QuestRoutes(Quests, tradeLink);
             Executor = new NpcActionExecutor(Trade, Quests, Routes);
             Driver = new ScriptedNpcDecisionDriver(executor: Executor);
-            ModelDriver = AgenerelaNpcDecisionDriver.ForOllama(ollamaModel, Executor);
+            ModelDriver = AgenerelaNpcDecisionDriver.ForOllama(ollamaModel, Executor, server: ollamaServer);
             // The scripted replies decide through Agent with ScriptedProvider (#194), so both paths share one pipeline.
             scriptedAgent = new ScriptedAgentDriver(Driver, Executor);
             Drivers = new SwitchableNpcDecisionDriver(scriptedAgent, ModelDriver, driver);
@@ -133,14 +135,15 @@ namespace LivingVale.Unity
             tradeLink.Attach(Coordinator, Trade);
             tradeLink.AttachQuests(Quests);
             tradeLink.AttachRoutes(Routes);
-            var ollama = new OllamaModelCatalog();
+            // The server's own model list, warm-up and unload (#198), through the provider in use.
             Models = new ModelCycle(Coordinator, Drivers,
-                new ModelSelector(ollamaModels, ollamaModel, ollama), ModelDriver, loader: ollama);
+                new ModelSelector(ollamaModels, ModelDriver.ModelLabel, new ProviderModelCatalog(() => ModelDriver.Provider)), ModelDriver,
+                model => AgenerelaNpcDecisionDriver.OllamaFor(model, ollamaServer));
             Models.Finished += OnModelCycled;
             Models.NoticeChanged += OnModelCycled;
 
-            // NPC memories save and load with the game (G5h), from whichever model driver F7 left in place.
-            Saves.Memories = new NpcMemoryArchive(() => Models.Driver);
+            // NPC memories save and load with the game (G5h); F7 keeps the same driver and agents.
+            Saves.Memories = new NpcMemoryArchive(() => ModelDriver);
 
             // The starting model loads like any other, so the notice says "loading …", and says
             // so when it does not load (not installed, server down) while F6 and F7 still work.
@@ -325,7 +328,7 @@ namespace LivingVale.Unity
                 // lines said after it (G5h saves memory, the shown history is not saved).
                 Coordinator.ClearHistories();
                 // The load may have reversed the last trades, so neither driver may report them.
-                (Models?.Driver ?? ModelDriver)?.ForgetReceipts();
+                ModelDriver?.ForgetReceipts();
                 scriptedAgent?.Inner.ForgetReceipts();
                 Debug.Log($"[LivingVale] Loaded {Saves.SavePath}.");
             }
@@ -361,7 +364,6 @@ namespace LivingVale.Unity
                 return;
             }
 
-            ModelDriver = Models.Driver;
             overlay.Render();
         }
 

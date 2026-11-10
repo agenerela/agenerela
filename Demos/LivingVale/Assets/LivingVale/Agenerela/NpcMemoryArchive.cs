@@ -9,7 +9,7 @@ namespace LivingVale.Agenerela
     /// <summary>
     /// The NPCs' conversation memories in the save (gap 11, DR-018): each NPC's
     /// <see cref="RollingHistory"/>, through the framework's <see cref="IExportsMemory"/>, under its
-    /// stable id. The memories are the model driver's, which every F7 switch shares.
+    /// stable id. The memories are the model driver's, which an F7 switch keeps (#198).
     /// </summary>
     public sealed class NpcMemoryArchive : INpcMemoryArchive
     {
@@ -18,7 +18,7 @@ namespace LivingVale.Agenerela
         // CanImport changes nothing, so one history serves every check.
         private static readonly RollingHistory Checker = new RollingHistory();
 
-        /// <param name="driver">The model driver in use now; read on every save and load, since F7 replaces it.</param>
+        /// <param name="driver">The model driver; read on every save and load.</param>
         public NpcMemoryArchive(Func<AgenerelaNpcDecisionDriver> driver)
         {
             this.driver = driver ?? throw new ArgumentNullException(nameof(driver));

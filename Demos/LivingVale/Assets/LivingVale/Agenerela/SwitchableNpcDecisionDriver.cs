@@ -9,7 +9,7 @@ namespace LivingVale.Agenerela
     public sealed class SwitchableNpcDecisionDriver : INpcDecisionDriver
     {
         private readonly INpcDecisionDriver scripted;
-        private INpcDecisionDriver agenerela;
+        private readonly INpcDecisionDriver agenerela;
 
         public NpcDriverChoice Choice { get; private set; }
         public INpcDecisionDriver Current => Choice == NpcDriverChoice.Scripted ? scripted : agenerela;
@@ -31,15 +31,6 @@ namespace LivingVale.Agenerela
             }
 
             Choice = choice;
-        }
-
-        /// <summary>
-        /// Puts another model-backed driver in the Agenerela slot, for a change of model. A reply
-        /// already decided is still executed by the driver that decided it.
-        /// </summary>
-        public void ReplaceAgenerela(INpcDecisionDriver driver)
-        {
-            agenerela = driver ?? throw new ArgumentNullException(nameof(driver));
         }
 
         public void Next() => Select(Choice == NpcDriverChoice.Scripted
