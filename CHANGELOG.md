@@ -29,6 +29,20 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **GreyBoxStrategy, stage 1: the country game, headless** (#20). `Demos/GreyBoxStrategy/` is
+  a new Unity project (Universal 2D, the framework by relative path, `com.unity.pipeline`). Its
+  simulation assembly has no engine references at all: five countries on a 5 × 5 map of 25
+  provinces, ten of them neutral, one move each a turn (recruit, fortify, raise taxes, declare
+  war, attack a province, offer peace), envoys that accept or refuse peace before anything
+  lands, every move re-checked at resolution so a stale one is refused, and dice keyed by
+  seed, turn and purpose so a game replays exactly. A scripted AI in two temperaments wins 98 to
+  99% of games against four random players and 27% and 24% per seat in a mixed line-up; random
+  wins none of 200. A runner plays N games from the editor menu, the Unity CLI or
+  `-executeMethod` and writes a summary, a CSV and a per-game log of every decision with the
+  facts the player saw. Facts come in two kinds from the start, standing and this turn's, for
+  `ObservationPlacement.WithStimulus`. 59 EditMode tests. The design moved on from the 9
+  November draft (`docs/demos/grey-box-strategy.md` says what changed and why), and the demo's
+  `README.md` answers #20's four questions and checks #216 against the game.
 - **In-game checks go through the Unity CLI.** Living Vale now has `com.unity.pipeline`
   0.9.1-exp.1, as GreyBoxVillage does, so `unity command` drives its editor: Play mode, a
   captured frame, the console and C# run in the game, without taking over the user's screen.
