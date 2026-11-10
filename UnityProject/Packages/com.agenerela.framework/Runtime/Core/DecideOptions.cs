@@ -61,9 +61,10 @@ namespace Agenerela
         /// <remarks>
         /// For a game whose targets change every turn, so no fixed list stays right. "Takes" is
         /// <see cref="ActionDefinition.AcceptsCategory"/>: any target, unless the action names its
-        /// categories. A target the stimulus mentions is skipped, by any word of its id or name of three
-        /// letters or more ("inn"; from four, "dock" for docks too), so the example never shows the
-        /// answer; with every target the action takes
+        /// categories. A target the stimulus mentions is skipped, by any word of its id or name said
+        /// whole ("ox"), or starting a word of the stimulus from three letters ("inn" in innkeeper), or
+        /// started by one of four or more ("dock" for docks), so the example never shows the answer;
+        /// with every target the action takes
         /// mentioned, the example is left out. A target that implements <see cref="INamedTarget"/> is
         /// called by its name. A registered preferred target is used as before, mentioned or not.
         /// </remarks>

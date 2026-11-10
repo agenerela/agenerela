@@ -228,18 +228,26 @@ await agent.DecideAsync(line, new DecideOptions { ExampleTargetFallback = true, 
 **The fallback.** With `ExampleTargetFallback` on, an example with no preferred target here names
 the first offered target its action takes instead: any target, unless the action declares
 `TargetCategories`, then the first in one of them. It skips a target the stimulus mentions, so the
-example never shows the model the answer to the request it travels with: a word of the target's id
-or name, of three letters or more, that starts a word of the stimulus ("inn" in "innkeeper",
-"tower" in "towers"), or a word of the stimulus of four letters or more that starts it ("dock" for
-`docks`). "The", "and", "for", "with" and "from" never count. With every target the action takes
-mentioned, the example is left out, as before. A counter-example with a `{0}` follows its example.
+example never shows the model the answer to the request it travels with. A word of the target's
+id or name counts when the stimulus says it whole, at any length ("ox"); when it starts a word of
+the stimulus, from three letters ("inn" in "innkeeper", "tower" in "towers"); or when a word of the
+stimulus of four letters or more starts it ("dock" for `docks`). An id's words include an acronym's
+(`NPCGuard` is "npc" and "guard"). "The", "a", "an", "of", "to", "and", "for", "with" and "from"
+never count, unless a name holds nothing else, and then all of them must be said. With every
+target the action takes mentioned, the example is left out, as before. A counter-example with a `{0}` follows its example.
 A preferred target that is here is used as before, mentioned or not.
 
 **Spaced names.** With `SpacedExampleNames` on, a target is called by its id's words, lowercase:
-`training_dummy` is "training dummy", not "TrainingDummy", and `village-gate` "village gate". The
-refusal of a target that is not here drops an article right before the `{0}`, so a move_to
-stimulus of "Go and stand by the {0}." gives "Go and stand by Atlantis." rather than "the
-Atlantis". Off, both read as before.
+`training_dummy` is "training dummy", not "TrainingDummy", `village-gate` "village gate" and
+`NPCGuard` "npc guard". The refusal of a target that is not here drops the article before `{0}`
+where the target ends its phrase (at the end, before punctuation, or before a word such as "for",
+"now" or "please"), so a move_to stimulus of "Go and stand by the {0}." gives "Go and stand by
+Atlantis." rather than "the Atlantis". Where `{0}` runs on into a longer phrase the article stays,
+"a" as "an": "Open the Atlantis gate.", "Bring an Atlantis-shaped token." Off, both read as before.
+
+Whichever switch is set, the refusal never names a place an offered target is called, by its id or
+by the name an example gives it: a target named "Atlantis" makes it "Avalon", and with both taken
+there is no refusal.
 
 **A target's own name.** Either way, a target is called by its `INamedTarget.Name` when it
 implements one, as written:

@@ -27,7 +27,10 @@ While the version stays `0.x`, the public API may change in any release.
   out, skipping any target the stimulus mentions, so the example never shows the answer.
   `DecideOptions.SpacedExampleNames` (and `PromptOptions.SpacedExampleNames`): a target is called by
   its id's words, "training dummy" rather than "TrainingDummy", and the refusal of a target that is
-  not here drops the article before it, "Go and stand by Atlantis." rather than "the Atlantis".
+  not here drops the article before it where it ends its phrase, "Go and stand by Atlantis." rather
+  than "the Atlantis" (and "an Atlantis gate" where it does not). Either way, the refusal no longer
+  names a place an offered target is called, by id or by its `INamedTarget` name, and is left out
+  when both of its placeholders are.
   `PromptOptions.Stimulus`, which `Agent` sets, is what the fallback reads. **`INamedTarget`**: a
   target object implements its `Name` ("healing potion") to be called by it wherever an example
   writes `{0}`; no target has one until a game writes one. `EvalArmConditions` records

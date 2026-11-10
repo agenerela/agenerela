@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 
 namespace Agenerela.Tests
@@ -375,6 +376,51 @@ namespace Agenerela.Tests
         }
 
         [Test]
+        public void ShortNamesNamesOfLittleWordsAndAcronymsAreMentionsToo()
+        {
+            var actions = new List<ActionDefinition> { Action("move_to", "Go and stand by the {0}.", true) };
+            string First(string stimulus, params (string id, object target)[] registered)
+            {
+                var targets = new TargetRegistry();
+                foreach (var (id, target) in registered) targets.Register(id, target);
+                targets.Register("well", new object());
+                return FewShotBuilder.Build(actions, targets, new PromptOptions
+                {
+                    ExampleTargetFallback = true, SpacedExampleNames = true, Stimulus = stimulus,
+                }).Split('\n')[1];
+            }
+
+            Assert.That(First("Attack the ox!", ("ox", new object())), Does.EndWith("target: well"), "'ox', said whole.");
+            Assert.That(First("Fetch Bo.", ("x9", new Named("Bo"))), Does.EndWith("target: well"), "A two-letter INamedTarget name, said whole.");
+            Assert.That(First("Go to stall 7.", ("stall_7", new object())), Does.EndWith("target: well"));
+            Assert.That(First("Box seven.", ("ox", new object())), Does.EndWith("target: ox"), "'ox' only starts nothing under three letters.");
+            Assert.That(First("Look to the end.", ("to_the", new object())), Does.EndWith("target: well"),
+                "A name of nothing but little words is a mention when all of them are said.");
+            Assert.That(First("Go to it.", ("to_the", new object())), Does.EndWith("target: to_the"));
+            Assert.That(First("Attack the guard.", ("NPCGuard", new object())), Does.EndWith("target: well"),
+                "NPCGuard's words are 'npc' and 'guard'.");
+            Assert.That(First("Hello.", ("NPCGuard", new object())), Does.StartWith("Player: \"Go and stand by the npc guard.\""));
+        }
+
+        [Test]
+        public void TheRefusalNeverNamesAPlaceAnOfferedTargetIsCalled()
+        {
+            string Refusal(params string[] names)
+            {
+                var targets = new TargetRegistry();
+                for (int i = 0; i < names.Length; i++) targets.Register("city_" + i, new Named(names[i]));
+                var actions = new List<ActionDefinition> { Action("travel", "Travel to {0}.", true, "city_0") };
+                return FewShotBuilder.Build(actions, targets).Split('\n').Last();
+            }
+
+            Assert.That(Refusal("Rome"), Does.StartWith("Player: \"Travel to Atlantis.\" -> action: none"));
+            Assert.That(Refusal("atlantis"), Does.StartWith("Player: \"Travel to Avalon.\" -> action: none"),
+                "A target an example calls Atlantis, by any case, is offered: the refusal names Avalon.");
+            Assert.That(Refusal("Atlantis", "Avalon"), Does.StartWith("Player: \"Travel to Atlantis.\" -> action: travel"),
+                "Both taken: no refusal at all, rather than one contradicting the example.");
+        }
+
+        [Test]
         public void SpacedNamesSeparateTheIdsWordsAndTheRefusalDropsItsArticle()
         {
             var targets = new TargetRegistry();
@@ -419,6 +465,11 @@ namespace Agenerela.Tests
             Assert.That(Refusal("Fetch an {0} for me."), Does.StartWith("Player: \"Fetch Atlantis for me.\""));
             Assert.That(Refusal("Take {0} home."), Does.StartWith("Player: \"Take Atlantis home.\""), "Nothing to drop is left alone.");
             Assert.That(Refusal("Bathe {0}."), Does.StartWith("Player: \"Bathe Atlantis.\""), "Only a whole-word article goes.");
+            Assert.That(Refusal("Open the {0} gate."), Does.StartWith("Player: \"Open the Atlantis gate.\""),
+                "A {0} that goes on into a longer phrase keeps its article.");
+            Assert.That(Refusal("Bring a {0}-shaped token."), Does.StartWith("Player: \"Bring an Atlantis-shaped token.\""),
+                "...as 'an', for the vowel.");
+            Assert.That(Refusal("Go to the {0} now."), Does.StartWith("Player: \"Go to Atlantis now.\""));
         }
 
         private sealed class Named : INamedTarget

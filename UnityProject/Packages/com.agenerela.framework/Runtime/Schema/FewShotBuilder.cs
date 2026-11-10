@@ -157,12 +157,14 @@ namespace Agenerela
         }
 
         // One refusal of a target that is not here, worded from the first targeted action's own
-        // stimulus. Spaced, the article before {0} goes: "the Atlantis" is not English whatever the
-        // stimulus says, while "stand by Atlantis" and "How much for Atlantis?" are.
+        // stimulus, naming a place no offered target is called, by id or by the name an example
+        // gives it; with both placeholders taken there is no refusal, rather than one contradicting
+        // an example. Spaced, the stimulus reads as English around the placeholder (FitArticle).
         private static string RefusalExample(IReadOnlyList<ActionDefinition> available, TargetRegistry targets,
                                              string stimulusLabel, bool spaced)
         {
-            string placeholder = targets.Contains(DisplayNameToId(UnknownTarget)) ? UnknownTargetFallback : UnknownTarget;
+            string placeholder = IsOffered(UnknownTarget, targets, spaced) ? UnknownTargetFallback : UnknownTarget;
+            if (IsOffered(placeholder, targets, spaced)) return null;
 
             foreach (ActionDefinition action in available)
             {
@@ -170,17 +172,43 @@ namespace Agenerela
                 if (string.IsNullOrWhiteSpace(action.ExampleStimulus)) continue;
                 if (!action.ExampleStimulus.Contains("{0}")) continue;
 
-                string stimulus = spaced ? ArticleBeforePlaceholder.Replace(action.ExampleStimulus, "{0}") : action.ExampleStimulus;
+                string stimulus = spaced ? FitArticle(action.ExampleStimulus) : action.ExampleStimulus;
                 return Example(stimulusLabel, Fill(stimulus, placeholder), "none", TargetRegistry.NoTarget + " (not an available target)", null);
             }
 
             return null;
         }
 
-        // An article, as a whole word, right before a placeholder: "by the {0}", "The {0}, please",
-        // "an {0}".
-        private static readonly Regex ArticleBeforePlaceholder =
-            new Regex(@"\b(?:the|an|a)\s+\{0\}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        // Whether an offered target is called placeholder: its id ("atlantis") or the name an example
+        // would give it, an INamedTarget's included.
+        private static bool IsOffered(string placeholder, TargetRegistry targets, bool spaced)
+        {
+            foreach (string id in targets.Ids)
+            {
+                if (string.Equals(id, DisplayNameToId(placeholder), StringComparison.OrdinalIgnoreCase)) return true;
+                if (string.Equals(NameOf(id, targets, spaced), placeholder, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+
+            return false;
+        }
+
+        // The refusal's stimulus with its article fitted to a proper name. An article goes where {0}
+        // ends its noun phrase, at the end, before punctuation or before a short word that starts
+        // something else ("for", "now", "please"): "stand by the {0}." gives "stand by {0}.", "Fetch
+        // an {0} for me." "Fetch {0} for me.". One before a {0} that goes on into a longer phrase
+        // stays, as "an" for the vowel both placeholders start with: "Open the {0} gate." and "Bring
+        // an {0}-shaped token."
+        private static string FitArticle(string text)
+        {
+            text = ArticleEndingThePhrase.Replace(text, "{0}");
+            return ArticleA.Replace(text, m => (m.Groups[1].Value == "A" ? "An" : "an") + m.Groups[2].Value + "{0}");
+        }
+
+        private static readonly Regex ArticleEndingThePhrase = new Regex(
+            @"\b(?:the|an|a)\s+\{0\}(?=$|[.,!?;:)""'\u2019]|\s+(?:for|to|at|in|on|by|with|from|and|or|but|so|if|when|now|please|here|there|again|first|then|today|tonight|before|after)\b)",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        private static readonly Regex ArticleA = new Regex(@"\b([Aa])(\s+)\{0\}", RegexOptions.CultureInvariant);
 
         // The first offered target the action takes that the stimulus does not mention (Living Vale
         // #20), so a game whose targets change every turn needs no list kept up to date, and the
@@ -200,11 +228,12 @@ namespace Agenerela
             return null;
         }
 
-        // Whether the stimulus says a word of the target's id or name, of three letters or more: a
-        // word that starts with it ("inn" in innkeeper, "tower" in towers), or one of four letters or
-        // more that it starts with ("dock" for docks). Generous on purpose: a skipped target costs
-        // only a different example, a named one shows the answer. A few words any name might hold
-        // ("the", "and") never count.
+        // Whether the stimulus says a word of the target's id or name: the word itself, of any length
+        // ("ox"); a word that starts with it, from three letters ("inn" in innkeeper, "tower" in
+        // towers); or a word of four letters or more that starts it ("dock" for docks). Generous on
+        // purpose: a skipped target costs only a different example, a named one shows the answer. A
+        // few words any name might hold ("the", "of") never count, unless the name holds nothing
+        // else, and then all of them must be said.
         private static bool Mentions(HashSet<string> stimulusWords, string id, string name)
         {
             if (stimulusWords.Count == 0) return false;
@@ -212,22 +241,39 @@ namespace Agenerela
             var names = Words(SplitId(id));
             names.UnionWith(Words(name));
 
+            bool anyCounted = false;
             foreach (string word in names)
             {
-                if (word.Length < 3 || NeverAMention(word)) continue;
+                if (NeverAMention(word)) continue;
+                anyCounted = true;
 
                 foreach (string said in stimulusWords)
                 {
-                    if (said.StartsWith(word, StringComparison.Ordinal)) return true;
+                    if (said == word) return true;
+                    if (word.Length >= 3 && said.StartsWith(word, StringComparison.Ordinal)) return true;
                     if (said.Length >= 4 && word.StartsWith(said, StringComparison.Ordinal)) return true;
                 }
             }
 
-            return false;
+            if (anyCounted || names.Count == 0) return false;
+            foreach (string word in names)
+            {
+                if (!stimulusWords.Contains(word)) return false;
+            }
+
+            return true;
         }
 
-        private static bool NeverAMention(string word) =>
-            word == "the" || word == "and" || word == "for" || word == "with" || word == "from";
+        private static bool NeverAMention(string word)
+        {
+            switch (word)
+            {
+                case "the": case "a": case "an": case "of": case "to": case "and": case "for": case "with": case "from":
+                    return true;
+                default:
+                    return false;
+            }
+        }
 
         // The lowercase words of a text, letters and digits only. Empty for null.
         private static HashSet<string> Words(string text)
@@ -320,26 +366,28 @@ namespace Agenerela
         }
 
         // An id's words with single spaces between them, case kept: "north_tower" -> "north tower",
-        // "village-gate" -> "village gate", "NorthTower" -> "North Tower".
+        // "village-gate" -> "village gate", "NorthTower" -> "North Tower", and an acronym kept whole
+        // before the next word: "NPCGuard" -> "NPC Guard".
         private static string SplitId(string id)
         {
             var words = new StringBuilder(id.Length + 4);
-            char previous = ' ';
 
-            foreach (char c in id)
+            for (int i = 0; i < id.Length; i++)
             {
-                bool separator = c == '_' || c == '-' || char.IsWhiteSpace(c);
-                if (separator)
+                char c = id[i];
+                if (c == '_' || c == '-' || char.IsWhiteSpace(c))
                 {
                     if (words.Length > 0 && words[words.Length - 1] != ' ') words.Append(' ');
-                    previous = ' ';
                     continue;
                 }
 
-                if (char.IsUpper(c) && char.IsLower(previous)) words.Append(' ');
+                char previous = i > 0 ? id[i - 1] : ' ';
+                char next = i + 1 < id.Length ? id[i + 1] : ' ';
+                bool wordStarts = char.IsUpper(c)
+                                  && (char.IsLower(previous) || (char.IsUpper(previous) && char.IsLower(next)));
+                if (wordStarts && words.Length > 0 && words[words.Length - 1] != ' ') words.Append(' ');
 
                 words.Append(c);
-                previous = c;
             }
 
             return words.ToString().Trim();
