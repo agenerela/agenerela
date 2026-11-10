@@ -7,7 +7,9 @@ request.
 
 **Before any run:**
 - Read [`llm-wiki/measuring.md`](llm-wiki/measuring.md).
-- Take the shared Ollama lock: `.scratch/ollama-lock/README.md` on the lead's laptop.
+- Take the lock for the machine you run on, from the lead's laptop: `.scratch/ollama-5080-lock/`
+  for the 5080 box, `.scratch/ollama-lock/` for the laptop's own Ollama. Each folder's README has
+  the commands.
 - Make sure only the model under test is loaded, and the machine is on mains power.
 - Record the Ollama version and `size_vram` with the result.
 
@@ -15,6 +17,10 @@ request.
 - **Laptop:** the lead's RTX 4060 Laptop, 8 GB, plugged in.
 - **5080 box:** the RTX 5080 machine, 16 GB, that also runs the asset server. It covers the 12 and
   16 GB tiers in [`llm-wiki/model-candidates.md`](llm-wiki/model-candidates.md).
+
+Since 9 November the **5080 box is the default** for runs started from the laptop, through
+[`tools/ollama-server/`](../tools/ollama-server/AGENT_USAGE.md). The laptop's own Ollama is used when
+the 5080 is unreachable, or when the lead asks for it.
 
 **A run for another machine, or for later, is written as a request** in
 [`run-requests/`](run-requests/README.md): what to run, step by step, and a results file to fill

@@ -225,8 +225,10 @@ deleted models, and the app's updater could change the version under a run.
 - **The serving machine's GPU is the one measured.** Record its card, driver and Ollama version,
   and that it was the Docker server, not the asking machine's.
 - **Latency includes the network hop.** About a millisecond at home, more over the VPN. Say which.
-- **The laptop's lock (`.scratch/ollama-lock/`) covers the laptop's Ollama only.** The 5080 has
-  none, so check nothing else uses its GPU: `ollama_remote.py ps`, and both ComfyUI stacks idle.
+- **Take the 5080's lock, `.scratch/ollama-5080-lock/` on the lead's laptop**, not the laptop's
+  `.scratch/ollama-lock/`, which covers the laptop's own Ollama only. It covers sessions on the
+  laptop; one on the 5080 machine or elsewhere can't see it, so still check nothing else uses the
+  GPU: `ollama_remote.py ps`, and both ComfyUI stacks idle.
 - **Unload models on that server** (`ollama_remote.py unload --all`). The runner's residency
   checks read that server's `/api/ps` through the gateway, so they work unchanged.
 - **Warm a model after a pull or a restart.** The first load read the file from disk in 54 s,

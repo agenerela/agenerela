@@ -43,8 +43,9 @@ restated because a request is often read on its own:
 - **`127.0.0.1` or an IP address, never `localhost`.**
 - **No default changes in code** as part of a run. A result that argues for one is reported, and
   the lead decides in a separate pull request.
-- **The lock.** On the lead's laptop, take `.scratch/ollama-lock/` first, and on its own, before
-  touching Ollama. Another machine has no lock, so make sure nobody else is using its GPU.
+- **The lock.** On the lead's laptop, take the lock first, and on its own, before touching Ollama:
+  `.scratch/ollama-5080-lock/` for the 5080 through its gateway, `.scratch/ollama-lock/` for the
+  laptop's own. A session on any other machine sees neither, so make sure nobody else is using its GPU.
 
 ## Requests
 

@@ -38,9 +38,11 @@ never need to.
    runs the asset server and the lead's own ComfyUI, which nothing from here may touch.
 3. **Ask before pulling.** A model is gigabytes on the server's disk. Pull one only when the user
    asked for it or the run they asked for needs it, and say which.
-4. **One timed run at a time, on a quiet GPU** (hard rule 3). Before timing anything, run `ps`; if
-   a model you did not load is resident, someone else is using the card: ask the user. Unload what
-   you loaded when you are done.
+4. **One session at a time, on a quiet GPU** (hard rule 3). On the lead's laptop, take the lock in
+   `.scratch/ollama-5080-lock/` before any request, even `check`, and release it when done; its
+   README has the commands. It covers sessions on the laptop only, so also run `ps`: if a model you
+   did not load is resident, someone else is using the card: ask the user. Unload what you loaded
+   when you are done.
 5. **This server is its own machine for measuring.** It runs Ollama's Linux build in Docker, not the
    Ollama app, so never compare a result from it with one from another Ollama, even on the same
    card. Record "RTX 5080, Docker Ollama 0.40.14, over the network (home or VPN)" with every result.

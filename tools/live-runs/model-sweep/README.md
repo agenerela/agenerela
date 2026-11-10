@@ -103,7 +103,8 @@ python tools/live-runs/model-sweep/aggregate.py "$SWEEP_OUT" --compare <an earli
 
 - **The Test Framework ends a test at 180 s** unless it has a `[Timeout]`. `ModelSweepRun` has 4 hours.
   The curated set fits in 180 s; the interim set does not.
-- **The lock.** On the lead's laptop, take `.scratch/ollama-lock/` first, and on its own. Never
+- **The lock.** On the lead's laptop, take the lock first, and on its own: `.scratch/ollama-5080-lock/`
+  against the 5080, `.scratch/ollama-lock/` against the laptop's own Ollama. Never
   restart Ollama in the same step as checking the lock: on 9 November that cut off another
   session's run.
 - **Battery.** The script reads `Win32_Battery` on the machine running Unity. A server elsewhere
