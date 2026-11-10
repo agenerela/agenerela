@@ -86,9 +86,9 @@ namespace Agenerela.Tests
             await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", new DecideOptions { CounterExamples = false }));
             string leftOut = fake.LastRequest.FewShotBlock;
 
-            int moveTo = shown.IndexOf("Player: \"Proceed to the Tower.\" -> action: move_to, target: tower");
+            int moveTo = shown.IndexOf("Player: \"Proceed to the tower.\" -> action: move_to, target: tower");
             Assert.That(moveTo, Is.GreaterThan(0));
-            Assert.That(shown[moveTo + 1], Is.EqualTo("Player: \"The Tower looks lovely at dusk.\" " + AnsweredWithNone),
+            Assert.That(shown[moveTo + 1], Is.EqualTo("Player: \"The tower looks lovely at dusk.\" " + AnsweredWithNone),
                 "Right after the action's own example, its {0} filled the same way.");
             Assert.That(shown, Has.None.Contains("You walk too fast."),
                 "stop_following is not offered while the guard is not following, so neither is its counter-example.");
@@ -97,7 +97,7 @@ namespace Agenerela.Tests
             Assert.That(new DecideOptions().CounterExamples, Is.True, "On by default, which shows only what a developer wrote.");
         }
 
-        // ---- Statements (#190, G14) --------------------------------------------------------------
+        // ---- Statements and the example's target (#190, G14 and Living Vale #20) -----------------
 
         [Test]
         public async Task AnIdleStatementNeverComesFromFurtherDownThanItsStimulus()
@@ -142,17 +142,24 @@ namespace Agenerela.Tests
             var fake = new FakeProvider(GoToTheTower);
             var agent = Fixtures.VillageGuard(fake);
             Definition(agent, "move_to").ExampleStatement = "Heading for the {0}.";
+            Definition(agent, "attack_target").PreferredExampleTargets = new[] { "scarecrow" };   // not registered
 
             await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower."));
             string defaults = fake.LastRequest.FewShotBlock;
-            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", new DecideOptions { ExampleStatements = false }));
+            await Fixtures.NotCancelled(agent.DecideAsync("Go to the tower.", new DecideOptions { ExampleStatements = false, ExampleTargetFallback = true }));
             string switched = fake.LastRequest.FewShotBlock;
 
-            Assert.That(defaults, Does.Contain("\"Proceed to the Tower.\" -> action: move_to, target: tower, statement: \"Heading for the Tower.\""),
+            Assert.That(defaults, Does.Contain("\"Proceed to the tower.\" -> action: move_to, target: tower, statement: \"Heading for the tower.\""),
                 "A written statement is shown by default, its {0} filled like the stimulus's.");
+            Assert.That(defaults, Does.Not.Contain("action: attack_target"), "No fallback by default.");
             Assert.That(switched, Does.Not.Contain("statement:"), "ExampleStatements = false leaves them out.");
-            Assert.That(switched, Does.Contain("\"Proceed to the Tower.\" -> action: move_to, target: tower\n"),
-                "Only the statement goes; the example stays.");
+            Assert.That(switched, Does.Contain("\"Engage the training dummy.\" -> action: attack_target, target: training_dummy"),
+                "ExampleTargetFallback = true names a target the action takes, skipping the tower the stimulus " +
+                "mentions, by its id's words.");
+            Assert.That(switched, Does.Contain("\"Proceed to the tower.\" -> action: move_to, target: tower"),
+                "A registered preferred target is still used, mentioned or not.");
+            Assert.That(defaults, Does.Contain("\"Proceed to Atlantis.\" -> action: none"), "The refusal drops the article.");
+            Assert.That(new DecideOptions().ExampleTargetFallback, Is.False);
             Assert.That(new DecideOptions().ExampleStatements, Is.True, "On, which shows only what a developer wrote.");
         }
 

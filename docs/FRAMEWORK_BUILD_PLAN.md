@@ -748,8 +748,13 @@ than a second schema system — do not let provider-specific syntax leak into th
    also carry a `CounterExampleStimulus`, a line that touches its subject but asks for nothing,
    shown answered with `none` right after its own example (#190). Any example but the refusal
    can also show a statement, after its target (#190 G14: a guard answered with its idle
-   example's stimulus, the only line it was shown). None of these is measured, and none becomes
-   a default before Phase 4's A/B (#151).
+   example's stimulus, the only line it was shown). With `DecideOptions.ExampleTargetFallback`,
+   an example whose preferred targets are all missing names the first target its action takes
+   instead of being left out, skipping a target the stimulus mentions, and a target implementing
+   `INamedTarget` is called by its name (Living Vale #20). Any other is called by its id's words,
+   "training dummy", adopted on 9 November after an A/B found it within noise of "TrainingDummy".
+   The fallback measured worse on impossible requests and stays off; the rest are unmeasured, and
+   none becomes a default before Phase 4's A/B (#151).
    **Example utterances must never overlap the evaluation prompt set** (see Phase 4),
    counter-examples and statements included. Few-shot was the largest single lever measured:
    +35 points.

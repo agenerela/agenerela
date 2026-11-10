@@ -53,6 +53,24 @@ namespace Agenerela
         public bool ExampleStatements = true;
 
         /// <summary>
+        /// Whether an example whose action has no registered target among its
+        /// <see cref="ActionDefinition.PreferredExampleTargets"/> names the first offered target the
+        /// action takes, rather than being left out (#190, Living Vale #20). Off by default: it changes
+        /// the examples, and is owed an A/B run (#151).
+        /// </summary>
+        /// <remarks>
+        /// For a game whose targets change every turn, so no fixed list stays right. "Takes" is
+        /// <see cref="ActionDefinition.AcceptsCategory"/>: any target, unless the action names its
+        /// categories. A target the stimulus mentions is skipped, by any word of its id or name said
+        /// whole ("ox"), or starting a word of the stimulus from three letters ("inn" in innkeeper), or
+        /// started by one of four or more ("dock" for docks), so the example never shows the answer;
+        /// with every target the action takes
+        /// mentioned, the example is left out. A target that implements <see cref="INamedTarget"/> is
+        /// called by its name. A registered preferred target is used as before, mentioned or not.
+        /// </remarks>
+        public bool ExampleTargetFallback;
+
+        /// <summary>
         /// Whether this call's system prompt lists the actions offered with their descriptions, and
         /// the targets offered with their own lines (#190). Off by default: unmeasured, and owed an
         /// A/B run before it becomes the default (#151). <see cref="PromptOptions.ListActionsAndTargets"/>

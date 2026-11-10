@@ -1252,6 +1252,8 @@ namespace Agenerela
                 CounterExamples = call.CounterExamples,
                 IdleExampleStatement = call.IdleExampleStatement,
                 ExampleStatements = call.ExampleStatements,
+                ExampleTargetFallback = call.ExampleTargetFallback,
+                Stimulus = stimulus,
             };
 
             // Asked once, so the action enum and the examples come from one answer even when an

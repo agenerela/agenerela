@@ -141,5 +141,20 @@ namespace Agenerela
         /// Read by <c>FewShotBuilder.Build</c>.
         /// </summary>
         public bool ExampleStatements = true;
+
+        /// <summary>
+        /// Whether an example with no registered preferred target names the first offered target its
+        /// action takes, skipping any target <see cref="Stimulus"/> mentions (#190, Living Vale #20).
+        /// Off by default. <c>Agent</c> copies it from <see cref="DecideOptions.ExampleTargetFallback"/>.
+        /// Read by <c>FewShotBuilder.Build</c>.
+        /// </summary>
+        public bool ExampleTargetFallback;
+
+        /// <summary>
+        /// The request's stimulus, which <see cref="ExampleTargetFallback"/> reads so a fallback example
+        /// never names a target the stimulus mentions: that example would show the model the answer.
+        /// <c>Agent</c> sets it. Null mentions nothing.
+        /// </summary>
+        public string Stimulus;
     }
 }

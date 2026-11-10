@@ -2,10 +2,11 @@
 
 `PromptBuilder` assembles every request an agent sends: the system prompt, the few-shot
 examples, the observations, the history and the stimulus. The schema travels with it. This
-note is about one gap, the switches that close it, and one that shapes the few-shot examples.
-At their defaults, none of them adds anything to the prompt. The list and the code-built agent's
-idle example are off. A counter-example and an example's statement are shown as soon as a
-developer writes one, which is their opt-in, and each has a per-call switch that leaves it out. None becomes a default until an A/B run shows
+note is about one gap, the switches that close it, and two that shape the few-shot examples. At
+their defaults, none of them adds anything to the prompt. The list, the code-built agent's idle
+example and the example-target fallback are off. A counter-example, an example's statement and a
+target's `INamedTarget` name are shown as soon as a developer writes one, which is their opt-in,
+and each has a per-call switch that leaves it out. None becomes a default until an A/B run shows
 it helps (hard rule 2, #151).
 
 **The gap.** A model served through Ollama never reads the schema. Ollama uses it only to
@@ -211,12 +212,69 @@ Player: "Fine day for it." -> action: none, target: no_target, statement: "Aye, 
 The other way out of G14 is an idle stimulus nobody would say back. A statement is the one built
 here. Whether either helps, and whether a statement makes a model copy *it* instead, is the A/B.
 
+## The example's target
+
+An example that needs a target names the first registered one from its action's
+`PreferredExampleTargets`, and is left out when none of them is here. It calls the target by a
+name made from its id's words. A game whose targets change every turn (stock runs out, quests
+move on) has to rewrite that list before every decision; Living Vale's `RefreshExamples` does. A
+switch, off by default, and an interface change that (#190, Living Vale #20).
+
+```csharp
+await agent.DecideAsync(line, new DecideOptions { ExampleTargetFallback = true });
+```
+
+**The fallback.** With `ExampleTargetFallback` on, an example with no preferred target here names
+the first offered target its action takes instead: any target, unless the action declares
+`TargetCategories`, then the first in one of them. It skips a target the stimulus mentions, so the
+example never shows the model the answer to the request it travels with. A word of the target's
+id or name counts when the stimulus says it whole, at any length ("ox"); when it starts a word of
+the stimulus, from three letters ("inn" in "innkeeper", "tower" in "towers"); or when a word of the
+stimulus of four letters or more starts it ("dock" for `docks`). An id's words include an acronym's
+(`NPCGuard` is "npc" and "guard"). "The", "a", "an", "of", "to", "and", "for", "with" and "from"
+never count, unless a name holds nothing else, and then all of them must be said. With every
+target the action takes mentioned, the example is left out, as before. A counter-example with a `{0}` follows its example.
+A preferred target that is here is used as before, mentioned or not. It stays off: on the interim
+set, whose targets have no categories, it showed "Strike the Bridge." as a correct attack, and
+impossible requests fell about 30 points (findings, 9 November). Turn it on where targeted actions
+declare `TargetCategories`.
+
+**Names.** A target is called by its id's words, lowercase: `training_dummy` is "training dummy",
+`village-gate` "village gate" and `NPCGuard` "npc guard", with a capital where it starts a
+sentence ("North tower is quiet."). Until 9 November the words were run
+together ("Engage the TrainingDummy."); the A/B found the two within noise on `qwen3.5:4b` and
+`qwen3.5:2b`, and the spaced wording was adopted. The refusal of a target that is not here drops the article before `{0}`
+where the target ends its phrase (at the end, before punctuation, or before a word such as "for",
+"now" or "please"), so a move_to stimulus of "Go and stand by the {0}." gives "Go and stand by
+Atlantis." rather than "the Atlantis". Where the phrase runs on past `{0}`, the article stays and a
+common noun takes the place of the proper name, "an" as "a": "The sunken city is unstaffed.",
+"Open the sunken city gate.", "Bring a sunken city-shaped token."
+
+The refusal never names a place an offered target is called, by its id or
+by the name an example gives it: a target named "Atlantis" makes it "Avalon" ("sunken city",
+"lost city"), and with both taken there is no refusal.
+
+**A target's own name.** A target is called by its `INamedTarget.Name` when it
+implements one, as written:
+
+```csharp
+sealed class StockEntry : IDescribedTarget, INamedTarget
+{
+    public string Name => Item;                                  // "healing potion"
+    public string Description => $"{Quantity} {Item}, {Price} gold.";
+}
+```
+
+`INamedTarget` is separate from `IDescribedTarget`: the description is a sentence for the list
+("One loaf of bread, 3 gold."), and would not fit inside "How much for the {0}?". No target has a
+name until a game writes one, which is the opt-in.
+
 ## Measuring them
 
 Each switch is an option an `EvalArm` carries, so one run in one session compares an arm with it
 against an arm without it. `report.json` records each arm's `listActionsAndTargets`,
-`maxListedTargets`, `counterExamples`, `idleExampleStimulus`, `idleExampleStatement` and
-`exampleStatements`, and `pairTargetsWithActions`
+`maxListedTargets`, `counterExamples`, `idleExampleStimulus`, `idleExampleStatement`,
+`exampleStatements` and `exampleTargetFallback`, and `pairTargetsWithActions`
 for the paired schema ([targets.md](targets.md#the-paired-schema)), which changes the schema rather
 than the prompt. Knowledge is the identity's rather than a call's, so an arm carries it as
 `EvalArm.Knowledge`, lines added to the profile's for that arm's agents without changing the asset,

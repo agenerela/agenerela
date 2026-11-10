@@ -16,6 +16,16 @@ While the version stays `0.x`, the public API may change in any release.
   (findings, 9 November). Pull it with `ollama pull qwen3.5:4b`. An existing config asset keeps the
   model it was saved with; code that relied on the default now asks the 4B, so name `qwen3.5:2b`
   in `OllamaSettings.Model` to keep the old one.
+- **Every agent's few-shot block changes wording** (#190, Living Vale #20). An example calls its
+  target by its id's words, lowercase: "Engage the training dummy." rather than "Engage the
+  TrainingDummy.", "north tower" rather than "NorthTower", capitalised where it starts a sentence.
+  The refusal of a target that is not here
+  drops the article where the target ends its phrase, "Go and stand by Atlantis." rather than "the
+  Atlantis", and keeps it with a common noun where the phrase goes on ("The sunken city is
+  unstaffed."). It also no longer names a place an offered target is called, by id or by its
+  `INamedTarget` name, and is left out when both of its placeholders are. A/B on the interim set,
+  RTX 5080, glued against spaced: `qwen3.5:4b` 334 against 337 of 389, `qwen3.5:2b` 269 against 280,
+  both within noise (findings, 9 November). No switch: it is what `FewShotBuilder` does.
 
 ### Added
 
@@ -30,6 +40,17 @@ While the version stays `0.x`, the public API may change in any release.
   `PipelineErrorKind.ChainTooLong`, logged nowhere and raised on the feed. A call with no chain, the
   default, records none, and the chain never reaches the prompt: the receiving model reads exactly
   the stimulus and label passed.
+
+- **An example's target when none of its preferred ones is here** (#190, Living Vale #20):
+  `DecideOptions.ExampleTargetFallback` (and `PromptOptions.ExampleTargetFallback`), off. On, an
+  example, or a counter-example with `{0}`, whose action has no registered `PreferredExampleTargets`
+  names the first offered target the action takes (`ActionDefinition.AcceptsCategory`) instead of
+  being left out, skipping any target the stimulus mentions, so the example never shows the answer.
+  `PromptOptions.Stimulus`, which `Agent` sets, is what it reads. `EvalArmConditions` records
+  `exampleTargetFallback`. It beat leaving the examples out by 15 to 19 points on the interim set,
+  but with no target categories it cost impossible requests about 30, so it stays off (findings,
+  9 November). **`INamedTarget`**: a target object implements its `Name` ("healing potion") to be
+  called by it wherever an example writes `{0}`; no target has one until a game writes one.
 - **Standing knowledge and statement rules on an identity** (#190, Living Vale #14):
   `AgentIdentity.Knowledge`, a list of lines, and `AgentIdentity.StatementRules`, one string, both
   serialized, so an `AgentProfile` carries them and a code-built agent gets them through the
