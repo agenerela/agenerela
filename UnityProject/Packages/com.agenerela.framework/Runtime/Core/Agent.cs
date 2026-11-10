@@ -85,6 +85,15 @@ namespace Agenerela
             Identity = profile.Identity;
         }
 
+        // A profile's agent that reads another identity instead of the profile's, so EvalRunner can
+        // give one arm knowledge without changing the shared asset (#190, Living Vale #14).
+        // Everything else, the idle example included, is still read from the profile.
+        internal Agent(AgentProfile profile, AgentIdentity identity, ILLMProvider provider)
+            : this(profile, provider)
+        {
+            Identity = identity ?? throw new ArgumentNullException(nameof(identity));
+        }
+
         /// <summary>
         /// An agent built in code, with no asset (DR-011). <paramref name="actions"/> are the actions
         /// it can ever take, the code equivalent of a profile's list; <see cref="Bind"/> registers

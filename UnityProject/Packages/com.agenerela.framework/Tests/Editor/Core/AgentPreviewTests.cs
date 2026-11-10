@@ -64,6 +64,42 @@ namespace Agenerela.Tests
         }
 
         [Test]
+        public void ThePreviewShowsKnowledgeAndStatementRulesOutsideTheObservationCap()
+        {
+            // #190, Living Vale #14: what a code-built or profile agent always knows is part of the
+            // system prompt, so the cap on observations never drops it.
+            var agent = Fixtures.VillageGuard(new FakeProvider(GoToTheTower));
+            agent.Identity.Knowledge = new List<string> { "The well is dry.", "The bridge closes at dusk.", "Wolves come at night." };
+            agent.Identity.StatementRules = "One short sentence.";
+            agent.MaxObservations = 1;
+            agent.ObservationSources.Add(new FakeObservationSource("The gate is open.", "A cart waits outside."));
+
+            var preview = agent.Preview("Go to the tower.");
+
+            Assert.That(preview.Error, Is.Null);
+            Assert.That(preview.Request.SystemPrompt, Does.Contain(string.Join("\n",
+                "What you know:", "- The well is dry.", "- The bridge closes at dusk.", "- Wolves come at night.",
+                "Your statement: One short sentence.")));
+            Assert.That(preview.Request.Observations, Is.EqualTo("What you know right now:\n- The gate is open."));
+        }
+
+        [Test]
+        public void ACodeBuiltAgentSendsTheKnowledgeItsIdentityIsGiven()
+        {
+            var identity = Fixtures.VillageGuardIdentity();
+            identity.Knowledge = new List<string> { "The well is dry." };
+            var agent = new Agent(identity, new[] { new ActionDefinition { Id = "move_to", RequiresTarget = true } }, new FakeProvider(GoToTheTower));
+            agent.Bind("move_to", new FakeHandler());
+            agent.Targets.Register("tower", new object());
+
+            Assert.That(agent.Preview("Go to the tower.").Request.SystemPrompt, Does.Contain("What you know:\n- The well is dry."));
+
+            identity.StatementRules = "One short sentence.";
+            Assert.That(agent.Preview("Go to the tower.").Request.SystemPrompt, Does.Contain("Your statement: One short sentence."),
+                "Read on every call, so a change applies from the next one.");
+        }
+
+        [Test]
         public void APreviewLeavesMemoryAndTheProviderUntouched()
         {
             var fake = new FakeProvider(GoToTheTower);

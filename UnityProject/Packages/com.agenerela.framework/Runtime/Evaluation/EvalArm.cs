@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Agenerela.Providers;
 
 namespace Agenerela.Evaluation
@@ -41,6 +42,22 @@ namespace Agenerela.Evaluation
             Name = name.Trim();
             Config = config;
             Options = options == null ? new DecideOptions() : options.Copy();
+        }
+
+        private List<string> knowledge = new List<string>();
+
+        /// <summary>
+        /// Lines added to the profile's <see cref="AgentIdentity.Knowledge"/> for this arm's agents,
+        /// after the profile's own; empty unless set, which leaves the profile's identity as it is.
+        /// The profile asset itself is never changed. So an arm can test a few lines as knowledge
+        /// against an arm that sends the same lines as <see cref="DecideOptions.Observations"/>
+        /// (#190, Living Vale #14).
+        /// </summary>
+        /// <remarks>Copied when set: changing the list afterwards changes nothing.</remarks>
+        public IReadOnlyList<string> Knowledge
+        {
+            get => knowledge;
+            set => knowledge = value == null ? new List<string>() : new List<string>(value);
         }
 
         /// <summary>The arm's name in the report.</summary>

@@ -10,6 +10,16 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **Standing knowledge and statement rules on an identity** (#190, Living Vale #14):
+  `AgentIdentity.Knowledge`, a list of lines, and `AgentIdentity.StatementRules`, one string, both
+  serialized, so an `AgentProfile` carries them and a code-built agent gets them through the
+  identity it is given. `PromptBuilder` renders them in the system prompt after the goals, as
+  `What you know:` with one `- ` line each, then `Your statement: <rules>.`; blank lines are skipped
+  and every line break becomes a space, so neither can add a heading or a line of its own.
+  Knowledge is not an observation and never counts against `Agent.MaxObservations`. Both empty, the
+  default and what every existing asset loads as, sends exactly the prompt sent before them.
+  `EvalRunner` can measure them: `EvalArm.Knowledge` adds lines to the profile's knowledge for one
+  arm's agents without changing the asset, and each arm's conditions record it as `knowledge`.
 - **A key for an Ollama server that wants one**: `OllamaSettings.ApiKey`, empty by default, is
   sent as `Authorization: Bearer <key>` on every request, decisions and lifecycle calls alike, so
   a project can use an Ollama served from another machine behind a gateway, such as the RTX 5080's

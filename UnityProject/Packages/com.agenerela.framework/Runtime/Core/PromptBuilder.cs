@@ -61,6 +61,14 @@ namespace Agenerela
 
         private const string ObservationsHeader = "What you know right now:";
 
+        // The identity's standing knowledge and statement rules (#190, Living Vale #14), after the
+        // goals. "What you know:" sets the knowledge against the observations' "What you know right
+        // now:"; the rules line is framed like "Your goals:" and named for the statement field,
+        // never for speech (DR-008). New and unmeasured as wording, and here alone so an A/B can
+        // change them in one place.
+        private const string KnowledgeHeader = "What you know:";
+        private const string StatementRulesPrefix = "Your statement: ";
+
         // The action and target list's headings (#190). "Allowed" echoes the instruction line's
         // "from the allowed list"; the target list is the "listed targets" it names. New and
         // unmeasured, and here alone so the A/B can change them in one place.
@@ -260,11 +268,13 @@ namespace Agenerela
             return text.Length > 0 ? "- " + id + ": " + EndSentence(text) : "- " + id;
         }
 
-        // Who the agent is, its goals if it has any, then the fixed instruction line, then the
-        // action and target list and the target rule, each when there is one.
+        // Who the agent is, its goals, its knowledge and its statement rules, each when it has
+        // them, then the fixed instruction line, then the action and target list and the target
+        // rule, each when there is one. With no knowledge and no rules the prompt is exactly what
+        // it was before them (#190, Living Vale #14).
         private static string SystemPrompt(AgentIdentity identity, string choices, string targetRule)
         {
-            var lines = new List<string>(5);
+            var lines = new List<string>(7);
 
             string who = WhoLine(identity);
             if (who.Length > 0)
@@ -276,6 +286,18 @@ namespace Agenerela
             if (goals.Length > 0)
             {
                 lines.Add("Your goals: " + EndSentence(goals));
+            }
+
+            string knowledge = KnowledgeBlock(identity.Knowledge);
+            if (knowledge != null)
+            {
+                lines.Add(knowledge);
+            }
+
+            string rules = OneLine(identity.StatementRules);
+            if (rules.Length > 0)
+            {
+                lines.Add(StatementRulesPrefix + EndSentence(rules));
             }
 
             lines.Add(InstructionLine);
@@ -329,7 +351,34 @@ namespace Agenerela
             return lines.Count > 1 ? string.Join("\n", lines) : null;
         }
 
+        // The identity's knowledge, one "- " line each under its heading, or null when it has
+        // none. Like an observation, a line goes in as written, except that a blank one is skipped
+        // and its own line breaks become spaces, so one entry cannot pose as several or as a
+        // heading of the prompt.
+        private static string KnowledgeBlock(IReadOnlyList<string> knowledge)
+        {
+            if (knowledge == null)
+            {
+                return null;
+            }
+
+            var lines = new List<string> { KnowledgeHeader };
+
+            foreach (string line in knowledge)
+            {
+                string text = OneLine(line);
+                if (text.Length == 0) continue;
+
+                lines.Add("- " + text);
+            }
+
+            return lines.Count > 1 ? string.Join("\n", lines) : null;
+        }
+
         private static string Clean(string text) => text == null ? "" : text.Trim();
+
+        // Trimmed, and every run of whitespace, line breaks included, one space.
+        private static string OneLine(string text) => text == null ? "" : Regex.Replace(text, @"\s+", " ").Trim();
 
         // Ends a framed sentence with a full stop unless the developer's text already ends one,
         // so "a guard at the town gate." does not become "gate..".
