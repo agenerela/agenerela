@@ -83,28 +83,46 @@ the framework which action may take which target. None of that reaches a local m
 above names every target, and the schema, which carries the pairs, is never read. So the model can
 choose a pair the guards then refuse.
 
+**To keep a model off illegal pairs, pair the schema** (`PairTargetsWithActions = true`). The
+grammar then allows only legal pairs, and the prompt does not change. On the interim set, with
+actions restricted to some targets, it brought the illegal pairs the model chose from 6 to 0 on
+`qwen3.5:4b` and from 20 to 0 on `qwen3.5:2b`. It broke no answer and added no prompt tokens
+(findings, 10 November 2026, "Saying which targets each action may take"). It does not raise the
+score: 319 against 319, and 291 against 287.
+
+Telling the model the pairs as well is an opt-in, and helps only a larger model:
+
 ```csharp
-var result = await agent.DecideAsync(line, new DecideOptions { LegalTargets = LegalTargetListing.PerAction });
+var result = await agent.DecideAsync(line, new DecideOptions { LegalTargets = LegalTargetListing.PerTarget });
 ```
 
-`LegalTargets` lists the actions and targets whether `ListActionsAndTargets` is on or not, and says
-the pairs in one of two ways:
+`PerTarget` lists the actions and targets whether `ListActionsAndTargets` is on or not, and names,
+on each target's line, the actions that may take it:
 
 ```
-Allowed actions:                                          Allowed actions:
-- follow_player: Walk behind the player. Target: no_target.   - follow_player: Walk behind the player. Target: no_target.
-- move_to: Walk to a place. Targets: bridge, well, docks.     - move_to: Walk to a place.
-- attack_target: Attack something. Targets: wolf.             - attack_target: Attack something.
-- none: Take no action. Target: no_target.                    - none: Take no action. Target: no_target.
-Targets:                                                  Targets:
-- bridge                                                  - bridge (for move_to)
-- well                                                    - well (for move_to)
-- docks                                                   - docks (for move_to)
-- wolf                                                    - wolf (for attack_target)
+Allowed actions:
+- follow_player: Walk behind the player. Target: no_target.
+- move_to: Walk to a place.
+- attack_target: Attack something.
+- none: Take no action. Target: no_target.
+Targets:
+- bridge (for move_to)
+- well (for move_to)
+- docks (for move_to)
+- wolf (for attack_target)
 ```
 
-`PerAction` on the left, `PerTarget` on the right. An action that takes every listed target says
-`Targets: any listed target.`, and one that also takes none says `, or no_target`.
+An action that may take no listed target says so on its own line: `Target: no_target.`, or
+`Targets: none listed.` when `MaxListedTargets` cut its targets.
+
+**What it measured.** On the interim set with restricted pairs, `qwen3.5:4b` scored 333 against
+317, +4.1 points, beyond noise: impossible requests +10.9, events +9.2, calm scenes +15.
+`qwen3.5:2b` lost 3.9 points with restricted pairs and 4.4 without, both beyond noise. It dropped
+"stay here" commands to `none`, and walked to whatever place a calm scene named. On the curated 76
+neither model moved. It costs about 50 to 140 more prompt tokens than the plain list. **Do not use
+it with a 2B-class model.** Neither evaluation set restricts any pairs as it ships, and a number
+from a real game is still owed. The other rendering tried, each action's line ending with its
+targets, helped neither model, and was removed.
 
 - **The pairs** are the paired schema's, made by the same rule from the same availability answer:
   an action takes the targets in its categories, or every target when it names none, less any its
@@ -118,7 +136,7 @@ Targets:                                                  Targets:
 - **The schema stays flat** unless `PairTargetsWithActions` is on. The list tells the model the
   pairs; pairing makes the grammar keep to them; the guards refuse a pair that breaks them either
   way.
-- **Off**, the default, the request is byte for byte what it was before the option.
+- **Off**, the default, leaves the request byte for byte what it was before the option.
 
 ## The idle example on an agent built in code
 

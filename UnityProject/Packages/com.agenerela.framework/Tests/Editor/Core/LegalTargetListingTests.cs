@@ -67,26 +67,6 @@ namespace Agenerela.Tests
         // ---- On --------------------------------------------------------------------------------
 
         [Test]
-        public void PerActionNamesOnlyTheLegalPairs()
-        {
-            var request = Mill().Preview("What now?", new DecideOptions { LegalTargets = LegalTargetListing.PerAction }).Request;
-
-            Assert.That(ListLines(request), Is.EqualTo(new[]
-            {
-                "Allowed actions:",
-                "- move_to: Walk somewhere. Targets: any listed target.",
-                "- chop: Chop a tree. Targets: tree_a.",
-                "- wave: Wave at someone. Target: no_target.",
-                "- none: Take no action. Target: no_target.",
-                "Targets:",
-                "- tree_a",
-                "- tree_b",
-                "- well: The village well.",
-            }), "chop's check rejects tree_b; fetch takes buckets and there are none, so it is not offered; " +
-                "wave takes people, and there are none, but needs no target.");
-        }
-
-        [Test]
         public void PerTargetNamesOnlyTheLegalPairs()
         {
             var request = Mill().Preview("What now?", new DecideOptions { LegalTargets = LegalTargetListing.PerTarget }).Request;
@@ -106,23 +86,26 @@ namespace Agenerela.Tests
         }
 
         [Test]
-        public void AnActionThatTakesSomeTargetsAndNoTargetSaysBoth()
+        public void AnActionThatTakesSomeTargetsIsNamedOnThoseAlone()
         {
             var agent = Mill();
             agent.Actions.Register(
                 new ActionDefinition { Id = "sing", Description = "Sing.", RequiresTarget = false, TargetCategories = new[] { "place" } },
                 new FakeHandler());
 
-            var request = agent.Preview("What now?", new DecideOptions { LegalTargets = LegalTargetListing.PerAction }).Request;
+            var request = agent.Preview("What now?", new DecideOptions { LegalTargets = LegalTargetListing.PerTarget }).Request;
 
-            Assert.That(ListLines(request), Does.Contain("- sing: Sing. Targets: well, or no_target."));
+            var lines = ListLines(request);
+            Assert.That(lines, Does.Contain("- sing: Sing."), "It takes a listed target, so its own line carries no note.");
+            Assert.That(lines, Does.Contain("- well (for move_to, sing): The village well."));
+            Assert.That(lines, Does.Contain("- tree_a (for move_to, chop)"), "And not on a tree, which it may not take.");
         }
 
         [Test]
         public void AnActionWithNoLegalTargetIsNotOfferedAnywhere()
         {
             var flat = Mill().Preview("Fetch a bucket.", new DecideOptions { ListActionsAndTargets = true });
-            var legal = Mill().Preview("Fetch a bucket.", new DecideOptions { LegalTargets = LegalTargetListing.PerAction });
+            var legal = Mill().Preview("Fetch a bucket.", new DecideOptions { LegalTargets = LegalTargetListing.PerTarget });
 
             Assert.That(ActionEnum(flat.Request.Schema), Does.Contain("fetch"), "Off, the flat schema offers it, as before.");
             Assert.That(ActionEnum(legal.Request.Schema), Is.EqualTo(new[] { "move_to", "chop", "wave", "none" }),
@@ -135,7 +118,7 @@ namespace Agenerela.Tests
         [Test]
         public void ThePromptThePairedSchemaAndTheGuardsAgree()
         {
-            foreach (var layout in new[] { LegalTargetListing.PerAction, LegalTargetListing.PerTarget })
+            foreach (var layout in new[] { LegalTargetListing.PerTarget })
             {
                 var agent = Mill();
                 var request = agent.Preview("What now?", new DecideOptions { LegalTargets = layout }).Request;
@@ -169,10 +152,11 @@ namespace Agenerela.Tests
         public void PairedAndListedTheTwoReadOneAnswer()
         {
             // With pairing on too, the list is the schema's own pairs.
-            var request = Mill().Preview("What now?", new DecideOptions { LegalTargets = LegalTargetListing.PerAction, PairTargetsWithActions = true }).Request;
+            var request = Mill().Preview("What now?", new DecideOptions { LegalTargets = LegalTargetListing.PerTarget, PairTargetsWithActions = true }).Request;
 
             Assert.That(request.Schema.Pairs, Is.Not.Null);
-            Assert.That(ListLines(request), Does.Contain("- chop: Chop a tree. Targets: tree_a."));
+            Assert.That(ListLines(request), Does.Contain("- tree_a (for move_to, chop)"));
+            Assert.That(ListLines(request), Does.Contain("- tree_b (for move_to)"));
         }
 
         [Test]
@@ -250,7 +234,7 @@ namespace Agenerela.Tests
             }
 
             var result = await Fixtures.NotCancelled(agent.DecideAsync("What now?",
-                new DecideOptions { LegalTargets = LegalTargetListing.PerAction, MaxListedTargets = 1 }));
+                new DecideOptions { LegalTargets = LegalTargetListing.PerTarget, MaxListedTargets = 1 }));
 
             Assert.That(result.Telemetry.TargetsUnlisted, Is.EqualTo(new[] { "tree_c" }),
                 "tree_b and the well are not listed because chop may not take them, not because of the cap.");
@@ -300,7 +284,6 @@ namespace Agenerela.Tests
             int targetsAt = lines.IndexOf("Targets:");
             var actionLines = lines.Skip(1).Take(targetsAt - 1).ToList();
             var targetLines = lines.Skip(targetsAt + 1).ToList();
-            var listedTargets = targetLines.Select(l => l.Substring(2).Split(' ', ':')[0]).ToList();
             var said = new HashSet<string>();
 
             foreach (string line in actionLines)
@@ -309,19 +292,6 @@ namespace Agenerela.Tests
                 int at = line.IndexOf("Target", StringComparison.Ordinal);
                 string note = at < 0 ? "" : line.Substring(at);
                 if (note.StartsWith("Target: ")) said.Add(action + "/" + TargetRegistry.NoTarget);
-
-                if (layout == LegalTargetListing.PerAction && note.StartsWith("Targets: "))
-                {
-                    string body = note.Substring("Targets: ".Length).TrimEnd('.');
-                    if (body.EndsWith(", or no_target"))
-                    {
-                        said.Add(action + "/" + TargetRegistry.NoTarget);
-                        body = body.Substring(0, body.Length - ", or no_target".Length);
-                    }
-
-                    var ids = body == "any listed target" ? listedTargets : body.Split(new[] { ", " }, StringSplitOptions.None).ToList();
-                    foreach (string id in ids) said.Add(action + "/" + id);
-                }
             }
 
             if (layout == LegalTargetListing.PerTarget)

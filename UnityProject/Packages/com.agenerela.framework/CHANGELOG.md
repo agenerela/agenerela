@@ -30,15 +30,18 @@ While the version stays `0.x`, the public API may change in any release.
 ### Added
 
 - **`DecideOptions.LegalTargets`: the prompt says which targets each action may take** (#151). An
-  enum, `LegalTargetListing`: `Off`, the default, which leaves every request byte for byte as it
-  was; `PerAction`, each action's line ending with its targets (`Targets: wolf.`, `Targets: any listed
-  target.`, `Target: no_target.`); and `PerTarget`, each target's line naming the actions that may
-  take it (`- wolf (for attack_target)`). Either lists the actions and targets whether
-  `ListActionsAndTargets` is on or not. The pairs are the paired schema's, from the same rule and the
-  same availability answer, so the list, the paired schema, `TargetCategoryGuard` and
-  `TargetAvailabilityGuard` cannot disagree. On, an action that requires a target and may take none
-  is not offered, as with pairing, and a target no offered action may take is not listed. For a
-  provider that never reads the schema, such as Ollama. Off by default until its A/B is complete.
+  enum, `LegalTargetListing`, with two values. `Off`, the default, leaves every request byte for byte
+  as it was. `PerTarget` names, on each target's line, the actions that may take it
+  (`- wolf (for attack_target)`), and lists the actions and targets whether `ListActionsAndTargets`
+  is on or not. The pairs are the paired schema's, from the same rule and the same availability
+  answer, so the list, the paired schema, `TargetCategoryGuard` and `TargetAvailabilityGuard` cannot
+  disagree. When it is on, an action that requires a target and may take none is not offered, as with
+  pairing, and a target no offered action may take is not listed. It is for a provider that never
+  reads the schema, such as Ollama. It is an opt-in for larger models. With restricted pairs it scored
+  +4.1 points on `qwen3.5:4b` and −3.9 on `qwen3.5:2b`, both beyond noise, for about 50 to 140 more
+  prompt tokens, so do not use it with a 2B-class model. A second rendering, each action's line ending
+  with its targets, helped neither model and was removed. To keep any model off illegal pairs, use
+  `PairTargetsWithActions`: it brought them to 0 on both models with no extra tokens.
 - **`DecisionTelemetry.TargetsUnlisted`**, with `AgentPreview.TargetsUnlisted` and the decision
   log's `targetsUnlisted`: the target ids the schema offered but the prompt's action and target list
   left out for `MaxListedTargets`, a cut that was silent before (#151). Changes no request.

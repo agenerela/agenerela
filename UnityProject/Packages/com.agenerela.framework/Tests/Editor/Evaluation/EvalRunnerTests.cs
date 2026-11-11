@@ -563,16 +563,17 @@ namespace Agenerela.Tests.Evaluation
             var b = new FakeProvider(Reply("attack_target", "bridge"));
             var set = fixtures.Set(new[] { Bridge });
             var profile = Fixtures.VillageGuardProfile();
-            var options = new DecideOptions { LegalTargets = LegalTargetListing.PerAction };
+            var options = new DecideOptions { LegalTargets = LegalTargetListing.PerTarget };
             var armA = new EvalArm("plain", fixtures.Config(a, "FakeA"), options);
             var armB = new EvalArm("legal", fixtures.Config(b, "FakeB"), options) { Legality = PlacesAndCreatures() };
 
             var report = await Fixtures.NotCancelled(new EvalRunner(set, profile, armA, armB).RunAsync());
 
-            Assert.That(Request(a, "Meet me over at the bridge.").SystemPrompt, Does.Contain("- attack_target: Attack a named target. Targets: any listed target."));
+            Assert.That(Request(a, "Meet me over at the bridge.").SystemPrompt, Does.Match(@"\n- bridge \(for [^)]*attack_target"),
+                "Plain, the set's targets declare no categories, so an attack may take the bridge.");
             var legal = Request(b, "Meet me over at the bridge.");
-            Assert.That(legal.SystemPrompt, Does.Contain("- attack_target: Attack a named target. Targets: wolf."));
-            Assert.That(legal.SystemPrompt, Does.Contain("- move_to: Walk to a named place. Targets: bridge, docks."));
+            Assert.That(legal.SystemPrompt, Does.Contain("\n- wolf (for attack_target)"));
+            Assert.That(legal.SystemPrompt, Does.Contain("\n- bridge (for move_to)"));
             Assert.That(legal.SystemPrompt, Does.Not.Contain("- trader"), "Nothing may take the trader, so the list leaves it out.");
             Assert.That(legal.Observations, Does.Contain("- trader: A travelling trader."), "It is still told as a standing line, as the set's targets are.");
 
@@ -583,7 +584,7 @@ namespace Agenerela.Tests.Evaluation
             Assert.That(refused.Guard, Is.EqualTo("TargetCategoryGuard"), "And the category guard refused it.");
             Assert.That(report.Conditions.Arms[0].Legality, Is.Null);
             Assert.That(report.Conditions.Arms[1].Legality.Name, Is.EqualTo("places-and-creatures"));
-            Assert.That(report.Conditions.Arms[1].LegalTargets, Is.EqualTo("PerAction"));
+            Assert.That(report.Conditions.Arms[1].LegalTargets, Is.EqualTo("PerTarget"));
             Assert.That(profile.Actions.Select(x => x.Action.TargetCategories), Has.All.Null.Or.Empty, "The shared profile is never changed.");
         }
 

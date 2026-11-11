@@ -2890,3 +2890,148 @@ pipeline errors. A game costs the model 11 to 18 decisions.
 grounding guard's misfires are about several legal targets and not about this prompt. Also an
 arm with a guard threshold the call can set, which the framework does not offer (stage 2's gap
 N4). The tables, method and gaps are in `Demos/GreyBoxStrategy/README.md`.
+
+### Saying which targets each action may take: per target helps `qwen3.5:4b` by 4.1 points and costs `qwen3.5:2b` about 4, while the paired schema alone takes illegal pairs to 0 on both (10 November 2026)
+
+For #151. Ollama never shows the schema to the model (10 October), so a game's target categories,
+its paired schema (`PairTargetsWithActions`) and its per-target checks (`ITargetAvailability`) reach
+a local model nowhere. The model can pick a pair the guards then refuse. This run asks whether
+saying the legal pairs in the prompt helps. It is the new opt-in `DecideOptions.LegalTargets`,
+whose pairs come from the paired schema's own rule and availability answer.
+
+**Two renderings were tried**, against the plain `ListActionsAndTargets` list:
+
+- **PerAction** ended each action's line with its targets: `- attack_target: Attack something.
+  Targets: wolf.`
+- **PerTarget** names, on each target's line, the actions that may take it: `- wolf (for
+  attack_target)`.
+
+Both renderings print `Target: no_target.` on the line of an action that may take no listed target.
+
+**Neither set has restricted pairs as it ships.** Rendered with no model, 0 of the interim set's
+389 prompts give any action a strict subset of the targets. The curated 76 uses the same targets,
+so it has none either. On these sets the option can only show formatting and that it does no harm.
+So the runner got an eval-only legality, `EvalArm.Legality`, applied to the arm's own copies. The
+prompt set, its labels and the profile stay unchanged.
+
+- **Categories:** the set's 10 places are "place", the wolf is "creature", and the player is
+  "player". `move_to` takes places, `attack_target` creatures, and the two follow actions the player.
+- **Extra targets:** six people that no action may take (villagers, lookout, child, farmer, trader,
+  merchant), told as standing lines.
+- **Cap:** the list's cap is 20.
+
+The runner refuses a legality that would make any label's expected pair illegal, and with it all
+389 prompts have restricted pairs. **This legality arm is the only evidence for restricted pairs.**
+A number from a real game is still owed: GreyBoxStrategy with `PerTarget` in place of its game-side
+moves line.
+
+**Setup.**
+
+- **Sets:** the interim set (389, `Assets/Evaluation/Interim/`) and the curated set (76), both at
+  set commit a24dde9, with `Assets/Evaluation/VillageGuard.asset` unchanged.
+- **Machine:** the RTX 5080's Docker Ollama over the network. The 5080 lock was held for each run
+  and released between runs, and `ps` showed nothing resident before each run. The model was 100%
+  in VRAM (`qwen3.5:4b` 3.1 GB, `qwen3.5:2b` 2.4 GB).
+- **Runs:** interleaved, runner defaults (guards on, temperature 0), framework 0.4.0-preview.1 with
+  this change. A 24-prompt slice came first, then 18 runs. The 4B half ran before a pause for the
+  card, and the rest ran in one later session the same day.
+- **Control:** the plain-list control arm drifted by 1 to 2 answers between runs. Each comparison
+  below is against its own run's control.
+- **Floors:** 3.6 points at n = 389, 8.8 at 65, 11.2 at 40 (calm scenes), 8.1 at 76.
+
+**Interim set, survived (after guards), A against B.**
+
+| Arms | `qwen3.5:4b` | Δ | `qwen3.5:2b` | Δ |
+|---|---|---:|---|---:|
+| Set as it is: list vs PerAction | 323 vs 321 | −0.5 | 292 vs 268 | **−6.2** |
+| Set as it is: list vs PerTarget | 322 vs 334 | +3.1 | 291 vs 274 | **−4.4** |
+| Restricted pairs: list vs PerAction | 316 vs 313 | −0.8 | 290 vs 284 | −1.5 |
+| Restricted pairs: list vs PerTarget | 317 vs 333 | **+4.1** | 286 vs 271 | **−3.9** |
+| Restricted pairs: list vs paired schema (no prompt change) | 319 vs 319 | 0.0 | 287 vs 291 | +1.0 |
+
+Bold is beyond noise.
+
+- **The 4B with PerTarget and restricted pairs:** impossible requests +10.9, events +9.2 and calm
+  scenes +15, all beyond noise. It fixed 27 answers and broke 11.
+- **The 2B with PerTarget:**
+  - **Set as it is:** simple commands fell 20.0, 14 "stay here" lines going from `stop_following`
+    to `none`. That is the action the idle example also cost it (9 November).
+  - **Restricted pairs:** calm scenes fell 22.5, beyond noise, as it walked to whatever place the
+    scene named ("The locked cave is silent." → `move_to locked_cave`).
+- **PerAction** cost the 2B on simple commands and conversation, and helped neither model anywhere
+  beyond noise.
+- **The paired schema** fixed 4 answers on the 2B and broke none. On the 4B it fixed none and broke
+  none.
+
+**Illegal pairs the model chose under restricted pairs**, before any guard, list → B:
+
+| Arm B | `qwen3.5:4b` | `qwen3.5:2b` |
+|---|---|---|
+| PerAction | 6 → 0 | 20 → 2 |
+| PerTarget | 6 → 1 | 20 → 3 |
+| Paired schema | 6 → 0 | 20 → 0 |
+
+On the 2B, 15 of the list arm's 20 illegal pairs named a person. With restricted pairs,
+`TargetCategoryGuard` fired 10 times in the list arm and 0 to 2 times in the others.
+
+**Prompt length**, mean prompt tokens:
+
+| | List | PerAction | PerTarget | Paired schema |
+|---|---:|---:|---:|---:|
+| Set as it is | 459 | 489 | 597 | — |
+| Restricted pairs | 544 | 572 | 593 | 544 |
+
+**Curated 76, as it is.** Within noise everywhere.
+
+| Arm | `qwen3.5:4b` | `qwen3.5:2b` |
+|---|---:|---:|
+| List | 70 | 57 |
+| PerAction | 68 | 57 |
+| PerTarget | 70 | 57 |
+
+**What was decided.** The default stays `Off`.
+
+- **PerAction** was deleted. The enum stays, with `Off` and `PerTarget`, so another rendering can be
+  added.
+- **PerTarget** stays as a documented opt-in for larger models: do not use it with a 2B-class model.
+- **To keep any model off illegal pairs,** the docs point to `PairTargetsWithActions`. It took them
+  to 0 on both models, broke nothing and costs no tokens.
+
+Removing PerAction left PerTarget's code path unchanged, so its requests are the ones measured here.
+This also answers the live-runs row "`PairTargetsWithActions` on vs off": it changes no score
+(0.0 and +1.0) and removes the illegal pairs.
+
+Beside it, `DecisionTelemetry.TargetsUnlisted` now reports the targets the list's
+`MaxListedTargets` cut, which was silent before.
+
+**What would change this:**
+
+- A real game with restricted pairs, to see whether the 4B's gain holds outside the legality arm.
+- #147's curated set, should it come with categories.
+- A rendering the 2B reads without losing `stop_following`.
+
+### The plain action list over the defaults: +8.2 points on `qwen3.5:2b`, −1.5 on `qwen3.5:4b`, on the interim set (10 November 2026)
+
+**Not this task's question:** a side result of the runs above, recorded as input to the defaults
+pass. No default was changed for it.
+
+Each model's first run set the runner defaults, which send no action and target list
+(`ListActionsAndTargets` off), against the list on. The setup is the entry above's, on the interim
+set as it is (no legality).
+
+| Model | Defaults | List | Δ |
+|---|---:|---:|---:|
+| `qwen3.5:2b` | 260/389 | 292/389 | **+8.2** |
+| `qwen3.5:4b` | 329/389 | 323/389 | −1.5 |
+
+- **The 2B, beyond noise:** simple commands +10.8, impossible requests +9.4 and situations +16.9.
+  The list fixed 49 answers and broke 17. It also cut `TargetGroundingGuard`'s refusals from 35 to
+  14.
+- **The 4B, both beyond noise:** the list cost impossible requests 9.4 points and gained
+  situations 12.3, and the two nearly cancel.
+- **Curated 76:** within noise on both (2B 54 against 57, 4B 69 against 70), as on 9 November
+  (58 against 56).
+- **Cost:** the list adds about 90 prompt tokens (368 → 459).
+
+The 9 November situations entry measured the list at 323 against 330 on the 4B, consistent with
+this. That entry had no 2B arm.

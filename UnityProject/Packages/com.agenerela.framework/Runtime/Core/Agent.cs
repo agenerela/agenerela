@@ -693,7 +693,7 @@ namespace Agenerela
             if (!Enum.IsDefined(typeof(LegalTargetListing), options.LegalTargets))
             {
                 throw new ArgumentOutOfRangeException(nameof(options), options.LegalTargets,
-                    "DecideOptions.LegalTargets is not one of Off, PerAction or PerTarget.");
+                    "DecideOptions.LegalTargets is not one of Off or PerTarget.");
             }
 
             // A list of the context's own, apart from the options' copy a guard may read. Blank

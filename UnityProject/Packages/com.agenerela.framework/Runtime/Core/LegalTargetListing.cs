@@ -4,6 +4,7 @@ namespace Agenerela
     /// Whether, and how, the system prompt says which targets each offered action may take right now
     /// (#151). For a provider that never reads the schema, such as Ollama, where the target
     /// categories, the paired schema and the per-target checks otherwise reach the model nowhere.
+    /// An enum rather than a switch, so another rendering can be added beside the one measured.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -21,6 +22,14 @@ namespace Agenerela
     /// <see cref="DecideOptions.ListActionsAndTargets"/> does, whether that is on or not, with only
     /// the targets some offered action may take, at most <see cref="DecideOptions.MaxListedTargets"/>.
     /// </para>
+    /// <para>
+    /// Measured on 10 November 2026 (findings, "Saying which targets each action may take"):
+    /// <see cref="PerTarget"/> gained 4.1 points beyond noise on <c>qwen3.5:4b</c> where actions take
+    /// only some targets, and lost 3.9 to 4.4 beyond noise on <c>qwen3.5:2b</c>, for about 50 to 140
+    /// more prompt tokens. Do not use it with a 2B-class model. To keep any model off illegal pairs,
+    /// use <see cref="DecideOptions.PairTargetsWithActions"/>, which enforces the same pairs in the
+    /// schema at no prompt cost.
+    /// </para>
     /// </remarks>
     public enum LegalTargetListing
     {
@@ -28,18 +37,11 @@ namespace Agenerela
         Off = 0,
 
         /// <summary>
-        /// Each action's line ends with the targets it may take:
-        /// <c>- attack_target: Strike something. Targets: wolf.</c> An action that takes every listed
-        /// target says <c>Targets: any listed target.</c>, one that takes no target
-        /// <c>Target: no_target.</c>
+        /// Each target's line names the actions that may take it:
+        /// <c>- wolf (for attack_target): A wolf from the woods.</c> An action that may take no listed
+        /// target says so on its own line: <c>Target: no_target.</c>, or <c>Targets: none listed.</c>
+        /// when the cap left its targets out.
         /// </summary>
-        PerAction = 1,
-
-        /// <summary>
-        /// Each target's line ends with the actions that may take it:
-        /// <c>- wolf: A wolf from the woods. For: attack_target.</c> An action that takes no target
-        /// at all says <c>Target: no_target.</c> on its own line.
-        /// </summary>
-        PerTarget = 2,
+        PerTarget = 1,
     }
 }

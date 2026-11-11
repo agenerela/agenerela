@@ -79,8 +79,6 @@ namespace Agenerela
 
         // The legal pairs' wording (#151, LegalTargetListing). New, and here alone so an A/B can
         // change it in one place. "Listed" because the cap may leave targets out of the list.
-        private const string TargetsNotePrefix = "Targets: ";
-        private const string AnyListedTarget = "any listed target";
         private const string TargetNoneNote = "Target: " + TargetRegistry.NoTarget + ".";
         private const string TargetsUnlistedNote = "Targets: none listed.";
         private const string ForPrefix = "for ";
@@ -173,11 +171,10 @@ namespace Agenerela
                     "PromptOptions.CallObservationCount cannot be negative. 0 means none of the observations is the call's own.");
             }
 
-            if (options.LegalTargets != LegalTargetListing.Off && options.LegalTargets != LegalTargetListing.PerAction &&
-                options.LegalTargets != LegalTargetListing.PerTarget)
+            if (options.LegalTargets != LegalTargetListing.Off && options.LegalTargets != LegalTargetListing.PerTarget)
             {
                 throw new ArgumentOutOfRangeException(nameof(options), options.LegalTargets,
-                    "PromptOptions.LegalTargets is not one of Off, PerAction or PerTarget.");
+                    "PromptOptions.LegalTargets is not one of Off or PerTarget.");
             }
 
             string choices = null;
@@ -369,7 +366,6 @@ namespace Agenerela
                 }
             }
 
-            bool perAction = options.LegalTargets == LegalTargetListing.PerAction;
             var lines = new List<string> { ActionsHeader };
             foreach (string id in actionField.AllowedValues)
             {
@@ -378,18 +374,9 @@ namespace Agenerela
                 var real = listed.FindAll(set.Contains);
                 bool noTarget = set.Contains(TargetRegistry.NoTarget);
 
-                string note = null;
-                if (real.Count == 0)
-                {
-                    note = noTarget ? TargetNoneNote : TargetsUnlistedNote;
-                }
-                else if (perAction)
-                {
-                    string body = real.Count == listed.Count && listed.Count > 1 ? AnyListedTarget : string.Join(", ", real);
-                    note = TargetsNotePrefix + body + (noTarget ? ", or " + TargetRegistry.NoTarget : "") + ".";
-                }
-
-                lines.Add(note == null ? line : WithNote(line, note));
+                // An action that may take no listed target says so on its own line; the others are
+                // named on their targets' lines below.
+                lines.Add(real.Count > 0 ? line : WithNote(line, noTarget ? TargetNoneNote : TargetsUnlistedNote));
             }
 
             if (listed.Count > 0)
@@ -399,12 +386,6 @@ namespace Agenerela
                 {
                     ctx.Targets.TryGet(id, out object target);
                     string description = (target as IDescribedTarget)?.Description;
-                    if (perAction)
-                    {
-                        lines.Add(Entry(id, description));
-                        continue;
-                    }
-
                     var takers = new List<string>();
                     foreach (string action in actionField.AllowedValues)
                     {
@@ -418,8 +399,8 @@ namespace Agenerela
             return string.Join("\n", lines);
         }
 
-        // An action's line with its pairs note: "- id: Its description. Targets: wolf.", or with no
-        // description "- id: Targets: wolf.".
+        // An action's line with its pairs note: "- id: Its description. Target: no_target.", or with
+        // no description "- id: Target: no_target.".
         private static string WithNote(string entry, string note)
         {
             return entry.IndexOf(": ", StringComparison.Ordinal) >= 0 ? entry + " " + note : entry + ": " + note;
