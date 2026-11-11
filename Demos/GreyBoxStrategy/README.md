@@ -71,8 +71,8 @@ modifiers after a `+`: `+paired` (the paired schema), `+listed` (`PerTarget`) an
 
 Each game log shows the model's answer and its statement under each of its moves.
 
-**Tests:** 81 EditMode tests in `Assets/GreyBoxStrategy/Tests/Editor/`, about 5 seconds once the
-project has imported. Nineteen of them drive the model seat through `ScriptedProvider`.
+**Tests:** 82 EditMode tests in `Assets/GreyBoxStrategy/Tests/Editor/`, about 5 seconds once the
+project has imported. Twenty of them drive the model seat through `ScriptedProvider`.
 
 ## The first real run
 
