@@ -108,8 +108,9 @@ One agent's trouble is its own:
 
 - a **pipeline error** (an unreachable server, an unreadable reply) is that agent's `Result`, as it
   would be from `DecideAsync`; the others decide normally. Executing it is refused, not stale;
-- a **call that throws**, as one cancelled by `Agent.Reset` during the round does, leaves that
-  entry `Failed` with the exception in `Error`, and the round still returns;
+- a **call that throws** leaves that entry `Failed` with the exception in `Error`, and the round
+  still returns. So does an `Agent.Reset` of one agent before the round returns, whether or not it
+  had answered yet: its decision is dropped and never executed;
 - a **handler that throws** stops that `Execute` call and passes the exception on, as
   `Agent.Execute` does: its entry is `Threw`, those before it keep their outcomes, those after it
   are still waiting.

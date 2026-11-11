@@ -41,9 +41,10 @@ namespace Agenerela
     /// deciding cancels every request still out, discards from memory every answer already in, and
     /// ends <see cref="DecideAsync"/> with an <see cref="OperationCanceledException"/>, at once, even
     /// when a provider ignores the cancellation: its answer is discarded when it comes. One agent's
-    /// trouble is its own: a pipeline error is that entry's result, and a call that throws, as one
-    /// cancelled by <see cref="Agent.Reset"/> does, leaves that entry <see cref="RoundEntryStatus.Failed"/>
-    /// and the others decided.
+    /// trouble is its own: a pipeline error is that entry's result, and a call that throws leaves
+    /// that entry <see cref="RoundEntryStatus.Failed"/> and the others decided. So does an
+    /// <see cref="Agent.Reset"/> of one agent at any time before the round returns, before or after
+    /// that agent answered: its decision is dropped, never executed.
     /// </para>
     /// <para>
     /// <b>The log.</b> Each decision is an ordinary <see cref="Agent.DecideAsync"/> call, so
@@ -323,19 +324,24 @@ namespace Agenerela
 
         private async Awaitable<DecisionRound> Decide(CancellationToken ct)
         {
-            // One token for every request, cancelled with the caller's or when the round is dropped.
-            // Never disposed: a request that ignores cancellation may still hold it.
             if (entries.Count == 0)
             {
                 ct.ThrowIfCancellationRequested();
                 return this;
             }
 
+            // One token for every request, cancelled with the caller's or when the round is dropped,
+            // and disposed once every request has ended (Codex, round 1).
             var stop = CancellationTokenSource.CreateLinkedTokenSource(ct);
             var decisions = new Task<DecisionResult>[entries.Count];
+
+            // Each agent's reset token as the round asks it: an agent reset at any point before the
+            // round returns has its part dropped, answered or not (Codex, round 1).
+            var resets = new CancellationToken[entries.Count];
             for (int i = 0; i < entries.Count; i++)
             {
                 var entry = entries[i];
+                resets[i] = entry.Agent.ResetToken;
                 try
                 {
                     decisions[i] = AsTask(entry.Agent.DecideAsync(entry.Stimulus, entry.Options, stop.Token));
@@ -374,6 +380,9 @@ namespace Agenerela
                     _ = DiscardWhenDone(entries[i].Agent, decisions[i]);
                 }
 
+                // Only once the round is done with it, and every request has ended (Codex, round 2).
+                _ = DisposeWhenDone(stop, all);
+
                 throw new OperationCanceledException("The round was cancelled before every agent answered; nothing from it is remembered.", ct);
             }
 
@@ -381,7 +390,15 @@ namespace Agenerela
             {
                 var entry = entries[i];
                 var decision = decisions[i];
-                if (decision.Status == TaskStatus.RanToCompletion && decision.Result != null)
+                if (decision.Status == TaskStatus.RanToCompletion && decision.Result != null && resets[i].IsCancellationRequested)
+                {
+                    // Answered, then the agent was reset while the others were still deciding: the
+                    // reset dropped its held memory already; the round drops the decision too.
+                    entry.Agent.Discard(decision.Result);
+                    entry.Error = new OperationCanceledException($"{Who(entry)} was reset after it answered, before the round was decided.", resets[i]);
+                    entry.Status = RoundEntryStatus.Failed;
+                }
+                else if (decision.Status == TaskStatus.RanToCompletion && decision.Result != null)
                 {
                     entry.Result = decision.Result;
                     entry.Status = RoundEntryStatus.Decided;
@@ -395,6 +412,8 @@ namespace Agenerela
                 }
             }
 
+            // Every request has ended, so nothing holds the token any more.
+            stop.Dispose();
             return this;
         }
 
@@ -424,6 +443,18 @@ namespace Agenerela
             catch (Exception e)
             {
                 Debug.LogException(e);
+            }
+        }
+
+        private static async Task DisposeWhenDone(CancellationTokenSource source, Task every)
+        {
+            try
+            {
+                await every;
+            }
+            finally
+            {
+                source.Dispose();
             }
         }
 

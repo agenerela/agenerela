@@ -161,6 +161,32 @@ namespace Agenerela.Tests
             Assert.That(round.Execute(valen).Single().Outcome.Value.Status, Is.EqualTo(ExecutionStatus.Done));
         }
 
+        // Codex, round 1: a reset after the agent answered, while another still decided, left the
+        // old decision executable.
+        [Test]
+        public async Task AnAgentResetAfterItAnsweredButBeforeTheRoundReturnsFailsAlone()
+        {
+            var world = new World();
+            var fast = new ScriptedProvider().Otherwise(ScriptedReply.Decide("recruit"));
+            var slow = new ScriptedProvider { Hold = true }.Otherwise(ScriptedReply.Decide("recruit"));
+            var valen = Country("valen", fast, world);
+            var orsk = Country("orsk", slow, world);
+            var answered = Recorded();
+
+            var pending = AsTask(DecisionRound.DecideAsync(Calls(new[] { valen, orsk })));
+            await Until(() => slow.HeldCount == 1 && answered.Count == 1);
+            valen.Reset();
+            slow.Release();
+            var round = await Fixtures.NotCancelled(pending);
+
+            Assert.That(round[valen].Status, Is.EqualTo(RoundEntryStatus.Failed));
+            Assert.That(round[valen].Error, Is.InstanceOf<OperationCanceledException>());
+            Assert.That(round[orsk].Status, Is.EqualTo(RoundEntryStatus.Decided));
+            Assert.Throws<InvalidOperationException>(() => round.Execute(valen), "The reset agent's decision never runs.");
+            round.Execute(orsk);
+            Assert.That(world.Log, Is.EqualTo(new[] { "orsk:recruit" }));
+        }
+
         // ---- Cancellation and memory ---------------------------------------------------------
 
         [Test]
@@ -213,6 +239,25 @@ namespace Agenerela.Tests
             }
 
             Assert.That(Remembered(valen), Is.EqualTo(0), "Whatever came of the late answer, nothing remembers it.");
+            Assert.That(world.Log, Is.Empty);
+        }
+
+        // Codex, round 2: with every call already ended, the token source was disposed before the
+        // round cancelled it, so the round threw ObjectDisposedException instead.
+        [Test]
+        public async Task ARoundGivenAnAlreadyCancelledTokenEndsCancelled()
+        {
+            var (provider, world, agents) = Countries("valen", "orsk");
+            Script(provider, "valen", "recruit");
+            Script(provider, "orsk", "recruit");
+
+            using (var cts = new CancellationTokenSource())
+            {
+                cts.Cancel();
+                Assert.That(await Cancelled(AsTask(DecisionRound.DecideAsync(Calls(agents), ct: cts.Token))), Is.True);
+            }
+
+            Assert.That(Remembered(agents[0]) + Remembered(agents[1]), Is.EqualTo(0));
             Assert.That(world.Log, Is.Empty);
         }
 
