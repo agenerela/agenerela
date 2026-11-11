@@ -204,10 +204,12 @@ namespace Agenerela
         /// </summary>
         /// <remarks>
         /// Lower it for a call where several targets are often right at once, such as a strategy
-        /// game's provinces, rather than turning <see cref="CheckTarget"/> off: probability spread
-        /// over more listed targets than the provider reports alternatives for reads as off the list.
-        /// 0 never stops a decision but still records the reading. Unmeasured below 0.8 on the
-        /// evaluation set except where findings.md says so.
+        /// game's provinces, rather than turning <see cref="CheckTarget"/> off. Know the trade
+        /// (findings, 11 November 2026): at 0.6, GreyBoxStrategy's model attacked as often as with
+        /// the guard off, while on the interim evaluation set <c>qwen3.5:2b</c> carried out two more
+        /// of 64 impossible requests than at 0.8. So it suits a game with many legal targets a turn,
+        /// not one where refusing the impossible matters most. 0 never stops a decision but still
+        /// records the reading.
         /// </remarks>
         public float TargetGroundingThreshold = TargetGroundingGuard.DefaultThreshold;
 

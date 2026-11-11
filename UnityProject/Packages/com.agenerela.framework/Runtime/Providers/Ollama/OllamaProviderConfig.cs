@@ -51,7 +51,8 @@ namespace Agenerela.Providers
 
         [Range(1, OllamaSettings.MaxTokenAlternatives)]
         [Tooltip("How many alternatives each token's probabilities carry (top_logprobs), which the " +
-                 "grounding guard reads. 5 is what its 0.8 threshold was measured with.")]
+                 "grounding guard reads. 20, the most Ollama accepts, unless set; 5 is what every request " +
+                 "sent before 11 November 2026.")]
         public int TokenAlternatives = Defaults.TokenAlternatives;
 
         [Tooltip("For a server that wants a key: the name of the environment variable holding it, " +
@@ -75,7 +76,9 @@ namespace Agenerela.Providers
                 ContextSize = ContextSize,
                 Temperature = Temperature,
                 TimeoutSeconds = TimeoutSeconds,
-                TokenAlternatives = TokenAlternatives,
+                // Clamped, so an asset edited by hand or by code to a value Ollama refuses still
+                // builds a provider, rather than failing at the first decision (#244).
+                TokenAlternatives = Mathf.Clamp(TokenAlternatives, 1, OllamaSettings.MaxTokenAlternatives),
                 ApiKey = ReadKey(),
             };
         }

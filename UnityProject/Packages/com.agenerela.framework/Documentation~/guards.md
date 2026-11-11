@@ -36,14 +36,23 @@ Inside `Agent.DecideAsync`, after the reply has been parsed:
 
    **When several targets are right at once** (#244). The share counts every listed target, so a
    model torn between two good ones keeps its probability on the list. What it cannot count is
-   probability the provider did not report: Ollama reports five alternatives a token by default,
-   and the rest counts as off the list, so a model spread over many listed targets, such as a
-   strategy game's provinces, can read below 0.8 without wanting anything absent. Two settings
-   tune this instead of switching the guard off, both left at DR-016's values unless set:
-   `DecideOptions.TargetGroundingThreshold` (0.8, from 0 to 1, per call) and
-   `OllamaSettings.TokenAlternatives` (5, up to 20, per provider; the same field on an
-   `OllamaProviderConfig`). What each costs on impossible requests is in findings.md
-   (11 November 2026).
+   probability the provider did not report, which counts as off the list. Ollama reports
+   `OllamaSettings.TokenAlternatives` alternatives a token, 20 by default since 11 November 2026
+   (5 before): with five, a model spread over a strategy game's provinces read below 0.8 without
+   wanting anything absent, and twenty cut GreyBoxStrategy's containments of legal moves from 72
+   to 19 on `qwen3.5:4b` and from 94 to 58 on `qwen3.5:2b`, while changing no answer on the
+   evaluation sets.
+
+   What is left is real probability on strings that are no target, beside a legal spread: at
+   "declare war", 0.365 on `k(esh)`, 0.315 on `mer(row)`, 0.11 on `orsk`, and 0.07 on `kers`, which
+   continues no id. The guard counts that as designed and contains it at 0.8. A call can lower
+   `DecideOptions.TargetGroundingThreshold` (0.8 unless set, from 0 to 1) instead of switching the
+   guard off, but know the trade. At 0.6, GreyBoxStrategy's remaining legal containments fell to
+   2 to 5 in 30 games and the model attacked as often as with the guard off, while on the
+   389-prompt interim set `qwen3.5:2b` carried out 17 impossible requests instead of 15 (a guess
+   at a target that is not there) and `qwen3.5:4b` none more. So a lower threshold suits a game
+   with many legal targets a turn, not one where refusing the impossible matters most: an NPC
+   told to fetch what is not there should keep 0.8.
 3. **`TargetCategoryGuard`.** The target is a kind the action takes. An action that names
    `TargetCategories` is held to them: a target in another category, or in none, is rewritten to
    `none`, so `complete_quest` aimed at the village gate does nothing. An action that names none

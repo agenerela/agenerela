@@ -71,7 +71,7 @@ namespace Agenerela.Tests
     ""num_ctx"": 4096
   },
   ""logprobs"": true,
-  ""top_logprobs"": 5
+  ""top_logprobs"": 20
 }";
 
         [TearDown]
@@ -125,7 +125,7 @@ namespace Agenerela.Tests
             Assert.That(settings.ContextSize, Is.EqualTo(4096));
             Assert.That(settings.Temperature, Is.EqualTo(0f), "Appendix A was greedy.");
             Assert.That(settings.TimeoutSeconds, Is.EqualTo(30f));
-            Assert.That(settings.TokenAlternatives, Is.EqualTo(5), "What DR-016 calibrated the grounding guard's 0.8 on.");
+            Assert.That(settings.TokenAlternatives, Is.EqualTo(20), "The most Ollama accepts, measured free on 11 November 2026 (#244).");
             Assert.That(settings.ApiKey, Is.Empty, "A local Ollama wants no key.");
         }
 

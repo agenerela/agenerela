@@ -119,7 +119,7 @@ measurement in Appendix A depends on it:
 | `format` | `JsonSchemaSerializer`'s output (#9), embedded as a JSON object exactly as written |
 | `stream`, `think` | `false`, `false` |
 | `options` | `temperature` from the settings, `num_ctx` from the settings |
-| `logprobs`, `top_logprobs` | `true`, `OllamaSettings.TokenAlternatives` (5 unless set) |
+| `logprobs`, `top_logprobs` | `true`, `OllamaSettings.TokenAlternatives` (20 unless set) |
 
 `History` is sent in the encoding `DecisionRequest.History` documents (#90): entries alternate
 `user` and `assistant`, starting with `user`, each exchange being the stimulus as it was sent
@@ -156,10 +156,14 @@ are unchanged. Call `RequestAsync` from the main thread: nothing on the way back
 fails there. Ollama is the development backend and cannot ship in a game anyway; in the Editor
 it works whatever the build target.
 
-**Token probabilities.** Send `"logprobs": true` and `"top_logprobs"` on every request, 5
+**Token probabilities.** Send `"logprobs": true` and `"top_logprobs"` on every request, 20
 unless `OllamaSettings.TokenAlternatives` says otherwise (from 1 to 20; Ollama refuses more than
-20). Five was enough in the probe, with a handful of targets; with many right at once, the
-grounding guard reads what five leave uncovered as doubt ([guards.md](guards.md), #244). They come from before the mask
+20, and the provider refuses such a setting when it is built, while an `OllamaProviderConfig`
+clamps its field into range). Five was enough in the probe, with a handful of targets, and was the
+default until 11 November 2026; with many right at once, the grounding guard read what five left
+uncovered as doubt ([guards.md](guards.md), #244). Twenty changed no reply on the evaluation sets
+and no measurable latency, and makes the reply's probabilities about 17 KB instead of 5 KB; the
+decision log keeps only the reply's text, so its lines do not grow. They come from before the mask
 (checked on 0.34.2) and cost about 0.07 s a decision. Each entry of the response's `logprobs`
 maps onto one `TokenProbability`: `token` to `Text`, `logprob` to `LogProbability`,
 `top_logprobs` to `Alternatives`. A character split across two tokens is missing from both

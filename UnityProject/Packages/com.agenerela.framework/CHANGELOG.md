@@ -10,6 +10,16 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Changed
 
+- **Ollama reports 20 alternatives a token, not 5** (#244 item 1). `top_logprobs` is now 20 on
+  every request unless `OllamaSettings.TokenAlternatives` says otherwise, so the grounding guard
+  no longer reads probability spread over many legal targets as doubt just because five
+  alternatives could not hold it. Measured on 11 November 2026: no reply and no verdict changed on
+  the interim or curated evaluation set on `qwen3.5:4b` or `qwen3.5:2b`, no measurable latency,
+  and GreyBoxStrategy's containments of legal moves fell from 72 to 19 and from 94 to 58 in 30
+  games. Each reply's token probabilities grow from about 5 KB to 17 KB in memory; the decision
+  log keeps only the reply's text. An existing `OllamaProviderConfig` asset that never saved the
+  field gets 20 too. Set 5 for the requests sent before. The threshold stays 0.8.
+
 - **An agent with no examples sends no few-shot block** (#244 item 3). `FewShotBuilder.Build`
   returns an empty string when it has not one example to show, rather than the header
   `Examples of correct decisions:` with nothing under it, and the request then has no blank line
@@ -54,9 +64,9 @@ While the version stays `0.x`, the public API may change in any release.
   `TargetGroundingGuard` contains a decision, from 0 to 1, and `TargetGroundingGuard.DefaultThreshold`
   (0.8) is public; a value outside 0 to 1 throws at the call, as `Agent.DecideAsync`, `Preview` and
   `Conversation` check their other options. `OllamaSettings.TokenAlternatives`, and the same field
-  on `OllamaProviderConfig`, sets `top_logprobs`, from 1 to 20 (`DefaultTokenAlternatives` 5,
-  `MaxTokenAlternatives` 20). Both default to what DR-016 measured, so every request and verdict
-  is unchanged until a game sets them. An evaluation report records both for each arm
+  on `OllamaProviderConfig`, sets `top_logprobs`, from 1 to 20 (`DefaultTokenAlternatives`,
+  `MaxTokenAlternatives` 20); the config clamps its field into range, the provider refuses an
+  out-of-range setting when it is built. An evaluation report records both for each arm
   (`EvalArmConditions.TargetGroundingThreshold`, `TokenAlternatives`), and its arms table names
   them when an arm changes them. For a game where several targets are right at once, which the
   guard otherwise reads as doubt; `Documentation~/guards.md` says when.
