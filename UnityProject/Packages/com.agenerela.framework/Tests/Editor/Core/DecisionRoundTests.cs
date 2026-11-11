@@ -306,11 +306,7 @@ namespace Agenerela.Tests
             Script(provider, "orsk", "recruit");
             DecisionRound round = null;
             Exception inner = null;
-            agents[0].Bind("recruit", new DelegateActionHandler(_ => true, (_, __) =>
-            {
-                inner = Record(() => round.Execute(agents[1]));
-                world.Log.Add("valen:recruit");
-            }));
+            world.BeforeRecruit["valen"] = () => inner = Record(() => round.Execute(agents[1]));
 
             round = await Decide(agents);
             round.Execute(agents[0]);
@@ -329,7 +325,7 @@ namespace Agenerela.Tests
                 Script(provider, id, "recruit");
             }
 
-            agents[1].Bind("recruit", new DelegateActionHandler(_ => true, (_, __) => throw new InvalidCastException("orsk's bug")));
+            world.BeforeRecruit["orsk"] = () => throw new InvalidCastException("orsk's bug");
 
             var round = await Decide(agents);
             Assert.Throws<InvalidCastException>(() => round.Execute(agents));
@@ -379,12 +375,21 @@ namespace Agenerela.Tests
         }
 
         [Test]
+        public async Task AnEmptyRoundIsDecidedAtOnce()
+        {
+            var round = await Fixtures.NotCancelled(DecisionRound.DecideAsync(new RoundCall[0]));
+
+            Assert.That(round.Entries, Is.Empty);
+            Assert.That(round.Execute(new Agent[0]), Is.Empty);
+            Assert.That(round.End(), Is.EqualTo(0));
+        }
+
+        [Test]
         public void MistakesInTheCallsThrowBeforeAnyoneIsAsked()
         {
             var (provider, _, agents) = Countries("valen", "orsk");
 
             Assert.Throws<ArgumentNullException>(() => DecisionRound.DecideAsync(null));
-            Assert.Throws<ArgumentException>(() => DecisionRound.DecideAsync(new RoundCall[0]));
             Assert.Throws<ArgumentException>(() => DecisionRound.DecideAsync(new[] { new RoundCall(agents[0], Stimulus), new RoundCall(agents[0], Stimulus) }));
             Assert.Throws<ArgumentException>(() => DecisionRound.DecideAsync(new[] { new RoundCall(agents[0], Stimulus), default(RoundCall) }));
             Assert.Throws<ArgumentException>(() => DecisionRound.DecideAsync(new[]
@@ -428,6 +433,9 @@ namespace Agenerela.Tests
         {
             public readonly List<string> Log = new List<string>();
             public bool FenmarkTaken;
+
+            // Run by a country's recruit handler before it records the move, keyed by country id.
+            public readonly Dictionary<string, Action> BeforeRecruit = new Dictionary<string, Action>();
         }
 
         // Countries sharing one scripted provider, and so one queue, each remembering on execution.
@@ -452,7 +460,15 @@ namespace Agenerela.Tests
                 Id = id,
                 MemoryCommit = MemoryCommit.OnExecute,
             };
-            agent.Bind("recruit", new DelegateActionHandler(_ => true, (_, __) => world.Log.Add(id + ":recruit")));
+            agent.Bind("recruit", new DelegateActionHandler(_ => true, (_, __) =>
+            {
+                if (world.BeforeRecruit.TryGetValue(id, out var before))
+                {
+                    before();
+                }
+
+                world.Log.Add(id + ":recruit");
+            }));
             agent.Bind("attack", new DelegateActionHandler(_ => !world.FenmarkTaken, (_, d) =>
             {
                 world.FenmarkTaken = true;

@@ -561,6 +561,13 @@ re-check (legality, categories, per-target availability) is the confirm-time che
 nothing in `Agent`'s public API, `ActionResult` or `ExecutionStatus`. A held proposal is
 remembered once, at hold; `Agent.Reset` ends every pending one. `Documentation~/proposals.md`.
 
+For a game that asks several agents at once, an optional `DecisionRound` (#216, item 2; DR-021)
+decides them all on one snapshot through the normal queue, then executes in an order the caller
+gives after reading the results, in as many phases as it likes, each decision re-checked by
+`Agent.Execute` and a move an earlier one made illegal reported as stale. It needs `OnExecute`
+memory, drops the whole round on cancellation with nothing remembered, and groups a round's
+decisions in the log as one `DecisionChain`. `Documentation~/decision-rounds.md`.
+
 ### 2.2 Actions (`Runtime/Actions/`) — the heart of the framework
 
 **Settled rule: the action vocabulary is data, not an enum.** The prototype's fixed
@@ -2367,6 +2374,47 @@ one, right now". The tech lead accepted this shape from the design pass:
 making the default; a game needs a target in more than one category; a cloud provider needs a
 paired form other than a root `anyOf`; or masking an action per target is seen to hurt a model that
 relied on seeing it.
+
+### DR-021 — A decision round decides everyone first and takes the order afterwards
+
+**Status:** Decided, 10 November 2026 (#216, item 2), by the framework tech lead session, settling
+the issue's two "To settle" points against GreyBoxStrategy's stage 1 (#240). Additive: removing the
+helper changes nothing in `Agent`.
+
+**Context.** Every turn-based game writes "ask these agents on one snapshot, wait for all, then
+execute in an order, re-checking each" by hand: GreyBoxStrategy's `Game` does it in three calls
+(`BeginTurn`, `SubmitCouncil`, `Resolve`). #216 sketched a helper taking the order up front, with
+phases left to the caller as separate rounds. Stage 1 showed the order is not known up front:
+peace lands first, then home moves, wars and attacks, seats rotating, so it depends on what was
+chosen. And "phases as two rounds" would ask the model twice for one turn.
+
+**Options considered**
+
+| Question | Options | Verdict |
+|---|---|---|
+| When the order is given | A list up front, with the calls; a comparer over results; a list after the results, in a second call | **A list of agents, after the results**: it is the only one GreyBoxStrategy can use, and a list is easier to read in a test and a log than a comparer |
+| Phases | Two rounds (the issue's recommendation); a phase list on the round; `Execute` callable more than once on one decided round | **`Execute` more than once**, each call naming the agents it runs, nobody decided again. Phases stay the caller's idea, never the helper's |
+| How "not before everyone has decided" is enforced | A round object with `DecideAsync` and `Execute` that throws until decided; a static `DecideAsync` returning the decided round | **Static `DecideAsync` returning the round**: there is no object to execute before deciding is over |
+| Memory | Allow `OnDecide`; require `OnExecute` for an agent with memory, as `Conversation` does | **Require `OnExecute`**: under `OnDecide` a cancelled round would already have remembered the answers in |
+| A round id in the log | `Correlation`; a new log field and version; `DecideOptions.Chain` | **`Chain`**, `DecisionChain.Start(round.Id)` for a call with none: no new log version, `Correlation` stays the caller's (DR-018), and a relay from a round decision stays in its chain. The cost is that "chain" now also means "round" |
+
+**Decision.** `DecisionRound.DecideAsync(calls, id, ct)` takes a `RoundCall` (agent, stimulus,
+`DecideOptions`) per agent, each agent once, starts every call into the normal queue, and returns
+the decided round once all have answered. `Execute(order)` runs the named agents' decisions in that
+order through `Agent.Execute`, checks the whole order before running any of it, and may be called
+per phase; each `RoundEntry` carries its `DecisionResult`, `ActionResult` and `Stale`, a refusal of
+a decision `DecideAsync` accepted. `End()` discards whatever is left. Cancellation while deciding
+drops the round at once, even past a provider that ignores it, and discards every answer in. A
+pipeline error is one entry's result; a call that throws makes one entry `Failed`.
+
+**Consequences.** A game builds its order from `entry.ActionId`. A rule another agent's move can
+break must be in what `Execute` re-checks (availability, categories, the per-target check), or the
+round can only report it as the handler's failure. Decisions that depend on other decisions in the
+same turn, such as GreyBoxStrategy's envoys, are a second round decided before either executes, and
+the two are executed interleaved.
+
+**Revisit if:** a game needs one agent asked twice in a round, a broadcast with merged answers
+(#216, F8), or a round deadline the token cannot express.
 
 ### Decisions already recorded elsewhere in this plan
 

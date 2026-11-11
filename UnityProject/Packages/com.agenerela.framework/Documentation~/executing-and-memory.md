@@ -135,7 +135,10 @@ A game that asks an agent one thing at a time, such as a chat, can leave this bo
 optional `Conversation` ([conversations.md](conversations.md)): it refuses a stale reply at
 `Execute` and discards it from memory. A game where some decisions are offers the player
 confirms can hold them in an optional `Proposals` ([proposals.md](proposals.md)), which remembers
-a proposal once, when it is held, and carries it out through `Execute` on confirm.
+a proposal once, when it is held, and carries it out through `Execute` on confirm. A game that
+asks several agents at once and acts on their answers in an order of its own can use an optional
+`DecisionRound` ([decision-rounds.md](decision-rounds.md)): it remembers a decision only when it
+carries it out, and nothing from a round that is cancelled or a decision it never executes.
 
 `Commit` and `Discard` return whether the decision was waiting. Only the agent that made a
 decision can settle it; another agent's `Commit` or `Discard` throws, and its `Execute` may carry

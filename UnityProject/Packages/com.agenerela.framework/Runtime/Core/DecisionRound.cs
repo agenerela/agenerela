@@ -126,13 +126,13 @@ namespace Agenerela
         /// Decides every call through <see cref="Agent.DecideAsync"/>, all started at once into the
         /// normal queue, and returns the round once every one has answered, with nothing executed.
         /// </summary>
-        /// <param name="calls">One per agent, each agent at most once. The order is the order the calls are made, and so the queue's among equal priorities; it says nothing about the order of execution.</param>
+        /// <param name="calls">One per agent, each agent at most once; none makes an empty round, decided at once, as a turn with no envoy to ask has. The order is the order the calls are made, and so the queue's among equal priorities; it says nothing about the order of execution.</param>
         /// <param name="id">The round's id, such as <c>"turn-7-council"</c>; null or empty for a new one.</param>
         /// <param name="ct">Cancels the whole round while it decides; once the round is returned, it changes nothing.</param>
         /// <returns>The decided round: every entry <see cref="RoundEntryStatus.Decided"/>, or <see cref="RoundEntryStatus.Failed"/> for a call that threw.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="calls"/> is null.</exception>
         /// <exception cref="ArgumentException">
-        /// <paramref name="calls"/> is empty, holds a call with no agent, names one agent twice, or
+        /// <paramref name="calls"/> holds a call with no agent, names one agent twice, or
         /// has options <see cref="Agent.DecideAsync"/> would throw for (an empty
         /// <see cref="DecideOptions.StimulusLabel"/>, a negative <see cref="DecideOptions.MaxListedTargets"/>).
         /// Thrown at the call, before anyone is asked.
@@ -300,11 +300,6 @@ namespace Agenerela
                 list.Add(new RoundEntry(list.Count, agent, call.Stimulus, options));
             }
 
-            if (list.Count == 0)
-            {
-                throw new ArgumentException("A round needs at least one call.", nameof(calls));
-            }
-
             return new DecisionRound(id, list);
         }
 
@@ -330,6 +325,12 @@ namespace Agenerela
         {
             // One token for every request, cancelled with the caller's or when the round is dropped.
             // Never disposed: a request that ignores cancellation may still hold it.
+            if (entries.Count == 0)
+            {
+                ct.ThrowIfCancellationRequested();
+                return this;
+            }
+
             var stop = CancellationTokenSource.CreateLinkedTokenSource(ct);
             var decisions = new Task<DecisionResult>[entries.Count];
             for (int i = 0; i < entries.Count; i++)
