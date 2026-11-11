@@ -162,6 +162,12 @@ namespace Agenerela
         [JsonProperty("targetsDropped")] public List<string> TargetsDropped;
 
         /// <summary>
+        /// Target ids the prompt's list left out for its cap (<see cref="DecisionTelemetry.TargetsUnlisted"/>,
+        /// #151); left out when none were.
+        /// </summary>
+        [JsonProperty("targetsUnlisted")] public List<string> TargetsUnlisted;
+
+        /// <summary>
         /// Each action and target pair a per-target check rejected, with its reason
         /// (<see cref="DecisionTelemetry.TargetsUnavailable"/>, #190 LV #19); left out when none was.
         /// </summary>
@@ -259,6 +265,11 @@ namespace Agenerela
             if (telemetry.TargetsDropped != null && telemetry.TargetsDropped.Count > 0)
             {
                 line.TargetsDropped = new List<string>(telemetry.TargetsDropped);
+            }
+
+            if (telemetry.TargetsUnlisted != null && telemetry.TargetsUnlisted.Count > 0)
+            {
+                line.TargetsUnlisted = new List<string>(telemetry.TargetsUnlisted);
             }
 
             if (telemetry.TargetsUnavailable != null && telemetry.TargetsUnavailable.Count > 0)

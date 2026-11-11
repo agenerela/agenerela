@@ -185,6 +185,17 @@ namespace Agenerela.Editor.Evaluation
                 : "system-prompt list of actions and targets off";
             yield return arm.CounterExamples ? "counter-examples shown" : "no counter-examples";
             yield return arm.PairTargetsWithActions ? "schema pairs each action with its targets" : "schema does not pair actions with targets";
+            // Only when on (#151), so a report from before it reads as it always did.
+            if (!string.IsNullOrEmpty(arm.LegalTargets) && arm.LegalTargets != nameof(LegalTargetListing.Off))
+            {
+                yield return $"the list says which targets each action may take ({arm.LegalTargets})";
+            }
+
+            if (arm.Legality != null)
+            {
+                yield return $"the arm's own target legality '{arm.Legality.Name}' ({arm.Legality.ExtraTargets.Count} extra targets)";
+            }
+
             string placement = PlacementWords(arm.ObservationPlacement, arm.StandingLinesAsCallObservations);
             if (placement != null) yield return placement;
         }

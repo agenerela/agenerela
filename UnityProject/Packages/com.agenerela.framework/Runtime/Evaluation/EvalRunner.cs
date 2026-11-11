@@ -336,6 +336,8 @@ namespace Agenerela.Evaluation
                 .Concat(PromptSetChecks.CompareWithProfile(Set, Profile))
                 .Concat(IdleExampleProblems(ArmA, prompts))
                 .Concat(IdleExampleProblems(ArmB, prompts))
+                .Concat(LegalityProblems(ArmA, prompts))
+                .Concat(LegalityProblems(ArmB, prompts))
                 .ToList();
             if (problems.Count > 0)
             {
@@ -347,6 +349,59 @@ namespace Agenerela.Evaluation
             if (prompts.Count == 0)
             {
                 throw new InvalidOperationException("The set has no prompts.");
+            }
+        }
+
+        // An arm's own legality (#151) is honest only if every label stays a legal answer under it, and
+        // its extra targets are new ids no label names: otherwise the arm would score the model
+        // against an answer it was told it may not give.
+        private IEnumerable<string> LegalityProblems(EvalArm arm, List<(string Category, EvalPrompt Prompt)> prompts)
+        {
+            var legality = arm.Legality;
+            if (legality == null)
+            {
+                yield break;
+            }
+
+            var setIds = new HashSet<string>(Set.Targets.Select(t => t.Id), StringComparer.Ordinal);
+            var extraIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var extra in legality.ExtraTargets)
+            {
+                if (string.IsNullOrWhiteSpace(extra.Id) || setIds.Contains(extra.Id) || !extraIds.Add(extra.Id))
+                {
+                    yield return $"arm '{arm.Name}': extra target '{extra.Id}' is blank, the set's own, or listed twice.";
+                }
+            }
+
+            foreach (string id in legality.TargetCategories.Keys)
+            {
+                if (!setIds.Contains(id))
+                {
+                    yield return $"arm '{arm.Name}': its legality gives a category to '{id}', which is not one of the set's targets.";
+                }
+            }
+
+            foreach (var (_, prompt) in prompts)
+            {
+                if (prompt.ExpectedTarget == null || prompt.ExpectedAction == ActionRegistry.None)
+                {
+                    continue;
+                }
+
+                legality.ActionCategories.TryGetValue(prompt.ExpectedAction, out var categories);
+                var rule = new ActionDefinition { Id = prompt.ExpectedAction, TargetCategories = categories };
+                foreach (string id in prompt.ExpectedTarget.Ids)
+                {
+                    if (extraIds.Contains(id))
+                    {
+                        yield return $"{prompt.Id}: arm '{arm.Name}' registers its expected target '{id}' as an extra target.";
+                    }
+                    else if (categories != null && id != TargetRegistry.NoTarget &&
+                             !rule.AcceptsCategory(legality.TargetCategories.TryGetValue(id, out var category) ? category : null))
+                    {
+                        yield return $"{prompt.Id}: arm '{arm.Name}' makes its expected answer {prompt.ExpectedAction}/{id} illegal.";
+                    }
+                }
             }
         }
 
@@ -659,6 +714,11 @@ namespace Agenerela.Evaluation
             var observations = new List<string>(run.Arm.Options.Observations ?? new List<string>());
             observations.AddRange(stateLines);
             observations.AddRange(Set.Targets.Select(TargetLine));
+            foreach (var extra in run.Arm.Legality?.ExtraTargets ?? new List<EvalExtraTarget>())
+            {
+                observations.Add(TargetLine(new DeclaredTarget { Id = extra.Id, Description = extra.Description }));
+            }
+
             return observations;
         }
 
@@ -696,13 +756,31 @@ namespace Agenerela.Evaluation
 
                 // CompareWithProfile has made sure the set declares it.
                 var declared = Set.FindAction(action.Id);
-                agent.Bind(action.Id, new DelegateActionHandler(ctx => declared.IsAvailableIn(ToJson(ctx.State)), (ctx, d) => { }));
+                var handler = new DelegateActionHandler(ctx => declared.IsAvailableIn(ToJson(ctx.State)), (ctx, d) => { });
+                var legality = run.Arm.Legality;
+                if (legality != null && legality.ActionCategories.TryGetValue(action.Id, out var categories))
+                {
+                    // A copy with the arm's categories, so the shared profile asset never changes.
+                    agent.Actions.Register(WithCategories(action, categories), handler);
+                }
+                else
+                {
+                    agent.Bind(action.Id, handler);
+                }
             }
 
             var targets = new ExplicitTargetSource();
+            var targetCategories = run.Arm.Legality?.TargetCategories;
             foreach (var target in Set.Targets)
             {
-                targets.Add(target.Id, target);
+                string category = null;
+                targetCategories?.TryGetValue(target.Id, out category);
+                targets.Add(target.Id, target, category);
+            }
+
+            foreach (var extra in run.Arm.Legality?.ExtraTargets ?? new List<EvalExtraTarget>())
+            {
+                targets.Add(extra.Id, new DeclaredTarget { Id = extra.Id, Description = extra.Description }, extra.Category);
             }
 
             agent.TargetSources.Add(targets);
@@ -712,6 +790,24 @@ namespace Agenerela.Evaluation
             }
 
             return agent;
+        }
+
+        // The profile's definition with an arm's own target categories (#151): every field copied, so
+        // its examples and description read as the profile's do.
+        private static ActionDefinition WithCategories(ActionDefinition action, string[] categories)
+        {
+            return new ActionDefinition
+            {
+                Id = action.Id,
+                Description = action.Description,
+                RequiresTarget = action.RequiresTarget,
+                ExampleStimulus = action.ExampleStimulus,
+                PreferredExampleTargets = action.PreferredExampleTargets == null ? null : (string[])action.PreferredExampleTargets.Clone(),
+                ExampleStatement = action.ExampleStatement,
+                CounterExampleStimulus = action.CounterExampleStimulus,
+                CounterExampleStatement = action.CounterExampleStatement,
+                TargetCategories = categories == null ? null : (string[])categories.Clone(),
+            };
         }
 
         // The profile's identity, or for an arm with knowledge of its own a copy of it with that
@@ -880,6 +976,8 @@ namespace Agenerela.Evaluation
                     ExampleStatements = arm.Options.ExampleStatements,
                     ExampleTargetFallback = arm.Options.ExampleTargetFallback,
                     PairTargetsWithActions = arm.Options.PairTargetsWithActions,
+                    LegalTargets = arm.Options.LegalTargets.ToString(),
+                    Legality = arm.Legality?.Copy(),
                     ObservationPlacement = arm.Options.ObservationPlacement.ToString(),
                     StandingLinesAsCallObservations = arm.StandingLinesAsCallObservations,
                     Priority = arm.Options.Priority.ToString(),

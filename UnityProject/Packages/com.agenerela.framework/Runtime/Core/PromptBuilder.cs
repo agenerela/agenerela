@@ -77,6 +77,14 @@ namespace Agenerela
         private const string ActionsHeader = "Allowed actions:";
         private const string TargetsHeader = "Targets:";
 
+        // The legal pairs' wording (#151, LegalTargetListing). New, and here alone so an A/B can
+        // change it in one place. "Listed" because the cap may leave targets out of the list.
+        private const string TargetsNotePrefix = "Targets: ";
+        private const string AnyListedTarget = "any listed target";
+        private const string TargetNoneNote = "Target: " + TargetRegistry.NoTarget + ".";
+        private const string TargetsUnlistedNote = "Targets: none listed.";
+        private const string ForPrefix = "for ";
+
         // The user turn of a refusal line's request (#109): {0} is the stimulus, {1} the guard's
         // reason. New and unmeasured. It changes only what is said after a refusal, never which
         // action runs, and is here alone so Phase 4 can change it in one place.
@@ -118,6 +126,22 @@ namespace Agenerela
             IReadOnlyList<string> history = null,
             PromptOptions options = null)
         {
+            return Build(ctx, schema, fewShotBlock, history, options, null, null);
+        }
+
+        // For Agent, which has asked ActionAvailability once for this decision: the legal pairs
+        // (#151) come from that answer, so a per-target check is never asked twice, and the ids the
+        // listing left out for MaxListedTargets go into unlisted, when given. Without an answer, one
+        // is asked for here, and only when the pairs are listed.
+        internal static DecisionRequest Build(
+            AgentContext ctx,
+            DecisionSchema schema,
+            string fewShotBlock,
+            IReadOnlyList<string> history,
+            PromptOptions options,
+            AvailabilityAnswer answer,
+            List<string> unlisted)
+        {
             if (ctx == null)
             {
                 throw new ArgumentNullException(nameof(ctx));
@@ -149,7 +173,23 @@ namespace Agenerela
                     "PromptOptions.CallObservationCount cannot be negative. 0 means none of the observations is the call's own.");
             }
 
-            string choices = options.ListActionsAndTargets ? ChoicesBlock(ctx, schema, options.MaxListedTargets) : null;
+            if (options.LegalTargets != LegalTargetListing.Off && options.LegalTargets != LegalTargetListing.PerAction &&
+                options.LegalTargets != LegalTargetListing.PerTarget)
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), options.LegalTargets,
+                    "PromptOptions.LegalTargets is not one of Off, PerAction or PerTarget.");
+            }
+
+            string choices = null;
+            if (options.LegalTargets != LegalTargetListing.Off)
+            {
+                choices = LegalChoicesBlock(ctx, schema, options, answer ?? ActionAvailability.Evaluate(ctx), unlisted);
+            }
+            else if (options.ListActionsAndTargets)
+            {
+                choices = ChoicesBlock(ctx, schema, options.MaxListedTargets, unlisted);
+            }
+
             Place(ctx.Observations, options, out var block, out string facts);
 
             return new DecisionRequest
@@ -222,7 +262,7 @@ namespace Agenerela
         // each with its own line when it has one (#190). Built from the schema rather than from
         // the registries, so the list and the enum cannot disagree. Every action is listed; the
         // targets stop at maxTargets.
-        private static string ChoicesBlock(AgentContext ctx, DecisionSchema schema, int maxTargets)
+        private static string ChoicesBlock(AgentContext ctx, DecisionSchema schema, int maxTargets, List<string> unlisted)
         {
             var lines = new List<string>();
 
@@ -243,8 +283,13 @@ namespace Agenerela
                     var targets = new List<string>();
                     foreach (string id in field.AllowedValues)
                     {
-                        if (targets.Count == maxTargets) break;
                         if (id == TargetRegistry.NoTarget) continue;
+                        if (targets.Count == maxTargets)
+                        {
+                            // Still offered by the schema; only its line is left out (#151).
+                            unlisted?.Add(id);
+                            continue;
+                        }
 
                         ctx.Targets.TryGet(id, out object target);
                         targets.Add(Entry(id, (target as IDescribedTarget)?.Description));
@@ -259,6 +304,125 @@ namespace Agenerela
             }
 
             return lines.Count > 0 ? string.Join("\n", lines) : null;
+        }
+
+        // The action and target list with the legal pairs (#151): the schema's actions, each with
+        // its description, and the targets some offered action may take, at most MaxListedTargets of
+        // them in schema order, with the pairs said per action or per target. The pairs are the
+        // paired schema's (DecisionSchema.PairsOf), so the list, the schema and the guards agree. A
+        // target no offered action may take is not listed, since no answer naming it would stand;
+        // only one the cap leaves out goes into unlisted.
+        private static string LegalChoicesBlock(AgentContext ctx, DecisionSchema schema, PromptOptions options,
+                                                AvailabilityAnswer answer, List<string> unlisted)
+        {
+            SchemaField actionField = null, targetField = null;
+            foreach (var field in schema.Fields)
+            {
+                if (field.AllowedValues == null) continue;
+                if (field.Name == DecisionSchema.ActionFieldName) actionField = field;
+                else if (field.Name == DecisionSchema.TargetFieldName) targetField = field;
+            }
+
+            if (actionField == null)
+            {
+                return null;
+            }
+
+            // What each offered action may take, none's no_target included.
+            var takes = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+            foreach (var pair in DecisionSchema.PairsOf(ctx, schema, answer))
+            {
+                foreach (string action in pair.Actions)
+                {
+                    takes[action] = new HashSet<string>(pair.Targets, StringComparer.Ordinal);
+                }
+            }
+
+            var noTargetOnly = new HashSet<string>(StringComparer.Ordinal) { TargetRegistry.NoTarget };
+            HashSet<string> TakenBy(string action) => takes.TryGetValue(action, out var set) ? set : noTargetOnly;
+
+            var listed = new List<string>();
+            if (targetField != null)
+            {
+                foreach (string id in targetField.AllowedValues)
+                {
+                    if (id == TargetRegistry.NoTarget) continue;
+
+                    bool taken = false;
+                    foreach (string action in actionField.AllowedValues)
+                    {
+                        if (TakenBy(action).Contains(id))
+                        {
+                            taken = true;
+                            break;
+                        }
+                    }
+
+                    if (!taken) continue;
+                    if (listed.Count == options.MaxListedTargets)
+                    {
+                        unlisted?.Add(id);
+                        continue;
+                    }
+
+                    listed.Add(id);
+                }
+            }
+
+            bool perAction = options.LegalTargets == LegalTargetListing.PerAction;
+            var lines = new List<string> { ActionsHeader };
+            foreach (string id in actionField.AllowedValues)
+            {
+                string line = Entry(id, id == ActionRegistry.None ? DecisionSchema.NoneDescription : DescriptionOf(ctx.Actions, id));
+                var set = TakenBy(id);
+                var real = listed.FindAll(set.Contains);
+                bool noTarget = set.Contains(TargetRegistry.NoTarget);
+
+                string note = null;
+                if (real.Count == 0)
+                {
+                    note = noTarget ? TargetNoneNote : TargetsUnlistedNote;
+                }
+                else if (perAction)
+                {
+                    string body = real.Count == listed.Count && listed.Count > 1 ? AnyListedTarget : string.Join(", ", real);
+                    note = TargetsNotePrefix + body + (noTarget ? ", or " + TargetRegistry.NoTarget : "") + ".";
+                }
+
+                lines.Add(note == null ? line : WithNote(line, note));
+            }
+
+            if (listed.Count > 0)
+            {
+                lines.Add(TargetsHeader);
+                foreach (string id in listed)
+                {
+                    ctx.Targets.TryGet(id, out object target);
+                    string description = (target as IDescribedTarget)?.Description;
+                    if (perAction)
+                    {
+                        lines.Add(Entry(id, description));
+                        continue;
+                    }
+
+                    var takers = new List<string>();
+                    foreach (string action in actionField.AllowedValues)
+                    {
+                        if (TakenBy(action).Contains(id)) takers.Add(action);
+                    }
+
+                    lines.Add(Entry(id + " (" + ForPrefix + string.Join(", ", takers) + ")", description));
+                }
+            }
+
+            return string.Join("\n", lines);
+        }
+
+        // An action's line with its pairs note: "- id: Its description. Targets: wolf.", or with no
+        // description "- id: Targets: wolf.".
+        private static string WithNote(string entry, string note)
+        {
+            return entry.IndexOf(": ", StringComparison.Ordinal) >= 0 ? entry + " " + note : entry + ": " + note;
         }
 
         // The description of the action the schema offers as id. Matched on each definition's Id

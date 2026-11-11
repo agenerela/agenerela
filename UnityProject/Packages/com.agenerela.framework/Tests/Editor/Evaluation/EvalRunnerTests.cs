@@ -539,6 +539,84 @@ namespace Agenerela.Tests.Evaluation
                 Is.EqualTo(("Quiet as ever.", false, true)));
         }
 
+        // ---- An arm's own legality (#151) ---------------------------------------------------------
+
+        private static EvalLegality PlacesAndCreatures()
+        {
+            var legality = new EvalLegality { Name = "places-and-creatures" };
+            legality.TargetCategories["bridge"] = "place";
+            legality.TargetCategories["docks"] = "place";
+            legality.TargetCategories["wolf"] = "creature";
+            legality.ActionCategories["move_to"] = new[] { "place" };
+            legality.ActionCategories["attack_target"] = new[] { "creature" };
+            // Their target is the player, who is not a registered target.
+            legality.ActionCategories["follow_player"] = new[] { "player" };
+            legality.ActionCategories["stop_following"] = new[] { "player" };
+            legality.ExtraTargets.Add(new EvalExtraTarget { Id = "trader", Description = "A travelling trader", Category = "person" });
+            return legality;
+        }
+
+        [Test]
+        public async Task AnArmsLegalityReachesOnlyItsOwnAgentsAndLeavesTheSetAndProfileAlone()
+        {
+            var a = new FakeProvider(Reply("attack_target", "bridge"));
+            var b = new FakeProvider(Reply("attack_target", "bridge"));
+            var set = fixtures.Set(new[] { Bridge });
+            var profile = Fixtures.VillageGuardProfile();
+            var options = new DecideOptions { LegalTargets = LegalTargetListing.PerAction };
+            var armA = new EvalArm("plain", fixtures.Config(a, "FakeA"), options);
+            var armB = new EvalArm("legal", fixtures.Config(b, "FakeB"), options) { Legality = PlacesAndCreatures() };
+
+            var report = await Fixtures.NotCancelled(new EvalRunner(set, profile, armA, armB).RunAsync());
+
+            Assert.That(Request(a, "Meet me over at the bridge.").SystemPrompt, Does.Contain("- attack_target: Attack a named target. Targets: any listed target."));
+            var legal = Request(b, "Meet me over at the bridge.");
+            Assert.That(legal.SystemPrompt, Does.Contain("- attack_target: Attack a named target. Targets: wolf."));
+            Assert.That(legal.SystemPrompt, Does.Contain("- move_to: Walk to a named place. Targets: bridge, docks."));
+            Assert.That(legal.SystemPrompt, Does.Not.Contain("- trader"), "Nothing may take the trader, so the list leaves it out.");
+            Assert.That(legal.Observations, Does.Contain("- trader: A travelling trader."), "It is still told as a standing line, as the set's targets are.");
+
+            var answers = report.Answers.Where(x => x.PromptId == "target_001").ToList();
+            Assert.That(answers.Single(x => x.Arm == "plain").Outcome, Is.EqualTo(DecisionOutcome.WrongLegalAction));
+            var refused = answers.Single(x => x.Arm == "legal");
+            Assert.That((refused.ModelAction, refused.ModelTarget), Is.EqualTo(("attack_target", "bridge")), "What the model chose is kept.");
+            Assert.That(refused.Guard, Is.EqualTo("TargetCategoryGuard"), "And the category guard refused it.");
+            Assert.That(report.Conditions.Arms[0].Legality, Is.Null);
+            Assert.That(report.Conditions.Arms[1].Legality.Name, Is.EqualTo("places-and-creatures"));
+            Assert.That(report.Conditions.Arms[1].LegalTargets, Is.EqualTo("PerAction"));
+            Assert.That(profile.Actions.Select(x => x.Action.TargetCategories), Has.All.Null.Or.Empty, "The shared profile is never changed.");
+        }
+
+        [Test]
+        public async Task AnArmsLegalityThatMakesALabelIllegalIsRefused()
+        {
+            var legality = PlacesAndCreatures();
+            legality.TargetCategories["bridge"] = "creature";
+            var provider = new FakeProvider(Reply("move_to", "bridge"));
+            var set = fixtures.Set(new[] { Bridge });
+            var runner = new EvalRunner(set, Fixtures.VillageGuardProfile(),
+                new EvalArm("A", fixtures.Config(provider, "FakeA")), new EvalArm("B", fixtures.Config(provider, "FakeB")) { Legality = legality });
+
+            var e = await Refused(runner);
+
+            Assert.That(e.Message, Does.Contain("target_001").And.Contain("move_to/bridge").And.Contain("illegal"));
+            Assert.That(provider.Requests, Is.Empty);
+        }
+
+        [Test]
+        public async Task AnArmsExtraTargetMayNotBeTheSetsOwn()
+        {
+            var legality = PlacesAndCreatures();
+            legality.ExtraTargets.Add(new EvalExtraTarget { Id = "wolf", Description = "Another wolf", Category = "creature" });
+            var provider = new FakeProvider(Reply("move_to", "bridge"));
+            var runner = new EvalRunner(fixtures.Set(new[] { Bridge }), Fixtures.VillageGuardProfile(),
+                new EvalArm("A", fixtures.Config(provider, "FakeA")) { Legality = legality }, new EvalArm("B", fixtures.Config(provider, "FakeB")));
+
+            var e = await Refused(runner);
+
+            Assert.That(e.Message, Does.Contain("'wolf'").And.Contain("the set's own"));
+        }
+
         [Test]
         public void TwoArmsCannotShareAName()
         {

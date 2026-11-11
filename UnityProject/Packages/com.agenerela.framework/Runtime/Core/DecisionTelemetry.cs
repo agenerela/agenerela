@@ -17,6 +17,7 @@ namespace Agenerela{
         public GuardVerdictKind? Verdict; // The verdict of the guard that stopped the decision, or of Execute's re-check when it refused; null when every guard passed (#106)
         public string GuardReason; // That guard's reason, word for word; null when every guard passed (#106)
         public List<string> TargetsDropped = new List<string>(); // Target ids a source found but left out because of its cap (#32)
+        public List<string> TargetsUnlisted = new List<string>(); // Target ids the schema offered but the prompt's action and target list left out for DecideOptions.MaxListedTargets, in schema order; empty when nothing is listed or nothing was cut. The request is the same with or without this record (#151)
         public List<string> ObservationsDropped = new List<string>(); // Observation lines a source had but the request does not carry, in source order: for each source, its lines Agent.MaxObservations cut, then those its own cap left out, from IReportsDroppedObservations (#91)
         public List<UnavailableTarget> TargetsUnavailable = new List<UnavailableTarget>(); // Each action and target pair a per-target check (ITargetAvailability) rejected when the request was prepared, with its reason, in registry then target order; empty for an agent with no such check (#190 LV #19)
         public int HistoryTurnsSent; // Exchanges of memory sent in DecisionRequest.History, two entries each (#90)
@@ -55,6 +56,7 @@ namespace Agenerela{
             Verdict = null;
             GuardReason = null;
             TargetsDropped = new List<string>();
+            TargetsUnlisted = new List<string>();
             ObservationsDropped = new List<string>();
             TargetsUnavailable = new List<UnavailableTarget>();
             HistoryTurnsSent = 0;

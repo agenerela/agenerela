@@ -29,6 +29,24 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **`DecideOptions.LegalTargets`: the prompt says which targets each action may take** (#151). An
+  enum, `LegalTargetListing`: `Off`, the default, which leaves every request byte for byte as it
+  was; `PerAction`, each action's line ending with its targets (`Targets: wolf.`, `Targets: any listed
+  target.`, `Target: no_target.`); and `PerTarget`, each target's line naming the actions that may
+  take it (`- wolf (for attack_target)`). Either lists the actions and targets whether
+  `ListActionsAndTargets` is on or not. The pairs are the paired schema's, from the same rule and the
+  same availability answer, so the list, the paired schema, `TargetCategoryGuard` and
+  `TargetAvailabilityGuard` cannot disagree. On, an action that requires a target and may take none
+  is not offered, as with pairing, and a target no offered action may take is not listed. For a
+  provider that never reads the schema, such as Ollama. Off by default until its A/B is complete.
+- **`DecisionTelemetry.TargetsUnlisted`**, with `AgentPreview.TargetsUnlisted` and the decision
+  log's `targetsUnlisted`: the target ids the schema offered but the prompt's action and target list
+  left out for `MaxListedTargets`, a cut that was silent before (#151). Changes no request.
+- **`EvalArm.Legality`** (`EvalLegality`, `EvalExtraTarget`): an arm's own target categories and
+  extra targets, applied to copies so the prompt set and the profile never change, so a run can
+  score legal pairs on a set whose targets declare no categories (#151). The runner refuses an arm
+  that makes a label's expected pair illegal. `report.json` records each arm's `legalTargets` and
+  `legality`.
 - **`DecideOptions.ObservationPlacement`: where a call's own observations go** (#151). An enum,
   `ObservationPlacement`: `AfterSources`, the default and the request as before, with the call's
   own `Observations` last in the "What you know right now:" block after every
