@@ -14,6 +14,10 @@ namespace GreyBoxStrategy
         public int Seed;
         public int Turn;
         public string Country;
+        /// <summary>The seat's persona, or null for stage 2's identity.</summary>
+        public string Persona;
+        /// <summary>The <see cref="DecisionRound"/> it was decided in, by the round's id (its chain id); null when decided alone.</summary>
+        public string Round;
         public Moment Moment;
         /// <summary>What the model answered, before any guard.</summary>
         public string ModelAction;
@@ -37,6 +41,8 @@ namespace GreyBoxStrategy
         /// <summary>What <c>Agent.Execute</c> did when the move landed, or null when it never got that far.</summary>
         public ExecutionStatus? Execution;
         public string ExecutionReason;
+        /// <summary>Whether its round refused it as stale when it landed (<see cref="RoundEntry.Stale"/>): legal when decided, broken by an earlier move. False outside a round.</summary>
+        public bool Stale;
 
         /// <summary>The model named a target for a move that takes none; the framework dropped it (<c>DecisionTelemetry.TargetIgnored</c>), or the seat did.</summary>
         public bool TargetIgnored;
@@ -163,10 +169,12 @@ namespace GreyBoxStrategy
 
         private readonly World world;
         // Keyed by the request object itself: the game hands the same one back when the move lands.
-        private readonly Dictionary<CountryRequest, (DecisionResult result, ModelDecision record)> pending =
-            new Dictionary<CountryRequest, (DecisionResult, ModelDecision)>();
+        // A decision from a round is executed through that round, so its entry says what came of it.
+        private readonly Dictionary<CountryRequest, (DecisionResult result, ModelDecision record, DecisionRound round)> pending =
+            new Dictionary<CountryRequest, (DecisionResult, ModelDecision, DecisionRound)>();
 
-        public CountryAgent(World world, string countryId, ILLMProvider provider, ModelSeatOptions options = null)
+        /// <param name="persona">A character for the ruler (<see cref="Personas"/>), in place of the country's one-line personality; null keeps stage 2's identity exactly.</param>
+        public CountryAgent(World world, string countryId, ILLMProvider provider, ModelSeatOptions options = null, Persona persona = null)
         {
             this.world = world ?? throw new ArgumentNullException(nameof(world));
             CountryId = countryId;
@@ -180,6 +188,8 @@ namespace GreyBoxStrategy
                 Personality = info.Personality,
                 Goals = $"Hold {world.Rules.ProvincesToWin} provinces to win; if nobody has by turn {world.Rules.MaxTurns}, hold the most.",
             };
+            Persona = persona;
+            persona?.ApplyTo(identity);
             Agent = new Agent(identity, Array.Empty<ActionDefinition>(), provider)
             {
                 Id = countryId,
@@ -195,6 +205,8 @@ namespace GreyBoxStrategy
         public string CountryId { get; }
         public Agent Agent { get; }
         public ModelSeatOptions Options { get; }
+        /// <summary>The ruler's persona, or null.</summary>
+        public Persona Persona { get; }
         /// <summary>Every decision this seat made, in order.</summary>
         public List<ModelDecision> Decisions { get; } = new List<ModelDecision>();
         /// <summary>The seed of the game it plays, for the records.</summary>
@@ -293,40 +305,63 @@ namespace GreyBoxStrategy
         public async Awaitable<CountryAnswer> DecideAsync(CountryRequest request, CancellationToken ct = default)
         {
             var result = await Agent.DecideAsync(StimulusFor(request), OptionsFor(request), ct);
-            var t = result.Telemetry;
+            return Take(request, result, null);
+        }
+
+        /// <summary>This request as one call of a <see cref="DecisionRound"/>: what <see cref="DecideAsync"/> would ask.</summary>
+        public RoundCall CallFor(CountryRequest request) => new RoundCall(Agent, StimulusFor(request), OptionsFor(request));
+
+        /// <summary>
+        /// The answer to <paramref name="request"/> from a decided round this seat was in. When the
+        /// game lands the move, <see cref="Admit"/> executes it through the round, so the round's entry
+        /// records the outcome and whether it went stale. A call that threw is a decision with no
+        /// result: the game holds, as for a pipeline error.
+        /// </summary>
+        public CountryAnswer Take(CountryRequest request, DecisionRound round)
+        {
+            if (round == null) throw new ArgumentNullException(nameof(round));
+            return Take(request, round[Agent].Result, round);
+        }
+
+        private CountryAnswer Take(CountryRequest request, DecisionResult result, DecisionRound round)
+        {
+            var t = result?.Telemetry;
             var record = new ModelDecision
             {
                 Seed = Seed,
                 Turn = request.Turn,
                 Country = CountryId,
+                Persona = Persona?.Id,
+                Round = t?.ChainId,
                 Moment = request.Moment,
-                ModelAction = result.ModelDecision?.ActionId,
-                ModelTarget = result.ModelDecision?.TargetId,
-                Action = result.Decision?.ActionId,
-                Target = result.Decision?.TargetId,
-                Statement = result.Decision?.Statement ?? result.ModelDecision?.Statement,
+                ModelAction = result?.ModelDecision?.ActionId,
+                ModelTarget = result?.ModelDecision?.TargetId,
+                Action = result?.Decision?.ActionId,
+                Target = result?.Decision?.TargetId,
+                Statement = result?.Decision?.Statement ?? result?.ModelDecision?.Statement,
                 LatencySeconds = t?.LatencySeconds ?? 0,
                 PromptTokens = t?.PromptTokens ?? 0,
                 Verdict = t?.Verdict,
                 GuardReason = t?.GuardReason,
                 Guard = t != null && t.GuardsFired.Count > 0 ? t.GuardsFired[0] : null,
-                Error = t?.ErrorKind,
+                // A round entry whose call threw has no result at all: counted as the provider failing.
+                Error = result == null ? PipelineErrorKind.ProviderFailed : t?.ErrorKind,
             };
 
-            var move = ToMove(request, result.Decision);
+            var move = ToMove(request, result?.Decision);
             // The framework drops a target on a move that takes none and records it (#244 item 2);
             // the seat's own drop in ToMove stays as a second check.
-            record.TargetIgnored = t?.TargetIgnored != null || (result.Decision != null && move.Target == null
+            record.TargetIgnored = t?.TargetIgnored != null || (result?.Decision != null && move.Target == null
                 && result.Decision.TargetId != null && result.Decision.TargetId != TargetRegistry.NoTarget);
             record.Move = move;
             record.Offered = request.Legal.Contains(move);
             // An envoy's ToMove turns any answer into accept or refuse, so check its action itself.
-            string asked = result.ModelDecision?.ActionId;
+            string asked = result?.ModelDecision?.ActionId;
             record.ModelAnswerLegal = asked != null && (request.Moment == Moment.Envoy
                 ? asked == Actions.AcceptPeace || asked == Actions.RefusePeace || asked == ActionRegistry.None
                 : request.Legal.Contains(ToMove(request, result.ModelDecision)));
             Decisions.Add(record);
-            if (result.Decision != null) pending[request] = (result, record);
+            if (result?.Decision != null) pending[request] = (result, record, round);
             return new CountryAnswer(request, move, Note(record));
         }
 
@@ -363,7 +398,15 @@ namespace GreyBoxStrategy
         {
             if (!pending.TryGetValue(request, out var entry)) return null; // no decision: the game holds
             pending.Remove(request);
-            Agent.Execute(entry.result, out var outcome);
+            ActionResult outcome;
+            if (entry.round != null)
+            {
+                // Through the round: the same Agent.Execute and re-check, and its entry keeps the outcome and Stale.
+                var executed = entry.round.Execute(Agent)[0];
+                outcome = executed.Outcome ?? ActionResult.Failed(executed.Error?.Message ?? "the round did not execute it");
+                entry.record.Stale = executed.Stale;
+            }
+            else Agent.Execute(entry.result, out outcome);
             entry.record.Execution = outcome.Status;
             entry.record.ExecutionReason = outcome.Reason;
             return outcome.Succeeded ? null : outcome.Reason ?? "the agent refused it";
@@ -375,7 +418,9 @@ namespace GreyBoxStrategy
         /// </summary>
         public void EndTurn()
         {
-            foreach (var e in pending.Values) Agent.Discard(e.result);
+            // A round's own End discards its waiting decisions; one decided alone is discarded here.
+            foreach (var e in pending.Values)
+                if (e.round == null) Agent.Discard(e.result);
             pending.Clear();
         }
     }

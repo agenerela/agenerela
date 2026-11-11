@@ -70,34 +70,73 @@ namespace GreyBoxStrategy
                 }
             }
 
+            await PlayToTheEndAsync(game, players, seats, ct);
+            var record = new GameRecord(game, kindByCountry);
+            return new ModelGameRecord(record, seats.Values.SelectMany(s => s.Decisions).ToList(), seats.Keys.ToList());
+        }
+
+        /// <summary>
+        /// Plays <paramref name="game"/> to its end. Each turn, every model seat's council move is
+        /// decided in one <see cref="DecisionRound"/> on the turn's snapshot, while the scripted and
+        /// random players answer at once; the offers of peace that council made are a second round
+        /// (or more: a country offered peace twice answers in two, since a round holds an agent once).
+        /// Nothing is executed until <see cref="Game.Resolve"/> lands the turn in the game's own order,
+        /// and each model move then runs through its round (<see cref="CountryAgent.Admit"/>), which
+        /// re-checks it and marks it stale if an earlier move broke it. Whatever never landed is
+        /// dropped when the rounds end.
+        /// </summary>
+        public static async Awaitable PlayToTheEndAsync(Game game, IReadOnlyDictionary<string, IPlayer> players,
+            IReadOnlyDictionary<string, CountryAgent> seats, CancellationToken ct = default)
+        {
             int guard = game.Rules.MaxTurns + 1;
             while (!game.IsOver)
             {
                 ct.ThrowIfCancellationRequested();
                 if (guard-- <= 0) throw new InvalidOperationException("The game did not end within its turn limit.");
-                var council = game.BeginTurn();
-                var answers = await AnswerAll(council, players, seats, ct);
-                var envoys = game.SubmitCouncil(answers);
-                var replies = await AnswerAll(envoys, players, seats, ct);
-                game.Resolve(replies);
-                foreach (var seat in seats.Values) seat.EndTurn();
+                await PlayTurnAsync(game, players, seats, ct);
             }
-
-            var record = new GameRecord(game, kindByCountry);
-            return new ModelGameRecord(record, seats.Values.SelectMany(s => s.Decisions).ToList(), seats.Keys.ToList());
         }
 
-        // Every model seat's decision is started before any is awaited, all on the same snapshot.
-        private static async Awaitable<List<CountryAnswer>> AnswerAll(IReadOnlyList<CountryRequest> requests,
-            Dictionary<string, IPlayer> players, Dictionary<string, CountryAgent> seats, CancellationToken ct)
+        /// <summary>One turn of <see cref="PlayToTheEndAsync"/>: the council round, the envoy rounds, the resolution.</summary>
+        public static async Awaitable<TurnReport> PlayTurnAsync(Game game, IReadOnlyDictionary<string, IPlayer> players,
+            IReadOnlyDictionary<string, CountryAgent> seats, CancellationToken ct = default)
         {
-            var started = new List<(CountryRequest request, Awaitable<CountryAnswer> answer)>();
-            foreach (var r in requests)
-                if (seats.TryGetValue(r.CountryId, out var seat)) started.Add((r, seat.DecideAsync(r, ct)));
+            var rounds = new List<DecisionRound>();
+            var council = game.BeginTurn();
+            var answers = await AnswerAll(council, players, seats, $"seed-{game.Seed}-turn-{game.World.Turn}-council", rounds, ct);
+            var envoys = game.SubmitCouncil(answers);
+            var replies = await AnswerAll(envoys, players, seats, $"seed-{game.Seed}-turn-{game.World.Turn}-envoys", rounds, ct);
+            var report = game.Resolve(replies);
+            foreach (var round in rounds) round.End();
+            foreach (var seat in seats.Values) seat.EndTurn();
+            return report;
+        }
+
+        // Model seats decide in rounds, all on the same snapshot; the others answer at once.
+        private static async Awaitable<List<CountryAnswer>> AnswerAll(IReadOnlyList<CountryRequest> requests,
+            IReadOnlyDictionary<string, IPlayer> players, IReadOnlyDictionary<string, CountryAgent> seats, string id,
+            List<DecisionRound> rounds, CancellationToken ct)
+        {
             var answers = new List<CountryAnswer>();
             foreach (var r in requests)
                 if (players.TryGetValue(r.CountryId, out var p)) answers.Add(new CountryAnswer(r, p.Decide(r)));
-            foreach (var s in started) answers.Add(await s.answer);
+
+            // A round holds each agent once, so the k-th request of each seat goes in round k.
+            var layers = requests.Where(r => seats.ContainsKey(r.CountryId))
+                .GroupBy(r => r.CountryId)
+                .SelectMany(g => g.Select((r, k) => (r, k)))
+                .GroupBy(x => x.k)
+                .OrderBy(g => g.Key)
+                .Select(g => g.Select(x => x.r).ToList())
+                .ToList();
+            for (int k = 0; k < layers.Count; k++)
+            {
+                var layer = layers[k];
+                var round = await DecisionRound.DecideAsync(layer.Select(r => seats[r.CountryId].CallFor(r)),
+                    layers.Count == 1 ? id : $"{id}-{k + 1}", ct);
+                rounds.Add(round);
+                foreach (var r in layer) answers.Add(seats[r.CountryId].Take(r, round));
+            }
             return answers;
         }
 

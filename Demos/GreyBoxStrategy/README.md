@@ -7,8 +7,9 @@ Issue #20, a sub-issue of #47.
 **Stages 1 and 2 of 3 are built.** Stage 1 is the game as a headless simulation, a scripted AI
 with two temperaments, a random baseline, and a runner that plays whole games and logs every
 decision. Stage 2 puts a framework `Agent` in one seat and measures a model there against the
-scripted AI; [its results are below](#stage-2-a-model-plays-a-country). Stage 3, the map and the
-screen, is next.
+scripted AI; [its results are below](#stage-2-a-model-plays-a-country). Any seat can now be a
+model, a script or random, with personas; [the table of models](#models-at-one-table) scores them.
+Stage 3, the map and the screen, is next.
 
 ## Run it
 
@@ -73,8 +74,9 @@ alternatives the provider reports a token), as in `control+paired+no-grounding`.
 
 Each game log shows the model's answer and its statement under each of its moves.
 
-**Tests:** 83 EditMode tests in `Assets/GreyBoxStrategy/Tests/Editor/`, about 5 seconds once the
-project has imported. Twenty of them drive the model seat through `ScriptedProvider`.
+**Tests:** 99 EditMode tests in `Assets/GreyBoxStrategy/Tests/Editor/`, about 5 seconds once the
+project has imported. Twenty of them drive the model seat through `ScriptedProvider`, and
+sixteen in `TableTests` the table, the personas and the scorecard.
 
 ## The first real run
 
@@ -447,6 +449,205 @@ threshold 0.6 (`ModelSeatOptions.Default`), which plays as the guard off does wh
 guard on. Every other arm keeps the framework's 0.8. The arm measured as `default` before this is
 `control+paired+alternatives-5`.
 
+## Models at one table
+
+Measured on 11 November 2026, on the RTX 5080 box (Docker Ollama 0.40.14, over the network), 20 games a
+table, seeds 1 to 20. Every table used the same seeds and the same seat rotation.
+
+**Any seat can be a model, a script or random**, chosen per seat (`TableDefinition`, `Tables.Named`).
+In this project, **all five model seats share one loaded model**. An agent is a prompt, not a model:
+five `Agent`s with five identities send their calls to one `OllamaProvider` and one model in the
+server's memory. The server reported **3.1 GB resident for qwen3.5:4b alone**, **2.4 GB for
+qwen3.5:2b alone**, 1.7 GB for gemma4:e2b-it-qat, and **5.5 GB for the mixed table**, with both
+qwens loaded. Only the mixed table had two models loaded. Every other table ran with exactly one,
+unloaded before and after (`resident.txt` in each run).
+
+### What the decision round bought, and what did not fit
+
+Each turn's council is **one `DecisionRound`**. Every country is asked at once. The game then
+executes the moves in its own order (peace, home moves, wars, attacks, rotating seats), each through
+`RoundEntry`. Envoy answers get rounds of their own, one for each offer a country has to answer. A
+round's id is `seed-<n>-turn-<t>-council` and becomes the `ChainId` in the telemetry.
+`ModelGameRunner.PlayTurnAsync` does all this, and stage 2's single-seat arms run through it
+unchanged.
+
+- **Bought:** the game no longer asks five calls in a fixed order, so nobody's answer depends on who
+  was asked first. A move that lands gets into memory through `MemoryCommit.OnExecute`. A move that
+  never lands is not remembered. A council costs one `await`, not five.
+- **Did not fit, 1:** `RoundEntry.Stale` never fires here. The game re-checks every move before it
+  calls the seat's gate. A move that an earlier one made impossible (`merrow took duskvale first`)
+  is refused by the game, and the round sees it only as Skipped. The round's own staleness check
+  would need the game to ask it first. That is a sequencing question for the helper, not a bug.
+- **Did not fit, 2:** a round holds an agent once. A country offered peace by two others in one turn
+  needs a second envoy round.
+- **Did not fit, 3:** two models are two providers, each with its own queue (`MaxInFlight` 1).
+  The server still answers one request at a time, so the mixed table's latency includes waiting for
+  the other model. Hence no timing from it.
+- **Cost of swapping models:** none measurable on this box. Both qwens stay resident at 100% on the
+  GPU, and alternating them cost nothing measurable in a probe before the tables ran.
+
+### Personas
+
+The five personas (`Personas.cs`) use only the framework's identity: `Personality`, three
+`Knowledge` lines about how the ruler plays, and `StatementRules`. Their names are warmonger,
+builder, opportunist, merchant and proud. A persona rotates across seats separately from the
+country. Over 20 games, each persona plays every country and, at the mixed table, meets each model.
+
+### The scorecard
+
+`Scorecard` computes five sections from the game logs and decisions alone, never from what a
+player says of itself. Every run writes `scorecard.md` (with a one-line reason for each number),
+`scorecard.csv`, and `scorecard-games.csv`, one game a row.
+
+- **Liveliness:** length, endings, wars, peace offered and made, battles, provinces changing
+  hands, land taken from a country, quiet turns, lead changes, eliminations, and how uneven the
+  final map is (Gini).
+- **Sense:** idle share, illegal answers, guard containments, refusals at resolution, attack win
+  rate, whether it aims at the weaker, answering an attack within two turns, and accepting peace
+  when losing against when winning.
+- **Character:** the move mix and aggression for each persona. **The character test** is η², the
+  share of the seat-to-seat variance in a move share that the persona explains, with a
+  permutation p (2,000 shuffles within each game). A table without personas is scored on placebo
+  slots, so its η² shows what noise looks like.
+- **Voice:** statements given, length, repeated word for word, names its target, contradicts its
+  move.
+- **Strength:** placement, wins, provinces at the end, knocked out.
+
+The all-script and all-random tables are the **reference points**: what a lively game and a
+random one look like. They are not opponents to beat.
+
+**How to read the sample.** 20 games is small. `compare.py` in the run kit pairs two tables by
+seed and gives a 95% interval on the difference. A difference is called **beyond** only when that
+interval excludes zero, that is, when it is larger than what the same table varies between its own
+games. Everything else is **within**, however large it looks.
+
+### The tables
+
+On the framework after #248, the `default` arm (grounding threshold 0.6, 20 alternatives a token):
+
+| Measure | all scripts | all random | plain 4b | persona 4b | mixed 3×4b + 2×2b | persona 2b |
+|---|---:|---:|---:|---:|---:|---:|
+| turns | 22.9 | 30.0 | 28.8 | 25.1 | 25.4 | 30.0 |
+| ended by domination | 95% | 0% | 20% | 60% | 75% | 0% |
+| wars declared a game | 7.0 | 12.8 | 6.6 | 5.8 | 5.1 | 5.0 |
+| peace offered / made a game | 11.8 / 1.1 | 16.0 / 8.9 | 3.2 / 1.5 | 8.1 / 1.8 | 7.1 / 2.1 | 6.3 / 2.1 |
+| battles a turn | 1.62 | 0.89 | 1.23 | 1.46 | 1.15 | 0.72 |
+| provinces changing hands a turn | 1.52 | 0.64 | 0.93 | 1.14 | 0.92 | 0.53 |
+| turns with no change | 12% | 54% | 39% | 26% | 35% | 64% |
+| lead changes a game | 2.6 | 1.5 | 1.5 | 1.5 | 1.4 | 0.9 |
+| eliminations a game | 2.5 | 0.3 | 1.3 | 1.5 | 1.4 | 0.2 |
+| final map Gini | 0.62 | 0.30 | 0.48 | 0.54 | 0.53 | 0.27 |
+| idle share | 0% | 13% | 3% | 10% | 10% (4b), 34% (2b) | 33% |
+| contained by a guard | – | – | 0% | 2% | 2%, 1% | 1% |
+| aims at the weaker | 95–100% | 63% | 61% | 63% | 73%, 47% | 73% |
+| answers an attack | 63–77% | 64% | 53% | 74% | 76%, 72% | 69% |
+| η² aggression (p) | 0.009 (0.39) | – | 0.030 (0.60), placebo | **0.841 (<0.001)** | 0.432 (<0.001) | 0.295 (<0.001) |
+| words a statement | – | – | 37.8 | 13.6 | 13.5 (4b), 14.1 (2b) | 15.5 |
+| repeated word for word | – | – | 3% | 5% | 6%, 48% | 54% |
+| names its target | – | – | 97% | 72% | 62%, 32% | 29% |
+| contradicts its move | – | – | 2% | 18% | 28%, 23% | 18% |
+
+Before #248, on the old default (threshold 0.8, five alternatives), a separate set. Persona 4b and
+plain 4b only. The guard contained 23% and 17% of decisions, almost all of them legal attacks. Both
+tables played a slow game: 95 to 100% ended at the turn limit, and half the turns were quiet.
+Within that set, personas still raised η² aggression from 0.036 (p 0.51) to 0.524 (p < 0.001), and
+peace offered from 2.1 to 7.75 a game (beyond).
+
+**Seconds a decision**, from single-model tables only, with the other models unloaded: qwen3.5:4b
+0.46 s median, 0.55 s 90th percentile, with personas; 0.65 / 0.85 s plain, whose statements are
+three times longer. qwen3.5:2b with personas: 0.35 / 0.45 s; gemma4:e2b-it-qat 0.30 / 0.35 s.
+A 20-game table took 16 to 30
+minutes. A council is five calls in one queue, so a turn of five model seats takes about five
+decisions' time.
+
+### What the numbers say
+
+- **Same game, same model, different persona, measurably different play: yes.** On qwen3.5:4b, the
+  persona explains 84% of the seat-to-seat variance in aggression (p < 0.001). The placebo slots of
+  the plain table explain 3% (p 0.60). The warmonger attacks with 60% of its moves and never
+  offers peace. The builder attacks with 5% and holds 37% of its turns. The merchant accepts every
+  peace offer, and the proud ruler almost none (0% when losing, 6% when winning).
+- **Personas also make the 4B's game livelier**, compared with the same model plain, paired by
+  seed, every one of these beyond: battles a turn +0.24, provinces changing hands a turn +0.21,
+  quiet turns 38% → 25%, domination 20% → 60%, peace offered 3.2 → 8.1 a game, games 3.7 turns
+  shorter. Wars declared, lead changes and peace made are within.
+- **#248 changed the game more than the personas did.** Persona 4b before and after: battles +0.51
+  a turn, land taken from countries 10.9 → 18.5 a game, domination 5% → 60%, all beyond.
+- **The 2B plays a quieter, weaker game, and its persona shows less.** Placement 3.45 against the
+  4B's 2.70 at the mixed table (beyond). Idle share 35% against 10%, and it aims at the weaker 44%
+  against 74% (both beyond). η² aggression is 0.30 at its own table.
+- **A third model, gemma4:e2b-it-qat (1.7 GB), with personas:** η² of aggression 0.713, nearly the
+  4B's. It plays a slower game, though: 15% of games end by domination, 46% of turns are quiet,
+  and its attack win rate is 61%. Its voice is the cleanest: 9.5 words a statement, no rule
+  copied, 4% repeated, 7% contradicting the move. Decisions take 0.30 s median.
+- **The voice is where the illusion breaks.** Statements are short with a persona (13 to 15 words)
+  and run to 38 words without one: a plain model writes analyst's notes. The 2B repeats itself word
+  for word in half its statements. Most of those repeats are the persona's own statement rule
+  copied out ("A trader's voice: profit, price or a deal. One sentence, under 25 words. If the move
+  has a target, name it."): 373 of the merchant's 582 statements at the 2B table, 76 of the
+  warmonger's. That is gap N9. The 4B does it twice in 2,318. About a fifth of statements name
+  someone other than the target.
+
+### Three games
+
+**Persona 4b, seed 4: kesh, the proud ruler, wins by domination on turn 17.** It opens on the
+neutrals with lines that already sound like grievances ("Harrow must bleed for daring to stand
+near our sacred soil"), then declares war on valen, the builder, with "Valen's peace is a lie; they
+will bleed for taking our land back". Valen had taken nothing. Valen holds turn after turn
+("We remain patient, fortifying ashby and saving gold"), offers peace on turn 7, and is refused
+("Valen took our land; we will not accept their peace until they bleed for it"). By turn 10, kesh
+attacks with 81 against 7. Meanwhile orsk, the opportunist, picks off ilvar, the warmonger, who is
+fighting it alone ("Ilvar's capital is his pride; I strike while he fights on two fronts"), and
+makes peace with merrow to do it ("A truce with the strong buys time to crush the weak"). It reads
+like people playing: a slighted ruler snowballing, a schemer sizing up the weak, a warmonger
+overreaching. The illusion breaks on a few lines. Kesh's first line ends with its own instruction
+("...one sentence under twenty-five words"). Kesh is insulted by a neutral garrison. The builder
+says "We fortify brindle" on a turn it held.
+
+**Mixed table, seed 3: orsk, the 2B warmonger, wins at the turn limit, the 2B's only win in 20.**
+The 4B's proud valen and opportunist kesh fight a long feud ("Kesh stole our land; we will not
+accept their hollow peace until they pay!"). Kesh keeps offering truces ("I offer Valen a truce to
+turn my focus to their weak provinces") until both offer peace on the same turn. Orsk recruits and
+fortifies, then takes valen's provinces with 91 against 14 and 111 against 57. It has one phrase
+("Attack stonereach to secure our border and crush the enemy's weak hold!") and reuses it for a
+fort as well. The other 2B seat, ilvar the merchant, says one thing in all 33 of its turns, whatever
+it does: its statement rule, word for word. The 4B seats read like rulers. The 2B seats
+read like a template. Ilvar declaring war "in a trader's voice" breaks the illusion for good.
+
+**Plain 4b, seed 4: orsk wins at the turn limit.** Without a persona, the same model plays a
+sound and rather even game. Every country expands onto the neutrals, then wars start on turns 4
+to 9. Merrow builds an army of 182 over four quiet turns before it declares war. Every statement is
+a staff officer's memo, 30 to 70 words ("I have recruited another 10 soldiers, bringing my army to
+172. My stability remains high at 5/5, and while I hold 9 provinces, I am still short of the 15
+needed to win..."). Orsk declares war on valen with a statement calling exactly that "a strategic
+error that will split our forces". The game is reasonable. What breaks the illusion is that nobody
+in it has a voice: five copies of one advisor.
+
+**Do they read like people playing?** With personas on the 4B, mostly yes. Feuds, refusals and
+opportunism follow from the persona and the facts, and most lines fit the move. The things that
+break it, most damaging first:
+
+1. The 2B copying its statement rule (gap N9).
+2. Grievances that never happened ("they will bleed for taking our land back").
+3. A statement naming one target while the move takes another, or talking of a fort on a turn
+   it held.
+4. Repeated phrases.
+
+### Running a table
+
+```bash
+Unity.exe -batchmode -nographics -projectPath Demos/GreyBoxStrategy -executeMethod GreyBoxStrategy.Editor.StrategyTableMenu.RunFromCommandLine -strategyTable personas -strategyModel qwen3.5:4b -strategyArm default -strategyGames 20 -strategySeed 1 -logFile run.log
+```
+
+The tables (`Tables.Named`) are `models` (five model seats, no personas), `personas` (five model
+seats with personas), `two-models` (`-strategyModel2`; seats A, B, A, B, A, with personas),
+`model-vs-scripted`, `scripted` and `random`. A comma-separated seat list is also a table, such as
+`model,expansionist,cautious,random,model`. `-strategyPersonas on|off` overrides the persona
+setting. `-strategyArm` takes stage 2's arms and modifiers. Each run writes a `ModelReport` for each
+model in `summary.md`, the scorecard files, `games.csv`, `model.csv`, `decisions.jsonl` and the game
+logs. From the editor: `StrategyTableMenu.Start(table, model, model2, arm, games, firstSeed,
+personas)`.
+
 ## What the framework lacks for this game
 
 Checked against #216 on 10 November 2026, from building stage 1, reading the code on `test`, and
@@ -525,6 +726,17 @@ Found by stage 2, from the runs above:
   action, would let a game drop its own line; its wording would need an A/B on the evaluation set
   as well as here. A smaller sign in the same runs: with the list and a flat schema, the 4B named a
   country it was at war with as `attack`'s target 15 times, which only the paired schema prevents.
+- **N9. A statement rule reads like a statement already given.** `PromptBuilder` writes
+  `StatementRules` as `Your statement: <the rules>`. With a rule that opens with a noun phrase
+  (`A trader's voice: profit, price or a deal. One sentence, under 25 words.`), qwen3.5:2b copies
+  the whole line into its statement: 373 of the merchant's 582 statements at the persona 2b table,
+  76 of the warmonger's, 2 of 2,318 on the 4B ([the table of models](#models-at-one-table)). A
+  heading that cannot be read as an answer (`How your statement should read:`) would likely stop
+  it. That changes the prompt, so it needs an A/B run. Rewording the personas would only hide it.
+- **N10. A decision round's staleness check comes after the game's own.** `RoundEntry.Stale`
+  never fires here, because the game refuses a move that an earlier one broke before it asks the
+  seat. Two smaller misfits: a round holds an agent once (a second peace offer needs a second
+  round), and two models at one table are two provider queues against one server.
 - **Item 1 (examples with their situation), still confirmed:** stage 2 registers no examples,
   because with the same question every turn no stimulus-only example could show when to choose an
   action.
@@ -539,11 +751,13 @@ Found by stage 2, from the runs above:
 ```text
 Assets/GreyBoxStrategy/
   Sim/                GreyBoxStrategy.Sim (noEngineReferences: true): no UnityEngine at all
-    Rules/            Dice, GameRules, MapDefinition, World, Move, Legality, Facts, Requests, Game
+    Rules/            Dice, GameRules, MapDefinition, World, Move, Legality, Facts, Requests, Game,
+                      TurnSnapshot
     Players/          IPlayer, ScriptedPlayer and Temperament, RandomPlayer
-    Runner/           GameRunner and Lineups, SeriesSummary, GameLog and StrategyRuns
+    Runner/           GameRunner and Lineups, SeriesSummary, GameLog and StrategyRuns, Scorecard
   Agents/             GreyBoxStrategy (refs Agenerela, GreyBoxStrategy.Sim): CountryAgent, the model seat;
-                      ModelGameRunner and ModelReport; ModelSeatOptions, the A/B arms
+                      ModelGameRunner (one DecisionRound a council) and ModelReport; ModelSeatOptions,
+                      the A/B arms; Personas; TableRunner, the table of models
   Editor/             GreyBoxStrategy.Editor: the menus and the CLI entry points
   Tests/Editor/       GreyBoxStrategy.Tests.Editor
 ```

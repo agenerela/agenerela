@@ -3226,3 +3226,80 @@ reading above, for a game that declares its legal sets.
 **What would change this.** An evaluation set with many prompts that accept several targets, where
 the threshold trade could be measured on right answers rather than in a game; a second game; and a
 provider that reports its alternatives differently (LLMUnity reports at most 10).
+
+### GreyBoxStrategy: five models at one table. A persona explains 84% of a 4B seat's aggression, and makes the game livelier; the 2B copies its statement rule (11 November 2026)
+
+**The question.** Asked by #20. Can the same game and the same model, with a different persona,
+play measurably differently? And what do five model seats at one table look like against the
+all-script and all-random tables?
+
+**What was run.** `TableRunner` in `Demos/GreyBoxStrategy/`. Every council is one
+`DecisionRound`. Five personas use only `AgentIdentity` (`Personality`, three `Knowledge` lines,
+`StatementRules`). Each table played 20 games, seeds 1 to 20, with the same seat and persona
+rotation. The machine was the RTX 5080 box (Docker Ollama 0.40.14, over the home network), at
+temperature 0. Each table ran with exactly one model resident, except the mixed table, which had
+both qwens. The other models were unloaded before each table started (`resident.txt` per run).
+
+There are two sets, never compared with each other:
+
+- **Before #248** (grounding threshold 0.8, five alternatives a token), 07:59 to 09:08:
+  persona 4b and plain 4b.
+- **After #248** (the demo's `default`: threshold 0.6, 20 alternatives), 09:09 to 10:52: persona
+  4b, plain 4b, mixed (three 4b seats and two 2b, with personas), persona 2b, and persona
+  gemma4:e2b-it-qat.
+
+All-script and all-random tables on the same seeds are reference points. Each number gets a paired,
+seed-by-seed 95% interval. A difference counts as **beyond** only when that interval excludes zero.
+
+**Results, after #248.**
+
+| | plain 4b | persona 4b | mixed | persona 2b |
+|---|---:|---:|---:|---:|
+| η² of aggression by persona (p) | 0.030 (0.60), placebo slots | 0.841 (<0.001) | 0.432 (<0.001) | 0.295 (<0.001) |
+| ended by domination | 20% | 60% | 75% | 0% |
+| battles a turn | 1.23 | 1.46 | 1.15 | 0.72 |
+| turns with no change | 39% | 26% | 35% | 64% |
+| words a statement | 37.8 | 13.6 | 13.5 / 14.1 | 15.5 |
+| repeated word for word | 3% | 5% | 6% (4b) / 48% (2b) | 54% |
+
+- **Persona against plain, 4b, paired by seed.** These differences are beyond: battles a turn
+  +0.24 (+0.13 to +0.35), provinces changing hands a turn +0.21, quiet turns −13 points, domination
+  +40 points, peace offered +4.9 a game, and 3.7 turns shorter. Wars declared, lead changes and
+  peace made are within. The warmonger attacks with 60% of its council moves and offers no peace.
+  The builder attacks with 5% and holds 37% of its turns.
+- **Before #248** the same contrast held: η² 0.524 against 0.036, and peace offered beyond. But the
+  guard contained 23% of persona decisions, almost all of them legal attacks, and 95 to 100% of
+  games ran to the turn limit. Persona 4b before and after: domination 5% → 60% and battles +0.51 a
+  turn, both beyond. The guard fix moved this game more than the persona did.
+- **4b against 2b at the mixed table, paired by seed.** The 2B places 3.45 against 2.70 and ends
+  with 2.7 provinces against 6.5. It holds 35% of its turns against 10%, and aims at the weaker 44%
+  of the time against 74%. All of these are beyond. Of the 20 wins, 19 went to the 4B, which held
+  three of the five seats.
+- **The 2B copies its statement rule.** `PromptBuilder` writes the rules as
+  `Your statement: <rules>`. The merchant's rule opens "A trader's voice: profit, price or a
+  deal." The 2B returned that whole line as its statement 373 times in 582 at its own table, and
+  the warmonger's line 76 times in 594. The 4B did it twice in 2,318.
+- **Seconds a decision**, single-model tables only: 4b with personas 0.46 s median and 0.55 s
+  90th percentile; 4b plain 0.65 / 0.85 s, with statements three times as long; 2b 0.35 / 0.45 s.
+  No timing is given from the mixed table, where two models shared one server.
+- **Memory resident:** 3.1 GB (4b), 2.4 GB (2b), 1.7 GB (gemma4:e2b-it-qat), 5.5 GB for the
+  mixed table. All five seats share one loaded model.
+
+- **A third model, gemma4:e2b-it-qat, with personas** (10:35 to 10:52): η² of aggression 0.713
+  (p < 0.001), so its personas show nearly as much as the 4B's. It plays a slower game: 15% of
+  games end by domination, and 46% of turns are quiet. Its statements are the shortest (9.5
+  words), none copies the statement rule, 4% are repeated word for word and 7% contradict the move.
+  Its attack win rate is the lowest (61%). Decisions take 0.30 s median and 0.35 s at the 90th
+  percentile.
+
+**What was not measured.** No persona was tuned. The persona texts were written once and run
+as they were. 20 games is small, and only the differences marked beyond are claimed. Whether the
+statements read like people is the three game accounts in the demo README, one reader's judgement.
+
+**What it changes.** Personas through the identity are enough to give a 4B seat a character, so
+the human player's default opponents should be 4B seats with personas. The 2B is not fit for a
+persona seat until gap N9 is fixed; that fix is a prompt change, owed an A/B run. Gaps N9 and N10
+are in the demo README.
+
+**What would change this.** A second game; personas written by someone else; and gap N9's A/B run,
+which may change the 2B's voice numbers entirely.
