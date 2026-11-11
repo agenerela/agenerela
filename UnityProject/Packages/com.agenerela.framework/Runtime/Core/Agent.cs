@@ -1233,7 +1233,12 @@ namespace Agenerela
                 return Failed(telemetry, PipelineErrorKind.UnreadableReply, $"{problem} The reply was: {Excerpt(reply.Text)}", call.Correlation, request, reply);
             }
 
-            var result = Guard(new GuardInput(ctx, request, reply, decision, call, telemetry) { AvailabilityAnswer = availability });
+            // Before the guards, so neither they nor a handler see a target the action never takes
+            // (#244 item 2). The model's own answer stays in ModelDecision.
+            var answered = decision;
+            decision = DropStrayTarget(decision, ctx, request, telemetry);
+
+            var result = Guard(new GuardInput(ctx, request, reply, decision, call, telemetry) { AvailabilityAnswer = availability }, answered);
             if (result.Verdict.HasValue)
             {
                 result = await SayWhatWasStopped(provider, result, ctx, request, call, ct, reset);
@@ -1338,7 +1343,7 @@ namespace Agenerela
         // The guards over one parsed decision: the built-in ones, then Guards. A decision none of
         // them stopped is returned as it is; one they stopped becomes none, beside the model's own.
         // A guard that throws is the developer's code failing, not a refusal: a pipeline error.
-        private DecisionResult Guard(GuardInput input)
+        private DecisionResult Guard(GuardInput input, AgentDecision answered)
         {
             string running = null;
             GuardVerdict verdict;
@@ -1356,7 +1361,7 @@ namespace Agenerela
 
             if (verdict.Kind == GuardVerdictKind.Pass)
             {
-                return new DecisionResult(decision, input.Telemetry, decision, null, input.Request, input.Reply, input.Context.Correlation);
+                return new DecisionResult(decision, input.Telemetry, answered, null, input.Request, input.Reply, input.Context.Correlation);
             }
 
             if (verdict.Kind == GuardVerdictKind.Reject)
@@ -1367,7 +1372,24 @@ namespace Agenerela
 
             // Empty, never the model's: it no longer matches what the agent does (#109).
             var none = new AgentDecision(ActionRegistry.None, TargetRegistry.NoTarget, "");
-            return new DecisionResult(none, input.Telemetry, decision, verdict, input.Request, input.Reply, input.Context.Correlation);
+            return new DecisionResult(none, input.Telemetry, answered, verdict, input.Request, input.Reply, input.Context.Correlation);
+        }
+
+        // A target named for a registered action that takes none (ActionDefinition.TakesNoTarget)
+        // becomes no_target, and telemetry says which was dropped (#244 item 2). Only under a flat
+        // schema, whose one target enum lets the model name any target with any action: a paired
+        // schema forbade it, so one that comes anyway broke the contract, and SchemaLegalityGuard
+        // rejects it as it rejects any pair the grammar forbade.
+        private static AgentDecision DropStrayTarget(AgentDecision decision, AgentContext ctx, DecisionRequest request, DecisionTelemetry telemetry)
+        {
+            if (decision.TargetId == TargetRegistry.NoTarget || request.Schema?.Pairs != null ||
+                !ctx.Actions.TryGet(decision.ActionId, out var definition, out _) || !definition.TakesNoTarget)
+            {
+                return decision;
+            }
+
+            telemetry.TargetIgnored = decision.TargetId;
+            return new AgentDecision(decision.ActionId, TargetRegistry.NoTarget, decision.Statement);
         }
 
         // The stopped decision with what the agent says about it: the developer's line, else the

@@ -193,6 +193,13 @@ namespace Agenerela
                     nameof(definition));
             }
 
+            if (definition.TakesNoTarget && (definition.RequiresTarget || definition.DeclaresTargetCategories))
+            {
+                throw new ArgumentException(
+                    $"Action '{definition.Id}' takes no target, so it cannot also require one or name target categories.",
+                    nameof(definition));
+            }
+
             if (_byId.ContainsKey(definition.Id))
             {
                 throw new InvalidOperationException($"Action already registered: {definition.Id}");

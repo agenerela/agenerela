@@ -19,7 +19,9 @@ namespace Agenerela
 
         /// <summary>
         /// What the model said, as parsed, before any guard. The same object as
-        /// <see cref="Decision"/> when every guard passed; null for a pipeline error.
+        /// <see cref="Decision"/> when every guard passed and no stray target was dropped
+        /// (<see cref="ActionDefinition.TakesNoTarget"/>, <see cref="DecisionTelemetry.TargetIgnored"/>);
+        /// null for a pipeline error.
         /// </summary>
         public AgentDecision ModelDecision { get; }
 

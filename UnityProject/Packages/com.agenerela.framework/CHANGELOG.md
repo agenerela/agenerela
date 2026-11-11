@@ -49,6 +49,18 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **`ActionDefinition.TakesNoTarget`, and `[AgentAction(TakesNoTarget = true)]`** (#244 item 2):
+  an action that never takes a target, such as `recruit`. Off by default, so nothing changes for an
+  existing agent. On, a target the model names anyway under the flat schema is dropped, not refused:
+  the decision's target becomes `no_target` before the guards and the handler see it,
+  `DecisionResult.ModelDecision` keeps the model's answer, and the new
+  `DecisionTelemetry.TargetIgnored` holds the target dropped, written to the decision log as
+  `targetIgnored` (left out when nothing was dropped, so existing lines are unchanged). The paired
+  schema offers such an action with `no_target` alone, and `SchemaLegalityGuard` rejects a target
+  for it, which covers a paired reply that breaks the grammar and a decision handed to
+  `Agent.Execute`. Registering it with `RequiresTarget` or `TargetCategories` throws. Nothing the
+  model reads in the prompt changes. `Documentation~/targets.md` explains it.
+
 - **`ActionResult.AvailabilityReason`** (#244 item 6): for a refusal that the handler's per-target
   check caused, the reason that check gave in `Availability.No(...)`, word for word ("the ford is
   flooded"), so a game can write its own line where `Reason` is the agent's sentence for a log.

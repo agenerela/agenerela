@@ -14,7 +14,8 @@ namespace Agenerela
     /// The rules, in order. <see cref="ActionRegistry.None"/> always passes. Otherwise the action
     /// is registered; the target is <see cref="TargetRegistry.NoTarget"/> or registered in the
     /// context's targets; an action that needs a target got a real one, which a flat schema cannot
-    /// enforce because all actions share one target enum; and the action is available. Against a
+    /// enforce because all actions share one target enum; an action that takes no target
+    /// (<see cref="ActionDefinition.TakesNoTarget"/>) got none; and the action is available. Against a
     /// request whose schema pairs actions with targets (<see cref="DecisionSchema.Pairs"/>, DR-020),
     /// the action must also have been offered with that target, which the grammar should have
     /// enforced.
@@ -64,6 +65,13 @@ namespace Agenerela
             if (definition.RequiresTarget && decision.TargetId == TargetRegistry.NoTarget)
             {
                 return GuardVerdict.Reject("the action needs a target, and the decision has none.");
+            }
+
+            // Inside DecideAsync a flat schema's stray target was already dropped (#244 item 2), so
+            // this is a paired schema whose grammar forbade it, or a decision Execute was handed.
+            if (definition.TakesNoTarget && decision.TargetId != TargetRegistry.NoTarget)
+            {
+                return GuardVerdict.Reject("the action takes no target, and the decision has one.");
             }
 
             if (input.Request != null)

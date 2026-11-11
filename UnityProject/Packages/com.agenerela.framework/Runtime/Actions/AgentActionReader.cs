@@ -190,6 +190,7 @@ namespace Agenerela
                     Id = f.Action.Id,
                     Description = f.Action.Description,
                     RequiresTarget = f.Action.RequiresTarget,
+                    TakesNoTarget = f.Action.TakesNoTarget,
                     // An action without [Example] reads like an asset whose example was left blank.
                     ExampleStimulus = f.Example?.Stimulus ?? "",
                     PreferredExampleTargets = f.Example?.PreferredTargets ?? Array.Empty<string>(),

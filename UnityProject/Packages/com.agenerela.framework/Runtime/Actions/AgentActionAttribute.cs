@@ -40,6 +40,12 @@ namespace Agenerela
         public bool RequiresTarget { get; set; }
 
         /// <summary>
+        /// Whether this action never takes a target (#244 item 2). Copied to
+        /// <see cref="ActionDefinition.TakesNoTarget"/>, whose remarks say what it does.
+        /// </summary>
+        public bool TakesNoTarget { get; set; }
+
+        /// <summary>
         /// The target categories this action takes, such as <c>new[] { "quest" }</c>; null, the
         /// default, takes any target. Copied to <see cref="ActionDefinition.TargetCategories"/>.
         /// </summary>

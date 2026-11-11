@@ -18,6 +18,7 @@ namespace Agenerela{
         public string GuardReason; // That guard's reason, word for word; null when every guard passed (#106)
         public List<string> TargetsDropped = new List<string>(); // Target ids a source found but left out because of its cap (#32)
         public List<string> ObservationsDropped = new List<string>(); // Observation lines a source had but the request does not carry, in source order: for each source, its lines Agent.MaxObservations cut, then those its own cap left out, from IReportsDroppedObservations (#91)
+        public string TargetIgnored; // The target the model named for an action that takes none (ActionDefinition.TakesNoTarget), dropped before the guards so the decision's target is no_target; null when nothing was dropped (#244 item 2)
         public List<UnavailableTarget> TargetsUnavailable = new List<UnavailableTarget>(); // Each action and target pair a per-target check (ITargetAvailability) rejected when the request was prepared, with its reason, in registry then target order; empty for an agent with no such check (#190 LV #19)
         public int HistoryTurnsSent; // Exchanges of memory sent in DecisionRequest.History, two entries each (#90)
         public int HistoryTurnsDropped; // Exchanges the memory still held but left out of this request, from IReportsDroppedTurns; 0 when it cannot say (#90)
@@ -56,6 +57,7 @@ namespace Agenerela{
             GuardReason = null;
             TargetsDropped = new List<string>();
             ObservationsDropped = new List<string>();
+            TargetIgnored = null;
             TargetsUnavailable = new List<UnavailableTarget>();
             HistoryTurnsSent = 0;
             HistoryTurnsDropped = 0;
