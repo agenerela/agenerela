@@ -365,6 +365,12 @@ namespace Agenerela
                     "DecideOptions.MaxListedTargets cannot be negative. 0 lists no targets.");
             }
 
+            if (!(options.TargetGroundingThreshold >= 0f && options.TargetGroundingThreshold <= 1f))
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), options.TargetGroundingThreshold,
+                    "DecideOptions.TargetGroundingThreshold must be from 0 to 1. The default is 0.8; 0 never stops a decision.");
+            }
+
             if (!Enum.IsDefined(typeof(LegalTargetListing), options.LegalTargets))
             {
                 throw new ArgumentOutOfRangeException(nameof(options), options.LegalTargets,

@@ -197,6 +197,23 @@ namespace Agenerela
         public bool CheckTarget = true;
 
         /// <summary>
+        /// The share of the model's probability at its target that must stay on the target list for
+        /// <see cref="TargetGroundingGuard"/> to pass this call's decision, from 0 to 1:
+        /// <see cref="TargetGroundingGuard.DefaultThreshold"/>, 0.8, unless set (#244). A value
+        /// outside 0 to 1 is a mistake the call throws for.
+        /// </summary>
+        /// <remarks>
+        /// Lower it for a call where several targets are often right at once, such as a strategy
+        /// game's provinces, rather than turning <see cref="CheckTarget"/> off. Know the trade
+        /// (findings, 11 November 2026): at 0.6, GreyBoxStrategy's model attacked as often as with
+        /// the guard off, while on the interim evaluation set <c>qwen3.5:2b</c> carried out two more
+        /// of 64 impossible requests than at 0.8. So it suits a game with many legal targets a turn,
+        /// not one where refusing the impossible matters most. 0 never stops a decision but still
+        /// records the reading.
+        /// </remarks>
+        public float TargetGroundingThreshold = TargetGroundingGuard.DefaultThreshold;
+
+        /// <summary>
         /// Whether to ask the model what to say when a guard stops this decision and
         /// <see cref="Agent.RefusalStatement"/> gave no line (#109). Off by default, so a stopped
         /// decision's statement is empty. Per call, because only the caller knows whether anyone is

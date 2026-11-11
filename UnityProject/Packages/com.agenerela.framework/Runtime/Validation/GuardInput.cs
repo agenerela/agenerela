@@ -18,6 +18,11 @@ namespace Agenerela
     public sealed class GuardInput
     {
         /// <exception cref="ArgumentNullException"><paramref name="context"/> or <paramref name="decision"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// <paramref name="options"/>' <see cref="DecideOptions.TargetGroundingThreshold"/> is outside 0 to 1, or NaN,
+        /// as <see cref="Agent.DecideAsync"/> refuses it, so a guard never reads a threshold that would
+        /// contain every decision (#244).
+        /// </exception>
         public GuardInput(
             AgentContext context,
             DecisionRequest request,
@@ -34,6 +39,12 @@ namespace Agenerela
             if (decision == null)
             {
                 throw new ArgumentNullException(nameof(decision));
+            }
+
+            if (options != null && !(options.TargetGroundingThreshold >= 0f && options.TargetGroundingThreshold <= 1f))
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), options.TargetGroundingThreshold,
+                    "DecideOptions.TargetGroundingThreshold must be from 0 to 1. The default is 0.8; 0 never stops a decision.");
             }
 
             Context = context;

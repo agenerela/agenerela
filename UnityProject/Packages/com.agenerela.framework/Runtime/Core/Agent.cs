@@ -527,7 +527,8 @@ namespace Agenerela
         /// </returns>
         /// <exception cref="ArgumentException">
         /// <see cref="DecideOptions.StimulusLabel"/> is null, empty or whitespace, or
-        /// <see cref="DecideOptions.MaxListedTargets"/> is negative. Thrown by the call itself, before
+        /// <see cref="DecideOptions.MaxListedTargets"/> is negative, or
+        /// <see cref="DecideOptions.TargetGroundingThreshold"/> is outside 0 to 1. Thrown by the call itself, before
         /// anything is sent: it is a mistake in the calling code, not an event.
         /// </exception>
         /// <exception cref="OperationCanceledException">
@@ -688,6 +689,12 @@ namespace Agenerela
             {
                 throw new ArgumentOutOfRangeException(nameof(options), options.MaxListedTargets,
                     "DecideOptions.MaxListedTargets cannot be negative. 0 lists no targets.");
+            }
+
+            if (!(options.TargetGroundingThreshold >= 0f && options.TargetGroundingThreshold <= 1f))
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), options.TargetGroundingThreshold,
+                    "DecideOptions.TargetGroundingThreshold must be from 0 to 1. The default is 0.8; 0 never stops a decision.");
             }
 
             if (!Enum.IsDefined(typeof(LegalTargetListing), options.LegalTargets))

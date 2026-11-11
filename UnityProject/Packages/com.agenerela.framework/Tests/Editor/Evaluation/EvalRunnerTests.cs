@@ -589,6 +589,23 @@ namespace Agenerela.Tests.Evaluation
         }
 
         [Test]
+        public async Task AnArmsGroundingThresholdIsRecordedAndNamedInTheReport()
+        {
+            var set = fixtures.Set(new[] { Bridge });
+            var armA = new EvalArm("control", fixtures.Config(new FakeProvider(Reply("move_to", "bridge")), "FakeA"));
+            var armB = new EvalArm("lower", fixtures.Config(new FakeProvider(Reply("move_to", "bridge")), "FakeB"),
+                new DecideOptions { TargetGroundingThreshold = 0.6f });
+
+            var report = await Fixtures.NotCancelled(new EvalRunner(set, Fixtures.VillageGuardProfile(), armA, armB).RunAsync());
+
+            Assert.That(report.Conditions.Arms.Select(x => x.TargetGroundingThreshold), Is.EqualTo(new float?[] { 0.8f, 0.6f }));
+            Assert.That(report.Conditions.Arms.Select(x => x.TokenAlternatives), Has.All.Null, "A provider other than Ollama asks for none.");
+            string markdown = report.ToMarkdown();
+            Assert.That(markdown, Does.Contain("| on, threshold 0.6 |"));
+            Assert.That(markdown, Does.Contain("| on |"), "A default arm's cell reads as it did before.");
+        }
+
+        [Test]
         public async Task AnArmsLegalityThatMakesALabelIllegalIsRefused()
         {
             var legality = PlacesAndCreatures();

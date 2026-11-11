@@ -29,6 +29,15 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **GreyBoxStrategy: the grounding guard plays legal moves again** (#244 item 1, gap N4). New arm
+  modifiers `+threshold-<x>` and `+alternatives-<n>`, and the `default` arm now sets the grounding
+  threshold to 0.6 on top of the framework's new 20 alternatives a token. On the RTX 5080, 30 games
+  an arm, the guard's containments of legal moves fell from 72 to 3 (`qwen3.5:4b`) and 94 to 3
+  (`qwen3.5:2b`), and the attack share rose from 22% to 32% and 12% to 21%, as with the guard off;
+  provinces within noise. The arm measured as `default` before is `control+paired+alternatives-5`.
+  The framework's side, and the evaluation-set measurement, is in the package's changelog and
+  `findings.md` (11 November).
+
 - **GreyBoxStrategy: can the framework replace the moves line?** (#20, #244 item 5, #151). The
   model seat gains arms for the framework's legal-target listing (`per-target`, `per-target-paired`)
   and modifiers on any arm (`+paired`, `+listed`, `+no-grounding`). Its report adds illegal answers,

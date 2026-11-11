@@ -26,6 +26,17 @@ namespace Agenerela.Evaluation
 
         // The arm's options, as every call started from them.
         [JsonProperty("checkTarget")] public bool CheckTarget;
+        /// <summary>
+        /// The arm's <see cref="DecideOptions.TargetGroundingThreshold"/> (#244); null in a report
+        /// written before it existed, which ran <see cref="TargetGroundingGuard.DefaultThreshold"/>.
+        /// </summary>
+        [JsonProperty("targetGroundingThreshold", NullValueHandling = NullValueHandling.Ignore)] public float? TargetGroundingThreshold;
+        /// <summary>
+        /// How many alternatives an Ollama arm asked for at each token
+        /// (<see cref="Agenerela.Providers.OllamaSettings.TokenAlternatives"/>, #244); null for another
+        /// provider, and in a report written before it existed, which asked for 5.
+        /// </summary>
+        [JsonProperty("tokenAlternatives", NullValueHandling = NullValueHandling.Ignore)] public int? TokenAlternatives;
         [JsonProperty("askForRefusalLine")] public bool AskForRefusalLine;
         [JsonProperty("idleExampleStimulus")] public string IdleExampleStimulus;
         [JsonProperty("listActionsAndTargets")] public bool ListActionsAndTargets;

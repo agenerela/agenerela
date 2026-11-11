@@ -54,6 +54,30 @@ namespace Agenerela.Providers
         public float TimeoutSeconds = 30f;
 
         /// <summary>
+        /// How many alternatives each generated token's probabilities carry, sent as
+        /// <c>top_logprobs</c>: 20 unless set, from 1 to 20, the most Ollama accepts (#244).
+        /// </summary>
+        /// <remarks>
+        /// <see cref="TargetGroundingGuard"/> counts what the alternatives do not cover as off the
+        /// target list. DR-016 measured it with five, and five was enough for a handful of targets;
+        /// with many right at once, such as a strategy game's provinces, a model's probability
+        /// spreads past five and read as doubt. Twenty since 11 November 2026: on the evaluation
+        /// sets every reply on <c>qwen3.5:4b</c> and <c>qwen3.5:2b</c> was the same, and so were the
+        /// correct answers and the impossible requests handled, though four wrong answers the guard
+        /// had contained passed; no measurable latency; and in GreyBoxStrategy it cut the guard's containments of legal moves
+        /// from 72 to 19 and from 94 to 58 (findings, 11 November). The reply's token probabilities
+        /// grow from about 5 KB to 17 KB; nothing the framework writes to disk keeps them. Set 5 for
+        /// what every request sent before then.
+        /// </remarks>
+        public int TokenAlternatives = DefaultTokenAlternatives;
+
+        /// <summary><see cref="TokenAlternatives"/>' default, 20 (#244); DR-016 measured with 5.</summary>
+        public const int DefaultTokenAlternatives = 20;
+
+        /// <summary>The most <see cref="TokenAlternatives"/> Ollama accepts, 20.</summary>
+        public const int MaxTokenAlternatives = 20;
+
+        /// <summary>
         /// A key for a server that wants one, sent as <c>Authorization: Bearer &lt;key&gt;</c> on
         /// every request, or empty to send none. A local Ollama wants none. The team's RTX 5080
         /// server, behind the gateway in <c>tools/ollama-server/</c>, does.

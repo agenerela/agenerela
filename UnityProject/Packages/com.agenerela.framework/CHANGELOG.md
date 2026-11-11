@@ -10,6 +10,18 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Changed
 
+- **Ollama reports 20 alternatives a token, not 5** (#244 item 1). `top_logprobs` is now 20 on
+  every request unless `OllamaSettings.TokenAlternatives` says otherwise, so the grounding guard
+  no longer reads probability spread over many legal targets as doubt just because five
+  alternatives could not hold it. Measured on 11 November 2026 on the interim and curated
+  evaluation sets, `qwen3.5:4b` and `qwen3.5:2b`: every reply was identical, and the correct
+  answers and the impossible requests handled were unchanged, but four wrong answers the guard
+  had contained now pass as wrong actions (3 on the 2B, 1 on the 4B, each where an action was
+  expected). No measurable latency, and GreyBoxStrategy's containments of legal moves fell from 72 to 19 and from 94 to 58 in 30
+  games. Each reply's token probabilities grow from about 5 KB to 17 KB in memory; the decision
+  log keeps only the reply's text. An existing `OllamaProviderConfig` asset that never saved the
+  field gets 20 too. Set 5 for the requests sent before. The threshold stays 0.8.
+
 - **An agent with no examples sends no few-shot block** (#244 item 3). `FewShotBuilder.Build`
   returns an empty string when it has not one example to show, rather than the header
   `Examples of correct decisions:` with nothing under it, and the request then has no blank line
@@ -48,6 +60,18 @@ While the version stays `0.x`, the public API may change in any release.
   both within noise (findings, 9 November). No switch: it is what `FewShotBuilder` does.
 
 ### Added
+
+- **The grounding guard's threshold, per call, and Ollama's alternatives count, per provider**
+  (#244 item 1). `DecideOptions.TargetGroundingThreshold` sets the share below which
+  `TargetGroundingGuard` contains a decision, from 0 to 1, and `TargetGroundingGuard.DefaultThreshold`
+  (0.8) is public; a value outside 0 to 1 throws at the call, as `Agent.DecideAsync`, `Preview` and
+  `Conversation` check their other options, and a `GuardInput` refuses it when built. `OllamaSettings.TokenAlternatives`, and the same field
+  on `OllamaProviderConfig`, sets `top_logprobs`, from 1 to 20 (`DefaultTokenAlternatives`,
+  `MaxTokenAlternatives` 20); the config clamps its field into range, the provider refuses an
+  out-of-range setting when it is built. An evaluation report records both for each arm
+  (`EvalArmConditions.TargetGroundingThreshold`, `TokenAlternatives`), and its arms table names
+  them when an arm changes them. For a game where several targets are right at once, which the
+  guard otherwise reads as doubt; `Documentation~/guards.md` says when.
 
 - **`DecideOptions.LegalTargets`: the prompt says which targets each action may take** (#151). An
   enum, `LegalTargetListing`, with two values. `Off`, the default, leaves every request byte for byte

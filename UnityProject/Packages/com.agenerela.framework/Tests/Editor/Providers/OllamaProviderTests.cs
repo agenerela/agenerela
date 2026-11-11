@@ -71,7 +71,7 @@ namespace Agenerela.Tests
     ""num_ctx"": 4096
   },
   ""logprobs"": true,
-  ""top_logprobs"": 5
+  ""top_logprobs"": 20
 }";
 
         [TearDown]
@@ -100,6 +100,20 @@ namespace Agenerela.Tests
                 "Every field, in order, with the values #88 tables. Whitespace aside, the body is exact.");
         }
 
+        [TestCase(1)]
+        [TestCase(20)]
+        public async Task TokenAlternativesAreSentAsTopLogprobs(int alternatives)
+        {
+            var handler = ScriptedHandler.Replying(Envelope(GoToTheTower));
+            var provider = Provider(handler, new OllamaSettings { TokenAlternatives = alternatives });
+
+            await NotCancelled(provider.RequestAsync(Request(), CancellationToken.None));
+
+            var body = Newtonsoft.Json.Linq.JObject.Parse(handler.Requests[0].Body);
+            Assert.That((int)body["top_logprobs"], Is.EqualTo(alternatives));
+            Assert.That(provider.TokenAlternatives, Is.EqualTo(alternatives));
+        }
+
         [Test]
         public void TheDefaultsAreTheMeasuredOnes()
         {
@@ -111,6 +125,7 @@ namespace Agenerela.Tests
             Assert.That(settings.ContextSize, Is.EqualTo(4096));
             Assert.That(settings.Temperature, Is.EqualTo(0f), "Appendix A was greedy.");
             Assert.That(settings.TimeoutSeconds, Is.EqualTo(30f));
+            Assert.That(settings.TokenAlternatives, Is.EqualTo(20), "The most Ollama accepts, measured free on 11 November 2026 (#244).");
             Assert.That(settings.ApiKey, Is.Empty, "A local Ollama wants no key.");
         }
 
@@ -717,6 +732,8 @@ namespace Agenerela.Tests
                 new OllamaSettings { TimeoutSeconds = 0f },
                 new OllamaSettings { TimeoutSeconds = float.NaN },
                 new OllamaSettings { TimeoutSeconds = 1e10f },
+                new OllamaSettings { TokenAlternatives = 0 },
+                new OllamaSettings { TokenAlternatives = 21 },
             };
 
             foreach (var settings in bad)

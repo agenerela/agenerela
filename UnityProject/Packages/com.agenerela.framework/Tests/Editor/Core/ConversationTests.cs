@@ -491,6 +491,7 @@ namespace Agenerela.Tests
             var waiting = chat.Start("Go to the tower again.");
             Assert.Throws<ArgumentException>(() => chat.Replace("Attack the dummy.", noLabel));
             Assert.Throws<ArgumentOutOfRangeException>(() => chat.Replace("Attack the dummy.", new DecideOptions { MaxListedTargets = -1 }));
+            Assert.Throws<ArgumentOutOfRangeException>(() => chat.Replace("Attack the dummy.", new DecideOptions { TargetGroundingThreshold = 2f }));
             Assert.That(waiting.Status, Is.EqualTo(TurnStatus.Waiting));
             Assert.That(chat.Current, Is.SameAs(waiting));
             Assert.That(fake.HeldCount, Is.EqualTo(1));

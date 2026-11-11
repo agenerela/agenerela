@@ -441,6 +441,10 @@ namespace Agenerela.Tests
             {
                 new RoundCall(agents[0], Stimulus), new RoundCall(agents[1], Stimulus, new DecideOptions { StimulusLabel = " " }),
             }));
+            Assert.Throws<ArgumentOutOfRangeException>(() => DecisionRound.DecideAsync(new[]
+            {
+                new RoundCall(agents[0], Stimulus), new RoundCall(agents[1], Stimulus, new DecideOptions { TargetGroundingThreshold = float.NaN }),
+            }), "the last call's threshold is checked before the first agent is asked (#244)");
             Assert.That(provider.RequestCount, Is.EqualTo(0));
         }
 
