@@ -98,6 +98,24 @@ namespace GreyBoxStrategy.Tests
             game.Resolve(new[] { answer });
             Assert.That(game.World.RelationBetween("valen", "orsk"), Is.EqualTo(Relation.Truce));
             Assert.That(seat.Decisions.Single().Execution, Is.EqualTo(ExecutionStatus.Done));
+            Assert.That(seat.Decisions.Single().ModelAnswerLegal, Is.True);
+        }
+
+        [Test]
+        public async Task Envoy_AnAnswerThatIsNotAnEnvoyMove_IsRefusalAndCountedIllegal()
+        {
+            var game = NewGame();
+            game.World.SetRelation("valen", "orsk", Relation.War);
+            var provider = new ScriptedProvider().Otherwise(ScriptedReply.Decide(Actions.Recruit));
+            var seat = new CountryAgent(game.World, "valen", provider);
+            var council = game.BeginTurn();
+            var envoys = game.SubmitCouncil(new[] { new CountryAnswer(For(council, "orsk"), new Move(Actions.OfferPeace, "valen")) });
+            var answer = await Await.NotCancelled(seat.DecideAsync(envoys[0]));
+            Assert.That(answer.Choice, Is.EqualTo(new Move(Actions.RefusePeace)), "the game hears a refusal");
+            var d = seat.Decisions.Single();
+            Assert.That(d.ModelAction, Is.EqualTo(Actions.Recruit));
+            Assert.That(d.ModelAnswerLegal, Is.False, "recruit is not an answer to an envoy");
+            game.Resolve(new[] { answer });
         }
 
         [Test]
@@ -145,6 +163,7 @@ namespace GreyBoxStrategy.Tests
             Assert.That(game.World.Province("westmarch").Owner, Is.EqualTo("valen"));
             var d = seat.Decisions.Single();
             Assert.That(d.Execution, Is.EqualTo(ExecutionStatus.Done));
+            Assert.That(d.ModelAnswerLegal, Is.True);
             Assert.That(Outcome(report, "valen").Note, Does.Contain("Westmarch is ours."));
             Assert.That(provider.LastRequest.Request.Observations, Does.Contain("Moves open to us: attack fenmark, stonereach or westmarch"));
         }
@@ -163,6 +182,7 @@ namespace GreyBoxStrategy.Tests
             var d = seat.Decisions.Single();
             Assert.That(d.ModelAction, Is.EqualTo(Actions.Attack));
             Assert.That(d.Verdict, Is.Not.Null, "a guard stopped it");
+            Assert.That(d.ModelAnswerLegal, Is.False, "the model's own answer was not offered");
             Assert.That(answer.Note, Does.Contain("ilvarion"));
             game.SubmitCouncil(new[] { answer });
             var report = game.Resolve();
@@ -175,7 +195,8 @@ namespace GreyBoxStrategy.Tests
         {
             var game = NewGame();
             var provider = new ScriptedProvider().Otherwise(ScriptedReply.Decide(Actions.Recruit, "highmoor"));
-            var seat = new CountryAgent(game.World, "valen", provider);
+            // Only a flat schema lets the model name a target with recruit; the default pairs them.
+            var seat = new CountryAgent(game.World, "valen", provider, ModelSeatOptions.Control);
             game.Gates["valen"] = seat;
             var council = game.BeginTurn();
             var answer = await Await.NotCancelled(seat.DecideAsync(For(council, "valen")));
@@ -187,6 +208,23 @@ namespace GreyBoxStrategy.Tests
             game.SubmitCouncil(new[] { answer });
             var report = game.Resolve();
             Assert.That(Outcome(report, "valen").Text, Does.StartWith("recruited"));
+        }
+
+        [Test]
+        public async Task ATargetOnAMoveThatTakesNone_UnderThePairedDefault_IsRejectedAndHeld()
+        {
+            // The paired schema's grammar forbids recruit with a target, so a provider that sends one
+            // anyway broke the contract: SchemaLegalityGuard rejects it rather than dropping it.
+            var game = NewGame();
+            var provider = new ScriptedProvider().Otherwise(ScriptedReply.Decide(Actions.Recruit, "highmoor"));
+            var seat = new CountryAgent(game.World, "valen", provider);
+            var council = game.BeginTurn();
+            var answer = await Await.NotCancelled(seat.DecideAsync(For(council, "valen")));
+            Assert.That(answer.Choice, Is.EqualTo(Move.Hold));
+            var d = seat.Decisions.Single();
+            Assert.That((d.Guard, d.Verdict), Is.EqualTo(("SchemaLegalityGuard", (GuardVerdictKind?)GuardVerdictKind.Reject)));
+            Assert.That(d.ModelAnswerLegal, Is.True, "the move itself, recruit, was offered");
+            Finish(game, council, null);
         }
 
         [Test]
@@ -328,6 +366,90 @@ namespace GreyBoxStrategy.Tests
             Assert.That(on.Agent.Preview(on.StimulusFor(request), on.OptionsFor(request)).Request.Observations, Does.Contain("Moves open to us"));
             Assert.That(off.Agent.Preview(off.StimulusFor(request), off.OptionsFor(request)).Request.Observations, Does.Not.Contain("Moves open to us"));
             Finish(game, council, null);
+        }
+
+        [Test]
+        public void PerTargetArm_TheFrameworkListsEachMovesLegalTargetsInPlaceOfTheMovesLine()
+        {
+            // The same state as the moves line's test: attack fenmark or westmarch; fortify ashby,
+            // brindle or stonereach; declare war on merrow or orsk.
+            var game = NewGame();
+            Give(game.World, "stonereach", "valen");
+            var council = game.BeginTurn();
+            var request = For(council, "valen");
+            var seat = new CountryAgent(game.World, "valen", new ScriptedProvider(), ModelSeatOptions.PerTarget);
+            var options = seat.OptionsFor(request);
+            Assert.That(options.LegalTargets, Is.EqualTo(LegalTargetListing.PerTarget));
+            Assert.That(options.PairTargetsWithActions, Is.False);
+
+            var sent = seat.Agent.Preview(seat.StimulusFor(request), options).Request;
+            Assert.That(sent.Observations, Does.Not.Contain("Moves open to us"), "no game-side line");
+            foreach (string pair in new[] { "fenmark (for attack)", "westmarch (for attack)", "ashby (for fortify)",
+                         "brindle (for fortify)", "stonereach (for fortify)", "merrow (for declare_war)", "orsk (for declare_war)" })
+                Assert.That(sent.SystemPrompt, Does.Contain(pair));
+            // A province no move can take now is not listed as a target (the grounding line still
+            // names every registered id), and a legal one only for its own moves.
+            Assert.That(sent.SystemPrompt, Does.Not.Contain("- ilvarion"));
+            Assert.That(sent.SystemPrompt, Does.Not.Contain("- highmoor"));
+            Assert.That(sent.SystemPrompt, Does.Not.Contain("fenmark (for attack, fortify"));
+
+            var control = new CountryAgent(game.World, "valen", new ScriptedProvider());
+            Assert.That(control.Agent.Preview(control.StimulusFor(request), control.OptionsFor(request)).Request.SystemPrompt,
+                Does.Not.Contain("(for attack)"), "the control arm leaves the framework's listing off");
+            Finish(game, council, null);
+        }
+
+        [Test]
+        public void Arms_ByName()
+        {
+            var paired = ModelSeatOptions.Named("per-target-paired");
+            Assert.That((paired.MovesLine, paired.LegalTargets, paired.PairTargets, paired.CheckTarget),
+                Is.EqualTo((false, LegalTargetListing.PerTarget, true, true)));
+            var perTarget = ModelSeatOptions.Named("per-target");
+            Assert.That((perTarget.MovesLine, perTarget.LegalTargets, perTarget.PairTargets),
+                Is.EqualTo((false, LegalTargetListing.PerTarget, false)));
+            var checksOnly = ModelSeatOptions.Named("no-moves-line");
+            Assert.That((checksOnly.MovesLine, checksOnly.LegalTargets, checksOnly.PairTargets),
+                Is.EqualTo((false, LegalTargetListing.Off, false)));
+            var off = ModelSeatOptions.Named("per-target-paired+no-grounding");
+            Assert.That((off.PairTargets, off.CheckTarget, off.Arm), Is.EqualTo((true, false, "per-target-paired+no-grounding")));
+            Assert.That(ModelSeatOptions.Named("per-target").CheckTarget, Is.True, "a modifier changes only its own copy");
+            Assert.That(ModelSeatOptions.Named("nonsense+no-grounding"), Is.Null);
+            Assert.That(ModelSeatOptions.Named("control+nonsense"), Is.Null);
+            var linePaired = ModelSeatOptions.Named("control+paired");
+            Assert.That((linePaired.MovesLine, linePaired.LegalTargets, linePaired.PairTargets, linePaired.CheckTarget),
+                Is.EqualTo((true, LegalTargetListing.Off, true, true)));
+            var lineListed = ModelSeatOptions.Named("control+listed");
+            Assert.That((lineListed.MovesLine, lineListed.LegalTargets, lineListed.PairTargets),
+                Is.EqualTo((true, LegalTargetListing.PerTarget, false)));
+
+            var byDefault = ModelSeatOptions.Named(null);
+            Assert.That((byDefault.Arm, byDefault.MovesLine, byDefault.LegalTargets, byDefault.PairTargets, byDefault.CheckTarget),
+                Is.EqualTo(("default", true, LegalTargetListing.Off, true, true)), "the moves line, paired");
+            Assert.That(ModelSeatOptions.Named("control").PairTargets, Is.False, "stage 2's control stays as it was measured");
+
+            var game = NewGame();
+            var council = game.BeginTurn();
+            var request = For(council, "valen");
+            Assert.That(new CountryAgent(game.World, "valen", new ScriptedProvider(), paired).OptionsFor(request).PairTargetsWithActions, Is.True);
+            var unset = new CountryAgent(game.World, "valen", new ScriptedProvider());
+            Assert.That(unset.Options.Arm, Is.EqualTo("default"));
+            Assert.That(unset.OptionsFor(request).PairTargetsWithActions, Is.True);
+            Finish(game, council, null);
+        }
+
+        [Test]
+        public async Task Report_CountsAttacksLandedAndLegalAnswers()
+        {
+            var game = await PlayWithFakeModel(2);
+            var report = new ModelReport("fake", new[] { game });
+            int doneAttacks = game.Decisions.Count(d => d.Move.Action == Actions.Attack && d.Execution == ExecutionStatus.Done);
+            Assert.That(doneAttacks, Is.GreaterThan(0));
+            Assert.That(report.AttacksLanded, Is.EqualTo(doneAttacks), "every attack Agent.Execute admitted reached a battle");
+            Assert.That(report.AttacksWon, Is.InRange(1, report.AttacksLanded));
+            Assert.That(report.IllegalAnswers, Is.Zero, "the fake model only makes offered moves");
+            Assert.That(report.ContainedLegal, Is.Zero);
+            Assert.That(report.ToMarkdown(), Does.Contain($"| Attacks landed / won | {report.AttacksLanded} / {report.AttacksWon} |"));
         }
     }
 }

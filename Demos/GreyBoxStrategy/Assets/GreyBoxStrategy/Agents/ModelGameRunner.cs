@@ -137,6 +137,13 @@ namespace GreyBoxStrategy
             NotOffered = all.Count(d => !d.Offered);
             TargetsIgnored = all.Count(d => d.TargetIgnored);
             RefusedOnExecute = all.Count(d => d.Execution == ExecutionStatus.Refused);
+            IllegalAnswers = all.Count(d => d.Moment == Moment.Council && d.ModelAction != null && !d.ModelAnswerLegal);
+            ContainedLegal = all.Count(d => d.Contained && d.ModelAnswerLegal);
+            ContainedLegalAttacks = all.Count(d => d.Contained && d.ModelAnswerLegal && d.ModelAction == Actions.Attack);
+            var attacks = games.SelectMany(g => g.Record.Reports.SelectMany(r => r.Outcomes)
+                .Where(o => g.ModelCountries.Contains(o.Request.CountryId) && !o.Refused && o.Applied.Action == Actions.Attack)).ToList();
+            AttacksLanded = attacks.Count;
+            AttacksWon = attacks.Count(o => o.Text != null && o.Text.StartsWith("took ", StringComparison.Ordinal));
             var latencies = all.Where(d => d.Error == null).Select(d => (double)d.LatencySeconds).OrderBy(x => x).ToList();
             MedianLatency = latencies.Count == 0 ? 0 : latencies[latencies.Count / 2];
             P90Latency = latencies.Count == 0 ? 0 : latencies[(int)(latencies.Count * 0.9)];
@@ -161,6 +168,15 @@ namespace GreyBoxStrategy
         public int NotOffered { get; }
         public int TargetsIgnored { get; }
         public int RefusedOnExecute { get; }
+        /// <summary>Council answers, before any guard, that were not a move the game offered: an illegal pair or an unavailable move.</summary>
+        public int IllegalAnswers { get; }
+        /// <summary>Decisions a guard turned into none although the model's answer was legal.</summary>
+        public int ContainedLegal { get; }
+        /// <summary>Of <see cref="ContainedLegal"/>, those that were attacks (gap N4).</summary>
+        public int ContainedLegalAttacks { get; }
+        /// <summary>The model's attacks that reached a battle, and those it won.</summary>
+        public int AttacksLanded { get; }
+        public int AttacksWon { get; }
         /// <summary>The model's moves the game refused at resolution, stale ones and the framework's refusals both.</summary>
         public int StaleAtResolution { get; }
         public double MedianLatency { get; }
@@ -182,7 +198,10 @@ namespace GreyBoxStrategy
             sb.AppendLine($"| Decisions per game | {F(DecisionsPerGame)} |");
             sb.AppendLine($"| Median / 90th percentile latency per decision, s | {F2(MedianLatency)} / {F2(P90Latency)} |");
             sb.AppendLine($"| Mean prompt tokens | {MeanPromptTokens.ToString("0", Inv)} |");
+            sb.AppendLine($"| Council answers not offered, before the guards | {IllegalAnswers} |");
             sb.AppendLine($"| Contained by a guard (rewritten to none) | {Contained} |");
+            sb.AppendLine($"| Of those, on a legal answer / a legal attack | {ContainedLegal} / {ContainedLegalAttacks} |");
+            sb.AppendLine($"| Attacks landed / won | {AttacksLanded} / {AttacksWon} |");
             sb.AppendLine($"| Rejected by a guard | {Rejected} |");
             sb.AppendLine($"| Pipeline errors (no decision) | {PipelineErrors} |");
             sb.AppendLine($"| Move not among those offered | {NotOffered} |");
@@ -209,10 +228,10 @@ namespace GreyBoxStrategy
         public string ToCsv()
         {
             var sb = new StringBuilder();
-            sb.AppendLine("seed,turn,country,moment,model_action,model_target,action,target,move,offered,target_ignored,latency_s,prompt_tokens,guard,verdict,error,execution,statement");
+            sb.AppendLine("seed,turn,country,moment,model_action,model_target,action,target,move,offered,model_answer_legal,target_ignored,latency_s,prompt_tokens,guard,verdict,error,execution,statement");
             foreach (var d in Games.SelectMany(g => g.Decisions))
                 sb.AppendLine(string.Join(",", d.Seed, d.Turn, d.Country, d.Moment, d.ModelAction, d.ModelTarget, d.Action, d.Target,
-                    d.Move, d.Offered, d.TargetIgnored, d.LatencySeconds.ToString("0.000", Inv), d.PromptTokens, d.Guard, d.Verdict, d.Error, d.Execution,
+                    d.Move, d.Offered, d.ModelAnswerLegal, d.TargetIgnored, d.LatencySeconds.ToString("0.000", Inv), d.PromptTokens, d.Guard, d.Verdict, d.Error, d.Execution,
                     Csv(d.Statement)));
             return sb.ToString();
         }
@@ -251,7 +270,7 @@ namespace GreyBoxStrategy
             var summary = new SeriesSummary($"{modelKind} against scripted", records.Select(r => r.Record).ToList());
             var report = new ModelReport(modelKind, records);
             File.WriteAllText(Path.Combine(folder, "summary.md"), summary.ToMarkdown() + "\n" + report.ToMarkdown() +
-                $"\nWall time: {(DateTime.Now - started).TotalSeconds:0} s. Arm: {options?.Arm ?? "control"}.\n");
+                $"\nWall time: {(DateTime.Now - started).TotalSeconds:0} s. Arm: {options?.Arm ?? "default"}.\n");
             File.WriteAllText(Path.Combine(folder, "games.csv"), summary.ToCsv());
             File.WriteAllText(Path.Combine(folder, "model.csv"), report.ToCsv());
             foreach (var r in records)

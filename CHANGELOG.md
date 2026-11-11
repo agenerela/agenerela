@@ -29,6 +29,15 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **GreyBoxStrategy: can the framework replace the moves line?** (#20, #244 item 5, #151). The
+  model seat gains arms for the framework's legal-target listing (`per-target`, `per-target-paired`)
+  and modifiers on any arm (`+paired`, `+listed`, `+no-grounding`). Its report adds illegal answers,
+  containments on legal answers and attacks, and attacks landed. On the RTX 5080, 30 games an arm,
+  `LegalTargets = PerTarget` in place of the game's line cut the 4B's attack share from 23% to 15%
+  (17% with pairing), so the line stays. The paired schema took illegal answers from 30 to 0 (4B)
+  and 62 to 0 (2B) at no measured cost, and is now the seat's default (`ModelSeatOptions.Default`,
+  the `default` arm); stage 2's `control` is unchanged. Grounding off with pairing raised the attack
+  share to 33%, sizing gap N4. A new gap, N8, is in the demo's `README.md`. 82 EditMode tests.
 - **GreyBoxStrategy, stage 2: a model plays a country** (#20). A framework `Agent` built in code
   with no scene plays one seat. Its eight moves are registered once. Availability comes from the
   game's rules, action-wide and per target (`ITargetAvailability`), with categories for provinces

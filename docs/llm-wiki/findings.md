@@ -3035,3 +3035,70 @@ set as it is (no legality).
 
 The 9 November situations entry measured the list at 323 against 330 on the 4B, consistent with
 this. That entry had no 2B arm.
+
+### GreyBoxStrategy: the framework's legal-target listing does not replace the game's moves line, and the paired schema takes illegal answers to none at no cost (10 November 2026)
+
+**One game, small n.** Game-side findings (#20, #151, #244 item 5), 30 games an arm. Read
+decision shares as fairly solid and outcomes as weak.
+
+**What was run.** `Demos/GreyBoxStrategy` with a framework `Agent` in one seat against four scripted
+countries, as stage 2 (the entry above): seeds 1 to 30 in every arm, seats rotating, arms one
+after another in Unity batch mode, from 22:17 to 23:24. RTX 5080, Docker Ollama 0.40.14, over the
+home network, one model resident, temperature 0, `qwen3.5:4b` then `qwen3.5:2b`. The seat's
+per-target check (`DelegateActionHandler.IsAvailableFor`, built from the game's `Legality.WhyNot`)
+is on in every arm. The control (A) is stage 2's: the game-side line `Moves open to us: attack
+fenmark or westmarch; ...` among the standing facts, a flat schema, grounding on. B drops the line
+for `DecideOptions.LegalTargets = PerTarget`; C adds `PairTargetsWithActions` to B; D drops the
+line and lists nothing. Four more arms were added to explain them. The framework changed since
+stage 2's runs (#245 among others), so A was run again here rather than taken from that entry.
+
+| Model, arm | Provinces | Attack share | Attacks landed a game | Illegal answers | Contained (legal / legal attacks) | Prompt tokens |
+|---|---:|---:|---:|---:|---:|---:|
+| 4b A, the moves line | 2.0 | 23% | 2.8 | 30 | 86 (56 / 30) | 975 |
+| 4b A, run again | 1.9 | 22% | 3.0 | 26 | 71 (45 / 30) | 966 |
+| 4b B, `PerTarget`, no line | 1.0 | 15% | 1.6 | 17 | 29 (12 / 7) | 621 |
+| 4b C, B paired | 1.6 | 17% | 1.9 | 0 | 17 (17 / 12) | 620 |
+| 4b D, checks only | 1.1 | 2% | 0.1 | 81 | 98 (18 / 13) | 928 |
+| 4b the line and `PerTarget` | 1.4 | 22% | 2.3 | 10 | 31 (21 / 11) | 660 |
+| 4b the line, paired | 2.6 | 22% | 3.0 | 0 | 72 (72 / 39) | 972 |
+| 4b the line, paired, grounding off | 2.5 | 33% | 3.8 | 0 | 0 | 965 |
+| 4b C, grounding off | 1.8 | 19% | 2.1 | 0 | 0 | 620 |
+| 2b A | 1.1 | 10% | 1.1 | 62 | 132 (70 / 23) | 956 |
+| 2b C | 0.5 | 7% | 0.8 | 0 | 109 (109 / 44) | 619 |
+| 2b the line, paired | 1.0 | 12% | 1.3 | 0 | 94 (94 / 28) | 953 |
+
+No model won a game except one, in the 4B's line-paired-grounding-off arm. Illegal answers are
+council answers before any guard that the game did not offer. Median latency was 0.59 to 0.65 s a
+decision, with no pipeline errors. Arms compare seed by seed: the paired 95% band on mean provinces
+is about ±1.1 to ±1.5 on the 4B and ±0.7 on the 2B, and no province difference above is beyond it.
+Attack shares rest on about 480 council moves an arm, where 5 points is about two standard errors;
+moves within a game are not independent, so 5 to 8 points is likely, not proven. A's rerun differed
+by 0.03 provinces and 0.3 points.
+
+**What it shows.**
+
+- **`PerTarget` does not replace a game's own moves line.** In its place the 4B attacks less: 15%
+  against 23% (z −3.0), and 17% with pairing (z −2.4). The gap is on turns 1 to 4, where A attacks
+  in 57 of 120 council moves and B and C in 21. On the 2B, C ends with 0.5 provinces to A's 1.1,
+  inside the band. The eval-set gain for `PerTarget` on the 4B (+4.1, the entry above this one) does
+  not carry over into this game's attack behaviour.
+- **What helps is a sentence among the facts, not the pairs as such.** The line with `PerTarget`
+  beside it keeps the attack share at 22%, so the listing does not suppress attacks; it just does
+  not prompt them. The listing shrinks the prompt by about 35% (975 → 620 tokens), listing the 5 to
+  10 targets some move can take instead of all 29.
+- **The paired schema is free here.** Illegal answers fall to 0 on both models (30 and 62 before),
+  with attack share and provinces unchanged within noise. In B, 15 of the 17 illegal answers named
+  a country at war with the seat as `attack`'s target; its list had that country `(for offer_peace)`.
+- **The grounding guard's legal containments are the largest loss left (gap N4).** With pairing,
+  every containment is on a legal answer: 72 in the 4B's line-paired arm, 39 of them attacks.
+  Grounding off raises the attack share from 22% to 33% (z 3.8) and attacks landed from 3.0 to 3.8
+  a game; provinces stay within noise.
+
+**What was decided.** The demo keeps its moves line and turns the paired schema on by default
+(`ModelSeatOptions.Default`). No framework default changes. A new framework gap goes in the demo's
+`README.md` (N8): an option to send the legal moves as an observation line, worded by action, which
+would need its own A/B on the evaluation set.
+
+**What would change this.** 100 games an arm or more, to see the outcome effects that 30 cannot;
+a second game, to tell this game's verbs from the general point; and an A/B of a framework-written
+moves line (N8) against the game's own.

@@ -20,13 +20,13 @@ namespace GreyBoxStrategy.Editor
     /// </para>
     /// <para>From the Unity CLI, with the editor open on this project (the run goes on in the background):</para>
     /// <code>
-    /// unity command script eval -- --code 'return GreyBoxStrategy.Editor.StrategyModelRunMenu.Start("model", "qwen3.5:4b", "control", 10, 1);'
+    /// unity command script eval -- --code 'return GreyBoxStrategy.Editor.StrategyModelRunMenu.Start("model", "qwen3.5:4b", "default", 10, 1);'
     /// </code>
     /// <para>In batch mode, with the project closed. No <c>-quit</c>: the editor exits when the run ends.</para>
     /// <code>
     /// Unity.exe -batchmode -nographics -projectPath Demos/GreyBoxStrategy
     ///   -executeMethod GreyBoxStrategy.Editor.StrategyModelRunMenu.RunFromCommandLine
-    ///   -strategySeat model -strategyModel qwen3.5:4b -strategyArm control -strategyGames 10 -strategySeed 1
+    ///   -strategySeat model -strategyModel qwen3.5:4b -strategyArm default -strategyGames 10 -strategySeed 1
     /// </code>
     /// <para>
     /// <c>-strategySeat</c> is <c>model</c>, or a baseline kind (<c>expansionist</c>, <c>cautious</c>,
@@ -40,10 +40,10 @@ namespace GreyBoxStrategy.Editor
         public const string DefaultModel = "qwen3.5:4b";
 
         [MenuItem(Menu + "Model seat: play 5 games (qwen3.5:4b vs scripted)")]
-        private static void PlayFive() => Start(ModelGameRunner.Model, DefaultModel, "control", 5, 1);
+        private static void PlayFive() => Start(ModelGameRunner.Model, DefaultModel, "default", 5, 1);
 
         [MenuItem(Menu + "Model seat: play 1 game (qwen3.5:4b vs scripted)")]
-        private static void PlayOne() => Start(ModelGameRunner.Model, DefaultModel, "control", 1, 1);
+        private static void PlayOne() => Start(ModelGameRunner.Model, DefaultModel, "default", 1, 1);
 
         /// <summary>Starts a run and returns its folder at once; the run logs its progress to the console.</summary>
         public static string Start(string seat, string model, string arm, int games, int firstSeed)
@@ -58,7 +58,7 @@ namespace GreyBoxStrategy.Editor
         {
             string seat = Arg("-strategySeat") ?? ModelGameRunner.Model;
             string model = Arg("-strategyModel") ?? DefaultModel;
-            string arm = Arg("-strategyArm") ?? "control";
+            string arm = Arg("-strategyArm") ?? "default";
             int games = int.TryParse(Arg("-strategyGames"), out int g) ? g : 10;
             int seed = int.TryParse(Arg("-strategySeed"), out int s) ? s : 1;
             string folder = Arg("-strategyOut") ?? FolderFor(seat, model, arm);

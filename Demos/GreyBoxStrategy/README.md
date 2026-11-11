@@ -47,18 +47,23 @@ from the environment and sent in headers only. From the menu, **GreyBoxStrategy 
 its progress to the console):
 
 ```bash
-unity command script eval -- --code 'return GreyBoxStrategy.Editor.StrategyModelRunMenu.Start("model", "qwen3.5:4b", "control", 10, 1);'
+unity command script eval -- --code 'return GreyBoxStrategy.Editor.StrategyModelRunMenu.Start("model", "qwen3.5:4b", "default", 10, 1);'
 ```
 
 In batch mode, with no `-quit` (the editor exits when the run ends):
 
 ```bash
-Unity.exe -batchmode -nographics -projectPath Demos/GreyBoxStrategy -executeMethod GreyBoxStrategy.Editor.StrategyModelRunMenu.RunFromCommandLine -strategySeat model -strategyModel qwen3.5:4b -strategyArm control -strategyGames 30 -strategySeed 1 -logFile run.log
+Unity.exe -batchmode -nographics -projectPath Demos/GreyBoxStrategy -executeMethod GreyBoxStrategy.Editor.StrategyModelRunMenu.RunFromCommandLine -strategySeat model -strategyModel qwen3.5:4b -strategyArm default -strategyGames 30 -strategySeed 1 -logFile run.log
 ```
 
 `-strategySeat` also takes `expansionist`, `cautious` or `random`, for a baseline on the same
-seeds. The arms are `control`, `after-sources`, `headline`, `no-moves-line` and `no-grounding`
-(`ModelSeatOptions`). A model run writes everything a scripted run writes, and adds three things:
+seeds. The arms (`ModelSeatOptions.Named`) are `default` (the moves line and the paired schema,
+[chosen from the runs below](#can-the-framework-replace-the-moves-line)), stage 2's `control` (the
+moves line, a flat schema), `after-sources`, `headline`, `no-moves-line`, `no-grounding`,
+`per-target` (no moves line; the framework lists each move's legal targets,
+`LegalTargets = PerTarget`) and `per-target-paired` (that, with the paired schema). Any arm takes
+modifiers after a `+`: `+paired` (the paired schema), `+listed` (`PerTarget`) and `+no-grounding`
+(the grounding guard off), as in `control+paired+no-grounding`. A model run writes everything a scripted run writes, and adds three things:
 
 - the model's own table in `summary.md`;
 - `model.csv`, every model decision with its latency, guard and execution;
@@ -66,8 +71,8 @@ seeds. The arms are `control`, `after-sources`, `headline`, `no-moves-line` and 
 
 Each game log shows the model's answer and its statement under each of its moves.
 
-**Tests:** 77 EditMode tests in `Assets/GreyBoxStrategy/Tests/Editor/`, about 5 seconds once the
-project has imported. Fifteen of them drive the model seat through `ScriptedProvider`.
+**Tests:** 82 EditMode tests in `Assets/GreyBoxStrategy/Tests/Editor/`, about 5 seconds once the
+project has imported. Twenty of them drive the model seat through `ScriptedProvider`.
 
 ## The first real run
 
@@ -223,7 +228,9 @@ eight moves once, as `ActionDefinition`s with `DelegateActionHandler`s:
 - Standing facts come from an `IObservationSource`. This turn's facts go with the call in
   `DecideOptions.Observations`, placed by `ObservationPlacement`.
 - `RollingHistory(6)` with `MemoryCommit.OnExecute`. `ListActionsAndTargets` is on, and
-  `MaxListedTargets` is raised to 40 (gap N2). `MaxObservations` is 12 (8 standing lines, the
+  `MaxListedTargets` is raised to 40 (gap N2). By default the schema is paired
+  (`DecideOptions.PairTargetsWithActions`), so the grammar keeps the model to legal move and target
+  pairs; stage 2's runs below used a flat schema (the `control` arm). `MaxObservations` is 12 (8 standing lines, the
   moves line and 3 turn facts).
 - A `DecisionLog` with prompts per run (`decisions.jsonl`).
 
@@ -331,6 +338,80 @@ every arm:
 
 The full logs are not committed. A run writes them to `Logs/StrategyRuns/` in a few minutes.
 
+### Can the framework replace the moves line?
+
+**No, not yet. The moves line stays, and the schema is now paired by default.** Measured on
+10 November 2026 (22:17 to 23:24) after #235 (per-target checks), #245 (`TakesNoTarget`) and #246
+(`DecideOptions.LegalTargets`) landed, on the same machine and by the same method as stage 2: RTX
+5080, Docker Ollama 0.40.14 over the home network, one model resident, temperature 0, 30 games an
+arm, seeds 1 to 30, seats rotating, arms one after another in Unity batch mode. The seat's
+per-target check (`DelegateActionHandler.IsAvailableFor`, from `Legality.WhyNot`) is on in every
+arm; the arms change only what reaches the model.
+
+| Model | Arm | Wins | Provinces (sd) | Attack share | Attacks landed (won) a game | Illegal answers | Contained (on legal answers / legal attacks) | Prompt tokens |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| 4b | **A** `control`: the moves line, flat schema | 0 | 2.0 (2.9) | 23% | 2.8 (2.4) | 30 (6%) | 86 (56 / 30) | 975 |
+| 4b | A again (`control`, rerun) | 0 | 1.9 (3.1) | 22% | 3.0 (2.4) | 26 (5%) | 71 (45 / 30) | 966 |
+| 4b | **B** `per-target`: no line, `LegalTargets = PerTarget` | 0 | 1.0 (1.5) | 15% | 1.6 (1.2) | 17 (4%) | 29 (12 / 7) | 621 |
+| 4b | **C** `per-target-paired`: B plus `PairTargetsWithActions` | 0 | 1.6 (2.6) | 17% | 1.9 (1.5) | 0 | 17 (17 / 12) | 620 |
+| 4b | **D** `no-moves-line`: the per-target checks alone | 0 | 1.1 (1.5) | 2% | 0.1 (0.1) | 81 (17%) | 98 (18 / 13) | 928 |
+| 4b | `control+listed`: the line and `PerTarget` | 0 | 1.4 (2.5) | 22% | 2.3 (1.8) | 10 (2%) | 31 (21 / 11) | 660 |
+| 4b | **`default`** (`control+paired`): the line, paired schema | 0 | 2.6 (3.2) | 22% | 3.0 (2.6) | 0 | 72 (72 / 39) | 972 |
+| 4b | `control+paired+no-grounding` | 1 | 2.5 (3.7) | 33% | 3.8 (3.1) | 0 | 0 | 965 |
+| 4b | `per-target-paired+no-grounding` | 0 | 1.8 (2.6) | 19% | 2.1 (1.6) | 0 | 0 | 620 |
+| 2b | A `control` | 0 | 1.1 (1.7) | 10% | 1.1 (1.1) | 62 (14%) | 132 (70 / 23) | 956 |
+| 2b | C `per-target-paired` | 0 | 0.5 (1.1) | 7% | 0.8 (0.4) | 0 | 109 (109 / 44) | 619 |
+| 2b | `default` (`control+paired`) | 0 | 1.0 (1.6) | 12% | 1.3 (1.0) | 0 | 94 (94 / 28) | 953 |
+
+Illegal answers are council answers, before any guard, that were not a move the game offered.
+Contained is every decision a guard turned into `none`; in brackets, those whose answer was legal,
+and of those the attacks. No arm had a pipeline error, and one decision in all of them (in D) was
+refused by `Agent.Execute` when it landed. Median latency was 0.59 to 0.65 s a decision on the 4B
+and 0.54 to 0.60 s on the 2B, over 450 to 550 decisions an arm.
+
+**What 30 games can show.** Every arm plays the same 30 seeds, so arms compare seed by seed. The
+paired 95% band on the difference in mean provinces is about ±1.1 to ±1.5 on the 4B and ±0.7 on
+the 2B, and no difference in provinces in this table is beyond it. Decision shares are better
+measured: on about 480 council moves an arm, an attack-share gap of 5 points is about two standard
+errors, though moves within one game are not independent, so read 5 to 8 points as likely, not
+proven. A's rerun moved provinces by 0.03 and attack share by 0.3 points: the server repeats
+closely, though not move for move.
+
+**What it shows:**
+
+- **The framework's listing does not replace the moves line.** Without the line, with `PerTarget`
+  (B), the 4B's attack share falls from 23% to 15% (z −3.0), and with the paired schema too (C) to
+  17% (z −2.4). Provinces fall by 1.0 and 0.4, within noise. On the 2B, C holds 0.5 provinces to
+  A's 1.1, just inside the band. The gap is on turns 1 to 4, the land grab: A attacks in 57 of 120
+  council moves, B and C in 21. On turn 1 of seed 1, A's prompt ends its facts with
+  `Moves open to us: attack fenmark, stonereach or westmarch; fortify ashby or brindle.` and the 4B
+  attacks fenmark. B's prompt carries the same pairs as `- fenmark (for attack): neutral, garrison 13.`
+  in the system prompt's target list, and it recruits.
+- **The listing does not suppress attacks; the line drives them.** With both (`control+listed`) the
+  attack share stays at 22%. What the line adds is a sentence among the facts, in the game's own
+  verbs. The listing's lines cost nothing there, and are fewer: the prompt drops from 975 tokens
+  to 620 to 660, since only the 5 to 10 targets some move can take are listed, not all 29.
+- **The checks alone (D) do almost nothing for the model.** They keep unavailable moves off the
+  schema's action enum, but the 4B attacks in 2% of council moves and lands 0.1 attacks a game, as
+  stage 2's `no-moves-line` arm found.
+- **The paired schema removes every illegal answer at no measured cost.** Illegal answers fall from
+  30 to 0 on the 4B and 62 to 0 on the 2B, with attack share and provinces unchanged within noise
+  (4B 2.6 against 2.0, 2B 1.0 against 1.1). In B, 15 of the 17 illegal answers were
+  `attack <country>`, naming a country the seat was at war with rather than one of its provinces.
+  B's list names that country `(for offer_peace)`, and only pairing stops the grammar sampling it.
+- **Gap N4, sized.** With pairing on, every containment is on a legal answer. In `default` the
+  grounding guard contains 72 decisions (13%), 39 of them attacks. Switching it off
+  (`control+paired+no-grounding`) raises the attack share from 22% to 33% (z 3.8) and attacks
+  landed from 3.0 to 3.8 a game, and gave the first model win in any run; provinces stay within
+  noise (2.5 against 2.6). Without the line (C) the guard contains less, 17, and switching it off
+  moves little.
+
+**The decision.** No framework arm matched A, so the moves line stays: it is still the N1
+workaround. The paired schema goes on by default (`ModelSeatOptions.Default`, the `default` arm),
+since it took illegal answers to none on both models and cost nothing these 30 games can see.
+Stage 2's `control` stays as it was measured. The grounding guard stays on: N4 is the framework's
+to fix, and the demo shows the framework as it ships.
+
 ## What the framework lacks for this game
 
 Checked against #216 on 10 November 2026, from building stage 1, reading the code on `test`, and
@@ -368,6 +449,12 @@ Found by stage 2, from the runs above:
 - **N1, with evidence.** The game-side moves line is the workaround. Without it, the 4B's attack
   share falls from 15% to 2% and its provinces from 1.8 to 0.9 (one game, 30 seeds). It also
   repeats `declare_war` on countries it cannot declare war on, about twice as often.
+  *Partly closed by #235, #245 and #246: the framework now knows each move's legal targets from the
+  seat's per-target check, lists them in the prompt (`LegalTargets = PerTarget`) and holds the
+  grammar to them (`PairTargetsWithActions`). The listing does not replace the line: without the
+  line the 4B attacks 6 to 8 points less often
+  ([the runs above](#can-the-framework-replace-the-moves-line)). The line stays, with the paired
+  schema on by default. What is still missing is gap N8.*
 - **N4. The grounding guard contains legal moves when several targets are legal.** It turns a
   decision into `none` when less than 0.8 of the model's probability at the target stayed on the
   chosen target (`TargetGroundingGuard.DefaultThreshold`, internal). With three provinces open to
@@ -375,7 +462,9 @@ Found by stage 2, from the runs above:
   4B's 508 decisions in the control arm, 47 of them attacks, and 150 of the 2B's 338. A game can only
   switch it off (`DecideOptions.CheckTarget`), not tune it. Two things would help: a threshold the
   call can set, or scoring the probability that stayed on any target the action could legally
-  take.
+  take. *Sized on 10 November with the paired schema on: every containment is then on a legal
+  answer, 13% of the 4B's decisions and 39 attacks in 30 games; with the guard off, the attack
+  share rises from 22% to 33%.*
 - **N5. A target on an action that takes none passes through.** `recruit merrowdeep` reaches the
   handler with `TargetId = merrowdeep`, and no guard or the parser flags it. The seat drops it, as
   any handler would, but the telemetry calls it a clean decision. The 4B did it 87 times in 30
@@ -391,13 +480,22 @@ Found by stage 2, from the runs above:
   for turns on end, once claiming an army of 10 against the facts' 108. This is #216 item 3's other
   half: what to remember of a decision. The move, and what came of it, would help this game more
   than the statement.
+- **N8. The legal pairs reach a local model as a list, not as moves.** `LegalTargets = PerTarget`
+  annotates the system prompt's target list (`- fenmark (for attack): neutral, garrison 13.`). The
+  same pairs as a sentence among the facts (`Moves open to us: attack fenmark or westmarch; ...`)
+  make the 4B attack 6 to 8 points more often, with or without the list beside it, almost all on
+  turns 1 to 4. A framework option to send the legal moves as an observation line, worded by
+  action, would let a game drop its own line; its wording would need an A/B on the evaluation set
+  as well as here. A smaller sign in the same runs: with the list and a flat schema, the 4B named a
+  country it was at war with as `attack`'s target 15 times, which only the paired schema prevents.
 - **Item 1 (examples with their situation), still confirmed:** stage 2 registers no examples,
   because with the same question every turn no stimulus-only example could show when to choose an
   action.
 - **What did not fit:** nothing the seat needed was missing from the public API. The demo cannot
   reference the framework's test helpers, so `Await.NotCancelled` in the tests copies
-  `Fixtures.NotCancelled`. `PairTargetsWithActions` was not run as an arm, since a local model never
-  reads the schema it changes.
+  `Fixtures.NotCancelled`. `PairTargetsWithActions` was not run as an arm in stage 2's first runs. It
+  was on 10 November, and is now the seat's default: it changes only the grammar a local model
+  samples under, not what it reads.
 
 ## Layout
 
