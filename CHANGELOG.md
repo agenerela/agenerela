@@ -273,6 +273,11 @@ phase table and the open issues, not here.
 
 ### Changed
 
+- **GreyBoxStrategy marks the moves that take no target** (#244 item 2): recruit, raise_taxes and
+  the two envoy answers set `ActionDefinition.TakesNoTarget`, so the framework drops a target the
+  model names for one and records it, and the seat's `TargetIgnored` reads the framework's
+  telemetry. The seat's own drop stays as a second check.
+
 - **Living Vale runs on the framework features its own gap list asked for** (#190, #69). One
   commit per feature replaces the game's workaround with the framework's API: the identity's
   knowledge and statement rules (#231), target categories (#208) and a per-target check (#235) in
