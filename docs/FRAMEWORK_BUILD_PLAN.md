@@ -1990,8 +1990,9 @@ not run, and `PromptBuilder` adds the one-line rule instead.
 
 **Amended 11 November 2026 (#244 item 1).** In a game with many legal targets a turn, the
 guard contained legal moves: what the five reported alternatives left uncovered counted as off
-the list. Ollama now reports 20 by default (`OllamaSettings.TokenAlternatives`), which changed no
-reply or verdict on the evaluation sets and cut GreyBoxStrategy's legal containments by 74% and
+the list. Ollama now reports 20 by default (`OllamaSettings.TokenAlternatives`), which left every
+reply, the correct answers and the impossible requests handled the same on the evaluation sets
+(four contained wrong answers now pass) and cut GreyBoxStrategy's legal containments by 74% and
 38%. The threshold stays 0.8 by default and is a per-call setting; 0.6 frees the rest of a game's
 legal spreads but let `qwen3.5:2b` guess on two more impossible requests of 64. Scoring only the
 chosen action's legal targets, and dividing by the reported mass, were measured and not adopted.

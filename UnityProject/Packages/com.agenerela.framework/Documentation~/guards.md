@@ -40,8 +40,9 @@ Inside `Agent.DecideAsync`, after the reply has been parsed:
    `OllamaSettings.TokenAlternatives` alternatives a token, 20 by default since 11 November 2026
    (5 before): with five, a model spread over a strategy game's provinces read below 0.8 without
    wanting anything absent, and twenty cut GreyBoxStrategy's containments of legal moves from 72
-   to 19 on `qwen3.5:4b` and from 94 to 58 on `qwen3.5:2b`, while changing no answer on the
-   evaluation sets.
+   to 19 on `qwen3.5:4b` and from 94 to 58 on `qwen3.5:2b`. On the evaluation sets it left the
+   correct answers and the impossible requests handled as they were; it did let four wrong
+   answers the guard had contained pass, where an action was expected.
 
    What is left is real probability on strings that are no target, beside a legal spread: at
    "declare war", 0.365 on `k(esh)`, 0.315 on `mer(row)`, 0.11 on `orsk`, and 0.07 on `kers`, which

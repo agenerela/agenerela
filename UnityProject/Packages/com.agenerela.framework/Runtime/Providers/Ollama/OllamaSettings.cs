@@ -62,8 +62,9 @@ namespace Agenerela.Providers
         /// target list. DR-016 measured it with five, and five was enough for a handful of targets;
         /// with many right at once, such as a strategy game's provinces, a model's probability
         /// spreads past five and read as doubt. Twenty since 11 November 2026: on the evaluation
-        /// sets it changed no reply and no verdict on <c>qwen3.5:4b</c> or <c>qwen3.5:2b</c>, at no
-        /// measurable latency, and in GreyBoxStrategy it cut the guard's containments of legal moves
+        /// sets every reply on <c>qwen3.5:4b</c> and <c>qwen3.5:2b</c> was the same, and so were the
+        /// correct answers and the impossible requests handled, though four wrong answers the guard
+        /// had contained passed; no measurable latency; and in GreyBoxStrategy it cut the guard's containments of legal moves
         /// from 72 to 19 and from 94 to 58 (findings, 11 November). The reply's token probabilities
         /// grow from about 5 KB to 17 KB; nothing the framework writes to disk keeps them. Set 5 for
         /// what every request sent before then.

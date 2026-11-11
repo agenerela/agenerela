@@ -320,6 +320,12 @@ namespace Agenerela
                 throw new ArgumentOutOfRangeException("calls", options.MaxListedTargets,
                     $"The call for {Name(agent)} has a negative DecideOptions.MaxListedTargets. 0 lists no targets.");
             }
+
+            if (!(options.TargetGroundingThreshold >= 0f && options.TargetGroundingThreshold <= 1f))
+            {
+                throw new ArgumentOutOfRangeException("calls", options.TargetGroundingThreshold,
+                    $"The call for {Name(agent)} has a DecideOptions.TargetGroundingThreshold outside 0 to 1. The default is 0.8; 0 never stops a decision.");
+            }
         }
 
         private async Awaitable<DecisionRound> Decide(CancellationToken ct)

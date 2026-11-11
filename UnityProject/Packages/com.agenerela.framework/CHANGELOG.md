@@ -13,9 +13,11 @@ While the version stays `0.x`, the public API may change in any release.
 - **Ollama reports 20 alternatives a token, not 5** (#244 item 1). `top_logprobs` is now 20 on
   every request unless `OllamaSettings.TokenAlternatives` says otherwise, so the grounding guard
   no longer reads probability spread over many legal targets as doubt just because five
-  alternatives could not hold it. Measured on 11 November 2026: no reply and no verdict changed on
-  the interim or curated evaluation set on `qwen3.5:4b` or `qwen3.5:2b`, no measurable latency,
-  and GreyBoxStrategy's containments of legal moves fell from 72 to 19 and from 94 to 58 in 30
+  alternatives could not hold it. Measured on 11 November 2026 on the interim and curated
+  evaluation sets, `qwen3.5:4b` and `qwen3.5:2b`: every reply was identical, and the correct
+  answers and the impossible requests handled were unchanged, but four wrong answers the guard
+  had contained now pass as wrong actions (3 on the 2B, 1 on the 4B, each where an action was
+  expected). No measurable latency, and GreyBoxStrategy's containments of legal moves fell from 72 to 19 and from 94 to 58 in 30
   games. Each reply's token probabilities grow from about 5 KB to 17 KB in memory; the decision
   log keeps only the reply's text. An existing `OllamaProviderConfig` asset that never saved the
   field gets 20 too. Set 5 for the requests sent before. The threshold stays 0.8.

@@ -3103,7 +3103,7 @@ would need its own A/B on the evaluation set.
 a second game, to tell this game's verbs from the general point; and an A/B of a framework-written
 moves line (N8) against the game's own.
 
-### The grounding guard and many legal targets: 20 alternatives a token cut its legal containments by 74% and 38% at no cost on the evaluation sets; a lower threshold frees the rest but lets a small model guess (11 November 2026)
+### The grounding guard and many legal targets: 20 alternatives a token cut its legal containments by 74% and 38% at no cost to correct answers or impossible requests; a lower threshold frees the rest but lets a small model guess (11 November 2026)
 
 **The question.** In GreyBoxStrategy the grounding guard (`TargetGroundingGuard`, DR-016) contained
 13% of `qwen3.5:4b`'s decisions and 21% of `qwen3.5:2b`'s, every one a legal answer once the schema
@@ -3201,7 +3201,10 @@ the 4B's guard-off, two lower-threshold and combined arms.
 
 **What I believe now.**
 
-- Twenty alternatives are free and fix the provider half of the problem. Adopted as the default.
+- Twenty alternatives fix the provider half of the problem, at no cost to correct answers or to
+  impossible requests. Their one cost: four wrong answers the guard had contained at five now
+  pass (3 on the 2B, 1 on the 4B, each where an action was expected: `int_situation_053`,
+  `int_event_038`, `int_event_058` and `int_situation_050`). Adopted as the default.
 - Renormalising is not a cheap stand-in for twenty. It is more permissive (2 containments against
   19 in the 4B's games) and cost the 2B the same two impossible requests as a 0.6 threshold. Not
   shipped.
