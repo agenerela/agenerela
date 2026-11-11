@@ -33,6 +33,17 @@ Inside `Agent.DecideAsync`, after the reply has been parsed:
    rewritten. A provider that reports no probabilities
    cannot be checked, and the guard records that and passes. `DecideOptions.CheckTarget =
    false` turns it off for one call. DR-016 has the measurements.
+
+   **When several targets are right at once** (#244). The share counts every listed target, so a
+   model torn between two good ones keeps its probability on the list. What it cannot count is
+   probability the provider did not report: Ollama reports five alternatives a token by default,
+   and the rest counts as off the list, so a model spread over many listed targets, such as a
+   strategy game's provinces, can read below 0.8 without wanting anything absent. Two settings
+   tune this instead of switching the guard off, both left at DR-016's values unless set:
+   `DecideOptions.TargetGroundingThreshold` (0.8, from 0 to 1, per call) and
+   `OllamaSettings.TokenAlternatives` (5, up to 20, per provider; the same field on an
+   `OllamaProviderConfig`). What each costs on impossible requests is in findings.md
+   (11 November 2026).
 3. **`TargetCategoryGuard`.** The target is a kind the action takes. An action that names
    `TargetCategories` is held to them: a target in another category, or in none, is rewritten to
    `none`, so `complete_quest` aimed at the village gate does nothing. An action that names none

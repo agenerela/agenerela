@@ -49,6 +49,18 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **The grounding guard's threshold, per call, and Ollama's alternatives count, per provider**
+  (#244 item 1). `DecideOptions.TargetGroundingThreshold` sets the share below which
+  `TargetGroundingGuard` contains a decision, from 0 to 1, and `TargetGroundingGuard.DefaultThreshold`
+  (0.8) is public; a value outside 0 to 1 throws at the call, as `Agent.DecideAsync`, `Preview` and
+  `Conversation` check their other options. `OllamaSettings.TokenAlternatives`, and the same field
+  on `OllamaProviderConfig`, sets `top_logprobs`, from 1 to 20 (`DefaultTokenAlternatives` 5,
+  `MaxTokenAlternatives` 20). Both default to what DR-016 measured, so every request and verdict
+  is unchanged until a game sets them. An evaluation report records both for each arm
+  (`EvalArmConditions.TargetGroundingThreshold`, `TokenAlternatives`), and its arms table names
+  them when an arm changes them. For a game where several targets are right at once, which the
+  guard otherwise reads as doubt; `Documentation~/guards.md` says when.
+
 - **`DecideOptions.LegalTargets`: the prompt says which targets each action may take** (#151). An
   enum, `LegalTargetListing`, with two values. `Off`, the default, leaves every request byte for byte
   as it was. `PerTarget` names, on each target's line, the actions that may take it

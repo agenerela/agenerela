@@ -119,7 +119,7 @@ measurement in Appendix A depends on it:
 | `format` | `JsonSchemaSerializer`'s output (#9), embedded as a JSON object exactly as written |
 | `stream`, `think` | `false`, `false` |
 | `options` | `temperature` from the settings, `num_ctx` from the settings |
-| `logprobs`, `top_logprobs` | `true`, `5` |
+| `logprobs`, `top_logprobs` | `true`, `OllamaSettings.TokenAlternatives` (5 unless set) |
 
 `History` is sent in the encoding `DecisionRequest.History` documents (#90): entries alternate
 `user` and `assistant`, starting with `user`, each exchange being the stimulus as it was sent
@@ -156,8 +156,10 @@ are unchanged. Call `RequestAsync` from the main thread: nothing on the way back
 fails there. Ollama is the development backend and cannot ship in a game anyway; in the Editor
 it works whatever the build target.
 
-**Token probabilities.** Send `"logprobs": true, "top_logprobs": 5` on every request. Five
-was enough in the probe, and Ollama refuses more than 20. They come from before the mask
+**Token probabilities.** Send `"logprobs": true` and `"top_logprobs"` on every request, 5
+unless `OllamaSettings.TokenAlternatives` says otherwise (from 1 to 20; Ollama refuses more than
+20). Five was enough in the probe, with a handful of targets; with many right at once, the
+grounding guard reads what five leave uncovered as doubt ([guards.md](guards.md), #244). They come from before the mask
 (checked on 0.34.2) and cost about 0.07 s a decision. Each entry of the response's `logprobs`
 maps onto one `TokenProbability`: `token` to `Text`, `logprob` to `LogProbability`,
 `top_logprobs` to `Alternatives`. A character split across two tokens is missing from both
