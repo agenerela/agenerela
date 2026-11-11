@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using static GreyBoxStrategy.Tests.TestGames;
@@ -232,6 +233,73 @@ namespace GreyBoxStrategy.Tests
             Assert.That(game.World.RelationBetween("valen", "orsk"), Is.EqualTo(Relation.Truce));
         }
 
+        private sealed class RefusingGate : IMoveGate
+        {
+            public int Asked;
+            public string Admit(CountryRequest request, Move move) { Asked++; return "the agent refused it"; }
+        }
+
+        private sealed class AdmittingGate : IMoveGate
+        {
+            public readonly List<Move> Admitted = new List<Move>();
+            public string Admit(CountryRequest request, Move move) { Admitted.Add(move); return null; }
+        }
+
+        [Test]
+        public void Gate_APartnerRefusedInMutualPeaceMakesNoTruce()
+        {
+            var game = NewGame();
+            game.World.SetRelation("valen", "orsk", Relation.War);
+            var gate = new RefusingGate();
+            game.Gates["orsk"] = gate;
+            var council = game.BeginTurn();
+            game.SubmitCouncil(new[]
+            {
+                new CountryAnswer(For(council, "valen"), new Move(Actions.OfferPeace, "orsk")),
+                new CountryAnswer(For(council, "orsk"), new Move(Actions.OfferPeace, "valen")),
+            });
+            var report = game.Resolve();
+            Assert.That(gate.Asked, Is.EqualTo(1));
+            Assert.That(game.World.AtWar("valen", "orsk"), Is.True);
+            Assert.That(Outcome(report, "orsk").Refused, Is.True);
+            Assert.That(report.PeaceAccepted, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Gate_IsAskedOnceForEveryMoveThatLandsAndNeverForARefusedOne()
+        {
+            var game = NewGame();
+            game.World.Country("valen").Army = 200;
+            game.World.Country("merrow").Army = 200;
+            var valen = new AdmittingGate();
+            var merrow = new RefusingGate();
+            game.Gates["valen"] = valen;
+            game.Gates["merrow"] = merrow;
+            // Valen lands first and takes stonereach; merrow's attack is then stale, refused by the game.
+            PlayTurn(game, ("valen", Actions.Attack, "stonereach"), ("merrow", Actions.Attack, "stonereach"));
+            Assert.That(valen.Admitted, Is.EqualTo(new[] { new Move(Actions.Attack, "stonereach") }));
+            Assert.That(merrow.Asked, Is.EqualTo(0), "the game refused it first, so the gate is never asked");
+            // A move never offered is held without asking either; a hold is asked once.
+            var council = game.BeginTurn();
+            game.SubmitCouncil(new[] { new CountryAnswer(For(council, "valen"), new Move(Actions.Attack, "ilvarion")) });
+            game.Resolve();
+            Assert.That(valen.Admitted.Count, Is.EqualTo(1));
+            PlayTurn(game);
+            Assert.That(valen.Admitted.Last(), Is.EqualTo(Move.Hold));
+            Assert.That(valen.Admitted.Count, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void Gate_ARefusalHoldsTheMoveWithItsReason()
+        {
+            var game = NewGame();
+            game.World.Country("valen").Army = 200;
+            game.Gates["valen"] = new RefusingGate();
+            var report = PlayTurn(game, ("valen", Actions.Attack, "westmarch"));
+            Assert.That(game.World.Province("westmarch").Owner, Is.Null);
+            Assert.That(Outcome(report, "valen").Text, Does.Contain("the agent refused it"));
+        }
+
         [Test]
         public void Envoy_IsOfferedOnlyAcceptOrRefuse()
         {
@@ -288,7 +356,7 @@ namespace GreyBoxStrategy.Tests
             var report = PlayTurn(game, ("valen", Actions.Attack, "stonereach"), ("merrow", Actions.Attack, "stonereach"));
             Assert.That(game.World.Province("stonereach").Owner, Is.EqualTo("valen"));
             Assert.That(Outcome(report, "merrow").Refused, Is.True);
-            Assert.That(Outcome(report, "merrow").Text, Does.Contain("not at war with valen"));
+            Assert.That(Outcome(report, "merrow").Text, Does.Contain("valen took stonereach first"));
         }
 
         [Test]

@@ -1,0 +1,14 @@
+{
+    "name": "GreyBoxStrategy",
+    "rootNamespace": "GreyBoxStrategy",
+    "references": ["Agenerela", "GreyBoxStrategy.Sim"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

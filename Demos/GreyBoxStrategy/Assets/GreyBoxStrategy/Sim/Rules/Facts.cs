@@ -70,6 +70,35 @@ namespace GreyBoxStrategy
             return lines;
         }
 
+        /// <summary>
+        /// One line naming every target each targeted move can take right now, for a model that
+        /// cannot read the schema: "Moves open to us: attack fenmark or westmarch; fortify ashby;
+        /// declare war on orsk; offer peace to kesh." Null when no targeted move is legal.
+        /// </summary>
+        /// <remarks>
+        /// The game-side workaround for stage 1's gap N1: an Ollama model never reads the schema,
+        /// and the framework's target list is every registered target, whatever per-target
+        /// availability says, so a legal pair reaches it nowhere else.
+        /// </remarks>
+        public static string MovesLine(World world, string countryId)
+        {
+            var legal = Legality.CouncilMoves(world, countryId);
+            var parts = new List<string>();
+            void Add(string action, string verb)
+            {
+                var targets = legal.Where(m => m.Action == action).Select(m => m.Target).ToList();
+                if (targets.Count == 0) return;
+                string list = targets.Count == 1 ? targets[0]
+                    : string.Join(", ", targets.Take(targets.Count - 1)) + " or " + targets[targets.Count - 1];
+                parts.Add(verb + " " + list);
+            }
+            Add(Actions.Attack, "attack");
+            Add(Actions.Fortify, "fortify");
+            Add(Actions.DeclareWar, "declare war on");
+            Add(Actions.OfferPeace, "offer peace to");
+            return parts.Count == 0 ? null : "Moves open to us: " + string.Join("; ", parts) + ".";
+        }
+
         /// <summary>"1 province", "6 provinces".</summary>
         public static string Provinces(int n) => n == 1 ? "1 province" : $"{n} provinces";
 

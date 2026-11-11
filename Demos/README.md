@@ -12,7 +12,7 @@ in general: §1.6.
 | `GreyBoxVillageClassic/` (#19, #143) | The grey-box village from before v2, two guards and an agent board, kept for comparison. Frozen: it changes only to keep compiling | Built; restored from 396f266, the commit before #157 | Universal 3D (URP) |
 | `LivingVale/` (#69) | A third-person RPG where every NPC is talked to in typed chat, with the first adventure (*The Missing Wagon*) playable end to end | First adventure built: G0–G5, G7, G8; the rest of G4 (perks, relationships) open | Universal 3D (URP) |
 | `GreyBox2D/` (#44) | The API works from outside the package, in a second genre | Phase 2 | not created yet |
-| `GreyBoxStrategy/` (#20) | A country agent with no Transform — an agent is not an NPC. **Never cut** | Stage 1 built: the rules headless, a scripted AI and a runner; next a model in a seat, then the map | Universal 2D (URP) |
+| `GreyBoxStrategy/` (#20) | A country agent with no Transform — an agent is not an NPC. **Never cut** | Stages 1 and 2 built: the rules headless, a scripted AI, a runner, and a model in a seat measured on the RTX 5080; next the map | Universal 2D (URP) |
 | `CompanionRPG/` (#45) | A companion built with the Inspector tooling | Phase 5 | not created yet |
 
 Each game is a sub-issue of #47, and its steps (grey box, first real decision, polish)
