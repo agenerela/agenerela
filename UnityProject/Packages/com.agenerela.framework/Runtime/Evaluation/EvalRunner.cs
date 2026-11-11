@@ -37,12 +37,24 @@ namespace Agenerela.Evaluation
     /// <see cref="ExplicitTargetSource"/> made from its declaration. The model reads neither the
     /// state nor the schema, so both are also told to it as observations, in this order: the
     /// arm's own lines, the state as <see cref="DescribeState"/> words it, one <c>id: description.</c>
-    /// line per target, then the prompt's own observations.
+    /// line per target, then the prompt's own observations. The prompt's own are the call's
+    /// <see cref="DecideOptions.Observations"/>; the rest, the same on every prompt of the arm, come
+    /// from an observation source of the agent's, so an arm's
+    /// <see cref="DecideOptions.ObservationPlacement"/> moves the prompt's lines alone (#151),
+    /// unless the arm sets <see cref="EvalArm.StandingLinesAsCallObservations"/>, which makes every
+    /// line the call's.
     /// </para>
     /// <para>
     /// <b>The outcome</b> of each answer is <see cref="Classify"/>'s and is written to the
     /// decision's <see cref="DecisionTelemetry.Outcome"/>. Nothing is executed: the runner scores
     /// what the agent chose, not what it said.
+    /// </para>
+    /// <para>
+    /// <b>What it said</b> is a second score: <see cref="ReplyChecks"/> flags each answer's statement
+    /// that repeats a few-shot line, is empty, is longer than the arm's
+    /// <see cref="EvalArm.MaxStatementLength"/>, or leaks the machinery, into
+    /// <see cref="EvalAnswer.ReplyFlags"/> and <see cref="EvalArmResult.Replies"/>. No flag changes
+    /// an outcome or the accuracy.
     /// </para>
     /// <para>
     /// Run it from the main thread. <see cref="Progress"/> says how far it has come. Cancelling
@@ -192,8 +204,8 @@ namespace Agenerela.Evaluation
             var prompts = Prompts();
             RefuseABrokenSet(prompts);
 
-            var a = new ArmRun(ArmA, ProviderOf(ArmA));
-            var b = new ArmRun(ArmB, ProviderOf(ArmB));
+            var a = new ArmRun(ArmA, ProviderOf(ArmA), new ReplyChecks.Checker(Set, Profile, ArmA));
+            var b = new ArmRun(ArmB, ProviderOf(ArmB), new ReplyChecks.Checker(Set, Profile, ArmB));
             if (Order == EvalArmOrder.Interleaved && a.Ollama != null && b.Ollama != null
                 && !OllamaProvider.SameModel(a.Ollama.Model, b.Ollama.Model))
             {
@@ -338,22 +350,30 @@ namespace Agenerela.Evaluation
             }
         }
 
-        // An arm's own idle example replaces the profile's, which PromptSetChecks has checked, so it
-        // is checked here: scoring a prompt the model was shown as an example measures nothing
-        // (hard rule 4).
+        // An arm's own idle example, and its statement (#190, G14), replace the profile's, which
+        // PromptSetChecks has checked, so they are checked here: scoring a prompt the model was
+        // shown in an example measures nothing (hard rule 4).
         private IEnumerable<string> IdleExampleProblems(EvalArm arm, List<(string Category, EvalPrompt Prompt)> prompts)
         {
-            string idle = arm.Options.IdleExampleStimulus;
-            if (string.IsNullOrWhiteSpace(idle))
+            var texts = new[]
             {
-                yield break;
-            }
+                (Text: arm.Options.IdleExampleStimulus, What: "idle example"),
+                (Text: arm.Options.IdleExampleStatement, What: "idle example's statement"),
+            };
 
-            foreach (var (_, prompt) in prompts)
+            foreach (var (text, what) in texts)
             {
-                if (PromptSetChecks.MatchesExample(prompt.Stimulus, idle))
+                if (string.IsNullOrWhiteSpace(text))
                 {
-                    yield return $"{prompt.Id}: the stimulus is arm '{arm.Name}''s idle example \"{idle}\": never score on a few-shot example (hard rule 4)";
+                    continue;
+                }
+
+                foreach (var (_, prompt) in prompts)
+                {
+                    if (PromptSetChecks.MatchesExample(prompt.Stimulus, text))
+                    {
+                        yield return $"{prompt.Id}: the stimulus is arm '{arm.Name}''s {what} \"{text}\": never score on a few-shot example (hard rule 4)";
+                    }
                 }
             }
         }
@@ -478,10 +498,9 @@ namespace Agenerela.Evaluation
 
                 // Shaped like a prompt's request, the arm's and the targets' lines included, but with
                 // no state: a DescribeState of the caller's may expect values a set always has.
-                var agent = Build(run, new JObject());
                 var options = run.Arm.Options.Copy();
                 options.StimulusLabel = "Player";
-                options.Observations = Observations(run, new List<string>(), null);
+                var agent = Build(run, new JObject(), Standing(run, new List<string>()), new List<string>(), options);
                 last = await agent.DecideAsync(stimuli[i % stimuli.Count], options, ct);
                 decided |= last.Decision != null;
             }
@@ -567,8 +586,6 @@ namespace Agenerela.Evaluation
         private async Awaitable<EvalAnswer> Ask(ArmRun run, string category, EvalPrompt prompt, CancellationToken ct)
         {
             var state = prompt.PreconditionState ?? new JObject();
-            var agent = Build(run, state);
-
             var stateLines = DescribeState == null
                 ? new List<string>()
                 : (DescribeState(state) ?? Enumerable.Empty<string>()).Where(l => !string.IsNullOrWhiteSpace(l)).ToList();
@@ -576,13 +593,22 @@ namespace Agenerela.Evaluation
             var options = run.Arm.Options.Copy();
             options.StimulusLabel = prompt.Label;
             options.CheckTarget = run.Arm.Options.CheckTarget && prompt.ChecksTarget;
-            options.Observations = Observations(run, stateLines, prompt.Observations);
+            var agent = Build(run, state, Standing(run, stateLines), prompt.Observations ?? new List<string>(), options);
 
             var result = await agent.DecideAsync(prompt.Stimulus, options, ct);
             var outcome = Classify(prompt, result);
             result.Telemetry.Outcome = outcome;
             run.Result.Add(category, outcome);
             run.Answered(result.Telemetry.Model);
+
+            // The reply checks, a second score: they read the statement and change nothing above.
+            var replyFlags = new List<ReplyFinding>();
+            bool replyChecked = outcome != DecisionOutcome.PipelineError && result.ModelDecision != null;
+            if (replyChecked)
+            {
+                replyFlags = run.Replies.Check(result.ModelDecision.Statement, AsksForStatement(result));
+                run.Result.Replies.Add(replyFlags);
+            }
 
             var t = result.Telemetry;
             return new EvalAnswer
@@ -612,25 +638,54 @@ namespace Agenerela.Evaluation
                 ErrorMessage = t.ErrorMessage,
                 Model = t.Model,
                 LatencySeconds = t.LatencySeconds,
+                ReplyChecked = replyChecked,
+                ReplyFlags = replyFlags,
                 Result = result,
             };
         }
 
-        // The arm's own lines, the state's, one per target, then the prompt's own.
-        private List<string> Observations(ArmRun run, List<string> stateLines, IList<string> own)
+        // Whether the request's schema had a statement field; a decision's always has, so a result
+        // without its request counts as asking.
+        private static bool AsksForStatement(DecisionResult result)
+        {
+            var fields = result.Request?.Schema?.Fields;
+            return fields == null || fields.Any(f => f != null && f.Name == DecisionSchema.StatementFieldName);
+        }
+
+        // The lines every prompt of the arm is told whatever it asks: the arm's own, the state's,
+        // then one per target. The prompt's own lines are the call's own observations, after these.
+        private List<string> Standing(ArmRun run, List<string> stateLines)
         {
             var observations = new List<string>(run.Arm.Options.Observations ?? new List<string>());
             observations.AddRange(stateLines);
             observations.AddRange(Set.Targets.Select(TargetLine));
-            observations.AddRange(own ?? new List<string>());
             return observations;
         }
 
         // A fresh agent for one prompt in one arm: the profile's actions, each available exactly
-        // when the state matches its onlyWhen, the set's targets, the state, and no memory.
-        private Agent Build(ArmRun run, JObject state)
+        // when the state matches its onlyWhen, the set's targets, the state, and no memory. Sets
+        // the call's own observations on options: the prompt's own lines. The standing lines reach
+        // the agent through an observation source, so the agent tells them apart from the call's
+        // own (#151), unless the arm sends them with the call, ahead of the prompt's. The cap is
+        // raised to fit every line, so none is dropped. With AfterSources the request is the one
+        // the runner sent when every line was the call's own: the standing lines first, then the
+        // prompt's.
+        private Agent Build(ArmRun run, JObject state, List<string> standing, IList<string> own, DecideOptions options)
         {
-            var agent = new Agent(Profile, run.Provider) { Memory = null };
+            var agent = new Agent(Profile, IdentityOf(run.Arm), run.Provider) { Memory = null };
+            if (run.Arm.StandingLinesAsCallObservations)
+            {
+                var all = new List<string>(standing);
+                all.AddRange(own);
+                options.Observations = all;
+            }
+            else
+            {
+                options.Observations = new List<string>(own);
+                agent.ObservationSources.Add(new StandingLines(standing));
+            }
+
+            agent.MaxObservations = standing.Count + own.Count;
             foreach (var asset in Profile.Actions)
             {
                 var action = asset != null ? asset.Action : null;
@@ -657,6 +712,29 @@ namespace Agenerela.Evaluation
             }
 
             return agent;
+        }
+
+        // The profile's identity, or for an arm with knowledge of its own a copy of it with that
+        // knowledge after the profile's, so the shared asset is never changed (#190, Living Vale #14).
+        private AgentIdentity IdentityOf(EvalArm arm)
+        {
+            var identity = Profile.Identity;
+            if (arm.Knowledge.Count == 0)
+            {
+                return identity;
+            }
+
+            var knowledge = new List<string>(identity.Knowledge ?? new List<string>());
+            knowledge.AddRange(arm.Knowledge);
+            return new AgentIdentity
+            {
+                Name = identity.Name,
+                Role = identity.Role,
+                Personality = identity.Personality,
+                Goals = identity.Goals,
+                Knowledge = knowledge,
+                StatementRules = identity.StatementRules,
+            };
         }
 
         private static JObject ToJson(IReadOnlyDictionary<string, object> state)
@@ -756,6 +834,19 @@ namespace Agenerela.Evaluation
             }
         }
 
+        // The standing lines of one prompt, handed to its agent as an observation source.
+        private sealed class StandingLines : IObservationSource
+        {
+            private readonly List<string> lines;
+
+            public StandingLines(List<string> lines)
+            {
+                this.lines = lines;
+            }
+
+            public IEnumerable<string> Observe(AgentContext ctx) => lines;
+        }
+
         // One arm while it runs: its provider, what Ollama can say about it, and what it has found.
         private sealed class ArmRun
         {
@@ -764,11 +855,13 @@ namespace Agenerela.Evaluation
             public readonly OllamaProvider Ollama;
             public readonly EvalArmConditions Conditions;
             public readonly EvalArmResult Result;
+            public readonly ReplyChecks.Checker Replies;
 
-            public ArmRun(EvalArm arm, ILLMProvider provider)
+            public ArmRun(EvalArm arm, ILLMProvider provider, ReplyChecks.Checker replies)
             {
                 Arm = arm;
                 Provider = provider;
+                Replies = replies;
                 Ollama = provider as OllamaProvider;
                 Result = new EvalArmResult { Name = arm.Name };
                 Conditions = new EvalArmConditions
@@ -783,9 +876,16 @@ namespace Agenerela.Evaluation
                     ListActionsAndTargets = arm.Options.ListActionsAndTargets,
                     MaxListedTargets = arm.Options.MaxListedTargets,
                     CounterExamples = arm.Options.CounterExamples,
+                    IdleExampleStatement = arm.Options.IdleExampleStatement,
+                    ExampleStatements = arm.Options.ExampleStatements,
+                    ExampleTargetFallback = arm.Options.ExampleTargetFallback,
                     PairTargetsWithActions = arm.Options.PairTargetsWithActions,
+                    ObservationPlacement = arm.Options.ObservationPlacement.ToString(),
+                    StandingLinesAsCallObservations = arm.StandingLinesAsCallObservations,
                     Priority = arm.Options.Priority.ToString(),
                     Observations = new List<string>(arm.Options.Observations ?? new List<string>()),
+                    Knowledge = new List<string>(arm.Knowledge),
+                    MaxStatementLength = arm.MaxStatementLength,
                 };
             }
 

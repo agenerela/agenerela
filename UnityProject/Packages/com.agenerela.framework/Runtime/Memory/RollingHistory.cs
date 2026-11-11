@@ -40,7 +40,7 @@ namespace Agenerela
     /// remembered in the order they finish.
     /// </para>
     /// </remarks>
-    public sealed class RollingHistory : IMemoryStrategy, IReportsDroppedTurns, IExportsMemory
+    public sealed class RollingHistory : IMemoryStrategy, IReportsDroppedTurns, IExportsMemory, IClearableMemory
     {
         /// <summary>How many exchanges are kept by default: six, as §2.1 sets.</summary>
         public const int DefaultTurns = 6;
@@ -100,8 +100,8 @@ namespace Agenerela
         public int Dropped { get; private set; }
 
         /// <summary>
-        /// Every exchange the turn cap has forgotten since this memory was made, which no recall
-        /// can send again.
+        /// Every exchange the turn cap has forgotten since this memory was made, or last cleared,
+        /// which no recall can send again.
         /// </summary>
         public int Forgotten { get; private set; }
 
@@ -169,6 +169,22 @@ namespace Agenerela
                 exchanges.RemoveFirst();
                 Forgotten++;
             }
+        }
+
+        /// <summary>
+        /// Forgets every exchange, as <see cref="Agent.Reset"/> asks (#190, G12), and sets
+        /// <see cref="Dropped"/> and <see cref="Forgotten"/> back to 0, leaving this memory as a new
+        /// one with the same <see cref="Turns"/> and <see cref="MaxTokens"/> would be.
+        /// </summary>
+        /// <remarks>
+        /// The counts go too because they describe the past a request lacks, and after a clear the
+        /// agent has none. Telemetry then reads 0 rather than counting an earlier conversation.
+        /// </remarks>
+        public void Clear()
+        {
+            exchanges.Clear();
+            Dropped = 0;
+            Forgotten = 0;
         }
 
         /// <summary>

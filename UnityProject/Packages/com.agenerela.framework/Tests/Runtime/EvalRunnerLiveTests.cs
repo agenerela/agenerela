@@ -151,6 +151,11 @@ namespace Agenerela.Tests
             config.name = name;
             config.Endpoint = LiveOllama.Endpoint;
             config.Model = LiveOllama.Model;
+            if (LiveOllama.ApiKey.Length > 0)
+            {
+                config.ApiKeyVariable = LiveOllama.ApiKeyVariable;
+            }
+
             created.Add(config);
             return config;
         }

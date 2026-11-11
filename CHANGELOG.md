@@ -29,6 +29,54 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **In-game checks go through the Unity CLI.** Living Vale now has `com.unity.pipeline`
+  0.9.1-exp.1, as GreyBoxVillage does, so `unity command` drives its editor: Play mode, a
+  captured frame, the console and C# run in the game, without taking over the user's screen.
+  `AGENTS.md` makes it the way agents check a running game, with computer use only for what it
+  cannot do. `environment.md` has the loop as checked on Living Vale on 10 November, and
+  `Demos/README.md` adds the package to every new game. Git ignores the package's per-machine
+  `ProjectSettings/Packages/com.unity.pipeline/`. Living Vale's EditMode tests are unchanged:
+  577 passed, 4 skipped.
+- **An Ollama server on the RTX 5080 for other machines**, in `tools/ollama-server/`: Ollama
+  0.40.14 in Docker, pinned by its image tag, with the model-sweep kit's settings, behind a Caddy
+  gateway on port 11436 that wants a key on every request and passes only the routes the framework
+  and the kits use. The laptop runs Unity, the live tests and the kits against the 5080's card,
+  at home or over the VPN. `setup.ps1` prepares the server and writes the key; `ollama_remote.py`
+  checks it, lists and warms models, unloads them and pulls new ones; `AGENT_USAGE.md` is the guide
+  an agent on the laptop follows, and `AGENTS.md` points to it. The kit's `sweep_one.sh` and
+  `probe.py` and its Unity entry point send the key, which `sweep_one.sh` reads from that folder's
+  `.env` when `OLLAMA_URL` is unset, and `LiveOllama` reads `AGENERELA_OLLAMA_API_KEY` for the
+  `RequiresOllama` tests, whose own calls to the server now send it too, and which a 401 fails
+  rather than skips. All nine passed through the gateway from its LAN address on 9 November. `environment.md`'s network
+  section, the sweep README and run request 001 now use it, in place of opening the Ollama app's
+  port, which has no login. The framework's side is the package's new `OllamaSettings.ApiKey`.
+  Its logs: the gateway writes one short line per request instead of its header dump, Docker
+  rotates both containers' logs (5 files of 20 MB), the health check runs every 5 minutes instead
+  of 30 s, and `logs.py` shows both containers as one timeline of requests, model loads, pulls and
+  problems, cutting about 9,000 lines to about 300.
+- **Run requests**, in `docs/run-requests/`: a run one machine should do, written down for another
+  session or person to pick up. Each is a folder with a `request.md`, what to run step by step, and
+  a `results.md` to fill in, with a status that goes open, claimed, done. Request 001 is the
+  13-model sweep on the interim set, for the RTX 5080. Its kit, `tools/live-runs/model-sweep/`,
+  is the 9 November sweep's scripts made portable: the server, project and set come from
+  environment variables, and the Unity entry point is a file to copy in, not a committed test.
+  `environment.md` gains a section on serving Ollama from another machine over the local network,
+  so the laptop can use the 5080's card. It is untested until someone runs it.
+- **An interim evaluation set of 389 prompts**, in `UnityProject/Assets/Evaluation/Interim/`
+  (#151), for A/B runs until #147's curated 200+ set exists. It is measured against the curated
+  set's agent, with the same actions and 11 targets, and is a set of its own with its own
+  `agent.json` and `int_` ids. It was written and first labelled by Claude, then labelled blind by
+  Codex: they agreed on 391 of 392. The one split was dropped, and so were two prompts Codex's
+  review of the pull request found ambiguous or too near a few-shot example. `none` is 40% of the
+  expected answers, and each acting action has 46 or more, where the curated set has 4 to 7. Its
+  noise floor is about 3.6 points overall and 9 per category, against 8 and 20 to 30 at 76. It is
+  AI-written and interim, not a replacement for #147; its `README.md` says how it was made and
+  checked.
+- **GreyBoxVillageClassic keeps the grey-box village from before v2**, in
+  `Demos/GreyBoxVillageClassic/`: `Demos/GreyBoxVillage` as it stood at 396f266, the commit
+  before #157, with its files and `.meta` GUIDs unchanged, as a Unity project of its own named
+  "GreyBoxVillage Classic". It is kept for comparison and frozen, changing only to keep
+  compiling against the framework.
 - **GreyBoxVillage became Ashford, a village worth exploring** (#153).
   - **Art:** low-poly art built by a Blender script in `Demos/GreyBoxVillage/ArtSource/`, 77
     models on one palette. The grey boxes stay as invisible colliders, so the NavMesh and the
@@ -143,6 +191,33 @@ phase table and the open issues, not here.
   - **Not adopted:** `Agent.Backlog`, since a waiting event must be prepared when its turn comes
     (framework gap G18). The prompt switches (#193) and the paired schema (#210) stay off, as the
     lab's experiment variables.
+- **GreyBoxVillage's scenario bench** (the framework lab, L2), in
+  `Demos/GreyBoxVillage/Assets/GreyBoxVillage/Lab/`, for comparing models and agent recipes in the
+  game itself rather than on a list of prompts.
+  - **80 scenarios** written for it, across Bram, Wren, Odile and Hale: 32 commands, 16 questions
+    and small talk, 12 game events, 12 bait (an unknown target, an unaffordable buy, a quest not
+    ready, a villager to attack, out-of-world asks) and 8 two-turn memory probes. Each sets the
+    village up after F1 (hour, weather, the wolf, a thief, a fire, the bell, the pack, quests) and
+    says which answers are right, weaker or must never happen. A test holds every line to hard
+    rule 4 against both evaluation sets and every agent's few-shot lines.
+  - **Variants** as data: the model, temperature and context, the prompt switches, a persona per
+    agent (#231's knowledge and statement rules), example statements (#218), the observation style
+    and layout (#239), and memory. `baseline` sets nothing, so it is the game.
+  - **The runner,** `LabBench.RunFromCommandLine`, plays them headless in Play mode, interleaved or
+    sequential, through each agent's own mind, unloading every other model and warming each up
+    outside the measurement (hard rule 3). It writes the framework's `DecisionLog` (#229) with the
+    prompt as sent, a score per turn, a report (accuracy, `none` when it is right, bait caught,
+    must-nots, latency p50 and p95, tokens, VRAM, an exact McNemar test per pair against the noise
+    floor) and the statements side by side.
+  - **The game, for the bench:** F1 resets each agent with `AgentBehaviour.ResetAgent` (#219) in
+    place of replacing its component; `AgentMind.OptionsFor`, `Tune` and `AskAsync`; and
+    `VillageCommands.EventsMuted`, so a scenario is exactly the decisions it asks for. The game's
+    event texts are built in one place each, so the bench sends the game's own words.
+  - **Fixed:** the target grounding's refusal line answers only the player. Odile no longer says
+    "I don't sell that." to a thief.
+  - **The game stays on `qwen3.5:2b`:** on the laptop beside the running game, the 4B's median decision
+    was 1.18 s against the 2B's 0.87 s, over the line of about 1 s the lab set for switching
+    (findings, 10 November).
 - **An editor UI kit** (#167) in the package's `Editor/UI/`, for the Phase 5 screens to share.
   It is internal to `Agenerela.Editor`, so it adds no public API.
   - `Agenerela.uss` holds colour, spacing and type variables (`--ag-*`) built on Unity's own
@@ -232,8 +307,29 @@ phase table and the open issues, not here.
   the control, on `qwen3.5:2b` and Ollama 0.40.14, recorded in `findings.md`. At n = 20 that
   says the gate passed, not by how much the guard helps.
 
+
+### Changed
+
+- **Living Vale runs on the framework features its own gap list asked for** (#190, #69). One
+  commit per feature replaces the game's workaround with the framework's API: the identity's
+  knowledge and statement rules (#231), target categories (#208) and a per-target check (#235) in
+  place of three pair guards, fixed examples with `INamedTarget` and `ExampleTargetFallback` in
+  place of three `RefreshExamples` (#234), the provider's model list, warm-up and unload and a
+  provider swap in place of the game's Ollama calls and driver rebuilds (#198), one agent per NPC
+  for the script and the model (#194, LV #23), `Conversation` for the chat's turns (#209),
+  `Proposals` for the route cards (#236), `Agent.Id` (#217), `CanImport` (#205) and the decision
+  log (#229). The game's code is 268 lines shorter (blank and comment lines not counted). What did
+  not fit, and why, is in `docs/demos/living-vale-framework-gaps.md`, "The adoption". The model
+  now reads the personas' facts in the system prompt and slightly different examples. Living
+  Vale's EditMode tests: 568 passed, 4 skipped, of 572. A same-session check on the RTX 5080
+  (findings, 10 November) found one regression, on the route examples, fixed in the branch.
+
 ### Fixed
 
+- **The model-sweep kit no longer takes Unity Hub's CLI server for an Editor.** `sweep_one.sh`
+  refused every model while `Unity Hub\resources\unity.exe serve` was running, since it counted
+  any process named Unity. It now counts Editors only. `OLLAMA_SERVER_ENV` points a copy of the kit
+  in a worktree at another checkout's `tools/ollama-server/.env`. Found running request 001.
 - **Release notes no longer break mid-sentence.** GitHub shows every newline in a release's
   notes as a line break, so notes copied from wrapped Markdown came out as ragged paragraphs
   stopping halfway across the page, as 0.2.0, 0.3.0 and 0.4.0-preview.1 did (the last was

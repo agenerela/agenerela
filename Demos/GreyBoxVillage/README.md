@@ -338,11 +338,11 @@ finished quest leaves the schema. Each giver's observations say where the player
 The player starts with 8 coins (`PlayerInventory`). Things lying in the world are `Pickup`s,
 taken with E.
 
-An `AgentBehaviour` builds its agent once, so `AgentMind.UseProvider` replaces the component with
-one carrying a new config. It copies every serialized field of the old one, so each agent keeps
-its Target Categories and Only Actions, and any field the framework adds later. That is how the
-tests give all four agents the framework's `ScriptedProvider` (#194), and how the presenter's F1
-gives them fresh memories.
+`AgentMind.UseProvider` gives an agent a provider config and resets it
+(`AgentBehaviour.ResetAgent`, #219): what it had queued or with the model is cancelled, its memory
+is cleared, and the component, the agent, its guards and its settings stay. That is how the tests
+give all four agents the framework's `ScriptedProvider` (#194), and how the presenter's F1 gives
+them fresh memories.
 
 ## When the game asks a guard
 
@@ -470,7 +470,8 @@ does nothing. The agent then says the line `VillageGuard.RefusalLine` gives that
 |---|---|
 | `never_attack_villagers` | "I won't raise my sword against our own." |
 | `TargetCategoryGuard` | "I don't follow you." |
-| `TargetGroundingGuard` (a target the model wanted that is not here) | "There's no such thing here." |
+| `TargetGroundingGuard` (a target the model wanted that is not here), when the player asked | "There's no such thing here." (Odile: "I don't sell that.") |
+| `TargetGroundingGuard`, when the game asked (a thief, a fire, the wolf) | nothing: nobody asked for anything to answer |
 | `SchemaLegalityGuard` (the provider broke the contract) | nothing |
 
 The overlay, the board and the history show the model's own answer, the guard that stopped it,
@@ -592,6 +593,16 @@ JSON schema. Every finished decision is also appended, as one JSON line, to
 
 It is a game-side prototype of the framework's Decision Log window (build plan §2.7, Phase 5).
 
+## The lab bench
+
+[`Assets/GreyBoxVillage/Lab/`](Assets/GreyBoxVillage/Lab/README.md) holds the framework lab's
+scenario bench (L2): 80 scripted situations across the four agents, played headless in Play
+mode through the agents' own minds, against named variants of how the agents are built (the
+model, the prompt switches, the persona, the observations, memory). `baseline` is the game as it
+ships. It writes the framework's decision log with each prompt as sent, a score per turn, and a
+report with paired comparisons and the run's own noise floor. While it runs, the village's own
+events are muted (`VillageCommands.EventsMuted`) and every scenario starts from F1.
+
 ## Dependencies and tools
 
 The framework is loaded from `file:../../../UnityProject/Packages/com.agenerela.framework`. The
@@ -661,12 +672,16 @@ They cover:
   campfire; F6 goes round to fog, which Wren's next request carries, and F1 brings clear skies back.
   It takes about 15 s.
 - The reset, from #157's landing review: F1 cancels what the old agents still have queued or with
-  the model, so a fresh line goes through without the old answer ever coming back
-  (`VillageSituationTests`); in Play mode, F1 restarts a guard's quiet timer, so a guard that was
+  the model, so a fresh line goes through without the old answer ever coming back, and it keeps
+  the agent and forgets what it remembered (`VillageSituationTests`); in Play mode, F1 restarts a guard's quiet timer, so a guard that was
   busy past its quiet time is not asked at once, and a player typing to a guard who walks out of
   earshot is freed when the panel hides (`VillageResetTests`); and a second F3 puts back the ware
-  the running thief holds. The reset keeps every setting of an agent's component, Target
-  Categories and Only Actions included (`VillageSituationTests`).
+  the running thief holds.
+- The lab bench (`LabBenchTests`, `LabBenchPlayTests`): its scenarios and variants are well formed,
+  balanced and keep hard rule 4 against both evaluation sets and every agent's few-shot lines; a
+  wrong answer scores as wrong; a preview changes nothing in the village; and the whole bench,
+  played in Play mode, scores an oracle 100% and a contrary model 0% with the village after every
+  F1 as it was after the first. [`Lab/README.md`](Assets/GreyBoxVillage/Lab/README.md) is the bench.
 - The woods and the sound (`VillageWoodsTests`): walking to each of the six places records it
   in the journal once, with one toast; every place, Oswin and the wolf's den are on the NavMesh over
   the bridge; Oswin says his lines in turn and is neither an agent nor a target; wherever the player

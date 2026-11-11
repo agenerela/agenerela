@@ -15,6 +15,12 @@ namespace Agenerela.Evaluation
         /// <summary>Each category's counts, keyed by category id, in the set's order.</summary>
         [JsonProperty("categories")] public Dictionary<string, OutcomeCounts> Categories = new Dictionary<string, OutcomeCounts>();
 
+        /// <summary>
+        /// The reply checks' counts over the whole set (<see cref="ReplyChecks"/>): a second score,
+        /// beside <see cref="Overall"/> and never part of it.
+        /// </summary>
+        [JsonProperty("replies")] public ReplyCounts Replies = new ReplyCounts();
+
         /// <summary>The counts for category <paramref name="id"/>, or null.</summary>
         public OutcomeCounts Category(string id) => Categories.TryGetValue(id, out var counts) ? counts : null;
 

@@ -3,6 +3,7 @@
   "references": [
     "GreyBoxVillage",
     "Demos.GreyBoxVillage.Editor",
+    "Demos.GreyBoxVillage.Lab.Editor",
     "Agenerela",
     "Demos.Shared",
     "Unity.InputSystem",

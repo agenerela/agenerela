@@ -501,7 +501,7 @@ The agent abstraction, deliberately **not** welded to `MonoBehaviour`:
 ```csharp
 // Plain class — the brain. Owns identity, registered actions, targets and state (#17).
 public sealed class Agent {
-    public AgentIdentity Identity { get; }               // name, role, personality, goals
+    public AgentIdentity Identity { get; }               // name, role, personality, goals, knowledge, statement rules
     public ActionRegistry Actions { get; }               // see 2.2; filled by Bind
     public TargetRegistry Targets { get; }               // hand-registered targets
     public List<ITargetSource> TargetSources { get; }    // asked on every decision (DR-014)
@@ -555,6 +555,12 @@ still decides when a turn starts, and removing it changes nothing in `Agent`. It
 result by reference, so `Correlation` stays the caller's and DR-018's stale rule lives in the
 helper, as DR-018 asked. `Documentation~/conversations.md` has the whole of it.
 
+Beside it, an optional `Proposals` (#190, Living Vale #16) holds a decision the player must
+confirm instead of executing it, and on confirm carries it out through `Agent.Execute`, whose
+re-check (legality, categories, per-target availability) is the confirm-time check. It changes
+nothing in `Agent`'s public API, `ActionResult` or `ExecutionStatus`. A held proposal is
+remembered once, at hold; `Agent.Reset` ends every pending one. `Documentation~/proposals.md`.
+
 ### 2.2 Actions (`Runtime/Actions/`) — the heart of the framework
 
 **Settled rule: the action vocabulary is data, not an enum.** The prototype's fixed
@@ -571,7 +577,9 @@ public sealed class ActionDefinition {
     public bool RequiresTarget;
     public string ExampleStimulus;       // "{0}" placeholder for target; see few-shot rules
     public string[] PreferredExampleTargets;   // targets this verb sensibly applies to
+    public string ExampleStatement;            // optional, what the agent says in it (#190 G14)
     public string CounterExampleStimulus;      // optional, shown answered with none (#190)
+    public string CounterExampleStatement;     // optional, its statement (#190 G14)
     public string[] TargetCategories;          // optional, the kinds of target it takes (DR-020)
 }
 ```
@@ -744,10 +752,18 @@ than a second schema system — do not let provider-specific syntax leak into th
    ([findings](llm-wiki/findings.md)). An agent built in code has no profile, so it has an idle
    example only when `Agent.IdleExampleStimulus` or the call gives one (#190). An action may
    also carry a `CounterExampleStimulus`, a line that touches its subject but asks for nothing,
-   shown answered with `none` right after its own example (#190). Neither is measured, and both
-   stay off until Phase 4's A/B (#151). **Example utterances must never overlap the
-   evaluation prompt set** (see Phase 4), counter-examples included. Few-shot was the largest
-   single lever measured: +35 points.
+   shown answered with `none` right after its own example (#190). Any example but the refusal
+   can also show a statement, after its target (#190 G14: a guard answered with its idle
+   example's stimulus, the only line it was shown). With `DecideOptions.ExampleTargetFallback`,
+   an example whose preferred targets are all missing names the first target its action takes
+   instead of being left out, skipping a target the stimulus mentions, and a target implementing
+   `INamedTarget` is called by its name (Living Vale #20). Any other is called by its id's words,
+   "training dummy", adopted on 9 November after an A/B found it within noise of "TrainingDummy".
+   The fallback measured worse on impossible requests and stays off; the rest are unmeasured, and
+   none becomes a default before Phase 4's A/B (#151).
+   **Example utterances must never overlap the evaluation prompt set** (see Phase 4),
+   counter-examples and statements included. Few-shot was the largest single lever measured:
+   +35 points.
 5. **A local model reads no schema** (findings, 10 October 2026), so neither the action list nor
    the target ids reach it unless the prompt carries them. `DecideOptions.ListActionsAndTargets`
    (#190) lists both in the system prompt, the targets capped at `MaxListedTargets`. It is off
@@ -1036,7 +1052,7 @@ underneath have stopped moving.
 where the 200 prompts and their second annotator are needed. It writes and labels prompts
 against a chosen agent profile: the expected action is picked from the profile's actions,
 so a prompt cannot name an action the agent lacks, and a stimulus that repeats an action's
-`ExampleStimulus` or `CounterExampleStimulus` is flagged (hard rule 4). Labelling is blind: the annotator sees the
+`ExampleStimulus`, `CounterExampleStimulus` or a statement is flagged (hard rule 4). Labelling is blind: the annotator sees the
 stimulus, observations and state, never the expected answer, anyone else's label or the
 model's reply. Each annotator's answers go to their own file, so two people labelling at
 once never edit the same one. The Evaluation Report (screen 4) reads the same format and
@@ -1189,6 +1205,11 @@ A reply the game drops as stale did not happen, but `DecideAsync` has already re
 `Agent.MemoryCommit = MemoryCommit.OnExecute` holds each decision on its result until
 `Execute` carries it out, or the game calls `Commit` or `Discard`; the default, `OnDecide`, is
 unchanged. `Documentation~/executing-and-memory.md` has both.
+
+**Starting afresh (DR-018, amended).** GreyBoxVillage started an agent over mid-game by
+destroying its `AgentBehaviour` and adding it again. `Agent.Reset()` does it in place: it cancels
+the agent's own decisions wherever they wait, drops those held for `OnExecute`, and clears memory
+through `IClearableMemory`, an optional interface `RollingHistory` implements.
 
 ---
 
@@ -2100,6 +2121,29 @@ default memory behaviour must compile and behave as before.
    names another format is not one this memory can vouch for. The lead chose this, and the method
    on `RollingHistory` rather than a new interface, so `IExportsMemory` is unchanged.
 
+*Amended 9 November 2026 (#190, GreyBoxVillage G12).* 7. **`Agent.Reset()`** starts an agent
+afresh without destroying it. GreyBoxVillage's F1 reset destroyed and re-added its
+`AgentBehaviour`, which built a new agent and lost the guards, sources and state the game had
+added, and it dropped stale answers with a generation counter of its own. The lead chose from
+the options at each step:
+
+- **Synchronous**, `void Reset()`, rather than an awaitable that waits until the cancelled
+  decisions have ended, which could hang on a provider that ignores cancellation.
+  `AgentBehaviour.ResetAgent()` calls it, since Unity calls a component's `Reset` in the editor.
+- **It cancels through the tokens.** Every call's token is linked to a per-agent reset token, so
+  the queues and the provider stop a reset call exactly as they stop a caller's cancelled one, and
+  `RequestScheduler` is unchanged. Only this agent's calls are cancelled. In consequence a provider
+  is sent the linked token, no longer the caller's own token object.
+- **A caller sees the plain `OperationCanceledException`**, rather than a subclass. Its token is
+  the agent's when a reset cancelled the call, and the caller's own when the caller did, so a
+  caller whose token is not cancelled knows it was a reset.
+- **A decision held for `OnExecute` before the reset is never remembered**: `Commit` and
+  `Discard` return false. `Execute` still carries it out as today, rather than refusing it.
+- **Memory is cleared through `IClearableMemory`**, an optional interface, since
+  `IMemoryStrategy` cannot gain a member that Living Vale's strategy would have to implement. A
+  strategy without it is **skipped with a warning**, rather than replaced by a `RollingHistory` or
+  made to throw. A memory two agents share is cleared for both.
+
 **Consequences**
 
 - No existing signature changes. `IActionHandler`, `IMemoryStrategy`, `Execute(result)` and
@@ -2283,13 +2327,46 @@ check its own limit, or send the flat schema, before it sends a paired one.
   keep actions off Bram, for `OnlyActions`; and the skip in `GuardTargetSource`, which `Offer` does.
   **Living Vale**: the pair guards in `TradeActionBinding` and `QuestActionBinding`, once its targets
   are registered in categories and its actions name them.
-- **Extension point: the Targets research area (#120).** A target in several categories, a source
-  that offers by component type, and conditions per target (Living Vale's gap 19) would sit beside
-  the category as more that an action can require of a target.
+- **Extension point: the Targets research area (#120).** A target in several categories and a
+  source that offers by component type would sit beside the category as more that an action can
+  require of a target. Conditions per target now do (amendment below).
+
+**Amendment, 9 November 2026: conditions per target (#190 LV #19, #216 item 5).** A category says
+what kind of target an action takes; Living Vale's routes and GreyBoxStrategy's truces need "this
+one, right now". The tech lead accepted this shape from the design pass:
+
+| Question | Options | Verdict |
+|---|---|---|
+| Where the condition lives | An optional handler interface asked per target; on the target object (a scene target is its `Transform`, the reason `ICategorizedTarget` was rejected above); a predicate on the registry | **An optional handler interface**, `ITargetAvailability.IsAvailableFor(ctx, targetId)`, returning an `Availability`: yes, or no with an optional reason |
+| Its front doors | As for `IsAvailable` | **`[AvailableFor("id")]`** on a method taking the target's id (and optionally an `AgentContext` first), returning `bool` or `Availability`; a settable **`DelegateActionHandler.IsAvailableFor`** |
+| An action with no legal target left | Left out paired only, as categories are; left out in both modes | **Left out in both modes**: state masking the developer opts into by giving the check |
+| A rejected pair under a flat schema | Narrow the target enum; a guard | **A guard**, `TargetAvailabilityGuard`, after `TargetCategoryGuard`, rewriting to `none`; the flat enum stays every target so grounding reads the same list. Under pairing the pair is dropped from its branch, and `SchemaLegalityGuard` rejects one the grammar let through |
+| Telling the model | A "Not possible right now: ..." prompt line behind an option; nothing | **Nothing.** The line forbids in prose what the schema already makes absent, and would be another off-by-default switch. Considered and dropped |
+
+8. **Per-target checks.** For a handler with a check, `ActionAvailability` asks it once per decision
+   for each registered target in the action's categories (every target when it names none), never
+   for `no_target`, and only while `IsAvailable` says yes. An action that requires a target and has
+   none it takes that the check allows is left out, flat or paired. The paired schema drops each
+   rejected pair. The schema, the examples, the preview and the guard read that one answer.
+   `TargetAvailabilityGuard`, the fourth built-in guard, turns a rejected pair into `none`;
+   `Execute` runs it again after `TargetCategoryGuard`, asking the check against the game as it is
+   then, and refuses a stale pair with the check's reason in the `ActionResult`. Each rejected pair
+   and its reason is in `DecisionTelemetry.TargetsUnavailable`, the decision log's
+   `targetsUnavailable` and `AgentPreview.TargetsUnavailable`; an action left out for it is named in
+   `AgentPreview.LeftOut` with each target's reason. The reason never reaches the model.
+   A handler without a check, every handler written before, changes nothing: the request is
+   byte-identical, and no A/B is owed until a developer gives one. Living Vale can delete
+   `RouteActionBinding.CheckPair` (its `RoutePairGuard`) and the per-target half of `Offers`, and
+   stop filtering route targets in its target source, once each route handler implements
+   `ITargetAvailability` over `RouteContract.Available`; `QuestRoutes`' own re-checks at
+   `TryPropose` and `Confirm` stay the game's. Not done: an example whose preferred
+   target the check rejects is still shown with it, and `[Available]` gives no reason for a whole
+   action.
 
 **Revisit if:** the A/B shows the paired schema costs accuracy on small models, or that it is worth
-making the default; a game needs a target in more than one category; or a cloud provider needs a
-paired form other than a root `anyOf`.
+making the default; a game needs a target in more than one category; a cloud provider needs a
+paired form other than a root `anyOf`; or masking an action per target is seen to hurt a model that
+relied on seeing it.
 
 ### Decisions already recorded elsewhere in this plan
 

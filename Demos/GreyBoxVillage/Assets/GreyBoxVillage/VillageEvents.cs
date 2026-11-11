@@ -50,13 +50,17 @@ namespace Demos.GreyBoxVillage
             if (Alarm != null) Alarm.Rang -= OnRang;
         }
 
+        /// <summary>What everyone in earshot is told when the bell rings; <paramref name="ringer"/> null for nobody known.</summary>
+        public static string BellStimulus(string ringer) =>
+            "The alarm bell is ringing" + (!string.IsNullOrEmpty(ringer) ? ". " + ringer + " rang it." : ".");
+
         private void OnRang(VillageBody ringer)
         {
             var who = ringer != null ? ringer.GetComponent<AgentMind>() : null;
             Raise(new VillageEvent
             {
                 Source = "bell",
-                Text = "The alarm bell is ringing" + (who != null ? ". " + who.Name + " rang it." : "."),
+                Text = BellStimulus(who != null ? who.Name : null),
                 Where = Alarm.transform.position,
                 HearingRadius = BellHearingRadius,
                 Cause = ringer

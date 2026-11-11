@@ -99,9 +99,9 @@ namespace Agenerela.Tests
         // all 20 prompts. As rendered, the block is:
         //   Player: "I could use an escort on my rounds." -> follow_player   (when not following)
         //   Player: "You can return to your post now." -> stop_following     (when following)
-        //   Player: "I need you up on that Tower." -> move_to, tower
-        //   Player: "Give that TrainingDummy a good beating." -> attack_target, training_dummy
-        //   Player: "Could you grab me that Sword?" -> pick_up_item, sword
+        //   Player: "I need you up on that tower." -> move_to, tower
+        //   Player: "Give that training dummy a good beating." -> attack_target, training_dummy
+        //   Player: "Could you grab me that sword?" -> pick_up_item, sword
         //   Player: "You seem well rested today." -> none
         //   Player: "I need you up on that Atlantis." -> none (the generated refusal)
         private const string IdleExample = "You seem well rested today.";
@@ -247,7 +247,7 @@ namespace Agenerela.Tests
         // On a worker thread, so the blocking wait cannot deadlock against Unity's synchronization context.
         private static string Get(string path)
         {
-            using (var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) })
+            using (var client = LiveOllama.Client(TimeSpan.FromSeconds(10)))
             {
                 return Task.Run(() => client.GetStringAsync(LiveOllama.Endpoint.TrimEnd('/') + path)).Result.Trim();
             }

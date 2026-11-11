@@ -145,6 +145,22 @@ namespace Agenerela.Tests.Evaluation
             AssertBreaks(prompt, PromptRule.StimulusIsExample);
         }
 
+        [TestCase("On my way to the wolf.")]
+        [TestCase("it does, AT that!")]
+        [TestCase("Rested and READY.")]
+        public void TheStimulusIsNotAnExamplesStatement(string stimulus)
+        {
+            // A statement is shown in the prompt too, so scoring on one measures nothing (#190, G14).
+            var moveTo = profile.Actions.Find(a => a.Action.Id == "move_to").Action;
+            moveTo.ExampleStatement = "On my way to the {0}.";
+            moveTo.CounterExampleStatement = "It does, at that.";
+            profile.IdleExampleStatement = "Rested and ready.";
+            var prompt = Valid();
+            prompt.Stimulus = stimulus;
+
+            AssertBreaks(prompt, PromptRule.StimulusIsExample);
+        }
+
         [Test]
         public void ThePlaceholderStandsForAnyText()
         {

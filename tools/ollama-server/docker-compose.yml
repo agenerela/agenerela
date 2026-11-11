@@ -1,0 +1,81 @@
+# Ollama for Agenerela's live runs, served from the RTX 5080 machine to other machines.
+#
+# A self-contained stack: its own containers, port and model volume. It never touches
+# the Ollama app installed on this machine, which keeps its own models and port 11434.
+# Run every command from this folder; README.md walks through setup.
+#
+#   ollama   Ollama itself, at a pinned version, with the settings every result so far
+#            was measured with. It publishes no port: only the gateway can reach it.
+#   gateway  Caddy in front of Ollama's API: the one port other machines can reach.
+#            Every request must carry AGENERELA_OLLAMA_API_KEY from .env.
+
+name: agenerela-ollama
+
+# Both containers' logs, kept by Docker and rotated so they cannot fill the disk: Ollama writes
+# about 25 lines per request and a few hundred per model load. `docker logs` reads them; logs.py
+# turns both into one short timeline (README, "Logs").
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
+services:
+  ollama:
+    # The version every result is tied to. Change it only on purpose, in its own pull
+    # request, then re-run tools/benchmarks/schema_visibility_probe.py (AGENTS.md) and
+    # raise OLLAMA_VERSION in tools/live-runs/model-sweep/sweep_one.sh to match.
+    image: ollama/ollama:0.40.14
+    container_name: agenerela-ollama
+    restart: unless-stopped
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434          # inside the container; nothing publishes it
+      # The settings the model-sweep kit starts `ollama serve` with
+      # (tools/live-runs/model-sweep/README.md, step 1):
+      OLLAMA_GO_TEMPLATE: "1"             # no model has its keys sorted (findings, 9 November)
+      OLLAMA_CONTEXT_LENGTH: "16384"      # what the Ollama app adds on Windows
+      OLLAMA_NO_CLOUD: "0"                # likewise
+    volumes:
+      - models:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    logging: *logging
+    # Each check is two requests in Ollama's log, so it runs every 5 minutes once up, and every
+    # 5 s only while starting.
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5m
+      timeout: 10s
+      start_period: 60s
+      start_interval: 5s
+      retries: 3
+
+  gateway:
+    image: caddy:2.11.7-alpine
+    container_name: agenerela-ollama-gateway
+    restart: unless-stopped
+    logging: *logging
+    depends_on:
+      - ollama
+    environment:
+      API_KEY: ${AGENERELA_OLLAMA_API_KEY:?AGENERELA_OLLAMA_API_KEY is empty. Run setup.ps1, which writes one to .env}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if [ "$${#API_KEY}" -lt 32 ]; then
+          echo "AGENERELA_OLLAMA_API_KEY is shorter than 32 characters; refusing to start. Run setup.ps1." >&2
+          exit 1
+        fi
+        exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    ports:
+      - "${OLLAMA_API_BIND:-0.0.0.0}:${OLLAMA_API_PORT:-11436}:8080"
+
+volumes:
+  models:

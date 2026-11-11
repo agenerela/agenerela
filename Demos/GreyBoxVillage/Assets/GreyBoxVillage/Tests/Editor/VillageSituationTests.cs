@@ -183,11 +183,16 @@ namespace Demos.GreyBoxVillage.Tests
         public async Task AGuardThatCannotBeBuiltDoesNotStopOdile()
         {
             var events = fire.Events;
-            var profile = bram.Behaviour.Profile;
+            // F1 keeps an agent once it is built, so Bram stands in with a component that has
+            // never built one, and has no profile to build it from.
+            var built = bram.Behaviour;
+            string settings = JsonUtility.ToJson(built);
+            UnityEngine.Object.DestroyImmediate(built);
+            var unbuilt = bram.gameObject.AddComponent<AgentBehaviour>();
+            JsonUtility.FromJsonOverwrite(settings, unbuilt);
             try
             {
-                bram.UseProvider(config);
-                bram.Behaviour.Profile = null;
+                unbuilt.Profile = null;
                 fire.Events = null;
                 fire.Ignite();
                 await SayTo(odile, "Is that smoke?");
@@ -198,7 +203,9 @@ namespace Demos.GreyBoxVillage.Tests
             finally
             {
                 fire.Events = events;
-                bram.Behaviour.Profile = profile;
+                // Bram again, as the scene has him: a component with every setting, built afresh.
+                UnityEngine.Object.DestroyImmediate(unbuilt);
+                JsonUtility.FromJsonOverwrite(settings, bram.gameObject.AddComponent<AgentBehaviour>());
                 bram.UseProvider(config);
             }
         }
@@ -585,36 +592,28 @@ namespace Demos.GreyBoxVillage.Tests
 
         // ---- The presenter -------------------------------------------------------------------------
 
-        // G12: the reset replaces an agent's AgentBehaviour, and the new one must keep every setting of
-        // the old, the ones #208 added (Target Categories, Only Actions) and any the framework adds
-        // later. On an agent of its own, every setting away from its default: the scene's agents have
-        // already been through SetUp's reset, so they cannot show what one loses.
+        // G12: F1 resets the agent (#190, AgentBehaviour.ResetAgent) rather than replacing its
+        // component. The component, the agent and every setting stay, the guards the mind added are
+        // not added twice, and the memory is empty: the next request carries no history.
         [Test]
-        public void AResetKeepsEveryAgentSetting()
+        public async Task AResetKeepsTheAgentAndForgetsWhatItRemembered()
         {
-            var probe = new GameObject("reset probe");
-            try
-            {
-                var old = probe.AddComponent<AgentBehaviour>();
-                old.Profile = bram.Behaviour.Profile;
-                old.Provider = config;
-                old.FindTargetsNearby = false;
-                old.Targets = new ProximityTargetSource { Radius = 12f, Cap = 3, RequireLineOfSight = true, Categories = new[] { "place" } };
-                old.NoticeNearby = true;
-                old.Observations = new ProximityObservationSource { Radius = 7f, Cap = 2, RequireLineOfSight = true };
-                old.OnlyActions = new[] { "patrol" };
-                old.TargetCategories = new[] { "place", "creature" };
-                var mind = probe.AddComponent<AgentMind>();
-                string before = JsonUtility.ToJson(old);
+            var behaviour = bram.Behaviour;
+            var agent = bram.Agent;
+            int guards = agent.Guards.Count;
+            string settings = JsonUtility.ToJson(behaviour);
+            await SayTo(bram, "Anything on the road today?");
+            await SayTo(bram, "And yesterday?");
+            Assert.That(provider.LastRequest.Request.History, Is.Not.Empty, "Bram remembered nothing, so the reset cannot show it forgets.");
 
-                mind.UseProvider(config);
-                Assert.That(mind.Behaviour, Is.Not.SameAs(old), "The reset kept the old component, so its agent and memory.");
-                Assert.That(JsonUtility.ToJson(mind.Behaviour), Is.EqualTo(before), "The reset lost a setting.");
-            }
-            finally
-            {
-                UnityEngine.Object.DestroyImmediate(probe);
-            }
+            commands.ResetAgents();
+            Assert.That(bram.Behaviour, Is.SameAs(behaviour), "The reset replaced the component.");
+            Assert.That(bram.Agent, Is.SameAs(agent), "The reset built a new agent.");
+            Assert.That(JsonUtility.ToJson(bram.Behaviour), Is.EqualTo(settings), "The reset changed a setting.");
+            Assert.That(agent.Guards.Count, Is.EqualTo(guards), "The mind added its guards again.");
+            await SayTo(bram, "Anything on the road today?");
+            Assert.That(provider.LastRequest.Request.History, Is.Empty, "F1 left Bram remembering the last stage.");
+            Assert.That(bram.Last.Outcome, Is.EqualTo("none"));
         }
 
         [Test]

@@ -83,6 +83,10 @@ namespace Demos.GreyBoxVillage
             Report("A hooded stranger is making for Odile's stall.");
         }
 
+        /// <summary>What Odile is told when a thief snatches <paramref name="ware"/> from her counter.</summary>
+        public static string SnatchedStimulus(string ware) =>
+            "A hooded stranger has snatched the " + ware + " from your counter and is running for the eastern_road!";
+
         /// <summary>Takes the first ware on the counter and runs. Odile sees it, and is asked.</summary>
         public void Grab()
         {
@@ -102,9 +106,7 @@ namespace Demos.GreyBoxVillage
             Report("The thief took the " + Loot.Id + " and is running for the eastern_road.");
             var odile = Merchant.GetComponent<AgentMind>();
             if (odile != null)
-                _ = odile.ReportEventAsync("thief", "Event",
-                    "A hooded stranger has snatched the " + Loot.Id + " from your counter and is running for the eastern_road!",
-                    DecisionPriority.Background);
+                _ = odile.ReportEventAsync("thief", "Event", SnatchedStimulus(Loot.Id), DecisionPriority.Background);
         }
 
         /// <summary>Caught by a guard: it drops the ware, which goes back on the counter.</summary>

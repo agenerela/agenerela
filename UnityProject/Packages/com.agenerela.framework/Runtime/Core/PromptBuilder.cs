@@ -24,7 +24,9 @@ namespace Agenerela
     /// <para>
     /// Developer text goes in verbatim. The identity fields are only trimmed of surrounding
     /// whitespace, because they sit inside a sentence; observations and the stimulus are not
-    /// touched at all. The framework never classifies the stimulus or assumes a speaking
+    /// touched at all, except that a call's own observations placed after the stimulus
+    /// (<see cref="ObservationPlacement.WithStimulus"/>) are each put on one line and ended as a
+    /// sentence, since they share the stimulus's line. The framework never classifies the stimulus or assumes a speaking
     /// character (DR-008): the label is whatever the caller passed.
     /// </para>
     /// <para>
@@ -61,6 +63,14 @@ namespace Agenerela
 
         private const string ObservationsHeader = "What you know right now:";
 
+        // The identity's standing knowledge and statement rules (#190, Living Vale #14), after the
+        // goals. "What you know:" sets the knowledge against the observations' "What you know right
+        // now:"; the rules line is framed like "Your goals:" and named for the statement field,
+        // never for speech (DR-008). New and unmeasured as wording, and here alone so an A/B can
+        // change them in one place.
+        private const string KnowledgeHeader = "What you know:";
+        private const string StatementRulesPrefix = "Your statement: ";
+
         // The action and target list's headings (#190). "Allowed" echoes the instruction line's
         // "from the allowed list"; the target list is the "listed targets" it names. New and
         // unmeasured, and here alone so the A/B can change them in one place.
@@ -79,6 +89,11 @@ namespace Agenerela
         /// from <c>ctx.Observations</c>, <paramref name="history"/>, the stimulus from
         /// <c>ctx.Stimulus</c> labelled <c>Label: "text"</c>, and <paramref name="schema"/>.
         /// </summary>
+        /// <remarks>
+        /// <see cref="PromptOptions.ObservationPlacement"/> says where the last
+        /// <see cref="PromptOptions.CallObservationCount"/> observations, the call's own, go: at the
+        /// end of the block (the default), or after the stimulus's closing quote in the user turn (#151).
+        /// </remarks>
         /// <param name="ctx">What the agent knows at this decision.</param>
         /// <param name="schema">The schema <see cref="DecisionSchema.Build"/> made from the same context.</param>
         /// <param name="fewShotBlock">
@@ -92,7 +107,10 @@ namespace Agenerela
         /// <param name="options">Null uses the defaults.</param>
         /// <exception cref="ArgumentNullException"><paramref name="ctx"/> or <paramref name="schema"/> is null.</exception>
         /// <exception cref="ArgumentException"><see cref="PromptOptions.StimulusLabel"/> is null, empty or whitespace.</exception>
-        /// <exception cref="ArgumentOutOfRangeException"><see cref="PromptOptions.MaxListedTargets"/> is negative.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// <see cref="PromptOptions.MaxListedTargets"/> or <see cref="PromptOptions.CallObservationCount"/> is
+        /// negative, or <see cref="PromptOptions.ObservationPlacement"/> is not a defined value.
+        /// </exception>
         public static DecisionRequest Build(
             AgentContext ctx,
             DecisionSchema schema,
@@ -125,17 +143,24 @@ namespace Agenerela
                     "PromptOptions.MaxListedTargets cannot be negative. 0 lists no targets.");
             }
 
+            if (options.CallObservationCount < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), options.CallObservationCount,
+                    "PromptOptions.CallObservationCount cannot be negative. 0 means none of the observations is the call's own.");
+            }
+
             string choices = options.ListActionsAndTargets ? ChoicesBlock(ctx, schema, options.MaxListedTargets) : null;
+            Place(ctx.Observations, options, out var block, out string facts);
 
             return new DecisionRequest
             {
                 SystemPrompt = SystemPrompt(ctx.Identity, choices, options.TargetRule ? TargetRuleLine(schema) : null),
                 FewShotBlock = fewShotBlock,
-                Observations = ObservationsBlock(ctx.Observations),
+                Observations = ObservationsBlock(block),
                 // Copied, so a memory strategy changing its list afterwards does not change a
                 // request already built.
                 History = new ReadOnlyCollection<string>(new List<string>(history ?? Array.Empty<string>())),
-                Stimulus = $"{options.StimulusLabel}: \"{ctx.Stimulus}\"",
+                Stimulus = $"{options.StimulusLabel}: \"{ctx.Stimulus}\"" + facts,
                 Schema = schema,
                 AgentName = ctx.Identity?.Name,
                 StimulusText = ctx.Stimulus,
@@ -157,6 +182,7 @@ namespace Agenerela
                 AgentName = decided.AgentName,
                 StimulusText = decided.StimulusText,
                 StimulusLabel = decided.StimulusLabel,
+                AgentId = decided.AgentId,
             };
         }
 
@@ -259,11 +285,13 @@ namespace Agenerela
             return text.Length > 0 ? "- " + id + ": " + EndSentence(text) : "- " + id;
         }
 
-        // Who the agent is, its goals if it has any, then the fixed instruction line, then the
-        // action and target list and the target rule, each when there is one.
+        // Who the agent is, its goals, its knowledge and its statement rules, each when it has
+        // them, then the fixed instruction line, then the action and target list and the target
+        // rule, each when there is one. With no knowledge and no rules the prompt is exactly what
+        // it was before them (#190, Living Vale #14).
         private static string SystemPrompt(AgentIdentity identity, string choices, string targetRule)
         {
-            var lines = new List<string>(5);
+            var lines = new List<string>(7);
 
             string who = WhoLine(identity);
             if (who.Length > 0)
@@ -275,6 +303,18 @@ namespace Agenerela
             if (goals.Length > 0)
             {
                 lines.Add("Your goals: " + EndSentence(goals));
+            }
+
+            string knowledge = KnowledgeBlock(identity.Knowledge);
+            if (knowledge != null)
+            {
+                lines.Add(knowledge);
+            }
+
+            string rules = OneLine(identity.StatementRules);
+            if (rules.Length > 0)
+            {
+                lines.Add(StatementRulesPrefix + EndSentence(rules));
             }
 
             lines.Add(InstructionLine);
@@ -311,6 +351,50 @@ namespace Agenerela
             return line.Length > 0 ? line + " " + personality : personality;
         }
 
+        // Where the call's own observations go (#151). ctx holds the sources' lines first and the
+        // call's own last, CallObservationCount of them. AfterSources renders the list as it is, so
+        // the request is byte-identical to one built before the option; WithStimulus takes them out of
+        // the block and returns them as the text that follows the stimulus's closing quote: each on one line,
+        // ended as a sentence, after a space, so the developer's stimulus stays whole inside the
+        // quote and the facts read as what comes after it. Blank lines are skipped, as in the block.
+        private static void Place(IReadOnlyList<string> observations, PromptOptions options,
+                                  out IReadOnlyList<string> block, out string facts)
+        {
+            block = observations;
+            facts = "";
+            int own = Math.Min(options.CallObservationCount, observations.Count);
+            if (own == 0 || options.ObservationPlacement == ObservationPlacement.AfterSources)
+            {
+                return;
+            }
+
+            int sources = observations.Count - own;
+            var sourceLines = new List<string>(sources);
+            var callLines = new List<string>(own);
+            for (int i = 0; i < observations.Count; i++)
+            {
+                (i < sources ? sourceLines : callLines).Add(observations[i]);
+            }
+
+            if (options.ObservationPlacement != ObservationPlacement.WithStimulus)
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), options.ObservationPlacement,
+                    "PromptOptions.ObservationPlacement is not one of AfterSources or WithStimulus.");
+            }
+
+            block = sourceLines;
+            var text = new System.Text.StringBuilder();
+            foreach (string line in callLines)
+            {
+                string fact = OneLine(line);
+                if (fact.Length == 0) continue;
+
+                text.Append(' ').Append(EndSentence(fact));
+            }
+
+            facts = text.ToString();
+        }
+
         // The developer's observations, one "- " line each under a heading, or null when there
         // are none, so the block is left out rather than sent as an empty heading. A blank
         // entry is skipped: an empty line is not something the agent knows.
@@ -328,7 +412,34 @@ namespace Agenerela
             return lines.Count > 1 ? string.Join("\n", lines) : null;
         }
 
+        // The identity's knowledge, one "- " line each under its heading, or null when it has
+        // none. Like an observation, a line goes in as written, except that a blank one is skipped
+        // and its own line breaks become spaces, so one entry cannot pose as several or as a
+        // heading of the prompt.
+        private static string KnowledgeBlock(IReadOnlyList<string> knowledge)
+        {
+            if (knowledge == null)
+            {
+                return null;
+            }
+
+            var lines = new List<string> { KnowledgeHeader };
+
+            foreach (string line in knowledge)
+            {
+                string text = OneLine(line);
+                if (text.Length == 0) continue;
+
+                lines.Add("- " + text);
+            }
+
+            return lines.Count > 1 ? string.Join("\n", lines) : null;
+        }
+
         private static string Clean(string text) => text == null ? "" : text.Trim();
+
+        // Trimmed, and every run of whitespace, line breaks included, one space.
+        private static string OneLine(string text) => text == null ? "" : Regex.Replace(text, @"\s+", " ").Trim();
 
         // Ends a framed sentence with a full stop unless the developer's text already ends one,
         // so "a guard at the town gate." does not become "gate..".

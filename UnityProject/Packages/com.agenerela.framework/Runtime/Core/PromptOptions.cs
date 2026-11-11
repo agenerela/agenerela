@@ -126,5 +126,52 @@ namespace Agenerela
         /// <see cref="IdleExampleStimulus"/>: the caller passes it as <c>counterExamples</c>.
         /// </remarks>
         public bool CounterExamples = true;
+
+        /// <summary>
+        /// What the agent says in the idle example (#190, G14). <c>Agent</c> fills it from the call,
+        /// the agent or the profile, never from further down than the idle stimulus came from
+        /// (<see cref="DecideOptions.IdleExampleStatement"/>). Null or empty gives no statement. Read by
+        /// <see cref="FewShotBuilder.Build(System.Collections.Generic.IReadOnlyList{ActionDefinition}, TargetRegistry, PromptOptions)"/>.
+        /// </summary>
+        public string IdleExampleStatement;
+
+        /// <summary>
+        /// Whether the examples show the statements developers wrote (#190, G14). On by default, which
+        /// shows only what was written. <c>Agent</c> copies it from <see cref="DecideOptions.ExampleStatements"/>.
+        /// Read by <c>FewShotBuilder.Build</c>.
+        /// </summary>
+        public bool ExampleStatements = true;
+
+        /// <summary>
+        /// Whether an example with no registered preferred target names the first offered target its
+        /// action takes, skipping any target <see cref="Stimulus"/> mentions (#190, Living Vale #20).
+        /// Off by default. <c>Agent</c> copies it from <see cref="DecideOptions.ExampleTargetFallback"/>.
+        /// Read by <c>FewShotBuilder.Build</c>.
+        /// </summary>
+        public bool ExampleTargetFallback;
+
+        /// <summary>
+        /// Where the call's own observations go (#151). <see cref="Agenerela.ObservationPlacement.AfterSources"/>
+        /// by default, which renders <c>ctx.Observations</c> exactly as before it existed.
+        /// <c>Agent</c> copies it from <see cref="DecideOptions.ObservationPlacement"/>. Read by
+        /// <see cref="PromptBuilder.Build"/> together with <see cref="CallObservationCount"/>.
+        /// </summary>
+        public ObservationPlacement ObservationPlacement = ObservationPlacement.AfterSources;
+
+        /// <summary>
+        /// How many of the context's observations, counted from its end, are the call's own, 0 by
+        /// default. <c>Agent</c> sets it: it puts the lines of its observation sources first and the
+        /// call's own last, so this says where one ends and the other begins. A value larger than
+        /// the list takes the whole list. With 0, or with <see cref="ObservationPlacement"/> left at
+        /// its default, nothing moves. <see cref="PromptBuilder.Build"/> throws for a negative value.
+        /// </summary>
+        public int CallObservationCount;
+
+        /// <summary>
+        /// The request's stimulus, which <see cref="ExampleTargetFallback"/> reads so a fallback example
+        /// never names a target the stimulus mentions: that example would show the model the answer.
+        /// <c>Agent</c> sets it. Null mentions nothing.
+        /// </summary>
+        public string Stimulus;
     }
 }

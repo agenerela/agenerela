@@ -51,9 +51,12 @@ namespace Demos.GreyBoxVillage
                 .OrderBy(m => Vector3.Distance(m.transform.position, place.position))
                 .FirstOrDefault();
             if (guard == null) return;
-            string words = string.IsNullOrWhiteSpace(statement) ? "" : " He says: \"" + statement.Trim() + "\"";
-            _ = guard.ReportEventAsync("captain", "Captain", "Captain Hale orders you to the " + IdOf(place) + "." + words,
-                DecisionPriority.Background);
+            _ = guard.ReportEventAsync("captain", "Captain", OrderStimulus(IdOf(place), statement), DecisionPriority.Background);
         }
+
+        /// <summary>What the guard Hale sends is told: the place, and his own words.</summary>
+        public static string OrderStimulus(string placeId, string statement) =>
+            "Captain Hale orders you to the " + placeId + "." +
+            (string.IsNullOrWhiteSpace(statement) ? "" : " He says: \"" + statement.Trim() + "\"");
     }
 }

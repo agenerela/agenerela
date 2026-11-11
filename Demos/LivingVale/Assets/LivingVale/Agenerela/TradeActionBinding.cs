@@ -11,20 +11,26 @@ namespace LivingVale.Agenerela
     /// <see cref="Agent"/>, all of it through the framework's public API. What the NPC may offer
     /// comes from <see cref="NpcActionExecutor.AvailableFor"/>, asked afresh on every decision:
     /// <list type="bullet">
-    /// <item><description>Availability: each action's handler is available only while the executor lists it, so an action with nothing to offer is absent from the schema.</description></item>
+    /// <item><description>Availability: each handler's per-target check (<see cref="ExecutorHandler"/>, #235) allows only what the executor lists now, so an action with nothing to offer is absent from the schema.</description></item>
     /// <item><description>Targets: a target source registers the listed target IDs on each decision, and again in <see cref="Agent.Execute"/>, so a target that went stale is refused there.</description></item>
-    /// <item><description>Pairs: one target list serves both actions, so a guard rewrites a quote whose target belongs to the other action to <c>none</c>.</description></item>
+    /// <item><description>Pairs: stock entries and the traveler's sale bundles are registered in their own target categories, which each action declares (#208), so the framework's <c>TargetCategoryGuard</c> rewrites a quote naming the other action's target to <c>none</c>.</description></item>
     /// <item><description>Execution: the handlers call the same <see cref="NpcActionExecutor.Execute"/> the scripted driver does, with the turn's conversation generation, so both drivers share one path.</description></item>
     /// </list>
     /// </summary>
     /// <remarks>
     /// A local model never reads the schema (AGENTS.md). The framework lists the actions and their
-    /// described targets in the prompt (#193), <see cref="RuleLines"/> says when to choose them, and <see cref="RefreshExamples"/> gives each
-    /// available action a one-line example on a real target, which the few-shot block shows.
+    /// described targets in the prompt (#193), and <see cref="RuleLines"/> says when to choose them.
+    /// Each action has a fixed example, <c>"I'll take {0}, please."</c>, whose target the framework
+    /// picks each turn from those its category offers (<c>ExampleTargetFallback</c>, #234) and names
+    /// by the target's own words (<see cref="INamedTarget"/>), so it always points at a real target.
     /// </remarks>
     public sealed class TradeActionBinding
     {
-        public const string PairGuardName = "TradePairGuard";
+        /// <summary>The target category of this NPC's stock entries, which <c>quote_purchase</c> takes.</summary>
+        public const string StockCategory = "stock";
+
+        /// <summary>The target category of the traveler's sale bundles, which <c>quote_sale</c> takes.</summary>
+        public const string PackCategory = "pack";
 
         private readonly string npcId;
         private readonly NpcActionExecutor executor;
@@ -40,6 +46,8 @@ namespace LivingVale.Agenerela
                 Id = GameActions.QuotePurchase,
                 Description = "Offer the traveler an exact price for one of your stock entries.",
                 RequiresTarget = true,
+                TargetCategories = new[] { StockCategory },
+                ExampleStimulus = PurchaseExample,
                 CounterExampleStimulus = PurchaseCounterExample
             };
             sale = new ActionDefinition
@@ -47,11 +55,13 @@ namespace LivingVale.Agenerela
                 Id = GameActions.QuoteSale,
                 Description = "Offer to buy something the traveler carries, at an exact price.",
                 RequiresTarget = true,
+                TargetCategories = new[] { PackCategory },
+                ExampleStimulus = SaleExample,
                 CounterExampleStimulus = SaleCounterExample
             };
         }
 
-        /// <summary>Binds both actions, the target source and the pair guard to <paramref name="agent"/>.</summary>
+        /// <summary>Binds both actions and the target source to <paramref name="agent"/>.</summary>
         public static TradeActionBinding Bind(Agent agent, string npcId, NpcActionExecutor executor)
         {
             if (agent == null)
@@ -65,10 +75,9 @@ namespace LivingVale.Agenerela
             }
 
             var binding = new TradeActionBinding(npcId, executor);
-            agent.Actions.Register(binding.purchase, new Handler(binding, GameActions.QuotePurchase));
-            agent.Actions.Register(binding.sale, new Handler(binding, GameActions.QuoteSale));
+            agent.Actions.Register(binding.purchase, new ExecutorHandler(executor, npcId, GameActions.QuotePurchase));
+            agent.Actions.Register(binding.sale, new ExecutorHandler(executor, npcId, GameActions.QuoteSale));
             agent.TargetSources.Add(new Targets(binding));
-            agent.Guards.Add(new DelegateGuard(PairGuardName, binding.CheckPair));
             return binding;
         }
 
@@ -126,6 +135,13 @@ namespace LivingVale.Agenerela
             "For greetings, questions, rumours and small talk, choose none and just answer. " +
             "Nothing changes hands until the traveler confirms your offer.";
 
+        /// <summary>
+        /// Each action's few-shot example. The framework fills <c>{0}</c> with the first target of the
+        /// action's category offered this turn, by its <see cref="INamedTarget"/> name ("healing potion ×1").
+        /// </summary>
+        public const string PurchaseExample = "I'll take {0}, please.";
+        public const string SaleExample = "Would you buy my {0}?";
+
         /// <summary>Lines that mention trade and ask for nothing, shown answered with <c>none</c> when counter-examples are on (#193).</summary>
         public const string PurchaseCounterExample = "Your stall looks well stocked today.";
         public const string SaleCounterExample = "Iron and pelts must be hard to come by these days.";
@@ -146,102 +162,6 @@ namespace LivingVale.Agenerela
             return new List<string> { string.IsNullOrWhiteSpace(rule) ? DefaultRule : rule };
         }
 
-        /// <summary>
-        /// Points each action's few-shot example at its first target now, so the example the
-        /// framework shows names a real id. Only an action with targets is offered, so only its
-        /// example appears.
-        /// </summary>
-        public void RefreshExamples(IReadOnlyList<GameActionOption> options)
-        {
-            purchase.ExampleStimulus = null;
-            purchase.PreferredExampleTargets = null;
-            sale.ExampleStimulus = null;
-            sale.PreferredExampleTargets = null;
-
-            foreach (var option in options ?? Array.Empty<GameActionOption>())
-            {
-                if (option.Targets.Count == 0)
-                {
-                    continue;
-                }
-
-                var first = option.Targets[0];
-                if (option.ActionId == GameActions.QuotePurchase)
-                {
-                    purchase.ExampleStimulus = $"I'll take {Lower(first.Name)}, please.";
-                    purchase.PreferredExampleTargets = new[] { first.Id };
-                }
-                else if (option.ActionId == GameActions.QuoteSale)
-                {
-                    sale.ExampleStimulus = $"Would you buy my {Lower(StripOwner(first.Name))}?";
-                    sale.PreferredExampleTargets = new[] { first.Id };
-                }
-            }
-        }
-
-        private static string Lower(string text) => string.IsNullOrEmpty(text) ? "" : char.ToLowerInvariant(text[0]) + text.Substring(1);
-
-        private static string StripOwner(string name) =>
-            name != null && name.StartsWith("Player's ", StringComparison.Ordinal) ? name.Substring("Player's ".Length) : name;
-
-        private bool Offers(string actionId, string targetId)
-        {
-            foreach (var option in Options())
-            {
-                if (option.ActionId != actionId)
-                {
-                    continue;
-                }
-
-                if (targetId == null)
-                {
-                    return true;
-                }
-
-                foreach (var target in option.Targets)
-                {
-                    if (target.Id == targetId)
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        }
-
-        private GuardVerdict CheckPair(GuardInput input)
-        {
-            var decision = input.Decision;
-            if (decision == null || (decision.ActionId != GameActions.QuotePurchase && decision.ActionId != GameActions.QuoteSale))
-            {
-                return GuardVerdict.Pass;
-            }
-
-            return Offers(decision.ActionId, decision.TargetId)
-                ? GuardVerdict.Pass
-                : GuardVerdict.RewriteToNone($"{decision.TargetId} is not a target of {decision.ActionId}.");
-        }
-
-        private sealed class Handler : IActionHandlerWithResult
-        {
-            private readonly TradeActionBinding binding;
-            private readonly string actionId;
-
-            public Handler(TradeActionBinding binding, string actionId)
-            {
-                this.binding = binding;
-                this.actionId = actionId;
-            }
-
-            public bool IsAvailable(AgentContext ctx) => binding.Offers(actionId, null);
-
-            public void Execute(AgentContext ctx, AgentDecision decision) => ExecuteWithResult(ctx, decision);
-
-            public ActionResult ExecuteWithResult(AgentContext ctx, AgentDecision decision) =>
-                ExecutorActions.Execute(binding.executor, binding.npcId, ctx, decision);
-        }
-
         private sealed class Targets : ITargetSource
         {
             private readonly TradeActionBinding binding;
@@ -252,11 +172,12 @@ namespace LivingVale.Agenerela
             {
                 foreach (var option in binding.Options())
                 {
+                    string category = option.ActionId == GameActions.QuotePurchase ? StockCategory : PackCategory;
                     foreach (var target in option.Targets)
                     {
                         if (!into.Contains(target.Id))
                         {
-                            into.Register(target.Id, target);
+                            into.Register(target.Id, target, category);
                         }
                     }
                 }

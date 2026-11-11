@@ -1,12 +1,13 @@
-# The prompt — what the model reads, and three switches that change it
+# The prompt — what the model reads, and the switches that change it
 
 `PromptBuilder` assembles every request an agent sends: the system prompt, the few-shot
 examples, the observations, the history and the stimulus. The schema travels with it. This
-note is about one gap and the three switches that close it. At their defaults, none of them adds
-anything to the prompt. The list and the code-built agent's idle example are off. A
-counter-example is shown as soon as a developer writes one, which is its opt-in, and
-`DecideOptions.CounterExamples = false` leaves it out. None becomes a default until an A/B run
-shows it helps (hard rule 2, #151).
+note is about one gap, the switches that close it, and two that shape the few-shot examples. At
+their defaults, none of them adds anything to the prompt. The list, the code-built agent's idle
+example and the example-target fallback are off. A counter-example, an example's statement and a
+target's `INamedTarget` name are shown as soon as a developer writes one, which is their opt-in,
+and each has a per-call switch that leaves it out. None becomes a default until an A/B run shows
+it helps (hard rule 2, #151).
 
 **The gap.** A model served through Ollama never reads the schema. Ollama uses it only to
 constrain sampling (findings, 10 October 2026), so the action list, the descriptions and the
@@ -86,6 +87,75 @@ An empty string at any level leaves the example out. `Agent.IdleExampleStimulus`
 default, so it changes nothing until someone sets it. Whether the idle example helps at all is
 still unmeasured (build plan §2.3).
 
+## Knowledge and statement rules
+
+Two optional fields on `AgentIdentity`, so a profile carries them and a code-built agent gets
+them through the identity it is given (#190, Living Vale #14):
+
+```csharp
+var identity = new AgentIdentity
+{
+    Name = "Mara", Role = "the miller", Personality = "Practical and plain-spoken.",
+    Goals = "keep the mill running",
+    Knowledge = { "The bridge closes at dusk.", "When a customer asks for flour you have, quote a price." },
+    StatementRules = "One to three short sentences. Never claim to have done what you only talked about.",
+};
+```
+
+The system prompt then reads, after the goals and before the instruction line:
+
+```
+Your goals: keep the mill running.
+What you know:
+- The bridge closes at dusk.
+- When a customer asks for flour you have, quote a price.
+Your statement: One to three short sentences. Never claim to have done what you only talked about.
+Choose exactly one action from the allowed list. Use no_target when none of the listed targets applies.
+```
+
+Each knowledge line goes in as written, except that a blank line is skipped and a line's own line
+breaks become spaces; the statement rules are put on one line and end with a full stop. Both
+empty, the default, sends exactly the prompt sent before they existed. The headings are
+constants in `PromptBuilder`, and their wording is unmeasured.
+
+**Which slot a line belongs in.** The model reads all three; what differs is how often a line
+changes and who pays for it.
+
+- **Knowledge** is what stays true for this agent: the game's rules for it ("When trouble is
+  reported at a place you can reach, go there."), facts about its world that never change, and
+  the designer's policy for situations a line from the player would not settle. It is sent on
+  every call in the system prompt and never counts against `Agent.MaxObservations`.
+- **Observations** are what is true now: the quest stage, what is nearby, a quote just made. They
+  share the cap. A fact that is re-sent as an observation every turn takes room from those and
+  reads as news. They come two ways, and the two go to different places:
+  - **An observation source's lines** (`Agent.ObservationSources`) are the standing picture,
+    gathered the same way on every call: what is nearby, the time of day, the agent's post. They
+    go in the "What you know right now:" block.
+  - **The call's own lines** (`DecideOptions.Observations`) are what this one moment is made of:
+    for a situation, the facts that decide it ("A wolf has cornered a child."). By default
+    (`ObservationPlacement.AfterSources`) they close the same block. With
+    `ObservationPlacement.WithStimulus` they follow the stimulus in its turn instead, after its
+    closing quote, each ended as a sentence: `Situation: "Screams are coming from the well." A wolf
+    has cornered a child.` The quote stays the developer's text. Nothing reads the label to choose
+    (DR-008).
+
+  So keep what holds on every call in an observation source, pass a moment's deciding facts with
+  the call, and set `WithStimulus`: that split gained about 21 of 389 answers on both models
+  measured, beyond noise only on situations and events. Passing every fact with the call and setting
+  `WithStimulus` moves the whole block after the stimulus, which is measured separately. Findings,
+  10 November 2026, "Where a call's own facts go".
+- **A fact that counts only once it is told** (a clue, a password) is none of these: it is a
+  target of the action that tells it, removed by that action's per-target check once told
+  ([targets.md](targets.md#facts-told-through-an-action), #190 Living Vale #17).
+- **Memory** is what was said and done in this conversation (`IMemoryStrategy`). It is never the
+  place for a standing fact: a window drops it once the conversation is long enough.
+- **Statement rules** are about the free text only: its length, its voice, what it never says.
+  They are named for the `statement` field, not for speech, because the agent may be a country
+  writing a report (DR-008). Before them, a game appended its rules to every `Personality`.
+
+Whether a policy line works better as knowledge than as an observation is in findings,
+9 November 2026, "Policy lines as knowledge or as observations".
+
 ## Counter-examples
 
 A counter-example is a line that touches an action's subject but asks for nothing, shown
@@ -126,12 +196,107 @@ run that set. A counter-example also carries a risk: it pushes the model toward 
 the prototype a prompt biased toward `none` scored below the baseline (Appendix A). So the A/B
 has to check that real commands still score, as well as whether unasked actions go down.
 
+## Statements in the examples
+
+An example without a statement leaves the model one line to copy: its stimulus. GreyBoxVillage's
+guard answered "Quiet night, Bram?" with "Fine day for it.", the stimulus of its idle example, in
+4 of 4 live tries (findings, 5 November: "GreyBoxVillage's situations played live"). An example
+can now show what the agent says too, after its target, in the reply's own field order:
+
+```
+Player: "How much for the Bread?" -> action: quote_purchase, target: bread, statement: "Three gold, fresh today."
+Player: "Fine day for it." -> action: none, target: no_target, statement: "Aye, if it holds."
+```
+
+| Example | Where its statement is written |
+|---|---|
+| An action's own | `ActionDefinition.ExampleStatement`, or `[Example("...", Statement = "...")]` |
+| An action's counter-example | `ActionDefinition.CounterExampleStatement`, or `[CounterExample("...", Statement = "...")]` |
+| The idle example | `AgentProfile.IdleExampleStatement`, `Agent.IdleExampleStatement`, `DecideOptions.IdleExampleStatement` |
+| The refusal of a target that is not here | Never: its line would be the framework's own words, sent with every prompt |
+
+- A `{0}` in a statement is filled with the same target as its stimulus.
+- A `"` or `\` inside an example's stimulus or statement is escaped as JSON escapes it
+  (`\"`, `\\`), so a line like `He said "halt".` cannot end the quoted text early.
+- **The idle statement** is looked up like the idle stimulus, first the call's, then the agent's,
+  then the profile's, but never from further down than the stimulus came from. A profile's
+  statement was written for the profile's line, so it is never attached to a line a call or an
+  agent supplied. Set both at the level you change. Empty gives no statement.
+- Every statement is empty by default. `DecideOptions.ExampleStatements = false` leaves them all
+  out of a call.
+- **Keep them apart from the evaluation set** (hard rule 4). A statement is shown in the prompt
+  like a stimulus, so `PromptSetChecks` flags a prompt that matches one, and `EvalRunner` refuses
+  an arm whose own idle statement matches one.
+
+The other way out of G14 is an idle stimulus nobody would say back. A statement is the one built
+here. Whether either helps, and whether a statement makes a model copy *it* instead, is the A/B.
+
+## The example's target
+
+An example that needs a target names the first registered one from its action's
+`PreferredExampleTargets`, and is left out when none of them is here. It calls the target by a
+name made from its id's words. A game whose targets change every turn (stock runs out, quests
+move on) has to rewrite that list before every decision; Living Vale's `RefreshExamples` does. A
+switch, off by default, and an interface change that (#190, Living Vale #20).
+
+```csharp
+await agent.DecideAsync(line, new DecideOptions { ExampleTargetFallback = true });
+```
+
+**The fallback.** With `ExampleTargetFallback` on, an example with no preferred target here names
+the first offered target its action takes instead: any target, unless the action declares
+`TargetCategories`, then the first in one of them. It skips a target the stimulus mentions, so the
+example never shows the model the answer to the request it travels with. A word of the target's
+id or name counts when the stimulus says it whole, at any length ("ox"); when it starts a word of
+the stimulus, from three letters ("inn" in "innkeeper", "tower" in "towers"); or when a word of the
+stimulus of four letters or more starts it ("dock" for `docks`). An id's words include an acronym's
+(`NPCGuard` is "npc" and "guard"). "The", "a", "an", "of", "to", "and", "for", "with" and "from"
+never count, unless a name holds nothing else, and then all of them must be said. With every
+target the action takes mentioned, the example is left out, as before. A counter-example with a `{0}` follows its example.
+A preferred target that is here is used as before, mentioned or not. It stays off: on the interim
+set, whose targets have no categories, it showed "Strike the Bridge." as a correct attack, and
+impossible requests fell about 30 points (findings, 9 November). Turn it on where targeted actions
+declare `TargetCategories`.
+
+**Names.** A target is called by its id's words, lowercase: `training_dummy` is "training dummy",
+`village-gate` "village gate" and `NPCGuard` "npc guard", with a capital where it starts a
+sentence ("North tower is quiet."). Until 9 November the words were run
+together ("Engage the TrainingDummy."); the A/B found the two within noise on `qwen3.5:4b` and
+`qwen3.5:2b`, and the spaced wording was adopted. The refusal of a target that is not here drops the article before `{0}`
+where the target ends its phrase (at the end, before punctuation, or before a word such as "for",
+"now" or "please"), so a move_to stimulus of "Go and stand by the {0}." gives "Go and stand by
+Atlantis." rather than "the Atlantis". Where the phrase runs on past `{0}`, the article stays and a
+common noun takes the place of the proper name, "an" as "a": "The sunken city is unstaffed.",
+"Open the sunken city gate.", "Bring a sunken city-shaped token."
+
+The refusal never names a place an offered target is called, by its id or
+by the name an example gives it: a target named "Atlantis" makes it "Avalon" ("sunken city",
+"lost city"), and with both taken there is no refusal.
+
+**A target's own name.** A target is called by its `INamedTarget.Name` when it
+implements one, as written:
+
+```csharp
+sealed class StockEntry : IDescribedTarget, INamedTarget
+{
+    public string Name => Item;                                  // "healing potion"
+    public string Description => $"{Quantity} {Item}, {Price} gold.";
+}
+```
+
+`INamedTarget` is separate from `IDescribedTarget`: the description is a sentence for the list
+("One loaf of bread, 3 gold."), and would not fit inside "How much for the {0}?". No target has a
+name until a game writes one, which is the opt-in.
+
 ## Measuring them
 
 Each switch is an option an `EvalArm` carries, so one run in one session compares an arm with it
 against an arm without it. `report.json` records each arm's `listActionsAndTargets`,
-`maxListedTargets`, `counterExamples` and `idleExampleStimulus`, and `pairTargetsWithActions`
+`maxListedTargets`, `counterExamples`, `idleExampleStimulus`, `idleExampleStatement`,
+`exampleStatements` and `exampleTargetFallback`, and `pairTargetsWithActions`
 for the paired schema ([targets.md](targets.md#the-paired-schema)), which changes the schema rather
-than the prompt.
+than the prompt. Knowledge is the identity's rather than a call's, so an arm carries it as
+`EvalArm.Knowledge`, lines added to the profile's for that arm's agents without changing the asset,
+and `report.json` records it as each arm's `knowledge`.
 [`evaluation.md`](evaluation.md#running-an-ab) explains how to run an A/B. Until one has been
 run, quote no number for any of these on the evaluation set.

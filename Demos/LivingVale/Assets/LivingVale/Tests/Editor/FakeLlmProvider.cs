@@ -9,9 +9,10 @@ namespace LivingVale.Tests
     /// <summary>
     /// A model the test scripts: it answers every request with <see cref="Reply"/>, fails with
     /// <see cref="Failure"/>, or, with <see cref="Hold"/>, waits until the request is cancelled.
-    /// It records each request, so a test can read what reached the model.
+    /// It records each request, so a test can read what reached the model. As a model server
+    /// (<see cref="IModelLifecycle"/>) it counts warm-ups and unloads, and can hold or fail them.
     /// </summary>
-    internal sealed class FakeLlmProvider : ILLMProvider
+    internal sealed class FakeLlmProvider : ILLMProvider, IModelLifecycle
     {
         public readonly List<DecisionRequest> Requests = new List<DecisionRequest>();
 
@@ -55,6 +56,57 @@ namespace LivingVale.Tests
                 source.TrySetResult(new ProviderResult { Text = Reply });
             }
 
+            return source.Awaitable;
+        }
+
+        public IReadOnlyList<ModelInfo> Installed = Array.Empty<ModelInfo>();
+        public int WarmUps;
+        public bool HoldWarmUp;
+        public Exception WarmUpFailure;
+        public CancellationToken LastWarmUpToken;
+        public int Unloads;
+
+        /// <summary>What an unload answers; null answers true at once.</summary>
+        public Func<Awaitable<bool>> OnUnload;
+
+        public Awaitable<IReadOnlyList<ModelInfo>> ListModelsAsync(CancellationToken ct)
+        {
+            var source = new AwaitableCompletionSource<IReadOnlyList<ModelInfo>>();
+            source.TrySetResult(Installed);
+            return source.Awaitable;
+        }
+
+        public Awaitable WarmUpAsync(CancellationToken ct)
+        {
+            WarmUps++;
+            LastWarmUpToken = ct;
+            var source = new AwaitableCompletionSource();
+            if (HoldWarmUp)
+            {
+                ct.Register(() => source.TrySetCanceled());
+            }
+            else if (WarmUpFailure != null)
+            {
+                source.TrySetException(WarmUpFailure);
+            }
+            else
+            {
+                source.TrySetResult();
+            }
+
+            return source.Awaitable;
+        }
+
+        public Awaitable<bool> UnloadAsync(CancellationToken ct)
+        {
+            Unloads++;
+            if (OnUnload != null)
+            {
+                return OnUnload();
+            }
+
+            var source = new AwaitableCompletionSource<bool>();
+            source.TrySetResult(true);
             return source.Awaitable;
         }
     }

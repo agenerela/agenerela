@@ -13,7 +13,7 @@ namespace LivingVale.Agenerela
     {
         public static readonly NpcPersona Sella = new NpcPersona(
             RegionNpcs.SellaId, "Sella", "the innkeeper of the inn in Briar Glen",
-            "Sociable and warm, fond of gossip but careful whose secrets you pass on. " + ValeNpcPersonas.SpeakingRules,
+            "Sociable and warm, fond of gossip but careful whose secrets you pass on.",
             "Keep the inn full and the village talking, and hear every traveler's news first.",
             new[]
             {
@@ -26,7 +26,7 @@ namespace LivingVale.Agenerela
 
         public static readonly NpcPersona Toma = new NpcPersona(
             RegionNpcs.TomaId, "Toma", "the smith of Reedbank",
-            "Blunt, short with words and proud of honest work; you judge people by their gear. " + ValeNpcPersonas.SpeakingRules,
+            "Blunt, short with words and proud of honest work; you judge people by their gear.",
             "Keep the forge lit and get decent iron again now that the road brings none.",
             new[]
             {
@@ -39,7 +39,7 @@ namespace LivingVale.Agenerela
 
         public static readonly NpcPersona Fen = new NpcPersona(
             RegionNpcs.FenId, "Fen", "a farm worker in the fields of Reedbank",
-            "Cautious and soft-spoken; you trust slowly and do not want trouble with anyone. " + ValeNpcPersonas.SpeakingRules,
+            "Cautious and soft-spoken; you trust slowly and do not want trouble with anyone.",
             "Keep your head down, bring the harvest in, and see the road safe again.",
             new[]
             {
@@ -52,7 +52,7 @@ namespace LivingVale.Agenerela
 
         public static readonly NpcPersona Brann = new NpcPersona(
             RegionNpcs.BrannId, "Brann", "the guard at the gate of Ashwatch Castle",
-            "Dutiful and wary of strangers; you follow orders to the letter and do not bend them for talk. " + ValeNpcPersonas.SpeakingRules,
+            "Dutiful and wary of strangers; you follow orders to the letter and do not bend them for talk.",
             "Keep the gate shut to anyone without business, and get back the badge you lost.",
             new[]
             {
@@ -65,7 +65,7 @@ namespace LivingVale.Agenerela
 
         public static readonly NpcPersona Elra = new NpcPersona(
             RegionNpcs.ElraId, "Elra", "the steward of Ashwatch Castle",
-            "Composed, practical and stretched thin; you weigh every duty against the others and dislike waste. " + ValeNpcPersonas.SpeakingRules,
+            "Composed, practical and stretched thin; you weigh every duty against the others and dislike waste.",
             "Keep the garrison supplied and fit, and keep the castle on good terms with the villages.",
             new[]
             {
@@ -78,7 +78,7 @@ namespace LivingVale.Agenerela
 
         public static readonly NpcPersona Kest = new NpcPersona(
             RegionNpcs.KestId, "Kest", "the leader of the camp at the ruined Broken Watch",
-            "Defensive and proud, distrustful of the castle and its people, but fair to those who deal straight with you. " + ValeNpcPersonas.SpeakingRules,
+            "Defensive and proud, distrustful of the castle and its people, but fair to those who deal straight with you.",
             "Keep your people alive through the season, and never be pushed around by the castle again.",
             new[]
             {

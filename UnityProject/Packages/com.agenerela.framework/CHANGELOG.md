@@ -8,7 +8,191 @@ While the version stays `0.x`, the public API may change in any release.
 
 ## [Unreleased]
 
+### Changed
+
+- **The default Ollama model is `qwen3.5:4b`**, not `qwen3.5:2b`: `new OllamaSettings()` and a new
+  `OllamaProviderConfig` asset name it. On the 389-prompt interim set it chose right 330 times
+  against 263, for about 0.08 s more a decision on an RTX 5080 and about 0.7 GB more memory
+  (findings, 9 November). Pull it with `ollama pull qwen3.5:4b`. An existing config asset keeps the
+  model it was saved with; code that relied on the default now asks the 4B, so name `qwen3.5:2b`
+  in `OllamaSettings.Model` to keep the old one.
+- **Every agent's few-shot block changes wording** (#190, Living Vale #20). An example calls its
+  target by its id's words, lowercase: "Engage the training dummy." rather than "Engage the
+  TrainingDummy.", "north tower" rather than "NorthTower", capitalised where it starts a sentence.
+  The refusal of a target that is not here
+  drops the article where the target ends its phrase, "Go and stand by Atlantis." rather than "the
+  Atlantis", and keeps it with a common noun where the phrase goes on ("The sunken city is
+  unstaffed."). It also no longer names a place an offered target is called, by id or by its
+  `INamedTarget` name, and is left out when both of its placeholders are. A/B on the interim set,
+  RTX 5080, glued against spaced: `qwen3.5:4b` 334 against 337 of 389, `qwen3.5:2b` 269 against 280,
+  both within noise (findings, 9 November). No switch: it is what `FewShotBuilder` does.
+
 ### Added
+
+- **`DecideOptions.ObservationPlacement`: where a call's own observations go** (#151). An enum,
+  `ObservationPlacement`: `AfterSources`, the default and the request as before, with the call's
+  own `Observations` last in the "What you know right now:" block after every
+  `ObservationSources` line; and `WithStimulus`, the call's lines after the stimulus's closing
+  quote in the user turn (`Situation: "Screams are coming from the well." A wolf has cornered a
+  child.`), each ended as a sentence, the sources' lines left in the block. Only the rendering
+  moves: the context guards, sources and handlers read, and the cap, are unchanged, and nothing
+  reads the label (DR-008). With the standing facts in an observation source and a moment's own
+  facts passed with the call, `WithStimulus` scored 351 against 330 of 389 on `qwen3.5:4b` and 283
+  against 261 on `qwen3.5:2b`, interleaved on the RTX 5080, beyond noise only on situations and events, player
+  lines and calm scenes no worse; within noise on the curated 76 (findings, 10 November). The
+  default is unchanged, because a game that passes every fact with its call would have its whole
+  block moved. `PromptOptions` gains `ObservationPlacement` and `CallObservationCount`, which
+  `Agent` sets. `EvalRunner` now sends an arm's, the state's and the targets' lines through an
+  observation source, so a prompt's own lines alone are the call's, with every default request
+  byte-identical (the interim set's 389, checked against the 10 November render);
+  `EvalArm.StandingLinesAsCallObservations` sends them with the call instead, and
+  `EvalArmConditions` records both.
+- **`Proposals`, an optional helper for "the agent proposes, the player confirms"** (#190, Living
+  Vale #16). It holds a `DecisionResult` instead of carrying it out, for the action ids in
+  `HeldActions` (`Submit`) or any decision (`Hold`), and `Confirm(proposal)` carries it out through
+  `Agent.Execute`, so the check at confirm is the agent's own re-check, per-target availability
+  included, and a stale pair is refused with its reason. `Confirm` takes the `Proposal` by
+  reference, so a click on a superseded, declined or reset card is refused; `Decline`,
+  `DeclineAll`, `OnePending` (a new proposal supersedes), a caller-supplied `StillValid`
+  predicate and a `Changed` event complete it. `Agent.Reset()` ends every pending proposal as
+  `ProposalStatus.Reset`. A proposal is remembered once, when it is held (committed then under
+  `MemoryCommit.OnExecute`), and `Execute` at confirm does not remember it again;
+  `DecisionTelemetry.Execution` stays null until confirm. No change to `Agent`'s public API,
+  `ActionResult` or `ExecutionStatus`, and nothing the model reads changes.
+  `Documentation~/proposals.md`.
+- **Facts told through an action** (#190, Living Vale #17): no new API, a documented pattern with a
+  test. A fact that counts only when revealed is a target of the revealing action, in its own
+  category, and that action's per-target check removes it once told; never a standing `Knowledge`
+  line. `Documentation~/targets.md`, "Facts told through an action".
+- **Examples follow the per-target check** (follow-up to #235): for an action whose handler has a
+  per-target check, an example no longer names a `PreferredExampleTargets` entry, or a fallback
+  target, that the check rejected or that is outside the action's categories; it takes the next
+  one, or is left out. An action with no such check renders byte for byte as before.
+- **Conditions per target** (#190 Living Vale #19, #216 item 5, DR-020 amended): an action can say,
+  for each target, whether it can be done to it right now, and why not. `ITargetAvailability`, an
+  optional addition to `IActionHandler`, returns an `Availability` (`Availability.Yes`, or
+  `Availability.No(reason)`; a bool converts). Its front doors are `[AvailableFor("id")]` on a method
+  taking the target's id (optionally after an `AgentContext`) and returning bool or `Availability`,
+  and the settable `DelegateActionHandler.IsAvailableFor`. For a handler with a check: an action
+  that needs a target and has none left that it takes and the check allows is left out of the
+  schema, flat or paired; the paired schema drops each rejected pair; the flat target enum stays
+  every registered target. `TargetAvailabilityGuard`, a fourth built-in guard after
+  `TargetCategoryGuard`, rewrites a rejected pair to `none`, and `Agent.Execute` runs it again, so a
+  stale pair is refused with the check's reason in the `ActionResult`. Rejected pairs and reasons
+  are in `DecisionTelemetry.TargetsUnavailable` (`UnavailableTarget`), the log line's
+  `targetsUnavailable` and `AgentPreview.TargetsUnavailable`; `AgentPreview.LeftOut` names the
+  reasons for an action left out by it. Nothing is said to the model. A handler without a check
+  sends exactly the request it sent before. See `Documentation~/targets.md`.
+
+- **Relayed decisions in one chain** (#190, G4): `odile.RelayAsync(call, wren, stimulus, label)`
+  asks `wren` with that stimulus and label as the next hop of the chain `call` was in, or of a new
+  one, and returns Wren's decision. The chain is `DecisionChain` (`Id`, `Hop`, `SourceAgentId`) on
+  the new `DecideOptions.Chain`, recorded as `DecisionTelemetry.ChainId`, `ChainHop` and
+  `ChainSource`, pipeline errors included, and written by `DecisionLog` as `chainId`, `chainHop` and
+  `chainSource`, so `DecisionLogLine.CurrentVersion` is now 2; version 1 lines still read, with no
+  chain. `DecisionChain.Start()` puts the chain's first decision in it too. A relay past `maxHops`
+  (`DecisionRelay.DefaultMaxHops`, 8) is not sent and returns the new
+  `PipelineErrorKind.ChainTooLong`, logged nowhere and raised on the feed. A call with no chain, the
+  default, records none, and the chain never reaches the prompt: the receiving model reads exactly
+  the stimulus and label passed.
+
+- **An example's target when none of its preferred ones is here** (#190, Living Vale #20):
+  `DecideOptions.ExampleTargetFallback` (and `PromptOptions.ExampleTargetFallback`), off. On, an
+  example, or a counter-example with `{0}`, whose action has no registered `PreferredExampleTargets`
+  names the first offered target the action takes (`ActionDefinition.AcceptsCategory`) instead of
+  being left out, skipping any target the stimulus mentions, so the example never shows the answer.
+  `PromptOptions.Stimulus`, which `Agent` sets, is what it reads. `EvalArmConditions` records
+  `exampleTargetFallback`. It beat leaving the examples out by 15 to 19 points on the interim set,
+  but with no target categories it cost impossible requests about 30, so it stays off (findings,
+  9 November). **`INamedTarget`**: a target object implements its `Name` ("healing potion") to be
+  called by it wherever an example writes `{0}`; no target has one until a game writes one.
+- **Standing knowledge and statement rules on an identity** (#190, Living Vale #14):
+  `AgentIdentity.Knowledge`, a list of lines, and `AgentIdentity.StatementRules`, one string, both
+  serialized, so an `AgentProfile` carries them and a code-built agent gets them through the
+  identity it is given. `PromptBuilder` renders them in the system prompt after the goals, as
+  `What you know:` with one `- ` line each, then `Your statement: <rules>.`; blank lines are skipped
+  and every line break becomes a space, so neither can add a heading or a line of its own.
+  Knowledge is not an observation and never counts against `Agent.MaxObservations`. Both empty, the
+  default and what every existing asset loads as, sends exactly the prompt sent before them.
+  `EvalRunner` can measure them: `EvalArm.Knowledge` adds lines to the profile's knowledge for one
+  arm's agents without changing the asset, and each arm's conditions record it as `knowledge`.
+- **A decision log file** (#190, G7): `DecisionLog.Start(path)` appends every decision feed
+  entry to a JSON-lines file, one `DecisionLogLine` per line with `"version": 1`: the agent, the
+  stimulus and label, what the game got, the model's own answer when a guard changed it, the
+  verdict, what `Execute` did, the provider, model, latency, waits, tokens, a pipeline error's kind
+  and the raw reply. The prompt is written only with `IncludePrompt` on. Lines are written off the
+  main thread; a failed write is reported once and never reaches the game. The file rolls over
+  once past `MaxFileBytes` (16 MiB). `DecisionLogReader.Read(path)` parses a file back, skipping a
+  partial last line. See `Documentation~/logging-decisions.md`.
+- **A key for an Ollama server that wants one**: `OllamaSettings.ApiKey`, empty by default, is
+  sent as `Authorization: Bearer <key>` on every request, decisions and lifecycle calls alike, so
+  a project can use an Ollama served from another machine behind a gateway, such as the RTX 5080's
+  in this repository's `tools/ollama-server/`. A key with a space or a control character inside is
+  refused when the provider is built. `OllamaProviderConfig.ApiKeyVariable` (**API Key Variable**)
+  names the environment variable to read it from when the provider is built, so the asset never
+  holds the key; a named variable that is not set fails then, naming it. An HTTP 401 is still
+  `Rejected`, and its message now says whether a key was sent. No message names the key.
+- **Reply checks in `EvalRunner`** (#145): every answer's statement is checked for four mechanical
+  flags, `ReplyFlag.Echo` (it is a few-shot line, by `PromptSetChecks.MatchesExample`: any action's
+  example or counter-example stimulus or statement, the profile's idle example and its statement,
+  or the arm's own), `Empty` (blank when the schema asked for one), `TooLong` (over the new
+  `EvalArm.MaxStatementLength`, `EvalArm.DefaultMaxStatementLength` = 200 characters, unmeasured)
+  and `Leak` (an action or target id that is not a plain word, such as `move_to` or `no_target`; a
+  schema field used as a label, `action:`; a JSON brace; or one of `ReplyChecks.AssistantPhrases`).
+  Each answer records `EvalAnswer.ReplyChecked` and `ReplyFlags`, a `ReplyFinding` per flag with
+  what it found; each arm `EvalArmResult.Replies`, a `ReplyCounts` per flag and of answers with any
+  flag; each arm's conditions `MaxStatementLength`; and `report.md` ends with a **Reply checks**
+  section listing every flagged answer. `EvalReport.FlaggedReplies` lists them in code and
+  `ReplyChecks.Check` runs the checks on any statement. A second score only: no flag changes an
+  outcome, `Telemetry.Outcome` or the accuracy, and a report written before them reads back with
+  nothing checked. No prompt-set format change.
+- **Inspection seams** (#166): `DecisionFeed.Recorded`, raised once for each result `DecideAsync`
+  returns, pipeline errors and guard-stopped decisions included, and once for each `Execute` that
+  returns, with a `DecisionFeedEntry` carrying the `Agent`, the `DecisionResult`, its
+  `DecisionStage`, the `Execution` for `Executed`, the UTC time and a sequence number. Cancelled
+  calls, a reset's included, are never in it. A subscriber that throws is logged; with none, raising
+  costs a null check. **`Agent.Preview(stimulus, options)`** returns an `AgentPreview`: the request
+  `DecideAsync` would send next, built by the same method, with the actions offered and left out,
+  the targets and observations per source with what each dropped, and the history. It never calls
+  the provider or remembers anything. **`AgentBehaviour.Find(agent)`** and **`HasAgent`** map an
+  agent back to its component without building one. The package's Editor assembly now sees the
+  runtime's internals. `IMemoryStrategy.Recall`, `ITargetSource.Collect` and
+  `IObservationSource.Observe` now say a preview calls them with no decision after it, so they
+  should change nothing.
+- **Statements in the few-shot examples** (#190 G14): an example can show what the agent says,
+  as `-> action: X, target: Y, statement: "..."`, the reply's own field order. Write one in
+  `ActionDefinition.ExampleStatement` and `CounterExampleStatement` (or `Statement = "..."` on
+  `[Example]` and `[CounterExample]`), its `{0}` filled with the stimulus's target, and for the idle
+  example in `AgentProfile.IdleExampleStatement`, `Agent.IdleExampleStatement` or
+  `DecideOptions.IdleExampleStatement`. The idle statement follows the stimulus's precedence but
+  never comes from further down than the stimulus did, so a profile's statement is never attached
+  to a line a call or an agent supplied. On, but empty: every statement is empty by default, so
+  nothing changes until one is written. `DecideOptions.ExampleStatements = false` (and
+  `PromptOptions.ExampleStatements`) leaves them all out, for an A/B's control arm. The refusal
+  of a target that is not here never has one. A quote or backslash inside an example's stimulus
+  or statement is now escaped as JSON escapes it, so it cannot end the quoted text early; no
+  example the repository ships contains either. Unmeasured: the A/B is owed in #151 and written up
+  in `docs/live-runs.md`.
+- **`FewShotBuilder.Build(available, targets, PromptOptions)`**, the overload `Agent` now uses, so
+  every per-call example setting comes from one object. The old overload is unchanged.
+- `PromptSetChecks` and `EvalRunner` (an arm's own idle statement) refuse a prompt that matches an
+  example's statement, as they do one that matches its stimulus (hard rule 4). `EvalArmConditions`
+  records `idleExampleStatement` and `exampleStatements`.
+- `Documentation~/prompt.md`: a section on statements.
+- **`Agent.Reset()`** (#190, G12): starts an agent afresh without destroying it. It cancels this
+  agent's decisions, and no other agent's on the same provider: one waiting in its `Backlog` or in
+  the provider's queue is never sent, and one with the provider is stopped through its token. It
+  drops the decisions held for `MemoryCommit.OnExecute`, so `Commit` and `Discard` return false for
+  them and `Execute` carries them out without remembering them. And it clears memory. A cancelled
+  caller sees a plain `OperationCanceledException` whose token is the agent's own, so a caller whose
+  own token is not cancelled knows the agent was reset. **`AgentBehaviour.ResetAgent()`** does the
+  same for the agent the component built; it is not called `Reset` because Unity calls that in the
+  editor.
+- **`IClearableMemory`** (#190, G12): an optional interface beside `IMemoryStrategy`, with
+  `Clear()`, which `Agent.Reset` calls. `RollingHistory` implements it, setting `Dropped` and
+  `Forgotten` back to 0 as well. A strategy without it keeps its memory on a reset, with a warning.
+- `Documentation~/executing-and-memory.md`: starting an agent afresh, and telling a reset from your
+  own cancellation.
 
 - **Target categories** (#190 B, DR-020): `TargetRegistry.Register(id, target, category)`, beside
   the two-argument overload, and `TargetRegistry.CategoryOf(id)`, null for a target with no
@@ -274,6 +458,12 @@ While the version stays `0.x`, the public API may change in any release.
   further in code.
 - `Documentation~/providers.md`: the scripted provider, as an asset, testing with it, and how a
   decision log will replay through it (G7).
+- **`Agent.Id`** (#190, Living Vale #21): an optional stable id the game chooses, such as
+  `"npc_mara"`, null by default and never sent to a model. Two agents that share a name, or are
+  built from one profile and so share one `AgentIdentity`, can be told apart by it.
+  `ScriptedProvider` matches a script by the asking agent's id before its name, within each stage,
+  and reports it in `ScriptedRequest.AgentId`. `When(agent, …)` and a config entry's **Agent** take
+  either, and keying by name works as before when no id is set.
 
 - **Provider health** (#190 G1, DR-015 as amended). `ProviderHealth.For(provider)`, one per
   provider instance like its queue, says whether the provider is answering: `IsDown`, `Reason`
@@ -307,6 +497,21 @@ While the version stays `0.x`, the public API may change in any release.
   and the backlog.
 
 ### Changed
+
+- **A provider is sent a token linked to the caller's** (#190, G12), so that `Agent.Reset` can stop
+  a request already with it. It was the caller's own token object. Cancelling the caller's token
+  cancels it as before, and a caller still sees its own token on the `OperationCanceledException`.
+  Only code that compared the provider's token with the caller's notices.
+
+- **The Evaluation Report window is built in UI Toolkit on the #167 kit** (#179): the same
+  window as #146 built, now a tree from `EvaluationReportWindow.uxml` and `.uss`, with the kit's
+  section titles, chips for category ids, problem boxes for what the project or the set lacks,
+  and its primary button. The five outcomes' fills come from the kit's variables, so both editor
+  skins read. Two changes the lead approved with the redrawn screen 4: **Run set-up** folds to one
+  line, with **Run A/B** on it, while a report is shown; and on first open the one primary
+  button is the **Start here** card's. It opens at 780 × 900 rather than Unity's small default,
+  at the lead's request; its minimum stays 560 px. EditMode tests now build the window's tree and
+  check what it shows, and that nothing runs past the window at its 560 px minimum.
 
 - **The same target from two sources is one target** (#190 B, G13, DR-020). `ExplicitTargetSource`
   and `ProximityTargetSource` skip an id an earlier source, or `Agent.Targets`, already registered

@@ -130,6 +130,16 @@ To also cancel for a reason of the game's own, call
 `guard.Agent.DecideAsync(stimulus, options, token)` with a token linked to
 `guard.destroyCancellationToken`.
 
+## Starting the agent afresh
+
+To start a guard over without destroying anything, after a scene event or a new stage, call
+`guard.ResetAgent()`. It cancels every decision the agent has waiting or under way, and no other
+agent's, then drops the decisions held for memory and clears its memory. The GameObject, the
+component and the agent itself stay, with the guards, sources and state the game added to it.
+Awaiting a cancelled decision throws `OperationCanceledException`, as for a destruction.
+[executing-and-memory.md](executing-and-memory.md#starting-an-agent-afresh-reset) has the whole
+of it, including how to tell a reset from your own cancellation.
+
 ## An agent with no GameObject
 
 The same `Agent`, owned by the game's own class, with nothing in the scene:
@@ -141,3 +151,44 @@ country.TargetSources.Add(new ExplicitTargetSource().Add("north_border", northBo
 ```
 
 Nothing cancels it when a scene unloads, so pass your own token to `DecideAsync`.
+
+## Watching an agent from a tool
+
+Two seams let a tool, such as the Decision Log or one of your own, see an agent without the game
+passing anything on (#166).
+
+**The decision feed.** `DecisionFeed.Recorded` is raised once when `DecideAsync` returns a result,
+pipeline errors and guard-stopped decisions included, and once each time `Execute` returns, saying
+whether the handler ran or the re-check refused. Each `DecisionFeedEntry` carries the `Agent`, the
+`DecisionResult`, the `Stage`, for `Executed` the `Execution` it reported, the time in UTC and a
+`Sequence` number. It covers every agent, a country with no GameObject as well as a guard. With no
+subscriber it costs a null check, and a subscriber that throws is logged and changes nothing.
+
+```csharp
+DecisionFeed.Recorded += entry =>
+{
+    var guard = AgentBehaviour.Find(entry.Agent);          // null for an agent with no GameObject
+    Debug.Log($"{entry.Sequence} {entry.Stage} {(guard != null ? guard.name : entry.Agent.Identity.Name)}");
+};
+```
+
+A call that ends cancelled throws instead of returning, so it is never in the feed, and neither is a
+call that `ResetAgent` cancels. A decision held for memory that the reset drops already has its
+`Decided` entry, and gets no other. An `Execute` whose handler throws has no entry. With the domain
+reload off, every subscriber is removed and the sequence starts again as Play mode starts, so
+subscribe again then.
+
+To keep the feed in a file instead, `DecisionLog.Start(path)` writes one JSON line per entry
+([logging-decisions.md](logging-decisions.md)).
+
+`AgentBehaviour.Find(agent)` gives the component that built an agent, or null. It never builds one;
+`guard.HasAgent` says whether the component has built its agent yet, since reading `guard.Agent`
+builds it.
+
+**The preview.** `agent.Preview(stimulus, options)` returns what `DecideAsync` would send next with
+the same stimulus and options, without sending it: the actions offered and why the others are not,
+each action and target pair a per-target check rejected and why (`TargetsUnavailable`), the targets of each source with what its cap dropped, the observation lines of each source with
+what was left out, the history the memory would send, and the `DecisionRequest` itself. It runs
+the same code as a decision, so it never drifts from it. It never calls the provider or remembers
+anything, but every source, availability check and `IMemoryStrategy.Recall` runs once per preview:
+a source that costs something, such as one searching the scene, costs it again each time.

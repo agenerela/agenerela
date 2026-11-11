@@ -38,7 +38,11 @@ Inside `Agent.DecideAsync`, after the reply has been parsed:
    `none`, so `complete_quest` aimed at the village gate does nothing. An action that names none
    always passes, so this guard changes nothing until a developer declares a category. DR-020, and
    [targets.md](targets.md).
-4. **`Agent.Guards`**, the game's own, in list order.
+4. **`TargetAvailabilityGuard`.** The action can be done to this target right now, as the
+   handler's per-target check (`[AvailableFor]`, `DelegateActionHandler.IsAvailableFor` or
+   `ITargetAvailability`) says. A pair it rejects is rewritten to `none`, with the check's reason.
+   An action whose handler has no check always passes. [targets.md](targets.md#conditions-per-target).
+5. **`Agent.Guards`**, the game's own, in list order.
 
 The first guard whose verdict is not `Pass` stops the rest, so a decision fires at most one
 guard. The built-in guards are not in `Agent.Guards` and cannot be removed from it.
@@ -149,11 +153,13 @@ the chosen target's distance.
 
 `Agent.Execute` checks the decision again before running the handler, because the world can
 change while the model thinks. That re-check is `SchemaLegalityGuard`, then
-`TargetCategoryGuard`, against the targets as they are then. A game's guards judged the answer
+`TargetCategoryGuard`, then `TargetAvailabilityGuard`, which asks a per-target check again,
+against the targets as they are then. A game's guards judged the answer
 once, inside `DecideAsync`, and are not run again.
 
-If a game rule must still hold at the moment of acting, put it in the handler, or in the action's
-`IsAvailable`, which `Execute` does ask again. A handler can say why it did not act by returning
+If a game rule must still hold at the moment of acting, put it in the handler, in the action's
+`IsAvailable`, or, when it is about one target, in its per-target check; `Execute` asks both
+again. A handler can say why it did not act by returning
 `ActionResult.Failed(reason)`, which `Execute(result, out ActionResult)` hands back and the
 telemetry records ([executing-and-memory.md](executing-and-memory.md)).
 

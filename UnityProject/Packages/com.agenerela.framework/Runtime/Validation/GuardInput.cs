@@ -80,5 +80,17 @@ namespace Agenerela
         /// grounding guard does (#105). Never null.
         /// </summary>
         public DecisionTelemetry Telemetry { get; }
+
+        // The availability answer the decision was made from, so the legality check and the
+        // per-target guard read the one the schema came from rather than asking the developer's
+        // checks again (#190 LV #19). Asked on first use when nothing set it, as in Agent.Execute's
+        // re-check and in a GuardInput a developer builds, and then kept, so it is asked once.
+        internal AvailabilityAnswer AvailabilityAnswer
+        {
+            get => availabilityAnswer ?? (availabilityAnswer = ActionAvailability.Evaluate(Context));
+            set => availabilityAnswer = value;
+        }
+
+        private AvailabilityAnswer availabilityAnswer;
     }
 }

@@ -27,6 +27,14 @@ namespace Agenerela
                  "the idle example. Leave empty to omit it.")]
         public string IdleExampleStimulus = DefaultIdleExampleStimulus;
 
+        /// <summary>
+        /// What the agent says in the idle example, shown after it as <c>statement: "..."</c> (#190,
+        /// G14). Empty by default, which shows none, as before. Without one, a model can answer with
+        /// the idle example's own stimulus, the only line it was shown. Unmeasured (#151).
+        /// </summary>
+        [Tooltip("Optional. What the agent says in the idle example. Never reuse an evaluation prompt.")]
+        public string IdleExampleStatement = "";
+
         public bool Validate(out string problem)
         {
             problem = null;

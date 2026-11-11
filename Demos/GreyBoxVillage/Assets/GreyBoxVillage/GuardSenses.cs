@@ -44,6 +44,30 @@ namespace Demos.GreyBoxVillage
         [Tooltip("Seconds of nothing happening, with the guard standing still, before it is asked what to do.")]
         public float QuietSeconds = 30f;
 
+        // ---- What a guard is told, in the game's words: also how the lab bench asks -------------
+
+        /// <summary>A wolf the guard sees, <paramref name="metres"/> away.</summary>
+        public static string WolfStimulus(float metres) =>
+            "A wolf has come out of the woods, " + M(metres) + " from you.";
+
+        /// <summary>A thief the guard sees running with Odile's <paramref name="ware"/>, <paramref name="metres"/> away.</summary>
+        public static string ThiefStimulus(string ware, float metres) =>
+            "A thief is running for the eastern_road with Odile's " + ware + ", " + M(metres) + " from you.";
+
+        /// <summary>The player seen walking into a zone that is off limits.</summary>
+        public static string ZoneEnteredStimulus(string zoneName) => "The player has walked into the " + zoneName + ", which is off limits.";
+
+        /// <summary>The player still inside it, a reminder later.</summary>
+        public static string ZoneStillStimulus(string zoneName) => "The player is still inside the " + zoneName + ".";
+
+        /// <summary>The player out of a zone the guard reacted to.</summary>
+        public static string ZoneLeftStimulus(string zoneName) => "The player has left the " + zoneName + ".";
+
+        /// <summary>A quiet moment at the guard's post.</summary>
+        public const string QuietStimulus = "Time passes quietly at your post.";
+
+        private static string M(float metres) => metres.ToString("0", CultureInfo.InvariantCulture) + " m";
+
         /// <summary>One line for the agent board: zone and timer state.</summary>
         public string Status { get; private set; } = "";
 
@@ -126,13 +150,12 @@ namespace Demos.GreyBoxVillage
                 {
                     if (!seen) continue;
                     reportedAt[zone] = Time.time;
-                    Raise("zone", "Event", "The player has walked into the " + zone.DisplayName + ", which is off limits.",
-                        DecisionPriority.PlayerFacing);
+                    Raise("zone", "Event", ZoneEnteredStimulus(zone.DisplayName), DecisionPriority.PlayerFacing);
                 }
                 else if (seen && Time.time - at > ZoneReminderSeconds)
                 {
                     reportedAt[zone] = Time.time;
-                    Raise("zone", "Event", "The player is still inside the " + zone.DisplayName + ".", DecisionPriority.PlayerFacing);
+                    Raise("zone", "Event", ZoneStillStimulus(zone.DisplayName), DecisionPriority.PlayerFacing);
                 }
             }
             Status = inside ?? QuietStatus();
@@ -142,7 +165,7 @@ namespace Demos.GreyBoxVillage
         {
             // Only a trespass the guard reacted to has an ending worth telling it about.
             if (reportedAt.Remove(zone))
-                Raise("zone", "Event", "The player has left the " + zone.DisplayName + ".", DecisionPriority.PlayerFacing);
+                Raise("zone", "Event", ZoneLeftStimulus(zone.DisplayName), DecisionPriority.PlayerFacing);
         }
 
         private void WatchWolf()
@@ -152,8 +175,7 @@ namespace Demos.GreyBoxVillage
             if (!CanSee(Wolf.transform, WolfSightRange)) return;
             wolfReportedAt = Time.time;
             float d = Vector3.Distance(Wolf.transform.position, Guard.transform.position);
-            Raise("wolf", "Event", "A wolf has come out of the woods, " + d.ToString("0", CultureInfo.InvariantCulture) + " m from you.",
-                DecisionPriority.Background);
+            Raise("wolf", "Event", WolfStimulus(d), DecisionPriority.Background);
         }
 
         // A thief running with stolen goods, once per theft, the first time this guard sees it.
@@ -163,8 +185,7 @@ namespace Demos.GreyBoxVillage
             thiefReported = Thief.Theft;
             float d = Vector3.Distance(Thief.transform.position, Guard.transform.position);
             string ware = Thief.Loot != null ? Thief.Loot.Id : "goods";
-            Raise("thief", "Event", "A thief is running for the eastern_road with Odile's " + ware + ", " +
-                d.ToString("0", CultureInfo.InvariantCulture) + " m from you.", DecisionPriority.Background);
+            Raise("thief", "Event", ThiefStimulus(ware, d), DecisionPriority.Background);
         }
 
         // Smoke from a fire this guard was not told about when it started: once per fire.
@@ -182,7 +203,7 @@ namespace Demos.GreyBoxVillage
         {
             if (!QuietTimerEnabled || Mind.IsDeciding || Mind.HasPending || Guard.IsBusy) return;
             if (Time.time - Mind.LastActivityTime < QuietSeconds) return;
-            Raise("quiet", "Time", "Time passes quietly at your post.", DecisionPriority.Background);
+            Raise("quiet", "Time", QuietStimulus, DecisionPriority.Background);
         }
 
         private string QuietStatus()

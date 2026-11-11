@@ -78,9 +78,25 @@ namespace Agenerela
                     return GuardVerdict.Reject("the target was not offered with this action: the schema paired them apart.");
                 }
             }
-            else if (!IsAvailable(definition, ctx))
+            else
             {
-                return GuardVerdict.Reject("the action is not available right now.");
+                // Asked once per input, the same rule the schema was built by, so the two can never
+                // disagree about what "available" means.
+                var answer = input.AvailabilityAnswer;
+                if (!answer.IsOffered(definition))
+                {
+                    // Left out because no target it takes is allowed now (#190 LV #19): say why the
+                    // decision's own target is not, when its check said.
+                    if (answer.TryGetLeftOut(definition, out var because) && because == LeftOutBecause.NoLegalTarget)
+                    {
+                        string why = answer.IsRejected(definition, decision.TargetId, out string reason) && reason != null
+                            ? $" '{decision.TargetId}': {reason}"
+                            : "";
+                        return GuardVerdict.Reject("the action is not available right now: no target it takes is." + why);
+                    }
+
+                    return GuardVerdict.Reject("the action is not available right now.");
+                }
             }
 
             return GuardVerdict.Pass;
@@ -138,22 +154,6 @@ namespace Agenerela
             foreach (string value in values)
             {
                 if (string.Equals(value, id, StringComparison.Ordinal))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        // Asks ActionAvailability, the same rule the schema was built by, rather than the handler
-        // alone, so the two can never disagree about what "available" means.
-        private static bool IsAvailable(ActionDefinition definition, AgentContext ctx)
-        {
-            var available = ActionAvailability.For(ctx);
-            foreach (var candidate in available)
-            {
-                if (candidate == definition)
                 {
                     return true;
                 }

@@ -24,8 +24,8 @@ namespace Demos.GreyBoxVillage
     /// sent while it is deciding is turned away, and an event waits, the latest replacing any older one.
     /// Other agents are not held up; their requests wait in the provider's queue instead.
     ///
-    /// Not <c>[RequireComponent(typeof(AgentBehaviour))]</c>: Unity refuses to remove a required
-    /// component, and <see cref="UseProvider"/> has to replace it. The scene builder adds both.
+    /// The scene builder adds both components. F1 keeps them, and the agent too: it resets the agent
+    /// (<see cref="UseProvider"/>, #190 G12) rather than replacing the component as it did before.
     /// </remarks>
     public sealed class AgentMind : MonoBehaviour
     {
@@ -63,6 +63,13 @@ namespace Demos.GreyBoxVillage
         [Tooltip("The example the framework shows for the none action.")]
         public string IdleExampleStimulus = "Fine day for it.";
 
+        /// <summary>
+        /// Changes the options of every call this mind makes, after the game has built them: the lab
+        /// bench's variants (prompt switches, the observation layout). Null in the game, which then
+        /// sends exactly what it always sent. Never reaches the model by itself.
+        /// </summary>
+        [System.NonSerialized] public Action<AgentMind, DecideOptions> Tune;
+
         public AgentBehaviour Behaviour => behaviour != null ? behaviour : behaviour = GetComponent<AgentBehaviour>();
         public string Name => Behaviour.Profile != null && !string.IsNullOrEmpty(Behaviour.Profile.Identity.Name) ? Behaviour.Profile.Identity.Name : name;
         public string Role => Behaviour.Profile != null ? Behaviour.Profile.Identity.Role : "";
@@ -81,12 +88,6 @@ namespace Demos.GreyBoxVillage
         private AgentBehaviour behaviour;
         private Agent configured;
         private PendingEvent pending;
-        // Bumped by UseProvider: a decision begun before it belongs to an agent that is gone.
-        private int generation;
-        // Cancels this generation's requests: UseProvider cancels it, so what the old agent still has
-        // queued or with the model leaves the provider's shared queue at once. Linked to
-        // destroyCancellationToken in Play mode, so destroying the mind cancels them as before.
-        private CancellationTokenSource requests;
 
         private sealed class PendingEvent
         {
@@ -116,58 +117,40 @@ namespace Demos.GreyBoxVillage
             Body.Inventory = Village.Inventory;
             foreach (var guard in Body.Guards()) agent.Guards.Add(guard);
             foreach (var source in Body.TargetSources()) agent.TargetSources.Add(source);
-            agent.RefusalStatement = (verdict, ctx) => Body.RefusalLine(verdict);
+            agent.RefusalStatement = (verdict, ctx) => Body.RefusalLine(verdict, ctx);
             Village.Watch(agent.Provider);
             LastActivityTime = Time.time;
         }
 
         /// <summary>
-        /// Gives the agent a new provider config, and so a fresh agent with an empty memory. An
-        /// <see cref="AgentBehaviour"/> builds its agent once, so this replaces the component with one
-        /// that has the same settings, every serialized field of the old one copied, so a field the
-        /// framework adds later is kept too (G12). Tests pass a config with a scripted provider.
+        /// Gives the agent a new provider config and starts it afresh, with an empty memory: the
+        /// presenter's F1, and how tests give it a scripted provider. The agent itself is kept, with
+        /// its guards, sources and settings; <see cref="AgentBehaviour.ResetAgent"/> (#190, G12)
+        /// cancels what it still has queued or with the model, so the shared slot is free at once, and
+        /// clears its memory. Before the agent is built there is nothing to reset: it is built from
+        /// this config on its first read.
         /// </summary>
         public void UseProvider(ProviderConfig config)
         {
-            var old = Behaviour;
-            string settings = JsonUtility.ToJson(old);
-            DestroyImmediate(old);
-            behaviour = gameObject.AddComponent<AgentBehaviour>();
-            // Nothing reads the agent before this, so it is built from these settings on its first read.
-            JsonUtility.FromJsonOverwrite(settings, behaviour);
-            behaviour.Provider = config;
-            configured = null;
+            var b = Behaviour;
+            b.Provider = config;
             pending = null;
-            generation++;
-            // The old agent's requests give up their place in the queue, and its slot with the model:
-            // the next stage must not wait for an answer nobody will use (#157's landing review).
-            CancelRequests();
+            if (b.HasAgent)
+            {
+                var agent = b.Agent;
+                // Resolved as the component resolves it when it builds the agent.
+                agent.Provider = ProviderConfig.Resolve(config).Provider;
+                b.ResetAgent();
+                // The new provider's health, from the next decision on.
+                if (configured == agent) Village.Watch(agent.Provider);
+            }
             Conversation.Clear();
             IsDeciding = false;
             Last = null;
-            // A fresh agent starts its quiet timer now, not from the old one's last decision: a guard
-            // that was busy or idle past its quiet time is not asked about a quiet moment at once.
+            // A fresh start begins its quiet timer now, not from the last decision: a guard that was
+            // busy or idle past its quiet time is not asked about a quiet moment at once.
             LastActivityTime = Time.time;
         }
-
-        private CancellationToken RequestToken()
-        {
-            requests ??= Application.isPlaying
-                ? CancellationTokenSource.CreateLinkedTokenSource(destroyCancellationToken)
-                : new CancellationTokenSource();
-            return requests.Token;
-        }
-
-        private void CancelRequests()
-        {
-            if (requests == null) return;
-            var cancelling = requests;
-            requests = null;
-            cancelling.Cancel();
-            cancelling.Dispose();
-        }
-
-        private void OnDestroy() => CancelRequests();
 
         // ---- What the agent knows ------------------------------------------------------------
 
@@ -274,6 +257,7 @@ namespace Demos.GreyBoxVillage
         /// </summary>
         public async Awaitable ReportEventAsync(string source, string label, string text, DecisionPriority priority)
         {
+            if (Village.EventsMuted) return;
             if (!Village.MayAskOnItsOwn)
             {
                 // Nobody can answer it. The quiet timer counts from now, so it does not ask at once.
@@ -286,6 +270,38 @@ namespace Demos.GreyBoxVillage
                 return;
             }
             await DecideAsync(source, label, text, priority);
+        }
+
+        /// <summary>
+        /// Asks the agent about a moment now, as an event would, whether or not the village's events
+        /// are muted or the model is down: the lab bench's and the tests' way to ask exactly once.
+        /// Turned away, as a player line is, while a decision is running. Completes when the decision
+        /// has been executed.
+        /// </summary>
+        public async Awaitable AskAsync(string source, string label, string text, DecisionPriority priority)
+        {
+            if (IsDeciding) return;
+            await DecideAsync(source, label, text, priority);
+        }
+
+        /// <summary>
+        /// The options a call about this moment sends, built as a decision builds them: the label,
+        /// the idle example, the observations, the priority and the <see cref="Moment"/>, then
+        /// <see cref="Tune"/>. For <see cref="Agent.Preview"/>, so a preview shows what a decision
+        /// would send.
+        /// </summary>
+        public DecideOptions OptionsFor(string source, string label, DecisionPriority priority)
+        {
+            var options = new DecideOptions
+            {
+                StimulusLabel = label,
+                IdleExampleStimulus = IdleExampleStimulus,
+                Observations = Observations(),
+                Priority = priority,
+                Correlation = new Moment(source, VisibleWolfDistance(), VisibleThiefDistance())
+            };
+            Tune?.Invoke(this, options);
+            return options;
         }
 
         private async Awaitable DecideAsync(string source, string label, string text, DecisionPriority priority)
@@ -304,36 +320,34 @@ namespace Demos.GreyBoxVillage
                 return;
             }
             IsDeciding = true;
-            int asking = generation;
             // Who is asking decides what the agent is offered (its body's availability checks). The
             // moment rides with the call, so Execute's re-check reads this call's values.
             Body.Attend(source);
-            var moment = new Moment(source, VisibleWolfDistance(), VisibleThiefDistance());
             string asked = Name + " ← " + label + ": " + text;
             Village.Overlay.ShowThinking(asked, Village.ProviderLabel, Name + " is thinking...");
             var record = Village.Recorder.Begin(Name, source, label, priority, text);
             Last = record;
-            bool gone = false;
+            bool gone = false, reset = false;
+            // Destroying the mind cancels the call in Play mode; in Edit mode nothing does.
+            var own = Application.isPlaying ? destroyCancellationToken : CancellationToken.None;
             try
             {
-                var options = new DecideOptions
-                {
-                    StimulusLabel = label,
-                    IdleExampleStimulus = IdleExampleStimulus,
-                    Observations = Observations(),
-                    Priority = priority,
-                    Correlation = moment
-                };
-                var result = await agent.DecideAsync(text, options, RequestToken());
-                // Destroyed while the model thought (in Edit mode nothing cancels the call), or given
-                // a new agent (the presenter's reset, which cancels the call too, though a provider
-                // may still answer it): the answer is for an agent that is gone.
-                if (this == null || generation != asking) { gone = true; return; }
+                var options = OptionsFor(source, label, priority);
+                var result = await agent.DecideAsync(text, options, own);
+                // Destroyed while the model thought, in Edit mode, where nothing cancels the call.
+                if (this == null) { gone = true; return; }
                 Village.Recorder.Attach(record, result);
                 // A decision that says nothing, or fails, must not leave the last one's line standing.
                 Body.Hush();
                 if (result.Decision == null) ShowError(record, result, asked);
                 else Settle(agent, record, result, asked);
+            }
+            catch (OperationCanceledException) when (!own.IsCancellationRequested)
+            {
+                // The agent was reset (F1, UseProvider), which cancels what it had under way, whether
+                // or not a provider still answers it. The reset set this mind's state afresh, and a
+                // decision may already have begun after it, so this one leaves the state alone.
+                reset = true;
             }
             catch (OperationCanceledException)
             {
@@ -342,8 +356,7 @@ namespace Demos.GreyBoxVillage
             }
             finally
             {
-                // A decision from before a reset leaves the new agent's state alone.
-                if (this == null || generation == asking)
+                if (!reset)
                 {
                     IsDeciding = false;
                     LastActivityTime = Time.time;
@@ -353,7 +366,7 @@ namespace Demos.GreyBoxVillage
 
             // An event that came in meanwhile is asked now, whatever became of this decision, unless
             // the model is down and nobody could answer it.
-            if (!gone && pending != null)
+            if (!gone && !reset && pending != null)
             {
                 var next = pending;
                 pending = null;

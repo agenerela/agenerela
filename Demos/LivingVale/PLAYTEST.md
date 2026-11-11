@@ -93,6 +93,13 @@ Use your own words throughout; the NPCs are not looking for keywords.
 - **The XP budget is open:** five places pay 10 XP each on first visit, but the content list
   planned three (30). This is the lead's call.
 - No sound yet. Sound waits for the asset server.
+- **Since the #190 adoption (10 November):** scripted replies (F6) and the model now share each
+  NPC's memory, so after F6 the model reads what the script said, and the save holds both.
+- A route card the game refuses when you confirm it, because things changed while it was open,
+  closes with "Things changed; that offer no longer stands."
+- In the adoption's in-game pass on `qwen3.5:4b`, after a load Iven ignored that the traveler
+  already held the parcel and offered the herbs side quest to "Do you still need the medicine?".
+  One line, not measured; note it if you see it again.
 
 ## Reporting
 

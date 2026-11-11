@@ -49,6 +49,10 @@ namespace Agenerela.Tests
                 "Play session keeps what its last request showed, which is still the best word on it: the next " +
                 "reply marks it up. Clearing it would give that provider a second health, and a game listening " +
                 "to the first one's Changed would never hear from it again."),
+            ["Agenerela.AgentBehaviour.owners"] = new KeptField(
+                "Keyed weakly by the agent, like ProviderConfig.names, and right for whichever agent it names (#166). " +
+                "A new Play session builds new agents, so it never reads an entry from the last; clearing it would " +
+                "lose the GameObject of an agent built before Play started and still in use."),
             ["Agenerela.Providers.ProviderConfig.Built"] = new KeptField(
                 "Editor only. ProviderConfig.ForgetAll empties it as Play mode starts (ExitingEditMode, before " +
                 "SubsystemRegistration) and as it ends. A second reset at SubsystemRegistration could drop a " +
