@@ -20,6 +20,11 @@ namespace Agenerela
     /// <see cref="Start"/> on the call that begins it, such as Odile's when she sees the thief, and
     /// that decision is in the chain too, at hop 0.
     /// </para>
+    /// <para>
+    /// A <see cref="DecisionRound"/> is one chain too: every call it makes without a chain of its own
+    /// starts one with the round's <see cref="DecisionRound.Id"/>, so a turn's decisions share an id,
+    /// each at hop 0, and a decision relayed from one of them continues it (#216, item 2).
+    /// </para>
     /// </remarks>
     public sealed class DecisionChain
     {

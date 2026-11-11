@@ -29,6 +29,20 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **`DecisionRound`: several agents decided on one snapshot, executed in an order given afterwards**
+  (#216, item 2; DR-021). Optional, plain C#. `await DecisionRound.DecideAsync(calls, id, ct)` takes
+  a `RoundCall(agent, stimulus, options)` per agent, decides them all through the normal queue and
+  returns the round once every one has answered, with nothing executed. `round.Execute(order)` then
+  runs the named agents' decisions in that order through `Agent.Execute`, once per phase if the
+  game likes, the whole order checked before any of it runs; each `RoundEntry` has its `Result`,
+  `Outcome` (`ActionResult`), `Status` and `Stale`, whether `Execute` refused a decision that had
+  been legal because an earlier move made it illegal. `round.End()` discards whatever was never
+  executed. Agents with memory need `MemoryCommit.OnExecute`; cancelling while deciding drops the
+  whole round at once, even past a provider that ignores cancellation, and remembers nothing. A
+  pipeline error stays one agent's result, and a call that throws, as an `Agent.Reset` makes it,
+  one agent's `Failed` entry. Each call with no chain of its own gets `DecisionChain.Start(round.Id)`,
+  so the log groups a round under one `chainId` with no new log version; `Correlation` is untouched.
+  Nothing reaches the model differently. `Documentation~/decision-rounds.md`.
 - **`DecideOptions.ObservationPlacement`: where a call's own observations go** (#151). An enum,
   `ObservationPlacement`: `AfterSources`, the default and the request as before, with the call's
   own `Observations` last in the "What you know right now:" block after every
