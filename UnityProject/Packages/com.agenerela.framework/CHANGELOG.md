@@ -63,7 +63,7 @@ While the version stays `0.x`, the public API may change in any release.
   (#244 item 1). `DecideOptions.TargetGroundingThreshold` sets the share below which
   `TargetGroundingGuard` contains a decision, from 0 to 1, and `TargetGroundingGuard.DefaultThreshold`
   (0.8) is public; a value outside 0 to 1 throws at the call, as `Agent.DecideAsync`, `Preview` and
-  `Conversation` check their other options. `OllamaSettings.TokenAlternatives`, and the same field
+  `Conversation` check their other options, and a `GuardInput` refuses it when built. `OllamaSettings.TokenAlternatives`, and the same field
   on `OllamaProviderConfig`, sets `top_logprobs`, from 1 to 20 (`DefaultTokenAlternatives`,
   `MaxTokenAlternatives` 20); the config clamps its field into range, the provider refuses an
   out-of-range setting when it is built. An evaluation report records both for each arm

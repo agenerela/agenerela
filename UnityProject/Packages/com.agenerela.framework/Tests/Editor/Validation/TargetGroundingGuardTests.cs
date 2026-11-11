@@ -114,6 +114,18 @@ namespace Agenerela.Tests
             Assert.That(Inspect(0.61f, tokens), Is.EqualTo(GuardVerdictKind.RewriteToNone));
         }
 
+        [TestCase(float.NaN)]
+        [TestCase(-0.1f)]
+        [TestCase(1.5f)]
+        public void AGuardInputBuiltByHandRefusesAThresholdOutsideZeroToOne(float threshold)
+        {
+            // A NaN threshold would contain every scored decision: no share is >= NaN.
+            var tokens = Reply("move_to", T("tower", -0.001, ("tower", -0.001)));
+
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                Input("move_to", "tower", tokens, new DecideOptions { TargetGroundingThreshold = threshold }, new string[0]));
+        }
+
         [Test]
         public void TheCallsThresholdDecidesAndItsReasonSaysWhich()
         {
