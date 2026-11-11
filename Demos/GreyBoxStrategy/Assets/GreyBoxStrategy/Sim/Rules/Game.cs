@@ -61,6 +61,8 @@ namespace GreyBoxStrategy
         public bool IsOver => Result != null;
         /// <summary>Every resolved turn, in order.</summary>
         public List<TurnReport> Reports { get; } = new List<TurnReport>();
+        /// <summary>The map at each council, after upkeep: what every country decided on, turn by turn.</summary>
+        public List<TurnSnapshot> Snapshots { get; } = new List<TurnSnapshot>();
 
         // ------------------------------------------------------------------------------------
         // 1. Upkeep and council requests
@@ -88,6 +90,7 @@ namespace GreyBoxStrategy
             foreach (var c in World.Alive.ToList()) Upkeep(c);
 
             ownersAtCouncil = World.ProvinceList.ToDictionary(p => p.Id, p => p.Owner, StringComparer.Ordinal);
+            Snapshots.Add(new TurnSnapshot(World));
             councilRequests = World.Alive.Select(c => new CountryRequest(
                 Moment.Council, World.Turn, c.Id, World,
                 Facts.Standing(World, c.Id),

@@ -29,6 +29,15 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **GreyBoxStrategy: models at one table** (#20). Any seat can be a model, a script or random
+  (`TableDefinition`, `Tables.Named`, `StrategyTableMenu`). Each council is one framework
+  `DecisionRound`, executed in the game's own order. There are five personas built only from
+  `AgentIdentity`, and a `Scorecard` scoring liveliness, sense, character, voice and strength from
+  the logs, with all-script and all-random tables as reference points. On the RTX 5080, 20 games a
+  table: a persona explains 84% of a 4B seat's aggression (placebo 3%) and makes the game livelier
+  (domination 20% → 60%, quiet turns 39% → 25%). The 2B copies its statement rule into its
+  statements (new gap N9). 16 new EditMode tests. See the demo README's "Models at one table" and
+  `findings.md`, 11 November.
 - **GreyBoxStrategy: the grounding guard plays legal moves again** (#244 item 1, gap N4). New arm
   modifiers `+threshold-<x>` and `+alternatives-<n>`, and the `default` arm now sets the grounding
   threshold to 0.6 on top of the framework's new 20 alternatives a token. On the RTX 5080, 30 games
