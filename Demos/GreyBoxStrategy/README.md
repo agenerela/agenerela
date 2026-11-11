@@ -57,13 +57,15 @@ Unity.exe -batchmode -nographics -projectPath Demos/GreyBoxStrategy -executeMeth
 ```
 
 `-strategySeat` also takes `expansionist`, `cautious` or `random`, for a baseline on the same
-seeds. The arms (`ModelSeatOptions.Named`) are `default` (the moves line and the paired schema,
-[chosen from the runs below](#can-the-framework-replace-the-moves-line)), stage 2's `control` (the
+seeds. The arms (`ModelSeatOptions.Named`) are `default` (the moves line, the paired schema and
+the grounding threshold 0.6, [chosen from the runs below](#can-the-framework-replace-the-moves-line)
+and [in gap N4's](#the-grounding-guard-with-many-legal-targets-gap-n4-11-november)), stage 2's `control` (the
 moves line, a flat schema), `after-sources`, `headline`, `no-moves-line`, `no-grounding`,
 `per-target` (no moves line; the framework lists each move's legal targets,
 `LegalTargets = PerTarget`) and `per-target-paired` (that, with the paired schema). Any arm takes
-modifiers after a `+`: `+paired` (the paired schema), `+listed` (`PerTarget`) and `+no-grounding`
-(the grounding guard off), as in `control+paired+no-grounding`. A model run writes everything a scripted run writes, and adds three things:
+modifiers after a `+`: `+paired` (the paired schema), `+listed` (`PerTarget`), `+no-grounding`
+(the grounding guard off), `+threshold-<x>` (its threshold) and `+alternatives-<n>` (how many
+alternatives the provider reports a token), as in `control+paired+no-grounding`. A model run writes everything a scripted run writes, and adds three things:
 
 - the model's own table in `summary.md`;
 - `model.csv`, every model decision with its latency, guard and execution;
@@ -71,7 +73,7 @@ modifiers after a `+`: `+paired` (the paired schema), `+listed` (`PerTarget`) an
 
 Each game log shows the model's answer and its statement under each of its moves.
 
-**Tests:** 82 EditMode tests in `Assets/GreyBoxStrategy/Tests/Editor/`, about 5 seconds once the
+**Tests:** 83 EditMode tests in `Assets/GreyBoxStrategy/Tests/Editor/`, about 5 seconds once the
 project has imported. Twenty of them drive the model seat through `ScriptedProvider`.
 
 ## The first real run
@@ -412,6 +414,39 @@ since it took illegal answers to none on both models and cost nothing these 30 g
 Stage 2's `control` stays as it was measured. The grounding guard stays on: N4 is the framework's
 to fix, and the demo shows the framework as it ships.
 
+### The grounding guard with many legal targets (gap N4, 11 November)
+
+The guard's share counts every listed target, so a spread over legal provinces was not the
+problem in itself. What it could not count was probability Ollama never reported: five
+alternatives a token, the rest read as off the list. The framework now asks for 20 by default
+(`OllamaSettings.TokenAlternatives`) and lets a call set the threshold
+(`DecideOptions.TargetGroundingThreshold`, #244). 30 games an arm on `default`, seeds 1 to 30,
+RTX 5080, Docker Ollama 0.40.14, the full method and the evaluation-set side in `findings.md`
+(11 November):
+
+| Model, arm | Provinces | Attack share | Attacks landed a game | Legal answers contained (attacks) |
+|---|---:|---:|---:|---:|
+| 4b `default` as it was (5 alternatives, 0.8) | 2.6 | 22% | 3.0 | 72 (39) |
+| 4b + 20 alternatives | 2.1 | 27% | 3.2 | 19 (4) |
+| 4b + threshold 0.6 | 2.5 | 31% | 3.7 | 15 (12) |
+| 4b + 20 alternatives + 0.6 | 2.1 | 32% (z 3.5) | 3.6 | 3 (0) |
+| 4b guard off | 2.5 | 33% | 3.8 | 0 |
+| 2b `default` as it was | 1.0 | 12% | 1.3 | 94 (28) |
+| 2b + 20 alternatives | 0.7 | 16% | 1.7 | 58 (13) |
+| 2b + threshold 0.6 | 0.9 | 18% | 2.2 | 25 (10) |
+| 2b + 20 alternatives + 0.6 | 0.7 | 21% (z 3.7) | 2.3 | 3 (1) |
+| 2b guard off | 0.5 | 21% | 2.3 | 0 |
+
+No province difference is beyond the paired band. What 20 alternatives at 0.8 still contains is
+real probability on strings that are no target beside a legal spread (`k` 0.365, `mer` 0.315,
+`orsk` 0.11, `kers` 0.07 at "declare war"); the guard also caught the model wanting to declare
+war on itself (`val` 0.634).
+
+**The decision.** The framework's default is 20 alternatives; the demo's `default` arm adds the
+threshold 0.6 (`ModelSeatOptions.Default`), which plays as the guard off does while keeping the
+guard on. Every other arm keeps the framework's 0.8. The arm measured as `default` before this is
+`control+paired+alternatives-5`.
+
 ## What the framework lacks for this game
 
 Checked against #216 on 10 November 2026, from building stage 1, reading the code on `test`, and
@@ -464,7 +499,9 @@ Found by stage 2, from the runs above:
   call can set, or scoring the probability that stayed on any target the action could legally
   take. *Sized on 10 November with the paired schema on: every containment is then on a legal
   answer, 13% of the 4B's decisions and 39 attacks in 30 games; with the guard off, the attack
-  share rises from 22% to 33%.*
+  share rises from 22% to 33%.* *Closed by #244 item 1 (11 November): 20 alternatives by default
+  in the framework, a per-call threshold, and the demo's `default` arm at 0.6, which took the
+  legal containments to 3 on both models ("The grounding guard with many legal targets").*
 - **N5. A target on an action that takes none passes through.** `recruit merrowdeep` reaches the
   handler with `TargetId = merrowdeep`, and no guard or the parser flags it. The seat drops it, as
   any handler would, but the telemetry calls it a clean decision. The 4B did it 87 times in 30

@@ -3102,3 +3102,124 @@ would need its own A/B on the evaluation set.
 **What would change this.** 100 games an arm or more, to see the outcome effects that 30 cannot;
 a second game, to tell this game's verbs from the general point; and an A/B of a framework-written
 moves line (N8) against the game's own.
+
+### The grounding guard and many legal targets: 20 alternatives a token cut its legal containments by 74% and 38% at no cost on the evaluation sets; a lower threshold frees the rest but lets a small model guess (11 November 2026)
+
+**The question.** In GreyBoxStrategy the grounding guard (`TargetGroundingGuard`, DR-016) contained
+13% of `qwen3.5:4b`'s decisions and 21% of `qwen3.5:2b`'s, every one a legal answer once the schema
+was paired (#244 item 1, the demo's gap N4; the entry of 10 November above). Why, and what fixes it
+without letting a model act on a target it invented?
+
+**Why it fires.** The guard's share already counts every listed target, not only the chosen one,
+so a model torn between three legal provinces keeps that probability on the list. Scoring only the
+targets the chosen action may legally take would count a subset, so it could only contain more.
+What the guard cannot count is probability the provider did not report: Ollama returned the five
+likeliest alternatives a token, and the guard counts the rest as off the list, as DR-016's probe
+calibrated it. Of the 4B's 72 containments in 30 games, 39 had every reported alternative on the
+list; for the 2B, 66 of 94. The rest had some reported mass on a string that continues no id.
+
+**What was run.** Two settings, both new (`OllamaSettings.TokenAlternatives`, sent as
+`top_logprobs`, and `DecideOptions.TargetGroundingThreshold`), and four scorings of the same
+replies. RTX 5080, Docker Ollama 0.40.14 over the home network, one model resident, temperature 0,
+`qwen3.5:4b` then `qwen3.5:2b`, the evaluation runs and the first ten game arms between 06:42 and
+07:56, the combined game arm from 08:24 to 08:36.
+
+- Evaluation sets: `EvalRunner`, interleaved, control (five alternatives, 0.8) against twenty
+  alternatives at 0.8, on the interim 389 and the curated 76. Every reply was identical between
+  the two arms on all 465 prompts on both models, so the replies were dumped with all twenty
+  alternatives and every other variant scored on them offline, as DR-016's checks were: a port of
+  `TargetGrounding.Read` that matched the guard's recorded share on every answer. The variants:
+  top 5 or top 20; the share over the listed targets or over the chosen action's legal ones (the
+  eval-only legality of #246: `move_to` takes places, `attack_target` the wolf); the share as is,
+  or divided by the reported mass ("renormalised", the unreported rest counted as unknown); and
+  thresholds from 0.8 to 0.3.
+- GreyBoxStrategy: 30 games an arm, seeds 1 to 30, on the demo's `default` arm (the moves line and
+  the paired schema), with every reply's alternatives dumped by a scratch wrapper. `default`
+  reproduced #247's line-paired arm exactly (72 contained, 39 attacks, 2.6 provinces).
+
+**Evaluation sets.** Correct · contained when the label was `none` · refused when an action was
+expected · wrong · the guard's containments on right / wrong answers · impossible requests handled
+(correct or contained, of 64) · impossible requests carried out on a guessed target:
+
+| `qwen3.5:2b`, interim 389 | Correct | Contained | Refused | Wrong | Contained right / wrong | Impossible handled | Guessed |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Control: top 5, 0.8 | 261 | 11 | 27 | 90 | 9 / 27 | 49 | 15 |
+| Top 20, 0.8 (the live arm) | 261 | 11 | 24 | 93 | 9 / 24 | 49 | 15 |
+| Top 5, 0.6 | 268 | 8 | 16 | 97 | 2 / 20 | 47 | 17 |
+| Top 5, 0.5 | 268 | 7 | 14 | 100 | 2 / 17 | 47 | 17 |
+| Top 20, 0.6 | 268 | 8 | 16 | 97 | 2 / 20 | 47 | 17 |
+| Renormalised, top 5, 0.8 | 263 | 8 | 22 | 96 | 7 / 21 | 47 | 17 |
+| Renormalised, top 20, 0.8 | 262 | 8 | 23 | 96 | 8 / 21 | 47 | 17 |
+| Legal targets only, top 5, 0.8 | 260 | 20 | 30 | 79 | 10 / 38 | 53 | 11 |
+| Guard off | 270 | 0 | 2 | 117 | 0 / 0 | 41 | 23 |
+
+On `qwen3.5:4b` the guard fires 10 times in 389. Control 330 · 4 · 6 · 49 (contained 1 right, 7
+wrong; 53 impossible handled, 11 guessed); top 20 at 0.8 330 · 4 · 5 · 50, the same impossibles;
+top 5 at 0.6 331, 53 handled; at 0.5 331, 52 handled, 12 guessed; renormalised 331, 53 handled;
+legal targets 330, 54 handled, 10 guessed; off 331, 50 handled, 14 guessed. On the curated 76 no
+variant changes an answer (4B 69; 2B 54 with 9 of 9 impossible handled; off 8 of 9). Every
+difference is within the 3.6-point floor at n = 389. The sets hold few open choices: 5 of 389
+prompts and 3 of 76 accept more than one target.
+
+**Cost of twenty.** No measurable latency, interleaved in one session: median 0.47 → 0.43 s on the
+4B, 0.38 → 0.37 s on the 2B. Each reply's token probabilities grow from about 5 KB to 17 KB as
+JSON, in memory only: the decision log keeps the reply's text, and GreyBoxStrategy's log lines
+stayed at about 5.4 KB.
+
+**GreyBoxStrategy, 30 games an arm.** Provinces at the end · attack share of council moves (z
+against `default`) · attacks landed a game · the guard's containments, all legal (of them attacks):
+
+| Model, arm | Provinces | Attack share | Attacks landed | Contained (attacks) |
+|---|---:|---:|---:|---:|
+| 4b `default` | 2.6 | 22% | 3.0 | 72 (39) |
+| 4b + 20 alternatives | 2.1 | 27% (z 1.9) | 3.2 | 19 (4) |
+| 4b + threshold 0.6 | 2.5 | 31% (z 3.2) | 3.7 | 15 (12) |
+| 4b + threshold 0.5 | 2.3 | 32% (z 3.6) | 3.7 | 3 (1) |
+| 4b + 20 alternatives + 0.6 | 2.1 | 32% (z 3.5) | 3.6 | 3 (0) |
+| 4b guard off | 2.5 | 33% (z 3.8) | 3.8 | 0 |
+| 2b `default` | 1.0 | 12% | 1.3 | 94 (28) |
+| 2b + 20 alternatives | 0.7 | 16% (z 1.7) | 1.7 | 58 (13) |
+| 2b + threshold 0.6 | 0.9 | 18% (z 2.7) | 2.2 | 25 (10) |
+| 2b + threshold 0.5 | 0.8 | 20% (z 3.3) | 2.3 | 8 (6) |
+| 2b + 20 alternatives + 0.6 | 0.7 | 21% (z 3.7) | 2.3 | 3 (1) |
+| 2b guard off | 0.5 | 21% (z 3.6) | 2.3 | 0 |
+
+No province difference is beyond the paired 95% band (±0.9 to ±1.4 on the 4B, ±0.4 to ±0.7 on the
+2B; the 2B's guard-off −0.47 sits just inside its ±0.49). No model won a game except one each in
+the 4B's guard-off, two lower-threshold and combined arms.
+
+**What the containments wanted.** Three, with the alternatives at the target's lowest token:
+
+- `declare_war kesh`, share 0.789: `k` 0.365, `mer` 0.315, `kers` 0.072, `orsk` 0.058, `ors` 0.051,
+  `mers` 0.025, then fragments (`or`, `ork`, `sk`, `ks`, `esk`, `gers`). A three-way legal spread
+  with about 0.15 on strings that continue no id. Most of what top 20 still contains is this shape;
+  renormalised it reads 0.92.
+- `declare_war orsk`, share 0.263: `val` 0.634. The model wanted to declare war on its own country,
+  `valen`, which is not a target, and the mask wrote `orsk`. The guard working.
+- `declare_war orsk`, share 0.000: `il` 0.564, then `no` and `none`. It wanted `ilvar`, not on this
+  call's list. The guard working.
+
+**What I believe now.**
+
+- Twenty alternatives are free and fix the provider half of the problem. Adopted as the default.
+- Renormalising is not a cheap stand-in for twenty. It is more permissive (2 containments against
+  19 in the 4B's games) and cost the 2B the same two impossible requests as a 0.6 threshold. Not
+  shipped.
+- Scoring only the legal targets is the stricter direction: on the 2B it handled 53 impossible
+  requests against 49, for one more right answer contained. It needs an action's legal set, which
+  here only the eval-only legality supplied. Not shipped; a lead for #138.
+- A lower threshold frees legal spreads and costs a small model impossible requests: at 0.6 the
+  2B guessed on 17 of 64 against 15. The default stays 0.8, and the threshold is a per-call setting
+  for a game with many legal targets a turn. GreyBoxStrategy's `default` arm uses 0.6 with twenty
+  alternatives: 3 legal containments in 30 games on either model, and the attack share of the
+  guard off.
+
+**For #138: what remains.** Real off-list mass inside a legal spread, the `kers` case, is still
+contained at 0.8 with twenty alternatives: 19 of the 4B's decisions and 58 of the 2B's in 30 games.
+The guard cannot tell a fragment that continues no id from a near miss without a list of names.
+Leads: a reading that ignores alternatives below some probability or length; or the legal-set
+reading above, for a game that declares its legal sets.
+
+**What would change this.** An evaluation set with many prompts that accept several targets, where
+the threshold trade could be measured on right answers rather than in a game; a second game; and a
+provider that reports its alternatives differently (LLMUnity reports at most 10).

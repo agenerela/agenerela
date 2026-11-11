@@ -938,7 +938,10 @@ Built-ins, in order:
    on every decision unless the caller turns it off for that call. From the same request's
    token probabilities (§2.4), it reads, at every token of the model's target, how much of
    the model's probability could still lead to a target on the list, and keeps the lowest.
-   Below 0.8, a threshold calibrated in Phase 4, it rewrites the decision to `none`.
+   Below 0.8, a threshold calibrated in Phase 4, it rewrites the decision to `none`. Since
+   #244 a call may set the threshold (`DecideOptions.TargetGroundingThreshold`), and Ollama
+   reports 20 alternatives a token rather than 5, so a spread over many legal targets is not
+   read as doubt (DR-016's amendment of 11 November).
 
    - **"Attack the scarecrow."** scores 0.05, because the model wanted to write "sc…".
    - **"Go to the south tower."** scores 0.007 on the 2B. The start "south" fits
@@ -1984,6 +1987,15 @@ torn between two listed targets keeps all of it on the list. A caller turns it o
 call with `DecideOptions.CheckTarget = false`. Telemetry records the number for every
 decision. On a provider that reports no token probabilities, the guard records that it could
 not run, and `PromptBuilder` adds the one-line rule instead.
+
+**Amended 11 November 2026 (#244 item 1).** In a game with many legal targets a turn, the
+guard contained legal moves: what the five reported alternatives left uncovered counted as off
+the list. Ollama now reports 20 by default (`OllamaSettings.TokenAlternatives`), which changed no
+reply or verdict on the evaluation sets and cut GreyBoxStrategy's legal containments by 74% and
+38%. The threshold stays 0.8 by default and is a per-call setting; 0.6 frees the rest of a game's
+legal spreads but let `qwen3.5:2b` guess on two more impossible requests of 64. Scoring only the
+chosen action's legal targets, and dividing by the reported mass, were measured and not adopted.
+findings.md, 11 November, has the tables.
 
 **Consequences**
 - `ProviderCapabilities` gains a flag for reporting token probabilities, and `ProviderResult`
