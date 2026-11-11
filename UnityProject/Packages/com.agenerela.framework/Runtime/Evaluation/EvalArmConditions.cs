@@ -36,6 +36,14 @@ namespace Agenerela.Evaluation
         [JsonProperty("exampleTargetFallback")] public bool ExampleTargetFallback;
         [JsonProperty("pairTargetsWithActions")] public bool PairTargetsWithActions;
         /// <summary>
+        /// How the arm's prompt said which targets each action may take, the name of a
+        /// <see cref="Agenerela.LegalTargetListing"/> value (#151); null in a report written before it
+        /// existed, which listed none.
+        /// </summary>
+        [JsonProperty("legalTargets")] public string LegalTargets;
+        /// <summary>The arm's own target legality (<see cref="EvalArm.Legality"/>, #151); null when it ran the set as it is.</summary>
+        [JsonProperty("legality", NullValueHandling = NullValueHandling.Ignore)] public EvalLegality Legality;
+        /// <summary>
         /// Where the arm put each prompt's own observations, the name of a
         /// <see cref="Agenerela.ObservationPlacement"/> value (#151); null in a report written before
         /// it existed, which ran <c>AfterSources</c>.

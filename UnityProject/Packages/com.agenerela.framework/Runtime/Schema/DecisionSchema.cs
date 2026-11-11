@@ -260,6 +260,38 @@ namespace Agenerela
             return takeable;
         }
 
+        // The pairs a prompt names (#151, LegalTargetListing): the schema's own when it is paired;
+        // otherwise the ones a paired schema of the same actions would offer, made by the same rule
+        // from the same answer, so the prompt and the schema cannot disagree. The actions are the
+        // schema's, matched on each definition's Id as it is now, as the prompt's list matches them.
+        internal static IReadOnlyList<ActionTargets> PairsOf(AgentContext ctx, DecisionSchema schema, AvailabilityAnswer answer)
+        {
+            if (schema.Pairs != null)
+            {
+                return schema.Pairs;
+            }
+
+            var offered = new List<ActionDefinition>();
+            foreach (var field in schema.Fields)
+            {
+                if (field.Name != ActionFieldName || field.AllowedValues == null) continue;
+
+                foreach (string id in field.AllowedValues)
+                {
+                    foreach (var definition in ctx.Actions.Definitions)
+                    {
+                        if (definition != null && string.Equals(definition.Id, id, StringComparison.Ordinal))
+                        {
+                            offered.Add(definition);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return PairsFor(offered, ctx.Targets, answer);
+        }
+
         // One branch per distinct target list, in the order each list's first action is offered,
         // none's last unless an action shares its list. Keyed on the list itself, so two actions
         // share a branch exactly when they take the same targets in the same order.

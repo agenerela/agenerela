@@ -91,6 +91,20 @@ namespace Agenerela
         public int MaxListedTargets = PromptOptions.DefaultMaxListedTargets;
 
         /// <summary>
+        /// Whether this call's system prompt says which targets each offered action may take now,
+        /// and how (#151, <see cref="LegalTargetListing"/>). Off by default: unmeasured as a default,
+        /// and with it off every request is byte-identical to one sent before it existed.
+        /// </summary>
+        /// <remarks>
+        /// On, the actions and targets are listed whether <see cref="ListActionsAndTargets"/> is on or
+        /// not, with the pairs the paired schema would offer (<see cref="PairTargetsWithActions"/>),
+        /// and an action that requires a target and may take none is not offered, as with pairing. The
+        /// schema stays flat unless pairing is on too: this tells the model the pairs, pairing makes
+        /// the grammar keep to them, and the guards refuse a pair that breaks them either way.
+        /// </remarks>
+        public LegalTargetListing LegalTargets = LegalTargetListing.Off;
+
+        /// <summary>
         /// Whether this call's examples show each action's
         /// <see cref="ActionDefinition.CounterExampleStimulus"/>, answered with <c>none</c> (#190). On
         /// by default, which shows only what a developer wrote. False leaves them out of this call, as

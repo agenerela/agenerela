@@ -690,6 +690,12 @@ namespace Agenerela
                     "DecideOptions.MaxListedTargets cannot be negative. 0 lists no targets.");
             }
 
+            if (!Enum.IsDefined(typeof(LegalTargetListing), options.LegalTargets))
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), options.LegalTargets,
+                    "DecideOptions.LegalTargets is not one of Off or PerTarget.");
+            }
+
             // A list of the context's own, apart from the options' copy a guard may read. Blank
             // lines are not something the agent knows, so they take no place under the cap.
             observations = new ReadOnlyCollection<string>(NotBlank(options.Observations));
@@ -1289,6 +1295,7 @@ namespace Agenerela
                 TargetRule = call.CheckTarget && provider.Capabilities?.ReportsTokenProbabilities != true,
                 ListActionsAndTargets = call.ListActionsAndTargets,
                 MaxListedTargets = call.MaxListedTargets,
+                LegalTargets = call.LegalTargets,
                 CounterExamples = call.CounterExamples,
                 IdleExampleStatement = call.IdleExampleStatement,
                 ExampleStatements = call.ExampleStatements,
@@ -1307,9 +1314,10 @@ namespace Agenerela
             var offered = availability.Offered;
             var available = offered;
             bool paired = call.PairTargetsWithActions;
-            if (paired)
+            if (paired || call.LegalTargets != LegalTargetListing.Off)
             {
-                // No example for an action the paired schema cannot offer (DR-020).
+                // No example for an action the paired schema cannot offer (DR-020), and none offered
+                // at all when the prompt names the pairs and it has no legal target (#151).
                 available = DecisionSchema.Takeable(available, ctx.Targets, availability);
             }
 
@@ -1329,7 +1337,8 @@ namespace Agenerela
                 seen.HistoryTurnsForgotten = telemetry.HistoryTurnsForgotten;
             }
 
-            var request = PromptBuilder.Build(ctx, schema, fewShot, history, options);
+            var request = PromptBuilder.Build(ctx, schema, fewShot, history, options, availability, telemetry.TargetsUnlisted);
+            seen?.SetUnlisted(telemetry.TargetsUnlisted);
             request.AgentId = Id;
             telemetry.TargetRuleSent = PromptBuilder.SendsTargetRule(schema, options);
             return request;

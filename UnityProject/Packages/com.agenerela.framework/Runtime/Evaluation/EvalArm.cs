@@ -76,6 +76,23 @@ namespace Agenerela.Evaluation
         /// <summary>The arm's name in the report.</summary>
         public string Name { get; }
 
+        private EvalLegality legality;
+
+        /// <summary>
+        /// The arm's own target legality (#151): categories for the set's targets and the profile's
+        /// actions, and extra targets, so the run can score whether the model picks a legal pair. Null,
+        /// the default, runs the set and the profile as they are. Copied when set.
+        /// </summary>
+        /// <remarks>
+        /// For evaluation only; <see cref="EvalLegality"/> says what it changes. The run is refused when
+        /// a label expects a pair it makes illegal, or an extra target's id is already the set's.
+        /// </remarks>
+        public EvalLegality Legality
+        {
+            get => legality;
+            set => legality = value?.Copy();
+        }
+
         /// <summary>The provider config the arm's agents decide through.</summary>
         public ProviderConfig Config { get; }
 

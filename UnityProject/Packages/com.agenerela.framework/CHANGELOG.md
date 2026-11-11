@@ -49,6 +49,28 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **`DecideOptions.LegalTargets`: the prompt says which targets each action may take** (#151). An
+  enum, `LegalTargetListing`, with two values. `Off`, the default, leaves every request byte for byte
+  as it was. `PerTarget` names, on each target's line, the actions that may take it
+  (`- wolf (for attack_target)`), and lists the actions and targets whether `ListActionsAndTargets`
+  is on or not. The pairs are the paired schema's, from the same rule and the same availability
+  answer, so the list, the paired schema, `TargetCategoryGuard` and `TargetAvailabilityGuard` cannot
+  disagree. When it is on, an action that requires a target and may take none is not offered, as with
+  pairing, and a target no offered action may take is not listed. It is for a provider that never
+  reads the schema, such as Ollama. It is an opt-in for larger models. With restricted pairs it scored
+  +4.1 points on `qwen3.5:4b` and −3.9 on `qwen3.5:2b`, both beyond noise, for about 50 to 140 more
+  prompt tokens, so do not use it with a 2B-class model. A second rendering, each action's line ending
+  with its targets, helped neither model and was removed. To keep any model off illegal pairs, use
+  `PairTargetsWithActions`: it brought them to 0 on both models with no extra tokens.
+- **`DecisionTelemetry.TargetsUnlisted`**, with `AgentPreview.TargetsUnlisted` and the decision
+  log's `targetsUnlisted`: the target ids the schema offered but the prompt's action and target list
+  left out for `MaxListedTargets`, a cut that was silent before (#151). Changes no request.
+- **`EvalArm.Legality`** (`EvalLegality`, `EvalExtraTarget`): an arm's own target categories and
+  extra targets, applied to copies so the prompt set and the profile never change, so a run can
+  score legal pairs on a set whose targets declare no categories (#151). The runner refuses an arm
+  that makes a label's expected pair illegal. `report.json` records each arm's `legalTargets` and
+  `legality`.
+
 - **`ActionDefinition.TakesNoTarget`, and `[AgentAction(TakesNoTarget = true)]`** (#244 item 2):
   an action that never takes a target, such as `recruit`. Off by default, so nothing changes for an
   existing agent. On, a target the model names anyway under the flat schema is dropped, not refused:

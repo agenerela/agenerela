@@ -117,6 +117,19 @@ namespace Agenerela
         public const int DefaultMaxListedTargets = 12;
 
         /// <summary>
+        /// Whether the action and target list says which targets each offered action may take now,
+        /// and how (#151). <see cref="LegalTargetListing.Off"/> by default, which leaves the prompt
+        /// exactly as it was. <c>Agent</c> copies it from <see cref="DecideOptions.LegalTargets"/>.
+        /// </summary>
+        /// <remarks>
+        /// Any other value lists the actions and targets whether <see cref="ListActionsAndTargets"/>
+        /// is on or not, and lists only targets some offered action may take. <see cref="LegalTargetListing"/>
+        /// says where the pairs come from and how each rendering reads. <b>Unmeasured as a default</b>:
+        /// the A/B is #151's.
+        /// </remarks>
+        public LegalTargetListing LegalTargets = LegalTargetListing.Off;
+
+        /// <summary>
         /// Whether the few-shot block shows each action's
         /// <see cref="ActionDefinition.CounterExampleStimulus"/>. On by default, which shows only what
         /// a developer wrote. <c>Agent</c> copies it from <see cref="DecideOptions.CounterExamples"/>.

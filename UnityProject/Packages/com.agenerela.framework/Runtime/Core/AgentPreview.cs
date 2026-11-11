@@ -35,6 +35,7 @@ namespace Agenerela
         private readonly List<string> registeredTargets = new List<string>();
         private readonly List<PreviewSource> targetSources = new List<PreviewSource>();
         private readonly List<string> leftOutByCategory = new List<string>();
+        private readonly List<string> unlisted = new List<string>();
         private readonly List<UnavailableTarget> unavailable = new List<UnavailableTarget>();
         private readonly List<PreviewSource> observationSources = new List<PreviewSource>();
 
@@ -47,6 +48,7 @@ namespace Agenerela
             RegisteredTargets = registeredTargets.AsReadOnly();
             TargetSources = targetSources.AsReadOnly();
             TargetsLeftOutByCategory = leftOutByCategory.AsReadOnly();
+            TargetsUnlisted = unlisted.AsReadOnly();
             TargetsUnavailable = unavailable.AsReadOnly();
             ObservationSources = observationSources.AsReadOnly();
         }
@@ -104,6 +106,15 @@ namespace Agenerela
         public IReadOnlyList<string> TargetsLeftOutByCategory { get; }
 
         /// <summary>
+        /// The ids the schema offers but the prompt's action and target list leaves out, because
+        /// <see cref="DecideOptions.MaxListedTargets"/> is reached, in schema order, as
+        /// <see cref="DecisionTelemetry.TargetsUnlisted"/> records them for a decision (#151). A model
+        /// that never reads the schema, such as one served through Ollama, is told nothing of these.
+        /// Empty when nothing is listed or nothing was cut.
+        /// </summary>
+        public IReadOnlyList<string> TargetsUnlisted { get; }
+
+        /// <summary>
         /// Each of <see cref="Agent.ObservationSources"/>, in order: the lines it gave that are sent,
         /// and those left out, by <see cref="Agent.MaxObservations"/> and then by its own cap through
         /// <see cref="IReportsDroppedObservations"/>.
@@ -154,6 +165,12 @@ namespace Agenerela
         internal void AddTargetSource(ITargetSource source, List<string> added, IReadOnlyList<string> dropped)
         {
             targetSources.Add(new PreviewSource(source, added, dropped != null ? new List<string>(dropped) : new List<string>()));
+        }
+
+        internal void SetUnlisted(IEnumerable<string> ids)
+        {
+            unlisted.Clear();
+            unlisted.AddRange(ids);
         }
 
         internal void AddLeftOutByCategory(string id)

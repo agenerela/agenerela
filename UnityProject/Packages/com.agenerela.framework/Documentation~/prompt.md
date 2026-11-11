@@ -74,6 +74,76 @@ Targets:
 The list's form follows the "Around you" list that DR-016's probe measured, which listed
 targets the same way, but no actions. It has never been measured on its own.
 
+**When the cap cuts.** A target the cap leaves out is still offered by the schema, so nothing
+fails, but a local model is told nothing of it. Each decision records the ids cut in
+`DecisionTelemetry.TargetsUnlisted`, in schema order, and so does `AgentPreview.TargetsUnlisted` and
+the decision log's `targetsUnlisted`. The request is the same with or without this record. Raise
+`MaxListedTargets` when it is not empty and the far targets matter, as with a strategy game's 30
+countries.
+
+## Saying which targets each action may take
+
+A game that declares target categories (`ActionDefinition.TargetCategories`), pairs its schema
+(`PairTargetsWithActions`) or checks each target (`ITargetAvailability`, `[AvailableFor]`) has told
+the framework which action may take which target. None of that reaches a local model: the list
+above names every target, and the schema, which carries the pairs, is never read. So the model can
+choose a pair the guards then refuse.
+
+**To keep a model off illegal pairs, pair the schema** (`PairTargetsWithActions = true`). The
+grammar then allows only legal pairs, and the prompt does not change. On the interim set, with
+actions restricted to some targets, it brought the illegal pairs the model chose from 6 to 0 on
+`qwen3.5:4b` and from 20 to 0 on `qwen3.5:2b`. It broke no answer and added no prompt tokens
+(findings, 10 November 2026, "Saying which targets each action may take"). It does not raise the
+score: 319 against 319, and 291 against 287.
+
+Telling the model the pairs as well is an opt-in, and helps only a larger model:
+
+```csharp
+var result = await agent.DecideAsync(line, new DecideOptions { LegalTargets = LegalTargetListing.PerTarget });
+```
+
+`PerTarget` lists the actions and targets whether `ListActionsAndTargets` is on or not, and names,
+on each target's line, the actions that may take it:
+
+```
+Allowed actions:
+- follow_player: Walk behind the player. Target: no_target.
+- move_to: Walk to a place.
+- attack_target: Attack something.
+- none: Take no action. Target: no_target.
+Targets:
+- bridge (for move_to)
+- well (for move_to)
+- docks (for move_to)
+- wolf (for attack_target)
+```
+
+An action that may take no listed target says so on its own line: `Target: no_target.`, or
+`Targets: none listed.` when `MaxListedTargets` cut its targets.
+
+**What it measured.** On the interim set with restricted pairs, `qwen3.5:4b` scored 333 against
+317, +4.1 points, beyond noise: impossible requests +10.9, events +9.2, calm scenes +15.
+`qwen3.5:2b` lost 3.9 points with restricted pairs and 4.4 without, both beyond noise. It dropped
+"stay here" commands to `none`, and walked to whatever place a calm scene named. On the curated 76
+neither model moved. It costs about 50 to 140 more prompt tokens than the plain list. **Do not use
+it with a 2B-class model.** Neither evaluation set restricts any pairs as it ships, and a number
+from a real game is still owed. The other rendering tried, each action's line ending with its
+targets, helped neither model, and was removed.
+
+- **The pairs** are the paired schema's, made by the same rule from the same availability answer:
+  an action takes the targets in its categories, or every target when it names none, less any its
+  per-target check rejected for this decision, and `no_target` only when it does not require a
+  target. So the list, the paired schema, `TargetCategoryGuard` and `TargetAvailabilityGuard` cannot
+  disagree. With `PairTargetsWithActions` on too, the list reads the schema's own pairs.
+- **What is left out.** An action that requires a target and may take none is not offered, in the
+  schema and its examples either, as with pairing; `AgentPreview.LeftOut` says why. A target no
+  offered action may take is not listed. `MaxListedTargets` counts only the targets that are, and
+  `TargetsUnlisted` reports only those it cut.
+- **The schema stays flat** unless `PairTargetsWithActions` is on. The list tells the model the
+  pairs; pairing makes the grammar keep to them; the guards refuse a pair that breaks them either
+  way.
+- **Off**, the default, leaves the request byte for byte what it was before the option.
+
 ## The idle example on an agent built in code
 
 The few-shot block ends with an idle example, a line answered with `none`, so the model sees
@@ -299,10 +369,14 @@ name until a game writes one, which is the opt-in.
 Each switch is an option an `EvalArm` carries, so one run in one session compares an arm with it
 against an arm without it. `report.json` records each arm's `listActionsAndTargets`,
 `maxListedTargets`, `counterExamples`, `idleExampleStimulus`, `idleExampleStatement`,
-`exampleStatements` and `exampleTargetFallback`, and `pairTargetsWithActions`
+`exampleStatements`, `exampleTargetFallback` and `legalTargets`, and `pairTargetsWithActions`
 for the paired schema ([targets.md](targets.md#the-paired-schema)), which changes the schema rather
 than the prompt. Knowledge is the identity's rather than a call's, so an arm carries it as
 `EvalArm.Knowledge`, lines added to the profile's for that arm's agents without changing the asset,
-and `report.json` records it as each arm's `knowledge`.
+and `report.json` records it as each arm's `knowledge`. The evaluation set's targets declare no
+categories, so legality cannot matter on it as it is; an arm can carry its own, `EvalArm.Legality`
+(an `EvalLegality`: categories for the set's targets and the profile's actions, and extra targets),
+applied to copies so neither the set nor the profile changes, and recorded as each arm's `legality`.
+The runner refuses an arm whose legality makes a label's expected pair illegal.
 [`evaluation.md`](evaluation.md#running-an-ab) explains how to run an A/B. Until one has been
 run, quote no number for any of these on the evaluation set.

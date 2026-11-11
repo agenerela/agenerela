@@ -364,6 +364,12 @@ namespace Agenerela
                 throw new ArgumentOutOfRangeException(nameof(options), options.MaxListedTargets,
                     "DecideOptions.MaxListedTargets cannot be negative. 0 lists no targets.");
             }
+
+            if (!Enum.IsDefined(typeof(LegalTargetListing), options.LegalTargets))
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), options.LegalTargets,
+                    "DecideOptions.LegalTargets is not one of Off or PerTarget.");
+            }
         }
 
         // The whole life of one turn's request, including watching a provider that answers after
