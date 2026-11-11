@@ -60,6 +60,11 @@ namespace GreyBoxStrategy
                     sb.AppendLine($"Offered ({req.Legal.Count}): " + string.Join(" · ", req.Legal.Select(Show)));
                     sb.AppendLine();
                     sb.AppendLine($"**Chose `{o.Choice}`** → {o.Text}" + (o.Refused ? " **(refused)**" : ""));
+                    if (o.Note != null)
+                    {
+                        sb.AppendLine();
+                        sb.AppendLine("> " + o.Note.Replace("\n", "\n> "));
+                    }
                 }
 
                 if (report.Resolution.Count > 0)

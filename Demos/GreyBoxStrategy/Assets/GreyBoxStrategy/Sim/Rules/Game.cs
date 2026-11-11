@@ -38,6 +38,9 @@ namespace GreyBoxStrategy
         private List<CountryRequest> councilRequests;
         private List<CountryAnswer> councilAnswers;
         private List<Offer> offers;
+        // Who held each province when the council decided, so a refusal can say that someone took
+        // it first rather than only what the rules now say.
+        private Dictionary<string, string> ownersAtCouncil = new Dictionary<string, string>(StringComparer.Ordinal);
 
         public Game(int seed, MapDefinition map = null, GameRules rules = null)
         {
@@ -48,6 +51,11 @@ namespace GreyBoxStrategy
 
         public int Seed { get; }
         public World World { get; }
+        /// <summary>
+        /// Gates by country id: asked before each move of that country lands (<see cref="IMoveGate"/>).
+        /// Countries without one are admitted as before.
+        /// </summary>
+        public Dictionary<string, IMoveGate> Gates { get; } = new Dictionary<string, IMoveGate>(StringComparer.Ordinal);
         public GameRules Rules => World.Rules;
         public GameResult Result { get; private set; }
         public bool IsOver => Result != null;
@@ -79,6 +87,7 @@ namespace GreyBoxStrategy
 
             foreach (var c in World.Alive.ToList()) Upkeep(c);
 
+            ownersAtCouncil = World.ProvinceList.ToDictionary(p => p.Id, p => p.Owner, StringComparer.Ordinal);
             councilRequests = World.Alive.Select(c => new CountryRequest(
                 Moment.Council, World.Turn, c.Id, World,
                 Facts.Standing(World, c.Id),
@@ -174,7 +183,7 @@ namespace GreyBoxStrategy
                 .GroupBy(a => a.Request.CountryId)
                 .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
             councilAnswers = councilRequests
-                .Select(req => byCountry.TryGetValue(req.CountryId, out var a) ? new CountryAnswer(req, a.Choice ?? Move.Hold) : new CountryAnswer(req, Move.Hold))
+                .Select(req => byCountry.TryGetValue(req.CountryId, out var a) ? new CountryAnswer(req, a.Choice ?? Move.Hold, a.Note) : new CountryAnswer(req, Move.Hold))
                 .ToList();
 
             offers = new List<Offer>();
@@ -250,7 +259,15 @@ namespace GreyBoxStrategy
                 }
 
             foreach (var a in councilAnswers.Where(a => !done.Contains(a.Request.CountryId)))
+            {
+                Gate(a.Request, a.Choice);
                 report.Outcomes.Add(new MoveOutcome(a.Request, a.Choice, Move.Hold, false, "held"));
+            }
+
+            var notes = councilAnswers.Concat(answers.Values).Where(a => a.Note != null)
+                .GroupBy(a => a.Request).ToDictionary(g => g.Key, g => g.First().Note);
+            foreach (var o in report.Outcomes)
+                if (o.Request != null && notes.TryGetValue(o.Request, out string note)) o.Note = note;
 
             foreach (var c in World.Alive.ToList())
             {
@@ -274,7 +291,7 @@ namespace GreyBoxStrategy
             {
                 var offerer = council[o.From];
                 done.Add(o.From);
-                string stale = Legality.WhyNot(World, o.From, offerer.Choice);
+                string stale = Legality.WhyNot(World, o.From, offerer.Choice) ?? Gate(offerer.Request, offerer.Choice);
                 if (stale != null)
                 {
                     Refuse(offerer, stale);
@@ -290,6 +307,16 @@ namespace GreyBoxStrategy
                 if (o.Mutual)
                 {
                     done.Add(o.To);
+                    council.TryGetValue(o.To, out var partner);
+                    string partnerWhy = partner == null ? null : Gate(partner.Request, partner.Choice);
+                    if (partnerWhy != null)
+                    {
+                        // The partner's own side was refused, so there is no truce to make.
+                        Refuse(partner, partnerWhy);
+                        report.Outcomes.Add(new MoveOutcome(offerer.Request, offerer.Choice, offerer.Choice, false, $"{o.To}'s offer was refused: no truce"));
+                        report.Resolution.Add($"{o.From} offered peace, but {o.To}'s offer was refused: no truce.");
+                        continue;
+                    }
                     MakeTruce(o.From, o.To);
                     report.Outcomes.Add(new MoveOutcome(offerer.Request, offerer.Choice, offerer.Choice, false, $"{o.To} offered peace too: truce"));
                     if (council.TryGetValue(o.To, out var other))
@@ -300,6 +327,7 @@ namespace GreyBoxStrategy
 
                 answers.TryGetValue(o.Id, out var answer);
                 var reply = answer?.Choice ?? new Move(Actions.RefusePeace);
+                if (answer != null && Gate(o.EnvoyRequest, reply) != null) reply = new Move(Actions.RefusePeace);
                 bool accepted = reply.Action == Actions.AcceptPeace;
                 report.Outcomes.Add(new MoveOutcome(o.EnvoyRequest, reply, accepted ? reply : new Move(Actions.RefusePeace), false,
                     accepted ? $"accepted {o.From}'s peace" : $"refused {o.From}'s peace"));
@@ -331,6 +359,10 @@ namespace GreyBoxStrategy
             string id = a.Request.CountryId;
             var move = a.Choice;
             string why = Legality.WhyNot(World, id, move);
+            if (why != null && move.Action == Actions.Attack && World.Province(move.Target) is Province taken
+                && ownersAtCouncil.TryGetValue(taken.Id, out string before) && before != taken.Owner && taken.Owner != null)
+                why = $"{taken.Owner} took {taken.Id} first";
+            why = why ?? Gate(a.Request, move);
             if (why != null)
             {
                 Refuse(a, why);
@@ -498,6 +530,9 @@ namespace GreyBoxStrategy
             }
             return order;
         }
+
+        private string Gate(CountryRequest request, Move move) =>
+            request != null && Gates.TryGetValue(request.CountryId, out var gate) && gate != null ? gate.Admit(request, move) : null;
 
         private static bool IsOffered(CountryAnswer a) => a.Request.Legal.Contains(a.Choice);
 

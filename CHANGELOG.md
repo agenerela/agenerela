@@ -29,6 +29,19 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **GreyBoxStrategy, stage 2: a model plays a country** (#20). A framework `Agent` built in code
+  with no scene plays one seat. Its eight moves are registered once. Availability comes from the
+  game's rules, action-wide and per target (`ITargetAvailability`), with categories for provinces
+  and countries. Standing facts come from an observation source, and this turn's facts go with the
+  call. `Agent.Execute` runs as the re-check at the moment the game lands each move, through a new
+  `IMoveGate` in the simulation. A game-side line names each move's legal targets, standing in for
+  stage 1's gap N1. On the RTX 5080, 30 games per arm against four scripted countries: `qwen3.5:4b`
+  ends with 1.8 provinces (random 1.4, scripted 3.1 to 4.3), `qwen3.5:2b` with 0.4, and neither
+  wins a game. Without the moves line the 4B's attacks fall from 15% to 2% of its moves. The
+  grounding guard contains legal attacks when several provinces are open. Five arms and the
+  baselines are in the demo's `README.md` and `findings.md`. The menu and the CLI entry points run a
+  model seat, and the logs show each model answer and statement. 77 EditMode tests, 15 of them on
+  the model seat through `ScriptedProvider`.
 - **GreyBoxStrategy, stage 1: the country game, headless** (#20). `Demos/GreyBoxStrategy/` is
   a new Unity project (Universal 2D, the framework by relative path, `com.unity.pipeline`). Its
   simulation assembly has no engine references at all: five countries on a 5 × 5 map of 25

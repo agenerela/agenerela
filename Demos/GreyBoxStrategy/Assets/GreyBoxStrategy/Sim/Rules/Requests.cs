@@ -52,14 +52,34 @@ namespace GreyBoxStrategy
     /// <summary>A player's answer, paired with the request it answers.</summary>
     public sealed class CountryAnswer
     {
-        public CountryAnswer(CountryRequest request, Move choice)
+        public CountryAnswer(CountryRequest request, Move choice, string note = null)
         {
             Request = request;
             Choice = choice;
+            Note = note;
         }
 
         public CountryRequest Request { get; }
         public Move Choice { get; }
+        /// <summary>
+        /// Anything the player wants in the log beside its choice, copied to
+        /// <see cref="MoveOutcome.Note"/>: a model seat's statement, latency and guard verdicts.
+        /// </summary>
+        public string Note { get; }
+    }
+
+    /// <summary>
+    /// A last word on a move at the moment it lands, after the game's own re-check has passed: a
+    /// seat driven by a framework agent answers through <c>Agent.Execute</c>, whose re-check is the
+    /// framework's. Null admits the move; anything else refuses it, with that reason.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="Game"/> asks the gate of the country whose move it is, for every move it is about
+    /// to carry out, holds and envoy answers included, and never for one it has already refused.
+    /// </remarks>
+    public interface IMoveGate
+    {
+        string Admit(CountryRequest request, Move move);
     }
 
     /// <summary>What happened to one decision once the turn resolved.</summary>
@@ -86,6 +106,8 @@ namespace GreyBoxStrategy
         public bool Refused { get; }
         /// <summary>One line for the log: "took fenmark from orsk (34 against 21)".</summary>
         public string Text { get; }
+        /// <summary>The player's <see cref="CountryAnswer.Note"/>, or null.</summary>
+        public string Note { get; set; }
     }
 
     /// <summary>How a game ended.</summary>

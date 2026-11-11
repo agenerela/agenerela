@@ -2823,3 +2823,70 @@ offer in 52 non-trade lines per model.
 **What would change it.** A larger, labelled set of the game's lines; the fallback's mention check
 measured on targeted actions with categories (`docs/live-runs.md`, waiting), where a line naming the
 target it wants is the normal case. Raw rows: the lead's checkout, `.scratch/lv-adopt-190/ab/` (not in git).
+
+### GreyBoxStrategy: a model in a country's seat plays at a random player's level; the game-side moves line is what makes it attack, and the grounding guard contains legal attacks (10 November 2026)
+
+**One game, small n.** These are game-side findings on a new game (#20, stage 2), not
+evaluation-set results. Every arm is 30 games. Read the decision-level shares as solid, to about
+±4 points on 340 to 540 decisions an arm, and the outcomes as weak.
+
+**What was run.** `Demos/GreyBoxStrategy` played with a framework `Agent` in one seat against
+four scripted countries (two expansionist, two cautious), seats rotating, seeds 1 to 30 for every
+row. The control arm sends this turn's facts after the stimulus (`ObservationPlacement.WithStimulus`),
+with the plain stimulus "Your move.". It also sends a game-side standing line naming each move's
+legal targets ("Moves open to us: attack fenmark or westmarch; ..."), and leaves the grounding guard on.
+Each treatment changes one of those four. Baselines: a scripted or random player in the same seat
+on the same seeds. Conditions: RTX 5080, Docker Ollama 0.40.14, over the home network, one model
+resident, temperature 0, `qwen3.5:4b` then `qwen3.5:2b` in one session (16:20 and 16:39 that day),
+with `ListActionsAndTargets` on and `MaxListedTargets` 40. A 30-game pilot of the 4B the same
+afternoon, before one game-side fix (a target named on a move that takes none is now dropped,
+not refused), gave the same control numbers (1.8 provinces, 20% contained).
+
+| Seat | Mean provinces at the end | Knocked out of 30 | Wins |
+|---|---:|---:|---:|
+| scripted expansionist | 4.3 | 19 | 8 |
+| scripted cautious | 3.1 | 17 | 1 |
+| random | 1.4 | 21 | 1 |
+| `qwen3.5:4b`, control | 1.8 | 19 | 0 |
+| `qwen3.5:2b`, control | 0.4 | 26 | 0 |
+
+| Model, arm | Provinces | Contained by a guard | Hold | Attack |
+|---|---:|---:|---:|---:|
+| 4b control | 1.8 | 21% | 31% | 15% |
+| 4b after-sources | 1.8 | 34% | 53% | 16% |
+| 4b headline stimulus | 2.0 | 9% | 14% | 10% |
+| 4b no moves line | 0.9 | 25% | 32% | 2% |
+| 4b grounding off | 2.1 | 12% | 20% | 21% |
+| 2b control | 0.4 | 50% | 91% | 1% |
+| 2b after-sources | 0.6 | 66% | 93% | 1% |
+| 2b headline stimulus | 0.7 | 34% | 79% | 1% |
+| 2b no moves line | 0.4 | 45% | 87% | 0% |
+| 2b grounding off | 0.3 | 33% | 65% | 8% |
+
+Median latency was 0.55 to 0.60 s a decision on the 4B and 0.40 to 0.55 s on the 2B, with no
+pipeline errors. A game costs the model 11 to 18 decisions.
+
+**What it shows.**
+
+- Neither model is a player yet. The 4B is near random (1.8 provinces against 1.4); the 2B is
+  below it. The 4B's attacks are well chosen, winning 89% of those that landed against the
+  scripts' 97%, but it lands 2.7 a game to their 13.
+- The moves line is a game-side stand-in for listing legal pairs in the prompt (#216, stage 1's
+  N1). It is the one arm that moves the 4B's play a long way. Without it, attacks fall from 15% to 2% of
+  council moves.
+- The grounding guard (`TargetGroundingGuard`, threshold 0.8) contains legal moves whenever
+  several targets are legal, because a sensible model spreads its probability across them. In the
+  4B's control arm it fired 63 times (47 on attacks); in the 2B's, 150 times. Switching it off
+  cut the 4B's containment from 21% to 12%.
+- After the stimulus beats after the sources on containment (21% against 34% on the 4B, 50%
+  against 66% on the 2B), which agrees in direction with the evaluation-set result of the same
+  day. The game's outcome did not move.
+- The headline stimulus cuts holds, but turns them into recruits and tax rises, not attacks.
+- The 4B copies its remembered statements over the facts. Once it called an army of 108
+  "critically low at 10 soldiers" for 20 turns. That points at what `RollingHistory` replays (#216
+  item 3).
+
+**What would change this.** A run of 100 games or more per arm, and a second game state to check that the
+grounding guard's misfires are about several legal targets and not about this prompt. Also an
+arm with a guard threshold the call can set, which the framework does not offer (stage 2's gap
+N4). The tables, method and gaps are in `Demos/GreyBoxStrategy/README.md`.
