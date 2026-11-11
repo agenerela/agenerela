@@ -43,7 +43,8 @@ namespace GreyBoxStrategy
 
         /// <summary>
         /// Whether the model's own answer, before any guard, was a move the game offered on that
-        /// snapshot (a target on a move that takes none is ignored). False when there was no answer.
+        /// snapshot (a target on a move that takes none is ignored; for an envoy, accept, refuse or
+        /// none). False when there was no answer.
         /// </summary>
         public bool ModelAnswerLegal;
 
@@ -318,7 +319,11 @@ namespace GreyBoxStrategy
                 && result.Decision.TargetId != null && result.Decision.TargetId != TargetRegistry.NoTarget);
             record.Move = move;
             record.Offered = request.Legal.Contains(move);
-            record.ModelAnswerLegal = result.ModelDecision != null && request.Legal.Contains(ToMove(request, result.ModelDecision));
+            // An envoy's ToMove turns any answer into accept or refuse, so check its action itself.
+            string asked = result.ModelDecision?.ActionId;
+            record.ModelAnswerLegal = asked != null && (request.Moment == Moment.Envoy
+                ? asked == Actions.AcceptPeace || asked == Actions.RefusePeace || asked == ActionRegistry.None
+                : request.Legal.Contains(ToMove(request, result.ModelDecision)));
             Decisions.Add(record);
             if (result.Decision != null) pending[request] = (result, record);
             return new CountryAnswer(request, move, Note(record));

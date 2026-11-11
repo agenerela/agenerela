@@ -98,6 +98,24 @@ namespace GreyBoxStrategy.Tests
             game.Resolve(new[] { answer });
             Assert.That(game.World.RelationBetween("valen", "orsk"), Is.EqualTo(Relation.Truce));
             Assert.That(seat.Decisions.Single().Execution, Is.EqualTo(ExecutionStatus.Done));
+            Assert.That(seat.Decisions.Single().ModelAnswerLegal, Is.True);
+        }
+
+        [Test]
+        public async Task Envoy_AnAnswerThatIsNotAnEnvoyMove_IsRefusalAndCountedIllegal()
+        {
+            var game = NewGame();
+            game.World.SetRelation("valen", "orsk", Relation.War);
+            var provider = new ScriptedProvider().Otherwise(ScriptedReply.Decide(Actions.Recruit));
+            var seat = new CountryAgent(game.World, "valen", provider);
+            var council = game.BeginTurn();
+            var envoys = game.SubmitCouncil(new[] { new CountryAnswer(For(council, "orsk"), new Move(Actions.OfferPeace, "valen")) });
+            var answer = await Await.NotCancelled(seat.DecideAsync(envoys[0]));
+            Assert.That(answer.Choice, Is.EqualTo(new Move(Actions.RefusePeace)), "the game hears a refusal");
+            var d = seat.Decisions.Single();
+            Assert.That(d.ModelAction, Is.EqualTo(Actions.Recruit));
+            Assert.That(d.ModelAnswerLegal, Is.False, "recruit is not an answer to an envoy");
+            game.Resolve(new[] { answer });
         }
 
         [Test]
