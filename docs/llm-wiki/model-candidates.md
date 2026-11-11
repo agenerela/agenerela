@@ -368,6 +368,40 @@ All benchmarks are makers' claims unless marked. Sizes are Ollama's unless marke
   and session, one model resident at a time (hard rule 3). Latency from the 5080 does not
   transfer to other cards (`environment.md`).
 
+## Another route: fine-tuning the 2B (an idea, noted 11 November 2026)
+
+**Not planned, not started, nothing here measured.** The lead asked whether `qwen3.5:2b` could be
+fine-tuned for our task in place of swapping it for a bigger model. This section records the
+thinking so it is not redone.
+
+**Why it is tempting.** On the RTX 5080 the 2B scores 263 of 389 on the interim set against the
+4B's 330, holds on a third of its turns in GreyBoxStrategy, and copies its statement rule into
+its statements (findings, 9 and 11 November). A 2B-class model is small enough to train a LoRA
+adapter for on a 16 GB card, and it is the size that fits an 8 GB card beside a game.
+
+**Why it waits.**
+
+- **The framework's promise is that it works with the model a developer has.** A model tuned on
+  our demos' actions helps our demos. To help a developer with their own actions it would have to
+  learn the general task (choose one action and target from a list, given facts), which needs
+  training data from many different games, not from ours alone.
+- **The data is the real work.** It needs thousands of labelled decisions that are not evaluation
+  prompts: training on a prompt and then scoring on it invalidates the score, as hard rule 4 says
+  of few-shot examples. The cheapest source is a larger model's answers on generated game states,
+  which GreyBoxStrategy can produce in bulk with their legal moves.
+- **The gain is small where we measure today.** On the RTX 5080 the 4B takes 0.46 s a decision
+  against the 2B's 0.35 s, and 3.1 GB against 2.4 GB. A tuned 2B pays off mainly on a laptop and
+  on small cards.
+- **Cheaper fixes come first.** Prompt wording is still moving the 2B by several points a change
+  (#151, #244).
+- **Shipping it adds work.** The adapter has to load in Ollama and later in LLMUnity (Phase 6b),
+  and the base model's license has to allow distributing a tuned copy. Neither was checked.
+
+**The smallest honest experiment, if someone takes it.** Generate a few thousand GreyBoxStrategy
+decisions, label them with the 4B, train an adapter on the 2B, and score it on the interim set,
+which it never saw, against the untuned 2B in the same session on the same machine. One or two
+days of work. A negative result goes in [`findings.md`](findings.md) like any other.
+
 ## How this feeds Phase 4
 
 - **#151's "`qwen3.5:2b` vs `qwen3.5:4b`" row stays first.** It is the prototype's headline
