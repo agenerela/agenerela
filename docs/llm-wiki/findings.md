@@ -1664,7 +1664,7 @@ tower." (noted on 5 November). Both arms answered target_005 correctly.
 
 **What it means.** Nothing to change: listing the actions and targets is no measurable help to
 `qwen3.5:2b` on this set, and it stays off. A larger set, or a model that reads the list better,
-would need its own run.
+would need its own run; the 10 November entry "The plain action list over the defaults" ran it on the interim set: +8.2 on the 2B, -1.5 on the 4B.
 
 **What would change this.** A repeat that moves outside the noise floor, on more prompts (#147) or
 on another model. Raw report: `.scratch/live-runs-1109/run3a-report/` in the session's checkout.
