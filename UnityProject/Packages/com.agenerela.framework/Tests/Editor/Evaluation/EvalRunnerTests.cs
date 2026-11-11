@@ -624,6 +624,27 @@ namespace Agenerela.Tests.Evaluation
         }
 
         [Test]
+        public async Task AnArmsCopyOfAnActionKeepsThatItTakesNoTarget()
+        {
+            // The arm gives follow_player an empty category list, so the run registers its own copy
+            // of the profile's action; that copy must still drop a target the model names (#244 item 2).
+            var profile = Fixtures.VillageGuardProfile();
+            profile.Actions.Single(a => a.Action.Id == "follow_player").Action.TakesNoTarget = true;
+            var legality = new EvalLegality { Name = "empty-categories" };
+            legality.ActionCategories["follow_player"] = new string[0];
+            var provider = new FakeProvider(Reply("follow_player", "bridge"));
+            var runner = new EvalRunner(fixtures.Set(new[] { Escort }), profile,
+                new EvalArm("A", fixtures.Config(provider, "FakeA")), new EvalArm("B", fixtures.Config(provider, "FakeB")) { Legality = legality });
+
+            var report = await Fixtures.NotCancelled(runner.RunAsync());
+
+            Assert.That(report.Answers.Select(a => a.Arm).Distinct(), Is.EquivalentTo(new[] { "A", "B" }));
+            Assert.That(report.Answers.Select(a => a.ModelTarget), Is.All.EqualTo("bridge"));
+            Assert.That(report.Answers.Select(a => a.Target), Is.All.EqualTo("no_target"));
+            Assert.That(report.Answers.Select(a => a.Outcome), Is.All.EqualTo(DecisionOutcome.Correct));
+        }
+
+        [Test]
         public async Task AnArmsExtraTargetMayNotBeTheSetsOwn()
         {
             var legality = PlacesAndCreatures();

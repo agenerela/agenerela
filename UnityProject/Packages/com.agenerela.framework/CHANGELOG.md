@@ -10,6 +10,26 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Changed
 
+- **An agent with no examples sends no few-shot block** (#244 item 3). `FewShotBuilder.Build`
+  returns an empty string when it has not one example to show, rather than the header
+  `Examples of correct decisions:` with nothing under it, and the request then has no blank line
+  where the block was. This changes the prompt only for an agent with no examples at all (no
+  action example, idle example, counter-example or refusal), such as GreyBoxStrategy's countries;
+  every agent with one example sends exactly what it sent before. Unmeasured, and no A/B: no
+  evaluation arm runs without examples.
+
+- **`Proposals.Hold` checks the decision again before it holds it** (#244 item 6), as
+  `Agent.Execute` does, against the agent as it is now. A decision that went stale between the
+  decision and the hold, its target closed or its action no longer available, makes no proposal:
+  `Hold` returns null instead of a card, and so does `Submit` for a held action, with the refusal in
+  its `out` outcome. A new overload, `Hold(result, out ActionResult? refused)`, says why. The
+  refusal is recorded as the re-check at `Execute` records one, with `@Hold` after the guard's name
+  in `DecisionTelemetry.GuardsFired` and `Refused` in `Execution`; it is not logged or raised on the
+  decision feed, and under `MemoryCommit.OnExecute` the decision stays waiting for `Commit` or
+  `Discard`. Code that held a decision and used the proposal without checking for null must check
+  it now. `Documentation~/proposals.md` says so, and adds a recipe for one card across several
+  agents, from Living Vale's driver.
+
 - **The default Ollama model is `qwen3.5:4b`**, not `qwen3.5:2b`: `new OllamaSettings()` and a new
   `OllamaProviderConfig` asset name it. On the 389-prompt interim set it chose right 330 times
   against 263, for about 0.08 s more a decision on an RTX 5080 and about 0.7 GB more memory
@@ -50,6 +70,26 @@ While the version stays `0.x`, the public API may change in any release.
   score legal pairs on a set whose targets declare no categories (#151). The runner refuses an arm
   that makes a label's expected pair illegal. `report.json` records each arm's `legalTargets` and
   `legality`.
+
+- **`ActionDefinition.TakesNoTarget`, and `[AgentAction(TakesNoTarget = true)]`** (#244 item 2):
+  an action that never takes a target, such as `recruit`. Off by default, so nothing changes for an
+  existing agent. On, a target the model names anyway under the flat schema is dropped, not refused:
+  the decision's target becomes `no_target` before the guards and the handler see it,
+  `DecisionResult.ModelDecision` keeps the model's answer, and the new
+  `DecisionTelemetry.TargetIgnored` holds the target dropped, written to the decision log as
+  `targetIgnored` (left out when nothing was dropped, so existing lines are unchanged). The paired
+  schema offers such an action with `no_target` alone, and `SchemaLegalityGuard` rejects a target
+  for it, which covers a paired reply that breaks the grammar and a decision handed to
+  `Agent.Execute`. Registering it with `RequiresTarget` or `TargetCategories` throws. Nothing the
+  model reads in the prompt changes. `Documentation~/targets.md` explains it.
+
+- **`ActionResult.AvailabilityReason`** (#244 item 6): for a refusal that the handler's per-target
+  check caused, the reason that check gave in `Availability.No(...)`, word for word ("the ford is
+  flooded"), so a game can write its own line where `Reason` is the agent's sentence for a log.
+  Null for every other refusal and status. `Agent.Execute`, `Proposals.Confirm` and `Proposals.Hold`
+  fill it, whether the per-target guard refused the pair or the legality check left the action out
+  because no target it takes is allowed.
+
 - **`DecisionRound`: several agents decided on one snapshot, executed in an order given afterwards**
   (#216, item 2; DR-021). Optional, plain C#. `await DecisionRound.DecideAsync(calls, id, ct)` takes
   a `RoundCall(agent, stimulus, options)` per agent, decides them all through the normal queue and

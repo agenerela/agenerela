@@ -91,7 +91,8 @@ namespace Agenerela
 
         /// <summary>
         /// What the model itself answered (<see cref="DecisionResult.ModelDecision"/>), only when a
-        /// guard changed it; left out when it is the same as <see cref="Decision"/>.
+        /// guard changed it or a stray target was dropped (<see cref="TargetIgnored"/>); left out when
+        /// it is the same as <see cref="Decision"/>.
         /// </summary>
         [JsonProperty("modelDecision")] public DecisionLogDecision ModelDecision;
 
@@ -172,6 +173,12 @@ namespace Agenerela
         /// (<see cref="DecisionTelemetry.TargetsUnavailable"/>, #190 LV #19); left out when none was.
         /// </summary>
         [JsonProperty("targetsUnavailable")] public List<UnavailableTarget> TargetsUnavailable;
+
+        /// <summary>
+        /// The target the model named for an action that takes none, dropped before the guards
+        /// (<see cref="DecisionTelemetry.TargetIgnored"/>, #244 item 2); left out when none was.
+        /// </summary>
+        [JsonProperty("targetIgnored")] public string TargetIgnored;
 
         /// <summary>
         /// How many observation lines the request does not carry
@@ -271,6 +278,8 @@ namespace Agenerela
             {
                 line.TargetsUnlisted = new List<string>(telemetry.TargetsUnlisted);
             }
+
+            line.TargetIgnored = telemetry.TargetIgnored;
 
             if (telemetry.TargetsUnavailable != null && telemetry.TargetsUnavailable.Count > 0)
             {

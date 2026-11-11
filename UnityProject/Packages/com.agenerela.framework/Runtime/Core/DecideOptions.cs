@@ -122,7 +122,7 @@ namespace Agenerela
         /// On, <see cref="DecisionSchema.Build(AgentContext, bool)"/> says what each action takes: its
         /// <see cref="ActionDefinition.TargetCategories"/>, or every target when it names none, and
         /// <c>no_target</c> only when it does not require a target; <c>none</c> takes
-        /// <c>no_target</c> alone. An action that requires a target and takes none of those
+        /// <c>no_target</c> alone, as does an action with <see cref="ActionDefinition.TakesNoTarget"/>. An action that requires a target and takes none of those
         /// registered is not offered, and its example is not shown. The prompt, its action and target
         /// list and the target rule are what they would be without it.
         /// </para>

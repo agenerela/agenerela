@@ -180,7 +180,10 @@ namespace GreyBoxStrategy.Tests
             var council = game.BeginTurn();
             var answer = await Await.NotCancelled(seat.DecideAsync(For(council, "valen")));
             Assert.That(answer.Choice, Is.EqualTo(new Move(Actions.Recruit)));
-            Assert.That(seat.Decisions.Single().TargetIgnored, Is.True);
+            var d = seat.Decisions.Single();
+            Assert.That(d.TargetIgnored, Is.True);
+            Assert.That(d.ModelTarget, Is.EqualTo("highmoor"));
+            Assert.That(d.Target, Is.EqualTo(TargetRegistry.NoTarget), "The framework dropped it before the handler (#244 item 2).");
             game.SubmitCouncil(new[] { answer });
             var report = game.Resolve();
             Assert.That(Outcome(report, "valen").Text, Does.StartWith("recruited"));

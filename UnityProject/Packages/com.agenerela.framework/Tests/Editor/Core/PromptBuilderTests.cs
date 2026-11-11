@@ -260,6 +260,27 @@ namespace Agenerela.Tests
             return ctx;
         }
 
+        // #244 item 3: an agent with no examples sent the header alone, between blank lines.
+        [Test]
+        public async Task AnAgentWithNoExamplesSendsNoExampleBlockAndNoGapWhereItWas()
+        {
+            var fake = new FakeProvider("{\"action\":\"recruit\",\"statement\":\"\"}");
+            var agent = new Agent(new AgentIdentity { Name = "Fenmark", Role = "a country" },
+                new[] { new ActionDefinition { Id = "recruit", Description = "Raise soldiers." } }, fake);
+            agent.Bind("recruit", new FakeHandler());
+
+            await Fixtures.NotCancelled(agent.DecideAsync("Your move.",
+                new DecideOptions { Observations = new List<string> { "Our treasury holds 40 gold." } }));
+
+            var request = fake.LastRequest;
+            Assert.That(request.FewShotBlock, Is.Empty);
+            Assert.That(request.Observations, Is.Not.Empty);
+            Assert.That(SystemSide(request), Is.EqualTo(request.SystemPrompt + "\n\n" + request.Observations),
+                "The system prompt then the observations, one blank line between, nothing where the examples were.");
+            Assert.That(SystemSide(request), Does.Not.Contain("Examples of correct decisions"));
+            Assert.That(SystemSide(request), Does.Not.Contain("\n\n\n"));
+        }
+
         [Test]
         public void ObservationsBlockIsAbsentWhenThereAreNone()
         {

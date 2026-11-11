@@ -92,7 +92,8 @@ It is **off by default and unmeasured**: it changes what the model is constraine
 off until an A/B on the evaluation set shows it helps (hard rule 2, #151). What it does:
 
 - Each action offered takes the targets its `TargetCategories` name, or every target when it names
-  none, and `no_target` only if it does not require a target. `none` takes `no_target` alone.
+  none, and `no_target` only if it does not require a target. `none` takes `no_target` alone, and
+  so does an action with `TakesNoTarget` (below).
 - Actions that take the same targets share one branch (`DecisionSchema.Pairs`, one `ActionTargets`
   each).
 - An action that requires a target and takes none of those registered is not offered at all, and
@@ -320,3 +321,27 @@ the profile lists but **Only Actions** leaves out needs no handler.
   source by component type. Conditions per target (Living Vale's gap 19) now sit beside the
   category as the second thing an action can require of a target (above), and the examples name
   only a target the check allows.
+
+## An action that takes no target
+
+`RequiresTarget = false` means the target is optional: such an action may take `no_target` or any
+target in its categories, and the paired schema offers it both. An action that never takes a
+target, `recruit` or `raise_taxes`, says so with `TakesNoTarget` (#244 item 2), on the definition or
+as `[AgentAction("recruit", "...", TakesNoTarget = true)]`. Off by default, so every action stays as
+it was until a developer sets it. It adds this to DR-020's rules, and changes nothing the model
+reads in the prompt:
+
+- **Flat schema** (the default): all actions share one target enum, so a model can still answer
+  `recruit merrowdeep`. The target is dropped, not refused: before any guard or handler sees it,
+  the decision's target becomes `no_target`. `DecisionResult.ModelDecision` keeps the model's
+  answer, `DecisionTelemetry.TargetIgnored` holds the target dropped, and the decision log writes it
+  as `targetIgnored` ([logging-decisions.md](logging-decisions.md)).
+- **Paired schema**: the action is offered with `no_target` alone, so the grammar never lets a
+  target through. One that comes anyway broke the contract, and `SchemaLegalityGuard` rejects it.
+- **`Agent.Execute`** refuses a decision it is handed with a target for such an action.
+
+Registering an action with `TakesNoTarget` and `RequiresTarget`, or with `TargetCategories`, throws.
+
+The evaluation set's checks (`PromptSetChecks`) already read an action whose `RequiresTarget` is
+off as one that takes no target; the runtime does not, and only `TakesNoTarget` means that there.
+The two are left apart for now (the evaluation area, #121).

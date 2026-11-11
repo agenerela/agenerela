@@ -38,7 +38,7 @@ chain fields, still read, with no chain. A field that is null is left out.
 | `chainId`, `chainHop`, `chainSource` | The chain of relayed decisions the line is in, its hop (0 for the chain's first decision) and the `Agent.Id` it was relayed from: see [Chains of relayed decisions](#chains-of-relayed-decisions). Absent for a decision in no chain |
 | `label`, `stimulus`, `priority` | The call's stimulus label and stimulus, as the game passed them, and its priority |
 | `decision` | What the game got, after the guards: `action`, `target`, `statement`. Absent for a pipeline error |
-| `modelDecision` | What the model answered, only when a guard changed it |
+| `modelDecision` | What the model answered, only when a guard changed it or a stray target was dropped |
 | `verdict`, `guardsFired` | The guard, kind and reason that stopped the model's answer; every guard that did not pass it, `Execute`'s re-check included |
 | `execution` | For an `Executed` line, what `Execute` did: `status` and `reason` |
 | `error` | A pipeline error's `kind` and `message` |
@@ -47,6 +47,7 @@ chain fields, still read, with no chain. A field that is null is left out.
 | `promptTokens`, `completionTokens` | As the provider reported them |
 | `targetGrounding`, `targetGroundingStatus`, `historyTurnsSent`, `historyTurnsDropped`, `targetsDropped`, `observationsDropped` | From the telemetry; `observationsDropped` is a count |
 | `targetsUnavailable` | Each action and target pair a per-target check rejected, as `action`, `target` and `reason` (left out when the check gave none); the line has no such key when none was rejected ([targets.md](targets.md#conditions-per-target)) |
+| `targetIgnored` | The target the model named for an action that takes none (`TakesNoTarget`), dropped before the guards; the line has no such key when none was ([targets.md](targets.md#an-action-that-takes-no-target)) |
 | `reply` | The model's reply exactly as the provider returned it, which a replay scripts with `ScriptedReply.Raw` |
 | `request` | Only with `IncludePrompt` on: the system prompt, few-shot block, observations, history, stimulus turn, and the actions and targets offered |
 

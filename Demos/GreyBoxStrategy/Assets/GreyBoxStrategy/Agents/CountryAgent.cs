@@ -38,7 +38,7 @@ namespace GreyBoxStrategy
         public ExecutionStatus? Execution;
         public string ExecutionReason;
 
-        /// <summary>The model named a target for a move that takes none; the seat dropped it.</summary>
+        /// <summary>The model named a target for a move that takes none; the framework dropped it (<c>DecisionTelemetry.TargetIgnored</c>), or the seat did.</summary>
         public bool TargetIgnored;
 
         public bool Contained => Verdict == GuardVerdictKind.RewriteToNone;
@@ -215,6 +215,9 @@ namespace GreyBoxStrategy
                 Id = action,
                 Description = description,
                 RequiresTarget = targeted,
+                // recruit and raise_taxes take no target in the rules (Legality.WhyNot), so the
+                // framework drops one the model names anyway and says so (#244 item 2).
+                TakesNoTarget = !targeted,
                 TargetCategories = categories,
             };
             var handler = DelegateActionHandler.WithResult(
@@ -231,7 +234,7 @@ namespace GreyBoxStrategy
 
         private void Envoy(string action, string description)
         {
-            Agent.Actions.Register(new ActionDefinition { Id = action, Description = description },
+            Agent.Actions.Register(new ActionDefinition { Id = action, Description = description, TakesNoTarget = true },
                 DelegateActionHandler.WithResult(ctx => ctx.Correlation is EnvoyOffer, (ctx, d) => ActionResult.Done()));
         }
 
@@ -301,8 +304,10 @@ namespace GreyBoxStrategy
             };
 
             var move = ToMove(request, result.Decision);
-            record.TargetIgnored = result.Decision != null && move.Target == null
-                && result.Decision.TargetId != null && result.Decision.TargetId != TargetRegistry.NoTarget;
+            // The framework drops a target on a move that takes none and records it (#244 item 2);
+            // the seat's own drop in ToMove stays as a second check.
+            record.TargetIgnored = t?.TargetIgnored != null || (result.Decision != null && move.Target == null
+                && result.Decision.TargetId != null && result.Decision.TargetId != TargetRegistry.NoTarget);
             record.Move = move;
             record.Offered = request.Legal.Contains(move);
             Decisions.Add(record);
@@ -315,8 +320,8 @@ namespace GreyBoxStrategy
             if (request.Moment == Moment.Envoy)
                 return d != null && d.ActionId == Actions.AcceptPeace ? new Move(Actions.AcceptPeace) : new Move(Actions.RefusePeace);
             if (d == null || d.ActionId == ActionRegistry.None) return Move.Hold;
-            // A move that takes no target ignores one the model named anyway ("recruit corwick"):
-            // the framework passes it through (gap N5), and the handler would ignore it too.
+            // A move that takes no target ignores one the model named anyway ("recruit corwick").
+            // The framework drops it first since #244 item 2 (gap N5); this stays as a second check.
             bool takesTarget = Actions.TargetsProvince(d.ActionId) || Actions.TargetsCountry(d.ActionId);
             string target = !takesTarget || d.TargetId == TargetRegistry.NoTarget ? null : d.TargetId;
             return new Move(d.ActionId, target);

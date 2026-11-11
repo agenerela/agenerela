@@ -16,7 +16,7 @@ namespace Agenerela
     /// <para>
     /// Nothing in the framework needs it, and it decides nothing about when or why the agent is
     /// asked (DR-008), nor which actions want a confirmation: the game lists them in
-    /// <see cref="HeldActions"/>, or calls <see cref="Hold"/> itself. It changes nothing in
+    /// <see cref="HeldActions"/>, or calls <see cref="Hold(DecisionResult)"/> itself. It changes nothing in
     /// <see cref="Agent"/>, <see cref="ActionResult"/> or <see cref="ExecutionStatus"/>, and nothing
     /// that reaches the model: the agent decides exactly as it would without it. Delete it, and an
     /// agent works as before.
@@ -25,7 +25,7 @@ namespace Agenerela
     /// <b>Memory.</b> A held proposal is remembered when it is held, once: the agent did propose it,
     /// and the player saw the offer, whatever they answer. Under <see cref="Agenerela.MemoryCommit.OnDecide"/>
     /// it was already remembered as <see cref="Agent.DecideAsync"/> returned it; under
-    /// <see cref="Agenerela.MemoryCommit.OnExecute"/>, <see cref="Hold"/> commits it
+    /// <see cref="Agenerela.MemoryCommit.OnExecute"/>, <see cref="Hold(DecisionResult)"/> commits it
     /// (<see cref="Agent.Commit"/>). Either way <see cref="Agent.Execute(DecisionResult)"/> at confirm
     /// finds it settled and does not remember it again, and declining it does not forget it.
     /// </para>
@@ -84,7 +84,7 @@ namespace Agenerela
         /// <summary>
         /// When true, at most one proposal waits: holding a new one supersedes those pending
         /// (<see cref="ProposalStatus.Superseded"/>), as a new card replaces the old. False, the
-        /// default, keeps every proposal until it is settled. Read at each <see cref="Hold"/>.
+        /// default, keeps every proposal until it is settled. Read at each <see cref="Hold(DecisionResult)"/>.
         /// </summary>
         public bool OnePending { get; set; }
 
@@ -113,7 +113,8 @@ namespace Agenerela
         /// <summary>
         /// Holds <paramref name="result"/> when its action is in <see cref="HeldActions"/> and returns
         /// the proposal; otherwise carries it out at once through <see cref="Agent.Execute(DecisionResult)"/>
-        /// and returns null.
+        /// and returns null. Also null when the action is held but the re-check in
+        /// <see cref="Hold(DecisionResult)"/> refused the decision as stale.
         /// </summary>
         /// <exception cref="ArgumentNullException"><paramref name="result"/> is null.</exception>
         public Proposal Submit(DecisionResult result)
@@ -129,12 +130,14 @@ namespace Agenerela
         /// What <see cref="Agent.Execute(DecisionResult, out ActionResult)"/> reported when the
         /// decision was carried out at once; null when it was held. A pipeline error, a rejected
         /// answer and <c>none</c> are never held, so they are carried out, which refuses or does
-        /// nothing as <see cref="Agent.Execute(DecisionResult)"/> always does.
+        /// nothing as <see cref="Agent.Execute(DecisionResult)"/> always does. For a held action whose
+        /// decision went stale before the hold, the re-check's refusal, as
+        /// <see cref="Hold(DecisionResult, out ActionResult?)"/> gives it; nothing ran.
         /// </param>
         /// <returns>The proposal when held, or null.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="result"/> is null.</exception>
-        /// <exception cref="ArgumentException">As for <see cref="Hold"/>, for a result it would hold.</exception>
-        /// <exception cref="InvalidOperationException">As for <see cref="Hold"/>, for a result it would hold.</exception>
+        /// <exception cref="ArgumentException">As for <see cref="Hold(DecisionResult)"/>, for a result it would hold.</exception>
+        /// <exception cref="InvalidOperationException">As for <see cref="Hold(DecisionResult)"/>, for a result it would hold.</exception>
         public Proposal Submit(DecisionResult result, out ActionResult? outcome)
         {
             if (result == null)
@@ -144,8 +147,7 @@ namespace Agenerela
 
             if (Holdable(result) && HeldActions.Contains(result.Decision.ActionId))
             {
-                outcome = null;
-                return Hold(result);
+                return Hold(result, out outcome);
             }
 
             Agent.Execute(result, out var done);
@@ -155,14 +157,31 @@ namespace Agenerela
 
         /// <summary>
         /// Holds <paramref name="result"/> for the player, whatever its action, and returns the
-        /// proposal. Nothing runs. Under <see cref="Agenerela.MemoryCommit.OnExecute"/> the decision is
-        /// remembered now (see the class remarks). With <see cref="OnePending"/>, the proposals already
-        /// waiting are superseded. Holding a result already pending here returns its proposal and
-        /// changes nothing.
+        /// proposal, or null when the decision went stale since it was made. Nothing runs. Under
+        /// <see cref="Agenerela.MemoryCommit.OnExecute"/> the decision is remembered now (see the class
+        /// remarks). With <see cref="OnePending"/>, the proposals already waiting are superseded.
+        /// Holding a result already pending here returns its proposal and changes nothing.
         /// </summary>
         /// <remarks>
-        /// The decision is not checked again here: it was legal when the agent made it, and the agent
-        /// checks it again at <see cref="Confirm(Proposal, out ActionResult)"/>.
+        /// <para>
+        /// The decision is checked again first, as <see cref="Agent.Execute(DecisionResult)"/> checks
+        /// it, against the agent as it is now: the action is registered and available, the target
+        /// registered and in its categories, and the per-target check allows the pair (#244 item 6). A
+        /// decision that fails, because the world changed between the decision and the hold, makes no
+        /// proposal: this returns null, and <see cref="Hold(DecisionResult, out ActionResult?)"/> says
+        /// why. The agent checks it again at <see cref="Confirm(Proposal, out ActionResult)"/>.
+        /// </para>
+        /// <para>
+        /// A refusal here is recorded as the re-check in <see cref="Agent.Execute(DecisionResult)"/>
+        /// records one, with <c>"@Hold"</c> after the guard's name in
+        /// <see cref="DecisionTelemetry.GuardsFired"/>, and is written to
+        /// <see cref="DecisionTelemetry.Execution"/> as the helper's other refusals are, unless the
+        /// result already has an execution of its own. It is not logged or raised on the decision
+        /// feed. The pending proposals and memory are left as they were: under
+        /// <see cref="Agenerela.MemoryCommit.OnExecute"/> the decision still waits for
+        /// <see cref="Agent.Commit"/> or <see cref="Agent.Discard"/>, as one that
+        /// <see cref="Agent.Execute(DecisionResult)"/> refused does.
+        /// </para>
         /// </remarks>
         /// <exception cref="ArgumentNullException"><paramref name="result"/> is null.</exception>
         /// <exception cref="ArgumentException">
@@ -179,6 +198,26 @@ namespace Agenerela
         /// </exception>
         public Proposal Hold(DecisionResult result)
         {
+            return Hold(result, out _);
+        }
+
+        /// <summary>
+        /// Holds <paramref name="result"/> as <see cref="Hold(DecisionResult)"/> does, and says why
+        /// when it made no proposal.
+        /// </summary>
+        /// <param name="result">The decision, as <see cref="Agent.DecideAsync"/> returned it.</param>
+        /// <param name="refused">
+        /// Null when the decision is held. When the re-check refused it,
+        /// <see cref="ExecutionStatus.Refused"/> with the reason, and with
+        /// <see cref="ActionResult.AvailabilityReason"/> when the per-target check said no. No handler ran.
+        /// </param>
+        /// <returns>The proposal, or null when the re-check refused the decision.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="result"/> is null.</exception>
+        /// <exception cref="ArgumentException">As for <see cref="Hold(DecisionResult)"/>.</exception>
+        /// <exception cref="InvalidOperationException">As for <see cref="Hold(DecisionResult)"/>.</exception>
+        public Proposal Hold(DecisionResult result, out ActionResult? refused)
+        {
+            refused = null;
             if (result == null)
             {
                 throw new ArgumentNullException(nameof(result));
@@ -208,16 +247,42 @@ namespace Agenerela
                     "The result was decided before its agent was reset, and a reset leaves nothing held.", nameof(result));
             }
 
-            foreach (var waiting in pending)
+            var already = PendingFor(result);
+            if (already != null)
             {
-                if (ReferenceEquals(waiting.Result, result))
-                {
-                    return waiting;
-                }
+                return already;
             }
 
-            // First, so a result of another agent's throws before anything changes. False, harmlessly,
-            // for one already remembered (OnDecide, or settled before) and for an agent with no memory.
+            // First, so a result held for another agent's memory throws before anything changes.
+            Agent.CheckOwnHeld(result);
+
+            // The re-check in Execute, so a decision gone stale since it was made makes no card
+            // (#244 item 6). Asked only for a result not already pending, which keeps its proposal.
+            // It runs the developer's availability checks, which may reset the agent or hold this
+            // very result, so both are asked again after it (Codex, round 1 of #244).
+            var watchedReset = Agent.ResetToken;
+            var verdict = Agent.Recheck(result, "@Hold", out _);
+            if (verdict.Kind == GuardVerdictKind.Pass && watchedReset.IsCancellationRequested)
+            {
+                verdict = GuardVerdict.Reject("the agent was reset while the decision was checked, and a reset leaves nothing held.");
+            }
+
+            if (verdict.Kind != GuardVerdictKind.Pass)
+            {
+                var outcome = ActionResult.Refused(verdict.Reason, verdict.AvailabilityReason);
+                WriteRefusal(result, outcome);
+                refused = outcome;
+                return null;
+            }
+
+            already = PendingFor(result);
+            if (already != null)
+            {
+                return already;
+            }
+
+            // False, harmlessly, for one already remembered (OnDecide, or settled before) and for an
+            // agent with no memory.
             Agent.Commit(result);
 
             Watch();
@@ -378,6 +443,20 @@ namespace Agenerela
         public int DeclineAll(string reason = null)
         {
             return EndAll(ProposalStatus.Declined, reason ?? "Declined.");
+        }
+
+        // The proposal pending here for this very result, or null.
+        private Proposal PendingFor(DecisionResult result)
+        {
+            foreach (var waiting in pending)
+            {
+                if (ReferenceEquals(waiting.Result, result))
+                {
+                    return waiting;
+                }
+            }
+
+            return null;
         }
 
         private static bool Holdable(DecisionResult result)

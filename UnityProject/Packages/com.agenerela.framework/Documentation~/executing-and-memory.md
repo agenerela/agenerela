@@ -66,6 +66,10 @@ changes.
 | `NoAction` | The decision was `none`, a guard's rewrite included: nothing to run | `true` |
 | `Refused` | No handler ran: a pipeline error, a guard's `Reject`, or the re-check at `Execute` refused it; `Reason` says which | `false` |
 
+When the per-target check is what refused, `outcome.AvailabilityReason` is that check's own
+`Availability.No(...)` reason, word for word ("claimed by Brann"), for a line the game writes
+itself; `Reason` is the agent's sentence for a log. It is null for every other refusal and status.
+
 A handler makes only `Done` and `Failed`. `Failed` needs a reason. `default(ActionResult)` is
 `Done` with no payload. A `Failed` is the game's own answer, so it is not logged; a `Refused` is
 logged as it always was. A handler that throws still throws out of `Execute`, and records

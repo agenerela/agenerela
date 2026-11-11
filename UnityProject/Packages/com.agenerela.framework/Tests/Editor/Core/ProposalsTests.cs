@@ -67,6 +67,101 @@ namespace Agenerela.Tests
             Assert.That(proposals.Pending, Is.Empty);
         }
 
+        [Test]
+        public async Task ADecisionGoneStaleBeforeTheHoldMakesNoCardAndSaysWhy()
+        {
+            var (agent, fake, proposals, offered, closed) = GuideWithRoutes();
+            agent.MemoryCommit = MemoryCommit.OnExecute;
+            int changes = 0;
+            proposals.Changed += _ => changes++;
+            var result = await Decide(agent, fake, "offer_route", "route_ford");
+
+            // The ford floods between the decision and the hold (#244 item 6).
+            closed.Add("route_ford");
+            var proposal = proposals.Hold(result, out var refused);
+
+            Assert.That(proposal, Is.Null, "No card for a decision Execute would refuse.");
+            Assert.That(refused.HasValue, Is.True);
+            Assert.That(refused.Value.Status, Is.EqualTo(ExecutionStatus.Refused));
+            Assert.That(refused.Value.Reason, Is.EqualTo($"'offer_route' cannot be done to 'route_ford' right now: {Flooded}"));
+            Assert.That(refused.Value.AvailabilityReason, Is.EqualTo(Flooded));
+            Assert.That(offered, Is.Empty, "No handler ran.");
+            Assert.That(proposals.Pending, Is.Empty);
+            Assert.That(changes, Is.Zero, "Nothing pending changed.");
+            Assert.That(result.Telemetry.GuardsFired, Is.EqualTo(new[] { "TargetAvailabilityGuard@Hold" }));
+            Assert.That(result.Telemetry.Execution, Is.EqualTo(ExecutionStatus.Refused));
+            Assert.That(Remembered(agent), Is.Zero, "Not committed: it still waits, as one Execute refused does.");
+            Assert.That(agent.Commit(result), Is.True, "Still waiting for the game to settle it.");
+        }
+
+        [Test]
+        public async Task SubmitAndThePlainHoldReturnNullForAStaleDecision()
+        {
+            var (agent, fake, proposals, offered, closed) = GuideWithRoutes();
+            var first = await Decide(agent, fake, "offer_route", "route_ford");
+            var second = await Decide(agent, fake, "offer_route", "route_ford");
+
+            // Every route closes, so offer_route is not available at all: the legality check refuses
+            // it, still with the check's reason for this route.
+            closed.Add("route_ford");
+            closed.Add("route_mill");
+
+            Assert.That(proposals.Hold(first), Is.Null);
+            Assert.That(proposals.Submit(second, out var outcome), Is.Null);
+            Assert.That(outcome.Value.Status, Is.EqualTo(ExecutionStatus.Refused));
+            Assert.That(outcome.Value.AvailabilityReason, Is.EqualTo(Flooded));
+            Assert.That(second.Telemetry.GuardsFired, Is.EqualTo(new[] { "SchemaLegalityGuard@Hold" }));
+            Assert.That(offered, Is.Empty);
+            Assert.That(proposals.Pending, Is.Empty);
+        }
+
+        [TestCase(MemoryCommit.OnExecute)]
+        [TestCase(MemoryCommit.OnDecide)]
+        public async Task AResetFromInsideTheHoldsRecheckLeavesNothingHeld(MemoryCommit commit)
+        {
+            var (agent, fake, proposals, _, arm) = GuideWithHook();
+            agent.MemoryCommit = commit;
+            var result = await Decide(agent, fake, "offer_route", "route_ford");
+
+            // The game's per-target check resets the agent while Hold asks it (Codex, round 1 of #244).
+            arm(() => agent.Reset());
+            var proposal = proposals.Hold(result, out var refused);
+
+            Assert.That(proposal, Is.Null, "A reset leaves nothing held.");
+            Assert.That(refused.Value.Status, Is.EqualTo(ExecutionStatus.Refused));
+            Assert.That(refused.Value.Reason, Does.Contain("reset"));
+            Assert.That(proposals.Pending, Is.Empty);
+        }
+
+        [Test]
+        public async Task AHoldOfTheSameResultFromInsideTheRecheckMakesOneProposal()
+        {
+            var (agent, fake, proposals, _, arm) = GuideWithHook();
+            var result = await Decide(agent, fake, "offer_route", "route_ford");
+
+            Proposal inner = null;
+            arm(() => inner = proposals.Hold(result));
+            var outer = proposals.Hold(result);
+
+            Assert.That(inner, Is.Not.Null);
+            Assert.That(outer, Is.SameAs(inner), "Both holds return the one proposal.");
+            Assert.That(proposals.Pending, Is.EqualTo(new[] { inner }));
+        }
+
+        [Test]
+        public async Task AFreshDecisionIsHeldAfterTheRecheckRecordingNothing()
+        {
+            var (agent, fake, proposals, _, _) = GuideWithRoutes();
+            var result = await Decide(agent, fake, "offer_route", "route_ford");
+
+            var proposal = proposals.Hold(result, out var refused);
+
+            Assert.That(proposal, Is.Not.Null);
+            Assert.That(refused, Is.Null);
+            Assert.That(result.Telemetry.GuardsFired, Is.Empty);
+            Assert.That(result.Telemetry.Execution, Is.Null);
+        }
+
         // ---- Confirm -------------------------------------------------------------------------
 
         [Test]
@@ -102,6 +197,7 @@ namespace Agenerela.Tests
             Assert.That(proposals.Confirm(old, out var outcome), Is.False);
             Assert.That(outcome.Status, Is.EqualTo(ExecutionStatus.Refused));
             Assert.That(outcome.Reason, Does.Contain("Superseded"));
+            Assert.That(outcome.AvailabilityReason, Is.Null, "No per-target check refused it.");
             Assert.That(offered, Is.Empty, "The old card ran nothing, and certainly not the newer proposal.");
             Assert.That(old.Result.Telemetry.Execution, Is.EqualTo(ExecutionStatus.Refused));
 
@@ -157,6 +253,7 @@ namespace Agenerela.Tests
             Assert.That(offered, Is.Empty, "No handler ran.");
             Assert.That(outcome.Status, Is.EqualTo(ExecutionStatus.Refused));
             Assert.That(outcome.Reason, Is.EqualTo($"'offer_route' cannot be done to 'route_ford' right now: {Flooded}"));
+            Assert.That(outcome.AvailabilityReason, Is.EqualTo(Flooded), "The check's own words, for the game's line (#244 item 6).");
             Assert.That(proposal.Status, Is.EqualTo(ProposalStatus.Refused));
             Assert.That(proposal.Reason, Is.EqualTo(outcome.Reason));
             Assert.That(proposal.Outcome.Value.Status, Is.EqualTo(ExecutionStatus.Refused));
@@ -439,7 +536,22 @@ namespace Agenerela.Tests
             return (agent, fake, new Proposals(agent, new[] { "offer_route" }), offered, closed);
         }
 
-        private static Agent Agent(FakeProvider fake, out List<string> offered, HashSet<string> closed = null)
+        // A guide whose per-target check runs the hook once, the next time it is asked: the
+        // developer's own code, running inside a re-check.
+        private static (Agent Agent, FakeProvider Fake, Proposals Proposals, List<string> Offered, Action<Action> Arm) GuideWithHook()
+        {
+            var fake = new FakeProvider();
+            Action hook = null;
+            var agent = Agent(fake, out var offered, new HashSet<string>(), () =>
+            {
+                var once = hook;
+                hook = null;
+                once?.Invoke();
+            });
+            return (agent, fake, new Proposals(agent, new[] { "offer_route" }), offered, a => hook = a);
+        }
+
+        private static Agent Agent(FakeProvider fake, out List<string> offered, HashSet<string> closed = null, Action onCheck = null)
         {
             var actions = new[]
             {
@@ -452,7 +564,11 @@ namespace Agenerela.Tests
             var offer = new DelegateActionHandler(_ => true, (_, decision) => log.Add(decision.TargetId));
             if (closed != null)
             {
-                offer.IsAvailableFor = (_, id) => closed.Contains(id) ? Availability.No(Flooded) : Availability.Yes;
+                offer.IsAvailableFor = (_, id) =>
+                {
+                    onCheck?.Invoke();
+                    return closed.Contains(id) ? Availability.No(Flooded) : Availability.Yes;
+                };
             }
 
             var agent = new Agent(new AgentIdentity { Name = "Kest", Role = "a guide" }, actions, fake);

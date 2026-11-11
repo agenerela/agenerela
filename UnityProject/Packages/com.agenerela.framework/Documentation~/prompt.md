@@ -17,6 +17,12 @@ only from the few-shot examples, and learns the targets only from what the game 
 observations. Living Vale and GreyBoxVillage both wrote every action and target into their
 observations by hand (#190).
 
+**An agent with no examples sends no example block.** When no action has an example, and there is
+no idle example, counter-example or refusal to show, the request carries no few-shot block at all,
+not its header `Examples of correct decisions:` alone, and no blank line where it would have been
+(#244 item 3). Such an agent learns the actions only from the list below, or from what the game
+writes.
+
 ## Listing the actions and targets
 
 ```csharp

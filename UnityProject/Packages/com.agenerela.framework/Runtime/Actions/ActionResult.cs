@@ -23,11 +23,12 @@ namespace Agenerela
     /// </remarks>
     public readonly struct ActionResult
     {
-        private ActionResult(ExecutionStatus status, string reason, object payload)
+        private ActionResult(ExecutionStatus status, string reason, object payload, string availabilityReason = null)
         {
             Status = status;
             Reason = reason;
             Payload = payload;
+            AvailabilityReason = availabilityReason;
         }
 
         /// <summary>What happened. <see cref="ExecutionStatus.Done"/> for <c>default</c>.</summary>
@@ -39,6 +40,22 @@ namespace Agenerela
         /// <see cref="ExecutionStatus.Done"/> and <see cref="ExecutionStatus.NoAction"/>.
         /// </summary>
         public string Reason { get; }
+
+        /// <summary>
+        /// For a <see cref="ExecutionStatus.Refused"/> that the handler's per-target check caused
+        /// (<see cref="ITargetAvailability"/>, <see cref="AvailableForAttribute"/> or
+        /// <see cref="DelegateActionHandler.IsAvailableFor"/>), the reason that check gave in its
+        /// <see cref="Availability.No(string)"/>, word for word, such as <c>"the ford is flooded"</c>
+        /// (#244 item 6). Null for every other refusal and status, and when the check said no without
+        /// a reason.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="Reason"/> is the agent's sentence for a log, with the action and target ids in
+        /// it. This is the game's own words alone, so a game can write its own line from it: "That
+        /// offer no longer stands: the ford is flooded." A refusal with no such reason, an action no
+        /// longer available at all say, leaves the game to write a line of its own.
+        /// </remarks>
+        public string AvailabilityReason { get; }
 
         /// <summary>
         /// What the handler made or wants the caller to have, such as the quote it offered or the
@@ -90,9 +107,9 @@ namespace Agenerela
             return new ActionResult(ExecutionStatus.NoAction, null, null);
         }
 
-        internal static ActionResult Refused(string reason)
+        internal static ActionResult Refused(string reason, string availabilityReason = null)
         {
-            return new ActionResult(ExecutionStatus.Refused, reason, null);
+            return new ActionResult(ExecutionStatus.Refused, reason, null, availabilityReason);
         }
 
         // A handler's answer as its agent reports it. A handler can only make Done or Failed, but

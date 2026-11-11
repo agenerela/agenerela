@@ -808,6 +808,7 @@ namespace Agenerela.Evaluation
                 Id = action.Id,
                 Description = action.Description,
                 RequiresTarget = action.RequiresTarget,
+                TakesNoTarget = action.TakesNoTarget,
                 ExampleStimulus = action.ExampleStimulus,
                 PreferredExampleTargets = action.PreferredExampleTargets == null ? null : (string[])action.PreferredExampleTargets.Clone(),
                 ExampleStatement = action.ExampleStatement,
