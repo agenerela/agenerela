@@ -374,7 +374,13 @@ namespace Agenerela
             if (!Enum.IsDefined(typeof(LegalTargetListing), options.LegalTargets))
             {
                 throw new ArgumentOutOfRangeException(nameof(options), options.LegalTargets,
-                    "DecideOptions.LegalTargets is not one of Off or PerTarget.");
+                    "DecideOptions.LegalTargets is not one of Off, PerTarget or ObservationLine.");
+            }
+
+            if (!Enum.IsDefined(typeof(StatementRulesWording), options.StatementRulesWording))
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), options.StatementRulesWording,
+                    "DecideOptions.StatementRulesWording is not one of YourStatement, HowItShouldRead or InYourOwnWords.");
             }
         }
 

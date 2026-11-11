@@ -482,6 +482,48 @@ namespace Agenerela.Tests.Evaluation
         }
 
         [Test]
+        public async Task AnArmsStatementRulesAndTheirWordingReachOnlyItsOwnPromptAndAreRecorded()
+        {
+            // #244 item 8: both arms give the set's agent the same rules; only the wording differs.
+            var a = new FakeProvider(Reply("move_to", "bridge"));
+            var b = new FakeProvider(Reply("move_to", "bridge"));
+            const string rules = "A guard's voice: short and plain.";
+            var profile = Fixtures.VillageGuardProfile();
+            var armA = new EvalArm("your-statement", fixtures.Config(a, "FakeA")) { StatementRules = rules };
+            var armB = new EvalArm("how-it-reads", fixtures.Config(b, "FakeB"),
+                new DecideOptions { StatementRulesWording = StatementRulesWording.HowItShouldRead }) { StatementRules = rules };
+            var runner = new EvalRunner(fixtures.Set(new[] { Bridge }, null), profile, armA, armB);
+
+            var report = await Fixtures.NotCancelled(runner.RunAsync());
+
+            Assert.That(a.Requests.Select(r => r.SystemPrompt), Has.All.Contains("\nYour statement: " + rules + "\n"),
+                "Every call of the arm, warm-ups included.");
+            Assert.That(b.Requests.Select(r => r.SystemPrompt), Has.All.Contains("\nHow your statement should read: " + rules + "\n"));
+            Assert.That(b.Requests.Select(r => r.SystemPrompt), Has.None.Contains("Your statement:"));
+            Assert.That(report.Conditions.Arms.Select(c => (c.StatementRulesWording, c.StatementRules)), Is.EqualTo(new[]
+            {
+                (nameof(StatementRulesWording.YourStatement), rules),
+                (nameof(StatementRulesWording.HowItShouldRead), rules),
+            }));
+            Assert.That(profile.Identity.StatementRules ?? "", Is.Empty, "The shared profile is never changed.");
+        }
+
+        [Test]
+        public async Task AnArmWithoutRulesKeepsTheProfilesIdentity()
+        {
+            var a = new FakeProvider(Reply("move_to", "bridge"));
+            var b = new FakeProvider(Reply("move_to", "bridge"));
+            var runner = new EvalRunner(fixtures.Set(new[] { Bridge }, null), Fixtures.VillageGuardProfile(),
+                new EvalArm("A", fixtures.Config(a, "FakeA")), new EvalArm("B", fixtures.Config(b, "FakeB")));
+
+            var report = await Fixtures.NotCancelled(runner.RunAsync());
+
+            Assert.That(a.Requests.Select(r => r.SystemPrompt), Has.None.Contains("Your statement:"));
+            Assert.That(report.Conditions.Arms[0].StatementRules, Is.Null);
+            Assert.That(report.Conditions.Arms[0].StatementRulesWording, Is.EqualTo(nameof(StatementRulesWording.YourStatement)));
+        }
+
+        [Test]
         public void AnArmsKnowledgeIsCopiedWhenSet()
         {
             var lines = new List<string> { "The well is dry." };

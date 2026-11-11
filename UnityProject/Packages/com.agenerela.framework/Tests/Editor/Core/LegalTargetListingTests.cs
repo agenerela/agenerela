@@ -183,6 +183,141 @@ namespace Agenerela.Tests
                 new PromptOptions { LegalTargets = (LegalTargetListing)7 }));
         }
 
+        // ---- As an observation line (#244 item 5) -------------------------------------------
+
+        private const string MillMoves = "Moves open to you: move_to tree_a, tree_b or well; chop tree_a.";
+
+        [Test]
+        public void ObservationLineSaysTheLegalPairsAsOneSentenceByAction()
+        {
+            var preview = Mill().Preview("What now?", new DecideOptions { LegalTargets = LegalTargetListing.ObservationLine });
+            var request = preview.Request;
+
+            // wave takes only no_target here, so it names nothing; fetch may take nothing, so it is
+            // not offered at all, as with PerTarget.
+            Assert.That(request.Observations, Is.EqualTo("What you know right now:\n- " + MillMoves));
+            Assert.That(request.SystemPrompt, Does.Not.Contain("Allowed actions:").And.Not.Contain("(for ").And.Not.Contain("Moves open"),
+                "The system prompt is not changed: no list was asked for.");
+            Assert.That(ActionEnum(request.Schema), Is.EqualTo(new[] { "move_to", "chop", "wave", "none" }));
+            Assert.That(preview.Context.Observations, Has.None.Contains("Moves open"),
+                "Rendered only: the context the guards and handlers read holds no such line.");
+        }
+
+        [Test]
+        public void ObservationLineGoesAfterTheSourcesAndBeforeTheCallsOwnWhereverThoseGo()
+        {
+            var agent = Mill();
+            agent.ObservationSources.Add(new Lines("The mill wheel is turning.", "It is noon."));
+            var call = new List<string> { "A cart has tipped over." };
+
+            var after = agent.Preview("What now?", new DecideOptions { LegalTargets = LegalTargetListing.ObservationLine, Observations = call }).Request;
+            var with = agent.Preview("What now?", new DecideOptions
+            {
+                LegalTargets = LegalTargetListing.ObservationLine, Observations = call, ObservationPlacement = ObservationPlacement.WithStimulus,
+            }).Request;
+
+            Assert.That(after.Observations.Split('\n'), Is.EqualTo(new[]
+            {
+                "What you know right now:", "- The mill wheel is turning.", "- It is noon.", "- " + MillMoves, "- A cart has tipped over.",
+            }));
+            Assert.That(with.Observations.Split('\n'), Is.EqualTo(new[]
+            {
+                "What you know right now:", "- The mill wheel is turning.", "- It is noon.", "- " + MillMoves,
+            }));
+            Assert.That(with.Stimulus, Is.EqualTo("Player: \"What now?\" A cart has tipped over."));
+        }
+
+        [Test]
+        public void ObservationLineWithTheFlatListLeavesTheListUnannotated()
+        {
+            var request = Mill().Preview("What now?", new DecideOptions { LegalTargets = LegalTargetListing.ObservationLine, ListActionsAndTargets = true }).Request;
+
+            Assert.That(ListLines(request), Is.EqualTo(new[]
+            {
+                "Allowed actions:",
+                "- move_to: Walk somewhere.",
+                "- chop: Chop a tree.",
+                "- wave: Wave at someone.",
+                "- none: Take no action.",
+                "Targets:",
+                "- tree_a",
+                "- tree_b",
+                "- well: The village well.",
+            }), "#190's list, less the action that may take nothing.");
+            Assert.That(request.Observations, Does.Contain("- " + MillMoves));
+        }
+
+        [Test]
+        public void TheObservationLineThePairedSchemaAndTheGuardsAgree()
+        {
+            var agent = Mill();
+            agent.Actions.Register(
+                new ActionDefinition { Id = "sing", Description = "Sing.", RequiresTarget = false, TargetCategories = new[] { "place" } },
+                new FakeHandler());
+            var request = agent.Preview("What now?", new DecideOptions { LegalTargets = LegalTargetListing.ObservationLine }).Request;
+
+            // Read the sentence back: "action a, b or c" per part.
+            string line = request.Observations.Split('\n').Single(l => l.StartsWith("- Moves open to you: "));
+            var said = new HashSet<string>();
+            foreach (string part in line.Substring("- Moves open to you: ".Length).TrimEnd('.').Split(new[] { "; " }, StringSplitOptions.None))
+            {
+                int space = part.IndexOf(' ');
+                string action = part.Substring(0, space);
+                foreach (string target in part.Substring(space + 1).Replace(" or ", ", ").Split(new[] { ", " }, StringSplitOptions.None))
+                    said.Add(action + "/" + target);
+            }
+
+            var ctx = Context(agent);
+            var paired = DecisionSchema.Build(ctx, pairTargets: true);
+            var schemaPairs = new HashSet<string>(paired.Pairs.SelectMany(p => p.Actions.SelectMany(a => p.Targets.Select(t => a + "/" + t))));
+            foreach (string action in ActionEnum(request.Schema).Where(a => a != ActionRegistry.None))
+            {
+                foreach (string target in ctx.Targets.Ids)
+                {
+                    string pair = action + "/" + target;
+                    Assert.That(said.Contains(pair), Is.EqualTo(schemaPairs.Contains(pair)), "sentence and paired schema on " + pair);
+                    Assert.That(GuardsPass(ctx, action, target), Is.EqualTo(said.Contains(pair)), "guards and sentence on " + pair);
+                }
+            }
+
+            Assert.That(said, Does.Contain("sing/well"));
+        }
+
+        [Test]
+        public async Task ObservationLineCapsItsTargetsAndReportsTheCutOnce()
+        {
+            var provider = new FakeProvider(Reply("none", "no_target"));
+            var both = new DecideOptions { LegalTargets = LegalTargetListing.ObservationLine, ListActionsAndTargets = true, MaxListedTargets = 1 };
+
+            var result = await Fixtures.NotCancelled(Mill(provider).DecideAsync("What now?", both));
+            var alone = Mill().Preview("What now?", new DecideOptions { LegalTargets = LegalTargetListing.ObservationLine, MaxListedTargets = 1 });
+
+            Assert.That(provider.LastRequest.Observations, Does.Contain("- Moves open to you: move_to tree_a; chop tree_a."));
+            Assert.That(result.Telemetry.TargetsUnlisted, Is.EqualTo(new[] { "tree_b", "well" }), "Cut by the list and the sentence, reported once.");
+            Assert.That(alone.TargetsUnlisted, Is.EqualTo(new[] { "tree_b", "well" }));
+        }
+
+        [Test]
+        public void NoActionTakingATargetNoLine()
+        {
+            var agent = new Agent(new AgentIdentity { Name = "Bram" },
+                new[] { new ActionDefinition { Id = "wave", Description = "Wave.", RequiresTarget = false, TargetCategories = new[] { "person" } } },
+                new FakeProvider());
+            agent.Bind("wave", new FakeHandler());
+            agent.Targets.Register("well", new object(), "place");
+
+            var request = agent.Preview("What now?", new DecideOptions { LegalTargets = LegalTargetListing.ObservationLine }).Request;
+
+            Assert.That(request.Observations, Is.Null, "No sentence, and no empty heading for it.");
+        }
+
+        private sealed class Lines : IObservationSource
+        {
+            private readonly string[] lines;
+            public Lines(params string[] lines) { this.lines = lines; }
+            public IEnumerable<string> Observe(AgentContext ctx) => lines;
+        }
+
         // ---- The cap's cut (#151) ------------------------------------------------------------
 
         [Test]

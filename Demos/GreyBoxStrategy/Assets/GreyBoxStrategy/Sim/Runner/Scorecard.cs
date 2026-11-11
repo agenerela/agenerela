@@ -27,6 +27,8 @@ namespace GreyBoxStrategy
         /// <summary>Whether a guard turned it into none.</summary>
         public bool Contained;
         public string Statement;
+        /// <summary>The statement rules the seat's persona gave it, or null: what "copies its statement rule" compares with.</summary>
+        public string StatementRules;
     }
 
     /// <summary>One played game, with who sat where: a label per country (the player: a model or a script kind) and a character (a persona, or a placebo slot).</summary>
@@ -107,6 +109,8 @@ namespace GreyBoxStrategy
             ("voice", "statements given", "Share of model answers with a statement: a ruler who speaks."),
             ("voice", "words a statement", "Length: a proclamation, not an essay."),
             ("voice", "repeated word for word", "Statements identical to one the same country said earlier that game: the illusion breaks on the second time."),
+            ("voice", "copies its statement rule", "Of statements from a seat with statement rules, those that hold the whole rule word for word: the instruction read out as the proclamation (gap N9)."),
+            ("voice", "copies a sentence of its rule", "Of the same statements, those that hold any one sentence of the rule of four words or more word for word, the whole rule included."),
             ("voice", "names its target", "Of targeted moves, statements that name the target: the words fit the deed."),
             ("voice", "contradicts its move", "Of targeted moves whose statement names a country or province, those that do not name the target: the words name someone else."),
             ("strength", "placement", "Mean rank by provinces at the end, 1 best, ties shared: strength between seats at the same table."),
@@ -480,6 +484,14 @@ namespace GreyBoxStrategy
                 }
                 Add(S, group.Key, "repeated word for word", Share(repeated, said.Count));
 
+                var ruled = said.Where(x => !string.IsNullOrWhiteSpace(x.d.StatementRules)).ToList();
+                if (ruled.Count > 0)
+                {
+                    Add(S, group.Key, "statements with a rule", ruled.Count);
+                    Add(S, group.Key, "copies its statement rule", Share(ruled.Count(x => CopiesRule(x.d.Statement, x.d.StatementRules)), ruled.Count));
+                    Add(S, group.Key, "copies a sentence of its rule", Share(ruled.Count(x => CopiesRuleSentence(x.d.Statement, x.d.StatementRules)), ruled.Count));
+                }
+
                 var targeted = said.Where(x => Takes(x.d.AskedAction) && !string.IsNullOrEmpty(x.d.AskedTarget) && x.d.AskedTarget != "no_target").ToList();
                 int named = 0, naming = 0, contradicts = 0;
                 foreach (var x in targeted)
@@ -501,6 +513,32 @@ namespace GreyBoxStrategy
         public static int Words(string s) => string.IsNullOrWhiteSpace(s) ? 0 : s.Split(new[] { ' ', '\t', '\n' }, StringSplitOptions.RemoveEmptyEntries).Length;
 
         public static string Normal(string s) => Regex.Replace(s.Trim().ToLowerInvariant(), @"\s+", " ");
+
+        // Lower case, every run of characters that are not letters or digits one space, so the
+        // model's own punctuation does not hide a copy.
+        private static string Bare(string s) => Regex.Replace(s.ToLowerInvariant(), @"[^\p{L}\p{N}]+", " ").Trim();
+
+        /// <summary>Whether the statement holds the whole rule word for word, ignoring case and punctuation.</summary>
+        public static bool CopiesRule(string statement, string rules)
+        {
+            if (string.IsNullOrWhiteSpace(statement) || string.IsNullOrWhiteSpace(rules)) return false;
+            string rule = Bare(rules);
+            return rule.Length > 0 && (" " + Bare(statement) + " ").Contains(" " + rule + " ");
+        }
+
+        /// <summary>Whether the statement holds any sentence of the rule of four words or more word for word, ignoring case and punctuation.</summary>
+        public static bool CopiesRuleSentence(string statement, string rules)
+        {
+            if (string.IsNullOrWhiteSpace(statement) || string.IsNullOrWhiteSpace(rules)) return false;
+            string said = " " + Bare(statement) + " ";
+            foreach (string sentence in Regex.Split(rules, @"(?<=[.!?:])\s+"))
+            {
+                string words = Bare(sentence);
+                if (Words(sentence) >= 4 && said.Contains(" " + words + " ")) return true;
+            }
+
+            return CopiesRule(statement, rules);
+        }
 
         /// <summary>The country and province ids a statement names, as whole words, ignoring case.</summary>
         public static HashSet<string> Named(string statement, World world)

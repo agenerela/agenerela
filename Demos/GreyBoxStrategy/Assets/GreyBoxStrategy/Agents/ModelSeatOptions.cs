@@ -68,6 +68,12 @@ namespace GreyBoxStrategy
         /// </summary>
         public bool PairTargets;
 
+        /// <summary>
+        /// <see cref="DecideOptions.StatementRulesWording"/>: how the persona's statement rules are
+        /// introduced (#244 item 8, gap N9). The framework's default unless an arm sets another.
+        /// </summary>
+        public StatementRulesWording RulesWording = StatementRulesWording.YourStatement;
+
         /// <summary>A short name for logs and tables: "control", "per-target", "no-moves-line", and so on.</summary>
         public string Arm = "control";
 
@@ -103,7 +109,11 @@ namespace GreyBoxStrategy
         /// the provider reports at each token (#244), <c>+paired</c>
         /// switches the paired schema on, <c>+listed</c> the framework's listing
         /// (<see cref="LegalTargetListing.PerTarget"/>) ("control+paired", "control+listed",
-        /// "per-target-paired+no-grounding").
+        /// "per-target-paired+no-grounding"). For #244: <c>+no-moves-line</c> drops the game's own
+        /// moves line, <c>+moves-sentence</c> has the framework say the legal moves as an observation
+        /// line (<see cref="LegalTargetListing.ObservationLine"/>), and <c>+how-it-reads</c> and
+        /// <c>+own-words</c> word the statement rules (<see cref="StatementRulesWording"/>)
+        /// ("default+no-moves-line+moves-sentence", "default+how-it-reads").
         /// </summary>
         public static ModelSeatOptions Named(string arm)
         {
@@ -126,6 +136,10 @@ namespace GreyBoxStrategy
                         options.TokenAlternatives = alternatives;
                     else if (modifier == "paired") options.PairTargets = true;
                     else if (modifier == "listed") options.LegalTargets = LegalTargetListing.PerTarget;
+                    else if (modifier == "no-moves-line") options.MovesLine = false;
+                    else if (modifier == "moves-sentence") options.LegalTargets = LegalTargetListing.ObservationLine;
+                    else if (modifier == "how-it-reads") options.RulesWording = StatementRulesWording.HowItShouldRead;
+                    else if (modifier == "own-words") options.RulesWording = StatementRulesWording.InYourOwnWords;
                     else return null;
                 }
                 options.Arm = arm;

@@ -227,6 +227,14 @@ namespace GreyBoxStrategy.Tests
             Assert.That(b.Get("character", "table", "eta2 aggression"), Is.Zero);
             Assert.That(b.Get("character", "table", "p aggression"), Is.EqualTo(1).Within(1e-9));
             Assert.That(b.Get("character", "slot 1", "none"), Is.EqualTo(1), "without a persona every seat holds");
+
+            // What the voice section's rule count compares with (gap N9): each seat's own persona's rules.
+            var scored = with.Select(g => g.ToScored()).ToList();
+            Assert.That(scored.SelectMany(g => g.Decisions), Is.Not.Empty);
+            foreach (var g in scored)
+                foreach (var d in g.Decisions)
+                    Assert.That(d.StatementRules, Is.EqualTo(Personas.Named(g.Characters[d.Country]).StatementRules));
+            Assert.That(without.SelectMany(g => g.ToScored().Decisions).Select(d => d.StatementRules), Has.All.Null);
         }
 
         // --- The scorecard -----------------------------------------------------------------------
@@ -329,6 +337,35 @@ namespace GreyBoxStrategy.Tests
             Assert.That(card.Get("voice", "warmonger", "names its target"), Is.EqualTo(1 / 3.0).Within(1e-9));
             Assert.That(card.Get("voice", "warmonger", "contradicts its move"), Is.EqualTo(0.5), "1 of the 2 that name anyone");
             Assert.That(card.Get("voice", "all: m", "answers"), Is.EqualTo(4));
+        }
+
+        [Test]
+        public void Scorecard_Voice_CountsStatementsThatCopyTheirRule()
+        {
+            // Gap N9: the 2B returned its persona's whole rule as its statement.
+            var game = NewGame();
+            PlayTurn(game);
+            var record = new GameRecord(game, game.World.CountryList.ToDictionary(c => c.Id, c => "m"));
+            string rule = Personas.Merchant.StatementRules;
+            SeatDecisionInfo Said(int turn, string statement, string rules) => new SeatDecisionInfo
+            {
+                Seed = 1, Turn = turn, Country = "valen", Moment = Moment.Council, Answered = true, AskedLegal = true,
+                AskedAction = Actions.Recruit, Statement = statement, StatementRules = rules,
+            };
+            var said = new[]
+            {
+                Said(1, rule, rule),                                                                      // the whole rule
+                Said(2, "a TRADER'S voice - profit, price or a deal; one sentence, under 25 words: if the move has a target, name it!", rule), // the whole rule, other punctuation
+                Said(3, "A fair price for fenmark. One sentence, under 25 words.", rule),                  // one sentence of it
+                Said(4, "Gold buys more than blood.", rule),                                              // its own words
+                Said(5, "One sentence, under 25 words.", null),                                           // no rule to copy: not counted
+            };
+            var characters = game.World.CountryList.ToDictionary(c => c.Id, c => "merchant");
+            var card = new Scorecard("t", new[] { new ScoredGame(record, null, characters, said) });
+            Assert.That(card.Get("voice", "merchant", "statements with a rule"), Is.EqualTo(4));
+            Assert.That(card.Get("voice", "merchant", "copies its statement rule"), Is.EqualTo(0.5));
+            Assert.That(card.Get("voice", "merchant", "copies a sentence of its rule"), Is.EqualTo(0.75));
+            Assert.That(Scorecard.CopiesRuleSentence("A trader's voice wins.", rule), Is.False, "three words are not a sentence copied");
         }
 
         [Test]

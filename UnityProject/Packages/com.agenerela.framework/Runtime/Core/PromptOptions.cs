@@ -122,12 +122,21 @@ namespace Agenerela
         /// exactly as it was. <c>Agent</c> copies it from <see cref="DecideOptions.LegalTargets"/>.
         /// </summary>
         /// <remarks>
-        /// Any other value lists the actions and targets whether <see cref="ListActionsAndTargets"/>
-        /// is on or not, and lists only targets some offered action may take. <see cref="LegalTargetListing"/>
-        /// says where the pairs come from and how each rendering reads. <b>Unmeasured as a default</b>:
-        /// the A/B is #151's.
+        /// <see cref="LegalTargetListing.PerTarget"/> lists the actions and targets whether
+        /// <see cref="ListActionsAndTargets"/> is on or not, and lists only targets some offered action
+        /// may take; <see cref="LegalTargetListing.ObservationLine"/> adds one sentence to the
+        /// observations instead. <see cref="LegalTargetListing"/> says where the pairs come from and
+        /// how each rendering reads, and what was measured.
         /// </remarks>
         public LegalTargetListing LegalTargets = LegalTargetListing.Off;
+
+        /// <summary>
+        /// How the system prompt introduces the identity's <see cref="AgentIdentity.StatementRules"/>
+        /// (#244 item 8). <see cref="Agenerela.StatementRulesWording.YourStatement"/> by default, which
+        /// leaves the prompt exactly as it was. <c>Agent</c> copies it from
+        /// <see cref="DecideOptions.StatementRulesWording"/>. With no rules there is no line to word.
+        /// </summary>
+        public StatementRulesWording StatementRulesWording = StatementRulesWording.YourStatement;
 
         /// <summary>
         /// Whether the few-shot block shows each action's

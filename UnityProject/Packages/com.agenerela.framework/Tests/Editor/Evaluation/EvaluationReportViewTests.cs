@@ -269,6 +269,28 @@ namespace Agenerela.Tests.Evaluation
         }
 
         [Test]
+        public void AnArmsLegalPairsLineAndRulesWordingAreSaidOnlyWhenSet()
+        {
+            // #244 items 5 and 8: a report from before them, or an arm on the defaults, reads as it did.
+            var arm = new EvalArmConditions();
+            Assert.That(EvaluationReportView.PromptOptions(arm), Has.None.Contains("statement rules").And.None.Contains("may take"));
+
+            arm.LegalTargets = "Off";
+            arm.StatementRulesWording = "YourStatement";
+            Assert.That(EvaluationReportView.PromptOptions(arm), Has.None.Contains("statement rules").And.None.Contains("may take"));
+
+            arm.LegalTargets = "ObservationLine";
+            arm.StatementRulesWording = "InYourOwnWords";
+            arm.StatementRules = "Short.";
+            Assert.That(EvaluationReportView.PromptOptions(arm), Has.Some.EqualTo("an observation line says which targets each action may take (ObservationLine)"));
+            Assert.That(EvaluationReportView.PromptOptions(arm), Has.Some.EqualTo("statement rules introduced as InYourOwnWords"));
+            Assert.That(EvaluationReportView.PromptOptions(arm), Has.Some.EqualTo("the arm's own statement rules \"Short.\""));
+
+            arm.LegalTargets = "PerTarget";
+            Assert.That(EvaluationReportView.PromptOptions(arm), Has.Some.EqualTo("the list says which targets each action may take (PerTarget)"));
+        }
+
+        [Test]
         public void TheConditionsSayTheOrderTheVersionAndHowMuchOfTheModelWasInVram()
         {
             var report = Report(new[] { 12, 8, 0, 0, 0 }, new[] { 17, 1, 2, 0, 0 });

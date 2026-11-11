@@ -174,6 +174,7 @@ namespace GreyBoxStrategy
             AskedLegal = d.ModelAnswerLegal,
             Contained = d.Contained,
             Statement = d.Statement,
+            StatementRules = d.Persona == null ? null : Personas.Named(d.Persona).StatementRules,
         }).ToList());
     }
 
