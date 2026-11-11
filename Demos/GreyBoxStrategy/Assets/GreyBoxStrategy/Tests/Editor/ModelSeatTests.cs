@@ -439,6 +439,26 @@ namespace GreyBoxStrategy.Tests
         }
 
         [Test]
+        public void Arms_GroundingModifiers()
+        {
+            var tuned = ModelSeatOptions.Named("default+threshold-0.5+alternatives-20");
+            Assert.That((tuned.PairTargets, tuned.CheckTarget, tuned.GroundingThreshold, tuned.TokenAlternatives),
+                Is.EqualTo((true, true, 0.5f, 20)));
+            Assert.That((ModelSeatOptions.Default.GroundingThreshold, ModelSeatOptions.Default.TokenAlternatives), Is.EqualTo((0.6f, 20)),
+                "the demo's default: 0.6 and the framework's 20 alternatives (gap N4)");
+            Assert.That((ModelSeatOptions.Control.GroundingThreshold, ModelSeatOptions.Control.TokenAlternatives), Is.EqualTo((0.8f, 20)),
+                "the other arms keep the framework's threshold");
+            Assert.That(ModelSeatOptions.Named("default+threshold-1.5"), Is.Null);
+            Assert.That(ModelSeatOptions.Named("default+alternatives-21"), Is.Null);
+            var game = NewGame();
+            var council = game.BeginTurn();
+            var request = For(council, "valen");
+            var seat = new CountryAgent(game.World, "valen", new ScriptedProvider(), tuned);
+            Assert.That(seat.OptionsFor(request).TargetGroundingThreshold, Is.EqualTo(0.5f), "the seat passes the threshold to its calls");
+            Finish(game, council, null);
+        }
+
+        [Test]
         public async Task Report_CountsAttacksLandedAndLegalAnswers()
         {
             var game = await PlayWithFakeModel(2);

@@ -87,6 +87,7 @@ namespace GreyBoxStrategy.Editor
                         ApiKey = Environment.GetEnvironmentVariable("AGENERELA_OLLAMA_API_KEY") ?? "",
                         Model = model,
                         TimeoutSeconds = 90f,
+                        TokenAlternatives = options.TokenAlternatives,
                     });
                     kind = $"{model} ({arm})";
                 }

@@ -15,7 +15,7 @@ namespace GreyBoxStrategy
     /// The prompt-side choices a model seat makes, each one an arm of stage 2's A/B runs. The
     /// field defaults are stage 2's control arm; the seat's default, <see cref="Default"/>, adds
     /// the paired schema to it (measured 10 November 2026, the README's "Can the framework replace
-    /// the moves line?").
+    /// the moves line?") and the grounding threshold 0.6 (measured 11 November, gap N4).
     /// </summary>
     public sealed class ModelSeatOptions
     {
@@ -43,6 +43,19 @@ namespace GreyBoxStrategy
         public bool CheckTarget = true;
 
         /// <summary>
+        /// <see cref="DecideOptions.TargetGroundingThreshold"/>: the share below which the grounding
+        /// guard contains a decision (#244). The framework's 0.8 here; <see cref="Default"/> sets 0.6.
+        /// </summary>
+        public float GroundingThreshold = TargetGroundingGuard.DefaultThreshold;
+
+        /// <summary>
+        /// <see cref="Agenerela.Providers.OllamaSettings.TokenAlternatives"/> for the model seat's
+        /// provider: how many alternatives the grounding guard reads at each token (#244). The
+        /// framework's default, 20 since 11 November 2026; <c>+alternatives-5</c> for the runs before.
+        /// </summary>
+        public int TokenAlternatives = Agenerela.Providers.OllamaSettings.DefaultTokenAlternatives;
+
+        /// <summary>
         /// <see cref="DecideOptions.LegalTargets"/>: whether the framework's own prompt says which
         /// targets each move may take now, from the per-target checks (#151). The framework's
         /// replacement for <see cref="MovesLine"/>.
@@ -60,9 +73,13 @@ namespace GreyBoxStrategy
 
         /// <summary>
         /// What a seat plays with unless told otherwise: stage 2's control (the moves line, grounding
-        /// on) plus the paired schema, which cut the model's illegal answers to none at no measured cost.
+        /// on) plus the paired schema, which cut the model's illegal answers to none at no measured
+        /// cost, and a grounding threshold of 0.6, which with the framework's 20 alternatives cut the
+        /// guard's containments of legal moves from 72 to 3 (qwen3.5:4b) and 94 to 3 (qwen3.5:2b) in
+        /// 30 games (README, gap N4). The arm measured as <c>default</c> on 10 November is
+        /// <c>control+paired+alternatives-5</c> now.
         /// </summary>
-        public static ModelSeatOptions Default => new ModelSeatOptions { PairTargets = true, Arm = "default" };
+        public static ModelSeatOptions Default => new ModelSeatOptions { PairTargets = true, GroundingThreshold = 0.6f, Arm = "default" };
 
         /// <summary>Stage 2's control arm: the moves line, a flat schema, grounding on.</summary>
         public static ModelSeatOptions Control => new ModelSeatOptions();
@@ -81,7 +98,9 @@ namespace GreyBoxStrategy
 
         /// <summary>
         /// The arm by its name, or null. A name may add modifiers after a <c>+</c>, each applied on
-        /// top of the arm: <c>+no-grounding</c> switches the grounding guard off, <c>+paired</c>
+        /// top of the arm: <c>+no-grounding</c> switches the grounding guard off,
+        /// <c>+threshold-0.5</c> sets its threshold, <c>+alternatives-20</c> how many alternatives
+        /// the provider reports at each token (#244), <c>+paired</c>
         /// switches the paired schema on, <c>+listed</c> the framework's listing
         /// (<see cref="LegalTargetListing.PerTarget"/>) ("control+paired", "control+listed",
         /// "per-target-paired+no-grounding").
@@ -96,6 +115,15 @@ namespace GreyBoxStrategy
                 foreach (string modifier in arm.Substring(plus + 1).Split('+'))
                 {
                     if (modifier == "no-grounding") options.CheckTarget = false;
+                    else if (modifier.StartsWith("threshold-")
+                             && float.TryParse(modifier.Substring("threshold-".Length), System.Globalization.NumberStyles.Float,
+                                 System.Globalization.CultureInfo.InvariantCulture, out float threshold)
+                             && threshold >= 0f && threshold <= 1f)
+                        options.GroundingThreshold = threshold;
+                    else if (modifier.StartsWith("alternatives-")
+                             && int.TryParse(modifier.Substring("alternatives-".Length), out int alternatives)
+                             && alternatives >= 1 && alternatives <= Agenerela.Providers.OllamaSettings.MaxTokenAlternatives)
+                        options.TokenAlternatives = alternatives;
                     else if (modifier == "paired") options.PairTargets = true;
                     else if (modifier == "listed") options.LegalTargets = LegalTargetListing.PerTarget;
                     else return null;

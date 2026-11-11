@@ -278,6 +278,7 @@ namespace GreyBoxStrategy
                 MaxListedTargets = 40,
                 Priority = DecisionPriority.Background,
                 CheckTarget = Options.CheckTarget,
+                TargetGroundingThreshold = Options.GroundingThreshold,
                 LegalTargets = Options.LegalTargets,
                 PairTargetsWithActions = Options.PairTargets,
                 Correlation = request.Moment == Moment.Envoy ? new EnvoyOffer(request.OfferId, request.OfferedBy) : null,
