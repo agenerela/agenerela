@@ -605,6 +605,25 @@ namespace Agenerela.Tests.Evaluation
         }
 
         [Test]
+        public async Task AnArmsLegalityIsCheckedAgainstTheProfilesOwnCategoriesWhereItGivesNone()
+        {
+            // The profile restricts move_to to places, and the arm gives move_to no categories of its
+            // own, so the run would keep the profile's: the bridge as a creature makes the label illegal.
+            var profile = Fixtures.VillageGuardProfile();
+            profile.Actions.Single(a => a.Action.Id == "move_to").Action.TargetCategories = new[] { "place" };
+            var legality = new EvalLegality { Name = "bridge-as-creature" };
+            legality.TargetCategories["bridge"] = "creature";
+            var provider = new FakeProvider(Reply("move_to", "bridge"));
+            var runner = new EvalRunner(fixtures.Set(new[] { Bridge }), profile,
+                new EvalArm("A", fixtures.Config(provider, "FakeA")), new EvalArm("B", fixtures.Config(provider, "FakeB")) { Legality = legality });
+
+            var e = await Refused(runner);
+
+            Assert.That(e.Message, Does.Contain("target_001").And.Contain("move_to/bridge").And.Contain("illegal"));
+            Assert.That(provider.Requests, Is.Empty);
+        }
+
+        [Test]
         public async Task AnArmsExtraTargetMayNotBeTheSetsOwn()
         {
             var legality = PlacesAndCreatures();

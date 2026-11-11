@@ -388,7 +388,14 @@ namespace Agenerela.Evaluation
                     continue;
                 }
 
-                legality.ActionCategories.TryGetValue(prompt.ExpectedAction, out var categories);
+                // The categories Build gives the action: the arm's own, or else the profile's.
+                if (!legality.ActionCategories.TryGetValue(prompt.ExpectedAction, out var categories))
+                {
+                    categories = Profile.Actions
+                        .Select(asset => asset != null ? asset.Action : null)
+                        .FirstOrDefault(action => action != null && action.Id == prompt.ExpectedAction)?.TargetCategories;
+                }
+
                 var rule = new ActionDefinition { Id = prompt.ExpectedAction, TargetCategories = categories };
                 foreach (string id in prompt.ExpectedTarget.Ids)
                 {
