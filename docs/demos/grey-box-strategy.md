@@ -1,8 +1,10 @@
 # GreyBoxStrategy — five countries, one decision each a turn
 
-**Status:** stage 1 of 3 is built (10 November 2026, #20): the rules as a headless simulation,
-a scripted AI with two temperaments, a random baseline, and a runner that plays whole games and
-logs them. There is no screen and no model call yet. The project is
+**Status:** stages 1 and 2 of 3 are built (10 November 2026, #20). Stage 1 is the rules as a
+headless simulation, a scripted AI with two temperaments, a random baseline, and a runner that
+plays whole games and logs them. In stage 2 a framework agent plays one seat, measured on the
+RTX 5080; neither `qwen3.5:4b` nor `qwen3.5:2b` plays better than a random player yet, and the
+demo's `README.md` has the numbers and why. There is no screen yet. The project is
 [`Demos/GreyBoxStrategy/`](../../Demos/GreyBoxStrategy/README.md); its `README.md` answers
 #20's four questions with the literal sentences a country will read, and lists what the
 framework still lacks for this game. This page is the design: the rules, why they are what they
@@ -198,7 +200,7 @@ The order the lead agreed on 10 November 2026, replacing the draft's slices S1 t
 | Stage | Contents | Done when |
 |---|---|---|
 | **1. The game, headless** (built) | `Sim/`: rules, legality, turn resolution, seeded dice, the scripted AI and random players, the runner and its logs | EditMode tests for every rule, legality, determinism, termination, and scripted beating random; a 200-game summary |
-| **2. A model as a player** | A framework `Agent` per country behind `IPlayer`'s shape, council and envoy moments, measured against the scripted AI on the RTX 5080 | Games where one seat is a model and the rest are scripted, compared seat for seat on the same seeds; results in `findings.md` with the scripted control |
+| **2. A model as a player** (built) | `Agents/`: a framework `Agent` in one seat, council and envoy moments, `Agent.Execute` as the re-check when a move lands, measured against the scripted AI on the RTX 5080 | Games where one seat is a model and the rest are scripted, compared seat for seat on the same seeds; results in `findings.md` with the scripted control |
 | **3. The map and the screen** | The board coloured by owner as territory changes, the turn bar, the selected country's facts and offered moves, the event log; spectate and play one country | Screenshots through the Unity CLI; a person plays it |
 
 Stage 2 asks the design questions that need a model (the stimulus, examples, the A/B arms);

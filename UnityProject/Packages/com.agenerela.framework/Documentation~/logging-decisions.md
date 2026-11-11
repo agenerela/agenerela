@@ -107,6 +107,10 @@ feed carries it, and every line of the receiving decision, its `Executed` line i
   so two agents relaying to each other stop, and the log shows where.
 - **Not a scheduler.** The game still decides when to relay, to whom and with what words (DR-008).
   To tell two agents, relay twice.
+- **A decision round is one chain.** `DecisionRound` (#216, [decision-rounds.md](decision-rounds.md))
+  starts every call it makes that has no chain of its own at `DecisionChain.Start(round.Id)`, so a
+  turn's decisions share one `chainId`, each at hop 0, and a decision relayed from one of them
+  continues that chain.
 
 Group a file by chain with `DecisionLogReader.Read(path).Where(l => l.ChainId != null).GroupBy(l =>
 l.ChainId)`, and order each group by `sequence`; `chainSource` and `agentId` give each hop's two

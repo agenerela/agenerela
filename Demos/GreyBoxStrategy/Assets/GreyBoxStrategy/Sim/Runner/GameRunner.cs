@@ -40,6 +40,10 @@ namespace GreyBoxStrategy
             ["cautious-vs-random"] = new[] { Cautious, Random, Random, Random, Random },
             ["scripted"] = new[] { Expansionist, Cautious, Expansionist, Cautious, Expansionist },
             ["random"] = new[] { Random, Random, Random, Random, Random },
+            // Stage 2's baselines: the seat a model plays, against the same four opponents.
+            ["seat-expansionist"] = new[] { Expansionist, Expansionist, Cautious, Expansionist, Cautious },
+            ["seat-cautious"] = new[] { Cautious, Expansionist, Cautious, Expansionist, Cautious },
+            ["seat-random"] = new[] { Random, Expansionist, Cautious, Expansionist, Cautious },
         };
 
         public static IPlayer Make(string kind)
