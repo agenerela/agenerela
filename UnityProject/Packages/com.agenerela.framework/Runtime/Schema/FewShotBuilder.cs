@@ -28,7 +28,8 @@ namespace Agenerela
         /// <summary>
         /// The example block for the actions available right now: each action's example, then its
         /// counter-example when it has one, then the idle example, then one refusal of a target
-        /// that is not here.
+        /// that is not here. Empty when there is not one example to show, so a request then carries
+        /// no example block at all, not its header alone (#244 item 3).
         /// </summary>
         /// <param name="available">The actions offered in this request, in schema order.</param>
         /// <param name="targets">The targets offered in this request; examples name only these.</param>
@@ -130,6 +131,12 @@ namespace Agenerela
             if (refusal != null)
             {
                 lines.Add(refusal);
+            }
+
+            // No example at all: no block, rather than a header with nothing under it (#244 item 3).
+            if (lines.Count == 1)
+            {
+                return "";
             }
 
             return string.Join("\n", lines);

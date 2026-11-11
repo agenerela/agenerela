@@ -10,6 +10,14 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Changed
 
+- **An agent with no examples sends no few-shot block** (#244 item 3). `FewShotBuilder.Build`
+  returns an empty string when it has not one example to show, rather than the header
+  `Examples of correct decisions:` with nothing under it, and the request then has no blank line
+  where the block was. This changes the prompt only for an agent with no examples at all (no
+  action example, idle example, counter-example or refusal), such as GreyBoxStrategy's countries;
+  every agent with one example sends exactly what it sent before. Unmeasured, and no A/B: no
+  evaluation arm runs without examples.
+
 - **`Proposals.Hold` checks the decision again before it holds it** (#244 item 6), as
   `Agent.Execute` does, against the agent as it is now. A decision that went stale between the
   decision and the hold, its target closed or its action no longer available, makes no proposal:
