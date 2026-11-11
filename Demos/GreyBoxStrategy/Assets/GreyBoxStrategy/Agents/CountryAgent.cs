@@ -41,6 +41,12 @@ namespace GreyBoxStrategy
         /// <summary>The model named a target for a move that takes none; the framework dropped it (<c>DecisionTelemetry.TargetIgnored</c>), or the seat did.</summary>
         public bool TargetIgnored;
 
+        /// <summary>
+        /// Whether the model's own answer, before any guard, was a move the game offered on that
+        /// snapshot (a target on a move that takes none is ignored). False when there was no answer.
+        /// </summary>
+        public bool ModelAnswerLegal;
+
         public bool Contained => Verdict == GuardVerdictKind.RewriteToNone;
         public bool Rejected => Verdict == GuardVerdictKind.Reject;
     }
@@ -163,7 +169,7 @@ namespace GreyBoxStrategy
         {
             this.world = world ?? throw new ArgumentNullException(nameof(world));
             CountryId = countryId;
-            Options = options ?? ModelSeatOptions.Control;
+            Options = options ?? ModelSeatOptions.Default;
             var info = world.Country(countryId).Info;
 
             var identity = new AgentIdentity
@@ -271,6 +277,8 @@ namespace GreyBoxStrategy
                 MaxListedTargets = 40,
                 Priority = DecisionPriority.Background,
                 CheckTarget = Options.CheckTarget,
+                LegalTargets = Options.LegalTargets,
+                PairTargetsWithActions = Options.PairTargets,
                 Correlation = request.Moment == Moment.Envoy ? new EnvoyOffer(request.OfferId, request.OfferedBy) : null,
             };
         }
@@ -310,6 +318,7 @@ namespace GreyBoxStrategy
                 && result.Decision.TargetId != null && result.Decision.TargetId != TargetRegistry.NoTarget);
             record.Move = move;
             record.Offered = request.Legal.Contains(move);
+            record.ModelAnswerLegal = result.ModelDecision != null && request.Legal.Contains(ToMove(request, result.ModelDecision));
             Decisions.Add(record);
             if (result.Decision != null) pending[request] = (result, record);
             return new CountryAnswer(request, move, Note(record));
