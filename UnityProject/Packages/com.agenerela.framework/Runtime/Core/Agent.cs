@@ -972,20 +972,11 @@ namespace Agenerela
                 return ActionResult.NoAction();
             }
 
-            // No dropped targets to fill: this Collect overwrites a source's Dropped, but the result
-            // already holds its own copy from the decision.
-            var ctx = Snapshot("", Array.Empty<string>(), dropped: null, result.Correlation);
-
-            // No request and no reply: only the agent as it is now. The options are the defaults
-            // with the call's correlation, and no guard that runs here reads them.
-            // Availability is asked once, by the first guard that needs it, and the input keeps the
-            // answer, so the legality check and the per-target guard read the same one.
-            var input = new GuardInput(ctx, null, null, decision, new DecideOptions { Correlation = result.Correlation }, result.Telemetry);
-            var verdict = GuardPipeline.Run(ExecuteGuards, input, "@Execute");
+            var verdict = Recheck(result, "@Execute", out var ctx);
             if (verdict.Kind != GuardVerdictKind.Pass)
             {
                 Refuse(decision, verdict.Reason);
-                return ActionResult.Refused(verdict.Reason);
+                return ActionResult.Refused(verdict.Reason, verdict.AvailabilityReason);
             }
 
             ctx.Actions.TryGet(decision.ActionId, out _, out var handler);
@@ -998,7 +989,25 @@ namespace Agenerela
             return ActionResult.Done();
         }
 
-        private void CheckOwnHeld(DecisionResult result)
+        // Execute's re-check of a real decision, against the agent as it is now, with no handler run:
+        // the verdict, recorded in the result's telemetry under suffix, and the context it built.
+        // Proposals.Hold asks it too (#244 item 6), so a card is never made for a decision Execute
+        // would already refuse. Throws what the developer's availability checks and target sources throw.
+        internal GuardVerdict Recheck(DecisionResult result, string suffix, out AgentContext ctx)
+        {
+            // No dropped targets to fill: this Collect overwrites a source's Dropped, but the result
+            // already holds its own copy from the decision.
+            ctx = Snapshot("", Array.Empty<string>(), dropped: null, result.Correlation);
+
+            // No request and no reply: only the agent as it is now. The options are the defaults
+            // with the call's correlation, and no guard that runs here reads them.
+            // Availability is asked once, by the first guard that needs it, and the input keeps the
+            // answer, so the legality check and the per-target guard read the same one.
+            var input = new GuardInput(ctx, null, null, result.Decision, new DecideOptions { Correlation = result.Correlation }, result.Telemetry);
+            return GuardPipeline.Run(ExecuteGuards, input, suffix);
+        }
+
+        internal void CheckOwnHeld(DecisionResult result)
         {
             if (result == null)
             {
@@ -1224,7 +1233,12 @@ namespace Agenerela
                 return Failed(telemetry, PipelineErrorKind.UnreadableReply, $"{problem} The reply was: {Excerpt(reply.Text)}", call.Correlation, request, reply);
             }
 
-            var result = Guard(new GuardInput(ctx, request, reply, decision, call, telemetry) { AvailabilityAnswer = availability });
+            // Before the guards, so neither they nor a handler see a target the action never takes
+            // (#244 item 2). The model's own answer stays in ModelDecision.
+            var answered = decision;
+            decision = DropStrayTarget(decision, ctx, request, telemetry);
+
+            var result = Guard(new GuardInput(ctx, request, reply, decision, call, telemetry) { AvailabilityAnswer = availability }, answered);
             if (result.Verdict.HasValue)
             {
                 result = await SayWhatWasStopped(provider, result, ctx, request, call, ct, reset);
@@ -1329,7 +1343,7 @@ namespace Agenerela
         // The guards over one parsed decision: the built-in ones, then Guards. A decision none of
         // them stopped is returned as it is; one they stopped becomes none, beside the model's own.
         // A guard that throws is the developer's code failing, not a refusal: a pipeline error.
-        private DecisionResult Guard(GuardInput input)
+        private DecisionResult Guard(GuardInput input, AgentDecision answered)
         {
             string running = null;
             GuardVerdict verdict;
@@ -1347,7 +1361,7 @@ namespace Agenerela
 
             if (verdict.Kind == GuardVerdictKind.Pass)
             {
-                return new DecisionResult(decision, input.Telemetry, decision, null, input.Request, input.Reply, input.Context.Correlation);
+                return new DecisionResult(decision, input.Telemetry, answered, null, input.Request, input.Reply, input.Context.Correlation);
             }
 
             if (verdict.Kind == GuardVerdictKind.Reject)
@@ -1358,7 +1372,24 @@ namespace Agenerela
 
             // Empty, never the model's: it no longer matches what the agent does (#109).
             var none = new AgentDecision(ActionRegistry.None, TargetRegistry.NoTarget, "");
-            return new DecisionResult(none, input.Telemetry, decision, verdict, input.Request, input.Reply, input.Context.Correlation);
+            return new DecisionResult(none, input.Telemetry, answered, verdict, input.Request, input.Reply, input.Context.Correlation);
+        }
+
+        // A target named for a registered action that takes none (ActionDefinition.TakesNoTarget)
+        // becomes no_target, and telemetry says which was dropped (#244 item 2). Only under a flat
+        // schema, whose one target enum lets the model name any target with any action: a paired
+        // schema forbade it, so one that comes anyway broke the contract, and SchemaLegalityGuard
+        // rejects it as it rejects any pair the grammar forbade.
+        private static AgentDecision DropStrayTarget(AgentDecision decision, AgentContext ctx, DecisionRequest request, DecisionTelemetry telemetry)
+        {
+            if (decision.TargetId == TargetRegistry.NoTarget || request.Schema?.Pairs != null ||
+                !ctx.Actions.TryGet(decision.ActionId, out var definition, out _) || !definition.TakesNoTarget)
+            {
+                return decision;
+            }
+
+            telemetry.TargetIgnored = decision.TargetId;
+            return new AgentDecision(decision.ActionId, TargetRegistry.NoTarget, decision.Statement);
         }
 
         // The stopped decision with what the agent says about it: the developer's line, else the

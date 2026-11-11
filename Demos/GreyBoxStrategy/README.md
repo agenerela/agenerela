@@ -379,7 +379,10 @@ Found by stage 2, from the runs above:
 - **N5. A target on an action that takes none passes through.** `recruit merrowdeep` reaches the
   handler with `TargetId = merrowdeep`, and no guard or the parser flags it. The seat drops it, as
   any handler would, but the telemetry calls it a clean decision. The 4B did it 87 times in 30
-  games in the control arm, and 217 times with the headline stimulus.
+  games in the control arm, and 217 times with the headline stimulus. *Closed by #244 item 2: the
+  seat sets `ActionDefinition.TakesNoTarget` on recruit, raise_taxes and the two envoy answers, so
+  the framework drops the target before the guards and records it in
+  `DecisionTelemetry.TargetIgnored`; the seat's own drop stays as a second check.*
 - **N6. An empty examples header.** With no examples registered, the few-shot block is the line
   `Examples of correct decisions:` with nothing under it, sent on every call. Unmeasured; a
   framework test would show whether it is intended.

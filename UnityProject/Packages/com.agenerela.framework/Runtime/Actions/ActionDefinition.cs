@@ -17,6 +17,33 @@ namespace Agenerela
         [Tooltip("Does this action need something to act on?")]
         public bool RequiresTarget;
 
+        /// <summary>
+        /// Whether this action never takes a target, such as <c>recruit</c> or <c>raise_taxes</c>
+        /// (#244 item 2). False, the default, leaves the action as it always was: with
+        /// <see cref="RequiresTarget"/> off, its target is optional and may be any target in its
+        /// <see cref="TargetCategories"/>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// On, a target the model names anyway is dropped, not refused: inside
+        /// <see cref="Agent.DecideAsync"/> the decision's target becomes
+        /// <see cref="TargetRegistry.NoTarget"/> before any guard or handler sees it,
+        /// <see cref="DecisionResult.ModelDecision"/> keeps the model's, and
+        /// <see cref="DecisionTelemetry.TargetIgnored"/> records the target dropped. With
+        /// <see cref="DecideOptions.PairTargetsWithActions"/> the schema pairs the action with
+        /// <c>no_target</c> alone, so the grammar never lets a target through, and one that comes
+        /// anyway is rejected by <see cref="SchemaLegalityGuard"/>, as any pair the grammar forbade is.
+        /// <see cref="Agent.Execute(DecisionResult)"/> refuses such a decision too.
+        /// </para>
+        /// <para>
+        /// It changes nothing the model reads in the prompt. Registering an action with it and
+        /// <see cref="RequiresTarget"/>, or with <see cref="TargetCategories"/>, throws.
+        /// </para>
+        /// </remarks>
+        [Tooltip("This action never takes a target. A target the model names anyway is dropped. " +
+                 "Cannot be combined with 'Requires Target' or 'Target Categories'.")]
+        public bool TakesNoTarget;
+
         [Tooltip("A stimulus that should lead to this action. A player's input, an event, " +
          "or behavior that triggers this action. Use {0} for the target and never reuse an evaluation prompt")]
         public string ExampleStimulus;

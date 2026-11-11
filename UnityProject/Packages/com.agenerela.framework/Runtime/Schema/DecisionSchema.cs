@@ -292,7 +292,11 @@ namespace Agenerela
                     takes.Add(TargetRegistry.NoTarget);
                 }
 
-                takes.AddRange(TargetsOf(definition, targets, answer));
+                // An action that takes no target is offered with no_target alone (#244 item 2).
+                if (!definition.TakesNoTarget)
+                {
+                    takes.AddRange(TargetsOf(definition, targets, answer));
+                }
                 Add(definition.Id, takes);
             }
 

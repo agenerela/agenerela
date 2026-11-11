@@ -148,11 +148,26 @@ namespace Agenerela.Tests
         }
 
         [Test]
-        public void TheBlockAlwaysOpensWithTheHeader()
+        public void TheBlockOpensWithTheHeader()
         {
-            string block = FewShotBuilder.Build(new List<ActionDefinition>(), new TargetRegistry());
+            string block = FewShotBuilder.Build(new List<ActionDefinition>(), new TargetRegistry(), idleExampleStimulus: "Fine day for it.");
 
-            Assert.That(block, Is.EqualTo("Examples of correct decisions:"));
+            Assert.That(block, Is.EqualTo("Examples of correct decisions:\nPlayer: \"Fine day for it.\" -> action: none, target: no_target"));
+        }
+
+        // #244 item 3: GreyBoxStrategy, with no examples, sent the header alone on every call.
+        [Test]
+        public void WithNoExampleToShowThereIsNoBlockAtAll()
+        {
+            var targets = Registry("tower");
+            var actions = new List<ActionDefinition>
+            {
+                Action("wait", "", false),
+                Action("move_to", "", true, "tower"),
+            };
+
+            Assert.That(FewShotBuilder.Build(new List<ActionDefinition>(), new TargetRegistry()), Is.Empty);
+            Assert.That(FewShotBuilder.Build(actions, targets), Is.Empty, "Actions without an example stimulus show none.");
         }
 
         // ---- Counter-examples (#190, Living Vale #9) ----------------------------------------------

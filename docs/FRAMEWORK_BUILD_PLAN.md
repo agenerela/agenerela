@@ -2290,7 +2290,10 @@ forbidden in prose. Every request must stay byte-identical while none of this is
    source and says whether it added the target. `TargetRegistry.Register` is unchanged, so a
    source written before the rule behaves as it did. "The same object" is reference equality.
 7. **The paired schema**, `DecideOptions.PairTargetsWithActions`, off by default. Each action offered gets the targets it takes, its categories' or every target, and
-   `no_target` only if it does not require a target; `none` gets `no_target` alone. Actions with
+   `no_target` only if it does not require a target; `none` gets `no_target` alone, as does an
+   action with `TakesNoTarget` (added by #244 item 2: an action that never takes a target, whose
+   stray target a flat schema drops to `no_target` before the guards and records in
+   `DecisionTelemetry.TargetIgnored`). Actions with
    the same list share one branch. An action that requires a target and takes none of those
    registered is left out of the schema, the prompt's action list and the examples, as an action needing a target already is
    when there are no targets at all. `DecisionSchema` keeps the flat `action` and `target` fields,

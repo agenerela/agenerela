@@ -26,12 +26,14 @@ namespace Agenerela
     {
         private readonly string modelReason;
 
-        private GuardVerdict(GuardVerdictKind kind, string reason, string guard, string modelReason = null)
+        private GuardVerdict(GuardVerdictKind kind, string reason, string guard, string modelReason = null,
+            string availabilityReason = null)
         {
             Kind = kind;
             Reason = reason;
             Guard = guard;
             this.modelReason = modelReason;
+            AvailabilityReason = availabilityReason;
         }
 
         /// <summary>The decision may go on to the next guard. Also what <c>default</c> is.</summary>
@@ -51,9 +53,9 @@ namespace Agenerela
         // A rewrite whose reason is telemetry, not something to tell a model, with the words a
         // refusal line's request uses instead (#109). A built-in guard's only, for now; a public
         // form of this is the extension point if a game's guard needs one.
-        internal static GuardVerdict RewriteToNone(string reason, string modelReason)
+        internal static GuardVerdict RewriteToNone(string reason, string modelReason, string availabilityReason = null)
         {
-            return new GuardVerdict(GuardVerdictKind.RewriteToNone, Required(reason), null, Required(modelReason));
+            return new GuardVerdict(GuardVerdictKind.RewriteToNone, Required(reason), null, Required(modelReason), availabilityReason);
         }
 
         /// <summary>
@@ -66,6 +68,12 @@ namespace Agenerela
         public static GuardVerdict Reject(string reason)
         {
             return new GuardVerdict(GuardVerdictKind.Reject, Required(reason), null);
+        }
+
+        // A rejection that a per-target check caused, with that check's own words (#244 item 6).
+        internal static GuardVerdict Reject(string reason, string availabilityReason)
+        {
+            return new GuardVerdict(GuardVerdictKind.Reject, Required(reason), null, null, availabilityReason);
         }
 
         /// <summary>Pass, rewrite to <c>none</c>, or reject.</summary>
@@ -85,10 +93,14 @@ namespace Agenerela
         // gave other words for it.
         internal string ModelReason => modelReason ?? Reason;
 
+        // The reason the handler's per-target check gave (Availability.No), when that check is what
+        // stopped the decision; null otherwise. Passed to ActionResult.AvailabilityReason (#244 item 6).
+        internal string AvailabilityReason { get; }
+
         // The pipeline's stamp: the same verdict, naming the guard that returned it.
         internal GuardVerdict From(string guard)
         {
-            return new GuardVerdict(Kind, Reason, guard, modelReason);
+            return new GuardVerdict(Kind, Reason, guard, modelReason, AvailabilityReason);
         }
 
         private static string Required(string reason)
