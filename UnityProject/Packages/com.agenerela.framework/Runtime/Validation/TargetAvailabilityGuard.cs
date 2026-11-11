@@ -71,7 +71,7 @@ namespace Agenerela
 
             string because = reason == null ? "its per-target check says no." : reason;
             return GuardVerdict.RewriteToNone(
-                $"'{definition.Id}' cannot be done to '{decision.TargetId}' right now: {because}", NotNow);
+                $"'{definition.Id}' cannot be done to '{decision.TargetId}' right now: {because}", NotNow, reason);
         }
     }
 }

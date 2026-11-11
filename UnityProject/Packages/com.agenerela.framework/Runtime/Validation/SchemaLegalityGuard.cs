@@ -92,7 +92,8 @@ namespace Agenerela
                         string why = answer.IsRejected(definition, decision.TargetId, out string reason) && reason != null
                             ? $" '{decision.TargetId}': {reason}"
                             : "";
-                        return GuardVerdict.Reject("the action is not available right now: no target it takes is." + why);
+                        return GuardVerdict.Reject("the action is not available right now: no target it takes is." + why,
+                            why.Length > 0 ? reason : null);
                     }
 
                     return GuardVerdict.Reject("the action is not available right now.");

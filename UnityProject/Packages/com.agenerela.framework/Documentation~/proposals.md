@@ -57,8 +57,23 @@ once through `Agent.Execute`, returning `null` with the outcome in `done`. A pip
 rejected answer and `none` are never held. `Hold(result)` holds a decision whatever its action,
 for a game that decides that itself; it throws for a result with nothing to propose.
 
-A held decision is not checked again when it is held: it was legal when the agent made it, and
-the agent checks it again at confirm.
+**A decision is checked again when it is held**, as `Agent.Execute` checks it: the action
+registered and available, the target registered and in its categories, the per-target check
+allowing the pair now. One that went stale between the decision and the hold, a ford that flooded
+while the model thought, makes no card: `Hold` returns `null`, and so does `Submit`, with the
+refusal in its `out` outcome.
+
+```csharp
+var proposal = offers.Hold(result, out var refused);
+if (proposal == null)
+    Say(refused.Value.AvailabilityReason ?? "Never mind.");   // stale: nothing was held or run
+```
+
+The refusal is recorded as the re-check at `Execute` records one, with `@Hold` after the guard's
+name in `GuardsFired` and `Refused` in `Execution`, but it is not logged and not raised on the
+decision feed. Memory is left alone: under `MemoryCommit.OnExecute` the decision still waits for
+`Commit` or `Discard`, as one `Execute` refused does. The agent checks the decision once more at
+confirm.
 
 ## The card's buttons
 
@@ -67,8 +82,10 @@ void OnConfirm(Proposal proposal)
 {
     if (offers.Confirm(proposal, out var outcome))
         Toast("Route started.");
+    else if (outcome.AvailabilityReason != null)
+        Toast($"That offer no longer stands: {outcome.AvailabilityReason}.");   // the check's own words
     else
-        Toast(outcome.Reason);       // superseded, stale, or the agent's re-check said no
+        Debug.Log(outcome.Reason);   // superseded, StillValid, or the action is gone: the developer's sentence
 }
 
 void OnDecline(Proposal proposal) => offers.Decline(proposal);
@@ -99,7 +116,16 @@ handler runs, so no handler, however deeply confirmations nest, can confirm it t
 | `Reset` | The agent was reset while it waited |
 
 The status changes once. `proposal.Outcome` is what `Agent.Execute` reported, null until then;
-`proposal.Reason` says why one ended without being carried out. `Changed` is raised once per call
+`proposal.Reason` says why one ended without being carried out.
+
+**Writing the game's own line.** `outcome.Reason` is the agent's sentence for a log, with the
+action and target ids in it. When the per-target check is what refused, `outcome.AvailabilityReason`
+holds the reason that check gave in `Availability.No(...)`, word for word, such as "the ford is
+flooded", so the game can say it in its own voice. It is null for every other refusal: the proposal
+was superseded or settled, `StillValid` said no, or the action itself is no longer available or
+registered. Then `outcome.HandlerRan` is false, and the game writes a line of its own, as Living
+Vale's card does ("Things changed; that offer no longer stands."). `Agent.Execute` fills it the
+same way for a decision carried out directly. `Changed` is raised once per call
 that changes the pending set, however many proposals it settled.
 
 ## Memory, telemetry and reset
@@ -146,7 +172,8 @@ when the conversation moves on, say so in `StillValid`, for example
 - **Decide which actions need a confirmation.** The game lists them.
 - **Show anything.** The card, its wording and its buttons are the game's.
 - **Save.** Proposals live as long as the helper; on loading a save, call `DeclineAll`.
-- **Check at hold.** The agent's check at decide, and again at confirm, is the check.
+- **Share one card between agents.** Each `Proposals` belongs to one agent. A game that shows
+  one card at a time across several agents keeps one helper per agent; the recipe is below.
 
 ## Replacing Living Vale's route cards
 
@@ -157,3 +184,50 @@ handler of `offer_route` does what `Confirm` applied; `RouteContract.Available` 
 action's `[AvailableFor]` check; the generation goes in `DecideOptions.Correlation` and
 `StillValid`; `InvalidatePending` becomes `DeclineAll`; and `OnePending` replaces the hand-written
 supersede.
+
+## One card across several agents
+
+A `Proposals` belongs to one agent, but a game often shows one card at a time across every NPC.
+Keep one helper per agent and route through them; no shared helper is built in, since what "one
+card" means (one per conversation, one per screen, the newest anywhere) is the game's call. Living
+Vale's `AgenerelaNpcDecisionDriver` does it in about 40 lines, in this shape:
+
+```csharp
+// One helper per NPC, made with its agent. OnePending: a new card replaces that NPC's old one.
+readonly Dictionary<string, Proposals> proposals = new Dictionary<string, Proposals>();
+
+void AddNpc(string npcId, Agent agent)
+{
+    var held = new Proposals(agent) { OnePending = true };
+    held.Changed += _ => ProposalsChanged?.Invoke();   // one event for the card, whoever changed
+    proposals[npcId] = held;
+}
+
+public event Action ProposalsChanged;
+
+// The card on screen: the first NPC with one waiting. Cards end with their conversation, so
+// there is at most one.
+public Proposal PendingProposal =>
+    proposals.Values.Select(p => p.Latest).FirstOrDefault(p => p != null);
+
+// The decision carries its NPC in its correlation, so a card finds the helper that holds it.
+Proposals Owner(Proposal proposal) =>
+    proposal?.Correlation is NpcTurn turn && proposals.TryGetValue(turn.Npc.Id, out var held) ? held : null;
+
+bool Hold(NpcTurn turn, DecisionResult result) =>
+    proposals[turn.Npc.Id].Hold(result) != null;      // null: it went stale, no card
+
+public bool Confirm(Proposal proposal, out ActionResult outcome) =>
+    (Owner(proposal) ?? throw new ArgumentException("Not one of this driver's cards.", nameof(proposal)))
+        .Confirm(proposal, out outcome);
+
+public bool Decline(Proposal proposal) => Owner(proposal)?.Decline(proposal) ?? false;
+
+// A conversation opened or closed, or a save loaded: every NPC's card goes.
+public int DeclineProposals(string reason = null) =>
+    proposals.Values.Sum(held => held.DeclineAll(reason));
+```
+
+`NpcTurn` is Living Vale's own type, passed as `DecideOptions.Correlation`; any object that names
+the agent works. For a strict "one card across every agent", decline the other helpers' cards when
+one is held: call `DeclineAll` on each of the others before `Hold`.

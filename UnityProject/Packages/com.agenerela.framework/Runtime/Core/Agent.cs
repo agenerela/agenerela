@@ -972,20 +972,11 @@ namespace Agenerela
                 return ActionResult.NoAction();
             }
 
-            // No dropped targets to fill: this Collect overwrites a source's Dropped, but the result
-            // already holds its own copy from the decision.
-            var ctx = Snapshot("", Array.Empty<string>(), dropped: null, result.Correlation);
-
-            // No request and no reply: only the agent as it is now. The options are the defaults
-            // with the call's correlation, and no guard that runs here reads them.
-            // Availability is asked once, by the first guard that needs it, and the input keeps the
-            // answer, so the legality check and the per-target guard read the same one.
-            var input = new GuardInput(ctx, null, null, decision, new DecideOptions { Correlation = result.Correlation }, result.Telemetry);
-            var verdict = GuardPipeline.Run(ExecuteGuards, input, "@Execute");
+            var verdict = Recheck(result, "@Execute", out var ctx);
             if (verdict.Kind != GuardVerdictKind.Pass)
             {
                 Refuse(decision, verdict.Reason);
-                return ActionResult.Refused(verdict.Reason);
+                return ActionResult.Refused(verdict.Reason, verdict.AvailabilityReason);
             }
 
             ctx.Actions.TryGet(decision.ActionId, out _, out var handler);
@@ -998,7 +989,25 @@ namespace Agenerela
             return ActionResult.Done();
         }
 
-        private void CheckOwnHeld(DecisionResult result)
+        // Execute's re-check of a real decision, against the agent as it is now, with no handler run:
+        // the verdict, recorded in the result's telemetry under suffix, and the context it built.
+        // Proposals.Hold asks it too (#244 item 6), so a card is never made for a decision Execute
+        // would already refuse. Throws what the developer's availability checks and target sources throw.
+        internal GuardVerdict Recheck(DecisionResult result, string suffix, out AgentContext ctx)
+        {
+            // No dropped targets to fill: this Collect overwrites a source's Dropped, but the result
+            // already holds its own copy from the decision.
+            ctx = Snapshot("", Array.Empty<string>(), dropped: null, result.Correlation);
+
+            // No request and no reply: only the agent as it is now. The options are the defaults
+            // with the call's correlation, and no guard that runs here reads them.
+            // Availability is asked once, by the first guard that needs it, and the input keeps the
+            // answer, so the legality check and the per-target guard read the same one.
+            var input = new GuardInput(ctx, null, null, result.Decision, new DecideOptions { Correlation = result.Correlation }, result.Telemetry);
+            return GuardPipeline.Run(ExecuteGuards, input, suffix);
+        }
+
+        internal void CheckOwnHeld(DecisionResult result)
         {
             if (result == null)
             {

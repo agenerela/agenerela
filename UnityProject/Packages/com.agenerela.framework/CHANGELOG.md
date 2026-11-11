@@ -10,6 +10,18 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Changed
 
+- **`Proposals.Hold` checks the decision again before it holds it** (#244 item 6), as
+  `Agent.Execute` does, against the agent as it is now. A decision that went stale between the
+  decision and the hold, its target closed or its action no longer available, makes no proposal:
+  `Hold` returns null instead of a card, and so does `Submit` for a held action, with the refusal in
+  its `out` outcome. A new overload, `Hold(result, out ActionResult? refused)`, says why. The
+  refusal is recorded as the re-check at `Execute` records one, with `@Hold` after the guard's name
+  in `DecisionTelemetry.GuardsFired` and `Refused` in `Execution`; it is not logged or raised on the
+  decision feed, and under `MemoryCommit.OnExecute` the decision stays waiting for `Commit` or
+  `Discard`. Code that held a decision and used the proposal without checking for null must check
+  it now. `Documentation~/proposals.md` says so, and adds a recipe for one card across several
+  agents, from Living Vale's driver.
+
 - **The default Ollama model is `qwen3.5:4b`**, not `qwen3.5:2b`: `new OllamaSettings()` and a new
   `OllamaProviderConfig` asset name it. On the 389-prompt interim set it chose right 330 times
   against 263, for about 0.08 s more a decision on an RTX 5080 and about 0.7 GB more memory
@@ -28,6 +40,13 @@ While the version stays `0.x`, the public API may change in any release.
   both within noise (findings, 9 November). No switch: it is what `FewShotBuilder` does.
 
 ### Added
+
+- **`ActionResult.AvailabilityReason`** (#244 item 6): for a refusal that the handler's per-target
+  check caused, the reason that check gave in `Availability.No(...)`, word for word ("the ford is
+  flooded"), so a game can write its own line where `Reason` is the agent's sentence for a log.
+  Null for every other refusal and status. `Agent.Execute`, `Proposals.Confirm` and `Proposals.Hold`
+  fill it, whether the per-target guard refused the pair or the legality check left the action out
+  because no target it takes is allowed.
 
 - **`DecisionRound`: several agents decided on one snapshot, executed in an order given afterwards**
   (#216, item 2; DR-021). Optional, plain C#. `await DecisionRound.DecideAsync(calls, id, ct)` takes

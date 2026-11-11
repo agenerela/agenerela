@@ -47,12 +47,18 @@ workaround became. In short:
 - **Entry 16.** `Proposals` belongs to one agent, but the game shows one card at a time across all
   NPCs, so the driver keeps one `Proposals` per NPC and adds what the card needs on top: the
   pending card across NPCs, finding a proposal's owner, declining every NPC's cards. It is
-  about 40 lines a game with more than one proposing agent will write.
+  about 40 lines a game with more than one proposing agent will write. *Since #244 item 6: a
+  recipe in the framework's `Documentation~/proposals.md` ("One card across several agents"),
+  no helper.*
 - **Entry 16.** `Proposals.Hold` runs no re-check, so a decision that went stale between the
-  decision and the hold still makes a card; the driver asks the executor first.
+  decision and the hold still makes a card; the driver asks the executor first. *Fixed by #244
+  item 6: `Hold` re-checks as `Agent.Execute` does and returns null for a stale decision; the
+  driver's own check of the conversation and the contract stays the game's.*
 - **Entry 16.** A confirm the agent refuses before the handler runs (the pair is no longer
   offered) produces no line of the game's: `ActionResult.Refused` is internal, and the outcome
-  says only "refused". The card writes its own chat line.
+  says only "refused". The card writes its own chat line. *Since #244 item 6:
+  `ActionResult.AvailabilityReason` holds the per-target check's own words when that check
+  refused, so the card can say why; other refusals still leave the line to the game.*
 - **Entry 17.** Fen's persona knowledge still contains what she saw, now as identity knowledge
   instead of observations. The rule says a revealed fact is never standing knowledge, but the
   card target leaves once told, so without the lines Fen would no longer know what she saw.
