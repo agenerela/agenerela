@@ -49,6 +49,11 @@ namespace Agenerela.Providers
                  "a model that was not resident.")]
         public float TimeoutSeconds = Defaults.TimeoutSeconds;
 
+        [Range(1, OllamaSettings.MaxTokenAlternatives)]
+        [Tooltip("How many alternatives each token's probabilities carry (top_logprobs), which the " +
+                 "grounding guard reads. 5 is what its 0.8 threshold was measured with.")]
+        public int TokenAlternatives = Defaults.TokenAlternatives;
+
         [Tooltip("For a server that wants a key: the name of the environment variable holding it, " +
                  "such as AGENERELA_OLLAMA_API_KEY. Empty for a local Ollama. The key itself is never " +
                  "stored in the asset. Restart Unity, and Unity Hub, after setting the variable.")]
@@ -70,6 +75,7 @@ namespace Agenerela.Providers
                 ContextSize = ContextSize,
                 Temperature = Temperature,
                 TimeoutSeconds = TimeoutSeconds,
+                TokenAlternatives = TokenAlternatives,
                 ApiKey = ReadKey(),
             };
         }

@@ -27,17 +27,21 @@ namespace Agenerela
     /// could not read. It never runs in <see cref="Agent.Execute"/>, which has no reply to read.
     /// </para>
     /// <para>
-    /// The threshold is fixed, not a setting: any change to it or to the signal needs an A/B run with
-    /// a control arm, and Phase 4 calibrates it on the 200+ prompt set (§2.5, Limits).
+    /// The threshold is <see cref="DecideOptions.TargetGroundingThreshold"/>, <see cref="DefaultThreshold"/>
+    /// unless a call sets it (#244). The share counts only the alternatives the provider reports, so
+    /// a model whose probability is spread over more listed targets than that reads low without
+    /// wanting anything off the list; <see cref="OllamaSettings.TokenAlternatives"/> says how many
+    /// Ollama reports. Any change to the default or to the signal needs an A/B run with a control arm
+    /// (§2.5, Limits).
     /// </para>
     /// </remarks>
     public sealed class TargetGroundingGuard : IDecisionGuard
     {
-        /// <summary>The share below which a decision is refused, as DR-016 measured it.</summary>
-        internal const float DefaultThreshold = 0.8f;
-
-        // Settable so tests can move it. Phase 4 decides how its harness varies it.
-        internal float Threshold { get; set; } = DefaultThreshold;
+        /// <summary>
+        /// The share below which a decision is refused unless a call sets
+        /// <see cref="DecideOptions.TargetGroundingThreshold"/>: 0.8, as DR-016 measured it.
+        /// </summary>
+        public const float DefaultThreshold = 0.8f;
 
         /// <summary>Always <c>"TargetGroundingGuard"</c>.</summary>
         public string Name => nameof(TargetGroundingGuard);
@@ -64,12 +68,13 @@ namespace Agenerela
             telemetry.TargetGroundingStatus = reading.Status;
             telemetry.TargetGrounding = scored ? reading.Share : (float?)null;
 
-            if (!scored || reading.Share >= Threshold || !NeedsTarget(input))
+            float threshold = input.Options.TargetGroundingThreshold;
+            if (!scored || reading.Share >= threshold || !NeedsTarget(input))
             {
                 return GuardVerdict.Pass;
             }
 
-            return GuardVerdict.RewriteToNone(Reason(reading), NotHere);
+            return GuardVerdict.RewriteToNone(Reason(reading, threshold), NotHere);
         }
 
         // The target enum the model was offered, or null when the schema had no target field.
@@ -102,11 +107,11 @@ namespace Agenerela
         // developer reading telemetry (#109). Unmeasured, and it changes only what is said.
         private const string NotHere = "nothing like that is here.";
 
-        private string Reason(GroundingReading reading)
+        private static string Reason(GroundingReading reading, float threshold)
         {
             string reason = string.Format(CultureInfo.InvariantCulture,
                 "Only {0:0.###} of the model's probability at the target stayed on the target list (threshold {1:0.###})",
-                reading.Share, Threshold);
+                reading.Share, threshold);
 
             return reading.Wanted == null ? reason + "." : reason + $"; it wanted to write \"{reading.Wanted}…\".";
         }

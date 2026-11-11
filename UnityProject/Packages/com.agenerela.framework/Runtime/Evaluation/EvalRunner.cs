@@ -975,6 +975,8 @@ namespace Agenerela.Evaluation
                     Provider = provider.Name,
                     Model = Ollama?.Model,
                     CheckTarget = arm.Options.CheckTarget,
+                    TargetGroundingThreshold = arm.Options.TargetGroundingThreshold,
+                    TokenAlternatives = Ollama?.TokenAlternatives,
                     AskForRefusalLine = arm.Options.AskForRefusalLine,
                     IdleExampleStimulus = arm.Options.IdleExampleStimulus,
                     ListActionsAndTargets = arm.Options.ListActionsAndTargets,

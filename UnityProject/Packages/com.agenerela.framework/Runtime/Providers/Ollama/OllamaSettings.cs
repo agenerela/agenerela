@@ -54,6 +54,24 @@ namespace Agenerela.Providers
         public float TimeoutSeconds = 30f;
 
         /// <summary>
+        /// How many alternatives each generated token's probabilities carry, sent as
+        /// <c>top_logprobs</c>: 5 unless set, from 1 to 20, the most Ollama accepts (#244).
+        /// </summary>
+        /// <remarks>
+        /// <see cref="TargetGroundingGuard"/> counts what the alternatives do not cover as off the
+        /// target list, because DR-016 calibrated its 0.8 on five. With many targets right at once,
+        /// a model's probability can spread past five of them and read as doubt. More alternatives
+        /// make the reply a little larger; unmeasured as a default except where findings.md says so.
+        /// </remarks>
+        public int TokenAlternatives = DefaultTokenAlternatives;
+
+        /// <summary><see cref="TokenAlternatives"/>' default, 5, what DR-016 measured with.</summary>
+        public const int DefaultTokenAlternatives = 5;
+
+        /// <summary>The most <see cref="TokenAlternatives"/> Ollama accepts, 20.</summary>
+        public const int MaxTokenAlternatives = 20;
+
+        /// <summary>
         /// A key for a server that wants one, sent as <c>Authorization: Bearer &lt;key&gt;</c> on
         /// every request, or empty to send none. A local Ollama wants none. The team's RTX 5080
         /// server, behind the gateway in <c>tools/ollama-server/</c>, does.

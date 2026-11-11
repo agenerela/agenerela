@@ -161,7 +161,7 @@ namespace Agenerela.Evaluation
                     ? "not checked"
                     : string.Join(", ", reading.Models.Select(m => $"{m.Name} {Megabytes(m.SizeVram)}/{Megabytes(m.Size)} MB in VRAM"));
                 Line($"| {Cell(arm.Name)} | {Cell(arm.ProviderConfig)} | {Cell(arm.Provider)} | {Cell(arm.Model)} | {Cell(arm.ProviderVersion)} "
-                   + $"| {(arm.CheckTarget ? "on" : "off")} | {arm.WarmUpRequests} | {Cell(resident)} |");
+                   + $"| {Guard(arm)} | {arm.WarmUpRequests} | {Cell(resident)} |");
             }
 
             Line();
@@ -294,6 +294,29 @@ namespace Agenerela.Evaluation
         private static string Points(double points) => points.ToString("0.0", CultureInfo.InvariantCulture);
 
         private static string Signed(double points) => (points >= 0 ? "+" : "") + Points(points);
+
+        // "on" or "off", and what an arm changed about the grounding guard's reading (#244), so a
+        // default arm's cell reads as it did before.
+        private static string Guard(EvalArmConditions arm)
+        {
+            if (!arm.CheckTarget)
+            {
+                return "off";
+            }
+
+            var changed = new List<string>();
+            if (arm.TargetGroundingThreshold.HasValue && arm.TargetGroundingThreshold.Value != TargetGroundingGuard.DefaultThreshold)
+            {
+                changed.Add("threshold " + arm.TargetGroundingThreshold.Value.ToString("0.###", CultureInfo.InvariantCulture));
+            }
+
+            if (arm.TokenAlternatives.HasValue && arm.TokenAlternatives.Value != Providers.OllamaSettings.DefaultTokenAlternatives)
+            {
+                changed.Add(arm.TokenAlternatives.Value.ToString(CultureInfo.InvariantCulture) + " alternatives");
+            }
+
+            return changed.Count == 0 ? "on" : "on, " + string.Join(", ", changed);
+        }
 
         private static string Megabytes(long bytes) => (bytes / (1024 * 1024)).ToString(CultureInfo.InvariantCulture);
     }

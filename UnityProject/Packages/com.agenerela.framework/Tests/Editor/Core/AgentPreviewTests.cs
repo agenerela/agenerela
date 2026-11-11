@@ -157,6 +157,20 @@ namespace Agenerela.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => agent.Preview("Hello.", new DecideOptions { MaxListedTargets = -1 }));
         }
 
+        [TestCase(-0.01f)]
+        [TestCase(1.01f)]
+        [TestCase(float.NaN)]
+        public void AGroundingThresholdOutsideZeroToOneThrowsAtTheCall(float threshold)
+        {
+            var agent = Fixtures.VillageGuard(new FakeProvider(GoToTheTower));
+            var options = new DecideOptions { TargetGroundingThreshold = threshold };
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => agent.DecideAsync("Go to the tower.", options));
+            Assert.Throws<ArgumentOutOfRangeException>(() => agent.Preview("Go to the tower.", options));
+            Assert.DoesNotThrow(() => agent.Preview("Go to the tower.", new DecideOptions { TargetGroundingThreshold = 0f }));
+            Assert.DoesNotThrow(() => agent.Preview("Go to the tower.", new DecideOptions { TargetGroundingThreshold = 1f }));
+        }
+
         // ---- What it is offered --------------------------------------------------------------
 
         [Test]

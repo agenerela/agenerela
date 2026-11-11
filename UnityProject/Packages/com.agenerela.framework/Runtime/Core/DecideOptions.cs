@@ -197,6 +197,21 @@ namespace Agenerela
         public bool CheckTarget = true;
 
         /// <summary>
+        /// The share of the model's probability at its target that must stay on the target list for
+        /// <see cref="TargetGroundingGuard"/> to pass this call's decision, from 0 to 1:
+        /// <see cref="TargetGroundingGuard.DefaultThreshold"/>, 0.8, unless set (#244). A value
+        /// outside 0 to 1 is a mistake the call throws for.
+        /// </summary>
+        /// <remarks>
+        /// Lower it for a call where several targets are often right at once, such as a strategy
+        /// game's provinces, rather than turning <see cref="CheckTarget"/> off: probability spread
+        /// over more listed targets than the provider reports alternatives for reads as off the list.
+        /// 0 never stops a decision but still records the reading. Unmeasured below 0.8 on the
+        /// evaluation set except where findings.md says so.
+        /// </remarks>
+        public float TargetGroundingThreshold = TargetGroundingGuard.DefaultThreshold;
+
+        /// <summary>
         /// Whether to ask the model what to say when a guard stops this decision and
         /// <see cref="Agent.RefusalStatement"/> gave no line (#109). Off by default, so a stopped
         /// decision's statement is empty. Per call, because only the caller knows whether anyone is

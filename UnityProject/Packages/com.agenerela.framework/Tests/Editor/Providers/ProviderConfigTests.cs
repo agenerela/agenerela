@@ -61,11 +61,14 @@ namespace Agenerela.Tests
             var config = Make<OllamaProviderConfig>("OllamaLocal");
             config.Model = "llama3.2:3b";
             config.TimeoutSeconds = 12f;
+            Assert.That(config.TokenAlternatives, Is.EqualTo(5), "A config starts as a provider built in code does.");
+            config.TokenAlternatives = 20;
 
             var settings = config.ToSettings();
 
             Assert.That(settings.Model, Is.EqualTo("llama3.2:3b"));
             Assert.That(settings.TimeoutSeconds, Is.EqualTo(12f));
+            Assert.That(settings.TokenAlternatives, Is.EqualTo(20));
             Assert.That(settings.ApiKey, Is.Empty, "No variable named, no key.");
             Assert.That(config.ApiKeyVariable, Is.Empty);
             Assert.That(config.Provider, Is.TypeOf<OllamaProvider>());

@@ -60,10 +60,6 @@ namespace Agenerela.Providers
         // How long UnloadAsync waits for /api/ps to stop listing the model.
         private const float UnloadWaitSeconds = 15f;
 
-        // How many alternatives each token's probabilities carry. Five was enough in the probe
-        // (DR-016), and Ollama refuses more than 20.
-        private const int TopLogprobs = 5;
-
         // The longest server text a message quotes: enough to see what went wrong.
         private const int Longest = 200;
 
@@ -75,6 +71,7 @@ namespace Agenerela.Providers
         private readonly string model;
         private readonly int contextSize;
         private readonly float temperature;
+        private readonly int tokenAlternatives;
         private readonly float timeoutSeconds;
         private readonly bool sendsKey;
         private readonly JsonSchemaSerializer serializer = new JsonSchemaSerializer();
@@ -84,7 +81,7 @@ namespace Agenerela.Providers
         /// <exception cref="ArgumentNullException"><paramref name="settings"/> is null.</exception>
         /// <exception cref="ArgumentException">
         /// The endpoint is not an absolute http or https address without a query, the model is empty, or the
-        /// context size, temperature or timeout is out of range.
+        /// context size, temperature, timeout or token alternatives is out of range.
         /// </exception>
         public OllamaProvider(OllamaSettings settings)
             : this(settings, new HttpClientHandler())
@@ -157,9 +154,17 @@ namespace Agenerela.Providers
             // Authority is the host and port alone.
             string path = chatUri.AbsolutePath;
             endpoint = chatUri.Scheme + "://" + chatUri.Authority + path.Substring(0, path.Length - "/api/chat".Length);
+            if (settings.TokenAlternatives < 1 || settings.TokenAlternatives > OllamaSettings.MaxTokenAlternatives)
+            {
+                throw new ArgumentException(
+                    $"OllamaSettings.TokenAlternatives is {settings.TokenAlternatives}. It must be from 1 to {OllamaSettings.MaxTokenAlternatives}, "
+                  + "the most Ollama accepts; the default is 5.", nameof(settings));
+            }
+
             model = settings.Model.Trim();
             contextSize = settings.ContextSize;
             temperature = settings.Temperature;
+            tokenAlternatives = settings.TokenAlternatives;
             timeoutSeconds = settings.TimeoutSeconds;
 
             // The provider's own timeout runs on a token, so it can be told apart from the caller's
@@ -385,6 +390,9 @@ namespace Agenerela.Providers
         /// <summary>The model this provider asks for, as its settings name it.</summary>
         internal string Model => model;
 
+        // What top_logprobs is sent as, for the evaluation report's conditions (#244).
+        internal int TokenAlternatives => tokenAlternatives;
+
         /// <summary>The server's address, without any user name or password it carried.</summary>
         internal string Endpoint => endpoint;
 
@@ -596,7 +604,7 @@ namespace Agenerela.Providers
                 json.WritePropertyName("logprobs");
                 json.WriteValue(true);
                 json.WritePropertyName("top_logprobs");
-                json.WriteValue(TopLogprobs);
+                json.WriteValue(tokenAlternatives);
 
                 json.WriteEndObject();
             }
