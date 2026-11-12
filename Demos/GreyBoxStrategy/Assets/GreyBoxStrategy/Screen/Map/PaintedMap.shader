@@ -24,15 +24,17 @@ Shader "GreyBoxStrategy/PaintedMap"
         _SpreadTex ("Capture spread", 2D) = "white" {}
         _Focus ("Focus (uv x, uv y, radius, amount)", Vector) = (0.5, 0.5, 0.1, 0)
         _Engraved ("Engraved style", Float) = 0
+        _EdgeFade ("Fade into the open sea at the edge (uv)", Float) = 0.04
     }
     SubShader
     {
-        Tags { "RenderType" = "Opaque" "Queue" = "Geometry" "RenderPipeline" = "UniversalPipeline" }
+        Tags { "RenderType" = "Transparent" "Queue" = "Transparent" "RenderPipeline" = "UniversalPipeline" }
         Pass
         {
             Name "PaintedMap"
             ZWrite Off
             Cull Off
+            Blend SrcAlpha OneMinusSrcAlpha
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
@@ -46,6 +48,7 @@ Shader "GreyBoxStrategy/PaintedMap"
             float4 _IdTex_TexelSize;
             float4 _Focus;
             float _Engraved;
+            float _EdgeFade;
 
             struct Attributes { float4 positionOS : POSITION; float2 uv : TEXCOORD0; };
             struct Varyings { float4 positionCS : SV_POSITION; float2 uv : TEXCOORD0; };
@@ -178,7 +181,10 @@ Shader "GreyBoxStrategy/PaintedMap"
                     float l = Lum(colour);
                     colour = lerp(colour, lerp(colour, l.xxx, 0.3) * 0.55, k);
                 }
-                return half4(colour, 1);
+                // The painting's sea fades into the open sea beyond it; land never reaches the edge.
+                float2 e = min(i.uv, 1 - i.uv);
+                float alpha = id >= 0 ? 1 : smoothstep(0, _EdgeFade, min(e.x, e.y * 1.777));
+                return half4(colour, alpha);
             }
             ENDHLSL
         }

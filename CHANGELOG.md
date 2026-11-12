@@ -29,6 +29,16 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **GreyBoxStrategy, stage 3, slice 2: the decision inspector** (#20). Any chronicle line or
+  speech banner opens the decision behind it. It shows six sections, from the recorded telemetry
+  alone: the model's raw answer; the game's offered moves with the choice marked, and those not
+  offered with each reason; the facts sent; the guards with target grounding and the re-check when
+  the move landed; memory; model, tokens and queue time. Also: the map now fills the screen edge to
+  edge over a tile of its own sea, the scroller and buttons are styled, tooltips work in play, the
+  top bar turns compact below 1600 px, and banners stay clear of the panels. The URP upgrade
+  Unity asked for on first open is committed, so a fresh checkout opens without the modal dialog
+  that blocked the Unity CLI. 4 new EditMode tests.
+
 - **GreyBoxStrategy, stage 3, slice 1: watch mode plays back a recorded game** (#20, working
   title Painted Realm). `Screen/Watch.unity` replays seed 4 of the v248 persona 4b table with every
   ruler's own words and no model call. `ReplayBuilder` rebuilds the game from its recorded decisions,

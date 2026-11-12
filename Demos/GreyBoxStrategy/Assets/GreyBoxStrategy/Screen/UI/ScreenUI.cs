@@ -12,7 +12,7 @@ namespace GreyBoxStrategy.Realm
     /// the chronicle, the labels that follow the map, the speech banner and the battle marks.
     /// It only shows; <see cref="ReplayDirector"/> decides what and when.
     /// </summary>
-    public sealed class ScreenUI
+    public sealed partial class ScreenUI
     {
         public readonly VisualElement Root;
         private readonly VisualElement nations, realmBody, chronicleBody, labels, fx, filters;
@@ -63,6 +63,7 @@ namespace GreyBoxStrategy.Realm
             top.Add(brand);
             nations = new VisualElement(); nations.AddToClassList("nations"); top.Add(nations);
             var time = new VisualElement(); time.AddToClassList("time");
+            time.Add(BuildThinking());
             phaseLabel = new Label("Council"); phaseLabel.AddToClassList("phase"); time.Add(phaseLabel);
             turnLabel = new Label("Turn 1 of 30"); turnLabel.AddToClassList("turn"); time.Add(turnLabel);
             playButton = new Button(() => PlayPressed?.Invoke()) { tooltip = "Play or pause (Space)" }; playButton.AddToClassList("tbtn");
@@ -91,6 +92,9 @@ namespace GreyBoxStrategy.Realm
             root.Add(chronicle);
             RenderFilters();
 
+            root.Add(BuildInspector());
+            BuildTooltips();
+
             // ---- the map's labels ----
             for (int i = 0; i < provinceIds.Count; i++)
             {
@@ -115,6 +119,9 @@ namespace GreyBoxStrategy.Realm
         public static string Cap(string id) => string.IsNullOrEmpty(id) ? "" : char.ToUpperInvariant(id[0]) + id.Substring(1);
 
         // ---- top bar and realm ----
+
+        /// <summary>Below 1600 px wide the top bar keeps crest, name, provinces, army and wars; the rest is in its tooltip.</summary>
+        public void SetCompact(bool compact) => Root.EnableInClassList("compact", compact);
 
         public void SetTurn(int turn, string phase) { turnLabel.text = $"Turn {turn} of 30"; phaseLabel.text = phase; }
 
@@ -149,9 +156,10 @@ namespace GreyBoxStrategy.Realm
                 if (id == flipCountry) Flip(count);
                 Stat(chip, IconKind.Army, c.Army.ToString());
                 var gold = Stat(chip, IconKind.Gold, c.Gold.ToString());
+                gold.parent.AddToClassList("gold-stat");
                 var delta = new Label($"{net:+0;-0}"); delta.AddToClassList("stat-delta"); delta.AddToClassList(net >= 0 ? "good" : "bad");
                 gold.parent.Add(delta);
-                var pips = new VisualElement(); pips.style.flexDirection = FlexDirection.Row; pips.style.marginRight = 7;
+                var pips = new VisualElement(); pips.AddToClassList("pips"); pips.style.flexDirection = FlexDirection.Row; pips.style.marginRight = 7;
                 for (int k = 1; k <= 5; k++) { var pip = new VisualElement(); pip.AddToClassList("pip"); pip.EnableInClassList("on", k <= c.Stability); pips.Add(pip); }
                 chip.Add(pips);
                 if (wars.Count > 0) { var w = Stat(chip, IconKind.War, wars.Count.ToString()); w.AddToClassList("bad"); }
@@ -281,7 +289,7 @@ namespace GreyBoxStrategy.Realm
             {
                 if (l.Turn != turn) { turn = l.Turn; var h = new Label($"TURN {turn}"); h.AddToClassList("lg-turn"); chronicleBody.Add(h); }
                 var row = new VisualElement(); row.AddToClassList("lg");
-                row.tooltip = l.Event.Decision != null ? "Click: find it on the map" : "Click: find it on the map";
+                row.tooltip = l.Event.Decision != null ? "Click: find it on the map and open the decision" : "Click: find it on the map";
                 row.RegisterCallback<ClickEvent>(_ => LinePressed?.Invoke(l));
                 row.Add(new Crest(CountryLook.Of(l.Country), 16));
                 var body = new VisualElement(); body.AddToClassList("lg-body");
@@ -326,12 +334,13 @@ namespace GreyBoxStrategy.Realm
         private readonly List<Banner> banners = new List<Banner>();
 
         /// <summary>The ruler speaks at the capital: the persona's face, the country's colour, the line.</summary>
-        public VisualElement Say(string country, string line, int atProvince = -1)
+        public VisualElement Say(string country, string line, int atProvince = -1, Action onClick = null)
         {
             if (string.IsNullOrWhiteSpace(line)) return null;
             var look = CountryLook.Of(country);
             var player = Players?.GetValueOrDefault(country);
-            var e = new VisualElement { pickingMode = PickingMode.Ignore }; e.AddToClassList("banner");
+            var e = new VisualElement { pickingMode = onClick != null ? PickingMode.Position : PickingMode.Ignore, tooltip = onClick != null ? "Click: why this move" : null }; e.AddToClassList("banner");
+            if (onClick != null) e.RegisterCallback<ClickEvent>(_ => onClick());
             e.style.borderLeftColor = (Color)look.Colour;
             var face = new Image { image = portraits, uv = Faces.Uv(player?.Persona, look.Slot % 2), scaleMode = ScaleMode.ScaleAndCrop };
             face.AddToClassList("face"); face.style.borderTopColor = face.style.borderBottomColor = face.style.borderLeftColor = face.style.borderRightColor = (Color)look.Colour;
@@ -358,9 +367,13 @@ namespace GreyBoxStrategy.Realm
 
         private void PlaceBanner(Banner b)
         {
+            // Above the capital, but kept in the space between the realm list and the chronicle, so
+            // no panel ever hides a ruler's words.
             var p = ProvinceToPanel(b.Province);
-            b.Element.style.left = p.x;
-            b.Element.style.top = p.y - 26;
+            float half = Mathf.Max(60, b.Element.resolvedStyle.width) / 2, height = Mathf.Max(40, b.Element.resolvedStyle.height);
+            float minX = 248 + half, maxX = Root.layout.width - 356 - half;
+            b.Element.style.left = maxX > minX ? Mathf.Clamp(p.x, minX, maxX) : p.x;
+            b.Element.style.top = Mathf.Max(50 + height, p.y - 26);
         }
 
         // ---- battle marks: the arrow, the swords and the score ----

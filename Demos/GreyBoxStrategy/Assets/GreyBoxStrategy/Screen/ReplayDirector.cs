@@ -36,6 +36,7 @@ namespace GreyBoxStrategy.Realm
         private int turnIndex, eventIndex;
         private Vector3 dragStart;
         private bool dragging;
+        private Vector2Int lastSize;
 
         /// <summary>For the Unity CLI: where the playback is, as "turn 3, event 4 of 9".</summary>
         public string Position => game == null ? "not built" : $"turn {(turnIndex < game.Turns.Count ? game.Turns[turnIndex].Turn : game.Turns.Count)}, event {eventIndex}";
@@ -64,9 +65,14 @@ namespace GreyBoxStrategy.Realm
                 PlayPressed = () => { playing = !playing; ui.SetPlaying(playing, speed); },
                 StepPressed = () => { playing = false; stepOnce = true; ui.SetPlaying(false, speed); },
                 SpeedPressed = () => { speed = speed >= 4 ? 1 : speed * 2; ui.SetPlaying(playing, speed); },
-                LinePressed = l => { if (l.Event.ProvinceIndex >= 0) PanTo(l.Event.ProvinceIndex); else if (l.Country != null) PanTo(ui.CapitalIndex(l.Country)); },
+                LinePressed = l =>
+                {
+                    if (l.Event.ProvinceIndex >= 0) PanTo(l.Event.ProvinceIndex); else if (l.Country != null) PanTo(ui.CapitalIndex(l.Country));
+                    if (l.Event.Decision != null) ui.ShowCard(DecisionCard.From(l.Event));
+                },
                 CountryPressed = id => PanTo(ui.CapitalIndex(id)),
             };
+            ui.monoFont = UnityEngine.TextCore.Text.FontAsset.CreateFontAsset("Consolas", "Regular");
             Show(game.Initial, null);
             ui.SetTurn(1, "Council");
             playing = playOnStart;
@@ -129,12 +135,14 @@ namespace GreyBoxStrategy.Realm
         private void Update()
         {
             if (ui == null) return;
+            if (Screen.width != lastSize.x || Screen.height != lastSize.y) { lastSize = new Vector2Int(Screen.width, Screen.height); FitCamera(); ui.SetCompact(Screen.width < 1600); }
             var mouse = Mouse.current; var kb = Keyboard.current;
             if (kb != null)
             {
                 if (kb.spaceKey.wasPressedThisFrame) ui.Root.schedule.Execute(() => { playing = !playing; ui.SetPlaying(playing, speed); });
                 if (kb.nKey.wasPressedThisFrame) { playing = false; stepOnce = true; ui.SetPlaying(false, speed); }
                 if (kb.equalsKey.wasPressedThisFrame || kb.numpadPlusKey.wasPressedThisFrame) { speed = speed >= 4 ? 1 : speed * 2; ui.SetPlaying(playing, speed); }
+                if (kb.escapeKey.wasPressedThisFrame) ui.CloseInspector();
             }
             if (mouse != null)
             {
@@ -194,6 +202,14 @@ namespace GreyBoxStrategy.Realm
                 var turn = game.Turns[turnIndex];
                 ui.SetTurn(turn.Turn, "Upkeep");
                 Show(turn.Start, null);
+                if (turn.Turn >= skipUntilTurn)
+                {
+                    // The council: every ruler asked at once, on one snapshot (decision 24's thinking indicator).
+                    ui.SetTurn(turn.Turn, "Council");
+                    ui.SetThinking(true);
+                    yield return Wait(0.9f);
+                    ui.SetThinking(false);
+                }
                 for (eventIndex = 0; eventIndex < turn.Events.Count; eventIndex++)
                 {
                     var e = turn.Events[eventIndex];
@@ -246,7 +262,7 @@ namespace GreyBoxStrategy.Realm
                 case ReplayEventKind.AttackFailed:
                 case ReplayEventKind.Refused:
                 {
-                    var banner = ui.Say(e.Country, e.Statement);
+                    var banner = ui.Say(e.Country, e.Statement, -1, Why(e));
                     yield return Wait(0.8f);
                     if (e.ProvinceIndex >= 0) yield return Failed(e);
                     Show(e.After, null);
@@ -259,7 +275,7 @@ namespace GreyBoxStrategy.Realm
                 default:
                 {
                     // Envoys, wars, forts, levies, taxes, holds: the ruler speaks, the screen answers.
-                    var banner = ui.Say(e.Country, e.Statement);
+                    var banner = ui.Say(e.Country, e.Statement, -1, Why(e));
                     yield return Wait(0.5f);
                     if (e.Kind == ReplayEventKind.Fort && e.ProvinceIndex >= 0) { map.SetFocus(e.ProvinceIndex, 0.6f); }
                     Show(e.After, null);
@@ -278,7 +294,7 @@ namespace GreyBoxStrategy.Realm
         /// </summary>
         private IEnumerator Capture(ReplayEvent e, ChronicleLine line)
         {
-            var banner = ui.Say(e.Country, e.Statement);
+            var banner = ui.Say(e.Country, e.Statement, -1, Why(e));
             yield return Wait(0.6f);
 
             int p = e.ProvinceIndex;
@@ -332,6 +348,18 @@ namespace GreyBoxStrategy.Realm
             yield return Wait(0.9f);
             ui.HideArrow(arrow);
             map.SetFocus(-1, 0);
+        }
+
+        /// <summary>A banner's click: open the decision behind it.</summary>
+        private Action Why(ReplayEvent e) => e.Decision == null ? null : (Action)(() => ui.ShowCard(DecisionCard.From(e)));
+
+        /// <summary>For the Unity CLI: open the inspector on a decision, as a click on its chronicle line would.</summary>
+        public string Inspect(int turn, string country)
+        {
+            var e = game.AllEvents.FirstOrDefault(x => x.Turn == turn && x.Country == country && x.Decision != null);
+            if (e == null) return "no decision for " + country + " on turn " + turn;
+            ui.ShowCard(DecisionCard.From(e));
+            return e.Kind + ": " + e.Text;
         }
 
         private static float Smooth(float t) { t = Mathf.Clamp01(t); return t * t * (3 - 2 * t); }
