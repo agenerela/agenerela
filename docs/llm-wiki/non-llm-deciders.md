@@ -246,13 +246,107 @@ exactly this, would answer it like for like, and the stage runs it unchanged thr
 - **The `/v1/systemone` route on the gateway.** The gateway passes `/api/chat`, `/api/generate`,
   `/api/embed`, `/api/tags`, `/api/ps`, `/api/show` and `/api/pull`, and nothing else. `d1` and
   `strands-decider` have trained heads that produce no tokens, so they answer only on
-  `/v1/systemone`. One route in the gateway's `Caddyfile` on the RTX 5080 machine would open it; that
-  is a change to the server, the lead's to make, and this research did not work around it.
+  `/v1/systemone`. One route in the gateway's `Caddyfile` on the RTX 5080 machine opens it: see
+  [What to change on the RTX 5080](#what-to-change-on-the-rtx-5080-for-decision-models). That is a
+  change to the server, the lead's to make, and this research did not work around it.
   - `tev1` keeps a normal output head, so the `decide` stage can run it through `/api/chat` without
     the route. That copies Tev1's prompt rather than Ollama's own `/v1/systemone` handling of it, so
     its numbers would carry that caveat.
 - **Then the run**: the `decide` stage, or a `/v1/systemone` stage, on both sets with the 4B control
   in the same session, as above. About 10 minutes a model.
+
+## What to change on the RTX 5080 for decision models
+
+For the person at the RTX 5080 machine. Everything here was checked against the repository's
+`tools/ollama-server/` files and Ollama's release notes on 12 November 2026. It has not been applied:
+that is the lead's to do.
+
+**(c) No Ollama upgrade is needed.** `/v1/systemone` arrived in Ollama **0.35.0** ([release notes,
+28 September 2026](https://github.com/ollama/ollama/releases/tag/v0.35.0)): "decision models" on a
+new `/v1/systemone` endpoint "based on TypeSafe's Jev API", launched with Nimble and Tev1. The
+compose file pins **0.40.14**, later than that, so the route is already in the container. The gateway
+is the only thing in the way. If the check in step 4 says the route itself is missing (an Ollama
+404 that does not name a model), that would mean a newer Ollama. An upgrade is its own pull request
+(AGENTS.md; `docker-compose.yml`'s comment on `image:`), because every result is tied to the version,
+so it would be a separate decision.
+
+**(d) No environment variable is needed.** The release notes name none, and the `ollama` service's
+environment stays as it is.
+
+**Steps**, in PowerShell or Git Bash on the RTX 5080 machine, in the repository's `tools/ollama-server`
+folder:
+
+1. **Get the change.** Either check out this pull request's branch (`non-llm-deciders`), or make the
+   one edit by hand in `Caddyfile`. **(a)** The line today is:
+
+   ```
+   	@api path /api/version /api/tags /api/ps /api/show /api/chat /api/generate /api/embed /api/pull
+   ```
+
+   The new line:
+
+   ```
+   	@api path /api/version /api/tags /api/ps /api/show /api/chat /api/generate /api/embed /api/pull /v1/systemone
+   ```
+
+   It is the same line with ` /v1/systemone` at the end. Caddy's `path` matcher compares whole paths,
+   so this opens that one route and no other `/v1` path. The pull request also updates the two comments
+   that describe the routes.
+
+2. **Check the file before applying it**, inside the running gateway, which sees the host's file
+   through its bind mount:
+
+   ```
+   docker compose exec gateway caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+   ```
+
+   It should end with `Valid configuration`.
+
+3. **(b) Apply it, recreating only the gateway.** The service is `gateway`, its container
+   `agenerela-ollama-gateway`; `ollama` is left alone, so the models stay loaded and nothing else on
+   the machine is touched:
+
+   ```
+   docker compose up -d --force-recreate --no-deps gateway
+   ```
+
+   `--force-recreate` because the Caddyfile is a bind-mounted file that Caddy reads only when it
+   starts, and a plain `up -d` sees no change to the compose file. `--no-deps` keeps `ollama` out of
+   it. `docker compose ps` should then show both containers up.
+
+4. **(e) Check it worked**, from the laptop, under the 5080 lock like any request, once a decision
+   model is pulled (`python tools/ollama-server/ollama_remote.py pull tev1:4b`):
+
+   ```
+   python tools/ollama-server/ollama_remote.py systemone tev1:4b
+   ```
+
+   This is a new `ollama_remote.py` command in this pull request. It asks one `choice` question and
+   prints the choice and its probabilities:
+
+   | Output | Meaning |
+   |---|---|
+   | `tev1:4b: choice move_to, probabilities {...}` | It works |
+   | `/v1/systemone is not exposed through the gateway` | The gateway still runs the old file: repeat step 3 |
+   | An error naming the model | The route works, but that model has not been pulled |
+
+**(f) What the route changes for security.**
+- A key holder can already run any pulled model through `/api/chat` and `/api/generate`. The new route
+  adds the same kind of thing: inference on pulled models, in the decision-model format.
+- It adds no way to create, delete, copy or push a model, or to upload a blob, and opens no other
+  `/v1` route.
+- Two differences from `/api/chat`:
+  - One request can carry up to 64 questions, which Ollama scores together. That is more work per
+    request, but within the same use of the GPU.
+  - Decision models such as `d1` take base64 images, as `/api/chat` already does for vision models.
+- The gateway puts no limit on request size for any route, and Ollama's `tev1` page gives 64 KiB as
+  the route's own limit.
+- The key is still required, and the access log still drops headers.
+
+**One model may not run on this machine at all.** `strands-decider`'s Ollama page says it "requires
+Ollama 0.40.0 or later on Apple silicon Macs", and its tags are MLX and NVFP4 builds. The Linux
+container on the 5080 may refuse it whatever the gateway allows. `tev1` and `d1` give no platform
+limit on their pages.
 
 ## Background: other ways to decide without generating (survey)
 
