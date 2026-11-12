@@ -75,8 +75,12 @@ While the version stays `0.x`, the public API may change in any release.
   one. A strategy keeps outcomes by implementing the new optional `IRemembersOutcomes`, which
   `RollingHistory` does. `MemoryExchange.Outcome` saves it, and `RollingHistory.SnapshotVersion` is
   now 2; version 1 snapshots still import. Off by default: nothing changes the prompt unless
-  `Remembers` is set. Unmeasured so far: GreyBoxStrategy's A/B run on `qwen3.5:4b` is owed
-  (`docs/live-runs.md`), and `qwen3.5:2b` is not to be measured with it.
+  `Remembers` is set, and the default stays `Whole`. Measured on 11 November 2026 in
+  GreyBoxStrategy, `qwen3.5:4b`, 20 games an arm: without its remembered statements the 4B's
+  statements named the move's target far less often (72% to 33% under `Move`, 43% under
+  `MoveAndOutcome`) and started copying their persona's rule, while the repetition and invented
+  grievances the option was meant to stop were already rare (5% and 1.4%) and did not move.
+  `qwen3.5:2b` was not measured. See `findings.md`.
 
 - **Two prompt options, both off by default** (#244 items 5 and 8).
   - `DecideOptions.StatementRulesWording` (and `PromptOptions.StatementRulesWording`) picks how the

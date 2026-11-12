@@ -732,8 +732,11 @@ Found by stage 2, from the runs above:
   move alone (`+memory-move`) or the move and the report's line for it (`+memory-outcome`), which
   `CountryAgent.Learn` attaches once the turn resolves. Note that each remembered stimulus already
   carries the next turn's facts ("Our attack on ashby failed"), so part of the outcome was always
-  there. The scorecard counts invented grievances to measure it. The A/B on `qwen3.5:4b` is owed;
-  the 2B will not be measured.
+  there. **Measured on `qwen3.5:4b`, and it does not help** (11 November, 20 games an arm, findings): with
+  personas and the paired schema, repetition (5%) and invented grievances (1.4%) were already rare
+  and did not move, while without the remembered statements the new ones named their target far
+  less often (72% to 33% under `+memory-move`, 43% under `+memory-outcome`) and began copying the
+  persona's rule. The seat keeps the whole decision. The 2B was not measured.
 - **N8. The legal pairs reach a local model as a list, not as moves.** `LegalTargets = PerTarget`
   annotates the system prompt's target list (`- fenmark (for attack): neutral, garrison 13.`). The
   same pairs as a sentence among the facts (`Moves open to us: attack fenmark or westmarch; ...`)

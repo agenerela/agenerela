@@ -208,8 +208,12 @@ memory holds the decision, or will once it is settled:
   not implement `IRemembersOutcomes`.
 
 Under `Whole` and `Move` an outcome is kept and saved but never sent, so attaching outcomes changes
-no prompt by default. Which setting helps is unmeasured: GreyBoxStrategy's A/B run on `qwen3.5:4b`
-is owed (`docs/live-runs.md`), and the 2B will not be measured in it. No setting is per call, because what a memory
+no prompt by default. **Measured, and `Whole` stays the default.** In GreyBoxStrategy on `qwen3.5:4b`
+(11 November 2026, 20 games an arm), leaving the statements out made the model's new statements
+name the move's target far less often (72% to 33% under `Move`, 43% under `MoveAndOutcome`), name
+someone else more often, and copy their persona's rule: the remembered statements are examples
+the model follows. The repetition and invented grievances it was meant to stop were already rare
+and did not change. The 2B was not measured. The wiki's `findings.md` has the numbers. No setting is per call, because what a memory
 holds is the memory's to say, and a strategy of the Memory area's own decides it for itself.
 
 ## Saving memory with the game: `IExportsMemory`
