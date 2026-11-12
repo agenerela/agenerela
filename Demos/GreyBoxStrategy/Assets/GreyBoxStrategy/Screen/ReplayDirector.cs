@@ -25,6 +25,8 @@ namespace GreyBoxStrategy.Realm
         [SerializeField] private bool playOnStart = true;
         [Tooltip("Playback speed at start: 1, 2 or 4.")]
         [SerializeField] private float speed = 1;
+        [Tooltip("When it is set and playing live, the screen follows a live game instead of the recording.")]
+        [SerializeField] private LiveGame live;
 
         private ReplayGame game;
         private ScreenUI ui;
@@ -39,12 +41,20 @@ namespace GreyBoxStrategy.Realm
         private Vector2Int lastSize;
 
         /// <summary>For the Unity CLI: where the playback is, as "turn 3, event 4 of 9".</summary>
+        public string LiveStatus => live == null ? "no live source" : live.Status + $", {game?.Turns.Count ?? 0} turns logged, log {live.LogPath}";
+        public LiveGame Live => live;
         public string Position => game == null ? "not built" : $"turn {(turnIndex < game.Turns.Count ? game.Turns[turnIndex].Turn : game.Turns.Count)}, event {eventIndex}";
         public ReplayGame Game => game;
 
         private void Start()
         {
-            game = ReplayBuilder.Build(Recording.Parse(recording.text));
+            bool isLive = live != null && live.PlayLive;
+            if (isLive)
+            {
+                live.Begin();
+                game = ReplayBuilder.Build(Recording.FromDecisionLog(live.Lines(), live.Seed, live.Players), partial: true);
+            }
+            else game = ReplayBuilder.Build(Recording.Parse(recording.text));
             cam = Camera.main;
             map.Build();
             FitCamera();
@@ -284,10 +294,33 @@ namespace GreyBoxStrategy.Realm
         /// <summary>Reading time for a banner at 1×: 1.5 s plus 40 ms a character (the design page).</summary>
         private static float Reading(string line) => string.IsNullOrEmpty(line) ? 0.6f : 1.5f + 0.04f * line.Length;
 
+        /// <summary>
+        /// The turns ready to play. For a live game, a turn is ready once the next council has begun
+        /// or the game is over: only then has every move of it landed and been logged.
+        /// </summary>
+        private int ReadyTurns()
+        {
+            if (live == null || !live.PlayLive) return game.Turns.Count;
+            game = ReplayBuilder.Build(Recording.FromDecisionLog(live.Lines(), live.Seed, live.Players), partial: true);
+            if (live.Finished || game.Result != null) return game.Turns.Count;
+            return Math.Max(0, game.Turns.Count - 1);
+        }
+
         private IEnumerator Play()
         {
-            for (turnIndex = 0; turnIndex < game.Turns.Count; turnIndex++)
+            for (turnIndex = 0; ; turnIndex++)
             {
+                // Live: wait for the council, with the thinking indicator, until the turn has resolved.
+                while (live != null && live.PlayLive && turnIndex >= ReadyTurns() && !live.Finished)
+                {
+                    if (live.StopAfterTurns > 0 && turnIndex >= live.StopAfterTurns) { live.Stop(); break; }
+                    ui.SetTurn(turnIndex + 1, "Council");
+                    ui.SetThinking(true);
+                    yield return new WaitForSeconds(1f);
+                }
+                if (live != null && live.PlayLive) ReadyTurns();
+                ui.SetThinking(false);
+                if (turnIndex >= game.Turns.Count) break;
                 var turn = game.Turns[turnIndex];
                 ui.SetTurn(turn.Turn, "Upkeep");
                 Show(turn.Start, null);
@@ -318,7 +351,8 @@ namespace GreyBoxStrategy.Realm
                     Current = "";
                 }
             }
-            ui.SetTurn(game.Result.Turns, $"{CountryLook.NameOf(game.Result.Winner)} wins");
+            if (game.Result != null) ui.SetTurn(game.Result.Turns, $"{CountryLook.NameOf(game.Result.Winner)} wins");
+            else ui.SetTurn(game.Turns.Count, live != null && live.Error != null ? "live game stopped: " + live.Error : "stopped");
             playing = false;
             ui.SetPlaying(false, speed);
         }

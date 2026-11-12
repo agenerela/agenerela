@@ -111,6 +111,39 @@ namespace GreyBoxStrategy.Replay
             return rec;
         }
 
+        /// <summary>
+        /// A recording from the framework's decision log as it is being written: the lines of a
+        /// <c>decisions.jsonl</c> (<c>DecisionLog</c>), the same conversion as
+        /// <c>ArtSource/export_recording.py</c>. Each decision keeps its "Decided" record with the
+        /// execution of its "Executed" one.
+        /// </summary>
+        public static Recording FromDecisionLog(IEnumerable<string> lines, int seed, Dictionary<string, RecordedPlayer> players, string title = null)
+        {
+            var rx = new System.Text.RegularExpressions.Regex(@"^seed-(\d+)-turn-(\d+)-(\w+)");
+            var decided = new List<JObject>();
+            var executed = new Dictionary<string, JToken>(StringComparer.Ordinal);
+            foreach (string line in lines)
+            {
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                JObject o;
+                try { o = JObject.Parse(line); } catch (Newtonsoft.Json.JsonReaderException) { continue; } // a line still being written
+                var m = rx.Match((string)o["chainId"] ?? "");
+                if (!m.Success || int.Parse(m.Groups[1].Value) != seed) continue;
+                o["turn"] = int.Parse(m.Groups[2].Value);
+                o["moment"] = m.Groups[3].Value;
+                string stage = (string)o["stage"];
+                if (stage == "Executed") executed[(string)o["chainId"] + "|" + (string)o["agentId"]] = o["execution"];
+                else if (stage == "Decided") decided.Add(o);
+            }
+            var rec = new Recording { Seed = seed, Title = title ?? $"Live game, seed {seed}", Source = "live", Players = players };
+            foreach (var o in decided.OrderBy(o => (int)o["turn"]).ThenBy(o => (string)o["moment"] != "council").ThenBy(o => (long?)o["sequence"] ?? 0))
+            {
+                if (executed.TryGetValue((string)o["chainId"] + "|" + (string)o["agentId"], out var ex)) o["execution"] = ex;
+                rec.Decisions.Add(ParseDecision(o));
+            }
+            return rec;
+        }
+
         private static RecordedDecision ParseDecision(JObject o)
         {
             var decision = o["decision"] as JObject;
