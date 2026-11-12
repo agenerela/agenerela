@@ -6,6 +6,8 @@
     python tools/ollama-server/ollama_remote.py unload --all    unload every resident model
     python tools/ollama-server/ollama_remote.py warm <model>    load a model now and say how long it took
     python tools/ollama-server/ollama_remote.py pull <model>    have the server download a model
+    python tools/ollama-server/ollama_remote.py systemone <model>  ask a decision model one question
+                                                    on /v1/systemone, to check the route works
 
 Configuration comes from the environment, or from tools/ollama-server/.env:
     AGENERELA_OLLAMA_URL      the gateway, such as http://192.168.1.50:11436
@@ -140,7 +142,16 @@ def ps(server):
 
 def unload(server, names):
     for name in names:
-        server.post("/api/generate", {"model": name, "keep_alive": 0}, timeout=60)
+        try:
+            server.post("/api/generate", {"model": name, "keep_alive": 0}, timeout=60)
+        except Failure as e:
+            # A decision model with a trained head (d1, strands-decider) has no generate; it is
+            # unloaded on its own route, which the gateway passes once the Caddyfile allows it.
+            if "does not support generate" not in str(e):
+                raise
+            server.post("/v1/systemone", {"model": name, "keep_alive": 0, "state": "unload",
+                                          "questions": {"q": {"type": "noul", "instructions": "Unload."}}},
+                        timeout=60)
     deadline = time.time() + 30
     while True:
         left = [m.get("name") for m in resident(server) if any(same_model(m.get("name"), n) for n in names)]
@@ -165,6 +176,21 @@ def warm(server, name):
     started = time.time()
     server.post("/api/generate", {"model": name, "options": {"num_ctx": 4096}}, timeout=600)
     print(f"{name} loaded in {time.time() - started:.1f} s")
+
+
+def systemone(server, name):
+    """One choice question on /v1/systemone, the route decision models answer on (Ollama 0.35 and later)."""
+    body = {"model": name, "state": 'Player: "Meet me at the bridge."',
+            "questions": {"action": {"type": "choice",
+                                     "instructions": "Which action should the guard take now?",
+                                     "criteria": {"move_to": "Walk to a place.",
+                                                  "follow_player": "Walk behind the player wherever they go.",
+                                                  "none": "Take no action."}}}}
+    started = time.time()
+    reply = server.post("/v1/systemone", body, timeout=600)
+    answer = (reply.get("answers") or {}).get("action") or {}
+    print(f"{name}: choice {answer.get('choice')}, probabilities {answer.get('probabilities')}, "
+          f"{time.time() - started:.2f} s (the first call includes loading)")
 
 
 def pull(server, name):
@@ -214,6 +240,8 @@ def main(argv):
             warm(server, rest[0])
         elif command == "pull" and len(rest) == 1:
             pull(server, rest[0])
+        elif command == "systemone" and len(rest) == 1:
+            systemone(server, rest[0])
         else:
             print(__doc__.strip(), file=sys.stderr)
             return 2
