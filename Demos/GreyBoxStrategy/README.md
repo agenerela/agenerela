@@ -835,7 +835,21 @@ the decision behind it in six numbered sections, from the recorded telemetry onl
 
 **The map** is a 4096 × 2304 master with open sea on every side (`ArtSource/sea-chart-map.png`). It is codex-image's 1672 × 941 painting upscaled, so its detail is still the 1672 px original's. The province maps are baked at 2048 × 1152, and `provinces.json` records the land's bounds, which the camera frames.
 
-Slice 3 plays a live game.
+**A live game** (slice 3): the Watch object's `LiveGame` component, off by default, plays five
+`qwen3.5:4b` persona seats on the default arm, through the game's own `TableRunner`. The
+framework's `DecisionLog` writes every decision to `Logs/Live/`. The screen rebuilds the replay
+from that log as it grows. It plays a turn once the next council has begun or the game is over,
+so no turn is shown before every move of it has landed, and while it waits, the council's
+thinking indicator shows.
+
+The server comes from `AGENERELA_OLLAMA_URL` and `AGENERELA_OLLAMA_API_KEY` in Unity's
+environment. Take `.scratch/ollama-5080-lock` first.
+
+Checked on 11 November on the RTX 5080: a short game, then a full one, seed 102, which Ilvar won
+by domination on turn 24. The screen followed both, guard containments included. There are no
+timing claims from these runs. A short check's "stop after N turns" now counts the turns the
+model has played; the first run counted played-back turns, so the model went on to 21. The fix
+is covered by a review of the code, not yet by a live run.
 
 ## Layout
 

@@ -317,6 +317,8 @@ namespace GreyBoxStrategy.Realm
         {
             if (live == null || !live.PlayLive) return game.Turns.Count;
             game = ReplayBuilder.Build(Recording.FromDecisionLog(live.Lines(), live.Seed, live.Players), partial: true);
+            // A short live check stops the model once it has played that many turns, not when playback gets there.
+            if (live.StopAfterTurns > 0 && game.Turns.Count >= live.StopAfterTurns && !live.Finished) live.Stop();
             if (live.Finished || game.Result != null) return game.Turns.Count;
             return Math.Max(0, game.Turns.Count - 1);
         }
@@ -328,7 +330,6 @@ namespace GreyBoxStrategy.Realm
                 // Live: wait for the council, with the thinking indicator, until the turn has resolved.
                 while (live != null && live.PlayLive && turnIndex >= ReadyTurns() && !live.Finished)
                 {
-                    if (live.StopAfterTurns > 0 && turnIndex >= live.StopAfterTurns) { live.Stop(); break; }
                     ui.SetTurn(turnIndex + 1, "Council");
                     ui.SetThinking(true);
                     yield return new WaitForSeconds(1f);
