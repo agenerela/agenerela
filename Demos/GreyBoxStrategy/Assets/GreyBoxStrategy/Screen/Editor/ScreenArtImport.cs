@@ -37,7 +37,8 @@ namespace GreyBoxStrategy.Realm.Editor
             {
                 t.sRGBTexture = true;
                 t.filterMode = FilterMode.Bilinear;
-                t.mipmapEnabled = name == "sea-chart-map";
+                t.mipmapEnabled = name == "sea-chart-map" || name == "sea-tile";
+                if (name == "sea-tile") t.wrapMode = TextureWrapMode.Repeat;
             }
         }
     }

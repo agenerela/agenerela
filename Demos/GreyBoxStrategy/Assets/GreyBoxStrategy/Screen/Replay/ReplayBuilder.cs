@@ -314,6 +314,7 @@ namespace GreyBoxStrategy.Replay
                 throw new InvalidOperationException($"The recording has no {(envoy ? "envoy" : "council")} decision for {r.CountryId} on turn {r.Turn}: it is from a different game or different rules.");
             var d = q.Dequeue();
             answered[r] = d;
+            d.OfferedMoves = r.Legal.Select(m => m.ToString()).ToList();
             if (!envoy) council[r.Turn + "|" + r.CountryId] = d;
             if (envoy) return d.Action == Actions.AcceptPeace ? new Move(Actions.AcceptPeace) : new Move(Actions.RefusePeace);
             return new Move(d.Action ?? Actions.None, d.HasTarget ? d.Target : null);

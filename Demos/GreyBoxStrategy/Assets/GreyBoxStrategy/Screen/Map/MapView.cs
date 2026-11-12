@@ -20,6 +20,8 @@ namespace GreyBoxStrategy.Realm
         [SerializeField] private Texture2D provinceIds;
         [SerializeField] private Texture2D provinceEdge;
         [SerializeField] private TextAsset provincePoints;
+        [SerializeField] private Shader seaShader;
+        [SerializeField] private Texture2D seaTile;
 
         private Material material;
         private Texture2D state;
@@ -61,6 +63,22 @@ namespace GreyBoxStrategy.Realm
             mesh.RecalculateBounds();
             gameObject.AddComponent<MeshFilter>().sharedMesh = mesh;
             gameObject.AddComponent<MeshRenderer>().sharedMaterial = material;
+
+            // The open sea behind it, far wider than any window, so the map fills the screen edge to edge.
+            if (seaShader != null && seaTile != null)
+            {
+                var sea = new GameObject("OpenSea");
+                sea.transform.SetParent(transform, false);
+                sea.transform.localPosition = new Vector3(0, 0, 1);
+                sea.transform.localScale = new Vector3(8, 8, 1);
+                seaTile.wrapMode = TextureWrapMode.Repeat;
+                sea.AddComponent<MeshFilter>().sharedMesh = mesh;
+                var seaMat = new Material(seaShader) { name = "SeaBackdrop (runtime)" };
+                seaMat.SetTexture("_MainTex", seaTile);
+                seaMat.SetFloat("_TileUnits", s.y * 0.42f);
+                var r = sea.AddComponent<MeshRenderer>(); r.sharedMaterial = seaMat; r.sortingOrder = -10;
+                GetComponent<MeshRenderer>().sortingOrder = 0;
+            }
         }
 
         private void ReadIds()

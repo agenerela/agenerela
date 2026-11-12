@@ -63,6 +63,10 @@ namespace GreyBoxStrategy.Replay
         public string Observations;
         public string StimulusTurn;
         public List<string> OfferedActions = new List<string>();
+        /// <summary>The moves the game offered, "attack harrow", filled in by the replay from the request it answered.</summary>
+        public List<string> OfferedMoves = new List<string>();
+        /// <summary>The exchanges of memory sent, as the request carried them.</summary>
+        public int HistoryEntries;
         /// <summary>The whole record, for anything the screen shows later.</summary>
         public JObject Raw;
 
@@ -151,6 +155,7 @@ namespace GreyBoxStrategy.Replay
                 d.TargetsUnavailable = tu.Select(x => new RecordedUnavailable
                     { Action = (string)x["action"], Target = (string)x["target"], Reason = (string)x["reason"] }).ToList();
             if (req?["actions"] is JArray acts) d.OfferedActions = acts.Select(x => (string)x).ToList();
+            if (req?["history"] is JArray hist) d.HistoryEntries = hist.Count;
             return d;
         }
     }

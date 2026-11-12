@@ -808,7 +808,24 @@ On the screen:
 unity command script eval -- --code 'return GreyBoxStrategy.Realm.Editor.ScreenSceneBuilder.Build();'
 ```
 
-Slice 2 adds the decision inspector over the same recorded decisions; slice 3 plays a live game.
+**The decision inspector** (slice 2) opens from any chronicle line or speech banner. It shows
+the decision behind it in six numbered sections, from the recorded telemetry only:
+- what the model answered (its raw reply);
+- the moves the game offered, with the choice marked, and every move not offered with its reason;
+- the standing and turn facts it was sent;
+- the guards: schema legality, target grounding against its 60% threshold, and the re-check when
+  the move landed;
+- memory;
+- model, tokens, and queue time against model time.
+
+`DecisionCard` builds the inspector's content in plain C#. Esc closes it. The rest of the screen:
+- The painting fades into a tile of its own open sea (`Art/sea-tile.jpg`), so the map fills
+  any window edge to edge.
+- Tooltips work in play, since runtime UI Toolkit shows none of its own.
+- Below 1600 px the top bar turns compact.
+- The council's thinking indicator shows at each turn's start.
+
+Slice 3 plays a live game.
 
 ## Layout
 

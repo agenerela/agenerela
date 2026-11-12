@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &455223390
+--- !u!1 &1612010130
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,8 +127,110 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 455223392}
-  - component: {fileID: 455223391}
+  - component: {fileID: 1612010132}
+  - component: {fileID: 1612010131}
+  m_Layer: 0
+  m_Name: Map
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1612010131
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1612010130}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6484804eae5914f45ac14311ca613f12, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GreyBoxStrategy.Screen::GreyBoxStrategy.Realm.MapView
+  shader: {fileID: 4800000, guid: 65443457aae283a49b8328fa8acb284f, type: 3}
+  painting: {fileID: 2800000, guid: b23a5981b8ea6f2428c742296f2b3ca4, type: 3}
+  provinceIds: {fileID: 2800000, guid: b44e6aceb9e4f2e41886e2538f179a03, type: 3}
+  provinceEdge: {fileID: 2800000, guid: 229b71d4cb19445469ff06614c6a484b, type: 3}
+  provincePoints: {fileID: 4900000, guid: 604102556e2e03d47ae7b73867ca420f, type: 3}
+  seaShader: {fileID: 4800000, guid: 04b77bbfc10c0364c9a6a349d743bae9, type: 3}
+  seaTile: {fileID: 2800000, guid: e525985db0c4ca1429d06e83476ea944, type: 3}
+--- !u!4 &1612010132
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1612010130}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2123995200
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2123995202}
+  - component: {fileID: 2123995201}
+  m_Layer: 0
+  m_Name: Watch
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2123995201
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2123995200}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19cf34dedc7d3cf49973c727a837ec89, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GreyBoxStrategy.Screen::GreyBoxStrategy.Realm.ReplayDirector
+  recording: {fileID: 4900000, guid: 499c0e3a36619ed4d9b39b33303c934e, type: 3}
+  map: {fileID: 1612010131}
+  style: {fileID: 7433441132597879392, guid: 5fbd7ae608f88854fb097051583479ec, type: 3}
+  theme: {fileID: -4733365628477956816, guid: 5584629805020754cbd635f9f9e4e137, type: 3}
+  portraits: {fileID: 2800000, guid: 241dfff30f7a9004782a4f907ef7d88f, type: 3}
+  playOnStart: 1
+  speed: 1
+--- !u!4 &2123995202
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2123995200}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2132517747
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2132517749}
+  - component: {fileID: 2132517748}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -136,13 +238,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!20 &455223391
+--- !u!20 &2132517748
 Camera:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 455223390}
+  m_GameObject: {fileID: 2132517747}
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
@@ -187,116 +289,16 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
---- !u!4 &455223392
+--- !u!4 &2132517749
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 455223390}
+  m_GameObject: {fileID: 2132517747}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: -10}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &561612212
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 561612214}
-  - component: {fileID: 561612213}
-  m_Layer: 0
-  m_Name: Map
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &561612213
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 561612212}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6484804eae5914f45ac14311ca613f12, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: GreyBoxStrategy.Screen::GreyBoxStrategy.Realm.MapView
-  shader: {fileID: 4800000, guid: 65443457aae283a49b8328fa8acb284f, type: 3}
-  painting: {fileID: 2800000, guid: b23a5981b8ea6f2428c742296f2b3ca4, type: 3}
-  provinceIds: {fileID: 2800000, guid: b44e6aceb9e4f2e41886e2538f179a03, type: 3}
-  provinceEdge: {fileID: 2800000, guid: 229b71d4cb19445469ff06614c6a484b, type: 3}
-  provincePoints: {fileID: 4900000, guid: 604102556e2e03d47ae7b73867ca420f, type: 3}
---- !u!4 &561612214
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 561612212}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1196377770
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1196377772}
-  - component: {fileID: 1196377771}
-  m_Layer: 0
-  m_Name: Watch
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1196377771
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1196377770}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 19cf34dedc7d3cf49973c727a837ec89, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: GreyBoxStrategy.Screen::GreyBoxStrategy.Realm.ReplayDirector
-  recording: {fileID: 4900000, guid: 499c0e3a36619ed4d9b39b33303c934e, type: 3}
-  map: {fileID: 561612213}
-  style: {fileID: 7433441132597879392, guid: 5fbd7ae608f88854fb097051583479ec, type: 3}
-  theme: {fileID: -4733365628477956816, guid: 5584629805020754cbd635f9f9e4e137, type: 3}
-  portraits: {fileID: 2800000, guid: 241dfff30f7a9004782a4f907ef7d88f, type: 3}
-  playOnStart: 1
-  speed: 1
---- !u!4 &1196377772
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1196377770}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -306,6 +308,6 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 455223392}
-  - {fileID: 561612214}
-  - {fileID: 1196377772}
+  - {fileID: 2132517749}
+  - {fileID: 1612010132}
+  - {fileID: 2123995202}

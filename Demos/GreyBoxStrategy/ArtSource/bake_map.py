@@ -12,6 +12,7 @@ Writes, into ../Assets/GreyBoxStrategy/Screen/Art/:
   province-ids.png   8-bit: index * 10 for land, 255 for sea (point-sampled)
   province-edge.png  8-bit: distance to the nearest province border or coast, 16 per pixel, capped
   provinces.json     each province's label point (0..1) and area in pixels
+  sea-tile.jpg       a seamless tile of open sea, for beyond the painting's edge
 """
 import numpy as np, json, base64, io, math
 from PIL import Image, ImageFilter
@@ -137,3 +138,25 @@ Image.fromarray(edge).save(OUT + "province-edge.png", optimize=True)
 json.dump({"width": W, "height": H, "provinces": [{"index": int(k), "x": v[0], "y": v[1], "area": v[2]} for k, v in sorted(pts.items())]},
           open(OUT + "provinces.json", "w"), indent=1)
 print("baked", OUT)
+
+# The open sea beyond the painting: the calmest square of pure sea (away from the compass rose),
+# mirrored into a seamless tile. The screen tiles it behind the painting, so the map fills any
+# window edge to edge and the land can sit in the space between the panels.
+img = Image.open("sea-chart-map.png").convert("RGB")
+grey = np.asarray(img.convert("L")).astype(float)
+S = 128
+cands = []
+for y in range(0, H - S, 8):
+    for x in range(0, W - S, 8):
+        if x + S > W * 0.78 and y + S > H * 0.5:
+            continue
+        if (ids[y:y + S, x:x + S] == 255).all():
+            cands.append((grey[y:y + S, x:x + S].std(), x, y))
+cands.sort()
+_, x, y = cands[0]
+patch = img.crop((x, y, x + S, y + S)).resize((200, 200), Image.LANCZOS)
+tile = Image.new("RGB", (400, 400))
+tile.paste(patch, (0, 0)); tile.paste(patch.transpose(Image.FLIP_LEFT_RIGHT), (200, 0))
+tile.paste(patch.transpose(Image.FLIP_TOP_BOTTOM), (0, 200)); tile.paste(patch.transpose(Image.ROTATE_180), (200, 200))
+tile.save(OUT + "sea-tile.jpg", quality=92)
+print("sea tile from", x, y)

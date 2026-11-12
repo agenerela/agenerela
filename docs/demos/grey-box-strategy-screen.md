@@ -630,6 +630,14 @@ they are designed.
 
 ### In the game so far, and their licences
 
+**The map's size, and the 4K master.** Today's painting is 1672 × 941, and it is upscaled at
+1920 × 1080. Beyond its edge a tile of its own sea is repeated, so a window of any shape is
+covered and the land can sit in the space between the panels. The master that replaces it should
+be **at least 4096 × 2304** (16:9), so it is sharp at 4K, with **open sea on every side**: about
+15% of the width left and right, and 10% top and bottom. That margin lets the camera shift the
+land into the free space without reaching the tiled sea, and a fresh sea tile is cut from it by
+`bake_map.py`. The province maps are baked again from the new painting; nothing else changes.
+
 What `Demos/GreyBoxStrategy/` ships for the screen (slice 1, #20), and under what terms. **Every
 row with "check" must be cleared before the game is sold.**
 
@@ -637,10 +645,11 @@ row with "check" must be cleared before the game is sold.**
 |---|---|---|---|
 | The sea-chart painting | `Assets/GreyBoxStrategy/Screen/Art/sea-chart-map.jpg`, source `ArtSource/sea-chart-map.png` | OpenAI's image model through the `codex-image` skill, 11 November 2026 | Generated; OpenAI's terms assign the output to the user, but whether it can be used commercially has to be **checked** before shipping. A 4K master replaces it |
 | Ten persona faces | `Screen/Art/persona-portraits.jpg`, source `ArtSource/persona-portraits.png` | The same, one 5 × 2 sheet | The same: **check** |
+| The open sea beyond the painting | `Screen/Art/sea-tile.jpg` | Cut by `ArtSource/bake_map.py` from the painting's calmest open sea and mirrored into a seamless tile | The painting's: **check** |
 | Province id map, edge field, label points | `Screen/Art/province-*.png`, `provinces.json` | Baked by `ArtSource/bake_map.py` from the painting and the rule graph | Ours |
 | The shader, crests and icons | `Screen/Map/PaintedMap.shader`, `Screen/UI/CountryLook.cs` | Code: crests and icons are drawn by `Painter2D` | Ours |
 | Fonts | none bundled | The OS's own serif (Palatino Linotype, Book Antiqua, Georgia or Cambria), loaded at run time | Not shipped, so nothing to licence. Open-licence (SIL OFL) fonts replace them as files, with their licence beside them |
-| The recorded game | `Screen/Replays/seed-0004-personas-4b.json` | Exported from the v248 persona 4b table run by `ArtSource/export_recording.py`; the statements are qwen3.5:4b's | Ours; the model's output is under the Qwen licence's terms for outputs, to **check** if statements ever ship as content |
+| The recorded game, slice 2's inspector content | `Screen/Replays/seed-0004-personas-4b.json` | Exported from the v248 persona 4b table run by `ArtSource/export_recording.py`; the statements are qwen3.5:4b's | Ours; the model's output is under the Qwen licence's terms for outputs, to **check** if statements ever ship as content |
 
 ## Building it
 
