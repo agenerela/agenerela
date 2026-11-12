@@ -11,7 +11,7 @@
 //   _EdgeTex   distance to the nearest border, 16 per pixel (bilinear)
 //   _StateTex  32 x 4, one column per province: row 0 owner colour + owner slot, row 1 the
 //              colour it had before a capture, row 2 (front, fall, capturing, selected),
-//              row 3 (reach highlight, dim, -, -)
+//              row 3 (reach highlight, dim, 1 - wash strength for the map mode, -)
 //   _SpreadTex distance from the attacker's border inside the province being captured, 0..1
 Shader "GreyBoxStrategy/PaintedMap"
 {
@@ -148,12 +148,12 @@ Shader "GreyBoxStrategy/PaintedMap"
                         else owned = false;
                     }
 
-                    float reach = extra.r; float dimOthers = extra.g;
+                    float reach = extra.r; float dimOthers = extra.g; float strength = 1 - extra.b;
                     if (owned)
                     {
                         tint = wash;
-                        tintA = saturate((0.52 + 0.34 * pool) * (0.82 + 0.36 * n) * washScale * (1 - 0.8 * dimOthers));
-                        if (inkA == 0) { ink = wash * 0.45; inkA = (0.10 + 0.30 * pool) * (0.7 + 0.6 * n) * washScale * (1 - 0.8 * dimOthers); }
+                        tintA = saturate((0.52 + 0.34 * pool) * (0.82 + 0.36 * n) * washScale * (1 - 0.8 * dimOthers) * strength);
+                        if (inkA == 0) { ink = wash * 0.45; inkA = (0.10 + 0.30 * pool) * (0.7 + 0.6 * n) * washScale * (1 - 0.8 * dimOthers) * strength; }
                     }
                     else
                     {

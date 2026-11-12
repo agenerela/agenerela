@@ -16,7 +16,10 @@ Writes, into ../Assets/GreyBoxStrategy/Screen/Art/:
 """
 import numpy as np, json, base64, io, math
 from PIL import Image, ImageFilter
-im = np.asarray(Image.open("sea-chart-map.png").convert("RGB")).astype(np.int32)
+# The painting is the 4096 x 2304 master; the province maps are baked at half that, which is
+# plenty for data the shader samples (the painting keeps its own resolution).
+BAKE = (2048, 1152)
+im = np.asarray(Image.open("sea-chart-map.png").convert("RGB").resize(BAKE, Image.LANCZOS)).astype(np.int32)
 H, W, _ = im.shape
 r, g, b = im[...,0], im[...,1], im[...,2]
 lum = (r*3 + g*6 + b) / 10
@@ -135,14 +138,14 @@ for k in range(15):
     grown = grown.filter(ImageFilter.MaxFilter(3))
 edge = np.where(ids == 255, 0, np.minimum(255, dist.astype(np.int32) * 16 + 8)).astype(np.uint8)
 Image.fromarray(edge).save(OUT + "province-edge.png", optimize=True)
-json.dump({"width": W, "height": H, "provinces": [{"index": int(k), "x": v[0], "y": v[1], "area": v[2]} for k, v in sorted(pts.items())]},
+json.dump({"width": W, "height": H, "land": [round(x0 / W, 4), round(y0 / H, 4), round(x1 / W, 4), round(y1 / H, 4)], "provinces": [{"index": int(k), "x": v[0], "y": v[1], "area": v[2]} for k, v in sorted(pts.items())]},
           open(OUT + "provinces.json", "w"), indent=1)
 print("baked", OUT)
 
 # The open sea beyond the painting: the calmest square of pure sea (away from the compass rose),
 # mirrored into a seamless tile. The screen tiles it behind the painting, so the map fills any
 # window edge to edge and the land can sit in the space between the panels.
-img = Image.open("sea-chart-map.png").convert("RGB")
+img = Image.open("sea-chart-map.png").convert("RGB").resize(BAKE, Image.LANCZOS)
 grey = np.asarray(img.convert("L")).astype(float)
 S = 128
 cands = []

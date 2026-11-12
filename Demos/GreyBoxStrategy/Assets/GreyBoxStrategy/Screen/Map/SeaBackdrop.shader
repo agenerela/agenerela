@@ -35,7 +35,16 @@ Shader "GreyBoxStrategy/SeaBackdrop"
             }
             half4 frag(Varyings i) : SV_Target
             {
-                float3 c = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.world / _TileUnits).rgb;
+                // Two samples of the tile, the second larger and turned, mixed by slow noise, so the
+                // mirror tile never shows a repeating pattern.
+                float2 uv = i.world / _TileUnits;
+                float2 uv2 = mul(float2x2(0.81, -0.59, 0.59, 0.81), i.world / (_TileUnits * 1.73)) + 0.37;
+                float3 a = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv).rgb;
+                float3 b = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv2).rgb;
+                float2 p = i.world / (_TileUnits * 2.9);
+                float n = sin(p.x * 1.7 + sin(p.y * 1.3)) * 0.5 + 0.5;
+                n = smoothstep(0.25, 0.75, n * 0.7 + 0.3 * (sin(p.y * 2.3 + p.x * 0.7) * 0.5 + 0.5));
+                float3 c = lerp(a, b, n);
                 c = lerp(c, float3(0.036, 0.035, 0.03), _Flatten);
                 return half4(c * _Shade, 1);
             }

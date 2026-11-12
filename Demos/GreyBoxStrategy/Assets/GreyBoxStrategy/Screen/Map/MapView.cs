@@ -99,6 +99,13 @@ namespace GreyBoxStrategy.Realm
         private void ReadPoints()
         {
             var root = Newtonsoft.Json.Linq.JObject.Parse(provincePoints.text);
+            var s = SizeUnits;
+            if (root["land"] is Newtonsoft.Json.Linq.JArray land)
+            {
+                float x0 = (float)land[0], y0 = (float)land[1], x1 = (float)land[2], y1 = (float)land[3];
+                LandWorld = Rect.MinMaxRect((x0 - 0.5f) * s.x, (0.5f - y1) * s.y, (x1 - 0.5f) * s.x, (0.5f - y0) * s.y);
+            }
+            else LandWorld = new Rect(-s.x * 0.45f, -s.y * 0.45f, s.x * 0.9f, s.y * 0.9f);
             foreach (var p in (Newtonsoft.Json.Linq.JArray)root["provinces"])
                 labelUv[(int)p["index"]] = new Vector2((float)p["x"], 1 - (float)p["y"]);
         }
@@ -144,17 +151,23 @@ namespace GreyBoxStrategy.Realm
             ApplyState();
         }
 
-        /// <summary>Hatches the provinces in <paramref name="reach"/> and dims the rest, or clears both.</summary>
-        public void SetReach(ISet<int> reach, string focusOwner, IReadOnlyList<string> owners)
+        /// <summary>
+        /// A map mode's overlay: <paramref name="strength"/> scales each province's wash (null for
+        /// full), <paramref name="reach"/> hatches provinces, <paramref name="dim"/> fades the rest.
+        /// </summary>
+        public void SetOverlay(IReadOnlyList<float> strength, ISet<int> reach, ISet<int> dim)
         {
             for (int p = 0; p < 25; p++)
             {
-                bool on = reach != null && reach.Contains(p);
-                bool dim = reach != null && !on && owners[p] != focusOwner;
-                stateData[3 * StateColumns + p] = new Color32((byte)(on ? 255 : 0), (byte)(dim ? 255 : 0), 0, 0);
+                float k = strength == null ? 1 : Mathf.Clamp01(strength[p]);
+                stateData[3 * StateColumns + p] = new Color32((byte)(reach != null && reach.Contains(p) ? 255 : 0),
+                    (byte)(dim != null && dim.Contains(p) ? 255 : 0), (byte)Mathf.RoundToInt((1 - k) * 255), 0);
             }
             ApplyState();
         }
+
+        /// <summary>The land's bounding box in world units, from the bake.</summary>
+        public Rect LandWorld { get; private set; }
 
         private void ApplyState()
         {

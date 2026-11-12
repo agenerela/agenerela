@@ -825,6 +825,16 @@ the decision behind it in six numbered sections, from the recorded telemetry onl
 - Below 1600 px the top bar turns compact.
 - The council's thinking indicator shows at each turn's start.
 
+**Panels, map modes and following** (still on the replay):
+- **Clicking a province** opens its panel: owner, how it defends (garrison or 70% of the owner's army, forts, capital), income, borders, every country that may attack it with the share of rolls it wins or why it may not, and its history.
+- **Clicking a country** (its crest or a realm row) opens its panel: the persona's description and knowledge from `Personas.cs`, the treasury, the facts it last read, the moves it was last offered, and its decisions.
+- **Follow** in the country panel turns the top bar into that country's full values (provinces, army, treasury, income, upkeep, stability, wars, truces, places kept for buildings and trade), with the rivals compact on the right. This is the groundwork for rule mode's own bar.
+- **Map modes** (keys 1 to 4): Political, the main one, keeps capitals, forts and names; Armies; Forts; Reach, which hatches the followed country's legal attacks with the share of rolls each wins and dims the rest.
+- **Diplomacy** (D) is a 5 × 5 matrix of war, truce and peace, with borders and this turn's envoys.
+- `RealmQueries` answers these from `GameRules` and the map, and a test checks its reach against every attack the game offered in the recorded game.
+
+**The map** is a 4096 × 2304 master with open sea on every side (`ArtSource/sea-chart-map.png`). It is codex-image's 1672 × 941 painting upscaled, so its detail is still the 1672 px original's. The province maps are baked at 2048 × 1152, and `provinces.json` records the land's bounds, which the camera frames.
+
 Slice 3 plays a live game.
 
 ## Layout

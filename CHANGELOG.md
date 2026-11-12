@@ -29,6 +29,18 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **GreyBoxStrategy, the screen's panels and map modes** (#20, still on the replay).
+  - **Province and country panels** on click: defence, who may attack a province and why not,
+    and a country's persona, treasury, last facts, offered moves and decisions.
+  - **Map modes:** Political, the main one, keeps capitals and forts; Armies; Forts; and Reach,
+    which shows the followed country's legal attacks with win chances.
+  - **A diplomacy matrix.**
+  - **Following a country** turns the top bar into its full values, the groundwork for rule mode.
+  - **The map** is a 4096 × 2304 master with open sea on every side, upscaled from codex-image's
+    painting and re-baked; the sea beyond it no longer repeats visibly.
+  - `RealmQueries`' reach is checked against every attack the recorded game offered. 3 new
+    EditMode tests.
+
 - **GreyBoxStrategy, stage 3, slice 2: the decision inspector** (#20). Any chronicle line or
   speech banner opens the decision behind it. It shows six sections, from the recorded telemetry
   alone: the model's raw answer; the game's offered moves with the choice marked, and those not
