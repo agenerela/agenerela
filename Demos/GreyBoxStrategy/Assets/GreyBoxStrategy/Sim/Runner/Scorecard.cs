@@ -27,6 +27,8 @@ namespace GreyBoxStrategy
         /// <summary>Whether a guard turned it into none.</summary>
         public bool Contained;
         public string Statement;
+        /// <summary>For an envoy's answer, the country that offered peace; null otherwise.</summary>
+        public string OfferedBy;
         /// <summary>The statement rules the seat's persona gave it, or null: what "copies its statement rule" compares with.</summary>
         public string StatementRules;
     }
@@ -113,6 +115,8 @@ namespace GreyBoxStrategy
             ("voice", "copies a sentence of its rule", "Of the same statements, those that hold any one sentence of the rule of four words or more word for word, the whole rule included."),
             ("voice", "names its target", "Of targeted moves, statements that name the target: the words fit the deed."),
             ("voice", "contradicts its move", "Of targeted moves whose statement names a country or province, those that do not name the target: the words name someone else."),
+            ("voice", "claims land taken", "Statements saying someone took, seized or stole our land (ClaimsLandTaken): a grievance, true or not."),
+            ("voice", "invented grievance", "Statements claiming our land was taken by someone who took none of it earlier in the game: the countries named, else the move's counterpart, else anyone (gap N7)."),
             ("strength", "placement", "Mean rank by provinces at the end, 1 best, ties shared: strength between seats at the same table."),
             ("strength", "wins", "Games won by this seat kind."),
             ("strength", "provinces at the end", "Mean provinces held at the end."),
@@ -505,8 +509,76 @@ namespace GreyBoxStrategy
                 Add(S, group.Key, "targeted statements", targeted.Count);
                 Add(S, group.Key, "names its target", Share(named, targeted.Count));
                 Add(S, group.Key, "contradicts its move", Share(contradicts, naming));
+
+                int claims = 0, invented = 0;
+                foreach (var x in said)
+                {
+                    if (!ClaimsLandTaken(x.d.Statement)) continue;
+                    claims++;
+                    if (!GrievanceHappened(x.g, x.d)) invented++;
+                }
+                Add(S, group.Key, "claims land taken", Share(claims, said.Count));
+                Add(S, group.Key, "invented grievance", Share(invented, said.Count));
             }
         }
+
+        // A taking verb in the past, or as an accusation ("for taking", "is taking"), in the same
+        // sentence as our land or "from us". Not "we will take": a threat or a plan is no grievance.
+        private static readonly Regex Taking = new Regex(
+            @"\b(took|taken|seized|stole|stolen|grabbed|captured|conquered|robbed|for (taking|seizing|stealing|grabbing)|(?<!\bwe )(is|are|was|were|keeps?|kept) (taking|seizing|stealing|grabbing))\b",
+            RegexOptions.IgnoreCase);
+        private static readonly Regex OurLand = new Regex(
+            @"\b(our|my) (\w+ )?(land|lands|province|provinces|territory|territories|soil|border|borders|home|homes|homeland|fields|village|villages|town|towns)\b|\bfrom us\b",
+            RegexOptions.IgnoreCase);
+
+        /// <summary>
+        /// Whether a statement says someone took our land: one sentence with a taking verb in the past
+        /// or as an accusation (<c>took</c>, <c>stole</c>, <c>for taking</c>, <c>is seizing</c>) and our land
+        /// (<c>our land</c>, <c>my provinces</c>, <c>from us</c>). Mechanical, so approximate: it reads
+        /// "Valen has taken our land" and "peace from those who stole our land", and not "we will take
+        /// their land".
+        /// </summary>
+        public static bool ClaimsLandTaken(string statement)
+        {
+            if (string.IsNullOrWhiteSpace(statement)) return false;
+            foreach (string sentence in Regex.Split(statement, @"(?<=[.!?;])\s+"))
+                if (Taking.IsMatch(sentence) && OurLand.IsMatch(sentence)) return true;
+            return false;
+        }
+
+        /// <summary>
+        /// Whether a land grievance in <paramref name="d"/>'s statement could be true: someone it
+        /// accuses took a province from <paramref name="d"/>'s country on an earlier turn of the game.
+        /// The accused are the countries the statement names; with none, the move's counterpart (the
+        /// country targeted, the owner of the province targeted, or the envoy's offerer); with none of
+        /// those either, anyone.
+        /// </summary>
+        public static bool GrievanceHappened(ScoredGame g, SeatDecisionInfo d)
+        {
+            var world = g.Record.Game.World;
+            var countries = new HashSet<string>(world.CountryList.Select(c => c.Id), StringComparer.Ordinal);
+            var takers = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var report in g.Record.Reports.Where(r => r.Turn < d.Turn))
+                foreach (var o in report.Outcomes)
+                {
+                    var m = o.Request == null || o.Refused ? null : TookFrom.Match(o.Text ?? "");
+                    if (m != null && m.Success && m.Groups[2].Value == d.Country) takers.Add(o.Request.CountryId);
+                }
+
+            var accused = new HashSet<string>(Named(d.Statement, world).Where(countries.Contains), StringComparer.Ordinal);
+            accused.Remove(d.Country);
+            if (accused.Count == 0)
+            {
+                string counterpart = d.Moment == Moment.Envoy ? d.OfferedBy
+                    : d.AskedTarget != null && countries.Contains(d.AskedTarget) ? d.AskedTarget
+                    : g.Record.Game.Snapshots.FirstOrDefault(s => s.Turn == d.Turn)?.OwnerOf(d.AskedTarget);
+                if (counterpart != null && counterpart != d.Country) accused.Add(counterpart);
+            }
+            return accused.Count == 0 ? takers.Count > 0 : accused.Overlaps(takers);
+        }
+
+        // Game.Battle's line for a won attack: "took fenmark from orsk (34 against 21); lost 6".
+        private static readonly Regex TookFrom = new Regex(@"^took (\S+) from (\S+) \(");
 
         private static bool Takes(string action) => action != null && (Actions.TargetsProvince(action) || Actions.TargetsCountry(action));
 

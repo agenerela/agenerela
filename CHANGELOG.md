@@ -41,6 +41,17 @@ phase table and the open issues, not here.
   lead's answers to 28 design questions are recorded, each marked as met by the mock-up or not.
   Docs only.
 
+- **GreyBoxStrategy: what a remembered move holds, and invented grievances** (#244 item 4, #216
+  item 3, gap N7). After each turn resolves, `CountryAgent.Learn` attaches every landed move's
+  line from the resolution report (`"took fenmark from orsk (34 against 21); lost 6"`) to its
+  remembered decision through the framework's new `Agent.SetOutcome`. The model-seat modifiers
+  `+memory-move` and `+memory-outcome` set `RollingHistory.Remembers`. The default arm keeps the
+  whole decision, so no existing arm changes. The scorecard's voice section gains **claims land
+  taken** and **invented grievance**: a claim against a country that took none of our land
+  earlier that game. 6 new EditMode tests. Measured on `qwen3.5:4b`, 20 games an arm: both settings
+  made statements name their target far less often (72% to 33% and 43%) and contradict the move
+  more, beyond noise, while repetition (5%) and invented grievances (1.4%) were already rare and
+  did not move. The demo keeps the whole decision. `qwen3.5:2b` was not measured. See `findings.md`.
 - **GreyBoxStrategy: arms for #244's prompt options, and a rule-copy count** (#244 items 5 and 8).
   - The model-seat modifiers `+no-moves-line`, `+moves-sentence` (`LegalTargets = ObservationLine`),
     `+how-it-reads` and `+own-words` (`StatementRulesWording`).

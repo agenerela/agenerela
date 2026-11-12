@@ -513,8 +513,14 @@ player says of itself. Every run writes `scorecard.md` (with a one-line reason f
   permutation p (2,000 shuffles within each game). A table without personas is scored on placebo
   slots, so its η² shows what noise looks like.
 - **Voice:** statements given, length, repeated word for word, names its target, contradicts its
-  move, and for seats with statement rules, the statements that copy the whole rule or one sentence
-  of it (gap N9).
+  move, for seats with statement rules, the statements that copy the whole rule or one sentence
+  of it (gap N9), claims land taken, and **invented grievances** (since #244 item 4): statements
+  saying our land was taken by a country that took none of it earlier in the game. The accused are
+  the countries the statement names, else the move's counterpart (the country targeted, the owner
+  of the province targeted, the envoy's offerer), else anyone. The claim is matched mechanically
+  (`Scorecard.ClaimsLandTaken`: a taking verb in the past or as an accusation, and our land or
+  "from us", in one sentence), so it misses paraphrases; on #249's persona 4B logs it matched about
+  2% of statements, all of them real claims.
 - **Strength:** placement, wins, provinces at the end, knocked out.
 
 The all-script and all-random tables are the **reference points**: what a lively game and a
@@ -647,7 +653,8 @@ The tables (`Tables.Named`) are `models` (five model seats, no personas), `perso
 seats with personas), `two-models` (`-strategyModel2`; seats A, B, A, B, A, with personas),
 `model-vs-scripted`, `scripted` and `random`. A comma-separated seat list is also a table, such as
 `model,expansionist,cautious,random,model`. `-strategyPersonas on|off` overrides the persona
-setting. `-strategyArm` takes stage 2's arms and modifiers. Each run writes a `ModelReport` for each
+setting. `-strategyArm` takes stage 2's arms and modifiers, among them `+memory-move` and
+`+memory-outcome` for what a remembered move holds (gap N7). Each run writes a `ModelReport` for each
 model in `summary.md`, the scorecard files, `games.csv`, `model.csv`, `decisions.jsonl` and the game
 logs. From the editor: `StrategyTableMenu.Start(table, model, model2, arm, games, firstSeed,
 personas)`.
@@ -721,7 +728,15 @@ Found by stage 2, from the runs above:
   keeps each decision's JSON, statement included. The 4B repeated its own sentences word for word
   for turns on end, once claiming an army of 10 against the facts' 108. This is #216 item 3's other
   half: what to remember of a decision. The move, and what came of it, would help this game more
-  than the statement.
+  than the statement. **Now an option, off** (#244 item 4): `RollingHistory.Remembers` sends the
+  move alone (`+memory-move`) or the move and the report's line for it (`+memory-outcome`), which
+  `CountryAgent.Learn` attaches once the turn resolves. Note that each remembered stimulus already
+  carries the next turn's facts ("Our attack on ashby failed"), so part of the outcome was always
+  there. **Measured on `qwen3.5:4b`, and it does not help** (11 November, 20 games an arm, findings): with
+  personas and the paired schema, repetition (5%) and invented grievances (1.4%) were already rare
+  and did not move, while without the remembered statements the new ones named their target far
+  less often (72% to 33% under `+memory-move`, 43% under `+memory-outcome`) and began copying the
+  persona's rule. The seat keeps the whole decision. The 2B was not measured.
 - **N8. The legal pairs reach a local model as a list, not as moves.** `LegalTargets = PerTarget`
   annotates the system prompt's target list (`- fenmark (for attack): neutral, garrison 13.`). The
   same pairs as a sentence among the facts (`Moves open to us: attack fenmark or westmarch; ...`)

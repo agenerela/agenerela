@@ -19,6 +19,8 @@ namespace GreyBoxStrategy
         /// <summary>The <see cref="DecisionRound"/> it was decided in, by the round's id (its chain id); null when decided alone.</summary>
         public string Round;
         public Moment Moment;
+        /// <summary>For an envoy call, the country that offered peace; null otherwise.</summary>
+        public string OfferedBy;
         /// <summary>What the model answered, before any guard.</summary>
         public string ModelAction;
         public string ModelTarget;
@@ -172,6 +174,8 @@ namespace GreyBoxStrategy
         // A decision from a round is executed through that round, so its entry says what came of it.
         private readonly Dictionary<CountryRequest, (DecisionResult result, ModelDecision record, DecisionRound round)> pending =
             new Dictionary<CountryRequest, (DecisionResult, ModelDecision, DecisionRound)>();
+        // The decisions that landed this turn, by request, until the turn's report says what came of them.
+        private readonly Dictionary<CountryRequest, DecisionResult> landed = new Dictionary<CountryRequest, DecisionResult>();
 
         /// <param name="persona">A character for the ruler (<see cref="Personas"/>), in place of the country's one-line personality; null keeps stage 2's identity exactly.</param>
         public CountryAgent(World world, string countryId, ILLMProvider provider, ModelSeatOptions options = null, Persona persona = null)
@@ -195,7 +199,9 @@ namespace GreyBoxStrategy
                 Id = countryId,
                 MaxObservations = 12,
                 MemoryCommit = MemoryCommit.OnExecute,
-                Memory = new RollingHistory(6),
+                // What a remembered move holds (#244 item 4): the whole decision unless the arm says
+                // otherwise. Outcomes are attached either way (Learn); only MoveAndOutcome sends them.
+                Memory = new RollingHistory(6) { Remembers = Options.Remembers },
             };
             Agent.TargetSources.Add(new StrategyTargetSource(world, countryId));
             Agent.ObservationSources.Add(new StandingFactsSource(world, countryId, Options.MovesLine));
@@ -335,6 +341,7 @@ namespace GreyBoxStrategy
                 Persona = Persona?.Id,
                 Round = t?.ChainId,
                 Moment = request.Moment,
+                OfferedBy = request.OfferedBy,
                 ModelAction = result?.ModelDecision?.ActionId,
                 ModelTarget = result?.ModelDecision?.TargetId,
                 Action = result?.Decision?.ActionId,
@@ -410,7 +417,26 @@ namespace GreyBoxStrategy
             else Agent.Execute(entry.result, out outcome);
             entry.record.Execution = outcome.Status;
             entry.record.ExecutionReason = outcome.Reason;
+            // Remembered now (MemoryCommit.OnExecute), before the game has landed it: what came of
+            // it, a battle's result say, is attached once the turn resolves (Learn).
+            if (outcome.Succeeded) landed[request] = entry.result;
             return outcome.Succeeded ? null : outcome.Reason ?? "the agent refused it";
+        }
+
+        /// <summary>
+        /// Attaches what came of each move this seat landed this turn, the report's own line
+        /// (<c>"took fenmark from orsk (34 against 21); lost 6"</c>, <c>"orsk refused"</c>), to the
+        /// remembered decision through <see cref="Agent.SetOutcome"/> (#216 item 3). The memory sends
+        /// it only when <see cref="ModelSeatOptions.Remembers"/> is
+        /// <see cref="RememberedDecision.MoveAndOutcome"/>. Call after <see cref="Game.Resolve"/>.
+        /// </summary>
+        public void Learn(TurnReport report)
+        {
+            if (report == null) throw new ArgumentNullException(nameof(report));
+            foreach (var o in report.Outcomes)
+                if (o.Request != null && !o.Refused && landed.TryGetValue(o.Request, out var result))
+                    Agent.SetOutcome(result, o.Text);
+            landed.Clear();
         }
 
         /// <summary>
@@ -423,6 +449,7 @@ namespace GreyBoxStrategy
             foreach (var e in pending.Values)
                 if (e.round == null) Agent.Discard(e.result);
             pending.Clear();
+            landed.Clear();
         }
     }
 }
