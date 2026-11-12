@@ -628,6 +628,20 @@ when it is added ([decision 27](#the-leads-decisions-11-november-2026)). The lea
 add armies as pieces, development shown on the map, and music. They are not counted here until
 they are designed.
 
+### In the game so far, and their licences
+
+What `Demos/GreyBoxStrategy/` ships for the screen (slice 1, #20), and under what terms. **Every
+row with "check" must be cleared before the game is sold.**
+
+| Asset | Where | How it was made | Licence |
+|---|---|---|---|
+| The sea-chart painting | `Assets/GreyBoxStrategy/Screen/Art/sea-chart-map.jpg`, source `ArtSource/sea-chart-map.png` | OpenAI's image model through the `codex-image` skill, 11 November 2026 | Generated; OpenAI's terms assign the output to the user, but whether it can be used commercially has to be **checked** before shipping. A 4K master replaces it |
+| Ten persona faces | `Screen/Art/persona-portraits.jpg`, source `ArtSource/persona-portraits.png` | The same, one 5 × 2 sheet | The same: **check** |
+| Province id map, edge field, label points | `Screen/Art/province-*.png`, `provinces.json` | Baked by `ArtSource/bake_map.py` from the painting and the rule graph | Ours |
+| The shader, crests and icons | `Screen/Map/PaintedMap.shader`, `Screen/UI/CountryLook.cs` | Code: crests and icons are drawn by `Painter2D` | Ours |
+| Fonts | none bundled | The OS's own serif (Palatino Linotype, Book Antiqua, Georgia or Cambria), loaded at run time | Not shipped, so nothing to licence. Open-licence (SIL OFL) fonts replace them as files, with their licence beside them |
+| The recorded game | `Screen/Replays/seed-0004-personas-4b.json` | Exported from the v248 persona 4b table run by `ArtSource/export_recording.py`; the statements are qwen3.5:4b's | Ours; the model's output is under the Qwen licence's terms for outputs, to **check** if statements ever ship as content |
+
 ## Building it
 
 A suggested order of work for stage 3, each step with something to look at:

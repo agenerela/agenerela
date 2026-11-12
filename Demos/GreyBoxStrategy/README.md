@@ -9,7 +9,7 @@ with two temperaments, a random baseline, and a runner that plays whole games an
 decision. Stage 2 puts a framework `Agent` in one seat and measures a model there against the
 scripted AI; [its results are below](#stage-2-a-model-plays-a-country). Any seat can now be a
 model, a script or random, with personas; [the table of models](#models-at-one-table) scores them.
-Stage 3, the map and the screen, is next.
+Stage 3, the map and the screen, has begun: [watch mode plays back a recorded game](#the-screen-watch-mode-playing-back-a-recorded-game).
 
 ## Run it
 
@@ -776,6 +776,40 @@ Found by stage 2, from the runs above:
   was on 10 November, and is now the seat's default: it changes only the grammar a local model
   samples under, not what it reads.
 
+## The screen: watch mode playing back a recorded game
+
+Stage 3's first slice (working title **Painted Realm**; the design is
+[`docs/demos/grey-box-strategy-screen.md`](../../docs/demos/grey-box-strategy-screen.md)). Open
+`Assets/GreyBoxStrategy/Screen/Watch.unity` and press Play. It plays seed 4 of the v248 persona 4b
+table, in which Kesh, the proud ruler, wins by domination on turn 17, with every ruler's own words.
+**No model is called**:
+
+- The rules are deterministic per seed, so `ReplayBuilder` rebuilds the very game from the
+  recorded decisions (`Screen/Replays/*.json`), and refuses a recording that no longer fits the
+  rules rather than show a different game.
+- `ArtSource/export_recording.py` makes a recording from any table run's `decisions.jsonl`.
+
+On the screen:
+
+- **The map** is one quad and one shader (`Screen/Map/PaintedMap.shader`). A province id map, an
+  edge field and a 32 × 4 state texture drive it, so owners and the capture are numbers changing.
+  The id map is baked by `ArtSource/bake_map.py` from the painting and the rule graph, and checked
+  against it.
+- **The capture** plays as the design page times it: focus, strike, fall, spread from the
+  attacker's border with a wet front, settle, release.
+- **Around the map**, in UI Toolkit (`Screen/UI/`): the top bar, the realm list, the chronicle
+  with filters by country and kind, the speech banner at the capital, and time controls (Space,
+  N, +). Right or middle drag pans the map, and the wheel zooms.
+
+`ScreenSceneBuilder` builds the scene, so it is never edited by hand. Run it from the menu
+**GreyBoxStrategy → Build the watch-mode scene**, or from the Unity CLI:
+
+```bash
+unity command script eval -- --code 'return GreyBoxStrategy.Realm.Editor.ScreenSceneBuilder.Build();'
+```
+
+Slice 2 adds the decision inspector over the same recorded decisions; slice 3 plays a live game.
+
 ## Layout
 
 ```text
@@ -790,8 +824,17 @@ Assets/GreyBoxStrategy/
                       the A/B arms; Personas; TableRunner, the table of models
   Editor/             GreyBoxStrategy.Editor: the menus and the CLI entry points
   Tests/Editor/       GreyBoxStrategy.Tests.Editor
+  Screen/             GreyBoxStrategy.Screen: the screen (namespace GreyBoxStrategy.Realm)
+    Replay/           GreyBoxStrategy.Replay (noEngineReferences): Recording, ReplayBuilder, Chronicle
+    Map/              PaintedMap.shader, MapView
+    UI/               ScreenUI, CountryLook (crests and icons drawn by code), PaintedRealm.uss/.tss
+    Art/              the painting, the faces, the baked province maps
+    Replays/          recorded games to play back
+    Editor/           the art import settings, ScreenSceneBuilder
+    Tests/Editor/     GreyBoxStrategy.Screen.Tests.Editor
+ArtSource/            outside Assets: the art's sources and the scripts that bake and export
 ```
 
 
-The project was made from the Universal 2D template; the `SampleScene` it came with is unused until
-stage 3.
+The project was made from the Universal 2D template; the `SampleScene` it came with is unused. The
+screen's scene is `Screen/Watch.unity`.
