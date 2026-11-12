@@ -428,6 +428,13 @@ phase table and the open issues, not here.
 
 ### Fixed
 
+- **Painted Realm: fixes from the night's play-through** (#20).
+  - A move that is not offered shows its reason on hover again: disabled buttons got no hover,
+    so the reason never appeared.
+  - Once your country is out, the orders panel says so.
+  - A ruler's speech no longer sits under the open inspector.
+  - The README's Play it section opens with "What to try".
+
 - **The model-sweep kit no longer takes Unity Hub's CLI server for an Editor.** `sweep_one.sh`
   refused every model while `Unity Hub\resources\unity.exe serve` was running, since it counted
   any process named Unity. It now counts Editors only. `OLLAMA_SERVER_ENV` points a copy of the kit

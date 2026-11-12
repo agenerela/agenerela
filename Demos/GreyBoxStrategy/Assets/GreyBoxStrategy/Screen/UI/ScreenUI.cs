@@ -371,10 +371,10 @@ namespace GreyBoxStrategy.Realm
         private void PlaceBanner(Banner b)
         {
             // Above the capital, but kept in the space between the realm list and the chronicle, so
-            // no panel ever hides a ruler's words.
+            // no panel, the inspector included, ever hides a ruler's words.
             var p = ProvinceToPanel(b.Province);
             float half = Mathf.Max(60, b.Element.resolvedStyle.width) / 2, height = Mathf.Max(40, b.Element.resolvedStyle.height);
-            float minX = 248 + half, maxX = Root.layout.width - 356 - half;
+            float minX = 248 + half, maxX = Root.layout.width - (InspectorOpen ? 536 : 356) - half; // the inspector is wider than the chronicle
             b.Element.style.left = maxX > minX ? Mathf.Clamp(p.x, minX, maxX) : p.x;
             b.Element.style.top = Mathf.Max(50 + height, p.y - 26);
         }

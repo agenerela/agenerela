@@ -215,7 +215,8 @@
 .order-move:hover { background-color: rgb(70, 55, 34); }
 .order-move.on { background-color: rgb(70, 55, 34); border-color: rgb(210, 173, 98); }
 .order-move.pick { background-color: rgb(107, 82, 40); border-color: rgb(210, 173, 98); }
-.order-move:disabled { opacity: 0.4; }
+.order-move.off { opacity: 0.4; }
+.order-move.off:hover { background-color: rgb(46, 36, 25); }
 .order-move.wide { align-self: stretch; -unity-text-align: middle-left; margin-right: 0; }
 .target-chip { height: 22px; margin: 0 4px 4px 0; padding-left: 7px; padding-right: 7px; font-size: 12px; background-color: rgba(210, 173, 98, 0.1); border-width: 1px; border-color: rgba(201, 164, 90, 0.35); border-radius: 0; color: rgb(234, 223, 198); }
 .target-chip:hover { border-color: rgb(210, 173, 98); }
