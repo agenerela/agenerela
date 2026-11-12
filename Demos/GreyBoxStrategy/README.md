@@ -734,7 +734,7 @@ Found by stage 2, from the runs above:
   sentence (`Moves open to you: ...`) where the game's line stood, `+moves-sentence` here. On the
   interim evaluation set it scored below both the plain list and `PerTarget`: −6.4 and −6.7 points
   on the 2B, beyond noise, and −3.6 and −3.3 on the 4B (findings, "The legal moves as an observation
-  line"). Stage 2 here, the game's line against the framework's, is still owed.
+  line"). Stage 2 here, the game's line against the framework's, is still owed, on the 4B only.
 - **N9. A statement rule reads like a statement already given.** `PromptBuilder` writes
   `StatementRules` as `Your statement: <the rules>`. With a rule that opens with a noun phrase
   (`A trader's voice: profit, price or a deal. One sentence, under 25 words.`), qwen3.5:2b copies

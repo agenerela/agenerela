@@ -3420,7 +3420,9 @@ situations −9.2, all beyond; simple commands +6.2, within. Most of the breaks 
 into `attack_target wolf` or a `move_to`. Read as a list of things to do, the line pulls the 2B
 toward acting. On the 4B against `PerTarget`, situations −15.4 and events −9.2 are beyond.
 
-**GreyBoxStrategy stage 2.** OWED: one model seat against scripts, 30 games an arm, on both models.
+**GreyBoxStrategy stage 2.** OWED: one model seat against scripts, 30 games an arm, on `qwen3.5:4b`
+only. The lead's rule for long game runs is the 4B only, so the moves sentence in the game is
+measured on the 4B alone.
 The game's own moves line (`default`) runs against the framework's line with the game's removed
 (`default+no-moves-line+moves-sentence`), measuring attack share, provinces and illegal answers.
 Not yet run when the server change paused the card.
