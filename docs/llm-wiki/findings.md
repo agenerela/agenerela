@@ -3847,7 +3847,7 @@ titles fixed and re-run; the 2B; a storyteller persona, or a storyteller on its 
 higher temperature (gap 7). Raw data: `.scratch/storyteller-s1/runs/ab/` in the lead's laptop
 checkout (the smoke games, the title probe, the labels and the scripts beside it).
 
-### Non-generative deciders against `qwen3.5:4b`: the best embedding engine scores 13 points lower on both sets, a confident quarter could skip the 4B, and no reranker runs on Ollama (12 November 2026)
+### Non-generative deciders against `qwen3.5:4b`: the best embedding engine scores 15 and 9 points lower, a cascade to the 4B keeps its score while answering 28% itself, and no reranker runs on Ollama (12 November 2026)
 
 **The question.** Can a model built for choosing, or a game engine with no model, pick the action
 and the target instead of a generative model? The lead asked for "the decision making
@@ -3855,57 +3855,66 @@ models/engines rather than LLMs"; the reading, the survey and the design notes a
 [`non-llm-deciders.md`](non-llm-deciders.md), which this entry summarises.
 
 **What was run.** One session on the RTX 5080 (Docker Ollama 0.40.14, over the network), one model
-resident at a time, under the 5080 lock, 09:30 to 10:15 (the full run itself 10:00 to 10:07). `tools/benchmarks/non_llm_decider_probe.py`
-asked every prompt of the curated 76, the interim 389 and a new 80-prompt tuning set:
+resident at a time, under the 5080 lock. The run reported here is the second, 10:29 to 10:40, after
+Codex's review; the first, 10:00 to 10:13, is superseded (below).
+`tools/benchmarks/non_llm_decider_probe.py` asked every prompt of the curated 76, the interim 389
+and a new 80-prompt tuning set:
 
 - **Control:** `qwen3.5:4b`, the framework's request rebuilt in Python, with no guards and one arm.
-  It scored 330 of 389 and 70 of 76; the sweeps had 330 and 69.
+  It scored 330 of 389 and 70 of 76 in both runs; the sweeps had 330 and 69.
 - **Three embedders**, `qwen3-embedding:0.6b`, `embeddinggemma:300m` and `bge-m3:567m`, each used
   three ways: nearest description, nearest reference examples (kNN), and a softmax head trained on
   the examples. The 90 reference examples were written new.
 - **A keyword parser with rules**, no model.
 - **Cascades** to the 4B, and **a hybrid** where the engine chooses and the 4B writes only the line.
 - Every threshold was tuned on the tuning set, never on an evaluation prompt. The references and the
-  tuning set pass `check-examples` against both sets. Its first run caught 11 lines that matched
-  interim prompts word for word, since the same model wrote both, and they were rewritten.
+  tuning set pass `check-examples` against both sets, templates and filled strings.
+
+**Why there were two runs.** The first run of `check-examples` caught 11 of the reference and
+tuning lines matching interim prompts word for word (one model wrote both). Codex's review then
+found two holes in the check: `{X}` placeholders never became wildcards, and the filled strings
+were never checked. Five more templates failed once both were fixed. It also found the control's
+refusal example worded "by the Atlantis" where the C# writes "by Atlantis". All were fixed and every
+stage run again. The first run's best engine scored 279 and 60, so the conclusion did not change.
 
 **Results** (correct answers, curated /76 and interim /389; noise floors 8 and 3.6):
 
 | Engine | Curated | Interim | Impossible /64 | Median s | Resident MB |
 |---|---:|---:|---:|---:|---:|
-| `qwen3.5:4b`, control | 70 | 330 | 49 | 0.539 | 2,995 |
-| `bge-m3` + head | 60 | 279 (−13.1) | 35 | 0.039 | 657 |
-| `embeddinggemma` + head | 58 | 268 (−15.9) | 38 | 0.036 | 653 |
-| `qwen3-embedding:0.6b` + head | 58 | 264 (−17.0) | 36 | 0.035 | 939 |
-| best kNN (`bge-m3`) | 59 | 251 (−20.3) | 25 | 0.039 | 657 |
-| best descriptions (`embeddinggemma`) | 46 | 220 (−28.3) | 32 | 0.036 | 653 |
+| `qwen3.5:4b`, control | 70 | 330 | 49 | 0.543 | 2,995 |
+| `bge-m3` + head | 63 | 271 (−15.2) | 31 | 0.045 | 657 |
+| `embeddinggemma` + head | 57 | 269 (−15.7) | 39 | 0.073 | 653 |
+| `qwen3-embedding:0.6b` + head | 58 | 259 (−18.3) | 30 | 0.050 | 939 |
+| best kNN (`bge-m3`) | 61 | 254 (−19.5) | 33 | 0.045 | 657 |
+| best descriptions (`embeddinggemma`) | 46 | 220 (−28.3) | 32 | 0.073 | 653 |
 | keyword parser and rules | 51 | 205 (−32.1) | 58 | under 0.001 | 0 |
+| cascade, `bge-m3` + head, then the 4B | 68 | 329 (−0.3) | 48 | 0.556 | 3,652, summed |
 
 - **Every engine is beyond noise below the control on both sets.** Examples nearly solve commands
-  with a target (63 of 66 against 66). They do not solve impossible requests (35 against 49),
-  conversation (46 against 60) or curated situations (10 of 19 against 17).
+  with a target (61 of 66 against 66). They do not solve impossible requests (31 against 49),
+  conversation (46 against 61) or the curated set's situations (10 of 19 against 17).
 - **`none` comes only from thresholds, and they trade.** Engines that refuse well hardly act: the
   zero-shot `bge-m3` refuses 54 of 64 impossible requests and acts correctly on 60 of 233.
-- **Cascades tuned on the 80 prompts** kept 330 only by sending 87% to the 4B. **Read descriptively
-  off the interim set**, the `bge-m3` head answering only its most confident 25% gave 329, and 50%
-  gave 323 (−1.8, inside the floor). That cut was chosen on the evaluation prompts, so it is a
-  hypothesis for an A/B, not a result.
-- **The hybrid** keeps the engine's 279 and takes 0.477 s median against the 4B's 0.539, with a worse
-  p90 (0.753 against 0.637). A statement-only request still reads the whole prompt.
+- **The `bge-m3` cascade, tuned on the 80 prompts, is within noise of the 4B on both sets** while
+  answering 28% of the interim decisions and 49% of the curated ones itself. The other three cascades
+  lost 2.6 to 8.5 points. Read descriptively off the interim set, the head's most confident half
+  gave 331 of 389. That cut was chosen on the evaluation prompts, so it is a hypothesis.
+- **The hybrid** (`embeddinggemma` + head choosing, best on the tuning set) keeps the engine's 269.
+  It takes 0.463 s median against the 4B's 0.543 on the interim set, and the same on the curated set.
 - **No reranker ran.** Ollama has no rerank route. `hf.co/ggml-org/Qwen3-Reranker-0.6B-Q8_0-GGUF`
   does not support generate, and through `/api/embed` it returns zero vectors.
   `dengcao/Qwen3-Reranker-0.6B:Q8_0` generates, but with a uniform −11.93 log-probability on every
   token.
 
 **What we now believe.** No non-generative engine replaces the 4B on these prompts. An embedding
-first stage that answers only its confident decisions might save a quarter of the 4B's calls. It
-needs its own A/B through `EvalRunner` with the guards on, a reference bank, and a tuning set the
-developer writes.
+first stage that answers only its confident decisions might take a quarter to a half of them off
+the 4B at no cost. That rests on one tuning on 80 prompts. It needs its own A/B through `EvalRunner`
+with the guards on, a reference bank, and a larger tuning set the developer writes.
 
 **What would change this.** A reranker running (llama.cpp's server, or a future Ollama rerank route);
 examples written by people; a larger tuning set; another agent's action set; the guards on.
 
 **Conditions.** The control ran without the guards, so it is not `EvalRunner`'s score.
 `qwen3-embedding:0.6b` was 2,563 MB resident at its default context in the first slice and 939 MB at
-`num_ctx` 2048 in the full run. Raw data is in `.scratch/non-llm-deciders/` in the lead's laptop
-checkout: the stage files, `summary.json`, the curve script and the logs.
+`num_ctx` 2048. Raw data is in `.scratch/non-llm-deciders/` in the lead's laptop checkout: `runs/full`
+(this run), `runs/full-v1` (the superseded one), `summary.json`, the curve script and the logs.

@@ -121,7 +121,7 @@ writes to them.
 
 `non_llm_examples.json` holds the engines' reference examples and a separate 80-prompt tuning set,
 written new for this probe. Every threshold is tuned on that set, never on an evaluation prompt.
-`check-examples` checks both against the two sets with `PromptSetChecks.MatchesExample`'s rule and a
+`check-examples` checks both, templates and filled strings, against the two sets with `PromptSetChecks.MatchesExample`'s rule and a
 word-overlap check, and fails on any match (hard rule 4): run it after changing the file.
 
 ```bash

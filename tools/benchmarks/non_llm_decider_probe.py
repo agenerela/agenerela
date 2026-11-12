@@ -177,7 +177,8 @@ def matches_example(stimulus, example):
     """PromptSetChecks.MatchesExample: the example, {0} standing for anything, is the whole stimulus."""
     if not stimulus.strip() or not example.strip():
         return False
-    pattern = re.escape(normalize(example)).replace(r"\{0\}", ".+").replace(r"\{X\}", ".+")
+    # normalize() lowercases, so this file's {X} placeholder is {x} by now.
+    pattern = re.escape(normalize(example)).replace(r"\{0\}", ".+").replace(r"\{x\}", ".+")
     return re.fullmatch(pattern, normalize(stimulus)) is not None
 
 
@@ -189,6 +190,8 @@ def check_examples():
     ex = json.load(open(EXAMPLES, encoding="utf-8"))
     lines = [(f"references.{a}", r["stimulus"]) for a, rs in ex["references"].items() for r in rs]
     lines += [(d["id"], d["stimulus"]) for d in ex["dev"]]
+    # The strings the engines actually embed, with every placeholder filled, as well as the templates.
+    lines += [(f"filled.{a}", t) for a, _, t in reference_lines()]
     evals = [p for s in SETS for p in load_set(s)[1]]
     bad = 0
     for where, text in lines:
@@ -372,7 +375,8 @@ def system_prompt(p, agent, examples=True):
             else:
                 lines.append(f'{label}: "{d["example"]}" -> action: {a}, target: no_target')
         lines.append(f'{label}: "{IDLE_EXAMPLE}" -> action: none, target: no_target')
-        lines.append(f'{label}: "Go and stand by the Atlantis." -> action: none, target: no_target (not an available target)')
+        # FewShotBuilder.RefusalExample drops the article that ends the phrase: "by Atlantis", not "by the Atlantis".
+        lines.append(f'{label}: "Go and stand by Atlantis." -> action: none, target: no_target (not an available target)')
         parts.append("\n".join(lines))
     following = bool((p.get("preconditionState") or {}).get("isFollowing"))
     obs = ["You are following the player." if following else "You are not following the player."]
@@ -710,7 +714,9 @@ def score(out_dir, only=None):
                 a, t = (c[k] if asked else r[k])[:2]
                 casc[k] = (a, t, asked, r[k][3] + (c[k][3] if asked else 0.0))
             casc["_size"] = e.size_mb + c["_size"]
-            casc["_tau"] = (best_m, sum(1 for p in evals if casc[(p["set"], p["id"])][2]) / max(1, len(evals)))
+            # The share sent to the 4B, per set, never pooled across them.
+            casc["_tau"] = (best_m, {s: sum(1 for p in evals if p["set"] == s and casc[(p["set"], p["id"])][2]) /
+                                        max(1, sum(1 for p in evals if p["set"] == s)) for s in ("curated", "interim")})
             results[name] = casc
     report(results, dev, evals, out)
     return results

@@ -16,18 +16,18 @@ control in the same session on the same server (hard rule 2). The measured part 
 [`findings.md`](findings.md), "Non-generative deciders against `qwen3.5:4b`".
 
 **In short.** Nothing we could run comes close to the 4B as the whole decision. The best engine,
-`bge-m3` embeddings with a small trained head on 90 reference examples we wrote, scored **279 of
-389** on the interim set and **60 of 76** on the curated set, against the 4B's **330** and **70** in
-the same session: 13 points down on both sets, beyond both noise floors (3.6 and 8). Every engine is
-weakest where the survey said it would be: impossible requests, conversation and situations. As a
-**first stage** the picture is better but not settled. Letting the engine answer only its most
-confident quarter and sending the rest to the 4B scored 329 against 330, but that cut was read off the
-evaluation set; the cascade tuned honestly, on our own 80 tuning prompts, sent 87% to the 4B. The
-**hybrid**, where the engine chooses and the 4B writes only the statement, has the engine's accuracy
-and saves only 0.06 s of the 4B's 0.54 s median, because reading the prompt, not writing the reply,
-is most of a decision. **No reranker ran**: Ollama 0.40.14 has no rerank route, and both
-Qwen3-Reranker GGUFs we pulled failed the yes/no route. Recommendation: no non-generative provider
-now; the one idea worth an issue is an embedding first stage, measured as its own A/B.
+`bge-m3` embeddings with a small trained head on 90 reference examples we wrote, scored **271 of
+389** on the interim set and **63 of 76** on the curated set, against the 4B's **330** and **70** in
+the same session: 15 and 9 points down, beyond both noise floors (3.6 and 8). Every engine is weakest
+where the survey said it would be: impossible requests and conversation, and the curated set's
+situations. As a **first stage** it does better. A cascade where the engine answers when its margin
+is high and hands the rest to the 4B, its threshold tuned on our own 80 tuning prompts, scored 329 and
+68 against 330 and 70, within noise, while answering 28% of the interim decisions itself; one tuning
+on a small set, so it needs its own A/B. The **hybrid**, where the engine chooses and the 4B writes
+only the statement, has the engine's accuracy and saves 0.08 s of the 4B's 0.54 s median on the
+interim set and nothing on the curated set. **No reranker ran**: Ollama 0.40.14 has no rerank route,
+and both Qwen3-Reranker GGUFs we pulled failed the yes/no route. Recommendation: no non-generative
+provider as the decision; an embedding first stage is worth an issue and an A/B through `EvalRunner`.
 
 ## The decision being replaced
 
@@ -209,8 +209,10 @@ benchmarks README says how to run it.
   schema with the actions available in the prompt's state; `think: false`, temperature 0, `num_ctx`
   4096, `logprobs`. **Where it differs from `EvalRunner`:** no guards run (neither grounding nor
   legality), so a reply a guard would have contained counts as given; one arm, not two interleaved;
-  and the request is rebuilt in Python, not taken from the C#. The scores match the sweeps anyway:
-  330 of 389 (findings: 330) and 70 of 76 (69). That is a sanity check, not the control.
+  and the request is rebuilt in Python, not taken from the C#. The first run sent the refusal
+  example as "Go and stand by the Atlantis." where `FewShotBuilder` writes "by Atlantis."; Codex's
+  review caught it, and the run reported here uses the C#'s wording. The scores match the sweeps:
+  330 of 389 (findings: 330) and 70 of 76 (69), in both runs. That is a sanity check, not the control.
 - **Three embedding models**, each used three ways, all from one embedding of each situation (label,
   stimulus and the prompt's own observations, on one line):
   - *descriptions*: the nearest action description (the four action assets' and the framework's
@@ -227,7 +229,7 @@ benchmarks README says how to run it.
 - **Cascades**, computed from the same answers: the engine answers when the margin between its best
   two actions reaches a threshold, tuned on the tuning set, and the 4B's answer is used otherwise.
   Latency is the engine's, plus the 4B's when it is asked.
-- **The hybrid**: the engine that scored best on the tuning set (`bge-m3` with the head) chooses, and
+- **The hybrid**: the engine that scored best on the tuning set (`embeddinggemma` with the head) chooses, and
   the 4B is told the choice and asked for the statement alone, in `BuildRefusalLine`'s shape (the
   decision's system prompt without examples, one user turn, a statement-only schema).
 - **Rerankers**: tried, and neither ran (below).
@@ -240,8 +242,12 @@ targets' names as `FewShotBuilder` fills an example, giving 90 references; and a
 in the evaluation format. `check-examples` tests every line against both sets with
 `PromptSetChecks.MatchesExample`'s rule and a word-overlap check (Jaccard 0.8 or more). **Its first
 run found 11 lines that matched interim prompts**, among them "Shadow me for a bit." and "Become
-invisible.", word for word: the interim set was written by the same model. All 11 were rewritten,
-and the check then passed: 142 lines against 465 prompts. Because one model writes near-identical
+invisible.", word for word: the interim set was written by the same model. All 11 were rewritten.
+**Codex's review then found that the check missed two cases**: the `{X}` placeholder never became a
+wildcard ("Fight the {X}!" matches "Fight the bandits."), and the filled strings the engines embed
+were never checked ("Take down the wolf." against "Take the wolf down."). With both fixed, five more
+templates failed and were rewritten, and every stage was run again; the numbers here are that
+second run's. The check now passes on 232 lines, templates and filled strings, against 465 prompts. Because one model writes near-identical
 lines, a reference bank a model writes may sit closer to an evaluation set a model wrote than either
 would to a player. The interim scores below may flatter the engines for that reason, never the
 other way.
@@ -256,92 +262,104 @@ Correct answers, each against the control in the same session. The noise floor i
 at 389 and 8 at 76; every engine row below is beyond both. "Impossible" is the impossible-request
 category; "`none` expected" is every prompt labelled `none`, conversation and situations included;
 "acting" is every prompt labelled with an action. Latency is the probe's wall clock per decision
-over the network on the interim set, median and 90th percentile.
+over the network on the interim set, median and 90th percentile. The embedders' medians moved between
+the two runs (`embeddinggemma` 0.036 s in the first, 0.073 s in the second), so read them as "tens of
+milliseconds over this network", not as a ranking.
 
 | Engine | Curated /76 | Interim /389 | vs control, interim (points) | Action right /389 | Target right /389 | Impossible /64 | `none` expected /156 | Acting /233 | Median / p90 s | Resident MB |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|
-| **`qwen3.5:4b`, control** | **70** | **330** | | 333 | 341 | 49 | 133 | 197 | 0.539 / 0.637 | 2,995 |
-| `bge-m3:567m`, examples + head | 60 | 279 | −13.1 | 285 | 309 | 35 | 90 | 189 | 0.039 / 0.269 | 657 |
-| `embeddinggemma:300m`, examples + head | 58 | 268 | −15.9 | 287 | 294 | 38 | 91 | 177 | 0.036 / 0.051 | 653 |
-| `qwen3-embedding:0.6b`, examples + head | 58 | 264 | −17.0 | 281 | 294 | 36 | 76 | 188 | 0.035 / 0.052 | 939 |
-| `bge-m3:567m`, examples (kNN) | 59 | 251 | −20.3 | 257 | 294 | 25 | 62 | 189 | 0.039 / 0.269 | 657 |
-| `embeddinggemma:300m`, examples (kNN) | 53 | 249 | −20.8 | 268 | 285 | 34 | 73 | 176 | 0.036 / 0.051 | 653 |
-| `qwen3-embedding:0.6b`, examples (kNN) | 54 | 216 | −29.3 | 233 | 283 | 14 | 34 | 182 | 0.035 / 0.052 | 939 |
-| `embeddinggemma:300m`, descriptions | 46 | 220 | −28.3 | 223 | 281 | 32 | 109 | 111 | 0.036 / 0.051 | 653 |
-| `bge-m3:567m`, descriptions | 42 | 200 | −33.4 | 200 | 252 | 54 | 140 | 60 | 0.039 / 0.269 | 657 |
-| `qwen3-embedding:0.6b`, descriptions | 35 | 177 | −39.3 | 178 | 252 | 54 | 133 | 44 | 0.035 / 0.052 | 939 |
+| **`qwen3.5:4b`, control** | **70** | **330** | | 334 | 340 | 49 | 133 | 197 | 0.543 / 0.683 | 2,995 |
+| `bge-m3:567m`, examples + head | 63 | 271 | −15.2 | 277 | 303 | 31 | 81 | 190 | 0.045 / 0.070 | 657 |
+| `embeddinggemma:300m`, examples + head | 57 | 269 | −15.7 | 288 | 306 | 39 | 98 | 171 | 0.073 / 0.121 | 653 |
+| `qwen3-embedding:0.6b`, examples + head | 58 | 259 | −18.3 | 276 | 289 | 30 | 72 | 187 | 0.050 / 0.079 | 939 |
+| `bge-m3:567m`, examples (kNN) | 61 | 254 | −19.5 | 257 | 297 | 33 | 82 | 172 | 0.045 / 0.070 | 657 |
+| `embeddinggemma:300m`, examples (kNN) | 53 | 248 | −21.1 | 264 | 286 | 33 | 71 | 177 | 0.073 / 0.121 | 653 |
+| `qwen3-embedding:0.6b`, examples (kNN) | 54 | 214 | −29.8 | 231 | 281 | 14 | 34 | 180 | 0.050 / 0.079 | 939 |
+| `embeddinggemma:300m`, descriptions | 46 | 220 | −28.3 | 223 | 281 | 32 | 109 | 111 | 0.073 / 0.121 | 653 |
+| `bge-m3:567m`, descriptions | 42 | 200 | −33.4 | 200 | 252 | 54 | 140 | 60 | 0.045 / 0.070 | 657 |
+| `qwen3-embedding:0.6b`, descriptions | 35 | 177 | −39.3 | 178 | 252 | 54 | 133 | 44 | 0.050 / 0.079 | 939 |
 | Keyword parser and rules, no model | 51 | 205 | −32.1 | 207 | 286 | 58 | 131 | 74 | under 0.001 | 0 |
 
 By category, the best engine against the control (interim, curated in brackets):
 
 | Category | `bge-m3` + head | `qwen3.5:4b` |
 |---|---:|---:|
-| `simple_command` /65 (/9) | 55 (7) | 64 (9) |
-| `command_with_target` /66 (/11) | 63 (10) | 66 (11) |
-| `impossible_request` /64 (/9) | 35 (8) | 49 (9) |
-| `conversation` /64 (/9) | 46 (9) | 60 (9) |
-| `situation` /65 (/19) | 39 (10) | 40 (17) |
-| `event` /65 (/19) | 41 (16) | 51 (15) |
+| `simple_command` /65 (/9) | 54 (9) | 64 (9) |
+| `command_with_target` /66 (/11) | 61 (11) | 66 (11) |
+| `impossible_request` /64 (/9) | 31 (8) | 49 (9) |
+| `conversation` /64 (/9) | 46 (9) | 61 (9) |
+| `situation` /65 (/19) | 40 (10) | 39 (17) |
+| `event` /65 (/19) | 39 (16) | 51 (15) |
 
 What the rows say:
 
-- **Commands are the easy part.** With examples, every embedder gets 56 to 64 of the 66 commands
+- **Commands are the easy part.** With examples, every embedder gets 56 to 61 of the 66 commands
   with a target, against the 4B's 66: a nearest-example search does name a place it is told about.
 - **`none` is the hard part, as the survey predicted.** The thresholds trade one way or the other.
   Two zero-shot *descriptions* rows say `none` to 133 and 140 of the 156 `none` prompts, and to 54 of
   64 impossible requests, because they hardly ever act (44 and 60 of 233). The keyword parser does
   the same, 58 of 64 impossible, because an unknown noun matches no target. No threshold tuned on
   the tuning set got an engine both acting and refusing at the 4B's level.
-- **Situations and events need reading, not matching.** On the curated set the best engine gets 10
-  of 19 situations against the 4B's 17: "Something is wrong", with the reason in an observation, is
-  not near any action description or example.
+- **Situations need reading, not matching.** On the curated set the best engine gets 10 of 19
+  situations against the 4B's 17: "Something is wrong", with the reason in an observation, is not
+  near any action description or example. On the interim set's situations the two are level (40
+  and 39), so this is the curated set's harder situations, not every situation.
 - **A trained head beats nearest examples, and both beat descriptions**, on all three models.
-- **The three embedders are within noise of one another** once given examples and a head, 264 to
-  279; `bge-m3`, the oldest and the only one with no instruction prefix, is first.
+- **The three embedders are within noise of one another** once given examples and a head, 259 to
+  271; `bge-m3`, the oldest and the only one with no instruction prefix, is first.
 
 #### Cascades: the engine first, the 4B when it is unsure
 
-Tuned on the tuning set (n = 80), then applied to the evaluation sets unchanged:
+Tuned on the tuning set (n = 80), then applied to the evaluation sets unchanged. "Sent to the 4B" is
+per set:
 
-| Cascade | Curated /76 | Interim /389 | Sent to the 4B (interim) | Median / p90 s |
-|---|---:|---:|---:|---|
-| `bge-m3` + head, then the 4B | 69 | 330 | 87% | 0.572 / 0.817 |
-| `embeddinggemma` + head, then the 4B | 66 | 319 | 61% | 0.529 / 0.649 |
-| `qwen3-embedding` + head, then the 4B | 62 | 312 | 49% | 0.460 / 0.640 |
-| `bge-m3` kNN, then the 4B | 66 | 289 | 31% | 0.051 / 0.624 |
+| Cascade | Curated /76 | Interim /389 | Sent to the 4B, curated / interim | Median / p90 s, interim |
+|---|---:|---:|---|---|
+| `bge-m3` + head, then the 4B | 68 | 329 | 51% / 72% | 0.556 / 0.706 |
+| `embeddinggemma` + head, then the 4B | 66 | 320 | 45% / 57% | 0.537 / 0.748 |
+| `qwen3-embedding` + head, then the 4B | 60 | 313 | 29% / 50% | 0.469 / 0.674 |
+| `bge-m3` kNN, then the 4B | 64 | 297 | 34% / 40% | 0.062 / 0.679 |
 
-At n = 80 the tuned thresholds are noisy, and the cascade that kept the 4B's score is the one that
-sent it almost everything. **Read descriptively off the evaluation set, not tuned on it**, the shape
-is clearer. Ranking each set by the `bge-m3` head's own margin and letting it answer only its most
-confident share:
+**The `bge-m3` cascade is within noise of the 4B on both sets** (−0.3 points on the interim set,
+−2.6 on the curated set) while answering 28% of the interim decisions and 49% of the curated ones
+itself. Its threshold came from 80 prompts, and the other three tuned no better than their engines
+deserve: −2.6, −4.4 and −8.5 points on the interim set. So one cascade tuned honestly kept the 4B's
+score; that is one tuning on a small set, not yet a property of cascades.
+
+**Read descriptively off the evaluation set, not tuned on it**, the shape is the same. Ranking each
+set by the `bge-m3` head's own margin and letting it answer only its most confident share:
 
 | Engine answers | 100% | 75% | 50% | 25% | 0% (the 4B alone) |
 |---|---:|---:|---:|---:|---:|
-| Interim /389 | 279 | 306 | 323 | 329 | 330 |
-| Curated /76 | 60 | 65 | 67 | 69 | 70 |
+| Interim /389 | 271 | 306 | 331 | 331 | 330 |
+| Curated /76 | 63 | 67 | 68 | 70 | 70 |
 
-So a confident quarter of the decisions could skip the 4B at no measurable cost on these prompts, and
-half at a cost inside the interim floor (−1.8 points). That is a hypothesis for an A/B, not a result:
-the cut was chosen by looking at these prompts. The engine is right on 25 interim prompts where the
-4B is wrong, so a perfect arbiter would reach 355, but nothing here can tell those 25 apart.
+The engine's confident half costs nothing measurable on the interim set, and its confident quarter
+nothing on either. Those cuts were chosen by looking at these prompts, so they are a hypothesis for
+an A/B, not a result. The engine is right on 25 interim prompts where the 4B is wrong, so a perfect
+arbiter would reach 355, but nothing here can tell those 25 apart.
 
 #### The hybrid: the engine chooses, the 4B writes only the line
 
+The chooser is `embeddinggemma` with the head, the engine with the best tuning-set score (72 of 80,
+against `bge-m3`'s 71); the evaluation sets played no part in choosing it.
+
 | | Curated | Interim |
 |---|---|---|
-| Correct | 60 (the engine's) | 279 (the engine's) |
-| Statement call, median / p90 s | 0.395 / 0.486 | 0.419 / 0.532 |
-| Engine and statement, median / p90 s | 0.435 / 0.550 | 0.477 / 0.753 |
-| The 4B's whole decision, median / p90 s | 0.543 / 0.611 | 0.539 / 0.637 |
-| Words per statement, hybrid / the 4B's own | 9.7 / 7.1 | 9.6 / 6.6 |
-| Statements repeated word for word, hybrid / the 4B's own | 0 / 4 | 27 / 117 |
+| Correct | 57 (the engine's) | 269 (the engine's) |
+| Statement call, median / p90 s | 0.375 / 0.467 | 0.380 / 0.482 |
+| Engine and statement, median / p90 s | 0.448 / 0.540 | 0.463 / 0.574 |
+| The 4B's whole decision, median / p90 s | 0.451 / 0.541 | 0.543 / 0.683 |
+| Words per statement, hybrid / the 4B's own | 9.7 / 6.8 | 9.6 / 6.5 |
+| Statements repeated word for word, hybrid / the 4B's own | 0 / 4 | 19 / 110 |
 
 The 4B follows a decision it is given. Its line names the chosen target, and it argues for a wrong
 choice as readily as for a right one ("I will secure the locked cave while you close the gate.").
-The lines are longer and repeat less than when the 4B chooses, because the request differs, not
-because they are better: nobody rated them. The time saved is small, since a statement-only call
-still reads the whole system prompt, and the p90 is worse. With both models resident it would be
-about 3.65 GB (657 + 2,995 MB, summed, not measured together).
+The lines are longer and repeat less than when the 4B chooses, but the request differs too, and
+nobody rated them. The time saved is small: the statement call alone took 0.38 s of the 4B's
+0.54 s median on the interim set, and nothing on the curated set. The probe did not time reading
+the prompt and writing the reply separately, so it cannot say where the rest goes. With both models
+resident it would be about 3.65 GB (653 + 2,995 MB, summed, not measured together).
 
 ### Rerankers: two tried, neither runs on Ollama
 
@@ -403,15 +421,16 @@ would fit behind it without the rest of the framework knowing. What it would hav
 
 ## Recommendation
 
-- **No non-generative provider as the whole decision.** It scores 13 points below the 4B on both
-  sets, beyond noise, and loses where a game most needs judgement: impossible requests, conversation
-  and situations. That holds for every engine we could run.
-- **An embedding first stage is the one idea worth an issue.** It costs about 0.04 s and 0.65 GB, and
-  the descriptive curve suggests a confident quarter of the decisions could skip the 4B. It saves
-  time only on the decisions it takes, it needs a reference bank and a tuning set from the developer,
-  and its threshold must be tuned on new prompts. Measure it through `EvalRunner` as an A/B, with the
-  guards on, before anyone builds it.
-- **Not the hybrid on its own**: the statement call costs most of a decision.
+- **No non-generative provider as the whole decision.** The best engine scores 15 points below the
+  4B on the interim set and 9 on the curated set, beyond noise, and loses where a game most needs
+  judgement: impossible requests, conversation and situations. That holds for every engine we could run.
+- **An embedding first stage is the one idea worth an issue.** It costs about 0.05 s and 0.65 GB. One
+  cascade, tuned on 80 new prompts, kept the 4B's score while answering 28% of the interim decisions
+  itself, and the descriptive curve says up to half might be possible. It saves time only on the
+  decisions it takes, it needs a reference bank and a tuning set from the developer, and its
+  threshold must be tuned on new prompts. Measure it through `EvalRunner` as an A/B, with the guards
+  on and more than 80 tuning prompts, before anyone builds it.
+- **Not the hybrid on its own**: the statement call alone took 0.38 s of the 4B's 0.54 s.
 - **Rerankers stay an open question** until Ollama has a rerank route, or a test runs llama.cpp's
   server directly.
 

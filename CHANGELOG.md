@@ -34,9 +34,10 @@ phase table and the open issues, not here.
   survey and the results, an entry in `findings.md` and a row in `live-runs.md`. The probe is
   `tools/benchmarks/non_llm_decider_probe.py`; its reference and tuning examples, written new and
   checked against both sets, are in `non_llm_examples.json`.
-  - The best engine, `bge-m3` embeddings with a trained head, scores 279/389 and 60/76 against the
+  - The best engine, `bge-m3` embeddings with a trained head, scores 271/389 and 63/76 against the
     4B's 330 and 70, beyond noise on both sets.
-  - A cascade that lets the engine answer only when it is confident is the one idea left to A/B.
+  - A cascade that lets the engine answer only when it is confident kept the 4B's score within noise
+    while answering 28% of interim decisions itself: the one idea left to A/B.
   - No reranker runs on Ollama 0.40.14.
   - Five small models pulled onto the server: three embedders and two reranker GGUFs. No framework
     code changed.
