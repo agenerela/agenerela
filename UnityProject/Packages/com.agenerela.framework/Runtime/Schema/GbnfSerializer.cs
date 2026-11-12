@@ -48,10 +48,12 @@ namespace Agenerela
                 {
                     AppendRule(grammar, "value-" + i, "json-string");
                 }
+                else
+                {
+                    var alternatives = new List<string> (field.AllowedValues.Count);
+                    
+                }
             }
-
-        
-
         }
     }    
 }
