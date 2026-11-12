@@ -47,13 +47,28 @@ namespace GreyBoxStrategy.Realm
         /// For the Unity CLI and for frames without a server: rule with the four seats played by a
         /// <c>ScriptedProvider</c> that picks a move the game offers, at random, with a stock line.
         /// </summary>
-        public void StartRuleScripted(string country, int gameSeed)
+        /// <param name="busyCardSeconds">For frames of the card's states: a stand-in lock "held by another session" for this long, then held by this game. No real lock is touched.</param>
+        public void StartRuleScripted(string country, int gameSeed, float busyCardSeconds = 0)
         {
             var rng = new System.Random(gameSeed);
             World world = null;
             var provider = new ScriptedProvider { Callback = r => ScriptedRuler(r, rng, world) };
             provider.Otherwise(ScriptedReply.Decide("none", statement: "We wait."));
-            BeginRule(country, "scripted", gameSeed, (m, w) => { world = w; return provider; }, null);
+            BeginRule(country, "scripted", gameSeed, (m, w) => { world = w; return provider; }, busyCardSeconds > 0 ? new StandInLock(busyCardSeconds) : null);
+        }
+
+        private sealed class StandInLock : RuleSession.ICardLock
+        {
+            private readonly float seconds;
+            public StandInLock(float seconds) { this.seconds = seconds; }
+            public string WaitingFor { get; private set; }
+            public async Awaitable Acquire(System.Threading.CancellationToken ct)
+            {
+                WaitingFor = $"another session (since {DateTime.Now.AddMinutes(-4):HH:mm}, expects 25 minutes)";
+                await Awaitable.WaitForSecondsAsync(seconds, ct);
+                WaitingFor = null;
+            }
+            public async Awaitable Release() { await Awaitable.NextFrameAsync(); }
         }
 
         private static readonly string[] StockLines =
@@ -154,25 +169,52 @@ namespace GreyBoxStrategy.Realm
             return game.Turns.Count;
         }
 
-        /// <summary>While the screen waits on the game: the orders panel, the envoy card, or who it waits for.</summary>
+        /// <summary>"0:42", "12:05": how long the game has waited.</summary>
+        private static string Clock(DateTime sinceUtc)
+        {
+            var t = DateTime.UtcNow - sinceUtc;
+            return t.TotalHours >= 1 ? t.ToString(@"h\:mm\:ss") : t.ToString(@"m\:ss");
+        }
+
+        /// <summary>After this long with no answer, the status line says the server may be busy.</summary>
+        private const double SlowSeconds = 20;
+
+        private string RulersLine(string prefix)
+        {
+            double waited = (DateTime.UtcNow - rule.WaitingSince).TotalSeconds;
+            string line = $"{prefix} ({Clock(rule.WaitingSince)}).";
+            if (waited > SlowSeconds)
+                line += $" The server is slow to answer: another client may be using it. The game gives up after {rule.RoundTimeout.TotalSeconds:0} s; Menu leaves now.";
+            return line;
+        }
+
+        /// <summary>While the screen waits on the game: the orders panel, the envoy card, or what it waits for and for how long.</summary>
         private void RuleTick()
         {
+            ui.SetCard(rule.HoldsCard ? "held" : rule.WaitingFor == RuleSession.Waiting.Card ? "waiting" : null);
             if (rule.Error != null) { ui.ShowNotice("The rule game stopped: " + rule.Error); return; }
             var w = rule.WaitingFor;
             string status;
-            if (w == RuleSession.Waiting.Orders && rule.Orders != null)
+            if (w == RuleSession.Waiting.Card)
+            {
+                ui.OrdersRequest = null;
+                status = $"Waiting for the RTX 5080, held by {rule.WaitingForCard ?? "someone"}. Waited {Clock(rule.WaitingSince)}. " +
+                         "The game takes the card when it is free and holds it until you leave. Menu leaves now.";
+                ui.SetThinking(false);
+            }
+            else if (w == RuleSession.Waiting.Orders && rule.Orders != null)
             {
                 if (ui.OrdersRequest != rule.Orders)
                 {
                     // Your council meets: the map shows the state it meets on, after upkeep.
                     ui.OrdersRequest = rule.Orders;
                     ui.Chosen = Move.Hold;
+                    lastOrdersStatus = null;
                     Show(ReplayBuilder.StateOf(rule.Orders.World, game.ProvinceIds, shown), null);
                     ui.SetPlaying(false, speed);
                     RefreshSide();
                 }
-                status = rule.WaitingForCard != null ? $"The rulers wait for the RTX 5080 ({rule.WaitingForCard})."
-                    : rule.ModelsThinking ? "The four rulers are deciding while you choose."
+                status = rule.ModelsThinking ? RulersLine("The four rulers are deciding while you choose")
                     : "The four rulers have decided. Your order?";
                 ui.SetThinking(rule.ModelsThinking);
             }
@@ -194,11 +236,34 @@ namespace GreyBoxStrategy.Realm
             else
             {
                 ui.OrdersRequest = null;
-                status = rule.WaitingForCard != null ? $"Your order is in. The rulers wait for the RTX 5080 ({rule.WaitingForCard})."
-                    : "Your order is in. The rulers are deciding.";
+                status = rule.ModelsThinking ? RulersLine("Your order is in. The rulers are deciding") : "Your order is in.";
                 ui.SetThinking(true);
             }
-            if (status != lastOrdersStatus) { lastOrdersStatus = status; ui.ShowOrders(status); }
+            // Rebuild the panel only when what it offers changes; the clock updates its line alone,
+            // so a button is never rebuilt under the pointer.
+            var key = (ui.OrdersRequest, ui.Chosen, w);
+            if (!Equals(key, lastOrdersKey) || lastOrdersStatus == null) { lastOrdersKey = key; lastOrdersStatus = status; ui.ShowOrders(status); }
+            else if (status != lastOrdersStatus) { lastOrdersStatus = status; ui.SetOrdersStatus(status); }
+        }
+
+        private object lastOrdersKey;
+
+        /// <summary>
+        /// Back to the start menu: stops the game, lets the card go (unloading the model), and loads
+        /// the scene afresh. The Menu button in the top bar, and the Unity CLI.
+        /// </summary>
+        public void LeaveToMenu()
+        {
+            rule?.Stop();
+            ruleLock?.ReleaseNow();
+            if (live != null) live.Stop();
+            Gateway.ReleaseHeldNow();
+            var scene = gameObject.scene;
+#if UNITY_EDITOR
+            UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(scene.path, new UnityEngine.SceneManagement.LoadSceneParameters(UnityEngine.SceneManagement.LoadSceneMode.Single));
+#else
+            UnityEngine.SceneManagement.SceneManager.LoadScene(scene.name);
+#endif
         }
 
         /// <summary>A turn about to play back: the orders panel says so and offers nothing.</summary>
@@ -208,7 +273,9 @@ namespace GreyBoxStrategy.Realm
             ui.HideOffer();
             ui.OrdersRequest = null;
             lastOrdersStatus = $"Turn {turn} resolves: your order and the four rulers' moves land in the rules' order.";
+            lastOrdersKey = null;
             ui.ShowOrders(lastOrdersStatus);
+            ui.SetCard(rule.HoldsCard ? "held" : null);
             RefreshSide();
             ui.SetPlaying(true, speed);
             playing = true;
@@ -221,7 +288,9 @@ namespace GreyBoxStrategy.Realm
                 ? (rule.Result.Winner == rule.You ? $"You won, by {rule.Result.Ending}, on turn {rule.Result.Turns}." : $"{CountryLook.NameOf(rule.Result.Winner)} won, by {rule.Result.Ending}, on turn {rule.Result.Turns}.")
                   + " Every ruler's council is open in the inspector now."
                 : rule.Error != null ? "The game stopped: " + rule.Error : "The game stopped.";
+            lastOrdersKey = null;
             ui.ShowOrders(end);
+            ui.SetCard(null);
         }
 
         private void OnDestroy()

@@ -107,29 +107,74 @@ namespace GreyBoxStrategy.Screen.Tests
         }
 
         [Test]
-        public async Task The_card_is_held_only_while_the_rulers_decide()
+        public async Task The_card_is_held_for_the_whole_game_and_let_go_when_it_ends()
         {
             var cardLock = new CountingLock();
             var provider = new ScriptedProvider().Otherwise(ScriptedReply.Decide("none"));
             var s = Session(provider, cardLock);
             var run = s.RunAsync();
             await Until(() => s.WaitingFor == RuleSession.Waiting.Orders && !s.ModelsThinking, "your first order");
-            Assert.That(cardLock.Held, Is.False, "not held while the game waits for you");
-            Assert.That(cardLock.Taken, Is.EqualTo(1));
+            Assert.That(cardLock.Held && s.HoldsCard, Is.True, "held while the game waits for you: a person is playing");
             s.Order(Move.Hold);
             await Until(() => s.Resolved == 1 && s.WaitingFor == RuleSession.Waiting.Orders && !s.ModelsThinking, "turn 2's council");
-            Assert.That(cardLock.Held, Is.False);
-            Assert.That(cardLock.Taken, Is.EqualTo(2), "one round a turn");
+            Assert.That(cardLock.Taken, Is.EqualTo(1), "taken once for the game, not once a round");
+            Assert.That(cardLock.Held, Is.True);
             s.Stop();
             await run;
+            Assert.That(cardLock.Held || s.HoldsCard, Is.False, "let go when the game is left");
+            Assert.That(cardLock.Released, Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task A_round_that_never_answers_stops_the_game_and_says_why()
+        {
+            var cardLock = new CountingLock();
+            var provider = new ScriptedProvider().Otherwise(ScriptedReply.Never());
+            var s = Session(provider, cardLock);
+            s.RoundTimeout = TimeSpan.FromSeconds(0.3);
+            var run = s.RunAsync();
+            // The game is waiting for your order when the rulers' round times out: it must not wait on.
+            await Until(() => s.Finished, "the game to stop");
+            await run;
+            Assert.That(s.Error, Does.Contain("did not answer within"), "a message the screen can show");
+            Assert.That(s.Stopped, Is.False);
+            Assert.That(cardLock.Held || s.HoldsCard, Is.False, "the card is let go on a timeout too");
+            Assert.That(cardLock.Released, Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task Leaving_while_the_card_is_busy_never_takes_it()
+        {
+            var cardLock = new BusyLock();
+            var s = Session(new ScriptedProvider().Otherwise(ScriptedReply.Decide("none")), cardLock);
+            var run = s.RunAsync();
+            await Until(() => s.WaitingFor == RuleSession.Waiting.Card, "the wait for the card");
+            Assert.That(s.WaitingForCard, Is.EqualTo("another session (since 23:41)"), "the screen can say who holds it");
+            Assert.That(s.Orders, Is.Null, "no council meets before the game has the card");
+            s.Stop();
+            await run;
+            Assert.That(s.Stopped, Is.True);
+            Assert.That(cardLock.Released, Is.EqualTo(0), "it never had the card, so it lets nothing go");
         }
 
         private sealed class CountingLock : RuleSession.ICardLock
         {
-            public bool Held; public int Taken;
+            public bool Held; public int Taken, Released;
             public string WaitingFor => null;
             public async Awaitable Acquire(System.Threading.CancellationToken ct) { Assert.That(Held, Is.False, "taken twice"); Held = true; Taken++; await Task.CompletedTask; }
-            public async Awaitable Release() { Held = false; await Task.CompletedTask; }
+            public async Awaitable Release() { Held = false; Released++; await Task.CompletedTask; }
+        }
+
+        // Another session holds the card for as long as the test runs.
+        private sealed class BusyLock : RuleSession.ICardLock
+        {
+            public int Released;
+            public string WaitingFor => "another session (since 23:41)";
+            public async Awaitable Acquire(System.Threading.CancellationToken ct)
+            {
+                while (true) { ct.ThrowIfCancellationRequested(); await Task.Delay(5); }
+            }
+            public async Awaitable Release() { Released++; await Task.CompletedTask; }
         }
     }
 
@@ -185,6 +230,46 @@ namespace GreyBoxStrategy.Screen.Tests
                 Assert.That(Gateway.MainCheckout(main), Is.EqualTo(main), "the main checkout is its own");
             }
             finally { try { Directory.Delete(tmp, true); } catch (IOException) { } }
+        }
+
+        [Test]
+        public void The_lock_is_released_only_by_the_Unity_that_took_it()
+        {
+            string tmp = Path.Combine(Application.temporaryCachePath, "lock-" + Guid.NewGuid().ToString("N"));
+            string held = Path.Combine(tmp, "held");
+            try
+            {
+                Directory.CreateDirectory(held);
+                File.WriteAllText(Path.Combine(held, "owner.txt"), "owner: another session\npid: 1 (Git Bash)\nsince: 2026-11-11T23:41:37\nexpect: 30 min\n");
+                var note = Gateway.ReadLock(held);
+                Assert.That(note.ToString(), Is.EqualTo("another session (since 23:41, expects 30 min)"));
+                Assert.That(Gateway.TakeLock(held, "test", "test", null), Is.False, "someone else holds it");
+                Gateway.ReleaseLock(held);
+                Assert.That(Directory.Exists(held), Is.True, "another session's lock is never deleted");
+
+                Directory.Delete(held, true);
+                Assert.That(Gateway.TakeLock(held, "test", "test", null), Is.True);
+                Assert.That(Gateway.HoldsLock, Is.True);
+                Gateway.ReleaseHeldNow(); // as quitting, leaving Play mode or a script reload does
+                Assert.That(Directory.Exists(held), Is.False, "the lock this Unity took is let go on every way out");
+                Assert.That(Gateway.HoldsLock, Is.False);
+            }
+            finally { try { Directory.Delete(tmp, true); } catch (IOException) { } }
+        }
+    }
+
+    public class UiScaleTests
+    {
+        [TestCase(1920, 1080, 1f, false)]
+        [TestCase(2560, 1440, 1.3333f, false)]
+        [TestCase(3840, 2160, 2f, false)]
+        [TestCase(3440, 1440, 1.3333f, false)] // ultrawide: the height decides
+        [TestCase(1366, 768, 1f, true)]
+        [TestCase(2202, 1168, 1.0815f, false)] // the lead's maximized Game view on 12 November
+        public void The_UI_grows_with_the_screen_and_never_shrinks_below_its_design(int w, int h, float scale, bool compact)
+        {
+            Assert.That(UiScale.For(w, h), Is.EqualTo(scale).Within(0.001f));
+            Assert.That(UiScale.Compact(w, h), Is.EqualTo(compact));
         }
     }
 }

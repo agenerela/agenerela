@@ -453,6 +453,19 @@ phase table and the open issues, not here.
 
 ### Fixed
 
+- **Painted Realm: sharp on large screens, and never silent while the card is busy** (#20).
+  - **Large screens.** The UI now grows with the screen: 1.33× at 1440 and 2× at 2160. Before,
+    it stayed 1080p-sized below 2000 pixels tall.
+    - In the editor, a notice says when the Game view draws the game at a fixed size such as
+      1920 × 1080 and stretches it. That is what the lead saw.
+  - **The RTX 5080 in rule mode.** A rule game now holds the card for the whole game, as the
+    lead decided, and the top bar says so.
+    - It waits with the holder and a clock while another session has the card.
+    - It says when the server is slow, and stops a round with no answer in 150 s.
+    - Menu returns to the start menu from any game.
+    - The lock records the Unity that took it, and is let go, with the model unloaded, on every
+      way out: the end, Menu, stopping Play mode, quitting, a script reload, or an error.
+
 - **Painted Realm: fixes from the night's play-through** (#20).
   - A move that is not offered shows its reason on hover again: disabled buttons got no hover,
     so the reason never appeared.

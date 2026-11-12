@@ -242,3 +242,6 @@
 /* rule mode: the orders panel holds the bottom centre, so the map-mode bar and its legend move to the top of the map */
 .rule .modes { top: 50px; bottom: auto; }
 .rule .legend { top: 88px; bottom: auto; }
+/* the RTX 5080 in the top bar while a game holds it or waits for it */
+.card-chip { font-size: 11px; -unity-font-style: bold; padding: 2px 7px; margin-right: 10px; border-width: 1px; border-color: rgb(143, 191, 122); color: rgb(143, 191, 122); }
+.card-chip.waiting { border-color: rgb(216, 162, 74); color: rgb(216, 162, 74); }

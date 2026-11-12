@@ -65,7 +65,7 @@ namespace GreyBoxStrategy.Realm
         public void Begin()
         {
             if (session != null) return;
-            if (!Gateway.TakeLock("Painted Realm live game (GreyBoxStrategy Watch scene)", $"one live game, {model} x5 with personas, seed {seed}; a few minutes")) { Error = WhyNotNow() ?? "could not take the RTX 5080 lock"; return; }
+            if (!Gateway.TakeLock("Painted Realm live game (GreyBoxStrategy Watch scene)", $"one live game, {model} x5 with personas, seed {seed}; a few minutes", model)) { Error = WhyNotNow() ?? "could not take the RTX 5080 lock"; return; }
             tookLock = true;
 
             string folder = Path.Combine(Application.dataPath, "..", "Logs", "Live");
@@ -95,10 +95,13 @@ namespace GreyBoxStrategy.Realm
         public IEnumerable<string> Lines() => session?.Lines() ?? Array.Empty<string>();
         public void Stop() => session?.Stop();
 
+        /// <summary>Whether this game holds the RTX 5080 now.</summary>
+        public bool HoldsCard => tookLock;
+
         private void OnDestroy()
         {
             session?.Stop();
-            ReleaseLock();
+            if (tookLock) { tookLock = false; Gateway.ReleaseHeldNow(); } // unloads the model too
         }
     }
 }

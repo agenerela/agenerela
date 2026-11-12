@@ -15,6 +15,7 @@ namespace GreyBoxStrategy.Realm
     public sealed partial class ScreenUI
     {
         private VisualElement orders, offerCard;
+        private Label ordersStatus, card;
         private string openAction;
         private bool showReport;
 
@@ -65,6 +66,7 @@ namespace GreyBoxStrategy.Realm
             if (req == null)
             {
                 var wait = new Label(status ?? ""); wait.AddToClassList("orders-status"); body.Add(wait);
+                ordersStatus = wait;
                 return;
             }
 
@@ -104,6 +106,7 @@ namespace GreyBoxStrategy.Realm
 
             var foot = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center, marginTop = 8 } };
             var st = new Label(status ?? ""); st.AddToClassList("orders-status"); st.style.flexGrow = 1; st.style.flexShrink = 1; foot.Add(st);
+            ordersStatus = st;
             var end = new Button(() => EndTurnPressed?.Invoke()) { text = "End turn", tooltip = "Send your order (Enter). The four rulers' moves and yours then land in the rules' order." };
             end.AddToClassList("menu-button"); end.AddToClassList("end-turn"); foot.Add(end);
             body.Add(foot);
@@ -173,6 +176,39 @@ namespace GreyBoxStrategy.Realm
                 case Actions.OfferPeace: return "Offer peace to " + CountryLook.NameOf(m.Target);
                 default: return m.ToString();
             }
+        }
+
+        /// <summary>Changes only the orders panel's status line: the clock ticks without rebuilding its buttons.</summary>
+        public void SetOrdersStatus(string status)
+        {
+            if (ordersStatus != null) ordersStatus.text = status ?? "";
+        }
+
+        /// <summary>
+        /// The RTX 5080 in the top bar: "held" while this game holds the card, "waiting" while it
+        /// waits for it, null to hide it.
+        /// </summary>
+        public void SetCard(string state)
+        {
+            if (card == null)
+            {
+                card = new Label(); card.AddToClassList("card-chip");
+                turnLabel.parent.Insert(0, card);
+            }
+            card.style.display = state == null ? DisplayStyle.None : DisplayStyle.Flex;
+            card.EnableInClassList("waiting", state == "waiting");
+            card.text = state == "held" ? "RTX 5080 · held" : "RTX 5080 · waiting";
+            card.tooltip = state == "held"
+                ? "This game holds the RTX 5080's lock until it ends or you leave (Menu). Other sessions wait for it."
+                : "Another session holds the RTX 5080. The game takes it when it is free.";
+        }
+
+        /// <summary>A Menu button at the top bar's right end: back to the start menu, from any game.</summary>
+        public void AddMenuButton(Action pressed)
+        {
+            var b = new Button(pressed) { text = "Menu", tooltip = "Back to the start menu. A game in progress stops, and the RTX 5080 is let go." };
+            b.AddToClassList("tbtn"); b.style.width = StyleKeyword.Auto; b.style.paddingLeft = 8; b.style.paddingRight = 8; b.style.marginLeft = 8;
+            playButton.parent.Add(b);
         }
 
         public void HideOrders() { orders?.RemoveFromHierarchy(); orders = null; openAction = null; }
