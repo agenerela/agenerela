@@ -29,6 +29,28 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm rules v2: the design for the deeper game** (#20),
+  `docs/demos/painted-realm-rules-v2.md`. Design only, no game code. It records the lead's
+  34 answers of 12 November and his answers to its own eight questions, and settles, for build sessions to take one slice at a time:
+  - **The turn:** writs (2 to 5 orders a turn), standing orders, and a model ruler asked only about
+    the court and the armies awaiting orders. About 7 s of model time a turn for six `qwen3.5:4b`
+    rulers, 14 s at worst; five ways compared.
+  - **A seeded map generator** with fairness and connectivity checks, special places named and told
+    by a model, and a sea chart drawn by code at any resolution. Today's board stays as the Classic
+    preset.
+  - **Armies:** three unit types with counters, generals with traits, sieges, supply as stores, fog
+    of war, and a survey of what gives army play depth.
+  - **The rest:** population, food, goods and buildings shown as development; agreements and opinions
+    with reasons; conquest with no turn limit; the settings and presets; what each decision asks of
+    the models and the framework; the A/B each slice owes.
+  - **Conquest by treaty:** armies occupy land, shown as hatching, and a peace treaty transfers it.
+    The treaty is a closed set of terms bounded by a war score, answered by the other ruler.
+  - **Later stages:** orders without a cap (automation, groups, a decision budget), a world shaped
+    by a model through the framework, and names and histories written by a model, each with its
+    A/B. Research on making the unit roster our own.
+  - **The build:** eleven slices with issue-ready checklists. The lead's answers to the first
+    draft's eight questions are recorded beside his other 12 November answers.
+
 - **Painted Realm: a dev menu** (#20). F1 opens it, in the editor and in development builds.
   - Play with stand-in rulers and no card. Jump, step, autoplay and set any speed.
   - Change gold, soldiers, stability, forts, owners, wars and eliminations, and fire any of the

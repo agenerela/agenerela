@@ -266,6 +266,11 @@ yet; the next round will be. Items 11, 22 and 26 are **under research** in a sep
 | 27 | Audience | "Presentation first, but if it turns out very fun, I am thinking about actually developing it nicely and maybe make revenue with it in future" | Not in scope; see the licence note below |
 | 28 | Platform | Windows, mouse and keyboard; 1920 × 1080 first, 1366 × 768 must work, and "make sure we support 4k too eventually" | Partly: checked at 1920 × 1080 and 1366 × 768, not at 4K |
 
+**The lead's next 34 answers, of 12 November**, after he played all three modes (the map generator,
+armies, economy, diplomacy, events, settings, conquest with no turn limit), are written out in
+[`painted-realm-rules-v2.md`](painted-realm-rules-v2.md#the-leads-answers-12-november-2026), with
+the design they lead to.
+
 **Met:** 2, 4, 6, 14, 15, 16, 18, 19. **Partly:** 3, 5, 17, 21, 23, 24, 28. **Not yet:** 7, 8,
 9, 10, 12, 13, 20; and 11 and 22, under research. **Outside this mock-up:** 1, 25, 26
 (under research) and 27.
