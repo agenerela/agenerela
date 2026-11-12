@@ -90,7 +90,7 @@ namespace GreyBoxStrategy.Realm
                 ("Card held", "fault lock another session"), ("Server down", "fault server on"), ("Round times out", "fault timeout on"),
                 ("Unreadable replies", "fault unreadable on"), ("All off", "faults off"));
             Buttons("CAPTURE", ("Screenshot", "screenshot"), ("Save recording", "save-recording"));
-            Buttons("WINDOW", ("1366×768", "size 1366x768"), ("1920×1080", "size 1920x1080"), ("2560×1440", "size 2560x1440"), ("3840×2160", "size 3840x2160"));
+            Buttons("WINDOW", ("1366×768", "size 1366x768"), ("1920×1080", "size 1920x1080"), ("2560×1440", "size 2560x1440"), ("3840×2160", "size 3840x2160"), ("1920×1200", "size 1920x1200"), ("3840×2400", "size 3840x2400"));
             Buttons("HELP", ("All commands", "help"), ("Event list", "events"), ("Readouts", "readouts"));
             Root.Add(devPanel);
         }

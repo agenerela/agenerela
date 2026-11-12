@@ -117,7 +117,7 @@ namespace GreyBoxStrategy.Realm
                 StartReplay();
                 return $"replaying {rec.Title}, {game.Turns.Count} turns{(game.Dev ? ", dev game" : "")}";
             });
-            c.Add("size", "size <w>x<h>", "set the window or Game view size: 1366x768, 1920x1080, 2560x1440, 3840x2160", a =>
+            c.Add("size", "size <w>x<h>", "set the window or Game view size: 1366x768, 1920x1080, 2560x1440, 3840x2160, or 16:10 1920x1200, 3840x2400", a =>
             {
                 Need(a.Length == 1 && a[0].Contains("x"), "Give a size like 1920x1080.");
                 var wh = a[0].Split('x'); int w = int.Parse(wh[0]), h = int.Parse(wh[1]);
