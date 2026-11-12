@@ -26,7 +26,14 @@ language model through the framework, fighting over 25 provinces on a painted se
   the attack, then press End turn. Declare war on a neighbour, and an envoy may come with peace.
 
 1. Open `Demos/GreyBoxStrategy` in Unity 6000.3.23f1, then open
-   `Assets/GreyBoxStrategy/Screen/Watch.unity` and press **Play**.
+   `Assets/GreyBoxStrategy/Screen/Watch.unity`.
+   - **Set the Game view to your screen first:** in its resolution menu choose **Free Aspect**,
+     set **Scale** to **1x**, and untick **Low Resolution Aspect Ratios**.
+   - A fixed size such as 1920 × 1080 is drawn at that size and stretched to fill a larger
+     window, so it looks soft. The game says so across the top of the map when it happens.
+   - The screen's text and panels grow with the screen: 1× at 1080 pixels tall, 1.33× at 1440,
+     2× at 2160.
+   - Then press **Play**.
 2. The start menu offers three games:
    - **Replay the recorded game.** Seed 4 of the persona table: five `qwen3.5:4b` rulers, Kesh
      wins by domination on turn 17. Every line is the rulers' own. It needs no model and no
@@ -41,6 +48,7 @@ language model through the framework, fighting over 25 provinces on a painted se
    - Click a province, a crest or a chronicle line to open it. A chronicle line or a speech banner
      opens the decision behind it.
    - Right-drag pans the map, and the wheel zooms.
+   - **Menu** (top right) goes back to the start menu from any game, and lets the RTX 5080 go.
 4. When you rule a country:
    - The orders panel, bottom centre, lists every move the rules offer you. These are the moves
      a model ruler would be offered in your place. A move that is not offered says why in its
@@ -63,9 +71,18 @@ language model through the framework, fighting over 25 provinces on a painted se
 - **The RTX 5080, behind its lock.** The server is the card shared by every live run. A live game
   takes `.scratch/ollama-5080-lock/held` while the model plays, unloads the model, and releases
   the lock as soon as the model is done (playback carries on from the log). A full game holds the
-  card for a few minutes. A rule game takes the lock for each round of the rulers' decisions
-  only, and unloads the model after each. It never holds the card while it waits for your
-  order, and if another session holds it, the orders panel says who.
+  card for a few minutes.
+- **A rule game holds the card for the whole game,** from before the first council until it
+  ends or you leave with Menu (the lead's decision, 12 November). The top bar shows
+  **RTX 5080 · held** meanwhile. The lock is let go, and the model unloaded, on every way out:
+  the end, Menu, stopping Play mode, quitting, a script reload, or an error.
+  - **While another session holds the card,** the game waits and shows who holds it, since when,
+    and how long you have waited.
+  - **When the server is slow** (another client using it without the lock), the status line says
+    so after 20 s.
+  - **A round with no answer in 150 s** stops the game with a message.
+- **The game never sits silent.** A live game's council clock runs in the top bar, and a notice
+  appears after 30 s.
 - **If it cannot start, the menu says why rather than wait:** a variable is not set, the lock is
   held (and by whom), the server cannot be reached, or the key is refused. A game that stops
   mid-way says so across the top of the map.

@@ -61,32 +61,117 @@ namespace GreyBoxStrategy.Realm
         }
 
         /// <summary>Who holds the lock, as its owner line, or null when it is free.</summary>
-        public static string LockHolder()
+        public static string LockHolder() => ReadLock()?.Owner;
+
+        /// <summary>The lock's owner.txt: who, since when, and what they expect, or null when it is free.</summary>
+        public sealed class LockNote
         {
-            if (!Directory.Exists(LockPath)) return null;
-            try { var lines = File.ReadAllLines(Path.Combine(LockPath, "owner.txt")); return lines.Length > 0 ? System.Text.RegularExpressions.Regex.Replace(lines[0], @"^owner:\s*", "") : "someone"; }
-            catch (IOException) { return "someone"; }
-            catch (UnauthorizedAccessException) { return "someone"; }
+            public string Owner = "someone", Expect;
+            public DateTime? Since;
+            public int? Pid;
+
+            /// <summary>"owner (since 23:41, expects 30 min)"</summary>
+            public override string ToString()
+            {
+                var parts = new System.Collections.Generic.List<string>();
+                if (Since != null) parts.Add($"since {Since.Value:HH:mm}");
+                if (!string.IsNullOrEmpty(Expect)) parts.Add("expects " + Expect);
+                return parts.Count == 0 ? Owner : $"{Owner} ({string.Join(", ", parts)})";
+            }
         }
 
-        /// <summary>Takes the lock if it is free. False when someone else holds it.</summary>
-        public static bool TakeLock(string owner, string what)
+        public static LockNote ReadLock() => ReadLock(LockPath);
+
+        public static LockNote ReadLock(string lockPath)
         {
-            if (Directory.Exists(LockPath)) return false;
+            if (!Directory.Exists(lockPath)) return null;
+            var note = new LockNote();
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(LockPath));
-                Directory.CreateDirectory(LockPath);
-                File.WriteAllText(Path.Combine(LockPath, "owner.txt"), $"owner: {owner}\nwhat: {what}\nsince: {DateTime.Now:s}\n");
+                foreach (string line in File.ReadAllLines(Path.Combine(lockPath, "owner.txt")))
+                {
+                    int colon = line.IndexOf(':');
+                    if (colon < 0) continue;
+                    string key = line.Substring(0, colon).Trim(), value = line.Substring(colon + 1).Trim();
+                    if (key == "owner") note.Owner = value;
+                    else if (key == "expect") note.Expect = value;
+                    else if (key == "since" && DateTime.TryParse(value, out var since)) note.Since = since;
+                    else if (key == "pid" && int.TryParse(value.Split(' ')[0], out int pid)) note.Pid = pid;
+                }
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+            return note;
+        }
+
+        private static int Pid => System.Diagnostics.Process.GetCurrentProcess().Id;
+
+        // The lock this Unity took, if any, so every way out of the game can let it go.
+        private static string heldPath, heldModel;
+
+        /// <summary>Takes the lock if it is free. False when someone else holds it.</summary>
+        public static bool TakeLock(string owner, string what, string model = null) => TakeLock(LockPath, owner, what, model);
+
+        public static bool TakeLock(string lockPath, string owner, string what, string model)
+        {
+            if (Directory.Exists(lockPath)) return false;
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(lockPath));
+                Directory.CreateDirectory(lockPath);
+                File.WriteAllText(Path.Combine(lockPath, "owner.txt"),
+                    $"owner: {owner}\npid: {Pid} (Unity)\nwhat: {what}\nsince: {DateTime.Now:s}\nexpect: until the game ends or is left\n");
+                heldPath = lockPath;
+                heldModel = model;
+                WatchExits();
                 return true;
             }
             catch (IOException e) { Debug.LogWarning("Painted Realm: could not take the RTX 5080 lock: " + e.Message); return false; }
         }
 
-        public static void ReleaseLock()
+        /// <summary>Releases the lock, but only one this Unity took: another session's lock is never touched.</summary>
+        public static void ReleaseLock() => ReleaseLock(LockPath);
+
+        public static void ReleaseLock(string lockPath)
         {
-            try { if (Directory.Exists(LockPath)) Directory.Delete(LockPath, true); }
+            try
+            {
+                var note = ReadLock(lockPath);
+                if (note != null && (note.Pid == null || note.Pid == Pid)) Directory.Delete(lockPath, true);
+            }
             catch (IOException e) { Debug.LogWarning("Painted Realm: could not release the RTX 5080 lock: " + e.Message); }
+            if (heldPath == lockPath) { heldPath = null; heldModel = null; }
+        }
+
+        /// <summary>Whether this Unity holds the RTX 5080's lock now.</summary>
+        public static bool HoldsLock => heldPath != null;
+
+        private static bool watching;
+
+        // Quitting, leaving Play mode and a script reload all end the game without its own code
+        // running to the end: each lets the card go here, at once.
+        private static void WatchExits()
+        {
+            if (watching) return;
+            watching = true;
+            Application.quitting += ReleaseHeldNow;
+#if UNITY_EDITOR
+            UnityEditor.AssemblyReloadEvents.beforeAssemblyReload += ReleaseHeldNow;
+            UnityEditor.EditorApplication.playModeStateChanged += s => { if (s == UnityEditor.PlayModeStateChange.ExitingPlayMode) ReleaseHeldNow(); };
+#endif
+        }
+
+        /// <summary>Unloads the model (a few seconds at most) and releases the lock this Unity holds, if any.</summary>
+        public static void ReleaseHeldNow()
+        {
+            if (heldPath == null) return;
+            string path = heldPath, model = heldModel;
+            if (model != null && !string.IsNullOrEmpty(Url))
+            {
+                try { http.SendAsync(Request(System.Net.Http.HttpMethod.Post, "/api/generate", "{\"model\":\"" + model + "\",\"keep_alive\":0}")).Wait(TimeSpan.FromSeconds(3)); }
+                catch (Exception) { }
+            }
+            ReleaseLock(path);
         }
 
         // HttpClient, as the framework's OllamaProvider uses: UnityWebRequest refuses a plain-HTTP
@@ -149,9 +234,9 @@ namespace GreyBoxStrategy.Realm
     }
 
     /// <summary>
-    /// The RTX 5080's lock for a rule game: taken for each round of model calls and released, with
-    /// the model unloaded, as soon as the round is decided. The card is never held while the game
-    /// waits for the person's order, and a round waits its turn when another session holds it.
+    /// The RTX 5080's lock for a rule game: taken before the first council and held until the game
+    /// ends or is left, with the model unloaded when it is let go (the lead's decision, 12 November).
+    /// While another session holds it, the game waits and says who.
     /// </summary>
     public sealed class CardLock : RuleSession.ICardLock
     {
@@ -161,13 +246,14 @@ namespace GreyBoxStrategy.Realm
         public CardLock(string model, string what) { this.model = model; this.what = what; }
 
         public string WaitingFor { get; private set; }
+        public bool Held => held;
 
         public async Awaitable Acquire(CancellationToken ct)
         {
-            while (!Gateway.TakeLock("Painted Realm rule game (GreyBoxStrategy Watch scene)", what + "; one council round at a time, released between rounds"))
+            while (!Gateway.TakeLock("Painted Realm rule game (GreyBoxStrategy Watch scene)", what, model))
             {
-                WaitingFor = Gateway.LockHolder() ?? "someone";
-                await Awaitable.WaitForSecondsAsync(3f, ct);
+                WaitingFor = Gateway.ReadLock()?.ToString() ?? "someone";
+                await Awaitable.WaitForSecondsAsync(2f, ct);
             }
             WaitingFor = null;
             held = true;
@@ -181,12 +267,12 @@ namespace GreyBoxStrategy.Realm
             finally { Gateway.ReleaseLock(); }
         }
 
-        /// <summary>For OnDestroy: let go at once, without waiting on the server.</summary>
+        /// <summary>For leaving the game: unload and let go at once.</summary>
         public void ReleaseNow()
         {
             if (!held) return;
             held = false;
-            Gateway.ReleaseLock();
+            Gateway.ReleaseHeldNow();
         }
     }
 }

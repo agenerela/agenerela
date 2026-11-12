@@ -26,16 +26,22 @@ namespace GreyBoxStrategy.Realm
     /// </remarks>
     public sealed class RuleSession
     {
-        /// <summary>The card the model seats use, taken for each round of model calls only.</summary>
+        /// <summary>
+        /// The card the model seats use. A game a person plays takes it before the first council and
+        /// holds it until the game ends or is left (the lead's decision, 12 November).
+        /// </summary>
         public interface ICardLock
         {
-            /// <summary>Who holds the card while a round waits for it, or null.</summary>
+            /// <summary>Who holds the card while the game waits for it, or null.</summary>
             string WaitingFor { get; }
             Awaitable Acquire(CancellationToken ct);
             Awaitable Release();
         }
 
-        public enum Waiting { Nothing, Orders, Envoy, Models }
+        public enum Waiting { Nothing, Card, Orders, Envoy, Models }
+
+        /// <summary>How long one round of the rulers' decisions may take before the game stops and says so.</summary>
+        public TimeSpan RoundTimeout { get; set; } = TimeSpan.FromSeconds(150);
 
         public const string YourModel = "you";
 
@@ -46,6 +52,7 @@ namespace GreyBoxStrategy.Realm
         private readonly List<RecordedDecision> yours = new List<RecordedDecision>();
         private readonly Dictionary<string, CountryAgent> seats = new Dictionary<string, CountryAgent>(StringComparer.Ordinal);
         private AwaitableCompletionSource<Move> pending;
+        private Exception failure;
         private DecisionLog log;
 
         public RuleSession(string you, string model, string arm, int seed, string logPath, Func<string, World, ILLMProvider> providerFor, ICardLock cardLock = null)
@@ -92,8 +99,12 @@ namespace GreyBoxStrategy.Realm
         public string OfferStatement { get; private set; }
         /// <summary>True while the model seats are deciding; they decide while you choose, so it can turn false before your order is in.</summary>
         public bool ModelsThinking { get; private set; }
-        /// <summary>Who holds the RTX 5080 while a round waits for it, or null.</summary>
+        /// <summary>Who holds the RTX 5080 while the game waits for it, or null.</summary>
         public string WaitingForCard => cardLock?.WaitingFor;
+        /// <summary>True from when this game has the card until it lets it go.</summary>
+        public bool HoldsCard { get; private set; }
+        /// <summary>When the current wait began: for the card, or for the rulers' round (UTC).</summary>
+        public DateTime WaitingSince { get; private set; } = DateTime.UtcNow;
         /// <summary>Turns resolved so far: the screen plays a turn only once it has.</summary>
         public int Resolved { get; private set; }
 
@@ -145,6 +156,15 @@ namespace GreyBoxStrategy.Realm
                     Game.Gates[id] = seat;
                 }
 
+                if (cardLock != null)
+                {
+                    WaitingFor = Waiting.Card;
+                    WaitingSince = DateTime.UtcNow;
+                    await cardLock.Acquire(cancel.Token);
+                    HoldsCard = true;
+                    WaitingFor = Waiting.Nothing;
+                }
+
                 while (!Game.IsOver)
                 {
                     cancel.Token.ThrowIfCancellationRequested();
@@ -152,6 +172,7 @@ namespace GreyBoxStrategy.Realm
                 }
             }
             catch (OperationCanceledException) { Stopped = true; }
+            catch (TimeoutException e) { Error = e.Message; Debug.LogWarning("Painted Realm: " + e.Message); }
             catch (Exception e) { Error = e.Message; Debug.LogException(e); }
             finally
             {
@@ -159,6 +180,13 @@ namespace GreyBoxStrategy.Realm
                 ModelsThinking = false;
                 log.Flush(TimeSpan.FromSeconds(5));
                 log.Dispose();
+                // Every way out lets the card go: the end, Stop, a timeout, an exception.
+                if (HoldsCard)
+                {
+                    HoldsCard = false;
+                    try { await cardLock.Release(); }
+                    catch (Exception e) { Debug.LogWarning("Painted Realm: releasing the RTX 5080: " + e.Message); }
+                }
                 Finished = true;
             }
         }
@@ -172,6 +200,7 @@ namespace GreyBoxStrategy.Realm
 
             // The model seats decide at once, on the council's snapshot, while you choose.
             ModelsThinking = true;
+            WaitingSince = DateTime.UtcNow;
             var models = Decide(council.Where(r => seats.ContainsKey(r.CountryId)).ToList(), $"seed-{Seed}-turn-{turn}-council", rounds);
             var answers = new List<CountryAnswer>();
             if (mine != null)
@@ -188,6 +217,7 @@ namespace GreyBoxStrategy.Realm
             var myOffer = envoys.FirstOrDefault(r => r.CountryId == You);
             var replies = new List<CountryAnswer>();
             ModelsThinking = envoys.Any(r => seats.ContainsKey(r.CountryId));
+            if (ModelsThinking) WaitingSince = DateTime.UtcNow;
             var modelReplies = Decide(envoys.Where(r => seats.ContainsKey(r.CountryId)).ToList(), $"seed-{Seed}-turn-{turn}-envoys", rounds);
             if (myOffer != null)
             {
@@ -211,6 +241,7 @@ namespace GreyBoxStrategy.Realm
 
         private async Awaitable<Move> Ask(Waiting what, Action show)
         {
+            if (failure != null) throw failure;
             pending = new AwaitableCompletionSource<Move>();
             var awaitable = pending.Awaitable;
             show();
@@ -219,33 +250,64 @@ namespace GreyBoxStrategy.Realm
         }
 
         // The model seats' requests, in rounds: a seat asked twice (two offers of peace) goes in a
-        // second round, as ModelGameRunner does. Each round holds the card only while it decides.
+        // second round, as ModelGameRunner does. A round that takes longer than RoundTimeout stops
+        // the game with a message, even while it waits for your order, so it never sits silent.
         private async Awaitable<List<CountryAnswer>> Decide(List<CountryRequest> requests, string id, List<DecisionRound> rounds)
         {
-            var answers = new List<CountryAnswer>();
-            var layers = requests.GroupBy(r => r.CountryId)
-                .SelectMany(g => g.Select((r, k) => (r, k)))
-                .GroupBy(x => x.k).OrderBy(g => g.Key)
-                .Select(g => g.Select(x => x.r).ToList()).ToList();
-            for (int k = 0; k < layers.Count; k++)
+            try
             {
-                var layer = layers[k];
-                if (cardLock != null) await cardLock.Acquire(cancel.Token);
-                DecisionRound round;
-                try
+                var answers = new List<CountryAnswer>();
+                var layers = requests.GroupBy(r => r.CountryId)
+                    .SelectMany(g => g.Select((r, k) => (r, k)))
+                    .GroupBy(x => x.k).OrderBy(g => g.Key)
+                    .Select(g => g.Select(x => x.r).ToList()).ToList();
+                for (int k = 0; k < layers.Count; k++)
                 {
-                    round = await DecisionRound.DecideAsync(layer.Select(r => seats[r.CountryId].CallFor(r)),
-                        layers.Count == 1 ? id : $"{id}-{k + 1}", cancel.Token);
+                    var layer = layers[k];
+                    DecisionRound round;
+                    using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancel.Token))
+                    using (OnMainThreadAfter(RoundTimeout, timeout))
+                    {
+                        try
+                        {
+                            round = await DecisionRound.DecideAsync(layer.Select(r => seats[r.CountryId].CallFor(r)),
+                                layers.Count == 1 ? id : $"{id}-{k + 1}", timeout.Token);
+                        }
+                        catch (OperationCanceledException) when (!cancel.IsCancellationRequested)
+                        {
+                            throw new TimeoutException($"The rulers did not answer within {RoundTimeout.TotalSeconds:0} seconds on turn {requests[0].Turn}. " +
+                                "The server may be busy with another client's requests, or unreachable. Go back to the menu and try again when the card is free.");
+                        }
+                    }
+                    rounds.Add(round);
+                    foreach (var r in layer) answers.Add(seats[r.CountryId].Take(r, round));
                 }
-                finally
-                {
-                    if (cardLock != null) await cardLock.Release();
-                }
-                rounds.Add(round);
-                foreach (var r in layer) answers.Add(seats[r.CountryId].Take(r, round));
+                ModelsThinking = false; // they have decided, whether or not you have
+                return answers;
             }
-            ModelsThinking = false; // they have decided, whether or not you have
-            return answers;
+            catch (Exception e) when (!(e is OperationCanceledException))
+            {
+                Fail(e);
+                throw;
+            }
+        }
+
+        // A failure while the game waits for you ends the wait, so the game stops and says why.
+        private void Fail(Exception e)
+        {
+            failure = e;
+            var p = pending; pending = null;
+            p?.SetException(e);
+        }
+
+        // Cancels after a delay, on the main thread: a timer's own thread would resume the round's
+        // awaits off the main thread.
+        private static IDisposable OnMainThreadAfter(TimeSpan delay, CancellationTokenSource cts)
+        {
+            var context = SynchronizationContext.Current;
+            if (context == null) { cts.CancelAfter(delay); return new CancellationTokenSource(); }
+            return new Timer(_ => context.Post(__ => { try { cts.Cancel(); } catch (ObjectDisposedException) { } }, null),
+                null, delay, Timeout.InfiniteTimeSpan);
         }
 
         private void Record(CountryRequest request, Move move)
