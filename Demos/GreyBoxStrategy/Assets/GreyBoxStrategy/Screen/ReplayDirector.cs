@@ -15,7 +15,7 @@ namespace GreyBoxStrategy.Realm
     /// lands the events one by one with the timings of the design page ("How the colour change
     /// should feel"). No model is called.
     /// </summary>
-    public sealed class ReplayDirector : MonoBehaviour
+    public sealed partial class ReplayDirector : MonoBehaviour
     {
         [SerializeField] private TextAsset recording;
         [SerializeField] private MapView map;
@@ -81,7 +81,7 @@ namespace GreyBoxStrategy.Realm
                 LinePressed = l =>
                 {
                     if (l.Event.ProvinceIndex >= 0) PanTo(l.Event.ProvinceIndex); else if (l.Country != null) PanTo(ui.CapitalIndex(l.Country));
-                    if (l.Event.Decision != null) ui.ShowCard(DecisionCard.From(l.Event));
+                    if (CanInspect(l.Event)) ui.ShowCard(DecisionCard.From(l.Event));
                 },
                 CountryPressed = id => { OpenCountry(id); FrameCountry(id); },
             };
@@ -91,7 +91,7 @@ namespace GreyBoxStrategy.Realm
             ui.ModePressed = SetMode;
             ui.FollowPressed = Follow;
             ui.DiplomacyPressed = ToggleDiplomacy;
-            ui.DecisionPressed = e => ui.ShowCard(DecisionCard.From(e));
+            ui.DecisionPressed = e => { if (CanInspect(e)) ui.ShowCard(DecisionCard.From(e)); };
             ui.monoFont = UnityEngine.TextCore.Text.FontAsset.CreateFontAsset("Consolas", "Regular");
             Show(game.Initial, null);
             ui.SetTurn(1, "Council");
@@ -99,7 +99,7 @@ namespace GreyBoxStrategy.Realm
             ui.SetPlaying(playing, speed);
             if (showMenu && !isLive)
             {
-                ui.ShowMenu(game.Title, live != null ? live.Model : "qwen3.5:4b", live != null ? live.Seed : 101, StartReplay, (m, s) => StartCoroutine(StartLive(m, s)));
+                ui.ShowMenu(game.Title, live != null ? live.Model : "qwen3.5:4b", live != null ? live.Seed : 101, StartReplay, (m, s) => StartCoroutine(StartLive(m, s)), TryRule);
                 return;
             }
             StartCoroutine(Play());
@@ -127,7 +127,7 @@ namespace GreyBoxStrategy.Realm
             if (why != null) { ui.ShowMenuStatus(why); yield break; }
             ui.ShowMenuStatus("Asking the server...", true);
             string serverWhy = null;
-            yield return live.CheckServer(w => serverWhy = w);
+            yield return Gateway.CheckServer(w => serverWhy = w);
             if (serverWhy != null) { ui.ShowMenuStatus(serverWhy); yield break; }
             started = true;
             live.Configure(true, gameSeed, 0, model);
@@ -224,11 +224,23 @@ namespace GreyBoxStrategy.Realm
             var persona = game.Players.TryGetValue(id, out var pl) ? pl.Persona : null;
             GreyBoxStrategy.Persona p = null;
             try { if (persona != null) p = GreyBoxStrategy.Personas.Named(persona); } catch (ArgumentException) { }
+            sideCountry = id;
             ui.ShowCountry(id, shown, played, p?.Personality, p?.Knowledge);
+        }
+
+        /// <summary>The country whose panel is open, or null for a province's.</summary>
+        private string sideCountry;
+
+        /// <summary>Redraws the open side panel, as when rule mode's orders open or close.</summary>
+        private void RefreshSide()
+        {
+            if (!ui.SideOpen) return;
+            if (sideCountry != null) OpenCountry(sideCountry);
+            else if (selected >= 0) OpenProvince(selected);
         }
         public void OpenProvince(int province)
         {
-            selected = province; map.SetSelected(province);
+            selected = province; sideCountry = null; map.SetSelected(province);
             ui.ShowProvince(province, shown, played);
         }
         public void ToggleDiplomacy()
@@ -252,7 +264,8 @@ namespace GreyBoxStrategy.Realm
                     break;
                 }
                 case MapMode.Forts:
-                    map.SetOverlay(shown.Forts.Select(f => f == 0 ? 0.15f : f == 1 ? 0.6f : 1f).ToList(), null, null);
+                    // Rule mode: forts beyond your borders are not known, and show as none.
+                    map.SetOverlay(shown.Forts.Select((f, q) => !ui.Fog.KnowsProvince(shown, q) || f == 0 ? 0.15f : f == 1 ? 0.6f : 1f).ToList(), null, null);
                     break;
                 case MapMode.Reach:
                     if (followed == null) { map.SetOverlay(null, null, null); break; }
@@ -282,6 +295,7 @@ namespace GreyBoxStrategy.Realm
                 if (kb.digit3Key.wasPressedThisFrame) SetMode(MapMode.Forts);
                 if (kb.digit4Key.wasPressedThisFrame) SetMode(MapMode.Reach);
                 if (kb.dKey.wasPressedThisFrame) ToggleDiplomacy();
+                if ((kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame) && rule != null) EndTurn();
             }
             if (mouse != null)
             {
@@ -358,6 +372,7 @@ namespace GreyBoxStrategy.Realm
         /// </summary>
         private int ReadyTurns()
         {
+            if (rule != null) return RuleReadyTurns();
             if (live == null || !live.PlayLive) return game.Turns.Count;
             game = ReplayBuilder.Build(Recording.FromDecisionLog(live.Lines(), live.Seed, live.Players), partial: true);
             if (live.Error != null) ui.ShowNotice("The live game stopped: " + live.Error);
@@ -370,6 +385,13 @@ namespace GreyBoxStrategy.Realm
             for (turnIndex = 0; ; turnIndex++)
             {
                 // Live: wait for the council, with the thinking indicator, until the turn has resolved.
+                while (rule != null && turnIndex >= ReadyTurns() && !rule.Finished)
+                {
+                    ui.SetTurn(turnIndex + 1, rule.WaitingFor == RuleSession.Waiting.Envoy ? "Envoys" : "Council");
+                    RuleTick();
+                    yield return new WaitForSeconds(0.2f);
+                }
+                if (rule != null) { ReadyTurns(); RuleResolving(turnIndex + 1); }
                 while (live != null && live.PlayLive && turnIndex >= ReadyTurns() && !live.Finished)
                 {
                     if (live.Error != null) { ui.ShowNotice("The live game stopped: " + live.Error); break; }
@@ -383,7 +405,7 @@ namespace GreyBoxStrategy.Realm
                 var turn = game.Turns[turnIndex];
                 ui.SetTurn(turn.Turn, "Upkeep");
                 Show(turn.Start, null);
-                if (turn.Turn >= skipUntilTurn)
+                if (turn.Turn >= skipUntilTurn && rule == null)
                 {
                     // The council: every ruler asked at once, on one snapshot (decision 24's thinking indicator).
                     ui.SetTurn(turn.Turn, "Council");
@@ -401,7 +423,7 @@ namespace GreyBoxStrategy.Realm
                     if (turn.Turn < skipUntilTurn)
                     {
                         Show(e.After, null);
-                        ui.AddLine(Chronicle.Line(e, CountryLook.NameOf));
+                        AddLine(e, Chronicle.Line(e, CountryLook.NameOf));
                         continue;
                     }
                     yield return Gate();
@@ -410,6 +432,8 @@ namespace GreyBoxStrategy.Realm
                     Current = "";
                 }
             }
+            ui.GameOver = true;
+            if (rule != null) RuleOver();
             if (game.Result != null) ui.SetTurn(game.Result.Turns, $"{CountryLook.NameOf(game.Result.Winner)} wins");
             else ui.SetTurn(game.Turns.Count, live != null && live.Error != null ? "live game stopped: " + live.Error : "stopped");
             playing = false;
@@ -425,7 +449,7 @@ namespace GreyBoxStrategy.Realm
                 case ReplayEventKind.TruceEnded:
                 case ReplayEventKind.Eliminated:
                     Show(e.After, null);
-                    ui.AddLine(line);
+                    if (!AddLine(e, line)) break; // another country's harvest: not news to your court
                     yield return Wait(e.Kind == ReplayEventKind.Upkeep ? 0.35f : 1.2f);
                     break;
 
@@ -534,7 +558,19 @@ namespace GreyBoxStrategy.Realm
         }
 
         /// <summary>A banner's click: open the decision behind it.</summary>
-        private Action Why(ReplayEvent e) => e.Decision == null ? null : (Action)(() => ui.ShowCard(DecisionCard.From(e)));
+        private Action Why(ReplayEvent e) => !CanInspect(e) ? null : (Action)(() => ui.ShowCard(DecisionCard.From(e)));
+
+        /// <summary>Whether a decision opens in the inspector: always in watch mode; in rule mode, a model ruler's once the game is over (fog of war).</summary>
+        private bool CanInspect(ReplayEvent e) =>
+            e?.Decision != null && e.Decision.ModelName != RuleSession.YourModel && ui.Fog.KnowsDecision(e.Decision.AgentId, ui.GameOver);
+
+        /// <summary>A chronicle line, unless fog of war hides it. False when hidden.</summary>
+        private bool AddLine(ReplayEvent e, ChronicleLine line)
+        {
+            if (!ui.Fog.KnowsUpkeep(e)) return false;
+            ui.AddLine(line);
+            return true;
+        }
 
         /// <summary>For the Unity CLI: open the inspector on a decision, as a click on its chronicle line would.</summary>
         public string Inspect(int turn, string country)

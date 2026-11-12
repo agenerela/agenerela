@@ -29,6 +29,23 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **GreyBoxStrategy, Painted Realm: rule mode** (#20). The start menu's third choice: you rule
+  one country against four model rulers with personas.
+  - The rulers decide at once, in one `DecisionRound`, while your order waits. The turn then
+    plays back as in watch mode.
+  - The orders panel offers exactly the moves `Legality` offers a model seat in your place. A
+    move that is not offered says why. Province and rival panels have Order buttons, and a peace
+    offer to you opens the envoy's card.
+  - Fog of war is decided and documented: you know what a model ruler is told, no more.
+  - The RTX 5080's lock is taken for each round of model calls only, and the model is unloaded
+    after each.
+  - Tests drive the four seats with a `ScriptedProvider`.
+- **Painted Realm: three fixes to #260's live game.**
+  - The lock now resolves to the main checkout's from a git worktree too.
+  - The server check and the unload use `HttpClient`, as the framework's provider does. Before,
+    `UnityWebRequest` refused the plain-HTTP gateway.
+  - The start menu fits at 1366 × 768.
+
 - **GreyBoxStrategy, Painted Realm: a start menu and "Play it"** (#20).
   - The Watch scene opens on a menu: replay the recorded game, or watch a live game (model and
     seed).

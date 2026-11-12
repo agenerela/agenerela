@@ -204,3 +204,40 @@
 .menu-status.busy { color: rgb(194, 179, 147); -unity-font-style: italic; }
 /* a notice across the top of the map */
 .notice { position: absolute; left: 50%; top: 50px; translate: -50% 0; max-width: 760px; flex-direction: row; align-items: center; padding: 6px 6px 6px 12px; background-color: rgba(90, 29, 20, 0.95); border-width: 1px; border-color: rgb(208, 97, 76); font-size: 13px; white-space: normal; }
+
+/* rule mode: the orders panel, bottom centre, ending in End turn */
+.orders { right: 364px; bottom: 8px; width: 520px; background-color: rgb(20, 16, 12); }
+.compact .orders { width: 470px; }
+.order-line { flex-direction: row; align-items: center; height: 26px; }
+.order-chosen { font-size: 16px; -unity-font-style: bold; color: rgb(210, 173, 98); }
+.order-moves { flex-direction: row; flex-wrap: wrap; margin-top: 4px; }
+.order-move { height: 24px; margin: 0 4px 4px 0; padding-left: 8px; padding-right: 8px; font-size: 12px; background-color: rgb(46, 36, 25); border-width: 1px; border-color: rgba(201, 164, 90, 0.55); border-radius: 0; color: rgb(234, 223, 198); }
+.order-move:hover { background-color: rgb(70, 55, 34); }
+.order-move.on { background-color: rgb(70, 55, 34); border-color: rgb(210, 173, 98); }
+.order-move.pick { background-color: rgb(107, 82, 40); border-color: rgb(210, 173, 98); }
+.order-move:disabled { opacity: 0.4; }
+.order-move.wide { align-self: stretch; -unity-text-align: middle-left; margin-right: 0; }
+.target-chip { height: 22px; margin: 0 4px 4px 0; padding-left: 7px; padding-right: 7px; font-size: 12px; background-color: rgba(210, 173, 98, 0.1); border-width: 1px; border-color: rgba(201, 164, 90, 0.35); border-radius: 0; color: rgb(234, 223, 198); }
+.target-chip:hover { border-color: rgb(210, 173, 98); }
+.target-chip.pick { background-color: rgb(107, 82, 40); border-color: rgb(210, 173, 98); }
+.orders-status { font-size: 12.5px; -unity-font-style: italic; color: rgb(194, 179, 147); white-space: normal; }
+.end-turn { margin-top: 0; margin-left: 10px; }
+.menu-button.quiet { background-color: rgb(46, 36, 25); border-color: rgba(201, 164, 90, 0.55); }
+.menu-button:disabled { opacity: 0.4; }
+.rule.compact .legend { max-width: 420px; }
+/* the envoy card: a peace offer to you */
+.offer { left: 50%; top: 22%; width: 470px; translate: -50% 0; background-color: rgb(20, 16, 12); }
+/* the menu's rule choice: five crests to pick from */
+.menu-crest { width: 64px; height: 52px; flex-shrink: 0; margin-right: 6px; margin-bottom: 4px; align-items: center; justify-content: center; background-color: rgb(46, 36, 25); border-width: 1px; border-color: rgba(201, 164, 90, 0.35); border-radius: 0; color: rgb(234, 223, 198); font-size: 11px; padding: 2px; }
+.menu-crest.pick { background-color: rgb(107, 82, 40); border-color: rgb(210, 173, 98); }
+.menu-choice, .menu-field { flex-shrink: 0; }
+.menu-field { min-height: 26px; }
+/* 1366 x 768: the menu's three choices fit without squeezing their fields */
+.compact .menu { padding: 12px 20px; }
+.compact .menu-title { font-size: 24px; margin-bottom: 0; }
+.compact .menu-choice { padding: 8px 12px; margin-bottom: 6px; }
+.compact .menu-button { margin-top: 5px; height: 26px; }
+.compact .menu .src { display: none; }
+/* rule mode: the orders panel holds the bottom centre, so the map-mode bar and its legend move to the top of the map */
+.rule .modes { top: 50px; bottom: auto; }
+.rule .legend { top: 88px; bottom: auto; }

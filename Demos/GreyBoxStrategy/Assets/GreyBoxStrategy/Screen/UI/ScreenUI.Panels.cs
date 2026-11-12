@@ -137,7 +137,7 @@ namespace GreyBoxStrategy.Realm
             var me = Followed; var c = s.Countries[me]; var look = CountryLook.Of(me);
             int n = s.ProvinceCount(me), net = c.Income - c.Upkeep;
             var head = new VisualElement(); head.AddToClassList("nation"); head.AddToClassList("me");
-            head.tooltip = $"Following {look.Name}. Click: its panel. The other rulers are on the right.";
+            head.tooltip = Fog.On ? $"You rule {look.Name}. Click: your panel. Your rivals are on the right." : $"Following {look.Name}. Click: its panel. The other rulers are on the right.";
             head.RegisterCallback<ClickEvent>(_ => CountryPressed?.Invoke(me));
             head.Add(new Crest(look)); var nm = new Label(look.Name.ToUpperInvariant()); nm.AddToClassList("nation-name"); head.Add(nm);
             followBar.Add(head);
@@ -164,6 +164,7 @@ namespace GreyBoxStrategy.Realm
                 rivals.Add(chip);
             }
             followBar.Add(rivals);
+            if (Fog.On) return; // rule mode: the bar is your own country, for the whole game
             var stop = new Button(() => FollowPressed?.Invoke(null)) { text = "×", tooltip = "Stop following: all five countries again" }; stop.AddToClassList("tbtn"); stop.style.marginLeft = 4; followBar.Add(stop);
         }
 
@@ -208,18 +209,21 @@ namespace GreyBoxStrategy.Realm
             var sub = new Label(owner == null ? "Neutral land" : CountryLook.NameOf(owner) + (capital ? "'s capital" : "'s province")); sub.AddToClassList("insp-sub"); hb.Add(sub);
             hdr.Add(hb); body.Add(hdr);
 
-            var hold = Sec(body, "HOLDING", "");
+            bool known = Fog.KnowsProvince(s, p);
+            var hold = Sec(body, "HOLDING", known ? "" : "beyond your borders");
             hold.Add(KeyValue("Owner", owner == null ? "nobody" : CountryLook.NameOf(owner)));
-            if (owner == null) hold.Add(KeyValue("Garrison", s.Garrisons[p].ToString()));
+            if (owner == null) hold.Add(KeyValue("Garrison", known ? s.Garrisons[p].ToString() : "not known"));
             else hold.Add(KeyValue("Defended by", $"70% of {s.Countries[owner].Army} soldiers"));
-            hold.Add(KeyValue("Forts", $"{s.Forts[p]} (+{s.Forts[p] * Queries.Rules.FortBonus})"));
+            hold.Add(KeyValue("Forts", known ? $"{s.Forts[p]} (+{s.Forts[p] * Queries.Rules.FortBonus})" : "not known"));
             if (capital) hold.Add(KeyValue("Capital", $"+{Queries.Rules.CapitalBonus}"));
-            hold.Add(KeyValue("Defends with about", Queries.Defence(s, p).ToString()));
+            hold.Add(KeyValue("Defends with about", known ? Queries.Defence(s, p).ToString() : "not known"));
+            if (!known) hold.Add(Note("Your court knows the garrisons and forts of your own provinces and of those touching your land, as a model ruler is told."));
             hold.Add(KeyValue("Income", owner == null ? "none" : $"{Queries.Rules.IncomePerProvince} gold a turn"));
             var nb = new Label("Borders: " + string.Join(", ", Queries.Neighbours(p).Select(q => Cap(ProvinceIds[q])))); nb.AddToClassList("why-no"); hold.Add(nb);
 
 
-            var moves = Sec(body, "WHO CAN ATTACK IT", "now");
+            if (Fog.On) ProvinceOrders(body, p);
+            var moves = Fog.On ? new VisualElement() : Sec(body, "WHO CAN ATTACK IT", "now");
             foreach (var c in CountryIds.Where(c => c != owner && s.Countries[c].Alive))
             {
                 string why = Queries.WhyNotAttack(s, c, p);
@@ -242,7 +246,7 @@ namespace GreyBoxStrategy.Realm
                     var row = new VisualElement(); row.AddToClassList("row");
                     row.Add(new Crest(CountryLook.Of(e.Country), 15));
                     row.Add(new Label($"t{e.Turn} · {line.Text}") { style = { marginLeft = 6, whiteSpace = WhiteSpace.Normal, flexShrink = 1 } });
-                    if (e.Decision != null) { row.tooltip = "Click: the decision"; row.RegisterCallback<ClickEvent>(_ => DecisionPressed?.Invoke(e)); }
+                    if (e.Decision != null && Fog.KnowsDecision(e.Decision.AgentId, GameOver)) { row.tooltip = "Click: the decision"; row.RegisterCallback<ClickEvent>(_ => DecisionPressed?.Invoke(e)); }
                     hist.Add(row);
                 }
             }
@@ -250,7 +254,7 @@ namespace GreyBoxStrategy.Realm
 
         public void ShowCountry(string id, ReplayState s, IEnumerable<ReplayEvent> history, string personality, IReadOnlyList<string> knowledge)
         {
-            var look = CountryLook.Of(id); var player = Players?.GetValueOrDefault(id); var c = s.Countries[id];
+            var look = CountryLook.Of(id); var player = Players?.GetValueOrDefault(id);
             var body = SideHead(look.Name.ToUpperInvariant());
             var hdr = new VisualElement(); hdr.AddToClassList("insp-head");
             var face = new Image { image = portraits, uv = Faces.Uv(player?.Persona, look.Slot % 2), scaleMode = ScaleMode.ScaleAndCrop };
@@ -261,23 +265,50 @@ namespace GreyBoxStrategy.Realm
             row.Add(new Crest(look, 18)); var name = new Label(look.Name.ToUpperInvariant()); name.AddToClassList("insp-title"); row.Add(name);
             hb.Add(row);
             var sub = new Label($"The {player?.Persona ?? "ruler"} · {player?.Model}"); sub.AddToClassList("insp-sub"); hb.Add(sub);
+            if (Fog.On) { hdr.Add(hb); body.Add(hdr); CountryBody(body, id, s, history, personality, knowledge); return; }
             var follow = new Button(() => FollowPressed?.Invoke(Followed == id ? null : id)) { text = Followed == id ? "Following" : "Follow", tooltip = "Follow: the top bar shows this country's full values, and the reach mode its attacks" };
             follow.AddToClassList("tbtn"); follow.style.width = StyleKeyword.Auto; follow.style.paddingLeft = 8; follow.style.paddingRight = 8; follow.style.marginTop = 4;
             if (Followed == id) follow.AddToClassList("on");
             hb.Add(follow);
             hdr.Add(hb); body.Add(hdr);
+            CountryBody(body, id, s, history, personality, knowledge);
+        }
 
-            var ruler = Sec(body, "RULER", "persona, not country");
-            var p = new Label(personality ?? ""); p.AddToClassList("insp-sub"); ruler.Add(p);
-            if (knowledge != null) foreach (var k in knowledge) { var kl = new Label("· " + k); kl.AddToClassList("why-no"); ruler.Add(kl); }
-            ruler.Add(Src("AgentIdentity.Personality and Knowledge, from Personas.cs"));
+        private void CountryBody(VisualElement body, string id, ReplayState s, IEnumerable<ReplayEvent> history, string personality, IReadOnlyList<string> knowledge)
+        {
+            var c = s.Countries[id];
+            if (Fog.On && id != You) CountryOrders(body, id);
+            if (id == You)
+            {
+                var you = Sec(body, "RULER", "you");
+                you.Add(Note("You rule this country. Your council is offered the moves a model ruler would be offered here, by the same rules."));
+            }
+            else
+            {
+                var ruler = Sec(body, "RULER", "persona, not country");
+                var p = new Label(personality ?? ""); p.AddToClassList("insp-sub"); ruler.Add(p);
+                if (knowledge != null) foreach (var k in knowledge) { var kl = new Label("· " + k); kl.AddToClassList("why-no"); ruler.Add(kl); }
+                ruler.Add(Src("AgentIdentity.Personality and Knowledge, from Personas.cs"));
+            }
 
             var tre = Sec(body, "TREASURY", "");
-            tre.Add(KeyValue("Gold", c.Gold.ToString()));
-            tre.Add(KeyValue("Income", "+" + c.Income));
-            tre.Add(KeyValue("Upkeep (1 per 2 soldiers)", "-" + c.Upkeep));
+            if (Fog.KnowsTreasury(id))
+            {
+                tre.Add(KeyValue("Gold", c.Gold.ToString()));
+                tre.Add(KeyValue("Income", "+" + c.Income));
+                tre.Add(KeyValue("Upkeep (1 per 2 soldiers)", "-" + c.Upkeep));
+            }
             tre.Add(KeyValue("Army", c.Army.ToString()));
-            tre.Add(KeyValue("Stability", $"{c.Stability} of 5"));
+            if (Fog.KnowsTreasury(id)) tre.Add(KeyValue("Stability", $"{c.Stability} of 5"));
+            else tre.Add(Note("Its treasury, income and stability are not known to your court. A model ruler is told every rival's army and land, and nothing more."));
+
+            if (!Fog.KnowsDecision(id, GameOver))
+            {
+                var sealedSec = Sec(body, "ITS COUNCIL", "sealed");
+                sealedSec.Add(Note("What this ruler read, was offered and decided opens in the inspector when the game is over."));
+                return;
+            }
+            if (id == You && Fog.On) return;
 
             var last = history.LastOrDefault(e => e.Decision != null && e.Decision.AgentId == id && !e.Decision.IsEnvoy);
             if (last != null)
