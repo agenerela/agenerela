@@ -268,7 +268,7 @@ deleted models, and the app's updater could change the version under a run.
 - **Take the 5080's lock, `.scratch/ollama-5080-lock/` on the lead's laptop**, not the laptop's
   `.scratch/ollama-lock/`, which covers the laptop's own Ollama only. It covers sessions on the
   laptop; one on the 5080 machine or elsewhere can't see it, so still check nothing else uses the
-  GPU: `ollama_remote.py ps`, and both ComfyUI stacks idle.
+  GPU: `ollama_remote.py ps`, and both ComfyUI stacks idle. The server runs one request at a time (`OLLAMA_NUM_PARALLEL` unset): `qwen3.5` takes no parallel requests, and two clients at once can move a reply (findings, 11 November, "Parallel requests on the RTX 5080").
 - **Unload models on that server** (`ollama_remote.py unload --all`). The runner's residency
   checks read that server's `/api/ps` through the gateway, so they work unchanged.
 - **Warm a model after a pull or a restart.** The first load read the file from disk in 54 s,

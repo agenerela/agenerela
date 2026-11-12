@@ -52,6 +52,13 @@ namespace Agenerela
         /// <summary>The decision as one line of JSON, in the schema's field order.</summary>
         public string Decision;
 
+        /// <summary>
+        /// What came of the decision, in the game's own words, as <see cref="IRemembersOutcomes.SetOutcome"/>
+        /// left it; null, or empty after <c>JsonUtility</c>, when none was attached (#216 item 3).
+        /// <see cref="RollingHistory"/> writes it from <see cref="RollingHistory.SnapshotVersion"/> 2.
+        /// </summary>
+        public string Outcome;
+
         /// <summary>An empty exchange, for serializers.</summary>
         public MemoryExchange()
         {

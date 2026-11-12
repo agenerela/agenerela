@@ -9,7 +9,7 @@ with two temperaments, a random baseline, and a runner that plays whole games an
 decision. Stage 2 puts a framework `Agent` in one seat and measures a model there against the
 scripted AI; [its results are below](#stage-2-a-model-plays-a-country). Any seat can now be a
 model, a script or random, with personas; [the table of models](#models-at-one-table) scores them.
-Stage 3, the map and the screen, is next.
+Stage 3, the map and the screen, has begun: [watch mode plays back a recorded game](#the-screen-watch-mode-playing-back-a-recorded-game).
 
 ## Run it
 
@@ -513,8 +513,14 @@ player says of itself. Every run writes `scorecard.md` (with a one-line reason f
   permutation p (2,000 shuffles within each game). A table without personas is scored on placebo
   slots, so its η² shows what noise looks like.
 - **Voice:** statements given, length, repeated word for word, names its target, contradicts its
-  move, and for seats with statement rules, the statements that copy the whole rule or one sentence
-  of it (gap N9).
+  move, for seats with statement rules, the statements that copy the whole rule or one sentence
+  of it (gap N9), claims land taken, and **invented grievances** (since #244 item 4): statements
+  saying our land was taken by a country that took none of it earlier in the game. The accused are
+  the countries the statement names, else the move's counterpart (the country targeted, the owner
+  of the province targeted, the envoy's offerer), else anyone. The claim is matched mechanically
+  (`Scorecard.ClaimsLandTaken`: a taking verb in the past or as an accusation, and our land or
+  "from us", in one sentence), so it misses paraphrases; on #249's persona 4B logs it matched about
+  2% of statements, all of them real claims.
 - **Strength:** placement, wins, provinces at the end, knocked out.
 
 The all-script and all-random tables are the **reference points**: what a lively game and a
@@ -647,7 +653,8 @@ The tables (`Tables.Named`) are `models` (five model seats, no personas), `perso
 seats with personas), `two-models` (`-strategyModel2`; seats A, B, A, B, A, with personas),
 `model-vs-scripted`, `scripted` and `random`. A comma-separated seat list is also a table, such as
 `model,expansionist,cautious,random,model`. `-strategyPersonas on|off` overrides the persona
-setting. `-strategyArm` takes stage 2's arms and modifiers. Each run writes a `ModelReport` for each
+setting. `-strategyArm` takes stage 2's arms and modifiers, among them `+memory-move` and
+`+memory-outcome` for what a remembered move holds (gap N7). Each run writes a `ModelReport` for each
 model in `summary.md`, the scorecard files, `games.csv`, `model.csv`, `decisions.jsonl` and the game
 logs. From the editor: `StrategyTableMenu.Start(table, model, model2, arm, games, firstSeed,
 personas)`.
@@ -721,7 +728,15 @@ Found by stage 2, from the runs above:
   keeps each decision's JSON, statement included. The 4B repeated its own sentences word for word
   for turns on end, once claiming an army of 10 against the facts' 108. This is #216 item 3's other
   half: what to remember of a decision. The move, and what came of it, would help this game more
-  than the statement.
+  than the statement. **Now an option, off** (#244 item 4): `RollingHistory.Remembers` sends the
+  move alone (`+memory-move`) or the move and the report's line for it (`+memory-outcome`), which
+  `CountryAgent.Learn` attaches once the turn resolves. Note that each remembered stimulus already
+  carries the next turn's facts ("Our attack on ashby failed"), so part of the outcome was always
+  there. **Measured on `qwen3.5:4b`, and it does not help** (11 November, 20 games an arm, findings): with
+  personas and the paired schema, repetition (5%) and invented grievances (1.4%) were already rare
+  and did not move, while without the remembered statements the new ones named their target far
+  less often (72% to 33% under `+memory-move`, 43% under `+memory-outcome`) and began copying the
+  persona's rule. The seat keeps the whole decision. The 2B was not measured.
 - **N8. The legal pairs reach a local model as a list, not as moves.** `LegalTargets = PerTarget`
   annotates the system prompt's target list (`- fenmark (for attack): neutral, garrison 13.`). The
   same pairs as a sentence among the facts (`Moves open to us: attack fenmark or westmarch; ...`)
@@ -766,6 +781,67 @@ Found by stage 2, from the runs above:
   was on 10 November, and is now the seat's default: it changes only the grammar a local model
   samples under, not what it reads.
 
+## The screen: watch mode playing back a recorded game
+
+Stage 3's first slice (working title **Painted Realm**; the design is
+[`docs/demos/grey-box-strategy-screen.md`](../../docs/demos/grey-box-strategy-screen.md)). Open
+`Assets/GreyBoxStrategy/Screen/Watch.unity` and press Play. It plays seed 4 of the v248 persona 4b
+table, in which Kesh, the proud ruler, wins by domination on turn 17, with every ruler's own words.
+**No model is called**:
+
+- The rules are deterministic per seed, so `ReplayBuilder` rebuilds the very game from the
+  recorded decisions (`Screen/Replays/*.json`), and refuses a recording that no longer fits the
+  rules rather than show a different game.
+- `ArtSource/export_recording.py` makes a recording from any table run's `decisions.jsonl`.
+
+On the screen:
+
+- **The map** is one quad and one shader (`Screen/Map/PaintedMap.shader`). A province id map, an
+  edge field and a 32 × 4 state texture drive it, so owners and the capture are numbers changing.
+  The id map is baked by `ArtSource/bake_map.py` from the painting and the rule graph, and checked
+  against it.
+- **The capture** plays as the design page times it: focus, strike, fall, spread from the
+  attacker's border with a wet front, settle, release.
+- **Around the map**, in UI Toolkit (`Screen/UI/`): the top bar, the realm list, the chronicle
+  with filters by country and kind, the speech banner at the capital, and time controls (Space,
+  N, +). Right or middle drag pans the map, and the wheel zooms.
+
+`ScreenSceneBuilder` builds the scene, so it is never edited by hand. Run it from the menu
+**GreyBoxStrategy → Build the watch-mode scene**, or from the Unity CLI:
+
+```bash
+unity command script eval -- --code 'return GreyBoxStrategy.Realm.Editor.ScreenSceneBuilder.Build();'
+```
+
+**The decision inspector** (slice 2) opens from any chronicle line or speech banner. It shows
+the decision behind it in six numbered sections, from the recorded telemetry only:
+- what the model answered (its raw reply);
+- the moves the game offered, with the choice marked, and every move not offered with its reason;
+- the standing and turn facts it was sent;
+- the guards: schema legality, target grounding against its 60% threshold, and the re-check when
+  the move landed;
+- memory;
+- model, tokens, and queue time against model time.
+
+`DecisionCard` builds the inspector's content in plain C#. Esc closes it. The rest of the screen:
+- The painting fades into a tile of its own open sea (`Art/sea-tile.jpg`), so the map fills
+  any window edge to edge.
+- Tooltips work in play, since runtime UI Toolkit shows none of its own.
+- Below 1600 px the top bar turns compact.
+- The council's thinking indicator shows at each turn's start.
+
+**Panels, map modes and following** (still on the replay):
+- **Clicking a province** opens its panel: owner, how it defends (garrison or 70% of the owner's army, forts, capital), income, borders, every country that may attack it with the share of rolls it wins or why it may not, and its history.
+- **Clicking a country** (its crest or a realm row) opens its panel: the persona's description and knowledge from `Personas.cs`, the treasury, the facts it last read, the moves it was last offered, and its decisions.
+- **Follow** in the country panel turns the top bar into that country's full values (provinces, army, treasury, income, upkeep, stability, wars, truces, places kept for buildings and trade), with the rivals compact on the right. This is the groundwork for rule mode's own bar.
+- **Map modes** (keys 1 to 4): Political, the main one, keeps capitals, forts and names; Armies; Forts; Reach, which hatches the followed country's legal attacks with the share of rolls each wins and dims the rest.
+- **Diplomacy** (D) is a 5 × 5 matrix of war, truce and peace, with borders and this turn's envoys.
+- `RealmQueries` answers these from `GameRules` and the map, and a test checks its reach against every attack the game offered in the recorded game.
+
+**The map** is a 4096 × 2304 master with open sea on every side (`ArtSource/sea-chart-map.png`). It is codex-image's 1672 × 941 painting upscaled, so its detail is still the 1672 px original's. The province maps are baked at 2048 × 1152, and `provinces.json` records the land's bounds, which the camera frames.
+
+Slice 3 plays a live game.
+
 ## Layout
 
 ```text
@@ -780,8 +856,17 @@ Assets/GreyBoxStrategy/
                       the A/B arms; Personas; TableRunner, the table of models
   Editor/             GreyBoxStrategy.Editor: the menus and the CLI entry points
   Tests/Editor/       GreyBoxStrategy.Tests.Editor
+  Screen/             GreyBoxStrategy.Screen: the screen (namespace GreyBoxStrategy.Realm)
+    Replay/           GreyBoxStrategy.Replay (noEngineReferences): Recording, ReplayBuilder, Chronicle
+    Map/              PaintedMap.shader, MapView
+    UI/               ScreenUI, CountryLook (crests and icons drawn by code), PaintedRealm.uss/.tss
+    Art/              the painting, the faces, the baked province maps
+    Replays/          recorded games to play back
+    Editor/           the art import settings, ScreenSceneBuilder
+    Tests/Editor/     GreyBoxStrategy.Screen.Tests.Editor
+ArtSource/            outside Assets: the art's sources and the scripts that bake and export
 ```
 
 
-The project was made from the Universal 2D template; the `SampleScene` it came with is unused until
-stage 3.
+The project was made from the Universal 2D template; the `SampleScene` it came with is unused. The
+screen's scene is `Screen/Watch.unity`.

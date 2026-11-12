@@ -29,6 +29,62 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **GreyBoxStrategy, the screen's panels and map modes** (#20, still on the replay).
+  - **Province and country panels** on click: defence, who may attack a province and why not,
+    and a country's persona, treasury, last facts, offered moves and decisions.
+  - **Map modes:** Political, the main one, keeps capitals and forts; Armies; Forts; and Reach,
+    which shows the followed country's legal attacks with win chances.
+  - **A diplomacy matrix.**
+  - **Following a country** turns the top bar into its full values, the groundwork for rule mode.
+  - **The map** is a 4096 × 2304 master with open sea on every side, upscaled from codex-image's
+    painting and re-baked; the sea beyond it no longer repeats visibly.
+  - `RealmQueries`' reach is checked against every attack the recorded game offered. 3 new
+    EditMode tests.
+
+- **GreyBoxStrategy, stage 3, slice 2: the decision inspector** (#20). Any chronicle line or
+  speech banner opens the decision behind it. It shows six sections, from the recorded telemetry
+  alone: the model's raw answer; the game's offered moves with the choice marked, and those not
+  offered with each reason; the facts sent; the guards with target grounding and the re-check when
+  the move landed; memory; model, tokens and queue time. Also: the map now fills the screen edge to
+  edge over a tile of its own sea, the scroller and buttons are styled, tooltips work in play, the
+  top bar turns compact below 1600 px, and banners stay clear of the panels. The URP upgrade
+  Unity asked for on first open is committed, so a fresh checkout opens without the modal dialog
+  that blocked the Unity CLI. 4 new EditMode tests.
+
+- **GreyBoxStrategy, stage 3, slice 1: watch mode plays back a recorded game** (#20, working
+  title Painted Realm). `Screen/Watch.unity` replays seed 4 of the v248 persona 4b table with every
+  ruler's own words and no model call. `ReplayBuilder` rebuilds the game from its recorded decisions,
+  since the rules are deterministic per seed, and refuses a recording the rules no longer fit.
+  The map is one quad and one shader over a sea-chart painting, with a province id map baked from
+  the rule graph. Owners tint the painting's hue, borders between owners redraw themselves, and a
+  capture plays as the design page times it: strike, fall, spread from the attacker's side,
+  settle. A UI Toolkit screen adds the top bar, realm list, filtered chronicle, speech at the
+  capital and time controls. 6 new EditMode tests. Assets and their licences are in the design
+  page's asset list.
+
+- **GreyBoxStrategy, stage 3's design: the painted map and the screen** (#20), for the lead to
+  approve or redirect: [`docs/demos/grey-box-strategy-screen.md`](docs/demos/grey-box-strategy-screen.md)
+  with eight mock-ups (three looks for the parchment map, the capture of a province step by step,
+  rule and advise modes, a court scene). It specifies the colour change to the millisecond, the
+  three modes, the Why card over `DecisionFeed`, a single-shader map built from the rule graph
+  with a painted fallback, and an asset list. Round 2 follows the lead's choices (look C,
+  "Painted Realm" for now, dense terrain, a portrait per persona with several faces): a clickable
+  grand-strategy screen in HTML, `docs/demos/grey-box-strategy-screen/ui/index.html`, with
+  watch, rule and advise modes, a decision inspector, two styles, and twelve screenshots. The
+  lead's answers to 28 design questions are recorded, each marked as met by the mock-up or not.
+  Docs only.
+
+- **GreyBoxStrategy: what a remembered move holds, and invented grievances** (#244 item 4, #216
+  item 3, gap N7). After each turn resolves, `CountryAgent.Learn` attaches every landed move's
+  line from the resolution report (`"took fenmark from orsk (34 against 21); lost 6"`) to its
+  remembered decision through the framework's new `Agent.SetOutcome`. The model-seat modifiers
+  `+memory-move` and `+memory-outcome` set `RollingHistory.Remembers`. The default arm keeps the
+  whole decision, so no existing arm changes. The scorecard's voice section gains **claims land
+  taken** and **invented grievance**: a claim against a country that took none of our land
+  earlier that game. 6 new EditMode tests. Measured on `qwen3.5:4b`, 20 games an arm: both settings
+  made statements name their target far less often (72% to 33% and 43%) and contradict the move
+  more, beyond noise, while repetition (5%) and invented grievances (1.4%) were already rare and
+  did not move. The demo keeps the whole decision. `qwen3.5:2b` was not measured. See `findings.md`.
 - **GreyBoxStrategy: arms for #244's prompt options, and a rule-copy count** (#244 items 5 and 8).
   - The model-seat modifiers `+no-moves-line`, `+moves-sentence` (`LegalTargets = ObservationLine`),
     `+how-it-reads` and `+own-words` (`StatementRulesWording`).
@@ -118,7 +174,9 @@ phase table and the open issues, not here.
   Its logs: the gateway writes one short line per request instead of its header dump, Docker
   rotates both containers' logs (5 files of 20 MB), the health check runs every 5 minutes instead
   of 30 s, and `logs.py` shows both containers as one timeline of requests, model loads, pulls and
-  problems, cutting about 9,000 lines to about 300.
+  problems, cutting about 9,000 lines to about 300. It runs without `OLLAMA_NUM_PARALLEL`, which
+  Ollama ignores for `qwen3.5` and which changed replies on models it does batch (findings,
+  11 November).
 - **Run requests**, in `docs/run-requests/`: a run one machine should do, written down for another
   session or person to pick up. Each is a folder with a `request.md`, what to run step by step, and
   a `results.md` to fill in, with a status that goes open, claimed, done. Request 001 is the

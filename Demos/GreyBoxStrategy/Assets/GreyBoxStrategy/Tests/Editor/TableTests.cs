@@ -340,6 +340,53 @@ namespace GreyBoxStrategy.Tests
         }
 
         [Test]
+        public void Scorecard_Voice_ClaimsOfLandTaken()
+        {
+            Assert.That(Scorecard.ClaimsLandTaken("Valen has taken our land; now they shall pay."), Is.True);
+            Assert.That(Scorecard.ClaimsLandTaken("Peace from those who stole our land is an insult!"), Is.True);
+            Assert.That(Scorecard.ClaimsLandTaken("They will bleed for taking our land back."), Is.True);
+            Assert.That(Scorecard.ClaimsLandTaken("Merrow is seizing my provinces!"), Is.True);
+            Assert.That(Scorecard.ClaimsLandTaken("We seek the land they took from us."), Is.True);
+            Assert.That(Scorecard.ClaimsLandTaken("We will take their land."), Is.False, "a plan, not a grievance");
+            Assert.That(Scorecard.ClaimsLandTaken("We are taking back our land."), Is.False);
+            Assert.That(Scorecard.ClaimsLandTaken("We took fenmark. Our land grows."), Is.False, "two sentences");
+            Assert.That(Scorecard.ClaimsLandTaken(null), Is.False);
+        }
+
+        [Test]
+        public void Scorecard_Voice_AGrievanceIsInventedWhenTheAccusedTookNothingFromUs()
+        {
+            var game = NewGame();
+            Give(game.World, "stonereach", "valen");
+            game.World.SetRelation("valen", "orsk", Relation.War);
+            game.World.Country("orsk").Army = 500;
+            var first = PlayTurn(game, ("orsk", Actions.Attack, "stonereach"));
+            Assert.That(Outcome(first, "orsk").Text, Does.StartWith("took stonereach from valen ("));
+            PlayTurn(game);
+            var record = new GameRecord(game, game.World.CountryList.ToDictionary(c => c.Id, c => "m"));
+            SeatDecisionInfo Said(int turn, string statement, string action = Actions.Recruit, string target = null, string offeredBy = null) =>
+                new SeatDecisionInfo
+                {
+                    Seed = 1, Turn = turn, Country = "valen", Answered = true, AskedLegal = true, Statement = statement,
+                    Moment = offeredBy != null ? Moment.Envoy : Moment.Council, AskedAction = action, AskedTarget = target, OfferedBy = offeredBy,
+                };
+            var said = new[]
+            {
+                Said(1, "Orsk took our land!"),                                      // before it happened: invented
+                Said(2, "Orsk took our land, again!"),                               // true
+                Said(2, "Kesh stole our provinces; they will pay."),                 // kesh took nothing: invented
+                Said(2, "Peace from those who took our land is an insult.", Actions.RefusePeace, null, "orsk"), // the offerer: true
+                Said(2, "Peace from those who stole our land is an insult.", Actions.RefusePeace, null, "kesh"), // invented
+                Said(2, "They will bleed for taking our land back.", Actions.Attack, "corwick"), // corwick is orsk's: true
+                Said(2, "We will take their land."),                                 // no claim
+                Said(2, "Merrow is taking our fields!"),                             // invented
+            };
+            var card = new Scorecard("t", new[] { new ScoredGame(record, null, null, said) });
+            Assert.That(card.Get("voice", "m", "claims land taken"), Is.EqualTo(7 / 8.0));
+            Assert.That(card.Get("voice", "m", "invented grievance"), Is.EqualTo(4 / 8.0));
+        }
+
+        [Test]
         public void Scorecard_Voice_CountsStatementsThatCopyTheirRule()
         {
             // Gap N9: the 2B returned its persona's whole rule as its statement.

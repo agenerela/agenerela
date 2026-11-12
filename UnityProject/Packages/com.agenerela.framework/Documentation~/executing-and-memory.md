@@ -9,7 +9,8 @@ All of it is opt-in. A handler, a call and a memory written before it work as th
 `agent.Execute(result)` still returns `true` or `false`.
 
 Every rule here runs as a test, in `Tests/Editor/Core/ExecutionResultTests.cs`,
-`Tests/Editor/Memory/MemoryCommitTests.cs`, `Tests/Editor/Memory/MemorySnapshotTests.cs` and
+`Tests/Editor/Memory/MemoryCommitTests.cs`, `Tests/Editor/Memory/MemorySnapshotTests.cs`,
+`Tests/Editor/Memory/RememberedDecisionTests.cs` and
 `Tests/Editor/Core/AgentResetTests.cs`.
 
 ## What a handler did: `ActionResult`
@@ -161,6 +162,60 @@ scripted one and one the model drives, holds two memories, and each remembers on
 decisions. To give them one, set both agents' `Agent.Memory` to the same `IMemoryStrategy`
 instance. Under `MemoryCommit.OnExecute`, each agent still settles only the decisions it made.
 
+## What a remembered decision holds: `Remembers` and outcomes
+
+`RollingHistory` sends each past decision back to the model as the JSON the model gave, statement
+included. That suits a conversation, where the agent's own words are the history. A turn-based game
+may want the moves remembered instead, and what came of them: in GreyBoxStrategy a small model
+copied its remembered statements for turns on end, and claimed land was taken that nobody took
+(#244 item 4, #216 item 3). `RollingHistory.Remembers` chooses, at each recall:
+
+| `RememberedDecision` | Each remembered decision is sent as |
+|---|---|
+| `Whole` (the default) | the decision as given, byte for byte as before: `{"action":"attack","target":"fenmark","statement":"Fenmark falls today."}` |
+| `Move` | the decision without its statement: `{"action":"attack","target":"fenmark"}` |
+| `MoveAndOutcome` | the move, then what came of it: `{"action":"attack","target":"fenmark","outcome":"took fenmark from orsk (34 against 21); lost 6"}` |
+
+The stimulus of each exchange is sent unchanged in every setting, and the history keeps two
+entries an exchange. The memory keeps everything whichever is set, so the setting can change at
+any time and loses nothing; the token cap counts what is sent, so leaving statements out fits more
+exchanges in the same budget.
+
+The outcome is the game's own line, never a value from a list. Attach it through the agent, any
+time after the decision, because it is often known only after the handler has run, or later in the
+turn:
+
+```csharp
+var history = new RollingHistory { Remembers = RememberedDecision.MoveAndOutcome };
+agent.Memory = history;
+agent.MemoryCommit = MemoryCommit.OnExecute;
+
+agent.Execute(result);                       // remembered now, before the battle resolves
+// ...every move of the turn lands...
+agent.SetOutcome(result, "took fenmark from orsk (34 against 21); lost 6");
+```
+
+`SetOutcome` replaces an outcome set before, and null or blank clears it. It returns whether a
+memory holds the decision, or will once it is settled:
+
+- A decision still held by `MemoryCommit.OnExecute` keeps the line and hands it to the memory when
+  `Execute` or `Commit` remembers it. When `Execute` does not carry it out, the refusal's or
+  failure's `ActionResult.Reason` becomes its outcome unless the game set one, so a decision
+  committed anyway is remembered with why it failed. A later failure replaces that reason, a
+  retry that succeeds drops it, and the game's own line always stays.
+- One already remembered, under `OnDecide` or once settled, is amended in `Agent.Memory`.
+- False for one discarded, dropped by `Reset`, forgotten by the turn cap, and for a memory that does
+  not implement `IRemembersOutcomes`.
+
+Under `Whole` and `Move` an outcome is kept and saved but never sent, so attaching outcomes changes
+no prompt by default. **Measured, and `Whole` stays the default.** In GreyBoxStrategy on `qwen3.5:4b`
+(11 November 2026, 20 games an arm), leaving the statements out made the model's new statements
+name the move's target far less often (72% to 33% under `Move`, 43% under `MoveAndOutcome`), name
+someone else more often, and copy their persona's rule: the remembered statements are examples
+the model follows. The repetition and invented grievances it was meant to stop were already rare
+and did not change. The 2B was not measured. The wiki's `findings.md` has the numbers. No setting is per call, because what a memory
+holds is the memory's to say, and a strategy of the Memory area's own decides it for itself.
+
 ## Saving memory with the game: `IExportsMemory`
 
 A strategy that can be saved implements `IExportsMemory` beside `IMemoryStrategy`.
@@ -187,13 +242,15 @@ A `MemorySnapshot` holds:
 | Field | Holds |
 |---|---|
 | `Format`, `Version` | Which strategy wrote it, such as `RollingHistory.SnapshotFormat`, and its version |
-| `Exchanges` | Every exchange remembered, oldest first, as `DecisionRequest.History` encodes it: the stimulus as sent, label included, then the decision as JSON |
+| `Exchanges` | Every exchange remembered, oldest first, as `DecisionRequest.History` encodes it: the stimulus as sent, label included, then the whole decision as JSON, and its `Outcome` (null, or empty after `JsonUtility`, when none) |
 | `Data` | Anything else the strategy keeps, in its own encoding; null or empty when nothing |
 
 `RollingHistory.Export` holds every exchange it keeps, those the token cap leaves out of a
 request included. `Import` replaces what it holds and keeps the newest `Turns` of the snapshot's
 exchanges. It takes only a snapshot `RollingHistory` wrote: `RollingHistory.SnapshotFormat`, at a
-version from 1 to `RollingHistory.SnapshotVersion`. Another strategy's snapshot, a newer version,
+version from 1 to `RollingHistory.SnapshotVersion`, which is 2 since outcomes are saved; a version 1
+snapshot imports with no outcomes. An imported outcome is sent again, but `SetOutcome` cannot reach
+it, since a save keeps no results. Another strategy's snapshot, a newer version,
 or a missing exchange, stimulus or decision is refused with an `ArgumentException`, and the memory
 keeps what it had. To move memory between strategies, copy the exchanges into a snapshot of the
 target's format on purpose. `Dropped` and `Forgotten` are counts for telemetry, so they are not
@@ -277,7 +334,8 @@ never the caller's own token object. Cancelling either one cancels it.
 
 - **Memory (#119).** A new strategy implements `IExportsMemory` to be saved, with what it keeps
   beyond exchanges in `Data`, and `IClearableMemory` to be cleared by `Agent.Reset`, facts or a
-  summary included. `MemoryCommit` needs nothing from it.
+  summary included. `MemoryCommit` needs nothing from it. A strategy that keeps outcomes implements
+  `IRemembersOutcomes`, and decides for itself how they reach the model.
 - **Guards (#138).** A guard reads `Correlation` from its input's context. The re-check at
   `Execute` is the one place a rule is checked at the moment of acting; until a guard can run
   there too, such a rule belongs in the handler, which can now say why with `ActionResult.Failed`.
