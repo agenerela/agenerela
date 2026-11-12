@@ -89,10 +89,18 @@ namespace GreyBoxStrategy
             return new GameRecord(game, players.ToDictionary(kv => kv.Key, kv => kv.Value.Kind, StringComparer.Ordinal));
         }
 
-        /// <summary>Plays one game per seed with a named line-up, seats rotating game by game.</summary>
-        public static List<GameRecord> PlaySeries(string lineup, IReadOnlyList<int> seeds, GameRules rules = null)
+        /// <summary>Plays one game from a setup (<see cref="GameSetup"/>) with a named line-up.</summary>
+        public static GameRecord Play(GameSetup setup, string lineup, int gameIndex = 0)
         {
-            var map = MapDefinition.Standard();
+            var map = setup.BuildMap();
+            return Play(setup.Seed, Lineups.Seat(lineup, gameIndex, map), map, setup.BuildRules(map));
+        }
+
+        /// <summary>Plays one game per seed with a named line-up, seats rotating game by game.</summary>
+        /// <param name="map">The map; the Classic board when null.</param>
+        public static List<GameRecord> PlaySeries(string lineup, IReadOnlyList<int> seeds, GameRules rules = null, MapDefinition map = null)
+        {
+            map = map ?? MapDefinition.Standard();
             var records = new List<GameRecord>(seeds.Count);
             for (int i = 0; i < seeds.Count; i++)
                 records.Add(Play(seeds[i], Lineups.Seat(lineup, i, map), map, rules));

@@ -1,6 +1,7 @@
 # Painted Realm (GreyBoxStrategy), rules v2: the deeper game
 
-**Status:** a design, 12 November 2026 (#20). No game code yet. It is written so that build
+**Status:** a design, 12 November 2026 (#20), being built slice by slice: **R0 is built** (12 November,
+[below](#r0-settings-and-the-map-as-data)). It is written so that build
 sessions can each take one slice ([the build](#10-the-build-as-slices)) without inventing rules.
 The game as it is today, with its measurements, is in the demo's
 [`README.md`](../../Demos/GreyBoxStrategy/README.md) and in
@@ -1531,6 +1532,37 @@ changelog line and the demo `README.md` updated.
   - A recording made before R0 still replays.
 - **Playable:** today's game, plus settings, conquest by default.
 
+**Built, 12 November 2026** (the game's half; the screen's half is the screen session's). What
+exists, and where it differs from the list above:
+- **`WorldMap`** (`Sim/Map/WorldMap.cs`), the map as data, read and written as JSON by Newtonsoft
+  (now referenced by `GreyBoxStrategy.Sim`, which keeps `noEngineReferences`). Provinces carry
+  terrain, coast, port, population, a good, a region and a special place; no rule reads them yet.
+  `MapDefinition.Standard()` is now `ClassicMap.Load().ToDefinition()`.
+- **The Classic preset** (`ClassicMap`) is a JSON string in C#, because the simulation cannot load a
+  Unity asset; it goes through the same reader as any map file. Terrain set by eye from the painting:
+  10 plains, 7 forest, 4 hills, 3 mountains, 1 marsh. The board built in code is kept in the tests
+  (`LegacyBoard`), and a test compares the two in every field.
+- **`GameSetup`** (`Sim/Rules/GameSetup.cs`), not `GameSettings`: the screen already has a
+  `GameSettings` for the display, and two types of one name in two namespaces the screen imports would
+  not compile there. Seed, map, countries, victory mode with its share, turn limit and headless cap,
+  storyteller preset and advisor (both data only). `FromJson` refuses unknown names, bad values and
+  invalid settings with a message; `BuildMap`, `BuildRules` and `NewGame` start a game.
+- **Victory modes:** `Domination` (today's rule, the default), `Conquest` (last country standing; a
+  headless run stops at its cap with the new ending `Unfinished`) and `TurnLimit`. _Mine:_ **the
+  default stays domination** until R1. On today's one-move rules conquest is the same game without
+  its end, and the brief for this slice asked that today's game play exactly as it did.
+- **Byte-identical, pinned:** the 200-game mixed series' `summary.md` and every turn's owner grid hash
+  to the same values as on the commit before R0 (`SetupTests`). The first standing fact, the agent's
+  goal line and its "one of five countries" read exactly as before on Classic; other victory modes and
+  country counts get their own words.
+- **Not in this slice:** model presets as files and seats or personas from settings (they touch
+  `ModelSeatOptions`, which another session was changing); the menu, the settings screen, the state
+  texture and settings stored in recordings are the screen's (`Screen/`). Recordings made before R0
+  still replay: the recorded game's test passes unchanged.
+- **What the page left inconsistent:** section 2.2 sets neutral land at 55% *and* starting realms of 3
+  provinces; on a medium map of 60 provinces with 6 countries those give 70% neutral, not 55%. R2
+  takes the realm size as the setting and reports the neutral share.
+
 ### R1. The turn of writs and armies as pieces
 
 - **Sim:**
@@ -1762,15 +1794,15 @@ the demo `README.md`, `docs/demos/grey-box-strategy.md` where the rules change, 
 line, and `findings.md` for anything measured.
 
 **R0, settings and the map as data**
-- [ ] `WorldMap` data and JSON loader; `MapDefinition` from it for any size
-- [ ] Classic preset with hand-set terrain matching the painting
-- [ ] `GameSettings`, serialised and stored in recordings
-- [ ] Victory modes: conquest (default), domination, turn limit; headless turn cap
+- [x] `WorldMap` data and JSON loader; `MapDefinition` from it for any size
+- [x] Classic preset with hand-set terrain matching the painting
+- [x] `GameSettings` (built as `GameSetup`), serialised; stored in recordings: screen
+- [x] Victory modes: conquest, domination (default until R1), turn limit; headless turn cap
 - [ ] Model presets as files; seats and personas from settings
 - [ ] New game menu and the settings screen with its seven tabs; display settings
 - [ ] State texture sized per province
-- [ ] Test: Classic in domination mode is byte-identical to today's 200-game `summary.md`
-- [ ] Test: settings round-trip; conquest ends; old recordings replay
+- [x] Test: Classic in domination mode is byte-identical to today's 200-game `summary.md`
+- [x] Test: settings round-trip; conquest ends; old recordings replay
 
 **R1, the turn of writs and armies as pieces**
 - [ ] `Army`, orders, standing orders and the eight wake conditions

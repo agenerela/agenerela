@@ -29,6 +29,13 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm rules v2, slice R0: settings and the map as data** (#20). GreyBoxStrategy's map is
+  now data (`WorldMap`, JSON, with terrain, coasts, ports and population no rule reads yet), and
+  today's board is the Classic preset, loaded from it. `GameSetup` holds a new game's settings (seed,
+  map, countries, victory mode, storyteller preset, advisor) with a saved form that refuses invalid
+  settings with a message. Conquest and turn-limit victory modes join today's domination, which stays
+  the default until R1. A test pins today's 200-game series byte for byte. `GreyBoxStrategy.Sim` now
+  references Newtonsoft JSON.
 - **Painted Realm rules v2: the design for the deeper game** (#20),
   `docs/demos/painted-realm-rules-v2.md`. Design only, no game code. It records the lead's
   34 answers of 12 November and his answers to its own eight questions, and settles, for build sessions to take one slice at a time:
