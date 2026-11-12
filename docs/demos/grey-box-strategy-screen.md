@@ -84,7 +84,7 @@ every number and icon.
 
 | Region | What it shows | What it does |
 |---|---|---|
-| **Top bar** | Each country's crest and name, then provinces, army, gold and net income a turn, stability as five pips, and wars as a count. On the right: the turn and phase, play and pause, step, speed, diplomacy, the chronicle | A country's tooltip gives the arithmetic (income 10 a province, upkeep 1 per 2 soldiers); a click opens its panel. The leader comes first; in rule and advise modes the player's country comes first, marked |
+| **Top bar** | Watch mode: each country's crest and name, then provinces, army, gold and net income a turn, stability as five pips, and wars as a count. On the right: the turn and phase, play and pause, step, speed, diplomacy, the chronicle | A country's tooltip gives the arithmetic (income 10 a province, upkeep 1 per 2 soldiers); a click opens its panel. The leader comes first; in rule and advise modes the bar is your own country in full, with the rivals in a compact strip ([the top bar by mode](#where-commands-live-as-the-game-grows)) |
 | **Realm** (left) | The standing against 15, wars and the turn each began, truces and their turns left, armies as bars, neutral land and its garrisons | A click on a line finds it on the map. It collapses to a strip, and starts collapsed below 1600 px |
 | **Map** | 25 provinces over painted terrain, the capitals with towers, forts as small towers, every province named | Drag to pan, wheel to zoom. Hovering a province shows its owner, forts and defence, and whether the focused country may attack it, and why not. A click opens its panel |
 | **Map modes** (bottom left, keys 1 to 5) | **Political**; **Armies** (colour strength by army size, counts at the capitals); **Forts**; **Reach** (who can attack what: a chosen country's legal attacks, hatched, each with the share of dice rolls it wins); **Terrain** (the painting alone) | A legend sits above them |
@@ -146,6 +146,40 @@ layout.
   - Asking for war on Orsk shows the rule that matters. `declare_war orsk` was not offered,
     because Orsk does not border Kesh: **counsel cannot make an illegal move**.
   - End turn plays the advised move.
+
+### Where commands live as the game grows
+
+The lead approved round 2 ("Yes, build on it") and asked where the buttons will go once the game
+has more in it. The rule: **every command has one home, chosen by what it acts on**. A new
+feature takes the home its object already has, so nothing is bolted on later.
+
+| What it acts on | Its home | What lives there now | What goes there later |
+|---|---|---|---|
+| **The game as a whole** | **The top bar's right end**: small icon buttons, each with a key | Time controls (play, step, speed), the turn, diplomacy (D), the chronicle (C) | Ledgers that open a full panel: the economy, trade and research, buildings, and events (each with a key; the event list is the game master's work, decision 11). Settings and saving go behind one menu button at the far right |
+| **Your own country** (rule and advise) | **The top bar's left**: your values, each opening its panel on click | Provinces, army, treasury, income, upkeep, stability, wars, truces | Buildings and trade fill the two places already kept for them. A value that needs a decision (a deficit, an unhappy province) gets a small alert mark that opens the panel where it is fixed |
+| **Every country** | **The realm list**, left; a click opens the **country panel** | Standing, wars, truces, armies, neutral land | Alliances and tribute under wars and truces. A rival's panel gets a **diplomacy row**: declare war, offer peace, propose an alliance, demand tribute, and **talk** (decision 10). Every move offered to you sits there, and every move not offered says why, as the orders panel does |
+| **One province** | **The province panel**, opened by clicking the map | Holding, defence, the moves on it, history | **Build** (decision 12) and **move an army here** (decision 8). The map shows development as small marks on the province, not as buildings |
+| **This turn's orders** (rule) | **The orders panel**, bottom centre, ending in **End turn** | The moves the rules offer you, then the order and End turn | Several orders a turn, if the rules allow them, as a short queue above End turn. Each order still comes from a panel; the orders panel only collects them |
+| **Talking to a ruler** | **A conversation panel** that replaces the orders panel while it is open | Advise mode's counsel box | Negotiation with a rival in free text (decision 10) uses the same panel, with the rival's face and replies in character. The deal it reaches lands as ordinary moves the rules check |
+| **Something that happened** | **The chronicle**, and the map where it happened | Lines, filters, click to locate, the inspector | Events from the game master appear here as lines, with a banner at the province they touch |
+| **Why a ruler did something** | **The decision inspector**, from any line, banner or panel | The six sections | Unchanged: it is the framework's window, and grows only as the framework records more |
+| **How you look at the map** | **The map-mode bar**, bottom left, keys 1 to 9 | Political, armies, forts, reach, terrain | Development, trade, alliances and fog of war (decision 13) become modes; the political mode keeps capitals, forts and armies on it (decision 19) |
+
+**Keys.** Every panel and every map mode has one. Space plays and pauses. Enter ends the turn
+in rule mode. Esc closes the top panel. The keys are listed in the about panel, and each
+tooltip shows its key.
+
+**Not used, on purpose:** floating toolbars, buttons painted on the map, and a radial menu. A
+command lives in a panel's header or its rows, in the top bar, or in the orders panel.
+
+**The top bar by mode.** Watch mode keeps the five countries side by side. You rule nobody, so
+nobody comes first. In rule and advise modes the top bar is **your country in full**, as the
+lead asked: provinces against 15, army, treasury with its change a turn, income, upkeep,
+stability, wars and truces, plus two places kept for buildings and trade. The four rivals
+shrink to a compact strip of crests on the right, each showing its province count and whether
+you are at war or at truce with it. A click opens its panel, and the realm list keeps the full
+comparison. In rule mode a rival's army will hide behind fog of war (decision 13), so the strip
+does not show it.
 
 ### Two styles, one layout
 

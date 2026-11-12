@@ -65,6 +65,15 @@ body[data-style="engraved"] #ov .clab{fill:#1c140c;stroke:rgba(246,238,220,.9)}
 #nations{display:flex;flex:1;min-width:0}
 .nat{display:flex;align-items:center;gap:6px;padding:0 9px;border-right:1px solid var(--line2);cursor:pointer;white-space:nowrap;position:relative}
 .nat:hover,.nat.sel{background:var(--hi)}
+.seg2{display:flex;flex-direction:column;justify-content:center;padding:0 9px;border-right:1px solid var(--line2);white-space:nowrap;cursor:default}
+.seg2 small{font:600 9px var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);line-height:1}
+.seg2 span{display:flex;align-items:center;gap:3px;font:500 12.5px var(--sans);line-height:1.5}.seg2 b{font-weight:700}
+.seg2 .pos{color:var(--good)}.seg2 .neg{color:var(--bad)}.seg2.later{opacity:.45}.seg2 .crest{width:15px;height:18px}
+.own{padding-right:12px}
+.rivals{display:flex;align-items:center;margin-left:auto;padding:0 6px;gap:2px;border-left:1px solid var(--line2)}
+.riv{display:flex;align-items:center;gap:3px;padding:2px 5px;cursor:pointer;font:700 12px var(--sans);border-radius:2px}
+.riv:hover{background:var(--hi)}.riv.war{color:var(--bad)}.riv.truce{color:var(--warn)}.riv .crest{width:15px;height:18px}
+
 .nat.me:before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:var(--gold)}
 .nat .nm{font:700 13px var(--title);letter-spacing:.05em}
 .stat{display:inline-flex;align-items:center;gap:2px;font:500 12px var(--sans);color:var(--ink2)}
@@ -222,7 +231,7 @@ body[data-style="engraved"] #counsel textarea{background:rgba(255,255,255,.5)}
 body.olmin #side,body.olmin #modes,body.olmin #legend{left:50px}
 #nations{overflow:hidden}
 @media (max-width:1500px){#brand i,#phase{display:none}#brand{font-size:13px;padding:0 9px}.nat .nm{font-size:12px}.stat{font-size:11.5px}#time,#toolsr{padding:0 6px}#turn{min-width:0}
- #orders,#counsel{left:auto;right:356px;transform:none;width:520px}#ledger{width:300px}#insp{width:470px}#orders,#counsel{width:560px}.nat{padding:0 6px;gap:4px}.nat .xs{display:none}}
+ #orders,#counsel{left:auto;right:356px;transform:none;width:520px}#ledger{width:300px}#insp{width:470px}#orders,#counsel{width:560px}.nat{padding:0 6px;gap:4px}.nat .xs{display:none}.seg2{padding:0 6px}.seg2.later{display:none}}
 </style></head>
 <body data-style="gilt" data-mode="watch">
 
@@ -644,6 +653,7 @@ let mode="watch",ruler="valen",adv="kesh";
 function renderTop(){
  const me=mode==="rule"?ruler:mode==="advise"?adv:null;
  const order=[...IDS].sort((a,b)=>(b===me)-(a===me)||provsOf(S,b).length-provsOf(S,a).length);
+ if(me){$("#nations").innerHTML=ownTop(me);}else
  $("#nations").innerHTML=order.map(id=>{const c=S.c[id],n=provsOf(S,id).length,net=income(S,id)-upkeep(S,id),wars=IDS.filter(o=>o!==id&&rel(S,id,o).k==="war");
   const tipH=`<span class=tt>${C[id].name}</span>${PERS[C[id].persona].name} ruler · ${C[id].model}<hr>Provinces <b>${n}</b> of 25 (15 wins)<br>Army <b>${c.army}</b> · upkeep ${upkeep(S,id)} a turn<br>Treasury <b>${c.gold}</b> gold · income ${income(S,id)}, upkeep ${upkeep(S,id)} → <b>${net>=0?'+':''}${net}</b><br>Stability <b>${c.stab}</b> of 5${c.stab<=1?' · revolt risk 1 in 3':''}<br>${wars.length?'At war with '+wars.map(w=>C[w].name).join(', '):'At war with nobody'}<hr><span class=muted>Click: country panel</span>`;
   return `<div class="nat ${id===me?'me':''} ${id===openCountry?'sel':''}" data-c="${id}" data-tip="${esc(tipH)}">${crestSVG(id)}<span class="nm">${C[id].name}</span>
@@ -652,9 +662,28 @@ function renderTop(){
    <span class="stat">${icon('gold','ic s')}<b>${c.gold}</b><span class="xs ${net>=0?'pos':'neg'}">${net>=0?'+':''}${net}</span></span>
    <span class="stat xs"><span class="pips">${[1,2,3,4,5].map(k=>`<i class="${k<=c.stab?'on':''}"></i>`).join('')}</span></span>
    ${wars.length?`<span class="stat warn-ic">${icon('war','ic s')}<b style="color:inherit">${wars.length}</b></span>`:''}</div>`;}).join("");
- $$(".nat").forEach(n=>n.onclick=()=>openCountryPanel(n.dataset.c));
+ $$(".nat,.riv").forEach(n=>n.onclick=()=>openCountryPanel(n.dataset.c));
  $("#turn").textContent=`Turn ${S.turn} of 30`;
 }
+/* rule and advise: the top bar is your own country in full; the rivals shrink to a compact strip */
+function ownTop(me){const c=S.c[me],n=provsOf(S,me).length,inc=income(S,me),up=upkeep(S,me),net=inc-up;
+ const others=IDS.filter(o=>o!==me&&alive(S,o));const wars=others.filter(o=>rel(S,me,o).k==="war"),truces=others.filter(o=>rel(S,me,o).k==="truce");
+ const seg=(lbl,val,tip,cls="")=>`<div class="seg2 ${cls}" data-tip="${esc(tip)}"><small>${lbl}</small><span>${val}</span></div>`;
+ let h=`<div class="nat me own" data-c="${me}" data-tip="${esc(`<span class=tt>${C[me].name}</span>${mode==="rule"?'You rule it':'You advise its ruler'} · ${PERS[C[me].persona].name} persona<hr><span class=muted>Click: country panel</span>`)}">${crestSVG(me)}<span class="nm">${C[me].name}</span>${icon(mode==="rule"?'crown':'quill','ic s')}</div>`;
+ h+=seg("Provinces",`${icon('prov','ic s')}<b>${n}</b><span class="muted">/15</span><span class="bar" style="width:46px;--cc:${C[me].hex}"><i style="width:${n/15*100}%"></i></span>`,`<span class=tt>Provinces</span>${n} of 25; 15 wins. ${15-n} to go.`);
+ h+=seg("Army",`${icon('army','ic s')}<b>${c.army}</b>`,`<span class=tt>Army</span>${c.army} soldiers. A province of ours defends with 70% of it. Upkeep 1 gold per 2 soldiers.`);
+ h+=seg("Treasury",`${icon('gold','ic s')}<b>${c.gold}</b><span class="${net>=0?'pos':'neg'}">${net>=0?'+':''}${net}</span>`,`<span class=tt>Treasury</span>${c.gold} gold, ${net>=0?'+':''}${net} a turn. Below zero, 15% of the army deserts.`);
+ h+=seg("Income",`<b class="pos">+${inc}</b>`,`<span class=tt>Income</span>10 gold for each of ${n} provinces.`);
+ h+=seg("Upkeep",`<b class="neg">&minus;${up}</b>`,`<span class=tt>Upkeep</span>1 gold per 2 soldiers: ${c.army} soldiers.`);
+ h+=seg("Stability",`<span class="pips">${[1,2,3,4,5].map(k=>`<i class="${k<=c.stab?'on':''}"></i>`).join('')}</span>`,`<span class=tt>Stability ${c.stab} of 5</span>Rises 1 a turn without a tax rise. At 1, a province may revolt.`);
+ h+=seg("Wars",wars.length?wars.map(o=>crestSVG(o)).join(''):'<span class="muted">none</span>',`<span class=tt>Wars</span>${wars.map(o=>C[o].name+' since turn '+rel(S,me,o).since).join('<br>')||'At war with nobody'}`);
+ h+=seg("Truces",truces.length?truces.map(o=>crestSVG(o)+`<span class="muted">${rel(S,me,o).left}</span>`).join(''):'<span class="muted">none</span>',`<span class=tt>Truces</span>${truces.map(o=>C[o].name+': '+rel(S,me,o).left+' turns left').join('<br>')||'No truce'}`);
+ h+=seg("Buildings",'<span class="muted">&mdash;</span>',`<span class=tt>Buildings</span>Room for province development (decision 12). Not in the game yet.`,"later");
+ h+=seg("Trade",'<span class="muted">&mdash;</span>',`<span class=tt>Trade</span>Room for trade and tribute (decision 9). Not in the game yet.`,"later");
+ h+=`<div class="rivals">`+others.sort((a,b)=>provsOf(S,b).length-provsOf(S,a).length).map(o=>{const r=rel(S,me,o).k;
+   return `<div class="riv ${r}" data-c="${o}" data-tip="${esc(`<span class=tt>${C[o].name}</span>${r==='war'?'At war with you':r==='truce'?'Truce with you':'At peace with you'} · ${provsOf(S,o).length} provinces<br><span class=muted>${mode==='rule'?'Fog of war will hide its army in rule mode (decision 13)':'Army '+S.c[o].army}</span><hr><span class=muted>Click: country panel</span>`)}">${crestSVG(o)}<b>${provsOf(S,o).length}</b>${r==='war'?icon('war','ic s'):r==='truce'?icon('truce','ic s'):''}</div>`;}).join('')+`</div>`;
+ return h;}
+
 function renderOutliner(){
  const wars=[],truces=[];for(const k in S.rel){const [a,b]=k.split("|"),r=S.rel[k];(r.k==="war"?wars:r.k==="truce"?truces:[]).push({a,b,r});}
  const rank=[...IDS].sort((a,b)=>provsOf(S,b).length-provsOf(S,a).length);
