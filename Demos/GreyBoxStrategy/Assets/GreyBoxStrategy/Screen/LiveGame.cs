@@ -6,7 +6,6 @@ using Agenerela;
 using Agenerela.Providers;
 using GreyBoxStrategy.Replay;
 using UnityEngine;
-using UnityEngine.Networking;
 
 namespace GreyBoxStrategy.Realm
 {
@@ -23,8 +22,8 @@ namespace GreyBoxStrategy.Realm
     /// </remarks>
     public sealed class LiveGame : MonoBehaviour
     {
-        public const string UrlVariable = "AGENERELA_OLLAMA_URL";
-        public const string KeyVariable = "AGENERELA_OLLAMA_API_KEY";
+        public const string UrlVariable = Gateway.UrlVariable;
+        public const string KeyVariable = Gateway.KeyVariable;
 
         [SerializeField] private bool playLive;
         [SerializeField] private string model = "qwen3.5:4b";
@@ -53,64 +52,26 @@ namespace GreyBoxStrategy.Realm
             if (!string.IsNullOrWhiteSpace(modelName)) model = modelName.Trim();
         }
 
-        /// <summary>The lock the RTX 5080's users share, from this project's place in the repository.</summary>
-        public static string LockPath => Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..", "..", ".scratch", "ollama-5080-lock", "held"));
-
-        /// <summary>Why a live game cannot start now, or null when it can. Quick checks only; the server is checked by <see cref="CheckServer"/>.</summary>
+        /// <summary>Why a live game cannot start now, or null when it can. Quick checks only; the server is checked by <see cref="Gateway.CheckServer"/>.</summary>
         public static string WhyNotNow()
         {
-            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(UrlVariable)))
-                return $"{UrlVariable} is not set in the environment Unity was started from. Set it and {KeyVariable}, then restart Unity and Unity Hub.";
-            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(KeyVariable)))
-                return $"{KeyVariable} is not set in the environment Unity was started from. Set it, then restart Unity and Unity Hub.";
-            if (Directory.Exists(LockPath))
-            {
-                string owner = "";
-                try { var lines = File.ReadAllLines(Path.Combine(LockPath, "owner.txt")); owner = lines.Length > 0 ? " " + lines[0] : ""; } catch (IOException) { }
-                return "The RTX 5080 is in use (its lock is held:" + owner + "). Try again when it is free.";
-            }
-            return null;
+            string why = Gateway.WhyNotSet();
+            if (why != null) return why;
+            string holder = Gateway.LockHolder();
+            return holder == null ? null : "The RTX 5080 is in use (its lock is held: " + holder + "). Try again when it is free.";
         }
 
-        /// <summary>Asks the gateway for its version, with a short timeout. Calls back with null when it answers.</summary>
-        public IEnumerator CheckServer(Action<string> done)
-        {
-            string url = Environment.GetEnvironmentVariable(UrlVariable)?.TrimEnd('/');
-            using (var req = UnityWebRequest.Get(url + "/api/version"))
-            {
-                req.timeout = 6;
-                req.SetRequestHeader("Authorization", "Bearer " + Environment.GetEnvironmentVariable(KeyVariable));
-                yield return req.SendWebRequest();
-                if (req.result == UnityWebRequest.Result.Success) done(null);
-                else if (req.responseCode == 401) done("The server refused the key in " + KeyVariable + ".");
-                else done("Cannot reach the server at " + UrlVariable + " (" + req.error + "). Check the network or the VPN.");
-            }
-        }
-
-        /// <summary>Starts the live game: takes the lock, then plays. Call only after <see cref="WhyNotNow"/> and <see cref="CheckServer"/> said yes.</summary>
+        /// <summary>Starts the live game: takes the lock, then plays. Call only after <see cref="WhyNotNow"/> and <see cref="Gateway.CheckServer"/> said yes.</summary>
         public void Begin()
         {
             if (session != null) return;
-            try
-            {
-                if (Directory.Exists(LockPath)) { Error = WhyNotNow(); return; }
-                Directory.CreateDirectory(LockPath);
-                File.WriteAllText(Path.Combine(LockPath, "owner.txt"),
-                    $"owner: Painted Realm live game (GreyBoxStrategy Watch scene)\nwhat: one live game, {model} x5 with personas, seed {seed}\nsince: {DateTime.Now:s}\nexpect: a few minutes\n");
-                tookLock = true;
-            }
-            catch (IOException e) { Debug.LogWarning("Painted Realm: could not take the RTX 5080 lock: " + e.Message); }
+            if (!Gateway.TakeLock("Painted Realm live game (GreyBoxStrategy Watch scene)", $"one live game, {model} x5 with personas, seed {seed}; a few minutes")) { Error = WhyNotNow() ?? "could not take the RTX 5080 lock"; return; }
+            tookLock = true;
 
             string folder = Path.Combine(Application.dataPath, "..", "Logs", "Live");
             string path = Path.GetFullPath(Path.Combine(folder, $"seed-{seed:D4}-{DateTime.Now:yyyyMMdd-HHmmss}.jsonl"));
             ILLMProvider provider = null;
-            session = new LiveSession(model, arm, seed, stopAfterTurns, path, (m, world) => provider ?? (provider = new OllamaProvider(new OllamaSettings
-            {
-                Endpoint = Environment.GetEnvironmentVariable(UrlVariable),
-                ApiKey = Environment.GetEnvironmentVariable(KeyVariable) ?? "",
-                Model = m,
-                TimeoutSeconds = 90f,
-            })));
+            session = new LiveSession(model, arm, seed, stopAfterTurns, path, (m, world) => provider ?? (provider = Gateway.Provider(m)));
             Debug.Log($"Painted Realm: live game, seed {seed}, {model} with personas, arm {arm}; decisions into {path}");
             Run();
         }
@@ -120,32 +81,15 @@ namespace GreyBoxStrategy.Realm
             await session.RunAsync();
             if (session.Error != null) { Error = session.Error; Debug.LogWarning("Painted Realm: live game stopped: " + session.Error); }
             else if (session.Result != null) Debug.Log($"Painted Realm: live game over: {session.Result.Winner} won on turn {session.Result.Turns}");
-            if (tookLock) await Unload();
+            if (tookLock) await Gateway.Unload(model);
             ReleaseLock();
-        }
-
-        /// <summary>Leaves the card as it was found: asks the server to unload the model (keep_alive 0).</summary>
-        private async Awaitable Unload()
-        {
-            string url = Environment.GetEnvironmentVariable(UrlVariable)?.TrimEnd('/');
-            if (string.IsNullOrEmpty(url)) return;
-            using (var req = new UnityWebRequest(url + "/api/generate", "POST"))
-            {
-                req.uploadHandler = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes("{\"model\":\"" + model + "\",\"keep_alive\":0}"));
-                req.downloadHandler = new DownloadHandlerBuffer();
-                req.SetRequestHeader("Content-Type", "application/json");
-                req.SetRequestHeader("Authorization", "Bearer " + Environment.GetEnvironmentVariable(KeyVariable));
-                req.timeout = 20;
-                await Awaitable.FromAsyncOperation(req.SendWebRequest());
-                if (req.result != UnityWebRequest.Result.Success) Debug.LogWarning("Painted Realm: could not unload " + model + ": " + req.error);
-            }
         }
 
         private void ReleaseLock()
         {
             if (!tookLock) return;
             tookLock = false;
-            try { if (Directory.Exists(LockPath)) Directory.Delete(LockPath, true); } catch (IOException e) { Debug.LogWarning("Painted Realm: could not release the RTX 5080 lock: " + e.Message); }
+            Gateway.ReleaseLock();
         }
 
         public IEnumerable<string> Lines() => session?.Lines() ?? Array.Empty<string>();

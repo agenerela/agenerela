@@ -18,20 +18,35 @@ language model through the framework, fighting over 25 provinces on a painted se
 
 1. Open `Demos/GreyBoxStrategy` in Unity 6000.3.23f1, then open
    `Assets/GreyBoxStrategy/Screen/Watch.unity` and press **Play**.
-2. The start menu offers two games:
+2. The start menu offers three games:
    - **Replay the recorded game.** Seed 4 of the persona table: five `qwen3.5:4b` rulers, Kesh
      wins by domination on turn 17. Every line is the rulers' own. It needs no model and no
      server.
    - **Watch a live game.** Five model rulers with personas play a new game now. Choose the model
      (`qwen3.5:4b` by default) and the seed, then **Watch live**.
+   - **Rule a country.** You rule one country, chosen by its crest, against four model rulers
+     with personas on the same server. Choose the model and the seed, then **Rule**.
 3. In the game:
    - Space plays and pauses, N steps one move, and + changes the speed.
    - Keys 1 to 4 switch the map modes, D opens diplomacy, and Esc closes a panel.
    - Click a province, a crest or a chronicle line to open it. A chronicle line or a speech banner
      opens the decision behind it.
    - Right-drag pans the map, and the wheel zooms.
+4. When you rule a country:
+   - The orders panel, bottom centre, lists every move the rules offer you. These are the moves
+     a model ruler would be offered in your place. A move that is not offered says why in its
+     tooltip.
+   - A move with a target lists its targets. A province or a rival's panel also has Order
+     buttons. **End turn** (or Enter) sends your order.
+   - The four rulers decide while you choose. The turn then plays back, and the panel opens
+     again for your next order.
+   - A peace offer to you opens the envoy's card: **Accept** or **Refuse**.
+   - **Report** shows what your court tells you, the same lines a model ruler reads.
+   - **Fog of war:** you see what your court knows. Other countries' treasuries and stability
+     are hidden, and so are garrisons and forts beyond your borders. The rulers' councils open
+     in the inspector when the game is over. The design page has the full rule.
 
-**What a live game needs:**
+**What a live game or a rule game needs:**
 - **Two environment variables, in the environment Unity was started from:**
   `AGENERELA_OLLAMA_URL` (the server) and `AGENERELA_OLLAMA_API_KEY` (its key).
   [`tools/ollama-server/README.md`](../../tools/ollama-server/README.md#unity-on-the-laptop) says
@@ -39,7 +54,9 @@ language model through the framework, fighting over 25 provinces on a painted se
 - **The RTX 5080, behind its lock.** The server is the card shared by every live run. A live game
   takes `.scratch/ollama-5080-lock/held` while the model plays, unloads the model, and releases
   the lock as soon as the model is done (playback carries on from the log). A full game holds the
-  card for a few minutes.
+  card for a few minutes. A rule game takes the lock for each round of the rulers' decisions
+  only, and unloads the model after each. It never holds the card while it waits for your
+  order, and if another session holds it, the orders panel says who.
 - **If it cannot start, the menu says why rather than wait:** a variable is not set, the lock is
   held (and by whom), the server cannot be reached, or the key is refused. A game that stops
   mid-way says so across the top of the map.

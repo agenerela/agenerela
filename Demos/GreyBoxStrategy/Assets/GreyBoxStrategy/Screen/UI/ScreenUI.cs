@@ -135,6 +135,7 @@ namespace GreyBoxStrategy.Realm
 
         public void ShowState(ReplayState s, string flipCountry = null)
         {
+            lastState = s;
             nations.Clear();
             provinceCount.Clear();
             foreach (var id in CountryIds.OrderByDescending(id => s.ProvinceCount(id)))
@@ -169,6 +170,7 @@ namespace GreyBoxStrategy.Realm
             for (int i = 0; i < 25; i++)
             {
                 fortMarks[i].Clear();
+                if (!Fog.KnowsProvince(s, i)) continue;
                 for (int k = 0; k < s.Forts[i]; k++) fortMarks[i].Add(new Icon(IconKind.Fort, 11) { Tint = new Color32(233, 217, 176, 255) });
             }
         }
@@ -204,7 +206,7 @@ namespace GreyBoxStrategy.Realm
             {
                 var row = new VisualElement(); row.AddToClassList("row");
                 row.Add(new Label(Cap(ProvinceIds[i])));
-                var g = new Label($"garrison {s.Garrisons[i]}"); g.AddToClassList("muted"); g.style.marginLeft = StyleKeyword.Auto; row.Add(g);
+                var g = new Label(Fog.KnowsProvince(s, i) ? $"garrison {s.Garrisons[i]}" : "garrison ?") { tooltip = Fog.KnowsProvince(s, i) ? null : "Beyond your borders: your court does not know its garrison" }; g.AddToClassList("muted"); g.style.marginLeft = StyleKeyword.Auto; row.Add(g);
                 return row;
             }));
         }

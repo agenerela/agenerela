@@ -259,6 +259,21 @@ namespace GreyBoxStrategy.Replay
             return e;
         }
 
+        /// <summary>
+        /// The state of a game being played, as the screen shows it: rule mode's council, after
+        /// upkeep and before any move lands. A war keeps the turn it began from <paramref name="before"/>.
+        /// </summary>
+        public static ReplayState StateOf(World w, IReadOnlyList<string> provinceIds, ReplayState before = null)
+        {
+            var since = new Dictionary<string, int>(StringComparer.Ordinal);
+            if (before != null)
+                foreach (var r in before.Relations.Where(r => r.Kind == "war"))
+                {
+                    since[r.A + "|" + r.B] = r.Since; since[r.B + "|" + r.A] = r.Since;
+                }
+            return Capture(w, provinceIds.ToArray(), since);
+        }
+
         private static ReplayState Capture(World w, string[] provinceIds, Dictionary<string, int> since)
         {
             var s = new ReplayState

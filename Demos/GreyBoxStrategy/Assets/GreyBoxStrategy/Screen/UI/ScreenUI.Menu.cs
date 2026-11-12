@@ -9,9 +9,10 @@ namespace GreyBoxStrategy.Realm
     {
         private VisualElement menu, notice;
         private Label menuStatus, noticeText;
-        private Button liveButton;
+        private Button liveButton, ruleButton;
+        private Label ruleStatus;
 
-        public void ShowMenu(string recordingTitle, string defaultModel, int defaultSeed, Action replay, Action<string, int> live)
+        public void ShowMenu(string recordingTitle, string defaultModel, int defaultSeed, Action replay, Action<string, int> live, Action<string, string, int> rule = null)
         {
             menu = new VisualElement(); menu.AddToClassList("menu-veil");
             var card = new VisualElement(); card.AddToClassList("panel"); card.AddToClassList("menu");
@@ -36,10 +37,45 @@ namespace GreyBoxStrategy.Realm
             menuStatus = new Label(); menuStatus.AddToClassList("menu-status"); b.Add(menuStatus);
             card.Add(b);
 
-            var keys = new Label("In the game: Space play/pause · N step · + speed · 1–4 map modes · D diplomacy · Esc close · click a province, a crest or a chronicle line · right-drag to pan, wheel to zoom");
+            if (rule != null)
+            {
+                var c = new VisualElement(); c.AddToClassList("menu-choice");
+                c.Add(new Label("Rule a country") { style = { fontSize = 15, unityFontStyleAndWeight = FontStyle.Bold } });
+                var ct = new Label("You rule one country against four model rulers with personas, on the same server. You see what your court knows; they decide while you choose. The card's lock is taken only while they decide."); ct.AddToClassList("why-no"); c.Add(ct);
+                string pickedCountry = "kesh";
+                var crests = new VisualElement { style = { flexDirection = FlexDirection.Row, marginTop = 6 } };
+                foreach (var id in CountryIds)
+                {
+                    var look = CountryLook.Of(id);
+                    var cb = new Button { tooltip = $"Rule {look.Name}" }; cb.AddToClassList("menu-crest");
+                    cb.Add(new Crest(look, 22)); cb.Add(new Label(look.Name));
+                    cb.clicked += () => { pickedCountry = id; foreach (var x in crests.Children()) x.RemoveFromClassList("pick"); cb.AddToClassList("pick"); };
+                    if (id == pickedCountry) cb.AddToClassList("pick");
+                    crests.Add(cb);
+                }
+                c.Add(crests);
+                var row2 = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center, marginTop = 6 } };
+                var model2 = new TextField("Model") { value = defaultModel }; model2.AddToClassList("menu-field"); row2.Add(model2);
+                var seed2 = new IntegerField("Seed") { value = defaultSeed }; seed2.AddToClassList("menu-field"); seed2.style.width = 140; row2.Add(seed2);
+                c.Add(row2);
+                ruleButton = new Button(() => rule(pickedCountry, model2.value, seed2.value)) { text = "Rule" }; ruleButton.AddToClassList("menu-button"); c.Add(ruleButton);
+                ruleStatus = new Label(); ruleStatus.AddToClassList("menu-status"); c.Add(ruleStatus);
+                card.Add(c);
+            }
+
+            var keys = new Label("In the game: Enter ends your turn · Space play/pause · N step · + speed · 1–4 map modes · D diplomacy · Esc close · click a province, a crest or a chronicle line · right-drag to pan, wheel to zoom");
             keys.AddToClassList("src"); card.Add(keys);
             menu.Add(card);
             Root.Add(menu);
+        }
+
+        /// <summary>The rule choice's status line: why it cannot start, or that it is starting.</summary>
+        public void ShowRuleStatus(string text, bool busy = false)
+        {
+            if (ruleStatus == null) return;
+            ruleStatus.text = text ?? "";
+            ruleStatus.EnableInClassList("busy", busy);
+            ruleButton?.SetEnabled(!busy);
         }
 
         public void ShowMenuStatus(string text, bool busy = false)
