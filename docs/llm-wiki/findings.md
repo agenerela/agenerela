@@ -8,6 +8,8 @@ Every entry needs: what changed, control vs treatment with n, the conditions (mo
 quantisation, hardware, other models resident), and what would change your mind. See
 [README.md](README.md) for the rule.
 
+**Raw-data pointers.** An entry that says its raw data is in a worktree's `.scratch/` (for example `wonderful-kilby-ef674e`, `20-strategy-model-table-b06b94`) now means the folder of that name in `.scratch/archive-2026-11-12/` in the lead's main checkout, moved there on 12 November when finished worktrees were removed; a README in that folder says so.
+
 ---
 
 ## Inherited, unresolved — carry these forward
