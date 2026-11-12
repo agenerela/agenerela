@@ -379,6 +379,50 @@ namespace GreyBoxStrategy.Tests
         }
 
         [Test]
+        public async Task ATableRun_WritesEveryEvent_AndTheStorytellersCalls()
+        {
+            // Two arms interleaved, as the A/B runs them: the files each arm's folder gets.
+            ILLMProvider Fake(World w) => new ScriptedProvider
+            {
+                Callback = req =>
+                {
+                    if (req.AgentId != Storyteller.AgentId) return ScriptedReply.Decide(ActionRegistry.None, TargetRegistry.NoTarget, "We wait.");
+                    return w.Turn % 2 == 0
+                        ? ScriptedReply.Decide(ActionRegistry.None, TargetRegistry.NoTarget, "Quiet.")
+                        : ScriptedReply.Decide(EventRules.Windfall, EventGroups.Everyone, "A Year of Plenty: Every barn was full.");
+                },
+            };
+            string folder = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gbs-storyteller-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                var arms = new List<(string, TableDefinition)>
+                {
+                    ("control", Tables.Named("fake,fake,fake,fake,fake", null, arm: "default")),
+                    ("story", Tables.Named("fake,fake,fake,fake,fake", null, arm: "default+storyteller")),
+                };
+                var cards = await Await.NotCancelled(StrategyTableRuns.RunInterleavedAsync(folder, arms, (m, w) => Fake(w), 2, 1, 1));
+                string story = System.IO.Path.Combine(folder, "story");
+                foreach (string f in new[] { "events.csv", "events.md", "storyteller.csv", "scorecard.md", "scorecard-games.csv", "game-0001.md", "game-0002.md" })
+                    Assert.That(System.IO.File.Exists(System.IO.Path.Combine(story, f)), Is.True, f);
+                Assert.That(System.IO.File.Exists(System.IO.Path.Combine(folder, "control", "storyteller.csv")), Is.False);
+                string md = System.IO.File.ReadAllText(System.IO.Path.Combine(story, "events.md"));
+                Assert.That(md, Does.Contain("**\"A Year of Plenty\"**, windfall on everyone"));
+                string log = System.IO.File.ReadAllText(System.IO.Path.Combine(story, "game-0001.md"));
+                Assert.That(log, Does.Contain("The storyteller:"));
+                Assert.That(System.IO.File.ReadAllText(System.IO.Path.Combine(story, "scorecard.md")), Does.Contain("## Events"));
+                Assert.That(cards[1].Get("events", "table", "storyteller calls"), Is.GreaterThan(10));
+                Assert.That(cards[1].Get("events", "table", "titles shared across seeds"), Is.EqualTo(1), "one title, in both games");
+                Assert.That(cards[0].Get("events", "table", "storyteller calls"), Is.NaN);
+                var lines = System.IO.File.ReadAllLines(System.IO.Path.Combine(story, "events.csv"));
+                Assert.That(lines.Skip(1).All(l => l.Contains(",storyteller,windfall,everyone,")), Is.True);
+            }
+            finally
+            {
+                if (System.IO.Directory.Exists(folder)) System.IO.Directory.Delete(folder, true);
+            }
+        }
+
+        [Test]
         public void TheArm_ParsesInTheExistingStyle()
         {
             var o = ModelSeatOptions.Named("default+storyteller+inspiration-2");
