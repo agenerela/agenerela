@@ -29,6 +29,14 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **GreyBoxStrategy: arms for #244's prompt options, and a rule-copy count** (#244 items 5 and 8).
+  - The model-seat modifiers `+no-moves-line`, `+moves-sentence` (`LegalTargets = ObservationLine`),
+    `+how-it-reads` and `+own-words` (`StatementRulesWording`).
+  - The `Scorecard`'s voice section counts statements that copy their persona's whole statement
+    rule, or one sentence of it.
+  - At the persona 2b table, `+own-words` took those copies from 15% to none. The stage 2 runs and
+    the 4B table are still owed. See the demo README's gaps N8 and N9.
+
 - **GreyBoxStrategy: models at one table** (#20). Any seat can be a model, a script or random
   (`TableDefinition`, `Tables.Named`, `StrategyTableMenu`). Each council is one framework
   `DecisionRound`, executed in the game's own order. There are five personas built only from

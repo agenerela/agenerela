@@ -298,6 +298,7 @@ namespace GreyBoxStrategy
                 CheckTarget = Options.CheckTarget,
                 TargetGroundingThreshold = Options.GroundingThreshold,
                 LegalTargets = Options.LegalTargets,
+                StatementRulesWording = Options.RulesWording,
                 PairTargetsWithActions = Options.PairTargets,
                 Correlation = request.Moment == Moment.Envoy ? new EnvoyOffer(request.OfferId, request.OfferedBy) : null,
             };

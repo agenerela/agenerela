@@ -177,6 +177,92 @@ namespace Agenerela.Tests
             Assert.That(request.FewShotBlock, Is.EqualTo(GoldenFewShotBlock));
         }
 
+        // #244 item 8 (GreyBoxStrategy gap N9): how the rules are introduced.
+        [Test]
+        public void TheStatementRulesWordingDefaultsToTodaysLine()
+        {
+            Assert.That(new PromptOptions().StatementRulesWording, Is.EqualTo(StatementRulesWording.YourStatement));
+            Assert.That(new DecideOptions().StatementRulesWording, Is.EqualTo(StatementRulesWording.YourStatement));
+
+            var unset = Assemble(Knowing(null, "Keep it short."), GuardOptions());
+            var options = GuardOptions();
+            options.StatementRulesWording = StatementRulesWording.YourStatement;
+            var set = Assemble(Knowing(null, "Keep it short."), options);
+
+            Assert.That(set.SystemPrompt, Is.EqualTo(unset.SystemPrompt));
+            Assert.That(set.SystemPrompt.Split('\n'), Does.Contain("Your statement: Keep it short."));
+        }
+
+        [TestCase(StatementRulesWording.HowItShouldRead, "How your statement should read: A trader's voice: profit, price or a deal.")]
+        [TestCase(StatementRulesWording.InYourOwnWords, "Write your statement in your own words, following these rules: A trader's voice: profit, price or a deal.")]
+        public void EachWordingReplacesOnlyTheRulesLinesOpening(StatementRulesWording wording, string line)
+        {
+            var plain = Assemble(Knowing(new[] { "The well is dry." }, " A trader's voice: profit, price or a deal "), GuardOptions());
+            var options = GuardOptions();
+            options.StatementRulesWording = wording;
+            var worded = Assemble(Knowing(new[] { "The well is dry." }, " A trader's voice: profit, price or a deal "), options);
+
+            Assert.That(worded.SystemPrompt.Split('\n'), Is.EqualTo(new[]
+            {
+                GuardWho,
+                GuardGoals,
+                "What you know:",
+                "- The well is dry.",
+                line,
+                Instruction,
+            }));
+            Assert.That(worded.SystemPrompt, Does.Not.Contain("Your statement:"));
+            Assert.That(SystemSideWithout(worded), Is.EqualTo(SystemSideWithout(plain)), "Nothing but the system prompt moves.");
+            Assert.That(worded.Stimulus, Is.EqualTo(plain.Stimulus));
+        }
+
+        [Test]
+        public void NoRulesNoLineWhateverTheWording()
+        {
+            foreach (StatementRulesWording wording in Enum.GetValues(typeof(StatementRulesWording)))
+            {
+                var options = GuardOptions();
+                options.StatementRulesWording = wording;
+                var request = Assemble(Knowing(null, "   "), options);
+
+                Assert.That(request.SystemPrompt, Is.EqualTo(GoldenSystemPrompt), wording.ToString());
+            }
+        }
+
+        [Test]
+        public void AnUndefinedWordingThrows()
+        {
+            var options = GuardOptions();
+            options.StatementRulesWording = (StatementRulesWording)9;
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => Assemble(Knowing(null, "Keep it short."), options));
+
+            var agent = new Agent(new AgentIdentity { Name = "Bram", StatementRules = "Keep it short." },
+                new[] { new ActionDefinition { Id = "wave", Description = "Wave." } }, new FakeProvider());
+            agent.Bind("wave", new FakeHandler());
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                agent.Preview("Hello.", new DecideOptions { StatementRulesWording = (StatementRulesWording)9 }));
+        }
+
+        [Test]
+        public void TheAgentSendsTheCallsWording()
+        {
+            var agent = new Agent(new AgentIdentity { Name = "Bram", StatementRules = "Keep it short." },
+                new[] { new ActionDefinition { Id = "wave", Description = "Wave." } }, new FakeProvider());
+            agent.Bind("wave", new FakeHandler());
+
+            string Prompt(StatementRulesWording w) =>
+                agent.Preview("Hello.", new DecideOptions { StatementRulesWording = w }).Request.SystemPrompt;
+
+            Assert.That(Prompt(StatementRulesWording.YourStatement), Does.Contain("\nYour statement: Keep it short.\n"));
+            Assert.That(Prompt(StatementRulesWording.HowItShouldRead), Does.Contain("\nHow your statement should read: Keep it short.\n"));
+            Assert.That(Prompt(StatementRulesWording.InYourOwnWords),
+                Does.Contain("\nWrite your statement in your own words, following these rules: Keep it short.\n"));
+        }
+
+        private static string SystemSideWithout(DecisionRequest request) =>
+            string.Join("\n\n", request.FewShotBlock ?? "", request.Observations ?? "", request.Stimulus ?? "");
+
         [Test]
         public void KnowledgeThenStatementRulesThenTheInstructionLine()
         {

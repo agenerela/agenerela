@@ -175,6 +175,7 @@ namespace GreyBoxStrategy
             Contained = d.Contained,
             Statement = d.Statement,
             OfferedBy = d.OfferedBy,
+            StatementRules = d.Persona == null ? null : Personas.Named(d.Persona).StatementRules,
         }).ToList());
     }
 

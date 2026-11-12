@@ -64,6 +64,15 @@ namespace Agenerela.Evaluation
         }
 
         /// <summary>
+        /// The <see cref="AgentIdentity.StatementRules"/> this arm's agents have in place of the
+        /// profile's; null, the default, keeps the profile's. The profile asset itself is never
+        /// changed. So two arms can give the evaluation agent the same rules and compare how they are
+        /// introduced (<see cref="DecideOptions.StatementRulesWording"/>, #244 item 8), on a set
+        /// whose profile has none.
+        /// </summary>
+        public string StatementRules { get; set; }
+
+        /// <summary>
         /// Whether the arm's, the state's and the targets' lines are sent as the call's own
         /// <see cref="DecideOptions.Observations"/>, ahead of the prompt's own, instead of through an
         /// observation source; false unless set (#151). On, the whole block is the call's, as a

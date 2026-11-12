@@ -67,9 +67,13 @@ namespace Agenerela
         // goals. "What you know:" sets the knowledge against the observations' "What you know right
         // now:"; the rules line is framed like "Your goals:" and named for the statement field,
         // never for speech (DR-008). New and unmeasured as wording, and here alone so an A/B can
-        // change them in one place.
+        // change them in one place. The rules line has three wordings (StatementRulesWording, #244
+        // item 8): the first reads like the statement field already filled in, which a 2B model
+        // copied out as its statement (GreyBoxStrategy gap N9).
         private const string KnowledgeHeader = "What you know:";
         private const string StatementRulesPrefix = "Your statement: ";
+        private const string StatementRulesHowItReads = "How your statement should read: ";
+        private const string StatementRulesOwnWords = "Write your statement in your own words, following these rules: ";
 
         // The action and target list's headings (#190). "Allowed" echoes the instruction line's
         // "from the allowed list"; the target list is the "listed targets" it names. New and
@@ -82,6 +86,11 @@ namespace Agenerela
         private const string TargetNoneNote = "Target: " + TargetRegistry.NoTarget + ".";
         private const string TargetsUnlistedNote = "Targets: none listed.";
         private const string ForPrefix = "for ";
+
+        // The legal pairs as one observation line (#244 item 5, LegalTargetListing.ObservationLine),
+        // after GreyBoxStrategy's own "Moves open to us:" line, which measured better than the list
+        // (#247). "you" because the system prompt speaks to the agent; a game's facts may say "us".
+        private const string MovesLinePrefix = "Moves open to you: ";
 
         // The user turn of a refusal line's request (#109): {0} is the stimulus, {1} the guard's
         // reason. New and unmeasured. It changes only what is said after a refusal, never which
@@ -171,14 +180,21 @@ namespace Agenerela
                     "PromptOptions.CallObservationCount cannot be negative. 0 means none of the observations is the call's own.");
             }
 
-            if (options.LegalTargets != LegalTargetListing.Off && options.LegalTargets != LegalTargetListing.PerTarget)
+            if (!Enum.IsDefined(typeof(LegalTargetListing), options.LegalTargets))
             {
                 throw new ArgumentOutOfRangeException(nameof(options), options.LegalTargets,
-                    "PromptOptions.LegalTargets is not one of Off or PerTarget.");
+                    "PromptOptions.LegalTargets is not one of Off, PerTarget or ObservationLine.");
+            }
+
+            if (!Enum.IsDefined(typeof(StatementRulesWording), options.StatementRulesWording))
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), options.StatementRulesWording,
+                    "PromptOptions.StatementRulesWording is not one of YourStatement, HowItShouldRead or InYourOwnWords.");
             }
 
             string choices = null;
-            if (options.LegalTargets != LegalTargetListing.Off)
+            string moves = null;
+            if (options.LegalTargets == LegalTargetListing.PerTarget)
             {
                 choices = LegalChoicesBlock(ctx, schema, options, answer ?? ActionAvailability.Evaluate(ctx), unlisted);
             }
@@ -187,11 +203,24 @@ namespace Agenerela
                 choices = ChoicesBlock(ctx, schema, options.MaxListedTargets, unlisted);
             }
 
-            Place(ctx.Observations, options, out var block, out string facts);
+            if (options.LegalTargets == LegalTargetListing.ObservationLine)
+            {
+                moves = MovesLine(ctx, schema, options, answer ?? ActionAvailability.Evaluate(ctx), unlisted);
+            }
+
+            Place(ctx.Observations, options, out var block, out int sourceLines, out string facts);
+            if (moves != null)
+            {
+                // After the sources' lines and before the call's own, wherever those go.
+                var withMoves = new List<string>(block);
+                withMoves.Insert(sourceLines, moves);
+                block = withMoves;
+            }
 
             return new DecisionRequest
             {
-                SystemPrompt = SystemPrompt(ctx.Identity, choices, options.TargetRule ? TargetRuleLine(schema) : null),
+                SystemPrompt = SystemPrompt(ctx.Identity, options.StatementRulesWording, choices,
+                    options.TargetRule ? TargetRuleLine(schema) : null),
                 FewShotBlock = fewShotBlock,
                 Observations = ObservationsBlock(block),
                 // Copied, so a memory strategy changing its list afterwards does not change a
@@ -325,46 +354,7 @@ namespace Agenerela
                 return null;
             }
 
-            // What each offered action may take, none's no_target included.
-            var takes = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
-            foreach (var pair in DecisionSchema.PairsOf(ctx, schema, answer))
-            {
-                foreach (string action in pair.Actions)
-                {
-                    takes[action] = new HashSet<string>(pair.Targets, StringComparer.Ordinal);
-                }
-            }
-
-            var noTargetOnly = new HashSet<string>(StringComparer.Ordinal) { TargetRegistry.NoTarget };
-            HashSet<string> TakenBy(string action) => takes.TryGetValue(action, out var set) ? set : noTargetOnly;
-
-            var listed = new List<string>();
-            if (targetField != null)
-            {
-                foreach (string id in targetField.AllowedValues)
-                {
-                    if (id == TargetRegistry.NoTarget) continue;
-
-                    bool taken = false;
-                    foreach (string action in actionField.AllowedValues)
-                    {
-                        if (TakenBy(action).Contains(id))
-                        {
-                            taken = true;
-                            break;
-                        }
-                    }
-
-                    if (!taken) continue;
-                    if (listed.Count == options.MaxListedTargets)
-                    {
-                        unlisted?.Add(id);
-                        continue;
-                    }
-
-                    listed.Add(id);
-                }
-            }
+            var TakenBy = LegalPairs(ctx, schema, answer, actionField, targetField, options.MaxListedTargets, unlisted, out var listed);
 
             var lines = new List<string> { ActionsHeader };
             foreach (string id in actionField.AllowedValues)
@@ -397,6 +387,93 @@ namespace Agenerela
             }
 
             return string.Join("\n", lines);
+        }
+
+        // What each offered action may take (none's no_target included, an action the pairs do not
+        // name taking no_target alone), and the targets some offered action may take, at most max of
+        // them in schema order; one past the cap goes into unlisted, unless it is there already. The
+        // pairs are the paired schema's (DecisionSchema.PairsOf), so the prompt, the schema and the
+        // guards agree, whichever way the prompt says them (#151, #244 item 5).
+        private static Func<string, HashSet<string>> LegalPairs(AgentContext ctx, DecisionSchema schema, AvailabilityAnswer answer,
+                                                                SchemaField actionField, SchemaField targetField, int max,
+                                                                List<string> unlisted, out List<string> listed)
+        {
+            var takes = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+            foreach (var pair in DecisionSchema.PairsOf(ctx, schema, answer))
+            {
+                foreach (string action in pair.Actions)
+                {
+                    takes[action] = new HashSet<string>(pair.Targets, StringComparer.Ordinal);
+                }
+            }
+
+            var noTargetOnly = new HashSet<string>(StringComparer.Ordinal) { TargetRegistry.NoTarget };
+            HashSet<string> TakenBy(string action) => takes.TryGetValue(action, out var set) ? set : noTargetOnly;
+
+            listed = new List<string>();
+            if (targetField != null)
+            {
+                foreach (string id in targetField.AllowedValues)
+                {
+                    if (id == TargetRegistry.NoTarget) continue;
+
+                    bool taken = false;
+                    foreach (string action in actionField.AllowedValues)
+                    {
+                        if (TakenBy(action).Contains(id))
+                        {
+                            taken = true;
+                            break;
+                        }
+                    }
+
+                    if (!taken) continue;
+                    if (listed.Count == max)
+                    {
+                        if (unlisted != null && !unlisted.Contains(id)) unlisted.Add(id);
+                        continue;
+                    }
+
+                    listed.Add(id);
+                }
+            }
+
+            return TakenBy;
+        }
+
+        // The legal pairs as one sentence (#244 item 5): "Moves open to you: attack fenmark or
+        // westmarch; fortify ashby." Each offered action that may take a listed target, in schema
+        // order, with those targets in schema order; null when there is none.
+        private static string MovesLine(AgentContext ctx, DecisionSchema schema, PromptOptions options,
+                                        AvailabilityAnswer answer, List<string> unlisted)
+        {
+            SchemaField actionField = null, targetField = null;
+            foreach (var field in schema.Fields)
+            {
+                if (field.AllowedValues == null) continue;
+                if (field.Name == DecisionSchema.ActionFieldName) actionField = field;
+                else if (field.Name == DecisionSchema.TargetFieldName) targetField = field;
+            }
+
+            if (actionField == null || targetField == null)
+            {
+                return null;
+            }
+
+            var TakenBy = LegalPairs(ctx, schema, answer, actionField, targetField, options.MaxListedTargets, unlisted, out var listed);
+            var parts = new List<string>();
+            foreach (string action in actionField.AllowedValues)
+            {
+                var targets = listed.FindAll(TakenBy(action).Contains);
+                if (targets.Count == 0) continue;
+
+                string list = targets.Count == 1
+                    ? targets[0]
+                    : string.Join(", ", targets.GetRange(0, targets.Count - 1)) + " or " + targets[targets.Count - 1];
+                parts.Add(action + " " + list);
+            }
+
+            return parts.Count == 0 ? null : MovesLinePrefix + string.Join("; ", parts) + ".";
         }
 
         // An action's line with its pairs note: "- id: Its description. Target: no_target.", or with
@@ -434,7 +511,7 @@ namespace Agenerela
         // them, then the fixed instruction line, then the action and target list and the target
         // rule, each when there is one. With no knowledge and no rules the prompt is exactly what
         // it was before them (#190, Living Vale #14).
-        private static string SystemPrompt(AgentIdentity identity, string choices, string targetRule)
+        private static string SystemPrompt(AgentIdentity identity, StatementRulesWording wording, string choices, string targetRule)
         {
             var lines = new List<string>(7);
 
@@ -459,7 +536,7 @@ namespace Agenerela
             string rules = OneLine(identity.StatementRules);
             if (rules.Length > 0)
             {
-                lines.Add(StatementRulesPrefix + EndSentence(rules));
+                lines.Add(RulesPrefix(wording) + EndSentence(rules));
             }
 
             lines.Add(InstructionLine);
@@ -475,6 +552,17 @@ namespace Agenerela
             }
 
             return string.Join("\n", lines);
+        }
+
+        // The words before the statement rules (#244 item 8).
+        private static string RulesPrefix(StatementRulesWording wording)
+        {
+            switch (wording)
+            {
+                case StatementRulesWording.HowItShouldRead: return StatementRulesHowItReads;
+                case StatementRulesWording.InYourOwnWords: return StatementRulesOwnWords;
+                default: return StatementRulesPrefix;
+            }
         }
 
         // "You are <name>, <role>. <personality>", leaving out whichever parts are empty. A
@@ -502,23 +590,26 @@ namespace Agenerela
         // the block and returns them as the text that follows the stimulus's closing quote: each on one line,
         // ended as a sentence, after a space, so the developer's stimulus stays whole inside the
         // quote and the facts read as what comes after it. Blank lines are skipped, as in the block.
+        // sourceLines says how many of block's lines came from the sources: where a line that belongs
+        // between them and the call's own goes.
         private static void Place(IReadOnlyList<string> observations, PromptOptions options,
-                                  out IReadOnlyList<string> block, out string facts)
+                                  out IReadOnlyList<string> block, out int sourceLines, out string facts)
         {
             block = observations;
             facts = "";
             int own = Math.Min(options.CallObservationCount, observations.Count);
+            sourceLines = observations.Count - own;
             if (own == 0 || options.ObservationPlacement == ObservationPlacement.AfterSources)
             {
                 return;
             }
 
-            int sources = observations.Count - own;
-            var sourceLines = new List<string>(sources);
+            int sources = sourceLines;
+            var fromSources = new List<string>(sources);
             var callLines = new List<string>(own);
             for (int i = 0; i < observations.Count; i++)
             {
-                (i < sources ? sourceLines : callLines).Add(observations[i]);
+                (i < sources ? fromSources : callLines).Add(observations[i]);
             }
 
             if (options.ObservationPlacement != ObservationPlacement.WithStimulus)
@@ -527,7 +618,7 @@ namespace Agenerela
                     "PromptOptions.ObservationPlacement is not one of AfterSources or WithStimulus.");
             }
 
-            block = sourceLines;
+            block = fromSources;
             var text = new System.Text.StringBuilder();
             foreach (string line in callLines)
             {

@@ -186,9 +186,25 @@ namespace Agenerela.Editor.Evaluation
             yield return arm.CounterExamples ? "counter-examples shown" : "no counter-examples";
             yield return arm.PairTargetsWithActions ? "schema pairs each action with its targets" : "schema does not pair actions with targets";
             // Only when on (#151), so a report from before it reads as it always did.
-            if (!string.IsNullOrEmpty(arm.LegalTargets) && arm.LegalTargets != nameof(LegalTargetListing.Off))
+            if (arm.LegalTargets == nameof(LegalTargetListing.ObservationLine))
+            {
+                yield return "an observation line says which targets each action may take (ObservationLine)";
+            }
+            else if (!string.IsNullOrEmpty(arm.LegalTargets) && arm.LegalTargets != nameof(LegalTargetListing.Off))
             {
                 yield return $"the list says which targets each action may take ({arm.LegalTargets})";
+            }
+
+            // Only when the arm set its own rules or a wording other than the default (#244 item 8),
+            // so a report from before reads as it always did.
+            if (arm.StatementRules != null)
+            {
+                yield return $"the arm's own statement rules \"{arm.StatementRules}\"";
+            }
+
+            if (!string.IsNullOrEmpty(arm.StatementRulesWording) && arm.StatementRulesWording != nameof(StatementRulesWording.YourStatement))
+            {
+                yield return $"statement rules introduced as {arm.StatementRulesWording}";
             }
 
             if (arm.Legality != null)

@@ -314,6 +314,11 @@ ran one after the other; repeat a close result.
   moves the whole block. The report's conditions name each arm's placement and that switch. The prompt's
   `label` is the stimulus label.
   `CheckTarget` is on only when both the arm and the prompt's `checkTarget` leave it on.
+- The agent's identity is the profile's, with an arm's `Knowledge` added after the profile's own
+  and an arm's `StatementRules` in place of the profile's, when set. The profile asset is never
+  changed. So two arms can give a set whose profile has no rules the same rules, and compare how
+  they are introduced (`DecideOptions.StatementRulesWording`, #244). The report's conditions name
+  each arm's rules and wording.
 
 The warm-up's requests are shaped like a prompt's, with the arm's and the targets' lines, but no
 state. Nothing is executed: the runner scores what the agent chose, and checks what it said apart

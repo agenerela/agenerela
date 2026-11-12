@@ -144,6 +144,44 @@ targets, helped neither model, and was removed.
   way.
 - **Off**, the default, leaves the request byte for byte what it was before the option.
 
+### As one line among the facts
+
+`LegalTargetListing.ObservationLine` says the same pairs as one sentence among the observations,
+grouped by action, instead of annotating the list:
+
+```csharp
+var result = await agent.DecideAsync(line, new DecideOptions { LegalTargets = LegalTargetListing.ObservationLine });
+```
+
+```
+What you know right now:
+- It is noon.
+- Moves open to you: move_to bridge, well or docks; attack_target wolf.
+- A cart has tipped over.
+```
+
+- **Where it goes:** after the lines of `Agent.ObservationSources` and before the call's own
+  `DecideOptions.Observations`, so it reads as a standing fact. With
+  `ObservationPlacement.WithStimulus` the call's own lines move after the stimulus and the sentence
+  stays last in the block.
+- **What it names:** each offered action that may take a listed target, by its id, in schema order,
+  with those targets in schema order: `a, b or c`. Actions that take only `no_target` are left out,
+  since the sentence names targets. With no action taking a target there is no sentence.
+- **The same pairs as `PerTarget`,** from the same availability answer, with the same
+  `MaxListedTargets` cap on the targets named and the same `TargetsUnlisted` report. An action that
+  requires a target and may take none is not offered, as with `PerTarget`.
+- **The system prompt is not changed.** Its list is `ListActionsAndTargets`' plain one, or none.
+- **Rendered only.** The sentence is not in `AgentContext.Observations`: it takes no place under
+  `Agent.MaxObservations`, and no guard, source or handler reads it.
+
+It is a game's own moves line, made by the framework: GreyBoxStrategy's "Moves open to us: attack
+fenmark or westmarch; ..." line made `qwen3.5:4b` attack 6 to 8 points more often than `PerTarget`'s
+annotated list did (#247). On the interim evaluation set, though, the sentence scored below both the
+plain list and `PerTarget`: beyond noise on `qwen3.5:2b` (−6.4 and −6.7 points), at the noise floor
+on `qwen3.5:4b` (−3.6 and −3.3), with the 2B choosing to act where it should not (findings, "The
+legal moves as an observation line", 11 November). It takes illegal pairs to none, but the paired
+schema alone already does. Measure it on your own agent before using it.
+
 ## The idle example on an agent built in code
 
 The few-shot block ends with an idle example, a line answered with `none`, so the model sees
@@ -192,7 +230,24 @@ Choose exactly one action from the allowed list. Use no_target when none of the 
 Each knowledge line goes in as written, except that a blank line is skipped and a line's own line
 breaks become spaces; the statement rules are put on one line and end with a full stop. Both
 empty, the default, sends exactly the prompt sent before they existed. The headings are
-constants in `PromptBuilder`, and their wording is unmeasured.
+constants in `PromptBuilder`.
+
+**How the rules are introduced** is a per-call choice, `DecideOptions.StatementRulesWording`:
+
+| Value | The line |
+|---|---|
+| `YourStatement` (the default) | `Your statement: <rules>` |
+| `HowItShouldRead` | `How your statement should read: <rules>` |
+| `InYourOwnWords` | `Write your statement in your own words, following these rules: <rules>` |
+
+The default's heading names the field the model fills, so rules that open with a noun phrase ("A
+trader's voice: profit, price or a deal.") can read as a statement already given. In GreyBoxStrategy
+`qwen3.5:2b` returned its persona's whole rule as its statement 373 times in 582 (#249).
+At that game's table `InYourOwnWords` took the 2B's copies of its rule from 15% of statements to
+none, and `HowItShouldRead` to 7%. On the evaluation sets neither wording moved correct answers
+beyond noise on `qwen3.5:2b` or `qwen3.5:4b`, but with `InYourOwnWords` the 2B repeated more
+few-shot example lines as its statement (findings, "How a statement rule is introduced",
+11 November).
 
 **Which slot a line belongs in.** The model reads all three; what differs is how often a line
 changes and who pays for it.
