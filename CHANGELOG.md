@@ -34,8 +34,11 @@ phase table and the open issues, not here.
   with eight mock-ups (three looks for the parchment map, the capture of a province step by step,
   rule and advise modes, a court scene). It specifies the colour change to the millisecond, the
   three modes, the Why card over `DecisionFeed`, a single-shader map built from the rule graph
-  with a painted fallback, an asset list, five names (pick: Inkwash) and six open questions.
-  Docs only.
+  with a painted fallback, and an asset list. Round 2 follows the lead's choices (look C,
+  "Painted Realm" for now, dense terrain, a portrait per persona with several faces): a clickable
+  grand-strategy screen in HTML, `docs/demos/grey-box-strategy-screen/ui/index.html`, with
+  watch, rule and advise modes, a decision inspector, two styles, and twelve screenshots. Docs
+  only.
 
 - **GreyBoxStrategy: arms for #244's prompt options, and a rule-copy count** (#244 items 5 and 8).
   - The model-seat modifiers `+no-moves-line`, `+moves-sentence` (`LegalTargets = ObservationLine`),

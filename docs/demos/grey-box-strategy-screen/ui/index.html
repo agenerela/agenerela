@@ -1,0 +1,1034 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painted Realm — screen mock-up</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Cormorant+SC:wght@500;600;700&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* ---------- two styles, one layout ---------- */
+:root, body[data-style="gilt"]{
+  --bg:#141a1f; --panel:rgba(18,15,12,.93); --panel2:rgba(30,24,18,.96); --panel3:rgba(44,35,25,.9);
+  --ink:#eadfc6; --ink2:#c2b393; --ink3:#8d7f66; --line:rgba(201,164,90,.55); --line2:rgba(201,164,90,.22);
+  --gold:#d2ad62; --gold2:#9a7a3e; --accent:#d2ad62; --bad:#d0614c; --good:#8fbf7a; --warn:#d8a24a;
+  --title:'Cormorant SC','Cormorant Garamond',Georgia,serif; --serif:'Cormorant Garamond',Georgia,serif;
+  --sans:'Alegreya Sans','Segoe UI',sans-serif; --mono:'JetBrains Mono',Consolas,monospace;
+  --shadow:0 6px 24px rgba(0,0,0,.55); --hi:rgba(210,173,98,.14);
+  --bar-grad:linear-gradient(#2a2118,#16110c); --btn:linear-gradient(#3a2e20,#21190f); --btn-on:linear-gradient(#6b5228,#3e2f15);
+  --mapfilter:none;
+}
+body[data-style="engraved"]{
+  --bg:#2b2a26; --panel:rgba(236,228,209,.95); --panel2:rgba(244,238,224,.97); --panel3:rgba(222,211,186,.92);
+  --ink:#231b13; --ink2:#4e4130; --ink3:#7c6c55; --line:rgba(52,40,26,.6); --line2:rgba(52,40,26,.2);
+  --gold:#8a2f1d; --gold2:#5a4a36; --accent:#8a2f1d; --bad:#a2321f; --good:#3f6b2e; --warn:#9a6417;
+  --title:'IM Fell English SC','IM Fell English',Georgia,serif; --serif:'IM Fell English',Georgia,serif;
+  --shadow:0 4px 16px rgba(0,0,0,.35); --hi:rgba(138,47,29,.08);
+  --bar-grad:linear-gradient(#f1e9d6,#ddd0b2); --btn:linear-gradient(#f4ecda,#ddd0b4); --btn-on:linear-gradient(#cdb98f,#b9a271);
+  --mapfilter:sepia(.28) saturate(.85) brightness(1.12) contrast(.96);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font:13px/1.35 var(--sans)}
+button{font:inherit;color:inherit}
+.ic{width:14px;height:14px;fill:currentColor;flex:none;vertical-align:-2px}
+.ic.s{width:12px;height:12px}
+
+/* ---------- map ---------- */
+#view{position:fixed;inset:0;overflow:hidden;cursor:grab;background:radial-gradient(ellipse at 50% 50%,#2f3534,#1d2120 75%)}
+body[data-style="engraved"] #view{background:radial-gradient(ellipse at 50% 50%,#55554b,#3b3c36 75%)}
+#view.drag{cursor:grabbing}
+#stage{position:absolute;left:0;top:0;width:1672px;height:941px;transform-origin:0 0}
+#mapimg{position:absolute;inset:0;width:100%;height:100%;filter:var(--mapfilter);user-select:none;-webkit-user-drag:none;-webkit-mask-image:radial-gradient(ellipse 58% 60% at 50% 50%,#000 80%,transparent 100%);mask-image:radial-gradient(ellipse 58% 60% at 50% 50%,#000 80%,transparent 100%)}
+#wash,#ink{position:absolute;inset:0;width:100%;height:100%}
+#wash{mix-blend-mode:color}
+body[data-style="engraved"] #wash{opacity:.85}
+#ov{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+#ov .plab{font:italic 500 calc(12px*var(--k,1)) var(--serif);fill:#f3e7c8;paint-order:stroke;stroke:rgba(20,14,8,.85);stroke-width:calc(3px*var(--k,1));text-anchor:middle;letter-spacing:.02em}
+#ov .clab{font:700 calc(14px*var(--k,1)) var(--title);fill:#fff4d6;paint-order:stroke;stroke:rgba(15,10,5,.9);stroke-width:calc(3.4px*var(--k,1));text-anchor:middle;letter-spacing:.08em}
+body[data-style="engraved"] #ov .plab{fill:#2a1d10;stroke:rgba(246,238,220,.85)}
+body[data-style="engraved"] #ov .clab{fill:#1c140c;stroke:rgba(246,238,220,.9)}
+#ov .num{font:700 calc(11px*var(--k,1)) var(--sans);fill:#fff;text-anchor:middle}
+#dim{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .3s}
+#screen{position:fixed;inset:0;pointer-events:none}
+
+/* speech over the map, tied to the capital */
+.bubble{position:absolute;display:flex;align-items:center;gap:7px;max-width:290px;padding:5px 10px 5px 5px;background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--cc);border-radius:3px;box-shadow:var(--shadow);transform:translate(-50%,calc(-100% - 16px));pointer-events:auto;cursor:pointer;opacity:0;transition:opacity .25s, transform .25s}
+.bubble.on{opacity:1}
+.bubble:after{content:"";position:absolute;left:50%;bottom:-7px;width:12px;height:12px;background:var(--panel2);border-right:1px solid var(--line);border-bottom:1px solid var(--line);transform:translateX(-50%) rotate(45deg)}
+.bubble .face{width:38px;height:38px;border-radius:50%;border:2px solid var(--cc);flex:none}
+.bubble q{font:italic 500 14px/1.22 var(--serif);quotes:"\201C" "\201D"}
+.bubble small{display:block;font:600 10px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:1px}
+.face{background:url(portraits.jpg) 0 0/500% 200% no-repeat;background-color:#2a2018}
+
+/* ---------- top bar ---------- */
+#top{position:fixed;left:0;right:0;top:0;height:42px;display:flex;align-items:stretch;background:var(--bar-grad);border-bottom:1px solid var(--line);box-shadow:0 2px 10px rgba(0,0,0,.45);z-index:20;user-select:none}
+#brand{display:flex;align-items:center;gap:8px;padding:0 12px;border-right:1px solid var(--line2);font:700 15px var(--title);letter-spacing:.1em;white-space:nowrap}
+#brand i{font:italic 500 11px var(--serif);letter-spacing:0;color:var(--ink3)}
+#nations{display:flex;flex:1;min-width:0}
+.nat{display:flex;align-items:center;gap:6px;padding:0 9px;border-right:1px solid var(--line2);cursor:pointer;white-space:nowrap;position:relative}
+.nat:hover,.nat.sel{background:var(--hi)}
+.nat.me:before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:var(--gold)}
+.nat .nm{font:700 13px var(--title);letter-spacing:.05em}
+.stat{display:inline-flex;align-items:center;gap:2px;font:500 12px var(--sans);color:var(--ink2)}
+.stat b{color:var(--ink);font-weight:700}
+.stat .pos{color:var(--good)} .stat .neg{color:var(--bad)}
+.pips{display:inline-flex;gap:1px}.pips i{width:4px;height:9px;background:var(--ink3);opacity:.35}.pips i.on{background:var(--gold);opacity:1}
+.warn-ic{color:var(--bad)}
+#time{display:flex;align-items:center;gap:6px;padding:0 10px;border-left:1px solid var(--line2);white-space:nowrap}
+#turn{font:700 14px var(--title);letter-spacing:.06em;min-width:96px;text-align:right}
+#phase{font:500 11px var(--sans);color:var(--ink3);min-width:70px}
+.tb{display:inline-flex;align-items:center;justify-content:center;height:24px;min-width:24px;padding:0 6px;border:1px solid var(--line);background:var(--btn);border-radius:2px;cursor:pointer;font:600 11px var(--sans)}
+.tb:hover{border-color:var(--gold)} .tb.on{background:var(--btn-on);border-color:var(--gold)}
+.tb:disabled{opacity:.4;cursor:default}
+.seg{display:inline-flex}.seg .tb{border-radius:0;margin-left:-1px}.seg .tb:first-child{border-radius:2px 0 0 2px;margin-left:0}.seg .tb:last-child{border-radius:0 2px 2px 0}
+#speed i{display:inline-block;width:4px;height:9px;margin:0 1px;background:var(--ink3);transform:skewX(-15deg)}#speed i.on{background:var(--gold)}
+#toolsr{display:flex;align-items:center;gap:6px;padding:0 10px;border-left:1px solid var(--line2)}
+
+/* ---------- panels ---------- */
+.panel{position:fixed;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);z-index:10;display:flex;flex-direction:column;min-height:0}
+.ph{display:flex;align-items:center;gap:7px;height:30px;padding:0 8px 0 10px;border-bottom:1px solid var(--line2);background:var(--panel3);flex:none}
+.ph h3{margin:0;font:700 14px var(--title);letter-spacing:.07em;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.x{width:20px;height:20px;border:0;background:none;cursor:pointer;color:var(--ink3);font-size:15px;line-height:1}
+.x:hover{color:var(--ink)}
+.pb{overflow:auto;min-height:0;flex:1}
+.pb::-webkit-scrollbar{width:7px}.pb::-webkit-scrollbar-thumb{background:var(--line2)}
+.sec{padding:7px 10px;border-bottom:1px solid var(--line2)}
+.sec h4{margin:0 0 5px;font:700 10.5px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);display:flex;align-items:center;gap:6px}
+.sec h4 span{margin-left:auto;font-weight:500;letter-spacing:0;text-transform:none}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:12.5px}.kv dt{color:var(--ink3)}.kv dd{margin:0;text-align:right;font-weight:500}
+.row{display:flex;align-items:center;gap:6px;padding:3px 0;font-size:12.5px;cursor:pointer;border-radius:2px}
+.row:hover{background:var(--hi)}
+.muted{color:var(--ink3)} .bad{color:var(--bad)} .good{color:var(--good)} .warnc{color:var(--warn)}
+.chip{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;border:1px solid var(--line2);border-radius:2px;font:500 11.5px var(--sans);background:var(--hi);cursor:pointer;white-space:nowrap}
+.chip.off{opacity:.38;background:none}
+.chip.act{border-color:var(--line)}
+.crest{width:18px;height:21px;flex:none}
+.crest.l{width:30px;height:35px}
+
+/* outliner */
+#outl{left:8px;top:50px;width:232px;bottom:56px}
+#outl.min{width:34px}
+#outl.min .pb,#outl.min .ph h3{display:none}
+.ol-h{display:flex;align-items:center;gap:6px;padding:5px 10px;font:700 10.5px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);cursor:pointer;border-bottom:1px solid var(--line2);background:rgba(0,0,0,.08)}
+.ol-h span{margin-left:auto;font-weight:500;letter-spacing:0}
+.ol-b{padding:3px 8px 6px}
+.ol-b .row{padding:3px 2px}
+.bar{height:4px;background:rgba(127,127,127,.25);position:relative;flex:1;min-width:30px}.bar i{position:absolute;left:0;top:0;bottom:0;background:var(--cc,var(--gold))}
+
+/* ledger */
+#ledger{right:8px;top:50px;width:340px;bottom:8px}
+#ledger .filters{display:flex;flex-wrap:wrap;gap:4px;padding:6px 8px;border-bottom:1px solid var(--line2);flex:none}
+.lg-turn{position:sticky;top:0;background:var(--panel2);padding:3px 10px;font:700 11px var(--title);letter-spacing:.1em;color:var(--ink3);border-bottom:1px solid var(--line2);z-index:1}
+.lg{display:grid;grid-template-columns:18px 1fr auto;gap:2px 7px;align-items:start;padding:5px 10px;border-bottom:1px solid var(--line2);cursor:pointer}
+.lg:hover{background:var(--hi)} .lg.sel{background:var(--hi);box-shadow:inset 2px 0 var(--gold)}
+.lg.new{animation:flash 1.6s ease-out}
+@keyframes flash{0%{background:rgba(210,173,98,.45)}100%{background:transparent}}
+.lg .t{font:500 12.5px/1.3 var(--sans)}
+.lg .t b{font-weight:700}
+.lg .t s{color:var(--ink3)}
+.lg .q{grid-column:2/4;font:italic 500 13px/1.25 var(--serif);color:var(--ink2)}
+.lg .tag{font:600 9.5px var(--sans);letter-spacing:.08em;text-transform:uppercase;padding:1px 4px;border:1px solid var(--line2);border-radius:2px;color:var(--ink3);white-space:nowrap}
+.lg .tag.guard{color:var(--warn);border-color:var(--warn)} .lg .tag.ref{color:var(--bad);border-color:var(--bad)}
+.lg .tag.land{color:var(--good);border-color:var(--good)}
+#ledger.noq .lg .q{display:none}
+
+/* map modes */
+#modes{position:fixed;left:248px;bottom:8px;display:flex;gap:0;z-index:11;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow)}
+#modes .tb{height:30px;min-width:32px;border:0;border-right:1px solid var(--line2);border-radius:0;background:none;gap:5px;padding:0 9px}
+#modes .tb.on{background:var(--btn-on)}
+#modes .lbl{font:600 11px var(--sans)}
+#legend{position:fixed;left:248px;bottom:46px;z-index:11;background:var(--panel);border:1px solid var(--line);padding:5px 9px;font-size:11.5px;display:flex;gap:10px;align-items:center;box-shadow:var(--shadow)}
+#legend i{display:inline-block;width:12px;height:9px;margin-right:4px;vertical-align:-1px}
+
+/* side panel: province or country */
+#side{left:248px;top:50px;width:300px;max-height:calc(100% - 110px);display:none}
+#side.on{display:flex}
+.hdr{display:flex;gap:9px;padding:9px 10px;border-bottom:1px solid var(--line2);align-items:center}
+.hdr .face{width:54px;height:54px;border-radius:50%;border:2px solid var(--cc);flex:none}
+.hdr h2{margin:0;font:700 18px var(--title);letter-spacing:.05em}
+.hdr p{margin:1px 0 0;font:italic 500 13px/1.2 var(--serif);color:var(--ink2)}
+.moves .mv{display:grid;grid-template-columns:16px 1fr auto;gap:6px;align-items:center;padding:4px 4px;border-bottom:1px dotted var(--line2);font-size:12.5px}
+.moves .mv.no{color:var(--ink3)}
+.moves .mv .why{grid-column:2/4;font-size:11.5px;color:var(--ink3);margin-top:-2px}
+.moves .mv .go{font:600 11px var(--sans)}
+.odds{font:600 11px var(--sans)}
+.faces{display:flex;gap:6px}.faces .face{width:40px;height:40px;border-radius:50%;border:2px solid var(--line2);opacity:.6;cursor:pointer}.faces .face.on{border-color:var(--cc);opacity:1}
+
+/* diplomacy */
+#diplo{left:50%;top:50%;transform:translate(-50%,-50%);width:620px;display:none;z-index:30}
+#diplo.on{display:flex}
+.mx{display:grid;grid-template-columns:110px repeat(5,1fr);font-size:12px}
+.mx div{padding:6px 4px;border-bottom:1px solid var(--line2);border-right:1px solid var(--line2);text-align:center;min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.mx .rh{justify-content:flex-start;flex-direction:row;gap:6px;text-align:left;font:700 13px var(--title)}
+.mx .ch{font:700 12px var(--title);min-height:34px}
+.mx .self{background:repeating-linear-gradient(45deg,transparent,transparent 4px,var(--line2) 4px,var(--line2) 5px)}
+.mx .war{color:var(--bad);background:rgba(208,97,76,.1)} .mx .truce{color:var(--warn)} .mx .peace{color:var(--ink3)}
+.mx small{font-size:10.5px;color:var(--ink3)}
+
+/* inspector */
+#insp{right:8px;top:50px;width:520px;bottom:8px;display:none;z-index:25}
+#insp.on{display:flex}
+.badge{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 7px;border-radius:2px;font:700 10.5px var(--sans);letter-spacing:.08em;text-transform:uppercase;border:1px solid}
+.badge.ok{color:var(--good);border-color:var(--good)} .badge.ref{color:var(--bad);border-color:var(--bad)} .badge.guard{color:var(--warn);border-color:var(--warn)}
+pre.json{margin:0;padding:8px 10px;background:rgba(0,0,0,.28);border:1px solid var(--line2);font:12px/1.5 var(--mono);color:var(--ink);white-space:pre-wrap;word-break:break-word}
+body[data-style="engraved"] pre.json{background:rgba(255,255,255,.45)}
+pre.json .k{color:var(--gold)} pre.json .s{color:var(--ink2)}
+.facts{margin:0;padding:6px 9px;background:rgba(0,0,0,.18);border-left:2px solid var(--line);font:11.5px/1.5 var(--mono);white-space:pre-wrap;color:var(--ink2)}
+body[data-style="engraved"] .facts{background:rgba(255,255,255,.4)}
+.gl{display:grid;grid-template-columns:16px 1fr auto;gap:3px 7px;align-items:center;font-size:12.5px;padding:3px 0;border-bottom:1px dotted var(--line2)}
+.gl .d{grid-column:2/4;font-size:11.5px;color:var(--ink3)}
+.meter{position:relative;height:8px;background:rgba(127,127,127,.25);margin:4px 0 2px}
+.meter i{position:absolute;left:0;top:0;bottom:0;background:var(--good)}
+.meter b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
+.tl{display:flex;height:16px;border:1px solid var(--line2);font:600 10px var(--sans);overflow:hidden}
+.tl span{display:flex;align-items:center;justify-content:center;white-space:nowrap;overflow:hidden}
+.ofl{display:flex;flex-wrap:wrap;gap:4px}
+.ofl .chip{cursor:default;font-family:var(--mono);font-size:11px}
+.ofl .chip.pick{border-color:var(--gold);color:var(--gold)}
+.src{font:11px var(--mono);color:var(--ink3)}
+.why-no{font-size:12px;padding:2px 0;color:var(--ink2)} .why-no code{font:11px var(--mono);color:var(--ink)}
+
+/* rule mode: orders; advise: counsel */
+#orders,#counsel{left:50%;transform:translateX(-50%);bottom:8px;width:640px;display:none}
+body[data-mode="rule"] #orders{display:flex}
+body[data-mode="advise"] #counsel{display:flex}
+body[data-mode="rule"] #modes,body[data-mode="advise"] #modes,body[data-mode="rule"] #legend,body[data-mode="advise"] #legend{left:248px}
+.ord{display:flex;gap:4px;padding:7px 9px;flex-wrap:wrap;border-bottom:1px solid var(--line2)}
+.ord .tb{height:26px;gap:5px;padding:0 9px}
+.ordline{display:flex;align-items:center;gap:8px;padding:7px 9px}
+.ordline .what{flex:1;font:500 13px var(--sans)}
+.ordline .what i{font:italic 500 13px var(--serif);color:var(--ink2)}
+.endturn{height:30px;padding:0 16px;font:700 13px var(--title);letter-spacing:.1em;border:1px solid var(--gold);background:var(--btn-on);cursor:pointer}
+.endturn:disabled{opacity:.4;cursor:default}
+#counsel textarea{flex:1;height:46px;resize:none;background:rgba(0,0,0,.25);border:1px solid var(--line2);color:var(--ink);font:italic 500 14px/1.25 var(--serif);padding:6px 8px}
+body[data-style="engraved"] #counsel textarea{background:rgba(255,255,255,.5)}
+.creply{padding:6px 9px;font-size:12.5px;border-top:1px solid var(--line2);display:none;gap:8px;align-items:center}
+.creply.on{display:flex}
+.select{background:var(--btn);border:1px solid var(--line);color:var(--ink);font:600 12px var(--sans);height:24px}
+
+/* tooltip, envoy card, mock-up bar */
+#tip{position:fixed;z-index:100;pointer-events:none;max-width:300px;padding:6px 9px;background:var(--panel2);border:1px solid var(--line);box-shadow:var(--shadow);font-size:12px;line-height:1.35;display:none}
+#tip b{font-weight:700} #tip .tt{font:700 13px var(--title);letter-spacing:.05em;display:block;margin-bottom:2px}
+#tip hr{border:0;border-top:1px solid var(--line2);margin:4px 0}
+#envoy{left:50%;top:44%;transform:translate(-50%,-50%);width:430px;display:none;z-index:40}
+#envoy.on{display:flex}
+#mock{position:fixed;left:50%;transform:translateX(-50%);top:48px;z-index:12;display:flex;align-items:center;gap:6px;padding:4px 7px;background:var(--panel);border:1px dashed var(--line);font:600 11px var(--sans);color:var(--ink3)}
+#about{left:50%;transform:translateX(-50%);top:84px;width:380px;display:none;z-index:31}
+#about.on{display:flex}
+#about p{margin:0 0 6px;font-size:12.5px}
+#quills{display:none;align-items:center;gap:6px;font:italic 500 12.5px var(--serif);color:var(--ink2)}
+#quills.on{display:inline-flex}
+.dot3 i{display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--gold);margin:0 1px;animation:b 1s infinite}
+.dot3 i:nth-child(2){animation-delay:.15s}.dot3 i:nth-child(3){animation-delay:.3s}
+@keyframes b{0%,100%{opacity:.2}50%{opacity:1}}
+body.olmin #side,body.olmin #modes,body.olmin #legend{left:50px}
+#nations{overflow:hidden}
+@media (max-width:1500px){#brand i,#phase{display:none}#brand{font-size:13px;padding:0 9px}.nat .nm{font-size:12px}.stat{font-size:11.5px}#time,#toolsr{padding:0 6px}#turn{min-width:0}
+ #orders,#counsel{left:auto;right:356px;transform:none;width:520px}#ledger{width:300px}#insp{width:470px}#orders,#counsel{width:560px}.nat{padding:0 6px;gap:4px}.nat .xs{display:none}}
+</style></head>
+<body data-style="gilt" data-mode="watch">
+
+<svg width="0" height="0" style="position:absolute">
+ <defs>
+  <symbol id="i-prov" viewBox="0 0 16 16"><path d="M3 1h1.5v14H3zM5 2h8l-2 3 2 3H5z"/></symbol>
+  <symbol id="i-army" viewBox="0 0 16 16"><path d="M8 1l2 3H9v4h3v2H9v5H7v-5H4V8h3V4H6z"/></symbol>
+  <symbol id="i-gold" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7.2 4h1.6v1.2c1 .2 1.8.8 1.9 1.8H9.1c0-.5-.5-.8-1.1-.8-.7 0-1.1.3-1.1.7 0 .5.5.6 1.4.9 1.3.3 2.4.7 2.4 2 0 1-.8 1.7-1.9 1.9V13H7.2v-1.3c-1.1-.2-2-.9-2-2h1.6c0 .5.5.9 1.2.9.8 0 1.2-.3 1.2-.8s-.5-.6-1.4-.9C6.6 8.6 5.6 8.2 5.6 7c0-.9.7-1.6 1.6-1.8z"/></symbol>
+  <symbol id="i-stab" viewBox="0 0 16 16"><path d="M2 14h12v1.5H2zM3 12h10v1.2H3zM4 5h1.6v6.5H4zm3.2 0h1.6v6.5H7.2zm3.2 0H12v6.5h-1.6zM2 3.2L8 .8l6 2.4V4.5H2z"/></symbol>
+  <symbol id="i-war" viewBox="0 0 16 16"><path d="M2 1l7.5 7.5-1 1L1 2zM14 1l-7.5 7.5 1 1L15 2zM3.5 10.5l2 2-2.5 2.5-2-2zM12.5 10.5l-2 2 2.5 2.5 2-2z"/></symbol>
+  <symbol id="i-fort" viewBox="0 0 16 16"><path d="M2 15V5h2v2h2V5h1.5V2h1v3H10v2h2V5h2v10H9.5v-4h-3v4z"/></symbol>
+  <symbol id="i-peace" viewBox="0 0 16 16"><path d="M2 14C5 8 9 4 14 2c-1 4-4 9-12 12zM6 9l-2-2.4M8.5 6.8L7.5 4M10.8 4.8l-.4-2.4M8 10.5l2.6.6M10 8.4l2.5.2" stroke="currentColor" stroke-width="1.2" fill="currentColor"/></symbol>
+  <symbol id="i-truce" viewBox="0 0 16 16"><path d="M3 1h10v2c0 2.5-2.5 4-3.5 5 1 1 3.5 2.5 3.5 5v2H3v-2c0-2.5 2.5-4 3.5-5C5.5 7 3 5.5 3 3zm2 2c0 1.5 2 3 3 3.8C9 6 11 4.5 11 3zm3 7.2C7 11 5 12 5 13h6c0-1-2-2-3-2.8z"/></symbol>
+  <symbol id="i-env" viewBox="0 0 16 16"><path d="M1 3h14v10H1zm1.6 1.6L8 8.6l5.4-4zM2.5 5.8v5.7h11V5.8L8 10z"/></symbol>
+  <symbol id="i-guard" viewBox="0 0 16 16"><path d="M8 1l6 2.2v4.6c0 3.4-2.5 6-6 7.2-3.5-1.2-6-3.8-6-7.2V3.2z"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 16 16"><path d="M4 3h3v10H4zm5 0h3v10H9z"/></symbol>
+  <symbol id="i-play" viewBox="0 0 16 16"><path d="M4 2l10 6-10 6z"/></symbol>
+  <symbol id="i-step" viewBox="0 0 16 16"><path d="M3 2l8 6-8 6zM12 2h2v12h-2z"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 16 16"><path d="M2 5c0-1.7 2.7-3 6-3s6 1.3 6 3-2.7 3-6 3-6-1.3-6-3zm0 2.4C3.2 8.6 5.4 9.4 8 9.4s4.8-.8 6-2V9c0 1.7-2.7 3-6 3s-6-1.3-6-3zm0 3.6c1.2 1.2 3.4 2 6 2s4.8-.8 6-2V12c0 1.7-2.7 3-6 3s-6-1.3-6-3z"/></symbol>
+  <symbol id="i-recruit" viewBox="0 0 16 16"><circle cx="5" cy="4" r="2"/><circle cx="11" cy="4" r="2"/><path d="M1.5 14v-4c0-2 1.5-3 3.5-3s3.5 1 3.5 3v4zm6 0v-4c0-2 1.5-3 3.5-3s3.5 1 3.5 3v4z"/></symbol>
+  <symbol id="i-hold" viewBox="0 0 16 16"><path d="M3 7h10v8H3zM5 7V5a3 3 0 016 0v2H9.5V5a1.5 1.5 0 00-3 0v2z"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 16 16"><path d="M8 3c3.5 0 6 3 7 5-1 2-3.5 5-7 5S2 10 1 8c1-2 3.5-5 7-5zm0 2a3 3 0 100 6 3 3 0 000-6zm0 1.6a1.4 1.4 0 110 2.8 1.4 1.4 0 010-2.8z"/></symbol>
+  <symbol id="i-crown" viewBox="0 0 16 16"><path d="M1 5l3.5 3L8 2l3.5 6L15 5l-1.5 8h-11z"/></symbol>
+  <symbol id="i-quill" viewBox="0 0 16 16"><path d="M15 1C9 2 5 6 3.5 11L2 15l1.2-.3C4 12 5.5 10.6 8 10l-1-1c2-.2 4-1.5 5-3.4L10.5 5c1.6-.6 3.2-2 4.5-4z"/></symbol>
+  <symbol id="i-scroll" viewBox="0 0 16 16"><path d="M4 1h9a2 2 0 012 2v1h-3v9a2 2 0 01-2 2H3a2 2 0 01-2-2v-1h3zm1.5 3v1h5V4zm0 2.5v1h5v-1zm0 2.5v1h4V9z"/></symbol>
+  <symbol id="i-pol" viewBox="0 0 16 16"><path d="M1 2l5 1.5 4-1.5 5 1.5V14l-5-1.5L6 14l-5-1.5z" opacity=".35"/><path d="M6 3.5V14M10 2v10.5" stroke="currentColor" stroke-width="1.2"/></symbol>
+  <symbol id="i-reach" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="8" r="1"/></symbol>
+  <symbol id="i-terrain" viewBox="0 0 16 16"><path d="M1 14l4.5-8 3 5 2-3L15 14z"/></symbol>
+  <symbol id="i-diplo" viewBox="0 0 16 16"><path d="M1 8l3-3 3 1 2-2 3 1 3 3-3 3-2 2-2-1-1 1-2-1-1-2zM5 9l2 2M7 8l2 2M9 7l2 2" stroke="currentColor" stroke-width=".8" fill="currentColor"/></symbol>
+  <symbol id="i-info" viewBox="0 0 16 16"><path d="M8 1a7 7 0 110 14A7 7 0 018 1zm-1 6v5h2V7zm1-3.2a1.1 1.1 0 100 2.2 1.1 1.1 0 000-2.2z"/></symbol>
+  <!-- crests -->
+  <symbol id="cr-shape" viewBox="0 0 30 35"><path d="M2 2h26v15c0 9-7 14-13 16C9 31 2 26 2 17z"/></symbol>
+ </defs>
+</svg>
+
+<div id="view">
+ <div id="stage">
+  <img id="mapimg" src="map.jpg" alt="The continent: a painted sea-chart with mountains, forests, rivers and lakes" draggable="false">
+  <canvas id="wash" width="1672" height="941"></canvas>
+  <canvas id="ink" width="1672" height="941"></canvas>
+  <div id="dim"></div>
+  <svg id="ov" viewBox="0 0 1672 941"></svg>
+ </div>
+</div>
+<div id="screen"></div>
+
+<header id="top">
+ <div id="brand" data-tip="&lt;span class=tt&gt;Painted Realm&lt;/span&gt;Working title. Five rulers, each a framework agent, play for 25 provinces.">Painted Realm <i>mock-up</i></div>
+ <div id="nations"></div>
+ <div id="time">
+  <span id="quills"><span class="dot3"><i></i><i></i><i></i></span> council deciding</span>
+  <span id="phase">Resolve</span><span id="turn">Turn 12 of 30</span>
+  <span class="seg">
+   <button class="tb" id="bPlay" data-tip="Play / pause (Space)"><svg class="ic"><use href="#i-play"/></svg></button>
+   <button class="tb" id="bStep" data-tip="Step: land the next move (N)"><svg class="ic"><use href="#i-step"/></svg></button>
+   <button class="tb" id="speed" data-tip="Speed: 1×, 2×, 4× (+ / −)"><i class="on"></i><i></i><i></i></button>
+  </span>
+ </div>
+ <div id="toolsr">
+  <button class="tb" id="bDiplo" data-tip="Diplomacy: who is at war, at truce or at peace with whom (D)"><svg class="ic"><use href="#i-diplo"/></svg></button>
+  <button class="tb" id="bLedger" data-tip="Chronicle (C)"><svg class="ic"><use href="#i-scroll"/></svg></button>
+ </div>
+</header>
+
+<aside id="outl" class="panel">
+ <div class="ph"><h3>Realm</h3><button class="x" id="olMin" data-tip="Collapse">&#x2039;</button></div>
+ <div class="pb" id="olBody"></div>
+</aside>
+
+<aside id="ledger" class="panel">
+ <div class="ph"><svg class="ic"><use href="#i-scroll"/></svg><h3>Chronicle</h3>
+  <button class="x" id="qToggle" data-tip="Show or hide the rulers' words">&#x201C;</button>
+  <button class="x" id="lgClose" data-tip="Close (C)">&#xd7;</button></div>
+ <div class="filters" id="lgFilters"></div>
+ <div class="pb" id="lgBody"></div>
+</aside>
+
+<section id="side" class="panel"></section>
+<section id="diplo" class="panel"></section>
+<section id="insp" class="panel"></section>
+<section id="envoy" class="panel"></section>
+
+<div id="legend"></div>
+<div id="modes"></div>
+
+<section id="orders" class="panel">
+ <div class="ph"><svg class="ic"><use href="#i-crown"/></svg><h3 id="ordTitle">Orders</h3>
+  <select class="select" id="ruleAs" data-tip="The country you rule; the other four are model rulers"></select></div>
+ <div class="ord" id="ordBtns"></div>
+ <div class="ordline"><div class="what" id="ordWhat"></div><button class="endturn" id="endTurn">End turn</button></div>
+</section>
+
+<section id="counsel" class="panel">
+ <div class="ph"><svg class="ic"><use href="#i-quill"/></svg><h3 id="cTitle">Counsel</h3>
+  <select class="select" id="adviseWho" data-tip="The model ruler you advise"></select></div>
+ <div style="display:flex;gap:8px;padding:8px 9px;align-items:center">
+  <textarea id="cText" placeholder="Write one line of counsel for this turn. It goes into the ruler's call as a fact of this turn; the ruler still chooses only among the moves it is offered."></textarea>
+  <div style="display:flex;flex-direction:column;gap:4px"><button class="endturn" id="cSend">Send</button><button class="tb" id="cEnd">End turn</button></div>
+ </div>
+ <div class="creply" id="cReply"></div>
+</section>
+
+<div id="mock"><span>Mock-up</span>
+ <span class="seg" id="modeSeg"><button class="tb" data-m="watch" data-tip="Watch: five model rulers play">Watch</button><button class="tb" data-m="rule" data-tip="Rule one country against four model rulers">Rule</button><button class="tb" data-m="advise" data-tip="Advise one model ruler in free text">Advise</button></span>
+ <span class="seg" id="styleSeg"><button class="tb" data-s="gilt" data-tip="Style: dark gilt">Gilt</button><button class="tb" data-s="engraved" data-tip="Style: light engraved">Engraved</button></span>
+ <button class="tb" id="bAbout" data-tip="What this page is"><svg class="ic s"><use href="#i-info"/></svg></button>
+</div>
+<section id="about" class="panel"><div class="ph"><h3>About this mock-up</h3><button class="x" onclick="about.classList.remove('on')">&#xd7;</button></div>
+ <div class="pb" style="padding:9px 11px">
+  <p><b>A clickable design, not the game.</b> No model runs in this page: the decisions, the replies in advise mode and the rivals' moves are scripted. The rules are real: the moves offered, the reasons a move is not offered, battle strength and upkeep follow <code>GameRules</code> and <code>Legality</code>.</p>
+  <p>Turn 12 is invented to fit the rules. Lines marked <b>*</b> are quoted from the persona 4b table's seed 4 (11 November); the rest are written for the mock-up. Telemetry values are plausible, not measured.</p>
+  <p>The map is a generated painting; the 25 provinces are built from the rule board's 5 × 5 graph, so they border exactly as the rules say. Washes, borders and the capture animation are drawn live from that province map, as the Unity shader would.</p>
+  <p class="muted">Keys: Space play/pause · N step · +/− speed · C chronicle · D diplomacy · 1–5 map modes · Esc close. Drag to pan, wheel to zoom.</p>
+ </div></section>
+<div id="tip"></div>
+
+<script>
+const DATA={"idmap":"data:image/png;base64,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iAAiKtVoG8FDJWqZ62gvY3/hobBFBCJyjGkfHrpuc+m+1aADiIiGevDQtXsAu85vK4gwM6+EwP5QGLgAoCJasaq65CEOwgElkXoIXYrosmUXteuhax7CziZiIQxdEZ1X+BpTsx66Vg6Fobk9TERDGFhE50v8wMsqPXTKQ6fG5uob1r4VBQwsovOoukWnHipaDTFRdd8mAjoU0fmaP/7SnEIp8VzbG/IOK4iosG4u2zxHbjKkMFP9wz8AEXl51dh2k0MJbx1/CoQXWsNrrCg5mNHRMaFOPAURKYh4qMkhbekbCK059ZA3aIpe6lvfJwKIiIdoyJUCIKIePCQ5zzK08G+vTp0EEFFbXJbU0KoOOr1+5kWeVushW0UAEUXvw9qdjymcrveGkcIPQBjfHt1Dp6eP//MqjljRQ2+VSYCKiIcqLoCuR9s7AkBEPNTy3NrpTCcE6cvZ5QJ+ZXMvBrH9tELvc9vXW/75rlu50C88BKiIFERd1k2nY7T2eAhQEdVWEk1GyQ4si9qviN4+/Klv5/mteAhEhO1cNJlpPtREbYvo7VK/Fw8htOYQc39CfAxO9edmmdHjIRARtpSRA7fh2+UAEQGl1PA2liqKFEQIJyvgkaroXEGEvWzxlocAFdFcKrJVhBVswUIAEcEEwcy62LYZSEEAESmJYpDv4VU3QUBBABFhsM+yvq3rpB8eAsILrbHf262Tb/TEYa+0lrzKL+u54wsHASqiCmuA616PpN7+ldbTSsoQb/oARKQJ1deXEbb9stFpyy8WKWQAIqqD79MSbungAz3buOi0vi0apRFARMqhjj4T95KLfA8PABGtVhKdjno6aHNfH3cuHEBE41VJ171XCaePDWacMpG9JoCIYq5vE32fDszT1yN0q7ThABDRWt9r3T39/lsXydbjlUTqIYCIYoldot2FQkEAQET710M/mohRAICICtZENAQARFRkg+gvE/EQwv4QQETlaiIaYpHnf7l3lIDwqfAlTSQEYxlGNQMQEROhpIne6swBoTXHRGhtW+eHV5RICCAioEAR86eJSAgIX2iNJc5VOBeebviimQaEPSLAWDWgIsJOJZGCaICiiKAAIqrZRUTUvYloCCCiik3EQp27iIOAMDVXE+e7fgsC0e5WkcMQACICzC0AoTWHeL5BpzMHACqiKNeoAwAQEQsBQGjNAQAQTlYAABARAABEBAAgIgAAiAgAQEQAABARAICIAAAgIgAAEQEAQEQAACICAICIAABEBAAAEQEAiAgAACICABARAABEBAAgIgAAEQEAQEQAACICAICIAABEBAAAEQEAiAgAACICABARAABEBAAgIgAAiAgAQEQAABARAICIAAAgIgAAEQEAQEQAACICAICIAABEBAAAEQEAiAgAACICABARAABEBAAgIgAAiAgAQEQAABARAICIAABEBAAAEQEAiAgAACICABARAABEBAAgIgAAiAgAQEQAABARAICIAAAgIgBAb/wfoKh4koegaKEAAAAASUVORK5CYII=","points":{"0":[0.1651,0.1637],"1":[0.2468,0.1173],"2":[0.4896,0.1569],"3":[0.6832,0.1603],"4":[0.7929,0.1756],"5":[0.1468,0.3122],"6":[0.3069,0.2798],"7":[0.4922,0.2945],"8":[0.6522,0.3247],"9":[0.8195,0.3193],"10":[0.1593,0.4839],"11":[0.3211,0.4744],"12":[0.465,0.456],"13":[0.638,0.5004],"14":[0.7961,0.4932],"15":[0.1642,0.6615],"16":[0.2847,0.6592],"17":[0.4579,0.6626],"18":[0.6128,0.6652],"19":[0.7982,0.65],"20":[0.1525,0.7922],"21":[0.3436,0.8345],"22":[0.4862,0.834],"23":[0.6305,0.8082],"24":[0.7717,0.76]}};
+</script>
+<script>
+"use strict";
+const W=1672,H=941;
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const svgNS="http://www.w3.org/2000/svg";
+const icon=(n,c='ic')=>`<svg class="${c}"><use href="#i-${n}"/></svg>`;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const cap=s=>s[0].toUpperCase()+s.slice(1);
+
+/* ---------------- the game's data ---------------- */
+const NAMES=["highmoor","ashby","stonereach","corwick","orskhaven","brindle","fenmark","templegate","saltmere","redcliff","westmarch","harrow","merrowdeep","glimmerford","eastwatch","thornbury","ravenholt","pilgrimsrest","duskvale","ilmoor","keshtar","marrowfield","southgate","oakhollow","ilvarion"];
+const IDS=["valen","orsk","merrow","kesh","ilvar"];
+const PERS={
+ warmonger:{name:"Warmonger",col:0,desc:"A warlord who believes land is taken, never given. Restless in peace, happiest on campaign."},
+ builder:{name:"Builder",col:1,desc:"A careful ruler who builds before it fights, and fights only when the odds are long in its favour."},
+ opportunist:{name:"Opportunist",col:2,desc:"A cold opportunist with no friends, only chances. Strikes whoever is weakest, and only then."},
+ merchant:{name:"Merchant",col:3,desc:"A merchant prince who prefers coin to blood. War is bad for trade, but a cheap province is a good bargain."},
+ proud:{name:"Proud",col:4,desc:"A proud ruler who answers every slight. Whoever attacks us or declares war on us will pay, whatever it costs."}};
+const C={
+ valen:{name:"Valen",where:"north-west",rgb:[176,46,36],hex:"#b02e24",persona:"builder",face:1,cap:0,charge:"chevron",model:"qwen3.5:4b"},
+ orsk:{name:"Orsk",where:"north-east",rgb:[214,152,40],hex:"#d69828",persona:"opportunist",face:0,cap:4,charge:"sun",model:"qwen3.5:4b"},
+ merrow:{name:"Merrow",where:"the middle",rgb:[38,134,104],hex:"#268668",persona:"merchant",face:1,cap:12,charge:"waves",model:"qwen3.5:4b"},
+ kesh:{name:"Kesh",where:"south-west",rgb:[58,80,170],hex:"#3a50aa",persona:"proud",face:1,cap:20,charge:"peaks",model:"qwen3.5:4b"},
+ ilvar:{name:"Ilvar",where:"south-east",rgb:[128,60,146],hex:"#803c92",persona:"warmonger",face:0,cap:24,charge:"star",model:"qwen3.5:4b"}};
+const RULES={incomePer:10,upkeepPer:2,fortCost:30,maxForts:2,taxGold:30,warArmy:20,attackArmy:10,soldierCost:2,win:15,turns:30};
+const nb=p=>{const r=Math.floor(p/5),c=p%5,o=[];if(r>0)o.push(p-5);if(r<4)o.push(p+5);if(c>0)o.push(p-1);if(c<4)o.push(p+1);return o;};
+const faceStyle=(id,variant)=>{const c=C[id],col=PERS[c.persona].col,row=variant??c.face;return `background-position:${col*25}% ${row*100}%`;};
+const crestSVG=(id,cls='crest')=>{const c=C[id];const ch={chevron:'<path d="M5 22L15 11l10 11-3 0-7-7.5L8 22z" fill="#f4e6c4"/>',sun:'<circle cx="15" cy="15" r="4.2" fill="#f4e6c4"/><path d="M15 6v4M15 20v4M6 15h4M20 15h4M8.6 8.6l2.8 2.8M18.6 18.6l2.8 2.8M21.4 8.6l-2.8 2.8M11.4 18.6l-2.8 2.8" stroke="#f4e6c4" stroke-width="1.6"/>',waves:'<path d="M6 11c3-2 6 2 9 0s6 2 9 0M6 16c3-2 6 2 9 0s6 2 9 0M6 21c3-2 6 2 9 0s6 2 9 0" stroke="#f4e6c4" stroke-width="1.8" fill="none"/>',peaks:'<path d="M5 23l6-10 3 4 4-8 7 14z" fill="#f4e6c4"/>',star:'<path d="M15 6l2.6 6.2 6.6.5-5 4.4 1.6 6.5L15 20l-5.8 3.6 1.6-6.5-5-4.4 6.6-.5z" fill="#f4e6c4"/>'}[c.charge];
+ return `<svg class="${cls}" viewBox="0 0 30 35"><path d="M2 2h26v15c0 9-7 14-13 16C9 31 2 26 2 17z" fill="${c.hex}" stroke="#d2ad62" stroke-width="1.6"/>${ch}</svg>`;};
+
+/* state at the start of turn 12, before it resolves */
+function initialState(){
+ const own=["valen","valen","valen","orsk","orsk","valen","valen","merrow","orsk","orsk","kesh","valen","merrow","merrow","orsk","kesh","kesh","merrow",null,"ilvar","kesh","kesh","merrow","ilvar","ilvar"];
+ return {turn:12, owner:own, forts:{0:1,1:2,4:1,5:1,6:1,7:1,12:1,14:1,20:1,24:1}, garrison:{18:13},
+  c:{valen:{gold:112,army:54,stab:5},orsk:{gold:141,army:70,stab:2},merrow:{gold:88,army:61,stab:4},kesh:{gold:38,army:96,stab:3},ilvar:{gold:12,army:38,stab:2}},
+  rel:{"kesh|valen":{k:"war",since:7},"ilvar|orsk":{k:"war",since:11},"merrow|orsk":{k:"truce",left:3}}};
+}
+let S=initialState();
+const key=(a,b)=>a<b?a+"|"+b:b+"|"+a;
+const rel=(s,a,b)=>s.rel[key(a,b)]||{k:"peace"};
+const provsOf=(s,id)=>s.owner.map((o,i)=>o===id?i:-1).filter(i=>i>=0);
+const upkeep=(s,id)=>Math.ceil(s.c[id].army/RULES.upkeepPer);
+const income=(s,id)=>provsOf(s,id).length*RULES.incomePer;
+const borders=(s,a,b)=>provsOf(s,a).some(p=>nb(p).some(q=>s.owner[q]===b));
+const alive=(s,id)=>provsOf(s,id).length>0;
+
+/* Legality.WhyNot, as the rules page has it: a reason, or null */
+function whyNot(s,id,action,t){
+ const me=s.c[id];
+ switch(action){
+  case"recruit": return me.gold>=5*RULES.soldierCost?null:"the treasury cannot pay for 5 soldiers";
+  case"raise_taxes": return me.stab>=2?null:"stability is under 2";
+  case"none": return null;
+  case"fortify":{ if(s.owner[t]!==id) return t==null?"needs one of our provinces":"not ours";
+   if((s.forts[t]||0)>=RULES.maxForts) return "already 2 forts there";
+   if(!nb(t).some(q=>s.owner[q]!==id)) return "it borders only our own land";
+   if(me.gold<RULES.fortCost) return "costs 30 gold; we have "+me.gold; return null;}
+  case"declare_war":{ if(t===id) return "ourselves"; const r=rel(s,id,t);
+   if(r.k==="war") return "already at war with "+t; if(r.k==="truce") return "truce, "+r.left+" turns left";
+   if(!borders(s,id,t)) return t+" does not border us"; if(me.army<RULES.warArmy) return "army under 20"; return null;}
+  case"attack":{ const o=s.owner[t]; if(o===id) return "ours";
+   if(!nb(t).some(q=>s.owner[q]===id)) return "does not border us"; if(me.army<RULES.attackArmy) return "army under 10";
+   if(o===null) return null; const r=rel(s,id,o);
+   return r.k==="war"?null:(r.k==="truce"?"truce with "+o+", "+r.left+" turns left":"we are not at war with "+o);}
+  case"offer_peace": return rel(s,id,t).k==="war"?null:"not at war with "+t;
+ }
+ return "unknown move";
+}
+function moveSet(s,id){
+ const offered=[],no=[];
+ const add=(a,t,why)=>{(why?no:offered).push({a,t,why});};
+ for(const a of["recruit","raise_taxes"]) add(a,null,whyNot(s,id,a));
+ const mine=provsOf(s,id);
+ for(const p of mine){const w=whyNot(s,id,"fortify",p); if(!w) add("fortify",NAMES[p]); else if(w.startsWith("costs")||w.startsWith("already")) add("fortify",NAMES[p],w);}
+ for(const o of IDS) if(o!==id&&alive(s,o)){const w=whyNot(s,id,"declare_war",o); if(!w||!w.startsWith("already")) add("declare_war",o,w);}
+ const front=new Set(); mine.forEach(p=>nb(p).forEach(q=>{if(s.owner[q]!==id) front.add(q);}));
+ [...front].sort((a,b)=>a-b).forEach(q=>add("attack",NAMES[q],whyNot(s,id,"attack",q)));
+ for(const o of IDS) if(o!==id&&rel(s,id,o).k==="war") add("offer_peace",o,null);
+ add("none",null,null);
+ return {offered,no};
+}
+const detail=(s,id,p)=>{const o=s.owner[p],f=s.forts[p]||0;
+ if(o===null) return `neutral, garrison ${s.garrison[p]}`+(f?`, ${f} fort${f>1?'s':''}`:'');
+ return `${o}'s`+(f?`, ${f} fort${f>1?'s':''}`:'')+(C[o].cap===p?', a capital':'');};
+function defense(s,p,roll=1){const o=s.owner[p];const f=(s.forts[p]||0)*15;
+ if(o===null) return s.garrison[p]*roll+f; return .7*s.c[o].army*roll+f+(C[o].cap===p?8:0);}
+function oddsOf(s,id,p){/* chance the attack wins with both rolls uniform in 0.8..1.2 */
+ let w=0,n=0;for(let i=0;i<=20;i++)for(let j=0;j<=20;j++){const ra=.8+.4*i/20,rd=.8+.4*j/20;n++;if(s.c[id].army*ra>defense(s,p,rd))w++;}return w/n;}
+
+/* standing facts, in the game's own sentences */
+function standing(s,id){
+ const me=s.c[id],L=[];
+ L.push(`Turn ${s.turn} of 30. We hold ${provsOf(s,id).length} of 25 provinces; 15 wins.`);
+ L.push(`Treasury: ${me.gold} gold; income ${income(s,id)} and upkeep ${upkeep(s,id)} a turn.`);
+ L.push(`Army: ${me.army} soldiers. Stability: ${me.stab} of 5.`);
+ for(const o of IDS){ if(o===id||!alive(s,o)) continue; const r=rel(s,id,o);
+  const rs=r.k==="war"?"at war with us":r.k==="truce"?`truce with us for ${r.left} more turns`:"at peace with us";
+  L.push(`${o}: ${rs}; army ${s.c[o].army}, ${provsOf(s,o).length} province${provsOf(s,o).length>1?'s':''}`+(borders(s,id,o)?"; borders us.":"."));}
+ const nn=new Set();provsOf(s,id).forEach(p=>nb(p).forEach(q=>{if(s.owner[q]===null)nn.add(q);}));
+ if(nn.size) L.push(`${nn.size} neutral province${nn.size>1?'s':''} border${nn.size>1?'':'s'} us.`);
+ return L.slice(0,8);
+}
+
+/* ---------------- the turn: decisions and what they did ---------------- */
+/* q* = quoted from the persona 4b table, seed 4 */
+const SNAP=initialState();
+const DEC={};
+function mkDec(o){
+ const s=o.snap||SNAP, ms=moveSet(s,o.c);
+ const d=Object.assign({turn:s.turn,stage:"Council",hop:0,source:null,latency:.46,queue:0,ptok:1240,ctok:34,ground:.94,mem:[4,2,0],guards:null,exec:{k:"Done"},counsel:null,stim:"Your move."},o);
+ d.moves=ms; d.standing=standing(s,o.c); d.chain=`seed-4-turn-${d.turn}-${d.stage==="Council"?"council":"envoy-"+o.c}`;
+ DEC[d.id]=d; return d;
+}
+mkDec({id:"ilvar-12",c:"ilvar",action:"attack",target:"duskvale",st:"Duskvale falls today; Ilvar's banners do not wait.",latency:.43,queue:0,ptok:1188,ctok:31,ground:.97,
+ tfacts:["We held ilmoor against orsk; we lost 6 soldiers."],mem:[4,3,0]});
+mkDec({id:"kesh-12",c:"kesh",action:"attack",target:"harrow",st:"Harrow must bleed for daring to stand near our sacred soil.",real:true,latency:.51,queue:.43,ptok:1302,ctok:33,ground:.93,
+ tfacts:["Our attack on brindle failed; we lost 9 soldiers.","valen offers us peace: a truce for 5 turns."],mem:[4,4,0]});
+mkDec({id:"orsk-12",c:"orsk",action:"attack",target:"ilmoor",st:"Ilvar spends its spears on duskvale; ilmoor is mine for the taking.",latency:.47,queue:.94,ptok:1265,ctok:36,ground:.88,
+ tfacts:["We raised taxes: +30 gold."],mem:[4,3,0]});
+mkDec({id:"merrow-12",c:"merrow",action:"attack",target:"duskvale",st:"Duskvale's mills are a bargain no army guards.",latency:.45,queue:1.41,ptok:1240,ctok:30,ground:.91,
+ tfacts:["A good harvest brought 25 gold."],mem:[4,1,0],exec:{k:"Refused",why:"Our attack on duskvale could not happen: we are not at war with ilvar."}});
+mkDec({id:"valen-12",c:"valen",action:"offer_peace",target:"kesh",st:"Enough blood on the fields; let Kesh name a fair border.",latency:.49,queue:1.86,ptok:1226,ctok:35,ground:.96,
+ tfacts:["We held brindle against kesh; we lost 4 soldiers."],mem:[4,4,0]});
+mkDec({id:"kesh-12e",c:"kesh",stage:"Envoy",hop:1,source:"valen",action:"refuse_peace",target:"no_target",st:"Valen took our land; we will not accept their peace until they bleed for it.",real:true,
+ latency:.41,queue:0,ptok:1096,ctok:29,ground:null,stim:"Your move.",tfacts:["valen offers us peace: a truce for 5 turns.","Our attack on brindle failed; we lost 9 soldiers."],mem:[4,4,0],
+ movesOverride:{offered:[{a:"accept_peace"},{a:"refuse_peace"}],no:[]}});
+/* turn 11, from the chronicle */
+const S11=(()=>{const s=initialState();s.turn=11;s.c.kesh.army=105;s.c.orsk.gold=111;s.c.orsk.stab=3;s.c.valen.gold=142;s.c.merrow.gold=63;return s;})();
+mkDec({id:"merrow-11",snap:S11,c:"merrow",action:"attack",target:"harrow",st:"",latency:.52,queue:1.4,ptok:1251,ctok:28,ground:.41,
+ guards:{name:"TargetGroundingGuard",verdict:"Contained",reason:"target 'harrow' is not on the list for attack: the model's probability stayed on the list for 41% of it (threshold 60%)"},
+ exec:{k:"NoAction"},tfacts:["A good harvest brought 25 gold."],mem:[4,0,0],contained:true});
+mkDec({id:"kesh-11",snap:S11,c:"kesh",action:"attack",target:"brindle",st:"Brindle's walls will not save Valen twice.",latency:.48,ground:.95,tfacts:["We took westmarch from valen; we lost 11 soldiers."],mem:[4,4,0]});
+mkDec({id:"valen-11",snap:S11,c:"valen",action:"fortify",target:"ashby",st:"We remain patient, fortifying ashby and saving gold.",real:true,latency:.44,ground:.98,tfacts:["kesh took westmarch from us; we lost 14 soldiers."],mem:[4,3,0]});
+mkDec({id:"orsk-11",snap:S11,c:"orsk",action:"raise_taxes",target:"no_target",st:"Coin first; steel when Ilvar stumbles.",latency:.46,ground:null,tfacts:["ilvar declared war on us."],mem:[4,2,0]});
+mkDec({id:"ilvar-11",snap:S11,c:"ilvar",action:"declare_war",target:"orsk",st:"Orsk counts coins while Ilvar sharpens spears. War.",latency:.5,ground:.92,tfacts:[],mem:[4,2,0]});
+
+/* the chronicle: turn 12's lines appear as the turn plays; earlier turns are history */
+const HIST=[
+ {turn:11,c:"ilvar",type:"war",text:"<b>Ilvar</b> declares war on <b>Orsk</b>",dec:"ilvar-11",at:"orsk"},
+ {turn:11,c:"kesh",type:"war",text:"<b>Kesh</b>'s attack on <b>Brindle</b> fails against its fort",dec:"kesh-11",at:5},
+ {turn:11,c:"valen",type:"build",text:"<b>Valen</b> fortifies <b>Ashby</b> (2 forts)",dec:"valen-11",at:1},
+ {turn:11,c:"orsk",type:"econ",text:"<b>Orsk</b> raises taxes: +30 gold",dec:"orsk-11",at:4},
+ {turn:11,c:"merrow",type:"guard",text:"<b>Merrow</b> holds: a guard stopped an attack on <b>Harrow</b>",dec:"merrow-11",at:11,tag:"guard"},
+ {turn:10,c:"orsk",type:"peace",text:"<b>Orsk</b> accepts <b>Merrow</b>'s peace: a truce for 5 turns",q:"A truce with the strong buys time to crush the weak.",real:true,at:"merrow"},
+ {turn:10,c:"kesh",type:"land",text:"<b>Kesh</b> takes <b>Westmarch</b> from <b>Valen</b>",q:"Westmarch was ours before Valen ever drew a map.",at:10,tag:"land"},
+ {turn:9,c:"orsk",type:"war",text:"<b>Orsk</b> declares war on <b>Merrow</b>",q:"Merrow's markets are soft and its army softer.",at:"merrow"},
+ {turn:7,c:"kesh",type:"war",text:"<b>Kesh</b> declares war on <b>Valen</b>",q:"Valen's peace is a lie; they will bleed for taking our land back.",real:true,at:"valen"},
+];
+let LOG=[...HIST];
+
+/* turn 12 as it resolves: envoys, then attacks in this turn's seat order (ilvar, kesh, orsk, merrow) */
+const SCRIPT=[
+ {kind:"envoy",from:"valen",to:"kesh",dec:"valen-12",ans:"kesh-12e",accept:false},
+ {kind:"attack",c:"ilvar",p:18,dec:"ilvar-12",ra:1.05,rd:.95},
+ {kind:"attack",c:"kesh",p:11,dec:"kesh-12",ra:.98,rd:1.0},
+ {kind:"attack",c:"orsk",p:19,dec:"orsk-12",ra:1.1,rd:.9},
+ {kind:"attack",c:"merrow",p:18,dec:"merrow-12",ra:1.0,rd:1.0},
+];
+</script>
+<script>
+/* ---------------- the map: province map, washes, borders ---------------- */
+const wash=$("#wash"), wctx=wash.getContext("2d"), ictx=$("#ink").getContext("2d");
+let ID,DIST,NOISE,CB,PIX=[],BBOX=[];
+const TINT=wctx.createImageData(W,H), INK=ictx.createImageData(W,H);
+function chamfer(src,isSeed){/* distance in px from seed pixels */
+ const d=new Float32Array(W*H);for(let i=0;i<W*H;i++)d[i]=isSeed(i)?0:1e4;
+ const a=1,b=1.414;
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x;let v=d[i];if(!v)continue;
+  if(x>0)v=Math.min(v,d[i-1]+a);if(y>0){v=Math.min(v,d[i-W]+a);if(x>0)v=Math.min(v,d[i-W-1]+b);if(x<W-1)v=Math.min(v,d[i-W+1]+b);}d[i]=v;}
+ for(let y=H-1;y>=0;y--)for(let x=W-1;x>=0;x--){const i=y*W+x;let v=d[i];if(!v)continue;
+  if(x<W-1)v=Math.min(v,d[i+1]+a);if(y<H-1){v=Math.min(v,d[i+W]+a);if(x<W-1)v=Math.min(v,d[i+W+1]+b);if(x>0)v=Math.min(v,d[i+W-1]+b);}d[i]=v;}
+ return d;
+}
+function valueNoise(){/* three octaves of smooth noise for paper grain and pigment granulation */
+ const n=new Float32Array(W*H);let seed=7;const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
+ for(const [cell,amp] of [[64,.5],[18,.3],[5,.2]]){
+  const gw=Math.ceil(W/cell)+2,gh=Math.ceil(H/cell)+2,g=new Float32Array(gw*gh).map(rnd);
+  for(let y=0;y<H;y++){const gy=y/cell,y0=gy|0,fy=gy-y0,sy=fy*fy*(3-2*fy);
+   for(let x=0;x<W;x++){const gx=x/cell,x0=gx|0,fx=gx-x0,sx=fx*fx*(3-2*fx);
+    const a=g[y0*gw+x0],b=g[y0*gw+x0+1],c=g[(y0+1)*gw+x0],d=g[(y0+1)*gw+x0+1];
+    n[y*W+x]+=amp*((a+(b-a)*sx)*(1-sy)+(c+(d-c)*sx)*sy);}}}
+ return n;
+}
+function loadIdMap(){return new Promise(res=>{const im=new Image();im.onload=()=>{
+ const c=document.createElement("canvas");c.width=W;c.height=H;const x=c.getContext("2d");x.drawImage(im,0,0);
+ const d=x.getImageData(0,0,W,H).data;ID=new Uint8Array(W*H);
+ for(let i=0;i<W*H;i++){const v=d[i*4];ID[i]=v>=250?255:Math.round(v/10);}
+ for(let p=0;p<25;p++){PIX[p]=[];BBOX[p]=[W,H,0,0];}
+ for(let i=0;i<W*H;i++){const p=ID[i];if(p===255)continue;PIX[p].push(i);const x=i%W,y=(i/W)|0,b=BBOX[p];if(x<b[0])b[0]=x;if(y<b[1])b[1]=y;if(x>b[2])b[2]=x;if(y>b[3])b[3]=y;}
+ PIX=PIX.map(a=>Int32Array.from(a));
+ DIST=chamfer(ID,i=>{const p=ID[i];if(p===255)return false;const x=i%W;return (x>0&&ID[i-1]!==p)||(x<W-1&&ID[i+1]!==p)||(i>=W&&ID[i-W]!==p)||(i<W*H-W&&ID[i+W]!==p);});
+ NOISE=valueNoise();res();};im.src=DATA.idmap;});}
+function computeCB(){/* distance to a border between two owners: country borders redraw themselves */
+ const own=i=>S.owner[ID[i]]??"_";
+ CB=chamfer(null,i=>{const p=ID[i];if(p===255)return false;const o=own(i),x=i%W;
+  const t=j=>ID[j]!==255&&own(j)!==o;return (x>0&&t(i-1))||(x<W-1&&t(i+1))||(i>=W&&t(i-W))||(i<W*H-W&&t(i+W));});
+}
+const STY=()=>document.body.dataset.style;
+let mapMode="political", focusC="kesh", selP=null, reachSet=null, anim=null, ringSet=null;
+const NEUTRAL=[214,199,160];
+function pxColor(i,p,owner,out){/* two layers per pixel: a hue tint (blend "color": the painting keeps its light and shade) and ink (normal) */
+ const d=DIST[i],n=NOISE[i],eng=STY()==="engraved";
+ const col=owner?C[owner].rgb:null;
+ const pool=Math.exp(-d/(eng?5:7));
+ let tr=0,tg=0,tb=0,ta=0, ir=0,ig=0,ib=0,ia=0;
+ const x=i%W,y=(i/W)|0;
+ if(mapMode!=="terrain"){
+  if(col){
+   let k=1;
+   if(mapMode==="armies"){k=.2+.8*Math.min(1,S.c[owner].army/110);}
+   if(mapMode==="forts"){const f=S.forts[p]||0;k=f?.45+.3*f:.1;}
+   if(mapMode==="reach"){k=reachSet&&reachSet.has(p)?1:(owner===focusC?.75:.15);}
+   tr=col[0];tg=col[1];tb=col[2];ta=Math.min(1,(.52+.34*pool)*(.82+.36*n)*k);
+   ir=col[0]*.45;ig=col[1]*.45;ib=col[2]*.45;ia=(.10+.30*pool)*(.7+.6*n)*k;  /* pigment pooled at the edge */
+   if(p===selP){ir=240;ig=214;ib=150;ia=Math.max(ia,.12);}
+  } else { /* neutral: the bare chart, drained of colour, lightly hatched */
+   tr=150;tg=140;tb=122;ta=mapMode==="reach"&&!(reachSet&&reachSet.has(p))?.4:.75;
+   if(((x+y)%9)<1.3){ir=eng?50:22;ig=eng?38:16;ib=eng?25:10;ia=.28;}
+  }
+  if(mapMode==="reach"&&reachSet&&reachSet.has(p)&&((x-y)&7)<2){ir=210;ig=70;ib=50;ia=.5;}
+ }
+ /* ink: province lines thin, country borders heavy with a gilt or red-ink edge */
+ const cb=CB[i];
+ if(cb<1.6){ir=eng?28:16;ig=eng?20:12;ib=eng?12:8;ia=.92;}
+ else if(cb<2.9&&mapMode!=="terrain"){if(eng){ir=110;ig=40;ib=25;ia=.5;}else{ir=214;ig=176;ib=100;ia=.6;}}
+ else if(d<1.3){ir=24;ig=17;ib=10;ia=.62;}
+ if(p===selP&&d<3.2){ir=240;ig=214;ib=150;ia=.95;}
+ if(ringSet&&ringSet.has(p)&&d<2.6){ir=232;ig=200;ib=110;ia=.95;}
+ out[0]=tr;out[1]=tg;out[2]=tb;out[3]=ta;out[4]=ir;out[5]=ig;out[6]=ib;out[7]=ia;
+}
+const tmp=new Float32Array(8);
+function put8(i,o){const T_=TINT.data,K=INK.data,q=i*4;T_[q]=o[0];T_[q+1]=o[1];T_[q+2]=o[2];T_[q+3]=o[3]*255;K[q]=o[4];K[q+1]=o[5];K[q+2]=o[6];K[q+3]=o[7]*255;}
+function composeAll(){
+ for(let i=0;i<W*H;i++){const p=ID[i];if(p===255){TINT.data[i*4+3]=0;INK.data[i*4+3]=0;continue;}pxColor(i,p,S.owner[p],tmp);put8(i,tmp);}
+ wctx.putImageData(TINT,0,0);ictx.putImageData(INK,0,0);}
+function composeProv(p,fn){const px=PIX[p];
+ for(let j=0;j<px.length;j++){const i=px[j];fn(i,tmp);put8(i,tmp);}
+ const b=BBOX[p];wctx.putImageData(TINT,0,0,b[0],b[1],b[2]-b[0]+1,b[3]-b[1]+1);ictx.putImageData(INK,0,0,b[0],b[1],b[2]-b[0]+1,b[3]-b[1]+1);}
+
+/* ---------------- overlay: names, capitals, forts, armies ---------------- */
+const PT=p=>[DATA.points[p][0]*W,DATA.points[p][1]*H];
+const ov=$("#ov");
+function drawOverlay(){
+ let s="";
+ for(let p=0;p<25;p++){const [x,y]=PT(p);const o=S.owner[p];const isCap=o&&C[o].cap===p;const capOf=IDS.find(id=>C[id].cap===p);
+  if(capOf){s+=`<g transform="translate(${x},${y-16})" style="transform:translate(${x}px,${y-16}px) scale(var(--k))"><path d="M-9 8V-2h3v2h2v-4h2v-3h4v3h2v4h2v-2h3V8z" fill="${o?C[o].hex:'#777'}" stroke="#120c06" stroke-width="1.4"/><circle r="2" cy="-9" fill="#f6e3a8"/></g>`;
+   s+=`<text class="clab" x="${x}" y="${y+8}">${cap(NAMES[p])}</text>`;}
+  else s+=`<text class="plab" x="${x}" y="${y+4}">${cap(NAMES[p])}</text>`;
+  const f=S.forts[p]||0;for(let k=0;k<f;k++)s+=`<g style="transform:translate(${x-8+k*12+(f===1?6:0)}px,${y+(capOf?14:12)}px) scale(var(--k))"><path d="M-5 5V-2h2v1.5h2V-2h2v1.5h2V-2h2v7z" fill="#e9d9b0" stroke="#160f08" stroke-width="1"/></g>`;
+  if(mapMode==="armies"&&capOf&&o){s+=`<g style="transform:translate(${x+26}px,${y-24}px) scale(var(--k))"><rect x="-15" y="-9" width="30" height="16" rx="1" fill="${C[o].hex}" stroke="#d2ad62"/><text class="num" y="3" style="font-size:11px">${S.c[o].army}</text></g>`;}
+  if(mapMode==="political"&&o===null&&S.garrison[p]!=null){s+=`<text class="plab" x="${x}" y="${y+18}" style="font-style:normal;font-size:calc(10px*var(--k))">garrison ${S.garrison[p]}</text>`;}
+  if(mapMode==="reach"&&reachSet&&reachSet.has(p)){const od=oddsOf(S,focusC,p);s+=`<text class="num" x="${x}" y="${y+20}" style="fill:${od>.6?'#bfe3a8':od>.3?'#f0cf86':'#f19a86'};paint-order:stroke;stroke:#140c06;stroke-width:calc(3px*var(--k))">${Math.round(od*100)}%</text>`;}
+ }
+ s+=`<g id="fx"></g>`;
+ ov.innerHTML=s;
+}
+
+/* ---------------- pan and zoom ---------------- */
+const view=$("#view"),stage=$("#stage");
+let T={s:1,x:0,y:0};
+function applyT(){stage.style.transform=`translate(${T.x}px,${T.y}px) scale(${T.s})`;ov.style.setProperty("--k",Math.max(.85,1/T.s).toFixed(3));placeBubbles();}
+function fit(){const vw=innerWidth,vh=innerHeight;const L=($("#outl").classList.contains("min")?50:248),R=(ledgerOpen()?356:16);
+ const lx0=.05*W,lx1=.92*W,ly0=.04*H,ly1=.95*H;const fw=vw-L-R,fh=vh-50-10;
+ T.s=Math.min(fw/(lx1-lx0),fh/(ly1-ly0));T.x=L+(fw-(lx1-lx0)*T.s)/2-lx0*T.s;T.y=46+(fh-(ly1-ly0)*T.s)/2-ly0*T.s;applyT();}
+const toScreen=(x,y)=>[T.x+x*T.s,T.y+y*T.s];
+const toMap=(sx,sy)=>[(sx-T.x)/T.s,(sy-T.y)/T.s];
+let drag=null;
+view.addEventListener("pointerdown",e=>{drag={x:e.clientX,y:e.clientY,tx:T.x,ty:T.y,moved:false};view.classList.add("drag");});
+addEventListener("pointermove",e=>{if(drag){const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.abs(dx)+Math.abs(dy)>4)drag.moved=true;T.x=drag.tx+dx;T.y=drag.ty+dy;applyT();}
+ else if(e.target===view||view.contains(e.target))hoverMap(e);});
+addEventListener("pointerup",e=>{if(drag){const m=drag.moved;drag=null;view.classList.remove("drag");if(!m&&(e.target===view||view.contains(e.target)))clickMap(e);}});
+view.addEventListener("wheel",e=>{e.preventDefault();const f=Math.exp(-e.deltaY*.0015);const ns=Math.min(3,Math.max(.4,T.s*f));const [mx,my]=toMap(e.clientX,e.clientY);T.s=ns;T.x=e.clientX-mx*ns;T.y=e.clientY-my*ns;applyT();},{passive:false});
+function provAt(e){const [x,y]=toMap(e.clientX,e.clientY);const xi=x|0,yi=y|0;if(xi<0||yi<0||xi>=W||yi>=H)return 255;return ID[yi*W+xi];}
+function panTo(p,zoom){const [x,y]=PT(p);const L=248,R=ledgerOpen()||$("#insp").classList.contains("on")?(innerWidth>1500?540:490):16;
+ const cx=L+(innerWidth-L-R)/2,cy=innerHeight/2;const s0={...T};const s1=zoom?Math.max(T.s,zoom):T.s;const tx=cx-x*s1,ty=cy-y*s1;const t0=performance.now();
+ const step=t=>{const k=Math.min(1,(t-t0)/450),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;T.s=s0.s+(s1-s0.s)*e;T.x=s0.x+(tx-s0.x)*e;T.y=s0.y+(ty-s0.y)*e;applyT();if(k<1)requestAnimationFrame(step);else pulse(p);};requestAnimationFrame(step);}
+function pulse(p){const [x,y]=PT(p);const fx=$("#fx");if(!fx)return;const c=document.createElementNS(svgNS,"circle");c.setAttribute("cx",x);c.setAttribute("cy",y);c.setAttribute("r",10);c.setAttribute("fill","none");c.setAttribute("stroke","#f3d48a");c.setAttribute("stroke-width",3);fx.appendChild(c);
+ c.animate([{r:10,opacity:1},{r:60,opacity:0}],{duration:900,easing:"ease-out",iterations:2}).onfinish=()=>c.remove();}
+
+/* ---------------- tooltips on everything ---------------- */
+const tip=$("#tip");
+function showTip(html,e){tip.innerHTML=html;tip.style.display="block";const r=tip.getBoundingClientRect();let x=e.clientX+14,y=e.clientY+16;if(x+r.width>innerWidth-6)x=e.clientX-r.width-12;if(y+r.height>innerHeight-6)y=e.clientY-r.height-12;tip.style.left=x+"px";tip.style.top=y+"px";}
+document.addEventListener("mouseover",e=>{const t=e.target.closest("[data-tip]");if(t)showTip(t.dataset.tip,e);else if(!view.contains(e.target))tip.style.display="none";});
+document.addEventListener("mousemove",e=>{const t=e.target.closest("[data-tip]");if(t)showTip(t.dataset.tip,e);});
+function provTip(p){const o=S.owner[p],f=S.forts[p]||0;let h=`<span class=tt>${cap(NAMES[p])}</span>`;
+ h+=o?`${crestSVG(o)} <b>${C[o].name}</b>${C[o].cap===p?' · capital':''}`:`<b>Neutral</b> · garrison ${S.garrison[p]}`;
+ h+=`<br>${f?f+' fort'+(f>1?'s':'')+' (+'+15*f+' defence)':'No fort'}`;
+ h+=`<br><span class=muted>Defends with about ${Math.round(defense(S,p))}</span>`;
+ const me=mode==="watch"?focusC:mode==="rule"?ruler:adv;
+ if(o!==me){const w=whyNot(S,me,"attack",p);h+=`<hr>${C[me].name}: `+(w?`<span class=muted>attack not offered: ${w}</span>`:`attack offered · wins ${Math.round(oddsOf(S,me,p)*100)}% of rolls`);}
+ return h;}
+function hoverMap(e){if(drag)return;const p=provAt(e);if(p===255||!ID){tip.style.display="none";return;}showTip(provTip(p),e);}
+function clickMap(e){const p=provAt(e);if(p===255){selP=null;composeAll();closeSide();return;}
+ if(mode==="rule"&&targeting){if(targeting.valid.has(p)){setOrder({a:targeting.a,t:NAMES[targeting.a==="fortify"?p:p],p});}targeting=null;ringSet=null;composeAll();return;}
+ selP=p;composeAll();openProvince(p);}
+</script>
+<script>
+/* ---------------- top bar, outliner ---------------- */
+let mode="watch",ruler="valen",adv="kesh";
+function renderTop(){
+ const me=mode==="rule"?ruler:mode==="advise"?adv:null;
+ const order=[...IDS].sort((a,b)=>(b===me)-(a===me)||provsOf(S,b).length-provsOf(S,a).length);
+ $("#nations").innerHTML=order.map(id=>{const c=S.c[id],n=provsOf(S,id).length,net=income(S,id)-upkeep(S,id),wars=IDS.filter(o=>o!==id&&rel(S,id,o).k==="war");
+  const tipH=`<span class=tt>${C[id].name}</span>${PERS[C[id].persona].name} ruler · ${C[id].model}<hr>Provinces <b>${n}</b> of 25 (15 wins)<br>Army <b>${c.army}</b> · upkeep ${upkeep(S,id)} a turn<br>Treasury <b>${c.gold}</b> gold · income ${income(S,id)}, upkeep ${upkeep(S,id)} → <b>${net>=0?'+':''}${net}</b><br>Stability <b>${c.stab}</b> of 5${c.stab<=1?' · revolt risk 1 in 3':''}<br>${wars.length?'At war with '+wars.map(w=>C[w].name).join(', '):'At war with nobody'}<hr><span class=muted>Click: country panel</span>`;
+  return `<div class="nat ${id===me?'me':''} ${id===openCountry?'sel':''}" data-c="${id}" data-tip="${esc(tipH)}">${crestSVG(id)}<span class="nm">${C[id].name}</span>
+   <span class="stat">${icon('prov','ic s')}<b>${n}</b></span>
+   <span class="stat">${icon('army','ic s')}<b>${c.army}</b></span>
+   <span class="stat">${icon('gold','ic s')}<b>${c.gold}</b><span class="xs ${net>=0?'pos':'neg'}">${net>=0?'+':''}${net}</span></span>
+   <span class="stat xs"><span class="pips">${[1,2,3,4,5].map(k=>`<i class="${k<=c.stab?'on':''}"></i>`).join('')}</span></span>
+   ${wars.length?`<span class="stat warn-ic">${icon('war','ic s')}<b style="color:inherit">${wars.length}</b></span>`:''}</div>`;}).join("");
+ $$(".nat").forEach(n=>n.onclick=()=>openCountryPanel(n.dataset.c));
+ $("#turn").textContent=`Turn ${S.turn} of 30`;
+}
+function renderOutliner(){
+ const wars=[],truces=[];for(const k in S.rel){const [a,b]=k.split("|"),r=S.rel[k];(r.k==="war"?wars:r.k==="truce"?truces:[]).push({a,b,r});}
+ const rank=[...IDS].sort((a,b)=>provsOf(S,b).length-provsOf(S,a).length);
+ const max=Math.max(...IDS.map(i=>S.c[i].army));
+ let h=`<div class="ol-h">${icon('prov','ic s')} Standing <span>15 wins</span></div><div class="ol-b">`+rank.map(id=>{const n=provsOf(S,id).length;
+  return `<div class="row" data-c="${id}" data-tip="${esc(`<span class=tt>${C[id].name}</span>${n} provinces · needs ${15-n} more to win`)}" style="--cc:${C[id].hex}">${crestSVG(id)}<span style="width:54px">${C[id].name}</span><span class="bar"><i style="width:${n/15*100}%"></i></span><b style="width:18px;text-align:right">${n}</b></div>`;}).join("")+`</div>`;
+ h+=`<div class="ol-h">${icon('war','ic s')} Wars <span>${wars.length}</span></div><div class="ol-b">`+wars.map(w=>`<div class="row" data-w="${w.a}|${w.b}" data-tip="${esc(`<span class=tt>${C[w.a].name} against ${C[w.b].name}</span>Since turn ${w.r.since}. Armies ${S.c[w.a].army} and ${S.c[w.b].army}.<br><span class=muted>Click: show the front</span>`)}">${crestSVG(w.a)}<span class="bad">${icon('war','ic s')}</span>${crestSVG(w.b)}<span>${C[w.a].name} – ${C[w.b].name}</span><span class="muted" style="margin-left:auto">t${w.r.since}</span></div>`).join("")+`</div>`;
+ h+=`<div class="ol-h">${icon('truce','ic s')} Truces <span>${truces.length}</span></div><div class="ol-b">`+(truces.map(w=>`<div class="row" data-tip="${esc(`<span class=tt>Truce</span>${C[w.a].name} and ${C[w.b].name} cannot declare war on each other for ${w.r.left} more turns.`)}">${crestSVG(w.a)}<span class="warnc">${icon('truce','ic s')}</span>${crestSVG(w.b)}<span>${w.r.left} turns left</span></div>`).join("")||'<div class="muted row">None</div>')+`</div>`;
+ h+=`<div class="ol-h">${icon('army','ic s')} Armies</div><div class="ol-b">`+rank.map(id=>`<div class="row" data-c="${id}" style="--cc:${C[id].hex}" data-tip="${esc(`<span class=tt>${C[id].name}'s army</span>${S.c[id].army} soldiers, upkeep ${upkeep(S,id)} gold a turn. Defends a province with 70% of it.`)}">${crestSVG(id)}<span style="width:54px">${C[id].name}</span><span class="bar"><i style="width:${S.c[id].army/max*100}%"></i></span><b style="width:24px;text-align:right">${S.c[id].army}</b></div>`).join("")+`</div>`;
+ const neut=S.owner.map((o,i)=>o===null?i:-1).filter(i=>i>=0);
+ h+=`<div class="ol-h">${icon('prov','ic s')} Neutral land <span>${neut.length}</span></div><div class="ol-b">`+(neut.map(p=>`<div class="row" data-p="${p}">${cap(NAMES[p])}<span class="muted" style="margin-left:auto">garrison ${S.garrison[p]}</span></div>`).join("")||'<div class="muted row">All taken</div>')+`</div>`;
+ $("#olBody").innerHTML=h;
+ $$("#olBody [data-c]").forEach(r=>r.onclick=()=>{openCountryPanel(r.dataset.c);panTo(C[r.dataset.c].cap);});
+ $$("#olBody [data-p]").forEach(r=>r.onclick=()=>{selP=+r.dataset.p;composeAll();openProvince(selP);panTo(selP);});
+ $$("#olBody [data-w]").forEach(r=>r.onclick=()=>{const [a,b]=r.dataset.w.split("|");const f=provsOf(S,a).find(p=>nb(p).some(q=>S.owner[q]===b));if(f!=null)panTo(f,1.3);});
+}
+$("#olMin").onclick=()=>{$("#outl").classList.toggle("min");document.body.classList.toggle("olmin",$("#outl").classList.contains("min"));$("#olMin").innerHTML=$("#outl").classList.contains("min")?"&#x203A;":"&#x2039;";};
+
+/* ---------------- map modes ---------------- */
+const MODES=[["political","pol","Political","Owners' colours; neutral land bare"],["armies","army","Armies","Colour strength by army size; army counts at capitals"],["forts","fort","Forts","Provinces by forts: +15 defence each"],["reach","reach","Reach","Who can attack what: the focused country's legal attacks, with the share of rolls it wins"],["terrain","terrain","Terrain","The painted map alone"]];
+function renderModes(){$("#modes").innerHTML=MODES.map((m,i)=>`<button class="tb ${mapMode===m[0]?'on':''}" data-mm="${m[0]}" data-tip="${esc(`<span class=tt>${m[2]} (${i+1})</span>${m[3]}`)}">${icon(m[1])}<span class="lbl">${m[2]}</span></button>`).join("");
+ $$("#modes [data-mm]").forEach(b=>b.onclick=()=>setMapMode(b.dataset.mm));renderLegend();}
+function setMapMode(m){mapMode=m;reachSet=m==="reach"?reachFor(focusOf()):null;renderModes();drawOverlay();composeAll();}
+const focusOf=()=>mode==="rule"?ruler:mode==="advise"?adv:focusC;
+function reachFor(id){focusC=id;const s=new Set();for(let p=0;p<25;p++)if(S.owner[p]!==id&&!whyNot(S,id,"attack",p))s.add(p);return s;}
+function renderLegend(){const L=$("#legend");
+ if(mapMode==="reach"){const id=focusOf();L.style.display="flex";L.innerHTML=`${crestSVG(id)}<span><b>${C[id].name}</b> can attack ${reachSet.size} province${reachSet.size===1?'':'s'}</span><span class="muted">% = share of rolls it wins</span><select class="select" id="reachWho">${IDS.map(i=>`<option value="${i}" ${i===id?'selected':''}>${C[i].name}</option>`).join('')}</select>`;
+  $("#reachWho").onchange=e=>{focusC=e.target.value;if(mode==="rule")ruler=focusC;setMapMode("reach");};}
+ else if(mapMode==="political"){L.style.display="flex";L.innerHTML=IDS.map(i=>`<span><i style="background:${C[i].hex}"></i>${C[i].name}</span>`).join("")+`<span><i style="background:repeating-linear-gradient(45deg,#cbb98f,#cbb98f 2px,transparent 2px,transparent 5px);border:1px solid var(--line2)"></i>Neutral</span>`;}
+ else L.style.display="none";}
+
+/* ---------------- chronicle ---------------- */
+const TYPES=[["land","Land"],["war","War"],["peace","Peace"],["build","Building"],["econ","Economy"],["guard","Guards"],["ref","Refused"]];
+let fC=new Set(IDS),fT=new Set(TYPES.map(t=>t[0])),selLog=null;
+function renderFilters(){$("#lgFilters").innerHTML=IDS.map(i=>`<span class="chip ${fC.has(i)?'':'off'}" data-fc="${i}" data-tip="Show or hide ${C[i].name}">${crestSVG(i)}</span>`).join("")+TYPES.map(t=>`<span class="chip ${fT.has(t[0])?'':'off'}" data-ft="${t[0]}">${t[1]}</span>`).join("");
+ $$("[data-fc]").forEach(c=>c.onclick=()=>{const k=c.dataset.fc;fC.has(k)?fC.delete(k):fC.add(k);renderFilters();renderLedger();});
+ $$("[data-ft]").forEach(c=>c.onclick=()=>{const k=c.dataset.ft;fT.has(k)?fT.delete(k):fT.add(k);renderFilters();renderLedger();});}
+function quoteOf(e){if(e.q)return e.q;if(e.dec&&DEC[e.dec])return DEC[e.dec].st;return "";}
+function renderLedger(flashId){
+ const rows=LOG.filter(e=>fC.has(e.c)&&fT.has(e.type));let h="",t=null;
+ for(const e of rows){if(e.turn!==t){t=e.turn;h+=`<div class="lg-turn">Turn ${t}</div>`;}
+  const q=quoteOf(e),real=e.real||(e.dec&&DEC[e.dec]?.real);
+  const tag=e.tag==="guard"?'<span class="tag guard">guard</span>':e.tag==="ref"?'<span class="tag ref">refused</span>':e.tag==="land"?'<span class="tag land">land</span>':e.dec?'<span class="tag" data-tip="Open the decision">'+icon('eye','ic s')+'</span>':'';
+  h+=`<div class="lg ${e.id&&e.id===flashId?'new':''} ${selLog===e?'sel':''}" data-i="${LOG.indexOf(e)}" data-tip="${esc(e.dec?'Click: find it on the map and open the decision':'Click: find it on the map')}">${crestSVG(e.c)}<div class="t">${e.text}</div>${tag}${q?`<div class="q">“${esc(q)}”${real?' <b data-tip="Quoted from the persona 4b table, seed 4">*</b>':''}</div>`:''}</div>`;}
+ $("#lgBody").innerHTML=h||'<div class="sec muted">Nothing matches the filters.</div>';
+ $$("#lgBody .lg").forEach(r=>r.onclick=()=>{const e=LOG[+r.dataset.i];selLog=e;renderLedger();locate(e);if(e.dec)openInspector(e.dec);});
+}
+function locate(e){if(typeof e.at==="number"){panTo(e.at);}else if(e.at){panTo(C[e.at].cap);}}
+const ledgerOpen=()=>!$("#ledger").classList.contains("hide")&&$("#ledger").style.display!=="none";
+$("#lgClose").onclick=()=>toggleLedger(false);$("#bLedger").onclick=()=>toggleLedger(!ledgerOpen());
+function toggleLedger(on){$("#ledger").style.display=on?"flex":"none";}
+$("#qToggle").onclick=()=>$("#ledger").classList.toggle("noq");
+
+/* ---------------- side panel: province, country ---------------- */
+let openCountry=null;
+const side=$("#side");
+function closeSide(){side.classList.remove("on");openCountry=null;renderTop();}
+const MV={recruit:["recruit","Recruit"],raise_taxes:["coin","Raise taxes"],fortify:["fort","Fortify"],declare_war:["war","Declare war"],attack:["war","Attack"],offer_peace:["peace","Offer peace"],none:["hold","Hold"],accept_peace:["peace","Accept peace"],refuse_peace:["hold","Refuse peace"]};
+function openProvince(p){openCountry=null;renderTop();const o=S.owner[p];const me=focusOf();const f=S.forts[p]||0;
+ const capOf=IDS.find(id=>C[id].cap===p);
+ let h=`<div class="ph"><h3>${cap(NAMES[p])}</h3><button class="x" onclick="closeSide()">&#xd7;</button></div><div class="pb">`;
+ h+=`<div class="hdr" style="--cc:${o?C[o].hex:'#999'}">${o?crestSVG(o,'crest l'):'<svg class="crest l" viewBox="0 0 30 35"><path d="M2 2h26v15c0 9-7 14-13 16C9 31 2 26 2 17z" fill="none" stroke="#8d7f66" stroke-dasharray="3 2"/></svg>'}<div><h2>${cap(NAMES[p])}</h2><p>${o?C[o].name+(capOf===o?"'s capital":"'s province"):"Neutral land"} · <span class="src">${NAMES[p]}</span></p></div></div>`;
+ h+=`<div class="sec"><h4>Holding</h4><dl class="kv"><dt>Owner</dt><dd>${o?C[o].name:'nobody'}</dd><dt>${o?'Defended by':'Garrison'}</dt><dd>${o?`70% of ${S.c[o].army} soldiers`:S.garrison[p]}</dd><dt>Forts</dt><dd>${f} (+${15*f})</dd>${capOf?'<dt>Capital</dt><dd>+8</dd>':''}<dt>Defends with about</dt><dd><b>${Math.round(defense(S,p))}</b></dd><dt>Income</dt><dd>${o?'10 gold a turn':'—'}</dd><dt>Borders</dt><dd>${nb(p).map(q=>cap(NAMES[q])).join(', ')}</dd></dl>
+  <div class="src" style="margin-top:5px">As a target it reads: "${detail(S,null,p)}"</div></div>`;
+ h+=`<div class="sec moves"><h4>${crestSVG(me)} ${C[me].name}'s moves here <span>${mode==="watch"?'the model is offered':'you are offered'}</span></h4>`;
+ const acts=o===me?["fortify"]:["attack"];
+ for(const a of acts){const w=whyNot(S,me,a,p);const od=a==="attack"&&!w?oddsOf(S,me,p):null;
+  h+=`<div class="mv ${w?'no':''}">${icon(MV[a][0],'ic s')}<span>${MV[a][1]} ${cap(NAMES[p])}${od!=null?` <span class="odds" style="color:${od>.6?'var(--good)':od>.3?'var(--warn)':'var(--bad)'}">wins ${Math.round(od*100)}% of rolls</span>`:''}</span>${!w&&mode==="rule"?`<button class="tb go" onclick="setOrder({a:'${a}',t:'${NAMES[p]}',p:${p}})">Order</button>`:`<span class="muted">${w?'not offered':'offered'}</span>`}${w?`<div class="why">${esc(w)}</div>`:''}</div>`;}
+ if(o&&o!==me){const w=whyNot(S,me,"declare_war",o);h+=`<div class="mv ${w?'no':''}">${icon('war','ic s')}<span>Declare war on ${C[o].name}</span>${!w&&mode==="rule"?`<button class="tb go" onclick="setOrder({a:'declare_war',t:'${o}'})">Order</button>`:`<span class="muted">${w?'not offered':'offered'}</span>`}${w?`<div class="why">${esc(w)}</div>`:''}</div>`;}
+ h+=`<div class="src" style="margin-top:6px">Reasons are <code>Legality.WhyNot</code>'s, the same the model's schema is built from.</div></div>`;
+ const hist=LOG.filter(e=>e.at===p);if(hist.length)h+=`<div class="sec"><h4>History</h4>${hist.map(e=>`<div class="row" onclick="${e.dec?`openInspector('${e.dec}')`:''}">${crestSVG(e.c)}<span>t${e.turn} · ${e.text}</span></div>`).join('')}</div>`;
+ side.innerHTML=h+"</div>";side.classList.add("on");}
+function openCountryPanel(id){openCountry=id;renderTop();const c=S.c[id],P=PERS[C[id].persona];
+ let h=`<div class="ph"><h3>${C[id].name}</h3><button class="x" onclick="closeSide()">&#xd7;</button></div><div class="pb">`;
+ h+=`<div class="hdr" style="--cc:${C[id].hex}"><div class="face" style="${faceStyle(id)}"></div><div><h2>${crestSVG(id)} ${C[id].name}</h2><p>The ${P.name.toLowerCase()} · ${C[id].where}</p></div></div>`;
+ h+=`<div class="sec"><h4>Ruler <span>persona, not country</span></h4><div style="font:italic 500 13.5px/1.3 var(--serif);color:var(--ink2);margin-bottom:6px">${P.desc}</div>
+  <div style="display:flex;align-items:center;gap:8px"><div class="faces">${[0,1].map(v=>`<div class="face ${v===C[id].face?'on':''}" style="--cc:${C[id].hex};${faceStyle(id,v)}" data-tip="Face ${v+1} of 2 for the ${P.name.toLowerCase()}: a persona has several faces, so two ${P.name.toLowerCase()}s at one table look different" onclick="C['${id}'].face=${v};openCountryPanel('${id}');placeBubbles(true)"></div>`).join('')}</div><span class="muted" style="font-size:11.5px">Model <b>${C[id].model}</b><br>Provider config <b>OllamaRemote</b></span></div></div>`;
+ h+=`<div class="sec"><h4>What ${C[id].name} reads every turn <span>standing facts</span></h4><pre class="facts">${esc(standing(S,id).join("\n"))}</pre></div>`;
+ h+=`<div class="sec"><h4>Treasury</h4><dl class="kv"><dt>Gold</dt><dd>${c.gold}</dd><dt>Income</dt><dd class="good">+${income(S,id)}</dd><dt>Upkeep (1 per 2 soldiers)</dt><dd class="bad">−${upkeep(S,id)}</dd><dt>Stability</dt><dd>${c.stab} of 5</dd></dl></div>`;
+ const ms=moveSet(S,id);h+=`<div class="sec"><h4>Offered this turn <span>${ms.offered.length} moves</span></h4><div class="ofl">${ms.offered.map(m=>`<span class="chip">${m.a}${m.t?' '+m.t:''}</span>`).join('')}</div>${ms.no.length?`<div style="margin-top:6px">${ms.no.slice(0,6).map(m=>`<div class="why-no"><code>${m.a} ${m.t||''}</code> — ${esc(m.why)}</div>`).join('')}</div>`:''}</div>`;
+ const decs=Object.values(DEC).filter(d=>d.c===id);h+=`<div class="sec"><h4>Decisions</h4>${decs.map(d=>`<div class="row" onclick="openInspector('${d.id}')">${icon('eye','ic s')}<span>t${d.turn} · ${d.stage.toLowerCase()} · <code>${d.action} ${d.target||''}</code></span></div>`).join('')}</div>`;
+ side.innerHTML=h+"</div>";side.classList.add("on");}
+
+/* ---------------- diplomacy ---------------- */
+function openDiplo(){const d=$("#diplo");if(d.classList.contains("on")){d.classList.remove("on");return;}
+ let h=`<div class="ph">${icon('diplo')}<h3>Diplomacy</h3><button class="x" onclick="diplo.classList.remove('on')">&#xd7;</button></div><div class="pb"><div class="mx"><div class="ch"></div>${IDS.map(i=>`<div class="ch">${crestSVG(i)}${C[i].name}</div>`).join('')}`;
+ for(const a of IDS){h+=`<div class="rh">${crestSVG(a)}${C[a].name}</div>`;for(const b of IDS){if(a===b){h+=`<div class="self"></div>`;continue;}const r=rel(S,a,b),bd=borders(S,a,b);
+  const tipH=`<span class=tt>${C[a].name} and ${C[b].name}</span>${r.k==="war"?'At war since turn '+r.since:r.k==="truce"?'Truce: '+r.left+' turns left':'At peace'}<br>${bd?'They share a border':'No shared border: war cannot be declared'}<br><span class=muted>${C[a].name} may: ${['declare_war','offer_peace'].filter(m=>!whyNot(S,a,m,b)).join(', ')||'neither declare war nor offer peace'}</span>`;
+  h+=`<div class="${r.k}" data-tip="${esc(tipH)}">${r.k==="war"?icon('war'):r.k==="truce"?icon('truce'):icon('peace','ic s')}<small>${r.k==="war"?'war · t'+r.since:r.k==="truce"?'truce · '+r.left:'peace'}${bd?' · border':''}</small></div>`;}}
+ h+=`</div><div class="sec"><h4>This turn's envoys</h4>${LOG.filter(e=>e.turn===S.turn&&e.type==="peace").map(e=>`<div class="row">${crestSVG(e.c)}<span>${e.text}</span></div>`).join('')||'<div class="muted">None yet. Envoys are answered before any move lands; an accepted offer is a 5-turn truce.</div>'}</div></div>`;
+ d.innerHTML=h;d.classList.add("on");}
+$("#bDiplo").onclick=openDiplo;
+</script>
+<script>
+/* ---------------- the decision inspector: the framework's window ---------------- */
+const insp=$("#insp");
+function jsonHTML(o){return "{\n"+Object.entries(o).map(([k,v])=>`  <span class="k">"${k}"</span>: <span class="s">"${esc(v)}"</span>`).join(",\n")+"\n}";}
+function openInspector(id){const d=DEC[id];if(!d)return;const c=C[d.c];
+ const outcome=d.contained?["guard","Contained by a guard"]:d.exec.k==="Refused"?["ref","Refused at resolution"]:["ok","Done"];
+ const ms=d.movesOverride||d.moves;
+ let h=`<div class="ph">${icon('eye')}<h3>Decision · ${c.name} · turn ${d.turn}</h3><button class="x" onclick="insp.classList.remove('on')">&#xd7;</button></div><div class="pb">`;
+ h+=`<div class="hdr" style="--cc:${c.hex}"><div class="face" style="${faceStyle(d.c)}"></div><div style="flex:1"><h2>${crestSVG(d.c)} ${c.name} <span class="badge ${outcome[0]}">${outcome[1]}</span></h2>
+  <p>${PERS[c.persona].name} persona · ${d.stage==="Envoy"?'answering '+C[d.source].name+"'s envoy":'the council'} · <span class="src">${d.chain}${d.hop?' · hop '+d.hop+' from '+d.source:''}</span></p></div></div>`;
+ /* 1 the answer */
+ const raw={action:d.action,target:d.target||"no_target",statement:d.st||""};
+ h+=`<div class="sec"><h4>1 · What the model answered <span>action, then target, then statement</span></h4><pre class="json">${jsonHTML(raw)}</pre>
+  ${d.contained?`<div class="why-no" style="margin-top:5px">${icon('guard','ic s')} The guard contained it: the agent ran <code>none</code> instead, and no statement was shown.</div>`:''}</div>`;
+ /* 2 the menu */
+ const picked=m=>m.a===d.action&&(m.t||"no_target")===(d.target||"no_target");
+ h+=`<div class="sec"><h4>2 · The moves it was offered <span>${ms.offered.length}, from the agent's state</span></h4><div class="ofl">${ms.offered.map(m=>`<span class="chip ${picked(m)?'pick':''}" ${picked(m)?'data-tip="Its choice"':''}>${m.a}${m.t?' '+m.t:''}</span>`).join('')}</div>
+  ${ms.no.length?`<div style="margin-top:7px" class="muted" >Not offered, so absent from its schema:</div>${ms.no.map(m=>`<div class="why-no"><code>${m.a}${m.t?' '+m.t:''}</code> — ${esc(m.why)}</div>`).join('')}`:''}
+  <div class="src" style="margin-top:5px">TargetsUnavailable · ITargetAvailability, each with its reason</div></div>`;
+ /* 3 what it was told */
+ h+=`<div class="sec"><h4>3 · What it was told <span>${d.standing.length} standing + ${d.tfacts.length+(d.counsel?1:0)} this turn</span></h4>
+  <div class="muted" style="font-size:11.5px;margin-bottom:3px">Standing facts (IObservationSource)</div><pre class="facts">${esc(d.standing.join("\n"))}</pre>
+  <div class="muted" style="font-size:11.5px;margin:6px 0 3px">Stimulus, then this turn's facts (ObservationPlacement.WithStimulus)</div><pre class="facts">${esc([d.stim,...d.tfacts].join("\n"))}${d.counsel?"\n<b style='color:var(--gold)'>"+esc(`Your counsellor says: "${d.counsel}"`)+"</b>":''}</pre>
+  <div class="src" style="margin-top:5px">ObservationsDropped: none</div></div>`;
+ /* 4 guards */
+ const g=d.guards;const gr=d.ground;
+ h+=`<div class="sec"><h4>4 · Guards</h4>
+  <div class="gl"><span class="good">${icon('guard','ic s')}</span><span>SchemaLegalityGuard</span><span class="good">passed</span><div class="d">The action and target are on the offered list.</div></div>
+  <div class="gl"><span class="${g?'warnc':'good'}">${icon('guard','ic s')}</span><span>TargetGroundingGuard</span><span class="${g?'warnc':'good'}">${gr==null?'not scored':g?'contained':'passed'}</span>
+   <div class="d">${gr==null?'No target to ground for this action.':`How much of the model's probability at the target stayed on the list: <b>${Math.round(gr*100)}%</b> (threshold 60%)<div class="meter"><i style="width:${gr*100}%;background:${g?'var(--warn)':'var(--good)'}"></i><b style="left:60%"></b></div>`}${g?`<div style="color:var(--ink2)">Reason, word for word: “${esc(g.reason)}”</div>`:''}</div></div>
+  <div class="gl"><span class="muted">${icon('guard','ic s')}</span><span>Developer guards</span><span class="muted">none on this agent</span></div>
+  <div class="gl"><span class="${d.exec.k==='Refused'?'bad':'good'}">${icon('scroll','ic s')}</span><span>When it landed · Agent.Execute</span><span class="${d.exec.k==='Refused'?'bad':'good'}">${d.exec.k}</span>${d.exec.why?`<div class="d">The game re-checked it after earlier moves this turn: “${esc(d.exec.why)}”</div>`:'<div class="d">Re-checked with the same rule that offered it, then carried out.</div>'}</div>
+  <div class="src" style="margin-top:5px">GuardsFired · Verdict · GuardReason · TargetGrounding · Execution · ExecutionReason</div></div>`;
+ /* 5 memory */
+ h+=`<div class="sec"><h4>5 · Memory</h4><dl class="kv"><dt>Exchanges sent with this call</dt><dd>${d.mem[0]}</dd><dt>Held but left out</dt><dd>${d.mem[1]}</dd><dt>Forgotten so far</dt><dd>${d.mem[2]}</dd></dl>
+  <div class="src" style="margin-top:4px">HistoryTurnsSent · HistoryTurnsDropped · HistoryTurnsForgotten. Only moves that landed are remembered.</div></div>`;
+ /* 6 model and time */
+ const tot=d.queue+d.latency;
+ h+=`<div class="sec"><h4>6 · Model and time</h4><dl class="kv"><dt>Model</dt><dd>${c.model}</dd><dt>Provider config</dt><dd>OllamaRemote</dd><dt>Persona</dt><dd>${PERS[c.persona].name} · face ${c.face+1} of 2</dd><dt>Tokens</dt><dd>${d.ptok.toLocaleString()} in · ${d.ctok} out</dd></dl>
+  <div style="margin-top:7px" class="tl">${d.queue?`<span style="width:${d.queue/tot*100}%;background:rgba(127,127,127,.25)" data-tip="Waiting behind ${Math.round(d.queue/.47)} other council calls: one model, one queue">queue ${d.queue.toFixed(2)} s</span>`:''}<span style="flex:1;background:${c.hex};color:#fff" data-tip="The provider's request alone">model ${d.latency.toFixed(2)} s</span></div>
+  <div class="src" style="margin-top:5px">QueueWaitSeconds · LatencySeconds · PromptTokens · CompletionTokens · Model · ProviderConfig</div></div>`;
+ h+=`<div class="sec src">Everything on this card comes from <b>DecisionFeed.Recorded</b>: the DecisionResult and its DecisionTelemetry. The game adds nothing but the layout. Values here are mock-up values.</div>`;
+ insp.innerHTML=h+"</div>";insp.classList.add("on");
+}
+</script>
+<script>
+/* ---------------- speech over the map ---------------- */
+const scr=$("#screen");let bubbles=[];
+function say(id,text,decId,ms){const p=C[id].cap;const b=document.createElement("div");b.className="bubble";b.style.setProperty("--cc",C[id].hex);
+ b.innerHTML=`<div class="face" style="${faceStyle(id)}"></div><div><small>${C[id].name} · the ${PERS[C[id].persona].name.toLowerCase()}</small><q>${esc(text)}</q></div>`;
+ b.dataset.tip="Click: open the decision";b.onclick=()=>{if(decId)openInspector(decId);};
+ scr.appendChild(b);const rec={b,p,id};bubbles.push(rec);placeBubbles();requestAnimationFrame(()=>b.classList.add("on"));
+ if(ms)setTimeout(()=>unsay(rec),ms);return rec;}
+function unsay(r){if(!r)return;r.b.classList.remove("on");setTimeout(()=>r.b.remove(),300);bubbles=bubbles.filter(x=>x!==r);}
+function placeBubbles(refresh){for(const r of bubbles){const [x,y]=PT(r.p);const [sx,sy]=toScreen(x,y-18);r.b.style.left=sx+"px";r.b.style.top=sy+"px";if(refresh){const f=r.b.querySelector(".face");f.setAttribute("style",faceStyle(r.id));}}}
+
+/* ---------------- the capture: strike, fall, spread, settle (the design page's timings) ---------------- */
+let speed=1;const sp=ms=>ms/speed;
+const wait=ms=>new Promise(r=>setTimeout(r,sp(ms)));
+function spreadField(p,from){/* distance inside p from its border with `from`'s land, 0..1 */
+ const px=PIX[p],n=px.length,idx=new Map();px.forEach((i,j)=>idx.set(i,j));const d=new Float32Array(n).fill(1e9);const q=[];
+ for(let j=0;j<n;j++){const i=px[j];for(const k of [i-1,i+1,i-W,i+W]){const o=ID[k];if(o!==255&&o!==p&&S.owner[o]===from){d[j]=0;q.push(j);break;}}}
+ if(!q.length){q.push(0);d[0]=0;}
+ for(let h=0;h<q.length;h++){const j=q[h],i=px[j];for(const k of [i-1,i+1,i-W,i+W]){const jj=idx.get(k);if(jj!==undefined&&d[jj]>d[j]+1){d[jj]=d[j]+1;q.push(jj);}}}
+ let m=0;for(let j=0;j<n;j++)if(d[j]<1e9&&d[j]>m)m=d[j];for(let j=0;j<n;j++)d[j]=Math.min(1,d[j]/(m||1));return d;}
+function arrow(fromP,toP,hex,broken){const [x1,y1]=PT(fromP),[x2,y2]=PT(toP);const mx=(x1+x2)/2+(y2-y1)*.18,my=(y1+y2)/2-(x2-x1)*.18;
+ const fx=$("#fx");const g=document.createElementNS(svgNS,"g");const path=document.createElementNS(svgNS,"path");
+ path.setAttribute("d",`M${x1},${y1} Q${mx},${my} ${x2},${y2}`);path.setAttribute("fill","none");path.setAttribute("stroke",hex);path.setAttribute("stroke-width",7);path.setAttribute("stroke-linecap","round");path.setAttribute("style","filter:drop-shadow(0 0 2px #000)");
+ const L=path.getTotalLength?0:0;g.appendChild(path);fx.appendChild(g);const len=path.getTotalLength();path.style.strokeDasharray=len;path.style.strokeDashoffset=len;
+ path.animate([{strokeDashoffset:len},{strokeDashoffset:broken?len*.35:0}],{duration:sp(400),easing:"ease-out",fill:"forwards"});
+ const ang=Math.atan2(y2-my,x2-mx)*180/Math.PI;
+ if(!broken){const head=document.createElementNS(svgNS,"path");head.setAttribute("d","M0,0 L-18,-10 L-14,0 L-18,10z");head.setAttribute("fill",hex);head.setAttribute("transform",`translate(${x2},${y2}) rotate(${ang})`);head.style.opacity=0;g.appendChild(head);head.animate([{opacity:0},{opacity:1}],{delay:sp(300),duration:sp(100),fill:"forwards"});}
+ return g;}
+function swords(p,txt,bad){const [x,y]=PT(p);const g=document.createElementNS(svgNS,"g");g.setAttribute("transform",`translate(${x},${y-28})`);
+ g.innerHTML=`<circle r="15" fill="${bad?'#5a1d14':'#1b130b'}" stroke="#d2ad62" stroke-width="1.5"/><path d="M-8 -8l16 16M8 -8l-16 16" stroke="#f3e2b8" stroke-width="3" stroke-linecap="round"/><text y="31" class="num" style="font-size:13px;paint-order:stroke;stroke:#140c06;stroke-width:3px">${txt}</text>`;
+ $("#fx").appendChild(g);g.animate([{transform:`translate(${x}px,${y-28}px) scale(1.4)`,opacity:0},{transform:`translate(${x}px,${y-28}px) scale(1)`,opacity:1}],{duration:sp(220),easing:"ease-out",fill:"forwards"});return g;}
+function focusDim(p,on){const d=$("#dim");if(on){const [x,y]=PT(p);d.style.background=`radial-gradient(circle at ${x}px ${y}px, transparent 0 130px, rgba(8,6,4,.55) 300px)`;d.style.opacity=1;}else d.style.opacity=0;}
+function captureFrame(p,att,from,e,D1,D2,field,lookup){/* one frame of the capture at time e (ms): fall, then spread, with a wet edge */
+ const toC=C[att].rgb,fromC=from?C[from].rgb:null;
+ composeProv(p,(i,out)=>{const j=lookup.get(i),n=NOISE[i],d=DIST[i];
+   const fall=D1?Math.min(1,e/D1):1;const sk=Math.max(0,Math.min(1,(e-D1)/D2));const front=1-Math.pow(1-sk,3);
+   const dn=field[j]+(n-.5)*.16;
+   const pool=Math.exp(-d/7),ta=Math.min(1,(.52+.34*pool)*(.82+.36*n)),ia=(.10+.30*pool)*(.7+.6*n);
+   let c=null,a=0,k=0;
+   if(dn<front){c=toC;a=ta;k=ia;const wet=front-dn;if(wet<.045&&sk<1){k=.55;}}           /* the new colour, with its wet edge */
+   else if(fromC&&fall<1&&n>fall*1.05){c=fromC;a=ta*(1-fall*.8);k=ia*(1-fall);}          /* the old wash lifting in dry specks */
+   if(c){out[0]=c[0];out[1]=c[1];out[2]=c[2];out[3]=a;out[4]=c[0]*.42;out[5]=c[1]*.42;out[6]=c[2]*.42;out[7]=k;}
+   else{out[0]=150;out[1]=140;out[2]=122;out[3]=.75;out[4]=22;out[5]=16;out[6]=10;out[7]=0;}  /* bare chart */
+   if(d<1.3){out[4]=24;out[5]=17;out[6]=10;out[7]=.62;}});}
+function captureSetup(p,att){const px=PIX[p],lookup=new Map();px.forEach((i,j)=>lookup.set(i,j));return {field:spreadField(p,att),lookup,src:[...provsOf(S,att)].find(q=>nb(q).includes(p))};}
+async function capture(att,p,from,battleTxt){
+ if(speed>=20){S.owner[p]=att;computeCB();composeAll();drawOverlay();renderTop();renderOutliner();return;}  /* fast-forward */
+ const {field,lookup,src}=captureSetup(p,att);
+ focusDim(p,true);await wait(300);
+ const ar=arrow(src,p,C[att].hex,false);await wait(300);const sw=swords(p,battleTxt);await wait(100);
+ const t0=performance.now(),D1=from?sp(400):0,D2=sp(1200);
+ S.owner[p]=att;
+ await new Promise(res=>{const frame=t=>{const e=t-t0;captureFrame(p,att,from,e,D1,D2,field,lookup);
+  if(e<D1+D2)requestAnimationFrame(frame);else res();};requestAnimationFrame(frame);});
+ computeCB();composeAll();drawOverlay();renderTop();renderOutliner();await wait(400);
+ ar.remove();sw.remove();focusDim(p,false);await wait(300);}
+function captureStill(att,p,e,battleTxt){/* a frozen frame of the capture, for screenshots: #still=<ms> */
+ const from=S.owner[p];const {field,lookup,src}=captureSetup(p,att);focusDim(p,true);arrow(src,p,C[att].hex,false);swords(p,battleTxt);
+ S.owner[p]=att;captureFrame(p,att,from,e,400,1200,field,lookup);}
+async function failedAttack(att,p,txt){const src=[...provsOf(S,att)].find(q=>nb(q).includes(p));focusDim(p,true);await wait(300);const ar=arrow(src,p,C[att].hex,true);await wait(350);
+ const sw=swords(p,txt,true);const [x,y]=PT(p);await wait(900);ar.remove();sw.remove();focusDim(p,false);}
+
+/* ---------------- playing a turn ---------------- */
+let queue=[],playing=false,busy=false;
+function resetTurn(){S=initialState();LOG=[...HIST];computeCB();composeAll();drawOverlay();renderTop();renderOutliner();renderLedger();bubbles.forEach(unsay);
+ queue=SCRIPT.map(e=>({...e}));$("#phase").textContent="Envoys";$("#bStep").disabled=false;}
+function battle(att,p,ra,rd){const A=S.c[att].army*ra,Dv=defense(S,p,rd),o=S.owner[p];const win=A>Dv;
+ const aLoss=Math.round(.3*Dv),dLoss=Math.round(.3*A*(win?1:.6));S.c[att].army=Math.max(0,S.c[att].army-aLoss);
+ if(o)S.c[o].army=Math.max(0,S.c[o].army-dLoss);else S.garrison[p]=Math.max(0,S.garrison[p]-dLoss);
+ if(win){if(S.forts[p])S.forts[p]--;if(o===null)delete S.garrison[p];}
+ return {win,A:Math.round(A),D:Math.round(Dv),from:o,aLoss};}
+function pushLog(e){e.id="L"+Math.random().toString(36).slice(2,7);LOG.unshift(e);renderLedger(e.id);}
+async function runEvent(ev){
+ const d=ev.dec?DEC[ev.dec]:null;
+ if(ev.kind==="envoy"){$("#phase").textContent="Envoys";
+  const b1=say(ev.from,DEC[ev.dec].st,ev.dec);envoyLine(ev.from,ev.to);
+  pushLog({turn:S.turn,c:ev.from,type:"peace",text:`<b>${C[ev.from].name}</b> offers <b>${C[ev.to].name}</b> peace`,dec:ev.dec,at:ev.to});await wait(1500+40*DEC[ev.dec].st.length);unsay(b1);
+  if(ev.playerAnswers){const acc=await envoyCard(ev);ev.accept=acc;}
+  const ans=DEC[ev.ans];const b2=ev.playerAnswers?null:say(ev.to,ans.st,ev.ans);
+  pushLog({turn:S.turn,c:ev.to,type:"peace",text:ev.accept?`<b>${C[ev.to].name}</b> accepts: a truce for 5 turns`:`<b>${C[ev.to].name}</b> refuses <b>${C[ev.from].name}</b>'s peace`,dec:ev.playerAnswers?null:ev.ans,at:ev.from,q:ev.playerAnswers?'':undefined});
+  if(ev.accept){S.rel[key(ev.from,ev.to)]={k:"truce",left:5};renderTop();renderOutliner();}
+  await wait(1500+40*(ans.st||"").length);unsay(b2);$("#envline")?.remove();return;}
+ if(ev.kind==="attack"){$("#phase").textContent="Attacks";
+  const w=whyNot(S,ev.c,"attack",ev.p);
+  const st=ev.st??(d?d.st:"");const b=st?say(ev.c,st,ev.dec):null;await wait(1200+30*st.length);
+  if(w){/* re-checked at resolution: stale */
+   await failedAttack(ev.c,ev.p,"refused");unsay(b);
+   const why=w.startsWith("we are not at war")?`we are not at war with ${S.owner[ev.p]}`:w;
+   pushLog({turn:S.turn,c:ev.c,type:"ref",tag:"ref",text:`<s><b>${C[ev.c].name}</b>'s attack on <b>${cap(NAMES[ev.p])}</b></s> could not happen: ${esc(why)}`,dec:ev.dec,at:ev.p});return;}
+  const r=battle(ev.c,ev.p,ev.ra??(.8+Math.random()*.4),ev.rd??(.8+Math.random()*.4));
+  if(r.win){unsay(b);await capture(ev.c,ev.p,r.from,`${r.A} vs ${r.D}`);
+   pushLog({turn:S.turn,c:ev.c,type:"land",tag:"land",text:`<b>${C[ev.c].name}</b> takes <b>${cap(NAMES[ev.p])}</b> from ${r.from?'<b>'+C[r.from].name+'</b>':'the neutrals'} <span class="muted">${r.A} vs ${r.D}</span>`,dec:ev.dec,at:ev.p});}
+  else{await failedAttack(ev.c,ev.p,`${r.A} vs ${r.D}`);unsay(b);renderTop();renderOutliner();
+   pushLog({turn:S.turn,c:ev.c,type:"war",text:`<b>${C[ev.c].name}</b>'s attack on <b>${cap(NAMES[ev.p])}</b> fails <span class="muted">${r.A} vs ${r.D}</span>`,dec:ev.dec,at:ev.p});}
+  return;}
+ if(ev.kind==="home"){$("#phase").textContent="Home moves";const b=ev.st?say(ev.c,ev.st,ev.dec):null;
+  if(ev.a==="recruit"){const lv=Math.min(5+5*provsOf(S,ev.c).length,Math.floor(S.c[ev.c].gold/2));S.c[ev.c].army+=lv;S.c[ev.c].gold-=lv*2;pushLog({turn:S.turn,c:ev.c,type:"econ",text:`<b>${C[ev.c].name}</b> recruits ${lv} soldiers`,dec:ev.dec,at:ev.c});}
+  if(ev.a==="raise_taxes"){S.c[ev.c].gold+=30;S.c[ev.c].stab--;pushLog({turn:S.turn,c:ev.c,type:"econ",text:`<b>${C[ev.c].name}</b> raises taxes: +30 gold`,dec:ev.dec,at:ev.c});}
+  if(ev.a==="fortify"){const p=NAMES.indexOf(ev.t);S.forts[p]=(S.forts[p]||0)+1;S.c[ev.c].gold-=30;drawOverlay();pulse(p);pushLog({turn:S.turn,c:ev.c,type:"build",text:`<b>${C[ev.c].name}</b> fortifies <b>${cap(ev.t)}</b>`,dec:ev.dec,at:p});}
+  if(ev.a==="declare_war"){S.rel[key(ev.c,ev.t)]={k:"war",since:S.turn};computeCB();composeAll();pushLog({turn:S.turn,c:ev.c,type:"war",text:`<b>${C[ev.c].name}</b> declares war on <b>${C[ev.t].name}</b>`,dec:ev.dec,at:ev.t});}
+  if(ev.a==="none"){pushLog({turn:S.turn,c:ev.c,type:"econ",text:`<b>${C[ev.c].name}</b> holds`,dec:ev.dec,at:ev.c});}
+  renderTop();renderOutliner();await wait(1300+30*(ev.st||"").length);unsay(b);}
+}
+function envoyLine(a,b){const [x1,y1]=PT(C[a].cap),[x2,y2]=PT(C[b].cap);const l=document.createElementNS(svgNS,"g");l.id="envline";
+ l.innerHTML=`<path d="M${x1},${y1} L${x2},${y2}" stroke="#f0dca8" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round" fill="none" opacity=".85"/><g transform="translate(${(x1+x2)/2},${(y1+y2)/2})"><rect x="-13" y="-9" width="26" height="18" fill="#efe1bd" stroke="#1a120a"/><path d="M-13 -9l13 10 13-10" fill="none" stroke="#1a120a"/><circle r="4" cy="2" fill="${C[a].hex}"/></g>`;$("#fx").appendChild(l);}
+async function upkeepNext(){$("#phase").textContent="Upkeep";S.turn++;for(const id of IDS){if(!alive(S,id))continue;const c=S.c[id];c.gold+=income(S,id)-upkeep(S,id);if(c.gold<0){c.gold=0;c.army=Math.round(c.army*.85);}if(c.stab<5)c.stab++;}
+ for(const k in S.rel){const r=S.rel[k];if(r.k==="truce"){r.left--;if(r.left<=0)delete S.rel[k];}}
+ renderTop();renderOutliner();await wait(600);$("#phase").textContent="Council";$("#quills").classList.add("on");await wait(2300);$("#quills").classList.remove("on");
+ $("#phase").textContent="Council";pushLog({turn:S.turn,c:"kesh",type:"econ",text:`<span class="muted">Turn ${S.turn}'s council would be asked here. The mock-up scripts only turn 12: press <b>Play</b> to replay it.</span>`});}
+async function step(){if(busy)return;busy=true;
+ if(!queue.length){await upkeepNext();busy=false;playing=false;setPlay();queue=null;return;}
+ const ev=queue.shift();await runEvent(ev);busy=false;}
+async function play(){if(queue===null){resetTurn();}playing=!playing;setPlay();while(playing&&!busy){if(queue===null){playing=false;break;}await step();if(queue===null){playing=false;}}setPlay();}
+function setPlay(){$("#bPlay").innerHTML=icon(playing?'pause':'play');}
+$("#bPlay").onclick=()=>{if(mode!=="watch"){return;}play();};
+$("#bStep").onclick=()=>{if(mode!=="watch")return;if(queue===null)resetTurn();step();};
+$("#speed").onclick=()=>{speed=speed===1?2:speed===2?4:1;$$("#speed i").forEach((i,k)=>i.classList.toggle("on",k<({1:1,2:2,4:3})[speed]));};
+</script>
+<script>
+/* ---------------- rule mode ---------------- */
+let order=null,targeting=null;
+function renderOrders(){const id=ruler;$("#ordTitle").innerHTML=`${C[id].name} · orders for turn ${S.turn}`;
+ const ms=moveSet(S,id);const has=a=>ms.offered.some(m=>m.a===a);
+ const btn=(a,label,ic,tipH)=>{const ok=has(a);return `<button class="tb ${order&&order.a===a?'on':''}" data-a="${a}" ${ok?'':'disabled'} data-tip="${esc(tipH+(ok?'':'<hr><span class=muted>Not offered: '+(ms.no.find(m=>m.a===a)?.why||'no legal target')+'</span>'))}">${icon(ic,'ic s')}${label}</button>`;};
+ const lv=Math.min(5+5*provsOf(S,id).length,Math.floor(S.c[id].gold/2));
+ $("#ordBtns").innerHTML=btn("recruit","Recruit","recruit",`<span class=tt>Recruit</span>+${lv} soldiers for ${lv*2} gold (5 + 5 per province, 2 gold each)`)+
+  btn("fortify","Fortify…","fort","<span class=tt>Fortify</span>+1 fort on a border province of ours: 30 gold, at most 2. Choose the province on the map.")+
+  btn("raise_taxes","Raise taxes","coin","<span class=tt>Raise taxes</span>+30 gold, −1 stability, and stability does not recover next upkeep")+
+  btn("attack","Attack…","war","<span class=tt>Attack</span>A province that borders ours: neutral, or held by a country we are at war with. Choose it on the map.")+
+  btn("declare_war","Declare war…","war","<span class=tt>Declare war</span>On a bordering country we are at peace with (not at truce). Army 20 or more.")+
+  btn("offer_peace","Offer peace…","peace","<span class=tt>Offer peace</span>An envoy to a country we are at war with; it answers before anything lands.")+
+  btn("none","Hold","hold","<span class=tt>Hold</span>Do nothing this turn");
+ $$("#ordBtns [data-a]").forEach(b=>b.onclick=()=>pickAction(b.dataset.a));
+ $("#ordWhat").innerHTML=order?`${icon(MV[order.a][0],'ic s')} <b>${MV[order.a][1]}${order.t?' '+(C[order.t]?C[order.t].name:cap(order.t)):''}</b>${order.p!=null&&order.a==="attack"?` <i>wins ${Math.round(oddsOf(S,id,order.p)*100)}% of rolls</i>`:''} <span class="muted">· the four model rulers decide on the same snapshot</span>`:`<span class="muted">Choose a move. These are the moves the rules offer ${C[id].name}: the same list a model ruler gets.</span>`;
+ $("#endTurn").disabled=!order||busy;}
+function pickAction(a){const id=ruler;const ms=moveSet(S,id);
+ if(a==="attack"||a==="fortify"){const valid=new Set(ms.offered.filter(m=>m.a===a).map(m=>NAMES.indexOf(m.t)));targeting={a,valid};ringSet=valid;
+  if(a==="attack"){mapMode="reach";reachSet=reachFor(id);renderModes();drawOverlay();}composeAll();
+  $("#ordWhat").innerHTML=`<span class="warnc">Choose a ringed province on the map</span> <span class="muted">(${valid.size} offered; Esc cancels)</span>`;return;}
+ if(a==="declare_war"||a==="offer_peace"){const ts=ms.offered.filter(m=>m.a===a).map(m=>m.t);
+  $("#ordWhat").innerHTML=`${MV[a][1]}: `+ts.map(t=>`<button class="tb" onclick="setOrder({a:'${a}',t:'${t}'})">${crestSVG(t)} ${C[t].name}</button>`).join(" ")+` <span class="muted">${ms.no.filter(m=>m.a===a).map(m=>C[m.t]?.name+': '+m.why).join(' · ')}</span>`;return;}
+ setOrder({a});}
+function setOrder(o){order=o;targeting=null;ringSet=null;if(mapMode==="reach")setMapMode("political");else composeAll();renderOrders();closeSide();}
+async function endTurn(overrideFor,overrideEv){
+ if(busy)return;busy=true;$("#endTurn").disabled=true;
+ const me=overrideFor;let evs=SCRIPT.filter(e=>!(e.kind==="attack"&&e.c===me)&&!(e.kind==="envoy"&&e.from===me)).map(e=>({...e}));
+ if(mode==="rule"){const env=evs.find(e=>e.kind==="envoy"&&e.to===me);if(env)env.playerAnswers=true;}  /* in advise mode the model ruler answers its own envoys */
+ const o=overrideEv;
+ if(o.a==="offer_peace"){const ans=o.t==="kesh"?"kesh-12e":null;evs.unshift({kind:"envoy",from:me,to:o.t,dec:null,ans,accept:false,st:"",player:true});}
+ else if(o.a==="attack")evs.splice(evs.findIndex(e=>e.kind==="attack"),0,{kind:"attack",c:me,p:NAMES.indexOf(o.t),dec:o.dec||null,st:o.st||""});
+ else evs.splice(evs.findIndex(e=>e.kind==="attack"),0,{kind:"home",c:me,a:o.a,t:o.t,dec:o.dec||null,st:o.st||""});
+ for(const ev of evs){if(ev.kind==="envoy"&&ev.player){/* the player's own envoy: the scripted answer is the proud refusal */
+   envoyLine(me,ev.to);pushLog({turn:S.turn,c:me,type:"peace",text:`<b>${C[me].name}</b> offers <b>${C[ev.to].name}</b> peace`,at:ev.to});await wait(900);
+   const ans=ev.ans?DEC[ev.ans]:null;const b=say(ev.to,ans?ans.st:"A truce is a pause, not a friendship. No.",ev.ans);
+   pushLog({turn:S.turn,c:ev.to,type:"peace",text:`<b>${C[ev.to].name}</b> refuses <b>${C[me].name}</b>'s peace`,dec:ev.ans,at:me});await wait(2600);unsay(b);$("#envline")?.remove();continue;}
+  await runEvent(ev);}
+ await upkeepNext();busy=false;order=null;renderOrders();
+ const again=document.createElement("div");}
+$("#endTurn").onclick=()=>{if(!order)return;endTurn(ruler,order).then(()=>{$("#ordWhat").innerHTML=`<span class="muted">Turn 12 resolved. <button class="tb" onclick="resetTurn();renderOrders()">Replay turn 12</button></span>`;});};
+function envoyCard(ev){return new Promise(res=>{const e=$("#envoy");const d=DEC[ev.dec];
+ e.innerHTML=`<div class="ph">${icon('env')}<h3>An envoy from ${C[ev.from].name}</h3></div><div class="hdr" style="--cc:${C[ev.from].hex}"><div class="face" style="${faceStyle(ev.from)}"></div><div><h2>${crestSVG(ev.from)} ${C[ev.from].name} offers peace</h2><p>“${esc(d.st)}”</p></div></div>
+ <div class="sec"><div class="src">${ev.from} offers us peace: a truce for 5 turns.</div><div class="muted" style="margin-top:4px">A truce stops the war for 5 turns; neither side may declare war again until it ends.</div></div>
+ <div style="display:flex;gap:8px;justify-content:flex-end;padding:8px 10px"><button class="tb" id="eRef">${icon('hold','ic s')} Refuse</button><button class="endturn" id="eAcc">Accept</button></div>`;
+ e.classList.add("on");$("#eAcc").onclick=()=>{e.classList.remove("on");res(true);};$("#eRef").onclick=()=>{e.classList.remove("on");res(false);};});}
+
+/* ---------------- advise mode ---------------- */
+const REPLIES=[
+ {re:/peace|truce/i,fn:()=>({a:"attack",t:"harrow",st:"Peace with Valen? Not while Valen holds harrow. We take it back first.",note:"offer_peace valen was offered; the ruler chose attack harrow"})},
+ {re:/merrow/i,fn:()=>({a:"declare_war",t:"merrow",st:"Merrow fattens on its trade. Let it learn the price of standing near Kesh."})},
+ {re:/orsk|ilvar/i,fn:m=>({a:"attack",t:"harrow",st:"Our quarrel is with Valen, counsellor. The east can wait.",note:`declare_war ${/orsk/i.test(m)?'orsk':'ilvar'} was not offered: it does not border us. Counsel cannot make an illegal move.`})},
+ {re:/fort|defen|wall/i,fn:()=>({a:"fortify",t:"westmarch",st:"Westmarch faces Valen's spears; we raise a wall there."})},
+ {re:/tax|gold|coin/i,fn:()=>({a:"raise_taxes",t:null,st:"The clans will pay, and Kesh will remember who asked."})},
+ {re:/recruit|army|soldier/i,fn:()=>({a:"recruit",t:null,st:"More spears for the hills. Valen will see them soon enough."})},
+ {re:/hold|wait|rest/i,fn:()=>({a:"none",t:null,st:"Kesh waits, but Kesh does not forget."})},
+];
+let advPending=null;
+function renderCounsel(){$("#cTitle").innerHTML=`Counsel to the ruler of ${C[adv].name}`;
+ $("#adviseWho").innerHTML=IDS.map(i=>`<option value="${i}" ${i===adv?'selected':''} ${i!=="kesh"?'disabled':''}>${C[i].name}${i!=="kesh"?' (scripted for Kesh only)':''}</option>`).join("");}
+$("#cSend").onclick=async()=>{const m=$("#cText").value.trim();if(!m)return;const r=$("#cReply");
+ r.classList.add("on");r.innerHTML=`<span class="dot3"><i></i><i></i><i></i></span><span class="muted">Your counsel is in ${C[adv].name}'s call as a fact of this turn. The ruler is deciding…</span>`;
+ await new Promise(x=>setTimeout(x,900));
+ const hit=REPLIES.find(x=>x.re.test(m));const rep=hit?hit.fn(m):{a:"attack",t:"harrow",st:"Harrow must bleed for daring to stand near our sacred soil."};
+ const id="kesh-12a";mkDec({id,c:"kesh",action:rep.a,target:rep.t||"no_target",st:rep.st,counsel:m,latency:.55,queue:.43,ptok:1338,ctok:35,ground:rep.t?.92:null,
+  tfacts:["Our attack on brindle failed; we lost 9 soldiers.","valen offers us peace: a truce for 5 turns."],mem:[4,4,0]});
+ advPending={a:rep.a,t:rep.t,st:rep.st,dec:id};
+ bubbles.forEach(unsay);say(adv,rep.st,id);
+ r.innerHTML=`${icon('quill','ic s')}<span><b>${C[adv].name}</b> will <code>${rep.a}${rep.t?' '+rep.t:''}</code>${rep.note?` · <span class="warnc">${esc(rep.note)}</span>`:''}</span><button class="tb" onclick="openInspector('${id}')" style="margin-left:auto">${icon('eye','ic s')} Why</button>`;
+ openInspector(id);};
+$("#cEnd").onclick=()=>{const o=advPending||{a:"attack",t:"harrow",st:DEC["kesh-12"].st,dec:"kesh-12"};endTurn(adv,{...o,dec:o.dec}).then(()=>{advPending=null;$("#cReply").innerHTML=`<span class="muted">Turn 12 resolved. <button class="tb" onclick="resetTurn()">Replay turn 12</button></span>`;});};
+
+/* ---------------- modes and styles ---------------- */
+function setMode(m){mode=m;document.body.dataset.mode=m;$$("#modeSeg .tb").forEach(b=>b.classList.toggle("on",b.dataset.m===m));
+ playing=false;setPlay();resetTurn();order=null;targeting=null;ringSet=null;advPending=null;$("#cReply").classList.remove("on");
+ $("#bPlay").disabled=$("#bStep").disabled=$("#speed").disabled=m!=="watch";
+ if(m==="rule"){$("#ruleAs").innerHTML=IDS.map(i=>`<option value="${i}" ${i===ruler?'selected':''}>${C[i].name}</option>`).join("");renderOrders();}
+ if(m==="advise")renderCounsel();
+ if(mapMode==="reach")reachSet=reachFor(focusOf());renderTop();renderLegend();composeAll();drawOverlay();}
+$("#ruleAs").onchange=e=>{ruler=e.target.value;order=null;renderOrders();renderTop();if(mapMode==="reach")setMapMode("reach");};
+$$("#modeSeg .tb").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+function setStyle(s){document.body.dataset.style=s;$$("#styleSeg .tb").forEach(b=>b.classList.toggle("on",b.dataset.s===s));composeAll();}
+$$("#styleSeg .tb").forEach(b=>b.onclick=()=>setStyle(b.dataset.s));
+$("#bAbout").onclick=()=>$("#about").classList.toggle("on");
+addEventListener("keydown",e=>{if(e.target.tagName==="TEXTAREA"||e.target.tagName==="SELECT")return;
+ if(e.key===" "){e.preventDefault();$("#bPlay").click();}else if(e.key==="n"||e.key==="N")$("#bStep").click();
+ else if(e.key==="+"||e.key==="=")$("#speed").click();else if(e.key==="c"||e.key==="C")toggleLedger(!ledgerOpen());else if(e.key==="d"||e.key==="D")openDiplo();
+ else if(e.key>="1"&&e.key<="5")setMapMode(MODES[+e.key-1][0]);
+ else if(e.key==="Escape"){targeting=null;ringSet=null;composeAll();closeSide();insp.classList.remove("on");$("#diplo").classList.remove("on");$("#about").classList.remove("on");if(mode==="rule")renderOrders();}});
+addEventListener("resize",()=>{if(!window.__fixed)fit();});
+
+/* ---------------- start; the URL hash sets a state, for screenshots ---------------- */
+(async()=>{await loadIdMap();computeCB();
+ if(innerWidth<1600){$("#outl").classList.add("min");document.body.classList.add("olmin");$("#olMin").innerHTML="&#x203A;";}
+ const h=Object.fromEntries(location.hash.slice(1).split("&").filter(Boolean).map(kv=>kv.split("=")));
+ if(h.style)setStyle(h.style);else setStyle("gilt");
+ renderFilters();renderModes();setMode(h.mode||"watch");fit();
+ if(h.at){/* jump: land the first n events at once */speed=50;for(let i=0;i<+h.at;i++)await step();speed=1;bubbles.forEach(unsay);}
+ if(h.mm)setMapMode(h.mm);
+ if(h.say){const d=DEC[h.say];say(d.c,d.st,d.id);}
+ if(h.sel){selP=+h.sel;composeAll();openProvince(selP);}
+ if(h.country)openCountryPanel(h.country);
+ if(h.insp)openInspector(h.insp);
+ if(h.diplo)openDiplo();
+ if(h.order){pickAction(h.order);}
+ if(h.counsel){$("#cText").value=decodeURIComponent(h.counsel);$("#cSend").click();}
+ if(h.still){/* a frozen frame of kesh-12's capture of harrow */speed=50;for(let i=0;i<2;i++)await step();speed=1;bubbles.forEach(unsay);queue.shift();
+  pushLog({turn:12,c:"kesh",type:"land",tag:"land",text:"<b>Kesh</b> takes <b>Harrow</b> from <b>Valen</b> <span class=muted>94 vs 38</span>",dec:"kesh-12",at:11});
+  captureStill("kesh",11,+h.still,"94 vs 38");say("kesh",DEC["kesh-12"].st,"kesh-12");}
+ if(h.selftest){/* plays turn 12 three ways and writes what happened into #selftest, for a headless check */
+  const errs=[];addEventListener("error",e=>errs.push(e.message));addEventListener("unhandledrejection",e=>errs.push(String(e.reason)));
+  const snap=()=>({owner:S.owner.map(o=>o?o[0]:"-").join(""),turn:S.turn,armies:IDS.map(i=>i[0]+S.c[i].army).join(" "),log:LOG.filter(e=>e.turn>=12).map(e=>e.text.replace(/<[^>]+>/g,""))});
+  const out={stage:"start"};const pre=document.createElement("pre");pre.id="selftest";document.body.appendChild(pre);const w=()=>pre.textContent=JSON.stringify(out);w();
+  speed=50;let g=0;while(queue!==null&&g++<20){await step();out.stage="watch "+g;w();}out.watch=snap();w();
+  setMode("rule");speed=50;setOrder({a:"attack",t:"westmarch",p:10});out.stage="rule";w();await endTurn("valen",{a:"attack",t:"westmarch"});out.rule=snap();w();
+  setMode("advise");speed=50;$("#cText").value="Raise taxes, we need gold";await $("#cSend").onclick();out.stage="advise";w();await endTurn("kesh",advPending);out.advise=snap();out.stage="done";w();
+  out.errs=errs;w();}
+ if(h.zoom){const [x,y]=PT(+(h.zp||11));T.s=+h.zoom;T.x=(innerWidth-360)/2+120-x*T.s;T.y=innerHeight/2+30-y*T.s;applyT();window.__fixed=1;}
+ document.body.dataset.ready=1;})();
+</script>
+</body></html>

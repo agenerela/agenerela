@@ -1,7 +1,8 @@
-# GreyBoxStrategy, stage 3: the painted map and the screen
+# Painted Realm (GreyBoxStrategy), stage 3: the painted map and the screen
 
-**Status:** a proposal for the lead to approve or redirect, 11 November 2026 (#20). No game code
-yet. The rules, the board and stages 1 and 2 are in [`grey-box-strategy.md`](grey-box-strategy.md)
+**Status:** a proposal, in its second round, 11 November 2026 (#20). No game code yet. **Painted
+Realm** is the working title the lead chose; the folder and the issue keep the old name until
+the name is final. The rules, the board and stages 1 and 2 are in [`grey-box-strategy.md`](grey-box-strategy.md)
 and in the demo's [`README.md`](../../Demos/GreyBoxStrategy/README.md). This page designs the
 screen: what it shows, how the map's colour changes, the three modes, the art approach for
 Unity, the assets, a new name, and six questions for the lead.
@@ -14,9 +15,187 @@ Unity, the assets, a new name, and six questions for the lead.
 > stage 3. And the goal: "make sure that the framework showcases itself perfectly there", with
 > "the 'coloring' of the map" as the part that should feel best.
 
-## The mock-ups
+## Round 2: the lead's choices, and a screen you can click
 
-Eight images, made with an image model on 11 November. **They are drafts, not art**: generated
+The lead looked at round 1 and decided on 11 November:
+
+| Question | His answer |
+|---|---|
+| Look | **C, the dark sea-chart** |
+| Name | **Painted Realm**, for now. The folder and the issue are not renamed yet |
+| Terrain on the land | **A lot**, as in look B, in look C's palette |
+| Portraits | **Belong to the persona**, "but we will need to have variants": several faces for each persona |
+| Capture time (question 4), court scenes for war (question 5) | Still open; see [the questions](#open-questions-for-the-lead) |
+| Later | **Text-to-speech for the rulers' statements**: recorded here as a later feature, not designed yet |
+
+He also judged round 1's interface. It "seems very mobile like and tbh not very attractive",
+and "the mockup is not very detailed and UI is just like a useless image so its hard to say
+anything." He likes the interfaces of PC grand-strategy games: "We obviously wont have as much
+features as those games, but I anticipate us having not a small amount of features."
+
+So round 2 is **a working HTML page**, not a picture. It is laid out as a desktop grand-strategy
+screen, in an original design, with real content. The map, the panels, the three modes and the
+decision inspector all respond to clicks.
+
+### Open it
+
+Open [`grey-box-strategy-screen/ui/index.html`](grey-box-strategy-screen/ui/index.html) in
+Chrome or Edge. It needs nothing installed. When the machine is online, its fonts come from
+Google Fonts; offline, it falls back to system serifs. A local server works too:
+`python -m http.server 8765 --directory docs/demos/grey-box-strategy-screen/ui`.
+
+The **Mock-up** strip at the top centre switches the mode (Watch, Rule, Advise) and the style
+(Gilt, Engraved). Its **i** says what is real and what is scripted. **No model runs in the
+page.** The game logic is real, ported to JavaScript from `GameRules` and `Legality`: the moves
+offered, the reasons a move is not, battle strength, losses and upkeep. Turn 12 is invented to
+fit those rules. Three statements are quoted from the persona 4b table's seed 4 and marked
+`*`. The other statements and every telemetry number are written for the mock-up.
+
+The address takes a state after `#`, which is how the screenshots were taken:
+`#mode=rule&order=attack`, `#insp=kesh-12`, `#style=engraved&country=orsk&mm=armies`, or
+`#still=600&zoom=2.4`, a frozen frame of a capture. `#selftest=1` plays turn 12 in all three
+modes and writes what happened into the page. Run in headless Edge, it finished all three with
+no script error.
+
+### Screenshots
+
+At 1920 × 1080 and 1366 × 768, in `grey-box-strategy-screen/ui-shots/`:
+
+| # | State |
+|---|---|
+| [01](grey-box-strategy-screen/ui-shots/01-watch.jpg) | **Watch**, gilt: the whole screen, with Valen's envoy speaking at Highmoor |
+| [02](grey-box-strategy-screen/ui-shots/02-capture.jpg), [02b](grey-box-strategy-screen/ui-shots/02b-capture-close.jpg) | **The capture**: Kesh takes Harrow with the map dimmed around it; close up, indigo bleeding in from Kesh's side across bare chart |
+| [03](grey-box-strategy-screen/ui-shots/03-inspector.jpg) | **The decision inspector** on Kesh's attack |
+| [04](grey-box-strategy-screen/ui-shots/04-guard-engraved.jpg) | **Engraved style**: a decision a guard contained, and a province panel |
+| [05](grey-box-strategy-screen/ui-shots/05-rule.jpg) | **Rule** as Valen: the orders, and the attack targets ringed with the share of rolls each attack wins |
+| [06](grey-box-strategy-screen/ui-shots/06-advise.jpg) | **Advise** Kesh: the counsel, the reply over the map, and the inspector with the counsel in the request |
+| [07](grey-box-strategy-screen/ui-shots/07-diplomacy.jpg) | **Diplomacy**, and a neutral province's panel |
+| [08](grey-box-strategy-screen/ui-shots/08-engraved-country.jpg) | **Engraved**, the armies map mode and a country panel: the persona, both faces, the standing facts, the moves offered |
+| [09](grey-box-strategy-screen/ui-shots/09-small-watch.jpg), [10](grey-box-strategy-screen/ui-shots/10-small-rule.jpg), [11](grey-box-strategy-screen/ui-shots/11-small-refused.jpg) | **1366 × 768**: the reach map mode after the turn, rule mode with a province open, a move refused at resolution |
+
+![Watch mode, gilt](grey-box-strategy-screen/ui-shots/01-watch.jpg)
+
+![The decision inspector](grey-box-strategy-screen/ui-shots/03-inspector.jpg)
+
+### The screen
+
+The map fills the screen. Everything else floats over it, small and dense, with a tooltip on
+every number and icon.
+
+| Region | What it shows | What it does |
+|---|---|---|
+| **Top bar** | Each country's crest and name, then provinces, army, gold and net income a turn, stability as five pips, and wars as a count. On the right: the turn and phase, play and pause, step, speed, diplomacy, the chronicle | A country's tooltip gives the arithmetic (income 10 a province, upkeep 1 per 2 soldiers); a click opens its panel. The leader comes first; in rule and advise modes the player's country comes first, marked |
+| **Realm** (left) | The standing against 15, wars and the turn each began, truces and their turns left, armies as bars, neutral land and its garrisons | A click on a line finds it on the map. It collapses to a strip, and starts collapsed below 1600 px |
+| **Map** | 25 provinces over painted terrain, the capitals with towers, forts as small towers, every province named | Drag to pan, wheel to zoom. Hovering a province shows its owner, forts and defence, and whether the focused country may attack it, and why not. A click opens its panel |
+| **Map modes** (bottom left, keys 1 to 5) | **Political**; **Armies** (colour strength by army size, counts at the capitals); **Forts**; **Reach** (who can attack what: a chosen country's legal attacks, hatched, each with the share of dice rolls it wins); **Terrain** (the painting alone) | A legend sits above them |
+| **Province panel** | Owner, defence and what makes it up, income, borders, the line a model reads when this province is a target, the focused country's moves here or why not, and the province's history | In rule mode each move it offers has an **Order** button |
+| **Country panel** | The ruler: the persona, its description from `Personas.cs`, its two faces (pick one), the model and provider config. Then the standing facts it reads every turn, word for word; the treasury; the moves it is offered and those it is not, with reasons; and its decisions | A decision opens in the inspector |
+| **Diplomacy** (key D) | A 5 × 5 matrix: war since a turn, truce with turns left, or peace, and whether the two share a border | Each cell's tooltip says what either side may do |
+| **Chronicle** (right, key C) | A compact ledger by turn: a crest, the line the game writes, a tag (land, guard, refused), and the ruler's words under it | Filters by country and by kind. A click finds the place on the map and opens the decision. The quote-mark button hides the rulers' words |
+| **Speech** | A small banner at the speaker's capital: the persona's face, the country's colour, the name and persona, the line | It stays on the capital through pan and zoom. A click opens the decision |
+| **Decision inspector** | See below | Opens from a chronicle line, a banner, a country panel or advise mode |
+
+### The decision inspector, the showcase
+
+Six numbered sections. Under each, in small code type, are the names of the framework fields it
+shows:
+
+1. **What the model answered**: the raw JSON in its field order (action, target, statement).
+   For a contained decision, it also says that the agent ran `none` and showed no statement.
+2. **The moves it was offered**: each offered move as a chip, with its choice outlined, then
+   what was **not** offered and the reason for each (`TargetsUnavailable`,
+   `ITargetAvailability`). The page computes them with its port of `Legality.WhyNot`, on the
+   state the ruler saw.
+3. **What it was told**: the standing facts (`IObservationSource`), then the stimulus and this
+   turn's facts (`ObservationPlacement.WithStimulus`), with the counsel in advise mode, and
+   anything dropped.
+4. **Guards**: `SchemaLegalityGuard`; `TargetGroundingGuard`, with the grounding share on a bar
+   against the 60% threshold and, when it fires, its reason word for word; developer guards; and
+   `Agent.Execute`'s re-check when the move landed: Done, or Refused with the reason ("we are not
+   at war with ilvar").
+5. **Memory**: exchanges sent, held but left out, and forgotten.
+6. **Model and time**: model, provider config, persona and face, tokens in and out, and a bar
+   that splits the queue wait (behind the other council calls on one model) from the model's own
+   time.
+
+Its footer says every value comes from `DecisionFeed.Recorded`, and that the game adds only the
+layout.
+
+### The three modes, as the page plays them
+
+- **Watch**: Play runs turn 12 as [a turn on screen](#a-turn-on-screen) describes:
+  - Valen's envoy and Kesh's refusal are spoken at the capitals.
+  - The attacks land in seat order. Ilvar takes Duskvale, Kesh takes Harrow, and Orsk takes
+    Ilmoor, each with the capture animation.
+  - Merrow's attack on Duskvale is then refused, because Ilvar now holds it. The arrow breaks,
+    and the chronicle strikes the line through.
+
+  Step lands one move at a time. The speed is 1×, 2× or 4×.
+- **Rule**:
+  - Pick a country. The orders panel lists only the moves the rules offer it, and a disabled
+    move's tooltip says why.
+  - Attack and Fortify ring the legal provinces on the map. Attack also switches to the reach
+    mode, which shows each target's odds.
+  - End turn resolves your order with the four model rulers' moves. Each move is re-checked as it
+    lands, so yours can make theirs stale.
+  - If you rule Kesh, Valen's envoy waits for your Accept or Refuse.
+- **Advise**:
+  - Write a line of counsel to Kesh's ruler and send it. The page shows the ruler's reply over
+    the map and opens the inspector, with your counsel in the request as a fact of this turn.
+  - The replies are scripted from keywords.
+  - Asking for war on Orsk shows the rule that matters. `declare_war orsk` was not offered,
+    because Orsk does not border Kesh: **counsel cannot make an illegal move**.
+  - End turn plays the advised move.
+
+### Two styles, one layout
+
+**Gilt**: dark panels, gold hairlines, small capitals, the map as painted. **Engraved**: ivory
+panels, dark-brown ink with red-ink accents, an engraver's typeface, and the map warmed and
+lightened beneath. The layout and the map are the same in both, and the switch is instant.
+
+### What building it taught, for the Unity shader
+
+- **Tint the hue, not the paint.** Laying the country colour over the painting with plain alpha
+  either buried the terrain or left the five colours too weak to tell apart; the page tried
+  both. A hue-and-saturation replace (CSS `mix-blend-mode: color`) recolours the painting and
+  keeps its light and shade, so the mountains and forests read through every country. The ink
+  (borders, the pooled edge, hatching) goes on a second layer with normal blending. The Unity
+  shader should do the same: a `color`-style blend for the wash, alpha for the ink.
+- **The province map can be made from the rule graph by a script.** The page's 25 provinces
+  are a 5 × 5 grid warped with noise: four vertical and four horizontal curves, none crossing
+  another of its own kind, cut by the painted coastline. A last pass fixes the odd pixel where
+  two diagonal provinces touch. Checked against the rules, the adjacency matched exactly. That
+  proves the editor tool [the art approach](#the-art-approach-for-unity) proposes. The script is
+  `.scratch/strategy-stage3/build_idmap.py` on the machine that made it; the province map
+  itself is inside `index.html`.
+- **Country borders redraw themselves**, from a distance field to the pixels whose neighbour
+  has another owner. They are recomputed once a capture settles.
+- **The CPU is fast enough here.** The page composes 1.6 million pixels on the CPU in about
+  40 ms, so the GPU will not notice the work.
+
+### Text-to-speech, later
+
+The lead plans to give the rulers voices. It is not designed here. Two notes for when it is:
+the voice follows the persona, as the face does, and the banner's reading time (1.5 s plus
+40 ms a character) becomes the line's spoken length.
+
+### What round 2 changes in the rest of this page
+
+- **Superseded:** the round-1 interface (the regions table below, and images 5 to 7, now
+  deleted), the round-1 recommendation of look A, the name pick (Inkwash), and the four
+  questions the lead answered.
+- **Still the design:** how the colour change should feel and its timings, a turn on screen,
+  what each mode is for, statements and the chronicle, court scenes, and the art approach, now
+  with the tint lesson above.
+- **Image 8**, the court scene, stays as the mood for court scenes, though it is drawn in look A.
+- **Assets:** the map is one painting with dense terrain (`ui/map.jpg` is a draft). Portraits
+  are two or more faces for each of the five personas, ten to start (`ui/portraits.jpg`
+  holds ten drafts), and not five countries × three moods.
+
+## The mock-ups (round 1)
+
+Eight images were made with an image model on 11 November; images 5 to 7, the round-1
+interface, are deleted (see round 2). **They are drafts, not art**: generated
 images stay drafts until a person puts them in a game.
 
 | # | Image | Shows |
@@ -25,9 +204,7 @@ images stay drafts until a person puts them in a game.
 | 2 | [`2-look-storybook.jpg`](grey-box-strategy-screen/2-look-storybook.jpg) | **Look B, bright storybook map.** The same moment with bright washes, painted trees, hills and a sea serpent |
 | 3 | [`3-look-sea-chart.jpg`](grey-box-strategy-screen/3-look-sea-chart.jpg) | **Look C, dark aged sea-chart.** Jewel washes on dark vellum, gold-leaf country borders, brass and leather panels |
 | 4 | [`4-capture-sequence.jpg`](grey-box-strategy-screen/4-capture-sequence.jpg) | **The centrepiece in four steps**, look A: strike, fall, spread, settle |
-| 5 | [`5-capture-moment.jpg`](grey-box-strategy-screen/5-capture-moment.jpg) | **The centrepiece on the full screen**, look A: the map dimmed around one province, the colour mid-spread, the score ticking, the chronicle's new line |
-| 6 | [`6-mode-rule.jpg`](grey-box-strategy-screen/6-mode-rule.jpg) | **Rule mode**, look A: the player's council, legal targets ringed on the map, a move that is not offered and why |
-| 7 | [`7-mode-advise.jpg`](grey-box-strategy-screen/7-mode-advise.jpg) | **Advise mode**, look A: the player's counsel, the ruler's answer, and why it made its move |
+| 5–7 | *deleted* | The round-1 interface (the capture on the full screen, rule, advise), superseded by round 2's page |
 | 8 | [`8-court-truce.jpg`](grey-box-strategy-screen/8-court-truce.jpg) | **A court scene** for a truce, over the dimmed map |
 
 ![Look A, the recommended look](grey-box-strategy-screen/1-look-sepia-atlas.jpg)
@@ -41,25 +218,23 @@ images stay drafts until a person puts them in a game.
   four orthogonal neighbours. The images draw more than 25 shapes in places, and diagonal
   provinces touch. [The art approach](#the-art-approach-for-unity) says how the real map keeps
   the rule graph exactly.
-- Province counts in the images do not add up to the strip's counts, and the counts in image 6
-  (turn 9) are not a real game.
-- Image 7's "Advice heard: yes" is not something the framework can know. The real card shows
-  the counsel as it was sent in the request (see [advise](#3-advise)).
-- Image 7 drops the capital names, and its arrow points at Merrowdeep while the card says
-  Templegate.
+- Province counts in the images do not add up to the strip's counts.
 - The line at Keshtar in images 1 to 3, "Harrow must bleed for daring to stand near our sacred
   soil", is real: kesh, the proud ruler, said it in the persona 4b table's seed 4. Every other
   line is written for the mock-ups.
 
-**Recommended look: A, the sepia atlas**, with B's clarity in one respect, the labels and
+*Superseded: the lead chose C.* Round 1 recommended **A, the sepia atlas**, with B's clarity in one respect, the labels and
 panels. A is the lead's brief taken literally: paper, ink, watercolour. Its muted washes leave
 room for the capture to be the brightest thing on screen (a fresh wash can be painted a little
 more saturated, then dry to the muted tone). B reads fastest, but its painted terrain competes
 with the colour for the eye, and its bright washes leave the capture nowhere brighter to go. C is
 the most dramatic, but the dark sea and gold borders make five colours harder to tell apart, and
-its leather panels are the most art to make. Images 4 to 8 are drawn in look A.
+its leather panels are the most art to make. Images 4 and 8 are drawn in look A. Round 2 answers
+the colour worry: a hue-only tint keeps five colours apart on the dark chart.
 
-## The screen's regions
+## The screen's regions (round 1, superseded)
+
+*Replaced by [round 2's screen](#the-screen). Kept for the record.*
 
 Drawn in image 1. 16:9, laid out for 1920 × 1080, and it must stay legible at 1280 × 720.
 
@@ -159,7 +334,7 @@ the controls, and what waits for the player.
 
 ### 1. Watch
 
-Five model rulers play; the player watches (images 1 to 5). Pause, step one move, and three
+Five model rulers play; the player watches (round 2's screenshots 01 to 04). Pause, step one move, and three
 speeds. Pausing also pauses the council, so a paused game asks no model. Every banner, chronicle
 line and seal opens its Why card. A table is chosen before the game: the model for each seat and
 whether personas are on, as `Tables.Named` already defines them, so a viewer can set the 4B
@@ -170,7 +345,7 @@ every capture plays the sequence above.
 
 ### 2. Rule
 
-The player rules one country against four model rulers (image 6). The side column becomes **your
+The player rules one country against four model rulers (screenshots 05 and 10). The side column becomes **your
 council**: the country's figures, then the moves it is offered, which are **the same list the
 models are offered**, from the same `Legality.WhyNot`. A move that takes a target rings the
 legal targets on the map with a dashed gold line; hovering one says what it would be ("Attack
@@ -190,7 +365,7 @@ the models were offered on the same state.
 
 ### 3. Advise
 
-The player is the counsellor of one model ruler (image 7). Each turn, before the council, the
+The player is the counsellor of one model ruler (screenshot 06). Each turn, before the council, the
 player may write one line of counsel in a box across the bottom of the map; leaving it empty is
 fine. **The counsel goes into that ruler's call** as a fact of this turn, after the stimulus
 (`ObservationPlacement.WithStimulus`, #239), marked as the counsellor's. The ruler then decides
@@ -211,7 +386,7 @@ the mode still works as theatre, but the Why card must not claim influence it ca
 ## Statements over the map and in the chronicle
 
 **Over the map.** A statement rises as a ribbon banner from the speaker's capital, in the
-country's colour, with the ruler's round portrait at the left end (images 1, 5 and 6). Rules:
+country's colour, with the ruler's round portrait at the left end (screenshots 01 and 06). Rules:
 
 - One banner at a time at 1×, shown as its move lands: 1.5 s plus 40 ms a character (about 4 s
   for a 15-word persona line), skippable with a click. At 2× and 4× a banner shrinks to the
@@ -378,19 +553,19 @@ The demo will not look grey-box, so it gets a name of its own. Five proposals:
 | **Border & Brush** | Territory and paint in three words; playful, and a little harder to say |
 | **Five Thrones** | Says five rulers at one table, the framework's agents. (Not "Five Crowns", which is an existing card game) |
 
-**Pick: Inkwash.** It names what the lead wants to feel best, it fits look A, it is short enough
-for a folder (`Demos/Inkwash/`) and a menu (`Inkwash → Play 200 games`), and it does not tie the
-game to kings if a republic like Orsk is ever the hero. Renaming the folder and the issue
-follows the lead's choice, not this page.
+**The lead chose Painted Realm** (11 November), for now. Round 1 picked Inkwash. The folder
+and the issue are renamed only when the name is final.
 
 ## Open questions for the lead
 
-1. **Which look?** A (sepia atlas), B (storybook) or C (sea-chart). Recommended: A.
-2. **Which name?** One of the five, or another. Recommended: Inkwash.
-3. **Terrain on the land?** None (A), a little (only the corner landmarks), or a lot (B).
-   Recommended: a little.
-4. **A capture at 1× takes 2.4 s.** Right, slower, or faster?
-5. **Court scenes for accepted peace only, or for declarations of war too?**
-6. **Does a portrait belong to the country or to the persona?** Personas rotate across seats, so
-   "proud Kesh" in one game is "merchant Kesh" in the next. Recommended: the persona, so the
-   face matches the voice.
+Answered in round 1: the look (C), the name (Painted Realm, for now), terrain (a lot) and
+portraits (by persona, with several faces each). Still open, each answerable in a word or by
+pointing at a screenshot:
+
+1. **Which style?** Gilt (screenshot 01) or Engraved (screenshot 08).
+2. **A capture at 1× takes 2.4 s** (screenshots 02 and 02b). Right, slower, or faster?
+3. **Court scenes for accepted peace only, or for declarations of war too?**
+4. **Is the screen's density right?** More, the same, or less.
+5. **Is the country colour's strength right** (screenshot 01)? Stronger, the same, or lighter.
+6. **Is the decision inspector for every player, or behind a toggle for developers?**
+   Recommended: every player. It is the showcase.
