@@ -10,6 +10,7 @@ decision. Stage 2 puts a framework `Agent` in one seat and measures a model ther
 scripted AI; [its results are below](#stage-2-a-model-plays-a-country). Any seat can now be a
 model, a script or random, with personas; [the table of models](#models-at-one-table) scores them.
 Stage 3, the map and the screen, has begun: [watch mode plays back a recorded game](#the-screen-watch-mode-playing-back-a-recorded-game).
+A [storyteller](#storyteller) that invents the game's events is built as an arm, `+storyteller`, and measured against the random event table.
 
 ## Play it
 
@@ -119,7 +120,8 @@ modifiers after a `+`: `+paired` (the paired schema), `+listed` (`PerTarget`), `
 alternatives the provider reports a token), as in `control+paired+no-grounding`. Four more change
 the prompt for gaps N8 and N9: `+no-moves-line` (the game's moves line off), `+moves-sentence` (the
 framework writes the moves as one line among the facts, `LegalTargets = ObservationLine`), and
-`+how-it-reads` and `+own-words` (`StatementRulesWording`). A model run writes everything a scripted run writes, and adds three things:
+`+how-it-reads` and `+own-words` (`StatementRulesWording`). `+storyteller` puts the
+[storyteller](#storyteller) in place of the random event table (`+inspiration-<n>`, `+no-inspiration`). A model run writes everything a scripted run writes, and adds three things:
 
 - the model's own table in `summary.md`;
 - `model.csv`, every model decision with its latency, guard and execution;
@@ -127,9 +129,10 @@ framework writes the moves as one line among the facts, `LegalTargets = Observat
 
 Each game log shows the model's answer and its statement under each of its moves.
 
-**Tests:** 99 EditMode tests in `Assets/GreyBoxStrategy/Tests/Editor/`, about 5 seconds once the
-project has imported. Twenty of them drive the model seat through `ScriptedProvider`, and
-sixteen in `TableTests` the table, the personas and the scorecard.
+**Tests:** 123 EditMode tests in `Assets/GreyBoxStrategy/Tests/Editor/`, about 5 seconds once the
+project has imported. Twenty of them drive the model seat through `ScriptedProvider`,
+sixteen in `TableTests` the table, the personas and the scorecard, and fifteen in `StorytellerTests`
+the storyteller. The screen has its own in `Screen/Tests/Editor/`.
 
 ## The first real run
 
@@ -548,7 +551,7 @@ country. Over 20 games, each persona plays every country and, at the mixed table
 
 ### The scorecard
 
-`Scorecard` computes five sections from the game logs and decisions alone, never from what a
+`Scorecard` computes five sections (six with the [storyteller](#storyteller)'s events) from the game logs and decisions alone, never from what a
 player says of itself. Every run writes `scorecard.md` (with a one-line reason for each number),
 `scorecard.csv`, and `scorecard-games.csv`, one game a row.
 
@@ -709,6 +712,227 @@ model in `summary.md`, the scorecard files, `games.csv`, `model.csv`, `decisions
 logs. From the editor: `StrategyTableMenu.Start(table, model, model2, arm, games, firstSeed,
 personas)`.
 
+## Storyteller
+
+Stage S1 of the research page's storyteller ([`painted-realm-research.md`](../../docs/demos/painted-realm-research.md#1-a-storyteller-that-creates-events),
+design A), built in the demo only, with no framework change. **An arm, off in `default`:** `+storyteller`.
+
+**What it is.** One more framework `Agent`, `Storyteller`, with no body (DR-011). Before each turn's
+upkeep from turn 3 the game asks it once, alone, on the state the last turn left: *"Turn 7. What
+happens?"* It answers with one of the game's effect templates and a target, or `none`, and writes
+the title and the story in its statement (*"The Golden Star: A meteor of gold fell in the hills of
+valen."*). The game does everything else.
+
+| Template | Takes | What the game applies |
+|---|---|---|
+| `windfall` | a country or a group | + gold, one turn's income, 20 to 60 |
+| `bad_harvest` | a country or a group | its income halved this turn |
+| `plague` | a country or a group | − 15% of the army, at least 3 |
+| `volunteers` | a country | + soldiers, 5 + 3 a province, at most 30 |
+| `zeal` | a country or a group | + 1 stability |
+| `unrest` | a country | − 1 stability, and no recovery at that upkeep |
+| `stronghold` | a province | + 1 fort there |
+| `walls_crumble` | a province | − 1 fort there |
+
+Targets are the living countries (category `country`), six groups (`group`: `everyone`,
+`the_north` valen and orsk, `the_south` kesh and ilvar, `the_leader` and `the_weakest`, whoever alone
+holds the most and the fewest provinces, `all_at_war`), and the provinces somebody holds
+(`province`). Each is an `IDescribedTarget`; the schema is paired. `desertion` and a `discovery`
+were left out: one is `plague` again, the other `windfall` again, and nothing lasting fits without
+the fact ledger.
+
+**Fair by availability.** Every rule is `EventRules.WhyNot`, the storyteller's per-target check
+(`IsAvailableFor`) and the re-check when the event lands at upkeep:
+
+- none before turn 3;
+- a budget: a country whose events over the last 6 turns are worth +60 gold or more gets no gift,
+  −60 or less no blow (soldiers count at 2 gold, stability at 20, a fort at 30);
+- no gift to a country at 12 provinces or more, no blow on one with fewer than 3;
+- a sickness only on an army of 20 or more, unrest only at stability 3 or more, no fort falls in a
+  capital;
+- cooldowns: a template not again within its last 4 events, a target not twice in a row, a
+  country not struck twice in a row through one of its provinces, and no third blow (or gift) in a
+  row;
+- a group is open only when every member is.
+
+Nothing in the list takes a province or a capital, so no event can end a country or win the game.
+
+**The story check** is in the game (`EventRules.CheckStory`), because a framework guard can keep or
+contain the whole decision but not replace the statement alone (gap 4). The statement splits at its
+first colon into title and story. A story that names a country the event did not reach, or a
+province of one, that holds a digit, or that runs past 70 words, is replaced by the template's own
+line, and the effect stands. `StoryVerdict` says what happened.
+
+**What the rulers read**, in the game's words, among this turn's facts:
+
+| Who | Priority | Line |
+|---|---|---|
+| a country hit | 1 | `Event "The Golden Star": a windfall of 30 gold reached our treasury.` |
+| everyone else | 3 | `News: valen received a windfall of gold ("The Golden Star").` |
+
+They read the title, never the story (an S2 arm). The game log, `events.md` and `events.csv` keep
+both.
+
+**What the storyteller reads.** Its statement rule: *"A title of two to five words, a colon, then one
+or two sentences telling what happened, as in "Title Of The Event: what happened to whom." Name only
+the country or province it strikes. No numbers."* Its identity (*"The Chronicler"*, a wry chronicler of fortune and
+calamity; goals: memorable and different, fair to those falling behind), the eight templates as its
+actions with their effects, the targets, and standing facts: the turn, every country's standing,
+`Events open now: windfall on kesh, merrow or the_weakest; ...` (the rulers' moves line, for the same
+reason, N1), `Told so far:` its last five events by title, template, target and turn (not its
+replies: no memory, gap 6), and `Inspiration, if you want it: a drowned bell, wolves.`, two of 64
+images drawn from the seed and the turn (`+inspiration-<n>` draws others, `+no-inspiration` drops it).
+Temperature stays 0, on the rulers' provider.
+
+**With the arm on, the random event table is off** (`Game.EventTable`), so the storyteller's one
+event a turn replaces the harvests, bandits and unrest rather than adding to them. `Game.QueueEvent`
+throws if the table is on, and the table cannot be switched on with an event queued. Table events
+are recorded in the same ledger (`TurnReport.Events`), so both arms are scored alike.
+
+**Run it** as any table, with the arm: `-strategyArm default+storyteller` (stage 2's single-seat runs ignore it). Several arms on the same
+seeds, interleaved in blocks, in one editor:
+
+```bash
+Unity.exe -batchmode -nographics -projectPath Demos/GreyBoxStrategy -executeMethod GreyBoxStrategy.Editor.StrategyTableMenu.RunInterleavedFromCommandLine -strategyTable personas -strategyModel qwen3.5:4b -strategyArms "default;default+storyteller" -strategyArmNames "control;storyteller" -strategyGames 20 -strategySeed 1 -strategyBlock 5 -strategyOut <folder> -logFile run.log
+```
+
+Each arm's folder gets the usual files plus `events.csv`, `events.md`, and with the storyteller
+`storyteller.csv`. The scorecard has an **events** section.
+
+### What it did: the storyteller against the random table (12 November)
+
+`personas` table, five `qwen3.5:4b` seats with personas, 20 games an arm, seeds 1 to 20, RTX 5080,
+Docker Ollama 0.40.14 over the home network, one model resident, temperature 0. Four arms
+interleaved in blocks of five seeds in one editor (00:38 to 02:03): **control** (`default`, the random
+table), **story A** (`default+storyteller`), **story B** (`+inspiration-1`, the same with other
+inspiration words), and the control again. The full method and every number are in
+[`findings.md`](../../docs/llm-wiki/findings.md), 12 November, "A storyteller in GreyBoxStrategy". A
+difference is **beyond** when `compare.py`'s 95% interval, paired by seed, excludes 0.
+
+**The control ran twice and played the same 20 games move for move**, so on this server the seeds are
+exact: every difference below comes from the arm.
+
+| Per game, mean | control | story A | story B |
+|---|---:|---:|---:|
+| events a game | 25.1 | 23.6, within | 22.1, within |
+| what they moved, gold a game | 527 | 690, **beyond** | 683, **beyond** |
+| gifts among them | 31% | 42%, **beyond** | 42%, **beyond** |
+| kinds of event a game (of 8; the table has 4) | 3.95 | 6.65, **beyond** | 6.20, **beyond** |
+| distinct kind-and-target pairs | 14.1 | 16.7, **beyond** | 15.7, within |
+| net value Gini between the five | 0.54 | 0.64, **beyond** | 0.63, **beyond** |
+| value tracks standing (r) | −0.15 | −0.37, **beyond** | −0.33, **beyond** |
+| hit rulers whose statement names the event | 21% | 29%, **beyond** | 31%, **beyond** |
+| peace offered a game | 8.05 | 11.25, **beyond** | 10.95, **beyond** |
+| words a statement | 13.6 | 12.7, **beyond** | 12.7, **beyond** |
+
+Every other liveliness number (turns, endings, wars, battles, land changing hands, quiet turns,
+lead changes, eliminations) is within noise in both, and so is every sense and voice number of the
+seats taken together, except in story B a higher idle share (10% to 15%) and more attacks on the
+weaker (63% to 69%), both just beyond. Persona still explains the play: η² of aggression 0.84, 0.81
+and 0.82. The warmonger wins 13, 12 and 15 of the 20.
+
+**The storyteller itself:** 473 and 444 calls, no illegal answer (the paired schema), no containment,
+none chosen in 0.4% and 0.7%, one unreadable reply per arm (a 20 s runaway), no event refused when it
+landed, 0.69 s median a call on about 1,340 prompt tokens. Of its stories, 4.9% and 3.4% were
+replaced (most for a number, a few for a wrong country); 45% and 44% came with no title; of the
+titles in a game, 59% and 65% were not repeated in it; 72% and 77% of titles also appear in another
+game; a story shares 18% and 16% of its two-word phrases with the game's earlier stories.
+
+**Divergence.** The two storyteller runs, same seeds, other inspiration words: 22% of provinces have
+another owner at turn 10 (sd 13), 45% at turn 20 (sd 18); 19 and 20 of 20 games differ. The control
+against its rerun: 0% and 0%.
+
+**What it shows:**
+
+- **It is livelier where it was asked to be, and costs the game nothing measurable.** Twice the
+  kinds of event, a third more weight, more gifts, and rulers who mention what hit them; the same
+  battles, conquests, wars and endings.
+- **It is a rubber band.** Its events lean against the leader (r −0.37; `the_leader` is its favourite
+  group, 56 and 61 times) and help the weak: the builder, usually the weakest seat, got +461 and +468
+  gold of events against −400 in the control, the warmonger −1,467 and −1,431 against −740. The
+  leader still wins as often.
+- **Two personas play differently, in both runs.** The builder holds far more (39% of its council
+  moves to 61% and 71%), on the turns no event reached it: gifts let it sit on a full treasury. The
+  opportunist offers peace twice as often (15% to 27% and 37%). Twenty games, five personas and some
+  twenty numbers each make a few "beyond" results likely by chance; these two replicate.
+- **Titles are the weak part.** Without an example in the rule, the 4B wrote no title in any of 62
+  events (three smoke games, two wordings); with one, about half. When it does, it often takes the inspiration words
+  ("A Drowned Bell", "A Broken Crown"), which is why titles repeat across games, or copies a title
+  from the "told so far" line, which in seed 14 of story A made "The Iron Hermit's Curse strikes
+  again" nine times. The fallback titles it reads there ("The Sickness") get copied too.
+- **The stories mostly match their effects.** One reader (this session's author, not blind) labelled
+  50 drawn at random: the right sign in 48, the right country in 47 (three name none, none names a
+  wrong one), an invented consequence in 3 (unrest told as a famine; zeal with "the flames of war
+  ignite in Valen's capital"), a wrong magnitude in 2 ("a thousand volunteers" for 20), and 6 flat,
+  reading like the effect's own description ("the_leader's income is halved this turn.").
+
+### One game: seed 4, with and without the storyteller
+
+Without it (the control, the game [above](#three-games)): kesh, the proud ruler, wins by domination on
+turn 17. With it, the same seats, the same personas, the same dice:
+
+The storyteller opens on valen, the builder: *"A blight of gray mold has stricken the fields of
+Valen, halving their income this turn"* (turn 3), then *"A Child King's Burden: The young ruler of
+Valen, burdened by the memory of a bad harvest, finds his people grumbling in the streets"* (unrest,
+turn 5). It remembers its own blight. Once kesh leads, it goes after the leader: *"A foul mist rises
+from the marshes of fenmark and sweeps over keshtar, striking the leader with a sickness"* (turn 6),
+*"A Blight Upon the Leader"* (turn 8), *"The Sickness of the Soil: Kesh's fields turn to dust, and its
+people grumble at the leader's greed"* (turn 10). Kesh answers in character, raising taxes "to fund
+our vengeance against those who stole our land", and fortifies fenmark "to withstand the coming
+storm while our treasury bleeds". By turn 20 kesh and merrow hold 10 provinces each, and the
+storyteller strikes whichever leads: *"A Locust Swarm: The great harvest of Merrow is swallowed by the
+sky"* (turn 13), *"A White Stag: The leader merrow suffers a bad harvest"* (turn 18). Meanwhile it keeps
+valen alive on one province: volunteers on turns 14, 19, 24 and 29, *"A golden meteor streaks across
+the northern sky, raining sudden wealth upon Valen's single province"* on turn 16. Valen reads the
+news and waits: *"We save our gold while Kesh's sickness and Merrow's famine weaken their resolve"*,
+*"We hoard the windfall and wait for Orsk's unrest to turn into an army"*, and on turn 29, with the
+storyteller's *"A Broken Crown"* on kesh the turn before, *"We attack Westmarch while Kesh's broken
+crown weakens their resolve."* Ilvar, the warmonger, is out on turn 17. Nobody reaches 15: orsk, the
+opportunist, wins at the turn limit with 7, level with merrow on provinces; kesh 6, valen back to 5.
+
+It reads like a game with a narrator: a leader brought low by a run of bad luck, a small king kept
+alive by miracles and talking about everyone else's misfortunes. What breaks it: the narrator is
+monotonous in its targets (the leader, again), half its events carry the template's own title, and
+two zeals and two unrests lost their stories to the number check ("stability drops to 3").
+
+**The best event seen:** *"A Weeping Statue: The ancient stone figure in Merrow's capital, once silent,
+now sheds tears of black ink that poison the well water."* (unrest on merrow, story A, seed 14, turn
+11). **The worst:** *"A Silver Mine: the people of kesh dig up a fortune in gold."* (the same game,
+turn 16), which is the story of a windfall, told for an unrest: kesh lost a point of stability while
+its ruler read about a fortune.
+
+### What the framework lacked, by the research page's numbers
+
+- **1, one target per decision: hit, and the workaround held.** Six groups as targets of their own,
+  with members in the description; 111 and 120 group events, `the_leader` most. No API wanted yet.
+- **3, one free-text field: hit hard.** The 4B ignored "a short title, a colon, then..." in 62 of 62
+  events under two wordings, and with an example in the rule still left out half the titles. A second text field (a
+  title) is now the gap with evidence behind it.
+- **4, a guard cannot keep the move and replace the statement: hit.** The story check runs in the
+  game when the event lands; 23 and 15 replaced stories are invisible to the framework's telemetry,
+  which calls those decisions clean.
+- **6, remembering as a list: hit.** `Memory = null` and a "Told so far" line work, but the 4B copies
+  titles from that line ("The Iron Hermit's Curse strikes again" nine times in one game), and the
+  game's own fallback titles there get copied as the model's. A list of moves, not of words, would
+  avoid both.
+- **8, fairness and cooldowns written by every game: hit.** `EventRules.WhyNot` is the budget, the
+  weak and the leader, four cooldowns and the gift-and-blow streak, all through `IsAvailableFor`, as
+  the research page expected. The first live game showed why the streak rule is needed: under a
+  three-event cooldown alone the 4B cycled plague, bad harvest, unrest, volunteers for 21 turns.
+- **9, no measure of variety: hit.** Built in the demo's scorecard (the events section), as the page
+  said to.
+- **2 (strength), 5 (the fact ledger) and 7 (sampling per agent): not needed in S1.** Strength is the
+  game's; no effect lasts past its upkeep; temperature stayed 0, and the inspiration line alone made
+  45% of the map differ by turn 20.
+- **New, N11: the same moves-line workaround for a second agent.** The storyteller needs an "Events
+  open now" line among its facts for the same reason the rulers need theirs (N1, N8): the paired
+  schema holds the grammar, but a local model reads only the prompt.
+- **New, N12: a reply that runs away.** One storyteller call per arm (of about 460) took 20 s and came
+  back unreadable; nothing caps a reply's length per call.
+
+The screen's replay (`ReplayBuilder`) does not know storyteller events: a storyteller game's forts and
+armies would not rebuild. That is the screen's to add when it wants one.
+
 ## What the framework lacks for this game
 
 Checked against #216 on 10 November 2026, from building stage 1, reading the code on `test`, and
@@ -822,6 +1046,10 @@ Found by stage 2, from the runs above:
   never fires here, because the game refuses a move that an earlier one broke before it asks the
   seat. Two smaller misfits: a round holds an agent once (a second peace offer needs a second
   round), and two models at one table are two provider queues against one server.
+- **N11 and N12, from the storyteller** (12 November): a second agent that needs the moves-line
+  workaround, and a reply that runs away. They are in
+  [the storyteller's gap list](#what-the-framework-lacked-by-the-research-pages-numbers), beside the
+  research page's gaps 1, 3, 4, 6, 8 and 9 that it hit.
 - **Item 1 (examples with their situation), still confirmed:** stage 2 registers no examples,
   because with the same question every turn no stimulus-only example could show when to choose an
   action.
@@ -912,12 +1140,12 @@ is covered by a review of the code, not yet by a live run.
 Assets/GreyBoxStrategy/
   Sim/                GreyBoxStrategy.Sim (noEngineReferences: true): no UnityEngine at all
     Rules/            Dice, GameRules, MapDefinition, World, Move, Legality, Facts, Requests, Game,
-                      TurnSnapshot
+                      TurnSnapshot, Events (the storyteller's templates, groups and fairness rules)
     Players/          IPlayer, ScriptedPlayer and Temperament, RandomPlayer
-    Runner/           GameRunner and Lineups, SeriesSummary, GameLog and StrategyRuns, Scorecard
+    Runner/           GameRunner and Lineups, SeriesSummary, GameLog and StrategyRuns, Scorecard, EventLog
   Agents/             GreyBoxStrategy (refs Agenerela, GreyBoxStrategy.Sim): CountryAgent, the model seat;
                       ModelGameRunner (one DecisionRound a council) and ModelReport; ModelSeatOptions,
-                      the A/B arms; Personas; TableRunner, the table of models
+                      the A/B arms; Personas; TableRunner, the table of models; Storyteller
   Editor/             GreyBoxStrategy.Editor: the menus and the CLI entry points
   Tests/Editor/       GreyBoxStrategy.Tests.Editor
   Screen/             GreyBoxStrategy.Screen: the screen (namespace GreyBoxStrategy.Realm)

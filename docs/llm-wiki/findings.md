@@ -3596,3 +3596,108 @@ copies more and may be helped or hurt more; and a grievance measure that also re
 Each remembered stimulus already carries the next turn's facts ("Our attack on ashby failed"), so
 this game always remembered part of each outcome. Raw data: `.scratch/244-memory-outcomes/runs/full-4b/`
 in the lead's laptop checkout (worktree `wonderful-kilby-ef674e`).
+
+### A storyteller in GreyBoxStrategy: twice the kinds of event, games that diverge, no cost to the game; it leans against the leader, and the 4B leaves out half its titles (12 November 2026)
+
+**What.** Stage S1 of the storyteller (`docs/demos/painted-realm-research.md`, section 1, design A),
+in the demo only: one more `Agent` with no body, asked once a turn before upkeep from turn 3, whose
+actions are eight effect templates and whose targets are the five countries, six groups and the held
+provinces, with the paired schema and every fairness rule as per-target availability. The game sets
+the strength, checks the story, applies the effect and tells the rulers the title (never the story).
+It replaces the random event table. GreyBoxStrategy's `personas` table, five `qwen3.5:4b` seats,
+seeds 1 to 20, seats and personas rotating, the demo's `default` seat. Four arms interleaved in four
+blocks of five seeds, the order rotating: **control** (`default`, the random table), **story A**
+(`default+storyteller`), **story B** (`+inspiration-1`: other inspiration words, nothing else), and
+the **control again**. RTX 5080, Docker Ollama 0.40.14 over the home network, one model resident,
+one client, temperature 0, 12 November 00:38 to 02:03 (5,048 s). A difference is beyond noise only
+when `compare.py`'s 95% interval, paired by seed, excludes 0. The 2B was not run (game runs are 4B
+only).
+
+**Why.** The lead wants the model to create events with bonuses and minuses for countries, to make
+each run unique. The research page asked for this A/B before any framework work.
+
+**Before the run, three fixes from two smoke games and a probe** (the same model and server, not
+measurements): under a three-event template cooldown the 4B cycled plague, bad harvest, unrest and
+volunteers for 21 turns, three blows to each gift, so the cooldown became four events with no third
+blow or gift in a row; unrest was undone by the same upkeep's recovery and now blocks it; and the 4B
+wrote no title in any of 62 events under two wordings of the statement rule. Replaying five logged
+requests with three wordings: no title in 5 of 5 without an example, in 5 of 5 with
+`Format: <Title>: <story>`, a title in 3 of 5 with an example (`as in "Title Of The Event: what
+happened to whom."`), which the arm uses.
+
+**The control ran twice and played the same 20 games move for move** (0% of provinces differ at
+turns 10 and 20), so on this server the seeds are exact and every difference is the arm's.
+
+| Per game, mean (sd) | control | story A | story B |
+|---|---:|---:|---:|
+| events a game | 25.1 (8.6) | 23.6 (4.3), within | 22.1 (4.4), within |
+| event value a game, gold, unsigned | 527 (205) | 690 (127), **+163, +50 to +277** | 683 (186), **+156, +27 to +286** |
+| gifts share | 31% | 42%, **+11, +5 to +16** | 42%, **+10, +5 to +16** |
+| distinct templates a game | 3.95 | 6.65, **+2.70, +2.32 to +3.08** | 6.20, **+2.25, +1.88 to +2.62** |
+| distinct template-target pairs a game | 14.1 | 16.7, **+2.55, +0.50 to +4.60** | 15.7, within |
+| net value Gini | 0.54 | 0.64, **+0.10, +0.05 to +0.15** | 0.63, **+0.09, +0.04 to +0.14** |
+| value tracks standing (r) | −0.15 | −0.37, **−0.22, −0.37 to −0.06** | −0.33, **−0.18, −0.32 to −0.04** |
+| hit rulers naming the event | 21% | 29%, **+8, +1 to +15** | 31%, **+9, +2 to +16** |
+| peace offered a game | 8.05 | 11.25, **+3.20, +0.10 to +6.30** | 10.95, **+2.90, +0.06 to +5.74** |
+| final map Gini | 0.54 | 0.53, within | 0.58, **+0.05, +0.01 to +0.08** |
+| words a statement | 13.6 | 12.7, **−0.92, −1.21 to −0.63** | 12.7, **−0.93, −1.23 to −0.62** |
+| idle share (all seats) | 10% | 13%, within | 15%, **+5, +0 to +9** |
+| aims at the weaker | 63% | 66%, within | 69%, **+6, +1 to +11** |
+
+Within noise in both storyteller arms: turns, endings, wars, peace made, battles and provinces
+changing hands a turn, land taken from a country, quiet turns, lead changes, eliminations; illegal
+answers, containments, refusals, attack win rate, answering an attack, accepting peace; statements
+given, repeated word for word, names its target (72% against 66% and 66%), contradicts its move (19%
+against 24%), claims of land taken; invented grievances fell slightly (beyond, under 1 point). η² of
+aggression by persona: 0.84, 0.81, 0.82. Warmonger wins: 13, 12, 15 of 20.
+
+*Event value* counts soldiers at 2 gold, stability at 20, a fort at 30. *Net value Gini* is the mean
+absolute difference over twice the mean absolute value, so blows count. *Value tracks standing* is,
+within a game, the correlation between what an event was worth to a country and its provinces then
+against the living mean. *Hit rulers naming the event*: of model rulers hit, those whose statement
+on that turn's council holds a word of four letters or more from the title, or a word of the kind
+(harvest, plague, fever...); the table's events have no title, so the control is scored on the kind
+alone, which favours it.
+
+**The storyteller's own numbers** (story A / story B): 473 / 444 calls; no illegal answer; no
+containment; `none` 0.4% / 0.7%; one `UnreadableReply` each after about 20 s; no event refused when
+it landed; median 0.69 s a call on about 1,340 prompt tokens (the rulers' median stayed 0.45 s).
+Stories replaced by the game's check 4.9% / 3.4% (16 / 10 for a digit, 7 / 5 for naming a country the
+event did not reach). No title 45% / 44%. Titles not repeated within their game 59% / 65%; titles
+that also appear in another game 72% / 77%. A story shares 18% / 16% of its two-word phrases with the
+game's earlier stories. Targets: 340 / 293 countries, 111 / 120 groups (`the_leader` 56 / 61), 20 /
+28 provinces. Template mix, story A: bad harvest 98, volunteers 92, unrest 91, plague 83, zeal 51,
+windfall 36, stronghold 18, walls crumble 2.
+
+**Divergence**, story A against story B, the same seeds: another owner in 22% (sd 13) of provinces at
+turn 10 and 45% (sd 18) at turn 20; 19 and 20 of the 20 games differ. The control against its rerun:
+0% and 0%.
+
+**Fairness, by persona** (net event value over the 20 games): the builder, usually the weakest seat,
+−400 under the table, +461 and +468 under the storyteller; the warmonger, who wins most games, −740
+against −1,467 and −1,431.
+
+**Two personas change, in both storyteller runs:** the builder holds 39% of its council moves under
+the table and 61% and 71% under the storyteller (beyond), almost all on turns no event reached it
+(65% and 78% against 42%); the opportunist offers peace in 15% against 27% and 37% (beyond). With
+five personas and about twenty numbers each, single "beyond" results are expected by chance; these
+two are each beyond in both runs. A likely reading for the builder: gifts fill a treasury its
+persona prefers to keep.
+
+**50 events labelled by one reader** (this session's author, not blind to the arm, model statements
+before the check; `.scratch/storyteller-s1/labels.md`): the right sign 48, the right country 47
+(none named 3, a wrong one 0), an invented consequence 3, a wrong magnitude 2, flat, reading like
+the effect's own description, 6.
+
+**So.** The storyteller does what the research page hoped on every measure from the logs: varied
+within a game, divergent between runs of a seed, noticed by the rulers, with no measured cost to the
+game's liveliness or the rulers' sense, at 0.7 s a turn. It is not neutral: it hits the leader and
+helps the weak, and it changes how the builder and the opportunist play. Its titles are the weak part:
+half missing, the rest often the inspiration words or a title copied from its own "told so far" line
+("The Iron Hermit's Curse strikes again" nine times in one game). It stays an arm, off in `default`;
+S2 starts with the titles.
+
+**What would change this.** A blind read by people (the research page's fun test, not run); the
+titles fixed and re-run; the 2B; a storyteller persona, or a storyteller on its own provider at a
+higher temperature (gap 7). Raw data: `.scratch/storyteller-s1/runs/ab/` in the short-path worktree
+`C:\Unity_Projects\wt-st` on the lead's laptop (smoke games, the title probe and the labels beside it).
