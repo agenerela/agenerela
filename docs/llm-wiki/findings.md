@@ -3596,3 +3596,147 @@ copies more and may be helped or hurt more; and a grievance measure that also re
 Each remembered stimulus already carries the next turn's facts ("Our attack on ashby failed"), so
 this game always remembered part of each outcome. Raw data: `.scratch/244-memory-outcomes/runs/full-4b/`
 in the lead's laptop checkout (worktree `wonderful-kilby-ef674e`).
+
+### Two 4B-class candidates against `qwen3.5:4b`: Gemma 4 E4B ties it at choosing and at the strategy table, in shorter lines but worse on impossible requests; Nemotron 3.5 Bolt E4B plays a passive game and repeats itself (11 and 12 November 2026)
+
+**The question.** Is `gemma4:e4b-it-qat` or `nemotron-3.5-bolt:e4b` worth using in place of
+`qwen3.5:4b`, the model the team leans on? Above all, for GreyBoxStrategy's rulers. They were the
+first two arms that `model-candidates.md`'s 4B-class section recommended (#252).
+
+**What was run.** One session on the RTX 5080 box (Docker Ollama 0.40.14, over the home network),
+with `qwen3.5:4b` re-run as the control in the same session. One model was resident at a time, and
+the others were unloaded before each run. Temperature 0, `think: false`, num_ctx 4096, 20
+alternatives a token.
+- **Pre-checks**, 19:59 to 20:03 on 11 November: load, residency, thinking, field order and token
+  probabilities, nine requests a model.
+- **The evaluation sets**, through the model-sweep kit and `EvalRunner`, with the framework at
+  origin/test 429000a. Interim 389 from 20:03 to 21:15, curated 76 from 21:15 to 21:23. The arms
+  `idle-profile` (the defaults) and `idle-none` were interleaved; only `idle-profile` is scored
+  below.
+- **GreyBoxStrategy's `personas` table**, `default` arm, 20 games from seed 1, at origin/test
+  469c900, from 23:41 on 11 November to 00:38 on 12 November. One lock a table, with the other
+  models unloaded before each (`resident.txt` per run).
+
+**Pre-checks: both candidates pass.**
+- **Load.** Both load on 0.40.14. Gemma's first request took 22 s, Bolt's 6 s; after that about
+  0.4 s each.
+- **Thinking.** `think: false` left no `thinking` text and no thought markup on either model, on
+  9 requests of 9. The field order was action, target, statement on 9 of 9.
+- **Token probabilities come back, and they are from before the grammar mask.**
+  - The first check asked "Attack the scarecrow.", where the scarecrow is not a listed target. It
+    read both Bolt variants as after the mask, because the forbidden alternatives rounded to
+    p 0.0.
+  - A sharper check settled it. The target enum leaves out the target the stimulus names, and the
+    action is forced. On every model, nearly all the probability at the target value's first token
+    sat on the unlisted target the model wanted: "wolf" 0.9997 to 1.0, "campfire" 0.96 to 0.9995.
+    The mask then forced a listed value.
+  - So the numbers are from before the mask, as on `qwen3.5:2b` (27 October).
+- **Resident, as `/api/ps` reports it.** Gemma 2,969 MB at the pre-check and 3.1 GB at the table,
+  all on the GPU. The control 2,995 MB.
+- **Bolt's 950 MB reading is wrong.**
+  - Its text GGUF (`hf.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB:Q4_K_M`, pulled as the fallback
+    and run in the pre-check only) reports 3,195 MB.
+  - Five 128-token generations a model, each model alone: Bolt 172 tok/s, its GGUF 150, Gemma 159.
+  - Bolt forced onto the CPU (`num_gpu 0`) generates at 11.5 tok/s and reports 2,791 MB, with
+    nothing on the GPU.
+  - So Bolt's weights are on the GPU, and `/api/ps` leaves them out of its count for this tag. Its
+    real footprint is about 2.8 GB, the CPU-load figure. That is an estimate: the gateway gives no
+    GPU memory reading. At the table the same tag reported 2.0 GB, then 1.0 GB.
+
+**The evaluation sets, paired prompt by prompt with the control.** The noise floor, 10·√(50/n),
+is 3.6 points at 389 and 8.1 at 76. The McNemar p is exact, on the discordant prompts.
+
+| | qwen3.5:4b (control) | gemma4:e4b-it-qat | nemotron-3.5-bolt:e4b |
+|---|---:|---:|---:|
+| interim, correct of 389 | 330 | 329 (−0.3, within) | 324 (−1.5, within) |
+| curated, correct of 76 | 69 | 69 (0.0) | 66 (−3.9, within) |
+| interim impossible requests, of 64 | 49 | 37 (**−18.8**, p 0.008) | 55 (+9.4, p 0.07) |
+| interim situations, of 65 | 40 | 51 (**+16.9**, p 0.043) | 42 (+3.1) |
+| unasked actions, of 156 labelled `none` | 25 | 36 | 11 |
+| missed requests, of 233 labelled with an action | 10 | 8 | 39 |
+| contained by a guard | 4 | 5 | 0 |
+| latency median / 90th percentile, s | 0.444 / 0.484 | 0.424 / 0.472 | 0.438 / 0.468 |
+| words a statement (mean) | 6.5 | 5.5 | 4.4 |
+| statements repeating an earlier one word for word | 80 | 151 | 220 |
+
+- **Neither candidate differs from the control overall**, on either set, and no curated category
+  is beyond its floor.
+- **Six categories were tested.** After a correction for that, Gemma's situations gain (p 0.043)
+  would not survive, and its impossible-request loss (p 0.008) would.
+- **Many of Gemma's losses refuse in words while making the forbidden move.** "Burn down the
+  market." gives `attack_target`/`market` with "I will not allow that."; "Tear down the north
+  tower." gives `attack_target`/`north_tower` with "I will not destroy the tower."
+- **Bolt is the opposite: passive.** It answers `none` to requests the control acts on: "On me,
+  guard." gives "I watch you."; "C'mon, let's go." gives "I wait here." It never needed a guard.
+- **Without the idle example** (`idle-none`), the control falls to 281 of 389 and Gemma to 308.
+  Bolt stays at 324.
+
+**The strategy table, paired by seed with the control.** A difference is **beyond** only when its
+95% interval excludes zero.
+
+| | qwen3.5:4b | gemma4:e4b-it-qat | nemotron-3.5-bolt:e4b |
+|---|---:|---:|---:|
+| η² of aggression by persona (p) | 0.841 (<0.001) | 0.871 (<0.001) | 0.826 (<0.001) |
+| ended by domination | 60% | 60% | 60% |
+| battles a turn | 1.47 | 1.40, within | 1.02, **−0.45** |
+| provinces taken from a country a game | 18.5 | 16.2, within | 10.5, **−8.1** |
+| peace offered / made a game | 8.1 / 1.8 | 6.1 / 1.4, within | 4.2 / 0.4, **both beyond** |
+| turns with no change | 25% | 27%, within | 35%, **+10** |
+| idle share | 10% | 10% | 38%, **+28** (builder 80%, merchant 57%) |
+| answers an attack | 74% | 57%, **−17** | 65%, within |
+| words a statement | 13.6 | 10.6, **−3.0** | 8.3, **−5.3** |
+| repeated word for word | 5% | 7%, within | 53%, **+47** |
+| copies a sentence of its statement rule | 0% | 1%, within | 14%, **+14** (merchant 70%) |
+| contradicts its move | 19% | 17%, within | 5%, **−14** |
+| names its target | 72% | 68%, within | 63%, within |
+| invented grievance | 1% | 0%, **−1** | 0%, **−1** |
+| decision latency median / 90th percentile, s | 0.49 / 0.55 | 0.44 / 0.49 | 0.35 / 0.40 |
+
+- **The control reproduced #249's persona 4b table** on a later commit: η² 0.841, 25.1 turns, 60%
+  domination, 13.6 words, 5% repeated, 72% naming the target, 18 to 19% contradicting the move.
+- **Gemma's table is the control's game in shorter words.** Every liveliness number is within, the
+  persona shows at least as much, and it invents no grievances.
+- **Gemma's proud ruler is the voice that breaks.**
+  - 73% of its statements contradict the move, and 18% name the target.
+  - It opens most moves with one formula, on a recruit or a fort as well as an attack: "My honor
+    demands that I strike back at those who dare to challenge my might." (29 times), or "My honor
+    demands that I crush those who dare to stand against Kesh."
+  - Gemma's other four personas contradict their move 1 to 7% of the time, below the control's
+    6 to 22%.
+- **Bolt's game is quieter, beyond on eight liveliness numbers.** Its personas still separate (η²
+  0.826), but by holding: the builder holds 80% of its turns.
+- **Bolt's voice repeats.** The merchant's most frequent statement is its own rule followed by the
+  target sentinel, 201 times: "A trader's voice: profit, price or a deal. no_target". The proud
+  ruler says "Honor demands we answer every slight." 116 times.
+- **Bolt does write the lines that most often fit the move**: 5% contradict it, against the
+  control's 19%.
+
+**One game: Gemma E4B, seed 4.** The account is in the demo README, beside the control's seed 4.
+
+**So.**
+- **For the rulers, `qwen3.5:4b` stays, and no default changes.** Gemma 4 E4B is the one
+  candidate worth keeping in mind:
+  - it ties the control at choosing on both sets, and plays the same game at the table, a little
+    faster, in shorter lines, with no invented grievances;
+  - it is worse on impossible requests, answers attacks less, and one of its five personas falls
+    into a formula.
+- **Bolt E4B disappoints at choosing**, through passivity rather than wrong moves. Its lines
+  contradict the move least of the three, but half of them are repeats, and the merchant reads its
+  rule out. It is not worth a seat.
+
+**What was not measured.**
+- Gemma or Bolt at a mixed table with the control.
+- A persona text tuned for either model.
+- Bolt's GGUF variant, beyond its pre-check.
+- Real GPU memory: the gateway has no `nvidia-smi`.
+- 20 games is small, and only the differences marked beyond are claimed.
+
+**What would change this.**
+- A rewrite of the proud persona's rule, run on Gemma.
+- `InYourOwnWords` on Bolt in an A/B run: the merchant's copying is gap N9 again.
+- A game with more impossible orders than GreyBoxStrategy has, which would weigh Gemma's weakness
+  more.
+
+**Raw data:** `.scratch/4b-candidates-ab/runs/` in the lead's laptop checkout (worktree
+`affectionate-volhard-9aa1d8`): `paired-interim.md`, `paired-curated.md`, `combined.md`,
+`compare-tables.md`, `residency.json`, and the `precheck-*` and `mask2-*` files.
