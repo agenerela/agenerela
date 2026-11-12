@@ -93,6 +93,10 @@ namespace GreyBoxStrategy.Replay
         public string Source;
         public Dictionary<string, RecordedPlayer> Players = new Dictionary<string, RecordedPlayer>(StringComparer.Ordinal);
         public List<RecordedDecision> Decisions = new List<RecordedDecision>();
+        /// <summary>Changes made through the dev menu, each applied at the start of its turn.</summary>
+        public List<DevEdit> DevEdits = new List<DevEdit>();
+        /// <summary>True for a game the dev menu touched, or played with stand-in rulers: never a measured game.</summary>
+        public bool Dev;
 
         public static Recording Parse(string json)
         {
@@ -108,7 +112,55 @@ namespace GreyBoxStrategy.Replay
                     rec.Players[p.Name] = new RecordedPlayer { Model = (string)p.Value["model"], Persona = (string)p.Value["persona"] };
             foreach (var d in (JArray)root["decisions"])
                 rec.Decisions.Add(ParseDecision((JObject)d));
+            rec.Dev = (bool?)root["dev"] ?? false;
+            if (root["devEdits"] is JArray edits)
+                foreach (var e in edits) rec.DevEdits.Add(new DevEdit { Turn = (int)e["turn"], Command = (string)e["command"] });
             return rec;
+        }
+
+        /// <summary>
+        /// The recording as <see cref="Parse"/> reads it, so a game played on the screen can be
+        /// saved and replayed. A decision from the log keeps its own record; one made by a person
+        /// is written from its fields.
+        /// </summary>
+        public string ToJson()
+        {
+            var root = new JObject
+            {
+                ["seed"] = Seed,
+                ["title"] = Title,
+                ["source"] = Source,
+                ["dev"] = Dev,
+            };
+            var players = new JObject();
+            foreach (var kv in Players) players[kv.Key] = new JObject { ["model"] = kv.Value.Model, ["persona"] = kv.Value.Persona };
+            root["players"] = players;
+            var decisions = new JArray();
+            foreach (var d in Decisions)
+            {
+                JObject o;
+                if (d.Raw != null) o = (JObject)d.Raw.DeepClone();
+                else
+                {
+                    o = new JObject
+                    {
+                        ["agentId"] = d.AgentId,
+                        ["chainId"] = d.ChainId,
+                        ["sequence"] = d.Sequence,
+                        ["modelName"] = d.ModelName,
+                        ["decision"] = new JObject { ["action"] = d.Action, ["target"] = d.Target, ["statement"] = d.Statement },
+                        ["modelDecision"] = new JObject { ["action"] = d.ModelAction, ["target"] = d.ModelTarget },
+                        ["request"] = new JObject { ["observations"] = d.Observations, ["stimulusTurn"] = d.StimulusTurn },
+                    };
+                    if (d.ExecutionStatus != null) o["execution"] = new JObject { ["status"] = d.ExecutionStatus, ["reason"] = d.ExecutionReason };
+                }
+                o["turn"] = d.Turn;
+                o["moment"] = d.Moment;
+                decisions.Add(o);
+            }
+            root["decisions"] = decisions;
+            root["devEdits"] = new JArray(DevEdits.Select(e => new JObject { ["turn"] = e.Turn, ["command"] = e.Command }));
+            return root.ToString(Newtonsoft.Json.Formatting.Indented);
         }
 
         /// <summary>

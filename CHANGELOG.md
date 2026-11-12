@@ -50,6 +50,58 @@ phase table and the open issues, not here.
   - No reranker runs on Ollama 0.40.14.
   - Five small models pulled onto the server: three embedders and two reranker GGUFs. No framework
     code changed.
+
+- **Painted Realm rules v2, slice R0: settings and the map as data** (#20). GreyBoxStrategy's map is
+  now data (`WorldMap`, JSON, with terrain, coasts, ports and population no rule reads yet), and
+  today's board is the Classic preset, loaded from it. `GameSetup` holds a new game's settings (seed,
+  map, countries, victory mode, storyteller preset, advisor) with a saved form that refuses invalid
+  settings with a message. Conquest and turn-limit victory modes join today's domination, which stays
+  the default until R1. A test pins today's 200-game series byte for byte. `GreyBoxStrategy.Sim` now
+  references Newtonsoft JSON.
+- **Painted Realm rules v2: the design for the deeper game** (#20),
+  `docs/demos/painted-realm-rules-v2.md`. Design only, no game code. It records the lead's
+  34 answers of 12 November and his answers to its own eight questions, and settles, for build sessions to take one slice at a time:
+  - **The turn:** writs (2 to 5 orders a turn), standing orders, and a model ruler asked only about
+    the court and the armies awaiting orders. About 7 s of model time a turn for six `qwen3.5:4b`
+    rulers, 14 s at worst; five ways compared.
+  - **A seeded map generator** with fairness and connectivity checks, special places named and told
+    by a model, and a sea chart drawn by code at any resolution. Today's board stays as the Classic
+    preset.
+  - **Armies:** three unit types with counters, generals with traits, sieges, supply as stores, fog
+    of war, and a survey of what gives army play depth.
+  - **The rest:** population, food, goods and buildings shown as development; agreements and opinions
+    with reasons; conquest with no turn limit; the settings and presets; what each decision asks of
+    the models and the framework; the A/B each slice owes.
+  - **Conquest by treaty:** armies occupy land, shown as hatching, and a peace treaty transfers it.
+    The treaty is a closed set of terms bounded by a war score, answered by the other ruler.
+  - **Later stages:** orders without a cap (automation, groups, a decision budget), a world shaped
+    by a model through the framework, and names and histories written by a model, each with its
+    A/B. Research on making the unit roster our own.
+  - **The build:** eleven slices with issue-ready checklists. The lead's answers to the first
+    draft's eight questions are recorded beside his other 12 November answers.
+
+- **Painted Realm: a dev menu** (#20). F1 opens it, in the editor and in development builds.
+  - Play with stand-in rulers and no card. Jump, step, autoplay and set any speed.
+  - Change gold, soldiers, stability, forts, owners, wars and eliminations, and fire any of the
+    storyteller's event templates. Edits are recorded and replayed at the same turn.
+  - Pretend the card is held, the server is down, a round times out, or a reply is unreadable,
+    without touching the real lock.
+  - Readouts, screenshots, save and load a recording, and window sizes.
+  - Everything runs through `DevTools.Run("…")` too. A game it touches is marked DEV on screen
+    and in its recording.
+
+- **Painted Realm: a main menu, New game, Settings and a pause menu** (#20).
+  - The game opens on a main menu: New game, Replay, Settings, Quit.
+  - New game chooses watch or rule, your country, the model and the seed. It lists the map,
+    persona mix, storyteller and advisor as coming.
+  - Settings: display mode, resolution, UI scale, VSync, frame cap, playback speed and sound
+    volumes. They are saved in `settings.json` and applied at once. A display change reverts
+    unless kept.
+  - Esc opens a pause menu in a game.
+  - In rule mode, rivals' decisions and words open as they happen; only their court's report
+    stays private until the game ends.
+  - Every country's army stands on the map at its capital, with its size, in every map mode.
+
 - **Two 4B-class candidates measured against `qwen3.5:4b`** (#252's first arms), on the RTX 5080
   with the control re-run in the same session. The candidates are `gemma4:e4b-it-qat` and
   `nemotron-3.5-bolt:e4b`. Results are in `findings.md` and `model-candidates.md`'s "Measured",
@@ -473,6 +525,23 @@ phase table and the open issues, not here.
   (findings, 10 November) found one regression, on the route examples, fixed in the branch.
 
 ### Fixed
+
+- **Painted Realm: two offers of peace to you in one turn** were answered only once. The
+  replay then stopped at that turn. Each envoy now waits for its own answer. A replay that
+  cannot rebuild a turn that resolved now says so on screen.
+
+- **Painted Realm: sharp on large screens, and never silent while the card is busy** (#20).
+  - **Large screens.** The UI now grows with the screen: 1.33× at 1440 and 2× at 2160. Before,
+    it stayed 1080p-sized below 2000 pixels tall.
+    - In the editor, a notice says when the Game view draws the game at a fixed size such as
+      1920 × 1080 and stretches it. That is what the lead saw.
+  - **The RTX 5080 in rule mode.** A rule game now holds the card for the whole game, as the
+    lead decided, and the top bar says so.
+    - It waits with the holder and a clock while another session has the card.
+    - It says when the server is slow, and stops a round with no answer in 150 s.
+    - Menu returns to the start menu from any game.
+    - The lock records the Unity that took it, and is let go, with the model unloaded, on every
+      way out: the end, Menu, stopping Play mode, quitting, a script reload, or an error.
 
 - **Painted Realm: fixes from the night's play-through** (#20).
   - A move that is not offered shows its reason on hover again: disabled buttons got no hover,

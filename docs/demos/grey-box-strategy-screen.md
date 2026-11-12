@@ -266,6 +266,11 @@ yet; the next round will be. Items 11, 22 and 26 are **under research** in a sep
 | 27 | Audience | "Presentation first, but if it turns out very fun, I am thinking about actually developing it nicely and maybe make revenue with it in future" | Not in scope; see the licence note below |
 | 28 | Platform | Windows, mouse and keyboard; 1920 × 1080 first, 1366 × 768 must work, and "make sure we support 4k too eventually" | Partly: checked at 1920 × 1080 and 1366 × 768, not at 4K |
 
+**The lead's next 34 answers, of 12 November**, after he played all three modes (the map generator,
+armies, economy, diplomacy, events, settings, conquest with no turn limit), are written out in
+[`painted-realm-rules-v2.md`](painted-realm-rules-v2.md#the-leads-answers-12-november-2026), with
+the design they lead to.
+
 **Met:** 2, 4, 6, 14, 15, 16, 18, 19. **Partly:** 3, 5, 17, 21, 23, 24, 28. **Not yet:** 7, 8,
 9, 10, 12, 13, 20; and 11 and 22, under research. **Outside this mock-up:** 1, 25, 26
 (under research) and 27.
@@ -504,15 +509,72 @@ same turn, no more. So:
   - another country's treasury, income, upkeep and stability;
   - garrisons and forts beyond your borders (the forts map mode shows them as none);
   - other countries' harvests, bandits and unrest (revolts stay, since land changes hands);
-  - the model rulers' councils: what they read, what they were offered, and the guards. These
-    open in the inspector when the game is over.
+  - what a model ruler's court told it (its standing facts, and why moves were not offered),
+    since they hold its treasury and plans. It opens in the inspector when the game is over.
+- **Shown as it happens** (the lead, 12 November: "we should show what they do and what they say
+  to the user"): every rival's decision in the inspector, with its answer, its statement, the
+  moves it could choose from, the guards and the timing.
+- **Armies** are on the map at all times: one piece per country at its capital, with its size,
+  in every map mode. The rules have one army per country today, so this stands in until armies
+  become pieces in the rules.
 
   `Fog` in `Screen/Replay/Fog.cs` holds these rules, and `FogTests` checks them.
 
-**The RTX 5080 in rule mode** is locked one round of model calls at a time. The lock is taken when
-the rulers start deciding, and released, with the model unloaded, as soon as they have decided.
-The game never holds the card while it waits for you. When another session holds the lock, the
-orders panel says who, and the round waits its turn.
+**The RTX 5080 in rule mode** is held for the whole game. The lead decided this on 12 November,
+after a game that sat silent while another session used the card. It replaces the first build's
+lock per round.
+
+- The lock is taken before the first council, and let go, with the model unloaded, on every way
+  out: the end, Menu, stopping Play mode, quitting, a script reload, or an error.
+- The lock now records the Unity process that took it, so a game never deletes another session's
+  lock.
+- While another session holds the card, the orders panel shows the holder, since when, what it
+  expects, and how long the game has waited.
+- When the rulers take more than 20 s, the panel says the server may be busy with another client.
+- A round with no answer in 150 s stops the game with that message.
+- Menu, at the top right, leaves at any time.
+
+**On large screens (12 November).** The lead played on a screen larger than 1080p and found it
+soft.
+
+- **Why it looked soft.** His Game view was set to a fixed 1920 × 1080, which Unity draws at that
+  size and stretches to fill the window (2202 × 1168 pixels on his screen). The editor now says
+  so across the map. The fix is Free Aspect at Scale 1x.
+- **The UI.** It grows with the screen (`UiScale`): 1× up to 1080 pixels tall, 1.33× at 1440 and
+  2× at 2160. It never drops below 1×, since 1366 × 768 switches to the compact layout instead.
+  Text and the drawn icons are then sharp at every size checked: 1366 × 768, 1920 × 1080,
+  2560 × 1440 and 3840 × 2160.
+- **What is still soft at 1440 and above, and why.** At 2160 the map fills about 3000 pixels.
+  - **The painting.** Its 4096-wide master is an upscale of a 1672-pixel painting, so it carries
+    1672 pixels of real detail.
+  - **The ink borders.** They are traced from 2048-wide province ID and edge maps, so they show
+    small steps at 4K.
+  - Sharp at 4K needs a painting made at 4096 and the province maps baked at 4096. That is art
+    work for the art pass, not code.
+
+**The menus (13 November).**
+- **The main menu** is the Watch scene's first state, not a scene of its own. The painted map
+  stays behind it, and "back to the main menu" is a reload of the one scene, with no scene list
+  to keep in the build.
+- **New game** chooses watch or rule, your country, the model and the seed. It lists what is
+  coming as disabled rows with a note: the map generator, the persona mix, storyteller presets
+  and the advisor. That way the lead sees where they will go before they exist.
+- **Settings** are a JSON file, `settings.json` in `Application.persistentDataPath`. JSON is
+  readable, testable without Unity and never in the registry.
+  - They apply at once.
+  - A display change reverts after 12 s unless kept.
+  - In the editor, the page says the Game view decides the size.
+- **Esc** works the same everywhere: it closes the top panel, then goes back a page, then opens
+  the pause menu. Menu in the top bar opens the pause menu too.
+- The compass rose and the gilt rules are drawn by code.
+
+**The dev menu (13 November).** F1, in the editor and development builds. The demo README's
+"Dev menu" section lists its commands.
+- **Edits are recorded:** the screen replays every game from its recording, so a change to a
+  game's state is recorded and applied at the start of the same turn in the game and in its
+  replay.
+- **Pretended faults never touch the real lock or server.**
+- **A dev game is marked** on screen and in its recording.
 
 **Not built yet:** the court scene for an accepted truce, the dashed gold ring (the reach mode's
 hatching rings the targets instead), the mark on statements that name your country, and
@@ -527,9 +589,7 @@ several orders a turn.
 2. **The rulers' councils during the game.** They are sealed until the game ends, because the
    inspector shows a ruler's treasury and its plans. Should they open at once instead, as a
    "showcase" switch?
-3. **Lock per round, or per game?** One round at a time keeps the card free for other sessions
-   while you think, but reloading the model costs a few seconds a turn. Should a game that a
-   person is playing hold the card throughout?
+3. ~~Lock per round, or per game?~~ **Decided 12 November: per game**, as above.
 4. **Rule mode's speed.** Playback starts at 1×. Should it start faster, or skip your own moves'
    banners? You have no banner now, since you write no statement.
 

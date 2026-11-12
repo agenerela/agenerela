@@ -3,6 +3,7 @@
 Five countries on a map of 25 provinces, one move each a turn, until one holds 15. The design,
 the rules and why they are what they are: [`docs/demos/grey-box-strategy.md`](../../docs/demos/grey-box-strategy.md).
 Issue #20, a sub-issue of #47.
+A deeper version of the rules is designed, not built: [`docs/demos/painted-realm-rules-v2.md`](../../docs/demos/painted-realm-rules-v2.md).
 
 **Stages 1 and 2 of 3 are built.** Stage 1 is the game as a headless simulation, a scripted AI
 with two temperaments, a random baseline, and a runner that plays whole games and logs every
@@ -11,6 +12,7 @@ scripted AI; [its results are below](#stage-2-a-model-plays-a-country). Any seat
 model, a script or random, with personas; [the table of models](#models-at-one-table) scores them.
 Stage 3, the map and the screen, has begun: [watch mode plays back a recorded game](#the-screen-watch-mode-playing-back-a-recorded-game).
 A [storyteller](#storyteller) that invents the game's events is built as an arm, `+storyteller`, and measured against the random event table.
+[Rules v2](../../docs/demos/painted-realm-rules-v2.md), the deeper game, is being built a slice at a time; [what exists so far](#rules-v2-being-built).
 
 ## Play it
 
@@ -24,23 +26,44 @@ language model through the framework, fighting over 25 provinces on a painted se
   4 for the reach map, then open a country and Follow it to see what it can attack and its odds.
 - **Rule:** take Kesh. Open Report to read what a model would be told. Click Southgate and order
   the attack, then press End turn. Declare war on a neighbour, and an envoy may come with peace.
+  Click a rival's chronicle line: what it did and said opens at once, and its court's report
+  stays private until the game ends.
+- **Settings:** try the UI scale steps, then Esc in a game for the pause menu.
 
 1. Open `Demos/GreyBoxStrategy` in Unity 6000.3.23f1, then open
-   `Assets/GreyBoxStrategy/Screen/Watch.unity` and press **Play**.
-2. The start menu offers three games:
-   - **Replay the recorded game.** Seed 4 of the persona table: five `qwen3.5:4b` rulers, Kesh
-     wins by domination on turn 17. Every line is the rulers' own. It needs no model and no
-     server.
-   - **Watch a live game.** Five model rulers with personas play a new game now. Choose the model
-     (`qwen3.5:4b` by default) and the seed, then **Watch live**.
-   - **Rule a country.** You rule one country, chosen by its crest, against four model rulers
-     with personas on the same server. Choose the model and the seed, then **Rule**.
+   `Assets/GreyBoxStrategy/Screen/Watch.unity`.
+   - **Set the Game view to your screen first:** in its resolution menu choose **Free Aspect**,
+     set **Scale** to **1x**, and untick **Low Resolution Aspect Ratios**.
+   - A fixed size such as 1920 × 1080 is drawn at that size and stretched to fill a larger
+     window, so it looks soft. The game says so across the top of the map when it happens.
+   - The screen's text and panels grow with the screen: 1× at 1080 pixels tall, 1.33× at 1440,
+     2× at 2160.
+   - Then press **Play**.
+2. The main menu is the first screen: **New game**, **Replay**, **Settings**, **Quit**.
+   - **New game:**
+     - Choose **Watch** (five model rulers with personas play) or **Rule** (you rule one country,
+       chosen by its crest, against four).
+     - Choose the model (`qwen3.5:4b` by default) and the seed (Roll picks one), then **Start**.
+     - The map, persona mix, storyteller and advisor are listed as coming.
+   - **Replay:** seed 4 of the persona table, five `qwen3.5:4b` rulers. Kesh wins by domination
+     on turn 17. Every line is the rulers' own. It needs no model and no server.
+   - **Settings:**
+     - Display mode, resolution, UI scale (automatic or fixed steps), VSync, frame cap, the
+       default playback speed, and sound volumes (no sound plays yet).
+     - Each applies at once and is saved in `settings.json` in the game's persistent data
+       folder.
+     - A change of display mode or resolution reverts after 12 s unless you keep it.
+     - In the editor, the Game view decides the size, and the page says so.
 3. In the game:
    - Space plays and pauses, N steps one move, and + changes the speed.
-   - Keys 1 to 4 switch the map modes, D opens diplomacy, and Esc closes a panel.
+   - Keys 1 to 4 switch the map modes, and D opens diplomacy.
+   - **Esc** closes the top panel. With none open it opens the **pause menu**: Resume, Settings,
+     or Main menu. Menu (top right) opens the same pause menu.
+   - Every country's army stands at its capital with its size, in every map mode.
    - Click a province, a crest or a chronicle line to open it. A chronicle line or a speech banner
      opens the decision behind it.
    - Right-drag pans the map, and the wheel zooms.
+   - **Main menu** in the pause menu ends the game and lets the RTX 5080 go.
 4. When you rule a country:
    - The orders panel, bottom centre, lists every move the rules offer you. These are the moves
      a model ruler would be offered in your place. A move that is not offered says why in its
@@ -52,8 +75,10 @@ language model through the framework, fighting over 25 provinces on a painted se
    - A peace offer to you opens the envoy's card: **Accept** or **Refuse**.
    - **Report** shows what your court tells you, the same lines a model ruler reads.
    - **Fog of war:** you see what your court knows. Other countries' treasuries and stability
-     are hidden, and so are garrisons and forts beyond your borders. The rulers' councils open
-     in the inspector when the game is over. The design page has the full rule.
+     are hidden, and so are garrisons and forts beyond your borders. What rivals do and say is
+     shown as it happens: their decisions open in the inspector during the game. What their
+     courts tell them (their treasuries) opens when the game is over. The design page has the
+     full rule.
 
 **What a live game or a rule game needs:**
 - **Two environment variables, in the environment Unity was started from:**
@@ -63,12 +88,71 @@ language model through the framework, fighting over 25 provinces on a painted se
 - **The RTX 5080, behind its lock.** The server is the card shared by every live run. A live game
   takes `.scratch/ollama-5080-lock/held` while the model plays, unloads the model, and releases
   the lock as soon as the model is done (playback carries on from the log). A full game holds the
-  card for a few minutes. A rule game takes the lock for each round of the rulers' decisions
-  only, and unloads the model after each. It never holds the card while it waits for your
-  order, and if another session holds it, the orders panel says who.
+  card for a few minutes.
+- **A rule game holds the card for the whole game,** from before the first council until it
+  ends or you leave with Menu (the lead's decision, 12 November). The top bar shows
+  **RTX 5080 · held** meanwhile. The lock is let go, and the model unloaded, on every way out:
+  the end, Menu, stopping Play mode, quitting, a script reload, or an error.
+  - **While another session holds the card,** the game waits and shows who holds it, since when,
+    and how long you have waited.
+  - **When the server is slow** (another client using it without the lock), the status line says
+    so after 20 s.
+  - **A round with no answer in 150 s** stops the game with a message.
+- **The game never sits silent.** A live game's council clock runs in the top bar, and a notice
+  appears after 30 s.
 - **If it cannot start, the menu says why rather than wait:** a variable is not set, the lock is
   held (and by whom), the server cannot be reached, or the key is refused. A game that stops
   mid-way says so across the top of the map.
+
+## Dev menu
+
+**F1** opens the dev menu in the editor and in development builds. It is not in a release build,
+and the pause menu says so where it is available. It is a plain, dense tool, not part of the
+look. Every button runs one command line, and the same lines run from code:
+
+```csharp
+GreyBoxStrategy.Realm.DevTools.Run("scripted-rule kesh 7");   // returns what happened, as text
+GreyBoxStrategy.Realm.DevTools.Run("help");                   // every command
+```
+
+A session drives it through the Unity CLI:
+
+```bash
+unity command script eval -- --code 'return GreyBoxStrategy.Realm.DevTools.Run("turn 12");'
+```
+
+| Command | What it does |
+|---|---|
+| `scripted-rule <country> [seed]` | Rule a country against four stand-in rulers: a `ScriptedProvider` picks a move the rules offer, through the real agents. No server, no card |
+| `scripted-watch [seed]` | Watch five stand-in rulers. No server, no card |
+| `turn <n>` · `step` · `play` · `pause` · `speed <x>` | Jump to a turn without animating the turns before it, land one event, or play and pause. Speed is 0.25 to 32 |
+| `autoplay on\|off` | Play to the end at 8× or faster. In rule mode it also holds every turn and refuses every envoy |
+| `gold\|army\|stability <country> <+n\|-n\|=n>` | Change a country's numbers, within the rules' ranges |
+| `forts <province> <+n\|-n\|=n>` · `owner <province> <country\|neutral>` | Change a province |
+| `war\|peace <country> <country>` · `eliminate <country>` | Change relations, or take a country out of the game |
+| `event <template> <target>` · `events` | Fire one of the storyteller's event templates. The list is read from `EventRules.Templates`, so new kinds appear by themselves. The rules allow none before turn 3 |
+| `fog off\|on` | Reveal everything in rule mode, or restore what your court knows |
+| `fault lock <holder…>` · `fault lock off` | Pretend another session holds the RTX 5080. The real lock directory is never read, written or taken while this is on |
+| `fault server on\|off` | Pretend the server cannot be reached |
+| `fault timeout on\|off` | Requests hang until cancelled, and a rule round times out after 8 s instead of 150 s |
+| `fault unreadable on\|off` | Every reply is text no parser can read. The model is never asked |
+| `faults off` | Clear every pretended fault |
+| `readouts` | Frames per second, UI scale, resolution, the last reply's latency and tokens, the last played decision's queue wait, requests in flight, and who holds the card |
+| `screenshot [name]` · `save-recording [name]` | Save to `Logs/Dev/`. A saved recording replays with `load-recording <path>` from the main menu |
+| `size <w>x<h>` | 1366x768, 1920x1080, 2560x1440 or 3840x2160, or 16:10 1920x1200 or 3840x2400 (the lead's display): the Game view in the editor, the window in a build |
+| `menu` | Show or hide the dev menu |
+
+**State edits work in rule games, at the start of the next turn.** The screen rebuilds every turn
+from the recording, so an edit is recorded and applied at the same point in the game and its
+replay. It shows in the chronicle as a "Dev menu:" line.
+- A recorded replay cannot change.
+- A watch-live game runs on the table runner, which has no hook between turns. Start
+  `scripted-rule` to try edits without the card.
+
+**A game the dev menu touched is a dev game.** That covers an edit, stand-in rulers, or a
+pretended fault. The top bar marks it with a red **DEV**, and its saved recording carries
+`"dev": true` and the edits. The table runner and the scorecard never go through the screen, so
+they never meet the dev menu.
 
 ## Run it
 
@@ -137,10 +221,45 @@ framework writes the moves as one line among the facts, `LegalTargets = Observat
 
 Each game log shows the model's answer and its statement under each of its moves.
 
-**Tests:** 123 EditMode tests in `Assets/GreyBoxStrategy/Tests/Editor/`, about 5 seconds once the
+**Tests:** 156 EditMode tests in `Assets/GreyBoxStrategy/Tests/Editor/`, about 10 seconds once the
 project has imported. Twenty of them drive the model seat through `ScriptedProvider`,
 sixteen in `TableTests` the table, the personas and the scorecard, and fifteen in `StorytellerTests`
 the storyteller. The screen has its own in `Screen/Tests/Editor/`.
+
+## Rules v2, being built
+
+[`docs/demos/painted-realm-rules-v2.md`](../../docs/demos/painted-realm-rules-v2.md) is the plan, in
+slices R0 to R10. Built so far:
+
+**R0, settings and the map as data** (12 November). Today's game plays exactly as before; what
+changed is where it comes from.
+
+- **The map is data.** `WorldMap` (`Sim/Map/`) holds countries, provinces and borders, and v2's
+  province fields that no rule reads yet: terrain (plains, forest, hills, marsh, mountains), coast,
+  port, population, good, region, special place. It reads and writes JSON
+  (`WorldMap.FromJson`, `ToJson`), refusing a map it cannot play with the reason.
+  `MapDefinition.Standard()` is the **Classic** preset (`ClassicMap`), today's 25 provinces with
+  terrain set by hand from the painting.
+- **The settings are data.** `GameSetup` (`Sim/Rules/`) is what the menu, the runners and the tests
+  share: seed, map, number of countries, victory mode and its values, the storyteller preset and the
+  advisor switch (both data only so far). Its saved form:
+
+  ```json
+  { "version": 1, "seed": 4, "map": "classic", "countries": 5, "victory": "domination",
+    "dominationPercent": 60, "turnLimit": 30, "turnCap": 150, "storyteller": "off", "advisor": true }
+  ```
+
+  `GameSetup.FromJson` refuses unknown names and invalid values with a message ("the Classic board has
+  five countries, not 6"); `NewGame()` starts the game; `GameRunner.Play(setup, lineup)` plays one
+  headless.
+- **Three victory modes.** `domination` is today's (15 of 25, or the most after turn 30) and stays the
+  default until armies arrive in R1. `conquest`: the last country standing wins; a headless run stops
+  at `turnCap` and records the game as `Unfinished`. `turn_limit`: the most provinces after
+  `turnLimit` turns. A ruler's first fact and goal line say the mode's goal; on domination they read
+  word for word as before.
+- **Proof it is the same game:** `SetupTests` pins the hash of the 200-game mixed series' `summary.md`
+  and of every turn's owner grid, as measured on the commit before R0, and compares the Classic data
+  with the board as it was built in code (`LegacyBoard`), field by field.
 
 ## The first real run
 
@@ -1199,7 +1318,9 @@ is covered by a review of the code, not yet by a live run.
 Assets/GreyBoxStrategy/
   Sim/                GreyBoxStrategy.Sim (noEngineReferences: true): no UnityEngine at all
     Rules/            Dice, GameRules, MapDefinition, World, Move, Legality, Facts, Requests, Game,
-                      TurnSnapshot, Events (the storyteller's templates, groups and fairness rules)
+                      TurnSnapshot, Events (the storyteller's templates, groups and fairness rules),
+                      GameSetup (rules v2's settings)
+    Map/              WorldMap (the map as data, JSON), Terrain and TerrainTable, ClassicMap
     Players/          IPlayer, ScriptedPlayer and Temperament, RandomPlayer
     Runner/           GameRunner and Lineups, SeriesSummary, GameLog and StrategyRuns, Scorecard, EventLog
   Agents/             GreyBoxStrategy (refs Agenerela, GreyBoxStrategy.Sim): CountryAgent, the model seat;

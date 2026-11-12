@@ -65,7 +65,7 @@ namespace GreyBoxStrategy.Realm
         public void Begin()
         {
             if (session != null) return;
-            if (!Gateway.TakeLock("Painted Realm live game (GreyBoxStrategy Watch scene)", $"one live game, {model} x5 with personas, seed {seed}; a few minutes")) { Error = WhyNotNow() ?? "could not take the RTX 5080 lock"; return; }
+            if (!Gateway.TakeLock("Painted Realm live game (GreyBoxStrategy Watch scene)", $"one live game, {model} x5 with personas, seed {seed}; a few minutes", model)) { Error = WhyNotNow() ?? "could not take the RTX 5080 lock"; return; }
             tookLock = true;
 
             string folder = Path.Combine(Application.dataPath, "..", "Logs", "Live");
@@ -73,6 +73,27 @@ namespace GreyBoxStrategy.Realm
             ILLMProvider provider = null;
             session = new LiveSession(model, arm, seed, stopAfterTurns, path, (m, world) => provider ?? (provider = Gateway.Provider(m)));
             Debug.Log($"Painted Realm: live game, seed {seed}, {model} with personas, arm {arm}; decisions into {path}");
+            Run();
+        }
+
+        /// <summary>True for a game played with stand-in rulers from the dev menu: never a measured game.</summary>
+        public bool Dev { get; private set; }
+
+        /// <summary>
+        /// The dev menu's watch game: five stand-in rulers (a <c>ScriptedProvider</c> picking moves
+        /// the rules offer, through the real agents), no server and no card.
+        /// </summary>
+        public void BeginScripted(int gameSeed)
+        {
+            if (session != null) return;
+            playLive = true; seed = gameSeed; model = "scripted"; Dev = true;
+            string path = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "Live", $"dev-seed-{seed:D4}-{DateTime.Now:yyyyMMdd-HHmmss}.jsonl"));
+            var rng = new System.Random(gameSeed);
+            World world = null;
+            var scripted = new ScriptedProvider { Callback = r => ReplayDirector.ScriptedRuler(r, rng, world) };
+            scripted.Otherwise(ScriptedReply.Decide("none", statement: "We wait."));
+            var provider = DevProvider.Wrap(scripted);
+            session = new LiveSession(model, arm, seed, stopAfterTurns, path, (m, w) => { world = w; return provider; });
             Run();
         }
 
@@ -95,10 +116,13 @@ namespace GreyBoxStrategy.Realm
         public IEnumerable<string> Lines() => session?.Lines() ?? Array.Empty<string>();
         public void Stop() => session?.Stop();
 
+        /// <summary>Whether this game holds the RTX 5080 now.</summary>
+        public bool HoldsCard => tookLock;
+
         private void OnDestroy()
         {
             session?.Stop();
-            ReleaseLock();
+            if (tookLock) { tookLock = false; Gateway.ReleaseHeldNow(); } // unloads the model too
         }
     }
 }

@@ -33,6 +33,8 @@ namespace GreyBoxStrategy.Replay
         Hold,
         /// <summary>A country lost its last province.</summary>
         Eliminated,
+        /// <summary>A change made through the dev menu, at the start of the turn: the game is a dev game.</summary>
+        Dev,
     }
 
     /// <summary>A country's numbers at one moment.</summary>
@@ -138,6 +140,10 @@ namespace GreyBoxStrategy.Replay
         public ReplayState Initial;
         public List<ReplayTurn> Turns = new List<ReplayTurn>();
         public GameResult Result;
+        /// <summary>True when the dev menu changed the game, or played it with stand-in rulers: never a measured game.</summary>
+        public bool Dev;
+        /// <summary>For a partial build: why it stopped where it did, or null when it reached the end of what was recorded.</summary>
+        public string StoppedBecause;
         public IEnumerable<ReplayEvent> AllEvents => Turns.SelectMany(t => t.Events);
         public int IndexOf(string provinceId)
         {

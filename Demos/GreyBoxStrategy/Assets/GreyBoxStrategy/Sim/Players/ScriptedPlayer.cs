@@ -203,7 +203,9 @@ namespace GreyBoxStrategy
         public static string Leader(World w)
         {
             var best = w.Alive.OrderByDescending(c => w.ProvinceCount(c.Id)).ThenBy(c => c.Id, StringComparer.Ordinal).FirstOrDefault();
-            return best != null && w.ProvinceCount(best.Id) >= w.Rules.ProvincesToWin - 4 ? best.Id : null;
+            // Outside domination nothing wins early, so "near winning" is near holding everything.
+            int toWin = w.Rules.Victory == VictoryMode.Domination ? w.Rules.ProvincesToWin : w.ProvinceList.Count;
+            return best != null && w.ProvinceCount(best.Id) >= toWin - 4 ? best.Id : null;
         }
     }
 }

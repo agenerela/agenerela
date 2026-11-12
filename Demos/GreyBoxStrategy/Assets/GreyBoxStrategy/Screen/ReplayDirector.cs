@@ -41,6 +41,29 @@ namespace GreyBoxStrategy.Realm
         private Vector3 dragStart;
         private bool dragging;
         private Vector2Int lastSize;
+        private PanelSettings panelSettings;
+
+        /// <summary>
+        /// In the editor: a warning when the Game view draws the game smaller than its own window and
+        /// stretches it, as a fixed resolution such as 1920 × 1080 does on a larger screen. The game
+        /// cannot change the editor's Game view itself; the person can, in a click.
+        /// </summary>
+        private static string GameViewWarning()
+        {
+#if UNITY_EDITOR
+            var type = System.Type.GetType("UnityEditor.GameView,UnityEditor");
+            var views = type == null ? null : Resources.FindObjectsOfTypeAll(type);
+            if (views == null || views.Length == 0) return null;
+            var view = (UnityEditor.EditorWindow)views[0];
+            float ppp = UnityEditor.EditorGUIUtility.pixelsPerPoint;
+            float windowW = view.position.width * ppp, windowH = (view.position.height - 21) * ppp; // less the Game view's toolbar
+            if (Screen.width >= windowW * 0.9f || Screen.height >= windowH * 0.9f) return null;
+            return $"The Game view draws the game at {Screen.width} × {Screen.height} and stretches it to fill {Mathf.RoundToInt(windowW)} × {Mathf.RoundToInt(windowH)}, so it looks soft. " +
+                   "In the Game view's resolution menu choose Free Aspect, set Scale to 1x, and untick Low Resolution Aspect Ratios.";
+#else
+            return null;
+#endif
+        }
 
         /// <summary>For the Unity CLI: where the playback is, as "turn 3, event 4 of 9".</summary>
         public string LiveStatus => live == null ? "no live source" : live.Status + $", {game?.Turns.Count ?? 0} turns logged, log {live.LogPath}";
@@ -65,7 +88,8 @@ namespace GreyBoxStrategy.Realm
             var panel = ScriptableObject.CreateInstance<PanelSettings>();
             panel.themeStyleSheet = theme;
             panel.scaleMode = PanelScaleMode.ConstantPixelSize;
-            panel.scale = Screen.height >= 2000 ? 2 : 1;
+            panelSettings = panel;
+            LoadSettings();
             panel.sortingOrder = 10;
             document = gameObject.AddComponent<UIDocument>();
             document.panelSettings = panel;
@@ -92,6 +116,9 @@ namespace GreyBoxStrategy.Realm
             ui.FollowPressed = Follow;
             ui.DiplomacyPressed = ToggleDiplomacy;
             ui.DecisionPressed = e => { if (CanInspect(e)) ui.ShowCard(DecisionCard.From(e)); };
+            ui.AddMenuButton(OpenPause);
+            DevTools.Director = this;
+            ApplyScale();
             ui.monoFont = UnityEngine.TextCore.Text.FontAsset.CreateFontAsset("Consolas", "Regular");
             Show(game.Initial, null);
             ui.SetTurn(1, "Council");
@@ -99,7 +126,7 @@ namespace GreyBoxStrategy.Realm
             ui.SetPlaying(playing, speed);
             if (showMenu && !isLive)
             {
-                ui.ShowMenu(game.Title, live != null ? live.Model : "qwen3.5:4b", live != null ? live.Seed : 101, StartReplay, (m, s) => StartCoroutine(StartLive(m, s)), TryRule);
+                ShowMainMenu();
                 return;
             }
             StartCoroutine(Play());
@@ -157,7 +184,7 @@ namespace GreyBoxStrategy.Realm
             // The land (about 90% of the painting each way) fills the space between the realm list
             // (248 px), the chronicle (356 px) and the top bar (50 px).
             var size = map.SizeUnits;
-            float w = Screen.width, h = Screen.height, scale = Screen.height >= 2000 ? 2 : 1;
+            float w = Screen.width, h = Screen.height, scale = CurrentUiScale();
             float left = 248 * scale, right = 356 * scale, top = 50 * scale, bottom = 46 * scale;
             float freeW = Mathf.Max(200, w - left - right), freeH = Mathf.Max(200, h - top - bottom);
             // world units per pixel needed so the land fits both ways
@@ -169,7 +196,7 @@ namespace GreyBoxStrategy.Realm
         }
 
         /// <summary>For the Unity CLI and tests: play faster, or jump ahead to a turn without animating.</summary>
-        public void SetSpeed(float s) { speed = Mathf.Clamp(s, 0.25f, 8); ui?.SetPlaying(playing, speed); }
+        public void SetSpeed(float s) { speed = Mathf.Clamp(s, 0.25f, 32); ui?.SetPlaying(playing, speed); }
         public void SkipToTurn(int turn) { skipUntilTurn = turn; playing = true; ui?.SetPlaying(true, speed); }
         public void Pause() { playing = false; ui?.SetPlaying(false, speed); }
         /// <summary>The kind of the event being played, for the CLI to wait on ("Capture").</summary>
@@ -282,14 +309,21 @@ namespace GreyBoxStrategy.Realm
         private void Update()
         {
             if (ui == null) return;
-            if (Screen.width != lastSize.x || Screen.height != lastSize.y) { lastSize = new Vector2Int(Screen.width, Screen.height); FitCamera(); ui.SetCompact(Screen.width < 1600); }
+            if (Screen.width != lastSize.x || Screen.height != lastSize.y)
+            {
+                lastSize = new Vector2Int(Screen.width, Screen.height);
+                ApplyScale();
+                string soft = GameViewWarning();
+                if (soft != null) ui.ShowNotice(soft);
+            }
             var mouse = Mouse.current; var kb = Keyboard.current;
-            if (kb != null)
+            if (kb != null && !ui.Typing)
             {
                 if (kb.spaceKey.wasPressedThisFrame) ui.Root.schedule.Execute(() => { playing = !playing; ui.SetPlaying(playing, speed); });
                 if (kb.nKey.wasPressedThisFrame) { playing = false; stepOnce = true; ui.SetPlaying(false, speed); }
                 if (kb.equalsKey.wasPressedThisFrame || kb.numpadPlusKey.wasPressedThisFrame) { speed = speed >= 4 ? 1 : speed * 2; ui.SetPlaying(playing, speed); }
-                if (kb.escapeKey.wasPressedThisFrame) { ui.CloseInspector(); ui.CloseSide(); ui.CloseDiplomacy(); map.SetSelected(-1); }
+                if (kb.escapeKey.wasPressedThisFrame) { if (ui.DevOpen) ui.CloseDev(); else Escape(); }
+                if (kb.f1Key.wasPressedThisFrame) ToggleDevMenu();
                 if (kb.digit1Key.wasPressedThisFrame) SetMode(MapMode.Political);
                 if (kb.digit2Key.wasPressedThisFrame) SetMode(MapMode.Armies);
                 if (kb.digit3Key.wasPressedThisFrame) SetMode(MapMode.Forts);
@@ -324,6 +358,7 @@ namespace GreyBoxStrategy.Realm
                 }
             }
             ui.PlaceLabels(shown);
+            DevUpdate();
         }
 
         private void PanTo(int province)
@@ -392,13 +427,23 @@ namespace GreyBoxStrategy.Realm
                     yield return new WaitForSeconds(0.2f);
                 }
                 if (rule != null) { ReadyTurns(); RuleResolving(turnIndex + 1); }
+                var councilSince = DateTime.UtcNow;
+                bool slowShown = false;
                 while (live != null && live.PlayLive && turnIndex >= ReadyTurns() && !live.Finished)
                 {
                     if (live.Error != null) { ui.ShowNotice("The live game stopped: " + live.Error); break; }
-                    ui.SetTurn(turnIndex + 1, "Council");
+                    // Never silent: the council's clock runs in the top bar, and a slow server is named.
+                    var waited = DateTime.UtcNow - councilSince;
+                    ui.SetTurn(turnIndex + 1, $"Council {(int)waited.TotalMinutes}:{waited.Seconds:00}");
+                    ui.SetCard(live.HoldsCard ? "held" : null);
+                    slowShown |= waited.TotalSeconds > 30;
+                    if (waited.TotalSeconds > 30)
+                        ui.ShowNotice($"The rulers have taken {(int)waited.TotalSeconds} s on turn {turnIndex + 1}. The server may be busy with another client. Esc, then Main menu, leaves the game and lets the RTX 5080 go.");
                     ui.SetThinking(true);
                     yield return new WaitForSeconds(1f);
                 }
+                if (live != null && live.PlayLive) ui.SetCard(live.HoldsCard ? "held" : null);
+                if (slowShown && live?.Error == null) ui.ShowNotice(null);
                 if (live != null && live.PlayLive) ReadyTurns();
                 ui.SetThinking(false);
                 if (turnIndex >= game.Turns.Count) break;
