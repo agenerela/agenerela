@@ -108,6 +108,8 @@ namespace GreyBoxStrategy
             var replies = await AnswerAll(envoys, players, seats, $"seed-{game.Seed}-turn-{game.World.Turn}-envoys", rounds, ct);
             var report = game.Resolve(replies);
             foreach (var round in rounds) round.End();
+            // What came of each landed move is known only now, once the whole turn has resolved.
+            foreach (var seat in seats.Values) seat.Learn(report);
             foreach (var seat in seats.Values) seat.EndTurn();
             return report;
         }

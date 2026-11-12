@@ -67,6 +67,13 @@ namespace GreyBoxStrategy
         /// the targets it may take, so the grammar cannot sample an illegal pair.
         /// </summary>
         public bool PairTargets;
+        /// <summary>
+        /// <see cref="RollingHistory.Remembers"/>: what a remembered move holds (#244 item 4, gap N7).
+        /// <see cref="RememberedDecision.Whole"/>, the framework's default, keeps the statement;
+        /// <c>+memory-move</c> leaves it out; <c>+memory-outcome</c> sends the turn report's line for
+        /// the move in its place (<see cref="CountryAgent.Learn"/>).
+        /// </summary>
+        public RememberedDecision Remembers = RememberedDecision.Whole;
 
         /// <summary>
         /// <see cref="DecideOptions.StatementRulesWording"/>: how the persona's statement rules are
@@ -113,7 +120,8 @@ namespace GreyBoxStrategy
         /// moves line, <c>+moves-sentence</c> has the framework say the legal moves as an observation
         /// line (<see cref="LegalTargetListing.ObservationLine"/>), and <c>+how-it-reads</c> and
         /// <c>+own-words</c> word the statement rules (<see cref="StatementRulesWording"/>)
-        /// ("default+no-moves-line+moves-sentence", "default+how-it-reads").
+        /// ("default+no-moves-line+moves-sentence", "default+how-it-reads"), and <c>+memory-move</c>
+        /// and <c>+memory-outcome</c> what a remembered move holds (<see cref="Remembers"/>, #244 item 4).
         /// </summary>
         public static ModelSeatOptions Named(string arm)
         {
@@ -136,6 +144,8 @@ namespace GreyBoxStrategy
                         options.TokenAlternatives = alternatives;
                     else if (modifier == "paired") options.PairTargets = true;
                     else if (modifier == "listed") options.LegalTargets = LegalTargetListing.PerTarget;
+                    else if (modifier == "memory-move") options.Remembers = RememberedDecision.Move;
+                    else if (modifier == "memory-outcome") options.Remembers = RememberedDecision.MoveAndOutcome;
                     else if (modifier == "no-moves-line") options.MovesLine = false;
                     else if (modifier == "moves-sentence") options.LegalTargets = LegalTargetListing.ObservationLine;
                     else if (modifier == "how-it-reads") options.RulesWording = StatementRulesWording.HowItShouldRead;

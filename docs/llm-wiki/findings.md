@@ -3482,3 +3482,70 @@ before the setting was added, with one slot.
 **What would change this.** An Ollama version that runs `qwen35` in parallel, and an A/B of a whole
 set with and without batching on such a model, to see whether the changed replies cost accuracy
 or only move it. Raw data: `.scratch/ollama-parallel/` in the lead's RTX 5080 checkout.
+
+### What a remembered decision holds: leaving the statement out of memory makes the 4B's statements fit their moves worse, and fixes nothing it was meant to (11 November 2026)
+
+**What.** `RollingHistory.Remembers` (#244 item 4, #216 item 3, PR #251) in GreyBoxStrategy's
+`personas` table: five `qwen3.5:4b` seats with personas, seeds 1 to 20, seats and personas
+rotating. Three arms, each the demo's `default` seat (moves line, paired schema, grounding 0.6):
+**whole**, the control and today's history; **move**, `+memory-move`, each remembered decision
+without its statement; **outcome**, `+memory-outcome`, without its statement and with the turn
+report's line for the move (`"took fenmark from orsk (34 against 21); lost 6"`, attached by
+`CountryAgent.Learn`). Arms interleaved in four blocks of five seeds, the order rotating block to
+block. RTX 5080, Docker Ollama 0.40.14 over the home network, `OLLAMA_NUM_PARALLEL` unset, one model
+resident, one client on the server, temperature 0. 18:22 to 19:31, 3,957 s of games. A difference is
+called beyond noise only when `compare.py`'s 95% interval, paired by seed, excludes 0. **`qwen3.5:2b`
+was not measured** (the lead: long game runs on the 4B only).
+
+**Why.** Gap N7: in stage 2 the 4B repeated its own remembered sentences for turns on end, and #249's
+table showed grievances that never happened ("they will bleed for taking our land back"). The guess
+was that remembering the move, and what came of it, would stop both.
+
+| Per game, mean (sd between games) | whole | move | outcome |
+|---|---:|---:|---:|
+| repeated word for word | 5% (4%) | 6% (3%), +0 within | 7% (2%), +1 within |
+| claims land taken | 2% (1%) | 3% (2%), +1 within | 2% (1%), −0 within |
+| invented grievance | 1% (1%) | 2% (2%), +0 within | 1% (1%), −0 within |
+| names its target | 72% (8%) | 33% (5%), **−39, −44 to −35** | 43% (6%), **−29, −34 to −25** |
+| contradicts its move | 19% (7%) | 42% (9%), **+23, +18 to +28** | 26% (9%), **+8, +3 to +13** |
+| copies a sentence of its rule | 0% | 1%, **+1, +0 to +1** | 5% (3%), **+5, +4 to +7** |
+| copies its whole statement rule | 0% | 0%, within | 1% (2%), **+1, +1 to +2** |
+| words a statement | 13.6 | 12.2, **−1.4** | 11.2, **−2.4** |
+| statements given | 98% | 99%, within | 98%, within |
+| battles a turn | 1.47 | 1.27, **−0.20, −0.30 to −0.09** | 1.56, within |
+| provinces changing hands a turn | 1.15 | 0.98, **−0.18, −0.27 to −0.08** | 1.20, within |
+| refused at resolution | 6% | 4%, **−1, −3 to −0** | 7%, within |
+
+Pooled over the 20 games: 2,318, 2,594 and 2,413 statements; 124, 147 and 159 repeated word for word
+(5.3%, 5.7%, 6.6%); 57, 84 and 57 claims of land taken; 32, 46 and 31 invented grievances (1.4%, 1.8%,
+1.3%). Every other liveliness and sense number (turns, endings, wars, peace offered and made, land
+taken from a country, quiet turns, lead changes, eliminations, Gini, idle share, illegal answers,
+containments, attack win rate, aiming at the weaker, answering an attack, accepting peace) is within
+noise in both arms.
+
+**The problems were already small under today's default.** With personas, the paired schema and the
+moves line, 5% of the control's statements repeat an earlier one and 1.4% invent a grievance. Stage
+2's runs of repetition came from a different seat (no persona, the flat schema). Neither number
+moves in either arm.
+
+**The remembered statements were doing a job.** Without them, statements name the move's target
+half as often (72% to 33%) and name someone else more than twice as often (19% to 42%). The
+persona's rule says "if the move has a target, name it"; the model's own earlier answers, each
+naming its target, were the examples it followed. With them gone, the 4B also starts reading its
+rule out as its statement (`"A trader's voice: profit, price or a deal."`), which #249 saw only on
+the 2B (gap N9): 5% of statements copy a sentence of the rule under **outcome**. The outcome line
+recovers part of the naming (43% against 33%), most likely because its text names the target
+(`took fenmark ...`), and leaves the game as lively as the control. **Move** also makes the game a
+little quieter (fewer battles and conquests a turn, beyond noise).
+
+**So.** Neither setting becomes a default, for any game. `Whole` stays. The option stays in the
+package, off: the outcome line is a sound way to give a game's results to memory, and a game
+whose statements carry no rule, or a strategy that keeps one remembered statement for its voice,
+may read this differently. GreyBoxStrategy keeps the whole decision.
+
+**What would change this.** A run where the statement is remembered *and* the outcome is added
+(a fourth setting, not built), which would keep the examples and add the truth; the 2B, which
+copies more and may be helped or hurt more; and a grievance measure that also reads paraphrases.
+Each remembered stimulus already carries the next turn's facts ("Our attack on ashby failed"), so
+this game always remembered part of each outcome. Raw data: `.scratch/244-memory-outcomes/runs/full-4b/`
+in the lead's laptop checkout (worktree `wonderful-kilby-ef674e`).
