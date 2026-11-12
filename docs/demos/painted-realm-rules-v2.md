@@ -9,6 +9,13 @@ The game as it is today, with its measurements, is in the demo's
 generated identity in [`painted-realm-research.md`](painted-realm-research.md). The folder keeps
 its name (the lead, 12 November: "Lets not rename the folder for now").
 
+**Revised the same day** with the lead's answers to [this page's eight questions](#11-the-leads-answers-to-this-pages-questions).
+Conquest is now occupation followed by a peace treaty ([5.1](#51-occupation-war-score-and-treaties)).
+Three later slices are planned: orders without a cap ([1.6](#16-the-route-to-no-cap)), a world
+shaped by a model through the framework ([2.8](#28-a-world-shaped-through-the-framework)), and
+names and histories written by a model ([2.9](#29-names-and-histories-written-by-the-model)). There
+is also research on making the units our own ([3.11](#311-making-the-roster-our-own-research)).
+
 **How to read it.** The lead's words are quoted where they decide something. His 34 answers of
 12 November are written out in full [at the end](#the-leads-answers-12-november-2026). **Every
 choice of this page's own is marked _Mine_**, so the lead can overturn it without hunting for it.
@@ -23,8 +30,9 @@ Today a country makes one move a turn and has one army number. In v2 a country i
 **several armies standing on the map**, each led by a general, made of three kinds of soldier,
 marching one province at a time over terrain that slows them and starves them. Forts must be
 besieged. Provinces have people, food, a trade good and buildings that show on the map as how
-developed the land looks. Rulers make deals with each other and hold opinions of each other with
-reasons you can read. The map is **generated from a seed** at any size, and a model adds special
+developed the land looks. An army that takes a province **occupies** it, and the land becomes
+the conqueror's only when a **peace treaty** cedes it. Rulers make deals with each other and hold
+opinions of each other with reasons you can read. The map is **generated from a seed** at any size, and a model adds special
 places with their own stories.
 
 A turn works the way the lead asked: "in kind of the way that Civilization does it, like where you
@@ -36,8 +44,10 @@ turn limit.
 The hard constraint is the model. One `qwen3.5:4b` serves every ruler, one request at a time, at
 about half a second a decision. Six rulers making one decision each is 3 seconds a turn; six rulers
 each commanding four armies one by one would be 15 seconds or more. The design keeps a turn of six
-rulers at **about 7 seconds of model time on average and 14 at worst**, and every decision a
-closed list of about a dozen moves, the shape the 4B is measured to handle.
+rulers at **about 7 seconds of model time on average and 14 at worst** before treaties, and every decision a
+closed list of about a dozen moves, the shape the 4B is measured to handle. Treaty answers in
+wartime add about 0.7 s on average and up to 5.5 s at worst, so the totals are 7.3 to 8.7 s on
+average and 19.3 s at worst ([1.2](#12-how-a-model-ruler-takes-such-a-turn-five-ways)).
 
 ## Contents
 
@@ -51,7 +61,7 @@ closed list of about a dozen moves, the shape the 4B is measured to handle.
 8. [What each mechanic asks of the models and the framework](#8-what-each-mechanic-asks-of-the-models-and-the-framework)
 9. [How it will be measured](#9-how-it-will-be-measured)
 10. [The build as slices](#10-the-build-as-slices), with [issue-ready checklists](#issue-ready-checklists)
-11. [Questions for the lead](#11-questions-for-the-lead)
+11. [The lead's answers to this page's questions](#11-the-leads-answers-to-this-pages-questions)
 
 ## What the design has to respect
 
@@ -137,7 +147,8 @@ once, in this order (_Mine_, extending today's peace, home moves, wars, attacks)
                c. movement: every marching army takes its step at the same moment
                d. battles: wherever hostile armies now share a province, or crossed one border
                   in opposite directions
-               e. sieges tick; undefended provinces entered by a hostile army change hands
+               e. sieges tick; an undefended enemy province entered by a hostile army is occupied,
+                  neutral land entered is taken (5.1)
 5 Check        eliminations, victory
 ```
 
@@ -155,9 +166,10 @@ once, in this order (_Mine_, extending today's peace, home moves, wars, attacks)
 
 **In rule mode** a person gets the same turn: the court's orders in the orders panel, a "next army
 awaiting orders" key, each army's order from its panel, writs shown in the top bar, and End turn.
-The screen page already kept a short queue of orders above End turn for this. Whether a person is
-held to the writ cap is [question 1](#11-questions-for-the-lead); _Mine_ is yes by default, with
-"unlimited writs for the player" as an easy difficulty.
+The screen page already kept a short queue of orders above End turn for this. **A person is held
+to the same cap** (the lead: "Yeah lets have the same cap but to be honest I would eventually wont
+to have no cap of orders. We can have smth like civ has."). "Unlimited writs for the player"
+stays an easy difficulty setting. [1.6](#16-the-route-to-no-cap) designs the route to no cap.
 
 ### 1.2 How a model ruler takes such a turn: five ways
 
@@ -178,11 +190,20 @@ Numbers for **six rulers** (the default medium map) on the 4B. Two decision cost
 | **B. Every army and the court, every turn** | 1 + armies (2.5 average at medium) | 7.3 to 9.7 s / 16.6 s with 5 armies each | ~1,100 | Grows without a bound as realms grow. Most decisions are "keep marching", which the 4B's high hold share turns into idling |
 | **C. A fixed pool of K = 3 orders, for any piece** (closest to Old World) | 3 | 8.3 to 10 s / 10 s | 1,800 to 2,400: every army's every move on one list | One decision must name an army **and** a destination: a typed parameter, or compound target ids (`maren_host>fenmark`) that the grounding guard has never been measured on. The longest lists measured anywhere |
 | **D. A plan decision, then two orders narrowed by it** | 1 + 2 | 6.4 to 8.3 s / 8.3 s | ~1,100 | The plan is an extra decision whose only effect is to filter lists; a wrong plan starves the orders. A fixed two orders whether or not anything needs one |
-| **E. Orders when needed, under a writ cap** (recommended) | 1 court + armies awaiting orders (cap: writs − 1) + sometimes a second court order | **6.6 to 8.0 s / 13.8 s** (16.5 s at the 90th percentile latency) | court ~1,400, army ~1,100 | Armies past the cap hold and wait; the 4B's tendency to hold may leave armies idle. A probe and the sim must show standing orders carry the game |
+| **E. Orders when needed, under a writ cap** (recommended) | 1 court + armies awaiting orders (cap: writs − 1) + sometimes a second court order | **6.6 to 8.0 s / 13.8 s** (16.5 s at the 90th percentile latency); with treaty answers 7.3 to 8.7 s / 19.3 s | court ~1,500, army ~1,100 | Armies past the cap hold and wait; the 4B's tendency to hold may leave armies idle. A probe and the sim must show standing orders carry the game |
 
 How E's numbers are made: average 6 × (t_c + 1.4 t_o + 0.3 t_c) + 0.5 s of answers = 6.6 to 8.0 s;
 worst, every ruler at 5 writs, 6 × 5 × 0.46 = 13.8 s. For **eight rulers** (the large map) multiply
 by 4/3: 8.8 to 10.7 s average, 18.4 s worst. For **four rulers** (the small map) by 2/3: 4.4 to 5.3 s.
+
+**Treaties add answers** ([5.1](#51-occupation-war-score-and-treaties)).
+- **Proposing** a treaty is a court order, so it is already counted.
+- **Answering** one is a separate decision (_Mine_, estimate). In wartime about one ruler in four
+  answers a proposal each turn, so 6 × 0.25 × 0.46 ≈ **+0.7 s** on average: E becomes **7.3 to
+  8.7 s**.
+- **The worst case** is every ruler answering two proposals, the most a ruler answers in a turn
+  (5.1): 6 × 2 × 0.46 = +5.5 s, so **19.3 s**.
+- An enforced treaty asks nothing.
 
 **Recommendation: E.** _Mine._ Why:
 
@@ -263,7 +284,56 @@ Ordered this turn: recruit pikes at highmoor.
 Orders open to tolly_host: march to stonereach, ashby, corwick or orskhaven; merge with maren_host; hold.
 ```
 
-Only what the country can see is written ([fog of war](#37-fog-of-war)).
+Only what the country can see is written ([fog of war](#38-fog-of-war)).
+
+### 1.6 The route to no cap
+
+The lead: "Yeah lets have the same cap but to be honest I would eventually wont to have no cap of
+orders. We can have smth like civ has." So writs are the first version (R1). Slice
+[R8](#r8-orders-without-a-cap) removes the cap.
+
+**Without a cap,** as in Civilization:
+- every army may take an order every turn;
+- the court may give as many orders as the treasury pays for;
+- what limits a realm is what it has: gold, soldiers, armies, stores, and the turns a march takes.
+
+The person gets exactly that: no writs, the "next army" key, End turn.
+
+**What it does to a model ruler's turn.** Each decision stays the same size: it is still about one
+army or one court matter, so prompts stay at about 1,100 and 1,500 tokens. The **count** grows with
+the realm. Every army awaiting orders is now asked, and the court is asked again until it answers
+`none` or cannot pay. Estimates for six rulers on the medium map (_Mine_; t_o as in 1.2):
+
+| Stage of the game | Armies a ruler | Asked a turn (awaiting) | Court orders | Model time a turn, 6 rulers |
+|---|---:|---:|---:|---|
+| early | 2 | 1.0 | 1.5 | 6.0 to 6.9 s |
+| middle | 5 | 2.5 | 2 | 10.0 to 12.4 s |
+| late, two large realms of 10 armies, four middle ones | 10 / 5 | 5 / 2.5 | 3 / 2 | about 14 s |
+| late, all six large | 10 | 5 | 3 | 17 to 22 s |
+| for comparison: every army asked every turn, all six large | 10 | 10 | 3 | about 36 s |
+
+**Keeping it affordable**, each measured in R8:
+
+1. **Standing orders and wake conditions** (from R1) already keep most armies quiet most turns.
+2. **Automation an army can be left on.** Three marshal orders that run themselves, using the
+   scripted players' own tactics for one army:
+   - **`guard`** (a province): stays, returns after a battle, wakes only if it loses or the province
+     falls;
+   - **`campaign`** (a country at war): marches on that country's nearest provinces it can occupy,
+     besieges, falls back when hungry; wakes on a rout, on peace, or every 8 turns;
+   - **`watch_border`** (no target): moves toward the realm's nearest threat.
+
+   An army on automation is asked nothing until it wakes. This is the biggest saving, and it is
+   also a showcase: a model handing a piece to code with one decision.
+3. **Groups.** Armies in one province or bordering ones, with the same order, form a group with one
+   decision for all of them. A `follow` order (target: another of our armies) moves with it.
+4. **A decision budget a ruler a turn,** hidden from the rules: at most 8. Armies past it carry on
+   with their order or their automation. It is counted in decisions, never in seconds, so a seed
+   plays the same on every machine. The person has none.
+5. **The "ordered this turn" line** lists only the last five orders, so later decisions do not grow.
+
+With automation and the budget, the late game is estimated at 10 to 12 s a turn for six rulers. R8
+measures it ([9.3](#93-the-ab-each-slice-owes)).
 
 ## 2. The map generator, and how the map is drawn
 
@@ -277,11 +347,12 @@ castles".
 | Part | Made by | Why |
 |---|---|---|
 | Land shape, provinces, borders, adjacency, terrain, coasts, ports, capitals, starting realms, trade goods, population | **seeded code** | The rules, the balance and every measurement depend on them; a seed must give the same world on every machine |
-| Province names | **seeded code**: syllable tables per region, checked | Names are target ids, and odd names were measured fragile for target choice (findings, 5 October); the research page set this rule |
+| Province names | **seeded code** first: syllable tables per region, checked. **The model later** ([2.9](#29-names-and-histories-written-by-the-model), slice R10) | Names are target ids, and odd names were measured fragile for target choice (findings, 5 October); so the model's names come with checks and an A/B |
 | Which provinces may be special, and which effect each may carry | **seeded code**: slots and a closed list of effect templates | Strength stays the game's, as with the storyteller |
 | Which template each special place carries, its name and its story | **the model**, one decision per special place | Flavour and variety; a closed choice the 4B handles |
 | The world's name and a one-line legend | **the model** (optional) | Flavour only, never read back to a ruler as fact |
-| Country names, colours, flags, rulers | as the research page's section 3 says: tables and code, the model for flavour | Already designed there |
+| Country names, colours, flags, rulers | as the research page's section 3 says: tables and code, the model for flavour; names and histories by the model in R10 | Already designed there |
+| Which world among fair candidates, great features, each country's character and where it starts | **the model, later** ([2.8](#28-a-world-shaped-through-the-framework), slice R9), choosing among options the code made fair | The lead wants maps generated "maybe using the framework" |
 
 "In text way", read precisely: **the model writes text and chooses from closed lists; it never
 writes geometry or numbers.** _Mine._ A model asked for a map in text would give a description
@@ -436,6 +507,7 @@ distance fields baked from it, and the state texture, which grows from today's f
 | Ridges | a chain of mountain glyphs along each ridge, the passes left open with a small pass mark |
 | Wash | the owner's colour as today: a hue-and-saturation replace, darker toward the border (the screen page's lesson), so the terrain reads through it |
 | Borders | from the id map, as today: a line between two owners heavier than one inside a realm; a coast line heaviest |
+| Occupation | the occupier's colour as inked diagonal hatching over the owner's wash, and a pennant on the settlement ([5.1](#51-occupation-war-score-and-treaties)) |
 | Development | the settlement glyph and its surroundings ([4.6](#46-how-development-shows-on-the-map)) |
 | Armies, sieges, arrows | pieces above everything ([3.9](#39-armies-on-the-map)) |
 | Labels | below |
@@ -459,7 +531,108 @@ composed 1.6 million in about 40 ms, so this is well under a second once, at loa
 **Classic** preset, with terrain assigned by hand to match the painting. Every measurement so far
 was taken on it, and it stays the control for every A/B in [section 9](#9-how-it-will-be-measured).
 
-### 2.7 Risks and fallbacks
+### 2.8 A world shaped through the framework
+
+The lead: "Ok, but as I said, I want to end up with the possiblity to generate maps and maybe using
+the framework". So a later stage of the generator (slice [R9](#r9-the-model-shapes-the-world)) lets
+a model act as **the world's designer**, through the framework's own decision shape: one action,
+one target and one statement, the paired schema and per-target availability.
+
+**The rule: code proposes, the model picks, code checks** (_Mine_).
+- Every option the model sees has already passed the connectivity and fairness checks, or is
+  re-checked the moment it is applied and refused if it fails.
+- The model never writes a coordinate or a number.
+
+| Step | Action | Target | Statement | What code does |
+|---|---|---|---|---|
+| 1. The idea | a land shape (`continent`, `two_lands`, `inland_sea`, `peninsula`, `long_coast`) | a climate (`cold_north`, `temperate`, `warm_south`, `dry_inland`, `many_rivers`) | the world's name and legend | Generates three candidate worlds for that idea from three sub-seeds. All pass the checks |
+| 2. The world | `choose_world` | one of the three, each described in a line ("a long inland sea; two passes through the spine; marsh in the north") | why | Keeps it |
+| 3. Great features, up to three | `great_lake`, `spine_range`, `old_road`, `river_delta`, `wasteland` | a region | `Name: story` | Applies the feature: a range cuts borders but keeps the land connected; a road makes steps cost one turn; a lake removes a province. It re-runs every check, and refuses a feature that fails |
+| 4. Each country | a character (`seafarers`, `highlanders`, `river_folk`, `forest_folk`, `horse_lords`, `merchant_league`, `old_kingdom`) | a start site among the fair candidate sites code found. Availability is the fit rule: seafarers need a coastal site, highlanders hills | `Name: one line of history` | Places the realm. The character sets its own unit ([3.11](#311-making-the-roster-our-own-research)), its naming style, and which goods its land leans to, within the fairness spread |
+| 5. Special places | as in [2.5](#25-special-places) | a slot | `Name: story` | as there |
+| 6. Regions | a naming style | a region | the region's name | names ([2.9](#29-names-and-histories-written-by-the-model)) |
+
+**What stays seeded code:** geometry, adjacency, terrain quotas, the candidate sites, every number,
+and every check, including the balance run that certifies a preset.
+
+**The character is not the persona.** The persona (how the ruler plays) stays the five measured
+ones. A character's effect on what a ruler reads, such as a `Knowledge` line ("our riders are the
+best in the land"), changes the prompt, so it waits for its own A/B.
+
+**What it showcases.** A framework agent with no body designing a world:
+- per-target availability as the fit rules;
+- the paired schema keeping every pick legal;
+- the story check guarding its text;
+- the `DecisionLog` recording each choice with what was offered.
+
+The menu gets **How this world was made**, which opens those decisions in the inspector. _Mine:_ the
+world-maker gets its own identity, *the Cartographer*.
+
+**Cost.** About 1 + 1 + 3 + 6 + 4 + 8 = 23 decisions, about 12 s on the 4B, plus about 3 s to
+generate the three candidates. It runs on the loading screen with the names ([2.9](#29-names-and-histories-written-by-the-model)).
+
+### 2.9 Names and histories written by the model
+
+The lead: "Lets have model generate place names and history of provinces and countries eventually.
+Like it would add a lot of colors to the game where you have new names each time, its like we
+discussed with the country names". Tables are the first version (R2). Slice
+[R10](#r10-names-and-histories-by-the-model) adds the model.
+
+**What it writes, and how it is asked** (_Mine_). Each request is one decision, with the statement
+carrying the text:
+
+| What | Decisions | Action | Target | Statement |
+|---|---|---|---|---|
+| A region's name and its provinces' names | 1 a region (about 8 on medium) | a naming style (`harsh_north`, `soft_river`, `old_imperial`, `hill_clan`, `marsh_folk`, `coastal_trade`, `old_forest`, `open_steppe`) | the region | `Region: Name1, Name2, ...` in the order of a numbered list in its facts ("1 coastal plains with a port; 2 hills by the pass; ...") |
+| A country's name, its capital's name and its history | 1 a country | its character (2.8), or the rolled one | the country | `Name; Capital: two sentences` |
+| A one-sentence history for each province | 1 a region | `write_histories` | the region | `1: ...; 2: ...`, at most 120 words |
+
+**Checks.** A name that fails falls back to the region's table name; a history that fails, to none.
+
+- **Form:**
+  - letters only after folding accents;
+  - 4 to 11 letters, one word;
+  - the id is the name in lowercase, and the display name is the same word capitalised, so what a
+    person reads and what a model names are one word.
+- **Unique:**
+  - across every id (provinces, countries, regions, armies, generals);
+  - no id a prefix of another;
+  - none within one letter of an existing one;
+  - no two bordering provinces sharing their first three letters.
+- **Not reserved:** no action id, `none`, `no_target`, group id (`everyone`, `the_leader`...), or word
+  the facts use (`army`, `peace`, `war`).
+- **Safe to show:**
+  - nothing on a block list of real countries, capitals and well-known places;
+  - nothing on an unsuitable-word list (slurs, profanity, in several languages), matched as
+    substrings.
+- **Histories:**
+  - at most 40 words each, with no digits;
+  - they name only places and countries that exist;
+  - the storyteller's story check applies.
+
+**Exact references.** Names are fixed at creation, saved in the recording, and never change in a
+game. The rulers' and the storyteller's facts use the ids. Histories are **never read by a ruler**,
+being flavour in the province and country panels. The storyteller reads a province's history line
+when an event strikes it, so it can refer to it, as the lead asked of events.
+
+**When.** At game start, after the geometry and the world choices, on a loading screen.
+- **What it shows:** "The chronicler is naming the world", a line a region, the names appearing on
+  the drawn map as they arrive.
+- **Budget on the RTX 5080:**
+  - 8 region names × about 1.2 s (longer statements);
+  - 6 countries × 0.8 s;
+  - 8 history decisions × about 2 s;
+  - **about 30 s** in all, or **about 45 s with the world choices of 2.8**.
+- **Hard limit, 60 s:** what is left comes from the tables, and the game starts.
+- **The lock and the fallback:** the lock is taken for it (a rule game holds it anyway). With no
+  server, everything comes from tables.
+
+**Determinism and the A/B.** At temperature 0 the same seed's facts give the same names on the
+same server and model (the control re-run of 12 November reproduced 20 games move for move). Even
+so, names are **cached per seed** in a names file. Every arm of an A/B then reads the very same
+names, and two arms differ only in what they are meant to differ in.
+
+### 2.10 Risks and fallbacks
 
 | Risk | Fallback |
 |---|---|
@@ -558,7 +731,8 @@ side's strength in soldiers, the winner only 60% of that. Losses come from each 
 army, at most 30% (_Mine_). **Retreat:** the loser falls back one step to the province it came
 from, or else to the nearest province it may enter. An army that has nowhere to go, or lost by more
 than 2.5 to 1, is **routed**: destroyed, and its general captured or killed. A province with no
-defender left changes hands at the end of the turn, unless it is walled.
+defender left is **occupied** at the end of the turn, unless it is walled. Neutral land is taken
+outright ([5.1](#51-occupation-war-score-and-treaties)).
 
 **The report**, written by code from the factors, the three largest first (_Mine_ wording). The ruler
 reads it as one of this turn's facts:
@@ -639,7 +813,7 @@ ships ([R3](#r3-armies-in-depth)).
 - **A siege takes** 2 turns per walls level (*to tune*): −1 with a `siegewright` general, −1 if the
   besiegers outnumber the garrison (10 a level) three to one, never below 1. Each turn of a siege
   also has a 10% seeded chance of an early breach.
-- **When it ends** the walls drop one level and the province changes hands.
+- **When it ends** the walls drop one level and the province is occupied.
 - **A siege is broken** when the besieging army leaves or loses a battle there. The owner's army
   that marches in fights it, with the walls' bonus if the garrison sallies.
 - **A garrison** is only the walls' own 10 a level. An army inside walled land of its own just defends
@@ -734,6 +908,47 @@ Read across grand-strategy and 4X games ([sources](#sources)); ideas and convent
 - **Seasons and weather**: later, possibly as storyteller events.
 - **Morale as a separate meter**: hunger and rout carry it.
 - **Unit upgrades**.
+
+### 3.11 Making the roster our own: research
+
+The lead: "Lets have it like this for now but please do a reasearch on how we can make it more
+interesting and unique". Pikes, riders and bows stay the base ([sources](#sources)).
+
+**What makes a roster interesting**, as read across the genre:
+
+- **Units that say who you are.**
+  - Humankind gives every culture one emblematic unit beside the shared ones.
+  - Civilization does the same per civilization.
+  - A small difference with a strong identity is remembered more than a long list.
+- **Units that answer the map.** When a unit needs a resource (Civilization's horses and iron for
+  some units), land and trade gain a military reason.
+- **Counters you can see coming.** Rock, paper, scissors is only a choice when the enemy's mix can
+  be scouted, and switching takes time. Fog of war (3.8) and recruiting by companies do both.
+- **Growth and risk.** Battle Brothers grows each soldier through the fights it survives, and lets
+  injuries stay. Veterans make an army worth keeping alive.
+- **A choice before the fight.** Stances and formations, or a commander's character, let the same
+  army fight differently.
+- **Few kinds, many modifiers.** Depth from combination reads better than many unit kinds,
+  especially for a model reading a list.
+
+**Three directions that would make ours its own** (_Mine_):
+
+| Direction | What it is | What it asks of a model ruler | What it asks of the screen |
+|---|---|---|---|
+| **1. Levies of the land** | Each special place and some trade goods give a **local variant** of a base type, recruitable only there: `horse_plains` swift riders (the first step of a march one turn less); `iron_deep` iron pikes (+20% strength, +50% cost); `great_wood` wood bows (+25% in forest, size hidden as in forest); `old_castle` castle guards (+25% defending walls); salt marsh fen skirmishers (no marsh penalty) | One more recruit action for each variant, open only at the province that grants it (per-target availability), named in the moves line. No new decision kind. Facts gain the variant in the army's line | A small origin glyph on the company in the army panel; the province panel says what it levies; the variant's mark on the piece |
+| **2. The realm's own unit** | From the country's character (2.8), one base type replaced by its own: highland pikes (no hills penalty), horse lords' mounted bows (count as riders and as bows in the counter rule), forest folk's hidden bows, the merchant league's hired companies (raised anywhere it holds, double upkeep) | The recruit action is renamed (`recruit_highland_pikes`). A `Knowledge` line saying what it is good at would change the prompt, so it needs an A/B | A unit glyph drawn in the crest's colours; a realm card at the start showing the unit |
+| **3. Stances a general takes** | A marshal order with no target that lasts: `hold_line` (pikes +20% defending; marches cost a turn more), `skirmish` (bows +20%; the army falls back rather than be routed), `charge` (riders +25% attacking; +20% own casualties) | Three more marshal actions, a writ each. Personas would show in them (a warmonger charges). Risk: more army decisions, and the 4B repeating one stance | A stance glyph on the standard; the battle report names it |
+
+Veterancy (priority 6 in 3.10) combines with any of them: a company that survives three battles
+gets a name from the battle ("the Corwick pikes") and +10%.
+
+**Pick: levies of the land first** (_Mine_).
+- It ties armies to what the generator, the special places and the goods already create, so
+  conquest and trade deals gain a military reason ("take the horse plains").
+- It adds no decision kind and no prompt section, only actions offered where they are legal, which
+  is per-target availability doing the framework's showcase work.
+- **The order:** levies go in R6 with the goods; the realm's own unit follows the characters of 2.8
+  in R9; stances only if R1's probe shows army orders are cheap.
 
 ## 4. Economy and buildings
 
@@ -853,27 +1068,149 @@ Accepted: peace, truce, alliance, tribute, trade deal, right of passage; opinion
 reasons ("Yes, and yes"); free-text negotiation, one ruler at a time first; breaking a deal costs
 reputation, "maybe we can add more things as stability, legitimacy or more. If you think we need it".
 
-### 5.1 Agreements
+### 5.1 Occupation, war score and treaties
+
+The lead: "I would better want a peace treaty way. Like in EU4 where you conquer but you also need
+to do a treatty for it to become yours". This replaces the first draft's taking a province by
+entering it. The idea is the genre's; the rules, names and numbers here are ours (_Mine_, every
+number *to tune*).
+
+**Occupation.**
+- **How it happens:**
+  - an army at war with a province's owner ends its step there, with no defending army, and the
+    province is not walled;
+  - or its siege ends.
+
+  The province is then **occupied**: its owner stays, and its **controller** is the occupier.
+- **Neutral land has nobody to sign a treaty,** so beating its garrison takes it outright, as today.
+  The opening land grab still colours the map.
+- **An occupied province:**
+  - gives its owner no income and no food;
+  - gives the occupier half its income;
+  - counts as supplied land for the occupier's armies.
+- **Freeing it:** an army of the owner, or of an ally at war with the occupier, enters it with no
+  occupying army there. A walled province must be besieged again, at its walls' current level.
+- **Each war is between two countries.** An ally who joins is at war on its own account, and its
+  occupations count in its own war.
+
+**War score**, for each pair at war, from −100 to +100, from one side's view:
+
+| Part | Points |
+|---|---|
+| A province's value | 1 + its population ÷ 3 (rounded down), +2 for a capital |
+| Occupation | 100 × (value of their provinces we occupy − value of ours they occupy) ÷ the value of their whole realm |
+| Battles | +4 for each battle won against them in this war, −4 for each lost, at most ±20 |
+| Their capital | +10 while we occupy it |
+
+**The terms**, each a court order with one target and a cost in war score. A term is offered only
+when the proposer's score pays for it (availability), so the score bounds what may be asked, and
+the model never sees a term it cannot ask:
+
+| Action | Target | The treaty | Cost |
+|---|---|---|---|
+| `offer_white_peace` | the country | all occupied land returns | 0, either side |
+| `demand_occupied` | the country | every province of theirs we occupy becomes ours; ours they occupy return | the occupation points of what is ceded |
+| `demand_province` | a province of theirs that borders land we own or occupy | that province becomes ours; everything else returns | its value share × 100; × 1.5 if we do not occupy it |
+| `demand_tribute` | the country | they pay 20% of their income to us for 10 turns; everything returns | 25 |
+| `cede_occupied` | the country | (the losing side's offer) every province of ours they occupy becomes theirs | none |
+| `offer_province` | a province of ours | that province becomes theirs; everything else returns | none |
+| `offer_tribute` | the country | we pay 20% of our income for 10 turns; everything returns | none |
+
+Every treaty ends that war and starts a 5-turn truce.
+
+**Rounds.**
+- **Proposing:** a side may propose one term a war a turn, for a writ.
+- **Answering:** the other side answers, `accept` or `refuse`, as a separate free decision on the
+  same snapshot. Its facts are the term, the war score, and both sides' armies as it sees them.
+- **Both propose in one turn:** both proposals are answered. If both are accepted, the one from the
+  side with the higher score lands.
+- **A refused term** may be put again the next turn.
+- **How long it takes:** a war ends after one to a few turns of bargaining, which is what several
+  rounds look like here.
+- **A ruler answers at most two proposals a turn;** more wait.
+
+**Enforced terms.** At a war score of 90 or more, a demand cannot be refused. It lands without the
+other side being asked; the log records it as enforced.
+
+**When a war ends without a treaty**, and when a ruler is wiped out:
+
+- **A war ends only by a treaty,** white peace included, **or when one side is broken.** Occupation
+  never decays into ownership.
+- **A realm is broken** when every province it owns is occupied and it has no army left. Every
+  occupier then takes what it occupies, at once, and the country is out.
+- **An occupier knocked out of the game:** its occupations return to their owners.
+- **Peace with one of two enemies** settles only that pair's occupations.
+- **A stuck war is offered the status quo.** If a war's score has moved less than 10 points and no
+  occupation has changed for 10 turns, both sides are offered `status_quo`, free: each keeps what it
+  occupies. It lands if both accept. This replaces the white-peace offer of the first draft, so a
+  long war still moves the map.
+
+**Under conquest with no turn limit,** stalemates end through:
+- enforced terms at 90;
+- broken realms;
+- the status-quo offer;
+- war weariness;
+- fear of the leader;
+- the storyteller's lean ([6.1](#61-conquest-the-default)).
+
+**What the rulers read.** One more part on each line of a country at war with us, plus a terms line:
+
+```text
+orsk: at war with us, war score +34 (we occupy ashby and corwick; won 2 battles); about 90 soldiers in 2 armies; hostile (-45).
+orsk occupies brindle.
+Terms we may put to orsk: demand all we occupy (ashby, corwick); demand ashby; demand tribute; offer white peace.
+```
+
+That is about 80 more tokens a court prompt in wartime.
+
+**What the eye sees** (_Mine_). Colour changing is the game's centrepiece, so occupation and
+ownership must never look alike:
+
+- **Owned land:** the owner's wash, as now.
+- **Occupied land:** the owner's wash stays, and the occupier's colour is laid over it as **inked
+  diagonal hatching**:
+  - the lines are about 6 px apart at 1×, in the occupier's colour with a dark ink edge;
+  - a small pennant of the occupier is planted on the settlement;
+  - when a province is occupied, the hatching is drawn stroke by stroke from the side the army came
+    from, in about 0.8 s;
+  - it is a pattern, not only a colour, so it reads for colour-blind players too.
+- **Under siege:** the ring of tents (3.9), and no hatching until it falls.
+- **A treaty transferring land:**
+  1. the treaty card: both crests, the term, the seal (court scenes later);
+  2. for each ceded province, the hatching thickens and flows together into the new owner's solid
+     wash, spreading from the new owner's border, with today's capture spread and wet edge;
+  3. a wax-seal glyph stamps on the province for a second;
+  4. the borders redraw.
+
+  This is the colouring moment, now earned by a treaty.
+- **Land returned:** the hatching lifts, fading from the edges inward, in 0.6 s.
+- **A war map mode:** each war's score as a bar between the two crests; occupied provinces outlined
+  in the occupier's colour.
+- **The legend** in rule mode: solid is held, hatched is occupied.
+
+**With typed parameters** (#266 item 2) one decision could carry a whole treaty: a list of
+provinces, a tribute with its size and length, in any mix. Today a treaty is **one term**, so a
+war ends with one term, and a mix (a province and tribute) is not possible. Nothing here depends on
+that feature.
+
+### 5.2 Agreements
 
 Each is proposed by a court order and answered by the other ruler as a separate decision, accept or
 refuse, as peace is today (_Mine_, the exact rules; numbers *to tune*):
 
 | Agreement | Proposed by | Terms, fixed by the rules | Ends |
 |---|---|---|---|
-| **peace** | `offer_peace` (at war) | war ends; a truce for 5 turns | — |
-| **truce** | follows peace | no war between the two | after 5 turns, or broken |
-| **tribute** | `demand_tribute` (at war; peace on condition) or `offer_tribute` (at war; to buy peace) | the payer gives 20% of its income each turn to the other for 10 turns, and the war ends | after 10 turns, or broken |
-| **alliance** | `propose_alliance` (at peace) | defensive: when someone declares war on one, the other is asked to join ([5.3](#53-calls-to-arms)) | broken |
+| **peace treaty** | one of the terms in [5.1](#51-occupation-war-score-and-treaties) (at war) | the term; then a truce for 5 turns | — |
+| **truce** | follows a treaty | no war between the two | after 5 turns, or broken |
+| **tribute** | a treaty term, `demand_tribute` or `offer_tribute` (5.1) | the payer gives 20% of its income each turn to the other for 10 turns | after 10 turns, or broken |
+| **alliance** | `propose_alliance` (at peace) | defensive: when someone declares war on one, the other is asked to join ([5.3](#54-calls-to-arms)) | broken |
 | **trade deal** | `propose_trade` (at peace) | goods shared both ways, +5 gold each a turn ([4.5](#45-trade-goods-and-trade-deals)) | broken, at least 10 turns in |
 | **right of passage** | `ask_passage` (at peace) | our armies may enter and are supplied in their land | after 10 turns, or broken |
 
-- **Taking a province** happens on the map, by conquest. No peace term cedes land. That keeps peace
-  terms to a closed list with no typed parameter, and the map's colour changing with the armies
-  (_Mine_; [question 2](#11-questions-for-the-lead)).
 - **Free-text negotiation** (accepted, decision 10) uses the conversation panel the screen page
   planned. Whatever the talk agrees on lands as one of the proposals above, checked by the rules.
 
-### 5.2 Opinions with visible reasons
+### 5.3 Opinions with visible reasons
 
 Every ruler holds an opinion of every other from −100 to +100. It is the sum of reasons, each with a
 value and a decay:
@@ -881,7 +1218,8 @@ value and a decay:
 | Reason | Value | Decay |
 |---|---|---|
 | at war with us | −25 | while it lasts |
-| took a province of ours | −10 each, at most −40 | 1 a turn |
+| occupies a province of ours | −5 each, at most −20 | while it lasts |
+| took a province of ours by treaty | −10 each, at most −40 | 1 a turn |
 | broke a deal with us | −30 | 2 a turn |
 | broke a deal with anyone (its word) | −10 | 1 a turn |
 | borders us | −5 | while it lasts |
@@ -901,14 +1239,14 @@ neutral, wary (−10 to −29), hostile (−30 and below). The screen's country 
   reasons among its facts, does the model invent fewer? That is [R7](#r7-diplomacy-and-the-realm)'s
   A/B, and it is measurable with the scorecard's invented-grievance count (#244 item 4).
 
-### 5.3 Calls to arms
+### 5.4 Calls to arms
 
 When a country declares war on one of our allies, we are asked, as a separate free decision,
 `join_war` or `stay_out`.
 - **Joining** puts us at war with the attacker.
 - **Staying out** ends the alliance, with −30 opinion and the "broke a deal" reason.
 
-### 5.4 Breaking a deal
+### 5.5 Breaking a deal
 
 A court order, `break_<agreement>`, with the other country as the target. Declaring war during a
 truce is `break_truce`.
@@ -917,7 +1255,7 @@ truce is `break_truce`.
 - **Everyone's opinion** takes "broke a deal with anyone".
 - **Stability** −1.
 
-### 5.5 Does a realm value earn its place?
+### 5.6 Does a realm value earn its place?
 
 **Stability stays; nothing is added** (_Mine_).
 - **Stability** already does real work: taxes cost it, it drives revolts, and the 4B reads it.
@@ -937,9 +1275,8 @@ turns."
 
 ### 6.1 Conquest, the default
 
-- **The rule.** The game ends when one country is the last with any province (_Mine_, the precise
-  rule; [question 3](#11-questions-for-the-lead) asks whether a submitted tributary should also
-  count as conquered).
+- **The rule.** The game ends when one country is the last with any province. The lead accepted
+  "last ruler standing" ("Ok").
 - **There is no turn limit.** A person can stop at any time.
 - **Headless runs** for measurement stop at a cap, 150 turns by default, and record the game as
   unfinished.
@@ -961,12 +1298,12 @@ already carry four pressures:
 3. **Revolts at low stability** free provinces.
 4. **The storyteller** leans on the leader: S1 measured value against standing at r −0.37.
 
-Two more, both _Mine_:
+Treaties add three more ([5.1](#51-occupation-war-score-and-treaties)): **enforced terms** at a
+war score of 90, **broken realms** taken whole by their occupiers, and the **status-quo offer** in a
+stuck war. And one more, _Mine_:
 
-- **A stuck war is offered peace.** After 12 turns at war with no province changing hands between
-  two countries, each is offered white peace as an envoy, free.
-- **Stalemate is measured, not hidden.** A game with no province changing hands for 20 turns is
-  counted as a stalemate in the scorecard.
+- **Stalemate is measured, not hidden.** A game with no province changing owner or occupier for 20
+  turns is counted as a stalemate in the scorecard.
 
 ### 6.2 Other modes, as settings
 
@@ -1040,7 +1377,11 @@ lines and the moves line; every slice measures them.
 |---|---|---|---|---|---|
 | **Court order** | once or twice a ruler a turn | `recruit_pikes`, `recruit_riders`, `recruit_bows` (province); `build_farm`, `build_market`, `build_barracks`, `build_walls`, `build_special` (province); `raise_taxes`; `declare_war`, `break_truce`, `offer_peace`, `demand_tribute`, `offer_tribute`, `propose_alliance`, `propose_trade`, `ask_passage`, `break_alliance`, `break_trade` (country); `none` | 9 to 11 standing lines ([1.5](#15-what-a-ruler-reads-literally)), up to 3 turn facts, orders given, the moves line | ~1,400 with 4 remembered exchanges | **Typed parameters:** unit type and building kind spelled into action ids; peace terms as separate actions. Count by action is ~20, of which about 8 are open in a turn. The moves line grows: kept to two provinces a building kind and to provinces with barracks for recruits |
 | **Army order** | per army awaiting orders, up to writs − 1 | `march` (province: its borders, plus at most 6 farther ones the game picks: enemy and neutral border provinces in reach, our own threatened ones, the nearest capital at war), `merge` (army: ours, same or bordering province), `split` (none: halves the army, a new general), `hold`; later `plunder`, `forced_march` | the army's line, what it sees nearby, orders given, the moves line | ~1,100 | **The army is not a target**; it is in the stimulus and `DecideOptions.Correlation`, which per-target availability reads (as `EnvoyOffer` today). A destination many steps away is one target and the path is the rules'. **N10**, a round holds an agent once: one round per writ slot or a game-side chain |
-| **Answers**: peace, tribute, alliance, trade, passage, call to arms | per proposal received | `accept` / `refuse`; `join_war` / `stay_out` | the offer first, then two facts | ~900 | One round per offer, as today (N10) |
+| **Treaty proposal** | a court order | the seven terms of [5.1](#51-occupation-war-score-and-treaties) (country or province), offered only when the war score pays | the war's line and the terms line | ~1,500 in wartime | **Typed parameters:** one term a treaty; a list of provinces or a tribute's size needs #266 item 2 |
+| **Answers**: treaty, alliance, trade, passage, call to arms | per proposal received, at most two a turn | `accept` / `refuse`; `join_war` / `stay_out` | the offer first, the war score, then two facts | ~900 | One round per offer, as today (N10) |
+| **Automation** (R8) | a marshal order | `guard` (province), `campaign` (country), `watch_border`, `follow` (army) | as an army order | ~1,100 | none new; the code runs the army afterwards |
+| **World design** (R9) | at creation | land shape (climate); `choose_world` (candidate); features (region); character (start site) | the candidates' lines, sites, regions | ~800 | none new; the paired schema and per-target availability are the fit rules |
+| **Names and histories** (R10) | at creation | naming style (region); character (country); `write_histories` (region) | the region's numbered list of provinces | ~800, with statements of 60 to 160 tokens | **#266 item 3:** one text field carries a list; **#244 item 11:** a reply cap matters with long statements |
 | **Choice event** (R5) | per affected ruler; several for an event that "affects all" | `choose_first`, `choose_second`, `choose_third` (none) | the event's title and story, each option's line in the game's words | ~1,100 | **#266 item 2**: the storyteller cannot write options with their own effects in one decision. Workaround: *dilemma templates* whose options are the game's (below) |
 | **Storyteller: event** | once a turn | today's 8 templates, plus R5's dilemma templates and chain steps (country, group, province) | today's facts, plus a digest of what happened (battles, conquests, broken deals) and running chains | ~1,500 | #266 items 3 (title), 4 (replace the story only), 5 (a lasting fact, for chains), 6 (what was told), 9 (variety); N11, N12 |
 | **World-maker: special place** | at creation, per slot | the templates the slot allows (province) | the slot's terrain, region, neighbours; places made so far | ~700 | #266 item 3 (name and story split at a colon) |
@@ -1049,9 +1390,9 @@ lines and the moves line; every slice measures them.
 **What the framework would need, in one list:**
 
 1. **Typed parameters** (#266 item 2, #190 LV #12). *Unit type and building kind as action ids* is a
-   workaround that works: about 8 actions open in a turn. **Peace terms with a province** and
-   **trade deals with chosen goods** are left out of the design because of it. **Choice events written
-   by the model** need it.
+   workaround that works: about 8 actions open in a turn. **A treaty is one term**: a province or
+   tribute, never a mix or a size, until a decision can carry a list. **Trade deals with chosen
+   goods** are left out because of it. **Choice events written by the model** need it.
 2. **Several decisions per agent per turn** (N10). `DecisionRound` holds an agent once. Today that is
    a second envoy round; in v2 it is every turn, for every ruler. A *chain* helper is worth
    considering: one agent, several decisions in order, each with a line for what was ordered before,
@@ -1098,6 +1439,9 @@ Per game becomes per turn, plus the turn windows of [6.3](#63-what-it-means-for-
 | **Pace** | model time a turn (median, 90th percentile); decisions a turn by kind; tokens a decision by kind; queue time; the share of model time hidden behind playback |
 | **Orders** | writs used out of writs held; orders by kind; armies awaiting orders that got none; **wasted orders**: refused when they landed, a march that never arrives, a build that cannot pay, `none` with an army awaiting and a writ spare |
 | **Armies** | battles a turn; battle win rate against the odds before the battle (does it pick battles it should win?); losses to attrition as a share of all losses; sieges begun and finished; routs; army count and size over time |
+| **War and treaties** | occupations a turn and provinces transferred by treaty a turn (both replace "provinces changing hands"); treaties by term; proposals refused; enforced treaties; status-quo offers made and accepted; broken realms; turns a war lasts; whether a ruler asks for what its score allows |
+| **Automation** (R8) | armies on automation; decisions saved; what automated armies achieved against ordered ones |
+| **World and names** (R9, R10) | options offered and chosen; features refused by the checks; names and histories falling back, by check; time at the start |
 | **Counters** | whether recruits answer the mix of enemy armies the country has seen (the share of recruits that counter the largest type seen) |
 | **Economy** (R6) | buildings by kind against the scripted "where it pays" choice; buildings that cannot be used (a barracks never recruited from); famine turns; development Gini |
 | **Diplomacy** (R7) | deals made, kept and broken; calls answered; opinion against action (do rulers attack those they dislike?); **invented grievances** with and without opinion reasons |
@@ -1115,6 +1459,9 @@ Per game becomes per turn, plus the turn windows of [6.3](#63-what-it-means-for-
 | R5 | the storyteller as built (S1) | choices; chains as skeletons; chains written by the model (the lead: "if you insist we can do both and compare and test") | — | 20 games an arm; the events section plus the blind pick of two logs by the team |
 | R6 | R4 | economy and buildings | builds against the scripted choice | persona table; economy measures; does the builder persona build more? (η² of building) |
 | R7 | R6 | diplomacy; and opinion reasons in facts on against off | deals and their effect on length | persona table; invented grievances with reasons against without |
+| R8 | the writ cap | no cap with automation and the budget of 8; and no cap without automation | length, battles, armies idle | persona table, 20 games, 40-turn cap and a 100-turn slice of 5 games: model time a turn (median, 90th percentile) by turn window, decisions a turn, automation share, sense and character |
+| R9 | the seeded generator alone | the world chosen and shaped by the model | the balance run on both arms' worlds | the same 20 seeds: fairness scores, features refused, game length and stalemates; a blind pick of two worlds by the team |
+| R10 | table names | model names and histories, generated once per seed and cached | — | the same 20 seeds and geometry in both arms, only the names differing: illegal answers, grounding containments, statements naming their target, statements naming places that do not exist, attack share and sense; fallbacks by check; time at the start; a blind read of two maps by the team |
 
 **Cost.** A 40-turn game of six rulers at about 7 s of model time a turn is about 5 minutes; a
 20-game arm about 1.6 hours. Hence turn caps, two arms per session at most, and the sim doing
@@ -1123,13 +1470,18 @@ everything a script can.
 ## 10. The build as slices
 
 The lead's order: armies with the new mechanics, then the bigger map, then events with choices and
-chains, then buildings and economy, then diplomacy ("Ok"). Adjusted where something must come
-first (_Mine_):
+chains, then buildings and economy, then diplomacy ("Ok"). Three slices he wants "eventually" come
+after: no cap on orders (R8), the world shaped by the model (R9), and names and histories by the
+model (R10). R9 and R10 touch only creation and may run any time after R4. Adjusted where something
+must come first (_Mine_):
 
 - **R0, settings and the map as data, comes first:** every later slice reads a map with terrain and
   a settings object. The lead asked to "start with menu and the settings already".
 - **The turn of writs comes with the first armies (R1):** armies without it would be ordered one move a
   turn.
+- **Occupation and the two simplest treaties come with R1 too** (white peace, and ceding what is
+  occupied): with armies occupying land, nothing else would ever transfer it. The rest of the terms,
+  tribute and single provinces, come with diplomacy in R7.
 - **The generator's headless part (R2) moves up, beside R1,** because the lead asked to "start with
   the map generator already". It touches different files from R1, so the two can run at once. The
   drawn chart starts there as a spike the lead judges, while the full renderer waits for R4, "the
@@ -1138,14 +1490,17 @@ first (_Mine_):
 | Slice | What it is | Size (_Mine_) | Playable after it |
 |---|---|---|---|
 | **R0** | settings, victory modes, the map as data with terrain, the Classic preset | M | today's game exactly, with a settings screen and conquest as default |
-| **R1** | writs, the order cycle, armies as pieces, movement, battles, the court and marshal agents | L | the Classic board with armies |
+| **R1** | writs, the order cycle, armies as pieces, movement, battles, occupation, war score, white peace and ceding what is occupied, the court and marshal agents | L | the Classic board with armies, wars ending in treaties |
 | **R2** | the generator headless, its checks, special-place slots, the world-maker; a drawn-chart spike | L (parallel with R1) | as after R1; generated worlds playable headless |
 | **R3** | unit types, generals, sieges, supply, fog, the battle report | L | the Classic board, armies in depth |
 | **R4** | generated worlds on screen: the drawn chart, labels, map settings, specials shown | L | any generated world, on screen |
 | **R5** | events with choices and chains, province traits, multi-affected events | M to L | as R4, with a richer storyteller |
-| **R6** | population, food, goods, buildings, development drawn | L | as R5, with an economy |
-| **R7** | agreements, opinions, calls to arms, breaking deals, stalemate rules | M to L | the full v2 game |
+| **R6** | population, food, goods, buildings, development drawn, levies of the land | L | as R5, with an economy |
+| **R7** | all treaty terms, enforced terms, status quo, broken realms; agreements, opinions, calls to arms, breaking deals | M to L | the full v2 game |
 | **A** | the advisor, on by default and switchable in game | S to M (after R3) | rule mode with advice |
+| **R8** | orders without a cap: automation, groups, the decision budget | M | the v2 game with no cap on orders |
+| **R9** | the world shaped by the model: candidates, features, characters and start sites, the realm's own unit | M to L | worlds the model designed, with "How this world was made" |
+| **R10** | names and histories by the model, with their checks, cache and loading screen | M | new names every game |
 
 Sizes: **S** is one session's pull request; **M** about two; **L** three or more, and it may split
 into several pull requests. Each slice ends with the scripted players updated (they are the
@@ -1183,7 +1538,9 @@ changelog line and the demo `README.md` updated.
   - Writs and the order cycle ([1.3](#13-the-order-of-decisions-within-a-turn)).
   - Simultaneous movement with terrain costs; border crossings.
   - Battles between armies with today's formula; retreat and rout; militia and neutral garrisons.
-  - Capture by entering; recruit at the capital.
+  - Occupation, and neutral land taken by entering; recruit at the capital.
+  - War score; the terms `offer_white_peace`, `demand_occupied` and `cede_occupied`, and their
+    answers; broken realms.
   - The resolution phases ([1.1](#11-what-a-country-does-in-a-turn)).
   - Scripted players with armies, and random.
   - New log lines.
@@ -1193,17 +1550,21 @@ changelog line and the demo `README.md` updated.
   - Decisions chained per ruler; memory 4 each; the army statement rule.
 - **Screen:**
   - Pieces always shown, march lines, the step animation, battle clash and a plain report card.
+  - Occupation hatching and its drawing-in; the treaty's flow from hatch to wash, the seal, and
+    hatching lifting from returned land.
   - Rule mode: writs in the top bar, awaiting marks, the army cycle key, orders queued above End turn.
   - `ReplayBuilder` rebuilds armies.
 - **Tests:**
   - Each terrain's cost; two armies stepping at once; a border crossing.
+  - Occupation changes the controller and never the owner; a treaty transfers exactly its term;
+    white peace returns everything; a broken realm's land goes to its occupiers.
   - Battles are deterministic per seed; the writ cap holds.
   - Every wake condition fires once.
   - Every order is re-checked when it lands.
   - Whole games terminate; scripted beats random.
   - A fake model plays exactly the scripted game through the framework, as stage 2 checked.
 - **Measured:** [9.3](#93-the-ab-each-slice-owes), the latency probe first.
-- **Playable:** watch, live and rule on Classic, with armies.
+- **Playable:** watch, live and rule on Classic, with armies; wars end in treaties.
 
 ### R2. The map generator, headless, and a drawn-chart spike
 
@@ -1306,7 +1667,8 @@ like to have model write them ... but if you insist we can do both and compare a
 
 ### R6. Economy and buildings
 
-- **Sim:** population, food, gold, goods and trade deals' goods, buildings and their rules, famine.
+- **Sim:** population, food, gold, goods and trade deals' goods, buildings and their rules, famine;
+  levies of the land ([3.11](#311-making-the-roster-our-own-research)).
 - **Agents:** the `build_*` actions and their two-province moves lines; the realm's goods and food in
   the facts.
 - **Screen:**
@@ -1323,9 +1685,11 @@ like to have model write them ... but if you insist we can do both and compare a
 ### R7. Diplomacy and the realm
 
 - **Sim:**
+  - The rest of the treaty terms (`demand_province`, `demand_tribute`, `offer_province`,
+    `offer_tribute`); enforced terms at 90; the status-quo offer.
   - Agreements and their answers; calls to arms; breaking deals.
   - Opinions with reasons and decay; war weariness.
-  - The stuck-war peace offer; stalemate counting.
+  - Stalemate counting.
 - **Agents:** the diplomacy actions; the answers; the two largest reasons in each rival's line.
 - **Screen:**
   - The diplomacy matrix gains alliances, tribute, deals and passage.
@@ -1334,8 +1698,62 @@ like to have model write them ... but if you insist we can do both and compare a
 - **Tests:**
   - Each agreement's terms and end; a refused call to arms ends the alliance.
   - Opinion decay; a breach's costs.
-  - The stuck-war offer fires after 12 turns.
+  - The status-quo offer fires after 10 stuck turns; a demand at 90 is never asked.
 - **Playable:** the full v2 game.
+
+### R8. Orders without a cap
+
+- **Sim:**
+  - The cap goes, behind a rules flag.
+  - Automation orders (`guard`, `campaign`, `watch_border`) run by the scripted tactics for one army,
+    with their wake rules; `follow` and groups.
+  - The decision budget a ruler a turn.
+- **Agents:** the marshal's automation actions; the court asked until `none` or out of gold, within
+  the budget; the "ordered this turn" line capped at five.
+- **Screen:**
+  - No writs in the top bar; the next-army key cycles every army.
+  - An automation glyph on a piece, and its target drawn faintly.
+- **Tests:**
+  - An automated army acts as the scripted player would with one army.
+  - Each automation's wake rule; the budget holds and is deterministic.
+  - With the flag off, R7's game is unchanged.
+- **Playable:** the v2 game without a cap; writs as a setting.
+
+### R9. The model shapes the world
+
+- **Sim:**
+  - Three candidate worlds per idea; feature templates and how each is applied and re-checked.
+  - Candidate start sites within the fairness spread; characters and what each sets.
+  - The realm's own unit ([3.11](#311-making-the-roster-our-own-research)).
+- **Agents:** the Cartographer agent and its six steps ([2.8](#28-a-world-shaped-through-the-framework)),
+  with seeded fallbacks for each.
+- **Screen:**
+  - The loading screen showing each choice.
+  - **How this world was made** on the menu, opening the inspector.
+  - The realm card at the start.
+- **Tests:**
+  - Every option offered passes the checks.
+  - A feature that fails is refused and the world stays valid.
+  - The fallbacks give a full world with the server off.
+- **Playable:** model-designed worlds, or seeded ones as before.
+
+### R10. Names and histories by the model
+
+- **Sim:**
+  - Name and history checks ([2.9](#29-names-and-histories-written-by-the-model)) with table
+    fallbacks.
+  - The names file cached per seed.
+  - Names fixed in the recording.
+- **Agents:** the naming decisions per region and per country, and the history decisions; the
+  60-second budget; the storyteller reading a struck province's history.
+- **Screen:** the loading screen with names appearing on the map; histories in the province and
+  country panels.
+- **Tests:**
+  - Each check refuses its case: reserved word, duplicate, prefix, near duplicate, block list,
+    unsuitable word, digit, unknown place.
+  - The cache gives identical names.
+  - A timeout falls back cleanly.
+- **Playable:** new names and histories every game, or tables.
 
 ### Issue-ready checklists
 
@@ -1358,13 +1776,17 @@ line, and `findings.md` for anything measured.
 - [ ] `Army`, orders, standing orders and the eight wake conditions
 - [ ] Writs a turn, the order cycle, the second court order
 - [ ] Simultaneous movement with terrain turns; border crossings; re-check on landing
-- [ ] Battles between armies, retreat and rout, militia and neutral garrisons, capture by entering
+- [ ] Battles between armies, retreat and rout, militia and neutral garrisons
+- [ ] Occupation and controller; neutral land taken by entering; freeing occupied land
+- [ ] War score; `offer_white_peace`, `demand_occupied`, `cede_occupied` and their answers; broken realms
+- [ ] Occupation hatching, the treaty flow from hatch to wash with the seal, hatching lifting on return
 - [ ] Scripted expansionist and cautious with armies; random player
 - [ ] Court and marshal agents, the army in `Correlation`, both moves lines, chained decisions, memory 4
 - [ ] Pieces, march lines, step animation, battle card; rule mode's writs, cycle key and order queue
 - [ ] `ReplayBuilder` rebuilds armies
-- [ ] Tests: costs, simultaneity, determinism, writ cap, every wake condition, scripted beats random,
-      the fake model plays the scripted game
+- [ ] Tests: costs, simultaneity, determinism, writ cap, every wake condition, occupation never changes
+      the owner, a treaty transfers exactly its term, scripted beats random, the fake model plays the
+      scripted game
 - [ ] Sim: armies awaiting orders a ruler a turn, game length, battles
 - [ ] Live: the latency probe; then the persona table, 20 games, 40-turn cap, against the one-move game
 
@@ -1409,15 +1831,18 @@ line, and `findings.md` for anything measured.
 - [ ] Population, growth, cap; food and famine; gold
 - [ ] Goods and their effects; goods through trade deals
 - [ ] Buildings, levels, costs, time, the levels rule, the specials by terrain
+- [ ] Levies of the land: a variant per special place and good, recruitable only there
 - [ ] The `build_*` actions and their moves line (two provinces a kind)
 - [ ] Development drawn: tiers, fields, pennants, walls, specials, roads, scaffolding; development map mode
 - [ ] Live: persona table; builds against the scripted choice; η² of building
 
 **R7, diplomacy and the realm**
-- [ ] Peace, truce, tribute both ways, alliance, trade deal, passage; their answers
+- [ ] Treaty terms `demand_province`, `demand_tribute`, `offer_province`, `offer_tribute`; enforced terms at 90
+- [ ] The status-quo offer in a stuck war
+- [ ] Truce, alliance, trade deal, passage; their answers
 - [ ] Calls to arms; breaking deals; reputation as a reason
 - [ ] Opinions with reasons and decay; labels; war weariness
-- [ ] Stuck-war peace offers; stalemate counting
+- [ ] Stalemate counting
 - [ ] Diplomacy matrix and country panel reasons; court scenes for agreements
 - [ ] Live: opinion reasons in facts on against off (invented grievances); deals and length
 
@@ -1425,35 +1850,52 @@ line, and `findings.md` for anything measured.
 - [ ] Advise mode with the person's country's facts; refuses in character
 - [ ] On by default; switchable in game from the top bar; its model preset
 
-## 11. Questions for the lead
+**R8, orders without a cap**
+- [ ] The cap off behind a rules flag; writs kept as a setting
+- [ ] `guard`, `campaign`, `watch_border` run by the scripted tactics; `follow`; groups
+- [ ] The decision budget of 8, counted in decisions
+- [ ] The court asked until `none` or out of gold; "ordered this turn" capped at five
+- [ ] Screen: no writs, every army in the cycle, automation glyphs
+- [ ] Live: writs against no cap with automation against no cap without, 40-turn and 100-turn runs, pace by turn window
 
-Only he can answer these. Each has this page's recommendation first.
+**R9, the model shapes the world**
+- [ ] Three candidates per idea, all checked; feature templates applied and re-checked
+- [ ] Candidate start sites within the fairness spread; characters and their effects; the realm's own unit
+- [ ] The Cartographer agent, its six steps, the fit rules as per-target availability, seeded fallbacks
+- [ ] Loading screen, "How this world was made", the realm card
+- [ ] Live: the same 20 seeds against the seeded generator; fairness, refusals, length; blind pick of two worlds
 
-1. **Writs for the person.** Should a person ruling a country be held to the same cap on orders a
-   turn as the models (recommended, with "unlimited" as an easy setting), or always order every army?
-2. **Taking a province.** Should marching into an undefended province make it ours at once
-   (recommended: the map's colour moves with the armies), or only when a peace treaty cedes it, as in
-   EU (war score, more peace terms, and a typed parameter the framework lacks)?
-3. **The end of conquest.** Last ruler standing only (recommended for now), or may a beaten ruler
-   submit as a tributary and count as conquered, which shortens endgames?
-4. **The map.** May a code-drawn sea chart replace the painting for generated worlds, with today's
-   painted board kept as the Classic preset? The R2 spike would be shown to you first.
-5. **The default world.** Medium, about 60 provinces and 6 countries, a continent (recommended), or
-   another size or shape?
-6. **Supply.** Stores that run down away from home and twice as fast in poor land, with a cap of
-   100 soldiers an army (recommended), or a limit on what each province can feed?
-7. **Names.** Province names from the game's own tables, with the model naming only special places
-   and the world (recommended, until an A/B of model-written names), or the model naming
-   provinces too?
-8. **Unit types.** Pikes beat riders, riders beat bows, bows beat pikes (recommended), or do you
-   want other kinds?
+**R10, names and histories by the model**
+- [ ] Naming per region and per country, histories per region; parsing the lists
+- [ ] Every name and history check, with table fallbacks
+- [ ] Names cached per seed and fixed in the recording; the 60-second budget
+- [ ] The storyteller reads a struck province's history
+- [ ] Loading screen with names arriving; histories in the panels
+- [ ] Live: table names against cached model names on the same 20 seeds and geometry
+
+## 11. The lead's answers to this page's questions
+
+The first draft of this page asked eight questions; the lead answered them on 12 November, and the
+page above now follows his answers. His words, and what each changed:
+
+| # | The question | His answer | What it changed |
+|---|---|---|---|
+| 1 | Is a person held to the same cap on orders? | "Yeah lets have the same cap but to be honest I would eventually wont to have no cap of orders. We can have smth like civ has." | The same cap first; [1.6](#16-the-route-to-no-cap) and slice R8 design the route to no cap |
+| 2 | Taking a province: at once, or by treaty? | "I would better want a peace treaty way. Like in EU4 where you conquer but you also need to do a treatty for it to become yours" | Overrode the draft's recommendation: occupation, war score and treaties ([5.1](#51-occupation-war-score-and-treaties)); the basic treaties in R1, the rest in R7 |
+| 3 | The end of conquest: last ruler standing? | "Ok" | As drafted ([6.1](#61-conquest-the-default)) |
+| 4 | A code-drawn sea chart for generated worlds, the painting kept as Classic? | "Ok" | As drafted ([2.6](#26-how-the-map-is-drawn-by-code)) |
+| 5 | The default world: medium, about 60 provinces, 6 countries, a continent? | "Ok, but as I said, I want to end up with the possiblity to generate maps and maybe using the framework" | A stage where the model shapes the world through the framework ([2.8](#28-a-world-shaped-through-the-framework), slice R9) |
+| 6 | Supply as stores, with a cap of 100 an army? | "Ok" | As drafted ([3.6](#36-supply)) |
+| 7 | Province names from tables? | "Lets have model generate place names and history of provinces and countries eventually. Like it would add a lot of colors to the game where you have new names each time, its like we discussed with the country names" | Tables first; names and histories by the model ([2.9](#29-names-and-histories-written-by-the-model), slice R10) |
+| 8 | Pikes, riders and bows? | "Lets have it like this for now but please do a reasearch on how we can make it more interesting and unique" | Kept; research and a pick in [3.11](#311-making-the-roster-our-own-research) |
 
 ## The lead's answers, 12 November 2026
 
 Asked by the framework tech lead session after the lead played all three modes. His words are
 quoted; "Ok" means he accepted the default in brackets. The 11 November decisions are in
 [`grey-box-strategy-screen.md`](grey-box-strategy-screen.md#the-leads-decisions-11-november-2026).
-The last column says where this page uses each answer.
+The last column says where this page uses each answer. His answers to this page's own eight questions, given later the same day, are in
+[section 11](#11-the-leads-answers-to-this-pages-questions).
 
 **After playing (same day):**
 
@@ -1500,16 +1942,16 @@ The last column says where this page uses each answer.
 | 13 | Buildings [farm, market, barracks, walls, one special per terrain; three levels] | "Yes, and as I said I want it to be visible on the map" | 4.4, 4.6 |
 | 14 | Resources [food and one trade good per province] | Ok | 4.2, 4.5 |
 | 15 | Population per province [yes] | Ok | 4.1 |
-| 16 | Trade as negotiated deals [yes] | Ok | 4.5, 5.1 |
+| 16 | Trade as negotiated deals [yes] | Ok | 4.5, 5.2 |
 
 **Diplomacy:**
 
 | # | Question [default] | His answer | Here |
 |---|---|---|---|
-| 17 | Agreements [peace, truce, alliance, tribute, trade deal, right of passage] | Ok | 5.1 |
-| 18 | Opinions rulers hold of each other, visible, with reasons [yes] | "Yes, and yes" | 5.2 |
-| 19 | Free-text negotiation [one ruler at a time first] | Ok | 5.1 |
-| 20 | Breaking a deal costs reputation [yes] | "Ok, maybe we can add more things as stability, legitimacy or more. If you think we need it" | 5.4, 5.5 |
+| 17 | Agreements [peace, truce, alliance, tribute, trade deal, right of passage] | Ok | 5.1, 5.2 |
+| 18 | Opinions rulers hold of each other, visible, with reasons [yes] | "Yes, and yes" | 5.3 |
+| 19 | Free-text negotiation [one ruler at a time first] | Ok | 5.2 |
+| 20 | Breaking a deal costs reputation [yes] | "Ok, maybe we can add more things as stability, legitimacy or more. If you think we need it" | 5.5, 5.6 |
 
 **Events and the storyteller:**
 
@@ -1557,6 +1999,8 @@ Several are fan-written guides, used only for what a mechanic is, never for its 
 - Hearts of Iron IV's supply hubs: [dev diary, an early look at supply](https://admin-forum.paradoxplaza.com/forum/developer-diary/hoi4-dev-diary-early-look-at-at-supply-and-the-coming-year.1466076/page-3)
 - Crusader Kings III's commanders and battle phases: [CK3 dev diary 3, war](https://admin-forum.paradoxplaza.com/forum/developer-diary/ck3-dev-diary-3-war.1279641/latest),
   [a combat guide](https://www.naguide.com/crusader-kings-iii-combat-guide/)
+- Unit identity and growth: Humankind's emblematic units, [Humankind wiki, Culture](https://humankind.fandom.com/wiki/Culture);
+  Battle Brothers' soldiers growing through risk, [a review](https://rpgamer.com/review/battle-brothers-review/)
 - Map generation: Amit Patel, Red Blob Games, [Polygonal map generation](https://www.redblobgames.com/maps/polygon-map-generation/)
   (Voronoi provinces, noisy edges) and [a Voronoi maps tutorial](https://redblobgames.com/x/2022-voronoi-maps-tutorial);
   Azgaar's [Fantasy Map Generator](https://github.com/Azgaar/Fantasy-Map-Generator/wiki/Quick-Start-Tutorial) (grid, heightmap, states)
