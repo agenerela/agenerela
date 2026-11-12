@@ -14,6 +14,10 @@ candidate earns a place in [`findings.md`](findings.md) only through an A/B run.
 not this page, is where the scores are. The same 13 ran again on the 389-prompt interim set, on the
 RTX 5080: "Thirteen models on the interim set, on the RTX 5080".
 
+**Against `qwen3.5:4b`, since.** The 4B led both sweeps, so a later section,
+[4B-class candidates against `qwen3.5:4b`](#4b-class-candidates-against-qwen354b-researched-11-november-2026)
+(researched 11 November 2026, also unmeasured), lists what might beat it in about 4 GB resident.
+
 ## The job a candidate has to do
 
 From the build plan (§2.3 to §2.5, Appendix A, Phase 6b) and [`findings.md`](findings.md):
@@ -179,6 +183,163 @@ Models marked *(higher tier)* are too big for 8 GB but are weighed again in the
 - **LFM3's d1-2B "decision" models**: described only as returning "calibrated answers"; not
   enough is published to judge. Worth a read when the grounding guard's calibration is next
   revisited, since calibrated confidence is what DR-016 reads.
+
+## 4B-class candidates against `qwen3.5:4b` (researched 11 November 2026)
+
+**Why this section.** Since this page was written, `qwen3.5:4b` has become the model the team
+leans on. On the RTX 5080 it scored 330 of 389 on the interim set against the 2B's 263, at
+0.51 s a decision, and with personas at the GreyBoxStrategy table it took 0.46 s and 3.1 GB
+resident (findings, 9 and 11 November). So this section asks a narrower question than the 8 GB
+shortlist above: which open-weight models of about 3B to 5B parameters, or bigger ones that sit
+in about 4 GB resident when quantised, are worth one arm against `qwen3.5:4b`. The job, and every
+rule in "The job a candidate has to do", is unchanged. **Nothing here was measured by us**: no
+model was pulled, run or timed for it. Every number is a maker's or a third party's claim, linked
+in the sources under "4B-class section".
+
+**The honest answer first.** No candidate's published numbers make a clear case for beating
+`qwen3.5:4b` at choosing an action and a target. On the interim set it leads the next-best
+4B-class model by 26 answers (findings, 9 November), and the one maker table that compares a new
+model with it directly, NVIDIA's for Bolt E4B, has Qwen ahead on function calling (BFCL-v3,
+Tau2), the closest public proxy for that choice. Where the new models claim an edge is the
+`statement`: role-play and instruction-following sets. So the likeliest gain from this list is a
+better line at about the same accuracy, not a better choice. That is still worth one arm,
+because `gemma4:e2b-it-qat` already wrote the cleanest statements at the strategy table (findings,
+11 November).
+
+Every model already pulled on the RTX 5080 ran in the two sweeps of 9 November, and none
+reached `qwen3.5:4b`, so everything on this shortlist is new to the server.
+
+### Shortlist, in test order
+
+Each is one arm in the shape of "How this feeds Phase 4" below, with **`qwen3.5:4b` as the
+control** in place of the 2B. **None is pulled on the RTX 5080 yet: all four need a pull, which
+needs the lead's yes.**
+
+1. **Gemma 4 E4B, QAT** (`gemma4:e4b-it-qat`, a 6.1 GB download). Google, Apache-2.0, thinking off
+   unless `<|think|>` is in the system prompt, and on E2B and E4B no empty thought block when it is
+   off [E1]. The earlier sections ruled it out on its download size, but the download is not what
+   sits in VRAM: `gemma4:e2b-it-qat` downloads at 4,135 MB and reported 1,578 MB resident
+   (findings, 9 November), because most of a Gemma "E" model's weight is per-layer embeddings. By
+   the same ratio the E4B would sit around 2.5 to 3.5 GB. That is arithmetic, not a measurement,
+   and NVIDIA's 3.5 GB peak for Bolt E4B, the same architecture at Q4_K_M, points the same way
+   [B4]. It is first because it is the cheapest arm to trust: the family already runs on our
+   server and kept the field order, the E2B gave the best statements and nearly the 4B's persona
+   effect at the strategy table (η² 0.713 against 0.841), and it is the base of the second
+   candidate, so it is the control that tells whether NVIDIA's tuning of it adds anything. Its
+   public instruction-following numbers conflict: IFEval 90.02 in Liquid's table [L1], 44.4 in
+   OpenBMB's [M1], 45.3 in SparkLLM's [Sp4]; Google's card gives only IFBench 44 [E1]. **Ruled out
+   if** it sits above about 4 GB resident, or scores below `qwen3.5:4b` beyond noise on simple
+   commands and situations, which is where the 4B's lead is.
+2. **NVIDIA Nemotron 3.5 Bolt E4B** (`nemotron-3.5-bolt:e4b`, 7.2–7.9 GB on Ollama with a vision
+   projector and a speculative-decoding draft; the text GGUF `nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB`
+   is 6.18 GB at Q4_K_M). Released 23 October 2026, post-trained by NVIDIA from Gemma 4 E4B with
+   reinforcement learning, aimed at "interactive personas" [B1]. It is the only new model whose
+   maker compares it with `qwen3.5:4b` directly, in NVIDIA's own harness: in **non-reasoning mode**,
+   our mode, RoleBench 67.05 against 53.66; in reasoning mode, IFBench 63.79 against 58.91 and
+   InverseIFEval 46.84 against 30.98, but BFCL-v3 68.51 against 70.95 and Tau2 55.10 against 75.06
+   [B1]. At Q4_K_M the gaps hold, and Qwen leads IFBench 66.67 to 64.00 [B2]. NVIDIA reports 3.5 GB
+   peak and 133 tok/s on an RTX 5070 at Q4_K_M, about 3,000 tokens in and 50 out, through llama.cpp
+   [B4]. Thinking is on by default and `enable_thinking: false` turns it off [B1]; that Ollama's
+   `think: false` maps onto it is not documented [B3]. License OpenMDW-1.1, permissive, which asks
+   a redistributor to keep the license text and notices, but which was still before the OSI and not
+   on SPDX in August 2026 [OM]. **Two catches:** the card calls it "intended primarily for
+   customization and post-training rather than direct production inference" [B1], and the Ollama
+   tags are two weeks old, so whether our server's Ollama 0.40.14 loads them is unknown. **Ruled out
+   if** `think: false` leaves reasoning tokens, it fails to load on 0.40.14, or it does no better than
+   item 1, its own base.
+3. **Spark-X2.6-4B** (`SparkLLM/Spark-X2.6-4B:q4_k_m`, 3.5 GB; `q8_0` 4.4 GB; a user namespace on
+   Ollama, not the library). SparkLLM, released 21 October 2026, Apache-2.0, 4.11B [Sp1]. Its card
+   claims IFEval 93.6, IFBench 75.8 and BFCL-V4 71.8, against 89.8, 59.2 and 50.3 for Qwen3.5-4B
+   copied from Qwen's card, **all in thinking mode at its "high" level** [Sp4]; it publishes nothing
+   with thinking off. Thinking is on by default; `enable_thinking: false` is documented for SGLang
+   and vLLM only, and the Ollama page shows no thinking capability, so `think: false` may be ignored
+   or refused [Sp3]. Its architecture (`spark2_5`) needs llama.cpp b10828 or later [Sp1], far past
+   LLMUnity v3.0.3's b8209, so it cannot ship in-process until LLMUnity catches up. The biggest
+   claims on this list, with the least independent support. **Ruled out if** thinking cannot be
+   turned off through Ollama, which is the first pre-check.
+4. **Granite 4.2 3B** (`granite4.2:3b`, 2.2 GB). Already in the 8 GB table above, which said it was
+   worth one arm "only if Granite 4.1 3B does well". It did: `granite4.1:3b` tied for third on the
+   interim set at 304 of 389, at the lowest latency of the top ten (findings, 9 November). IBM's
+   4.2 is a reasoning model whose thinking-off quality is unpublished, and `enable_thinking=False`
+   leaves an empty `<think></think>` [G2]; in the K2-Horizon table it scores BFCL v4 50.8, in high
+   reasoning, against 55.7 for Qwen3.5-4B [K1]. Apache-2.0, dense Granite architecture, likely to
+   load in LLMUnity. It is below the 4B in size, so it competes on latency more than on accuracy.
+   **Ruled out if** it does no better than `granite4.1:3b` with thinking off, which would leave
+   4.1 as the Granite to keep.
+
+**Recommendation for the first arm:** `gemma4:e4b-it-qat` against `qwen3.5:4b`, with Bolt E4B
+straight after it in the same session. Run together, the two arms say whether Gemma's E4B can
+choose as well as the 4B, and whether NVIDIA's tuning improves on it.
+
+### 4B-class candidate table
+
+Benchmarks are makers' or third parties' claims and are not comparable across rows: harnesses,
+modes and BFCL versions differ, and the tables come from companies with a model on the list.
+"Pulled" means already on the RTX 5080 server.
+
+| Model | Maker, released | Params | License; can a build bundle it? | Ollama tag, size | GGUF; LLMUnity v3.0.3 | Thinking off? | Claimed benchmarks (source) | Resident, speed (source) | Pulled |
+|---|---|---|---|---|---|---|---|---|---|
+| **Qwen3.5-4B** (the control) | Alibaba Qwen, Mar 2026 | 4B + vision | Apache-2.0, yes | `qwen3.5:4b`, 3.3 GB | yes; its architecture is the one b8209 names | On by default; `think: false` | IFEval 89.8, IFBench 59.2, BFCL-V4 50.3, mode not stated [Q2] | 3.1 GB, 0.46 s a decision on the 5080 (ours: findings, 11 November) | yes |
+| Gemma 4 E4B QAT | Google DeepMind, 2 Apr 2026 | 4.5B effective, 8B with embeddings | Apache-2.0, yes | `gemma4:e4b-it-qat`, 6.1 GB download | yes; Gemma 4 post-dates b8209 | Off unless `<\|think\|>` | IFBench 44 [E1]; IFEval 90.02 per Liquid [L1], 44.4 per OpenBMB [M1], 45.3 per SparkLLM [Sp4] | Unpublished; about 2.5–3.5 GB by the E2B's ratio, *est.* | no (`e2b-it-qat` is) |
+| Nemotron 3.5 Bolt E4B | NVIDIA, 23 Oct 2026 | 8B total, 4B effective; Gemma 4 E4B | OpenMDW-1.1 (Gemma's Apache-2.0 beneath); yes, keeping the notices | `nemotron-3.5-bolt:e4b`, 7.2–7.9 GB with projector and draft; `hf.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB:Q4_K_M`, 6.18 GB | yes; Gemma 4 post-dates b8209 | On by default; `enable_thinking: false` | Non-reasoning: RoleBench 67.05 (Qwen3.5-4B 53.66), EQ-Bench v3 39.40 (32.92). Reasoning: IFBench 63.79 (58.91), BFCL-v3 68.51 (70.95), Tau2 55.10 (75.06) [B1] | 3.5 GB peak, 133 tok/s, RTX 5070, Q4_K_M, NVIDIA's figures [B4] | no |
+| Spark-X2.6-4B | SparkLLM, 21 Oct 2026 | 4.11B | Apache-2.0, yes | `SparkLLM/Spark-X2.6-4B:q4_k_m`, 3.5 GB; `q8_0` 4.4 GB (user namespace) | community GGUFs; needs llama.cpp b10828+, so **no** | On by default; `enable_thinking: false` (SGLang, vLLM) | Thinking high: IFEval 93.6, IFBench 75.8, BFCL-V4 71.8 [Sp4] | Unpublished; about 215 tok/s on an RTX 4090 at Q4_K_M, a third party's reading of the maker's chart [Sp4] | no |
+| Granite 4.2 3B | IBM, 25 Aug 2026 | 3B dense | Apache-2.0, yes | `granite4.2:3b`, 2.2 GB | yes, likely | On by default; `enable_thinking=False` leaves an empty block | BFCL v4 52.41, IFBench 74.33, mode not stated [G2]; BFCL v4 50.8 in high reasoning per IFM [K1] | Unpublished | no |
+| K2-Horizon-3.7B | IFM, card updated 1 Oct 2026 | 3.7B core (5B in the safetensors) | Apache-2.0, yes | none found | community GGUFs | **No**: `reasoning_effort` high, medium or low | High reasoning: IFEval 83.6 (loose), IFBench 47.7, BFCL v4 64.6 [K1] | Unpublished | no |
+| Nanbeige4.2-3B | Nanbeige, Jul 2026 | 3B non-embedding, 4B total, looped | Apache-2.0, yes | its own Ollama fork only | its own llama.cpp fork only, so **no** | `enable_thinking=False` | All in thinking mode: IFBench 54.6 [Na1] | Unpublished | no |
+| G9v3-3B | AI9Stars, Jul 2026 (third party) | 3B dense, `LlamaForCausalLM` | Apache-2.0, yes | none found in the library | community GGUFs; Llama architecture, likely | `enable_thinking=False` | None on its card; BFCL v4 47.9 in IFM's table [K1] | about 2.2 GB at Q4_K_M, a third party's estimate [G9] | no |
+
+Column notes:
+- **Logprobs.** Nobody reports anything model-specific about Ollama's `logprobs` for any of
+  these. "From before the mask" is still checked on Qwen only, so each needs the scarecrow check
+  before its guarded results mean anything.
+- **JSON-schema output.** No maker or third party reports how any of them behaves under a
+  constrained `format`. What we know is ours: the Gemma 4 family kept the framework's field order
+  on Ollama 0.40.14 in both sweeps (findings, 9 November). Spark's template, served from a user
+  namespace, is unknown, so the field-order pre-check matters most there. An Ollama issue reports
+  `format` being ignored only when thinking was disabled, for `qwen3.5` on Ollama 0.17.6
+  ([#14645](https://github.com/ollama/ollama/issues/14645)); our 0.40.14 runs show no such thing on
+  Qwen, but a model new to the server is the place it would show.
+
+### Ruled out of the 4B class, one line each
+
+- **K2-Horizon-3.7B**: reasoning effort goes down to "low" and its card documents no way to turn
+  it off; every number is in high reasoning.
+- **Nanbeige4.2-3B**: a looped transformer that needs Nanbeige's own forks of llama.cpp and
+  Ollama, and every number is in thinking mode. Nanbeige4.1-3B is superseded by it.
+- **G9v3-3B**: Apache-2.0, a Llama architecture and a thinking switch, but no instruction-following
+  or tool numbers of its own, and below Qwen3.5-4B in IFM's BFCL table. Reserve, if a 3B with a
+  plain architecture is wanted for Phase 6b.
+- **Nemotron 3.5 Bolt 74B-A9B**: 22 to 25 GB.
+- **Spark-X2.6-1.7B, the six LFM3 models, MiniCPM5-1B**: all 2B class or smaller; there is no
+  3B or 4B LFM3.
+- **Community role-play finetunes of Qwen3.5-4B** (for example MiniFantasy, EmergentRP): no
+  benchmarks, unknown training data, some built on refusal-removed bases. A finetune of our own is
+  the "fine-tuning" section's idea, not this list's.
+- **`gemma4:e4b-it-q4_K_M` and `q8_0`** (6.6 and 9.0 GB): the QAT tag is smaller and is the
+  variant whose E2B we measured.
+- **`qwen3.5:4b` at Q8_0** (5.2 GB): above the 4 GB budget, and the same model; a quantisation
+  A/B, not a candidate.
+- **Already measured, and below `qwen3.5:4b` on both sets**: `nemotron-3-nano:4b`, `granite4.1:3b`,
+  `qwen3:4b-instruct-2507`, `ministral-3:3b`, `phi4-mini`, `llama3.2:3b`, `qwen3:8b` (findings,
+  9 November).
+- **Not released**, searched on 11 November 2026: Qwen 4 and any small Qwen 3.6 or 3.8, Phi-5,
+  Ministral 4, Gemma 4.1, MiniCPM5-4B, SmolLM4, Falcon-H2.
+
+### What this section could not verify
+
+- How any candidate scores with thinking off on instruction following or tool calling. Only
+  NVIDIA labels modes per row, and its instruction-following and tool rows are in reasoning mode.
+- The resident size of `gemma4:e4b-it-qat`; the estimate is arithmetic from the E2B.
+- Whether Ollama 0.40.14 loads `nemotron-3.5-bolt:e4b` (its tags carry a `dflash` draft), and
+  whether `think: false` turns off Bolt's or Spark's reasoning through Ollama.
+- Whether the Ollama library's Bolt tag takes image input; the Hugging Face card says text only.
+- Spark-X2.6's benchmark table, which is published only as an image; its numbers here are a third
+  party's transcription [Sp4].
+- Whether OpenMDW-1.1 covers every file in NVIDIA's repository; OSI reviewers raised that question
+  [OM].
+- Release dates given only by third parties (G9v3-3B), and K2-Horizon's, which its card does not
+  state.
+- Any independent evaluation of Bolt E4B or Spark-X2.6; none turned up.
 
 ## High-end GPU tiers: 12 GB, 16 GB, 24 GB and up
 
@@ -505,3 +666,29 @@ High-end tiers:
 - [WR] Qwen3.5-27B on an RTX 4090, an estimate, not a measurement (third party) — https://willitrunai.com/can-run/qwen-3.5-27b-on-rtx-4090-24gb
 - Ollama tag pages: https://ollama.com/library/qwen3.6/tags, https://ollama.com/library/mistral-small3.2/tags,
   https://ollama.com/library/nemotron-3-nano/tags
+
+4B-class section, all accessed 11 November 2026. [Q2] and [E1] above were re-read the same
+day; [E1]'s IFBench 44 is from the card's evaluation sidebar. [G2], [L1] and [M1] are cited as
+read on 4 November.
+
+- [B1] Nemotron 3.5 Bolt E4B model card (BF16), with its comparison against Qwen3.5-4B — https://huggingface.co/nvidia/Nemotron-3.5-Bolt-E4B-BF16
+- [B2] Nemotron 3.5 Bolt E4B Q4_K_M GGUF card, with its quantised comparison — https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB
+- [B3] Ollama library page and tags — https://ollama.com/library/nemotron-3.5-bolt:e4b,
+  https://ollama.com/library/nemotron-3.5-bolt/tags
+- [B4] NVIDIA's memory and speed figures for Bolt E4B, as reported by a third party (Magica) —
+  https://magica.com/news/nvidia-nemotron-3-5-bolt-e4b-local-agents
+- [OM] OpenMDW-1.1: Linux Foundation release — https://www.linuxfoundation.org/press/linux-foundation-releases-openmdw-1.1-nvidia-adopts-openmdw-for-cosmos-isaac-gr00t-ising-and-nemotron-ai-model-families;
+  OSI license-review thread, August 2026 — https://lists.opensource.org/pipermail/license-review_lists.opensource.org/2026-August/006125.html;
+  license text — https://github.com/OpenMDW/openmdw
+- [Sp1] Spark-X2.6 README (release dates, architecture, llama.cpp and Ollama requirements) — https://github.com/XHToken/Spark-X2.6
+- [Sp2] Spark-X2.6-4B model card — https://huggingface.co/XHToken/Spark-X2.6-4B
+- [Sp3] Spark-X2.6-4B on Ollama (user namespace) — https://ollama.com/SparkLLM/Spark-X2.6-4B
+- [Sp4] A third party's transcription of the card's benchmark images, and its chart readings
+  (mer.vin) — https://mer.vin/news/spark-x2-6-4b-4b-on-device-agent-model-benchmarks-and-local-setup/
+- [K1] K2-Horizon-3.7B model card, with its comparison table — https://huggingface.co/IFM/K2-Horizon-3.7B
+- [Na1] Nanbeige4.2-3B model card — https://huggingface.co/Nanbeige/Nanbeige4.2-3B
+- [G9] G9v3-3B model card — https://huggingface.co/AI9Stars/G9v3-3B; its size estimate, a third
+  party's — https://llmrun.dev/model/ai9stars-g9v3-3b
+- Ollama tag page: https://ollama.com/library/gemma4/tags
+- For finding models only, not cited for any number: Artificial Analysis's list of tiny open
+  models, an aggregator — https://artificialanalysis.ai/models/open-source/tiny
