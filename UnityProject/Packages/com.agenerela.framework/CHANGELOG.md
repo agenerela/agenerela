@@ -61,6 +61,24 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **Two prompt options, both off by default** (#244 items 5 and 8).
+  - `DecideOptions.StatementRulesWording` (and `PromptOptions.StatementRulesWording`) picks how the
+    statement rules are introduced. `YourStatement`, the default, keeps `Your statement: <rules>`.
+    `HowItShouldRead` and `InYourOwnWords` change only that line's opening.
+  - `LegalTargetListing.ObservationLine` sends the legal pairs as one sentence among the
+    observations, grouped by action: `Moves open to you: attack fenmark or westmarch; fortify
+    ashby.` It sits after the sources' lines and before the call's own, and uses the same pairs,
+    cap and `TargetsUnlisted` report as `PerTarget`.
+  - `EvalArm.StatementRules` gives an arm its own rules, and an evaluation report records the arm's
+    rules and wording (`EvalArmConditions.StatementRules`, `StatementRulesWording`).
+  - Measured on 11 November 2026, `qwen3.5:2b` and `qwen3.5:4b`:
+    - Neither wording moved correct answers beyond noise on the interim or curated set.
+      `InYourOwnWords` ended the 2B's copying of its rule at GreyBoxStrategy's table, 15% of
+      statements to none. On the evaluation set it raised the 2B's few-shot echoes.
+    - `ObservationLine` scored below the plain list and `PerTarget`: −6.4 and −6.7 points on the
+      2B, beyond noise, and −3.6 and −3.3 on the 4B.
+  - No default changed. See `Documentation~/prompt.md` and the two findings of that day.
+
 - **The grounding guard's threshold, per call, and Ollama's alternatives count, per provider**
   (#244 item 1). `DecideOptions.TargetGroundingThreshold` sets the share below which
   `TargetGroundingGuard` contains a decision, from 0 to 1, and `TargetGroundingGuard.DefaultThreshold`

@@ -3303,3 +3303,135 @@ are in the demo README.
 
 **What would change this.** A second game; personas written by someone else; and gap N9's A/B run,
 which may change the 2B's voice numbers entirely.
+
+### How a statement rule is introduced: "in your own words" ends the 2B's copying at the game table with no accuracy cost on either model, but the 2B echoes more few-shot lines on the evaluation set (11 November 2026)
+
+**The question.** Asked by #244 item 8, demo gap N9. The persona 2B at GreyBoxStrategy's table
+returned its persona's whole statement rule as its statement: 64% of the merchant's statements
+(entry above, same day). Does the line that introduces the rules (`Your statement: <rules>`) invite
+that? If it does, does another wording stop it without costing correct answers?
+
+**What was run.** `PromptOptions.StatementRulesWording` / `DecideOptions.StatementRulesWording` has
+three values. Only the opening of the system prompt's rules line changes:
+
+| Value | The line |
+|---|---|
+| `YourStatement` (default, control) | `Your statement: <rules>` |
+| `HowItShouldRead` | `How your statement should read: <rules>` |
+| `InYourOwnWords` | `Write your statement in your own words, following these rules: <rules>` |
+
+- **Evaluation sets.** `EvalRunner`, interleaved, guards on. On the curated 76 and the interim 389,
+  each arm carried the same rules through the new `EvalArm.StatementRules`: "A village guard's
+  voice: plain and watchful. One sentence, under 20 words. If the action has a target, name it."
+  Control ran against each wording on `qwen3.5:2b` and `qwen3.5:4b`, one model resident (checked
+  with `ps` before and after each run). Rendered without a model, the arms differ only in that one
+  line (76 of 76 prompts).
+- **GreyBoxStrategy.** The `personas` table on the 2B, 20 games, seeds 1 to 20, three arms one
+  after another: `default`, `default+how-it-reads`, `default+own-words`. Each difference is paired
+  by seed with a 95% interval. "Copies its statement rule" is a new `Scorecard` number: the
+  statement holds the whole rule, ignoring case and punctuation. "A sentence of its rule" is any
+  one sentence of four words or more.
+- RTX 5080 box, Docker Ollama 0.40.14, over the network, temperature 0, 14:50 to 16:57. All of it
+  ran before the server's `OLLAMA_NUM_PARALLEL` change that evening.
+
+**Results, evaluation sets.** Correct answers, then statements that copy the rule (whole / a
+sentence):
+
+| Run | Control | `HowItShouldRead` | `InYourOwnWords` |
+|---|---:|---:|---:|
+| curated 76, 4B | 67, 0 / 0 | 64 (−3.9, floor 8.1), 0 / 0 | 66 (−1.3), 0 / 0 |
+| curated 76, 2B | 56, 1 copy | 56 (0.0), 0 | 58 (+2.6), 0 |
+| interim 389, 4B | 327, 5 / 8 | 325 (−0.5, floor 3.6), 0 / 0 | 330 (+0.8), 0 / 0 |
+| interim 389, 2B | 255, 16 / 17 | 255 (0.0), 2 / 2 | 254 (−0.3), 0 / 0 |
+
+Every change in correct answers is within noise, on both models and both sets. Neither model loses
+answers to either wording. Both wordings all but end rule copying on the evaluation set.
+
+**The cost, on the 2B only.** The runner flags replies that repeat a few-shot example's stimulus.
+On the interim set the 2B's flags rise from 8 (control) to 16 with `HowItShouldRead` and 24 with
+`InYourOwnWords`; on the curated set from 1 to 5 with `InYourOwnWords`. The echoed lines are the
+examples' own stimuli: "Strike the wolf." 9 times, "You can stay put now." 4, "Go and stand by the
+eastern road." 4, "Fine day for it." 2. Rule copies plus echoes come to 24 in control, 18 with
+`HowItShouldRead` and 24 with `InYourOwnWords`. So on the evaluation set the 2B moves its copying
+from the rule to the examples rather than stopping it. The 4B echoes nothing in any arm.
+
+**Results, the 2B at GreyBoxStrategy's table** (paired by seed, 20 games):
+
+| Number | Control | `HowItShouldRead` | `InYourOwnWords` |
+|---|---:|---:|---:|
+| copies its statement rule, all seats | 15% | 7% (−8, **beyond**) | 0% (−15, **beyond**) |
+| copies a sentence of its rule | 16% | 13% (within) | 0% (−16, **beyond**) |
+| the merchant's statements copying its rule | 65% | 35% (−30, **beyond**) | 0% (−65, **beyond**) |
+| words a statement | 15.5 | 14.3 (**beyond**) | 12.2 (**beyond**) |
+| repeated word for word | 54% | 57% (within) | 47% (within) |
+| names its target | 29% | 36% (within) | 38% (within) |
+| η² of aggression by persona | 0.295 | 0.370 | 0.308 |
+| battles a turn | 0.72 | 0.62 (**beyond**) | 0.67 (within) |
+| peace offered a game | 6.30 | 2.25 (**beyond**) | 5.50 (within) |
+| provinces changing hands a turn | 0.53 | 0.48 (within) | 0.47 (−0.06, **beyond**) |
+
+The persona still changes the play under both wordings (η² p < 0.001 in all three). Illegal
+answers stay at 0%. `HowItShouldRead` changes the game itself: fewer battles, far fewer peace
+offers, and the merchant holds 13 points more of its turns. `InYourOwnWords` changes one liveliness
+number, slightly (−0.06 provinces changing hands a turn, the interval's edge at −0.01).
+
+**The 4B at the table.** OWED: the same table with `default` against `default+own-words`, not yet
+run when the server change paused the card. It is the check that nothing gets worse on the 4B.
+
+**Reading.**
+- The wording of the rules line is what invites the copy. Saying "in your own words" ends it at the
+  game table, and costs no correct answers on either model or either set.
+- The 2B pays for it on the evaluation set by echoing more few-shot lines. That set's prompts look
+  much like its examples; the game's councils do not.
+- `HowItShouldRead` does half the job and moves the 2B's play.
+- No default changes. A developer whose small model reads its rules out can set `InYourOwnWords`,
+  and should watch for few-shot echoes when it does.
+
+### The legal moves as an observation line: it ends illegal pairs, but costs correct answers on both models, beyond noise on the 2B (11 November 2026)
+
+**The question.** Asked by #244 item 5, demo gap N8. GreyBoxStrategy writes its own sentence of
+legal moves among its facts, "Moves open to you: ...". It works better there than the framework's
+`PerTarget` annotations (entry of 10 November). Can the framework write that sentence itself, from
+the same availability checks, so a game need not?
+
+**What was built.** `LegalTargetListing.ObservationLine`, beside `Off` and `PerTarget`. One
+sentence, grouped by action, in schema order: `Moves open to you: move_to tree_a, tree_b or well;
+chop tree_a.` It sits among the observations, after the sources' lines and before the call's own,
+wherever `ObservationPlacement` puts those. That is where the game's line stood. It comes from
+`DecisionSchema.PairsOf` and the targets cap, like `PerTarget`. With `ListActionsAndTargets` on, the
+action list stays plain. The paired schema and the guards are unchanged. Rendered without a model,
+an `ObservationLine` arm differs from control only by that one line (389 of 389), and the schemas
+are identical.
+
+**What was run.** The interim 389 through `EvalRunner` with the eval-only legality `EvalArm.Legality`
+(places, creatures, people; #246), interleaved, guards on. Two runs a model: control (the plain
+list) against `ObservationLine`, then `PerTarget` against `ObservationLine`. Same machine and
+window as the entry above.
+
+| Run | A | `ObservationLine` | Δ (floor 3.6) | Fixed / broke | Illegal pairs, A → line | Prompt tokens, A → line |
+|---|---:|---:|---:|---:|---:|---:|
+| 4B, control | 335 | 321 | −3.6, on the floor | 6 / 20 | 9 → 0 | 435 → 476 |
+| 4B, `PerTarget` | 333 | 320 | −3.3, within | 18 / 31 | 0 → 0 | 593 → 476 |
+| 2B, control | 258 | 233 | **−6.4, beyond** | 17 / 42 | 23 → 10 | 435 → 476 |
+| 2B, `PerTarget` | 271 | 245 | **−6.7, beyond** | 17 / 43 | 3 → 9 | 593 → 476 |
+
+By category, on the 2B against control: impossible requests −23.4, conversation −10.9 and
+situations −9.2, all beyond; simple commands +6.2, within. Most of the breaks are `none` turning
+into `attack_target wolf` or a `move_to`. Read as a list of things to do, the line pulls the 2B
+toward acting. On the 4B against `PerTarget`, situations −15.4 and events −9.2 are beyond.
+
+**GreyBoxStrategy stage 2.** OWED: one model seat against scripts, 30 games an arm, on both models.
+The game's own moves line (`default`) runs against the framework's line with the game's removed
+(`default+no-moves-line+moves-sentence`), measuring attack share, provinces and illegal answers.
+Not yet run when the server change paused the card.
+
+**Reading.**
+- On the evaluation set the sentence is no better than the plain list and no better than
+  `PerTarget`: beyond noise worse on the 2B, at or near the floor on the 4B.
+- It takes the 4B's illegal pairs to 0, as `PerTarget` does, and costs fewer tokens than
+  `PerTarget`.
+- The paired schema alone already takes illegal pairs to 0 (entry of 10 November), so that is no
+  reason to use it.
+- Whether it replaces the game's own line in the game, where the line is what makes the model
+  attack, is what stage 2 answers.
+- No default changes.

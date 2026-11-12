@@ -593,7 +593,7 @@ namespace GreyBoxStrategy
         private static readonly HashSet<string> Counts = new HashSet<string>
         {
             "games", "council moves", "attacks landed", "moves against a country", "attacks suffered", "peace offers received",
-            "pipeline errors", "seat-games measured", "answers", "targeted statements", "seats", "wins", "knocked out",
+            "pipeline errors", "seat-games measured", "answers", "targeted statements", "statements with a rule", "seats", "wins", "knocked out",
         };
 
         private static readonly HashSet<string> Plain = new HashSet<string>

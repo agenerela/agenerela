@@ -363,6 +363,7 @@ namespace GreyBoxStrategy.Tests
             var characters = game.World.CountryList.ToDictionary(c => c.Id, c => "merchant");
             var card = new Scorecard("t", new[] { new ScoredGame(record, null, characters, said) });
             Assert.That(card.Get("voice", "merchant", "statements with a rule"), Is.EqualTo(4));
+            Assert.That(Scorecard.Format("statements with a rule", 4), Is.EqualTo("4"), "a count, not a share");
             Assert.That(card.Get("voice", "merchant", "copies its statement rule"), Is.EqualTo(0.5));
             Assert.That(card.Get("voice", "merchant", "copies a sentence of its rule"), Is.EqualTo(0.75));
             Assert.That(Scorecard.CopiesRuleSentence("A trader's voice wins.", rule), Is.False, "three words are not a sentence copied");

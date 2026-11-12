@@ -66,7 +66,10 @@ moves line, a flat schema), `after-sources`, `headline`, `no-moves-line`, `no-gr
 `LegalTargets = PerTarget`) and `per-target-paired` (that, with the paired schema). Any arm takes
 modifiers after a `+`: `+paired` (the paired schema), `+listed` (`PerTarget`), `+no-grounding`
 (the grounding guard off), `+threshold-<x>` (its threshold) and `+alternatives-<n>` (how many
-alternatives the provider reports a token), as in `control+paired+no-grounding`. A model run writes everything a scripted run writes, and adds three things:
+alternatives the provider reports a token), as in `control+paired+no-grounding`. Four more change
+the prompt for gaps N8 and N9: `+no-moves-line` (the game's moves line off), `+moves-sentence` (the
+framework writes the moves as one line among the facts, `LegalTargets = ObservationLine`), and
+`+how-it-reads` and `+own-words` (`StatementRulesWording`). A model run writes everything a scripted run writes, and adds three things:
 
 - the model's own table in `summary.md`;
 - `model.csv`, every model decision with its latency, guard and execution;
@@ -510,7 +513,8 @@ player says of itself. Every run writes `scorecard.md` (with a one-line reason f
   permutation p (2,000 shuffles within each game). A table without personas is scored on placebo
   slots, so its η² shows what noise looks like.
 - **Voice:** statements given, length, repeated word for word, names its target, contradicts its
-  move.
+  move, and for seats with statement rules, the statements that copy the whole rule or one sentence
+  of it (gap N9).
 - **Strength:** placement, wins, provinces at the end, knocked out.
 
 The all-script and all-random tables are the **reference points**: what a lively game and a
@@ -726,6 +730,11 @@ Found by stage 2, from the runs above:
   action, would let a game drop its own line; its wording would need an A/B on the evaluation set
   as well as here. A smaller sign in the same runs: with the list and a flat schema, the 4B named a
   country it was at war with as `attack`'s target 15 times, which only the paired schema prevents.
+  *Built and measured on 11 November (#244 item 5):* `LegalTargets = ObservationLine` writes that
+  sentence (`Moves open to you: ...`) where the game's line stood, `+moves-sentence` here. On the
+  interim evaluation set it scored below both the plain list and `PerTarget`: −6.4 and −6.7 points
+  on the 2B, beyond noise, and −3.6 and −3.3 on the 4B (findings, "The legal moves as an observation
+  line"). Stage 2 here, the game's line against the framework's, is still owed.
 - **N9. A statement rule reads like a statement already given.** `PromptBuilder` writes
   `StatementRules` as `Your statement: <the rules>`. With a rule that opens with a noun phrase
   (`A trader's voice: profit, price or a deal. One sentence, under 25 words.`), qwen3.5:2b copies
@@ -733,6 +742,12 @@ Found by stage 2, from the runs above:
   76 of the warmonger's, 2 of 2,318 on the 4B ([the table of models](#models-at-one-table)). A
   heading that cannot be read as an answer (`How your statement should read:`) would likely stop
   it. That changes the prompt, so it needs an A/B run. Rewording the personas would only hide it.
+  *Measured on 11 November (#244 item 8):* the framework now has `StatementRulesWording`. At the
+  persona 2b table, 20 games paired by seed, `+own-words` (`InYourOwnWords`) took the copies from
+  15% of statements to none, the merchant's from 65%. `+how-it-reads` took them to 7%, and it also
+  cut battles and peace offers. Neither wording cost correct answers on the evaluation sets, but
+  there the 2B repeated more few-shot lines (findings, "How a statement rule is introduced"). The
+  4B table is still owed. No default changed.
 - **N10. A decision round's staleness check comes after the game's own.** `RoundEntry.Stale`
   never fires here, because the game refuses a move that an earlier one broke before it asks the
   seat. Two smaller misfits: a round holds an agent once (a second peace offer needs a second
