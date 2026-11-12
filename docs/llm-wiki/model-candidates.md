@@ -192,9 +192,10 @@ leans on. On the RTX 5080 it scored 330 of 389 on the interim set against the 2B
 resident (findings, 9 and 11 November). So this section asks a narrower question than the 8 GB
 shortlist above: which open-weight models of about 3B to 5B parameters, or bigger ones that sit
 in about 4 GB resident when quantised, are worth one arm against `qwen3.5:4b`. The job, and every
-rule in "The job a candidate has to do", is unchanged. **Nothing here was measured by us**: no
-model was pulled, run or timed for it. Every number is a maker's or a third party's claim, linked
-in the sources under "4B-class section".
+rule in "The job a candidate has to do", is unchanged. When it was researched, nothing here had
+been measured by us. Every number in the shortlist and the table is a maker's or a third party's
+claim, linked in the sources under "4B-class section". The first two arms have since been run:
+see "Measured" below.
 
 **The honest answer first.** No candidate's published numbers make a clear case for beating
 `qwen3.5:4b` at choosing an action and a target. On the interim set it leads the next-best
@@ -209,11 +210,47 @@ because `gemma4:e2b-it-qat` already wrote the cleanest statements at the strateg
 Every model already pulled on the RTX 5080 ran in the two sweeps of 9 November, and none
 reached `qwen3.5:4b`, so everything on this shortlist is new to the server.
 
+### Measured: Gemma 4 E4B and Bolt E4B against `qwen3.5:4b` (11 and 12 November 2026)
+
+Items 1 and 2 below were pulled and run on the RTX 5080, with `qwen3.5:4b` as the control in the
+same session (findings, 11 and 12 November, "Two 4B-class candidates"). **Neither replaces the
+control; no default changed.**
+
+| | `qwen3.5:4b` | `gemma4:e4b-it-qat` | `nemotron-3.5-bolt:e4b` |
+|---|---:|---:|---:|
+| Loads on Ollama 0.40.14 | yes | yes (first request 22 s) | yes (first request 6 s) |
+| `think: false` leaves no thinking, field order kept | yes | yes | yes |
+| Token probabilities, from before the mask | yes | yes | yes |
+| Resident, `/api/ps` | 3.0–3.1 GB | 3.0–3.1 GB | 0.95–2.0 GB reported, about 2.8 GB real |
+| Interim, correct of 389 | 330 | 329 | 324 |
+| Curated, correct of 76 | 69 | 69 | 66 |
+| Interim impossible requests, of 64 | 49 | 37, beyond | 55 |
+| Requests missed (`none` when an action was asked), of 233 | 10 | 8 | 39 |
+| Latency, evaluation set, median | 0.44 s | 0.42 s | 0.44 s |
+| Strategy table: η² of aggression | 0.841 | 0.871 | 0.826 |
+| Strategy table: idle share | 10% | 10% | 38%, beyond |
+| Strategy table: words a statement | 13.6 | 10.6 | 8.3 |
+| Strategy table: repeated word for word | 5% | 7% | 53%, beyond |
+| Strategy table: contradicts its move | 19% | 17% | 5%, beyond |
+| Strategy table: latency median | 0.49 s | 0.44 s | 0.35 s |
+
+- **The claims against the measurements.** NVIDIA's RoleBench lead for Bolt did not show as a
+  better voice here: half its statements at the table repeat an earlier one, and the merchant reads
+  its rule out. Its function-calling deficit showed as passivity, not wrong moves.
+- **Gemma E4B's residency** came out at the top of the 2.5 to 3.5 GB arithmetic above.
+- **Bolt's `/api/ps` figure is not its footprint.** It generates at 172 tok/s against 11.5 on the
+  CPU, so its weights are on the GPU. Read Bolt's residency from a CPU load, or from `nvidia-smi`,
+  not from `/api/ps`.
+- **Bolt's text GGUF** loads, keeps the field order, and reports 3,195 MB. It was not run beyond
+  its pre-check.
+- **Items 3 and 4** (Spark-X2.6-4B, Granite 4.2 3B) are still unmeasured.
+
 ### Shortlist, in test order
 
 Each is one arm in the shape of "How this feeds Phase 4" below, with **`qwen3.5:4b` as the
-control** in place of the 2B. **None is pulled on the RTX 5080 yet: all four need a pull, which
-needs the lead's yes.**
+control** in place of the 2B. When this list was written none was pulled on the RTX 5080. Items 1
+and 2 have since been pulled and measured (above); items 3 and 4 still need a pull, which needs
+the lead's yes.
 
 1. **Gemma 4 E4B, QAT** (`gemma4:e4b-it-qat`, a 6.1 GB download). Google, Apache-2.0, thinking off
    unless `<|think|>` is in the system prompt, and on E2B and E4B no empty thought block when it is
@@ -280,8 +317,8 @@ modes and BFCL versions differ, and the tables come from companies with a model 
 | Model | Maker, released | Params | License; can a build bundle it? | Ollama tag, size | GGUF; LLMUnity v3.0.3 | Thinking off? | Claimed benchmarks (source) | Resident, speed (source) | Pulled |
 |---|---|---|---|---|---|---|---|---|---|
 | **Qwen3.5-4B** (the control) | Alibaba Qwen, Mar 2026 | 4B + vision | Apache-2.0, yes | `qwen3.5:4b`, 3.3 GB | yes; its architecture is the one b8209 names | On by default; `think: false` | IFEval 89.8, IFBench 59.2, BFCL-V4 50.3, mode not stated [Q2] | 3.1 GB, 0.46 s a decision on the 5080 (ours: findings, 11 November) | yes |
-| Gemma 4 E4B QAT | Google DeepMind, 2 Apr 2026 | 4.5B effective, 8B with embeddings | Apache-2.0, yes | `gemma4:e4b-it-qat`, 6.1 GB download | yes; Gemma 4 post-dates b8209 | Off unless `<\|think\|>` | IFBench 44 [E1]; IFEval 90.02 per Liquid [L1], 44.4 per OpenBMB [M1], 45.3 per SparkLLM [Sp4] | Unpublished; about 2.5–3.5 GB by the E2B's ratio, *est.* | no (`e2b-it-qat` is) |
-| Nemotron 3.5 Bolt E4B | NVIDIA, 23 Oct 2026 | 8B total, 4B effective; Gemma 4 E4B | OpenMDW-1.1 (Gemma's Apache-2.0 beneath); yes, keeping the notices | `nemotron-3.5-bolt:e4b`, 7.2–7.9 GB with projector and draft; `hf.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB:Q4_K_M`, 6.18 GB | yes; Gemma 4 post-dates b8209 | On by default; `enable_thinking: false` | Non-reasoning: RoleBench 67.05 (Qwen3.5-4B 53.66), EQ-Bench v3 39.40 (32.92). Reasoning: IFBench 63.79 (58.91), BFCL-v3 68.51 (70.95), Tau2 55.10 (75.06) [B1] | 3.5 GB peak, 133 tok/s, RTX 5070, Q4_K_M, NVIDIA's figures [B4] | no |
+| Gemma 4 E4B QAT | Google DeepMind, 2 Apr 2026 | 4.5B effective, 8B with embeddings | Apache-2.0, yes | `gemma4:e4b-it-qat`, 6.1 GB download | yes; Gemma 4 post-dates b8209 | Off unless `<\|think\|>` | IFBench 44 [E1]; IFEval 90.02 per Liquid [L1], 44.4 per OpenBMB [M1], 45.3 per SparkLLM [Sp4] | Unpublished; about 2.5–3.5 GB by the E2B's ratio, *est.* | yes, measured 11 Nov (see "Measured") |
+| Nemotron 3.5 Bolt E4B | NVIDIA, 23 Oct 2026 | 8B total, 4B effective; Gemma 4 E4B | OpenMDW-1.1 (Gemma's Apache-2.0 beneath); yes, keeping the notices | `nemotron-3.5-bolt:e4b`, 7.2–7.9 GB with projector and draft; `hf.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB:Q4_K_M`, 6.18 GB | yes; Gemma 4 post-dates b8209 | On by default; `enable_thinking: false` | Non-reasoning: RoleBench 67.05 (Qwen3.5-4B 53.66), EQ-Bench v3 39.40 (32.92). Reasoning: IFBench 63.79 (58.91), BFCL-v3 68.51 (70.95), Tau2 55.10 (75.06) [B1] | 3.5 GB peak, 133 tok/s, RTX 5070, Q4_K_M, NVIDIA's figures [B4] | yes, measured 11 Nov (see "Measured") |
 | Spark-X2.6-4B | SparkLLM, 21 Oct 2026 | 4.11B | Apache-2.0, yes | `SparkLLM/Spark-X2.6-4B:q4_k_m`, 3.5 GB; `q8_0` 4.4 GB (user namespace) | community GGUFs; needs llama.cpp b10828+, so **no** | On by default; `enable_thinking: false` (SGLang, vLLM) | Thinking high: IFEval 93.6, IFBench 75.8, BFCL-V4 71.8 [Sp4] | Unpublished; about 215 tok/s on an RTX 4090 at Q4_K_M, a third party's reading of the maker's chart [Sp4] | no |
 | Granite 4.2 3B | IBM, 25 Aug 2026 | 3B dense | Apache-2.0, yes | `granite4.2:3b`, 2.2 GB | yes, likely | On by default; `enable_thinking=False` leaves an empty block | BFCL v4 52.41, IFBench 74.33, mode not stated [G2]; BFCL v4 50.8 in high reasoning per IFM [K1] | Unpublished | no |
 | K2-Horizon-3.7B | IFM, card updated 1 Oct 2026 | 3.7B core (5B in the safetensors) | Apache-2.0, yes | none found | community GGUFs | **No**: `reasoning_effort` high, medium or low | High reasoning: IFEval 83.6 (loose), IFBench 47.7, BFCL v4 64.6 [K1] | Unpublished | no |

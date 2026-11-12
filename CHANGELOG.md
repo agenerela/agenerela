@@ -29,6 +29,20 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Two 4B-class candidates measured against `qwen3.5:4b`** (#252's first arms), on the RTX 5080
+  with the control re-run in the same session. The candidates are `gemma4:e4b-it-qat` and
+  `nemotron-3.5-bolt:e4b`. Results are in `findings.md` and `model-candidates.md`'s "Measured",
+  with a row in `live-runs.md` and a candidates table and a fourth game account in the
+  GreyBoxStrategy README.
+  - Both pass the pre-checks: no thinking, field order kept, probabilities from before the mask.
+  - Correct answers, interim and curated: 330 / 329 / 324 and 69 / 69 / 66 (control, Gemma,
+    Bolt). All within noise.
+  - Gemma E4B handles impossible requests worse (−18.8, beyond noise). At the persona table it
+    plays the control's game in shorter lines.
+  - Bolt E4B plays a passive game and repeats half its statements.
+  - `/api/ps` under-reports Bolt: 950 MB, about 2.8 GB real.
+  - No default changed.
+
 - **GreyBoxStrategy, Painted Realm: rule mode** (#20). The start menu's third choice: you rule
   one country against four model rulers with personas.
   - The rulers decide at once, in one `DecisionRound`, while your order waits. The turn then
