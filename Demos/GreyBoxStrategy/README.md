@@ -749,7 +749,10 @@ Found by stage 2, from the runs above:
   sentence (`Moves open to you: ...`) where the game's line stood, `+moves-sentence` here. On the
   interim evaluation set it scored below both the plain list and `PerTarget`: −6.4 and −6.7 points
   on the 2B, beyond noise, and −3.6 and −3.3 on the 4B (findings, "The legal moves as an observation
-  line"). Stage 2 here, the game's line against the framework's, is still owed, on the 4B only.
+  line"). In stage 2 here, on the 4B only (long game runs are 4B only), 30 games paired by seed,
+  `+no-moves-line+moves-sentence` kept the attack share within noise of the game's line (27%
+  against 32%), unlike `PerTarget`, but ended with fewer provinces, 0.7 against 2.1, at the edge of
+  the band. The game keeps its own line; no default changed.
 - **N9. A statement rule reads like a statement already given.** `PromptBuilder` writes
   `StatementRules` as `Your statement: <the rules>`. With a rule that opens with a noun phrase
   (`A trader's voice: profit, price or a deal. One sentence, under 25 words.`), qwen3.5:2b copies
@@ -761,8 +764,10 @@ Found by stage 2, from the runs above:
   persona 2b table, 20 games paired by seed, `+own-words` (`InYourOwnWords`) took the copies from
   15% of statements to none, the merchant's from 65%. `+how-it-reads` took them to 7%, and it also
   cut battles and peace offers. Neither wording cost correct answers on the evaluation sets, but
-  there the 2B repeated more few-shot lines (findings, "How a statement rule is introduced"). The
-  4B table is still owed. No default changed.
+  there the 2B repeated more few-shot lines (findings, "How a statement rule is introduced"). At
+  the persona 4b table, which never copied, `+own-words` left the game's liveliness and the
+  persona's hold on the play within noise; statements repeated word for word rose from 5% to 10%
+  and named their target more often (72% to 78%). No default changed.
 - **N10. A decision round's staleness check comes after the game's own.** `RoundEntry.Stale`
   never fires here, because the game refuses a move that an earlier one broke before it asks the
   seat. Two smaller misfits: a round holds an agent once (a second peace offer needs a second
