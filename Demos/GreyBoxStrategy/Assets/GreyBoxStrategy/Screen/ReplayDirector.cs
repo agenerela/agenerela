@@ -80,7 +80,7 @@ namespace GreyBoxStrategy.Realm
                     if (l.Event.ProvinceIndex >= 0) PanTo(l.Event.ProvinceIndex); else if (l.Country != null) PanTo(ui.CapitalIndex(l.Country));
                     if (l.Event.Decision != null) ui.ShowCard(DecisionCard.From(l.Event));
                 },
-                CountryPressed = id => { PanTo(ui.CapitalIndex(id)); OpenCountry(id); },
+                CountryPressed = id => { OpenCountry(id); FrameCountry(id); },
             };
             queries = new RealmQueries(game);
             ui.Queries = queries;
@@ -165,7 +165,16 @@ namespace GreyBoxStrategy.Realm
         {
             followed = id; ui.Followed = id;
             ui.ShowFollowBar(shown); ApplyMode();
-            if (id != null) OpenCountry(id);
+            if (id != null) { OpenCountry(id); FrameCountry(id); }
+        }
+
+        /// <summary>Centres a country's land in the free map area, so the panel does not hide it.</summary>
+        public void FrameCountry(string id)
+        {
+            var mine = Enumerable.Range(0, 25).Where(q => shown.Owners[q] == id).ToList();
+            if (mine.Count == 0) return;
+            var c = Vector3.zero; foreach (int q in mine) c += map.ProvinceWorld(q); c /= mine.Count;
+            StartCoroutine(PanRoutine(c));
         }
         public void OpenCountry(string id)
         {
@@ -266,9 +275,15 @@ namespace GreyBoxStrategy.Realm
             StartCoroutine(PanRoutine(map.ProvinceWorld(province)));
         }
 
+        /// <summary>Pans so <paramref name="target"/> sits at the centre of the free map area, between the open panels.</summary>
         private IEnumerator PanRoutine(Vector3 target)
         {
-            var from = cam.transform.position; var to = new Vector3(target.x, target.y, from.z);
+            yield return null; // let a panel that just opened lay out first
+            float scale = Screen.height / Mathf.Max(1f, document.rootVisualElement.layout.height);
+            float left = ui.FreeLeft * scale, right = (ui.InspectorOpen ? 536 : 356) * scale, top = 50 * scale, bottom = 46 * scale;
+            float upp = cam.orthographicSize * 2 / Screen.height;
+            float cx = (left + (Screen.width - left - right) / 2) - Screen.width / 2f, cy = (bottom + (Screen.height - top - bottom) / 2) - Screen.height / 2f;
+            var from = cam.transform.position; var to = new Vector3(target.x - cx * upp, target.y - cy * upp, from.z);
             for (float t = 0; t < 1; t += Time.deltaTime / 0.45f)
             {
                 float e = t < 0.5f ? 2 * t * t : 1 - Mathf.Pow(-2 * t + 2, 2) / 2;
