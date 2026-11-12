@@ -25,6 +25,27 @@ those names.
   models, and an open-source list of them ([awesome-decision-models](https://github.com/AnotiaWang/awesome-decision-models)).
   Very likely; no other model or company named Jev turned up.
 
+**For the lead, at a glance.**
+
+The decision models against `qwen3.5:4b`, curated 76 and interim 389, one session on the RTX 5080
+(details in [The open decision models on our sets](#the-open-decision-models-on-our-sets-measured)):
+
+| | Curated /76 | Interim /389 | Impossible /64 | Median s | Resident MB |
+|---|---:|---:|---:|---:|---:|
+| `qwen3.5:4b`, the framework's request (control) | 70 | 330 | 49 | 0.471 | 2,995 |
+| `qwen3.5:4b`, asked as decision questions | 62 | 272 (−14.9) | 45 | 0.104 | 2,995 |
+| `tev1:4b` | 56 | 248 (−21.1) | 49 | 0.104 | 5,457 |
+| `strands-decider:2b` | 49 | 231 (−25.4) | 57 | 0.121 | up to 10,002 |
+| `d1:3b` | 42 | 228 (−26.2) | 64 | 0.057 | 3,120 |
+
+- **The question wording was not tuned.** All three models were asked in one wording, written before
+  any run and tuned on nothing. Its `none` option carries a long description ("Choose this when
+  nothing calls for an action, or when what is asked is impossible or names something not listed
+  here"), which may push the models toward `none`. All three do refuse too much.
+- **Eight models were pulled onto the server** for this research, 14.0 GB in all. They are listed
+  with their sizes in [Models pulled](#models-pulled), with which ones you can remove to get the disk
+  back. None was removed.
+
 **In short.**
 - **The two named models are hosted only.** Neither has weights, so neither can run on our card.
   Both answer a typed question about a state with probabilities over a closed list of options, in one
@@ -748,7 +769,8 @@ run with `--reranking`, should load either; that is outside the gateway.
 
 ### Models pulled
 
-Eight, all onto the RTX 5080's Ollama. None was removed: the gateway cannot delete, and the lead can.
+Eight, all onto the RTX 5080's Ollama, 14,014 MB of downloads in all. None was removed: the gateway
+cannot delete, and the lead can.
 
 | Tag | Download | Resident, as run | Licence |
 |---|---:|---:|---|
@@ -763,6 +785,18 @@ Eight, all onto the RTX 5080's Ollama. None was removed: the gateway cannot dele
 
 The last three were pulled at the lead's word on 12 November, after the first five.
 `pplx-decider-flash:4b` (5.6 GB) was not pulled.
+
+**Which can be removed to get the disk back.** No framework code, test or game uses any of the eight.
+- **Remove first:** the two reranker GGUFs, `hf.co/ggml-org/Qwen3-Reranker-0.6B-Q8_0-GGUF` and
+  `dengcao/Qwen3-Reranker-0.6B:Q8_0`, 1.3 GB together. Neither works on Ollama.
+- **Remove unless the decision models are retried:** `tev1:4b`, `d1:3b` and `strands-decider:2b`,
+  10.3 GB. They are needed only for the tuned-wording test named under the recommendation.
+- **Remove unless the embedding first stage is A/B'd:** `qwen3-embedding:0.6b` and
+  `embeddinggemma:300m`, 1.3 GB.
+- **Keep `bge-m3:567m`** (1.2 GB) if that A/B is run; it is the engine it would use.
+
+Removing is done on the machine itself, as the gateway refuses it:
+`docker exec agenerela-ollama ollama rm <tag>` (`tools/ollama-server/Caddyfile`'s header comment).
 
 The control, `qwen3.5:4b` (3,324 MB download, 2,995 MB resident, Apache-2.0), was already on the
 server.
