@@ -174,6 +174,7 @@ namespace GreyBoxStrategy
             AskedLegal = d.ModelAnswerLegal,
             Contained = d.Contained,
             Statement = d.Statement,
+            OfferedBy = d.OfferedBy,
         }).ToList());
     }
 

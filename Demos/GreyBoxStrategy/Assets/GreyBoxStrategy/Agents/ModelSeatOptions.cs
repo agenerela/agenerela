@@ -67,6 +67,13 @@ namespace GreyBoxStrategy
         /// the targets it may take, so the grammar cannot sample an illegal pair.
         /// </summary>
         public bool PairTargets;
+        /// <summary>
+        /// <see cref="RollingHistory.Remembers"/>: what a remembered move holds (#244 item 4, gap N7).
+        /// <see cref="RememberedDecision.Whole"/>, the framework's default, keeps the statement;
+        /// <c>+memory-move</c> leaves it out; <c>+memory-outcome</c> sends the turn report's line for
+        /// the move in its place (<see cref="CountryAgent.Learn"/>).
+        /// </summary>
+        public RememberedDecision Remembers = RememberedDecision.Whole;
 
         /// <summary>A short name for logs and tables: "control", "per-target", "no-moves-line", and so on.</summary>
         public string Arm = "control";
@@ -102,7 +109,8 @@ namespace GreyBoxStrategy
         /// <c>+threshold-0.5</c> sets its threshold, <c>+alternatives-20</c> how many alternatives
         /// the provider reports at each token (#244), <c>+paired</c>
         /// switches the paired schema on, <c>+listed</c> the framework's listing
-        /// (<see cref="LegalTargetListing.PerTarget"/>) ("control+paired", "control+listed",
+        /// (<see cref="LegalTargetListing.PerTarget"/>), <c>+memory-move</c> and <c>+memory-outcome</c>
+        /// what a remembered move holds (<see cref="Remembers"/>) ("control+paired", "control+listed",
         /// "per-target-paired+no-grounding").
         /// </summary>
         public static ModelSeatOptions Named(string arm)
@@ -126,6 +134,8 @@ namespace GreyBoxStrategy
                         options.TokenAlternatives = alternatives;
                     else if (modifier == "paired") options.PairTargets = true;
                     else if (modifier == "listed") options.LegalTargets = LegalTargetListing.PerTarget;
+                    else if (modifier == "memory-move") options.Remembers = RememberedDecision.Move;
+                    else if (modifier == "memory-outcome") options.Remembers = RememberedDecision.MoveAndOutcome;
                     else return null;
                 }
                 options.Arm = arm;

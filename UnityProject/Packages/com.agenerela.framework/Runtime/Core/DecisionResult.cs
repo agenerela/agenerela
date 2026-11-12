@@ -158,6 +158,14 @@ namespace Agenerela
         public AgentContext Context { get; private set; }
         public DecisionRequest Request { get; private set; }
 
+        // What came of it, in the game's words, from Agent.SetOutcome or a failed Execute's reason
+        // (#216 item 3): handed to an IRemembersOutcomes memory when it is remembered.
+        public string Outcome { get; set; }
+
+        // Whether Outcome is a failed Execute's reason rather than the game's own line: a later
+        // Execute replaces it, and one that succeeds clears it, while the game's line stays.
+        public bool OutcomeFromExecute { get; set; }
+
         // Committed or discarded: either way, never remembered again.
         public bool Settled { get; private set; }
 

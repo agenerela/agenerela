@@ -825,6 +825,16 @@ namespace Agenerela
             result.Telemetry.Execution = outcome.Status;
             result.Telemetry.ExecutionReason = outcome.Reason;
 
+            // What came of it, should the game commit it anyway (#216 item 3), unless the game said:
+            // a failure's reason, replaced by a later failure's and dropped when a retry succeeds.
+            // Only for this agent's own decision, still waiting.
+            var held = result.Pending;
+            if (held != null && !held.Settled && held.Owner == holder && (held.Outcome == null || held.OutcomeFromExecute))
+            {
+                held.Outcome = outcome.Succeeded ? null : outcome.Reason;
+                held.OutcomeFromExecute = held.Outcome != null;
+            }
+
             if (outcome.Succeeded)
             {
                 Settle(result, remember: true);
@@ -871,6 +881,64 @@ namespace Agenerela
         {
             CheckOwnHeld(result);
             return Settle(result, remember: false);
+        }
+
+        /// <summary>
+        /// Says what came of a decision this agent made, in the game's own words, for a memory that
+        /// keeps outcomes (<see cref="IRemembersOutcomes"/>, #216 item 3): <c>"took fenmark from orsk
+        /// (34 against 21); lost 6"</c>. Replaces an outcome set before; null or blank clears it.
+        /// Returns whether a memory holds the decision, or will once it is settled.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Any time after <see cref="DecideAsync"/> returns, for as long as the memory holds the
+        /// decision, because an outcome is often known only after the handler has run, or later in
+        /// the turn: a battle resolves after every move has landed. A decision still held by
+        /// <see cref="Agenerela.MemoryCommit.OnExecute"/> keeps the line until it is remembered, and
+        /// hands it over then; a later call amends it in the memory. One already remembered, under
+        /// <see cref="Agenerela.MemoryCommit.OnDecide"/> or once settled, is amended in
+        /// <see cref="Memory"/> as it is now.
+        /// </para>
+        /// <para>
+        /// False, changing nothing, for a result with no decision, one discarded or dropped by a
+        /// <see cref="Reset"/>, one the memory has forgotten, and whenever <see cref="Memory"/> does
+        /// not implement <see cref="IRemembersOutcomes"/>. <see cref="RollingHistory"/> does, and sends
+        /// the line only when its <see cref="RollingHistory.Remembers"/> is
+        /// <see cref="RememberedDecision.MoveAndOutcome"/>, so setting one changes no prompt by default.
+        /// </para>
+        /// <para>
+        /// When <see cref="Execute(DecisionResult, out ActionResult)"/> does not carry a held decision
+        /// out, the refusal's or failure's <see cref="ActionResult.Reason"/> becomes its outcome,
+        /// unless the game set one, so a game that commits it anyway remembers why it failed. A later
+        /// failure replaces that reason, and a retry that succeeds drops it; the game's own line stays. A
+        /// memory that throws is logged as a warning, and the call returns false.
+        /// </para>
+        /// </remarks>
+        /// <exception cref="ArgumentNullException"><paramref name="result"/> is null.</exception>
+        /// <exception cref="ArgumentException"><paramref name="result"/> is held for another agent.</exception>
+        public bool SetOutcome(DecisionResult result, string outcome)
+        {
+            CheckOwnHeld(result);
+            if (result.Decision == null)
+            {
+                return false;
+            }
+
+            string line = string.IsNullOrWhiteSpace(outcome) ? null : outcome;
+            var pending = result.Pending;
+            if (pending != null && !pending.Settled)
+            {
+                if (pending.Reset.IsCancellationRequested || !(pending.Memory is IRemembersOutcomes))
+                {
+                    return false;
+                }
+
+                pending.Outcome = line;
+                pending.OutcomeFromExecute = false;
+                return true;
+            }
+
+            return Amend(Memory, result, line);
         }
 
         /// <summary>
@@ -1059,9 +1127,32 @@ namespace Agenerela
             if (remember && !dropped)
             {
                 Remember(memory, ctx, request, result);
+                if (pending.Outcome != null)
+                {
+                    Amend(memory, result, pending.Outcome);
+                }
             }
 
             return !dropped;
+        }
+
+        // An outcome into the memory that holds the decision, if it keeps outcomes (#216 item 3).
+        private bool Amend(IMemoryStrategy memory, DecisionResult result, string outcome)
+        {
+            if (!(memory is IRemembersOutcomes outcomes))
+            {
+                return false;
+            }
+
+            try
+            {
+                return outcomes.SetOutcome(result, outcome);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"{Who()}'s memory could not keep a decision's outcome. {e.GetType().Name}: {e.Message}");
+                return false;
+            }
         }
 
         // The decision was made; a memory that cannot record it does not undo it.

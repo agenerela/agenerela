@@ -459,6 +459,59 @@ namespace GreyBoxStrategy.Tests
         }
 
         [Test]
+        public async Task Memory_TheTurnReportsLineIsTheRememberedMovesOutcome([Values] RememberedDecision remembers)
+        {
+            var game = NewGame();
+            game.World.Country("valen").Army = 200;
+            var provider = new ScriptedProvider().Otherwise(ScriptedReply.Decide(Actions.Attack, "westmarch", "Westmarch is ours."));
+            var options = ModelSeatOptions.Default;
+            options.Remembers = remembers;
+            var seat = new CountryAgent(game.World, "valen", provider, options);
+            game.Gates["valen"] = seat;
+
+            var council = game.BeginTurn();
+            var answer = await Await.NotCancelled(seat.DecideAsync(For(council, "valen")));
+            game.SubmitCouncil(new[] { answer });
+            var report = game.Resolve();
+            seat.Learn(report);
+            seat.EndTurn();
+            string line = Outcome(report, "valen").Text;
+            Assert.That(line, Does.StartWith("took westmarch from the neutrals ("));
+
+            // The next turn's request carries the first turn's move as the arm says.
+            var next = game.BeginTurn();
+            await Await.NotCancelled(seat.DecideAsync(For(next, "valen")));
+            string remembered = provider.LastRequest.Request.History[1];
+            switch (remembers)
+            {
+                case RememberedDecision.Whole:
+                    Assert.That(remembered, Is.EqualTo("{\"action\":\"attack\",\"target\":\"westmarch\",\"statement\":\"Westmarch is ours.\"}"));
+                    break;
+                case RememberedDecision.Move:
+                    Assert.That(remembered, Is.EqualTo("{\"action\":\"attack\",\"target\":\"westmarch\"}"));
+                    break;
+                default:
+                    Assert.That(remembered, Is.EqualTo("{\"action\":\"attack\",\"target\":\"westmarch\",\"outcome\":\"" + line + "\"}"));
+                    break;
+            }
+            Assert.That(((RollingHistory)seat.Agent.Memory).Export().Exchanges.Single().Outcome, Is.EqualTo(line),
+                "the outcome is attached in every arm; only MoveAndOutcome sends it");
+        }
+
+        [Test]
+        public void Arms_MemoryModifiers()
+        {
+            Assert.That(ModelSeatOptions.Default.Remembers, Is.EqualTo(RememberedDecision.Whole), "the framework's default");
+            Assert.That(ModelSeatOptions.Named("default+memory-move").Remembers, Is.EqualTo(RememberedDecision.Move));
+            var outcome = ModelSeatOptions.Named("default+memory-outcome");
+            Assert.That((outcome.Remembers, outcome.PairTargets, outcome.Arm),
+                Is.EqualTo((RememberedDecision.MoveAndOutcome, true, "default+memory-outcome")));
+            var game = NewGame();
+            var seat = new CountryAgent(game.World, "valen", new ScriptedProvider(), outcome);
+            Assert.That(((RollingHistory)seat.Agent.Memory).Remembers, Is.EqualTo(RememberedDecision.MoveAndOutcome));
+        }
+
+        [Test]
         public async Task Report_CountsAttacksLandedAndLegalAnswers()
         {
             var game = await PlayWithFakeModel(2);

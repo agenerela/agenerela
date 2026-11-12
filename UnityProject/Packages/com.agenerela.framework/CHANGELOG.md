@@ -61,6 +61,22 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **What a remembered decision holds, and what came of it** (#244 item 4, #216 item 3).
+  `RollingHistory.Remembers` takes a `RememberedDecision`: `Whole`, the default, sends each past
+  decision as before, byte for byte; `Move` leaves its statement out; `MoveAndOutcome` leaves the
+  statement out and adds an `outcome` field (`RollingHistory.OutcomeFieldName`) after the move,
+  holding the game's own line. The memory keeps everything and writes the decision out at each
+  recall, so the setting can change at any time, and the token cap counts what is sent.
+  `Agent.SetOutcome(result, line)` attaches or replaces the outcome any time after the decision,
+  while it is still held by `MemoryCommit.OnExecute` or once remembered, since an outcome is often
+  known only later in the turn; it returns whether a memory holds the decision. When `Execute` does
+  not carry out a held decision, its `ActionResult.Reason` becomes the outcome (replaced by a later
+  failure's, dropped when a retry succeeds) unless the game set
+  one. A strategy keeps outcomes by implementing the new optional `IRemembersOutcomes`, which
+  `RollingHistory` does. `MemoryExchange.Outcome` saves it, and `RollingHistory.SnapshotVersion` is
+  now 2; version 1 snapshots still import. Off by default: nothing changes the prompt unless
+  `Remembers` is set. GreyBoxStrategy's A/B run is in `findings.md`, 11 November.
+
 - **The grounding guard's threshold, per call, and Ollama's alternatives count, per provider**
   (#244 item 1). `DecideOptions.TargetGroundingThreshold` sets the share below which
   `TargetGroundingGuard` contains a decision, from 0 to 1, and `TargetGroundingGuard.DefaultThreshold`

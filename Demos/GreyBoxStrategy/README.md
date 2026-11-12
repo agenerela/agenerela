@@ -510,7 +510,13 @@ player says of itself. Every run writes `scorecard.md` (with a one-line reason f
   permutation p (2,000 shuffles within each game). A table without personas is scored on placebo
   slots, so its η² shows what noise looks like.
 - **Voice:** statements given, length, repeated word for word, names its target, contradicts its
-  move.
+  move, claims land taken, and **invented grievances** (since #244 item 4): statements saying our
+  land was taken by a country that took none of it earlier in the game. The accused are the
+  countries the statement names, else the move's counterpart (the country targeted, the owner of
+  the province targeted, the envoy's offerer), else anyone. The claim is matched mechanically
+  (`Scorecard.ClaimsLandTaken`: a taking verb in the past or as an accusation, and our land or
+  "from us", in one sentence), so it misses paraphrases; on #249's persona 4B logs it matched about
+  2% of statements, all of them real claims.
 - **Strength:** placement, wins, provinces at the end, knocked out.
 
 The all-script and all-random tables are the **reference points**: what a lively game and a
@@ -643,7 +649,8 @@ The tables (`Tables.Named`) are `models` (five model seats, no personas), `perso
 seats with personas), `two-models` (`-strategyModel2`; seats A, B, A, B, A, with personas),
 `model-vs-scripted`, `scripted` and `random`. A comma-separated seat list is also a table, such as
 `model,expansionist,cautious,random,model`. `-strategyPersonas on|off` overrides the persona
-setting. `-strategyArm` takes stage 2's arms and modifiers. Each run writes a `ModelReport` for each
+setting. `-strategyArm` takes stage 2's arms and modifiers, among them `+memory-move` and
+`+memory-outcome` for what a remembered move holds (gap N7). Each run writes a `ModelReport` for each
 model in `summary.md`, the scorecard files, `games.csv`, `model.csv`, `decisions.jsonl` and the game
 logs. From the editor: `StrategyTableMenu.Start(table, model, model2, arm, games, firstSeed,
 personas)`.
