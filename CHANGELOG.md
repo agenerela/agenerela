@@ -124,7 +124,9 @@ phase table and the open issues, not here.
   Its logs: the gateway writes one short line per request instead of its header dump, Docker
   rotates both containers' logs (5 files of 20 MB), the health check runs every 5 minutes instead
   of 30 s, and `logs.py` shows both containers as one timeline of requests, model loads, pulls and
-  problems, cutting about 9,000 lines to about 300.
+  problems, cutting about 9,000 lines to about 300. It runs without `OLLAMA_NUM_PARALLEL`, which
+  Ollama ignores for `qwen3.5` and which changed replies on models it does batch (findings,
+  11 November).
 - **Run requests**, in `docs/run-requests/`: a run one machine should do, written down for another
   session or person to pick up. Each is a folder with a `request.md`, what to run step by step, and
   a `results.md` to fill in, with a status that goes open, claimed, done. Request 001 is the

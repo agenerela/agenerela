@@ -35,6 +35,8 @@ services:
       OLLAMA_GO_TEMPLATE: "1"             # no model has its keys sorted (findings, 9 November)
       OLLAMA_CONTEXT_LENGTH: "16384"      # what the Ollama app adds on Windows
       OLLAMA_NO_CLOUD: "0"                # likewise
+      # No OLLAMA_NUM_PARALLEL: Ollama ignores it for qwen3.5, and on models it does batch,
+      # parallel requests changed the replies (findings, 11 November).
     volumes:
       - models:/root/.ollama
     deploy:

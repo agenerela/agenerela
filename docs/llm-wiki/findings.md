@@ -3437,3 +3437,48 @@ Not yet run when the server change paused the card.
 - Whether it replaces the game's own line in the game, where the line is what makes the model
   attack, is what stage 2 answers.
 - No default changes.
+
+### Parallel requests on the RTX 5080: Ollama refuses them for `qwen3.5`, and on a model that takes them they change the answers (11 November 2026)
+
+**What.** `OLLAMA_NUM_PARALLEL=4` on the Docker server in `tools/ollama-server/` (Ollama 0.40.14,
+RTX 5080), tried so two laptop sessions could share the card. 60 stimuli spread over the interim
+set's six categories, in `framework_request.json`'s request shape (greedy, `num_ctx` 4096, the
+schema, logprobs), sent one at a time and then two or four at once from the 5080 itself, through
+the gateway. One run of each, no A/B: a check of what the setting does, not an accuracy result.
+
+| Model | Slots | At once | 60 requests | Per request (median) | Against one slot, one at a time |
+|---|---|---|---|---|---|
+| `qwen3.5:4b` | 1 (refused 4) | 1 | 25.4 s | 0.42 s | |
+| `qwen3.5:4b` | 1 (refused 4) | 2 | 24.3 s | 0.80 s | 60/60 replies identical |
+| `qwen3:4b-instruct-2507` | 1 | 1 | 16.9 s | 0.28 s | baseline |
+| `qwen3:4b-instruct-2507` | 1 | 2 | 16.3 s | 0.54 s | 55/60 replies identical, 60/60 decisions |
+| `qwen3:4b-instruct-2507` | 4 | 1 | 16.8 s | 0.28 s | 60/60 replies identical |
+| `qwen3:4b-instruct-2507` | 4 | 2 | 12.7 s | 0.42 s | 47/60 replies identical, 58/60 decisions |
+| `qwen3:4b-instruct-2507` | 4 | 4 | 10.9 s | 0.72 s | 47/60 replies identical, 58/60 decisions |
+
+**`qwen3.5` takes no parallel requests on Ollama 0.40.14.** Every load of the 2B and the 4B logged
+`model architecture does not currently support parallel requests architecture=qwen35` and started
+llama.cpp with one slot (`-np 1`), so two clients take turns: no gain in throughput, and each
+request's time doubles with the wait behind the other.
+
+**On a model that takes them, parallel is faster and changes the answers.** With four slots,
+`qwen3:4b-instruct` served 1.33 times as many requests a second two at a time and 1.55 times four
+at a time, but 13 of 60 replies changed, and two decisions turned into `none`
+(`int_event_007` from `move_to campfire`, `int_simple_033` from `follow_player`). First-token
+log-probabilities moved by up to 2.4, which is what the grounding guard reads. Four slots with one
+request at a time changed nothing, so it is batching requests together that moves them.
+
+**Two clients at once move a reply even with one slot.** On `qwen3:4b-instruct`, two at once with
+one slot, where they queue rather than batch, changed the wording of 5 of 60 replies and a
+first-token log-probability by up to 2.2, with every decision the same. `qwen3.5:4b` did not move
+in the same test. The cause, most likely prompt-cache reuse in a different order, was not
+separated.
+
+**So.** `OLLAMA_NUM_PARALLEL` stays unset on the Docker server. A measured run is the only client on
+the server, which is what the 5080's lock already asks: a result from two sessions at once is not
+comparable with one from a single session, in accuracy as well as latency. Request 001's sweep ran
+before the setting was added, with one slot.
+
+**What would change this.** An Ollama version that runs `qwen35` in parallel, and an A/B of a whole
+set with and without batching on such a model, to see whether the changed replies cost accuracy
+or only move it. Raw data: `.scratch/ollama-parallel/` in the lead's RTX 5080 checkout.
