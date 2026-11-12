@@ -29,6 +29,17 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **GreyBoxStrategy, stage 3, slice 1: watch mode plays back a recorded game** (#20, working
+  title Painted Realm). `Screen/Watch.unity` replays seed 4 of the v248 persona 4b table with every
+  ruler's own words and no model call. `ReplayBuilder` rebuilds the game from its recorded decisions,
+  since the rules are deterministic per seed, and refuses a recording the rules no longer fit.
+  The map is one quad and one shader over a sea-chart painting, with a province id map baked from
+  the rule graph. Owners tint the painting's hue, borders between owners redraw themselves, and a
+  capture plays as the design page times it: strike, fall, spread from the attacker's side,
+  settle. A UI Toolkit screen adds the top bar, realm list, filtered chronicle, speech at the
+  capital and time controls. 6 new EditMode tests. Assets and their licences are in the design
+  page's asset list.
+
 - **GreyBoxStrategy, stage 3's design: the painted map and the screen** (#20), for the lead to
   approve or redirect: [`docs/demos/grey-box-strategy-screen.md`](docs/demos/grey-box-strategy-screen.md)
   with eight mock-ups (three looks for the parchment map, the capture of a province step by step,
