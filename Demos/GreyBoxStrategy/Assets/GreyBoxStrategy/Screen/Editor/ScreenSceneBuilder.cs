@@ -47,6 +47,8 @@ namespace GreyBoxStrategy.Realm.Editor
             so.FindProperty("style").objectReferenceValue = AssetDatabase.LoadAssetAtPath<StyleSheet>(Root + "UI/PaintedRealm.uss");
             so.FindProperty("theme").objectReferenceValue = AssetDatabase.LoadAssetAtPath<ThemeStyleSheet>(Root + "UI/PaintedRealm.tss");
             so.FindProperty("portraits").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(Root + "Art/persona-portraits.jpg");
+            // A live game (five model seats on a server), off by default: the screen plays the recording.
+            so.FindProperty("live").objectReferenceValue = director.gameObject.AddComponent<LiveGame>();
             so.ApplyModifiedPropertiesWithoutUndo();
 
             foreach (var name in new[] { "shader", "painting", "provinceIds", "provinceEdge", "provincePoints", "seaShader", "seaTile" })

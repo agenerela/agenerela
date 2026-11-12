@@ -25,7 +25,9 @@ namespace GreyBoxStrategy.Replay
         private static readonly Regex TruceEnded = new Regex(@"^The truce between (\w+) and (\w+) ended");
         private static readonly Regex OutOfGame = new Regex(@"^(\w+) has lost its last province");
 
-        public static ReplayGame Build(Recording recording, MapDefinition map = null, GameRules rules = null)
+        /// <param name="partial">For a game still being played: stop at the first turn the recording
+        /// cannot finish, and return the turns before it, rather than throw.</param>
+        public static ReplayGame Build(Recording recording, MapDefinition map = null, GameRules rules = null, bool partial = false)
         {
             map = map ?? MapDefinition.Standard();
             var game = new Game(recording.Seed, map, rules);
@@ -54,9 +56,17 @@ namespace GreyBoxStrategy.Replay
             {
                 if (guard-- <= 0) throw new InvalidOperationException("The replay did not end within the turn limit.");
                 var turn = new ReplayTurn { Turn = game.World.Turn + 1, Start = state };
-                var council = game.BeginTurn();
-                var envoys = game.SubmitCouncil(council.Select(r => new CountryAnswer(r, players.Decide(r))).ToList());
-                var tr = game.Resolve(envoys.Select(r => new CountryAnswer(r, players.Decide(r))).ToList());
+                TurnReport tr;
+                try
+                {
+                    var council = game.BeginTurn();
+                    var envoys = game.SubmitCouncil(council.Select(r => new CountryAnswer(r, players.Decide(r))).ToList());
+                    tr = game.Resolve(envoys.Select(r => new CountryAnswer(r, players.Decide(r))).ToList());
+                }
+                catch (InvalidOperationException) when (partial)
+                {
+                    break; // the game has not got this far yet
+                }
 
                 // Upkeep happened before the council; its state is the council's snapshot plus what we read off the world now.
                 var councilState = state.Clone();
@@ -84,7 +94,7 @@ namespace GreyBoxStrategy.Replay
                 state = end;
             }
             replay.Result = game.Result;
-            players.CheckAllUsed();
+            if (!partial) players.CheckAllUsed();
             return replay;
         }
 
@@ -247,6 +257,21 @@ namespace GreyBoxStrategy.Replay
             foreach (var c in s.Countries.Values) c.Provinces = s.ProvinceCount(c.Id);
             e.After = s.Clone();
             return e;
+        }
+
+        /// <summary>
+        /// The state of a game being played, as the screen shows it: rule mode's council, after
+        /// upkeep and before any move lands. A war keeps the turn it began from <paramref name="before"/>.
+        /// </summary>
+        public static ReplayState StateOf(World w, IReadOnlyList<string> provinceIds, ReplayState before = null)
+        {
+            var since = new Dictionary<string, int>(StringComparer.Ordinal);
+            if (before != null)
+                foreach (var r in before.Relations.Where(r => r.Kind == "war"))
+                {
+                    since[r.A + "|" + r.B] = r.Since; since[r.B + "|" + r.A] = r.Since;
+                }
+            return Capture(w, provinceIds.ToArray(), since);
         }
 
         private static ReplayState Capture(World w, string[] provinceIds, Dictionary<string, int> since)

@@ -5,7 +5,10 @@
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "GreyBoxStrategy.Sim",
-        "GreyBoxStrategy.Replay"
+        "GreyBoxStrategy.Replay",
+        "GreyBoxStrategy.Screen",
+        "GreyBoxStrategy",
+        "Agenerela"
     ],
     "includePlatforms": [
         "Editor"

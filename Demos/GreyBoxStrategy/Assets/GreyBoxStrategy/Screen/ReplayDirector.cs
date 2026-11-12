@@ -15,7 +15,7 @@ namespace GreyBoxStrategy.Realm
     /// lands the events one by one with the timings of the design page ("How the colour change
     /// should feel"). No model is called.
     /// </summary>
-    public sealed class ReplayDirector : MonoBehaviour
+    public sealed partial class ReplayDirector : MonoBehaviour
     {
         [SerializeField] private TextAsset recording;
         [SerializeField] private MapView map;
@@ -23,8 +23,12 @@ namespace GreyBoxStrategy.Realm
         [SerializeField] private ThemeStyleSheet theme;
         [SerializeField] private Texture2D portraits;
         [SerializeField] private bool playOnStart = true;
+        [Tooltip("Show the start menu (replay or live). Off, or a live game configured before Play, starts at once.")]
+        [SerializeField] private bool showMenu = true;
         [Tooltip("Playback speed at start: 1, 2 or 4.")]
         [SerializeField] private float speed = 1;
+        [Tooltip("When it is set and playing live, the screen follows a live game instead of the recording.")]
+        [SerializeField] private LiveGame live;
 
         private ReplayGame game;
         private ScreenUI ui;
@@ -39,12 +43,21 @@ namespace GreyBoxStrategy.Realm
         private Vector2Int lastSize;
 
         /// <summary>For the Unity CLI: where the playback is, as "turn 3, event 4 of 9".</summary>
+        public string LiveStatus => live == null ? "no live source" : live.Status + $", {game?.Turns.Count ?? 0} turns logged, log {live.LogPath}";
+        public LiveGame Live => live;
         public string Position => game == null ? "not built" : $"turn {(turnIndex < game.Turns.Count ? game.Turns[turnIndex].Turn : game.Turns.Count)}, event {eventIndex}";
         public ReplayGame Game => game;
 
         private void Start()
         {
-            game = ReplayBuilder.Build(Recording.Parse(recording.text));
+            bool isLive = live != null && live.PlayLive;
+            if (isLive)
+            {
+                started = true;
+                live.Begin();
+                game = ReplayBuilder.Build(Recording.FromDecisionLog(live.Lines(), live.Seed, live.Players), partial: true);
+            }
+            else game = ReplayBuilder.Build(Recording.Parse(recording.text));
             cam = Camera.main;
             map.Build();
             FitCamera();
@@ -68,9 +81,9 @@ namespace GreyBoxStrategy.Realm
                 LinePressed = l =>
                 {
                     if (l.Event.ProvinceIndex >= 0) PanTo(l.Event.ProvinceIndex); else if (l.Country != null) PanTo(ui.CapitalIndex(l.Country));
-                    if (l.Event.Decision != null) ui.ShowCard(DecisionCard.From(l.Event));
+                    if (CanInspect(l.Event)) ui.ShowCard(DecisionCard.From(l.Event));
                 },
-                CountryPressed = id => { PanTo(ui.CapitalIndex(id)); OpenCountry(id); },
+                CountryPressed = id => { OpenCountry(id); FrameCountry(id); },
             };
             queries = new RealmQueries(game);
             ui.Queries = queries;
@@ -78,12 +91,52 @@ namespace GreyBoxStrategy.Realm
             ui.ModePressed = SetMode;
             ui.FollowPressed = Follow;
             ui.DiplomacyPressed = ToggleDiplomacy;
-            ui.DecisionPressed = e => ui.ShowCard(DecisionCard.From(e));
+            ui.DecisionPressed = e => { if (CanInspect(e)) ui.ShowCard(DecisionCard.From(e)); };
             ui.monoFont = UnityEngine.TextCore.Text.FontAsset.CreateFontAsset("Consolas", "Regular");
             Show(game.Initial, null);
             ui.SetTurn(1, "Council");
             playing = playOnStart;
             ui.SetPlaying(playing, speed);
+            if (showMenu && !isLive)
+            {
+                ui.ShowMenu(game.Title, live != null ? live.Model : "qwen3.5:4b", live != null ? live.Seed : 101, StartReplay, (m, s) => StartCoroutine(StartLive(m, s)), TryRule);
+                return;
+            }
+            StartCoroutine(Play());
+        }
+
+        private bool started;
+
+        /// <summary>The menu's first choice, and the Unity CLI's: play the recorded game.</summary>
+        public void StartReplay()
+        {
+            if (started) return;
+            started = true;
+            ui.HideMenu();
+            StartCoroutine(Play());
+        }
+
+        /// <summary>For the Unity CLI: the menu's live button.</summary>
+        public void TryLive(string model, int gameSeed) => StartCoroutine(StartLive(model, gameSeed));
+
+        /// <summary>The menu's second choice: checks the environment, the lock and the server, then follows a live game.</summary>
+        private IEnumerator StartLive(string model, int gameSeed)
+        {
+            if (started || live == null) yield break;
+            string why = LiveGame.WhyNotNow();
+            if (why != null) { ui.ShowMenuStatus(why); yield break; }
+            ui.ShowMenuStatus("Asking the server...", true);
+            string serverWhy = null;
+            yield return Gateway.CheckServer(w => serverWhy = w);
+            if (serverWhy != null) { ui.ShowMenuStatus(serverWhy); yield break; }
+            started = true;
+            live.Configure(true, gameSeed, 0, model);
+            live.Begin();
+            if (live.Error != null) { ui.ShowMenuStatus(live.Error); started = false; yield break; }
+            ui.Players = live.Players;
+            game = ReplayBuilder.Build(Recording.FromDecisionLog(live.Lines(), live.Seed, live.Players), partial: true);
+            ui.HideMenu();
+            Show(game.Initial, null);
             StartCoroutine(Play());
         }
 
@@ -155,18 +208,39 @@ namespace GreyBoxStrategy.Realm
         {
             followed = id; ui.Followed = id;
             ui.ShowFollowBar(shown); ApplyMode();
-            if (id != null) OpenCountry(id);
+            if (id != null) { OpenCountry(id); FrameCountry(id); }
+        }
+
+        /// <summary>Centres a country's land in the free map area, so the panel does not hide it.</summary>
+        public void FrameCountry(string id)
+        {
+            var mine = Enumerable.Range(0, 25).Where(q => shown.Owners[q] == id).ToList();
+            if (mine.Count == 0) return;
+            var c = Vector3.zero; foreach (int q in mine) c += map.ProvinceWorld(q); c /= mine.Count;
+            StartCoroutine(PanRoutine(c));
         }
         public void OpenCountry(string id)
         {
             var persona = game.Players.TryGetValue(id, out var pl) ? pl.Persona : null;
             GreyBoxStrategy.Persona p = null;
             try { if (persona != null) p = GreyBoxStrategy.Personas.Named(persona); } catch (ArgumentException) { }
+            sideCountry = id;
             ui.ShowCountry(id, shown, played, p?.Personality, p?.Knowledge);
+        }
+
+        /// <summary>The country whose panel is open, or null for a province's.</summary>
+        private string sideCountry;
+
+        /// <summary>Redraws the open side panel, as when rule mode's orders open or close.</summary>
+        private void RefreshSide()
+        {
+            if (!ui.SideOpen) return;
+            if (sideCountry != null) OpenCountry(sideCountry);
+            else if (selected >= 0) OpenProvince(selected);
         }
         public void OpenProvince(int province)
         {
-            selected = province; map.SetSelected(province);
+            selected = province; sideCountry = null; map.SetSelected(province);
             ui.ShowProvince(province, shown, played);
         }
         public void ToggleDiplomacy()
@@ -190,7 +264,8 @@ namespace GreyBoxStrategy.Realm
                     break;
                 }
                 case MapMode.Forts:
-                    map.SetOverlay(shown.Forts.Select(f => f == 0 ? 0.15f : f == 1 ? 0.6f : 1f).ToList(), null, null);
+                    // Rule mode: forts beyond your borders are not known, and show as none.
+                    map.SetOverlay(shown.Forts.Select((f, q) => !ui.Fog.KnowsProvince(shown, q) || f == 0 ? 0.15f : f == 1 ? 0.6f : 1f).ToList(), null, null);
                     break;
                 case MapMode.Reach:
                     if (followed == null) { map.SetOverlay(null, null, null); break; }
@@ -220,6 +295,7 @@ namespace GreyBoxStrategy.Realm
                 if (kb.digit3Key.wasPressedThisFrame) SetMode(MapMode.Forts);
                 if (kb.digit4Key.wasPressedThisFrame) SetMode(MapMode.Reach);
                 if (kb.dKey.wasPressedThisFrame) ToggleDiplomacy();
+                if ((kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame) && rule != null) EndTurn();
             }
             if (mouse != null)
             {
@@ -256,9 +332,15 @@ namespace GreyBoxStrategy.Realm
             StartCoroutine(PanRoutine(map.ProvinceWorld(province)));
         }
 
+        /// <summary>Pans so <paramref name="target"/> sits at the centre of the free map area, between the open panels.</summary>
         private IEnumerator PanRoutine(Vector3 target)
         {
-            var from = cam.transform.position; var to = new Vector3(target.x, target.y, from.z);
+            yield return null; // let a panel that just opened lay out first
+            float scale = Screen.height / Mathf.Max(1f, document.rootVisualElement.layout.height);
+            float left = ui.FreeLeft * scale, right = (ui.InspectorOpen ? 536 : 356) * scale, top = 50 * scale, bottom = 46 * scale;
+            float upp = cam.orthographicSize * 2 / Screen.height;
+            float cx = (left + (Screen.width - left - right) / 2) - Screen.width / 2f, cy = (bottom + (Screen.height - top - bottom) / 2) - Screen.height / 2f;
+            var from = cam.transform.position; var to = new Vector3(target.x - cx * upp, target.y - cy * upp, from.z);
             for (float t = 0; t < 1; t += Time.deltaTime / 0.45f)
             {
                 float e = t < 0.5f ? 2 * t * t : 1 - Mathf.Pow(-2 * t + 2, 2) / 2;
@@ -284,14 +366,46 @@ namespace GreyBoxStrategy.Realm
         /// <summary>Reading time for a banner at 1×: 1.5 s plus 40 ms a character (the design page).</summary>
         private static float Reading(string line) => string.IsNullOrEmpty(line) ? 0.6f : 1.5f + 0.04f * line.Length;
 
+        /// <summary>
+        /// The turns ready to play. For a live game, a turn is ready once the next council has begun
+        /// or the game is over: only then has every move of it landed and been logged.
+        /// </summary>
+        private int ReadyTurns()
+        {
+            if (rule != null) return RuleReadyTurns();
+            if (live == null || !live.PlayLive) return game.Turns.Count;
+            game = ReplayBuilder.Build(Recording.FromDecisionLog(live.Lines(), live.Seed, live.Players), partial: true);
+            if (live.Error != null) ui.ShowNotice("The live game stopped: " + live.Error);
+            if (live.Finished || game.Result != null) return game.Turns.Count;
+            return Math.Max(0, game.Turns.Count - 1);
+        }
+
         private IEnumerator Play()
         {
-            for (turnIndex = 0; turnIndex < game.Turns.Count; turnIndex++)
+            for (turnIndex = 0; ; turnIndex++)
             {
+                // Live: wait for the council, with the thinking indicator, until the turn has resolved.
+                while (rule != null && turnIndex >= ReadyTurns() && !rule.Finished)
+                {
+                    ui.SetTurn(turnIndex + 1, rule.WaitingFor == RuleSession.Waiting.Envoy ? "Envoys" : "Council");
+                    RuleTick();
+                    yield return new WaitForSeconds(0.2f);
+                }
+                if (rule != null) { ReadyTurns(); RuleResolving(turnIndex + 1); }
+                while (live != null && live.PlayLive && turnIndex >= ReadyTurns() && !live.Finished)
+                {
+                    if (live.Error != null) { ui.ShowNotice("The live game stopped: " + live.Error); break; }
+                    ui.SetTurn(turnIndex + 1, "Council");
+                    ui.SetThinking(true);
+                    yield return new WaitForSeconds(1f);
+                }
+                if (live != null && live.PlayLive) ReadyTurns();
+                ui.SetThinking(false);
+                if (turnIndex >= game.Turns.Count) break;
                 var turn = game.Turns[turnIndex];
                 ui.SetTurn(turn.Turn, "Upkeep");
                 Show(turn.Start, null);
-                if (turn.Turn >= skipUntilTurn)
+                if (turn.Turn >= skipUntilTurn && rule == null)
                 {
                     // The council: every ruler asked at once, on one snapshot (decision 24's thinking indicator).
                     ui.SetTurn(turn.Turn, "Council");
@@ -309,7 +423,7 @@ namespace GreyBoxStrategy.Realm
                     if (turn.Turn < skipUntilTurn)
                     {
                         Show(e.After, null);
-                        ui.AddLine(Chronicle.Line(e, CountryLook.NameOf));
+                        AddLine(e, Chronicle.Line(e, CountryLook.NameOf));
                         continue;
                     }
                     yield return Gate();
@@ -318,7 +432,10 @@ namespace GreyBoxStrategy.Realm
                     Current = "";
                 }
             }
-            ui.SetTurn(game.Result.Turns, $"{CountryLook.NameOf(game.Result.Winner)} wins");
+            ui.GameOver = true;
+            if (rule != null) RuleOver();
+            if (game.Result != null) ui.SetTurn(game.Result.Turns, $"{CountryLook.NameOf(game.Result.Winner)} wins");
+            else ui.SetTurn(game.Turns.Count, live != null && live.Error != null ? "live game stopped: " + live.Error : "stopped");
             playing = false;
             ui.SetPlaying(false, speed);
         }
@@ -332,7 +449,7 @@ namespace GreyBoxStrategy.Realm
                 case ReplayEventKind.TruceEnded:
                 case ReplayEventKind.Eliminated:
                     Show(e.After, null);
-                    ui.AddLine(line);
+                    if (!AddLine(e, line)) break; // another country's harvest: not news to your court
                     yield return Wait(e.Kind == ReplayEventKind.Upkeep ? 0.35f : 1.2f);
                     break;
 
@@ -441,7 +558,19 @@ namespace GreyBoxStrategy.Realm
         }
 
         /// <summary>A banner's click: open the decision behind it.</summary>
-        private Action Why(ReplayEvent e) => e.Decision == null ? null : (Action)(() => ui.ShowCard(DecisionCard.From(e)));
+        private Action Why(ReplayEvent e) => !CanInspect(e) ? null : (Action)(() => ui.ShowCard(DecisionCard.From(e)));
+
+        /// <summary>Whether a decision opens in the inspector: always in watch mode; in rule mode, a model ruler's once the game is over (fog of war).</summary>
+        private bool CanInspect(ReplayEvent e) =>
+            e?.Decision != null && e.Decision.ModelName != RuleSession.YourModel && ui.Fog.KnowsDecision(e.Decision.AgentId, ui.GameOver);
+
+        /// <summary>A chronicle line, unless fog of war hides it. False when hidden.</summary>
+        private bool AddLine(ReplayEvent e, ChronicleLine line)
+        {
+            if (!ui.Fog.KnowsUpkeep(e)) return false;
+            ui.AddLine(line);
+            return true;
+        }
 
         /// <summary>For the Unity CLI: open the inspector on a decision, as a click on its chronicle line would.</summary>
         public string Inspect(int turn, string country)

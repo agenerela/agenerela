@@ -11,6 +11,56 @@ scripted AI; [its results are below](#stage-2-a-model-plays-a-country). Any seat
 model, a script or random, with personas; [the table of models](#models-at-one-table) scores them.
 Stage 3, the map and the screen, has begun: [watch mode plays back a recorded game](#the-screen-watch-mode-playing-back-a-recorded-game).
 
+## Play it
+
+**Painted Realm** (the working title) is this project's screen: five countries, each ruled by a
+language model through the framework, fighting over 25 provinces on a painted sea-chart.
+
+1. Open `Demos/GreyBoxStrategy` in Unity 6000.3.23f1, then open
+   `Assets/GreyBoxStrategy/Screen/Watch.unity` and press **Play**.
+2. The start menu offers three games:
+   - **Replay the recorded game.** Seed 4 of the persona table: five `qwen3.5:4b` rulers, Kesh
+     wins by domination on turn 17. Every line is the rulers' own. It needs no model and no
+     server.
+   - **Watch a live game.** Five model rulers with personas play a new game now. Choose the model
+     (`qwen3.5:4b` by default) and the seed, then **Watch live**.
+   - **Rule a country.** You rule one country, chosen by its crest, against four model rulers
+     with personas on the same server. Choose the model and the seed, then **Rule**.
+3. In the game:
+   - Space plays and pauses, N steps one move, and + changes the speed.
+   - Keys 1 to 4 switch the map modes, D opens diplomacy, and Esc closes a panel.
+   - Click a province, a crest or a chronicle line to open it. A chronicle line or a speech banner
+     opens the decision behind it.
+   - Right-drag pans the map, and the wheel zooms.
+4. When you rule a country:
+   - The orders panel, bottom centre, lists every move the rules offer you. These are the moves
+     a model ruler would be offered in your place. A move that is not offered says why in its
+     tooltip.
+   - A move with a target lists its targets. A province or a rival's panel also has Order
+     buttons. **End turn** (or Enter) sends your order.
+   - The four rulers decide while you choose. The turn then plays back, and the panel opens
+     again for your next order.
+   - A peace offer to you opens the envoy's card: **Accept** or **Refuse**.
+   - **Report** shows what your court tells you, the same lines a model ruler reads.
+   - **Fog of war:** you see what your court knows. Other countries' treasuries and stability
+     are hidden, and so are garrisons and forts beyond your borders. The rulers' councils open
+     in the inspector when the game is over. The design page has the full rule.
+
+**What a live game or a rule game needs:**
+- **Two environment variables, in the environment Unity was started from:**
+  `AGENERELA_OLLAMA_URL` (the server) and `AGENERELA_OLLAMA_API_KEY` (its key).
+  [`tools/ollama-server/README.md`](../../tools/ollama-server/README.md#unity-on-the-laptop) says
+  how to set them for your Windows user. Restart Unity **and Unity Hub** after setting them.
+- **The RTX 5080, behind its lock.** The server is the card shared by every live run. A live game
+  takes `.scratch/ollama-5080-lock/held` while the model plays, unloads the model, and releases
+  the lock as soon as the model is done (playback carries on from the log). A full game holds the
+  card for a few minutes. A rule game takes the lock for each round of the rulers' decisions
+  only, and unloads the model after each. It never holds the card while it waits for your
+  order, and if another session holds it, the orders panel says who.
+- **If it cannot start, the menu says why rather than wait:** a variable is not set, the lock is
+  held (and by whom), the server cannot be reached, or the key is refused. A game that stops
+  mid-way says so across the top of the map.
+
 ## Run it
 
 **From the editor:** open this project in Unity 6000.3.23f1, then **GreyBoxStrategy → Play 200
@@ -749,7 +799,10 @@ Found by stage 2, from the runs above:
   sentence (`Moves open to you: ...`) where the game's line stood, `+moves-sentence` here. On the
   interim evaluation set it scored below both the plain list and `PerTarget`: −6.4 and −6.7 points
   on the 2B, beyond noise, and −3.6 and −3.3 on the 4B (findings, "The legal moves as an observation
-  line"). Stage 2 here, the game's line against the framework's, is still owed, on the 4B only.
+  line"). In stage 2 here, on the 4B only (long game runs are 4B only), 30 games paired by seed,
+  `+no-moves-line+moves-sentence` kept the attack share within noise of the game's line (27%
+  against 32%), unlike `PerTarget`, but ended with fewer provinces, 0.7 against 2.1, at the edge of
+  the band. The game keeps its own line; no default changed.
 - **N9. A statement rule reads like a statement already given.** `PromptBuilder` writes
   `StatementRules` as `Your statement: <the rules>`. With a rule that opens with a noun phrase
   (`A trader's voice: profit, price or a deal. One sentence, under 25 words.`), qwen3.5:2b copies
@@ -761,8 +814,10 @@ Found by stage 2, from the runs above:
   persona 2b table, 20 games paired by seed, `+own-words` (`InYourOwnWords`) took the copies from
   15% of statements to none, the merchant's from 65%. `+how-it-reads` took them to 7%, and it also
   cut battles and peace offers. Neither wording cost correct answers on the evaluation sets, but
-  there the 2B repeated more few-shot lines (findings, "How a statement rule is introduced"). The
-  4B table is still owed. No default changed.
+  there the 2B repeated more few-shot lines (findings, "How a statement rule is introduced"). At
+  the persona 4b table, which never copied, `+own-words` left the game's liveliness and the
+  persona's hold on the play within noise; statements repeated word for word rose from 5% to 10%
+  and named their target more often (72% to 78%). No default changed.
 - **N10. A decision round's staleness check comes after the game's own.** `RoundEntry.Stale`
   never fires here, because the game refuses a move that an earlier one broke before it asks the
   seat. Two smaller misfits: a round holds an agent once (a second peace offer needs a second
@@ -835,7 +890,21 @@ the decision behind it in six numbered sections, from the recorded telemetry onl
 
 **The map** is a 4096 × 2304 master with open sea on every side (`ArtSource/sea-chart-map.png`). It is codex-image's 1672 × 941 painting upscaled, so its detail is still the 1672 px original's. The province maps are baked at 2048 × 1152, and `provinces.json` records the land's bounds, which the camera frames.
 
-Slice 3 plays a live game.
+**A live game** (slice 3): the Watch object's `LiveGame` component, off by default, plays five
+`qwen3.5:4b` persona seats on the default arm, through the game's own `TableRunner`. The
+framework's `DecisionLog` writes every decision to `Logs/Live/`. The screen rebuilds the replay
+from that log as it grows. It plays a turn once the next council has begun or the game is over,
+so no turn is shown before every move of it has landed, and while it waits, the council's
+thinking indicator shows.
+
+The server comes from `AGENERELA_OLLAMA_URL` and `AGENERELA_OLLAMA_API_KEY` in Unity's
+environment. Take `.scratch/ollama-5080-lock` first.
+
+Checked on 11 November on the RTX 5080: a short game, then a full one, seed 102, which Ilvar won
+by domination on turn 24. The screen followed both, guard containments included. There are no
+timing claims from these runs. A short check's "stop after N turns" now counts the turns the
+model has played; the first run counted played-back turns, so the model went on to 21. The fix
+is covered by a review of the code, not yet by a live run.
 
 ## Layout
 

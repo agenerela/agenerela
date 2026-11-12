@@ -29,6 +29,44 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **GreyBoxStrategy, Painted Realm: rule mode** (#20). The start menu's third choice: you rule
+  one country against four model rulers with personas.
+  - The rulers decide at once, in one `DecisionRound`, while your order waits. The turn then
+    plays back as in watch mode.
+  - The orders panel offers exactly the moves `Legality` offers a model seat in your place. A
+    move that is not offered says why. Province and rival panels have Order buttons, and a peace
+    offer to you opens the envoy's card.
+  - Fog of war is decided and documented: you know what a model ruler is told, no more.
+  - The RTX 5080's lock is taken for each round of model calls only, and the model is unloaded
+    after each.
+  - Tests drive the four seats with a `ScriptedProvider`.
+- **Painted Realm: three fixes to #260's live game.**
+  - The lock now resolves to the main checkout's from a git worktree too.
+  - The server check and the unload use `HttpClient`, as the framework's provider does. Before,
+    `UnityWebRequest` refused the plain-HTTP gateway.
+  - The start menu fits at 1366 × 768.
+
+- **GreyBoxStrategy, Painted Realm: a start menu and "Play it"** (#20).
+  - The Watch scene opens on a menu: replay the recorded game, or watch a live game (model and
+    seed).
+  - A live game checks first and says why it cannot start: either gateway variable missing, the
+    RTX 5080's lock held (and by whom), the server unreachable, or the key refused.
+  - It takes the lock while the model plays, unloads the model, and releases the lock at once. A
+    game that stops mid-way says so on the map.
+  - The three-turn stop is now enforced where the game asks its rulers, and two tests drive a
+    whole live session with a `ScriptedProvider`.
+  - The demo README opens with the steps.
+
+- **GreyBoxStrategy, the screen follows a live game** (#20).
+  - Five `qwen3.5:4b` persona seats play through `TableRunner`, and the screen reads the
+    framework's `DecisionLog` as it grows: a partial replay build, and the log read while it is
+    written.
+  - A turn plays only once it has fully resolved.
+  - Checked with one full live game on the RTX 5080, where Ilvar won on turn 24; no timing claims.
+  - Also: open panels no longer cover the map-mode bar, and following a country centres its land
+    in the free map area.
+  - 3 new EditMode tests.
+
 - **GreyBoxStrategy, the screen's panels and map modes** (#20, still on the replay).
   - **Province and country panels** on click: defence, who may attack a province and why not,
     and a country's persona, treasury, last facts, offered moves and decisions.
@@ -90,8 +128,11 @@ phase table and the open issues, not here.
     `+how-it-reads` and `+own-words` (`StatementRulesWording`).
   - The `Scorecard`'s voice section counts statements that copy their persona's whole statement
     rule, or one sentence of it.
-  - At the persona 2b table, `+own-words` took those copies from 15% to none. The stage 2 runs and
-    the 4B table are still owed. See the demo README's gaps N8 and N9.
+  - At the persona 2b table, `+own-words` took those copies from 15% to none; at the 4b table,
+    which never copied, it changed nothing beyond noise but statements repeated word for word (5%
+    to 10%). In stage 2, on the 4B only, the framework's moves sentence kept the attack share
+    within noise of the game's line but ended with fewer provinces (0.7 against 2.1, the band's
+    edge), so the game keeps its line. See the demo README's gaps N8 and N9.
 
 - **GreyBoxStrategy: models at one table** (#20). Any seat can be a model, a script or random
   (`TableDefinition`, `Tables.Named`, `StrategyTableMenu`). Each council is one framework

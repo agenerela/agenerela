@@ -464,6 +464,75 @@ That is a fairness line the demo can say out loud.
 **Done when** a person can play a whole game as any country and the moves offered match what
 the models were offered on the same state.
 
+#### Rule mode as built (12 November)
+
+The start menu's third choice: pick a country, a model and a seed. The other four seats are model
+rulers with personas, one `CountryAgent` each, as in a `personas` table.
+
+- **A turn.** The council meets after upkeep. The four rulers decide at once in one
+  `DecisionRound` on that snapshot, while your order waits in the orders panel. Your order and
+  theirs then go to the game together, and the resolution plays back as in watch mode.
+  - The rulers think while the previous turn plays back, so the wait after End turn is short.
+  - Your seat is not a framework agent. It is offered `Legality.CouncilMoves` for your country,
+    which is the list a model seat is offered on the same state. An order that is not on the list
+    is refused. A test checks this.
+- **Orders.** The orders panel sits bottom centre. It shows your order, one button for each
+  action, and End turn (Enter).
+  - An action that takes a target opens its legal targets as chips, an attack with the share of
+    rolls it wins. It also switches the map to the reach mode.
+  - An action with no legal target is disabled, and its tooltip gives the rule's own reason.
+  - A province panel offers attack and fortify on that province, and a rival's panel offers war
+    and peace. Each move there is an Order button or a faded line saying why not.
+  - **Report** opens the standing facts and this turn's facts, the same lines a model ruler reads.
+- **A peace offer to you** opens the envoy card, with the offering ruler's face and words, the
+  terms, and Accept or Refuse. The turn waits for your answer.
+- **The top bar** is your country in full: the follow bar of watch mode, fixed on you. The four
+  rivals sit on the right with their province counts and their relation to you.
+
+**Fog of war, decided:** you see what your court knows, which is what a model ruler is told on the
+same turn, no more. So:
+
+- **Known:**
+  - who holds every province (the map is public);
+  - every country's army, province count and relation to you (a model ruler's standing facts list
+    all of these);
+  - your own country in full;
+  - the garrisons and forts of every province that is yours or touches your land (the targets a
+    model is told about);
+  - every move as it lands (a war or a capture is seen by everyone).
+- **Hidden:**
+  - another country's treasury, income, upkeep and stability;
+  - garrisons and forts beyond your borders (the forts map mode shows them as none);
+  - other countries' harvests, bandits and unrest (revolts stay, since land changes hands);
+  - the model rulers' councils: what they read, what they were offered, and the guards. These
+    open in the inspector when the game is over.
+
+  `Fog` in `Screen/Replay/Fog.cs` holds these rules, and `FogTests` checks them.
+
+**The RTX 5080 in rule mode** is locked one round of model calls at a time. The lock is taken when
+the rulers start deciding, and released, with the model unloaded, as soon as they have decided.
+The game never holds the card while it waits for you. When another session holds the lock, the
+orders panel says who, and the round waits its turn.
+
+**Not built yet:** the court scene for an accepted truce, the dashed gold ring (the reach mode's
+hatching rings the targets instead), the mark on statements that name your country, and
+several orders a turn.
+
+**Open questions for the lead:**
+
+1. **Armies under fog.** Decision 13 has a rival's army hide behind fog, but a model ruler is told
+   every rival's army. Rule mode shows armies, so that you and the models know the same things.
+   Should armies be hidden from both? That is a rules change for the models' facts, to be
+   measured in the simulation first.
+2. **The rulers' councils during the game.** They are sealed until the game ends, because the
+   inspector shows a ruler's treasury and its plans. Should they open at once instead, as a
+   "showcase" switch?
+3. **Lock per round, or per game?** One round at a time keeps the card free for other sessions
+   while you think, but reloading the model costs a few seconds a turn. Should a game that a
+   person is playing hold the card throughout?
+4. **Rule mode's speed.** Playback starts at 1×. Should it start faster, or skip your own moves'
+   banners? You have no banner now, since you write no statement.
+
 ### 3. Advise
 
 The player is the counsellor of one model ruler (screenshot 06). Each turn, before the council, the
