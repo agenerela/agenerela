@@ -295,6 +295,8 @@ namespace GreyBoxStrategy.Screen.Tests
         [TestCase(3440, 1440, 1.3333f, false)] // ultrawide: the height decides
         [TestCase(1366, 768, 1f, true)]
         [TestCase(2202, 1168, 1.0815f, false)] // the lead's maximized Game view on 12 November
+        [TestCase(3840, 2400, 2f, false)] // the lead's display, 16:10
+        [TestCase(1920, 1200, 1f, false)]
         public void The_UI_grows_with_the_screen_and_never_shrinks_below_its_design(int w, int h, float scale, bool compact)
         {
             Assert.That(UiScale.For(w, h), Is.EqualTo(scale).Within(0.001f));
