@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Agenerela.Providers;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Agenerela
 {
@@ -39,8 +40,15 @@ namespace Agenerela
     /// decisions in flight at once on one agent both recall before either remembers, and are
     /// remembered in the order they finish.
     /// </para>
+    /// <para>
+    /// <see cref="Remembers"/> says what each remembered decision holds when it is sent (#244 item 4,
+    /// #216 item 3): the whole decision, the default and how it always was; the move alone; or the
+    /// move and what came of it, a line the game attaches through <see cref="Agent.SetOutcome"/>
+    /// (<see cref="IRemembersOutcomes"/>). Everything is kept whichever is set, and written out at
+    /// each recall, so the token cap counts what is sent.
+    /// </para>
     /// </remarks>
-    public sealed class RollingHistory : IMemoryStrategy, IReportsDroppedTurns, IExportsMemory
+    public sealed class RollingHistory : IMemoryStrategy, IReportsDroppedTurns, IExportsMemory, IClearableMemory, IRemembersOutcomes
     {
         /// <summary>How many exchanges are kept by default: six, as §2.1 sets.</summary>
         public const int DefaultTurns = 6;
@@ -48,8 +56,22 @@ namespace Agenerela
         /// <summary>The <see cref="MemorySnapshot.Format"/> this strategy writes.</summary>
         public const string SnapshotFormat = "agenerela.rolling-history";
 
-        /// <summary>The <see cref="MemorySnapshot.Version"/> this strategy writes.</summary>
-        public const int SnapshotVersion = 1;
+        /// <summary>
+        /// The <see cref="MemorySnapshot.Version"/> this strategy writes: 2 since outcomes are saved
+        /// (<see cref="MemoryExchange.Outcome"/>, #216 item 3). A version 1 snapshot still imports,
+        /// with no outcomes.
+        /// </summary>
+        public const int SnapshotVersion = 2;
+
+        /// <summary>
+        /// The field a decision's outcome is sent in under <see cref="RememberedDecision.MoveAndOutcome"/>,
+        /// after the decision's own fields: <c>{"action":"attack","target":"fenmark","outcome":"took fenmark"}</c>.
+        /// </summary>
+        /// <remarks>
+        /// Inside the remembered decision rather than an entry of its own, so the history keeps two
+        /// entries an exchange and its <c>user</c>/<c>assistant</c> alternation (#216 item 3).
+        /// </remarks>
+        public const string OutcomeFieldName = "outcome";
 
         /// <summary>
         /// The default token budget for the history of one request: 256 estimated tokens.
@@ -64,6 +86,7 @@ namespace Agenerela
         public const int DefaultMaxTokens = 256;
 
         private readonly LinkedList<Exchange> exchanges = new LinkedList<Exchange>();
+        private RememberedDecision remembers = RememberedDecision.Whole;
 
         /// <param name="turns">The most exchanges kept, at least one.</param>
         /// <param name="maxTokens">The most estimated tokens one request's history may hold, at least one.</param>
@@ -90,6 +113,33 @@ namespace Agenerela
         /// <summary>The most estimated tokens one request's history may hold.</summary>
         public int MaxTokens { get; }
 
+        /// <summary>
+        /// What each remembered decision holds when it is sent: <see cref="RememberedDecision.Whole"/>,
+        /// the default, as it always was; <see cref="RememberedDecision.Move"/> without its statement;
+        /// <see cref="RememberedDecision.MoveAndOutcome"/> without its statement and with the outcome
+        /// the game attached. Read at each <see cref="Recall"/>, so it may change at any time.
+        /// </summary>
+        /// <remarks>
+        /// Off by default because it changes what the model reads (hard rule 2). In GreyBoxStrategy on
+        /// <c>qwen3.5:4b</c> (11 November 2026) both other settings made statements name the move's
+        /// target less often, beyond noise: the remembered statements are examples the model follows
+        /// (<c>docs/llm-wiki/findings.md</c>).
+        /// </remarks>
+        /// <exception cref="ArgumentOutOfRangeException">A value <see cref="RememberedDecision"/> does not define.</exception>
+        public RememberedDecision Remembers
+        {
+            get => remembers;
+            set
+            {
+                if (!Enum.IsDefined(typeof(RememberedDecision), value))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "Remembers is Whole, Move or MoveAndOutcome.");
+                }
+
+                remembers = value;
+            }
+        }
+
         /// <summary>How many exchanges are held now, at most <see cref="Turns"/>.</summary>
         public int Count => exchanges.Count;
 
@@ -100,8 +150,8 @@ namespace Agenerela
         public int Dropped { get; private set; }
 
         /// <summary>
-        /// Every exchange the turn cap has forgotten since this memory was made, which no recall
-        /// can send again.
+        /// Every exchange the turn cap has forgotten since this memory was made, or last cleared,
+        /// which no recall can send again.
         /// </summary>
         public int Forgotten { get; private set; }
 
@@ -111,18 +161,21 @@ namespace Agenerela
         /// </summary>
         public IReadOnlyList<string> Recall(AgentContext ctx)
         {
-            var sent = new List<Exchange>(exchanges.Count);
+            var sent = new List<(string Stimulus, string Decision)>(exchanges.Count);
             int tokens = 0;
 
             for (var node = exchanges.Last; node != null; node = node.Previous)
             {
-                if (tokens + node.Value.Tokens > MaxTokens)
+                // Written out as Remembers says now, and counted as written, so the cap holds what is sent.
+                string decision = Sent(node.Value);
+                int cost = EstimateTokens(node.Value.Stimulus.Length + decision.Length);
+                if (tokens + cost > MaxTokens)
                 {
                     break;
                 }
 
-                tokens += node.Value.Tokens;
-                sent.Add(node.Value);
+                tokens += cost;
+                sent.Add((node.Value.Stimulus, decision));
             }
 
             Dropped = exchanges.Count - sent.Count;
@@ -162,13 +215,67 @@ namespace Agenerela
 
             string stimulus = request.Stimulus ?? "";
             string decision = Write(result.Decision, request.Schema);
-            exchanges.AddLast(new Exchange(stimulus, decision, EstimateTokens(stimulus.Length + decision.Length)));
+            exchanges.AddLast(new Exchange(stimulus, decision, result.Decision, null));
 
             if (exchanges.Count > Turns)
             {
                 exchanges.RemoveFirst();
                 Forgotten++;
             }
+        }
+
+        /// <summary>
+        /// Sets what came of the remembered decision <paramref name="result"/> carries, replacing an
+        /// outcome set before; null or blank clears it. Returns false, changing nothing, when this
+        /// memory does not hold that decision: never remembered, still waiting under
+        /// <see cref="MemoryCommit.OnExecute"/>, forgotten by the turn cap, or imported (an import
+        /// keeps outcomes, but not which result each belongs to). A game usually calls
+        /// <see cref="Agent.SetOutcome"/>, which also reaches a decision still waiting.
+        /// </summary>
+        /// <remarks>
+        /// The decision is found by its <see cref="DecisionResult.Decision"/> object, so it must be the
+        /// result <see cref="Remember"/> was given. The outcome is kept whatever <see cref="Remembers"/>
+        /// is, saved by <see cref="Export"/>, and sent only under <see cref="RememberedDecision.MoveAndOutcome"/>.
+        /// </remarks>
+        /// <exception cref="ArgumentNullException"><paramref name="result"/> is null.</exception>
+        public bool SetOutcome(DecisionResult result, string outcome)
+        {
+            if (result == null)
+            {
+                throw new ArgumentNullException(nameof(result));
+            }
+
+            if (result.Decision == null)
+            {
+                return false;
+            }
+
+            for (var node = exchanges.Last; node != null; node = node.Previous)
+            {
+                if (ReferenceEquals(node.Value.Source, result.Decision))
+                {
+                    node.Value.Outcome = string.IsNullOrWhiteSpace(outcome) ? null : outcome;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Forgets every exchange, as <see cref="Agent.Reset"/> asks (#190, G12), and sets
+        /// <see cref="Dropped"/> and <see cref="Forgotten"/> back to 0, leaving this memory as a new
+        /// one with the same <see cref="Turns"/> and <see cref="MaxTokens"/> would be.
+        /// </summary>
+        /// <remarks>
+        /// The counts go too because they describe the past a request lacks, and after a clear the
+        /// agent has none. Telemetry then reads 0 rather than counting an earlier conversation.
+        /// </remarks>
+        public void Clear()
+        {
+            exchanges.Clear();
+            Dropped = 0;
+            Forgotten = 0;
         }
 
         /// <summary>
@@ -186,7 +293,7 @@ namespace Agenerela
 
             foreach (var exchange in exchanges)
             {
-                snapshot.Exchanges.Add(new MemoryExchange(exchange.Stimulus, exchange.Decision));
+                snapshot.Exchanges.Add(new MemoryExchange(exchange.Stimulus, exchange.Decision) { Outcome = exchange.Outcome });
             }
 
             return snapshot;
@@ -296,8 +403,9 @@ namespace Agenerela
                     return false;
                 }
 
-                read.Add(new Exchange(exchange.Stimulus, exchange.Decision,
-                    EstimateTokens(exchange.Stimulus.Length + exchange.Decision.Length)));
+                // JsonUtility writes a null string as an empty one, and version 1 had no outcomes.
+                read.Add(new Exchange(exchange.Stimulus, exchange.Decision, null,
+                    string.IsNullOrWhiteSpace(exchange.Outcome) ? null : exchange.Outcome));
             }
 
             imported = read;
@@ -365,18 +473,65 @@ namespace Agenerela
             json.WriteValue(value);
         }
 
-        private readonly struct Exchange
+        // The decision as Remembers says to send it now. Whole is the string kept, untouched, so the
+        // default history is byte for byte what it always was.
+        private string Sent(Exchange exchange)
         {
-            public Exchange(string stimulus, string decision, int tokens)
+            switch (remembers)
+            {
+                case RememberedDecision.Move:
+                    return Rewrite(exchange.Decision, null);
+                case RememberedDecision.MoveAndOutcome:
+                    return Rewrite(exchange.Decision, exchange.Outcome);
+                default:
+                    return exchange.Decision;
+            }
+        }
+
+        // The decision's JSON with its statement left out and, given one, the outcome after the rest,
+        // the other fields in the order they were written. A decision that is not a JSON object, which
+        // only an import can bring, is sent as it is.
+        internal static string Rewrite(string decision, string outcome)
+        {
+            JObject json;
+            try
+            {
+                using (var reader = new JsonTextReader(new StringReader(decision)) { DateParseHandling = DateParseHandling.None })
+                {
+                    json = JObject.Load(reader);
+                }
+            }
+            catch (JsonException)
+            {
+                return decision;
+            }
+
+            json.Remove(DecisionSchema.StatementFieldName);
+            json.Remove(OutcomeFieldName);
+            if (!string.IsNullOrWhiteSpace(outcome))
+            {
+                json.Add(OutcomeFieldName, outcome);
+            }
+
+            return json.ToString(Formatting.None);
+        }
+
+        // One exchange: what was sent and decided, the decision object it came from (null once
+        // imported), and the outcome the game attached, which may change while it is held.
+        private sealed class Exchange
+        {
+            public Exchange(string stimulus, string decision, AgentDecision source, string outcome)
             {
                 Stimulus = stimulus;
                 Decision = decision;
-                Tokens = tokens;
+                Source = source;
+                Outcome = outcome;
             }
 
             public string Stimulus { get; }
             public string Decision { get; }
-            public int Tokens { get; }
+            public AgentDecision Source { get; }
+            public string Outcome { get; set; }
         }
     }
 }

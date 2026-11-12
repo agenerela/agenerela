@@ -17,6 +17,7 @@ namespace Agenerela.Providers
             Request = request;
             Index = index;
             Agent = request.AgentName;
+            AgentId = string.IsNullOrEmpty(request.AgentId) ? null : request.AgentId;
             Stimulus = request.StimulusText;
             Label = request.StimulusLabel;
 
@@ -38,6 +39,13 @@ namespace Agenerela.Providers
         /// built by <see cref="PromptBuilder"/>, as a test may build one by hand.
         /// </summary>
         public string Agent { get; }
+
+        /// <summary>
+        /// The asking agent's stable id, <see cref="Agenerela.Agent.Id"/>, such as <c>"npc_mara"</c>.
+        /// Null when the agent has none, or the request was built by hand. Unlike <see cref="Agent"/>,
+        /// it tells apart two agents that share a name or a profile (#190, Living Vale #21).
+        /// </summary>
+        public string AgentId { get; }
 
         /// <summary>
         /// The stimulus exactly as it was passed to <see cref="Agenerela.Agent.DecideAsync"/>, without its

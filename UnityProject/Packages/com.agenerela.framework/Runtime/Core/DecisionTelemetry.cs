@@ -17,7 +17,10 @@ namespace Agenerela{
         public GuardVerdictKind? Verdict; // The verdict of the guard that stopped the decision, or of Execute's re-check when it refused; null when every guard passed (#106)
         public string GuardReason; // That guard's reason, word for word; null when every guard passed (#106)
         public List<string> TargetsDropped = new List<string>(); // Target ids a source found but left out because of its cap (#32)
+        public List<string> TargetsUnlisted = new List<string>(); // Target ids the schema offered but the prompt's action and target list left out for DecideOptions.MaxListedTargets, in schema order; empty when nothing is listed or nothing was cut. The request is the same with or without this record (#151)
         public List<string> ObservationsDropped = new List<string>(); // Observation lines a source had but the request does not carry, in source order: for each source, its lines Agent.MaxObservations cut, then those its own cap left out, from IReportsDroppedObservations (#91)
+        public string TargetIgnored; // The target the model named for an action that takes none (ActionDefinition.TakesNoTarget), dropped before the guards so the decision's target is no_target; null when nothing was dropped (#244 item 2)
+        public List<UnavailableTarget> TargetsUnavailable = new List<UnavailableTarget>(); // Each action and target pair a per-target check (ITargetAvailability) rejected when the request was prepared, with its reason, in registry then target order; empty for an agent with no such check (#190 LV #19)
         public int HistoryTurnsSent; // Exchanges of memory sent in DecisionRequest.History, two entries each (#90)
         public int HistoryTurnsDropped; // Exchanges the memory still held but left out of this request, from IReportsDroppedTurns; 0 when it cannot say (#90)
         public int HistoryTurnsForgotten; // Exchanges the memory has let go of since it was made, a rising total, from IReportsDroppedTurns; 0 when it cannot say (#90)
@@ -37,6 +40,9 @@ namespace Agenerela{
         public ExecutionStatus? Execution; // What the last Agent.Execute of this decision did: Done, Failed by the handler, NoAction for none, or Refused with no handler run; null until an Execute returns; a handler that throws leaves it as it was (DR-018)
         public string ExecutionReason; // That Execute's reason, word for word: the handler's for Failed, the agent's for Refused; null for Done and NoAction (DR-018)
         public float BacklogWaitSeconds; // From the call to its turn in the agent's own Agent.Backlog, before it was prepared; 0 with no backlog, and never part of QueueWaitSeconds (#190, G5)
+        public string ChainId; // DecideOptions.Chain's id: the chain of relayed decisions this one is in; null for none (#190, G4)
+        public int ChainHop; // That chain's hop: relays from its start, 0 for its first decision; 0 with no chain (#190, G4)
+        public string ChainSource; // The Agent.Id of the agent whose decision was relayed to this one; null at a chain's start, with no chain, or when that agent has no id (#190, G4)
 
         public DecisionTelemetry()
         {
@@ -51,7 +57,10 @@ namespace Agenerela{
             Verdict = null;
             GuardReason = null;
             TargetsDropped = new List<string>();
+            TargetsUnlisted = new List<string>();
             ObservationsDropped = new List<string>();
+            TargetIgnored = null;
+            TargetsUnavailable = new List<UnavailableTarget>();
             HistoryTurnsSent = 0;
             HistoryTurnsDropped = 0;
             HistoryTurnsForgotten = 0;
@@ -71,6 +80,9 @@ namespace Agenerela{
             Execution = null;
             ExecutionReason = null;
             BacklogWaitSeconds = 0f;
+            ChainId = null;
+            ChainHop = 0;
+            ChainSource = null;
         }
     }
 
@@ -117,7 +129,10 @@ namespace Agenerela{
         Superseded,
 
         // Not sent: refused at once, the agent's Backlog being full. Logs no warning (#190, G5)
-        BacklogFull
+        BacklogFull,
+
+        // Not sent: a DecisionRelay.RelayAsync past its chain's hop cap. Logs no warning (#190, G4)
+        ChainTooLong
     }
 
     /// <summary>What a <see cref="PipelineErrorKind"/> says about where a failure came from.</summary>

@@ -17,6 +17,33 @@ namespace Agenerela
         [Tooltip("Does this action need something to act on?")]
         public bool RequiresTarget;
 
+        /// <summary>
+        /// Whether this action never takes a target, such as <c>recruit</c> or <c>raise_taxes</c>
+        /// (#244 item 2). False, the default, leaves the action as it always was: with
+        /// <see cref="RequiresTarget"/> off, its target is optional and may be any target in its
+        /// <see cref="TargetCategories"/>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// On, a target the model names anyway is dropped, not refused: inside
+        /// <see cref="Agent.DecideAsync"/> the decision's target becomes
+        /// <see cref="TargetRegistry.NoTarget"/> before any guard or handler sees it,
+        /// <see cref="DecisionResult.ModelDecision"/> keeps the model's, and
+        /// <see cref="DecisionTelemetry.TargetIgnored"/> records the target dropped. With
+        /// <see cref="DecideOptions.PairTargetsWithActions"/> the schema pairs the action with
+        /// <c>no_target</c> alone, so the grammar never lets a target through, and one that comes
+        /// anyway is rejected by <see cref="SchemaLegalityGuard"/>, as any pair the grammar forbade is.
+        /// <see cref="Agent.Execute(DecisionResult)"/> refuses such a decision too.
+        /// </para>
+        /// <para>
+        /// It changes nothing the model reads in the prompt. Registering an action with it and
+        /// <see cref="RequiresTarget"/>, or with <see cref="TargetCategories"/>, throws.
+        /// </para>
+        /// </remarks>
+        [Tooltip("This action never takes a target. A target the model names anyway is dropped. " +
+                 "Cannot be combined with 'Requires Target' or 'Target Categories'.")]
+        public bool TakesNoTarget;
+
         [Tooltip("A stimulus that should lead to this action. A player's input, an event, " +
          "or behavior that triggers this action. Use {0} for the target and never reuse an evaluation prompt")]
         public string ExampleStimulus;
@@ -24,6 +51,22 @@ namespace Agenerela
         [Tooltip("Target ids this verb sensibly applies to. Prevents nonsense examples " +
                  "like 'Pick up the Blacksmith'.")]
         public string[] PreferredExampleTargets;
+
+        /// <summary>
+        /// What the agent says in this action's example, shown after its target as
+        /// <c>statement: "On my way to the Tower."</c> (#190, GreyBoxVillage G14). Empty by default:
+        /// the example then shows no statement, as before.
+        /// </summary>
+        /// <remarks>
+        /// An example with no statement leaves the model only the stimulus to copy: GreyBoxVillage's
+        /// guard answered with its idle example's stimulus in 4 of 4 live tries (findings,
+        /// 5 November). A <c>{0}</c> is filled with the same target as the example's stimulus.
+        /// <see cref="DecideOptions.ExampleStatements"/> leaves every statement out of one call.
+        /// Unmeasured: the A/B is owed (#151). Never an evaluation prompt (hard rule 4).
+        /// </remarks>
+        [Tooltip("Optional. What the agent says in this action's example. Use {0} for the target, " +
+                 "as in the example, and never reuse an evaluation prompt.")]
+        public string ExampleStatement;
 
         /// <summary>
         /// A stimulus that touches this action's subject but asks for nothing, shown to the model
@@ -52,6 +95,14 @@ namespace Agenerela
                  "shown answered with 'none'. Use {0} for the target, as in the example, and never " +
                  "reuse an evaluation prompt.")]
         public string CounterExampleStimulus;
+
+        /// <summary>
+        /// What the agent says in this action's counter-example, the line answered with <c>none</c>
+        /// (#190, G14). Empty by default. Shown and filled like <see cref="ExampleStatement"/>.
+        /// </summary>
+        [Tooltip("Optional. What the agent says in the counter-example. Use {0} for the target, and " +
+                 "never reuse an evaluation prompt.")]
+        public string CounterExampleStatement;
 
         /// <summary>
         /// The kinds of target this action takes, matched ordinally against the category each

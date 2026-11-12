@@ -33,6 +33,10 @@ namespace LivingVale.Tests
         private ConversationTradeLink link;
         private ConversationCoordinator coordinator;
         private ScriptedNpcDecisionDriver scripted;
+        private AgenerelaNpcDecisionDriver npcs;
+
+        // The action the NPC last carried out, or held as a card.
+        private string LastAction => npcs.LastDecision?.ActionId ?? GameActions.None;
         private string directory;
 
         [SetUp]
@@ -47,10 +51,12 @@ namespace LivingVale.Tests
             routes = new QuestRoutes(quests, link);
             executor = new NpcActionExecutor(trade, quests, routes);
             scripted = new ScriptedNpcDecisionDriver(seed: 1, executor: executor) { NormalDelay = TimeSpan.FromMilliseconds(5) };
-            coordinator = new ConversationCoordinator(scripted, new ConversationSettings { TurnTimeout = TimeSpan.FromSeconds(2) });
+            npcs = new ScriptedReplies(scripted).Driver(executor);
+            coordinator = new ConversationCoordinator(npcs, new ConversationSettings { TurnTimeout = TimeSpan.FromSeconds(2) });
             link.Attach(coordinator, trade);
             link.AttachQuests(quests);
             link.AttachRoutes(routes);
+            link.EndPendingCards = EndCards;
             directory = Path.Combine(Path.GetTempPath(), "LivingValeRouteTests_" + Guid.NewGuid().ToString("N"));
         }
 
@@ -82,14 +88,51 @@ namespace LivingVale.Tests
         private bool Lists(string npcId, string actionId, string targetId) =>
             executor.AvailableFor(npcId).Any(o => o.ActionId == actionId && o.Targets.Any(t => t.Id == targetId));
 
-        /// <summary>Asserts the NPC put <paramref name="contractId"/> on the card, then presses its button.</summary>
+        // The route cards are each driver's held proposals (#236): the scripted NPCs' and, in the
+        // model tests below, the model driver's.
+        private void EndCards()
+        {
+            npcs.DeclineProposals();
+            model?.DeclineProposals();
+        }
+
+        private AgenerelaNpcDecisionDriver CardHolder =>
+            npcs.PendingProposal != null ? npcs : model?.PendingProposal != null ? model : null;
+
+        private Proposal Card => CardHolder?.PendingProposal;
+
+        /// <summary>Presses the card's confirm button for <paramref name="proposal"/>: true when its contract was carried out.</summary>
+        private bool Confirm(Proposal proposal)
+        {
+            var holder = npcs;
+            try
+            {
+                holder.Confirm(proposal, out _);
+            }
+            catch (ArgumentException)
+            {
+                holder = model;
+                holder.Confirm(proposal, out _);
+            }
+
+            LastConfirmedBy = holder;
+            return holder.LastOutcome?.Receipt?.Applied ?? false;
+        }
+
+        /// <summary>Asserts the NPC put <paramref name="contractId"/> on the card, presses its button, and returns what the contract did.</summary>
         private QuestReceipt ConfirmCard(string contractId)
         {
-            var proposal = routes.ActiveProposal;
+            var proposal = Card;
             Assert.IsNotNull(proposal, $"No card for {contractId}.");
-            Assert.AreEqual(contractId, proposal.Contract.Id);
-            return routes.Confirm(proposal.Id);
+            Assert.AreEqual(contractId, proposal.TargetId);
+            Confirm(proposal);
+            var receipt = LastConfirmedBy.LastOutcome?.Receipt;
+            Assert.IsNotNull(receipt, $"The agent refused {contractId} before its contract ran.");
+            return receipt;
         }
+
+        // The driver whose card the last Confirm pressed.
+        private AgenerelaNpcDecisionDriver LastConfirmedBy;
 
         private void AcceptMainQuest()
         {
@@ -127,21 +170,21 @@ namespace LivingVale.Tests
         {
             AcceptMainQuest();
             await Say(Kest, "I have proof, Fen saw you take the wagon.");
-            Assert.AreEqual(GameActions.None, scripted.LastOutcome.ActionId, History(Kest));
-            Assert.IsNull(routes.ActiveProposal);
+            Assert.AreEqual(GameActions.None, LastAction, History(Kest));
+            Assert.IsNull(Card);
             Assert.IsFalse(quests.HasClue(QuestLog.ClueFenTestimony), "A claim in chat records nothing.");
             Assert.IsFalse(Lists(QuestRoutes.KestId, GameActions.OfferExchange, QuestRoutes.ExchangeKestTestimony));
             StringAssert.Contains("witness", History(Kest));
 
             await Say(Fen, "What did you see on the road?");
-            Assert.AreEqual(GameActions.ShareInformation, scripted.LastOutcome.ActionId, History(Fen));
+            Assert.AreEqual(GameActions.ShareInformation, LastAction, History(Fen));
             Assert.IsTrue(quests.HasClue(QuestLog.ClueFenTestimony));
             Assert.IsTrue(quests.HasClue(QuestLog.ClueCampLocated));
             StringAssert.Contains("Clue recorded", History(Fen), "The receipt is in the chat.");
             Assert.IsEmpty(routes.KnowledgeFor(QuestRoutes.FenId), "Told once; nothing left to tell.");
 
             await Say(Kest, "Fen saw you. She'll tell the castle.");
-            Assert.AreEqual(GameActions.OfferExchange, scripted.LastOutcome.ActionId, History(Kest));
+            Assert.AreEqual(GameActions.OfferExchange, LastAction, History(Kest));
             Assert.AreEqual(MainQuestState.Active, quests.MainState, "On the card, not yet carried out.");
             Assert.IsTrue(ConfirmCard(QuestRoutes.ExchangeKestTestimony).Applied);
             Assert.AreEqual(MainQuestState.ParcelRecovered, quests.MainState);
@@ -168,7 +211,7 @@ namespace LivingVale.Tests
         {
             AcceptMainQuest();
             await Say(Kest, "How much do you want for the parcel?");
-            Assert.AreEqual(GameActions.OfferExchange, scripted.LastOutcome.ActionId, History(Kest));
+            Assert.AreEqual(GameActions.OfferExchange, LastAction, History(Kest));
             Assert.AreEqual(PlayerInventory.StartingGold, inventory.Gold, "The card alone moves no gold.");
             Assert.IsTrue(ConfirmCard(QuestRoutes.ExchangeKestPayment).Applied);
             Assert.AreEqual(PlayerInventory.StartingGold - QuestRoutes.KestPayment, inventory.Gold);
@@ -195,16 +238,16 @@ namespace LivingVale.Tests
         {
             AcceptMainQuest();
             await Say(Kest, "Iven's herbs, does that count for something?");
-            Assert.AreEqual(GameActions.None, scripted.LastOutcome.ActionId, "No favour done yet.");
+            Assert.AreEqual(GameActions.None, LastAction, "No favour done yet.");
 
             await Say(Iven, "Is there anything else I can do? Herbs, maybe?");
-            Assert.AreEqual(GameActions.OfferQuest, scripted.LastOutcome.ActionId, History(Iven));
+            Assert.AreEqual(GameActions.OfferQuest, LastAction, History(Iven));
             Assert.AreEqual(SideQuestState.Undiscovered, quests.HerbsState, "Offered, not accepted.");
             Assert.IsTrue(ConfirmCard(QuestRoutes.OfferHerbsIven).Applied);
             Assert.AreEqual(SideQuestState.Active, quests.HerbsState);
 
             await Say(Iven, "Here are the herbs.");
-            Assert.AreNotEqual(GameActions.ResolveDelivery, scripted.LastOutcome.ActionId, "Not three bundles yet.");
+            Assert.AreNotEqual(GameActions.ResolveDelivery, LastAction, "Not three bundles yet.");
 
             foreach (var id in new[] { QuestRoutes.PickupHerb1, QuestRoutes.PickupHerb2, QuestRoutes.PickupHerb3 })
             {
@@ -215,7 +258,7 @@ namespace LivingVale.Tests
             Assert.AreEqual(3, inventory.CountOf(ItemCatalog.HerbBundle));
             StringAssert.Contains("herbs 3/3", string.Join("\n", routes.JournalLines()));
             await Say(Iven, "Here are the herbs you asked for.");
-            Assert.AreEqual(GameActions.ResolveDelivery, scripted.LastOutcome.ActionId, History(Iven));
+            Assert.AreEqual(GameActions.ResolveDelivery, LastAction, History(Iven));
             Assert.IsTrue(ConfirmCard(QuestRoutes.DeliveryHerbsIven).Applied);
             Assert.AreEqual(SideQuestState.Completed, quests.HerbsState);
             Assert.AreEqual(0, inventory.CountOf(ItemCatalog.HerbBundle));
@@ -261,7 +304,7 @@ namespace LivingVale.Tests
             AcceptMainQuest();
             await RecoverByCombat();
             await Say(Iven, "Here is the medicine.");
-            Assert.AreEqual(GameActions.ResolveDelivery, scripted.LastOutcome.ActionId, History(Iven));
+            Assert.AreEqual(GameActions.ResolveDelivery, LastAction, History(Iven));
             Assert.AreEqual(MainQuestState.ParcelRecovered, quests.MainState, "On the card, not yet delivered.");
             Assert.IsTrue(ConfirmCard(QuestRoutes.DeliveryParcelIven).Applied);
             Assert.AreEqual(ParcelDisposition.Healer, quests.Disposition);
@@ -278,7 +321,7 @@ namespace LivingVale.Tests
 
             await RecoverByCombat();
             await Say(Elra, "Here is the parcel for the garrison.");
-            Assert.AreEqual(GameActions.None, scripted.LastOutcome.ActionId, "No permit yet.");
+            Assert.AreEqual(GameActions.None, LastAction, "No permit yet.");
             StringAssert.Contains("permit", History(Elra));
             Assert.IsFalse(Lists(QuestRoutes.ElraId, GameActions.ResolveDelivery, QuestRoutes.DeliveryParcelElra));
 
@@ -299,7 +342,7 @@ namespace LivingVale.Tests
             Assert.IsFalse(Lists(QuestLog.IvenId, GameActions.ResolveDelivery, QuestRoutes.DeliveryDivisionIven));
 
             await Say(Iven, "Could we split the medicine with the garrison?");
-            Assert.AreEqual(GameActions.OfferExchange, scripted.LastOutcome.ActionId, History(Iven));
+            Assert.AreEqual(GameActions.OfferExchange, LastAction, History(Iven));
             Assert.IsFalse(quests.HasClue(QuestLog.AgreementHealer), "Proposed, not agreed.");
             Assert.IsTrue(ConfirmCard(QuestRoutes.ExchangeDivisionIven).Applied);
             Assert.IsTrue(quests.HasClue(QuestLog.AgreementHealer));
@@ -310,7 +353,7 @@ namespace LivingVale.Tests
             await Say(Elra, "Would the garrison agree to divide it with Iven?");
             Assert.IsTrue(ConfirmCard(QuestRoutes.ExchangeDivisionElra).Applied, History(Elra));
             await Say(Iven, "Here is your share, as agreed.");
-            Assert.AreEqual(GameActions.ResolveDelivery, scripted.LastOutcome.ActionId, History(Iven));
+            Assert.AreEqual(GameActions.ResolveDelivery, LastAction, History(Iven));
             Assert.IsTrue(ConfirmCard(QuestRoutes.DeliveryDivisionIven).Applied);
             Assert.AreEqual(ParcelDisposition.Division, quests.Disposition);
             Assert.AreEqual(PlayerInventory.StartingGold + QuestLog.DivisionGold, inventory.Gold);
@@ -323,18 +366,17 @@ namespace LivingVale.Tests
         {
             AcceptMainQuest();
             await Say(Kest, "What's your price for the parcel?");
-            var proposal = routes.ActiveProposal;
+            var proposal = Card;
             Assert.IsNotNull(proposal);
-            Assert.IsTrue(routes.Decline(proposal.Id));
-            Assert.IsFalse(routes.Confirm(proposal.Id).Applied, "Declined.");
+            Assert.IsTrue(npcs.Decline(proposal));
+            Assert.IsFalse(Confirm(proposal), "Declined.");
 
             await Say(Kest, "What's your price for the parcel?");
-            proposal = routes.ActiveProposal;
+            proposal = Card;
             coordinator.Close(ConversationCloseReason.PlayerClosed);
-            Assert.IsNull(routes.ActiveProposal);
+            Assert.IsNull(Card);
             coordinator.Open(Kest);
-            var stale = routes.Confirm(proposal.Id);
-            Assert.IsFalse(stale.Applied);
+            Assert.IsFalse(Confirm(proposal), "A card ends with its conversation.");
             Assert.AreEqual(MainQuestState.Active, quests.MainState);
             Assert.AreEqual(PlayerInventory.StartingGold, inventory.Gold);
         }
@@ -344,12 +386,11 @@ namespace LivingVale.Tests
         {
             AcceptMainQuest();
             await Say(Kest, "How much for the parcel?");
-            var proposal = routes.ActiveProposal;
+            var proposal = Card;
             Assert.IsNotNull(proposal);
             ClearCamp();
             Assert.IsTrue(routes.TryPickUp(QuestRoutes.PickupParcel).Applied, "Taken by force while the card was open.");
-            var receipt = routes.Confirm(proposal.Id);
-            Assert.IsFalse(receipt.Applied);
+            Assert.IsFalse(Confirm(proposal), "The agent's re-check finds the deal no longer offered.");
             Assert.AreEqual(PlayerInventory.StartingGold, inventory.Gold, "Never charged for a parcel already taken.");
         }
 
@@ -478,25 +519,25 @@ namespace LivingVale.Tests
         {
             AcceptMainQuest();
             await Say(Kest, "How much gold for Iven's parcel?");
-            Assert.AreEqual(GameActions.OfferExchange, scripted.LastOutcome.ActionId, History(Kest));
-            Assert.AreEqual(QuestRoutes.ExchangeKestPayment, routes.ActiveProposal?.Contract.Id);
+            Assert.AreEqual(GameActions.OfferExchange, LastAction, History(Kest));
+            Assert.AreEqual(QuestRoutes.ExchangeKestPayment, Card?.TargetId);
         }
 
         [Test]
         public async Task LoadingTakesThePendingCardAway()
         {
-            var save = new SaveGame(inventory, trade, quests, progression, directory) { Routes = routes };
+            var save = new SaveGame(inventory, trade, quests, progression, directory) { Routes = routes, EndPendingCards = EndCards };
             AcceptMainQuest();
             Assert.IsTrue(save.TrySave(out var error), error);
             await Say(Kest, "Name your price for the parcel.");
-            var proposal = routes.ActiveProposal;
+            var proposal = Card;
             Assert.IsNotNull(proposal);
 
             // The conversation stays open on purpose: only the load itself may take the card away
             // (#206 review: closing first hid a load that left the card live).
             Assert.IsTrue(save.TryLoad(out error), error);
-            Assert.IsNull(routes.ActiveProposal);
-            Assert.IsFalse(routes.Confirm(proposal.Id).Applied);
+            Assert.IsNull(Card);
+            Assert.IsFalse(Confirm(proposal));
             Assert.AreEqual(MainQuestState.Active, quests.MainState);
         }
 
@@ -537,9 +578,37 @@ namespace LivingVale.Tests
             StringAssert.Contains("No witness account", provider.LastRequest.Observations);
             Assert.AreEqual(ActionRegistry.None, reply.Decision?.ActionId ?? ActionRegistry.None, "An unlisted target never survives.");
             model.Execute(turn, reply);
-            Assert.IsNull(routes.ActiveProposal);
+            Assert.IsNull(Card);
             Assert.AreEqual(MainQuestState.Active, quests.MainState);
             Assert.IsFalse(quests.HasClue(QuestLog.ClueFenTestimony));
+        }
+
+        [Test]
+        public async Task AReplyFromAnEndedConversationMakesNoCardAndIsNotRemembered()
+        {
+            AcceptMainQuest();
+            UseModel(Kest);
+            var (turn, reply) = await Decide(Kest, "Name your price.", GameActions.OfferExchange, QuestRoutes.ExchangeKestPayment);
+            coordinator.Close(ConversationCloseReason.PlayerClosed);
+            coordinator.Open(Kest);
+
+            Assert.IsFalse(model.Execute(turn, reply), "A reply from a closed conversation is refused.");
+            Assert.IsNull(model.PendingProposal, "No card.");
+            await Decide(Kest, "Hello again.", ActionRegistry.None, TargetRegistry.NoTarget);
+            Assert.AreEqual(0, provider.LastRequest.History.Count, "And the offer never entered Kest's memory.");
+        }
+
+        [Test]
+        public async Task ARouteExampleStaysWhenThePlayersLineNamesItsTarget()
+        {
+            AcceptMainQuest();
+            await RecoverByCombat();
+            await GetPermit();
+            UseModel(Elra);
+            await Decide(Elra, "This is the medical parcel from the wagon, for your garrison.", ActionRegistry.None, TargetRegistry.NoTarget);
+
+            StringAssert.Contains($"action: {GameActions.ResolveDelivery}, target: {QuestRoutes.DeliveryParcelElra}", provider.LastRequest.FewShotBlock,
+                "The delivery's example is shown although the line mentions the parcel (A/B, 10 November).");
         }
 
         [Test]
@@ -559,7 +628,7 @@ namespace LivingVale.Tests
             (turn, reply) = await Decide(Kest, "Fen saw you.", GameActions.OfferExchange, QuestRoutes.ExchangeKestTestimony);
             StringAssert.Contains("Fen, really did see your raid", provider.LastRequest.Observations);
             Assert.IsTrue(model.Execute(turn, reply));
-            Assert.IsNotNull(model.LastOutcome.Proposal);
+            Assert.IsNotNull(model.PendingProposal, "Held as a proposal, not carried out (#236).");
             Assert.AreEqual(MainQuestState.Active, quests.MainState, "The card, not the model, hands it over.");
             Assert.IsTrue(ConfirmCard(QuestRoutes.ExchangeKestTestimony).Applied);
             Assert.AreEqual(RecoveryRoute.Investigation, quests.Route);

@@ -31,8 +31,12 @@ namespace Agenerela.Providers
     ///   <item><description><see cref="Otherwise"/>.</description></item>
     /// </list>
     /// <para>
-    /// The agent is matched by <see cref="AgentIdentity.Name"/> and the stimulus by the exact text
-    /// passed to <see cref="Agenerela.Agent.DecideAsync"/>, without its label, both case-sensitive.
+    /// The agent is matched by its <see cref="Agenerela.Agent.Id"/> when it has one, then by its
+    /// <see cref="AgentIdentity.Name"/>, within each stage above. Ids and names share one key, so a
+    /// script written for <c>"npc_mara"</c> answers the agent with that id, and one written for
+    /// <c>"Mara"</c> answers every agent of that name that no id script answered. The stimulus is
+    /// matched by the exact text passed to <see cref="Agenerela.Agent.DecideAsync"/>, without its
+    /// label. Both are case-sensitive.
     /// Several replies for one key answer in order, and the last keeps answering once they run out.
     /// With none of these, the request fails with a <see cref="ProviderException"/> of
     /// <see cref="ProviderErrorKind.Rejected"/> naming the agent and stimulus, so a test that asks
@@ -49,9 +53,11 @@ namespace Agenerela.Providers
     /// request to stay with the provider while something else happens.
     /// </para>
     /// <para>
-    /// <b>Replaying a decision log</b> (#190, G7, not built yet) goes through this class as it is:
+    /// <b>Replaying a decision log</b> (#190, G7; the helper itself is not built yet) goes through this class as it is:
     /// one <see cref="When"/> per agent and stimulus, with the log's replies in order, each
-    /// <see cref="ScriptedReply.Raw"/> text <see cref="ScriptedReply.After"/> its recorded latency.
+    /// <see cref="ScriptedReply.Raw"/> text <see cref="ScriptedReply.After"/> its recorded latency,
+    /// from each <see cref="DecisionLogLine"/>'s <see cref="DecisionLogLine.Reply"/> and
+    /// <see cref="DecisionLogLine.LatencySeconds"/>.
     /// </para>
     /// <para>
     /// Scripting a key, a callback or the fallback, <see cref="Hold"/> and <see cref="Release"/>
@@ -148,7 +154,10 @@ namespace Agenerela.Providers
         /// <paramref name="replies"/> in order, the last repeating once they run out. Replaces
         /// anything scripted for the same pair, and starts it from its first reply.
         /// </summary>
-        /// <param name="agent">The agent's <see cref="AgentIdentity.Name"/>; null or empty for any agent.</param>
+        /// <param name="agent">
+        /// The agent's <see cref="Agenerela.Agent.Id"/> or its <see cref="AgentIdentity.Name"/>; null or
+        /// empty for any agent. An agent with an id is matched by its id before its name.
+        /// </param>
         /// <param name="stimulus">The stimulus as passed to <c>DecideAsync</c>, without its label; null or empty for any stimulus.</param>
         /// <param name="replies">One reply or more.</param>
         /// <returns>This provider, so scripts read as one statement.</returns>
@@ -276,15 +285,25 @@ namespace Agenerela.Providers
             }
 
             // A stage that needs the agent or the stimulus is skipped when the request has none: an
-            // agent with no name, an empty stimulus, or a request built by hand. Its key would
+            // agent with no name or id, an empty stimulus, or a request built by hand. Its key would
             // otherwise be the wildcard, and Otherwise would answer ahead of the callback.
-            bool agent = !string.IsNullOrEmpty(request.Agent);
             bool stimulus = !string.IsNullOrEmpty(request.Stimulus);
-            return (agent && stimulus ? Take(new Key(request.Agent, request.Stimulus)) : null)
+            return (stimulus ? TakeForAgent(request, request.Stimulus) : null)
                    ?? (stimulus ? Take(new Key(null, request.Stimulus)) : null)
-                   ?? (agent ? Take(new Key(request.Agent, null)) : null)
+                   ?? TakeForAgent(request, null)
                    ?? Callback?.Invoke(request)
                    ?? Take(new Key(null, null));
+        }
+
+        // The asking agent's next reply for this stimulus, or for any when it is null: scripted for
+        // its id first, then for its name (#190, Living Vale #21). Null when it has neither, or
+        // nothing is scripted for either. An id equal to the name is one key, taken once.
+        private ScriptedReply TakeForAgent(ScriptedRequest request, string stimulus)
+        {
+            string id = request.AgentId;
+            string name = string.IsNullOrEmpty(request.Agent) ? null : request.Agent;
+            return (id != null ? Take(new Key(id, stimulus)) : null)
+                   ?? (name != null && !string.Equals(name, id, StringComparison.Ordinal) ? Take(new Key(name, stimulus)) : null);
         }
 
         // The key's next reply, or null when nothing is scripted for it.
@@ -296,9 +315,10 @@ namespace Agenerela.Providers
         private ScriptedReply Unscripted(ScriptedRequest request)
         {
             string what = request.IsRefusalLine ? "refusal line" : "reply";
-            string who = request.Agent == null && request.Stimulus == null
+            string id = request.AgentId != null ? $" (id '{request.AgentId}')" : "";
+            string who = request.Agent == null && request.AgentId == null && request.Stimulus == null
                 ? "a request PromptBuilder did not build"
-                : $"agent '{request.Agent}' and stimulus '{request.Stimulus}'";
+                : $"agent '{request.Agent}'{id} and stimulus '{request.Stimulus}'";
             string how = request.IsRefusalLine
                 ? "Set RefusalLine, or answer it from a Callback."
                 : "Script one with When(agent, stimulus, …), set a Callback, or set Otherwise.";

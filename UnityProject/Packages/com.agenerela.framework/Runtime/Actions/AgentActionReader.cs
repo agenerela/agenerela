@@ -39,6 +39,7 @@ namespace Agenerela
         {
             var found = new List<Found>();
             var checks = new Dictionary<string, MethodInfo>();
+            var targetChecks = new Dictionary<string, MethodInfo>();
             var counted = new HashSet<RuntimeMethodHandle>();
 
             // Every class in the hierarchy, private methods included, so a base class can declare
@@ -56,9 +57,10 @@ namespace Agenerela
                 {
                     bool isAction = method.IsDefined(typeof(AgentActionAttribute), false);
                     bool isCheck = method.IsDefined(typeof(AvailableAttribute), false);
+                    bool isTargetCheck = method.IsDefined(typeof(AvailableForAttribute), false);
                     bool hasExample = method.IsDefined(typeof(ExampleAttribute), false);
                     bool hasCounterExample = method.IsDefined(typeof(CounterExampleAttribute), false);
-                    if (!isAction && !isCheck && !hasExample && !hasCounterExample)
+                    if (!isAction && !isCheck && !isTargetCheck && !hasExample && !hasCounterExample)
                     {
                         continue;
                     }
@@ -73,6 +75,18 @@ namespace Agenerela
                     {
                         throw Error($"{Name(method)} has both [AgentAction] and [Available]. " +
                                     "Give the check its own method that returns bool.");
+                    }
+
+                    if (isAction && isTargetCheck)
+                    {
+                        throw Error($"{Name(method)} has both [AgentAction] and [AvailableFor]. " +
+                                    "Give the per-target check its own method that takes the target's id.");
+                    }
+
+                    if (isCheck && isTargetCheck)
+                    {
+                        throw Error($"{Name(method)} has both [Available] and [AvailableFor]. " +
+                                    "[Available] takes nothing or one AgentContext, and [AvailableFor] takes the target's id: give each its own method.");
                     }
 
                     if (isAction)
@@ -122,6 +136,21 @@ namespace Agenerela
                             checks.Add(id, method);
                         }
                     }
+
+                    if (isTargetCheck)
+                    {
+                        CheckAvailableForMethod(method);
+                        foreach (var availableFor in method.GetCustomAttributes<AvailableForAttribute>(false))
+                        {
+                            string id = availableFor.ActionId ?? "";
+                            if (targetChecks.TryGetValue(id, out MethodInfo other))
+                            {
+                                throw Error($"Action '{id}' has two [AvailableFor] checks: {Name(other)} and {Name(method)}.");
+                            }
+
+                            targetChecks.Add(id, method);
+                        }
+                    }
                 }
             }
 
@@ -136,6 +165,15 @@ namespace Agenerela
                 }
             }
 
+            foreach (var check in targetChecks)
+            {
+                if (!found.Exists(f => f.Action.Id == check.Key))
+                {
+                    throw Error($"{Name(check.Value)} is the [AvailableFor] check for '{check.Key}', " +
+                                $"but {owner.GetType().Name} has no [AgentAction] with that id.");
+                }
+            }
+
             // Base class first, then declaration order. The schema enum (#8) is built in
             // registration order.
             found.Sort((a, b) => a.Depth != b.Depth
@@ -146,22 +184,26 @@ namespace Agenerela
             foreach (var f in found)
             {
                 checks.TryGetValue(f.Action.Id, out MethodInfo check);
+                targetChecks.TryGetValue(f.Action.Id, out MethodInfo targetCheck);
                 var definition = new ActionDefinition
                 {
                     Id = f.Action.Id,
                     Description = f.Action.Description,
                     RequiresTarget = f.Action.RequiresTarget,
+                    TakesNoTarget = f.Action.TakesNoTarget,
                     // An action without [Example] reads like an asset whose example was left blank.
                     ExampleStimulus = f.Example?.Stimulus ?? "",
                     PreferredExampleTargets = f.Example?.PreferredTargets ?? Array.Empty<string>(),
+                    ExampleStatement = f.Example?.Statement ?? "",
                     CounterExampleStimulus = f.CounterExample?.Stimulus ?? "",
+                    CounterExampleStatement = f.CounterExample?.Statement ?? "",
                     // Copied, so the definition never shares an array with the attribute.
                     TargetCategories = f.Action.TargetCategories == null
                         ? Array.Empty<string>()
                         : (string[])f.Action.TargetCategories.Clone()
                 };
 
-                actions.Add((definition, new MethodActionHandler(owner, f.Method, check)));
+                actions.Add((definition, new MethodActionHandler(owner, f.Method, check, targetCheck)));
             }
 
             return actions;
@@ -242,6 +284,24 @@ namespace Agenerela
                 (parameters.Length == 1 && parameters[0].ParameterType != typeof(AgentContext)))
             {
                 throw Error($"{Name(method)} is an [Available] check, so it takes nothing or one AgentContext.");
+            }
+        }
+
+        private static void CheckAvailableForMethod(MethodInfo method)
+        {
+            if (method.ReturnType != typeof(bool) && method.ReturnType != typeof(Availability))
+            {
+                throw Error($"{Name(method)} returns {method.ReturnType.Name}, but an [AvailableFor] check must return bool or Availability.");
+            }
+
+            var parameters = method.GetParameters();
+            bool shape = parameters.Length == 1
+                ? parameters[0].ParameterType == typeof(string)
+                : parameters.Length == 2 && parameters[0].ParameterType == typeof(AgentContext) && parameters[1].ParameterType == typeof(string);
+            if (method.ContainsGenericParameters || !shape)
+            {
+                throw Error($"{Name(method)} is an [AvailableFor] check, so it takes the target's id as a string, " +
+                            "alone or after one AgentContext.");
             }
         }
 

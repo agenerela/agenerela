@@ -149,7 +149,7 @@ namespace LivingVale.Tests
                         row.latencySeconds = result.Telemetry.LatencySeconds;
                         bool hadClue = quests.HasClue(QuestLog.ClueFenTestimony);
                         row.executed = driver.Execute(turn, reply);
-                        row.card = routes.ActiveProposal != null;
+                        row.card = driver.PendingProposal != null;
                         row.clueRecorded = !hadClue && quests.HasClue(QuestLog.ClueFenTestimony);
                     }
 

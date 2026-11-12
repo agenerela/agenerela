@@ -179,6 +179,83 @@ namespace Agenerela.Tests.Evaluation
         }
 
         [Test]
+        public async Task TheDefaultPlacementSendsTheBlockTheRunnerSentBefore()
+        {
+            // #151: the standing lines now come from an observation source; with the default
+            // placement the block is the one written when every line was the call's own.
+            var seen = Prompt("target_001", "Keep an eye on that animal.", "attack_target", "wolf", false, observations: "[\"A wolf is near the sheep\"]");
+            var provider = new FakeProvider(Reply("attack_target", "wolf"));
+            var armA = new DecideOptions();
+            armA.Observations.Add("Arm line.");
+
+            await Run(new[] { seen }, null, provider, provider, armA);
+
+            string observations = Request(provider, "Keep an eye on that animal.").Observations;
+            Assert.That(observations, Is.EqualTo(string.Join("\n",
+                "What you know right now:",
+                "- Arm line.",
+                "- isFollowing: false.",
+                "- bridge: The wooden bridge.",
+                "- docks: The docks.",
+                "- wolf: A wolf.",
+                "- A wolf is near the sheep")));
+            Assert.That(Request(provider, "Keep an eye on that animal.").Stimulus, Is.EqualTo("Player: \"Keep an eye on that animal.\""));
+        }
+
+        [Test]
+        public async Task AnArmsPlacementMovesThePromptsOwnLinesAlone()
+        {
+            var seen = Prompt("target_001", "Keep an eye on that animal.", "attack_target", "wolf", false, observations: "[\"A wolf is near the sheep\"]");
+            var a = new FakeProvider(Reply("attack_target", "wolf"));
+            var b = new FakeProvider(Reply("attack_target", "wolf"));
+            var after = new DecideOptions();
+            after.Observations.Add("Arm line.");
+            var with = new DecideOptions { ObservationPlacement = ObservationPlacement.WithStimulus };
+
+            var report = await Fixtures.NotCancelled(Runner(new[] { seen }, null, a, b, after, with).RunAsync());
+
+            var inA = Request(a, "Keep an eye on that animal.");
+            Assert.That(inA.Observations, Does.EndWith("- wolf: A wolf.\n- A wolf is near the sheep"),
+                "The prompt's line closes the block, after the arm's, the state's and the targets'.");
+            Assert.That(inA.Stimulus, Is.EqualTo("Player: \"Keep an eye on that animal.\""));
+            var inB = Request(b, "Keep an eye on that animal.");
+            Assert.That(inB.Stimulus, Is.EqualTo("Player: \"Keep an eye on that animal.\" A wolf is near the sheep."));
+            Assert.That(inB.Observations, Does.Not.Contain("A wolf is near the sheep"));
+            Assert.That(inB.Observations, Does.Contain("- isFollowing: false."), "The standing lines stay in the block.");
+            Assert.That(report.Conditions.Arms.Select(c => c.ObservationPlacement), Is.EqualTo(new[] { "AfterSources", "WithStimulus" }));
+        }
+
+        [Test]
+        public async Task AnArmCanSendItsStandingLinesWithTheCallSoThePlacementMovesThemAll()
+        {
+            // #151: how a game that passes every fact with its call is sent. With AfterSources the
+            // request is the same as through the source; with WithStimulus the whole block moves.
+            var seen = Prompt("target_001", "Keep an eye on that animal.", "attack_target", "wolf", false, observations: "[\"A wolf is near the sheep\"]");
+            var viaSource = new FakeProvider(Reply("attack_target", "wolf"));
+            var withCall = new FakeProvider(Reply("attack_target", "wolf"));
+            var moved = new FakeProvider(Reply("attack_target", "wolf"));
+            var none = new FakeProvider(Reply("attack_target", "wolf"));
+
+            await Fixtures.NotCancelled(Runner(new[] { seen }, null, viaSource, none).RunAsync());
+            var runner = Runner(new[] { seen }, null, withCall, moved, null,
+                new DecideOptions { ObservationPlacement = ObservationPlacement.WithStimulus });
+            runner.ArmA.StandingLinesAsCallObservations = true;
+            runner.ArmB.StandingLinesAsCallObservations = true;
+            var report = await Fixtures.NotCancelled(runner.RunAsync());
+
+            var source = Request(viaSource, "Keep an eye on that animal.");
+            var call = Request(withCall, "Keep an eye on that animal.");
+            Assert.That(call.Observations, Is.EqualTo(source.Observations));
+            Assert.That(call.Stimulus, Is.EqualTo(source.Stimulus));
+
+            var all = Request(moved, "Keep an eye on that animal.");
+            Assert.That(all.Observations, Is.Null, "Every line was the call's, so the block is empty and left out.");
+            Assert.That(all.Stimulus, Does.StartWith("Player: \"Keep an eye on that animal.\" isFollowing: false. bridge: The wooden bridge."));
+            Assert.That(all.Stimulus, Does.EndWith(" wolf: A wolf. A wolf is near the sheep."));
+            Assert.That(report.Conditions.Arms.Select(c => c.StandingLinesAsCallObservations), Is.EqualTo(new[] { true, true }));
+        }
+
+        [Test]
         public async Task TheSetsTargetsAreOfferedThroughATargetSource()
         {
             var provider = new FakeProvider(Reply("move_to", "bridge"));
@@ -379,6 +456,85 @@ namespace Agenerela.Tests.Evaluation
         }
 
         [Test]
+        public async Task AnArmsKnowledgeReachesOnlyItsOwnSystemPromptAndLeavesTheProfileAlone()
+        {
+            // #190, Living Vale #14's A/B: the same lines as knowledge in one arm and as
+            // observations in the other.
+            var a = new FakeProvider(Reply("move_to", "bridge"));
+            var b = new FakeProvider(Reply("move_to", "bridge"));
+            var line = "When trouble is reported at a place you can reach, go there.";
+            var set = fixtures.Set(new[] { Bridge }, null);
+            var profile = Fixtures.VillageGuardProfile();
+            var armA = new EvalArm("as-observations", fixtures.Config(a, "FakeA"), new DecideOptions { Observations = new[] { line } });
+            var armB = new EvalArm("as-knowledge", fixtures.Config(b, "FakeB")) { Knowledge = new List<string> { line } };
+            var runner = new EvalRunner(set, profile, armA, armB);
+
+            var report = await Fixtures.NotCancelled(runner.RunAsync());
+
+            Assert.That(a.Requests.Select(r => r.SystemPrompt), Has.None.Contains(line));
+            Assert.That(a.Requests.Select(r => r.Observations), Has.All.Contains("- " + line));
+            Assert.That(b.Requests.Select(r => r.SystemPrompt), Has.All.Contains("What you know:\n- " + line),
+                "Every call of the arm, warm-ups included.");
+            Assert.That(b.Requests.Select(r => r.Observations ?? ""), Has.None.Contains(line));
+            Assert.That(report.Conditions.Arms[0].Knowledge, Is.Empty);
+            Assert.That(report.Conditions.Arms[1].Knowledge, Is.EqualTo(new[] { line }));
+            Assert.That(profile.Identity.Knowledge, Is.Empty, "The shared profile is never changed.");
+        }
+
+        [Test]
+        public async Task AnArmsStatementRulesAndTheirWordingReachOnlyItsOwnPromptAndAreRecorded()
+        {
+            // #244 item 8: both arms give the set's agent the same rules; only the wording differs.
+            var a = new FakeProvider(Reply("move_to", "bridge"));
+            var b = new FakeProvider(Reply("move_to", "bridge"));
+            const string rules = "A guard's voice: short and plain.";
+            var profile = Fixtures.VillageGuardProfile();
+            var armA = new EvalArm("your-statement", fixtures.Config(a, "FakeA")) { StatementRules = rules };
+            var armB = new EvalArm("how-it-reads", fixtures.Config(b, "FakeB"),
+                new DecideOptions { StatementRulesWording = StatementRulesWording.HowItShouldRead }) { StatementRules = rules };
+            var runner = new EvalRunner(fixtures.Set(new[] { Bridge }, null), profile, armA, armB);
+
+            var report = await Fixtures.NotCancelled(runner.RunAsync());
+
+            Assert.That(a.Requests.Select(r => r.SystemPrompt), Has.All.Contains("\nYour statement: " + rules + "\n"),
+                "Every call of the arm, warm-ups included.");
+            Assert.That(b.Requests.Select(r => r.SystemPrompt), Has.All.Contains("\nHow your statement should read: " + rules + "\n"));
+            Assert.That(b.Requests.Select(r => r.SystemPrompt), Has.None.Contains("Your statement:"));
+            Assert.That(report.Conditions.Arms.Select(c => (c.StatementRulesWording, c.StatementRules)), Is.EqualTo(new[]
+            {
+                (nameof(StatementRulesWording.YourStatement), rules),
+                (nameof(StatementRulesWording.HowItShouldRead), rules),
+            }));
+            Assert.That(profile.Identity.StatementRules ?? "", Is.Empty, "The shared profile is never changed.");
+        }
+
+        [Test]
+        public async Task AnArmWithoutRulesKeepsTheProfilesIdentity()
+        {
+            var a = new FakeProvider(Reply("move_to", "bridge"));
+            var b = new FakeProvider(Reply("move_to", "bridge"));
+            var runner = new EvalRunner(fixtures.Set(new[] { Bridge }, null), Fixtures.VillageGuardProfile(),
+                new EvalArm("A", fixtures.Config(a, "FakeA")), new EvalArm("B", fixtures.Config(b, "FakeB")));
+
+            var report = await Fixtures.NotCancelled(runner.RunAsync());
+
+            Assert.That(a.Requests.Select(r => r.SystemPrompt), Has.None.Contains("Your statement:"));
+            Assert.That(report.Conditions.Arms[0].StatementRules, Is.Null);
+            Assert.That(report.Conditions.Arms[0].StatementRulesWording, Is.EqualTo(nameof(StatementRulesWording.YourStatement)));
+        }
+
+        [Test]
+        public void AnArmsKnowledgeIsCopiedWhenSet()
+        {
+            var lines = new List<string> { "The well is dry." };
+            var arm = new EvalArm("A", fixtures.Config(new FakeProvider(Reply("none", "no_target")), "FakeA")) { Knowledge = lines };
+            lines.Add("Added later.");
+
+            Assert.That(arm.Knowledge, Is.EqualTo(new[] { "The well is dry." }));
+            Assert.That(new EvalArm("B", fixtures.Config(new FakeProvider(Reply("none", "no_target")), "FakeB")) { Knowledge = null }.Knowledge, Is.Empty);
+        }
+
+        [Test]
         public async Task AnArmsIdleExampleThatIsAPromptIsRefused()
         {
             // The arm's idle example replaces the profile's, so the model would be shown "The
@@ -391,6 +547,174 @@ namespace Agenerela.Tests.Evaluation
 
             Assert.That(e.Message, Does.Contain("situation_001").And.Contain("arm 'B'").And.Contain("hard rule 4"));
             Assert.That(provider.Requests, Is.Empty);
+        }
+
+        [Test]
+        public async Task AnArmsIdleStatementThatIsAPromptIsRefused()
+        {
+            // A statement is shown in the prompt as an example's is (#190, G14), so the same rule.
+            var provider = new FakeProvider(Reply("none", "no_target"));
+            var runner = Runner(new[] { Bridge }, new[] { Quiet }, provider, provider,
+                optionsB: new DecideOptions { IdleExampleStimulus = "Nothing new.", IdleExampleStatement = "The square is empty." });
+
+            var e = await Refused(runner);
+
+            Assert.That(e.Message, Does.Contain("situation_001").And.Contain("arm 'B'").And.Contain("statement").And.Contain("hard rule 4"));
+            Assert.That(provider.Requests, Is.Empty);
+        }
+
+        [Test]
+        public async Task TheReportSaysWhichArmShowedStatementsAndTheFallback()
+        {
+            var a = new FakeProvider(Reply("move_to", "bridge"));
+            var b = new FakeProvider(Reply("move_to", "bridge"));
+            var runner = Runner(new[] { Bridge }, null, a, b,
+                optionsB: new DecideOptions { IdleExampleStatement = "Quiet as ever.", ExampleStatements = false, ExampleTargetFallback = true });
+
+            var report = await Fixtures.NotCancelled(runner.RunAsync());
+
+            var armA = report.Conditions.Arms[0];
+            var armB = report.Conditions.Arms[1];
+            Assert.That((armA.IdleExampleStatement, armA.ExampleStatements, armA.ExampleTargetFallback),
+                Is.EqualTo(((string)null, true, false)));
+            Assert.That((armB.IdleExampleStatement, armB.ExampleStatements, armB.ExampleTargetFallback),
+                Is.EqualTo(("Quiet as ever.", false, true)));
+        }
+
+        // ---- An arm's own legality (#151) ---------------------------------------------------------
+
+        private static EvalLegality PlacesAndCreatures()
+        {
+            var legality = new EvalLegality { Name = "places-and-creatures" };
+            legality.TargetCategories["bridge"] = "place";
+            legality.TargetCategories["docks"] = "place";
+            legality.TargetCategories["wolf"] = "creature";
+            legality.ActionCategories["move_to"] = new[] { "place" };
+            legality.ActionCategories["attack_target"] = new[] { "creature" };
+            // Their target is the player, who is not a registered target.
+            legality.ActionCategories["follow_player"] = new[] { "player" };
+            legality.ActionCategories["stop_following"] = new[] { "player" };
+            legality.ExtraTargets.Add(new EvalExtraTarget { Id = "trader", Description = "A travelling trader", Category = "person" });
+            return legality;
+        }
+
+        [Test]
+        public async Task AnArmsLegalityReachesOnlyItsOwnAgentsAndLeavesTheSetAndProfileAlone()
+        {
+            var a = new FakeProvider(Reply("attack_target", "bridge"));
+            var b = new FakeProvider(Reply("attack_target", "bridge"));
+            var set = fixtures.Set(new[] { Bridge });
+            var profile = Fixtures.VillageGuardProfile();
+            var options = new DecideOptions { LegalTargets = LegalTargetListing.PerTarget };
+            var armA = new EvalArm("plain", fixtures.Config(a, "FakeA"), options);
+            var armB = new EvalArm("legal", fixtures.Config(b, "FakeB"), options) { Legality = PlacesAndCreatures() };
+
+            var report = await Fixtures.NotCancelled(new EvalRunner(set, profile, armA, armB).RunAsync());
+
+            Assert.That(Request(a, "Meet me over at the bridge.").SystemPrompt, Does.Match(@"\n- bridge \(for [^)]*attack_target"),
+                "Plain, the set's targets declare no categories, so an attack may take the bridge.");
+            var legal = Request(b, "Meet me over at the bridge.");
+            Assert.That(legal.SystemPrompt, Does.Contain("\n- wolf (for attack_target)"));
+            Assert.That(legal.SystemPrompt, Does.Contain("\n- bridge (for move_to)"));
+            Assert.That(legal.SystemPrompt, Does.Not.Contain("- trader"), "Nothing may take the trader, so the list leaves it out.");
+            Assert.That(legal.Observations, Does.Contain("- trader: A travelling trader."), "It is still told as a standing line, as the set's targets are.");
+
+            var answers = report.Answers.Where(x => x.PromptId == "target_001").ToList();
+            Assert.That(answers.Single(x => x.Arm == "plain").Outcome, Is.EqualTo(DecisionOutcome.WrongLegalAction));
+            var refused = answers.Single(x => x.Arm == "legal");
+            Assert.That((refused.ModelAction, refused.ModelTarget), Is.EqualTo(("attack_target", "bridge")), "What the model chose is kept.");
+            Assert.That(refused.Guard, Is.EqualTo("TargetCategoryGuard"), "And the category guard refused it.");
+            Assert.That(report.Conditions.Arms[0].Legality, Is.Null);
+            Assert.That(report.Conditions.Arms[1].Legality.Name, Is.EqualTo("places-and-creatures"));
+            Assert.That(report.Conditions.Arms[1].LegalTargets, Is.EqualTo("PerTarget"));
+            Assert.That(profile.Actions.Select(x => x.Action.TargetCategories), Has.All.Null.Or.Empty, "The shared profile is never changed.");
+        }
+
+        [Test]
+        public async Task AnArmsGroundingThresholdIsRecordedAndNamedInTheReport()
+        {
+            var set = fixtures.Set(new[] { Bridge });
+            var armA = new EvalArm("control", fixtures.Config(new FakeProvider(Reply("move_to", "bridge")), "FakeA"));
+            var armB = new EvalArm("lower", fixtures.Config(new FakeProvider(Reply("move_to", "bridge")), "FakeB"),
+                new DecideOptions { TargetGroundingThreshold = 0.6f });
+
+            var report = await Fixtures.NotCancelled(new EvalRunner(set, Fixtures.VillageGuardProfile(), armA, armB).RunAsync());
+
+            Assert.That(report.Conditions.Arms.Select(x => x.TargetGroundingThreshold), Is.EqualTo(new float?[] { 0.8f, 0.6f }));
+            Assert.That(report.Conditions.Arms.Select(x => x.TokenAlternatives), Has.All.Null, "A provider other than Ollama asks for none.");
+            string markdown = report.ToMarkdown();
+            Assert.That(markdown, Does.Contain("| on, threshold 0.6 |"));
+            Assert.That(markdown, Does.Contain("| on |"), "A default arm's cell reads as it did before.");
+        }
+
+        [Test]
+        public async Task AnArmsLegalityThatMakesALabelIllegalIsRefused()
+        {
+            var legality = PlacesAndCreatures();
+            legality.TargetCategories["bridge"] = "creature";
+            var provider = new FakeProvider(Reply("move_to", "bridge"));
+            var set = fixtures.Set(new[] { Bridge });
+            var runner = new EvalRunner(set, Fixtures.VillageGuardProfile(),
+                new EvalArm("A", fixtures.Config(provider, "FakeA")), new EvalArm("B", fixtures.Config(provider, "FakeB")) { Legality = legality });
+
+            var e = await Refused(runner);
+
+            Assert.That(e.Message, Does.Contain("target_001").And.Contain("move_to/bridge").And.Contain("illegal"));
+            Assert.That(provider.Requests, Is.Empty);
+        }
+
+        [Test]
+        public async Task AnArmsLegalityIsCheckedAgainstTheProfilesOwnCategoriesWhereItGivesNone()
+        {
+            // The profile restricts move_to to places, and the arm gives move_to no categories of its
+            // own, so the run would keep the profile's: the bridge as a creature makes the label illegal.
+            var profile = Fixtures.VillageGuardProfile();
+            profile.Actions.Single(a => a.Action.Id == "move_to").Action.TargetCategories = new[] { "place" };
+            var legality = new EvalLegality { Name = "bridge-as-creature" };
+            legality.TargetCategories["bridge"] = "creature";
+            var provider = new FakeProvider(Reply("move_to", "bridge"));
+            var runner = new EvalRunner(fixtures.Set(new[] { Bridge }), profile,
+                new EvalArm("A", fixtures.Config(provider, "FakeA")), new EvalArm("B", fixtures.Config(provider, "FakeB")) { Legality = legality });
+
+            var e = await Refused(runner);
+
+            Assert.That(e.Message, Does.Contain("target_001").And.Contain("move_to/bridge").And.Contain("illegal"));
+            Assert.That(provider.Requests, Is.Empty);
+        }
+
+        [Test]
+        public async Task AnArmsCopyOfAnActionKeepsThatItTakesNoTarget()
+        {
+            // The arm gives follow_player an empty category list, so the run registers its own copy
+            // of the profile's action; that copy must still drop a target the model names (#244 item 2).
+            var profile = Fixtures.VillageGuardProfile();
+            profile.Actions.Single(a => a.Action.Id == "follow_player").Action.TakesNoTarget = true;
+            var legality = new EvalLegality { Name = "empty-categories" };
+            legality.ActionCategories["follow_player"] = new string[0];
+            var provider = new FakeProvider(Reply("follow_player", "bridge"));
+            var runner = new EvalRunner(fixtures.Set(new[] { Escort }), profile,
+                new EvalArm("A", fixtures.Config(provider, "FakeA")), new EvalArm("B", fixtures.Config(provider, "FakeB")) { Legality = legality });
+
+            var report = await Fixtures.NotCancelled(runner.RunAsync());
+
+            Assert.That(report.Answers.Select(a => a.Arm).Distinct(), Is.EquivalentTo(new[] { "A", "B" }));
+            Assert.That(report.Answers.Select(a => a.ModelTarget), Is.All.EqualTo("bridge"));
+            Assert.That(report.Answers.Select(a => a.Target), Is.All.EqualTo("no_target"));
+            Assert.That(report.Answers.Select(a => a.Outcome), Is.All.EqualTo(DecisionOutcome.Correct));
+        }
+
+        [Test]
+        public async Task AnArmsExtraTargetMayNotBeTheSetsOwn()
+        {
+            var legality = PlacesAndCreatures();
+            legality.ExtraTargets.Add(new EvalExtraTarget { Id = "wolf", Description = "Another wolf", Category = "creature" });
+            var provider = new FakeProvider(Reply("move_to", "bridge"));
+            var runner = new EvalRunner(fixtures.Set(new[] { Bridge }), Fixtures.VillageGuardProfile(),
+                new EvalArm("A", fixtures.Config(provider, "FakeA")) { Legality = legality }, new EvalArm("B", fixtures.Config(provider, "FakeB")));
+
+            var e = await Refused(runner);
+
+            Assert.That(e.Message, Does.Contain("'wolf'").And.Contain("the set's own"));
         }
 
         [Test]

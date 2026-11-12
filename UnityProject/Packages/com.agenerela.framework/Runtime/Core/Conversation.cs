@@ -364,6 +364,24 @@ namespace Agenerela
                 throw new ArgumentOutOfRangeException(nameof(options), options.MaxListedTargets,
                     "DecideOptions.MaxListedTargets cannot be negative. 0 lists no targets.");
             }
+
+            if (!(options.TargetGroundingThreshold >= 0f && options.TargetGroundingThreshold <= 1f))
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), options.TargetGroundingThreshold,
+                    "DecideOptions.TargetGroundingThreshold must be from 0 to 1. The default is 0.8; 0 never stops a decision.");
+            }
+
+            if (!Enum.IsDefined(typeof(LegalTargetListing), options.LegalTargets))
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), options.LegalTargets,
+                    "DecideOptions.LegalTargets is not one of Off, PerTarget or ObservationLine.");
+            }
+
+            if (!Enum.IsDefined(typeof(StatementRulesWording), options.StatementRulesWording))
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), options.StatementRulesWording,
+                    "DecideOptions.StatementRulesWording is not one of YourStatement, HowItShouldRead or InYourOwnWords.");
+            }
         }
 
         // The whole life of one turn's request, including watching a provider that answers after
@@ -396,8 +414,9 @@ namespace Agenerela
                     }
                     else
                     {
-                        // Nothing here ended it, so the caller's token did: the request was cancelled,
-                        // is still out, or answered just as the caller gave up on it.
+                        // Nothing here ended it, so the caller's token or a reset of the agent did:
+                        // the request was cancelled, is still out, or answered just as the caller
+                        // gave up on it.
                         End(turn, TurnStatus.Cancelled);
                     }
                 }

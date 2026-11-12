@@ -33,12 +33,37 @@ Inside `Agent.DecideAsync`, after the reply has been parsed:
    rewritten. A provider that reports no probabilities
    cannot be checked, and the guard records that and passes. `DecideOptions.CheckTarget =
    false` turns it off for one call. DR-016 has the measurements.
+
+   **When several targets are right at once** (#244). The share counts every listed target, so a
+   model torn between two good ones keeps its probability on the list. What it cannot count is
+   probability the provider did not report, which counts as off the list. Ollama reports
+   `OllamaSettings.TokenAlternatives` alternatives a token, 20 by default since 11 November 2026
+   (5 before): with five, a model spread over a strategy game's provinces read below 0.8 without
+   wanting anything absent, and twenty cut GreyBoxStrategy's containments of legal moves from 72
+   to 19 on `qwen3.5:4b` and from 94 to 58 on `qwen3.5:2b`. On the evaluation sets it left the
+   correct answers and the impossible requests handled as they were; it did let four wrong
+   answers the guard had contained pass, where an action was expected.
+
+   What is left is real probability on strings that are no target, beside a legal spread: at
+   "declare war", 0.365 on `k(esh)`, 0.315 on `mer(row)`, 0.11 on `orsk`, and 0.07 on `kers`, which
+   continues no id. The guard counts that as designed and contains it at 0.8. A call can lower
+   `DecideOptions.TargetGroundingThreshold` (0.8 unless set, from 0 to 1) instead of switching the
+   guard off, but know the trade. At 0.6, GreyBoxStrategy's remaining legal containments fell to
+   2 to 5 in 30 games and the model attacked as often as with the guard off, while on the
+   389-prompt interim set `qwen3.5:2b` carried out 17 impossible requests instead of 15 (a guess
+   at a target that is not there) and `qwen3.5:4b` none more. So a lower threshold suits a game
+   with many legal targets a turn, not one where refusing the impossible matters most: an NPC
+   told to fetch what is not there should keep 0.8.
 3. **`TargetCategoryGuard`.** The target is a kind the action takes. An action that names
    `TargetCategories` is held to them: a target in another category, or in none, is rewritten to
    `none`, so `complete_quest` aimed at the village gate does nothing. An action that names none
    always passes, so this guard changes nothing until a developer declares a category. DR-020, and
    [targets.md](targets.md).
-4. **`Agent.Guards`**, the game's own, in list order.
+4. **`TargetAvailabilityGuard`.** The action can be done to this target right now, as the
+   handler's per-target check (`[AvailableFor]`, `DelegateActionHandler.IsAvailableFor` or
+   `ITargetAvailability`) says. A pair it rejects is rewritten to `none`, with the check's reason.
+   An action whose handler has no check always passes. [targets.md](targets.md#conditions-per-target).
+5. **`Agent.Guards`**, the game's own, in list order.
 
 The first guard whose verdict is not `Pass` stops the rest, so a decision fires at most one
 guard. The built-in guards are not in `Agent.Guards` and cannot be removed from it.
@@ -149,11 +174,13 @@ the chosen target's distance.
 
 `Agent.Execute` checks the decision again before running the handler, because the world can
 change while the model thinks. That re-check is `SchemaLegalityGuard`, then
-`TargetCategoryGuard`, against the targets as they are then. A game's guards judged the answer
+`TargetCategoryGuard`, then `TargetAvailabilityGuard`, which asks a per-target check again,
+against the targets as they are then. A game's guards judged the answer
 once, inside `DecideAsync`, and are not run again.
 
-If a game rule must still hold at the moment of acting, put it in the handler, or in the action's
-`IsAvailable`, which `Execute` does ask again. A handler can say why it did not act by returning
+If a game rule must still hold at the moment of acting, put it in the handler, in the action's
+`IsAvailable`, or, when it is about one target, in its per-target check; `Execute` asks both
+again. A handler can say why it did not act by returning
 `ActionResult.Failed(reason)`, which `Execute(result, out ActionResult)` hands back and the
 telemetry records ([executing-and-memory.md](executing-and-memory.md)).
 

@@ -131,6 +131,94 @@ namespace Agenerela.Tests
             Assert.That(await Says(captain, "Anything else."), Is.EqualTo("otherwise"), "The callback returned null.");
         }
 
+        // ---- Agents told apart by id (#190, Living Vale #21) ------------------------------------
+
+        [Test]
+        public async Task TwoAgentsWithOneNameAreToldApartByTheirIds()
+        {
+            var scripted = new ScriptedProvider()
+                .When("guard_north", GoToTheTower, ScriptedReply.Decide("move_to", "tower", "North goes."))
+                .When("guard_south", GoToTheTower, ScriptedReply.Decide("none", statement: "South stays."));
+            var north = Named(Guard, scripted);
+            north.Id = "guard_north";
+            var south = Named(Guard, scripted);
+            south.Id = "guard_south";
+
+            var norths = await Fixtures.NotCancelled(north.DecideAsync(GoToTheTower));
+            var asked = scripted.LastRequest;
+            var souths = await Fixtures.NotCancelled(south.DecideAsync(GoToTheTower));
+
+            Assert.That(norths.Decision.Statement, Is.EqualTo("North goes."));
+            Assert.That(souths.Decision.Statement, Is.EqualTo("South stays."));
+            Assert.That(asked.AgentId, Is.EqualTo("guard_north"));
+            Assert.That(asked.Agent, Is.EqualTo(Guard), "The name is still reported beside the id.");
+            Assert.That(scripted.LastRequest.AgentId, Is.EqualTo("guard_south"));
+        }
+
+        [Test]
+        public async Task AnIdScriptComesBeforeANameScriptWhichStillAnswersTheRest()
+        {
+            var scripted = new ScriptedProvider()
+                .When(Guard, GoToTheTower, ScriptedReply.Decide("none", statement: "by name"))
+                .When("guard_north", GoToTheTower, ScriptedReply.Decide("none", statement: "by id"));
+            var north = Named(Guard, scripted);
+            north.Id = "guard_north";
+            var south = Named(Guard, scripted);
+            south.Id = "guard_south";
+            var plain = Named(Guard, scripted);
+
+            async Task<string> Says(Agent agent) => (await Fixtures.NotCancelled(agent.DecideAsync(GoToTheTower))).Decision.Statement;
+
+            Assert.That(await Says(north), Is.EqualTo("by id"));
+            Assert.That(await Says(south), Is.EqualTo("by name"), "An id with no script of its own falls back to the name.");
+            Assert.That(await Says(plain), Is.EqualTo("by name"), "An agent with no id is matched by name, as before.");
+        }
+
+        [Test]
+        public async Task AnIdOnlyAgentIsMatchedByIdWithinEachStage()
+        {
+            // Agent and any stimulus is a later stage than any agent and this stimulus, for an id as
+            // for a name; and an agent with no name is still matched by its id.
+            var scripted = new ScriptedProvider()
+                .When(null, GoToTheTower, ScriptedReply.Decide("none", statement: "anyone, this stimulus"))
+                .When("guard_north", null, ScriptedReply.Decide("none", statement: "north, anything"))
+                .Otherwise(ScriptedReply.Decide("none", statement: "otherwise"));
+            var north = Named("", scripted);
+            north.Id = "guard_north";
+
+            var tower = await Fixtures.NotCancelled(north.DecideAsync(GoToTheTower));
+            var other = await Fixtures.NotCancelled(north.DecideAsync("Anything else."));
+
+            Assert.That(tower.Decision.Statement, Is.EqualTo("anyone, this stimulus"));
+            Assert.That(other.Decision.Statement, Is.EqualTo("north, anything"));
+        }
+
+        [Test]
+        public async Task AnIdEqualToTheNameIsOneKeyTakenOnce()
+        {
+            var scripted = new ScriptedProvider().When(Guard, GoToTheTower,
+                ScriptedReply.Decide("none", statement: "one"), ScriptedReply.Decide("none", statement: "two"));
+            var guard = Named(Guard, scripted);
+            guard.Id = Guard;
+
+            var first = await Fixtures.NotCancelled(guard.DecideAsync(GoToTheTower));
+
+            Assert.That(first.Decision.Statement, Is.EqualTo("one"), "Looked up by id and then by name, it would skip a reply.");
+        }
+
+        [Test]
+        public async Task AnUnscriptedRequestNamesTheAgentsIdToo()
+        {
+            var scripted = new ScriptedProvider();
+            var guard = Named(Guard, scripted);
+            guard.Id = "guard_north";
+
+            var result = await Fixtures.NotCancelled(guard.DecideAsync(GoToTheTower));
+
+            Assert.That(result.Telemetry.ErrorMessage,
+                Does.Contain("no reply for agent 'Village Guard' (id 'guard_north') and stimulus 'Go to the tower.'"));
+        }
+
         [Test]
         public async Task WithNoAgentOrNoStimulusTheCallbackStillAnswersBeforeOtherwise()
         {
@@ -222,6 +310,7 @@ namespace Agenerela.Tests
             Assert.That(seen.Agent, Is.EqualTo(Guard));
             Assert.That(seen.Stimulus, Is.EqualTo("Walk with me."));
             Assert.That(seen.Label, Is.EqualTo("Traveller"));
+            Assert.That(seen.AgentId, Is.Null, "This agent has no id.");
             Assert.That(seen.IsRefusalLine, Is.False);
             Assert.That(seen.Index, Is.EqualTo(0));
             Assert.That(seen.Request, Is.SameAs(result.Request));

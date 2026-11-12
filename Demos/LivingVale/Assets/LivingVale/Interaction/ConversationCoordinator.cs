@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
+using Agenerela;
 using UnityEngine;
 
 namespace LivingVale.Interaction
@@ -41,7 +41,7 @@ namespace LivingVale.Interaction
         /// <summary>The player cancelled the pending turn.</summary>
         TurnCancelled,
 
-        /// <summary>The backend finished (answered, failed or cancelled) a turn that had already ended; nothing was applied. Diagnostic only.</summary>
+        /// <summary>A turn the player abandoned (close, switch, cancel) ended; its answer, now or later, is never applied. Diagnostic only.</summary>
         StaleReplyDropped,
 
         /// <summary>Game code added a system line, such as a trade receipt (<see cref="ConversationCoordinator.AddSystemLine"/>).</summary>
@@ -84,10 +84,12 @@ namespace LivingVale.Interaction
     }
 
     /// <summary>
-    /// Owns who the player is talking to and the one turn in flight. A reply is applied only if it
-    /// answers the pending request of the conversation that is still open: closing, switching
-    /// speaker or cancelling ends the turn, and anything that arrives for it afterwards is dropped,
-    /// because cancelling a backend does not guarantee it stops (design §12).
+    /// Owns who the player is talking to, the chat log and the one turn in flight. The turn itself
+    /// is the framework's (<see cref="Conversation"/>, #209): it races the timeout against the
+    /// backend, so a backend that ignores cancellation cannot hold the turn open, and an answer that
+    /// arrives after the turn ended, or after a cancel, close or switch, never runs and never
+    /// enters the NPC's memory (design §12). What stays here is game policy: who is open, the
+    /// conversation generation trade and quests are tied to, the chat lines and the events.
     /// </summary>
     /// <remarks>
     /// Plain C#, no scene: the Unity side opens and closes conversations (focus, range, damage)
@@ -102,7 +104,9 @@ namespace LivingVale.Interaction
 
         private long nextRequestId;
         private NpcTurn pendingTurn;
-        private CancellationTokenSource pendingCts;
+
+        // The framework's side of the pending turn: the NPC's conversation, which ends it.
+        private Conversation pendingChat;
 
         public ConversationCoordinator(INpcDecisionDriver driver, ConversationSettings settings = null)
         {
@@ -128,9 +132,8 @@ namespace LivingVale.Interaction
         public long Generation { get; private set; }
 
         /// <summary>
-        /// The most recently started turn's whole life, for tests and tools. It ends when the
-        /// backend does, which can be after the turn itself ended (timeout, cancel, close), so
-        /// waiting on it can take as long as a backend that ignores cancellation.
+        /// The most recently started turn, for tests and tools. It ends when the turn does: at the
+        /// latest at the timeout, whatever the backend does afterwards.
         /// </summary>
         public Task LastTurn { get; private set; } = Task.CompletedTask;
 
@@ -220,12 +223,11 @@ namespace LivingVale.Interaction
 
             history.Add(new ChatLine(ChatSpeaker.Player, text));
 
-            // Locals, not the fields: a subscriber to the events below may cancel, close or even
-            // submit again, which replaces the fields with another turn's.
-            var cts = new CancellationTokenSource();
+            // A local, not the field: a subscriber to the events below may cancel, close or even
+            // submit again, which replaces the field with another turn's.
             long generation = Generation;
             pendingTurn = turn;
-            pendingCts = cts;
+            pendingChat = null;
 
             Raise(new ConversationEvent(ConversationEventKind.PlayerSaid, npc.Id, turn.RequestId));
             Raise(new ConversationEvent(ConversationEventKind.Waiting, npc.Id, turn.RequestId));
@@ -233,13 +235,46 @@ namespace LivingVale.Interaction
             if (!IsCurrent(turn, generation))
             {
                 // Abandoned by a subscriber before it reached the backend.
-                cts.Dispose();
                 return true;
             }
 
-            // The deadline starts when the backend is asked, after the subscribers ran.
-            cts.CancelAfter(settings.TurnTimeout);
-            LastTurn = RunTurn(turn, generation, cts);
+            // The deadline starts when the NPC's agent is asked, after the subscribers ran.
+            ConversationTurn asked = null;
+            Exception failed = null;
+            var chat = driver.ConversationFor(npc);
+            try
+            {
+                chat.Timeout = settings.TurnTimeout;
+                asked = chat.Start(text, driver.OptionsFor(turn));
+            }
+            catch (Exception e)
+            {
+                failed = e;
+            }
+
+            if (!IsCurrent(turn, generation))
+            {
+                // Abandoned by game code the agent ran while preparing the request. A newer turn
+                // on this conversation already ended this one; otherwise end it here.
+                if (asked != null && ReferenceEquals(chat.Current, asked))
+                {
+                    chat.Cancel();
+                }
+
+                return true;
+            }
+
+            if (asked == null)
+            {
+                ClearPending();
+                Debug.LogWarning($"[LivingVale] {driver.Label} could not start turn {turn.RequestId} for {npc.Id}: " +
+                                 (failed?.ToString() ?? "a turn was still waiting."));
+                Fail(turn, TurnFailure.ProviderError);
+                return true;
+            }
+
+            pendingChat = chat;
+            LastTurn = RunTurn(turn, generation, asked);
             return true;
         }
 
@@ -273,119 +308,52 @@ namespace LivingVale.Interaction
             Raise(new ConversationEvent(ConversationEventKind.TurnCancelled, turn.Npc.Id, turn.RequestId));
         }
 
-        // The whole life of one turn, including watching a backend that answers after the
-        // coordinator stopped waiting for it; LastTurn is this task.
-        private async Task RunTurn(NpcTurn turn, long generation, CancellationTokenSource cts)
+        // One turn, until the conversation ends it; LastTurn is this task.
+        private async Task RunTurn(NpcTurn turn, long generation, ConversationTurn asked)
         {
-            Task<NpcReply> decide;
+            TurnStatus status;
+            bool threw = false;
             try
             {
-                decide = driver.DecideAsync(turn, cts.Token) ?? Task.FromResult<NpcReply>(null);
+                status = await asked.Completion;
             }
             catch (Exception e)
             {
-                decide = Task.FromException<NpcReply>(e);
+                status = TurnStatus.Failed;
+                threw = true;
+                Debug.LogWarning($"[LivingVale] {driver.Label} failed on turn {turn.RequestId} for {turn.Npc.Id}: {e}");
             }
 
-            try
+            if (!IsCurrent(turn, generation))
             {
-                // Race the backend against the token, which the timeout and every abandonment
-                // cancel: a backend that ignores cancellation must not keep the turn open.
-                var stopped = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-                using (cts.Token.Register(() => stopped.TrySetResult(true)))
-                {
-                    await Task.WhenAny(decide, stopped.Task);
-                }
-
-                if (!decide.IsCompleted)
-                {
-                    if (IsCurrent(turn, generation))
-                    {
-                        // Nothing abandoned it, so the timeout fired.
-                        ClearPending();
-                        Fail(turn, TurnFailure.Timeout);
-                    }
-
-                    // Whatever the backend does now is late, and only observed.
-                    try
-                    {
-                        await decide;
-                    }
-                    catch (Exception)
-                    {
-                        // Cancelled or failed after the turn ended: nothing to report to the player.
-                    }
-
-                    Raise(new ConversationEvent(ConversationEventKind.StaleReplyDropped, turn.Npc.Id, turn.RequestId));
-                    return;
-                }
-
-                NpcReply reply = null;
-                bool threw = false;
-                try
-                {
-                    reply = await decide;
-                }
-                catch (OperationCanceledException) when (cts.IsCancellationRequested)
-                {
-                    // Timeout or abandonment; told apart below.
-                }
-                catch (Exception e)
-                {
-                    threw = true;
-                    Debug.LogWarning($"[LivingVale] {driver.Label} failed on turn {turn.RequestId} for {turn.Npc.Id}: {e}");
-                }
-
-                if (!IsCurrent(turn, generation))
-                {
-                    // Cancelled, closed or switched while it was out. Never applied.
-                    Raise(new ConversationEvent(ConversationEventKind.StaleReplyDropped, turn.Npc.Id, turn.RequestId));
-                    return;
-                }
-
-                // Still current, so nothing abandoned it: a cancelled token means the timeout fired,
-                // and a reply that ignored the token and landed with it is late all the same.
-                bool timedOut = cts.IsCancellationRequested;
-                ClearPending();
-
-                TurnFailure failure;
-                if (timedOut)
-                {
-                    failure = TurnFailure.Timeout;
-                }
-                else if (threw)
-                {
-                    failure = TurnFailure.ProviderError;
-                }
-                else if (reply == null || (reply.Failure == NpcReplyFailure.None && reply.Decision == null))
-                {
-                    failure = TurnFailure.Malformed;
-                }
-                else if (reply.Failure != NpcReplyFailure.None)
-                {
-                    failure = reply.Failure == NpcReplyFailure.Malformed ? TurnFailure.Malformed : TurnFailure.ProviderError;
-                }
-                else
-                {
-                    failure = Apply(turn, reply);
-                }
-
-                if (failure == TurnFailure.None)
-                {
-                    Raise(new ConversationEvent(ConversationEventKind.NpcReplied, turn.Npc.Id, turn.RequestId));
-                    return;
-                }
-
-                Fail(turn, failure);
+                // Cancelled, closed or switched while it waited. The conversation already refuses
+                // its answer, however late it comes.
+                Raise(new ConversationEvent(ConversationEventKind.StaleReplyDropped, turn.Npc.Id, turn.RequestId));
+                return;
             }
-            finally
+
+            ClearPending();
+            TurnFailure failure;
+            if (status == TurnStatus.Answered && asked.IsCurrent)
             {
-                // Only once the backend is done with its token.
-                if (decide.IsCompleted)
-                {
-                    cts.Dispose();
-                }
+                var reply = NpcReply.From(asked.Result);
+                failure = reply.Failure == NpcReplyFailure.Malformed ? TurnFailure.Malformed
+                    : reply.Failure != NpcReplyFailure.None ? TurnFailure.ProviderError
+                    : Apply(turn, reply);
             }
+            else
+            {
+                // The timeout, or a failure no reply came with.
+                failure = threw || status == TurnStatus.Failed ? TurnFailure.ProviderError : TurnFailure.Timeout;
+            }
+
+            if (failure == TurnFailure.None)
+            {
+                Raise(new ConversationEvent(ConversationEventKind.NpcReplied, turn.Npc.Id, turn.RequestId));
+                return;
+            }
+
+            Fail(turn, failure);
         }
 
         private void Fail(NpcTurn turn, TurnFailure failure)
@@ -399,7 +367,7 @@ namespace LivingVale.Interaction
             bool executed;
             try
             {
-                executed = driver.Execute(turn, reply);
+                executed = driver.Execute(turn, (DecisionResult)reply.DriverState);
             }
             catch (Exception e)
             {
@@ -439,17 +407,17 @@ namespace LivingVale.Interaction
 
         private void AbandonPending()
         {
-            var cts = pendingCts;
+            var chat = pendingChat;
             ClearPending();
-            // After clearing, so a driver that completes synchronously on cancel sees a stale turn.
-            // RunTurn disposes it once the backend has let go of the token.
-            cts?.Cancel();
+            // After clearing, so a turn that ends at once on cancel finds itself stale. Its answer,
+            // now or later, never runs and is never remembered (the conversation discards it).
+            chat?.Cancel();
         }
 
         private void ClearPending()
         {
             pendingTurn = null;
-            pendingCts = null;
+            pendingChat = null;
         }
 
         private List<ChatLine> Lines(string npcId)

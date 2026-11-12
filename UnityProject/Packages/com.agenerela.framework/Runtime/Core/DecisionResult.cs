@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Agenerela.Providers;
 
 namespace Agenerela
@@ -18,7 +19,9 @@ namespace Agenerela
 
         /// <summary>
         /// What the model said, as parsed, before any guard. The same object as
-        /// <see cref="Decision"/> when every guard passed; null for a pipeline error.
+        /// <see cref="Decision"/> when every guard passed and no stray target was dropped
+        /// (<see cref="ActionDefinition.TakesNoTarget"/>, <see cref="DecisionTelemetry.TargetIgnored"/>);
+        /// null for a pipeline error.
         /// </summary>
         public AgentDecision ModelDecision { get; }
 
@@ -130,24 +133,38 @@ namespace Agenerela
     // DR-018): everything IMemoryStrategy.Remember needs, as the decision had it, and the memory
     // it recalled from, so replacing Agent.Memory meanwhile changes nothing. The agent that made
     // it is named by a token of that agent's, never the agent itself, so a result kept in a log
-    // keeps no agent alive.
+    // keeps no agent alive. A reset of that agent drops it (#190, G12): Reset is the agent's reset
+    // token from when the decision began, so a decision held across a reset is never remembered.
     internal sealed class PendingMemory
     {
-        public PendingMemory(object owner, string ownerName, IMemoryStrategy memory, AgentContext context, DecisionRequest request)
+        public PendingMemory(object owner, string ownerName, IMemoryStrategy memory, AgentContext context, DecisionRequest request,
+            CancellationToken reset)
         {
             Owner = owner;
             OwnerName = ownerName;
             Memory = memory;
             Context = context;
             Request = request;
+            Reset = reset;
         }
 
         // The deciding agent's token, compared by reference, and its name for messages.
         public object Owner { get; }
         public string OwnerName { get; }
+
+        // Cancelled once the agent has been reset since the decision began.
+        public CancellationToken Reset { get; }
         public IMemoryStrategy Memory { get; private set; }
         public AgentContext Context { get; private set; }
         public DecisionRequest Request { get; private set; }
+
+        // What came of it, in the game's words, from Agent.SetOutcome or a failed Execute's reason
+        // (#216 item 3): handed to an IRemembersOutcomes memory when it is remembered.
+        public string Outcome { get; set; }
+
+        // Whether Outcome is a failed Execute's reason rather than the game's own line: a later
+        // Execute replaces it, and one that succeeds clears it, while the game's line stays.
+        public bool OutcomeFromExecute { get; set; }
 
         // Committed or discarded: either way, never remembered again.
         public bool Settled { get; private set; }

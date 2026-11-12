@@ -26,14 +26,65 @@ namespace Agenerela.Evaluation
 
         // The arm's options, as every call started from them.
         [JsonProperty("checkTarget")] public bool CheckTarget;
+        /// <summary>
+        /// The arm's <see cref="DecideOptions.TargetGroundingThreshold"/> (#244); null in a report
+        /// written before it existed, which ran <see cref="TargetGroundingGuard.DefaultThreshold"/>.
+        /// </summary>
+        [JsonProperty("targetGroundingThreshold", NullValueHandling = NullValueHandling.Ignore)] public float? TargetGroundingThreshold;
+        /// <summary>
+        /// How many alternatives an Ollama arm asked for at each token
+        /// (<see cref="Agenerela.Providers.OllamaSettings.TokenAlternatives"/>, #244); null for another
+        /// provider, and in a report written before it existed, which asked for 5.
+        /// </summary>
+        [JsonProperty("tokenAlternatives", NullValueHandling = NullValueHandling.Ignore)] public int? TokenAlternatives;
         [JsonProperty("askForRefusalLine")] public bool AskForRefusalLine;
         [JsonProperty("idleExampleStimulus")] public string IdleExampleStimulus;
         [JsonProperty("listActionsAndTargets")] public bool ListActionsAndTargets;
         [JsonProperty("maxListedTargets")] public int MaxListedTargets;
         [JsonProperty("counterExamples")] public bool CounterExamples;
+        [JsonProperty("idleExampleStatement")] public string IdleExampleStatement;
+        [JsonProperty("exampleStatements")] public bool ExampleStatements;
+        [JsonProperty("exampleTargetFallback")] public bool ExampleTargetFallback;
         [JsonProperty("pairTargetsWithActions")] public bool PairTargetsWithActions;
+        /// <summary>
+        /// How the arm's prompt said which targets each action may take, the name of a
+        /// <see cref="Agenerela.LegalTargetListing"/> value (#151); null in a report written before it
+        /// existed, which listed none.
+        /// </summary>
+        [JsonProperty("legalTargets")] public string LegalTargets;
+        /// <summary>
+        /// How the arm's prompt introduced the identity's statement rules, the name of a
+        /// <see cref="Agenerela.StatementRulesWording"/> value (#244 item 8); null in a report written
+        /// before it existed, which used <c>YourStatement</c>.
+        /// </summary>
+        [JsonProperty("statementRulesWording")] public string StatementRulesWording;
+        /// <summary>The arm's own <see cref="EvalArm.StatementRules"/>, in place of the profile's; null when it kept the profile's.</summary>
+        [JsonProperty("statementRules", NullValueHandling = NullValueHandling.Ignore)] public string StatementRules;
+        /// <summary>The arm's own target legality (<see cref="EvalArm.Legality"/>, #151); null when it ran the set as it is.</summary>
+        [JsonProperty("legality", NullValueHandling = NullValueHandling.Ignore)] public EvalLegality Legality;
+        /// <summary>
+        /// Where the arm put each prompt's own observations, the name of a
+        /// <see cref="Agenerela.ObservationPlacement"/> value (#151); null in a report written before
+        /// it existed, which ran <c>AfterSources</c>.
+        /// </summary>
+        [JsonProperty("observationPlacement")] public string ObservationPlacement;
+        /// <summary>
+        /// Whether the arm sent its standing lines, the arm's, the state's and the targets', as the
+        /// call's own observations rather than through an observation source
+        /// (<see cref="EvalArm.StandingLinesAsCallObservations"/>, #151); false in a report written
+        /// before it existed.
+        /// </summary>
+        [JsonProperty("standingLinesAsCallObservations")] public bool StandingLinesAsCallObservations;
         [JsonProperty("priority")] public string Priority;
         [JsonProperty("observations")] public List<string> Observations = new List<string>();
+        /// <summary>The arm's <see cref="EvalArm.Knowledge"/>, added to the profile's; empty in a report written before it existed.</summary>
+        [JsonProperty("knowledge")] public List<string> Knowledge = new List<string>();
+
+        /// <summary>
+        /// The arm's <see cref="EvalArm.MaxStatementLength"/>, above which a statement is
+        /// <see cref="ReplyFlag.TooLong"/>; 0 in a report written before reply checks existed.
+        /// </summary>
+        [JsonProperty("maxStatementLength")] public int MaxStatementLength;
 
         /// <summary>The throwaway decisions sent before the arm's first prompt, which no count includes.</summary>
         [JsonProperty("warmUpRequests")] public int WarmUpRequests;

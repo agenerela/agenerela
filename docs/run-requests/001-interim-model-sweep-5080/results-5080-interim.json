@@ -1,0 +1,4599 @@
+{
+ "describe": "interim set, 389 prompts, test cd0c09c, RTX 5080, Docker Ollama 0.40.14 (OLLAMA_GO_TEMPLATE=1), over the network from the laptop (way B, gateway)",
+ "baseline": "qwen3.5:2b",
+ "compare": "docs/run-requests/001-interim-model-sweep-5080/laptop-curated-results.json",
+ "arms": {
+  "idle-profile": "defaults (the profile's idle example)",
+  "idle-none": "IdleExampleStimulus = ''"
+ },
+ "noise_floor": "10 x sqrt(50 / n) points",
+ "models": [
+  {
+   "model": "gemma4:e2b-it-qat",
+   "server": "http://192.168.1.129:11436",
+   "ollama_version": "0.40.14",
+   "template": "",
+   "order_kept": "2/2",
+   "order_ok": true,
+   "probe_errors": 0,
+   "thinking_replies": 0,
+   "probe_eval_counts": [
+    38,
+    28
+   ],
+   "probe_resident": [
+    {
+     "name": "gemma4:e2b-it-qat",
+     "size_mb": 1578,
+     "size_vram_mb": 1578,
+     "context_length": 4096
+    }
+   ],
+   "residency": {
+    "idle-profile": [
+     {
+      "when": "before warm-up",
+      "models": [
+       {
+        "name": "gemma4:e2b-it-qat",
+        "size_mb": 1578,
+        "size_vram_mb": 1578
+       }
+      ]
+     },
+     {
+      "when": "after warm-up",
+      "models": [
+       {
+        "name": "gemma4:e2b-it-qat",
+        "size_mb": 1578,
+        "size_vram_mb": 1578
+       }
+      ]
+     },
+     {
+      "when": "after the arm's last prompt",
+      "models": [
+       {
+        "name": "gemma4:e2b-it-qat",
+        "size_mb": 1578,
+        "size_vram_mb": 1578
+       }
+      ]
+     }
+    ],
+    "idle-none": [
+     {
+      "when": "before warm-up",
+      "models": [
+       {
+        "name": "gemma4:e2b-it-qat",
+        "size_mb": 1578,
+        "size_vram_mb": 1578
+       }
+      ]
+     },
+     {
+      "when": "after warm-up",
+      "models": [
+       {
+        "name": "gemma4:e2b-it-qat",
+        "size_mb": 1578,
+        "size_vram_mb": 1578
+       }
+      ]
+     },
+     {
+      "when": "after the arm's last prompt",
+      "models": [
+       {
+        "name": "gemma4:e2b-it-qat",
+        "size_mb": 1578,
+        "size_vram_mb": 1578
+       }
+      ]
+     }
+    ]
+   },
+   "warnings": [],
+   "started_utc": "2026-11-10T02:44:41Z",
+   "finished_utc": "2026-11-10T02:49:24Z",
+   "idle_on": {
+    "n": 389,
+    "correct": 290,
+    "accuracy": 74.6,
+    "raw": 74.55012853470437,
+    "outcomes": {
+     "Correct": 290,
+     "WrongLegalAction": 90,
+     "ContainedByGuard": 4,
+     "RejectedWhenActionExpected": 5
+    },
+    "categories": {
+     "command_with_target": {
+      "correct": 63,
+      "n": 66,
+      "pct": 95.5,
+      "raw": 95.45454545454545
+     },
+     "conversation": {
+      "correct": 50,
+      "n": 64,
+      "pct": 78.1,
+      "raw": 78.125
+     },
+     "event": {
+      "correct": 44,
+      "n": 65,
+      "pct": 67.7,
+      "raw": 67.6923076923077
+     },
+     "impossible_request": {
+      "correct": 41,
+      "n": 64,
+      "pct": 64.1,
+      "raw": 64.0625
+     },
+     "simple_command": {
+      "correct": 53,
+      "n": 65,
+      "pct": 81.5,
+      "raw": 81.53846153846153
+     },
+     "situation": {
+      "correct": 39,
+      "n": 65,
+      "pct": 60.0,
+      "raw": 60.0
+     }
+    },
+    "stop_following": {
+     "correct": 29,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 32,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 35,
+     "n": 233
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 0,
+     "empty": 0,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 0
+    },
+    "reply_flagged": [],
+    "latency_s": {
+     "median": 0.336,
+     "p90": 0.41
+    },
+    "pipeline_errors": []
+   },
+   "idle_off": {
+    "n": 389,
+    "correct": 297,
+    "accuracy": 76.3,
+    "raw": 76.34961439588689,
+    "outcomes": {
+     "Correct": 297,
+     "WrongLegalAction": 82,
+     "ContainedByGuard": 5,
+     "RejectedWhenActionExpected": 5
+    },
+    "categories": {
+     "command_with_target": {
+      "correct": 61,
+      "n": 66,
+      "pct": 92.4,
+      "raw": 92.42424242424242
+     },
+     "conversation": {
+      "correct": 49,
+      "n": 64,
+      "pct": 76.6,
+      "raw": 76.5625
+     },
+     "event": {
+      "correct": 47,
+      "n": 65,
+      "pct": 72.3,
+      "raw": 72.3076923076923
+     },
+     "impossible_request": {
+      "correct": 39,
+      "n": 64,
+      "pct": 60.9,
+      "raw": 60.9375
+     },
+     "simple_command": {
+      "correct": 61,
+      "n": 65,
+      "pct": 93.8,
+      "raw": 93.84615384615384
+     },
+     "situation": {
+      "correct": 40,
+      "n": 65,
+      "pct": 61.5,
+      "raw": 61.53846153846154
+     }
+    },
+    "stop_following": {
+     "correct": 42,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 45,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 13,
+     "n": 233
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 1,
+     "empty": 0,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 1
+    },
+    "reply_flagged": [
+     {
+      "prompt": "int_situation_006",
+      "statement": "You can stay put now.",
+      "flags": [
+       "Echo: stop_following's example \"You can stay put now.\""
+      ]
+     }
+    ],
+    "latency_s": {
+     "median": 0.345,
+     "p90": 0.421
+    },
+    "pipeline_errors": []
+   },
+   "idle_off_minus_on": {
+    "delta": 1.8,
+    "floor": 3.6,
+    "verdict": "within noise"
+   },
+   "idle_off_minus_on_by_category": {
+    "command_with_target": {
+     "delta": -3.0,
+     "floor": 8.7,
+     "verdict": "within noise"
+    },
+    "conversation": {
+     "delta": -1.6,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "event": {
+     "delta": 4.6,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "impossible_request": {
+     "delta": -3.1,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "simple_command": {
+     "delta": 12.3,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "situation": {
+     "delta": 1.5,
+     "floor": 8.8,
+     "verdict": "within noise"
+    }
+   },
+   "compared": {
+    "idle_on": {
+     "correct": 64,
+     "n": 76,
+     "accuracy": 84.2
+    },
+    "idle_off": {
+     "correct": 62,
+     "n": 76,
+     "accuracy": 81.6
+    }
+   },
+   "default_vs_baseline": {
+    "delta": 6.9,
+    "floor": 3.6,
+    "verdict": "beyond noise"
+   },
+   "default_vs_baseline_by_category": {
+    "command_with_target": {
+     "delta": 1.5,
+     "floor": 8.7,
+     "verdict": "within noise"
+    },
+    "conversation": {
+     "delta": 7.8,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "event": {
+     "delta": 7.7,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "impossible_request": {
+     "delta": 0.0,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "simple_command": {
+     "delta": 9.2,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "situation": {
+     "delta": 15.4,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    }
+   }
+  },
+  {
+   "model": "granite4.1:3b",
+   "server": "http://192.168.1.129:11436",
+   "ollama_version": "0.40.14",
+   "template": "",
+   "order_kept": "2/2",
+   "order_ok": true,
+   "probe_errors": 0,
+   "thinking_replies": 0,
+   "probe_eval_counts": [
+    31,
+    28
+   ],
+   "probe_resident": [
+    {
+     "name": "granite4.1:3b",
+     "size_mb": 2390,
+     "size_vram_mb": 2390,
+     "context_length": 4096
+    }
+   ],
+   "residency": {
+    "idle-profile": [
+     {
+      "when": "before warm-up",
+      "models": [
+       {
+        "name": "granite4.1:3b",
+        "size_mb": 2390,
+        "size_vram_mb": 2390
+       }
+      ]
+     },
+     {
+      "when": "after warm-up",
+      "models": [
+       {
+        "name": "granite4.1:3b",
+        "size_mb": 2390,
+        "size_vram_mb": 2390
+       }
+      ]
+     },
+     {
+      "when": "after the arm's last prompt",
+      "models": [
+       {
+        "name": "granite4.1:3b",
+        "size_mb": 2390,
+        "size_vram_mb": 2390
+       }
+      ]
+     }
+    ],
+    "idle-none": [
+     {
+      "when": "before warm-up",
+      "models": [
+       {
+        "name": "granite4.1:3b",
+        "size_mb": 2390,
+        "size_vram_mb": 2390
+       }
+      ]
+     },
+     {
+      "when": "after warm-up",
+      "models": [
+       {
+        "name": "granite4.1:3b",
+        "size_mb": 2390,
+        "size_vram_mb": 2390
+       }
+      ]
+     },
+     {
+      "when": "after the arm's last prompt",
+      "models": [
+       {
+        "name": "granite4.1:3b",
+        "size_mb": 2390,
+        "size_vram_mb": 2390
+       }
+      ]
+     }
+    ]
+   },
+   "warnings": [],
+   "started_utc": "2026-11-10T02:28:25Z",
+   "finished_utc": "2026-11-10T02:31:40Z",
+   "idle_on": {
+    "n": 389,
+    "correct": 304,
+    "accuracy": 78.1,
+    "raw": 78.1491002570694,
+    "outcomes": {
+     "Correct": 304,
+     "WrongLegalAction": 76,
+     "ContainedByGuard": 4,
+     "RejectedWhenActionExpected": 5
+    },
+    "categories": {
+     "command_with_target": {
+      "correct": 65,
+      "n": 66,
+      "pct": 98.5,
+      "raw": 98.48484848484848
+     },
+     "conversation": {
+      "correct": 59,
+      "n": 64,
+      "pct": 92.2,
+      "raw": 92.1875
+     },
+     "event": {
+      "correct": 41,
+      "n": 65,
+      "pct": 63.1,
+      "raw": 63.07692307692308
+     },
+     "impossible_request": {
+      "correct": 47,
+      "n": 64,
+      "pct": 73.4,
+      "raw": 73.4375
+     },
+     "simple_command": {
+      "correct": 62,
+      "n": 65,
+      "pct": 95.4,
+      "raw": 95.38461538461539
+     },
+     "situation": {
+      "correct": 30,
+      "n": 65,
+      "pct": 46.2,
+      "raw": 46.15384615384615
+     }
+    },
+    "stop_following": {
+     "correct": 38,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 19,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 36,
+     "n": 233
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 2,
+     "empty": 0,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 2
+    },
+    "reply_flagged": [
+     {
+      "prompt": "int_target_032",
+      "statement": "Go and stand by the Well.",
+      "flags": [
+       "Echo: move_to's example \"Go and stand by the {0}.\""
+      ]
+     },
+     {
+      "prompt": "int_event_041",
+      "statement": "Strike the Wolf.",
+      "flags": [
+       "Echo: attack_target's example \"Strike the {0}.\""
+      ]
+     }
+    ],
+    "latency_s": {
+     "median": 0.236,
+     "p90": 0.266
+    },
+    "pipeline_errors": []
+   },
+   "idle_off": {
+    "n": 389,
+    "correct": 311,
+    "accuracy": 79.9,
+    "raw": 79.94858611825192,
+    "outcomes": {
+     "Correct": 311,
+     "WrongLegalAction": 70,
+     "ContainedByGuard": 4,
+     "RejectedWhenActionExpected": 4
+    },
+    "categories": {
+     "command_with_target": {
+      "correct": 66,
+      "n": 66,
+      "pct": 100.0,
+      "raw": 100.0
+     },
+     "conversation": {
+      "correct": 60,
+      "n": 64,
+      "pct": 93.8,
+      "raw": 93.75
+     },
+     "event": {
+      "correct": 39,
+      "n": 65,
+      "pct": 60.0,
+      "raw": 60.0
+     },
+     "impossible_request": {
+      "correct": 50,
+      "n": 64,
+      "pct": 78.1,
+      "raw": 78.125
+     },
+     "simple_command": {
+      "correct": 63,
+      "n": 65,
+      "pct": 96.9,
+      "raw": 96.92307692307692
+     },
+     "situation": {
+      "correct": 33,
+      "n": 65,
+      "pct": 50.8,
+      "raw": 50.76923076923077
+     }
+    },
+    "stop_following": {
+     "correct": 42,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 21,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 36,
+     "n": 233
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 0,
+     "empty": 0,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 0
+    },
+    "reply_flagged": [],
+    "latency_s": {
+     "median": 0.24,
+     "p90": 0.268
+    },
+    "pipeline_errors": []
+   },
+   "idle_off_minus_on": {
+    "delta": 1.8,
+    "floor": 3.6,
+    "verdict": "within noise"
+   },
+   "idle_off_minus_on_by_category": {
+    "command_with_target": {
+     "delta": 1.5,
+     "floor": 8.7,
+     "verdict": "within noise"
+    },
+    "conversation": {
+     "delta": 1.6,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "event": {
+     "delta": -3.1,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "impossible_request": {
+     "delta": 4.7,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "simple_command": {
+     "delta": 1.5,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "situation": {
+     "delta": 4.6,
+     "floor": 8.8,
+     "verdict": "within noise"
+    }
+   },
+   "compared": {
+    "idle_on": {
+     "correct": 62,
+     "n": 76,
+     "accuracy": 81.6
+    },
+    "idle_off": {
+     "correct": 61,
+     "n": 76,
+     "accuracy": 80.3
+    }
+   },
+   "default_vs_baseline": {
+    "delta": 10.5,
+    "floor": 3.6,
+    "verdict": "beyond noise"
+   },
+   "default_vs_baseline_by_category": {
+    "command_with_target": {
+     "delta": 4.5,
+     "floor": 8.7,
+     "verdict": "within noise"
+    },
+    "conversation": {
+     "delta": 21.9,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "event": {
+     "delta": 3.1,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "impossible_request": {
+     "delta": 9.4,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "simple_command": {
+     "delta": 23.1,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "situation": {
+     "delta": 1.5,
+     "floor": 8.8,
+     "verdict": "within noise"
+    }
+   }
+  },
+  {
+   "model": "hf.co/QuantFactory/L3-8B-Stheno-v3.2-GGUF:Q4_K_M",
+   "server": "http://192.168.1.129:11436",
+   "ollama_version": "0.40.14",
+   "template": "",
+   "order_kept": "2/2",
+   "order_ok": true,
+   "probe_errors": 0,
+   "thinking_replies": 0,
+   "probe_eval_counts": [
+    25,
+    37
+   ],
+   "probe_resident": [
+    {
+     "name": "hf.co/QuantFactory/L3-8B-Stheno-v3.2-GGUF:Q4_K_M",
+     "size_mb": 5035,
+     "size_vram_mb": 5035,
+     "context_length": 4096
+    }
+   ],
+   "residency": {
+    "idle-profile": [
+     {
+      "when": "before warm-up",
+      "models": [
+       {
+        "name": "hf.co/QuantFactory/L3-8B-Stheno-v3.2-GGUF:Q4_K_M",
+        "size_mb": 5035,
+        "size_vram_mb": 5035
+       }
+      ]
+     },
+     {
+      "when": "after warm-up",
+      "models": [
+       {
+        "name": "hf.co/QuantFactory/L3-8B-Stheno-v3.2-GGUF:Q4_K_M",
+        "size_mb": 5035,
+        "size_vram_mb": 5035
+       }
+      ]
+     },
+     {
+      "when": "after the arm's last prompt",
+      "models": [
+       {
+        "name": "hf.co/QuantFactory/L3-8B-Stheno-v3.2-GGUF:Q4_K_M",
+        "size_mb": 5035,
+        "size_vram_mb": 5035
+       }
+      ]
+     }
+    ],
+    "idle-none": [
+     {
+      "when": "before warm-up",
+      "models": [
+       {
+        "name": "hf.co/QuantFactory/L3-8B-Stheno-v3.2-GGUF:Q4_K_M",
+        "size_mb": 5035,
+        "size_vram_mb": 5035
+       }
+      ]
+     },
+     {
+      "when": "after warm-up",
+      "models": [
+       {
+        "name": "hf.co/QuantFactory/L3-8B-Stheno-v3.2-GGUF:Q4_K_M",
+        "size_mb": 5035,
+        "size_vram_mb": 5035
+       }
+      ]
+     },
+     {
+      "when": "after the arm's last prompt",
+      "models": [
+       {
+        "name": "hf.co/QuantFactory/L3-8B-Stheno-v3.2-GGUF:Q4_K_M",
+        "size_mb": 5035,
+        "size_vram_mb": 5035
+       }
+      ]
+     }
+    ]
+   },
+   "warnings": [],
+   "started_utc": "2026-11-10T03:08:40Z",
+   "finished_utc": "2026-11-10T03:13:04Z",
+   "idle_on": {
+    "n": 389,
+    "correct": 294,
+    "accuracy": 75.6,
+    "raw": 75.57840616966581,
+    "outcomes": {
+     "Correct": 294,
+     "WrongLegalAction": 79,
+     "RejectedWhenActionExpected": 9,
+     "ContainedByGuard": 7
+    },
+    "categories": {
+     "command_with_target": {
+      "correct": 64,
+      "n": 66,
+      "pct": 97.0,
+      "raw": 96.96969696969697
+     },
+     "conversation": {
+      "correct": 50,
+      "n": 64,
+      "pct": 78.1,
+      "raw": 78.125
+     },
+     "event": {
+      "correct": 44,
+      "n": 65,
+      "pct": 67.7,
+      "raw": 67.6923076923077
+     },
+     "impossible_request": {
+      "correct": 39,
+      "n": 64,
+      "pct": 60.9,
+      "raw": 60.9375
+     },
+     "simple_command": {
+      "correct": 63,
+      "n": 65,
+      "pct": 96.9,
+      "raw": 96.92307692307692
+     },
+     "situation": {
+      "correct": 34,
+      "n": 65,
+      "pct": 52.3,
+      "raw": 52.30769230769231
+     }
+    },
+    "stop_following": {
+     "correct": 46,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 65,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 3,
+     "n": 233
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 1,
+     "empty": 0,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 1
+    },
+    "reply_flagged": [
+     {
+      "prompt": "int_situation_006",
+      "statement": "You can stay put now.",
+      "flags": [
+       "Echo: stop_following's example \"You can stay put now.\""
+      ]
+     }
+    ],
+    "latency_s": {
+     "median": 0.318,
+     "p90": 0.371
+    },
+    "pipeline_errors": []
+   },
+   "idle_off": {
+    "n": 389,
+    "correct": 279,
+    "accuracy": 71.7,
+    "raw": 71.72236503856041,
+    "outcomes": {
+     "Correct": 279,
+     "WrongLegalAction": 94,
+     "RejectedWhenActionExpected": 8,
+     "ContainedByGuard": 8
+    },
+    "categories": {
+     "command_with_target": {
+      "correct": 65,
+      "n": 66,
+      "pct": 98.5,
+      "raw": 98.48484848484848
+     },
+     "conversation": {
+      "correct": 41,
+      "n": 64,
+      "pct": 64.1,
+      "raw": 64.0625
+     },
+     "event": {
+      "correct": 40,
+      "n": 65,
+      "pct": 61.5,
+      "raw": 61.53846153846154
+     },
+     "impossible_request": {
+      "correct": 36,
+      "n": 64,
+      "pct": 56.2,
+      "raw": 56.25
+     },
+     "simple_command": {
+      "correct": 62,
+      "n": 65,
+      "pct": 95.4,
+      "raw": 95.38461538461539
+     },
+     "situation": {
+      "correct": 35,
+      "n": 65,
+      "pct": 53.8,
+      "raw": 53.84615384615385
+     }
+    },
+    "stop_following": {
+     "correct": 47,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 82,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 1,
+     "n": 233
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 0,
+     "empty": 0,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 0
+    },
+    "reply_flagged": [],
+    "latency_s": {
+     "median": 0.325,
+     "p90": 0.372
+    },
+    "pipeline_errors": []
+   },
+   "idle_off_minus_on": {
+    "delta": -3.9,
+    "floor": 3.6,
+    "verdict": "beyond noise"
+   },
+   "idle_off_minus_on_by_category": {
+    "command_with_target": {
+     "delta": 1.5,
+     "floor": 8.7,
+     "verdict": "within noise"
+    },
+    "conversation": {
+     "delta": -14.1,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "event": {
+     "delta": -6.2,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "impossible_request": {
+     "delta": -4.7,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "simple_command": {
+     "delta": -1.5,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "situation": {
+     "delta": 1.5,
+     "floor": 8.8,
+     "verdict": "within noise"
+    }
+   },
+   "compared": {
+    "idle_on": {
+     "correct": 60,
+     "n": 76,
+     "accuracy": 78.9
+    },
+    "idle_off": {
+     "correct": 61,
+     "n": 76,
+     "accuracy": 80.3
+    }
+   },
+   "default_vs_baseline": {
+    "delta": 8.0,
+    "floor": 3.6,
+    "verdict": "beyond noise"
+   },
+   "default_vs_baseline_by_category": {
+    "command_with_target": {
+     "delta": 3.0,
+     "floor": 8.7,
+     "verdict": "within noise"
+    },
+    "conversation": {
+     "delta": 7.8,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "event": {
+     "delta": 7.7,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "impossible_request": {
+     "delta": -3.1,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "simple_command": {
+     "delta": 24.6,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "situation": {
+     "delta": 7.7,
+     "floor": 8.8,
+     "verdict": "within noise"
+    }
+   }
+  },
+  {
+   "model": "hf.co/openbmb/MiniCPM5-2B-GGUF:Q4_K_M",
+   "server": "http://192.168.1.129:11436",
+   "ollama_version": "0.40.14",
+   "template": "",
+   "order_kept": "2/2",
+   "order_ok": true,
+   "probe_errors": 0,
+   "thinking_replies": 0,
+   "probe_eval_counts": [
+    30,
+    28
+   ],
+   "probe_resident": [
+    {
+     "name": "hf.co/openbmb/MiniCPM5-2B-GGUF:Q4_K_M",
+     "size_mb": 1564,
+     "size_vram_mb": 1564,
+     "context_length": 4096
+    }
+   ],
+   "residency": {
+    "idle-profile": [
+     {
+      "when": "before warm-up",
+      "models": [
+       {
+        "name": "hf.co/openbmb/MiniCPM5-2B-GGUF:Q4_K_M",
+        "size_mb": 1564,
+        "size_vram_mb": 1564
+       }
+      ]
+     },
+     {
+      "when": "after warm-up",
+      "models": [
+       {
+        "name": "hf.co/openbmb/MiniCPM5-2B-GGUF:Q4_K_M",
+        "size_mb": 1564,
+        "size_vram_mb": 1564
+       }
+      ]
+     },
+     {
+      "when": "after the arm's last prompt",
+      "models": [
+       {
+        "name": "hf.co/openbmb/MiniCPM5-2B-GGUF:Q4_K_M",
+        "size_mb": 1564,
+        "size_vram_mb": 1564
+       }
+      ]
+     }
+    ],
+    "idle-none": [
+     {
+      "when": "before warm-up",
+      "models": [
+       {
+        "name": "hf.co/openbmb/MiniCPM5-2B-GGUF:Q4_K_M",
+        "size_mb": 1564,
+        "size_vram_mb": 1564
+       }
+      ]
+     },
+     {
+      "when": "after warm-up",
+      "models": [
+       {
+        "name": "hf.co/openbmb/MiniCPM5-2B-GGUF:Q4_K_M",
+        "size_mb": 1564,
+        "size_vram_mb": 1564
+       }
+      ]
+     },
+     {
+      "when": "after the arm's last prompt",
+      "models": [
+       {
+        "name": "hf.co/openbmb/MiniCPM5-2B-GGUF:Q4_K_M",
+        "size_mb": 1564,
+        "size_vram_mb": 1564
+       }
+      ]
+     }
+    ]
+   },
+   "warnings": [],
+   "started_utc": "2026-11-10T02:37:30Z",
+   "finished_utc": "2026-11-10T02:40:19Z",
+   "idle_on": {
+    "n": 389,
+    "correct": 240,
+    "accuracy": 61.7,
+    "raw": 61.696658097686374,
+    "outcomes": {
+     "Correct": 240,
+     "WrongLegalAction": 125,
+     "RejectedWhenActionExpected": 19,
+     "ContainedByGuard": 5
+    },
+    "categories": {
+     "command_with_target": {
+      "correct": 62,
+      "n": 66,
+      "pct": 93.9,
+      "raw": 93.93939393939394
+     },
+     "conversation": {
+      "correct": 38,
+      "n": 64,
+      "pct": 59.4,
+      "raw": 59.375
+     },
+     "event": {
+      "correct": 29,
+      "n": 65,
+      "pct": 44.6,
+      "raw": 44.61538461538461
+     },
+     "impossible_request": {
+      "correct": 37,
+      "n": 64,
+      "pct": 57.8,
+      "raw": 57.8125
+     },
+     "simple_command": {
+      "correct": 51,
+      "n": 65,
+      "pct": 78.5,
+      "raw": 78.46153846153847
+     },
+     "situation": {
+      "correct": 23,
+      "n": 65,
+      "pct": 35.4,
+      "raw": 35.38461538461539
+     }
+    },
+    "stop_following": {
+     "correct": 38,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 63,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 32,
+     "n": 233
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 1,
+     "empty": 0,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 1
+    },
+    "reply_flagged": [
+     {
+      "prompt": "int_conversation_036",
+      "statement": "You can stay put now.",
+      "flags": [
+       "Echo: stop_following's example \"You can stay put now.\""
+      ]
+     }
+    ],
+    "latency_s": {
+     "median": 0.207,
+     "p90": 0.231
+    },
+    "pipeline_errors": []
+   },
+   "idle_off": {
+    "n": 389,
+    "correct": 240,
+    "accuracy": 61.7,
+    "raw": 61.696658097686374,
+    "outcomes": {
+     "Correct": 240,
+     "WrongLegalAction": 124,
+     "RejectedWhenActionExpected": 20,
+     "ContainedByGuard": 5
+    },
+    "categories": {
+     "command_with_target": {
+      "correct": 62,
+      "n": 66,
+      "pct": 93.9,
+      "raw": 93.93939393939394
+     },
+     "conversation": {
+      "correct": 35,
+      "n": 64,
+      "pct": 54.7,
+      "raw": 54.6875
+     },
+     "event": {
+      "correct": 31,
+      "n": 65,
+      "pct": 47.7,
+      "raw": 47.69230769230769
+     },
+     "impossible_request": {
+      "correct": 37,
+      "n": 64,
+      "pct": 57.8,
+      "raw": 57.8125
+     },
+     "simple_command": {
+      "correct": 53,
+      "n": 65,
+      "pct": 81.5,
+      "raw": 81.53846153846153
+     },
+     "situation": {
+      "correct": 22,
+      "n": 65,
+      "pct": 33.8,
+      "raw": 33.84615384615385
+     }
+    },
+    "stop_following": {
+     "correct": 42,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 72,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 22,
+     "n": 233
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 0,
+     "empty": 0,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 0
+    },
+    "reply_flagged": [],
+    "latency_s": {
+     "median": 0.207,
+     "p90": 0.235
+    },
+    "pipeline_errors": []
+   },
+   "idle_off_minus_on": {
+    "delta": 0.0,
+    "floor": 3.6,
+    "verdict": "within noise"
+   },
+   "idle_off_minus_on_by_category": {
+    "command_with_target": {
+     "delta": 0.0,
+     "floor": 8.7,
+     "verdict": "within noise"
+    },
+    "conversation": {
+     "delta": -4.7,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "event": {
+     "delta": 3.1,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "impossible_request": {
+     "delta": 0.0,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "simple_command": {
+     "delta": 3.1,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "situation": {
+     "delta": -1.5,
+     "floor": 8.8,
+     "verdict": "within noise"
+    }
+   },
+   "compared": {
+    "idle_on": {
+     "correct": 58,
+     "n": 76,
+     "accuracy": 76.3
+    },
+    "idle_off": {
+     "correct": 56,
+     "n": 76,
+     "accuracy": 73.7
+    }
+   },
+   "default_vs_baseline": {
+    "delta": -5.9,
+    "floor": 3.6,
+    "verdict": "beyond noise"
+   },
+   "default_vs_baseline_by_category": {
+    "command_with_target": {
+     "delta": 0.0,
+     "floor": 8.7,
+     "verdict": "within noise"
+    },
+    "conversation": {
+     "delta": -10.9,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "event": {
+     "delta": -15.4,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "impossible_request": {
+     "delta": -6.2,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "simple_command": {
+     "delta": 6.2,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "situation": {
+     "delta": -9.2,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    }
+   }
+  },
+  {
+   "model": "lfm3:1.7b",
+   "server": "http://192.168.1.129:11436",
+   "ollama_version": "0.40.14",
+   "template": "",
+   "order_kept": "2/2",
+   "order_ok": true,
+   "probe_errors": 0,
+   "thinking_replies": 0,
+   "probe_eval_counts": [
+    29,
+    32
+   ],
+   "probe_resident": [
+    {
+     "name": "lfm3:1.7b",
+     "size_mb": 1114,
+     "size_vram_mb": 1114,
+     "context_length": 4096
+    }
+   ],
+   "residency": {
+    "idle-profile": [
+     {
+      "when": "before warm-up",
+      "models": [
+       {
+        "name": "lfm3:1.7b",
+        "size_mb": 1114,
+        "size_vram_mb": 1114
+       }
+      ]
+     },
+     {
+      "when": "after warm-up",
+      "models": [
+       {
+        "name": "lfm3:1.7b",
+        "size_mb": 1114,
+        "size_vram_mb": 1114
+       }
+      ]
+     },
+     {
+      "when": "after the arm's last prompt",
+      "models": [
+       {
+        "name": "lfm3:1.7b",
+        "size_mb": 1114,
+        "size_vram_mb": 1114
+       }
+      ]
+     }
+    ],
+    "idle-none": [
+     {
+      "when": "before warm-up",
+      "models": [
+       {
+        "name": "lfm3:1.7b",
+        "size_mb": 1114,
+        "size_vram_mb": 1114
+       }
+      ]
+     },
+     {
+      "when": "after warm-up",
+      "models": [
+       {
+        "name": "lfm3:1.7b",
+        "size_mb": 1114,
+        "size_vram_mb": 1114
+       }
+      ]
+     },
+     {
+      "when": "after the arm's last prompt",
+      "models": [
+       {
+        "name": "lfm3:1.7b",
+        "size_mb": 1114,
+        "size_vram_mb": 1114
+       }
+      ]
+     }
+    ]
+   },
+   "warnings": [],
+   "started_utc": "2026-11-10T02:40:42Z",
+   "finished_utc": "2026-11-10T02:43:52Z",
+   "idle_on": {
+    "n": 389,
+    "correct": 202,
+    "accuracy": 51.9,
+    "raw": 51.9280205655527,
+    "outcomes": {
+     "Correct": 202,
+     "RejectedWhenActionExpected": 5,
+     "WrongLegalAction": 176,
+     "ContainedByGuard": 6
+    },
+    "categories": {
+     "command_with_target": {
+      "correct": 57,
+      "n": 66,
+      "pct": 86.4,
+      "raw": 86.36363636363636
+     },
+     "conversation": {
+      "correct": 38,
+      "n": 64,
+      "pct": 59.4,
+      "raw": 59.375
+     },
+     "event": {
+      "correct": 21,
+      "n": 65,
+      "pct": 32.3,
+      "raw": 32.30769230769231
+     },
+     "impossible_request": {
+      "correct": 18,
+      "n": 64,
+      "pct": 28.1,
+      "raw": 28.125
+     },
+     "simple_command": {
+      "correct": 52,
+      "n": 65,
+      "pct": 80.0,
+      "raw": 80.0
+     },
+     "situation": {
+      "correct": 16,
+      "n": 65,
+      "pct": 24.6,
+      "raw": 24.615384615384617
+     }
+    },
+    "stop_following": {
+     "correct": 30,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 86,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 3,
+     "n": 233
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 0,
+     "empty": 3,
+     "tooLong": 1,
+     "leak": 1,
+     "flagged": 4
+    },
+    "reply_flagged": [
+     {
+      "prompt": "int_impossible_017",
+      "statement": "",
+      "flags": [
+       "Empty: the schema asked for a statement"
+      ]
+     },
+     {
+      "prompt": "int_impossible_030",
+      "statement": "",
+      "flags": [
+       "Empty: the schema asked for a statement"
+      ]
+     },
+     {
+      "prompt": "int_impossible_031",
+      "statement": "",
+      "flags": [
+       "Empty: the schema asked for a statement"
+      ]
+     },
+     {
+      "prompt": "int_situation_050",
+      "statement": "Village guard will alert or intervene if needed; but here a villager is up a tree - need to decide what to do. Since I'm not following the player and my goal is safety/keeping people out of off-limits areas... I should probably just note it? But options: follow_player, move_to, attack_target, use_special_move. None fits perfectly. The situation says 'A villager is slipping' earlier too. For 'up a tree', maybe I should warn them or go get them down? But as guard, I might just say 'stand by' or something. However, the instruction: Choose exactly one action from the allowed list. Options: follow_player, move_to, attack_target, use_special_move. None directly matches 'go to tree' or 'help villager'. So likely 'none, target: no_target'? But there's a villager up a tree. Hmm. Let me think about typical guard behavior: If someone is up a tree, maybe they slipped and could fall. I should probably call for help or stay back. But given the examples: ",
+      "flags": [
+       "TooLong: 953 characters, over 200",
+       "Leak: the id follow_player, the id move_to, the id attack_target, the id no_target, the field label target:"
+      ]
+     }
+    ],
+    "latency_s": {
+     "median": 0.23,
+     "p90": 0.281
+    },
+    "pipeline_errors": []
+   },
+   "idle_off": {
+    "n": 389,
+    "correct": 200,
+    "accuracy": 51.4,
+    "raw": 51.41388174807198,
+    "outcomes": {
+     "Correct": 200,
+     "WrongLegalAction": 177,
+     "RejectedWhenActionExpected": 7,
+     "ContainedByGuard": 5
+    },
+    "categories": {
+     "command_with_target": {
+      "correct": 59,
+      "n": 66,
+      "pct": 89.4,
+      "raw": 89.39393939393939
+     },
+     "conversation": {
+      "correct": 34,
+      "n": 64,
+      "pct": 53.1,
+      "raw": 53.125
+     },
+     "event": {
+      "correct": 23,
+      "n": 65,
+      "pct": 35.4,
+      "raw": 35.38461538461539
+     },
+     "impossible_request": {
+      "correct": 17,
+      "n": 64,
+      "pct": 26.6,
+      "raw": 26.5625
+     },
+     "simple_command": {
+      "correct": 47,
+      "n": 65,
+      "pct": 72.3,
+      "raw": 72.3076923076923
+     },
+     "situation": {
+      "correct": 20,
+      "n": 65,
+      "pct": 30.8,
+      "raw": 30.76923076923077
+     }
+    },
+    "stop_following": {
+     "correct": 30,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 65,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 19,
+     "n": 233
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 0,
+     "empty": 3,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 3
+    },
+    "reply_flagged": [
+     {
+      "prompt": "int_impossible_009",
+      "statement": "",
+      "flags": [
+       "Empty: the schema asked for a statement"
+      ]
+     },
+     {
+      "prompt": "int_impossible_031",
+      "statement": "",
+      "flags": [
+       "Empty: the schema asked for a statement"
+      ]
+     },
+     {
+      "prompt": "int_event_022",
+      "statement": "",
+      "flags": [
+       "Empty: the schema asked for a statement"
+      ]
+     }
+    ],
+    "latency_s": {
+     "median": 0.227,
+     "p90": 0.269
+    },
+    "pipeline_errors": []
+   },
+   "idle_off_minus_on": {
+    "delta": -0.5,
+    "floor": 3.6,
+    "verdict": "within noise"
+   },
+   "idle_off_minus_on_by_category": {
+    "command_with_target": {
+     "delta": 3.0,
+     "floor": 8.7,
+     "verdict": "within noise"
+    },
+    "conversation": {
+     "delta": -6.2,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "event": {
+     "delta": 3.1,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "impossible_request": {
+     "delta": -1.6,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "simple_command": {
+     "delta": -7.7,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "situation": {
+     "delta": 6.2,
+     "floor": 8.8,
+     "verdict": "within noise"
+    }
+   },
+   "compared": {
+    "idle_on": {
+     "correct": 46,
+     "n": 76,
+     "accuracy": 60.5
+    },
+    "idle_off": {
+     "correct": 47,
+     "n": 76,
+     "accuracy": 61.8
+    }
+   },
+   "default_vs_baseline": {
+    "delta": -15.7,
+    "floor": 3.6,
+    "verdict": "beyond noise"
+   },
+   "default_vs_baseline_by_category": {
+    "command_with_target": {
+     "delta": -7.6,
+     "floor": 8.7,
+     "verdict": "within noise"
+    },
+    "conversation": {
+     "delta": -10.9,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "event": {
+     "delta": -27.7,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "impossible_request": {
+     "delta": -35.9,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "simple_command": {
+     "delta": 7.7,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "situation": {
+     "delta": -20.0,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    }
+   }
+  },
+  {
+   "model": "llama3.2:3b",
+   "server": "http://192.168.1.129:11436",
+   "ollama_version": "0.40.14",
+   "template": "",
+   "order_kept": "2/2",
+   "order_ok": true,
+   "probe_errors": 0,
+   "thinking_replies": 0,
+   "probe_eval_counts": [
+    28,
+    30
+   ],
+   "probe_resident": [
+    {
+     "name": "llama3.2:3b",
+     "size_mb": 2442,
+     "size_vram_mb": 2442,
+     "context_length": 4096
+    }
+   ],
+   "residency": {
+    "idle-profile": [
+     {
+      "when": "before warm-up",
+      "models": [
+       {
+        "name": "llama3.2:3b",
+        "size_mb": 2442,
+        "size_vram_mb": 2442
+       }
+      ]
+     },
+     {
+      "when": "after warm-up",
+      "models": [
+       {
+        "name": "llama3.2:3b",
+        "size_mb": 2442,
+        "size_vram_mb": 2442
+       }
+      ]
+     },
+     {
+      "when": "after the arm's last prompt",
+      "models": [
+       {
+        "name": "llama3.2:3b",
+        "size_mb": 2442,
+        "size_vram_mb": 2442
+       }
+      ]
+     }
+    ],
+    "idle-none": [
+     {
+      "when": "before warm-up",
+      "models": [
+       {
+        "name": "llama3.2:3b",
+        "size_mb": 2442,
+        "size_vram_mb": 2442
+       }
+      ]
+     },
+     {
+      "when": "after warm-up",
+      "models": [
+       {
+        "name": "llama3.2:3b",
+        "size_mb": 2442,
+        "size_vram_mb": 2442
+       }
+      ]
+     },
+     {
+      "when": "after the arm's last prompt",
+      "models": [
+       {
+        "name": "llama3.2:3b",
+        "size_mb": 2442,
+        "size_vram_mb": 2442
+       }
+      ]
+     }
+    ]
+   },
+   "warnings": [],
+   "started_utc": "2026-11-10T02:58:59Z",
+   "finished_utc": "2026-11-10T03:02:21Z",
+   "idle_on": {
+    "n": 389,
+    "correct": 277,
+    "accuracy": 71.2,
+    "raw": 71.2082262210797,
+    "outcomes": {
+     "Correct": 277,
+     "WrongLegalAction": 95,
+     "ContainedByGuard": 9,
+     "RejectedWhenActionExpected": 8
+    },
+    "categories": {
+     "command_with_target": {
+      "correct": 65,
+      "n": 66,
+      "pct": 98.5,
+      "raw": 98.48484848484848
+     },
+     "conversation": {
+      "correct": 41,
+      "n": 64,
+      "pct": 64.1,
+      "raw": 64.0625
+     },
+     "event": {
+      "correct": 43,
+      "n": 65,
+      "pct": 66.2,
+      "raw": 66.15384615384616
+     },
+     "impossible_request": {
+      "correct": 35,
+      "n": 64,
+      "pct": 54.7,
+      "raw": 54.6875
+     },
+     "simple_command": {
+      "correct": 60,
+      "n": 65,
+      "pct": 92.3,
+      "raw": 92.3076923076923
+     },
+     "situation": {
+      "correct": 33,
+      "n": 65,
+      "pct": 50.8,
+      "raw": 50.76923076923077
+     }
+    },
+    "stop_following": {
+     "correct": 44,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 78,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 4,
+     "n": 233
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 1,
+     "empty": 0,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 1
+    },
+    "reply_flagged": [
+     {
+      "prompt": "int_situation_006",
+      "statement": "You can stay put now.",
+      "flags": [
+       "Echo: stop_following's example \"You can stay put now.\""
+      ]
+     }
+    ],
+    "latency_s": {
+     "median": 0.242,
+     "p90": 0.286
+    },
+    "pipeline_errors": []
+   },
+   "idle_off": {
+    "n": 389,
+    "correct": 235,
+    "accuracy": 60.4,
+    "raw": 60.411311053984576,
+    "outcomes": {
+     "Correct": 235,
+     "WrongLegalAction": 126,
+     "ContainedByGuard": 19,
+     "RejectedWhenActionExpected": 9
+    },
+    "categories": {
+     "command_with_target": {
+      "correct": 64,
+      "n": 66,
+      "pct": 97.0,
+      "raw": 96.96969696969697
+     },
+     "conversation": {
+      "correct": 26,
+      "n": 64,
+      "pct": 40.6,
+      "raw": 40.625
+     },
+     "event": {
+      "correct": 36,
+      "n": 65,
+      "pct": 55.4,
+      "raw": 55.38461538461539
+     },
+     "impossible_request": {
+      "correct": 24,
+      "n": 64,
+      "pct": 37.5,
+      "raw": 37.5
+     },
+     "simple_command": {
+      "correct": 56,
+      "n": 65,
+      "pct": 86.2,
+      "raw": 86.15384615384616
+     },
+     "situation": {
+      "correct": 29,
+      "n": 65,
+      "pct": 44.6,
+      "raw": 44.61538461538461
+     }
+    },
+    "stop_following": {
+     "correct": 45,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 120,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 2,
+     "n": 233
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 1,
+     "empty": 0,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 1
+    },
+    "reply_flagged": [
+     {
+      "prompt": "int_situation_006",
+      "statement": "You can stay put now.",
+      "flags": [
+       "Echo: stop_following's example \"You can stay put now.\""
+      ]
+     }
+    ],
+    "latency_s": {
+     "median": 0.242,
+     "p90": 0.281
+    },
+    "pipeline_errors": []
+   },
+   "idle_off_minus_on": {
+    "delta": -10.8,
+    "floor": 3.6,
+    "verdict": "beyond noise"
+   },
+   "idle_off_minus_on_by_category": {
+    "command_with_target": {
+     "delta": -1.5,
+     "floor": 8.7,
+     "verdict": "within noise"
+    },
+    "conversation": {
+     "delta": -23.4,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "event": {
+     "delta": -10.8,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "impossible_request": {
+     "delta": -17.2,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "simple_command": {
+     "delta": -6.2,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "situation": {
+     "delta": -6.2,
+     "floor": 8.8,
+     "verdict": "within noise"
+    }
+   },
+   "compared": {
+    "idle_on": {
+     "correct": 59,
+     "n": 76,
+     "accuracy": 77.6
+    },
+    "idle_off": {
+     "correct": 51,
+     "n": 76,
+     "accuracy": 67.1
+    }
+   },
+   "default_vs_baseline": {
+    "delta": 3.6,
+    "floor": 3.6,
+    "verdict": "beyond noise"
+   },
+   "default_vs_baseline_by_category": {
+    "command_with_target": {
+     "delta": 4.5,
+     "floor": 8.7,
+     "verdict": "within noise"
+    },
+    "conversation": {
+     "delta": -6.2,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "event": {
+     "delta": 6.2,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "impossible_request": {
+     "delta": -9.4,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "simple_command": {
+     "delta": 20.0,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "situation": {
+     "delta": 6.2,
+     "floor": 8.8,
+     "verdict": "within noise"
+    }
+   }
+  },
+  {
+   "model": "ministral-3:3b",
+   "server": "http://192.168.1.129:11436",
+   "ollama_version": "0.40.14",
+   "template": "",
+   "order_kept": "2/2",
+   "order_ok": true,
+   "probe_errors": 0,
+   "thinking_replies": 0,
+   "probe_eval_counts": [
+    28,
+    30
+   ],
+   "probe_resident": [
+    {
+     "name": "ministral-3:3b",
+     "size_mb": 2601,
+     "size_vram_mb": 2601,
+     "context_length": 4096
+    }
+   ],
+   "residency": {
+    "idle-profile": [
+     {
+      "when": "before warm-up",
+      "models": [
+       {
+        "name": "ministral-3:3b",
+        "size_mb": 2601,
+        "size_vram_mb": 2601
+       }
+      ]
+     },
+     {
+      "when": "after warm-up",
+      "models": [
+       {
+        "name": "ministral-3:3b",
+        "size_mb": 2601,
+        "size_vram_mb": 2601
+       }
+      ]
+     },
+     {
+      "when": "after the arm's last prompt",
+      "models": [
+       {
+        "name": "ministral-3:3b",
+        "size_mb": 2601,
+        "size_vram_mb": 2601
+       }
+      ]
+     }
+    ],
+    "idle-none": [
+     {
+      "when": "before warm-up",
+      "models": [
+       {
+        "name": "ministral-3:3b",
+        "size_mb": 2601,
+        "size_vram_mb": 2601
+       }
+      ]
+     },
+     {
+      "when": "after warm-up",
+      "models": [
+       {
+        "name": "ministral-3:3b",
+        "size_mb": 2601,
+        "size_vram_mb": 2601
+       }
+      ]
+     },
+     {
+      "when": "after the arm's last prompt",
+      "models": [
+       {
+        "name": "ministral-3:3b",
+        "size_mb": 2601,
+        "size_vram_mb": 2601
+       }
+      ]
+     }
+    ]
+   },
+   "warnings": [],
+   "started_utc": "2026-11-10T02:49:52Z",
+   "finished_utc": "2026-11-10T02:53:44Z",
+   "idle_on": {
+    "n": 389,
+    "correct": 289,
+    "accuracy": 74.3,
+    "raw": 74.293059125964,
+    "outcomes": {
+     "Correct": 289,
+     "ContainedByGuard": 11,
+     "WrongLegalAction": 74,
+     "RejectedWhenActionExpected": 15
+    },
+    "categories": {
+     "command_with_target": {
+      "correct": 66,
+      "n": 66,
+      "pct": 100.0,
+      "raw": 100.0
+     },
+     "conversation": {
+      "correct": 45,
+      "n": 64,
+      "pct": 70.3,
+      "raw": 70.3125
+     },
+     "event": {
+      "correct": 40,
+      "n": 65,
+      "pct": 61.5,
+      "raw": 61.53846153846154
+     },
+     "impossible_request": {
+      "correct": 44,
+      "n": 64,
+      "pct": 68.8,
+      "raw": 68.75
+     },
+     "simple_command": {
+      "correct": 63,
+      "n": 65,
+      "pct": 96.9,
+      "raw": 96.92307692307692
+     },
+     "situation": {
+      "correct": 31,
+      "n": 65,
+      "pct": 47.7,
+      "raw": 47.69230769230769
+     }
+    },
+    "stop_following": {
+     "correct": 46,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 64,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 0,
+     "n": 233
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 0,
+     "empty": 0,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 0
+    },
+    "reply_flagged": [],
+    "latency_s": {
+     "median": 0.281,
+     "p90": 0.313
+    },
+    "pipeline_errors": []
+   },
+   "idle_off": {
+    "n": 389,
+    "correct": 277,
+    "accuracy": 71.2,
+    "raw": 71.2082262210797,
+    "outcomes": {
+     "Correct": 277,
+     "ContainedByGuard": 15,
+     "WrongLegalAction": 83,
+     "RejectedWhenActionExpected": 14
+    },
+    "categories": {
+     "command_with_target": {
+      "correct": 66,
+      "n": 66,
+      "pct": 100.0,
+      "raw": 100.0
+     },
+     "conversation": {
+      "correct": 44,
+      "n": 64,
+      "pct": 68.8,
+      "raw": 68.75
+     },
+     "event": {
+      "correct": 36,
+      "n": 65,
+      "pct": 55.4,
+      "raw": 55.38461538461539
+     },
+     "impossible_request": {
+      "correct": 37,
+      "n": 64,
+      "pct": 57.8,
+      "raw": 57.8125
+     },
+     "simple_command": {
+      "correct": 62,
+      "n": 65,
+      "pct": 95.4,
+      "raw": 95.38461538461539
+     },
+     "situation": {
+      "correct": 32,
+      "n": 65,
+      "pct": 49.2,
+      "raw": 49.23076923076923
+     }
+    },
+    "stop_following": {
+     "correct": 46,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 80,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 0,
+     "n": 233
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 0,
+     "empty": 0,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 0
+    },
+    "reply_flagged": [],
+    "latency_s": {
+     "median": 0.284,
+     "p90": 0.321
+    },
+    "pipeline_errors": []
+   },
+   "idle_off_minus_on": {
+    "delta": -3.1,
+    "floor": 3.6,
+    "verdict": "within noise"
+   },
+   "idle_off_minus_on_by_category": {
+    "command_with_target": {
+     "delta": 0.0,
+     "floor": 8.7,
+     "verdict": "within noise"
+    },
+    "conversation": {
+     "delta": -1.6,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "event": {
+     "delta": -6.2,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "impossible_request": {
+     "delta": -10.9,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "simple_command": {
+     "delta": -1.5,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "situation": {
+     "delta": 1.5,
+     "floor": 8.8,
+     "verdict": "within noise"
+    }
+   },
+   "compared": {
+    "idle_on": {
+     "correct": 65,
+     "n": 76,
+     "accuracy": 85.5
+    },
+    "idle_off": {
+     "correct": 61,
+     "n": 76,
+     "accuracy": 80.3
+    }
+   },
+   "default_vs_baseline": {
+    "delta": 6.7,
+    "floor": 3.6,
+    "verdict": "beyond noise"
+   },
+   "default_vs_baseline_by_category": {
+    "command_with_target": {
+     "delta": 6.1,
+     "floor": 8.7,
+     "verdict": "within noise"
+    },
+    "conversation": {
+     "delta": 0.0,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "event": {
+     "delta": 1.5,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "impossible_request": {
+     "delta": 4.7,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "simple_command": {
+     "delta": 24.6,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "situation": {
+     "delta": 3.1,
+     "floor": 8.8,
+     "verdict": "within noise"
+    }
+   }
+  },
+  {
+   "model": "nemotron-3-nano:4b",
+   "server": "http://192.168.1.129:11436",
+   "ollama_version": "0.40.14",
+   "template": "",
+   "order_kept": "2/2",
+   "order_ok": true,
+   "probe_errors": 0,
+   "thinking_replies": 0,
+   "probe_eval_counts": [
+    31,
+    29
+   ],
+   "probe_resident": [
+    {
+     "name": "nemotron-3-nano:4b",
+     "size_mb": 2693,
+     "size_vram_mb": 2693,
+     "context_length": 4096
+    }
+   ],
+   "residency": {
+    "idle-profile": [
+     {
+      "when": "before warm-up",
+      "models": [
+       {
+        "name": "nemotron-3-nano:4b",
+        "size_mb": 2693,
+        "size_vram_mb": 2693
+       }
+      ]
+     },
+     {
+      "when": "after warm-up",
+      "models": [
+       {
+        "name": "nemotron-3-nano:4b",
+        "size_mb": 2693,
+        "size_vram_mb": 2693
+       }
+      ]
+     },
+     {
+      "when": "after the arm's last prompt",
+      "models": [
+       {
+        "name": "nemotron-3-nano:4b",
+        "size_mb": 2693,
+        "size_vram_mb": 2693
+       }
+      ]
+     }
+    ],
+    "idle-none": [
+     {
+      "when": "before warm-up",
+      "models": [
+       {
+        "name": "nemotron-3-nano:4b",
+        "size_mb": 2693,
+        "size_vram_mb": 2693
+       }
+      ]
+     },
+     {
+      "when": "after warm-up",
+      "models": [
+       {
+        "name": "nemotron-3-nano:4b",
+        "size_mb": 2693,
+        "size_vram_mb": 2693
+       }
+      ]
+     },
+     {
+      "when": "after the arm's last prompt",
+      "models": [
+       {
+        "name": "nemotron-3-nano:4b",
+        "size_mb": 2693,
+        "size_vram_mb": 2693
+       }
+      ]
+     }
+    ]
+   },
+   "warnings": [],
+   "started_utc": "2026-11-10T02:32:23Z",
+   "finished_utc": "2026-11-10T02:37:07Z",
+   "idle_on": {
+    "n": 389,
+    "correct": 304,
+    "accuracy": 78.1,
+    "raw": 78.1491002570694,
+    "outcomes": {
+     "Correct": 304,
+     "RejectedWhenActionExpected": 13,
+     "WrongLegalAction": 62,
+     "ContainedByGuard": 10
+    },
+    "categories": {
+     "command_with_target": {
+      "correct": 66,
+      "n": 66,
+      "pct": 100.0,
+      "raw": 100.0
+     },
+     "conversation": {
+      "correct": 53,
+      "n": 64,
+      "pct": 82.8,
+      "raw": 82.8125
+     },
+     "event": {
+      "correct": 46,
+      "n": 65,
+      "pct": 70.8,
+      "raw": 70.76923076923077
+     },
+     "impossible_request": {
+      "correct": 35,
+      "n": 64,
+      "pct": 54.7,
+      "raw": 54.6875
+     },
+     "simple_command": {
+      "correct": 62,
+      "n": 65,
+      "pct": 95.4,
+      "raw": 95.38461538461539
+     },
+     "situation": {
+      "correct": 42,
+      "n": 65,
+      "pct": 64.6,
+      "raw": 64.61538461538461
+     }
+    },
+    "stop_following": {
+     "correct": 44,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 43,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 14,
+     "n": 233
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 2,
+     "empty": 0,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 2
+    },
+    "reply_flagged": [
+     {
+      "prompt": "int_situation_031",
+      "statement": "Go and stand by the docks.",
+      "flags": [
+       "Echo: move_to's example \"Go and stand by the {0}.\""
+      ]
+     },
+     {
+      "prompt": "int_event_041",
+      "statement": "Strike the wolf.",
+      "flags": [
+       "Echo: attack_target's example \"Strike the {0}.\""
+      ]
+     }
+    ],
+    "latency_s": {
+     "median": 0.346,
+     "p90": 0.38
+    },
+    "pipeline_errors": []
+   },
+   "idle_off": {
+    "n": 389,
+    "correct": 278,
+    "accuracy": 71.5,
+    "raw": 71.46529562982005,
+    "outcomes": {
+     "Correct": 278,
+     "RejectedWhenActionExpected": 16,
+     "WrongLegalAction": 81,
+     "ContainedByGuard": 14
+    },
+    "categories": {
+     "command_with_target": {
+      "correct": 66,
+      "n": 66,
+      "pct": 100.0,
+      "raw": 100.0
+     },
+     "conversation": {
+      "correct": 49,
+      "n": 64,
+      "pct": 76.6,
+      "raw": 76.5625
+     },
+     "event": {
+      "correct": 40,
+      "n": 65,
+      "pct": 61.5,
+      "raw": 61.53846153846154
+     },
+     "impossible_request": {
+      "correct": 27,
+      "n": 64,
+      "pct": 42.2,
+      "raw": 42.1875
+     },
+     "simple_command": {
+      "correct": 62,
+      "n": 65,
+      "pct": 95.4,
+      "raw": 95.38461538461539
+     },
+     "situation": {
+      "correct": 34,
+      "n": 65,
+      "pct": 52.3,
+      "raw": 52.30769230769231
+     }
+    },
+    "stop_following": {
+     "correct": 44,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 69,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 8,
+     "n": 233
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 2,
+     "empty": 0,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 2
+    },
+    "reply_flagged": [
+     {
+      "prompt": "int_situation_031",
+      "statement": "Go and stand by the docks.",
+      "flags": [
+       "Echo: move_to's example \"Go and stand by the {0}.\""
+      ]
+     },
+     {
+      "prompt": "int_event_041",
+      "statement": "Strike the wolf.",
+      "flags": [
+       "Echo: attack_target's example \"Strike the {0}.\""
+      ]
+     }
+    ],
+    "latency_s": {
+     "median": 0.35,
+     "p90": 0.394
+    },
+    "pipeline_errors": []
+   },
+   "idle_off_minus_on": {
+    "delta": -6.7,
+    "floor": 3.6,
+    "verdict": "beyond noise"
+   },
+   "idle_off_minus_on_by_category": {
+    "command_with_target": {
+     "delta": 0.0,
+     "floor": 8.7,
+     "verdict": "within noise"
+    },
+    "conversation": {
+     "delta": -6.2,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "event": {
+     "delta": -9.2,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "impossible_request": {
+     "delta": -12.5,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "simple_command": {
+     "delta": 0.0,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "situation": {
+     "delta": -12.3,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    }
+   },
+   "compared": {
+    "idle_on": {
+     "correct": 60,
+     "n": 76,
+     "accuracy": 78.9
+    },
+    "idle_off": {
+     "correct": 63,
+     "n": 76,
+     "accuracy": 82.9
+    }
+   },
+   "default_vs_baseline": {
+    "delta": 10.5,
+    "floor": 3.6,
+    "verdict": "beyond noise"
+   },
+   "default_vs_baseline_by_category": {
+    "command_with_target": {
+     "delta": 6.1,
+     "floor": 8.7,
+     "verdict": "within noise"
+    },
+    "conversation": {
+     "delta": 12.5,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "event": {
+     "delta": 10.8,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "impossible_request": {
+     "delta": -9.4,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "simple_command": {
+     "delta": 23.1,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "situation": {
+     "delta": 20.0,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    }
+   }
+  },
+  {
+   "model": "phi4-mini:latest",
+   "server": "http://192.168.1.129:11436",
+   "ollama_version": "0.40.14",
+   "template": "",
+   "order_kept": "2/2",
+   "order_ok": true,
+   "probe_errors": 0,
+   "thinking_replies": 0,
+   "probe_eval_counts": [
+    27,
+    29
+   ],
+   "probe_resident": [
+    {
+     "name": "phi4-mini:latest",
+     "size_mb": 2956,
+     "size_vram_mb": 2956,
+     "context_length": 4096
+    }
+   ],
+   "residency": {
+    "idle-profile": [
+     {
+      "when": "before warm-up",
+      "models": [
+       {
+        "name": "phi4-mini:latest",
+        "size_mb": 2956,
+        "size_vram_mb": 2956
+       }
+      ]
+     },
+     {
+      "when": "after warm-up",
+      "models": [
+       {
+        "name": "phi4-mini:latest",
+        "size_mb": 2956,
+        "size_vram_mb": 2956
+       }
+      ]
+     },
+     {
+      "when": "after the arm's last prompt",
+      "models": [
+       {
+        "name": "phi4-mini:latest",
+        "size_mb": 2956,
+        "size_vram_mb": 2956
+       }
+      ]
+     }
+    ],
+    "idle-none": [
+     {
+      "when": "before warm-up",
+      "models": [
+       {
+        "name": "phi4-mini:latest",
+        "size_mb": 2956,
+        "size_vram_mb": 2956
+       }
+      ]
+     },
+     {
+      "when": "after warm-up",
+      "models": [
+       {
+        "name": "phi4-mini:latest",
+        "size_mb": 2956,
+        "size_vram_mb": 2956
+       }
+      ]
+     },
+     {
+      "when": "after the arm's last prompt",
+      "models": [
+       {
+        "name": "phi4-mini:latest",
+        "size_mb": 2956,
+        "size_vram_mb": 2956
+       }
+      ]
+     }
+    ]
+   },
+   "warnings": [],
+   "started_utc": "2026-11-10T02:54:20Z",
+   "finished_utc": "2026-11-10T02:58:33Z",
+   "idle_on": {
+    "n": 389,
+    "correct": 290,
+    "accuracy": 74.6,
+    "raw": 74.55012853470437,
+    "outcomes": {
+     "Correct": 290,
+     "WrongLegalAction": 73,
+     "ContainedByGuard": 4,
+     "RejectedWhenActionExpected": 22
+    },
+    "categories": {
+     "command_with_target": {
+      "correct": 59,
+      "n": 66,
+      "pct": 89.4,
+      "raw": 89.39393939393939
+     },
+     "conversation": {
+      "correct": 51,
+      "n": 64,
+      "pct": 79.7,
+      "raw": 79.6875
+     },
+     "event": {
+      "correct": 38,
+      "n": 65,
+      "pct": 58.5,
+      "raw": 58.46153846153846
+     },
+     "impossible_request": {
+      "correct": 53,
+      "n": 64,
+      "pct": 82.8,
+      "raw": 82.8125
+     },
+     "simple_command": {
+      "correct": 62,
+      "n": 65,
+      "pct": 95.4,
+      "raw": 95.38461538461539
+     },
+     "situation": {
+      "correct": 27,
+      "n": 65,
+      "pct": 41.5,
+      "raw": 41.53846153846154
+     }
+    },
+    "stop_following": {
+     "correct": 48,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 36,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 4,
+     "n": 233
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 2,
+     "empty": 0,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 2
+    },
+    "reply_flagged": [
+     {
+      "prompt": "int_situation_039",
+      "statement": "Go and stand by the village gate.",
+      "flags": [
+       "Echo: move_to's example \"Go and stand by the {0}.\""
+      ]
+     },
+     {
+      "prompt": "int_situation_047",
+      "statement": "Go and stand by the wolf.",
+      "flags": [
+       "Echo: move_to's example \"Go and stand by the {0}.\""
+      ]
+     }
+    ],
+    "latency_s": {
+     "median": 0.311,
+     "p90": 0.353
+    },
+    "pipeline_errors": []
+   },
+   "idle_off": {
+    "n": 389,
+    "correct": 255,
+    "accuracy": 65.6,
+    "raw": 65.55269922879178,
+    "outcomes": {
+     "Correct": 255,
+     "WrongLegalAction": 102,
+     "ContainedByGuard": 10,
+     "RejectedWhenActionExpected": 22
+    },
+    "categories": {
+     "command_with_target": {
+      "correct": 58,
+      "n": 66,
+      "pct": 87.9,
+      "raw": 87.87878787878788
+     },
+     "conversation": {
+      "correct": 35,
+      "n": 64,
+      "pct": 54.7,
+      "raw": 54.6875
+     },
+     "event": {
+      "correct": 34,
+      "n": 65,
+      "pct": 52.3,
+      "raw": 52.30769230769231
+     },
+     "impossible_request": {
+      "correct": 45,
+      "n": 64,
+      "pct": 70.3,
+      "raw": 70.3125
+     },
+     "simple_command": {
+      "correct": 60,
+      "n": 65,
+      "pct": 92.3,
+      "raw": 92.3076923076923
+     },
+     "situation": {
+      "correct": 23,
+      "n": 65,
+      "pct": 35.4,
+      "raw": 35.38461538461539
+     }
+    },
+    "stop_following": {
+     "correct": 47,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 74,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 1,
+     "n": 233
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 3,
+     "empty": 0,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 3
+    },
+    "reply_flagged": [
+     {
+      "prompt": "int_impossible_031",
+      "statement": "Go and stand by the locked cave.",
+      "flags": [
+       "Echo: move_to's example \"Go and stand by the {0}.\""
+      ]
+     },
+     {
+      "prompt": "int_situation_039",
+      "statement": "Go and stand by the village gate.",
+      "flags": [
+       "Echo: move_to's example \"Go and stand by the {0}.\""
+      ]
+     },
+     {
+      "prompt": "int_situation_047",
+      "statement": "Go and stand by the wolf.",
+      "flags": [
+       "Echo: move_to's example \"Go and stand by the {0}.\""
+      ]
+     }
+    ],
+    "latency_s": {
+     "median": 0.32,
+     "p90": 0.357
+    },
+    "pipeline_errors": []
+   },
+   "idle_off_minus_on": {
+    "delta": -9.0,
+    "floor": 3.6,
+    "verdict": "beyond noise"
+   },
+   "idle_off_minus_on_by_category": {
+    "command_with_target": {
+     "delta": -1.5,
+     "floor": 8.7,
+     "verdict": "within noise"
+    },
+    "conversation": {
+     "delta": -25.0,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "event": {
+     "delta": -6.2,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "impossible_request": {
+     "delta": -12.5,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "simple_command": {
+     "delta": -3.1,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "situation": {
+     "delta": -6.2,
+     "floor": 8.8,
+     "verdict": "within noise"
+    }
+   },
+   "compared": {
+    "idle_on": {
+     "correct": 57,
+     "n": 76,
+     "accuracy": 75.0
+    },
+    "idle_off": {
+     "correct": 56,
+     "n": 76,
+     "accuracy": 73.7
+    }
+   },
+   "default_vs_baseline": {
+    "delta": 6.9,
+    "floor": 3.6,
+    "verdict": "beyond noise"
+   },
+   "default_vs_baseline_by_category": {
+    "command_with_target": {
+     "delta": -4.5,
+     "floor": 8.7,
+     "verdict": "within noise"
+    },
+    "conversation": {
+     "delta": 9.4,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "event": {
+     "delta": -1.5,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "impossible_request": {
+     "delta": 18.8,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "simple_command": {
+     "delta": 23.1,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "situation": {
+     "delta": -3.1,
+     "floor": 8.8,
+     "verdict": "within noise"
+    }
+   }
+  },
+  {
+   "model": "qwen3.5:2b",
+   "server": "http://192.168.1.129:11436",
+   "ollama_version": "0.40.14",
+   "template": "",
+   "order_kept": "2/2",
+   "order_ok": true,
+   "probe_errors": 0,
+   "thinking_replies": 0,
+   "probe_eval_counts": [
+    31,
+    27
+   ],
+   "probe_resident": [
+    {
+     "name": "qwen3.5:2b",
+     "size_mb": 2254,
+     "size_vram_mb": 2254,
+     "context_length": 4096
+    }
+   ],
+   "residency": {
+    "idle-profile": [
+     {
+      "when": "before warm-up",
+      "models": [
+       {
+        "name": "qwen3.5:2b",
+        "size_mb": 2254,
+        "size_vram_mb": 2254
+       }
+      ]
+     },
+     {
+      "when": "after warm-up",
+      "models": [
+       {
+        "name": "qwen3.5:2b",
+        "size_mb": 2254,
+        "size_vram_mb": 2254
+       }
+      ]
+     },
+     {
+      "when": "after the arm's last prompt",
+      "models": [
+       {
+        "name": "qwen3.5:2b",
+        "size_mb": 2254,
+        "size_vram_mb": 2254
+       }
+      ]
+     }
+    ],
+    "idle-none": [
+     {
+      "when": "before warm-up",
+      "models": [
+       {
+        "name": "qwen3.5:2b",
+        "size_mb": 2254,
+        "size_vram_mb": 2254
+       }
+      ]
+     },
+     {
+      "when": "after warm-up",
+      "models": [
+       {
+        "name": "qwen3.5:2b",
+        "size_mb": 2254,
+        "size_vram_mb": 2254
+       }
+      ]
+     },
+     {
+      "when": "after the arm's last prompt",
+      "models": [
+       {
+        "name": "qwen3.5:2b",
+        "size_mb": 2254,
+        "size_vram_mb": 2254
+       }
+      ]
+     }
+    ]
+   },
+   "warnings": [],
+   "started_utc": "2026-11-10T01:49:46Z",
+   "finished_utc": "2026-11-10T01:54:43Z",
+   "idle_on": {
+    "n": 389,
+    "correct": 263,
+    "accuracy": 67.6,
+    "raw": 67.60925449871465,
+    "outcomes": {
+     "Correct": 263,
+     "WrongLegalAction": 93,
+     "RejectedWhenActionExpected": 22,
+     "ContainedByGuard": 11
+    },
+    "categories": {
+     "command_with_target": {
+      "correct": 62,
+      "n": 66,
+      "pct": 93.9,
+      "raw": 93.93939393939394
+     },
+     "conversation": {
+      "correct": 45,
+      "n": 64,
+      "pct": 70.3,
+      "raw": 70.3125
+     },
+     "event": {
+      "correct": 39,
+      "n": 65,
+      "pct": 60.0,
+      "raw": 60.0
+     },
+     "impossible_request": {
+      "correct": 41,
+      "n": 64,
+      "pct": 64.1,
+      "raw": 64.0625
+     },
+     "simple_command": {
+      "correct": 47,
+      "n": 65,
+      "pct": 72.3,
+      "raw": 72.3076923076923
+     },
+     "situation": {
+      "correct": 29,
+      "n": 65,
+      "pct": 44.6,
+      "raw": 44.61538461538461
+     }
+    },
+    "stop_following": {
+     "correct": 22,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 50,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 36,
+     "n": 233
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 13,
+     "empty": 0,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 13
+    },
+    "reply_flagged": [
+     {
+      "prompt": "int_simple_028",
+      "statement": "You can stay put now.",
+      "flags": [
+       "Echo: stop_following's example \"You can stay put now.\""
+      ]
+     },
+     {
+      "prompt": "int_simple_057",
+      "statement": "Fine day for it.",
+      "flags": [
+       "Echo: the profile's idle example \"Fine day for it.\""
+      ]
+     },
+     {
+      "prompt": "int_conversation_018",
+      "statement": "Strike the Wolf.",
+      "flags": [
+       "Echo: attack_target's example \"Strike the {0}.\""
+      ]
+     },
+     {
+      "prompt": "int_conversation_026",
+      "statement": "You can stay put now.",
+      "flags": [
+       "Echo: stop_following's example \"You can stay put now.\""
+      ]
+     },
+     {
+      "prompt": "int_situation_043",
+      "statement": "Strike the Wolf.",
+      "flags": [
+       "Echo: attack_target's example \"Strike the {0}.\""
+      ]
+     },
+     {
+      "prompt": "int_event_013",
+      "statement": "You can stay put now.",
+      "flags": [
+       "Echo: stop_following's example \"You can stay put now.\""
+      ]
+     },
+     {
+      "prompt": "int_event_014",
+      "statement": "You can stay put now.",
+      "flags": [
+       "Echo: stop_following's example \"You can stay put now.\""
+      ]
+     },
+     {
+      "prompt": "int_event_037",
+      "statement": "Strike the Wolf.",
+      "flags": [
+       "Echo: attack_target's example \"Strike the {0}.\""
+      ]
+     },
+     {
+      "prompt": "int_event_041",
+      "statement": "Strike the Wolf.",
+      "flags": [
+       "Echo: attack_target's example \"Strike the {0}.\""
+      ]
+     },
+     {
+      "prompt": "int_event_045",
+      "statement": "Strike the Wolf.",
+      "flags": [
+       "Echo: attack_target's example \"Strike the {0}.\""
+      ]
+     },
+     {
+      "prompt": "int_event_050",
+      "statement": "Strike the Wolf.",
+      "flags": [
+       "Echo: attack_target's example \"Strike the {0}.\""
+      ]
+     },
+     {
+      "prompt": "int_event_062",
+      "statement": "You can stay put now.",
+      "flags": [
+       "Echo: stop_following's example \"You can stay put now.\""
+      ]
+     },
+     {
+      "prompt": "int_event_063",
+      "statement": "You can stay put now.",
+      "flags": [
+       "Echo: stop_following's example \"You can stay put now.\""
+      ]
+     }
+    ],
+    "latency_s": {
+     "median": 0.371,
+     "p90": 0.421
+    },
+    "pipeline_errors": []
+   },
+   "idle_off": {
+    "n": 389,
+    "correct": 281,
+    "accuracy": 72.2,
+    "raw": 72.23650385604113,
+    "outcomes": {
+     "Correct": 281,
+     "WrongLegalAction": 78,
+     "RejectedWhenActionExpected": 23,
+     "ContainedByGuard": 7
+    },
+    "categories": {
+     "command_with_target": {
+      "correct": 60,
+      "n": 66,
+      "pct": 90.9,
+      "raw": 90.9090909090909
+     },
+     "conversation": {
+      "correct": 45,
+      "n": 64,
+      "pct": 70.3,
+      "raw": 70.3125
+     },
+     "event": {
+      "correct": 39,
+      "n": 65,
+      "pct": 60.0,
+      "raw": 60.0
+     },
+     "impossible_request": {
+      "correct": 47,
+      "n": 64,
+      "pct": 73.4,
+      "raw": 73.4375
+     },
+     "simple_command": {
+      "correct": 57,
+      "n": 65,
+      "pct": 87.7,
+      "raw": 87.6923076923077
+     },
+     "situation": {
+      "correct": 33,
+      "n": 65,
+      "pct": 50.8,
+      "raw": 50.76923076923077
+     }
+    },
+    "stop_following": {
+     "correct": 39,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 48,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 22,
+     "n": 233
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 7,
+     "empty": 0,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 7
+    },
+    "reply_flagged": [
+     {
+      "prompt": "int_event_013",
+      "statement": "You can stay put now.",
+      "flags": [
+       "Echo: stop_following's example \"You can stay put now.\""
+      ]
+     },
+     {
+      "prompt": "int_event_014",
+      "statement": "You can stay put now.",
+      "flags": [
+       "Echo: stop_following's example \"You can stay put now.\""
+      ]
+     },
+     {
+      "prompt": "int_event_037",
+      "statement": "Strike the Wolf.",
+      "flags": [
+       "Echo: attack_target's example \"Strike the {0}.\""
+      ]
+     },
+     {
+      "prompt": "int_event_041",
+      "statement": "Strike the Wolf.",
+      "flags": [
+       "Echo: attack_target's example \"Strike the {0}.\""
+      ]
+     },
+     {
+      "prompt": "int_event_045",
+      "statement": "Strike the Wolf.",
+      "flags": [
+       "Echo: attack_target's example \"Strike the {0}.\""
+      ]
+     },
+     {
+      "prompt": "int_event_050",
+      "statement": "Strike the Wolf.",
+      "flags": [
+       "Echo: attack_target's example \"Strike the {0}.\""
+      ]
+     },
+     {
+      "prompt": "int_event_063",
+      "statement": "You can stay put now.",
+      "flags": [
+       "Echo: stop_following's example \"You can stay put now.\""
+      ]
+     }
+    ],
+    "latency_s": {
+     "median": 0.367,
+     "p90": 0.423
+    },
+    "pipeline_errors": []
+   },
+   "idle_off_minus_on": {
+    "delta": 4.6,
+    "floor": 3.6,
+    "verdict": "beyond noise"
+   },
+   "idle_off_minus_on_by_category": {
+    "command_with_target": {
+     "delta": -3.0,
+     "floor": 8.7,
+     "verdict": "within noise"
+    },
+    "conversation": {
+     "delta": 0.0,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "event": {
+     "delta": 0.0,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "impossible_request": {
+     "delta": 9.4,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "simple_command": {
+     "delta": 15.4,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "situation": {
+     "delta": 6.2,
+     "floor": 8.8,
+     "verdict": "within noise"
+    }
+   },
+   "compared": {
+    "idle_on": {
+     "correct": 56,
+     "n": 76,
+     "accuracy": 73.7
+    },
+    "idle_off": {
+     "correct": 59,
+     "n": 76,
+     "accuracy": 77.6
+    }
+   }
+  },
+  {
+   "model": "qwen3.5:4b",
+   "server": "http://192.168.1.129:11436",
+   "ollama_version": "0.40.14",
+   "template": "",
+   "order_kept": "2/2",
+   "order_ok": true,
+   "probe_errors": 0,
+   "thinking_replies": 0,
+   "probe_eval_counts": [
+    31,
+    36
+   ],
+   "probe_resident": [
+    {
+     "name": "qwen3.5:4b",
+     "size_mb": 2995,
+     "size_vram_mb": 2995,
+     "context_length": 4096
+    }
+   ],
+   "residency": {
+    "idle-profile": [
+     {
+      "when": "before warm-up",
+      "models": [
+       {
+        "name": "qwen3.5:4b",
+        "size_mb": 2995,
+        "size_vram_mb": 2995
+       }
+      ]
+     },
+     {
+      "when": "after warm-up",
+      "models": [
+       {
+        "name": "qwen3.5:4b",
+        "size_mb": 2995,
+        "size_vram_mb": 2995
+       }
+      ]
+     },
+     {
+      "when": "after the arm's last prompt",
+      "models": [
+       {
+        "name": "qwen3.5:4b",
+        "size_mb": 2995,
+        "size_vram_mb": 2995
+       }
+      ]
+     }
+    ],
+    "idle-none": [
+     {
+      "when": "before warm-up",
+      "models": [
+       {
+        "name": "qwen3.5:4b",
+        "size_mb": 2995,
+        "size_vram_mb": 2995
+       }
+      ]
+     },
+     {
+      "when": "after warm-up",
+      "models": [
+       {
+        "name": "qwen3.5:4b",
+        "size_mb": 2995,
+        "size_vram_mb": 2995
+       }
+      ]
+     },
+     {
+      "when": "after the arm's last prompt",
+      "models": [
+       {
+        "name": "qwen3.5:4b",
+        "size_mb": 2995,
+        "size_vram_mb": 2995
+       }
+      ]
+     }
+    ]
+   },
+   "warnings": [],
+   "started_utc": "2026-11-10T02:16:17Z",
+   "finished_utc": "2026-11-10T02:23:04Z",
+   "idle_on": {
+    "n": 389,
+    "correct": 330,
+    "accuracy": 84.8,
+    "raw": 84.83290488431876,
+    "outcomes": {
+     "Correct": 330,
+     "WrongLegalAction": 49,
+     "ContainedByGuard": 4,
+     "RejectedWhenActionExpected": 6
+    },
+    "categories": {
+     "command_with_target": {
+      "correct": 66,
+      "n": 66,
+      "pct": 100.0,
+      "raw": 100.0
+     },
+     "conversation": {
+      "correct": 60,
+      "n": 64,
+      "pct": 93.8,
+      "raw": 93.75
+     },
+     "event": {
+      "correct": 51,
+      "n": 65,
+      "pct": 78.5,
+      "raw": 78.46153846153847
+     },
+     "impossible_request": {
+      "correct": 49,
+      "n": 64,
+      "pct": 76.6,
+      "raw": 76.5625
+     },
+     "simple_command": {
+      "correct": 64,
+      "n": 65,
+      "pct": 98.5,
+      "raw": 98.46153846153847
+     },
+     "situation": {
+      "correct": 40,
+      "n": 65,
+      "pct": 61.5,
+      "raw": 61.53846153846154
+     }
+    },
+    "stop_following": {
+     "correct": 44,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 23,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 12,
+     "n": 233
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 0,
+     "empty": 0,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 0
+    },
+    "reply_flagged": [],
+    "latency_s": {
+     "median": 0.505,
+     "p90": 0.558
+    },
+    "pipeline_errors": []
+   },
+   "idle_off": {
+    "n": 389,
+    "correct": 292,
+    "accuracy": 75.1,
+    "raw": 75.06426735218508,
+    "outcomes": {
+     "Correct": 292,
+     "WrongLegalAction": 88,
+     "ContainedByGuard": 3,
+     "RejectedWhenActionExpected": 6
+    },
+    "categories": {
+     "command_with_target": {
+      "correct": 66,
+      "n": 66,
+      "pct": 100.0,
+      "raw": 100.0
+     },
+     "conversation": {
+      "correct": 48,
+      "n": 64,
+      "pct": 75.0,
+      "raw": 75.0
+     },
+     "event": {
+      "correct": 43,
+      "n": 65,
+      "pct": 66.2,
+      "raw": 66.15384615384616
+     },
+     "impossible_request": {
+      "correct": 41,
+      "n": 64,
+      "pct": 64.1,
+      "raw": 64.0625
+     },
+     "simple_command": {
+      "correct": 57,
+      "n": 65,
+      "pct": 87.7,
+      "raw": 87.6923076923077
+     },
+     "situation": {
+      "correct": 37,
+      "n": 65,
+      "pct": 56.9,
+      "raw": 56.92307692307692
+     }
+    },
+    "stop_following": {
+     "correct": 45,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 67,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 3,
+     "n": 233
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 0,
+     "empty": 0,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 0
+    },
+    "reply_flagged": [],
+    "latency_s": {
+     "median": 0.505,
+     "p90": 0.565
+    },
+    "pipeline_errors": []
+   },
+   "idle_off_minus_on": {
+    "delta": -9.8,
+    "floor": 3.6,
+    "verdict": "beyond noise"
+   },
+   "idle_off_minus_on_by_category": {
+    "command_with_target": {
+     "delta": 0.0,
+     "floor": 8.7,
+     "verdict": "within noise"
+    },
+    "conversation": {
+     "delta": -18.8,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "event": {
+     "delta": -12.3,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "impossible_request": {
+     "delta": -12.5,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "simple_command": {
+     "delta": -10.8,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "situation": {
+     "delta": -4.6,
+     "floor": 8.8,
+     "verdict": "within noise"
+    }
+   },
+   "compared": {
+    "idle_on": {
+     "correct": 70,
+     "n": 76,
+     "accuracy": 92.1
+    },
+    "idle_off": {
+     "correct": 66,
+     "n": 76,
+     "accuracy": 86.8
+    }
+   },
+   "default_vs_baseline": {
+    "delta": 17.2,
+    "floor": 3.6,
+    "verdict": "beyond noise"
+   },
+   "default_vs_baseline_by_category": {
+    "command_with_target": {
+     "delta": 6.1,
+     "floor": 8.7,
+     "verdict": "within noise"
+    },
+    "conversation": {
+     "delta": 23.4,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "event": {
+     "delta": 18.5,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "impossible_request": {
+     "delta": 12.5,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "simple_command": {
+     "delta": 26.2,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "situation": {
+     "delta": 16.9,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    }
+   }
+  },
+  {
+   "model": "qwen3:4b-instruct-2507-q4_K_M",
+   "server": "http://192.168.1.129:11436",
+   "ollama_version": "0.40.14",
+   "template": "",
+   "order_kept": "2/2",
+   "order_ok": true,
+   "probe_errors": 0,
+   "thinking_replies": 0,
+   "probe_eval_counts": [
+    31,
+    30
+   ],
+   "probe_resident": [
+    {
+     "name": "qwen3:4b-instruct-2507-q4_K_M",
+     "size_mb": 3032,
+     "size_vram_mb": 3032,
+     "context_length": 4096
+    }
+   ],
+   "residency": {
+    "idle-profile": [
+     {
+      "when": "before warm-up",
+      "models": [
+       {
+        "name": "qwen3:4b-instruct-2507-q4_K_M",
+        "size_mb": 3032,
+        "size_vram_mb": 3032
+       }
+      ]
+     },
+     {
+      "when": "after warm-up",
+      "models": [
+       {
+        "name": "qwen3:4b-instruct-2507-q4_K_M",
+        "size_mb": 3032,
+        "size_vram_mb": 3032
+       }
+      ]
+     },
+     {
+      "when": "after the arm's last prompt",
+      "models": [
+       {
+        "name": "qwen3:4b-instruct-2507-q4_K_M",
+        "size_mb": 3032,
+        "size_vram_mb": 3032
+       }
+      ]
+     }
+    ],
+    "idle-none": [
+     {
+      "when": "before warm-up",
+      "models": [
+       {
+        "name": "qwen3:4b-instruct-2507-q4_K_M",
+        "size_mb": 3032,
+        "size_vram_mb": 3032
+       }
+      ]
+     },
+     {
+      "when": "after warm-up",
+      "models": [
+       {
+        "name": "qwen3:4b-instruct-2507-q4_K_M",
+        "size_mb": 3032,
+        "size_vram_mb": 3032
+       }
+      ]
+     },
+     {
+      "when": "after the arm's last prompt",
+      "models": [
+       {
+        "name": "qwen3:4b-instruct-2507-q4_K_M",
+        "size_mb": 3032,
+        "size_vram_mb": 3032
+       }
+      ]
+     }
+    ]
+   },
+   "warnings": [],
+   "started_utc": "2026-11-10T02:23:28Z",
+   "finished_utc": "2026-11-10T02:27:55Z",
+   "idle_on": {
+    "n": 389,
+    "correct": 296,
+    "accuracy": 76.1,
+    "raw": 76.09254498714652,
+    "outcomes": {
+     "Correct": 296,
+     "WrongLegalAction": 86,
+     "ContainedByGuard": 5,
+     "RejectedWhenActionExpected": 2
+    },
+    "categories": {
+     "command_with_target": {
+      "correct": 65,
+      "n": 66,
+      "pct": 98.5,
+      "raw": 98.48484848484848
+     },
+     "conversation": {
+      "correct": 53,
+      "n": 64,
+      "pct": 82.8,
+      "raw": 82.8125
+     },
+     "event": {
+      "correct": 47,
+      "n": 65,
+      "pct": 72.3,
+      "raw": 72.3076923076923
+     },
+     "impossible_request": {
+      "correct": 31,
+      "n": 64,
+      "pct": 48.4,
+      "raw": 48.4375
+     },
+     "simple_command": {
+      "correct": 58,
+      "n": 65,
+      "pct": 89.2,
+      "raw": 89.23076923076923
+     },
+     "situation": {
+      "correct": 42,
+      "n": 65,
+      "pct": 64.6,
+      "raw": 64.61538461538461
+     }
+    },
+    "stop_following": {
+     "correct": 38,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 66,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 3,
+     "n": 233
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 0,
+     "empty": 0,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 0
+    },
+    "reply_flagged": [],
+    "latency_s": {
+     "median": 0.316,
+     "p90": 0.357
+    },
+    "pipeline_errors": []
+   },
+   "idle_off": {
+    "n": 389,
+    "correct": 268,
+    "accuracy": 68.9,
+    "raw": 68.89460154241645,
+    "outcomes": {
+     "Correct": 268,
+     "WrongLegalAction": 113,
+     "ContainedByGuard": 6,
+     "RejectedWhenActionExpected": 2
+    },
+    "categories": {
+     "command_with_target": {
+      "correct": 65,
+      "n": 66,
+      "pct": 98.5,
+      "raw": 98.48484848484848
+     },
+     "conversation": {
+      "correct": 43,
+      "n": 64,
+      "pct": 67.2,
+      "raw": 67.1875
+     },
+     "event": {
+      "correct": 45,
+      "n": 65,
+      "pct": 69.2,
+      "raw": 69.23076923076923
+     },
+     "impossible_request": {
+      "correct": 24,
+      "n": 64,
+      "pct": 37.5,
+      "raw": 37.5
+     },
+     "simple_command": {
+      "correct": 53,
+      "n": 65,
+      "pct": 81.5,
+      "raw": 81.53846153846153
+     },
+     "situation": {
+      "correct": 38,
+      "n": 65,
+      "pct": 58.5,
+      "raw": 58.46153846153846
+     }
+    },
+    "stop_following": {
+     "correct": 40,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 94,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 0,
+     "n": 233
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 0,
+     "empty": 0,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 0
+    },
+    "reply_flagged": [],
+    "latency_s": {
+     "median": 0.318,
+     "p90": 0.367
+    },
+    "pipeline_errors": []
+   },
+   "idle_off_minus_on": {
+    "delta": -7.2,
+    "floor": 3.6,
+    "verdict": "beyond noise"
+   },
+   "idle_off_minus_on_by_category": {
+    "command_with_target": {
+     "delta": 0.0,
+     "floor": 8.7,
+     "verdict": "within noise"
+    },
+    "conversation": {
+     "delta": -15.6,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "event": {
+     "delta": -3.1,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "impossible_request": {
+     "delta": -10.9,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "simple_command": {
+     "delta": -7.7,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "situation": {
+     "delta": -6.2,
+     "floor": 8.8,
+     "verdict": "within noise"
+    }
+   },
+   "compared": {
+    "idle_on": {
+     "correct": 65,
+     "n": 76,
+     "accuracy": 85.5
+    },
+    "idle_off": {
+     "correct": 56,
+     "n": 76,
+     "accuracy": 73.7
+    }
+   },
+   "default_vs_baseline": {
+    "delta": 8.5,
+    "floor": 3.6,
+    "verdict": "beyond noise"
+   },
+   "default_vs_baseline_by_category": {
+    "command_with_target": {
+     "delta": 4.5,
+     "floor": 8.7,
+     "verdict": "within noise"
+    },
+    "conversation": {
+     "delta": 12.5,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "event": {
+     "delta": 12.3,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "impossible_request": {
+     "delta": -15.6,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "simple_command": {
+     "delta": 16.9,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "situation": {
+     "delta": 20.0,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    }
+   }
+  },
+  {
+   "model": "qwen3:8b",
+   "server": "http://192.168.1.129:11436",
+   "ollama_version": "0.40.14",
+   "template": "",
+   "order_kept": "2/2",
+   "order_ok": true,
+   "probe_errors": 0,
+   "thinking_replies": 0,
+   "probe_eval_counts": [
+    29,
+    30
+   ],
+   "probe_resident": [
+    {
+     "name": "qwen3:8b",
+     "size_mb": 5327,
+     "size_vram_mb": 5327,
+     "context_length": 4096
+    }
+   ],
+   "residency": {
+    "idle-profile": [
+     {
+      "when": "before warm-up",
+      "models": [
+       {
+        "name": "qwen3:8b",
+        "size_mb": 5327,
+        "size_vram_mb": 5327
+       }
+      ]
+     },
+     {
+      "when": "after warm-up",
+      "models": [
+       {
+        "name": "qwen3:8b",
+        "size_mb": 5327,
+        "size_vram_mb": 5327
+       }
+      ]
+     },
+     {
+      "when": "after the arm's last prompt",
+      "models": [
+       {
+        "name": "qwen3:8b",
+        "size_mb": 5327,
+        "size_vram_mb": 5327
+       }
+      ]
+     }
+    ],
+    "idle-none": [
+     {
+      "when": "before warm-up",
+      "models": [
+       {
+        "name": "qwen3:8b",
+        "size_mb": 5327,
+        "size_vram_mb": 5327
+       }
+      ]
+     },
+     {
+      "when": "after warm-up",
+      "models": [
+       {
+        "name": "qwen3:8b",
+        "size_mb": 5327,
+        "size_vram_mb": 5327
+       }
+      ]
+     },
+     {
+      "when": "after the arm's last prompt",
+      "models": [
+       {
+        "name": "qwen3:8b",
+        "size_mb": 5327,
+        "size_vram_mb": 5327
+       }
+      ]
+     }
+    ]
+   },
+   "warnings": [],
+   "started_utc": "2026-11-10T03:03:00Z",
+   "finished_utc": "2026-11-10T03:08:07Z",
+   "idle_on": {
+    "n": 389,
+    "correct": 315,
+    "accuracy": 81.0,
+    "raw": 80.97686375321337,
+    "outcomes": {
+     "Correct": 315,
+     "WrongLegalAction": 59,
+     "ContainedByGuard": 6,
+     "RejectedWhenActionExpected": 9
+    },
+    "categories": {
+     "command_with_target": {
+      "correct": 66,
+      "n": 66,
+      "pct": 100.0,
+      "raw": 100.0
+     },
+     "conversation": {
+      "correct": 61,
+      "n": 64,
+      "pct": 95.3,
+      "raw": 95.3125
+     },
+     "event": {
+      "correct": 47,
+      "n": 65,
+      "pct": 72.3,
+      "raw": 72.3076923076923
+     },
+     "impossible_request": {
+      "correct": 40,
+      "n": 64,
+      "pct": 62.5,
+      "raw": 62.5
+     },
+     "simple_command": {
+      "correct": 64,
+      "n": 65,
+      "pct": 98.5,
+      "raw": 98.46153846153847
+     },
+     "situation": {
+      "correct": 37,
+      "n": 65,
+      "pct": 56.9,
+      "raw": 56.92307692307692
+     }
+    },
+    "stop_following": {
+     "correct": 47,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 40,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 7,
+     "n": 233
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 2,
+     "empty": 0,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 2
+    },
+    "reply_flagged": [
+     {
+      "prompt": "int_situation_043",
+      "statement": "Strike the Wolf.",
+      "flags": [
+       "Echo: attack_target's example \"Strike the {0}.\""
+      ]
+     },
+     {
+      "prompt": "int_event_041",
+      "statement": "Strike the Wolf.",
+      "flags": [
+       "Echo: attack_target's example \"Strike the {0}.\""
+      ]
+     }
+    ],
+    "latency_s": {
+     "median": 0.366,
+     "p90": 0.42
+    },
+    "pipeline_errors": []
+   },
+   "idle_off": {
+    "n": 389,
+    "correct": 294,
+    "accuracy": 75.6,
+    "raw": 75.57840616966581,
+    "outcomes": {
+     "Correct": 294,
+     "WrongLegalAction": 77,
+     "ContainedByGuard": 7,
+     "RejectedWhenActionExpected": 11
+    },
+    "categories": {
+     "command_with_target": {
+      "correct": 66,
+      "n": 66,
+      "pct": 100.0,
+      "raw": 100.0
+     },
+     "conversation": {
+      "correct": 58,
+      "n": 64,
+      "pct": 90.6,
+      "raw": 90.625
+     },
+     "event": {
+      "correct": 44,
+      "n": 65,
+      "pct": 67.7,
+      "raw": 67.6923076923077
+     },
+     "impossible_request": {
+      "correct": 30,
+      "n": 64,
+      "pct": 46.9,
+      "raw": 46.875
+     },
+     "simple_command": {
+      "correct": 62,
+      "n": 65,
+      "pct": 95.4,
+      "raw": 95.38461538461539
+     },
+     "situation": {
+      "correct": 34,
+      "n": 65,
+      "pct": 52.3,
+      "raw": 52.30769230769231
+     }
+    },
+    "stop_following": {
+     "correct": 47,
+     "n": 48
+    },
+    "unasked_actions": {
+     "count": 63,
+     "n": 156
+    },
+    "missed_requests": {
+     "count": 4,
+     "n": 233
+    },
+    "replies": {
+     "checked": 389,
+     "echo": 2,
+     "empty": 0,
+     "tooLong": 0,
+     "leak": 0,
+     "flagged": 2
+    },
+    "reply_flagged": [
+     {
+      "prompt": "int_situation_043",
+      "statement": "Strike the Wolf.",
+      "flags": [
+       "Echo: attack_target's example \"Strike the {0}.\""
+      ]
+     },
+     {
+      "prompt": "int_event_041",
+      "statement": "Strike the Wolf.",
+      "flags": [
+       "Echo: attack_target's example \"Strike the {0}.\""
+      ]
+     }
+    ],
+    "latency_s": {
+     "median": 0.368,
+     "p90": 0.421
+    },
+    "pipeline_errors": []
+   },
+   "idle_off_minus_on": {
+    "delta": -5.4,
+    "floor": 3.6,
+    "verdict": "beyond noise"
+   },
+   "idle_off_minus_on_by_category": {
+    "command_with_target": {
+     "delta": 0.0,
+     "floor": 8.7,
+     "verdict": "within noise"
+    },
+    "conversation": {
+     "delta": -4.7,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "event": {
+     "delta": -4.6,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "impossible_request": {
+     "delta": -15.6,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "simple_command": {
+     "delta": -3.1,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "situation": {
+     "delta": -4.6,
+     "floor": 8.8,
+     "verdict": "within noise"
+    }
+   },
+   "compared": {
+    "idle_on": {
+     "correct": 65,
+     "n": 76,
+     "accuracy": 85.5
+    },
+    "idle_off": {
+     "correct": 61,
+     "n": 76,
+     "accuracy": 80.3
+    }
+   },
+   "default_vs_baseline": {
+    "delta": 13.4,
+    "floor": 3.6,
+    "verdict": "beyond noise"
+   },
+   "default_vs_baseline_by_category": {
+    "command_with_target": {
+     "delta": 6.1,
+     "floor": 8.7,
+     "verdict": "within noise"
+    },
+    "conversation": {
+     "delta": 25.0,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "event": {
+     "delta": 12.3,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "impossible_request": {
+     "delta": -1.6,
+     "floor": 8.8,
+     "verdict": "within noise"
+    },
+    "simple_command": {
+     "delta": 26.2,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    },
+    "situation": {
+     "delta": 12.3,
+     "floor": 8.8,
+     "verdict": "beyond noise"
+    }
+   }
+  }
+ ],
+ "note": "Per-prompt answers removed; the full file is in the live-runs session's checkout, .scratch/model-sweep-5080/interim/results.json"
+}

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Agenerela.Providers;
 using UnityEngine;
@@ -11,7 +12,8 @@ namespace Agenerela
     /// page): drop it on the guard and assign a <see cref="Profile"/>. It builds the
     /// <see cref="Agenerela.Agent"/>, registers the <c>[AgentAction]</c> methods on this GameObject,
     /// binds the listed <see cref="Handlers"/>, finds targets and observations around this transform,
-    /// and cancels the agent's decisions when the GameObject is destroyed. An agent that is not a
+    /// and cancels the agent's decisions when the GameObject is destroyed. <see cref="ResetAgent"/>
+    /// starts the agent afresh without destroying anything. An agent that is not a
     /// thing in the world owns a plain <see cref="Agenerela.Agent"/> instead (DR-011).
     /// </summary>
     /// <remarks>
@@ -83,8 +85,29 @@ namespace Agenerela
                  "for every target. A Targets source with no categories of its own gets these.")]
         public string[] TargetCategories;
 
+        // Each agent a component built, back to that component (#166), weakly, so it keeps no agent
+        // or component alive. Only ever added to: an agent is built once.
+        private static readonly ConditionalWeakTable<Agent, AgentBehaviour> owners = new ConditionalWeakTable<Agent, AgentBehaviour>();
+
         private Agent agent;
         private bool warningQueued;
+
+        /// <summary>
+        /// The component that built <paramref name="agent"/>, so a tool reading the
+        /// <see cref="DecisionFeed"/> can show or select its GameObject (#166). Null for an agent
+        /// built in code, and for one whose component has been destroyed. Never builds an agent.
+        /// </summary>
+        public static AgentBehaviour Find(Agent agent)
+        {
+            // Unity's null: a destroyed component is no answer.
+            return agent != null && owners.TryGetValue(agent, out var owner) && owner != null ? owner : null;
+        }
+
+        /// <summary>
+        /// Whether this component has built its agent yet. Reading <see cref="Agent"/> builds it, so a
+        /// tool that only looks asks this first.
+        /// </summary>
+        public bool HasAgent => agent != null;
 
         /// <summary>
         /// The agent this component built, the same one every time. Built by this read if
@@ -100,7 +123,9 @@ namespace Agenerela
             {
                 if (agent == null)
                 {
-                    agent = Build();
+                    var built = Build();
+                    owners.Add(built, this);
+                    agent = built;
                 }
 
                 return agent;
@@ -122,6 +147,23 @@ namespace Agenerela
             // Unity's null: destroyCancellationToken itself throws once the component is destroyed.
             var ct = this != null ? destroyCancellationToken : new CancellationToken(true);
             return Agent.DecideAsync(stimulus, options, ct);
+        }
+
+        /// <summary>
+        /// <see cref="Agenerela.Agent.Reset"/> on this component's agent (#190, G12): starts it afresh,
+        /// keeping this GameObject, this component and the agent itself. Its decisions under way or
+        /// waiting end cancelled, the decisions it holds for memory are dropped, and its memory is
+        /// cleared. Before the agent is built there is nothing to reset, so nothing happens.
+        /// </summary>
+        /// <remarks>
+        /// Not named <c>Reset</c>: Unity calls a component's <c>Reset</c> in the editor, when the
+        /// component is added or reset from the Inspector. Replaces destroying and re-adding this
+        /// component, which a game had to do before, and which also dropped the guards, sources and
+        /// state it had added.
+        /// </remarks>
+        public void ResetAgent()
+        {
+            agent?.Reset();
         }
 
         /// <summary>

@@ -501,7 +501,7 @@ The agent abstraction, deliberately **not** welded to `MonoBehaviour`:
 ```csharp
 // Plain class — the brain. Owns identity, registered actions, targets and state (#17).
 public sealed class Agent {
-    public AgentIdentity Identity { get; }               // name, role, personality, goals
+    public AgentIdentity Identity { get; }               // name, role, personality, goals, knowledge, statement rules
     public ActionRegistry Actions { get; }               // see 2.2; filled by Bind
     public TargetRegistry Targets { get; }               // hand-registered targets
     public List<ITargetSource> TargetSources { get; }    // asked on every decision (DR-014)
@@ -555,6 +555,19 @@ still decides when a turn starts, and removing it changes nothing in `Agent`. It
 result by reference, so `Correlation` stays the caller's and DR-018's stale rule lives in the
 helper, as DR-018 asked. `Documentation~/conversations.md` has the whole of it.
 
+Beside it, an optional `Proposals` (#190, Living Vale #16) holds a decision the player must
+confirm instead of executing it, and on confirm carries it out through `Agent.Execute`, whose
+re-check (legality, categories, per-target availability) is the confirm-time check. It changes
+nothing in `Agent`'s public API, `ActionResult` or `ExecutionStatus`. A held proposal is
+remembered once, at hold; `Agent.Reset` ends every pending one. `Documentation~/proposals.md`.
+
+For a game that asks several agents at once, an optional `DecisionRound` (#216, item 2; DR-021)
+decides them all on one snapshot through the normal queue, then executes in an order the caller
+gives after reading the results, in as many phases as it likes, each decision re-checked by
+`Agent.Execute` and a move an earlier one made illegal reported as stale. It needs `OnExecute`
+memory, drops the whole round on cancellation with nothing remembered, and groups a round's
+decisions in the log as one `DecisionChain`. `Documentation~/decision-rounds.md`.
+
 ### 2.2 Actions (`Runtime/Actions/`) — the heart of the framework
 
 **Settled rule: the action vocabulary is data, not an enum.** The prototype's fixed
@@ -571,7 +584,9 @@ public sealed class ActionDefinition {
     public bool RequiresTarget;
     public string ExampleStimulus;       // "{0}" placeholder for target; see few-shot rules
     public string[] PreferredExampleTargets;   // targets this verb sensibly applies to
+    public string ExampleStatement;            // optional, what the agent says in it (#190 G14)
     public string CounterExampleStimulus;      // optional, shown answered with none (#190)
+    public string CounterExampleStatement;     // optional, its statement (#190 G14)
     public string[] TargetCategories;          // optional, the kinds of target it takes (DR-020)
 }
 ```
@@ -744,10 +759,18 @@ than a second schema system — do not let provider-specific syntax leak into th
    ([findings](llm-wiki/findings.md)). An agent built in code has no profile, so it has an idle
    example only when `Agent.IdleExampleStimulus` or the call gives one (#190). An action may
    also carry a `CounterExampleStimulus`, a line that touches its subject but asks for nothing,
-   shown answered with `none` right after its own example (#190). Neither is measured, and both
-   stay off until Phase 4's A/B (#151). **Example utterances must never overlap the
-   evaluation prompt set** (see Phase 4), counter-examples included. Few-shot was the largest
-   single lever measured: +35 points.
+   shown answered with `none` right after its own example (#190). Any example but the refusal
+   can also show a statement, after its target (#190 G14: a guard answered with its idle
+   example's stimulus, the only line it was shown). With `DecideOptions.ExampleTargetFallback`,
+   an example whose preferred targets are all missing names the first target its action takes
+   instead of being left out, skipping a target the stimulus mentions, and a target implementing
+   `INamedTarget` is called by its name (Living Vale #20). Any other is called by its id's words,
+   "training dummy", adopted on 9 November after an A/B found it within noise of "TrainingDummy".
+   The fallback measured worse on impossible requests and stays off; the rest are unmeasured, and
+   none becomes a default before Phase 4's A/B (#151).
+   **Example utterances must never overlap the evaluation prompt set** (see Phase 4),
+   counter-examples and statements included. Few-shot was the largest single lever measured:
+   +35 points.
 5. **A local model reads no schema** (findings, 10 October 2026), so neither the action list nor
    the target ids reach it unless the prompt carries them. `DecideOptions.ListActionsAndTargets`
    (#190) lists both in the system prompt, the targets capped at `MaxListedTargets`. It is off
@@ -915,7 +938,10 @@ Built-ins, in order:
    on every decision unless the caller turns it off for that call. From the same request's
    token probabilities (§2.4), it reads, at every token of the model's target, how much of
    the model's probability could still lead to a target on the list, and keeps the lowest.
-   Below 0.8, a threshold calibrated in Phase 4, it rewrites the decision to `none`.
+   Below 0.8, a threshold calibrated in Phase 4, it rewrites the decision to `none`. Since
+   #244 a call may set the threshold (`DecideOptions.TargetGroundingThreshold`), and Ollama
+   reports 20 alternatives a token rather than 5, so a spread over many legal targets is not
+   read as doubt (DR-016's amendment of 11 November).
 
    - **"Attack the scarecrow."** scores 0.05, because the model wanted to write "sc…".
    - **"Go to the south tower."** scores 0.007 on the 2B. The start "south" fits
@@ -1036,7 +1062,7 @@ underneath have stopped moving.
 where the 200 prompts and their second annotator are needed. It writes and labels prompts
 against a chosen agent profile: the expected action is picked from the profile's actions,
 so a prompt cannot name an action the agent lacks, and a stimulus that repeats an action's
-`ExampleStimulus` or `CounterExampleStimulus` is flagged (hard rule 4). Labelling is blind: the annotator sees the
+`ExampleStimulus`, `CounterExampleStimulus` or a statement is flagged (hard rule 4). Labelling is blind: the annotator sees the
 stimulus, observations and state, never the expected answer, anyone else's label or the
 model's reply. Each annotator's answers go to their own file, so two people labelling at
 once never edit the same one. The Evaluation Report (screen 4) reads the same format and
@@ -1189,6 +1215,11 @@ A reply the game drops as stale did not happen, but `DecideAsync` has already re
 `Agent.MemoryCommit = MemoryCommit.OnExecute` holds each decision on its result until
 `Execute` carries it out, or the game calls `Commit` or `Discard`; the default, `OnDecide`, is
 unchanged. `Documentation~/executing-and-memory.md` has both.
+
+**Starting afresh (DR-018, amended).** GreyBoxVillage started an agent over mid-game by
+destroying its `AgentBehaviour` and adding it again. `Agent.Reset()` does it in place: it cancels
+the agent's own decisions wherever they wait, drops those held for `OnExecute`, and clears memory
+through `IClearableMemory`, an optional interface `RollingHistory` implements.
 
 ---
 
@@ -1957,6 +1988,16 @@ call with `DecideOptions.CheckTarget = false`. Telemetry records the number for 
 decision. On a provider that reports no token probabilities, the guard records that it could
 not run, and `PromptBuilder` adds the one-line rule instead.
 
+**Amended 11 November 2026 (#244 item 1).** In a game with many legal targets a turn, the
+guard contained legal moves: what the five reported alternatives left uncovered counted as off
+the list. Ollama now reports 20 by default (`OllamaSettings.TokenAlternatives`), which left every
+reply, the correct answers and the impossible requests handled the same on the evaluation sets
+(four contained wrong answers now pass) and cut GreyBoxStrategy's legal containments by 74% and
+38%. The threshold stays 0.8 by default and is a per-call setting; 0.6 frees the rest of a game's
+legal spreads but let `qwen3.5:2b` guess on two more impossible requests of 64. Scoring only the
+chosen action's legal targets, and dividing by the reported mass, were measured and not adopted.
+findings.md, 11 November, has the tables.
+
 **Consequences**
 - `ProviderCapabilities` gains a flag for reporting token probabilities, and `ProviderResult`
   carries them (§2.4). Ollama returns them from before the schema's mask. LLMUnity's
@@ -2100,6 +2141,29 @@ default memory behaviour must compile and behave as before.
    names another format is not one this memory can vouch for. The lead chose this, and the method
    on `RollingHistory` rather than a new interface, so `IExportsMemory` is unchanged.
 
+*Amended 9 November 2026 (#190, GreyBoxVillage G12).* 7. **`Agent.Reset()`** starts an agent
+afresh without destroying it. GreyBoxVillage's F1 reset destroyed and re-added its
+`AgentBehaviour`, which built a new agent and lost the guards, sources and state the game had
+added, and it dropped stale answers with a generation counter of its own. The lead chose from
+the options at each step:
+
+- **Synchronous**, `void Reset()`, rather than an awaitable that waits until the cancelled
+  decisions have ended, which could hang on a provider that ignores cancellation.
+  `AgentBehaviour.ResetAgent()` calls it, since Unity calls a component's `Reset` in the editor.
+- **It cancels through the tokens.** Every call's token is linked to a per-agent reset token, so
+  the queues and the provider stop a reset call exactly as they stop a caller's cancelled one, and
+  `RequestScheduler` is unchanged. Only this agent's calls are cancelled. In consequence a provider
+  is sent the linked token, no longer the caller's own token object.
+- **A caller sees the plain `OperationCanceledException`**, rather than a subclass. Its token is
+  the agent's when a reset cancelled the call, and the caller's own when the caller did, so a
+  caller whose token is not cancelled knows it was a reset.
+- **A decision held for `OnExecute` before the reset is never remembered**: `Commit` and
+  `Discard` return false. `Execute` still carries it out as today, rather than refusing it.
+- **Memory is cleared through `IClearableMemory`**, an optional interface, since
+  `IMemoryStrategy` cannot gain a member that Living Vale's strategy would have to implement. A
+  strategy without it is **skipped with a warning**, rather than replaced by a `RollingHistory` or
+  made to throw. A memory two agents share is cleared for both.
+
 **Consequences**
 
 - No existing signature changes. `IActionHandler`, `IMemoryStrategy`, `Execute(result)` and
@@ -2239,7 +2303,10 @@ forbidden in prose. Every request must stay byte-identical while none of this is
    source and says whether it added the target. `TargetRegistry.Register` is unchanged, so a
    source written before the rule behaves as it did. "The same object" is reference equality.
 7. **The paired schema**, `DecideOptions.PairTargetsWithActions`, off by default. Each action offered gets the targets it takes, its categories' or every target, and
-   `no_target` only if it does not require a target; `none` gets `no_target` alone. Actions with
+   `no_target` only if it does not require a target; `none` gets `no_target` alone, as does an
+   action with `TakesNoTarget` (added by #244 item 2: an action that never takes a target, whose
+   stray target a flat schema drops to `no_target` before the guards and records in
+   `DecisionTelemetry.TargetIgnored`). Actions with
    the same list share one branch. An action that requires a target and takes none of those
    registered is left out of the schema, the prompt's action list and the examples, as an action needing a target already is
    when there are no targets at all. `DecisionSchema` keeps the flat `action` and `target` fields,
@@ -2283,13 +2350,87 @@ check its own limit, or send the flat schema, before it sends a paired one.
   keep actions off Bram, for `OnlyActions`; and the skip in `GuardTargetSource`, which `Offer` does.
   **Living Vale**: the pair guards in `TradeActionBinding` and `QuestActionBinding`, once its targets
   are registered in categories and its actions name them.
-- **Extension point: the Targets research area (#120).** A target in several categories, a source
-  that offers by component type, and conditions per target (Living Vale's gap 19) would sit beside
-  the category as more that an action can require of a target.
+- **Extension point: the Targets research area (#120).** A target in several categories and a
+  source that offers by component type would sit beside the category as more that an action can
+  require of a target. Conditions per target now do (amendment below).
+
+**Amendment, 9 November 2026: conditions per target (#190 LV #19, #216 item 5).** A category says
+what kind of target an action takes; Living Vale's routes and GreyBoxStrategy's truces need "this
+one, right now". The tech lead accepted this shape from the design pass:
+
+| Question | Options | Verdict |
+|---|---|---|
+| Where the condition lives | An optional handler interface asked per target; on the target object (a scene target is its `Transform`, the reason `ICategorizedTarget` was rejected above); a predicate on the registry | **An optional handler interface**, `ITargetAvailability.IsAvailableFor(ctx, targetId)`, returning an `Availability`: yes, or no with an optional reason |
+| Its front doors | As for `IsAvailable` | **`[AvailableFor("id")]`** on a method taking the target's id (and optionally an `AgentContext` first), returning `bool` or `Availability`; a settable **`DelegateActionHandler.IsAvailableFor`** |
+| An action with no legal target left | Left out paired only, as categories are; left out in both modes | **Left out in both modes**: state masking the developer opts into by giving the check |
+| A rejected pair under a flat schema | Narrow the target enum; a guard | **A guard**, `TargetAvailabilityGuard`, after `TargetCategoryGuard`, rewriting to `none`; the flat enum stays every target so grounding reads the same list. Under pairing the pair is dropped from its branch, and `SchemaLegalityGuard` rejects one the grammar let through |
+| Telling the model | A "Not possible right now: ..." prompt line behind an option; nothing | **Nothing.** The line forbids in prose what the schema already makes absent, and would be another off-by-default switch. Considered and dropped |
+
+8. **Per-target checks.** For a handler with a check, `ActionAvailability` asks it once per decision
+   for each registered target in the action's categories (every target when it names none), never
+   for `no_target`, and only while `IsAvailable` says yes. An action that requires a target and has
+   none it takes that the check allows is left out, flat or paired. The paired schema drops each
+   rejected pair. The schema, the examples, the preview and the guard read that one answer.
+   `TargetAvailabilityGuard`, the fourth built-in guard, turns a rejected pair into `none`;
+   `Execute` runs it again after `TargetCategoryGuard`, asking the check against the game as it is
+   then, and refuses a stale pair with the check's reason in the `ActionResult`. Each rejected pair
+   and its reason is in `DecisionTelemetry.TargetsUnavailable`, the decision log's
+   `targetsUnavailable` and `AgentPreview.TargetsUnavailable`; an action left out for it is named in
+   `AgentPreview.LeftOut` with each target's reason. The reason never reaches the model.
+   A handler without a check, every handler written before, changes nothing: the request is
+   byte-identical, and no A/B is owed until a developer gives one. Living Vale can delete
+   `RouteActionBinding.CheckPair` (its `RoutePairGuard`) and the per-target half of `Offers`, and
+   stop filtering route targets in its target source, once each route handler implements
+   `ITargetAvailability` over `RouteContract.Available`; `QuestRoutes`' own re-checks at
+   `TryPropose` and `Confirm` stay the game's. Not done: an example whose preferred
+   target the check rejects is still shown with it, and `[Available]` gives no reason for a whole
+   action.
 
 **Revisit if:** the A/B shows the paired schema costs accuracy on small models, or that it is worth
-making the default; a game needs a target in more than one category; or a cloud provider needs a
-paired form other than a root `anyOf`.
+making the default; a game needs a target in more than one category; a cloud provider needs a
+paired form other than a root `anyOf`; or masking an action per target is seen to hurt a model that
+relied on seeing it.
+
+### DR-021 — A decision round decides everyone first and takes the order afterwards
+
+**Status:** Decided, 10 November 2026 (#216, item 2), by the framework tech lead session, settling
+the issue's two "To settle" points against GreyBoxStrategy's stage 1 (#240). Additive: removing the
+helper changes nothing in `Agent`.
+
+**Context.** Every turn-based game writes "ask these agents on one snapshot, wait for all, then
+execute in an order, re-checking each" by hand: GreyBoxStrategy's `Game` does it in three calls
+(`BeginTurn`, `SubmitCouncil`, `Resolve`). #216 sketched a helper taking the order up front, with
+phases left to the caller as separate rounds. Stage 1 showed the order is not known up front:
+peace lands first, then home moves, wars and attacks, seats rotating, so it depends on what was
+chosen. And "phases as two rounds" would ask the model twice for one turn.
+
+**Options considered**
+
+| Question | Options | Verdict |
+|---|---|---|
+| When the order is given | A list up front, with the calls; a comparer over results; a list after the results, in a second call | **A list of agents, after the results**: it is the only one GreyBoxStrategy can use, and a list is easier to read in a test and a log than a comparer |
+| Phases | Two rounds (the issue's recommendation); a phase list on the round; `Execute` callable more than once on one decided round | **`Execute` more than once**, each call naming the agents it runs, nobody decided again. Phases stay the caller's idea, never the helper's |
+| How "not before everyone has decided" is enforced | A round object with `DecideAsync` and `Execute` that throws until decided; a static `DecideAsync` returning the decided round | **Static `DecideAsync` returning the round**: there is no object to execute before deciding is over |
+| Memory | Allow `OnDecide`; require `OnExecute` for an agent with memory, as `Conversation` does | **Require `OnExecute`**: under `OnDecide` a cancelled round would already have remembered the answers in |
+| A round id in the log | `Correlation`; a new log field and version; `DecideOptions.Chain` | **`Chain`**, `DecisionChain.Start(round.Id)` for a call with none: no new log version, `Correlation` stays the caller's (DR-018), and a relay from a round decision stays in its chain. The cost is that "chain" now also means "round" |
+
+**Decision.** `DecisionRound.DecideAsync(calls, id, ct)` takes a `RoundCall` (agent, stimulus,
+`DecideOptions`) per agent, each agent once, starts every call into the normal queue, and returns
+the decided round once all have answered. `Execute(order)` runs the named agents' decisions in that
+order through `Agent.Execute`, checks the whole order before running any of it, and may be called
+per phase; each `RoundEntry` carries its `DecisionResult`, `ActionResult` and `Stale`, a refusal of
+a decision `DecideAsync` accepted. `End()` discards whatever is left. Cancellation while deciding
+drops the round at once, even past a provider that ignores it, and discards every answer in. A
+pipeline error is one entry's result; a call that throws makes one entry `Failed`.
+
+**Consequences.** A game builds its order from `entry.ActionId`. A rule another agent's move can
+break must be in what `Execute` re-checks (availability, categories, the per-target check), or the
+round can only report it as the handler's failure. Decisions that depend on other decisions in the
+same turn, such as GreyBoxStrategy's envoys, are a second round decided before either executes, and
+the two are executed interleaved.
+
+**Revisit if:** a game needs one agent asked twice in a round, a broadcast with merged answers
+(#216, F8), or a round deadline the token cannot express.
 
 ### Decisions already recorded elsewhere in this plan
 

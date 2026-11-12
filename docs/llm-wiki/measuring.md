@@ -133,7 +133,12 @@ the A/B compares two designs, not two models. Source: findings, "First model A/B
 the schema's keys sorted on the way to llama.cpp. The server log says which way a model went:
 a "template selection" line with `selected=gguf_chat_template` means the order is lost, and
 `renderer_parser` or `go_template` means it is kept. Source: findings, "Why
-`qwen3:4b-instruct-2507` wrote `statement` before `target`" (5 November 2026).
+`qwen3:4b-instruct-2507` wrote `statement` before `target`" (5 November 2026). Setting `OLLAMA_GO_TEMPLATE=1`
+on the server sends a model that has a Go template down `go_template`, the 4B and `MiniCPM5-2B`
+included. That restores the order, but the Go template then formats the prompt too, a second
+difference to name in the result. The `OLLAMA_GO_TEMPLATE:true` every server log prints is only the
+default, shown when the variable is unset. Source: findings, "`OLLAMA_GO_TEMPLATE=1` keeps the field
+order" (9 November 2026).
 
 ## Before you run
 
@@ -151,14 +156,15 @@ why.
 | Only one model resident (rule 2) | Reads `/api/ps` on both servers and refuses to start if a model other than the arm's is loaded, and checks again before each arm's warm-up (Ollama) | `ollama stop <other>`; note that `ollama` hangs in Git Bash on the lead's laptop, so use the HTTP API there |
 | The model is on the GPU | Records `size` and `size_vram` before the warm-up, after it and at the arm's end, and warns when the model is not fully on the GPU (a warning, not a refusal). The GPU name in the report is Unity's, not necessarily Ollama's device | Look at the server log's "inference compute" line; check `nvidia-smi` if latency is odd |
 | Provider version recorded | Records Ollama's `/api/version` | For any other provider, write it down yourself |
-| No few-shot and evaluation overlap (rule 3) | Refuses an example stimulus (the profile's examples and counter-examples, or an arm's own idle example) that is exactly a prompt. Partial phrasings are not checked | Compare your examples with the prompt set; partial phrasings count |
+| No few-shot and evaluation overlap (rule 3) | Refuses an example stimulus (the profile's examples, counter-examples and their statements, or an arm's own idle example and its statement) that is exactly a prompt. Partial phrasings are not checked | Compare your examples with the prompt set; partial phrasings count |
 | Preconditions staged per case (rule 4) | Stages `preconditionState`, binds every declared action (offered exactly when its `onlyWhen` holds, and always when it has none), and tells the model the state as an observation | Check the set's labels use the right preconditions, and that `onlyWhen` is declared for every action the game restricts |
 | Outcomes classified, not one percentage (rule 5) | Sorts every answer into the five outcomes. A guard stopping an answer counts as contained only when the label was `none`, else as rejected-when-expected. Pipeline errors stay in the accuracy denominator | Read the wrong answers, not only the counts (the Markdown report lists every answer that was not correct) |
+| What the agent said, not only what it chose | Flags each answer's statement that repeats a few-shot line, is empty, is over the arm's `MaxStatementLength` (200 characters by default, unmeasured) or leaks an id, a field label, a JSON brace or an assistant's phrase, and counts them per arm beside the outcomes, never in them. A statement that contradicts its decision is not checked | Read the flagged answers; count contradictions ("I will stand guard here." with `none`) by hand until a judge model has been validated against people's labels |
 | Warm-up (rule 6) | 3 throwaway requests per arm, never in the report; refuses if none of them produced a decision | Warm up yourself for a probe or script |
 | Arms of two models run one after the other | `EvalArmOrder.Sequential` unloads the first arm's model (`keep_alive: 0`), waits until `/api/ps` drops it, and refuses if it stays. Interleaved arms on two Ollama models are refused | Choose it, and say so in the result |
 | The model writes the fields in the schema's order | Not checked: the report keeps parsed fields, not the raw text | For a model's first A/B, read a few raw `/api/chat` responses (point 5 above) |
 | How targets and state reached the prompt | Records the choice in the report, with the set's last commit and whether it has uncommitted changes | Compare only with results fed the same way |
-| Which prompt switches each arm ran with | Records each arm's options: `CheckTarget`, `AskForRefusalLine`, the idle example, `ListActionsAndTargets` with its cap, `CounterExamples`, `PairTargetsWithActions`, priority and the arm's own observations | Name the switches that differ between arms when you quote a result; the three #190 switches are off by default and unmeasured |
+| Which prompt switches each arm ran with | Records each arm's options: `CheckTarget`, `AskForRefusalLine`, the idle example, `ListActionsAndTargets` with its cap, `CounterExamples`, `PairTargetsWithActions`, `ExampleTargetFallback`, priority and the arm's own observations | Name the switches that differ between arms when you quote a result; `ListActionsAndTargets`, `CounterExamples`, `PairTargetsWithActions` and `ExampleTargetFallback` are off by default, as are `StatementRulesWording` (other than the default `YourStatement`) and `LegalTargetListing.ObservationLine`; where an A/B has run, it is in findings. Example target names are spaced in every arm (#234) |
 | `127.0.0.1`, not `localhost` | Not checked | Use `http://127.0.0.1:11434` everywhere |
 | Plugged in (a laptop) | Not checked | A battery run is not comparable with an AC one |
 | Nothing else heavy on the machine | Not checked | Another session's Unity batch tests ran on the CPU during the 3 November run, so its latencies are "not a latency measurement" (findings) |

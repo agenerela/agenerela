@@ -384,6 +384,25 @@ namespace Agenerela.Tests
         // ---- The caller's token, the timeout and mistakes -----------------------------------
 
         [Test]
+        public async Task AResetOfTheAgentEndsItsTurnCancelledAndTheNextTurnStarts()
+        {
+            var (agent, fake, chat) = Guard(hold: true);
+            var turn = chat.Start("Go to the tower.");
+
+            agent.Reset();
+            await Task.Delay(100);
+
+            Assert.That(turn.Completion.IsCompleted, Is.True);
+            Assert.That(await Fixtures.NotCancelled(turn.Completion), Is.EqualTo(TurnStatus.Cancelled));
+            Assert.That(chat.IsWaiting, Is.False);
+            Assert.That(fake.HeldCount, Is.Zero, "The reset stopped the turn's request.");
+
+            var next = chat.Start("Are you there?");
+            fake.Release();
+            Assert.That(await Fixtures.NotCancelled(next.Completion), Is.EqualTo(TurnStatus.Answered));
+        }
+
+        [Test]
         public async Task TheCallersTokenEndsTheTurnEvenWhenTheProviderIgnoresIt()
         {
             var (agent, fake, chat) = Guard(hold: true);
@@ -472,6 +491,7 @@ namespace Agenerela.Tests
             var waiting = chat.Start("Go to the tower again.");
             Assert.Throws<ArgumentException>(() => chat.Replace("Attack the dummy.", noLabel));
             Assert.Throws<ArgumentOutOfRangeException>(() => chat.Replace("Attack the dummy.", new DecideOptions { MaxListedTargets = -1 }));
+            Assert.Throws<ArgumentOutOfRangeException>(() => chat.Replace("Attack the dummy.", new DecideOptions { TargetGroundingThreshold = 2f }));
             Assert.That(waiting.Status, Is.EqualTo(TurnStatus.Waiting));
             Assert.That(chat.Current, Is.SameAs(waiting));
             Assert.That(fake.HeldCount, Is.EqualTo(1));

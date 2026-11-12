@@ -32,6 +32,45 @@ namespace Agenerela
         public string IdleExampleStimulus;
 
         /// <summary>
+        /// What the agent says in the idle example, for this call only (#190, G14). Null uses the
+        /// agent's <see cref="Agent.IdleExampleStatement"/>, then the profile's
+        /// <see cref="AgentProfile.IdleExampleStatement"/>, but never from further down than the
+        /// idle example's stimulus came from; empty gives the example no statement.
+        /// </summary>
+        /// <remarks>
+        /// So a profile's statement is never attached to a line this call or the agent supplied: set
+        /// <see cref="IdleExampleStimulus"/> here, and its statement comes from here or nowhere.
+        /// </remarks>
+        public string IdleExampleStatement;
+
+        /// <summary>
+        /// Whether this call's examples show the statements developers wrote: each action's
+        /// <see cref="ActionDefinition.ExampleStatement"/> and <see cref="ActionDefinition.CounterExampleStatement"/>,
+        /// and the idle example's (#190, G14). On by default, which shows only what was written: every
+        /// statement is empty unless someone fills it. False leaves them all out, as an A/B run's
+        /// control arm does.
+        /// </summary>
+        public bool ExampleStatements = true;
+
+        /// <summary>
+        /// Whether an example whose action has no registered target among its
+        /// <see cref="ActionDefinition.PreferredExampleTargets"/> names the first offered target the
+        /// action takes, rather than being left out (#190, Living Vale #20). Off by default: it changes
+        /// the examples, and is owed an A/B run (#151).
+        /// </summary>
+        /// <remarks>
+        /// For a game whose targets change every turn, so no fixed list stays right. "Takes" is
+        /// <see cref="ActionDefinition.AcceptsCategory"/>: any target, unless the action names its
+        /// categories. A target the stimulus mentions is skipped, by any word of its id or name said
+        /// whole ("ox"), or starting a word of the stimulus from three letters ("inn" in innkeeper), or
+        /// started by one of four or more ("dock" for docks), so the example never shows the answer;
+        /// with every target the action takes
+        /// mentioned, the example is left out. A target that implements <see cref="INamedTarget"/> is
+        /// called by its name. A registered preferred target is used as before, mentioned or not.
+        /// </remarks>
+        public bool ExampleTargetFallback;
+
+        /// <summary>
         /// Whether this call's system prompt lists the actions offered with their descriptions, and
         /// the targets offered with their own lines (#190). Off by default: unmeasured, and owed an
         /// A/B run before it becomes the default (#151). <see cref="PromptOptions.ListActionsAndTargets"/>
@@ -52,6 +91,37 @@ namespace Agenerela
         public int MaxListedTargets = PromptOptions.DefaultMaxListedTargets;
 
         /// <summary>
+        /// Whether this call's system prompt says which targets each offered action may take now,
+        /// and how (#151, <see cref="LegalTargetListing"/>). Off by default: unmeasured as a default,
+        /// and with it off every request is byte-identical to one sent before it existed.
+        /// </summary>
+        /// <remarks>
+        /// With <see cref="LegalTargetListing.PerTarget"/> the actions and targets are listed whether
+        /// <see cref="ListActionsAndTargets"/> is on or not, with the pairs the paired schema would
+        /// offer (<see cref="PairTargetsWithActions"/>); with <see cref="LegalTargetListing.ObservationLine"/>
+        /// the same pairs are one sentence among the observations, and the system prompt is what
+        /// <see cref="ListActionsAndTargets"/> makes it. Either way an action that requires a target
+        /// and may take none is not offered, as with pairing. The
+        /// schema stays flat unless pairing is on too: this tells the model the pairs, pairing makes
+        /// the grammar keep to them, and the guards refuse a pair that breaks them either way.
+        /// </remarks>
+        public LegalTargetListing LegalTargets = LegalTargetListing.Off;
+
+        /// <summary>
+        /// How this call's system prompt introduces the identity's
+        /// <see cref="AgentIdentity.StatementRules"/> (#244 item 8, <see cref="Agenerela.StatementRulesWording"/>).
+        /// <see cref="Agenerela.StatementRulesWording.YourStatement"/> by default, the line every
+        /// request carried before this option; with it every request is byte-identical to one sent
+        /// before.
+        /// </summary>
+        /// <remarks>
+        /// For an identity whose rules a small model copies out as its statement. Measured on 11
+        /// November 2026 (findings, "How a statement rule is introduced"); the default stays until a
+        /// decision record says otherwise. An identity without rules is not changed by any value.
+        /// </remarks>
+        public StatementRulesWording StatementRulesWording = StatementRulesWording.YourStatement;
+
+        /// <summary>
         /// Whether this call's examples show each action's
         /// <see cref="ActionDefinition.CounterExampleStimulus"/>, answered with <c>none</c> (#190). On
         /// by default, which shows only what a developer wrote. False leaves them out of this call, as
@@ -69,7 +139,7 @@ namespace Agenerela
         /// On, <see cref="DecisionSchema.Build(AgentContext, bool)"/> says what each action takes: its
         /// <see cref="ActionDefinition.TargetCategories"/>, or every target when it names none, and
         /// <c>no_target</c> only when it does not require a target; <c>none</c> takes
-        /// <c>no_target</c> alone. An action that requires a target and takes none of those
+        /// <c>no_target</c> alone, as does an action with <see cref="ActionDefinition.TakesNoTarget"/>. An action that requires a target and takes none of those
         /// registered is not offered, and its example is not shown. The prompt, its action and target
         /// list and the target rule are what they would be without it.
         /// </para>
@@ -90,6 +160,32 @@ namespace Agenerela
         /// not: it stays with the developer's handlers and never reaches the prompt.
         /// </remarks>
         public IList<string> Observations = new List<string>();
+
+        /// <summary>
+        /// Where this call's own <see cref="Observations"/> go in the request (#151):
+        /// <see cref="Agenerela.ObservationPlacement.AfterSources"/> by default, the end of the
+        /// observation block, after every line of <see cref="Agent.ObservationSources"/>, which is
+        /// what every request sent before this option.
+        /// <see cref="Agenerela.ObservationPlacement.WithStimulus"/> puts them after the stimulus's
+        /// closing quote in its user turn instead.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Choose <see cref="Agenerela.ObservationPlacement.WithStimulus"/> when this call's lines are
+        /// the facts of this one moment (a wolf has cornered a child) and what holds on every call
+        /// (the time of day, the agent's post) comes from an observation source: then it won an
+        /// interleaved A/B run on both models it was measured on (findings, 10 November 2026). With
+        /// every fact passed here and no source, it moves the whole block, which is measured
+        /// separately.
+        /// </para>
+        /// <para>
+        /// Only where the lines are rendered changes. They count against
+        /// <see cref="Agent.MaxObservations"/> the same way, and the context every guard, source and
+        /// handler reads holds the same list in the same order. Nothing here reads
+        /// <see cref="StimulusLabel"/> or the stimulus (DR-008).
+        /// </para>
+        /// </remarks>
+        public ObservationPlacement ObservationPlacement = ObservationPlacement.AfterSources;
 
         /// <summary>
         /// Whether anyone is waiting on this decision (DR-015). Every agent on one provider shares
@@ -116,6 +212,23 @@ namespace Agenerela
         /// while this is on (<see cref="PromptOptions.TargetRule"/>, #107).
         /// </remarks>
         public bool CheckTarget = true;
+
+        /// <summary>
+        /// The share of the model's probability at its target that must stay on the target list for
+        /// <see cref="TargetGroundingGuard"/> to pass this call's decision, from 0 to 1:
+        /// <see cref="TargetGroundingGuard.DefaultThreshold"/>, 0.8, unless set (#244). A value
+        /// outside 0 to 1 is a mistake the call throws for.
+        /// </summary>
+        /// <remarks>
+        /// Lower it for a call where several targets are often right at once, such as a strategy
+        /// game's provinces, rather than turning <see cref="CheckTarget"/> off. Know the trade
+        /// (findings, 11 November 2026): at 0.6, GreyBoxStrategy's model attacked as often as with
+        /// the guard off, while on the interim evaluation set <c>qwen3.5:2b</c> carried out two more
+        /// of 64 impossible requests than at 0.8. So it suits a game with many legal targets a turn,
+        /// not one where refusing the impossible matters most. 0 never stops a decision but still
+        /// records the reading.
+        /// </remarks>
+        public float TargetGroundingThreshold = TargetGroundingGuard.DefaultThreshold;
 
         /// <summary>
         /// Whether to ask the model what to say when a guard stops this decision and
@@ -152,6 +265,18 @@ namespace Agenerela
         /// </para>
         /// </remarks>
         public object Correlation;
+
+        /// <summary>
+        /// The chain of relayed decisions this call belongs to, or null for none, the default (#190,
+        /// G4). <see cref="DecisionRelay.RelayAsync"/> sets it; set <see cref="DecisionChain.Start"/>
+        /// here to put the decision that begins a chain in it too.
+        /// </summary>
+        /// <remarks>
+        /// Recorded in <see cref="DecisionTelemetry.ChainId"/>, <see cref="DecisionTelemetry.ChainHop"/>
+        /// and <see cref="DecisionTelemetry.ChainSource"/>, pipeline errors included, so the decision
+        /// feed and <see cref="DecisionLog"/> carry it. It never reaches the prompt or the provider.
+        /// </remarks>
+        public DecisionChain Chain;
 
         // The options one call keeps, taken when it is made, so changing the caller's object
         // afterwards changes nothing, the guards' view included (#106). A memberwise copy, so a

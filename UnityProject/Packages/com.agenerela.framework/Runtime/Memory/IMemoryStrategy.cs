@@ -33,7 +33,8 @@ namespace Agenerela
     /// thread that calls them, and never for a decision it drops. The arguments are the same.
     /// </para>
     /// <para>
-    /// A strategy that can be saved with the game also implements <see cref="IExportsMemory"/>.
+    /// A strategy that can be saved with the game also implements <see cref="IExportsMemory"/>, and
+    /// one that <c>Agent.Reset</c> can clear implements <see cref="IClearableMemory"/>.
     /// </para>
     /// </remarks>
     public interface IMemoryStrategy
@@ -43,6 +44,13 @@ namespace Agenerela
         /// there is none.
         /// </summary>
         /// <param name="ctx">The context the request is built from.</param>
+        /// <remarks>
+        /// Must leave the strategy as it was, apart from what it reports through
+        /// <see cref="IReportsDroppedTurns"/>: <c>Agent.Preview</c> calls it once per preview, with no
+        /// decision after it, and a decision may fail after recalling. Only
+        /// <see cref="Remember"/> changes what is remembered. A stateful strategy sees each of those
+        /// calls (#166).
+        /// </remarks>
         IReadOnlyList<string> Recall(AgentContext ctx);
 
         /// <summary>

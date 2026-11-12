@@ -122,6 +122,34 @@ namespace Agenerela.Tests
         }
 
         [Test]
+        public void ClearForgetsEverythingAndItsCountsAsANewMemoryWould()
+        {
+            // Both counts above zero first, so the clear is seen setting each back.
+            var exchange = Decided("none", "no_target", "");
+            var memory = new RollingHistory(turns: 3, maxTokens: Estimate("Player: \"Order 1.\"", exchange) * 2);
+            for (int i = 1; i <= 5; i++)
+            {
+                memory.Remember(Ctx, Request($"Player: \"Order {i}.\""), exchange);
+            }
+
+            memory.Recall(Ctx);
+            Assert.That(memory.Dropped, Is.EqualTo(1));
+            Assert.That(memory.Forgotten, Is.EqualTo(2));
+
+            memory.Clear();
+
+            Assert.That(memory.Count, Is.Zero);
+            Assert.That(memory.Dropped, Is.Zero);
+            Assert.That(memory.Forgotten, Is.Zero, "An earlier conversation's count is not carried past a clear.");
+            Assert.That(memory.Recall(Ctx), Is.Empty);
+            Assert.That(memory.Export().Exchanges, Is.Empty);
+            Assert.That(memory.Turns, Is.EqualTo(3), "The settings stay.");
+
+            memory.Remember(Ctx, Request("Player: \"Again.\""), exchange);
+            Assert.That(Stimuli(memory.Recall(Ctx)), Is.EqualTo(new[] { "Player: \"Again.\"" }), "And it remembers again.");
+        }
+
+        [Test]
         public void PastTheTokenCapTheOldestWholeExchangesAreLeftOut()
         {
             // Each exchange is the same length, so the budget fits exactly two of them.

@@ -23,9 +23,6 @@ namespace LivingVale.Agenerela
     /// </remarks>
     public sealed class RouteActionBinding
     {
-        /// <summary>Rewrites a route action naming another action's target to <c>none</c>: one target list serves every action (gaps #4).</summary>
-        public const string PairGuardName = "RoutePairGuard";
-
         public static readonly IReadOnlyList<string> ActionIds = new[]
         {
             GameActions.ShareInformation, GameActions.OfferExchange, GameActions.ResolveDelivery, GameActions.GrantAccess
@@ -37,6 +34,19 @@ namespace LivingVale.Agenerela
             [GameActions.OfferExchange] = "Propose a deal with fixed terms; the traveler accepts or declines on a card.",
             [GameActions.ResolveDelivery] = "Take what the traveler brings you; they confirm the hand-over on a card.",
             [GameActions.GrantAccess] = "Grant the traveler an access they have earned."
+        };
+
+        /// <summary>
+        /// The target category each route action takes (#208), one per action: a fact to tell, a deal,
+        /// a hand-over, an access. The framework's <c>TargetCategoryGuard</c> rewrites a pair across
+        /// them, or onto a trade or quest target, to <c>none</c>.
+        /// </summary>
+        public static readonly IReadOnlyDictionary<string, string> Categories = new Dictionary<string, string>
+        {
+            [GameActions.ShareInformation] = "fact",
+            [GameActions.OfferExchange] = "deal",
+            [GameActions.ResolveDelivery] = "handover",
+            [GameActions.GrantAccess] = "access"
         };
 
         private static readonly Dictionary<string, string> Examples = new Dictionary<string, string>
@@ -60,22 +70,34 @@ namespace LivingVale.Agenerela
         private readonly string npcId;
         private readonly NpcActionExecutor executor;
         private readonly Dictionary<string, ActionDefinition> definitions = new Dictionary<string, ActionDefinition>();
+        private readonly Func<Proposal> pendingCard;
 
-        private RouteActionBinding(string npcId, NpcActionExecutor executor)
+        private RouteActionBinding(string npcId, NpcActionExecutor executor, Func<Proposal> pendingCard)
         {
             this.npcId = npcId;
             this.executor = executor;
+            this.pendingCard = pendingCard;
             foreach (var id in ActionIds)
             {
                 definitions[id] = new ActionDefinition
                 {
-                    Id = id, Description = Descriptions[id], RequiresTarget = true, CounterExampleStimulus = CounterExamples[id]
+                    Id = id, Description = Descriptions[id], RequiresTarget = true, CounterExampleStimulus = CounterExamples[id],
+                    TargetCategories = new[] { Categories[id] },
+
+                    // Fixed: the framework names the first of these targets offered this turn, and
+                    // drops the example with the action. Preferred, not left to ExampleTargetFallback:
+                    // the fallback skips a target the player's line mentions, and a route line names
+                    // its subject ("the parcel ... for your garrison"), which left Elra's only delivery
+                    // without its example and made gemma4 answer none, 3 of 3 (A/B, 10 November).
+                    ExampleStimulus = Examples[id],
+                    PreferredExampleTargets = new List<string>(executor.Routes.TargetIds(id)).ToArray()
                 };
             }
         }
 
 
-        public static RouteActionBinding Bind(Agent agent, string npcId, NpcActionExecutor executor)
+        /// <param name="pendingCard">This NPC's card waiting for the player, from its proposals (#236); null for none.</param>
+        public static RouteActionBinding Bind(Agent agent, string npcId, NpcActionExecutor executor, Func<Proposal> pendingCard = null)
         {
             if (agent == null)
             {
@@ -87,14 +109,13 @@ namespace LivingVale.Agenerela
                 throw new ArgumentException("The executor needs quest routes.", nameof(executor));
             }
 
-            var binding = new RouteActionBinding(npcId, executor);
+            var binding = new RouteActionBinding(npcId, executor, pendingCard);
             foreach (var id in ActionIds)
             {
-                agent.Actions.Register(binding.definitions[id], new Handler(binding, id));
+                agent.Actions.Register(binding.definitions[id], new ExecutorHandler(executor, npcId, id));
             }
 
             agent.TargetSources.Add(new Targets(binding));
-            agent.Guards.Add(new DelegateGuard(PairGuardName, binding.CheckPair));
             return binding;
         }
 
@@ -210,90 +231,13 @@ namespace LivingVale.Agenerela
                     break;
             }
 
-            var proposal = routes.ActiveProposal;
-            if (proposal != null && proposal.NpcId == npcId)
+            var contract = pendingCard?.Invoke() is Proposal waiting ? routes.Contract(waiting.TargetId) : null;
+            if (contract != null)
             {
-                lines.Add($"Your proposal \"{proposal.Contract.Title}\" is on the traveler's card, waiting. Nothing is agreed until they confirm.");
+                lines.Add($"Your proposal \"{contract.Title}\" is on the traveler's card, waiting. Nothing is agreed until they confirm.");
             }
 
             return lines;
-        }
-
-        /// <summary>Points each action's few-shot example at a target that exists now, or clears it.</summary>
-        public void RefreshExamples(IReadOnlyList<GameActionOption> options)
-        {
-            foreach (var definition in definitions.Values)
-            {
-                definition.ExampleStimulus = null;
-                definition.PreferredExampleTargets = null;
-            }
-
-            foreach (var option in options)
-            {
-                if (option.Targets.Count > 0 && definitions.TryGetValue(option.ActionId, out var definition))
-                {
-                    definition.ExampleStimulus = Examples[option.ActionId];
-                    definition.PreferredExampleTargets = new[] { option.Targets[0].Id };
-                }
-            }
-        }
-
-        private bool Offers(string actionId, string targetId)
-        {
-            foreach (var option in Options())
-            {
-                if (option.ActionId != actionId)
-                {
-                    continue;
-                }
-
-                if (targetId == null)
-                {
-                    return true;
-                }
-
-                foreach (var target in option.Targets)
-                {
-                    if (target.Id == targetId)
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        }
-
-        private GuardVerdict CheckPair(GuardInput input)
-        {
-            var decision = input.Decision;
-            if (decision == null || !definitions.ContainsKey(decision.ActionId))
-            {
-                return GuardVerdict.Pass;
-            }
-
-            return Offers(decision.ActionId, decision.TargetId)
-                ? GuardVerdict.Pass
-                : GuardVerdict.RewriteToNone($"{decision.TargetId} is not a target of {decision.ActionId}.");
-        }
-
-        private sealed class Handler : IActionHandlerWithResult
-        {
-            private readonly RouteActionBinding binding;
-            private readonly string actionId;
-
-            public Handler(RouteActionBinding binding, string actionId)
-            {
-                this.binding = binding;
-                this.actionId = actionId;
-            }
-
-            public bool IsAvailable(AgentContext ctx) => binding.Offers(actionId, null);
-
-            public void Execute(AgentContext ctx, AgentDecision decision) => ExecuteWithResult(ctx, decision);
-
-            public ActionResult ExecuteWithResult(AgentContext ctx, AgentDecision decision) =>
-                ExecutorActions.Execute(binding.executor, binding.npcId, ctx, decision);
         }
 
         private sealed class Targets : ITargetSource
@@ -310,7 +254,7 @@ namespace LivingVale.Agenerela
                     {
                         if (!into.Contains(target.Id))
                         {
-                            into.Register(target.Id, target);
+                            into.Register(target.Id, target, Categories[option.ActionId]);
                         }
                     }
                 }

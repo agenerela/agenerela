@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading;
+using Agenerela.Editor.UI;
 using Agenerela.Evaluation;
 using Agenerela.Providers;
 using UnityEditor;
@@ -23,38 +23,20 @@ namespace Agenerela.Editor.Evaluation
     /// </para>
     /// <para>
     /// <b>Run A/B</b> runs <see cref="EvalRunner"/> without blocking the Editor, and can be
-    /// cancelled. Each finished run is saved to <c>Logs/Evaluation/</c>, and <b>Open report…</b>
-    /// reads any saved one back: what is shown comes only from what the report saves
-    /// (<see cref="EvaluationReportView"/>). The choices are remembered on this machine, per
+    /// cancelled. Each run is saved to <c>Logs/Evaluation/</c>, a cancelled one marked so, and
+    /// <b>Open report…</b> reads any saved one back: what is shown comes only from what the report
+    /// saves (<see cref="EvaluationReportView"/>). The choices are remembered on this machine, per
     /// project (<see cref="EvaluationReportPrefs"/>).
+    /// </para>
+    /// <para>
+    /// Built in UI Toolkit on the #167 kit (#179): the tree is <see cref="EvaluationReportUi"/>, from
+    /// <c>EvaluationReportWindow.uxml</c> and <c>.uss</c>. This class holds the set-up, the run and
+    /// the report, and hands the tree all of it whenever one changes.
     /// </para>
     /// </remarks>
     public sealed class EvaluationReportWindow : EditorWindow
     {
         private const string ProjectSettingsPath = "Project/Agenerela";
-
-        private const string SetTip = "The set file: the agent.json beside a folder of prompts. The Prompt Set window writes and labels it.";
-        private const string ProfileTip = "The AgentProfile the set is measured against: every prompt is asked of an agent built from it.";
-        private const string ConfigTip = "The provider config this arm's decisions go through. Project Settings → Agenerela names a default arm A and arm B.";
-        private const string NameTip = "How the report names this arm, such as control or guards-on. The two must differ.";
-        private const string CheckTargetTip = "The target-grounding guard (DecideOptions.CheckTarget). On, a decision whose target the model's own token probabilities show it swapped in for one not on the list becomes none. Off is the usual control arm.";
-        private const string OrderTip = "Interleaved asks each prompt in A, then in B, so drift hits both alike. One after the other runs all of A, unloads its model, then all of B: the only choice for arms on two models.";
-        private const string DefaultsTip = "Opens the project's agent.json, the profile beside it, and the arm A and arm B configs from Project Settings → Agenerela.";
-
-        private static readonly GUIContent[] OrderNames =
-        {
-            new GUIContent("Interleaved", OrderTip),
-            new GUIContent("One after the other", OrderTip),
-        };
-
-        private static readonly Color[] OutcomeColors =
-        {
-            new Color(0.30f, 0.62f, 0.36f), // correct
-            new Color(0.82f, 0.33f, 0.28f), // wrong but legal
-            new Color(0.33f, 0.53f, 0.83f), // contained by a guard
-            new Color(0.88f, 0.64f, 0.22f), // rejected when an action was expected
-            new Color(0.52f, 0.52f, 0.52f), // pipeline error
-        };
 
         [SerializeField] private TextAsset setAsset;
         [SerializeField] private AgentProfile profile;
@@ -63,17 +45,13 @@ namespace Agenerela.Editor.Evaluation
         [SerializeField] private bool checkTargetA = true, checkTargetB = true;
         [SerializeField] private EvalArmOrder order = EvalArmOrder.Interleaved;
         [SerializeField] private string shownReport = "";
-        [SerializeField] private int failureArm = 1;
-        [SerializeField] private int failureFilter;
-        [SerializeField] private bool showChecks = true, showConditions;
 
         private EvaluationReportPrefs prefs;
         private readonly EvaluationRunSetup setup = new EvaluationRunSetup();
+        private EvaluationReportUi ui;
         private EvaluationReportView view;
         private AgreementReport agreement;
         private string agreementNote;
-        private readonly HashSet<string> opened = new HashSet<string>();
-        private Vector2 scroll;
 
         // The run in progress, if any.
         private CancellationTokenSource running;
@@ -81,18 +59,29 @@ namespace Agenerela.Editor.Evaluation
         private double runStarted;
         private double lastTick;
         private string runMessage;
-        private MessageType runMessageType;
+        private ProblemSeverity? runSeverity;
+
+        /// <summary>The size the window opens at when it is not already open: wide enough for a report's tables without wrapping.</summary>
+        internal static readonly Vector2 DefaultSize = new Vector2(780, 900);
 
         [MenuItem("Window/Agenerela/Evaluation Report")]
         public static void Open()
         {
+            bool fresh = !HasOpenInstances<EvaluationReportWindow>();
             var window = GetWindow<EvaluationReportWindow>();
             window.titleContent = new GUIContent("Evaluation Report");
             window.minSize = new Vector2(560, 420);
+            if (fresh)
+            {
+                // Unity opens a new window small; one already open keeps the size it was given.
+                float height = Mathf.Min(DefaultSize.y, Screen.currentResolution.height - 120);
+                window.position = new Rect(window.position.x, window.position.y, DefaultSize.x, Mathf.Max(420, height));
+            }
+
             window.Show();
         }
 
-        /// <summary>Where each finished run is saved: <c>Logs/Evaluation/</c> in the project, which git ignores.</summary>
+        /// <summary>Where each run is saved: <c>Logs/Evaluation/</c> in the project, which git ignores.</summary>
         internal static string ReportsFolder => Path.Combine(Path.GetDirectoryName(Application.dataPath), "Logs", "Evaluation");
 
         private bool Running => running != null;
@@ -128,12 +117,65 @@ namespace Agenerela.Editor.Evaluation
             EditorApplication.playModeStateChanged += OnPlayModeChanged;
         }
 
+        private void CreateGUI()
+        {
+            ui = new EvaluationReportUi(EvaluationReportUi.Load());
+            rootVisualElement.Add(ui.Root);
+
+            ui.UseDefaults += UseProjectDefaults;
+            ui.OpenReport += OpenReport;
+            ui.EditSet += PromptSetWindow.Open;
+            ui.ReviewDisagreements += PromptSetWindow.Open;
+            ui.OpenProjectSettings += () => SettingsService.OpenProjectSettings(ProjectSettingsPath);
+            ui.Run += Run;
+            ui.Cancel += () => running?.Cancel();
+            ui.CopySummary += CopySummary;
+            ui.ShowFiles += () => EditorUtility.RevealInFinder(Path.Combine(ShownFolder, EvalReport.MarkdownFile));
+            ui.SaveCopy += SaveCopy;
+
+            ui.SetChanged += chosen =>
+            {
+                setAsset = chosen;
+                LoadSet();
+                if (profile == null) profile = ProfileFor(setAsset, setup.Set);
+                Remember();
+            };
+            ui.ProfileChanged += chosen =>
+            {
+                profile = chosen;
+                Remember();
+            };
+            ui.ConfigChanged += (arm, chosen) =>
+            {
+                ToSetup();
+                setup.ChangeConfig(arm, chosen);
+                FromSetup();
+            };
+            ui.NameChanged += (arm, typed) =>
+            {
+                if (arm == 0) nameA = typed; else nameB = typed;
+                Remember();
+            };
+            ui.GuardChanged += (arm, on) =>
+            {
+                if (arm == 0) checkTargetA = on; else checkTargetB = on;
+                Remember();
+            };
+            ui.OrderChanged += chosen =>
+            {
+                order = chosen;
+                Remember();
+            };
+
+            Refresh();
+        }
+
         private void OnDisable()
         {
             EditorApplication.playModeStateChanged -= OnPlayModeChanged;
             EditorApplication.update -= Tick;
 
-            // A closed window cannot show its run, so the run stops.
+            // A closed window cannot show its run, so the run stops; its partial report is still saved.
             running?.Cancel();
         }
 
@@ -154,7 +196,12 @@ namespace Agenerela.Editor.Evaluation
             {
                 ReadAgreement(view.Report);
             }
+
+            Refresh();
         }
+
+        // A set file added, moved or deleted, or a config changed, can change what the steps say.
+        private void OnProjectChange() => Refresh();
 
         private void OnPlayModeChanged(PlayModeStateChange change)
         {
@@ -162,6 +209,8 @@ namespace Agenerela.Editor.Evaluation
             {
                 running.Cancel();
             }
+
+            Refresh();
         }
 
         // ---- State ------------------------------------------------------------------------------
@@ -189,6 +238,7 @@ namespace Agenerela.Editor.Evaluation
             Remember();
         }
 
+        // Every change of choice is remembered at once, and shown.
         private void Remember()
         {
             prefs.SetGuid = GuidOf(setAsset);
@@ -200,6 +250,7 @@ namespace Agenerela.Editor.Evaluation
             prefs.SetCheckTarget(0, checkTargetA);
             prefs.SetCheckTarget(1, checkTargetB);
             prefs.Order = order.ToString();
+            Refresh();
         }
 
         private void LoadSet()
@@ -218,307 +269,37 @@ namespace Agenerela.Editor.Evaluation
                 }
             }
 
-            Repaint();
+            Refresh();
         }
 
-        // ---- Drawing ----------------------------------------------------------------------------
-
-        private void OnGUI()
+        /// <summary>Hands the tree everything it shows. Before <c>CreateGUI</c>, nothing to do.</summary>
+        private void Refresh()
         {
+            if (ui == null)
+            {
+                return;
+            }
+
             ToSetup();
-            DrawToolbar();
-            scroll = EditorGUILayout.BeginScrollView(scroll);
-
-            if (view == null && setup.WhyNotRunnable() != null && !Running)
-            {
-                DrawStart();
-            }
-
-            DrawSetup();
-
-            if (view == null)
-            {
-                EditorGUILayout.Space();
-                EditorGUILayout.HelpBox("No report yet. Press Run A/B above, or Open report… in the toolbar to read a saved one.", MessageType.None);
-            }
-            else
-            {
-                DrawReport();
-            }
-
-            EditorGUILayout.Space();
-            EditorGUILayout.EndScrollView();
-        }
-
-        private void DrawToolbar()
-        {
-            using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
-            {
-                using (new EditorGUI.DisabledScope(Running))
-                {
-                    if (GUILayout.Button(new GUIContent("Use the project's set, profile and arms", DefaultsTip), EditorStyles.toolbarButton))
-                    {
-                        UseProjectDefaults();
-                        GUIUtility.ExitGUI();
-                    }
-
-                    if (GUILayout.Button(new GUIContent("Open report…", "Read a saved report.json back, such as one from Logs/Evaluation."), EditorStyles.toolbarButton))
-                    {
-                        OpenReport();
-                        GUIUtility.ExitGUI();
-                    }
-                }
-
-                GUILayout.FlexibleSpace();
-                if (GUILayout.Button(new GUIContent("Edit prompt set", "Opens the Prompt Set window, which writes and labels prompts."), EditorStyles.toolbarButton))
-                {
-                    PromptSetWindow.Open();
-                }
-
-                if (GUILayout.Button(new GUIContent("Project Settings", "Project Settings → Agenerela names the default arm A and arm B."), EditorStyles.toolbarButton))
-                {
-                    SettingsService.OpenProjectSettings(ProjectSettingsPath);
-                }
-            }
-        }
-
-        /// <summary>The window before it can run: four numbered steps, and the button that does the first three.</summary>
-        private void DrawStart()
-        {
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Start here", EditorStyles.largeLabel);
-            EditorGUILayout.LabelField(
-                "The window measures how often an agent chooses correctly: the same labelled prompts asked in two set-ups, arm A and arm B, in one session. " +
-                "It remembers your choices on this machine.",
-                EditorStyles.wordWrappedMiniLabel);
-            EditorGUILayout.Space();
-
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                if (GUILayout.Button(new GUIContent("Use the project's set, profile and arms", DefaultsTip), GUILayout.Width(280), GUILayout.Height(24)))
-                {
-                    UseProjectDefaults();
-                    GUIUtility.ExitGUI();
-                }
-
-                GUILayout.Label("Does steps 1 to 3 at once, where the project has them.", EditorStyles.wordWrappedMiniLabel);
-            }
-
-            EditorGUILayout.Space();
-            Step(1, setup.Set != null, "Choose the prompt set",
-                setup.Set != null ? $"{AssetDatabase.GetAssetPath(setAsset)}: {setup.Set.Prompts.Count()} prompts." : "The agent.json the Prompt Set window writes. Drag it into Prompt set below.");
-            Step(2, profile != null, "Choose the profile",
-                profile != null ? profile.name + "." : "The AgentProfile the set was written for, usually beside agent.json.");
-
             var settings = AgenerelaSettingsPage.Find();
-            bool armsInSettings = settings != null && settings.EvaluationArmA != null && settings.EvaluationArmB != null;
-            Step(3, configA != null && configB != null, "Choose the two arms",
-                configA != null && configB != null
-                    ? $"A: {configA.name}, B: {configB.name}."
-                    : armsInSettings
-                        ? "Project Settings → Agenerela names them; the button above takes them from there."
-                        : "Name an Arm A and an Arm B in Project Settings → Agenerela, or drag a provider config into each arm below. One config twice compares the grounding guard off and on.");
-            if (configA == null || configB == null)
+            ui.Show(new EvaluationReportUi.State
             {
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    GUILayout.Space(26);
-                    if (GUILayout.Button("Open Project Settings → Agenerela", GUILayout.Width(240)))
-                    {
-                        SettingsService.OpenProjectSettings(ProjectSettingsPath);
-                    }
-                }
-            }
-
-            Step(4, false, "Run A/B",
-                "Uses the GPU for a few minutes. Make sure nobody else is running a model: the run refuses to start while another one is loaded (hard rule 3).");
-        }
-
-        private static void Step(int number, bool done, string title, string detail)
-        {
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                GUILayout.Label(done ? "✓" : number + ".", EditorStyles.boldLabel, GUILayout.Width(22));
-                using (new EditorGUILayout.VerticalScope())
-                {
-                    EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
-                    EditorGUILayout.LabelField(detail, EditorStyles.wordWrappedLabel);
-                }
-            }
-        }
-
-        private static void Heading(string number, string text)
-        {
-            EditorGUILayout.Space();
-            var rect = EditorGUILayout.GetControlRect(false, 1);
-            EditorGUI.DrawRect(rect, new Color(0.5f, 0.5f, 0.5f, 0.4f));
-            EditorGUILayout.LabelField($"{number}  {text}", EditorStyles.boldLabel);
-        }
-
-        // ① The set, the profile, the arms, the order, the checks, and Run.
-        private void DrawSetup()
-        {
-            Heading("①", "Run set-up");
-            using (new EditorGUI.DisabledScope(Running))
-            {
-                var chosenSet = (TextAsset)EditorGUILayout.ObjectField(new GUIContent("Prompt set", SetTip), setAsset, typeof(TextAsset), false);
-                if (chosenSet != setAsset)
-                {
-                    setAsset = chosenSet;
-                    LoadSet();
-                    if (profile == null) profile = ProfileFor(setAsset, setup.Set);
-                    Remember();
-                    GUIUtility.ExitGUI();
-                }
-
-                if (setup.SetError != null)
-                {
-                    EditorGUILayout.HelpBox("The set did not load: " + setup.SetError, MessageType.Error);
-                }
-                else if (setup.Set != null)
-                {
-                    EditorGUILayout.LabelField(" ", $"{setup.Set.Agent}: {setup.Set.Prompts.Count()} prompts in {setup.Set.Categories.Count} categories.", EditorStyles.miniLabel);
-                }
-
-                var chosenProfile = (AgentProfile)EditorGUILayout.ObjectField(new GUIContent("Profile", ProfileTip), profile, typeof(AgentProfile), false);
-                if (chosenProfile != profile)
-                {
-                    profile = chosenProfile;
-                    Remember();
-                }
-
-                EditorGUILayout.Space(4);
-                DrawArm(0, "Arm A");
-                DrawArm(1, "Arm B");
-
-                using (new EditorGUI.DisabledScope(setup.TwoModels))
-                {
-                    int chosen = EditorGUILayout.Popup(new GUIContent("Order", OrderTip), (int)setup.Order, OrderNames);
-                    if (!setup.TwoModels && chosen != (int)order)
-                    {
-                        order = (EvalArmOrder)chosen;
-                        Remember();
-                    }
-                }
-
-                if (setup.TwoModels)
-                {
-                    EditorGUILayout.LabelField(" ", "The arms are on two models, so they run one after the other: both loaded at once would break hard rule 3.", EditorStyles.wordWrappedMiniLabel);
-                }
-            }
-
-            ToSetup();
-            if (setup.ArmsAreTheSame)
-            {
-                EditorGUILayout.HelpBox("Both arms are the same config with the same guard setting: a run of one set-up against itself. That measures the noise, not a change.", MessageType.Info);
-            }
-
-            var problems = setup.SetProblems();
-            if (problems.Count > 0)
-            {
-                EditorGUILayout.HelpBox(
-                    $"The runner refuses this set until {(problems.Count == 1 ? "this is" : "these are")} fixed:\n• " + string.Join("\n• ", problems.Take(8))
-                    + (problems.Count > 8 ? $"\n… and {problems.Count - 8} more." : ""),
-                    MessageType.Warning);
-            }
-
-            showChecks = EditorGUILayout.Foldout(showChecks, "What the run checks", true);
-            if (showChecks)
-            {
-                using (new EditorGUI.IndentLevelScope())
-                {
-                    foreach (string line in setup.Checks(3))
-                    {
-                        EditorGUILayout.LabelField("• " + line, EditorStyles.wordWrappedMiniLabel);
-                    }
-                }
-            }
-
-            EditorGUILayout.Space(4);
-            DrawRunButton();
-        }
-
-        private void DrawArm(int arm, string label)
-        {
-            var current = arm == 0 ? configA : configB;
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                var chosen = (ProviderConfig)EditorGUILayout.ObjectField(new GUIContent(label, ConfigTip), current, typeof(ProviderConfig), false);
-                if (chosen != current)
-                {
-                    setup.ChangeConfig(arm, chosen);
-                    FromSetup();
-                }
-            }
-
-            using (new EditorGUI.IndentLevelScope())
-            {
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    string name = arm == 0 ? nameA : nameB;
-                    string typed = EditorGUILayout.TextField(new GUIContent("Name", NameTip), name);
-                    bool check = arm == 0 ? checkTargetA : checkTargetB;
-                    bool toggled = EditorGUILayout.ToggleLeft(new GUIContent("Grounding guard", CheckTargetTip), check, GUILayout.Width(130));
-                    if (typed != name || toggled != check)
-                    {
-                        if (arm == 0) { nameA = typed; checkTargetA = toggled; }
-                        else { nameB = typed; checkTargetB = toggled; }
-                        Remember();
-                    }
-                }
-
-                if (current != null)
-                {
-                    string model = EvaluationRunSetup.ModelOf(current);
-                    EditorGUILayout.LabelField(" ", model != null ? $"{model} on Ollama." : $"A {current.GetType().Name}: which model it runs is not checked.", EditorStyles.miniLabel);
-                }
-            }
-        }
-
-        private void DrawRunButton()
-        {
-            string why = Running ? null
-                : EditorApplication.isPlayingOrWillChangePlaymode ? "Leave Play mode first: entering or leaving it would stop the run."
-                : setup.WhyNotRunnable();
-
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                if (Running)
-                {
-                    if (GUILayout.Button(new GUIContent("Cancel", "Stops the run between or during decisions."), GUILayout.Width(120), GUILayout.Height(26)))
-                    {
-                        running.Cancel();
-                    }
-
-                    double seconds = EditorApplication.timeSinceStartup - runStarted;
-                    using (new EditorGUILayout.VerticalScope())
-                    {
-                        var bar = EditorGUILayout.GetControlRect(false, 18);
-                        float done = progress == null || progress.Total == 0 ? 0 : (float)progress.Answered / progress.Total;
-                        EditorGUI.ProgressBar(bar, done, ProgressText(progress));
-                        GUILayout.Label($"{(int)(seconds / 60)} min {(int)(seconds % 60)} s so far. The Editor stays usable; scripts do not recompile until the run ends.",
-                            EditorStyles.wordWrappedMiniLabel);
-                    }
-                }
-                else
-                {
-                    using (new EditorGUI.DisabledScope(why != null))
-                    {
-                        if (GUILayout.Button(new GUIContent("▶ Run A/B", "Asks every prompt in both arms and saves the report to Logs/Evaluation."), GUILayout.Width(120), GUILayout.Height(26)))
-                        {
-                            Run();
-                            GUIUtility.ExitGUI();
-                        }
-                    }
-
-                    GUILayout.Label(why ?? "Ready. Make sure nobody else is using the GPU.", EditorStyles.wordWrappedMiniLabel);
-                }
-            }
-
-            if (runMessage != null)
-            {
-                EditorGUILayout.HelpBox(runMessage, runMessageType);
-            }
+                SetAsset = setAsset,
+                Setup = setup,
+                WhyNotRunnable = Running ? null
+                    : EditorApplication.isPlayingOrWillChangePlaymode ? "Leave Play mode first: entering or leaving it would stop the run."
+                    : setup.WhyNotRunnable(),
+                ArmsInSettings = settings != null && settings.EvaluationArmA != null && settings.EvaluationArmB != null,
+                Running = Running,
+                Progress = progress,
+                Seconds = Running ? EditorApplication.timeSinceStartup - runStarted : 0,
+                Message = runMessage,
+                MessageSeverity = runSeverity,
+                View = view,
+                ShownPath = shownReport,
+                Agreement = agreement,
+                AgreementNote = agreementNote,
+            });
         }
 
         /// <summary>The progress bar's words, such as "Asking · guards-on · 37 of 152 answers".</summary>
@@ -539,305 +320,6 @@ namespace Agenerela.Editor.Evaluation
             }
 
             return $"{what} · {p.Answered} of {p.Total} answers";
-        }
-
-        private void DrawReport()
-        {
-            var report = view.Report;
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField(report.Name ?? "Report", EditorStyles.largeLabel);
-            EditorGUILayout.LabelField(view.RunLine, EditorStyles.miniLabel);
-            if (!string.IsNullOrEmpty(shownReport))
-            {
-                EditorGUILayout.LabelField(shownReport, EditorStyles.miniLabel);
-            }
-
-            if (view.CancelledLine != null)
-            {
-                EditorGUILayout.HelpBox(view.CancelledLine, MessageType.Warning);
-            }
-
-            foreach (string warning in view.Warnings)
-            {
-                EditorGUILayout.HelpBox(warning, MessageType.Warning);
-            }
-
-            showConditions = EditorGUILayout.Foldout(showConditions, "Conditions this run was measured under", true);
-            if (showConditions)
-            {
-                foreach (string line in view.ConditionLines())
-                {
-                    EditorGUILayout.LabelField(line, EditorStyles.wordWrappedMiniLabel);
-                }
-            }
-
-            DrawOutcomes();
-            DrawNoise();
-            DrawCategories();
-            DrawFailures();
-            DrawLabellingAndExport();
-        }
-
-        // ② The five outcomes per arm: a bar each, a legend, and the table.
-        private void DrawOutcomes()
-        {
-            Heading("②", $"Outcomes · {view.Report.Conditions.Prompts} prompts per arm");
-            foreach (var arm in new[] { view.ArmA, view.ArmB })
-            {
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    using (new EditorGUILayout.VerticalScope(GUILayout.Width(150)))
-                    {
-                        EditorGUILayout.LabelField(arm.Name, EditorStyles.boldLabel, GUILayout.Width(150));
-                        EditorGUILayout.LabelField(arm.Subtitle, EditorStyles.miniLabel, GUILayout.Width(150));
-                    }
-
-                    var rect = GUILayoutUtility.GetRect(100, 22, GUILayout.ExpandWidth(true));
-                    rect.y += 6;
-                    DrawBar(rect, arm.Counts);
-                }
-            }
-
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                GUILayout.Space(154);
-                for (int i = 0; i < EvaluationReportView.Outcomes.Length; i++)
-                {
-                    var swatch = GUILayoutUtility.GetRect(10, 10, GUILayout.Width(10));
-                    swatch.y += 4;
-                    EditorGUI.DrawRect(swatch, OutcomeColors[i]);
-                    GUILayout.Label(EvaluationReportView.NameOf(EvaluationReportView.Outcomes[i]), EditorStyles.miniLabel);
-                }
-
-                GUILayout.FlexibleSpace();
-            }
-
-            EditorGUILayout.Space(4);
-            Row("Outcome", view.ArmA.Name, view.ArmB.Name, "Difference", EditorStyles.miniBoldLabel);
-            foreach (var row in view.OutcomeRows())
-            {
-                string name = row.Meaning.Length > 0 ? $"{row.Name} — {row.Meaning}" : row.Name;
-                string difference = EvaluationReportView.Signed(row.DifferencePoints) + " pts" + (row.Noise != null ? " · " + row.Noise : "");
-                Row(name, $"{EvaluationReportView.Percent(row.ShareA)} ({row.CountA})", $"{EvaluationReportView.Percent(row.ShareB)} ({row.CountB})", difference,
-                    row.Outcome == DecisionOutcome.Correct ? EditorStyles.boldLabel : EditorStyles.label);
-            }
-        }
-
-        private static void Row(string name, string a, string b, string difference, GUIStyle style)
-        {
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                GUILayout.Label(name, style, GUILayout.MinWidth(160), GUILayout.ExpandWidth(true));
-                GUILayout.Label(a, style, GUILayout.Width(80));
-                GUILayout.Label(b, style, GUILayout.Width(80));
-                GUILayout.Label(difference, style, GUILayout.Width(150));
-            }
-        }
-
-        private static void DrawBar(Rect rect, OutcomeCounts counts)
-        {
-            EditorGUI.DrawRect(rect, new Color(0.5f, 0.5f, 0.5f, 0.15f));
-            if (counts.Total == 0)
-            {
-                return;
-            }
-
-            float x = rect.x;
-            for (int i = 0; i < EvaluationReportView.Outcomes.Length; i++)
-            {
-                double share = EvaluationReportView.Share(counts, EvaluationReportView.Outcomes[i]);
-                float width = (float)(rect.width * share);
-                if (width <= 0)
-                {
-                    continue;
-                }
-
-                var part = new Rect(x, rect.y, width, rect.height);
-                EditorGUI.DrawRect(part, OutcomeColors[i]);
-                if (width > 34)
-                {
-                    GUI.Label(part, EvaluationReportView.Percent(share), BarText);
-                }
-
-                x += width;
-            }
-        }
-
-        private static GUIStyle barText;
-
-        private static GUIStyle BarText => barText ?? (barText = new GUIStyle(EditorStyles.miniBoldLabel)
-        {
-            alignment = TextAnchor.MiddleCenter,
-            normal = { textColor = Color.white },
-        });
-
-        // ③ The noise check, in one sentence and its formula.
-        private void DrawNoise()
-        {
-            Heading("③", "Noise check");
-            var all = view.Overall;
-            EditorGUILayout.HelpBox(view.NoiseLine, all != null && !all.WithinNoise ? MessageType.None : MessageType.Info);
-            EditorGUILayout.LabelField($"Noise floor: {NoiseCheck.Formula}. Checked on accuracy, over the whole set and in each category with its own n.",
-                EditorStyles.wordWrappedMiniLabel);
-        }
-
-        // ④ Accuracy per category, with each one's own noise check.
-        private void DrawCategories()
-        {
-            Heading("④", "Correct answers by prompt category");
-            var rows = view.CategoryRows();
-            if (rows.Count == 0)
-            {
-                EditorGUILayout.LabelField("The report has no categories.", EditorStyles.miniLabel);
-                return;
-            }
-
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                GUILayout.Label("Category", EditorStyles.miniBoldLabel, GUILayout.MinWidth(140), GUILayout.ExpandWidth(true));
-                GUILayout.Label("n", EditorStyles.miniBoldLabel, GUILayout.Width(36));
-                GUILayout.Label(view.ArmA.Name, EditorStyles.miniBoldLabel, GUILayout.Width(120));
-                GUILayout.Label(view.ArmB.Name, EditorStyles.miniBoldLabel, GUILayout.Width(120));
-                GUILayout.Label("Difference", EditorStyles.miniBoldLabel, GUILayout.Width(150));
-            }
-
-            foreach (var row in rows)
-            {
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    GUILayout.Label(row.Id, GUILayout.MinWidth(140), GUILayout.ExpandWidth(true));
-                    GUILayout.Label(row.N.ToString(), GUILayout.Width(36));
-                    AccuracyCell(row.AccuracyA);
-                    AccuracyCell(row.AccuracyB);
-                    GUILayout.Label(EvaluationReportView.Signed(row.DifferencePoints) + " pts · " + (row.WithinNoise ? "within noise" : "beyond noise"),
-                        row.WithinNoise ? EditorStyles.miniLabel : EditorStyles.miniBoldLabel, GUILayout.Width(150));
-                }
-            }
-
-            EditorGUILayout.LabelField(
-                "Categories exist so the headline number is never measured on player chat alone: agents are also asked by timers and game events. " +
-                "A small category needs a large difference before it says anything.",
-                EditorStyles.wordWrappedMiniLabel);
-        }
-
-        private static void AccuracyCell(double points)
-        {
-            var rect = GUILayoutUtility.GetRect(120, 18, GUILayout.Width(120));
-            var bar = new Rect(rect.x, rect.y + 5, 70, 8);
-            EditorGUI.DrawRect(bar, new Color(0.5f, 0.5f, 0.5f, 0.2f));
-            EditorGUI.DrawRect(new Rect(bar.x, bar.y, (float)(bar.width * Math.Max(0, Math.Min(100, points)) / 100), bar.height), OutcomeColors[0]);
-            GUI.Label(new Rect(rect.x + 74, rect.y, 46, rect.height), EvaluationReportView.Percent(points / 100), EditorStyles.miniLabel);
-        }
-
-        // ⑤ The answers that were not correct, per arm, each opening its whole record.
-        private void DrawFailures()
-        {
-            string[] arms = { view.ArmA.Name, view.ArmB.Name };
-            string arm = arms[Mathf.Clamp(failureArm, 0, 1)];
-            var outcomes = new[] { (DecisionOutcome?)null }.Concat(EvaluationReportView.Outcomes.Skip(1).Select(o => (DecisionOutcome?)o)).ToArray();
-            var filter = outcomes[Mathf.Clamp(failureFilter, 0, outcomes.Length - 1)];
-            var failures = view.Failures(arm, filter);
-
-            Heading("⑤", $"Not correct in arm {(failureArm == 0 ? "A" : "B")} · {failures.Count} prompt{(failures.Count == 1 ? "" : "s")}");
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                failureArm = GUILayout.Toolbar(Mathf.Clamp(failureArm, 0, 1), new[] { "A · " + arms[0], "B · " + arms[1] }, GUILayout.Width(260));
-                var names = outcomes.Select(o => o == null ? "Every outcome but correct" : EvaluationReportView.NameOf(o.Value)).ToArray();
-                failureFilter = EditorGUILayout.Popup(Mathf.Clamp(failureFilter, 0, outcomes.Length - 1), names, GUILayout.Width(240));
-                GUILayout.FlexibleSpace();
-            }
-
-            if (failures.Count == 0)
-            {
-                EditorGUILayout.LabelField("None.", EditorStyles.miniLabel);
-                return;
-            }
-
-            foreach (var answer in failures)
-            {
-                string key = answer.Arm + "\n" + answer.PromptId;
-                bool open = opened.Contains(key);
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    GUILayout.Label(answer.PromptId, EditorStyles.miniBoldLabel, GUILayout.Width(110));
-                    using (new EditorGUILayout.VerticalScope())
-                    {
-                        EditorGUILayout.LabelField(EvaluationReportView.Asked(answer), EditorStyles.wordWrappedLabel);
-                        EditorGUILayout.LabelField(EvaluationReportView.ExpectedAndGot(answer) + " · " + EvaluationReportView.NameOf(answer.Outcome).ToLowerInvariant(),
-                            EditorStyles.wordWrappedMiniLabel);
-                    }
-
-                    if (GUILayout.Button(open ? "Close ▾" : "Open ▸", GUILayout.Width(70)))
-                    {
-                        if (open) opened.Remove(key); else opened.Add(key);
-                    }
-                }
-
-                if (open)
-                {
-                    using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-                    {
-                        foreach (var detail in EvaluationReportView.Details(answer))
-                        {
-                            using (new EditorGUILayout.HorizontalScope())
-                            {
-                                GUILayout.Label(detail.Key, EditorStyles.miniBoldLabel, GUILayout.Width(150));
-                                EditorGUILayout.SelectableLabel(detail.Value, EditorStyles.wordWrappedMiniLabel,
-                                    GUILayout.Height(EditorStyles.wordWrappedMiniLabel.CalcHeight(new GUIContent(detail.Value), Mathf.Max(100, position.width - 210))));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // ⑥ The labellers' agreement on the set now, and the report's export.
-        private void DrawLabellingAndExport()
-        {
-            Heading("⑥", "Labelling and export");
-            if (agreement != null)
-            {
-                EditorGUILayout.LabelField(EvaluationReportView.AgreementHeadline(agreement), new GUIStyle(EditorStyles.boldLabel) { wordWrap = true });
-                EditorGUILayout.LabelField(EvaluationReportView.AgreementDetail(agreement), EditorStyles.wordWrappedMiniLabel);
-            }
-
-            if (agreementNote != null)
-            {
-                EditorGUILayout.LabelField(agreementNote, EditorStyles.wordWrappedMiniLabel);
-            }
-
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                if (GUILayout.Button(new GUIContent("Review disagreements", "Opens the Prompt Set window: its Agreement tab lists and settles the splits."), GUILayout.Width(170)))
-                {
-                    PromptSetWindow.Open();
-                }
-
-                if (GUILayout.Button(new GUIContent("Copy summary for findings.md", "Copies a short Markdown summary: what ran, its conditions, the five outcomes and the noise check."), GUILayout.Width(210)))
-                {
-                    EditorGUIUtility.systemCopyBuffer = view.FindingsSummary(ShownFolder == null ? null : Path.Combine(ShownFolder, EvalReport.MarkdownFile));
-                    ShowNotification(new GUIContent("Summary copied"));
-                }
-
-                using (new EditorGUI.DisabledScope(ShownFolder == null || !Directory.Exists(ShownFolder)))
-                {
-                    if (GUILayout.Button(new GUIContent("Show files", "Shows report.json and report.md in the file browser."), GUILayout.Width(90)))
-                    {
-                        EditorUtility.RevealInFinder(Path.Combine(ShownFolder, EvalReport.MarkdownFile));
-                    }
-                }
-
-                if (GUILayout.Button(new GUIContent("Save a copy…", "Writes report.json and report.md into a folder of your choice."), GUILayout.Width(100)))
-                {
-                    SaveCopy();
-                    GUIUtility.ExitGUI();
-                }
-            }
-
-            EditorGUILayout.LabelField(
-                "Every accuracy claim has to come from a run like this one: a control arm, the same model, the same machine, the same session (hard rule 2). " +
-                "Read docs/llm-wiki/measuring.md before writing a number down.",
-                EditorStyles.wordWrappedMiniLabel);
         }
 
         private string ShownFolder => string.IsNullOrEmpty(shownReport) ? null : Path.GetDirectoryName(shownReport);
@@ -892,11 +374,9 @@ namespace Agenerela.Editor.Evaluation
 
             ToSetup();
             setup.NameArmsFromConfigs();
-            FromSetup();
-
             runMessage = missing.Count == 0 ? null : "The project has " + string.Join("; ", missing) + ".";
-            runMessageType = MessageType.Info;
-            Repaint();
+            runSeverity = ProblemSeverity.Warning;
+            FromSetup();
         }
 
         // The profile the Prompt Set window last used for this set, else the one beside it.
@@ -907,8 +387,7 @@ namespace Agenerela.Editor.Evaluation
                 return null;
             }
 
-            string guid = GuidOf(set);
-            var remembered = LoadByGuid<AgentProfile>(PromptSetPrefs.ForThisProject().ProfileGuidFor(guid));
+            var remembered = LoadByGuid<AgentProfile>(PromptSetPrefs.ForThisProject().ProfileGuidFor(GuidOf(set)));
             return remembered != null ? remembered : PromptSetStart.FindProfileBeside(AssetDatabase.GetAssetPath(set), loaded);
         }
 
@@ -923,8 +402,7 @@ namespace Agenerela.Editor.Evaluation
             }
             catch (Exception e) when (e is InvalidOperationException || e is ArgumentException)
             {
-                runMessage = e.Message;
-                runMessageType = MessageType.Error;
+                SetRunMessage(e.Message, ProblemSeverity.Error);
                 return;
             }
 
@@ -935,6 +413,7 @@ namespace Agenerela.Editor.Evaluation
             progress = null;
             runner.Progress = p => progress = p;
             EditorApplication.update += Tick;
+            Refresh();
 
             // A recompile mid-run would drop the run with the old domain.
             EditorApplication.LockReloadAssemblies();
@@ -942,12 +421,10 @@ namespace Agenerela.Editor.Evaluation
             {
                 var report = await runner.RunAsync(cancel.Token);
                 string folder = report.Save(ReportsFolder);
-                string json = Path.Combine(folder, EvalReport.JsonFile);
                 if (this != null)
                 {
-                    Show(report, json);
-                    runMessage = $"Finished and saved to {folder}.";
-                    runMessageType = MessageType.Info;
+                    Show(report, Path.Combine(folder, EvalReport.JsonFile));
+                    SetRunMessage($"Finished and saved to {folder}.", null);
                 }
             }
             catch (EvalCancelledException e)
@@ -960,7 +437,7 @@ namespace Agenerela.Editor.Evaluation
                 }
                 catch (Exception saving) when (saving is IOException || saving is UnauthorizedAccessException)
                 {
-                    SetRunMessage("Cancelled, and the partial report could not be saved: " + saving.Message, MessageType.Warning);
+                    SetRunMessage("Cancelled, and the partial report could not be saved: " + saving.Message, ProblemSeverity.Warning);
                     folder = null;
                 }
 
@@ -968,21 +445,21 @@ namespace Agenerela.Editor.Evaluation
                 {
                     Show(e.Partial, Path.Combine(folder, EvalReport.JsonFile));
                     SetRunMessage($"Cancelled after {e.Partial.Answers.Count} of {e.Partial.Conditions.Prompts * 2} answers. "
-                                + $"The partial report below is saved to {folder}, marked cancelled: it is no result.", MessageType.Warning);
+                                + $"The partial report below is saved to {folder}, marked cancelled: it is no result.", ProblemSeverity.Warning);
                 }
             }
             catch (OperationCanceledException)
             {
-                SetRunMessage("Cancelled before the first request. Nothing was saved.", MessageType.Warning);
+                SetRunMessage("Cancelled before the first request. Nothing was saved.", ProblemSeverity.Warning);
             }
             catch (Exception e) when (e is InvalidOperationException || e is ProviderException)
             {
                 // The runner's refusals say what to fix.
-                SetRunMessage("The run stopped: " + e.Message, MessageType.Error);
+                SetRunMessage("The run stopped: " + e.Message, ProblemSeverity.Error);
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {
-                SetRunMessage("The run finished but its report could not be saved: " + e.Message, MessageType.Error);
+                SetRunMessage("The run finished but its report could not be saved: " + e.Message, ProblemSeverity.Error);
             }
             finally
             {
@@ -996,12 +473,12 @@ namespace Agenerela.Editor.Evaluation
                 cancel.Dispose();
                 if (this != null)
                 {
-                    Repaint();
+                    Refresh();
                 }
             }
         }
 
-        private void SetRunMessage(string message, MessageType type)
+        private void SetRunMessage(string message, ProblemSeverity? severity)
         {
             if (this == null)
             {
@@ -1009,16 +486,17 @@ namespace Agenerela.Editor.Evaluation
             }
 
             runMessage = message;
-            runMessageType = type;
+            runSeverity = severity;
+            Refresh();
         }
 
-        // Redraws the elapsed time while a run goes on.
+        // Moves the progress bar and the time while a run goes on.
         private void Tick()
         {
             if (EditorApplication.timeSinceStartup - lastTick > 0.5)
             {
                 lastTick = EditorApplication.timeSinceStartup;
-                Repaint();
+                ui?.ShowProgress(progress, EditorApplication.timeSinceStartup - runStarted);
             }
         }
 
@@ -1038,6 +516,7 @@ namespace Agenerela.Editor.Evaluation
             {
                 Show(EvalReport.FromJson(File.ReadAllText(path)), path);
                 runMessage = null;
+                Refresh();
             }
             catch (Exception e) when (e is IOException || e is InvalidDataException || e is UnauthorizedAccessException)
             {
@@ -1053,11 +532,8 @@ namespace Agenerela.Editor.Evaluation
             view = new EvaluationReportView(report);
             shownReport = jsonPath ?? "";
             prefs.LastReport = shownReport;
-            opened.Clear();
-            failureArm = 1;
-            failureFilter = 0;
             ReadAgreement(report);
-            Repaint();
+            Refresh();
         }
 
         // The agreement on the report's set as its label files are now: labels are not part of a run.
@@ -1084,8 +560,24 @@ namespace Agenerela.Editor.Evaluation
             }
         }
 
+        private void CopySummary()
+        {
+            if (view == null)
+            {
+                return;
+            }
+
+            EditorGUIUtility.systemCopyBuffer = view.FindingsSummary(ShownFolder == null ? null : Path.Combine(ShownFolder, EvalReport.MarkdownFile));
+            ShowNotification(new GUIContent("Summary copied"));
+        }
+
         private void SaveCopy()
         {
+            if (view == null)
+            {
+                return;
+            }
+
             string parent = EditorUtility.SaveFolderPanel("Save a copy of the report", Path.GetDirectoryName(Application.dataPath), "");
             if (string.IsNullOrEmpty(parent))
             {

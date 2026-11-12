@@ -29,6 +29,240 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Two 4B-class candidates measured against `qwen3.5:4b`** (#252's first arms), on the RTX 5080
+  with the control re-run in the same session. The candidates are `gemma4:e4b-it-qat` and
+  `nemotron-3.5-bolt:e4b`. Results are in `findings.md` and `model-candidates.md`'s "Measured",
+  with a row in `live-runs.md` and a candidates table and a fourth game account in the
+  GreyBoxStrategy README.
+  - Both pass the pre-checks: no thinking, field order kept, probabilities from before the mask.
+  - Correct answers, interim and curated: 330 / 329 / 324 and 69 / 69 / 66 (control, Gemma,
+    Bolt). All within noise.
+  - Gemma E4B handles impossible requests worse (−18.8, beyond noise). At the persona table it
+    plays the control's game in shorter lines.
+  - Bolt E4B plays a passive game and repeats half its statements.
+  - `/api/ps` under-reports Bolt: 950 MB, about 2.8 GB real.
+  - No default changed.
+
+- **GreyBoxStrategy: a storyteller that invents the game's events** (#20, stage S1 of
+  `docs/demos/painted-realm-research.md`, demo only, no framework change). One more `Agent` with no
+  body, asked before each upkeep from turn 3, picks one of eight effect templates and a country,
+  group or province, and writes the title and story; the game sets the strength, keeps it fair
+  through availability (a budget, no gift to the leader or blow on the weak, cooldowns, no third
+  blow or gift in a row), replaces a story that names the wrong country or holds a number, and tells
+  the rulers the title. An arm, `+storyteller`, off in `default`; it replaces the random event table
+  (`Game.EventTable`). `StrategyTableMenu.RunInterleavedFromCommandLine` runs several arms on the
+  same seeds in blocks, every run writes `events.csv` and `events.md`, and the scorecard has an
+  events section. Measured against the table on `qwen3.5:4b`: findings, 12 November, "A storyteller
+  in GreyBoxStrategy".
+- **GreyBoxStrategy, Painted Realm: rule mode** (#20). The start menu's third choice: you rule
+  one country against four model rulers with personas.
+  - The rulers decide at once, in one `DecisionRound`, while your order waits. The turn then
+    plays back as in watch mode.
+  - The orders panel offers exactly the moves `Legality` offers a model seat in your place. A
+    move that is not offered says why. Province and rival panels have Order buttons, and a peace
+    offer to you opens the envoy's card.
+  - Fog of war is decided and documented: you know what a model ruler is told, no more.
+  - The RTX 5080's lock is taken for each round of model calls only, and the model is unloaded
+    after each.
+  - Tests drive the four seats with a `ScriptedProvider`.
+- **Painted Realm: three fixes to #260's live game.**
+  - The lock now resolves to the main checkout's from a git worktree too.
+  - The server check and the unload use `HttpClient`, as the framework's provider does. Before,
+    `UnityWebRequest` refused the plain-HTTP gateway.
+  - The start menu fits at 1366 × 768.
+
+- **GreyBoxStrategy, Painted Realm: a start menu and "Play it"** (#20).
+  - The Watch scene opens on a menu: replay the recorded game, or watch a live game (model and
+    seed).
+  - A live game checks first and says why it cannot start: either gateway variable missing, the
+    RTX 5080's lock held (and by whom), the server unreachable, or the key refused.
+  - It takes the lock while the model plays, unloads the model, and releases the lock at once. A
+    game that stops mid-way says so on the map.
+  - The three-turn stop is now enforced where the game asks its rulers, and two tests drive a
+    whole live session with a `ScriptedProvider`.
+  - The demo README opens with the steps.
+
+- **GreyBoxStrategy, the screen follows a live game** (#20).
+  - Five `qwen3.5:4b` persona seats play through `TableRunner`, and the screen reads the
+    framework's `DecisionLog` as it grows: a partial replay build, and the log read while it is
+    written.
+  - A turn plays only once it has fully resolved.
+  - Checked with one full live game on the RTX 5080, where Ilvar won on turn 24; no timing claims.
+  - Also: open panels no longer cover the map-mode bar, and following a country centres its land
+    in the free map area.
+  - 3 new EditMode tests.
+
+- **GreyBoxStrategy, the screen's panels and map modes** (#20, still on the replay).
+  - **Province and country panels** on click: defence, who may attack a province and why not,
+    and a country's persona, treasury, last facts, offered moves and decisions.
+  - **Map modes:** Political, the main one, keeps capitals and forts; Armies; Forts; and Reach,
+    which shows the followed country's legal attacks with win chances.
+  - **A diplomacy matrix.**
+  - **Following a country** turns the top bar into its full values, the groundwork for rule mode.
+  - **The map** is a 4096 × 2304 master with open sea on every side, upscaled from codex-image's
+    painting and re-baked; the sea beyond it no longer repeats visibly.
+  - `RealmQueries`' reach is checked against every attack the recorded game offered. 3 new
+    EditMode tests.
+
+- **GreyBoxStrategy, stage 3, slice 2: the decision inspector** (#20). Any chronicle line or
+  speech banner opens the decision behind it. It shows six sections, from the recorded telemetry
+  alone: the model's raw answer; the game's offered moves with the choice marked, and those not
+  offered with each reason; the facts sent; the guards with target grounding and the re-check when
+  the move landed; memory; model, tokens and queue time. Also: the map now fills the screen edge to
+  edge over a tile of its own sea, the scroller and buttons are styled, tooltips work in play, the
+  top bar turns compact below 1600 px, and banners stay clear of the panels. The URP upgrade
+  Unity asked for on first open is committed, so a fresh checkout opens without the modal dialog
+  that blocked the Unity CLI. 4 new EditMode tests.
+
+- **GreyBoxStrategy, stage 3, slice 1: watch mode plays back a recorded game** (#20, working
+  title Painted Realm). `Screen/Watch.unity` replays seed 4 of the v248 persona 4b table with every
+  ruler's own words and no model call. `ReplayBuilder` rebuilds the game from its recorded decisions,
+  since the rules are deterministic per seed, and refuses a recording the rules no longer fit.
+  The map is one quad and one shader over a sea-chart painting, with a province id map baked from
+  the rule graph. Owners tint the painting's hue, borders between owners redraw themselves, and a
+  capture plays as the design page times it: strike, fall, spread from the attacker's side,
+  settle. A UI Toolkit screen adds the top bar, realm list, filtered chronicle, speech at the
+  capital and time controls. 6 new EditMode tests. Assets and their licences are in the design
+  page's asset list.
+
+- **GreyBoxStrategy, stage 3's design: the painted map and the screen** (#20), for the lead to
+  approve or redirect: [`docs/demos/grey-box-strategy-screen.md`](docs/demos/grey-box-strategy-screen.md)
+  with eight mock-ups (three looks for the parchment map, the capture of a province step by step,
+  rule and advise modes, a court scene). It specifies the colour change to the millisecond, the
+  three modes, the Why card over `DecisionFeed`, a single-shader map built from the rule graph
+  with a painted fallback, and an asset list. Round 2 follows the lead's choices (look C,
+  "Painted Realm" for now, dense terrain, a portrait per persona with several faces): a clickable
+  grand-strategy screen in HTML, `docs/demos/grey-box-strategy-screen/ui/index.html`, with
+  watch, rule and advise modes, a decision inspector, two styles, and twelve screenshots. The
+  lead's answers to 28 design questions are recorded, each marked as met by the mock-up or not.
+  Docs only.
+
+- **GreyBoxStrategy: what a remembered move holds, and invented grievances** (#244 item 4, #216
+  item 3, gap N7). After each turn resolves, `CountryAgent.Learn` attaches every landed move's
+  line from the resolution report (`"took fenmark from orsk (34 against 21); lost 6"`) to its
+  remembered decision through the framework's new `Agent.SetOutcome`. The model-seat modifiers
+  `+memory-move` and `+memory-outcome` set `RollingHistory.Remembers`. The default arm keeps the
+  whole decision, so no existing arm changes. The scorecard's voice section gains **claims land
+  taken** and **invented grievance**: a claim against a country that took none of our land
+  earlier that game. 6 new EditMode tests. Measured on `qwen3.5:4b`, 20 games an arm: both settings
+  made statements name their target far less often (72% to 33% and 43%) and contradict the move
+  more, beyond noise, while repetition (5%) and invented grievances (1.4%) were already rare and
+  did not move. The demo keeps the whole decision. `qwen3.5:2b` was not measured. See `findings.md`.
+- **GreyBoxStrategy: arms for #244's prompt options, and a rule-copy count** (#244 items 5 and 8).
+  - The model-seat modifiers `+no-moves-line`, `+moves-sentence` (`LegalTargets = ObservationLine`),
+    `+how-it-reads` and `+own-words` (`StatementRulesWording`).
+  - The `Scorecard`'s voice section counts statements that copy their persona's whole statement
+    rule, or one sentence of it.
+  - At the persona 2b table, `+own-words` took those copies from 15% to none; at the 4b table,
+    which never copied, it changed nothing beyond noise but statements repeated word for word (5%
+    to 10%). In stage 2, on the 4B only, the framework's moves sentence kept the attack share
+    within noise of the game's line but ended with fewer provinces (0.7 against 2.1, the band's
+    edge), so the game keeps its line. See the demo README's gaps N8 and N9.
+
+- **GreyBoxStrategy: models at one table** (#20). Any seat can be a model, a script or random
+  (`TableDefinition`, `Tables.Named`, `StrategyTableMenu`). Each council is one framework
+  `DecisionRound`, executed in the game's own order. There are five personas built only from
+  `AgentIdentity`, and a `Scorecard` scoring liveliness, sense, character, voice and strength from
+  the logs, with all-script and all-random tables as reference points. On the RTX 5080, 20 games a
+  table: a persona explains 84% of a 4B seat's aggression (placebo 3%) and makes the game livelier
+  (domination 20% → 60%, quiet turns 39% → 25%). The 2B copies its statement rule into its
+  statements (new gap N9). 16 new EditMode tests. See the demo README's "Models at one table" and
+  `findings.md`, 11 November.
+- **GreyBoxStrategy: the grounding guard plays legal moves again** (#244 item 1, gap N4). New arm
+  modifiers `+threshold-<x>` and `+alternatives-<n>`, and the `default` arm now sets the grounding
+  threshold to 0.6 on top of the framework's new 20 alternatives a token. On the RTX 5080, 30 games
+  an arm, the guard's containments of legal moves fell from 72 to 3 (`qwen3.5:4b`) and 94 to 3
+  (`qwen3.5:2b`), and the attack share rose from 22% to 32% and 12% to 21%, as with the guard off;
+  provinces within noise. The arm measured as `default` before is `control+paired+alternatives-5`.
+  The framework's side, and the evaluation-set measurement, is in the package's changelog and
+  `findings.md` (11 November).
+
+- **GreyBoxStrategy: can the framework replace the moves line?** (#20, #244 item 5, #151). The
+  model seat gains arms for the framework's legal-target listing (`per-target`, `per-target-paired`)
+  and modifiers on any arm (`+paired`, `+listed`, `+no-grounding`). Its report adds illegal answers,
+  containments on legal answers and attacks, and attacks landed. On the RTX 5080, 30 games an arm,
+  `LegalTargets = PerTarget` in place of the game's line cut the 4B's attack share from 23% to 15%
+  (17% with pairing), so the line stays. The paired schema took illegal answers from 30 to 0 (4B)
+  and 62 to 0 (2B) at no measured cost, and is now the seat's default (`ModelSeatOptions.Default`,
+  the `default` arm); stage 2's `control` is unchanged. Grounding off with pairing raised the attack
+  share to 33%, sizing gap N4. A new gap, N8, is in the demo's `README.md`. 82 EditMode tests.
+- **GreyBoxStrategy, stage 2: a model plays a country** (#20). A framework `Agent` built in code
+  with no scene plays one seat. Its eight moves are registered once. Availability comes from the
+  game's rules, action-wide and per target (`ITargetAvailability`), with categories for provinces
+  and countries. Standing facts come from an observation source, and this turn's facts go with the
+  call. `Agent.Execute` runs as the re-check at the moment the game lands each move, through a new
+  `IMoveGate` in the simulation. A game-side line names each move's legal targets, standing in for
+  stage 1's gap N1. On the RTX 5080, 30 games per arm against four scripted countries: `qwen3.5:4b`
+  ends with 1.8 provinces (random 1.4, scripted 3.1 to 4.3), `qwen3.5:2b` with 0.4, and neither
+  wins a game. Without the moves line the 4B's attacks fall from 15% to 2% of its moves. The
+  grounding guard contains legal attacks when several provinces are open. Five arms and the
+  baselines are in the demo's `README.md` and `findings.md`. The menu and the CLI entry points run a
+  model seat, and the logs show each model answer and statement. 77 EditMode tests, 15 of them on
+  the model seat through `ScriptedProvider`.
+- **GreyBoxStrategy, stage 1: the country game, headless** (#20). `Demos/GreyBoxStrategy/` is
+  a new Unity project (Universal 2D, the framework by relative path, `com.unity.pipeline`). Its
+  simulation assembly has no engine references at all: five countries on a 5 × 5 map of 25
+  provinces, ten of them neutral, one move each a turn (recruit, fortify, raise taxes, declare
+  war, attack a province, offer peace), envoys that accept or refuse peace before anything
+  lands, every move re-checked at resolution so a stale one is refused, and dice keyed by
+  seed, turn and purpose so a game replays exactly. A scripted AI in two temperaments wins 98 to
+  99% of games against four random players and 27% and 24% per seat in a mixed line-up; random
+  wins none of 200. A runner plays N games from the editor menu, the Unity CLI or
+  `-executeMethod` and writes a summary, a CSV and a per-game log of every decision with the
+  facts the player saw. Facts come in two kinds from the start, standing and this turn's, for
+  `ObservationPlacement.WithStimulus`. 59 EditMode tests. The design moved on from the 9
+  November draft (`docs/demos/grey-box-strategy.md` says what changed and why), and the demo's
+  `README.md` answers #20's four questions and checks #216 against the game.
+- **In-game checks go through the Unity CLI.** Living Vale now has `com.unity.pipeline`
+  0.9.1-exp.1, as GreyBoxVillage does, so `unity command` drives its editor: Play mode, a
+  captured frame, the console and C# run in the game, without taking over the user's screen.
+  `AGENTS.md` makes it the way agents check a running game, with computer use only for what it
+  cannot do. `environment.md` has the loop as checked on Living Vale on 10 November, and
+  `Demos/README.md` adds the package to every new game. Git ignores the package's per-machine
+  `ProjectSettings/Packages/com.unity.pipeline/`. Living Vale's EditMode tests are unchanged:
+  577 passed, 4 skipped.
+- **An Ollama server on the RTX 5080 for other machines**, in `tools/ollama-server/`: Ollama
+  0.40.14 in Docker, pinned by its image tag, with the model-sweep kit's settings, behind a Caddy
+  gateway on port 11436 that wants a key on every request and passes only the routes the framework
+  and the kits use. The laptop runs Unity, the live tests and the kits against the 5080's card,
+  at home or over the VPN. `setup.ps1` prepares the server and writes the key; `ollama_remote.py`
+  checks it, lists and warms models, unloads them and pulls new ones; `AGENT_USAGE.md` is the guide
+  an agent on the laptop follows, and `AGENTS.md` points to it. The kit's `sweep_one.sh` and
+  `probe.py` and its Unity entry point send the key, which `sweep_one.sh` reads from that folder's
+  `.env` when `OLLAMA_URL` is unset, and `LiveOllama` reads `AGENERELA_OLLAMA_API_KEY` for the
+  `RequiresOllama` tests, whose own calls to the server now send it too, and which a 401 fails
+  rather than skips. All nine passed through the gateway from its LAN address on 9 November. `environment.md`'s network
+  section, the sweep README and run request 001 now use it, in place of opening the Ollama app's
+  port, which has no login. The framework's side is the package's new `OllamaSettings.ApiKey`.
+  Its logs: the gateway writes one short line per request instead of its header dump, Docker
+  rotates both containers' logs (5 files of 20 MB), the health check runs every 5 minutes instead
+  of 30 s, and `logs.py` shows both containers as one timeline of requests, model loads, pulls and
+  problems, cutting about 9,000 lines to about 300. It runs without `OLLAMA_NUM_PARALLEL`, which
+  Ollama ignores for `qwen3.5` and which changed replies on models it does batch (findings,
+  11 November).
+- **Run requests**, in `docs/run-requests/`: a run one machine should do, written down for another
+  session or person to pick up. Each is a folder with a `request.md`, what to run step by step, and
+  a `results.md` to fill in, with a status that goes open, claimed, done. Request 001 is the
+  13-model sweep on the interim set, for the RTX 5080. Its kit, `tools/live-runs/model-sweep/`,
+  is the 9 November sweep's scripts made portable: the server, project and set come from
+  environment variables, and the Unity entry point is a file to copy in, not a committed test.
+  `environment.md` gains a section on serving Ollama from another machine over the local network,
+  so the laptop can use the 5080's card. It is untested until someone runs it.
+- **An interim evaluation set of 389 prompts**, in `UnityProject/Assets/Evaluation/Interim/`
+  (#151), for A/B runs until #147's curated 200+ set exists. It is measured against the curated
+  set's agent, with the same actions and 11 targets, and is a set of its own with its own
+  `agent.json` and `int_` ids. It was written and first labelled by Claude, then labelled blind by
+  Codex: they agreed on 391 of 392. The one split was dropped, and so were two prompts Codex's
+  review of the pull request found ambiguous or too near a few-shot example. `none` is 40% of the
+  expected answers, and each acting action has 46 or more, where the curated set has 4 to 7. Its
+  noise floor is about 3.6 points overall and 9 per category, against 8 and 20 to 30 at 76. It is
+  AI-written and interim, not a replacement for #147; its `README.md` says how it was made and
+  checked.
+- **GreyBoxVillageClassic keeps the grey-box village from before v2**, in
+  `Demos/GreyBoxVillageClassic/`: `Demos/GreyBoxVillage` as it stood at 396f266, the commit
+  before #157, with its files and `.meta` GUIDs unchanged, as a Unity project of its own named
+  "GreyBoxVillage Classic". It is kept for comparison and frozen, changing only to keep
+  compiling against the framework.
 - **GreyBoxVillage became Ashford, a village worth exploring** (#153).
   - **Art:** low-poly art built by a Blender script in `Demos/GreyBoxVillage/ArtSource/`, 77
     models on one palette. The grey boxes stay as invisible colliders, so the NavMesh and the
@@ -195,8 +429,41 @@ phase table and the open issues, not here.
   the control, on `qwen3.5:2b` and Ollama 0.40.14, recorded in `findings.md`. At n = 20 that
   says the gate passed, not by how much the guard helps.
 
+
+### Changed
+
+- **GreyBoxStrategy marks the moves that take no target** (#244 item 2): recruit, raise_taxes and
+  the two envoy answers set `ActionDefinition.TakesNoTarget`, so the framework drops a target the
+  model names for one and records it, and the seat's `TargetIgnored` reads the framework's
+  telemetry. The seat's own drop stays as a second check.
+
+- **Living Vale runs on the framework features its own gap list asked for** (#190, #69). One
+  commit per feature replaces the game's workaround with the framework's API: the identity's
+  knowledge and statement rules (#231), target categories (#208) and a per-target check (#235) in
+  place of three pair guards, fixed examples with `INamedTarget` and `ExampleTargetFallback` in
+  place of three `RefreshExamples` (#234), the provider's model list, warm-up and unload and a
+  provider swap in place of the game's Ollama calls and driver rebuilds (#198), one agent per NPC
+  for the script and the model (#194, LV #23), `Conversation` for the chat's turns (#209),
+  `Proposals` for the route cards (#236), `Agent.Id` (#217), `CanImport` (#205) and the decision
+  log (#229). The game's code is 268 lines shorter (blank and comment lines not counted). What did
+  not fit, and why, is in `docs/demos/living-vale-framework-gaps.md`, "The adoption". The model
+  now reads the personas' facts in the system prompt and slightly different examples. Living
+  Vale's EditMode tests: 568 passed, 4 skipped, of 572. A same-session check on the RTX 5080
+  (findings, 10 November) found one regression, on the route examples, fixed in the branch.
+
 ### Fixed
 
+- **Painted Realm: fixes from the night's play-through** (#20).
+  - A move that is not offered shows its reason on hover again: disabled buttons got no hover,
+    so the reason never appeared.
+  - Once your country is out, the orders panel says so.
+  - A ruler's speech no longer sits under the open inspector.
+  - The README's Play it section opens with "What to try".
+
+- **The model-sweep kit no longer takes Unity Hub's CLI server for an Editor.** `sweep_one.sh`
+  refused every model while `Unity Hub\resources\unity.exe serve` was running, since it counted
+  any process named Unity. It now counts Editors only. `OLLAMA_SERVER_ENV` points a copy of the kit
+  in a worktree at another checkout's `tools/ollama-server/.env`. Found running request 001.
 - **Release notes no longer break mid-sentence.** GitHub shows every newline in a release's
   notes as a line break, so notes copied from wrapped Markdown came out as ragged paragraphs
   stopping halfway across the page, as 0.2.0, 0.3.0 and 0.4.0-preview.1 did (the last was

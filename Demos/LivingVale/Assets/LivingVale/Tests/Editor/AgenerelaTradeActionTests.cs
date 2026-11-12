@@ -127,7 +127,7 @@ namespace LivingVale.Tests
 
             Assert.AreEqual(ActionRegistry.None, reply.Decision.ActionId);
             Assert.AreEqual(AgenerelaNpcDecisionDriver.RefusalLine, reply.Decision.Statement);
-            CollectionAssert.Contains(((DecisionResult)reply.DriverState).Telemetry.GuardsFired, TradeActionBinding.PairGuardName);
+            CollectionAssert.Contains(((DecisionResult)reply.DriverState).Telemetry.GuardsFired, nameof(TargetCategoryGuard));
             Assert.IsTrue(driver.Execute(turn, reply), "A contained refusal executes as none.");
             Assert.IsNull(trade.ActiveQuote);
         }
@@ -226,13 +226,15 @@ namespace LivingVale.Tests
         {
             driver.IdleExampleStimulus = null;
             driver.TradeRule = TradeActionBinding.OnlyWhenAskedRule;
-            var next = driver.WithProvider(provider, "other");
+            driver.UseProvider(new FakeLlmProvider(), "other");
+            var other = (FakeLlmProvider)driver.Provider;
 
-            var decide = next.DecideAsync(Turn("Hello."), CancellationToken.None);
+            var decide = driver.DecideAsync(Turn("Hello."), CancellationToken.None);
             await Run.NotCancelled(decide);
 
-            StringAssert.DoesNotContain(AgenerelaNpcDecisionDriver.DefaultIdleExample, provider.LastRequest.FewShotBlock);
-            StringAssert.Contains(TradeActionBinding.OnlyWhenAskedRule, provider.LastRequest.Observations);
+            StringAssert.DoesNotContain(AgenerelaNpcDecisionDriver.DefaultIdleExample, other.LastRequest.FewShotBlock);
+            StringAssert.Contains(TradeActionBinding.OnlyWhenAskedRule, other.LastRequest.Observations);
+            Assert.AreEqual("Agenerela · other", driver.Label);
         }
 
         [Test]
@@ -251,6 +253,21 @@ namespace LivingVale.Tests
             StringAssert.Contains(TradeActionBinding.PurchaseCounterExample, request.FewShotBlock);
             StringAssert.Contains(TradeActionBinding.SaleCounterExample, request.FewShotBlock);
             StringAssert.Contains(AgenerelaNpcDecisionDriver.DefaultIdleExample, request.FewShotBlock, "Through Agent.IdleExampleStimulus.");
+        }
+
+        [Test]
+        public async Task EachExampleNamesAnOfferedTargetInItsOwnWordsAndNeverTheOneAskedFor()
+        {
+            GivePelt(1);
+
+            var request = ((DecisionResult)(await Decide(Turn("Hello."))).DriverState).Request;
+            StringAssert.Contains("I'll take healing potion ×1, please.", request.FewShotBlock, "The fixed example, filled with the first stock entry's own name (#234).");
+            StringAssert.Contains("target: " + Potion, request.FewShotBlock);
+            StringAssert.Contains("Would you buy my wolf pelt ×1?", request.FewShotBlock, "The sale example names a pack item, never a stock entry.");
+
+            request = ((DecisionResult)(await Decide(Turn("Do you have a healing potion?"))).DriverState).Request;
+            StringAssert.DoesNotContain("I'll take healing potion", request.FewShotBlock, "An example never shows the answer to the line being asked.");
+            StringAssert.Contains("I'll take bread ×1, please.", request.FewShotBlock);
         }
 
         [Test]

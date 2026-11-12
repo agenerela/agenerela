@@ -1,0 +1,94 @@
+#if UNITY_EDITOR
+// The model sweep's entry point (tools/live-runs/model-sweep/README.md). NOT a committed test:
+// copy it into a detached copy of the repository as
+// UnityProject/Packages/com.agenerela.framework/Tests/Runtime/ModelSweepRun.cs and run it in
+// batch mode. It runs one model through EvalRunner, two arms interleaved:
+//   idle-profile  the defaults, so the profile's own idle example ("Fine day for it.")
+//   idle-none     DecideOptions.IdleExampleStimulus = "", no idle example
+// The idle-profile arm is also the model's default score.
+//
+// Read from the environment:
+//   AGENERELA_OLLAMA_MODEL  the model (LiveOllama.Model; qwen3.5:2b when unset)
+//   AGENERELA_OLLAMA_URL    the server (LiveOllama.Endpoint; http://127.0.0.1:11434 when unset)
+//   AGENERELA_OLLAMA_API_KEY the server's key, for one behind tools/ollama-server/'s gateway
+//                           (LiveOllama.ApiKey; none when unset). The config names the variable only.
+//   AGENERELA_SWEEP_SET     the set file under Assets/ (Evaluation/agent.json when unset)
+//   AGENERELA_SWEEP_PROFILE the profile asset (Assets/Evaluation/VillageGuard.asset when unset)
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using Agenerela.Evaluation;
+using Agenerela.Providers;
+using NUnit.Framework;
+using UnityEditor;
+using UnityEngine;
+using Object = UnityEngine.Object;
+
+namespace Agenerela.Tests
+{
+    public sealed class ModelSweepRun
+    {
+        private readonly List<Object> created = new List<Object>();
+
+        [TearDown]
+        public void TearDown()
+        {
+            foreach (var obj in created)
+            {
+                Object.DestroyImmediate(obj);
+            }
+
+            created.Clear();
+        }
+
+        [Test]
+        [Category(LiveOllama.Category)]
+        [Timeout(14400000)] // 4 h. The Test Framework's default, 180 s, ends a 389-prompt run halfway.
+        public async Task RunOneModel()
+        {
+            LiveOllama.Reset();
+            LiveOllama.RequireReachable();
+
+            string setRelative = Environment.GetEnvironmentVariable("AGENERELA_SWEEP_SET") ?? "Evaluation/agent.json";
+            string profilePath = Environment.GetEnvironmentVariable("AGENERELA_SWEEP_PROFILE") ?? "Assets/Evaluation/VillageGuard.asset";
+            var set = PromptSet.Load(Path.GetFullPath(Path.Combine(Application.dataPath, setRelative)));
+            var profile = AssetDatabase.LoadAssetAtPath<AgentProfile>(profilePath);
+            Assert.That(profile, Is.Not.Null, $"No AgentProfile at {profilePath}");
+
+            var on = new EvalArm("idle-profile", Config("sweep-A"), new DecideOptions());
+            var off = new EvalArm("idle-none", Config("sweep-B"), new DecideOptions { IdleExampleStimulus = "" });
+            var runner = new EvalRunner(set, profile, on, off)
+            {
+                Order = EvalArmOrder.Interleaved,
+                // The wording every 9 November 2026 run used, so results compare.
+                DescribeState = state => new[] { (bool)state["isFollowing"] ? "You are following the player." : "You are not following the player." },
+            };
+
+            var started = DateTime.Now;
+            var report = await LiveOllama.NotCancelled(runner.RunAsync());
+            var took = DateTime.Now - started;
+            string saved = report.Save(Path.Combine(Application.dataPath, "..", "Logs", "Evaluation"));
+            string line = $"EVAL-REPORT {saved}\nEVAL-TOOK {took.TotalSeconds:F0}s for {set.Prompts.Count()} prompts per arm";
+            TestContext.Out.WriteLine(line);
+            Debug.Log(line);
+        }
+
+        private ProviderConfig Config(string name)
+        {
+            var config = ScriptableObject.CreateInstance<OllamaProviderConfig>();
+            config.name = name;
+            config.Endpoint = LiveOllama.Endpoint;
+            config.Model = LiveOllama.Model;
+            if (LiveOllama.ApiKey.Length > 0)
+            {
+                config.ApiKeyVariable = LiveOllama.ApiKeyVariable;
+            }
+
+            created.Add(config);
+            return config;
+        }
+    }
+}
+#endif
