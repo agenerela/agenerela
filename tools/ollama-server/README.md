@@ -136,6 +136,10 @@ start.
   memory on it: `nvidia-smi` on the server, and `ollama_remote.py ps` from anywhere. Never stop
   another container to make room without the lead's say-so.
 - **Unload before timing** (hard rule 3): `ollama_remote.py unload --all`.
+- **One client at a time, and no `OLLAMA_NUM_PARALLEL`.** Ollama 0.40.14 serves `qwen3.5` one
+  request at a time whatever the setting, so two sessions only take turns. On models it does run in
+  parallel, two requests at once changed 13 of 60 replies and two decisions, so a result from two
+  sessions at once is not comparable with one from one (findings, 11 November).
 - **The first load after a pull or a restart is slow**: 54 s for `qwen3.5:2b` the first time, while
   Docker read the file from disk, 28.5 s after the containers were recreated, and 1.9 s cold
   otherwise (9 November). The framework's default timeout is
