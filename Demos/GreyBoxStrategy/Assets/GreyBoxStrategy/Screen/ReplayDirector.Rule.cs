@@ -33,11 +33,11 @@ namespace GreyBoxStrategy.Realm
         {
             if (started) yield break;
             string why = Gateway.WhyNotSet();
-            if (why != null) { ui.ShowRuleStatus(why); yield break; }
-            ui.ShowRuleStatus("Asking the server...", true);
+            if (why != null) { ui.ShowMenuStatus(why); yield break; }
+            ui.ShowMenuStatus("Asking the server...", true);
             string serverWhy = null;
             yield return Gateway.CheckServer(w => serverWhy = w);
-            if (serverWhy != null) { ui.ShowRuleStatus(serverWhy); yield break; }
+            if (serverWhy != null) { ui.ShowMenuStatus(serverWhy); yield break; }
             model = string.IsNullOrWhiteSpace(model) ? "qwen3.5:4b" : model.Trim();
             ruleLock = new CardLock(model, $"rule game, {model} x4 with personas, seed {gameSeed}");
             BeginRule(country, model, gameSeed, (m, w) => Gateway.Provider(m), ruleLock);

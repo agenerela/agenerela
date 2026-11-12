@@ -245,3 +245,30 @@
 /* the RTX 5080 in the top bar while a game holds it or waits for it */
 .card-chip { font-size: 11px; -unity-font-style: bold; padding: 2px 7px; margin-right: 10px; border-width: 1px; border-color: rgb(143, 191, 122); color: rgb(143, 191, 122); }
 .card-chip.waiting { border-color: rgb(216, 162, 74); color: rgb(216, 162, 74); }
+/* each country's army, at its capital, in every map mode */
+.army-piece { position: absolute; flex-direction: row; align-items: center; padding: 1px 6px 1px 4px; border-width: 1px; border-color: rgb(210, 173, 98); border-radius: 3px; translate: -50% -100%; }
+.army-piece-n { font-size: 12px; -unity-font-style: bold; color: rgb(243, 231, 200); margin-left: 3px; }
+/* the menus: main, New game, Settings, pause */
+.menu { max-height: 94%; }
+.menu-scroll { flex-shrink: 1; }
+.menu.main { width: 500px; padding: 22px 30px; }
+.menu.newgame, .menu.settings { width: 720px; }
+.menu.pause { width: 380px; }
+.menu-sub { font-size: 14px; -unity-font-style: italic; color: rgb(194, 179, 147); white-space: normal; -unity-text-align: middle-center; margin-bottom: 4px; }
+.menu.main .menu-title { -unity-text-align: middle-center; font-size: 34px; }
+.menu-head { font-size: 20px; -unity-font-style: bold; letter-spacing: 4px; color: rgb(210, 173, 98); margin-bottom: 4px; }
+.menu-big { flex-direction: column; align-items: flex-start; margin: 0 0 8px 0; padding: 9px 16px; background-color: rgba(210, 173, 98, 0.06); border-width: 1px; border-color: rgba(201, 164, 90, 0.4); border-radius: 0; color: rgb(234, 223, 198); font-size: 17px; -unity-font-style: bold; letter-spacing: 1px; }
+.menu-big:hover { background-color: rgba(210, 173, 98, 0.18); border-color: rgb(210, 173, 98); }
+.menu-big.pick { background-color: rgba(107, 82, 40, 0.85); border-color: rgb(210, 173, 98); }
+.menu-big-note { font-size: 12px; -unity-font-style: italic; letter-spacing: 0; color: rgb(194, 179, 147); white-space: normal; margin-top: 2px; }
+.menu-row { flex-direction: row; align-items: center; flex-wrap: wrap; }
+.menu-modes > .menu-big { flex-grow: 1; flex-basis: 0; margin-right: 8px; }
+.menu-coming { flex-direction: row; align-items: center; padding: 4px 6px; margin-bottom: 3px; opacity: 0.55; border-left-width: 2px; border-left-color: rgba(201, 164, 90, 0.35); font-size: 12.5px; }
+.set-row { flex-direction: row; align-items: center; min-height: 30px; font-size: 13px; }
+.set-steps { flex-direction: row; flex-wrap: wrap; flex-grow: 1; }
+.set-slider { flex-grow: 1; margin-left: 0; }
+.set-slider .unity-base-slider__tracker { background-color: rgba(0, 0, 0, 0.35); border-color: rgba(201, 164, 90, 0.35); height: 4px; margin-top: -2px; }
+.set-slider .unity-base-slider__dragger { background-color: rgb(210, 173, 98); border-width: 0; border-radius: 6px; width: 12px; height: 12px; margin-top: -6px; }
+.set-slider .unity-base-slider__dragger-border { display: none; }
+.compact .menu.main { padding: 12px 22px; }
+.compact .menu-big { padding: 6px 12px; margin-bottom: 5px; font-size: 15px; }

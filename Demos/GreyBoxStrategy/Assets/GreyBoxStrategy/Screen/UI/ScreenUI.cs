@@ -167,6 +167,7 @@ namespace GreyBoxStrategy.Realm
                 nations.Add(chip);
             }
             RenderRealm(s);
+            ShowArmies(s);
             for (int i = 0; i < 25; i++)
             {
                 fortMarks[i].Clear();
@@ -321,6 +322,7 @@ namespace GreyBoxStrategy.Realm
                 l.style.left = p.x; l.style.top = p.y + (capital ? 4 : 0);
                 fortMarks[i].style.left = p.x; fortMarks[i].style.top = p.y + (capital ? 24 : 10);
             }
+            PlaceArmies();
             foreach (var b in banners) PlaceBanner(b);
             if (Queries != null) PlaceBadges();
             foreach (var m in marks) m.Place();
