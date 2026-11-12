@@ -29,6 +29,18 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **GreyBoxStrategy, stage 3's design: the painted map and the screen** (#20), for the lead to
+  approve or redirect: [`docs/demos/grey-box-strategy-screen.md`](docs/demos/grey-box-strategy-screen.md)
+  with eight mock-ups (three looks for the parchment map, the capture of a province step by step,
+  rule and advise modes, a court scene). It specifies the colour change to the millisecond, the
+  three modes, the Why card over `DecisionFeed`, a single-shader map built from the rule graph
+  with a painted fallback, and an asset list. Round 2 follows the lead's choices (look C,
+  "Painted Realm" for now, dense terrain, a portrait per persona with several faces): a clickable
+  grand-strategy screen in HTML, `docs/demos/grey-box-strategy-screen/ui/index.html`, with
+  watch, rule and advise modes, a decision inspector, two styles, and twelve screenshots. The
+  lead's answers to 28 design questions are recorded, each marked as met by the mock-up or not.
+  Docs only.
+
 - **GreyBoxStrategy: what a remembered move holds, and invented grievances** (#244 item 4, #216
   item 3, gap N7). After each turn resolves, `CountryAgent.Learn` attaches every landed move's
   line from the resolution report (`"took fenmark from orsk (34 against 21); lost 6"`) to its

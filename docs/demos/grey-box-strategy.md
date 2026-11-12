@@ -204,7 +204,8 @@ The order the lead agreed on 10 November 2026, replacing the draft's slices S1 t
 | **3. The map and the screen** | The board coloured by owner as territory changes, the turn bar, the selected country's facts and offered moves, the event log; spectate and play one country | Screenshots through the Unity CLI; a person plays it |
 
 Stage 2 asks the design questions that need a model (the stimulus, examples, the A/B arms);
-stage 3 asks the visual ones, with the lead.
+stage 3 asks the visual ones, with the lead. Stage 3's proposed design, with mock-ups and its
+open questions, is [`grey-box-strategy-screen.md`](grey-box-strategy-screen.md).
 
 ## Project layout
 
