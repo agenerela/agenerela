@@ -35,8 +35,8 @@ those names.
   need pulls beyond the five this research was allowed. Both are waiting on the lead
   ([below](#what-it-would-take-to-test-the-open-decision-models)), so **no decision model was run**.
 - **What we could measure is the question format itself**, on our own `qwen3.5:4b`, scored from one
-  forward pass's probabilities as these models score it. It is 3.4 times faster (0.144 s against
-  0.488 s median) but 15 points worse on the interim set (272 against 330) and 10 on the curated set
+  forward pass's probabilities as these models score it. It is 3.2 times faster (0.140 s against
+  0.453 s median) but 15 points worse on the interim set (272 against 330) and 10 on the curated set
   (62 against 70): it leans to `none` on simple commands. That gap is what decision-model training
   claims to close, and testing one of them is the obvious next step.
 - **Of the non-generative engines we could run, none comes close as the whole decision.** The best,
@@ -190,17 +190,22 @@ our decision as the decision models are asked it:
   when nothing calls for an action, or when what is asked is impossible or names something not listed
   here."). Then, for a targeted action, the target, over the 11 targets and `no_target`.
 - **One forward pass each.** `num_predict` 1; the answer is the first token's probability over the
-  option letters, renormalised over the letters offered. This is the "label-probability readout" that
-  the audit above found typed decision models have not yet beaten. Every letter came back within the
-  top 20 on every question.
+  option letters. Every token that spells a letter adds to it ("A" and " A" both came back on 185
+  questions), and the result is normalised over the letters seen. This is the "label-probability
+  readout" that the audit above found typed decision models have not yet beaten.
+- **Ollama returns only the top 20 tokens.** Every action question got all its letters back. On 16 of
+  the 208 target questions, one to two of the 12 letters were missing, so those targets were chosen
+  among the letters seen. Codex's review caught the first version of this stage keeping only the
+  larger of two spellings of a letter. Fixed and re-run, it changed no answer; the numbers here are
+  the re-run's.
 
-Run 12 November, 10:51 to 10:58, on the RTX 5080 (Docker Ollama 0.40.14), one model resident, with
+Run 12 November, 11:08 to 11:14, on the RTX 5080 (Docker Ollama 0.40.14), one model resident, with
 the control re-run in the same lock.
 
 | | Curated /76 | Interim /389 | Impossible /64 | `none` expected /156 | Acting /233 | Said `none` when acting /233 | Median / p90 s |
 |---|---:|---:|---:|---:|---:|---:|---|
-| **`qwen3.5:4b`, the framework's request (control)** | **70** | **330** | 49 | 133 | 197 | 12 | 0.488 / 0.568 |
-| `qwen3.5:4b`, decision questions | 62 | 272 (−14.9) | 45 | 117 | 155 | 44 | 0.144 / 0.287 |
+| **`qwen3.5:4b`, the framework's request (control)** | **70** | **330** | 49 | 133 | 197 | 12 | 0.453 / 0.503 |
+| `qwen3.5:4b`, decision questions | 62 | 272 (−14.9) | 45 | 117 | 155 | 44 | 0.140 / 0.259 |
 
 | Category, interim (curated) | Decision questions | Control |
 |---|---:|---:|
@@ -211,9 +216,10 @@ the control re-run in the same lock.
 | `situation` /65 (/19) | 46 (15) | 39 (17) |
 | `event` /65 (/19) | 49 (15) | 51 (15) |
 
-- **3.4 times faster, and 15 points worse** on the interim set (10 on the curated set), beyond both
-  floors. The time saved is the reply: one token per question instead of a JSON object with a
-  statement.
+- **3.2 times faster at the median, and 15 points worse** on the interim set (10 on the curated
+  set), beyond both floors. It writes one token per question where the control writes a JSON object
+  with a statement, but its prompt differs too and the probe did not time the two parts of a request,
+  so this says how much faster, not why.
 - **It says `none` when it should act.** It said `none` on 44 prompts that wanted an action, against
   the control's 12; 20 of the 44 were simple commands ("Come with me." gets `none` 0.52, `follow_player`
   0.19). The untuned 4B leans to the last, longest option. This is what a decision model's training
@@ -225,7 +231,7 @@ the control re-run in the same lock.
   assumed to be good at.
 - **A cascade inside one model does not pay.** We tried the readout first and the full request when
   its action margin was low, tuned on the 80 tuning prompts. It sent 85% of the interim decisions on
-  to the full request, scored 321 (within noise), and took longer overall (0.639 s median).
+  to the full request, scored 321 (within noise), and took longer overall (0.582 s median against 0.453).
 
 So the format alone, on a model not trained for it, is fast and not good enough. Whether a model
 **trained** for it closes the 15 points is the open question. `tev1:4b`, Qwen3.5-4B fine-tuned for
@@ -632,7 +638,7 @@ or one that embeds and compares, would fit behind it without the rest of the fra
 - **Test an open decision model next**: `tev1:4b` against `qwen3.5:4b`, through the `decide` stage or
   `/v1/systemone`, once the lead approves the pull and, for `d1` and `strands-decider`, the gateway
   route. Tev1 is the 4B fine-tuned for this, so it shows what the training adds over the bare format,
-  which on the 4B was 3.4 times faster and 15 points worse.
+  which on the 4B was 3.2 times faster and 15 points worse.
 - **Not Gemini Decision 1 or Jev** for the framework's default: both are hosted only, and every
   decision would leave the game's machine.
 - **No non-generative provider as the whole decision.** The best engine scores 15 points below the

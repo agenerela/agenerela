@@ -500,16 +500,19 @@ def ask_choice(model, state, question, options):
                            "logprobs": True, "top_logprobs": 20})
     lat = time.time() - t
     lp = (r.get("logprobs") or [{}])[0]
-    best = {}
-    for c in lp.get("top_logprobs", []) or []:
-        tok = c.get("token", "").strip()
-        if len(tok) == 1 and tok in LETTERS[:len(options)]:
-            best[tok] = max(best.get(tok, -1e9), c["logprob"])
-    if not best:
-        return {}, lat, 0
-    m = max(best.values())
-    z = sum(math.exp(v - m) for v in best.values())
-    return {options[LETTERS.index(k)][0]: math.exp(v - m) / z for k, v in best.items()}, lat, len(best)
+    raw = [(c.get("token", ""), c["logprob"]) for c in (lp.get("top_logprobs", []) or [])]
+    # Every token that spells a letter ("A", " A") adds its probability to that letter. Only the top 20
+    # tokens come back, so a letter outside them gets nothing: the result is normalised over the letters
+    # seen, and found_letters says how many of the offered ones that was.
+    mass = {}
+    for tok, logprob in raw:
+        t = tok.strip()
+        if len(t) == 1 and t in LETTERS[:len(options)]:
+            mass[t] = mass.get(t, 0.0) + math.exp(logprob)
+    if not mass:
+        return {}, lat, 0, raw
+    z = sum(mass.values())
+    return {options[LETTERS.index(k)][0]: v / z for k, v in mass.items()}, lat, len(mass), raw
 
 
 def stage_decide(model, out_dir, limit):
@@ -523,17 +526,18 @@ def stage_decide(model, out_dir, limit):
         for i, p in enumerate(prompts):
             state = decide_state(p, agent)
             opts = [(a, NONE_CRITERION if a == "none" else ACTIONS[a]["description"]) for a in available(p)]
-            acts, lat, n_a = ask_choice(model, state, "Which action should the guard take now?", opts)
+            acts, lat, n_a, raw_a = ask_choice(model, state, "Which action should the guard take now?", opts)
             action = max(acts, key=acts.get) if acts else "none"
-            target, tgts, lat_t, n_t = "no_target", {}, 0.0, 0
+            target, tgts, lat_t, n_t, raw_t, topts = "no_target", {}, 0.0, 0, [], []
             if ACTIONS[action]["needsTarget"]:
                 topts = [(t["id"], t["description"]) for t in agent["targets"]] + [("no_target", NO_TARGET_CRITERION)]
-                tgts, lat_t, n_t = ask_choice(model, state, f"The guard will {action}. What is it aimed at?", topts)
+                tgts, lat_t, n_t, raw_t = ask_choice(model, state, f"The guard will {action}. What is it aimed at?", topts)
                 target = max(tgts, key=tgts.get) if tgts else "no_target"
                 if target == "no_target":
                     action = "none"
             f.write(json.dumps({"id": p["id"], "set": p["set"], "action": action, "target": target,
-                                "actions": acts, "targets": tgts, "letters_found": [n_a, n_t],
+                                "actions": acts, "targets": tgts, "letters_found": [n_a, n_t], "letters_offered": [len(opts), len(topts)],
+                                "raw_action_tokens": raw_a, "raw_target_tokens": raw_t,
                                 "latency_s": lat + lat_t}) + "\n")
             if i % 50 == 0:
                 print(f"  decide {model} {i}/{len(prompts)} {action}/{target}", flush=True)

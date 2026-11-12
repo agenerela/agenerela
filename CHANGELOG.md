@@ -31,7 +31,7 @@ phase table and the open issues, not here.
 
 - **Decision models researched** (Gemini Decision 1, Jev and the open-weight ones in the Ollama
   library), with their question format measured on `qwen3.5:4b`: 272/389 and 62/76 against 330 and 70,
-  3.4 times faster. Both named models are hosted only. Testing an open one waits on the lead: a pull,
+  3.2 times faster. Both named models are hosted only. Testing an open one waits on the lead: a pull,
   and a `/v1/systemone` route on the gateway. They lead the page below.
 - **Non-generative deciders researched and measured against `qwen3.5:4b`**, on the RTX 5080 with the
   control re-run in the same session: a new wiki page, `docs/llm-wiki/non-llm-deciders.md`, with a

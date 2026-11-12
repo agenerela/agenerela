@@ -3919,7 +3919,7 @@ examples written by people; a larger tuning set; another agent's action set; the
 `num_ctx` 2048. Raw data is in `.scratch/non-llm-deciders/` in the lead's laptop checkout: `runs/full`
 (this run), `runs/full-v1` (the superseded one), `summary.json`, the curve script and the logs.
 
-### Decision models: Gemini Decision 1 and Jev are hosted only, the open ones wait on a pull and a gateway route, and their question format on our own 4B is 3.4 times faster and 15 points worse (12 November 2026)
+### Decision models: Gemini Decision 1 and Jev are hosted only, the open ones wait on a pull and a gateway route, and their question format on our own 4B is 3.2 times faster and 15 points worse (12 November 2026)
 
 **The question.** The lead asked to look into "those new models Like Jev" and Google's "gemini
 decision 1", and "simillar local ones". These are decision models: they score a closed list of
@@ -3939,21 +3939,24 @@ The research, with sources, is in [`non-llm-deciders.md`](non-llm-deciders.md), 
 Standard One's layout: the action, over the available actions and `none`, then the target. It reads
 each answer from the first token's probabilities over the option letters, `num_predict` 1, the
 "label-probability readout". The control is the framework's request, re-run in the same lock. RTX
-5080, Docker Ollama 0.40.14, one model resident, 10:51 to 10:58.
+5080, Docker Ollama 0.40.14, one model resident, 11:08 to 11:14. Every token spelling a letter adds to
+it, and the result is normalised over the letters seen. Ollama returns only the top 20, and 16 of 208
+target questions missed one or two of their 12 letters. A first version kept only the larger spelling
+of a letter; Codex caught it, and the fixed re-run changed no answer.
 
 | | Curated /76 | Interim /389 | Impossible /64 | Said `none` when acting /233 | Median / p90 s |
 |---|---:|---:|---:|---:|---|
-| `qwen3.5:4b`, framework request (control) | 70 | 330 | 49 | 12 | 0.488 / 0.568 |
-| `qwen3.5:4b`, decision questions | 62 | 272 (−14.9) | 45 | 44 | 0.144 / 0.287 |
+| `qwen3.5:4b`, framework request (control) | 70 | 330 | 49 | 12 | 0.453 / 0.503 |
+| `qwen3.5:4b`, decision questions | 62 | 272 (−14.9) | 45 | 44 | 0.140 / 0.259 |
 
-- **3.4 times faster and beyond noise worse on both sets.** It is −14.9 on the interim set and −10.5
+- **3.2 times faster at the median and beyond noise worse on both sets.** It is −14.9 on the interim set and −10.5
   on the curated one.
 - **It answers `none` to commands.** Simple commands fell to 30 of 65 against 64; "Come with me." got
   `none` 0.52 and `follow_player` 0.19.
 - **Situations rose**: 46 of 65 against 39 (+10.8, just beyond the per-category floor). That is one
   category in one run.
 - **A cascade within the one model**, the readout first and the full request when its margin was low,
-  sent 85% of decisions on, scored 321 (within noise) and was slower overall.
+  sent 85% of decisions on, scored 321 (within noise) and was slower overall (0.582 s median).
 
 **What we now believe.** The format alone, on a model not trained for it, does not reach the 4B.
 Whether training does is the open question. `tev1:4b`, Qwen3.5-4B fine-tuned for decisions, would
@@ -3961,5 +3964,5 @@ answer it like for like through the same stage.
 
 **What would change this.** Any open decision model run on both sets against this control.
 
-Raw data: `.scratch/non-llm-deciders/runs/decide-full/` in the lead's laptop checkout, and
-`decide_cascade.py` beside it.
+Raw data: `.scratch/non-llm-deciders/runs/decide-full/` in the lead's laptop checkout (`decide-full-v1/`
+is the superseded first run), and `decide_cascade.py` beside it.
