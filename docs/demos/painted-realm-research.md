@@ -1,7 +1,8 @@
 # Painted Realm — research: a storyteller, voices, generated countries
 
-**Status:** a proposal, written 11 November 2026. **Nothing on this page is decided, and nothing
-on it was measured by us.** It answers three of the lead's design answers of 11 November that
+**Status:** a proposal, written 11 November 2026. **Nothing on this page is decided.** One part
+has since been built and measured: stage S1 of the storyteller ([below](#a-staged-recommendation),
+12 November). Everything else on the page is still unmeasured by us. It answers three of the lead's design answers of 11 November that
 needed research before design, for the strategy demo (working title Painted Realm, today
 [`Demos/GreyBoxStrategy/`](../../Demos/GreyBoxStrategy/README.md), #20, design in
 [`grey-box-strategy.md`](grey-box-strategy.md)). Where this page says what the repo has
@@ -342,7 +343,8 @@ pacing. Every system above that works keeps the numbers and the pacing in code.
 
 ### A staged recommendation
 
-**Stage S1, the smallest version worth building (demo only, no framework change).**
+**Stage S1, the smallest version worth building (demo only, no framework change).** *Built and
+measured on 12 November: see "What S1 found" below.*
 Design A with the game's strength. One storyteller agent on the same `qwen3.5:4b` (game runs are
 4B only), asked at upkeep from turn 3, one event a turn at most, `none` allowed. Eight templates,
 five countries and four groups as targets, the paired schema, the fairness rules above as
@@ -365,7 +367,37 @@ What "interesting and unique" could be measured as, from logs alone where possib
 | Is it fun? | the lead and team read two event logs of one seed side by side, not told which is which, and pick one | a sample |
 | Does it behave? | illegal answers, guard containments, stories replaced, latency | telemetry |
 
-**Stage S2.** Arms on S1: design B against A (story and match, from the labelled sample and the
+**What S1 found** (12 November; the demo `README.md`'s "Storyteller" and `findings.md`, "A storyteller
+in GreyBoxStrategy"). Built as planned, with eight templates (`windfall`, `bad_harvest`, `plague`,
+`volunteers`, `zeal`, `unrest`, `stronghold`, `walls_crumble`), six groups and the provinces as
+targets, the fairness rules as availability, the story check in the game, the "told so far" and
+inspiration lines, the title only in the rulers' facts. Against the random table, `qwen3.5:4b`,
+personas, 20 games, two storyteller runs:
+
+- **No illegal answer, no containment, 0.69 s a call;** liveliness, sense and voice within noise
+  except more peace offered (8.1 to 11.3 and 11.0 a game) and slightly shorter statements.
+- **Varied within a game:** 6.7 and 6.2 kinds of event a game against the table's 4, more weight
+  (690 against 527 gold a game), more gifts (42% against 31%), and 29% and 31% of hit rulers
+  naming the event against 21%.
+- **Games diverge:** two runs differing only in the inspiration words had another owner in 22% of
+  provinces at turn 10 and 45% at turn 20; the control against itself, 0%.
+- **Fair, as a rubber band:** value against standing r −0.37 and −0.33 (the table's −0.15): it hits
+  the leader and props up the weak. The leader still wins as often.
+- **The failures the page predicted, and one it did not.** The first live game cycled four
+  templates under the three-event cooldown, three blows to every gift; a four-event cooldown and no
+  third blow or gift in a row fixed it. Stories match their effects well (one reader, 50 events:
+  the right sign in 48, the right country in 47, an invented consequence in 3). The titles are the
+  weak part: the 4B wrote none in 62 of 62 smoke events until the rule had an example, and still
+  leaves out half; titles repeat across games (72% and 77% of them), mostly the inspiration words.
+- **Two personas play differently, in both runs:** the builder holds far more (39% to 61% and 71%),
+  the opportunist offers peace twice as often.
+- **Gaps hit:** 1, 3 (now with evidence), 4, 6, 8 and 9; not 2, 5 or 7. Two new: the moves-line
+  workaround again for a second agent, and a reply that runs away.
+
+**Stage S2.** First, from what S1 found: titles (the "told so far" line by template and target
+only, never the fallback titles; inspiration words kept out of titles, or many more of them) and
+the builder's holding (an arm with the title kept out of the rulers' facts would separate the
+fact from the gold). Then the arms planned on S1: design B against A (story and match, from the labelled sample and the
 blind pick); inspiration on and off; title only against title and story in the rulers' facts; a
 storyteller persona. Design D only if A is unfair or flat.
 

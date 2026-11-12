@@ -43,6 +43,17 @@ phase table and the open issues, not here.
   - `/api/ps` under-reports Bolt: 950 MB, about 2.8 GB real.
   - No default changed.
 
+- **GreyBoxStrategy: a storyteller that invents the game's events** (#20, stage S1 of
+  `docs/demos/painted-realm-research.md`, demo only, no framework change). One more `Agent` with no
+  body, asked before each upkeep from turn 3, picks one of eight effect templates and a country,
+  group or province, and writes the title and story; the game sets the strength, keeps it fair
+  through availability (a budget, no gift to the leader or blow on the weak, cooldowns, no third
+  blow or gift in a row), replaces a story that names the wrong country or holds a number, and tells
+  the rulers the title. An arm, `+storyteller`, off in `default`; it replaces the random event table
+  (`Game.EventTable`). `StrategyTableMenu.RunInterleavedFromCommandLine` runs several arms on the
+  same seeds in blocks, every run writes `events.csv` and `events.md`, and the scorecard has an
+  events section. Measured against the table on `qwen3.5:4b`: findings, 12 November, "A storyteller
+  in GreyBoxStrategy".
 - **GreyBoxStrategy, Painted Realm: rule mode** (#20). The start menu's third choice: you rule
   one country against four model rulers with personas.
   - The rulers decide at once, in one `DecisionRound`, while your order waits. The turn then

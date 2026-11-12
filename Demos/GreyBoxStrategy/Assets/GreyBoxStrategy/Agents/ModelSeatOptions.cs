@@ -81,6 +81,21 @@ namespace GreyBoxStrategy
         /// </summary>
         public StatementRulesWording RulesWording = StatementRulesWording.YourStatement;
 
+        /// <summary>
+        /// Whether a <see cref="Storyteller"/> invents the game's events (the README's "Storyteller",
+        /// stage S1 of the research page): one event a turn at upkeep in place of the random event
+        /// table, which is then off (<see cref="Game.EventTable"/>). Off in every named arm; <c>+storyteller</c>
+        /// switches it on. It adds what the rulers read, an event's title among their facts, so it is an
+        /// arm until measured (hard rule 2).
+        /// </summary>
+        public bool Storyteller;
+
+        /// <summary>Whether the storyteller reads an inspiration line (<see cref="GreyBoxStrategy.Storyteller.InspirationLine"/>); <c>+no-inspiration</c> drops it.</summary>
+        public bool Inspiration = true;
+
+        /// <summary>Which inspiration draw the storyteller gets: <c>+inspiration-1</c> draws other words on the same seeds, for the divergence runs.</summary>
+        public int InspirationSalt;
+
         /// <summary>A short name for logs and tables: "control", "per-target", "no-moves-line", and so on.</summary>
         public string Arm = "control";
 
@@ -122,6 +137,8 @@ namespace GreyBoxStrategy
         /// <c>+own-words</c> word the statement rules (<see cref="StatementRulesWording"/>)
         /// ("default+no-moves-line+moves-sentence", "default+how-it-reads"), and <c>+memory-move</c>
         /// and <c>+memory-outcome</c> what a remembered move holds (<see cref="Remembers"/>, #244 item 4).
+        /// For the storyteller: <c>+storyteller</c> (<see cref="Storyteller"/>), <c>+no-inspiration</c> and
+        /// <c>+inspiration-&lt;n&gt;</c> ("default+storyteller+inspiration-1").
         /// </summary>
         public static ModelSeatOptions Named(string arm)
         {
@@ -150,6 +167,10 @@ namespace GreyBoxStrategy
                     else if (modifier == "moves-sentence") options.LegalTargets = LegalTargetListing.ObservationLine;
                     else if (modifier == "how-it-reads") options.RulesWording = StatementRulesWording.HowItShouldRead;
                     else if (modifier == "own-words") options.RulesWording = StatementRulesWording.InYourOwnWords;
+                    else if (modifier == "storyteller") options.Storyteller = true;
+                    else if (modifier == "no-inspiration") options.Inspiration = false;
+                    else if (modifier.StartsWith("inspiration-") && int.TryParse(modifier.Substring("inspiration-".Length), out int salt) && salt >= 0)
+                        options.InspirationSalt = salt;
                     else return null;
                 }
                 options.Arm = arm;

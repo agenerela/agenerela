@@ -68,6 +68,32 @@ namespace GreyBoxStrategy
         public int BanditsSoldiers = 5;
         public double UnrestChance = 0.04;
 
+        // --- The storyteller's events (the README's "Storyteller"; used only when Game.EventTable is off) ---
+        /// <summary>No storyteller event before this turn, so the first expansion is the rulers' own.</summary>
+        public int EventFirstTurn = 3;
+        /// <summary>A country whose events over the last <see cref="EventBudgetWindow"/> turns are worth this much gold or more is offered no gift; this much or less, no blow.</summary>
+        public int EventBudget = 60;
+        // Five, as measured on 12 November: until Codex's review the window's lower bound was
+        // exclusive, so the "6" the runs used counted five turns. The bound is inclusive now.
+        public int EventBudgetWindow = 5;
+        /// <summary>A template is not offered again within this many of the storyteller's events.</summary>
+        public int EventTemplateCooldown = 4;
+        /// <summary>
+        /// At most this many blows (or gifts) in a row from the storyteller; then only the other kind
+        /// is offered. Without it the smoke run's 4B cycled plague, bad harvest, unrest, volunteers.
+        /// </summary>
+        public int EventMaxSameKindInARow = 2;
+        /// <summary>No gift for a country holding this many provinces or more: no event crowns the leader.</summary>
+        public int EventNoBonusFromProvinces = 12;
+        /// <summary>No blow for a country holding fewer provinces than this: no event kicks the weak out.</summary>
+        public int EventMinProvincesForPenalty = 3;
+        public int EventWindfallMin = 20;
+        public int EventWindfallMax = 60;
+        public double EventPlagueShare = 0.15;
+        /// <summary>A sickness needs an army of this size, so it never takes the last soldiers.</summary>
+        public int EventMinArmyForPlague = 20;
+        public int EventVolunteersMax = 30;
+
         /// <summary>The rules as designed.</summary>
         public static GameRules Standard => new GameRules();
 

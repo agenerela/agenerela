@@ -85,23 +85,29 @@ namespace GreyBoxStrategy
         /// re-checks it and marks it stale if an earlier move broke it. Whatever never landed is
         /// dropped when the rounds end.
         /// </summary>
+        /// <param name="storyteller">When given, asked for an event before every turn (<see cref="Storyteller.TellAsync"/>); the game's random event table must then be off.</param>
         public static async Awaitable PlayToTheEndAsync(Game game, IReadOnlyDictionary<string, IPlayer> players,
-            IReadOnlyDictionary<string, CountryAgent> seats, CancellationToken ct = default)
+            IReadOnlyDictionary<string, CountryAgent> seats, CancellationToken ct = default, Storyteller storyteller = null)
         {
             int guard = game.Rules.MaxTurns + 1;
             while (!game.IsOver)
             {
                 ct.ThrowIfCancellationRequested();
                 if (guard-- <= 0) throw new InvalidOperationException("The game did not end within its turn limit.");
-                await PlayTurnAsync(game, players, seats, ct);
+                await PlayTurnAsync(game, players, seats, ct, storyteller);
             }
         }
 
-        /// <summary>One turn of <see cref="PlayToTheEndAsync"/>: the council round, the envoy rounds, the resolution.</summary>
+        /// <summary>
+        /// One turn of <see cref="PlayToTheEndAsync"/>: the storyteller's event if there is one, then the
+        /// council round, the envoy rounds, the resolution. The storyteller decides on the state the last
+        /// turn left, alone, before the upkeep its event lands at; the rulers read it on this council.
+        /// </summary>
         public static async Awaitable<TurnReport> PlayTurnAsync(Game game, IReadOnlyDictionary<string, IPlayer> players,
-            IReadOnlyDictionary<string, CountryAgent> seats, CancellationToken ct = default)
+            IReadOnlyDictionary<string, CountryAgent> seats, CancellationToken ct = default, Storyteller storyteller = null)
         {
             var rounds = new List<DecisionRound>();
+            if (storyteller != null) await storyteller.TellAsync(ct);
             var council = game.BeginTurn();
             var answers = await AnswerAll(council, players, seats, $"seed-{game.Seed}-turn-{game.World.Turn}-council", rounds, ct);
             var envoys = game.SubmitCouncil(answers);

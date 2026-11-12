@@ -39,6 +39,14 @@ namespace GreyBoxStrategy
                     foreach (var line in report.Upkeep) sb.AppendLine("- " + line);
                 }
 
+                var told = report.Events.Where(e => e.Source == EventRecord.FromStoryteller).ToList();
+                if (told.Count > 0)
+                {
+                    sb.AppendLine();
+                    sb.AppendLine("The storyteller:");
+                    foreach (var e in told) sb.AppendLine("- " + EventLog.Line(e));
+                }
+
                 foreach (var o in report.Outcomes.OrderBy(o => o.Request.Moment).ThenBy(o => Seat(world, o.Request.CountryId)))
                 {
                     var req = o.Request;

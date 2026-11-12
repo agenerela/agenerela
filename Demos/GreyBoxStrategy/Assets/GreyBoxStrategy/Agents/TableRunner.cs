@@ -148,12 +148,17 @@ namespace GreyBoxStrategy
     /// <summary>One game of a table, with who sat where.</summary>
     public sealed class TableGame
     {
-        public TableGame(ModelGameRecord game, IReadOnlyDictionary<string, string> labels, IReadOnlyDictionary<string, string> characters)
+        public TableGame(ModelGameRecord game, IReadOnlyDictionary<string, string> labels, IReadOnlyDictionary<string, string> characters,
+            IReadOnlyList<StorytellerDecision> storyteller = null)
         {
             Game = game;
             Labels = labels;
             Characters = characters;
+            Storyteller = storyteller ?? Array.Empty<StorytellerDecision>();
         }
+
+        /// <summary>Every call to the game's storyteller, or none when the arm has no storyteller.</summary>
+        public IReadOnlyList<StorytellerDecision> Storyteller { get; }
 
         public ModelGameRecord Game { get; }
         public GameRecord Record => Game.Record;
@@ -176,6 +181,17 @@ namespace GreyBoxStrategy
             Statement = d.Statement,
             OfferedBy = d.OfferedBy,
             StatementRules = d.Persona == null ? null : Personas.Named(d.Persona).StatementRules,
+        }).ToList(), Storyteller.Select(s => new StorytellerCallInfo
+        {
+            Turn = s.Turn,
+            Answered = s.ModelAction != null,
+            AskedAction = s.ModelAction,
+            AskedLegal = s.ModelAnswerLegal,
+            Contained = s.Contained,
+            Error = s.Error != null,
+            None = s.Action == null || s.Action == ActionRegistry.None,
+            Queued = s.Queued,
+            LatencySeconds = s.LatencySeconds,
         }).ToList());
     }
 
@@ -219,20 +235,31 @@ namespace GreyBoxStrategy
                 }
             }
 
-            await ModelGameRunner.PlayToTheEndAsync(game, players, seats, ct);
+            // The storyteller arm: the first model seat's model tells the events, through the same
+            // provider and queue, and the random table is off so the two never both fire.
+            Storyteller teller = null;
+            if (table.Options.Storyteller)
+            {
+                string model = table.Models.FirstOrDefault() ?? throw new ArgumentException("The storyteller needs a model at the table.");
+                game.EventTable = false;
+                teller = new Storyteller(game, providerFor(model, game.World), table.Options);
+            }
+
+            await ModelGameRunner.PlayToTheEndAsync(game, players, seats, ct, teller);
             var record = new GameRecord(game, shown);
             var decisions = seats.Values.SelectMany(s => s.Decisions).ToList();
-            return new TableGame(new ModelGameRecord(record, decisions, seats.Keys.ToList()), labels, characters);
+            return new TableGame(new ModelGameRecord(record, decisions, seats.Keys.ToList()), labels, characters, teller?.Decisions);
         }
 
         /// <summary>One game per seed, the seats and personas rotating game by game.</summary>
+        /// <param name="firstIndex">The series index of the first seed, so a block of a longer series (seeds 6 to 10 of 1 to 20) seats everyone as the whole series would.</param>
         public static async Awaitable<List<TableGame>> PlaySeriesAsync(TableDefinition table, IReadOnlyList<int> seeds,
-            Func<string, World, ILLMProvider> providerFor, Action<int, TableGame> progress = null, CancellationToken ct = default)
+            Func<string, World, ILLMProvider> providerFor, Action<int, TableGame> progress = null, CancellationToken ct = default, int firstIndex = 0)
         {
             var games = new List<TableGame>(seeds.Count);
             for (int g = 0; g < seeds.Count; g++)
             {
-                var game = await PlayAsync(table, seeds[g], g, providerFor, ct);
+                var game = await PlayAsync(table, seeds[g], firstIndex + g, providerFor, ct);
                 games.Add(game);
                 progress?.Invoke(g, game);
             }
@@ -243,7 +270,8 @@ namespace GreyBoxStrategy
     /// <summary>
     /// Plays a table's series and writes it to a folder: everything a model-seat run writes
     /// (<c>summary.md</c>, <c>games.csv</c>, <c>model.csv</c>, <c>decisions.jsonl</c>, one
-    /// <c>game-&lt;seed&gt;.md</c> a game), plus <c>scorecard.md</c> and <c>scorecard.csv</c>.
+    /// <c>game-&lt;seed&gt;.md</c> a game), plus <c>scorecard.md</c> and <c>scorecard.csv</c>, and
+    /// <c>events.csv</c> and <c>events.md</c> (every event), and with a storyteller <c>storyteller.csv</c>.
     /// </summary>
     public static class StrategyTableRuns
     {
@@ -254,19 +282,69 @@ namespace GreyBoxStrategy
             var seeds = GameRunner.Seeds(games, firstSeed);
             var started = DateTime.Now;
             List<TableGame> played;
-            bool anyModel = table.Models.Any();
-            using (var log = anyModel ? DecisionLog.Start(Path.Combine(folder, "decisions.jsonl"), includePrompt: true) : null)
+            using (var log = table.Models.Any() ? DecisionLog.Start(Path.Combine(folder, "decisions.jsonl"), includePrompt: true) : null)
             {
                 played = await TableRunner.PlaySeriesAsync(table, seeds, providerFor,
-                    (i, g) => progress?.Invoke($"game {i + 1}/{games} (seed {g.Record.Seed}): {g.Record.Result.Winner} " +
-                                               $"({g.Record.Kinds[g.Record.Result.Winner]}) won on turn {g.Record.Result.Turns}, " +
-                                               $"{g.Game.Decisions.Count} model decisions; {(DateTime.Now - started).TotalSeconds:0} s so far"),
-                    ct);
+                    (i, g) => progress?.Invoke(Line(i, games, g, started)), ct);
             }
+            return Write(folder, table, played, $"{games} games, seeds {firstSeed} to {firstSeed + games - 1}", (DateTime.Now - started).TotalSeconds);
+        }
 
+        /// <summary>
+        /// Plays several arms of one table on the same seeds, interleaved in blocks (hard rule 2): seeds
+        /// 1 to 5 in every arm, then 6 to 10, the arms' order rotating each block, so drift over the
+        /// session reaches every arm alike. Each arm is written to <c>folder/&lt;name&gt;</c> as
+        /// <see cref="RunAsync"/> writes one, seated exactly as a single run of the whole series would be.
+        /// </summary>
+        public static async Awaitable<List<Scorecard>> RunInterleavedAsync(string folder, IReadOnlyList<(string name, TableDefinition table)> arms,
+            Func<string, World, ILLMProvider> providerFor, int games, int firstSeed, int block, Action<string> progress = null, CancellationToken ct = default)
+        {
+            if (arms == null || arms.Count == 0) throw new ArgumentException("No arms to run.", nameof(arms));
+            if (block < 1) block = games;
+            // Two arms in one folder would append to one decision log and overwrite each other's files.
+            var clash = arms.GroupBy(a => a.name, StringComparer.OrdinalIgnoreCase).FirstOrDefault(g => g.Count() > 1);
+            if (clash != null) throw new ArgumentException($"Two arms are named '{clash.Key}': give each its own name.", nameof(arms));
+            var seeds = GameRunner.Seeds(games, firstSeed);
+            var played = arms.Select(_ => new List<TableGame>()).ToList();
+            var started = DateTime.Now;
+            for (int b = 0, k = 0; b < games; b += block, k++)
+            {
+                var some = seeds.Skip(b).Take(block).ToList();
+                for (int j = 0; j < arms.Count; j++)
+                {
+                    int a = (j + k) % arms.Count;
+                    var (name, table) = arms[a];
+                    string sub = Path.Combine(folder, name);
+                    Directory.CreateDirectory(sub);
+                    progress?.Invoke($"block {k + 1}: arm {name}, seeds {some[0]} to {some[some.Count - 1]}");
+                    int offset = b;
+                    using (var log = table.Models.Any() ? DecisionLog.Start(Path.Combine(sub, "decisions.jsonl"), includePrompt: true) : null)
+                    {
+                        var blockGames = await TableRunner.PlaySeriesAsync(table, some, providerFor,
+                            (i, g) => progress?.Invoke($"{name}: " + Line(offset + i, games, g, started)), ct, firstIndex: offset);
+                        played[a].AddRange(blockGames);
+                    }
+                }
+            }
             double wall = (DateTime.Now - started).TotalSeconds;
+            var cards = new List<Scorecard>();
+            for (int a = 0; a < arms.Count; a++)
+                cards.Add(Write(Path.Combine(folder, arms[a].name), arms[a].table, played[a].OrderBy(g => g.Record.Seed).ToList(),
+                    $"{games} games, seeds {firstSeed} to {firstSeed + games - 1}, interleaved in blocks of {block} with {string.Join(", ", arms.Select(x => x.name))}",
+                    wall));
+            return cards;
+        }
+
+        private static string Line(int i, int games, TableGame g, DateTime started) =>
+            $"game {i + 1}/{games} (seed {g.Record.Seed}): {g.Record.Result.Winner} ({g.Record.Kinds[g.Record.Result.Winner]}) won on turn {g.Record.Result.Turns}, "
+            + $"{g.Game.Decisions.Count} model decisions, {g.Record.Reports.Sum(r => r.Events.Count)} events; {(DateTime.Now - started).TotalSeconds:0} s so far";
+
+        private static Scorecard Write(string folder, TableDefinition table, List<TableGame> played, string what, double wall)
+        {
+            Directory.CreateDirectory(folder);
+            bool anyModel = table.Models.Any();
             var scorecard = new Scorecard(table.Name, played.Select(g => g.ToScored()).ToList(),
-                (table.Note ?? "") + $"\n\n{games} games, seeds {firstSeed} to {firstSeed + games - 1}, seats and personas rotating. Wall time {wall:0} s.");
+                (table.Note ?? "") + $"\n\n{what}, seats and personas rotating. Wall time {wall:0} s.");
             var summary = new SeriesSummary(table.Name, played.Select(g => g.Record).ToList());
             var sb = new StringBuilder(summary.ToMarkdown());
             foreach (string model in table.Models)
@@ -281,9 +359,23 @@ namespace GreyBoxStrategy
             File.WriteAllText(Path.Combine(folder, "scorecard-games.csv"), scorecard.PerGameCsv());
             File.WriteAllText(Path.Combine(folder, "games.csv"), summary.ToCsv());
             if (anyModel) File.WriteAllText(Path.Combine(folder, "model.csv"), new ModelReport("all", played.Select(g => g.Game).ToList()).ToCsv());
+            var records = played.Select(g => g.Record).ToList();
+            File.WriteAllText(Path.Combine(folder, "events.csv"), EventLog.Csv(records));
+            File.WriteAllText(Path.Combine(folder, "events.md"), EventLog.Markdown(table.Name, records));
+            if (table.Options.Storyteller) File.WriteAllText(Path.Combine(folder, "storyteller.csv"), StorytellerCsv(played));
             foreach (var g in played)
                 File.WriteAllText(Path.Combine(folder, $"game-{g.Record.Seed:D4}.md"), GameLog.Write(g.Record));
             return scorecard;
+        }
+
+        private static string StorytellerCsv(IEnumerable<TableGame> played)
+        {
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            var sb = new StringBuilder("seed,turn,open,model_action,model_target,action,target,model_answer_legal,latency_s,prompt_tokens,guard,verdict,error,execution,queued,statement\n");
+            foreach (var d in played.SelectMany(g => g.Storyteller))
+                sb.AppendLine(string.Join(",", d.Seed, d.Turn, d.Open, d.ModelAction, d.ModelTarget, d.Action, d.Target, d.ModelAnswerLegal,
+                    d.LatencySeconds.ToString("0.000", inv), d.PromptTokens, d.Guard, d.Verdict, d.Error, d.Execution, d.Queued, EventLog.Q(d.Statement)));
+            return sb.ToString();
         }
 
         // One model's seats of a game, for its own report.
