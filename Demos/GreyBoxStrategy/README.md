@@ -3,6 +3,7 @@
 Five countries on a map of 25 provinces, one move each a turn, until one holds 15. The design,
 the rules and why they are what they are: [`docs/demos/grey-box-strategy.md`](../../docs/demos/grey-box-strategy.md).
 Issue #20, a sub-issue of #47.
+A deeper version of the rules is designed, not built: [`docs/demos/painted-realm-rules-v2.md`](../../docs/demos/painted-realm-rules-v2.md).
 
 **Stages 1 and 2 of 3 are built.** Stage 1 is the game as a headless simulation, a scripted AI
 with two temperaments, a random baseline, and a runner that plays whole games and logs every
