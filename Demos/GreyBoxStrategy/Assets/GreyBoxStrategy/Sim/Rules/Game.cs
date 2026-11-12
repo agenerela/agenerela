@@ -272,7 +272,12 @@ namespace GreyBoxStrategy
                     case EventRules.Plague: c.Army -= amount; break;
                     case EventRules.Volunteers: c.Army += amount; break;
                     case EventRules.Zeal: c.Stability = Math.Min(Rules.MaxStability, c.Stability + 1); break;
-                    case EventRules.Unrest: c.Stability = Math.Max(1, c.Stability - 1); break;
+                    case EventRules.Unrest:
+                        // And no recovery at this upkeep, as after a tax rise; otherwise the point
+                        // lost is back before the council and the event does nothing.
+                        c.Stability = Math.Max(1, c.Stability - 1);
+                        c.RaisedTaxes = true;
+                        break;
                     case EventRules.Stronghold: World.Province(e.Province).Forts++; break;
                     case EventRules.WallsCrumble: World.Province(e.Province).Forts--; break;
                 }

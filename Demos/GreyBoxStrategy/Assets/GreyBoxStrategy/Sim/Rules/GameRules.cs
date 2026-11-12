@@ -75,7 +75,12 @@ namespace GreyBoxStrategy
         public int EventBudget = 60;
         public int EventBudgetWindow = 6;
         /// <summary>A template is not offered again within this many of the storyteller's events.</summary>
-        public int EventTemplateCooldown = 3;
+        public int EventTemplateCooldown = 4;
+        /// <summary>
+        /// At most this many blows (or gifts) in a row from the storyteller; then only the other kind
+        /// is offered. Without it the smoke run's 4B cycled plague, bad harvest, unrest, volunteers.
+        /// </summary>
+        public int EventMaxSameKindInARow = 2;
         /// <summary>No gift for a country holding this many provinces or more: no event crowns the leader.</summary>
         public int EventNoBonusFromProvinces = 12;
         /// <summary>No blow for a country holding fewer provinces than this: no event kicks the weak out.</summary>

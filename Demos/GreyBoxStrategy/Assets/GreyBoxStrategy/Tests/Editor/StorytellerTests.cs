@@ -83,7 +83,7 @@ namespace GreyBoxStrategy.Tests
             OnlyThisChanged(a, b, "valen");
 
             (a, b, e) = Twin(EventRules.Unrest, "valen", w => w.Country("valen").Stability = 4);
-            Assert.That(Of(a, "valen").stability - Of(b, "valen").stability, Is.EqualTo(-1));
+            Assert.That((Of(a, "valen").stability, Of(b, "valen").stability), Is.EqualTo((3, 5)), "-1, and no recovery at that upkeep");
             OnlyThisChanged(a, b, "valen");
 
             (a, b, e) = Twin(EventRules.Stronghold, "ashby");
@@ -153,13 +153,14 @@ namespace GreyBoxStrategy.Tests
             // A windfall worth 60 to kesh on turn 2: no more gifts to kesh for six turns.
             g.Events.Events.Add(Told(2, EventRules.Windfall, "kesh", ("kesh", 60)));
             Assert.That(g.WhyNotEvent(EventRules.Plague, "ilvar"), Is.Null);
-            Assert.That(g.WhyNotEvent(EventRules.Windfall, "ilvar"), Does.Contain("within the last 3 events"), "a template not again within three events");
+            Assert.That(g.WhyNotEvent(EventRules.Windfall, "ilvar"), Does.Contain("within the last 4 events"), "a template not again within four events");
             Assert.That(g.WhyNotEvent(EventRules.Plague, "kesh"), Does.Contain("the last event struck kesh"), "a target not twice in a row");
             Assert.That(g.WhyNotEvent(EventRules.Stronghold, "keshtar"), Does.Contain("kesh was struck by the last event"), "nor a country through its province");
 
-            // Three more events later, the windfall is open again, but kesh's budget is still spent until turn 8.
+            // Four events later, the windfall is open again, but kesh's budget is still spent until turn 8.
             g.Events.Events.Add(Told(2, EventRules.Plague, "orsk", ("orsk", -8)));
             g.Events.Events.Add(Told(2, EventRules.Zeal, "merrow", ("merrow", 20)));
+            g.Events.Events.Add(Told(2, EventRules.Stronghold, "ashby", ("valen", 30)));
             g.Events.Events.Add(Told(2, EventRules.Unrest, "valen", ("valen", -20)));
             Assert.That(g.WhyNotEvent(EventRules.Windfall, "ilvar"), Is.Null);
             Assert.That(g.WhyNotEvent(EventRules.Windfall, "kesh"), Does.Contain("enough good fortune"));
@@ -226,6 +227,9 @@ namespace GreyBoxStrategy.Tests
                     var recent = told.Skip(Math.Max(0, i - r.EventTemplateCooldown)).Take(Math.Min(i, r.EventTemplateCooldown)).ToList();
                     Assert.That(recent.Select(x => x.Template), Does.Not.Contain(e.Template), $"seed {seed} {e}: template cooldown");
                     if (i > 0) Assert.That(told[i - 1].Target, Is.Not.EqualTo(e.Target), $"seed {seed} {e}: target twice in a row");
+                    if (i >= 2)
+                        Assert.That(told.Skip(i - 2).Take(3).Select(x => EventRules.Template(x.Template).Bonus).Distinct().Count(),
+                            Is.EqualTo(2), $"seed {seed} {e}: no third blow or gift in a row");
                 }
                 Assert.That(teller.Decisions.All(d => d.ModelAnswerLegal && d.Queued), Is.True);
             }

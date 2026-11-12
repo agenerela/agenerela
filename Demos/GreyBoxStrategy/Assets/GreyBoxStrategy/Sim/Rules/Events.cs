@@ -316,6 +316,10 @@ namespace GreyBoxStrategy
             var recent = ledger.LastTold(r.EventTemplateCooldown);
             if (recent.Any(e => e.Template == template)) return $"{template} happened within the last {r.EventTemplateCooldown} events";
             var last = recent.LastOrDefault();
+            int same = r.EventMaxSameKindInARow;
+            var streak = ledger.LastTold(same);
+            if (same > 0 && streak.Count == same && streak.All(e => Template(e.Template)?.Bonus == t.Bonus))
+                return t.Bonus ? $"{same} gifts in a row: a blow is due" : $"{same} blows in a row: a gift is due";
             if (last != null && last.Target == target) return $"the last event struck {target}";
 
             string province = null;
