@@ -31,9 +31,11 @@ those names.
   forward pass, with no generated text and so no statement.
 - **Open-weight models of the same kind exist and are in the Ollama library.** The small ones are
   Together AI's `tev1` (0.8B and 4B), Liquid AI's `d1` (3B) and AWS Strands' `strands-decider` (2B).
-  Ollama serves them on a new route, `/v1/systemone`, which our gateway does not expose. They also
-  need pulls beyond the five this research was allowed. Both are waiting on the lead
-  ([below](#what-it-would-take-to-test-the-open-decision-models)), so **no decision model was run**.
+  Ollama serves them on a new route, `/v1/systemone`, and **only** there. All three are now pulled,
+  and Ollama refuses `/api/chat` and `/api/generate` for each ("does not support chat"). Our gateway
+  does not pass `/v1/systemone`, so **no decision model has run yet**. The change is one line on the
+  RTX 5080 machine, [written down below](#what-to-change-on-the-rtx-5080-for-decision-models) for the
+  lead to apply.
 - **What we could measure is the question format itself**, on our own `qwen3.5:4b`, scored from one
   forward pass's probabilities as these models score it. It is 3.2 times faster (0.140 s against
   0.453 s median) but 15 points worse on the interim set (272 against 330) and 10 on the curated set
@@ -153,7 +155,7 @@ enough for an 8 GB card, from their Ollama library pages and model cards:
 
 | Model | Maker | Base | Ollama tag, download | Licence | How it scores | Maker's evidence |
 |---|---|---|---|---|---|---|
-| Tev1 | Together AI | Qwen3.5-4B, fine-tuned ([card](https://huggingface.co/togethercomputer/Tev1-4B-experimental)) | `tev1:4b` 4.4 to 4.6 GB; `tev1:0.8b` 834 MB | weights' licence "being finalized"; base Apache-2.0 | keeps Qwen's normal output head: answers one option letter; 2 to 24 options | 880 of 1,000 on its own development set; calibration "not comprehensively evaluated" |
+| Tev1 | Together AI | Qwen3.5-4B, fine-tuned ([card](https://huggingface.co/togethercomputer/Tev1-4B-experimental)) | `tev1:4b` 4.6 GB; `tev1:0.8b` 834 MB | "being finalized" on its card; Apache License in its Ollama manifest | keeps Qwen's output head and answers one option letter; 2 to 24 options; Ollama serves it on `/v1/systemone` only | 880 of 1,000 on its own development set; calibration "not comprehensively evaluated" |
 | d1 | Liquid AI | LFM2.5-VL-3B ([blog](https://huggingface.co/blog/LiquidAI/open-d1)) | `d1:3b` 3.7 GB | LFM Open License v1.0 | trained to answer "in a single forward pass" with no tokens | best under 10B on the Jev Decision Index 0.2.1, 48.57; under 10 ms a question on an RTX 4090 |
 | Strands Decider | AWS Strands Labs | Qwen3.5-2B-Base "with a trained decision head" | `strands-decider:2b` 2.0 GB | Apache-2.0 | a trained head; 4K context | 180 of 231 on JevBench; the Ollama page names Apple silicon, so it may not run on Linux CUDA |
 | Perplexity Decider Flash | Perplexity | Qwen3.5-4B, distilled | `pplx-decider-flash:4b` 5.6 GB, above our 5 GB limit | Apache-2.0 | not stated on its page | Decision Index 0.3, 58.88 |
@@ -235,25 +237,28 @@ the control re-run in the same lock.
 
 So the format alone, on a model not trained for it, is fast and not good enough. Whether a model
 **trained** for it closes the 15 points is the open question. `tev1:4b`, Qwen3.5-4B fine-tuned for
-exactly this, would answer it like for like, and the stage runs it unchanged through `/api/chat`.
+exactly this, would answer it like for like, on its own route (the `systemone` stage).
 
 ## What it would take to test the open decision models
 
-- **A pull beyond this research's limit.** It was allowed five pulls of 5 GB or less, all used on
-  the embedders and rerankers below. Candidates: `tev1:4b` (4.4 to 4.6 GB), `d1:3b` (3.7 GB),
-  `strands-decider:2b` (2.0 GB); `pplx-decider-flash:4b` is 5.6 GB, over the limit. Asked of the
-  lead on 12 November.
+- **The pulls: done.** The lead approved three more beyond the first five on 12 November; they are in
+  [Models pulled](#models-pulled). `pplx-decider-flash:4b` (5.6 GB, over the 5 GB limit) was not
+  pulled and is not tested.
 - **The `/v1/systemone` route on the gateway.** The gateway passes `/api/chat`, `/api/generate`,
   `/api/embed`, `/api/tags`, `/api/ps`, `/api/show` and `/api/pull`, and nothing else. `d1` and
   `strands-decider` have trained heads that produce no tokens, so they answer only on
   `/v1/systemone`. One route in the gateway's `Caddyfile` on the RTX 5080 machine opens it: see
   [What to change on the RTX 5080](#what-to-change-on-the-rtx-5080-for-decision-models). That is a
   change to the server, the lead's to make, and this research did not work around it.
-  - `tev1` keeps a normal output head, so the `decide` stage can run it through `/api/chat` without
-    the route. That copies Tev1's prompt rather than Ollama's own `/v1/systemone` handling of it, so
-    its numbers would carry that caveat.
-- **Then the run**: the `decide` stage, or a `/v1/systemone` stage, on both sets with the 4B control
-  in the same session, as above. About 10 minutes a model.
+  - **No way round it.** Ollama gives each of the three only the `decision` capability, and refuses
+    them on `/api/chat` and `/api/generate`, `tev1` included, though it keeps a normal output head on
+    its model card. Each refusal was checked once under the lock on 12 November, and the gateway
+    answered 403 on `/v1/systemone`.
+- **Then the run**: the probe's `systemone` stage, already written and checked against a stand-in
+  server. It asks the action and target questions in one request. Run it on both sets for each model,
+  with the 4B control in the same session.
+- **`strands-decider` may not load at all.** Ollama pulled it as an MLX safetensors build
+  (`runner: mlx`), and its page says it needs Apple silicon; the 5080's container is Linux with CUDA.
 
 ## What to change on the RTX 5080 for decision models
 
@@ -677,7 +682,7 @@ run with `--reranking`, should load either; that is outside the gateway.
 
 ### Models pulled
 
-Five, all onto the RTX 5080's Ollama. None was removed: the gateway cannot delete, and the lead can.
+Eight, all onto the RTX 5080's Ollama. None was removed: the gateway cannot delete, and the lead can.
 
 | Tag | Download | Resident, as run | Licence |
 |---|---:|---:|---|
@@ -686,6 +691,12 @@ Five, all onto the RTX 5080's Ollama. None was removed: the gateway cannot delet
 | `bge-m3:567m` (F16, 567M) | 1,158 MB | 657 MB | MIT (in the model's manifest) |
 | `hf.co/ggml-org/Qwen3-Reranker-0.6B-Q8_0-GGUF` | 639 MB | did not run | Apache-2.0 ([card](https://huggingface.co/Qwen/Qwen3-Reranker-0.6B)) |
 | `dengcao/Qwen3-Reranker-0.6B:Q8_0` | 639 MB | 742 MB; ran, output unusable | Apache-2.0, as Qwen's original; a community upload |
+| `tev1:4b` (Q8_0, 4.3B, Qwen3.5) | 4,611 MB | not yet run | Apache License in its Ollama manifest; its model card says the weights' licence is "being finalized" |
+| `d1:3b` (Q8_0, 2.7B, LFM2; vision) | 3,731 MB | not yet run | LFM Open License v1.0 (library page; none in the manifest) |
+| `strands-decider:2b` (MXFP8 safetensors, MLX runner) | 1,975 MB | not yet run; may need Apple silicon | its manifest carries a licence file; Apache-2.0 per its library page |
+
+The last three were pulled at the lead's word on 12 November, after the first five.
+`pplx-decider-flash:4b` (5.6 GB) was not pulled.
 
 The control, `qwen3.5:4b` (3,324 MB download, 2,995 MB resident, Apache-2.0), was already on the
 server.
@@ -729,9 +740,8 @@ or one that embeds and compares, would fit behind it without the rest of the fra
 
 ## Recommendation
 
-- **Test an open decision model next**: `tev1:4b` against `qwen3.5:4b`, through the `decide` stage or
-  `/v1/systemone`, once the lead approves the pull and, for `d1` and `strands-decider`, the gateway
-  route. Tev1 is the 4B fine-tuned for this, so it shows what the training adds over the bare format,
+- **Test an open decision model next**: `tev1:4b`, `d1:3b` and `strands-decider:2b` against
+  `qwen3.5:4b`, through the `systemone` stage, once the lead has opened the gateway route. Tev1 is the 4B fine-tuned for this, so it shows what the training adds over the bare format,
   which on the 4B was 3.2 times faster and 15 points worse.
 - **Not Gemini Decision 1 or Jev** for the framework's default: both are hosted only, and every
   decision would leave the game's machine.
@@ -751,7 +761,7 @@ or one that embeds and compares, would fit behind it without the rest of the fra
 ## What was not tested
 
 - **Any decision model.** Gemini Decision 1 and Jev are hosted only and no key was available; the open
-  ones wait on a pull and, for most, a gateway route. Only their question format was measured, on our
+  ones are pulled and wait on the gateway route. Only their question format was measured, on our
   own 4B.
 - Any reranker or cross-encoder (none runs on this Ollama), zero-shot NLI, GLiNER, GLiClass, DIET, and
   FunctionGemma or any other small generative tool model.

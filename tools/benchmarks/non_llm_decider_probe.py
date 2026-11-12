@@ -9,6 +9,7 @@ in one session on one server (docs/llm-wiki/non-llm-deciders.md). Standard libra
     python non_llm_decider_probe.py control <model> <out_dir> [--limit N]
     python non_llm_decider_probe.py hybrid  <model> <out_dir> <decisions.jsonl> [--limit N]
     python non_llm_decider_probe.py decide  <model> <out_dir> [--limit N]
+    python non_llm_decider_probe.py systemone <decision model> <out_dir> [--limit N]
     python non_llm_decider_probe.py score   <out_dir> [--prompts id,id,...]
 
 `embed`, `rerank` and `control` ask the server and write <out_dir>/<stage>-<model>.jsonl, one line
@@ -548,6 +549,60 @@ def stage_decide(model, out_dir, limit):
     unload(model)
 
 
+# ---- Systemone: a decision model on its own route ------------------------------------------
+
+# Ollama (0.35 and later) serves decision models only on POST /v1/systemone, in TypeSafe's Jev
+# shape: a state and named typed questions, answered with probabilities and no tokens. A model with
+# the "decision" capability refuses /api/chat and /api/generate. Both of our questions go in one
+# request, as such a model is meant to be asked: the action over the available actions and none,
+# and the target over the registered targets and no_target. A targeted action whose target answer
+# is no_target becomes none; an untargeted action takes no_target whatever the target answer was.
+def stage_systemone(model, out_dir, limit):
+    agent, prompts = all_prompts(limit)
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    safe = model.replace(":", "_").replace("/", "_")
+    targets = {t["id"]: t["description"] for t in agent["targets"]}
+    targets["no_target"] = NO_TARGET_CRITERION
+    first = True
+    with open(out / f"systemone-{safe}.jsonl", "w", encoding="utf-8") as f:
+        for i, p in enumerate(prompts):
+            actions = {a: NONE_CRITERION if a == "none" else ACTIONS[a]["description"] for a in available(p)}
+            body = {"model": model, "state": decide_state(p, agent), "keep_alive": "10m",
+                    "questions": {
+                        "action": {"type": "choice", "instructions": "Which action should the guard take now?",
+                                   "criteria": actions},
+                        "target": {"type": "choice",
+                                   "instructions": "If the guard acts on something, which listed target is it aimed at?",
+                                   "criteria": targets}}}
+            t = time.time()
+            r = call("/v1/systemone", body, timeout=600)
+            lat = time.time() - t
+            ans = r.get("answers") or {}
+            act = (ans.get("action") or {})
+            tgt = (ans.get("target") or {})
+            action, target = act.get("choice") or "none", tgt.get("choice") or "no_target"
+            if action not in actions:
+                action = "none"
+            if not ACTIONS[action]["needsTarget"]:
+                target = "no_target"
+            elif target == "no_target" or target not in targets:
+                action, target = "none", "no_target"
+            f.write(json.dumps({"id": p["id"], "set": p["set"], "action": action, "target": target,
+                                "actions": act.get("probabilities"), "targets": tgt.get("probabilities"),
+                                "confidence": [act.get("confidence"), tgt.get("confidence")],
+                                "latency_s": lat, "first": first}) + "\n")
+            first = False
+            if i % 50 == 0:
+                print(f"  systemone {model} {i}/{len(prompts)} {action}/{target}", flush=True)
+    res = resident()
+    json.dump({"model": model, "resident": res, "version": call("/api/version")["version"]},
+              open(out / f"systemone-{safe}.meta.json", "w"), indent=1)
+    print(f"systemone {model}: {len(prompts)} prompts, resident {res}")
+    call("/v1/systemone", {"model": model, "state": "unload", "keep_alive": 0,
+                           "questions": {"q": {"type": "noul", "instructions": "Unload."}}})
+
+
 # ---- Engines, built offline from the stage files ---------------------------------------------
 
 def dot(a, b):
@@ -739,7 +794,7 @@ def score(out_dir, only=None):
     # Only the prompts every stage file answered (a --limit run answers the first N of each set).
     keys = None
     for f in (list(out.glob("embed-*.jsonl")) + list(out.glob("rerank-*.jsonl")) + list(out.glob("control-*.jsonl"))
-              + list(out.glob("decide-*.jsonl"))):
+              + list(out.glob("decide-*.jsonl")) + list(out.glob("systemone-*.jsonl"))):
         k = set(read_jsonl(f))
         keys = k if keys is None else keys & k
     prompts = [p for p in prompts if keys is None or (p["set"], p["id"]) in keys]
@@ -765,10 +820,10 @@ def score(out_dir, only=None):
         results[name] = {k: (r["action"], r["target"], None, r["latency_s"]) for k, r in rows.items()}
         results[name]["_size"] = sum(m["size_mb"] for m in meta["resident"])
         results[name]["_tau"] = None
-    for f in sorted(out.glob("decide-*.jsonl")):
+    for f in sorted(out.glob("decide-*.jsonl")) + sorted(out.glob("systemone-*.jsonl")):
         rows = read_jsonl(f)
         meta = json.load(open(str(f)[:-6] + ".meta.json"))
-        name = "decision questions " + meta["model"]
+        name = ("decision questions " if f.name.startswith("decide-") else "decision model ") + meta["model"]
         results[name] = {k: (r["action"], r["target"], None, r["latency_s"]) for k, r in rows.items()}
         results[name]["_size"] = sum(m["size_mb"] for m in meta["resident"])
         results[name]["_tau"] = None
@@ -896,6 +951,8 @@ def main():
         stage_rerank(args[1], args[2], limit)
     elif cmd == "control":
         stage_control(args[1], args[2], limit)
+    elif cmd == "systemone":
+        stage_systemone(args[1], args[2], limit)
     elif cmd == "decide":
         stage_decide(args[1], args[2], limit)
     elif cmd == "hybrid":

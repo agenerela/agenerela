@@ -29,6 +29,10 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **The RTX 5080 gateway passes `/v1/systemone`**, the route Ollama (0.35 and later) serves decision
+  models on, and `ollama_remote.py systemone <model>` checks it. The lead applies the Caddyfile on the
+  machine with the steps in `docs/llm-wiki/non-llm-deciders.md`, "What to change on the RTX 5080 for
+  decision models". No other `/v1` route opens.
 - **Decision models researched** (Gemini Decision 1, Jev and the open-weight ones in the Ollama
   library), with their question format measured on `qwen3.5:4b`: 272/389 and 62/76 against 330 and 70,
   3.2 times faster. Both named models are hosted only. Testing an open one waits on the lead: a pull,

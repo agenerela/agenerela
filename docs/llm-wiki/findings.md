@@ -3931,8 +3931,10 @@ The research, with sources, is in [`non-llm-deciders.md`](non-llm-deciders.md), 
   only, with no weights. Neither can run on our card, and no key was available to try them.
 - Open-weight decision models are in the Ollama library: `tev1:4b` (4.4 to 4.6 GB), `d1:3b`
   (3.7 GB), `strands-decider:2b` (2.0 GB) and others. Ollama serves them on `/v1/systemone`, which
-  the RTX 5080's gateway does not expose. They are also beyond this research's five pulls, all spent.
-  The pulls and the route were asked of the lead; **no decision model was run**.
+  the RTX 5080's gateway does not expose. The lead approved three pulls: `tev1:4b` (4,611 MB), `d1:3b`
+  (3,731 MB) and `strands-decider:2b` (1,975 MB, an MLX build that may need Apple silicon). Ollama
+  refuses all three on `/api/chat` and `/api/generate`, since they have only the `decision`
+  capability, so **no decision model has run** until the lead opens the route.
 
 **What was run.** The question format itself, on `qwen3.5:4b`. The new `decide` stage of
 `tools/benchmarks/non_llm_decider_probe.py` asks two `choice` questions in Tev1's prompt and

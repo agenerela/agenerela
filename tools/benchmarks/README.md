@@ -137,7 +137,11 @@ python tools/benchmarks/non_llm_decider_probe.py hybrid qwen3.5:4b .scratch/x/ru
 options, and reads each answer from the first token's probabilities (the format of Jev, Gemini Decision 1
 and the open decision models, on any model served through `/api/chat`).
 
-`embed`, `rerank`, `control` and `decide` ask the server once per prompt of the tuning set, the curated 76 and
+`systemone` asks a decision model (`tev1`, `d1`, `strands-decider`) on Ollama's `/v1/systemone`, the only
+route Ollama serves them on; the RTX 5080's gateway needs that route opened first
+(`docs/llm-wiki/non-llm-deciders.md`, "What to change on the RTX 5080").
+
+`embed`, `rerank`, `control`, `decide` and `systemone` ask the server once per prompt of the tuning set, the curated 76 and
 the interim 389 (`--limit N` takes the first N of each), write one file each and unload their model.
 `score` asks nothing: it builds every engine from those files and prints the tables. The server is
 read the way `ollama_remote.py` reads it; from a worktree, pass `--server-tools <main checkout>/tools/ollama-server`
