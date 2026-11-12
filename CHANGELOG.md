@@ -29,6 +29,20 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Two 4B-class candidates measured against `qwen3.5:4b`** (#252's first arms), on the RTX 5080
+  with the control re-run in the same session. The candidates are `gemma4:e4b-it-qat` and
+  `nemotron-3.5-bolt:e4b`. Results are in `findings.md` and `model-candidates.md`'s "Measured",
+  with a row in `live-runs.md` and a candidates table and a fourth game account in the
+  GreyBoxStrategy README.
+  - Both pass the pre-checks: no thinking, field order kept, probabilities from before the mask.
+  - Correct answers, interim and curated: 330 / 329 / 324 and 69 / 69 / 66 (control, Gemma,
+    Bolt). All within noise.
+  - Gemma E4B handles impossible requests worse (−18.8, beyond noise). At the persona table it
+    plays the control's game in shorter lines.
+  - Bolt E4B plays a passive game and repeats half its statements.
+  - `/api/ps` under-reports Bolt: 950 MB, about 2.8 GB real.
+  - No default changed.
+
 - **GreyBoxStrategy: a storyteller that invents the game's events** (#20, stage S1 of
   `docs/demos/painted-realm-research.md`, demo only, no framework change). One more `Agent` with no
   body, asked before each upkeep from turn 3, picks one of eight effect templates and a country,
@@ -438,6 +452,13 @@ phase table and the open issues, not here.
   (findings, 10 November) found one regression, on the route examples, fixed in the branch.
 
 ### Fixed
+
+- **Painted Realm: fixes from the night's play-through** (#20).
+  - A move that is not offered shows its reason on hover again: disabled buttons got no hover,
+    so the reason never appeared.
+  - Once your country is out, the orders panel says so.
+  - A ruler's speech no longer sits under the open inspector.
+  - The README's Play it section opens with "What to try".
 
 - **The model-sweep kit no longer takes Unity Hub's CLI server for an Editor.** `sweep_one.sh`
   refused every model while `Unity Hub\resources\unity.exe serve` was running, since it counted

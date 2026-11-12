@@ -118,6 +118,7 @@ namespace GreyBoxStrategy.Realm
             string why = legal.Count > 0 ? null : WhyNone(req, action);
             var b = new Button(() =>
             {
+                if (why != null) return;
                 if (!targeted) { OrderPressed?.Invoke(legal[0]); return; }
                 openAction = openAction == action ? null : action;
                 if (action == Actions.Attack && openAction != null) HintMode?.Invoke(MapMode.Reach);
@@ -127,10 +128,9 @@ namespace GreyBoxStrategy.Realm
             b.AddToClassList("order-move");
             if (Chosen.Action == action) b.AddToClassList("pick");
             if (openAction == action) b.AddToClassList("on");
-            b.SetEnabled(why == null);
+            // Not SetEnabled(false): a disabled element gets no hover, and its tooltip is the reason.
+            b.EnableInClassList("off", why != null);
             b.tooltip = why != null ? $"Not offered: {why}" : targeted ? $"{string.Join(", ", legal.Select(m => Cap(m.Target)))}" : Explain(action);
-            // A disabled button gets no hover: keep the reason reachable from the panel's own rows.
-            if (why != null) { b.pickingMode = PickingMode.Position; }
             return b;
         }
 

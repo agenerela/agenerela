@@ -17,6 +17,14 @@ A [storyteller](#storyteller) that invents the game's events is built as an arm,
 **Painted Realm** (the working title) is this project's screen: five countries, each ruled by a
 language model through the framework, fighting over 25 provinces on a painted sea-chart.
 
+**What to try:**
+- **Replay:** let turn 1 play, then click any chronicle line or speech banner. The inspector
+  shows what that ruler read, the moves it was offered, and what the guards did.
+- **Watch live:** watch the "council deciding" dots in the top bar while the model thinks. Press
+  4 for the reach map, then open a country and Follow it to see what it can attack and its odds.
+- **Rule:** take Kesh. Open Report to read what a model would be told. Click Southgate and order
+  the attack, then press End turn. Declare war on a neighbour, and an envoy may come with peace.
+
 1. Open `Demos/GreyBoxStrategy` in Unity 6000.3.23f1, then open
    `Assets/GreyBoxStrategy/Screen/Watch.unity` and press **Play**.
 2. The start menu offers three games:
@@ -623,6 +631,34 @@ A 20-game table took 16 to 30
 minutes. A council is five calls in one queue, so a turn of five model seats takes about five
 decisions' time.
 
+**Two 4B-class candidates with personas** (12 November). Each ran its own table with the control
+re-run beside it in the same session, on origin/test 469c900, with the `default` arm (findings, 11
+and 12 November, "Two 4B-class candidates"). The re-run control reproduced the persona 4b column
+above exactly. Each candidate is paired by seed with that control.
+
+| Measure | persona 4b (control) | persona gemma4:e4b-it-qat | persona nemotron-3.5-bolt:e4b |
+|---|---:|---:|---:|
+| η² aggression (p) | 0.841 (<0.001) | 0.871 (<0.001) | 0.826 (<0.001) |
+| ended by domination | 60% | 60% | 60% |
+| battles a turn | 1.46 | 1.41 | 1.01, beyond |
+| peace offered / made a game | 8.1 / 1.8 | 6.1 / 1.4 | 4.2 / 0.4, beyond |
+| turns with no change | 26% | 28% | 38%, beyond |
+| idle share | 10% | 10% | 39%, beyond |
+| answers an attack | 74% | 59%, beyond | 65% |
+| words a statement | 13.6 | 10.6, beyond | 8.3, beyond |
+| repeated word for word | 5% | 7% | 55%, beyond |
+| copies a sentence of its rule | 0% | 1% | 15%, beyond (merchant 70%) |
+| names its target | 72% | 67% | 61% |
+| contradicts its move | 18% | 18% (proud 73%) | 5%, beyond |
+| invented grievance | 1% | 0%, beyond | 0%, beyond |
+| seconds a decision, median / 90th | 0.49 / 0.55 | 0.44 / 0.49 | 0.35 / 0.40 |
+
+Gemma E4B plays the control's game in shorter lines, and none of them invents a grievance. Its
+proud ruler, though, says "My honor demands..." on almost every move. Bolt E4B plays a quieter
+game: the builder holds 80% of its turns. Half its statements repeat an earlier one, and the
+merchant's favourite is its own rule plus the sentinel, "A trader's voice: profit, price or a
+deal. no_target".
+
 ### What the numbers say
 
 - **Same game, same model, different persona, measurably different play: yes.** On qwen3.5:4b, the
@@ -695,6 +731,29 @@ break it, most damaging first:
 3. A statement naming one target while the move takes another, or talking of a fort on a turn
    it held.
 4. Repeated phrases.
+
+**A fourth game: persona gemma4:e4b-it-qat, seed 4. orsk, the opportunist, wins at the turn limit.**
+This is the same seed as the persona 4b account above, so the same map and rotation, but a
+different game. Kesh, the proud ruler, wins nothing this time. The voices are distinct from the first
+turn. Orsk sizes up the weak ("A weak neutral target offers a swift gain before the others
+awaken"). Merrow talks like a trader ("A cheap province is a good bargain; let's acquire Fenmark",
+"Glimmerford is a small prize; let's add it to our growing portfolio"). Ilvar talks like a
+warmonger ("Duskvale falls to Ilvar; the map bleeds with our ambition") and refuses every truce
+("Peace is a pause, not a surrender; we march on Merrow"). The game turns on ilvar fighting
+everyone: kesh, orsk and merrow take six of its provinces in five turns. Orsk offers ilvar peace
+"to turn my gaze toward a softer neighbor", is refused, and takes duskvale with 40 against 3. Valen
+the builder holds and fortifies for eight turns, then declares war on kesh "to challenge their
+dominance", fails at westmarch, loses brindle and highmoor, and spends the rest of the game recruiting "to replace our
+losses". Kesh refuses peace from both, and this grievance is real ("We do not negotiate with those
+who steal our soil", after orsk took four of its provinces). Orsk then takes keshtar, kesh's
+capital ("Kesh's capital is weak; I strike at Keshtar"), and holds the most provinces at turn 30.
+
+**What breaks the illusion is kesh's voice.** For its first nine turns it says one sentence, "My
+honor demands that I crush those who dare to stand against Kesh.", over a raid on a neutral, a
+recruit, a fort and a declaration of war alike. Only when valen attacks does it find new words
+("Valen dares to challenge Kesh; they shall pay for their insolence"). The other four seats read as
+well as the 4B's, in fewer words, and nobody invents a grievance. It is the persona 4b game's
+weaknesses swapped: no false grievances, but one ruler stuck on a formula.
 
 ### Running a table
 
