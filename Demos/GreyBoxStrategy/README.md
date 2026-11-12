@@ -11,6 +11,39 @@ scripted AI; [its results are below](#stage-2-a-model-plays-a-country). Any seat
 model, a script or random, with personas; [the table of models](#models-at-one-table) scores them.
 Stage 3, the map and the screen, has begun: [watch mode plays back a recorded game](#the-screen-watch-mode-playing-back-a-recorded-game).
 
+## Play it
+
+**Painted Realm** (the working title) is this project's screen: five countries, each ruled by a
+language model through the framework, fighting over 25 provinces on a painted sea-chart.
+
+1. Open `Demos/GreyBoxStrategy` in Unity 6000.3.23f1, then open
+   `Assets/GreyBoxStrategy/Screen/Watch.unity` and press **Play**.
+2. The start menu offers two games:
+   - **Replay the recorded game.** Seed 4 of the persona table: five `qwen3.5:4b` rulers, Kesh
+     wins by domination on turn 17. Every line is the rulers' own. It needs no model and no
+     server.
+   - **Watch a live game.** Five model rulers with personas play a new game now. Choose the model
+     (`qwen3.5:4b` by default) and the seed, then **Watch live**.
+3. In the game:
+   - Space plays and pauses, N steps one move, and + changes the speed.
+   - Keys 1 to 4 switch the map modes, D opens diplomacy, and Esc closes a panel.
+   - Click a province, a crest or a chronicle line to open it. A chronicle line or a speech banner
+     opens the decision behind it.
+   - Right-drag pans the map, and the wheel zooms.
+
+**What a live game needs:**
+- **Two environment variables, in the environment Unity was started from:**
+  `AGENERELA_OLLAMA_URL` (the server) and `AGENERELA_OLLAMA_API_KEY` (its key).
+  [`tools/ollama-server/README.md`](../../tools/ollama-server/README.md#unity-on-the-laptop) says
+  how to set them for your Windows user. Restart Unity **and Unity Hub** after setting them.
+- **The RTX 5080, behind its lock.** The server is the card shared by every live run. A live game
+  takes `.scratch/ollama-5080-lock/held` while the model plays, unloads the model, and releases
+  the lock as soon as the model is done (playback carries on from the log). A full game holds the
+  card for a few minutes.
+- **If it cannot start, the menu says why rather than wait:** a variable is not set, the lock is
+  held (and by whom), the server cannot be reached, or the key is refused. A game that stops
+  mid-way says so across the top of the map.
+
 ## Run it
 
 **From the editor:** open this project in Unity 6000.3.23f1, then **GreyBoxStrategy → Play 200

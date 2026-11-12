@@ -29,6 +29,17 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **GreyBoxStrategy, Painted Realm: a start menu and "Play it"** (#20).
+  - The Watch scene opens on a menu: replay the recorded game, or watch a live game (model and
+    seed).
+  - A live game checks first and says why it cannot start: either gateway variable missing, the
+    RTX 5080's lock held (and by whom), the server unreachable, or the key refused.
+  - It takes the lock while the model plays, unloads the model, and releases the lock at once. A
+    game that stops mid-way says so on the map.
+  - The three-turn stop is now enforced where the game asks its rulers, and two tests drive a
+    whole live session with a `ScriptedProvider`.
+  - The demo README opens with the steps.
+
 - **GreyBoxStrategy, the screen follows a live game** (#20).
   - Five `qwen3.5:4b` persona seats play through `TableRunner`, and the screen reads the
     framework's `DecisionLog` as it grows: a partial replay build, and the log read while it is
