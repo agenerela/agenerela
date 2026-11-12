@@ -120,8 +120,8 @@ namespace Agenerela
         /// the game attached. Read at each <see cref="Recall"/>, so it may change at any time.
         /// </summary>
         /// <remarks>
-        /// Off by default because it changes what the model reads (hard rule 2). Measured in
-        /// GreyBoxStrategy on 11 November 2026 (<c>docs/llm-wiki/findings.md</c>).
+        /// Off by default because it changes what the model reads (hard rule 2). Unmeasured so far:
+        /// GreyBoxStrategy's A/B run on <c>qwen3.5:4b</c> is owed (<c>docs/live-runs.md</c>).
         /// </remarks>
         /// <exception cref="ArgumentOutOfRangeException">A value <see cref="RememberedDecision"/> does not define.</exception>
         public RememberedDecision Remembers

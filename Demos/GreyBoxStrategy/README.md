@@ -728,7 +728,12 @@ Found by stage 2, from the runs above:
   keeps each decision's JSON, statement included. The 4B repeated its own sentences word for word
   for turns on end, once claiming an army of 10 against the facts' 108. This is #216 item 3's other
   half: what to remember of a decision. The move, and what came of it, would help this game more
-  than the statement.
+  than the statement. **Now an option, off** (#244 item 4): `RollingHistory.Remembers` sends the
+  move alone (`+memory-move`) or the move and the report's line for it (`+memory-outcome`), which
+  `CountryAgent.Learn` attaches once the turn resolves. Note that each remembered stimulus already
+  carries the next turn's facts ("Our attack on ashby failed"), so part of the outcome was always
+  there. The scorecard counts invented grievances to measure it. The A/B on `qwen3.5:4b` is owed;
+  the 2B will not be measured.
 - **N8. The legal pairs reach a local model as a list, not as moves.** `LegalTargets = PerTarget`
   annotates the system prompt's target list (`- fenmark (for attack): neutral, garrison 13.`). The
   same pairs as a sentence among the facts (`Moves open to us: attack fenmark or westmarch; ...`)

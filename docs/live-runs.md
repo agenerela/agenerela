@@ -34,6 +34,7 @@ in, the machine, and the live checks that aren't A/B runs.
 
 | Run | Kind | Machine | What it checks | From |
 |---|---|---|---|---|
+| What a remembered decision holds (#244 item 4, #216 item 3): `RollingHistory.Remembers` `Whole` against `Move` and `MoveAndOutcome` | A/B, three arms interleaved in blocks of 5 seeds, one model, `qwen3.5:4b` only (the lead, 11 November); waiting for the go-ahead after the server's `OLLAMA_NUM_PARALLEL` change | 5080 box | GreyBoxStrategy's `personas` table, seeds 1 to 20, arms `default`, `default+memory-move`, `default+memory-outcome`. Statements repeated word for word, contradicting the move, and invented grievances fall, without liveliness or sense getting worse? A difference counts only when `compare.py`'s 95% interval, paired by seed, excludes 0. The interim and curated sets cannot see it (`EvalRunner` runs with no memory) | #244, #216, #151 |
 | The 12 and 16 GB tiers | A/B, sequential arms | 5080 box | A "high-end GPU" option, such as Granite 4.1 8B, Qwen3.5-9B or Gemma 4 12B, against the 2B | `model-candidates.md`. Not run with request 001: the lead judged it not needed (9 November) |
 
 ## Waiting for something first

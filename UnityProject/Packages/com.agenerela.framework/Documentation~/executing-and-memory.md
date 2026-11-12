@@ -208,8 +208,8 @@ memory holds the decision, or will once it is settled:
   not implement `IRemembersOutcomes`.
 
 Under `Whole` and `Move` an outcome is kept and saved but never sent, so attaching outcomes changes
-no prompt by default. Which setting helps is unmeasured as a default: GreyBoxStrategy's A/B run,
-11 November 2026, is in the wiki's `findings.md`. No setting is per call, because what a memory
+no prompt by default. Which setting helps is unmeasured: GreyBoxStrategy's A/B run on `qwen3.5:4b`
+is owed (`docs/live-runs.md`), and the 2B will not be measured in it. No setting is per call, because what a memory
 holds is the memory's to say, and a strategy of the Memory area's own decides it for itself.
 
 ## Saving memory with the game: `IExportsMemory`

@@ -75,7 +75,8 @@ While the version stays `0.x`, the public API may change in any release.
   one. A strategy keeps outcomes by implementing the new optional `IRemembersOutcomes`, which
   `RollingHistory` does. `MemoryExchange.Outcome` saves it, and `RollingHistory.SnapshotVersion` is
   now 2; version 1 snapshots still import. Off by default: nothing changes the prompt unless
-  `Remembers` is set. GreyBoxStrategy's A/B run is in `findings.md`, 11 November.
+  `Remembers` is set. Unmeasured so far: GreyBoxStrategy's A/B run on `qwen3.5:4b` is owed
+  (`docs/live-runs.md`), and `qwen3.5:2b` is not to be measured with it.
 
 - **Two prompt options, both off by default** (#244 items 5 and 8).
   - `DecideOptions.StatementRulesWording` (and `PromptOptions.StatementRulesWording`) picks how the

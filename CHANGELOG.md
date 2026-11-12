@@ -29,6 +29,15 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **GreyBoxStrategy: what a remembered move holds, and invented grievances** (#244 item 4, #216
+  item 3, gap N7). After each turn resolves, `CountryAgent.Learn` attaches every landed move's
+  line from the resolution report (`"took fenmark from orsk (34 against 21); lost 6"`) to its
+  remembered decision through the framework's new `Agent.SetOutcome`. The model-seat modifiers
+  `+memory-move` and `+memory-outcome` set `RollingHistory.Remembers`. The default arm keeps the
+  whole decision, so no existing arm changes. The scorecard's voice section gains **claims land
+  taken** and **invented grievance**: a claim against a country that took none of our land
+  earlier that game. 6 new EditMode tests. The A/B run on `qwen3.5:4b`, three arms of 20 games, is
+  owed (`docs/live-runs.md`); `qwen3.5:2b` will not be measured.
 - **GreyBoxStrategy: arms for #244's prompt options, and a rule-copy count** (#244 items 5 and 8).
   - The model-seat modifiers `+no-moves-line`, `+moves-sentence` (`LegalTargets = ObservationLine`),
     `+how-it-reads` and `+own-words` (`StatementRulesWording`).
