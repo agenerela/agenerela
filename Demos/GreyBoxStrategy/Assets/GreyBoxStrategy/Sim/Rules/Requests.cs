@@ -119,6 +119,11 @@ namespace GreyBoxStrategy
         LastStanding,
         /// <summary>The last turn ended: most provinces won, then the larger army, then more gold.</summary>
         TurnLimit,
+        /// <summary>
+        /// A conquest game reached its headless cap with more than one country left. The leader is
+        /// named as by the turn limit, but nobody won (rules v2, section 6.1).
+        /// </summary>
+        Unfinished,
     }
 
     /// <summary>A finished game's result.</summary>

@@ -1,5 +1,19 @@
 namespace GreyBoxStrategy
 {
+    /// <summary>How a game is won: rules v2, section 6.2.</summary>
+    public enum VictoryMode
+    {
+        /// <summary>
+        /// Today's rule: holding <see cref="GameRules.ProvincesToWin"/> provinces wins at once, and
+        /// after <see cref="GameRules.MaxTurns"/> the most provinces win.
+        /// </summary>
+        Domination,
+        /// <summary>The last country with a province wins. No turn limit; a headless run stops at its cap, unfinished.</summary>
+        Conquest,
+        /// <summary>The most provinces after <see cref="GameRules.MaxTurns"/> turns win; holding many ends nothing early.</summary>
+        TurnLimit,
+    }
+
     /// <summary>
     /// Every number the rules use, in one place, so the game can be tuned without touching the
     /// rules themselves. <see cref="Standard"/> is the game as designed in
@@ -8,9 +22,14 @@ namespace GreyBoxStrategy
     public sealed class GameRules
     {
         // --- Length and victory ----------------------------------------------------------
-        /// <summary>The game ends after this turn if nobody has won before it.</summary>
+        /// <summary>How the game is won (rules v2, section 6). Today's game is <see cref="VictoryMode.Domination"/>.</summary>
+        public VictoryMode Victory = VictoryMode.Domination;
+        /// <summary>
+        /// The game ends after this turn if nobody has won before it. In <see cref="VictoryMode.Conquest"/>
+        /// it is only the cap a headless run stops at, and the game is recorded as unfinished.
+        /// </summary>
         public int MaxTurns = 30;
-        /// <summary>Holding this many provinces at the end of a turn wins at once.</summary>
+        /// <summary>Holding this many provinces at the end of a turn wins at once (<see cref="VictoryMode.Domination"/> only).</summary>
         public int ProvincesToWin = 15;
 
         // --- Economy ---------------------------------------------------------------------

@@ -11,6 +11,7 @@ scripted AI; [its results are below](#stage-2-a-model-plays-a-country). Any seat
 model, a script or random, with personas; [the table of models](#models-at-one-table) scores them.
 Stage 3, the map and the screen, has begun: [watch mode plays back a recorded game](#the-screen-watch-mode-playing-back-a-recorded-game).
 A [storyteller](#storyteller) that invents the game's events is built as an arm, `+storyteller`, and measured against the random event table.
+[Rules v2](../../docs/demos/painted-realm-rules-v2.md), the deeper game, is being built a slice at a time; [what exists so far](#rules-v2-being-built).
 
 ## Play it
 
@@ -219,10 +220,45 @@ framework writes the moves as one line among the facts, `LegalTargets = Observat
 
 Each game log shows the model's answer and its statement under each of its moves.
 
-**Tests:** 123 EditMode tests in `Assets/GreyBoxStrategy/Tests/Editor/`, about 5 seconds once the
+**Tests:** 156 EditMode tests in `Assets/GreyBoxStrategy/Tests/Editor/`, about 10 seconds once the
 project has imported. Twenty of them drive the model seat through `ScriptedProvider`,
 sixteen in `TableTests` the table, the personas and the scorecard, and fifteen in `StorytellerTests`
 the storyteller. The screen has its own in `Screen/Tests/Editor/`.
+
+## Rules v2, being built
+
+[`docs/demos/painted-realm-rules-v2.md`](../../docs/demos/painted-realm-rules-v2.md) is the plan, in
+slices R0 to R10. Built so far:
+
+**R0, settings and the map as data** (12 November). Today's game plays exactly as before; what
+changed is where it comes from.
+
+- **The map is data.** `WorldMap` (`Sim/Map/`) holds countries, provinces and borders, and v2's
+  province fields that no rule reads yet: terrain (plains, forest, hills, marsh, mountains), coast,
+  port, population, good, region, special place. It reads and writes JSON
+  (`WorldMap.FromJson`, `ToJson`), refusing a map it cannot play with the reason.
+  `MapDefinition.Standard()` is the **Classic** preset (`ClassicMap`), today's 25 provinces with
+  terrain set by hand from the painting.
+- **The settings are data.** `GameSetup` (`Sim/Rules/`) is what the menu, the runners and the tests
+  share: seed, map, number of countries, victory mode and its values, the storyteller preset and the
+  advisor switch (both data only so far). Its saved form:
+
+  ```json
+  { "version": 1, "seed": 4, "map": "classic", "countries": 5, "victory": "domination",
+    "dominationPercent": 60, "turnLimit": 30, "turnCap": 150, "storyteller": "off", "advisor": true }
+  ```
+
+  `GameSetup.FromJson` refuses unknown names and invalid values with a message ("the Classic board has
+  five countries, not 6"); `NewGame()` starts the game; `GameRunner.Play(setup, lineup)` plays one
+  headless.
+- **Three victory modes.** `domination` is today's (15 of 25, or the most after turn 30) and stays the
+  default until armies arrive in R1. `conquest`: the last country standing wins; a headless run stops
+  at `turnCap` and records the game as `Unfinished`. `turn_limit`: the most provinces after
+  `turnLimit` turns. A ruler's first fact and goal line say the mode's goal; on domination they read
+  word for word as before.
+- **Proof it is the same game:** `SetupTests` pins the hash of the 200-game mixed series' `summary.md`
+  and of every turn's owner grid, as measured on the commit before R0, and compares the Classic data
+  with the board as it was built in code (`LegacyBoard`), field by field.
 
 ## The first real run
 
@@ -1281,7 +1317,9 @@ is covered by a review of the code, not yet by a live run.
 Assets/GreyBoxStrategy/
   Sim/                GreyBoxStrategy.Sim (noEngineReferences: true): no UnityEngine at all
     Rules/            Dice, GameRules, MapDefinition, World, Move, Legality, Facts, Requests, Game,
-                      TurnSnapshot, Events (the storyteller's templates, groups and fairness rules)
+                      TurnSnapshot, Events (the storyteller's templates, groups and fairness rules),
+                      GameSetup (rules v2's settings)
+    Map/              WorldMap (the map as data, JSON), Terrain and TerrainTable, ClassicMap
     Players/          IPlayer, ScriptedPlayer and Temperament, RandomPlayer
     Runner/           GameRunner and Lineups, SeriesSummary, GameLog and StrategyRuns, Scorecard, EventLog
   Agents/             GreyBoxStrategy (refs Agenerela, GreyBoxStrategy.Sim): CountryAgent, the model seat;
