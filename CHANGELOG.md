@@ -29,6 +29,22 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm rules v2: the design for the deeper game** (#20),
+  `docs/demos/painted-realm-rules-v2.md`. Design only, no game code. It records the lead's
+  34 answers of 12 November, and settles, for build sessions to take one slice at a time:
+  - **The turn:** writs (2 to 5 orders a turn), standing orders, and a model ruler asked only about
+    the court and the armies awaiting orders. About 7 s of model time a turn for six `qwen3.5:4b`
+    rulers, 14 s at worst; five ways compared.
+  - **A seeded map generator** with fairness and connectivity checks, special places named and told
+    by a model, and a sea chart drawn by code at any resolution. Today's board stays as the Classic
+    preset.
+  - **Armies:** three unit types with counters, generals with traits, sieges, supply as stores, fog
+    of war, and a survey of what gives army play depth.
+  - **The rest:** population, food, goods and buildings shown as development; agreements and opinions
+    with reasons; conquest with no turn limit; the settings and presets; what each decision asks of
+    the models and the framework; the A/B each slice owes.
+  - **The build:** eight slices with issue-ready checklists, and eight questions for the lead.
+
 - **Two 4B-class candidates measured against `qwen3.5:4b`** (#252's first arms), on the RTX 5080
   with the control re-run in the same session. The candidates are `gemma4:e4b-it-qat` and
   `nemotron-3.5-bolt:e4b`. Results are in `findings.md` and `model-candidates.md`'s "Measured",
