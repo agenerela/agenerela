@@ -148,7 +148,8 @@ namespace GreyBoxStrategy
                     "The groups: everyone; the_north is valen and orsk; the_south is kesh and ilvar; the_leader and the_weakest are whoever alone holds the most and the fewest provinces; all_at_war is every country at war.",
                     "The game decides how strong an event is and tells the rulers the numbers; you tell the story.",
                 },
-                StatementRules = "Begin with a title of two to five words and a colon, then one or two sentences telling what happened. "
+                StatementRules = "A title of two to five words, a colon, then one or two sentences telling what happened, "
+                                 + "as in \"Title Of The Event: what happened to whom.\" "
                                  + "Name only the country or province it strikes. No numbers.",
             };
             Agent = new Agent(identity, Array.Empty<ActionDefinition>(), provider)
