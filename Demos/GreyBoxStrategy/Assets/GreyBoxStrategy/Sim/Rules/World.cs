@@ -96,6 +96,14 @@ namespace GreyBoxStrategy
         public MapDefinition Map { get; }
         public GameRules Rules { get; }
         public int Seed { get; }
+        /// <summary>
+        /// Every province's terrain, landmark and resource (<see cref="TraitCatalog"/>), drawn from the
+        /// seed on first use. Only the storyteller's S2 events read them; nothing else in the rules does.
+        /// </summary>
+        public IReadOnlyDictionary<string, ProvinceTraits> Traits =>
+            traits ?? (traits = TraitCatalog.Assign(ProvinceList.Select(p => p.Id), Seed));
+        private Dictionary<string, ProvinceTraits> traits;
+
         /// <summary>The turn being played, 1-based; 0 before the first upkeep.</summary>
         public int Turn { get; set; }
 

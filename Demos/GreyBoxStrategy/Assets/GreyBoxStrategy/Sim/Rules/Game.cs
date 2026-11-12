@@ -85,8 +85,76 @@ namespace GreyBoxStrategy
         /// <summary>The turn the next <see cref="BeginTurn"/> starts: the one an event queued now happens on.</summary>
         public int NextTurn => World.Turn + 1;
 
+        /// <summary>
+        /// Which of the storyteller's stage S2 pieces this game uses (<see cref="StoryRules"/>); S1's
+        /// rules, every piece off, unless set. Set it before the first event.
+        /// </summary>
+        public StoryRules Story
+        {
+            get => story;
+            set => story = value ?? StoryRules.S1;
+        }
+
+        private StoryRules story = StoryRules.S1;
+
         /// <summary>Why this event may not happen at the next upkeep, or null (<see cref="EventRules.WhyNot"/>).</summary>
-        public string WhyNotEvent(string template, string target) => EventRules.WhyNot(World, Events, NextTurn, template, target);
+        public string WhyNotEvent(string template, string target) => EventRules.WhyNot(World, Events, NextTurn, template, target, story);
+
+        /// <summary>Every chain of the game (S2): the screen follows a tale through these.</summary>
+        public IReadOnlyList<Chain> Chains => Events.Chains;
+
+        /// <summary>
+        /// The choices the queued event asks, one per ruler it reaches, until the next upkeep lands
+        /// them. A person's seat answers through <see cref="Choose"/>; model and scripted seats through
+        /// <see cref="ChoiceRequests"/> and <see cref="SubmitChoices"/>. An unanswered one takes its default.
+        /// </summary>
+        public IReadOnlyList<EventChoice> PendingChoices => pendingChoices;
+
+        private readonly List<EventChoice> pendingChoices = new List<EventChoice>();
+        // The queued event as the rulers will read it (S2), built when it is queued so a dilemma can be asked before upkeep.
+        private EventRecord draft;
+        private EventTemplate draftTemplate;
+
+        /// <summary>One request per waiting choice, for the seats: the story and the options among its facts, the options as its moves.</summary>
+        public IReadOnlyList<CountryRequest> ChoiceRequests()
+        {
+            Expect(Phase.AwaitingTurn);
+            return pendingChoices.Where(c => c.Chosen == null && World.Country(c.Country).Alive).Select(c => new CountryRequest(
+                Moment.Choice, c.Turn, c.Country, World, Facts.Standing(World, c.Country),
+                new List<string> { $"Event \"{c.Title}\": {c.Story}", c.OptionsLine() },
+                c.Options.Select(o => new Move(o.Id)).ToList(), offerId: c.Id, defaultMove: new Move(c.DefaultOption))).ToList();
+        }
+
+        /// <summary>A ruler's choice, by a person on the screen or a seat; null when taken, else why not.</summary>
+        public string Choose(string countryId, string optionId, string by = "person")
+        {
+            Expect(Phase.AwaitingTurn);
+            var c = pendingChoices.FirstOrDefault(x => x.Country == countryId && x.Chosen == null);
+            if (c == null) return $"{countryId} has no choice waiting";
+            if (c.Option(optionId) == null) return $"{optionId} is not one of {countryId}'s options";
+            c.Chosen = optionId;
+            c.ChosenBy = by;
+            return null;
+        }
+
+        /// <summary>
+        /// The seats' answers to <see cref="ChoiceRequests"/>. A model seat's gate executes the
+        /// decision first (<see cref="IMoveGate"/>), so its memory keeps what it chose; an answer that is
+        /// not one of the options, or that the gate refuses, leaves the default for upkeep.
+        /// </summary>
+        public void SubmitChoices(IEnumerable<CountryAnswer> answers)
+        {
+            Expect(Phase.AwaitingTurn);
+            foreach (var a in answers ?? Enumerable.Empty<CountryAnswer>())
+            {
+                if (a?.Request == null || a.Request.Moment != Moment.Choice) continue;
+                var c = pendingChoices.FirstOrDefault(x => x.Id == a.Request.OfferId && x.Chosen == null);
+                if (c == null || a.Choice == null || c.Option(a.Choice.Action) == null) continue;
+                bool seat = Gates.TryGetValue(c.Country, out var gate);
+                if (seat && gate.Admit(a.Request, a.Choice) != null) continue;
+                Choose(c.Country, a.Choice.Action, seat ? "model" : "seat");
+            }
+        }
 
         /// <summary>
         /// Queues the storyteller's event for the next upkeep, where it is re-checked, applied and told
@@ -99,6 +167,87 @@ namespace GreyBoxStrategy
             if (eventTable) throw new InvalidOperationException("The random event table is on: a storyteller event would fire beside it.");
             if (queued != null) throw new InvalidOperationException("An event is already queued for this turn.");
             queued = e;
+            if (story.IsS2) Draft(e);
+        }
+
+        // S2: the event as the rulers will read it, built when it is queued, and the choices it asks.
+        private void Draft(StoryEvent q)
+        {
+            int turn = NextTurn;
+            var asked = EventRules.Template(q.Template);
+            var t = asked?.Skeleton != null ? EventRules.BeginStage(World, Events, turn, asked, q.Target, story) : asked;
+            draft = null;
+            draftTemplate = null;
+            pendingChoices.Clear();
+            if (t == null || EventRules.WhyNot(World, Events, turn, q.Template, q.Target, story) != null) return; // refused at upkeep
+
+            var chain = Events.Chain(q.Target);
+            var (hit, spared) = EventRules.ReachFor(World, Events, turn, t, q.Target, story);
+            string subject = chain?.Subject ?? q.Target;
+            string province = World.IsProvince(subject) ? subject : null;
+            var e = new EventRecord
+            {
+                Turn = turn,
+                Source = EventRecord.FromStoryteller,
+                Template = t.Id,
+                Action = q.Template,
+                Target = q.Target,
+                Province = province,
+                Statement = q.Statement,
+            };
+            e.Hit.AddRange(hit);
+            e.Spared.AddRange(spared);
+            foreach (var other in World.Alive) e.ProvincesAtTime[other.Id] = World.ProvinceCount(other.Id);
+            if (story.Traits && province != null) e.Traits = World.Traits[province].Line;
+
+            var happenings = story.History ? History.Of(this) : null;
+            var allowed = new HashSet<string>(StringComparer.Ordinal);
+            if (happenings != null) allowed.UnionWith(History.Named(happenings));
+            if (chain != null)
+            {
+                allowed.UnionWith(chain.Countries);
+                if (chain.Province != null) allowed.Add(chain.Province);
+            }
+            (e.Title, e.Story, e.StoryVerdict) = EventRules.CheckStory(World, t, e.Hit, province, q.Statement, q.Title,
+                allowed.Count > 0 ? allowed : null, story.TitleCall);
+            e.ModelTitle = story.TitleCall ? EventRules.CleanTitle(q.Title) : EventRules.SplitTitle(q.Statement).title;
+            if (happenings != null && !e.StoryReplaced)
+            {
+                e.HistoryRef = History.Check(World, happenings, History.Recent(happenings, turn), e.Hit, e.Story);
+                if (e.HistoryRef != null && e.HistoryRef.StartsWith("invented", StringComparison.Ordinal))
+                {
+                    e.Story = EventRules.FallbackStory(t, e.Hit, province);
+                    e.StoryVerdict = "replaced: " + e.HistoryRef;
+                }
+            }
+
+            if (t.IsChoice)
+            {
+                foreach (string id in e.Hit)
+                {
+                    var ch = new EventChoice
+                    {
+                        Id = $"t{turn}-{id}-{t.Id}", Turn = turn, Country = id, Template = t.Id, Title = e.Title, Story = e.Story,
+                        Province = province, ChainId = chain?.Id, DefaultOption = t.DefaultOption,
+                    };
+                    foreach (var o in t.Options)
+                    {
+                        var co = new ChoiceOption { Id = o.Id, Label = o.Label, Lean = o.Lean };
+                        foreach (var part in o.Parts)
+                        {
+                            var (amount, value, text) = EventEffects.Plan(World, part, id);
+                            co.Planned.Add((part, amount, value, text));
+                        }
+                        co.Effect = co.Planned.Count == 0 ? "nothing changes"
+                            : string.Join(", ", co.Planned.Select(x => EventEffects.Phrase(x.part, x.amount, province)));
+                        ch.Options.Add(co);
+                    }
+                    pendingChoices.Add(ch);
+                }
+                e.Options.AddRange(t.Options.Select(o => o.Id));
+            }
+            draft = e;
+            draftTemplate = t;
         }
 
         private bool eventTable = true;
@@ -130,6 +279,7 @@ namespace GreyBoxStrategy
             }
 
             if (queued != null) ApplyQueued();
+            if (story.Chains != ChainMode.None) TendChains();
             foreach (var c in World.Alive.ToList()) Upkeep(c);
             incomeCut.Clear();
 
@@ -239,6 +389,11 @@ namespace GreyBoxStrategy
         {
             var q = queued;
             queued = null;
+            if (story.IsS2)
+            {
+                ApplyDraft(q);
+                return;
+            }
             string why = EventRules.WhyNot(World, Events, World.Turn, q.Template, q.Target);
             if (why != null)
             {
@@ -260,27 +415,12 @@ namespace GreyBoxStrategy
             e.Hit.AddRange(EventRules.Reach(World, q.Target));
             foreach (var other in World.Alive) e.ProvincesAtTime[other.Id] = World.ProvinceCount(other.Id);
             (e.Title, e.Story, e.StoryVerdict) = EventRules.CheckStory(World, t, e.Hit, e.Province, q.Statement);
+            e.ModelTitle = EventRules.SplitTitle(q.Statement).title;
+            e.Action = q.Template;
 
             foreach (string id in e.Hit)
             {
-                var c = World.Country(id);
-                var (amount, value, effect) = EventRules.Plan(World, t.Id, id);
-                switch (t.Id)
-                {
-                    case EventRules.Windfall: c.Gold += amount; break;
-                    case EventRules.BadHarvest: incomeCut[id] = amount; break;
-                    case EventRules.Plague: c.Army -= amount; break;
-                    case EventRules.Volunteers: c.Army += amount; break;
-                    case EventRules.Zeal: c.Stability = Math.Min(Rules.MaxStability, c.Stability + 1); break;
-                    case EventRules.Unrest:
-                        // And no recovery at this upkeep, as after a tax rise; otherwise the point
-                        // lost is back before the council and the event does nothing.
-                        c.Stability = Math.Max(1, c.Stability - 1);
-                        c.RaisedTaxes = true;
-                        break;
-                    case EventRules.Stronghold: World.Province(e.Province).Forts++; break;
-                    case EventRules.WallsCrumble: World.Province(e.Province).Forts--; break;
-                }
+                var (amount, value, effect) = ApplyS1(t, id, e.Province);
                 e.Value[id] = value;
                 e.Effect[id] = effect;
                 Tell(id, 1, EventRules.HitLine(e, id, amount));
@@ -291,6 +431,166 @@ namespace GreyBoxStrategy
             foreach (var other in World.Alive.Where(c => !e.Hit.Contains(c.Id))) Tell(other.Id, 3, news);
             report.Events.Add(e);
             Events.Events.Add(e);
+        }
+
+        // One of S1's eight templates on one country, as S1 applied it.
+        private (int amount, int value, string effect) ApplyS1(EventTemplate t, string id, string province)
+        {
+            var c = World.Country(id);
+            var (amount, value, effect) = EventRules.Plan(World, t.Id, id);
+            switch (t.Id)
+            {
+                case EventRules.Windfall: c.Gold += amount; break;
+                case EventRules.BadHarvest: incomeCut[id] = amount; break;
+                case EventRules.Plague: c.Army -= amount; break;
+                case EventRules.Volunteers: c.Army += amount; break;
+                case EventRules.Zeal: c.Stability = Math.Min(Rules.MaxStability, c.Stability + 1); break;
+                case EventRules.Unrest:
+                    // And no recovery at this upkeep, as after a tax rise; otherwise the point
+                    // lost is back before the council and the event does nothing.
+                    c.Stability = Math.Max(1, c.Stability - 1);
+                    c.RaisedTaxes = true;
+                    break;
+                case EventRules.Stronghold: World.Province(province).Forts++; break;
+                case EventRules.WallsCrumble: World.Province(province).Forts--; break;
+            }
+            return (amount, value, effect);
+        }
+
+        // S2's event at upkeep: re-checked with the rule that offered it, then each country's effect
+        // (for a dilemma, the option it chose, or the default), told to every ruler, and its chain kept.
+        private void ApplyDraft(StoryEvent q)
+        {
+            var e = draft;
+            var t = draftTemplate;
+            var choices = pendingChoices.ToList();
+            draft = null;
+            draftTemplate = null;
+            pendingChoices.Clear();
+            string why = e == null ? "it could not be told" : EventRules.WhyNot(World, Events, World.Turn, q.Template, q.Target, story);
+            if (why != null)
+            {
+                report.EventRefused = $"{q.Template} on {q.Target}: {why}";
+                report.Upkeep.Add($"The storyteller's {q.Template} on {q.Target} was refused: {why}.");
+                return;
+            }
+
+            foreach (string id in e.Hit.ToList())
+            {
+                int value;
+                string effect, line;
+                if (t.IsChoice)
+                {
+                    var ch = choices.First(x => x.Country == id);
+                    string chosen = ch.Chosen ?? ch.DefaultOption;
+                    var o = ch.Option(chosen);
+                    foreach (var x in o.Planned) EventEffects.Apply(World, x.part, id, e.Province, x.amount, incomeCut);
+                    value = o.Value;
+                    e.Choices[id] = chosen;
+                    e.ChosenBy[id] = ch.Chosen != null ? ch.ChosenBy : "default";
+                    effect = o.Planned.Count == 0 ? $"chose to {o.Label}" : $"chose to {o.Label}: " + string.Join(", ", o.Planned.Select(x => x.text));
+                    line = $"Event \"{e.Title}\": we chose to {o.Label}" + (o.Planned.Count == 0 ? "." : ": " + o.Effect + ".");
+                }
+                else if (t.Parts != null)
+                {
+                    var planned = t.Parts.Select(p => (p, plan: EventEffects.Plan(World, p, id))).ToList();
+                    foreach (var x in planned) EventEffects.Apply(World, x.p, id, e.Province, x.plan.amount, incomeCut);
+                    value = planned.Sum(x => x.plan.value);
+                    effect = planned.Count == 0 ? "a story only" : string.Join(", ", planned.Select(x => x.plan.text));
+                    line = planned.Count == 0 ? $"Event \"{e.Title}\": {e.Story}"
+                        : $"Event \"{e.Title}\": " + string.Join(", ", planned.Select(x => EventEffects.Phrase(x.p, x.plan.amount, e.Province))) + ".";
+                }
+                else
+                {
+                    var (amount, v, text) = ApplyS1(t, id, e.Province);
+                    value = v;
+                    effect = text;
+                    line = EventRules.HitLine(e, id, amount);
+                }
+                e.Value[id] = value;
+                e.Effect[id] = effect;
+                Tell(id, 1, line);
+                report.Upkeep.Add($"{id}: event \"{e.Title}\" ({t.Id}{(e.Province != null ? " in " + e.Province : "")}), {effect}.");
+            }
+            string news = EventRules.NewsLine(e, t);
+            foreach (var other in World.Alive.Where(c => !e.Hit.Contains(c.Id))) Tell(other.Id, 3, news);
+            report.Events.Add(e);
+            Events.Events.Add(e);
+            if (story.Chains != ChainMode.None) KeepChain(e, q);
+        }
+
+        // A chain begins, continues or ends with this event (S2).
+        private void KeepChain(EventRecord e, StoryEvent q)
+        {
+            var asked = EventRules.Template(q.Template);
+            var chain = Events.Chain(q.Target);
+            if (asked.Skeleton != null)
+            {
+                chain = NewChain(e, q.Target, ChainMode.Skeleton, asked.Skeleton);
+                chain.Status = ChainStatus.Open;
+                chain.Events.Add(e);
+                chain.StageIndex = 0;
+                if (ChainSkeletons.NextStage(ChainSkeletons.Named(chain.Skeleton), chain) < 0) End(chain, ChainStatus.Completed, "told to its end");
+            }
+            else if (chain != null)
+            {
+                if (chain.Mode == ChainMode.Skeleton)
+                {
+                    var k = ChainSkeletons.Named(chain.Skeleton);
+                    int stage = ChainSkeletons.NextStage(k, chain);
+                    chain.Events.Add(e);
+                    chain.StageIndex = stage;
+                    if (ChainSkeletons.NextStage(k, chain) < 0) End(chain, ChainStatus.Completed, "told to its end");
+                }
+                else
+                {
+                    chain.Events.Add(e);
+                    chain.Status = ChainStatus.Open;
+                    if (q.Template == EventRules.EndTale) End(chain, ChainStatus.Completed, "end_tale");
+                    else if (chain.Events.Count >= ChainSkeletons.MaxEvents) End(chain, ChainStatus.Completed, "its full length");
+                }
+            }
+            else if (story.Chains == ChainMode.Free)
+            {
+                chain = NewChain(e, q.Target, ChainMode.Free, null);
+                chain.Events.Add(e);
+            }
+            if (chain == null) return;
+            e.ChainId = chain.Id;
+            e.ChainStage = chain.Events.Count;
+        }
+
+        private Chain NewChain(EventRecord e, string target, ChainMode mode, string skeleton)
+        {
+            var c = new Chain
+            {
+                Id = $"tale_{Events.Chains.Count + 1}",
+                Mode = mode,
+                Skeleton = skeleton,
+                Subject = target,
+                SubjectKind = EventRules.KindOf(World, target),
+                Province = e.Province,
+                Title = e.Title,
+            };
+            c.Countries.AddRange(e.Hit.Concat(e.Spared));
+            Events.Chains.Add(c);
+            return c;
+        }
+
+        private static void End(Chain c, ChainStatus status, string reason)
+        {
+            c.Status = status;
+            c.EndReason = reason;
+        }
+
+        // At every upkeep: an open chain whose subject is out, or that nobody continued for a while, is abandoned.
+        private void TendChains()
+        {
+            foreach (var c in Events.Chains.Where(c => c.Status == ChainStatus.Open))
+            {
+                if (c.Countries.All(id => World.Country(id)?.Alive != true)) End(c, ChainStatus.Abandoned, "its subject is out");
+                else if (c.LastTurn < World.Turn - ChainSkeletons.IdleTurns) End(c, ChainStatus.Abandoned, "not continued");
+            }
         }
 
         // ------------------------------------------------------------------------------------

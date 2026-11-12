@@ -108,6 +108,13 @@ namespace GreyBoxStrategy
         {
             var rounds = new List<DecisionRound>();
             if (storyteller != null) await storyteller.TellAsync(ct);
+            // S2: the rulers an event asks to choose answer before the upkeep it lands at, in a round of their own.
+            if (game.PendingChoices.Count > 0)
+            {
+                var asks = game.ChoiceRequests();
+                var picks = await AnswerAll(asks, players, seats, $"seed-{game.Seed}-turn-{game.NextTurn}-choices", rounds, ct);
+                game.SubmitChoices(picks);
+            }
             var council = game.BeginTurn();
             var answers = await AnswerAll(council, players, seats, $"seed-{game.Seed}-turn-{game.World.Turn}-council", rounds, ct);
             var envoys = game.SubmitCouncil(answers);

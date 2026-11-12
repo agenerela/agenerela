@@ -12,7 +12,8 @@ namespace GreyBoxStrategy
         public Move Decide(CountryRequest request)
         {
             var legal = request.Legal;
-            string purpose = request.Moment == Moment.Envoy ? "random-envoy:" + request.OfferId : "random-council";
+            string purpose = request.Moment == Moment.Envoy ? "random-envoy:" + request.OfferId
+                : request.Moment == Moment.Choice ? "random-choice:" + request.OfferId : "random-council";
             int i = Dice.Int(request.World.Seed, request.Turn, request.CountryId, purpose, 0, legal.Count);
             return legal[i];
         }
