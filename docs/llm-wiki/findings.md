@@ -2926,6 +2926,8 @@ The runner refuses a legality that would make any label's expected pair illegal,
 389 prompts have restricted pairs. **This legality arm is the only evidence for restricted pairs.**
 A number from a real game is still owed: GreyBoxStrategy with `PerTarget` in place of its game-side
 moves line.
+*Since then:* it was run on 10 November, in "GreyBoxStrategy: the framework's legal-target listing does
+not replace the game's moves line" below.
 
 **Setup.**
 
@@ -3302,6 +3304,7 @@ statements read like people is the three game accounts in the demo README, one r
 the human player's default opponents should be 4B seats with personas. The 2B is not fit for a
 persona seat until gap N9 is fixed; that fix is a prompt change, owed an A/B run. Gaps N9 and N10
 are in the demo README.
+*Since then:* the A/B run was made the same day, in "How a statement rule is introduced" below.
 
 **What would change this.** A second game; personas written by someone else; and gap N9's A/B run,
 which may change the 2B's voice numbers entirely.
