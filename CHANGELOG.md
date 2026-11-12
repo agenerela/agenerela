@@ -29,6 +29,14 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **GreyBoxStrategy, stage 3's design: the painted map and the screen** (#20), for the lead to
+  approve or redirect: [`docs/demos/grey-box-strategy-screen.md`](docs/demos/grey-box-strategy-screen.md)
+  with eight mock-ups (three looks for the parchment map, the capture of a province step by step,
+  rule and advise modes, a court scene). It specifies the colour change to the millisecond, the
+  three modes, the Why card over `DecisionFeed`, a single-shader map built from the rule graph
+  with a painted fallback, an asset list, five names (pick: Inkwash) and six open questions.
+  Docs only.
+
 - **GreyBoxStrategy: arms for #244's prompt options, and a rule-copy count** (#244 items 5 and 8).
   - The model-seat modifiers `+no-moves-line`, `+moves-sentence` (`LegalTargets = ObservationLine`),
     `+how-it-reads` and `+own-words` (`StatementRulesWording`).
