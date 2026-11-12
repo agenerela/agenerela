@@ -29,6 +29,16 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **GreyBoxStrategy, the screen follows a live game** (#20).
+  - Five `qwen3.5:4b` persona seats play through `TableRunner`, and the screen reads the
+    framework's `DecisionLog` as it grows: a partial replay build, and the log read while it is
+    written.
+  - A turn plays only once it has fully resolved.
+  - Checked with one full live game on the RTX 5080, where Ilvar won on turn 24; no timing claims.
+  - Also: open panels no longer cover the map-mode bar, and following a country centres its land
+    in the free map area.
+  - 3 new EditMode tests.
+
 - **GreyBoxStrategy, the screen's panels and map modes** (#20, still on the replay).
   - **Province and country panels** on click: defence, who may attack a province and why not,
     and a country's persona, treasury, last facts, offered moves and decisions.

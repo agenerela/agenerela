@@ -25,6 +25,8 @@ namespace GreyBoxStrategy.Realm
         [SerializeField] private bool playOnStart = true;
         [Tooltip("Playback speed at start: 1, 2 or 4.")]
         [SerializeField] private float speed = 1;
+        [Tooltip("When it is set and playing live, the screen follows a live game instead of the recording.")]
+        [SerializeField] private LiveGame live;
 
         private ReplayGame game;
         private ScreenUI ui;
@@ -39,12 +41,20 @@ namespace GreyBoxStrategy.Realm
         private Vector2Int lastSize;
 
         /// <summary>For the Unity CLI: where the playback is, as "turn 3, event 4 of 9".</summary>
+        public string LiveStatus => live == null ? "no live source" : live.Status + $", {game?.Turns.Count ?? 0} turns logged, log {live.LogPath}";
+        public LiveGame Live => live;
         public string Position => game == null ? "not built" : $"turn {(turnIndex < game.Turns.Count ? game.Turns[turnIndex].Turn : game.Turns.Count)}, event {eventIndex}";
         public ReplayGame Game => game;
 
         private void Start()
         {
-            game = ReplayBuilder.Build(Recording.Parse(recording.text));
+            bool isLive = live != null && live.PlayLive;
+            if (isLive)
+            {
+                live.Begin();
+                game = ReplayBuilder.Build(Recording.FromDecisionLog(live.Lines(), live.Seed, live.Players), partial: true);
+            }
+            else game = ReplayBuilder.Build(Recording.Parse(recording.text));
             cam = Camera.main;
             map.Build();
             FitCamera();
@@ -70,7 +80,7 @@ namespace GreyBoxStrategy.Realm
                     if (l.Event.ProvinceIndex >= 0) PanTo(l.Event.ProvinceIndex); else if (l.Country != null) PanTo(ui.CapitalIndex(l.Country));
                     if (l.Event.Decision != null) ui.ShowCard(DecisionCard.From(l.Event));
                 },
-                CountryPressed = id => { PanTo(ui.CapitalIndex(id)); OpenCountry(id); },
+                CountryPressed = id => { OpenCountry(id); FrameCountry(id); },
             };
             queries = new RealmQueries(game);
             ui.Queries = queries;
@@ -155,7 +165,16 @@ namespace GreyBoxStrategy.Realm
         {
             followed = id; ui.Followed = id;
             ui.ShowFollowBar(shown); ApplyMode();
-            if (id != null) OpenCountry(id);
+            if (id != null) { OpenCountry(id); FrameCountry(id); }
+        }
+
+        /// <summary>Centres a country's land in the free map area, so the panel does not hide it.</summary>
+        public void FrameCountry(string id)
+        {
+            var mine = Enumerable.Range(0, 25).Where(q => shown.Owners[q] == id).ToList();
+            if (mine.Count == 0) return;
+            var c = Vector3.zero; foreach (int q in mine) c += map.ProvinceWorld(q); c /= mine.Count;
+            StartCoroutine(PanRoutine(c));
         }
         public void OpenCountry(string id)
         {
@@ -256,9 +275,15 @@ namespace GreyBoxStrategy.Realm
             StartCoroutine(PanRoutine(map.ProvinceWorld(province)));
         }
 
+        /// <summary>Pans so <paramref name="target"/> sits at the centre of the free map area, between the open panels.</summary>
         private IEnumerator PanRoutine(Vector3 target)
         {
-            var from = cam.transform.position; var to = new Vector3(target.x, target.y, from.z);
+            yield return null; // let a panel that just opened lay out first
+            float scale = Screen.height / Mathf.Max(1f, document.rootVisualElement.layout.height);
+            float left = ui.FreeLeft * scale, right = (ui.InspectorOpen ? 536 : 356) * scale, top = 50 * scale, bottom = 46 * scale;
+            float upp = cam.orthographicSize * 2 / Screen.height;
+            float cx = (left + (Screen.width - left - right) / 2) - Screen.width / 2f, cy = (bottom + (Screen.height - top - bottom) / 2) - Screen.height / 2f;
+            var from = cam.transform.position; var to = new Vector3(target.x - cx * upp, target.y - cy * upp, from.z);
             for (float t = 0; t < 1; t += Time.deltaTime / 0.45f)
             {
                 float e = t < 0.5f ? 2 * t * t : 1 - Mathf.Pow(-2 * t + 2, 2) / 2;
@@ -284,10 +309,34 @@ namespace GreyBoxStrategy.Realm
         /// <summary>Reading time for a banner at 1×: 1.5 s plus 40 ms a character (the design page).</summary>
         private static float Reading(string line) => string.IsNullOrEmpty(line) ? 0.6f : 1.5f + 0.04f * line.Length;
 
+        /// <summary>
+        /// The turns ready to play. For a live game, a turn is ready once the next council has begun
+        /// or the game is over: only then has every move of it landed and been logged.
+        /// </summary>
+        private int ReadyTurns()
+        {
+            if (live == null || !live.PlayLive) return game.Turns.Count;
+            game = ReplayBuilder.Build(Recording.FromDecisionLog(live.Lines(), live.Seed, live.Players), partial: true);
+            // A short live check stops the model once it has played that many turns, not when playback gets there.
+            if (live.StopAfterTurns > 0 && game.Turns.Count >= live.StopAfterTurns && !live.Finished) live.Stop();
+            if (live.Finished || game.Result != null) return game.Turns.Count;
+            return Math.Max(0, game.Turns.Count - 1);
+        }
+
         private IEnumerator Play()
         {
-            for (turnIndex = 0; turnIndex < game.Turns.Count; turnIndex++)
+            for (turnIndex = 0; ; turnIndex++)
             {
+                // Live: wait for the council, with the thinking indicator, until the turn has resolved.
+                while (live != null && live.PlayLive && turnIndex >= ReadyTurns() && !live.Finished)
+                {
+                    ui.SetTurn(turnIndex + 1, "Council");
+                    ui.SetThinking(true);
+                    yield return new WaitForSeconds(1f);
+                }
+                if (live != null && live.PlayLive) ReadyTurns();
+                ui.SetThinking(false);
+                if (turnIndex >= game.Turns.Count) break;
                 var turn = game.Turns[turnIndex];
                 ui.SetTurn(turn.Turn, "Upkeep");
                 Show(turn.Start, null);
@@ -318,7 +367,8 @@ namespace GreyBoxStrategy.Realm
                     Current = "";
                 }
             }
-            ui.SetTurn(game.Result.Turns, $"{CountryLook.NameOf(game.Result.Winner)} wins");
+            if (game.Result != null) ui.SetTurn(game.Result.Turns, $"{CountryLook.NameOf(game.Result.Winner)} wins");
+            else ui.SetTurn(game.Turns.Count, live != null && live.Error != null ? "live game stopped: " + live.Error : "stopped");
             playing = false;
             ui.SetPlaying(false, speed);
         }

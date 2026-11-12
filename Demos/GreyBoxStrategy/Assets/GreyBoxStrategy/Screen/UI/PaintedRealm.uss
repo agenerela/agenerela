@@ -185,3 +185,7 @@
 .riv:hover { background-color: rgba(210, 173, 98, 0.14); }
 .riv.war { color: rgb(208, 97, 76); }
 .riv.truce { color: rgb(216, 162, 74); }
+
+/* an open side panel pushes the map-mode bar and its legend to its right: panels and bars never overlap */
+.side-open .modes, .side-open .legend { left: 568px; }
+.compact.side-open .modes, .compact.side-open .legend { left: 370px; }

@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &428746966
+--- !u!1 &30276260
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,8 +127,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 428746968}
-  - component: {fileID: 428746967}
+  - component: {fileID: 30276262}
+  - component: {fileID: 30276261}
   m_Layer: 0
   m_Name: Map
   m_TagString: Untagged
@@ -136,13 +136,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &428746967
+--- !u!114 &30276261
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 428746966}
+  m_GameObject: {fileID: 30276260}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6484804eae5914f45ac14311ca613f12, type: 3}
@@ -155,13 +155,13 @@ MonoBehaviour:
   provincePoints: {fileID: 4900000, guid: 604102556e2e03d47ae7b73867ca420f, type: 3}
   seaShader: {fileID: 4800000, guid: 04b77bbfc10c0364c9a6a349d743bae9, type: 3}
   seaTile: {fileID: 2800000, guid: e525985db0c4ca1429d06e83476ea944, type: 3}
---- !u!4 &428746968
+--- !u!4 &30276262
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 428746966}
+  m_GameObject: {fileID: 30276260}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -170,7 +170,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1015961664
+--- !u!1 &355531333
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -178,8 +178,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1015961666}
-  - component: {fileID: 1015961665}
+  - component: {fileID: 355531336}
+  - component: {fileID: 355531335}
+  - component: {fileID: 355531334}
   m_Layer: 0
   m_Name: Watch
   m_TagString: Untagged
@@ -187,32 +188,50 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1015961665
+--- !u!114 &355531334
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1015961664}
+  m_GameObject: {fileID: 355531333}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1fc5378558d1f214c9e1b04647b061ad, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GreyBoxStrategy.Screen::GreyBoxStrategy.Realm.LiveGame
+  playLive: 0
+  model: qwen3.5:4b
+  arm: default
+  seed: 101
+  stopAfterTurns: 0
+--- !u!114 &355531335
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 355531333}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 19cf34dedc7d3cf49973c727a837ec89, type: 3}
   m_Name: 
   m_EditorClassIdentifier: GreyBoxStrategy.Screen::GreyBoxStrategy.Realm.ReplayDirector
   recording: {fileID: 4900000, guid: 499c0e3a36619ed4d9b39b33303c934e, type: 3}
-  map: {fileID: 428746967}
+  map: {fileID: 30276261}
   style: {fileID: 7433441132597879392, guid: 5fbd7ae608f88854fb097051583479ec, type: 3}
   theme: {fileID: -4733365628477956816, guid: 5584629805020754cbd635f9f9e4e137, type: 3}
   portraits: {fileID: 2800000, guid: 241dfff30f7a9004782a4f907ef7d88f, type: 3}
   playOnStart: 1
   speed: 1
---- !u!4 &1015961666
+  live: {fileID: 355531334}
+--- !u!4 &355531336
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1015961664}
+  m_GameObject: {fileID: 355531333}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -221,7 +240,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1112776398
+--- !u!1 &1484254293
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -229,8 +248,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1112776400}
-  - component: {fileID: 1112776399}
+  - component: {fileID: 1484254295}
+  - component: {fileID: 1484254294}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -238,13 +257,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!20 &1112776399
+--- !u!20 &1484254294
 Camera:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1112776398}
+  m_GameObject: {fileID: 1484254293}
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
@@ -289,13 +308,13 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
---- !u!4 &1112776400
+--- !u!4 &1484254295
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1112776398}
+  m_GameObject: {fileID: 1484254293}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: -10}
@@ -308,6 +327,6 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 1112776400}
-  - {fileID: 428746968}
-  - {fileID: 1015961666}
+  - {fileID: 1484254295}
+  - {fileID: 30276262}
+  - {fileID: 355531336}

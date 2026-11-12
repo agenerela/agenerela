@@ -178,7 +178,10 @@ namespace GreyBoxStrategy.Realm
 
         // ---- the side panel: a province or a country ----
 
-        public void CloseSide() => side.RemoveFromClassList("on");
+        public void CloseSide() { side.RemoveFromClassList("on"); Root.RemoveFromClassList("side-open"); }
+        public bool SideOpen => side.ClassListContains("on");
+        /// <summary>The panel-space x where the free map area begins: right of the realm list, or of an open side panel.</summary>
+        public float FreeLeft => SideOpen ? side.layout.xMax + 10 : (Root.ClassListContains("compact") ? 50 : 248);
 
         private VisualElement SideHead(string title)
         {
@@ -189,6 +192,7 @@ namespace GreyBoxStrategy.Realm
             side.Add(head);
             var body = new ScrollView(); body.style.flexGrow = 1; side.Add(body);
             side.AddToClassList("on");
+            Root.AddToClassList("side-open");
             return body;
         }
 
