@@ -134,6 +134,31 @@ namespace Agenerela.Tests.Evaluation
             Assert.That(Find(EvaluationReportUi.FailureListName).childCount, Is.EqualTo(2));
             // ⑥ agreement in the Prompt Set window's words.
             Assert.That(Find<Label>(EvaluationReportUi.AgreementHeadlineName).text, Is.EqualTo(EvaluationReportView.AgreementHeadline(Agreement())));
+            Assert.That(Find<Label>("agreement-pairs").text, Does.Contain("unavailable"));
+        }
+
+        [Test]
+        public void LabellingShowsEachPairsRawAgreementAndKappaAndClearsStaleValues()
+        {
+            using (var labelled = new EvalFixtures())
+            {
+                labelled.WriteLabels("Bo", "command_with_target",
+                    "{ \"target_001\": \"move_to/bridge\", \"target_002\": \"move_to/wolf\" }");
+                var set = labelled.Load();
+                var agreement = AgreementReport.Compute(set, set.LoadLabels());
+                var state = new EvaluationReportUi.State
+                {
+                    Setup = Ready(), View = new EvaluationReportView(Saved(Report())), Agreement = agreement,
+                };
+                ui.Show(state);
+
+                Assert.That(Find<Label>("agreement-pairs").text, Does.Contain("Bo / Maxim: 1/2 agree (50.0%); Cohen's kappa: 0.333."));
+                Assert.That(Find<Label>("agreement-pairs").enableRichText, Is.False, "Annotator names are data.");
+
+                state.Agreement = null;
+                ui.Show(state);
+                Assert.That(Find<Label>("agreement-pairs").text, Is.Empty);
+            }
         }
 
         [Test]

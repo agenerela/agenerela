@@ -14,6 +14,7 @@ What is still to do is in *Still to do*.
 | `VillageGuard.asset`, `Actions/` | The set's `AgentProfile` and its four action assets (#158): what the window offers in Write, and the few-shot examples hard rule 4 checks every prompt against |
 | `prompts/<category>.json` | One file per category, so two people can label different files without conflicting |
 | `labels/<annotator>/<category>.json` | Each annotator's blind answers, written by the Prompt Set window. None yet |
+| `agreement-subset.json` | The fixed 76-prompt cohort selected for #148 on 12 November, before second-person labelling; ids by category and source hashes, with no answers |
 | `Interim/` | A separate, larger set against the same agent: 389 prompts written and labelled by AI models, used until #147's curated 200+ exists. Its [`README.md`](Interim/README.md) says how it was made |
 
 Open the set in **Window → Agenerela → Prompt Set** (#134): click **Open the project's evaluation
@@ -133,3 +134,40 @@ people's separate answers to restore, and agreement cannot be computed from this
   `labelledBy` names: Maxim on 58 prompts, Yevhen on 18. Agreement mode lists the
   splits, and a split is settled as `findings.md` describes, which writes both answers into the
   prompt's `labels`. `situation_001` is the first check.
+
+## The second-person cohort (#148)
+
+`agreement-subset.json` freezes all 76 current prompts before #147 adds more. This is a
+census of the current set, with every populated category represented (9 simple commands,
+11 commands with targets, 9 impossible requests, 9 conversations, 19 situations, 19 events).
+It becomes a fixed subset of the growing set; later additions do not change these ids.
+The manifest records the source commit and SHA-256 of each category file's UTF-8 text with
+LF line endings. Those hashes identify the originals, and are not updated after settlement.
+Selection used no second-person answers; none existed on 12 November.
+
+A person other than either writer (Maxim and Yevhen) labels this cohort in the Prompt Set
+window's **Label** mode, with their own name. Before #147 grows the set, this is simply every
+prompt the window offers. If it has grown, the coordinator prepares a working copy of the
+set with just the frozen ids before handing it over; the annotator must not inspect the
+prompt JSON or Agreement tab. Bring the unchanged `labels/<person>/` files back to this set.
+Never put an AI answer under a person's name.
+
+There are 73 single-answer originals. The three open choices (`situation_016`,
+`situation_018`, `event_015`) have no recorded single first answer, so the window does not
+invent one from their first listed target. They need two people's independent single
+answers before contributing to agreement. The other 73 already allow the minimum of 60
+comparable prompts once a second person labels them.
+
+After both people have answered, discuss every split using the 8 October procedure in
+`docs/llm-wiki/findings.md`. In **Agreement**, settle splits with a reason, preserving each
+original answer in `labels`. Click **Record agreed answers** for unanimous prompts too, keeping
+the expected answer, so both original answers are recorded in each prompt's `labels`, as #148
+requires. Do not change a person's label file. Record relabelled prompt ids, the settled
+answer and the discussion's reason in findings, including an explicit "none" if none changed.
+
+The windows report raw agreement and Cohen's kappa per named pair, so Maxim's overlap and
+Yevhen's overlap with the second person are reported separately. Once labels and settlements
+are saved, reload the Evaluation Report and use **Copy summary for findings.md**, then add
+the cohort, completion counts and relabelled ids. This remains pending: this change selects
+the cohort and supplies the reporting code, and does not provide human labels or claim an
+agreement result.

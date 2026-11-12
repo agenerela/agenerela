@@ -28,6 +28,22 @@ namespace Agenerela.Evaluation
         {
             Prompts = prompts;
             Splits = prompts.Where(p => p.IsSplit).ToList();
+            var annotators = prompts.SelectMany(p => p.Answers.Keys).Distinct()
+                .OrderBy(a => a, StringComparer.Ordinal).ToList();
+            var pairs = new List<AnnotatorAgreement>();
+            for (int first = 0; first < annotators.Count; first++)
+            {
+                for (int second = first + 1; second < annotators.Count; second++)
+                {
+                    var pair = new AnnotatorAgreement(annotators[first], annotators[second], prompts);
+                    if (pair.AnsweredByBoth > 0)
+                    {
+                        pairs.Add(pair);
+                    }
+                }
+            }
+
+            Pairwise = pairs;
         }
 
         /// <summary>Every prompt with at least one answer, in the set's order.</summary>
@@ -35,6 +51,13 @@ namespace Agenerela.Evaluation
 
         /// <summary>The prompts whose annotators gave different answers.</summary>
         public IReadOnlyList<PromptAgreement> Splits { get; }
+
+        /// <summary>
+        /// Raw agreement and Cohen's kappa for each pair with overlapping answers, in ordinal
+        /// annotator order. Each pair uses only the prompts both people answered. There is no
+        /// pooled Cohen's kappa for three or more annotators.
+        /// </summary>
+        public IReadOnlyList<AnnotatorAgreement> Pairwise { get; }
 
         /// <summary>How many prompts two or more people answered.</summary>
         public int AnsweredByTwoOrMore => Prompts.Count(p => p.Answered >= 2);

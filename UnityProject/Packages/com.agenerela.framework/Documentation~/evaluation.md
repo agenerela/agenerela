@@ -186,6 +186,19 @@ saved is never replaced, even if you change your mind: agreement is measured on 
 **Agreement** compares everyone's answers: overall, how many prompts answered by two or more
 people got the same answer from all; by category; and the list of prompts where they split.
 
+It also reports raw agreement and **Cohen's kappa for each named pair of annotators**, using
+only prompts both answered. Each complete `action/target` is one answer category: agreeing on
+the action but choosing different targets is a disagreement. With observed agreement `p_o`
+and chance agreement `p_e` (the sum of the products of the two people's answer proportions),
+`kappa = (p_o - p_e) / (1 - p_e)`. Missing answers enter neither proportion. A pair with no
+shared prompts is not reported. If both people always gave the same single answer, raw
+agreement is 100% and kappa is undefined, which the window explains. Negative kappa is kept.
+There is no single pooled Cohen's kappa when more than two people labelled the set.
+
+**Record agreed answers** keeps each person's original answer in `labels` for unanimous
+prompts too, without changing their expected answer. It leaves splits for discussion and
+never changes a person's label file.
+
 A prompt's answers are its writer's expected answer (until it is settled, when the writer is the
 only name in `labelledBy` and the target is not an open choice), the `labels` written when it
 was settled, and every label file.
@@ -414,8 +427,10 @@ next step and is not in the runner.
    asked and the state told to the model, the expected answer, what the model said and its
    statement, what the guards made of it, and any error.
 6. **Labelling and export**: the labellers' agreement on the set's label files as they are now,
-   in the Prompt Set window's own counts; **Review disagreements** opens that window, whose
-   Agreement tab settles them. **Copy summary for findings.md** copies the arms, the five
+   in the Prompt Set window's own counts, with each named pair's raw agreement and Cohen's
+   kappa; **Review disagreements** opens that window, whose Agreement tab settles them.
+   **Copy summary for findings.md** includes current agreement, each pair's raw agreement and
+   kappa, and the note that these labels may have changed since the run, as well as the arms, the five
    outcomes, the noise check and any warning as Markdown; **Show files** and **Save a copy…**
    reach `report.json` and `report.md`.
 
@@ -436,7 +451,7 @@ you compare with.
 | `PromptSetChecks` | The writing rules: `Check`, `CheckPrompt`, `CompareWithProfile`, `MatchesExample` |
 | `BlindPrompt`, `LabelChoices` | Everything Label mode is given |
 | `AnnotatorLabels`, `LabelAnswer` | One person's label file, and one `action/target` answer |
-| `AgreementReport`, `PromptAgreement` | Agreement overall and per prompt |
+| `AgreementReport`, `PromptAgreement`, `AnnotatorAgreement` | Agreement overall, per prompt, and per named pair (`Pairwise`), including raw agreement and `CohensKappa` |
 | `EvalRunner`, `EvalArm`, `EvalArmOrder` | An A/B run: `RunAsync`, `Classify`, `DescribeState`, `PlainStateLines`, `WarmUpRequests`, `Order`, `Progress` |
 | `EvalProgress`, `EvalPhase`, `EvalCancelledException` | How far a run has come, and a cancelled run's `Partial` report |
 | `EvalReport` | What a run found: `Conditions`, `Arms`, `Noise`, `Answers`, `NotCorrect`, `Cancelled`; `Save`, `ToJson`, `FromJson`, `ToMarkdown` |
