@@ -823,7 +823,7 @@ namespace Agenerela.Evaluation
         private AgentIdentity IdentityOf(EvalArm arm)
         {
             var identity = Profile.Identity;
-            if (arm.Knowledge.Count == 0)
+            if (arm.Knowledge.Count == 0 && arm.StatementRules == null)
             {
                 return identity;
             }
@@ -837,7 +837,7 @@ namespace Agenerela.Evaluation
                 Personality = identity.Personality,
                 Goals = identity.Goals,
                 Knowledge = knowledge,
-                StatementRules = identity.StatementRules,
+                StatementRules = arm.StatementRules ?? identity.StatementRules,
             };
         }
 
@@ -987,6 +987,8 @@ namespace Agenerela.Evaluation
                     ExampleTargetFallback = arm.Options.ExampleTargetFallback,
                     PairTargetsWithActions = arm.Options.PairTargetsWithActions,
                     LegalTargets = arm.Options.LegalTargets.ToString(),
+                    StatementRulesWording = arm.Options.StatementRulesWording.ToString(),
+                    StatementRules = arm.StatementRules,
                     Legality = arm.Legality?.Copy(),
                     ObservationPlacement = arm.Options.ObservationPlacement.ToString(),
                     StandingLinesAsCallObservations = arm.StandingLinesAsCallObservations,

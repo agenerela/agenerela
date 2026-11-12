@@ -400,6 +400,52 @@ namespace GreyBoxStrategy.Tests
         }
 
         [Test]
+        public void MovesSentenceArm_TheFrameworkSaysTheMovesLinesPairsInItsPlace()
+        {
+            // #244 item 5 (gap N8): the same state as the moves line's test.
+            var game = NewGame();
+            Give(game.World, "stonereach", "valen");
+            var council = game.BeginTurn();
+            var request = For(council, "valen");
+            var seat = new CountryAgent(game.World, "valen", new ScriptedProvider(), ModelSeatOptions.Named("default+no-moves-line+moves-sentence"));
+            var options = seat.OptionsFor(request);
+            Assert.That(options.LegalTargets, Is.EqualTo(LegalTargetListing.ObservationLine));
+
+            var sent = seat.Agent.Preview(seat.StimulusFor(request), options).Request;
+            var lines = sent.Observations.Split('\n').ToList();
+            Assert.That(lines, Has.None.Contains("Moves open to us"), "no game-side line");
+            Assert.That(lines, Does.Contain("- Moves open to you: fortify ashby, stonereach or brindle; declare_war orsk or merrow; attack fenmark or westmarch."),
+                "the moves line's pairs, the moves in their registration order and the targets in the schema's");
+            var withLine = new CountryAgent(game.World, "valen", new ScriptedProvider());
+            var gameLines = withLine.Agent.Preview(withLine.StimulusFor(request), withLine.OptionsFor(request)).Request.Observations.Split('\n').ToList();
+            Assert.That(lines.FindIndex(l => l.StartsWith("- Moves open")), Is.EqualTo(gameLines.FindIndex(l => l.StartsWith("- Moves open"))),
+                "where the game's own line sits: last of the standing facts");
+            Assert.That(sent.SystemPrompt, Does.Not.Contain("(for "), "the framework's list stays unannotated");
+            Finish(game, council, null);
+        }
+
+        [Test]
+        public void Arms_PromptWordingModifiers()
+        {
+            var sentence = ModelSeatOptions.Named("default+no-moves-line+moves-sentence");
+            Assert.That((sentence.MovesLine, sentence.LegalTargets, sentence.PairTargets, sentence.GroundingThreshold),
+                Is.EqualTo((false, LegalTargetListing.ObservationLine, true, 0.6f)));
+            Assert.That(ModelSeatOptions.Named("default+how-it-reads").RulesWording, Is.EqualTo(StatementRulesWording.HowItShouldRead));
+            Assert.That(ModelSeatOptions.Named("default+own-words").RulesWording, Is.EqualTo(StatementRulesWording.InYourOwnWords));
+            Assert.That(ModelSeatOptions.Default.RulesWording, Is.EqualTo(StatementRulesWording.YourStatement));
+
+            var game = NewGame();
+            var council = game.BeginTurn();
+            var request = For(council, "valen");
+            var seat = new CountryAgent(game.World, "valen", new ScriptedProvider(), ModelSeatOptions.Named("default+how-it-reads"), Personas.Merchant);
+            var options = seat.OptionsFor(request);
+            Assert.That(options.StatementRulesWording, Is.EqualTo(StatementRulesWording.HowItShouldRead));
+            Assert.That(seat.Agent.Preview(seat.StimulusFor(request), options).Request.SystemPrompt,
+                Does.Contain("\nHow your statement should read: A trader's voice: profit, price or a deal."));
+            Finish(game, council, null);
+        }
+
+        [Test]
         public void Arms_ByName()
         {
             var paired = ModelSeatOptions.Named("per-target-paired");

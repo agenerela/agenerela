@@ -52,6 +52,14 @@ namespace Agenerela.Evaluation
         /// existed, which listed none.
         /// </summary>
         [JsonProperty("legalTargets")] public string LegalTargets;
+        /// <summary>
+        /// How the arm's prompt introduced the identity's statement rules, the name of a
+        /// <see cref="Agenerela.StatementRulesWording"/> value (#244 item 8); null in a report written
+        /// before it existed, which used <c>YourStatement</c>.
+        /// </summary>
+        [JsonProperty("statementRulesWording")] public string StatementRulesWording;
+        /// <summary>The arm's own <see cref="EvalArm.StatementRules"/>, in place of the profile's; null when it kept the profile's.</summary>
+        [JsonProperty("statementRules", NullValueHandling = NullValueHandling.Ignore)] public string StatementRules;
         /// <summary>The arm's own target legality (<see cref="EvalArm.Legality"/>, #151); null when it ran the set as it is.</summary>
         [JsonProperty("legality", NullValueHandling = NullValueHandling.Ignore)] public EvalLegality Legality;
         /// <summary>

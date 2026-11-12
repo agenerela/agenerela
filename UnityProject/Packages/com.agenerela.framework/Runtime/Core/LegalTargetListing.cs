@@ -18,9 +18,12 @@ namespace Agenerela
     /// schema or its examples either, as with the paired schema.
     /// </para>
     /// <para>
-    /// Any value but <see cref="Off"/> lists the actions and targets as
+    /// <see cref="PerTarget"/> lists the actions and targets as
     /// <see cref="DecideOptions.ListActionsAndTargets"/> does, whether that is on or not, with only
     /// the targets some offered action may take, at most <see cref="DecideOptions.MaxListedTargets"/>.
+    /// <see cref="ObservationLine"/> leaves the system prompt as <see cref="DecideOptions.ListActionsAndTargets"/>
+    /// makes it and says the pairs in one sentence among the observations instead. Either way an
+    /// action that requires a target and may take none is not offered.
     /// </para>
     /// <para>
     /// Measured on 10 November 2026 (findings, "Saying which targets each action may take"):
@@ -43,5 +46,31 @@ namespace Agenerela
         /// when the cap left its targets out.
         /// </summary>
         PerTarget = 1,
+
+        /// <summary>
+        /// One sentence among the observations, grouped by action, naming the targets each action that
+        /// takes one may take now (#244 item 5): <c>Moves open to you: attack fenmark or westmarch;
+        /// fortify ashby; declare_war orsk.</c> It goes right after the observation sources' lines and
+        /// before the call's own, so it reads as a standing fact, where a game's own line of this kind
+        /// would sit. Actions that take only <c>no_target</c> are left out, since the sentence names
+        /// targets; with no action taking a listed target there is no sentence.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The system prompt is not changed: its list is <see cref="DecideOptions.ListActionsAndTargets"/>'s,
+        /// unannotated, or none. The sentence names actions by id, the values the schema offers, and
+        /// targets in schema order, at most <see cref="DecideOptions.MaxListedTargets"/> of them in all;
+        /// one past the cap goes into <see cref="DecisionTelemetry.TargetsUnlisted"/>. It is rendered
+        /// in the request only: it is not in <see cref="AgentContext.Observations"/>, counts against no
+        /// cap and no guard reads it.
+        /// </para>
+        /// <para>
+        /// For GreyBoxStrategy's gap N8: in #247 the same pairs as a sentence among the game's facts
+        /// made <c>qwen3.5:4b</c> attack 6 to 8 points more often than <see cref="PerTarget"/>'s
+        /// annotated list did. Measured on 11 November 2026 (findings, "The legal moves as an
+        /// observation line").
+        /// </para>
+        /// </remarks>
+        ObservationLine = 2,
     }
 }
