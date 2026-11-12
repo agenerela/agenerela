@@ -189,3 +189,18 @@
 /* an open side panel pushes the map-mode bar and its legend to its right: panels and bars never overlap */
 .side-open .modes, .side-open .legend { left: 568px; }
 .compact.side-open .modes, .compact.side-open .legend { left: 370px; }
+
+/* the start menu */
+.menu-veil { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(10, 8, 6, 0.55); align-items: center; justify-content: center; }
+.menu { position: relative; width: 620px; padding: 22px 26px; background-color: rgb(20, 16, 12); }
+.menu-title { font-size: 30px; -unity-font-style: bold; letter-spacing: 6px; color: rgb(210, 173, 98); margin-bottom: 4px; }
+.menu-choice { padding: 12px 14px; margin-bottom: 10px; border-width: 1px; border-color: rgba(201, 164, 90, 0.35); background-color: rgba(210, 173, 98, 0.05); }
+.menu-button { align-self: flex-start; margin-top: 8px; height: 30px; padding-left: 18px; padding-right: 18px; font-size: 13px; -unity-font-style: bold; letter-spacing: 1px; background-color: rgb(107, 82, 40); border-width: 1px; border-color: rgb(210, 173, 98); color: rgb(234, 223, 198); border-radius: 0; }
+.menu-button:hover { background-color: rgb(130, 100, 50); }
+.menu-field { margin-right: 10px; flex-grow: 1; }
+.menu-field .unity-base-field__label { min-width: 46px; color: rgb(141, 127, 102); }
+.menu-field .unity-base-text-field__input, .menu-field .unity-text-field__input { background-color: rgba(0, 0, 0, 0.3); border-color: rgba(201, 164, 90, 0.35); color: rgb(234, 223, 198); }
+.menu-status { margin-top: 6px; font-size: 12.5px; white-space: normal; color: rgb(208, 97, 76); }
+.menu-status.busy { color: rgb(194, 179, 147); -unity-font-style: italic; }
+/* a notice across the top of the map */
+.notice { position: absolute; left: 50%; top: 50px; translate: -50% 0; max-width: 760px; flex-direction: row; align-items: center; padding: 6px 6px 6px 12px; background-color: rgba(90, 29, 20, 0.95); border-width: 1px; border-color: rgb(208, 97, 76); font-size: 13px; white-space: normal; }

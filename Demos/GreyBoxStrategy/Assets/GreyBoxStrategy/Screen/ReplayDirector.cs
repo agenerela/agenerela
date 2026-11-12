@@ -23,6 +23,8 @@ namespace GreyBoxStrategy.Realm
         [SerializeField] private ThemeStyleSheet theme;
         [SerializeField] private Texture2D portraits;
         [SerializeField] private bool playOnStart = true;
+        [Tooltip("Show the start menu (replay or live). Off, or a live game configured before Play, starts at once.")]
+        [SerializeField] private bool showMenu = true;
         [Tooltip("Playback speed at start: 1, 2 or 4.")]
         [SerializeField] private float speed = 1;
         [Tooltip("When it is set and playing live, the screen follows a live game instead of the recording.")]
@@ -51,6 +53,7 @@ namespace GreyBoxStrategy.Realm
             bool isLive = live != null && live.PlayLive;
             if (isLive)
             {
+                started = true;
                 live.Begin();
                 game = ReplayBuilder.Build(Recording.FromDecisionLog(live.Lines(), live.Seed, live.Players), partial: true);
             }
@@ -94,6 +97,46 @@ namespace GreyBoxStrategy.Realm
             ui.SetTurn(1, "Council");
             playing = playOnStart;
             ui.SetPlaying(playing, speed);
+            if (showMenu && !isLive)
+            {
+                ui.ShowMenu(game.Title, live != null ? live.Model : "qwen3.5:4b", live != null ? live.Seed : 101, StartReplay, (m, s) => StartCoroutine(StartLive(m, s)));
+                return;
+            }
+            StartCoroutine(Play());
+        }
+
+        private bool started;
+
+        /// <summary>The menu's first choice, and the Unity CLI's: play the recorded game.</summary>
+        public void StartReplay()
+        {
+            if (started) return;
+            started = true;
+            ui.HideMenu();
+            StartCoroutine(Play());
+        }
+
+        /// <summary>For the Unity CLI: the menu's live button.</summary>
+        public void TryLive(string model, int gameSeed) => StartCoroutine(StartLive(model, gameSeed));
+
+        /// <summary>The menu's second choice: checks the environment, the lock and the server, then follows a live game.</summary>
+        private IEnumerator StartLive(string model, int gameSeed)
+        {
+            if (started || live == null) yield break;
+            string why = LiveGame.WhyNotNow();
+            if (why != null) { ui.ShowMenuStatus(why); yield break; }
+            ui.ShowMenuStatus("Asking the server...", true);
+            string serverWhy = null;
+            yield return live.CheckServer(w => serverWhy = w);
+            if (serverWhy != null) { ui.ShowMenuStatus(serverWhy); yield break; }
+            started = true;
+            live.Configure(true, gameSeed, 0, model);
+            live.Begin();
+            if (live.Error != null) { ui.ShowMenuStatus(live.Error); started = false; yield break; }
+            ui.Players = live.Players;
+            game = ReplayBuilder.Build(Recording.FromDecisionLog(live.Lines(), live.Seed, live.Players), partial: true);
+            ui.HideMenu();
+            Show(game.Initial, null);
             StartCoroutine(Play());
         }
 
@@ -317,8 +360,7 @@ namespace GreyBoxStrategy.Realm
         {
             if (live == null || !live.PlayLive) return game.Turns.Count;
             game = ReplayBuilder.Build(Recording.FromDecisionLog(live.Lines(), live.Seed, live.Players), partial: true);
-            // A short live check stops the model once it has played that many turns, not when playback gets there.
-            if (live.StopAfterTurns > 0 && game.Turns.Count >= live.StopAfterTurns && !live.Finished) live.Stop();
+            if (live.Error != null) ui.ShowNotice("The live game stopped: " + live.Error);
             if (live.Finished || game.Result != null) return game.Turns.Count;
             return Math.Max(0, game.Turns.Count - 1);
         }
@@ -330,6 +372,7 @@ namespace GreyBoxStrategy.Realm
                 // Live: wait for the council, with the thinking indicator, until the turn has resolved.
                 while (live != null && live.PlayLive && turnIndex >= ReadyTurns() && !live.Finished)
                 {
+                    if (live.Error != null) { ui.ShowNotice("The live game stopped: " + live.Error); break; }
                     ui.SetTurn(turnIndex + 1, "Council");
                     ui.SetThinking(true);
                     yield return new WaitForSeconds(1f);
