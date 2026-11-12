@@ -206,7 +206,7 @@ namespace GreyBoxStrategy.Realm
         /// <summary>A Menu button at the top bar's right end: back to the start menu, from any game.</summary>
         public void AddMenuButton(Action pressed)
         {
-            var b = new Button(pressed) { text = "Menu", tooltip = "Back to the start menu. A game in progress stops, and the RTX 5080 is let go." };
+            var b = new Button(pressed) { text = "Menu", tooltip = "The pause menu (Esc): resume, settings, or back to the main menu." };
             b.AddToClassList("tbtn"); b.style.width = StyleKeyword.Auto; b.style.paddingLeft = 8; b.style.paddingRight = 8; b.style.marginLeft = 8;
             playButton.parent.Add(b);
         }

@@ -16,8 +16,11 @@ namespace GreyBoxStrategy.Replay
     /// because a war or a capture is seen by everyone.</para>
     /// <para><b>Hidden:</b> another country's treasury, income, upkeep and stability; the
     /// garrisons and forts of provinces beyond your borders; the harvests, bandits and unrest of
-    /// other countries; and the model rulers' own decisions (what they read, what they were
-    /// offered, the guards), which open in the inspector once the game is over.</para>
+    /// other countries; and what a rival's court tells it (its standing facts, and why moves were
+    /// not offered), which open in the inspector once the game is over.</para>
+    /// <para><b>Open as they happen</b> (the lead, 12 November: "we should show what they do and
+    /// what they say"): every rival's decision in the inspector, its answer, its statement, the
+    /// moves it could choose from, the guards and the timing.</para>
     /// Watch mode has no viewer, and shows everything.
     /// </remarks>
     public sealed class Fog
@@ -45,8 +48,11 @@ namespace GreyBoxStrategy.Replay
         /// <summary>Whether a country's treasury, income, upkeep and stability are known: only your own.</summary>
         public bool KnowsTreasury(string country) => !On || country == Viewer;
 
-        /// <summary>Whether a ruler's decision can be opened in the inspector: your own, or any once the game is over.</summary>
-        public bool KnowsDecision(string country, bool gameOver) => !On || gameOver || country == Viewer;
+        /// <summary>Whether a ruler's decision opens in the inspector: always, since what rulers do and say is public.</summary>
+        public bool KnowsDecision(string country, bool gameOver) => true;
+
+        /// <summary>Whether what a ruler's court told it can be read: your own, or any once the game is over. It holds the treasury.</summary>
+        public bool KnowsReport(string country, bool gameOver) => !On || gameOver || country == Viewer;
 
         /// <summary>Whether an upkeep line is news to you: your own, and every revolt or truce, since land and relations are public.</summary>
         public bool KnowsUpkeep(ReplayEvent e) =>

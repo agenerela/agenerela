@@ -33,11 +33,11 @@ namespace GreyBoxStrategy.Realm
         {
             if (started) yield break;
             string why = Gateway.WhyNotSet();
-            if (why != null) { ui.ShowRuleStatus(why); yield break; }
-            ui.ShowRuleStatus("Asking the server...", true);
+            if (why != null) { ui.ShowMenuStatus(why); yield break; }
+            ui.ShowMenuStatus("Asking the server...", true);
             string serverWhy = null;
             yield return Gateway.CheckServer(w => serverWhy = w);
-            if (serverWhy != null) { ui.ShowRuleStatus(serverWhy); yield break; }
+            if (serverWhy != null) { ui.ShowMenuStatus(serverWhy); yield break; }
             model = string.IsNullOrWhiteSpace(model) ? "qwen3.5:4b" : model.Trim();
             ruleLock = new CardLock(model, $"rule game, {model} x4 with personas, seed {gameSeed}");
             BeginRule(country, model, gameSeed, (m, w) => Gateway.Provider(m), ruleLock);
@@ -54,7 +54,9 @@ namespace GreyBoxStrategy.Realm
             World world = null;
             var provider = new ScriptedProvider { Callback = r => ScriptedRuler(r, rng, world) };
             provider.Otherwise(ScriptedReply.Decide("none", statement: "We wait."));
-            BeginRule(country, "scripted", gameSeed, (m, w) => { world = w; return provider; }, busyCardSeconds > 0 ? new StandInLock(busyCardSeconds) : null);
+            var wrapped = DevProvider.Wrap(provider);
+            BeginRule(country, "scripted", gameSeed, (m, w) => { world = w; return wrapped; }, busyCardSeconds > 0 ? new StandInLock(busyCardSeconds) : null);
+            if (rule != null) rule.Dev = true;
         }
 
         private sealed class StandInLock : RuleSession.ICardLock
@@ -78,7 +80,7 @@ namespace GreyBoxStrategy.Realm
         };
 
         // A stand-in ruler: one of the moves the rules offer its country, at random, with a stock line.
-        private static ScriptedReply ScriptedRuler(ScriptedRequest r, System.Random rng, World world)
+        internal static ScriptedReply ScriptedRuler(ScriptedRequest r, System.Random rng, World world)
         {
             if (r.IsRefusalLine) return ScriptedReply.Statement("We will not.");
             if (r.OfferedActions.Contains(Actions.AcceptPeace))
@@ -165,6 +167,9 @@ namespace GreyBoxStrategy.Realm
             {
                 builtResolved = rule.Resolved;
                 game = rule.BuildReplay();
+                // Never silent: a turn that resolved but cannot be rebuilt from the recording is a bug to see.
+                if (game.Turns.Count < rule.Resolved)
+                    ui.ShowNotice($"The replay cannot rebuild turn {game.Turns.Count + 1}: {game.StoppedBecause}");
             }
             return game.Turns.Count;
         }
@@ -184,7 +189,7 @@ namespace GreyBoxStrategy.Realm
             double waited = (DateTime.UtcNow - rule.WaitingSince).TotalSeconds;
             string line = $"{prefix} ({Clock(rule.WaitingSince)}).";
             if (waited > SlowSeconds)
-                line += $" The server is slow to answer: another client may be using it. The game gives up after {rule.RoundTimeout.TotalSeconds:0} s; Menu leaves now.";
+                line += $" The server is slow to answer: another client may be using it. The game gives up after {rule.RoundTimeout.TotalSeconds:0} s; Esc, then Main menu, leaves now.";
             return line;
         }
 
@@ -199,7 +204,7 @@ namespace GreyBoxStrategy.Realm
             {
                 ui.OrdersRequest = null;
                 status = $"Waiting for the RTX 5080, held by {rule.WaitingForCard ?? "someone"}. Waited {Clock(rule.WaitingSince)}. " +
-                         "The game takes the card when it is free and holds it until you leave. Menu leaves now.";
+                         "The game takes the card when it is free and holds it until you leave. Esc, then Main menu, leaves now.";
                 ui.SetThinking(false);
             }
             else if (w == RuleSession.Waiting.Orders && rule.Orders != null)

@@ -45,6 +45,28 @@ phase table and the open issues, not here.
     the models and the framework; the A/B each slice owes.
   - **The build:** eight slices with issue-ready checklists, and eight questions for the lead.
 
+- **Painted Realm: a dev menu** (#20). F1 opens it, in the editor and in development builds.
+  - Play with stand-in rulers and no card. Jump, step, autoplay and set any speed.
+  - Change gold, soldiers, stability, forts, owners, wars and eliminations, and fire any of the
+    storyteller's event templates. Edits are recorded and replayed at the same turn.
+  - Pretend the card is held, the server is down, a round times out, or a reply is unreadable,
+    without touching the real lock.
+  - Readouts, screenshots, save and load a recording, and window sizes.
+  - Everything runs through `DevTools.Run("…")` too. A game it touches is marked DEV on screen
+    and in its recording.
+
+- **Painted Realm: a main menu, New game, Settings and a pause menu** (#20).
+  - The game opens on a main menu: New game, Replay, Settings, Quit.
+  - New game chooses watch or rule, your country, the model and the seed. It lists the map,
+    persona mix, storyteller and advisor as coming.
+  - Settings: display mode, resolution, UI scale, VSync, frame cap, playback speed and sound
+    volumes. They are saved in `settings.json` and applied at once. A display change reverts
+    unless kept.
+  - Esc opens a pause menu in a game.
+  - In rule mode, rivals' decisions and words open as they happen; only their court's report
+    stays private until the game ends.
+  - Every country's army stands on the map at its capital, with its size, in every map mode.
+
 - **Two 4B-class candidates measured against `qwen3.5:4b`** (#252's first arms), on the RTX 5080
   with the control re-run in the same session. The candidates are `gemma4:e4b-it-qat` and
   `nemotron-3.5-bolt:e4b`. Results are in `findings.md` and `model-candidates.md`'s "Measured",
@@ -468,6 +490,10 @@ phase table and the open issues, not here.
   (findings, 10 November) found one regression, on the route examples, fixed in the branch.
 
 ### Fixed
+
+- **Painted Realm: two offers of peace to you in one turn** were answered only once. The
+  replay then stopped at that turn. Each envoy now waits for its own answer. A replay that
+  cannot rebuild a turn that resolved now says so on screen.
 
 - **Painted Realm: sharp on large screens, and never silent while the card is busy** (#20).
   - **Large screens.** The UI now grows with the screen: 1.33× at 1440 and 2× at 2160. Before,

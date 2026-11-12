@@ -24,6 +24,9 @@ language model through the framework, fighting over 25 provinces on a painted se
   4 for the reach map, then open a country and Follow it to see what it can attack and its odds.
 - **Rule:** take Kesh. Open Report to read what a model would be told. Click Southgate and order
   the attack, then press End turn. Declare war on a neighbour, and an envoy may come with peace.
+  Click a rival's chronicle line: what it did and said opens at once, and its court's report
+  stays private until the game ends.
+- **Settings:** try the UI scale steps, then Esc in a game for the pause menu.
 
 1. Open `Demos/GreyBoxStrategy` in Unity 6000.3.23f1, then open
    `Assets/GreyBoxStrategy/Screen/Watch.unity`.
@@ -34,21 +37,31 @@ language model through the framework, fighting over 25 provinces on a painted se
    - The screen's text and panels grow with the screen: 1× at 1080 pixels tall, 1.33× at 1440,
      2× at 2160.
    - Then press **Play**.
-2. The start menu offers three games:
-   - **Replay the recorded game.** Seed 4 of the persona table: five `qwen3.5:4b` rulers, Kesh
-     wins by domination on turn 17. Every line is the rulers' own. It needs no model and no
-     server.
-   - **Watch a live game.** Five model rulers with personas play a new game now. Choose the model
-     (`qwen3.5:4b` by default) and the seed, then **Watch live**.
-   - **Rule a country.** You rule one country, chosen by its crest, against four model rulers
-     with personas on the same server. Choose the model and the seed, then **Rule**.
+2. The main menu is the first screen: **New game**, **Replay**, **Settings**, **Quit**.
+   - **New game:**
+     - Choose **Watch** (five model rulers with personas play) or **Rule** (you rule one country,
+       chosen by its crest, against four).
+     - Choose the model (`qwen3.5:4b` by default) and the seed (Roll picks one), then **Start**.
+     - The map, persona mix, storyteller and advisor are listed as coming.
+   - **Replay:** seed 4 of the persona table, five `qwen3.5:4b` rulers. Kesh wins by domination
+     on turn 17. Every line is the rulers' own. It needs no model and no server.
+   - **Settings:**
+     - Display mode, resolution, UI scale (automatic or fixed steps), VSync, frame cap, the
+       default playback speed, and sound volumes (no sound plays yet).
+     - Each applies at once and is saved in `settings.json` in the game's persistent data
+       folder.
+     - A change of display mode or resolution reverts after 12 s unless you keep it.
+     - In the editor, the Game view decides the size, and the page says so.
 3. In the game:
    - Space plays and pauses, N steps one move, and + changes the speed.
-   - Keys 1 to 4 switch the map modes, D opens diplomacy, and Esc closes a panel.
+   - Keys 1 to 4 switch the map modes, and D opens diplomacy.
+   - **Esc** closes the top panel. With none open it opens the **pause menu**: Resume, Settings,
+     or Main menu. Menu (top right) opens the same pause menu.
+   - Every country's army stands at its capital with its size, in every map mode.
    - Click a province, a crest or a chronicle line to open it. A chronicle line or a speech banner
      opens the decision behind it.
    - Right-drag pans the map, and the wheel zooms.
-   - **Menu** (top right) goes back to the start menu from any game, and lets the RTX 5080 go.
+   - **Main menu** in the pause menu ends the game and lets the RTX 5080 go.
 4. When you rule a country:
    - The orders panel, bottom centre, lists every move the rules offer you. These are the moves
      a model ruler would be offered in your place. A move that is not offered says why in its
@@ -60,8 +73,10 @@ language model through the framework, fighting over 25 provinces on a painted se
    - A peace offer to you opens the envoy's card: **Accept** or **Refuse**.
    - **Report** shows what your court tells you, the same lines a model ruler reads.
    - **Fog of war:** you see what your court knows. Other countries' treasuries and stability
-     are hidden, and so are garrisons and forts beyond your borders. The rulers' councils open
-     in the inspector when the game is over. The design page has the full rule.
+     are hidden, and so are garrisons and forts beyond your borders. What rivals do and say is
+     shown as it happens: their decisions open in the inspector during the game. What their
+     courts tell them (their treasuries) opens when the game is over. The design page has the
+     full rule.
 
 **What a live game or a rule game needs:**
 - **Two environment variables, in the environment Unity was started from:**
@@ -86,6 +101,56 @@ language model through the framework, fighting over 25 provinces on a painted se
 - **If it cannot start, the menu says why rather than wait:** a variable is not set, the lock is
   held (and by whom), the server cannot be reached, or the key is refused. A game that stops
   mid-way says so across the top of the map.
+
+## Dev menu
+
+**F1** opens the dev menu in the editor and in development builds. It is not in a release build,
+and the pause menu says so where it is available. It is a plain, dense tool, not part of the
+look. Every button runs one command line, and the same lines run from code:
+
+```csharp
+GreyBoxStrategy.Realm.DevTools.Run("scripted-rule kesh 7");   // returns what happened, as text
+GreyBoxStrategy.Realm.DevTools.Run("help");                   // every command
+```
+
+A session drives it through the Unity CLI:
+
+```bash
+unity command script eval -- --code 'return GreyBoxStrategy.Realm.DevTools.Run("turn 12");'
+```
+
+| Command | What it does |
+|---|---|
+| `scripted-rule <country> [seed]` | Rule a country against four stand-in rulers: a `ScriptedProvider` picks a move the rules offer, through the real agents. No server, no card |
+| `scripted-watch [seed]` | Watch five stand-in rulers. No server, no card |
+| `turn <n>` · `step` · `play` · `pause` · `speed <x>` | Jump to a turn without animating the turns before it, land one event, or play and pause. Speed is 0.25 to 32 |
+| `autoplay on\|off` | Play to the end at 8× or faster. In rule mode it also holds every turn and refuses every envoy |
+| `gold\|army\|stability <country> <+n\|-n\|=n>` | Change a country's numbers, within the rules' ranges |
+| `forts <province> <+n\|-n\|=n>` · `owner <province> <country\|neutral>` | Change a province |
+| `war\|peace <country> <country>` · `eliminate <country>` | Change relations, or take a country out of the game |
+| `event <template> <target>` · `events` | Fire one of the storyteller's event templates. The list is read from `EventRules.Templates`, so new kinds appear by themselves. The rules allow none before turn 3 |
+| `fog off\|on` | Reveal everything in rule mode, or restore what your court knows |
+| `fault lock <holder…>` · `fault lock off` | Pretend another session holds the RTX 5080. The real lock directory is never read, written or taken while this is on |
+| `fault server on\|off` | Pretend the server cannot be reached |
+| `fault timeout on\|off` | Requests hang until cancelled, and a rule round times out after 8 s instead of 150 s |
+| `fault unreadable on\|off` | Every reply is text no parser can read. The model is never asked |
+| `faults off` | Clear every pretended fault |
+| `readouts` | Frames per second, UI scale, resolution, the last reply's latency and tokens, the last played decision's queue wait, requests in flight, and who holds the card |
+| `screenshot [name]` · `save-recording [name]` | Save to `Logs/Dev/`. A saved recording replays with `load-recording <path>` from the main menu |
+| `size <w>x<h>` | 1366x768, 1920x1080, 2560x1440 or 3840x2160, or 16:10 1920x1200 or 3840x2400 (the lead's display): the Game view in the editor, the window in a build |
+| `menu` | Show or hide the dev menu |
+
+**State edits work in rule games, at the start of the next turn.** The screen rebuilds every turn
+from the recording, so an edit is recorded and applied at the same point in the game and its
+replay. It shows in the chronicle as a "Dev menu:" line.
+- A recorded replay cannot change.
+- A watch-live game runs on the table runner, which has no hook between turns. Start
+  `scripted-rule` to try edits without the card.
+
+**A game the dev menu touched is a dev game.** That covers an edit, stand-in rulers, or a
+pretended fault. The top bar marks it with a red **DEV**, and its saved recording carries
+`"dev": true` and the edits. The table runner and the scorecard never go through the screen, so
+they never meet the dev menu.
 
 ## Run it
 
