@@ -132,7 +132,8 @@ namespace GreyBoxStrategy.Realm
                 chips.Add(chip);
             }
             s2.Add(chips);
-            if (c.NotOffered.Count > 0)
+            bool report = Fog.KnowsReport(c.Country, GameOver);
+            if (c.NotOffered.Count > 0 && report)
             {
                 s2.Add(Note("Not offered, so absent from its schema:"));
                 foreach (var n in c.NotOffered.Take(14)) { var l = new Label($"{n.move}  —  {n.why}"); l.AddToClassList("why-no"); s2.Add(l); }
@@ -141,12 +142,20 @@ namespace GreyBoxStrategy.Realm
             s2.Add(Src("TargetsUnavailable · ITargetAvailability, each with its reason"));
 
             // 3 what it was told
-            var s3 = Section("3 · WHAT IT WAS TOLD", $"{c.Standing.Count} standing + {c.ThisTurn.Count} this turn");
+            var s3 = Section("3 · WHAT IT WAS TOLD", report ? $"{c.Standing.Count} standing + {c.ThisTurn.Count} this turn" : "private");
+            if (!report)
+            {
+                s2.Add(Note("Why other moves were not offered is its court's business: it shows the treasury."));
+                s3.Add(Note($"What {look.Name}'s court told it holds its treasury, stability and plans, so it stays private while the game runs. It opens when the game is over. What it did and said is above."));
+            }
+            else
+            {
             s3.Add(Note("Standing facts (IObservationSource)"));
             var f1 = new VisualElement(); f1.AddToClassList("facts-box"); f1.Add(Mono(string.Join("\n", c.Standing))); s3.Add(f1);
             s3.Add(Note("The stimulus, then this turn's facts (ObservationPlacement.WithStimulus)"));
             var f2 = new VisualElement(); f2.AddToClassList("facts-box"); f2.Add(Mono(string.Join("\n", c.ThisTurn))); s3.Add(f2);
             s3.Add(Src($"ObservationsDropped: {c.ObservationsDropped}"));
+            }
 
             // 4 guards
             var s4 = Section("4 · GUARDS, AND THE RE-CHECK WHEN IT LANDED", "");

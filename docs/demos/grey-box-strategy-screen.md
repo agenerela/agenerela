@@ -504,8 +504,14 @@ same turn, no more. So:
   - another country's treasury, income, upkeep and stability;
   - garrisons and forts beyond your borders (the forts map mode shows them as none);
   - other countries' harvests, bandits and unrest (revolts stay, since land changes hands);
-  - the model rulers' councils: what they read, what they were offered, and the guards. These
-    open in the inspector when the game is over.
+  - what a model ruler's court told it (its standing facts, and why moves were not offered),
+    since they hold its treasury and plans. It opens in the inspector when the game is over.
+- **Shown as it happens** (the lead, 12 November: "we should show what they do and what they say
+  to the user"): every rival's decision in the inspector, with its answer, its statement, the
+  moves it could choose from, the guards and the timing.
+- **Armies** are on the map at all times: one piece per country at its capital, with its size,
+  in every map mode. The rules have one army per country today, so this stands in until armies
+  become pieces in the rules.
 
   `Fog` in `Screen/Replay/Fog.cs` holds these rules, and `FogTests` checks them.
 
@@ -540,6 +546,22 @@ soft.
     small steps at 4K.
   - Sharp at 4K needs a painting made at 4096 and the province maps baked at 4096. That is art
     work for the art pass, not code.
+
+**The menus (13 November).**
+- **The main menu** is the Watch scene's first state, not a scene of its own. The painted map
+  stays behind it, and "back to the main menu" is a reload of the one scene, with no scene list
+  to keep in the build.
+- **New game** chooses watch or rule, your country, the model and the seed. It lists what is
+  coming as disabled rows with a note: the map generator, the persona mix, storyteller presets
+  and the advisor. That way the lead sees where they will go before they exist.
+- **Settings** are a JSON file, `settings.json` in `Application.persistentDataPath`. JSON is
+  readable, testable without Unity and never in the registry.
+  - They apply at once.
+  - A display change reverts after 12 s unless kept.
+  - In the editor, the page says the Game view decides the size.
+- **Esc** works the same everywhere: it closes the top panel, then goes back a page, then opens
+  the pause menu. Menu in the top bar opens the pause menu too.
+- The compass rose and the gilt rules are drawn by code.
 
 **Not built yet:** the court scene for an accepted truce, the dashed gold ring (the reach mode's
 hatching rings the targets instead), the mark on statements that name your country, and

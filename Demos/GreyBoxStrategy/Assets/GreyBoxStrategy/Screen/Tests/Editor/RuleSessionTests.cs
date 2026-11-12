@@ -198,8 +198,10 @@ namespace GreyBoxStrategy.Screen.Tests
             Assert.That(fog.Known(s).Count, Is.LessThan(25));
             Assert.That(fog.KnowsTreasury("kesh"), Is.True);
             Assert.That(fog.KnowsTreasury("valen"), Is.False);
-            Assert.That(fog.KnowsDecision("valen", gameOver: false), Is.False, "a ruler's council is sealed while the game runs");
-            Assert.That(fog.KnowsDecision("valen", gameOver: true), Is.True);
+            Assert.That(fog.KnowsDecision("valen", gameOver: false), Is.True, "what a rival does and says is shown as it happens");
+            Assert.That(fog.KnowsReport("valen", gameOver: false), Is.False, "what its court tells it (its treasury) is not");
+            Assert.That(fog.KnowsReport("valen", gameOver: true), Is.True, "until the game is over");
+            Assert.That(fog.KnowsReport("kesh", gameOver: false), Is.True, "your own court's report is yours");
             Assert.That(fog.KnowsUpkeep(new ReplayEvent { Kind = ReplayEventKind.Upkeep, Country = "valen" }), Is.False, "another country's harvest");
             Assert.That(fog.KnowsUpkeep(new ReplayEvent { Kind = ReplayEventKind.Upkeep, Country = "kesh" }), Is.True);
             Assert.That(fog.KnowsUpkeep(new ReplayEvent { Kind = ReplayEventKind.Revolt, Country = "valen" }), Is.True, "land changing hands is public");
@@ -210,7 +212,7 @@ namespace GreyBoxStrategy.Screen.Tests
         {
             var g = Start(); var fog = new Fog(null, new RealmQueries(g));
             Assert.That(fog.Known(g.Initial).Count, Is.EqualTo(25));
-            Assert.That(fog.KnowsTreasury("valen") && fog.KnowsDecision("valen", false), Is.True);
+            Assert.That(fog.KnowsTreasury("valen") && fog.KnowsDecision("valen", false) && fog.KnowsReport("valen", false), Is.True);
         }
     }
 

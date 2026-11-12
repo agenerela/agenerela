@@ -33,11 +33,11 @@ namespace GreyBoxStrategy.Realm
         {
             if (started) yield break;
             string why = Gateway.WhyNotSet();
-            if (why != null) { ui.ShowRuleStatus(why); yield break; }
-            ui.ShowRuleStatus("Asking the server...", true);
+            if (why != null) { ui.ShowMenuStatus(why); yield break; }
+            ui.ShowMenuStatus("Asking the server...", true);
             string serverWhy = null;
             yield return Gateway.CheckServer(w => serverWhy = w);
-            if (serverWhy != null) { ui.ShowRuleStatus(serverWhy); yield break; }
+            if (serverWhy != null) { ui.ShowMenuStatus(serverWhy); yield break; }
             model = string.IsNullOrWhiteSpace(model) ? "qwen3.5:4b" : model.Trim();
             ruleLock = new CardLock(model, $"rule game, {model} x4 with personas, seed {gameSeed}");
             BeginRule(country, model, gameSeed, (m, w) => Gateway.Provider(m), ruleLock);
@@ -184,7 +184,7 @@ namespace GreyBoxStrategy.Realm
             double waited = (DateTime.UtcNow - rule.WaitingSince).TotalSeconds;
             string line = $"{prefix} ({Clock(rule.WaitingSince)}).";
             if (waited > SlowSeconds)
-                line += $" The server is slow to answer: another client may be using it. The game gives up after {rule.RoundTimeout.TotalSeconds:0} s; Menu leaves now.";
+                line += $" The server is slow to answer: another client may be using it. The game gives up after {rule.RoundTimeout.TotalSeconds:0} s; Esc, then Main menu, leaves now.";
             return line;
         }
 
@@ -199,7 +199,7 @@ namespace GreyBoxStrategy.Realm
             {
                 ui.OrdersRequest = null;
                 status = $"Waiting for the RTX 5080, held by {rule.WaitingForCard ?? "someone"}. Waited {Clock(rule.WaitingSince)}. " +
-                         "The game takes the card when it is free and holds it until you leave. Menu leaves now.";
+                         "The game takes the card when it is free and holds it until you leave. Esc, then Main menu, leaves now.";
                 ui.SetThinking(false);
             }
             else if (w == RuleSession.Waiting.Orders && rule.Orders != null)
