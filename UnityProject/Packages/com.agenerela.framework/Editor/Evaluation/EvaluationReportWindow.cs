@@ -567,7 +567,8 @@ namespace Agenerela.Editor.Evaluation
                 return;
             }
 
-            EditorGUIUtility.systemCopyBuffer = view.FindingsSummary(ShownFolder == null ? null : Path.Combine(ShownFolder, EvalReport.MarkdownFile));
+            EditorGUIUtility.systemCopyBuffer = view.FindingsSummary(
+                ShownFolder == null ? null : Path.Combine(ShownFolder, EvalReport.MarkdownFile), agreement, agreementNote);
             ShowNotification(new GUIContent("Summary copied"));
         }
 

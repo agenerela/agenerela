@@ -363,6 +363,14 @@ namespace Agenerela.Tests.Evaluation
                 Assert.That(EvaluationReportView.AgreementHeadline(agreement),
                     Is.EqualTo("2 of 4 prompts answered by two or more people got the same answer from all (50%)."));
                 Assert.That(EvaluationReportView.AgreementDetail(agreement), Does.StartWith("2 prompts split"));
+                string pairs = EvaluationReportView.PairwiseAgreement(agreement);
+                Assert.That(pairs, Does.Contain("Bo / Maxim: 2/3 agree (66.7%); Cohen's kappa: 0.571."));
+                Assert.That(pairs, Does.Contain("Ana / Maxim: 0/1 agree (0.0%); Cohen's kappa: 0.000."));
+
+                string summary = new EvaluationReportView(Report(new[] { 12, 8, 0, 0, 0 }, new[] { 17, 1, 2, 0, 0 }))
+                    .FindingsSummary(null, agreement, "Label files as they are now, not at run time.");
+                Assert.That(summary, Does.Contain(pairs));
+                Assert.That(summary, Does.Contain("Label files as they are now, not at run time."));
             }
         }
 
@@ -377,6 +385,23 @@ namespace Agenerela.Tests.Evaluation
 
                 Assert.That(EvaluationReportView.AgreementHeadline(agreement), Is.EqualTo("No prompt has two answers yet."));
                 Assert.That(EvaluationReportView.AgreementDetail(agreement), Does.Contain("Label tab"));
+                Assert.That(EvaluationReportView.PairwiseAgreement(agreement), Does.Contain("unavailable"));
+            }
+        }
+
+        [Test]
+        public void UndefinedKappaIsExplainedBesidePerfectRawAgreement()
+        {
+            using (var labelled = new EvalFixtures())
+            {
+                var set = labelled.Load();
+                set.Categories[0].Prompts.RemoveRange(1, 2);
+                set.Categories[1].Prompts.Clear();
+                labelled.WriteLabels("Bo", "command_with_target", "{ \"target_001\": \"move_to/bridge\" }");
+                var agreement = AgreementReport.Compute(set, set.LoadLabels());
+
+                Assert.That(EvaluationReportView.PairwiseAgreement(agreement), Does.Contain(
+                    "Bo / Maxim: 1/1 agree (100.0%); Cohen's kappa: undefined (both always gave the same answer)."));
             }
         }
 

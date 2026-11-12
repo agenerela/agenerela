@@ -764,6 +764,7 @@ namespace Agenerela.Editor.Evaluation
             Display(root.Q("agreement-percent"), agreement?.PercentAgreement != null);
             root.Q<Label>(AgreementHeadlineName).text = agreement == null ? "" : EvaluationReportView.AgreementHeadline(agreement);
             root.Q<Label>("agreement-detail").text = agreement == null ? "" : EvaluationReportView.AgreementDetail(agreement);
+            root.Q<Label>("agreement-pairs").text = agreement == null ? "" : EvaluationReportView.PairwiseAgreement(agreement);
             root.Q<Label>("agreement-note").text = state.AgreementNote ?? "";
 
             bool folder = !string.IsNullOrEmpty(state.ShownPath) && System.IO.Directory.Exists(System.IO.Path.GetDirectoryName(state.ShownPath));

@@ -1,0 +1,127 @@
+{
+  "issue": 148,
+  "selectedOn": "2026-11-12",
+  "sourceCommit": "c6dce4d8c75ba3d3900047e9f2a3638db21c5397",
+  "selection": "All 76 prompts present before second-person labelling, with every populated category represented. This fixed cohort stays unchanged as issue 147 grows the set.",
+  "population": 76,
+  "categories": [
+    {
+      "id": "simple_command",
+      "file": "prompts/simple_commands.json",
+      "sourceSha256Lf": "84c81338dc0de1788f569436151b244896c233f85308042cca09e3d0371be3e7",
+      "promptIds": [
+        "simple_001",
+        "simple_002",
+        "simple_003",
+        "simple_004",
+        "simple_005",
+        "simple_006",
+        "simple_007",
+        "simple_008",
+        "simple_009"
+      ]
+    },
+    {
+      "id": "command_with_target",
+      "file": "prompts/commands_with_target.json",
+      "sourceSha256Lf": "0ddc20b2c2dada9acee63cacb918aa541e537d6cbe6ce54f7275b8a3e1a16357",
+      "promptIds": [
+        "target_001",
+        "target_002",
+        "target_003",
+        "target_004",
+        "target_005",
+        "target_006",
+        "target_007",
+        "target_008",
+        "target_009",
+        "target_010",
+        "target_011"
+      ]
+    },
+    {
+      "id": "impossible_request",
+      "file": "prompts/impossible_requests.json",
+      "sourceSha256Lf": "99f9026db0e8760bdb1485f68dbce8e60291d2dd6fa5696fda983e7b6ea018b5",
+      "promptIds": [
+        "impossible_001",
+        "impossible_002",
+        "impossible_003",
+        "impossible_004",
+        "impossible_005",
+        "impossible_006",
+        "impossible_007",
+        "impossible_008",
+        "impossible_009"
+      ]
+    },
+    {
+      "id": "conversation",
+      "file": "prompts/conversation.json",
+      "sourceSha256Lf": "ea1f1373eb10ec28accf21e0886b18ceb9b9ea2b457ed481dcaebfb0c994525f",
+      "promptIds": [
+        "conversation_001",
+        "conversation_002",
+        "conversation_003",
+        "conversation_004",
+        "conversation_005",
+        "conversation_006",
+        "conversation_007",
+        "conversation_008",
+        "conversation_009"
+      ]
+    },
+    {
+      "id": "situation",
+      "file": "prompts/situations.json",
+      "sourceSha256Lf": "77ed37b88c25662109a20a6c5787ab4d2aa35c2b745c7c792aded113f6b6ee33",
+      "promptIds": [
+        "situation_001",
+        "situation_002",
+        "situation_003",
+        "situation_004",
+        "situation_005",
+        "situation_006",
+        "situation_007",
+        "situation_008",
+        "situation_009",
+        "situation_010",
+        "situation_011",
+        "situation_012",
+        "situation_013",
+        "situation_014",
+        "situation_015",
+        "situation_016",
+        "situation_017",
+        "situation_018",
+        "situation_019"
+      ]
+    },
+    {
+      "id": "event",
+      "file": "prompts/events.json",
+      "sourceSha256Lf": "51eb5b5cc67012472def4208a9efef6c34df115a361189ca5f3335ed5404c707",
+      "promptIds": [
+        "event_001",
+        "event_002",
+        "event_003",
+        "event_004",
+        "event_005",
+        "event_006",
+        "event_007",
+        "event_008",
+        "event_009",
+        "event_010",
+        "event_011",
+        "event_012",
+        "event_013",
+        "event_014",
+        "event_015",
+        "event_016",
+        "event_017",
+        "event_018",
+        "event_019"
+      ]
+    }
+  ]
+}

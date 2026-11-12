@@ -3846,3 +3846,37 @@ S2 starts with the titles.
 titles fixed and re-run; the 2B; a storyteller persona, or a storyteller on its own provider at a
 higher temperature (gap 7). Raw data: `.scratch/storyteller-s1/runs/ab/` in the lead's laptop
 checkout (the smoke games, the title probe, the labels and the scripts beside it).
+
+### Second-annotator cohort selected; human agreement still pending (12 November 2026, #148)
+
+This is a preregistration and implementation note, **not an agreement measurement**.
+[`agreement-subset.json`](../../UnityProject/Assets/Evaluation/agreement-subset.json) fixes the
+76 curated prompts present at `c6dce4d8c75ba3d3900047e9f2a3638db21c5397`, before any second
+person labels them. Every populated category is represented: 9 simple commands, 11 commands
+with targets, 9 impossible requests, 9 conversations, 19 situations and 19 events. This is
+the whole current population, held fixed as #147 grows the set, with per-category prompt ids
+and source hashes. No second-person answer was used to choose it. The AI-labelled Interim
+set is separate and is not evidence of two people's agreement on this cohort.
+
+**Current state:** 0 prompts have two people's own answers; raw agreement and Cohen's kappa
+are unavailable. No split has been discussed or settled for #148. Relabelled prompt ids in
+this change: none. The 73 single-answer originals can meet the minimum of 60; the three open
+choices (`situation_016`, `situation_018`, `event_015`) need two people's independent single
+answers, rather than turning the first target in a list into the writer's answer.
+
+`AgreementReport.Pairwise` now computes raw agreement and Cohen's kappa for each named pair
+on just their shared prompts, from original complete `action/target` answers. The two
+windows display the same figures, and the Evaluation Report's findings summary includes
+them, marked as the labels as they are now rather than at run time. Because Maxim and
+Yevhen wrote different parts of the set, their overlaps with a new annotator are separate
+pairs, not one pooled Cohen's kappa. A pair with constant identical answers has 100% raw
+agreement and undefined kappa. Settlement preserves the original answers and the statistics.
+
+**To finish the human part:** someone other than either writer labels the frozen cohort in
+Label mode, under their own name. Both people discuss each split using the 8 October
+procedure above. Record unanimous answers with **Record agreed answers**, settle splits
+with reasons, and commit the label files and prompts with both original answers in
+`labels`. Then record the completed overlap and unanimous counts, raw agreement and kappa
+for each named pair, every relabelled id with its old and settled answer and discussion
+reason (or an explicit none), and any rewritten/retired ids. Until those records exist,
+#148 and the second-annotator part of the Phase 4 gate remain open.
