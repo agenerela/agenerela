@@ -4,13 +4,17 @@
     "references": [
         "GreyBoxStrategy.Sim",
         "GreyBoxStrategy.Replay",
+        "GreyBoxStrategy",
+        "Agenerela",
         "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": true,
-    "precompiledReferences": ["Newtonsoft.Json.dll"],
+    "precompiledReferences": [
+        "Newtonsoft.Json.dll"
+    ],
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [],

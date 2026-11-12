@@ -320,6 +320,7 @@ namespace GreyBoxStrategy.Realm
                 fortMarks[i].style.left = p.x; fortMarks[i].style.top = p.y + (capital ? 24 : 10);
             }
             foreach (var b in banners) PlaceBanner(b);
+            if (Queries != null) PlaceBadges();
             foreach (var m in marks) m.Place();
         }
 

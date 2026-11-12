@@ -70,8 +70,15 @@ namespace GreyBoxStrategy.Realm
                     if (l.Event.ProvinceIndex >= 0) PanTo(l.Event.ProvinceIndex); else if (l.Country != null) PanTo(ui.CapitalIndex(l.Country));
                     if (l.Event.Decision != null) ui.ShowCard(DecisionCard.From(l.Event));
                 },
-                CountryPressed = id => PanTo(ui.CapitalIndex(id)),
+                CountryPressed = id => { PanTo(ui.CapitalIndex(id)); OpenCountry(id); },
             };
+            queries = new RealmQueries(game);
+            ui.Queries = queries;
+            ui.BuildPanels();
+            ui.ModePressed = SetMode;
+            ui.FollowPressed = Follow;
+            ui.DiplomacyPressed = ToggleDiplomacy;
+            ui.DecisionPressed = e => ui.ShowCard(DecisionCard.From(e));
             ui.monoFont = UnityEngine.TextCore.Text.FontAsset.CreateFontAsset("Consolas", "Regular");
             Show(game.Initial, null);
             ui.SetTurn(1, "Council");
@@ -101,10 +108,11 @@ namespace GreyBoxStrategy.Realm
             float left = 248 * scale, right = 356 * scale, top = 50 * scale, bottom = 46 * scale;
             float freeW = Mathf.Max(200, w - left - right), freeH = Mathf.Max(200, h - top - bottom);
             // world units per pixel needed so the land fits both ways
-            float upp = Mathf.Max(size.x * 0.88f / freeW, size.y * 0.9f / freeH);
+            var land = map.LandWorld;
+            float upp = Mathf.Max(land.width * 1.04f / freeW, land.height * 1.04f / freeH);
             cam.orthographicSize = upp * h / 2;
             float cx = (left + freeW / 2) - w / 2, cy = (bottom + freeH / 2) - h / 2;
-            cam.transform.position = new Vector3(-cx * upp, -cy * upp, -10);
+            cam.transform.position = new Vector3(land.center.x - cx * upp, land.center.y - cy * upp, -10);
         }
 
         /// <summary>For the Unity CLI and tests: play faster, or jump ahead to a turn without animating.</summary>
@@ -127,7 +135,71 @@ namespace GreyBoxStrategy.Realm
             shown = s;
             map.SetOwners(s.Owners, id => CountryLook.Of(id).Colour, id => CountryLook.Of(id).Slot);
             ui.ShowState(s, flip);
+            ui.ShowFollowBar(s);
+            ApplyMode();
             ui.PlaceLabels(s);
+        }
+
+        // ---- map modes, follow, panels ----
+
+        private RealmQueries queries;
+        private MapMode mode = MapMode.Political;
+        private string followed;
+        private readonly List<ReplayEvent> played = new List<ReplayEvent>();
+        private Vector2 clickStart;
+        private int selected = -1;
+
+        /// <summary>For the Unity CLI: switch the map mode, follow a country (null for none), open a panel.</summary>
+        public void SetMode(MapMode m) { mode = m; ApplyMode(); }
+        public void Follow(string id)
+        {
+            followed = id; ui.Followed = id;
+            ui.ShowFollowBar(shown); ApplyMode();
+            if (id != null) OpenCountry(id);
+        }
+        public void OpenCountry(string id)
+        {
+            var persona = game.Players.TryGetValue(id, out var pl) ? pl.Persona : null;
+            GreyBoxStrategy.Persona p = null;
+            try { if (persona != null) p = GreyBoxStrategy.Personas.Named(persona); } catch (ArgumentException) { }
+            ui.ShowCountry(id, shown, played, p?.Personality, p?.Knowledge);
+        }
+        public void OpenProvince(int province)
+        {
+            selected = province; map.SetSelected(province);
+            ui.ShowProvince(province, shown, played);
+        }
+        public void ToggleDiplomacy()
+        {
+            if (ui.DiplomacyOpen) { ui.CloseDiplomacy(); return; }
+            int turn = turnIndex < game.Turns.Count ? game.Turns[turnIndex].Turn : game.Result.Turns;
+            ui.ShowDiplomacy(shown, turn, played.Where(e => e.Turn == turn && (e.Kind == ReplayEventKind.PeaceOffered || e.Kind == ReplayEventKind.PeaceAccepted || e.Kind == ReplayEventKind.PeaceRefused || e.Kind == ReplayEventKind.PeaceMutual)));
+        }
+
+        private void ApplyMode()
+        {
+            if (shown == null || queries == null) return;
+            HashSet<int> reach = null;
+            switch (mode)
+            {
+                case MapMode.Political: map.SetOverlay(null, null, null); break;
+                case MapMode.Armies:
+                {
+                    int max = Math.Max(1, shown.Countries.Values.Max(c => c.Army));
+                    map.SetOverlay(shown.Owners.Select(o => o == null ? 1f : 0.2f + 0.8f * Mathf.Min(1, shown.Countries[o].Army / (float)max)).ToList(), null, null);
+                    break;
+                }
+                case MapMode.Forts:
+                    map.SetOverlay(shown.Forts.Select(f => f == 0 ? 0.15f : f == 1 ? 0.6f : 1f).ToList(), null, null);
+                    break;
+                case MapMode.Reach:
+                    if (followed == null) { map.SetOverlay(null, null, null); break; }
+                    reach = new HashSet<int>(queries.Attackable(shown, followed));
+                    var dim = new HashSet<int>(Enumerable.Range(0, 25).Where(q => !reach.Contains(q) && shown.Owners[q] != followed));
+                    map.SetOverlay(null, reach, dim);
+                    break;
+            }
+            ui.ShowMode(mode, shown, reach);
         }
 
         // ---- input: pan, zoom, keys ----
@@ -142,7 +214,12 @@ namespace GreyBoxStrategy.Realm
                 if (kb.spaceKey.wasPressedThisFrame) ui.Root.schedule.Execute(() => { playing = !playing; ui.SetPlaying(playing, speed); });
                 if (kb.nKey.wasPressedThisFrame) { playing = false; stepOnce = true; ui.SetPlaying(false, speed); }
                 if (kb.equalsKey.wasPressedThisFrame || kb.numpadPlusKey.wasPressedThisFrame) { speed = speed >= 4 ? 1 : speed * 2; ui.SetPlaying(playing, speed); }
-                if (kb.escapeKey.wasPressedThisFrame) ui.CloseInspector();
+                if (kb.escapeKey.wasPressedThisFrame) { ui.CloseInspector(); ui.CloseSide(); ui.CloseDiplomacy(); map.SetSelected(-1); }
+                if (kb.digit1Key.wasPressedThisFrame) SetMode(MapMode.Political);
+                if (kb.digit2Key.wasPressedThisFrame) SetMode(MapMode.Armies);
+                if (kb.digit3Key.wasPressedThisFrame) SetMode(MapMode.Forts);
+                if (kb.digit4Key.wasPressedThisFrame) SetMode(MapMode.Reach);
+                if (kb.dKey.wasPressedThisFrame) ToggleDiplomacy();
             }
             if (mouse != null)
             {
@@ -157,6 +234,18 @@ namespace GreyBoxStrategy.Realm
                 if (mouse.middleButton.wasPressedThisFrame || mouse.rightButton.wasPressedThisFrame) { dragging = true; dragStart = cam.ScreenToWorldPoint(mouse.position.ReadValue()); }
                 if (mouse.middleButton.wasReleasedThisFrame || mouse.rightButton.wasReleasedThisFrame) dragging = false;
                 if (dragging) cam.transform.position += dragStart - cam.ScreenToWorldPoint(mouse.position.ReadValue());
+                // A left click on the map (not on a panel) opens the province's panel.
+                if (mouse.leftButton.wasPressedThisFrame) clickStart = mouse.position.ReadValue();
+                if (mouse.leftButton.wasReleasedThisFrame && (mouse.position.ReadValue() - clickStart).sqrMagnitude < 25)
+                {
+                    var sp = mouse.position.ReadValue();
+                    var panelPos = RuntimePanelUtils.ScreenToPanel(document.rootVisualElement.panel, new Vector2(sp.x, Screen.height - sp.y));
+                    if (document.rootVisualElement.panel.Pick(panelPos) == null)
+                    {
+                        int p = map.ProvinceAt(cam.ScreenToWorldPoint(sp));
+                        if (p >= 0) OpenProvince(p); else { ui.CloseSide(); map.SetSelected(-1); }
+                    }
+                }
             }
             ui.PlaceLabels(shown);
         }
@@ -216,6 +305,7 @@ namespace GreyBoxStrategy.Realm
                     if (e.Kind == ReplayEventKind.Upkeep || e.Kind == ReplayEventKind.Revolt || e.Kind == ReplayEventKind.TruceEnded) ui.SetTurn(turn.Turn, "Upkeep");
                     else if (e.Kind == ReplayEventKind.PeaceOffered || e.Kind == ReplayEventKind.PeaceAccepted || e.Kind == ReplayEventKind.PeaceRefused) ui.SetTurn(turn.Turn, "Envoys");
                     else ui.SetTurn(turn.Turn, "Resolve");
+                    played.Add(e);
                     if (turn.Turn < skipUntilTurn)
                     {
                         Show(e.After, null);

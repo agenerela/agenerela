@@ -148,3 +148,40 @@
 .compact .brand { font-size: 13px; padding-left: 8px; padding-right: 8px; letter-spacing: 1px; }
 .compact .time { padding-left: 6px; padding-right: 6px; }
 .compact .turn { font-size: 13px; margin-right: 6px; }
+
+/* the side panel: a province or a country, over the realm list's right edge */
+.side { left: 248px; top: 50px; width: 310px; max-height: 80%; display: none; background-color: rgb(20, 16, 12); }
+.side.on { display: flex; }
+.compact .side { left: 50px; }
+
+/* the diplomacy view */
+.diplomacy { left: 50%; top: 18%; width: 640px; translate: -50% 0; display: none; background-color: rgb(20, 16, 12); }
+.diplomacy.on { display: flex; }
+.mx-row { flex-direction: row; }
+.mx-head { flex-grow: 1; flex-basis: 0; align-items: center; padding: 4px; border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.22); font-size: 12px; -unity-font-style: bold; }
+.mx-rowhead { width: 110px; flex-direction: row; align-items: center; font-size: 13px; -unity-font-style: bold; border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.22); }
+.mx-cell { flex-grow: 1; flex-basis: 0; min-height: 46px; align-items: center; justify-content: center; border-bottom-width: 1px; border-right-width: 1px; border-color: rgba(201, 164, 90, 0.22); }
+.mx-cell.war { color: rgb(208, 97, 76); background-color: rgba(208, 97, 76, 0.1); }
+.mx-cell.truce { color: rgb(216, 162, 74); }
+.mx-cell.peace { color: rgb(141, 127, 102); }
+.mx-cell.self { background-color: rgba(201, 164, 90, 0.08); }
+
+/* map modes */
+.legend { position: absolute; left: 248px; bottom: 46px; flex-direction: row; flex-wrap: wrap; align-items: center; padding: 5px 9px; max-width: 700px; background-color: rgba(18, 15, 12, 0.93); border-width: 1px; border-color: rgba(201, 164, 90, 0.55); font-size: 12px; }
+.compact .legend, .compact .modes { left: 50px; }
+.army-badge { position: absolute; padding: 1px 6px; font-size: 11px; -unity-font-style: bold; color: rgb(255, 255, 255); border-width: 1px; border-color: rgb(210, 173, 98); translate: -50% 0; }
+
+/* the followed country's own bar */
+.follow-bar { flex-direction: row; flex-grow: 1; align-items: stretch; display: none; overflow: hidden; }
+.nation.me { border-top-width: 2px; border-top-color: rgb(210, 173, 98); }
+.seg2 { justify-content: center; padding-left: 9px; padding-right: 9px; border-right-width: 1px; border-right-color: rgba(201, 164, 90, 0.22); }
+.seg2-label { font-size: 9px; -unity-font-style: bold; letter-spacing: 1px; color: rgb(141, 127, 102); }
+.seg2-value { font-size: 12.5px; -unity-font-style: bold; }
+.seg2.later { opacity: 0.45; }
+.compact .seg2.later { display: none; }
+.compact .seg2 { padding-left: 5px; padding-right: 5px; }
+.rivals { flex-direction: row; align-items: center; margin-left: auto; padding-left: 6px; padding-right: 6px; border-left-width: 1px; border-left-color: rgba(201, 164, 90, 0.22); }
+.riv { flex-direction: row; align-items: center; padding: 2px 5px; font-size: 12px; -unity-font-style: bold; }
+.riv:hover { background-color: rgba(210, 173, 98, 0.14); }
+.riv.war { color: rgb(208, 97, 76); }
+.riv.truce { color: rgb(216, 162, 74); }

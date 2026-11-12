@@ -630,20 +630,20 @@ they are designed.
 
 ### In the game so far, and their licences
 
-**The map's size, and the 4K master.** Today's painting is 1672 × 941, and it is upscaled at
-1920 × 1080. Beyond its edge a tile of its own sea is repeated, so a window of any shape is
-covered and the land can sit in the space between the panels. The master that replaces it should
-be **at least 4096 × 2304** (16:9), so it is sharp at 4K, with **open sea on every side**: about
-15% of the width left and right, and 10% top and bottom. That margin lets the camera shift the
-land into the free space without reaching the tiled sea, and a fresh sea tile is cut from it by
-`bake_map.py`. The province maps are baked again from the new painting; nothing else changes.
+**The map's size, and the 4K master.** The master is now 4096 × 2304 with open sea on every side:
+the land fills 18 to 80% of the width and 12 to 85% of the height. `bake_map.py` records those
+bounds, and the camera frames the land, not the painting, in the space between the panels.
+Beyond the master's edge, a tile of its own sea is repeated, mixed at two scales and turns so it
+never shows a pattern, so a window of any shape is covered. Its detail is still the image
+model's 1672 px. A real 4K pass would run the source through an upscaling model and bake again;
+nothing else changes.
 
 What `Demos/GreyBoxStrategy/` ships for the screen (slice 1, #20), and under what terms. **Every
 row with "check" must be cleared before the game is sold.**
 
 | Asset | Where | How it was made | Licence |
 |---|---|---|---|
-| The sea-chart painting | `Assets/GreyBoxStrategy/Screen/Art/sea-chart-map.jpg`, source `ArtSource/sea-chart-map.png` | OpenAI's image model through the `codex-image` skill, 11 November 2026 | Generated; OpenAI's terms assign the output to the user, but whether it can be used commercially has to be **checked** before shipping. A 4K master replaces it |
+| The sea-chart painting | `Assets/GreyBoxStrategy/Screen/Art/sea-chart-map.jpg` (4096 × 2304), master `ArtSource/sea-chart-map.png`, source `ArtSource/sea-chart-map-source.png` | OpenAI's image model through the `codex-image` skill, 11 November 2026, with open sea on every side, then upscaled by Lanczos with light sharpening: its detail is the 1672 × 941 source's. A real 4K pass needs an upscaling model, such as the asset server's, when its card is free | Generated; OpenAI's terms assign the output to the user, but whether it can be used commercially has to be **checked** before shipping. A 4K master replaces it |
 | Ten persona faces | `Screen/Art/persona-portraits.jpg`, source `ArtSource/persona-portraits.png` | The same, one 5 × 2 sheet | The same: **check** |
 | The open sea beyond the painting | `Screen/Art/sea-tile.jpg` | Cut by `ArtSource/bake_map.py` from the painting's calmest open sea and mirrored into a seamless tile | The painting's: **check** |
 | Province id map, edge field, label points | `Screen/Art/province-*.png`, `provinces.json` | Baked by `ArtSource/bake_map.py` from the painting and the rule graph | Ours |
