@@ -435,7 +435,7 @@ namespace GreyBoxStrategy.Realm
                     ui.SetCard(live.HoldsCard ? "held" : null);
                     slowShown |= waited.TotalSeconds > 30;
                     if (waited.TotalSeconds > 30)
-                        ui.ShowNotice($"The rulers have taken {(int)waited.TotalSeconds} s on turn {turnIndex + 1}. The server may be busy with another client. Menu (top right) leaves the game and lets the RTX 5080 go.");
+                        ui.ShowNotice($"The rulers have taken {(int)waited.TotalSeconds} s on turn {turnIndex + 1}. The server may be busy with another client. Esc, then Main menu, leaves the game and lets the RTX 5080 go.");
                     ui.SetThinking(true);
                     yield return new WaitForSeconds(1f);
                 }
