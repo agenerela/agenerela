@@ -3968,3 +3968,40 @@ answer it like for like through the same stage.
 
 Raw data: `.scratch/non-llm-deciders/runs/decide-full/` in the lead's laptop checkout (`decide-full-v1/`
 is the superseded first run), and `decide_cascade.py` beside it.
+
+### The open decision models on our sets: `tev1:4b`, `strands-decider:2b` and `d1:3b` score 21 to 26 points below `qwen3.5:4b` and refuse commands (12 November 2026)
+
+**What was run.** After the lead opened `/v1/systemone` on the RTX 5080's gateway, the three decision
+models pulled earlier ran on their own route against `qwen3.5:4b`, in one lock session from 14:38 to
+14:50 (Docker Ollama 0.40.14, one model resident at a time). The probe's `systemone` stage asks each
+prompt as one request with two `choice` questions, the action and the target, in the wording of the
+decision-question entry above. The control is the framework's request; the 4B's decision-question
+readout ran beside it. Ten-prompt slices first. Details are in
+[`non-llm-deciders.md`](non-llm-deciders.md), "The open decision models on our sets".
+
+| | Curated /76 | Interim /389 | Impossible /64 | Said `none` when acting /233 | Median s | Resident MB |
+|---|---:|---:|---:|---:|---:|---:|
+| `qwen3.5:4b`, framework request (control) | 70 | 330 | 49 | 12 | 0.471 | 2,995 |
+| `qwen3.5:4b`, decision questions | 62 | 272 (−14.9) | 45 | 44 | 0.104 | 2,995 |
+| `tev1:4b` | 56 | 248 (−21.1) | 49 | 69 | 0.104 | 5,457 |
+| `strands-decider:2b` | 49 | 231 (−25.4) | 57 | 61 | 0.121 | up to 10,002 |
+| `d1:3b` | 42 | 228 (−26.2) | 64 | 154 | 0.057 | 3,120 |
+
+- **All three are beyond noise below the control on both sets**, and below the 4B asked the same
+  questions.
+- **They refuse commands**: 26 to 29 of 65 simple commands against 64.
+  - `d1` answered `none` to 154 of the 233 prompts that wanted an action, so its perfect score on
+    impossible requests is a never-acting agent's.
+  - `strands-decider`'s 57 of 64 impossible requests is +12.5 on the control, beyond that category's
+    floor, but it also refused 61 actions.
+- **As a first stage, they barely help.** With a margin threshold tuned on the 80 tuning prompts, each
+  cascade to the 4B sent 76% to 96% of the interim decisions on, and scored 318 to 330.
+- `strands-decider` loaded on Ollama's MLX runner in the Linux container, but grew to 10 GB resident.
+
+**What we now believe.** On our prompts and in this wording, no decision model is a better decider than
+the 4B, or a better first stage than an embedding engine.
+
+**What would change this.** Question wording tuned on new prompts (a shorter or empty `none`
+criterion), a decision model fine-tuned on a game's own decisions, or a larger decision model.
+
+Raw data: `.scratch/non-llm-deciders/runs/dm-final/` in the lead's laptop checkout.

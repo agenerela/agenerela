@@ -35,8 +35,9 @@ phase table and the open issues, not here.
   decision models". No other `/v1` route opens.
 - **Decision models researched** (Gemini Decision 1, Jev and the open-weight ones in the Ollama
   library), with their question format measured on `qwen3.5:4b`: 272/389 and 62/76 against 330 and 70,
-  3.2 times faster. Both named models are hosted only. Testing an open one waits on the lead: a pull,
-  and a `/v1/systemone` route on the gateway. They lead the page below.
+  3.2 times faster. Both named models are hosted only. The open ones ran on `/v1/systemone` once
+  the lead opened it: `tev1:4b` 248/389, `strands-decider:2b` 231, `d1:3b` 228, all beyond noise below
+  the 4B, refusing commands. No decision-model provider recommended. They lead the page below.
 - **Non-generative deciders researched and measured against `qwen3.5:4b`**, on the RTX 5080 with the
   control re-run in the same session: a new wiki page, `docs/llm-wiki/non-llm-deciders.md`, with a
   survey and the results, an entry in `findings.md` and a row in `live-runs.md`. The probe is

@@ -31,11 +31,16 @@ those names.
   forward pass, with no generated text and so no statement.
 - **Open-weight models of the same kind exist and are in the Ollama library.** The small ones are
   Together AI's `tev1` (0.8B and 4B), Liquid AI's `d1` (3B) and AWS Strands' `strands-decider` (2B).
-  Ollama serves them on a new route, `/v1/systemone`, and **only** there. All three are now pulled,
-  and Ollama refuses `/api/chat` and `/api/generate` for each ("does not support chat"). Our gateway
-  does not pass `/v1/systemone`, so **no decision model has run yet**. The change is one line on the
-  RTX 5080 machine, [written down below](#what-to-change-on-the-rtx-5080-for-decision-models) for the
-  lead to apply.
+  Ollama serves them only on a new route, `/v1/systemone`, which the lead opened on the RTX 5080's
+  gateway with [one line](#what-to-change-on-the-rtx-5080-for-decision-models).
+- **On our prompts the open decision models are the weakest thing that ran.** Against the 4B's 330 of
+  389 and 70 of 76 in the same session:
+  - `tev1:4b` scored 248 and 56, `strands-decider:2b` 231 and 49, and `d1:3b` 228 and 42. All are
+    beyond noise below the 4B, below the 4B asked the same questions, and below the best embedding
+    engine.
+  - They refuse commands: `d1` answers `none` to almost everything.
+  - They are fast (0.06 to 0.12 s) and, as a first stage before the 4B, barely help.
+  - This rests on one wording of the questions, not tuned ([below](#the-open-decision-models-on-our-sets-measured)).
 - **What we could measure is the question format itself**, on our own `qwen3.5:4b`, scored from one
   forward pass's probabilities as these models score it. It is 3.2 times faster (0.140 s against
   0.453 s median) but 15 points worse on the interim set (272 against 330) and 10 on the curated set
@@ -46,9 +51,8 @@ those names.
   4B, with its threshold tuned on our own 80 tuning prompts, it kept 329 and 68 (within noise) while
   answering 28% of the interim decisions itself. One tuning on a small set, so it needs its own A/B.
 - **No reranker runs on Ollama 0.40.14.**
-- Recommendation: test `tev1:4b` against the 4B once the route and the pull are approved. It is
-  Qwen3.5-4B fine-tuned for decisions, so the comparison isolates the training. Until then, no
-  non-generative provider.
+- Recommendation: no decision-model provider and no non-generative provider as the decision. The one
+  first stage worth an A/B is the `bge-m3` embedding cascade.
 
 ## The decision being replaced
 
@@ -174,8 +178,8 @@ A target answer of "nothing listed" makes the decision `none`. The developer's a
 descriptions become the criteria. The confidence they return is a ready-made input for the grounding
 guard and for a cascade to a generative model. The statement still has to come from somewhere else.
 
-**What it would take to test them.** See
-[below](#what-it-would-take-to-test-the-open-decision-models).
+**How they did on our sets.** See
+[below](#the-open-decision-models-on-our-sets-measured): worse than the 4B on both.
 
 ## Decision questions on our own 4B (measured)
 
@@ -237,11 +241,73 @@ the control re-run in the same lock.
 
 So the format alone, on a model not trained for it, is fast and not good enough. Whether a model
 **trained** for it closes the 15 points is the open question. `tev1:4b`, Qwen3.5-4B fine-tuned for
-exactly this, would answer it like for like, on its own route (the `systemone` stage).
+exactly this, answered it like for like on its own route: it did not close them (next section).
 
-## What it would take to test the open decision models
+## The open decision models on our sets (measured)
 
-- **The pulls: done.** The lead approved three more beyond the first five on 12 November; they are in
+The lead applied the gateway change on 12 November, and the three pulled decision models were run on
+their own route, `/v1/systemone`, against `qwen3.5:4b` in one lock session from 14:38 to 14:50 (RTX
+5080, Docker Ollama 0.40.14, one model resident at a time). The probe's `systemone` stage sends each
+prompt as one request with two `choice` questions, the action and the target:
+- the same state, criteria and `none` wording as the decision questions above;
+- a targeted action whose target answer is `no_target` becomes `none`.
+
+The control is the framework's request, and the 4B's decision-question readout ran again beside it.
+Each model answered a ten-prompt slice first, and scored as the labels mean. `ollama_remote.py
+systemone tev1:4b` answered `choice move_to` at 0.08 s once loaded, so the check in the host
+checklist works.
+
+| | Curated /76 | Interim /389 | vs control, interim | Impossible /64 | `none` expected /156 | Acting /233 | Said `none` when acting /233 | Median / p90 s | Resident MB |
+|---|---:|---:|---:|---:|---:|---:|---:|---|---:|
+| **`qwen3.5:4b`, framework request (control)** | **70** | **330** | | 49 | 133 | 197 | 12 | 0.471 / 0.577 | 2,995 |
+| `qwen3.5:4b`, decision questions | 62 | 272 | −14.9 | 45 | 117 | 155 | 44 | 0.104 / 0.190 | 2,995 |
+| `tev1:4b` | 56 | 248 | −21.1 | 49 | 123 | 125 | 69 | 0.104 / 0.124 | 5,457 |
+| `strands-decider:2b` | 49 | 231 | −25.4 | 57 | 132 | 99 | 61 | 0.121 / 0.178 | 3,908 to 10,002 |
+| `d1:3b` | 42 | 228 | −26.2 | 64 | 156 | 72 | 154 | 0.057 / 0.070 | 3,120 |
+
+| Category, interim (curated) | `tev1:4b` | `strands-decider:2b` | `d1:3b` | Control |
+|---|---:|---:|---:|---:|
+| `simple_command` /65 (/9) | 26 (4) | 27 (4) | 29 (4) | 64 (9) |
+| `command_with_target` /66 (/11) | 42 (4) | 41 (10) | 26 (1) | 66 (11) |
+| `impossible_request` /64 (/9) | 49 (9) | 57 (9) | 64 (9) | 49 (9) |
+| `conversation` /64 (/9) | 38 (9) | 41 (8) | 42 (9) | 61 (9) |
+| `situation` /65 (/19) | 45 (15) | 33 (10) | 35 (13) | 39 (17) |
+| `event` /65 (/19) | 48 (15) | 32 (8) | 32 (6) | 51 (15) |
+
+- **All three are beyond noise below the 4B on both sets**, by 21 to 26 points on the interim set
+  and 18 to 37 on the curated set. All three are also below the 4B asked the same questions (272),
+  and below `bge-m3` with a trained head (271).
+- **They refuse too much.** `d1` answered `none` to every prompt labelled `none` and to 154 of the
+  233 that wanted an action: its 64 of 64 impossible requests are what an agent that never acts gets.
+  `strands-decider` refused 57 of 64 impossible requests, +12.5 points on the control and beyond the
+  category's floor of about 9, but it also refused 61 commands and situations. `tev1` ties the
+  control on impossible requests (49) and loses everywhere else except the interim situations (45
+  against 39).
+- **Commands are where they fail**, the case a generative model finds easiest: 26 to 29 of 65 simple
+  commands against 64. "Come with me." gets `none` from `tev1` (0.69) and `d1` (0.63).
+- **As a first stage they barely help.** With the margin threshold tuned on the 80 tuning prompts,
+  the cascade from each to the 4B sent most decisions on: `tev1` 93%, giving 318 (−3.1); `d1` 96%,
+  giving 330; `strands-decider` 76%, giving 323 (−1.8). That is no better than the `bge-m3` cascade
+  above, which answered 28% itself and kept 329.
+- **Fast once loaded**: 0.06 to 0.12 s median for both questions in one request, against 0.47 s.
+  The first request loaded the model in 2.2 to 4.7 s.
+- **Resident size.** `tev1:4b` is a Q8_0 build at 5.5 GB, nearly twice the 4B's Q4. `strands-decider`
+  ran on Ollama's MLX runner in the Linux container, despite its page naming Apple silicon, but grew
+  from 3.9 GB in the slice to 10.0 GB in the full run, too big for an 8 GB card beside a game.
+
+**What the numbers rest on.** One wording of the questions, written before any run and tuned on
+nothing:
+- the state lists every target and the observations;
+- the `none` option reads "Take no action. Choose this when nothing calls for an action, or when
+  what is asked is impossible or names something not listed here".
+
+The makers suggest a `none` option. A shorter `none`, or no description at all, might shift all three
+towards acting. Tuning the wording on the 80 tuning prompts is the fair next step, and was not done.
+The `strands-decider` and `d1` cards also advise fine-tuning for a task's own decisions.
+
+## What it took to run the open decision models
+
+- **The pulls.** The lead approved three more beyond the first five on 12 November; they are in
   [Models pulled](#models-pulled). `pplx-decider-flash:4b` (5.6 GB, over the 5 GB limit) was not
   pulled and is not tested.
 - **The `/v1/systemone` route on the gateway.** The gateway passes `/api/chat`, `/api/generate`,
@@ -254,17 +320,17 @@ exactly this, would answer it like for like, on its own route (the `systemone` s
     them on `/api/chat` and `/api/generate`, `tev1` included, though it keeps a normal output head on
     its model card. Each refusal was checked once under the lock on 12 November, and the gateway
     answered 403 on `/v1/systemone`.
-- **Then the run**: the probe's `systemone` stage, already written and checked against a stand-in
-  server. It asks the action and target questions in one request. Run it on both sets for each model,
-  with the 4B control in the same session.
-- **`strands-decider` may not load at all.** Ollama pulled it as an MLX safetensors build
-  (`runner: mlx`), and its page says it needs Apple silicon; the 5080's container is Linux with CUDA.
+- **The route.** The lead applied the Caddyfile change in the next section on 12 November. Before
+  any run, the tech lead's session checked that an empty request to `/v1/systemone` now reaches Ollama
+  (HTTP 400, "questions must contain 1 to 64 fields", where the gateway had answered 403).
+- **`strands-decider` loaded** although Ollama pulled it as an MLX safetensors build (`runner: mlx`)
+  and its page names Apple silicon.
 
 ## What to change on the RTX 5080 for decision models
 
 For the person at the RTX 5080 machine. Everything here was checked against the repository's
-`tools/ollama-server/` files and Ollama's release notes on 12 November 2026. It has not been applied:
-that is the lead's to do.
+`tools/ollama-server/` files and Ollama's release notes on 12 November 2026. The lead applied it the
+same day, and the decision models then ran through it (above).
 
 **(c) No Ollama upgrade is needed.** `/v1/systemone` arrived in Ollama **0.35.0** ([release notes,
 28 September 2026](https://github.com/ollama/ollama/releases/tag/v0.35.0)): "decision models" on a
@@ -691,9 +757,9 @@ Eight, all onto the RTX 5080's Ollama. None was removed: the gateway cannot dele
 | `bge-m3:567m` (F16, 567M) | 1,158 MB | 657 MB | MIT (in the model's manifest) |
 | `hf.co/ggml-org/Qwen3-Reranker-0.6B-Q8_0-GGUF` | 639 MB | did not run | Apache-2.0 ([card](https://huggingface.co/Qwen/Qwen3-Reranker-0.6B)) |
 | `dengcao/Qwen3-Reranker-0.6B:Q8_0` | 639 MB | 742 MB; ran, output unusable | Apache-2.0, as Qwen's original; a community upload |
-| `tev1:4b` (Q8_0, 4.3B, Qwen3.5) | 4,611 MB | not yet run | Apache License in its Ollama manifest; its model card says the weights' licence is "being finalized" |
-| `d1:3b` (Q8_0, 2.7B, LFM2; vision) | 3,731 MB | not yet run | LFM Open License v1.0 (library page; none in the manifest) |
-| `strands-decider:2b` (MXFP8 safetensors, MLX runner) | 1,975 MB | not yet run; may need Apple silicon | its manifest carries a licence file; Apache-2.0 per its library page |
+| `tev1:4b` (Q8_0, 4.3B, Qwen3.5) | 4,611 MB | 5,457 MB | Apache License in its Ollama manifest; its model card says the weights' licence is "being finalized" |
+| `d1:3b` (Q8_0, 2.7B, LFM2; vision) | 3,731 MB | 3,120 MB | LFM Open License v1.0 (library page; none in the manifest) |
+| `strands-decider:2b` (MXFP8 safetensors, MLX runner) | 1,975 MB | 3,908 MB after 30 prompts, 10,002 MB after 545 | its manifest carries a licence file; Apache-2.0 per its library page |
 
 The last three were pulled at the lead's word on 12 November, after the first five.
 `pplx-decider-flash:4b` (5.6 GB) was not pulled.
@@ -740,9 +806,10 @@ or one that embeds and compares, would fit behind it without the rest of the fra
 
 ## Recommendation
 
-- **Test an open decision model next**: `tev1:4b`, `d1:3b` and `strands-decider:2b` against
-  `qwen3.5:4b`, through the `systemone` stage, once the lead has opened the gateway route. Tev1 is the 4B fine-tuned for this, so it shows what the training adds over the bare format,
-  which on the 4B was 3.2 times faster and 15 points worse.
+- **No decision-model provider.** On our prompts the three open decision models scored 21 to 26 points
+  below `qwen3.5:4b` on the interim set, refused commands, and gained almost nothing as a first stage.
+  If one is tried again, tune the question wording, the `none` option above all, on new prompts
+  first: the run here used one wording, untuned.
 - **Not Gemini Decision 1 or Jev** for the framework's default: both are hosted only, and every
   decision would leave the game's machine.
 - **No non-generative provider as the whole decision.** The best engine scores 15 points below the
@@ -760,9 +827,10 @@ or one that embeds and compares, would fit behind it without the rest of the fra
 
 ## What was not tested
 
-- **Any decision model.** Gemini Decision 1 and Jev are hosted only and no key was available; the open
-  ones are pulled and wait on the gateway route. Only their question format was measured, on our
-  own 4B.
+- **Gemini Decision 1 and Jev**: hosted only, and no key was available.
+- **Other wordings of the decision questions**, a shorter or empty `none` criterion above all, and
+  `pplx-decider-flash:4b` (5.6 GB, over the pull limit), `tev1:0.8b`, and the 9B and 27B decision
+  models.
 - Any reranker or cross-encoder (none runs on this Ollama), zero-shot NLI, GLiNER, GLiClass, DIET, and
   FunctionGemma or any other small generative tool model.
 - `qwen3-embedding:4b`, and fine-tuning the encoder (SetFit) rather than training a head on a frozen one.
