@@ -34,8 +34,11 @@ phase table and the open issues, not here.
     `+how-it-reads` and `+own-words` (`StatementRulesWording`).
   - The `Scorecard`'s voice section counts statements that copy their persona's whole statement
     rule, or one sentence of it.
-  - At the persona 2b table, `+own-words` took those copies from 15% to none. The stage 2 runs and
-    the 4B table are still owed. See the demo README's gaps N8 and N9.
+  - At the persona 2b table, `+own-words` took those copies from 15% to none; at the 4b table,
+    which never copied, it changed nothing beyond noise but statements repeated word for word (5%
+    to 10%). In stage 2, on the 4B only, the framework's moves sentence kept the attack share
+    within noise of the game's line but ended with fewer provinces (0.7 against 2.1, the band's
+    edge), so the game keeps its line. See the demo README's gaps N8 and N9.
 
 - **GreyBoxStrategy: models at one table** (#20). Any seat can be a model, a script or random
   (`TableDefinition`, `Tables.Named`, `StrategyTableMenu`). Each council is one framework

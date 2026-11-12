@@ -3375,8 +3375,29 @@ answers stay at 0%. `HowItShouldRead` changes the game itself: fewer battles, fa
 offers, and the merchant holds 13 points more of its turns. `InYourOwnWords` changes one liveliness
 number, slightly (−0.06 provinces changing hands a turn, the interval's edge at −0.01).
 
-**The 4B at the table.** OWED: the same table with `default` against `default+own-words`, not yet
-run when the server change paused the card. It is the check that nothing gets worse on the 4B.
+**The 4B at the table.** The same `personas` table on `qwen3.5:4b`, 20 games, seeds 1 to 20,
+`default` against `default+own-words`, one after another under one lock, one model resident,
+22:23 to 23:03, after the server's `OLLAMA_NUM_PARALLEL` change (both arms). It is the check that
+nothing gets worse on the 4B. Paired by seed, 95%:
+
+| Number | Control | `InYourOwnWords` | |
+|---|---:|---:|---|
+| copies its statement rule / a sentence of it | 0% / 0% | 0% / 0% | — |
+| words a statement | 13.6 | 13.8 | within |
+| names its target | 72% | 78% (+6) | **beyond**, better |
+| repeated word for word | 5% | 10% (+5) | **beyond**, worse |
+| contradicts its move | 19% | 15% | within |
+| statements given | 98% | 99% | within |
+| illegal answers | 0% | 0% | — |
+| η² of aggression / hold / peace by persona | 0.84 / 0.60 / 0.72 | 0.83 / 0.68 / 0.62 | — |
+| battles a turn | 1.47 | 1.36 | within (edge, +0.00) |
+| provinces changing hands a turn | 1.15 | 1.06 | within |
+| peace offered a game | 8.05 | 9.10 | within |
+
+No pipeline errors. The 4B never copied its rule, so there was nothing to fix. Every liveliness
+number is within its interval, and the persona still shapes the play as strongly. One voice number
+gets worse beyond noise: statements repeated word for word, 5% to 10%, still well under the 2B's
+47 to 54%. One gets better: naming the target, 72% to 78%.
 
 **Reading.**
 - The wording of the rules line is what invites the copy. Saying "in your own words" ends it at the
@@ -3384,6 +3405,8 @@ run when the server change paused the card. It is the check that nothing gets wo
 - The 2B pays for it on the evaluation set by echoing more few-shot lines. That set's prompts look
   much like its examples; the game's councils do not.
 - `HowItShouldRead` does half the job and moves the 2B's play.
+- On the 4B it changes nothing that matters: no copies to remove, the game as lively, the persona
+  as strong; statements repeat a little more often (5% to 10%) and name their target a little more.
 - No default changes. A developer whose small model reads its rules out can set `InYourOwnWords`,
   and should watch for few-shot echoes when it does.
 
@@ -3420,12 +3443,31 @@ situations −9.2, all beyond; simple commands +6.2, within. Most of the breaks 
 into `attack_target wolf` or a `move_to`. Read as a list of things to do, the line pulls the 2B
 toward acting. On the 4B against `PerTarget`, situations −15.4 and events −9.2 are beyond.
 
-**GreyBoxStrategy stage 2.** OWED: one model seat against scripts, 30 games an arm, on `qwen3.5:4b`
-only. The lead's rule for long game runs is the 4B only, so the moves sentence in the game is
-measured on the 4B alone.
-The game's own moves line (`default`) runs against the framework's line with the game's removed
-(`default+no-moves-line+moves-sentence`), measuring attack share, provinces and illegal answers.
-Not yet run when the server change paused the card.
+**GreyBoxStrategy stage 2, on `qwen3.5:4b` only.** The lead's rule is that long game runs use the
+4B only, so **the moves sentence in the game was measured on the 4B alone**; the 2B's run was
+dropped. One model seat against four scripts, 30 games an arm, seeds 1 to 30, seats rotating. Two
+arms one after another under one lock, one model resident, RTX 5080 box, Docker Ollama 0.40.14,
+19:48 to 19:59, both after the server's `OLLAMA_NUM_PARALLEL` change. `default` is the game's own
+line (`Moves open to us: attack fenmark, stonereach or westmarch; fortify ashby or brindle.`).
+`default+no-moves-line+moves-sentence` drops it for the framework's
+(`Moves open to you: fortify ashby or brindle; attack stonereach, fenmark or westmarch.`, schema
+order). Paired schema and the demo's grounding settings in both. Intervals are paired by seed, 95%.
+
+| Number | The game's line | The framework's sentence | Difference |
+|---|---:|---:|---:|
+| provinces at the end | 2.1 | 0.7 | −1.4, [−2.8, +0.0], the edge |
+| knocked out | 19 of 30 | 24 of 30 | +5, within |
+| attack share, all council moves | 32% (150 / 511) | 27% (110 / 436) | −5, z about −1.7, within |
+| attack share, turns 1 to 4 | 45% (55 / 122) | 40% (48 / 121) | −5, within |
+| attacks landed a game | 3.6 | 2.6 | −1.0 |
+| illegal answers | 0 | 0 | — |
+| contained by a guard | 3 | 3 | — |
+| wins | 1 | 0 | — |
+| prompt tokens | 965 | 968 | — |
+| median latency | 0.60 s | 0.64 s | — |
+
+No pipeline errors. Fewer decisions in the second arm (436 against 511) because the seat is knocked
+out sooner.
 
 **Reading.**
 - On the evaluation set the sentence is no better than the plain list and no better than
@@ -3434,6 +3476,11 @@ Not yet run when the server change paused the card.
   `PerTarget`.
 - The paired schema alone already takes illegal pairs to 0 (entry of 10 November), so that is no
   reason to use it.
-- Whether it replaces the game's own line in the game, where the line is what makes the model
-  attack, is what stage 2 answers.
-- No default changes.
+- In the game, on the 4B, it does most of what the game's own line does, unlike `PerTarget`. The
+  attack share stays within noise of the game's line (27% against 32%), where `PerTarget` in the
+  line's place fell to 15% and no line at all to 2% (entries of 10 November). It still ends with
+  fewer provinces, 0.7 against 2.1, at the edge of the band, so it is not shown to be as good.
+- Two differences in the text may matter and were not separated: the framework's sentence follows
+  schema order, so `fortify` comes before `attack`, and it says "you" where the game says "us".
+- No default changes. GreyBoxStrategy keeps its own line. `ObservationLine` stays an option for a
+  game that has no such sentence of its own; on a 2B-class model the evaluation set says not to.
