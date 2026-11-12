@@ -1,33 +1,52 @@
-# Deciding without a generative model (researched and measured 12 November 2026)
+# Decision models, and other ways to decide without generating (researched and measured 12 November 2026)
 
 Can something other than a generative language model choose the action and the target? Today
 `qwen3.5:4b` does it: it reads the stimulus, the observations and the examples, and writes
-`action`, `target` and `statement` under a JSON schema, in about 0.45 s. The lead asked for "the
-decision making models/engines rather than LLMs", researched and tried on the RTX 5080. **Our
-reading of that request**, which is the framework tech lead's and this page's: could a model built
-for *choosing* (an embedding model, a reranker, a classifier) or a classic game engine (utility AI,
-a behaviour tree, a planner) make the choice from a closed list, and how good is it on our own
-prompts?
+`action`, `target` and `statement` under a JSON schema, in about 0.45 s.
 
-The page has two halves. [What exists](#what-exists-the-survey) is a survey: nothing in it was
-measured by us, and every number there is a maker's or a paper's, cited. [What we
-measured](#what-we-measured) is a run on our two evaluation sets, with `qwen3.5:4b` re-run as the
-control in the same session on the same server (hard rule 2). The measured part is also in
-[`findings.md`](findings.md), "Non-generative deciders against `qwen3.5:4b`".
+The lead asked for research into "the decision making models/engines rather than LLMs", tested on the
+RTX 5080, and then narrowed it, in his words: "I aprticularly want you to research those new models
+Like Jev and the recent decision making engine by google", and "THe recent one from google is called
+gemini decision 1. I want you to check on simillar local ones". So the centre of this page is a new
+kind of model, the **decision model** (makers also say "System One model" or "typed decision
+model"). These are Jev, Gemini Decision 1 and the open-weight models of the same kind. The
+broader survey (embedding classifiers, rerankers, classic game AI) and its measurements on the 5080
+are the background and the baseline.
 
-**In short.** Nothing we could run comes close to the 4B as the whole decision. The best engine,
-`bge-m3` embeddings with a small trained head on 90 reference examples we wrote, scored **271 of
-389** on the interim set and **63 of 76** on the curated set, against the 4B's **330** and **70** in
-the same session: 15 and 9 points down, beyond both noise floors (3.6 and 8). Every engine is weakest
-where the survey said it would be: impossible requests and conversation, and the curated set's
-situations. As a **first stage** it does better. A cascade where the engine answers when its margin
-is high and hands the rest to the 4B, its threshold tuned on our own 80 tuning prompts, scored 329 and
-68 against 330 and 70, within noise, while answering 28% of the interim decisions itself; one tuning
-on a small set, so it needs its own A/B. The **hybrid**, where the engine chooses and the 4B writes
-only the statement, has the engine's accuracy and saves 0.08 s of the 4B's 0.54 s median on the
-interim set and nothing on the curated set. **No reranker ran**: Ollama 0.40.14 has no rerank route,
-and both Qwen3-Reranker GGUFs we pulled failed the yes/no route. Recommendation: no non-generative
-provider as the decision; an embedding first stage is worth an issue and an A/B through `EvalRunner`.
+**How the two names were identified.** Both were searched on 12 November 2026, and both exist under
+those names.
+- **Gemini Decision 1** (`gemini-decision-1`) is named in Google's launch post of 11 November 2026,
+  [Gemini Decisions API](https://blog.google/innovation-and-ai/technology/developers-tools/gemini-decisions-api/),
+  by Google DeepMind's product manager and principal scientist. Certain.
+- **"Jev"** is TypeSafe AI's Jev, launched 15 September 2026 as "the first System One model". The
+  sources are TypeSafe's documentation ([docs.typesafe.ai](https://docs.typesafe.ai/introduction))
+  and press coverage of the launch ([InfoQ](https://infoq.com/news/2026/10/typesafe-ai-jev-released)).
+  The lead's "models Like Jev" fits it exactly: by November there is a whole class of "Jev-like"
+  models, and an open-source list of them ([awesome-decision-models](https://github.com/AnotiaWang/awesome-decision-models)).
+  Very likely; no other model or company named Jev turned up.
+
+**In short.**
+- **The two named models are hosted only.** Neither has weights, so neither can run on our card.
+  Both answer a typed question about a state with probabilities over a closed list of options, in one
+  forward pass, with no generated text and so no statement.
+- **Open-weight models of the same kind exist and are in the Ollama library.** The small ones are
+  Together AI's `tev1` (0.8B and 4B), Liquid AI's `d1` (3B) and AWS Strands' `strands-decider` (2B).
+  Ollama serves them on a new route, `/v1/systemone`, which our gateway does not expose. They also
+  need pulls beyond the five this research was allowed. Both are waiting on the lead
+  ([below](#what-it-would-take-to-test-the-open-decision-models)), so **no decision model was run**.
+- **What we could measure is the question format itself**, on our own `qwen3.5:4b`, scored from one
+  forward pass's probabilities as these models score it. It is 3.4 times faster (0.144 s against
+  0.488 s median) but 15 points worse on the interim set (272 against 330) and 10 on the curated set
+  (62 against 70): it leans to `none` on simple commands. That gap is what decision-model training
+  claims to close, and testing one of them is the obvious next step.
+- **Of the non-generative engines we could run, none comes close as the whole decision.** The best,
+  `bge-m3` embeddings with a small trained head, scored 271 and 63. As a **first stage** before the
+  4B, with its threshold tuned on our own 80 tuning prompts, it kept 329 and 68 (within noise) while
+  answering 28% of the interim decisions itself. One tuning on a small set, so it needs its own A/B.
+- **No reranker runs on Ollama 0.40.14.**
+- Recommendation: test `tev1:4b` against the 4B once the route and the pull are approved. It is
+  Qwen3.5-4B fine-tuned for decisions, so the comparison isolates the training. Until then, no
+  non-generative provider.
 
 ## The decision being replaced
 
@@ -47,7 +66,189 @@ registered targets, each with a one-line description. The answer is one action, 
 `none` is the expected answer for 156 of the interim set's 389 prompts and 30 of the curated 76. A
 decider that never acts would score 40% and 39%.
 
-## What exists: the survey
+## Decision models
+
+Researched on 12 November 2026. **Nothing in this section was measured by us**: every number is a
+maker's or a paper's, cited, and most are self-reported.
+
+### What a decision model is
+
+A decision model is given a **state** (text, often with images or other media) and one or more
+**typed questions**:
+- `choice`: pick one of a list of options, each with a description;
+- `noul`: the probability that a statement is true;
+- `score`: a place on an ordered rubric.
+
+It returns a probability for every option, and a confidence, **without generating text**. Every
+option is scored in one forward pass, so adding questions barely adds time. Jev's documentation
+puts it as "No text generation, no parsing", with every question "evaluated in parallel and in
+isolation against the same state in one go"
+([docs](https://docs.typesafe.ai/introduction)). The makers position these models as a fast decision
+layer inside software: routing, tool selection, policy checks, classification. They are not offered
+as a replacement for chat.
+
+**Our decision is exactly one of these questions.** The state is the label, the stimulus and the
+observations. The action is a `choice` whose options are the available actions with their
+descriptions, `none` included. The target is a second `choice` over the registered targets, with a
+"nothing listed" option. What these models do not give is the `statement`.
+
+### Gemini Decision 1 (Google DeepMind), hosted
+
+From Google's launch post of 11 November 2026
+([blog](https://blog.google/innovation-and-ai/technology/developers-tools/gemini-decisions-api/)):
+
+- **What it is.** The model behind the new Gemini Decisions API, "a new endpoint for fast,
+  closed-set decisions". Instead of writing an answer it "scores your candidate options in a single
+  forward pass", returning probabilities and a confidence from 0 to 1 per answer.
+- **Questions.**
+  - `noul`, `choice` (2 to 255 options) and `score`.
+  - Up to 1,000 independent questions per request, against one shared input of text, images, audio,
+    video or PDF of up to 256K tokens.
+- **Speed and price.**
+  - 150 to 250 ms end to end, with 50 to 100 ms of model compute, for contexts up to 16K tokens.
+  - Nearly flat from 1 to 100 questions.
+  - $0.10 per million input tokens, nothing for output, and a no-cost tier in AI Studio.
+- **Accuracy.**
+  - Google says it "leads across the suite, with the lowest calibration error" on its routing,
+    reasoning, ranking and multimodal benchmarks, but gives the numbers only in charts.
+  - Its one named comparison is that Gemini 3.5 Flash-Lite costs "nearly 5x" more on the same suite.
+- **Uses Google names.**
+  - Gemini Notebook routes queries with it ("up to 40% lower latency").
+  - Google Search uses it as a safety check on MCP tools.
+- **Access.** Gemini API (v1beta) and AI Studio. Google Cloud "coming soon".
+- **Weights.** Nothing says there are any; it is a hosted model.
+
+**For us**, it cannot run on our card. A game calling it would send every decision to Google over
+the network, about 0.2 s plus the round trip, where DR-001 puts inference in the game's own process. No API key was available to this research, so it was not tried.
+
+### Jev (TypeSafe AI), hosted
+
+- **What it is.** Launched 15 September 2026, as TypeSafe's "first System One model"
+  ([docs](https://docs.typesafe.ai/introduction), [InfoQ](https://infoq.com/news/2026/10/typesafe-ai-jev-released)).
+  Question types are `choice`, `score`, `noul` and `box`, a bounding box on an image.
+  - TypeSafe's docs do not say how it is built or trained.
+  - TypeSafe reports 70 to 500 ms per request; that is the maker's figure.
+- **Access.** Early access, from a waitlist. Third-party pages list the endpoint as
+  `POST https://api.typesafe.ai/v1/systemone`.
+- **Weights.** None published: no architecture and no parameter count.
+- **Independent evidence.**
+  - Deußer and others ran it zero-shot on 37 datasets, 346,009 requests
+    ([arXiv 2609.37647](https://arxiv.org/abs/2609.37647)). It beat Qwen3.8-27B on 27 of them, with
+    none of Qwen's leads outside the bootstrap intervals, and beat Gemma-4-E4B on all 37. Its choice
+    probabilities supported selective prediction.
+  - In sequential games it did worse than Qwen. It completed 35% of ALFWorld tasks against 54.5%, and
+    it repeated actions that had no effect.
+  - An audit of the first week's 28 papers found that "the typed readout itself has not shown an
+    independent accuracy advantage over comparable label-probability readouts"
+    ([arXiv 2609.32160](https://arxiv.org/abs/2609.32160)). Reading option probabilities off a
+    language model can do about as well; Jev's clear gains are latency and cost.
+
+**For us**, the same as Gemini Decision 1: hosted only, so not on our card, and not tried.
+
+### The open-weight ones ("similar local ones")
+
+By November dozens of open models answer the same API. Ollama serves them on `POST /v1/systemone`,
+which "follows TypeSafe's Jev API" ([`tev1` page](https://ollama.com/library/tev1)). The ones small
+enough for an 8 GB card, from their Ollama library pages and model cards:
+
+| Model | Maker | Base | Ollama tag, download | Licence | How it scores | Maker's evidence |
+|---|---|---|---|---|---|---|
+| Tev1 | Together AI | Qwen3.5-4B, fine-tuned ([card](https://huggingface.co/togethercomputer/Tev1-4B-experimental)) | `tev1:4b` 4.4 to 4.6 GB; `tev1:0.8b` 834 MB | weights' licence "being finalized"; base Apache-2.0 | keeps Qwen's normal output head: answers one option letter; 2 to 24 options | 880 of 1,000 on its own development set; calibration "not comprehensively evaluated" |
+| d1 | Liquid AI | LFM2.5-VL-3B ([blog](https://huggingface.co/blog/LiquidAI/open-d1)) | `d1:3b` 3.7 GB | LFM Open License v1.0 | trained to answer "in a single forward pass" with no tokens | best under 10B on the Jev Decision Index 0.2.1, 48.57; under 10 ms a question on an RTX 4090 |
+| Strands Decider | AWS Strands Labs | Qwen3.5-2B-Base "with a trained decision head" | `strands-decider:2b` 2.0 GB | Apache-2.0 | a trained head; 4K context | 180 of 231 on JevBench; the Ollama page names Apple silicon, so it may not run on Linux CUDA |
+| Perplexity Decider Flash | Perplexity | Qwen3.5-4B, distilled | `pplx-decider-flash:4b` 5.6 GB, above our 5 GB limit | Apache-2.0 | not stated on its page | Decision Index 0.3, 58.88 |
+| Standard One | Standard Thinking | Ministral 3 3B and 8B ([card](https://huggingface.co/StandardThinking/StandardOne-8B)) | GGUF on Hugging Face, no library tag | Apache-2.0 | scores option letters in one pass, temperature-scaled; up to 255 options | JevBench hard tier 56.76% against Jev's 72.07% |
+| Laya, GLiNER2.5-Decide | Convai, Fastino | ModernBERT-large 395M, DeBERTa-v3-large | `laya` in the library | Apache-2.0 | encoders | not checked |
+
+Larger ones (Perplexity's 27B `pplx-decider`, Bespoke Labs' 9B `nimble`, Cloudflare's 27B `clef`)
+would fit the 16 GB card at 4 bits, not an 8 GB one, and are beyond this research's pull limits.
+
+**How one would make our decision.** Two `choice` questions in one request, from the request's
+state:
+- the action, over the available actions and `none`, each with its description;
+- the target, over the registered targets and a "nothing listed" option.
+
+A target answer of "nothing listed" makes the decision `none`. The developer's action and target
+descriptions become the criteria. The confidence they return is a ready-made input for the grounding
+guard and for a cascade to a generative model. The statement still has to come from somewhere else.
+
+**What it would take to test them.** See
+[below](#what-it-would-take-to-test-the-open-decision-models).
+
+## Decision questions on our own 4B (measured)
+
+No decision model could be run (see the next section), but the question format can be, on the model
+we already have. The `decide` stage of
+[`non_llm_decider_probe.py`](../../tools/benchmarks/non_llm_decider_probe.py) asks `qwen3.5:4b`
+our decision as the decision models are asked it:
+
+- **The prompt.** Tev1's recommended system line ("Evaluate the supplied decision task. ... Select
+  exactly one listed option. Return only its letter"). Then Standard One's layout: `State:` (the
+  agent, its state line, the targets, the observations, the labelled stimulus), `Question:`, and
+  lettered `Options:` with descriptions.
+- **Two questions.** The action, over the available actions and `none` ("Take no action. Choose this
+  when nothing calls for an action, or when what is asked is impossible or names something not listed
+  here."). Then, for a targeted action, the target, over the 11 targets and `no_target`.
+- **One forward pass each.** `num_predict` 1; the answer is the first token's probability over the
+  option letters, renormalised over the letters offered. This is the "label-probability readout" that
+  the audit above found typed decision models have not yet beaten. Every letter came back within the
+  top 20 on every question.
+
+Run 12 November, 10:51 to 10:58, on the RTX 5080 (Docker Ollama 0.40.14), one model resident, with
+the control re-run in the same lock.
+
+| | Curated /76 | Interim /389 | Impossible /64 | `none` expected /156 | Acting /233 | Said `none` when acting /233 | Median / p90 s |
+|---|---:|---:|---:|---:|---:|---:|---|
+| **`qwen3.5:4b`, the framework's request (control)** | **70** | **330** | 49 | 133 | 197 | 12 | 0.488 / 0.568 |
+| `qwen3.5:4b`, decision questions | 62 | 272 (−14.9) | 45 | 117 | 155 | 44 | 0.144 / 0.287 |
+
+| Category, interim (curated) | Decision questions | Control |
+|---|---:|---:|
+| `simple_command` /65 (/9) | 30 (5) | 64 (9) |
+| `command_with_target` /66 (/11) | 59 (10) | 66 (11) |
+| `impossible_request` /64 (/9) | 45 (8) | 49 (9) |
+| `conversation` /64 (/9) | 43 (9) | 61 (9) |
+| `situation` /65 (/19) | 46 (15) | 39 (17) |
+| `event` /65 (/19) | 49 (15) | 51 (15) |
+
+- **3.4 times faster, and 15 points worse** on the interim set (10 on the curated set), beyond both
+  floors. The time saved is the reply: one token per question instead of a JSON object with a
+  statement.
+- **It says `none` when it should act.** It said `none` on 44 prompts that wanted an action, against
+  the control's 12; 20 of the 44 were simple commands ("Come with me." gets `none` 0.52, `follow_player`
+  0.19). The untuned 4B leans to the last, longest option. This is what a decision model's training
+  would have to fix, and what the bare question format does not.
+- **Situations went the other way**: 46 of 65 against 39, +10.8 points, just beyond the interim
+  set's per-category floor of about 9. A question that names the choice may suit a situation better
+  than "Choose exactly one action". One category, one run: a lead, not a result.
+- **No better on impossible requests** (45 against 49), the case a closed-set scorer is sometimes
+  assumed to be good at.
+- **A cascade inside one model does not pay.** We tried the readout first and the full request when
+  its action margin was low, tuned on the 80 tuning prompts. It sent 85% of the interim decisions on
+  to the full request, scored 321 (within noise), and took longer overall (0.639 s median).
+
+So the format alone, on a model not trained for it, is fast and not good enough. Whether a model
+**trained** for it closes the 15 points is the open question. `tev1:4b`, Qwen3.5-4B fine-tuned for
+exactly this, would answer it like for like, and the stage runs it unchanged through `/api/chat`.
+
+## What it would take to test the open decision models
+
+- **A pull beyond this research's limit.** It was allowed five pulls of 5 GB or less, all used on
+  the embedders and rerankers below. Candidates: `tev1:4b` (4.4 to 4.6 GB), `d1:3b` (3.7 GB),
+  `strands-decider:2b` (2.0 GB); `pplx-decider-flash:4b` is 5.6 GB, over the limit. Asked of the
+  lead on 12 November.
+- **The `/v1/systemone` route on the gateway.** The gateway passes `/api/chat`, `/api/generate`,
+  `/api/embed`, `/api/tags`, `/api/ps`, `/api/show` and `/api/pull`, and nothing else. `d1` and
+  `strands-decider` have trained heads that produce no tokens, so they answer only on
+  `/v1/systemone`. One route in the gateway's `Caddyfile` on the RTX 5080 machine would open it; that
+  is a change to the server, the lead's to make, and this research did not work around it.
+  - `tev1` keeps a normal output head, so the `decide` stage can run it through `/api/chat` without
+    the route. That copies Tev1's prompt rather than Ollama's own `/v1/systemone` handling of it, so
+    its numbers would carry that caveat.
+- **Then the run**: the `decide` stage, or a `/v1/systemone` stage, on both sets with the 4B control
+  in the same session, as above. About 10 minutes a model.
+
+## Background: other ways to decide without generating (survey)
 
 Researched on 12 November 2026 from makers' pages, model cards, GitHub and arXiv. **No number in
 this section was measured by us.**
@@ -193,7 +394,7 @@ action already chosen, not the choice.
 | RL, decision transformer | reward, simulator, retraining per action set | no | what the reward teaches | small nets | Apache (ML-Agents) | no | yes |
 | Cascade, chooser and writer | the chooser's needs and the language model | yes | the language model takes the doubtful ones | the chooser, plus the model on deferrals | per part | yes | yes |
 
-## What we measured
+## Baseline: embedding engines, cascades and the hybrid (measured)
 
 12 November 2026, on the RTX 5080, Docker Ollama 0.40.14, over the network from the lead's laptop,
 one model resident at a time, under the 5080 lock. The probe is
@@ -391,9 +592,15 @@ server.
 
 ## What a non-generative provider would need
 
-`ILLMProvider` is one method, `RequestAsync(DecisionRequest)`, so a provider that embeds and compares
-would fit behind it without the rest of the framework knowing. What it would have to work around today:
+`ILLMProvider` is one method, `RequestAsync(DecisionRequest)`, so a provider that asks a decision model,
+or one that embeds and compares, would fit behind it without the rest of the framework knowing. What it would have to work around today:
 
+- **A decision-model provider would map the request onto `/v1/systemone`.** The request already
+  holds what that API wants: the state (the identity, the observations and the labelled stimulus), the
+  offered actions and targets, and, with a change below, their descriptions as criteria. Two
+  `choice` questions in one call would return both choices with probabilities; a provider would fill
+  `action` and `target` and leave `statement` empty or ask a generative provider for it. Behind
+  `ILLMProvider` nothing else in the framework would know.
 - **The candidates arrive as prompt text.** A provider gets the action and target ids from the
   schema's enums, and the stimulus and its label as fields (`StimulusText`, `StimulusLabel`). The
   action descriptions arrive only inside the system prompt, and only with `ListActionsAndTargets` on;
@@ -409,9 +616,10 @@ would fit behind it without the rest of the framework knowing. What it would hav
   a second request to a generative provider, which is what `BuildRefusalLine` already does for a
   refusal. The hybrid measured here is that second request.
 - **The grounding guard would have nothing to read.** It reads token probabilities (DR-016). A
-  similarity engine has none and sets `ReportsTokenProbabilities` false, and the guard then records
-  that it could not run. The engine's own margin is a confidence of the same kind, but the framework
-  has no field for a provider-supplied confidence, and the target threshold above already does the
+  similarity engine or a decision model has none and sets `ReportsTokenProbabilities` false, and the
+  guard then records that it could not run. A decision model's probability per target, or an engine's
+  margin, is a confidence of the same kind, but the framework has no field for a provider-supplied
+  confidence, and the target threshold above already does the
   guard's job inside the engine.
 - **A cascade is a provider that holds two providers**, an engine and a generative one, and asks the
   second when the first is unsure. It needs nothing beyond the above from the framework, but its
@@ -421,6 +629,12 @@ would fit behind it without the rest of the framework knowing. What it would hav
 
 ## Recommendation
 
+- **Test an open decision model next**: `tev1:4b` against `qwen3.5:4b`, through the `decide` stage or
+  `/v1/systemone`, once the lead approves the pull and, for `d1` and `strands-decider`, the gateway
+  route. Tev1 is the 4B fine-tuned for this, so it shows what the training adds over the bare format,
+  which on the 4B was 3.4 times faster and 15 points worse.
+- **Not Gemini Decision 1 or Jev** for the framework's default: both are hosted only, and every
+  decision would leave the game's machine.
 - **No non-generative provider as the whole decision.** The best engine scores 15 points below the
   4B on the interim set and 9 on the curated set, beyond noise, and loses where a game most needs
   judgement: impossible requests, conversation and situations. That holds for every engine we could run.
@@ -436,6 +650,9 @@ would fit behind it without the rest of the framework knowing. What it would hav
 
 ## What was not tested
 
+- **Any decision model.** Gemini Decision 1 and Jev are hosted only and no key was available; the open
+  ones wait on a pull and, for most, a gateway route. Only their question format was measured, on our
+  own 4B.
 - Any reranker or cross-encoder (none runs on this Ollama), zero-shot NLI, GLiNER, GLiClass, DIET, and
   FunctionGemma or any other small generative tool model.
 - `qwen3-embedding:4b`, and fine-tuning the encoder (SetFit) rather than training a head on a frozen one.
