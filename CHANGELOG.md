@@ -37,8 +37,9 @@ phase table and the open issues, not here.
   with a painted fallback, and an asset list. Round 2 follows the lead's choices (look C,
   "Painted Realm" for now, dense terrain, a portrait per persona with several faces): a clickable
   grand-strategy screen in HTML, `docs/demos/grey-box-strategy-screen/ui/index.html`, with
-  watch, rule and advise modes, a decision inspector, two styles, and twelve screenshots. Docs
-  only.
+  watch, rule and advise modes, a decision inspector, two styles, and twelve screenshots. The
+  lead's answers to 28 design questions are recorded, each marked as met by the mock-up or not.
+  Docs only.
 
 - **GreyBoxStrategy: arms for #244's prompt options, and a rule-copy count** (#244 items 5 and 8).
   - The model-seat modifiers `+no-moves-line`, `+moves-sentence` (`LegalTargets = ObservationLine`),

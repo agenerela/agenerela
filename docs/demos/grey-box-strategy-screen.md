@@ -175,7 +175,8 @@ lightened beneath. The layout and the map are the same in both, and the switch i
 
 ### Text-to-speech, later
 
-The lead plans to give the rulers voices. It is not designed here. Two notes for when it is:
+The lead plans to give the rulers voices ([decision 26](#the-leads-decisions-11-november-2026),
+under research). It is not designed here. Two notes for when it is:
 the voice follows the persona, as the face does, and the banner's reading time (1.5 s plus
 40 ms a character) becomes the line's spoken length.
 
@@ -189,8 +190,74 @@ the voice follows the persona, as the face does, and the banner's reading time (
   with the tint lesson above.
 - **Image 8**, the court scene, stays as the mood for court scenes, though it is drawn in look A.
 - **Assets:** the map is one painting with dense terrain (`ui/map.jpg` is a draft). Portraits
-  are two or more faces for each of the five personas, ten to start (`ui/portraits.jpg`
-  holds ten drafts), and not five countries × three moods.
+  belong to the persona: three faces each with three expressions, by the lead's decisions 20 and
+  21 below (`ui/portraits.jpg` holds ten drafts, two faces each), not five countries × three
+  moods.
+
+## The lead's decisions, 11 November 2026
+
+The lead answered 28 design questions about the game as a whole, beyond this screen. His words are
+quoted where he gave them; "ok" means he accepted the question's proposal. The last column says
+whether round 2's mock-up already meets each decision. The mock-up is **not** redesigned for them
+yet; the next round will be. Items 11, 22 and 26 are **under research** in a separate session.
+
+| # | Topic | Decision | Mock-up |
+|---|---|---|---|
+| 1 | Session length | "Should depend on the settings and the map sizes. I think we can target the 30 minutes for now." | Not measured. 30 turns at 1× would be about 3 to 8 minutes of playback, plus the council's model time |
+| 2 | Map size | "We should have different settings, lets focus on smaller that we have now." *Our reading, not his words: several sizes as a setting later; build the current 25-province size first.* | Meets: 25 provinces |
+| 3 | Maps | "One hand made map and detailed one first, with interesting geo locations, for future we can create a generator or create more hand made ones" | Partly: one map, but a generated painting over a warped grid, not a hand-made map with designed places |
+| 4 | Setting | An invented late-medieval world, no magic: ok | Meets |
+| 5 | Winning | "the honest one would be to capture the most provinces and hold them, but we can have something like a king of the hel, where there is one like wonder in AoE which you need hold long enough to win maybe" | Partly: 15 provinces wins, as the rules say. A wonder to hold for several turns is not drawn |
+| 6 | Tone | Slightly playful: ok, "we may tweak that later" | Meets, in the statements |
+| 7 | Economy | "will definetely need a reasearch but we should also make sure models will understand how to use it" | No: the economy is still gold, income and upkeep |
+| 8 | Armies | Armies as pieces on provinces: ok | No: armies are a number per country, shown only in the armies map mode |
+| 9 | Diplomacy | Alliances and tribute: ok | No: war, truce and peace only |
+| 10 | Negotiation | Free-text negotiation with another ruler, answered in character: "Yes, perfect" | No: advise mode talks to your own ruler, not to a rival |
+| 11 | Events | Not a fixed deck. "Lets actually make this something dynamic that model will create, it will make each run unique. Like I want to allow model to create events which have like bonuses or minuses to 1 or more contries. I want our framework to support that kind of usage too, this can become one of the gold points of the framework. In simple words, we should have a tools for the model that is going to be a master teller in the game to create all kinds of flavorable situations that would make each run unique and interesting, for example (a golden meteor fall out of the sky)." **Under research.** | No: the fixed events of the rules (harvest, bandits, unrest) |
+| 12 | Buildings | "I would like to have buildings to be one of the big parts of the game and I want them to be shown on the map. Not particualry the buildings but how some provinces are like better developed, like in victoria 3 kind of" | No: forts only |
+| 13 | Fog of war | In rule mode; everything visible in watch: ok | No: rule mode shows everything |
+| 14 | Mode order | Watch is the main mode, then rule: ok | Meets |
+| 15 | Rule mode's turn | The others move at once, then the resolution is played back: "Ok, we will maybe change that" | Meets |
+| 16 | Advise mode | The model ruler may refuse in character: ok | Meets: Kesh refuses peace with Valen in its own voice |
+| 17 | Difficulty | By persona mix and starting land: ok, and "why not to add a model. It can be like model presets because for some models you may want them to work differently" | Partly: each seat shows its model; choosing models or presets is not drawn |
+| 18 | View | Flat 2D with zoom and pan: ok | Meets |
+| 19 | Map modes | "different map modes like in EU5 or victoria, but there should be the main one which gives you the most info still, like the political map that still shows fortress icons and etc." | Meets: five modes, and the political mode shows capitals, forts, names and garrisons |
+| 20 | Expressions | Three expressions per portrait: ok, "maybe smth more eventually" | No: one each |
+| 21 | Faces | Three faces per persona: ok | Partly: two each |
+| 22 | Country identity | "Lets have some kind of generator of each, this way we can also see what are the generated apsects of the country and we can try to use qwen image model to generate them a flag or even their persona." Whether that is possible, and whether it belongs in the framework, is to be looked into. **Under research.** | No: five fixed countries |
+| 23 | Animation | Ok, "more animation is better I think" | Partly: the capture, arrows, envoys and pulses |
+| 24 | Inspector | On click, with a small thinking indicator: ok | Partly: the inspector opens on click; the only thinking indicator is the council's, in the top bar |
+| 25 | Music | Candidates generated both without and with the asset server, and he picks. Never generate while tests run on the card | Not in scope |
+| 26 | Text-to-speech | Wanted. Is there a local text-to-speech model that can be configured? **Under research.** | Not in scope |
+| 27 | Audience | "Presentation first, but if it turns out very fun, I am thinking about actually developing it nicely and maybe make revenue with it in future" | Not in scope; see the licence note below |
+| 28 | Platform | Windows, mouse and keyboard; 1920 × 1080 first, 1366 × 768 must work, and "make sure we support 4k too eventually" | Partly: checked at 1920 × 1080 and 1366 × 768, not at 4K |
+
+**Met:** 2, 4, 6, 14, 15, 16, 18, 19. **Partly:** 3, 5, 17, 21, 23, 24, 28. **Not yet:** 7, 8,
+9, 10, 12, 13, 20; and 11 and 22, under research. **Outside this mock-up:** 1, 25, 26
+(under research) and 27.
+
+**What these change in the rest of this page:**
+
+- **Licences matter from now on (item 27).** Revenue is possible, so the licence of every
+  generated or bundled asset, font and model has to be recorded where it is added, starting
+  with this page's drafts. The fonts the page uses are open-licence (the SIL Open Font
+  Licence). The images came from image models whose terms have to be checked before any of
+  them ships.
+- **Portraits (items 20, 21):** five personas × three faces × three expressions, 45 portraits,
+  in place of round 1's 15. The asset list below is updated.
+- **Text-to-speech (item 26)** is wanted; [its note](#text-to-speech-later) stands until the
+  research reports.
+- **Events (item 11)** would come from a model acting as a game master, not from the fixed
+  deck in [the rules](grey-box-strategy.md#the-rules). The capture sequence and the chronicle
+  would show them like any other event. Nothing is designed until the research reports.
+- **The map (items 3, 8, 12, 13)** gains armies as pieces, visible development, and fog of war in
+  rule mode. The province map keeps its rule: it is built from the rule graph and checked
+  against it, whether the map is drawn by hand or generated.
+- **Winning (item 5)** may gain a wonder to hold. That is a rules change for
+  [`grey-box-strategy.md`](grey-box-strategy.md), measured in the simulation first, as every rule
+  there was.
+- **4K (item 28):** text and icons are drawn at device scale, and the map painting needs a
+  4096-wide master, as [the asset list](#assets-with-rough-counts) already plans.
 
 ## The mock-ups (round 1)
 
@@ -510,7 +577,7 @@ real paint looks like real paint. The shader's borders, dim and highlights stay 
 | | compass rose, frame ornaments | 2 to 4 |
 | **Countries** | colours, each with a fresh and a dried tone | 5 |
 | | wax seal base and five emblems (mountain, lion, sun, trident, branch, as in the mock-ups) | 1 + 5 |
-| | ruler portraits, round, three moods each | 15 |
+| | ruler portraits by persona: 5 personas × 3 faces × 3 expressions (decisions 20, 21) | 45 |
 | **Court** | hall background | 1 |
 | | rulers at the table, half-body, one pose per side for each country | 10 |
 | | treaty scroll and table props | 1 to 2 |
@@ -521,8 +588,11 @@ real paint looks like real paint. The shader's borders, dim and highlights stay 
 | | ambient loop and one music loop | 2 |
 | **Fallback only** | painted province washes, five colours | 125 |
 
-About 90 pieces of art, most of them small, plus the fallback's 125 if it is needed. The
-portraits and the court figures are the largest single cost.
+About 120 pieces of art, most of them small, plus the fallback's 125 if it is needed. The
+portraits and the court figures are the largest single cost. Each asset's licence is recorded
+when it is added ([decision 27](#the-leads-decisions-11-november-2026)). The lead's decisions
+add armies as pieces, development shown on the map, and music. They are not counted here until
+they are designed.
 
 ## Building it
 
