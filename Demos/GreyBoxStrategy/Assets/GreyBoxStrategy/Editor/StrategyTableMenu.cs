@@ -77,6 +77,82 @@ namespace GreyBoxStrategy.Editor
             Run(definition, games, seed, folder, exitWhenDone: true);
         }
 
+        /// <summary>
+        /// For <c>-executeMethod</c>: several arms of one table on the same seeds, interleaved in blocks
+        /// (<see cref="StrategyTableRuns.RunInterleavedAsync"/>). <c>-strategyArms</c> lists the arms and
+        /// <c>-strategyArmNames</c> their folder names, both separated by <c>;</c>; <c>-strategyBlock</c>
+        /// is the block size (5). Writes each arm to <c>-strategyOut/&lt;name&gt;</c> and exits when done.
+        /// </summary>
+        /// <example>
+        /// <code>
+        /// -executeMethod GreyBoxStrategy.Editor.StrategyTableMenu.RunInterleavedFromCommandLine -strategyTable personas
+        ///   -strategyModel qwen3.5:4b -strategyArms "default;default+storyteller" -strategyArmNames "control;storyteller"
+        ///   -strategyGames 20 -strategySeed 1 -strategyBlock 5 -strategyOut runs/ab
+        /// </code>
+        /// </example>
+        public static void RunInterleavedFromCommandLine()
+        {
+            string table = Arg("-strategyTable") ?? "personas";
+            string model = Arg("-strategyModel") ?? StrategyModelRunMenu.DefaultModel;
+            string model2 = Arg("-strategyModel2");
+            string personas = Arg("-strategyPersonas");
+            string[] arms = (Arg("-strategyArms") ?? "default").Split(';');
+            string[] names = (Arg("-strategyArmNames") ?? string.Join(";", arms)).Split(';');
+            int games = int.TryParse(Arg("-strategyGames"), out int g) ? g : 20;
+            int seed = int.TryParse(Arg("-strategySeed"), out int s0) ? s0 : 1;
+            int block = int.TryParse(Arg("-strategyBlock"), out int b) ? b : 5;
+            var defined = new List<(string, TableDefinition)>();
+            try
+            {
+                if (names.Length != arms.Length) throw new ArgumentException("-strategyArmNames needs one name per arm.");
+                for (int i = 0; i < arms.Length; i++) defined.Add((names[i], Define(table, model, model2, arms[i], personas)));
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                EditorApplication.Exit(2);
+                return;
+            }
+            string folder = Arg("-strategyOut") ?? StrategyRuns.NewFolder(StrategyRunMenu.Root, "interleaved-" + table);
+            RunInterleaved(defined, games, seed, block, folder);
+        }
+
+        private static async void RunInterleaved(List<(string, TableDefinition)> arms, int games, int firstSeed, int block, string folder)
+        {
+            int code = 0;
+            try
+            {
+                Debug.Log($"GreyBoxStrategy: {arms.Count} arms interleaved in blocks of {block}, {games} games, seeds from {firstSeed}, into {folder}");
+                await StrategyTableRuns.RunInterleavedAsync(folder, arms, ProviderCache(), games, firstSeed, block,
+                    line => Debug.Log("GreyBoxStrategy: " + line));
+                Debug.Log($"GreyBoxStrategy: done. {folder}");
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                code = 1;
+            }
+            EditorApplication.Exit(code);
+        }
+
+        // One provider per model for the whole run, so every seat and the storyteller share its queue.
+        private static Func<string, World, ILLMProvider> ProviderCache()
+        {
+            var providers = new Dictionary<string, ILLMProvider>(StringComparer.Ordinal);
+            return (model, world) =>
+            {
+                if (!providers.TryGetValue(model, out var p))
+                    providers[model] = p = new OllamaProvider(new OllamaSettings
+                    {
+                        Endpoint = Environment.GetEnvironmentVariable("AGENERELA_OLLAMA_URL") is string url && url.Length > 0 ? url : "http://127.0.0.1:11434",
+                        ApiKey = Environment.GetEnvironmentVariable("AGENERELA_OLLAMA_API_KEY") ?? "",
+                        Model = model,
+                        TimeoutSeconds = 90f,
+                    });
+                return p;
+            };
+        }
+
         private static TableDefinition Define(string table, string model, string model2, string arm, string personas)
         {
             bool? withPersonas = personas == "on" ? true : personas == "off" ? false : (bool?)null;

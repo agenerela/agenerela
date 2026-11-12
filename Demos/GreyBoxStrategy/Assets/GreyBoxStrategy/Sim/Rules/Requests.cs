@@ -154,6 +154,10 @@ namespace GreyBoxStrategy
         public int Battles;
         /// <summary>Moves the re-check refused because an earlier move this turn made them stale.</summary>
         public int StaleRefusals;
+        /// <summary>The events that happened at this turn's upkeep: the random table's, or the storyteller's one.</summary>
+        public List<EventRecord> Events = new List<EventRecord>();
+        /// <summary>A storyteller event refused when it came to land, with the reason; null when none was.</summary>
+        public string EventRefused;
         public int PeaceOffers;
         public int PeaceAccepted;
         public string OwnerGrid;

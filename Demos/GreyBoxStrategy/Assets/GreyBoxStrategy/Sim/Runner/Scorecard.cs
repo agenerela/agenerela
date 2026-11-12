@@ -33,17 +33,40 @@ namespace GreyBoxStrategy
         public string StatementRules;
     }
 
+    /// <summary>One call to a game's storyteller, for the scorecard's events section.</summary>
+    public sealed class StorytellerCallInfo
+    {
+        public int Turn;
+        /// <summary>Whether the model answered at all.</summary>
+        public bool Answered;
+        public string AskedAction;
+        /// <summary>Whether its own answer, before any guard, was an event the game offered, or none.</summary>
+        public bool AskedLegal;
+        public bool Contained;
+        public bool Error;
+        /// <summary>Whether the decision, after the guards, was no event.</summary>
+        public bool None;
+        /// <summary>Whether an event was queued for the upkeep.</summary>
+        public bool Queued;
+        public float LatencySeconds;
+    }
+
     /// <summary>One played game, with who sat where: a label per country (the player: a model or a script kind) and a character (a persona, or a placebo slot).</summary>
     public sealed class ScoredGame
     {
         public ScoredGame(GameRecord record, IReadOnlyDictionary<string, string> labels,
-            IReadOnlyDictionary<string, string> characters, IReadOnlyList<SeatDecisionInfo> decisions = null)
+            IReadOnlyDictionary<string, string> characters, IReadOnlyList<SeatDecisionInfo> decisions = null,
+            IReadOnlyList<StorytellerCallInfo> storyteller = null)
         {
             Record = record ?? throw new ArgumentNullException(nameof(record));
             Labels = labels ?? record.Kinds;
             Characters = characters ?? Labels;
             Decisions = decisions ?? Array.Empty<SeatDecisionInfo>();
+            Storyteller = storyteller ?? Array.Empty<StorytellerCallInfo>();
         }
+
+        /// <summary>The storyteller's calls, or none when the game had no storyteller.</summary>
+        public IReadOnlyList<StorytellerCallInfo> Storyteller { get; }
 
         public GameRecord Record { get; }
         public IReadOnlyDictionary<string, string> Labels { get; }
@@ -117,6 +140,26 @@ namespace GreyBoxStrategy
             ("voice", "contradicts its move", "Of targeted moves whose statement names a country or province, those that do not name the target: the words name someone else."),
             ("voice", "claims land taken", "Statements saying someone took, seized or stole our land (ClaimsLandTaken): a grievance, true or not."),
             ("voice", "invented grievance", "Statements claiming our land was taken by someone who took none of it earlier in the game: the countries named, else the move's counterpart, else anyone (gap N7)."),
+            ("events", "events a game", "Events that happened, the random table's or the storyteller's: the two arms should be of comparable volume."),
+            ("events", "event value a game", "What the events moved, in gold (soldiers at 2, stability at 20, a fort at 30), summed without sign: their weight in the game."),
+            ("events", "gifts share", "Events worth something to those hit, rather than costing them."),
+            ("events", "distinct template-target pairs a game", "How many different things happened to different targets in one game: variety within a game."),
+            ("events", "distinct templates a game", "How many of the kinds of event a game saw."),
+            ("events", "distinct titles", "Of the storyteller's titles in a game, those not repeated in that game."),
+            ("events", "story phrases shared", "Of a story's two-word phrases, those an earlier story of the same game already had (pairs of two common words left out): the stories repeating themselves."),
+            ("events", "titles shared across seeds", "Of the storyteller's titles, those that also appear in another game of the table: the stories repeating between games."),
+            ("events", "stories replaced", "Of the storyteller's events, those whose story the game replaced: it named a country the event did not reach, held a number or ran long."),
+            ("events", "titles missing", "Of the storyteller's events, those with no title before a colon, so the template's own title stood."),
+            ("events", "net value Gini", "How unevenly events' net worth fell on the five countries in a game, 0 even; Gini's mean difference over the mean absolute value, so blows count as well as gifts."),
+            ("events", "value tracks standing", "Correlation, within a game, between what an event was worth to a country and its provinces then against the mean: below 0 helps the weak, above 0 crowns the strong."),
+            ("events", "hit rulers naming it", "Of model rulers hit by an event, those whose statement on that turn's council names it (a word of its title or of its kind): the event reached the story."),
+            ("events", "storyteller calls", "Times the storyteller was asked."),
+            ("events", "storyteller chose none", "Of its calls, those that made nothing happen, after the guards."),
+            ("events", "storyteller illegal answers", "Of its answers, before any guard, those that were no event it was offered."),
+            ("events", "storyteller contained", "Of its calls, those a guard turned into none."),
+            ("events", "storyteller pipeline errors", "Calls with no decision at all."),
+            ("events", "events refused at upkeep", "Events the storyteller chose that the game's re-check refused when they came to land."),
+            ("events", "storyteller median latency", "Seconds a storyteller call took, median."),
             ("strength", "placement", "Mean rank by provinces at the end, 1 best, ties shared: strength between seats at the same table."),
             ("strength", "wins", "Games won by this seat kind."),
             ("strength", "provinces at the end", "Mean provinces held at the end."),
@@ -210,6 +253,7 @@ namespace GreyBoxStrategy
             }
             Character(moves);
             Voice();
+            EventsSection();
         }
 
         // --- Liveliness ----------------------------------------------------------------------
@@ -622,6 +666,157 @@ namespace GreyBoxStrategy
             return found;
         }
 
+        // --- Events --------------------------------------------------------------------------
+
+        private static readonly HashSet<string> Common = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "the", "a", "an", "of", "and", "in", "on", "at", "to", "from", "with", "for", "over", "under", "its", "their", "his", "her",
+            "our", "by", "as", "is", "was", "were", "it", "that", "this", "into", "upon", "all", "who", "when", "while", "has", "had",
+        };
+
+        private static List<string> Tokens(string s) =>
+            string.IsNullOrEmpty(s) ? new List<string>() : Regex.Matches(s.ToLowerInvariant(), @"[\p{L}']+").Cast<Match>().Select(m => m.Value.Trim('\'')).Where(t => t.Length > 0).ToList();
+
+        private static HashSet<string> Bigrams(string s)
+        {
+            var t = Tokens(s);
+            var set = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i + 1 < t.Count; i++)
+                if (!(Common.Contains(t[i]) && Common.Contains(t[i + 1]))) set.Add(t[i] + " " + t[i + 1]);
+            return set;
+        }
+
+        /// <summary>Whether a ruler's statement names an event: a word of its title of four letters or more (not a common word, not a place), or a word of its kind.</summary>
+        public static bool NamesEvent(string statement, EventRecord e, World world)
+        {
+            if (string.IsNullOrWhiteSpace(statement)) return false;
+            var said = new HashSet<string>(Tokens(statement), StringComparer.Ordinal);
+            var places = new HashSet<string>(world.CountryList.Select(c => c.Id).Concat(world.ProvinceList.Select(p => p.Id)), StringComparer.Ordinal);
+            var words = Tokens(e.Title).Where(w => w.Length >= 4 && !Common.Contains(w) && !places.Contains(w)).Concat(EventRules.KeywordsFor(e.Template));
+            return words.Any(said.Contains);
+        }
+
+        /// <summary>The Gini coefficient of signed values: the mean absolute difference over twice the mean absolute value; NaN when all are 0.</summary>
+        public static double SignedGini(IReadOnlyList<double> xs)
+        {
+            if (xs.Count == 0) return double.NaN;
+            double meanAbs = xs.Average(x => Math.Abs(x));
+            if (meanAbs == 0) return double.NaN;
+            double sum = 0;
+            foreach (double a in xs)
+                foreach (double b in xs) sum += Math.Abs(a - b);
+            return sum / (2.0 * xs.Count * xs.Count * meanAbs);
+        }
+
+        private static double Pearson(IReadOnlyList<(double x, double y)> pts)
+        {
+            if (pts.Count < 3) return double.NaN;
+            double mx = pts.Average(p => p.x), my = pts.Average(p => p.y);
+            double sxy = pts.Sum(p => (p.x - mx) * (p.y - my));
+            double sxx = pts.Sum(p => (p.x - mx) * (p.x - mx)), syy = pts.Sum(p => (p.y - my) * (p.y - my));
+            return sxx == 0 || syy == 0 ? double.NaN : sxy / Math.Sqrt(sxx * syy);
+        }
+
+        private void EventsSection()
+        {
+            const string S = "events", G = "table";
+            int n = Games.Count;
+            var perGame = Games.Select(g => (g, ev: g.Record.Reports.SelectMany(r => r.Events).ToList())).ToList();
+            var all = perGame.SelectMany(x => x.ev).ToList();
+            Add(S, G, "events a game", all.Count / (double)n);
+            Add(S, G, "event value a game", perGame.Average(x => (double)x.ev.Sum(e => e.Value.Values.Sum(v => Math.Abs(v)))));
+            Add(S, G, "gifts share", Share(all.Count(e => e.TotalValue > 0), all.Count));
+            Add(S, G, "distinct template-target pairs a game", perGame.Average(x => (double)x.ev.Select(e => e.Template + "|" + e.Target).Distinct().Count()));
+            Add(S, G, "distinct templates a game", perGame.Average(x => (double)x.ev.Select(e => e.Template).Distinct().Count()));
+
+            var told = perGame.Select(x => (x.g, ev: x.ev.Where(e => e.Source == EventRecord.FromStoryteller).ToList())).ToList();
+            int toldCount = told.Sum(x => x.ev.Count);
+            if (toldCount > 0 || Games.Any(g => g.Storyteller.Count > 0))
+            {
+                int distinct = told.Sum(x => x.ev.Select(e => Normal(e.Title ?? "")).Distinct().Count());
+                Add(S, G, "distinct titles", Share(distinct, toldCount));
+                int stories = 0;
+                double shared = 0;
+                foreach (var x in told)
+                {
+                    var seen = new HashSet<string>(StringComparer.Ordinal);
+                    foreach (var e in x.ev)
+                    {
+                        var b = Bigrams(e.Story);
+                        if (seen.Count > 0 && b.Count > 0)
+                        {
+                            stories++;
+                            shared += b.Count(seen.Contains) / (double)b.Count;
+                        }
+                        seen.UnionWith(b);
+                    }
+                }
+                Add(S, G, "story phrases shared", stories == 0 ? double.NaN : shared / stories);
+                if (n >= 2)
+                {
+                    var bySeed = told.SelectMany(x => x.ev.Select(e => (seed: x.g.Record.Seed, title: Normal(e.Title ?? "")))).ToList();
+                    var games = bySeed.GroupBy(t => t.title).ToDictionary(t => t.Key, t => t.Select(z => z.seed).Distinct().Count());
+                    Add(S, G, "titles shared across seeds", Share(bySeed.Count(t => games[t.title] > 1), bySeed.Count));
+                }
+                Add(S, G, "stories replaced", Share(told.Sum(x => x.ev.Count(e => e.StoryReplaced)), toldCount));
+                Add(S, G, "titles missing", Share(told.Sum(x => x.ev.Count(e => e.StoryVerdict == "no title")), toldCount));
+            }
+
+            // Fairness: how unevenly the net worth fell, and whether it followed standing.
+            var ginis = new List<double>();
+            var tracks = new List<double>();
+            foreach (var x in perGame)
+            {
+                var world = x.g.Record.Game.World;
+                var net = world.CountryList.Select(c => (double)x.ev.Where(e => e.Value.ContainsKey(c.Id)).Sum(e => e.Value[c.Id])).ToList();
+                double gi = SignedGini(net);
+                if (!double.IsNaN(gi)) ginis.Add(gi);
+                var pts = new List<(double, double)>();
+                foreach (var e in x.ev)
+                {
+                    if (e.ProvincesAtTime.Count == 0) continue;
+                    double mean = e.ProvincesAtTime.Values.Average();
+                    foreach (string h in e.Hit)
+                        if (e.ProvincesAtTime.TryGetValue(h, out int held)) pts.Add((e.Value[h], held - mean));
+                }
+                double r = Pearson(pts);
+                if (!double.IsNaN(r)) tracks.Add(r);
+            }
+            Add(S, G, "net value Gini", ginis.Count == 0 ? double.NaN : ginis.Average());
+            Add(S, G, "value tracks standing", tracks.Count == 0 ? double.NaN : tracks.Average());
+
+            // Reaction: a hit model ruler's statement on that turn's council names the event.
+            int hitSeats = 0, naming = 0;
+            foreach (var x in perGame)
+            {
+                if (x.g.Decisions.Count == 0) continue;
+                var world = x.g.Record.Game.World;
+                foreach (var e in x.ev)
+                    foreach (string h in e.Hit)
+                    {
+                        var d = x.g.Decisions.FirstOrDefault(s => s.Country == h && s.Moment == Moment.Council && s.Turn == e.Turn && s.Answered);
+                        if (d == null || string.IsNullOrWhiteSpace(d.Statement)) continue;
+                        hitSeats++;
+                        if (NamesEvent(d.Statement, e, world)) naming++;
+                    }
+            }
+            if (hitSeats > 0) Add(S, G, "hit rulers naming it", Share(naming, hitSeats));
+
+            var calls = Games.SelectMany(g => g.Storyteller).ToList();
+            if (calls.Count > 0)
+            {
+                var answered = calls.Where(c => c.Answered).ToList();
+                Add(S, G, "storyteller calls", calls.Count);
+                Add(S, G, "storyteller chose none", Share(calls.Count(c => c.None), calls.Count));
+                Add(S, G, "storyteller illegal answers", Share(answered.Count(c => !c.AskedLegal), answered.Count));
+                Add(S, G, "storyteller contained", Share(calls.Count(c => c.Contained), calls.Count));
+                Add(S, G, "storyteller pipeline errors", calls.Count(c => c.Error));
+                Add(S, G, "events refused at upkeep", Games.Sum(g => g.Record.Reports.Count(r => r.EventRefused != null)));
+                var lat = answered.Select(c => (double)c.LatencySeconds).OrderBy(v => v).ToList();
+                Add(S, G, "storyteller median latency", lat.Count == 0 ? double.NaN : lat[lat.Count / 2]);
+            }
+        }
+
         // --- Strength ------------------------------------------------------------------------
 
         private void Strength(Func<ScoredGame, string, string> key)
@@ -666,6 +861,7 @@ namespace GreyBoxStrategy
         {
             "games", "council moves", "attacks landed", "moves against a country", "attacks suffered", "peace offers received",
             "pipeline errors", "seat-games measured", "answers", "targeted statements", "statements with a rule", "seats", "wins", "knocked out",
+            "storyteller calls", "storyteller pipeline errors", "events refused at upkeep",
         };
 
         private static readonly HashSet<string> Plain = new HashSet<string>
@@ -673,6 +869,8 @@ namespace GreyBoxStrategy
             "turns", "wars declared a game", "peace offered a game", "peace made a game", "battles a turn",
             "provinces changing hands a turn", "provinces taken from a country a game", "lead changes a game", "eliminations a game",
             "final map Gini", "words a statement", "placement", "provinces at the end",
+            "events a game", "event value a game", "distinct template-target pairs a game", "distinct templates a game", "net value Gini",
+            "value tracks standing", "storyteller median latency",
         };
 
         public static string Format(string metric, double v)
@@ -706,7 +904,7 @@ namespace GreyBoxStrategy
                 sb.AppendLine(Note);
                 sb.AppendLine();
             }
-            foreach (string section in new[] { "liveliness", "sense", "character", "voice", "strength" })
+            foreach (string section in new[] { "liveliness", "sense", "character", "voice", "events", "strength" })
             {
                 var rows = Rows.Where(r => r.Section == section).ToList();
                 sb.AppendLine($"## {char.ToUpperInvariant(section[0])}{section.Substring(1)}");

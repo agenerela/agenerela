@@ -64,6 +64,48 @@ namespace GreyBoxStrategy
         /// <summary>The map at each council, after upkeep: what every country decided on, turn by turn.</summary>
         public List<TurnSnapshot> Snapshots { get; } = new List<TurnSnapshot>();
 
+        /// <summary>
+        /// Whether upkeep rolls the random event table (harvests, bandits, unrest) for each country.
+        /// On by default. A game with a storyteller turns it off, so the storyteller's one event a
+        /// turn replaces the table rather than adding to it, and the two never both fire.
+        /// </summary>
+        public bool EventTable
+        {
+            get => eventTable;
+            set
+            {
+                if (value && queued != null) throw new InvalidOperationException("An event is queued: the random table cannot be switched on as well.");
+                eventTable = value;
+            }
+        }
+
+        /// <summary>Every event of the game, the table's and the storyteller's, for the fairness rules and the logs.</summary>
+        public EventLedger Events { get; } = new EventLedger();
+
+        /// <summary>The turn the next <see cref="BeginTurn"/> starts: the one an event queued now happens on.</summary>
+        public int NextTurn => World.Turn + 1;
+
+        /// <summary>Why this event may not happen at the next upkeep, or null (<see cref="EventRules.WhyNot"/>).</summary>
+        public string WhyNotEvent(string template, string target) => EventRules.WhyNot(World, Events, NextTurn, template, target);
+
+        /// <summary>
+        /// Queues the storyteller's event for the next upkeep, where it is re-checked, applied and told
+        /// to the rulers. Only between turns, only with <see cref="EventTable"/> off, and one a turn.
+        /// </summary>
+        public void QueueEvent(StoryEvent e)
+        {
+            if (e == null) throw new ArgumentNullException(nameof(e));
+            Expect(Phase.AwaitingTurn);
+            if (eventTable) throw new InvalidOperationException("The random event table is on: a storyteller event would fire beside it.");
+            if (queued != null) throw new InvalidOperationException("An event is already queued for this turn.");
+            queued = e;
+        }
+
+        private bool eventTable = true;
+        private StoryEvent queued;
+        // Income a bad harvest takes from a country at this upkeep.
+        private readonly Dictionary<string, int> incomeCut = new Dictionary<string, int>(StringComparer.Ordinal);
+
         // ------------------------------------------------------------------------------------
         // 1. Upkeep and council requests
         // ------------------------------------------------------------------------------------
@@ -87,7 +129,9 @@ namespace GreyBoxStrategy
                 report.Upkeep.Add($"The truce between {a} and {b} ended.");
             }
 
+            if (queued != null) ApplyQueued();
             foreach (var c in World.Alive.ToList()) Upkeep(c);
+            incomeCut.Clear();
 
             ownersAtCouncil = World.ProvinceList.ToDictionary(p => p.Id, p => p.Owner, StringComparer.Ordinal);
             Snapshots.Add(new TurnSnapshot(World));
@@ -103,39 +147,47 @@ namespace GreyBoxStrategy
         private void Upkeep(Country c)
         {
             var r = Rules;
-            double roll = Dice.Unit(Seed, World.Turn, c.Id, "event");
             bool poorHarvest = false;
-            if (roll < r.GoodHarvestChance)
+            if (eventTable)
             {
-                c.Gold += r.GoodHarvestGold;
-                Tell(c.Id, 2, $"A good harvest brought {r.GoodHarvestGold} gold.");
-                report.Upkeep.Add($"{c.Id}: good harvest, +{r.GoodHarvestGold} gold.");
-            }
-            else if (roll < r.GoodHarvestChance + r.PoorHarvestChance)
-            {
-                poorHarvest = true;
-                Tell(c.Id, 2, "A poor harvest halved our income this turn.");
-                report.Upkeep.Add($"{c.Id}: poor harvest, income halved.");
-            }
-            else if (roll < r.GoodHarvestChance + r.PoorHarvestChance + r.BanditsChance)
-            {
-                int lost = Math.Min(c.Army, r.BanditsSoldiers);
-                c.Army -= lost;
-                Tell(c.Id, 2, $"Bandits killed {lost} of our soldiers.");
-                report.Upkeep.Add($"{c.Id}: bandits, -{lost} soldiers.");
-            }
-            else if (roll < r.GoodHarvestChance + r.PoorHarvestChance + r.BanditsChance + r.UnrestChance)
-            {
-                if (c.Stability > 1)
+                double roll = Dice.Unit(Seed, World.Turn, c.Id, "event");
+                if (roll < r.GoodHarvestChance)
                 {
-                    c.Stability--;
-                    Tell(c.Id, 2, "Unrest in the provinces cost us 1 stability.");
-                    report.Upkeep.Add($"{c.Id}: unrest, -1 stability.");
+                    c.Gold += r.GoodHarvestGold;
+                    Tell(c.Id, 2, $"A good harvest brought {r.GoodHarvestGold} gold.");
+                    report.Upkeep.Add($"{c.Id}: good harvest, +{r.GoodHarvestGold} gold.");
+                    TableEvent(c, EventRules.GoodHarvest, r.GoodHarvestGold, $"{r.GoodHarvestGold} gold");
+                }
+                else if (roll < r.GoodHarvestChance + r.PoorHarvestChance)
+                {
+                    poorHarvest = true;
+                    Tell(c.Id, 2, "A poor harvest halved our income this turn.");
+                    report.Upkeep.Add($"{c.Id}: poor harvest, income halved.");
+                    TableEvent(c, EventRules.PoorHarvest, -(World.Income(c) - World.Income(c) / 2), "half the income");
+                }
+                else if (roll < r.GoodHarvestChance + r.PoorHarvestChance + r.BanditsChance)
+                {
+                    int lost = Math.Min(c.Army, r.BanditsSoldiers);
+                    c.Army -= lost;
+                    Tell(c.Id, 2, $"Bandits killed {lost} of our soldiers.");
+                    report.Upkeep.Add($"{c.Id}: bandits, -{lost} soldiers.");
+                    TableEvent(c, EventRules.Bandits, -lost * r.GoldPerSoldier, $"{lost} soldiers");
+                }
+                else if (roll < r.GoodHarvestChance + r.PoorHarvestChance + r.BanditsChance + r.UnrestChance)
+                {
+                    if (c.Stability > 1)
+                    {
+                        c.Stability--;
+                        Tell(c.Id, 2, "Unrest in the provinces cost us 1 stability.");
+                        report.Upkeep.Add($"{c.Id}: unrest, -1 stability.");
+                        TableEvent(c, EventRules.Unrest, -EventRules.StabilityValue, "1 stability");
+                    }
                 }
             }
 
             int income = World.Income(c);
             if (poorHarvest) income /= 2;
+            if (incomeCut.TryGetValue(c.Id, out int cut)) income -= Math.Min(income, cut);
             int upkeep = World.Upkeep(c);
             c.Gold += income - upkeep;
             if (c.Gold < 0)
@@ -167,6 +219,73 @@ namespace GreyBoxStrategy
                     report.Upkeep.Add($"{c.Id}: {lost.Id} revolted and is neutral again.");
                 }
             }
+        }
+
+        // A random table event, recorded beside the storyteller's so both arms are scored alike.
+        private void TableEvent(Country c, string kind, int value, string effect)
+        {
+            var e = new EventRecord { Turn = World.Turn, Source = EventRecord.FromTable, Template = kind, Target = c.Id };
+            e.Hit.Add(c.Id);
+            e.Value[c.Id] = value;
+            e.Effect[c.Id] = effect;
+            foreach (var other in World.Alive) e.ProvincesAtTime[other.Id] = World.ProvinceCount(other.Id);
+            report.Events.Add(e);
+            Events.Events.Add(e);
+        }
+
+        // The storyteller's event, at the start of upkeep: re-checked with the same rule that offered
+        // it, then applied with the game's strength, its story checked, and told to every ruler.
+        private void ApplyQueued()
+        {
+            var q = queued;
+            queued = null;
+            string why = EventRules.WhyNot(World, Events, World.Turn, q.Template, q.Target);
+            if (why != null)
+            {
+                report.EventRefused = $"{q.Template} on {q.Target}: {why}";
+                report.Upkeep.Add($"The storyteller's {q.Template} on {q.Target} was refused: {why}.");
+                return;
+            }
+
+            var t = EventRules.Template(q.Template);
+            var e = new EventRecord
+            {
+                Turn = World.Turn,
+                Source = EventRecord.FromStoryteller,
+                Template = t.Id,
+                Target = q.Target,
+                Province = World.IsProvince(q.Target) ? q.Target : null,
+                Statement = q.Statement,
+            };
+            e.Hit.AddRange(EventRules.Reach(World, q.Target));
+            foreach (var other in World.Alive) e.ProvincesAtTime[other.Id] = World.ProvinceCount(other.Id);
+            (e.Title, e.Story, e.StoryVerdict) = EventRules.CheckStory(World, t, e.Hit, e.Province, q.Statement);
+
+            foreach (string id in e.Hit)
+            {
+                var c = World.Country(id);
+                var (amount, value, effect) = EventRules.Plan(World, t.Id, id);
+                switch (t.Id)
+                {
+                    case EventRules.Windfall: c.Gold += amount; break;
+                    case EventRules.BadHarvest: incomeCut[id] = amount; break;
+                    case EventRules.Plague: c.Army -= amount; break;
+                    case EventRules.Volunteers: c.Army += amount; break;
+                    case EventRules.Zeal: c.Stability = Math.Min(Rules.MaxStability, c.Stability + 1); break;
+                    case EventRules.Unrest: c.Stability = Math.Max(1, c.Stability - 1); break;
+                    case EventRules.Stronghold: World.Province(e.Province).Forts++; break;
+                    case EventRules.WallsCrumble: World.Province(e.Province).Forts--; break;
+                }
+                e.Value[id] = value;
+                e.Effect[id] = effect;
+                Tell(id, 1, EventRules.HitLine(e, id, amount));
+                string sign = value >= 0 ? "+" : "-";
+                report.Upkeep.Add($"{id}: event \"{e.Title}\" ({t.Id}{(e.Province != null ? " in " + e.Province : "")}), {sign}{effect}.");
+            }
+            string news = EventRules.NewsLine(e, t);
+            foreach (var other in World.Alive.Where(c => !e.Hit.Contains(c.Id))) Tell(other.Id, 3, news);
+            report.Events.Add(e);
+            Events.Events.Add(e);
         }
 
         // ------------------------------------------------------------------------------------
