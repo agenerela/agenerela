@@ -16,6 +16,14 @@ Stage 3, the map and the screen, has begun: [watch mode plays back a recorded ga
 **Painted Realm** (the working title) is this project's screen: five countries, each ruled by a
 language model through the framework, fighting over 25 provinces on a painted sea-chart.
 
+**What to try:**
+- **Replay:** let turn 1 play, then click any chronicle line or speech banner. The inspector
+  shows what that ruler read, the moves it was offered, and what the guards did.
+- **Watch live:** watch the "council deciding" dots in the top bar while the model thinks. Press
+  4 for the reach map, then open a country and Follow it to see what it can attack and its odds.
+- **Rule:** take Kesh. Open Report to read what a model would be told. Click Southgate and order
+  the attack, then press End turn. Declare war on a neighbour, and an envoy may come with peace.
+
 1. Open `Demos/GreyBoxStrategy` in Unity 6000.3.23f1, then open
    `Assets/GreyBoxStrategy/Screen/Watch.unity` and press **Play**.
 2. The start menu offers three games:

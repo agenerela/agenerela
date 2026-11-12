@@ -185,6 +185,12 @@ namespace GreyBoxStrategy.Realm
                 }
                 status = $"{CountryLook.NameOf(rule.Offer.OfferedBy)}'s envoy waits for your answer.";
             }
+            else if (!rule.Game.World.Country(rule.You).Alive)
+            {
+                ui.OrdersRequest = null;
+                status = $"{CountryLook.NameOf(rule.You)} has lost its last province. The four rulers play on; watch how it ends.";
+                ui.SetThinking(rule.ModelsThinking);
+            }
             else
             {
                 ui.OrdersRequest = null;
