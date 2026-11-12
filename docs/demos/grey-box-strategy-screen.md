@@ -563,6 +563,14 @@ soft.
   the pause menu. Menu in the top bar opens the pause menu too.
 - The compass rose and the gilt rules are drawn by code.
 
+**The dev menu (13 November).** F1, in the editor and development builds. The demo README's
+"Dev menu" section lists its commands.
+- **Edits are recorded:** the screen replays every game from its recording, so a change to a
+  game's state is recorded and applied at the start of the same turn in the game and in its
+  replay.
+- **Pretended faults never touch the real lock or server.**
+- **A dev game is marked** on screen and in its recording.
+
 **Not built yet:** the court scene for an accepted truce, the dashed gold ring (the reach mode's
 hatching rings the targets instead), the mark on statements that name your country, and
 several orders a turn.

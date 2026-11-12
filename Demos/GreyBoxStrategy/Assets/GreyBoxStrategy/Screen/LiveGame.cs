@@ -76,6 +76,27 @@ namespace GreyBoxStrategy.Realm
             Run();
         }
 
+        /// <summary>True for a game played with stand-in rulers from the dev menu: never a measured game.</summary>
+        public bool Dev { get; private set; }
+
+        /// <summary>
+        /// The dev menu's watch game: five stand-in rulers (a <c>ScriptedProvider</c> picking moves
+        /// the rules offer, through the real agents), no server and no card.
+        /// </summary>
+        public void BeginScripted(int gameSeed)
+        {
+            if (session != null) return;
+            playLive = true; seed = gameSeed; model = "scripted"; Dev = true;
+            string path = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "Live", $"dev-seed-{seed:D4}-{DateTime.Now:yyyyMMdd-HHmmss}.jsonl"));
+            var rng = new System.Random(gameSeed);
+            World world = null;
+            var scripted = new ScriptedProvider { Callback = r => ReplayDirector.ScriptedRuler(r, rng, world) };
+            scripted.Otherwise(ScriptedReply.Decide("none", statement: "We wait."));
+            var provider = DevProvider.Wrap(scripted);
+            session = new LiveSession(model, arm, seed, stopAfterTurns, path, (m, w) => { world = w; return provider; });
+            Run();
+        }
+
         private async void Run()
         {
             await session.RunAsync();

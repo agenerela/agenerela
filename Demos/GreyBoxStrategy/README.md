@@ -102,6 +102,56 @@ language model through the framework, fighting over 25 provinces on a painted se
   held (and by whom), the server cannot be reached, or the key is refused. A game that stops
   mid-way says so across the top of the map.
 
+## Dev menu
+
+**F1** opens the dev menu in the editor and in development builds. It is not in a release build,
+and the pause menu says so where it is available. It is a plain, dense tool, not part of the
+look. Every button runs one command line, and the same lines run from code:
+
+```csharp
+GreyBoxStrategy.Realm.DevTools.Run("scripted-rule kesh 7");   // returns what happened, as text
+GreyBoxStrategy.Realm.DevTools.Run("help");                   // every command
+```
+
+A session drives it through the Unity CLI:
+
+```bash
+unity command script eval -- --code 'return GreyBoxStrategy.Realm.DevTools.Run("turn 12");'
+```
+
+| Command | What it does |
+|---|---|
+| `scripted-rule <country> [seed]` | Rule a country against four stand-in rulers: a `ScriptedProvider` picks a move the rules offer, through the real agents. No server, no card |
+| `scripted-watch [seed]` | Watch five stand-in rulers. No server, no card |
+| `turn <n>` · `step` · `play` · `pause` · `speed <x>` | Jump to a turn without animating the turns before it, land one event, or play and pause. Speed is 0.25 to 32 |
+| `autoplay on\|off` | Play to the end at 8× or faster. In rule mode it also holds every turn and refuses every envoy |
+| `gold\|army\|stability <country> <+n\|-n\|=n>` | Change a country's numbers, within the rules' ranges |
+| `forts <province> <+n\|-n\|=n>` · `owner <province> <country\|neutral>` | Change a province |
+| `war\|peace <country> <country>` · `eliminate <country>` | Change relations, or take a country out of the game |
+| `event <template> <target>` · `events` | Fire one of the storyteller's event templates. The list is read from `EventRules.Templates`, so new kinds appear by themselves. The rules allow none before turn 3 |
+| `fog off\|on` | Reveal everything in rule mode, or restore what your court knows |
+| `fault lock <holder…>` · `fault lock off` | Pretend another session holds the RTX 5080. The real lock directory is never read, written or taken while this is on |
+| `fault server on\|off` | Pretend the server cannot be reached |
+| `fault timeout on\|off` | Requests hang until cancelled, and a rule round times out after 8 s instead of 150 s |
+| `fault unreadable on\|off` | Every reply is text no parser can read. The model is never asked |
+| `faults off` | Clear every pretended fault |
+| `readouts` | Frames per second, UI scale, resolution, the last reply's latency and tokens, the last played decision's queue wait, requests in flight, and who holds the card |
+| `screenshot [name]` · `save-recording [name]` | Save to `Logs/Dev/`. A saved recording replays with `load-recording <path>` from the main menu |
+| `size <w>x<h>` | 1366x768, 1920x1080, 2560x1440 or 3840x2160: the Game view in the editor, the window in a build |
+| `menu` | Show or hide the dev menu |
+
+**State edits work in rule games, at the start of the next turn.** The screen rebuilds every turn
+from the recording, so an edit is recorded and applied at the same point in the game and its
+replay. It shows in the chronicle as a "Dev menu:" line.
+- A recorded replay cannot change.
+- A watch-live game runs on the table runner, which has no hook between turns. Start
+  `scripted-rule` to try edits without the card.
+
+**A game the dev menu touched is a dev game.** That covers an edit, stand-in rulers, or a
+pretended fault. The top bar marks it with a red **DEV**, and its saved recording carries
+`"dev": true` and the edits. The table runner and the scorecard never go through the screen, so
+they never meet the dev menu.
+
 ## Run it
 
 **From the editor:** open this project in Unity 6000.3.23f1, then **GreyBoxStrategy → Play 200

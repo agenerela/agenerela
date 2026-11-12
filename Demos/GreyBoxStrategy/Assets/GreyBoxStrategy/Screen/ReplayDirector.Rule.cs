@@ -54,7 +54,9 @@ namespace GreyBoxStrategy.Realm
             World world = null;
             var provider = new ScriptedProvider { Callback = r => ScriptedRuler(r, rng, world) };
             provider.Otherwise(ScriptedReply.Decide("none", statement: "We wait."));
-            BeginRule(country, "scripted", gameSeed, (m, w) => { world = w; return provider; }, busyCardSeconds > 0 ? new StandInLock(busyCardSeconds) : null);
+            var wrapped = DevProvider.Wrap(provider);
+            BeginRule(country, "scripted", gameSeed, (m, w) => { world = w; return wrapped; }, busyCardSeconds > 0 ? new StandInLock(busyCardSeconds) : null);
+            if (rule != null) rule.Dev = true;
         }
 
         private sealed class StandInLock : RuleSession.ICardLock
@@ -78,7 +80,7 @@ namespace GreyBoxStrategy.Realm
         };
 
         // A stand-in ruler: one of the moves the rules offer its country, at random, with a stock line.
-        private static ScriptedReply ScriptedRuler(ScriptedRequest r, System.Random rng, World world)
+        internal static ScriptedReply ScriptedRuler(ScriptedRequest r, System.Random rng, World world)
         {
             if (r.IsRefusalLine) return ScriptedReply.Statement("We will not.");
             if (r.OfferedActions.Contains(Actions.AcceptPeace))
@@ -165,6 +167,9 @@ namespace GreyBoxStrategy.Realm
             {
                 builtResolved = rule.Resolved;
                 game = rule.BuildReplay();
+                // Never silent: a turn that resolved but cannot be rebuilt from the recording is a bug to see.
+                if (game.Turns.Count < rule.Resolved)
+                    ui.ShowNotice($"The replay cannot rebuild turn {game.Turns.Count + 1}: {game.StoppedBecause}");
             }
             return game.Turns.Count;
         }

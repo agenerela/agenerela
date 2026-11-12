@@ -272,3 +272,16 @@
 .set-slider .unity-base-slider__dragger-border { display: none; }
 .compact .menu.main { padding: 12px 22px; }
 .compact .menu-big { padding: 6px 12px; margin-bottom: 5px; font-size: 15px; }
+/* the dev menu: a plain tool, not part of the look */
+.dev { position: absolute; left: 8px; top: 50px; width: 470px; max-height: 92%; background-color: rgba(8, 8, 10, 0.95); border-width: 1px; border-color: rgb(120, 180, 220); font-size: 11.5px; color: rgb(220, 225, 230); }
+.dev-head { flex-direction: row; align-items: center; padding: 3px 6px; background-color: rgb(25, 45, 60); color: rgb(160, 210, 240); }
+.dev-sec { font-size: 10px; -unity-font-style: bold; color: rgb(120, 180, 220); margin: 6px 6px 2px 6px; }
+.dev-row { flex-direction: row; flex-wrap: wrap; padding: 0 4px; }
+.dev-b { height: 20px; margin: 1px; padding: 0 6px; font-size: 11px; background-color: rgb(30, 36, 42); border-width: 1px; border-color: rgb(70, 90, 105); border-radius: 0; color: rgb(220, 225, 230); }
+.dev-b:hover { background-color: rgb(45, 60, 72); }
+.dev-b.fill { border-color: rgb(110, 100, 60); }
+.dev-mono { white-space: normal; font-size: 11px; padding: 4px 6px; color: rgb(190, 220, 200); }
+.dev-out { color: rgb(230, 210, 150); background-color: rgba(255, 255, 255, 0.04); margin: 0 4px; }
+.dev-line { flex-grow: 1; margin: 1px; }
+.dev-line .unity-text-field__input { background-color: rgb(20, 24, 28); color: rgb(230, 230, 230); border-color: rgb(70, 90, 105); font-size: 12px; }
+.dev-mark { font-size: 11px; -unity-font-style: bold; padding: 2px 7px; margin-right: 10px; color: rgb(255, 255, 255); background-color: rgb(170, 40, 40); }

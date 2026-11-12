@@ -53,6 +53,8 @@ namespace GreyBoxStrategy.Realm
         private readonly Dictionary<string, CountryAgent> seats = new Dictionary<string, CountryAgent>(StringComparer.Ordinal);
         private AwaitableCompletionSource<Move> pending;
         private Exception failure;
+        private readonly List<string> devQueue = new List<string>();
+        private readonly List<DevEdit> devApplied = new List<DevEdit>();
         private DecisionLog log;
 
         public RuleSession(string you, string model, string arm, int seed, string logPath, Func<string, World, ILLMProvider> providerFor, ICardLock cardLock = null)
@@ -105,6 +107,26 @@ namespace GreyBoxStrategy.Realm
         public bool HoldsCard { get; private set; }
         /// <summary>When the current wait began: for the card, or for the rulers' round (UTC).</summary>
         public DateTime WaitingSince { get; private set; } = DateTime.UtcNow;
+        /// <summary>True once the dev menu has touched this game, or it was played with stand-in rulers: never a measured game.</summary>
+        public bool Dev { get; set; }
+        /// <summary>Dev edits waiting for the start of the next turn.</summary>
+        public IReadOnlyList<string> DevQueued => devQueue;
+        /// <summary>Dev edits applied so far, each with the turn it started.</summary>
+        public IReadOnlyList<DevEdit> DevApplied => devApplied;
+
+        /// <summary>
+        /// Queues a dev edit (<see cref="DevEdits"/>) for the start of the next turn, so the game and
+        /// its replay change at the same point. Null when queued, else why not. Marks the game dev.
+        /// </summary>
+        public string QueueDev(string command)
+        {
+            string why = DevEdits.WhyNot(Game, command);
+            if (why != null) return why;
+            devQueue.Add(command);
+            Dev = true;
+            return null;
+        }
+
         /// <summary>Turns resolved so far: the screen plays a turn only once it has.</summary>
         public int Resolved { get; private set; }
 
@@ -194,7 +216,15 @@ namespace GreyBoxStrategy.Realm
         private async Awaitable PlayTurn()
         {
             var rounds = new List<DecisionRound>();
+            foreach (string command in devQueue)
+            {
+                string why = DevEdits.Apply(Game, command);
+                if (why == null) devApplied.Add(new DevEdit { Turn = Game.NextTurn, Command = command });
+                else Debug.LogWarning($"Painted Realm: dev edit '{command}' did not apply: {why}");
+            }
+            devQueue.Clear();
             var council = Game.BeginTurn();
+            DevEdits.AfterBeginTurn(Game);
             int turn = Game.World.Turn;
             var mine = council.FirstOrDefault(r => r.CountryId == You);
 
@@ -214,12 +244,13 @@ namespace GreyBoxStrategy.Realm
             answers.AddRange(await models);
 
             var envoys = Game.SubmitCouncil(answers);
-            var myOffer = envoys.FirstOrDefault(r => r.CountryId == You);
+            // Several rulers may offer you peace in one turn: each envoy waits for its own answer.
+            var myOffers = envoys.Where(r => r.CountryId == You).ToList();
             var replies = new List<CountryAnswer>();
             ModelsThinking = envoys.Any(r => seats.ContainsKey(r.CountryId));
             if (ModelsThinking) WaitingSince = DateTime.UtcNow;
             var modelReplies = Decide(envoys.Where(r => seats.ContainsKey(r.CountryId)).ToList(), $"seed-{Seed}-turn-{turn}-envoys", rounds);
-            if (myOffer != null)
+            foreach (var myOffer in myOffers)
             {
                 OfferStatement = seats.TryGetValue(myOffer.OfferedBy, out var by)
                     ? by.Decisions.LastOrDefault(d => d.Turn == turn && d.Moment == Moment.Council)?.Statement : null;
@@ -346,6 +377,8 @@ namespace GreyBoxStrategy.Realm
             var rec = GreyBoxStrategy.Replay.Recording.FromDecisionLog(Lines(), Seed, Players, $"You rule {Cap(You)}, seed {Seed}");
             rec.Source = "rule";
             rec.Decisions.AddRange(yours);
+            rec.DevEdits.AddRange(devApplied);
+            rec.Dev = Dev;
             return rec;
         }
 

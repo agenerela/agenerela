@@ -117,6 +117,7 @@ namespace GreyBoxStrategy.Realm
             ui.DiplomacyPressed = ToggleDiplomacy;
             ui.DecisionPressed = e => { if (CanInspect(e)) ui.ShowCard(DecisionCard.From(e)); };
             ui.AddMenuButton(OpenPause);
+            DevTools.Director = this;
             ApplyScale();
             ui.monoFont = UnityEngine.TextCore.Text.FontAsset.CreateFontAsset("Consolas", "Regular");
             Show(game.Initial, null);
@@ -195,7 +196,7 @@ namespace GreyBoxStrategy.Realm
         }
 
         /// <summary>For the Unity CLI and tests: play faster, or jump ahead to a turn without animating.</summary>
-        public void SetSpeed(float s) { speed = Mathf.Clamp(s, 0.25f, 8); ui?.SetPlaying(playing, speed); }
+        public void SetSpeed(float s) { speed = Mathf.Clamp(s, 0.25f, 32); ui?.SetPlaying(playing, speed); }
         public void SkipToTurn(int turn) { skipUntilTurn = turn; playing = true; ui?.SetPlaying(true, speed); }
         public void Pause() { playing = false; ui?.SetPlaying(false, speed); }
         /// <summary>The kind of the event being played, for the CLI to wait on ("Capture").</summary>
@@ -316,12 +317,13 @@ namespace GreyBoxStrategy.Realm
                 if (soft != null) ui.ShowNotice(soft);
             }
             var mouse = Mouse.current; var kb = Keyboard.current;
-            if (kb != null)
+            if (kb != null && !ui.Typing)
             {
                 if (kb.spaceKey.wasPressedThisFrame) ui.Root.schedule.Execute(() => { playing = !playing; ui.SetPlaying(playing, speed); });
                 if (kb.nKey.wasPressedThisFrame) { playing = false; stepOnce = true; ui.SetPlaying(false, speed); }
                 if (kb.equalsKey.wasPressedThisFrame || kb.numpadPlusKey.wasPressedThisFrame) { speed = speed >= 4 ? 1 : speed * 2; ui.SetPlaying(playing, speed); }
-                if (kb.escapeKey.wasPressedThisFrame) Escape();
+                if (kb.escapeKey.wasPressedThisFrame) { if (ui.DevOpen) ui.CloseDev(); else Escape(); }
+                if (kb.f1Key.wasPressedThisFrame) ToggleDevMenu();
                 if (kb.digit1Key.wasPressedThisFrame) SetMode(MapMode.Political);
                 if (kb.digit2Key.wasPressedThisFrame) SetMode(MapMode.Armies);
                 if (kb.digit3Key.wasPressedThisFrame) SetMode(MapMode.Forts);
@@ -356,6 +358,7 @@ namespace GreyBoxStrategy.Realm
                 }
             }
             ui.PlaceLabels(shown);
+            DevUpdate();
         }
 
         private void PanTo(int province)

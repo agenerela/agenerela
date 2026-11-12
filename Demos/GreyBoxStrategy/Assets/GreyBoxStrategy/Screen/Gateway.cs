@@ -84,6 +84,8 @@ namespace GreyBoxStrategy.Realm
 
         public static LockNote ReadLock(string lockPath)
         {
+            // The dev menu's pretended holder: shown everywhere, and no real lock is read or taken.
+            if (DevFaults.FakeLockHolder != null) return new LockNote { Owner = DevFaults.FakeLockHolder, Since = DateTime.Now.AddMinutes(-3), Expect = "pretended by the dev menu" };
             if (!Directory.Exists(lockPath)) return null;
             var note = new LockNote();
             try
@@ -114,6 +116,7 @@ namespace GreyBoxStrategy.Realm
 
         public static bool TakeLock(string lockPath, string owner, string what, string model)
         {
+            if (DevFaults.FakeLockHolder != null) return false; // pretend someone holds it; touch nothing
             if (Directory.Exists(lockPath)) return false;
             try
             {
@@ -189,6 +192,12 @@ namespace GreyBoxStrategy.Realm
         /// <summary>Asks the gateway for its version, with a short timeout. Calls back with null when it answers.</summary>
         public static IEnumerator CheckServer(Action<string> done)
         {
+            if (DevFaults.ServerDown)
+            {
+                yield return new WaitForSeconds(1f);
+                done("Cannot reach the server at " + UrlVariable + " (pretended by the dev menu). Check the network or the VPN.");
+                yield break;
+            }
             var cts = new CancellationTokenSource(TimeSpan.FromSeconds(6));
             var task = http.SendAsync(Request(System.Net.Http.HttpMethod.Get, "/api/version"), cts.Token);
             while (!task.IsCompleted) yield return null;
@@ -206,13 +215,13 @@ namespace GreyBoxStrategy.Realm
             }
         }
 
-        public static ILLMProvider Provider(string model) => new OllamaProvider(new OllamaSettings
+        public static ILLMProvider Provider(string model) => DevProvider.Wrap(new OllamaProvider(new OllamaSettings
         {
             Endpoint = Environment.GetEnvironmentVariable(UrlVariable),
             ApiKey = Key,
             Model = model,
             TimeoutSeconds = 90f,
-        });
+        }));
 
         /// <summary>Leaves the card as it was found: asks the server to unload the model (keep_alive 0).</summary>
         public static async Awaitable Unload(string model)

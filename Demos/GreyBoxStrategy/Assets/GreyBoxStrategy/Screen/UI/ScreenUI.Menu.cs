@@ -298,13 +298,14 @@ namespace GreyBoxStrategy.Realm
 
         // ---- the pause menu ----
 
-        public void ShowPause(Action resume, Action settings, Action mainMenu)
+        public void ShowPause(Action resume, Action settings, Action mainMenu, string note = null)
         {
             var card = Page("pause", resume);
             card.Add(Heading("PAUSED"));
             card.Add(BigButton("Resume", "Esc", resume));
             card.Add(BigButton("Settings", null, settings));
             card.Add(BigButton("Main menu", "Ends this game; a live or rule game lets the RTX 5080 go", mainMenu));
+            if (note != null) { var n = new Label(note); n.AddToClassList("src"); n.style.alignSelf = Align.Center; card.Add(n); }
         }
 
         // ---- the notice line ----
