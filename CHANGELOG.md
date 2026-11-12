@@ -29,6 +29,17 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Non-generative deciders researched and measured against `qwen3.5:4b`**, on the RTX 5080 with the
+  control re-run in the same session: a new wiki page, `docs/llm-wiki/non-llm-deciders.md`, with a
+  survey and the results, an entry in `findings.md` and a row in `live-runs.md`. The probe is
+  `tools/benchmarks/non_llm_decider_probe.py`; its reference and tuning examples, written new and
+  checked against both sets, are in `non_llm_examples.json`.
+  - The best engine, `bge-m3` embeddings with a trained head, scores 279/389 and 60/76 against the
+    4B's 330 and 70, beyond noise on both sets.
+  - A cascade that lets the engine answer only when it is confident is the one idea left to A/B.
+  - No reranker runs on Ollama 0.40.14.
+  - Five small models pulled onto the server: three embedders and two reranker GGUFs. No framework
+    code changed.
 - **Two 4B-class candidates measured against `qwen3.5:4b`** (#252's first arms), on the RTX 5080
   with the control re-run in the same session. The candidates are `gemma4:e4b-it-qat` and
   `nemotron-3.5-bolt:e4b`. Results are in `findings.md` and `model-candidates.md`'s "Measured",
