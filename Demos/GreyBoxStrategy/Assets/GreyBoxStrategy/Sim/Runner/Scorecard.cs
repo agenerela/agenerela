@@ -149,10 +149,10 @@ namespace GreyBoxStrategy
             ("events", "story phrases shared", "Of a story's two-word phrases, those an earlier story of the same game already had (pairs of two common words left out): the stories repeating themselves."),
             ("events", "titles shared across seeds", "Of the storyteller's titles, those that also appear in another game of the table: the stories repeating between games."),
             ("events", "stories replaced", "Of the storyteller's events, those whose story the game replaced: it named a country the event did not reach, held a number or ran long."),
-            ("events", "titles missing", "Of the storyteller's events, those with no title before a colon, so the template's own title stood."),
+            ("events", "titles missing", "Of the storyteller's events, those whose statement had no title before a colon, whatever else the story check did."),
             ("events", "net value Gini", "How unevenly events' net worth fell on the five countries in a game, 0 even; Gini's mean difference over the mean absolute value, so blows count as well as gifts."),
             ("events", "value tracks standing", "Correlation, within a game, between what an event was worth to a country and its provinces then against the mean: below 0 helps the weak, above 0 crowns the strong."),
-            ("events", "hit rulers naming it", "Of model rulers hit by an event, those whose statement on that turn's council names it (a word of its title or of its kind): the event reached the story."),
+            ("events", "hit rulers naming it", "Of model rulers hit by an event who made a statement on that turn's council, those whose statement names it (a word of its title or of its kind): the event reached the story."),
             ("events", "storyteller calls", "Times the storyteller was asked."),
             ("events", "storyteller chose none", "Of its calls, those that made nothing happen, after the guards."),
             ("events", "storyteller illegal answers", "Of its answers, before any guard, those that were no event it was offered."),
@@ -759,7 +759,7 @@ namespace GreyBoxStrategy
                     Add(S, G, "titles shared across seeds", Share(bySeed.Count(t => games[t.title] > 1), bySeed.Count));
                 }
                 Add(S, G, "stories replaced", Share(told.Sum(x => x.ev.Count(e => e.StoryReplaced)), toldCount));
-                Add(S, G, "titles missing", Share(told.Sum(x => x.ev.Count(e => e.StoryVerdict == "no title")), toldCount));
+                Add(S, G, "titles missing", Share(told.Sum(x => x.ev.Count(e => EventRules.SplitTitle(e.Statement).title == null)), toldCount));
             }
 
             // Fairness: how unevenly the net worth fell, and whether it followed standing.

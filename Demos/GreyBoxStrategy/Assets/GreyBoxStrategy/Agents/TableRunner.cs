@@ -301,6 +301,9 @@ namespace GreyBoxStrategy
         {
             if (arms == null || arms.Count == 0) throw new ArgumentException("No arms to run.", nameof(arms));
             if (block < 1) block = games;
+            // Two arms in one folder would append to one decision log and overwrite each other's files.
+            var clash = arms.GroupBy(a => a.name, StringComparer.OrdinalIgnoreCase).FirstOrDefault(g => g.Count() > 1);
+            if (clash != null) throw new ArgumentException($"Two arms are named '{clash.Key}': give each its own name.", nameof(arms));
             var seeds = GameRunner.Seeds(games, firstSeed);
             var played = arms.Select(_ => new List<TableGame>()).ToList();
             var started = DateTime.Now;

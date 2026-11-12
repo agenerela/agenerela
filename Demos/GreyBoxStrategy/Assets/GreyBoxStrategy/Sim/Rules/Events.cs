@@ -112,9 +112,9 @@ namespace GreyBoxStrategy
 
         public IEnumerable<EventRecord> Told => Events.Where(e => e.Source == EventRecord.FromStoryteller);
 
-        /// <summary>What events were worth to a country over the <paramref name="window"/> turns before <paramref name="turn"/>.</summary>
+        /// <summary>What events were worth to a country over the <paramref name="window"/> turns before <paramref name="turn"/> (turns turn − window to turn − 1).</summary>
         public int NetValue(string country, int turn, int window) =>
-            Events.Where(e => e.Turn > turn - window && e.Turn < turn && e.Value.ContainsKey(country)).Sum(e => e.Value[country]);
+            Events.Where(e => e.Turn >= turn - window && e.Turn < turn && e.Value.ContainsKey(country)).Sum(e => e.Value[country]);
 
         /// <summary>The storyteller's last <paramref name="n"/> events, latest last.</summary>
         public List<EventRecord> LastTold(int n)
@@ -433,14 +433,7 @@ namespace GreyBoxStrategy
             string text = (statement ?? "").Trim();
             if (text.Length == 0) return (t.FallbackTitle, fallbackStory, "replaced: no story");
 
-            string title = null, story = text;
-            int colon = text.IndexOf(':');
-            if (colon > 0 && colon <= 80)
-            {
-                title = Clean(text.Substring(0, colon));
-                story = text.Substring(colon + 1).Trim();
-                if (title.Length == 0) title = null;
-            }
+            var (title, story) = SplitTitle(text);
 
             string wrong = WrongName(w, hit, (title ?? "") + " " + story);
             if (wrong != null) return (t.FallbackTitle, fallbackStory, $"replaced: names {wrong}");
@@ -448,6 +441,16 @@ namespace GreyBoxStrategy
             if (Scorecard.Words(story) > MaxStoryWords) return (title ?? t.FallbackTitle, fallbackStory, "replaced: too long");
             if (story.Length == 0) return (title ?? t.FallbackTitle, fallbackStory, "replaced: no story");
             return title == null ? (t.FallbackTitle, story, "no title") : (title, story, "kept");
+        }
+
+        /// <summary>A statement's title, before its first colon within 80 characters, and its story; the title is null when there is none.</summary>
+        public static (string title, string story) SplitTitle(string statement)
+        {
+            string text = (statement ?? "").Trim();
+            int colon = text.IndexOf(':');
+            if (colon <= 0 || colon > 80) return (null, text);
+            string title = Clean(text.Substring(0, colon));
+            return (title.Length == 0 ? null : title, text.Substring(colon + 1).Trim());
         }
 
         /// <summary>A country the text names that the event did not reach, or one whose province it names; null when there is none.</summary>

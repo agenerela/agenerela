@@ -167,6 +167,11 @@ namespace GreyBoxStrategy.Tests
             Assert.That(g.WhyNotEvent(EventRules.Volunteers, "kesh"), Does.Contain("enough good fortune"), "the budget holds every gift back");
             Assert.That(g.WhyNotEvent(EventRules.Unrest, "valen"), Is.Not.Null, "valen was struck by the last event");
 
+            // The budget's window is the five turns before: kesh's turn-2 windfall still counts on turn 7, not on turn 8.
+            Assert.That(g.Rules.EventBudgetWindow, Is.EqualTo(5));
+            Assert.That(g.Events.NetValue("kesh", 7, 5), Is.EqualTo(60));
+            Assert.That(g.Events.NetValue("kesh", 8, 5), Is.EqualTo(0));
+
             var open = EventRules.Open(g.World, g.Events, g.NextTurn);
             Assert.That(open, Has.No.Member((EventRules.Volunteers, "kesh")));
             Assert.That(open, Has.Member((EventRules.Windfall, "ilvar")));
@@ -212,7 +217,7 @@ namespace GreyBoxStrategy.Tests
                     Assert.That(e.Turn, Is.GreaterThanOrEqualTo(r.EventFirstTurn));
                     foreach (string c in e.Hit)
                     {
-                        int net = history.Where(h => h.Turn > e.Turn - r.EventBudgetWindow && h.Value.ContainsKey(c)).Sum(h => h.Value[c]);
+                        int net = history.Where(h => h.Turn >= e.Turn - r.EventBudgetWindow && h.Value.ContainsKey(c)).Sum(h => h.Value[c]);
                         if (t.Bonus)
                         {
                             Assert.That(provinces[c], Is.LessThan(r.EventNoBonusFromProvinces), $"seed {seed} {e}: no gift to the leader");
@@ -311,6 +316,8 @@ namespace GreyBoxStrategy.Tests
             Assert.That(EventRules.CheckStory(w, t, new[] { "valen" }, null, "Grey Cough: Twelve fell in Highmoor.").verdict, Is.EqualTo("kept"), "valen's own province is fine");
             Assert.That(EventRules.CheckStory(w, t, new[] { "valen" }, null, "Grey Cough: 12 soldiers died.").verdict, Is.EqualTo("replaced: has a number"));
             Assert.That(EventRules.CheckStory(w, t, new[] { "valen" }, null, "A cough spread through valen's camps.").verdict, Is.EqualTo("no title"));
+            Assert.That(EventRules.SplitTitle("12 soldiers fell in valen.").title, Is.Null, "a replaced story can lack a title too");
+            Assert.That(EventRules.SplitTitle("Grey Cough: it spread.").title, Is.EqualTo("Grey Cough"));
         }
 
         [Test]
@@ -404,6 +411,11 @@ namespace GreyBoxStrategy.Tests
                     ("control", Tables.Named("fake,fake,fake,fake,fake", null, arm: "default")),
                     ("story", Tables.Named("fake,fake,fake,fake,fake", null, arm: "default+storyteller")),
                 };
+                var twice = new List<(string, TableDefinition)> { arms[0], ("Control", arms[1].Item2) };
+                ArgumentException clash = null;
+                try { await StrategyTableRuns.RunInterleavedAsync(folder, twice, (m, w) => Fake(w), 2, 1, 1); }
+                catch (ArgumentException e) { clash = e; }
+                Assert.That(clash, Is.Not.Null, "two arms in one folder");
                 var cards = await Await.NotCancelled(StrategyTableRuns.RunInterleavedAsync(folder, arms, (m, w) => Fake(w), 2, 1, 1));
                 string story = System.IO.Path.Combine(folder, "story");
                 foreach (string f in new[] { "events.csv", "events.md", "storyteller.csv", "scorecard.md", "scorecard-games.csv", "game-0001.md", "game-0002.md" })

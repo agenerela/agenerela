@@ -3654,7 +3654,7 @@ aggression by persona: 0.84, 0.81, 0.82. Warmonger wins: 13, 12, 15 of 20.
 *Event value* counts soldiers at 2 gold, stability at 20, a fort at 30. *Net value Gini* is the mean
 absolute difference over twice the mean absolute value, so blows count. *Value tracks standing* is,
 within a game, the correlation between what an event was worth to a country and its provinces then
-against the living mean. *Hit rulers naming the event*: of model rulers hit, those whose statement
+against the living mean. *Hit rulers naming the event*: of model rulers hit who made a statement, those whose statement
 on that turn's council holds a word of four letters or more from the title, or a word of the kind
 (harvest, plague, fever...); the table's events have no title, so the control is scored on the kind
 alone, which favours it.
@@ -3663,7 +3663,7 @@ alone, which favours it.
 containment; `none` 0.4% / 0.7%; one `UnreadableReply` each after about 20 s; no event refused when
 it landed; median 0.69 s a call on about 1,340 prompt tokens (the rulers' median stayed 0.45 s).
 Stories replaced by the game's check 4.9% / 3.4% (16 / 10 for a digit, 7 / 5 for naming a country the
-event did not reach). No title 45% / 44%. Titles not repeated within their game 59% / 65%; titles
+event did not reach). No title 47% / 44% (counted from the statement, so stories the check replaced count too). Titles not repeated within their game 59% / 65%; titles
 that also appear in another game 72% / 77%. A story shares 18% / 16% of its two-word phrases with the
 game's earlier stories. Targets: 340 / 293 countries, 111 / 120 groups (`the_leader` 56 / 61), 20 /
 28 provinces. Template mix, story A: bad harvest 98, volunteers 92, unrest 91, plague 83, zeal 51,
@@ -3699,5 +3699,5 @@ S2 starts with the titles.
 
 **What would change this.** A blind read by people (the research page's fun test, not run); the
 titles fixed and re-run; the 2B; a storyteller persona, or a storyteller on its own provider at a
-higher temperature (gap 7). Raw data: `.scratch/storyteller-s1/runs/ab/` in the short-path worktree
-`C:\Unity_Projects\wt-st` on the lead's laptop (smoke games, the title probe and the labels beside it).
+higher temperature (gap 7). Raw data: `.scratch/storyteller-s1/runs/ab/` in the lead's laptop
+checkout (the smoke games, the title probe, the labels and the scripts beside it).

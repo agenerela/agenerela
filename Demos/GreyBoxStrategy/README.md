@@ -745,7 +745,7 @@ the fact ledger.
 (`IsAvailableFor`) and the re-check when the event lands at upkeep:
 
 - none before turn 3;
-- a budget: a country whose events over the last 6 turns are worth +60 gold or more gets no gift,
+- a budget: a country whose events over the last 5 turns are worth +60 gold or more gets no gift,
   −60 or less no blow (soldiers count at 2 gold, stability at 20, a fort at 30);
 - no gift to a country at 12 provinces or more, no blow on one with fewer than 3;
 - a sickness only on an army of 20 or more, unrest only at stability 3 or more, no fort falls in a
@@ -834,7 +834,7 @@ and 0.82. The warmonger wins 13, 12 and 15 of the 20.
 **The storyteller itself:** 473 and 444 calls, no illegal answer (the paired schema), no containment,
 none chosen in 0.4% and 0.7%, one unreadable reply per arm (a 20 s runaway), no event refused when it
 landed, 0.69 s median a call on about 1,340 prompt tokens. Of its stories, 4.9% and 3.4% were
-replaced (most for a number, a few for a wrong country); 45% and 44% came with no title; of the
+replaced (most for a number, a few for a wrong country); 47% and 44% came with no title; of the
 titles in a game, 59% and 65% were not repeated in it; 72% and 77% of titles also appear in another
 game; a story shares 18% and 16% of its two-word phrases with the game's earlier stories.
 

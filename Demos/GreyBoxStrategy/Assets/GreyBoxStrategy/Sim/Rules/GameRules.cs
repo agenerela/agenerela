@@ -73,7 +73,9 @@ namespace GreyBoxStrategy
         public int EventFirstTurn = 3;
         /// <summary>A country whose events over the last <see cref="EventBudgetWindow"/> turns are worth this much gold or more is offered no gift; this much or less, no blow.</summary>
         public int EventBudget = 60;
-        public int EventBudgetWindow = 6;
+        // Five, as measured on 12 November: until Codex's review the window's lower bound was
+        // exclusive, so the "6" the runs used counted five turns. The bound is inclusive now.
+        public int EventBudgetWindow = 5;
         /// <summary>A template is not offered again within this many of the storyteller's events.</summary>
         public int EventTemplateCooldown = 4;
         /// <summary>
