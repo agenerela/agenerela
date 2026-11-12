@@ -107,6 +107,33 @@ namespace GreyBoxStrategy.Screen.Tests
         }
 
         [Test]
+        public async Task Two_peace_offers_in_one_turn_each_wait_for_an_answer()
+        {
+            var provider = new ScriptedProvider
+            {
+                Callback = r => r.OfferedActions.Contains(Actions.OfferPeace) && r.OfferedTargets.Contains(You)
+                    ? ScriptedReply.Decide(Actions.OfferPeace, You, "Peace.") : null,
+            }.Otherwise(ScriptedReply.Decide("none"));
+            var s = Session(provider);
+            var run = s.RunAsync();
+            await Until(() => s.WaitingFor == RuleSession.Waiting.Orders, "your first order");
+            Assert.That(s.QueueDev("war kesh merrow"), Is.Null);
+            Assert.That(s.QueueDev("war kesh ilvar"), Is.Null);
+            s.Order(Move.Hold);
+            await Until(() => s.Resolved == 1 && s.WaitingFor == RuleSession.Waiting.Orders, "turn 2's council");
+            s.Order(Move.Hold);
+            await Until(() => s.WaitingFor == RuleSession.Waiting.Envoy, "the first envoy");
+            string first = s.Offer.OfferedBy;
+            s.Answer(true);
+            await Until(() => s.WaitingFor == RuleSession.Waiting.Envoy && s.Offer.OfferedBy != first, "the second envoy");
+            s.Answer(false);
+            await Until(() => s.Resolved == 2, "turn 2 to resolve");
+            Assert.That(s.BuildReplay().Turns.Count, Is.EqualTo(2), "both answers are in the recording, so the replay rebuilds the turn");
+            s.Stop();
+            await run;
+        }
+
+        [Test]
         public async Task The_card_is_held_for_the_whole_game_and_let_go_when_it_ends()
         {
             var cardLock = new CountingLock();

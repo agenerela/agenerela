@@ -46,6 +46,7 @@ namespace GreyBoxStrategy.Replay
                 ProvinceIds = provinceIds,
                 Columns = cols,
                 Players = recording.Players,
+                Dev = recording.Dev || recording.DevEdits.Count > 0,
             };
             var since = new Dictionary<string, int>(StringComparer.Ordinal);
             replay.Initial = Capture(game.World, provinceIds, since);
@@ -59,16 +60,29 @@ namespace GreyBoxStrategy.Replay
                 TurnReport tr;
                 try
                 {
+                    // The dev menu's changes for this turn land first, as they did in the game.
+                    int next = game.World.Turn + 1;
+                    if (recording.DevEdits.Any(d => d.Turn == next))
+                    {
+                        DevEdits.ApplyFor(game, recording.DevEdits, next);
+                        // The turn starts from the edited state, so upkeep and the end check build on it.
+                        state = Capture(game.World, provinceIds, since);
+                        turn.Start = state;
+                    }
                     var council = game.BeginTurn();
+                    DevEdits.AfterBeginTurn(game);
                     var envoys = game.SubmitCouncil(council.Select(r => new CountryAnswer(r, players.Decide(r))).ToList());
                     tr = game.Resolve(envoys.Select(r => new CountryAnswer(r, players.Decide(r))).ToList());
                 }
-                catch (InvalidOperationException) when (partial)
+                catch (InvalidOperationException e) when (partial)
                 {
-                    break; // the game has not got this far yet
+                    replay.StoppedBecause = e.Message;
+                    break; // the game has not got this far yet, or the recording cannot rebuild it
                 }
 
                 // Upkeep happened before the council; its state is the council's snapshot plus what we read off the world now.
+                foreach (var d in recording.DevEdits.Where(d => d.Turn == turn.Turn))
+                    turn.Events.Add(new ReplayEvent { Turn = turn.Turn, Kind = ReplayEventKind.Dev, Text = d.Command, After = state.Clone() });
                 var councilState = state.Clone();
                 var snap = game.Snapshots.Last();
                 for (int i = 0; i < provinceIds.Length; i++) councilState.Owners[i] = snap.OwnerOf(provinceIds[i]);

@@ -138,7 +138,7 @@ namespace GreyBoxStrategy.Realm
         {
             if (!started) return;
             if (!ui.MenuOpen) { pausedByMenu = playing; playing = false; ui.SetPlaying(false, speed); }
-            ui.ShowPause(ResumeFromPause, () => OpenSettings(OpenPause), LeaveToMenu);
+            ui.ShowPause(ResumeFromPause, () => OpenSettings(OpenPause), LeaveToMenu, DevTools.Available ? "F1 opens the dev menu (editor and development builds)" : null);
         }
 
         private void ResumeFromPause()
