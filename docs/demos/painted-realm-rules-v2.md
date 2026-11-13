@@ -1598,6 +1598,40 @@ exists, and where it differs from the list above:
 - **Measured:** [9.3](#93-the-ab-each-slice-owes), the latency probe first.
 - **Playable:** watch, live and rule on Classic, with armies; wars end in treaties.
 
+**Split in three, 12 November** (proposed to the tech lead with R2's follow-up):
+- **R1a, the rules, headless: built.**
+- **R1b:** the court and marshal agents, and the prompt fixes R2 found: the standing facts, the length
+  of the moves line, and the game's length.
+- **R1c:** the live measurement on `qwen3.5:4b`.
+
+The screen's half is the screen session's.
+
+**What R1a built, and what it decided** (_Mine_ unless said):
+- **The writs turn is a setting, not a replacement.** `GameRules.Turn` (`OneMove`, the default, or
+  `Writs`) keeps today's game byte for byte: the pinned 200-game series and the recorded replay pass
+  unchanged. `GameSetup.Writs` sets conquest, a 150-turn headless cap, and a 20-turn stalemate ending.
+- **The stalemate ends a game.** Section 6.1 asks only that it be counted. A headless run needs an end,
+  so 20 turns without a change of owner or controller ends the game as `Stalemate`, the leader named
+  and nobody winning.
+- **A border crossing:** the winner steps through, and the loser never crosses. Since the winner now
+  stands in the province the loser was leaving, the loser falls back from it, with no second battle.
+  Section 1.1's "the loser stays in the province it was leaving" cannot hold with the winner there.
+- **Sieges, stores, unit types and generals' traits wait for R3.** A walled province is fought for
+  through its militia (5 + 10 a fort, plus the capital bonus) rather than besieged. Wake conditions 3
+  and 6 (a siege ends, stores run low) wait with them.
+- **Recruiting** keeps today's levy (5 + 5 a province, paid at 2 gold a soldier). It appears at the
+  capital, joining an army standing there up to 100, the rest forming new armies. Companies of 10 by
+  type come with R3.
+- **The status-quo offer, the other treaty terms and the war-weariness parts of 5.1 wait for R7**, as
+  the page planned.
+- **What the scripted players needed.** Without the random events, two scripted neighbours armed in
+  step forever, and neither outnumbered the other enough to declare war. War is now weighed against
+  the share of a rival's army that defends a province (`DefenceShare`, 0.7, as the one-move script
+  does). The expansionist weighs war before arming, the cautious after.
+- **Measured by simulation:** 0.95 armies awaiting orders a ruler a turn on Classic, against the
+  page's estimate of 1.0. A medium generated world rarely ends within 150 turns (19 of 20 games
+  unfinished), so the game's length needs tuning before R1c's live runs.
+
 ### R2. The map generator, headless, and a drawn-chart spike
 
 - **Sim:**
@@ -1858,21 +1892,21 @@ line, and `findings.md` for anything measured.
 - [x] Test: settings round-trip; conquest ends; old recordings replay
 
 **R1, the turn of writs and armies as pieces**
-- [ ] `Army`, orders, standing orders and the eight wake conditions
-- [ ] Writs a turn, the order cycle, the second court order
-- [ ] Simultaneous movement with terrain turns; border crossings; re-check on landing
-- [ ] Battles between armies, retreat and rout, militia and neutral garrisons
-- [ ] Occupation and controller; neutral land taken by entering; freeing occupied land
-- [ ] War score; `offer_white_peace`, `demand_occupied`, `cede_occupied` and their answers; broken realms
+- [x] `Army`, orders, standing orders and the wake conditions (six of eight; sieges and stores in R3)
+- [x] Writs a turn, the order cycle, the second court order
+- [x] Simultaneous movement with terrain turns; border crossings; re-check on landing
+- [x] Battles between armies, retreat and rout, militia and neutral garrisons
+- [x] Occupation and controller; neutral land taken by entering; freeing occupied land
+- [x] War score; `offer_white_peace`, `demand_occupied`, `cede_occupied` and their answers; broken realms
 - [ ] Occupation hatching, the treaty flow from hatch to wash with the seal, hatching lifting on return
-- [ ] Scripted expansionist and cautious with armies; random player
+- [x] Scripted expansionist and cautious with armies; random player
 - [ ] Court and marshal agents, the army in `Correlation`, both moves lines, chained decisions, memory 4
 - [ ] Pieces, march lines, step animation, battle card; rule mode's writs, cycle key and order queue
 - [ ] `ReplayBuilder` rebuilds armies
-- [ ] Tests: costs, simultaneity, determinism, writ cap, every wake condition, occupation never changes
-      the owner, a treaty transfers exactly its term, scripted beats random, the fake model plays the
-      scripted game
-- [ ] Sim: armies awaiting orders a ruler a turn, game length, battles
+- [x] Tests: costs, simultaneity, determinism, writ cap, every wake condition, occupation never changes
+      the owner, a treaty transfers exactly its term, scripted beats random; [ ] the fake model plays the
+      scripted game (R1b)
+- [x] Sim: armies awaiting orders a ruler a turn, game length, battles
 - [ ] Live: the latency probe; then the persona table, 20 games, 40-turn cap, against the one-move game
 
 **R2, the generator headless and the chart spike**

@@ -250,7 +250,7 @@ changed is where it comes from.
   advisor switch (both data only so far). Its saved form:
 
   ```json
-  { "version": 1, "seed": 4, "map": "classic", "countries": 5, "victory": "domination",
+  { "version": 1, "turn": "one_move", "seed": 4, "map": "classic", "countries": 5, "victory": "domination",
     "dominationPercent": 60, "turnLimit": 30, "turnCap": 150, "storyteller": "off", "advisor": true }
   ```
 
@@ -396,6 +396,79 @@ huge world's generator takes about 12 s in the editor before any of this (R2's o
 - With one move a turn, a huge map changes slowly. After 8 turns most of it is still neutral
   hatching.
 - Scripted rulers say nothing, so the chronicle has no speech.
+
+**R1a, the writs turn and armies as pieces, headless** (12 November). Rules v2's turn, as a setting
+beside today's: `GameSetup.Writs(seed)` (or `"turn": "writs"`) plays it, conquest with no turn limit.
+The default stays the one-move game, so every pinned series and recording is unchanged. Nothing asks a
+model yet (R1b); the scripted players and the random baseline play it.
+
+- **A turn.** Each ruler has writs: 2, plus 1 for every 8 provinces it owns, at most 5. The court is
+  asked first. Then come the armies that are waiting for orders, the most urgent first (an enemy army
+  beside them, then the largest), while writs are left beyond one kept for the court. Last, a second
+  court order if a writ is left. Rounds of requests all see one snapshot:
+  ```csharp
+  var requests = game.BeginTurn();
+  while (requests.Count > 0) requests = game.Submit(answers);   // court, armies, second court, treaty answers
+  game.Resolve();
+  ```
+  Each request carries the ruler's earlier orders this turn (`Ordered`), and an army order its army
+  (`ArmyId`, which a model seat will send as the correlation).
+- **Armies** (`Sim/Rules/Armies.cs`) stand in provinces, named for their general (`maren_host`). An
+  order stands until it is done:
+  - `march` takes the shortest path, one step a turn, hills, marsh and mountains taking two;
+  - `hold` lasts four turns.
+
+  An army waits for orders when one of the wake conditions built here fires:
+  - it was raised or reinforced;
+  - it arrived, or its path was blocked;
+  - it fought;
+  - an enemy army came near;
+  - war or peace was made;
+  - four turns passed.
+
+  The other two conditions, a siege ending and stores running low, wait for R3. `Country.Army` stays the
+  total, so upkeep, desertion and the storyteller's events land on the armies unchanged.
+- **The landing order** (`Sim/Rules/WritTurn.cs`):
+  1. treaties, then declarations of war;
+  2. recruits (at the capital), taxes, forts;
+  3. army orders, then every army steps at once;
+  4. battles, then neutral land taken and enemy land occupied.
+
+  Every order is re-checked as it lands, with the function that offered it (`WritLegality`). Two enemy
+  armies crossing one border meet on it. The winner steps through; the loser never crosses, and falls
+  back from the province it was leaving.
+- **Battles** keep today's formula: soldiers × a roll, the holder adding forts and the capital bonus,
+  30% casualties, 60% for the winner. A province with no army defends with a militia of 5 plus 10 a fort.
+  A loser falls back where it came from, or else to a bordering province it holds. One beaten 2.5 to 1,
+  or with nowhere to go, is routed.
+- **Occupation and treaties** (v2 5.1).
+  - Beating an enemy province's defence occupies it. The owner stays, and the occupier draws half its
+    income. Neutral land is taken outright.
+  - The war score counts the value occupied each way, battles (±4 each, at most ±20) and capitals.
+  - The court may put three terms to an enemy:
+    - `offer_white_peace`: everything returns;
+    - `demand_occupied`: what we occupy becomes ours; this needs the war score to pay for it, and is
+      enforced without asking at 90;
+    - `cede_occupied`: what they occupy becomes theirs.
+
+    The other side answers on the same snapshot, at most two a turn. A treaty ends the war in a 5-turn
+    truce.
+  - A realm with every province occupied and no army is broken: its occupiers keep what they hold.
+  - A game where nothing changes hands for 20 turns ends as a stalemate.
+
+**Simulated** (50 games a line-up on Classic, 20 on a medium generated world, scripted and random
+players, 12 November; no model):
+
+| Map, line-up | Turns | One left / stalemate / at the 150 cap | Battles a game | Treaties a game | Decisions a ruler a turn (army orders) |
+|---|---:|---|---:|---:|---|
+| Classic, mixed | 122 | 29 / 9 / 12 | 141 | 30 | 1.94 (49%) |
+| Classic, scripted | 107 | 44 / 3 / 3 | 138 | 17 | 1.86 (49%) |
+| Classic, expansionist against 4 random | 123 | 10 / 22 / 18; the expansionist won 47 | 107 | 56 | 2.16 |
+| Medium, mixed | 150 | 1 / 0 / 19 | 287 | 43 | 2.45 (61%) |
+
+On Classic a ruler is asked about 0.95 armies a turn, close to the page's estimate of 1.0. **A medium
+world rarely finishes within 150 turns**, so the game's length is the first thing R1's numbers have to
+tune.
 
 ## The first real run
 
@@ -1642,10 +1715,11 @@ Assets/GreyBoxStrategy/
   Sim/                GreyBoxStrategy.Sim (noEngineReferences: true): no UnityEngine at all
     Rules/            Dice, GameRules, MapDefinition, World, Move, Legality, Facts, Requests, Game,
                       TurnSnapshot, Events (the storyteller's templates, groups and fairness rules),
-                      GameSetup (rules v2's settings)
+                      GameSetup (rules v2's settings); the writs turn: Armies (Army, WarRecord,
+                      WarScore), WritLegality, WritTurn (Game's second half)
     Map/              WorldMap (the map as data, JSON), Terrain and TerrainTable, ClassicMap; the generator:
                       MapGenerator, MapSettings, MapChecks, MapGeometry, MapNames, SpecialTemplates, MapRandom
-    Players/          IPlayer, ScriptedPlayer and Temperament, RandomPlayer
+    Players/          IPlayer, ScriptedPlayer and Temperament, RandomPlayer, WritScripted (the writs turn)
     Runner/           GameRunner and Lineups, SeriesSummary, GameLog and StrategyRuns, Scorecard, EventLog
   Agents/             GreyBoxStrategy (refs Agenerela, GreyBoxStrategy.Sim): CountryAgent, the model seat;
                       ModelGameRunner (one DecisionRound a council) and ModelReport; ModelSeatOptions,
