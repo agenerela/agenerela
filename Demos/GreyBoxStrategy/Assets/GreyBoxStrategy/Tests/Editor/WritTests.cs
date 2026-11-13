@@ -115,18 +115,18 @@ namespace GreyBoxStrategy.Tests
             Ready(g, "valen");
             Turn(g, r => r.Moment == Moment.Council && r.CountryId == "valen" && r.Ordered.Count == 0 ? new Move(Actions.RaiseTaxes) : null);
             var valen = asked.Where(r => r.CountryId == "valen" && r.Moment != Moment.Envoy).ToList();
-            Assert.That(valen.Count(r => r.Moment == Moment.Army), Is.EqualTo(1), "2 writs: the court and one army of four waiting");
-            Assert.That(valen.Count, Is.EqualTo(2));
-            Assert.That(g.World.ArmiesOf("valen").Count(a => a.Awaiting), Is.EqualTo(3), "the others keep waiting");
+            Assert.That(valen.Count(r => r.Moment == Moment.Army), Is.EqualTo(2), "3 writs: the court and two armies of four waiting");
+            Assert.That(valen.Count, Is.EqualTo(3));
+            Assert.That(g.World.ArmiesOf("valen").Count(a => a.Awaiting), Is.EqualTo(2), "the others keep waiting");
         }
 
         [Test]
         public void Writs_GrowWithTheRealm()
         {
             var g = NewWrits();
-            Assert.That(g.World.Writs("valen"), Is.EqualTo(2));
+            Assert.That(g.World.Writs("valen"), Is.EqualTo(3));
             foreach (var id in new[] { "stonereach", "fenmark", "westmarch", "harrow", "templegate" }) Give(g.World, id, "valen");
-            Assert.That(g.World.Writs("valen"), Is.EqualTo(3), "8 provinces");
+            Assert.That(g.World.Writs("valen"), Is.EqualTo(4), "8 provinces");
             foreach (var p in g.World.ProvinceList) p.Owner = "valen";
             Assert.That(g.World.Writs("valen"), Is.EqualTo(5), "25 provinces: the cap");
         }
@@ -474,6 +474,85 @@ namespace GreyBoxStrategy.Tests
             Assert.That(g.Reports.Sum(r => r.Battles), Is.GreaterThan(0));
         }
 
+        // --- Pace, battle reports and snapshots (R1b's first part) --------------------------------
+
+        [Test]
+        public void Movement_OpenGroundTakesTwoStepsATurn_RoughGroundOne()
+        {
+            var g = NewWrits();
+            Turn(g);
+            foreach (var id in new[] { "fenmark", "harrow" }) Give(g.World, id, "valen");
+            var host = ArmyOf(g, "valen");
+            host.Location = "brindle";
+            Ready(g, "valen");
+            // brindle -> fenmark (plains) -> harrow (forest): both open, both ours.
+            Turn(g, Orders(("valen", Actions.March, "harrow")));
+            Assert.That(host.Location, Is.EqualTo("harrow"), "two open steps in one turn");
+
+            // Rough ground ends the turn's steps: brindle -> fenmark (plains), then ashby (hills) waits.
+            host.Location = "brindle";
+            Ready(g, "valen");
+            Turn(g, r => r.Moment == Moment.Army && r.CountryId == "valen" ? new Move(Actions.March, "ashby") : null);
+            Assert.That(host.Path.Count == 0 || host.Location == "fenmark", Is.True, $"at {host.Location}");
+            Assert.That(host.Location, Is.Not.EqualTo("ashby"), "hills take their two turns");
+        }
+
+        [Test]
+        public void Battles_AreRecordedWithEveryTerm_AndWhyTheyWentAsTheyDid()
+        {
+            var records = new List<BattleRecord>();
+            for (int seed = 1; seed <= 3; seed++)
+            {
+                var played = GameRunner.Play(GameSetup.Writs(seed), "mixed", seed);
+                foreach (var report in played.Reports)
+                {
+                    Assert.That(report.BattleRecords.Count, Is.EqualTo(report.Battles), $"turn {report.Turn}: one record a battle");
+                    records.AddRange(report.BattleRecords);
+                }
+            }
+            Assert.That(records.Count, Is.GreaterThan(50));
+            foreach (var b in records)
+            {
+                Assert.That(b.AttackStrength, Is.EqualTo(b.AttackerSoldiers * b.AttackRoll).Within(1e-6));
+                Assert.That(b.DefenceStrength, Is.EqualTo(b.DefenderSoldiers * b.DefenceRoll + b.FortTerm + b.CapitalTerm).Within(1e-6));
+                Assert.That(b.AttackerWon, Is.EqualTo(b.AttackStrength > b.DefenceStrength));
+                Assert.That(b.AttackRoll, Is.InRange(0.8, 1.2));
+                Assert.That(b.Province != null ^ b.Border != null, Is.True, "a province or a border");
+                Assert.That(new[] { "army", "militia", "garrison" }, Does.Contain(b.DefenderKind));
+                Assert.That(b.Why, Does.StartWith(b.AttackerWon ? b.Attacker + " won" : (b.Defender == null ? "the garrison held" : b.Defender)));
+                Assert.That(b.Why, Does.Contain($"{b.AttackerSoldiers} against {b.DefenderSoldiers}"));
+                Assert.That(b.AttackerLost, Is.InRange(0, b.AttackerSoldiers));
+            }
+            Assert.That(records.Any(b => b.Retreats.Count > 0), Is.True, "beaten armies fall back, and the record says where");
+            Assert.That(records.Any(b => b.FortTerm > 0 && b.Why.Contains("fort")), Is.True);
+        }
+
+        [Test]
+        public void Snapshots_HoldEveryArmyAndOccupation_AsTheCouncilSawThem()
+        {
+            var g = GameRunner.Play(GameSetup.Writs(2), "mixed", 2).Game;
+            Assert.That(g.Snapshots.Count, Is.EqualTo(g.Reports.Count));
+            Assert.That(g.Snapshots.Skip(1).All(s => s.Armies.Count > 0), Is.True);
+            Assert.That(g.Snapshots.Any(s => s.Occupiers.Count > 0), Is.True);
+
+            var live = NewWrits(4);
+            for (int i = 0; i < 6; i++) Turn(live, r => r.Moment == Moment.Army ? r.Legal[0] : null);
+            live.World.Country("valen").Army -= 7; // as an event would, before the next upkeep
+            live.BeginTurn();
+            var snap = live.Snapshots.Last();
+            Assert.That(snap.Armies.Select(a => (a.Id, a.Location, a.Soldiers)), Is.EqualTo(live.World.Armies.Select(a => (a.Id, a.Location, a.Soldiers))));
+            Assert.That(snap.Armies.Sum(a => a.Soldiers), Is.EqualTo(live.World.Alive.Sum(c => c.Army)), "taken after the armies are brought in step");
+        }
+
+        [Test]
+        public void Pace_AClassicGameEndsWithinAboutAnHourOfPlay()
+        {
+            // Scripted players, 12 November: 78 turns on average over 40 games (123 before the tuning).
+            var turns = new List<int>();
+            for (int seed = 1; seed <= 12; seed++) turns.Add(GameRunner.Play(GameSetup.Writs(seed), "mixed", seed).Result.Turns);
+            Assert.That(turns.Average(), Is.LessThan(100), string.Join(", ", turns));
+        }
+
         [Test]
         public void Stalemate_EndsAGameWhereNothingChangesHands()
         {
@@ -544,7 +623,9 @@ namespace GreyBoxStrategy.Tests
             var back = GameSetup.FromJson(writs.ToJson());
             Assert.That(back.ToJson(), Does.Contain("\"turn\": \"writs\""));
             var rules = back.BuildRules(back.BuildMap());
-            Assert.That((rules.Turn, rules.Victory, rules.StalemateTurns), Is.EqualTo((TurnStyle.Writs, VictoryMode.Conquest, 20)));
+            Assert.That((rules.Turn, rules.Victory, rules.StalemateTurns), Is.EqualTo((TurnStyle.Writs, VictoryMode.Conquest, 12)));
+            Assert.That(rules.TruceTurns, Is.EqualTo(3), "the writs turn's shorter truce");
+            Assert.That(new GameSetup().BuildRules(MapDefinition.Standard()).TruceTurns, Is.EqualTo(5), "the one-move game keeps its own");
         }
     }
 }

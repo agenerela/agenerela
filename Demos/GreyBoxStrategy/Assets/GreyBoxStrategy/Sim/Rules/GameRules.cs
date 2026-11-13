@@ -131,24 +131,27 @@ namespace GreyBoxStrategy
 
         // --- Writs (rules v2, R1; every number *to tune*) ------------------------------------
         /// <summary>Writs a turn: this many, plus one per <see cref="ProvincesPerWrit"/> provinces owned, at most <see cref="MaxWrits"/>.</summary>
-        public int BaseWrits = 2;
+        // Tuned for pace on 12 November (R1b): 3 writs, not the page's 2, so a realm moves more of its armies.
+        public int BaseWrits = 3;
         public int ProvincesPerWrit = 8;
         public int MaxWrits = 5;
         /// <summary>An army asks for orders again after this many turns on one order (wake condition 8), and a hold lasts this long.</summary>
         public int WakeAfterTurns = 4;
         /// <summary>A march may be ordered to a province at most this many steps away.</summary>
-        public int MarchRange = 3;
+        public int MarchRange = 4;
+        /// <summary>Steps a march may take in one turn over open ground (plains, forest) where it meets nothing to fight.</summary>
+        public int MarchStepsPerTurn = 2;
         /// <summary>At most this many destinations are offered an army, the nearest first (v2: about a dozen targets a decision).</summary>
         public int MarchTargets = 12;
         /// <summary>Soldiers one army may hold; a levy beyond it forms another army.</summary>
         public int ArmyMax = 100;
         /// <summary>A province with no army defends with this militia, plus <see cref="MilitiaPerFort"/> a fort.</summary>
-        public int MilitiaBase = 5;
-        public int MilitiaPerFort = 10;
+        public int MilitiaBase = 3;
+        public int MilitiaPerFort = 6;
         /// <summary>A loser beaten by this many times its strength, or with nowhere to go, is routed: destroyed.</summary>
         public double RoutRatio = 2.5;
         /// <summary>At this war score a demand lands without being asked (v2 5.1).</summary>
-        public int EnforcedScore = 90;
+        public int EnforcedScore = 80;
         /// <summary>War score from battles: this much a battle won or lost, at most <see cref="BattleScoreMax"/> either way.</summary>
         public int BattleScore = 4;
         public int BattleScoreMax = 20;
@@ -160,6 +163,11 @@ namespace GreyBoxStrategy
         /// stalemate (v2 6.1 measures it; ending it is ours, so a headless run stops). 0: never.
         /// </summary>
         public int StalemateTurns = 0;
+        /// <summary>
+        /// A realm with no army whose capital is occupied breaks too, not only one with every province
+        /// occupied (v2 5.1's rule); its land not occupied goes to its capital's occupier. Ours, for pace.
+        /// </summary>
+        public bool BreakWhenCapitalFalls = false;
 
         /// <summary>Turns to enter a province of this terrain (v2 3.2): 1 on plains and forest, 2 elsewhere.</summary>
         public int TurnsToEnter(Terrain t) => t == Terrain.Plains || t == Terrain.Forest ? 1 : 2;

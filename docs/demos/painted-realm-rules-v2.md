@@ -1632,6 +1632,40 @@ The screen's half is the screen session's.
   page's estimate of 1.0. A medium generated world rarely ends within 150 turns (19 of 20 games
   unfinished), so the game's length needs tuning before R1c's live runs.
 
+**R1b's first part: the pace, 12 November.** The tech lead asked for a game a person finishes in
+about an hour. Scripted games before and after, same seeds:
+
+| Scripted games (mixed line-up) | Turns, mean / median / 90th | Ended | Countries out at turns | Treaties a game |
+|---|---|---|---|---:|
+| Classic, before (40 games) | 123 / 121 / 150 | 23 one left, 8 stalemate, 9 at the 150 cap | 49, ... | 30 |
+| **Classic, after** (40 games) | **78 / 80 / 106** | 39 one left, 1 stalemate | 18, 34, 57, 78 | 8 |
+| Medium, before (20 games, 150 cap) | 150 | 1 one left, 19 at the cap | | 41 |
+| **Medium, after** (20 games, 150 cap) | **141 / 150 / 150** | 10 one left, 10 at the cap | 22, 36, 55, 102, 132 | 12 |
+| Medium, before, no cap (12 games) | 226 / 217 / 292 | all one left | 46, 63, 106, 164, 215 | |
+| **Medium, after, no cap** (12 games) | **178 / 152 / 213** | 10 one left, 1 stalemate, 1 still going at turn 500 | 23, 31, 55, 102, 148 | |
+| For comparison, after, domination at 75% | Classic 63 / 58; medium 144 / 118 | | | |
+
+The levers that worked:
+- **Armies:** two steps a turn over open ground; three writs; a weaker militia (3 + 6 a fort).
+- **Wars:** wars fought out rather than settled small. The scripted rulers' new thresholds; demands
+  enforced at 80; truces of 3 turns.
+- **The game's end:** a 12-turn stalemate.
+
+The levers that did not:
+- earlier demands, since every treaty starts a truce;
+- two wars at once;
+- a realm breaking when its capital falls.
+
+**Not yet "an hour" for a medium world:** about 180 turns on average (median 152). The medium rows "after" were measured on #277's new worlds, the rows "before" on R2's; Classic is the same board in both. Its last war between two large realms is
+where the time goes. Section 6.1's pressures for that (fear of the leader, war weariness, the
+status-quo offer) belong to R7.
+
+_For the lead:_ a 75% domination win gives 144 turns on medium (median 118) and 63 on Classic, if a shorter default is
+wanted before R7.
+
+**Three writs** raise R1c's model time: decisions a ruler a turn rise from about 1.9 to 2.3 on Classic.
+R1c measures the cost.
+
 ### R2. The map generator, headless, and a drawn-chart spike
 
 - **Sim:**
