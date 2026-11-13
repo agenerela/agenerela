@@ -77,8 +77,30 @@ namespace GreyBoxStrategy
         /// Rules v2's game as R1 builds it: the writs turn, armies on the map, conquest with no turn
         /// limit (a headless run stops at the cap or a 20-turn stalemate).
         /// </summary>
-        public static GameSetup Writs(int seed = 1, string map = ClassicMapId) =>
-            new GameSetup { Seed = seed, Map = map, Turn = TurnStyle.Writs, Victory = VictoryMode.Conquest, TurnCap = 150 };
+        public static GameSetup Writs(int seed = 1, string map = ClassicMapId, string victory = ConquestPreset)
+        {
+            var setup = new GameSetup { Seed = seed, Map = map, Turn = TurnStyle.Writs, Victory = VictoryMode.Conquest, TurnCap = 150 };
+            switch (victory)
+            {
+                case ConquestPreset:
+                    break;
+                case DominationPreset:
+                    // The lead is asked (12 November) whether this should be the writs game's default;
+                    // until he answers, conquest is, and this is a choice at New game.
+                    setup.Victory = VictoryMode.Domination;
+                    setup.DominationPercent = 75;
+                    setup.TurnLimit = setup.TurnCap; // no turn limit of its own: the headless cap only
+                    break;
+                default:
+                    throw new ArgumentException($"Unknown victory preset '{victory}'; expected one of {string.Join(", ", VictoryPresets)}.");
+            }
+            return setup;
+        }
+
+        /// <summary>The writs game's victory presets: the last country standing (the default), or 75% of all provinces.</summary>
+        public const string ConquestPreset = "conquest";
+        public const string DominationPreset = "domination_75";
+        public static readonly string[] VictoryPresets = { ConquestPreset, DominationPreset };
 
         public GameSetup Clone() => (GameSetup)MemberwiseClone();
 

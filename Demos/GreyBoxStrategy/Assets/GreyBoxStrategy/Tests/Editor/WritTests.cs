@@ -616,6 +616,20 @@ namespace GreyBoxStrategy.Tests
         }
 
         [Test]
+        public void Setup_DominationAt75_IsANamedChoice_ConquestStaysTheDefault()
+        {
+            Assert.That(GameSetup.Writs(1).Victory, Is.EqualTo(VictoryMode.Conquest));
+            var setup = GameSetup.Writs(6, victory: GameSetup.DominationPreset);
+            var back = GameSetup.FromJson(setup.ToJson());
+            var rules = back.BuildRules(back.BuildMap());
+            Assert.That((rules.Victory, rules.ProvincesToWin, rules.MaxTurns), Is.EqualTo((VictoryMode.Domination, 19, 150)), "75% of 25 provinces, rounded up");
+            var g = GameRunner.Play(back, "scripted");
+            Assert.That(g.Result.Ending, Is.EqualTo(Ending.Domination).Or.EqualTo(Ending.LastStanding).Or.EqualTo(Ending.Stalemate));
+            if (g.Result.Ending == Ending.Domination) Assert.That(g.Result.Provinces[g.Result.Winner], Is.GreaterThanOrEqualTo(19));
+            Assert.Throws<ArgumentException>(() => GameSetup.Writs(1, victory: "kingmaker"));
+        }
+
+        [Test]
         public void Setup_TheWritsTurnIsASetting_TodaysGameStaysTheDefault()
         {
             Assert.That(new GameSetup().Turn, Is.EqualTo(TurnStyle.OneMove));

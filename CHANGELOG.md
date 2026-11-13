@@ -29,6 +29,13 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm rules v2, R1b's second part: model rulers for the writs turn** (#20). `WritRuler` is two
+  framework agents with one persona: a court for court orders, treaties and dilemmas, and a marshal for
+  army orders, the army carried in the decision's correlation. Each keeps a memory of four decisions.
+  They read local facts (at most eight lines on any map, rivals limited to those at war or bordering),
+  a moves line of what is offered, and the orders already given this turn. A fake model playing like
+  the script plays exactly the scripted game through them. A `domination_75` victory preset sits beside
+  conquest, which stays the default until the lead chooses.
 - **Painted Realm: the storyteller on screen** (#20). New game → Storyteller: off, or one of its
   five presets, for watch live and rule games.
   - Its events land as the chronicler's banner where they strike and as lines in the chronicle,

@@ -1967,11 +1967,11 @@ line, and `findings.md` for anything measured.
 - [x] War score; `offer_white_peace`, `demand_occupied`, `cede_occupied` and their answers; broken realms
 - [ ] Occupation hatching, the treaty flow from hatch to wash with the seal, hatching lifting on return
 - [x] Scripted expansionist and cautious with armies; random player
-- [ ] Court and marshal agents, the army in `Correlation`, both moves lines, chained decisions, memory 4
+- [x] Court and marshal agents, the army in `Correlation`, both moves lines, chained decisions, memory 4 (R1b, `WritRuler`); the army statement rule waits for R1c's A/B
 - [ ] Pieces, march lines, step animation, battle card; rule mode's writs, cycle key and order queue
 - [ ] `ReplayBuilder` rebuilds armies
 - [x] Tests: costs, simultaneity, determinism, writ cap, every wake condition, occupation never changes
-      the owner, a treaty transfers exactly its term, scripted beats random; [ ] the fake model plays the
+      the owner, a treaty transfers exactly its term, scripted beats random; [x] the fake model plays the
       scripted game (R1b)
 - [x] Sim: armies awaiting orders a ruler a turn, game length, battles
 - [ ] Live: the latency probe; then the persona table, 20 games, 40-turn cap, against the one-move game
