@@ -498,6 +498,26 @@ a `Chain`: title, subject, events, status) to follow a chain; `World.Traits` for
 five: S1 (`default+storyteller`) as the control; S1 with the title call alone; and S2 whole
 (`+s2`, every piece above) with free chains, and with skeletons.
 
+**What S2 found** (12 November; the demo `README.md`'s "What S2 did" and `findings.md`, "The
+storyteller's stage S2"). Built as designed above, plus one change the smoke games forced: offered
+dilemmas and tales on 40% and 30% of turns, the 4B chose one dilemma in 28 events and began no tale, so
+the game deals each turn's kind. Against S1, `qwen3.5:4b`, personas, 20 games an arm:
+
+- **The title call fixes the titles** (missing 47% to 0%, distinct within a game 60% to 92 to 96%), at
+  0.37 s an event, with nothing else in the game changed.
+- **Twice the variety** (kinds of event 6.65 to 10.55 and 11.30), and the war unchanged: battles,
+  conquests, wars, peace and endings within noise, rulers' sense, voice and character too.
+- **Choices in character where the options tempt:** a pretender paid off by the builder and the merchant
+  15 of 15 times, defied by the warmonger and the proud ruler 11 of 11. Elsewhere the active option wins.
+- **Tales:** free, 2.2 a game and longer (3.6 events), recurring motifs; skeletons, 1.1 a game (2.3),
+  each turning on a choice. Both leave most unfinished (8 of 44 and 4 of 22 completed).
+- **Game-aware stories are rare** (5 to 6% name a real happening; 4 invented battles replaced), though
+  the happenings line is read on nearly every call.
+- **Costs:** a milder rubber band (value against standing −0.37 to −0.25 and −0.21), hit rulers naming
+  the event 29% to 22%, 0.5 s more a turn.
+- **Gaps:** 1, 2 (the main cost), 3, 4, 5, 6, 8 and 9 hit; two new, N13 (an optional action the model
+  never takes, so the game must deal frequency) and N14 (a follow-up call for one decision).
+
 ### Framework gaps for a storyteller, ready to become an issue
 
 Written as #244 is. **Rules for every item:** one pull request per item or small group, into
