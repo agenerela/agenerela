@@ -527,6 +527,37 @@ tune.
 - **Snapshots.** `TurnSnapshot.Armies` and `Occupiers` hold every army and occupation as the council
   saw them, so a replay or the inspector can show any past turn.
 
+**R1b, second part: model rulers for the writs turn** (12 November). `WritRuler` (`Agents/`) is a model
+seat for the writs turn: two framework agents with one identity and persona.
+
+- **The court** gives court orders, answers treaties and the storyteller's dilemmas. Each action's
+  availability comes from `WritLegality.WhyNotCourt`.
+- **The marshal** orders one army at a time. The army is named in the decision's correlation
+  (`ArmyOrder`), and each march target's availability is `WritLegality.WhyNotArmy` for that army.
+
+Each agent keeps its own memory of four decisions. A ruler's decisions run back to back
+(`WritModelRunner`), one ruler after another.
+
+What a model reads (it never reads the schema):
+- **Local standing facts** (`WritFacts.Standing`), at most eight lines on any map:
+  - the goal and this turn's writs;
+  - treasury;
+  - soldiers;
+  - our armies;
+  - at most three rivals (those at war with us first, then those our land borders), each with the war
+    score and what each side occupies;
+  - the neutral land bordering us.
+- **A moves line** written from the request's own offered moves: the court's ("Moves open to us:
+  recruit; fortify ...; demand what we occupy from orsk") or the army's ("Orders open to maren_host:
+  march to fenmark (neutral, garrison 9; next to us), ...; hold").
+- **An "Ordered this turn" line**, so a later decision does not repeat an earlier one.
+
+Fortify is offered at no more than six provinces, and a march at no more than twelve, so one decision
+stays near a dozen targets. The one-move game's `CountryAgent` and its prompts are unchanged.
+
+A fake model that answers like the scripted player plays exactly the scripted game through both agents
+(`WritRulerTests`).
+
 ## The first real run
 
 `mixed`, 200 games, seeds 1 to 200, standard rules, run in batch mode on 10 November 2026. The
