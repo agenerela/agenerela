@@ -241,9 +241,12 @@ namespace GreyBoxStrategy
             foreach (var report in g.Record.Reports)
             {
                 var seen = new HashSet<CountryRequest>();
-                foreach (var o in report.Outcomes)
+                // One council move a ruler a turn: in the writs turn a ruler may give a second court order,
+                // and the scorecard reads the first, its turn's proclamation (the one-move game has only one).
+                var countries = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var o in report.Outcomes.OrderBy(o => o.Request?.Writ ?? 0))
                 {
-                    if (o.Request == null || o.Request.Moment != Moment.Council || !seen.Add(o.Request)) continue;
+                    if (o.Request == null || o.Request.Moment != Moment.Council || !seen.Add(o.Request) || !countries.Add(o.Request.CountryId)) continue;
                     yield return new CouncilMove
                     {
                         Game = g, Turn = report.Turn, Country = o.Request.CountryId, Choice = o.Choice, Outcome = o,
