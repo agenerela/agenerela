@@ -71,7 +71,7 @@ namespace GreyBoxStrategy.Realm
         /// A generated world: the chart drawn by <see cref="ChartImage"/>, its province map with
         /// 16-bit ids, and its own sea tile behind it. Label points come from the geometry.
         /// </summary>
-        public void BuildChart(ChartImage chart, WorldMap world)
+        public void BuildChart(ChartImage chart, WorldMap world, int seed = 0)
         {
             Drawn = true;
             width = chart.IdWidth;
@@ -102,8 +102,23 @@ namespace GreyBoxStrategy.Realm
             idTex.SetPixelData(idBytes, 0); idTex.Apply(false, true);
             var edgeTex = new Texture2D(width, height, TextureFormat.R8, false, true) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp, name = "ProvinceEdge (drawn)" };
             edgeTex.SetPixelData(edgeBytes, 0); edgeTex.Apply(false, true);
-            var chartTex = new Texture2D(chart.ChartWidth, chart.ChartHeight, TextureFormat.RGBA32, true, false) { filterMode = FilterMode.Trilinear, wrapMode = TextureWrapMode.Clamp, anisoLevel = 4, name = "Chart (drawn)" };
-            chartTex.SetPixelData(Flip(chart.Chart, chart.ChartWidth, chart.ChartHeight, 4), 0); chartTex.Apply(true, true);
+            Texture chartTex;
+            var drawWatch = System.Diagnostics.Stopwatch.StartNew();
+            if (chart.Gpu)
+            {
+                // The ground in a shader, the glyphs as quads from their atlas: the chart is drawn on the GPU.
+                gpuChart = ChartGpu.Render(chart, idTex, Paper, PaperMean, seed, Shader.Find("GreyBoxStrategy/ChartGround"), Shader.Find("GreyBoxStrategy/ChartMarks"));
+                chartTex = gpuChart;
+                // Wait for the GPU, so the time measured is the draw's, not only its submission.
+                UnityEngine.Rendering.AsyncGPUReadback.Request(gpuChart, 0, 0, 1, 0, 1, 0, 1).WaitForCompletion();
+            }
+            else
+            {
+                var t = new Texture2D(chart.ChartWidth, chart.ChartHeight, TextureFormat.RGBA32, true, false) { filterMode = FilterMode.Trilinear, wrapMode = TextureWrapMode.Clamp, anisoLevel = 4, name = "Chart (drawn)" };
+                t.SetPixelData(Flip(chart.Chart, chart.ChartWidth, chart.ChartHeight, 4), 0); t.Apply(true, true);
+                chartTex = t;
+            }
+            chart.Milliseconds["upload and draw"] = drawWatch.ElapsedMilliseconds;
 
             // Label points and the land's box, from the geometry.
             var geo = world.Geometry;
@@ -133,6 +148,20 @@ namespace GreyBoxStrategy.Realm
 
             long total = 0; foreach (var v in chart.Milliseconds.Values) total += v;
             ChartReport = $"chart {chart.ChartWidth}×{chart.ChartHeight}, province map {width}×{height}, {count} provinces, {chart.Glyphs} glyphs, drawn in {total} ms ({string.Join(", ", chart.Milliseconds)})";
+        }
+
+        private RenderTexture gpuChart;
+
+        /// <summary>The paper tile laid over a drawn chart's land (<c>Screen/Art/Resources/chart-paper.png</c>), generated art; null when missing.</summary>
+        public static Texture2D Paper => paper != null ? paper : paper = Resources.Load<Texture2D>("chart-paper");
+        private static Texture2D paper;
+        /// <summary>The paper tile's mean brightness, 0 to 1: the shader multiplies by the paper relative to it, so the land keeps its tone.</summary>
+        public const float PaperMean = 0.673f;
+
+        private void OnDestroy()
+        {
+            ChartGpu.ReleaseInputs();
+            if (gpuChart != null) { gpuChart.Release(); Destroy(gpuChart); }
         }
 
         private static byte[] Flip(byte[] top, int w, int h, int bpp)

@@ -340,3 +340,8 @@
 .tale-stage-title { font-size: 12px; -unity-font-style: bold; color: rgb(216, 192, 140); }
 .tale-story { font-size: 13px; -unity-font-style: italic; color: rgb(214, 200, 170); }
 .tale-end { font-size: 12px; -unity-font-style: italic; color: rgb(141, 127, 102); margin-top: 6px; }
+
+/* the loading card while a generated world is made and drawn */
+.loading-card { position: relative; width: 520px; padding: 18px 22px; }
+.loading-bar { height: 8px; margin-top: 12px; background-color: rgba(201, 164, 90, 0.18); border-width: 1px; border-color: rgba(201, 164, 90, 0.55); }
+.loading-fill { height: 100%; width: 0; background-color: rgb(201, 164, 90); }

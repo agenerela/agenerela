@@ -777,6 +777,8 @@ row with "check" must be cleared before the game is sold.**
 | The open sea beyond the painting | `Screen/Art/sea-tile.jpg` | Cut by `ArtSource/bake_map.py` from the painting's calmest open sea and mirrored into a seamless tile | The painting's: **check** |
 | Province id map, edge field, label points | `Screen/Art/province-*.png`, `provinces.json` | Baked by `ArtSource/bake_map.py` from the painting and the rule graph | Ours |
 | The shader, crests and icons | `Screen/Map/PaintedMap.shader`, `Screen/UI/CountryLook.cs` | Code: crests and icons are drawn by `Painter2D` | Ours |
+| The chart's paper | `Screen/Art/Resources/chart-paper.png` (1024 × 1024) | OpenAI's image model through the `codex-image` skill, 13 November 2026, then made seamless by blending its edges (offset and cross-fade) | Generated, as the painting: **check** before shipping. Any plain tileable paper replaces it; the chart reads its mean brightness from `MapView.PaperMean` |
+| The drawn chart's glyphs, shaders and atlas | `Screen/Chart/`, `Screen/Map/ChartGpu.cs`, `Screen/Map/Resources/Chart*.shader` | Code | Ours |
 | Fonts | none bundled | The OS's own serif (Palatino Linotype, Book Antiqua, Georgia or Cambria), loaded at run time | Not shipped, so nothing to licence. Open-licence (SIL OFL) fonts replace them as files, with their licence beside them |
 | The recorded game, slice 2's inspector content | `Screen/Replays/seed-0004-personas-4b.json` | Exported from the v248 persona 4b table run by `ArtSource/export_recording.py`; the statements are qwen3.5:4b's | Ours; the model's output is under the Qwen licence's terms for outputs, to **check** if statements ever ship as content |
 

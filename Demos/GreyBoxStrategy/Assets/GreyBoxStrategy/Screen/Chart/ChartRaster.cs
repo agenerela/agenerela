@@ -23,6 +23,8 @@ namespace GreyBoxStrategy.Chart
         public const ushort Sea = 0xFFFF;
         /// <summary>Inland water (a lake) in <see cref="Ids"/>.</summary>
         public const ushort Water = 0xFFFE;
+        /// <summary>A scenery island in <see cref="Ids"/>: land that is drawn and never played. The province map shows it as sea.</summary>
+        public const ushort Island = 0xFFFD;
 
         public int Width { get; private set; }
         public int Height { get; private set; }
@@ -37,6 +39,8 @@ namespace GreyBoxStrategy.Chart
         public int[] Cells { get; private set; }
 
         public static bool IsWater(ushort id) => id >= Water;
+        /// <summary>A province's pixel: not water, not a scenery island.</summary>
+        public static bool IsProvince(ushort id) => id < Island;
 
         /// <summary>Rasterises <paramref name="geometry"/> <paramref name="width"/> pixels wide; the height keeps the grid's shape.</summary>
         public static ChartRaster Build(MapGeometry geometry, int width, int seed = 0)
@@ -63,7 +67,7 @@ namespace GreyBoxStrategy.Chart
             if (x < 0) x = 0; else if (x >= GridWidth) x = GridWidth - 1;
             if (y < 0) y = 0; else if (y >= GridHeight) y = GridHeight - 1;
             int v = Cells[y * GridWidth + x];
-            return v >= 0 ? (ushort)v : v == MapGeometry.Water ? Water : Sea;
+            return v >= 0 ? (ushort)v : v == MapGeometry.Water ? Water : v == MapGeometry.Island ? Island : Sea;
         }
 
         /// <summary>The province (or water) at a point in grid units, as a pixel there is drawn.</summary>
@@ -120,7 +124,11 @@ namespace GreyBoxStrategy.Chart
             int w = width, half = factor / 2;
             for (int y = 0; y < height; y++)
             for (int x = 0; x < w; x++)
-                o[y * w + x] = Ids[(y * factor + half) * Width + x * factor + half];
+            {
+                ushort id = Ids[(y * factor + half) * Width + x * factor + half];
+                // The shader and the rules know no islands: to them it is sea, with no wash and no border.
+                o[y * w + x] = id == Island ? Sea : id;
+            }
             return o;
         }
 
