@@ -52,7 +52,9 @@ namespace GreyBoxStrategy.Replay
         public bool KnowsDecision(string country, bool gameOver) => true;
 
         /// <summary>Whether what a ruler's court told it can be read: your own, or any once the game is over. It holds the treasury.</summary>
-        public bool KnowsReport(string country, bool gameOver) => !On || gameOver || country == Viewer;
+        public bool KnowsReport(string country, bool gameOver) => !On || gameOver || country == Viewer
+            // The storyteller and its scribe are no country and keep no secrets: what they read and were offered is the showcase.
+            || country == Recording.StorytellerId || country == Recording.ScribeId;
 
         /// <summary>Whether an upkeep line is news to you: your own, and every revolt or truce, since land and relations are public.</summary>
         public bool KnowsUpkeep(ReplayEvent e) =>

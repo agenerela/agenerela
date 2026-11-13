@@ -80,6 +80,9 @@ namespace GreyBoxStrategy.Realm
             Buttons("GENERATED WORLD (scripted rulers, drawn chart)", ("Small", "generated small continent 7"), ("Medium", "generated medium continent 7"),
                 ("Large", "generated large continent 7"), ("Huge", "generated huge continent 7"), ("Two lands", "generated medium two_lands 7"),
                 ("Inland sea", "generated medium inland_sea 7"), ("Peninsula", "generated medium peninsula 7"), ("Long coast", "generated medium long_coast 7"));
+            Buttons("STORYTELLER (a stand-in one, no server)", ($"Rule {you}, saga", $"scripted-rule {you} 7 saga"), ("Watch, saga", "scripted-watch 7 saga"),
+                ("Dilemma on you", $"event sellswords {you}"), ("Pretender tale", $"event begin_pretender {you}"), ("Omen", $"event omen {you}"),
+                ("Open last event", "story-open"), ("Its decision", "story-inspect"), ("Title call", "story-inspect title"), ("Tales", "tales"));
             Buttons("TIME", ("Step", "step"), ("Play", "play"), ("Pause", "pause"), ("1×", "speed 1"), ("4×", "speed 4"), ("16×", "speed 16"),
                 ("Turn 5", "turn 5"), ("Turn 15", "turn 15"), ("Autoplay", "autoplay on"), ("Stop autoplay", "autoplay off"));
             Fill("STATE (rule games; at the start of the next turn)",

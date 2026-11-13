@@ -31,6 +31,9 @@ namespace GreyBoxStrategy.Replay
         {
             map = map ?? MapDefinition.Standard();
             var game = new Game(recording.Seed, map, rules);
+            // A storyteller game: no random table, the storyteller's rules, its recorded events.
+            var story = StoryArms.Rules(recording.StoryArm);
+            if (story != null) { game.EventTable = false; game.Story = story; }
             var players = new RecordedPlayers(recording);
             foreach (var c in game.World.CountryList) game.Gates[c.Id] = players;
 
@@ -48,6 +51,7 @@ namespace GreyBoxStrategy.Replay
                 Map = map,
                 Rules = game.Rules,
                 Dev = recording.Dev || recording.DevEdits.Count > 0,
+                Story = story,
             };
             var since = new Dictionary<string, int>(StringComparer.Ordinal);
             replay.Initial = Capture(game.World, provinceIds, since);
@@ -70,8 +74,10 @@ namespace GreyBoxStrategy.Replay
                         state = Capture(game.World, provinceIds, since);
                         turn.Start = state;
                     }
+                    // The storyteller's event for this upkeep, unless the dev menu set one, and the rulers' choices.
+                    if (story != null) QueueStory(game, players, next, recording.DevEdits.Any(d => d.Turn == next && DevEdits.QueuesEvent(d.Command)));
                     var council = game.BeginTurn();
-                    DevEdits.AfterBeginTurn(game);
+                    if (story == null) DevEdits.AfterBeginTurn(game);
                     var envoys = game.SubmitCouncil(council.Select(r => new CountryAnswer(r, players.Decide(r))).ToList());
                     tr = game.Resolve(envoys.Select(r => new CountryAnswer(r, players.Decide(r))).ToList());
                 }
@@ -88,6 +94,7 @@ namespace GreyBoxStrategy.Replay
                 var snap = game.Snapshots.Last();
                 for (int i = 0; i < provinceIds.Length; i++) councilState.Owners[i] = snap.OwnerOf(provinceIds[i]);
                 var upkeepEvents = UpkeepEvents(tr, state, councilState, replay, turn.Turn);
+                if (story != null) upkeepEvents.InsertRange(0, StoryEvents(tr, state, replay, players));
                 turn.Events.AddRange(upkeepEvents);
                 turn.Council = councilState;
                 foreach (var kv in snap.Army) if (councilState.Countries.TryGetValue(kv.Key, out var cs)) cs.Army = kv.Value;
@@ -109,6 +116,7 @@ namespace GreyBoxStrategy.Replay
                 state = end;
             }
             replay.Result = game.Result;
+            replay.Chains = game.Chains.ToList();
             if (!partial) players.CheckAllUsed();
             return replay;
         }
@@ -133,12 +141,52 @@ namespace GreyBoxStrategy.Replay
             return ids;
         }
 
+        // The storyteller's recorded event, queued as the game queued it, then each ruler's recorded choice.
+        private static void QueueStory(Game game, RecordedPlayers players, int turn, bool devEvent)
+        {
+            var told = players.Story(turn);
+            if (!devEvent && told != null && told.ExecutionStatus == RecordedDecision.Done && told.HasTarget)
+                game.QueueEvent(new StoryEvent(told.Action, told.Target, told.Statement, players.Title(turn)?.Statement));
+            foreach (var c in game.PendingChoices.ToList())
+            {
+                var d = players.Choice(turn, c.Country);
+                if (d == null || d.ExecutionStatus == "Refused") continue; // the default lands, as it did
+                game.Choose(c.Country, d.Action, d.ModelName == "you" ? "person" : "model");
+            }
+        }
+
+        // One event a storyteller event, in place of the upkeep lines that tell it country by country.
+        private static IEnumerable<ReplayEvent> StoryEvents(TurnReport tr, ReplayState state, ReplayGame replay, RecordedPlayers players)
+        {
+            foreach (var r in tr.Events.Where(x => x.Source == EventRecord.FromStoryteller))
+            {
+                string at = r.Province ?? (r.Hit.Count > 0 ? CapitalOf(replay.Map, r.Hit[0]) : null);
+                var e = new ReplayEvent
+                {
+                    Turn = r.Turn, Kind = ReplayEventKind.Story, Story = r,
+                    Country = r.Hit.Count == 1 ? r.Hit[0] : null,
+                    Province = at, ProvinceIndex = replay.IndexOf(at),
+                    Text = r.Title, Statement = r.Story ?? "",
+                    Decision = players.Story(r.Turn), TitleDecision = players.Title(r.Turn),
+                    After = state.Clone(),
+                };
+                foreach (string c in r.Hit) { var d = players.Choice(r.Turn, c); if (d != null) e.ChoiceDecisions[c] = d; }
+                yield return e;
+            }
+        }
+
+        private static readonly Regex StoryLine = new Regex(@"^\w+: event "".*"" \(");
+
+        private static string CapitalOf(MapDefinition map, string country) => map.Provinces.FirstOrDefault(p => p.IsCapital && p.StartOwner == country)?.Id;
+
         private static List<ReplayEvent> UpkeepEvents(TurnReport tr, ReplayState before, ReplayState council, ReplayGame replay, int turn)
         {
             var events = new List<ReplayEvent>();
             var running = before.Clone();
+            bool told = tr.Events.Any(x => x.Source == EventRecord.FromStoryteller);
             foreach (string line in tr.Upkeep)
             {
+                if (told && StoryLine.IsMatch(line)) continue; // the storyteller's event is its own event
                 var e = new ReplayEvent { Turn = turn, Text = line, Kind = ReplayEventKind.Upkeep };
                 var m = Revolted.Match(line);
                 var t = TruceEnded.Match(line);
@@ -355,10 +403,18 @@ namespace GreyBoxStrategy.Replay
         private readonly Dictionary<CountryRequest, RecordedDecision> answered = new Dictionary<CountryRequest, RecordedDecision>();
         private readonly Dictionary<string, RecordedDecision> council = new Dictionary<string, RecordedDecision>(StringComparer.Ordinal);
 
+        private readonly Dictionary<string, RecordedDecision> told = new Dictionary<string, RecordedDecision>(StringComparer.Ordinal);
+
         public RecordedPlayers(Recording recording)
         {
             foreach (var d in recording.Decisions)
             {
+                if (!d.IsMove)
+                {
+                    // The storyteller's, the scribe's and the rulers' choices are not moves; the replay looks them up.
+                    told[$"{d.Moment}|{d.Turn}|{(d.IsChoice ? d.AgentId : "")}"] = d;
+                    continue;
+                }
                 string k = Key(d.Turn, d.AgentId, d.IsEnvoy);
                 if (!queues.TryGetValue(k, out var q)) queues[k] = q = new Queue<RecordedDecision>();
                 q.Enqueue(d);
@@ -379,6 +435,10 @@ namespace GreyBoxStrategy.Replay
             if (envoy) return d.Action == Actions.AcceptPeace ? new Move(Actions.AcceptPeace) : new Move(Actions.RefusePeace);
             return new Move(d.Action ?? Actions.None, d.HasTarget ? d.Target : null);
         }
+
+        public RecordedDecision Story(int turn) => told.TryGetValue($"{RecordedDecision.StoryMoment}|{turn}|", out var d) ? d : null;
+        public RecordedDecision Title(int turn) => told.TryGetValue($"{RecordedDecision.TitleMoment}|{turn}|", out var d) ? d : null;
+        public RecordedDecision Choice(int turn, string country) => told.TryGetValue($"{RecordedDecision.ChoiceMoment}|{turn}|{country}", out var d) ? d : null;
 
         public RecordedDecision DecisionFor(CountryRequest r) => r != null && answered.TryGetValue(r, out var d) ? d : null;
 

@@ -124,8 +124,9 @@ namespace GreyBoxStrategy.Realm
                 StartGeneratedWatch(c.Size, c.Shape, c.Seed);
                 return;
             }
-            if (c.Rule) TryRule(c.Country, c.Model, c.Seed);
-            else TryLive(c.Model, c.Seed);
+            string arm = StoryArms.For(c.Storyteller);
+            if (c.Rule) TryRule(c.Country, c.Model, c.Seed, arm);
+            else TryLive(c.Model, c.Seed, arm);
         }
 
         private static void Quit()
@@ -162,6 +163,9 @@ namespace GreyBoxStrategy.Realm
         {
             if (ui.DisplayConfirmOpen) return;
             if (ui.MenuOpen) { ui.MenuBack?.Invoke(); return; }
+            // The choice card closes only by choosing: Esc opens the pause menu over it.
+            if (ui.EventOpen) { ui.CloseEvent(); return; }
+            if (ui.TalesOpen) { ui.CloseTales(); return; }
             if (ui.InspectorOpen || ui.SideOpen || ui.DiplomacyOpen)
             {
                 ui.CloseInspector(); ui.CloseSide(); ui.CloseDiplomacy(); map.SetSelected(-1);

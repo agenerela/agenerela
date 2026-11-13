@@ -5,7 +5,7 @@ using UnityEngine.UIElements;
 namespace GreyBoxStrategy.Realm
 {
     /// <summary>The heraldic charge drawn on a country's crest.</summary>
-    public enum Charge { Chevron, Sun, Waves, Peaks, Star }
+    public enum Charge { Chevron, Sun, Waves, Peaks, Star, Quill }
 
     /// <summary>
     /// How one country looks on screen: name, colour, crest, and its ruler's face. One object, so a
@@ -48,9 +48,18 @@ namespace GreyBoxStrategy.Realm
             }
         }
 
+        /// <summary>The storyteller's look: no country, a quill on a dark field. The scribe that titles its events shares it.</summary>
+        public static readonly CountryLook Storyteller = new CountryLook { Id = "storyteller", Name = "The Chronicler", Colour = new Color32(58, 44, 30, 255), Charge = Charge.Quill, Slot = 0 };
+        public static readonly CountryLook Scribe = new CountryLook { Id = "scribe", Name = "The Scribe", Colour = new Color32(58, 44, 30, 255), Charge = Charge.Quill, Slot = 0 };
+
+        /// <summary>True for the storyteller and its scribe, which speak but have no face and rule nothing.</summary>
+        public static bool IsStoryteller(string id) => id == Storyteller.Id || id == Scribe.Id;
+
         public static CountryLook Of(string id)
         {
             if (id == null) return null;
+            if (id == Storyteller.Id) return Storyteller;
+            if (id == Scribe.Id) return Scribe;
             if (world != null) return world.TryGetValue(id, out var w) ? w : null;
             return Standard.TryGetValue(id, out var l) ? l : null;
         }
@@ -136,6 +145,14 @@ namespace GreyBoxStrategy.Realm
                     break;
                 case Charge.Peaks:
                     p.BeginPath(); p.MoveTo(P(5, 23)); p.LineTo(P(11, 13)); p.LineTo(P(14, 17)); p.LineTo(P(18, 9)); p.LineTo(P(25, 23)); p.ClosePath(); p.Fill();
+                    break;
+                case Charge.Quill:
+                    // A quill, slanting down to its nib.
+                    p.BeginPath(); p.MoveTo(P(23, 5)); p.BezierCurveTo(P(14, 7), P(9, 15), P(10, 24)); p.LineTo(P(12, 24));
+                    p.BezierCurveTo(P(13, 17), P(17, 11), P(23, 5)); p.ClosePath(); p.Fill();
+                    p.lineWidth = 1.4f * s;
+                    p.BeginPath(); p.MoveTo(P(11, 24)); p.LineTo(P(9, 28)); p.Stroke();
+                    p.BeginPath(); p.MoveTo(P(19, 9)); p.LineTo(P(14, 13)); p.Stroke();
                     break;
                 case Charge.Star:
                     p.BeginPath();

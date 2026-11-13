@@ -46,9 +46,10 @@ namespace GreyBoxStrategy.Realm
         public string Status => Error != null ? "error: " + Error : session?.Status ?? "not started";
 
         /// <summary>For the start menu and the Unity CLI.</summary>
-        public void Configure(bool live, int gameSeed, int turns = 0, string modelName = null)
+        public void Configure(bool live, int gameSeed, int turns = 0, string modelName = null, string gameArm = null)
         {
             playLive = live; seed = gameSeed; stopAfterTurns = turns;
+            if (gameArm != null) arm = gameArm;
             if (!string.IsNullOrWhiteSpace(modelName)) model = modelName.Trim();
         }
 
@@ -83,9 +84,10 @@ namespace GreyBoxStrategy.Realm
         /// The dev menu's watch game: five stand-in rulers (a <c>ScriptedProvider</c> picking moves
         /// the rules offer, through the real agents), no server and no card.
         /// </summary>
-        public void BeginScripted(int gameSeed)
+        public void BeginScripted(int gameSeed, string gameArm = null)
         {
             if (session != null) return;
+            if (gameArm != null) arm = gameArm;
             playLive = true; seed = gameSeed; model = "scripted"; Dev = true;
             string path = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "Live", $"dev-seed-{seed:D4}-{DateTime.Now:yyyyMMdd-HHmmss}.jsonl"));
             var rng = new System.Random(gameSeed);
@@ -114,6 +116,10 @@ namespace GreyBoxStrategy.Realm
         }
 
         public IEnumerable<string> Lines() => session?.Lines() ?? Array.Empty<string>();
+
+        /// <summary>The game so far, as the screen replays it, with the storyteller's arm when it has one.</summary>
+        public Recording Recording() => session?.Recording() ?? GreyBoxStrategy.Replay.Recording.FromDecisionLog(Array.Empty<string>(), seed, Players);
+        public string Arm => arm;
         public void Stop() => session?.Stop();
 
         /// <summary>Whether this game holds the RTX 5080 now.</summary>

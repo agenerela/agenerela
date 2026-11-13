@@ -28,6 +28,11 @@ language model through the framework, fighting over 25 provinces on a painted se
   the attack, then press End turn. Declare war on a neighbour, and an envoy may come with peace.
   Click a rival's chronicle line: what it did and said opens at once, and its court's report
   stays private until the game ends.
+- **Storyteller:** New game → Storyteller: Saga, then Rule. When the chronicler's banner
+  appears over the map, click it to open the event. Its "storyteller's decision" button shows
+  the template it picked and the targets it was not offered, with the reasons. Open **Tales** in
+  the chronicle. With no server, the dev menu's **Rule kesh, saga** plays the same game with
+  stand-ins, and **Dilemma on you** puts the choice card in front of you.
 - **Settings:** try the UI scale steps, then Esc in a game for the pause menu.
 
 1. Open `Demos/GreyBoxStrategy` in Unity 6000.3.23f1, then open
@@ -48,7 +53,10 @@ language model through the framework, fighting over 25 provinces on a painted se
        land shape. A generated world is a first look: the rules' scripted rulers play it at once
        and you watch the replay. It plays in watch mode only, with no model and no server
        ([the drawn chart](#the-drawn-chart-spike-12-november)).
-     - The persona mix, storyteller and advisor are listed as coming.
+     - **Storyteller:** Off (the random event table, as every measured game), or one of its
+       presets: Even hand, Underdog, Cruel fate, Quiet years, Saga
+       ([what it shows](#the-storyteller-on-screen-13-november)).
+     - The persona mix and advisor are listed as coming.
    - **Replay:** seed 4 of the persona table, five `qwen3.5:4b` rulers. Kesh wins by domination
      on turn 17. Every line is the rulers' own. It needs no model and no server.
    - **Settings:**
@@ -131,11 +139,13 @@ unity command script eval -- --code 'return GreyBoxStrategy.Realm.DevTools.Run("
 | `scripted-watch [seed]` | Watch five stand-in rulers. No server, no card |
 | `generated <small\|medium\|large\|huge> [shape] [seed] [countries]` | Watch scripted rulers play a generated world, drawn as a chart. Shapes: `continent`, `two_lands`, `inland_sea`, `peninsula`, `long_coast` |
 | `turn <n>` · `step` · `play` · `pause` · `speed <x>` | Jump to a turn without animating the turns before it, land one event, or play and pause. Speed is 0.25 to 32 |
-| `autoplay on\|off` | Play to the end at 8× or faster. In rule mode it also holds every turn and refuses every envoy |
+| `autoplay on\|off` | Play to the end at 8× or faster. In rule mode it also holds every turn and refuses every envoy, and takes the default of every dilemma |
 | `gold\|army\|stability <country> <+n\|-n\|=n>` | Change a country's numbers, within the rules' ranges |
 | `forts <province> <+n\|-n\|=n>` · `owner <province> <country\|neutral>` | Change a province |
 | `war\|peace <country> <country>` · `eliminate <country>` | Change relations, or take a country out of the game |
-| `event <template> <target>` · `events` | Fire one of the storyteller's event templates. The list is read from `EventRules.Templates`, so new kinds appear by themselves. The rules allow none before turn 3 |
+| `event <template> <target> [Title: story]` · `events` | Fire any event template at the next upkeep: the table's, the storyteller's, a dilemma (`event sellswords kesh`), or a planned tale's beginning (`event begin_pretender kesh`). In a storyteller game it takes that turn's place, and the dev menu deals the turn the kind its event needs. `events` lists them all, read from `EventRules.AllTemplates`. The rules allow none before turn 3 |
+| `scripted-rule <country> [seed] [preset]` · `scripted-watch [seed] [preset]` | The stand-in games above, with a stand-in storyteller on a preset (`saga`, `even_hand`...) that picks legal events, leaning toward dilemmas and tales |
+| `story-open` · `story-inspect [title]` · `tales` · `choose <option>` | Open the last storyteller event, its decision (or its title call's) in the inspector, the tales panel; answer the choice card |
 | `fog off\|on` | Reveal everything in rule mode, or restore what your court knows |
 | `fault lock <holder…>` · `fault lock off` | Pretend another session holds the RTX 5080. The real lock directory is never read, written or taken while this is on |
 | `fault server on\|off` | Pretend the server cannot be reached |
@@ -226,10 +236,12 @@ framework writes the moves as one line among the facts, `LegalTargets = Observat
 
 Each game log shows the model's answer and its statement under each of its moves.
 
-**Tests:** 221 EditMode tests in `Assets/GreyBoxStrategy/Tests/Editor/`, about a minute once the
-project has imported (the map generator's take most of it), and four long ones run by hand. Twenty of them drive the model seat through `ScriptedProvider`,
-sixteen in `TableTests` the table, the personas and the scorecard, and fifteen in `StorytellerTests`
-the storyteller. The screen has its own in `Screen/Tests/Editor/`.
+**Tests:** 351 EditMode tests in all, counted on 13 November. 284 are the game's, in
+`Assets/GreyBoxStrategy/Tests/Editor/`: 280 run every time, about a minute once the project has
+imported (the map generator's take most of it), and four long ones are run by hand. Of the game's,
+twenty drive the model seat through `ScriptedProvider`, sixteen in `TableTests` the table, the
+personas and the scorecard, and fifteen in `StorytellerTests` the storyteller. 67 are the screen's,
+in `Screen/Tests/Editor/`.
 
 ## Rules v2, being built
 
@@ -1374,8 +1386,69 @@ its ruler read about a fortune.
 - **New, N12: a reply that runs away.** One storyteller call per arm (of about 460) took 20 s and came
   back unreadable; nothing caps a reply's length per call.
 
-The screen's replay (`ReplayBuilder`) does not know storyteller events: a storyteller game's forts and
+The screen's replay (`ReplayBuilder`) did not know storyteller events when S1 was built; it does now
+([the storyteller on screen](#the-storyteller-on-screen-13-november)). It said: a storyteller game's forts and
 armies would not rebuild. That is the screen's to add when it wants one.
+
+### The storyteller on screen (13 November)
+
+The storyteller plays on the screen, in watch live and rule games.
+
+**Choosing it.** New game → **Storyteller**: Off, or one of its five presets. On, the arm is
+`default+storyteller+s2+chains-skeleton+preset-<name>`:
+- every stage S2 piece, with the title call on (the tech lead's decision, from S2's measurements:
+  titles missing went from 47% to 0%);
+- planned tales, which turn on what the rulers choose and so read as a story. Free tales ran longer
+  but seldom ended.
+
+The arm goes into the recording (`storyArm`), so a saved game replays under the same rules.
+
+**How the screen plays it.** The storyteller and its scribe decide outside the rulers' rounds, so
+their log lines have no chain id. `Recording.FromDecisionLog` takes the turn from the storyteller's
+stimulus ("Turn 7. What happens?"), and the scribe's title from the line after it. The rulers' answers
+to a dilemma are the `choices` round. `ReplayBuilder` then plays them through the game:
+- before each turn's upkeep it queues the event the storyteller queued (the same `StoryEvent`);
+- then each ruler's recorded choice (`Game.Choose`), an unanswered one taking the default.
+
+The game rebuilds exactly: a test plays ten turns with a stand-in storyteller and compares every
+event, choice and tale.
+
+**On the map and in the chronicle:**
+- **The chronicler's banner:** parchment, with its quill crest and no face. It stands where the event
+  strikes: at the province, or at a country's capital when it strikes the realm. It shows the title,
+  the story and who it struck, with what effect.
+- **Its chronicle line** carries the quill crest and the title, then who it struck and what each
+  chose. The story is the quote. The **Story** filter shows or hides these lines.
+- **Clicking either opens the event card:**
+  - the title, the story and the province's traits;
+  - each country it struck, with its effect, what it chose (and whether you, the model or the
+    default did), and what it said;
+  - its tale;
+  - the story check's verdict;
+  - two buttons that open the storyteller's decision and the title call in the inspector. The
+    inspector shows the templates offered, the targets left out with their reasons, the guards,
+    and the reply.
+
+**The choice card** (rule mode). When a dilemma reaches your country, the turn stops before its upkeep
+behind a parchment card:
+- the title and the story;
+- every option, with what it costs or gives in the game's words and amounts, the default marked.
+
+Nothing closes the card but a choice. Clicking an option selects it, and **Decide** takes it, so
+one stray click never chooses. Esc opens the pause menu over the card, and leaving to the main menu
+ends the game. The top bar says **Your choice**. The four rulers answer theirs at the same time.
+
+**Tales** (the chronicle's **Tales** button) lists every tale from its first event to its end:
+- each stage's turn, title and story, and what was chosen;
+- whether the tale is begun, going on, told or left untold, and why.
+
+Clicking a stage opens its event.
+
+**Without a server:** the dev menu's **Storyteller** row.
+- **Rule kesh, saga** and **Watch, saga** play with a stand-in storyteller (`ScriptedStory`). It
+  picks legal pairs from the paired schema, leaning toward dilemmas and tales, and draws titles from
+  a list.
+- **Dilemma on you**, **Pretender tale** and **Omen** fire one at the next upkeep.
 
 ### Stage S2: dilemmas, events on many, tales, game-aware stories (12 November)
 

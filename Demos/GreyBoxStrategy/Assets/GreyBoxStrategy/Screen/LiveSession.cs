@@ -29,12 +29,15 @@ namespace GreyBoxStrategy.Realm
             LogPath = logPath;
             this.providerFor = providerFor;
             table = Tables.Named("personas", model, null, arm, true);
+            StoryArm = table.Options.Storyteller ? arm : null;
             var map = MapDefinition.Standard();
             for (int i = 0; i < map.Countries.Count; i++)
                 Players[map.Countries[i].Id] = new RecordedPlayer { Model = table.SeatFor(i, 0).Model, Persona = table.PersonaFor(i, 0)?.Id };
         }
 
         public int Seed { get; }
+        /// <summary>The arm when the game has a storyteller, for the replay; null otherwise.</summary>
+        public string StoryArm { get; }
         /// <summary>0 for a whole game; otherwise the game stops once this many turns have been played.</summary>
         public int StopAfterTurns { get; }
         public string LogPath { get; }
@@ -91,7 +94,10 @@ namespace GreyBoxStrategy.Realm
         }
 
         /// <summary>The game so far, as the screen plays it.</summary>
-        public ReplayGame Replay() => ReplayBuilder.Build(Recording.FromDecisionLog(Lines(), Seed, Players), partial: true);
+        public ReplayGame Replay() => ReplayBuilder.Build(Recording(), partial: true);
+
+        /// <summary>The game so far as a recording: the rulers', the storyteller's and the scribe's decisions from the log.</summary>
+        public Recording Recording() => GreyBoxStrategy.Replay.Recording.FromDecisionLog(Lines(), Seed, Players, null, StoryArm);
 
         /// <summary>
         /// Passes requests through until the game asks for a turn past the limit, then cancels the

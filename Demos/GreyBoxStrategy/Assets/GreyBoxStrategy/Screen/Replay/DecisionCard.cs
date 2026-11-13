@@ -80,7 +80,8 @@ namespace GreyBoxStrategy.Replay
             var d = e.Decision ?? throw new ArgumentException("This event has no decision behind it.");
             var c = new DecisionCard
             {
-                Country = d.AgentId, Turn = d.Turn, Moment = d.IsEnvoy ? "envoy" : "council",
+                Country = d.AgentId, Turn = d.Turn,
+                Moment = d.IsEnvoy ? "envoy" : d.IsStory ? "the storyteller's call" : d.IsTitle ? "the title call" : d.IsChoice ? "a dilemma's choice" : "council",
                 ChainId = d.ChainId, ChainHop = d.ChainHop,
                 Action = d.Action, Target = d.Target ?? RecordedDecision.NoTarget, Statement = d.Statement ?? "",
                 Model = d.ModelName, LatencySeconds = d.LatencySeconds, QueueWaitSeconds = d.QueueWaitSeconds,
@@ -97,7 +98,7 @@ namespace GreyBoxStrategy.Replay
             c.Offered = d.OfferedMoves.Count > 0 ? d.OfferedMoves.ToList() : d.OfferedActions.ToList();
             string chosen = d.HasTarget ? d.Action + " " + d.Target : d.Action;
             c.Picked = c.Offered.IndexOf(chosen);
-            if (c.Picked < 0 && d.IsEnvoy) c.Picked = c.Offered.IndexOf(d.Action);
+            if (c.Picked < 0 && (d.IsEnvoy || !d.IsMove)) c.Picked = c.Offered.IndexOf(d.Action);
             c.NotOffered = d.TargetsUnavailable.Select(u => ((u.Action + " " + u.Target).Trim(), u.Reason)).ToList();
 
             // 3. what it was told
@@ -150,8 +151,8 @@ namespace GreyBoxStrategy.Replay
             }
             else
             {
-                c.Outcome = contained ? CardOutcome.Contained : d.ExecutionStatus == "NoAction" || d.IsEnvoy ? CardOutcome.Held : CardOutcome.Done;
-                c.OutcomeText = contained ? "Contained by a guard" : c.Outcome == CardOutcome.Held ? (d.IsEnvoy ? "Answered" : "Held") : "Done";
+                c.Outcome = contained ? CardOutcome.Contained : d.ExecutionStatus == "NoAction" || d.IsEnvoy || d.IsTitle || d.IsChoice ? CardOutcome.Held : CardOutcome.Done;
+                c.OutcomeText = contained ? "Contained by a guard" : c.Outcome == CardOutcome.Held ? (d.IsEnvoy || d.IsChoice ? "Answered" : d.IsTitle ? "Titled" : "Held") : d.IsStory ? "Queued" : "Done";
                 c.Guards.Add(new CardGuard { Name = "Agent.Execute", State = (d.ExecutionStatus ?? "not reached").ToLowerInvariant(), Good = true,
                     Detail = d.ExecutionStatus == null ? "The game did not call Execute for it." : "Re-checked with the same rule that offered it, then carried out." });
             }

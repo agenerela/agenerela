@@ -35,6 +35,8 @@ namespace GreyBoxStrategy.Replay
         Eliminated,
         /// <summary>A change made through the dev menu, at the start of the turn: the game is a dev game.</summary>
         Dev,
+        /// <summary>The storyteller's event, landed at upkeep: <see cref="ReplayEvent.Story"/> has all of it.</summary>
+        Story,
     }
 
     /// <summary>A country's numbers at one moment.</summary>
@@ -112,6 +114,13 @@ namespace GreyBoxStrategy.Replay
         public ReplayState After;
 
         public bool ChangesMap => Kind == ReplayEventKind.Capture || Kind == ReplayEventKind.Revolt;
+
+        /// <summary>A storyteller event: title, story, who it hit and each one's effect, the choices, its tale.</summary>
+        public EventRecord Story;
+        /// <summary>The scribe's decision that titled it (<c>+title-call</c>), or null. <see cref="Decision"/> is the storyteller's.</summary>
+        public RecordedDecision TitleDecision;
+        /// <summary>Each ruler's answer to a dilemma, by country: what it chose and said.</summary>
+        public Dictionary<string, RecordedDecision> ChoiceDecisions = new Dictionary<string, RecordedDecision>(StringComparer.Ordinal);
     }
 
     /// <summary>One turn: the state it opened with, and what happened in it.</summary>
@@ -145,6 +154,10 @@ namespace GreyBoxStrategy.Replay
         public GameResult Result;
         /// <summary>True when the dev menu changed the game, or played it with stand-in rulers: never a measured game.</summary>
         public bool Dev;
+        /// <summary>The storyteller's rules, or null for a game without one.</summary>
+        public StoryRules Story;
+        /// <summary>The game's tales as they stood when the build ended; follow one to a turn with its events' <c>Turn</c>.</summary>
+        public List<Chain> Chains = new List<Chain>();
         /// <summary>For a partial build: why it stopped where it did, or null when it reached the end of what was recorded.</summary>
         public string StoppedBecause;
         public IEnumerable<ReplayEvent> AllEvents => Turns.SelectMany(t => t.Events);
