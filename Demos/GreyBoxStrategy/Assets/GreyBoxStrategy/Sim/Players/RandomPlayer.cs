@@ -13,7 +13,9 @@ namespace GreyBoxStrategy
         {
             var legal = request.Legal;
             string purpose = request.Moment == Moment.Envoy ? "random-envoy:" + request.OfferId
-                : request.Moment == Moment.Choice ? "random-choice:" + request.OfferId : "random-council";
+                : request.Moment == Moment.Choice ? "random-choice:" + request.OfferId
+                : request.Moment == Moment.Army ? "random-army:" + request.ArmyId
+                : request.Writ > 1 ? "random-council:" + request.Writ : "random-council";
             int i = Dice.Int(request.World.Seed, request.Turn, request.CountryId, purpose, 0, legal.Count);
             return legal[i];
         }

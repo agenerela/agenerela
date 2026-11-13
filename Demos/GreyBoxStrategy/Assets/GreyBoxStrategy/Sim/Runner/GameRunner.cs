@@ -82,6 +82,15 @@ namespace GreyBoxStrategy
             while (!game.IsOver)
             {
                 if (guard-- <= 0) throw new InvalidOperationException("The game did not end within its turn limit.");
+                if (game.Rules.Turn == TurnStyle.Writs)
+                {
+                    // The writs turn: rounds of orders until every ruler is done, then the treaty answers.
+                    var requests = game.BeginTurn();
+                    while (requests.Count > 0)
+                        requests = game.Submit(requests.Select(r => new CountryAnswer(r, players[r.CountryId].Decide(r))).ToList());
+                    game.Resolve();
+                    continue;
+                }
                 var council = game.BeginTurn();
                 var envoys = game.SubmitCouncil(council.Select(r => new CountryAnswer(r, players[r.CountryId].Decide(r))).ToList());
                 game.Resolve(envoys.Select(r => new CountryAnswer(r, players[r.CountryId].Decide(r))).ToList());

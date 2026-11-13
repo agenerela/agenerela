@@ -155,7 +155,7 @@ namespace GreyBoxStrategy
                 return;
             }
             int n = map.Provinces.Count, w = geo.Width, h = geo.Height;
-            if (cells.Any(v => v >= n || v < MapGeometry.Water))
+            if (cells.Any(v => v >= n || v < MapGeometry.Island || v == -3))
             {
                 problems.Add(new MapProblem(ProblemKind.Connectivity, "cells", "a cell names a province that does not exist"));
                 return;
@@ -202,6 +202,20 @@ namespace GreyBoxStrategy
                             $"the border {map.Provinces[a].Id}-{map.Provinces[b].Id} crosses a ridge away from a pass"));
                 }
 
+            CheckRiversAndRoads(map, g, cells, w, h, problems);
+
+            // A scenery island touching a province would read as part of it.
+            int touching = 0;
+            for (int c = 0; c < cells.Length; c++)
+            {
+                if (cells[c] != MapGeometry.Island) continue;
+                int x = c % w, y = c / w;
+                if ((x > 0 && cells[c - 1] >= 0) || (x + 1 < w && cells[c + 1] >= 0) || (y > 0 && cells[c - w] >= 0) || (y + 1 < h && cells[c + w] >= 0))
+                    touching++;
+            }
+            if (touching > 0)
+                problems.Add(new MapProblem(ProblemKind.Shape, "island", $"{touching} island cells touch a province"));
+
             // Corners: two provinces meeting only diagonally, across two others.
             int diagonals = 0;
             for (int y = 0; y + 1 < h; y++)
@@ -237,6 +251,75 @@ namespace GreyBoxStrategy
             for (int i = 0; i < n; i++)
                 if (area[i] > 0 && widest[i] < minWidth)
                     problems.Add(new MapProblem(ProblemKind.Shape, "width", $"{map.Provinces[i].Id} is nowhere wider than {2 * widest[i] - 1} cells"));
+        }
+
+        private static void CheckRiversAndRoads(WorldMap map, Graph g, int[] cells, int w, int h, List<MapProblem> problems)
+        {
+            var geo = map.Geometry;
+            int Cell(int x, int y) => x < 0 || y < 0 || x >= w || y >= h ? MapGeometry.Sea : cells[y * w + x];
+            var riverIds = new HashSet<string>(geo.Rivers.Select(r => r.Id), StringComparer.Ordinal);
+            var cornersOf = geo.Rivers.ToDictionary(r => r.Id, r => Corners(r.Line), StringComparer.Ordinal);
+            foreach (var r in geo.Rivers)
+            {
+                if (r.Line == null || r.Line.Length < 4) { problems.Add(new MapProblem(ProblemKind.Content, "rivers", $"{r.Id} has no course")); continue; }
+                int x = r.Line[r.Line.Length - 2], y = r.Line[r.Line.Length - 1];
+                var around = new[] { Cell(x - 1, y - 1), Cell(x, y - 1), Cell(x - 1, y), Cell(x, y) };
+                bool ok;
+                if (r.Mouth == "sea") ok = around.Contains(MapGeometry.Sea);
+                else if (r.Mouth == "water") ok = around.Contains(MapGeometry.Water);
+                else
+                {
+                    string into = r.Mouth != null && r.Mouth.StartsWith("river:", StringComparison.Ordinal) ? r.Mouth.Substring(6) : null;
+                    ok = into != null && into != r.Id && riverIds.Contains(into) && cornersOf[into].Contains((x, y));
+                }
+                if (!ok) problems.Add(new MapProblem(ProblemKind.Content, "rivers", $"{r.Id} does not end in water or another river ({r.Mouth})"));
+            }
+
+            var roadAdj = map.Provinces.ToDictionary(p => p.Id, _ => new HashSet<string>(StringComparer.Ordinal), StringComparer.Ordinal);
+            foreach (var road in geo.Roads)
+                for (int k = 0; k + 1 < road.Provinces.Count; k++)
+                {
+                    string a = road.Provinces[k], b = road.Provinces[k + 1];
+                    if (!g.Index.ContainsKey(a) || !g.Index.ContainsKey(b) || !g.Has(g.Index[a], g.Index[b]))
+                    {
+                        problems.Add(new MapProblem(ProblemKind.Content, "roads", $"{road.Id} steps from {a} to {b}, which are not neighbours"));
+                        continue;
+                    }
+                    roadAdj[a].Add(b);
+                    roadAdj[b].Add(a);
+                    bool river = geo.Rivers.Any(r => r.Borders.Any(x => (x[0] == a && x[1] == b) || (x[0] == b && x[1] == a)));
+                    bool bridged = road.Bridges.Any(x => (x.A == a && x.B == b) || (x.A == b && x.B == a));
+                    if (river && !bridged) problems.Add(new MapProblem(ProblemKind.Content, "roads", $"{road.Id} crosses a river between {a} and {b} with no bridge"));
+                }
+            var capitals = map.Provinces.Where(p => p.Capital).Select(p => p.Id).ToList();
+            if (capitals.Count > 1)
+            {
+                var reached = new HashSet<string>(StringComparer.Ordinal) { capitals[0] };
+                var queue = new Queue<string>(reached);
+                while (queue.Count > 0)
+                    foreach (string n in roadAdj[queue.Dequeue()])
+                        if (reached.Add(n)) queue.Enqueue(n);
+                var cut = capitals.Where(c => !reached.Contains(c)).ToList();
+                if (cut.Count > 0) problems.Add(new MapProblem(ProblemKind.Content, "roads", $"no road joins {capitals[0]} to {string.Join(", ", cut)}"));
+            }
+        }
+
+        // Every grid corner a polyline passes, its straight runs expanded.
+        private static HashSet<(int, int)> Corners(int[] line)
+        {
+            var set = new HashSet<(int, int)>();
+            if (line == null) return set;
+            for (int k = 0; k + 3 < line.Length; k += 2)
+            {
+                int x0 = line[k], y0 = line[k + 1], x1 = line[k + 2], y1 = line[k + 3];
+                int dx = Math.Sign(x1 - x0), dy = Math.Sign(y1 - y0);
+                for (int x = x0, y = y0; ; x += dx, y += dy)
+                {
+                    set.Add((x, y));
+                    if (x == x1 && y == y1) break;
+                }
+            }
+            return set;
         }
 
         /// <summary>The narrowest a province may be, as cells from its middle to its border.</summary>

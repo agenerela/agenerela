@@ -3,7 +3,7 @@
 Five countries on a map of 25 provinces, one move each a turn, until one holds 15. The design,
 the rules and why they are what they are: [`docs/demos/grey-box-strategy.md`](../../docs/demos/grey-box-strategy.md).
 Issue #20, a sub-issue of #47.
-A deeper version of the rules is designed, not built: [`docs/demos/painted-realm-rules-v2.md`](../../docs/demos/painted-realm-rules-v2.md).
+A deeper version of the rules, [`docs/demos/painted-realm-rules-v2.md`](../../docs/demos/painted-realm-rules-v2.md), is being built slice by slice. Its first turn, the writs turn with armies as pieces, exists headless as a setting beside the one-move game, which stays the default ([R1a](#rules-v2-being-built)).
 
 **Stages 1 and 2 of 3 are built.** Stage 1 is the game as a headless simulation, a scripted AI
 with two temperaments, a random baseline, and a runner that plays whole games and logs every
@@ -262,7 +262,7 @@ changed is where it comes from.
   advisor switch (both data only so far). Its saved form:
 
   ```json
-  { "version": 1, "seed": 4, "map": "classic", "countries": 5, "victory": "domination",
+  { "version": 1, "turn": "one_move", "seed": 4, "map": "classic", "countries": 5, "victory": "domination",
     "dominationPercent": 60, "turnLimit": 30, "turnCap": 150, "storyteller": "off", "advisor": true }
   ```
 
@@ -294,7 +294,10 @@ var game = new GameSetup { Seed = 7, Map = "generated", Countries = 6, Generator
   and settings make the same world on every machine: integer noise and hashes throughout, and a test
   pins one world per size, measured under .NET and matched under Unity's Mono.
 - **The steps** (`Sim/Map/MapGenerator.cs`), each drawing its randomness from the seed and its own name:
-  1. land from a height field shaped by the land shape;
+  1. land from a height field shaped by the land shape, whose proportions vary by seed. Two warps,
+     one broad and one fine, give the coasts bays and headlands and keep the inland sea from being an
+     oval. The land fades out before the frame, so no coast runs along it. Small land clear of the main
+     land stays as scenery islands;
   2. Poisson-disc seeds relaxed three times;
   3. provinces by nearest seed after a low-frequency warp, so borders wander, with small provinces
      grown, borders smoothed, and pieces, corners and short contacts repaired;
@@ -324,7 +327,20 @@ var game = new GameSetup { Seed = 7, Map = "generated", Countries = 6, Generator
   back to the tables.
 - **Geometry for drawing** (`MapGeometry`, in the world's JSON): the cell grid, each province's outline
   loops, centre, label point and label radius, every border and coast as polylines with its kind (land,
-  ridge, pass, coast, shore), and the ridge lines.
+  ridge, pass, coast, shore), the ridge lines, and the scenery islands' outlines (cell value -4).
+  Also:
+  - **rivers**, from high land to the sea or an inland sea, along cell corners, each with its rank, its
+    mouth, the provinces it touches and the borders it forms;
+  - **roads**: highways joining every capital and tracks to the ports and the most populous provinces,
+    crossing ridges only at passes, each bridge recorded;
+  - each province's **development**, 0 to 4, from `Development.Of` (population, capital, port; R6's
+    buildings will feed it).
+
+  No rule reads rivers, roads or development yet.
+- **Progress and a time budget.** `MapGenerator.Generate(..., progress, budget)` reports after every try
+  (tries so far, the best world's problems and reach spread, a line to show). After the budget it
+  returns the best world found, with its problems and `TimedOut`, so a menu shows a loading state and
+  never hangs.
 - **A sheet of worlds**: **GreyBoxStrategy → Export 20 generated worlds** (or
   `MapExportMenu.ExportFromCommandLine` in batch mode) writes one world per size and shape with a
   `summary.md`. `python ArtSource/world_sheet.py <folder> sheet.png` draws them.
@@ -408,6 +424,79 @@ huge world's generator takes about 12 s in the editor before any of this (R2's o
 - With one move a turn, a huge map changes slowly. After 8 turns most of it is still neutral
   hatching.
 - Scripted rulers say nothing, so the chronicle has no speech.
+
+**R1a, the writs turn and armies as pieces, headless** (12 November). Rules v2's turn, as a setting
+beside today's: `GameSetup.Writs(seed)` (or `"turn": "writs"`) plays it, conquest with no turn limit.
+The default stays the one-move game, so every pinned series and recording is unchanged. Nothing asks a
+model yet (R1b); the scripted players and the random baseline play it.
+
+- **A turn.** Each ruler has writs: 2, plus 1 for every 8 provinces it owns, at most 5. The court is
+  asked first. Then come the armies that are waiting for orders, the most urgent first (an enemy army
+  beside them, then the largest), while writs are left beyond one kept for the court. Last, a second
+  court order if a writ is left. Rounds of requests all see one snapshot:
+  ```csharp
+  var requests = game.BeginTurn();
+  while (requests.Count > 0) requests = game.Submit(answers);   // court, armies, second court, treaty answers
+  game.Resolve();
+  ```
+  Each request carries the ruler's earlier orders this turn (`Ordered`), and an army order its army
+  (`ArmyId`, which a model seat will send as the correlation).
+- **Armies** (`Sim/Rules/Armies.cs`) stand in provinces, named for their general (`maren_host`). An
+  order stands until it is done:
+  - `march` takes the shortest path, one step a turn, hills, marsh and mountains taking two;
+  - `hold` lasts four turns.
+
+  An army waits for orders when one of the wake conditions built here fires:
+  - it was raised or reinforced;
+  - it arrived, or its path was blocked;
+  - it fought;
+  - an enemy army came near;
+  - war or peace was made;
+  - four turns passed.
+
+  The other two conditions, a siege ending and stores running low, wait for R3. `Country.Army` stays the
+  total, so upkeep, desertion and the storyteller's events land on the armies unchanged.
+- **The landing order** (`Sim/Rules/WritTurn.cs`):
+  1. treaties, then declarations of war;
+  2. recruits (at the capital), taxes, forts;
+  3. army orders, then every army steps at once;
+  4. battles, then neutral land taken and enemy land occupied.
+
+  Every order is re-checked as it lands, with the function that offered it (`WritLegality`). Two enemy
+  armies crossing one border meet on it. The winner steps through; the loser never crosses, and falls
+  back from the province it was leaving.
+- **Battles** keep today's formula: soldiers × a roll, the holder adding forts and the capital bonus,
+  30% casualties, 60% for the winner. A province with no army defends with a militia of 5 plus 10 a fort.
+  A loser falls back where it came from, or else to a bordering province it holds. One beaten 2.5 to 1,
+  or with nowhere to go, is routed.
+- **Occupation and treaties** (v2 5.1).
+  - Beating an enemy province's defence occupies it. The owner stays, and the occupier draws half its
+    income. Neutral land is taken outright.
+  - The war score counts the value occupied each way, battles (±4 each, at most ±20) and capitals.
+  - The court may put three terms to an enemy:
+    - `offer_white_peace`: everything returns;
+    - `demand_occupied`: what we occupy becomes ours; this needs the war score to pay for it, and is
+      enforced without asking at 90;
+    - `cede_occupied`: what they occupy becomes theirs.
+
+    The other side answers on the same snapshot, at most two a turn. A treaty ends the war in a 5-turn
+    truce.
+  - A realm with every province occupied and no army is broken: its occupiers keep what they hold.
+  - A game where nothing changes hands for 20 turns ends as a stalemate.
+
+**Simulated** (50 games a line-up on Classic, 20 on a medium generated world, scripted and random
+players, 12 November; no model):
+
+| Map, line-up | Turns | One left / stalemate / at the 150 cap | Battles a game | Treaties a game | Decisions a ruler a turn (army orders) |
+|---|---:|---|---:|---:|---|
+| Classic, mixed | 122 | 29 / 9 / 12 | 141 | 30 | 1.94 (49%) |
+| Classic, scripted | 107 | 44 / 3 / 3 | 138 | 17 | 1.86 (49%) |
+| Classic, expansionist against 4 random | 123 | 10 / 22 / 18; the expansionist won 47 | 107 | 56 | 2.16 |
+| Medium, mixed | 150 | 1 / 0 / 19 | 287 | 43 | 2.45 (61%) |
+
+On Classic a ruler is asked about 0.95 armies a turn, close to the page's estimate of 1.0. **A medium
+world rarely finishes within 150 turns**, so the game's length is the first thing R1's numbers have to
+tune.
 
 ## The first real run
 
@@ -1715,10 +1804,11 @@ Assets/GreyBoxStrategy/
   Sim/                GreyBoxStrategy.Sim (noEngineReferences: true): no UnityEngine at all
     Rules/            Dice, GameRules, MapDefinition, World, Move, Legality, Facts, Requests, Game,
                       TurnSnapshot, Events (the storyteller's templates, groups and fairness rules),
-                      GameSetup (rules v2's settings)
+                      GameSetup (rules v2's settings); the writs turn: Armies (Army, WarRecord,
+                      WarScore), WritLegality, WritTurn (Game's second half)
     Map/              WorldMap (the map as data, JSON), Terrain and TerrainTable, ClassicMap; the generator:
                       MapGenerator, MapSettings, MapChecks, MapGeometry, MapNames, SpecialTemplates, MapRandom
-    Players/          IPlayer, ScriptedPlayer and Temperament, RandomPlayer
+    Players/          IPlayer, ScriptedPlayer and Temperament, RandomPlayer, WritScripted (the writs turn)
     Runner/           GameRunner and Lineups, SeriesSummary, GameLog and StrategyRuns, Scorecard, EventLog
   Agents/             GreyBoxStrategy (refs Agenerela, GreyBoxStrategy.Sim): CountryAgent, the model seat;
                       ModelGameRunner (one DecisionRound a council) and ModelReport; ModelSeatOptions,

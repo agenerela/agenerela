@@ -19,7 +19,7 @@ namespace GreyBoxStrategy
     /// country decides on the same snapshot. Resolution then re-checks each move with
     /// <see cref="Legality.WhyNot"/> before it lands, and refuses one an earlier move made stale.
     /// </remarks>
-    public sealed class Game
+    public sealed partial class Game
     {
         private enum Phase { AwaitingTurn, AwaitingCouncil, AwaitingEnvoys, Over }
 
@@ -285,6 +285,7 @@ namespace GreyBoxStrategy
 
             ownersAtCouncil = World.ProvinceList.ToDictionary(p => p.Id, p => p.Owner, StringComparer.Ordinal);
             Snapshots.Add(new TurnSnapshot(World));
+            if (Rules.Turn == TurnStyle.Writs) return BeginWrits();
             councilRequests = World.Alive.Select(c => new CountryRequest(
                 Moment.Council, World.Turn, c.Id, World,
                 Facts.Standing(World, c.Id),
@@ -655,6 +656,7 @@ namespace GreyBoxStrategy
         /// </summary>
         public TurnReport Resolve(IEnumerable<CountryAnswer> envoyAnswers = null)
         {
+            if (Rules.Turn == TurnStyle.Writs) return ResolveWrits(envoyAnswers);
             Expect(Phase.AwaitingEnvoys);
             foreach (var c in World.CountryList) pending[c.Id].Clear();
 

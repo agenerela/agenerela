@@ -73,13 +73,15 @@ namespace GreyBoxStrategy
     {
         public const int Sea = -1;
         public const int Water = -2;
+        /// <summary>A small island off the coast: scenery to draw, never a province.</summary>
+        public const int Island = -4;
 
         /// <summary>The grid's size in cells.</summary>
         public int Width;
         public int Height;
         /// <summary>
         /// The grid, row by row from the top, run-length coded: <c>"v*n v*n ..."</c>, where v is the
-        /// province's index in <see cref="WorldMap.Provinces"/>, -1 the sea and -2 inland water. Decode
+        /// province's index in <see cref="WorldMap.Provinces"/>, -1 the sea, -2 inland water and -4 a scenery island. Decode
         /// with <see cref="DecodeCells"/>.
         /// </summary>
         public string Cells;
@@ -87,6 +89,12 @@ namespace GreyBoxStrategy
         public List<ProvinceShape> Provinces = new List<ProvinceShape>();
         public List<BorderLine> Borders = new List<BorderLine>();
         public List<RidgeLine> Ridges = new List<RidgeLine>();
+        /// <summary>Scenery islands' outlines, closed polylines of grid corners: land to draw, never played.</summary>
+        public List<int[]> Islands = new List<int[]>();
+        /// <summary>Rivers, source to mouth, along grid corners. No rule reads them yet.</summary>
+        public List<RiverLine> Rivers = new List<RiverLine>();
+        /// <summary>Roads through chains of neighbouring provinces, with their bridges. No rule reads them yet.</summary>
+        public List<RoadLine> Roads = new List<RoadLine>();
 
         public static string EncodeCells(int[] cells)
         {
@@ -166,6 +174,16 @@ namespace GreyBoxStrategy
                     Outline = outlines[i],
                 });
             }
+
+            var islandEdges = new List<(int x0, int y0, int x1, int y1)>();
+            int Cell(int ax, int ay) => ax < 0 || ay < 0 || ax >= width || ay >= height ? Sea : cells[ay * width + ax];
+            for (int y = 0; y <= height; y++)
+            for (int x = 0; x <= width; x++)
+            {
+                if (x < width && (Cell(x, y - 1) == Island) != (Cell(x, y) == Island)) islandEdges.Add((x, y, x + 1, y));
+                if (y < height && (Cell(x - 1, y) == Island) != (Cell(x, y) == Island)) islandEdges.Add((x, y, x, y + 1));
+            }
+            if (islandEdges.Count > 0) g.Islands = Chain(islandEdges, width + 1);
 
             foreach (var line in EdgeLines(cells, width, height))
             {
@@ -303,6 +321,9 @@ namespace GreyBoxStrategy
             }
             return a;
         }
+
+        /// <summary>An open polyline <c>[x0, y0, ...]</c> with the corners in the middle of straight runs dropped.</summary>
+        internal static int[] SimplifyOpen(List<int> pts) => Simplify(pts, closed: false);
 
         // Drops corners in the middle of a straight run.
         private static int[] Simplify(List<int> pts, bool closed)

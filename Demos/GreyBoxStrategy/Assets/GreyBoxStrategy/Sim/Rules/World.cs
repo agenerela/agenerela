@@ -55,6 +55,13 @@ namespace GreyBoxStrategy
         public int Garrison { get; set; }
         /// <summary>A capital is the start province marked * on the map, whoever holds it now.</summary>
         public bool IsCapital => Info.IsCapital;
+        /// <summary>
+        /// The writs turn: the country occupying it, or null while its owner controls it. Occupation
+        /// never changes the owner; only a treaty does (v2 5.1).
+        /// </summary>
+        public string Occupier { get; set; }
+        /// <summary>Who controls it now: the occupier, or else the owner (null for neutral land).</summary>
+        public string Controller => Occupier ?? Owner;
 
         public override string ToString() => Id;
     }
@@ -120,7 +127,44 @@ namespace GreyBoxStrategy
         public IEnumerable<Province> ProvincesOf(string countryId) => ProvinceList.Where(p => p.Owner == countryId);
         public int ProvinceCount(string countryId) => ProvinceList.Count(p => p.Owner == countryId);
 
-        public int Income(Country c) => ProvinceCount(c.Id) * Rules.IncomePerProvince;
+        /// <summary>
+        /// Gold a turn. In the writs turn an occupied province gives its owner nothing and its
+        /// occupier half (v2 5.1); otherwise every province owned gives the same.
+        /// </summary>
+        public int Income(Country c)
+        {
+            if (Rules.Turn != TurnStyle.Writs) return ProvinceCount(c.Id) * Rules.IncomePerProvince;
+            int own = ProvinceList.Count(p => p.Owner == c.Id && p.Occupier == null);
+            int occupied = ProvinceList.Count(p => p.Occupier == c.Id);
+            return own * Rules.IncomePerProvince + occupied * Rules.IncomePerProvince / 2;
+        }
+
+        // --- The writs turn (rules v2, R1) -----------------------------------------------------
+
+        /// <summary>Every army on the map, in the order they were raised.</summary>
+        public List<Army> Armies { get; } = new List<Army>();
+        /// <summary>Ids of armies destroyed or disbanded, never given to a new army, so a log or a memory keeps one name for one army.</summary>
+        public HashSet<string> RetiredArmyIds { get; } = new HashSet<string>(StringComparer.Ordinal);
+        /// <summary>Each war's record of battles, by the pair's key (the two ids in order).</summary>
+        public Dictionary<string, WarRecord> Wars { get; } = new Dictionary<string, WarRecord>(StringComparer.Ordinal);
+
+        public Army FindArmy(string id) => id == null ? null : Armies.FirstOrDefault(a => a.Id == id);
+        public IEnumerable<Army> ArmiesOf(string countryId) => Armies.Where(a => a.Owner == countryId);
+        public IEnumerable<Army> ArmiesAt(string provinceId) => Armies.Where(a => a.Location == provinceId);
+
+        /// <summary>Writs this country has this turn: 2 + 1 per 8 provinces owned, at most 5 (v2 1.1).</summary>
+        public int Writs(string countryId) =>
+            System.Math.Min(Rules.MaxWrits, Rules.BaseWrits + ProvinceCount(countryId) / Rules.ProvincesPerWrit);
+
+        /// <summary>The record of the war between two countries, made when first asked.</summary>
+        public WarRecord War(string a, string b)
+        {
+            string key = PairKey(a, b);
+            if (!Wars.TryGetValue(key, out var w)) Wars[key] = w = new WarRecord(key);
+            return w;
+        }
+
+        public static string PairKey(string a, string b) => Key(a, b);
         public int Upkeep(Country c) => c.Army / Rules.SoldiersPerUpkeepGold;
 
         /// <summary>How many soldiers a recruit would raise now: the levy, cut to what the treasury pays for.</summary>
@@ -139,6 +183,14 @@ namespace GreyBoxStrategy
         /// <summary>Whether any province of one borders any province of the other.</summary>
         public bool Borders(string a, string b) =>
             ProvinceList.Any(p => p.Owner == a && Neighbours(p).Any(n => n.Owner == b));
+
+        /// <summary>
+        /// One letter per province for the writs turn's logs: the owner's initial, upper case on a
+        /// capital, '.' for neutral; an occupied province shows the occupier's initial after a '/'.
+        /// Not used by the one-move game, whose log is unchanged.
+        /// </summary>
+        public string ControlSignature() =>
+            string.Join(",", ProvinceList.Select(p => p.Id + "=" + (p.Owner ?? "-") + (p.Occupier != null ? "/" + p.Occupier : "")));
 
         public Relation RelationBetween(string a, string b) =>
             relations.TryGetValue(Key(a, b), out var r) ? r : Relation.Peace;

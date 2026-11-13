@@ -1,5 +1,17 @@
 namespace GreyBoxStrategy
 {
+    /// <summary>How a turn is played (rules v2, section 1).</summary>
+    public enum TurnStyle
+    {
+        /// <summary>Today's game: one move a country a turn, one army number a country.</summary>
+        OneMove,
+        /// <summary>
+        /// Rules v2's turn (slice R1): a few writs a turn, a court order, orders for the armies
+        /// awaiting them; armies stand on the map, march, fight, occupy, and wars end in treaties.
+        /// </summary>
+        Writs,
+    }
+
     /// <summary>How a game is won: rules v2, section 6.2.</summary>
     public enum VictoryMode
     {
@@ -21,6 +33,10 @@ namespace GreyBoxStrategy
     /// </summary>
     public sealed class GameRules
     {
+        // --- The turn ---------------------------------------------------------------------
+        /// <summary>One move a turn (today) or the writs turn of rules v2. Everything below "Writs" is read only by the latter.</summary>
+        public TurnStyle Turn = TurnStyle.OneMove;
+
         // --- Length and victory ----------------------------------------------------------
         /// <summary>How the game is won (rules v2, section 6). Today's game is <see cref="VictoryMode.Domination"/>.</summary>
         public VictoryMode Victory = VictoryMode.Domination;
@@ -112,6 +128,41 @@ namespace GreyBoxStrategy
         /// <summary>A sickness needs an army of this size, so it never takes the last soldiers.</summary>
         public int EventMinArmyForPlague = 20;
         public int EventVolunteersMax = 30;
+
+        // --- Writs (rules v2, R1; every number *to tune*) ------------------------------------
+        /// <summary>Writs a turn: this many, plus one per <see cref="ProvincesPerWrit"/> provinces owned, at most <see cref="MaxWrits"/>.</summary>
+        public int BaseWrits = 2;
+        public int ProvincesPerWrit = 8;
+        public int MaxWrits = 5;
+        /// <summary>An army asks for orders again after this many turns on one order (wake condition 8), and a hold lasts this long.</summary>
+        public int WakeAfterTurns = 4;
+        /// <summary>A march may be ordered to a province at most this many steps away.</summary>
+        public int MarchRange = 3;
+        /// <summary>At most this many destinations are offered an army, the nearest first (v2: about a dozen targets a decision).</summary>
+        public int MarchTargets = 12;
+        /// <summary>Soldiers one army may hold; a levy beyond it forms another army.</summary>
+        public int ArmyMax = 100;
+        /// <summary>A province with no army defends with this militia, plus <see cref="MilitiaPerFort"/> a fort.</summary>
+        public int MilitiaBase = 5;
+        public int MilitiaPerFort = 10;
+        /// <summary>A loser beaten by this many times its strength, or with nowhere to go, is routed: destroyed.</summary>
+        public double RoutRatio = 2.5;
+        /// <summary>At this war score a demand lands without being asked (v2 5.1).</summary>
+        public int EnforcedScore = 90;
+        /// <summary>War score from battles: this much a battle won or lost, at most <see cref="BattleScoreMax"/> either way.</summary>
+        public int BattleScore = 4;
+        public int BattleScoreMax = 20;
+        public int CapitalScore = 10;
+        /// <summary>A ruler answers at most this many treaty proposals a turn.</summary>
+        public int MaxTreatyAnswers = 2;
+        /// <summary>
+        /// A game where no province changes owner or controller for this many turns ends as a
+        /// stalemate (v2 6.1 measures it; ending it is ours, so a headless run stops). 0: never.
+        /// </summary>
+        public int StalemateTurns = 0;
+
+        /// <summary>Turns to enter a province of this terrain (v2 3.2): 1 on plains and forest, 2 elsewhere.</summary>
+        public int TurnsToEnter(Terrain t) => t == Terrain.Plains || t == Terrain.Forest ? 1 : 2;
 
         /// <summary>The rules as designed.</summary>
         public static GameRules Standard => new GameRules();
