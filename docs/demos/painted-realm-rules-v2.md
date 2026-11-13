@@ -1658,6 +1658,17 @@ What the design got wrong or left open, and what was decided (_Mine_ unless the 
   the whole: in the editor, 0.3 to 11 s for the exported huge worlds (16 tries at worst). The page's
   target of 2 s is met per try but not for every seed. Fewer retries would need a fairer first try, or
   fairness re-tried on the same geometry.
+- **Shapes that read as figures** (the lead's review of the first sheet, 13 November). An ellipse, an
+  oval lake, two round lobes, a land cut flat by the frame. Now each shape's proportions vary by seed, and
+  two warps bend it before it is read: a broad one about 15% of the chart, and a fine one about 5.5%
+  that cuts bays and pushes out headlands. The land fades out before the frame, so a peninsula or a long
+  coast no longer runs off the chart's edge: section 2.2's "open to one edge" became a broad land
+  narrowing to a tip. Land detached from the main land stays as scenery islands. It must stand two cells
+  of sea from the main land and three from the frame, and be no bigger than a province. It is never
+  played, as section 2.2 says. Every seed's world changed, and the pinned hashes were re-pinned.
+- **The huge worlds that failed reach** after 50 tries. Up to eight more capital searches now run on
+  the same geometry before a world is remade. A world that the first four searches made fair comes out
+  unchanged.
 - **Lloyd relaxation** runs three times, not two, and provinces under 0.7 of the mean area take a layer
   of cells from larger neighbours. Both cut the "area" failures.
 

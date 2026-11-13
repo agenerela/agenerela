@@ -39,13 +39,14 @@ namespace GreyBoxStrategy.Tests
             }
         }
 
-        // Hashes measured under .NET 9 outside Unity on 12 November; the same world under Unity's Mono
-        // shows the generator does not depend on the runtime. A changed rule changes them: re-pin, and
-        // say in the pull request that every seed now makes a different world.
-        [TestCase(MapSize.Small, 7, "9c5dd7ed034ac99406d6c33a54793d94e95cfb063c97689d77fa18e68bc84f5c")]
-        [TestCase(MapSize.Medium, 7, "0f0bd8c4f54575e45f1938a52ccd0f69096534c66b3f4d7ecf322e0f145ea60d")]
-        [TestCase(MapSize.Large, 7, "d7fcd039279e28bcc6989ec9cb11e622e214819872a2890034d94c6b7c8e305c")]
-        [TestCase(MapSize.Huge, 4, "de6e6ce255fbec8133fc78b4874d50f2b3c15106f1dac5eb58da6abde53be2b3")]
+        // Hashes measured under .NET 9 outside Unity; the same world under Unity's Mono shows the
+        // generator does not depend on the runtime. A changed rule changes them: re-pin, and say in the
+        // pull request that every seed now makes a different world. Re-pinned on 13 November when the
+        // land shapes became irregular (warped shapes, scenery islands, land kept off the frame).
+        [TestCase(MapSize.Small, 7, "d767564849cadd88d2e210c2baa5562af9a3c98aaae09c1f74abbd40006b8937")]
+        [TestCase(MapSize.Medium, 7, "07221e93a71dadf1c5b8b8823fb33fcf50b282f64edf06ef2f1a77e22d202d82")]
+        [TestCase(MapSize.Large, 7, "b80e80addca97d8bb695ffd4d596b3336a982b28a845c66df105872256dbe80f")]
+        [TestCase(MapSize.Huge, 28, "4f8bab21058ed9f5a4674753269c8ce6d0b091ae2c5e3e96271dcc9a6fe0f9f4")]
         public void Determinism_ASeedsWorldIsPinned(MapSize size, int seed, string hash)
         {
             var made = Make(seed, size);
@@ -118,6 +119,23 @@ namespace GreyBoxStrategy.Tests
             Assert.That(ids, Is.Unique);
             foreach (string id in ids) Assert.That(id, Does.Match("^[a-z]{4,11}$"));
             foreach (var t in TerrainTable.All) Assert.That(map.Provinces.Any(p => p.Terrain == t), Is.True, $"no {t}");
+
+            // The land never meets the frame, and scenery islands never touch a province.
+            var geo = map.Geometry;
+            var grid = geo.DecodeCells();
+            for (int y = 0; y < geo.Height; y++)
+            for (int x = 0; x < geo.Width; x++)
+            {
+                int v = grid[y * geo.Width + x];
+                if (v >= 0) Assert.That(x > 0 && y > 0 && x < geo.Width - 1 && y < geo.Height - 1, Is.True, $"province cell on the frame at {x},{y}");
+                if (v != MapGeometry.Island) continue;
+                foreach (var (dx, dy) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+                {
+                    int nx = x + dx, ny = y + dy;
+                    if (nx >= 0 && ny >= 0 && nx < geo.Width && ny < geo.Height)
+                        Assert.That(grid[ny * geo.Width + nx], Is.LessThan(0), $"island touches a province at {x},{y}");
+                }
+            }
 
             // The outlines are the cells: each province's loops enclose exactly its area.
             foreach (var shape in map.Geometry.Provinces)
@@ -195,6 +213,7 @@ namespace GreyBoxStrategy.Tests
         [TestCase("real-name", "names")]
         [TestCase("special-on-capital", "specials")]
         [TestCase("special-wrong-terrain", "specials")]
+        [TestCase("island-ashore", "island")]
         public void Checks_CatchABrokenWorld(string breakage, string check)
         {
             var m = Copy(Sample());
@@ -300,6 +319,18 @@ namespace GreyBoxStrategy.Tests
                     p.Special = s.Template;
                     break;
                 }
+                case "island-ashore":
+                {
+                    // The sea cell beside a coastal province becomes a scenery island.
+                    int w = m.Geometry.Width;
+                    SetCells(m, c =>
+                    {
+                        for (int k = w; k < c.Length - w; k++)
+                            if (c[k] == MapGeometry.Sea && (c[k - 1] >= 0 || c[k + 1] >= 0)) { c[k] = MapGeometry.Island; break; }
+                        return c;
+                    });
+                    break;
+                }
                 default:
                     Assert.Fail("unknown breakage");
                     break;
@@ -349,15 +380,15 @@ namespace GreyBoxStrategy.Tests
         public void Generator_RetriesUntilAWorldPasses_AndReportsWhenNoneDid()
         {
             var settings = new MapSettings { Size = MapSize.Small, Shape = LandShape.LongCoast };
-            var once = MapGenerator.Generate(2, 4, settings, maxAttempts: 1);
-            Assert.That(once.Passed, Is.False, "seed 2's first try fails (found by search, 12 November)");
+            var once = MapGenerator.Generate(1, 4, settings, maxAttempts: 1);
+            Assert.That(once.Passed, Is.False, "seed 1's first try fails (found by search, 13 November)");
             Assert.That(once.Attempts, Is.EqualTo(1));
             Assert.That(once.Problems, Is.Not.Empty);
             Assert.That(once.Log.Single(), Does.StartWith("try 0: "));
             Assert.That(once.Map, Is.Not.Null, "the best world found is still returned");
             Assert.That(once.Playable, Is.True, "it fails fairness, not connectivity");
 
-            var retried = MapGenerator.Generate(2, 4, settings);
+            var retried = MapGenerator.Generate(1, 4, settings);
             Assert.That(retried.Passed, Is.True);
             Assert.That(retried.Attempts, Is.GreaterThan(1));
             Assert.That(retried.Map.Generated.Attempt, Is.EqualTo(retried.Attempts - 1));

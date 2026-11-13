@@ -6,7 +6,7 @@ Each world is a WorldMap as the generator writes it (WorldMap.ToJson, rules v2 s
 by GreyBoxStrategy.Editor.MapExportMenu or the generator tests. The sheet draws, from the
 geometry's cell grid only, the way a screen would:
 
-- the sea dark, inland water lighter;
+- the sea dark, inland water lighter, scenery islands in a plain land colour;
 - each province in its terrain's colour, washed toward its starting owner's colour;
 - province borders thin, realm borders and coasts heavier, ridge cuts as thick brown lines with
   the passes left open;
@@ -31,6 +31,7 @@ TERRAIN = {
 }
 SEA = (30, 44, 60)
 WATER = (64, 98, 122)
+ISLAND = (170, 160, 120)
 OWNERS = [
     (200, 60, 50), (50, 90, 190), (220, 170, 40), (60, 150, 80), (150, 70, 160),
     (40, 160, 170), (220, 110, 40), (120, 120, 120), (190, 80, 120), (100, 60, 30),
@@ -67,7 +68,7 @@ def draw_world(world, scale, title_font, label_font):
     for y in range(h):
         for x in range(w):
             v = cells[y * w + x]
-            px[x, y] = SEA if v == -1 else WATER if v == -2 else colour[v]
+            px[x, y] = SEA if v == -1 else WATER if v == -2 else ISLAND if v == -4 else colour[v]
     img = img.resize((w * scale, h * scale), Image.NEAREST)
     d = ImageDraw.Draw(img)
     u = max(1, scale // 3)  # line widths and markers grow with the drawing scale
@@ -92,6 +93,10 @@ def draw_world(world, scale, title_font, label_font):
             pts = [(line[i] * scale, line[i + 1] * scale) for i in range(0, len(line), 2)]
             if len(pts) > 1:
                 d.line(pts, fill=fill, width=width)
+    for line in geo.get("islands", []):
+        pts = [(line[i] * scale, line[i + 1] * scale) for i in range(0, len(line), 2)]
+        if len(pts) > 1:
+            d.line(pts, fill=(20, 20, 20), width=u)
     for r in geo.get("ridges", []):
         x0, y0, x1, y1 = [v * scale + scale // 2 for v in r["line"]]
         d.line([(x0, y0), (x1, y1)], fill=(90, 50, 20), width=u)

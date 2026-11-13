@@ -181,17 +181,27 @@ namespace GreyBoxStrategy
                 height = new int[w * h];
                 int period = Math.Max(4, w / 4);
                 bool flip = (MapRandom.Hash(seed, "flip", 0) & 1) == 1;
+                // Two warps bend the shape before it is read: a broad one turns ellipses into irregular
+                // lands, a finer one cuts bays and pushes out headlands.
+                int broad = Math.Max(4, w / 3), fine = Math.Max(4, w / 9);
+                const long BroadReach = 9800, FineReach = 3600; // in 1/65536 of the chart: about 15% and 5.5%
                 var hist = new int[65536];
                 for (int y = 0; y < h; y++)
                 for (int x = 0; x < w; x++)
                 {
                     int noise = MapRandom.Fractal(seed, "land", x, y, period, 5);
                     long u = (long)(flip ? w - 1 - x : x) * 65536 / w, v = (long)y * 65536 / h;
+                    u += (MapRandom.Fractal(seed, "warp-u", x, y, broad, 3) - 32768) * BroadReach / 32768
+                       + (MapRandom.Fractal(seed, "bay-u", x, y, fine, 2) - 32768) * FineReach / 32768;
+                    v += (MapRandom.Fractal(seed, "warp-v", x, y, broad, 3) - 32768) * BroadReach / 32768
+                       + (MapRandom.Fractal(seed, "bay-v", x, y, fine, 2) - 32768) * FineReach / 32768;
                     int shape = Shape(u, v);
-                    int value = (int)(((long)noise * 50 + (long)shape * 50) / 100);
-                    if (ForcedWater(x, y, flip)) value = 0;
-                    height[y * w + x] = value;
-                    hist[value]++;
+                    long value = ((long)noise * 50 + (long)shape * 50) / 100;
+                    // Land fades out near the frame, so no coast runs along it in a straight line.
+                    long edge = Math.Min(Math.Min(x, w - 1 - x) * 65536L / w * 16 / 9, Math.Min(y, h - 1 - y) * 65536L / h);
+                    value = value * Math.Min(65536L, edge * 65536 / 4600) / 65536;
+                    height[y * w + x] = (int)Math.Max(0, Math.Min(65535, value));
+                    hist[height[y * w + x]]++;
                 }
                 long target = grid * percent / 100;
                 int threshold = 65535;
@@ -199,20 +209,41 @@ namespace GreyBoxStrategy
                 while (threshold > 0 && count + hist[threshold] < target) count += hist[threshold--];
                 for (int c = 0; c < cells.Length; c++) cells[c] = height[c] >= threshold && height[c] > 0 ? Land : MapGeometry.Sea;
 
-                // Only the largest land stays playable; small enclosed water is filled, large stays as inland water.
+                // Only the largest land is played. Smaller land stays as scenery islands where it stands
+                // clear of the main land (two cells of sea or more) and of the frame (three), is big
+                // enough to see, and no bigger than a province.
                 var landParts = Components(c => cells[c] == Land);
                 var biggest = landParts.OrderByDescending(p => p.Count).ThenBy(p => p[0]).FirstOrDefault();
                 if (biggest == null) { Problems.Add(new MapProblem(ProblemKind.Shape, "land", "no land at all")); return false; }
-                var keep = new bool[cells.Length];
-                foreach (int c in biggest) keep[c] = true;
-                for (int c = 0; c < cells.Length; c++) if (cells[c] == Land && !keep[c]) cells[c] = MapGeometry.Sea;
+                var nearMain = new bool[cells.Length];
+                foreach (int c in biggest)
+                {
+                    int x0 = c % w, y0 = c / w;
+                    for (int dy = -2; dy <= 2; dy++)
+                    for (int dx = -2; dx <= 2; dx++)
+                    {
+                        int x = x0 + dx, y = y0 + dy;
+                        if (x >= 0 && y >= 0 && x < w && y < h) nearMain[y * w + x] = true;
+                    }
+                }
+                foreach (var part in landParts)
+                {
+                    if (part == biggest) continue;
+                    bool island = part.Count >= 6 && part.Count <= biggest.Count / n
+                        && !part.Any(c => nearMain[c] || c % w < 3 || c / w < 3 || c % w >= w - 3 || c / w >= h - 3);
+                    foreach (int c in part) cells[c] = island ? MapGeometry.Island : MapGeometry.Sea;
+                }
                 int landCount = biggest.Count;
                 meanArea = (double)landCount / n;
                 foreach (var water in Components(c => cells[c] == MapGeometry.Sea))
                 {
                     bool open = water.Any(c => { int x = c % w, y = c / w; return x == 0 || y == 0 || x == w - 1 || y == h - 1; });
                     if (open) continue;
-                    if (water.Count < meanArea * 0.6) { foreach (int c in water) cells[c] = Land; landCount += water.Count; }
+                    if (water.Count < meanArea * 0.6 && !water.Any(c => Around(c).Contains(MapGeometry.Island)))
+                    {
+                        foreach (int c in water) cells[c] = Land;
+                        landCount += water.Count;
+                    }
                     else foreach (int c in water) cells[c] = MapGeometry.Water;
                 }
                 meanArea = (double)landCount / n;
@@ -224,35 +255,39 @@ namespace GreyBoxStrategy
                 return true;
             }
 
-            // The shape's falloff, 0..65535: high where the shape wants land. u and v run 0..65535 across the chart.
+            // A seeded nudge in [-range, range], so no two worlds of a shape have the same proportions.
+            private double Jitter(string name, double range) => (MapRandom.Int(seed, "shape-" + name, 0, 2001) - 1000) / 1000.0 * range;
+
+            // The shape's falloff, 0..65535: high where the shape wants land. u and v run 0..65535 across
+            // the chart, already warped.
             private int Shape(long u, long v)
             {
                 switch (settings.Shape)
                 {
                     case LandShape.TwoLands:
-                        return Math.Max(Ellipse(u, v, 0.28, 0.5, 0.25, 0.42),
-                               Math.Max(Ellipse(u, v, 0.72, 0.5, 0.25, 0.42), Ellipse(u, v, 0.5, 0.5, 0.22, 0.09)));
+                    {
+                        double tilt = Jitter("tilt", 0.08);
+                        return Math.Max(Ellipse(u, v, 0.28 + Jitter("lu", 0.03), 0.5 - tilt, 0.23 + Jitter("lr", 0.03), 0.38 + Jitter("lh", 0.05)),
+                               Math.Max(Ellipse(u, v, 0.72 + Jitter("ru", 0.03), 0.5 + tilt, 0.23 + Jitter("rr", 0.03), 0.38 + Jitter("rh", 0.05)),
+                                        Ellipse(u, v, 0.5, 0.5 + Jitter("neck", 0.06), 0.2, 0.08)));
+                    }
                     case LandShape.InlandSea:
                     {
-                        long e = EllipseDistance(u, v, 0.5, 0.5, 0.47, 0.47);
-                        long s = 1024 - Math.Abs(e - 700) * 1024 / 300;
+                        long e = EllipseDistance(u, v, 0.5 + Jitter("cu", 0.03), 0.5 + Jitter("cv", 0.04), 0.44 + Jitter("ru", 0.03), 0.44 + Jitter("rv", 0.04));
+                        long s = 1024 - Math.Abs(e - 680) * 1024 / 320;
                         return (int)Math.Min(65535, Math.Max(0, s) * 64);
                     }
                     case LandShape.Peninsula:
-                        return Ellipse(u, v, 0.0, 0.5, 0.92, 0.44);
+                        // A broad land on one side narrowing to a tip on the other.
+                        return Math.Max(Ellipse(u, v, 0.18, 0.5 + Jitter("bv", 0.06), 0.2, 0.42),
+                                        Ellipse(u, v, 0.45 + Jitter("tu", 0.04), 0.5 + Jitter("tv", 0.08), 0.42, 0.24));
                     case LandShape.LongCoast:
-                    {
-                        long sv = Clamp((v - 26214) * 65536 / 14418);       // 0 at 40% down, full at 62%
-                        long edge = Math.Min(u, 65535 - u);
-                        long sx = Clamp(edge * 65536 / 5243);               // tapers within 8% of each side
-                        return (int)(sv * sx / 65536);
-                    }
+                        // A long land lying along the sea.
+                        return Ellipse(u, v, 0.5, 0.55 + Jitter("v", 0.06), 0.46, 0.25 + Jitter("h", 0.04));
                     default:
-                        return Ellipse(u, v, 0.5, 0.5, 0.46, 0.46);
+                        return Ellipse(u, v, 0.5 + Jitter("cu", 0.04), 0.5 + Jitter("cv", 0.04), 0.42 + Jitter("ru", 0.04), 0.42 + Jitter("rv", 0.05));
                 }
             }
-
-            private static long Clamp(long v) => Math.Max(0, Math.Min(65535, v));
 
             // 1024 at the ellipse's rim, 0 at its centre, in fixed point.
             private static long EllipseDistance(long u, long v, double cu, double cv, double ru, double rv)
@@ -264,18 +299,6 @@ namespace GreyBoxStrategy
 
             private static int Ellipse(long u, long v, double cu, double cv, double ru, double rv) =>
                 (int)Math.Min(65535, Math.Max(0, 1024 - EllipseDistance(u, v, cu, cv, ru, rv)) * 64);
-
-            // The chart's edges are sea, except the side a peninsula or a long coast runs off.
-            private bool ForcedWater(int x, int y, bool flip)
-            {
-                bool left = x == 0, right = x == w - 1, top = y == 0, bottom = y == h - 1;
-                switch (settings.Shape)
-                {
-                    case LandShape.Peninsula: return top || bottom || (flip ? left : right);
-                    case LandShape.LongCoast: return top || left || right;
-                    default: return left || right || top || bottom;
-                }
-            }
 
             private List<List<int>> Components(Func<int, bool> member)
             {
@@ -987,7 +1010,9 @@ namespace GreyBoxStrategy
                 List<int> best = null;
                 int[] bestOwners = null;
                 double bestScore = double.MaxValue;
-                int trials = 4;
+                // Four searches usually find fair starts. When they do not, up to eight more run on the
+                // same geometry before the world is made again: geometry is the dearer half of a try.
+                int trials = 12;
                 for (int t = 0; t < trials && bestScore >= 1; t++)
                 {
                     var chosen = new List<int> { candidates[MapRandom.Int(seed, "capital-first", t, candidates.Count)] };

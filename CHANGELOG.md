@@ -29,6 +29,10 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm's generated worlds look like land, not figures** (#20). Coasts have bays and
+  headlands, inland seas are irregular, lobes are uneven, and no land meets the frame. Small scenery
+  islands lie offshore. When a world's starts are unfair, the generator searches again on the same
+  geometry before making a new one. Every seed now makes a different world than before.
 - **Painted Realm rules v2, slice R2: the map generator, headless** (#20). GreyBoxStrategy generates
   worlds from a seed: small to huge (30 to 150 provinces), five land shapes, terrain, coasts and
   ports, ridges with passes, regions, fair capitals and starting realms, goods, population, names from

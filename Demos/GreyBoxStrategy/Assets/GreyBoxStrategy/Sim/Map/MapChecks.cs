@@ -155,7 +155,7 @@ namespace GreyBoxStrategy
                 return;
             }
             int n = map.Provinces.Count, w = geo.Width, h = geo.Height;
-            if (cells.Any(v => v >= n || v < MapGeometry.Water))
+            if (cells.Any(v => v >= n || v < MapGeometry.Island || v == -3))
             {
                 problems.Add(new MapProblem(ProblemKind.Connectivity, "cells", "a cell names a province that does not exist"));
                 return;
@@ -201,6 +201,18 @@ namespace GreyBoxStrategy
                         problems.Add(new MapProblem(ProblemKind.Connectivity, "ridge-pass",
                             $"the border {map.Provinces[a].Id}-{map.Provinces[b].Id} crosses a ridge away from a pass"));
                 }
+
+            // A scenery island touching a province would read as part of it.
+            int touching = 0;
+            for (int c = 0; c < cells.Length; c++)
+            {
+                if (cells[c] != MapGeometry.Island) continue;
+                int x = c % w, y = c / w;
+                if ((x > 0 && cells[c - 1] >= 0) || (x + 1 < w && cells[c + 1] >= 0) || (y > 0 && cells[c - w] >= 0) || (y + 1 < h && cells[c + w] >= 0))
+                    touching++;
+            }
+            if (touching > 0)
+                problems.Add(new MapProblem(ProblemKind.Shape, "island", $"{touching} island cells touch a province"));
 
             // Corners: two provinces meeting only diagonally, across two others.
             int diagonals = 0;
