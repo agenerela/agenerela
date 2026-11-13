@@ -101,6 +101,39 @@ namespace GreyBoxStrategy.Tests
             Assert.That(mostMoves, Is.LessThanOrEqualTo(20), "the targeted moves of one decision stay near a dozen");
         }
 
+        // R1c's run, end to end with a fake model: the writs arm and today's game interleaved in blocks,
+        // every file written, the per-turn file for the writs arm.
+        [Test]
+        public async Task ATable_PlaysTheWritsTurn_InterleavedWithTodaysGame()
+        {
+            ILLMProvider First(string model, World w) => new ScriptedProvider
+            {
+                Callback = req => ScriptedReply.Decide(req.OfferedActions.FirstOrDefault(a => a != ActionRegistry.None) ?? ActionRegistry.None,
+                    req.OfferedTargets.FirstOrDefault(t => t != TargetRegistry.NoTarget) ?? TargetRegistry.NoTarget, "Onward."),
+            };
+            var writs = Tables.Named("fake,fake,fake,fake,fake", null, personas: true);
+            writs.Setup = GameSetup.Writs(1);
+            writs.Setup.TurnCap = 8;
+            var oneMove = Tables.Named("fake,fake,fake,fake,fake", null, personas: true);
+            string folder = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gbs-writs-table-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                var cards = await Await.NotCancelled(StrategyTableRuns.RunInterleavedAsync(folder, new[] { ("writs", writs), ("onemove", oneMove) },
+                    First, 2, 1, 1));
+                Assert.That(cards.Count, Is.EqualTo(2));
+                foreach (string file in new[] { "summary.md", "scorecard.md", "model.csv", "games.csv", "writs-turns.csv" })
+                    Assert.That(System.IO.File.Exists(System.IO.Path.Combine(folder, "writs", file)), Is.True, file);
+                Assert.That(System.IO.File.Exists(System.IO.Path.Combine(folder, "onemove", "writs-turns.csv")), Is.False);
+                var rows = System.IO.File.ReadAllLines(System.IO.Path.Combine(folder, "writs", "writs-turns.csv"));
+                Assert.That(rows.Length, Is.EqualTo(1 + 2 * 8 * 5), "a row a country a turn, two games of eight turns");
+                Assert.That(System.IO.File.ReadAllText(System.IO.Path.Combine(folder, "writs", "model.csv")), Does.Contain(",Army,"));
+            }
+            finally
+            {
+                if (System.IO.Directory.Exists(folder)) System.IO.Directory.Delete(folder, true);
+            }
+        }
+
         [Test]
         public void ARuler_IsForTheWritsTurnOnly()
         {
