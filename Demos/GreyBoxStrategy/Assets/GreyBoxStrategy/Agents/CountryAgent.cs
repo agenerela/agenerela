@@ -129,12 +129,26 @@ namespace GreyBoxStrategy
         {
             foreach (string line in Facts.Standing(world, self)) yield return line;
             // An envoy call offers no targeted move, so the line would only mislead it.
-            if (movesLine && !(ctx.Correlation is EnvoyOffer))
+            if (movesLine && !(ctx.Correlation is EnvoyOffer) && !(ctx.Correlation is ChoiceCall))
             {
                 string moves = Facts.MovesLine(world, self);
                 if (moves != null) yield return moves;
             }
         }
+    }
+
+    /// <summary>The correlation a choice call carries (S2): which event's choice it answers, and its options.</summary>
+    public sealed class ChoiceCall
+    {
+        public ChoiceCall(string id, IReadOnlyList<string> options)
+        {
+            Id = id;
+            Options = options;
+        }
+
+        public string Id { get; }
+        public IReadOnlyList<string> Options { get; }
+        public override string ToString() => Id;
     }
 
     /// <summary>The correlation an envoy call carries: which offer it answers.</summary>
@@ -230,6 +244,13 @@ namespace GreyBoxStrategy
             Council(Actions.OfferPeace, "Ask a country we are at war with for a truce.", new[] { AtWar });
             Envoy(Actions.AcceptPeace, "Accept the offered truce.");
             Envoy(Actions.RefusePeace, "Refuse the offered truce and fight on.");
+            // S2's dilemmas: every option of every dilemma is an action, open only on its own choice
+            // call. Registered only with +choices, so the other arms' registry is S1's exactly.
+            if (Options.Choices)
+                foreach (var t in EventRules.S2Templates.Where(t => t.IsChoice))
+                    foreach (var o in t.Options)
+                        Agent.Actions.Register(new ActionDefinition { Id = o.Id, Description = $"Choose to {o.Label}.", TakesNoTarget = true },
+                            DelegateActionHandler.WithResult(ctx => ctx.Correlation is ChoiceCall c && c.Options.Contains(o.Id), (ctx, d) => ActionResult.Done()));
         }
 
         private void Council(string action, string description, string[] categories)
@@ -246,7 +267,8 @@ namespace GreyBoxStrategy
                 TargetCategories = categories,
             };
             var handler = DelegateActionHandler.WithResult(
-                ctx => !(ctx.Correlation is EnvoyOffer) && (targeted ? AnyTarget(action) : Legality.IsLegal(world, CountryId, new Move(action))),
+                ctx => !(ctx.Correlation is EnvoyOffer) && !(ctx.Correlation is ChoiceCall)
+                       && (targeted ? AnyTarget(action) : Legality.IsLegal(world, CountryId, new Move(action))),
                 (ctx, d) => ActionResult.Done());
             if (targeted)
                 handler.IsAvailableFor = (ctx, target) =>
@@ -298,6 +320,7 @@ namespace GreyBoxStrategy
         public string StimulusFor(CountryRequest request)
         {
             if (request.Moment == Moment.Envoy) return $"{request.OfferedBy} offers us peace.";
+            if (request.Moment == Moment.Choice) return "An event asks for our decision.";
             if (Options.Stimulus == CouncilStimulus.Plain) return "Your move.";
             string head = request.TurnFacts.Count > 0 ? request.TurnFacts[0] : "Nothing has changed.";
             return $"Turn {request.Turn} of {world.Rules.MaxTurns}. {head}";
@@ -310,7 +333,7 @@ namespace GreyBoxStrategy
                 : request.TurnFacts.ToList();
             return new DecideOptions
             {
-                StimulusLabel = request.Moment == Moment.Envoy ? "Envoy" : "Council",
+                StimulusLabel = request.Moment == Moment.Envoy ? "Envoy" : request.Moment == Moment.Choice ? "Choice" : "Council",
                 Observations = facts,
                 ObservationPlacement = Options.Placement,
                 ListActionsAndTargets = true,
@@ -321,7 +344,9 @@ namespace GreyBoxStrategy
                 LegalTargets = Options.LegalTargets,
                 StatementRulesWording = Options.RulesWording,
                 PairTargetsWithActions = Options.PairTargets,
-                Correlation = request.Moment == Moment.Envoy ? new EnvoyOffer(request.OfferId, request.OfferedBy) : null,
+                Correlation = request.Moment == Moment.Envoy ? new EnvoyOffer(request.OfferId, request.OfferedBy)
+                    : request.Moment == Moment.Choice ? new ChoiceCall(request.OfferId, request.Legal.Select(m => m.Action).ToList())
+                    : (object)null,
             };
         }
 
@@ -388,6 +413,8 @@ namespace GreyBoxStrategy
             string asked = result?.ModelDecision?.ActionId;
             record.ModelAnswerLegal = asked != null && (request.Moment == Moment.Envoy
                 ? asked == Actions.AcceptPeace || asked == Actions.RefusePeace || asked == ActionRegistry.None
+                : request.Moment == Moment.Choice
+                ? asked == ActionRegistry.None || request.Legal.Any(m => m.Action == asked)
                 : request.Legal.Contains(ToMove(request, result.ModelDecision)));
             Decisions.Add(record);
             if (result?.Decision != null) pending[request] = (result, record, round);
@@ -398,6 +425,9 @@ namespace GreyBoxStrategy
         {
             if (request.Moment == Moment.Envoy)
                 return d != null && d.ActionId == Actions.AcceptPeace ? new Move(Actions.AcceptPeace) : new Move(Actions.RefusePeace);
+            // A choice not among the options holds: the game then takes the default.
+            if (request.Moment == Moment.Choice)
+                return d != null && request.Legal.Any(m => m.Action == d.ActionId) ? new Move(d.ActionId) : Move.Hold;
             if (d == null || d.ActionId == ActionRegistry.None) return Move.Hold;
             // A move that takes no target ignores one the model named anyway ("recruit corwick").
             // The framework drops it first since #244 item 2 (gap N5); this stays as a second check.

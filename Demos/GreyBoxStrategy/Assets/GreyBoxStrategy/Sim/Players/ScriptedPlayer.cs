@@ -84,7 +84,8 @@ namespace GreyBoxStrategy
         private readonly Dictionary<string, int> lastOffer = new Dictionary<string, int>(StringComparer.Ordinal);
 
         public Move Decide(CountryRequest request) =>
-            request.Moment == Moment.Envoy ? AnswerPeace(request) : Council(request);
+            request.Moment == Moment.Choice ? request.DefaultMove ?? request.Legal[0]
+            : request.Moment == Moment.Envoy ? AnswerPeace(request) : Council(request);
 
         private Move Council(CountryRequest req)
         {

@@ -4008,3 +4008,20 @@ the 4B, or a better first stage than an embedding engine.
 criterion), a decision model fine-tuned on a game's own decisions, or a larger decision model.
 
 Raw data: `.scratch/non-llm-deciders/runs/dm-final/` in the lead's laptop checkout.
+
+### The storyteller's stage S2: titles fixed, twice the kinds of event, choices in character, tales mostly left unfinished; nothing in the war worse (12 November 2026)
+
+GreyBoxStrategy, `personas` table, five `qwen3.5:4b` seats, RTX 5080 (Docker Ollama 0.40.14), seeds 1 to 20, four arms interleaved in blocks of five seeds, one Unity run and lock window per arm-block: **s1** (`default+storyteller`, the control), **s1-title** (`+title-call`), **s2-free** (`+s2+chains-free`) and **s2-skel** (`+s2+chains-skeleton`). Paired by seed with `compare.py`; "beyond" when the 95% interval excludes 0. The control reproduced S1's published numbers (titles missing 47%, 6.65 kinds a game, 29% of hit rulers naming the event). Kit and data: `.scratch/storyteller-s2/`.
+
+- **Titles:** the second call (a scribe agent) cut titles missing from 47% to 0% in all three arms (beyond); titles distinct within a game 60% → 92 to 96%, shared across games 72% → 38 to 48%. Cost 0.35 to 0.39 s an event.
+- **Variety:** kinds of event a game 6.65 → 10.55 (free) and 11.30 (skeleton), beyond. Dilemmas 17% and 29% of events; story-only 12 to 13%; trait events 9 to 12%.
+- **The war:** battles, conquests, wars, peace, lead changes, eliminations and turns within noise in every arm, except free tales: domination 60% → 80% (just beyond). Rulers' sense and voice within, except names its target 66% → 73% (free). η² of aggression 0.81 (s1), 0.80, 0.85, 0.82, all p < 0.001.
+- **Fairness:** gifts 42% → 36% and 29%, value against standing −0.37 → −0.25 and −0.21 (both beyond): a milder rubber band, since dilemmas count as neither gift nor blow.
+- **Hit rulers naming the event:** 29% → 22% in both S2 arms (beyond). The title-call arm alone: 28% (within).
+- **Choices in character:** a pretender was paid off by the builder and the merchant 15 of 15 times and defied by the warmonger and the proud ruler 11 of 11. Elsewhere the model takes the active option almost always (quarantine 62 of 64, hire sellswords 33 of 34, call the muster 44 of 48), whatever the persona.
+- **Chains:** free 2.2 started a game (length 3.6, 0.75 long tales a game), skeleton 1.1 (length 2.3), both beyond. Most are left unfinished: free 8 of 44 completed (2 by `end_tale`), skeleton 4 of 22; the model rarely tells a due stage or closes a tale.
+- **History:** 5% and 6% of stories name a real happening, 0.2% and 0.7% invent one (replaced). One reader, 60 events: 3 refer to what happened, none invents.
+- **Story fit (one reader, not blind, 60 events):** 50 fit, 5 partly (wrong size, invented consequence), 5 not (wrong country or event, or replaced); dilemma stories set up the choice in 9 of 15, are flat in 5, decide it in 1. New defects: numbers in words pass the digit check, and a target id leaked once ("the lords of tale_8").
+- **Smoke finding:** with dilemmas merely open on 40% of turns and tales on 30%, the 4B chose 1 dilemma in 28 events and began no tale; S2 therefore has the game deal each turn's kind.
+- **Latency:** event seconds a turn 0.74 → 1.05 (title call), 1.23 and 1.27 (S2); storyteller prompt 1,363 → about 1,900 tokens, median call 0.73 → 0.85 s.
+- Measured with seeded province terrain; after merging #273 the terrain and coast come from the map's own data (unmeasured wording change, same kind of content).
