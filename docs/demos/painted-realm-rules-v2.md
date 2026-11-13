@@ -1609,15 +1609,15 @@ The screen's half is the screen session's.
 **What R1a built, and what it decided** (_Mine_ unless said):
 - **The writs turn is a setting, not a replacement.** `GameRules.Turn` (`OneMove`, the default, or
   `Writs`) keeps today's game byte for byte: the pinned 200-game series and the recorded replay pass
-  unchanged. `GameSetup.Writs` sets conquest, a 150-turn headless cap, and a 20-turn stalemate ending.
+  unchanged. `GameSetup.Writs` sets conquest, a 150-turn headless cap, and a 20-turn stalemate ending (R1b: 12 turns).
 - **The stalemate ends a game.** Section 6.1 asks only that it be counted. A headless run needs an end,
-  so 20 turns without a change of owner or controller ends the game as `Stalemate`, the leader named
+  so 20 turns (R1b: 12) without a change of owner or controller ends the game as `Stalemate`, the leader named
   and nobody winning.
 - **A border crossing:** the winner steps through, and the loser never crosses. Since the winner now
   stands in the province the loser was leaving, the loser falls back from it, with no second battle.
   Section 1.1's "the loser stays in the province it was leaving" cannot hold with the winner there.
 - **Sieges, stores, unit types and generals' traits wait for R3.** A walled province is fought for
-  through its militia (5 + 10 a fort, plus the capital bonus) rather than besieged. Wake conditions 3
+  through its militia (5 + 10 a fort, plus the capital bonus; R1b: 3 + 6 a fort) rather than besieged. Wake conditions 3
   and 6 (a siege ends, stores run low) wait with them.
 - **Recruiting** keeps today's levy (5 + 5 a province, paid at 2 gold a soldier). It appears at the
   capital, joining an army standing there up to 100, the rest forming new armies. Companies of 10 by
@@ -1655,6 +1655,10 @@ The levers that did not:
 - earlier demands, since every treaty starts a truce;
 - two wars at once;
 - a realm breaking when its capital falls.
+
+**The numbers in the design sections above are the first ones** (writs 2 + 1 for every
+8 provinces, a 5-turn truce, enforced terms at 90, a 20-turn stalemate). R1b's defaults for the writs turn
+are in the levers above: three writs, 3-turn truces, demands enforced at 80, a 12-turn stalemate.
 
 **Not yet "an hour" for a medium world:** about 180 turns on average (median 152). The medium rows "after" were measured on #277's new worlds, the rows "before" on R2's; Classic is the same board in both. Its last war between two large realms is
 where the time goes. Section 6.1's pressures for that (fear of the leader, war weariness, the

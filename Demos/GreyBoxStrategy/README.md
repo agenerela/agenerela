@@ -418,7 +418,7 @@ beside today's: `GameSetup.Writs(seed)` (or `"turn": "writs"`) plays it, conques
 The default stays the one-move game, so every pinned series and recording is unchanged. Nothing asks a
 model yet (R1b); the scripted players and the random baseline play it.
 
-- **A turn.** Each ruler has writs: 2, plus 1 for every 8 provinces it owns, at most 5. The court is
+- **A turn.** Each ruler has writs: 2, plus 1 for every 8 provinces it owns, at most 5 (R1b, #281: three writs, not two; the R1b paragraph below gives the rest of the retune). The court is
   asked first. Then come the armies that are waiting for orders, the most urgent first (an enemy army
   beside them, then the largest), while writs are left beyond one kept for the court. Last, a second
   court order if a writ is left. Rounds of requests all see one snapshot:
@@ -431,7 +431,7 @@ model yet (R1b); the scripted players and the random baseline play it.
   (`ArmyId`, which a model seat will send as the correlation).
 - **Armies** (`Sim/Rules/Armies.cs`) stand in provinces, named for their general (`maren_host`). An
   order stands until it is done:
-  - `march` takes the shortest path, one step a turn, hills, marsh and mountains taking two;
+  - `march` takes the shortest path, one step a turn, hills, marsh and mountains taking two (R1b: two steps a turn over plains and forest where it meets nothing to fight);
   - `hold` lasts four turns.
 
   An army waits for orders when one of the wake conditions built here fires:
@@ -464,13 +464,13 @@ model yet (R1b); the scripted players and the random baseline play it.
   - The court may put three terms to an enemy:
     - `offer_white_peace`: everything returns;
     - `demand_occupied`: what we occupy becomes ours; this needs the war score to pay for it, and is
-      enforced without asking at 90;
+      enforced without asking at 90 (R1b: 80);
     - `cede_occupied`: what they occupy becomes theirs.
 
     The other side answers on the same snapshot, at most two a turn. A treaty ends the war in a 5-turn
-    truce.
+    truce (R1b: 3 turns).
   - A realm with every province occupied and no army is broken: its occupiers keep what they hold.
-  - A game where nothing changes hands for 20 turns ends as a stalemate.
+  - A game where nothing changes hands for 20 turns ends as a stalemate (R1b: 12 turns).
 
 **Simulated** (50 games a line-up on Classic, 20 on a medium generated world, scripted and random
 players, 12 November; no model):
