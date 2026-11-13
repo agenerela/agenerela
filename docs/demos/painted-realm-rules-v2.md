@@ -1704,7 +1704,7 @@ table is in the R2 pull request). Not built yet:
 - the drawn-chart spike, which is the screen's. **Built the same day:** the demo README's
   [drawn-chart spike](../../Demos/GreyBoxStrategy/README.md#the-drawn-chart-spike-12-november) section
   says how it is drawn, what it costs and what today's rules make look wrong. Its pull request
-  compares it with the painting. Not built yet: the paper texture, realm names along their realm,
+  compares it with the painting. The paper texture was built in the second slice (13 November; see the demo README's "second slice"). Not built yet: realm names along their realm,
   levels of detail beyond provinces and regions, and occupation hatching.
 
 What the design got wrong or left open, and what was decided (_Mine_ unless the lead says otherwise):
