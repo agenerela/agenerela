@@ -149,7 +149,13 @@ namespace GreyBoxStrategy.Replay
                     string told = a.Length > 3 ? string.Join(" ", a.Skip(3)) : null;
                     string title = t.FallbackTitle, statement;
                     if (told == null)
-                        statement = EventRules.FallbackStory(t, EventRules.Reach(game.World, a[2]), game.World.IsProvince(a[2]) ? a[2] : null);
+                    {
+                        // Who it reaches as the game will reach it: a tale's subject, a group's members, a province's owner.
+                        var hit = EventRules.ReachFor(game.World, game.Events, game.NextTurn, t, a[2], game.Story).hit;
+                        var chain = game.Events.Chain(a[2]);
+                        string at = game.World.IsProvince(a[2]) ? a[2] : chain?.Province;
+                        statement = EventRules.FallbackStory(t, hit, at);
+                    }
                     else
                     {
                         var (head, body) = EventRules.SplitTitle(told);

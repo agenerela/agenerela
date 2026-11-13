@@ -164,6 +164,26 @@ namespace GreyBoxStrategy.Screen.Tests
         }
 
         [Test]
+        public void A_tale_the_dev_menu_continues_tells_of_its_subject()
+        {
+            var game = new Game(4, MapDefinition.Standard()) { EventTable = false, Story = StoryArms.Rules(StoryArms.For("saga")) };
+            void Turn() { game.BeginTurn(); game.SubmitCouncil(null); game.Resolve(); }
+            Turn(); Turn();
+            Assert.That(DevEdits.Apply(game, "event begin_pretender kesh"), Is.Null);
+            Turn();
+            var tale = game.Chains.Single();
+            // The stage the rules offer the tale next, on a turn dealt as a tale's, as the dev menu fires it.
+            game.Events.TurnKinds[game.NextTurn] = TurnKind.Tale;
+            var next = EventRules.Open(game.World, game.Events, game.NextTurn, game.Story).First(p => p.target == tale.Id);
+            Assert.That(DevEdits.Apply(game, $"event {next.template} {tale.Id}"), Is.Null);
+            Turn();
+            var told = game.Events.Told.Last();
+            Assert.That(told.ChainId, Is.EqualTo(tale.Id));
+            Assert.That(told.Story, Does.Contain("kesh"), "the tale's subject, not nobody");
+            Assert.That(told.Story, Does.Not.Contain("nobody"));
+        }
+
+        [Test]
         public void A_banner_stands_where_the_event_strikes()
         {
             var map = MapDefinition.Standard();
