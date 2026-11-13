@@ -94,7 +94,10 @@ namespace GreyBoxStrategy.Realm
                 {
                     var option = EventRules.Template(r.Template)?.Options?.FirstOrDefault(o => o.Id == chose);
                     string by = r.ChosenBy.GetValueOrDefault(c) ?? "?";
-                    row.Add(Text($"chose to {option?.Label ?? chose.Replace('_', ' ')} ({By(by)})", "event-chose"));
+                    // A dilemma's effect line already says what was chosen ("chose to pay him to go: 30 gold").
+                    row.Add(Text(effect != null && effect.StartsWith("chose", StringComparison.Ordinal) ? $"{effect} ({By(by)})"
+                        : $"chose to {option?.Label ?? chose.Replace('_', ' ')} ({By(by)})", "event-chose"));
+                    if (effect != null && effect.StartsWith("chose", StringComparison.Ordinal)) effect = null;
                 }
                 if (effect != null) row.Add(Text(effect, "event-effect"));
                 body.Add(row);
