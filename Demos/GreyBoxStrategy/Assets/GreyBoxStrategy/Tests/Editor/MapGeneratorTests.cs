@@ -41,7 +41,7 @@ namespace GreyBoxStrategy.Tests
 
         // Hashes measured under .NET 9 outside Unity; the same world under Unity's Mono shows the
         // generator does not depend on the runtime. A changed rule changes them: re-pin, and say in the
-        // pull request that every seed now makes a different world. Re-pinned on 13 November when the
+        // pull request that every seed now makes a different world. Re-pinned on 12 November when the
         // land shapes became irregular (warped shapes, scenery islands, land kept off the frame).
         [TestCase(MapSize.Small, 7, "d767564849cadd88d2e210c2baa5562af9a3c98aaae09c1f74abbd40006b8937")]
         [TestCase(MapSize.Medium, 7, "07221e93a71dadf1c5b8b8823fb33fcf50b282f64edf06ef2f1a77e22d202d82")]
@@ -381,7 +381,7 @@ namespace GreyBoxStrategy.Tests
         {
             var settings = new MapSettings { Size = MapSize.Small, Shape = LandShape.LongCoast };
             var once = MapGenerator.Generate(1, 4, settings, maxAttempts: 1);
-            Assert.That(once.Passed, Is.False, "seed 1's first try fails (found by search, 13 November)");
+            Assert.That(once.Passed, Is.False, "seed 1's first try fails (found by search, 12 November)");
             Assert.That(once.Attempts, Is.EqualTo(1));
             Assert.That(once.Problems, Is.Not.Empty);
             Assert.That(once.Log.Single(), Does.StartWith("try 0: "));

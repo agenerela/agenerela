@@ -1658,7 +1658,7 @@ What the design got wrong or left open, and what was decided (_Mine_ unless the 
   the whole: in the editor, 0.3 to 11 s for the exported huge worlds (16 tries at worst). The page's
   target of 2 s is met per try but not for every seed. Fewer retries would need a fairer first try, or
   fairness re-tried on the same geometry.
-- **Shapes that read as figures** (the lead's review of the first sheet, 13 November). An ellipse, an
+- **Shapes that read as figures** (the tech lead's review of the first sheet, 12 November). An ellipse, an
   oval lake, two round lobes, a land cut flat by the frame. Now each shape's proportions vary by seed, and
   two warps bend it before it is read: a broad one about 15% of the chart, and a fine one about 5.5%
   that cuts bays and pushes out headlands. The land fades out before the frame, so a peninsula or a long
