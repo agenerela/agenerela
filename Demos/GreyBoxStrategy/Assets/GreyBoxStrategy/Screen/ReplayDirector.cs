@@ -74,15 +74,17 @@ namespace GreyBoxStrategy.Realm
         private void Start()
         {
             bool isLive = live != null && live.PlayLive;
-            if (isLive)
+            cam = Camera.main;
+            bool generated = BuildGeneratedGame();
+            if (generated) { started = true; isLive = false; }
+            else if (isLive)
             {
                 started = true;
                 live.Begin();
                 game = ReplayBuilder.Build(Recording.FromDecisionLog(live.Lines(), live.Seed, live.Players), partial: true);
             }
             else game = ReplayBuilder.Build(Recording.Parse(recording.text));
-            cam = Camera.main;
-            map.Build();
+            if (!generated) { CountryLook.UseWorld(null); map.Build(); }
             FitCamera();
 
             var panel = ScriptableObject.CreateInstance<PanelSettings>();
@@ -109,8 +111,11 @@ namespace GreyBoxStrategy.Realm
                 },
                 CountryPressed = id => { OpenCountry(id); FrameCountry(id); },
             };
-            queries = new RealmQueries(game);
+            queries = new RealmQueries(game, game.Map, game.Rules);
             ui.Queries = queries;
+            ui.WinAt = game.Rules?.ProvincesToWin ?? 15;
+            ui.MaxTurns = game.Rules?.MaxTurns ?? 30;
+            if (world != null) ui.ProvinceLabelSize = i => labelSizes[i];
             ui.BuildPanels();
             ui.ModePressed = SetMode;
             ui.FollowPressed = Follow;
@@ -124,7 +129,7 @@ namespace GreyBoxStrategy.Realm
             ui.SetTurn(1, "Council");
             playing = playOnStart;
             ui.SetPlaying(playing, speed);
-            if (showMenu && !isLive)
+            if (showMenu && !isLive && !generated)
             {
                 ShowMainMenu();
                 return;
@@ -191,6 +196,7 @@ namespace GreyBoxStrategy.Realm
             var land = map.LandWorld;
             float upp = Mathf.Max(land.width * 1.04f / freeW, land.height * 1.04f / freeH);
             cam.orthographicSize = upp * h / 2;
+            SetZoomRange(cam.orthographicSize);
             float cx = (left + freeW / 2) - w / 2, cy = (bottom + freeH / 2) - h / 2;
             cam.transform.position = new Vector3(land.center.x - cx * upp, land.center.y - cy * upp, -10);
         }
@@ -217,6 +223,7 @@ namespace GreyBoxStrategy.Realm
             ui.ShowState(s, flip);
             ui.ShowFollowBar(s);
             ApplyMode();
+            FitChartLabels();
             ui.PlaceLabels(s);
         }
 
@@ -241,7 +248,7 @@ namespace GreyBoxStrategy.Realm
         /// <summary>Centres a country's land in the free map area, so the panel does not hide it.</summary>
         public void FrameCountry(string id)
         {
-            var mine = Enumerable.Range(0, 25).Where(q => shown.Owners[q] == id).ToList();
+            var mine = Enumerable.Range(0, game.ProvinceIds.Count).Where(q => shown.Owners[q] == id).ToList();
             if (mine.Count == 0) return;
             var c = Vector3.zero; foreach (int q in mine) c += map.ProvinceWorld(q); c /= mine.Count;
             StartCoroutine(PanRoutine(c));
@@ -297,7 +304,7 @@ namespace GreyBoxStrategy.Realm
                 case MapMode.Reach:
                     if (followed == null) { map.SetOverlay(null, null, null); break; }
                     reach = new HashSet<int>(queries.Attackable(shown, followed));
-                    var dim = new HashSet<int>(Enumerable.Range(0, 25).Where(q => !reach.Contains(q) && shown.Owners[q] != followed));
+                    var dim = new HashSet<int>(Enumerable.Range(0, game.ProvinceIds.Count).Where(q => !reach.Contains(q) && shown.Owners[q] != followed));
                     map.SetOverlay(null, reach, dim);
                     break;
             }
@@ -337,7 +344,7 @@ namespace GreyBoxStrategy.Realm
                 if (Mathf.Abs(wheel) > 0.01f)
                 {
                     var before = cam.ScreenToWorldPoint(mouse.position.ReadValue());
-                    cam.orthographicSize = Mathf.Clamp(cam.orthographicSize * Mathf.Exp(-wheel * 0.0015f), 1.6f, 7f);
+                    cam.orthographicSize = Mathf.Clamp(cam.orthographicSize * Mathf.Exp(-wheel * 0.0015f), zoomMin, zoomMax);
                     var after = cam.ScreenToWorldPoint(mouse.position.ReadValue());
                     cam.transform.position += before - after;
                 }
@@ -357,6 +364,7 @@ namespace GreyBoxStrategy.Realm
                     }
                 }
             }
+            FitChartLabels();
             ui.PlaceLabels(shown);
             DevUpdate();
         }
@@ -550,7 +558,7 @@ namespace GreyBoxStrategy.Realm
             yield return Wait(0.6f);
 
             int p = e.ProvinceIndex;
-            int src = Enumerable.Range(0, 25).Where(q => shown.Owners[q] == e.Country)
+            int src = Enumerable.Range(0, game.ProvinceIds.Count).Where(q => shown.Owners[q] == e.Country)
                 .OrderBy(q => (map.ProvinceWorld(q) - map.ProvinceWorld(p)).sqrMagnitude).FirstOrDefault();
             map.SetFocus(p, 0);
             for (float t = 0; t < 1; t += Time.deltaTime * speed / 0.3f) { map.SetFocus(p, Smooth(t)); yield return null; }
@@ -590,7 +598,7 @@ namespace GreyBoxStrategy.Realm
         private IEnumerator Failed(ReplayEvent e)
         {
             int p = e.ProvinceIndex;
-            int src = Enumerable.Range(0, 25).Where(q => shown.Owners[q] == e.Country)
+            int src = Enumerable.Range(0, game.ProvinceIds.Count).Where(q => shown.Owners[q] == e.Country)
                 .OrderBy(q => (map.ProvinceWorld(q) - map.ProvinceWorld(p)).sqrMagnitude).FirstOrDefault();
             map.SetFocus(p, 1);
             var arrow = ui.ShowArrow(src, p, CountryLook.Of(e.Country).Colour);

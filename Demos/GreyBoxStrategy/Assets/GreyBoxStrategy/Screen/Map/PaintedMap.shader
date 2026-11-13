@@ -7,9 +7,10 @@
 // hatching on neutral land, the wet edge of a capture.
 //
 // Inputs are data, so animation is numbers changing:
-//   _IdTex     province index * 10 per pixel, 255 for sea (point)
+//   _IdTex     province index * 10 per pixel, 255 for sea (point); with _IdWide, a 16-bit index in
+//              red (low byte) and green (high byte), 65534 and 65535 for water: a generated world
 //   _EdgeTex   distance to the nearest border, 16 per pixel (bilinear)
-//   _StateTex  32 x 4, one column per province: row 0 owner colour + owner slot, row 1 the
+//   _StateTex  one column per province (at least 32), 4 rows: row 0 owner colour + owner slot, row 1 the
 //              colour it had before a capture, row 2 (front, fall, capturing, selected),
 //              row 3 (reach highlight, dim, 1 - wash strength for the map mode, -)
 //   _SpreadTex distance from the attacker's border inside the province being captured, 0..1
@@ -25,6 +26,7 @@ Shader "GreyBoxStrategy/PaintedMap"
         _Focus ("Focus (uv x, uv y, radius, amount)", Vector) = (0.5, 0.5, 0.1, 0)
         _Engraved ("Engraved style", Float) = 0
         _EdgeFade ("Fade into the open sea at the edge (uv)", Float) = 0.04
+        _IdWide ("Province ids are 16-bit (a generated world)", Float) = 0
     }
     SubShader
     {
@@ -49,6 +51,7 @@ Shader "GreyBoxStrategy/PaintedMap"
             float4 _Focus;
             float _Engraved;
             float _EdgeFade;
+            float _IdWide;
 
             struct Attributes { float4 positionOS : POSITION; float2 uv : TEXCOORD0; };
             struct Varyings { float4 positionCS : SV_POSITION; float2 uv : TEXCOORD0; };
@@ -94,7 +97,13 @@ Shader "GreyBoxStrategy/PaintedMap"
 
             int IdAt(float2 uv)
             {
-                float v = SAMPLE_TEXTURE2D(_IdTex, sampler_point_clamp, uv).r * 255;
+                float4 t = SAMPLE_TEXTURE2D(_IdTex, sampler_point_clamp, uv);
+                if (_IdWide > 0.5)
+                {
+                    int w = (int)round(t.r * 255) + 256 * (int)round(t.g * 255);
+                    return w >= 65534 ? -1 : w;
+                }
+                float v = t.r * 255;
                 return v > 250 ? -1 : (int)round(v / 10);
             }
             float4 State(int id, int row) { return LOAD_TEXTURE2D(_StateTex, int2(id, row)); }

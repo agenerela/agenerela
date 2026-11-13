@@ -77,6 +77,9 @@ namespace GreyBoxStrategy.Realm
             body.Add(devOutput);
 
             Buttons("PLAY WITHOUT THE CARD", ($"Rule {you}, stand-ins", $"scripted-rule {you} 7"), ("Watch, stand-ins", "scripted-watch 7"));
+            Buttons("GENERATED WORLD (scripted rulers, drawn chart)", ("Small", "generated small continent 7"), ("Medium", "generated medium continent 7"),
+                ("Large", "generated large continent 7"), ("Huge", "generated huge continent 7"), ("Two lands", "generated medium two_lands 7"),
+                ("Inland sea", "generated medium inland_sea 7"), ("Peninsula", "generated medium peninsula 7"), ("Long coast", "generated medium long_coast 7"));
             Buttons("TIME", ("Step", "step"), ("Play", "play"), ("Pause", "pause"), ("1×", "speed 1"), ("4×", "speed 4"), ("16×", "speed 16"),
                 ("Turn 5", "turn 5"), ("Turn 15", "turn 15"), ("Autoplay", "autoplay on"), ("Stop autoplay", "autoplay off"));
             Fill("STATE (rule games; at the start of the next turn)",

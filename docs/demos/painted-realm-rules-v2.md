@@ -1629,7 +1629,11 @@ table is in the R2 pull request). Not built yet:
 - neutral garrisons by terrain, which waits for terrain's effects in R3;
 - the 200-game balance certificate per preset. The runner plays a series on one generated world
   (`GameSetup.MapSeed`), which is its first half;
-- the drawn-chart spike, which is the screen's.
+- the drawn-chart spike, which is the screen's. **Built the same day:** the demo README's
+  [drawn-chart spike](../../Demos/GreyBoxStrategy/README.md#the-drawn-chart-spike-12-november) section
+  says how it is drawn, what it costs and what today's rules make look wrong. Its pull request
+  compares it with the painting. Not built yet: the paper texture, realm names along their realm,
+  levels of detail beyond provinces and regions, and occupation hatching.
 
 What the design got wrong or left open, and what was decided (_Mine_ unless the lead says otherwise):
 - **Capital spacing.** Section 2.3 asked for 4 steps on medium. With six countries on 60 provinces each
