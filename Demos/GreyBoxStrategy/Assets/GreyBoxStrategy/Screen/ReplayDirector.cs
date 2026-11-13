@@ -125,6 +125,9 @@ namespace GreyBoxStrategy.Realm
             queries = new RealmQueries(game, game.Map, game.Rules);
             ui.Queries = queries;
             ui.WinAt = game.Rules?.ProvincesToWin ?? 15;
+            // Conquest (the writs game's default): the last realm standing wins, so there is no province count to reach.
+            ui.Conquest = game.Rules != null && game.Rules.Victory == VictoryMode.Conquest;
+            if (ui.Conquest) ui.WinAt = game.ProvinceIds.Count;
             ui.MaxTurns = game.Rules?.MaxTurns ?? 30;
             if (world != null) ui.ProvinceLabelSize = i => labelSizes[i];
             ui.BuildPanels();

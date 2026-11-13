@@ -29,6 +29,17 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: the writs turn on screen, watch and replay** (#20). New game offers the writs
+  turn with stand-in rulers, on Classic or a generated world.
+  - Every army is a piece on the map at all times, with its march line and the turns left, and it
+    steps when the turn's armies march.
+  - A battle clashes where it happens; its report card shows each term from the rules' record.
+  - Occupation is the occupier's inked hatching over the owner's wash, with a pennant. A treaty
+    turns it into the new owner's wash under a seal.
+  - War scores show beside each war.
+  - The dev menu can raise, order and fight armies, occupy and free land, set a war score and land a
+    treaty. A generated chart is drawn again when the window's size needs it.
+
 - **Painted Realm: the drawn chart shows development, rivers, roads and bridges, drawn on the GPU** (#20).
   - Each province's development decides its settlement (hamlet to large town, a capital walled, forts
     as towers) and how much farmland lies around it.

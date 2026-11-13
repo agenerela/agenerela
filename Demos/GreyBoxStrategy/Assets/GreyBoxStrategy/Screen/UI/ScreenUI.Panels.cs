@@ -140,7 +140,7 @@ namespace GreyBoxStrategy.Realm
             head.RegisterCallback<ClickEvent>(_ => CountryPressed?.Invoke(me));
             head.Add(new Crest(look)); var nm = new Label(look.Name.ToUpperInvariant()); nm.AddToClassList("nation-name"); head.Add(nm);
             followBar.Add(head);
-            Segment("PROVINCES", $"{n} / {WinAt}", $"{n} of {ProvinceIds.Count} provinces; {WinAt} wins. {Math.Max(0, WinAt - n)} to go.");
+            Segment("PROVINCES", $"{n} / {WinAt}", Conquest ? $"{n} of {ProvinceIds.Count} provinces. Conquest: the last realm standing wins." : $"{n} of {ProvinceIds.Count} provinces; {WinAt} wins. {Math.Max(0, WinAt - n)} to go.");
             int hostCount = s.Armies.Count(a => a.Owner == me);
             Segment("ARMY", Writs ? $"{c.Army} · {hostCount}" : c.Army.ToString(), Writs
                 ? $"{c.Army} soldiers in {hostCount} {(hostCount == 1 ? "army" : "armies")}. A province with no army defends with its militia."

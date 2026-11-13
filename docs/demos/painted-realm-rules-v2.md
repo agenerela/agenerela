@@ -1606,6 +1606,14 @@ exists, and where it differs from the list above:
 
 The screen's half is the screen session's.
 
+**The screen's half, first part: built** (13 November). Watch and replay of a writs game by stand-in
+rulers: the pieces, the march lines and the step animation, the battle clash and its report card, the
+occupation hatching and its drawing-in, the treaty's flow from hatch to wash under a seal, hatching
+lifting from freed land, war scores, and `ReplayBuilder` rebuilding armies. The GreyBoxStrategy README's
+"The writs turn on screen" has the detail. Rule mode on the writs turn (writs in the top bar, the
+awaiting marks, the army cycle key, orders queued above End turn) is the next part, with model rulers
+on the screen.
+
 **What R1a built, and what it decided** (_Mine_ unless said):
 - **The writs turn is a setting, not a replacement.** `GameRules.Turn` (`OneMove`, the default, or
   `Writs`) keeps today's game byte for byte: the pinned 200-game series and the recorded replay pass
