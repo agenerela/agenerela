@@ -492,7 +492,7 @@ in the console.
 **R1a, the writs turn and armies as pieces, headless** (12 November). Rules v2's turn, as a setting
 beside today's: `GameSetup.Writs(seed)` (or `"turn": "writs"`) plays it, conquest with no turn limit.
 The default stays the one-move game, so every pinned series and recording is unchanged. Nothing asks a
-model yet (R1b); the scripted players and the random baseline play it.
+model yet; the scripted players and the random baseline play it. R1b's second part, below, adds model rulers (`WritRuler`), which no run has called yet.
 
 - **A turn.** Each ruler has writs: 2, plus 1 for every 8 provinces it owns, at most 5 (R1b, #281: three writs, not two; the R1b paragraph below gives the rest of the retune). The court is
   asked first. Then come the armies that are waiting for orders, the most urgent first (an enemy army
@@ -602,6 +602,41 @@ tune.
     the defence; the capital (+8) for the defence.").
 - **Snapshots.** `TurnSnapshot.Armies` and `Occupiers` hold every army and occupation as the council
   saw them, so a replay or the inspector can show any past turn.
+
+**R1b, second part: model rulers for the writs turn** (12 November). `WritRuler` (`Agents/`) is a model
+seat for the writs turn: two framework agents with one identity and persona.
+
+- **The court** gives court orders, answers treaties and the storyteller's dilemmas. Each action's
+  availability comes from `WritLegality.WhyNotCourt`.
+- **The marshal** orders one army at a time. The army is named in the decision's correlation
+  (`ArmyOrder`), and each march target's availability is `WritLegality.WhyNotArmy` for that army.
+
+Each agent keeps its own memory of four decisions. A ruler's decisions run back to back
+(`WritModelRunner`), one ruler after another.
+
+What a model reads (it never reads the schema):
+- **Local standing facts** (`WritFacts.Standing`), at most eight lines on any map:
+  - the goal and this turn's writs;
+  - treasury;
+  - soldiers;
+  - our armies;
+  - at most three rivals (those at war with us first, then those our land borders), each with the war
+    score and what each side occupies;
+  - the neutral land bordering us.
+- **A moves line** written from the request's own offered moves: the court's ("Moves open to us:
+  recruit; fortify ...; demand what we occupy from orsk") or the army's ("Orders open to maren_host:
+  march to fenmark (neutral, garrison 9; next to us), ...; hold").
+- **An "Ordered this turn" line**, so a later decision does not repeat an earlier one.
+
+Fortify is offered at no more than six provinces, and a march at no more than twelve, so one decision
+stays near a dozen targets. The one-move game's `CountryAgent` and its prompts are unchanged.
+
+A fake model that answers like the scripted player plays exactly the scripted game through both agents
+(`WritRulerTests`).
+
+**Victory presets for the writs game:** `GameSetup.Writs(seed, map, victory)` with `conquest`, the default,
+or `domination_75`: 75% of all provinces wins, with the headless cap the only turn limit. The lead is asked
+which should be the default (63 against 78 scripted turns on Classic, 144 against about 180 on medium).
 
 ## The first real run
 

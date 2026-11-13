@@ -142,7 +142,7 @@ namespace GreyBoxStrategy
 
         private CountryRequest CourtRequest(Docket d) =>
             new CountryRequest(Moment.Council, World.Turn, d.Country, World,
-                Facts.Standing(World, d.Country), Facts.Select(pending[d.Country]), WritLegality.CourtMoves(World, d.Country))
+                WritFacts.Standing(World, d.Country), Facts.Select(pending[d.Country]), WritLegality.CourtMoves(World, d.Country))
             {
                 Ordered = d.Ordered.ToList(),
                 Writ = d.Used + 1,
@@ -154,7 +154,7 @@ namespace GreyBoxStrategy
             var facts = new List<string> { $"{army.Id}: {army.Soldiers} soldiers at {army.Location}; " + (army.Wake.Count > 0 ? "awaiting orders: " + string.Join(", ", army.Wake) : "") + "." };
             facts.AddRange(Facts.Select(pending[d.Country], Facts.MaxTurnFacts - 1));
             return new CountryRequest(Moment.Army, World.Turn, d.Country, World,
-                Facts.Standing(World, d.Country), facts, WritLegality.ArmyMoves(World, d.Country, army.Id))
+                WritFacts.Standing(World, d.Country), facts, WritLegality.ArmyMoves(World, d.Country, army.Id))
             {
                 ArmyId = army.Id,
                 Ordered = d.Ordered.ToList(),
@@ -192,7 +192,7 @@ namespace GreyBoxStrategy
                             var turnFacts = new List<string> { TermLine(p.From, a.Choice) };
                             turnFacts.AddRange(Facts.Select(pending[p.To], Facts.MaxTurnFacts - 1));
                             p.Request = new CountryRequest(Moment.Envoy, World.Turn, p.To, World,
-                                Facts.Standing(World, p.To), turnFacts, Legality.EnvoyMoves(), p.Id, p.From);
+                                WritFacts.Standing(World, p.To), turnFacts, Legality.EnvoyMoves(), p.Id, p.From);
                         }
                     }
                     proposals.Add(p);

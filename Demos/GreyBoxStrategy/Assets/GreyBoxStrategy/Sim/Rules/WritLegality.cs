@@ -11,6 +11,9 @@ namespace GreyBoxStrategy
     /// </summary>
     public static class WritLegality
     {
+        /// <summary>The most provinces a fortify order is offered at once.</summary>
+        public const int MaxFortTargets = 6;
+
         // --- The court ------------------------------------------------------------------------
 
         /// <summary>Null when the court order is legal now, otherwise why not.</summary>
@@ -96,9 +99,16 @@ namespace GreyBoxStrategy
                     : Actions.TargetsCountry(action)
                         ? world.CountryList.OrderBy(c => c.Id, StringComparer.Ordinal).Select(c => new Move(action, c.Id))
                         : new[] { new Move(action) };
-                foreach (var m in candidates)
-                    if (WhyNotCourt(world, countryId, m) == null)
-                        legal.Add(new Move(m.Action, m.Target, DescribeCourtTarget(world, countryId, m)));
+                var open = candidates.Where(m => WhyNotCourt(world, countryId, m) == null).ToList();
+                // At most six forts offered (a large realm borders many provinces): those facing an
+                // enemy first, then capitals, then by id, so the list stays the dozen targets a model reads well.
+                if (action == Actions.Fortify)
+                    open = open.Select(m => world.Province(m.Target))
+                        .OrderByDescending(p => world.Neighbours(p).Any(n => n.Controller != null && n.Controller != countryId && world.AtWar(countryId, n.Controller)))
+                        .ThenByDescending(p => p.IsCapital).ThenBy(p => p.Id, StringComparer.Ordinal)
+                        .Take(MaxFortTargets).OrderBy(p => p.Id, StringComparer.Ordinal).Select(p => new Move(action, p.Id)).ToList();
+                foreach (var m in open)
+                    legal.Add(new Move(m.Action, m.Target, DescribeCourtTarget(world, countryId, m)));
             }
             legal.Add(Move.Hold);
             return legal;
