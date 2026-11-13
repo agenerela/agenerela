@@ -17,7 +17,7 @@ namespace GreyBoxStrategy.Realm
         public string Name;
         public Color32 Colour;
         public Charge Charge;
-        /// <summary>Its slot, 0 to 4: the shader tells owners apart by it.</summary>
+        /// <summary>Its slot, 0 to 4 on the Classic board, up to 9 on a generated world: the shader tells owners apart by it.</summary>
         public int Slot;
 
         public static readonly Dictionary<string, CountryLook> Standard = new Dictionary<string, CountryLook>
@@ -29,7 +29,31 @@ namespace GreyBoxStrategy.Realm
             ["ilvar"] = new CountryLook { Id = "ilvar", Name = "Ilvar", Colour = new Color32(128, 60, 146, 255), Charge = Charge.Star, Slot = 4 },
         };
 
-        public static CountryLook Of(string id) => id != null && Standard.TryGetValue(id, out var l) ? l : null;
+        private static Dictionary<string, CountryLook> world;
+
+        /// <summary>
+        /// The looks of a generated world's countries, in seat order: its own names, the palette's
+        /// colours for up to ten (<see cref="GreyBoxStrategy.Chart.ChartPalette"/>), the five charges in
+        /// turn. Null goes back to the Classic five.
+        /// </summary>
+        public static void UseWorld(WorldMap map)
+        {
+            if (map == null || map.Geometry == null) { world = null; return; }
+            world = new Dictionary<string, CountryLook>();
+            for (int i = 0; i < map.Countries.Count; i++)
+            {
+                var c = map.Countries[i];
+                var rgb = GreyBoxStrategy.Chart.ChartPalette.Owner(i);
+                world[c.Id] = new CountryLook { Id = c.Id, Name = c.Name ?? c.Id, Colour = new Color32(rgb[0], rgb[1], rgb[2], 255), Charge = (Charge)(i % 5), Slot = i };
+            }
+        }
+
+        public static CountryLook Of(string id)
+        {
+            if (id == null) return null;
+            if (world != null) return world.TryGetValue(id, out var w) ? w : null;
+            return Standard.TryGetValue(id, out var l) ? l : null;
+        }
         public static string NameOf(string id) => Of(id)?.Name ?? id ?? "the neutrals";
     }
 

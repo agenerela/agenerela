@@ -14,6 +14,10 @@ namespace GreyBoxStrategy.Realm
         public string Country = "kesh";
         public string Model = "qwen3.5:4b";
         public int Seed = 101;
+        /// <summary>A generated world instead of the Classic board (the drawn-chart spike: scripted rulers, watch only).</summary>
+        public bool Generated;
+        public MapSize Size = MapSize.Medium;
+        public LandShape Shape = LandShape.Continent;
     }
 
     /// <summary>What the settings page needs to know about the screen it runs on.</summary>
@@ -132,8 +136,19 @@ namespace GreyBoxStrategy.Realm
             var dice = new Button(() => seed.value = UnityEngine.Random.Range(1, 10000)) { text = "Roll", tooltip = "A new seed: a new map of events and rolls" }; dice.AddToClassList("tbtn"); dice.style.width = 48;
             card.Add(Row(model, seed, dice));
 
+            card.Add(Section2("MAP", "a generated world is a first look: scripted rulers play it, you watch"));
+            var sizeRow = Steps("Size", new[] { "Small", "Medium", "Large", "Huge" }, (int)choice.Size, i => choice.Size = (MapSize)i);
+            var shapeRow = Steps("Shape", new[] { "Continent", "Two lands", "Inland sea", "Peninsula", "Long coast" }, (int)choice.Shape, i => choice.Shape = (LandShape)i);
+            void World(bool generated)
+            {
+                choice.Generated = generated;
+                sizeRow.SetEnabled(generated); shapeRow.SetEnabled(generated);
+            }
+            card.Add(Steps("World", new[] { "Classic, painted", "Generated, drawn" }, choice.Generated ? 1 : 0, i => World(i == 1)));
+            card.Add(sizeRow); card.Add(shapeRow);
+            World(choice.Generated);
+
             card.Add(Section2("COMING", "not in the game yet"));
-            card.Add(Coming("Map", "Size and shape, from a map generator"));
             card.Add(Coming("Persona mix", "Which personas rule, and how hard they play"));
             card.Add(Coming("Storyteller", "Events with choices and chains: presets you tweak before the game"));
             card.Add(Coming("Advisor", "A model that counsels you in rule mode: on by default, off in a click"));

@@ -136,6 +136,9 @@ namespace GreyBoxStrategy.Replay
         public IReadOnlyList<string> CountryIds;
         public IReadOnlyList<string> ProvinceIds;
         public int Columns;
+        /// <summary>The map the game was played on: the Classic board, or a generated world (its <c>Source</c> carries the geometry).</summary>
+        public MapDefinition Map;
+        public GameRules Rules;
         public Dictionary<string, RecordedPlayer> Players;
         public ReplayState Initial;
         public List<ReplayTurn> Turns = new List<ReplayTurn>();

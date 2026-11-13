@@ -18,7 +18,7 @@ namespace GreyBoxStrategy.Realm
     public sealed partial class ScreenUI
     {
         private VisualElement side, diplomacy, modes, legend, followBar;
-        private readonly Label[] armyBadges = new Label[25];
+        private Label[] armyBadges;
         public RealmQueries Queries;
         public Action<MapMode> ModePressed;
         public Action<string> FollowPressed;
@@ -59,7 +59,8 @@ namespace GreyBoxStrategy.Realm
             diplo.AddToClassList("tbtn"); diplo.Add(new Icon(IconKind.Peace, 12)); diplo.style.marginLeft = 8;
             playButton.parent.Add(diplo);
 
-            for (int i = 0; i < 25; i++)
+            armyBadges = new Label[ProvinceIds.Count];
+            for (int i = 0; i < ProvinceIds.Count; i++)
             {
                 armyBadges[i] = new Label { pickingMode = PickingMode.Ignore }; armyBadges[i].AddToClassList("army-badge");
                 armyBadges[i].style.display = DisplayStyle.None; labels.Add(armyBadges[i]);
@@ -91,7 +92,7 @@ namespace GreyBoxStrategy.Realm
                         : new Label($"{CountryLook.NameOf(Followed)} can attack {reach?.Count ?? 0} province(s) · % = share of rolls it wins"));
                     break;
             }
-            for (int i = 0; i < 25; i++)
+            for (int i = 0; i < ProvinceIds.Count; i++)
             {
                 // The badge shows the reach mode's odds; armies have their own pieces in every mode.
                 bool odds = mode == MapMode.Reach && reach != null && reach.Contains(i) && Followed != null;
@@ -115,7 +116,7 @@ namespace GreyBoxStrategy.Realm
 
         private void PlaceBadges()
         {
-            for (int i = 0; i < 25; i++)
+            for (int i = 0; i < ProvinceIds.Count; i++)
             {
                 if (armyBadges[i].style.display == DisplayStyle.None) continue;
                 var p = ProvinceToPanel(i);
@@ -139,7 +140,7 @@ namespace GreyBoxStrategy.Realm
             head.RegisterCallback<ClickEvent>(_ => CountryPressed?.Invoke(me));
             head.Add(new Crest(look)); var nm = new Label(look.Name.ToUpperInvariant()); nm.AddToClassList("nation-name"); head.Add(nm);
             followBar.Add(head);
-            Segment("PROVINCES", $"{n} / 15", $"{n} of 25 provinces; 15 wins. {Math.Max(0, 15 - n)} to go.");
+            Segment("PROVINCES", $"{n} / {WinAt}", $"{n} of {ProvinceIds.Count} provinces; {WinAt} wins. {Math.Max(0, WinAt - n)} to go.");
             Segment("ARMY", c.Army.ToString(), $"{c.Army} soldiers. A province of ours defends with 70% of it.");
             Segment("TREASURY", $"{c.Gold}  {net:+0;-0}", $"{c.Gold} gold, {net:+0;-0} a turn. Below zero, 15% of the army deserts.");
             Segment("INCOME", $"+{c.Income}", $"10 gold for each of {n} provinces.");

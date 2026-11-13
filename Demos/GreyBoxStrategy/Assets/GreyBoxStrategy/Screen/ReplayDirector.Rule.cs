@@ -105,7 +105,7 @@ namespace GreyBoxStrategy.Realm
 
             ui.Players = rule.Players;
             game = rule.BuildReplay();
-            queries = new RealmQueries(game);
+            queries = new RealmQueries(game, game.Map, game.Rules);
             ui.Queries = queries;
             ui.Fog = new Fog(country, queries);
             ui.SetRuleMode(country);

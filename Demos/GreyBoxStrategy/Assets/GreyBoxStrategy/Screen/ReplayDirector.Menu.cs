@@ -118,6 +118,12 @@ namespace GreyBoxStrategy.Realm
 
         private void StartNewGame(NewGameChoice c)
         {
+            if (c.Generated)
+            {
+                if (c.Rule) { ui.ShowMenuStatus("A generated world is watch only for now: scripted rulers play it. Rule mode on it comes with generated worlds in full (R4)."); return; }
+                StartGeneratedWatch(c.Size, c.Shape, c.Seed);
+                return;
+            }
             if (c.Rule) TryRule(c.Country, c.Model, c.Seed);
             else TryLive(c.Model, c.Seed);
         }
