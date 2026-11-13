@@ -21,9 +21,12 @@ namespace GreyBoxStrategy.Chart
         public readonly int Width, Height;
         public readonly byte[] Rgba;
 
-        public ChartCanvas(int width, int height)
+        /// <summary>True for a transparent canvas (an atlas): colours are kept premultiplied by their coverage, and alpha grows as shapes land.</summary>
+        public readonly bool Premultiplied;
+
+        public ChartCanvas(int width, int height, bool premultiplied = false)
         {
-            Width = width; Height = height;
+            Width = width; Height = height; Premultiplied = premultiplied;
             Rgba = new byte[width * height * 4];
         }
 
@@ -40,6 +43,15 @@ namespace GreyBoxStrategy.Chart
             if (a <= 0.002f || x < 0 || y < 0 || x >= Width || y >= Height) return;
             if (a > 1) a = 1;
             int k = (y * Width + x) * 4;
+            if (Premultiplied)
+            {
+                // Over, premultiplied: what is there is covered by a.
+                Rgba[k] = Clamp(c.R * a + Rgba[k] * (1 - a));
+                Rgba[k + 1] = Clamp(c.G * a + Rgba[k + 1] * (1 - a));
+                Rgba[k + 2] = Clamp(c.B * a + Rgba[k + 2] * (1 - a));
+                Rgba[k + 3] = Clamp(255 * a + Rgba[k + 3] * (1 - a));
+                return;
+            }
             Rgba[k] = Clamp(Rgba[k] + (c.R - Rgba[k]) * a);
             Rgba[k + 1] = Clamp(Rgba[k + 1] + (c.G - Rgba[k + 1]) * a);
             Rgba[k + 2] = Clamp(Rgba[k + 2] + (c.B - Rgba[k + 2]) * a);

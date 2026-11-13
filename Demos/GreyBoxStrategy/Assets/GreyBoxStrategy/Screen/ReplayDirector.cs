@@ -71,11 +71,19 @@ namespace GreyBoxStrategy.Realm
         public string Position => game == null ? "not built" : $"turn {(turnIndex < game.Turns.Count ? game.Turns[turnIndex].Turn : game.Turns.Count)}, event {eventIndex}";
         public ReplayGame Game => game;
 
-        private void Start()
+        private IEnumerator Start()
+        {
+            cam = Camera.main;
+            // A generated world is made, played and drawn behind a loading card, off the main thread
+            // where it can be, so the screen never freezes while it waits.
+            if (pendingWorld != null) yield return LoadGeneratedWorld();
+            StartScreen();
+        }
+
+        private void StartScreen()
         {
             bool isLive = live != null && live.PlayLive;
-            cam = Camera.main;
-            bool generated = BuildGeneratedGame();
+            bool generated = world != null;
             if (generated) { started = true; isLive = false; }
             else if (isLive)
             {
@@ -175,7 +183,7 @@ namespace GreyBoxStrategy.Realm
         }
 
         /// <summary>Fonts from the OS, nothing bundled: a book serif for the screen. OFL fonts replace them later.</summary>
-        private static void ApplyFonts(VisualElement root)
+        internal static void ApplyFonts(VisualElement root)
         {
             foreach (var family in new[] { "Palatino Linotype", "Book Antiqua", "Georgia", "Cambria" })
             {

@@ -29,6 +29,15 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: the drawn chart shows development, rivers, roads and bridges, drawn on the GPU** (#20).
+  - Each province's development decides its settlement (hamlet to large town, a capital walled, forts
+    as towers) and how much farmland lies around it.
+  - Forests and mountains are massed, plains carry trees and hedgerows, scenery islands are drawn as
+    land the rules never see, and special places have their own marks.
+  - Rivers and roads come from the generator's `MapGeometry`, with a bridge at every crossing.
+  - The ground is a shader and the marks one atlas, so a medium world at 3840 × 2400 draws in about
+    0.1 s instead of 7.3 s; a loading card shows the generator's progress.
+  - An open side panel no longer covers the council panel's buttons.
 - **Painted Realm rules v2, R1b's second part: model rulers for the writs turn** (#20). `WritRuler` is two
   framework agents with one persona: a court for court orders, treaties and dilemmas, and a marshal for
   army orders, the army carried in the decision's correlation. Each keeps a memory of four decisions.

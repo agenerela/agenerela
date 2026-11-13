@@ -87,7 +87,7 @@ namespace GreyBoxStrategy.Realm
             return inspector;
         }
 
-        public void CloseInspector() => inspector.RemoveFromClassList("on");
+        public void CloseInspector() { inspector.RemoveFromClassList("on"); Root.RemoveFromClassList("insp-open"); }
 
         public void ShowCard(DecisionCard c)
         {
@@ -216,6 +216,7 @@ namespace GreyBoxStrategy.Realm
             inspectorBody.Add(foot);
 
             inspector.AddToClassList("on");
+            Root.AddToClassList("insp-open"); // the council panel moves left of it
             inspectorBody.scrollOffset = Vector2.zero;
         }
 

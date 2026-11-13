@@ -236,11 +236,11 @@ framework writes the moves as one line among the facts, `LegalTargets = Observat
 
 Each game log shows the model's answer and its statement under each of its moves.
 
-**Tests:** 351 EditMode tests in all, counted on 13 November. 284 are the game's, in
-`Assets/GreyBoxStrategy/Tests/Editor/`: 280 run every time, about a minute once the project has
+**Tests:** 360 EditMode tests in all, counted on 13 November. 289 are the game's, in
+`Assets/GreyBoxStrategy/Tests/Editor/`: 285 run every time, about a minute once the project has
 imported (the map generator's take most of it), and four long ones are run by hand. Of the game's,
 twenty drive the model seat through `ScriptedProvider`, sixteen in `TableTests` the table, the
-personas and the scorecard, and fifteen in `StorytellerTests` the storyteller. 67 are the screen's,
+personas and the scorecard, and fifteen in `StorytellerTests` the storyteller. 71 are the screen's,
 in `Screen/Tests/Editor/`.
 
 ## Rules v2, being built
@@ -413,6 +413,8 @@ too):
 | 1920 × 1080 | 2400 × 1351 | 1200 × 675 | about 2 s (estimated; not timed after the last speed-up) |
 | 3840 × 2400 | 4800 × 2702 | 2400 × 1351 | 7.3 s (under .NET: 1.7 s) |
 
+The second slice below moves the drawing to the GPU: about 0.1 s at 3840 × 2400.
+
 About 4.4 s of the 7.3 s is one pass over every pixel, which runs about 15 times slower under the
 editor's Mono than under .NET. Memory for the chart at 4800 wide is about 70 MB with mipmaps. A
 huge world's generator takes about 12 s in the editor before any of this (R2's own number).
@@ -424,6 +426,68 @@ huge world's generator takes about 12 s in the editor before any of this (R2's o
 - With one move a turn, a huge map changes slowly. After 8 turns most of it is still neutral
   hatching.
 - Scripted rulers say nothing, so the chronicle has no speech.
+
+### The drawn chart, second slice: development, roads, the GPU (13 November)
+
+The lead's verdict on the spike was to keep improving it, with farms and buildings by how much a
+province has, and the generated roads. This slice draws what the world's data says, and moves the
+drawing onto the GPU. Classic is unchanged.
+
+**What the chart shows now** (`ChartLayout` in `Screen/Chart/ChartScene.cs` decides what goes where,
+from the world alone, and both renderers draw that one scene):
+- **Development.** Each province's `Development` (R6 feeds it; today `Development.Of` from its
+  population, capital, port and buildings) is read once and decides its settlement and its fields:
+  - a hamlet, a village, a town or a large town (tiers 0 to 3); a capital is a walled city with a
+    banner (tier 4); each fort is a tower beside it, up to three; a port adds an anchor;
+  - farmland around the settlement, wider and denser with development (`FarmRadius`, `FarmShare`),
+    drawn as fields of strips and furrows with hedges, each field turned its own way. A test holds
+    that a developed plains province is farmed at least 1.3 times as much as a poor one.
+- **Terrain massed, not scattered.** Forests are closed canopies of conifers and round trees; mountains
+  two staggered rows of peaks along their ridges, open at passes; hills, marsh reeds, scattered trees
+  and hedgerow trees on plains, so no plain is empty.
+- **Rivers and roads** from `MapGeometry` (#277): every river at its rank's width, smoothed from the
+  cell corners and given a meander; every road from settlement to settlement through its provinces, a
+  highway cased, a track dashed; and a bridge wherever a road crosses a river, at the generator's own
+  crossing point.
+- **Scenery islands** (cell `-4`) are drawn as land with a coast, trees and rocks. The province map
+  sees sea there, so the rules, the wash and clicks never treat them as a province.
+- **Special places** have their own marks: a ruined castle, mines, a lake, a spring, a horseshoe, a
+  great tree, crossed swords, a crown with a gilt halo.
+- **Paper.** The land and the sea are printed on a tileable paper texture
+  (`Screen/Art/Resources/chart-paper.png`, its licence is in the screen page's asset list).
+
+**How it is drawn.** `ChartImage.Make(..., gpu: true)` prepares the inputs off the main thread: the
+raster at half width, the ids, the coast's distance field, the scene, the terrain and farmland fields,
+and the atlas (`ChartAtlas`: every distinct glyph look drawn once by the CPU's own code, about 170 for
+4,800 glyphs). `ChartGpu` then draws, on the main thread:
+- the ground with `ChartGround.shader`, a port of the CPU painter's per-pixel pass (same hashes, so the
+  same noise), into an sRGB texture with mipmaps;
+- the rivers and roads as triangle strips and every glyph as a quad from the atlas
+  (`ChartMarks.shader`), in the scene's order.
+
+The CPU painter (`ChartPainter`) stays as the fallback on a machine without float textures or the two
+shaders (`ChartGpu.Supported`), and for the .NET harness and the tests. It draws without the paper texture.
+
+**Loading.** A generated world shows a loading card (`UI/LoadingCard.cs`) while the generator runs, with
+its attempts and time, then while the game is played and the chart prepared. The generator has a
+12-second budget; past it the best world found so far is played, and the load report says so. When
+no playable world was found, the card closes and the screen stays on the Classic board, with a warning
+in the console.
+
+**What it costs** (medium world, seed 7, 3840 × 2400, in the editor):
+
+| Step | Where | Time |
+|---|---|---|
+| The world (generator) | worker thread | 4.2 s |
+| The game played, the chart's inputs prepared | worker thread | 1.7 s |
+| The chart drawn on the GPU, read back once so the time is honest | main thread | 106 to 121 ms |
+| The spike's CPU drawing, for comparison | main thread | 7.3 s |
+
+**Noted, not fixed:**
+- The 1366 × 768 frame shows a chart built for a 3840-wide window and scaled down: changing the Game
+  view's size does not rebuild the chart.
+- Seed 7 has one bridge. Roads cross rivers rarely on the generator's maps today.
+- The farmland test reads the scene, not the pixels; how the fields look is judged by eye.
 
 **R1a, the writs turn and armies as pieces, headless** (12 November). Rules v2's turn, as a setting
 beside today's: `GameSetup.Writs(seed)` (or `"turn": "writs"`) plays it, conquest with no turn limit.
@@ -1894,7 +1958,7 @@ Assets/GreyBoxStrategy/
   Screen/             GreyBoxStrategy.Screen: the screen (namespace GreyBoxStrategy.Realm)
     Replay/           GreyBoxStrategy.Replay (noEngineReferences): Recording, ReplayBuilder, Chronicle
     Chart/            GreyBoxStrategy.Chart (noEngineReferences): a generated world drawn as a chart, by code
-    Map/              PaintedMap.shader, MapView
+    Map/              PaintedMap.shader, MapView, ChartGpu; Resources/ the chart's two shaders
     UI/               ScreenUI, CountryLook (crests and icons drawn by code), PaintedRealm.uss/.tss
     Art/              the painting, the faces, the baked province maps
     Replays/          recorded games to play back
