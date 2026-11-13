@@ -23,8 +23,8 @@ namespace GreyBoxStrategy.Realm
         private readonly List<ChronicleLine> lines = new List<ChronicleLine>();
         private readonly HashSet<string> countryFilter;
         private readonly HashSet<ChronicleCategory> categoryFilter = new HashSet<ChronicleCategory>((ChronicleCategory[])Enum.GetValues(typeof(ChronicleCategory)));
-        private readonly Label[] provinceLabels = new Label[25];
-        private readonly VisualElement[] fortMarks = new VisualElement[25];
+        private readonly Label[] provinceLabels;
+        private readonly VisualElement[] fortMarks;
         private readonly Texture2D portraits;
         private bool showQuotes = true;
 
@@ -42,9 +42,13 @@ namespace GreyBoxStrategy.Realm
             this.portraits = portraits;
             CountryIds = countryIds;
             ProvinceIds = provinceIds;
+            provinceLabels = new Label[provinceIds.Count];
+            fortMarks = new VisualElement[provinceIds.Count];
             Players = players;
             countryFilter = new HashSet<string>(countryIds);
             Root = root;
+            // More than the Classic five: the top bar keeps each country's crest and numbers, its name in the tooltip.
+            root.EnableInClassList("crowded", countryIds.Count > 5);
             root.styleSheets.Add(style);
             root.AddToClassList("root");
             root.pickingMode = PickingMode.Ignore;
@@ -123,7 +127,10 @@ namespace GreyBoxStrategy.Realm
         /// <summary>Below 1600 px wide the top bar keeps crest, name, provinces, army and wars; the rest is in its tooltip.</summary>
         public void SetCompact(bool compact) => Root.EnableInClassList("compact", compact);
 
-        public void SetTurn(int turn, string phase) { turnLabel.text = $"Turn {turn} of 30"; phaseLabel.text = phase; }
+        /// <summary>The rules' numbers the screen shows: the Classic board's 15 of 25 in 30 turns, or a generated world's.</summary>
+        public int WinAt = 15, MaxTurns = 30;
+
+        public void SetTurn(int turn, string phase) { turnLabel.text = $"Turn {turn} of {MaxTurns}"; phaseLabel.text = phase; }
 
         public void SetPlaying(bool playing, float speed)
         {
@@ -147,7 +154,7 @@ namespace GreyBoxStrategy.Realm
                 var chip = new VisualElement(); chip.AddToClassList("nation");
                 if (!c.Alive) chip.AddToClassList("out");
                 chip.tooltip = $"{look.Name} · the {Players?.GetValueOrDefault(id)?.Persona ?? "?"} · {Players?.GetValueOrDefault(id)?.Model}\n" +
-                               $"Provinces {n} of 25 (15 wins)\nArmy {c.Army}, upkeep {c.Upkeep} a turn\nTreasury {c.Gold} gold: income {c.Income}, upkeep {c.Upkeep}, net {net:+0;-0}\n" +
+                               $"Provinces {n} of {ProvinceIds.Count} ({WinAt} wins)\nArmy {c.Army}, upkeep {c.Upkeep} a turn\nTreasury {c.Gold} gold: income {c.Income}, upkeep {c.Upkeep}, net {net:+0;-0}\n" +
                                $"Stability {c.Stability} of 5\n" + (wars.Count > 0 ? "At war with " + string.Join(", ", wars.Select(CountryLook.NameOf)) : "At war with nobody");
                 chip.RegisterCallback<ClickEvent>(_ => CountryPressed?.Invoke(id));
                 chip.Add(new Crest(look));
@@ -155,7 +162,7 @@ namespace GreyBoxStrategy.Realm
                 var count = Stat(chip, IconKind.Province, n.ToString());
                 provinceCount[id] = count;
                 if (id == flipCountry) Flip(count);
-                Stat(chip, IconKind.Army, c.Army.ToString());
+                Stat(chip, IconKind.Army, c.Army.ToString()).parent.AddToClassList("army-stat");
                 var gold = Stat(chip, IconKind.Gold, c.Gold.ToString());
                 gold.parent.AddToClassList("gold-stat");
                 var delta = new Label($"{net:+0;-0}"); delta.AddToClassList("stat-delta"); delta.AddToClassList(net >= 0 ? "good" : "bad");
@@ -168,7 +175,7 @@ namespace GreyBoxStrategy.Realm
             }
             RenderRealm(s);
             ShowArmies(s);
-            for (int i = 0; i < 25; i++)
+            for (int i = 0; i < ProvinceIds.Count; i++)
             {
                 fortMarks[i].Clear();
                 if (!Fog.KnowsProvince(s, i)) continue;
@@ -195,7 +202,7 @@ namespace GreyBoxStrategy.Realm
         {
             realmBody.Clear();
             var rank = CountryIds.OrderByDescending(id => s.ProvinceCount(id)).ToList();
-            Section("STANDING", "15 wins", rank.Select(id => BarRow(id, s.ProvinceCount(id), 15, $"{CountryLook.NameOf(id)}: {s.ProvinceCount(id)} provinces, {Math.Max(0, 15 - s.ProvinceCount(id))} to win")));
+            Section("STANDING", $"{WinAt} wins", rank.Select(id => BarRow(id, s.ProvinceCount(id), WinAt, $"{CountryLook.NameOf(id)}: {s.ProvinceCount(id)} provinces, {Math.Max(0, WinAt - s.ProvinceCount(id))} to win")));
             var wars = s.Relations.Where(r => r.Kind == "war").ToList();
             Section("WARS", wars.Count.ToString(), wars.Select(r => PairRow(r.A, r.B, IconKind.War, r.Since > 0 ? $"since t{r.Since}" : "", "bad")));
             var truces = s.Relations.Where(r => r.Kind == "truce").ToList();
@@ -311,7 +318,7 @@ namespace GreyBoxStrategy.Realm
         public void PlaceLabels(ReplayState s)
         {
             if (ProvinceToPanel == null) return;
-            for (int i = 0; i < 25; i++)
+            for (int i = 0; i < ProvinceIds.Count; i++)
             {
                 var p = ProvinceToPanel(i);
                 bool capital = CountryIds.Any(id => CapitalIndex(id) == i);
@@ -319,6 +326,14 @@ namespace GreyBoxStrategy.Realm
                 l.EnableInClassList("clab", capital);
                 l.EnableInClassList("plab", !capital);
                 l.text = capital ? ProvinceIds[i].ToUpperInvariant() : Cap(ProvinceIds[i]);
+                float size = ProvinceLabelSize?.Invoke(i) ?? -1;
+                if (size >= 0)
+                {
+                    // A generated world: each name sized to the room in its province, hidden when it does not fit.
+                    l.style.display = size > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+                    if (size > 0) l.style.fontSize = size;
+                    fortMarks[i].style.display = size > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+                }
                 l.style.left = p.x; l.style.top = p.y + (capital ? 4 : 0);
                 fortMarks[i].style.left = p.x; fortMarks[i].style.top = p.y + (capital ? 24 : 10);
             }
@@ -333,7 +348,33 @@ namespace GreyBoxStrategy.Realm
             ["valen"] = "highmoor", ["orsk"] = "orskhaven", ["merrow"] = "merrowdeep", ["kesh"] = "keshtar", ["ilvar"] = "ilvarion",
         };
 
-        public int CapitalIndex(string country) => Capitals.TryGetValue(country, out var p) ? ProvinceIds.ToList().IndexOf(p) : -1;
+        public int CapitalIndex(string country) => Queries != null ? Queries.CapitalIndex(country) : Capitals.TryGetValue(country, out var p) ? ProvinceIds.ToList().IndexOf(p) : -1;
+
+        /// <summary>A generated world: a province name's size in panel pixels, 0 to hide it. Null on the Classic board, whose names keep their style.</summary>
+        public Func<int, float> ProvinceLabelSize;
+
+        private readonly List<Label> regionLabels = new List<Label>();
+
+        /// <summary>Region names, in spaced italic capitals, where the director placed them (panel pixels); an empty list hides them.</summary>
+        public void PlaceRegionLabels(IReadOnlyList<(string text, Vector2 at, float size)> items)
+        {
+            while (regionLabels.Count < items.Count)
+            {
+                var l = new Label { pickingMode = PickingMode.Ignore };
+                l.AddToClassList("rlab");
+                labels.Insert(0, l);
+                regionLabels.Add(l);
+            }
+            for (int i = 0; i < regionLabels.Count; i++)
+            {
+                var l = regionLabels[i];
+                if (i >= items.Count) { l.style.display = DisplayStyle.None; continue; }
+                l.style.display = DisplayStyle.Flex;
+                l.text = items[i].text.ToUpperInvariant();
+                l.style.fontSize = items[i].size;
+                l.style.left = items[i].at.x; l.style.top = items[i].at.y;
+            }
+        }
 
         private sealed class Banner { public VisualElement Element; public int Province; }
         private readonly List<Banner> banners = new List<Banner>();

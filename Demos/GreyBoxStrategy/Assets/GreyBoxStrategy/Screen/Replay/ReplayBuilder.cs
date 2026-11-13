@@ -35,8 +35,7 @@ namespace GreyBoxStrategy.Replay
             foreach (var c in game.World.CountryList) game.Gates[c.Id] = players;
 
             int cols = map.Columns;
-            var provinceIds = new string[map.Provinces.Count];
-            foreach (var p in map.Provinces) provinceIds[p.Row * cols + p.Column] = p.Id;
+            var provinceIds = ProvinceOrder(map);
 
             var replay = new ReplayGame
             {
@@ -46,6 +45,8 @@ namespace GreyBoxStrategy.Replay
                 ProvinceIds = provinceIds,
                 Columns = cols,
                 Players = recording.Players,
+                Map = map,
+                Rules = game.Rules,
                 Dev = recording.Dev || recording.DevEdits.Count > 0,
             };
             var since = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -110,6 +111,26 @@ namespace GreyBoxStrategy.Replay
             replay.Result = game.Result;
             if (!partial) players.CheckAllUsed();
             return replay;
+        }
+
+        /// <summary>
+        /// The screen's order of provinces. The Classic board's grid is dense (5 × 5), and its
+        /// order is the grid's, which its baked province map uses. A generated world's grid has
+        /// gaps, so its order is the map's own, which its drawn province map uses.
+        /// </summary>
+        public static string[] ProvinceOrder(MapDefinition map)
+        {
+            int cols = map.Columns, n = map.Provinces.Count;
+            var ids = new string[n];
+            bool dense = true;
+            foreach (var p in map.Provinces)
+            {
+                int k = p.Row * cols + p.Column;
+                if (k < 0 || k >= n || ids[k] != null) { dense = false; break; }
+                ids[k] = p.Id;
+            }
+            if (!dense) for (int i = 0; i < n; i++) ids[i] = map.Provinces[i].Id;
+            return ids;
         }
 
         private static List<ReplayEvent> UpkeepEvents(TurnReport tr, ReplayState before, ReplayState council, ReplayGame replay, int turn)

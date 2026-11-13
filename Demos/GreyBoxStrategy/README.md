@@ -44,7 +44,11 @@ language model through the framework, fighting over 25 provinces on a painted se
      - Choose **Watch** (five model rulers with personas play) or **Rule** (you rule one country,
        chosen by its crest, against four).
      - Choose the model (`qwen3.5:4b` by default) and the seed (Roll picks one), then **Start**.
-     - The map, persona mix, storyteller and advisor are listed as coming.
+     - **Map:** Classic (the painting) or **Generated** (a chart drawn by code), with a size and a
+       land shape. A generated world is a first look: the rules' scripted rulers play it at once
+       and you watch the replay. It plays in watch mode only, with no model and no server
+       ([the drawn chart](#the-drawn-chart-spike-12-november)).
+     - The persona mix, storyteller and advisor are listed as coming.
    - **Replay:** seed 4 of the persona table, five `qwen3.5:4b` rulers. Kesh wins by domination
      on turn 17. Every line is the rulers' own. It needs no model and no server.
    - **Settings:**
@@ -125,6 +129,7 @@ unity command script eval -- --code 'return GreyBoxStrategy.Realm.DevTools.Run("
 |---|---|
 | `scripted-rule <country> [seed]` | Rule a country against four stand-in rulers: a `ScriptedProvider` picks a move the rules offer, through the real agents. No server, no card |
 | `scripted-watch [seed]` | Watch five stand-in rulers. No server, no card |
+| `generated <small\|medium\|large\|huge> [shape] [seed] [countries]` | Watch scripted rulers play a generated world, drawn as a chart. Shapes: `continent`, `two_lands`, `inland_sea`, `peninsula`, `long_coast` |
 | `turn <n>` · `step` · `play` · `pause` · `speed <x>` | Jump to a turn without animating the turns before it, land one event, or play and pause. Speed is 0.25 to 32 |
 | `autoplay on\|off` | Play to the end at 8× or faster. In rule mode it also holds every turn and refuses every envoy |
 | `gold\|army\|stability <country> <+n\|-n\|=n>` | Change a country's numbers, within the rules' ranges |
@@ -331,6 +336,69 @@ var game = new GameSetup { Seed = 7, Map = "generated", Countries = 6, Generator
     at every country once in five games" no longer holds.
   - **The owner grid** in the logs places provinces on a coarse grid by their centres. It shows every
     province once, but sparsely.
+
+### The drawn-chart spike (12 November)
+
+The screen half of R2: a generated world drawn by code in the sea-chart style, for the lead to
+judge against the painting. Classic is unchanged: its painting, its baked province map and its
+look.
+
+**See it:** New game → Map: Generated, or the dev menu's **Generated world** buttons
+(`generated medium continent 7`). The world is made from the seed, and a whole game is played on it
+at once by the rules' own scripted rulers (`ScriptedWorldGame`, Sim's `mixed` line-up), then
+replayed on the screen like any recording. The model seats' runner plays the Classic board only, and
+it lives in `Agents/`, which the rules sessions own. It is a dev game: the top bar says **DEV**.
+
+**How it is drawn** (`Screen/Chart/`, plain C#, no Unity, so the tests and a .NET harness draw it
+too):
+- `ChartRaster` turns the cell grid into pixels at any width. Each pixel looks up the cells around a
+  point moved a little by noise and takes the province with the most weight. Corners round off and
+  borders wander like inked ones, and a neck one cell wide survives.
+- `ChartPainter` draws the layers, all sized in grid cells, so a chart for 1366 and one for 3840 are
+  the same drawing:
+  - the sea, with engraved wave marks, ripples along the coast, rhumb lines from two points and a
+    compass rose;
+  - the coast line, and a cliff face under every coast that faces south;
+  - land toned by terrain, with a soft relief and paper grain;
+  - terrain as ink glyphs placed by Poisson rejection, clear of names and towns: conifers and round
+    trees, peaks with a lit and a shaded side, hills, marsh reeds, field strips;
+  - ridges as a chain of peaks, open at their passes with a pass mark;
+  - a settlement for each province by population (a hamlet, a village, a town; a capital walled);
+  - an anchor at each port, and a gilt seal for each special place, with its own mark.
+- `ChartImage` makes the chart and the shader's inputs from one raster. The **chart** is a texture
+  1.25 times the screen's width (2048 to 6144). The **province map** is half that width, with 16-bit
+  ids in red and green, so any number of provinces fits. Its **edge field** is as Classic's bake.
+- The map shader (`PaintedMap`) reads 16-bit ids when `_IdWide` is on. The state texture has a
+  column per province (at least 32), so the owner wash, the borders between owners, the focus and
+  the capture animation work as on Classic.
+- `ChartPalette` gives ten owner colours. The first five are Classic's. The wash keeps the chart's
+  lightness and takes only hue and saturation, so the palette is checked as the map shows it: both
+  colours washed over a chart tone, then their CIE distance. The closest pair is 14 apart; Classic's
+  five alone are 15. A test holds it at 12 or more.
+- `ChartLabels` places names as screen text, never baked, so they stay sharp:
+  - a province's name at its label point (the cell farthest from its border), sized to the room
+    there, hidden when it does not fit or would collide with a larger one;
+  - below about 4 screen pixels a cell, region names in spaced italic capitals instead.
+
+**What it costs** (medium world, seed 7; the editor's Mono runtime unless said):
+
+| Screen | Chart | Province map | Time to draw |
+|---|---|---|---|
+| 1366 × 768 | 2048 × 1153 | 1024 × 576 | 1.4 s |
+| 1920 × 1080 | 2400 × 1351 | 1200 × 675 | about 2 s (estimated; not timed after the last speed-up) |
+| 3840 × 2400 | 4800 × 2702 | 2400 × 1351 | 7.3 s (under .NET: 1.7 s) |
+
+About 4.4 s of the 7.3 s is one pass over every pixel, which runs about 15 times slower under the
+editor's Mono than under .NET. Memory for the chart at 4800 wide is about 70 MB with mipmaps. A
+huge world's generator takes about 12 s in the editor before any of this (R2's own number).
+
+**What looks wrong because of today's rules** (noted, not fixed):
+- The game is 30 turns with 60% to win. That is 36 of 60 provinces on medium and 90 of 150 on
+  huge, which no one reaches, so every game ends on the turn limit. "Turn 8 of 30" and "90 wins"
+  say so in the top bar.
+- With one move a turn, a huge map changes slowly. After 8 turns most of it is still neutral
+  hatching.
+- Scripted rulers say nothing, so the chronicle has no speech.
 
 ## The first real run
 
@@ -1589,6 +1657,7 @@ Assets/GreyBoxStrategy/
   Tests/Editor/       GreyBoxStrategy.Tests.Editor
   Screen/             GreyBoxStrategy.Screen: the screen (namespace GreyBoxStrategy.Realm)
     Replay/           GreyBoxStrategy.Replay (noEngineReferences): Recording, ReplayBuilder, Chronicle
+    Chart/            GreyBoxStrategy.Chart (noEngineReferences): a generated world drawn as a chart, by code
     Map/              PaintedMap.shader, MapView
     UI/               ScreenUI, CountryLook (crests and icons drawn by code), PaintedRealm.uss/.tss
     Art/              the painting, the faces, the baked province maps

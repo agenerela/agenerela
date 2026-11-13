@@ -33,6 +33,12 @@ phase table and the open issues, not here.
   headlands, inland seas are irregular, lobes are uneven, and no land meets the frame. Small scenery
   islands lie offshore. When a world's starts are unfair, the generator searches again on the same
   geometry before making a new one. Every seed now makes a different world than before.
+- **Painted Realm: a generated world drawn as a sea chart by code** (#20, the screen half of R2).
+  New game → Map: Generated, or the dev menu's `generated` command. Scripted rulers play a world
+  of any size and shape, and the screen replays it over a chart drawn at the screen's size: sea,
+  coast, terrain glyphs, ridges and passes, settlements, ports, special places, a compass rose, and
+  names placed to fit. The owner wash, the borders and the capture work as on the Classic board,
+  with ten owner colours checked to stay apart. The Classic board and its painting are unchanged.
 - **Painted Realm rules v2, slice R2: the map generator, headless** (#20). GreyBoxStrategy generates
   worlds from a seed: small to huge (30 to 150 provinces), five land shapes, terrain, coasts and
   ports, ridges with passes, regions, fair capitals and starting realms, goods, population, names from

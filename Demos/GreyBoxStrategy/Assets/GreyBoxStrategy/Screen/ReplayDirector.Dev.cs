@@ -40,6 +40,20 @@ namespace GreyBoxStrategy.Realm
             c.Add("scripted-watch", "scripted-watch [seed]", "watch five stand-in rulers; no server, no card",
                 a => { if (started || live == null) return started ? "A game is running: Esc, then Main menu, first." : "No live component in the scene."; StartScriptedWatch(N(a, 0, 7)); return "watch game, stand-in rulers"; });
 
+            c.Add("generated", "generated <small|medium|large|huge> [shape] [seed] [countries]",
+                "watch scripted rulers play a generated world, drawn as a chart; shapes continent, two_lands, inland_sea, peninsula, long_coast",
+                a =>
+                {
+                    Need(a.Length >= 1, "Give a size.");
+                    var size = (MapSize)Enum.Parse(typeof(MapSize), a[0], true);
+                    var shape = a.Length > 1 ? (LandShape)Enum.Parse(typeof(LandShape), a[1].Replace("_", ""), true) : LandShape.Continent;
+                    int seed = N(a, 2, 7), countries = N(a, 3, MapSettings.DefaultCountries(size));
+                    string why = new MapSettings { Size = size, Shape = shape }.WhyInvalid(countries);
+                    if (why != null) return why;
+                    StartGeneratedWatch(size, shape, seed, countries);
+                    return $"loading a {size} {shape} world, seed {seed}, {countries} countries";
+                });
+
             // ---- time ----
             c.Add("turn", "turn <n>", "jump to turn n without animating the turns before it", a => { SkipToTurn(N(a, 0, 1)); return $"jumping to turn {N(a, 0, 1)}"; });
             c.Add("step", "step", "land the next event", _ => { playing = false; stepOnce = true; ui.SetPlaying(false, speed); return Position; });
@@ -189,6 +203,7 @@ namespace GreyBoxStrategy.Realm
                 last != null ? $"last decision played: {last.AgentId} turn {last.Turn}, {last.LatencySeconds:0.00} s, queue wait {last.QueueWaitSeconds:0.00} s, {last.PromptTokens} tokens in" : "last decision played: none",
                 $"card: {(holder == null ? "free" : holder)}{(Gateway.HoldsLock ? " · this game holds it" : "")} · faults: {DevFaults.Describe()}",
                 rule != null && rule.DevQueued.Count > 0 ? "next turn: " + string.Join("; ", rule.DevQueued) : null,
+                MapReadout(),
             }.Where(x => x != null));
         }
 
