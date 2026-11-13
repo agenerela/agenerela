@@ -236,10 +236,12 @@ framework writes the moves as one line among the facts, `LegalTargets = Observat
 
 Each game log shows the model's answer and its statement under each of its moves.
 
-**Tests:** 221 EditMode tests in `Assets/GreyBoxStrategy/Tests/Editor/`, about a minute once the
-project has imported (the map generator's take most of it), and four long ones run by hand. Twenty of them drive the model seat through `ScriptedProvider`,
+**Tests:** 314 EditMode tests in all, counted on 12 November. 248 are the game's, in
+`Assets/GreyBoxStrategy/Tests/Editor/`: 244 run every time, about a minute once the project has
+imported (the map generator's take most of it), and four long ones are run by hand. 66 are the
+screen's, in `Screen/Tests/Editor/`. Twenty of them drive the model seat through `ScriptedProvider`,
 sixteen in `TableTests` the table, the personas and the scorecard, and fifteen in `StorytellerTests`
-the storyteller. The screen has its own in `Screen/Tests/Editor/`.
+the storyteller.
 
 ## Rules v2, being built
 
