@@ -9,6 +9,8 @@ namespace GreyBoxStrategy
         Council,
         /// <summary>When another country offers it peace: accept or refuse.</summary>
         Envoy,
+        /// <summary>When an event asks its ruler to choose (the storyteller's dilemmas, S2): one of the event's options.</summary>
+        Choice,
     }
 
     /// <summary>
@@ -20,8 +22,9 @@ namespace GreyBoxStrategy
     {
         public CountryRequest(Moment moment, int turn, string countryId, World world,
             IReadOnlyList<string> standingFacts, IReadOnlyList<string> turnFacts, IReadOnlyList<Move> legal,
-            string offerId = null, string offeredBy = null)
+            string offerId = null, string offeredBy = null, Move defaultMove = null)
         {
+            DefaultMove = defaultMove;
             Moment = moment;
             Turn = turn;
             CountryId = countryId;
@@ -47,6 +50,8 @@ namespace GreyBoxStrategy
         public string OfferId { get; }
         /// <summary>For an envoy call: the country offering peace.</summary>
         public string OfferedBy { get; }
+        /// <summary>For a choice: the option taken when nobody answers, which a scripted seat takes too.</summary>
+        public Move DefaultMove { get; }
     }
 
     /// <summary>A player's answer, paired with the request it answers.</summary>

@@ -31,6 +31,7 @@ namespace GreyBoxStrategy
         public string OfferedBy;
         /// <summary>The statement rules the seat's persona gave it, or null: what "copies its statement rule" compares with.</summary>
         public string StatementRules;
+        public float LatencySeconds;
     }
 
     /// <summary>One call to a game's storyteller, for the scorecard's events section.</summary>
@@ -49,6 +50,8 @@ namespace GreyBoxStrategy
         /// <summary>Whether an event was queued for the upkeep.</summary>
         public bool Queued;
         public float LatencySeconds;
+        /// <summary>The title call's seconds (S2's <c>+title-call</c>), 0 without one.</summary>
+        public float TitleLatencySeconds;
     }
 
     /// <summary>One played game, with who sat where: a label per country (the player: a model or a script kind) and a character (a persona, or a placebo slot).</summary>
@@ -56,8 +59,9 @@ namespace GreyBoxStrategy
     {
         public ScoredGame(GameRecord record, IReadOnlyDictionary<string, string> labels,
             IReadOnlyDictionary<string, string> characters, IReadOnlyList<SeatDecisionInfo> decisions = null,
-            IReadOnlyList<StorytellerCallInfo> storyteller = null)
+            IReadOnlyList<StorytellerCallInfo> storyteller = null, IReadOnlyList<SeatDecisionInfo> choices = null)
         {
+            Choices = choices ?? Array.Empty<SeatDecisionInfo>();
             Record = record ?? throw new ArgumentNullException(nameof(record));
             Labels = labels ?? record.Kinds;
             Characters = characters ?? Labels;
@@ -67,6 +71,8 @@ namespace GreyBoxStrategy
 
         /// <summary>The storyteller's calls, or none when the game had no storyteller.</summary>
         public IReadOnlyList<StorytellerCallInfo> Storyteller { get; }
+        /// <summary>The model seats' answers to dilemmas (S2), kept out of <see cref="Decisions"/> so the other sections score the council and the envoys as before.</summary>
+        public IReadOnlyList<SeatDecisionInfo> Choices { get; }
 
         public GameRecord Record { get; }
         public IReadOnlyDictionary<string, string> Labels { get; }
@@ -160,6 +166,20 @@ namespace GreyBoxStrategy
             ("events", "storyteller pipeline errors", "Calls with no decision at all."),
             ("events", "events refused at upkeep", "Events the storyteller chose that the game's re-check refused when they came to land."),
             ("events", "storyteller median latency", "Seconds a storyteller call took, median."),
+            ("events", "choice events share", "Of the storyteller's events, the dilemmas: a ruler chose (S2)."),
+            ("events", "choices a game", "Rulers' choices a game, one per country a dilemma reached."),
+            ("events", "choices left to the default", "Of those choices, the ones nobody answered, or answered with none: the game took the default."),
+            ("events", "events on two or more", "Of the storyteller's events, those that reached two countries or more."),
+            ("events", "story-only events share", "Of the storyteller's events, those with no effect: an omen, a tale's end."),
+            ("events", "trait events share", "Of the storyteller's events, those that need a province's trait: a rich vein, a flood, pilgrims."),
+            ("events", "chains started a game", "Chains that reached two events."),
+            ("events", "chains completed a game", "Chains told to their end, closed with end_tale, or run to their full length."),
+            ("events", "chains abandoned a game", "Chains nobody continued for three turns, or whose subject fell."),
+            ("events", "chain length", "Events in a started chain, mean."),
+            ("events", "long chains a game", "Chains of four events or more."),
+            ("events", "stories naming a real happening", "Of the storyteller's stories, those whose claim of a fight matched the game, or that named someone from the recent happenings (with +history)."),
+            ("events", "stories inventing history", "Of the storyteller's stories, those claiming a capture or battle the game never had (before the story was replaced)."),
+            ("events", "event seconds a turn", "Seconds spent a turn on events: the storyteller's call, its title call, and the rulers' choices."),
             ("strength", "placement", "Mean rank by provinces at the end, 1 best, ties shared: strength between seats at the same table."),
             ("strength", "wins", "Games won by this seat kind."),
             ("strength", "provinces at the end", "Mean provinces held at the end."),
@@ -759,7 +779,36 @@ namespace GreyBoxStrategy
                     Add(S, G, "titles shared across seeds", Share(bySeed.Count(t => games[t.title] > 1), bySeed.Count));
                 }
                 Add(S, G, "stories replaced", Share(told.Sum(x => x.ev.Count(e => e.StoryReplaced)), toldCount));
-                Add(S, G, "titles missing", Share(told.Sum(x => x.ev.Count(e => EventRules.SplitTitle(e.Statement).title == null)), toldCount));
+                Add(S, G, "titles missing", Share(told.Sum(x => x.ev.Count(e => e.ModelTitle == null)), toldCount));
+                // Stage S2.
+                var events = told.SelectMany(x => x.ev).ToList();
+                if (events.Any(e => e.Options.Count > 0) || Games.Any(g => g.Choices.Count > 0))
+                {
+                    Add(S, G, "choice events share", Share(events.Count(e => e.Options.Count > 0), toldCount));
+                    int choices = events.Sum(e => e.Choices.Count);
+                    Add(S, G, "choices a game", choices / (double)n);
+                    Add(S, G, "choices left to the default", Share(events.Sum(e => e.ChosenBy.Values.Count(v => v == "default")), choices));
+                }
+                Add(S, G, "events on two or more", Share(events.Count(e => e.Hit.Count >= 2), toldCount));
+                Add(S, G, "story-only events share", Share(events.Count(e => EventRules.Template(e.Template)?.Parts?.Count == 0), toldCount));
+                Add(S, G, "trait events share", Share(events.Count(e => EventRules.Template(e.Template)?.Feature == EventFeature.Trait), toldCount));
+                var chains = Games.SelectMany(g => g.Record.Game.Events.Chains).Where(c => c.Started).ToList();
+                if (chains.Count > 0 || Games.Any(g => g.Record.Game.Story.Chains != ChainMode.None))
+                {
+                    Add(S, G, "chains started a game", chains.Count / (double)n);
+                    Add(S, G, "chains completed a game", chains.Count(c => c.Status == ChainStatus.Completed) / (double)n);
+                    Add(S, G, "chains abandoned a game", chains.Count(c => c.Status == ChainStatus.Abandoned) / (double)n);
+                    Add(S, G, "chain length", chains.Count == 0 ? double.NaN : chains.Average(c => (double)c.Events.Count));
+                    Add(S, G, "long chains a game", chains.Count(c => c.Events.Count >= ChainSkeletons.Long) / (double)n);
+                }
+                if (Games.Any(g => g.Record.Game.Story.History))
+                {
+                    Add(S, G, "stories naming a real happening", Share(events.Count(e => e.HistoryRef != null && e.HistoryRef.StartsWith("real", StringComparison.Ordinal)), toldCount));
+                    Add(S, G, "stories inventing history", Share(events.Count(e => e.HistoryRef != null && e.HistoryRef.StartsWith("invented", StringComparison.Ordinal)), toldCount));
+                }
+                double seconds = Games.Sum(g => g.Storyteller.Sum(c => (double)c.LatencySeconds + c.TitleLatencySeconds) + g.Choices.Sum(c => (double)c.LatencySeconds));
+                int turns = Games.Sum(g => g.Record.Result?.Turns ?? g.Record.Reports.Count);
+                Add(S, G, "event seconds a turn", turns == 0 ? double.NaN : seconds / turns);
             }
 
             // Fairness: how unevenly the net worth fell, and whether it followed standing.

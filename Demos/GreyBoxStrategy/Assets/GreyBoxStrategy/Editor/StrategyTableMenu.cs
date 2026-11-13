@@ -81,7 +81,7 @@ namespace GreyBoxStrategy.Editor
         /// For <c>-executeMethod</c>: several arms of one table on the same seeds, interleaved in blocks
         /// (<see cref="StrategyTableRuns.RunInterleavedAsync"/>). <c>-strategyArms</c> lists the arms and
         /// <c>-strategyArmNames</c> their folder names, both separated by <c>;</c>; <c>-strategyBlock</c>
-        /// is the block size (5). Writes each arm to <c>-strategyOut/&lt;name&gt;</c> and exits when done.
+        /// is the block size (5), <c>-strategyIndex</c> the series index of the first seed (0). Writes each arm to <c>-strategyOut/&lt;name&gt;</c> and exits when done.
         /// </summary>
         /// <example>
         /// <code>
@@ -101,6 +101,8 @@ namespace GreyBoxStrategy.Editor
             int games = int.TryParse(Arg("-strategyGames"), out int g) ? g : 20;
             int seed = int.TryParse(Arg("-strategySeed"), out int s0) ? s0 : 1;
             int block = int.TryParse(Arg("-strategyBlock"), out int b) ? b : 5;
+            // The series index of the first seed, when this run is one block of a longer series (seats rotate by it).
+            int index = int.TryParse(Arg("-strategyIndex"), out int i0) ? i0 : 0;
             var defined = new List<(string, TableDefinition)>();
             try
             {
@@ -114,17 +116,17 @@ namespace GreyBoxStrategy.Editor
                 return;
             }
             string folder = Arg("-strategyOut") ?? StrategyRuns.NewFolder(StrategyRunMenu.Root, "interleaved-" + table);
-            RunInterleaved(defined, games, seed, block, folder);
+            RunInterleaved(defined, games, seed, block, folder, index);
         }
 
-        private static async void RunInterleaved(List<(string, TableDefinition)> arms, int games, int firstSeed, int block, string folder)
+        private static async void RunInterleaved(List<(string, TableDefinition)> arms, int games, int firstSeed, int block, string folder, int index = 0)
         {
             int code = 0;
             try
             {
                 Debug.Log($"GreyBoxStrategy: {arms.Count} arms interleaved in blocks of {block}, {games} games, seeds from {firstSeed}, into {folder}");
                 await StrategyTableRuns.RunInterleavedAsync(folder, arms, ProviderCache(), games, firstSeed, block,
-                    line => Debug.Log("GreyBoxStrategy: " + line));
+                    line => Debug.Log("GreyBoxStrategy: " + line), default, index);
                 Debug.Log($"GreyBoxStrategy: done. {folder}");
             }
             catch (Exception e)

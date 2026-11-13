@@ -96,6 +96,30 @@ namespace GreyBoxStrategy
         /// <summary>Which inspiration draw the storyteller gets: <c>+inspiration-1</c> draws other words on the same seeds, for the divergence runs.</summary>
         public int InspirationSalt;
 
+        // --- The storyteller's stage S2 (the README's "Storyteller"), each a modifier on +storyteller ---
+
+        /// <summary><c>+choices</c>: dilemmas; the ruler struck chooses (and the seats register the options as actions).</summary>
+        public bool Choices;
+        /// <summary><c>+multi</c>: group events reach the members the fairness rules allow.</summary>
+        public bool Multi;
+        /// <summary><c>+history</c>: the recent-happenings line, and the story check against invented history.</summary>
+        public bool History;
+        /// <summary><c>+traits</c>: province traits in the targets, and the three trait events.</summary>
+        public bool Traits;
+        /// <summary><c>+title-call</c>: the story in the statement, the title from a second call, "told so far" without titles.</summary>
+        public bool TitleCall;
+        /// <summary><c>+chains-free</c> or <c>+chains-skeleton</c>.</summary>
+        public ChainMode Chains = ChainMode.None;
+        /// <summary><c>+preset-&lt;name&gt;</c> (<see cref="StorytellerSettings.Presets"/>); null keeps S1's settings.</summary>
+        public string Preset;
+
+        /// <summary>The game's <see cref="StoryRules"/> for these options.</summary>
+        public StoryRules StoryRules() => new StoryRules
+        {
+            Choices = Choices, Multi = Multi, History = History, Traits = Traits, TitleCall = TitleCall, Chains = Chains,
+            Settings = Preset == null ? new StorytellerSettings() : StorytellerSettings.Named(Preset),
+        };
+
         /// <summary>A short name for logs and tables: "control", "per-target", "no-moves-line", and so on.</summary>
         public string Arm = "control";
 
@@ -138,7 +162,10 @@ namespace GreyBoxStrategy
         /// ("default+no-moves-line+moves-sentence", "default+how-it-reads"), and <c>+memory-move</c>
         /// and <c>+memory-outcome</c> what a remembered move holds (<see cref="Remembers"/>, #244 item 4).
         /// For the storyteller: <c>+storyteller</c> (<see cref="Storyteller"/>), <c>+no-inspiration</c> and
-        /// <c>+inspiration-&lt;n&gt;</c> ("default+storyteller+inspiration-1").
+        /// <c>+inspiration-&lt;n&gt;</c> ("default+storyteller+inspiration-1"); stage S2's <c>+choices</c>,
+        /// <c>+multi</c>, <c>+history</c>, <c>+traits</c>, <c>+title-call</c>, <c>+chains-free</c>,
+        /// <c>+chains-skeleton</c>, <c>+preset-&lt;name&gt;</c>, and <c>+s2</c> for all but the chains on
+        /// <c>even_hand</c> ("default+storyteller+s2+chains-free").
         /// </summary>
         public static ModelSeatOptions Named(string arm)
         {
@@ -168,6 +195,21 @@ namespace GreyBoxStrategy
                     else if (modifier == "how-it-reads") options.RulesWording = StatementRulesWording.HowItShouldRead;
                     else if (modifier == "own-words") options.RulesWording = StatementRulesWording.InYourOwnWords;
                     else if (modifier == "storyteller") options.Storyteller = true;
+                    else if (modifier == "choices") options.Choices = true;
+                    else if (modifier == "multi") options.Multi = true;
+                    else if (modifier == "history") options.History = true;
+                    else if (modifier == "traits") options.Traits = true;
+                    else if (modifier == "title-call") options.TitleCall = true;
+                    else if (modifier == "chains-free") options.Chains = ChainMode.Free;
+                    else if (modifier == "chains-skeleton") options.Chains = ChainMode.Skeleton;
+                    else if (modifier.StartsWith("preset-") && StorytellerSettings.Named(modifier.Substring("preset-".Length)) != null)
+                        options.Preset = modifier.Substring("preset-".Length);
+                    else if (modifier == "s2")
+                    {
+                        // Every S2 piece but the chains, on the measured preset.
+                        options.Choices = options.Multi = options.History = options.Traits = options.TitleCall = true;
+                        options.Preset = options.Preset ?? StorytellerSettings.EvenHand.Name;
+                    }
                     else if (modifier == "no-inspiration") options.Inspiration = false;
                     else if (modifier.StartsWith("inspiration-") && int.TryParse(modifier.Substring("inspiration-".Length), out int salt) && salt >= 0)
                         options.InspirationSalt = salt;

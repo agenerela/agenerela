@@ -128,6 +128,23 @@ phase table and the open issues, not here.
   - `/api/ps` under-reports Bolt: 950 MB, about 2.8 GB real.
   - No default changed.
 
+- **GreyBoxStrategy: the storyteller's stage S2** (#20, demo only, no framework change). Each piece
+  is a modifier on `+storyteller`, off in `default`:
+  - `+choices`: six dilemmas whose options the struck ruler chooses, as one more decision (`Moment.Choice`);
+    a person's seat answers through `Game.PendingChoices` and `Game.Choose`.
+  - `+multi`: group events that leave out the members the fairness rules protect, each member with its
+    own amount or choice.
+  - `+chains-free` and `+chains-skeleton`: tales over several turns, held by the game (`Game.Chains`),
+    written freely by the model or on four skeletons the game registers.
+  - `+history`: a recent-happenings line, and a story check that replaces an invented battle.
+  - `+traits`: a terrain, a landmark and a resource for every province, and three events that need one.
+  - `+title-call`: the title from a second, short call.
+  - `+preset-<name>`: five storyteller presets (`StorytellerSettings.Presets`); `+s2` is every piece but
+    the chains.
+  - The game deals each turn's kind (a tale, a dilemma or an ordinary event) by the preset's chances.
+    Effects, dilemmas, skeletons and traits are data, with no province or country named.
+  - `-strategyIndex` lets one block of a longer series seat everyone as the series would.
+  - Measured against S1: findings, 12 November, "The storyteller's stage S2".
 - **GreyBoxStrategy: a storyteller that invents the game's events** (#20, stage S1 of
   `docs/demos/painted-realm-research.md`, demo only, no framework change). One more `Agent` with no
   body, asked before each upkeep from turn 3, picks one of eight effect templates and a country,

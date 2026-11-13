@@ -1182,6 +1182,193 @@ its ruler read about a fortune.
 The screen's replay (`ReplayBuilder`) does not know storyteller events: a storyteller game's forts and
 armies would not rebuild. That is the screen's to add when it wants one.
 
+### Stage S2: dilemmas, events on many, tales, game-aware stories (12 November)
+
+What the lead asked for after reading S1's events: events that ask a ruler to decide, events that strike
+everyone, stories over several turns, stories that know what happened, and places with a character
+of their own. The design, with the alternatives it chose between, is the research page's ["Stage S2:
+design"](../../docs/demos/painted-realm-research.md#stage-s2-design-12-november). Built in the demo, with
+no framework change. **Every piece is a modifier on `+storyteller`, off in `default`**, and with every
+piece off the storyteller is S1's exactly (a test holds that):
+
+| Modifier | What it adds |
+|---|---|
+| `+choices` | Six dilemmas (`sellswords`, `petitioners`, `relic`, `muster`, `engineers`, `fever_camps`), two or three options each, every option an effect the game applies |
+| `+multi` | A group event reaches the members the fairness rules allow (open when two are) and records who was spared; a group dilemma gives each member its own choice |
+| `+chains-free` | Any recent event is a tale the storyteller may continue (an effect on `tale_<n>` strikes its subject again) or close (`end_tale`) |
+| `+chains-skeleton` | Four tales the game plans (`begin_pretender`, `begin_deep_vein`, `begin_fever`, `begin_long_winter`), each stage prescribed, the next one chosen by what the ruler chose |
+| `+history` | A "Recent happenings" line from the game's reports, and the story check against invented battles |
+| `+traits` | A terrain, a landmark and a resource for every province, in its description: terrain and coast from the map's own data (`WorldMap`, rules v2's R0), the landmark and resource from its special place and trade good when the map has them, else drawn from the seed; `rich_vein`, `flood` and `pilgrims` need one. The A/B ran before the merge, on drawn terrain |
+| `+title-call` | The statement is the story alone; a second short call (the scribe) gives the title; "told so far" names template and target only |
+| `+preset-<name>` | `even_hand`, `underdog`, `cruel_fate`, `quiet_years`, `saga` (`StorytellerSettings.Presets`) |
+| `+s2` | Every piece but the chains, on `even_hand` |
+
+**Effects are data.** S1's eight templates keep their code; every new one is `EffectPart`s (gold,
+income, soldiers lost or gained, stability, a fort in the event's province) whose amounts the game
+sets (`EventEffects.Plan`) and whose applicability it checks (`EventEffects.WhyNot`). Nothing names a
+province or a country: dilemmas, skeletons, traits and presets carry over to a generated map.
+
+**The game deals each turn.** In the first smoke games the 4B, offered dilemmas on 40% of turns and
+tales on 30%, chose one dilemma in 28 events and began no tale. So each turn is dealt one kind from the
+preset's chances (`EventRules.KindOfTurn`): a **tale's** turn (only beginnings and continuations of
+tales are open), else a **dilemma's** (only dilemmas), else an **ordinary** one. A tale already open may
+go on in any turn. On `even_hand`, 15% of turns are a tale's and 25% a dilemma's when one is open.
+
+**A dilemma, step by step.** The storyteller picks `sellswords` on `valen` and writes the story. The
+game plans each option for valen and asks it, between turns, in a round of its own (`Moment.Choice`):
+the story and *"Our choice: hire_sellswords, hire them: pay 30 gold, 14 soldiers join our army;
+send_sellswords_away, send them away: nothing changes."* among its facts, the options as its only
+actions (registered on the seat with `+choices`, open only on that choice call). The answer lands at
+the next upkeep with the event: *"Event "The Sellswords": we chose to hire them: pay 30 gold, 14
+soldiers join our army."* A scripted seat takes the default, a random seat any option, an unanswered
+one the default. A dilemma counts as a gift when every option gains, a blow when every option costs,
+otherwise neither, and is open only when every option can apply.
+
+**Tales.** The game holds each chain (`Chain`: subject, events, what was chosen, status). An open one
+is a target of category `tale`, described with what happened so far (*"the tale "The Shadowed
+Pretender" of valen: turn 17 pretender, valen chose defy_pretender; next: unrest"*). Rules for both
+modes: at most two open; one not continued for three turns, or whose subject is out, is abandoned; at
+most six events, and only one tale a game may reach four.
+
+**The history check.** A sentence with a verb of capture or battle that names a province nobody has
+fought over, or two countries that never fought, has its story replaced (`replaced: invented: ...`).
+It cannot check a claim with no name in it, a motive, a count of the dead, or what an earlier story said.
+
+**What the screen can use** (plain C#, `Sim/`): `Game.PendingChoices` (each `EventChoice`: country,
+title, story, options with the game's effect line, default) and `Game.Choose(country, option)` for a
+person's seat, to be called before the next `BeginTurn`; `EventRecord.Choices`, `ChosenBy`, `ChainId`
+and `ChainStage`; `Game.Chains` to follow a tale; `World.Traits` for a province's card;
+`StorytellerSettings.Presets` for the menu.
+
+**Run it** as S1's A/B, one Unity run per arm and block (the lock is held for one arm's five games):
+
+```bash
+Unity.exe -batchmode -nographics -projectPath Demos/GreyBoxStrategy -executeMethod GreyBoxStrategy.Editor.StrategyTableMenu.RunInterleavedFromCommandLine -strategyTable personas -strategyModel qwen3.5:4b -strategyArms "default+storyteller+s2+chains-free" -strategyArmNames "s2-free" -strategyGames 5 -strategySeed 6 -strategyIndex 5 -strategyBlock 5 -strategyOut <folder> -logFile run.log
+```
+
+`-strategyIndex` is the series index of the first seed, so a block seats everyone as the whole series
+would. With chains on, an arm's folder also gets `chains.csv`; with choices, `choices.csv`.
+
+### What S2 did: against S1, 20 games an arm (12 November)
+
+`personas` table, five `qwen3.5:4b` seats, RTX 5080 (Docker Ollama 0.40.14), seeds 1 to 20, four arms
+interleaved in blocks of five seeds, one Unity run and one lock window per arm-block: **s1** (S1's
+storyteller, `default+storyteller`, the control), **s1-title** (`+title-call` alone), **s2-free**
+(`+s2+chains-free`) and **s2-skel** (`+s2+chains-skeleton`). Paired by seed with `compare.py`; **beyond**
+when the 95% interval excludes 0. The control reproduced S1's published numbers. Method and every
+number: [`findings.md`](../../docs/llm-wiki/findings.md), 12 November, "The storyteller's stage S2".
+
+| Per game, mean | s1 | s1-title | s2-free | s2-skel |
+|---|---:|---:|---:|---:|
+| titles missing | 47% | 0%, **beyond** | 0%, **beyond** | 0%, **beyond** |
+| titles distinct within a game | 60% | 96%, **beyond** | 92%, **beyond** | 95%, **beyond** |
+| kinds of event a game | 6.65 | 6.95 | 10.55, **beyond** | 11.30, **beyond** |
+| dilemmas among the events | – | – | 18% | 29% |
+| story-only events | – | – | 13% | 12% |
+| events needing a province's trait | – | – | 12% | 9% |
+| tales started a game (two events or more) | – | – | 2.20 | 1.10, **beyond** against free |
+| tale length | – | – | 3.63 | 2.25, **beyond** against free |
+| tales completed / abandoned a game | – | – | 0.40 / 1.15 | 0.20 / 0.65 |
+| stories naming a real happening / inventing one | – | – | 5% / 0.2% | 6% / 0.7% |
+| gifts among the events | 42% | 42% | 36%, **beyond** | 29%, **beyond** |
+| value tracks standing (r) | −0.37 | −0.37 | −0.25, **beyond** | −0.21, **beyond** |
+| hit rulers whose statement names the event | 29% | 28% | 22%, **beyond** | 22%, **beyond** |
+| event seconds a turn | 0.74 | 1.05, **beyond** | 1.23, **beyond** | 1.27, **beyond** |
+
+**The game itself did not change.** Battles, land changing hands, wars, peace, lead changes,
+eliminations and turns are within noise in every arm; only free tales show more games ended by
+domination (60% to 80%, just beyond). The rulers' sense and voice are within noise, persona still
+explains aggression (η² 0.81, 0.80, 0.85, 0.82, all p < 0.001), and no event was refused at upkeep.
+Per persona, a few numbers move in each arm, as twenty numbers by five personas will by chance; the
+builder holding more again (61% to 74%) shows only with the title call.
+
+**What it shows:**
+
+- **The title call fixes the titles,** at 0.35 to 0.39 s an event: every event has one, nearly all are
+  different within a game, and fewer repeat across games (72% to 38 to 48%).
+- **Choices read in character where the options are a real temptation.** A pretender was paid off by
+  the builder and the merchant 15 times out of 15, and defied by the warmonger and the proud ruler 11
+  times out of 11. On the other dilemmas the model takes the active option almost always (quarantine 62
+  of 64, hire the sellswords 33 of 34, call the muster 44 of 48), whatever the persona: those options
+  are simply better.
+- **Free tales are longer and more numerous; skeleton tales are tighter.** Free: 44 tales, 15 of four
+  events or more, motifs that recur across turns (a frozen bride, a bell, a weeping silence), and the
+  model hammers one subject with its effects. Skeletons: 22 tales, each turning on the ruler's choice.
+  Both leave most tales unfinished: the model seldom tells a due stage or closes a tale (8 of 44 and 4
+  of 22 completed).
+- **Stories rarely use what happened.** The happenings line is read on almost every call, but only 5 to
+  6% of stories name a real capture, war or rival; the history check replaced 4 that invented one.
+- **The rubber band loosens:** dilemmas count as neither gift nor blow, so fewer gifts go to the weak.
+- **Rulers name the event less** (29% to 22%) in both S2 arms, but not with the title call alone. Not
+  explained yet: one guess is that a ruler who answered a dilemma has already spoken about it in its
+  choice call, and its council statement moves on; the measure counts council statements only.
+
+**One reader's labels** (this session's author, not blind, 60 events drawn from the two S2 arms,
+`.scratch/storyteller-s2/labels.md`): 50 stories fit their effect, 5 partly (a wrong size, an invented
+consequence), 5 not (a wrong country or event, or replaced); 3 refer to a real happening, none invents
+one; of 15 dilemmas, 9 stories set up the choice, 5 restate it flatly, 1 decides it for the ruler. Traits
+are used whenever a province is the target. New defects: numbers in words pass the digit check
+("stability slipping to four", "fifty men"), and a target id leaked into a story once ("the lords of
+tale_8").
+
+### One tale: "The Silent Flock" (free tales, seed 14)
+
+Turn 23, an omen on the north: *"A strange silence falls over the North as the wind dies, and in the
+monastery at highmoor, a flock of white birds lands on the river valley, their wings bearing symbols
+that no saint has ever taught."* Turn 25, the storyteller continues it with a windfall for valen and
+orsk: *"A sudden downpour washes the banks of Highmoor clean, revealing a forgotten silver mine that
+glints ominously in the mud."* Turn 26, a bad harvest: *"The Silent Flock's flock starves as the frost
+bites highmoor and ashby, leaving the north with nothing to feed its armies."* Turn 28, a dilemma, fever
+in the camps of both. Valen, the builder: *"We pay the quarantine to save our soldiers and keep our
+stability intact."* Orsk, the opportunist: *"I pay the quarantine to preserve my army before I strike
+Highmoor."* Turn 30, the storyteller closes the tale with `end_tale`, following what they chose: *"The
+fever's grip finally breaks as the quarantine lifts, leaving the north to breathe once more."*
+
+A skeleton tale for contrast, seed 13, "The Grain Hoard": a pretender appears at orskhaven's crossroads
+inn; orsk, the warmonger, defies him (*"Grain feeds the weak; I feed my soldiers with blood and
+steel!"*); the people grumble at the rotting grain; the pretender's men rise *"demanding grain that was
+hoarded by the old king"*, and orsk crushes them (*"Gold buys silence, but steel buys victory"*).
+
+### Three events worth reading, and the worst
+
+- **"The Ruler's Choice"** (skeletons, seed 13, turn 8, a muster for valen while orsk and kesh take
+  its provinces): *"The ruler faces a grim choice: gather the few remaining men to face the encroaching
+  armies of Orsk and Kesh, or leave the fields untended and risk starvation while the enemy advances."*
+  Valen, the proud ruler: *"War demands steel not seed; we must face Kesh and Orsk with every man we have!"*
+- **"The Armless Kesh"** (free tales, seed 12, turn 20, sellswords): *"A fortune-teller in keshtar
+  whispers of silver that will not flow from the earth, and sellswords offer their swords to the
+  gold-rich but armless kesh."* Kesh, the warmonger: *"Gold feeds the sword; I will buy men to reclaim my
+  lost provinces!"*
+- **"The Pilgrims' Prayer"** (skeletons, seed 19, turn 21, pilgrims at highmoor, whose landmark is a
+  hermit's cave): *"A flock of weary pilgrims stumbled into the hermit's cave at highmoor, seeking solace
+  from the war-torn lands, and the walls of valen's capital grew steadier with their prayers."*
+- **The worst: "Fever Halts the March"** (skeletons, seed 19, turn 8). The storyteller chose the muster
+  dilemma for kesh and told a fever: *"The fever breaks out in the camps of the leader, forcing a
+  quarantine that halts the march."* Kesh, offered the men to arms or the harvest, answered the story
+  it was told: *"Fever breaks but steel remains, we summon men to arms!"*
+
+The events of all four arms can be read game by game, with every choice and every tale, in the page
+`.scratch/storyteller-s2/page/chronicler-events.html` (built by `build.py` from the run's files).
+
+### What the framework lacked in S2, by #266's numbers
+
+- **1, one target per decision:** hit, the workaround held twice more: a tale in progress is a target of
+  its own (`tale_3`), and an event on many is a group that leaves out the protected members.
+- **2, no closed choice beside action and target:** hit, the main cost. The option lines are the game's,
+  because one statement cannot carry a line per option; and every option of every dilemma is an action
+  registered on every seat, unavailable except on its own choice call.
+- **3, one free-text field:** hit, and the second call fixed it (titles missing 47% to 0%, 0.37 s an event).
+- **4, keep the move and replace the statement:** hit again, by the history check, invisible to telemetry.
+- **5, the fact ledger:** hit: tale state, the happenings line and a choice's facts are game code.
+- **6, remembering as a list:** hit: "told so far" by template and target, and each tale's description.
+- **8, fairness and cooldowns:** hit harder: a template's own cooldown, two open tales at most, one long
+  tale a game, abandonment, dilemmas open only when every option can apply, the turn's kind dealt by chance.
+- **9, variety:** the scorecard's events section grew chains, choices and history.
+- **New, N13: an optional action the model never takes.** Offered but not dealt, dilemmas and tales were
+  almost never chosen (1 dilemma and no tale in 28 events): frequency had to be the game's decision.
+- **New, N14: a follow-up call for one decision.** The title is a second agent's decision on the first's
+  story, chained by hand; telemetry shows two unrelated decisions.
+
 ## What the framework lacks for this game
 
 Checked against #216 on 10 November 2026, from building stage 1, reading the code on `test`, and

@@ -412,6 +412,112 @@ The lead called this *"one of the gold points of the framework"*: the documented
 by measurements, is what makes it one. Design C is the only part that changes what the model is
 asked for, so it needs a decision record and its own A/B before anything else.
 
+### Stage S2: design (12 November)
+
+What the lead asked for after reading S1's events: *"too generic … we should also create a complex
+ones with chain of events and also the ones that require a decision from the player or persona …
+some events present the interesting story of something and also like depends on the province."*
+Built in the demo only, on today's rules, with no framework change. Every piece is a modifier on
+`+storyteller`, off in `default`, because each changes what a model reads. Nothing names a province
+or a country: effects, dilemmas, skeletons, traits and presets are data the game registers, so the
+same code runs on `realm-rules-v2`'s generated maps.
+
+**1. Events with choices: how one action, one target and one statement make a dilemma.** Three
+designs:
+
+| Design | How | For | Against |
+|---|---|---|---|
+| **Dilemma templates (chosen)** | The game registers dilemmas, each with two or three options and each option's effect (`sellswords`: hire them for gold, or send them away). The storyteller picks a dilemma as its action and a target, and writes the story; the game writes the option lines from its own data and states the amounts. | One call, the paired schema still holds the grammar, every option is applicable by construction, fairness is availability | The option lines are the game's, not the model's |
+| A second call writes the options | A first call picks the event; a second writes two or three option lines, each mapped to an effect by a list of effects | Options in the model's voice | One more call, and free-text options must be mapped back to effects: a parser the model can break |
+| Typed parameters (#266 item 2) | One action `dilemma` with typed fields: option ids from a closed list, a line per option | One call, model-written options, still closed | Needs the framework's typed parameters, which do not exist |
+
+A ruler answers a dilemma as one more decision: a `Choice` moment, the options as its actions (each
+dilemma's option ids, registered on the seat and available only on that choice), the story and
+what each option does among its facts. It is asked between turns, on the state the event is told
+on, in a round of its own; the chosen effect lands at the next upkeep with the event. A scripted
+seat takes the dilemma's default (the option that changes least), a random seat any option, and a
+person picks on the screen through `Game.PendingChoices` and `Game.Choose`; an unanswered choice
+takes the default. *What typed parameters would have made simpler:* the storyteller could have
+written its own option lines and chosen the strength in the same call; today both are the game's.
+
+**2. Events that strike many (`+multi`).** A group event reaches the members the fairness rules
+allow, and is open when at least two are allowed (one for `the_leader` and `the_weakest`); S1 opened
+a group only when every member was. Each member gets its own amount (a windfall is a turn of *its*
+income), and a group dilemma gives each member its own choice of the same story. Who was spared is
+recorded.
+
+**3. Chains, both ways, for the comparison the lead agreed to.** The game holds every chain: an id
+(`tale_1`), its subject (a country, a province or a group), the events told in it with what each
+ruler chose, and a status (open, completed, abandoned). An open chain is a **target** of category
+`tale`, described with its title and what happened so far, so continuing a chain is an ordinary
+decision: an effect template on a tale strikes the tale's subject.
+- **(a) Free (`+chains-free`):** any recent event of the storyteller can be continued with any
+  effect its subject may take now, and `end_tale` closes a chain with an epilogue (no effect). The
+  model decides what follows and when it ends.
+- **(b) Skeletons (`+chains-skeleton`):** the game registers four skeletons (a pretender, a deep
+  vein, a fever, a long winter), each a list of stages, each stage one or two templates or a
+  dilemma, the next stage depending on what was chosen. `begin_<skeleton>` starts one; when its next
+  stage is due, that stage is the action open on the tale. The model writes every stage's story.
+- **Rules for both:** at most two open chains; a chain not continued for three turns, or whose
+  subject is out, is abandoned; at most six events in a chain, and only one chain a game may pass
+  three (the long ones are rare); a chain is "started" once it has two events.
+
+**4. Game-aware stories (`+history`).** A `Recent happenings` line: captures, failed attacks on a
+country, wars declared, truces, eliminations, revolts, a change of leader and rulers' choices from
+the last three turns, from the game's reports. The story check then allows a country or province
+that line names, and catches **invented history** mechanically: a sentence with a verb of capture or
+battle (*took, captured, seized, conquered, fell, sacked, defeated, won …*) that names a province
+nobody has taken or fought over yet, or two countries that never fought, has its story replaced
+(`replaced: invents …`). It cannot check a claim with no name in it (*"after the great battle"*), a
+motive, a count of the dead, or what an earlier story said.
+
+**5. Province traits (`+traits`).** Every province gets a terrain, a landmark and a resource, drawn
+from lists by the game's seed (any map, any size). They are in the province's description, and three
+templates need one: `rich_vein` (a resource that is mined), `flood` (a river valley, a marsh or a
+coast) and `pilgrims` (a holy landmark).
+
+**6. Titles (`+title-call`).** The statement is the story alone, and a second, short call to a
+scribe agent asks for the title of that story: two to five words, nothing else. With it, the "told
+so far" line names template and target only (S1's owed fix), so there is no title to copy.
+
+**7. Presets.** `StorytellerSettings`, plain data: how hard it leans (none, mild as in S1, strong),
+how often it acts, how often a dilemma and a new chain are open, story-only events on or off.
+Named presets `even_hand` (the measured one), `underdog`, `cruel_fate`, `quiet_years`, `saga`;
+`+preset-<name>` picks one. A menu can list `StorytellerSettings.Presets`.
+
+**8. Story-only events.** `omen`, no effect, neither gift nor blow, rare (cooldown), when the preset
+allows.
+
+**What the screen should show** (it is another session's; everything is plain C# in `Sim/`):
+`Game.PendingChoices` (each an `EventChoice`: the country, the title, the story, the options with
+the game's own effect line, the default) and `Game.Choose(country, option)` for a person's seat; an
+`EventRecord`'s `Choices` (what each country chose), `ChainId` and `ChainStage`; `Game.Chains` (each
+a `Chain`: title, subject, events, status) to follow a chain; `World.Traits` for a province's card.
+
+**The measurement.** `personas` table, `qwen3.5:4b`, seeds 1 to 20, arms interleaved in blocks of
+five: S1 (`default+storyteller`) as the control; S1 with the title call alone; and S2 whole
+(`+s2`, every piece above) with free chains, and with skeletons.
+
+**What S2 found** (12 November; the demo `README.md`'s "What S2 did" and `findings.md`, "The
+storyteller's stage S2"). Built as designed above, plus one change the smoke games forced: offered
+dilemmas and tales on 40% and 30% of turns, the 4B chose one dilemma in 28 events and began no tale, so
+the game deals each turn's kind. Against S1, `qwen3.5:4b`, personas, 20 games an arm:
+
+- **The title call fixes the titles** (missing 47% to 0%, distinct within a game 60% to 92 to 96%), at
+  0.37 s an event, with nothing else in the game changed.
+- **Twice the variety** (kinds of event 6.65 to 10.55 and 11.30), and the war unchanged: battles,
+  conquests, wars, peace and endings within noise, rulers' sense, voice and character too.
+- **Choices in character where the options tempt:** a pretender paid off by the builder and the merchant
+  15 of 15 times, defied by the warmonger and the proud ruler 11 of 11. Elsewhere the active option wins.
+- **Tales:** free, 2.2 a game and longer (3.6 events), recurring motifs; skeletons, 1.1 a game (2.3),
+  each turning on a choice. Both leave most unfinished (8 of 44 and 4 of 22 completed).
+- **Game-aware stories are rare** (5 to 6% name a real happening; 4 invented battles replaced), though
+  the happenings line is read on nearly every call.
+- **Costs:** a milder rubber band (value against standing −0.37 to −0.25 and −0.21), hit rulers naming
+  the event 29% to 22%, 0.5 s more a turn.
+- **Gaps:** 1, 2 (the main cost), 3, 4, 5, 6, 8 and 9 hit; two new, N13 (an optional action the model
+  never takes, so the game must deal frequency) and N14 (a follow-up call for one decision).
+
 ### Framework gaps for a storyteller, ready to become an issue
 
 Written as #244 is. **Rules for every item:** one pull request per item or small group, into

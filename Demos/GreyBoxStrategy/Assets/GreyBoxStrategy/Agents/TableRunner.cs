@@ -167,7 +167,22 @@ namespace GreyBoxStrategy
         /// <summary>Per country: the persona, the placebo slot or the kind.</summary>
         public IReadOnlyDictionary<string, string> Characters { get; }
 
-        public ScoredGame ToScored() => new ScoredGame(Record, Labels, Characters, Game.Decisions.Select(d => new SeatDecisionInfo
+        public ScoredGame ToScored() => new ScoredGame(Record, Labels, Characters, Game.Decisions.Where(d => d.Moment != Moment.Choice).Select(Info).ToList(),
+            Storyteller.Select(s => new StorytellerCallInfo
+            {
+                Turn = s.Turn,
+                Answered = s.ModelAction != null,
+                AskedAction = s.ModelAction,
+                AskedLegal = s.ModelAnswerLegal,
+                Contained = s.Contained,
+                Error = s.Error != null,
+                None = s.Action == null || s.Action == ActionRegistry.None,
+                Queued = s.Queued,
+                LatencySeconds = s.LatencySeconds,
+                TitleLatencySeconds = s.TitleLatencySeconds,
+            }).ToList(), Game.Decisions.Where(d => d.Moment == Moment.Choice).Select(Info).ToList());
+
+        private static SeatDecisionInfo Info(ModelDecision d) => new SeatDecisionInfo
         {
             Seed = d.Seed,
             Turn = d.Turn,
@@ -181,18 +196,8 @@ namespace GreyBoxStrategy
             Statement = d.Statement,
             OfferedBy = d.OfferedBy,
             StatementRules = d.Persona == null ? null : Personas.Named(d.Persona).StatementRules,
-        }).ToList(), Storyteller.Select(s => new StorytellerCallInfo
-        {
-            Turn = s.Turn,
-            Answered = s.ModelAction != null,
-            AskedAction = s.ModelAction,
-            AskedLegal = s.ModelAnswerLegal,
-            Contained = s.Contained,
-            Error = s.Error != null,
-            None = s.Action == null || s.Action == ActionRegistry.None,
-            Queued = s.Queued,
-            LatencySeconds = s.LatencySeconds,
-        }).ToList());
+            LatencySeconds = d.LatencySeconds,
+        };
     }
 
     /// <summary>Plays tables: any seat a model, a script or random, every model seat's moves decided in rounds.</summary>
@@ -242,6 +247,7 @@ namespace GreyBoxStrategy
             {
                 string model = table.Models.FirstOrDefault() ?? throw new ArgumentException("The storyteller needs a model at the table.");
                 game.EventTable = false;
+                game.Story = table.Options.StoryRules();
                 teller = new Storyteller(game, providerFor(model, game.World), table.Options);
             }
 
@@ -295,9 +301,12 @@ namespace GreyBoxStrategy
         /// 1 to 5 in every arm, then 6 to 10, the arms' order rotating each block, so drift over the
         /// session reaches every arm alike. Each arm is written to <c>folder/&lt;name&gt;</c> as
         /// <see cref="RunAsync"/> writes one, seated exactly as a single run of the whole series would be.
+        /// <paramref name="firstIndex"/> is the series index of <paramref name="firstSeed"/>, for a run that is
+        /// one block of a longer series (seeds 6 to 10 of 1 to 20: 5).
         /// </summary>
         public static async Awaitable<List<Scorecard>> RunInterleavedAsync(string folder, IReadOnlyList<(string name, TableDefinition table)> arms,
-            Func<string, World, ILLMProvider> providerFor, int games, int firstSeed, int block, Action<string> progress = null, CancellationToken ct = default)
+            Func<string, World, ILLMProvider> providerFor, int games, int firstSeed, int block, Action<string> progress = null, CancellationToken ct = default,
+            int firstIndex = 0)
         {
             if (arms == null || arms.Count == 0) throw new ArgumentException("No arms to run.", nameof(arms));
             if (block < 1) block = games;
@@ -321,7 +330,7 @@ namespace GreyBoxStrategy
                     using (var log = table.Models.Any() ? DecisionLog.Start(Path.Combine(sub, "decisions.jsonl"), includePrompt: true) : null)
                     {
                         var blockGames = await TableRunner.PlaySeriesAsync(table, some, providerFor,
-                            (i, g) => progress?.Invoke($"{name}: " + Line(offset + i, games, g, started)), ct, firstIndex: offset);
+                            (i, g) => progress?.Invoke($"{name}: " + Line(offset + i, games, g, started)), ct, firstIndex: firstIndex + offset);
                         played[a].AddRange(blockGames);
                     }
                 }
@@ -363,6 +372,8 @@ namespace GreyBoxStrategy
             File.WriteAllText(Path.Combine(folder, "events.csv"), EventLog.Csv(records));
             File.WriteAllText(Path.Combine(folder, "events.md"), EventLog.Markdown(table.Name, records));
             if (table.Options.Storyteller) File.WriteAllText(Path.Combine(folder, "storyteller.csv"), StorytellerCsv(played));
+            if (table.Options.Storyteller) File.WriteAllText(Path.Combine(folder, "chains.csv"), EventLog.ChainsCsv(records));
+            if (table.Options.Choices) File.WriteAllText(Path.Combine(folder, "choices.csv"), ChoicesCsv(played));
             foreach (var g in played)
                 File.WriteAllText(Path.Combine(folder, $"game-{g.Record.Seed:D4}.md"), GameLog.Write(g.Record));
             return scorecard;
@@ -371,10 +382,28 @@ namespace GreyBoxStrategy
         private static string StorytellerCsv(IEnumerable<TableGame> played)
         {
             var inv = System.Globalization.CultureInfo.InvariantCulture;
-            var sb = new StringBuilder("seed,turn,open,model_action,model_target,action,target,model_answer_legal,latency_s,prompt_tokens,guard,verdict,error,execution,queued,statement\n");
+            var sb = new StringBuilder("seed,turn,open,model_action,model_target,action,target,model_answer_legal,latency_s,prompt_tokens,guard,verdict,error,execution,queued,statement,title_latency_s,title_statement,skipped\n");
             foreach (var d in played.SelectMany(g => g.Storyteller))
                 sb.AppendLine(string.Join(",", d.Seed, d.Turn, d.Open, d.ModelAction, d.ModelTarget, d.Action, d.Target, d.ModelAnswerLegal,
-                    d.LatencySeconds.ToString("0.000", inv), d.PromptTokens, d.Guard, d.Verdict, d.Error, d.Execution, d.Queued, EventLog.Q(d.Statement)));
+                    d.LatencySeconds.ToString("0.000", inv), d.PromptTokens, d.Guard, d.Verdict, d.Error, d.Execution, d.Queued, EventLog.Q(d.Statement),
+                    d.TitleLatencySeconds.ToString("0.000", inv), EventLog.Q(d.TitleStatement), d.Skipped));
+            return sb.ToString();
+        }
+
+        // Every ruler's answer to a dilemma, with its persona and what the game took.
+        private static string ChoicesCsv(IEnumerable<TableGame> played)
+        {
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            var sb = new StringBuilder("seed,turn,country,character,template,model_action,option,chosen_by,lean,latency_s,statement\n");
+            foreach (var g in played)
+                foreach (var e in g.Record.Reports.SelectMany(r => r.Events).Where(e => e.Choices.Count > 0))
+                    foreach (var kv in e.Choices)
+                    {
+                        var d = g.Game.Decisions.FirstOrDefault(x => x.Moment == Moment.Choice && x.Country == kv.Key && x.Turn == e.Turn);
+                        string lean = EventRules.Template(e.Template)?.Options?.FirstOrDefault(o => o.Id == kv.Value)?.Lean;
+                        sb.AppendLine(string.Join(",", g.Record.Seed, e.Turn, kv.Key, g.Characters[kv.Key], e.Template, d?.ModelAction, kv.Value,
+                            e.ChosenBy[kv.Key], lean, (d?.LatencySeconds ?? 0).ToString("0.000", inv), EventLog.Q(d?.Statement)));
+                    }
             return sb.ToString();
         }
 
