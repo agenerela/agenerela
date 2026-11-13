@@ -316,6 +316,19 @@ var game = new GameSetup { Seed = 7, Map = "generated", Countries = 6, Generator
 - **Geometry for drawing** (`MapGeometry`, in the world's JSON): the cell grid, each province's outline
   loops, centre, label point and label radius, every border and coast as polylines with its kind (land,
   ridge, pass, coast, shore), the ridge lines, and the scenery islands' outlines (cell value -4).
+  Also:
+  - **rivers**, from high land to the sea or an inland sea, along cell corners, each with its rank, its
+    mouth, the provinces it touches and the borders it forms;
+  - **roads**: highways joining every capital and tracks to the ports and the most populous provinces,
+    crossing ridges only at passes, each bridge recorded;
+  - each province's **development**, 0 to 4, from `Development.Of` (population, capital, port; R6's
+    buildings will feed it).
+
+  No rule reads rivers, roads or development yet.
+- **Progress and a time budget.** `MapGenerator.Generate(..., progress, budget)` reports after every try
+  (tries so far, the best world's problems and reach spread, a line to show). After the budget it
+  returns the best world found, with its problems and `TimedOut`, so a menu shows a loading state and
+  never hangs.
 - **A sheet of worlds**: **GreyBoxStrategy → Export 20 generated worlds** (or
   `MapExportMenu.ExportFromCommandLine` in batch mode) writes one world per size and shape with a
   `summary.md`. `python ArtSource/world_sheet.py <folder> sheet.png` draws them.

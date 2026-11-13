@@ -32,7 +32,10 @@ phase table and the open issues, not here.
 - **Painted Realm's generated worlds look like land, not figures** (#20). Coasts have bays and
   headlands, inland seas are irregular, lobes are uneven, and no land meets the frame. Small scenery
   islands lie offshore. When a world's starts are unfair, the generator searches again on the same
-  geometry before making a new one. Every seed now makes a different world than before.
+  geometry before making a new one. Worlds now have rivers, roads with bridges, and a development
+  value per province, all drawn on the contact sheet; no rule reads them yet. The generator reports its
+  progress and stops at a time budget with the best world found. Every seed now makes a different
+  world than before.
 - **Painted Realm: a generated world drawn as a sea chart by code** (#20, the screen half of R2).
   New game → Map: Generated, or the dev menu's `generated` command. Scripted rulers play a world
   of any size and shape, and the screen replays it over a chart drawn at the screen's size: sea,

@@ -1670,6 +1670,24 @@ What the design got wrong or left open, and what was decided (_Mine_ unless the 
   narrowing to a tip. Land detached from the main land stays as scenery islands. It must stand two cells
   of sea from the main land and three from the frame, and be no bigger than a province. It is never
   played, as section 2.2 says. Every seed's world changed, and the pinned hashes were re-pinned.
+- **Rivers, roads and development** (the lead, on seeing the drawn chart: farms, buildings and
+  generated roads "would look fantastic").
+  - **Rivers** drain from high land to water by a priority flood over cell corners, so none ends in a
+    pit, and a river may form a province border exactly.
+  - **Roads** follow the cheapest paths on the rules graph: plains are cheap, ridge cuts are never used,
+    and a river costs a crossing, recorded as a bridge. Highways form a tree over the capitals; tracks
+    join the ports and the most populous provinces.
+  - **Development** is 0 to 4, from population, capital and port, in one function (`Development.Of`)
+    that R6's buildings will feed.
+  - Checks: every river ends in water or another river; the roads join every capital; every road step
+    is between neighbours and bridges any river on that border.
+  - **No rule reads any of them.** What they could mean later (_Mine_, to design when a slice wants
+    them): a march along a road takes no extra turn on rough ground; a river border is a defensive line,
+    like a ridge but crossable; a bridge is a chokepoint an army can hold; development is what R6's
+    economy grows and what plunder lowers.
+- **Progress and a time budget**, for a menu that must never hang. The generator reports after every
+  try, and after a budget returns the best world found with its problems. A world cut short by the
+  clock is the only one that may differ between machines.
 - **The huge worlds that failed reach** after 50 tries. Up to eight more capital searches now run on
   the same geometry before a world is remade. A world that the first four searches made fair comes out
   unchanged.

@@ -91,6 +91,10 @@ namespace GreyBoxStrategy
         public List<RidgeLine> Ridges = new List<RidgeLine>();
         /// <summary>Scenery islands' outlines, closed polylines of grid corners: land to draw, never played.</summary>
         public List<int[]> Islands = new List<int[]>();
+        /// <summary>Rivers, source to mouth, along grid corners. No rule reads them yet.</summary>
+        public List<RiverLine> Rivers = new List<RiverLine>();
+        /// <summary>Roads through chains of neighbouring provinces, with their bridges. No rule reads them yet.</summary>
+        public List<RoadLine> Roads = new List<RoadLine>();
 
         public static string EncodeCells(int[] cells)
         {
@@ -317,6 +321,9 @@ namespace GreyBoxStrategy
             }
             return a;
         }
+
+        /// <summary>An open polyline <c>[x0, y0, ...]</c> with the corners in the middle of straight runs dropped.</summary>
+        internal static int[] SimplifyOpen(List<int> pts) => Simplify(pts, closed: false);
 
         // Drops corners in the middle of a straight run.
         private static int[] Simplify(List<int> pts, bool closed)

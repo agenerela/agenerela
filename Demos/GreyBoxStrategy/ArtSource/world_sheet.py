@@ -10,6 +10,9 @@ geometry's cell grid only, the way a screen would:
 - each province in its terrain's colour, washed toward its starting owner's colour;
 - province borders thin, realm borders and coasts heavier, ridge cuts as thick brown lines with
   the passes left open;
+- rivers in blue, wider by rank; roads in brown, highways solid and tracks thin, with a white tick
+  for each bridge;
+- each province's development (0 to 4) as that many small dots under its name;
 - capitals as white squares, ports as small blue dots, special places as gold diamonds;
 - the province names in small type at each province's label point.
 
@@ -97,6 +100,16 @@ def draw_world(world, scale, title_font, label_font):
         pts = [(line[i] * scale, line[i + 1] * scale) for i in range(0, len(line), 2)]
         if len(pts) > 1:
             d.line(pts, fill=(20, 20, 20), width=u)
+    for r in geo.get("rivers", []):
+        pts = [(r["line"][i] * scale, r["line"][i + 1] * scale) for i in range(0, len(r["line"]), 2)]
+        d.line(pts, fill=(70, 120, 200), width=u * (1 + r.get("rank", 1)))
+    for road in geo.get("roads", []):
+        pts = [(road["line"][i] * scale + scale // 2, road["line"][i + 1] * scale + scale // 2) for i in range(0, len(road["line"]), 2)]
+        highway = road.get("kind") == "highway"
+        d.line(pts, fill=(120, 70, 30) if highway else (150, 110, 70), width=u * (3 if highway else 1))
+        for b in road.get("bridges", []):
+            bx, by = b["at"][0] * scale, b["at"][1] * scale
+            d.rectangle([bx - 3 * u, by - 3 * u, bx + 3 * u, by + 3 * u], fill=(255, 255, 255), outline=(0, 0, 0))
     for r in geo.get("ridges", []):
         x0, y0, x1, y1 = [v * scale + scale // 2 for v in r["line"]]
         d.line([(x0, y0), (x1, y1)], fill=(90, 50, 20), width=u)
@@ -112,6 +125,8 @@ def draw_world(world, scale, title_font, label_font):
             d.ellipse([cx + 6 * u, cy - 3 * u, cx + 12 * u, cy + 3 * u], fill=(120, 190, 255), outline=(0, 0, 0), width=u)
         if p["id"] in specials:
             d.polygon([(cx, cy - 9 * u), (cx + 7 * u, cy), (cx, cy + 9 * u), (cx - 7 * u, cy)], fill=(240, 200, 60), outline=(0, 0, 0))
+        for k in range(p.get("development", 0)):
+            d.ellipse([lx - 6 * u + k * 4 * u, ly + 20 * u, lx - 4 * u + k * 4 * u, ly + 22 * u], fill=(60, 40, 20))
         name = p["name"]
         tw = d.textlength(name, font=label_font)
         d.text((lx - tw / 2, ly + 7 * u), name, fill=(15, 15, 15), font=label_font)

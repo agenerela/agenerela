@@ -20,9 +20,26 @@ namespace GreyBoxStrategy
         public List<CountryFairness> Fairness = new List<CountryFairness>();
         /// <summary>The slots the special places were made for.</summary>
         public List<SpecialSlot> Slots = new List<SpecialSlot>();
+        /// <summary>Whether the time budget ran out before a world passed; the best one found is returned.</summary>
+        public bool TimedOut;
 
         /// <summary>Whether the world can be played: it exists and nothing in its rules graph is wrong.</summary>
         public bool Playable => Map != null && Problems.All(p => p.Kind != ProblemKind.Connectivity);
+    }
+
+    /// <summary>How a generation is going, after each try: for a loading screen.</summary>
+    public sealed class GenerationProgress
+    {
+        /// <summary>Tries made so far, and the most it will make.</summary>
+        public int Attempts;
+        public int MaxAttempts;
+        /// <summary>Problems of the best world so far; 0 once one has passed.</summary>
+        public int BestProblems;
+        /// <summary>The best world's reach spread so far (best : worst country), or 0 before any world had starts.</summary>
+        public double BestReachSpread;
+        public long ElapsedMilliseconds;
+        /// <summary>A line to show: "try 3 of 50: best so far fails reach".</summary>
+        public string Line;
     }
 
     /// <summary>
@@ -44,9 +61,18 @@ namespace GreyBoxStrategy
         /// <summary>Land cells per province on the generator's grid: the drawing's resolution.</summary>
         public const int CellsPerProvince = 400;
 
+        /// <param name="progress">Told after every try (on the caller's thread), for a loading screen.</param>
+        /// <param name="budget">
+        /// Time after which no new try starts: the best world found is returned with its problems and
+        /// <see cref="GeneratedWorld.TimedOut"/> set. A world that passes within the budget is the same
+        /// on every machine; one cut short by the clock may not be.
+        /// </param>
         public static GeneratedWorld Generate(int seed, int countries, MapSettings settings = null,
-            ISpecialPlaceMaker specials = null, INameMaker names = null, int maxAttempts = MaxAttempts)
+            ISpecialPlaceMaker specials = null, INameMaker names = null, int maxAttempts = MaxAttempts,
+            Action<GenerationProgress> progress = null, TimeSpan? budget = null)
         {
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            double bestSpread = 0;
             settings = (settings ?? new MapSettings()).Clone();
             if (countries < GameSetup.MinCountries || countries > GameSetup.MaxCountries)
                 throw new ArgumentException($"{countries} countries is outside {GameSetup.MinCountries} to {GameSetup.MaxCountries}.");
@@ -58,6 +84,11 @@ namespace GreyBoxStrategy
             int bestScore = int.MaxValue;
             for (int attempt = 0; attempt < maxAttempts; attempt++)
             {
+                if (attempt > 0 && budget.HasValue && clock.Elapsed >= budget.Value)
+                {
+                    result.TimedOut = true;
+                    break;
+                }
                 result.Attempts = attempt + 1;
                 int sub = (int)MapRandom.Hash(seed, "attempt", attempt);
                 var draft = new Draft(sub, countries, settings, specials, names);
@@ -75,6 +106,12 @@ namespace GreyBoxStrategy
                     result.Passed = true;
                     result.Slots = draft.Slots;
                     result.Fairness = MapChecks.Fairness(map);
+                    progress?.Invoke(new GenerationProgress
+                    {
+                        Attempts = attempt + 1, MaxAttempts = maxAttempts, BestProblems = 0,
+                        BestReachSpread = Spread(result.Fairness), ElapsedMilliseconds = clock.ElapsedMilliseconds,
+                        Line = $"try {attempt + 1}: a world passed every check",
+                    });
                     return result;
                 }
                 result.Log.Add($"try {attempt}: " + string.Join("; ", problems.Take(3)) + (problems.Count > 3 ? $"; and {problems.Count - 3} more" : ""));
@@ -86,7 +123,14 @@ namespace GreyBoxStrategy
                 {
                     bestScore = score;
                     best = (map, problems, draft.Slots, map == null ? null : MapChecks.Fairness(map));
+                    if (best.fairness != null) bestSpread = Spread(best.fairness);
                 }
+                progress?.Invoke(new GenerationProgress
+                {
+                    Attempts = attempt + 1, MaxAttempts = maxAttempts, BestProblems = best.problems?.Count ?? -1,
+                    BestReachSpread = bestSpread, ElapsedMilliseconds = clock.ElapsedMilliseconds,
+                    Line = $"try {attempt + 1} of {maxAttempts}: best so far fails {best.problems?.FirstOrDefault()?.Check ?? "to make land"}",
+                });
             }
             result.Map = best.map;
             result.Problems = best.problems ?? new List<MapProblem>();
@@ -94,6 +138,9 @@ namespace GreyBoxStrategy
             result.Fairness = best.fairness ?? new List<CountryFairness>();
             return result;
         }
+
+        private static double Spread(List<CountryFairness> f) =>
+            f == null || f.Count == 0 ? 0 : (double)f.Max(x => x.Reach60) / Math.Max(1, f.Min(x => x.Reach60));
 
         /// <summary>One try: every step of section 2.3 on one sub-seed.</summary>
         private sealed class Draft
@@ -1010,9 +1057,9 @@ namespace GreyBoxStrategy
                 List<int> best = null;
                 int[] bestOwners = null;
                 double bestScore = double.MaxValue;
-                // Four searches usually find fair starts. When they do not, up to eight more run on the
+                // Four searches usually find fair starts. When they do not, up to four more run on the
                 // same geometry before the world is made again: geometry is the dearer half of a try.
-                int trials = 12;
+                int trials = 8;
                 for (int t = 0; t < trials && bestScore >= 1; t++)
                 {
                     var chosen = new List<int> { candidates[MapRandom.Int(seed, "capital-first", t, candidates.Count)] };
@@ -1225,6 +1272,10 @@ namespace GreyBoxStrategy
                         Cuts = r.Cuts.Select(x => new[] { "p" + x[0], "p" + x[1] }).ToList(),
                     });
                 }
+                int rivers = settings.Size == MapSize.Small ? 2 : settings.Size == MapSize.Medium ? 4 : settings.Size == MapSize.Large ? 6 : 8;
+                geo.Rivers = RiversAndRoads.Rivers(seed, cells, w, h, height, rivers, meanArea, i => "p" + i);
+                geo.Roads = RiversAndRoads.Roads(adj, terrain, isCapital, port, population, cx, cy, geo.Rivers, cells, w, i => "p" + i);
+                foreach (var p in map.Provinces) p.Development = Development.Of(p.Population, p.Capital, p.Port);
                 map.Geometry = geo;
                 return map;
             }
@@ -1339,6 +1390,16 @@ namespace GreyBoxStrategy
                 {
                     foreach (var x in r.Passes) { x[0] = R(x[0]); x[1] = R(x[1]); }
                     foreach (var x in r.Cuts) { x[0] = R(x[0]); x[1] = R(x[1]); }
+                }
+                foreach (var r in map.Geometry.Rivers)
+                {
+                    r.Provinces = r.Provinces.Select(R).ToList();
+                    foreach (var x in r.Borders) { x[0] = R(x[0]); x[1] = R(x[1]); }
+                }
+                foreach (var r in map.Geometry.Roads)
+                {
+                    r.Provinces = r.Provinces.Select(R).ToList();
+                    foreach (var b in r.Bridges) { b.A = R(b.A); b.B = R(b.B); }
                 }
                 map.Name = NameRules.Display(R("r0"));
             }

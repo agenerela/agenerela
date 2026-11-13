@@ -18,7 +18,12 @@ namespace GreyBoxStrategy
         public const string Name = "Classic";
 
         /// <summary>A fresh copy of the Classic map's data.</summary>
-        public static WorldMap Load() => WorldMap.FromJson(Json);
+        public static WorldMap Load()
+        {
+            var map = WorldMap.FromJson(Json);
+            foreach (var p in map.Provinces) p.Development = Development.Of(p.Population, p.Capital, p.Port);
+            return map;
+        }
 
         public const string Json = @"{
   ""format"": 1,

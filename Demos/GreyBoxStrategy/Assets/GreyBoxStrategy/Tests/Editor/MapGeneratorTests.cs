@@ -42,11 +42,12 @@ namespace GreyBoxStrategy.Tests
         // Hashes measured under .NET 9 outside Unity; the same world under Unity's Mono shows the
         // generator does not depend on the runtime. A changed rule changes them: re-pin, and say in the
         // pull request that every seed now makes a different world. Re-pinned on 12 November when the
-        // land shapes became irregular (warped shapes, scenery islands, land kept off the frame).
-        [TestCase(MapSize.Small, 7, "d767564849cadd88d2e210c2baa5562af9a3c98aaae09c1f74abbd40006b8937")]
-        [TestCase(MapSize.Medium, 7, "07221e93a71dadf1c5b8b8823fb33fcf50b282f64edf06ef2f1a77e22d202d82")]
-        [TestCase(MapSize.Large, 7, "b80e80addca97d8bb695ffd4d596b3336a982b28a845c66df105872256dbe80f")]
-        [TestCase(MapSize.Huge, 28, "4f8bab21058ed9f5a4674753269c8ce6d0b091ae2c5e3e96271dcc9a6fe0f9f4")]
+        // land shapes became irregular (warped shapes, scenery islands, land kept off the frame), and again
+        // the same day when rivers, roads and development joined the world.
+        [TestCase(MapSize.Small, 7, "3ad107559eaf817ab32c260d18910b224dee4d8ae527b901a43cf78a6d167fa6")]
+        [TestCase(MapSize.Medium, 7, "6bb8a35896f8f625f64e8669b683d4e8b694455bf2cd0d719041dda49eb6720c")]
+        [TestCase(MapSize.Large, 7, "a7467921558d3a3e76a360f2f6c3722b708e7313bb6a3eb93f7d2161a1eb3188")]
+        [TestCase(MapSize.Huge, 28, "2d2a57e94e019323ba7ede28ffa05c4393eba00dc8647d83052794eda4a01088")]
         public void Determinism_ASeedsWorldIsPinned(MapSize size, int seed, string hash)
         {
             var made = Make(seed, size);
@@ -137,6 +138,13 @@ namespace GreyBoxStrategy.Tests
                 }
             }
 
+            // Rivers reach water, roads join the capitals with a bridge at every river they cross, and
+            // development is 0 to 4.
+            Assert.That(geo.Rivers, Is.Not.Empty, "every world has rivers");
+            Assert.That(geo.Rivers.Any(r => r.Mouth == "sea" || r.Mouth == "water"), Is.True);
+            Assert.That(geo.Roads.Any(r => r.Kind == RoadLine.Highway), Is.True);
+            foreach (var p in map.Provinces) Assert.That(p.Development, Is.InRange(0, Development.Max), p.Id);
+
             // The outlines are the cells: each province's loops enclose exactly its area.
             foreach (var shape in map.Geometry.Provinces)
             {
@@ -214,6 +222,9 @@ namespace GreyBoxStrategy.Tests
         [TestCase("special-on-capital", "specials")]
         [TestCase("special-wrong-terrain", "specials")]
         [TestCase("island-ashore", "island")]
+        [TestCase("river-dry", "rivers")]
+        [TestCase("road-cut", "roads")]
+        [TestCase("road-jump", "roads")]
         public void Checks_CatchABrokenWorld(string breakage, string check)
         {
             var m = Copy(Sample());
@@ -319,6 +330,22 @@ namespace GreyBoxStrategy.Tests
                     p.Special = s.Template;
                     break;
                 }
+                case "river-dry":
+                {
+                    // A river cut short of its mouth ends inland.
+                    var r = m.Geometry.Rivers.First(x => x.Line.Length >= 6);
+                    r.Line = r.Line.Take(r.Line.Length - 2).ToArray();
+                    break;
+                }
+                case "road-cut":
+                    m.Geometry.Roads.RemoveAll(r => r.Kind == RoadLine.Highway && r.Provinces.Contains(cap0.Id));
+                    break;
+                case "road-jump":
+                {
+                    var d = Steps(m, m.Provinces[0].Id);
+                    m.Geometry.Roads.Add(new RoadLine { Id = "roadx", Kind = RoadLine.Track, Provinces = new List<string> { m.Provinces[0].Id, m.Provinces[Array.IndexOf(d, d.Max())].Id }, Line = new int[4] });
+                    break;
+                }
                 case "island-ashore":
                 {
                     // The sea cell beside a coastal province becomes a scenery island.
@@ -393,6 +420,36 @@ namespace GreyBoxStrategy.Tests
             Assert.That(retried.Attempts, Is.GreaterThan(1));
             Assert.That(retried.Map.Generated.Attempt, Is.EqualTo(retried.Attempts - 1));
             Assert.That(retried.Log.Count, Is.EqualTo(retried.Attempts - 1));
+        }
+
+        [Test]
+        public void Generator_ReportsProgress_AndStopsAtItsTimeBudget()
+        {
+            var settings = new MapSettings { Size = MapSize.Small, Shape = LandShape.LongCoast };
+            var seen = new List<GenerationProgress>();
+            var made = MapGenerator.Generate(1, 4, settings, progress: seen.Add);
+            Assert.That(seen.Select(p => p.Attempts), Is.EqualTo(Enumerable.Range(1, made.Attempts)), "told after every try");
+            Assert.That(seen.Last().BestProblems, Is.EqualTo(0));
+            Assert.That(seen.Last().Line, Does.Contain("passed"));
+            Assert.That(seen.Take(seen.Count - 1).All(p => p.BestProblems > 0 && p.Line.StartsWith("try")), Is.True);
+
+            var cut = MapGenerator.Generate(1, 4, settings, budget: TimeSpan.Zero);
+            Assert.That(cut.TimedOut, Is.True, "seed 1's first try fails, and no second starts");
+            Assert.That(cut.Attempts, Is.EqualTo(1));
+            Assert.That(cut.Map, Is.Not.Null, "the best world found is returned");
+            Assert.That(cut.Problems, Is.Not.Empty, "with its problems listed");
+        }
+
+        [Test]
+        public void Development_ComesFromPopulationCapitalAndPort_InOnePlace()
+        {
+            Assert.That(Development.Of(2, false, false), Is.EqualTo(0));
+            Assert.That(Development.Of(4, false, false), Is.EqualTo(1));
+            Assert.That(Development.Of(6, true, false), Is.EqualTo(3));
+            Assert.That(Development.Of(8, true, true), Is.EqualTo(4), "capped at 4");
+            Assert.That(Development.Of(3, false, false, buildingLevels: 2), Is.EqualTo(3), "R6's buildings add to it");
+            var classic = ClassicMap.Load();
+            Assert.That(classic.Provinces.First(p => p.Id == "orskhaven").Development, Is.EqualTo(Development.Of(6, true, true)));
         }
 
         [Test]
@@ -492,16 +549,27 @@ namespace GreyBoxStrategy.Tests
 
         // --- Speed --------------------------------------------------------------------------------------
 
+        // One try at huge measured about 0.4 to 0.6 s under .NET and 1.5 to 2 s in the editor (12 November),
+        // most of it the fairness search on hard geometries. What a menu needs is the budget: it never waits
+        // past the budget and one more try.
         [Test]
-        public void Speed_OneTryAtTheLargestSize_IsUnderTwoSeconds()
+        public void Speed_OneTryAtTheLargestSize_IsUnderThreeSeconds_AndTheBudgetHolds()
         {
             MapGenerator.Generate(1, 4, new MapSettings { Size = MapSize.Small }, maxAttempts: 1); // warm the code
             var watch = Stopwatch.StartNew();
             for (int seed = 31; seed < 34; seed++)
                 MapGenerator.Generate(seed, 10, new MapSettings { Size = MapSize.Huge }, maxAttempts: 1);
             watch.Stop();
-            TestContext.WriteLine($"huge, one try: {watch.ElapsedMilliseconds / 3} ms on average");
-            Assert.That(watch.ElapsedMilliseconds / 3, Is.LessThan(2000));
+            long oneTry = watch.ElapsedMilliseconds / 3;
+            TestContext.WriteLine($"huge, one try: {oneTry} ms on average");
+            Assert.That(oneTry, Is.LessThan(3000));
+
+            watch.Restart();
+            var made = MapGenerator.Generate(115, 10, new MapSettings { Size = MapSize.Huge }, budget: TimeSpan.FromSeconds(2));
+            watch.Stop();
+            TestContext.WriteLine($"huge with a 2 s budget: {watch.ElapsedMilliseconds} ms, {made.Attempts} tries, passed {made.Passed}");
+            Assert.That(watch.ElapsedMilliseconds, Is.LessThan(2000 + 3000), "the budget and at most one more try");
+            Assert.That(made.Map, Is.Not.Null);
         }
 
         // --- Today's rules on generated worlds --------------------------------------------------------
