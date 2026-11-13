@@ -11,6 +11,8 @@ namespace GreyBoxStrategy
         Envoy,
         /// <summary>When an event asks its ruler to choose (the storyteller's dilemmas, S2): one of the event's options.</summary>
         Choice,
+        /// <summary>The writs turn (rules v2, R1): orders for one army awaiting them, named by <see cref="CountryRequest.ArmyId"/>.</summary>
+        Army,
     }
 
     /// <summary>
@@ -52,6 +54,17 @@ namespace GreyBoxStrategy
         public string OfferedBy { get; }
         /// <summary>For a choice: the option taken when nobody answers, which a scripted seat takes too.</summary>
         public Move DefaultMove { get; }
+
+        /// <summary>For an army order (<see cref="Moment.Army"/>): the army being ordered. A model seat sends it as the correlation.</summary>
+        public string ArmyId { get; set; }
+        /// <summary>
+        /// In the writs turn: this ruler's earlier orders this turn, in order ("recruit", "maren_host
+        /// to march to corwick"), so a later decision does not repeat one. Empty for the first.
+        /// </summary>
+        public IReadOnlyList<string> Ordered { get; set; } = new string[0];
+        /// <summary>In the writs turn: the writ this decision spends, 1-based, and the writs this ruler has this turn.</summary>
+        public int Writ { get; set; }
+        public int Writs { get; set; }
     }
 
     /// <summary>A player's answer, paired with the request it answers.</summary>
@@ -129,6 +142,11 @@ namespace GreyBoxStrategy
         /// named as by the turn limit, but nobody won (rules v2, section 6.1).
         /// </summary>
         Unfinished,
+        /// <summary>
+        /// No province changed owner or controller for <see cref="GameRules.StalemateTurns"/> turns.
+        /// The leader is named as by the turn limit, but nobody won.
+        /// </summary>
+        Stalemate,
     }
 
     /// <summary>A finished game's result.</summary>

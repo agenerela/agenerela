@@ -40,6 +40,11 @@ namespace GreyBoxStrategy
         public const int MaxCountries = 10;
 
         public int Version = CurrentVersion;
+        /// <summary>
+        /// One move a turn (today's game, the default, so every pinned test and recording holds) or rules
+        /// v2's writs turn with armies on the map (<see cref="Writs"/> makes that setup).
+        /// </summary>
+        public TurnStyle Turn = TurnStyle.OneMove;
         /// <summary>The game's seed: every die and, for a generated map, the world.</summary>
         public int Seed = 1;
         /// <summary>One of <see cref="Maps"/>.</summary>
@@ -68,6 +73,13 @@ namespace GreyBoxStrategy
         /// <summary>Today's game: the defaults, with a seed.</summary>
         public static GameSetup Classic(int seed = 1) => new GameSetup { Seed = seed };
 
+        /// <summary>
+        /// Rules v2's game as R1 builds it: the writs turn, armies on the map, conquest with no turn
+        /// limit (a headless run stops at the cap or a 20-turn stalemate).
+        /// </summary>
+        public static GameSetup Writs(int seed = 1, string map = ClassicMapId) =>
+            new GameSetup { Seed = seed, Map = map, Turn = TurnStyle.Writs, Victory = VictoryMode.Conquest, TurnCap = 150 };
+
         public GameSetup Clone() => (GameSetup)MemberwiseClone();
 
         /// <summary>Why this setup cannot start a game, in words a menu can show, or null.</summary>
@@ -88,6 +100,7 @@ namespace GreyBoxStrategy
                 if (why != null) return why;
             }
             if (!Enum.IsDefined(typeof(VictoryMode), Victory)) return $"unknown victory mode {(int)Victory}";
+            if (!Enum.IsDefined(typeof(TurnStyle), Turn)) return $"unknown turn style {(int)Turn}";
             if (Victory == VictoryMode.Domination && (DominationPercent < 51 || DominationPercent > 100))
                 return $"domination at {DominationPercent}% is outside 51% to 100%";
             if (Victory != VictoryMode.Conquest && (TurnLimit < 1 || TurnLimit > 1000))
@@ -133,6 +146,8 @@ namespace GreyBoxStrategy
             if (map == null) throw new ArgumentNullException(nameof(map));
             var rules = (numbers ?? GameRules.Standard).Clone();
             rules.Victory = Victory;
+            rules.Turn = Turn;
+            if (Turn == TurnStyle.Writs) rules.StalemateTurns = 20;
             rules.MaxTurns = Victory == VictoryMode.Conquest ? TurnCap : TurnLimit;
             if (Victory == VictoryMode.Domination)
                 rules.ProvincesToWin = (map.Provinces.Count * DominationPercent + 99) / 100;

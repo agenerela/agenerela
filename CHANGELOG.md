@@ -36,6 +36,14 @@ phase table and the open issues, not here.
   value per province, all drawn on the contact sheet; no rule reads them yet. The generator reports its
   progress and stops at a time budget with the best world found. Every seed now makes a different
   world than before.
+- **Painted Realm rules v2, slice R1a: the writs turn and armies as pieces, headless** (#20). The turn
+  of rules v2 is a setting, `GameSetup.Writs`, beside today's one-move game, which stays the default
+  and unchanged. Each ruler has a few writs a turn: a court order, orders for its armies awaiting them,
+  and a second court order. Armies stand on the map and march with terrain costs, all stepping at
+  once. They fight with today's battle formula, retreat or are routed, occupy enemy land and take
+  neutral land. Wars end in treaties: white peace, demanding what is occupied, ceding it. A demand at
+  a war score of 90 is enforced, and broken realms fall to their occupiers. Conquest has a stalemate
+  ending. The scripted and random players play it. Model rulers come in R1b.
 - **Painted Realm: a generated world drawn as a sea chart by code** (#20, the screen half of R2).
   New game → Map: Generated, or the dev menu's `generated` command. Scripted rulers play a world
   of any size and shape, and the screen replays it over a chart drawn at the screen's size: sea,

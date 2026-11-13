@@ -22,14 +22,29 @@ namespace GreyBoxStrategy
         public const string AcceptPeace = "accept_peace";
         public const string RefusePeace = "refuse_peace";
 
+        // The writs turn (rules v2, R1).
+        /// <summary>An army order: march to a province, the rules' shortest path.</summary>
+        public const string March = "march";
+        /// <summary>A treaty term: all occupied land between the two returns (v2 5.1).</summary>
+        public const string OfferWhitePeace = "offer_white_peace";
+        /// <summary>A treaty term: every province of theirs we occupy becomes ours; ours they occupy return.</summary>
+        public const string DemandOccupied = "demand_occupied";
+        /// <summary>A treaty term, the losing side's offer: every province of ours they occupy becomes theirs.</summary>
+        public const string CedeOccupied = "cede_occupied";
+
         public static readonly string[] Council = { Recruit, Fortify, RaiseTaxes, DeclareWar, Attack, OfferPeace, None };
+        /// <summary>The court's orders in the writs turn: no attack (armies do that) and treaty terms for peace.</summary>
+        public static readonly string[] Court = { Recruit, Fortify, RaiseTaxes, DeclareWar, OfferWhitePeace, DemandOccupied, CedeOccupied, None };
+        public static readonly string[] ArmyOrders = { March, None };
+        /// <summary>Whether the action is a treaty term, answered by the other side.</summary>
+        public static bool IsTerm(string action) => action == OfferWhitePeace || action == DemandOccupied || action == CedeOccupied;
         public static readonly string[] Envoy = { AcceptPeace, RefusePeace };
 
         /// <summary>Whether the action names a province (fortify, attack) rather than a country.</summary>
-        public static bool TargetsProvince(string action) => action == Fortify || action == Attack;
+        public static bool TargetsProvince(string action) => action == Fortify || action == Attack || action == March;
 
         /// <summary>Whether the action names a country (declare_war, offer_peace).</summary>
-        public static bool TargetsCountry(string action) => action == DeclareWar || action == OfferPeace;
+        public static bool TargetsCountry(string action) => action == DeclareWar || action == OfferPeace || IsTerm(action);
     }
 
     /// <summary>
