@@ -568,6 +568,36 @@ namespace GreyBoxStrategy.Tests
         private static int UpkeepLoss(Game g, string country) =>
             g.Reports.Last().Upkeep.Where(l => l.StartsWith(country + ": bankrupt")).Select(l => int.Parse(l.Split(' ')[2])).Sum();
 
+        // The storyteller's dilemmas (S2) under the writs turn: offered between turns, answered by the
+        // seat, landing at the next upkeep, and the soldiers it brings reaching an army.
+        [Test]
+        public void Storyteller_ADilemmaIsOfferedAndAnswered_InAWritsGame()
+        {
+            var settings = StorytellerSettings.EvenHand;
+            settings.ChoiceChance = 1;
+            var g = NewWrits();
+            g.EventTable = false;
+            g.Story = new StoryRules { Settings = settings, Choices = true };
+            Turn(g);
+            Turn(g);
+            g.World.Country("valen").Gold = 100;
+            Assert.That(g.WhyNotEvent("sellswords", "valen"), Is.Null);
+            g.QueueEvent(new StoryEvent("sellswords", "valen", "Sellswords came over the hills to valen's gate.", null));
+
+            var request = g.ChoiceRequests().Single();
+            Assert.That((request.Moment, request.CountryId), Is.EqualTo((Moment.Choice, "valen")));
+            Assert.That(request.Legal.Select(m => m.Action), Is.EqualTo(new[] { "hire_sellswords", "send_sellswords_away" }));
+            g.SubmitChoices(new[] { new CountryAnswer(request, new Move("hire_sellswords")) });
+
+            int before = g.World.ArmiesOf("valen").Sum(a => a.Soldiers);
+            var report = Turn(g);
+            var e = report.Events.Single();
+            Assert.That(e.Choices["valen"], Is.EqualTo("hire_sellswords"));
+            Assert.That(g.World.ArmiesOf("valen").Sum(a => a.Soldiers), Is.EqualTo(before + 14), "the sellswords join valen's armies");
+            Assert.That(g.World.Country("valen").Army, Is.EqualTo(before + 14));
+            Assert.That(report.Events.All(x => x.Source != EventRecord.FromTable), Is.True, "with the table off, no table events");
+        }
+
         [Test]
         public void Events_ChangeTheArmiesThroughTheSoldierCount()
         {
