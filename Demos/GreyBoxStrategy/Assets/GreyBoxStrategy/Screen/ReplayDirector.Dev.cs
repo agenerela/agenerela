@@ -1,0 +1,219 @@
+using System;
+using System.IO;
+using System.Linq;
+using GreyBoxStrategy.Replay;
+using UnityEngine;
+
+namespace GreyBoxStrategy.Realm
+{
+    /// <summary>
+    /// The dev menu (F1, in the editor and development builds only) and its commands. Everything
+    /// it does goes through <see cref="DevTools.Run"/>, so a session can drive it with
+    /// <c>unity command script eval</c>. A game it touches is marked DEV on screen and in its
+    /// recording; the table runner and the scorecard never go through the screen, so they never
+    /// meet it.
+    /// </summary>
+    public sealed partial class ReplayDirector
+    {
+        private DevCommands dev;
+        private bool autoOrders;
+        private float fps, devTick;
+        private Recording sourceRecording;
+
+        /// <summary>True when the game on screen is a dev game: changed through the dev menu, or played with stand-in rulers.</summary>
+        public bool IsDevGame => (game != null && game.Dev) || (rule != null && rule.Dev) || (live != null && live.Dev) || DevFaults.Any;
+
+        public DevCommands Dev => dev ?? (dev = BuildDevCommands());
+
+        private string You => rule?.You ?? followed ?? "kesh";
+
+        private DevCommands BuildDevCommands()
+        {
+            int N(string[] a, int i, int fallback) => a.Length > i ? int.Parse(a[i]) : fallback;
+            string Need(bool ok, string why) => ok ? null : throw new ArgumentException(why);
+            var c = new DevCommands();
+            c.Add("help", "help", "every command", _ => dev.Help());
+
+            // ---- play without the card ----
+            c.Add("scripted-rule", "scripted-rule <country> [seed]", "rule a country against four stand-in rulers; no server, no card",
+                a => { Need(a.Length >= 1, "Name a country."); if (started) return "A game is running: Esc, then Main menu, first."; ui.HideMenu(); StartRuleScripted(a[0], N(a, 1, 7)); return $"rule game, {a[0]}, stand-in rulers"; });
+            c.Add("scripted-watch", "scripted-watch [seed]", "watch five stand-in rulers; no server, no card",
+                a => { if (started || live == null) return started ? "A game is running: Esc, then Main menu, first." : "No live component in the scene."; StartScriptedWatch(N(a, 0, 7)); return "watch game, stand-in rulers"; });
+
+            // ---- time ----
+            c.Add("turn", "turn <n>", "jump to turn n without animating the turns before it", a => { SkipToTurn(N(a, 0, 1)); return $"jumping to turn {N(a, 0, 1)}"; });
+            c.Add("step", "step", "land the next event", _ => { playing = false; stepOnce = true; ui.SetPlaying(false, speed); return Position; });
+            c.Add("speed", "speed <x>", "playback speed, 0.25 to 32", a => { Need(a.Length == 1, "Give a speed."); speed = Mathf.Clamp(float.Parse(a[0], System.Globalization.CultureInfo.InvariantCulture), 0.25f, 32f); ui.SetPlaying(playing, speed); return $"speed {speed}×"; });
+            c.Add("play", "play", "play", _ => { playing = true; ui.SetPlaying(true, speed); return "playing"; });
+            c.Add("pause", "pause", "pause", _ => { Pause(); return "paused"; });
+            c.Add("autoplay", "autoplay on|off", "play to the end at 8×; in rule mode, hold every turn and refuse every envoy",
+                a => { bool on = a.Length == 0 || a[0] == "on"; autoOrders = on && rule != null; if (on) { speed = Math.Max(speed, 8); playing = true; ui.SetPlaying(true, speed); } return on ? "autoplay on" : "autoplay off"; });
+
+            // ---- state (rule games: they own the turn loop) ----
+            foreach (string name in DevEdits.Names)
+                c.Add(name, EditUsage(name), "dev edit, applied at the start of the next turn (rule games)", a =>
+                {
+                    if (rule == null) return "State edits need a rule game (scripted-rule kesh): a replay cannot change, and a watch game runs on the table runner with no hook between turns.";
+                    string command = name + " " + string.Join(" ", a);
+                    string why = rule.QueueDev(command);
+                    return why ?? $"queued for turn {rule.Game.NextTurn}: {command}";
+                });
+            c.Add("events", "events", "the event templates the storyteller can use", _ =>
+                string.Join("\n", EventRules.Templates.Select(t => $"{t.Id} ({t.Takes}): {t.Description}")));
+            c.Add("fog", "fog off|on", "reveal everything, or restore what your court knows (rule mode)", a =>
+            {
+                Need(a.Length == 1 && (a[0] == "on" || a[0] == "off"), "on or off.");
+                if (rule == null) return "Fog is a rule-mode rule.";
+                ui.Fog = new Fog(a[0] == "on" ? rule.You : null, queries);
+                if (shown != null) Show(shown, null);
+                return a[0] == "on" ? "fog restored" : "fog off: everything shown";
+            });
+
+            // ---- faults: none touches the real lock or server ----
+            c.Add("fault", "fault lock <holder…>|lock off|server on|off|timeout on|off|unreadable on|off", "pretend a fault", a =>
+            {
+                Need(a.Length >= 2, "Say which fault and on or off.");
+                bool on = a[1] != "off";
+                switch (a[0])
+                {
+                    case "lock": DevFaults.FakeLockHolder = on ? string.Join(" ", a.Skip(1)) : null; break;
+                    case "server": DevFaults.ServerDown = on; break;
+                    case "timeout":
+                        DevFaults.Hang = on;
+                        if (rule != null) rule.RoundTimeout = on ? TimeSpan.FromSeconds(8) : TimeSpan.FromSeconds(150);
+                        break;
+                    case "unreadable": DevFaults.Unreadable = on; break;
+                    default: throw new ArgumentException($"No fault '{a[0]}'.");
+                }
+                return "faults: " + DevFaults.Describe();
+            });
+            c.Add("faults", "faults off", "clear every pretended fault", _ => { DevFaults.Clear(); if (rule != null) rule.RoundTimeout = TimeSpan.FromSeconds(150); return "faults: none"; });
+
+            // ---- readouts, capture, window ----
+            c.Add("readouts", "readouts", "frames per second, scale, resolution, the last request, the card", _ => Readouts());
+            c.Add("screenshot", "screenshot [name]", "save a screenshot in Logs/Dev", a =>
+            {
+                string path = DevPath(a.Length > 0 ? a[0] : $"shot-{DateTime.Now:yyyyMMdd-HHmmss}", ".png");
+                ScreenCapture.CaptureScreenshot(path);
+                return path;
+            });
+            c.Add("save-recording", "save-recording [name]", "save the game as a recording the replay can load", a =>
+            {
+                var rec = CurrentRecording();
+                if (rec == null) return "No game to save.";
+                string path = DevPath(a.Length > 0 ? a[0] : $"game-{DateTime.Now:yyyyMMdd-HHmmss}", ".json");
+                File.WriteAllText(path, rec.ToJson());
+                return $"{path} ({rec.Decisions.Count} decisions{(rec.Dev ? ", dev game" : "")})";
+            });
+            c.Add("load-recording", "load-recording <path>", "replay a saved recording", a =>
+            {
+                Need(a.Length >= 1, "Give a path.");
+                if (started) return "A game is running: Esc, then Main menu, first.";
+                var rec = Recording.Parse(File.ReadAllText(string.Join(" ", a)));
+                sourceRecording = rec;
+                game = ReplayBuilder.Build(rec);
+                ui.Players = game.Players;
+                Show(game.Initial, null);
+                StartReplay();
+                return $"replaying {rec.Title}, {game.Turns.Count} turns{(game.Dev ? ", dev game" : "")}";
+            });
+            c.Add("size", "size <w>x<h>", "set the window or Game view size: 1366x768, 1920x1080, 2560x1440, 3840x2160, or 16:10 1920x1200, 3840x2400", a =>
+            {
+                Need(a.Length == 1 && a[0].Contains("x"), "Give a size like 1920x1080.");
+                var wh = a[0].Split('x'); int w = int.Parse(wh[0]), h = int.Parse(wh[1]);
+#if UNITY_EDITOR
+                UnityEditor.PlayModeWindow.SetCustomRenderingResolution((uint)w, (uint)h, $"dev {w}x{h}");
+                return $"Game view {w} × {h}";
+#else
+                Screen.SetResolution(w, h, Screen.fullScreenMode);
+                return $"window {w} × {h}";
+#endif
+            });
+            c.Add("menu", "menu", "show or hide the dev menu", _ => { ToggleDevMenu(); return ui.DevOpen ? "dev menu open" : "dev menu closed"; });
+            return c;
+        }
+
+        private static string EditUsage(string name)
+        {
+            switch (name)
+            {
+                case "gold": case "army": case "stability": return name + " <country> <+n|-n|=n>";
+                case "forts": return "forts <province> <+n|-n|=n>";
+                case "owner": return "owner <province> <country|neutral>";
+                case "war": case "peace": return name + " <country> <country>";
+                case "eliminate": return "eliminate <country>";
+                default: return "event <template> <target>";
+            }
+        }
+
+        private static string DevPath(string name, string ext)
+        {
+            string dir = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "Dev"));
+            Directory.CreateDirectory(dir);
+            return Path.Combine(dir, Path.GetFileNameWithoutExtension(name) + ext);
+        }
+
+        /// <summary>The game on screen as a recording: a rule game's, a live game's log, or the replay's own.</summary>
+        private Recording CurrentRecording()
+        {
+            if (rule != null) return rule.BuildRecording();
+            if (live != null && live.PlayLive)
+            {
+                var r = Recording.FromDecisionLog(live.Lines(), live.Seed, live.Players);
+                r.Dev = live.Dev;
+                return r;
+            }
+            return sourceRecording ?? (recording != null ? Recording.Parse(recording.text) : null);
+        }
+
+        private void StartScriptedWatch(int seed)
+        {
+            started = true;
+            live.BeginScripted(seed);
+            ui.Players = live.Players;
+            game = ReplayBuilder.Build(Recording.FromDecisionLog(live.Lines(), live.Seed, live.Players), partial: true);
+            ui.HideMenu();
+            Show(game.Initial, null);
+            StartCoroutine(Play());
+        }
+
+        public string Readouts()
+        {
+            var last = game?.AllEvents.LastOrDefault(e => e.Decision != null && e.Decision.ModelName != RuleSession.YourModel)?.Decision;
+            string holder = Gateway.LockHolder();
+            return string.Join("\n", new[]
+            {
+                $"{fps:0} fps · UI scale {CurrentUiScale():0.##} · {Screen.width} × {Screen.height}{(Application.isEditor ? " (Game view)" : "")}",
+                $"game: {(rule != null ? "rule, you are " + rule.You : live != null && live.PlayLive ? "watch live" : started ? "replay" : "menu")} · {Position}{(IsDevGame ? " · DEV" : "")}",
+                $"last reply: {DevProvider.LastLatency:0.00} s, {DevProvider.LastPromptTokens} in / {DevProvider.LastCompletionTokens} out · requests {DevProvider.Requests}, in flight {DevProvider.InFlight}",
+                last != null ? $"last decision played: {last.AgentId} turn {last.Turn}, {last.LatencySeconds:0.00} s, queue wait {last.QueueWaitSeconds:0.00} s, {last.PromptTokens} tokens in" : "last decision played: none",
+                $"card: {(holder == null ? "free" : holder)}{(Gateway.HoldsLock ? " · this game holds it" : "")} · faults: {DevFaults.Describe()}",
+                rule != null && rule.DevQueued.Count > 0 ? "next turn: " + string.Join("; ", rule.DevQueued) : null,
+            }.Where(x => x != null));
+        }
+
+        // ---- the panel ----
+
+        public void ToggleDevMenu()
+        {
+            if (!DevTools.Available) return;
+            if (ui.DevOpen) { ui.CloseDev(); return; }
+            ui.ShowDev(Dev, You, rule != null ? rule.Game.World.CountryList.Select(x => x.Id).Where(x => x != rule.You).FirstOrDefault() : "valen",
+                EventRules.Templates.Select(t => t.Id).ToList());
+            ui.SetDevReadouts(Readouts());
+        }
+
+        /// <summary>Every frame: the readouts' clock, the DEV mark, and rule mode's automatic orders.</summary>
+        private void DevUpdate()
+        {
+            fps = Mathf.Lerp(fps, 1f / Mathf.Max(0.0001f, Time.unscaledDeltaTime), 0.05f);
+            ui.SetDevMark(IsDevGame);
+            if ((devTick -= Time.unscaledDeltaTime) <= 0) { devTick = 0.5f; if (ui.DevOpen) ui.SetDevReadouts(Readouts()); }
+            if (autoOrders && rule != null && !rule.Finished)
+            {
+                if (rule.WaitingFor == RuleSession.Waiting.Orders && ui.OrdersRequest != null) { ui.Chosen = Move.Hold; EndTurn(); }
+                else if (rule.WaitingFor == RuleSession.Waiting.Envoy) AnswerOffer(false);
+            }
+        }
+    }
+}

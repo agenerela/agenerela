@@ -31,7 +31,7 @@ namespace GreyBoxStrategy.Realm
         private static readonly (MapMode mode, string label, IconKind icon, string tip)[] Modes =
         {
             (MapMode.Political, "Political", IconKind.Province, "Political (1): owners' colours, capitals, forts and names"),
-            (MapMode.Armies, "Armies", IconKind.Army, "Armies (2): each country's colour as strong as its army, with the count at its capital"),
+            (MapMode.Armies, "Armies", IconKind.Army, "Armies (2): each country's colour as strong as its army"),
             (MapMode.Forts, "Forts", IconKind.Fort, "Forts (3): provinces by their forts, +15 defence each"),
             (MapMode.Reach, "Reach", IconKind.War, "Reach (4): who can attack what. The followed country's legal attacks, hatched, with the share of rolls each wins"),
         };
@@ -80,7 +80,7 @@ namespace GreyBoxStrategy.Realm
                     legend.Add(LegendItem(new Color32(150, 140, 122, 255), "Neutral"));
                     break;
                 case MapMode.Armies:
-                    legend.Add(new Label("Colour as strong as the owner's army; the count at each capital"));
+                    legend.Add(new Label("Colour as strong as the owner's army; each army stands at its capital"));
                     break;
                 case MapMode.Forts:
                     legend.Add(new Label("No fort: pale · one fort: half · two forts: full, +15 defence each"));
@@ -93,11 +93,9 @@ namespace GreyBoxStrategy.Realm
             }
             for (int i = 0; i < 25; i++)
             {
-                bool capital = Queries != null && Queries.IsCapital(i) && s.Owners[i] != null;
-                bool show = mode == MapMode.Armies && capital;
+                // The badge shows the reach mode's odds; armies have their own pieces in every mode.
                 bool odds = mode == MapMode.Reach && reach != null && reach.Contains(i) && Followed != null;
-                armyBadges[i].style.display = show || odds ? DisplayStyle.Flex : DisplayStyle.None;
-                if (show) { armyBadges[i].text = s.Countries[s.Owners[i]].Army.ToString(); armyBadges[i].style.backgroundColor = (Color)CountryLook.Of(s.Owners[i]).Colour; }
+                armyBadges[i].style.display = odds ? DisplayStyle.Flex : DisplayStyle.None;
                 if (odds)
                 {
                     double p = Queries.WinChance(s, Followed, i);
@@ -302,16 +300,10 @@ namespace GreyBoxStrategy.Realm
             if (Fog.KnowsTreasury(id)) tre.Add(KeyValue("Stability", $"{c.Stability} of 5"));
             else tre.Add(Note("Its treasury, income and stability are not known to your court. A model ruler is told every rival's army and land, and nothing more."));
 
-            if (!Fog.KnowsDecision(id, GameOver))
-            {
-                var sealedSec = Sec(body, "ITS COUNCIL", "sealed");
-                sealedSec.Add(Note("What this ruler read, was offered and decided opens in the inspector when the game is over."));
-                return;
-            }
             if (id == You && Fog.On) return;
 
             var last = history.LastOrDefault(e => e.Decision != null && e.Decision.AgentId == id && !e.Decision.IsEnvoy);
-            if (last != null)
+            if (last != null && Fog.KnowsReport(id, GameOver))
             {
                 var card = DecisionCard.From(last);
                 var told = Sec(body, "WHAT IT READ LAST", $"turn {card.Turn}");

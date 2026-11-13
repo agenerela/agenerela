@@ -107,6 +107,33 @@ namespace GreyBoxStrategy.Screen.Tests
         }
 
         [Test]
+        public async Task Two_peace_offers_in_one_turn_each_wait_for_an_answer()
+        {
+            var provider = new ScriptedProvider
+            {
+                Callback = r => r.OfferedActions.Contains(Actions.OfferPeace) && r.OfferedTargets.Contains(You)
+                    ? ScriptedReply.Decide(Actions.OfferPeace, You, "Peace.") : null,
+            }.Otherwise(ScriptedReply.Decide("none"));
+            var s = Session(provider);
+            var run = s.RunAsync();
+            await Until(() => s.WaitingFor == RuleSession.Waiting.Orders, "your first order");
+            Assert.That(s.QueueDev("war kesh merrow"), Is.Null);
+            Assert.That(s.QueueDev("war kesh ilvar"), Is.Null);
+            s.Order(Move.Hold);
+            await Until(() => s.Resolved == 1 && s.WaitingFor == RuleSession.Waiting.Orders, "turn 2's council");
+            s.Order(Move.Hold);
+            await Until(() => s.WaitingFor == RuleSession.Waiting.Envoy, "the first envoy");
+            string first = s.Offer.OfferedBy;
+            s.Answer(true);
+            await Until(() => s.WaitingFor == RuleSession.Waiting.Envoy && s.Offer.OfferedBy != first, "the second envoy");
+            s.Answer(false);
+            await Until(() => s.Resolved == 2, "turn 2 to resolve");
+            Assert.That(s.BuildReplay().Turns.Count, Is.EqualTo(2), "both answers are in the recording, so the replay rebuilds the turn");
+            s.Stop();
+            await run;
+        }
+
+        [Test]
         public async Task The_card_is_held_for_the_whole_game_and_let_go_when_it_ends()
         {
             var cardLock = new CountingLock();
@@ -198,8 +225,10 @@ namespace GreyBoxStrategy.Screen.Tests
             Assert.That(fog.Known(s).Count, Is.LessThan(25));
             Assert.That(fog.KnowsTreasury("kesh"), Is.True);
             Assert.That(fog.KnowsTreasury("valen"), Is.False);
-            Assert.That(fog.KnowsDecision("valen", gameOver: false), Is.False, "a ruler's council is sealed while the game runs");
-            Assert.That(fog.KnowsDecision("valen", gameOver: true), Is.True);
+            Assert.That(fog.KnowsDecision("valen", gameOver: false), Is.True, "what a rival does and says is shown as it happens");
+            Assert.That(fog.KnowsReport("valen", gameOver: false), Is.False, "what its court tells it (its treasury) is not");
+            Assert.That(fog.KnowsReport("valen", gameOver: true), Is.True, "until the game is over");
+            Assert.That(fog.KnowsReport("kesh", gameOver: false), Is.True, "your own court's report is yours");
             Assert.That(fog.KnowsUpkeep(new ReplayEvent { Kind = ReplayEventKind.Upkeep, Country = "valen" }), Is.False, "another country's harvest");
             Assert.That(fog.KnowsUpkeep(new ReplayEvent { Kind = ReplayEventKind.Upkeep, Country = "kesh" }), Is.True);
             Assert.That(fog.KnowsUpkeep(new ReplayEvent { Kind = ReplayEventKind.Revolt, Country = "valen" }), Is.True, "land changing hands is public");
@@ -210,7 +239,7 @@ namespace GreyBoxStrategy.Screen.Tests
         {
             var g = Start(); var fog = new Fog(null, new RealmQueries(g));
             Assert.That(fog.Known(g.Initial).Count, Is.EqualTo(25));
-            Assert.That(fog.KnowsTreasury("valen") && fog.KnowsDecision("valen", false), Is.True);
+            Assert.That(fog.KnowsTreasury("valen") && fog.KnowsDecision("valen", false) && fog.KnowsReport("valen", false), Is.True);
         }
     }
 
@@ -266,6 +295,8 @@ namespace GreyBoxStrategy.Screen.Tests
         [TestCase(3440, 1440, 1.3333f, false)] // ultrawide: the height decides
         [TestCase(1366, 768, 1f, true)]
         [TestCase(2202, 1168, 1.0815f, false)] // the lead's maximized Game view on 12 November
+        [TestCase(3840, 2400, 2f, false)] // the lead's display, 16:10
+        [TestCase(1920, 1200, 1f, false)]
         public void The_UI_grows_with_the_screen_and_never_shrinks_below_its_design(int w, int h, float scale, bool compact)
         {
             Assert.That(UiScale.For(w, h), Is.EqualTo(scale).Within(0.001f));

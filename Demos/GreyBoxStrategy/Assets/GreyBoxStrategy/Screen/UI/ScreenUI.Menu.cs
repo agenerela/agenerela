@@ -1,93 +1,314 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using GreyBoxStrategy.Replay;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace GreyBoxStrategy.Realm
 {
-    /// <summary>The start menu: replay the recorded game, or watch a live one; and a notice line for what goes wrong.</summary>
+    /// <summary>What the New game page chose.</summary>
+    public sealed class NewGameChoice
+    {
+        public bool Rule;
+        public string Country = "kesh";
+        public string Model = "qwen3.5:4b";
+        public int Seed = 101;
+    }
+
+    /// <summary>What the settings page needs to know about the screen it runs on.</summary>
+    public sealed class DisplayInfo
+    {
+        /// <summary>In the editor the Game view decides the size and mode; the page says so instead of offering them.</summary>
+        public bool InEditor;
+        public List<Vector2Int> Resolutions = new List<Vector2Int>();
+        public Vector2Int Native;
+        /// <summary>What automatic UI scale gives on this screen now.</summary>
+        public float AutoScale = 1;
+    }
+
+    /// <summary>
+    /// The menus, over the painted map: the main menu (the game's first screen), New game,
+    /// Settings, the pause menu (Esc in a game), the display countdown, and a notice line.
+    /// </summary>
     public sealed partial class ScreenUI
     {
         private VisualElement menu, notice;
         private Label menuStatus, noticeText;
-        private Button liveButton, ruleButton;
-        private Label ruleStatus;
+        private Button startButton;
 
-        public void ShowMenu(string recordingTitle, string defaultModel, int defaultSeed, Action replay, Action<string, int> live, Action<string, string, int> rule = null)
+        /// <summary>What Esc does on the page that is open: back one page, or resume. Null when no page is open.</summary>
+        public Action MenuBack { get; private set; }
+        public bool MenuOpen => menu != null;
+
+        private VisualElement Page(string cls, Action back)
         {
+            HideMenu();
             menu = new VisualElement(); menu.AddToClassList("menu-veil");
-            var card = new VisualElement(); card.AddToClassList("panel"); card.AddToClassList("menu");
-            var title = new Label("PAINTED REALM"); title.AddToClassList("menu-title"); card.Add(title);
-            var sub = new Label("Five countries, each ruled by a language model through the Agenerela framework, fight over 25 provinces.");
-            sub.AddToClassList("insp-sub"); sub.style.marginBottom = 10; card.Add(sub);
-
-            var a = new VisualElement(); a.AddToClassList("menu-choice");
-            a.Add(new Label("Replay the recorded game") { style = { fontSize = 15, unityFontStyleAndWeight = FontStyle.Bold } });
-            var at = new Label(recordingTitle + ". Every line is the rulers' own. No model and no server needed."); at.AddToClassList("why-no"); a.Add(at);
-            var ab = new Button(() => { HideMenu(); replay(); }) { text = "Replay" }; ab.AddToClassList("menu-button"); a.Add(ab);
-            card.Add(a);
-
-            var b = new VisualElement(); b.AddToClassList("menu-choice");
-            b.Add(new Label("Watch a live game") { style = { fontSize = 15, unityFontStyleAndWeight = FontStyle.Bold } });
-            var bt = new Label($"Five model rulers with personas play a new game now, on the server in {LiveGame.UrlVariable} (the RTX 5080). It takes the card's lock while the model plays, a few minutes."); bt.AddToClassList("why-no"); b.Add(bt);
-            var row = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center, marginTop = 6 } };
-            var model = new TextField("Model") { value = defaultModel }; model.AddToClassList("menu-field"); row.Add(model);
-            var seed = new IntegerField("Seed") { value = defaultSeed }; seed.AddToClassList("menu-field"); seed.style.width = 140; row.Add(seed);
-            b.Add(row);
-            liveButton = new Button(() => live(model.value, seed.value)) { text = "Watch live" }; liveButton.AddToClassList("menu-button"); b.Add(liveButton);
-            menuStatus = new Label(); menuStatus.AddToClassList("menu-status"); b.Add(menuStatus);
-            card.Add(b);
-
-            if (rule != null)
-            {
-                var c = new VisualElement(); c.AddToClassList("menu-choice");
-                c.Add(new Label("Rule a country") { style = { fontSize = 15, unityFontStyleAndWeight = FontStyle.Bold } });
-                var ct = new Label("You rule one country against four model rulers with personas, on the same server. You see what your court knows; they decide while you choose. The card's lock is taken only while they decide."); ct.AddToClassList("why-no"); c.Add(ct);
-                string pickedCountry = "kesh";
-                var crests = new VisualElement { style = { flexDirection = FlexDirection.Row, marginTop = 6 } };
-                foreach (var id in CountryIds)
-                {
-                    var look = CountryLook.Of(id);
-                    var cb = new Button { tooltip = $"Rule {look.Name}" }; cb.AddToClassList("menu-crest");
-                    cb.Add(new Crest(look, 22)); cb.Add(new Label(look.Name));
-                    cb.clicked += () => { pickedCountry = id; foreach (var x in crests.Children()) x.RemoveFromClassList("pick"); cb.AddToClassList("pick"); };
-                    if (id == pickedCountry) cb.AddToClassList("pick");
-                    crests.Add(cb);
-                }
-                c.Add(crests);
-                var row2 = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center, marginTop = 6 } };
-                var model2 = new TextField("Model") { value = defaultModel }; model2.AddToClassList("menu-field"); row2.Add(model2);
-                var seed2 = new IntegerField("Seed") { value = defaultSeed }; seed2.AddToClassList("menu-field"); seed2.style.width = 140; row2.Add(seed2);
-                c.Add(row2);
-                ruleButton = new Button(() => rule(pickedCountry, model2.value, seed2.value)) { text = "Rule" }; ruleButton.AddToClassList("menu-button"); c.Add(ruleButton);
-                ruleStatus = new Label(); ruleStatus.AddToClassList("menu-status"); c.Add(ruleStatus);
-                card.Add(c);
-            }
-
-            var keys = new Label("In the game: Enter ends your turn · Space play/pause · N step · + speed · 1–4 map modes · D diplomacy · Esc close · click a province, a crest or a chronicle line · right-drag to pan, wheel to zoom");
-            keys.AddToClassList("src"); card.Add(keys);
+            var card = new VisualElement(); card.AddToClassList("panel"); card.AddToClassList("menu"); card.AddToClassList(cls);
             menu.Add(card);
             Root.Add(menu);
+            MenuBack = back;
+            // A tall page scrolls inside the card at 1366 x 768 rather than squeezing its fields.
+            var scroll = new ScrollView(ScrollViewMode.Vertical); scroll.AddToClassList("menu-scroll");
+            card.Add(scroll);
+            return scroll.contentContainer;
         }
 
-        /// <summary>The rule choice's status line: why it cannot start, or that it is starting.</summary>
-        public void ShowRuleStatus(string text, bool busy = false)
+        public void HideMenu() { menu?.RemoveFromHierarchy(); menu = null; MenuBack = null; menuStatus = null; }
+
+        private static Button BigButton(string text, string note, Action pressed)
         {
-            if (ruleStatus == null) return;
-            ruleStatus.text = text ?? "";
-            ruleStatus.EnableInClassList("busy", busy);
-            ruleButton?.SetEnabled(!busy);
+            var b = new Button(pressed); b.AddToClassList("menu-big");
+            b.Add(new Label(text) { pickingMode = PickingMode.Ignore });
+            if (note != null) { var n = new Label(note) { pickingMode = PickingMode.Ignore }; n.AddToClassList("menu-big-note"); b.Add(n); }
+            return b;
         }
 
+        private static Label Heading(string text) { var l = new Label(text); l.AddToClassList("menu-head"); return l; }
+
+        private static VisualElement Row(params VisualElement[] items)
+        {
+            var r = new VisualElement(); r.AddToClassList("menu-row");
+            foreach (var i in items) r.Add(i);
+            return r;
+        }
+
+        // ---- the main menu ----
+
+        public void ShowMainMenu(string replayTitle, Action newGame, Action replay, Action settings, Action quit)
+        {
+            var card = Page("main", null);
+            card.Add(new CompassRose { style = { width = 112, height = 112, alignSelf = Align.Center, marginBottom = 6 } });
+            var title = new Label("PAINTED REALM"); title.AddToClassList("menu-title"); card.Add(title);
+            var sub = new Label("Five rulers, each a language model playing through the Agenerela framework, contend for twenty-five provinces.");
+            sub.AddToClassList("menu-sub"); card.Add(sub);
+            card.Add(new GiltRule());
+            card.Add(BigButton("New game", "Watch five model rulers, or rule a country against four", newGame));
+            card.Add(BigButton("Replay", replayTitle + " · no model or server needed", replay));
+            card.Add(BigButton("Settings", "Display, UI scale, speed, sound", settings));
+            card.Add(BigButton("Quit", null, quit));
+            card.Add(new GiltRule());
+            var foot = new Label("A demo of the Agenerela framework · GreyBoxStrategy · Esc opens the pause menu in a game"); foot.AddToClassList("src"); foot.style.alignSelf = Align.Center;
+            card.Add(foot);
+        }
+
+        // ---- New game ----
+
+        public void ShowNewGame(NewGameChoice choice, Action<NewGameChoice> start, Action back)
+        {
+            var card = Page("newgame", back);
+            card.Add(Heading("NEW GAME"));
+
+            card.Add(Section2("MODE"));
+            var watchB = BigButton("Watch", "Five model rulers with personas play; you follow, inspect and pause", null);
+            var ruleB = BigButton("Rule", "You rule one country against four model rulers", null);
+            var crests = new VisualElement(); crests.AddToClassList("menu-row");
+            void Mode(bool rule)
+            {
+                choice.Rule = rule;
+                watchB.EnableInClassList("pick", !rule); ruleB.EnableInClassList("pick", rule);
+                crests.SetEnabled(rule);
+            }
+            watchB.clicked += () => Mode(false); ruleB.clicked += () => Mode(true);
+            var modes = Row(watchB, ruleB); modes.AddToClassList("menu-modes"); card.Add(modes);
+
+            card.Add(Section2("YOUR COUNTRY", "rule mode"));
+            foreach (var id in CountryIds)
+            {
+                var look = CountryLook.Of(id);
+                var cb = new Button { tooltip = $"Rule {look.Name}" }; cb.AddToClassList("menu-crest");
+                cb.Add(new Crest(look, 22)); cb.Add(new Label(look.Name));
+                string country = id;
+                cb.clicked += () => { choice.Country = country; foreach (var x in crests.Children()) x.RemoveFromClassList("pick"); cb.AddToClassList("pick"); };
+                if (id == choice.Country) cb.AddToClassList("pick");
+                crests.Add(cb);
+            }
+            card.Add(crests);
+
+            card.Add(Section2("THE RULERS", "on the server in " + Gateway.UrlVariable));
+            var model = new TextField("Model") { value = choice.Model }; model.AddToClassList("menu-field");
+            var seed = new IntegerField("Seed") { value = choice.Seed }; seed.AddToClassList("menu-field"); seed.style.maxWidth = 190;
+            var dice = new Button(() => seed.value = UnityEngine.Random.Range(1, 10000)) { text = "Roll", tooltip = "A new seed: a new map of events and rolls" }; dice.AddToClassList("tbtn"); dice.style.width = 48;
+            card.Add(Row(model, seed, dice));
+
+            card.Add(Section2("COMING", "not in the game yet"));
+            card.Add(Coming("Map", "Size and shape, from a map generator"));
+            card.Add(Coming("Persona mix", "Which personas rule, and how hard they play"));
+            card.Add(Coming("Storyteller", "Events with choices and chains: presets you tweak before the game"));
+            card.Add(Coming("Advisor", "A model that counsels you in rule mode: on by default, off in a click"));
+
+            menuStatus = new Label(); menuStatus.AddToClassList("menu-status"); card.Add(menuStatus);
+            var backB = new Button(back) { text = "Back" }; backB.AddToClassList("menu-button"); backB.AddToClassList("quiet");
+            startButton = new Button(() => { choice.Model = model.value; choice.Seed = seed.value; start(choice); }) { text = "Start" }; startButton.AddToClassList("menu-button");
+            var foot = Row(backB, new VisualElement { style = { flexGrow = 1 } }, startButton); foot.style.marginTop = 10;
+            card.Add(foot);
+            Mode(choice.Rule);
+        }
+
+        private static VisualElement Section2(string title, string note = null)
+        {
+            var h = new VisualElement(); h.AddToClassList("sec-head"); h.style.marginTop = 10;
+            h.Add(new Label(title));
+            if (note != null) { var n = new Label(note); n.AddToClassList("sec-note"); h.Add(n); }
+            return h;
+        }
+
+        private static VisualElement Coming(string name, string what)
+        {
+            var r = new VisualElement(); r.AddToClassList("menu-coming");
+            r.Add(new Label(name) { style = { width = 110, unityFontStyleAndWeight = FontStyle.Bold } });
+            r.Add(new Label(what) { style = { flexGrow = 1, flexShrink = 1, whiteSpace = WhiteSpace.Normal } });
+            var tag = new Label("COMING"); tag.AddToClassList("tag"); r.Add(tag);
+            return r;
+        }
+
+        /// <summary>The New game page's status line: why a game cannot start, or that it is starting.</summary>
         public void ShowMenuStatus(string text, bool busy = false)
         {
             if (menuStatus == null) return;
             menuStatus.text = text ?? "";
             menuStatus.EnableInClassList("busy", busy);
-            liveButton?.SetEnabled(!busy);
+            startButton?.SetEnabled(!busy);
         }
 
-        public void HideMenu() { menu?.RemoveFromHierarchy(); menu = null; }
-        public bool MenuOpen => menu != null;
+        // ---- Settings ----
+
+        /// <summary>Settings: every change applies at once through <paramref name="changed"/>, which also saves it.</summary>
+        public void ShowSettings(GameSettings current, DisplayInfo display, Action<GameSettings> changed, Action back)
+        {
+            var s = current.Clone();
+            var card = Page("settings", back);
+            card.Add(Heading("SETTINGS"));
+            void Changed() => changed(s.Clone());
+
+            card.Add(Section2("DISPLAY"));
+            if (display.InEditor)
+            {
+                var n = new Label("In the editor the Game view decides the size and the window: choose Free Aspect and Scale 1x in its menus. Display mode and resolution apply in a built game.");
+                n.AddToClassList("why-no"); card.Add(n);
+            }
+            var modeRow = Steps("Mode", new[] { "Windowed", "Borderless", "Fullscreen" }, (int)s.Display, i => { s.Display = (DisplayMode)i; Changed(); });
+            modeRow.SetEnabled(!display.InEditor); card.Add(modeRow);
+            var sizes = display.Resolutions.Count > 0 ? display.Resolutions : new List<Vector2Int> { display.Native };
+            int idx = Math.Max(0, sizes.FindIndex(r => r.x == s.Width && r.y == s.Height));
+            if (s.Width == 0) idx = Math.Max(0, sizes.FindIndex(r => r == display.Native));
+            var resRow = Stepper("Resolution", sizes.Select(r => $"{r.x} × {r.y}" + (r == display.Native ? "  (display)" : "")).ToList(), idx,
+                i => { s.Width = sizes[i].x; s.Height = sizes[i].y; Changed(); });
+            resRow.SetEnabled(!display.InEditor); card.Add(resRow);
+            var scales = GameSettings.UiScaleSteps;
+            card.Add(Steps("UI scale", scales.Select(x => x == 0 ? $"Auto ({Mathf.RoundToInt(display.AutoScale * 100)}%)" : $"{Mathf.RoundToInt(x * 100)}%").ToArray(),
+                Array.IndexOf(scales, s.UiScale), i => { s.UiScale = scales[i]; Changed(); }));
+
+            card.Add(Section2("PERFORMANCE"));
+            card.Add(Steps("VSync", new[] { "Off", "On" }, s.VSync ? 1 : 0, i => { s.VSync = i == 1; Changed(); }));
+            var caps = GameSettings.FrameCaps;
+            card.Add(Steps("Frame cap", caps.Select(c => c == 0 ? "None" : c.ToString()).ToArray(), Array.IndexOf(caps, s.FrameCap), i => { s.FrameCap = caps[i]; Changed(); }));
+
+            card.Add(Section2("GAME"));
+            var speeds = GameSettings.Speeds;
+            card.Add(Steps("Playback speed", speeds.Select(x => $"{x:0}×").ToArray(), Array.IndexOf(speeds, s.PlaybackSpeed), i => { s.PlaybackSpeed = speeds[i]; Changed(); }));
+
+            card.Add(Section2("SOUND", "no sound plays yet; these are kept for when it does"));
+            card.Add(Volume("Master", s.MasterVolume, v => { s.MasterVolume = v; Changed(); }));
+            card.Add(Volume("Music", s.MusicVolume, v => { s.MusicVolume = v; Changed(); }));
+            card.Add(Volume("Effects", s.EffectsVolume, v => { s.EffectsVolume = v; Changed(); }));
+            card.Add(Volume("Voices", s.VoiceVolume, v => { s.VoiceVolume = v; Changed(); }));
+
+            var src = new Label("Saved as you change them, in settings.json in the game's data folder."); src.AddToClassList("src"); card.Add(src);
+            var backB = new Button(back) { text = "Back" }; backB.AddToClassList("menu-button"); backB.AddToClassList("quiet");
+            var foot = Row(backB); foot.style.marginTop = 10; card.Add(foot);
+        }
+
+        private static VisualElement Steps(string label, string[] options, int selected, Action<int> chose)
+        {
+            var row = new VisualElement(); row.AddToClassList("set-row");
+            row.Add(new Label(label) { style = { width = 130 } });
+            var group = new VisualElement(); group.AddToClassList("set-steps");
+            var buttons = new List<Button>();
+            for (int i = 0; i < options.Length; i++)
+            {
+                int k = i;
+                var b = new Button { text = options[i] }; b.AddToClassList("order-move");
+                b.clicked += () => { for (int j = 0; j < buttons.Count; j++) buttons[j].EnableInClassList("pick", j == k); chose(k); };
+                b.EnableInClassList("pick", i == selected);
+                buttons.Add(b); group.Add(b);
+            }
+            row.Add(group);
+            return row;
+        }
+
+        private static VisualElement Stepper(string label, List<string> options, int selected, Action<int> chose)
+        {
+            var row = new VisualElement(); row.AddToClassList("set-row");
+            row.Add(new Label(label) { style = { width = 130 } });
+            int i = Mathf.Clamp(selected, 0, Math.Max(0, options.Count - 1));
+            var value = new Label(options.Count > 0 ? options[i] : "—") { style = { minWidth = 190, unityTextAlign = TextAnchor.MiddleCenter } };
+            var prev = new Button { text = "‹" }; prev.AddToClassList("tbtn");
+            var next = new Button { text = "›" }; next.AddToClassList("tbtn");
+            prev.clicked += () => { if (i > 0) { i--; value.text = options[i]; chose(i); } };
+            next.clicked += () => { if (i < options.Count - 1) { i++; value.text = options[i]; chose(i); } };
+            row.Add(prev); row.Add(value); row.Add(next);
+            return row;
+        }
+
+        private static VisualElement Volume(string label, float value, Action<float> changed)
+        {
+            var row = new VisualElement(); row.AddToClassList("set-row");
+            row.Add(new Label(label) { style = { width = 130 } });
+            var slider = new Slider(0, 1) { value = value }; slider.AddToClassList("set-slider");
+            var pct = new Label($"{Mathf.RoundToInt(value * 100)}%") { style = { width = 44, unityTextAlign = TextAnchor.MiddleRight } };
+            slider.RegisterValueChangedCallback(e => { pct.text = $"{Mathf.RoundToInt(e.newValue * 100)}%"; changed(e.newValue); });
+            row.Add(slider); row.Add(pct);
+            return row;
+        }
+
+        // ---- the display countdown ----
+
+        private VisualElement confirm;
+
+        /// <summary>After a display change: keep it, or it reverts by itself when the countdown ends.</summary>
+        public void ShowDisplayConfirm(int seconds, Action keep, Action revert)
+        {
+            HideDisplayConfirm();
+            confirm = new VisualElement(); confirm.AddToClassList("panel"); confirm.AddToClassList("offer");
+            var head = new VisualElement(); head.AddToClassList("panel-head");
+            var t = new Label("KEEP THIS DISPLAY?"); t.AddToClassList("panel-title"); head.Add(t);
+            confirm.Add(head);
+            var text = new Label(); text.AddToClassList("why-no"); text.style.marginLeft = 12; text.style.marginRight = 12; text.style.marginTop = 10;
+            confirm.Add(text);
+            var revertB = new Button(() => { HideDisplayConfirm(); revert(); }) { text = "Revert" }; revertB.AddToClassList("menu-button"); revertB.AddToClassList("quiet");
+            var keepB = new Button(() => { HideDisplayConfirm(); keep(); }) { text = "Keep" }; keepB.AddToClassList("menu-button"); keepB.style.marginLeft = 8;
+            var row = Row(new VisualElement { style = { flexGrow = 1 } }, revertB, keepB); row.style.paddingLeft = 12; row.style.paddingRight = 12; row.style.paddingBottom = 12;
+            confirm.Add(row);
+            Root.Add(confirm);
+            int left = seconds;
+            void Tick()
+            {
+                if (confirm == null) return;
+                text.text = $"The display changed. It goes back to how it was in {left} s unless you keep it.";
+                if (left-- <= 0) { HideDisplayConfirm(); revert(); return; }
+                confirm.schedule.Execute(Tick).StartingIn(1000);
+            }
+            Tick();
+        }
+
+        public void HideDisplayConfirm() { confirm?.RemoveFromHierarchy(); confirm = null; }
+        public bool DisplayConfirmOpen => confirm != null;
+
+        // ---- the pause menu ----
+
+        public void ShowPause(Action resume, Action settings, Action mainMenu, string note = null)
+        {
+            var card = Page("pause", resume);
+            card.Add(Heading("PAUSED"));
+            card.Add(BigButton("Resume", "Esc", resume));
+            card.Add(BigButton("Settings", null, settings));
+            card.Add(BigButton("Main menu", "Ends this game; a live or rule game lets the RTX 5080 go", mainMenu));
+            if (note != null) { var n = new Label(note); n.AddToClassList("src"); n.style.alignSelf = Align.Center; card.Add(n); }
+        }
+
+        // ---- the notice line ----
 
         /// <summary>A line across the top of the map: what went wrong, or what is happening.</summary>
         public void ShowNotice(string text)
@@ -101,6 +322,71 @@ namespace GreyBoxStrategy.Realm
             }
             noticeText.text = text;
             notice.style.display = string.IsNullOrEmpty(text) ? DisplayStyle.None : DisplayStyle.Flex;
+        }
+
+        // ---- drawn by code ----
+
+        /// <summary>A thin gilt rule with a diamond at its centre, between a menu's parts.</summary>
+        private sealed class GiltRule : VisualElement
+        {
+            public GiltRule()
+            {
+                style.height = 14; style.marginTop = 6; style.marginBottom = 6;
+                generateVisualContent += ctx =>
+                {
+                    var r = contentRect; float y = r.height / 2, cx = r.width / 2;
+                    var p = ctx.painter2D;
+                    p.strokeColor = new Color32(201, 164, 90, 160); p.lineWidth = 1;
+                    p.BeginPath(); p.MoveTo(new Vector2(r.width * 0.08f, y)); p.LineTo(new Vector2(cx - 10, y)); p.Stroke();
+                    p.BeginPath(); p.MoveTo(new Vector2(cx + 10, y)); p.LineTo(new Vector2(r.width * 0.92f, y)); p.Stroke();
+                    p.fillColor = new Color32(210, 173, 98, 255);
+                    p.BeginPath(); p.MoveTo(new Vector2(cx, y - 5)); p.LineTo(new Vector2(cx + 5, y)); p.LineTo(new Vector2(cx, y + 5)); p.LineTo(new Vector2(cx - 5, y)); p.ClosePath(); p.Fill();
+                };
+            }
+        }
+
+        /// <summary>A sea-chart compass rose: rings, eight points in gilt and shadow, and the north mark.</summary>
+        private sealed class CompassRose : VisualElement
+        {
+            public CompassRose()
+            {
+                pickingMode = PickingMode.Ignore;
+                generateVisualContent += Draw;
+            }
+
+            private void Draw(MeshGenerationContext ctx)
+            {
+                var r = contentRect;
+                var c = r.center; float R = Mathf.Min(r.width, r.height) / 2 - 2;
+                var p = ctx.painter2D;
+                Color gold = new Color32(210, 173, 98, 255), pale = new Color32(243, 226, 184, 255), dark = new Color32(60, 46, 28, 255);
+                p.strokeColor = gold; p.lineWidth = 1.2f;
+                p.BeginPath(); p.Arc(c, R * 0.92f, Angle.Degrees(0), Angle.Degrees(360)); p.Stroke();
+                p.lineWidth = 0.8f;
+                p.BeginPath(); p.Arc(c, R * 0.8f, Angle.Degrees(0), Angle.Degrees(360)); p.Stroke();
+                for (int i = 0; i < 32; i++)
+                {
+                    float a = i * Mathf.PI * 2 / 32, len = i % 4 == 0 ? 0.12f : 0.06f;
+                    var d = new Vector2(Mathf.Sin(a), -Mathf.Cos(a));
+                    p.BeginPath(); p.MoveTo(c + d * R * 0.8f); p.LineTo(c + d * R * (0.8f + len)); p.Stroke();
+                }
+                // Eight points: the four winds long, the four between short; each half lit, half in shadow.
+                for (int i = 0; i < 8; i++)
+                {
+                    float a = i * Mathf.PI / 4;
+                    float len = i % 2 == 0 ? R * 0.95f : R * 0.55f, w = i % 2 == 0 ? R * 0.16f : R * 0.12f;
+                    var d = new Vector2(Mathf.Sin(a), -Mathf.Cos(a)); var n = new Vector2(-d.y, d.x);
+                    p.fillColor = i % 2 == 0 ? gold : pale;
+                    p.BeginPath(); p.MoveTo(c); p.LineTo(c + d * len); p.LineTo(c + n * w); p.ClosePath(); p.Fill();
+                    p.fillColor = dark;
+                    p.BeginPath(); p.MoveTo(c); p.LineTo(c + d * len); p.LineTo(c - n * w); p.ClosePath(); p.Fill();
+                }
+                p.fillColor = gold;
+                p.BeginPath(); p.Arc(c, R * 0.07f, Angle.Degrees(0), Angle.Degrees(360)); p.Fill();
+                // The north mark: a small fleur above the ring.
+                var top = c + new Vector2(0, -R);
+                p.BeginPath(); p.MoveTo(top + new Vector2(0, -2)); p.LineTo(top + new Vector2(4, 4)); p.LineTo(top + new Vector2(-4, 4)); p.ClosePath(); p.Fill();
+            }
         }
     }
 }

@@ -88,8 +88,8 @@ namespace GreyBoxStrategy.Realm
             var panel = ScriptableObject.CreateInstance<PanelSettings>();
             panel.themeStyleSheet = theme;
             panel.scaleMode = PanelScaleMode.ConstantPixelSize;
-            panel.scale = UiScale.For(Screen.width, Screen.height);
             panelSettings = panel;
+            LoadSettings();
             panel.sortingOrder = 10;
             document = gameObject.AddComponent<UIDocument>();
             document.panelSettings = panel;
@@ -116,7 +116,9 @@ namespace GreyBoxStrategy.Realm
             ui.FollowPressed = Follow;
             ui.DiplomacyPressed = ToggleDiplomacy;
             ui.DecisionPressed = e => { if (CanInspect(e)) ui.ShowCard(DecisionCard.From(e)); };
-            ui.AddMenuButton(LeaveToMenu);
+            ui.AddMenuButton(OpenPause);
+            DevTools.Director = this;
+            ApplyScale();
             ui.monoFont = UnityEngine.TextCore.Text.FontAsset.CreateFontAsset("Consolas", "Regular");
             Show(game.Initial, null);
             ui.SetTurn(1, "Council");
@@ -124,7 +126,7 @@ namespace GreyBoxStrategy.Realm
             ui.SetPlaying(playing, speed);
             if (showMenu && !isLive)
             {
-                ui.ShowMenu(game.Title, live != null ? live.Model : "qwen3.5:4b", live != null ? live.Seed : 101, StartReplay, (m, s) => StartCoroutine(StartLive(m, s)), TryRule);
+                ShowMainMenu();
                 return;
             }
             StartCoroutine(Play());
@@ -182,7 +184,7 @@ namespace GreyBoxStrategy.Realm
             // The land (about 90% of the painting each way) fills the space between the realm list
             // (248 px), the chronicle (356 px) and the top bar (50 px).
             var size = map.SizeUnits;
-            float w = Screen.width, h = Screen.height, scale = UiScale.For(Screen.width, Screen.height);
+            float w = Screen.width, h = Screen.height, scale = CurrentUiScale();
             float left = 248 * scale, right = 356 * scale, top = 50 * scale, bottom = 46 * scale;
             float freeW = Mathf.Max(200, w - left - right), freeH = Mathf.Max(200, h - top - bottom);
             // world units per pixel needed so the land fits both ways
@@ -194,7 +196,7 @@ namespace GreyBoxStrategy.Realm
         }
 
         /// <summary>For the Unity CLI and tests: play faster, or jump ahead to a turn without animating.</summary>
-        public void SetSpeed(float s) { speed = Mathf.Clamp(s, 0.25f, 8); ui?.SetPlaying(playing, speed); }
+        public void SetSpeed(float s) { speed = Mathf.Clamp(s, 0.25f, 32); ui?.SetPlaying(playing, speed); }
         public void SkipToTurn(int turn) { skipUntilTurn = turn; playing = true; ui?.SetPlaying(true, speed); }
         public void Pause() { playing = false; ui?.SetPlaying(false, speed); }
         /// <summary>The kind of the event being played, for the CLI to wait on ("Capture").</summary>
@@ -310,19 +312,18 @@ namespace GreyBoxStrategy.Realm
             if (Screen.width != lastSize.x || Screen.height != lastSize.y)
             {
                 lastSize = new Vector2Int(Screen.width, Screen.height);
-                panelSettings.scale = UiScale.For(Screen.width, Screen.height);
-                FitCamera();
-                ui.SetCompact(UiScale.Compact(Screen.width, Screen.height));
+                ApplyScale();
                 string soft = GameViewWarning();
                 if (soft != null) ui.ShowNotice(soft);
             }
             var mouse = Mouse.current; var kb = Keyboard.current;
-            if (kb != null)
+            if (kb != null && !ui.Typing)
             {
                 if (kb.spaceKey.wasPressedThisFrame) ui.Root.schedule.Execute(() => { playing = !playing; ui.SetPlaying(playing, speed); });
                 if (kb.nKey.wasPressedThisFrame) { playing = false; stepOnce = true; ui.SetPlaying(false, speed); }
                 if (kb.equalsKey.wasPressedThisFrame || kb.numpadPlusKey.wasPressedThisFrame) { speed = speed >= 4 ? 1 : speed * 2; ui.SetPlaying(playing, speed); }
-                if (kb.escapeKey.wasPressedThisFrame) { ui.CloseInspector(); ui.CloseSide(); ui.CloseDiplomacy(); map.SetSelected(-1); }
+                if (kb.escapeKey.wasPressedThisFrame) { if (ui.DevOpen) ui.CloseDev(); else Escape(); }
+                if (kb.f1Key.wasPressedThisFrame) ToggleDevMenu();
                 if (kb.digit1Key.wasPressedThisFrame) SetMode(MapMode.Political);
                 if (kb.digit2Key.wasPressedThisFrame) SetMode(MapMode.Armies);
                 if (kb.digit3Key.wasPressedThisFrame) SetMode(MapMode.Forts);
@@ -357,6 +358,7 @@ namespace GreyBoxStrategy.Realm
                 }
             }
             ui.PlaceLabels(shown);
+            DevUpdate();
         }
 
         private void PanTo(int province)
@@ -436,7 +438,7 @@ namespace GreyBoxStrategy.Realm
                     ui.SetCard(live.HoldsCard ? "held" : null);
                     slowShown |= waited.TotalSeconds > 30;
                     if (waited.TotalSeconds > 30)
-                        ui.ShowNotice($"The rulers have taken {(int)waited.TotalSeconds} s on turn {turnIndex + 1}. The server may be busy with another client. Menu (top right) leaves the game and lets the RTX 5080 go.");
+                        ui.ShowNotice($"The rulers have taken {(int)waited.TotalSeconds} s on turn {turnIndex + 1}. The server may be busy with another client. Esc, then Main menu, leaves the game and lets the RTX 5080 go.");
                     ui.SetThinking(true);
                     yield return new WaitForSeconds(1f);
                 }

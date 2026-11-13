@@ -202,9 +202,9 @@ namespace GreyBoxStrategy
             var identity = new AgentIdentity
             {
                 Name = info.Name,
-                Role = $"the ruler of {info.Name} ({countryId}), one of five countries at war over a map of provinces",
+                Role = $"the ruler of {info.Name} ({countryId}), one of {CountWord(world.CountryList.Count)} countries at war over a map of provinces",
                 Personality = info.Personality,
-                Goals = $"Hold {world.Rules.ProvincesToWin} provinces to win; if nobody has by turn {world.Rules.MaxTurns}, hold the most.",
+                Goals = GoalsFor(world.Rules),
             };
             Persona = persona;
             persona?.ApplyTo(identity);
@@ -294,6 +294,27 @@ namespace GreyBoxStrategy
         }
 
         // --- Deciding -------------------------------------------------------------------------
+
+        /// <summary>
+        /// The identity's goal line. Today's domination game keeps its wording exactly, so every
+        /// measured prompt is unchanged; the other victory modes of rules v2 say their own.
+        /// </summary>
+        public static string GoalsFor(GameRules rules)
+        {
+            switch (rules.Victory)
+            {
+                case VictoryMode.Conquest: return "Be the last country standing: take every province.";
+                case VictoryMode.TurnLimit: return $"Hold the most provinces at the end of turn {rules.MaxTurns}.";
+                default: return $"Hold {rules.ProvincesToWin} provinces to win; if nobody has by turn {rules.MaxTurns}, hold the most.";
+            }
+        }
+
+        /// <summary>"five" for the Classic board, so its prompt is unchanged; a word for any other count up to ten.</summary>
+        public static string CountWord(int n)
+        {
+            string[] words = { "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten" };
+            return n >= 0 && n < words.Length ? words[n] : n.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
 
         /// <summary>The stimulus for a request, by the arm's choice.</summary>
         public string StimulusFor(CountryRequest request)

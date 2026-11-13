@@ -102,6 +102,10 @@ namespace GreyBoxStrategy.Replay
                     int colon = e.Text.IndexOf(':');
                     line.Text = colon > 0 ? $"{N(e.Country)}: {e.Text.Substring(colon + 1).Trim()}" : e.Text;
                     break;
+                case ReplayEventKind.Dev:
+                    line.Category = ChronicleCategory.Story;
+                    line.Text = "Dev menu: " + e.Text;
+                    break;
                 case ReplayEventKind.Refused:
                     line.Category = ChronicleCategory.Refused;
                     line.Text = $"{N(e.Country)}'s move could not happen: {e.Text.Replace("refused: ", "")}";

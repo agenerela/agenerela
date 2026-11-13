@@ -23,6 +23,7 @@ to install):
 | `warm <model>` | loads a model now and says how long it took |
 | `unload <model>`, `unload --all` | unloads and waits until the GPU is free of it |
 | `pull <model>` | has the server download a model |
+| `systemone <model>` | asks a decision model one question on `/v1/systemone`, to check that route works |
 
 You cannot start, stop or inspect the server from here, read its logs, or delete a model, and you
 never need to.

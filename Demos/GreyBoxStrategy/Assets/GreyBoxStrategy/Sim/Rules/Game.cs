@@ -924,7 +924,9 @@ namespace GreyBoxStrategy
                 Result = new GameResult(alive[0].Id, Ending.LastStanding, World.Turn, counts);
                 return;
             }
-            var dominant = alive.FirstOrDefault(c => counts[c.Id] >= Rules.ProvincesToWin);
+            var dominant = Rules.Victory == VictoryMode.Domination
+                ? alive.FirstOrDefault(c => counts[c.Id] >= Rules.ProvincesToWin)
+                : null;
             if (dominant != null)
             {
                 Result = new GameResult(dominant.Id, Ending.Domination, World.Turn, counts);
@@ -937,7 +939,7 @@ namespace GreyBoxStrategy
                     .ThenByDescending(c => c.Army)
                     .ThenByDescending(c => c.Gold)
                     .First();
-                Result = new GameResult(best.Id, Ending.TurnLimit, World.Turn, counts);
+                Result = new GameResult(best.Id, Rules.Victory == VictoryMode.Conquest ? Ending.Unfinished : Ending.TurnLimit, World.Turn, counts);
             }
         }
 

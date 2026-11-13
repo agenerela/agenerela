@@ -2926,6 +2926,8 @@ The runner refuses a legality that would make any label's expected pair illegal,
 389 prompts have restricted pairs. **This legality arm is the only evidence for restricted pairs.**
 A number from a real game is still owed: GreyBoxStrategy with `PerTarget` in place of its game-side
 moves line.
+*Since then:* it was run on 10 November, in "GreyBoxStrategy: the framework's legal-target listing does
+not replace the game's moves line" below.
 
 **Setup.**
 
@@ -3302,6 +3304,7 @@ statements read like people is the three game accounts in the demo README, one r
 the human player's default opponents should be 4B seats with personas. The 2B is not fit for a
 persona seat until gap N9 is fixed; that fix is a prompt change, owed an A/B run. Gaps N9 and N10
 are in the demo README.
+*Since then:* the A/B run was made the same day, in "How a statement rule is introduced" below.
 
 **What would change this.** A second game; personas written by someone else; and gap N9's A/B run,
 which may change the 2B's voice numbers entirely.
@@ -3846,3 +3849,162 @@ S2 starts with the titles.
 titles fixed and re-run; the 2B; a storyteller persona, or a storyteller on its own provider at a
 higher temperature (gap 7). Raw data: `.scratch/storyteller-s1/runs/ab/` in the lead's laptop
 checkout (the smoke games, the title probe, the labels and the scripts beside it).
+
+### Non-generative deciders against `qwen3.5:4b`: the best embedding engine scores 15 and 9 points lower, a cascade to the 4B keeps its score while answering 28% itself, and no reranker runs on Ollama (12 November 2026)
+
+**The question.** Can a model built for choosing, or a game engine with no model, pick the action
+and the target instead of a generative model? The lead asked for "the decision making
+models/engines rather than LLMs"; the reading, the survey and the design notes are in
+[`non-llm-deciders.md`](non-llm-deciders.md), which this entry summarises.
+
+**What was run.** One session on the RTX 5080 (Docker Ollama 0.40.14, over the network), one model
+resident at a time, under the 5080 lock. The run reported here is the second, 10:29 to 10:40, after
+Codex's review; the first, 10:00 to 10:13, is superseded (below).
+`tools/benchmarks/non_llm_decider_probe.py` asked every prompt of the curated 76, the interim 389
+and a new 80-prompt tuning set:
+
+- **Control:** `qwen3.5:4b`, the framework's request rebuilt in Python, with no guards and one arm.
+  It scored 330 of 389 and 70 of 76 in both runs; the sweeps had 330 and 69.
+- **Three embedders**, `qwen3-embedding:0.6b`, `embeddinggemma:300m` and `bge-m3:567m`, each used
+  three ways: nearest description, nearest reference examples (kNN), and a softmax head trained on
+  the examples. The 90 reference examples were written new.
+- **A keyword parser with rules**, no model.
+- **Cascades** to the 4B, and **a hybrid** where the engine chooses and the 4B writes only the line.
+- Every threshold was tuned on the tuning set, never on an evaluation prompt. The references and the
+  tuning set pass `check-examples` against both sets, templates and filled strings.
+
+**Why there were two runs.** The first run of `check-examples` caught 11 of the reference and
+tuning lines matching interim prompts word for word (one model wrote both). Codex's review then
+found two holes in the check: `{X}` placeholders never became wildcards, and the filled strings
+were never checked. Five more templates failed once both were fixed. It also found the control's
+refusal example worded "by the Atlantis" where the C# writes "by Atlantis". All were fixed and every
+stage run again. The first run's best engine scored 279 and 60, so the conclusion did not change.
+
+**Results** (correct answers, curated /76 and interim /389; noise floors 8 and 3.6):
+
+| Engine | Curated | Interim | Impossible /64 | Median s | Resident MB |
+|---|---:|---:|---:|---:|---:|
+| `qwen3.5:4b`, control | 70 | 330 | 49 | 0.543 | 2,995 |
+| `bge-m3` + head | 63 | 271 (−15.2) | 31 | 0.045 | 657 |
+| `embeddinggemma` + head | 57 | 269 (−15.7) | 39 | 0.073 | 653 |
+| `qwen3-embedding:0.6b` + head | 58 | 259 (−18.3) | 30 | 0.050 | 939 |
+| best kNN (`bge-m3`) | 61 | 254 (−19.5) | 33 | 0.045 | 657 |
+| best descriptions (`embeddinggemma`) | 46 | 220 (−28.3) | 32 | 0.073 | 653 |
+| keyword parser and rules | 51 | 205 (−32.1) | 58 | under 0.001 | 0 |
+| cascade, `bge-m3` + head, then the 4B | 68 | 329 (−0.3) | 48 | 0.556 | 3,652, summed |
+
+- **Every engine is beyond noise below the control on both sets.** Examples nearly solve commands
+  with a target (61 of 66 against 66). They do not solve impossible requests (31 against 49),
+  conversation (46 against 61) or the curated set's situations (10 of 19 against 17).
+- **`none` comes only from thresholds, and they trade.** Engines that refuse well hardly act: the
+  zero-shot `bge-m3` refuses 54 of 64 impossible requests and acts correctly on 60 of 233.
+- **The `bge-m3` cascade, tuned on the 80 prompts, is within noise of the 4B on both sets** while
+  answering 28% of the interim decisions and 49% of the curated ones itself. The other three cascades
+  lost 2.6 to 8.5 points. Read descriptively off the interim set, the head's most confident half
+  gave 331 of 389. That cut was chosen on the evaluation prompts, so it is a hypothesis.
+- **The hybrid** (`embeddinggemma` + head choosing, best on the tuning set) keeps the engine's 269.
+  It takes 0.463 s median against the 4B's 0.543 on the interim set, and the same on the curated set.
+- **No reranker ran.** Ollama has no rerank route. `hf.co/ggml-org/Qwen3-Reranker-0.6B-Q8_0-GGUF`
+  does not support generate, and through `/api/embed` it returns zero vectors.
+  `dengcao/Qwen3-Reranker-0.6B:Q8_0` generates, but with a uniform −11.93 log-probability on every
+  token.
+
+**What we now believe.** No non-generative engine replaces the 4B on these prompts. An embedding
+first stage that answers only its confident decisions might take a quarter to a half of them off
+the 4B at no cost. That rests on one tuning on 80 prompts. It needs its own A/B through `EvalRunner`
+with the guards on, a reference bank, and a larger tuning set the developer writes.
+
+**What would change this.** A reranker running (llama.cpp's server, or a future Ollama rerank route);
+examples written by people; a larger tuning set; another agent's action set; the guards on.
+
+**Conditions.** The control ran without the guards, so it is not `EvalRunner`'s score.
+`qwen3-embedding:0.6b` was 2,563 MB resident at its default context in the first slice and 939 MB at
+`num_ctx` 2048. Raw data is in `.scratch/non-llm-deciders/` in the lead's laptop checkout: `runs/full`
+(this run), `runs/full-v1` (the superseded one), `summary.json`, the curve script and the logs.
+
+### Decision models: Gemini Decision 1 and Jev are hosted only, the open ones wait on a pull and a gateway route, and their question format on our own 4B is 3.2 times faster and 15 points worse (12 November 2026)
+
+**The question.** The lead asked to look into "those new models Like Jev" and Google's "gemini
+decision 1", and "simillar local ones". These are decision models: they score a closed list of
+options for a typed question in one forward pass and generate no text. Could one make our decision?
+The research, with sources, is in [`non-llm-deciders.md`](non-llm-deciders.md), "Decision models".
+
+**What we found.**
+- Gemini Decision 1 (Google DeepMind, 11 November) and Jev (TypeSafe AI, 15 September) are hosted
+  only, with no weights. Neither can run on our card, and no key was available to try them.
+- Open-weight decision models are in the Ollama library: `tev1:4b` (4.4 to 4.6 GB), `d1:3b`
+  (3.7 GB), `strands-decider:2b` (2.0 GB) and others. Ollama serves them on `/v1/systemone`, which
+  the RTX 5080's gateway does not expose. The lead approved three pulls: `tev1:4b` (4,611 MB), `d1:3b`
+  (3,731 MB) and `strands-decider:2b` (1,975 MB, an MLX build that may need Apple silicon). Ollama
+  refuses all three on `/api/chat` and `/api/generate`, since they have only the `decision`
+  capability, so **no decision model has run** until the lead opens the route.
+
+**What was run.** The question format itself, on `qwen3.5:4b`. The new `decide` stage of
+`tools/benchmarks/non_llm_decider_probe.py` asks two `choice` questions in Tev1's prompt and
+Standard One's layout: the action, over the available actions and `none`, then the target. It reads
+each answer from the first token's probabilities over the option letters, `num_predict` 1, the
+"label-probability readout". The control is the framework's request, re-run in the same lock. RTX
+5080, Docker Ollama 0.40.14, one model resident, 11:08 to 11:14. Every token spelling a letter adds to
+it, and the result is normalised over the letters seen. Ollama returns only the top 20, and 16 of 208
+target questions missed one or two of their 12 letters. A first version kept only the larger spelling
+of a letter; Codex caught it, and the fixed re-run changed no answer.
+
+| | Curated /76 | Interim /389 | Impossible /64 | Said `none` when acting /233 | Median / p90 s |
+|---|---:|---:|---:|---:|---|
+| `qwen3.5:4b`, framework request (control) | 70 | 330 | 49 | 12 | 0.453 / 0.503 |
+| `qwen3.5:4b`, decision questions | 62 | 272 (−14.9) | 45 | 44 | 0.140 / 0.259 |
+
+- **3.2 times faster at the median and beyond noise worse on both sets.** It is −14.9 on the interim set and −10.5
+  on the curated one.
+- **It answers `none` to commands.** Simple commands fell to 30 of 65 against 64; "Come with me." got
+  `none` 0.52 and `follow_player` 0.19.
+- **Situations rose**: 46 of 65 against 39 (+10.8, just beyond the per-category floor). That is one
+  category in one run.
+- **A cascade within the one model**, the readout first and the full request when its margin was low,
+  sent 85% of decisions on, scored 321 (within noise) and was slower overall (0.582 s median).
+
+**What we now believe.** The format alone, on a model not trained for it, does not reach the 4B.
+Whether training does is the open question. `tev1:4b`, Qwen3.5-4B fine-tuned for decisions, would
+answer it like for like through the same stage.
+
+**What would change this.** Any open decision model run on both sets against this control.
+
+Raw data: `.scratch/non-llm-deciders/runs/decide-full/` in the lead's laptop checkout (`decide-full-v1/`
+is the superseded first run), and `decide_cascade.py` beside it.
+
+### The open decision models on our sets: `tev1:4b`, `strands-decider:2b` and `d1:3b` score 21 to 26 points below `qwen3.5:4b` and refuse commands (12 November 2026)
+
+**What was run.** After the lead opened `/v1/systemone` on the RTX 5080's gateway, the three decision
+models pulled earlier ran on their own route against `qwen3.5:4b`, in one lock session from 14:38 to
+14:50 (Docker Ollama 0.40.14, one model resident at a time). The probe's `systemone` stage asks each
+prompt as one request with two `choice` questions, the action and the target, in the wording of the
+decision-question entry above. The control is the framework's request; the 4B's decision-question
+readout ran beside it. Ten-prompt slices first. Details are in
+[`non-llm-deciders.md`](non-llm-deciders.md), "The open decision models on our sets".
+
+| | Curated /76 | Interim /389 | Impossible /64 | Said `none` when acting /233 | Median s | Resident MB |
+|---|---:|---:|---:|---:|---:|---:|
+| `qwen3.5:4b`, framework request (control) | 70 | 330 | 49 | 12 | 0.471 | 2,995 |
+| `qwen3.5:4b`, decision questions | 62 | 272 (−14.9) | 45 | 44 | 0.104 | 2,995 |
+| `tev1:4b` | 56 | 248 (−21.1) | 49 | 69 | 0.104 | 5,457 |
+| `strands-decider:2b` | 49 | 231 (−25.4) | 57 | 61 | 0.121 | up to 10,002 |
+| `d1:3b` | 42 | 228 (−26.2) | 64 | 154 | 0.057 | 3,120 |
+
+- **All three are beyond noise below the control on both sets**, and below the 4B asked the same
+  questions.
+- **They refuse commands**: 26 to 29 of 65 simple commands against 64.
+  - `d1` answered `none` to 154 of the 233 prompts that wanted an action, so its perfect score on
+    impossible requests is a never-acting agent's.
+  - `strands-decider`'s 57 of 64 impossible requests is +12.5 on the control, beyond that category's
+    floor, but it also refused 61 actions.
+- **As a first stage, they barely help.** With a margin threshold tuned on the 80 tuning prompts, each
+  cascade to the 4B sent 76% to 96% of the interim decisions on, and scored 318 to 330.
+- `strands-decider` loaded on Ollama's MLX runner in the Linux container, but grew to 10 GB resident.
+
+**What we now believe.** On our prompts and in this wording, no decision model is a better decider than
+the 4B, or a better first stage than an embedding engine.
+
+**What would change this.** Question wording tuned on new prompts (a shorter or empty `none`
+criterion), a decision model fine-tuned on a game's own decisions, or a larger decision model.
+
+Raw data: `.scratch/non-llm-deciders/runs/dm-final/` in the lead's laptop checkout.

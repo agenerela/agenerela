@@ -108,6 +108,46 @@ python tools/benchmarks/paired_schema_probe.py qwen3.5:2b .scratch/paired/probe.
 Takes about a minute per model. It appends to the output file and does not create its folder. Re-run it after upgrading Ollama, and unload other models first. The result of 6 November 2026 is in
 `docs/llm-wiki/findings.md`.
 
+## `non_llm_decider_probe.py` and `non_llm_examples.json`
+
+Measures choosing the action and target **without a generative model**: embedding models by
+similarity to the action and target descriptions, by nearest reference examples (kNN) and with a
+small trained head, a keyword parser with rules, a reranker through `/api/generate` (no Ollama
+build we have runs one), a cascade that hands doubtful decisions to the 4B, and a hybrid where the
+engine chooses and the 4B writes only the statement. `qwen3.5:4b` is the control, sent the
+framework's request as `EvalRunner` builds it (where the probe differs is in
+`docs/llm-wiki/non-llm-deciders.md`). It reads both evaluation sets and `agent.json` and never
+writes to them.
+
+`non_llm_examples.json` holds the engines' reference examples and a separate 80-prompt tuning set,
+written new for this probe. Every threshold is tuned on that set, never on an evaluation prompt.
+`check-examples` checks both, templates and filled strings, against the two sets with `PromptSetChecks.MatchesExample`'s rule and a
+word-overlap check, and fails on any match (hard rule 4): run it after changing the file.
+
+```bash
+python tools/benchmarks/non_llm_decider_probe.py check-examples
+python tools/benchmarks/non_llm_decider_probe.py embed qwen3-embedding:0.6b .scratch/x/runs --limit 10
+python tools/benchmarks/non_llm_decider_probe.py control qwen3.5:4b .scratch/x/runs --limit 10
+python tools/benchmarks/non_llm_decider_probe.py decide qwen3.5:4b .scratch/x/runs --limit 10
+python tools/benchmarks/non_llm_decider_probe.py score .scratch/x/runs
+python tools/benchmarks/non_llm_decider_probe.py hybrid qwen3.5:4b .scratch/x/runs .scratch/x/runs/decisions-<engine>.jsonl
+```
+
+`decide` asks a model the decision as a decision model is asked it, two `choice` questions with lettered
+options, and reads each answer from the first token's probabilities (the format of Jev, Gemini Decision 1
+and the open decision models, on any model served through `/api/chat`).
+
+`systemone` asks a decision model (`tev1`, `d1`, `strands-decider`) on Ollama's `/v1/systemone`, the only
+route Ollama serves them on; the RTX 5080's gateway needs that route opened first
+(`docs/llm-wiki/non-llm-deciders.md`, "What to change on the RTX 5080").
+
+`embed`, `rerank`, `control`, `decide` and `systemone` ask the server once per prompt of the tuning set, the curated 76 and
+the interim 389 (`--limit N` takes the first N of each), write one file each and unload their model.
+`score` asks nothing: it builds every engine from those files and prints the tables. The server is
+read the way `ollama_remote.py` reads it; from a worktree, pass `--server-tools <main checkout>/tools/ollama-server`
+so its `.env` is used, and take the RTX 5080 lock around each stage. A full run of three embedders
+and the control took 7 minutes. The result of 12 November 2026 is in `docs/llm-wiki/findings.md`.
+
 ## Before trusting any number these print
 
 - Was there a **control arm**? A single before/after run is an anecdote.
