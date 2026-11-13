@@ -168,8 +168,11 @@ namespace GreyBoxStrategy
         public int Upkeep(Country c) => c.Army / Rules.SoldiersPerUpkeepGold;
 
         /// <summary>How many soldiers a recruit would raise now: the levy, cut to what the treasury pays for.</summary>
+        /// <remarks>In the writs turn an occupied province raises no one: the levy counts the land the country still controls.</remarks>
         public int Levy(Country c) =>
-            System.Math.Min(Rules.LevyBase + Rules.LevyPerProvince * ProvinceCount(c.Id), c.Gold / Rules.GoldPerSoldier);
+            System.Math.Min(Rules.LevyBase + Rules.LevyPerProvince * (Rules.Turn == TurnStyle.Writs
+                    ? ProvinceList.Count(p => p.Owner == c.Id && p.Occupier == null) : ProvinceCount(c.Id)),
+                c.Gold / Rules.GoldPerSoldier);
 
         public IEnumerable<Province> Neighbours(Province p) => Map.Neighbours(p.Id).Select(Province);
 

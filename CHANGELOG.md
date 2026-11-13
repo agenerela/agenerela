@@ -29,6 +29,12 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm rules v2, R1b's first part: the writs turn's pace, battle reports, armies in snapshots**
+  (#20). A Classic game with scripted rulers now takes 78 turns, down from 123; a medium world takes
+  173, down from 226. The levers: two march steps a turn over open ground, three writs, a weaker militia,
+  shorter truces and stalemates, demands enforced at 80, and scripted rulers who fight wars out. Every
+  battle is recorded with its terms and a sentence on why it went as it did (`TurnReport.BattleRecords`).
+  Each turn's snapshot holds the armies and occupations, so any past turn can be shown.
 - **Painted Realm rules v2, slice R1a: the writs turn and armies as pieces, headless** (#20). The turn
   of rules v2 is a setting, `GameSetup.Writs`, beside today's one-move game, which stays the default
   and unchanged. Each ruler has a few writs a turn: a court order, orders for its armies awaiting them,

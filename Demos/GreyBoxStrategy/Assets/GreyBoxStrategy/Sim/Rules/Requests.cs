@@ -180,6 +180,8 @@ namespace GreyBoxStrategy
         /// <summary>Provinces whose owner changed this turn, revolts included.</summary>
         public int TerritoryChanges;
         public int Battles;
+        /// <summary>The writs turn: every battle this turn, with its terms and why it went as it did, for the battle report.</summary>
+        public List<BattleRecord> BattleRecords = new List<BattleRecord>();
         /// <summary>Moves the re-check refused because an earlier move this turn made them stale.</summary>
         public int StaleRefusals;
         /// <summary>The events that happened at this turn's upkeep: the random table's, or the storyteller's one.</summary>

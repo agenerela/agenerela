@@ -147,7 +147,13 @@ namespace GreyBoxStrategy
             var rules = (numbers ?? GameRules.Standard).Clone();
             rules.Victory = Victory;
             rules.Turn = Turn;
-            if (Turn == TurnStyle.Writs) rules.StalemateTurns = 20;
+            if (Turn == TurnStyle.Writs)
+            {
+                // The writs turn's pace (tuned 12 November, R1b): a 12-turn stalemate and 3-turn truces.
+                // The one-move game keeps its 5-turn truce.
+                rules.StalemateTurns = 12;
+                rules.TruceTurns = 3;
+            }
             rules.MaxTurns = Victory == VictoryMode.Conquest ? TurnCap : TurnLimit;
             if (Victory == VictoryMode.Domination)
                 rules.ProvincesToWin = (map.Provinces.Count * DominationPercent + 99) / 100;

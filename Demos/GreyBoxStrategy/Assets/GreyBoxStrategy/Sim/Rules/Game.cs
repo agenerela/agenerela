@@ -284,6 +284,7 @@ namespace GreyBoxStrategy
             incomeCut.Clear();
 
             ownersAtCouncil = World.ProvinceList.ToDictionary(p => p.Id, p => p.Owner, StringComparer.Ordinal);
+            if (Rules.Turn == TurnStyle.Writs) SyncArmies();
             Snapshots.Add(new TurnSnapshot(World));
             if (Rules.Turn == TurnStyle.Writs) return BeginWrits();
             councilRequests = World.Alive.Select(c => new CountryRequest(
