@@ -212,6 +212,9 @@
 /* rule mode: the orders panel, bottom centre, ending in End turn */
 .orders { right: 364px; bottom: 8px; width: 520px; background-color: rgb(20, 16, 12); }
 .compact .orders { width: 470px; }
+/* A wider panel on the right (the inspector, the tales) never covers the council panel: it moves to the panel's left edge. */
+.tales-open .orders { right: 416px; }
+.insp-open .orders { right: 536px; }
 .order-line { flex-direction: row; align-items: center; height: 26px; }
 .order-chosen { font-size: 16px; -unity-font-style: bold; color: rgb(210, 173, 98); }
 .order-moves { flex-direction: row; flex-wrap: wrap; margin-top: 4px; }
