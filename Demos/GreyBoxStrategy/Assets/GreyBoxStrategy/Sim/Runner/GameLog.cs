@@ -108,9 +108,12 @@ namespace GreyBoxStrategy
     /// </summary>
     public static class StrategyRuns
     {
-        public static SeriesSummary Run(string folder, string lineup, int games, int firstSeed = 1, bool writeGameLogs = true)
+        /// <param name="map">The map every game is played on; the Classic board when null.</param>
+        /// <param name="rules">The rules; today's when null.</param>
+        public static SeriesSummary Run(string folder, string lineup, int games, int firstSeed = 1, bool writeGameLogs = true,
+            MapDefinition map = null, GameRules rules = null)
         {
-            var records = GameRunner.PlaySeries(lineup, GameRunner.Seeds(games, firstSeed));
+            var records = GameRunner.PlaySeries(lineup, GameRunner.Seeds(games, firstSeed), rules, map);
             var summary = new SeriesSummary(lineup, records);
             Directory.CreateDirectory(folder);
             File.WriteAllText(Path.Combine(folder, "summary.md"), summary.ToMarkdown());

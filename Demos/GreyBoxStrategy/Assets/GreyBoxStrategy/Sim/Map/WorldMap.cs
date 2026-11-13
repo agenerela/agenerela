@@ -49,6 +49,20 @@ namespace GreyBoxStrategy
         public string MadeBy;
     }
 
+    /// <summary>What a generated world was made from, so the same world can be made again.</summary>
+    public sealed class GenerationInfo
+    {
+        public int Seed;
+        public int Countries;
+        public MapSettings Settings;
+        /// <summary>Which try passed (0 is the first): the world is made from the sub-seed of that try.</summary>
+        public int Attempt;
+        /// <summary>The share of provinces neutral at the start, in percent.</summary>
+        public int NeutralPercent;
+        /// <summary>Each region's naming style, by region id.</summary>
+        public Dictionary<string, string> Styles = new Dictionary<string, string>();
+    }
+
     /// <summary>A named cluster of about eight provinces whose names sound alike (v2 section 2.3, step 12).</summary>
     public sealed class RegionData
     {
@@ -80,6 +94,10 @@ namespace GreyBoxStrategy
         public List<string[]> Borders = new List<string[]>();
         public List<RegionData> Regions = new List<RegionData>();
         public List<SpecialPlace> Specials = new List<SpecialPlace>();
+        /// <summary>How a generated world was made; null for a preset.</summary>
+        public GenerationInfo Generated;
+        /// <summary>The shapes a screen draws from; null for a board drawn by hand, such as Classic.</summary>
+        public MapGeometry Geometry;
 
         /// <summary>Why this map cannot be played, or null. Checks ids, owners, capitals and borders.</summary>
         public string WhyInvalid()

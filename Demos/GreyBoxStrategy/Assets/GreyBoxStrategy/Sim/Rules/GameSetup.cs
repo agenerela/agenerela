@@ -27,8 +27,11 @@ namespace GreyBoxStrategy
         /// <summary>Today's 25-province board (<see cref="ClassicMap"/>).</summary>
         public const string ClassicMapId = "classic";
 
-        /// <summary>The maps a setup may name. The generator adds its own in R2.</summary>
-        public static readonly string[] Maps = { ClassicMapId };
+        /// <summary>A world made by the generator from the seed and <see cref="Generator"/> (rules v2, R2).</summary>
+        public const string GeneratedMapId = "generated";
+
+        /// <summary>The maps a setup may name.</summary>
+        public static readonly string[] Maps = { ClassicMapId, GeneratedMapId };
 
         /// <summary>The storyteller presets of rules v2 section 7; <c>off</c> is today's random event table.</summary>
         public static readonly string[] StorytellerPresets = { "off", "chronicler", "kingmaker", "saga", "chaos" };
@@ -43,6 +46,13 @@ namespace GreyBoxStrategy
         public string Map = ClassicMapId;
         /// <summary>How many countries play. The Classic board has exactly five.</summary>
         public int Countries = 5;
+        /// <summary>The generator's settings, for a <see cref="GeneratedMapId"/> map; null takes the defaults.</summary>
+        public MapSettings Generator;
+        /// <summary>
+        /// The seed a generated world is made from, when it should differ from <see cref="Seed"/>: one
+        /// world shared by many games, as a balance run plays it. Null uses <see cref="Seed"/>.
+        /// </summary>
+        public int? MapSeed;
         public VictoryMode Victory = VictoryMode.Domination;
         /// <summary>Domination: the share of all provinces that wins, in percent (60 is today's 15 of 25).</summary>
         public int DominationPercent = 60;
@@ -70,6 +80,13 @@ namespace GreyBoxStrategy
                 return $"{Countries} countries is outside {MinCountries} to {MaxCountries}";
             if (Map == ClassicMapId && Countries != 5)
                 return $"the Classic board has five countries, not {Countries}";
+            if (Map == ClassicMapId && (Generator != null || MapSeed != null))
+                return "map settings apply only to a generated map";
+            if (Map == GeneratedMapId)
+            {
+                string why = (Generator ?? new MapSettings()).WhyInvalid(Countries);
+                if (why != null) return why;
+            }
             if (!Enum.IsDefined(typeof(VictoryMode), Victory)) return $"unknown victory mode {(int)Victory}";
             if (Victory == VictoryMode.Domination && (DominationPercent < 51 || DominationPercent > 100))
                 return $"domination at {DominationPercent}% is outside 51% to 100%";
@@ -89,11 +106,21 @@ namespace GreyBoxStrategy
             if (why != null) throw new ArgumentException($"These settings cannot start a game: {why}.");
         }
 
-        /// <summary>The map this setup plays on.</summary>
-        public MapDefinition BuildMap()
+        /// <summary>The map this setup plays on. A generated one is made from <see cref="Seed"/>.</summary>
+        /// <exception cref="InvalidOperationException">The generator made no playable world.</exception>
+        public MapDefinition BuildMap() => BuildWorld().ToDefinition();
+
+        /// <summary>The map as data: Classic, or the generated world with its geometry.</summary>
+        public WorldMap BuildWorld()
         {
             Validate();
-            return ClassicMap.Load().ToDefinition();
+            if (Map != GeneratedMapId) return ClassicMap.Load();
+            int mapSeed = MapSeed ?? Seed;
+            var made = MapGenerator.Generate(mapSeed, Countries, Generator ?? new MapSettings());
+            if (!made.Playable)
+                throw new InvalidOperationException(
+                    $"No playable world from seed {mapSeed} after {made.Attempts} tries: {string.Join("; ", made.Problems.Take(3))}.");
+            return made.Map;
         }
 
         /// <summary>

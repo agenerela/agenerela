@@ -29,6 +29,14 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm rules v2, slice R2: the map generator, headless** (#20). GreyBoxStrategy generates
+  worlds from a seed: small to huge (30 to 150 provinces), five land shapes, terrain, coasts and
+  ports, ridges with passes, regions, fair capitals and starting realms, goods, population, names from
+  tables and special places. Each world is checked for connectivity, shape and fairness, and made again
+  from the next sub-seed when it fails. A world comes out the same on every machine, and its geometry
+  is plain data for the screen to draw. The world-maker agent, the Cartographer and model-written names
+  plug in through checked hooks. Today's rules play on any generated world headless.
+  `ArtSource/world_sheet.py` draws exported worlds on one sheet.
 - **The RTX 5080 gateway passes `/v1/systemone`**, the route Ollama (0.35 and later) serves decision
   models on, and `ollama_remote.py systemone <model>` checks it. The lead applies the Caddyfile on the
   machine with the steps in `docs/llm-wiki/non-llm-deciders.md`, "What to change on the RTX 5080 for
