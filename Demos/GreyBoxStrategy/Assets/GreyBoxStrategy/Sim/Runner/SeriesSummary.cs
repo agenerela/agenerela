@@ -98,7 +98,7 @@ namespace GreyBoxStrategy
             sb.AppendLine("|---|---:|");
             // Unfinished (a conquest game at its cap) shows only when it happened, so a series of
             // today's game prints exactly as it did before rules v2 added it.
-            foreach (var e in Endings.Where(e => e.Key != Ending.Unfinished || e.Value > 0)) sb.AppendLine($"| {Describe(e.Key)} | {e.Value} |");
+            foreach (var e in Endings.Where(e => (e.Key != Ending.Unfinished && e.Key != Ending.Stalemate) || e.Value > 0)) sb.AppendLine($"| {Describe(e.Key)} | {e.Value} |");
             sb.AppendLine();
             sb.AppendLine("| Measure | Value |");
             sb.AppendLine("|---|---:|");
@@ -150,6 +150,7 @@ namespace GreyBoxStrategy
                 case Ending.Domination: return "domination (15 provinces)";
                 case Ending.LastStanding: return "last country standing";
                 case Ending.Unfinished: return "unfinished at the turn cap";
+                case Ending.Stalemate: return "stalemate, nothing changing hands";
                 default: return "turn limit, most provinces";
             }
         }
