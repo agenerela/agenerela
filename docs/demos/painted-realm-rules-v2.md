@@ -1705,6 +1705,14 @@ What the design got wrong or left open, and what was decided (_Mine_ unless the 
 
 ### R5. Events with choices and chains
 
+**Part of this is built already, as the storyteller's stage S2** (12 November, in the demo's
+[`README.md`](../../Demos/GreyBoxStrategy/README.md#stage-s2-dilemmas-events-on-many-tales-game-aware-stories-12-november)
+and the research page's [stage S2](painted-realm-research.md#stage-s2-design-12-november)): dilemmas
+(`+choices`), group events (`+multi`), tales continued by the model (`+chains-free`) or planned by the game
+(`+chains-skeleton`), the digest of what happened (`+history`) and province traits (`+traits`). They are
+arms of the storyteller, off by default, on today's board. The checklist below is not ticked: it describes the slice, and the README's S2
+section does not mention the held event card in rule mode.
+
 The lead: "we can have generic ones but we should also create a complex ones with chain of events
 and also the ones that require a decision from the player or persona. Like the EU5 events ... also
 like depends on the province"; "maybe we can even make multi affected. Like one events affect all";
