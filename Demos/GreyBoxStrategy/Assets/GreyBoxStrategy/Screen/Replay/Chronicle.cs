@@ -115,6 +115,64 @@ namespace GreyBoxStrategy.Replay
                     line.Quote = r.Story ?? "";
                     break;
                 }
+                case ReplayEventKind.ArmyOrder:
+                    line.Category = ChronicleCategory.War;
+                    line.Text = e.Province != null ? $"{N(e.Country)}: {Host(e.Army)} marches on {P(e.Province)}" : $"{N(e.Country)}: {Host(e.Army)} holds";
+                    break;
+                case ReplayEventKind.March:
+                    return null; // the map shows it
+                case ReplayEventKind.Battle:
+                {
+                    var b = e.Battle;
+                    string where = b.Province != null ? P(b.Province) : $"the {P(b.Border?[0])}–{P(b.Border?[1])} border";
+                    string them = b.Defender == null ? "the garrison" : b.DefenderKind == "militia" ? N(b.Defender) + "'s militia" : N(b.Defender);
+                    line.Category = ChronicleCategory.War;
+                    line.Text = $"Battle at {where}: {N(b.Attacker)} {b.AttackerSoldiers} against {them} {b.DefenderSoldiers}; "
+                                + (b.AttackerWon ? $"{N(b.Attacker)} won" : $"{them} held") + (b.Routed ? ", the loser routed" : "")
+                                + $" ({b.AttackerLost} and {b.DefenderLost} lost)";
+                    break;
+                }
+                case ReplayEventKind.ArmyLost:
+                    line.Category = ChronicleCategory.War;
+                    line.Text = $"{Host(e.Army)} of {N(e.Country)} " + (e.Text.Contains("routed") ? "is routed" : e.Text.Contains("disbanded") ? "has nowhere to go and disbands" : "is destroyed");
+                    break;
+                case ReplayEventKind.Occupy:
+                    line.Category = ChronicleCategory.Land;
+                    line.Text = $"{N(e.Country)} occupies {P(e.Province)}, {N(e.Other)}'s";
+                    break;
+                case ReplayEventKind.Free:
+                    line.Category = ChronicleCategory.Land;
+                    line.Text = $"{N(e.Country)} frees {P(e.Province)} from {N(e.Other)}";
+                    break;
+                case ReplayEventKind.TakeNeutral:
+                    line.Category = ChronicleCategory.Land;
+                    line.Text = $"{N(e.Country)} takes {P(e.Province)}, neutral land" + (e.Attack > 0 ? $" ({e.Attack} against {e.Defence})" : "");
+                    break;
+                case ReplayEventKind.TermOffered:
+                    line.Category = ChronicleCategory.Peace;
+                    line.Text = $"{N(e.Country)} puts a term to {N(e.Other)}: {TermText(e.Term, e.Country, e.Other, N)}";
+                    break;
+                case ReplayEventKind.TermAccepted:
+                    line.Category = ChronicleCategory.Peace;
+                    line.Text = $"{N(e.Country)} accepts {N(e.Other)}'s term";
+                    break;
+                case ReplayEventKind.TermRefused:
+                    line.Category = ChronicleCategory.Peace;
+                    line.Text = $"{N(e.Country)} refuses {N(e.Other)}'s term";
+                    break;
+                case ReplayEventKind.Treaty:
+                    line.Category = ChronicleCategory.Peace;
+                    line.Text = $"{(e.Enforced ? "Enforced treaty" : "Treaty")} between {N(e.Country)} and {N(e.Other)}: {TermText(e.Term, e.Country, e.Other, N)}"
+                                + (e.Ceded.Count > 0 ? $" ({string.Join(", ", e.Ceded.Select(P))})" : "") + "; a truce";
+                    break;
+                case ReplayEventKind.Broken:
+                    line.Category = ChronicleCategory.War;
+                    line.Text = $"{N(e.Country)}'s realm is broken: its occupiers keep what they hold";
+                    break;
+                case ReplayEventKind.Stalemate:
+                    line.Category = ChronicleCategory.War;
+                    line.Text = "No province has changed hands for many turns: a stalemate ends the game";
+                    break;
                 case ReplayEventKind.Dev:
                     line.Category = ChronicleCategory.Story;
                     line.Text = "Dev menu: " + e.Text;
@@ -132,6 +190,26 @@ namespace GreyBoxStrategy.Replay
                     return null;
             }
             return line;
+        }
+
+        /// <summary>An army's name as the chronicle says it: "maren_host" is "Maren's host".</summary>
+        public static string Host(string armyId)
+        {
+            if (string.IsNullOrEmpty(armyId)) return "an army";
+            string general = armyId.EndsWith("_host") ? armyId.Substring(0, armyId.Length - 5) : armyId;
+            return char.ToUpperInvariant(general[0]) + general.Substring(1) + "'s host";
+        }
+
+        /// <summary>A treaty's term in words, from the proposer's side.</summary>
+        public static string TermText(string term, string from, string to, Func<string, string> name)
+        {
+            switch (term)
+            {
+                case Actions.OfferWhitePeace: return "white peace, all occupied land returned";
+                case Actions.DemandOccupied: return $"{name(to)} cedes what {name(from)} occupies";
+                case Actions.CedeOccupied: return $"{name(from)} cedes what {name(to)} occupies";
+                default: return term?.Replace('_', ' ') ?? "a term";
+            }
         }
 
         /// <summary>Newest first; only the countries and categories switched on.</summary>

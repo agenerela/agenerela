@@ -62,6 +62,28 @@ namespace GreyBoxStrategy.Realm
                     return $"loading a {size} {shape} world, seed {seed}, {countries} countries";
                 });
 
+            // ---- the writs turn ----
+            c.Add("writs", "writs classic|<small|medium|large|huge> [seed] [conquest|domination_75]", "watch stand-in rulers play the writs turn: armies as pieces, occupation, treaties",
+                a =>
+                {
+                    Need(a.Length >= 1, "classic, or a world size.");
+                    int seed = N(a, 1, 3);
+                    string victory = a.Length > 2 ? a[2] : GameSetup.ConquestPreset;
+                    Need(GameSetup.VictoryPresets.Contains(victory), "conquest or domination_75.");
+                    if (a[0] == "classic") { StartWritsWatch(seed, victory); return $"the writs turn on the Classic board, seed {seed}"; }
+                    var size = (MapSize)Enum.Parse(typeof(MapSize), a[0], true);
+                    StartGeneratedWatch(size, LandShape.Continent, seed, 0, true, victory);
+                    return $"the writs turn on a {size} world, seed {seed}";
+                });
+            c.Add("until", "until <event kind>", "play on and hold before the next event of a kind: Battle, March, Occupy, Treaty, TermOffered...", a => { Need(a.Length == 1, "Name a kind."); RunUntil(a[0]); return "playing until " + a[0]; });
+            c.Add("battle-report", "battle-report", "open the report of the last battle played", _ =>
+            {
+                var e = played.LastOrDefault(x => x.Kind == ReplayEventKind.Battle);
+                if (e == null) return "No battle played yet.";
+                ui.ShowBattle(e);
+                return $"turn {e.Turn}: {e.Text}";
+            });
+
             // ---- time ----
             c.Add("turn", "turn <n>", "jump to turn n without animating the turns before it", a => { SkipToTurn(N(a, 0, 1)); return $"jumping to turn {N(a, 0, 1)}"; });
             c.Add("step", "step", "land the next event", _ => { playing = false; stepOnce = true; ui.SetPlaying(false, speed); return Position; });
@@ -75,7 +97,8 @@ namespace GreyBoxStrategy.Realm
             foreach (string name in DevEdits.Names)
                 c.Add(name, EditUsage(name), "dev edit, applied at the start of the next turn (rule games)", a =>
                 {
-                    if (rule == null) return "State edits need a rule game (scripted-rule kesh): a replay cannot change, and a watch game runs on the table runner with no hook between turns.";
+                    if (rule == null && game != null && game.Writs && scripted != null) return WritsEdit(name + " " + string.Join(" ", a));
+                    if (rule == null) return "State edits need a rule game (scripted-rule kesh) or a writs game with stand-in rulers: a replay cannot change, and a watch game runs on the table runner with no hook between turns.";
                     string command = name + " " + string.Join(" ", a);
                     string why = rule.QueueDev(command);
                     return why ?? $"queued for turn {rule.Game.NextTurn}: {command}";
@@ -164,6 +187,13 @@ namespace GreyBoxStrategy.Realm
                 case "owner": return "owner <province> <country|neutral>";
                 case "war": case "peace": return name + " <country> <country>";
                 case "eliminate": return "eliminate <country>";
+                case "spawn": return "spawn <country> <province> <soldiers>";
+                case "march": return "march <army> <province>";
+                case "battle": return "battle <army> <enemy army>";
+                case "occupy": return "occupy <province> <country>";
+                case "free": return "free <province>";
+                case "warscore": return "warscore <country> <country> =<-20..20>";
+                case "treaty": return "treaty <country> <offer_white_peace|demand_occupied|cede_occupied> <country>";
                 default: return "event <template> <target>";
             }
         }

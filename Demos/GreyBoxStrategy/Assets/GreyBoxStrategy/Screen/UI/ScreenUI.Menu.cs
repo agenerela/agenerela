@@ -20,6 +20,10 @@ namespace GreyBoxStrategy.Realm
         public LandShape Shape = LandShape.Continent;
         /// <summary>"off", or a storyteller preset's name (<see cref="StorytellerSettings.Presets"/>).</summary>
         public string Storyteller = "off";
+        /// <summary>Rules v2's writs turn: armies as pieces, occupation and treaties (R1). The one-move game stays the default.</summary>
+        public bool Writs;
+        /// <summary>The writs game's victory preset: <see cref="GameSetup.ConquestPreset"/> or <see cref="GameSetup.DominationPreset"/>.</summary>
+        public string Victory = GameSetup.ConquestPreset;
     }
 
     /// <summary>What the settings page needs to know about the screen it runs on.</summary>
@@ -149,6 +153,23 @@ namespace GreyBoxStrategy.Realm
             card.Add(Steps("World", new[] { "Classic, painted", "Generated, drawn" }, choice.Generated ? 1 : 0, i => World(i == 1)));
             card.Add(sizeRow); card.Add(shapeRow);
             World(choice.Generated);
+
+            card.Add(Section2("THE TURN", "rules v2: armies on the map, occupation, treaties"));
+            var victoryRow = Steps("Victory", new[] { "Conquest, the last realm standing", "75% of all provinces" },
+                choice.Victory == GameSetup.DominationPreset ? 1 : 0, i => choice.Victory = i == 1 ? GameSetup.DominationPreset : GameSetup.ConquestPreset);
+            var turnNote = new Label(); turnNote.AddToClassList("src"); turnNote.style.whiteSpace = WhiteSpace.Normal;
+            void Turn(bool writs)
+            {
+                choice.Writs = writs;
+                victoryRow.SetEnabled(writs);
+                turnNote.text = writs
+                    ? "Writs: each ruler gives a few orders a turn, to its court and to armies awaiting them; armies march, fight and occupy; land changes hands by treaty. Scripted rulers play it, you watch (rule mode on it comes next)."
+                    : "One move: each ruler makes one move a turn, as every measured game so far.";
+            }
+            card.Add(Steps("Turn", new[] { "One move", "Writs and armies" }, choice.Writs ? 1 : 0, i => Turn(i == 1)));
+            card.Add(victoryRow);
+            card.Add(turnNote);
+            Turn(choice.Writs);
 
             card.Add(Section2("COMING", "not in the game yet"));
             card.Add(Coming("Persona mix", "Which personas rule, and how hard they play"));

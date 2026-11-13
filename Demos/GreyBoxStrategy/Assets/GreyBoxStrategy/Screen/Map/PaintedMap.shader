@@ -12,7 +12,9 @@
 //   _EdgeTex   distance to the nearest border, 16 per pixel (bilinear)
 //   _StateTex  one column per province (at least 32), 4 rows: row 0 owner colour + owner slot, row 1 the
 //              colour it had before a capture, row 2 (front, fall, capturing, selected),
-//              row 3 (reach highlight, dim, 1 - wash strength for the map mode, -)
+//              row 3 (reach highlight, dim, 1 - wash strength for the map mode, hatch thickening),
+//              row 4 occupier colour + hatching amount, row 5 (sweep centre u, v, sweep angle / 2pi, 1 = drawn in
+//              by a sweep from that side, 0 = lifting from the edges inward): the writs turn's occupation
 //   _SpreadTex distance from the attacker's border inside the province being captured, 0..1
 Shader "GreyBoxStrategy/PaintedMap"
 {
@@ -27,6 +29,7 @@ Shader "GreyBoxStrategy/PaintedMap"
         _Engraved ("Engraved style", Float) = 0
         _EdgeFade ("Fade into the open sea at the edge (uv)", Float) = 0.04
         _IdWide ("Province ids are 16-bit (a generated world)", Float) = 0
+        _HatchReach ("A province's reach in uv, for the hatching's sweep", Float) = 0.09
     }
     SubShader
     {
@@ -52,6 +55,7 @@ Shader "GreyBoxStrategy/PaintedMap"
             float _Engraved;
             float _EdgeFade;
             float _IdWide;
+            float _HatchReach;
 
             struct Attributes { float4 positionOS : POSITION; float2 uv : TEXCOORD0; };
             struct Varyings { float4 positionCS : SV_POSITION; float2 uv : TEXCOORD0; };
@@ -173,6 +177,35 @@ Shader "GreyBoxStrategy/PaintedMap"
 
                     colour = lerp(painting, ColorBlend(painting, tint), tintA);
                     colour = lerp(colour, ink, inkA);
+
+                    // Occupation: the owner's wash stays, the occupier's colour goes over it as inked
+                    // diagonal hatching, a pattern rather than only a colour. Drawn in from the side the
+                    // army came from; lifted from the edges inward; thickened into a wash by a treaty.
+                    float4 occ = State(id, 4);
+                    if (occ.a > 0.003)
+                    {
+                        float4 sw = State(id, 5);
+                        float amount = occ.a, thick = extra.a;
+                        float shown;
+                        if (sw.a > 0.5)
+                        {
+                            float ang = sw.b * 6.2831853;
+                            float2 d = (i.uv - sw.rg) * float2(_IdTex_TexelSize.z / _IdTex_TexelSize.w, 1);
+                            float t = 0.5 - dot(d, float2(cos(ang), sin(ang))) / (2.2 * _HatchReach);
+                            shown = step(t + (n - 0.5) * 0.05, amount * 1.1);
+                        }
+                        else shown = step(1 - amount, saturate(edgePx / 10) + 0.02);
+                        float period = 9, f = frac((px.x - px.y) / period);
+                        float width = lerp(0.42, 1.02, thick);
+                        float band = step(f, width);
+                        // Each stroke: a dark ink edge on both sides, the occupier's colour, laid on thick.
+                        float edgeW = 0.11;
+                        float edge = band * (1 - step(edgeW, f)) + band * step(width - edgeW, f) * (1 - step(1, width));
+                        float3 occColour = ToLinear(occ.rgb);
+                        float a = shown * band * (0.85 + 0.15 * n);
+                        colour = lerp(colour, lerp(ColorBlend(colour, occColour), occColour, 0.55), a * 0.92);
+                        colour = lerp(colour, float3(0.006, 0.004, 0.002), shown * edge * 0.85 * (1 - thick));
+                    }
 
                     // Ink lines: heavy between owners (with a gilt or red-ink edge), thin inside a country.
                     float ring = CountryBorder(i.uv, id);

@@ -207,7 +207,7 @@ namespace GreyBoxStrategy.Realm
             var rank = CountryIds.OrderByDescending(id => s.ProvinceCount(id)).ToList();
             Section("STANDING", $"{WinAt} wins", rank.Select(id => BarRow(id, s.ProvinceCount(id), WinAt, $"{CountryLook.NameOf(id)}: {s.ProvinceCount(id)} provinces, {Math.Max(0, WinAt - s.ProvinceCount(id))} to win")));
             var wars = s.Relations.Where(r => r.Kind == "war").ToList();
-            Section("WARS", wars.Count.ToString(), wars.Select(r => PairRow(r.A, r.B, IconKind.War, r.Since > 0 ? $"since t{r.Since}" : "", "bad")));
+            Section("WARS", wars.Count.ToString(), wars.Select(r => PairRow(r.A, r.B, IconKind.War, Writs ? $"{s.WarScore(r.A, r.B):+0;-0;0}" : r.Since > 0 ? $"since t{r.Since}" : "", "bad")));
             var truces = s.Relations.Where(r => r.Kind == "truce").ToList();
             Section("TRUCES", truces.Count.ToString(), truces.Select(r => PairRow(r.A, r.B, IconKind.Truce, $"{r.TruceTurnsLeft} left", "warn")));
             int max = Math.Max(1, s.Countries.Values.Max(c => c.Army));
