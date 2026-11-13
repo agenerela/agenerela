@@ -1009,6 +1009,75 @@ its ruler read about a fortune.
 The screen's replay (`ReplayBuilder`) does not know storyteller events: a storyteller game's forts and
 armies would not rebuild. That is the screen's to add when it wants one.
 
+### Stage S2: dilemmas, events on many, tales, game-aware stories (12 November)
+
+What the lead asked for after reading S1's events: events that ask a ruler to decide, events that strike
+everyone, stories over several turns, stories that know what happened, and places with a character
+of their own. The design, with the alternatives it chose between, is the research page's ["Stage S2:
+design"](../../docs/demos/painted-realm-research.md#stage-s2-design-12-november). Built in the demo, with
+no framework change. **Every piece is a modifier on `+storyteller`, off in `default`**, and with every
+piece off the storyteller is S1's exactly (a test holds that):
+
+| Modifier | What it adds |
+|---|---|
+| `+choices` | Six dilemmas (`sellswords`, `petitioners`, `relic`, `muster`, `engineers`, `fever_camps`), two or three options each, every option an effect the game applies |
+| `+multi` | A group event reaches the members the fairness rules allow (open when two are) and records who was spared; a group dilemma gives each member its own choice |
+| `+chains-free` | Any recent event is a tale the storyteller may continue (an effect on `tale_<n>` strikes its subject again) or close (`end_tale`) |
+| `+chains-skeleton` | Four tales the game plans (`begin_pretender`, `begin_deep_vein`, `begin_fever`, `begin_long_winter`), each stage prescribed, the next one chosen by what the ruler chose |
+| `+history` | A "Recent happenings" line from the game's reports, and the story check against invented battles |
+| `+traits` | A terrain, a landmark and a resource for every province, in its description; `rich_vein`, `flood` and `pilgrims` need one |
+| `+title-call` | The statement is the story alone; a second short call (the scribe) gives the title; "told so far" names template and target only |
+| `+preset-<name>` | `even_hand`, `underdog`, `cruel_fate`, `quiet_years`, `saga` (`StorytellerSettings.Presets`) |
+| `+s2` | Every piece but the chains, on `even_hand` |
+
+**Effects are data.** S1's eight templates keep their code; every new one is `EffectPart`s (gold,
+income, soldiers lost or gained, stability, a fort in the event's province) whose amounts the game
+sets (`EventEffects.Plan`) and whose applicability it checks (`EventEffects.WhyNot`). Nothing names a
+province or a country: dilemmas, skeletons, traits and presets carry over to a generated map.
+
+**The game deals each turn.** In the first smoke games the 4B, offered dilemmas on 40% of turns and
+tales on 30%, chose one dilemma in 28 events and began no tale. So each turn is dealt one kind from the
+preset's chances (`EventRules.KindOfTurn`): a **tale's** turn (only beginnings and continuations of
+tales are open), else a **dilemma's** (only dilemmas), else an **ordinary** one. A tale already open may
+go on in any turn. On `even_hand`, 15% of turns are a tale's and 25% a dilemma's when one is open.
+
+**A dilemma, step by step.** The storyteller picks `sellswords` on `valen` and writes the story. The
+game plans each option for valen and asks it, between turns, in a round of its own (`Moment.Choice`):
+the story and *"Our choice: hire_sellswords, hire them: pay 30 gold, 14 soldiers join our army;
+send_sellswords_away, send them away: nothing changes."* among its facts, the options as its only
+actions (registered on the seat with `+choices`, open only on that choice call). The answer lands at
+the next upkeep with the event: *"Event "The Sellswords": we chose to hire them: pay 30 gold, 14
+soldiers join our army."* A scripted seat takes the default, a random seat any option, an unanswered
+one the default. A dilemma counts as a gift when every option gains, a blow when every option costs,
+otherwise neither, and is open only when every option can apply.
+
+**Tales.** The game holds each chain (`Chain`: subject, events, what was chosen, status). An open one
+is a target of category `tale`, described with what happened so far (*"the tale "The Shadowed
+Pretender" of valen: turn 17 pretender, valen chose defy_pretender; next: unrest"*). Rules for both
+modes: at most two open; one not continued for three turns, or whose subject is out, is abandoned; at
+most six events, and only one tale a game may reach four.
+
+**The history check.** A sentence with a verb of capture or battle that names a province nobody has
+fought over, or two countries that never fought, has its story replaced (`replaced: invented: ...`).
+It cannot check a claim with no name in it, a motive, a count of the dead, or what an earlier story said.
+
+**What the screen can use** (plain C#, `Sim/`): `Game.PendingChoices` (each `EventChoice`: country,
+title, story, options with the game's effect line, default) and `Game.Choose(country, option)` for a
+person's seat, to be called before the next `BeginTurn`; `EventRecord.Choices`, `ChosenBy`, `ChainId`
+and `ChainStage`; `Game.Chains` to follow a tale; `World.Traits` for a province's card;
+`StorytellerSettings.Presets` for the menu.
+
+**Run it** as S1's A/B, one Unity run per arm and block (the lock is held for one arm's five games):
+
+```bash
+Unity.exe -batchmode -nographics -projectPath Demos/GreyBoxStrategy -executeMethod GreyBoxStrategy.Editor.StrategyTableMenu.RunInterleavedFromCommandLine -strategyTable personas -strategyModel qwen3.5:4b -strategyArms "default+storyteller+s2+chains-free" -strategyArmNames "s2-free" -strategyGames 5 -strategySeed 6 -strategyIndex 5 -strategyBlock 5 -strategyOut <folder> -logFile run.log
+```
+
+`-strategyIndex` is the series index of the first seed, so a block seats everyone as the whole series
+would. With chains on, an arm's folder also gets `chains.csv`; with choices, `choices.csv`.
+
+<!-- S2 RESULTS -->
+
 ## What the framework lacks for this game
 
 Checked against #216 on 10 November 2026, from building stage 1, reading the code on `test`, and
