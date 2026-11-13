@@ -491,7 +491,7 @@ a province id map baked from it. A generated world has no painting, so it is dra
 
 **One source, any resolution.** The generator's output is vector: each province a polygon (from
 the cells, simplified, its edges subdivided with seeded midpoint noise, the "noisy edges" technique,
-[sources](#sources)), the coast, ridges, rivers if added later. At load the screen **rasterises the
+[sources](#sources)), the coast, ridges and rivers (R2's generator now makes rivers, see its follow-up below). At load the screen **rasterises the
 province id map at the size the display needs** (2048 wide at 1080 p, 4096 at 4K) on the CPU, so it
 is sharp at any size. The existing shader's inputs stay as they are: the id map, the edge and
 distance fields baked from it, and the state texture, which grows from today's fixed 32 columns
