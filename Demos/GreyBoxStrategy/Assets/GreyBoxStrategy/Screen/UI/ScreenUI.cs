@@ -90,6 +90,9 @@ namespace GreyBoxStrategy.Realm
             var chronicle = Panel("CHRONICLE", "chronicle");
             var quotes = new Button(() => { showQuotes = !showQuotes; RenderChronicle(null); }) { text = "“", tooltip = "Show or hide the rulers' words" };
             quotes.AddToClassList("tbtn");
+            var tales = new Button(() => ToggleTales()) { text = "Tales", tooltip = "The storyteller's tales, each followed from its start to its end" };
+            tales.AddToClassList("tbtn"); tales.AddToClassList("tales-button"); tales.style.width = StyleKeyword.Auto;
+            chronicle.Q(className: "panel-head").Add(tales);
             chronicle.Q(className: "panel-head").Add(quotes);
             filters = new VisualElement(); filters.AddToClassList("filters"); chronicle.Add(filters);
             chronicleBody = new ScrollView(); chronicleBody.style.flexGrow = 1; chronicle.Add(chronicleBody);
@@ -273,7 +276,6 @@ namespace GreyBoxStrategy.Realm
             }
             foreach (ChronicleCategory c in Enum.GetValues(typeof(ChronicleCategory)))
             {
-                if (c == ChronicleCategory.Story) continue; // room for the storyteller, not yet in the game
                 var chip = new VisualElement(); chip.AddToClassList("chip");
                 chip.EnableInClassList("off", !categoryFilter.Contains(c));
                 chip.Add(new Label(c.ToString()));
@@ -299,9 +301,12 @@ namespace GreyBoxStrategy.Realm
             {
                 if (l.Turn != turn) { turn = l.Turn; var h = new Label($"TURN {turn}"); h.AddToClassList("lg-turn"); chronicleBody.Add(h); }
                 var row = new VisualElement(); row.AddToClassList("lg");
-                row.tooltip = l.Event.Decision != null ? "Click: find it on the map and open the decision" : "Click: find it on the map";
+                bool told = l.Event.Kind == ReplayEventKind.Story;
+                row.tooltip = told ? "Click: open the event" : l.Event.Decision != null ? "Click: find it on the map and open the decision" : "Click: find it on the map";
                 row.RegisterCallback<ClickEvent>(_ => LinePressed?.Invoke(l));
-                row.Add(new Crest(CountryLook.Of(l.Country), 16));
+                // The storyteller's events carry its crest, not the country they struck.
+                row.Add(new Crest(told ? CountryLook.Storyteller : CountryLook.Of(l.Country), 16));
+                if (told) row.AddToClassList("lg-tale");
                 var body = new VisualElement(); body.AddToClassList("lg-body");
                 var t = new Label(l.Text); t.AddToClassList("lg-text"); body.Add(t);
                 if (showQuotes && !string.IsNullOrEmpty(l.Quote)) { var q = new Label($"“{l.Quote}”"); q.AddToClassList("lg-quote"); body.Add(q); }

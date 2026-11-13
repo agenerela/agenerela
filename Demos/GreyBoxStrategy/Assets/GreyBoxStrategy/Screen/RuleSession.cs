@@ -38,7 +38,7 @@ namespace GreyBoxStrategy.Realm
             Awaitable Release();
         }
 
-        public enum Waiting { Nothing, Card, Orders, Envoy, Models }
+        public enum Waiting { Nothing, Card, Orders, Envoy, Models, Storyteller, Choice }
 
         /// <summary>How long one round of the rulers' decisions may take before the game stops and says so.</summary>
         public TimeSpan RoundTimeout { get; set; } = TimeSpan.FromSeconds(150);
@@ -56,6 +56,9 @@ namespace GreyBoxStrategy.Realm
         private readonly List<string> devQueue = new List<string>();
         private readonly List<DevEdit> devApplied = new List<DevEdit>();
         private DecisionLog log;
+        private readonly string arm;
+        private readonly StoryRules story;
+        private Storyteller teller;
 
         public RuleSession(string you, string model, string arm, int seed, string logPath, Func<string, World, ILLMProvider> providerFor, ICardLock cardLock = null)
         {
@@ -69,6 +72,14 @@ namespace GreyBoxStrategy.Realm
             var map = MapDefinition.Standard();
             if (map.Countries.All(c => c.Id != you)) throw new ArgumentException($"No country '{you}'.", nameof(you));
             Game = new Game(seed, map);
+            this.arm = arm;
+            // A storyteller game: its rules from the arm, and no random table beside it.
+            if (table.Options.Storyteller)
+            {
+                story = table.Options.StoryRules();
+                Game.EventTable = false;
+                Game.Story = story;
+            }
             for (int i = 0; i < map.Countries.Count; i++)
             {
                 string id = map.Countries[i].Id;
@@ -97,6 +108,14 @@ namespace GreyBoxStrategy.Realm
         public CountryRequest Orders { get; private set; }
         /// <summary>Your envoy request while a peace offer waits for your answer.</summary>
         public CountryRequest Offer { get; private set; }
+        /// <summary>The storyteller's dilemma waiting for your choice, before the upkeep it lands at; null otherwise.</summary>
+        public EventChoice Choice { get; private set; }
+        /// <summary>The request behind <see cref="Choice"/>: its legal moves are the options.</summary>
+        public CountryRequest ChoiceRequest { get; private set; }
+        /// <summary>True when the game has a storyteller.</summary>
+        public bool HasStoryteller => story != null;
+        /// <summary>The storyteller, once the game runs; null without one.</summary>
+        public Storyteller Teller => teller;
         /// <summary>What the offering ruler said with its offer.</summary>
         public string OfferStatement { get; private set; }
         /// <summary>True while the model seats are deciding; they decide while you choose, so it can turn false before your order is in.</summary>
@@ -150,6 +169,16 @@ namespace GreyBoxStrategy.Realm
             p.SetResult(new Move(accept ? Actions.AcceptPeace : Actions.RefusePeace));
         }
 
+        /// <summary>Your answer to the storyteller's dilemma: one of <see cref="Choice"/>'s options.</summary>
+        public void Choose(string optionId)
+        {
+            if (WaitingFor != Waiting.Choice || ChoiceRequest == null) throw new InvalidOperationException("No choice waits for your answer.");
+            var move = ChoiceRequest.Legal.FirstOrDefault(m => m.Action == optionId)
+                       ?? throw new ArgumentException($"{optionId} is not one of the options: {string.Join(", ", ChoiceRequest.Legal.Select(m => m.Action))}.");
+            var p = pending; pending = null;
+            p.SetResult(move);
+        }
+
         public void Stop()
         {
             cancel.Cancel();
@@ -176,6 +205,12 @@ namespace GreyBoxStrategy.Realm
                     var seat = new CountryAgent(Game.World, id, provider, table.Options, table.PersonaFor(i, 0)) { Seed = Seed };
                     seats[id] = seat;
                     Game.Gates[id] = seat;
+                }
+                // The storyteller tells on the session's model, through the same provider and queue.
+                if (story != null)
+                {
+                    if (!providers.TryGetValue(Model, out var tellerProvider)) providers[Model] = tellerProvider = providerFor(Model, Game.World);
+                    teller = new Storyteller(Game, tellerProvider, table.Options);
                 }
 
                 if (cardLock != null)
@@ -223,8 +258,14 @@ namespace GreyBoxStrategy.Realm
                 else Debug.LogWarning($"Painted Realm: dev edit '{command}' did not apply: {why}");
             }
             devQueue.Clear();
+            if (story != null)
+            {
+                // The storyteller decides on the state the last turn left, unless the dev menu set this upkeep's event.
+                if (!devApplied.Any(d => d.Turn == Game.NextTurn && DevEdits.QueuesEvent(d.Command))) await Tell();
+                if (Game.PendingChoices.Count > 0) await Choices(rounds);
+            }
             var council = Game.BeginTurn();
-            DevEdits.AfterBeginTurn(Game);
+            if (story == null) DevEdits.AfterBeginTurn(Game);
             int turn = Game.World.Turn;
             var mine = council.FirstOrDefault(r => r.CountryId == You);
 
@@ -268,6 +309,48 @@ namespace GreyBoxStrategy.Realm
             foreach (var seat in seats.Values) seat.EndTurn();
             WaitingFor = Waiting.Nothing;
             Resolved++;
+        }
+
+        // The storyteller's call, with the rulers' timeout: it never sits silent either.
+        private async Awaitable Tell()
+        {
+            WaitingFor = Waiting.Storyteller;
+            WaitingSince = DateTime.UtcNow;
+            using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancel.Token))
+            using (OnMainThreadAfter(RoundTimeout, timeout))
+            {
+                try { await teller.TellAsync(timeout.Token); }
+                catch (OperationCanceledException) when (!cancel.IsCancellationRequested)
+                {
+                    throw new TimeoutException($"The storyteller did not answer within {RoundTimeout.TotalSeconds:0} seconds before turn {Game.NextTurn}. " +
+                        "The server may be busy with another client's requests, or unreachable. Go back to the menu and try again when the card is free.");
+                }
+            }
+            WaitingFor = Waiting.Nothing;
+        }
+
+        // A dilemma: the model seats it reaches choose in a round of their own while you choose, before the upkeep.
+        private async Awaitable Choices(List<DecisionRound> rounds)
+        {
+            int turn = Game.NextTurn;
+            var asks = Game.ChoiceRequests();
+            var theirs = asks.Where(r => seats.ContainsKey(r.CountryId)).ToList();
+            ModelsThinking = theirs.Count > 0;
+            if (ModelsThinking) WaitingSince = DateTime.UtcNow;
+            var models = Decide(theirs, $"seed-{Seed}-turn-{turn}-choices", rounds);
+            var mine = asks.FirstOrDefault(r => r.CountryId == You);
+            if (mine != null)
+            {
+                var choice = Game.PendingChoices.First(c => c.Country == You && c.Chosen == null);
+                var move = await Ask(Waiting.Choice, () => { Choice = choice; ChoiceRequest = mine; });
+                Choice = null; ChoiceRequest = null;
+                string why = Game.Choose(You, move.Action, "person");
+                if (why != null) Debug.LogWarning("Painted Realm: your choice did not land: " + why);
+                Record(mine, move);
+            }
+            WaitingFor = Waiting.Models;
+            Game.SubmitChoices(await models);
+            WaitingFor = Waiting.Nothing;
         }
 
         private async Awaitable<Move> Ask(Waiting what, Action show)
@@ -343,13 +426,13 @@ namespace GreyBoxStrategy.Realm
 
         private void Record(CountryRequest request, Move move)
         {
-            bool envoy = request.Moment == Moment.Envoy;
+            string moment = request.Moment == Moment.Envoy ? "envoys" : request.Moment == Moment.Choice ? RecordedDecision.ChoiceMoment : "council";
             yours.Add(new RecordedDecision
             {
                 AgentId = You,
                 Turn = request.Turn,
-                Moment = envoy ? "envoys" : "council",
-                ChainId = $"seed-{Seed}-turn-{request.Turn}-{(envoy ? "envoys" : "council")}",
+                Moment = moment,
+                ChainId = $"seed-{Seed}-turn-{request.Turn}-{moment}",
                 Action = move.Action,
                 Target = move.Target ?? RecordedDecision.NoTarget,
                 ModelAction = move.Action,
@@ -379,6 +462,7 @@ namespace GreyBoxStrategy.Realm
             rec.Decisions.AddRange(yours);
             rec.DevEdits.AddRange(devApplied);
             rec.Dev = Dev;
+            if (story != null) rec.StoryArm = arm;
             return rec;
         }
 

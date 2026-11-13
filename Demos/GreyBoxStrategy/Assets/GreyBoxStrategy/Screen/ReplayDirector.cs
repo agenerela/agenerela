@@ -81,7 +81,7 @@ namespace GreyBoxStrategy.Realm
             {
                 started = true;
                 live.Begin();
-                game = ReplayBuilder.Build(Recording.FromDecisionLog(live.Lines(), live.Seed, live.Players), partial: true);
+                game = ReplayBuilder.Build(live.Recording(), partial: true);
             }
             else game = ReplayBuilder.Build(Recording.Parse(recording.text));
             if (!generated) { CountryLook.UseWorld(null); map.Build(); }
@@ -106,6 +106,7 @@ namespace GreyBoxStrategy.Realm
                 SpeedPressed = () => { speed = speed >= 4 ? 1 : speed * 2; ui.SetPlaying(playing, speed); },
                 LinePressed = l =>
                 {
+                    if (l.Event.Kind == ReplayEventKind.Story) { OpenEvent(l.Event); return; }
                     if (l.Event.ProvinceIndex >= 0) PanTo(l.Event.ProvinceIndex); else if (l.Country != null) PanTo(ui.CapitalIndex(l.Country));
                     if (CanInspect(l.Event)) ui.ShowCard(DecisionCard.From(l.Event));
                 },
@@ -122,6 +123,7 @@ namespace GreyBoxStrategy.Realm
             ui.DiplomacyPressed = ToggleDiplomacy;
             ui.DecisionPressed = e => { if (CanInspect(e)) ui.ShowCard(DecisionCard.From(e)); };
             ui.AddMenuButton(OpenPause);
+            WireStory();
             DevTools.Director = this;
             ApplyScale();
             ui.monoFont = UnityEngine.TextCore.Text.FontAsset.CreateFontAsset("Consolas", "Regular");
@@ -149,10 +151,10 @@ namespace GreyBoxStrategy.Realm
         }
 
         /// <summary>For the Unity CLI: the menu's live button.</summary>
-        public void TryLive(string model, int gameSeed) => StartCoroutine(StartLive(model, gameSeed));
+        public void TryLive(string model, int gameSeed, string arm = null, int turns = 0) => StartCoroutine(StartLive(model, gameSeed, arm, turns));
 
         /// <summary>The menu's second choice: checks the environment, the lock and the server, then follows a live game.</summary>
-        private IEnumerator StartLive(string model, int gameSeed)
+        private IEnumerator StartLive(string model, int gameSeed, string arm = null, int turns = 0)
         {
             if (started || live == null) yield break;
             string why = LiveGame.WhyNotNow();
@@ -162,11 +164,11 @@ namespace GreyBoxStrategy.Realm
             yield return Gateway.CheckServer(w => serverWhy = w);
             if (serverWhy != null) { ui.ShowMenuStatus(serverWhy); yield break; }
             started = true;
-            live.Configure(true, gameSeed, 0, model);
+            live.Configure(true, gameSeed, turns, model, arm ?? "default");
             live.Begin();
             if (live.Error != null) { ui.ShowMenuStatus(live.Error); started = false; yield break; }
             ui.Players = live.Players;
-            game = ReplayBuilder.Build(Recording.FromDecisionLog(live.Lines(), live.Seed, live.Players), partial: true);
+            game = ReplayBuilder.Build(live.Recording(), partial: true);
             ui.HideMenu();
             Show(game.Initial, null);
             StartCoroutine(Play());
@@ -417,7 +419,7 @@ namespace GreyBoxStrategy.Realm
         {
             if (rule != null) return RuleReadyTurns();
             if (live == null || !live.PlayLive) return game.Turns.Count;
-            game = ReplayBuilder.Build(Recording.FromDecisionLog(live.Lines(), live.Seed, live.Players), partial: true);
+            game = ReplayBuilder.Build(live.Recording(), partial: true);
             if (live.Error != null) ui.ShowNotice("The live game stopped: " + live.Error);
             if (live.Finished || game.Result != null) return game.Turns.Count;
             return Math.Max(0, game.Turns.Count - 1);
@@ -430,7 +432,9 @@ namespace GreyBoxStrategy.Realm
                 // Live: wait for the council, with the thinking indicator, until the turn has resolved.
                 while (rule != null && turnIndex >= ReadyTurns() && !rule.Finished)
                 {
-                    ui.SetTurn(turnIndex + 1, rule.WaitingFor == RuleSession.Waiting.Envoy ? "Envoys" : "Council");
+                    var waits = rule.WaitingFor;
+                    ui.SetTurn(turnIndex + 1, waits == RuleSession.Waiting.Envoy ? "Envoys" : waits == RuleSession.Waiting.Storyteller ? "Chronicler"
+                        : waits == RuleSession.Waiting.Choice ? "Your choice" : "Council");
                     RuleTick();
                     yield return new WaitForSeconds(0.2f);
                 }
@@ -517,6 +521,10 @@ namespace GreyBoxStrategy.Realm
 
                 case ReplayEventKind.Capture:
                     yield return Capture(e, line);
+                    break;
+
+                case ReplayEventKind.Story:
+                    yield return LandStory(e, line);
                     break;
 
                 case ReplayEventKind.AttackFailed:

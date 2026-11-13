@@ -289,3 +289,51 @@
 .dev-line { flex-grow: 1; margin: 1px; }
 .dev-line .unity-text-field__input { background-color: rgb(20, 24, 28); color: rgb(230, 230, 230); border-color: rgb(70, 90, 105); font-size: 12px; }
 .dev-mark { font-size: 11px; -unity-font-style: bold; padding: 2px 7px; margin-right: 10px; color: rgb(255, 255, 255); background-color: rgb(170, 40, 40); }
+
+/* ---- the storyteller: its own voice, parchment rather than the rulers' dark speech ---- */
+.tale-banner { background-color: rgba(226, 210, 168, 0.97); border-color: rgb(120, 86, 44); border-left-width: 1px; border-width: 2px; max-width: 360px; padding: 7px 12px 7px 8px; }
+.tale-who { color: rgb(110, 70, 30); font-size: 11px; letter-spacing: 1px; }
+.tale-line { color: rgb(46, 32, 18); font-size: 14px; }
+.tale-hit { color: rgb(110, 70, 30); font-size: 11px; margin-top: 3px; white-space: normal; }
+.lg-tale { background-color: rgba(201, 164, 90, 0.10); border-left-width: 2px; border-left-color: rgb(201, 164, 90); }
+.lg-tale .lg-quote { color: rgb(226, 206, 160); }
+.tbtn.wide { width: auto; height: auto; padding: 4px 8px; margin: 3px 0; -unity-text-align: middle-left; white-space: normal; }
+.tales-button { padding: 0 8px; margin-right: 4px; font-size: 11px; letter-spacing: 1px; }
+
+.event-card { left: 50%; top: 60px; width: 480px; max-height: 80%; translate: -50% 0; background-color: rgb(24, 19, 14); border-color: rgb(201, 164, 90); }
+.event-body { padding: 10px 14px 12px 14px; }
+.event-title { font-size: 20px; -unity-font-style: bold; color: rgb(240, 222, 178); white-space: normal; }
+.event-story { font-size: 15px; -unity-font-style: italic; color: rgb(226, 212, 180); white-space: normal; margin: 8px 0 6px 0; }
+.event-row { flex-direction: row; align-items: center; flex-wrap: wrap; margin: 3px 0; }
+.event-name { font-size: 13px; -unity-font-style: bold; margin: 0 8px 0 6px; color: rgb(234, 223, 198); }
+.event-chose { font-size: 12px; color: rgb(216, 192, 140); margin-right: 8px; white-space: normal; }
+.event-effect { font-size: 12px; color: rgb(194, 179, 147); white-space: normal; }
+.event-replaced { font-size: 12px; color: rgb(216, 162, 74); }
+
+.choice-veil { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(8, 6, 4, 0.72); align-items: center; justify-content: center; }
+.choice-card { position: relative; width: 560px; max-width: 92%; padding: 16px 18px; background-color: rgb(226, 210, 168); border-width: 3px; border-color: rgb(120, 86, 44); }
+.choice-card .event-title { color: rgb(46, 32, 18); font-size: 24px; }
+.choice-card .event-story { color: rgb(60, 42, 24); font-size: 16px; }
+.choice-card .src { color: rgb(110, 70, 30); }
+.choice-head { flex-direction: row; align-items: center; }
+.choice-kicker { font-size: 11px; -unity-font-style: bold; letter-spacing: 2px; color: rgb(140, 50, 30); }
+.choice-option { margin-top: 8px; padding: 9px 12px; border-width: 2px; border-color: rgba(120, 86, 44, 0.45); background-color: rgba(255, 248, 228, 0.55); }
+.choice-option:hover { border-color: rgb(120, 86, 44); background-color: rgba(255, 248, 228, 0.85); }
+.choice-option.pick { border-color: rgb(140, 50, 30); background-color: rgb(255, 246, 222); }
+.choice-label { font-size: 16px; -unity-font-style: bold; color: rgb(46, 32, 18); flex-grow: 1; }
+.choice-option .tag { color: rgb(110, 70, 30); border-color: rgba(120, 86, 44, 0.6); }
+.choice-effect { font-size: 13px; color: rgb(80, 60, 36); margin-top: 2px; white-space: normal; }
+.choice-effect.gain { color: rgb(46, 100, 40); }
+.choice-effect.cost { color: rgb(140, 50, 30); }
+.choice-go { min-width: 220px; }
+
+.tales { right: 8px; top: 50px; width: 400px; bottom: 8px; display: none; background-color: rgb(22, 18, 13); }
+.tales.on { display: flex; }
+.tale { padding: 10px 12px; border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.3); }
+.tale.focus { background-color: rgba(201, 164, 90, 0.10); }
+.tale-title { font-size: 16px; -unity-font-style: bold; color: rgb(240, 222, 178); flex-grow: 1; white-space: normal; }
+.tale-stage { margin: 6px 0 0 6px; padding-left: 8px; border-left-width: 2px; border-left-color: rgba(201, 164, 90, 0.5); }
+.tale-stage:hover { background-color: rgba(201, 164, 90, 0.08); }
+.tale-stage-title { font-size: 12px; -unity-font-style: bold; color: rgb(216, 192, 140); }
+.tale-story { font-size: 13px; -unity-font-style: italic; color: rgb(214, 200, 170); }
+.tale-end { font-size: 12px; -unity-font-style: italic; color: rgb(141, 127, 102); margin-top: 6px; }

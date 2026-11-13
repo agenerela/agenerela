@@ -27,9 +27,9 @@ namespace GreyBoxStrategy.Realm
         public string RuleStatus => rule == null ? "no rule game" : $"{rule.Status}, {rule.Resolved} turns resolved, playing turn {turnIndex + 1}, order {ScreenUI.Describe(ui.Chosen)}, log {rule.LogPath}";
 
         /// <summary>The menu's third choice, and the Unity CLI's: rule <paramref name="country"/> against four model rulers on the server.</summary>
-        public void TryRule(string country, string model, int gameSeed) => StartCoroutine(StartRule(country, model, gameSeed));
+        public void TryRule(string country, string model, int gameSeed, string arm = null) => StartCoroutine(StartRule(country, model, gameSeed, arm));
 
-        private IEnumerator StartRule(string country, string model, int gameSeed)
+        private IEnumerator StartRule(string country, string model, int gameSeed, string arm)
         {
             if (started) yield break;
             string why = Gateway.WhyNotSet();
@@ -40,7 +40,7 @@ namespace GreyBoxStrategy.Realm
             if (serverWhy != null) { ui.ShowMenuStatus(serverWhy); yield break; }
             model = string.IsNullOrWhiteSpace(model) ? "qwen3.5:4b" : model.Trim();
             ruleLock = new CardLock(model, $"rule game, {model} x4 with personas, seed {gameSeed}");
-            BeginRule(country, model, gameSeed, (m, w) => Gateway.Provider(m), ruleLock);
+            BeginRule(country, model, gameSeed, (m, w) => Gateway.Provider(m), ruleLock, arm);
         }
 
         /// <summary>
@@ -48,14 +48,14 @@ namespace GreyBoxStrategy.Realm
         /// <c>ScriptedProvider</c> that picks a move the game offers, at random, with a stock line.
         /// </summary>
         /// <param name="busyCardSeconds">For frames of the card's states: a stand-in lock "held by another session" for this long, then held by this game. No real lock is touched.</param>
-        public void StartRuleScripted(string country, int gameSeed, float busyCardSeconds = 0)
+        public void StartRuleScripted(string country, int gameSeed, float busyCardSeconds = 0, string arm = null)
         {
             var rng = new System.Random(gameSeed);
             World world = null;
             var provider = new ScriptedProvider { Callback = r => ScriptedRuler(r, rng, world) };
             provider.Otherwise(ScriptedReply.Decide("none", statement: "We wait."));
             var wrapped = DevProvider.Wrap(provider);
-            BeginRule(country, "scripted", gameSeed, (m, w) => { world = w; return wrapped; }, busyCardSeconds > 0 ? new StandInLock(busyCardSeconds) : null);
+            BeginRule(country, "scripted", gameSeed, (m, w) => { world = w; return wrapped; }, busyCardSeconds > 0 ? new StandInLock(busyCardSeconds) : null, arm);
             if (rule != null) rule.Dev = true;
         }
 
@@ -83,6 +83,10 @@ namespace GreyBoxStrategy.Realm
         internal static ScriptedReply ScriptedRuler(ScriptedRequest r, System.Random rng, World world)
         {
             if (r.IsRefusalLine) return ScriptedReply.Statement("We will not.");
+            // A storyteller game: the stand-in storyteller and scribe, and a ruler's answer to a dilemma.
+            if (r.AgentId == Recording.StorytellerId) return ScriptedStory.Tell(r, rng);
+            if (r.AgentId == Recording.ScribeId) return ScriptedStory.Title(rng);
+            if (ScriptedStory.IsChoiceCall(r)) return ScriptedStory.Choose(r, rng);
             if (r.OfferedActions.Contains(Actions.AcceptPeace))
                 return ScriptedReply.Decide(rng.NextDouble() < 0.6 ? Actions.AcceptPeace : Actions.RefusePeace, statement: "So be it.");
             var legal = world == null || r.AgentId == null ? null : Legality.CouncilMoves(world, r.AgentId).Where(m => m.Action != Actions.None).ToList();
@@ -94,12 +98,12 @@ namespace GreyBoxStrategy.Realm
             return ScriptedReply.Decide(pick.Action, pick.Target ?? TargetRegistry.NoTarget, StockLines[rng.Next(StockLines.Length)]);
         }
 
-        private void BeginRule(string country, string model, int gameSeed, Func<string, World, ILLMProvider> providerFor, RuleSession.ICardLock cardLock)
+        private void BeginRule(string country, string model, int gameSeed, Func<string, World, ILLMProvider> providerFor, RuleSession.ICardLock cardLock, string arm = null)
         {
             if (started) return;
             started = true;
             string path = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "Rule", $"seed-{gameSeed:D4}-{country}-{DateTime.Now:yyyyMMdd-HHmmss}.jsonl"));
-            rule = new RuleSession(country, model, "default", gameSeed, path, providerFor, cardLock);
+            rule = new RuleSession(country, model, arm ?? "default", gameSeed, path, providerFor, cardLock);
             Debug.Log($"Painted Realm: rule game, you rule {country}, seed {gameSeed}, {model} x4 with personas; decisions into {path}");
             RunRule();
 
@@ -200,7 +204,8 @@ namespace GreyBoxStrategy.Realm
             if (rule.Error != null) { ui.ShowNotice("The rule game stopped: " + rule.Error); return; }
             var w = rule.WaitingFor;
             string status;
-            if (w == RuleSession.Waiting.Card)
+            if (StoryTick(w, out string told)) status = told;
+            else if (w == RuleSession.Waiting.Card)
             {
                 ui.OrdersRequest = null;
                 status = $"Waiting for the RTX 5080, held by {rule.WaitingForCard ?? "someone"}. Waited {Clock(rule.WaitingSince)}. " +

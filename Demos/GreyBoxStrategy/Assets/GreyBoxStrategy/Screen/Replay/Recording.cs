@@ -71,6 +71,19 @@ namespace GreyBoxStrategy.Replay
         public JObject Raw;
 
         public bool IsEnvoy => Moment == "envoys";
+        /// <summary>The storyteller's own decision: the event it chose for <see cref="Turn"/>'s upkeep.</summary>
+        public bool IsStory => Moment == StoryMoment;
+        /// <summary>The scribe's decision: the title of the turn's event (<c>+title-call</c>).</summary>
+        public bool IsTitle => Moment == TitleMoment;
+        /// <summary>A ruler's answer to a dilemma, between turns, before <see cref="Turn"/>'s upkeep.</summary>
+        public bool IsChoice => Moment == ChoiceMoment;
+        /// <summary>Taken by the rules as a council or envoy move (the others are the storyteller's).</summary>
+        public bool IsMove => !IsStory && !IsTitle && !IsChoice;
+        public const string StoryMoment = "story";
+        public const string TitleMoment = "title";
+        public const string ChoiceMoment = "choices";
+        /// <summary>The framework's execution status of a storyteller decision whose event was queued.</summary>
+        public const string Done = "Done";
         public bool HasTarget => !string.IsNullOrEmpty(Target) && Target != NoTarget;
         public const string NoTarget = "no_target";
     }
@@ -88,6 +101,9 @@ namespace GreyBoxStrategy.Replay
     /// </summary>
     public sealed class Recording
     {
+        /// <summary>The storyteller's agent id, and its scribe's (<c>Agents/Storyteller.cs</c>).</summary>
+        public const string StorytellerId = "storyteller", ScribeId = "scribe";
+
         public int Seed;
         public string Title;
         public string Source;
@@ -97,6 +113,11 @@ namespace GreyBoxStrategy.Replay
         public List<DevEdit> DevEdits = new List<DevEdit>();
         /// <summary>True for a game the dev menu touched, or played with stand-in rulers: never a measured game.</summary>
         public bool Dev;
+        /// <summary>
+        /// The table arm when the game had a storyteller ("default+storyteller+s2+chains-skeleton"), or
+        /// null. The replay plays the storyteller's recorded events under the same rules (<see cref="StoryArms"/>).
+        /// </summary>
+        public string StoryArm;
 
         public static Recording Parse(string json)
         {
@@ -113,6 +134,7 @@ namespace GreyBoxStrategy.Replay
             foreach (var d in (JArray)root["decisions"])
                 rec.Decisions.Add(ParseDecision((JObject)d));
             rec.Dev = (bool?)root["dev"] ?? false;
+            rec.StoryArm = (string)root["storyArm"];
             if (root["devEdits"] is JArray edits)
                 foreach (var e in edits) rec.DevEdits.Add(new DevEdit { Turn = (int)e["turn"], Command = (string)e["command"] });
             return rec;
@@ -132,6 +154,7 @@ namespace GreyBoxStrategy.Replay
                 ["source"] = Source,
                 ["dev"] = Dev,
             };
+            if (StoryArm != null) root["storyArm"] = StoryArm;
             var players = new JObject();
             foreach (var kv in Players) players[kv.Key] = new JObject { ["model"] = kv.Value.Model, ["persona"] = kv.Value.Persona };
             root["players"] = players;
@@ -169,8 +192,13 @@ namespace GreyBoxStrategy.Replay
         /// <c>ArtSource/export_recording.py</c>. Each decision keeps its "Decided" record with the
         /// execution of its "Executed" one.
         /// </summary>
-        public static Recording FromDecisionLog(IEnumerable<string> lines, int seed, Dictionary<string, RecordedPlayer> players, string title = null)
+        public static Recording FromDecisionLog(IEnumerable<string> lines, int seed, Dictionary<string, RecordedPlayer> players, string title = null, string storyArm = null)
         {
+            // The storyteller and its scribe decide outside the rulers' rounds, so their lines carry no
+            // chain id: the storyteller's stimulus names the turn ("Turn 7. What happens?"), and the
+            // scribe titles the storyteller's last event.
+            var told = new System.Text.RegularExpressions.Regex(@"^Turn (\d+)\.");
+            int storyTurn = 0;
             var rx = new System.Text.RegularExpressions.Regex(@"^seed-(\d+)-turn-(\d+)-(\w+)");
             var decided = new List<JObject>();
             var executed = new Dictionary<string, JToken>(StringComparer.Ordinal);
@@ -179,6 +207,23 @@ namespace GreyBoxStrategy.Replay
                 if (string.IsNullOrWhiteSpace(line)) continue;
                 JObject o;
                 try { o = JObject.Parse(line); } catch (Newtonsoft.Json.JsonReaderException) { continue; } // a line still being written
+                string agent = (string)o["agentId"];
+                if (string.IsNullOrEmpty((string)o["chainId"]) && (agent == StorytellerId || agent == ScribeId))
+                {
+                    if (agent == StorytellerId)
+                    {
+                        var t = told.Match((string)o["stimulus"] ?? "");
+                        if (!t.Success) continue;
+                        storyTurn = int.Parse(t.Groups[1].Value);
+                    }
+                    if (storyTurn == 0) continue;
+                    o["turn"] = storyTurn;
+                    o["moment"] = agent == StorytellerId ? RecordedDecision.StoryMoment : RecordedDecision.TitleMoment;
+                    o["chainId"] = $"seed-{seed}-turn-{storyTurn}-{o["moment"]}";
+                    if ((string)o["stage"] == "Executed") executed[(string)o["chainId"] + "|" + agent] = o["execution"];
+                    else if ((string)o["stage"] == "Decided") decided.Add(o);
+                    continue;
+                }
                 var m = rx.Match((string)o["chainId"] ?? "");
                 if (!m.Success || int.Parse(m.Groups[1].Value) != seed) continue;
                 o["turn"] = int.Parse(m.Groups[2].Value);
@@ -187,7 +232,7 @@ namespace GreyBoxStrategy.Replay
                 if (stage == "Executed") executed[(string)o["chainId"] + "|" + (string)o["agentId"]] = o["execution"];
                 else if (stage == "Decided") decided.Add(o);
             }
-            var rec = new Recording { Seed = seed, Title = title ?? $"Live game, seed {seed}", Source = "live", Players = players };
+            var rec = new Recording { Seed = seed, Title = title ?? $"Live game, seed {seed}", Source = "live", Players = players, StoryArm = storyArm };
             foreach (var o in decided.OrderBy(o => (int)o["turn"]).ThenBy(o => (string)o["moment"] != "council").ThenBy(o => (long?)o["sequence"] ?? 0))
             {
                 if (executed.TryGetValue((string)o["chainId"] + "|" + (string)o["agentId"], out var ex)) o["execution"] = ex;

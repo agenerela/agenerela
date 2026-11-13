@@ -14,7 +14,7 @@ namespace GreyBoxStrategy.Replay
         Economy,
         Refused,
         Guard,
-        /// <summary>Room for the storyteller's events (research, decision 11); nothing produces it yet.</summary>
+        /// <summary>The storyteller's events, and the dev menu's changes.</summary>
         Story,
     }
 
@@ -102,6 +102,19 @@ namespace GreyBoxStrategy.Replay
                     int colon = e.Text.IndexOf(':');
                     line.Text = colon > 0 ? $"{N(e.Country)}: {e.Text.Substring(colon + 1).Trim()}" : e.Text;
                     break;
+                case ReplayEventKind.Story:
+                {
+                    // The chronicler's voice: the title, then who it struck and how, in the game's words; the story is the quote.
+                    var r = e.Story;
+                    var t = EventRules.Template(r.Template);
+                    string who = r.Hit.Count == 0 ? "" : string.Join(", ", r.Hit.Select(N));
+                    string what = t?.NewsVerb ?? r.Template.Replace('_', ' ');
+                    line.Category = ChronicleCategory.Story;
+                    line.Text = $"“{r.Title}”: {who} {what}{(r.Province != null ? " in " + P(r.Province) : "")}"
+                                + (r.Choices.Count > 0 ? $"; chose {string.Join(", ", r.Choices.Select(kv => $"{N(kv.Key)} {kv.Value.Replace('_', ' ')}"))}" : "");
+                    line.Quote = r.Story ?? "";
+                    break;
+                }
                 case ReplayEventKind.Dev:
                     line.Category = ChronicleCategory.Story;
                     line.Text = "Dev menu: " + e.Text;

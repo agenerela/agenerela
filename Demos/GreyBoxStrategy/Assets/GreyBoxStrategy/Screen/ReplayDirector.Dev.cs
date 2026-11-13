@@ -35,10 +35,18 @@ namespace GreyBoxStrategy.Realm
             c.Add("help", "help", "every command", _ => dev.Help());
 
             // ---- play without the card ----
-            c.Add("scripted-rule", "scripted-rule <country> [seed]", "rule a country against four stand-in rulers; no server, no card",
-                a => { Need(a.Length >= 1, "Name a country."); if (started) return "A game is running: Esc, then Main menu, first."; ui.HideMenu(); StartRuleScripted(a[0], N(a, 1, 7)); return $"rule game, {a[0]}, stand-in rulers"; });
-            c.Add("scripted-watch", "scripted-watch [seed]", "watch five stand-in rulers; no server, no card",
-                a => { if (started || live == null) return started ? "A game is running: Esc, then Main menu, first." : "No live component in the scene."; StartScriptedWatch(N(a, 0, 7)); return "watch game, stand-in rulers"; });
+            c.Add("scripted-rule", "scripted-rule <country> [seed] [storyteller preset]", "rule a country against four stand-in rulers, and a stand-in storyteller with a preset (even_hand, saga...); no server, no card",
+                a => { Need(a.Length >= 1, "Name a country."); if (started) return "A game is running: Esc, then Main menu, first."; string why = Preset(a, 2); if (why != null) return why;
+                       ui.HideMenu(); StartRuleScripted(a[0], N(a, 1, 7), 0, StoryArms.For(a.Length > 2 ? a[2] : null)); return $"rule game, {a[0]}, stand-in rulers{(a.Length > 2 ? ", storyteller " + a[2] : "")}"; });
+            c.Add("scripted-watch", "scripted-watch [seed] [storyteller preset]", "watch five stand-in rulers, and a stand-in storyteller with a preset; no server, no card",
+                a => { if (started || live == null) return started ? "A game is running: Esc, then Main menu, first." : "No live component in the scene."; string why = Preset(a, 1); if (why != null) return why;
+                       StartScriptedWatch(N(a, 0, 7), StoryArms.For(a.Length > 1 ? a[1] : null)); return "watch game, stand-in rulers"; });
+
+            // ---- the storyteller ----
+            c.Add("story-open", "story-open", "open the last storyteller event played", _ => OpenLastEvent());
+            c.Add("story-inspect", "story-inspect [title]", "the storyteller's decision behind the last event in the inspector; with title, the title call's", a => InspectLastStory(a.Length > 0));
+            c.Add("tales", "tales", "open or close the tales panel", _ => { ui.ToggleTales(); return ui.TalesOpen ? "tales open" : "tales closed"; });
+            c.Add("choose", "choose <option>", "answer the dilemma on the choice card (rule mode)", a => { Need(a.Length == 1, "Name an option."); return ChooseOption(a[0]); });
 
             c.Add("generated", "generated <small|medium|large|huge> [shape] [seed] [countries]",
                 "watch scripted rulers play a generated world, drawn as a chart; shapes continent, two_lands, inland_sea, peninsula, long_coast",
@@ -60,7 +68,7 @@ namespace GreyBoxStrategy.Realm
             c.Add("speed", "speed <x>", "playback speed, 0.25 to 32", a => { Need(a.Length == 1, "Give a speed."); speed = Mathf.Clamp(float.Parse(a[0], System.Globalization.CultureInfo.InvariantCulture), 0.25f, 32f); ui.SetPlaying(playing, speed); return $"speed {speed}×"; });
             c.Add("play", "play", "play", _ => { playing = true; ui.SetPlaying(true, speed); return "playing"; });
             c.Add("pause", "pause", "pause", _ => { Pause(); return "paused"; });
-            c.Add("autoplay", "autoplay on|off", "play to the end at 8×; in rule mode, hold every turn and refuse every envoy",
+            c.Add("autoplay", "autoplay on|off", "play to the end at 8×; in rule mode, hold every turn, refuse every envoy and take every dilemma's default",
                 a => { bool on = a.Length == 0 || a[0] == "on"; autoOrders = on && rule != null; if (on) { speed = Math.Max(speed, 8); playing = true; ui.SetPlaying(true, speed); } return on ? "autoplay on" : "autoplay off"; });
 
             // ---- state (rule games: they own the turn loop) ----
@@ -72,8 +80,8 @@ namespace GreyBoxStrategy.Realm
                     string why = rule.QueueDev(command);
                     return why ?? $"queued for turn {rule.Game.NextTurn}: {command}";
                 });
-            c.Add("events", "events", "the event templates the storyteller can use", _ =>
-                string.Join("\n", EventRules.Templates.Select(t => $"{t.Id} ({t.Takes}): {t.Description}")));
+            c.Add("events", "events", "every event template: the random table's, the storyteller's, its dilemmas and the tales it can begin", _ =>
+                string.Join("\n", EventRules.AllTemplates.Select(t => $"{t.Id} ({t.Takes}{(t.IsChoice ? ", a dilemma: " + string.Join(" / ", t.Options.Select(o => o.Id)) : "")}{(t.Skeleton != null ? ", begins a tale" : "")}): {t.Description}")));
             c.Add("fog", "fog off|on", "reveal everything, or restore what your court knows (rule mode)", a =>
             {
                 Need(a.Length == 1 && (a[0] == "on" || a[0] == "off"), "on or off.");
@@ -173,19 +181,23 @@ namespace GreyBoxStrategy.Realm
             if (rule != null) return rule.BuildRecording();
             if (live != null && live.PlayLive)
             {
-                var r = Recording.FromDecisionLog(live.Lines(), live.Seed, live.Players);
+                var r = live.Recording();
                 r.Dev = live.Dev;
                 return r;
             }
             return sourceRecording ?? (recording != null ? Recording.Parse(recording.text) : null);
         }
 
-        private void StartScriptedWatch(int seed)
+        private static string Preset(string[] a, int i) =>
+            a.Length <= i || a[i] == "off" || StorytellerSettings.Named(a[i]) != null ? null
+                : $"No storyteller preset '{a[i]}': off, {string.Join(", ", StorytellerSettings.Presets.Select(p => p.Name))}.";
+
+        private void StartScriptedWatch(int seed, string arm = null)
         {
             started = true;
-            live.BeginScripted(seed);
+            live.BeginScripted(seed, arm);
             ui.Players = live.Players;
-            game = ReplayBuilder.Build(Recording.FromDecisionLog(live.Lines(), live.Seed, live.Players), partial: true);
+            game = ReplayBuilder.Build(live.Recording(), partial: true);
             ui.HideMenu();
             Show(game.Initial, null);
             StartCoroutine(Play());
@@ -228,6 +240,7 @@ namespace GreyBoxStrategy.Realm
             {
                 if (rule.WaitingFor == RuleSession.Waiting.Orders && ui.OrdersRequest != null) { ui.Chosen = Move.Hold; EndTurn(); }
                 else if (rule.WaitingFor == RuleSession.Waiting.Envoy) AnswerOffer(false);
+                else if (rule.WaitingFor == RuleSession.Waiting.Choice && rule.Choice != null) ChooseOption(rule.Choice.DefaultOption);
             }
         }
     }

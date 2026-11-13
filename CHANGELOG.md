@@ -36,6 +36,17 @@ phase table and the open issues, not here.
   a moves line of what is offered, and the orders already given this turn. A fake model playing like
   the script plays exactly the scripted game through them. A `domination_75` victory preset sits beside
   conquest, which stays the default until the lead chooses.
+- **Painted Realm: the storyteller on screen** (#20). New game → Storyteller: off, or one of its
+  five presets, for watch live and rule games.
+  - Its events land as the chronicler's banner where they strike and as lines in the chronicle,
+    with its own crest.
+  - Each opens into an event card: who it struck and how, what each chose and said, and its tale.
+    From the card, the storyteller's decision and the title call open in the inspector.
+  - In rule mode, a dilemma that reaches you stops the turn behind a choice card that only a choice
+    closes.
+  - A Tales panel follows each tale from start to end.
+  - The dev menu fires any event, dilemma or tale.
+  - The replay rebuilds a storyteller game exactly from its recording.
 - **Painted Realm rules v2, R1b's first part: the writs turn's pace, battle reports, armies in snapshots**
   (#20). A Classic game with scripted rulers now takes 78 turns, down from 123; a medium world takes
   about 180 (median 152), down from 226. The levers: two march steps a turn over open ground, three writs, a weaker militia,
