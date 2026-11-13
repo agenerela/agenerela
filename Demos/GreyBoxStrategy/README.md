@@ -496,10 +496,10 @@ tune.
 | Classic, before (40 games) | 123 / 121 / 150 | 23 one left, 8 stalemate, 9 at the 150 cap | 49, ... | 30 |
 | **Classic, after** (40 games) | **78 / 80 / 106** | 39 one left, 1 stalemate | 18, 34, 57, 78 | 8 |
 | Medium, before (20 games, 150 cap) | 150 | 1 one left, 19 at the cap | | 41 |
-| **Medium, after** (20 games, 150 cap) | **141 / 150 / 150** | 7 one left, 13 at the cap | 25, 40, 55, 101, 123 | 13 |
+| **Medium, after** (20 games, 150 cap) | **141 / 150 / 150** | 10 one left, 10 at the cap | 22, 36, 55, 102, 132 | 12 |
 | Medium, before, no cap (12 games) | 226 / 217 / 292 | all one left | 46, 63, 106, 164, 215 | |
-| **Medium, after, no cap** (12 games) | **173 / 180 / 206** | all one left | 26, 44, 60, 117, 173 | |
-| For comparison, after, domination at 75% | Classic 63 / 58; medium 126 / 121 | | | |
+| **Medium, after, no cap** (12 games) | **178 / 152 / 213** | 10 one left, 1 stalemate, 1 still going at turn 500 | 23, 31, 55, 102, 148 | |
+| For comparison, after, domination at 75% | Classic 63 / 58; medium 144 / 118 | | | |
 
   What changed, every value a default of the writs turn only (today's game is untouched):
   - three writs, not two;
@@ -515,7 +515,8 @@ tune.
 
   Things that did not help: earlier demands (more truces, longer games); two wars at once; a realm that
   breaks when its capital falls (`GameRules.BreakWhenCapitalFalls`, off; realms keep an army to the end).
-  The last war of a medium world, between two large realms, is still long. Section 6.1's pressures
+  The medium rows "after" were measured on #277's new worlds, those "before" on R2's. The last war of a
+  medium world, between two large realms, is still long. Section 6.1's pressures
   (fear of the leader, war weariness, the status-quo offer) are meant to end it, and come with R7.
 - **Battle reports.** `TurnReport.BattleRecords` lists every battle:
   - the sides, armies and soldiers, and the militia or garrison;

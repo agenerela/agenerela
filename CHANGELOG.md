@@ -31,7 +31,7 @@ phase table and the open issues, not here.
 
 - **Painted Realm rules v2, R1b's first part: the writs turn's pace, battle reports, armies in snapshots**
   (#20). A Classic game with scripted rulers now takes 78 turns, down from 123; a medium world takes
-  173, down from 226. The levers: two march steps a turn over open ground, three writs, a weaker militia,
+  about 180 (median 152), down from 226. The levers: two march steps a turn over open ground, three writs, a weaker militia,
   shorter truces and stalemates, demands enforced at 80, and scripted rulers who fight wars out. Every
   battle is recorded with its terms and a sentence on why it went as it did (`TurnReport.BattleRecords`).
   Each turn's snapshot holds the armies and occupations, so any past turn can be shown.
