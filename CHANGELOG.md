@@ -40,6 +40,12 @@ phase table and the open issues, not here.
   - A Tales panel follows each tale from start to end.
   - The dev menu fires any event, dilemma or tale.
   - The replay rebuilds a storyteller game exactly from its recording.
+- **Painted Realm rules v2, R1b's first part: the writs turn's pace, battle reports, armies in snapshots**
+  (#20). A Classic game with scripted rulers now takes 78 turns, down from 123; a medium world takes
+  about 180 (median 152), down from 226. The levers: two march steps a turn over open ground, three writs, a weaker militia,
+  shorter truces and stalemates, demands enforced at 80, and scripted rulers who fight wars out. Every
+  battle is recorded with its terms and a sentence on why it went as it did (`TurnReport.BattleRecords`).
+  Each turn's snapshot holds the armies and occupations, so any past turn can be shown.
 - **Painted Realm's generated worlds look like land, not figures** (#20). Coasts have bays and
   headlands, inland seas are irregular, lobes are uneven, and no land meets the frame. Small scenery
   islands lie offshore. When a world's starts are unfair, the generator searches again on the same

@@ -47,11 +47,11 @@ namespace GreyBoxStrategy
             {
                 int score = WarScore.Of(w, me, enemy.Id);
                 int length = w.Turn - w.War(me, enemy.Id).StartedOnTurn;
-                if (score >= (Cautious(t) ? 15 : 25) || (length >= 12 && score > 0))
+                if (score >= t.DemandAtScore || (length >= t.StuckWarTurns * 4 / 5 && score > 0))
                     if (Legal(Actions.DemandOccupied, enemy.Id) is Move demand) return demand;
-                if (score <= (Cautious(t) ? -25 : -40))
+                if (score <= t.CedeAtScore)
                     if (Legal(Actions.CedeOccupied, enemy.Id) is Move cede) return cede;
-                if (score <= (Cautious(t) ? -10 : -25) || (length >= 15 && Math.Abs(score) < 10))
+                if (score <= t.WhitePeaceAtScore || (length >= t.StuckWarTurns && Math.Abs(score) < 10))
                     if (Legal(Actions.OfferWhitePeace, enemy.Id) is Move peace) return peace;
             }
 
@@ -99,8 +99,8 @@ namespace GreyBoxStrategy
             int score = WarScore.Of(w, r.CountryId, r.OfferedBy);
             bool yes;
             if (offer.Contains(Actions.CedeOccupied)) yes = true;
-            else if (offer.Contains(Actions.OfferWhitePeace)) yes = score <= (Cautious(t) ? 15 : 0);
-            else yes = score <= (Cautious(t) ? -25 : -40);
+            else if (offer.Contains(Actions.OfferWhitePeace)) yes = score <= t.AcceptWhitePeaceAtScore;
+            else yes = score <= t.AcceptDemandAtScore;
             return new Move(yes ? Actions.AcceptPeace : Actions.RefusePeace);
         }
 

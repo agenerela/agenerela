@@ -57,6 +57,50 @@ namespace GreyBoxStrategy
         public override string ToString() => $"{Id} ({Owner}, {Soldiers} at {Location}{(Marching ? ", marching to " + Destination : "")})";
     }
 
+    /// <summary>
+    /// One battle of the writs turn, every term of it: what the screen's battle report shows and the
+    /// chronicle tells (v2 3.4's report, with today's formula's terms until R3 adds unit types and generals).
+    /// </summary>
+    public sealed class BattleRecord
+    {
+        public int Turn;
+        /// <summary>The province fought in, or null for a border crossing (<see cref="Border"/>).</summary>
+        public string Province;
+        /// <summary>For a battle on a border: the two provinces, the attacker's side first.</summary>
+        public string[] Border;
+        public string Attacker;
+        /// <summary>The defending country, or null for a neutral garrison.</summary>
+        public string Defender;
+        /// <summary><c>army</c>, <c>militia</c> (a country's land with no army) or <c>garrison</c> (neutral land).</summary>
+        public string DefenderKind;
+        public List<string> AttackerArmies = new List<string>();
+        public List<string> DefenderArmies = new List<string>();
+        public int AttackerSoldiers;
+        /// <summary>The defending armies' soldiers plus <see cref="Militia"/>.</summary>
+        public int DefenderSoldiers;
+        /// <summary>The militia or garrison that fought, included in <see cref="DefenderSoldiers"/>.</summary>
+        public int Militia;
+        /// <summary>The province's terrain; null on a border. It has no effect on a battle until R3.</summary>
+        public string Terrain;
+        public int Forts;
+        /// <summary>The defence added by forts and by a capital, when the defender holds the province.</summary>
+        public int FortTerm;
+        public int CapitalTerm;
+        public double AttackRoll;
+        public double DefenceRoll;
+        public double AttackStrength;
+        public double DefenceStrength;
+        public int AttackerLost;
+        public int DefenderLost;
+        public bool AttackerWon;
+        /// <summary>The loser was beaten by more than <see cref="GameRules.RoutRatio"/> to 1, or had nowhere to go, and was destroyed.</summary>
+        public bool Routed;
+        /// <summary>Where each beaten army fell back to, by army id.</summary>
+        public Dictionary<string, string> Retreats = new Dictionary<string, string>();
+        /// <summary>One sentence: who won, and the three terms that weighed most (numbers, forts, the capital, the dice).</summary>
+        public string Why;
+    }
+
     /// <summary>One war's record of battles, for its war score (v2 5.1).</summary>
     public sealed class WarRecord
     {

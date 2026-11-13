@@ -430,7 +430,7 @@ beside today's: `GameSetup.Writs(seed)` (or `"turn": "writs"`) plays it, conques
 The default stays the one-move game, so every pinned series and recording is unchanged. Nothing asks a
 model yet (R1b); the scripted players and the random baseline play it.
 
-- **A turn.** Each ruler has writs: 2, plus 1 for every 8 provinces it owns, at most 5. The court is
+- **A turn.** Each ruler has writs: 2, plus 1 for every 8 provinces it owns, at most 5 (R1b, #281: three writs, not two; the R1b paragraph below gives the rest of the retune). The court is
   asked first. Then come the armies that are waiting for orders, the most urgent first (an enemy army
   beside them, then the largest), while writs are left beyond one kept for the court. Last, a second
   court order if a writ is left. Rounds of requests all see one snapshot:
@@ -443,7 +443,7 @@ model yet (R1b); the scripted players and the random baseline play it.
   (`ArmyId`, which a model seat will send as the correlation).
 - **Armies** (`Sim/Rules/Armies.cs`) stand in provinces, named for their general (`maren_host`). An
   order stands until it is done:
-  - `march` takes the shortest path, one step a turn, hills, marsh and mountains taking two;
+  - `march` takes the shortest path, one step a turn, hills, marsh and mountains taking two (R1b: two steps a turn over plains and forest where it meets nothing to fight);
   - `hold` lasts four turns.
 
   An army waits for orders when one of the wake conditions built here fires:
@@ -476,13 +476,13 @@ model yet (R1b); the scripted players and the random baseline play it.
   - The court may put three terms to an enemy:
     - `offer_white_peace`: everything returns;
     - `demand_occupied`: what we occupy becomes ours; this needs the war score to pay for it, and is
-      enforced without asking at 90;
+      enforced without asking at 90 (R1b: 80);
     - `cede_occupied`: what they occupy becomes theirs.
 
     The other side answers on the same snapshot, at most two a turn. A treaty ends the war in a 5-turn
-    truce.
+    truce (R1b: 3 turns).
   - A realm with every province occupied and no army is broken: its occupiers keep what they hold.
-  - A game where nothing changes hands for 20 turns ends as a stalemate.
+  - A game where nothing changes hands for 20 turns ends as a stalemate (R1b: 12 turns).
 
 **Simulated** (50 games a line-up on Classic, 20 on a medium generated world, scripted and random
 players, 12 November; no model):
@@ -497,6 +497,47 @@ players, 12 November; no model):
 On Classic a ruler is asked about 0.95 armies a turn, close to the page's estimate of 1.0. **A medium
 world rarely finishes within 150 turns**, so the game's length is the first thing R1's numbers have to
 tune.
+
+**R1b, first part: the writs turn's pace, battle reports, armies in snapshots** (12 November).
+
+- **Pace.** The writs turn played too long: 123 turns on Classic, and a medium world never finished
+  within 150. Measured with scripted players on the same seeds before and after:
+
+| Scripted games (mixed line-up) | Turns, mean / median / 90th | Ended | Countries out at turns | Treaties a game |
+|---|---|---|---|---:|
+| Classic, before (40 games) | 123 / 121 / 150 | 23 one left, 8 stalemate, 9 at the 150 cap | 49, ... | 30 |
+| **Classic, after** (40 games) | **78 / 80 / 106** | 39 one left, 1 stalemate | 18, 34, 57, 78 | 8 |
+| Medium, before (20 games, 150 cap) | 150 | 1 one left, 19 at the cap | | 41 |
+| **Medium, after** (20 games, 150 cap) | **141 / 150 / 150** | 10 one left, 10 at the cap | 22, 36, 55, 102, 132 | 12 |
+| Medium, before, no cap (12 games) | 226 / 217 / 292 | all one left | 46, 63, 106, 164, 215 | |
+| **Medium, after, no cap** (12 games) | **178 / 152 / 213** | 10 one left, 1 stalemate, 1 still going at turn 500 | 23, 31, 55, 102, 148 | |
+| For comparison, after, domination at 75% | Classic 63 / 58; medium 144 / 118 | | | |
+
+  What changed, every value a default of the writs turn only (today's game is untouched):
+  - three writs, not two;
+  - a march takes two steps a turn over open ground (plains, forest) where it meets nothing to fight,
+    and may be ordered four steps away;
+  - the militia of land without an army is 3 + 6 a fort (was 5 + 10);
+  - a 12-turn stalemate (was 20) and 3-turn truces after a treaty (was 5);
+  - demands are enforced from a war score of 80 (was 90);
+  - the scripted rulers fight wars out instead of trading small treaties: they demand at 80 (cautious
+    70), cede at −80 (−70), and offer white peace only when losing badly (`Temperament`'s new treaty
+    fields);
+  - an occupied province no longer adds to its owner's levy, as it already gave no income.
+
+  Things that did not help: earlier demands (more truces, longer games); two wars at once; a realm that
+  breaks when its capital falls (`GameRules.BreakWhenCapitalFalls`, off; realms keep an army to the end).
+  The medium rows "after" were measured on #277's new worlds, those "before" on R2's. The last war of a
+  medium world, between two large realms, is still long. Section 6.1's pressures
+  (fear of the leader, war weariness, the status-quo offer) are meant to end it, and come with R7.
+- **Battle reports.** `TurnReport.BattleRecords` lists every battle:
+  - the sides, armies and soldiers, and the militia or garrison;
+  - terrain, forts, and the fort and capital terms;
+  - both rolls and strengths, the losses, the winner, a rout, and each retreat;
+  - `Why`, one sentence of the three terms that weighed most ("kesh won: 51 against 9; 1 fort (+15) for
+    the defence; the capital (+8) for the defence.").
+- **Snapshots.** `TurnSnapshot.Armies` and `Occupiers` hold every army and occupation as the council
+  saw them, so a replay or the inspector can show any past turn.
 
 ## The first real run
 

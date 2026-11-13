@@ -1609,15 +1609,15 @@ The screen's half is the screen session's.
 **What R1a built, and what it decided** (_Mine_ unless said):
 - **The writs turn is a setting, not a replacement.** `GameRules.Turn` (`OneMove`, the default, or
   `Writs`) keeps today's game byte for byte: the pinned 200-game series and the recorded replay pass
-  unchanged. `GameSetup.Writs` sets conquest, a 150-turn headless cap, and a 20-turn stalemate ending.
+  unchanged. `GameSetup.Writs` sets conquest, a 150-turn headless cap, and a 20-turn stalemate ending (R1b: 12 turns).
 - **The stalemate ends a game.** Section 6.1 asks only that it be counted. A headless run needs an end,
-  so 20 turns without a change of owner or controller ends the game as `Stalemate`, the leader named
+  so 20 turns (R1b: 12) without a change of owner or controller ends the game as `Stalemate`, the leader named
   and nobody winning.
 - **A border crossing:** the winner steps through, and the loser never crosses. Since the winner now
   stands in the province the loser was leaving, the loser falls back from it, with no second battle.
   Section 1.1's "the loser stays in the province it was leaving" cannot hold with the winner there.
 - **Sieges, stores, unit types and generals' traits wait for R3.** A walled province is fought for
-  through its militia (5 + 10 a fort, plus the capital bonus) rather than besieged. Wake conditions 3
+  through its militia (5 + 10 a fort, plus the capital bonus; R1b: 3 + 6 a fort) rather than besieged. Wake conditions 3
   and 6 (a siege ends, stores run low) wait with them.
 - **Recruiting** keeps today's levy (5 + 5 a province, paid at 2 gold a soldier). It appears at the
   capital, joining an army standing there up to 100, the rest forming new armies. Companies of 10 by
@@ -1631,6 +1631,44 @@ The screen's half is the screen session's.
 - **Measured by simulation:** 0.95 armies awaiting orders a ruler a turn on Classic, against the
   page's estimate of 1.0. A medium generated world rarely ends within 150 turns (19 of 20 games
   unfinished), so the game's length needs tuning before R1c's live runs.
+
+**R1b's first part: the pace, 12 November.** The tech lead asked for a game a person finishes in
+about an hour. Scripted games before and after, same seeds:
+
+| Scripted games (mixed line-up) | Turns, mean / median / 90th | Ended | Countries out at turns | Treaties a game |
+|---|---|---|---|---:|
+| Classic, before (40 games) | 123 / 121 / 150 | 23 one left, 8 stalemate, 9 at the 150 cap | 49, ... | 30 |
+| **Classic, after** (40 games) | **78 / 80 / 106** | 39 one left, 1 stalemate | 18, 34, 57, 78 | 8 |
+| Medium, before (20 games, 150 cap) | 150 | 1 one left, 19 at the cap | | 41 |
+| **Medium, after** (20 games, 150 cap) | **141 / 150 / 150** | 10 one left, 10 at the cap | 22, 36, 55, 102, 132 | 12 |
+| Medium, before, no cap (12 games) | 226 / 217 / 292 | all one left | 46, 63, 106, 164, 215 | |
+| **Medium, after, no cap** (12 games) | **178 / 152 / 213** | 10 one left, 1 stalemate, 1 still going at turn 500 | 23, 31, 55, 102, 148 | |
+| For comparison, after, domination at 75% | Classic 63 / 58; medium 144 / 118 | | | |
+
+The levers that worked:
+- **Armies:** two steps a turn over open ground; three writs; a weaker militia (3 + 6 a fort).
+- **Wars:** wars fought out rather than settled small. The scripted rulers' new thresholds; demands
+  enforced at 80; truces of 3 turns.
+- **The game's end:** a 12-turn stalemate.
+
+The levers that did not:
+- earlier demands, since every treaty starts a truce;
+- two wars at once;
+- a realm breaking when its capital falls.
+
+**The numbers in the design sections above are the first ones** (writs 2 + 1 for every
+8 provinces, a 5-turn truce, enforced terms at 90, a 20-turn stalemate). R1b's defaults for the writs turn
+are in the levers above: three writs, 3-turn truces, demands enforced at 80, a 12-turn stalemate.
+
+**Not yet "an hour" for a medium world:** about 180 turns on average (median 152). The medium rows "after" were measured on #277's new worlds, the rows "before" on R2's; Classic is the same board in both. Its last war between two large realms is
+where the time goes. Section 6.1's pressures for that (fear of the leader, war weariness, the
+status-quo offer) belong to R7.
+
+_For the lead:_ a 75% domination win gives 144 turns on medium (median 118) and 63 on Classic, if a shorter default is
+wanted before R7.
+
+**Three writs** raise R1c's model time: decisions a ruler a turn rise from about 1.9 to 2.3 on Classic.
+R1c measures the cost.
 
 ### R2. The map generator, headless, and a drawn-chart spike
 

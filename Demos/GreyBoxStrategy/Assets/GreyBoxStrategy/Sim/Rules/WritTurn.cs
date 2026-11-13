@@ -467,8 +467,33 @@ namespace GreyBoxStrategy
         private void MoveArmies()
         {
             foreach (var a in World.Armies) a.CameFrom = a.Location;
+            var moved = Step(null);
+            // Further steps this turn, for armies on open ground that met nothing: they go on while the
+            // next province is plains or forest and they stand nowhere they must fight for.
+            for (int k = 1; k < Rules.MarchStepsPerTurn; k++)
+            {
+                var going = new HashSet<Army>(moved.Where(a => World.FindArmy(a.Id) != null && a.Marching && a.StepTurnsLeft <= 1
+                    && Rules.TurnsToEnter(World.Province(a.Path[0]).Info.Terrain) == 1
+                    && !WritLegality.Blocks(World, a.Owner, World.Province(a.Location))
+                    && !World.ArmiesAt(a.Location).Any(o => World.AtWar(a.Owner, o.Owner))));
+                if (going.Count == 0) break;
+                moved = Step(going);
+            }
+
+            // An enemy army now stands beside one of ours: ours asks for orders.
+            foreach (var a in World.Armies)
+                if (World.Armies.Any(o => o.Location != o.CameFrom && World.AtWar(a.Owner, o.Owner)
+                                          && (o.Location == a.Location || World.Map.AreNeighbours(o.Location, a.Location)))
+                    && !a.Wake.Contains("an enemy army came near"))
+                    a.Wake.Add("an enemy army came near");
+        }
+
+        // One step for every marching army (or only those in <paramref name="only"/>), all at the same
+        // moment; returns the armies that stepped.
+        private List<Army> Step(HashSet<Army> only)
+        {
             var stepping = new List<(Army army, string to)>();
-            foreach (var a in World.Armies.Where(x => x.Marching).OrderBy(x => x.Id, StringComparer.Ordinal))
+            foreach (var a in World.Armies.Where(x => x.Marching && (only == null || only.Contains(x))).OrderBy(x => x.Id, StringComparer.Ordinal))
             {
                 if (a.StepTurnsLeft > 1) { a.StepTurnsLeft--; continue; }
                 string to = a.Path[0];
@@ -507,13 +532,7 @@ namespace GreyBoxStrategy
                 }
                 else a.StepTurnsLeft = Rules.TurnsToEnter(World.Province(a.Path[0]).Info.Terrain);
             }
-
-            // An enemy army now stands beside one of ours: ours asks for orders.
-            foreach (var a in World.Armies)
-                if (World.Armies.Any(o => o.Location != o.CameFrom && World.AtWar(a.Owner, o.Owner)
-                                          && (o.Location == a.Location || World.Map.AreNeighbours(o.Location, a.Location)))
-                    && !a.Wake.Contains("an enemy army came near"))
-                    a.Wake.Add("an enemy army came near");
+            return stepping.Where(x => !stopped.Contains(x.army)).Select(x => x.army).ToList();
         }
 
         // ------------------------------------------------------------------------------------
@@ -596,9 +615,35 @@ namespace GreyBoxStrategy
             string key = where + ":" + World.Turn;
             int att = attackers.Sum(a => a.Soldiers);
             int def = defenders.Sum(a => a.Soldiers) + fixedDefence;
-            double attack = att * Dice.Range(Seed, World.Turn, attackerId, "battle-attack:" + key, r.RollMin, r.RollMax);
-            double defence = def * Dice.Range(Seed, World.Turn, defenderId ?? "neutral", "battle-defence:" + key, r.RollMin, r.RollMax)
-                             + (held != null ? held.Forts * r.FortBonus + (held.IsCapital ? r.CapitalBonus : 0) : 0);
+            double attackRoll = Dice.Range(Seed, World.Turn, attackerId, "battle-attack:" + key, r.RollMin, r.RollMax);
+            double defenceRoll = Dice.Range(Seed, World.Turn, defenderId ?? "neutral", "battle-defence:" + key, r.RollMin, r.RollMax);
+            int fortTerm = held != null ? held.Forts * r.FortBonus : 0;
+            int capitalTerm = held != null && held.IsCapital ? r.CapitalBonus : 0;
+            double attack = att * attackRoll;
+            double defence = def * defenceRoll + fortTerm + capitalTerm;
+            var site = World.Province(where);
+            var record = new BattleRecord
+            {
+                Turn = World.Turn,
+                Province = site?.Id,
+                Border = site == null && attackers.Count > 0 ? new[] { attackers[0].Location, defenders.Count > 0 ? defenders[0].Location : null } : null,
+                Attacker = attackerId,
+                Defender = defenderId,
+                DefenderKind = defenders.Count > 0 ? "army" : defenderId != null ? "militia" : "garrison",
+                AttackerArmies = attackers.Select(a => a.Id).ToList(),
+                DefenderArmies = defenders.Select(a => a.Id).ToList(),
+                AttackerSoldiers = att,
+                DefenderSoldiers = def,
+                Militia = fixedDefence,
+                Terrain = site == null ? null : TerrainTable.Id(site.Info.Terrain),
+                Forts = held?.Forts ?? 0,
+                FortTerm = fortTerm,
+                CapitalTerm = capitalTerm,
+                AttackRoll = attackRoll,
+                DefenceRoll = defenceRoll,
+                AttackStrength = attack,
+                DefenceStrength = defence,
+            };
             bool attackerWon = attack > defence;
             int attLoss = Math.Min(att, (int)Math.Round(defence * r.CasualtyRate * (attackerWon ? r.HeldCasualtyFactor : 1)));
             int defLoss = Math.Min(def, (int)Math.Round(attack * r.CasualtyRate * (attackerWon ? 1 : r.HeldCasualtyFactor)));
@@ -607,6 +652,10 @@ namespace GreyBoxStrategy
             Lose(defenders, armyLoss);
             if (held != null && held.Owner == null) held.Garrison = Math.Max(0, held.Garrison - (defLoss - armyLoss));
             report.Battles++;
+            record.AttackerLost = attLoss;
+            record.DefenderLost = defLoss;
+            record.AttackerWon = attackerWon;
+            report.BattleRecords.Add(record);
 
             string defName = defenderId ?? "the garrison";
             if (defenders.Count == 0 && defenderId != null) defName = $"{defenderId}'s militia";
@@ -625,6 +674,8 @@ namespace GreyBoxStrategy
             var losers = attackerWon ? defenders : attackers;
             double loserStrength = attackerWon ? defence : attack, winnerStrength = attackerWon ? attack : defence;
             bool rout = loserStrength * r.RoutRatio < winnerStrength;
+            record.Routed = rout && losers.Count > 0;
+            record.Why = Why(record, defName);
             foreach (var a in losers.Where(a => World.FindArmy(a.Id) != null).ToList())
             {
                 // On a border the loser never crosses; the winner steps into the province it was leaving,
@@ -632,12 +683,32 @@ namespace GreyBoxStrategy
                 string back = rout ? null : RetreatTo(a, attackerWon || onBorder ? null : a.CameFrom);
                 if (back == null)
                 {
+                    record.Routed = true;
                     Disband(a, $"{a.Id} was routed at {where}");
                     continue;
                 }
+                record.Retreats[a.Id] = back;
                 a.Location = back;
             }
             return attackerWon;
+        }
+
+        // "orsk won: 52 against 40; the dice favoured orsk (+6); 1 fort (+15) for the defence." The three
+        // terms that moved the result most, each with what it was worth in strength.
+        private static string Why(BattleRecord b, string defName)
+        {
+            var terms = new List<(double weight, string text)>
+            {
+                (b.AttackerSoldiers - b.DefenderSoldiers, $"{b.AttackerSoldiers} against {b.DefenderSoldiers}"),
+                (-b.FortTerm, b.Forts == 1 ? $"1 fort (+{b.FortTerm}) for the defence" : $"{b.Forts} forts (+{b.FortTerm}) for the defence"),
+                (-b.CapitalTerm, $"the capital (+{b.CapitalTerm}) for the defence"),
+            };
+            double dice = b.AttackerSoldiers * (b.AttackRoll - 1) - b.DefenderSoldiers * (b.DefenceRoll - 1);
+            terms.Add((dice, $"the dice favoured {(dice >= 0 ? b.Attacker : defName)} (+{Math.Abs(dice):0})"));
+            var top = terms.Where(t => Math.Abs(t.weight) >= 0.5 || t.text.Contains(" against "))
+                .OrderByDescending(t => t.text.Contains(" against ") ? double.MaxValue : Math.Abs(t.weight)).Take(3).Select(t => t.text);
+            string who = b.AttackerWon ? $"{b.Attacker} won" : $"{defName} held";
+            return $"{who}{(b.Routed ? ", and routed the loser" : "")}: {string.Join("; ", top)}.";
         }
 
         // Where a beaten army falls back: where it came from this turn, or else a bordering province it controls.
@@ -721,11 +792,15 @@ namespace GreyBoxStrategy
             foreach (var c in World.Alive.ToList())
             {
                 var owned = World.ProvincesOf(c.Id).ToList();
-                if (owned.Count == 0 || owned.Any(p => p.Occupier == null) || World.ArmiesOf(c.Id).Any()) continue;
+                if (owned.Count == 0 || World.ArmiesOf(c.Id).Any()) continue;
+                var capital = owned.FirstOrDefault(p => p.IsCapital && p.Occupier != null);
+                bool all = owned.All(p => p.Occupier != null);
+                if (!all && !(Rules.BreakWhenCapitalFalls && capital != null)) continue;
                 foreach (var p in owned)
                 {
-                    p.Owner = p.Occupier;
+                    p.Owner = p.Occupier ?? capital.Occupier;
                     p.Occupier = null;
+                    p.Garrison = 0;
                     report.TerritoryChanges++;
                 }
                 lastChangeTurn = World.Turn;

@@ -10,6 +10,33 @@ namespace GreyBoxStrategy
     /// the state it was chosen on ("attacked a weaker neighbour"), since <see cref="World"/> has moved
     /// on by the time anyone looks.
     /// </summary>
+    /// <summary>An army as it stood when the council decided.</summary>
+    public sealed class ArmySnapshot
+    {
+        public ArmySnapshot(Army a)
+        {
+            Id = a.Id;
+            Owner = a.Owner;
+            Location = a.Location;
+            Soldiers = a.Soldiers;
+            Destination = a.Destination;
+            Path = a.Path.ToList();
+            StepTurnsLeft = a.StepTurnsLeft;
+            Wake = a.Wake.ToList();
+        }
+
+        public string Id { get; }
+        public string Owner { get; }
+        public string Location { get; }
+        public int Soldiers { get; }
+        /// <summary>Where it was marching, or null while holding.</summary>
+        public string Destination { get; }
+        public IReadOnlyList<string> Path { get; }
+        public int StepTurnsLeft { get; }
+        /// <summary>Why it was waiting for orders; empty while it carried one out.</summary>
+        public IReadOnlyList<string> Wake { get; }
+    }
+
     public sealed class TurnSnapshot
     {
         public TurnSnapshot(World world)
@@ -18,7 +45,14 @@ namespace GreyBoxStrategy
             Army = world.Alive.ToDictionary(c => c.Id, c => c.Army, StringComparer.Ordinal);
             Provinces = world.Alive.ToDictionary(c => c.Id, c => world.ProvinceCount(c.Id), StringComparer.Ordinal);
             Owners = world.ProvinceList.ToDictionary(p => p.Id, p => p.Owner, StringComparer.Ordinal);
+            Occupiers = world.ProvinceList.Where(p => p.Occupier != null).ToDictionary(p => p.Id, p => p.Occupier, StringComparer.Ordinal);
+            Armies = world.Armies.Select(a => new ArmySnapshot(a)).ToList();
         }
+
+        /// <summary>The writs turn: who occupies each occupied province, by province id.</summary>
+        public IReadOnlyDictionary<string, string> Occupiers { get; }
+        /// <summary>The writs turn: every army as it stood, so a replay or the inspector can show any past turn.</summary>
+        public IReadOnlyList<ArmySnapshot> Armies { get; }
 
         public int Turn { get; }
         /// <summary>Soldiers per living country.</summary>
