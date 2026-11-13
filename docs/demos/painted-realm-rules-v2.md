@@ -1,7 +1,7 @@
 # Painted Realm (GreyBoxStrategy), rules v2: the deeper game
 
 **Status:** a design, 12 November 2026 (#20), being built slice by slice: **R0 is built** (12 November,
-[below](#r0-settings-and-the-map-as-data)). It is written so that build
+[below](#r0-settings-and-the-map-as-data)), and **R2's headless generator** ([below](#r2-the-map-generator-headless-and-a-drawn-chart-spike)). It is written so that build
 sessions can each take one slice ([the build](#10-the-build-as-slices)) without inventing rules.
 The game as it is today, with its measurements, is in the demo's
 [`README.md`](../../Demos/GreyBoxStrategy/README.md) and in
@@ -1620,6 +1620,47 @@ exists, and where it differs from the list above:
   - Generation time per size.
 - **Playable:** as after R1; any generated world plays headless.
 
+**The headless generator is built, 12 November 2026** (before R1, so it plays today's rules). It lives in
+`Sim/Map/`: `MapGenerator`, `MapChecks`, `MapGeometry`, `MapNames`, `SpecialTemplates`. The demo README
+says how to use it. Measured on 100 seeds of every size and shape: every world passed every check (the
+table is in the R2 pull request). Not built yet:
+- the world-maker agent: `ISpecialPlaceMaker` is its hook, filled from tables today;
+- the legend call;
+- neutral garrisons by terrain, which waits for terrain's effects in R3;
+- the 200-game balance certificate per preset. The runner plays a series on one generated world
+  (`GameSetup.MapSeed`), which is its first half;
+- the drawn-chart spike, which is the screen's.
+
+What the design got wrong or left open, and what was decided (_Mine_ unless the lead says otherwise):
+- **Capital spacing.** Section 2.3 asked for 4 steps on medium. With six countries on 60 provinces each
+  reach is about ten provinces, and neighbouring capitals stand about 3.5 steps apart. At 4, compact
+  worlds failed nearly every try. Now: 4 when each country has 20 or more provinces to itself,
+  otherwise 3.
+- **Rival capitals within 6 steps.** With eight or ten countries, some realm must sit inland, with six
+  or seven rivals near against three on the coast. No placement met a spread of 2. Now the spread
+  allowed is 2 up to six countries, then half the countries less one (3 for eight, 4 for ten).
+- **Reach and ties.** "Nearer to it than to any other" left provinces at equal distance to nobody. On
+  large maps those ties were a fifth of the land, so a capital's reach swung by a third with where its
+  ties fell. A tied province now counts as shared equally among the capitals tied for it.
+- **Terrain from height made a continent's middle all mountains.** The land's height carries the shape's
+  falloff. Since capitals may not stand on mountains, they were pushed to a ring, and reach could not
+  balance. Terrain now ranks a relief noise of its own, plus the ridges.
+- **Corner contacts.** Repairing them one by one made new ones elsewhere. What works: smooth the borders
+  first, then grow each short contact into a real border, and let the cell join a side only when that
+  makes no new short contact. Where neither works, on the coast, the contact cells become water.
+- **Neutral land and starting realms** fix the same number and disagree (section 2.2). The realm size is
+  the setting. The neutral share follows: 60% small, 70% medium, 76% large and 80% huge with realms of
+  3, against the page's 55%. The lead may want realms of 4 or 5 on the larger sizes.
+- **Determinism.** A first version took its annealing odds from `Math.Exp`, whose last bit can differ
+  between runtimes. It now uses only + − × ÷. Pinned world hashes measured under .NET match under
+  Unity's Mono.
+- **Speed.** One try at huge takes about 0.25 s under .NET and 0.7 s in the Unity editor. Retries make
+  the whole: in the editor, 0.3 to 11 s for the exported huge worlds (16 tries at worst). The page's
+  target of 2 s is met per try but not for every seed. Fewer retries would need a fairer first try, or
+  fairness re-tried on the same geometry.
+- **Lloyd relaxation** runs three times, not two, and provinces under 0.7 of the mean area take a layer
+  of cells from larger neighbours. Both cut the "area" failures.
+
 ### R3. Armies in depth
 
 - **Sim:**
@@ -1823,13 +1864,13 @@ line, and `findings.md` for anything measured.
 - [ ] Live: the latency probe; then the persona table, 20 games, 40-turn cap, against the one-move game
 
 **R2, the generator headless and the chart spike**
-- [ ] Land shapes, seeds, provinces, adjacency, ridges and passes, terrain quotas, coasts, ports
-- [ ] Capitals, starting realms, goods, population, garrisons, names and their checks
-- [ ] Connectivity and fairness checks; retries; the balance run tool
-- [ ] Special-place slots and templates; the world-maker agent; fallback tables; the legend call
-- [ ] Integer noise; a pinned world hash per size
+- [x] Land shapes, seeds, provinces, adjacency, ridges and passes, terrain quotas, coasts, ports
+- [x] Capitals, starting realms, goods, population, names and their checks; garrisons by terrain wait for R3
+- [x] Connectivity and fairness checks; retries; the balance run tool: a series on one world, no certificate yet
+- [x] Special-place slots and templates; fallback tables; [ ] the world-maker agent; [ ] the legend call
+- [x] Integer noise; a pinned world hash per size
 - [ ] Spike scene: a medium map drawn by code, captured at 1080 p and 4K beside the painting, for the lead
-- [ ] Tests: 500 seeds per size pass; cell adjacency equals the graph; no corner borders; generation time
+- [x] Tests: seeds per size pass (100 per size and shape by hand, a few in every run); cell adjacency equals the graph; no corner borders; generation time
 
 **R3, armies in depth**
 - [ ] Three types, costs, the counter rule

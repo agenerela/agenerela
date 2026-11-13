@@ -221,8 +221,8 @@ framework writes the moves as one line among the facts, `LegalTargets = Observat
 
 Each game log shows the model's answer and its statement under each of its moves.
 
-**Tests:** 156 EditMode tests in `Assets/GreyBoxStrategy/Tests/Editor/`, about 10 seconds once the
-project has imported. Twenty of them drive the model seat through `ScriptedProvider`,
+**Tests:** 221 EditMode tests in `Assets/GreyBoxStrategy/Tests/Editor/`, about a minute once the
+project has imported (the map generator's take most of it), and four long ones run by hand. Twenty of them drive the model seat through `ScriptedProvider`,
 sixteen in `TableTests` the table, the personas and the scorecard, and fifteen in `StorytellerTests`
 the storyteller. The screen has its own in `Screen/Tests/Editor/`.
 
@@ -260,6 +260,74 @@ changed is where it comes from.
 - **Proof it is the same game:** `SetupTests` pins the hash of the 200-game mixed series' `summary.md`
   and of every turn's owner grid, as measured on the commit before R0, and compares the Classic data
   with the board as it was built in code (`LegacyBoard`), field by field.
+
+**R2, the map generator, headless** (12 November). Worlds of any size are generated from a seed,
+checked, and played by today's rules. Nothing draws them on screen yet (R4); a script draws them on a
+sheet.
+
+```csharp
+var made = MapGenerator.Generate(seed: 7, countries: 6, new MapSettings { Size = MapSize.Medium, Shape = LandShape.InlandSea });
+// made.Passed, made.Map (a WorldMap with Geometry), made.Problems, made.Attempts, made.Fairness
+var game = new GameSetup { Seed = 7, Map = "generated", Countries = 6, Generator = new MapSettings() }.NewGame();
+```
+
+- **Settings** (`MapSettings`): size (small ~30 provinces, medium ~60, large ~100, huge ~150, with 4, 6,
+  8 and 10 countries by default), land shape (`continent`, `two_lands`, `inland_sea`, `peninsula`,
+  `long_coast`), starting realm (2 to 5 provinces) and special places (none, few, many). The same seed
+  and settings make the same world on every machine: integer noise and hashes throughout, and a test
+  pins one world per size, measured under .NET and matched under Unity's Mono.
+- **The steps** (`Sim/Map/MapGenerator.cs`), each drawing its randomness from the seed and its own name:
+  1. land from a height field shaped by the land shape;
+  2. Poisson-disc seeds relaxed three times;
+  3. provinces by nearest seed after a low-frequency warp, so borders wander, with small provinces
+     grown, borders smoothed, and pieces, corners and short contacts repaired;
+  4. adjacency from the cells (three shared cell edges make a border);
+  5. ridges that cut borders except at passes;
+  6. terrain by quota from its own relief and moisture noise;
+  7. coasts and ports;
+  8. regions of about eight provinces;
+  9. goods and population;
+  10. capitals placed by a seeded search for fair starts, with starting realms that never touch;
+  11. names from syllable tables, a style a region;
+  12. special places.
+- **The checks** (`MapChecks`) judge any world, generated or not, and say why one fails:
+  - connectivity: connected, capitals reach each other, every province has borders, no ridge crossed
+    except at a pass, adjacency equal to the cells;
+  - shape: one piece, area within 0.5 to 1.8 times the mean, a minimum width, no corner or short contacts;
+  - fairness: reach, its value, neutral land bordering each start, rival capitals near, equal realms
+    that do not touch, capitals off mountains and marsh and apart, scarce goods;
+  - content: names, special places.
+
+  A world that fails is made again from the next sub-seed, up to 50 times. When none passes, the best
+  is returned with its problems, and `GameSetup` refuses one whose rules graph is wrong.
+- **Special places**: an old castle, a silver mine, a sacred lake and six more, on slots the code picks
+  (never a capital or starting realm, four steps apart, one a region), each with a name and a line of
+  story from tables. `ISpecialPlaceMaker` is where the world-maker agent and the Cartographer (R9) plug
+  in, and `INameMaker` is where the model's names (R10) do. Whatever they return is checked, and falls
+  back to the tables.
+- **Geometry for drawing** (`MapGeometry`, in the world's JSON): the cell grid, each province's outline
+  loops, centre, label point and label radius, every border and coast as polylines with its kind (land,
+  ridge, pass, coast, shore), and the ridge lines.
+- **A sheet of worlds**: **GreyBoxStrategy → Export 20 generated worlds** (or
+  `MapExportMenu.ExportFromCommandLine` in batch mode) writes one world per size and shape with a
+  `summary.md`. `python ArtSource/world_sheet.py <folder> sheet.png` draws them.
+- **Today's rules on a generated world**: **GreyBoxStrategy → Play 200 games on a generated world**, or
+  `StrategyRunMenu.RunFromCommandLine` with `-strategyMap generated -strategySize medium
+  -strategyShape continent -strategyMapSeed 1`. One world, every game its own dice. The rules ran on
+  every size without a change.
+
+  **Where they assume today's board** (none fixed here; each waits for its slice):
+  - **The game's length:** 30 turns and 60% to win suit 25 provinces. On 60 or more, every scripted game
+    ran to the turn limit (R1's pacing, or conquest).
+  - **The standing facts** list every rival, one line each: 12 lines with ten countries, over the budget
+    of 8 the tests hold Classic to. The page's "facts stay local" is a prompt change and owes an A/B.
+  - **The moves on offer:** up to 41 moves and 20 attack targets a turn, against the page's limit of
+    about 12 targets.
+  - **The labels:** `SeriesSummary` names the ending "domination (15 provinces)" whatever the share.
+  - **The line-ups** have five kinds, so with six or more countries a kind sits twice, and "every kind
+    at every country once in five games" no longer holds.
+  - **The owner grid** in the logs places provinces on a coarse grid by their centres. It shows every
+    province once, but sparsely.
 
 ## The first real run
 
@@ -1320,7 +1388,8 @@ Assets/GreyBoxStrategy/
     Rules/            Dice, GameRules, MapDefinition, World, Move, Legality, Facts, Requests, Game,
                       TurnSnapshot, Events (the storyteller's templates, groups and fairness rules),
                       GameSetup (rules v2's settings)
-    Map/              WorldMap (the map as data, JSON), Terrain and TerrainTable, ClassicMap
+    Map/              WorldMap (the map as data, JSON), Terrain and TerrainTable, ClassicMap; the generator:
+                      MapGenerator, MapSettings, MapChecks, MapGeometry, MapNames, SpecialTemplates, MapRandom
     Players/          IPlayer, ScriptedPlayer and Temperament, RandomPlayer
     Runner/           GameRunner and Lineups, SeriesSummary, GameLog and StrategyRuns, Scorecard, EventLog
   Agents/             GreyBoxStrategy (refs Agenerela, GreyBoxStrategy.Sim): CountryAgent, the model seat;
@@ -1336,7 +1405,8 @@ Assets/GreyBoxStrategy/
     Replays/          recorded games to play back
     Editor/           the art import settings, ScreenSceneBuilder
     Tests/Editor/     GreyBoxStrategy.Screen.Tests.Editor
-ArtSource/            outside Assets: the art's sources and the scripts that bake and export
+ArtSource/            outside Assets: the art's sources and the scripts that bake and export;
+                      world_sheet.py draws exported generated worlds on one sheet
 ```
 
 
