@@ -18,6 +18,8 @@ namespace GreyBoxStrategy.Realm
         public bool Generated;
         public MapSize Size = MapSize.Medium;
         public LandShape Shape = LandShape.Continent;
+        /// <summary>"off", or a storyteller preset's name (<see cref="StorytellerSettings.Presets"/>).</summary>
+        public string Storyteller = "off";
     }
 
     /// <summary>What the settings page needs to know about the screen it runs on.</summary>
@@ -150,7 +152,17 @@ namespace GreyBoxStrategy.Realm
 
             card.Add(Section2("COMING", "not in the game yet"));
             card.Add(Coming("Persona mix", "Which personas rule, and how hard they play"));
-            card.Add(Coming("Storyteller", "Events with choices and chains: presets you tweak before the game"));
+            card.Add(Section2("STORYTELLER", "a model that makes things happen: events, dilemmas, tales"));
+            var presets = StorytellerSettings.Presets;
+            int sel = Math.Max(0, presets.ToList().FindIndex(p => p.Name == choice.Storyteller) + 1);
+            var presetNote = new Label(); presetNote.AddToClassList("src"); presetNote.style.whiteSpace = WhiteSpace.Normal;
+            void Note(int i) => presetNote.text = i == 0
+                ? "Off: the random event table (harvests, bandits, unrest), as every measured game so far."
+                : presets[i - 1].Description + " Dilemmas, events on many, planned tales, and a second call that titles each event.";
+            card.Add(Steps("Storyteller", new[] { "Off" }.Concat(presets.Select(p => p.Label)).ToArray(), sel,
+                i => { choice.Storyteller = i == 0 ? "off" : presets[i - 1].Name; Note(i); }));
+            Note(sel);
+            card.Add(presetNote);
             card.Add(Coming("Advisor", "A model that counsels you in rule mode: on by default, off in a click"));
 
             menuStatus = new Label(); menuStatus.AddToClassList("menu-status"); card.Add(menuStatus);

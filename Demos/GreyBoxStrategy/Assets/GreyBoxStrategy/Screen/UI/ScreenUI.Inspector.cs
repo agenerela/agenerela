@@ -98,10 +98,15 @@ namespace GreyBoxStrategy.Realm
 
             // header: face, crest, outcome
             var head = new VisualElement(); head.AddToClassList("insp-head");
-            var face = new Image { image = portraits, uv = Faces.Uv(player?.Persona, look.Slot % 2), scaleMode = ScaleMode.ScaleAndCrop };
-            face.AddToClassList("insp-face");
-            face.style.borderTopColor = face.style.borderBottomColor = face.style.borderLeftColor = face.style.borderRightColor = (Color)look.Colour;
-            head.Add(face);
+            bool teller = CountryLook.IsStoryteller(c.Country);
+            if (teller) head.Add(new Crest(look, 44)); // the chronicler has no face
+            else
+            {
+                var face = new Image { image = portraits, uv = Faces.Uv(player?.Persona, look.Slot % 2), scaleMode = ScaleMode.ScaleAndCrop };
+                face.AddToClassList("insp-face");
+                face.style.borderTopColor = face.style.borderBottomColor = face.style.borderLeftColor = face.style.borderRightColor = (Color)look.Colour;
+                head.Add(face);
+            }
             var hb = new VisualElement { style = { marginLeft = 10, flexShrink = 1 } };
             var row = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center } };
             row.Add(new Crest(look, 18));
@@ -109,7 +114,8 @@ namespace GreyBoxStrategy.Realm
             string cls = c.Outcome == CardOutcome.Done || c.Outcome == CardOutcome.Held ? "ok" : c.Outcome == CardOutcome.Contained ? "guard" : "ref";
             var badge = new Label(c.OutcomeText.ToUpperInvariant()); badge.AddToClassList("badge-outcome"); badge.AddToClassList(cls); row.Add(badge);
             hb.Add(row);
-            var sub = new Label($"The {player?.Persona ?? "ruler"} · the {c.Moment} · {c.ChainId}{(c.ChainHop > 0 ? " · hop " + c.ChainHop : "")}");
+            var sub = new Label(teller ? $"The game's storyteller · {c.Moment} · before turn {c.Turn}'s upkeep"
+                : $"The {player?.Persona ?? "ruler"} · the {c.Moment} · {c.ChainId}{(c.ChainHop > 0 ? " · hop " + c.ChainHop : "")}");
             sub.AddToClassList("insp-sub"); hb.Add(sub);
             head.Add(hb);
             inspectorBody.Add(head);
@@ -189,7 +195,7 @@ namespace GreyBoxStrategy.Realm
             // 6 model and time
             var s6 = Section("6 · MODEL AND TIME", "");
             s6.Add(KeyValue("Model", c.Model ?? "?"));
-            s6.Add(KeyValue("Persona", (player?.Persona ?? "?") + $" · face {look.Slot % 2 + 1} of 2"));
+            if (!teller) s6.Add(KeyValue("Persona", (player?.Persona ?? "?") + $" · face {look.Slot % 2 + 1} of 2"));
             s6.Add(KeyValue("Tokens", $"{c.PromptTokens:N0} in · {c.CompletionTokens} out"));
             float total = Mathf.Max(0.01f, c.QueueWaitSeconds + c.LatencySeconds);
             var tb = new VisualElement(); tb.AddToClassList("timebar");

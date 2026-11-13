@@ -45,8 +45,11 @@ namespace GreyBoxStrategy.Replay
         /// </summary>
         public static string Apply(Game game, string command) => Run(game.World, game, command, dryRun: false);
 
-        /// <summary>Turns the random event table back on after an upkeep a dev event fired in.</summary>
+        /// <summary>Turns the random event table back on after an upkeep a dev event fired in. Not in a storyteller's game, which never has one.</summary>
         public static void AfterBeginTurn(Game game) { if (!game.EventTable) game.EventTable = true; }
+
+        /// <summary>Whether the command queues an event, so the storyteller is not asked that turn.</summary>
+        public static bool QueuesEvent(string command) => Split(command).FirstOrDefault() == "event";
 
         /// <summary>Applies every edit for <paramref name="turn"/>; for ReplayBuilder and the live session alike.</summary>
         public static void ApplyFor(Game game, IEnumerable<DevEdit> edits, int turn)
@@ -130,17 +133,35 @@ namespace GreyBoxStrategy.Replay
                 }
                 case "event":
                 {
-                    if (a.Length < 3) return "usage: event <template> <target>";
+                    if (a.Length < 3) return "usage: event <template> <target> [Title: story]";
                     var t = EventRules.Template(a[1]);
-                    if (t == null) return $"no event '{a[1]}': one of {string.Join(", ", EventRules.Templates.Select(x => x.Id))}";
+                    if (t == null) return $"no event '{a[1]}': one of {string.Join(", ", EventRules.AllTemplates.Select(x => x.Id))}";
                     if (game == null) return null; // a dry run needs the game's ledger: checked when applied
+                    // Stage S2 deals each turn one kind of event (a tale's, a dilemma's, an ordinary one) and opens
+                    // only that kind: the dev menu deals the turn the kind its event needs, in the game and its replay alike.
+                    if (game.Story.IsS2)
+                        game.Events.TurnKinds[game.NextTurn] = t.Skeleton != null || a[2].StartsWith("tale_", StringComparison.Ordinal) ? TurnKind.Tale
+                            : t.IsChoice ? TurnKind.Dilemma : TurnKind.Ordinary;
                     string why = game.WhyNotEvent(t.Id, a[2]);
                     if (why != null) return why;
                     if (dryRun) return null;
+                    // The words after the target are the event's "Title: story"; without them, the template's own.
+                    string told = a.Length > 3 ? string.Join(" ", a.Skip(3)) : null;
+                    string title = t.FallbackTitle, statement;
+                    if (told == null)
+                        statement = EventRules.FallbackStory(t, EventRules.Reach(game.World, a[2]), game.World.IsProvince(a[2]) ? a[2] : null);
+                    else
+                    {
+                        var (head, body) = EventRules.SplitTitle(told);
+                        if (head != null) title = head;
+                        statement = body.Length > 0 ? body : told;
+                    }
+                    // A storyteller game takes the title from the title call; one without takes it from the statement.
+                    if (!game.Story.TitleCall) statement = $"{title}: {statement}";
                     try
                     {
                         game.EventTable = false;
-                        game.QueueEvent(new StoryEvent(t.Id, a[2], "Set by the dev menu."));
+                        game.QueueEvent(new StoryEvent(t.Id, a[2], statement, game.Story.TitleCall ? title : null));
                     }
                     catch (InvalidOperationException e) { return e.Message; }
                     return null;
