@@ -29,6 +29,13 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm's generated worlds look like land, not figures** (#20). Coasts have bays and
+  headlands, inland seas are irregular, lobes are uneven, and no land meets the frame. Small scenery
+  islands lie offshore. When a world's starts are unfair, the generator searches again on the same
+  geometry before making a new one. Worlds now have rivers, roads with bridges, and a development
+  value per province, all drawn on the contact sheet; no rule reads them yet. The generator reports its
+  progress and stops at a time budget with the best world found. Every seed now makes a different
+  world than before.
 - **Painted Realm rules v2, slice R1a: the writs turn and armies as pieces, headless** (#20). The turn
   of rules v2 is a setting, `GameSetup.Writs`, beside today's one-move game, which stays the default
   and unchanged. Each ruler has a few writs a turn: a court order, orders for its armies awaiting them,

@@ -36,6 +36,11 @@ namespace GreyBoxStrategy
         public string Region;
         /// <summary>A special place's template id, or null (details in <see cref="WorldMap.Specials"/>).</summary>
         public string Special;
+        /// <summary>
+        /// How developed it looks, 0 to 4 (<see cref="GreyBoxStrategy.Development.Of"/>): what the screen
+        /// reads to draw farms and buildings.
+        /// </summary>
+        public int Development;
     }
 
     /// <summary>A special place on the map: which template it carries, its name and its line of story.</summary>
