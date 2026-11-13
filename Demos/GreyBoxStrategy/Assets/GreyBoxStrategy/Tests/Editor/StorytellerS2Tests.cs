@@ -394,6 +394,10 @@ namespace GreyBoxStrategy.Tests
             Assert.That(a.Count, Is.EqualTo(25));
             Assert.That(a.Keys.All(k => a[k].Line == b[k].Line), Is.True, "the same seed, the same land");
             Assert.That(NewGame(4).World.Traits.Values.Select(t => t.Line), Is.Not.EqualTo(a.Values.Select(t => t.Line)), "another seed, other land");
+            // The land itself is the map's (rules v2's R0 data): the Classic board's highmoor is coastal mountains in every game.
+            Assert.That(a["highmoor"].Terrain, Is.EqualTo("coastal mountains"));
+            Assert.That(NewGame(4).World.Traits["highmoor"].Terrain, Is.EqualTo("coastal mountains"));
+            Assert.That(a.Values.Count(t => t.Wet), Is.GreaterThan(0).And.LessThan(25));
 
             var g = AtTurnTwo(Rules(r => r.Traits = true), 3);
             var w = g.World;

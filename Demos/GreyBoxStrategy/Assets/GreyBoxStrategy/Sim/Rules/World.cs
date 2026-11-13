@@ -101,7 +101,7 @@ namespace GreyBoxStrategy
         /// seed on first use. Only the storyteller's S2 events read them; nothing else in the rules does.
         /// </summary>
         public IReadOnlyDictionary<string, ProvinceTraits> Traits =>
-            traits ?? (traits = TraitCatalog.Assign(ProvinceList.Select(p => p.Id), Seed));
+            traits ?? (traits = TraitCatalog.Assign(Map, Seed));
         private Dictionary<string, ProvinceTraits> traits;
 
         /// <summary>The turn being played, 1-based; 0 before the first upkeep.</summary>

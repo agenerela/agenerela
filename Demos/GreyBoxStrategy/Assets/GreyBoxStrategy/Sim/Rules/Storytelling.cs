@@ -378,7 +378,8 @@ namespace GreyBoxStrategy
     {
         public static readonly IReadOnlyList<string> Terrains = new[]
             { "hills", "marsh", "forest", "plains", "coast", "river valley", "moor", "heath" };
-        public static readonly HashSet<string> WetTerrains = new HashSet<string> { "marsh", "coast", "river valley" };
+        public static readonly HashSet<string> WetTerrains = new HashSet<string> { "marsh", "coast", "river valley", "coastal marsh",
+            "coastal plains", "coastal forest", "coastal hills", "coastal mountains" };
 
         public static readonly IReadOnlyList<string> Landmarks = new[]
         {
@@ -392,6 +393,27 @@ namespace GreyBoxStrategy
         public static readonly IReadOnlyList<string> Resources = new[]
             { "grain", "iron", "salt", "timber", "wool", "horses", "wine", "copper", "fish", "silver", "honey", "stone" };
         public static readonly HashSet<string> MinedResources = new HashSet<string> { "iron", "salt", "copper", "silver", "stone" };
+
+        /// <summary>
+        /// Three traits for every province of a map: from the map's own data where it has it (since
+        /// rules v2's R0 a map built from <c>WorldMap</c> carries terrain and coast for every province,
+        /// and may carry a trade good and a special place), and drawn from the seed for the rest.
+        /// </summary>
+        public static Dictionary<string, ProvinceTraits> Assign(MapDefinition map, int seed)
+        {
+            var drawn = Assign(map.Provinces.Select(p => p.Id), seed);
+            if (map.Source == null) return drawn;
+            var traits = new Dictionary<string, ProvinceTraits>(StringComparer.Ordinal);
+            foreach (var p in map.Provinces)
+            {
+                string land = p.Terrain.ToString().ToLowerInvariant();
+                string terrain = p.IsCoastal ? "coastal " + land : land;
+                string landmark = string.IsNullOrEmpty(p.Special) ? drawn[p.Id].Landmark : p.Special.Replace('_', ' ');
+                string resource = string.IsNullOrEmpty(p.Good) ? drawn[p.Id].Resource : p.Good.Replace('_', ' ');
+                traits[p.Id] = new ProvinceTraits(terrain, landmark, resource);
+            }
+            return traits;
+        }
 
         /// <summary>Three traits for every province, drawn from the seed and the province id.</summary>
         public static Dictionary<string, ProvinceTraits> Assign(IEnumerable<string> provinceIds, int seed)
