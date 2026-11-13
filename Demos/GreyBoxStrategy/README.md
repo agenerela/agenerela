@@ -558,6 +558,10 @@ stays near a dozen targets. The one-move game's `CountryAgent` and its prompts a
 A fake model that answers like the scripted player plays exactly the scripted game through both agents
 (`WritRulerTests`).
 
+**Victory presets for the writs game:** `GameSetup.Writs(seed, map, victory)` with `conquest`, the default,
+or `domination_75`: 75% of all provinces wins, with the headless cap the only turn limit. The lead is asked
+which should be the default (63 against 78 scripted turns on Classic, 144 against about 180 on medium).
+
 ## The first real run
 
 `mixed`, 200 games, seeds 1 to 200, standard rules, run in batch mode on 10 November 2026. The

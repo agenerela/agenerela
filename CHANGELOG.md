@@ -34,7 +34,8 @@ phase table and the open issues, not here.
   army orders, the army carried in the decision's correlation. Each keeps a memory of four decisions.
   They read local facts (at most eight lines on any map, rivals limited to those at war or bordering),
   a moves line of what is offered, and the orders already given this turn. A fake model playing like
-  the script plays exactly the scripted game through them.
+  the script plays exactly the scripted game through them. A `domination_75` victory preset sits beside
+  conquest, which stays the default until the lead chooses.
 - **Painted Realm rules v2, R1b's first part: the writs turn's pace, battle reports, armies in snapshots**
   (#20). A Classic game with scripted rulers now takes 78 turns, down from 123; a medium world takes
   about 180 (median 152), down from 226. The levers: two march steps a turn over open ground, three writs, a weaker militia,
