@@ -1600,7 +1600,7 @@ exists, and where it differs from the list above:
 
 **Split in three, 12 November** (proposed to the tech lead with R2's follow-up):
 - **R1a, the rules, headless: built.**
-- **R1b:** the court and marshal agents, and the prompt fixes R2 found: the standing facts, the length
+- **R1b, built** (both parts, 12 November; see below): the court and marshal agents, and the prompt fixes R2 found: the standing facts, the length
   of the moves line, and the game's length.
 - **R1c:** the live measurement on `qwen3.5:4b`.
 

@@ -428,7 +428,7 @@ huge world's generator takes about 12 s in the editor before any of this (R2's o
 **R1a, the writs turn and armies as pieces, headless** (12 November). Rules v2's turn, as a setting
 beside today's: `GameSetup.Writs(seed)` (or `"turn": "writs"`) plays it, conquest with no turn limit.
 The default stays the one-move game, so every pinned series and recording is unchanged. Nothing asks a
-model yet (R1b); the scripted players and the random baseline play it.
+model yet; the scripted players and the random baseline play it. R1b's second part, below, adds model rulers (`WritRuler`), which no run has called yet.
 
 - **A turn.** Each ruler has writs: 2, plus 1 for every 8 provinces it owns, at most 5 (R1b, #281: three writs, not two; the R1b paragraph below gives the rest of the retune). The court is
   asked first. Then come the armies that are waiting for orders, the most urgent first (an enemy army
