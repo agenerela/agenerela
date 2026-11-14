@@ -239,6 +239,20 @@ namespace GreyBoxStrategy
 
         public static string Name(UnitType t) => t == UnitType.Riders ? "riders" : t == UnitType.Bows ? "bows" : "pikes";
 
+        /// <summary>An army's soldiers by type, as its ruler reads them: "25 pikes, 15 riders, 10 bows" (types it has none of left out).</summary>
+        public static string Mix(Army a) => string.Join(", ", All.Where(t => a.Of(t) > 0).Select(t => $"{a.Of(t)} {Name(t)}"));
+
+        /// <summary>
+        /// What a rival's armies are mostly, as a ruler reads it: "mostly riders" when one type is half its soldiers
+        /// or more, else "mixed"; null when it has none.
+        /// </summary>
+        public static string Mostly(UnitMix m)
+        {
+            if (m.Total <= 0) return null;
+            var t = All.OrderByDescending(m.Of).ThenBy(x => x).First();
+            return m.Of(t) * 2 >= m.Total ? $"mostly {Name(t)}" : "mixed";
+        }
+
         public static double Base(GameRules r, UnitType t) => t == UnitType.Riders ? r.RiderStrength : t == UnitType.Bows ? r.BowStrength : r.PikeStrength;
 
         /// <summary>m(t) = 1 + c x (enemy's share of what t counters) - c x (enemy's share of what counters t).</summary>

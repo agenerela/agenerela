@@ -55,6 +55,38 @@ namespace GreyBoxStrategy.Tests
         }
 
         [Test]
+        public async Task UnitTypes_FakeModelsPlayTheScriptsGame_RecruitingByType_AndReadingTheMix()
+        {
+            var seen = new List<ScriptedRequest>();
+            var setup = GameSetup.Writs(5);
+            setup.TurnCap = 40;
+            setup.Numbers = GameRules.Standard;
+            setup.Numbers.UnitTypes = true;
+            var viaAgents = await PlayFakes(setup, seen);
+            var map = setup.BuildMap();
+            var direct = GameRunner.Play(setup.Seed, map.Countries.ToDictionary(c => c.Id, c => (IPlayer)new ScriptedPlayer(Temperament.Expansionist)), map, setup.BuildRules(map));
+            Assert.That(viaAgents.Record.Reports.SelectMany(r => r.Resolution), Is.EqualTo(direct.Reports.SelectMany(r => r.Resolution)),
+                "the court can give every recruit order the scripts give");
+            Assert.That(viaAgents.Decisions.All(d => d.Offered), Is.True);
+            var recruits = viaAgents.Decisions.Where(d => Actions.RecruitTypes.Contains(d.Action)).Select(d => d.Action).Distinct().ToList();
+            Assert.That(recruits, Is.Not.Empty, "recruit orders by type");
+            Assert.That(viaAgents.Decisions.Any(d => d.Action == Actions.Recruit), Is.False);
+
+            var court = seen.Where(r => r.Label == "Court").Select(r => r.Request.Observations).ToList();
+            var army = seen.Where(r => r.Label == "Army").Select(r => r.Request.Observations).ToList();
+            Assert.That(court.Any(o => System.Text.RegularExpressions.Regex.IsMatch(o, @"Our armies: \w+ \d+ \(\d+ (pikes|riders|bows)")), Is.True, "our armies with their mix");
+            Assert.That(court.Any(o => o.Contains(", mostly ") || o.Contains(", mixed,")), Is.True, "a rival's armies by what they mostly are");
+            Assert.That(court.Any(o => o.Contains("recruit pikes")), Is.True, "the moves line names the recruit orders");
+            Assert.That(army.All(o => System.Text.RegularExpressions.Regex.IsMatch(o, @"\w+: \d+ soldiers \(")), Is.True, "an army reads its own mix");
+
+            var offSeen = new List<ScriptedRequest>();
+            var off = GameSetup.Writs(5);
+            off.TurnCap = 12;
+            await PlayFakes(off, offSeen);
+            Assert.That(offSeen.All(r => !r.Request.Observations.Contains(" pikes") && !r.Request.Observations.Contains("mostly ")), Is.True, "off: no word of types");
+        }
+
+        [Test]
         public async Task TheCourtAndTheMarshal_ReadLocalFacts_AndTheirOwnMovesLine()
         {
             var seen = new List<ScriptedRequest>();
