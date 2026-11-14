@@ -120,6 +120,7 @@ namespace GreyBoxStrategy.Realm
         {
             string arm = StoryArms.For(c.Storyteller);
             yourWritsUnlimited = c.YourWritsUnlimited;
+            advisorNext = c.AdvisorFor;
             switch (c.Route(out string why))
             {
                 case NewGameRoute.None: ui.ShowMenuStatus(why); return;
@@ -154,7 +155,9 @@ namespace GreyBoxStrategy.Realm
         {
             if (!started) return;
             if (!ui.MenuOpen) { pausedByMenu = playing; playing = false; ui.SetPlaying(false, speed); }
-            ui.ShowPause(ResumeFromPause, () => OpenSettings(OpenPause), LeaveToMenu, DevTools.Available ? "F1 opens the dev menu (editor and development builds)" : null);
+            bool advisable = rule != null && rule.Writs && rule.Model != "scripted";
+            ui.ShowPause(ResumeFromPause, () => OpenSettings(OpenPause), LeaveToMenu, DevTools.Available ? "F1 opens the dev menu (editor and development builds)" : null,
+                advisable ? () => rule.AdvisorOn : (System.Func<bool>)null, advisable ? SetAdvisor : (System.Action<bool>)null);
         }
 
         private void ResumeFromPause()

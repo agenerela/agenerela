@@ -29,6 +29,11 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: the advisor in rule mode** (#20). A model on your own seat proposes each writs turn's plan in
+  the council: its counsel, each order with Take and Why, and "Take the advice". It is on by default with model
+  rulers and can be switched in New game and the pause menu. It is asked alongside the rulers, its orders always
+  map to legal moves, and only advice you take is recorded as yours.
+
 - **Painted Realm R3, part one: pikes, riders and bows with the counter rule** (#20), behind
   `GameRules.UnitTypes`, off by default.
   - Armies keep soldiers by type; losses keep the mix; `Army.Soldiers` stays the total.

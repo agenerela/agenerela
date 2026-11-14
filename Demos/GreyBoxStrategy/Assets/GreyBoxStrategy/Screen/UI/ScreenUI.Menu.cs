@@ -29,6 +29,10 @@ namespace GreyBoxStrategy.Realm
         public string Storyteller = "off";
         /// <summary>Rules v2's writs turn: armies as pieces, occupation and treaties (R1). The one-move game stays the default.</summary>
         public bool Writs;
+        /// <summary>Rule mode with model rulers: a model on your own seat proposes each turn's plan (the lead's answer 29). On by default.</summary>
+        public bool Advisor = true;
+        /// <summary>Whether this choice starts the advisor: ruling, on the writs turn, with model rulers.</summary>
+        public bool AdvisorFor => Rule && Writs && !Scripted && Advisor;
         /// <summary>Rule mode on the writs turn: your writs a turn without the rules' cap (<see cref="GameRules.UnlimitedWrits"/>). Off by default.</summary>
         public bool UnlimitedWrits;
         /// <summary>Whether this choice gives you unlimited writs: only when you rule, on the writs turn.</summary>
@@ -213,16 +217,31 @@ namespace GreyBoxStrategy.Realm
             card.Add(Section2("THE RULERS", "models on the server in " + Gateway.UrlVariable + ", or the rules' scripted rulers"));
             var rulersNote = new Label(); rulersNote.AddToClassList("src"); rulersNote.style.whiteSpace = WhiteSpace.Normal;
             var model = new TextField("Model") { value = choice.Model }; model.AddToClassList("menu-field");
+            VisualElement advisorRow = null; Label advisorNote = null;
             void Rulers(bool scripted)
             {
                 choice.Scripted = scripted;
                 model.SetEnabled(!scripted);
+                // The advisor is a model: with scripted rulers there is none, and no switch for it.
+                if (advisorRow != null) advisorRow.style.display = advisorNote.style.display = scripted ? DisplayStyle.None : DisplayStyle.Flex;
                 rulersNote.text = scripted
                     ? "Scripted: the rules' own rulers, no model and no server. Watching, the game is made at once and replayed; ruling, they answer through the same agents a model would."
                     : "Models: each ruler is a model on the server, behind the RTX 5080's lock; the game is played as you watch.";
             }
             card.Add(Steps("Rulers", new[] { "Models, live", "Scripted, a replay" }, choice.Scripted ? 1 : 0, i => Rulers(i == 1)));
             card.Add(rulersNote);
+            advisorNote = new Label(); advisorNote.AddToClassList("src"); advisorNote.style.whiteSpace = WhiteSpace.Normal;
+            void AdvisorChoice(int i)
+            {
+                choice.Advisor = i == 0;
+                advisorNote.text = i == 0
+                    ? "Advisor on: when you rule on the writs turn, a model on your own seat proposes each turn's orders, and you take them, change them or ignore them. Switch it in the game's menu too."
+                    : "Advisor off: you plan every turn alone. Switch it on in the game's menu.";
+            }
+            advisorRow = Steps("Advisor", new[] { "On", "Off" }, choice.Advisor ? 0 : 1, AdvisorChoice);
+            card.Add(advisorRow);
+            card.Add(advisorNote);
+            AdvisorChoice(choice.Advisor ? 0 : 1);
             var seed = new IntegerField("Seed") { value = choice.Seed }; seed.AddToClassList("menu-field"); seed.style.maxWidth = 190;
             var dice = new Button(() => seed.value = UnityEngine.Random.Range(1, 10000)) { text = "Roll", tooltip = "A new seed: a new map of events and rolls" }; dice.AddToClassList("tbtn"); dice.style.width = 48;
             card.Add(Row(model, seed, dice));
@@ -313,7 +332,6 @@ namespace GreyBoxStrategy.Realm
             Note(sel);
             card.Add(presetNote);
             Turn(choice.Writs);
-            card.Add(Coming("Advisor", "A model that counsels you in rule mode: on by default, off in a click"));
 
             menuStatus = new Label(); menuStatus.AddToClassList("menu-status"); card.Add(menuStatus);
             var backB = new Button(back) { text = "Back" }; backB.AddToClassList("menu-button"); backB.AddToClassList("quiet");
@@ -475,11 +493,18 @@ namespace GreyBoxStrategy.Realm
 
         // ---- the pause menu ----
 
-        public void ShowPause(Action resume, Action settings, Action mainMenu, string note = null)
+        public void ShowPause(Action resume, Action settings, Action mainMenu, string note = null, Func<bool> advisorOn = null, Action<bool> setAdvisor = null)
         {
             var card = Page("pause", resume);
             card.Add(Heading("PAUSED"));
             card.Add(BigButton("Resume", "Esc", resume));
+            if (advisorOn != null && setAdvisor != null)
+            {
+                bool on = advisorOn();
+                card.Add(BigButton(on ? "Advisor: on" : "Advisor: off",
+                    on ? "A model on your seat proposes each turn's orders. Click: plan alone from the next turn" : "Click: a model on your seat proposes each turn's orders, from the next turn",
+                    () => { setAdvisor(!on); ShowPause(resume, settings, mainMenu, note, advisorOn, setAdvisor); }));
+            }
             card.Add(BigButton("Settings", null, settings));
             card.Add(BigButton("Main menu", "Ends this game; a live or rule game lets the RTX 5080 go", mainMenu));
             if (note != null) { var n = new Label(note); n.AddToClassList("src"); n.style.alignSelf = Align.Center; card.Add(n); }

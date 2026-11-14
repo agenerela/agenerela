@@ -2140,8 +2140,11 @@ line, and `findings.md` for anything measured.
 - [ ] Live: opinion reasons in facts on against off (invented grievances); deals and length
 
 **A, the advisor**
-- [ ] Advise mode with the person's country's facts; refuses in character
-- [ ] On by default; switchable in game from the top bar; its model preset
+- [x] Advise mode with the person's country's facts: a `WritRuler` on the person's seat proposes the turn's
+  plan, built 14 November (`Agents/Advisor.cs`, demo README "The advisor in rule mode"); "refuses in character"
+  is not needed, as it only advises
+- [x] On by default with model rulers; switchable in New game and in game (the pause menu, not the top bar)
+- [ ] Its own model preset (today the session's model)
 
 **R8, orders without a cap**
 - [ ] The cap off behind a rules flag; writs kept as a setting

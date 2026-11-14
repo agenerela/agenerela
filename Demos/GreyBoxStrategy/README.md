@@ -554,6 +554,46 @@ world's in about 0.5 to 0.9 s, off the main thread behind the loading card.
 - The scripted rulers order armies into land they may not enter, so the chronicle shows many
   refused orders; that is the stand-ins' play, not the screen's.
 
+### The advisor in rule mode (14 November)
+
+The lead's answer 29: "have it optional and enabled by default which you can disable in game or turn on in game".
+
+**What it is.** When your turn opens on the writs turn, a model on your own seat proposes the turn's plan
+(`Agents/Advisor.cs`). It is the same court and marshal a model ruler has, a `WritRuler` used as it is, asked with
+your realm's facts:
+- the court's order first;
+- then an order for each army a writ reaches, each told the orders before it.
+
+Every suggestion maps to a move the rules offer on that request, and an answer naming any other move holds instead.
+Nothing it decides is carried out, and its memory drops each turn.
+
+**In the council.** A YOUR ADVISOR section shows:
+- its counsel: the first line any of its decisions kept;
+- each suggestion, with **Take** and **Why?**;
+- **Take the advice**, which fills your plan with them all.
+
+You can take one order, change any, or ignore them all; nothing is sent until End turn. **Why?** opens the inspector
+on the advisor's decision (what it read, was offered and answered), headed "your advisor ... advice, not a move".
+
+**Asked alongside the rulers.** The advice starts when your court request opens, beside the rulers' decisions. The
+turn never waits for it, and ending the turn drops advice still being decided. Its agents have their own names in
+the decision log (`kesh_advisor`, `kesh_advisor_marshal`), so the recording never takes them for yours. Only advice
+you take becomes your move, recorded as yours.
+
+**The switch:**
+- **In New game:** "Advisor: on / off" beside the rulers. On by default, and hidden for scripted rulers, where there
+  is no model to advise.
+- **In game:** "Advisor: on / off" in the pause menu, from the next turn (`ReplayDirector.SetAdvisor`).
+
+The stand-in rulers answer for the advisor too, so frames work without a server.
+
+**Tests**, each seen failing once against a deliberate break (`AdvisorTests`, a scripted model that names
+moves the rules never offer on alternate calls):
+- the advice maps only to moves the rules offer, checked against the rules themselves, and a legal answer is
+  the advice exactly;
+- taking it gives exactly that plan, and ignored advice is never recorded as your move;
+- with it off, no call is made, and turning it on in game asks it from the next turn.
+
 ### Generated worlds: detail up close, fields that show, rule mode on a big map (14 November)
 
 R4's third part on screen.

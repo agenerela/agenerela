@@ -92,6 +92,9 @@ namespace GreyBoxStrategy.Realm
             }
             body.Add(writs);
 
+            // Your advisor's proposal for the turn, when it is on: suggestions only.
+            AdvisorSection(body, req);
+
             // The court: its order, then a second one if a writ is left.
             body.Add(SectionHead("THE COURT", "one order, a writ"));
             body.Add(CourtRow(req, false, status));
