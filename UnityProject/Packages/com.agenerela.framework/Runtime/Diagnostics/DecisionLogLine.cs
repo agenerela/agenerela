@@ -181,6 +181,18 @@ namespace Agenerela
         [JsonProperty("targetIgnored")] public string TargetIgnored;
 
         /// <summary>
+        /// The choices the call offered (<see cref="DecisionTelemetry.ChoicesOffered"/>, DR-022); left out
+        /// for a call that gave none.
+        /// </summary>
+        [JsonProperty("choicesOffered")] public List<string> ChoicesOffered;
+
+        /// <summary>
+        /// The choices the call gave as unavailable, with their reasons
+        /// (<see cref="DecisionTelemetry.ChoicesUnavailable"/>, DR-022); left out when none was.
+        /// </summary>
+        [JsonProperty("choicesUnavailable")] public List<UnavailableChoice> ChoicesUnavailable;
+
+        /// <summary>
         /// False when the call asked for no statement (<see cref="DecisionTelemetry.StatementAsked"/>,
         /// #266); left out when it asked for one, as every call did before.
         /// </summary>
@@ -286,6 +298,20 @@ namespace Agenerela
             }
 
             line.TargetIgnored = telemetry.TargetIgnored;
+
+            if (telemetry.ChoicesOffered != null && telemetry.ChoicesOffered.Count > 0)
+            {
+                line.ChoicesOffered = new List<string>(telemetry.ChoicesOffered);
+            }
+
+            if (telemetry.ChoicesUnavailable != null && telemetry.ChoicesUnavailable.Count > 0)
+            {
+                line.ChoicesUnavailable = new List<UnavailableChoice>();
+                foreach (var choice in telemetry.ChoicesUnavailable)
+                {
+                    line.ChoicesUnavailable.Add(new UnavailableChoice(choice.Choice, Mask(choice.Reason)));
+                }
+            }
             line.StatementAsked = telemetry.StatementAsked ? (bool?)null : false;
 
             if (telemetry.TargetsUnavailable != null && telemetry.TargetsUnavailable.Count > 0)
