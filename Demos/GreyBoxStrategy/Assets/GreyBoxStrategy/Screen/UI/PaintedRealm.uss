@@ -259,6 +259,16 @@
 .host-n { font-size: 12px; -unity-font-style: bold; color: rgb(243, 231, 200); margin-left: 3px; }
 .host-g { font-size: 10px; color: rgb(214, 196, 156); margin-left: 3px; -unity-font-style: italic; }
 .host-wait { position: absolute; right: -6px; top: -6px; width: 10px; height: 10px; border-radius: 5px; border-width: 2px; border-color: rgb(196, 58, 40); background-color: rgb(246, 231, 196); }
+.host.chosen { border-color: rgb(250, 232, 170); border-width: 2px; scale: 1.15 1.15; }
+.writs-row { flex-direction: row; align-items: center; margin: 2px 0 4px 0; }
+.writ-pip { width: 13px; height: 13px; border-radius: 7px; border-width: 1px; border-color: rgb(201, 164, 90); margin-right: 4px; }
+.writ-pip.on { background-color: rgb(201, 164, 90); }
+.army-row { flex-direction: row; align-items: center; padding: 3px 4px; margin: 1px 0; border-left-width: 3px; border-color: rgba(0, 0, 0, 0); }
+.army-row:hover { background-color: rgba(255, 240, 200, 0.06); }
+.army-row.pick { background-color: rgba(201, 164, 90, 0.18); }
+.army-row.needs { border-left-color: rgb(222, 178, 80); }
+.army-row.ordered { border-left-color: rgb(110, 160, 90); }
+.army-row.no-writ { border-left-color: rgb(196, 58, 40); color: rgb(220, 160, 150); }
 .pennant { position: absolute; width: 18px; height: 22px; translate: 0 -100%; }
 .march-turns { position: absolute; font-size: 11px; -unity-font-style: italic bold; color: rgb(40, 28, 16); background-color: rgba(240, 226, 192, 0.85); padding: 0 3px; border-radius: 2px; }
 .battle-card { width: 520px; }

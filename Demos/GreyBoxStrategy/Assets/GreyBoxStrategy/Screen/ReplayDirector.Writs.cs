@@ -49,10 +49,10 @@ namespace GreyBoxStrategy.Realm
         /// Model rulers on the RTX 5080 behind its lock (checked first: the environment, the lock, its pause
         /// file, the server), or <paramref name="scripted"/> stand-ins through the same agents, with no server.
         /// </summary>
-        public void TryLiveWrits(string model, int seed, string victory = GameSetup.ConquestPreset, bool scripted = false, int turns = 0) =>
-            StartCoroutine(StartLiveWrits(model, seed, victory, scripted, turns));
+        public void TryLiveWrits(string model, int seed, string victory = GameSetup.ConquestPreset, bool scripted = false, int turns = 0, string arm = null) =>
+            StartCoroutine(StartLiveWrits(model, seed, victory, scripted, turns, arm));
 
-        private IEnumerator StartLiveWrits(string model, int seed, string victory, bool scripted, int turns)
+        private IEnumerator StartLiveWrits(string model, int seed, string victory, bool scripted, int turns, string arm)
         {
             if (started || live == null) yield break;
             if (!scripted)
@@ -69,7 +69,7 @@ namespace GreyBoxStrategy.Realm
             var map = setup.BuildMap();
             var rules = setup.BuildRules(map);
             live.Configure(true, seed, turns, model);
-            live.BeginWrits(map, rules, seed, scripted);
+            live.BeginWrits(map, rules, seed, scripted, arm);
             if (live.Error != null) { ui.ShowMenuStatus(live.Error); started = false; yield break; }
             ui.Players = live.Players;
             game = live.Replay();
@@ -100,6 +100,12 @@ namespace GreyBoxStrategy.Realm
             {
                 var a = shown?.Army(id);
                 if (a == null) return;
+                // Rule mode: your army with a writ is chosen for orders; anything else opens where it stands.
+                if (rule != null && rule.Writs && ui.OrdersRequest != null && a.Owner == rule.You && ui.ArmiesWithWrits(ui.OrdersRequest).Contains(id))
+                {
+                    if (ui.SelectedArmy != id) { ui.SelectedArmy = id; ApplyMode(); lastOrdersStatus = null; RuleTick(); }
+                    return;
+                }
                 int at = game.IndexOf(a.Location);
                 if (at >= 0) OpenProvince(at);
             };
@@ -128,6 +134,8 @@ namespace GreyBoxStrategy.Realm
         }
 
         private int Index(string province) => game.IndexOf(province);
+
+        private static string Cap(string id) => string.IsNullOrEmpty(id) ? "" : char.ToUpperInvariant(id[0]) + id.Substring(1);
 
         private static bool WritsKind(ReplayEventKind k) =>
             k == ReplayEventKind.ArmyOrder || k == ReplayEventKind.March || k == ReplayEventKind.Battle || k == ReplayEventKind.Occupy

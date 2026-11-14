@@ -48,33 +48,26 @@ namespace GreyBoxStrategy.Realm
         private readonly string model;
         private readonly Func<string, World, ILLMProvider> providerFor;
         private readonly CancellationTokenSource cancel = new CancellationTokenSource();
-        private readonly List<Asked> asked = new List<Asked>();
-        private readonly object gate = new object();
         private readonly Dictionary<string, Persona> personas = new Dictionary<string, Persona>(StringComparer.Ordinal);
+        private readonly WritsRecorder recorder;
+        private readonly TableDefinition table;
+        private readonly StoryRules story;
+        private readonly string arm;
         private DecisionLog log;
-        private long sequence;
 
-        /// <summary>One decision the game asked for, as it was asked and answered.</summary>
-        private sealed class Asked
-        {
-            public CountryRequest Request;
-            public string AgentId;
-            public string Stimulus;
-            public CountryAnswer Answer;
-            public ModelDecision Record;
-            public long Sequence;
-            public List<string> Offered;
-        }
-
-        public LiveWritsSession(string model, int seed, MapDefinition map, GameRules rules, int stopAfterTurns, string logPath, Func<string, World, ILLMProvider> providerFor)
+        /// <param name="arm">The table arm: "default", or one with a storyteller ("default+storyteller+s2..."), which then tells before every upkeep.</param>
+        public LiveWritsSession(string model, int seed, MapDefinition map, GameRules rules, int stopAfterTurns, string logPath, Func<string, World, ILLMProvider> providerFor, string arm = "default")
         {
             if (rules == null || rules.Turn != TurnStyle.Writs) throw new ArgumentException("A live writs session plays the writs turn.");
             this.model = model; this.map = map; this.rules = rules; this.providerFor = providerFor;
+            recorder = new WritsRecorder(seed);
             Seed = seed;
             StopAfterTurns = stopAfterTurns;
             LogPath = logPath;
             // The personas table's seats: every country a model ruler with its persona, as a live one-move game has.
-            var table = Tables.Named("personas", model, null, "default", true);
+            this.arm = arm ?? "default";
+            table = Tables.Named("personas", model, null, this.arm, true);
+            story = table.Options.Storyteller ? table.Options.StoryRules() : null;
             for (int i = 0; i < map.Countries.Count; i++)
             {
                 var persona = table.PersonaFor(i % 5, 0);
@@ -111,6 +104,14 @@ namespace GreyBoxStrategy.Realm
                 var game = new Game(Seed, map, rules);
                 Game = game;
                 var provider = providerFor(model, game.World);
+                Storyteller teller = null;
+                if (story != null)
+                {
+                    // A storyteller game: its rules from the arm, no random table beside it, the teller on the same model.
+                    game.EventTable = false;
+                    game.Story = story;
+                    teller = new Storyteller(game, provider, table.Options);
+                }
                 foreach (var c in game.World.CountryList)
                 {
                     var seat = new WritRuler(game.World, c.Id, provider, null, personas.TryGetValue(c.Id, out var p) ? p : null) { Seed = Seed };
@@ -124,6 +125,25 @@ namespace GreyBoxStrategy.Realm
                     if (guard-- <= 0) throw new InvalidOperationException("The game did not end within its turn limit.");
                     // The turn limit is enforced before the rulers are asked, so no model sees the turn after it.
                     if (StopAfterTurns > 0 && game.World.Turn >= StopAfterTurns) { Stopped = true; break; }
+                    if (teller != null)
+                    {
+                        await teller.TellAsync(cancel.Token);
+                        // A dilemma: each ruler it reaches chooses through its court before the upkeep.
+                        if (game.PendingChoices.Count > 0)
+                        {
+                            var chosen = new List<CountryAnswer>();
+                            foreach (var r in game.ChoiceRequests())
+                            {
+                                var seat = seats[r.CountryId];
+                                string stimulus = seat.StimulusFor(r);
+                                int before = seat.Decisions.Count;
+                                var answer = await seat.DecideAsync(r, cancel.Token);
+                                chosen.Add(answer);
+                                recorder.Model(r, answer, stimulus, seat.Decisions.Count > before ? seat.Decisions[seat.Decisions.Count - 1] : null, model);
+                            }
+                            game.SubmitChoices(chosen);
+                        }
+                    }
                     var requests = game.BeginTurn();
                     while (requests.Count > 0)
                     {
@@ -136,14 +156,7 @@ namespace GreyBoxStrategy.Realm
                             int before = seat.Decisions.Count;
                             var answer = await seat.DecideAsync(r, cancel.Token);
                             answers.Add(answer);
-                            lock (gate)
-                                asked.Add(new Asked
-                                {
-                                    Request = r, Answer = answer, Stimulus = stimulus, Sequence = sequence++,
-                                    AgentId = r.Moment == Moment.Army ? r.CountryId + RecordedDecision.MarshalSuffix : r.CountryId,
-                                    Record = seat.Decisions.Count > before ? seat.Decisions[seat.Decisions.Count - 1] : null,
-                                    Offered = r.Legal.Select(m => m.ToString()).ToList(),
-                                });
+                            recorder.Model(r, answer, stimulus, seat.Decisions.Count > before ? seat.Decisions[seat.Decisions.Count - 1] : null, model);
                         }
                         requests = game.Submit(answers);
                     }
@@ -183,9 +196,6 @@ namespace GreyBoxStrategy.Realm
         /// </summary>
         public Recording Recording()
         {
-            List<Asked> snapshot;
-            lock (gate) snapshot = asked.ToList();
-            var records = LogRecords();
             var rec = new Recording
             {
                 Seed = Seed,
@@ -193,73 +203,15 @@ namespace GreyBoxStrategy.Realm
                 Source = "live",
                 Players = Players,
             };
-            var used = new Dictionary<string, int>(StringComparer.Ordinal);
-            foreach (var a in snapshot)
+            var lines = Lines().ToList();
+            if (story != null)
             {
-                // The k-th decision of an agent is the k-th record of that agent in the log, if its stimulus says so.
-                used.TryGetValue(a.AgentId, out int k);
-                JObject raw = null;
-                if (records.TryGetValue(a.AgentId, out var list) && k < list.Count && (string)list[k]["stimulus"] == a.Stimulus) { raw = list[k]; used[a.AgentId] = k + 1; }
-                else if (records.TryGetValue(a.AgentId, out list) && k < list.Count) used[a.AgentId] = k + 1;
-                rec.Decisions.Add(Decision(a, raw));
+                // The storyteller's and its scribe's decisions, read from the log by their stimulus as in a one-move game.
+                rec.Decisions.AddRange(Replay.Recording.FromDecisionLog(lines, Seed, Players).Decisions.Where(d => d.IsStory || d.IsTitle));
+                rec.StoryArm = arm;
             }
+            rec.Decisions.AddRange(recorder.Decisions(lines));
             return rec;
-        }
-
-        private RecordedDecision Decision(Asked a, JObject raw)
-        {
-            var r = a.Request;
-            string moment = r.Moment == Moment.Envoy ? "envoys" : r.Moment == Moment.Army ? RecordedDecision.ArmyMoment : "council";
-            RecordedDecision d;
-            if (raw != null)
-            {
-                var o = (JObject)raw.DeepClone();
-                o["turn"] = r.Turn;
-                o["moment"] = moment;
-                d = GreyBoxStrategy.Replay.Recording.FromLogRecord(o);
-            }
-            else d = new RecordedDecision { Turn = r.Turn, Moment = moment, Stimulus = a.Stimulus };
-            // What the game asked and took is the truth; the log record adds how the model got there.
-            d.AgentId = a.AgentId;
-            d.Turn = r.Turn;
-            d.Moment = moment;
-            d.ArmyId = r.ArmyId;
-            d.Sequence = a.Sequence;
-            d.ChainId = d.ChainId ?? $"seed-{Seed}-turn-{r.Turn}-{moment}{(r.ArmyId != null ? "-" + r.ArmyId : "")}";
-            d.Action = a.Answer.Choice?.Action ?? Actions.None;
-            d.Target = a.Answer.Choice?.Target ?? RecordedDecision.NoTarget;
-            d.ModelName = model;
-            var m = a.Record;
-            if (m != null)
-            {
-                d.Statement = m.Statement ?? d.Statement ?? "";
-                d.ModelAction = m.ModelAction ?? d.ModelAction;
-                d.ModelTarget = m.ModelTarget ?? d.ModelTarget;
-                d.LatencySeconds = d.LatencySeconds > 0 ? d.LatencySeconds : m.LatencySeconds;
-                // How it ended when it landed: refused by the agent at Execute, as the replay's gate must refuse it too.
-                if (m.Execution.HasValue) { d.ExecutionStatus = m.Execution.Value.ToString(); d.ExecutionReason = m.ExecutionReason; }
-            }
-            d.OfferedMoves = a.Offered;
-            d.OfferedActions = r.Legal.Select(x => x.Action).Distinct().ToList();
-            return d;
-        }
-
-        // The log's "Decided" records by agent, in the order written, with the execution of their "Executed" ones.
-        private Dictionary<string, List<JObject>> LogRecords()
-        {
-            var byAgent = new Dictionary<string, List<JObject>>(StringComparer.Ordinal);
-            foreach (string line in Lines())
-            {
-                if (string.IsNullOrWhiteSpace(line)) continue;
-                JObject o;
-                try { o = JObject.Parse(line); } catch (Newtonsoft.Json.JsonReaderException) { continue; } // a line still being written
-                if ((string)o["stage"] != "Decided") continue;
-                string agent = (string)o["agentId"];
-                if (agent == null) continue;
-                if (!byAgent.TryGetValue(agent, out var list)) byAgent[agent] = list = new List<JObject>();
-                list.Add(o);
-            }
-            return byAgent;
         }
     }
 }

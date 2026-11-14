@@ -75,6 +75,10 @@ namespace GreyBoxStrategy.Realm
                     StartGeneratedWatch(size, LandShape.Continent, seed, 0, true, victory);
                     return $"the writs turn on a {size} world, seed {seed}";
                 });
+            c.Add("writs-rule", "writs-rule <country> [seed] [storyteller preset]", "rule a country on the writs turn against four stand-in rulers through the real agents, and a stand-in storyteller with a preset; no server, no card",
+                a => { if (a.Length < 1) return "Name a country."; if (started) return "A game is running: Esc, then Main menu, first."; string why = Preset(a, 2); if (why != null) return why;
+                       ui.HideMenu(); StartRuleScriptedWrits(a[0], a.Length > 1 ? int.Parse(a[1]) : 3, GameSetup.ConquestPreset, StoryArms.For(a.Length > 2 ? a[2] : null)); return $"writs rule game, {a[0]}, stand-in rulers{(a.Length > 2 ? ", storyteller " + a[2] : "")}"; });
+            c.Add("plan", "plan court <move> | court2 <move> | <army> <march province|hold> | end", "the writs turn's orders, as the panel and the map give them (rule mode)", a => WritsPlanCommand(a));
             c.Add("writs-live", "writs-live classic|<size> [seed] [turns] [model]", "model rulers play the writs turn live on the RTX 5080, a court and a marshal each (the lock, its pause file and the server are checked first)",
                 a => LiveWritsCommand(a, null));
             c.Add("writs-agents", "writs-agents classic|<size> [seed] [turns]", "stand-in rulers play the writs turn through the real agents, live: the inspector has their prompts; no server, no card",
@@ -180,6 +184,28 @@ namespace GreyBoxStrategy.Realm
             });
             c.Add("menu", "menu", "show or hide the dev menu", _ => { ToggleDevMenu(); return ui.DevOpen ? "dev menu open" : "dev menu closed"; });
             return c;
+        }
+
+        private string WritsPlanCommand(string[] a)
+        {
+            if (rule == null || !rule.Writs || ui.OrdersRequest == null) return "Not waiting for your writs orders.";
+            if (a.Length == 0) return ui.WritsKey();
+            if (a[0] == "end") { EndTurn(); return "orders sent"; }
+            var req = ui.OrdersRequest;
+            Move Find(System.Collections.Generic.IEnumerable<Move> legal, string action, string target) =>
+                legal.FirstOrDefault(m => m.Action == action && m.Target == target) ?? throw new ArgumentException($"{action} {target} is not offered.");
+            if (a[0] == "court" || a[0] == "court2")
+            {
+                var m = Find(req.Legal, a[1], a.Length > 2 ? a[2] : null);
+                if (a[0] == "court") ui.Plan.Court = m; else ui.Plan.Court2 = m;
+            }
+            else
+            {
+                var moves = WritLegality.ArmyMoves(req.World, rule.You, a[0]);
+                ui.Plan.Armies[a[0]] = a.Length > 1 && a[1] == "march" ? Find(moves, Actions.March, a[2]) : Find(moves, Actions.None, null);
+            }
+            lastOrdersStatus = null; RuleTick();
+            return ui.WritsKey();
         }
 
         private string LiveWritsCommand(string[] a, string model)

@@ -48,11 +48,14 @@ namespace GreyBoxStrategy.Realm
         /// For the menu, the dev menu and the Unity CLI: a generated world played live, the writs turn with model
         /// rulers (checked first, as on the Classic board) or stand-ins through the same agents.
         /// </summary>
-        public void StartGeneratedLive(MapSize size, int seed, string model, string victory = GameSetup.ConquestPreset, int turns = 0) =>
-            StartCoroutine(GeneratedLive(size, seed, model, victory, turns));
+        public void StartGeneratedLive(MapSize size, int seed, string model, string victory = GameSetup.ConquestPreset, int turns = 0, string arm = null) =>
+            StartCoroutine(GeneratedLive(size, seed, model, victory, turns, arm));
 
-        private IEnumerator GeneratedLive(MapSize size, int seed, string model, string victory, int turns)
+        private static string pendingLiveArm;
+
+        private IEnumerator GeneratedLive(MapSize size, int seed, string model, string victory, int turns, string arm)
         {
+            pendingLiveArm = arm;
             if (model != "scripted")
             {
                 string why = LiveGame.WhyNotNow();
@@ -176,7 +179,8 @@ namespace GreyBoxStrategy.Realm
             if (liveModel != null)
             {
                 live.Configure(true, setup.Seed, pendingLiveTurns, liveModel == "scripted" ? null : liveModel);
-                live.BeginWrits(liveMap, liveRules, setup.Seed, liveModel == "scripted");
+                live.BeginWrits(liveMap, liveRules, setup.Seed, liveModel == "scripted", pendingLiveArm);
+                pendingLiveArm = null;
                 if (live.Error != null) Debug.LogWarning("Painted Realm: the live game could not start: " + live.Error);
                 game = live.Replay();
             }

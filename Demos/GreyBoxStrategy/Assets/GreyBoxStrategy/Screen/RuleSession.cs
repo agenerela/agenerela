@@ -27,6 +27,30 @@ namespace GreyBoxStrategy.Realm
     public sealed class RuleSession
     {
         /// <summary>
+        /// Your orders for one writs turn (rules v2, R1), given at once: the court's order, an order for each
+        /// army that gets a writ, and a second court order when a writ is left. The rules ask for them round by
+        /// round; the session answers each round from this plan, and holds where it has nothing.
+        /// </summary>
+        public sealed class WritsPlan
+        {
+            public Move Court = Move.Hold;
+            public readonly Dictionary<string, Move> Armies = new Dictionary<string, Move>(StringComparer.Ordinal);
+            public Move Court2 = Move.Hold;
+            internal bool CourtTaken;
+
+            /// <summary>The order for a request of yours: the first court request takes <see cref="Court"/>, the next <see cref="Court2"/>.</summary>
+            public Move For(CountryRequest r)
+            {
+                Move m;
+                if (r.Moment == Moment.Army) m = r.ArmyId != null && Armies.TryGetValue(r.ArmyId, out var a) ? a : Move.Hold;
+                else if (!CourtTaken) { CourtTaken = true; m = Court ?? Move.Hold; }
+                else m = Court2 ?? Move.Hold;
+                // Only what the rules offer on this request lands; anything else holds, as for a model.
+                return r.Legal.FirstOrDefault(x => x.Equals(m)) ?? r.Legal.FirstOrDefault(x => x.Action == Actions.None) ?? Move.Hold;
+            }
+        }
+
+        /// <summary>
         /// The card the model seats use. A game a person plays takes it before the first council and
         /// holds it until the game ends or is left (the lead's decision, 12 November).
         /// </summary>
@@ -59,8 +83,19 @@ namespace GreyBoxStrategy.Realm
         private readonly string arm;
         private readonly StoryRules story;
         private Storyteller teller;
+        // The writs turn: a WritRuler for each model seat, every decision recorded as the game asked it.
+        private readonly Dictionary<string, WritRuler> writSeats = new Dictionary<string, WritRuler>(StringComparer.Ordinal);
+        private readonly WritsRecorder recorder;
+        private AwaitableCompletionSource<WritsPlan> pendingPlan;
+        private readonly MapDefinition map;
 
-        public RuleSession(string you, string model, string arm, int seed, string logPath, Func<string, World, ILLMProvider> providerFor, ICardLock cardLock = null)
+        /// <summary>True for the writs turn: armies, a court and a marshal for each model ruler, your orders as one plan a turn.</summary>
+        public bool Writs => Game.Rules.Turn == TurnStyle.Writs;
+
+        /// <param name="map">The map, or null for the Classic board.</param>
+        /// <param name="rules">The rules, or null for today's one-move game; the writs turn's (<see cref="GameSetup.Writs"/>) for rule mode on it.</param>
+        public RuleSession(string you, string model, string arm, int seed, string logPath, Func<string, World, ILLMProvider> providerFor, ICardLock cardLock = null,
+            MapDefinition map = null, GameRules rules = null)
         {
             You = you;
             Model = model;
@@ -69,9 +104,11 @@ namespace GreyBoxStrategy.Realm
             this.providerFor = providerFor;
             this.cardLock = cardLock;
             table = Tables.Named("personas", model, null, arm, true);
-            var map = MapDefinition.Standard();
+            map = map ?? MapDefinition.Standard();
+            this.map = map;
             if (map.Countries.All(c => c.Id != you)) throw new ArgumentException($"No country '{you}'.", nameof(you));
-            Game = new Game(seed, map);
+            Game = new Game(seed, map, rules);
+            recorder = new WritsRecorder(seed);
             this.arm = arm;
             // A storyteller game: its rules from the arm, and no random table beside it.
             if (table.Options.Storyteller)
@@ -85,7 +122,7 @@ namespace GreyBoxStrategy.Realm
                 string id = map.Countries[i].Id;
                 Players[id] = id == you
                     ? new RecordedPlayer { Model = YourModel, Persona = null }
-                    : new RecordedPlayer { Model = table.SeatFor(i, 0).Model, Persona = table.PersonaFor(i, 0)?.Id };
+                    : new RecordedPlayer { Model = table.SeatFor(i % 5, 0).Model, Persona = table.PersonaFor(i % 5, 0)?.Id };
             }
         }
 
@@ -161,6 +198,25 @@ namespace GreyBoxStrategy.Realm
             p.SetResult(Orders.Legal.First(m => m.Equals(move)));
         }
 
+        /// <summary>
+        /// The writs turn: your orders for this turn, while <see cref="WaitingFor"/> is <see cref="Waiting.Orders"/>.
+        /// Every order must be one the rules offer now: the court's on <see cref="Orders"/>, an army's from
+        /// <see cref="WritLegality.ArmyMoves"/> for an army awaiting orders.
+        /// </summary>
+        public void Plan(WritsPlan plan)
+        {
+            if (!Writs) throw new InvalidOperationException("Plan is the writs turn's; the one-move game takes Order.");
+            if (WaitingFor != Waiting.Orders || pendingPlan == null || Orders == null) throw new InvalidOperationException("The game is not waiting for your orders.");
+            var w = Orders.World;
+            if (plan.Court != null && !Orders.Legal.Contains(plan.Court))
+                throw new ArgumentException($"{plan.Court} is not offered to your court: {WritLegality.WhyNotCourt(w, You, plan.Court) ?? "not on the list"}.");
+            foreach (var kv in plan.Armies)
+                if (!WritLegality.ArmyMoves(w, You, kv.Key).Contains(kv.Value))
+                    throw new ArgumentException($"{kv.Key} cannot {kv.Value}: {WritLegality.WhyNotArmy(w, You, kv.Key, kv.Value) ?? "not on the list"}.");
+            var p = pendingPlan; pendingPlan = null;
+            p.SetResult(plan);
+        }
+
         /// <summary>Your answer to the peace offer.</summary>
         public void Answer(bool accept)
         {
@@ -184,6 +240,8 @@ namespace GreyBoxStrategy.Realm
             cancel.Cancel();
             var p = pending; pending = null;
             p?.SetCanceled();
+            var q = pendingPlan; pendingPlan = null;
+            q?.SetCanceled();
         }
 
         /// <summary>Plays the game to its end, or until <see cref="Stop"/>.</summary>
@@ -194,14 +252,21 @@ namespace GreyBoxStrategy.Realm
             log = DecisionLog.Start(LogPath, includePrompt: true);
             try
             {
-                var map = MapDefinition.Standard();
                 var providers = new Dictionary<string, ILLMProvider>(StringComparer.Ordinal);
                 for (int i = 0; i < map.Countries.Count; i++)
                 {
                     string id = map.Countries[i].Id;
                     if (id == You) continue;
-                    string model = table.SeatFor(i, 0).Model;
+                    string model = table.SeatFor(i % 5, 0).Model;
                     if (!providers.TryGetValue(model, out var provider)) providers[model] = provider = providerFor(model, Game.World);
+                    if (Writs)
+                    {
+                        // A court and a marshal for each model ruler, as the writs turn's measured runs have them.
+                        var ruler = new WritRuler(Game.World, id, provider, table.Options, table.PersonaFor(i % 5, 0)) { Seed = Seed };
+                        writSeats[id] = ruler;
+                        Game.Gates[id] = ruler;
+                        continue;
+                    }
                     var seat = new CountryAgent(Game.World, id, provider, table.Options, table.PersonaFor(i, 0)) { Seed = Seed };
                     seats[id] = seat;
                     Game.Gates[id] = seat;
@@ -225,7 +290,8 @@ namespace GreyBoxStrategy.Realm
                 while (!Game.IsOver)
                 {
                     cancel.Token.ThrowIfCancellationRequested();
-                    await PlayTurn();
+                    if (Writs) await PlayWritsTurn();
+                    else await PlayTurn();
                 }
             }
             catch (OperationCanceledException) { Stopped = true; }
@@ -309,6 +375,137 @@ namespace GreyBoxStrategy.Realm
             foreach (var seat in seats.Values) seat.EndTurn();
             WaitingFor = Waiting.Nothing;
             Resolved++;
+        }
+
+        // ---- the writs turn ----
+
+        // Rounds of requests until every order is in, then the treaty answers, then the turn lands. Your requests
+        // are answered from one plan you give at the first, while the model rulers decide theirs.
+        private async Awaitable PlayWritsTurn()
+        {
+            ApplyDev();
+            if (story != null)
+            {
+                if (!devApplied.Any(d => d.Turn == Game.NextTurn && DevEdits.QueuesEvent(d.Command))) await Tell();
+                if (Game.PendingChoices.Count > 0) await WritsChoices();
+            }
+            var requests = Game.BeginTurn();
+            if (story == null) DevEdits.AfterBeginTurn(Game);
+            WritsPlan plan = null;
+            while (requests.Count > 0)
+            {
+                var theirs = requests.Where(r => writSeats.ContainsKey(r.CountryId)).ToList();
+                ModelsThinking = theirs.Count > 0;
+                if (ModelsThinking) WaitingSince = DateTime.UtcNow;
+                var models = DecideWrits(theirs);
+                var answers = new List<CountryAnswer>();
+                foreach (var r in requests.Where(r => r.CountryId == You))
+                {
+                    Move move;
+                    if (r.Moment == Moment.Envoy)
+                    {
+                        // A treaty term put to you: its card waits for your answer.
+                        OfferStatement = writSeats.TryGetValue(r.OfferedBy, out var by)
+                            ? by.Decisions.LastOrDefault(d => d.Turn == r.Turn && Actions.IsTerm(d.Action))?.Statement : null;
+                        move = await Ask(Waiting.Envoy, () => Offer = r);
+                        Offer = null; OfferStatement = null;
+                    }
+                    else
+                    {
+                        if (plan == null) plan = await AskPlan(r);
+                        move = plan.For(r);
+                    }
+                    answers.Add(new CountryAnswer(r, move));
+                    recorder.Person(r, move, YourModel);
+                }
+                WaitingFor = Waiting.Models;
+                answers.AddRange(await models);
+                requests = Game.Submit(answers);
+            }
+            var report = Game.Resolve();
+            foreach (var seat in writSeats.Values) seat.Learn(report);
+            foreach (var seat in writSeats.Values) seat.EndTurn();
+            WaitingFor = Waiting.Nothing;
+            Resolved++;
+        }
+
+        private async Awaitable<WritsPlan> AskPlan(CountryRequest court)
+        {
+            if (failure != null) throw failure;
+            pendingPlan = new AwaitableCompletionSource<WritsPlan>();
+            var awaitable = pendingPlan.Awaitable;
+            Orders = court;
+            WaitingSince = DateTime.UtcNow;
+            WaitingFor = Waiting.Orders;
+            var plan = await awaitable;
+            Orders = null;
+            return plan;
+        }
+
+        // A dilemma on the writs turn: the model rulers' courts choose while you choose.
+        private async Awaitable WritsChoices()
+        {
+            var asks = Game.ChoiceRequests();
+            var models = DecideWrits(asks.Where(r => writSeats.ContainsKey(r.CountryId)).ToList());
+            var mine = asks.FirstOrDefault(r => r.CountryId == You);
+            if (mine != null)
+            {
+                var choice = Game.PendingChoices.First(c => c.Country == You && c.Chosen == null);
+                var move = await Ask(Waiting.Choice, () => { Choice = choice; ChoiceRequest = mine; });
+                Choice = null; ChoiceRequest = null;
+                string why = Game.Choose(You, move.Action, "person");
+                if (why != null) Debug.LogWarning("Painted Realm: your choice did not land: " + why);
+                recorder.Person(mine, move, YourModel);
+            }
+            WaitingFor = Waiting.Models;
+            Game.SubmitChoices(await models);
+            WaitingFor = Waiting.Nothing;
+        }
+
+        // The model rulers' requests, one ruler's back to back, each within the round timeout.
+        private async Awaitable<List<CountryAnswer>> DecideWrits(List<CountryRequest> requests)
+        {
+            try
+            {
+                var answers = new List<CountryAnswer>();
+                foreach (var r in requests.OrderBy(r => r.CountryId, StringComparer.Ordinal))
+                {
+                    var seat = writSeats[r.CountryId];
+                    string stimulus = seat.StimulusFor(r);
+                    int before = seat.Decisions.Count;
+                    CountryAnswer answer;
+                    using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancel.Token))
+                    using (OnMainThreadAfter(RoundTimeout, timeout))
+                    {
+                        try { answer = await seat.DecideAsync(r, timeout.Token); }
+                        catch (OperationCanceledException) when (!cancel.IsCancellationRequested)
+                        {
+                            throw new TimeoutException($"{r.CountryId}'s {(r.Moment == Moment.Army ? "marshal" : "court")} did not answer within {RoundTimeout.TotalSeconds:0} seconds on turn {r.Turn}. " +
+                                "The server may be busy with another client's requests, or unreachable. Go back to the menu and try again when the card is free.");
+                        }
+                    }
+                    answers.Add(answer);
+                    recorder.Model(r, answer, stimulus, seat.Decisions.Count > before ? seat.Decisions[seat.Decisions.Count - 1] : null, Players[r.CountryId].Model);
+                }
+                ModelsThinking = false;
+                return answers;
+            }
+            catch (Exception e) when (!(e is OperationCanceledException))
+            {
+                Fail(e);
+                throw;
+            }
+        }
+
+        private void ApplyDev()
+        {
+            foreach (string command in devQueue)
+            {
+                string why = DevEdits.Apply(Game, command);
+                if (why == null) devApplied.Add(new DevEdit { Turn = Game.NextTurn, Command = command });
+                else Debug.LogWarning($"Painted Realm: dev edit '{command}' did not apply: {why}");
+            }
+            devQueue.Clear();
         }
 
         // The storyteller's call, with the rulers' timeout: it never sits silent either.
@@ -412,6 +609,8 @@ namespace GreyBoxStrategy.Realm
             failure = e;
             var p = pending; pending = null;
             p?.SetException(e);
+            var q = pendingPlan; pendingPlan = null;
+            q?.SetException(e);
         }
 
         // Cancels after a delay, on the main thread: a timer's own thread would resume the round's
@@ -457,6 +656,19 @@ namespace GreyBoxStrategy.Realm
         /// <summary>The game so far: the model seats' decisions from the log, yours beside them.</summary>
         public GreyBoxStrategy.Replay.Recording BuildRecording()
         {
+            if (Writs)
+            {
+                // The writs turn: every ruler's decision as the game asked it, yours beside them; the storyteller's from the log.
+                var lines = Lines().ToList();
+                var w = new GreyBoxStrategy.Replay.Recording { Seed = Seed, Title = $"You rule {Cap(You)}, the writs turn, seed {Seed}", Source = "rule", Players = Players };
+                if (story != null)
+                    w.Decisions.AddRange(GreyBoxStrategy.Replay.Recording.FromDecisionLog(lines, Seed, Players).Decisions.Where(d => d.IsStory || d.IsTitle));
+                w.Decisions.AddRange(recorder.Decisions(lines));
+                w.DevEdits.AddRange(devApplied);
+                w.Dev = Dev;
+                if (story != null) w.StoryArm = arm;
+                return w;
+            }
             var rec = GreyBoxStrategy.Replay.Recording.FromDecisionLog(Lines(), Seed, Players, $"You rule {Cap(You)}, seed {Seed}");
             rec.Source = "rule";
             rec.Decisions.AddRange(yours);
@@ -469,7 +681,7 @@ namespace GreyBoxStrategy.Realm
         /// <summary>The turns that have resolved, as the screen plays them.</summary>
         public ReplayGame BuildReplay()
         {
-            var g = ReplayBuilder.Build(BuildRecording(), partial: true);
+            var g = ReplayBuilder.Build(BuildRecording(), map, Game.Rules, partial: true);
             // A turn whose decisions are all in but which has not resolved yet would play without
             // the refusals Agent.Execute writes when the moves land: keep only resolved turns.
             if (g.Turns.Count > Resolved) g.Turns.RemoveRange(Resolved, g.Turns.Count - Resolved);
