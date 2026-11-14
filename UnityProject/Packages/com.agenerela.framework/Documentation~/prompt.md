@@ -327,6 +327,35 @@ run that set. A counter-example also carries a risk: it pushes the model toward 
 the prototype a prompt biased toward `none` scored below the baseline (Appendix A). So the A/B
 has to check that real commands still score, as well as whether unasked actions go down.
 
+## Examples that carry their situation
+
+When the game asks the same thing every time ("Choose this turn's move."), the situation lives only
+in the observations, and an example of a stimulus and an answer cannot show *when* to pick an
+action (#216 item 1). An example can carry one or two observation lines,
+`ActionDefinition.ExampleObservations`, or `[Example("...", Observations = new[] { "..." })]` in
+code, shown above the example under the heading a real call's observations have:
+
+```text
+Examples of correct decisions:
+What you know right now:
+- Our treasury holds 3 gold.
+Report: "Choose this turn's move." -> action: raise_taxes, target: no_target
+Report: "Rest the army." -> action: rest, target: no_target
+```
+
+- **Off by default.** Only a call with `DecideOptions.ExampleObservations = true` shows them. Off,
+  or with none written, the block is byte-identical to one built before. It changes the examples,
+  so it is owed an A/B run (#151).
+- One format: the same heading and `- ` lines as the call's own observations, one line each, so the
+  model reads an example's situation as it reads its own. An example without observations stays
+  one line. A `{0}` names the example's target, as in its stimulus.
+- **Hard rule 4.** An example with a situation is its stimulus and its observations together, so
+  `PromptSetChecks` flags an evaluation prompt whose stimulus matches the example *and* whose
+  observations hold every line of its situation; the same stimulus in another situation is another
+  prompt. An `EvalRunner` arm with the option off shows each example's bare stimulus, so for that
+  arm the stimulus is judged alone, as before, and the run is refused if it matches.
+- Only an action's own example carries one; counter-examples and the idle example do not.
+
 ## Statements in the examples
 
 An example without a statement leaves the model one line to copy: its stimulus. GreyBoxVillage's

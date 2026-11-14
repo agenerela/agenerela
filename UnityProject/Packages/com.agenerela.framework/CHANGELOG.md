@@ -61,6 +61,16 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **Examples that carry their situation** (#216 item 1). `ActionDefinition.ExampleObservations`
+  (the asset front door) and `[Example(..., Observations = ...)]` (the code front door) hold one or
+  two observation lines, rendered by `FewShotBuilder` above the example under the observations'
+  own heading, only on a call with the new `DecideOptions.ExampleObservations` (and
+  `PromptOptions.ExampleObservations`), off by default: off, the block is byte-identical. Hard rule
+  4 now treats such an example as its stimulus and situation together:
+  `PromptSetChecks.MatchesSituation` is new, and `EvalRunner` judges the bare stimulus for an arm
+  that shows examples without their situations. `EvalArmConditions.ExampleObservations` records the
+  arm's setting.
+
 - **Sampling and a reply cap per call** (#266 item 7, #244 item 11). `DecideOptions.Temperature`,
   `Seed` and `MaxReplyTokens`, null by default, carried on the new `DecisionRequest.Temperature`,
   `Seed` and `MaxReplyTokens` and sent by `OllamaProvider` as `options.temperature` (in place of
