@@ -553,6 +553,31 @@ world's in about 0.5 to 0.9 s, off the main thread behind the loading card.
 - The scripted rulers order armies into land they may not enter, so the chronicle shows many
   refused orders; that is the stand-ins' play, not the screen's.
 
+### The writs turn on screen: polish (14 November)
+
+What the frames of rule mode showed, fixed:
+- **The council's buttons** look like the screen's other order buttons: gold on dark when offered. The
+  chosen one is filled and bold. One not offered is dim, its tooltip gives the rules' reason, and a click
+  says it in the panel rather than doing nothing.
+- **No ids in the chronicle or the panel.** A recruit reads "Orsk raises 15 soldiers at Orskhaven for
+  Fenna's host". A refusal or a reason the rules give is said with proper names and capitals
+  (`Wording` in `Screen/Replay/Chronicle.cs`).
+- **A ruler's orders of a turn are one entry.** On the writs turn a ruler gives several orders, and each
+  made its own line with its words under it. Now each ruler gets a heading, "Merrow's orders", with one
+  line an order ("fortifies Glimmerford, twice"), and what it said is shown once. A click on an order
+  still finds it on the map. Battles, land and the storyteller stay lines of their own (`Chronicle.Group`).
+- **Refused destinations:** the three nearest, nearest first, said of the province ("Highmoor: Valen's,
+  and we are at peace"). Any other is a click on the map away.
+- **Pieces never overlap.** Pieces in neighbouring provinces that would touch are set apart, one above
+  the other, while a moving piece keeps its path (`ScreenUI.Unclutter`). A treaty's seal is drawn above
+  the pieces, so a piece on the province no longer hides it. March lines run under the pieces, so a line never strikes through a piece's number. A march's "N turns" tag sits under its destination's name, not on it.
+- **The orders panel:** no stray horizontal scrollbar; Hold is a button like the others; an army with no march
+  offered says so instead of asking for a lit province; army names numbered by the rules read "Tolly's second host".
+- **The top bar** drops each country's lesser stats (gold, change, stability) when five countries in full
+  would push Menu off the right edge, as at 1080p in watch mode.
+
+Unlimited writs for the person waits for the rules' per-country setting.
+
 ### The writs turn on screen: rule mode (13 November)
 
 The third part of the screen's R1: you rule one country on the writs turn against four model rulers, a

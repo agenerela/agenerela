@@ -42,6 +42,7 @@ namespace GreyBoxStrategy.Realm
             this.portraits = portraits;
             CountryIds = countryIds;
             ProvinceIds = provinceIds;
+            words = null;
             provinceLabels = new Label[provinceIds.Count];
             fortMarks = new VisualElement[provinceIds.Count];
             Players = players;
@@ -80,6 +81,10 @@ namespace GreyBoxStrategy.Realm
             time.Add(speedButton);
             top.Add(time);
             root.Add(top);
+            topBar = top;
+            // Five countries in full can outgrow a 1080p bar and push Menu off the right edge: the bar then drops
+            // each country's lesser stats ("tight") rather than clip the controls.
+            root.schedule.Execute(FitTopBar).Every(400);
 
             // ---- realm ----
             var realm = Panel("REALM", "realm");
@@ -129,6 +134,21 @@ namespace GreyBoxStrategy.Realm
 
         /// <summary>Below 1600 px wide the top bar keeps crest, name, provinces, army and wars; the rest is in its tooltip.</summary>
         public void SetCompact(bool compact) => Root.EnableInClassList("compact", compact);
+
+        private VisualElement topBar;
+        private float tightAt = -1;
+
+        // Tight while the countries do not fit; loosened again only when the bar's width changes, so it never flickers.
+        private void FitTopBar()
+        {
+            if (topBar == null || nations == null || float.IsNaN(topBar.layout.width)) return;
+            float w = topBar.layout.width;
+            bool tight = Root.ClassListContains("tight");
+            if (tight && Math.Abs(w - tightAt) > 1) { Root.RemoveFromClassList("tight"); return; }
+            float need = 0;
+            foreach (var c in nations.Children()) need += c.layout.width;
+            if (!tight && need > nations.layout.width + 1) { Root.AddToClassList("tight"); tightAt = w; }
+        }
 
         /// <summary>The rules' numbers the screen shows: the Classic board's 15 of 25 in 30 turns, or a generated world's.</summary>
         public int WinAt = 15, MaxTurns = 30;
@@ -294,6 +314,8 @@ namespace GreyBoxStrategy.Realm
         {
             if (line == null) return;
             if (!string.IsNullOrEmpty(line.Quote) && quotes.Repeats(line.Country, line.Quote)) line.Quote = SaidAgain;
+            // A refusal is the rules' own reason: said with names, not ids.
+            if (line.Category == ChronicleCategory.Refused) { line.Text = Words.Plain(line.Text); line.Short = Words.Plain(line.Short); }
             lines.Add(line);
             RenderChronicle(line);
         }
@@ -302,9 +324,11 @@ namespace GreyBoxStrategy.Realm
         {
             chronicleBody.Clear();
             int turn = -1;
-            foreach (var l in Chronicle.Filter(lines, countryFilter, categoryFilter))
+            foreach (var g in Chronicle.Group(Chronicle.Filter(lines, countryFilter, categoryFilter), SaidAgain))
             {
-                if (l.Turn != turn) { turn = l.Turn; var h = new Label($"TURN {turn}"); h.AddToClassList("lg-turn"); chronicleBody.Add(h); }
+                if (g.Turn != turn) { turn = g.Turn; var h = new Label($"TURN {turn}"); h.AddToClassList("lg-turn"); chronicleBody.Add(h); }
+                if (!g.Single) { chronicleBody.Add(GroupRow(g, fresh)); continue; }
+                var l = g.Lines[0];
                 var row = new VisualElement(); row.AddToClassList("lg");
                 bool told = l.Event.Kind == ReplayEventKind.Story;
                 row.tooltip = told ? "Click: open the event" : l.Event.Decision != null ? "Click: find it on the map and open the decision" : "Click: find it on the map";
@@ -322,6 +346,35 @@ namespace GreyBoxStrategy.Realm
                 chronicleBody.Add(row);
             }
         }
+
+        // A ruler's orders of one turn: its name once, each order a line of its own (a click finds it), what it said once.
+        private VisualElement GroupRow(ChronicleGroup g, ChronicleLine fresh)
+        {
+            var row = new VisualElement(); row.AddToClassList("lg"); row.AddToClassList("lg-group");
+            row.Add(new Crest(CountryLook.Of(g.Country), 16));
+            var body = new VisualElement(); body.AddToClassList("lg-body");
+            var t = new Label($"{CountryLook.NameOf(g.Country)}'s orders"); t.AddToClassList("lg-text"); body.Add(t);
+            foreach (var (text, line) in g.Items)
+            {
+                var item = new Label("· " + char.ToUpperInvariant(text[0]) + text.Substring(1)); item.AddToClassList("lg-item");
+                if (line.Category == ChronicleCategory.Refused) item.AddToClassList("lg-item-ref");
+                if (line.Category == ChronicleCategory.Guard) item.AddToClassList("lg-item-ref");
+                item.tooltip = line.Event.Decision != null ? "Click: find it on the map and open the decision" : "Click: find it on the map";
+                var l = line;
+                item.RegisterCallback<ClickEvent>(e => { LinePressed?.Invoke(l); e.StopPropagation(); });
+                body.Add(item);
+            }
+            if (showQuotes) foreach (var q in g.Quotes) { var ql = new Label($"“{q}”"); ql.AddToClassList("lg-quote"); body.Add(ql); }
+            row.Add(body);
+            row.tooltip = "Click an order: find it on the map";
+            row.RegisterCallback<ClickEvent>(_ => LinePressed?.Invoke(g.Lines[0]));
+            if (fresh != null && g.Lines.Contains(fresh)) { row.AddToClassList("new"); row.schedule.Execute(() => row.RemoveFromClassList("new")).StartingIn(50); }
+            return row;
+        }
+
+        private Wording words;
+        /// <summary>The rules' wording in the screen's words, for this game's countries and provinces.</summary>
+        public Wording Words => words ?? (words = new Wording(CountryIds, ProvinceIds, CountryLook.NameOf));
 
         // ---- labels and speech that follow the map ----
 

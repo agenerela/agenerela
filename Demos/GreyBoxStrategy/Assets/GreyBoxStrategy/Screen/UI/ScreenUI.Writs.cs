@@ -66,7 +66,8 @@ namespace GreyBoxStrategy.Realm
                 piece.tooltip = rival ? $"{Chronicle.Host(a.Id)} ({CountryLook.NameOf(a.Owner)}), about {(int)Math.Round(a.Soldiers / 10.0) * 10} soldiers at {Cap(a.Location)}. Your court sees no more of it than that."
                     : HostLine(a) + "\nClick: its army.";
             }
-            if (marchLines == null) { marchLines = new MarchLines { Owner = this }; fx.Insert(0, marchLines); }
+            // Under the pieces, in their layer: a march line never strikes through a piece's number.
+            if (marchLines == null) { marchLines = new MarchLines { Owner = this }; hostLayer.Insert(0, marchLines); }
             marchLines.MarkDirtyRepaint();
             ShowPennants(s);
         }
@@ -106,6 +107,38 @@ namespace GreyBoxStrategy.Realm
             return p + new Vector2(dx, -24 - row * 24);
         }
 
+        /// <summary>
+        /// Pieces that would overlap are set apart: one at a time, each is moved up or down just clear of those
+        /// already placed. Moving pieces are placed first and stay on their paths. Each point is a piece's bottom
+        /// centre (pieces hang above their point).
+        /// </summary>
+        public static void Unclutter(List<Vector2> at, List<Vector2> size, List<bool> moving, float gap = 2)
+        {
+            var order = Enumerable.Range(0, at.Count).OrderBy(i => moving[i] ? 0 : 1).ThenBy(i => i).ToList();
+            var done = new List<int>();
+            foreach (int j in order)
+            {
+                for (int tries = 0; !moving[j] && tries < 16; tries++)
+                {
+                    int k = -1;
+                    foreach (int i in done) if (Overlap(at, size, i, j, gap) > 0) { k = i; break; }
+                    if (k < 0) break;
+                    // Clear of it by what is missing: upwards when level or above it, as pieces stand above their provinces.
+                    float h = (size[k].y + size[j].y) / 2 + gap, dy = at[j].y - at[k].y;
+                    at[j] = new Vector2(at[j].x, dy > 0 ? at[k].y + h : at[k].y - h);
+                }
+                done.Add(j);
+            }
+        }
+
+        // How far two pieces overlap, vertically; 0 when they do not.
+        private static float Overlap(List<Vector2> at, List<Vector2> size, int i, int j, float gap)
+        {
+            float w = (size[i].x + size[j].x) / 2 + gap, h = (size[i].y + size[j].y) / 2 + gap;
+            var d = at[j] - at[i];
+            return Math.Abs(d.x) >= w || Math.Abs(d.y) >= h ? 0 : h - Math.Abs(d.y);
+        }
+
         private int IndexOf(string province)
         {
             if (province == null) return -1;
@@ -113,16 +146,26 @@ namespace GreyBoxStrategy.Realm
             return -1;
         }
 
+        private readonly Dictionary<string, Vector2> placed = new Dictionary<string, Vector2>(StringComparer.Ordinal);
+
+        /// <summary>Where a piece is drawn: its point, nudged clear of the others.</summary>
+        public Vector2 PlacedPoint(ArmyState a) => placed.TryGetValue(a.Id, out var p) ? p : HostPoint(a);
+
         private void PlaceHosts()
         {
             if (hostState == null) return;
-            foreach (var a in hostState.Armies)
+            var shown = hostState.Armies.Where(a => hosts.ContainsKey(a.Id)).ToList();
+            var at = shown.Select(HostPoint).ToList();
+            var size = shown.Select(a => { var r = hosts[a.Id].resolvedStyle; return new Vector2(float.IsNaN(r.width) || r.width < 1 ? 52 : r.width, float.IsNaN(r.height) || r.height < 1 ? 20 : r.height); }).ToList();
+            Unclutter(at, size, shown.Select(a => hostMotion.ContainsKey(a.Id)).ToList());
+            placed.Clear();
+            for (int k = 0; k < shown.Count; k++)
             {
-                if (!hosts.TryGetValue(a.Id, out var piece)) continue;
+                var a = shown[k]; var piece = hosts[a.Id];
                 piece.EnableInClassList("chosen", a.Id == SelectedArmy);
-                var p = HostPoint(a);
-                piece.style.left = p.x;
-                piece.style.top = p.y;
+                placed[a.Id] = at[k];
+                piece.style.left = at[k].x;
+                piece.style.top = at[k].y;
             }
             foreach (var kv in pennants)
             {
@@ -194,7 +237,7 @@ namespace GreyBoxStrategy.Realm
                 var sight = Owner.Sight(s);
                 foreach (var a in s.Armies.Where(a => a.Marching && a.Path.Count > 0 && (sight == null || a.Owner == Owner.You || sight.Contains(a.Location))))
                 {
-                    var pts = new List<Vector2> { Owner.HostPoint(a) + new Vector2(0, 14) };
+                    var pts = new List<Vector2> { Owner.PlacedPoint(a) + new Vector2(0, 14) };
                     foreach (string step in a.Path)
                     {
                         int i = Owner.IndexOf(step);
@@ -218,7 +261,19 @@ namespace GreyBoxStrategy.Realm
                         label.text = t == 1 ? "1 turn" : $"{t} turns";
                         label.style.display = DisplayStyle.Flex;
                         var end = pts[pts.Count - 1];
-                        label.style.left = end.x + 7; label.style.top = end.y - 8;
+                        // Under the destination's name (and its fort marks), centred, so the tag never covers the name.
+                        int dest = Owner.IndexOf(a.Path[a.Path.Count - 1]);
+                        float below = end.y + 12;
+                        if (dest >= 0)
+                        {
+                            var name = Owner.provinceLabels[dest];
+                            if (name.resolvedStyle.display != DisplayStyle.None && !float.IsNaN(name.layout.height))
+                                below = Math.Max(below, name.layout.y + name.layout.height + 1);
+                            var fort = Owner.fortMarks[dest];
+                            if (fort.resolvedStyle.display != DisplayStyle.None && fort.childCount > 0 && !float.IsNaN(fort.layout.height) && fort.layout.height > 0)
+                                below = Math.Max(below, fort.layout.y + fort.layout.height + 1);
+                        }
+                        label.style.left = end.x; label.style.top = below;
                     }
                 Hide(used);
             }
@@ -383,12 +438,7 @@ namespace GreyBoxStrategy.Realm
 
         // One term as two bars, the attacker's growing left of the middle, the defender's right.
         /// <summary>A sentence of the rules' with country ids as names: "valen won" reads "Valen won".</summary>
-        private string Named(string text)
-        {
-            if (string.IsNullOrEmpty(text)) return text;
-            foreach (var id in CountryIds) text = System.Text.RegularExpressions.Regex.Replace(text, $@"\b{id}\b", CountryLook.NameOf(id));
-            return char.ToUpperInvariant(text[0]) + text.Substring(1);
-        }
+        private string Named(string text) => Words.Plain(text);
 
         private static VisualElement Bar(string label, double attack, double defence, double max, BattleRecord b, bool plain = false, bool total = false)
         {
@@ -420,7 +470,7 @@ namespace GreyBoxStrategy.Realm
             seal.Add(new Crest(CountryLook.Of(country), 20));
             var p = ProvinceToPanel(province);
             seal.style.left = p.x; seal.style.top = p.y;
-            fx.Add(seal);
+            labels.Add(seal);
             seal.schedule.Execute(() => seal.AddToClassList("on")).StartingIn(16);
             seal.schedule.Execute(() => seal.RemoveFromClassList("on")).StartingIn(1100);
             seal.schedule.Execute(() => seal.RemoveFromHierarchy()).StartingIn(1500);

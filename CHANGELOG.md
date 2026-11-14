@@ -29,6 +29,13 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: the writs turn polished** (#20).
+  - The council's buttons read as offered, chosen or not offered, with the reason.
+  - The chronicle and the panel use names, never ids.
+  - A ruler's orders of a turn are one entry with its line once.
+  - Refused destinations are the nearest three.
+  - Pieces in neighbouring provinces no longer overlap, and a treaty's seal shows above them.
+
 - **Painted Realm rules v2, R1c: the writs turn measured live on `qwen3.5:4b`** (#20). Tables can play the
   writs turn (`-strategyTurn writs`, with `-strategyCap`, `-strategyMap`, `-strategyMapSeed` and
   `-strategyVictory`), and a writs run writes `writs-turns.csv`. 20 writs games on Classic against 20 one-move
