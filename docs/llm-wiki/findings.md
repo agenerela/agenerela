@@ -4025,3 +4025,59 @@ GreyBoxStrategy, `personas` table, five `qwen3.5:4b` seats, RTX 5080 (Docker Oll
 - **Smoke finding:** with dilemmas merely open on 40% of turns and tales on 30%, the 4B chose 1 dilemma in 28 events and began no tale; S2 therefore has the game deal each turn's kind.
 - **Latency:** event seconds a turn 0.74 → 1.05 (title call), 1.23 and 1.27 (S2); storyteller prompt 1,363 → about 1,900 tokens, median call 0.73 → 0.85 s.
 - Measured with seeded province terrain; after merging #273 the terrain and coast come from the map's own data (unmeasured wording change, same kind of content).
+
+### Painted Realm's writs turn, live (R1c): 7.1 s of model time a turn, armies used, treaties made, personas still distinct; no Classic game ends in 40 turns, and statements repeat far more (13 November 2026)
+
+GreyBoxStrategy (#20), rules v2 slice R1c. `personas` table, five `qwen3.5:4b` seats, RTX 5080 (Docker Ollama 0.40.14). **Main comparison:** the writs turn (`-strategyTurn writs -strategyCap 40`, Classic, conquest) against today's one-move game (`default`), seeds 1 to 20, interleaved in blocks of five seeds (w1 o1 w2 o2 w3 o3 w4 o4), one Unity run and one lock window a block. Blocks w1 to o3 ran on 12 November from 19:45; the lead paused the card at 21:15, and **w4 and o4 ran a day later (13 November, 15:53 to 16:23) in a new lock session**, same seeds and settings. Blocks pooled by `aggregate.py`; the scorecard numbers are the mean of the four blocks. Kit and data: `.scratch/realm-build-map/r1c/`.
+
+- **Endings:** writs 20 of 20 unfinished at the 40-turn cap. One-move 12 domination, 8 at its turn limit, 25.1 turns on average. **No Classic writs game finishes in 40 turns**, so the numbers below describe the first 40 turns of the writs game, not whole games.
+- **Model time:** writs 7.13 s a turn (median 7.10, 90th percentile 8.54), 14.4 decisions a turn at about 0.50 s each, 1.46 s a ruler; six rulers would be about 8.7 s. Inside the 7 to 9 s estimate, at its top. One-move 2.45 s a turn, 4.7 decisions.
+- **Orders a ruler a turn:** 3.06 writs: 1.55 court orders, 1.16 army orders, 0.23 army holds; 0.21 refused at resolution.
+- **Wasted orders:** court `none` 245 of 6,080 (4%), army `none` 899 of 4,528 (20%).
+- **Illegal answers:** 62 of 11,496 (0.5%), 61 of them army orders the game held as "not offered". A march the rules allow but the twelve-target list left out passed the marshal's availability, which followed the rules alone. **Fixed after the main run:** the court's and the marshal's availability now also ask whether the move is among the decision's offered moves (`WritRuler.NotOffered`; test `ATargetTheListLeftOut_IsContained_NotHeldByTheGame`, seen failing without it). The extra runs below have the fix: 0 illegal answers in 16,183.
+- **Rulers' sense, writs against one-move** (model behaviour only):
+  - idle 6% against 10%;
+  - refused at resolution 1% against 6%;
+  - aims at the weaker 58% against 63%;
+  - contained by a guard 1% against 2%;
+  - accepts peace when losing 16% against 24%, when winning 8% against 17%.
+- **Voice:**
+  - statements given 99% against 98%, 12.9 words against 13.6;
+  - names its target 81% against 72%;
+  - contradicts its move 13% against 19%;
+  - invented grievances 1% in both;
+  - **repeated word for word 35% against 5%**, the one clear regression. The top line, "We fortify borders and save gold rather than fight before the odds are in our favour.", came 55 times. The army statement rule (R1b) waits for its own A/B.
+- **Not comparable across the two games** (other rules, other pace): answers an attack 21% / 74%, provinces changing hands 0.41 / 1.14 a turn, turns with no change 69% / 25%, eliminations 0.30 / 1.50 a game, battles 1.74 / 1.47 a turn, final map Gini 0.32 / 0.54, peace made 3.35 / 1.75 and wars declared 9.25 / 5.80 a game.
+- **Armies:**
+  - 2.20 a ruler a turn: 0.47 marching, 0.36 holding, 1.46 waiting for orders.
+  - 59% of ruler-turns have two or more armies; those rulers order 1.60 armies while 2.14 wait.
+  - In 20% of ruler-turns more armies wait than were ordered, because three writs cap the orders.
+  - 25% of ruler-turns with armies give no army order.
+  - 80% of army answers are a march. Rulers use several armies; what leaves armies idle is the writ cap, not the model.
+- **Treaties:** 67 made in 800 game-turns. The court offered white peace 799 times, demanded occupied land 119 and ceded it 30. Envoys accepted 92, refused 789, answered `none` 7.
+- **Character:**
+  - Army holds by persona: builder 89%, merchant 17%, opportunist 22%, proud 3%, warmonger 6% (η² 0.68, p < 0.001, 100 seat-games).
+  - Treaties accepted: merchant 48 of 100, opportunist 30 of 112, builder 11 of 103, proud 2 of 250, warmonger 1 of 323.
+  - Council η², writs against one-move: aggression 0.20 / 0.84, peace 0.56 / 0.72, recruit 0.62 / 0.15, raising taxes 0.21 / 0.39, fortify 0.15 / 0.25, all p ≤ 0.005. On the writs turn the persona shows in what the court builds (recruits: warmonger 51%, builder 32%), in army orders and in treaty answers, more than in declaring war.
+- **Army orders, quoted:**
+  - warmonger: "Gold is for soldiers; march to ashby!"
+  - proud: "Merrow's capital falls! We strike back for every inch of land lost!"
+  - opportunist: "Brindle is neutral and weak; I will take it before others do."
+  - warmonger: "Corwick is Orsk's; I march to seize his forts before he grows too strong!"
+- **Five uncapped writs games** (seeds 21 to 25, `-strategyCap 300`, never reached; with the fix):
+  - 4 ended in stalemate and 1 with one country left (proud Ilvar, turn 220); 192.8 turns on average (165 to 220).
+  - Model time 6.50 s a turn (90th percentile 7.85).
+  - 2.2 eliminations a game, final Gini 0.66, 83% of turns with no change.
+  - 17.6 peace treaties a game.
+  - Repeated word for word 44%.
+  - η² aggression 0.53, peace 0.63, recruit 0.74 (25 seat-games, p ≤ 0.02).
+  - A game played to its end takes about 190 turns, far from an hour's game.
+- **Medium generated world, capped at 40** (seeds 31 to 35, map seed 1; with the fix):
+  - **None of the five finished**; all stood unfinished at 40 turns.
+  - Model time 8.02 s a turn (90th percentile 9.51), 16.3 decisions.
+  - Provinces changing hands 0.98 a turn.
+  - 3.71 armies a ruler, 1.73 ordered.
+  - 13 treaties in 200 game-turns.
+  - Repeated word for word 38%.
+  - η² aggression 0.72, peace 0.62 (p ≤ 0.001); recruit and fortify not significant at 25 seat-games.
+- No default changed. Open: the game's length, statement repetition (the army statement rule's A/B), and whether a fourth writ or standing orders would use the waiting armies.

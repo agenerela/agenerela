@@ -139,7 +139,7 @@ namespace GreyBoxStrategy
             if (targeted)
                 handler.IsAvailableFor = (ctx, target) =>
                 {
-                    string why = WritLegality.WhyNotCourt(world, CountryId, new Move(action, target));
+                    string why = WritLegality.WhyNotCourt(world, CountryId, new Move(action, target)) ?? NotOffered(new Move(action, target));
                     return why == null ? Availability.Yes : Availability.No(why);
                 };
             Court.Actions.Register(new ActionDefinition
@@ -152,6 +152,12 @@ namespace GreyBoxStrategy
             }, handler);
         }
 
+        // The rules allow more targets than a decision offers: fortify lists at most six provinces and a march
+        // at most twelve. A target the rules allow but the list left out is not offered either, or the game
+        // holds the order as "not offered" (R1c: 56 of 3,408 army orders before this check).
+        private string NotOffered(Move move) =>
+            Asking != null && !Asking.Legal.Contains(move) ? "not among the moves offered in this decision" : null;
+
         private void RegisterMarshal()
         {
             var handler = DelegateActionHandler.WithResult(
@@ -160,7 +166,7 @@ namespace GreyBoxStrategy
             handler.IsAvailableFor = (ctx, target) =>
             {
                 if (!(ctx.Correlation is ArmyOrder order)) return Availability.No("no army is being ordered");
-                string why = WritLegality.WhyNotArmy(world, CountryId, order.ArmyId, new Move(Actions.March, target));
+                string why = WritLegality.WhyNotArmy(world, CountryId, order.ArmyId, new Move(Actions.March, target)) ?? NotOffered(new Move(Actions.March, target));
                 return why == null ? Availability.Yes : Availability.No(why);
             };
             Marshal.Actions.Register(new ActionDefinition

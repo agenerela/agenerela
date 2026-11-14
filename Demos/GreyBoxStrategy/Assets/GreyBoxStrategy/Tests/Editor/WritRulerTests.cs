@@ -101,6 +101,76 @@ namespace GreyBoxStrategy.Tests
             Assert.That(mostMoves, Is.LessThanOrEqualTo(20), "the targeted moves of one decision stay near a dozen");
         }
 
+        // R1c's run, end to end with a fake model: the writs arm and today's game interleaved in blocks,
+        // every file written, the per-turn file for the writs arm.
+        [Test]
+        public async Task ATable_PlaysTheWritsTurn_InterleavedWithTodaysGame()
+        {
+            ILLMProvider First(string model, World w) => new ScriptedProvider
+            {
+                Callback = req => ScriptedReply.Decide(req.OfferedActions.FirstOrDefault(a => a != ActionRegistry.None) ?? ActionRegistry.None,
+                    req.OfferedTargets.FirstOrDefault(t => t != TargetRegistry.NoTarget) ?? TargetRegistry.NoTarget, "Onward."),
+            };
+            var writs = Tables.Named("fake,fake,fake,fake,fake", null, personas: true);
+            writs.Setup = GameSetup.Writs(1);
+            writs.Setup.TurnCap = 8;
+            var oneMove = Tables.Named("fake,fake,fake,fake,fake", null, personas: true);
+            string folder = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gbs-writs-table-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                var cards = await Await.NotCancelled(StrategyTableRuns.RunInterleavedAsync(folder, new[] { ("writs", writs), ("onemove", oneMove) },
+                    First, 2, 1, 1));
+                Assert.That(cards.Count, Is.EqualTo(2));
+                foreach (string file in new[] { "summary.md", "scorecard.md", "model.csv", "games.csv", "writs-turns.csv" })
+                    Assert.That(System.IO.File.Exists(System.IO.Path.Combine(folder, "writs", file)), Is.True, file);
+                Assert.That(System.IO.File.Exists(System.IO.Path.Combine(folder, "onemove", "writs-turns.csv")), Is.False);
+                var rows = System.IO.File.ReadAllLines(System.IO.Path.Combine(folder, "writs", "writs-turns.csv"));
+                Assert.That(rows.Length, Is.EqualTo(1 + 2 * 8 * 5), "a row a country a turn, two games of eight turns");
+                Assert.That(System.IO.File.ReadAllText(System.IO.Path.Combine(folder, "writs", "model.csv")), Does.Contain(",Army,"));
+            }
+            finally
+            {
+                if (System.IO.Directory.Exists(folder)) System.IO.Directory.Delete(folder, true);
+            }
+        }
+
+        // R1c: the rules let an army march further than the twelve targets its list offers (and fortify reach
+        // more than the six provinces its list names), and the seat's availability once followed the rules
+        // alone, so a model could name a target the list left out and the game held it as not offered. A
+        // model that always tries such a target must now be contained, never reach the game unoffered.
+        [Test]
+        public async Task ATargetTheListLeftOut_IsContained_NotHeldByTheGame()
+        {
+            var seats = new Dictionary<string, WritRuler>();
+            World world = null;
+            int tried = 0;
+            ILLMProvider Provider(string id) => new ScriptedProvider
+            {
+                Callback = req =>
+                {
+                    var r = seats[id].Asking;
+                    foreach (string a in new[] { Actions.March, Actions.Fortify }.Where(req.OfferedActions.Contains))
+                        foreach (string t in req.OfferedTargets.Where(t => t != TargetRegistry.NoTarget))
+                        {
+                            var move = new Move(a, t);
+                            string why = a == Actions.March ? WritLegality.WhyNotArmy(world, r.CountryId, r.ArmyId, move) : WritLegality.WhyNotCourt(world, r.CountryId, move);
+                            if (why != null || r.Legal.Contains(move)) continue;
+                            tried++;
+                            return ScriptedReply.Decide(a, t, "Beyond the list.");
+                        }
+                    var m = new ScriptedPlayer(Temperament.Expansionist).Decide(r);
+                    return m.Action == Actions.None ? ScriptedReply.Decide(ActionRegistry.None) : ScriptedReply.Decide(m.Action, m.Target ?? TargetRegistry.NoTarget, $"{m}.");
+                },
+            };
+            var setup = GameSetup.Writs(1);
+            setup.TurnCap = 30;
+            var record = await Await.NotCancelled(WritModelRunner.PlayAsync(setup, Enumerable.Repeat(ModelGameRunner.Model, 5).ToList(),
+                (w, id) => seats[id] = new WritRuler(world = w, id, Provider(id)), "fake"));
+            Assert.That(tried, Is.GreaterThan(0), "the game gave the fake model a target beyond a list to try");
+            var unoffered = record.Decisions.Where(d => !d.Offered).Select(d => $"{d.Country} {d.Move}").ToList();
+            Assert.That(unoffered, Is.Empty, "orders the game held as not offered: " + string.Join("; ", unoffered.Take(5)));
+        }
+
         [Test]
         public void ARuler_IsForTheWritsTurnOnly()
         {

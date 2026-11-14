@@ -791,8 +791,37 @@ A fake model that answers like the scripted player plays exactly the scripted ga
 (`WritRulerTests`).
 
 **Victory presets for the writs game:** `GameSetup.Writs(seed, map, victory)` with `conquest`, the default,
-or `domination_75`: 75% of all provinces wins, with the headless cap the only turn limit. The lead is asked
-which should be the default (63 against 78 scripted turns on Classic, 144 against about 180 on medium).
+or `domination_75`: 75% of all provinces wins, with the headless cap the only turn limit (63 against 78
+scripted turns on Classic, 144 against about 180 on medium). The lead decided on 13 November: both, conquest
+the default.
+
+**R1c: the live measurement** (12 and 13 November). A table can play the writs turn: its `Setup` is a writs
+`GameSetup`, and its seats are `WritRuler`s. The interleaved command takes `-strategyTurn writs`, with
+`-strategyCap` (the headless turn cap, 40 by default), `-strategyMap classic|medium`, `-strategyMapSeed` and
+`-strategyVictory conquest|domination_75`. The setting applies to every arm of that run, so the writs arm and
+the one-move arm run as separate blocks:
+
+```bash
+Unity.exe -batchmode -nographics -projectPath Demos/GreyBoxStrategy -executeMethod GreyBoxStrategy.Editor.StrategyTableMenu.RunInterleavedFromCommandLine -strategyTable personas -strategyModel qwen3.5:4b -strategyArms default -strategyArmNames w1 -strategyTurn writs -strategyCap 40 -strategyGames 5 -strategySeed 1 -strategyBlock 5 -strategyOut <folder> -logFile run.log
+```
+
+A writs run also writes `writs-turns.csv`, a row a country a turn: its armies (marching, holding, waiting),
+writs, court and army orders, holds, refusals, model seconds, and the turn's battles and treaties.
+`model.csv` names the army each order was for.
+
+What it measured on `qwen3.5:4b`, 20 writs games on Classic against 20 one-move games on the same seeds
+(full numbers in [`findings.md`](../../docs/llm-wiki/findings.md), 13 November):
+- **No Classic writs game finishes in 40 turns.** Five uncapped games ended after 193 turns on average, four
+  by stalemate; five on a medium world, capped at 40, did not finish either.
+- **Model time:** 7.1 s a turn for five rulers, inside the 7 to 9 s estimate, at its top (one-move: 2.45 s).
+- **Orders and armies:** 3.06 orders a ruler a turn; 80% of army answers march. Rulers use several armies,
+  and the three-writ cap is what leaves the rest waiting.
+- **Treaties:** 3.35 peace treaties a game; merchants accept about half of the treaties offered to them, warmongers almost none.
+- **Character:** the persona still shows (army holds: builder 89%, warmonger 6%; η² 0.68).
+- **Voice:** statements repeated word for word 35% of the time against 5% in the one-move game.
+- **Unlisted targets.** The run found 61 army orders for a march the rules allow but the twelve-target list
+  left out, which the game held as "not offered". The court's and the marshal's availability now also check
+  the decision's own offered moves (`NotOffered`), and the later runs had no illegal answers.
 
 ## The first real run
 

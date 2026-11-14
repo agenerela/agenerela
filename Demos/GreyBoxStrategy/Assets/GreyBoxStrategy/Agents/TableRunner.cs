@@ -72,6 +72,11 @@ namespace GreyBoxStrategy
         public ModelSeatOptions Options { get; }
         /// <summary>A line for the scorecard, such as "reference point: no model".</summary>
         public string Note { get; }
+        /// <summary>
+        /// The game to play: null for today's one-move game on Classic; a <see cref="GameSetup"/> with the
+        /// writs turn (rules v2, R1c) plays it with <see cref="WritRuler"/> seats. Its seed is each game's.
+        /// </summary>
+        public GameSetup Setup { get; set; }
 
         public IEnumerable<string> Models => Seats.Where(s => s.IsModel).Select(s => s.Model).Distinct();
 
@@ -212,6 +217,7 @@ namespace GreyBoxStrategy
         public static async Awaitable<TableGame> PlayAsync(TableDefinition table, int seed, int gameIndex,
             Func<string, World, ILLMProvider> providerFor, CancellationToken ct = default)
         {
+            if (table.Setup != null && table.Setup.Turn == TurnStyle.Writs) return await PlayWritsAsync(table, seed, gameIndex, providerFor, ct);
             var map = MapDefinition.Standard();
             var game = new Game(seed, map);
             var players = new Dictionary<string, IPlayer>(StringComparer.Ordinal);
@@ -255,6 +261,51 @@ namespace GreyBoxStrategy
             var record = new GameRecord(game, shown);
             var decisions = seats.Values.SelectMany(s => s.Decisions).ToList();
             return new TableGame(new ModelGameRecord(record, decisions, seats.Keys.ToList()), labels, characters, teller?.Decisions);
+        }
+
+        // The writs turn: the same seating and personas, WritRuler seats, the writs runner.
+        private static async Awaitable<TableGame> PlayWritsAsync(TableDefinition table, int seed, int gameIndex,
+            Func<string, World, ILLMProvider> providerFor, CancellationToken ct)
+        {
+            var setup = table.Setup.Clone();
+            setup.Seed = seed;
+            var map = setup.BuildMap();
+            var game = new Game(seed, map, setup.BuildRules(map));
+            var players = new Dictionary<string, IPlayer>(StringComparer.Ordinal);
+            var seats = new Dictionary<string, WritRuler>(StringComparer.Ordinal);
+            var shown = new Dictionary<string, string>(StringComparer.Ordinal);
+            var labels = new Dictionary<string, string>(StringComparer.Ordinal);
+            var characters = new Dictionary<string, string>(StringComparer.Ordinal);
+            for (int i = 0; i < map.Countries.Count; i++)
+            {
+                string id = map.Countries[i].Id;
+                var plan = table.SeatFor(i, gameIndex);
+                labels[id] = plan.Label;
+                characters[id] = table.CharacterFor(i, gameIndex);
+                if (plan.IsModel)
+                {
+                    var persona = table.PersonaFor(i, gameIndex);
+                    var seat = new WritRuler(game.World, id, providerFor(plan.Model, game.World), table.Options, persona) { Seed = seed };
+                    seats[id] = seat;
+                    game.Gates[id] = seat;
+                    shown[id] = persona != null ? $"{plan.Model} {persona.Id}" : plan.Model;
+                }
+                else
+                {
+                    players[id] = Lineups.Make(plan.Kind);
+                    shown[id] = plan.Kind;
+                }
+            }
+            int guard = game.Rules.MaxTurns + 1;
+            while (!game.IsOver)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (guard-- <= 0) throw new InvalidOperationException("The game did not end within its turn limit.");
+                await WritModelRunner.PlayTurnAsync(game, players, seats, ct);
+            }
+            var record = new GameRecord(game, shown);
+            var decisions = seats.Values.SelectMany(s => s.Decisions).ToList();
+            return new TableGame(new ModelGameRecord(record, decisions, seats.Keys.ToList()), labels, characters);
         }
 
         /// <summary>One game per seed, the seats and personas rotating game by game.</summary>
@@ -376,7 +427,41 @@ namespace GreyBoxStrategy
             if (table.Options.Choices) File.WriteAllText(Path.Combine(folder, "choices.csv"), ChoicesCsv(played));
             foreach (var g in played)
                 File.WriteAllText(Path.Combine(folder, $"game-{g.Record.Seed:D4}.md"), GameLog.Write(g.Record));
+            if (table.Setup?.Turn == TurnStyle.Writs) File.WriteAllText(Path.Combine(folder, "writs-turns.csv"), WritsTurnsCsv(played));
             return scorecard;
+        }
+
+        // The writs turn, one row a country a turn: its armies as the council saw them (how many, how many
+        // marching, holding or waiting), the orders it gave, and the turn's battles, occupations and treaties.
+        private static string WritsTurnsCsv(IEnumerable<TableGame> played)
+        {
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            var sb = new StringBuilder("seed,turn,country,character,armies,marching,holding,awaiting,soldiers,writs,court_orders,army_orders,army_holds,refused,model_s,occupied_by_us,turn_battles,turn_treaties,result\n");
+            foreach (var g in played)
+            {
+                var game = g.Record.Game;
+                for (int t = 0; t < game.Snapshots.Count && t < game.Reports.Count; t++)
+                {
+                    var snap = game.Snapshots[t];
+                    var report = game.Reports[t];
+                    foreach (string c in snap.Provinces.Keys)
+                    {
+                        var armies = snap.Armies.Where(a => a.Owner == c).ToList();
+                        var mine = g.Game.Decisions.Where(d => d.Country == c && d.Turn == snap.Turn).ToList();
+                        sb.AppendLine(string.Join(",", g.Record.Seed, snap.Turn, c, g.Characters[c], armies.Count,
+                            armies.Count(a => a.Destination != null), armies.Count(a => a.Destination == null && a.Wake.Count == 0),
+                            armies.Count(a => a.Wake.Count > 0), armies.Sum(a => a.Soldiers),
+                            report.Outcomes.Where(o => o.Request?.CountryId == c).Select(o => o.Request.Writs).DefaultIfEmpty(0).Max(),
+                            mine.Count(d => d.Moment == Moment.Council), mine.Count(d => d.Moment == Moment.Army),
+                            mine.Count(d => d.Moment == Moment.Army && (d.Move == null || d.Move.Action == Actions.None)),
+                            report.Outcomes.Count(o => o.Request?.CountryId == c && o.Refused),
+                            mine.Sum(d => d.LatencySeconds).ToString("0.000", inv),
+                            snap.Occupiers.Count(kv => kv.Value == c), report.Battles, report.PeaceAccepted,
+                            t == game.Reports.Count - 1 ? game.Result?.Ending.ToString() : ""));
+                    }
+                }
+            }
+            return sb.ToString();
         }
 
         private static string StorytellerCsv(IEnumerable<TableGame> played)

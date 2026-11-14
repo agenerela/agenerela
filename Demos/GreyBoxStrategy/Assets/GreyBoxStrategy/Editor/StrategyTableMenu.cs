@@ -103,11 +103,19 @@ namespace GreyBoxStrategy.Editor
             int block = int.TryParse(Arg("-strategyBlock"), out int b) ? b : 5;
             // The series index of the first seed, when this run is one block of a longer series (seats rotate by it).
             int index = int.TryParse(Arg("-strategyIndex"), out int i0) ? i0 : 0;
+            // Rules v2 (R1c): -strategyTurn writs plays the writs turn, with -strategyCap (headless turn cap,
+            // default 40), -strategyMap (classic or medium) and -strategyVictory (conquest or domination_75).
+            var setup = WritsSetup();
             var defined = new List<(string, TableDefinition)>();
             try
             {
                 if (names.Length != arms.Length) throw new ArgumentException("-strategyArmNames needs one name per arm.");
-                for (int i = 0; i < arms.Length; i++) defined.Add((names[i], Define(table, model, model2, arms[i], personas)));
+                for (int i = 0; i < arms.Length; i++)
+                {
+                    var t = Define(table, model, model2, arms[i], personas);
+                    t.Setup = setup;
+                    defined.Add((names[i], t));
+                }
             }
             catch (Exception e)
             {
@@ -135,6 +143,23 @@ namespace GreyBoxStrategy.Editor
                 code = 1;
             }
             EditorApplication.Exit(code);
+        }
+
+        private static GameSetup WritsSetup()
+        {
+            if (Arg("-strategyTurn") != "writs") return null;
+            string map = Arg("-strategyMap") ?? "classic";
+            var setup = GameSetup.Writs(1, map == "medium" ? GameSetup.GeneratedMapId : GameSetup.ClassicMapId, Arg("-strategyVictory") ?? GameSetup.ConquestPreset);
+            if (map == "medium")
+            {
+                setup.Countries = 5; // the tables seat five
+                setup.Generator = new MapSettings { Size = MapSize.Medium };
+                setup.MapSeed = int.TryParse(Arg("-strategyMapSeed"), out int ms) ? ms : 1;
+            }
+            int cap = int.TryParse(Arg("-strategyCap"), out int c) ? c : 40;
+            setup.TurnCap = cap;
+            if (setup.Victory != VictoryMode.Conquest) setup.TurnLimit = cap;
+            return setup;
         }
 
         // One provider per model for the whole run, so every seat and the storyteller share its queue.
