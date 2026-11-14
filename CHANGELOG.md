@@ -34,6 +34,16 @@ phase table and the open issues, not here.
   rulers and can be switched in New game and the pause menu. It is asked alongside the rulers, its orders always
   map to legal moves, and only advice you take is recorded as yours.
 
+- **`tools/benchmarks/closed_choice_grammar_probe.py`** (#266 item 2): asks Ollama, with no framework code,
+  whether its grammar keeps an enum field beside `action` and `target` and an array of target ids with
+  `minItems`/`maxItems`, and in which key order. First run on `qwen3.5:4b`, RTX 5080: every constraint held on
+  `/api/chat`, and a strength placed after `statement` was written into the statement 3 times in 6. The
+  gateway refuses `/v1/chat/completions`, so that half is unmeasured. Results in `findings.md`, 14 November.
+- **Painted Realm: silent armies, an arm for the writs turn** (#20). `+silent-armies` asks the marshal's army
+  orders without a statement (`DecideOptions.AskForStatement`, #266). On `qwen3.5:4b`, 15 games an arm, it saves
+  0.59 s a turn with repeats and legality unchanged, but treaties fell from 4.7 to 3.5 a game within noise, so
+  `default` keeps every line. Results in `findings.md`, 14 November.
+
 - **Painted Realm: detail up close, fields that show, rule mode on a big map** (#20).
   - Zoomed in, the visible part of the chart is drawn again at screen scale (trees, fields, settlements, roads),
     not magnified.
