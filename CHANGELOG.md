@@ -39,6 +39,11 @@ phase table and the open issues, not here.
   rulers and can be switched in New game and the pause menu. It is asked alongside the rulers, its orders always
   map to legal moves, and only advice you take is recorded as yours.
 
+- **Painted Realm: two pacing settings for the writs turn, both off** (#20).
+  `GameRules.OccupationBecomesOwnership` makes a province held N turns the occupier's, and
+  `GameRules.BreakWhenAllOccupied` breaks a fully occupied realm with armies left. Scripted they leave the pace
+  as it was; the models' stall waits for a live run. Numbers in `findings.md`, 14 November.
+
 - **`tools/benchmarks/closed_choice_grammar_probe.py`** (#266 item 2): asks Ollama, with no framework code,
   whether its grammar keeps an enum field beside `action` and `target` and an array of target ids with
   `minItems`/`maxItems`, and in which key order. First run on `qwen3.5:4b`, RTX 5080: every constraint held on
