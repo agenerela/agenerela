@@ -2149,9 +2149,11 @@ piece off the storyteller is S1's exactly (a test holds that):
 | `+multi` | A group event reaches the members the fairness rules allow (open when two are) and records who was spared; a group dilemma gives each member its own choice |
 | `+chains-free` | Any recent event is a tale the storyteller may continue (an effect on `tale_<n>` strikes its subject again) or close (`end_tale`) |
 | `+chains-skeleton` | Four tales the game plans (`begin_pretender`, `begin_deep_vein`, `begin_fever`, `begin_long_winter`), each stage prescribed, the next one chosen by what the ruler chose |
-| `+history` | A "Recent happenings" line from the game's reports, and the story check against invented battles |
+| `+history` | A "Recent happenings" line from the game's reports, and the story check against invented battles. The check is the storyteller's guard (`Storyteller.HistoryGuard`, `GuardVerdict.ReplaceStatement`, #292): an invented fight is told as the template's line under the model's title and the event stands, recorded in the decision's `StatementsReplaced`. `Game.HistoryVerdict` runs the event's own checks in the same order, so every verdict and story reads as before; `+history-in-game` leaves the check at the queue, as before |
 | `+traits` | A terrain, a landmark and a resource for every province, in its description: terrain and coast from the map's own data (`WorldMap`, rules v2's R0), the landmark and resource from its special place and trade good when the map has them, else drawn from the seed; `rich_vein`, `flood` and `pilgrims` need one. The A/B ran before the merge, on drawn terrain |
 | `+title-call` | The statement is the story alone; a second short call (the scribe) gives the title; "told so far" names template and target only |
+| `+call-choices` | With `+choices`, a dilemma's options come with the call as `DecideOptions.Choices` (#293, DR-022) instead of being registered as the seat's actions: no `target` field, the options listed with their descriptions. It changes what the model reads, so it is an arm until its A/B |
+| `+no-reply-cap` | The storyteller's event and title calls send no `MaxReplyTokens`; by default they send 400 (`ModelSeatOptions.StorytellerReplyCap`, #244 item 11), which binds only a runaway reply and changes nothing the model reads |
 | `+preset-<name>` | `even_hand`, `underdog`, `cruel_fate`, `quiet_years`, `saga` (`StorytellerSettings.Presets`) |
 | `+s2` | Every piece but the chains, on `even_hand` |
 
@@ -2170,7 +2172,8 @@ go on in any turn. On `even_hand`, 15% of turns are a tale's and 25% a dilemma's
 game plans each option for valen and asks it, between turns, in a round of its own (`Moment.Choice`):
 the story and *"Our choice: hire_sellswords, hire them: pay 30 gold, 14 soldiers join our army;
 send_sellswords_away, send them away: nothing changes."* among its facts, the options as its only
-actions (registered on the seat with `+choices`, open only on that choice call). The answer lands at
+actions (registered on the seat with `+choices`, open only on that choice call; with `+call-choices`,
+given with the call instead). The answer lands at
 the next upkeep with the event: *"Event "The Sellswords": we chose to hire them: pay 30 gold, 14
 soldiers join our army."* A scripted seat takes the default, a random seat any option, an unanswered
 one the default. A dilemma counts as a gift when every option gains, a blow when every option costs,
@@ -2310,7 +2313,7 @@ The events of all four arms can be read game by game, with every choice and ever
   because one statement cannot carry a line per option; and every option of every dilemma is an action
   registered on every seat, unavailable except on its own choice call.
 - **3, one free-text field:** hit, and the second call fixed it (titles missing 47% to 0%, 0.37 s an event).
-- **4, keep the move and replace the statement:** hit again, by the history check, invisible to telemetry.
+- **4, keep the move and replace the statement:** hit again, by the history check, invisible to telemetry. Since #308 the history check is a guard, and telemetry records it in `StatementsReplaced`.
 - **5, the fact ledger:** hit: tale state, the happenings line and a choice's facts are game code.
 - **6, remembering as a list:** hit: "told so far" by template and target, and each tale's description.
 - **8, fairness and cooldowns:** hit harder: a template's own cooldown, two open tales at most, one long

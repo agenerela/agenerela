@@ -130,7 +130,7 @@ namespace GreyBoxStrategy
             foreach (var (action, description) in new[] { (Actions.AcceptPeace, "Accept the proposed treaty."), (Actions.RefusePeace, "Refuse the proposed treaty and fight on.") })
                 Court.Actions.Register(new ActionDefinition { Id = action, Description = description, TakesNoTarget = true },
                     DelegateActionHandler.WithResult(ctx => ctx.Correlation is TreatyOffer, (ctx, d) => ActionResult.Done()));
-            if (Options.Choices)
+            if (Options.Choices && !Options.CallChoices)
                 foreach (var t in EventRules.S2Templates.Where(t => t.IsChoice))
                     foreach (var o in t.Options)
                         Court.Actions.Register(new ActionDefinition { Id = o.Id, Description = $"Choose to {o.Label}.", TakesNoTarget = true },
@@ -228,6 +228,7 @@ namespace GreyBoxStrategy
                 PairTargetsWithActions = Options.PairTargets,
                 ExampleStatements = speaks && asked,
                 AskForStatement = asked,
+                Choices = r.Moment == Moment.Choice && Options.CallChoices ? CountryAgent.DilemmaChoices(r) : null,
                 Correlation = r.Moment == Moment.Army ? new ArmyOrder(r.ArmyId)
                     : r.Moment == Moment.Envoy ? new TreatyOffer(r.OfferId, r.OfferedBy)
                     : r.Moment == Moment.Choice ? new ChoiceCall(r.OfferId, r.Legal.Select(m => m.Action).ToList())
