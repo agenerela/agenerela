@@ -1405,7 +1405,8 @@ lines and the moves line; every slice measures them.
 4. **A fact ledger** (#216 item 4, #266 item 5) for opinions' reasons, chains, "last seen" walls, and
    lasting events. The game can compute each without one.
 5. **A reply cap** (#244 item 11, N12): needed now. With about 15 decisions a turn, a 20 s runaway in
-   460 calls stalls a game about once every 30 turns.
+   460 calls stalls a game about once every 30 turns. Built since: `DecideOptions.MaxReplyTokens` (#296), and the storyteller's calls
+   send 400 by default (#307, 14 November); the rulers' calls send none yet.
 6. **The moves-line workaround** (N1, N8, N11) for every decision kind. The game writes each line;
    `LegalTargets = ObservationLine` measured worse.
 7. **Per-call target sets.** The prompt's target list must hold only the targets this decision can use
