@@ -62,13 +62,23 @@ namespace GreyBoxStrategy
                 string occupies = string.Join(", ", occupiedOfOurs.Where(p => p.Occupier == other.Id).Select(Held));
                 string weOccupy = string.Join(", ", world.ProvinceList.Where(p => p.Owner == other.Id && p.Occupier == countryId).Select(Held));
                 // With unit types (R3), what its armies are mostly: "orsk: at war with us; 60 soldiers in 2 armies, mostly riders, ...".
-                string mostly = rules.UnitTypes ? Units.Mostly(UnitMix.Of(world.ArmiesOf(other.Id))) : null;
-                lines.Add($"{other.Id}: {relation}; {other.Army} soldiers in {Plural(theirArmies, "army", "armies")}" + (mostly != null ? $", {mostly}" : "") + $", {Facts.Provinces(world.ProvinceCount(other.Id))}"
+                // With fog (R3), the total rounded, and the mix only of the armies our riders scout.
+                var known = rules.Fog ? world.ArmiesOf(other.Id).Where(a => Fog.Scouts(world, countryId, a.Location) && Fog.Sees(world, countryId, a.Location)).ToList()
+                                      : world.ArmiesOf(other.Id).ToList();
+                string mostly = rules.UnitTypes ? Units.Mostly(UnitMix.Of(known)) : null;
+                string total = rules.Fog ? Fog.About(other.Army) : other.Army.ToString();
+                lines.Add($"{other.Id}: {relation}; {total} soldiers in {Plural(theirArmies, "army", "armies")}" + (mostly != null ? $", {mostly}" : "") + $", {Facts.Provinces(world.ProvinceCount(other.Id))}"
                           + (world.Borders(countryId, other.Id) ? "; borders us" : "")
                           + (weOccupy.Length > 0 ? $"; we occupy {weOccupy}" : "")
                           + (occupies.Length > 0 ? $"; it occupies our {occupies}" : "")
                           + (rules.Sieges && world.ProvinceList.Any(p => p.Controller == countryId && p.SiegedBy == other.Id)
                               ? "; it besieges our " + string.Join(", ", world.ProvinceList.Where(p => p.Controller == countryId && p.SiegedBy == other.Id).Select(p => p.Id)) : "") + ".");
+            }
+
+            if (rules.Fog)
+            {
+                var sightings = Fog.Sightings(world, countryId, rules.MaxSightings);
+                lines.Add(sightings.Count == 0 ? "Rival armies we see: none." : "Rival armies we see: " + string.Join("; ", sightings) + ".");
             }
 
             int neutralNear = world.ProvinceList.Count(p => p.IsNeutral && world.Neighbours(p).Any(n => n.Controller == countryId));
