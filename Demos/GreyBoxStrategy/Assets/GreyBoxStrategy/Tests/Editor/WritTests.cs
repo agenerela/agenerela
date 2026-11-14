@@ -897,28 +897,31 @@ namespace GreyBoxStrategy.Tests
         [Test]
         public void Stubborn_IsNeverRouted_ButRetreats()
         {
-            bool Survives(bool stubborn)
+            bool Routed(bool stubborn)
             {
                 var g = NewWrits(1, Led());
                 Turn(g);
-                var target = g.World.ProvincesOf("orsk").OrderBy(p => p.Id).First();
+                var target = g.World.ProvincesOf("orsk").Where(p => !p.IsCapital && p.Forts == 0).OrderBy(p => p.Id).First();
                 var host = ArmyOf(g, "valen");
                 var orsk = ArmyOf(g, "orsk");
-                host.Soldiers = 300;
-                orsk.Soldiers = 5;
-                g.World.Country("valen").Army = 300;
-                g.World.Country("orsk").Army = 5;
+                host.Soldiers = 200; // strong enough to rout (more than 2.5 to 1), not to destroy (30% of 200 is 60)
+                orsk.Soldiers = 70;
+                g.World.Country("valen").Army = 200;
+                g.World.Country("orsk").Army = 70;
                 Lead(host);
                 if (stubborn) Lead(orsk, GeneralTraits.Stubborn); else Lead(orsk);
                 orsk.Location = target.Id;
                 host.Location = target.Id;
                 War(g, "valen", "orsk");
                 var report = Turn(g);
-                Assert.That(report.BattleRecords.Any(b => b.Province == target.Id), Is.True, string.Join("\n", report.Resolution));
-                return g.World.FindArmy(orsk.Id) != null;
+                var battle = report.BattleRecords.FirstOrDefault(b => b.Province == target.Id);
+                Assert.That(battle, Is.Not.Null, string.Join("\n", report.Resolution));
+                if (stubborn) Assert.That(battle.Retreats.ContainsKey(orsk.Id) && g.World.FindArmy(orsk.Id) != null, Is.True, "it fell back: " + string.Join("\n", report.Resolution));
+                else Assert.That(g.World.FindArmy(orsk.Id), Is.Null);
+                return battle.Routed;
             }
-            Assert.That(Survives(false), Is.False, "5 against 300 is routed");
-            Assert.That(Survives(true), Is.True, "a stubborn general retreats instead");
+            Assert.That(Routed(false), Is.True, "70 against 200 is routed");
+            Assert.That(Routed(true), Is.False, "a stubborn general retreats instead");
         }
 
         [Test]
@@ -940,7 +943,9 @@ namespace GreyBoxStrategy.Tests
                     Turn(g);
                     var a = ArmyOf(g, "valen");
                     if (swift) Lead(a, GeneralTraits.Swift); else Lead(a);
+                    a.Stop("ready for the test"); // so the marshal is asked this turn
                     Turn(g, r => r.CountryId == "valen" && r.Moment == Moment.Army && r.ArmyId == a.Id ? slow : null);
+                    Assert.That(a.Location == army.Location ? a.Destination : slow.Target, Is.EqualTo(slow.Target), "the march was ordered");
                     return a.Location;
                 }
                 Assert.That(After(false), Is.EqualTo(army.Location), $"seed {seed}: rough ground takes two turns");

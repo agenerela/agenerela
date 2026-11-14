@@ -730,7 +730,7 @@ namespace GreyBoxStrategy
             if (r.Generals) AfterBattle(attackerWon ? attackers : defenders, losers, key);
             double loserStrength = attackerWon ? defence : attack, winnerStrength = attackerWon ? attack : defence;
             bool rout = loserStrength * r.RoutRatio < winnerStrength;
-            record.Routed = rout && losers.Count > 0;
+            record.Routed = rout && losers.Any(a => !(r.Generals && a.General != null && a.General.Has(GeneralTraits.Stubborn)));
             record.Why = Why(record, defName);
             foreach (var a in losers.Where(a => World.FindArmy(a.Id) != null).ToList())
             {
