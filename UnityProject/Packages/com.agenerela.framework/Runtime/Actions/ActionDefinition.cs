@@ -69,6 +69,22 @@ namespace Agenerela
         public string ExampleStatement;
 
         /// <summary>
+        /// The situation of this action's example: one or two observation lines, rendered above the
+        /// example the way a real call's observations are (#216 item 1). Empty by default, and shown
+        /// only on a call with <see cref="DecideOptions.ExampleObservations"/> on, which is off.
+        /// </summary>
+        /// <remarks>
+        /// For an agent the game asks the same thing every time ("Choose this turn's move."), where the
+        /// situation lives only in the observations, so no example could otherwise show when to pick
+        /// the action. A <c>{0}</c> is filled with the example's target, as in the stimulus. Never an
+        /// evaluation prompt's stimulus and observations together (hard rule 4); <c>PromptSetChecks</c>
+        /// flags one.
+        /// </remarks>
+        [Tooltip("Optional. One or two observation lines that make the example's situation, shown " +
+                 "only when a call turns on example observations. Use {0} for the target.")]
+        public string[] ExampleObservations;
+
+        /// <summary>
         /// A stimulus that touches this action's subject but asks for nothing, shown to the model
         /// answered with <c>none</c> beside the action's own example (#190, Living Vale #9). Empty
         /// by default, which adds nothing to the prompt.

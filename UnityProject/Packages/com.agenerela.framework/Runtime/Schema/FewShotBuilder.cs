@@ -98,6 +98,7 @@ namespace Agenerela
             options = options ?? new PromptOptions();
             string label = options.StimulusLabel;
             bool statements = options.ExampleStatements;
+            bool situations = options.ExampleObservations;
             HashSet<string> mentioned = options.ExampleTargetFallback ? Words(options.Stimulus) : null;
 
             List<string> lines = new List<string> { Header };
@@ -108,7 +109,7 @@ namespace Agenerela
                                 ?? (mentioned != null ? FallbackTarget(action, targets, mentioned, availability) : null);
                 string name = target == null ? null : NameOf(target, targets);
 
-                string example = ActionExample(action, target, name, label, statements);
+                string example = ActionExample(action, target, name, label, statements, situations);
                 if (example != null)
                 {
                     lines.Add(example);
@@ -144,7 +145,7 @@ namespace Agenerela
 
         // The action's own example, or null when it has none, or needs a target and has none to name.
         private static string ActionExample(ActionDefinition action, string target, string name,
-                                            string label, bool statements)
+                                            string label, bool statements, bool situations)
         {
             if (string.IsNullOrWhiteSpace(action.ExampleStimulus)) return null;
 
@@ -152,12 +153,34 @@ namespace Agenerela
 
             if (!action.RequiresTarget)
             {
-                return Example(label, action.ExampleStimulus, action.Id, TargetRegistry.NoTarget, statement);
+                return Situation(action, null, situations) +
+                       Example(label, action.ExampleStimulus, action.Id, TargetRegistry.NoTarget, statement);
             }
 
             if (target == null) return null;
 
-            return Example(label, Fill(action.ExampleStimulus, name), action.Id, target, Fill(statement, name));
+            return Situation(action, name, situations) +
+                   Example(label, Fill(action.ExampleStimulus, name), action.Id, target, Fill(statement, name));
+        }
+
+        // The example's observations, under the heading a real call's observations have, each "- "
+        // line on one line, then a line break before the example itself (#216 item 1). Empty when
+        // the option is off or the action wrote none, so the example is what it always was. A {0}
+        // names the example's target; with none to name, it is written as it stands.
+        private static string Situation(ActionDefinition action, string name, bool situations)
+        {
+            if (!situations || action.ExampleObservations == null) return "";
+
+            var lines = new List<string>();
+            foreach (string observation in action.ExampleObservations)
+            {
+                if (string.IsNullOrWhiteSpace(observation)) continue;
+
+                string line = System.Text.RegularExpressions.Regex.Replace(observation, @"\s+", " ").Trim();
+                lines.Add("- " + (name == null ? line : Fill(line, name)));
+            }
+
+            return lines.Count == 0 ? "" : PromptBuilder.ObservationsHeader + "\n" + string.Join("\n", lines) + "\n";
         }
 
         // A line that touches the action's subject and asks for nothing, answered with none (#190,

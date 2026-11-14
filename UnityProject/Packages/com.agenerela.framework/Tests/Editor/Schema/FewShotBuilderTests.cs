@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace Agenerela.Tests
 {
@@ -230,6 +232,93 @@ namespace Agenerela.Tests
             Assert.That(block, Does.Not.Contain("Nice"));
             Assert.That(block, Does.Not.Contain("I saw you"));
             Assert.That(block, Does.Contain("\"Wave at me.\" -> action: wave"), "The action's own example is unaffected.");
+        }
+
+        // ---- Examples that carry their situation (#216 item 1) ------------------------------------
+
+        [Test]
+        public void WithTheOptionOnAnExampleShowsItsSituationAboveIt()
+        {
+            var targets = Registry("orsk");
+            var taxes = Action("raise_taxes", "Choose this turn's move.", false);
+            taxes.ExampleObservations = new[] { "Our treasury holds 3 gold.", "  Our   people are calm. " };
+            var attack = Action("attack", "Choose this turn's move.", true, "orsk");
+            attack.ExampleObservations = new[] { "The {0} army is away." };
+            var rest = Action("rest", "Rest the army.", false);
+
+            string block = FewShotBuilder.Build(new List<ActionDefinition> { taxes, attack, rest }, targets,
+                new PromptOptions { StimulusLabel = "Report", ExampleObservations = true });
+
+            Assert.That(block, Does.StartWith(string.Join("\n",
+                "Examples of correct decisions:",
+                "What you know right now:",
+                "- Our treasury holds 3 gold.",
+                "- Our people are calm.",
+                "Report: \"Choose this turn's move.\" -> action: raise_taxes, target: no_target",
+                "What you know right now:",
+                "- The orsk army is away.",
+                "Report: \"Choose this turn's move.\" -> action: attack, target: orsk",
+                "Report: \"Rest the army.\" -> action: rest, target: no_target")),
+                "Under the heading a real call's observations have; an example without one is as it was.");
+        }
+
+        [Test]
+        public void WithTheOptionOffTheBlockIsByteIdenticalToOneWithoutSituations()
+        {
+            var targets = Registry("orsk");
+            var with = Action("attack", "Choose this turn's move.", true, "orsk");
+            with.ExampleObservations = new[] { "The {0} army is away." };
+            var without = Action("attack", "Choose this turn's move.", true, "orsk");
+
+            Assert.That(new PromptOptions().ExampleObservations, Is.False);
+            Assert.That(new DecideOptions().ExampleObservations, Is.False);
+            Assert.That(FewShotBuilder.Build(new List<ActionDefinition> { with }, targets, new PromptOptions()),
+                Is.EqualTo(FewShotBuilder.Build(new List<ActionDefinition> { without }, targets, new PromptOptions())));
+            Assert.That(FewShotBuilder.Build(new List<ActionDefinition> { without }, targets, new PromptOptions { ExampleObservations = true }),
+                Is.EqualTo(FewShotBuilder.Build(new List<ActionDefinition> { without }, targets, new PromptOptions())),
+                "On, an example without a situation is as it was.");
+        }
+
+        [Test]
+        public async Task BothFrontDoorsCarryTheSituationToTheRequest()
+        {
+            var registry = new ActionRegistry();
+            registry.RegisterMethods(new Treasury());
+            var coded = registry.Definitions.Single();
+            Assert.That(coded.ExampleObservations, Is.EqualTo(new[] { "Our treasury is empty." }), "The code front door.");
+
+            var asset = ScriptableObject.CreateInstance<ActionDefinitionAsset>();
+            try
+            {
+                asset.Action = new ActionDefinition
+                {
+                    Id = "raise_taxes", Description = "Take gold from our people.", ExampleStimulus = "Choose this turn's move.",
+                    ExampleObservations = new[] { "Our treasury is empty." },
+                };
+                var fake = new FakeProvider("{\"action\":\"none\",\"statement\":\"\"}");
+                var agent = new Agent(new AgentIdentity { Name = "Kesh" }, new[] { asset.Action }, fake);
+                agent.Bind("raise_taxes", new FakeHandler());
+
+                await Fixtures.NotCancelled(agent.DecideAsync("Choose this turn's move.", new DecideOptions { ExampleObservations = true }));
+                Assert.That(fake.LastRequest.FewShotBlock, Does.Contain("What you know right now:\n- Our treasury is empty.\nPlayer: \"Choose this turn's move.\""),
+                    "The asset front door, through an agent.");
+
+                await Fixtures.NotCancelled(agent.DecideAsync("Choose this turn's move."));
+                Assert.That(fake.LastRequest.FewShotBlock, Does.Not.Contain("treasury"), "Off by default.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(asset);
+            }
+        }
+
+        private sealed class Treasury
+        {
+            [AgentAction("raise_taxes", "Take gold from our people.")]
+            [Example("Choose this turn's move.", Observations = new[] { "Our treasury is empty." })]
+            public void RaiseTaxes()
+            {
+            }
         }
 
         // ---- Statements (#190, G14) ----------------------------------------------------------------

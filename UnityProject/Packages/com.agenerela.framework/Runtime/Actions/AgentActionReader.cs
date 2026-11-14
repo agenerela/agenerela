@@ -195,6 +195,8 @@ namespace Agenerela
                     ExampleStimulus = f.Example?.Stimulus ?? "",
                     PreferredExampleTargets = f.Example?.PreferredTargets ?? Array.Empty<string>(),
                     ExampleStatement = f.Example?.Statement ?? "",
+                    // Copied, so the definition never shares an array with the attribute.
+                    ExampleObservations = f.Example?.Observations == null ? Array.Empty<string>() : (string[])f.Example.Observations.Clone(),
                     CounterExampleStimulus = f.CounterExample?.Stimulus ?? "",
                     CounterExampleStatement = f.CounterExample?.Statement ?? "",
                     // Copied, so the definition never shares an array with the attribute.
