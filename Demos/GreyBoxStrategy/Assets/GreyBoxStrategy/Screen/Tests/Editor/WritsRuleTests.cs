@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -139,6 +140,68 @@ namespace GreyBoxStrategy.Screen.Tests
             Assert.That(f.Repeats("valen", "We march at dawn."), Is.False, "another ruler's line is its own");
             Assert.That(f.Repeats("kesh", "Hold the line."), Is.False);
             Assert.That(f.Repeats("kesh", "We march at dawn."), Is.False, "said again after something else: shown");
+        }
+
+        [Test]
+        public void The_chronicle_says_a_recruit_with_names_not_ids()
+        {
+            string P(string id) => char.ToUpperInvariant(id[0]) + id.Substring(1);
+            Assert.That(Chronicle.RecruitText("raised 15 soldiers at orskhaven (fenna_host +15)", P), Is.EqualTo("raises 15 soldiers at Orskhaven for Fenna's host"));
+            Assert.That(Chronicle.RecruitText("raised 15 soldiers at highmoor (maren_host +5, new tolly_host2 10)", P),
+                Is.EqualTo("raises 15 soldiers at Highmoor: 5 for Maren's host and a new army, Tolly's second host, of 10"));
+            Assert.That(Chronicle.Host("hester2_host"), Is.EqualTo("Hester's second host"), "a general's name taken again is numbered by the rules");
+            Assert.That(Chronicle.RecruitText("recruited 10 soldiers for 50 gold", P), Is.EqualTo("recruits 10 soldiers for 50 gold"), "the one-move game's recruit");
+            var e = new ReplayEvent { Turn = 3, Kind = ReplayEventKind.Recruit, Country = "orsk", Text = "raised 15 soldiers at orskhaven (fenna_host +15)" };
+            var line = Chronicle.Line(e, id => P(id));
+            Assert.That(line.Text, Does.Not.Contain("_host").And.Not.Contain("orskhaven").And.Not.Contain("raised"));
+            Assert.That(line.Short, Is.EqualTo("raises 15 soldiers at Orskhaven for Fenna's host"));
+        }
+
+        [Test]
+        public void The_rules_reasons_are_said_with_names()
+        {
+            var words = new Wording(new[] { "valen", "kesh" }, new[] { "highmoor", "corwick" }, id => id == "valen" ? "Valen" : "Kesh");
+            Assert.That(words.Destination("highmoor belongs to valen, at peace with us"), Is.EqualTo("Valen's, and we are at peace"));
+            Assert.That(words.Destination("corwick is more than 3 steps away"), Is.EqualTo("more than 3 steps away"));
+            Assert.That(words.Plain("highmoor belongs to valen, at peace with us"), Is.EqualTo("Highmoor is Valen's, and we are at peace"));
+            Assert.That(words.Plain("we are already at war with valen"), Is.EqualTo("We are already at war with Valen"));
+            Assert.That(words.Plain("maren_host cannot raise_taxes at corwick"), Is.EqualTo("Maren's host cannot raise taxes at Corwick"));
+        }
+
+        [Test]
+        public void A_rulers_orders_of_a_turn_are_one_entry_with_its_line_once()
+        {
+            ChronicleLine L(int turn, string c, ReplayEventKind k, string text, string quote) =>
+                Chronicle.Line(new ReplayEvent { Turn = turn, Kind = k, Country = c, Province = "glimmerford", Text = text, Statement = quote }, id => char.ToUpperInvariant(id[0]) + id.Substring(1));
+            var oldestFirst = new List<ChronicleLine>
+            {
+                L(3, "merrow", ReplayEventKind.Fort, "", "Glimmerford is mine."),
+                L(3, "orsk", ReplayEventKind.Taxes, "", "Gold."),
+                L(3, "merrow", ReplayEventKind.Fort, "", "Glimmerford is mine!"),
+                L(3, "valen", ReplayEventKind.Capture, "", ""),
+                L(4, "merrow", ReplayEventKind.Fort, "", "Again."),
+            };
+            var groups = Chronicle.Group(Enumerable.Reverse(oldestFirst).ToList(), ScreenUI.SaidAgain);
+            Assert.That(groups.Count, Is.EqualTo(4), "turn 4's fort, turn 3's capture, Orsk's taxes, Merrow's two forts as one");
+            var merrow = groups.Single(g => g.Turn == 3 && g.Country == "merrow");
+            Assert.That(merrow.Lines.Count, Is.EqualTo(2));
+            Assert.That(merrow.Items.Select(i => i.text), Is.EqualTo(new[] { "fortifies Glimmerford, twice" }));
+            Assert.That(merrow.Quotes, Is.EqualTo(new[] { "Glimmerford is mine." }), "the same words once");
+            Assert.That(groups.Single(g => g.Turn == 3 && g.Country == "valen").Single, Is.True, "a capture is not an order: its own line");
+            Assert.That(groups.IndexOf(merrow), Is.LessThan(groups.FindIndex(g => g.Country == "orsk")), "the group stands where its newest order stood");
+        }
+
+        [Test]
+        public void Pieces_that_would_overlap_are_set_apart()
+        {
+            var at = new List<Vector2> { new Vector2(100, 100), new Vector2(110, 104), new Vector2(300, 100), new Vector2(104, 98) };
+            var size = Enumerable.Repeat(new Vector2(52, 20), 4).ToList();
+            ScreenUI.Unclutter(at, size, new List<bool> { false, false, false, true });
+            Assert.That(at[3], Is.EqualTo(new Vector2(104, 98)), "a moving piece stays on its path");
+            Assert.That(at[2], Is.EqualTo(new Vector2(300, 100)), "a piece clear of the others stays");
+            for (int i = 0; i < at.Count; i++)
+                for (int j = i + 1; j < at.Count; j++)
+                    Assert.That(Mathf.Abs(at[i].x - at[j].x) >= 54 || Mathf.Abs(at[i].y - at[j].y) >= 21.9f, Is.True, $"{i} and {j} overlap: {at[i]} {at[j]}");
         }
 
         [Test]

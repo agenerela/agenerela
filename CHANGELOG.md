@@ -29,6 +29,13 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: the writs turn polished** (#20).
+  - The council's buttons read as offered, chosen or not offered, with the reason.
+  - The chronicle and the panel use names, never ids.
+  - A ruler's orders of a turn are one entry with its line once.
+  - Refused destinations are the nearest three.
+  - Pieces in neighbouring provinces no longer overlap, and a treaty's seal shows above them.
+
 - **Painted Realm: rule mode on the writs turn** (#20). You rule one country against four model rulers
   with a plan a turn: a court order, an order for each army with a writ, a second court order.
   - Your writs are counted, and armies waiting for want of a writ are marked.
