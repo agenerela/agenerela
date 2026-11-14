@@ -1209,7 +1209,9 @@ effect of 1% or more, and the counters turned the result of 6% of them.
   beat bows, and pikes beat riders.").
 - "Our armies" gives each army's mix ("nessa_host 30 (30 pikes) at highmoor"), a rival's line what its armies
   mostly are ("mostly riders", or "mixed"), an army's own line its mix, and the moves line the recruit orders.
-- Off, every prompt is exactly as before. Unmeasured live: the setting stays off until a run with the models.
+- Off, every prompt is exactly as before. A first live look (14 November, six pairs on `qwen3.5:4b`): no illegal
+  answers and no extra model time, but the courts recruit mostly pikes and counter the type they see only 22% of the
+  time (chance 33%), so the setting stays off; numbers in `findings.md`.
 - Headless table runs take rule settings, `-strategyRules "UnitTypes=true"` (`GameSetup.Numbers`, never saved
   with a setup), for that run.
 
