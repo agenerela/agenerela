@@ -1668,7 +1668,7 @@ Candidates, each with its cost:
    speed the middle game.
 
 _Mine:_ 1 and 3 together. Together they would end most Classic games in well under 100 turns at no model
-cost, and leave 2 for R3, where standing orders belong. That reading is unmeasured: the scripted series
+cost, and leave 2 for R3, where standing orders belong. That reading was unmeasured when written, and the live first look below found the opposite for both on together. The scripted series
 would show it in minutes before any live run.
 
 **Built, both off** (14 November): `GameRules.OccupationBecomesOwnership` (candidate 1: a province occupied that
@@ -1678,8 +1678,19 @@ show each occupation's count ("corwick (held 3 of 8 turns)"). **Scripted, they c
 100 Classic games of the `mixed` lineup take 77 turns off, 74 to 76 with either or both on. Scripted rulers
 press a war to the end and do not stall; when they are made to make peace as readily as the models do, they
 settle within 8 turns, so no occupation lasts long enough. Only model rulers stall, so which candidate helps can
-only be read from a live run: for example 5 uncapped games with both on, on R1c's uncapped seeds 21 to 25.
+only be read from a live run; the first look, two pairs of uncapped games with both on, is the next paragraph.
 Numbers: [`findings.md`](../llm-wiki/findings.md), 14 November.
+
+**Live, a first look (14 November, two pairs):** with both on, the models' games ran **longer**, not shorter:
+249 turns against 101 (one to the 300-turn guard), with 54 and 22 provinces passing by occupation. Land moves
+(no-change turns 77% against 85%), but every province that passes resets the 12-turn stalemate counter, so a
+stalled war that used to end in a stalemate now grinds on. **Both stay off.** What the result suggests instead:
+- **Ownership without resetting the stalemate counter:** a province that passes by holding counts as no change,
+  so the stalemate still ends a war that only trades held land; or count the counter on war score, not land.
+- **The break rule alone:** this run had both on, so it cannot say what `BreakWhenAllOccupied` does by itself;
+  each realm-break in it may have come from either rule.
+- **Ownership only at a war's end**, as a treaty term the model already has (`demand_occupied`), made cheaper.
+Each needs its own live pair.
 
 The screen's half is the screen session's.
 
@@ -1741,7 +1752,7 @@ has the detail.
 - **A border crossing:** the winner steps through, and the loser never crosses. Since the winner now
   stands in the province the loser was leaving, the loser falls back from it, with no second battle.
   Section 1.1's "the loser stays in the province it was leaving" cannot hold with the winner there.
-- **Sieges, stores, unit types and generals' traits wait for R3** (unit types were built in R3's first part, 14 November, behind `GameRules.UnitTypes`, and seven of the ten general traits in its third, behind `GameRules.Generals`; both off). A walled province is fought for
+- **Sieges, stores, unit types and generals' traits wait for R3** (unit types were built in R3's first part, 14 November, behind `GameRules.UnitTypes`, seven of the ten general traits in its third, behind `GameRules.Generals`, and sieges at forts in its fourth, behind `GameRules.Sieges`; all off; wake conditions 3 and 6 are not checked here). A walled province is fought for
   through its militia (5 + 10 a fort, plus the capital bonus; R1b: 3 + 6 a fort) rather than besieged. Wake conditions 3
   and 6 (a siege ends, stores run low) wait with them.
 - **Recruiting** keeps today's levy (5 + 5 a province, paid at 2 gold a soldier). It appears at the
@@ -2113,7 +2124,7 @@ line, and `findings.md` for anything measured.
 **R3, armies in depth**
 - [x] Three types, costs, the counter rule (`GameRules.UnitTypes`, off; scripted only, 14 November)
 - [x] The model rulers' recruit orders by type and the mix in their facts (14 November; unmeasured live, so still off)
-- [x] Generals: names, seven of the ten traits, second trait, a general falling (`GameRules.Generals`, off; scripted only, 14 November). Siegewright, forager and marshal wait for sieges, supply and army sizes; capture waits for prisoners
+- [x] Generals: names, seven of the ten traits, second trait, a general falling (`GameRules.Generals`, off; scripted only, 14 November). Siegewright came with the sieges (#311, only with `GameRules.Sieges` on); forager and marshal wait for supply and army sizes; capture waits for prisoners
 - [x] Sieges at forts over several turns, breach, broken siege, siegewright (`GameRules.Sieges`, off; scripted only, 14 November). Forts stand for walls; the fort that holds the road, and income lost under siege, are not built yet
 - [x] Supply model B, with forager (`GameRules.Supply`, off; scripted against none, 14 November). Still open: the army cap, and A against B (A needs farms)
 - [ ] Fog of war for facts and scripted players; totals rounded; forest; scouting
