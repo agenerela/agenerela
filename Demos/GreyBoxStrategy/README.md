@@ -1144,6 +1144,16 @@ in place of the formula; `GameRules.UnlimitedWrits` means no limit (shown as "Wr
 so the screen can give the person alone unlimited writs as an easy setting. `World.Writs` reads it, it is
 copied with the rules, and any number below 1 counts as 1.
 
+**Two pacing settings, both off** (14 November; the rules v2 page's "Why Classic stalls"):
+- `GameRules.OccupationBecomesOwnership`: a province occupied that many turns in a row becomes the occupier's,
+  with no treaty. `Province.OccupiedTurns` counts the turn ends it has been held, back to 0 when the occupier
+  changes; when the setting is on, the rulers' facts show "corwick (held 3 of 8 turns)".
+- `GameRules.BreakWhenAllOccupied`: a realm with every province occupied breaks even with armies left
+  elsewhere, which are disbanded with it.
+
+Scripted they barely move the pace (77 turns off, 74 to 76 on); the stall is the model rulers', and a live run
+will tell. Numbers in [`findings.md`](../../docs/llm-wiki/findings.md), 14 November.
+
 ## The first real run
 
 `mixed`, 200 games, seeds 1 to 200, standard rules, run in batch mode on 10 November 2026. The
