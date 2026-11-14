@@ -1225,6 +1225,19 @@ effect of 1% or more, and the counters turned the result of 6% of them.
 - Scripted, 100 Classic games (`pace classic 100 rule:Generals=True`): 71 turns on average against 77 off,
   94 last standing and 6 stalemates; with unit types too, 78. Unmeasured live, so off.
 
+**R3, part four: sieges** (14 November; rules v2 3.7). `GameRules.Sieges`, off by default:
+- An army alone in enemy land with forts besieges it instead of storming the militia. The province stays its
+  controller's until the siege ends: 2 turns a fort (`SiegeTurnsPerFort`), a turn off for a `siegewright`
+  commander and for besiegers three times the garrison (10 a fort), never below 1, and a 10% seeded breach each
+  turn (`SiegeBreachChance`). Then the province is occupied with one fort fewer.
+- The siege breaks when the besiegers leave or are beaten there. `Province.SiegedBy` and `SiegeTurns` hold it.
+- The besieger reads "besieging corwick, turn 2 of 4" for its army, the besieged "it besieges our corwick" on the
+  rival's line.
+- `siegewright` joins the generals' traits only with sieges on (`GeneralTraits.Pool`).
+- Not built yet: the fort that holds the road, and the income a besieged province loses.
+- Scripted, 100 Classic games: 80 turns on average against 77 off (94 last standing, 5 stalemates); with unit
+  types and generals too, 74. Unmeasured live, so off.
+
 **Two pacing settings, both off** (14 November; the rules v2 page's "Why Classic stalls"):
 - `GameRules.OccupationBecomesOwnership`: a province occupied that many turns in a row becomes the occupier's,
   with no treaty. `Province.OccupiedTurns` counts the turn ends it has been held, back to 0 when the occupier
