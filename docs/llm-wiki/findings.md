@@ -4149,3 +4149,61 @@ Nothing like it measured before but the one-voice arm (13–14 November), which 
 - **Why one voice lost treaties.** Statements reach no other ruler: the envoy decision reads "{country} proposes a treaty." and the terms, never the proposer's words. A line reaches only its own ruler, through its memory (the last four decisions, kept whole) and the own-lines line. So the loss came from inside the ruler's own prompt, and two causes are left: one voice's plain line telling most decisions to leave the statement empty, which a small model may read as "do little", and memory entries with no line, which keep what a ruler did but not why. Silent armies removes the first (no line at all, no field) and keeps the second for army orders only, and lost less (−1.1 against −1.9); that fits the first cause being the larger, but this run cannot separate them. Armies may be silent where an order's line feeds nothing; whether a ruler's memory of its marches needs their reasons is the open part.
 - **The fixed own lines hold live:** d against n, repeats −14.7 points (beyond), treaties +1.3 and time within, every illegal count 0.
 
+### A closed choice beside action and target: Ollama's grammar holds an enum and a bounded array of target ids on `/api/chat`, and a parameter written after `statement` lands in the statement (14 November 2026)
+
+The probe #266 item 2 asks for before any design for typed parameters, with no framework code:
+`tools/benchmarks/closed_choice_grammar_probe.py`. It sends hand-written schemas shaped as
+`JsonSchemaSerializer` writes them (`required`, `propertyOrdering`, `additionalProperties: false`)
+and checks every reply in code. It is not an accuracy claim, and there is no control arm: it asks
+what the grammar allows, not which answer is better.
+
+**Conditions.** RTX 5080, Docker Ollama 0.40.14, over the network (home or VPN), through the
+gateway; `qwen3.5:4b` alone resident (`ps` empty before), temperature 0.7, seed 7, `think: false`,
+`num_predict` 200. One storyteller system prompt (four countries; events famine, windfall, none;
+strengths minor, major), six stimuli that push against the constraints (three countries, "every
+country", "catastrophic", none at all), 6 requests an arm. Raw replies:
+`.scratch/266-gaps/probe-20261114-0214.jsonl` in this worktree (`266-framework-gaps-459b69`).
+
+**Arms.** `strength` (enum `minor`/`major`) after `target`; `strength` after `statement`;
+`targets`, an array of the country ids with `minItems` 1 and `maxItems` 2; the same with
+`uniqueItems`.
+
+| `/api/chat` with `format` | n | Parsed | Key order kept | Enum value | Array, 1–2 allowed ids | No duplicate |
+|---|---:|---:|---:|---:|---:|---:|
+| `strength` after `target` | 6 | 6 | 6 | 6 | – | – |
+| `strength` after `statement` | 6 | 6 | 6 | 6 | – | – |
+| `targets`, 1–2 | 6 | 6 | 6 | – | 6 | 6 |
+| `targets`, 1–2, `uniqueItems` | 6 | 6 | 6 | – | 6 | 6 |
+
+- **The grammar held every constraint.** Every `strength` was `minor` or `major`, "worse than
+  anything before" included. Every array held one or two allowed ids: "Strike orsk, kesh and
+  fenmark" and "Strike every country" came back as two, so `maxItems` cuts silently, and "Nothing
+  should happen to anyone" still struck two, because `minItems` 1 forces one (a game wanting
+  "nobody" needs `minItems` 0 or the `none` action to take no targets).
+- **The key order was kept on all 24**, as the schema gave it. `qwen3.5:4b` takes Ollama's
+  rendered path (`renderer_parser`, 5 November), so this says nothing about the native path, which
+  sorts keys alphabetically; there `strength` and `targets` would both sort after `statement`,
+  the order that failed here (next point). That path is not covered: it needs a model served through its GGUF
+  template (`MiniCPM5-2B` logged that path on 4 November), which was not pulled.
+- **A parameter after `statement` is written into the statement.** With `strength` last, 3 of 6
+  statements were the bare word `minor` or `major` ("Strike orsk, kesh and fenmark": statement
+  `minor`, strength `major`). With `strength` before `statement`, none were. The model never reads
+  the schema (10 October), so it writes what the prompt asks for ("how hard") in the first free
+  slot. A design should put parameters before `statement`, as `target` is (DR-008's order rule),
+  and say in the prompt what each one is.
+- **`uniqueItems` is not shown to do anything.** The two array arms gave identical replies, seed
+  for seed, and no reply in either repeated an id, so whether the grammar enforces it is unknown.
+- **Pairing is not in the grammar.** `none` came with a strength and a target (`orsk`) or two
+  targets; nothing ties a parameter to an action in these schemas, as `TakesNoTarget` (#245) does
+  for the target.
+- **The OpenAI-compatible endpoint was not reached.** The gateway answers 403 for
+  `/v1/chat/completions` by design (it exposes `/v1/systemone` only,
+  `tools/ollama-server/README.md`), so that arm stopped after its first refusals, 5 requests. It
+  needs a local Ollama, never compared with this one, or a gateway route, which is not this probe's
+  to add.
+- Replies took 0.4 to 1.0 s, the first 6.6 s (the load).
+
+**What would change this.** A native-path model that keeps a parameter's value valid but moves it
+after `statement`, which would make the field order unreachable by schema for such models, as
+for `target` (5 November). A reply with a repeated id under `uniqueItems`. A later Ollama that
+changes either path.
