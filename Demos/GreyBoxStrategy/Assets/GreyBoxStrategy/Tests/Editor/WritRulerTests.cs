@@ -73,17 +73,17 @@ namespace GreyBoxStrategy.Tests
             Assert.That(viaAgents.Decisions.Any(d => d.Action == Actions.Recruit), Is.False);
 
             var court = seen.Where(r => r.Label == "Court").Select(r => r.Request.Observations).ToList();
-            var army = seen.Where(r => r.Label == "Army").Select(r => r.Request.Observations).ToList();
+            var army = seen.Where(r => r.Label == "Army").Select(Read).ToList();
             Assert.That(court.Any(o => System.Text.RegularExpressions.Regex.IsMatch(o, @"Our armies: \w+ \d+ \(\d+ (pikes|riders|bows)")), Is.True, "our armies with their mix");
             Assert.That(court.Any(o => o.Contains(", mostly ") || o.Contains(", mixed,")), Is.True, "a rival's armies by what they mostly are");
             Assert.That(court.Any(o => o.Contains("recruit pikes")), Is.True, "the moves line names the recruit orders");
-            Assert.That(army.All(o => System.Text.RegularExpressions.Regex.IsMatch(o, @"\w+: \d+ soldiers \(")), Is.True, "an army reads its own mix");
+            Assert.That(army.FirstOrDefault(o => !System.Text.RegularExpressions.Regex.IsMatch(o, @"\d+ soldiers \(\d+ (pikes|riders|bows)")), Is.Null, "an army reads its own mix");
 
             var offSeen = new List<ScriptedRequest>();
             var off = GameSetup.Writs(5);
             off.TurnCap = 12;
             await PlayFakes(off, offSeen);
-            Assert.That(offSeen.All(r => !r.Request.Observations.Contains(" pikes") && !r.Request.Observations.Contains("mostly ")), Is.True, "off: no word of types");
+            Assert.That(offSeen.All(r => !Read(r).Contains(" pikes") && !r.Request.Observations.Contains("mostly ")), Is.True, "off: no word of types");
         }
 
         [Test]
