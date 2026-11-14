@@ -136,6 +136,14 @@ namespace GreyBoxStrategy
         /// from 36% to 22% in 15 games an arm, legality and persona unchanged); <c>+no-own-lines</c> switches it off.
         /// </summary>
         public bool OwnLines;
+        /// <summary>
+        /// <c>+silent-armies</c>: in the writs turn the marshal's army orders are asked with no statement at all
+        /// (<see cref="DecideOptions.AskForStatement"/> false, #266): no field in the schema, nothing of one in the
+        /// prompt. Both court orders, treaty answers and dilemmas keep their line. Measured 14 November, 15 games an
+        /// arm: 0.59 s a turn faster (an army order 0.50 s to 0.33 s), repeats and legality unchanged, treaties
+        /// 4.7 to 3.5 a game (within noise, not excluded), so it stays an arm and <c>default</c> keeps every line.
+        /// </summary>
+        public bool SilentArmies;
         /// <summary>How many of the ruler's last lines <see cref="OwnLines"/> shows.</summary>
         public const int OwnLinesShown = 4;
 
@@ -181,7 +189,7 @@ namespace GreyBoxStrategy
         /// line (<see cref="LegalTargetListing.ObservationLine"/>), and <c>+how-it-reads</c> and
         /// <c>+own-words</c> word the statement rules (<see cref="StatementRulesWording"/>)
         /// ("default+no-moves-line+moves-sentence", "default+how-it-reads"), <c>+one-voice</c>, <c>+own-lines</c> and
-        /// <c>+no-own-lines</c> for the writs turn's statements, and <c>+memory-move</c>
+        /// <c>+no-own-lines</c> and <c>+silent-armies</c> for the writs turn's statements, and <c>+memory-move</c>
         /// and <c>+memory-outcome</c> what a remembered move holds (<see cref="Remembers"/>, #244 item 4).
         /// For the storyteller: <c>+storyteller</c> (<see cref="Storyteller"/>), <c>+no-inspiration</c> and
         /// <c>+inspiration-&lt;n&gt;</c> ("default+storyteller+inspiration-1"); stage S2's <c>+choices</c>,
@@ -219,6 +227,7 @@ namespace GreyBoxStrategy
                     else if (modifier == "one-voice") options.OneVoice = true;
                     else if (modifier == "own-lines") options.OwnLines = true;
                     else if (modifier == "no-own-lines") options.OwnLines = false;
+                    else if (modifier == "silent-armies") options.SilentArmies = true;
                     else if (modifier == "storyteller") options.Storyteller = true;
                     else if (modifier == "choices") options.Choices = true;
                     else if (modifier == "multi") options.Multi = true;
