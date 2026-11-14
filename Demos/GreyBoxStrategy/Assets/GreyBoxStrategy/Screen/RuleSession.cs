@@ -38,6 +38,14 @@ namespace GreyBoxStrategy.Realm
             public Move Court2 = Move.Hold;
             internal bool CourtTaken;
 
+            /// <summary>The advisor's whole advice as a plan: its court order and every army's, as "Take the advice" fills it.</summary>
+            public static WritsPlan From(Advice advice)
+            {
+                var plan = new WritsPlan { Court = advice?.Court ?? Move.Hold };
+                if (advice != null) foreach (var kv in advice.Armies) plan.Armies[kv.Key] = kv.Value;
+                return plan;
+            }
+
             /// <summary>The order for a request of yours: the first court request takes <see cref="Court"/>, the next <see cref="Court2"/>.</summary>
             public Move For(CountryRequest r)
             {
@@ -91,6 +99,87 @@ namespace GreyBoxStrategy.Realm
 
         /// <summary>True for the writs turn: armies, a court and a marshal for each model ruler, your orders as one plan a turn.</summary>
         public bool Writs => Game.Rules.Turn == TurnStyle.Writs;
+
+        // ---- the advisor (the lead's answer 29: optional, on by default, turned off or on in game) ----
+
+        private Advisor advisor;
+        private CancellationTokenSource adviceCancel;
+
+        /// <summary>
+        /// Whether your advisor proposes each turn's plan, on the writs turn. Set before the game or during it; the
+        /// next turn follows it. Off: no call is made.
+        /// </summary>
+        public bool AdvisorOn { get; set; }
+        /// <summary>This turn's advice, once it is in; null while the advisor thinks, when it is off, or when it failed.</summary>
+        public Advice Advice { get; private set; }
+        /// <summary>True while the advisor is deciding this turn's advice.</summary>
+        public bool AdvisorThinking { get; private set; }
+        /// <summary>Why the advisor gave no advice this turn, or null.</summary>
+        public string AdvisorError { get; private set; }
+        /// <summary>How many decisions the advisor asked for over the game: 0 when it was never on.</summary>
+        public int AdvisorCalls => advisor?.Calls ?? 0;
+        /// <summary>The advisor's agents, as the decision log names them; null before the game starts.</summary>
+        public string AdvisorCourtId => advisor?.CourtAgentId;
+
+        /// <summary>
+        /// An advice decision as the inspector shows any ruler's: its log record where one pairs, marked as advice and
+        /// never a move of yours.
+        /// </summary>
+        public RecordedDecision AdviceDecision(AdviceItem item)
+        {
+            if (item == null) return null;
+            var r = item.Request;
+            string moment = r.Moment == Moment.Army ? RecordedDecision.ArmyMoment : "council";
+            Newtonsoft.Json.Linq.JObject raw = null;
+            foreach (string line in Lines())
+            {
+                if (string.IsNullOrWhiteSpace(line) || !line.Contains(item.AgentId)) continue;
+                try
+                {
+                    var o = Newtonsoft.Json.Linq.JObject.Parse(line);
+                    if ((string)o["stage"] == "Decided" && (string)o["agentId"] == item.AgentId && (string)o["stimulus"] == item.Stimulus) raw = o;
+                }
+                catch (Newtonsoft.Json.JsonException) { }
+            }
+            RecordedDecision d;
+            if (raw != null) { raw["turn"] = r.Turn; raw["moment"] = moment; d = GreyBoxStrategy.Replay.Recording.FromLogRecord(raw); }
+            else d = new RecordedDecision { Observations = string.Join("\n", r.StandingFacts), StimulusTurn = string.Join("\n", r.TurnFacts), Stimulus = item.Stimulus };
+            d.AgentId = item.AgentId; d.Turn = r.Turn; d.Moment = moment; d.ArmyId = r.ArmyId;
+            d.Action = item.Move.Action; d.Target = item.Move.Target ?? RecordedDecision.NoTarget;
+            d.Statement = item.Record?.Statement ?? d.Statement ?? "";
+            d.ModelAction = item.Record?.ModelAction ?? d.ModelAction;
+            d.ModelTarget = item.Record?.ModelTarget ?? d.ModelTarget;
+            d.ModelName = Model + " · advice";
+            d.OfferedMoves = r.Legal.Select(x => x.ToString()).ToList();
+            d.OfferedActions = r.Legal.Select(x => x.Action).Distinct().ToList();
+            return d;
+        }
+
+        // Starts this turn's advice beside the rulers' decisions; it lands in Advice when done. Never awaited by the turn.
+        private async void Advise(CountryRequest court)
+        {
+            if (advisor == null || !AdvisorOn) return;
+            adviceCancel?.Cancel();
+            var mine = adviceCancel = CancellationTokenSource.CreateLinkedTokenSource(cancel.Token);
+            Advice = null; AdvisorError = null; AdvisorThinking = true;
+            try
+            {
+                var advice = await advisor.AdviseAsync(court, mine.Token);
+                if (!mine.IsCancellationRequested) Advice = advice;
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception e) { if (!mine.IsCancellationRequested) AdvisorError = e.Message; Debug.LogWarning("Painted Realm: the advisor: " + e.Message); }
+            finally { if (adviceCancel == mine) AdvisorThinking = false; }
+        }
+
+        private void EndAdvice()
+        {
+            adviceCancel?.Cancel();
+            adviceCancel = null;
+            AdvisorThinking = false;
+            Advice = null;
+            AdvisorError = null;
+        }
 
         /// <param name="map">The map, or null for the Classic board.</param>
         /// <param name="rules">The rules, or null for today's one-move game; the writs turn's (<see cref="GameSetup.Writs"/>) for rule mode on it.</param>
@@ -271,6 +360,12 @@ namespace GreyBoxStrategy.Realm
                     seats[id] = seat;
                     Game.Gates[id] = seat;
                 }
+                // The advisor sits on your seat with the session's model, through the same provider and queue.
+                if (Writs)
+                {
+                    if (!providers.TryGetValue(Model, out var advisorProvider)) providers[Model] = advisorProvider = providerFor(Model, Game.World);
+                    advisor = new Advisor(Game.World, You, advisorProvider, table.Options);
+                }
                 // The storyteller tells on the session's model, through the same provider and queue.
                 if (story != null)
                 {
@@ -412,7 +507,13 @@ namespace GreyBoxStrategy.Realm
                     }
                     else
                     {
-                        if (plan == null) plan = await AskPlan(r);
+                        if (plan == null)
+                        {
+                            // The advisor is asked as your turn opens, beside the rulers, never before them.
+                            Advise(r);
+                            plan = await AskPlan(r);
+                            EndAdvice();
+                        }
                         move = plan.For(r);
                     }
                     answers.Add(new CountryAnswer(r, move));
