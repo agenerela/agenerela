@@ -29,6 +29,10 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: a stalemate counter that reads war score and land by treaty** (#20), behind
+  `GameRules.StalemateByWarScore`, off by default. Land taken or freed by force no longer restarts it; a treaty,
+  free land, a broken realm, a new war or a 10-point swing does. Scripted only; no live run yet.
+
 - **Painted Realm R3 sieges and supply on screen** (#20). New game has "Sieges" and "Supply" switches, off by
   default. A besieged province carries "Siege 2 of 4" beside its forts; your army rows show their stores as pips
   and a red "No stores" when there are none; the chronicle tells sieges begun, broken and ended, and hunger. A
@@ -771,6 +775,11 @@ phase table and the open issues, not here.
   (findings, 10 November) found one regression, on the route examples, fixed in the branch.
 
 ### Fixed
+
+- **GreyBoxStrategy's map generator speed test no longer fails when the machine is busy** (#20). It timed one
+  Huge try in wall time, which doubled when other Unity runs shared the CPU (two failures on 14 November, both passing
+  alone). It now takes the cheapest of three tries in this process's CPU time, under the same 3 s; a generator made
+  about three times slower still fails it.
 
 - **Painted Realm: a writs ruler's targets are the decision's own list** (#20). The court's and the marshal's
   availability followed the rules alone, so a model could name a march or fortify target the capped list left

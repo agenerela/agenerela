@@ -1247,6 +1247,45 @@ namespace GreyBoxStrategy.Tests
             Assert.That(ArmySight.Sighting(w, "valen", orsk), Does.Contain("(30 riders)"), "our riders scout it");
         }
 
+        // --- Pacing: a stalemate counter that reads war score and land by treaty, off by default -----
+
+        // valen at war with orsk from turn 2; orsk's two other provinces pass to valen by holding on turns 2 and 3.
+        // Returns the turn the game ended in a stalemate, or 0 if it had not by turn 5.
+        private static int StalemateTurn(bool byWarScore, int step = 1000, bool battles = false)
+        {
+            var r = WritRules();
+            r.StalemateTurns = 3;
+            r.OccupationBecomesOwnership = 1;
+            r.StalemateByWarScore = byWarScore;
+            r.StalemateWarScoreStep = step;
+            var g = NewWrits(1, r);
+            Turn(g);
+            War(g, "valen", "orsk");
+            var taken = g.World.ProvincesOf("orsk").Where(p => !p.IsCapital).OrderBy(p => p.Id).Take(2).ToList();
+            for (int t = 0; t < 4 && g.Result == null; t++)
+            {
+                if (t < taken.Count) taken[t].Occupier = "valen";
+                if (battles) { var war = g.World.War("valen", "orsk"); war.BattlesWon["valen"] = war.Won("valen") + 1; } // a battle won each turn moves the score
+                Turn(g);
+            }
+            return g.Result?.Ending == Ending.Stalemate ? g.Result.Turns : 0;
+        }
+
+        [Test]
+        public void StalemateByWarScore_LandTakenByForce_NoLongerRestartsTheCounter_ButANewWarDoes()
+        {
+            Assert.That(new GameRules().StalemateByWarScore, Is.False, "off by default");
+            Assert.That(StalemateTurn(false), Is.Zero, "off: land passing by holding on turn 3 keeps the game going past turn 5");
+            Assert.That(StalemateTurn(true), Is.EqualTo(5), "on: only the war, from turn 2, restarted it");
+        }
+
+        [Test]
+        public void StalemateByWarScore_AWarScoreThatMoves_RestartsTheCounter()
+        {
+            Assert.That(StalemateTurn(true, step: 1000, battles: true), Is.EqualTo(5), "a battle a turn moves the score less than the step");
+            Assert.That(StalemateTurn(true, step: 1, battles: true), Is.Zero, "moving it by the step restarts the counter each turn");
+        }
+
         [Test]
         public void Snapshots_HoldEveryArmyAndOccupation_AsTheCouncilSawThem()
         {

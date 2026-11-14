@@ -1360,6 +1360,10 @@ Live, two pairs on `qwen3.5:4b` (14 November): both on made the games longer, 24
 every province that passes by occupation resets the stalemate counter. Both stay off; the rules v2 page lists
 what to try instead.
 
+`GameRules.StalemateByWarScore`, off, is the first of those: the stalemate counter restarts on a treaty, free
+land taken, a realm broken, a new war, or a war's score moving 10 points (`StalemateWarScoreStep`), and no
+longer on land taken or freed by force of arms. Scripted only so far.
+
 ## The first real run
 
 `mixed`, 200 games, seeds 1 to 200, standard rules, run in batch mode on 10 November 2026. The
