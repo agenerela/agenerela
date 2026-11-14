@@ -2123,14 +2123,14 @@ line, and `findings.md` for anything measured.
 
 **R3, armies in depth**
 - [x] Three types, costs, the counter rule (`GameRules.UnitTypes`, off; scripted only, 14 November)
-- [x] The model rulers' recruit orders by type and the mix in their facts (14 November; unmeasured live, so still off)
+- [x] The model rulers' recruit orders by type and the mix in their facts (14 November; first live look, #316: no illegal answers, but the courts counter the type they see 22% of the time, so still off)
 - [x] Generals: names, seven of the ten traits, second trait, a general falling (`GameRules.Generals`, off; scripted only, 14 November). Siegewright came with the sieges (#311, only with `GameRules.Sieges` on); the forager came with supply (#313, only with `GameRules.Supply` on); the marshal waits for army sizes; capture waits for prisoners
 - [x] Sieges at forts over several turns, breach, broken siege, siegewright (`GameRules.Sieges`, off; scripted only, 14 November). Forts stand for walls; the fort that holds the road, and income lost under siege, are not built yet
 - [x] Supply model B, with forager (`GameRules.Supply`, off; scripted against none, 14 November). Still open: the army cap, and A against B (A needs farms)
 - [x] Fog of war for the rulers' facts: totals rounded, forest, scouting (`GameRules.Fog`, `ArmySight`, off; 14 November). Still open: fog for the scripted players, allies' sight and watchtowers
 - [ ] Support and pursuit; the report's factors
 - [ ] Every feature behind a rules flag; sim A/B each against off
-- [ ] Army panel, siege marks, stores pips, the full report card, fog in rule mode
+- [ ] Army panel, siege marks, stores pips, the full report card, fog in rule mode (built, each behind its setting in New game, 14 November: the mix and general on army rows and the battle report, #315; siege tags and stores pips, #317; fog in rule mode not checked here)
 - [ ] Live: all on against R1, persona table, 20 games; fog on against off
 
 **R4, generated worlds on screen**
