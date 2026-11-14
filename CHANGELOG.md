@@ -41,6 +41,15 @@ phase table and the open issues, not here.
   - With own lines on, the rulers keep 13 observation lines, not 12, so the extra line no longer pushes out
     "Ordered this turn" (cut from 43% of later orders in the arm as measured) or an army's moves line.
 
+- **Painted Realm: a sharp chart and names that never collide** (#20).
+  - Borders and occupation hatching stay sharp at any zoom: the shader takes each pixel's province from the
+    world's cell grid, by the CPU raster's own vote.
+  - Pieces, march tags, realm, region, capital and province names are kept clear of each other at every zoom.
+  - Realm names appear zoomed out.
+  - The province panel shows the land: terrain, region, settlement and development, population, goods, and a
+    special place's story.
+  - Panels are opaque.
+
 - **Painted Realm: the writs turn on generated worlds** (#20). New game plays a generated world of any size
   and number of countries in all three ways: a scripted replay, model rulers live, or ruling a realm.
   - The camera zooms and pans comfortably on any size, and opens on your realm.

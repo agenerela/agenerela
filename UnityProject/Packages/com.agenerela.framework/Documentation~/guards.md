@@ -71,13 +71,14 @@ guard. The built-in guards are not in `Agent.Guards` and cannot be removed from 
 A reply that could not be read, or a provider that failed, is a pipeline error and never
 reaches a guard.
 
-## The three verdicts
+## The four verdicts
 
 | Verdict | Means | The agent | `Execute` returns | Logged |
 |---|---|---|---|---|
 | `GuardVerdict.Pass` | Nothing wrong; the next guard looks at it | does what the model chose | whether the handler ran and did not report `Failed` | no |
 | `GuardVerdict.RewriteToNone(reason)` | The answer is legal, but wrong for the game right now | does `none` with `no_target` | `true` | no |
 | `GuardVerdict.Reject(reason)` | The provider broke the contract | does `none` with `no_target` | `false` | a warning |
+| `GuardVerdict.ReplaceStatement(reason, statement)` | The move is right; its statement is not | does what the model chose, saying `statement` (empty drops it) | as for `Pass` | no |
 
 Use **`RewriteToNone`** for a game rule. A model that picks a legal action at the wrong moment
 has not failed; the guard contained it. That is a contained refusal, and the evaluation harness
@@ -85,6 +86,25 @@ counts it apart from a wrong action carried out.
 
 Use **`Reject`** only when the answer should never have been possible, the kind of thing
 `SchemaLegalityGuard` catches. A game rarely needs it.
+
+Use **`ReplaceStatement`** for a fair move with a bad line (#266 item 4): a storyteller's event
+that strikes the right country but whose story invents a battle, a ruler's grievance the facts do
+not hold. Prefer it to containment whenever the move would be right on its own; prefer it to
+patching the line in the handler, which telemetry never sees. It does not stop the pipeline: the
+later guards judge the same move with the new statement, and one of them may still stop it, which
+leaves the statement empty as any stop does. The result's `Verdict` stays null,
+`ModelDecision` keeps the model's words, and each replacement is recorded in `GuardsFired` and
+`DecisionTelemetry.StatementsReplaced` (the guard, its reason, the text replaced and the new one),
+and in the decision log's `statementsReplaced`. Memory remembers the line the agent said. No refusal
+line is asked for. On a call that asked for no statement (`AskForStatement = false`) the verdict
+counts as a pass and is recorded nowhere.
+
+```csharp
+agent.Guards.Add(new DelegateGuard("HistoryCheck", input =>
+    InventsABattle(input.Decision.Statement)
+        ? GuardVerdict.ReplaceStatement("the story invents a battle.", TemplateLine(input.Decision))
+        : GuardVerdict.Pass));
+```
 
 Either way, the result keeps the model's own answer in `DecisionResult.ModelDecision` and the
 verdict in `DecisionResult.Verdict`, and the exchange it came from in `DecisionResult.Request`
