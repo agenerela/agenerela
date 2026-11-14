@@ -1651,7 +1651,7 @@ Candidates, each with its cost:
    speed the middle game.
 
 _Mine:_ 1 and 3 together. Together they would end most Classic games in well under 100 turns at no model
-cost, and leave 2 for R3, where standing orders belong. That reading is unmeasured: the scripted series
+cost, and leave 2 for R3, where standing orders belong. That reading was unmeasured when written, and the live first look below found the opposite for both on together. The scripted series
 would show it in minutes before any live run.
 
 **Built, both off** (14 November): `GameRules.OccupationBecomesOwnership` (candidate 1: a province occupied that
@@ -1661,7 +1661,7 @@ show each occupation's count ("corwick (held 3 of 8 turns)"). **Scripted, they c
 100 Classic games of the `mixed` lineup take 77 turns off, 74 to 76 with either or both on. Scripted rulers
 press a war to the end and do not stall; when they are made to make peace as readily as the models do, they
 settle within 8 turns, so no occupation lasts long enough. Only model rulers stall, so which candidate helps can
-only be read from a live run: for example 5 uncapped games with both on, on R1c's uncapped seeds 21 to 25.
+only be read from a live run; the first look, two pairs of uncapped games with both on, is the next paragraph.
 Numbers: [`findings.md`](../llm-wiki/findings.md), 14 November.
 
 **Live, a first look (14 November, two pairs):** with both on, the models' games ran **longer**, not shorter:
