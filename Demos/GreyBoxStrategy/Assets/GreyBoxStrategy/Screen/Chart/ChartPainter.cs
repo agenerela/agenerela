@@ -402,11 +402,14 @@ namespace GreyBoxStrategy.Chart
                         2 => new Ink(150, 112, 74),  // ploughed earth
                         _ => new Ink(170, 156, 96),  // stubble
                     };
-                    c = Ink.Lerp(c, crop.Times(Math.Max(0.75f, Math.Min(1.15f, c.R / 140f))), 0.62f);
+                    // Light and dark between crops, not only hue: an owner's wash keeps the chart's light and replaces
+                    // its hue, so fields must read in light alone (as the GPU's ground shader has it).
+                    float tone = ((h >> 16) & 3) switch { 0 => 1.14f, 1 => 0.9f, 2 => 0.78f, _ => 1.02f };
+                    c = Ink.Lerp(c, crop.Times(Math.Max(0.75f, Math.Min(1.15f, c.R / 140f)) * tone), 0.72f);
                     // Furrows along the plot, and a hedge round it.
-                    if (((fv * 5f) - (float)Math.Floor(fv * 5f)) < 0.22f) c = c.Times(0.9f);
+                    if (((fv * 5f) - (float)Math.Floor(fv * 5f)) < 0.22f) c = c.Times(0.84f);
                     float edge = Math.Min(Math.Min(fu, 1 - fu) * pw, Math.Min(fv, 1 - fv) * ph);
-                    if (edge < 0.05f) c = Ink.Lerp(c, new Ink(74, 76, 40), 0.55f);
+                    if (edge < 0.05f) c = Ink.Lerp(c, new Ink(58, 60, 30), 0.72f);
                 }
             }
             return c;

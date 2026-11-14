@@ -63,6 +63,45 @@ namespace GreyBoxStrategy.Screen.Tests
         }
 
         [Test]
+        public async Task Unlimited_writs_from_new_game_reach_the_rules_and_every_army_is_asked()
+        {
+            Assert.That(new NewGameChoice { Rule = true, Writs = true, UnlimitedWrits = true }.YourWritsUnlimited, Is.True);
+            Assert.That(new NewGameChoice { Rule = false, Writs = true, UnlimitedWrits = true }.YourWritsUnlimited, Is.False, "only when you rule");
+            Assert.That(new NewGameChoice { Rule = true, Writs = false, UnlimitedWrits = true }.YourWritsUnlimited, Is.False, "only on the writs turn");
+            Assert.That(new NewGameChoice().UnlimitedWrits, Is.False, "off by default");
+
+            var setup = GameSetup.Writs(5);
+            var map = setup.BuildMap();
+            var given = setup.BuildRules(map);
+            Assert.That(ReplayDirector.WithYourWrits(given, You, false), Is.SameAs(given), "off: the rules as given");
+            var rules = ReplayDirector.WithYourWrits(given, You, true);
+            Assert.That(given.WritsOverride.ContainsKey(You), Is.False, "the preset's rules are not changed");
+            Assert.That(rules.WritsOverride[You], Is.EqualTo(GameRules.UnlimitedWrits));
+            Assert.That(rules.WritsOverride.Count, Is.EqualTo(1), "you alone");
+
+            World w = null;
+            var provider = Rulers(() => w);
+            var s = new RuleSession(You, "qwen3.5:4b", "default", 5, Path.Combine(folder, "decisions.jsonl"), (m, world) => { w = world; return provider; }, null, map, rules);
+            var run = s.RunAsync();
+            for (int t = 1; t <= 3; t++)
+            {
+                await Until(() => (s.WaitingFor == RuleSession.Waiting.Orders && s.Orders != null) || s.WaitingFor == RuleSession.Waiting.Envoy || s.Finished, $"turn {t}'s orders");
+                if (s.WaitingFor == RuleSession.Waiting.Envoy) { s.Answer(false); t--; continue; }
+                var court = s.Orders;
+                Assert.That(court.Writs, Is.EqualTo(GameRules.UnlimitedWrits), "your court is told it has no limit");
+                foreach (var other in court.World.CountryList.Where(c => c.Info.Id != You))
+                    Assert.That(court.World.Writs(other.Info.Id), Is.LessThanOrEqualTo(court.World.Rules.MaxWrits), $"{other.Info.Id} keeps the rules' count");
+                // Every army awaiting orders gets one, however many: the plan the rules accept says so.
+                var plan = new RuleSession.WritsPlan { Court = court.Legal.FirstOrDefault(m => m.Action == Actions.Recruit) ?? court.Legal.First() };
+                foreach (var a in WritLegality.Awaiting(court.World, You))
+                    plan.Armies[a.Id] = WritLegality.ArmyMoves(court.World, You, a.Id).FirstOrDefault(m => m.Action == Actions.March) ?? WritLegality.ArmyMoves(court.World, You, a.Id).First();
+                s.Plan(plan);
+                int turn = t;
+                await Until(() => s.Resolved == turn || s.Finished, $"turn {turn} to resolve");
+            }
+        }
+
+        [Test]
         public async Task Your_plan_lands_as_the_rules_ask_it_and_the_replay_rebuilds_your_turns()
         {
             var s = Session();

@@ -29,6 +29,25 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **`tools/benchmarks/closed_choice_grammar_probe.py`** (#266 item 2): asks Ollama, with no framework code,
+  whether its grammar keeps an enum field beside `action` and `target` and an array of target ids with
+  `minItems`/`maxItems`, and in which key order. First run on `qwen3.5:4b`, RTX 5080: every constraint held on
+  `/api/chat`, and a strength placed after `statement` was written into the statement 3 times in 6. The
+  gateway refuses `/v1/chat/completions`, so that half is unmeasured. Results in `findings.md`, 14 November.
+- **Painted Realm: silent armies, an arm for the writs turn** (#20). `+silent-armies` asks the marshal's army
+  orders without a statement (`DecideOptions.AskForStatement`, #266). On `qwen3.5:4b`, 15 games an arm, it saves
+  0.59 s a turn with repeats and legality unchanged, but treaties fell from 4.7 to 3.5 a game within noise, so
+  `default` keeps every line. Results in `findings.md`, 14 November.
+
+- **Painted Realm: detail up close, fields that show, rule mode on a big map** (#20).
+  - Zoomed in, the visible part of the chart is drawn again at screen scale (trees, fields, settlements, roads),
+    not magnified.
+  - Farms and settlements grow visibly with development.
+  - Rule mode has a "next army awaiting orders" jump, and markers at the map's edge for off-screen battles and
+    your capital.
+  - The province panel speaks to a player.
+  - New game: "Your writs: unlimited" for rule mode, off by default; the council reads "no limit".
+
 - **Painted Realm: a ruler's own last lines, the writs turn's default, and a country's own writ count** (#20).
   - Two voice arms for the writs turn: `+one-voice` (only the first court decision of a turn speaks) and
     `+own-lines` (a decision that speaks reads the ruler's last four lines and is asked to say something new).

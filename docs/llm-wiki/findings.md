@@ -4107,6 +4107,31 @@ Nothing like either had been measured (findings and build plan Appendix A checke
 - What B does not reach: 22% is still far above the one-move game's 5%; a ruler shown four lines can still return to a fifth.
 - **A defect in arm B as measured, found after the run:** the rulers' agents keep 12 observation lines, the call's own lines count first, and the sources fill the rest, so the last source lines are cut. The own-lines line pushed out "Ordered this turn" (the orders already given) and, now and then, an army's moves line. In 5 scripted 40-turn games the ordered line was missing from 780 of 1,817 later orders (43%) with own lines against 21 in the control, and the moves line from 21 of 1,625 army orders against none. The rulers measured in B therefore often did not see their earlier orders of the turn; its legality held regardless (0 illegal answers). **Fixed with the default:** with own lines on, the agents keep 13 lines, which restores exactly the control's lines (21 and 0 in the same probe); test `TheCourtAndTheMarshal_ReadLocalFacts_AndTheirOwnMovesLine` failed without the fix. The fixed default is unmeasured live until the next A/B, which carries a `default+no-own-lines` arm to confirm it.
 
+### Painted Realm's writs turn, silent armies: asking army orders without a statement saves 0.6 s a turn, but treaties may fall, so the demo keeps every line (14 November 2026)
+
+GreyBoxStrategy (#20), the #151 row that `DecideOptions.AskForStatement` (#290) owes, and the follow-up the one-voice result asked for. `personas` table, five `qwen3.5:4b` seats, RTX 5080 (Docker Ollama 0.40.14), `-strategyTurn writs -strategyCap 40`, Classic, seeds 1 to 15, interleaved in blocks of five seeds (n1 d1 s1 n2 d2 s2 n3 d3 s3, 01:38 to 05:07), one Unity run and one lock window a block, nothing else on the card or on the laptop's CPU:
+
+- **d, control**: today's `default`, own lines on;
+- **s, silent armies** (`default+silent-armies`): the marshal's army orders are asked with `AskForStatement = false`, so no `statement` field in the schema and no statement rules, example lines or own lines in the prompt. Both court orders, treaty answers and dilemmas keep their line;
+- **n**, `default+no-own-lines`, to confirm live the own-lines default as fixed after the last A/B (13 observation lines).
+
+Nothing like it measured before but the one-voice arm (13–14 November), which asked for the field and threw the line away. Kit and data: `.scratch/realm-build-map/voice/`, `python compare.py silent d s` (and `n d s`). "Beyond" means the 95% interval of the paired difference over the 15 seeds excludes 0.
+
+| | d, control | s, silent armies | n, no own lines |
+|---|---|---|---|
+| Model seconds a turn | 6.87 | **6.28 (−0.59, beyond)** | 7.01 (within d) |
+| Seconds an army order | 0.50 | 0.33 (−0.16, beyond) | 0.48 |
+| Repeated word for word, all lines / court lines | 20.8% / 20.3% | 23.5% / 21.7% (both within) | 35.6% / 32.1% (beyond d) |
+| Decisions with a statement | 99% | 54% | 99% |
+| Illegal answers | 0 | 0 | 0 |
+| Treaties a game | 4.7 | 3.5 (−1.1, within; 95% [−3.0, +0.7]) | 3.3 (within d) |
+| Persona η² aggression / peace / recruit (75 seat-games, all p ≤ 0.002) | 0.37 / 0.55 / 0.59 | 0.40 / 0.66 / 0.52 | 0.20 / 0.63 / 0.63 |
+
+- **Time is a clear win, but not a large one:** 8.5% of a turn. An army order is short, so leaving its line out saves a third of an army order and little of a turn.
+- **Treaties are the doubt:** 1.1 fewer a game, inside the noise (SD about 2.5 a game) but not ruled out, and in the same direction as one voice's halving. Peace η² rose, recruit η² fell by 0.07. With "no loss elsewhere" the rule, **silent armies stay an arm**; `default` asks every decision for a line. Settling it would take about 40 games an arm, given the treaties' noise.
+- **Why one voice lost treaties.** Statements reach no other ruler: the envoy decision reads "{country} proposes a treaty." and the terms, never the proposer's words. A line reaches only its own ruler, through its memory (the last four decisions, kept whole) and the own-lines line. So the loss came from inside the ruler's own prompt, and two causes are left: one voice's plain line telling most decisions to leave the statement empty, which a small model may read as "do little", and memory entries with no line, which keep what a ruler did but not why. Silent armies removes the first (no line at all, no field) and keeps the second for army orders only, and lost less (−1.1 against −1.9); that fits the first cause being the larger, but this run cannot separate them. Armies may be silent where an order's line feeds nothing; whether a ruler's memory of its marches needs their reasons is the open part.
+- **The fixed own lines hold live:** d against n, repeats −14.7 points (beyond), treaties +1.3 and time within, every illegal count 0.
+
 ### A closed choice beside action and target: Ollama's grammar holds an enum and a bounded array of target ids on `/api/chat`, and a parameter written after `statement` lands in the statement (14 November 2026)
 
 The probe #266 item 2 asks for before any design for typed parameters, with no framework code:
