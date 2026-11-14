@@ -1,6 +1,6 @@
 /* Painted Realm, the gilt style. The design is docs/demos/grey-box-strategy-screen.md, round 2. */
 .root { flex-grow: 1; color: rgb(234, 223, 198); font-size: 13px; }
-.panel { position: absolute; background-color: rgba(18, 15, 12, 0.93); border-width: 1px; border-color: rgba(201, 164, 90, 0.55); }
+.panel { position: absolute; background-color: rgba(18, 15, 12, 0.985); border-width: 1px; border-color: rgba(201, 164, 90, 0.55); }
 .panel-head { flex-direction: row; align-items: center; height: 30px; padding-left: 10px; padding-right: 8px; background-color: rgba(44, 35, 25, 0.9); border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.22); }
 .panel-title { font-size: 14px; -unity-font-style: bold; letter-spacing: 1px; flex-grow: 1; color: rgb(234, 223, 198); }
 .muted { color: rgb(141, 127, 102); }

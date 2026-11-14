@@ -605,6 +605,8 @@ a frame:
   any zoom.
 - **Hard-coded counts:** "the four rulers" and "five countries" now say how many there are.
 - **Your realm's name** stays in the top bar however many realms share it.
+- **The panels** are nearly opaque (98.5%, from 93%): zoomed in on a generated world, province names showed through
+  the chronicle's text.
 
 **Not yet:**
 - Rule mode on a generated world plays the writs turn only.
