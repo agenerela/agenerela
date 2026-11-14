@@ -55,8 +55,9 @@ namespace GreyBoxStrategy.Realm
         /// RTX 5080 behind its lock, or with <paramref name="scripted"/> stand-ins through the same agents and no
         /// server. Call only after <see cref="WhyNotNow"/> and <see cref="Gateway.CheckServer"/> said yes, unless scripted.
         /// </summary>
-        public void BeginWrits(MapDefinition map, GameRules rules, int gameSeed, bool scripted)
+        public void BeginWrits(MapDefinition map, GameRules rules, int gameSeed, bool scripted, string gameArm = null)
         {
+            if (gameArm != null) arm = gameArm;
             if (session != null) return;
             Map = map; Rules = rules; seed = gameSeed; playLive = true;
             string folder = Path.Combine(Application.dataPath, "..", "Logs", "Live");
@@ -69,7 +70,7 @@ namespace GreyBoxStrategy.Realm
                 var stand = new ScriptedProvider { Callback = r => ReplayDirector.ScriptedRuler(r, rng, world) };
                 stand.Otherwise(ScriptedReply.Decide("none", statement: "We wait."));
                 var wrapped = DevProvider.Wrap(stand);
-                session = new LiveWritsSession(model, seed, map, rules, stopAfterTurns, path, (m, w) => { world = w; return wrapped; });
+                session = new LiveWritsSession(model, seed, map, rules, stopAfterTurns, path, (m, w) => { world = w; return wrapped; }, arm);
             }
             else
             {
@@ -77,7 +78,7 @@ namespace GreyBoxStrategy.Realm
                 { Error = WhyNotNow() ?? "could not take the RTX 5080 lock"; return; }
                 tookLock = true;
                 ILLMProvider provider = null;
-                session = new LiveWritsSession(model, seed, map, rules, stopAfterTurns, path, (m, w) => provider ?? (provider = Gateway.Provider(m)));
+                session = new LiveWritsSession(model, seed, map, rules, stopAfterTurns, path, (m, w) => provider ?? (provider = Gateway.Provider(m)), arm);
             }
             Debug.Log($"Painted Realm: live writs game, seed {seed}, {model}; decisions into {path}");
             Run();

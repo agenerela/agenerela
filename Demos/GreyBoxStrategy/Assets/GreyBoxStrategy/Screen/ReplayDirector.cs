@@ -312,6 +312,13 @@ namespace GreyBoxStrategy.Realm
         {
             if (shown == null || queries == null) return;
             HashSet<int> reach = null;
+            if (rule != null && rule.Writs && ui.OrdersRequest != null && ui.SelectedArmy != null)
+            {
+                var lit = ui.Destinations();
+                map.SetOverlay(null, lit, new HashSet<int>(Enumerable.Range(0, game.ProvinceIds.Count).Where(q => !lit.Contains(q))));
+                ui.ShowMode(mode, shown, lit);
+                return;
+            }
             switch (mode)
             {
                 case MapMode.Political: map.SetOverlay(null, null, null); break;
@@ -352,7 +359,12 @@ namespace GreyBoxStrategy.Realm
             if (kb != null && !ui.Typing)
             {
                 if (kb.spaceKey.wasPressedThisFrame) ui.Root.schedule.Execute(() => { playing = !playing; ui.SetPlaying(playing, speed); });
-                if (kb.nKey.wasPressedThisFrame) { playing = false; stepOnce = true; ui.SetPlaying(false, speed); }
+                if (kb.nKey.wasPressedThisFrame)
+                {
+                    // Rule mode on the writs turn: N is the next army awaiting orders, as the rules page has it.
+                    if (rule != null && rule.Writs && ui.OrdersRequest != null) { string a = ui.NextArmy(); if (a != null) { var at = shown?.Army(a); if (at != null) PanTo(game.IndexOf(at.Location)); } }
+                    else { playing = false; stepOnce = true; ui.SetPlaying(false, speed); }
+                }
                 if (kb.equalsKey.wasPressedThisFrame || kb.numpadPlusKey.wasPressedThisFrame) { speed = speed >= 4 ? 1 : speed * 2; ui.SetPlaying(playing, speed); }
                 if (kb.escapeKey.wasPressedThisFrame) { if (ui.DevOpen) ui.CloseDev(); else Escape(); }
                 if (kb.f1Key.wasPressedThisFrame) ToggleDevMenu();
@@ -385,7 +397,13 @@ namespace GreyBoxStrategy.Realm
                     if (document.rootVisualElement.panel.Pick(panelPos) == null)
                     {
                         int p = map.ProvinceAt(cam.ScreenToWorldPoint(sp));
-                        if (p >= 0) OpenProvince(p); else { ui.CloseSide(); map.SetSelected(-1); }
+                        if (p >= 0 && rule != null && rule.Writs && ui.OrdersRequest != null && ui.SelectedArmy != null)
+                        {
+                            // An army is chosen: the click orders its march, or says why it cannot go there.
+                            string why = ui.OrderArmyTo(p);
+                            ui.ShowNotice(why == null ? null : $"{Cap(game.ProvinceIds[p])}: {why}");
+                        }
+                        else if (p >= 0) OpenProvince(p); else { ui.CloseSide(); map.SetSelected(-1); }
                     }
                 }
             }

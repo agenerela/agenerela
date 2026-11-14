@@ -65,3 +65,43 @@ namespace GreyBoxStrategy.Replay
             new HashSet<int>(Enumerable.Range(0, s.Owners.Length).Where(p => KnowsProvince(s, p)));
     }
 }
+
+namespace GreyBoxStrategy.Replay
+{
+    /// <summary>
+    /// What a country's court sees on the writs turn (rules v2, 3.8): its own and controlled provinces, every
+    /// province with one of its armies, and the provinces bordering all of them. Rival armies beyond it are not shown.
+    /// </summary>
+    public static class WritsSight
+    {
+        public static System.Collections.Generic.HashSet<string> Of(ReplayState s, System.Collections.Generic.IReadOnlyList<string> provinceIds, string you,
+            System.Func<string, System.Collections.Generic.IReadOnlyList<string>> neighbours)
+        {
+            var seen = new System.Collections.Generic.HashSet<string>(System.StringComparer.Ordinal);
+            var core = new System.Collections.Generic.List<string>();
+            for (int i = 0; i < provinceIds.Count; i++) if (s.Controller(i) == you || s.Owners[i] == you) core.Add(provinceIds[i]);
+            foreach (var a in s.Armies) if (a.Owner == you) core.Add(a.Location);
+            foreach (string p in core) { seen.Add(p); foreach (string n in neighbours(p)) seen.Add(n); }
+            return seen;
+        }
+    }
+
+    /// <summary>
+    /// Whether a ruler says exactly what it said the last time it spoke. On the writs turn a country speaks
+    /// several times a turn, and the measured rulers repeat lines word for word (35% against 5% in the one-move
+    /// game); the screen shows a repeated line once, and the chronicle marks the repeat "said again".
+    /// </summary>
+    public sealed class RepeatFilter
+    {
+        private readonly System.Collections.Generic.Dictionary<string, string> last = new System.Collections.Generic.Dictionary<string, string>(System.StringComparer.Ordinal);
+
+        public bool Repeats(string country, string line)
+        {
+            if (country == null || string.IsNullOrWhiteSpace(line)) return false;
+            string norm = line.Trim();
+            bool same = last.TryGetValue(country, out string before) && string.Equals(before, norm, System.StringComparison.OrdinalIgnoreCase);
+            last[country] = norm;
+            return same;
+        }
+    }
+}

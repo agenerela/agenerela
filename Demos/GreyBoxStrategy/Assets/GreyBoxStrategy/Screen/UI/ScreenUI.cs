@@ -293,6 +293,7 @@ namespace GreyBoxStrategy.Realm
         public void AddLine(ChronicleLine line)
         {
             if (line == null) return;
+            if (!string.IsNullOrEmpty(line.Quote) && quotes.Repeats(line.Country, line.Quote)) line.Quote = SaidAgain;
             lines.Add(line);
             RenderChronicle(line);
         }
@@ -392,6 +393,8 @@ namespace GreyBoxStrategy.Realm
         public VisualElement Say(string country, string line, int atProvince = -1, Action onClick = null)
         {
             if (string.IsNullOrWhiteSpace(line)) return null;
+            // The same ruler saying exactly the same thing again: the chronicle has it, the map does not repeat it.
+            if (Repeats(country, line)) return null;
             var look = CountryLook.Of(country);
             var player = Players?.GetValueOrDefault(country);
             var e = new VisualElement { pickingMode = onClick != null ? PickingMode.Position : PickingMode.Ignore, tooltip = onClick != null ? "Click: why this move" : null }; e.AddToClassList("banner");
