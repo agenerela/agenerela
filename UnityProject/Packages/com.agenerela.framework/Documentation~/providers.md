@@ -118,8 +118,18 @@ measurement in Appendix A depends on it:
 | `messages` | One `system` message, the non-empty system-side blocks joined by a blank line (left out if there are none); then `History`; then `Stimulus` as the last `user` message |
 | `format` | `JsonSchemaSerializer`'s output (#9), embedded as a JSON object exactly as written |
 | `stream`, `think` | `false`, `false` |
-| `options` | `temperature` from the settings, `num_ctx` from the settings |
+| `options` | `temperature` from the call's `DecideOptions.Temperature` when set, else from the settings; `num_ctx` from the settings; then `seed` and `num_predict`, each only when the call set `DecideOptions.Seed` or `DecideOptions.MaxReplyTokens` |
 | `logprobs`, `top_logprobs` | `true`, `OllamaSettings.TokenAlternatives` (20 unless set) |
+
+**Sampling and a cap per call** (#266 item 7, #244 item 11). `DecideOptions.Temperature`, `Seed` and
+`MaxReplyTokens` are null by default, and a call that sets none sends exactly the request sent
+before they existed. They travel on `DecisionRequest`, so a storyteller at 0.8 and rulers at 0 share
+one provider and one queue, rather than needing a second provider (and a second queue against the
+same server). A refusal line is sampled as its decision was. `MaxReplyTokens` changes nothing the
+model reads; a reply cut at the cap is not one JSON object, so it ends as an `UnreadableReply`, as a
+runaway does, only sooner. Set it generously: a decision is a few dozen tokens, a story a hundred
+or two, so 400 binds only a runaway. A temperature above 0 changes the replies, and every number in
+the build plan's Appendix A was measured at 0. The scripted provider ignores all three.
 
 `History` is sent in the encoding `DecisionRequest.History` documents (#90): entries alternate
 `user` and `assistant`, starting with `user`, each exchange being the stimulus as it was sent

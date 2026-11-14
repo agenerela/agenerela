@@ -257,6 +257,10 @@ namespace Agenerela
                 StimulusText = decided.StimulusText,
                 StimulusLabel = decided.StimulusLabel,
                 AgentId = decided.AgentId,
+                // Sampled as the decision was (#266 item 7, #244 item 11).
+                Temperature = decided.Temperature,
+                Seed = decided.Seed,
+                MaxReplyTokens = decided.MaxReplyTokens,
             };
         }
 
