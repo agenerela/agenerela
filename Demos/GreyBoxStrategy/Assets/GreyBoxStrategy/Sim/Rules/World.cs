@@ -59,7 +59,17 @@ namespace GreyBoxStrategy
         /// The writs turn: the country occupying it, or null while its owner controls it. Occupation
         /// never changes the owner; only a treaty does (v2 5.1).
         /// </summary>
-        public string Occupier { get; set; }
+        public string Occupier
+        {
+            get => occupier;
+            set { if (value != occupier) OccupiedTurns = 0; occupier = value; }
+        }
+        private string occupier;
+        /// <summary>
+        /// Turn ends this province has stood occupied by its present <see cref="Occupier"/>, counted by the writs
+        /// turn; 0 when it is not occupied, and back to 0 whenever the occupier changes.
+        /// </summary>
+        public int OccupiedTurns { get; set; }
         /// <summary>Who controls it now: the occupier, or else the owner (null for neutral land).</summary>
         public string Controller => Occupier ?? Owner;
 
