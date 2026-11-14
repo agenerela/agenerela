@@ -97,7 +97,7 @@ namespace GreyBoxStrategy.Replay
             }
 
             // b-c. Wars declared, then home orders, then each army's order.
-            foreach (string kind in new[] { Actions.DeclareWar, Actions.Recruit, Actions.RaiseTaxes, Actions.Fortify })
+            foreach (string kind in new[] { Actions.DeclareWar, Actions.Recruit, Actions.RecruitPikes, Actions.RecruitRiders, Actions.RecruitBows, Actions.RaiseTaxes, Actions.Fortify })
                 foreach (var o in outcomes.Where(o => o.Request.Moment == Moment.Council && o.Choice.Action == kind))
                     if (seen.Add(o.Request)) yield return CourtEvent(o, s, end, replay, players, turn);
             foreach (var o in outcomes.Where(o => o.Request.Moment == Moment.Council))
@@ -276,6 +276,10 @@ namespace GreyBoxStrategy.Replay
                     s.Relations.Add(new RelationState { A = me, B = choice.Target, Kind = "war", Since = turn });
                     break;
                 case Actions.Recruit:
+                // R3's typed recruits read the same: "raised 15 riders at highmoor (maren_host +5, new tolly_host 10)".
+                case Actions.RecruitPikes:
+                case Actions.RecruitRiders:
+                case Actions.RecruitBows:
                 {
                     e.Kind = ReplayEventKind.Recruit;
                     // "raised 15 soldiers at highmoor (maren_host +5, new tolly_host 10)": the armies it joined or formed.
@@ -289,9 +293,17 @@ namespace GreyBoxStrategy.Replay
                             string id = m.Groups[2].Value;
                             int n = int.Parse(m.Groups[3].Value);
                             var a = s.Army(id);
+                            var type = Actions.RecruitsType(choice.Action);
                             if (m.Groups[1].Success || a == null)
-                                s.Armies.Add(new ArmyState { Id = id, Owner = me, Location = site ?? end.Army(id)?.Location, Soldiers = n, Wake = new List<string> { "raised" } });
-                            else a.Soldiers += n;
+                            {
+                                a = new ArmyState { Id = id, Owner = me, Location = site ?? end.Army(id)?.Location, Wake = new List<string> { "raised" } };
+                                s.Armies.Add(a);
+                            }
+                            a.Soldiers += n;
+                            // R3: a typed recruit tells its soldiers' type, so a new army's mix is exact even if it is lost this turn.
+                            if (type == UnitType.Pikes) a.Pikes += n;
+                            else if (type == UnitType.Riders) a.Riders += n;
+                            else if (type == UnitType.Bows) a.Bows += n;
                         }
                     break;
                 }

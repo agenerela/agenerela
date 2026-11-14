@@ -76,9 +76,12 @@ namespace GreyBoxStrategy.Screen.Tests
             var states = g.Turns.SelectMany(t => new[] { t.Council }.Concat(t.Events.Select(e => e.After))).Where(s => s != null).Distinct().ToList();
             var armies = states.SelectMany(s => s.Armies).ToList();
             Assert.That(armies.Count, Is.GreaterThan(100));
+            // An army raised and lost within one turn is in no turn-end state: the rules' snapshots never name its general.
+            var known = new System.Collections.Generic.HashSet<string>(g.Turns.SelectMany(t => t.Start.Armies.Concat((t.Events.Count > 0 ? t.Events.Last().After : t.Council).Armies)).Select(a => a.Id));
             foreach (var a in armies)
             {
                 Assert.That(a.Pikes + a.Riders + a.Bows, Is.EqualTo(a.Soldiers), $"{a.Id}: its mix adds up to its soldiers");
+                if (!known.Contains(a.Id)) { Assert.That(a.General, Is.Null, $"{a.Id}: no general rather than a made-up one"); continue; }
                 Assert.That(a.General, Is.Not.Null, $"{a.Id} has a general");
                 Assert.That(ArmyLook.Leader(a), Does.StartWith(a.General + " the "));
             }
@@ -97,6 +100,10 @@ namespace GreyBoxStrategy.Screen.Tests
             Assert.That(countered.Count(e => e.AttackMix != null && e.DefenceMix != null), Is.GreaterThan(countered.Count / 2), "most reports know both sides' mix");
             Assert.That(g.AllEvents.Count(e => e.Kind == ReplayEventKind.General), Is.GreaterThan(0), "the chronicle tells a general's trait or fall");
             Assert.That(ScreenUI.Describe(new Move(Actions.RecruitRiders)), Is.EqualTo("Recruit riders"), "an advisor's suggestion names the type");
+            // A typed recruit is a recruit on screen, with its army where it was raised, never a hold.
+            var raised = g.AllEvents.Where(e => e.Text != null && e.Text.StartsWith("raised ") && !e.Text.StartsWith("raised taxes")).ToList();
+            Assert.That(raised, Is.Not.Empty);
+            Assert.That(raised.All(e => e.Kind == ReplayEventKind.Recruit && e.ProvinceIndex >= 0), Is.True, string.Join("; ", raised.Where(e => e.Kind != ReplayEventKind.Recruit).Select(e => e.Kind + ": " + e.Text).Take(3)));
         }
     }
 }
