@@ -96,6 +96,15 @@ namespace GreyBoxStrategy
         public string Target { get; }
         /// <summary>The model's statement: "A title: one or two sentences."</summary>
         public string Statement { get; }
+
+        /// <summary>
+        /// Why the storyteller's history guard replaced the story before it was queued ("invented: ..."), or
+        /// null when it did not (#292). <see cref="Statement"/> is then the guard's line, and the event's verdict
+        /// is "replaced: " and this.
+        /// </summary>
+        public string HistoryReplaced { get; set; }
+        /// <summary>The model's own statement when a guard replaced it, for the record; null when none did.</summary>
+        public string ModelStatement { get; set; }
     }
 
     /// <summary>One event that happened: what the game applied, to whom, and the story told about it.</summary>

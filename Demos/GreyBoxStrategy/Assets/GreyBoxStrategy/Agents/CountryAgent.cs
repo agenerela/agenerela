@@ -247,8 +247,9 @@ namespace GreyBoxStrategy
             Envoy(Actions.AcceptPeace, "Accept the offered truce.");
             Envoy(Actions.RefusePeace, "Refuse the offered truce and fight on.");
             // S2's dilemmas: every option of every dilemma is an action, open only on its own choice
-            // call. Registered only with +choices, so the other arms' registry is S1's exactly.
-            if (Options.Choices)
+            // call. Registered only with +choices, so the other arms' registry is S1's exactly; with
+            // +call-choices the options come with the call instead (DecideOptions.Choices, DR-022).
+            if (Options.Choices && !Options.CallChoices)
                 foreach (var t in EventRules.S2Templates.Where(t => t.IsChoice))
                     foreach (var o in t.Options)
                         Agent.Actions.Register(new ActionDefinition { Id = o.Id, Description = $"Choose to {o.Label}.", TakesNoTarget = true },
@@ -318,6 +319,19 @@ namespace GreyBoxStrategy
             return n >= 0 && n < words.Length ? words[n] : n.ToString(System.Globalization.CultureInfo.InvariantCulture);
         }
 
+        /// <summary>
+        /// A dilemma's options as the call's choices (DR-022), described as the registered actions were:
+        /// "Choose to hire them.".
+        /// </summary>
+        public static List<Choice> DilemmaChoices(CountryRequest request)
+        {
+            var labels = EventRules.S2Templates.Where(t => t.IsChoice).SelectMany(t => t.Options)
+                .GroupBy(o => o.Id, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.First().Label, StringComparer.Ordinal);
+            return request.Legal.Select(m => m.Action).Where(id => id != ActionRegistry.None).Distinct(StringComparer.Ordinal)
+                .Select(id => new Choice(id, labels.TryGetValue(id, out string label) ? $"Choose to {label}." : $"Choose {id}."))
+                .ToList();
+        }
+
         /// <summary>The stimulus for a request, by the arm's choice.</summary>
         public string StimulusFor(CountryRequest request)
         {
@@ -346,6 +360,7 @@ namespace GreyBoxStrategy
                 LegalTargets = Options.LegalTargets,
                 StatementRulesWording = Options.RulesWording,
                 PairTargetsWithActions = Options.PairTargets,
+                Choices = request.Moment == Moment.Choice && Options.CallChoices ? DilemmaChoices(request) : null,
                 Correlation = request.Moment == Moment.Envoy ? new EnvoyOffer(request.OfferId, request.OfferedBy)
                     : request.Moment == Moment.Choice ? new ChoiceCall(request.OfferId, request.Legal.Select(m => m.Action).ToList())
                     : (object)null,
