@@ -20,6 +20,12 @@ namespace GreyBoxStrategy.Replay
         private static readonly Regex LostLine = new Regex(@"^(\w+_host\w*) (was routed at [\w -]+|was destroyed|had nowhere to go and disbanded)\.$");
         private static readonly Regex BrokenLine = new Regex(@"^(\w+)'s realm is broken");
         private static readonly Regex StalemateLine = new Regex(@"^No province changed hands for \d+ turns");
+        // R3's sieges and supply, as the rules write them.
+        private static readonly Regex BesiegesLine = new Regex(@"^(\w+) besieges (\w+) \((\w+)'s, (\d+) forts?\)\.$");
+        private static readonly Regex SiegeTakenLine = new Regex(@"^(\w+) took (\w+) after a siege(, the walls breached early)?; (\d+) forts? left\.$");
+        private static readonly Regex SiegeBrokenLine = new Regex(@"^The siege of (\w+) by (\w+) is broken\.$");
+        private static readonly Regex HungerLine = new Regex(@"^(\w+_host\w*) has no stores at (\w+): (\d+) lost to hunger\.$");
+        private static readonly Regex StarvedLine = new Regex(@"^(\w+_host\w*) starved at (\w+)\.$");
         private static readonly Regex Joined = new Regex(@"(new )?(\w+_host\w*) \+?(\d+)");
 
         // One writs turn: rounds of recorded orders, then the turn lands; returns its report and each army's path as ordered.
@@ -97,7 +103,7 @@ namespace GreyBoxStrategy.Replay
             }
 
             // b-c. Wars declared, then home orders, then each army's order.
-            foreach (string kind in new[] { Actions.DeclareWar, Actions.Recruit, Actions.RaiseTaxes, Actions.Fortify })
+            foreach (string kind in new[] { Actions.DeclareWar, Actions.Recruit, Actions.RecruitPikes, Actions.RecruitRiders, Actions.RecruitBows, Actions.RaiseTaxes, Actions.Fortify })
                 foreach (var o in outcomes.Where(o => o.Request.Moment == Moment.Council && o.Choice.Action == kind))
                     if (seen.Add(o.Request)) yield return CourtEvent(o, s, end, replay, players, turn);
             foreach (var o in outcomes.Where(o => o.Request.Moment == Moment.Council))
@@ -240,9 +246,60 @@ namespace GreyBoxStrategy.Replay
                     foreach (var k in s.WarScores.Keys.Where(k => k.StartsWith(c + "|", StringComparison.Ordinal) || k.EndsWith("|" + c, StringComparison.Ordinal)).ToList()) s.WarScores.Remove(k);
                     yield return Snap(new ReplayEvent { Turn = turn, Kind = ReplayEventKind.Eliminated, Country = c, Text = line }, s);
                 }
+                else if ((m = BesiegesLine.Match(line)).Success)
+                {
+                    int i = replay.IndexOf(m.Groups[2].Value);
+                    string who = m.Groups[1].Value;
+                    if (i >= 0 && s.SiegedBy != null)
+                    {
+                        s.SiegedBy[i] = who;
+                        s.SiegeTurns[i] = 1;
+                        // How long it takes: the game's own count at the turn's end, if the siege is still on then.
+                        s.SiegeNeeded[i] = end.SiegedBy?[i] == who ? end.SiegeNeeded[i] : 0;
+                    }
+                    yield return Snap(new ReplayEvent { Turn = turn, Kind = ReplayEventKind.Siege, Country = who, Other = m.Groups[3].Value, Province = m.Groups[2].Value, ProvinceIndex = i, Text = line }, s);
+                }
+                else if ((m = SiegeTakenLine.Match(line)).Success)
+                {
+                    int i = replay.IndexOf(m.Groups[2].Value);
+                    string who = m.Groups[1].Value;
+                    var e = new ReplayEvent { Turn = turn, Kind = ReplayEventKind.SiegeTaken, Country = who, Province = m.Groups[2].Value, ProvinceIndex = i, Text = line };
+                    if (i >= 0)
+                    {
+                        e.Other = s.Owners[i];
+                        s.Occupiers[i] = who;
+                        s.Forts[i] = int.Parse(m.Groups[4].Value);
+                        ClearSiege(s, i);
+                    }
+                    yield return Snap(e, s);
+                }
+                else if ((m = SiegeBrokenLine.Match(line)).Success)
+                {
+                    int i = replay.IndexOf(m.Groups[1].Value);
+                    if (i >= 0) ClearSiege(s, i);
+                    yield return Snap(new ReplayEvent { Turn = turn, Kind = ReplayEventKind.Siege, Country = m.Groups[2].Value, Other = i >= 0 ? s.Controller(i) : null, Province = m.Groups[1].Value, ProvinceIndex = i, Text = line }, s);
+                }
+                else if ((m = HungerLine.Match(line)).Success || (m = StarvedLine.Match(line)).Success)
+                {
+                    string id = m.Groups[1].Value;
+                    var a = s.Army(id);
+                    var e = new ReplayEvent { Turn = turn, Kind = ReplayEventKind.Hunger, Army = id, Country = a?.Owner, Province = m.Groups[2].Value, ProvinceIndex = replay.IndexOf(m.Groups[2].Value), Text = line };
+                    if (a != null)
+                    {
+                        if (m.Groups.Count > 3) { a.Soldiers = Math.Max(0, a.Soldiers - int.Parse(m.Groups[3].Value)); a.HalfStores = 0; }
+                        else s.Armies.Remove(a);
+                    }
+                    yield return Snap(e, s);
+                }
                 else if (StalemateLine.IsMatch(line))
                     yield return Snap(new ReplayEvent { Turn = turn, Kind = ReplayEventKind.Stalemate, Text = line }, s);
             }
+        }
+
+        private static void ClearSiege(ReplayState s, int i)
+        {
+            if (s.SiegedBy == null) return;
+            s.SiegedBy[i] = null; s.SiegeTurns[i] = 0; s.SiegeNeeded[i] = 0;
         }
 
         // Out of the game: at war with nobody, and no longer alive.
@@ -276,6 +333,10 @@ namespace GreyBoxStrategy.Replay
                     s.Relations.Add(new RelationState { A = me, B = choice.Target, Kind = "war", Since = turn });
                     break;
                 case Actions.Recruit:
+                // R3's typed recruits read the same: "raised 15 riders at highmoor (maren_host +5, new tolly_host 10)".
+                case Actions.RecruitPikes:
+                case Actions.RecruitRiders:
+                case Actions.RecruitBows:
                 {
                     e.Kind = ReplayEventKind.Recruit;
                     // "raised 15 soldiers at highmoor (maren_host +5, new tolly_host 10)": the armies it joined or formed.
@@ -289,9 +350,19 @@ namespace GreyBoxStrategy.Replay
                             string id = m.Groups[2].Value;
                             int n = int.Parse(m.Groups[3].Value);
                             var a = s.Army(id);
+                            var type = Actions.RecruitsType(choice.Action);
                             if (m.Groups[1].Success || a == null)
-                                s.Armies.Add(new ArmyState { Id = id, Owner = me, Location = site ?? end.Army(id)?.Location, Soldiers = n, Wake = new List<string> { "raised" } });
-                            else a.Soldiers += n;
+                            {
+                                a = new ArmyState { Id = id, Owner = me, Location = site ?? end.Army(id)?.Location, Wake = new List<string> { "raised" } };
+                                s.Armies.Add(a);
+                                // R3's supply: the rules raise every new army with full stores.
+                                if (end.Armies.FirstOrDefault(x => x.HasStores) is ArmyState any) { a.HalfStores = any.MaxHalfStores; a.MaxHalfStores = any.MaxHalfStores; }
+                            }
+                            a.Soldiers += n;
+                            // R3: a typed recruit tells its soldiers' type, so a new army's mix is exact even if it is lost this turn.
+                            if (type == UnitType.Pikes) a.Pikes += n;
+                            else if (type == UnitType.Riders) a.Riders += n;
+                            else if (type == UnitType.Bows) a.Bows += n;
                         }
                     break;
                 }

@@ -64,6 +64,14 @@ namespace GreyBoxStrategy.Replay
         Broken,
         /// <summary>No province changed hands for the stalemate's turns: the game ends.</summary>
         Stalemate,
+        /// <summary>R3's generals: one gained a trait, or fell and another took the army (<see cref="ReplayEvent.Text"/> says which).</summary>
+        General,
+        /// <summary>R3's sieges: a siege began or was broken (<see cref="ReplayEvent.Text"/> says which).</summary>
+        Siege,
+        /// <summary>R3's sieges: a siege ended and the province is occupied, its walls a level lower.</summary>
+        SiegeTaken,
+        /// <summary>R3's supply: an army with no stores lost soldiers to hunger, or starved.</summary>
+        Hunger,
     }
 
     /// <summary>An army at one moment, as the map draws its piece.</summary>
@@ -83,10 +91,24 @@ namespace GreyBoxStrategy.Replay
         public List<string> Wake = new List<string>();
         public bool Awaiting => Wake.Count > 0;
         public bool Marching => Destination != null;
+        /// <summary>R3's unit types (<c>GameRules.UnitTypes</c>): the mix. All 0 when the rules have no types.</summary>
+        public int Pikes, Riders, Bows;
+        public bool HasMix => Pikes + Riders + Bows > 0;
+        /// <summary>R3's generals (<c>GameRules.Generals</c>): its general's name and traits; null when the rules have none.</summary>
+        public string General;
+        public List<string> Traits = new List<string>();
+        /// <summary>R3's supply (<c>GameRules.Supply</c>): its stores in half-turns of food, out of <see cref="MaxHalfStores"/>; -1 without supply.</summary>
+        public int HalfStores = -1;
+        public int MaxHalfStores;
+        public bool HasStores => HalfStores >= 0;
+        /// <summary>No stores left: it loses soldiers each turn outside its own land, and fights weaker.</summary>
+        public bool Hungry => HalfStores == 0;
         public ArmyState Clone() => new ArmyState
         {
             Id = Id, Owner = Owner, Location = Location, Soldiers = Soldiers, Destination = Destination,
             Path = Path.ToList(), StepTurnsLeft = StepTurnsLeft, Wake = Wake.ToList(),
+            Pikes = Pikes, Riders = Riders, Bows = Bows, General = General, Traits = Traits.ToList(),
+            HalfStores = HalfStores, MaxHalfStores = MaxHalfStores,
         };
     }
 
@@ -139,6 +161,10 @@ namespace GreyBoxStrategy.Replay
         public string[] Occupiers;
         /// <summary>The writs turn: every army on the map.</summary>
         public List<ArmyState> Armies = new List<ArmyState>();
+        /// <summary>R3's sieges (<c>GameRules.Sieges</c>): who besieges each province, by index, the turns it has lasted, and the
+        /// turns it needs (0 when not known); all null without sieges.</summary>
+        public string[] SiegedBy;
+        public int[] SiegeTurns, SiegeNeeded;
         /// <summary>The writs turn: each war's score from the first country's side, keyed "a|b" in country order.</summary>
         public Dictionary<string, int> WarScores = new Dictionary<string, int>(StringComparer.Ordinal);
         public Dictionary<string, CountryState> Countries = new Dictionary<string, CountryState>(StringComparer.Ordinal);
@@ -151,6 +177,9 @@ namespace GreyBoxStrategy.Replay
             Garrisons = (int[])Garrisons.Clone(),
             Occupiers = Occupiers == null ? new string[Owners.Length] : (string[])Occupiers.Clone(),
             Armies = Armies.Select(a => a.Clone()).ToList(),
+            SiegedBy = (string[])SiegedBy?.Clone(),
+            SiegeTurns = (int[])SiegeTurns?.Clone(),
+            SiegeNeeded = (int[])SiegeNeeded?.Clone(),
             WarScores = new Dictionary<string, int>(WarScores, StringComparer.Ordinal),
             Countries = Countries.ToDictionary(kv => kv.Key, kv => kv.Value.Clone(), StringComparer.Ordinal),
             Relations = Relations.Select(r => new RelationState { A = r.A, B = r.B, Kind = r.Kind, TruceTurnsLeft = r.TruceTurnsLeft, Since = r.Since }).ToList(),
@@ -206,6 +235,8 @@ namespace GreyBoxStrategy.Replay
         public List<ArmyRoute> Routes = new List<ArmyRoute>();
         /// <summary>A <see cref="ReplayEventKind.Battle"/>: every term of it, from the rules.</summary>
         public BattleRecord Battle;
+        /// <summary>R3: each side's mix as the battle began, "24 pikes, 12 riders"; null without unit types.</summary>
+        public string AttackMix, DefenceMix;
         /// <summary>A treaty's term (<c>demand_occupied</c>, <c>cede_occupied</c>, <c>offer_white_peace</c>), offered or landed.</summary>
         public string Term;
         /// <summary>Whether a term landed without being asked, at a war score of 90 or more.</summary>

@@ -170,6 +170,9 @@ namespace GreyBoxStrategy.Realm
             {
                 case Actions.None: return "Hold";
                 case Actions.Recruit: return "Recruit";
+                case Actions.RecruitPikes: return "Recruit pikes";
+                case Actions.RecruitRiders: return "Recruit riders";
+                case Actions.RecruitBows: return "Recruit bows";
                 case Actions.RaiseTaxes: return "Raise taxes";
                 case Actions.Attack: return "Attack " + Cap(m.Target);
                 case Actions.Fortify: return "Fortify " + Cap(m.Target);

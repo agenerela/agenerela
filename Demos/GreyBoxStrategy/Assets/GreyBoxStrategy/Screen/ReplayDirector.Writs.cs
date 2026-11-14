@@ -67,7 +67,7 @@ namespace GreyBoxStrategy.Realm
             started = true;
             var setup = GameSetup.Writs(seed, GameSetup.ClassicMapId, victory);
             var map = setup.BuildMap();
-            var rules = setup.BuildRules(map);
+            var rules = RulesFor(setup, map);
             live.Configure(true, seed, turns, model);
             live.BeginWrits(map, rules, seed, scripted, arm);
             if (live.Error != null) { ui.ShowMenuStatus(live.Error); started = false; yield break; }
@@ -140,7 +140,7 @@ namespace GreyBoxStrategy.Realm
         private static bool WritsKind(ReplayEventKind k) =>
             k == ReplayEventKind.ArmyOrder || k == ReplayEventKind.March || k == ReplayEventKind.Battle || k == ReplayEventKind.Occupy
             || k == ReplayEventKind.Free || k == ReplayEventKind.TakeNeutral || k == ReplayEventKind.Treaty || k == ReplayEventKind.ArmyLost
-            || k == ReplayEventKind.Broken || k == ReplayEventKind.Stalemate;
+            || k == ReplayEventKind.Broken || k == ReplayEventKind.Stalemate || k == ReplayEventKind.SiegeTaken;
 
         private IEnumerator LandWrits(ReplayEvent e, ChronicleLine line)
         {
@@ -163,6 +163,7 @@ namespace GreyBoxStrategy.Realm
                     yield return Battle(e, line);
                     break;
                 case ReplayEventKind.Occupy:
+                case ReplayEventKind.SiegeTaken:
                 {
                     int p = e.ProvinceIndex;
                     int from = NearestHeldBy(e.Country, p, shown);

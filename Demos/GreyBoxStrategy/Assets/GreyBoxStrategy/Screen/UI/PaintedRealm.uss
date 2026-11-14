@@ -74,6 +74,14 @@
 .labels { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
 .plab { position: absolute; font-size: 12px; -unity-font-style: italic; color: rgb(243, 231, 200); -unity-text-outline-width: 0.25px; -unity-text-outline-color: rgb(20, 14, 8); text-shadow: 1px 1px 2px rgba(15, 10, 5, 0.95); translate: -50% -50%; }
 .rlab { position: absolute; font-size: 13px; -unity-font-style: italic; letter-spacing: 6px; color: rgba(246, 234, 204, 0.86); text-shadow: 1px 1px 3px rgba(15, 10, 5, 0.95); translate: -50% -50%; }
+/* R3's armies: the type mark on a piece, the mix bars, the general, the recruit orders. */
+.host-type { width: 10px; height: 12px; margin-left: 3px; }
+.mix-bars { flex-direction: row; height: 4px; width: 120px; margin-top: 2px; background-color: rgba(255, 255, 255, 0.08); }
+.mix-bar { height: 4px; }
+.mix-pikes { background-color: rgb(206, 196, 168); }
+.mix-riders { background-color: rgb(214, 150, 84); }
+.mix-bows { background-color: rgb(132, 168, 112); }
+.army-general { font-size: 11px; -unity-font-style: italic; color: rgb(196, 182, 150); }
 /* The first-turn help: a veil, notes beside what they explain, an ink line to each. */
 .help-veil { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(8, 6, 4, 0.45); }
 .help-note { position: absolute; width: 260px; padding: 8px 11px 9px 11px; background-color: rgb(34, 27, 19); border-width: 1px; border-color: rgb(214, 180, 112); border-radius: 3px; }
@@ -274,6 +282,18 @@
 .order-move.off { opacity: 0.4; border-color: rgba(201, 164, 90, 0.2); color: rgb(160, 148, 124); }
 .order-move.pick { -unity-font-style: bold; color: rgb(250, 232, 170); }
 .order-move.off:hover { background-color: rgb(46, 36, 25); }
+/* R3: a recruit order shows its cost and what it beats on a second line, so it is a row taller. */
+.order-move.recruit-type { height: 36px; flex-direction: column; align-items: flex-start; justify-content: center; padding-top: 2px; padding-bottom: 2px; }
+.recruit-type > Label { margin: 0; padding: 0; }
+.recruit-note { font-size: 10px; color: rgb(190, 176, 146); }
+/* R3: a siege beside the province's forts, an army's stores, and an army out of them. */
+.siege-tag { margin-left: 3px; padding: 0 3px; font-size: 10px; -unity-font-style: bold; color: rgb(40, 28, 16); background-color: rgba(240, 226, 192, 0.9); border-width: 1px; border-radius: 2px; }
+.stores { flex-direction: row; align-items: center; margin-top: 2px; }
+.store-pip { width: 7px; height: 7px; margin-right: 2px; border-width: 1px; border-color: rgba(214, 190, 140, 0.7); background-color: rgba(0, 0, 0, 0); }
+.store-pip.full { background-color: rgb(196, 168, 102); }
+.store-pip.half { background-color: rgba(196, 168, 102, 0.45); }
+.hungry-note { margin-left: 4px; font-size: 10px; -unity-font-style: bold; color: rgb(232, 112, 96); }
+.host.host-hungry { border-color: rgb(226, 84, 66); border-width: 2px; }
 .order-move.wide { align-self: stretch; -unity-text-align: middle-left; margin-right: 0; }
 .target-chip { height: 22px; margin: 0 4px 4px 0; padding-left: 7px; padding-right: 7px; font-size: 12px; background-color: rgba(210, 173, 98, 0.1); border-width: 1px; border-color: rgba(201, 164, 90, 0.35); border-radius: 0; color: rgb(234, 223, 198); }
 .target-chip:hover { border-color: rgb(210, 173, 98); }

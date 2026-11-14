@@ -165,7 +165,9 @@ namespace GreyBoxStrategy.Realm
             box.Add(line);
             var row = new VisualElement(); row.AddToClassList("order-moves");
             var w = req.World;
-            foreach (string action in new[] { Actions.Recruit, Actions.RaiseTaxes, Actions.Fortify, Actions.DeclareWar, Actions.OfferWhitePeace, Actions.DemandOccupied, Actions.CedeOccupied, Actions.None })
+            // R3's unit types: three recruit orders, one a type, in place of one.
+            var recruits = w.Rules.UnitTypes ? Actions.RecruitTypes : new[] { Actions.Recruit };
+            foreach (string action in recruits.Concat(new[] { Actions.RaiseTaxes, Actions.Fortify, Actions.DeclareWar, Actions.OfferWhitePeace, Actions.DemandOccupied, Actions.CedeOccupied, Actions.None }))
             {
                 var legal = req.Legal.Where(m => m.Action == action).ToList();
                 string a = action;
@@ -178,8 +180,16 @@ namespace GreyBoxStrategy.Realm
                     else { openCourt = openCourt == a && openCourt2 == second ? null : a; openCourt2 = second; ShowOrders(status); }
                 }) { text = CourtLabel(action) };
                 b.AddToClassList("order-move");
+                if (Actions.RecruitsType(action) is UnitType rt)
+                {
+                    // Its cost and what it beats, on the button itself, under its name.
+                    b.text = "";
+                    b.AddToClassList("recruit-type");
+                    b.Add(new Label(ArmyLook.RecruitName(action)) { pickingMode = PickingMode.Ignore });
+                    var note = new Label(ArmyLook.RecruitNote(w.Rules, rt)) { pickingMode = PickingMode.Ignore }; note.AddToClassList("recruit-note"); b.Add(note);
+                }
                 if (why != null) { b.AddToClassList("off"); b.tooltip = "Not offered: " + why; }
-                else b.tooltip = Explain(action);
+                else b.tooltip = Actions.RecruitsType(action) is UnitType tt ? ArmyLook.RecruitTooltip(w.Rules, tt, w.Levy(w.Country(You), tt)) : Explain(action);
                 if (chosen != null && chosen.Action == action) b.AddToClassList("pick");
                 else if (openCourt == action && openCourt2 == second) b.AddToClassList("on");
                 row.Add(b);
@@ -239,7 +249,27 @@ namespace GreyBoxStrategy.Realm
             var row = new VisualElement(); row.AddToClassList("army-row");
             bool hasWrit = withWrits.Contains(army.Id), waits = awaiting.Contains(army.Id);
             if (army.Id == SelectedArmy) row.AddToClassList("pick");
-            row.Add(new Label($"{Chronicle.Host(army.Id)} · {army.Soldiers}") { style = { width = 150, fontSize = 12, unityFontStyleAndWeight = FontStyle.Bold } });
+            var head = new VisualElement { style = { width = 150 } };
+            head.Add(new Label($"{Chronicle.Host(army.Id)} · {army.Soldiers}") { style = { fontSize = 12, unityFontStyleAndWeight = FontStyle.Bold } });
+            // R3: its mix as three small bars, and its general; nothing more when the rules have neither.
+            var st = hostState?.Army(army.Id);
+            if (st != null && st.HasMix) head.Add(new MixBars(st));
+            if (ArmyLook.Leader(st) is string leader) { var gl = new Label(ReplayBuilder.Title(st)) { tooltip = "Led by " + leader }; gl.AddToClassList("army-general"); head.Add(gl); }
+            // R3's supply: a pip a turn of stores, half-filled for half a turn, and a warning when there are none.
+            if (st != null && st.HasStores)
+            {
+                var stores = new VisualElement { tooltip = ArmyLook.Stores(st) }; stores.AddToClassList("stores");
+                for (int k = 0; k < st.MaxHalfStores / 2; k++)
+                {
+                    var pip = new VisualElement(); pip.AddToClassList("store-pip");
+                    pip.EnableInClassList("full", st.HalfStores >= 2 * (k + 1));
+                    pip.EnableInClassList("half", st.HalfStores == 2 * k + 1);
+                    stores.Add(pip);
+                }
+                if (st.Hungry) { var h = new Label("No stores"); h.AddToClassList("hungry-note"); stores.Add(h); }
+                head.Add(stores);
+            }
+            row.Add(head);
             string state;
             if (hasWrit)
             {

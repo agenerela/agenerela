@@ -632,6 +632,86 @@ moves the rules never offer on alternate calls):
 - taking it gives exactly that plan, and ignored advice is never recorded as your move;
 - with it off, no call is made, and turning it on in game asks it from the next turn.
 
+### R3's armies on screen: unit types and generals (14 November)
+
+R3's first three parts, the unit types (#306, #309) and the generals (#310), on the screen. Both are settings of
+the rules and both stay off by default; with both off the screen is exactly as it was.
+
+**In New game.** "Unit types: off / on" and "Generals: off / on" under "Your writs", with a line saying what each
+does. They apply on the writs turn only, to every way of playing it: the replay, model rulers live and rule mode,
+on Classic or a generated world. Every place that makes a writs game's rules goes through
+`ReplayDirector.RulesFor`, which ORs the two settings into a copy; the one-move game's rules never change.
+
+**Armies at a glance**, with unit types on:
+- a piece carries a small mark of its largest type: a pike head, a horseshoe or a bow;
+- your army rows show the mix as three small bars (pikes, riders, bows), and your piece's tooltip the exact mix,
+  "12 pikes, 8 riders";
+- a rival's piece inside your sight shows only what it mostly is, "Mostly riders." or "Mixed." (rule 3.8's spirit:
+  no exact mix of a rival).
+
+**The council** in rule mode offers `recruit_pikes`, `recruit_riders` and `recruit_bows` in place of Recruit, each a
+button with its cost and what it beats on a second line ("4 gold each · beat bows"), and a tooltip with the
+upkeep, how many you have and what beats them. The advisor's suggestions name the type ("Recruit riders").
+
+**Generals**, with generals on: the army row shows its general's title in italics ("Aldo the Bowmaster"), the
+tooltip "Led by Maren the Wary (+10% defending)." with each trait's effect. The chronicle has a line when a general
+gains a trait ("Maren, leading Maren's host, is now Maren the Wary and Bold after three victories") or falls, with
+who takes command.
+
+**The battle report** shows both sides' mix under their numbers, a bar for the counters' and the generals' effect
+on each side when it is not ×1, and a sentence a player reads: "Kesh's bows broke Merrow's pikes (+29%). Maren the
+Wary held firm (+10%)." With R3 on, its terrain line says terrain does not change a battle yet.
+
+**What the replay knows.** The turn-end states carry each army's mix and general from the rules' world. The
+moments inside a turn come from `ArmySnapshot`, which has neither, so the screen scales the turn's mix to the army's
+soldiers there. An army raised and routed in the same turn has no mix to show; its side of the report then shows
+no mix rather than a wrong one. Two names in the rules would close that gap: the mix and general on `ArmySnapshot`,
+and each side's mix on `BattleRecord`.
+
+**Tests** (`ArmiesScreenTests`), each seen failing once against a deliberate break:
+- New game's two settings reach the rules of every writs game, each on its own and together, and never the
+  one-move game's or the standard rules (broken by dropping the generals from the routing);
+- with both off, no army has a mix or a general, its tooltip adds nothing, the chronicle has no general's line,
+  every battle has no counter and no general, and the recruit order is still "Recruit" (broken by keeping the
+  mix with types off);
+- with both on, every army's mix adds up to its soldiers and names its general, and every report's mix agrees with
+  its counter sentence (broken by swapping riders and bows in a side's mix).
+
+### R3's sieges and supply on screen (14 November)
+
+R3's parts four and five, sieges (#311) and supply (#313), on the screen, the same way as unit types and
+generals: two more settings in New game, both off by default, and with them off the screen is exactly as it was.
+
+**In New game.** "Sieges: off / on" and "Supply: off / on" under "Generals", for every way of playing the writs
+turn, through the same `ReplayDirector.RulesFor`.
+
+**Sieges.** A besieged province carries a tag beside its fort marks, "Siege 2 of 4", edged in the besieger's
+colour: the turns the siege has lasted and the turns it needs (`Game.SiegeTurnsNeeded`, so a siegewright or a
+three-to-one host shortens it). The chronicle says when a siege begins ("Valen besieges Corwick, Orsk's"), is
+broken, or ends ("Valen takes Corwick, Orsk's, after a siege: the walls were breached early"). An ended siege
+lands like an occupation, its hatching spreading from the nearest held land, with the walls a level lower.
+
+Before this, a replay with sieges on stopped at the first siege that ended: it did not read the rules' line, so its
+occupiers no longer matched the game's.
+
+**Supply.** Your army's row shows its stores as four pips, half-filled for half a turn, and its tooltip "Stores: 3
+of 4 turns; refilled in your own land." An army with none shows "No stores" in red on its row, a red edge on its
+piece, and a tooltip that says it loses soldiers every turn outside your land and fights weaker. The chronicle
+says when an army goes hungry and how many it lost, or when it starves. A rival's stores are not shown.
+
+**What the replay knows.** The turn-end states carry each siege and each army's stores. Inside a turn an army has
+the stores it began with (they change only at the turn's end), a new army full stores (as the rules raise it), and
+a hungry one none from its hunger line.
+
+**Tests** (`SiegesSupplyScreenTests`), each seen failing once against a deliberate break:
+- New game's two settings reach the rules of every writs game, and never the one-move game's or the standard rules
+  (broken by dropping supply from the routing);
+- with both off, no province has a siege, no army has stores, every tooltip is as before, and the chronicle has no
+  siege or hunger line (broken by keeping stores with supply off);
+- with both on, over four scripted games: sieges begin and end, an ended siege is occupied by its besieger and has no
+  tag, every turn's end tags each siege with the game's own turns, every army has its stores at every moment, and a
+  hungry army shows the warning to you and not to a rival (broken by not reading the line of a siege that ended).
+
 ### Generated worlds: detail up close, fields that show, rule mode on a big map (14 November)
 
 R4's third part on screen.

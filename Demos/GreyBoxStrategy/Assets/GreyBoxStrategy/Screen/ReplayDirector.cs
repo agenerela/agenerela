@@ -606,6 +606,9 @@ namespace GreyBoxStrategy.Realm
             switch (e.Kind)
             {
                 case ReplayEventKind.Upkeep:
+                case ReplayEventKind.General:
+                case ReplayEventKind.Siege:
+                case ReplayEventKind.Hunger:
                 case ReplayEventKind.TruceEnded:
                 case ReplayEventKind.Eliminated:
                     Show(e.After, null);

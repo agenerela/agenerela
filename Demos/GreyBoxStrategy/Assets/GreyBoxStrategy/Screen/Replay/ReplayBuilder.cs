@@ -131,9 +131,34 @@ namespace GreyBoxStrategy.Replay
                 if (replay.Writs)
                     turn.ArmyDrift = end.Armies.Count(a => running.Army(a.Id) is ArmyState r ? r.Location != a.Location : true)
                                      + running.Armies.Count(a => end.Army(a.Id) == null);
+                // R3: a general who gained a trait or fell, as a line of its own at the turn's end.
+                if (game.Rules.Generals) turn.Events.AddRange(GeneralEvents(turn.Start, end, turn.Turn));
                 // The last event carries the game's own numbers for the turn's end.
                 if (turn.Events.Count > 0) turn.Events[turn.Events.Count - 1].After = end;
                 else turn.Council = end;
+                // R3: the moments inside a turn come from the rules' snapshots, which carry no mix or general: each army's
+                // is the one it ends the turn with (losses come from every type in proportion, so the shares hold), or
+                // the one it began with if it did not live to the end.
+                if (game.Rules.UnitTypes || game.Rules.Generals || game.Rules.Supply)
+                {
+                    var seen = new HashSet<ReplayState>();
+                    foreach (var st in new[] { turn.Council }.Concat(turn.Events.Select(x => x.After)))
+                        if (st != null && st != end && seen.Add(st)) FillArmies(st, end, turn.Start);
+                    // Each battle's sides as they stood just before it: a routed army is gone from every state after.
+                    if (game.Rules.UnitTypes)
+                    {
+                        var before = turn.Council;
+                        foreach (var ev in turn.Events)
+                        {
+                            if (ev.Kind == ReplayEventKind.Battle && ev.Battle != null && before != null)
+                            {
+                                ev.AttackMix = SideMix(before, ev.Battle.AttackerArmies, ev.Battle.AttackerSoldiers, 0);
+                                ev.DefenceMix = SideMix(before, ev.Battle.DefenderArmies, ev.Battle.DefenderSoldiers, ev.Battle.Militia);
+                            }
+                            if (ev.After != null) before = ev.After;
+                        }
+                    }
+                }
                 turn.TerritoryChanges = tr.TerritoryChanges;
                 replay.Turns.Add(turn);
                 state = end;
@@ -350,6 +375,82 @@ namespace GreyBoxStrategy.Replay
             }
         }
 
+        /// <summary>
+        /// R3: an army's mix and general where the rules' snapshot has none, from the turn's end (or its start): the mix
+        /// scaled to the soldiers it has at that moment.
+        /// </summary>
+        public static void FillArmies(ReplayState s, ReplayState end, ReplayState start)
+        {
+            foreach (var a in s.Armies)
+            {
+                // R3's supply: stores change only at the turn's end, so inside a turn an army has what it began with
+                // (a new one what it ends with); a hunger line has already set it to none.
+                var stores = start?.Army(a.Id) ?? end?.Army(a.Id);
+                if (stores != null && stores.HasStores)
+                {
+                    if (!a.HasStores) a.HalfStores = stores.HalfStores;
+                    a.MaxHalfStores = stores.MaxHalfStores;
+                }
+                var src = end?.Army(a.Id) ?? start?.Army(a.Id);
+                if (src == null) continue;
+                a.General = src.General;
+                a.Traits = src.Traits.ToList();
+                int total = src.Pikes + src.Riders + src.Bows;
+                if (total <= 0) continue;
+                a.Riders = (int)Math.Round((double)a.Soldiers * src.Riders / total);
+                a.Bows = Math.Min(a.Soldiers - a.Riders, (int)Math.Round((double)a.Soldiers * src.Bows / total));
+                a.Pikes = Math.Max(0, a.Soldiers - a.Riders - a.Bows);
+            }
+        }
+
+        /// <summary>
+        /// R3: a side's mix, "24 pikes, 12 riders": its armies' shares in <paramref name="s"/>, scaled to the soldiers it
+        /// fought with; a garrison or militia as pikes. Null when one of its armies' mix is not known.
+        /// </summary>
+        public static string SideMix(ReplayState s, List<string> armies, int soldiers, int militia)
+        {
+            double p = 0, r = 0, w = 0;
+            int unknown = 0;
+            foreach (var id in armies)
+            {
+                var a = s.Army(id);
+                if (a == null || !a.HasMix) { unknown++; continue; }
+                p += a.Pikes; r += a.Riders; w += a.Bows;
+            }
+            // An army raised and lost within one turn is in no state the screen sees with its mix (the rules' snapshots
+            // carry none): rather than guess, say nothing of that side.
+            if (unknown > 0) return null;
+            double sum = p + r + w;
+            int fighting = soldiers - militia;
+            int riders = sum > 0 ? (int)Math.Round(fighting * r / sum) : 0, bows = sum > 0 ? (int)Math.Round(fighting * w / sum) : 0;
+            int pikes = soldiers - riders - bows;
+            var parts = new List<string>();
+            if (pikes > 0) parts.Add($"{pikes} pikes");
+            if (riders > 0) parts.Add($"{riders} riders");
+            if (bows > 0) parts.Add($"{bows} bows");
+            return string.Join(", ", parts);
+        }
+
+        /// <summary>R3: the chronicle's lines for generals, from the turn's start and end: a trait gained, a general fallen.</summary>
+        public static List<ReplayEvent> GeneralEvents(ReplayState start, ReplayState end, int turn)
+        {
+            var list = new List<ReplayEvent>();
+            foreach (var a in end.Armies)
+            {
+                var before = start?.Army(a.Id);
+                if (before?.General == null || a.General == null) continue;
+                string host = Chronicle.Host(a.Id);
+                if (before.General != a.General)
+                    list.Add(new ReplayEvent { Turn = turn, Kind = ReplayEventKind.General, Country = a.Owner, Text = $"{Title(before)}, who led {host}, has fallen; {Title(a)} takes command", After = end });
+                else if (a.Traits.Count > before.Traits.Count)
+                    list.Add(new ReplayEvent { Turn = turn, Kind = ReplayEventKind.General, Country = a.Owner, Text = $"{before.General}, leading {host}, is now {Title(a)} after three victories", After = end });
+            }
+            return list;
+        }
+
+        /// <summary>"Maren the Wary", "Maren the Wary and Bold": the rules' own title for a general.</summary>
+        public static string Title(ArmyState a) => a.General == null ? null : a.General + " the " + string.Join(" and ", a.Traits.Select(GeneralTraits.Epithet));
+
         private static ArmyState ArmyOf(ArmySnapshot a) => new ArmyState
         {
             Id = a.Id, Owner = a.Owner, Location = a.Location, Soldiers = a.Soldiers, Destination = a.Destination,
@@ -398,8 +499,22 @@ namespace GreyBoxStrategy.Replay
                 {
                     Id = a.Id, Owner = a.Owner, Location = a.Location, Soldiers = a.Soldiers, Destination = a.Destination,
                     Path = a.Path.ToList(), StepTurnsLeft = a.StepTurnsLeft, Wake = a.Wake.ToList(),
+                    // R3, only with its settings: with them off every soldier is a pike and nobody leads, as the screen always showed.
+                    Pikes = w.Rules.UnitTypes ? a.Pikes : 0, Riders = w.Rules.UnitTypes ? a.Riders : 0, Bows = w.Rules.UnitTypes ? a.Bows : 0,
+                    General = w.Rules.Generals ? a.General?.Name : null,
+                    Traits = w.Rules.Generals && a.General != null ? a.General.Traits.ToList() : new List<string>(),
+                    HalfStores = w.Rules.Supply ? a.HalfStores : -1,
+                    MaxHalfStores = w.Rules.Supply ? 2 * w.Rules.MaxStores : 0,
                 }).ToList(),
             };
+            if (w.Rules.Sieges)
+            {
+                var ps = provinceIds.Select(id => w.Province(id)).ToArray();
+                s.SiegedBy = ps.Select(p => p.SiegedBy).ToArray();
+                s.SiegeTurns = ps.Select(p => p.SiegedBy != null ? p.SiegeTurns : 0).ToArray();
+                s.SiegeNeeded = ps.Select(p => p.SiegedBy == null ? 0
+                    : Game.SiegeTurnsNeeded(w.Rules, p, w.ArmiesAt(p.Id).Where(a => a.Owner == p.SiegedBy).ToList())).ToArray();
+            }
             foreach (var c in w.CountryList)
                 s.Countries[c.Id] = new CountryState
                 {
