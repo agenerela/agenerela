@@ -72,6 +72,16 @@ While the version stays `0.x`, the public API may change in any release.
   option, records `Done` and settles memory. A bad list throws at the call. With `Choices` null
   every request is what it was; a choice call's prompt is new and unmeasured (#151).
 
+- **A guard verdict that keeps the move and replaces only the statement** (#266 item 4).
+  `GuardVerdict.ReplaceStatement(reason, statement)`, with `GuardVerdictKind.ReplaceStatement` (at
+  the end of the enum) and `GuardVerdict.Statement`: the action and target stand, the statement is
+  the guard's (null or empty drops it), and the pipeline goes on, so later guards judge the same move
+  with the new line and may still stop it. Recorded in `GuardsFired`, the new
+  `DecisionTelemetry.StatementsReplaced` (a list of `ReplacedStatement`: guard, reason, the text
+  replaced and the new one), and the decision log's `statementsReplaced`; `DecisionResult.Verdict`
+  stays null and `ModelDecision` keeps the model's words. Passed over on a call with
+  `AskForStatement = false`. Every existing verdict behaves exactly as before.
+
 - **A decision that asks for no statement** (#266). `DecideOptions.AskForStatement`, on by default,
   leaves the free-text field out of a call when false: the schema has `action` and `target` only
   (or `action` alone with no target registered), flat and in every branch of a paired schema; the

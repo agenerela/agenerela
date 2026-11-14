@@ -40,6 +40,7 @@ chain fields, still read, with no chain. A field that is null is left out.
 | `decision` | What the game got, after the guards: `action`, `target`, `statement`. Absent for a pipeline error |
 | `modelDecision` | What the model answered, only when a guard changed it or a stray target was dropped |
 | `verdict`, `guardsFired` | The guard, kind and reason that stopped the model's answer; every guard that did not pass it, `Execute`'s re-check included |
+| `statementsReplaced` | Each statement a guard replaced while keeping the move (`GuardVerdict.ReplaceStatement`): `guard`, `reason`, `replaced` and `statement`; the line has no such key when none was ([guards.md](guards.md#the-four-verdicts)) |
 | `execution` | For an `Executed` line, what `Execute` did: `status` and `reason` |
 | `error` | A pipeline error's `kind` and `message` |
 | `provider`, `providerConfig`, `modelName`, `frameworkVersion` | Who answered |

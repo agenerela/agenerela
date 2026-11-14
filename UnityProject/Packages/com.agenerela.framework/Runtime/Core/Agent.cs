@@ -1501,17 +1501,17 @@ namespace Agenerela
         {
             string running = null;
             GuardVerdict verdict;
+            AgentDecision decision;
             try
             {
-                verdict = GuardPipeline.Run(AllGuards(name => running = name), input);
+                // The decision as the guards left it: its statement replaced, if a guard replaced it (#266 item 4).
+                verdict = GuardPipeline.Run(AllGuards(name => running = name), input, "", out decision);
             }
             catch (Exception e)
             {
                 return Failed(input.Telemetry, PipelineErrorKind.GuardFailed,
                     $"The guard {running} failed. {e.GetType().Name}: {e.Message}", input.Context.Correlation, input.Request, input.Reply);
             }
-
-            var decision = input.Decision;
 
             if (verdict.Kind == GuardVerdictKind.Pass)
             {

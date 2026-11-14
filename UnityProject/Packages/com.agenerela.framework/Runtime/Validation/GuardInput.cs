@@ -75,7 +75,8 @@ namespace Agenerela
 
         /// <summary>
         /// The decision being judged, as parsed from the reply. Never the rewritten one: the
-        /// pipeline stops at the first guard that does not pass it.
+        /// pipeline stops at the first guard that stops it. After a guard replaced the statement
+        /// (<see cref="GuardVerdict.ReplaceStatement"/>), the later guards read the new one.
         /// </summary>
         public AgentDecision Decision { get; }
 
@@ -103,5 +104,12 @@ namespace Agenerela
         }
 
         private AvailabilityAnswer availabilityAnswer;
+
+        // The same input with another decision, for the guards after one that replaced the
+        // statement (#266 item 4), keeping the availability answer so it is still asked once.
+        internal GuardInput With(AgentDecision decision)
+        {
+            return new GuardInput(Context, Request, Reply, decision, Options, Telemetry) { availabilityAnswer = availabilityAnswer };
+        }
     }
 }

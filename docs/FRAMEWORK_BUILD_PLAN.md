@@ -925,7 +925,7 @@ An ordered guard pipeline every decision passes through before any handler execu
 
 ```csharp
 public interface IDecisionGuard {
-    GuardVerdict Inspect(DecisionRequest req, AgentDecision d);  // Pass | RewriteToNone(reason) | Reject(reason)
+    GuardVerdict Inspect(DecisionRequest req, AgentDecision d);  // Pass | RewriteToNone(reason) | Reject(reason) | ReplaceStatement(reason, statement), #266
 }
 ```
 

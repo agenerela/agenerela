@@ -109,6 +109,13 @@ namespace Agenerela
         [JsonProperty("guardsFired")] public List<string> GuardsFired;
 
         /// <summary>
+        /// Each statement a guard replaced while keeping the move, with the guard, its reason, the text
+        /// replaced and the new one (<see cref="DecisionTelemetry.StatementsReplaced"/>, #266 item 4);
+        /// left out when none was.
+        /// </summary>
+        [JsonProperty("statementsReplaced")] public List<ReplacedStatement> StatementsReplaced;
+
+        /// <summary>
         /// For <see cref="DecisionStage.Executed"/>, what that <c>Execute</c> did
         /// (<see cref="DecisionFeedEntry.Execution"/>); left out for <see cref="DecisionStage.Decided"/>.
         /// </summary>
@@ -285,6 +292,15 @@ namespace Agenerela
             if (telemetry.GuardsFired != null && telemetry.GuardsFired.Count > 0)
             {
                 line.GuardsFired = new List<string>(telemetry.GuardsFired);
+            }
+
+            if (telemetry.StatementsReplaced != null && telemetry.StatementsReplaced.Count > 0)
+            {
+                line.StatementsReplaced = new List<ReplacedStatement>();
+                foreach (var replaced in telemetry.StatementsReplaced)
+                {
+                    line.StatementsReplaced.Add(new ReplacedStatement(replaced.Guard, Mask(replaced.Reason), Mask(replaced.Replaced), Mask(replaced.Statement)));
+                }
             }
 
             if (telemetry.TargetsDropped != null && telemetry.TargetsDropped.Count > 0)
