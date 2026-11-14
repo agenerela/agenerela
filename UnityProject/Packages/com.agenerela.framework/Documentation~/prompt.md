@@ -362,6 +362,26 @@ Player: "Fine day for it." -> action: none, target: no_target, statement: "Aye, 
 The other way out of G14 is an idle stimulus nobody would say back. A statement is the one built
 here. Whether either helps, and whether a statement makes a model copy *it* instead, is the A/B.
 
+## A move with no statement
+
+`DecideOptions.AskForStatement = false` asks for the move alone (#266). The schema has no
+`statement` field, flat or paired, so the reply is `{"action": ..., "target": ...}`, and the prompt
+says nothing about a statement: the identity's statement rules line is not sent, the examples show
+no statement whatever `ExampleStatements` says, and the target rule, when the provider reports no
+token probabilities, ends "choose action none and target no_target. Never act on a different thing
+instead." without asking the agent to say the thing is not here. Every other line is the same.
+
+The decision's `Statement` is empty, even when the provider sent one anyway, and memory remembers
+the reply as the schema asked for it, without one. A decision a guard stops keeps that empty
+statement: `Agent.RefusalStatement` is not asked and `AskForRefusalLine` sends nothing.
+`DecisionTelemetry.StatementAsked` is false, and the decision log line carries
+`"statementAsked": false`.
+
+For a call whose move is all the game needs, such as GreyBoxStrategy's marshal ordering ten armies
+a turn, where each army asked to speak made the rulers repeat themselves (35 to 44% of lines word for
+word, findings, 13 November). It changes what the model reads, so it is unmeasured as a default
+and owed an A/B run (#151); on by default, every request is byte-identical to one sent before.
+
 ## The example's target
 
 An example that needs a target names the first registered one from its action's

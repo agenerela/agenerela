@@ -158,6 +158,30 @@ namespace Agenerela
         public IReadOnlyList<ActionTargets> Pairs { get; }
 
         /// <summary>
+        /// Whether this schema has a <c>statement</c> field. Every schema <see cref="Build(AgentContext)"/>
+        /// makes has one, unless <see cref="DecideOptions.AskForStatement"/> was off (#266).
+        /// </summary>
+        /// <remarks>
+        /// What the parser and the prompt read to know a statement was asked for, so the two cannot
+        /// disagree with the schema that was sent.
+        /// </remarks>
+        public bool AsksForStatement
+        {
+            get
+            {
+                foreach (var field in Fields)
+                {
+                    if (field.Name == StatementFieldName)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+        }
+
+        /// <summary>
         /// The schema for one decision: the actions <see cref="ActionAvailability.For"/> returns,
         /// then <see cref="ActionRegistry.None"/>; the targets registered in <c>ctx.Targets</c>;
         /// and a free-form statement. All three fields are required.
@@ -202,6 +226,18 @@ namespace Agenerela
         /// <exception cref="ArgumentNullException"><paramref name="ctx"/> is null.</exception>
         public static DecisionSchema Build(AgentContext ctx, bool pairTargets)
         {
+            return Build(ctx, pairTargets, askForStatement: true);
+        }
+
+        /// <summary>
+        /// The schema for one decision, as <see cref="Build(AgentContext, bool)"/> makes it, and
+        /// without the <c>statement</c> field when <paramref name="askForStatement"/> is false (#266,
+        /// <see cref="DecideOptions.AskForStatement"/>). Every other field, and the pairs, are what
+        /// they would be with it.
+        /// </summary>
+        /// <exception cref="ArgumentNullException"><paramref name="ctx"/> is null.</exception>
+        public static DecisionSchema Build(AgentContext ctx, bool pairTargets, bool askForStatement)
+        {
             if (ctx == null)
             {
                 throw new ArgumentNullException(nameof(ctx));
@@ -209,7 +245,7 @@ namespace Agenerela
 
             var answer = ActionAvailability.Evaluate(ctx);
             var available = answer.Offered;
-            return Build(ctx, pairTargets ? Takeable(available, ctx.Targets, answer) : available, pairTargets, answer);
+            return Build(ctx, pairTargets ? Takeable(available, ctx.Targets, answer) : available, pairTargets, answer, askForStatement);
         }
 
         // For a caller that has already asked ActionAvailability about this context, as Agent has
@@ -218,7 +254,7 @@ namespace Agenerela
         // The answer, when given, is the one available came from: the paired schema leaves out each
         // pair a per-target check rejected in it (#190 LV #19).
         internal static DecisionSchema Build(AgentContext ctx, IReadOnlyList<ActionDefinition> available, bool pairTargets = false,
-            AvailabilityAnswer answer = null)
+            AvailabilityAnswer answer = null, bool askForStatement = true)
         {
             if (ctx == null)
             {
@@ -237,7 +273,11 @@ namespace Agenerela
                 fields.Add(TargetField(ctx.Targets.Ids));
             }
 
-            fields.Add(StatementField());
+            if (askForStatement)
+            {
+                fields.Add(StatementField());
+            }
+
             return new DecisionSchema(fields, pairTargets && ctx.Targets.Count > 0 ? PairsFor(available, ctx.Targets, answer) : null);
         }
 
