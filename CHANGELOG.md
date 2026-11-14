@@ -35,6 +35,13 @@ phase table and the open issues, not here.
   - `+call-choices` gives a dilemma's options with the call as `DecideOptions.Choices` (#293, DR-022) in place
     of registering them as the seat's actions. It is an arm, unmeasured, until its A/B; the default is unchanged.
 
+- **Painted Realm R3, part one: pikes, riders and bows with the counter rule** (#20), behind
+  `GameRules.UnitTypes`, off by default.
+  - Armies keep soldiers by type; losses keep the mix; `Army.Soldiers` stays the total.
+  - `recruit_pikes`, `recruit_riders` and `recruit_bows` replace `recruit`; riders cost twice a pike to raise and keep.
+  - Battles weigh each type by the counter rule, and the report names the largest effect.
+  - Scripted players recruit what counters their strongest rival. Scripted numbers in `findings.md`, 14 November.
+
 - **Painted Realm: two pacing settings for the writs turn, both off** (#20).
   `GameRules.OccupationBecomesOwnership` makes a province held N turns the occupier's, and
   `GameRules.BreakWhenAllOccupied` breaks a fully occupied realm with armies left. Scripted they leave the pace

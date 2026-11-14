@@ -29,9 +29,22 @@ namespace GreyBoxStrategy
                     return move.Target == null ? null : "none takes no target";
 
                 case Actions.Recruit:
+                    if (rules.UnitTypes) return "with unit types, recruit pikes, riders or bows";
                     if (move.Target != null) return "recruit takes no target";
                     if (RecruitSite(world, countryId) == null) return "we hold no province of ours to recruit in";
                     return world.Levy(me) >= rules.MinLevy ? null : $"recruiting needs {rules.MinLevy * rules.GoldPerSoldier} gold";
+
+                case Actions.RecruitPikes:
+                case Actions.RecruitRiders:
+                case Actions.RecruitBows:
+                {
+                    if (!rules.UnitTypes) return "unit types are off";
+                    if (move.Target != null) return $"{move.Action} takes no target";
+                    if (RecruitSite(world, countryId) == null) return "we hold no province of ours to recruit in";
+                    var type = Actions.RecruitsType(move.Action).Value;
+                    return world.Levy(me, type) >= rules.MinLevy ? null
+                        : $"recruiting {Units.Name(type)} needs {rules.MinLevy * rules.GoldPerSoldier * Units.CostFactor(rules, type)} gold";
+                }
 
                 case Actions.RaiseTaxes:
                     if (move.Target != null) return "raise_taxes takes no target";
@@ -91,7 +104,7 @@ namespace GreyBoxStrategy
         public static List<Move> CourtMoves(World world, string countryId)
         {
             var legal = new List<Move>();
-            foreach (string action in Actions.Court)
+            foreach (string action in world.Rules.UnitTypes ? Actions.Court.Concat(Actions.RecruitTypes) : Actions.Court)
             {
                 if (action == Actions.None) continue;
                 IEnumerable<Move> candidates = Actions.TargetsProvince(action)
