@@ -1213,6 +1213,18 @@ effect of 1% or more, and the counters turned the result of 6% of them.
 - Headless table runs take rule settings, `-strategyRules "UnitTypes=true"` (`GameSetup.Numbers`, never saved
   with a setup), for that run.
 
+**R3, part three: generals** (14 November; rules v2 3.5). `GameRules.Generals`, off by default:
+- Every army gets a general named for it ("Nessa" leads `nessa_host`) with one trait drawn from the seed: `bold`
+  (+10% attacking, +10% own losses), `wary` (+10% defending), `horse-born` and `bowmaster` (their type +15%, with
+  unit types), `swift` (a march's first step a turn shorter), `stubborn` (retreats where it would be routed),
+  `inspiring` (-20% own losses). Siegewright, forager and marshal wait for sieges, supply and army sizes.
+- A side's commander is its largest army's general. Three wins bring a second trait; a losing general falls 5%
+  of the time, and the army keeps its id under a new one.
+- The report names the commander whose traits moved the battle most ("…; Maren the Bold led the attack (+10%)"),
+  and the rulers' facts the general of each army ("nessa_host 30, led by Nessa the Wary, at highmoor").
+- Scripted, 100 Classic games (`pace classic 100 rule:Generals=True`): 71 turns on average against 77 off,
+  94 last standing and 6 stalemates; with unit types too, 78. Unmeasured live, so off.
+
 **Two pacing settings, both off** (14 November; the rules v2 page's "Why Classic stalls"):
 - `GameRules.OccupationBecomesOwnership`: a province occupied that many turns in a row becomes the occupier's,
   with no treaty. `Province.OccupiedTurns` counts the turn ends it has been held, back to 0 when the occupier

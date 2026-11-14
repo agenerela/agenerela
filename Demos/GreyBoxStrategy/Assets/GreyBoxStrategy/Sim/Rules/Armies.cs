@@ -71,6 +71,9 @@ namespace GreyBoxStrategy
             Pikes = now[0]; Riders = now[1]; Bows = now[2];
         }
 
+        /// <summary>Its general (<see cref="GameRules.Generals"/>), or null with generals off.</summary>
+        public General General { get; set; }
+
         /// <summary>Where it is marching, or null while it holds.</summary>
         public string Destination { get; set; }
         /// <summary>The provinces still to enter on the way, the next first.</summary>
@@ -139,6 +142,9 @@ namespace GreyBoxStrategy
         public double AttackCounter = 1, DefenceCounter = 1;
         /// <summary>The battle's largest counter effect, "valen's pikes broke orsk's riders (+18%)", or null.</summary>
         public string CounterNote;
+        /// <summary>With generals: each side's commander's strength factor (1 with none) and the report's line, "Maren the Wary held firm (+10%)", or null.</summary>
+        public double AttackGeneral = 1, DefenceGeneral = 1;
+        public string GeneralNote;
         public int AttackerLost;
         public int DefenderLost;
         public bool AttackerWon;
@@ -287,6 +293,80 @@ namespace GreyBoxStrategy
                 best = $"{name}'s {Name(t)} broke {otherName}'s {Name(Beats(t))} (+{Math.Round(effect * 100)}%)";
             }
             return best;
+        }
+    }
+
+    /// <summary>An army's general (rules v2 3.5, <see cref="GameRules.Generals"/>): a name and one or two traits.</summary>
+    public sealed class General
+    {
+        public string Name;
+        public List<string> Traits = new List<string>();
+        /// <summary>Battles won, toward a second trait.</summary>
+        public int Wins;
+
+        public bool Has(string trait) => Traits.Contains(trait);
+        /// <summary>"Maren the Wary", or "Maren the Wary and Bold".</summary>
+        public string Title => Name + " the " + string.Join(" and ", Traits.Select(GeneralTraits.Epithet));
+    }
+
+    public static class GeneralTraits
+    {
+        public const string Bold = "bold", Wary = "wary", HorseBorn = "horse-born", Bowmaster = "bowmaster",
+            Swift = "swift", Stubborn = "stubborn", Inspiring = "inspiring";
+        /// <summary>The traits built so far, in the page's order.</summary>
+        public static readonly string[] All = { Bold, Wary, HorseBorn, Bowmaster, Swift, Stubborn, Inspiring };
+
+        public static string Epithet(string trait) => trait == HorseBorn ? "Horse-born" : char.ToUpperInvariant(trait[0]) + trait.Substring(1);
+
+        /// <summary>A general for an army, its name from the army's id, one trait drawn from the seed.</summary>
+        public static General For(World w, Army a, string salt = "")
+        {
+            string first = a.Id.EndsWith("_host", StringComparison.Ordinal) ? a.Id.Substring(0, a.Id.Length - 5) : a.Id;
+            first = new string(first.TakeWhile(char.IsLetter).ToArray());
+            var g = new General { Name = char.ToUpperInvariant(first[0]) + first.Substring(1) };
+            g.Traits.Add(All[Dice.Int(w.Seed, w.Turn, a.Id, "general-trait" + salt, 0, All.Length)]);
+            return g;
+        }
+
+        /// <summary>A new general for an army whose general fell: the next free name of <see cref="ArmyNames.Generals"/>.</summary>
+        public static General Successor(World w, Army a)
+        {
+            var used = new HashSet<string>(w.Armies.Where(x => x.General != null).Select(x => x.General.Name), StringComparer.Ordinal);
+            int start = Dice.Int(w.Seed, w.Turn, a.Id, "successor", 0, ArmyNames.Generals.Length);
+            string name = Enumerable.Range(0, ArmyNames.Generals.Length).Select(k => ArmyNames.Generals[(start + k) % ArmyNames.Generals.Length])
+                .Select(n => char.ToUpperInvariant(n[0]) + n.Substring(1)).FirstOrDefault(n => !used.Contains(n)) ?? "Anon";
+            var g = new General { Name = name };
+            g.Traits.Add(All[Dice.Int(w.Seed, w.Turn, a.Id, "successor-trait", 0, All.Length)]);
+            return g;
+        }
+
+        /// <summary>
+        /// The strength factor of a side's commander, its largest army's general: bold attacking, wary defending,
+        /// horse-born and bowmaster on their type's share of the side's plain strength.
+        /// </summary>
+        public static double Strength(GameRules r, General g, bool attacking, UnitMix side)
+        {
+            if (g == null) return 1;
+            double f = 1;
+            if (attacking && g.Has(Bold)) f += r.BoldStrength;
+            if (!attacking && g.Has(Wary)) f += r.WaryStrength;
+            double plain = Units.Plain(r, side);
+            if (r.UnitTypes && plain > 0)
+            {
+                if (g.Has(HorseBorn)) f += r.TypeTraitStrength * side.Of(UnitType.Riders) * Units.Base(r, UnitType.Riders) / plain;
+                if (g.Has(Bowmaster)) f += r.TypeTraitStrength * side.Of(UnitType.Bows) * Units.Base(r, UnitType.Bows) / plain;
+            }
+            return f;
+        }
+
+        /// <summary>The casualty factor of a side's commander: bold +10%, inspiring -20%.</summary>
+        public static double Casualties(GameRules r, General g, bool attacking)
+        {
+            if (g == null) return 1;
+            double f = 1;
+            if (attacking && g.Has(Bold)) f += r.BoldCasualties;
+            if (g.Has(Inspiring)) f -= r.InspiringCasualties;
+            return f;
         }
     }
 

@@ -4225,3 +4225,18 @@ country", "catastrophic", none at all), 6 requests an arm. Raw replies:
 after `statement`, which would make the field order unreachable by schema for such models, as
 for `target` (5 November). A reply with a repeated id under `uniqueItems`. A later Ollama that
 changes either path.
+
+### Painted Realm R3, generals: scripted, they shorten a Classic game by 6 turns alone and leave it as it was with unit types (14 November 2026)
+
+GreyBoxStrategy (#20), rules v2 3.5, `GameRules.Generals`. Scripted only, no model: the `.NET 9` harness of `Sim/` (`pace classic 100 rule:Generals=True`), 100 Classic games of the `mixed` lineup on seeds 1 to 100, writs turn, conquest.
+
+| | turns (mean, median, p90) | endings | battles a game | treaties a game |
+|---|---|---|---|---|
+| off | 77, 75, 106 | 97 last standing, 3 stalemate | 147 | 7.6 |
+| generals | 71, 68, 100 | 94 last standing, 6 stalemate | 144 | 7.3 |
+| generals and unit types | 78, 72, 115 | 96 last standing, 3 stalemate, 1 unfinished | 156 | 7.2 |
+
+- Off, the harness prints the same line as before the change.
+- Traits are drawn evenly from seven, so a side's edge from its commander is up to 10 to 15%, about the size of the counter rule's; scripted rulers do not choose by trait, so these numbers say what the traits do to battles, not how a ruler plays to them.
+- Unmeasured: how the model rulers read "led by Nessa the Wary"; the switch stays off until a live run.
+

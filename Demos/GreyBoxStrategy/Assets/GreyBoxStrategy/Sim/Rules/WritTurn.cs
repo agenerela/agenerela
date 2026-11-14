@@ -151,7 +151,8 @@ namespace GreyBoxStrategy
 
         private CountryRequest ArmyRequest(Docket d, Army army)
         {
-            var facts = new List<string> { $"{army.Id}: {army.Soldiers} soldiers" + (Rules.UnitTypes ? $" ({Units.Mix(army)})" : "") + $" at {army.Location}; " + (army.Wake.Count > 0 ? "awaiting orders: " + string.Join(", ", army.Wake) : "") + "." };
+            var facts = new List<string> { $"{army.Id}: {army.Soldiers} soldiers" + (Rules.UnitTypes ? $" ({Units.Mix(army)})" : "")
+                + (Rules.Generals && army.General != null ? $", led by {army.General.Title}," : "") + $" at {army.Location}; " + (army.Wake.Count > 0 ? "awaiting orders: " + string.Join(", ", army.Wake) : "") + "." };
             facts.AddRange(Facts.Select(pending[d.Country], Facts.MaxTurnFacts - 1));
             return new CountryRequest(Moment.Army, World.Turn, d.Country, World,
                 WritFacts.Standing(World, d.Country), facts, WritLegality.ArmyMoves(World, d.Country, army.Id))
@@ -277,6 +278,8 @@ namespace GreyBoxStrategy
                     army.Destination = a.Choice.Target;
                     army.Path.AddRange(WritLegality.Paths(World, army.Owner, army.Location, Rules.MarchRange)[a.Choice.Target]);
                     army.StepTurnsLeft = Rules.TurnsToEnter(World.Province(army.Path[0]).Info.Terrain);
+                    if (Rules.Generals && army.General != null && army.General.Has(GeneralTraits.Swift))
+                        army.StepTurnsLeft = Math.Max(1, army.StepTurnsLeft - 1);
                     Done(a, $"{army.Id} marches to {army.Destination}");
                 }
                 else Done(a, $"{army.Id} holds at {army.Location}");
@@ -468,6 +471,7 @@ namespace GreyBoxStrategy
                 int size = Math.Min(soldiers, Rules.ArmyMax);
                 var army = new Army(ArmyNames.Next(World, countryId), countryId, provinceId, 0, World.Turn);
                 army.Add(type, size);
+                if (Rules.Generals) army.General = GeneralTraits.For(World, army);
                 World.Armies.Add(army);
                 soldiers -= size;
                 names.Add($"new {army.Id} {size}");
@@ -649,8 +653,20 @@ namespace GreyBoxStrategy
                 defenceCounter = Units.Plain(r, dMix) > 0 ? defenceBase / Units.Plain(r, dMix) : 1;
                 counterNote = Units.Describe(r, attackerId, aMix, defenderId ?? "the garrison", dMix);
             }
-            double attack = attackBase * attackRoll;
-            double defence = defenceBase * defenceRoll + fortTerm + capitalTerm;
+            // With generals (rules v2 3.5), each side's commander, its largest army's general, adds its traits.
+            General attackLead = null, defenceLead = null;
+            double attackGeneral = 1, defenceGeneral = 1;
+            string generalNote = null;
+            if (r.Generals)
+            {
+                attackLead = Commander(attackers);
+                defenceLead = Commander(defenders);
+                attackGeneral = GeneralTraits.Strength(r, attackLead, true, UnitMix.Of(attackers));
+                defenceGeneral = GeneralTraits.Strength(r, defenceLead, false, UnitMix.Of(defenders, fixedDefence));
+                generalNote = GeneralNote(attackLead, attackGeneral, defenceLead, defenceGeneral);
+            }
+            double attack = attackBase * attackGeneral * attackRoll;
+            double defence = defenceBase * defenceGeneral * defenceRoll + fortTerm + capitalTerm;
             var site = World.Province(where);
             var record = new BattleRecord
             {
@@ -676,10 +692,15 @@ namespace GreyBoxStrategy
                 AttackCounter = attackCounter,
                 DefenceCounter = defenceCounter,
                 CounterNote = counterNote,
+                AttackGeneral = attackGeneral,
+                DefenceGeneral = defenceGeneral,
+                GeneralNote = generalNote,
             };
             bool attackerWon = attack > defence;
-            int attLoss = Math.Min(att, (int)Math.Round(defence * r.CasualtyRate * (attackerWon ? r.HeldCasualtyFactor : 1)));
-            int defLoss = Math.Min(def, (int)Math.Round(attack * r.CasualtyRate * (attackerWon ? 1 : r.HeldCasualtyFactor)));
+            double attCas = r.Generals ? GeneralTraits.Casualties(r, attackLead, true) : 1;
+            double defCas = r.Generals ? GeneralTraits.Casualties(r, defenceLead, false) : 1;
+            int attLoss = Math.Min(att, (int)Math.Round(defence * r.CasualtyRate * (attackerWon ? r.HeldCasualtyFactor : 1) * attCas));
+            int defLoss = Math.Min(def, (int)Math.Round(attack * r.CasualtyRate * (attackerWon ? 1 : r.HeldCasualtyFactor) * defCas));
             Lose(attackers, attLoss);
             int armyLoss = Math.Min(defenders.Sum(a => a.Soldiers), defLoss);
             Lose(defenders, armyLoss);
@@ -694,7 +715,7 @@ namespace GreyBoxStrategy
             if (defenders.Count == 0 && defenderId != null) defName = $"{defenderId}'s militia";
             report.Resolution.Add($"Battle at {where}: {attackerId} {att} against {defName} {def}; " +
                                   (attackerWon ? $"{attackerId} won" : $"{defName} held") + $" ({attLoss} and {defLoss} lost)"
-                                  + (counterNote != null ? $"; {counterNote}." : "."));
+                                  + (counterNote != null ? $"; {counterNote}" : "") + (generalNote != null ? $"; {generalNote}" : "") + ".");
             if (defenderId != null)
             {
                 var war = World.War(attackerId, defenderId);
@@ -706,15 +727,17 @@ namespace GreyBoxStrategy
 
             foreach (var a in attackers.Concat(defenders).Where(a => World.FindArmy(a.Id) != null)) a.Stop("fought a battle");
             var losers = attackerWon ? defenders : attackers;
+            if (r.Generals) AfterBattle(attackerWon ? attackers : defenders, losers, key);
             double loserStrength = attackerWon ? defence : attack, winnerStrength = attackerWon ? attack : defence;
             bool rout = loserStrength * r.RoutRatio < winnerStrength;
-            record.Routed = rout && losers.Count > 0;
+            record.Routed = rout && losers.Any(a => !(r.Generals && a.General != null && a.General.Has(GeneralTraits.Stubborn)));
             record.Why = Why(record, defName);
             foreach (var a in losers.Where(a => World.FindArmy(a.Id) != null).ToList())
             {
                 // On a border the loser never crosses; the winner steps into the province it was leaving,
                 // so it is beaten off that too and falls back, without a second battle (our reading of v2 1.1).
-                string back = rout ? null : RetreatTo(a, attackerWon || onBorder ? null : a.CameFrom);
+                bool stubborn = r.Generals && a.General != null && a.General.Has(GeneralTraits.Stubborn);
+                string back = rout && !stubborn ? null : RetreatTo(a, attackerWon || onBorder ? null : a.CameFrom);
                 if (back == null)
                 {
                     record.Routed = true;
@@ -725,6 +748,42 @@ namespace GreyBoxStrategy
                 a.Location = back;
             }
             return attackerWon;
+        }
+
+        // A side's commander: its largest army's general (the first by id on a tie); null with none.
+        private static General Commander(List<Army> side) =>
+            side.Where(a => a.General != null).OrderByDescending(a => a.Soldiers).ThenBy(a => a.Id, StringComparer.Ordinal).FirstOrDefault()?.General;
+
+        // "Maren the Wary held firm (+10%)": the commander whose traits moved its side most, or null.
+        private static string GeneralNote(General attack, double attackFactor, General defence, double defenceFactor)
+        {
+            var (g, f, verb) = attackFactor - 1 >= defenceFactor - 1 ? (attack, attackFactor, "led the attack") : (defence, defenceFactor, "held firm");
+            return g == null || f - 1 < 0.01 ? null : $"{g.Title} {verb} (+{Math.Round((f - 1) * 100)}%)";
+        }
+
+        // After a battle: every winning general counts the win, and the third brings a second trait; a losing
+        // general falls with a 5% chance (a routed army's always falls with it), and the army gets a new one.
+        private void AfterBattle(List<Army> winners, List<Army> losers, string key)
+        {
+            foreach (var a in winners.Where(a => a.General != null && World.FindArmy(a.Id) != null))
+            {
+                a.General.Wins++;
+                if (a.General.Wins == Rules.WinsForSecondTrait && a.General.Traits.Count == 1)
+                {
+                    var other = GeneralTraits.All.Where(t => !a.General.Has(t)).ToList();
+                    string t2 = other[Dice.Int(Seed, World.Turn, a.Id, "second-trait:" + key, 0, other.Count)];
+                    a.General.Traits.Add(t2);
+                    Tell(a.Owner, 1, $"{a.General.Name} has won {Rules.WinsForSecondTrait} battles and is {a.General.Title} now.");
+                }
+            }
+            foreach (var a in losers.Where(a => a.General != null && World.FindArmy(a.Id) != null))
+            {
+                if (Dice.Unit(Seed, World.Turn, a.Id, "general-falls:" + key) >= Rules.GeneralFallsChance) continue;
+                string fallen = a.General.Title;
+                a.General = GeneralTraits.Successor(World, a);
+                report.Resolution.Add($"{fallen} fell; {a.General.Title} leads {a.Id} now.");
+                Tell(a.Owner, 1, $"{fallen} fell; {a.General.Title} leads {a.Id} now.");
+            }
         }
 
         // "orsk won: 52 against 40; the dice favoured orsk (+6); 1 fort (+15) for the defence." The three
@@ -739,6 +798,8 @@ namespace GreyBoxStrategy
             };
             if (b.CounterNote != null)
                 terms.Add((b.AttackerSoldiers * (b.AttackCounter - 1) - b.DefenderSoldiers * (b.DefenceCounter - 1), b.CounterNote));
+            if (b.GeneralNote != null)
+                terms.Add((b.AttackerSoldiers * (b.AttackGeneral - 1) - b.DefenderSoldiers * (b.DefenceGeneral - 1), b.GeneralNote));
             double dice = b.AttackerSoldiers * (b.AttackRoll - 1) - b.DefenderSoldiers * (b.DefenceRoll - 1);
             terms.Add((dice, $"the dice favoured {(dice >= 0 ? b.Attacker : defName)} (+{Math.Abs(dice):0})"));
             var top = terms.Where(t => Math.Abs(t.weight) >= 0.5 || t.text.Contains(" against "))
