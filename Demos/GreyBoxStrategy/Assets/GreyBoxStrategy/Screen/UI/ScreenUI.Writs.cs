@@ -54,6 +54,8 @@ namespace GreyBoxStrategy.Realm
                     piece.Add(new Crest(CountryLook.Of(a.Owner), 15));
                     var n = new Label(); n.AddToClassList("host-n"); piece.Add(n);
                     var g = new Label(Initial(a.Id)); g.AddToClassList("host-g"); piece.Add(g);
+                    // R3: the type it is mostly, as a small mark; hidden when the rules have no unit types.
+                    var mark = new TypeMark(); mark.AddToClassList("host-type"); piece.Add(mark);
                     var seal = new VisualElement { pickingMode = PickingMode.Ignore }; seal.AddToClassList("host-wait"); piece.Add(seal);
                     string id = a.Id;
                     piece.RegisterCallback<ClickEvent>(_ => HostPressed?.Invoke(id));
@@ -66,6 +68,13 @@ namespace GreyBoxStrategy.Realm
                 piece.Q(className: "host-wait").style.display = ShowAwaiting && a.Awaiting && a.Owner == You ? DisplayStyle.Flex : DisplayStyle.None;
                 piece.tooltip = rival ? $"{Chronicle.Host(a.Id)} ({CountryLook.NameOf(a.Owner)}), about {(int)Math.Round(a.Soldiers / 10.0) * 10} soldiers at {Cap(a.Location)}. Your court sees no more of it than that."
                     : HostLine(a) + "\nClick: its army.";
+                // R3: a rival in sight shows what it mostly is, never its exact mix (rules v2 3.8); yours shows all of it.
+                var extra = ArmyLook.TooltipLines(a, rival);
+                if (extra.Count > 0) piece.tooltip += "\n" + string.Join("\n", extra);
+                var typeMark = piece.Q<TypeMark>();
+                var largest = ArmyLook.Largest(a);
+                typeMark.style.display = largest != null ? DisplayStyle.Flex : DisplayStyle.None;
+                if (largest is UnitType lt && typeMark.Type != lt) { typeMark.Type = lt; typeMark.MarkDirtyRepaint(); }
             }
             // Under the pieces, in their layer: a march line never strikes through a piece's number.
             if (marchLines == null) { marchLines = new MarchLines { Owner = this }; hostLayer.Insert(0, marchLines); }
@@ -436,8 +445,16 @@ namespace GreyBoxStrategy.Realm
             var verdict = new Label(Named(b.Why)); verdict.AddToClassList("event-story"); body.Add(verdict);
 
             var sides = new VisualElement { style = { flexDirection = FlexDirection.Row, marginTop = 4 } };
-            sides.Add(Side(b.Attacker, CountryLook.NameOf(b.Attacker), "attacking", b.AttackerArmies, b.AttackerSoldiers, 0, b.AttackerLost, b.AttackerWon, b));
-            sides.Add(Side(b.Defender, them, b.DefenderKind == "army" ? "defending" : b.DefenderKind == "militia" ? "its militia" : "neutral garrison", b.DefenderArmies, b.DefenderSoldiers, b.Militia, b.DefenderLost, !b.AttackerWon, b));
+            var attackSide = Side(b.Attacker, CountryLook.NameOf(b.Attacker), "attacking", b.AttackerArmies, b.AttackerSoldiers, 0, b.AttackerLost, b.AttackerWon, b);
+            var defenceSide = Side(b.Defender, them, b.DefenderKind == "army" ? "defending" : b.DefenderKind == "militia" ? "its militia" : "neutral garrison", b.DefenderArmies, b.DefenderSoldiers, b.Militia, b.DefenderLost, !b.AttackerWon, b);
+            // R3: each side's mix, as it stood (losses come from every type in proportion); a garrison or militia fights as pikes.
+            if (b.CounterNote != null || b.AttackCounter != 1 || b.DefenceCounter != 1)
+            {
+                if (e.AttackMix != null) attackSide.Add(Text(e.AttackMix, "src"));
+                if (e.DefenceMix != null) defenceSide.Add(Text(e.DefenceMix, "src"));
+            }
+            sides.Add(attackSide);
+            sides.Add(defenceSide);
             body.Add(sides);
 
             body.Add(SectionHead("WHAT DECIDED IT", "strength, side by side"));
@@ -445,9 +462,17 @@ namespace GreyBoxStrategy.Realm
             body.Add(Bar("Soldiers", b.AttackerSoldiers, b.DefenderSoldiers, max, b, plain: true));
             if (b.FortTerm > 0) body.Add(Bar(b.Forts == 1 ? "1 fort" : $"{b.Forts} forts", 0, b.FortTerm, max, b));
             if (b.CapitalTerm > 0) body.Add(Bar("The capital", 0, b.CapitalTerm, max, b));
+            // R3: the counter's effect and the generals', as the rules weighed them, in the report's own words.
+            if (b.AttackCounter != 1 || b.DefenceCounter != 1)
+                body.Add(Bar($"Unit types ×{b.AttackCounter:0.00} and ×{b.DefenceCounter:0.00}", b.AttackerSoldiers * (b.AttackCounter - 1), b.DefenderSoldiers * (b.DefenceCounter - 1), max, b));
+            if (b.AttackGeneral != 1 || b.DefenceGeneral != 1)
+                body.Add(Bar($"Generals ×{b.AttackGeneral:0.00} and ×{b.DefenceGeneral:0.00}", b.AttackerSoldiers * (b.AttackGeneral - 1), b.DefenderSoldiers * (b.DefenceGeneral - 1), max, b));
             body.Add(Bar($"The dice ×{b.AttackRoll:0.00} and ×{b.DefenceRoll:0.00}", b.AttackerSoldiers * (b.AttackRoll - 1), b.DefenderSoldiers * (b.DefenceRoll - 1), max, b));
             body.Add(Bar("Strength", b.AttackStrength, b.DefenceStrength, max, b, plain: true, total: true));
-            if (b.Terrain != null) body.Add(Text($"Fought on {b.Terrain}: terrain does not change a battle until unit types and generals come (R3).", "src"));
+            var told = new[] { b.CounterNote, b.GeneralNote }.Where(x => !string.IsNullOrEmpty(x)).Select(x => Cap1(Named(x).TrimEnd('.')) + ".").ToList();
+            if (told.Count > 0) body.Add(Text(string.Join(" ", told), "event-chose"));
+            bool r3 = b.AttackCounter != 1 || b.DefenceCounter != 1 || b.AttackGeneral != 1 || b.DefenceGeneral != 1 || b.CounterNote != null || b.GeneralNote != null;
+            if (b.Terrain != null) body.Add(Text(r3 ? $"Fought on {b.Terrain}: terrain does not change a battle yet." : $"Fought on {b.Terrain}: terrain does not change a battle until unit types and generals come (R3).", "src"));
 
             var after = new List<string>();
             foreach (var kv in b.Retreats) after.Add($"{Chronicle.Host(kv.Key)} fell back to {Cap(kv.Value)}");
@@ -457,6 +482,54 @@ namespace GreyBoxStrategy.Realm
         }
 
         public void CloseBattle() { battleCard?.RemoveFromHierarchy(); battleCard = null; }
+
+        private static string Cap1(string s) => string.IsNullOrEmpty(s) ? s : char.ToUpperInvariant(s[0]) + s.Substring(1);
+
+        /// <summary>R3: a small drawn mark for a unit type: a pike's head, a horseshoe, a drawn bow.</summary>
+        public sealed class TypeMark : VisualElement
+        {
+            public UnitType Type;
+            public TypeMark()
+            {
+                pickingMode = PickingMode.Ignore;
+                generateVisualContent += ctx =>
+                {
+                    var p = ctx.painter2D; float w = contentRect.width, h = contentRect.height;
+                    p.strokeColor = new Color(0.97f, 0.92f, 0.8f, 1); p.fillColor = p.strokeColor; p.lineWidth = 1.4f; p.lineCap = LineCap.Round;
+                    switch (Type)
+                    {
+                        case UnitType.Pikes:
+                            p.BeginPath(); p.MoveTo(new Vector2(w / 2, h)); p.LineTo(new Vector2(w / 2, h * 0.3f)); p.Stroke();
+                            p.BeginPath(); p.MoveTo(new Vector2(w / 2, 0)); p.LineTo(new Vector2(w * 0.25f, h * 0.38f)); p.LineTo(new Vector2(w * 0.75f, h * 0.38f)); p.ClosePath(); p.Fill();
+                            break;
+                        case UnitType.Riders:
+                            p.BeginPath(); p.Arc(new Vector2(w / 2, h * 0.45f), w * 0.36f, Angle.Degrees(20), Angle.Degrees(160), ArcDirection.CounterClockwise); p.Stroke();
+                            break;
+                        default:
+                            p.BeginPath(); p.Arc(new Vector2(w * 0.25f, h / 2), h * 0.48f, Angle.Degrees(-70), Angle.Degrees(70)); p.Stroke();
+                            p.BeginPath(); p.MoveTo(new Vector2(w * 0.41f, h * 0.05f)); p.LineTo(new Vector2(w * 0.41f, h * 0.95f)); p.Stroke();
+                            break;
+                    }
+                };
+            }
+        }
+
+        /// <summary>R3: an army's mix as three small bars, pikes, riders and bows, with the counts in the tooltip.</summary>
+        public sealed class MixBars : VisualElement
+        {
+            public MixBars(ArmyState a)
+            {
+                AddToClassList("mix-bars");
+                tooltip = ArmyLook.Mix(a);
+                int total = Math.Max(1, a.Pikes + a.Riders + a.Bows);
+                foreach (var t in Units.All)
+                {
+                    var bar = new VisualElement(); bar.AddToClassList("mix-bar"); bar.AddToClassList("mix-" + Units.Name(t));
+                    bar.style.width = Length.Percent(100f * ArmyLook.Count(a, t) / total);
+                    Add(bar);
+                }
+            }
+        }
         public bool BattleOpen => battleCard != null;
 
         private VisualElement Side(string country, string name, string role, List<string> armies, int soldiers, int militia, int lost, bool won, BattleRecord b)

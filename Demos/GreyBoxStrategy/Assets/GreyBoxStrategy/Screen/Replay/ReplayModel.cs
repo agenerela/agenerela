@@ -64,6 +64,8 @@ namespace GreyBoxStrategy.Replay
         Broken,
         /// <summary>No province changed hands for the stalemate's turns: the game ends.</summary>
         Stalemate,
+        /// <summary>R3's generals: one gained a trait, or fell and another took the army (<see cref="ReplayEvent.Text"/> says which).</summary>
+        General,
     }
 
     /// <summary>An army at one moment, as the map draws its piece.</summary>
@@ -83,10 +85,17 @@ namespace GreyBoxStrategy.Replay
         public List<string> Wake = new List<string>();
         public bool Awaiting => Wake.Count > 0;
         public bool Marching => Destination != null;
+        /// <summary>R3's unit types (<c>GameRules.UnitTypes</c>): the mix. All 0 when the rules have no types.</summary>
+        public int Pikes, Riders, Bows;
+        public bool HasMix => Pikes + Riders + Bows > 0;
+        /// <summary>R3's generals (<c>GameRules.Generals</c>): its general's name and traits; null when the rules have none.</summary>
+        public string General;
+        public List<string> Traits = new List<string>();
         public ArmyState Clone() => new ArmyState
         {
             Id = Id, Owner = Owner, Location = Location, Soldiers = Soldiers, Destination = Destination,
             Path = Path.ToList(), StepTurnsLeft = StepTurnsLeft, Wake = Wake.ToList(),
+            Pikes = Pikes, Riders = Riders, Bows = Bows, General = General, Traits = Traits.ToList(),
         };
     }
 
@@ -206,6 +215,8 @@ namespace GreyBoxStrategy.Replay
         public List<ArmyRoute> Routes = new List<ArmyRoute>();
         /// <summary>A <see cref="ReplayEventKind.Battle"/>: every term of it, from the rules.</summary>
         public BattleRecord Battle;
+        /// <summary>R3: each side's mix as the battle began, "24 pikes, 12 riders"; null without unit types.</summary>
+        public string AttackMix, DefenceMix;
         /// <summary>A treaty's term (<c>demand_occupied</c>, <c>cede_occupied</c>, <c>offer_white_peace</c>), offered or landed.</summary>
         public string Term;
         /// <summary>Whether a term landed without being asked, at a war score of 90 or more.</summary>

@@ -60,7 +60,7 @@ namespace GreyBoxStrategy.Realm
         {
             var setup = GameSetup.Writs(gameSeed, GameSetup.ClassicMapId, victory);
             var map = setup.BuildMap();
-            StartCoroutine(StartRule(country, model, gameSeed, arm, map, setup.BuildRules(map)));
+            StartCoroutine(StartRule(country, model, gameSeed, arm, map, RulesFor(setup, map)));
         }
 
         /// <summary>For the Unity CLI, the dev menu and frames without a server: the writs turn with four stand-in rulers through the same agents.</summary>
@@ -68,7 +68,7 @@ namespace GreyBoxStrategy.Realm
         {
             var setup = GameSetup.Writs(gameSeed, GameSetup.ClassicMapId, victory);
             var map = setup.BuildMap();
-            BeginRuleOn(country, "scripted", true, arm, gameSeed, map, setup.BuildRules(map));
+            BeginRuleOn(country, "scripted", true, arm, gameSeed, map, RulesFor(setup, map));
         }
 
         /// <summary>
