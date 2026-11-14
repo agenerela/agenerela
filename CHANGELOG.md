@@ -29,6 +29,10 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm R3: unit types, a first live look** (#20). Six pairs on `qwen3.5:4b`: no illegal answers and no
+  extra model time with unit types on, but the courts recruit mostly pikes and counter the type they see only 22% of
+  the time. `UnitTypes` stays off. Results in `findings.md`, 14 November.
+
 - **Painted Realm R3, part six: what a country sees of a rival army** (#20), behind `GameRules.Fog`, off by
   default. `ArmySight` holds the rules: rival armies near our land and armies show position, general and size
   rounded to 10, nothing in forest but presence, their mix only to our riders. The rulers' facts follow it;
