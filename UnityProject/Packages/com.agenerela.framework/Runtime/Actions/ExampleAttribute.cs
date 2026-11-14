@@ -33,5 +33,12 @@ namespace Agenerela
         /// <c>[Example("Head over to the {0}.", "tower", Statement = "On my way.")]</c>.
         /// </summary>
         public string Statement { get; set; }
+
+        /// <summary>
+        /// The example's situation, one or two observation lines (#216 item 1): copied to
+        /// <see cref="ActionDefinition.ExampleObservations"/>, and shown only on a call with
+        /// <see cref="DecideOptions.ExampleObservations"/> on. Empty by default.
+        /// </summary>
+        public string[] Observations { get; set; }
     }
 }

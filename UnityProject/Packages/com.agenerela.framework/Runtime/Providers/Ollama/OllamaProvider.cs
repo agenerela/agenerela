@@ -595,9 +595,24 @@ namespace Agenerela.Providers
                 json.WritePropertyName("options");
                 json.WriteStartObject();
                 json.WritePropertyName("temperature");
-                json.WriteValue(temperature);
+                json.WriteValue(req.Temperature ?? temperature);
                 json.WritePropertyName("num_ctx");
                 json.WriteValue(contextSize);
+
+                // Only when the call set them, so a call that did not sends what it always sent
+                // (#266 item 7, #244 item 11).
+                if (req.Seed.HasValue)
+                {
+                    json.WritePropertyName("seed");
+                    json.WriteValue(req.Seed.Value);
+                }
+
+                if (req.MaxReplyTokens.HasValue)
+                {
+                    json.WritePropertyName("num_predict");
+                    json.WriteValue(req.MaxReplyTokens.Value);
+                }
+
                 json.WriteEndObject();
 
                 // For the grounding guard (DR-016).

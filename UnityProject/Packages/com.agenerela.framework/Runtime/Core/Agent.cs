@@ -697,6 +697,18 @@ namespace Agenerela
                     "DecideOptions.MaxListedTargets cannot be negative. 0 lists no targets.");
             }
 
+            if (options.Temperature.HasValue && (!(options.Temperature.Value >= 0f) || float.IsInfinity(options.Temperature.Value)))
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), options.Temperature,
+                    "DecideOptions.Temperature must be 0 or above. Null uses the provider's own.");
+            }
+
+            if (options.MaxReplyTokens.HasValue && options.MaxReplyTokens.Value <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), options.MaxReplyTokens,
+                    "DecideOptions.MaxReplyTokens must be above 0. Null caps nothing.");
+            }
+
             if (!(options.TargetGroundingThreshold >= 0f && options.TargetGroundingThreshold <= 1f))
             {
                 throw new ArgumentOutOfRangeException(nameof(options), options.TargetGroundingThreshold,
@@ -1445,6 +1457,7 @@ namespace Agenerela
                 // A call that asks for no statement shows none in its examples either (#266).
                 ExampleStatements = call.ExampleStatements && call.AskForStatement,
                 ExampleTargetFallback = call.ExampleTargetFallback,
+                ExampleObservations = call.ExampleObservations,
                 Stimulus = stimulus,
                 // Observe keeps the call's own lines last in ctx, after every source's.
                 ObservationPlacement = call.ObservationPlacement,
@@ -1485,6 +1498,9 @@ namespace Agenerela
             var request = PromptBuilder.Build(ctx, schema, fewShot, history, options, availability, telemetry.TargetsUnlisted);
             seen?.SetUnlisted(telemetry.TargetsUnlisted);
             request.AgentId = Id;
+            request.Temperature = call.Temperature;
+            request.Seed = call.Seed;
+            request.MaxReplyTokens = call.MaxReplyTokens;
             telemetry.TargetRuleSent = PromptBuilder.SendsTargetRule(schema, options);
             return request;
         }

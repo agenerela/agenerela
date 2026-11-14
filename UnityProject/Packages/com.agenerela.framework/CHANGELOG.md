@@ -61,6 +61,31 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **Examples that carry their situation** (#216 item 1). `ActionDefinition.ExampleObservations`
+  (the asset front door) and `[Example(..., Observations = ...)]` (the code front door) hold one or
+  two observation lines, rendered by `FewShotBuilder` above the example under the observations'
+  own heading, only on a call with the new `DecideOptions.ExampleObservations` (and
+  `PromptOptions.ExampleObservations`), off by default: off, the block is byte-identical. Hard rule
+  4 now treats such an example as its stimulus and situation together:
+  `PromptSetChecks.MatchesSituation` is new, and `EvalRunner` judges the bare stimulus for an arm
+  that shows examples without their situations. `EvalArmConditions.ExampleObservations` records the
+  arm's setting.
+
+- **Sampling and a reply cap per call** (#266 item 7, #244 item 11). `DecideOptions.Temperature`,
+  `Seed` and `MaxReplyTokens`, null by default, carried on the new `DecisionRequest.Temperature`,
+  `Seed` and `MaxReplyTokens` and sent by `OllamaProvider` as `options.temperature` (in place of
+  `OllamaSettings.Temperature`), `options.seed` and `options.num_predict`, the last two only when set.
+  A call that sets none sends exactly the request sent before. A refusal line is sampled as its
+  decision was. A negative or non-finite temperature, or a cap of 0 or less, throws at the call.
+
+- **A fact ledger** (#216 item 4, #266 item 5). `FactLedger`, an `IObservationSource`,
+  `IReportsDroppedObservations` and `IExportsMemory`: `Set(key, line, expiresAfter)`, `Word(key,
+  reader, line)` for one reader's own wording, `Remove`, `Tick()` counting expiry in the game's
+  units, `MaxLines` for a budget that keeps the newest lines and reports the oldest, and `For(reader)`
+  for one agent's `FactLedgerView`, so one ledger is read by many agents, each in its own words.
+  Lines come in the order facts were last set. `Export` and `Import` save it. An observation
+  source like any other: nothing new reaches the model, and no prompt changes unless a game adds it.
+
 - **A choice among options given with the call** (#266 item 2, DR-022). `DecideOptions.Choices`,
   null by default, a list of the new `Choice` (id, description, `Available`): the call offers those
   choices instead of the agent's registered actions, then `none`, with no `target` field, and the

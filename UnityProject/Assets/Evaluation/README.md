@@ -76,7 +76,9 @@ written. A test checks that our set breaks none of them.
 
 - **Never reuse a prompt as a few-shot example** (hard rule 4). An action's `ExampleStimulus`,
   or its `CounterExampleStimulus` or a statement when it has one, must not match any `stimulus`
-  here.
+  here. An example that carries a situation (`ExampleObservations`,
+  #297) is flagged only when a prompt matches its stimulus and its observations both; an arm that shows
+  the examples without their situations is judged on the bare stimulus, as before.
   `VillageGuard.asset`'s examples are GreyBoxVillage's guard's, the four actions' and its idle
   line, so the set is measured with the examples the demo plays with; `PromptSetStartTests`
   checks that none matches a prompt.

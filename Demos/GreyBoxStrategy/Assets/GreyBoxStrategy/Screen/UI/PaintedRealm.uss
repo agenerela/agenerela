@@ -40,6 +40,8 @@
 .section-head { flex-direction: row; padding-left: 10px; padding-right: 10px; padding-top: 5px; padding-bottom: 5px; font-size: 10px; -unity-font-style: bold; letter-spacing: 2px; color: rgb(141, 127, 102); border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.22); background-color: rgba(0, 0, 0, 0.08); }
 .section-body { padding-left: 8px; padding-right: 8px; padding-top: 3px; padding-bottom: 6px; }
 .row { flex-direction: row; align-items: center; height: 24px; font-size: 12px; }
+/* A row whose text may wrap: as tall as its text. */
+.row.wraps { height: auto; min-height: 24px; padding-top: 2px; padding-bottom: 2px; align-items: flex-start; }
 .row:hover { background-color: rgba(210, 173, 98, 0.14); }
 .row-name { width: 54px; margin-left: 6px; }
 .bar { flex-grow: 1; height: 4px; background-color: rgba(127, 127, 127, 0.25); margin-left: 4px; margin-right: 6px; }
@@ -73,6 +75,13 @@
 .plab { position: absolute; font-size: 12px; -unity-font-style: italic; color: rgb(243, 231, 200); -unity-text-outline-width: 0.25px; -unity-text-outline-color: rgb(20, 14, 8); text-shadow: 1px 1px 2px rgba(15, 10, 5, 0.95); translate: -50% -50%; }
 .rlab { position: absolute; font-size: 13px; -unity-font-style: italic; letter-spacing: 6px; color: rgba(246, 234, 204, 0.86); text-shadow: 1px 1px 3px rgba(15, 10, 5, 0.95); translate: -50% -50%; }
 /* A realm's name, zoomed out: widely spaced capitals along its land (rules v2 2.6), turned by the screen. */
+/* A marker at the map area's edge pointing to an off-screen battle or your capital (rule mode). */
+.edge-mark { position: absolute; flex-direction: row; align-items: center; translate: -50% -50%; padding: 2px 7px 2px 3px; background-color: rgb(26, 21, 15); border-width: 1px; border-color: rgba(201, 164, 90, 0.75); border-radius: 3px; }
+.edge-mark:hover { border-color: rgb(236, 205, 140); background-color: rgb(44, 35, 25); }
+.edge-mark.battle { border-color: rgb(196, 70, 52); }
+.edge-arrow { width: 16px; height: 12px; margin-right: 5px; }
+.edge-text { font-size: 12px; -unity-font-style: italic; color: rgb(240, 228, 200); }
+.next-army { align-self: flex-start; margin-top: 2px; margin-bottom: 4px; }
 .realmlab { position: absolute; font-size: 20px; -unity-font-style: bold; letter-spacing: 9px; color: rgba(255, 246, 222, 0.9); -unity-text-outline-width: 0.4px; -unity-text-outline-color: rgb(20, 14, 8); text-shadow: 1px 2px 4px rgba(10, 6, 3, 0.95); translate: -50% -50%; white-space: nowrap; }
 .clab { position: absolute; font-size: 14px; -unity-font-style: bold; letter-spacing: 2px; color: rgb(255, 244, 214); text-shadow: 1px 1px 2px rgba(15, 10, 5, 0.95); translate: -50% 0; }
 .forts { position: absolute; flex-direction: row; translate: -50% 0; }

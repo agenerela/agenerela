@@ -57,7 +57,7 @@ namespace GreyBoxStrategy.Screen.Tests
             var poor = plains.Where(p => ChartLayout.DevelopmentOf(world.Provinces[p]) <= 1).ToList();
             var rich = plains.Where(p => ChartLayout.DevelopmentOf(world.Provinces[p]) >= 3).ToList();
             Assume.That(poor.Count > 0 && rich.Count > 0, "the world has poor and rich plains");
-            Assert.That(rich.Average(Fields), Is.GreaterThan(poor.Average(Fields) * 1.3), "a developed province is farmed more than a poor one");
+            Assert.That(rich.Average(Fields), Is.GreaterThan(poor.Average(Fields) * 2.5), "a developed province is farmed far more than a poor one, so it shows");
         }
 
         [Test]

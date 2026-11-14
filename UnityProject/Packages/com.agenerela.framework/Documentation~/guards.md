@@ -252,6 +252,44 @@ agent.Guards.Add(new DelegateGuard("bell_cooldown", input =>
 A wolf that set the bell off 15 seconds ago gets `none`, and `GuardsFired` says
 `bell_cooldown`. A bandit on the road still rings it.
 
+## Recipe: fairness and cooldowns
+
+A storyteller, a director, GreyBoxVillage's bell: each wants rules such as "not the same target
+twice in a row", "at most two open tales", "this event at most once in eight turns" (#266 item 8).
+Write each where it is checked earliest, and count it where the thing actually happens.
+
+| Rule | Where | Why |
+|---|---|---|
+| An action not again within N turns (the omen every 8) | `[Available]` / `IsAvailable` | Absent from the schema while it cools down, rather than chosen and refused |
+| At most N of something open (two tales) | `[Available]` | The same: the action is not offered once N are open |
+| Not the same target again within N turns, or a budget per target | `[AvailableFor]` / `ITargetAvailability` | The pair is absent from a paired schema, the reason is recorded in `TargetsUnavailable`, and `Execute` checks again |
+| A rule the availability checks cannot see, such as one about the model's wording | A guard, as in the cooldown example above | Judged after the fact, with a verdict telemetry records |
+| How often a rare kind of event happens at all | The game deals each turn's kind and closes the rest | A small model prefers the familiar action; availability can only offer (#266, N13) |
+
+```csharp
+// When each target was last struck, and how many tales are open, kept by the game.
+var struckOn = new Dictionary<string, int>();
+int openTales = 0;
+
+var plague = new DelegateActionHandler(_ => true, (ctx, d) => { Strike(d.TargetId); struckOn[d.TargetId] = turn; })
+{
+    // Not the country struck in the last three turns, with the reason a tool shows.
+    IsAvailableFor = (ctx, country) => struckOn.TryGetValue(country, out int on) && turn - on < 3
+        ? Availability.No($"struck on turn {on}")
+        : Availability.Yes,
+};
+
+var beginTale = new DelegateActionHandler(_ => openTales < 2, (ctx, d) => openTales++);
+```
+
+- **Count in the handler, never in the check or the guard.** A check is asked at every decision and
+  every preview, and a guard may judge a decision that another stops later (see "Do not treat
+  inspection as execution" in the guards research page). Only the handler knows it happened.
+- **Fairness that depends on the turn's other moves** (two agents striking one country) is a
+  `DecisionRound` concern: `Execute` re-checks each in the caller's order, so the second is
+  refused as stale.
+- Every game writes these today; a helper comes only when two games write the same one.
+
 ## Example: the name check
 
 Before DR-016, the plan was a built-in check that the chosen target's name appears in what the

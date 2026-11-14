@@ -1677,6 +1677,12 @@ awaiting marks, the army cycle key, orders queued above End turn) came in the th
 - The province panel shows settlement tiers and special places. The tiers themselves were already drawn by
   development; changing them during play waits for R6's buildings.
 
+**R4 on screen, third part: built** (14 November).
+- Detail up close: the visible window is drawn again at screen scale by the chart's own code.
+- Farms and settlements grow with development.
+- Rule mode on big maps: a next-army jump and markers at the screen's edge.
+- The province panel speaks to a player.
+
 Still open in R4:
 - local facts and per-call target sets (Sim and Agents);
 - the id map's adjacency test at 2048 and 4096.
@@ -1795,8 +1801,8 @@ table is in the R2 pull request). Not built yet:
 - the drawn-chart spike, which is the screen's. **Built the same day:** the demo README's
   [drawn-chart spike](../../Demos/GreyBoxStrategy/README.md#the-drawn-chart-spike-12-november) section
   says how it is drawn, what it costs and what today's rules make look wrong. Its pull request
-  compares it with the painting. The paper texture was built in the second slice (13 November; see the demo README's "second slice"). Not built yet: realm names along their realm,
-  levels of detail beyond provinces and regions. Occupation hatching was built with the writs turn on screen (13 November, below).
+  compares it with the painting. The paper texture was built in the second slice (13 November; see the demo README's "second slice"). Realm names were drawn in R4's second part and detail up close in its third (14 November), in the R4 paragraphs above.
+  Not built yet: levels of detail beyond provinces and regions. Occupation hatching was built with the writs turn on screen (13 November, below).
 
 What the design got wrong or left open, and what was decided (_Mine_ unless the lead says otherwise):
 - **Capital spacing.** Section 2.3 asked for 4 steps on medium. With six countries on 60 provinces each
