@@ -29,6 +29,11 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm R3, part two: the model rulers recruit by type and read the mix** (#20), only with
+  `GameRules.UnitTypes`, still off. The court registers `recruit_pikes`, `recruit_riders` and `recruit_bows`
+  in place of `recruit`; the facts give each army's mix and what a rival's armies mostly are. Off, every prompt
+  is as before. Headless table runs take `-strategyRules "Field=value;..."` for rule settings.
+
 - **Painted Realm: the end of a game, and a first look** (#20). An end screen in every way of playing: who won
   and how, provinces per realm over the turns, wars and treaties, each ruler in its own words, and "watch the
   replay" or "new game". A first-turn help layer for rule mode, six notes at most, which opens once and stays in

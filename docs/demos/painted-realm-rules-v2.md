@@ -2093,7 +2093,8 @@ line, and `findings.md` for anything measured.
 - [x] Tests: seeds per size pass (100 per size and shape by hand, a few in every run); cell adjacency equals the graph; no corner borders; generation time
 
 **R3, armies in depth**
-- [x] Three types, costs, the counter rule (`GameRules.UnitTypes`, off; scripted only, 14 November; the model rulers' orders next)
+- [x] Three types, costs, the counter rule (`GameRules.UnitTypes`, off; scripted only, 14 November)
+- [x] The model rulers' recruit orders by type and the mix in their facts (14 November; unmeasured live, so still off)
 - [ ] Generals: names, ten traits, second trait, death and capture
 - [ ] Walls and sieges, breach, broken siege, forts hold the road
 - [ ] Supply model B, the army cap; sim A/B of B against A against none
