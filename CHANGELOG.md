@@ -765,6 +765,11 @@ phase table and the open issues, not here.
 
 ### Fixed
 
+- **GreyBoxStrategy's map generator speed test no longer fails when the machine is busy** (#20). It timed one
+  Huge try in wall time, which doubled when other Unity runs shared the CPU (two failures on 14 November, both passing
+  alone). It now takes the cheapest of three tries in this process's CPU time, under the same 3 s; a generator made
+  about three times slower still fails it.
+
 - **Painted Realm: a writs ruler's targets are the decision's own list** (#20). The court's and the marshal's
   availability followed the rules alone, so a model could name a march or fortify target the capped list left
   out and the game held it as "not offered" (61 army orders in R1c's main run). The scorecard also counted a
