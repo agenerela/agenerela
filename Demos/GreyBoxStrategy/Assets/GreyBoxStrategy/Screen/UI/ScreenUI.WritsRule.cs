@@ -77,10 +77,19 @@ namespace GreyBoxStrategy.Realm
             int used = WritsUsed(req);
             var writs = new VisualElement(); writs.AddToClassList("writs-row");
             writs.Add(new Label("WRITS") { style = { fontSize = 10, letterSpacing = 2, color = new Color(0.55f, 0.5f, 0.4f), width = 52 } });
-            for (int k = 0; k < req.Writs; k++) { var pip = new VisualElement(); pip.AddToClassList("writ-pip"); pip.EnableInClassList("on", k < used); writs.Add(pip); }
-            writs.Add(new Label($"{used} of {req.Writs}") { style = { marginLeft = 6, fontSize = 12, color = new Color(0.86f, 0.8f, 0.66f) } });
-            writs.tooltip = $"Writs a turn: {w.Rules.BaseWrits} + 1 for every {w.Rules.ProvincesPerWrit} provinces you own, at most {w.Rules.MaxWrits}. " +
-                            "The court's order takes one; each army awaiting orders takes one, the most urgent first, until one is left for the court; unused writs are lost.";
+            if (req.Writs == GameRules.UnlimitedWrits)
+            {
+                // New game's "Your writs: unlimited": no pips to count, every army awaiting orders is asked.
+                writs.Add(new Label($"no limit · {used} used") { style = { fontSize = 12, color = new Color(0.86f, 0.8f, 0.66f) } });
+                writs.tooltip = "Your writs have no limit this game (New game, Your writs: unlimited): every army awaiting orders asks you, and your court may give a second order. The rulers keep the rules' count.";
+            }
+            else
+            {
+                for (int k = 0; k < req.Writs; k++) { var pip = new VisualElement(); pip.AddToClassList("writ-pip"); pip.EnableInClassList("on", k < used); writs.Add(pip); }
+                writs.Add(new Label($"{used} of {req.Writs}") { style = { marginLeft = 6, fontSize = 12, color = new Color(0.86f, 0.8f, 0.66f) } });
+                writs.tooltip = $"Writs a turn: {w.Rules.BaseWrits} + 1 for every {w.Rules.ProvincesPerWrit} provinces you own, at most {w.Rules.MaxWrits}. " +
+                                "The court's order takes one; each army awaiting orders takes one, the most urgent first, until one is left for the court; unused writs are lost.";
+            }
             body.Add(writs);
 
             // The court: its order, then a second one if a writ is left.
@@ -96,6 +105,18 @@ namespace GreyBoxStrategy.Realm
             var withWrits = ArmiesWithWrits(req);
             var awaiting = WritLegality.Awaiting(w, You).Select(a => a.Id).ToList();
             body.Add(SectionHead("YOUR ARMIES", withWrits.Count < awaiting.Count ? $"{awaiting.Count - withWrits.Count} wait: no writ left" : "click one, then a lit province"));
+            if (withWrits.Count > 0)
+            {
+                // On a big world the army waiting may be anywhere: this finds it, as the N key does.
+                int open = withWrits.Count(a => !Plan.Armies.ContainsKey(a));
+                var next = new Button(() => NextArmyPressed?.Invoke())
+                {
+                    text = open > 0 ? $"Next army awaiting orders ({open}) · N" : "Next army · N",
+                    tooltip = "Choose the next army that has a writ and no order yet, and bring the map to it",
+                };
+                next.AddToClassList("order-move"); next.AddToClassList("next-army");
+                body.Add(next);
+            }
             foreach (var army in w.ArmiesOf(You).OrderBy(a => awaiting.IndexOf(a.Id) < 0 ? 99 : awaiting.IndexOf(a.Id)))
                 body.Add(ArmyRow(req, army, withWrits, awaiting));
             if (w.ArmiesOf(You).Count() == 0) body.Add(Text("No armies. Recruit at your capital to raise one.", "src"));
@@ -236,6 +257,9 @@ namespace GreyBoxStrategy.Realm
 
         /// <summary>What the panel shows of the plan, so the director redraws it only when it changed.</summary>
         public string WritsKey() => Plan.Court + "|" + Plan.Court2 + "|" + string.Join(",", Plan.Armies.Select(kv => kv.Key + ":" + kv.Value));
+
+        /// <summary>The council's "next army" button: the director does what the N key does.</summary>
+        public Action NextArmyPressed;
 
         /// <summary>The next of your armies that gets a writ and has no order yet (the N key), or the first again.</summary>
         public string NextArmy()

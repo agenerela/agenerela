@@ -18,6 +18,27 @@ namespace GreyBoxStrategy.Realm
     public sealed partial class ReplayDirector
     {
         private RuleSession rule;
+
+        private readonly List<ScreenUI.EdgeMark> edgeItems = new List<ScreenUI.EdgeMark>();
+
+        /// <summary>
+        /// Rule mode: markers at the map's edge for the last turn's battles and your capital, when they are off screen.
+        /// Not when watching: there the camera follows the story.
+        /// </summary>
+        private void PlaceEdgeMarks()
+        {
+            if (ui == null) return;
+            if (rule == null || shown == null) { if (ui.EdgeMarksShown > 0) ui.PlaceEdgeMarks(null); return; }
+            edgeItems.Clear();
+            int cap = ui.CapitalIndex(rule.You);
+            if (cap >= 0 && shown.Owners[cap] == rule.You)
+                edgeItems.Add(new ScreenUI.EdgeMark { Kind = "capital", Province = cap, Colour = CountryLook.Of(rule.You).Colour, Text = "Your capital, " + Wording.Province(game.ProvinceIds[cap]) });
+            int turn = played.Count > 0 ? played[played.Count - 1].Turn : -1;
+            foreach (var e in played)
+                if (e.Kind == ReplayEventKind.Battle && e.Turn == turn && e.ProvinceIndex >= 0)
+                    edgeItems.Add(new ScreenUI.EdgeMark { Kind = "battle", Province = e.ProvinceIndex, Event = e, Colour = new Color(0.86f, 0.3f, 0.22f), Text = "Battle at " + Wording.Province(game.ProvinceIds[e.ProvinceIndex]) });
+            ui.PlaceEdgeMarks(edgeItems);
+        }
         private CardLock ruleLock;
         private int builtResolved = -1;
         private string lastOrdersStatus;
@@ -163,11 +184,34 @@ namespace GreyBoxStrategy.Realm
             return ScriptedReply.Decide(pick.Action, pick.Target ?? TargetRegistry.NoTarget, StockLines[rng.Next(StockLines.Length)]);
         }
 
+        /// <summary>
+        /// New game's "Your writs: unlimited", for the next rule game on the writs turn. Static, as a generated world
+        /// reloads the scene before its rule game begins; used once.
+        /// </summary>
+        private static bool yourWritsUnlimited;
+
+        /// <summary>For the menu and the Unity CLI: the next rule game gives you unlimited writs.</summary>
+        public static bool NextRuleUnlimitedWrits { get => yourWritsUnlimited; set => yourWritsUnlimited = value; }
+
+        /// <summary>
+        /// The rules a rule game is played by: <paramref name="rules"/> as given, or a copy where <paramref name="you"/>
+        /// alone has <see cref="GameRules.UnlimitedWrits"/> (the writs turn only; the one-move game has no writs).
+        /// </summary>
+        public static GameRules WithYourWrits(GameRules rules, string you, bool unlimited)
+        {
+            if (!unlimited || rules == null || rules.Turn != TurnStyle.Writs) return rules;
+            var copy = rules.Clone();
+            copy.WritsOverride[you] = GameRules.UnlimitedWrits;
+            return copy;
+        }
+
         private void BeginRule(string country, string model, int gameSeed, Func<string, World, ILLMProvider> providerFor, RuleSession.ICardLock cardLock, string arm = null,
             MapDefinition map = null, GameRules rules = null)
         {
             if (started) return;
             started = true;
+            rules = WithYourWrits(rules, country, yourWritsUnlimited);
+            yourWritsUnlimited = false;
             string path = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "Rule", $"seed-{gameSeed:D4}-{country}-{DateTime.Now:yyyyMMdd-HHmmss}.jsonl"));
             rule = new RuleSession(country, model, arm ?? "default", gameSeed, path, providerFor, cardLock, map, rules);
             Debug.Log($"Painted Realm: rule game, you rule {country}, seed {gameSeed}, {model} x4 with personas; decisions into {path}");
@@ -308,7 +352,7 @@ namespace GreyBoxStrategy.Realm
                     RefreshSide();
                 }
                 int used = ui.WritsUsed(rule.Orders), waiting = WritLegality.Awaiting(rule.Orders.World, rule.You).Count(), withWrit = ui.ArmiesWithWrits(rule.Orders).Count;
-                ui.SetTurn(rule.Orders.Turn, $"Orders · writs {used} of {rule.Orders.Writs}");
+                ui.SetTurn(rule.Orders.Turn, rule.Orders.Writs == GameRules.UnlimitedWrits ? $"Orders · writs {used}, no limit" : $"Orders · writs {used} of {rule.Orders.Writs}");
                 string writsLine = waiting > withWrit ? $" {waiting - withWrit} of your armies wait for want of a writ: they hold." : "";
                 status = (rule.ModelsThinking ? RulersLine($"The {OtherRulers} are deciding while you choose") : $"The {OtherRulers} have decided. Your orders?") + writsLine;
                 ui.SetThinking(rule.ModelsThinking);

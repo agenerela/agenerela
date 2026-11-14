@@ -53,6 +53,15 @@ namespace Agenerela
         public bool ExampleStatements = true;
 
         /// <summary>
+        /// Whether this call's examples show their situation: each action's
+        /// <see cref="ActionDefinition.ExampleObservations"/>, rendered above its example as a real
+        /// call's observations are (#216 item 1). Off by default: it changes the examples, and is owed
+        /// an A/B run (#151). With it off, or with no example observations written, the block is
+        /// byte-identical to one built before it existed.
+        /// </summary>
+        public bool ExampleObservations;
+
+        /// <summary>
         /// Whether an example whose action has no registered target among its
         /// <see cref="ActionDefinition.PreferredExampleTargets"/> names the first offered target the
         /// action takes, rather than being left out (#190, Living Vale #20). Off by default: it changes
@@ -88,6 +97,11 @@ namespace Agenerela
         /// (<see cref="PromptOptions.MaxListedTargets"/>). A negative value is a mistake the call
         /// throws for.
         /// </summary>
+        /// <remarks>
+        /// The cut is silent: the prompt says nothing of the targets left out, which are always the
+        /// last in schema order, whatever the game would rather keep (#244 item 5).
+        /// <see cref="DecisionTelemetry.TargetsUnlisted"/> records them.
+        /// </remarks>
         public int MaxListedTargets = PromptOptions.DefaultMaxListedTargets;
 
         /// <summary>
@@ -305,6 +319,41 @@ namespace Agenerela
         /// beside it. The wording of that request is unmeasured.
         /// </remarks>
         public bool AskForRefusalLine;
+
+        /// <summary>
+        /// The sampling temperature for this call, or null, the default, for the provider's own
+        /// (<see cref="Providers.OllamaSettings.Temperature"/>, 0) (#266 item 7). Sent by Ollama as
+        /// <c>options.temperature</c>. A negative, NaN or infinite value is a mistake the call throws for.
+        /// </summary>
+        /// <remarks>
+        /// For an agent that should vary beside agents that should not, such as a storyteller at 0.8
+        /// beside rulers at 0, on one provider and so one queue (N10), rather than a second provider.
+        /// It changes the reply, so it is the caller's choice per call; every number in the build
+        /// plan's Appendix A was measured at 0. Null sends exactly the request sent before it existed.
+        /// A provider that cannot set a temperature ignores it.
+        /// </remarks>
+        public float? Temperature;
+
+        /// <summary>
+        /// The sampling seed for this call, or null, the default, for none (#266 item 7). Sent by
+        /// Ollama as <c>options.seed</c>, so a call at a temperature above 0 can be repeated. Null
+        /// sends exactly the request sent before it existed.
+        /// </summary>
+        public int? Seed;
+
+        /// <summary>
+        /// The most tokens the reply may run to, or null, the default, for no cap (#244 item 11).
+        /// Sent by Ollama as <c>options.num_predict</c>. Zero or less is a mistake the call throws for.
+        /// </summary>
+        /// <remarks>
+        /// For a reply that runs away: a storyteller call once took 20 s and came back unreadable,
+        /// holding the queue meanwhile. Nothing the model reads changes; a reply cut at the cap is
+        /// not one JSON object, so it ends as a <see cref="PipelineErrorKind.UnreadableReply"/>, as the
+        /// runaway did, only sooner. Set it generously: a decision's reply is a few dozen tokens, a
+        /// storyteller's story a hundred or two, so 400 binds only a runaway. Null sends exactly the
+        /// request sent before it existed.
+        /// </remarks>
+        public int? MaxReplyTokens;
 
         /// <summary>
         /// The caller's own object for this call, which the framework carries and never reads

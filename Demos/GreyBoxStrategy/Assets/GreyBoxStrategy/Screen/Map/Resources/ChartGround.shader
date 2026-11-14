@@ -138,10 +138,13 @@ Shader "GreyBoxStrategy/ChartGround"
                         float fu = ru / pw + shift - col, fv = rv / ph - row;
                         uint k = (h >> 16) & 3u;
                         float3 crop = k == 0 ? float3(192, 168, 92) : k == 1 ? float3(136, 146, 70) : k == 2 ? float3(150, 112, 74) : float3(170, 156, 96);
-                        c = lerp(c, crop * clamp(c.r / 140.0, 0.75, 1.15), 0.62);
-                        if (frac(fv * 5) < 0.22) c *= 0.9;
+                        // Light and dark between crops, furrows and hedges, not only hue: an owner's wash keeps the
+                        // chart's light and replaces its hue, so fields must read in light alone.
+                        float tone = k == 0 ? 1.14 : k == 1 ? 0.9 : k == 2 ? 0.78 : 1.02;
+                        c = lerp(c, crop * clamp(c.r / 140.0, 0.75, 1.15) * tone, 0.72);
+                        if (frac(fv * 5) < 0.22) c *= 0.84;
                         float edge = min(min(fu, 1 - fu) * pw, min(fv, 1 - fv) * ph);
-                        if (edge < 0.05) c = lerp(c, float3(74, 76, 40), 0.55);
+                        if (edge < 0.05) c = lerp(c, float3(58, 60, 30), 0.72);
                     }
                 }
                 return c;

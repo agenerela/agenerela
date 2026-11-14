@@ -138,6 +138,8 @@ namespace GreyBoxStrategy.Realm
             ui.DiplomacyPressed = ToggleDiplomacy;
             ui.DecisionPressed = e => { if (CanInspect(e)) ui.ShowCard(DecisionCard.From(e)); };
             ui.AddMenuButton(OpenPause);
+            ui.NextArmyPressed = NextArmyJump;
+            ui.EdgeMarkPressed = m => { PanTo(m.Province, closer: true); if (m.Event != null) ui.ShowBattle(m.Event); };
             WireStory();
             WireWrits();
             DevTools.Director = this;
@@ -375,7 +377,7 @@ namespace GreyBoxStrategy.Realm
                 if (kb.nKey.wasPressedThisFrame)
                 {
                     // Rule mode on the writs turn: N is the next army awaiting orders, as the rules page has it.
-                    if (rule != null && rule.Writs && ui.OrdersRequest != null) { string a = ui.NextArmy(); if (a != null) { var at = shown?.Army(a); if (at != null) PanTo(game.IndexOf(at.Location)); } }
+                    if (rule != null && rule.Writs && ui.OrdersRequest != null) NextArmyJump();
                     else { playing = false; stepOnce = true; ui.SetPlaying(false, speed); }
                 }
                 if (kb.equalsKey.wasPressedThisFrame || kb.numpadPlusKey.wasPressedThisFrame) { speed = speed >= 4 ? 1 : speed * 2; ui.SetPlaying(playing, speed); }
@@ -434,32 +436,56 @@ namespace GreyBoxStrategy.Realm
             ui.HostScale = HostScaleNow();
             FitChartLabels();
             ui.PlaceLabels(shown);
+            PlaceEdgeMarks();
             RedrawChartIfDue();
+            UpdateDetail();
             DevUpdate();
         }
 
-        private void PanTo(int province)
+        /// <summary><paramref name="closer"/>: on a far view of a big world, also zoom in until pieces read.</summary>
+        private void PanTo(int province, bool closer = false)
         {
             if (province < 0) return;
-            StartCoroutine(PanRoutine(map.ProvinceWorld(province)));
+            float size = cam.orthographicSize;
+            if (closer && world != null)
+            {
+                float ppc = PanelPixelsPerCell();
+                if (ppc < CloseEnough) size = Mathf.Clamp(size * ppc / CloseEnough, zoomMin, zoomMax);
+            }
+            StartCoroutine(PanRoutine(map.ProvinceWorld(province), size));
+        }
+
+        /// <summary>Panel pixels a grid cell that a jump to an army or a battle zooms in to, when the view is farther than that.</summary>
+        public const float CloseEnough = 9;
+
+        /// <summary>Rule mode, the N key and the council's button: the next army awaiting orders, the camera brought to it.</summary>
+        private void NextArmyJump()
+        {
+            string a = ui.NextArmy();
+            var at = a == null ? null : shown?.Army(a);
+            if (at != null) PanTo(game.IndexOf(at.Location), closer: true);
+            ApplyMode();
         }
 
         /// <summary>Pans so <paramref name="target"/> sits at the centre of the free map area, between the open panels.</summary>
-        private IEnumerator PanRoutine(Vector3 target)
+        private IEnumerator PanRoutine(Vector3 target, float size = -1)
         {
             yield return null; // let a panel that just opened lay out first
             float scale = Screen.height / Mathf.Max(1f, document.rootVisualElement.layout.height);
             float left = ui.FreeLeft * scale, right = (ui.InspectorOpen ? 536 : 356) * scale, top = 50 * scale, bottom = 46 * scale;
-            float upp = cam.orthographicSize * 2 / Screen.height;
+            float fromSize = cam.orthographicSize, toSize = size > 0 ? size : fromSize;
+            float upp = toSize * 2 / Screen.height;
             float cx = (left + (Screen.width - left - right) / 2) - Screen.width / 2f, cy = (bottom + (Screen.height - top - bottom) / 2) - Screen.height / 2f;
             var from = cam.transform.position; var to = new Vector3(target.x - cx * upp, target.y - cy * upp, from.z);
             for (float t = 0; t < 1; t += Time.deltaTime / 0.45f)
             {
                 float e = t < 0.5f ? 2 * t * t : 1 - Mathf.Pow(-2 * t + 2, 2) / 2;
                 cam.transform.position = Vector3.Lerp(from, to, e);
+                cam.orthographicSize = Mathf.Lerp(fromSize, toSize, e);
                 yield return null;
             }
             cam.transform.position = to;
+            cam.orthographicSize = toSize;
         }
 
         // ---- playback ----
