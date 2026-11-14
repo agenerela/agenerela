@@ -29,6 +29,12 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: the storyteller caps its replies, and dilemmas can come with the call** (#20).
+  - The storyteller's event and title calls send `MaxReplyTokens` 400 (#244 item 11), which binds only a
+    runaway; `+no-reply-cap` sends none, as before.
+  - `+call-choices` gives a dilemma's options with the call as `DecideOptions.Choices` (#293, DR-022) in place
+    of registering them as the seat's actions. It is an arm, unmeasured, until its A/B; the default is unchanged.
+
 - **Painted Realm: the end of a game, and a first look** (#20). An end screen in every way of playing: who won
   and how, provinces per realm over the turns, wars and treaties, each ruler in its own words, and "watch the
   replay" or "new game". A first-turn help layer for rule mode, six notes at most, which opens once and stays in

@@ -2143,6 +2143,8 @@ piece off the storyteller is S1's exactly (a test holds that):
 | `+history` | A "Recent happenings" line from the game's reports, and the story check against invented battles |
 | `+traits` | A terrain, a landmark and a resource for every province, in its description: terrain and coast from the map's own data (`WorldMap`, rules v2's R0), the landmark and resource from its special place and trade good when the map has them, else drawn from the seed; `rich_vein`, `flood` and `pilgrims` need one. The A/B ran before the merge, on drawn terrain |
 | `+title-call` | The statement is the story alone; a second short call (the scribe) gives the title; "told so far" names template and target only |
+| `+call-choices` | With `+choices`, a dilemma's options come with the call as `DecideOptions.Choices` (#293, DR-022) instead of being registered as the seat's actions: no `target` field, the options listed with their descriptions. It changes what the model reads, so it is an arm until its A/B |
+| `+no-reply-cap` | The storyteller's event and title calls send no `MaxReplyTokens`; by default they send 400 (`ModelSeatOptions.StorytellerReplyCap`, #244 item 11), which binds only a runaway reply and changes nothing the model reads |
 | `+preset-<name>` | `even_hand`, `underdog`, `cruel_fate`, `quiet_years`, `saga` (`StorytellerSettings.Presets`) |
 | `+s2` | Every piece but the chains, on `even_hand` |
 
@@ -2161,7 +2163,8 @@ go on in any turn. On `even_hand`, 15% of turns are a tale's and 25% a dilemma's
 game plans each option for valen and asks it, between turns, in a round of its own (`Moment.Choice`):
 the story and *"Our choice: hire_sellswords, hire them: pay 30 gold, 14 soldiers join our army;
 send_sellswords_away, send them away: nothing changes."* among its facts, the options as its only
-actions (registered on the seat with `+choices`, open only on that choice call). The answer lands at
+actions (registered on the seat with `+choices`, open only on that choice call; with `+call-choices`,
+given with the call instead). The answer lands at
 the next upkeep with the event: *"Event "The Sellswords": we chose to hire them: pay 30 gold, 14
 soldiers join our army."* A scripted seat takes the default, a random seat any option, an unanswered
 one the default. A dilemma counts as a gift when every option gains, a blow when every option costs,

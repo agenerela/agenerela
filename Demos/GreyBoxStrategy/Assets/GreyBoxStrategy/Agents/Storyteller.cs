@@ -350,6 +350,17 @@ namespace GreyBoxStrategy
 
         public string Stimulus() => $"Turn {game.NextTurn}. What happens?";
 
+        /// <summary>The title call's options (<c>+title-call</c>).</summary>
+        public DecideOptions TitleOptions() => new DecideOptions
+        {
+            StimulusLabel = "Title",
+            ListActionsAndTargets = true,
+            Priority = DecisionPriority.Background,
+            CheckTarget = false,
+            StatementRulesWording = options.RulesWording,
+            MaxReplyTokens = options.StorytellerMaxReplyTokens,
+        };
+
         public DecideOptions OptionsForCall() => new DecideOptions
         {
             StimulusLabel = "Upkeep",
@@ -360,6 +371,7 @@ namespace GreyBoxStrategy
             TargetGroundingThreshold = options.GroundingThreshold,
             StatementRulesWording = options.RulesWording,
             PairTargetsWithActions = true,
+            MaxReplyTokens = options.StorytellerMaxReplyTokens,
         };
 
         // --- Asking it ------------------------------------------------------------------------
@@ -418,14 +430,7 @@ namespace GreyBoxStrategy
             calledTitle = null;
             if (Scribe != null)
             {
-                var named = await Scribe.DecideAsync(TitleStimulus(d), new DecideOptions
-                {
-                    StimulusLabel = "Title",
-                    ListActionsAndTargets = true,
-                    Priority = DecisionPriority.Background,
-                    CheckTarget = false,
-                    StatementRulesWording = options.RulesWording,
-                }, ct);
+                var named = await Scribe.DecideAsync(TitleStimulus(d), TitleOptions(), ct);
                 record.TitleStatement = named?.Decision?.Statement ?? named?.ModelDecision?.Statement;
                 record.TitleLatencySeconds = named?.Telemetry?.LatencySeconds ?? 0;
                 calledTitle = record.TitleStatement;
