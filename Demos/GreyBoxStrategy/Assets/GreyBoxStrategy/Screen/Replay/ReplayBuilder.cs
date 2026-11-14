@@ -487,7 +487,8 @@ namespace GreyBoxStrategy.Replay
         public string Admit(CountryRequest request, Move move)
         {
             var d = DecisionFor(request);
-            return d != null && d.ExecutionStatus == "Refused" ? (d.ExecutionReason ?? "refused by the agent") : null;
+            // Agent.Execute refused it, or failed: either way the move did not land, so it does not here.
+            return d != null && (d.ExecutionStatus == "Refused" || d.ExecutionStatus == "Failed") ? (d.ExecutionReason ?? "refused by the agent") : null;
         }
 
         public void CheckAllUsed()

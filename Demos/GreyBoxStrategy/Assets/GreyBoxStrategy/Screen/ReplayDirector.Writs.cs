@@ -44,6 +44,53 @@ namespace GreyBoxStrategy.Realm
             return $"applied at the start of turn {at}: the stand-in rulers play on from there";
         }
 
+        /// <summary>
+        /// For the menu, the dev menu and the Unity CLI: a live writs game on the Classic board, here and now.
+        /// Model rulers on the RTX 5080 behind its lock (checked first: the environment, the lock, its pause
+        /// file, the server), or <paramref name="scripted"/> stand-ins through the same agents, with no server.
+        /// </summary>
+        public void TryLiveWrits(string model, int seed, string victory = GameSetup.ConquestPreset, bool scripted = false, int turns = 0) =>
+            StartCoroutine(StartLiveWrits(model, seed, victory, scripted, turns));
+
+        private IEnumerator StartLiveWrits(string model, int seed, string victory, bool scripted, int turns)
+        {
+            if (started || live == null) yield break;
+            if (!scripted)
+            {
+                string why = LiveGame.WhyNotNow();
+                if (why != null) { ui.ShowMenuStatus(why); yield break; }
+                ui.ShowMenuStatus("Asking the server...", true);
+                string serverWhy = null;
+                yield return Gateway.CheckServer(w => serverWhy = w);
+                if (serverWhy != null) { ui.ShowMenuStatus(serverWhy); yield break; }
+            }
+            started = true;
+            var setup = GameSetup.Writs(seed, GameSetup.ClassicMapId, victory);
+            var map = setup.BuildMap();
+            var rules = setup.BuildRules(map);
+            live.Configure(true, seed, turns, model);
+            live.BeginWrits(map, rules, seed, scripted);
+            if (live.Error != null) { ui.ShowMenuStatus(live.Error); started = false; yield break; }
+            ui.Players = live.Players;
+            game = live.Replay();
+            UseGame();
+            ui.HideMenu();
+            Show(game.Initial, null);
+            StartCoroutine(Play());
+        }
+
+        /// <summary>The screen's links to the game on it, after the game changed under a screen already built.</summary>
+        private void UseGame()
+        {
+            queries = new RealmQueries(game, game.Map, game.Rules);
+            ui.Queries = queries;
+            ui.WinAt = game.Rules?.ProvincesToWin ?? 15;
+            ui.Conquest = game.Rules != null && game.Rules.Victory == VictoryMode.Conquest;
+            if (ui.Conquest) ui.WinAt = game.ProvinceIds.Count;
+            ui.MaxTurns = game.Rules?.MaxTurns ?? 30;
+            WireWrits();
+        }
+
         private void WireWrits()
         {
             ui.Writs = game.Writs;

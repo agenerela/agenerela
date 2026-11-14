@@ -15,7 +15,7 @@ namespace GreyBoxStrategy.Realm
     /// (<see cref="LiveGame"/>) reads the log as it grows; tests drive it with a
     /// <c>ScriptedProvider</c>.
     /// </summary>
-    public sealed class LiveSession
+    public sealed class LiveSession : ILiveSession
     {
         private readonly TableDefinition table;
         private readonly Func<string, World, ILLMProvider> providerFor;

@@ -249,6 +249,9 @@ namespace GreyBoxStrategy.Replay
             return rec;
         }
 
+        /// <summary>One decision from a decision log's "Decided" record, with <c>turn</c> and <c>moment</c> set on it.</summary>
+        public static RecordedDecision FromLogRecord(JObject o) => ParseDecision(o);
+
         private static RecordedDecision ParseDecision(JObject o)
         {
             var decision = o["decision"] as JObject;

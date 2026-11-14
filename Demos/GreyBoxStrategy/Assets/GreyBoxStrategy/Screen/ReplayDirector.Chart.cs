@@ -40,6 +40,33 @@ namespace GreyBoxStrategy.Realm
             LeaveToMenu();
         }
 
+        /// <summary>Set before the scene reloads: the next generated world is played live, by this model ("scripted" for stand-ins through the agents).</summary>
+        private static string pendingLiveModel;
+        private static int pendingLiveTurns;
+
+        /// <summary>
+        /// For the menu, the dev menu and the Unity CLI: a generated world played live, the writs turn with model
+        /// rulers (checked first, as on the Classic board) or stand-ins through the same agents.
+        /// </summary>
+        public void StartGeneratedLive(MapSize size, int seed, string model, string victory = GameSetup.ConquestPreset, int turns = 0) =>
+            StartCoroutine(GeneratedLive(size, seed, model, victory, turns));
+
+        private IEnumerator GeneratedLive(MapSize size, int seed, string model, string victory, int turns)
+        {
+            if (model != "scripted")
+            {
+                string why = LiveGame.WhyNotNow();
+                if (why != null) { ui?.ShowMenuStatus(why); yield break; }
+                ui?.ShowMenuStatus("Asking the server...", true);
+                string serverWhy = null;
+                yield return Gateway.CheckServer(w => serverWhy = w);
+                if (serverWhy != null) { ui?.ShowMenuStatus(serverWhy); yield break; }
+            }
+            pendingLiveModel = model;
+            pendingLiveTurns = turns;
+            StartGeneratedWatch(size, LandShape.Continent, seed, 0, true, victory);
+        }
+
         /// <summary>Set before the scene reloads: the next start plays the writs turn on the Classic board with scripted rulers.</summary>
         private static GameSetup pendingClassic;
 
@@ -115,10 +142,19 @@ namespace GreyBoxStrategy.Realm
             bool gpu = ChartGpu.Supported;
             int chartWidth = ChartImage.WidthFor(Screen.width);
             loading.Set("Playing the game and drawing the chart...", 0.65f);
+            string liveModel = pendingLiveModel;
+            pendingLiveModel = null;
+            MapDefinition liveMap = null; GameRules liveRules = null;
             var preparing = System.Threading.Tasks.Task.Run(() =>
             {
                 var mapDef = world.ToDefinition();
                 var rules = setup.BuildRules(mapDef);
+                if (liveModel != null)
+                {
+                    // Played live: only the chart is made here; the game starts once the world is drawn.
+                    liveMap = mapDef; liveRules = rules;
+                    return ((Recording)null, (ReplayGame)null, ChartImage.Make(world, chartWidth, setup.Seed, gpu));
+                }
                 var rec = ScriptedWorldGame.Play(setup, mapDef, rules);
                 scripted = (setup, mapDef, rules);
                 var replay = ReplayBuilder.Build(rec, mapDef, rules);
@@ -137,6 +173,13 @@ namespace GreyBoxStrategy.Realm
             var (recording, replayed, chartImage) = preparing.Result;
             sourceRecording = recording;
             game = replayed;
+            if (liveModel != null)
+            {
+                live.Configure(true, setup.Seed, pendingLiveTurns, liveModel == "scripted" ? null : liveModel);
+                live.BeginWrits(liveMap, liveRules, setup.Seed, liveModel == "scripted");
+                if (live.Error != null) Debug.LogWarning("Painted Realm: the live game could not start: " + live.Error);
+                game = live.Replay();
+            }
             loading.Set("Laying out the chart...", 0.95f);
             yield return null;
             CountryLook.UseWorld(world);

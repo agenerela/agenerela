@@ -75,6 +75,10 @@ namespace GreyBoxStrategy.Realm
                     StartGeneratedWatch(size, LandShape.Continent, seed, 0, true, victory);
                     return $"the writs turn on a {size} world, seed {seed}";
                 });
+            c.Add("writs-live", "writs-live classic|<size> [seed] [turns] [model]", "model rulers play the writs turn live on the RTX 5080, a court and a marshal each (the lock, its pause file and the server are checked first)",
+                a => LiveWritsCommand(a, null));
+            c.Add("writs-agents", "writs-agents classic|<size> [seed] [turns]", "stand-in rulers play the writs turn through the real agents, live: the inspector has their prompts; no server, no card",
+                a => LiveWritsCommand(a, "scripted"));
             c.Add("until", "until <event kind>", "play on and hold before the next event of a kind: Battle, March, Occupy, Treaty, TermOffered...", a => { Need(a.Length == 1, "Name a kind."); RunUntil(a[0]); return "playing until " + a[0]; });
             c.Add("battle-report", "battle-report", "open the report of the last battle played", _ =>
             {
@@ -178,6 +182,18 @@ namespace GreyBoxStrategy.Realm
             return c;
         }
 
+        private string LiveWritsCommand(string[] a, string model)
+        {
+            if (a.Length < 1) return "classic, or a world size.";
+            if (started) return "A game is running: Esc, then Main menu, first.";
+            int seed = a.Length > 1 ? int.Parse(a[1]) : 3, turns = a.Length > 2 ? int.Parse(a[2]) : 0;
+            model = model ?? (a.Length > 3 ? a[3] : live?.Model ?? "qwen3.5:4b");
+            ui.HideMenu();
+            if (a[0] == "classic") { TryLiveWrits(model, seed, GameSetup.ConquestPreset, model == "scripted", turns); return $"live writs game on the Classic board, {model}, seed {seed}{(turns > 0 ? $", {turns} turns" : "")}"; }
+            StartGeneratedLive((MapSize)Enum.Parse(typeof(MapSize), a[0], true), seed, model, GameSetup.ConquestPreset, turns);
+            return $"live writs game on a {a[0]} world, {model}, seed {seed}";
+        }
+
         private static string EditUsage(string name)
         {
             switch (name)
@@ -227,7 +243,7 @@ namespace GreyBoxStrategy.Realm
             started = true;
             live.BeginScripted(seed, arm);
             ui.Players = live.Players;
-            game = ReplayBuilder.Build(live.Recording(), partial: true);
+            game = live.Replay();
             ui.HideMenu();
             Show(game.Initial, null);
             StartCoroutine(Play());

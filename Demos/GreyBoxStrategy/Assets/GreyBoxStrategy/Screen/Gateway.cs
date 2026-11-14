@@ -63,6 +63,12 @@ namespace GreyBoxStrategy.Realm
         /// <summary>Who holds the lock, as its owner line, or null when it is free.</summary>
         public static string LockHolder() => ReadLock()?.Owner;
 
+        /// <summary>
+        /// True while the card's users have paused it for a measurement: a <c>pause</c> file beside the lock.
+        /// Nothing takes the lock then, even when it is free between a measurement's blocks.
+        /// </summary>
+        public static bool Paused => File.Exists(Path.Combine(Path.GetDirectoryName(LockPath), "pause")) || Directory.Exists(Path.Combine(Path.GetDirectoryName(LockPath), "pause"));
+
         /// <summary>The lock's owner.txt: who, since when, and what they expect, or null when it is free.</summary>
         public sealed class LockNote
         {
@@ -118,6 +124,7 @@ namespace GreyBoxStrategy.Realm
         {
             if (DevFaults.FakeLockHolder != null) return false; // pretend someone holds it; touch nothing
             if (Directory.Exists(lockPath)) return false;
+            if (lockPath == LockPath && Paused) return false; // paused for a measurement: wait, never take it
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(lockPath));
