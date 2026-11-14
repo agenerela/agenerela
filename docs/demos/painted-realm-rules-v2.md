@@ -1717,7 +1717,7 @@ table is in the R2 pull request). Not built yet:
   [drawn-chart spike](../../Demos/GreyBoxStrategy/README.md#the-drawn-chart-spike-12-november) section
   says how it is drawn, what it costs and what today's rules make look wrong. Its pull request
   compares it with the painting. The paper texture was built in the second slice (13 November; see the demo README's "second slice"). Not built yet: realm names along their realm,
-  levels of detail beyond provinces and regions, and occupation hatching.
+  levels of detail beyond provinces and regions. Occupation hatching was built with the writs turn on screen (13 November, below).
 
 What the design got wrong or left open, and what was decided (_Mine_ unless the lead says otherwise):
 - **Capital spacing.** Section 2.3 asked for 4 steps on medium. With six countries on 60 provinces each
@@ -1977,7 +1977,7 @@ line, and `findings.md` for anything measured.
 - [x] Battles between armies, retreat and rout, militia and neutral garrisons
 - [x] Occupation and controller; neutral land taken by entering; freeing occupied land
 - [x] War score; `offer_white_peace`, `demand_occupied`, `cede_occupied` and their answers; broken realms
-- [ ] Occupation hatching, the treaty flow from hatch to wash with the seal, hatching lifting on return
+- [x] Occupation hatching, the treaty flow from hatch to wash with the seal, hatching lifting on return (watch and replay, #284)
 - [x] Scripted expansionist and cautious with armies; random player
 - [x] Court and marshal agents, the army in `Correlation`, both moves lines, chained decisions, memory 4 (R1b, `WritRuler`); the army statement rule waits for R1c's A/B
 - [ ] Pieces, march lines, step animation, battle card; rule mode's writs, cycle key and order queue
