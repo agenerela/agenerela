@@ -39,6 +39,10 @@ phase table and the open issues, not here.
   lose 10% a turn and fight 15% weaker; a forager eats half. The rulers read each army's stores; scripted
   armies go home to refill. The rules page records the three models considered and why B.
 
+- **Painted Realm pacing settings, measured live** (#20). On two pairs of uncapped `qwen3.5:4b` games, ownership
+  after 8 turns with the break rule made games longer (249 turns against 101): each province that passes resets
+  the stalemate counter. Both stay off; the rules v2 page lists what to try instead. Results in `findings.md`.
+
 - **Painted Realm R3, part four: sieges at forts** (#20), behind `GameRules.Sieges`, off by default. Enemy
   land with forts is besieged over 2 turns a fort (less with a siegewright or three to one, a 10% breach a turn)
   and occupied one fort fewer; the siege breaks when the besiegers leave or lose. Both sides read it.
