@@ -224,6 +224,21 @@ namespace GreyBoxStrategy
         public int SiegeOutnumber = 3;
         /// <summary>Each turn of a siege, the seeded chance that the walls are breached early.</summary>
         public double SiegeBreachChance = 0.10;
+
+        /// <summary>
+        /// R3, rules v2 3.6, model B: every army carries stores, full and refilled in our own land, eaten
+        /// elsewhere, faster in poor land; an army with none loses soldiers and fights weaker. Off by default.
+        /// </summary>
+        public bool Supply = false;
+        /// <summary>The most stores an army carries, in turns of food.</summary>
+        public int MaxStores = 4;
+        /// <summary>Stores refilled a turn in our own land.</summary>
+        public int StoresRefill = 2;
+        /// <summary>Stores eaten a turn elsewhere: plains and forest, then hills, marsh and mountains.</summary>
+        public int StoresRich = 1, StoresPoor = 2;
+        /// <summary>An army with no stores loses this share of its soldiers a turn, at least <see cref="HungerMinLoss"/>, and fights this much weaker.</summary>
+        public double HungerLoss = 0.10, HungerStrength = 0.15;
+        public int HungerMinLoss = 2;
         public double PikeStrength = 1.0;
         public double RiderStrength = 1.4;
         public double BowStrength = 0.9;

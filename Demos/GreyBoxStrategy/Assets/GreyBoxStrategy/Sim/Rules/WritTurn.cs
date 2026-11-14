@@ -152,7 +152,8 @@ namespace GreyBoxStrategy
         private CountryRequest ArmyRequest(Docket d, Army army)
         {
             var facts = new List<string> { $"{army.Id}: {army.Soldiers} soldiers" + (Rules.UnitTypes ? $" ({Units.Mix(army)})" : "")
-                + (Rules.Generals && army.General != null ? $", led by {army.General.Title}," : "") + $" at {army.Location}; " + (army.Wake.Count > 0 ? "awaiting orders: " + string.Join(", ", army.Wake) : "") + "." };
+                + (Rules.Generals && army.General != null ? $", led by {army.General.Title}," : "")
+                + (Rules.Supply ? $", stores {army.Stores} of {Rules.MaxStores}" + (Eats(World, army) > 0 ? $", eating {Eats(World, army) / 2.0:0.#} a turn here," : ",") : "") + $" at {army.Location}; " + (army.Wake.Count > 0 ? "awaiting orders: " + string.Join(", ", army.Wake) : "") + "." };
             facts.AddRange(Facts.Select(pending[d.Country], Facts.MaxTurnFacts - 1));
             return new CountryRequest(Moment.Army, World.Turn, d.Country, World,
                 WritFacts.Standing(World, d.Country), facts, WritLegality.ArmyMoves(World, d.Country, army.Id))
@@ -296,6 +297,7 @@ namespace GreyBoxStrategy
             foreach (var p in World.ProvinceList.OrderBy(p => p.Id, StringComparer.Ordinal)) Settle(p, order);
             SendHomeArmiesInPeacefulLand();
             HoldOccupations();
+            if (Rules.Supply) Supply();
 
             // 5. Broken realms, eliminations, victory.
             BreakRealms();
@@ -472,6 +474,7 @@ namespace GreyBoxStrategy
                 var army = new Army(ArmyNames.Next(World, countryId), countryId, provinceId, 0, World.Turn);
                 army.Add(type, size);
                 if (Rules.Generals) army.General = GeneralTraits.For(World, army);
+                if (Rules.Supply) army.HalfStores = 2 * Rules.MaxStores;
                 World.Armies.Add(army);
                 soldiers -= size;
                 names.Add($"new {army.Id} {size}");
@@ -715,8 +718,10 @@ namespace GreyBoxStrategy
                 defenceGeneral = GeneralTraits.Strength(r, defenceLead, false, UnitMix.Of(defenders, fixedDefence));
                 generalNote = GeneralNote(attackLead, attackGeneral, defenceLead, defenceGeneral);
             }
-            double attack = attackBase * attackGeneral * attackRoll;
-            double defence = defenceBase * defenceGeneral * defenceRoll + fortTerm + capitalTerm;
+            // With supply (rules v2 3.6), the soldiers of armies with no stores fight 15% weaker.
+            double attackHunger = r.Supply ? Hunger(r, attackers) : 1, defenceHunger = r.Supply ? Hunger(r, defenders) : 1;
+            double attack = attackBase * attackGeneral * attackHunger * attackRoll;
+            double defence = defenceBase * defenceGeneral * defenceHunger * defenceRoll + fortTerm + capitalTerm;
             var site = World.Province(where);
             var record = new BattleRecord
             {
@@ -798,6 +803,50 @@ namespace GreyBoxStrategy
                 a.Location = back;
             }
             return attackerWon;
+        }
+
+        /// <summary>A side's hunger factor: 1 less <see cref="GameRules.HungerStrength"/> times the share of its soldiers in armies with no stores.</summary>
+        public static double Hunger(GameRules r, List<Army> side)
+        {
+            int all = side.Sum(a => a.Soldiers);
+            return all == 0 ? 1 : 1 - r.HungerStrength * side.Where(a => a.HalfStores <= 0).Sum(a => a.Soldiers) / (double)all;
+        }
+
+        /// <summary>Half-stores an army eats a turn where it stands: none in our own land, else by terrain, halved for a forager.</summary>
+        public static int Eats(World w, Army a)
+        {
+            var p = w.Province(a.Location);
+            if (Supplied(p, a.Owner)) return 0;
+            var t = p.Info.Terrain;
+            int turns = t == Terrain.Plains || t == Terrain.Forest ? w.Rules.StoresRich : w.Rules.StoresPoor;
+            bool forager = w.Rules.Generals && a.General != null && a.General.Has(GeneralTraits.Forager);
+            return forager ? turns : 2 * turns;
+        }
+
+        /// <summary>Supplied land: our own province, held by us (alliances and passage are not built).</summary>
+        public static bool Supplied(Province p, string countryId) => p != null && p.Owner == countryId && p.Occupier == null;
+
+        // Every army eats or refills; one that has nothing left to eat goes hungry and loses soldiers.
+        private void Supply()
+        {
+            foreach (var a in World.Armies.OrderBy(x => x.Id, StringComparer.Ordinal).ToList())
+            {
+                var p = World.Province(a.Location);
+                if (Supplied(p, a.Owner))
+                {
+                    a.HalfStores = Math.Min(2 * Rules.MaxStores, a.HalfStores + 2 * Rules.StoresRefill);
+                    continue;
+                }
+                int eat = Eats(World, a);
+                if (a.HalfStores >= eat) { a.HalfStores -= eat; continue; }
+                a.HalfStores = 0;
+                int loss = Math.Min(a.Soldiers, Math.Max(Rules.HungerMinLoss, (int)Math.Round(a.Soldiers * Rules.HungerLoss)));
+                a.Soldiers -= loss;
+                World.Country(a.Owner).Army -= loss;
+                report.Resolution.Add($"{a.Id} has no stores at {a.Location}: {loss} lost to hunger.");
+                Tell(a.Owner, 1, $"{a.Id} is starving at {a.Location}: {loss} lost.");
+                if (a.Soldiers == 0) Disband(a, $"{a.Id} starved at {a.Location}");
+            }
         }
 
         // A side's commander: its largest army's general (the first by id on a tie); null with none.
