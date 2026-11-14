@@ -260,7 +260,8 @@ So nobody looks for them:
   prices or a strength are not fields (#190 LV #12, #266 item 2).
 - **No reasoning field.** A field before `action` measured worst of five variants.
 - **No length cap on `statement`.** A runaway reply has been seen once per 460 calls (#244
-  item 11); a cap is not built.
+  item 11). The schema holds no cap; `DecideOptions.MaxReplyTokens` (#296) cuts a reply
+  at the provider instead, and a cut reply ends as an `UnreadableReply`.
 - **Nothing about the prompt.** Which actions and targets are listed in the prompt, and how
   (`DecideOptions.ListActionsAndTargets`, `LegalTargets`), is `PromptBuilder`'s business and does
   not change the schema.
