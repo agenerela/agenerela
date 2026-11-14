@@ -71,6 +71,13 @@ While the version stays `0.x`, the public API may change in any release.
   that shows examples without their situations. `EvalArmConditions.ExampleObservations` records the
   arm's setting.
 
+- **Sampling and a reply cap per call** (#266 item 7, #244 item 11). `DecideOptions.Temperature`,
+  `Seed` and `MaxReplyTokens`, null by default, carried on the new `DecisionRequest.Temperature`,
+  `Seed` and `MaxReplyTokens` and sent by `OllamaProvider` as `options.temperature` (in place of
+  `OllamaSettings.Temperature`), `options.seed` and `options.num_predict`, the last two only when set.
+  A call that sets none sends exactly the request sent before. A refusal line is sampled as its
+  decision was. A negative or non-finite temperature, or a cap of 0 or less, throws at the call.
+
 - **A fact ledger** (#216 item 4, #266 item 5). `FactLedger`, an `IObservationSource`,
   `IReportsDroppedObservations` and `IExportsMemory`: `Set(key, line, expiresAfter)`, `Word(key,
   reader, line)` for one reader's own wording, `Remove`, `Tick()` counting expiry in the game's
