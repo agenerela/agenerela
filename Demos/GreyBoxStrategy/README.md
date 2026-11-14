@@ -553,6 +553,92 @@ world's in about 0.5 to 0.9 s, off the main thread behind the loading card.
 - The scripted rulers order armies into land they may not enter, so the chronicle shows many
   refused orders; that is the stand-ins' play, not the screen's.
 
+### Generated worlds: a sharp chart, names that never collide, the land in the panel (14 November)
+
+R4's second part on screen.
+
+**Sharp at any zoom.** Zoomed in, borders came out as staircases and occupation hatching as blocks: the
+shader read each pixel's province from the province map, 1,200 pixels wide on a 1080p screen. Now it works
+the province out itself, per screen pixel, from the world's cell grid (`_CellTex`). It uses the same noisy vote
+the CPU raster uses (`ChartRaster.IdAtCell`, ported bit for bit), so the shader and a click never disagree about
+a province.
+- **Border lines** are measured from the true border. Where the two weights are equal, the shader walks onto it
+  with up to three Newton steps, each at most a quarter of a cell. A single linear estimate frayed the gilt
+  edge into dashes. Lines are antialiased over one screen pixel, at the old widths.
+- **The hatching's** stripe edges are antialiased the same way.
+- **Only within five map pixels of a border** does the vote run. Deeper inside a province the province map
+  already knows the answer.
+- **A larger id map was not used.** At 4096 the lines would still step at the deepest zoom (about 2 screen
+  pixels a map pixel), and it would cost load time and memory. Drawing borders from the polyline geometry
+  would have needed a second, slightly different line.
+
+`MapView.GeometricBorders` switches it off, to compare.
+
+The map shader's GPU time, RTX 4060 laptop, huge world, best of 5 × 40 draws:
+
+| | province map (before) | cell grid (now) |
+|---|---|---|
+| 1080p, whole world | 0.20 ms | 0.47 ms |
+| 1080p, deepest zoom | 0.33 ms | 0.75 ms |
+| 1440p, whole world | 0.31 ms | 0.77 ms |
+| 1440p, deepest zoom | 0.59 ms | 1.25 ms |
+
+**Nothing on the map covers anything else** (`MapDeclutter`, rules v2 2.6). One pass a frame, after
+everything is placed, in a fixed order:
+1. **Pieces** stay where they stand, set apart from each other. They are now spaced by their measured
+   size, not a fixed 58 × 24 pixels, which they had outgrown.
+2. **March tags** move down, clear of what they would cover.
+3. **Realm names** come next. Pieces and tags may lie over them, as over a printed map's area names.
+4. **Capital and province names** step down by up to their own height to get clear, or hide.
+5. **Region names** hide where they would cover something.
+
+`ScreenUI.LabelReport()` counts what shows and any pair still overlapping. Seed 7, at three zooms, 1080p and
+1440p alike:
+
+| World | Far | Mid | Deep |
+|---|---|---|---|
+| Medium, turn 25 (29 pieces) | 5 capitals, 54 names, 1 to 2 hidden | 60 names, none hidden | 60 names, none hidden |
+| Huge, turn 51 (75 pieces) | 6 realms, 13 regions | 145 names, 5 to 6 hidden, 2 moved | 150 names, none hidden |
+
+Every one of the twelve views reads "overlaps: none" once the view has settled. A frame or two after a
+zoom jump, before the pieces are measured at their new size, two pieces can still touch.
+
+**Realm names**, new: widely spaced capitals along the realm's longest axis (`RealmLabels`), on its largest
+piece of joined land, never steeper than 35°. They show zoomed out, where province names step back. A realm
+of one province is named by its province.
+
+**The province panel's land**, new: terrain and coast, region, the settlement the chart draws and its
+development, population, goods, and a special place with its story. The settlement's tier is one function,
+shared with the chart (`SettlementLook.TierOf`), so the panel names what the chart draws.
+
+**Settlement tiers and farms** were already drawn by development, from population, a capital and a port: a
+hamlet up to a walled town, and a capital city. Nothing in today's rules changes development or builds
+anything during a game, so the chart cannot change with play yet. That waits for R6 (economy and buildings),
+which needs:
+- buildings per province in the rules' state;
+- a development that changes when one is built or the population grows;
+- an event in the replay when that happens, so the screen can draw the province's settlement again.
+
+**The panels** are opaque. At 98.5% a bright name still showed through the dark panel, because the screen
+blends in linear colour, where 1.5% of a bright colour is visible.
+
+**Frame time**, huge world at turn 51, 1080p, on a fresh editor (another Unity editor was open on the same
+laptop, so take these as approximate): the player loop takes 4.6 to 6.3 ms a frame paused and 6.7 to 7.1 ms
+playing at 4×, against 4.6 and 5.8 ms before. The label pass costs 0.2 ms zoomed out and 0.9 ms at the middle
+zoom.
+
+**Tests**, each seen failing once against a deliberate break:
+- `MapLabelTests`: nothing overlaps at three zooms on medium and huge worlds, with every province crowded with
+  armies; the rules of the order; a piece caught between two others; each realm named on its own land; the
+  panel's settlement is the chart's.
+
+**Not yet:**
+- **Local facts** (facts kept local on big maps, per-call target sets) are rules v2's Sim and Agents item for R4.
+  They are left to the build session; this part does only the panel's side.
+- The id map's adjacency test at 2048 and 4096 is not written. The shader no longer depends on the id map's
+  resolution for what it draws.
+- The map key at the bottom is still a little translucent.
+
 ### The writs turn on generated worlds (14 November)
 
 R4's first part on screen: a generated world in all three ways of playing, on the drawn chart.
@@ -606,7 +692,7 @@ a frame:
 - **Hard-coded counts:** "the four rulers" and "five countries" now say how many there are.
 - **Your realm's name** stays in the top bar however many realms share it.
 - **The panels** are nearly opaque (98.5%, from 93%): zoomed in on a generated world, province names showed through
-  the chronicle's text.
+  the chronicle's text. Not enough: the next part makes them opaque.
 
 **Not yet:**
 - Rule mode on a generated world plays the writs turn only.

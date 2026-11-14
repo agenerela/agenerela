@@ -439,6 +439,7 @@ namespace GreyBoxStrategy.Realm
             foreach (var b in banners) PlaceBanner(b);
             if (Queries != null) PlaceBadges();
             foreach (var m in marks) m.Place();
+            Declutter();
         }
 
         public static readonly Dictionary<string, string> Capitals = new Dictionary<string, string>

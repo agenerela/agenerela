@@ -305,7 +305,26 @@ namespace GreyBoxStrategy.Realm
                 regions.Add((l.Text, at, l.Size));
             }
             ui.PlaceRegionLabels(regions);
+
+            // Realm names: laid out again when the land changes hands, sized for the zoom, placed like the regions'.
+            var owners = shown?.Owners;
+            string key = owners == null ? "" : string.Join(",", owners);
+            if (key != realmKey) { realmKey = key; realmNames = RealmLabels.For(world, owners, CountryLook.NameOf); realmZoom = -1; }
+            if (Mathf.Abs(ppc - realmZoom) > 0.01f) { realmZoom = ppc; RealmLabels.Fit(realmNames, ppc); }
+            var realms = new List<(string, Vector2, float, float)>();
+            foreach (var r in realmNames)
+            {
+                if (!r.Visible) continue;
+                var sp = cam.WorldToScreenPoint(map.GridWorld(r.U, r.V, world.Geometry.Width, world.Geometry.Height));
+                var at = RuntimePanelUtils.ScreenToPanel(document.rootVisualElement.panel, new Vector2(sp.x, Screen.height - sp.y));
+                realms.Add((r.Text, at, r.Size, r.Angle));
+            }
+            ui.PlaceRealmLabels(realms);
         }
+
+        private List<RealmLabel> realmNames = new List<RealmLabel>();
+        private string realmKey;
+        private float realmZoom = -1;
 
         // ---- frame time, for the readouts and the Unity CLI: is a big world smooth? ----
 
