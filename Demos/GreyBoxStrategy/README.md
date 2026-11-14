@@ -57,7 +57,8 @@ language model through the framework, fighting over 25 provinces on a painted se
      - **Storyteller:** Off (the random event table, as every measured game), or one of its
        presets: Even hand, Underdog, Cruel fate, Quiet years, Saga
        ([what it shows](#the-storyteller-on-screen-13-november)).
-     - The persona mix and advisor are listed as coming.
+     - **Advisor:** on or off, for rule mode with model rulers (on by default; [the advisor in rule
+       mode](#the-advisor-in-rule-mode-14-november)). The persona mix is listed as coming.
    - **Replay:** seed 4 of the persona table, five `qwen3.5:4b` rulers. Kesh wins by domination
      on turn 17. Every line is the rulers' own. It needs no model and no server.
    - **Settings:**
@@ -265,7 +266,8 @@ changed is where it comes from.
   terrain set by hand from the painting.
 - **The settings are data.** `GameSetup` (`Sim/Rules/`) is what the menu, the runners and the tests
   share: seed, map, number of countries, victory mode and its values, the storyteller preset and the
-  advisor switch (both data only so far). Its saved form:
+  advisor switch (both were data only at first; the storyteller is played since 13 November and the
+  advisor since 14 November). Its saved form:
 
   ```json
   { "version": 1, "turn": "one_move", "seed": 4, "map": "classic", "countries": 5, "victory": "domination",

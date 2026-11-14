@@ -558,7 +558,7 @@ soft.
   to keep in the build.
 - **New game** chooses watch or rule, your country, the model and the seed. It lists what is
   coming as disabled rows with a note: the map generator, the persona mix, storyteller presets
-  and the advisor. That way the lead sees where they will go before they exist. The map generator (#274, #276) and the storyteller presets (#280) have since been built and are live rows; the demo README's "Play it" lists what is still coming.
+  and the advisor. That way the lead sees where they will go before they exist. The map generator (#274, #276) the storyteller presets (#280) and the advisor (#300) have since been built and are live rows; the demo README's "Play it" lists what is still coming.
 - **Settings** are a JSON file, `settings.json` in `Application.persistentDataPath`. JSON is
   readable, testable without Unity and never in the registry.
   - They apply at once.
