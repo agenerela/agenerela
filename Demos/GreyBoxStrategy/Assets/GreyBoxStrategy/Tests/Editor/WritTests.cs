@@ -719,6 +719,30 @@ namespace GreyBoxStrategy.Tests
         }
 
         [Test]
+        public void CallChoices_TheCourtGetsADilemmasOptionsWithTheCall_AndTheDefaultRegistersThem()
+        {
+            var settings = StorytellerSettings.EvenHand;
+            settings.ChoiceChance = 1;
+            var g = NewWrits();
+            g.EventTable = false;
+            g.Story = new StoryRules { Settings = settings, Choices = true };
+            Turn(g);
+            Turn(g);
+            g.World.Country("valen").Gold = 100;
+            g.QueueEvent(new StoryEvent("sellswords", "valen", "Sellswords came over the hills to valen's gate.", null));
+            var request = g.ChoiceRequests().Single();
+            var options = new[] { "hire_sellswords", "send_sellswords_away" };
+            bool Registers(Agenerela.Agent a) => a.Actions.Definitions.Any(d => options.Contains(d.Id));
+
+            var called = new WritRuler(g.World, "valen", new ScriptedProvider(), ModelSeatOptions.Named("default+storyteller+choices+call-choices"));
+            Assert.That(called.OptionsFor(request).Choices?.Select(c => c.Id), Is.EqualTo(options), "the options come with the call (DR-022)");
+            Assert.That(Registers(called.Court), Is.False);
+            var registered = new WritRuler(g.World, "valen", new ScriptedProvider(), ModelSeatOptions.Named("default+storyteller+choices"));
+            Assert.That(registered.OptionsFor(request).Choices, Is.Null);
+            Assert.That(Registers(registered.Court), Is.True, "the default registers them, as before");
+        }
+
+        [Test]
         public void Events_ChangeTheArmiesThroughTheSoldierCount()
         {
             var g = NewWrits();

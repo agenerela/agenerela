@@ -187,16 +187,10 @@ namespace GreyBoxStrategy.Tests
             Assert.That(call.Choices?.Select(c => c.Id), Is.EqualTo(options), "the options come with the call (DR-022)");
             Assert.That(call.Choices.Select(c => c.Description), Has.All.StartWith("Choose to "));
             Assert.That(Registers(seat.Agent), Is.False, "no option registered as an action");
-            var writs = new WritRuler(g.World, "valen", new ScriptedProvider(), ModelSeatOptions.Named("default+storyteller+choices+call-choices"));
-            Assert.That(writs.OptionsFor(request).Choices?.Select(c => c.Id), Is.EqualTo(options));
-            Assert.That(Registers(writs.Court), Is.False);
 
             var old = new CountryAgent(g.World, "valen", new ScriptedProvider(), ModelSeatOptions.Named("default+storyteller+choices"));
             Assert.That(old.OptionsFor(request).Choices, Is.Null);
             Assert.That(Registers(old.Agent), Is.True, "the default registers them, as before");
-            var oldWrits = new WritRuler(g.World, "valen", new ScriptedProvider(), ModelSeatOptions.Named("default+storyteller+choices"));
-            Assert.That(oldWrits.OptionsFor(request).Choices, Is.Null);
-            Assert.That(Registers(oldWrits.Court), Is.True);
         }
 
         [Test]
