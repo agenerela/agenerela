@@ -4269,3 +4269,19 @@ GreyBoxStrategy (#20), rules v2 3.6, model B, `GameRules.Supply`. Scripted only:
 - The first elimination moves from turn 19 to 21: early wars stall at the first long march.
 - Unmeasured live: whether a model ruler reads "stores 1 of 4" as a reason to come home. The switch stays off.
 
+### Painted Realm pacing settings, live: occupation turning into ownership makes the models' games longer, because each province that passes resets the stalemate counter (14 November 2026)
+
+GreyBoxStrategy (#20), the two settings of #305 on the models. `personas` table, five `qwen3.5:4b` seats with today's default options, RTX 5080 (Docker Ollama 0.40.14), `-strategyTurn writs -strategyCap 300` (uncapped but for R1c's 300-turn guard), Classic, conquest. Control (both off) against `-strategyRules OccupationBecomesOwnership=8;BreakWhenAllOccupied=true` (both on), on R1c's uncapped seeds 21 and 22, one game a block, interleaved (c21 t21 c22 t22, 05:36 to 06:50). Seed 23 was not run: the tech lead ended the run after the first pair answered the question. Kit and data: `.scratch/realm-build-map/pace-live/`, `python report.py`.
+
+| | turns | ending | turns with no province changing | provinces changing hands a turn | treaties | eliminations | armies waiting a ruler-turn | leader at three quarters of the land | provinces passed by occupation |
+|---|---|---|---|---|---|---|---|---|---|
+| c21, off | 107 | stalemate | 84% | 0.24 | 10 | 1 | 1.71 | never | – |
+| t21, on | 300 | unfinished (guard) | 74% | 0.30 | 32 | 2 | 2.08 | never | 54 |
+| c22, off | 95 | stalemate | 87% | 0.22 | 8 | 1 | 2.68 | never | – |
+| t22, on | 198 | stalemate | 79% | 0.26 | 10 | 2 | 2.52 | turn 160 | 22 |
+
+- **What it can show:** in both pairs the treatment game ran about twice as long or more, land moved more often, and two realms fell instead of one. The direction is the same in both, and the mechanism is plain in the records: a province passing by occupation counts as a change of land, so the 12-turn stalemate counter restarts and a stalled war that used to end in a stalemate goes on.
+- **What it cannot show:** with two games an arm, nothing about size; and with both settings on together, nothing about either alone. The realm breaks (2 a game against 1) may be either rule's.
+- **No default changes.** Both settings stay off. The rules v2 page lists what the result suggests instead: ownership that does not reset the stalemate counter, the break rule alone, or a cheaper `demand_occupied`, each for its own live pair.
+- The runner gained a deadline (no block starts that would end past 08:00, by the longest block so far plus 10%) and `-strategyRules`, which #309 brought to `test`.
+

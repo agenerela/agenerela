@@ -1217,7 +1217,7 @@ effect of 1% or more, and the counters turned the result of 6% of them.
 - Every army gets a general named for it ("Nessa" leads `nessa_host`) with one trait drawn from the seed: `bold`
   (+10% attacking, +10% own losses), `wary` (+10% defending), `horse-born` and `bowmaster` (their type +15%, with
   unit types), `swift` (a march's first step a turn shorter), `stubborn` (retreats where it would be routed),
-  `inspiring` (-20% own losses). Siegewright, forager and marshal wait for sieges, supply and army sizes.
+  `inspiring` (-20% own losses). Siegewright came with the sieges (R3 part four, only with `GameRules.Sieges` on); forager and marshal wait for supply and army sizes.
 - A side's commander is its largest army's general. Three wins bring a second trait; a losing general falls 5%
   of the time, and the army keeps its id under a new one.
 - The report names the commander whose traits moved the battle most ("…; Maren the Bold led the attack (+10%)"),
@@ -1273,6 +1273,10 @@ distance attrition). `GameRules.Supply`, off by default:
 
 Scripted they barely move the pace (77 turns off, 74 to 76 on); the stall is the model rulers', and a live run
 will tell. Numbers in [`findings.md`](../../docs/llm-wiki/findings.md), 14 November.
+
+Live, two pairs on `qwen3.5:4b` (14 November): both on made the games longer, 249 turns against 101, because
+every province that passes by occupation resets the stalemate counter. Both stay off; the rules v2 page lists
+what to try instead.
 
 ## The first real run
 
