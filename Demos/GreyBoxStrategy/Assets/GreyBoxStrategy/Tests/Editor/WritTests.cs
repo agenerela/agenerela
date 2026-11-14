@@ -617,6 +617,7 @@ namespace GreyBoxStrategy.Tests
         public void Riders_CostTwiceAPike_ToRecruitAndToKeep()
         {
             var g = NewWrits(1, Typed());
+            Turn(g); // the armies stand from the first turn
             var valen = g.World.Country("valen");
             int gps = g.World.Rules.GoldPerSoldier;
             valen.Gold = 100000;
