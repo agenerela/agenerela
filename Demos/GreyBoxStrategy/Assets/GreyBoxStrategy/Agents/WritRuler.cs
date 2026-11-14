@@ -113,7 +113,14 @@ namespace GreyBoxStrategy
 
         private void RegisterCourt()
         {
-            CourtOrder(Actions.Recruit, "Raise soldiers with gold, at our capital.", null);
+            // With unit types (R3), the three recruit orders take recruit's place: what each counters, and what counters it.
+            if (world.Rules.UnitTypes)
+            {
+                CourtOrder(Actions.RecruitPikes, "Raise pikes with gold, at our capital: pikes beat riders, and bows beat pikes.", null);
+                CourtOrder(Actions.RecruitRiders, "Raise riders with gold, at our capital, at twice a pike's cost: riders beat bows, and pikes beat riders.", null);
+                CourtOrder(Actions.RecruitBows, "Raise bows with gold, at our capital: bows beat pikes, and riders beat bows.", null);
+            }
+            else CourtOrder(Actions.Recruit, "Raise soldiers with gold, at our capital.", null);
             CourtOrder(Actions.Fortify, "Build a fort in one of our border provinces.", new[] { CountryAgent.Ours });
             CourtOrder(Actions.RaiseTaxes, "Take gold from our people, at a cost in stability.", null);
             CourtOrder(Actions.DeclareWar, "Go to war with a country our land borders.", new[] { CountryAgent.AtPeace });

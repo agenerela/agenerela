@@ -35,7 +35,8 @@ namespace GreyBoxStrategy
             };
             if (armies.Count > 0)
             {
-                var shown = armies.Take(MaxArmiesListed).Select(a => $"{a.Id} {a.Soldiers} at {a.Location}, " +
+                // With unit types (R3), each army's mix: "maren_host 50 (25 pikes, 15 riders, 10 bows) at stonereach".
+                var shown = armies.Take(MaxArmiesListed).Select(a => $"{a.Id} {a.Soldiers}" + (rules.UnitTypes ? $" ({Units.Mix(a)})" : "") + $" at {a.Location}, " +
                     (a.Marching ? $"marching to {a.Destination}" : a.Awaiting ? "awaiting orders" : "holding"));
                 lines.Add("Our armies: " + string.Join("; ", shown) + (armies.Count > MaxArmiesListed ? $"; and {armies.Count - MaxArmiesListed} more" : "") + ".");
             }
@@ -56,7 +57,9 @@ namespace GreyBoxStrategy
                 string Held(Province p) => keepAfter > 0 ? $"{p.Id} (held {p.OccupiedTurns} of {keepAfter} turns)" : p.Id;
                 string occupies = string.Join(", ", occupiedOfOurs.Where(p => p.Occupier == other.Id).Select(Held));
                 string weOccupy = string.Join(", ", world.ProvinceList.Where(p => p.Owner == other.Id && p.Occupier == countryId).Select(Held));
-                lines.Add($"{other.Id}: {relation}; {other.Army} soldiers in {Plural(theirArmies, "army", "armies")}, {Facts.Provinces(world.ProvinceCount(other.Id))}"
+                // With unit types (R3), what its armies are mostly: "orsk: at war with us; 60 soldiers in 2 armies, mostly riders, ...".
+                string mostly = rules.UnitTypes ? Units.Mostly(UnitMix.Of(world.ArmiesOf(other.Id))) : null;
+                lines.Add($"{other.Id}: {relation}; {other.Army} soldiers in {Plural(theirArmies, "army", "armies")}" + (mostly != null ? $", {mostly}" : "") + $", {Facts.Provinces(world.ProvinceCount(other.Id))}"
                           + (world.Borders(countryId, other.Id) ? "; borders us" : "")
                           + (weOccupy.Length > 0 ? $"; we occupy {weOccupy}" : "")
                           + (occupies.Length > 0 ? $"; it occupies our {occupies}" : "") + ".");
@@ -81,6 +84,9 @@ namespace GreyBoxStrategy
                 parts.Add(verb + " " + (targets.Count == 1 ? targets[0] : string.Join(", ", targets.Take(targets.Count - 1)) + " or " + targets.Last()));
             }
             Add(Actions.Recruit, "recruit");
+            Add(Actions.RecruitPikes, "recruit pikes");
+            Add(Actions.RecruitRiders, "recruit riders");
+            Add(Actions.RecruitBows, "recruit bows");
             Add(Actions.Fortify, "fortify");
             Add(Actions.RaiseTaxes, "raise taxes");
             Add(Actions.DeclareWar, "declare war on");

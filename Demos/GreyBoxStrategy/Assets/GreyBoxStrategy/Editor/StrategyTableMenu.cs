@@ -159,7 +159,24 @@ namespace GreyBoxStrategy.Editor
             int cap = int.TryParse(Arg("-strategyCap"), out int c) ? c : 40;
             setup.TurnCap = cap;
             if (setup.Victory != VictoryMode.Conquest) setup.TurnLimit = cap;
+            // -strategyRules "OccupationBecomesOwnership=8;BreakWhenAllOccupied=true": rule settings by field name.
+            if (Arg("-strategyRules") is string settings) setup.Numbers = RulesWith(settings);
             return setup;
+        }
+
+        /// <summary>Today's rules with the named fields set, from "Field=value;Field=value"; an unknown field throws.</summary>
+        public static GameRules RulesWith(string settings)
+        {
+            var rules = GameRules.Standard;
+            foreach (string part in settings.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                int eq = part.IndexOf('=');
+                if (eq <= 0) throw new ArgumentException($"-strategyRules: \"{part}\" is not Field=value.");
+                string name = part.Substring(0, eq).Trim();
+                var field = typeof(GameRules).GetField(name) ?? throw new ArgumentException($"-strategyRules: GameRules has no field {name}.");
+                field.SetValue(rules, Convert.ChangeType(part.Substring(eq + 1).Trim(), field.FieldType, System.Globalization.CultureInfo.InvariantCulture));
+            }
+            return rules;
         }
 
         // One provider per model for the whole run, so every seat and the storyteller share its queue.

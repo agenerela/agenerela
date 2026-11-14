@@ -1201,8 +1201,17 @@ default, gives the writs turn three types:
 Scripted, 100 Classic games of the `mixed` lineup with the .NET harness (`pace classic 100 rule:UnitTypes=True`):
 off, 77 turns on average (the same games as before); on, 82 turns, 158 battles a game against 147, the same
 endings (97 last standing). Soldiers were 44% pikes, 13% riders and 43% bows; 82% of battles had a counter
-effect of 1% or more, and the counters turned the result of 6% of them. The model rulers' `recruit_*` orders
-and the army line with its mix come in the next part.
+effect of 1% or more, and the counters turned the result of 6% of them.
+
+**R3, part two: what the model rulers read and order** (14 November), still only with `GameRules.UnitTypes`:
+- The court registers `recruit_pikes`, `recruit_riders` and `recruit_bows` in place of `recruit`, each saying
+  what it beats and what beats it ("Raise riders with gold, at our capital, at twice a pike's cost: riders
+  beat bows, and pikes beat riders.").
+- "Our armies" gives each army's mix ("nessa_host 30 (30 pikes) at highmoor"), a rival's line what its armies
+  mostly are ("mostly riders", or "mixed"), an army's own line its mix, and the moves line the recruit orders.
+- Off, every prompt is exactly as before. Unmeasured live: the setting stays off until a run with the models.
+- Headless table runs take rule settings, `-strategyRules "UnitTypes=true"` (`GameSetup.Numbers`, never saved
+  with a setup), for that run.
 
 **Two pacing settings, both off** (14 November; the rules v2 page's "Why Classic stalls"):
 - `GameRules.OccupationBecomesOwnership`: a province occupied that many turns in a row becomes the occupier's,

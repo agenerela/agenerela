@@ -69,6 +69,12 @@ namespace GreyBoxStrategy
         public string Storyteller = "off";
         /// <summary>The advisor (v2 slice A). Data only until it exists.</summary>
         public bool Advisor = true;
+        /// <summary>
+        /// The numbers <see cref="BuildRules"/> starts from when none are passed, in place of
+        /// <see cref="GameRules.Standard"/>: a headless run's rule settings (<c>-strategyRules</c>). Never
+        /// saved with the setup; null, the default, is today's game.
+        /// </summary>
+        [Newtonsoft.Json.JsonIgnore] public GameRules Numbers;
 
         /// <summary>Today's game: the defaults, with a seed.</summary>
         public static GameSetup Classic(int seed = 1) => new GameSetup { Seed = seed };
@@ -166,7 +172,7 @@ namespace GreyBoxStrategy
         {
             Validate();
             if (map == null) throw new ArgumentNullException(nameof(map));
-            var rules = (numbers ?? GameRules.Standard).Clone();
+            var rules = (numbers ?? Numbers ?? GameRules.Standard).Clone();
             rules.Victory = Victory;
             rules.Turn = Turn;
             if (Turn == TurnStyle.Writs)

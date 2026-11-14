@@ -29,6 +29,11 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm R3, part two: the model rulers recruit by type and read the mix** (#20), only with
+  `GameRules.UnitTypes`, still off. The court registers `recruit_pikes`, `recruit_riders` and `recruit_bows`
+  in place of `recruit`; the facts give each army's mix and what a rival's armies mostly are. Off, every prompt
+  is as before. Headless table runs take `-strategyRules "Field=value;..."` for rule settings.
+
 - **Painted Realm: the storyteller's history check is a guard** (#20). With `+history`, a story that tells
   of a fight that never happened is replaced through `GuardVerdict.ReplaceStatement` (#292) before the event
   is queued, and the event stands. `Game.HistoryVerdict` runs the event's own checks in the same order, so
