@@ -77,13 +77,14 @@ namespace GreyBoxStrategy.Realm
             // A generated world is made, played and drawn behind a loading card, off the main thread
             // where it can be, so the screen never freezes while it waits.
             if (pendingWorld != null) yield return LoadGeneratedWorld();
+            else if (pendingClassic != null) yield return LoadClassicWrits();
             StartScreen();
         }
 
         private void StartScreen()
         {
             bool isLive = live != null && live.PlayLive;
-            bool generated = world != null;
+            bool generated = world != null || prebuilt;
             if (generated) { started = true; isLive = false; }
             else if (isLive)
             {
@@ -92,7 +93,7 @@ namespace GreyBoxStrategy.Realm
                 game = ReplayBuilder.Build(live.Recording(), partial: true);
             }
             else game = ReplayBuilder.Build(Recording.Parse(recording.text));
-            if (!generated) { CountryLook.UseWorld(null); map.Build(); }
+            if (world == null) { CountryLook.UseWorld(null); map.Build(); }
             FitCamera();
 
             var panel = ScriptableObject.CreateInstance<PanelSettings>();
@@ -115,6 +116,7 @@ namespace GreyBoxStrategy.Realm
                 LinePressed = l =>
                 {
                     if (l.Event.Kind == ReplayEventKind.Story) { OpenEvent(l.Event); return; }
+                    if (l.Event.Kind == ReplayEventKind.Battle) { if (l.Event.ProvinceIndex >= 0) PanTo(l.Event.ProvinceIndex); ui.ShowBattle(l.Event); return; }
                     if (l.Event.ProvinceIndex >= 0) PanTo(l.Event.ProvinceIndex); else if (l.Country != null) PanTo(ui.CapitalIndex(l.Country));
                     if (CanInspect(l.Event)) ui.ShowCard(DecisionCard.From(l.Event));
                 },
@@ -123,6 +125,9 @@ namespace GreyBoxStrategy.Realm
             queries = new RealmQueries(game, game.Map, game.Rules);
             ui.Queries = queries;
             ui.WinAt = game.Rules?.ProvincesToWin ?? 15;
+            // Conquest (the writs game's default): the last realm standing wins, so there is no province count to reach.
+            ui.Conquest = game.Rules != null && game.Rules.Victory == VictoryMode.Conquest;
+            if (ui.Conquest) ui.WinAt = game.ProvinceIds.Count;
             ui.MaxTurns = game.Rules?.MaxTurns ?? 30;
             if (world != null) ui.ProvinceLabelSize = i => labelSizes[i];
             ui.BuildPanels();
@@ -132,6 +137,7 @@ namespace GreyBoxStrategy.Realm
             ui.DecisionPressed = e => { if (CanInspect(e)) ui.ShowCard(DecisionCard.From(e)); };
             ui.AddMenuButton(OpenPause);
             WireStory();
+            WireWrits();
             DevTools.Director = this;
             ApplyScale();
             ui.monoFont = UnityEngine.TextCore.Text.FontAsset.CreateFontAsset("Consolas", "Regular");
@@ -215,6 +221,13 @@ namespace GreyBoxStrategy.Realm
         public void SetSpeed(float s) { speed = Mathf.Clamp(s, 0.25f, 32); ui?.SetPlaying(playing, speed); }
         public void SkipToTurn(int turn) { skipUntilTurn = turn; playing = true; ui?.SetPlaying(true, speed); }
         public void Pause() { playing = false; ui?.SetPlaying(false, speed); }
+        /// <summary>For the Unity CLI and the N key: play the next event, then hold.</summary>
+        public void Step() { playing = false; stepOnce = true; ui?.SetPlaying(false, speed); }
+        /// <summary>For the Unity CLI and the frames: play on, and hold before the next event of this kind.</summary>
+        public void RunUntil(string kind) { pauseBefore = kind; playing = true; ui?.SetPlaying(true, speed); }
+        private string pauseBefore;
+        /// <summary>For the Unity CLI: the kind of the next event to play, or "" at a turn's end.</summary>
+        public string NextKind => game == null || turnIndex >= game.Turns.Count || eventIndex >= game.Turns[turnIndex].Events.Count ? "" : game.Turns[turnIndex].Events[eventIndex].Kind.ToString();
         /// <summary>The kind of the event being played, for the CLI to wait on ("Capture").</summary>
         public string Current { get; private set; } = "";
         private int skipUntilTurn;
@@ -230,6 +243,7 @@ namespace GreyBoxStrategy.Realm
         {
             shown = s;
             map.SetOwners(s.Owners, id => CountryLook.Of(id).Colour, id => CountryLook.Of(id).Slot);
+            ShowOccupiers(s);
             ui.ShowState(s, flip);
             ui.ShowFollowBar(s);
             ApplyMode();
@@ -330,6 +344,7 @@ namespace GreyBoxStrategy.Realm
             {
                 lastSize = new Vector2Int(Screen.width, Screen.height);
                 ApplyScale();
+                ChartResized();
                 string soft = GameViewWarning();
                 if (soft != null) ui.ShowNotice(soft);
             }
@@ -376,6 +391,7 @@ namespace GreyBoxStrategy.Realm
             }
             FitChartLabels();
             ui.PlaceLabels(shown);
+            RedrawChartIfDue();
             DevUpdate();
         }
 
@@ -482,7 +498,10 @@ namespace GreyBoxStrategy.Realm
                 {
                     var e = turn.Events[eventIndex];
                     if (e.Kind == ReplayEventKind.Upkeep || e.Kind == ReplayEventKind.Revolt || e.Kind == ReplayEventKind.TruceEnded) ui.SetTurn(turn.Turn, "Upkeep");
-                    else if (e.Kind == ReplayEventKind.PeaceOffered || e.Kind == ReplayEventKind.PeaceAccepted || e.Kind == ReplayEventKind.PeaceRefused) ui.SetTurn(turn.Turn, "Envoys");
+                    else if (e.Kind == ReplayEventKind.PeaceOffered || e.Kind == ReplayEventKind.PeaceAccepted || e.Kind == ReplayEventKind.PeaceRefused
+                             || e.Kind == ReplayEventKind.TermOffered || e.Kind == ReplayEventKind.TermAccepted || e.Kind == ReplayEventKind.TermRefused || e.Kind == ReplayEventKind.Treaty) ui.SetTurn(turn.Turn, "Envoys");
+                    else if (e.Kind == ReplayEventKind.ArmyOrder) ui.SetTurn(turn.Turn, "Orders");
+                    else if (e.Kind == ReplayEventKind.March) ui.SetTurn(turn.Turn, "March");
                     else ui.SetTurn(turn.Turn, "Resolve");
                     played.Add(e);
                     if (turn.Turn < skipUntilTurn)
@@ -491,6 +510,7 @@ namespace GreyBoxStrategy.Realm
                         AddLine(e, Chronicle.Line(e, CountryLook.NameOf));
                         continue;
                     }
+                    if (pauseBefore != null && e.Kind.ToString() == pauseBefore) { pauseBefore = null; playing = false; ui.SetPlaying(false, speed); }
                     yield return Gate();
                     Current = e.Kind.ToString();
                     yield return Land(e);
@@ -508,6 +528,7 @@ namespace GreyBoxStrategy.Realm
         private IEnumerator Land(ReplayEvent e)
         {
             var line = Chronicle.Line(e, CountryLook.NameOf);
+            if (WritsKind(e.Kind)) { yield return LandWrits(e, line); yield break; }
             switch (e.Kind)
             {
                 case ReplayEventKind.Upkeep:

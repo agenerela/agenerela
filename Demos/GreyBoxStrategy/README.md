@@ -146,6 +146,10 @@ unity command script eval -- --code 'return GreyBoxStrategy.Realm.DevTools.Run("
 | `event <template> <target> [Title: story]` · `events` | Fire any event template at the next upkeep: the table's, the storyteller's, a dilemma (`event sellswords kesh`), or a planned tale's beginning (`event begin_pretender kesh`). In a storyteller game it takes that turn's place, and the dev menu deals the turn the kind its event needs. `events` lists them all, read from `EventRules.AllTemplates`. The rules allow none before turn 3 |
 | `scripted-rule <country> [seed] [preset]` · `scripted-watch [seed] [preset]` | The stand-in games above, with a stand-in storyteller on a preset (`saga`, `even_hand`...) that picks legal events, leaning toward dilemmas and tales |
 | `story-open` · `story-inspect [title]` · `tales` · `choose <option>` | Open the last storyteller event, its decision (or its title call's) in the inspector, the tales panel; answer the choice card |
+| `writs classic\|<size> [seed] [conquest\|domination_75]` | Watch stand-in rulers play the writs turn, on the Classic board or a generated world: armies as pieces, occupation, treaties |
+| `until <event kind>` · `battle-report` | Play on and hold before the next event of a kind (`Battle`, `March`, `Occupy`, `Treaty`...); open the last battle's report card |
+| `spawn <country> <province> <n>` · `march <army> <province>` · `battle <army> <enemy army>` | The writs turn's armies: raise one, order one, or step one into an enemy's province so they fight when the turn resolves |
+| `occupy <province> <country>` · `free <province>` · `warscore <a> <b> =<n>` · `treaty <a> <term> <b>` | Occupation, the battles part of a war score (4 a battle, at most 20), and a treaty term landed at once. In a writs game with stand-in rulers, an edit lands at the start of the next turn and the game is played again from there |
 | `fog off\|on` | Reveal everything in rule mode, or restore what your court knows |
 | `fault lock <holder…>` · `fault lock off` | Pretend another session holds the RTX 5080. The real lock directory is never read, written or taken while this is on |
 | `fault server on\|off` | Pretend the server cannot be reached |
@@ -236,11 +240,11 @@ framework writes the moves as one line among the facts, `LegalTargets = Observat
 
 Each game log shows the model's answer and its statement under each of its moves.
 
-**Tests:** 360 EditMode tests in all, counted on 13 November. 289 are the game's, in
+**Tests:** 367 EditMode tests in all, counted on 13 November. 289 are the game's, in
 `Assets/GreyBoxStrategy/Tests/Editor/`: 285 run every time, about a minute once the project has
 imported (the map generator's take most of it), and four long ones are run by hand. Of the game's,
 twenty drive the model seat through `ScriptedProvider`, sixteen in `TableTests` the table, the
-personas and the scorecard, and fifteen in `StorytellerTests` the storyteller. 71 are the screen's,
+personas and the scorecard, and fifteen in `StorytellerTests` the storyteller. 78 are the screen's,
 in `Screen/Tests/Editor/`.
 
 ## Rules v2, being built
@@ -485,9 +489,68 @@ in the console.
 
 **Noted, not fixed:**
 - The 1366 × 768 frame shows a chart built for a 3840-wide window and scaled down: changing the Game
-  view's size does not rebuild the chart.
+  view's size did not rebuild the chart. Fixed with the writs turn on screen: the chart is drawn again
+  for the new size once it settles, if it needs at least 10% more or fewer pixels.
 - Seed 7 has one bridge. Roads cross rivers rarely on the generator's maps today.
 - The farmland test reads the scene, not the pixels; how the fields look is judged by eye.
+
+### The writs turn on screen: watch and replay (13 November)
+
+The screen's half of R1, first part: a writs game played back on the map, by stand-in rulers. Rule
+mode on the writs turn is the next part, and model rulers on the screen with it. The one-move game
+and Classic's painting stay the default.
+
+**See it:** New game → The turn: Writs and armies (with the victory preset), on Classic or a
+generated world, or the dev menu's `writs classic 3` and `writs medium 7`.
+
+**What the screen shows** (`Screen/Replay/ReplayBuilder.Writs.cs` makes the events,
+`Screen/ReplayDirector.Writs.cs` plays them, `Screen/UI/ScreenUI.Writs.cs` draws them):
+- **Every army, always, in every map mode:** a piece with its owner's crest, its soldiers and its
+  general's initial. Several in one province stand side by side, in two rows when there are many.
+  One waiting on rough ground stands on the border. Its tooltip gives its order and why it awaits
+  orders.
+- **Marches:** a dashed ink line in the owner's colour along the rest of the path, with the turns
+  left. At the turn's march every army steps at the same moment, 0.6 s a step at 1×. Two steps over
+  open ground are two slides.
+- **Battles:** crossed swords and a puff where it happens, in a province or on a border, and the
+  losers sliding back to where they fall back to. The report card (from the chronicle line, or
+  `battle-report`) is built from `TurnReport.BattleRecords`: both sides, their armies and soldiers,
+  each term of the result as a pair of bars with the dice last, the losses and retreats, and the
+  rules' own sentence on why.
+- **Occupation** as section 5.1 of the rules page draws it: the owner's wash stays, and the
+  occupier's colour goes over it as inked diagonal hatching, a pattern rather than only a colour.
+  A pennant stands on the province. The hatching is drawn in from the side the army came from, and
+  lifts from the edges inward when the land is freed.
+- **A treaty:** the ceded land's hatching thickens and flows into the new owner's wash, a wax seal
+  stamps on it, and the borders redraw. This is the colouring moment now. Returned land's hatching
+  lifts.
+- **War score** beside each war in the realm panel, the country panel and the diplomacy grid.
+- **The chronicle** has a line for each order, battle, occupation, freeing, term, answer and
+  treaty. Each army order opens its marshal's decision in the inspector (the army in its
+  correlation, `RecordedDecision.ArmyId`).
+- **Conquest** shows "last realm wins" in the standings instead of a province count.
+
+**How the replay is checked.** `ReplayBuilder` rebuilds each writs turn from the recorded orders,
+round by round as the rules ask them, then reads the turn's report in the order the rules resolve
+it. Each turn's owners and occupiers must match the game's, or it throws, as for the one-move game.
+The armies' places are counted too (`ReplayTurn.ArmyDrift`). Ten scripted games, eight Classic seeds
+and two medium worlds, about 25,000 army positions, leave none away from where the rules put them,
+and every step goes from a province to one bordering it. Armies the rules send home after a peace
+are set down, not marched.
+
+**Dev menu:** `spawn`, `march`, `battle`, `occupy`, `free`, `warscore` and `treaty`, in the table
+above. A stand-in writs game is played in full before it is shown, so an edit plays the game again
+from the start of the next turn, with the edit, and the turns before it stay as they were. The
+recording carries the edits, as a rule game's does.
+
+**What it costs:** a Classic writs game is played and rebuilt in about 0.2 s under .NET, a medium
+world's in about 0.5 to 0.9 s, off the main thread behind the loading card.
+
+**Noted, not fixed:**
+- Pieces in neighbouring provinces can overlap each other and the names when many armies gather.
+- The seal can sit under a piece standing on the same province.
+- The scripted rulers order armies into land they may not enter, so the chronicle shows many
+  refused orders; that is the stand-ins' play, not the screen's.
 
 **R1a, the writs turn and armies as pieces, headless** (12 November). Rules v2's turn, as a setting
 beside today's: `GameSetup.Writs(seed)` (or `"turn": "writs"`) plays it, conquest with no turn limit.

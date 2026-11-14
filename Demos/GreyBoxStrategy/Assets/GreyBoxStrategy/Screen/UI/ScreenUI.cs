@@ -132,6 +132,8 @@ namespace GreyBoxStrategy.Realm
 
         /// <summary>The rules' numbers the screen shows: the Classic board's 15 of 25 in 30 turns, or a generated world's.</summary>
         public int WinAt = 15, MaxTurns = 30;
+        /// <summary>Conquest: the last realm standing wins; the standings show each realm's share of all provinces.</summary>
+        public bool Conquest;
 
         public void SetTurn(int turn, string phase) { turnLabel.text = $"Turn {turn} of {MaxTurns}"; phaseLabel.text = phase; }
 
@@ -157,7 +159,7 @@ namespace GreyBoxStrategy.Realm
                 var chip = new VisualElement(); chip.AddToClassList("nation");
                 if (!c.Alive) chip.AddToClassList("out");
                 chip.tooltip = $"{look.Name} · the {Players?.GetValueOrDefault(id)?.Persona ?? "?"} · {Players?.GetValueOrDefault(id)?.Model}\n" +
-                               $"Provinces {n} of {ProvinceIds.Count} ({WinAt} wins)\nArmy {c.Army}, upkeep {c.Upkeep} a turn\nTreasury {c.Gold} gold: income {c.Income}, upkeep {c.Upkeep}, net {net:+0;-0}\n" +
+                               $"Provinces {n} of {ProvinceIds.Count} ({(Conquest ? "the last realm standing wins" : WinAt + " wins")})\nArmy {c.Army}, upkeep {c.Upkeep} a turn\nTreasury {c.Gold} gold: income {c.Income}, upkeep {c.Upkeep}, net {net:+0;-0}\n" +
                                $"Stability {c.Stability} of 5\n" + (wars.Count > 0 ? "At war with " + string.Join(", ", wars.Select(CountryLook.NameOf)) : "At war with nobody");
                 chip.RegisterCallback<ClickEvent>(_ => CountryPressed?.Invoke(id));
                 chip.Add(new Crest(look));
@@ -205,9 +207,11 @@ namespace GreyBoxStrategy.Realm
         {
             realmBody.Clear();
             var rank = CountryIds.OrderByDescending(id => s.ProvinceCount(id)).ToList();
-            Section("STANDING", $"{WinAt} wins", rank.Select(id => BarRow(id, s.ProvinceCount(id), WinAt, $"{CountryLook.NameOf(id)}: {s.ProvinceCount(id)} provinces, {Math.Max(0, WinAt - s.ProvinceCount(id))} to win")));
+            Section("STANDING", Conquest ? "last realm wins" : $"{WinAt} wins", rank.Select(id => BarRow(id, s.ProvinceCount(id), WinAt, Conquest
+                ? $"{CountryLook.NameOf(id)}: {s.ProvinceCount(id)} of {WinAt} provinces. Conquest: the last realm standing wins."
+                : $"{CountryLook.NameOf(id)}: {s.ProvinceCount(id)} provinces, {Math.Max(0, WinAt - s.ProvinceCount(id))} to win")));
             var wars = s.Relations.Where(r => r.Kind == "war").ToList();
-            Section("WARS", wars.Count.ToString(), wars.Select(r => PairRow(r.A, r.B, IconKind.War, r.Since > 0 ? $"since t{r.Since}" : "", "bad")));
+            Section("WARS", wars.Count.ToString(), wars.Select(r => PairRow(r.A, r.B, IconKind.War, Writs ? $"{s.WarScore(r.A, r.B):+0;-0;0}" : r.Since > 0 ? $"since t{r.Since}" : "", "bad")));
             var truces = s.Relations.Where(r => r.Kind == "truce").ToList();
             Section("TRUCES", truces.Count.ToString(), truces.Select(r => PairRow(r.A, r.B, IconKind.Truce, $"{r.TruceTurnsLeft} left", "warn")));
             int max = Math.Max(1, s.Countries.Values.Max(c => c.Army));

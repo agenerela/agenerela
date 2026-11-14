@@ -140,15 +140,19 @@ namespace GreyBoxStrategy.Realm
             head.RegisterCallback<ClickEvent>(_ => CountryPressed?.Invoke(me));
             head.Add(new Crest(look)); var nm = new Label(look.Name.ToUpperInvariant()); nm.AddToClassList("nation-name"); head.Add(nm);
             followBar.Add(head);
-            Segment("PROVINCES", $"{n} / {WinAt}", $"{n} of {ProvinceIds.Count} provinces; {WinAt} wins. {Math.Max(0, WinAt - n)} to go.");
-            Segment("ARMY", c.Army.ToString(), $"{c.Army} soldiers. A province of ours defends with 70% of it.");
+            Segment("PROVINCES", $"{n} / {WinAt}", Conquest ? $"{n} of {ProvinceIds.Count} provinces. Conquest: the last realm standing wins." : $"{n} of {ProvinceIds.Count} provinces; {WinAt} wins. {Math.Max(0, WinAt - n)} to go.");
+            int hostCount = s.Armies.Count(a => a.Owner == me);
+            Segment("ARMY", Writs ? $"{c.Army} · {hostCount}" : c.Army.ToString(), Writs
+                ? $"{c.Army} soldiers in {hostCount} {(hostCount == 1 ? "army" : "armies")}. A province with no army defends with its militia."
+                : $"{c.Army} soldiers. A province of ours defends with 70% of it.");
             Segment("TREASURY", $"{c.Gold}  {net:+0;-0}", $"{c.Gold} gold, {net:+0;-0} a turn. Below zero, 15% of the army deserts.");
             Segment("INCOME", $"+{c.Income}", $"10 gold for each of {n} provinces.");
             Segment("UPKEEP", $"-{c.Upkeep}", $"1 gold per 2 soldiers: {c.Army} soldiers.");
             Segment("STABILITY", $"{c.Stability} of 5", "Rises 1 a turn without a tax rise. At 1, a province may revolt.");
             var wars = CountryIds.Where(o => o != me && s.Relation(me, o)?.Kind == "war").ToList();
             var truces = CountryIds.Where(o => o != me && s.Relation(me, o)?.Kind == "truce").ToList();
-            Segment("WARS", wars.Count == 0 ? "none" : string.Join(", ", wars.Select(CountryLook.NameOf)), "Whom it is at war with.");
+            Segment("WARS", wars.Count == 0 ? "none" : string.Join(", ", wars.Select(o => Writs ? $"{CountryLook.NameOf(o)} {s.WarScore(me, o):+0;-0;0}" : CountryLook.NameOf(o))),
+                Writs ? "Whom it is at war with, and the war score from our side, -100 to +100: what we occupy of theirs against what they occupy of ours, battles won, their capital. A treaty's terms cost war score." : "Whom it is at war with.");
             Segment("TRUCES", truces.Count == 0 ? "none" : string.Join(", ", truces.Select(CountryLook.NameOf)), "Truces: no war may be declared until they end.");
             Segment("BUILDINGS", "—", "Room for province development (decision 12). Not in the game yet.").AddToClassList("later");
             Segment("TRADE", "—", "Room for trade and tribute (decision 9). Not in the game yet.").AddToClassList("later");
@@ -364,9 +368,9 @@ namespace GreyBoxStrategy.Realm
                     var (kind, since, left, border) = Queries.Between(s, a, b);
                     cell.AddToClassList(kind);
                     cell.Add(new Icon(kind == "war" ? IconKind.War : kind == "truce" ? IconKind.Truce : IconKind.Peace, 13));
-                    cell.Add(new Label(kind == "war" ? $"war · t{since}" : kind == "truce" ? $"truce · {left}" : "peace") { style = { fontSize = 10 } });
+                    cell.Add(new Label(kind == "war" ? (Writs ? $"war {s.WarScore(a, b):+0;-0;0}" : $"war · t{since}") : kind == "truce" ? $"truce · {left}" : "peace") { style = { fontSize = 10 } });
                     if (border) cell.Add(new Label("border") { style = { fontSize = 9, color = new Color(0.55f, 0.5f, 0.4f) } });
-                    cell.tooltip = $"{CountryLook.NameOf(a)} and {CountryLook.NameOf(b)}: " + (kind == "war" ? $"at war since turn {since}" : kind == "truce" ? $"truce, {left} turns left" : "at peace")
+                    cell.tooltip = $"{CountryLook.NameOf(a)} and {CountryLook.NameOf(b)}: " + (kind == "war" ? $"at war since turn {since}" + (Writs ? $", war score {s.WarScore(a, b):+0;-0;0} from {CountryLook.NameOf(a)}'s side" : "") : kind == "truce" ? $"truce, {left} turns left" : "at peace")
                                    + (border ? ". They share a border." : ". No shared border: war cannot be declared.");
                     row.Add(cell);
                 }

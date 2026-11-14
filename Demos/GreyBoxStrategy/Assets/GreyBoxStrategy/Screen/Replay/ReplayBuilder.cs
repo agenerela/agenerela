@@ -16,7 +16,7 @@ namespace GreyBoxStrategy.Replay
     /// If the rebuilt game ever drifts from the record (the rules changed since it was made),
     /// <see cref="Build"/> throws rather than show a different game with the same statements.
     /// </remarks>
-    public static class ReplayBuilder
+    public static partial class ReplayBuilder
     {
         private static readonly Regex Took = new Regex(@"^took (\w+) from (\w+|the neutrals) \((\d+) against (\d+)\)");
         private static readonly Regex Failed = new Regex(@"^attack on (\w+) failed \((\d+) against (\d+)\)");
@@ -52,6 +52,7 @@ namespace GreyBoxStrategy.Replay
                 Rules = game.Rules,
                 Dev = recording.Dev || recording.DevEdits.Count > 0,
                 Story = story,
+                Writs = game.Rules.Turn == TurnStyle.Writs,
             };
             var since = new Dictionary<string, int>(StringComparer.Ordinal);
             replay.Initial = Capture(game.World, provinceIds, since);
@@ -63,6 +64,7 @@ namespace GreyBoxStrategy.Replay
                 if (guard-- <= 0) throw new InvalidOperationException("The replay did not end within the turn limit.");
                 var turn = new ReplayTurn { Turn = game.World.Turn + 1, Start = state };
                 TurnReport tr;
+                Dictionary<string, List<string>> paths = null;
                 try
                 {
                     // The dev menu's changes for this turn land first, as they did in the game.
@@ -76,10 +78,18 @@ namespace GreyBoxStrategy.Replay
                     }
                     // The storyteller's event for this upkeep, unless the dev menu set one, and the rulers' choices.
                     if (story != null) QueueStory(game, players, next, recording.DevEdits.Any(d => d.Turn == next && DevEdits.QueuesEvent(d.Command)));
-                    var council = game.BeginTurn();
-                    if (story == null) DevEdits.AfterBeginTurn(game);
-                    var envoys = game.SubmitCouncil(council.Select(r => new CountryAnswer(r, players.Decide(r))).ToList());
-                    tr = game.Resolve(envoys.Select(r => new CountryAnswer(r, players.Decide(r))).ToList());
+                    if (replay.Writs)
+                    {
+                        tr = PlayWritsTurn(game, players, out paths);
+                        if (story == null) DevEdits.AfterBeginTurn(game);
+                    }
+                    else
+                    {
+                        var council = game.BeginTurn();
+                        if (story == null) DevEdits.AfterBeginTurn(game);
+                        var envoys = game.SubmitCouncil(council.Select(r => new CountryAnswer(r, players.Decide(r))).ToList());
+                        tr = game.Resolve(envoys.Select(r => new CountryAnswer(r, players.Decide(r))).ToList());
+                    }
                 }
                 catch (InvalidOperationException e) when (partial)
                 {
@@ -93,6 +103,11 @@ namespace GreyBoxStrategy.Replay
                 var councilState = state.Clone();
                 var snap = game.Snapshots.Last();
                 for (int i = 0; i < provinceIds.Length; i++) councilState.Owners[i] = snap.OwnerOf(provinceIds[i]);
+                if (replay.Writs)
+                {
+                    for (int i = 0; i < provinceIds.Length; i++) councilState.Occupiers[i] = snap.Occupiers.TryGetValue(provinceIds[i], out var occ) ? occ : null;
+                    councilState.Armies = snap.Armies.Select(ArmyOf).ToList();
+                }
                 var upkeepEvents = UpkeepEvents(tr, state, councilState, replay, turn.Turn);
                 if (story != null) upkeepEvents.InsertRange(0, StoryEvents(tr, state, replay, players));
                 turn.Events.AddRange(upkeepEvents);
@@ -100,14 +115,22 @@ namespace GreyBoxStrategy.Replay
                 foreach (var kv in snap.Army) if (councilState.Countries.TryGetValue(kv.Key, out var cs)) cs.Army = kv.Value;
 
                 var running = councilState.Clone();
-                foreach (var e in ResolutionEvents(tr, running, replay, players, turn.Turn))
+                var end = Capture(game.World, provinceIds, since);
+                foreach (var e in replay.Writs ? WritsEvents(tr, running, end, replay, players, turn.Turn, paths) : ResolutionEvents(tr, running, replay, players, turn.Turn))
                     turn.Events.Add(e);
 
-                var end = Capture(game.World, provinceIds, since);
                 // The resolution events moved owners and forts one by one; they must land where the game did.
                 for (int i = 0; i < provinceIds.Length; i++)
+                {
                     if (running.Owners[i] != end.Owners[i])
                         throw new InvalidOperationException($"Turn {turn.Turn}: the replay has {provinceIds[i]} held by {running.Owners[i] ?? "nobody"}, the game by {end.Owners[i] ?? "nobody"}.");
+                    if (running.Occupiers[i] != end.Occupiers[i])
+                        throw new InvalidOperationException($"Turn {turn.Turn}: the replay has {provinceIds[i]} occupied by {running.Occupiers[i] ?? "nobody"}, the game by {end.Occupiers[i] ?? "nobody"}.");
+                }
+                // The pieces: armies the events left somewhere other than the rules did (the last event then moves them there).
+                if (replay.Writs)
+                    turn.ArmyDrift = end.Armies.Count(a => running.Army(a.Id) is ArmyState r ? r.Location != a.Location : true)
+                                     + running.Armies.Count(a => end.Army(a.Id) == null);
                 // The last event carries the game's own numbers for the turn's end.
                 if (turn.Events.Count > 0) turn.Events[turn.Events.Count - 1].After = end;
                 else turn.Council = end;
@@ -327,6 +350,12 @@ namespace GreyBoxStrategy.Replay
             }
         }
 
+        private static ArmyState ArmyOf(ArmySnapshot a) => new ArmyState
+        {
+            Id = a.Id, Owner = a.Owner, Location = a.Location, Soldiers = a.Soldiers, Destination = a.Destination,
+            Path = a.Path.ToList(), StepTurnsLeft = a.StepTurnsLeft, Wake = a.Wake.ToList(),
+        };
+
         private static bool Pair(RelationState r, string a, string b) => (r.A == a && r.B == b) || (r.A == b && r.B == a);
 
         private static void SetTruce(ReplayState s, string a, string b)
@@ -364,6 +393,12 @@ namespace GreyBoxStrategy.Replay
                 Owners = provinceIds.Select(id => w.Province(id).Owner).ToArray(),
                 Forts = provinceIds.Select(id => w.Province(id).Forts).ToArray(),
                 Garrisons = provinceIds.Select(id => w.Province(id).Garrison).ToArray(),
+                Occupiers = provinceIds.Select(id => w.Province(id).Occupier).ToArray(),
+                Armies = w.Armies.Select(a => new ArmyState
+                {
+                    Id = a.Id, Owner = a.Owner, Location = a.Location, Soldiers = a.Soldiers, Destination = a.Destination,
+                    Path = a.Path.ToList(), StepTurnsLeft = a.StepTurnsLeft, Wake = a.Wake.ToList(),
+                }).ToList(),
             };
             foreach (var c in w.CountryList)
                 s.Countries[c.Id] = new CountryState
@@ -379,6 +414,7 @@ namespace GreyBoxStrategy.Replay
                     string key = ids[i] + "|" + ids[j];
                     if (rel == Relation.War)
                     {
+                        if (w.Rules.Turn == TurnStyle.Writs) s.WarScores[key] = GreyBoxStrategy.WarScore.Of(w, ids[i], ids[j]);
                         if (!since.ContainsKey(key)) since[key] = Math.Max(1, w.Turn);
                         s.Relations.Add(new RelationState { A = ids[i], B = ids[j], Kind = "war", Since = since[key] });
                     }
@@ -415,7 +451,7 @@ namespace GreyBoxStrategy.Replay
                     told[$"{d.Moment}|{d.Turn}|{(d.IsChoice ? d.AgentId : "")}"] = d;
                     continue;
                 }
-                string k = Key(d.Turn, d.AgentId, d.IsEnvoy);
+                string k = Key(d.Turn, d.Country, d.IsEnvoy);
                 if (!queues.TryGetValue(k, out var q)) queues[k] = q = new Queue<RecordedDecision>();
                 q.Enqueue(d);
             }
@@ -429,6 +465,8 @@ namespace GreyBoxStrategy.Replay
             if (!queues.TryGetValue(Key(r.Turn, r.CountryId, envoy), out var q) || q.Count == 0)
                 throw new InvalidOperationException($"The recording has no {(envoy ? "envoy" : "council")} decision for {r.CountryId} on turn {r.Turn}: it is from a different game or different rules.");
             var d = q.Dequeue();
+            if (r.Moment == Moment.Army && d.ArmyId != null && d.ArmyId != r.ArmyId)
+                throw new InvalidOperationException($"Turn {r.Turn}: the game asks {r.CountryId} for {r.ArmyId}'s orders, the recording has {d.ArmyId}'s: it is from a different game or different rules.");
             answered[r] = d;
             d.OfferedMoves = r.Legal.Select(m => m.ToString()).ToList();
             if (!envoy) council[r.Turn + "|" + r.CountryId] = d;
