@@ -238,11 +238,23 @@ namespace GreyBoxStrategy.Tests
         }
 
         [Test]
-        public void TheVoiceArms_AreNamed_AndOffByDefault()
+        public void TheVoiceArms_AreNamed_OwnLinesOnByDefault()
         {
-            Assert.That(ModelSeatOptions.Default.OneVoice || ModelSeatOptions.Default.OwnLines, Is.False);
+            Assert.That((ModelSeatOptions.Default.OwnLines, ModelSeatOptions.Default.OneVoice), Is.EqualTo((true, false)),
+                "own lines won the A/B of 13-14 November; one voice lost it");
+            Assert.That(ModelSeatOptions.Control.OwnLines, Is.False, "stage 2's control stays as it was");
+            Assert.That(ModelSeatOptions.Named("default+no-own-lines").OwnLines, Is.False);
             var both = ModelSeatOptions.Named("default+one-voice+own-lines");
             Assert.That(both.OneVoice && both.OwnLines, Is.True);
+        }
+
+        [Test]
+        public async Task TheDefaultRuler_ReadsItsOwnLines_AndNoOwnLinesDropsThem()
+        {
+            var (_, byDefault) = await PlayVoice("default");
+            Assert.That(byDefault.Any(x => x.asked.Turn > 1 && Read(x.req).Contains("Lines we said lately")), Is.True);
+            var (_, without) = await PlayVoice("default+no-own-lines");
+            Assert.That(without.Any(x => Read(x.req).Contains("Lines we said lately")), Is.False);
         }
 
         [Test]

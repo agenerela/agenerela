@@ -29,6 +29,16 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: a ruler's own last lines, the writs turn's default, and a country's own writ count** (#20).
+  - Two voice arms for the writs turn: `+one-voice` (only the first court decision of a turn speaks) and
+    `+own-lines` (a decision that speaks reads the ruler's last four lines and is asked to say something new).
+  - Measured on `qwen3.5:4b`, 15 games an arm: own lines cut word-for-word repeats from 36% to 22% with
+    legality, model time and persona unchanged, so the demo's `default` has it now (`+no-own-lines` for the
+    old one). One voice made repeats worse and halved the treaties. Results in `findings.md`, 13–14 November.
+  - `GameRules.WritsOverride` gives one country its own writs a turn, or `UnlimitedWrits`, for the person's
+    unlimited writs on screen.
+  - `model.csv` gains an `unspoken` column: a line written where none was asked.
+
 - **Painted Realm rules v2, R1c: the writs turn measured live on `qwen3.5:4b`** (#20). Tables can play the
   writs turn (`-strategyTurn writs`, with `-strategyCap`, `-strategyMap`, `-strategyMapSeed` and
   `-strategyVictory`), and a writs run writes `writs-turns.csv`. 20 writs games on Classic against 20 one-move
