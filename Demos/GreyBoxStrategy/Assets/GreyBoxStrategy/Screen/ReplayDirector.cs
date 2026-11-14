@@ -90,7 +90,7 @@ namespace GreyBoxStrategy.Realm
             {
                 started = true;
                 live.Begin();
-                game = ReplayBuilder.Build(live.Recording(), partial: true);
+                game = live.Replay();
             }
             else game = ReplayBuilder.Build(Recording.Parse(recording.text));
             if (world == null) { CountryLook.UseWorld(null); map.Build(); }
@@ -182,7 +182,7 @@ namespace GreyBoxStrategy.Realm
             live.Begin();
             if (live.Error != null) { ui.ShowMenuStatus(live.Error); started = false; yield break; }
             ui.Players = live.Players;
-            game = ReplayBuilder.Build(live.Recording(), partial: true);
+            game = live.Replay();
             ui.HideMenu();
             Show(game.Initial, null);
             StartCoroutine(Play());
@@ -443,7 +443,7 @@ namespace GreyBoxStrategy.Realm
         {
             if (rule != null) return RuleReadyTurns();
             if (live == null || !live.PlayLive) return game.Turns.Count;
-            game = ReplayBuilder.Build(live.Recording(), partial: true);
+            game = live.Replay();
             if (live.Error != null) ui.ShowNotice("The live game stopped: " + live.Error);
             if (live.Finished || game.Result != null) return game.Turns.Count;
             return Math.Max(0, game.Turns.Count - 1);

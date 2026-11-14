@@ -31,7 +31,7 @@ namespace GreyBoxStrategy.Realm
         [SerializeField] private int seed = 101;
         [SerializeField] private int stopAfterTurns;
 
-        private LiveSession session;
+        private ILiveSession session;
         private bool tookLock;
 
         public bool PlayLive => playLive;
@@ -44,6 +44,44 @@ namespace GreyBoxStrategy.Realm
         public string LogPath => session?.LogPath;
         public Dictionary<string, RecordedPlayer> Players => session?.Players ?? new Dictionary<string, RecordedPlayer>();
         public string Status => Error != null ? "error: " + Error : session?.Status ?? "not started";
+        /// <summary>The map and rules the game is played on: null for the Classic board's one-move game.</summary>
+        public MapDefinition Map { get; private set; }
+        public GameRules Rules { get; private set; }
+        /// <summary>True for the writs turn (rules v2, R1): a court and a marshal for each country.</summary>
+        public bool Writs => Rules != null && Rules.Turn == TurnStyle.Writs;
+
+        /// <summary>
+        /// Starts a live writs game: model rulers (<see cref="WritRuler"/>, a court and a marshal each) on the
+        /// RTX 5080 behind its lock, or with <paramref name="scripted"/> stand-ins through the same agents and no
+        /// server. Call only after <see cref="WhyNotNow"/> and <see cref="Gateway.CheckServer"/> said yes, unless scripted.
+        /// </summary>
+        public void BeginWrits(MapDefinition map, GameRules rules, int gameSeed, bool scripted)
+        {
+            if (session != null) return;
+            Map = map; Rules = rules; seed = gameSeed; playLive = true;
+            string folder = Path.Combine(Application.dataPath, "..", "Logs", "Live");
+            string path = Path.GetFullPath(Path.Combine(folder, $"{(scripted ? "dev-" : "")}writs-seed-{seed:D4}-{DateTime.Now:yyyyMMdd-HHmmss}.jsonl"));
+            if (scripted)
+            {
+                model = "scripted"; Dev = true;
+                var rng = new System.Random(gameSeed);
+                World world = null;
+                var stand = new ScriptedProvider { Callback = r => ReplayDirector.ScriptedRuler(r, rng, world) };
+                stand.Otherwise(ScriptedReply.Decide("none", statement: "We wait."));
+                var wrapped = DevProvider.Wrap(stand);
+                session = new LiveWritsSession(model, seed, map, rules, stopAfterTurns, path, (m, w) => { world = w; return wrapped; });
+            }
+            else
+            {
+                if (!Gateway.TakeLock("Painted Realm live writs game (GreyBoxStrategy Watch scene)", $"one live writs game, {model}, a court and a marshal each, seed {seed}", model))
+                { Error = WhyNotNow() ?? "could not take the RTX 5080 lock"; return; }
+                tookLock = true;
+                ILLMProvider provider = null;
+                session = new LiveWritsSession(model, seed, map, rules, stopAfterTurns, path, (m, w) => provider ?? (provider = Gateway.Provider(m)));
+            }
+            Debug.Log($"Painted Realm: live writs game, seed {seed}, {model}; decisions into {path}");
+            Run();
+        }
 
         /// <summary>For the start menu and the Unity CLI.</summary>
         public void Configure(bool live, int gameSeed, int turns = 0, string modelName = null, string gameArm = null)
@@ -59,7 +97,8 @@ namespace GreyBoxStrategy.Realm
             string why = Gateway.WhyNotSet();
             if (why != null) return why;
             string holder = Gateway.LockHolder();
-            return holder == null ? null : "The RTX 5080 is in use (its lock is held: " + holder + "). Try again when it is free.";
+            if (holder != null) return "The RTX 5080 is in use (its lock is held: " + holder + "). Try again when it is free.";
+            return Gateway.Paused ? "The RTX 5080 is paused for a measurement (its lock's pause file is set). Try again when it is lifted." : null;
         }
 
         /// <summary>Starts the live game: takes the lock, then plays. Call only after <see cref="WhyNotNow"/> and <see cref="Gateway.CheckServer"/> said yes.</summary>
@@ -119,6 +158,9 @@ namespace GreyBoxStrategy.Realm
 
         /// <summary>The game so far, as the screen replays it, with the storyteller's arm when it has one.</summary>
         public Recording Recording() => session?.Recording() ?? GreyBoxStrategy.Replay.Recording.FromDecisionLog(Array.Empty<string>(), seed, Players);
+
+        /// <summary>The game so far, as the screen plays it, on its own map and rules.</summary>
+        public ReplayGame Replay() => ReplayBuilder.Build(Recording(), Map, Rules, partial: true);
         public string Arm => arm;
         public void Stop() => session?.Stop();
 

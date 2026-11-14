@@ -184,6 +184,13 @@ namespace GreyBoxStrategy.Replay
                     };
                     if (d.ExecutionStatus != null) o["execution"] = new JObject { ["status"] = d.ExecutionStatus, ["reason"] = d.ExecutionReason };
                 }
+                // The game's own choice and how it landed: a live writs game's raw log record holds neither.
+                if (d.Raw != null)
+                {
+                    if (!(o["decision"] is JObject dec)) o["decision"] = dec = new JObject();
+                    dec["action"] = d.Action; dec["target"] = d.Target;
+                    if (d.ExecutionStatus != null) o["execution"] = new JObject { ["status"] = d.ExecutionStatus, ["reason"] = d.ExecutionReason };
+                }
                 o["turn"] = d.Turn;
                 o["moment"] = d.Moment;
                 if (d.ArmyId != null) o["army"] = d.ArmyId;
@@ -248,6 +255,9 @@ namespace GreyBoxStrategy.Replay
             }
             return rec;
         }
+
+        /// <summary>One decision from a decision log's "Decided" record, with <c>turn</c> and <c>moment</c> set on it.</summary>
+        public static RecordedDecision FromLogRecord(JObject o) => ParseDecision(o);
 
         private static RecordedDecision ParseDecision(JObject o)
         {

@@ -135,6 +135,18 @@ namespace GreyBoxStrategy.Screen.Tests
         }
 
         [Test]
+        public void A_country_out_of_the_game_is_at_war_with_nobody()
+        {
+            Assume.That(game.AllEvents.Any(e => e.Kind == ReplayEventKind.Eliminated || e.Kind == ReplayEventKind.Broken), "someone is knocked out");
+            foreach (var e in game.AllEvents)
+            {
+                var s = e.After;
+                foreach (var r in s.Relations.Where(r => r.Kind == "war"))
+                    Assert.That(s.Countries[r.A].Alive && s.Countries[r.B].Alive, Is.True, $"turn {e.Turn}, {e.Kind}: {r.A} and {r.B} at war, one of them out");
+            }
+        }
+
+        [Test]
         public void The_one_move_game_has_no_armies_and_no_occupation()
         {
             var classic = ReplayBuilder.Build(ScriptedWorldGame.Play(GameSetup.Classic(3), MapDefinition.Standard(), null), MapDefinition.Standard());

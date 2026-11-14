@@ -25,12 +25,20 @@ namespace GreyBoxStrategy.Realm
         private readonly Dictionary<string, (int from, int to, float t)> hostMotion = new Dictionary<string, (int, int, float)>(StringComparer.Ordinal);
         private readonly Dictionary<int, VisualElement> pennants = new Dictionary<int, VisualElement>();
         private MarchLines marchLines;
+        /// <summary>The plates and pennants, under the province names in the same layer, so a crowd of armies never hides a name.</summary>
+        private VisualElement hostLayer;
         private ReplayState hostState;
 
         /// <summary>The pieces for a state: one per army, fanned out where several stand together.</summary>
         private void ShowHosts(ReplayState s)
         {
             hostState = s;
+            if (hostLayer == null)
+            {
+                hostLayer = new VisualElement { pickingMode = PickingMode.Ignore, name = "hosts" };
+                hostLayer.style.position = Position.Absolute; hostLayer.style.left = 0; hostLayer.style.top = 0; hostLayer.style.right = 0; hostLayer.style.bottom = 0;
+                labels.Insert(0, hostLayer);
+            }
             foreach (var kv in armyPieces) kv.Value.style.display = DisplayStyle.None;
             var alive = new HashSet<string>(s.Armies.Select(a => a.Id), StringComparer.Ordinal);
             foreach (var id in hosts.Keys.Where(k => !alive.Contains(k)).ToList()) { hosts[id].RemoveFromHierarchy(); hosts.Remove(id); }
@@ -45,7 +53,7 @@ namespace GreyBoxStrategy.Realm
                     var seal = new VisualElement { pickingMode = PickingMode.Ignore }; seal.AddToClassList("host-wait"); piece.Add(seal);
                     string id = a.Id;
                     piece.RegisterCallback<ClickEvent>(_ => HostPressed?.Invoke(id));
-                    labels.Add(piece);
+                    hostLayer.Add(piece);
                     hosts[a.Id] = piece;
                 }
                 piece.style.backgroundColor = (Color)Darker(CountryLook.Of(a.Owner).Colour);
@@ -90,7 +98,7 @@ namespace GreyBoxStrategy.Realm
             int perRow = n <= 3 ? n : (n + 1) / 2;
             int row = k / perRow, col = k % perRow, inRow = Math.Min(perRow, n - row * perRow);
             float dx = (col - (inRow - 1) / 2f) * 58;
-            return p + new Vector2(dx, -20 - row * 24);
+            return p + new Vector2(dx, -24 - row * 24);
         }
 
         private int IndexOf(string province)
@@ -132,7 +140,7 @@ namespace GreyBoxStrategy.Realm
                 if (flag == null)
                 {
                     flag = new Pennant { pickingMode = PickingMode.Position };
-                    labels.Add(flag);
+                    hostLayer.Add(flag);
                     pennants[i] = flag;
                 }
                 ((Pennant)flag).Colour = CountryLook.Of(occ).Colour;

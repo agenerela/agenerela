@@ -147,6 +147,7 @@ unity command script eval -- --code 'return GreyBoxStrategy.Realm.DevTools.Run("
 | `scripted-rule <country> [seed] [preset]` · `scripted-watch [seed] [preset]` | The stand-in games above, with a stand-in storyteller on a preset (`saga`, `even_hand`...) that picks legal events, leaning toward dilemmas and tales |
 | `story-open` · `story-inspect [title]` · `tales` · `choose <option>` | Open the last storyteller event, its decision (or its title call's) in the inspector, the tales panel; answer the choice card |
 | `writs classic\|<size> [seed] [conquest\|domination_75]` | Watch stand-in rulers play the writs turn, on the Classic board or a generated world: armies as pieces, occupation, treaties |
+| `writs-live classic\|<size> [seed] [turns] [model]` · `writs-agents classic\|<size> [seed] [turns]` | The writs turn played live: model rulers on the RTX 5080 (the lock, its pause file and the server are checked first), or stand-ins through the same agents with no server |
 | `until <event kind>` · `battle-report` | Play on and hold before the next event of a kind (`Battle`, `March`, `Occupy`, `Treaty`...); open the last battle's report card |
 | `spawn <country> <province> <n>` · `march <army> <province>` · `battle <army> <enemy army>` | The writs turn's armies: raise one, order one, or step one into an enemy's province so they fight when the turn resolves |
 | `occupy <province> <country>` · `free <province>` · `warscore <a> <b> =<n>` · `treaty <a> <term> <b>` | Occupation, the battles part of a war score (4 a battle, at most 20), and a treaty term landed at once. In a writs game with stand-in rulers, an edit lands at the start of the next turn and the game is played again from there |
@@ -240,11 +241,11 @@ framework writes the moves as one line among the facts, `LegalTargets = Observat
 
 Each game log shows the model's answer and its statement under each of its moves.
 
-**Tests:** 367 EditMode tests in all, counted on 13 November. 289 are the game's, in
+**Tests:** 370 EditMode tests in all, counted on 13 November. 289 are the game's, in
 `Assets/GreyBoxStrategy/Tests/Editor/`: 285 run every time, about a minute once the project has
 imported (the map generator's take most of it), and four long ones are run by hand. Of the game's,
 twenty drive the model seat through `ScriptedProvider`, sixteen in `TableTests` the table, the
-personas and the scorecard, and fifteen in `StorytellerTests` the storyteller. 78 are the screen's,
+personas and the scorecard, and fifteen in `StorytellerTests` the storyteller. 81 are the screen's,
 in `Screen/Tests/Editor/`.
 
 ## Rules v2, being built
@@ -551,6 +552,42 @@ world's in about 0.5 to 0.9 s, off the main thread behind the loading card.
 - The seal can sit under a piece standing on the same province.
 - The scripted rulers order armies into land they may not enter, so the chronicle shows many
   refused orders; that is the stand-ins' play, not the screen's.
+
+### The writs turn on screen: model rulers, live (13 November)
+
+The second part of the screen's R1: the writs turn played live by model rulers, a court and a marshal
+for every country (`WritRuler`, R1b), each with its persona, on the RTX 5080 behind its lock. Rule mode
+on the writs turn is next.
+
+**See it:** New game → The turn: Writs and armies → Watch, on Classic or a generated world. The dev
+menu's `writs-live classic 3 [turns] [model]` does the same, and `writs-agents classic 3 [turns]` plays
+stand-in rulers through the same agents with no server, so the inspector shows real prompts without
+the card.
+
+**How a live writs game is recorded** (`Screen/LiveWritsSession.cs`). The session drives the turn
+round by round, as `WritModelRunner` does, with one ruler's decisions back to back. The rulers' agents
+decide outside any `DecisionRound`, so their decision log lines carry no chain id to read a turn from,
+and the one-move game's way of turning the log into a recording cannot see them. The session records
+every decision as the game asked it: turn, moment, country, the army a marshal's order is for, what
+was chosen, and what `Agent.Execute` made of it when it landed. It pairs each one with that agent's
+log record in order, checked by the stimulus the ruler sent, for its prompt, facts, guards and
+telemetry. A pair that does not match keeps no prompt rather than another decision's. The replay
+rebuilds the game from that recording, and the inspector opens every court and marshal decision.
+A marshal's says which army it ordered.
+
+**Two rules that changed for every live game:**
+- The replay's gate refuses a move whose `Agent.Execute` failed, as well as one it refused, since
+  both keep a move from landing in the game.
+- The RTX 5080's lock is not taken while its `pause` file is set, so a measurement's gap between
+  blocks stays its own. New game and the dev menu say so.
+
+**The first commit's fixes,** from the frames of #284:
+- A country out of the game is at war with nobody, so the wars lists and the diplomacy grid no
+  longer show wars with a realm that is gone.
+- New game's Watch button says who plays the turn chosen.
+- The storyteller row is off for the writs turn, which has none yet.
+- The province names are drawn above the army plates, which stand a little higher, so a crowd of
+  armies never hides where it is.
 
 **R1a, the writs turn and armies as pieces, headless** (12 November). Rules v2's turn, as a setting
 beside today's: `GameSetup.Writs(seed)` (or `"turn": "writs"`) plays it, conquest with no turn limit.

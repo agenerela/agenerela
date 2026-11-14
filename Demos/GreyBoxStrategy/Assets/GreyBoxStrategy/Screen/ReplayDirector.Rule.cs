@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Agenerela;
@@ -89,12 +90,35 @@ namespace GreyBoxStrategy.Realm
             if (ScriptedStory.IsChoiceCall(r)) return ScriptedStory.Choose(r, rng);
             if (r.OfferedActions.Contains(Actions.AcceptPeace))
                 return ScriptedReply.Decide(rng.NextDouble() < 0.6 ? Actions.AcceptPeace : Actions.RefusePeace, statement: "So be it.");
+            if (world != null && world.Rules.Turn == TurnStyle.Writs && r.AgentId != null) return ScriptedWrits(r, rng, world);
             var legal = world == null || r.AgentId == null ? null : Legality.CouncilMoves(world, r.AgentId).Where(m => m.Action != Actions.None).ToList();
             if (legal == null || legal.Count == 0 || rng.NextDouble() < 0.25) return ScriptedReply.Decide("none", statement: "We wait and watch.");
             // Attacks and offers of peace a little more often than the rest, so a short game has some.
             var pick = legal.FirstOrDefault(m => m.Action == Actions.OfferPeace && rng.NextDouble() < 0.5)
                        ?? legal.FirstOrDefault(m => m.Action == Actions.Attack && rng.NextDouble() < 0.5)
                        ?? legal[rng.Next(legal.Count)];
+            return ScriptedReply.Decide(pick.Action, pick.Target ?? TargetRegistry.NoTarget, StockLines[rng.Next(StockLines.Length)]);
+        }
+
+        // The writs turn's stand-in: the court picks one of its court orders, the marshal a march for the army
+        // its stimulus names ("Orders for maren_host."), both from what the rules offer now.
+        private static ScriptedReply ScriptedWrits(ScriptedRequest r, System.Random rng, World world)
+        {
+            bool marshal = r.AgentId.EndsWith(RecordedDecision.MarshalSuffix, StringComparison.Ordinal);
+            string country = marshal ? r.AgentId.Substring(0, r.AgentId.Length - RecordedDecision.MarshalSuffix.Length) : r.AgentId;
+            List<Move> moves;
+            if (marshal)
+            {
+                var m = System.Text.RegularExpressions.Regex.Match(r.Stimulus ?? "", @"^Orders for (\w+)\.");
+                moves = m.Success && world.FindArmy(m.Groups[1].Value) != null ? WritLegality.ArmyMoves(world, country, m.Groups[1].Value) : new List<Move>();
+            }
+            else moves = WritLegality.CourtMoves(world, country);
+            moves = moves.Where(x => x.Action != Actions.None).ToList();
+            if (moves.Count == 0 || rng.NextDouble() < (marshal ? 0.15 : 0.3)) return ScriptedReply.Decide("none", statement: marshal ? "Hold the line." : "We wait and watch.");
+            // Wars and treaty terms a little more often than the rest, so a short game has some.
+            var pick = moves.FirstOrDefault(x => Actions.IsTerm(x.Action) && rng.NextDouble() < 0.5)
+                       ?? moves.FirstOrDefault(x => x.Action == Actions.DeclareWar && rng.NextDouble() < 0.3)
+                       ?? moves[rng.Next(moves.Count)];
             return ScriptedReply.Decide(pick.Action, pick.Target ?? TargetRegistry.NoTarget, StockLines[rng.Next(StockLines.Length)]);
         }
 

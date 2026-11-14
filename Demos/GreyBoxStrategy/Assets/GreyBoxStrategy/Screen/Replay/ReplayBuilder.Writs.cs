@@ -226,6 +226,7 @@ namespace GreyBoxStrategy.Replay
                         if (s.Owners[i] == c) { s.Owners[i] = end.Owners[i]; s.Occupiers[i] = null; e.Ceded.Add(replay.ProvinceIds[i]); }
                     s.Armies.RemoveAll(a => a.Owner == c);
                     for (int i = 0; i < s.Occupiers.Length; i++) if (s.Occupiers[i] == c) s.Occupiers[i] = null;
+                    OutOfTheGame(s, c);
                     if (e.Ceded.Count > 0) { e.Province = e.Ceded[0]; e.ProvinceIndex = replay.IndexOf(e.Province); }
                     yield return Snap(e, s);
                 }
@@ -235,11 +236,21 @@ namespace GreyBoxStrategy.Replay
                     string c = m.Groups[1].Value;
                     s.Armies.RemoveAll(a => a.Owner == c);
                     for (int i = 0; i < s.Occupiers.Length; i++) if (s.Occupiers[i] == c) s.Occupiers[i] = null;
+                    OutOfTheGame(s, c);
+                    foreach (var k in s.WarScores.Keys.Where(k => k.StartsWith(c + "|", StringComparison.Ordinal) || k.EndsWith("|" + c, StringComparison.Ordinal)).ToList()) s.WarScores.Remove(k);
                     yield return Snap(new ReplayEvent { Turn = turn, Kind = ReplayEventKind.Eliminated, Country = c, Text = line }, s);
                 }
                 else if (StalemateLine.IsMatch(line))
                     yield return Snap(new ReplayEvent { Turn = turn, Kind = ReplayEventKind.Stalemate, Text = line }, s);
             }
+        }
+
+        // Out of the game: at war with nobody, and no longer alive.
+        private static void OutOfTheGame(ReplayState s, string c)
+        {
+            s.Relations.RemoveAll(r => r.A == c || r.B == c);
+            foreach (var k in s.WarScores.Keys.Where(k => k.StartsWith(c + "|", StringComparison.Ordinal) || k.EndsWith("|" + c, StringComparison.Ordinal)).ToList()) s.WarScores.Remove(k);
+            if (s.Countries.TryGetValue(c, out var cs)) cs.Alive = false;
         }
 
         private static ReplayEvent CourtEvent(MoveOutcome o, ReplayState s, ReplayState end, ReplayGame replay, RecordedPlayers players, int turn)

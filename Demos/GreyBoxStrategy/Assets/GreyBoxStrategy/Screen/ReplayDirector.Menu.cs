@@ -120,9 +120,10 @@ namespace GreyBoxStrategy.Realm
         {
             if (c.Writs)
             {
-                if (c.Rule) { ui.ShowMenuStatus("The writs turn is watch only for now: scripted rulers play it. Rule mode on it is the next slice."); return; }
-                if (c.Generated) StartGeneratedWatch(c.Size, c.Shape, c.Seed, 0, true, c.Victory);
-                else StartWritsWatch(c.Seed, c.Victory);
+                if (c.Rule) { ui.ShowMenuStatus("The writs turn is watch only for now: model rulers play it. Rule mode on it is the next slice."); return; }
+                // Model rulers on the RTX 5080: a court and a marshal for every country.
+                if (c.Generated) StartGeneratedLive(c.Size, c.Seed, c.Model, c.Victory);
+                else TryLiveWrits(c.Model, c.Seed, c.Victory);
                 return;
             }
             if (c.Generated)

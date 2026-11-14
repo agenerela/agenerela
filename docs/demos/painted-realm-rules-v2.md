@@ -1611,8 +1611,12 @@ rulers: the pieces, the march lines and the step animation, the battle clash and
 occupation hatching and its drawing-in, the treaty's flow from hatch to wash under a seal, hatching
 lifting from freed land, war scores, and `ReplayBuilder` rebuilding armies. The GreyBoxStrategy README's
 "The writs turn on screen" has the detail. Rule mode on the writs turn (writs in the top bar, the
-awaiting marks, the army cycle key, orders queued above End turn) is the next part, with model rulers
-on the screen.
+awaiting marks, the army cycle key, orders queued above End turn) is the next part.
+
+**The screen's half, second part: built** (13 November). Model rulers play the writs turn live on the
+screen, a court and a marshal for every country (`WritRuler`), with each decision recorded with its
+army and opening in the inspector with its prompt. The GreyBoxStrategy README's "model rulers, live"
+has the detail.
 
 **What R1a built, and what it decided** (_Mine_ unless said):
 - **The writs turn is a setting, not a replacement.** `GameRules.Turn` (`OneMove`, the default, or
