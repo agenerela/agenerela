@@ -29,6 +29,11 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm R3, part five: supply, model B** (#20), behind `GameRules.Supply`, off by default. Armies
+  carry 0 to 4 turns of stores, refilled at home and eaten abroad, twice as fast in poor land; with none they
+  lose 10% a turn and fight 15% weaker; a forager eats half. The rulers read each army's stores; scripted
+  armies go home to refill. The rules page records the three models considered and why B.
+
 - **Painted Realm pacing settings, measured live** (#20). On two pairs of uncapped `qwen3.5:4b` games, ownership
   after 8 turns with the break rule made games longer (249 turns against 101): each province that passes resets
   the stalemate counter. Both stay off; the rules v2 page lists what to try instead. Results in `findings.md`.

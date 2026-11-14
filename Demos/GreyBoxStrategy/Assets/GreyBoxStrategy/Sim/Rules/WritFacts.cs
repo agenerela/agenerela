@@ -37,7 +37,8 @@ namespace GreyBoxStrategy
             {
                 // With unit types (R3), each army's mix: "maren_host 50 (25 pikes, 15 riders, 10 bows) at stonereach".
                 var shown = armies.Take(MaxArmiesListed).Select(a => $"{a.Id} {a.Soldiers}" + (rules.UnitTypes ? $" ({Units.Mix(a)})" : "")
-                    + (rules.Generals && a.General != null ? $", led by {a.General.Title}," : "") + $" at {a.Location}, " +
+                    + (rules.Generals && a.General != null ? $", led by {a.General.Title}," : "")
+                    + (rules.Supply ? $", stores {a.Stores} of {rules.MaxStores}," : "") + $" at {a.Location}, " +
                     (a.Marching ? $"marching to {a.Destination}"
                      : rules.Sieges && world.Province(a.Location)?.SiegedBy == countryId ? Siege(world, a.Location)
                      : a.Awaiting ? "awaiting orders" : "holding"));

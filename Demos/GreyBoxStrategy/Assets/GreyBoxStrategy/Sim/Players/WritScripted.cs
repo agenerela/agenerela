@@ -136,6 +136,16 @@ namespace GreyBoxStrategy
             var rules = w.Rules;
             var paths = WritLegality.Paths(w, me, army.Location, rules.MarchRange);
 
+            // With supply (R3), an army abroad with a turn of stores or less goes home to refill, to the
+            // nearest province of ours it may march to; one that sits a siege it is about to win stays.
+            if (rules.Supply && army.Stores <= 1 && !Game.Supplied(w.Province(army.Location), me)
+                && !(w.Province(army.Location)?.SiegedBy == me && w.Province(army.Location).SiegeTurns + 1 >= Game.SiegeTurnsNeeded(rules, w.Province(army.Location), new[] { army })))
+            {
+                var home = r.Legal.Where(m => m.Action == Actions.March && Game.Supplied(w.Province(m.Target), me) && paths.ContainsKey(m.Target))
+                    .OrderBy(m => paths[m.Target].Count).ThenBy(m => m.Target, StringComparer.Ordinal).FirstOrDefault();
+                if (home != null) return home;
+            }
+
             // The value of marching on a province, or 0 when it is no target at these odds.
             double Worth(Province p)
             {

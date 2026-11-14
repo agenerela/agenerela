@@ -1066,6 +1066,116 @@ namespace GreyBoxStrategy.Tests
             Assert.That((laid > 0, won > 0), Is.EqualTo((true, true)), $"sieges laid {laid}, won {won}");
         }
 
+        // --- R3: supply, model B (rules v2 3.6), off by default ------------------------------------
+
+        private static GameRules Supplied()
+        {
+            var r = WritRules();
+            r.Supply = true;
+            return r;
+        }
+
+        // valen at war with orsk, valen's army alone in an orsk province valen already occupies: not supplied, no battle.
+        private static (Game g, Province p, Army a) Abroad(GameRules rules)
+        {
+            var g = NewWrits(1, rules);
+            Turn(g);
+            var p = g.World.ProvincesOf("orsk").Where(x => !x.IsCapital).OrderBy(x => x.Id).First();
+            War(g, "valen", "orsk");
+            p.Occupier = "valen";
+            foreach (var o in g.World.ArmiesOf("orsk").ToList()) o.Location = g.World.ProvincesOf("orsk").First(x => x.IsCapital).Id;
+            var a = ArmyOf(g, "valen");
+            a.Location = p.Id;
+            return (g, p, a);
+        }
+
+        [Test]
+        public void Supply_StoresAreFullAtHome_AndEatenAbroad_TwiceAsFastInPoorLand()
+        {
+            var g = NewWrits(1, Supplied());
+            Turn(g);
+            Assert.That(g.World.Armies.All(a => a.Stores == 4), Is.True, "raised full, kept full at home");
+            Assert.That(WritFacts.Standing(g.World, "valen").Any(l => l.StartsWith("Our armies:") && l.Contains("stores 4 of 4")), Is.True);
+            var a = ArmyOf(g, "valen");
+            var rich = g.World.ProvinceList.First(p => p.Owner != "valen" && (p.Info.Terrain == Terrain.Plains || p.Info.Terrain == Terrain.Forest));
+            var poor = g.World.ProvinceList.First(p => p.Owner != "valen" && p.Info.Terrain != Terrain.Plains && p.Info.Terrain != Terrain.Forest);
+            a.Location = rich.Id;
+            Assert.That(Game.Eats(g.World, a), Is.EqualTo(2), "a turn of stores in rich land");
+            a.Location = poor.Id;
+            Assert.That(Game.Eats(g.World, a), Is.EqualTo(4), "two in poor land");
+            g.World.Rules.Generals = true;
+            a.General = new General { Name = "Test", Traits = { GeneralTraits.Forager } };
+            Assert.That(Game.Eats(g.World, a), Is.EqualTo(2), "a forager eats half");
+            a.Location = g.World.ProvincesOf("valen").First().Id;
+            Assert.That(Game.Eats(g.World, a), Is.EqualTo(0), "nothing at home");
+
+            var (h, p2, b) = Abroad(Supplied());
+            int before = b.HalfStores;
+            Turn(h);
+            Assert.That(b.HalfStores, Is.EqualTo(before - Game.Eats(h.World, b)), "a turn abroad eats its share");
+            int abroad = b.HalfStores;
+            b.Location = h.World.ProvincesOf("valen").First().Id;
+            Turn(h);
+            Assert.That(b.HalfStores, Is.EqualTo(Math.Min(8, abroad + 4)), "home refills two a turn");
+            Assert.That(WritFacts.Standing(NewWrits(1).World, "valen").Any(l => l.Contains("stores")), Is.False, "off: no word of stores");
+        }
+
+        [Test]
+        public void Hunger_AnArmyWithNoStores_LosesATenth_AndFightsWeaker()
+        {
+            var (g, p, a) = Abroad(Supplied());
+            a.Soldiers = 50;
+            g.World.Country("valen").Army = g.World.ArmiesOf("valen").Sum(x => x.Soldiers);
+            a.HalfStores = 0;
+            var report = Turn(g);
+            Assert.That(a.Soldiers, Is.EqualTo(45), string.Join("\n", report.Resolution));
+            Assert.That(g.World.Country("valen").Army, Is.EqualTo(g.World.ArmiesOf("valen").Sum(x => x.Soldiers)), "the country's count follows");
+            Assert.That(report.Resolution.Any(l => l.Contains($"{a.Id} has no stores at {p.Id}: 5 lost to hunger")), Is.True);
+            a.Soldiers = 10;
+            g.World.Country("valen").Army = g.World.ArmiesOf("valen").Sum(x => x.Soldiers);
+            Turn(g);
+            Assert.That(a.Soldiers, Is.EqualTo(8), "at least 2");
+
+            var r = Supplied();
+            var fed = new Army("fed_host", "valen", p.Id, 50, 1) { HalfStores = 8 };
+            var hungry = new Army("hungry_host", "valen", p.Id, 50, 1) { HalfStores = 0 };
+            Assert.That(Game.Hunger(r, new List<Army> { fed }), Is.EqualTo(1));
+            Assert.That(Game.Hunger(r, new List<Army> { fed, hungry }), Is.EqualTo(1 - 0.15 / 2).Within(1e-9), "half the side hungry");
+            Assert.That(GeneralTraits.Pool(r), Does.Contain(GeneralTraits.Forager));
+            Assert.That(GeneralTraits.Pool(WritRules()), Does.Not.Contain(GeneralTraits.Forager), "only with supply");
+        }
+
+        [Test]
+        public void Supply_InScriptedGames_HungryArmiesGoHome()
+        {
+            int homeward = 0, hunger = 0, stayed = 0;
+            for (int seed = 1; seed <= 6; seed++)
+            {
+                var g = NewWrits(seed, Supplied());
+                var players = g.World.CountryList.ToDictionary(c => c.Id, c => new ScriptedPlayer(Temperament.Expansionist));
+                for (int t = 0; t < 60 && !g.IsOver; t++)
+                {
+                    var report = Turn(g, r =>
+                    {
+                        var m = players[r.CountryId].Decide(r);
+                        var army = r.Moment == Moment.Army ? r.World.FindArmy(r.ArmyId) : null;
+                        var at = army == null ? null : r.World.Province(army.Location);
+                        bool hungryAbroad = army != null && army.Stores <= 1 && !Game.Supplied(at, r.CountryId) && at.SiegedBy != r.CountryId;
+                        bool canGoHome = r.Legal.Any(x => x.Action == Actions.March && Game.Supplied(r.World.Province(x.Target), r.CountryId));
+                        if (hungryAbroad && canGoHome)
+                        {
+                            if (m.Action == Actions.March && Game.Supplied(r.World.Province(m.Target), r.CountryId)) homeward++;
+                            else stayed++;
+                        }
+                        return m;
+                    });
+                    hunger += report.Resolution.Count(l => l.Contains(" lost to hunger"));
+                    Assert.That(g.World.Armies.All(a => a.HalfStores >= 0 && a.HalfStores <= 8), Is.True);
+                }
+            }
+            Assert.That((homeward > 0, stayed), Is.EqualTo((true, 0)), $"hungry armies abroad that could go home: went {homeward}, stayed {stayed}; hunger losses {hunger}");
+        }
+
         [Test]
         public void Snapshots_HoldEveryArmyAndOccupation_AsTheCouncilSawThem()
         {

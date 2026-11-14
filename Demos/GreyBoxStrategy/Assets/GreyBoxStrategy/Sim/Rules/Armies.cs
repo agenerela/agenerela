@@ -71,6 +71,13 @@ namespace GreyBoxStrategy
             Pikes = now[0]; Riders = now[1]; Bows = now[2];
         }
 
+        /// <summary>
+        /// With <see cref="GameRules.Supply"/>: its stores in half-turns of food (a forager eats half a turn's),
+        /// 0 to twice <see cref="GameRules.MaxStores"/>. <see cref="Stores"/> is the whole turns a ruler reads.
+        /// </summary>
+        public int HalfStores { get; set; }
+        public int Stores => HalfStores / 2;
+
         /// <summary>Its general (<see cref="GameRules.Generals"/>), or null with generals off.</summary>
         public General General { get; set; }
 
@@ -312,12 +319,13 @@ namespace GreyBoxStrategy
     public static class GeneralTraits
     {
         public const string Bold = "bold", Wary = "wary", HorseBorn = "horse-born", Bowmaster = "bowmaster",
-            Swift = "swift", Stubborn = "stubborn", Inspiring = "inspiring", Siegewright = "siegewright";
-        /// <summary>The traits built so far, in the page's order; siegewright only with sieges (<see cref="Pool"/>).</summary>
+            Swift = "swift", Stubborn = "stubborn", Inspiring = "inspiring", Siegewright = "siegewright", Forager = "forager";
+        /// <summary>The traits built so far, in the page's order; siegewright only with sieges, forager only with supply (<see cref="Pool"/>).</summary>
         public static readonly string[] All = { Bold, Wary, HorseBorn, Bowmaster, Swift, Stubborn, Inspiring };
 
         /// <summary>The traits a general can be given under these rules: <see cref="All"/>, and siegewright with sieges on.</summary>
-        public static string[] Pool(GameRules r) => r.Sieges ? All.Concat(new[] { Siegewright }).ToArray() : All;
+        public static string[] Pool(GameRules r) => All.Concat(r.Sieges ? new[] { Siegewright } : new string[0])
+            .Concat(r.Supply ? new[] { Forager } : new string[0]).ToArray();
 
         public static string Epithet(string trait) => trait == HorseBorn ? "Horse-born" : char.ToUpperInvariant(trait[0]) + trait.Substring(1);
 
