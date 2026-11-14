@@ -4106,3 +4106,21 @@ Nothing like either had been measured (findings and build plan Appendix A checke
 - **A loses:** the few lines left repeat more (the one court line a turn says the same thing turn after turn), the model wrote a statement anyway on 1,259 of the 6,036 decisions asked to stay silent (21%), and treaties fell by more than half, with the peace η² halved (0.63 → 0.31). The statement seems to carry part of the diplomacy. It saves 1.7 s a turn, so asking without the field for model time alone is worth its own run with #266's `AskForStatement`, which also leaves the statement rules out of the prompt.
 - What B does not reach: 22% is still far above the one-move game's 5%; a ruler shown four lines can still return to a fifth.
 - **A defect in arm B as measured, found after the run:** the rulers' agents keep 12 observation lines, the call's own lines count first, and the sources fill the rest, so the last source lines are cut. The own-lines line pushed out "Ordered this turn" (the orders already given) and, now and then, an army's moves line. In 5 scripted 40-turn games the ordered line was missing from 780 of 1,817 later orders (43%) with own lines against 21 in the control, and the moves line from 21 of 1,625 army orders against none. The rulers measured in B therefore often did not see their earlier orders of the turn; its legality held regardless (0 illegal answers). **Fixed with the default:** with own lines on, the agents keep 13 lines, which restores exactly the control's lines (21 and 0 in the same probe); test `TheCourtAndTheMarshal_ReadLocalFacts_AndTheirOwnMovesLine` failed without the fix. The fixed default is unmeasured live until the next A/B, which carries a `default+no-own-lines` arm to confirm it.
+
+### Painted Realm pacing candidates, scripted: occupation turning into ownership and the end of the last stand leave the scripted pace where it was (14 November 2026)
+
+GreyBoxStrategy (#20), candidates 1 and 3 of the rules v2 page's "Why Classic stalls" (R1c's uncapped model games took about 190 turns, 83% of them with no province changing hands). Scripted only: the `.NET 9` harness (`pace classic 100`), 100 Classic games of the `mixed` lineup, seeds 1 to 100, writs turn, conquest, 12-turn stalemate.
+
+| | turns (mean, median, p90) | endings | treaties a game |
+|---|---|---|---|
+| both off | 77, 75, 106 | 97 last standing, 3 stalemate | 7.6 |
+| ownership after 8 turns | 75, 71, 104 | 94, 6 | 7.2 |
+| ownership after 5 turns | 75, 71, 99 | 98, 1, 1 unfinished | 6.6 |
+| break when all occupied | 76, 75, 103 | 97, 3 | 6.2 |
+| ownership after 8, and break | 75, 73, 104 | 94, 6 | 6.0 |
+| ownership after 5, and break | 74, 74, 99 | 97, 3 | 5.4 |
+
+- **No candidate changes the scripted pace** by more than 3 turns: scripted rulers push a war to elimination, so they never stall the way the models do.
+- With the scripts made as peaceable as the models (white peace offered at a war score of 30 or less and accepted at 10 or less, wars settled after 8 turns), every game ended in a 12-turn stalemate after 29 turns; the candidates changed almost nothing (only ownership after 5 turns with the break moved the first elimination, from turn 19 to 27): peace comes before an occupation is old enough.
+- What it means: the scripted series cannot choose between the candidates. The stall is the models' (white peace offered 806 times in five uncapped games), so the choice needs a live run with the settings on.
+

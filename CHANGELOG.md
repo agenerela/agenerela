@@ -29,6 +29,11 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: two pacing settings for the writs turn, both off** (#20).
+  `GameRules.OccupationBecomesOwnership` makes a province held N turns the occupier's, and
+  `GameRules.BreakWhenAllOccupied` breaks a fully occupied realm with armies left. Scripted they leave the pace
+  as it was; the models' stall waits for a live run. Numbers in `findings.md`, 14 November.
+
 - **Painted Realm: a ruler's own last lines, the writs turn's default, and a country's own writ count** (#20).
   - Two voice arms for the writs turn: `+one-voice` (only the first court decision of a turn speaks) and
     `+own-lines` (a decision that speaks reads the ruler's last four lines and is asked to say something new).
