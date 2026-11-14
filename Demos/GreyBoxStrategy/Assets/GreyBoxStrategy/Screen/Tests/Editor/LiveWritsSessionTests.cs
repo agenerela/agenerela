@@ -83,6 +83,11 @@ namespace GreyBoxStrategy.Screen.Tests
             Assert.That(court.Count, Is.GreaterThan(5));
             Assert.That(court.All(e => !string.IsNullOrEmpty(e.Decision.Observations)), Is.True, "every court decision keeps its prompt");
             Assert.That(s.Players.Values.All(p => p.Persona != null), Is.True, "each ruler has its persona");
+
+            // Saved and loaded, as the dev menu's save-recording writes it: the same game.
+            var saved = ReplayBuilder.Build(Replay.Recording.Parse(s.Recording().ToJson()), map, rules, partial: true);
+            Assert.That(saved.Turns.Count, Is.EqualTo(8), "a saved live writs game replays");
+            Assert.That(saved.Turns.Last().End.Owners, Is.EqualTo(g.Turns.Last().End.Owners));
         }
 
         [Test]
