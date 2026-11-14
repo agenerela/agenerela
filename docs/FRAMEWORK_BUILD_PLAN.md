@@ -2480,6 +2480,144 @@ from `input.Options.Choices`. The prompt a choice call sends is new and unmeasur
 **Revisit if:** a choice needs a target or a quantity (that is #266 item 2's typed parameters), a
 game wants choices and its ordinary actions in one enum, or a chosen option should run code.
 
+### DR-023 — Typed parameters beside action and target: declared on the action, written before the statement, sent only in the paired schema
+
+**Status:** Proposed, 14 November 2026 (#266 item 2, its second box), by the #266 framework-gaps
+session. Nothing is built. The lead decides the questions below; the verdicts in the table are the
+proposal, not decisions.
+
+**The lead's questions** (each has a recommendation in the table further down):
+
+1. **Build it now, or keep the "a parameter is a target" idiom** (Living Vale's bundled ids,
+   `stock_mara_potion_one`, and the storyteller's `windfall_major`; design review F9, 7 October)
+   until a game shows the idiom failing? *Proposed: build it, off unless declared, because the
+   storyteller and Living Vale want the same thing, and the probe shows the grammar holds it.*
+2. **Which kinds come first.** *Proposed: a closed set (`minor | major`) and a number given as a
+   short list of allowed values, first. An open number range and extra targets come second, each
+   after its own probe or design pass.*
+3. **Several targets: how.** An array that *replaces* `target`, or `target` kept and an
+   `also_targets` array of 0 to N−1 more beside it, or groups as targets only (the #298 recipe).
+   *Proposed: `target` kept plus `also_targets`, in the second step.*
+4. **Should a parameter force the paired schema** for the actions that declare one? *Proposed:
+   yes.* A flat schema could only carry parameters with a "not used" value in every enum.
+5. **Which game measures first.** *Proposed: GreyBoxStrategy's storyteller: strength as a
+   parameter against the bundled `windfall_major` ids, 20 games an arm on `qwen3.5:4b`.*
+
+**Context.** A decision is `action`, `target`, `statement`. A game that needs "how hard", "how
+many" or "for what price" encodes the answer in the ids:
+
+- Living Vale's gap 12 bundles the quantity into the target (`stock_mara_potion_one`).
+- The storyteller design bundles the strength into the action (`windfall_major`,
+  `painted-realm-research.md` §1).
+
+Both work, and both multiply the enum by every value. #263 found the storyteller wanting strength
+and several countries; the lead wants events that ask for a decision, which need the same shape.
+
+What is known:
+
+- **The grammar holds it** on Ollama 0.40.14's `/api/chat` for `qwen3.5:4b` (findings,
+  14 November). Every enum value was legal, and every array of target ids stayed within
+  `minItems`/`maxItems`.
+- **A parameter after `statement` is written into the statement.** That happened in 3 replies
+  of 6. Before `statement`, it happened in none. That contradicts `DecisionSchema`'s own remark,
+  "any field added later … goes after `statement`", which was written before any measurement.
+- **Not known:**
+  - Ollama's native path. It sorts keys (findings, 5 November), so `strength`, `turns` and
+    `targets` would all land after `statement`.
+  - `/v1/chat/completions`.
+  - An integer range.
+  - Whether `uniqueItems` is enforced.
+  - Accuracy of any kind: the probe was a grammar check.
+
+DR-022 already covers the cheaper half: a choice *among options given with the call*
+(`DecideOptions.Choices`).
+
+**Options considered**
+
+| Question | Options | Verdict (proposed) |
+|---|---|---|
+| Parameters at all | Keep the bundled-id idiom (F9) as the only way; parameters on the action | **Parameters**, for values that are plain scalars (strength, a count, a price). The idiom stays the recipe when each value is a game object with its own description (a stock bundle the shop actually holds) |
+| Where they are declared | On `ActionDefinition`; per call on `DecideOptions`; on the target | **`ActionDefinition.Parameters`**, a list of `ActionParameter { Name, Description, Values, Min, Max, Default }`, so both front doors fill one plain type (DR-011). Code: `[AgentParameter("strength", "how hard it strikes", "minor", "major")]` beside `[AgentAction]`, and the method takes `[Argument("strength")] string strength` (or `int`); `DelegateActionHandler` reads `decision.Arguments`. Asset: a serialized list on `ActionDefinitionAsset` |
+| Kinds | Closed set of strings; a number from an allowed list; an open integer range (`minimum`/`maximum`); a free string; extra target ids | **First step: closed set and number-from-list**, both an `enum` of strings in the schema, the shape the probe held. **Second step: extra targets** (below). **Not now: an open integer range** (unprobed, and a small model invents numbers; F9) **and free strings** (a second free-text field is #266 item 3, answered by a recipe) |
+| Values per decision | Fixed at registration; asked each decision | **Asked each decision when a check is given** (`IsAvailableValue(ctx, value)`, like `[AvailableFor]`), so an unaffordable quantity is absent from the schema rather than refused in prose (the settled rule). A value left out is recorded with its reason, as `TargetsUnavailable` is. An action with a required parameter and no value left is left out, as an action with no legal target is |
+| Place in the reply | After `statement`; between `target` and `statement`; before `target` | **After `target`, before `statement`**, in declaration order: `action`, `target`, parameters, `statement`. Measured: after `statement`, the value lands in the statement. Before `target` would move the grounding guard's field and the measured `action`-then-`target` pair; there is no evidence for it |
+| Ollama's native path, which sorts keys | Rename fields so they sort right; reply as an array (`prefixItems`); detect it and say so | **Detect it and record it** (5 November's "detect it" suggestion): the provider compares the reply's key order with the schema's, and telemetry marks `OrderLost`. Renaming a developer's fields, or changing the reply's format, is out of proportion. Recommend rendered-path models (the `qwen3.5` family) for parameters in the docs |
+| Several targets | An array replacing `target`; `target` plus `also_targets` (0 to N−1, items from the action's legal targets); groups only (#298) | **`target` plus `also_targets`**, second step. `TargetId` stays the first target, so every existing reader, the grounding guard, `TargetCategoryGuard` and the per-target checks keep working on it. The extra ones are checked by category and availability, de-duplicated by the parser (the probe could not show `uniqueItems` enforced), and not scored by grounding until the guards area (#138) says how |
+| Which schema carries them | Flat, with a "not used" value in every parameter enum; paired only | **Paired only**: offering an action with a parameter makes that call's schema paired (DR-020 decision 7), each branch carrying its action's own parameters in order, `required` and `additionalProperties: false`. Actions share a branch only if their targets *and* parameters match. A call with no parameters is byte-identical to today |
+| How a local model learns them | The schema; the prompt | **The prompt, always**, as for choices (DR-022): an action with parameters is listed with them whatever `ListActionsAndTargets` says ("`blight`: a country falls sick. strength: minor or major."). Its example shows them (`ExampleArguments`), so the few-shot block demonstrates the field rather than leaving it to the schema the model never reads |
+| Parsing | Lenient (bad value → default); strict | **Strict, with a declared default as the only fallback**: a missing or illegal value takes `Default` if the parameter has one, recorded as `ArgumentsDefaulted`; with none, `SchemaLegalityGuard` rejects, as it rejects a pair the grammar should have prevented. Numbers parse with the invariant culture |
+| Guards | Score parameters for grounding; legality only | **Legality and availability only**, inside the existing built-in guards (`SchemaLegalityGuard`, `TargetAvailabilityGuard` re-run at `Execute`). A developer guard reads `decision.Arguments`; `RewriteToNone`, `Reject` and `ReplaceStatement` apply unchanged. No verdict rewrites one value: it would be a fifth verdict for a need not seen |
+| Telemetry and the log | Nothing; the chosen values and what was offered | **Both**: the decision log's line carries `arguments` (an object, left out when empty), plus `argumentsDefaulted` and `valuesUnavailable`; `DecisionTelemetry` carries the same three. Memory under `Move` keeps the arguments with the move (#251) |
+| `AgentDecision` | New fields per kind; a map | **`Arguments`, an `IReadOnlyDictionary<string, string>`, empty and never null**, with `TryGetArgument` and an `int` reader; a 4-argument constructor beside the 3-argument one, which keeps meaning "no arguments". Source-compatible: no member changes, every existing call compiles |
+| Cloud providers | Assume the paired form travels | **Each provider says**, through `ProviderCapabilities`, whether it takes a paired schema. Gemini: `anyOf` yes, `oneOf` no, no `""` in an enum (a parameter value is refused at registration if empty), size limited by overall complexity rather than an enum count, so a paired schema grows with actions × targets × values. OpenAI's strict mode refuses a root `anyOf`, so an action with parameters cannot be sent there until a provider finds another shape. Neither provider exists yet (§2.4) |
+| Overlap with `Choices` (DR-022) | Merge them; keep both | **Both, with one rule**: a choice *among moves* is `Choices` (each an action value); a choice *about a move* (how hard, how many) is a parameter. A `Choice` takes no target and, in this step, no parameters; that stays a "revisit if" of DR-022 |
+
+**Measured before anything is recommended** (every arm on the RTX 5080 under the lock, one Ollama,
+rule 2):
+
+1. **The probe, extended** (`closed_choice_grammar_probe.py`):
+   - A native-path model. `MiniCPM5-2B` logged that path on 4 November and is not pulled, so
+     pulling it is the lead's call.
+   - An integer `minimum`/`maximum`, if question 2 opens it.
+   - `/v1/chat/completions` on a local Ollama.
+   - A repeated id under `uniqueItems`.
+2. **No change where none is declared.** A test holds the evaluation set's schema and prompt,
+   as `EvalRunner` sends them, byte-identical. No A/B is owed for the 76 curated or the 389 interim
+   prompts, since none declares a parameter.
+3. **GreyBoxStrategy's storyteller (#20).**
+   - Arms: `windfall_major` ids against a `strength` parameter, the same templates, seeds and
+     table.
+   - 20 games an arm, `qwen3.5:4b` (the demo rule); the 2B only if the lead asks.
+   - Measures:
+     - illegal answers;
+     - containment;
+     - a statement that is a bare value;
+     - story and strength that agree, counted in code where possible;
+     - titles present;
+     - kinds of event;
+     - model seconds;
+     - prompt tokens.
+4. **`also_targets`**, if built: the same table, groups as targets against `also_targets`, the
+   same measures plus how many countries an event strikes.
+5. **Living Vale (gap 12)**, when its owner wants it: `quote_purchase` with a `quantity` 1 to 3 and
+   per-value availability against its bundled stock ids, on its scenario bench.
+
+No evaluation prompt is reused for examples (rule 4). A new labelled slice for parameters would
+come through the Prompt Set window (#134), not this record.
+
+**How the two games would use it.**
+
+- **GreyBoxStrategy's storyteller.**
+  - `blight` declares `strength: minor | major`, and `turns: 1 | 3 | 5` if the game wants it;
+    `also_targets` comes in step two.
+  - A per-value check keeps `major` from striking the same country twice in a row: the fairness
+    recipe in `guards.md`, now on a value.
+  - The handler reads `decision.Arguments["strength"]` and scales the effect.
+  - The event's story is written after the strength (the order above), which is what the probe
+    says keeps it out of the statement.
+  - Groups as targets (#298) stay for "the north"; `also_targets` is for "orsk and kesh, this
+    once".
+- **Living Vale.**
+  - `quote_purchase` takes the stock item as its target, with no bundle ids, and `quantity: 1 |
+    2 | 3`. Its value check hides a quantity the stall cannot cover or the buyer cannot pay.
+  - A counter-offer price is a `price` from a short list the game computes each decision (for
+    example 80%, 90% and 100% of the list price), never an open number.
+  - Its `TradeActionBinding` lines that spell out each bundle's price shrink to one per item.
+
+**Consequences.**
+
+- Additive, as DR-020 and DR-022 were. Nothing changes for an agent that declares no parameter.
+- `DecisionSchema`'s remark that later fields go after `statement` is corrected, with tonight's
+  finding as the reason, in the pull request that builds the first step.
+- Rule-6 safe: no dependency. DR-011 safe: no scene type.
+
+**Revisit if:**
+
+- the storyteller A/B shows parameters cost accuracy against bundled ids;
+- a native-path model keeps the values legal but loses the order;
+- a provider needs a shape other than a root `anyOf`;
+- or a game needs an open number the list form cannot give.
+
 ### Decisions already recorded elsewhere in this plan
 
 | ID | Decision | Where |
