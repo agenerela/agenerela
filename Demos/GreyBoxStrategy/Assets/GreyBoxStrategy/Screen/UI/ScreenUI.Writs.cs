@@ -261,7 +261,19 @@ namespace GreyBoxStrategy.Realm
                         label.text = t == 1 ? "1 turn" : $"{t} turns";
                         label.style.display = DisplayStyle.Flex;
                         var end = pts[pts.Count - 1];
-                        label.style.left = end.x + 7; label.style.top = end.y - 8;
+                        // Under the destination's name (and its fort marks), centred, so the tag never covers the name.
+                        int dest = Owner.IndexOf(a.Path[a.Path.Count - 1]);
+                        float below = end.y + 12;
+                        if (dest >= 0)
+                        {
+                            var name = Owner.provinceLabels[dest];
+                            if (name.resolvedStyle.display != DisplayStyle.None && !float.IsNaN(name.layout.height))
+                                below = Math.Max(below, name.layout.y + name.layout.height + 1);
+                            var fort = Owner.fortMarks[dest];
+                            if (fort.resolvedStyle.display != DisplayStyle.None && fort.childCount > 0 && !float.IsNaN(fort.layout.height) && fort.layout.height > 0)
+                                below = Math.Max(below, fort.layout.y + fort.layout.height + 1);
+                        }
+                        label.style.left = end.x; label.style.top = below;
                     }
                 Hide(used);
             }

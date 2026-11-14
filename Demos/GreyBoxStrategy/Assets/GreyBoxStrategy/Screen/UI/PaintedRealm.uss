@@ -12,7 +12,10 @@
 /* top bar */
 .topbar { position: absolute; left: 0; right: 0; top: 0; height: 42px; flex-direction: row; align-items: stretch; background-color: rgb(30, 24, 17); border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.55); }
 .brand { flex-direction: row; align-items: center; padding-left: 12px; padding-right: 12px; border-right-width: 1px; border-right-color: rgba(201, 164, 90, 0.22); font-size: 15px; -unity-font-style: bold; letter-spacing: 2px; }
-.nations { flex-direction: row; flex-grow: 1; overflow: hidden; }
+.nations { flex-direction: row; flex-grow: 1; flex-shrink: 1; min-width: 0; overflow: hidden; }
+.time, .brand { flex-shrink: 0; }
+.tight .pips, .tight .stat-delta, .tight .gold-stat { display: none; }
+.tight .nation { padding-left: 6px; padding-right: 6px; }
 .nation { flex-direction: row; align-items: center; padding-left: 9px; padding-right: 9px; border-right-width: 1px; border-right-color: rgba(201, 164, 90, 0.22); }
 .nation:hover { background-color: rgba(210, 173, 98, 0.14); }
 .nation.out { opacity: 0.35; }
@@ -274,7 +277,7 @@
 .army-row.ordered { border-left-color: rgb(110, 160, 90); }
 .army-row.no-writ { border-left-color: rgb(196, 58, 40); color: rgb(220, 160, 150); }
 .pennant { position: absolute; width: 18px; height: 22px; translate: 0 -100%; }
-.march-turns { position: absolute; font-size: 11px; -unity-font-style: italic bold; color: rgb(40, 28, 16); background-color: rgba(240, 226, 192, 0.85); padding: 0 3px; border-radius: 2px; }
+.march-turns { position: absolute; translate: -50% 0; font-size: 11px; -unity-font-style: italic bold; color: rgb(40, 28, 16); background-color: rgba(240, 226, 192, 0.85); padding: 0 3px; border-radius: 2px; }
 .battle-card { width: 520px; }
 .battle-bar { flex-direction: row; align-items: center; margin: 2px 0; }
 .battle-bar.total { margin-top: 6px; }

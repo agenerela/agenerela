@@ -570,9 +570,11 @@ What the frames of rule mode showed, fixed:
   and we are at peace"). Any other is a click on the map away.
 - **Pieces never overlap.** Pieces in neighbouring provinces that would touch are set apart, one above
   the other, while a moving piece keeps its path (`ScreenUI.Unclutter`). A treaty's seal is drawn above
-  the pieces, so a piece on the province no longer hides it. March lines run under the pieces, so a line never strikes through a piece's number.
+  the pieces, so a piece on the province no longer hides it. March lines run under the pieces, so a line never strikes through a piece's number. A march's "N turns" tag sits under its destination's name, not on it.
 - **The orders panel:** no stray horizontal scrollbar; Hold is a button like the others; an army with no march
   offered says so instead of asking for a lit province; army names numbered by the rules read "Tolly's second host".
+- **The top bar** drops each country's lesser stats (gold, change, stability) when five countries in full
+  would push Menu off the right edge, as at 1080p in watch mode.
 
 Unlimited writs for the person waits for the rules' per-country setting.
 
