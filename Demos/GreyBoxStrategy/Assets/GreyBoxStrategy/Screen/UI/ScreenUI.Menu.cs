@@ -493,11 +493,17 @@ namespace GreyBoxStrategy.Realm
 
         // ---- the pause menu ----
 
+        private Action pauseHelp;
+
+        /// <summary>Rule mode on the writs turn: the pause menu offers the first-turn help, through this.</summary>
+        public void ShowPauseHelp(Action open) => pauseHelp = open;
+
         public void ShowPause(Action resume, Action settings, Action mainMenu, string note = null, Func<bool> advisorOn = null, Action<bool> setAdvisor = null)
         {
             var card = Page("pause", resume);
             card.Add(Heading("PAUSED"));
             card.Add(BigButton("Resume", "Esc", resume));
+            if (pauseHelp != null) card.Add(BigButton("How to play", "Writs, armies, the stripes and markers on the map, your advisor", pauseHelp));
             if (advisorOn != null && setAdvisor != null)
             {
                 bool on = advisorOn();

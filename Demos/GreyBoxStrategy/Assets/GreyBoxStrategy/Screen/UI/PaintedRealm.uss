@@ -74,6 +74,27 @@
 .labels { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
 .plab { position: absolute; font-size: 12px; -unity-font-style: italic; color: rgb(243, 231, 200); -unity-text-outline-width: 0.25px; -unity-text-outline-color: rgb(20, 14, 8); text-shadow: 1px 1px 2px rgba(15, 10, 5, 0.95); translate: -50% -50%; }
 .rlab { position: absolute; font-size: 13px; -unity-font-style: italic; letter-spacing: 6px; color: rgba(246, 234, 204, 0.86); text-shadow: 1px 1px 3px rgba(15, 10, 5, 0.95); translate: -50% -50%; }
+/* The first-turn help: a veil, notes beside what they explain, an ink line to each. */
+.help-veil { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(8, 6, 4, 0.45); }
+.help-note { position: absolute; width: 260px; padding: 8px 11px 9px 11px; background-color: rgb(34, 27, 19); border-width: 1px; border-color: rgb(214, 180, 112); border-radius: 3px; }
+.help-title { -unity-font-style: bold; font-size: 13px; color: rgb(246, 232, 196); margin-bottom: 3px; }
+.help-text { font-size: 12.5px; white-space: normal; color: rgb(230, 218, 190); }
+.help-foot { position: absolute; left: 256px; bottom: 14px; flex-direction: row; align-items: center; padding: 6px 10px; background-color: rgb(26, 21, 15); border-width: 1px; border-color: rgba(201, 164, 90, 0.6); }
+.help-done { margin-left: 12px; }
+/* The end of a game: the land chart, the timeline, the rulers in their own words. */
+.menu.end-card { width: 720px; }
+.end-chart { height: 170px; margin: 4px 0 6px 0; background-color: rgb(16, 13, 10); border-width: 1px; border-color: rgba(201, 164, 90, 0.3); }
+.end-tick { font-size: 10px; color: rgb(160, 148, 124); }
+.end-moment { flex-direction: row; align-items: center; min-height: 20px; }
+.end-when { width: 64px; font-size: 11px; color: rgb(170, 156, 128); }
+.end-text { flex-shrink: 1; white-space: normal; font-size: 12.5px; color: rgb(234, 223, 198); }
+.end-moment.fall .end-text { -unity-font-style: bold; color: rgb(232, 150, 128); }
+.end-moment.peace .end-text { color: rgb(196, 220, 180); }
+.end-ruler { flex-direction: row; align-items: flex-start; margin-bottom: 7px; }
+.end-face { width: 46px; height: 46px; margin-right: 10px; border-width: 2px; border-radius: 3px; }
+.end-name { -unity-font-style: bold; font-size: 14px; color: rgb(240, 228, 200); margin-right: 8px; }
+.end-who { font-size: 11.5px; -unity-font-style: italic; color: rgb(176, 162, 134); }
+.end-line { font-size: 12.5px; -unity-font-style: italic; white-space: normal; color: rgb(222, 206, 170); margin-top: 2px; }
 /* The advisor in the council: its counsel, then each suggestion with Take and Why. */
 .advice-counsel { -unity-font-style: italic; font-size: 12.5px; color: rgb(222, 206, 170); white-space: normal; margin: 2px 0 6px 0; }
 .advice-row { flex-direction: row; align-items: center; margin-bottom: 3px; }

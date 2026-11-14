@@ -554,6 +554,42 @@ world's in about 0.5 to 0.9 s, off the main thread behind the loading card.
 - The scripted rulers order armies into land they may not enter, so the chronicle shows many
   refused orders; that is the stand-ins' play, not the screen's.
 
+### The end of a game, and a first look (14 November)
+
+**The end screen.** Every way of playing ends on it, once the last turn has landed (`ScreenUI.EndScreen.cs`, from
+`Replay/EndSummary.cs`). It shows:
+- who won and how ("by conquest, the last realm standing"), or that nobody did, and the leader;
+- **Watch the replay**, **New game** and **Back to the map** (Esc), right under the heading;
+- **the land**: provinces each realm held, turn by turn, a line in its colour, the winner's drawn thickest;
+- **wars and treaties**, at most twelve: every realm's fall first, then the earliest wars and peaces, one line for
+  a pair's peace on a turn. A realm falls when the rules eliminate it, or when it loses its last province for good,
+  as a broken realm does while its occupiers keep what they hold;
+- **the rulers**, the winner first: face, persona and model (a scripted ruler names only its style), its land or
+  the turn it fell, and its last two distinct lines.
+
+**Watch the replay** plays the same game again from turn 1 with every council open. After a rule game, the council,
+the advisor and the fog step aside. **New game** reloads straight to the New game page.
+
+**The first-turn help** in rule mode on the writs turn (`ScreenUI.Help.cs`, from `Replay/HelpCallouts.cs`): no more
+than six notes, each beside what it explains, with an ink line and a ring round it:
+- writs;
+- ordering an army;
+- the stripes of occupation;
+- the markers at the map's edge (on a world of more than 40 provinces);
+- your advisor (when it is on);
+- End turn.
+
+It opens by itself the first time your council meets, once. "How to play" in the pause menu opens it again, and
+Esc or "Got it" closes it. Notes look their targets up each time they are placed, and are placed again once the
+council has its advice. They keep clear of the council, the chronicle and each other.
+
+**Also:** two battles in one place get one edge marker.
+
+**Tests**, each seen failing once against a deliberate break:
+- `EndSummaryTests`: the land chart runs from the start to the result; every fall is kept, and the timeline is
+  short and in order; each ruler speaks in its own last lines;
+- `HelpCalloutsTests`: at most six notes, about what this game shows, in a player's words.
+
 ### The advisor in rule mode (14 November)
 
 The lead's answer 29: "have it optional and enabled by default which you can disable in game or turn on in game".
