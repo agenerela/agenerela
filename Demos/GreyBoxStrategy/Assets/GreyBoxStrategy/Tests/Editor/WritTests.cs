@@ -1251,7 +1251,7 @@ namespace GreyBoxStrategy.Tests
 
         // valen at war with orsk from turn 2; orsk's two other provinces pass to valen by holding on turns 2 and 3.
         // Returns the turn the game ended in a stalemate, or 0 if it had not by turn 5.
-        private static int StalemateTurn(bool byWarScore, int step = 1000)
+        private static int StalemateTurn(bool byWarScore, int step = 1000, bool battles = false)
         {
             var r = WritRules();
             r.StalemateTurns = 3;
@@ -1265,6 +1265,7 @@ namespace GreyBoxStrategy.Tests
             for (int t = 0; t < 4 && g.Result == null; t++)
             {
                 if (t < taken.Count) taken[t].Occupier = "valen";
+                if (battles) { var war = g.World.War("valen", "orsk"); war.BattlesWon["valen"] = war.Won("valen") + 1; } // a battle won each turn moves the score
                 Turn(g);
             }
             return g.Result?.Ending == Ending.Stalemate ? g.Result.Turns : 0;
@@ -1281,7 +1282,8 @@ namespace GreyBoxStrategy.Tests
         [Test]
         public void StalemateByWarScore_AWarScoreThatMoves_RestartsTheCounter()
         {
-            Assert.That(StalemateTurn(true, step: 1), Is.Zero, "a score moving by a point restarts it each time it moves");
+            Assert.That(StalemateTurn(true, step: 1000, battles: true), Is.EqualTo(5), "a battle a turn moves the score less than the step");
+            Assert.That(StalemateTurn(true, step: 1, battles: true), Is.Zero, "moving it by the step restarts the counter each turn");
         }
 
         [Test]
