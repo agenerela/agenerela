@@ -177,6 +177,17 @@ namespace GreyBoxStrategy
         /// occupied (v2 5.1's rule); its land not occupied goes to its capital's occupier. Ours, for pace.
         /// </summary>
         public bool BreakWhenCapitalFalls = false;
+        /// <summary>
+        /// The writs turn's pace, candidate 1 of the rules v2 page's "Why Classic stalls": a province occupied
+        /// this many turns in a row passes to its occupier, with no treaty. 0, the default: never; occupation
+        /// changes no owner, as v2 5.1 has it.
+        /// </summary>
+        public int OccupationBecomesOwnership = 0;
+        /// <summary>
+        /// The writs turn's pace, candidate 3: a realm whose every province is occupied breaks even with armies
+        /// left elsewhere, which are disbanded. Off by default: such a realm breaks only once it has no army.
+        /// </summary>
+        public bool BreakWhenAllOccupied = false;
 
         // --- R3, armies in depth: unit types and the counter rule (rules v2 3.3) ---
 

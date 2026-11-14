@@ -292,6 +292,7 @@ namespace GreyBoxStrategy
             foreach (var p in World.ProvinceList.OrderBy(p => p.Id, StringComparer.Ordinal)) FightIn(p, order);
             foreach (var p in World.ProvinceList.OrderBy(p => p.Id, StringComparer.Ordinal)) Settle(p, order);
             SendHomeArmiesInPeacefulLand();
+            HoldOccupations();
 
             // 5. Broken realms, eliminations, victory.
             BreakRealms();
@@ -827,9 +828,11 @@ namespace GreyBoxStrategy
             foreach (var c in World.Alive.ToList())
             {
                 var owned = World.ProvincesOf(c.Id).ToList();
-                if (owned.Count == 0 || World.ArmiesOf(c.Id).Any()) continue;
+                if (owned.Count == 0) continue;
                 var capital = owned.FirstOrDefault(p => p.IsCapital && p.Occupier != null);
                 bool all = owned.All(p => p.Occupier != null);
+                // Armies left elsewhere save the realm, unless BreakWhenAllOccupied: then they are disbanded with it.
+                if (World.ArmiesOf(c.Id).Any() && !(Rules.BreakWhenAllOccupied && all)) continue;
                 if (!all && !(Rules.BreakWhenCapitalFalls && capital != null)) continue;
                 foreach (var p in owned)
                 {
@@ -840,6 +843,27 @@ namespace GreyBoxStrategy
                 }
                 lastChangeTurn = World.Turn;
                 Eliminate(c, $"{c.Id}'s realm is broken: every province occupied, no army left. Its occupiers keep what they hold.");
+            }
+        }
+
+        // Each occupation held through another turn counts; one held OccupationBecomesOwnership turns passes the
+        // province to its occupier (the rules v2 page's pacing candidate 1). Off while the setting is 0.
+        private void HoldOccupations()
+        {
+            foreach (var p in World.ProvinceList.OrderBy(p => p.Id, StringComparer.Ordinal))
+            {
+                if (p.Occupier == null) continue;
+                p.OccupiedTurns++;
+                if (Rules.OccupationBecomesOwnership <= 0 || p.OccupiedTurns < Rules.OccupationBecomesOwnership) continue;
+                string from = p.Owner, to = p.Occupier;
+                p.Owner = to;
+                p.Occupier = null;
+                p.Garrison = 0;
+                report.TerritoryChanges++;
+                lastChangeTurn = World.Turn;
+                report.Resolution.Add($"{to} has held {p.Id} for {Rules.OccupationBecomesOwnership} turns: it is {to}'s now.");
+                Tell(to, 1, $"{p.Id} is ours now, held {Rules.OccupationBecomesOwnership} turns.");
+                Tell(from, 1, $"{p.Id}, held by {to} for {Rules.OccupationBecomesOwnership} turns, is {to}'s now.");
             }
         }
 

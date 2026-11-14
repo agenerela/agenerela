@@ -1653,6 +1653,16 @@ _Mine:_ 1 and 3 together. Together they would end most Classic games in well und
 cost, and leave 2 for R3, where standing orders belong. That reading is unmeasured: the scripted series
 would show it in minutes before any live run.
 
+**Built, both off** (14 November): `GameRules.OccupationBecomesOwnership` (candidate 1: a province occupied that
+many turns in a row passes to the occupier; 0, the default, never) and `GameRules.BreakWhenAllOccupied`
+(candidate 3, the break rule only; the stalemate counter is unchanged). With candidate 1 on, the rulers' facts
+show each occupation's count ("corwick (held 3 of 8 turns)"). **Scripted, they change nothing that matters:**
+100 Classic games of the `mixed` lineup take 77 turns off, 74 to 76 with either or both on. Scripted rulers
+press a war to the end and do not stall; when they are made to make peace as readily as the models do, they
+settle within 8 turns, so no occupation lasts long enough. Only model rulers stall, so which candidate helps can
+only be read from a live run: for example 5 uncapped games with both on, on R1c's uncapped seeds 21 to 25.
+Numbers: [`findings.md`](../llm-wiki/findings.md), 14 November.
+
 The screen's half is the screen session's.
 
 **The screen's half, first part: built** (13 November). Watch and replay of a writs game by stand-in
