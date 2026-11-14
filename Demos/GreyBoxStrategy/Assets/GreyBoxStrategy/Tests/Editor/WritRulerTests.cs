@@ -134,6 +134,43 @@ namespace GreyBoxStrategy.Tests
             }
         }
 
+        // R1c: the rules let an army march further than the twelve targets its list offers (and fortify reach
+        // more than the six provinces its list names), and the seat's availability once followed the rules
+        // alone, so a model could name a target the list left out and the game held it as not offered. A
+        // model that always tries such a target must now be contained, never reach the game unoffered.
+        [Test]
+        public async Task ATargetTheListLeftOut_IsContained_NotHeldByTheGame()
+        {
+            var seats = new Dictionary<string, WritRuler>();
+            World world = null;
+            int tried = 0;
+            ILLMProvider Provider(string id) => new ScriptedProvider
+            {
+                Callback = req =>
+                {
+                    var r = seats[id].Asking;
+                    foreach (string a in new[] { Actions.March, Actions.Fortify }.Where(req.OfferedActions.Contains))
+                        foreach (string t in req.OfferedTargets.Where(t => t != TargetRegistry.NoTarget))
+                        {
+                            var move = new Move(a, t);
+                            string why = a == Actions.March ? WritLegality.WhyNotArmy(world, r.CountryId, r.ArmyId, move) : WritLegality.WhyNotCourt(world, r.CountryId, move);
+                            if (why != null || r.Legal.Contains(move)) continue;
+                            tried++;
+                            return ScriptedReply.Decide(a, t, "Beyond the list.");
+                        }
+                    var m = new ScriptedPlayer(Temperament.Expansionist).Decide(r);
+                    return m.Action == Actions.None ? ScriptedReply.Decide(ActionRegistry.None) : ScriptedReply.Decide(m.Action, m.Target ?? TargetRegistry.NoTarget, $"{m}.");
+                },
+            };
+            var setup = GameSetup.Writs(1);
+            setup.TurnCap = 30;
+            var record = await Await.NotCancelled(WritModelRunner.PlayAsync(setup, Enumerable.Repeat(ModelGameRunner.Model, 5).ToList(),
+                (w, id) => seats[id] = new WritRuler(world = w, id, Provider(id)), "fake"));
+            Assert.That(tried, Is.GreaterThan(0), "the game gave the fake model a target beyond a list to try");
+            var unoffered = record.Decisions.Where(d => !d.Offered).Select(d => $"{d.Country} {d.Move}").ToList();
+            Assert.That(unoffered, Is.Empty, "orders the game held as not offered: " + string.Join("; ", unoffered.Take(5)));
+        }
+
         [Test]
         public void ARuler_IsForTheWritsTurnOnly()
         {

@@ -1665,7 +1665,7 @@ where the time goes. Section 6.1's pressures for that (fear of the leader, war w
 status-quo offer) belong to R7.
 
 _For the lead:_ a 75% domination win gives 144 turns on medium (median 118) and 63 on Classic, if a shorter default is
-wanted before R7.
+wanted before R7. **Decided 13 November:** "Both, conquest default" (answer 9 in [11](#11-the-leads-answers-to-this-pages-questions)).
 
 **Three writs** raise R1c's model time: decisions a ruler a turn rise from about 1.9 to 2.3 on Classic.
 R1c measures the cost.
@@ -2074,6 +2074,7 @@ page above now follows his answers. His words, and what each changed:
 | 6 | Supply as stores, with a cap of 100 an army? | "Ok" | As drafted ([3.6](#36-supply)) |
 | 7 | Province names from tables? | "Lets have model generate place names and history of provinces and countries eventually. Like it would add a lot of colors to the game where you have new names each time, its like we discussed with the country names" | Tables first; names and histories by the model ([2.9](#29-names-and-histories-written-by-the-model), slice R10) |
 | 8 | Pikes, riders and bows? | "Lets have it like this for now but please do a reasearch on how we can make it more interesting and unique" | Kept; research and a pick in [3.11](#311-making-the-roster-our-own-research) |
+| 9 | The writs game's win: conquest, or domination at 75% (asked with R1b, 13 November)? | "Both, conquest default" | As #282 built it: conquest the default, `domination_75` a named preset ([6.1](#61-conquest-the-default)) |
 
 ## The lead's answers, 12 November 2026
 
