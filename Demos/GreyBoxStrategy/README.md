@@ -749,7 +749,7 @@ list is refused with the rules' reason.
 **What the council panel shows** (`Screen/UI/ScreenUI.WritsRule.cs`):
 - **Your writs** as pips, filled as the plan spends them, and "Orders · writs 1 of 3" in the top bar.
   The tooltip gives the rule. The cap is the rules' setting (`BaseWrits`, `ProvincesPerWrit`,
-  `MaxWrits`), read from each request.
+  `MaxWrits`, or a country's own `WritsOverride`), read from each request.
 - **The court's orders.** One not offered is greyed and says why. A treaty term shows the war score
   with that country.
 - **Your armies, in the order the rules ask them:**
@@ -996,6 +996,25 @@ What it measured on `qwen3.5:4b`, 20 writs games on Classic against 20 one-move 
 - **Unlisted targets.** The run found 61 army orders for a march the rules allow but the twelve-target list
   left out, which the game held as "not offered". The court's and the marshal's availability now also check
   the decision's own offered moves (`NotOffered`), and the later runs had no illegal answers.
+
+**The statement repeats, measured** (13 and 14 November). Two voice arms for the writs turn, modifiers on any arm:
+- `+one-voice`: only a ruler's first court decision of a turn speaks. The framework always asks for the
+  `statement` field, so the others are told to leave it empty, and a line written anyway is dropped and kept
+  in `model.csv`'s `unspoken` column. Since #266 the framework can ask without the field (`DecideOptions.AskForStatement`); this arm, measured just before, does not use it yet.
+- `+own-lines`: a decision that speaks reads the ruler's last four distinct lines and is asked to say
+  something new (`WritRuler.OwnLinesLine`). **On in `default`** since 14 November; `+no-own-lines` turns it off.
+
+15 games an arm on the same seeds: repeated word for word 35.6% (control), 44.5% (one voice), 21.6% (own
+lines), with no illegal answers, the same model time and the persona as clear as before with own lines. One
+voice saved 1.7 s a turn but halved the treaties. Numbers in [`findings.md`](../../docs/llm-wiki/findings.md),
+13–14 November. The arm as measured cut "Ordered this turn" from 43% of later orders, because the extra line
+took a place the agents' 12 lines did not have; with own lines on the agents keep 13 now, so the default reads
+exactly the control's lines plus its own.
+
+**A country's own writ count.** `GameRules.WritsOverride` maps a country to its own number of writs a turn,
+in place of the formula; `GameRules.UnlimitedWrits` means no limit (shown as "Writs: no limit this turn."),
+so the screen can give the person alone unlimited writs as an easy setting. `World.Writs` reads it, it is
+copied with the rules, and any number below 1 counts as 1.
 
 ## The first real run
 

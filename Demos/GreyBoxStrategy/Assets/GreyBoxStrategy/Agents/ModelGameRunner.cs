@@ -282,11 +282,11 @@ namespace GreyBoxStrategy
         public string ToCsv()
         {
             var sb = new StringBuilder();
-            sb.AppendLine("seed,turn,country,moment,model_action,model_target,action,target,move,offered,model_answer_legal,target_ignored,latency_s,prompt_tokens,guard,verdict,error,execution,statement,army");
+            sb.AppendLine("seed,turn,country,moment,model_action,model_target,action,target,move,offered,model_answer_legal,target_ignored,latency_s,prompt_tokens,guard,verdict,error,execution,statement,army,unspoken");
             foreach (var d in Games.SelectMany(g => g.Decisions))
                 sb.AppendLine(string.Join(",", d.Seed, d.Turn, d.Country, d.Moment, d.ModelAction, d.ModelTarget, d.Action, d.Target,
                     d.Move, d.Offered, d.ModelAnswerLegal, d.TargetIgnored, d.LatencySeconds.ToString("0.000", Inv), d.PromptTokens, d.Guard, d.Verdict, d.Error, d.Execution,
-                    Csv(d.Statement), d.Moment == Moment.Army ? d.Round : ""));
+                    Csv(d.Statement), d.Moment == Moment.Army ? d.Round : "", Csv(d.Unspoken)));
             return sb.ToString();
         }
 

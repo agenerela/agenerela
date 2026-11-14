@@ -28,7 +28,7 @@ namespace GreyBoxStrategy
             var armies = world.ArmiesOf(countryId).OrderByDescending(a => a.Soldiers).ThenBy(a => a.Id, StringComparer.Ordinal).ToList();
             var lines = new List<string>
             {
-                Facts.Goal(world, held) + $" Writs: {world.Writs(countryId)} this turn.",
+                Facts.Goal(world, held) + (world.Writs(countryId) == GameRules.UnlimitedWrits ? " Writs: no limit this turn." : $" Writs: {world.Writs(countryId)} this turn."),
                 $"Treasury: {me.Gold} gold; income {world.Income(me)} and upkeep {world.Upkeep(me)} a turn.",
                 $"Soldiers: {me.Army} in {Plural(armies.Count, "army", "armies")}. Stability: {me.Stability} of {rules.MaxStability}."
                     + (me.Stability <= 1 ? " A province may revolt." : ""),

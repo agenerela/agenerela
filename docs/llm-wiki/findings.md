@@ -4081,3 +4081,28 @@ GreyBoxStrategy (#20), rules v2 slice R1c. `personas` table, five `qwen3.5:4b` s
   - Repeated word for word 38%.
   - η² aggression 0.72, peace 0.62 (p ≤ 0.001); recruit and fortify not significant at 25 seat-games.
 - No default changed. Open: the game's length, statement repetition (the army statement rule's A/B), and whether a fourth writ or standing orders would use the waiting armies.
+
+### Painted Realm's writs turn: showing a ruler its own last lines cuts word-for-word repeats from 36% to 22%; one voice a turn makes them worse (13–14 November 2026)
+
+GreyBoxStrategy (#20), after R1c's one regression (statements repeated word for word 35% on the writs turn against 5% in the one-move game). `personas` table, five `qwen3.5:4b` seats, RTX 5080 (Docker Ollama 0.40.14), `-strategyTurn writs -strategyCap 40`, Classic. Three arms, the same seeds 1 to 15, interleaved in blocks of five seeds (c1 a1 b1 c2 a2 b2 c3 a3 b3), one Unity run and one lock window a block:
+
+- **control**: the writs turn as it was (`default`, now `default+no-own-lines`);
+- **A, one voice** (`+one-voice`): only a ruler's first court decision of a turn carries a statement. The framework cannot ask a decision without its `statement` field (it is always required, an empty string allowed), so the game asks the others to leave it empty with a plain line and drops any line written anyway. The framework's own way, `DecideOptions.AskForStatement` (#266), merged a minute after the run ended and is not measured here;
+- **B, own lines** (`+own-lines`): a decision that speaks reads the ruler's last four distinct lines, with "Say something new, not one of these."
+
+Nothing like either had been measured (findings and build plan Appendix A checked); the lines are the game's own, and no evaluation prompt is used. A probe of 2 games an arm came first (repeats 31% / 42% / 16%); A looked no use, so the combined arm C was not run. **n = 15 games an arm:** R1c put a game's repeat share at an SD of about 0.04, so 15 paired seeds pin a difference to about ±3 points, well inside the probe's gaps; treaties (SD about 2.2 a game) stay the noisy measure. Block b2 was cut at 21:46 on 13 November when the lead needed the card, and rerun from the start after the pause (23:41 to 00:06 on 14 November); the cut block is not counted. Kit and data: `.scratch/realm-build-map/voice/`, `python compare.py full c a b`. "Beyond" means the 95% interval of the paired difference over the 15 seeds excludes 0.
+
+| | control | A, one voice | B, own lines |
+|---|---|---|---|
+| Repeated word for word | 35.6% | 44.5% (+8.9, beyond) | **21.6% (−13.9, beyond)** |
+| Decisions with a statement | 99% | 35% | 99% |
+| Words a statement | 12.8 | 13.0 | 13.6 (+0.8, beyond) |
+| Illegal answers | 0 | 0 | 0 |
+| Model seconds a turn | 7.18 | 5.53 (−1.66, beyond) | 7.18 (within) |
+| Treaties a game | 3.3 | 1.4 (−1.9, beyond) | 4.1 (+0.8, within) |
+| Persona η² aggression / peace / recruit (75 seat-games, all p ≤ 0.002) | 0.20 / 0.63 / 0.63 | 0.22 / 0.31 / 0.55 | 0.36 / 0.65 / 0.69 |
+
+- **B wins** on the one thing it was for, with legality, model time and treaties unchanged and every persona η² as high or higher. The top line fell from 54 uses ("We fortify borders and save gold rather than fight before the odds are in our favour.") to 17. **Made the demo's default** (`ModelSeatOptions.Default.OwnLines`, writs turn only); the framework's defaults are unchanged.
+- **A loses:** the few lines left repeat more (the one court line a turn says the same thing turn after turn), the model wrote a statement anyway on 1,259 of the 6,036 decisions asked to stay silent (21%), and treaties fell by more than half, with the peace η² halved (0.63 → 0.31). The statement seems to carry part of the diplomacy. It saves 1.7 s a turn, so asking without the field for model time alone is worth its own run with #266's `AskForStatement`, which also leaves the statement rules out of the prompt.
+- What B does not reach: 22% is still far above the one-move game's 5%; a ruler shown four lines can still return to a fifth.
+- **A defect in arm B as measured, found after the run:** the rulers' agents keep 12 observation lines, the call's own lines count first, and the sources fill the rest, so the last source lines are cut. The own-lines line pushed out "Ordered this turn" (the orders already given) and, now and then, an army's moves line. In 5 scripted 40-turn games the ordered line was missing from 780 of 1,817 later orders (43%) with own lines against 21 in the control, and the moves line from 21 of 1,625 army orders against none. The rulers measured in B therefore often did not see their earlier orders of the turn; its legality held regardless (0 illegal answers). **Fixed with the default:** with own lines on, the agents keep 13 lines, which restores exactly the control's lines (21 and 0 in the same probe); test `TheCourtAndTheMarshal_ReadLocalFacts_AndTheirOwnMovesLine` failed without the fix. The fixed default is unmeasured live until the next A/B, which carries a `default+no-own-lines` arm to confirm it.
