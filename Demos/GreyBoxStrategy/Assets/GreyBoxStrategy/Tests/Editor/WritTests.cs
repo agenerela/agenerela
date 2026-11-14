@@ -734,10 +734,10 @@ namespace GreyBoxStrategy.Tests
             var options = new[] { "hire_sellswords", "send_sellswords_away" };
             bool Registers(Agenerela.Agent a) => a.Actions.Definitions.Any(d => options.Contains(d.Id));
 
-            var called = new WritRuler(g.World, "valen", new ScriptedProvider(), ModelSeatOptions.Named("default+storyteller+choices+call-choices"));
+            var called = new WritRuler(g.World, "valen", new Agenerela.Providers.ScriptedProvider(), ModelSeatOptions.Named("default+storyteller+choices+call-choices"));
             Assert.That(called.OptionsFor(request).Choices?.Select(c => c.Id), Is.EqualTo(options), "the options come with the call (DR-022)");
             Assert.That(Registers(called.Court), Is.False);
-            var registered = new WritRuler(g.World, "valen", new ScriptedProvider(), ModelSeatOptions.Named("default+storyteller+choices"));
+            var registered = new WritRuler(g.World, "valen", new Agenerela.Providers.ScriptedProvider(), ModelSeatOptions.Named("default+storyteller+choices"));
             Assert.That(registered.OptionsFor(request).Choices, Is.Null);
             Assert.That(Registers(registered.Court), Is.True, "the default registers them, as before");
         }

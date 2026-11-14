@@ -29,6 +29,12 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: the storyteller caps its replies, and dilemmas can come with the call** (#20).
+  - The storyteller's event and title calls send `MaxReplyTokens` 400 (#244 item 11), which binds only a
+    runaway; `+no-reply-cap` sends none, as before.
+  - `+call-choices` gives a dilemma's options with the call as `DecideOptions.Choices` (#293, DR-022) in place
+    of registering them as the seat's actions. It is an arm, unmeasured, until its A/B; the default is unchanged.
+
 - **Painted Realm: two pacing settings for the writs turn, both off** (#20).
   `GameRules.OccupationBecomesOwnership` makes a province held N turns the occupier's, and
   `GameRules.BreakWhenAllOccupied` breaks a fully occupied realm with armies left. Scripted they leave the pace
