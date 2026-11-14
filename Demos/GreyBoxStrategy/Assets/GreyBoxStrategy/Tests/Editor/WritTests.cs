@@ -1148,7 +1148,7 @@ namespace GreyBoxStrategy.Tests
         [Test]
         public void Supply_InScriptedGames_HungryArmiesGoHome()
         {
-            int homeward = 0, hunger = 0;
+            int homeward = 0, hunger = 0, stayed = 0;
             for (int seed = 1; seed <= 6; seed++)
             {
                 var g = NewWrits(seed, Supplied());
@@ -1159,15 +1159,21 @@ namespace GreyBoxStrategy.Tests
                     {
                         var m = players[r.CountryId].Decide(r);
                         var army = r.Moment == Moment.Army ? r.World.FindArmy(r.ArmyId) : null;
-                        if (army != null && army.Stores <= 1 && m.Action == Actions.March && Game.Supplied(r.World.Province(m.Target), r.CountryId)
-                            && !Game.Supplied(r.World.Province(army.Location), r.CountryId)) homeward++;
+                        var at = army == null ? null : r.World.Province(army.Location);
+                        bool hungryAbroad = army != null && army.Stores <= 1 && !Game.Supplied(at, r.CountryId) && at.SiegedBy != r.CountryId;
+                        bool canGoHome = r.Legal.Any(x => x.Action == Actions.March && Game.Supplied(r.World.Province(x.Target), r.CountryId));
+                        if (hungryAbroad && canGoHome)
+                        {
+                            if (m.Action == Actions.March && Game.Supplied(r.World.Province(m.Target), r.CountryId)) homeward++;
+                            else stayed++;
+                        }
                         return m;
                     });
                     hunger += report.Resolution.Count(l => l.Contains(" lost to hunger"));
                     Assert.That(g.World.Armies.All(a => a.HalfStores >= 0 && a.HalfStores <= 8), Is.True);
                 }
             }
-            Assert.That(homeward, Is.GreaterThan(0), $"hungry armies sent home {homeward}, hunger losses {hunger}");
+            Assert.That((homeward > 0, stayed), Is.EqualTo((true, 0)), $"hungry armies abroad that could go home: went {homeward}, stayed {stayed}; hunger losses {hunger}");
         }
 
         [Test]
