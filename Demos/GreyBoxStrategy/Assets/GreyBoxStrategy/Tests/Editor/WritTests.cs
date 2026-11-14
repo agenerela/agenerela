@@ -1267,7 +1267,7 @@ namespace GreyBoxStrategy.Tests
                 if (t < taken.Count) taken[t].Occupier = "valen";
                 Turn(g);
             }
-            return g.Result?.Ending == Ending.Stalemate ? g.Result.Turn : 0;
+            return g.Result?.Ending == Ending.Stalemate ? g.Result.Turns : 0;
         }
 
         [Test]
