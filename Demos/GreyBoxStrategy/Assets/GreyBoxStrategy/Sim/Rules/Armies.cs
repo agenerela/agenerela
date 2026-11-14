@@ -24,7 +24,52 @@ namespace GreyBoxStrategy
         public string Id { get; }
         public string Owner { get; }
         public string Location { get; set; }
-        public int Soldiers { get; set; }
+        /// <summary>
+        /// Every soldier in it, of whatever type. Setting it keeps the mix (losses come from each type in
+        /// proportion); with no riders or bows every soldier is a pike, which is all the rules know while
+        /// <see cref="GameRules.UnitTypes"/> is off.
+        /// </summary>
+        public int Soldiers
+        {
+            get => Pikes + Riders + Bows;
+            set => SetTotal(value);
+        }
+        /// <summary>Soldiers by type (rules v2 3.3); riders and bows only while <see cref="GameRules.UnitTypes"/> is on.</summary>
+        public int Pikes { get; private set; }
+        public int Riders { get; private set; }
+        public int Bows { get; private set; }
+
+        public int Of(UnitType t) => t == UnitType.Riders ? Riders : t == UnitType.Bows ? Bows : Pikes;
+
+        /// <summary>Adds soldiers of one type (a levy joining).</summary>
+        public void Add(UnitType t, int n)
+        {
+            if (n <= 0) return;
+            if (t == UnitType.Riders) Riders += n;
+            else if (t == UnitType.Bows) Bows += n;
+            else Pikes += n;
+        }
+
+        // The new total split over the types in proportion, the remainder to the largest fractions (pikes first on ties).
+        private void SetTotal(int value)
+        {
+            if (value <= 0) { Pikes = Riders = Bows = 0; return; }
+            int total = Pikes + Riders + Bows;
+            if (total == 0 || (Riders == 0 && Bows == 0)) { Pikes = value; Riders = Bows = 0; return; }
+            if (value == total) return;
+            var have = new[] { Pikes, Riders, Bows };
+            var now = new int[3];
+            var frac = new double[3];
+            for (int i = 0; i < 3; i++)
+            {
+                double exact = (double)value * have[i] / total;
+                now[i] = (int)Math.Floor(exact);
+                frac[i] = exact - now[i];
+            }
+            int left = value - now.Sum();
+            foreach (int i in Enumerable.Range(0, 3).OrderByDescending(i => frac[i]).ThenBy(i => i).Take(left)) now[i]++;
+            Pikes = now[0]; Riders = now[1]; Bows = now[2];
+        }
 
         /// <summary>Where it is marching, or null while it holds.</summary>
         public string Destination { get; set; }
@@ -90,6 +135,10 @@ namespace GreyBoxStrategy
         public double DefenceRoll;
         public double AttackStrength;
         public double DefenceStrength;
+        /// <summary>With unit types (R3): each side's strength from the counter rule over its plain strength; 1 without them.</summary>
+        public double AttackCounter = 1, DefenceCounter = 1;
+        /// <summary>The battle's largest counter effect, "valen's pikes broke orsk's riders (+18%)", or null.</summary>
+        public string CounterNote;
         public int AttackerLost;
         public int DefenderLost;
         public bool AttackerWon;
@@ -158,6 +207,75 @@ namespace GreyBoxStrategy
     }
 
     /// <summary>Generals' names for armies' ids: plain, short, and not real people.</summary>
+    /// <summary>The three unit types of rules v2 3.3: pikes counter riders, riders counter bows, bows counter pikes.</summary>
+    public enum UnitType { Pikes, Riders, Bows }
+
+    /// <summary>A side's soldiers by type, for the counter rule.</summary>
+    public struct UnitMix
+    {
+        public int Pikes, Riders, Bows;
+        public int Total => Pikes + Riders + Bows;
+        public int Of(UnitType t) => t == UnitType.Riders ? Riders : t == UnitType.Bows ? Bows : Pikes;
+        public double Share(UnitType t) => Total == 0 ? 0 : (double)Of(t) / Total;
+
+        /// <summary>The armies' soldiers, plus a militia or garrison, which fights as pikes.</summary>
+        public static UnitMix Of(IEnumerable<Army> armies, int militia = 0)
+        {
+            var m = new UnitMix { Pikes = militia };
+            foreach (var a in armies) { m.Pikes += a.Pikes; m.Riders += a.Riders; m.Bows += a.Bows; }
+            return m;
+        }
+    }
+
+    /// <summary>The counter rule (rules v2 3.3), and what each type costs.</summary>
+    public static class Units
+    {
+        public static readonly UnitType[] All = { UnitType.Pikes, UnitType.Riders, UnitType.Bows };
+
+        /// <summary>The type <paramref name="t"/> counters.</summary>
+        public static UnitType Beats(UnitType t) => t == UnitType.Pikes ? UnitType.Riders : t == UnitType.Riders ? UnitType.Bows : UnitType.Pikes;
+        /// <summary>The type that counters <paramref name="t"/>.</summary>
+        public static UnitType BeatenBy(UnitType t) => t == UnitType.Pikes ? UnitType.Bows : t == UnitType.Riders ? UnitType.Pikes : UnitType.Riders;
+
+        public static string Name(UnitType t) => t == UnitType.Riders ? "riders" : t == UnitType.Bows ? "bows" : "pikes";
+
+        public static double Base(GameRules r, UnitType t) => t == UnitType.Riders ? r.RiderStrength : t == UnitType.Bows ? r.BowStrength : r.PikeStrength;
+
+        /// <summary>m(t) = 1 + c x (enemy's share of what t counters) - c x (enemy's share of what counters t).</summary>
+        public static double Multiplier(GameRules r, UnitType t, UnitMix enemy) =>
+            1 + r.CounterStrength * enemy.Share(Beats(t)) - r.CounterStrength * enemy.Share(BeatenBy(t));
+
+        /// <summary>Soldiers x base, summed, without counters.</summary>
+        public static double Plain(GameRules r, UnitMix side) => All.Sum(t => side.Of(t) * Base(r, t));
+
+        /// <summary>Soldiers x base x m(t) against the enemy's mix, summed.</summary>
+        public static double Strength(GameRules r, UnitMix side, UnitMix enemy) => All.Sum(t => side.Of(t) * Base(r, t) * Multiplier(r, t, enemy));
+
+        /// <summary>What a soldier of the type costs to recruit and to keep, as a multiple of a pike.</summary>
+        public static int CostFactor(GameRules r, UnitType t) => t == UnitType.Riders ? r.RiderCostFactor : 1;
+
+        /// <summary>
+        /// The battle's largest counter effect as the report says it, "valen's pikes broke orsk's riders (+18%)", or
+        /// null when neither side gained 1% or more from counters.
+        /// </summary>
+        public static string Describe(GameRules r, string aName, UnitMix a, string dName, UnitMix d)
+        {
+            string best = null;
+            double most = 0.01;
+            foreach (var (name, side, otherName, other) in new[] { (aName, a, dName, d), (dName, d, aName, a) })
+            {
+                double plain = Plain(r, side);
+                if (plain <= 0) continue;
+                double effect = Strength(r, side, other) / plain - 1;
+                if (effect < most) continue;
+                var t = All.OrderByDescending(x => side.Of(x) * Base(r, x) * (Multiplier(r, x, other) - 1)).ThenBy(x => x).First();
+                most = effect;
+                best = $"{name}'s {Name(t)} broke {otherName}'s {Name(Beats(t))} (+{Math.Round(effect * 100)}%)";
+            }
+            return best;
+        }
+    }
+
     public static class ArmyNames
     {
         public static readonly string[] Generals =

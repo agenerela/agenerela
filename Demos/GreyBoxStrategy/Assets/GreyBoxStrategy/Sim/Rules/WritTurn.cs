@@ -254,7 +254,7 @@ namespace GreyBoxStrategy
             SendHomeArmiesInPeacefulLand();
 
             // b. Home: recruits appear, taxes, forts.
-            foreach (string action in new[] { Actions.Recruit, Actions.RaiseTaxes, Actions.Fortify })
+            foreach (string action in new[] { Actions.Recruit, Actions.RecruitPikes, Actions.RecruitRiders, Actions.RecruitBows, Actions.RaiseTaxes, Actions.Fortify })
                 foreach (var a in all.Where(a => !landed.Contains(a) && a.Choice.Action == action && a.Request.Moment == Moment.Council))
                 {
                     landed.Add(a);
@@ -419,6 +419,19 @@ namespace GreyBoxStrategy
                     Done(a, $"raised {levy} soldiers at {site.Id} ({joined})");
                     break;
                 }
+                case Actions.RecruitPikes:
+                case Actions.RecruitRiders:
+                case Actions.RecruitBows:
+                {
+                    var type = Actions.RecruitsType(a.Choice.Action).Value;
+                    int levy = World.Levy(me, type);
+                    me.Gold -= levy * r.GoldPerSoldier * Units.CostFactor(r, type);
+                    me.Army += levy;
+                    var site = WritLegality.RecruitSite(World, me.Id);
+                    var joined = Reinforce(me.Id, site.Id, levy, type);
+                    Done(a, $"raised {levy} {Units.Name(type)} at {site.Id} ({joined})");
+                    break;
+                }
                 case Actions.RaiseTaxes:
                     me.Gold += r.TaxGold;
                     me.Stability--;
@@ -437,7 +450,7 @@ namespace GreyBoxStrategy
         }
 
         // Soldiers join the armies standing at a province, up to the army cap; the rest form new armies.
-        private string Reinforce(string countryId, string provinceId, int soldiers)
+        private string Reinforce(string countryId, string provinceId, int soldiers, UnitType type = UnitType.Pikes)
         {
             var names = new List<string>();
             foreach (var army in World.ArmiesAt(provinceId).Where(x => x.Owner == countryId && !x.Marching).OrderBy(x => x.Id, StringComparer.Ordinal))
@@ -445,7 +458,7 @@ namespace GreyBoxStrategy
                 if (soldiers <= 0) break;
                 int add = Math.Min(soldiers, Rules.ArmyMax - army.Soldiers);
                 if (add <= 0) continue;
-                army.Soldiers += add;
+                army.Add(type, add);
                 soldiers -= add;
                 if (!army.Wake.Contains("reinforced")) army.Wake.Add("reinforced");
                 names.Add($"{army.Id} +{add}");
@@ -453,7 +466,8 @@ namespace GreyBoxStrategy
             while (soldiers > 0)
             {
                 int size = Math.Min(soldiers, Rules.ArmyMax);
-                var army = new Army(ArmyNames.Next(World, countryId), countryId, provinceId, size, World.Turn);
+                var army = new Army(ArmyNames.Next(World, countryId), countryId, provinceId, 0, World.Turn);
+                army.Add(type, size);
                 World.Armies.Add(army);
                 soldiers -= size;
                 names.Add($"new {army.Id} {size}");
@@ -620,8 +634,23 @@ namespace GreyBoxStrategy
             double defenceRoll = Dice.Range(Seed, World.Turn, defenderId ?? "neutral", "battle-defence:" + key, r.RollMin, r.RollMax);
             int fortTerm = held != null ? held.Forts * r.FortBonus : 0;
             int capitalTerm = held != null && held.IsCapital ? r.CapitalBonus : 0;
-            double attack = att * attackRoll;
-            double defence = def * defenceRoll + fortTerm + capitalTerm;
+            // With unit types, each side's soldiers count by type and the counter rule (rules v2 3.3); a militia or
+            // garrison fights as pikes. Off, every soldier counts once, as before.
+            double attackBase = att, defenceBase = def;
+            string counterNote = null;
+            double attackCounter = 1, defenceCounter = 1;
+            if (r.UnitTypes)
+            {
+                var aMix = UnitMix.Of(attackers);
+                var dMix = UnitMix.Of(defenders, fixedDefence);
+                attackBase = Units.Strength(r, aMix, dMix);
+                defenceBase = Units.Strength(r, dMix, aMix);
+                attackCounter = Units.Plain(r, aMix) > 0 ? attackBase / Units.Plain(r, aMix) : 1;
+                defenceCounter = Units.Plain(r, dMix) > 0 ? defenceBase / Units.Plain(r, dMix) : 1;
+                counterNote = Units.Describe(r, attackerId, aMix, defenderId ?? "the garrison", dMix);
+            }
+            double attack = attackBase * attackRoll;
+            double defence = defenceBase * defenceRoll + fortTerm + capitalTerm;
             var site = World.Province(where);
             var record = new BattleRecord
             {
@@ -644,6 +673,9 @@ namespace GreyBoxStrategy
                 DefenceRoll = defenceRoll,
                 AttackStrength = attack,
                 DefenceStrength = defence,
+                AttackCounter = attackCounter,
+                DefenceCounter = defenceCounter,
+                CounterNote = counterNote,
             };
             bool attackerWon = attack > defence;
             int attLoss = Math.Min(att, (int)Math.Round(defence * r.CasualtyRate * (attackerWon ? r.HeldCasualtyFactor : 1)));
@@ -661,7 +693,8 @@ namespace GreyBoxStrategy
             string defName = defenderId ?? "the garrison";
             if (defenders.Count == 0 && defenderId != null) defName = $"{defenderId}'s militia";
             report.Resolution.Add($"Battle at {where}: {attackerId} {att} against {defName} {def}; " +
-                                  (attackerWon ? $"{attackerId} won" : $"{defName} held") + $" ({attLoss} and {defLoss} lost).");
+                                  (attackerWon ? $"{attackerId} won" : $"{defName} held") + $" ({attLoss} and {defLoss} lost)"
+                                  + (counterNote != null ? $"; {counterNote}." : "."));
             if (defenderId != null)
             {
                 var war = World.War(attackerId, defenderId);
@@ -704,6 +737,8 @@ namespace GreyBoxStrategy
                 (-b.FortTerm, b.Forts == 1 ? $"1 fort (+{b.FortTerm}) for the defence" : $"{b.Forts} forts (+{b.FortTerm}) for the defence"),
                 (-b.CapitalTerm, $"the capital (+{b.CapitalTerm}) for the defence"),
             };
+            if (b.CounterNote != null)
+                terms.Add((b.AttackerSoldiers * (b.AttackCounter - 1) - b.DefenderSoldiers * (b.DefenceCounter - 1), b.CounterNote));
             double dice = b.AttackerSoldiers * (b.AttackRoll - 1) - b.DefenderSoldiers * (b.DefenceRoll - 1);
             terms.Add((dice, $"the dice favoured {(dice >= 0 ? b.Attacker : defName)} (+{Math.Abs(dice):0})"));
             var top = terms.Where(t => Math.Abs(t.weight) >= 0.5 || t.text.Contains(" against "))

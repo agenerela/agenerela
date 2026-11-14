@@ -4107,6 +4107,24 @@ Nothing like either had been measured (findings and build plan Appendix A checke
 - What B does not reach: 22% is still far above the one-move game's 5%; a ruler shown four lines can still return to a fifth.
 - **A defect in arm B as measured, found after the run:** the rulers' agents keep 12 observation lines, the call's own lines count first, and the sources fill the rest, so the last source lines are cut. The own-lines line pushed out "Ordered this turn" (the orders already given) and, now and then, an army's moves line. In 5 scripted 40-turn games the ordered line was missing from 780 of 1,817 later orders (43%) with own lines against 21 in the control, and the moves line from 21 of 1,625 army orders against none. The rulers measured in B therefore often did not see their earlier orders of the turn; its legality held regardless (0 illegal answers). **Fixed with the default:** with own lines on, the agents keep 13 lines, which restores exactly the control's lines (21 and 0 in the same probe); test `TheCourtAndTheMarshal_ReadLocalFacts_AndTheirOwnMovesLine` failed without the fix. The fixed default is unmeasured live until the next A/B, which carries a `default+no-own-lines` arm to confirm it.
 
+### Painted Realm R3, unit types: the counter rule changes 6% of battles and lengthens a scripted game by 5 turns (14 November 2026)
+
+GreyBoxStrategy (#20), rules v2 3.3, `GameRules.UnitTypes`. Scripted only, no model: the `.NET 9` harness of `Sim/`
+(`.scratch/realm-build-map/r3/`), 100 Classic games of the `mixed` lineup on seeds 1 to 100, writs turn, conquest.
+
+| | turns (mean, median, p90) | endings | battles a game | treaties a game |
+|---|---|---|---|---|
+| off | 77, 75, 106 | 97 last standing, 3 stalemate | 147 | 7.6 |
+| on | 82, 77, 112 | 97 last standing, 2 stalemate, 1 unfinished | 158 | 7.3 |
+| on, counter strength 0 | 77, 75, 106 | 96 last standing, 3 stalemate, 1 unfinished | 149 | 7.1 |
+
+- **Off is today's game:** the harness prints the same line as before the change (turns, endings, battles, treaties all equal), and the pinned tests check it game by game.
+- **Mix** (every army, every turn): 44% pikes, 13% riders, 43% bows. Riders cost double, so the scripts buy few.
+- **Counters:** 82% of battles had an effect of 1% or more for one side; the mean gap between the sides' multipliers was 0.42; the result would have gone the other way without counters in 6.1% of battles (by plain strength × roll against the result).
+- With the counter strength at 0 the pace returns to the control's, so the longer games come from the counters themselves, not from the costs.
+- Every offered move was legal in all 100 games, and each army's types summed to its soldiers every turn.
+- Unmeasured: how a model ruler chooses types (next part, with the `recruit_*` orders in its prompt).
+
 ### Painted Realm pacing candidates, scripted: occupation turning into ownership and the end of the last stand leave the scripted pace where it was (14 November 2026)
 
 GreyBoxStrategy (#20), candidates 1 and 3 of the rules v2 page's "Why Classic stalls" (R1c's uncapped model games took about 190 turns, 83% of them with no province changing hands). Scripted only: the `.NET 9` harness (`pace classic 100`), 100 Classic games of the `mixed` lineup, seeds 1 to 100, writs turn, conquest, 12-turn stalemate.
