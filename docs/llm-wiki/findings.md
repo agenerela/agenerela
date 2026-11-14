@@ -4285,3 +4285,23 @@ GreyBoxStrategy (#20), the two settings of #305 on the models. `personas` table,
 - **No default changes.** Both settings stay off. The rules v2 page lists what the result suggests instead: ownership that does not reset the stalemate counter, the break rule alone, or a cheaper `demand_occupied`, each for its own live pair.
 - The runner gained a deadline (no block starts that would end past 08:00, by the longest block so far plus 10%) and `-strategyRules`, which #309 brought to `test`.
 
+### Painted Realm R3, unit types live, a first look: the models recruit by type without one illegal answer, but mostly pikes, and do not answer the type they see (14 November 2026)
+
+GreyBoxStrategy (#20), `GameRules.UnitTypes` (#306, #309) on the models before it is switched on. `personas` table, five `qwen3.5:4b` seats with today's default options, RTX 5080 (Docker Ollama 0.40.14), `-strategyTurn writs -strategyCap 40`, Classic, conquest. Off (`o`) against on (`u`, `-strategyRules UnitTypes=true`), the same seeds 1 to 6, one game a block, interleaved (o1 u1 … o6 u6, 06:50 to 07:50); a seventh off game ran before the 08:00 deadline stopped the runner and is left out. Kit and data: `.scratch/realm-build-map/units-live/`, `python report.py`.
+
+| | off | on |
+|---|---|---|
+| Decisions, illegal answers | 3,345, 0 | 3,298, 0 |
+| Court recruits | 605 `recruit` | 788 by type: 505 pikes (64%), 150 riders (19%), 133 bows (17%); no plain `recruit` |
+| Recruits that counter the largest type the court sees (rules v2 9.2) | – | 157 of 714 (22%; chance 33%) |
+| Battles a game; with a counter note; won by the countering side with fewer soldiers | 81; –; – | 79; 289 of 474; 25 |
+| Model seconds a turn | 6.75 | 6.79 (paired +0.04, SD 1.02 over 6 seeds: within) |
+| Prompt tokens: court, army, treaty | 1,172, 1,232, 1,178 | 1,258, 1,283, 1,226 (+86, +51, +48) |
+| Treaties a game | 4.2 | 2.5 (paired −1.7, SD 2.3: within) |
+| Persona η² aggression / peace / recruit (30 seat-games) | 0.75 / 0.32 / 0.38 | 0.92 / 0.51 / 0.42 |
+
+- **What works:** every order by type was legal and offered, the courts used all three, the time a turn did not change, and the personas stayed as distinct or more. The prompt grew by 50 to 90 tokens.
+- **What does not, yet:** the courts answer what they see with pikes. Of 714 recruits made while a rival line said "mostly" one type, 344 were pikes against pikes (the counter is bows) and only 22% countered it, below the 33% of choosing at random. The descriptions say what beats what ("pikes beat riders, and bows beat pikes"), but the 4B reads its own army's type as the one to add. Riders are bought at twice the price and still 19%.
+- **Lines that name types,** 1,232 of them. Good: "Bows rise at ashby; I crush orsk's pikes before they strike again." "Riders strike bows; we raise forces to crush Merrow's garrison at Glimmerford." Wrong: "Pikes stand firm against bows; gold is dust, but Ilvarion's steel remains." (bows beat pikes). Repeated: "Pikes shall march to every province, for land is never given!"
+- **What it can and cannot show:** six games an arm, capped at 40 turns, so time, treaties and η² only within noise; the counter share is a large count (714 recruits) but from six games' worth of situations. No switch flips on it. The counter share is the thing to fix before unit types are on: a counters line in the court's facts ("orsk is mostly pikes: bows beat pikes") is the next A/B.
+
