@@ -30,6 +30,7 @@ namespace GreyBoxStrategy.Realm
 
         private void ShowArmies(ReplayState s)
         {
+            if (Writs) { ShowHosts(s); return; }
             foreach (var id in CountryIds)
             {
                 if (!armyPieces.TryGetValue(id, out var piece))
@@ -54,6 +55,7 @@ namespace GreyBoxStrategy.Realm
 
         private void PlaceArmies()
         {
+            if (Writs) { PlaceHosts(); return; }
             foreach (var kv in armyPieces)
             {
                 if (!armyAt.TryGetValue(kv.Key, out int at) || at < 0) continue;

@@ -35,6 +35,35 @@ phase table and the open issues, not here.
   games, then 5 uncapped and 5 on a medium world: 7.1 s of model time a turn, no capped game finished, armies
   used, treaties made, personas distinct, statements repeated far more. Results in `findings.md`, 13 November.
 
+- **Painted Realm: model rulers play the writs turn live on screen** (#20). Each country has a court
+  and a marshal with its persona, on the RTX 5080.
+  - Every decision is recorded as the game asked it, with the army a marshal's order is for.
+  - The inspector opens each decision with its prompt and facts.
+  - The RTX 5080's lock is not taken while its pause file is set.
+  - Wars with a country out of the game no longer show.
+  - Province names stay above the army plates.
+
+- **Painted Realm: the writs turn on screen, watch and replay** (#20). New game offers the writs
+  turn with stand-in rulers, on Classic or a generated world.
+  - Every army is a piece on the map at all times, with its march line and the turns left, and it
+    steps when the turn's armies march.
+  - A battle clashes where it happens; its report card shows each term from the rules' record.
+  - Occupation is the occupier's inked hatching over the owner's wash, with a pennant. A treaty
+    turns it into the new owner's wash under a seal.
+  - War scores show beside each war.
+  - The dev menu can raise, order and fight armies, occupy and free land, set a war score and land a
+    treaty. A generated chart is drawn again when the window's size needs it.
+
+- **Painted Realm: the drawn chart shows development, rivers, roads and bridges, drawn on the GPU** (#20).
+  - Each province's development decides its settlement (hamlet to large town, a capital walled, forts
+    as towers) and how much farmland lies around it.
+  - Forests and mountains are massed, plains carry trees and hedgerows, scenery islands are drawn as
+    land the rules never see, and special places have their own marks.
+  - Rivers and roads come from the generator's `MapGeometry`, with a bridge at every crossing.
+  - The ground is a shader and the marks one atlas, so a medium world at 3840 × 2400 draws in about
+    0.1 s instead of 7.3 s; a loading card shows the generator's progress.
+  - An open side panel no longer covers the council panel's buttons.
+
 - **Painted Realm rules v2, R1b's second part: model rulers for the writs turn** (#20). `WritRuler` is two
   framework agents with one persona: a court for court orders, treaties and dilemmas, and a marshal for
   army orders, the army carried in the decision's correlation. Each keeps a memory of four decisions.

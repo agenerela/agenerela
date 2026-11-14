@@ -212,6 +212,9 @@
 /* rule mode: the orders panel, bottom centre, ending in End turn */
 .orders { right: 364px; bottom: 8px; width: 520px; background-color: rgb(20, 16, 12); }
 .compact .orders { width: 470px; }
+/* A wider panel on the right (the inspector, the tales) never covers the council panel: it moves to the panel's left edge. */
+.tales-open .orders { right: 416px; }
+.insp-open .orders { right: 536px; }
 .order-line { flex-direction: row; align-items: center; height: 26px; }
 .order-chosen { font-size: 16px; -unity-font-style: bold; color: rgb(210, 173, 98); }
 .order-moves { flex-direction: row; flex-wrap: wrap; margin-top: 4px; }
@@ -251,6 +254,23 @@
 .card-chip.waiting { border-color: rgb(216, 162, 74); color: rgb(216, 162, 74); }
 /* each country's army, at its capital, in every map mode */
 .army-piece { position: absolute; flex-direction: row; align-items: center; padding: 1px 6px 1px 4px; border-width: 1px; border-color: rgb(210, 173, 98); border-radius: 3px; translate: -50% -100%; }
+/* The writs turn: an army as a piece (rules v2 3.9), its march, occupation, battles and treaties. */
+.host { position: absolute; flex-direction: row; align-items: center; padding: 1px 5px 1px 2px; border-width: 1px; border-color: rgb(210, 173, 98); border-radius: 3px; translate: -50% -100%; }
+.host-n { font-size: 12px; -unity-font-style: bold; color: rgb(243, 231, 200); margin-left: 3px; }
+.host-g { font-size: 10px; color: rgb(214, 196, 156); margin-left: 3px; -unity-font-style: italic; }
+.host-wait { position: absolute; right: -6px; top: -6px; width: 10px; height: 10px; border-radius: 5px; border-width: 2px; border-color: rgb(196, 58, 40); background-color: rgb(246, 231, 196); }
+.pennant { position: absolute; width: 18px; height: 22px; translate: 0 -100%; }
+.march-turns { position: absolute; font-size: 11px; -unity-font-style: italic bold; color: rgb(40, 28, 16); background-color: rgba(240, 226, 192, 0.85); padding: 0 3px; border-radius: 2px; }
+.battle-card { width: 520px; }
+.battle-bar { flex-direction: row; align-items: center; margin: 2px 0; }
+.battle-bar.total { margin-top: 6px; }
+.battle-bar-label { width: 150px; font-size: 12px; color: rgb(214, 198, 160); white-space: normal; }
+.battle-track { flex-grow: 1; flex-direction: row; height: 10px; background-color: rgb(40, 32, 24); margin: 0 6px; }
+.battle-half { flex-grow: 1; flex-basis: 0; }
+.battle-fill { height: 100%; }
+.battle-bar-value { width: 74px; font-size: 12px; color: rgb(234, 223, 198); -unity-text-align: middle-right; }
+.seal { position: absolute; width: 44px; height: 44px; border-radius: 22px; background-color: rgb(146, 30, 24); border-width: 3px; border-color: rgb(96, 16, 12); align-items: center; justify-content: center; translate: -50% -50%; scale: 0.3 0.3; opacity: 0; transition-property: scale, opacity; transition-duration: 0.25s, 0.25s; }
+.seal.on { scale: 1 1; opacity: 1; }
 .army-piece-n { font-size: 12px; -unity-font-style: bold; color: rgb(243, 231, 200); margin-left: 3px; }
 /* the menus: main, New game, Settings, pause */
 .menu { max-height: 94%; }
@@ -337,3 +357,8 @@
 .tale-stage-title { font-size: 12px; -unity-font-style: bold; color: rgb(216, 192, 140); }
 .tale-story { font-size: 13px; -unity-font-style: italic; color: rgb(214, 200, 170); }
 .tale-end { font-size: 12px; -unity-font-style: italic; color: rgb(141, 127, 102); margin-top: 6px; }
+
+/* the loading card while a generated world is made and drawn */
+.loading-card { position: relative; width: 520px; padding: 18px 22px; }
+.loading-bar { height: 8px; margin-top: 12px; background-color: rgba(201, 164, 90, 0.18); border-width: 1px; border-color: rgba(201, 164, 90, 0.55); }
+.loading-fill { height: 100%; width: 0; background-color: rgb(201, 164, 90); }

@@ -71,7 +71,7 @@ namespace GreyBoxStrategy.Realm
         /// A generated world: the chart drawn by <see cref="ChartImage"/>, its province map with
         /// 16-bit ids, and its own sea tile behind it. Label points come from the geometry.
         /// </summary>
-        public void BuildChart(ChartImage chart, WorldMap world)
+        public void BuildChart(ChartImage chart, WorldMap world, int seed = 0)
         {
             Drawn = true;
             width = chart.IdWidth;
@@ -102,8 +102,24 @@ namespace GreyBoxStrategy.Realm
             idTex.SetPixelData(idBytes, 0); idTex.Apply(false, true);
             var edgeTex = new Texture2D(width, height, TextureFormat.R8, false, true) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp, name = "ProvinceEdge (drawn)" };
             edgeTex.SetPixelData(edgeBytes, 0); edgeTex.Apply(false, true);
-            var chartTex = new Texture2D(chart.ChartWidth, chart.ChartHeight, TextureFormat.RGBA32, true, false) { filterMode = FilterMode.Trilinear, wrapMode = TextureWrapMode.Clamp, anisoLevel = 4, name = "Chart (drawn)" };
-            chartTex.SetPixelData(Flip(chart.Chart, chart.ChartWidth, chart.ChartHeight, 4), 0); chartTex.Apply(true, true);
+            Texture chartTex;
+            var drawWatch = System.Diagnostics.Stopwatch.StartNew();
+            if (chart.Gpu)
+            {
+                // The ground in a shader, the glyphs as quads from their atlas: the chart is drawn on the GPU.
+                gpuChart = ChartGpu.Render(chart, idTex, Paper, PaperMean, seed, Shader.Find("GreyBoxStrategy/ChartGround"), Shader.Find("GreyBoxStrategy/ChartMarks"));
+                chartTex = gpuChart;
+                // Wait for the GPU, so the time measured is the draw's, not only its submission.
+                UnityEngine.Rendering.AsyncGPUReadback.Request(gpuChart, 0, 0, 1, 0, 1, 0, 1).WaitForCompletion();
+            }
+            else
+            {
+                var t = new Texture2D(chart.ChartWidth, chart.ChartHeight, TextureFormat.RGBA32, true, false) { filterMode = FilterMode.Trilinear, wrapMode = TextureWrapMode.Clamp, anisoLevel = 4, name = "Chart (drawn)" };
+                t.SetPixelData(Flip(chart.Chart, chart.ChartWidth, chart.ChartHeight, 4), 0); t.Apply(true, true);
+                chartTex = t;
+            }
+            chart.Milliseconds["upload and draw"] = drawWatch.ElapsedMilliseconds;
+            ChartWidth = chart.ChartWidth;
 
             // Label points and the land's box, from the geometry.
             var geo = world.Geometry;
@@ -135,6 +151,52 @@ namespace GreyBoxStrategy.Realm
             ChartReport = $"chart {chart.ChartWidth}×{chart.ChartHeight}, province map {width}×{height}, {count} provinces, {chart.Glyphs} glyphs, drawn in {total} ms ({string.Join(", ", chart.Milliseconds)})";
         }
 
+        private RenderTexture gpuChart;
+
+        /// <summary>The width the chart was last drawn at, in pixels.</summary>
+        public int ChartWidth { get; private set; }
+
+        /// <summary>
+        /// Draws the chart again at another width (the window changed size), on the GPU, and swaps it in:
+        /// the province map, the state and the camera stay as they are. False where the GPU cannot draw it.
+        /// </summary>
+        public bool RedrawChart(ChartImage chart, int seed)
+        {
+            if (!chart.Gpu || material == null) return false;
+            var idBytes = new byte[chart.IdWidth * chart.IdHeight * 2];
+            for (int y = 0; y < chart.IdHeight; y++)
+            {
+                int src = (chart.IdHeight - 1 - y) * chart.IdWidth, dst = y * chart.IdWidth;
+                for (int x = 0; x < chart.IdWidth; x++)
+                {
+                    ushort v = chart.Ids[src + x];
+                    idBytes[(dst + x) * 2] = (byte)(v & 0xFF);
+                    idBytes[(dst + x) * 2 + 1] = (byte)(v >> 8);
+                }
+            }
+            var idTex = new Texture2D(chart.IdWidth, chart.IdHeight, TextureFormat.RG16, false, true) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp, name = "ProvinceIds (redraw)" };
+            idTex.SetPixelData(idBytes, 0); idTex.Apply(false, true);
+            var drawn = ChartGpu.Render(chart, idTex, Paper, PaperMean, seed, Shader.Find("GreyBoxStrategy/ChartGround"), Shader.Find("GreyBoxStrategy/ChartMarks"));
+            Destroy(idTex);
+            material.SetTexture("_MainTex", drawn);
+            if (gpuChart != null) { gpuChart.Release(); Destroy(gpuChart); }
+            gpuChart = drawn;
+            ChartWidth = chart.ChartWidth;
+            return true;
+        }
+
+        /// <summary>The paper tile laid over a drawn chart's land (<c>Screen/Art/Resources/chart-paper.png</c>), generated art; null when missing.</summary>
+        public static Texture2D Paper => paper != null ? paper : paper = Resources.Load<Texture2D>("chart-paper");
+        private static Texture2D paper;
+        /// <summary>The paper tile's mean brightness, 0 to 1: the shader multiplies by the paper relative to it, so the land keeps its tone.</summary>
+        public const float PaperMean = 0.673f;
+
+        private void OnDestroy()
+        {
+            ChartGpu.ReleaseInputs();
+            if (gpuChart != null) { gpuChart.Release(); Destroy(gpuChart); }
+        }
+
         private static byte[] Flip(byte[] top, int w, int h, int bpp)
         {
             var o = new byte[top.Length];
@@ -149,7 +211,7 @@ namespace GreyBoxStrategy.Realm
             pixels = new List<int>[count];
             for (int p = 0; p < count; p++) pixels[p] = new List<int>();
             labelUv = new Vector2[count];
-            stateData = new Color32[columns * 4];
+            stateData = new Color32[columns * Rows];
         }
 
         private void Assemble(Texture main, Texture idTex, Texture edgeTex, bool wide)
@@ -160,7 +222,7 @@ namespace GreyBoxStrategy.Realm
             material.SetTexture("_EdgeTex", edgeTex);
             material.SetFloat("_IdWide", wide ? 1 : 0);
 
-            state = new Texture2D(columns, 4, TextureFormat.RGBA32, false, true) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp, name = "ProvinceState" };
+            state = new Texture2D(columns, Rows, TextureFormat.RGBA32, false, true) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp, name = "ProvinceState" };
             spread = new Texture2D(width, height, TextureFormat.R8, false, true) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp, name = "CaptureSpread" };
             material.SetTexture("_StateTex", state);
             material.SetTexture("_SpreadTex", spread);
@@ -301,7 +363,59 @@ namespace GreyBoxStrategy.Realm
         }
 
         /// <summary>For tests and the readouts: the state texture's size.</summary>
-        public Vector2Int StateSize => new Vector2Int(columns, 4);
+        public Vector2Int StateSize => new Vector2Int(columns, Rows);
+
+        /// <summary>The state texture's rows: owner, before, capture, overlay, occupier, hatch sweep.</summary>
+        public const int Rows = 6;
+
+        // ---- occupation (the writs turn) ----
+
+        /// <summary>
+        /// The occupier of each province, as inked diagonal hatching in its colour over the owner's wash
+        /// (rules v2 5.1). Null where nobody occupies; a province with no occupier given keeps none.
+        /// </summary>
+        public void SetOccupiers(IReadOnlyList<string> occupiers, Func<string, Color32> colourOf)
+        {
+            for (int p = 0; p < count; p++)
+            {
+                string o = occupiers == null || p >= occupiers.Count ? null : occupiers[p];
+                var c = o == null ? new Color32(0, 0, 0, 0) : colourOf(o);
+                c.a = (byte)(o == null ? 0 : 255);
+                stateData[4 * columns + p] = c;
+                stateData[5 * columns + p] = new Color32(0, 0, 0, 0);
+                var extra = stateData[3 * columns + p];
+                stateData[3 * columns + p] = new Color32(extra.r, extra.g, extra.b, 0);
+            }
+            ApplyState();
+        }
+
+        /// <summary>
+        /// One province's hatching on its way in or out. <paramref name="amount"/> 0 to 1; with
+        /// <paramref name="from"/> set it is drawn in stroke by stroke from that side (a province index),
+        /// else it lifts from the edges inward as the amount falls. <paramref name="thicken"/> widens the
+        /// strokes until they flow together, as a treaty turns it into the new owner's wash.
+        /// </summary>
+        public void SetHatch(int province, string occupier, Func<string, Color32> colourOf, float amount, int from = -1, float thicken = 0)
+        {
+            if (province < 0 || province >= count) return;
+            var c = occupier == null ? new Color32(0, 0, 0, 0) : colourOf(occupier);
+            c.a = (byte)Mathf.RoundToInt(Mathf.Clamp01(amount) * 255);
+            stateData[4 * columns + province] = c;
+            var uv = labelUv[province];
+            byte angle = 0, sweep = 0;
+            if (from >= 0 && from < count)
+            {
+                var d = labelUv[from] - uv;
+                angle = (byte)Mathf.RoundToInt(Mathf.Repeat(Mathf.Atan2(d.y, d.x) / (2 * Mathf.PI), 1) * 255);
+                sweep = 255;
+            }
+            // The sweep's centre and its reach: a province's share of the land, as the focus has it.
+            stateData[5 * columns + province] = new Color32((byte)Mathf.RoundToInt(Mathf.Clamp01(uv.x) * 255), (byte)Mathf.RoundToInt(Mathf.Clamp01(uv.y) * 255), angle, sweep);
+            var extra = stateData[3 * columns + province];
+            stateData[3 * columns + province] = new Color32(extra.r, extra.g, extra.b, (byte)Mathf.RoundToInt(Mathf.Clamp01(thicken) * 255));
+            material.SetFloat("_HatchReach", Drawn ? 0.09f * Mathf.Sqrt(25f / count) : 0.09f);
+            ApplyState();
+        }
 
         // ---- the capture ----
 

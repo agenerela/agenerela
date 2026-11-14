@@ -18,10 +18,10 @@ namespace GreyBoxStrategy.Chart
     public sealed class ChartImage
     {
         public int ChartWidth, ChartHeight;
-        /// <summary>RGBA, top row first.</summary>
+        /// <summary>CPU mode: the drawn chart, RGBA, top row first. Null in GPU mode, which draws it from the fields below.</summary>
         public byte[] Chart;
         public int IdWidth, IdHeight;
-        /// <summary>Province index per pixel, <see cref="ChartRaster.Sea"/> or <see cref="ChartRaster.Water"/>, top row first.</summary>
+        /// <summary>Province index per pixel, <see cref="ChartRaster.Sea"/> or <see cref="ChartRaster.Water"/>, top row first. Scenery islands are sea here.</summary>
         public ushort[] Ids;
         /// <summary>Distance to the nearest border × 16, capped at 255, as <c>_EdgeTex</c> wants it.</summary>
         public byte[] Edge;
@@ -31,24 +31,70 @@ namespace GreyBoxStrategy.Chart
         public int Glyphs;
         public readonly Dictionary<string, long> Milliseconds = new Dictionary<string, long>();
 
-        /// <summary>The chart <paramref name="chartWidth"/> pixels wide (even); the province map is half that.</summary>
-        public static ChartImage Make(WorldMap world, int chartWidth, int seed)
+        // ---- GPU mode: what the ground shader and the quads need ----
+        /// <summary>GPU mode: the land's signed distance to the coast in province-map pixels (positive on land, islands included), top row first.</summary>
+        public float[] CoastSdf;
+        public ChartScene Scene;
+        public ChartFields Fields;
+        public ChartAtlas Atlas;
+        /// <summary>Per province: its terrain's index.</summary>
+        public byte[] TerrainOf;
+        public float[] Grain;
+        /// <summary>Chart pixels per grid cell.</summary>
+        public float Scale;
+        public bool Gpu => Chart == null;
+
+        /// <summary>
+        /// The chart <paramref name="chartWidth"/> pixels wide (even); the province map is half that.
+        /// <paramref name="gpu"/>: build only the inputs the GPU renderer draws from (a raster at half
+        /// size, the scene, its fields and atlas), which takes a fraction of the time; otherwise draw
+        /// the whole chart on the CPU.
+        /// </summary>
+        public static ChartImage Make(WorldMap world, int chartWidth, int seed, bool gpu = false, byte[] paper = null, int paperSize = 0)
         {
             if (world?.Geometry == null) throw new ArgumentException("Only a generated world has the geometry a chart is drawn from.");
-            if (world.Geometry.Provinces.Count >= ChartRaster.Water) throw new ArgumentException("Too many provinces for a 16-bit province map.");
+            if (world.Geometry.Provinces.Count >= ChartRaster.Island) throw new ArgumentException("Too many provinces for a 16-bit province map.");
             chartWidth -= chartWidth % 2;
             var o = new ChartImage { GridWidth = world.Geometry.Width, GridHeight = world.Geometry.Height };
             var watch = Stopwatch.StartNew();
-            var raster = ChartRaster.Build(world.Geometry, chartWidth, seed);
-            o.Milliseconds["raster"] = watch.ElapsedMilliseconds; watch.Restart();
-            o.Ids = raster.Downsample(2, out o.IdWidth, out o.IdHeight);
-            o.Edge = ChartRaster.EdgeField(o.Ids, o.IdWidth, o.IdHeight);
-            o.Milliseconds["edge"] = watch.ElapsedMilliseconds;
-            var painter = new ChartPainter(world, raster, seed);
-            var canvas = painter.Paint();
-            foreach (var kv in painter.Milliseconds) o.Milliseconds["paint " + kv.Key] = kv.Value;
-            o.Chart = canvas.Rgba; o.ChartWidth = canvas.Width; o.ChartHeight = canvas.Height;
-            o.Glyphs = painter.GlyphCount;
+            if (gpu)
+            {
+                var half = ChartRaster.Build(world.Geometry, chartWidth / 2, seed);
+                o.Milliseconds["raster"] = watch.ElapsedMilliseconds; watch.Restart();
+                o.Ids = half.Downsample(1, out o.IdWidth, out o.IdHeight);
+                o.Edge = ChartRaster.EdgeField(o.Ids, o.IdWidth, o.IdHeight);
+                var dist = ChartRaster.DistanceToOther(half.Ids, half.Width, half.Height, (a, c) => ChartRaster.IsWater(a) != ChartRaster.IsWater(c));
+                o.CoastSdf = new float[dist.Length];
+                for (int i = 0; i < dist.Length; i++) o.CoastSdf[i] = ChartRaster.IsWater(half.Ids[i]) ? -(dist[i] - 0.5f) : dist[i] - 0.5f;
+                o.Milliseconds["fields"] = watch.ElapsedMilliseconds; watch.Restart();
+                o.Scene = ChartLayout.Build(world, half, seed);
+                o.Fields = ChartFields.Build(world, o.Scene, seed);
+                o.Milliseconds["layout"] = watch.ElapsedMilliseconds; watch.Restart();
+                o.Scale = chartWidth / (float)world.Geometry.Width;
+                o.ChartWidth = chartWidth;
+                o.ChartHeight = (int)Math.Round(world.Geometry.Height * o.Scale);
+                o.Atlas = ChartAtlas.Build(o.Scene.Glyphs, o.Scale);
+                o.Glyphs = o.Scene.Glyphs.Count;
+                o.Milliseconds["atlas"] = watch.ElapsedMilliseconds; watch.Restart();
+                o.TerrainOf = world.Provinces.Select(p => (byte)p.Terrain).ToArray();
+                o.Grain = ChartPainter.Grain(seed);
+            }
+            else
+            {
+                var raster = ChartRaster.Build(world.Geometry, chartWidth, seed);
+                o.Milliseconds["raster"] = watch.ElapsedMilliseconds; watch.Restart();
+                o.Ids = raster.Downsample(2, out o.IdWidth, out o.IdHeight);
+                o.Edge = ChartRaster.EdgeField(o.Ids, o.IdWidth, o.IdHeight);
+                o.Milliseconds["edge"] = watch.ElapsedMilliseconds;
+                var painter = new ChartPainter(world, raster, seed);
+                if (paper != null) painter.UsePaper(paper, paperSize);
+                var canvas = painter.Paint();
+                foreach (var kv in painter.Milliseconds) o.Milliseconds["paint " + kv.Key] = kv.Value;
+                o.Chart = canvas.Rgba; o.ChartWidth = canvas.Width; o.ChartHeight = canvas.Height;
+                o.Glyphs = painter.GlyphCount;
+                o.Scene = painter.Scene; o.Fields = painter.Fields;
+                o.Scale = raster.Scale;
+            }
             watch.Restart();
             o.SeaTileSize = 512;
             o.SeaTile = ChartPainter.SeaTile(o.SeaTileSize);

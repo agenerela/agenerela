@@ -90,7 +90,7 @@ namespace GreyBoxStrategy.Screen.Tests
                 typeof(MapView).GetField("shader", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(view, Shader.Find("GreyBoxStrategy/PaintedMap"));
                 view.BuildChart(chart, world);
                 Assert.That(view.Count, Is.EqualTo(world.Provinces.Count));
-                Assert.That(view.StateSize, Is.EqualTo(new Vector2Int(world.Provinces.Count, 4)));
+                Assert.That(view.StateSize, Is.EqualTo(new Vector2Int(world.Provinces.Count, MapView.Rows)));
                 for (int p = 0; p < view.Count; p++)
                     Assert.That(view.ProvinceAt(view.ProvinceWorld(p)), Is.EqualTo(p), $"the name of {world.Provinces[p].Id} stands on it");
                 // Owners for every province, ten countries: nothing falls off the texture.

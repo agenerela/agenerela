@@ -71,6 +71,13 @@ namespace GreyBoxStrategy.Replay
         public JObject Raw;
 
         public bool IsEnvoy => Moment == "envoys";
+        /// <summary>The writs turn: the army a marshal's order is for (the decision's correlation), or null for a court decision.</summary>
+        public string ArmyId;
+        /// <summary>The country this decision is for: a marshal's agent id is the country's plus <c>_marshal</c>.</summary>
+        public string Country => AgentId != null && AgentId.EndsWith(MarshalSuffix, StringComparison.Ordinal) ? AgentId.Substring(0, AgentId.Length - MarshalSuffix.Length) : AgentId;
+        public const string MarshalSuffix = "_marshal";
+        /// <summary>The moment of an army order in the writs turn.</summary>
+        public const string ArmyMoment = "army";
         /// <summary>The storyteller's own decision: the event it chose for <see cref="Turn"/>'s upkeep.</summary>
         public bool IsStory => Moment == StoryMoment;
         /// <summary>The scribe's decision: the title of the turn's event (<c>+title-call</c>).</summary>
@@ -177,8 +184,16 @@ namespace GreyBoxStrategy.Replay
                     };
                     if (d.ExecutionStatus != null) o["execution"] = new JObject { ["status"] = d.ExecutionStatus, ["reason"] = d.ExecutionReason };
                 }
+                // The game's own choice and how it landed: a live writs game's raw log record holds neither.
+                if (d.Raw != null)
+                {
+                    if (!(o["decision"] is JObject dec)) o["decision"] = dec = new JObject();
+                    dec["action"] = d.Action; dec["target"] = d.Target;
+                    if (d.ExecutionStatus != null) o["execution"] = new JObject { ["status"] = d.ExecutionStatus, ["reason"] = d.ExecutionReason };
+                }
                 o["turn"] = d.Turn;
                 o["moment"] = d.Moment;
+                if (d.ArmyId != null) o["army"] = d.ArmyId;
                 decisions.Add(o);
             }
             root["decisions"] = decisions;
@@ -241,6 +256,9 @@ namespace GreyBoxStrategy.Replay
             return rec;
         }
 
+        /// <summary>One decision from a decision log's "Decided" record, with <c>turn</c> and <c>moment</c> set on it.</summary>
+        public static RecordedDecision FromLogRecord(JObject o) => ParseDecision(o);
+
         private static RecordedDecision ParseDecision(JObject o)
         {
             var decision = o["decision"] as JObject;
@@ -254,6 +272,7 @@ namespace GreyBoxStrategy.Replay
                 Moment = (string)o["moment"],
                 ChainId = (string)o["chainId"],
                 ChainHop = (int?)o["chainHop"] ?? 0,
+                ArmyId = (string)o["army"],
                 Sequence = (long?)o["sequence"] ?? 0,
                 Action = (string)decision?["action"],
                 Target = (string)decision?["target"],

@@ -118,6 +118,14 @@ namespace GreyBoxStrategy.Realm
 
         private void StartNewGame(NewGameChoice c)
         {
+            if (c.Writs)
+            {
+                if (c.Rule) { ui.ShowMenuStatus("The writs turn is watch only for now: model rulers play it. Rule mode on it is the next slice."); return; }
+                // Model rulers on the RTX 5080: a court and a marshal for every country.
+                if (c.Generated) StartGeneratedLive(c.Size, c.Seed, c.Model, c.Victory);
+                else TryLiveWrits(c.Model, c.Seed, c.Victory);
+                return;
+            }
             if (c.Generated)
             {
                 if (c.Rule) { ui.ShowMenuStatus("A generated world is watch only for now: scripted rulers play it. Rule mode on it comes with generated worlds in full (R4)."); return; }
@@ -165,6 +173,7 @@ namespace GreyBoxStrategy.Realm
             if (ui.MenuOpen) { ui.MenuBack?.Invoke(); return; }
             // The choice card closes only by choosing: Esc opens the pause menu over it.
             if (ui.EventOpen) { ui.CloseEvent(); return; }
+            if (ui.BattleOpen) { ui.CloseBattle(); return; }
             if (ui.TalesOpen) { ui.CloseTales(); return; }
             if (ui.InspectorOpen || ui.SideOpen || ui.DiplomacyOpen)
             {

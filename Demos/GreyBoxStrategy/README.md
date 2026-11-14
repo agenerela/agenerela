@@ -146,6 +146,11 @@ unity command script eval -- --code 'return GreyBoxStrategy.Realm.DevTools.Run("
 | `event <template> <target> [Title: story]` · `events` | Fire any event template at the next upkeep: the table's, the storyteller's, a dilemma (`event sellswords kesh`), or a planned tale's beginning (`event begin_pretender kesh`). In a storyteller game it takes that turn's place, and the dev menu deals the turn the kind its event needs. `events` lists them all, read from `EventRules.AllTemplates`. The rules allow none before turn 3 |
 | `scripted-rule <country> [seed] [preset]` · `scripted-watch [seed] [preset]` | The stand-in games above, with a stand-in storyteller on a preset (`saga`, `even_hand`...) that picks legal events, leaning toward dilemmas and tales |
 | `story-open` · `story-inspect [title]` · `tales` · `choose <option>` | Open the last storyteller event, its decision (or its title call's) in the inspector, the tales panel; answer the choice card |
+| `writs classic\|<size> [seed] [conquest\|domination_75]` | Watch stand-in rulers play the writs turn, on the Classic board or a generated world: armies as pieces, occupation, treaties |
+| `writs-live classic\|<size> [seed] [turns] [model]` · `writs-agents classic\|<size> [seed] [turns]` | The writs turn played live: model rulers on the RTX 5080 (the lock, its pause file and the server are checked first), or stand-ins through the same agents with no server |
+| `until <event kind>` · `battle-report` | Play on and hold before the next event of a kind (`Battle`, `March`, `Occupy`, `Treaty`...); open the last battle's report card |
+| `spawn <country> <province> <n>` · `march <army> <province>` · `battle <army> <enemy army>` | The writs turn's armies: raise one, order one, or step one into an enemy's province so they fight when the turn resolves |
+| `occupy <province> <country>` · `free <province>` · `warscore <a> <b> =<n>` · `treaty <a> <term> <b>` | Occupation, the battles part of a war score (4 a battle, at most 20), and a treaty term landed at once. In a writs game with stand-in rulers, an edit lands at the start of the next turn and the game is played again from there |
 | `fog off\|on` | Reveal everything in rule mode, or restore what your court knows |
 | `fault lock <holder…>` · `fault lock off` | Pretend another session holds the RTX 5080. The real lock directory is never read, written or taken while this is on |
 | `fault server on\|off` | Pretend the server cannot be reached |
@@ -236,11 +241,11 @@ framework writes the moves as one line among the facts, `LegalTargets = Observat
 
 Each game log shows the model's answer and its statement under each of its moves.
 
-**Tests:** 351 EditMode tests in all, counted on 13 November. 284 are the game's, in
-`Assets/GreyBoxStrategy/Tests/Editor/`: 280 run every time, about a minute once the project has
+**Tests:** 370 EditMode tests in all, counted on 13 November. 289 are the game's, in
+`Assets/GreyBoxStrategy/Tests/Editor/`: 285 run every time, about a minute once the project has
 imported (the map generator's take most of it), and four long ones are run by hand. Of the game's,
 twenty drive the model seat through `ScriptedProvider`, sixteen in `TableTests` the table, the
-personas and the scorecard, and fifteen in `StorytellerTests` the storyteller. 67 are the screen's,
+personas and the scorecard, and fifteen in `StorytellerTests` the storyteller. 81 are the screen's,
 in `Screen/Tests/Editor/`.
 
 ## Rules v2, being built
@@ -413,6 +418,8 @@ too):
 | 1920 × 1080 | 2400 × 1351 | 1200 × 675 | about 2 s (estimated; not timed after the last speed-up) |
 | 3840 × 2400 | 4800 × 2702 | 2400 × 1351 | 7.3 s (under .NET: 1.7 s) |
 
+The second slice below moves the drawing to the GPU: about 0.1 s at 3840 × 2400.
+
 About 4.4 s of the 7.3 s is one pass over every pixel, which runs about 15 times slower under the
 editor's Mono than under .NET. Memory for the chart at 4800 wide is about 70 MB with mipmaps. A
 huge world's generator takes about 12 s in the editor before any of this (R2's own number).
@@ -424,6 +431,163 @@ huge world's generator takes about 12 s in the editor before any of this (R2's o
 - With one move a turn, a huge map changes slowly. After 8 turns most of it is still neutral
   hatching.
 - Scripted rulers say nothing, so the chronicle has no speech.
+
+### The drawn chart, second slice: development, roads, the GPU (13 November)
+
+The lead's verdict on the spike was to keep improving it, with farms and buildings by how much a
+province has, and the generated roads. This slice draws what the world's data says, and moves the
+drawing onto the GPU. Classic is unchanged.
+
+**What the chart shows now** (`ChartLayout` in `Screen/Chart/ChartScene.cs` decides what goes where,
+from the world alone, and both renderers draw that one scene):
+- **Development.** Each province's `Development` (R6 feeds it; today `Development.Of` from its
+  population, capital, port and buildings) is read once and decides its settlement and its fields:
+  - a hamlet, a village, a town or a large town (tiers 0 to 3); a capital is a walled city with a
+    banner (tier 4); each fort is a tower beside it, up to three; a port adds an anchor;
+  - farmland around the settlement, wider and denser with development (`FarmRadius`, `FarmShare`),
+    drawn as fields of strips and furrows with hedges, each field turned its own way. A test holds
+    that a developed plains province is farmed at least 1.3 times as much as a poor one.
+- **Terrain massed, not scattered.** Forests are closed canopies of conifers and round trees; mountains
+  two staggered rows of peaks along their ridges, open at passes; hills, marsh reeds, scattered trees
+  and hedgerow trees on plains, so no plain is empty.
+- **Rivers and roads** from `MapGeometry` (#277): every river at its rank's width, smoothed from the
+  cell corners and given a meander; every road from settlement to settlement through its provinces, a
+  highway cased, a track dashed; and a bridge wherever a road crosses a river, at the generator's own
+  crossing point.
+- **Scenery islands** (cell `-4`) are drawn as land with a coast, trees and rocks. The province map
+  sees sea there, so the rules, the wash and clicks never treat them as a province.
+- **Special places** have their own marks: a ruined castle, mines, a lake, a spring, a horseshoe, a
+  great tree, crossed swords, a crown with a gilt halo.
+- **Paper.** The land and the sea are printed on a tileable paper texture
+  (`Screen/Art/Resources/chart-paper.png`, its licence is in the screen page's asset list).
+
+**How it is drawn.** `ChartImage.Make(..., gpu: true)` prepares the inputs off the main thread: the
+raster at half width, the ids, the coast's distance field, the scene, the terrain and farmland fields,
+and the atlas (`ChartAtlas`: every distinct glyph look drawn once by the CPU's own code, about 170 for
+4,800 glyphs). `ChartGpu` then draws, on the main thread:
+- the ground with `ChartGround.shader`, a port of the CPU painter's per-pixel pass (same hashes, so the
+  same noise), into an sRGB texture with mipmaps;
+- the rivers and roads as triangle strips and every glyph as a quad from the atlas
+  (`ChartMarks.shader`), in the scene's order.
+
+The CPU painter (`ChartPainter`) stays as the fallback on a machine without float textures or the two
+shaders (`ChartGpu.Supported`), and for the .NET harness and the tests. It draws without the paper texture.
+
+**Loading.** A generated world shows a loading card (`UI/LoadingCard.cs`) while the generator runs, with
+its attempts and time, then while the game is played and the chart prepared. The generator has a
+12-second budget; past it the best world found so far is played, and the load report says so. When
+no playable world was found, the card closes and the screen stays on the Classic board, with a warning
+in the console.
+
+**What it costs** (medium world, seed 7, 3840 × 2400, in the editor):
+
+| Step | Where | Time |
+|---|---|---|
+| The world (generator) | worker thread | 4.2 s |
+| The game played, the chart's inputs prepared | worker thread | 1.7 s |
+| The chart drawn on the GPU, read back once so the time is honest | main thread | 106 to 121 ms |
+| The spike's CPU drawing, for comparison | main thread | 7.3 s |
+
+**Noted, not fixed:**
+- The 1366 × 768 frame shows a chart built for a 3840-wide window and scaled down: changing the Game
+  view's size did not rebuild the chart. Fixed with the writs turn on screen: the chart is drawn again
+  for the new size once it settles, if it needs at least 10% more or fewer pixels.
+- Seed 7 has one bridge. Roads cross rivers rarely on the generator's maps today.
+- The farmland test reads the scene, not the pixels; how the fields look is judged by eye.
+
+### The writs turn on screen: watch and replay (13 November)
+
+The screen's half of R1, first part: a writs game played back on the map, by stand-in rulers. Rule
+mode on the writs turn is the next part, and model rulers on the screen with it. The one-move game
+and Classic's painting stay the default.
+
+**See it:** New game → The turn: Writs and armies (with the victory preset), on Classic or a
+generated world, or the dev menu's `writs classic 3` and `writs medium 7`.
+
+**What the screen shows** (`Screen/Replay/ReplayBuilder.Writs.cs` makes the events,
+`Screen/ReplayDirector.Writs.cs` plays them, `Screen/UI/ScreenUI.Writs.cs` draws them):
+- **Every army, always, in every map mode:** a piece with its owner's crest, its soldiers and its
+  general's initial. Several in one province stand side by side, in two rows when there are many.
+  One waiting on rough ground stands on the border. Its tooltip gives its order and why it awaits
+  orders.
+- **Marches:** a dashed ink line in the owner's colour along the rest of the path, with the turns
+  left. At the turn's march every army steps at the same moment, 0.6 s a step at 1×. Two steps over
+  open ground are two slides.
+- **Battles:** crossed swords and a puff where it happens, in a province or on a border, and the
+  losers sliding back to where they fall back to. The report card (from the chronicle line, or
+  `battle-report`) is built from `TurnReport.BattleRecords`: both sides, their armies and soldiers,
+  each term of the result as a pair of bars with the dice last, the losses and retreats, and the
+  rules' own sentence on why.
+- **Occupation** as section 5.1 of the rules page draws it: the owner's wash stays, and the
+  occupier's colour goes over it as inked diagonal hatching, a pattern rather than only a colour.
+  A pennant stands on the province. The hatching is drawn in from the side the army came from, and
+  lifts from the edges inward when the land is freed.
+- **A treaty:** the ceded land's hatching thickens and flows into the new owner's wash, a wax seal
+  stamps on it, and the borders redraw. This is the colouring moment now. Returned land's hatching
+  lifts.
+- **War score** beside each war in the realm panel, the country panel and the diplomacy grid.
+- **The chronicle** has a line for each order, battle, occupation, freeing, term, answer and
+  treaty. Each army order opens its marshal's decision in the inspector (the army in its
+  correlation, `RecordedDecision.ArmyId`).
+- **Conquest** shows "last realm wins" in the standings instead of a province count.
+
+**How the replay is checked.** `ReplayBuilder` rebuilds each writs turn from the recorded orders,
+round by round as the rules ask them, then reads the turn's report in the order the rules resolve
+it. Each turn's owners and occupiers must match the game's, or it throws, as for the one-move game.
+The armies' places are counted too (`ReplayTurn.ArmyDrift`). Ten scripted games, eight Classic seeds
+and two medium worlds, about 25,000 army positions, leave none away from where the rules put them,
+and every step goes from a province to one bordering it. Armies the rules send home after a peace
+are set down, not marched.
+
+**Dev menu:** `spawn`, `march`, `battle`, `occupy`, `free`, `warscore` and `treaty`, in the table
+above. A stand-in writs game is played in full before it is shown, so an edit plays the game again
+from the start of the next turn, with the edit, and the turns before it stay as they were. The
+recording carries the edits, as a rule game's does.
+
+**What it costs:** a Classic writs game is played and rebuilt in about 0.2 s under .NET, a medium
+world's in about 0.5 to 0.9 s, off the main thread behind the loading card.
+
+**Noted, not fixed:**
+- Pieces in neighbouring provinces can overlap each other and the names when many armies gather.
+- The seal can sit under a piece standing on the same province.
+- The scripted rulers order armies into land they may not enter, so the chronicle shows many
+  refused orders; that is the stand-ins' play, not the screen's.
+
+### The writs turn on screen: model rulers, live (13 November)
+
+The second part of the screen's R1: the writs turn played live by model rulers, a court and a marshal
+for every country (`WritRuler`, R1b), each with its persona, on the RTX 5080 behind its lock. Rule mode
+on the writs turn is next.
+
+**See it:** New game → The turn: Writs and armies → Watch, on Classic or a generated world. The dev
+menu's `writs-live classic 3 [turns] [model]` does the same, and `writs-agents classic 3 [turns]` plays
+stand-in rulers through the same agents with no server, so the inspector shows real prompts without
+the card.
+
+**How a live writs game is recorded** (`Screen/LiveWritsSession.cs`). The session drives the turn
+round by round, as `WritModelRunner` does, with one ruler's decisions back to back. The rulers' agents
+decide outside any `DecisionRound`, so their decision log lines carry no chain id to read a turn from,
+and the one-move game's way of turning the log into a recording cannot see them. The session records
+every decision as the game asked it: turn, moment, country, the army a marshal's order is for, what
+was chosen, and what `Agent.Execute` made of it when it landed. It pairs each one with that agent's
+log record in order, checked by the stimulus the ruler sent, for its prompt, facts, guards and
+telemetry. A pair that does not match keeps no prompt rather than another decision's. The replay
+rebuilds the game from that recording, and the inspector opens every court and marshal decision.
+A marshal's says which army it ordered.
+
+**Two rules that changed for every live game:**
+- The replay's gate refuses a move whose `Agent.Execute` failed, as well as one it refused, since
+  both keep a move from landing in the game.
+- The RTX 5080's lock is not taken while its `pause` file is set, so a measurement's gap between
+  blocks stays its own. New game and the dev menu say so.
+
+**The first commit's fixes,** from the frames of #284:
+- A country out of the game is at war with nobody, so the wars lists and the diplomacy grid no
+  longer show wars with a realm that is gone.
+- New game's Watch button says who plays the turn chosen.
+- The storyteller row is off for the writs turn, which has none yet.
+- The province names are drawn above the army plates, which stand a little higher, so a crowd of
+  armies never hides where it is.
 
 **R1a, the writs turn and armies as pieces, headless** (12 November). Rules v2's turn, as a setting
 beside today's: `GameSetup.Writs(seed)` (or `"turn": "writs"`) plays it, conquest with no turn limit.
@@ -1923,7 +2087,7 @@ Assets/GreyBoxStrategy/
   Screen/             GreyBoxStrategy.Screen: the screen (namespace GreyBoxStrategy.Realm)
     Replay/           GreyBoxStrategy.Replay (noEngineReferences): Recording, ReplayBuilder, Chronicle
     Chart/            GreyBoxStrategy.Chart (noEngineReferences): a generated world drawn as a chart, by code
-    Map/              PaintedMap.shader, MapView
+    Map/              PaintedMap.shader, MapView, ChartGpu; Resources/ the chart's two shaders
     UI/               ScreenUI, CountryLook (crests and icons drawn by code), PaintedRealm.uss/.tss
     Art/              the painting, the faces, the baked province maps
     Replays/          recorded games to play back

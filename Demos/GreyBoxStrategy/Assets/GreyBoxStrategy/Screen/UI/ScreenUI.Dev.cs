@@ -88,6 +88,12 @@ namespace GreyBoxStrategy.Realm
             Fill("STATE (rule games; at the start of the next turn)",
                 ("Gold", $"gold {you} +100"), ("Soldiers", $"army {you} +20"), ("Stability", $"stability {you} =5"), ("Fort", "forts harrow +1"),
                 ("Owner", $"owner harrow {you}"), ("War", $"war {you} {rival}"), ("Peace", $"peace {you} {rival}"), ("Eliminate", $"eliminate {rival}"));
+            Buttons("WRITS TURN (stand-in rulers: armies, occupation, treaties)", ("Classic", "writs classic 3"), ("Medium world", "writs medium 7"),
+                ("Next battle", "until Battle"), ("Next march", "until March"), ("Next treaty", "until Treaty"), ("Last battle's report", "battle-report"));
+            Fill("WRITS STATE (writs games with stand-ins; at the start of the next turn, then played on)",
+                ("Spawn", $"spawn {you} <province> 30"), ("March", "march <army> <province>"), ("Battle", "battle <army> <enemy army>"),
+                ("Occupy", $"occupy <province> {you}"), ("Free", "free <province>"), ("War score", $"warscore {you} {rival} =12"),
+                ("White peace", $"treaty {you} offer_white_peace {rival}"), ("Demand", $"treaty {you} demand_occupied {rival}"), ("Cede", $"treaty {you} cede_occupied {rival}"));
             Buttons("FOG", ("Reveal", "fog off"), ("Restore", "fog on"));
             var ev = new List<(string, string)>();
             foreach (string id in events) ev.Add((id, $"event {id} {you}"));

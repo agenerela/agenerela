@@ -80,8 +80,10 @@ namespace GreyBoxStrategy.Replay
             var d = e.Decision ?? throw new ArgumentException("This event has no decision behind it.");
             var c = new DecisionCard
             {
-                Country = d.AgentId, Turn = d.Turn,
-                Moment = d.IsEnvoy ? "envoy" : d.IsStory ? "the storyteller's call" : d.IsTitle ? "the title call" : d.IsChoice ? "a dilemma's choice" : "council",
+                Country = d.IsMove ? d.Country : d.AgentId, Turn = d.Turn,
+                // The writs turn has two agents a country: the marshal orders an army, the court the rest.
+                Moment = d.ArmyId != null ? $"marshal, ordering {Chronicle.Host(d.ArmyId)}" : d.IsEnvoy ? "envoy" : d.IsStory ? "the storyteller's call"
+                    : d.IsTitle ? "the title call" : d.IsChoice ? "a dilemma's choice" : "council",
                 ChainId = d.ChainId, ChainHop = d.ChainHop,
                 Action = d.Action, Target = d.Target ?? RecordedDecision.NoTarget, Statement = d.Statement ?? "",
                 Model = d.ModelName, LatencySeconds = d.LatencySeconds, QueueWaitSeconds = d.QueueWaitSeconds,

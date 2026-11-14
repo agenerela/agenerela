@@ -1611,6 +1611,18 @@ exists, and where it differs from the list above:
 
 The screen's half is the screen session's.
 
+**The screen's half, first part: built** (13 November). Watch and replay of a writs game by stand-in
+rulers: the pieces, the march lines and the step animation, the battle clash and its report card, the
+occupation hatching and its drawing-in, the treaty's flow from hatch to wash under a seal, hatching
+lifting from freed land, war scores, and `ReplayBuilder` rebuilding armies. The GreyBoxStrategy README's
+"The writs turn on screen" has the detail. Rule mode on the writs turn (writs in the top bar, the
+awaiting marks, the army cycle key, orders queued above End turn) is the next part.
+
+**The screen's half, second part: built** (13 November). Model rulers play the writs turn live on the
+screen, a court and a marshal for every country (`WritRuler`), with each decision recorded with its
+army and opening in the inspector with its prompt. The GreyBoxStrategy README's "model rulers, live"
+has the detail.
+
 **What R1a built, and what it decided** (_Mine_ unless said):
 - **The writs turn is a setting, not a replacement.** `GameRules.Turn` (`OneMove`, the default, or
   `Writs`) keeps today's game byte for byte: the pinned 200-game series and the recorded replay pass
@@ -1709,8 +1721,8 @@ table is in the R2 pull request). Not built yet:
 - the drawn-chart spike, which is the screen's. **Built the same day:** the demo README's
   [drawn-chart spike](../../Demos/GreyBoxStrategy/README.md#the-drawn-chart-spike-12-november) section
   says how it is drawn, what it costs and what today's rules make look wrong. Its pull request
-  compares it with the painting. Not built yet: the paper texture, realm names along their realm,
-  levels of detail beyond provinces and regions, and occupation hatching.
+  compares it with the painting. The paper texture was built in the second slice (13 November; see the demo README's "second slice"). Not built yet: realm names along their realm,
+  levels of detail beyond provinces and regions. Occupation hatching was built with the writs turn on screen (13 November, below).
 
 What the design got wrong or left open, and what was decided (_Mine_ unless the lead says otherwise):
 - **Capital spacing.** Section 2.3 asked for 4 steps on medium. With six countries on 60 provinces each
@@ -1970,7 +1982,7 @@ line, and `findings.md` for anything measured.
 - [x] Battles between armies, retreat and rout, militia and neutral garrisons
 - [x] Occupation and controller; neutral land taken by entering; freeing occupied land
 - [x] War score; `offer_white_peace`, `demand_occupied`, `cede_occupied` and their answers; broken realms
-- [ ] Occupation hatching, the treaty flow from hatch to wash with the seal, hatching lifting on return
+- [x] Occupation hatching, the treaty flow from hatch to wash with the seal, hatching lifting on return (watch and replay, #284)
 - [x] Scripted expansionist and cautious with armies; random player
 - [x] Court and marshal agents, the army in `Correlation`, both moves lines, chained decisions, memory 4 (R1b, `WritRuler`); the army statement rule waits for its own A/B (R1c measured the baseline: 35% of statements repeated word for word)
 - [ ] Pieces, march lines, step animation, battle card; rule mode's writs, cycle key and order queue

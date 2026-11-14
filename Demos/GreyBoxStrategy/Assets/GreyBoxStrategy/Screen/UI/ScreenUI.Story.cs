@@ -234,10 +234,11 @@ namespace GreyBoxStrategy.Realm
                 Root.Add(talesPanel);
             }
             talesPanel.AddToClassList("on");
+            Root.AddToClassList("tales-open"); // the council panel moves left of it
             RenderTales(focus);
         }
 
-        public void CloseTales() => talesPanel?.RemoveFromClassList("on");
+        public void CloseTales() { talesPanel?.RemoveFromClassList("on"); Root.RemoveFromClassList("tales-open"); }
 
         public void ToggleTales() { if (TalesOpen) CloseTales(); else OpenTales(); }
 
