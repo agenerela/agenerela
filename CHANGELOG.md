@@ -29,6 +29,14 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: model rulers play the writs turn live on screen** (#20). Each country has a court
+  and a marshal with its persona, on the RTX 5080.
+  - Every decision is recorded as the game asked it, with the army a marshal's order is for.
+  - The inspector opens each decision with its prompt and facts.
+  - The RTX 5080's lock is not taken while its pause file is set.
+  - Wars with a country out of the game no longer show.
+  - Province names stay above the army plates.
+
 - **Painted Realm: the writs turn on screen, watch and replay** (#20). New game offers the writs
   turn with stand-in rulers, on Classic or a generated world.
   - Every army is a piece on the map at all times, with its march line and the turns left, and it

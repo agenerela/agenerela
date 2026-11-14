@@ -159,24 +159,35 @@ namespace GreyBoxStrategy.Realm
             World(choice.Generated);
 
             card.Add(Section2("THE TURN", "rules v2: armies on the map, occupation, treaties"));
-            var victoryRow = Steps("Victory", new[] { "Conquest, the last realm standing", "75% of all provinces" },
-                choice.Victory == GameSetup.DominationPreset ? 1 : 0, i => choice.Victory = i == 1 ? GameSetup.DominationPreset : GameSetup.ConquestPreset);
+            // The lead's choice (13 November): both, conquest the default. Lengths are scripted games' (R1b's tuning).
+            var victoryNote = new Label(); victoryNote.AddToClassList("src"); victoryNote.style.whiteSpace = WhiteSpace.Normal;
+            void Victory(int i)
+            {
+                choice.Victory = i == 1 ? GameSetup.DominationPreset : GameSetup.ConquestPreset;
+                victoryNote.text = i == 1
+                    ? "Hold 75%: the first realm to own three provinces in four wins. Shorter: about 63 turns on Classic, 144 on a medium world, in scripted games."
+                    : "Conquest: the last realm standing wins, and land changes hands only by treaty. About 78 turns on Classic, 178 on a medium world, in scripted games.";
+            }
+            var victoryRow = Steps("Victory", new[] { "Conquest", "Hold 75%" }, choice.Victory == GameSetup.DominationPreset ? 1 : 0, Victory);
+            Victory(choice.Victory == GameSetup.DominationPreset ? 1 : 0);
             var turnNote = new Label(); turnNote.AddToClassList("src"); turnNote.style.whiteSpace = WhiteSpace.Normal;
             VisualElement storytellerRow = null; Label storyNote = null;
             void Turn(bool writs)
             {
                 choice.Writs = writs;
                 victoryRow.SetEnabled(writs);
+                victoryNote.style.display = writs ? DisplayStyle.Flex : DisplayStyle.None;
                 watchB.Q<Label>(className: "menu-big-note").text = WatchNote(writs);
                 // The storyteller plays the one-move game only, so far: the writs game runs with the random event table.
                 storytellerRow?.SetEnabled(!writs);
                 if (storyNote != null) storyNote.style.display = writs ? DisplayStyle.Flex : DisplayStyle.None;
                 turnNote.text = writs
-                    ? "Writs: each ruler gives a few orders a turn, to its court and to armies awaiting them; armies march, fight and occupy; land changes hands by treaty. Scripted rulers play it, you watch (rule mode on it comes next)."
+                    ? "Writs: each ruler gives a few orders a turn, to its court and to armies awaiting them; armies march, fight and occupy; land changes hands by treaty. Model rulers play it, a court and a marshal each; you watch (rule mode on it comes next)."
                     : "One move: each ruler makes one move a turn, as every measured game so far.";
             }
             card.Add(Steps("Turn", new[] { "One move", "Writs and armies" }, choice.Writs ? 1 : 0, i => Turn(i == 1)));
             card.Add(victoryRow);
+            card.Add(victoryNote);
             card.Add(turnNote);
             Turn(choice.Writs);
 
