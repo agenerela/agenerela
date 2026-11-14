@@ -14,16 +14,56 @@ namespace GreyBoxStrategy.Realm
         public string Country = "kesh";
         public string Model = "qwen3.5:4b";
         public int Seed = 101;
-        /// <summary>A generated world instead of the Classic board (the drawn-chart spike: scripted rulers, watch only).</summary>
+        /// <summary>A generated world instead of the Classic board, drawn by code, in all three ways of playing.</summary>
         public bool Generated;
         public MapSize Size = MapSize.Medium;
         public LandShape Shape = LandShape.Continent;
+        /// <summary>A generated world's countries; 0 is the size's own number (<see cref="MapSettings.DefaultCountries"/>).</summary>
+        public int Countries;
+        /// <summary>On a generated world, the realm you rule, in seat order: its name comes with the world.</summary>
+        public int Slot;
+        /// <summary>The rules' scripted rulers instead of models: a replay made at once, no server; in rule mode, stand-ins through the same agents.</summary>
+        public bool Scripted;
+
         /// <summary>"off", or a storyteller preset's name (<see cref="StorytellerSettings.Presets"/>).</summary>
         public string Storyteller = "off";
         /// <summary>Rules v2's writs turn: armies as pieces, occupation and treaties (R1). The one-move game stays the default.</summary>
         public bool Writs;
         /// <summary>The writs game's victory preset: <see cref="GameSetup.ConquestPreset"/> or <see cref="GameSetup.DominationPreset"/>.</summary>
         public string Victory = GameSetup.ConquestPreset;
+
+        /// <summary>How many countries a generated world of these settings has.</summary>
+        public int CountriesFor() => Countries > 0 ? Countries : MapSettings.DefaultCountries(Size);
+
+        /// <summary>
+        /// Which game these choices start: either world, the writs turn or the one-move game, watched as a replay,
+        /// watched live or ruled. <paramref name="why"/> says why not when the route is <see cref="NewGameRoute.None"/>.
+        /// </summary>
+        public NewGameRoute Route(out string why)
+        {
+            why = null;
+            if (Generated)
+            {
+                string bad = new MapSettings { Size = Size, Shape = Shape }.WhyInvalid(CountriesFor());
+                if (bad != null) { why = "Not this world: " + bad + "."; return NewGameRoute.None; }
+                if (Writs) return Rule ? NewGameRoute.WorldRule : Scripted ? NewGameRoute.WorldReplay : NewGameRoute.WorldLive;
+                if (!Rule && Scripted) return NewGameRoute.WorldReplay;
+                why = "A generated world plays the writs turn, or the one-move game as a scripted replay: choose Writs and armies.";
+                return NewGameRoute.None;
+            }
+            if (Writs) return Rule ? (Scripted ? NewGameRoute.ClassicWritsRuleScripted : NewGameRoute.ClassicWritsRule) : Scripted ? NewGameRoute.ClassicWritsReplay : NewGameRoute.ClassicWritsLive;
+            return Rule ? (Scripted ? NewGameRoute.ClassicRuleScripted : NewGameRoute.ClassicRule) : Scripted ? NewGameRoute.ClassicReplay : NewGameRoute.ClassicLive;
+        }
+    }
+
+    /// <summary>The games New game can start.</summary>
+    public enum NewGameRoute
+    {
+        None,
+        /// <summary>A generated world: you rule a realm, its scripted replay, or model rulers live.</summary>
+        WorldRule, WorldReplay, WorldLive,
+        ClassicWritsRule, ClassicWritsRuleScripted, ClassicWritsReplay, ClassicWritsLive,
+        ClassicRule, ClassicRuleScripted, ClassicReplay, ClassicLive,
     }
 
     /// <summary>What the settings page needs to know about the screen it runs on.</summary>
@@ -76,10 +116,13 @@ namespace GreyBoxStrategy.Realm
         }
 
         private static string WatchNote(bool writs) => writs
-            ? "Five model rulers play the writs turn, a court and a marshal each; you follow, inspect and pause"
-            : "Five model rulers with personas play; you follow, inspect and pause";
+            ? "The rulers play the writs turn, a court and a marshal each; you follow, inspect and pause"
+            : "The rulers play with personas; you follow, inspect and pause";
 
         private static Label Heading(string text) { var l = new Label(text); l.AddToClassList("menu-head"); return l; }
+
+        private static readonly string[] Ordinals = { "First", "Second", "Third", "Fourth", "Fifth", "Sixth", "Seventh", "Eighth", "Ninth", "Tenth" };
+        private static string Ordinal(int n) => n >= 1 && n <= Ordinals.Length ? Ordinals[n - 1] : n + "th";
 
         private static VisualElement Row(params VisualElement[] items)
         {
@@ -95,10 +138,10 @@ namespace GreyBoxStrategy.Realm
             var card = Page("main", null);
             card.Add(new CompassRose { style = { width = 112, height = 112, alignSelf = Align.Center, marginBottom = 6 } });
             var title = new Label("PAINTED REALM"); title.AddToClassList("menu-title"); card.Add(title);
-            var sub = new Label("Five rulers, each a language model playing through the Agenerela framework, contend for twenty-five provinces.");
+            var sub = new Label("Rulers, each a language model playing through the Agenerela framework, contend for a realm: the Classic board of twenty-five provinces, or a world made from a seed.");
             sub.AddToClassList("menu-sub"); card.Add(sub);
             card.Add(new GiltRule());
-            card.Add(BigButton("New game", "Watch five model rulers, or rule a country against four", newGame));
+            card.Add(BigButton("New game", "Watch model rulers, or rule a country against them, on Classic or a generated world", newGame));
             card.Add(BigButton("Replay", replayTitle + " · no model or server needed", replay));
             card.Add(BigButton("Settings", "Display, UI scale, speed, sound", settings));
             card.Add(BigButton("Quit", null, quit));
@@ -116,7 +159,7 @@ namespace GreyBoxStrategy.Realm
 
             card.Add(Section2("MODE"));
             var watchB = BigButton("Watch", WatchNote(choice.Writs), null);
-            var ruleB = BigButton("Rule", "You rule one country against four model rulers", null);
+            var ruleB = BigButton("Rule", "You rule one country against the others", null);
             var crests = new VisualElement(); crests.AddToClassList("menu-row");
             void Mode(bool rule)
             {
@@ -128,34 +171,81 @@ namespace GreyBoxStrategy.Realm
             var modes = Row(watchB, ruleB); modes.AddToClassList("menu-modes"); card.Add(modes);
 
             card.Add(Section2("YOUR COUNTRY", "rule mode"));
-            foreach (var id in CountryIds)
+            // The Classic five by name; on a generated world, its realms by seat, in the colours they will wear:
+            // their names come with the world.
+            void Crests()
             {
-                var look = CountryLook.Of(id);
-                var cb = new Button { tooltip = $"Rule {look.Name}" }; cb.AddToClassList("menu-crest");
-                cb.Add(new Crest(look, 22)); cb.Add(new Label(look.Name));
-                string country = id;
-                cb.clicked += () => { choice.Country = country; foreach (var x in crests.Children()) x.RemoveFromClassList("pick"); cb.AddToClassList("pick"); };
-                if (id == choice.Country) cb.AddToClassList("pick");
-                crests.Add(cb);
+                crests.Clear();
+                if (!choice.Generated)
+                {
+                    foreach (var id in CountryLook.Standard.Keys)
+                    {
+                        var look = CountryLook.Standard[id];
+                        var cb = new Button { tooltip = $"Rule {look.Name}" }; cb.AddToClassList("menu-crest");
+                        cb.Add(new Crest(look, 22)); cb.Add(new Label(look.Name));
+                        string country = id;
+                        cb.clicked += () => { choice.Country = country; foreach (var x in crests.Children()) x.RemoveFromClassList("pick"); cb.AddToClassList("pick"); };
+                        if (id == choice.Country) cb.AddToClassList("pick");
+                        crests.Add(cb);
+                    }
+                    return;
+                }
+                int n = choice.CountriesFor();
+                choice.Slot = Math.Min(choice.Slot, n - 1);
+                for (int i = 0; i < n; i++)
+                {
+                    var rgb = GreyBoxStrategy.Chart.ChartPalette.Owner(i);
+                    var look = new CountryLook { Id = "slot" + i, Name = Ordinal(i + 1), Colour = new Color32(rgb[0], rgb[1], rgb[2], 255), Charge = (Charge)(i % 5), Slot = i };
+                    var cb = new Button { tooltip = $"Rule the realm in this colour, the {Ordinal(i + 1).ToLowerInvariant()} seat: its name comes with the world" }; cb.AddToClassList("menu-crest");
+                    cb.Add(new Crest(look, 22)); cb.Add(new Label(look.Name));
+                    int slot = i;
+                    cb.clicked += () => { choice.Slot = slot; foreach (var x in crests.Children()) x.RemoveFromClassList("pick"); cb.AddToClassList("pick"); };
+                    if (i == choice.Slot) cb.AddToClassList("pick");
+                    crests.Add(cb);
+                }
             }
             card.Add(crests);
 
-            card.Add(Section2("THE RULERS", "on the server in " + Gateway.UrlVariable));
+            card.Add(Section2("THE RULERS", "models on the server in " + Gateway.UrlVariable + ", or the rules' scripted rulers"));
+            var rulersNote = new Label(); rulersNote.AddToClassList("src"); rulersNote.style.whiteSpace = WhiteSpace.Normal;
             var model = new TextField("Model") { value = choice.Model }; model.AddToClassList("menu-field");
+            void Rulers(bool scripted)
+            {
+                choice.Scripted = scripted;
+                model.SetEnabled(!scripted);
+                rulersNote.text = scripted
+                    ? "Scripted: the rules' own rulers, no model and no server. Watching, the game is made at once and replayed; ruling, they answer through the same agents a model would."
+                    : "Models: each ruler is a model on the server, behind the RTX 5080's lock; the game is played as you watch.";
+            }
+            card.Add(Steps("Rulers", new[] { "Models, live", "Scripted, a replay" }, choice.Scripted ? 1 : 0, i => Rulers(i == 1)));
+            card.Add(rulersNote);
             var seed = new IntegerField("Seed") { value = choice.Seed }; seed.AddToClassList("menu-field"); seed.style.maxWidth = 190;
             var dice = new Button(() => seed.value = UnityEngine.Random.Range(1, 10000)) { text = "Roll", tooltip = "A new seed: a new map of events and rolls" }; dice.AddToClassList("tbtn"); dice.style.width = 48;
             card.Add(Row(model, seed, dice));
+            Rulers(choice.Scripted);
 
-            card.Add(Section2("MAP", "a generated world is a first look: scripted rulers play it, you watch"));
-            var sizeRow = Steps("Size", new[] { "Small", "Medium", "Large", "Huge" }, (int)choice.Size, i => choice.Size = (MapSize)i);
-            var shapeRow = Steps("Shape", new[] { "Continent", "Two lands", "Inland sea", "Peninsula", "Long coast" }, (int)choice.Shape, i => choice.Shape = (LandShape)i);
+            card.Add(Section2("MAP", "the Classic board, or a world made from the seed: any size, every way of playing"));
+            var mapNote = new Label(); mapNote.AddToClassList("src"); mapNote.style.whiteSpace = WhiteSpace.Normal;
+            var countryOptions = new[] { "By size" }.Concat(Enumerable.Range(GameSetup.MinCountries, GameSetup.MaxCountries - GameSetup.MinCountries + 1).Select(n => n.ToString())).ToArray();
+            void MapNote()
+            {
+                string why = choice.Generated ? new MapSettings { Size = choice.Size, Shape = choice.Shape }.WhyInvalid(choice.CountriesFor()) : null;
+                mapNote.text = !choice.Generated ? "Classic: 25 provinces, five realms, the painted board."
+                    : why != null ? "Not this one: " + why + "."
+                    : $"A {choice.Size.ToString().ToLowerInvariant()} world of about {MapSettings.Provinces(choice.Size)} provinces and {choice.CountriesFor()} realms. Scroll or Page Up and Down to zoom, drag or the arrow keys to pan, Home to see it whole.";
+            }
+            var sizeRow = Steps("Size", new[] { "Small", "Medium", "Large", "Huge" }, (int)choice.Size, i => { choice.Size = (MapSize)i; MapNote(); Crests(); });
+            var shapeRow = Steps("Shape", new[] { "Continent", "Two lands", "Inland sea", "Peninsula", "Long coast" }, (int)choice.Shape, i => { choice.Shape = (LandShape)i; MapNote(); });
+            var countriesRow = Steps("Countries", countryOptions, choice.Countries <= 0 ? 0 : choice.Countries - GameSetup.MinCountries + 1,
+                i => { choice.Countries = i == 0 ? 0 : i + GameSetup.MinCountries - 1; MapNote(); Crests(); });
             void World(bool generated)
             {
                 choice.Generated = generated;
-                sizeRow.SetEnabled(generated); shapeRow.SetEnabled(generated);
+                sizeRow.SetEnabled(generated); shapeRow.SetEnabled(generated); countriesRow.SetEnabled(generated);
+                MapNote(); Crests();
             }
             card.Add(Steps("World", new[] { "Classic, painted", "Generated, drawn" }, choice.Generated ? 1 : 0, i => World(i == 1)));
-            card.Add(sizeRow); card.Add(shapeRow);
+            card.Add(sizeRow); card.Add(shapeRow); card.Add(countriesRow); card.Add(mapNote);
             World(choice.Generated);
 
             card.Add(Section2("THE TURN", "rules v2: armies on the map, occupation, treaties"));
@@ -180,7 +270,7 @@ namespace GreyBoxStrategy.Realm
                 watchB.Q<Label>(className: "menu-big-note").text = WatchNote(writs);
 
                 turnNote.text = writs
-                    ? "Writs: each ruler gives a few orders a turn, to its court and to armies awaiting them; armies march, fight and occupy; land changes hands by treaty. Model rulers play it, a court and a marshal each; you watch (rule mode on it comes next)."
+                    ? "Writs: each ruler gives a few orders a turn, to its court and to armies awaiting them; armies march, fight and occupy; land changes hands by treaty. Each ruler has a court and a marshal; you watch, or rule one."
                     : "One move: each ruler makes one move a turn, as every measured game so far.";
             }
             card.Add(Steps("Turn", new[] { "One move", "Writs and armies" }, choice.Writs ? 1 : 0, i => Turn(i == 1)));

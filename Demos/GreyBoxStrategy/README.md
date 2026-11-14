@@ -553,6 +553,67 @@ world's in about 0.5 to 0.9 s, off the main thread behind the loading card.
 - The scripted rulers order armies into land they may not enter, so the chronicle shows many
   refused orders; that is the stand-ins' play, not the screen's.
 
+### The writs turn on generated worlds (14 November)
+
+R4's first part on screen: a generated world in all three ways of playing, on the drawn chart.
+
+**See it:** New game → World: Generated, drawn, with a Size, a Shape and a number of Countries ("By size" is
+the size's own number). Then Rulers: "Models, live" or "Scripted, a replay", and Watch or Rule. Rule mode on a
+generated world picks the realm by its seat and colour: its name comes with the world. The dev menu:
+`writs-rule-world medium 7 2 6` rules the third seat of a medium world of six realms, with stand-ins and no server.
+Add a model's name to play against model rulers on the RTX 5080.
+
+**What New game starts** (`NewGameChoice.Route`, tested):
+
+| | Watch, scripted | Watch, models | Rule |
+|---|---|---|---|
+| **Classic** | the replay, or the writs replay | live rulers | rule a country |
+| **Generated** | the replay (writs, or one move) | live rulers on the writs turn | rule a realm on the writs turn |
+
+**The camera on any size.** Scroll or Page Up and Page Down to zoom, drag with any mouse button or use the arrow keys
+to pan, and Home to see the whole world. The view never leaves the land. The wheel over a panel scrolls the
+panel, not the map.
+
+A rule game on a generated world opens on your realm and its neighbours, in the space left of the council. It
+stays framed when the window changes size, until Home.
+
+**Pieces scale with the map:** full size while neighbouring provinces stand more than 110 panel pixels apart, down
+to 60% as a big world or a far zoom brings them closer (`ReplayDirector.HostScaleFor`). Below 70% a piece drops
+its general's initial. Classic at its fitted view keeps full size.
+
+**Lists on a big world:** the realm panel's wars, truces and neutral land show eight rows, then "Show all N".
+Neutral land is sorted as your court knows it, the weakest garrisons first, and a click finds the province. The
+chronicle draws its newest 150 entries, with older ones behind "Show older entries".
+
+**Smooth on a huge world** (150 provinces, ten realms, about 75 armies at turn 50, 1080p):
+
+| | screen update | Unity's player loop |
+|---|---|---|
+| paused | 2.4 ms mean | 4.6 ms mean, 6.7 ms worst |
+| playing at 4× | 2.4 ms mean | 5.8 ms mean, 65 ms worst |
+
+A medium world in rule mode, paused, runs at 1.5 ms a frame. Before two fixes the huge world playing cost 37 ms
+a frame:
+- the chronicle rebuilt every line it had on each new one;
+- every piece sorted every army to find its neighbours.
+
+`FrameStats` reports these, for the Unity CLI.
+
+**Also fixed:**
+- **The lit destinations** of a chosen army drew solid red over every province west of the chart's diagonal:
+  `fmod` of a negative number stays negative. The stripes now use `frac`, and keep eight screen pixels apart at
+  any zoom.
+- **Hard-coded counts:** "the four rulers" and "five countries" now say how many there are.
+- **Your realm's name** stays in the top bar however many realms share it.
+- **The panels** are nearly opaque (98.5%, from 93%): zoomed in on a generated world, province names showed through
+  the chronicle's text.
+
+**Not yet:**
+- Rule mode on a generated world plays the writs turn only.
+- Unlimited writs for you waits for the build session's per-country writs setting.
+- R4's other parts (settlement tiers, label collision tests at three zooms, the id map's adjacency test at 4096)
+  are not part of this.
+
 ### The writs turn on screen: polish (14 November)
 
 What the frames of rule mode showed, fixed:

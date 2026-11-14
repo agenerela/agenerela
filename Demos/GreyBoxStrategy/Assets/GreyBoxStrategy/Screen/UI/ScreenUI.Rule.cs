@@ -108,7 +108,7 @@ namespace GreyBoxStrategy.Realm
             var foot = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center, marginTop = 8 } };
             var st = new Label(status ?? ""); st.AddToClassList("orders-status"); st.style.flexGrow = 1; st.style.flexShrink = 1; foot.Add(st);
             ordersStatus = st;
-            var end = new Button(() => EndTurnPressed?.Invoke()) { text = "End turn", tooltip = "Send your order (Enter). The four rulers' moves and yours then land in the rules' order." };
+            var end = new Button(() => EndTurnPressed?.Invoke()) { text = "End turn", tooltip = "Send your order (Enter). The other rulers' moves and yours then land in the rules' order." };
             end.AddToClassList("menu-button"); end.AddToClassList("end-turn"); foot.Add(end);
             body.Add(foot);
         }

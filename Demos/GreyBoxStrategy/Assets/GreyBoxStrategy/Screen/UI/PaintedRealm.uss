@@ -1,6 +1,6 @@
 /* Painted Realm, the gilt style. The design is docs/demos/grey-box-strategy-screen.md, round 2. */
 .root { flex-grow: 1; color: rgb(234, 223, 198); font-size: 13px; }
-.panel { position: absolute; background-color: rgba(18, 15, 12, 0.93); border-width: 1px; border-color: rgba(201, 164, 90, 0.55); }
+.panel { position: absolute; background-color: rgba(18, 15, 12, 0.985); border-width: 1px; border-color: rgba(201, 164, 90, 0.55); }
 .panel-head { flex-direction: row; align-items: center; height: 30px; padding-left: 10px; padding-right: 8px; background-color: rgba(44, 35, 25, 0.9); border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.22); }
 .panel-title { font-size: 14px; -unity-font-style: bold; letter-spacing: 1px; flex-grow: 1; color: rgb(234, 223, 198); }
 .muted { color: rgb(141, 127, 102); }
@@ -51,6 +51,8 @@
 .filters { flex-direction: row; flex-wrap: wrap; padding: 6px 8px; border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.22); }
 .chip { flex-direction: row; align-items: center; height: 20px; padding-left: 6px; padding-right: 6px; margin-right: 4px; margin-bottom: 4px; border-width: 1px; border-color: rgba(201, 164, 90, 0.22); background-color: rgba(210, 173, 98, 0.14); font-size: 11px; }
 .chip.off { opacity: 0.38; background-color: rgba(0, 0, 0, 0); }
+.list-more { font-size: 11.5px; -unity-font-style: italic; color: rgb(210, 173, 98); padding: 3px 0 2px 2px; }
+.list-more:hover { color: rgb(250, 232, 170); }
 .lg-turn { padding: 3px 10px; font-size: 11px; -unity-font-style: bold; letter-spacing: 2px; color: rgb(141, 127, 102); background-color: rgba(30, 24, 18, 0.96); border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.22); }
 .lg { flex-direction: row; padding: 5px 10px; border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.22); }
 .lg:hover { background-color: rgba(210, 173, 98, 0.14); }
@@ -152,6 +154,8 @@
 .compact .gold-stat, .compact .pips, .compact .stat-delta, .compact .phase { display: none; }
 .compact .nation { padding-left: 6px; padding-right: 6px; }
 .crowded .nation-name, .crowded .gold-stat, .crowded .pips, .crowded .stat-delta { display: none; }
+/* Your own realm's name stays, however many realms share the bar. */
+.crowded .nation-name.my-name { display: flex; }
 .crowded .nation { padding-left: 5px; padding-right: 5px; }
 .crowded.compact .army-stat { display: none; }
 .compact .nation-name { font-size: 12px; margin-right: 4px; letter-spacing: 0; }
@@ -277,7 +281,7 @@
 .army-row.ordered { border-left-color: rgb(110, 160, 90); }
 .army-row.no-writ { border-left-color: rgb(196, 58, 40); color: rgb(220, 160, 150); }
 .pennant { position: absolute; width: 18px; height: 22px; translate: 0 -100%; }
-.march-turns { position: absolute; translate: -50% 0; font-size: 11px; -unity-font-style: italic bold; color: rgb(40, 28, 16); background-color: rgba(240, 226, 192, 0.85); padding: 0 3px; border-radius: 2px; }
+.march-turns { position: absolute; translate: -50% 0; font-size: 11px; -unity-font-style: bold-and-italic; color: rgb(40, 28, 16); background-color: rgba(240, 226, 192, 0.85); padding: 0 3px; border-radius: 2px; }
 .battle-card { width: 520px; }
 .battle-bar { flex-direction: row; align-items: center; margin: 2px 0; }
 .battle-bar.total { margin-top: 6px; }

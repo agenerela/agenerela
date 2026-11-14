@@ -108,6 +108,80 @@ namespace GreyBoxStrategy.Screen.Tests
         }
 
         [Test]
+        public async Task You_rule_a_realm_of_a_generated_world_and_the_replay_rebuilds_it()
+        {
+            // A medium world, six realms: you take the third seat, five stand-ins the rest, through the real agents.
+            var setup = GameSetup.Writs(3, GameSetup.GeneratedMapId);
+            setup.Countries = 6;
+            setup.Generator = new MapSettings { Size = MapSize.Medium, Shape = LandShape.Continent };
+            var map = setup.BuildMap();
+            Assert.That(map.Provinces.Count, Is.GreaterThan(40), "a medium world, not the Classic board");
+            string you = map.Countries[2].Id;
+            World w = null;
+            var provider = Rulers(() => w);
+            var s = new RuleSession(you, "qwen3.5:4b", "default", 3, Path.Combine(folder, "decisions.jsonl"), (m, world) => { w = world; return provider; }, null, map, setup.BuildRules(map));
+            Assert.That(s.Players.Count, Is.EqualTo(6), "every realm has a ruler, the personas taken in turn past the fifth");
+            var run = s.RunAsync();
+            int marches = 0;
+            for (int t = 1; t <= 4; t++)
+            {
+                await Until(() => (s.WaitingFor == RuleSession.Waiting.Orders && s.Orders != null) || s.WaitingFor == RuleSession.Waiting.Envoy || s.Finished, $"turn {t}'s orders");
+                if (s.WaitingFor == RuleSession.Waiting.Envoy) { s.Answer(false); t--; continue; }
+                var court = s.Orders;
+                Assert.That(court.Legal, Is.EqualTo(WritLegality.CourtMoves(court.World, you)));
+                var plan = new RuleSession.WritsPlan { Court = court.Legal.FirstOrDefault(m => m.Action == Actions.Recruit) ?? court.Legal.First() };
+                foreach (var a in WritLegality.Awaiting(court.World, you))
+                {
+                    var march = WritLegality.ArmyMoves(court.World, you, a.Id).FirstOrDefault(m => m.Action == Actions.March);
+                    if (march != null) { plan.Armies[a.Id] = march; marches++; }
+                }
+                s.Plan(plan);
+                int turn = t;
+                await Until(() => s.Resolved == turn || s.Finished, $"turn {turn} to resolve");
+            }
+            Assert.That(marches, Is.GreaterThan(0));
+            var g = s.BuildReplay();
+            Assert.That(g.ProvinceIds.Count, Is.EqualTo(map.Provinces.Count));
+            Assert.That(g.Turns.Count, Is.EqualTo(s.Resolved));
+            Assert.That(g.Turns.Sum(x => x.ArmyDrift), Is.EqualTo(0), "the screen's replay matches the rules on a generated world");
+            Assert.That(g.AllEvents.Any(e => e.Decision != null && e.Decision.ModelName == RuleSession.YourModel && e.Kind == ReplayEventKind.ArmyOrder), Is.True);
+            // Fog on a world this size: your court sees a part of it, not all of it.
+            var sight = WritsSight.Of(g.Turns[g.Turns.Count - 1].End, g.ProvinceIds, you, id => map.Neighbours(id));
+            Assert.That(sight.Count, Is.GreaterThan(0).And.LessThan(map.Provinces.Count / 2));
+            s.Stop();
+            await run;
+            Assert.That(s.Error, Is.Null);
+        }
+
+        [Test]
+        public void New_game_starts_every_way_of_playing_on_either_world()
+        {
+            NewGameRoute R(bool generated, bool writs, bool rule, bool scripted) =>
+                new NewGameChoice { Generated = generated, Writs = writs, Rule = rule, Scripted = scripted }.Route(out _);
+            Assert.That(R(true, true, true, false), Is.EqualTo(NewGameRoute.WorldRule));
+            Assert.That(R(true, true, true, true), Is.EqualTo(NewGameRoute.WorldRule), "stand-ins through the agents");
+            Assert.That(R(true, true, false, true), Is.EqualTo(NewGameRoute.WorldReplay));
+            Assert.That(R(true, true, false, false), Is.EqualTo(NewGameRoute.WorldLive));
+            Assert.That(R(true, false, false, true), Is.EqualTo(NewGameRoute.WorldReplay), "the one-move game as a replay");
+            Assert.That(R(true, false, true, false), Is.EqualTo(NewGameRoute.None), "the one-move game is not ruled on a generated world");
+            Assert.That(R(false, true, true, false), Is.EqualTo(NewGameRoute.ClassicWritsRule));
+            Assert.That(R(false, true, false, true), Is.EqualTo(NewGameRoute.ClassicWritsReplay));
+            Assert.That(R(false, false, false, false), Is.EqualTo(NewGameRoute.ClassicLive));
+            var tooMany = new NewGameChoice { Generated = true, Writs = true, Size = MapSize.Small, Countries = 9 };
+            Assert.That(tooMany.Route(out string why), Is.EqualTo(NewGameRoute.None));
+            Assert.That(why, Does.Contain("at most"), "a small world seats at most five");
+            Assert.That(new NewGameChoice { Generated = true, Size = MapSize.Large }.CountriesFor(), Is.EqualTo(MapSettings.DefaultCountries(MapSize.Large)));
+        }
+
+        [Test]
+        public void Pieces_shrink_as_provinces_come_close_on_screen()
+        {
+            Assert.That(ReplayDirector.HostScaleFor(200), Is.EqualTo(1f), "far apart: full size");
+            Assert.That(ReplayDirector.HostScaleFor(70), Is.LessThan(0.7f).And.GreaterThan(0.6f), "a large world at its whole view: about two thirds");
+            Assert.That(ReplayDirector.HostScaleFor(10), Is.EqualTo(0.6f), "never smaller than 60%, so the number still reads");
+        }
+
+        [Test]
         public void A_plan_answers_the_court_twice_and_each_army_with_its_own_order()
         {
             var setup = GameSetup.Writs(5);
