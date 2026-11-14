@@ -1677,6 +1677,12 @@ awaiting marks, the army cycle key, orders queued above End turn) came in the th
 - The province panel shows settlement tiers and special places. The tiers themselves were already drawn by
   development; changing them during play waits for R6's buildings.
 
+**R4 on screen, third part: built** (14 November).
+- Detail up close: the visible window is drawn again at screen scale by the chart's own code.
+- Farms and settlements grow with development.
+- Rule mode on big maps: a next-army jump and markers at the screen's edge.
+- The province panel speaks to a player.
+
 Still open in R4:
 - local facts and per-call target sets (Sim and Agents);
 - the id map's adjacency test at 2048 and 4096.

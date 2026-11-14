@@ -554,6 +554,84 @@ world's in about 0.5 to 0.9 s, off the main thread behind the loading card.
 - The scripted rulers order armies into land they may not enter, so the chronicle shows many
   refused orders; that is the stand-ins' play, not the screen's.
 
+### Generated worlds: detail up close, fields that show, rule mode on a big map (14 November)
+
+R4's third part on screen.
+
+**Drawn again, not magnified.** Zoomed in, the land used to be a blurred enlargement of a chart drawn about 2,400
+pixels wide. Now, once the camera settles on a view where the chart is magnified (more than 0.8 screen pixels for
+each chart pixel), the visible window and a quarter of its size around it are drawn again at screen scale
+(`ReplayDirector.Detail.cs`, `ChartGpu.RenderRegion`):
+- the same ground pass, rivers and roads, and every glyph (trees, hills, marsh, fields, settlements);
+- the glyphs laid out at that scale off the main thread (`ChartGpu.RegionAtlas`).
+
+The far view, where the chart is not magnified, is untouched. The paper grain and field patterns come with the
+ground pass, so they hold at screen scale too.
+- **Occupation hatching** repeats every 9 map pixels as before, but never more than 22 screen pixels apart.
+  Zoomed in, broad bands buried the land drawn under them.
+- **The cost**, RTX 4060 laptop, seed 7:
+
+  | World, view | Map shader, without the window / with it | Drawing the window, once the camera settles | Laying out its glyphs, off the main thread |
+  |---|---|---|---|
+  | Medium, mid zoom, 1080p | 0.69 / 0.65 ms | 7 ms (2709 × 1620) | 72 ms |
+  | Medium, deepest, 1080p | 0.68 / 0.57 ms | 13 ms | 165 ms |
+  | Medium, mid zoom, 1440p | 1.08 / 1.11 ms | 12 ms | 120 ms |
+  | Medium, deepest, 1440p | 1.06 / 1.08 ms | 10 ms | 307 ms |
+  | Huge, mid zoom, 1080p | 0.84 / 0.84 ms | 23 ms (2880 × 1621) | 47 ms |
+  | Huge, deepest, 1080p | 0.75 / 0.77 ms | 24 ms | 153 ms |
+  | Huge, mid zoom, 1440p | 1.37 / 1.39 ms | 26 ms | 76 ms |
+  | Huge, deepest, 1440p | 1.19 / 1.21 ms | 17 ms | 236 ms |
+
+  The map shader costs the same with the window. Drawing it is a one-off after each pan or zoom, timed with the
+  upload and the GPU's work, so about one frame drops when the window lands.
+
+**Fields and settlements show development** (the lead: "farms buildings ... depending on how much of them there
+are"):
+- **The plough** reaches 1.4 cells from a hamlet and 9 from a developed town, from 2.2 and 8.2 before
+  (`ChartLayout.FarmRadius`).
+- **The share of land farmed** runs from 18% to all of it, from 30% to 94% (`FarmShare`).
+- **Plains away from towns** keep only a trace of fields: 0.08, from 0.2.
+- **Fields read in light, not only colour.** An owner's wash replaces the chart's hue and keeps its light, so crops,
+  furrows and hedges now differ in light (the GPU ground shader and the CPU painter alike).
+- **Settlements grow** by 0.3 of a cell a tier, from 0.14, so a town reads from a village at the middle zoom.
+
+The test now asks a developed province to have 2.5 times a poor one's fields; it had 1.3 times before this change.
+
+**Rule mode on a big world:**
+- **"Next army awaiting orders (N)"**, a button in the council, does what the N key does: it chooses the next army
+  with a writ and no order and brings the camera to it. From a far view of a big world it also zooms in until the
+  pieces read (`ReplayDirector.CloseEnough`, 9 pixels a cell).
+- **Markers at the map's edge** point to the last turn's battles and to your capital when they are off screen
+  (`ScreenUI.EdgeMarks.cs`). Each marker keeps inside the free map area, clear of the panels, the council and the
+  map key, and stacks along the edge with its neighbours. A click pans there and opens a battle's report.
+
+**Your writs: unlimited**, a New game setting for rule mode on the writs turn, off by default ("As the rules give").
+It gives you alone the rules' `GameRules.UnlimitedWrits` (#294, `WritsOverride`), through
+`ReplayDirector.WithYourWrits` as the rule game begins:
+- every army awaiting orders asks you;
+- your court may give a second order;
+- the council reads "no limit" instead of pips.
+
+The model rulers keep the rules' count. The setting is ignored when watching and on the one-move turn. Tested headless
+through a rule session's own rules (`Unlimited_writs_from_new_game_reach_the_rules_and_every_army_is_asked`).
+
+**The province panel speaks to a player:**
+- No rule or file names: the notes naming `Legality.WhyNot` and `Personas.cs`, and the line about rules v2 and R6,
+  are gone.
+- Reasons go through `Wording`: "Pellan · we are not at war with Korvane", never a raw id.
+- "Who can attack it" lists the realms that can, with their odds, and any that cannot for a reason of their own.
+  Then one line covers the rest: "6 others cannot: not next to it."
+- History rows wrap and grow, instead of overlapping, and say "Turn 6", not "t6".
+
+**Tests**, each seen failing once against a deliberate break:
+- the farmland check, now 2.5 times;
+- `The_panel_counts_realms_too_far_away_by_the_reason_the_rules_give`;
+- `An_edge_marker_stands_on_the_edge_toward_its_place`.
+
+**Not yet:**
+- Real buildings wait for R6.
+- The window is drawn for the view as a whole, so it does not follow a pan until the camera stops.
+
 ### Generated worlds: a sharp chart, names that never collide, the land in the panel (14 November)
 
 R4's second part on screen.

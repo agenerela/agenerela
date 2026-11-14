@@ -29,6 +29,15 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: detail up close, fields that show, rule mode on a big map** (#20).
+  - Zoomed in, the visible part of the chart is drawn again at screen scale (trees, fields, settlements, roads),
+    not magnified.
+  - Farms and settlements grow visibly with development.
+  - Rule mode has a "next army awaiting orders" jump, and markers at the map's edge for off-screen battles and
+    your capital.
+  - The province panel speaks to a player.
+  - New game: "Your writs: unlimited" for rule mode, off by default; the council reads "no limit".
+
 - **Painted Realm: a ruler's own last lines, the writs turn's default, and a country's own writ count** (#20).
   - Two voice arms for the writs turn: `+one-voice` (only the first court decision of a turn speaks) and
     `+own-lines` (a decision that speaks reads the ruler's last four lines and is asked to say something new).

@@ -29,6 +29,10 @@ namespace GreyBoxStrategy.Realm
         public string Storyteller = "off";
         /// <summary>Rules v2's writs turn: armies as pieces, occupation and treaties (R1). The one-move game stays the default.</summary>
         public bool Writs;
+        /// <summary>Rule mode on the writs turn: your writs a turn without the rules' cap (<see cref="GameRules.UnlimitedWrits"/>). Off by default.</summary>
+        public bool UnlimitedWrits;
+        /// <summary>Whether this choice gives you unlimited writs: only when you rule, on the writs turn.</summary>
+        public bool YourWritsUnlimited => Rule && Writs && UnlimitedWrits;
         /// <summary>The writs game's victory preset: <see cref="GameSetup.ConquestPreset"/> or <see cref="GameSetup.DominationPreset"/>.</summary>
         public string Victory = GameSetup.ConquestPreset;
 
@@ -262,10 +266,23 @@ namespace GreyBoxStrategy.Realm
             Victory(choice.Victory == GameSetup.DominationPreset ? 1 : 0);
             var turnNote = new Label(); turnNote.AddToClassList("src"); turnNote.style.whiteSpace = WhiteSpace.Normal;
             VisualElement storytellerRow = null;
+            // Your writs, for rule mode on the writs turn: the rules' count, or no limit, which the rulers never get.
+            var writsNote = new Label(); writsNote.AddToClassList("src"); writsNote.style.whiteSpace = WhiteSpace.Normal;
+            void YourWrits(int i)
+            {
+                choice.UnlimitedWrits = i == 1;
+                writsNote.text = i == 1
+                    ? "Unlimited, when you rule: every army awaiting orders asks you, and your court may give a second order, every turn. The model rulers keep the rules' count."
+                    : "As the rules give: a few a turn, more as your realm grows, the same count every ruler has.";
+            }
+            var writsRow = Steps("Your writs", new[] { "As the rules give", "Unlimited" }, choice.UnlimitedWrits ? 1 : 0, YourWrits);
+            YourWrits(choice.UnlimitedWrits ? 1 : 0);
             void Turn(bool writs)
             {
                 choice.Writs = writs;
                 victoryRow.SetEnabled(writs);
+                writsRow.SetEnabled(writs);
+                writsNote.style.display = writs ? DisplayStyle.Flex : DisplayStyle.None;
                 victoryNote.style.display = writs ? DisplayStyle.Flex : DisplayStyle.None;
                 watchB.Q<Label>(className: "menu-big-note").text = WatchNote(writs);
 
@@ -276,6 +293,8 @@ namespace GreyBoxStrategy.Realm
             card.Add(Steps("Turn", new[] { "One move", "Writs and armies" }, choice.Writs ? 1 : 0, i => Turn(i == 1)));
             card.Add(victoryRow);
             card.Add(victoryNote);
+            card.Add(writsRow);
+            card.Add(writsNote);
             card.Add(turnNote);
             Turn(choice.Writs);
 

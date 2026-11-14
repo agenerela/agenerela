@@ -47,6 +47,9 @@ namespace GreyBoxStrategy.Replay
             return null;
         }
 
+        /// <summary>True for the reason "not next to our land", which the province panel counts rather than lists.</summary>
+        public static bool IsFarReason(string why) => why != null && why.EndsWith(" is not next to our land", StringComparison.Ordinal);
+
         /// <summary>Every province <paramref name="country"/> may attack at this moment.</summary>
         public List<int> Attackable(ReplayState s, string country) =>
             Enumerable.Range(0, s.Owners.Length).Where(p => WhyNotAttack(s, country, p) == null).ToList();

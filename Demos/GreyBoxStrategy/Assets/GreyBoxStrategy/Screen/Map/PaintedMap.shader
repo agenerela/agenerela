@@ -35,6 +35,9 @@ Shader "GreyBoxStrategy/PaintedMap"
         _IdWide ("Province ids are 16-bit (a generated world)", Float) = 0
         _HatchReach ("A province's reach in uv, for the hatching's sweep", Float) = 0.09
         _CellTex ("Cell grid (a generated world)", 2D) = "black" {}
+        _DetailTex ("The chart's visible window, drawn at screen scale", 2D) = "black" {}
+        _DetailRect ("The window in uv: x, y, width, height", Vector) = (0, 0, 1, 1)
+        _DetailOn ("Use the window", Float) = 0
         _Geo ("Provinces from the cell grid, per screen pixel", Float) = 0
         _Grid ("Grid width, height in cells, province-map pixels per cell", Vector) = (1, 1, 1, 0)
     }
@@ -64,6 +67,9 @@ Shader "GreyBoxStrategy/PaintedMap"
             float _IdWide;
             float _HatchReach;
             TEXTURE2D(_CellTex);
+            TEXTURE2D(_DetailTex); SAMPLER(sampler_DetailTex);
+            float4 _DetailRect;
+            float _DetailOn;
             float _Geo;
             float4 _Grid;
             int _Seed;
@@ -241,9 +247,19 @@ Shader "GreyBoxStrategy/PaintedMap"
                 return saturate(0.5 + inside / max(w, 1e-5));
             }
 
+            // Hatching repeats every 9 province-map pixels, but never more than 22 screen pixels apart: zoomed in, broad
+            // bands would bury the land drawn under them.
+            float HatchPeriod(float texelsPerPixel) { return min(9.0, 22.0 * texelsPerPixel); }
+
             half4 frag(Varyings i) : SV_Target
             {
                 float3 painting = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv).rgb;
+                // Zoomed in on a drawn chart, its visible window drawn again at screen scale replaces the magnified picture.
+                if (_DetailOn > 0.5)
+                {
+                    float2 d = (i.uv - _DetailRect.xy) / _DetailRect.zw;
+                    if (all(d >= 0) && all(d <= 1)) painting = SAMPLE_TEXTURE2D_LOD(_DetailTex, sampler_DetailTex, d, 0).rgb;
+                }
                 float2 px = i.uv * _IdTex_TexelSize.zw;
                 int id = IdAt(i.uv);
                 float3 colour = painting;
@@ -318,7 +334,8 @@ Shader "GreyBoxStrategy/PaintedMap"
                     else
                     {
                         tint = neutral; tintA = 0.75;
-                        float hatch = Band(frac((px.x + px.y) / 9), 0.145, 2 * texelsPerPixel / 9);
+                        float np = HatchPeriod(texelsPerPixel);
+                        float hatch = Band(frac((px.x + px.y) / np), 0.145, 2 * texelsPerPixel / np);
                         ink = _Engraved > 0.5 ? float3(0.05, 0.03, 0.015) : float3(0.01, 0.007, 0.004); inkA = 0.28 * hatch;
                     }
                     // The lit stripes keep 8 screen pixels apart at any zoom, and frac, not fmod: fmod of a negative
@@ -347,7 +364,7 @@ Shader "GreyBoxStrategy/PaintedMap"
                             shown = step(t + (n - 0.5) * 0.05, amount * 1.1);
                         }
                         else shown = step(1 - amount, saturate(edgePx / 10) + 0.02);
-                        float period = 9, f = frac((px.x - px.y) / period);
+                        float period = HatchPeriod(texelsPerPixel), f = frac((px.x - px.y) / period);
                         float width = lerp(0.42, 1.02, thick);
                         float aa = 2 * texelsPerPixel / period;
                         float band = Band(f, width, aa);

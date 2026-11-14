@@ -89,11 +89,14 @@ namespace GreyBoxStrategy.Chart
         /// </summary>
         public static int DevelopmentOf(ProvinceData p) => Math.Max(0, Math.Min(Development.Max, p.Development));
 
-        /// <summary>How far the plough reaches from a settlement of this development, in cells.</summary>
-        public static float FarmRadius(int development, bool capital) => 2.2f + 1.5f * development + (capital ? 1.0f : 0);
+        /// <summary>
+        /// How far the plough reaches from a settlement of this development, in cells: a hamlet's patch of a cell or
+        /// so, a developed town's belt of fields six or seven cells out, so the difference reads on the chart.
+        /// </summary>
+        public static float FarmRadius(int development, bool capital) => 1.4f + 1.9f * development + (capital ? 1.5f : 0);
 
         /// <summary>How much of the land near the settlement is fields, 0 to 1.</summary>
-        public static float FarmShare(int development) => 0.3f + 0.16f * development;
+        public static float FarmShare(int development) => Math.Min(1f, 0.18f + 0.2f * development);
 
         public static float TerrainFarming(Terrain t)
         {
@@ -172,10 +175,11 @@ namespace GreyBoxStrategy.Chart
                     if (!Inside(at.u, at.v, p, 0.8f)) at = (shape.Centre[0] + 0.5f, shape.Centre[1] + 0.5f);
                     Scene.Settlements[p] = at;
                     int tier = SettlementLook.TierOf(pr);
-                    float size = 1.25f + 0.14f * tier;
+                    // Each tier visibly larger, so a town reads from a village at the middle zoom.
+                    float size = 1.05f + 0.3f * tier;
                     Scene.Glyphs.Add(new GlyphInstance { Kind = GlyphKind.Settlement, U = at.u, V = at.v, Size = size, Variant = Hash8(p, 1),
                         Param = SettlementLook.Pack(tier, pr.Capital, pr.Forts, pr.Port) });
-                    float r = 1.6f + 0.35f * tier;
+                    float r = 1.4f + 0.55f * tier;
                     keepClear.Add((at.u, at.v - 0.7f, r + 0.6f, r * 0.75f + 0.4f));
                     if (pr.Port && FindShore(p, out float hu, out float hv))
                     {
@@ -190,7 +194,7 @@ namespace GreyBoxStrategy.Chart
                 var farm = new float[cells.Length];
                 // Plains are farmed a little everywhere; more, and further, around a developed settlement.
                 for (int i = 0; i < cells.Length; i++)
-                    if (cells[i] >= 0 && map.Provinces[cells[i]].Terrain == GreyBoxStrategy.Terrain.Plains) farm[i] = 0.2f;
+                    if (cells[i] >= 0 && map.Provinces[cells[i]].Terrain == GreyBoxStrategy.Terrain.Plains) farm[i] = 0.08f;
                 for (int p = 0; p < map.Provinces.Count; p++)
                 {
                     var (su, sv) = Scene.Settlements[p];

@@ -55,15 +55,18 @@ namespace GreyBoxStrategy.Realm
             sea.SetPixelData(Flip(img.SeaTile, img.SeaTileSize, img.SeaTileSize, 4), 0); sea.Apply(false, true);
             mat.SetTexture("_SeaTex", sea);
             if (paper != null) mat.SetTexture("_PaperTex", paper);
-            mat.SetVector("_Grid", new Vector4(img.GridWidth, img.GridHeight, img.Scale, img.IdWidth / (float)img.ChartWidth));
+            lastGrid = new Vector4(img.GridWidth, img.GridHeight, img.Scale, img.IdWidth / (float)img.ChartWidth);
+            mat.SetVector("_Grid", lastGrid);
             var rh = img.Scene.Rhumbs;
             mat.SetVector("_Rhumbs", new Vector4(rh[0].u, rh[0].v, rh.Count > 1 ? rh[1].u : rh[0].u, rh.Count > 1 ? rh[1].v : rh[0].v));
             mat.SetVector("_Paper", new Vector4(paper != null ? 1 : 0, Mathf.Max(0.01f, paperMean), 16, 0));
             mat.SetInt("_Seed", seed);
             Graphics.Blit(null, rt, mat);
+            lastGround = mat; lastImage = img;
 
             // ---- the marks ----
             var marksMat = Keep(new Material(marks) { name = "ChartMarks (runtime)" });
+            lastMarks = marksMat;
             var atlas = Keep(new Texture2D(img.Atlas.Width, img.Atlas.Height, TextureFormat.RGBA32, false, true) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp, name = "Glyph atlas" });
             atlas.SetPixelData(img.Atlas.Rgba, 0); atlas.Apply(false, true);
             marksMat.SetTexture("_MainTex", atlas);
@@ -72,7 +75,7 @@ namespace GreyBoxStrategy.Realm
             // Chart pixels, y down from the top, onto a texture whose v runs up: measured, the GPU projection
             // for a texture target already accounts for the flip, so it is asked for without it.
             cmd.SetViewProjectionMatrices(Matrix4x4.identity, GL.GetGPUProjectionMatrix(Matrix4x4.Ortho(0, w, h, 0, -1, 1), false));
-            var strokes = Keep(Strokes(img));
+            var strokes = Keep(Strokes(img, img.Scale));
             cmd.DrawMesh(strokes, Matrix4x4.identity, marksMat, 0, 0);
             var quads = Keep(Quads(img.Atlas));
             cmd.DrawMesh(quads, Matrix4x4.identity, marksMat, 0, 1);
@@ -82,11 +85,89 @@ namespace GreyBoxStrategy.Realm
             return rt;
         }
 
+        // The last full render's materials, whose input textures stay alive until the next one: a window of the chart is
+        // drawn again from them.
+        private static Material lastGround, lastMarks;
+        private static ChartImage lastImage;
+        private static Vector4 lastGrid;
+        private static readonly List<UnityEngine.Object> regionMade = new List<UnityEngine.Object>();
+
+        /// <summary>The chart the last full render drew, which <see cref="RenderRegion"/> draws a window of.</summary>
+        public static ChartImage LastImage => lastImage;
+
+        /// <summary>
+        /// A window of the chart drawn again at screen scale (rules v2 R4, detail that holds when zoomed in): the same
+        /// ground pass, rivers and roads and glyphs, for <paramref name="cells"/> (grid units, y down) into
+        /// <paramref name="w"/> × <paramref name="h"/> pixels. <paramref name="atlas"/> holds the glyphs near the window,
+        /// built at this scale (<see cref="RegionAtlas"/>). Null when there is no full render to draw from.
+        /// </summary>
+        public static RenderTexture RenderRegion(Rect cells, int w, int h, ChartAtlas atlas, RenderTexture reuse)
+        {
+            if (lastGround == null || lastMarks == null || lastImage == null) return null;
+            foreach (var o in regionMade) if (o != null) UnityEngine.Object.Destroy(o);
+            regionMade.Clear();
+            var img = lastImage;
+            float s = w / cells.width;
+            var rt = reuse;
+            if (rt == null || rt.width != w || rt.height != h)
+            {
+                if (rt != null) { rt.Release(); UnityEngine.Object.Destroy(rt); }
+                rt = new RenderTexture(new RenderTextureDescriptor(w, h, RenderTextureFormat.ARGB32, 0) { sRGB = QualitySettings.activeColorSpace == ColorSpace.Linear })
+                    { name = "Chart window (drawn at screen scale)", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+                rt.Create();
+            }
+            var cmd = new CommandBuffer { name = "Chart window" };
+            cmd.SetRenderTarget(rt);
+            // The ground: a quad whose uv is the window, at this scale (widths and the coast's distance follow s).
+            lastGround.SetVector("_Grid", new Vector4(img.GridWidth, img.GridHeight, s, img.IdWidth / (float)img.GridWidth / s));
+            var quad = new Mesh { name = "Chart window quad" };
+            float u0 = cells.xMin / img.GridWidth, u1 = cells.xMax / img.GridWidth, vTop = 1 - cells.yMin / img.GridHeight, vBottom = 1 - cells.yMax / img.GridHeight;
+            quad.vertices = new[] { new Vector3(0, 0), new Vector3(1, 0), new Vector3(1, 1), new Vector3(0, 1) };
+            quad.uv = new[] { new Vector2(u0, vTop), new Vector2(u1, vTop), new Vector2(u1, vBottom), new Vector2(u0, vBottom) };
+            quad.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+            regionMade.Add(quad);
+            cmd.SetViewProjectionMatrices(Matrix4x4.identity, GL.GetGPUProjectionMatrix(Matrix4x4.Ortho(0, 1, 1, 0, -1, 1), false));
+            cmd.DrawMesh(quad, Matrix4x4.identity, lastGround, 0, 0);
+            // The marks, in pixels at this scale, the window's corner at the origin.
+            cmd.SetViewProjectionMatrices(Matrix4x4.identity, GL.GetGPUProjectionMatrix(Matrix4x4.Ortho(cells.xMin * s, cells.xMax * s, cells.yMax * s, cells.yMin * s, -1, 1), false));
+            var strokes = Strokes(img, s); regionMade.Add(strokes);
+            cmd.DrawMesh(strokes, Matrix4x4.identity, lastMarks, 0, 0);
+            Texture prevAtlas = lastMarks.GetTexture("_MainTex");
+            Mesh quads = null;
+            if (atlas != null && atlas.Quads.Count > 0)
+            {
+                var tex = new Texture2D(atlas.Width, atlas.Height, TextureFormat.RGBA32, false, true) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp, name = "Glyph atlas (window)" };
+                tex.SetPixelData(atlas.Rgba, 0); tex.Apply(false, true);
+                regionMade.Add(tex);
+                quads = Quads(atlas); regionMade.Add(quads);
+                var m = new Material(lastMarks) { name = "ChartMarks (window)" }; m.SetTexture("_MainTex", tex); regionMade.Add(m);
+                cmd.DrawMesh(quads, Matrix4x4.identity, m, 0, 1);
+            }
+            Graphics.ExecuteCommandBuffer(cmd);
+            cmd.Release();
+            lastGround.SetVector("_Grid", lastGrid);
+            return rt;
+        }
+
+        /// <summary>
+        /// The glyphs standing in or near <paramref name="cells"/>, drawn at <paramref name="s"/> pixels a cell: plain C#,
+        /// for a worker thread. The window's own quads are placed in the full chart's pixels at that scale.
+        /// </summary>
+        public static ChartAtlas RegionAtlas(ChartImage img, Rect cells, float s)
+        {
+            var near = new List<GlyphInstance>();
+            float m = 4;
+            foreach (var g in img.Scene.Glyphs)
+                if (g.U > cells.xMin - m && g.U < cells.xMax + m && g.V > cells.yMin - m && g.V < cells.yMax + m) near.Add(g);
+            return ChartAtlas.Build(near, s);
+        }
+
         /// <summary>The intermediate textures, meshes and materials of the last render; the chart itself stays with its owner.</summary>
         public static void ReleaseInputs()
         {
             foreach (var o in made) if (o != null) UnityEngine.Object.Destroy(o);
             made.Clear();
+            lastGround = lastMarks = null; lastImage = null;
         }
 
         private static T Keep<T>(T o) where T : UnityEngine.Object { made.Add(o); return o; }
@@ -108,9 +189,8 @@ namespace GreyBoxStrategy.Realm
         }
 
         // ---- rivers and roads: two strips each where they have a casing, rivers under roads ----
-        private static Mesh Strokes(ChartImage img)
+        private static Mesh Strokes(ChartImage img, float s)
         {
-            float s = img.Scale;
             var v = new List<Vector3>(); var uv0 = new List<Vector2>(); var uv1 = new List<Vector2>(); var col = new List<Color>(); var ix = new List<int>();
             void Strip(Stroke st, float halfPx, Color c, bool dashed)
             {

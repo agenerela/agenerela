@@ -154,6 +154,33 @@ namespace GreyBoxStrategy.Realm
 
         private RenderTexture gpuChart;
         private Texture2D cellTex;
+        private RenderTexture detail;
+
+        /// <summary>
+        /// Zoomed in: the chart's window <paramref name="cells"/> (grid units, y down) drawn again at screen scale, to show
+        /// over the magnified chart where it covers. Null atlas and zero size turn it off.
+        /// </summary>
+        public bool SetDetail(Rect cells, int w, int h, ChartAtlas atlas)
+        {
+            if (material == null) return false;
+            if (w <= 0 || h <= 0) { material.SetFloat("_DetailOn", 0); return true; }
+            var drawn = ChartGpu.RenderRegion(cells, w, h, atlas, detail);
+            if (drawn == null) { material.SetFloat("_DetailOn", 0); return false; }
+            detail = drawn;
+            var img = ChartGpu.LastImage;
+            material.SetTexture("_DetailTex", detail);
+            material.SetVector("_DetailRect", new Vector4(cells.xMin / img.GridWidth, 1 - cells.yMax / img.GridHeight, cells.width / img.GridWidth, cells.height / img.GridHeight));
+            material.SetFloat("_DetailOn", 1);
+            DetailCells = cells; DetailScale = w / cells.width;
+            return true;
+        }
+
+        /// <summary>The window drawn at screen scale, in grid units, and its pixels a cell; zero when off.</summary>
+        public Rect DetailCells { get; private set; }
+        public float DetailScale { get; private set; }
+        public bool DetailOn => material != null && material.GetFloat("_DetailOn") > 0.5f;
+
+        public void DetailOff() { if (material != null) material.SetFloat("_DetailOn", 0); DetailScale = 0; }
 
         /// <summary>
         /// The cell grid for the shader, which takes each pixel's province from it by the raster's own vote
@@ -213,6 +240,7 @@ namespace GreyBoxStrategy.Realm
             var drawn = ChartGpu.Render(chart, idTex, Paper, PaperMean, seed, Shader.Find("GreyBoxStrategy/ChartGround"), Shader.Find("GreyBoxStrategy/ChartMarks"));
             Destroy(idTex);
             material.SetTexture("_MainTex", drawn);
+            DetailOff(); // drawn from the old chart's inputs: the next settled view draws it again
             if (gpuChart != null) { gpuChart.Release(); Destroy(gpuChart); }
             gpuChart = drawn;
             ChartWidth = chart.ChartWidth;
@@ -229,6 +257,7 @@ namespace GreyBoxStrategy.Realm
         {
             ChartGpu.ReleaseInputs();
             if (cellTex != null) Destroy(cellTex);
+            if (detail != null) { detail.Release(); Destroy(detail); }
             if (gpuChart != null) { gpuChart.Release(); Destroy(gpuChart); }
         }
 
