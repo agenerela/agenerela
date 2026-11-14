@@ -1238,6 +1238,20 @@ effect of 1% or more, and the counters turned the result of 6% of them.
 - Scripted, 100 Classic games: 80 turns on average against 77 off (94 last standing, 5 stalemates); with unit
   types and generals too, 74. Unmeasured live, so off.
 
+**R3, part five: supply** (14 November; rules v2 3.6, model B; the page says why B over the land's capacity and
+distance attrition). `GameRules.Supply`, off by default:
+- Every army carries stores, 0 to 4 turns of food (`Army.Stores`; `HalfStores` counts the halves a forager
+  saves). Full when raised and refilled 2 a turn in our own land; eaten 1 a turn in plains and forest, 2 in
+  hills, marsh and mountains.
+- An army with none loses 10% of its soldiers a turn (at least 2) and fights 15% weaker (`Game.Hunger`).
+- A `forager` general eats half; the trait joins the pool only with supply on.
+- The rulers read "stores 2 of 4" for each army, and an army what it eats where it stands ("eating 2 a turn
+  here").
+- Scripted armies abroad with a turn of stores left go home to refill, unless their siege ends next turn.
+- Not built yet: allies' and passage land as supplied, healing springs, famine and the 100-soldier cap.
+- Scripted, 100 Classic games: 90 turns against 77 off (91 last standing, 5 stalemates, 4 unfinished); with
+  all four R3 rules, 84. Unmeasured live, so off.
+
 **Two pacing settings, both off** (14 November; the rules v2 page's "Why Classic stalls"):
 - `GameRules.OccupationBecomesOwnership`: a province occupied that many turns in a row becomes the occupier's,
   with no treaty. `Province.OccupiedTurns` counts the turn ends it has been held, back to 0 when the occupier

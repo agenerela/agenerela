@@ -2115,7 +2115,7 @@ line, and `findings.md` for anything measured.
 - [x] The model rulers' recruit orders by type and the mix in their facts (14 November; unmeasured live, so still off)
 - [x] Generals: names, seven of the ten traits, second trait, a general falling (`GameRules.Generals`, off; scripted only, 14 November). Siegewright, forager and marshal wait for sieges, supply and army sizes; capture waits for prisoners
 - [x] Sieges at forts over several turns, breach, broken siege, siegewright (`GameRules.Sieges`, off; scripted only, 14 November). Forts stand for walls; the fort that holds the road, and income lost under siege, are not built yet
-- [ ] Supply model B, the army cap; sim A/B of B against A against none
+- [x] Supply model B, with forager (`GameRules.Supply`, off; scripted against none, 14 November). Still open: the army cap, and A against B (A needs farms)
 - [ ] Fog of war for facts and scripted players; totals rounded; forest; scouting
 - [ ] Support and pursuit; the report's factors
 - [ ] Every feature behind a rules flag; sim A/B each against off

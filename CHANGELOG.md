@@ -29,6 +29,11 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm R3, part five: supply, model B** (#20), behind `GameRules.Supply`, off by default. Armies
+  carry 0 to 4 turns of stores, refilled at home and eaten abroad, twice as fast in poor land; with none they
+  lose 10% a turn and fight 15% weaker; a forager eats half. The rulers read each army's stores; scripted
+  armies go home to refill. The rules page records the three models considered and why B.
+
 - **Painted Realm R3, part four: sieges at forts** (#20), behind `GameRules.Sieges`, off by default. Enemy
   land with forts is besieged over 2 turns a fort (less with a siegewright or three to one, a 10% breach a turn)
   and occupied one fort fewer; the siege breaks when the besiegers leave or lose. Both sides read it.

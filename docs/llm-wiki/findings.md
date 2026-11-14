@@ -4254,3 +4254,18 @@ GreyBoxStrategy (#20), rules v2 3.7, `GameRules.Sieges`. Scripted only: the `.NE
 - With all three R3 rules on, the game is 3 turns shorter than off. The rules are not independent: siegewright and three-to-one make sieges short where a general or a big army is.
 - Unmeasured live; the switch stays off.
 
+### Painted Realm R3, supply: scripted, stores lengthen a Classic game by 13 turns, mostly because hungry armies go home (14 November 2026)
+
+GreyBoxStrategy (#20), rules v2 3.6, model B, `GameRules.Supply`. Scripted only: the `.NET 9` harness (`pace classic 100 rule:Supply=True`), 100 Classic games of the `mixed` lineup on seeds 1 to 100, writs turn, conquest.
+
+| | turns (mean, median, p90) | endings | battles a game | treaties a game |
+|---|---|---|---|---|
+| off | 77, 75, 106 | 97 last standing, 3 stalemate | 147 | 7.6 |
+| supply, scripts that ignore it | 80, 76, 109 | 96 last standing, 3 stalemate, 1 unfinished | 153 | 7.7 |
+| supply, scripts that go home at 1 store | 90, 85, 122 | 91 last standing, 5 stalemate, 4 unfinished | 163 | 7.6 |
+| all four R3 rules | 84, 83, 116 | 93 last standing, 6 stalemate, 1 unfinished | 149 | 8.3 |
+
+- The stores themselves cost little: scripts that ignore them lose soldiers to hunger and still finish 3 turns later. Going home to refill is what slows a war, by another 10 turns: an army that leaves its front for two or three turns gives the enemy time.
+- The first elimination moves from turn 19 to 21: early wars stall at the first long march.
+- Unmeasured live: whether a model ruler reads "stores 1 of 4" as a reason to come home. The switch stays off.
+
