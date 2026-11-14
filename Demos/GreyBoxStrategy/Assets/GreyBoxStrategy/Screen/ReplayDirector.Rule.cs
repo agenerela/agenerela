@@ -18,6 +18,27 @@ namespace GreyBoxStrategy.Realm
     public sealed partial class ReplayDirector
     {
         private RuleSession rule;
+
+        private readonly List<ScreenUI.EdgeMark> edgeItems = new List<ScreenUI.EdgeMark>();
+
+        /// <summary>
+        /// Rule mode: markers at the map's edge for the last turn's battles and your capital, when they are off screen.
+        /// Not when watching: there the camera follows the story.
+        /// </summary>
+        private void PlaceEdgeMarks()
+        {
+            if (ui == null) return;
+            if (rule == null || shown == null) { if (ui.EdgeMarksShown > 0) ui.PlaceEdgeMarks(null); return; }
+            edgeItems.Clear();
+            int cap = ui.CapitalIndex(rule.You);
+            if (cap >= 0 && shown.Owners[cap] == rule.You)
+                edgeItems.Add(new ScreenUI.EdgeMark { Kind = "capital", Province = cap, Colour = CountryLook.Of(rule.You).Colour, Text = "Your capital, " + Wording.Province(game.ProvinceIds[cap]) });
+            int turn = played.Count > 0 ? played[played.Count - 1].Turn : -1;
+            foreach (var e in played)
+                if (e.Kind == ReplayEventKind.Battle && e.Turn == turn && e.ProvinceIndex >= 0)
+                    edgeItems.Add(new ScreenUI.EdgeMark { Kind = "battle", Province = e.ProvinceIndex, Event = e, Colour = new Color(0.86f, 0.3f, 0.22f), Text = "Battle at " + Wording.Province(game.ProvinceIds[e.ProvinceIndex]) });
+            ui.PlaceEdgeMarks(edgeItems);
+        }
         private CardLock ruleLock;
         private int builtResolved = -1;
         private string lastOrdersStatus;

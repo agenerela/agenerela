@@ -220,7 +220,7 @@ namespace GreyBoxStrategy.Realm
             hold.Add(KeyValue("Forts", known ? $"{s.Forts[p]} (+{s.Forts[p] * Queries.Rules.FortBonus})" : "not known"));
             if (capital) hold.Add(KeyValue("Capital", $"+{Queries.Rules.CapitalBonus}"));
             hold.Add(KeyValue("Defends with about", known ? Queries.Defence(s, p).ToString() : "not known"));
-            if (!known) hold.Add(Note("Your court knows the garrisons and forts of your own provinces and of those touching your land, as a model ruler is told."));
+            if (!known) hold.Add(Note("Your court knows the garrisons and forts of your own provinces and of those touching your land."));
             hold.Add(KeyValue("Income", owner == null ? "none" : $"{Queries.Rules.IncomePerProvince} gold a turn"));
             var nb = new Label("Borders: " + string.Join(", ", Queries.Neighbours(p).Select(q => Cap(ProvinceIds[q])))); nb.AddToClassList("why-no"); hold.Add(nb);
             LandSection(body, id);
@@ -228,16 +228,17 @@ namespace GreyBoxStrategy.Realm
 
             if (Fog.On) ProvinceOrders(body, p);
             var moves = Fog.On ? new VisualElement() : Sec(body, "WHO CAN ATTACK IT", "now");
-            foreach (var c in CountryIds.Where(c => c != owner && s.Countries[c].Alive))
-            {
-                string why = Queries.WhyNotAttack(s, c, p);
-                var row = new VisualElement(); row.AddToClassList("row");
-                row.Add(new Crest(CountryLook.Of(c), 15));
-                var t = new Label(why == null ? $"{CountryLook.NameOf(c)} · wins {Math.Round(Queries.WinChance(s, c, p) * 100)}% of rolls" : $"{CountryLook.NameOf(c)} · {why}");
-                t.style.marginLeft = 6; if (why != null) t.AddToClassList("muted");
-                row.Add(t); moves.Add(row);
-            }
-            moves.Add(Src("Legality.WhyNot's rule for attack, and the battle's own rolls"));
+            // The realms that can, each with its odds; then those that cannot, one line for every realm too far away.
+            var rivals = CountryIds.Where(c => c != owner && s.Countries[c].Alive).Select(c => (c, why: Queries.WhyNotAttack(s, c, p))).ToList();
+            foreach (var (c, why) in rivals.Where(x => x.why == null))
+                moves.Add(AttackRow(c, $"{CountryLook.NameOf(c)} · wins {Math.Round(Queries.WinChance(s, c, p) * 100)}% of rolls", false));
+            foreach (var (c, why) in rivals.Where(x => x.why != null && !RealmQueries.IsFarReason(x.why)))
+                moves.Add(AttackRow(c, $"{CountryLook.NameOf(c)} · {Lowered(Words.Plain(why)).TrimEnd('.')}", true));
+            int far = rivals.Count(x => x.why != null && RealmQueries.IsFarReason(x.why));
+            if (far > 0) moves.Add(Note(rivals.Count(x => x.why == null) + rivals.Count(x => x.why != null && !RealmQueries.IsFarReason(x.why)) == 0
+                ? (far == 1 ? "No realm can: the only other one is not next to it." : $"No realm can: none of the {far} others is next to it.")
+                : $"{far} {(far == 1 ? "other cannot" : "others cannot")}: not next to it."));
+            if (rivals.Count == 0) moves.Add(Note("No realm is left to attack it."));
 
             var events = history.Where(e => e.ProvinceIndex == p).ToList();
             if (events.Count > 0)
@@ -247,13 +248,24 @@ namespace GreyBoxStrategy.Realm
                 {
                     var line = Chronicle.Line(e, CountryLook.NameOf);
                     if (line == null) continue;
-                    var row = new VisualElement(); row.AddToClassList("row");
+                    var row = new VisualElement(); row.AddToClassList("row"); row.AddToClassList("wraps");
                     row.Add(new Crest(CountryLook.Of(e.Country), 15));
-                    row.Add(new Label($"t{e.Turn} · {line.Text}") { style = { marginLeft = 6, whiteSpace = WhiteSpace.Normal, flexShrink = 1 } });
+                    row.Add(new Label($"Turn {e.Turn} · {line.Text}") { style = { marginLeft = 6, whiteSpace = WhiteSpace.Normal, flexShrink = 1 } });
                     if (e.Decision != null && Fog.KnowsDecision(e.Decision.AgentId, GameOver)) { row.tooltip = "Click: the decision"; row.RegisterCallback<ClickEvent>(_ => DecisionPressed?.Invoke(e)); }
                     hist.Add(row);
                 }
             }
+        }
+
+        private static string Lowered(string t) => string.IsNullOrEmpty(t) ? t : char.ToLowerInvariant(t[0]) + t.Substring(1);
+
+        private static VisualElement AttackRow(string country, string text, bool cannot)
+        {
+            var row = new VisualElement(); row.AddToClassList("row"); row.AddToClassList("wraps");
+            row.Add(new Crest(CountryLook.Of(country), 15));
+            var t = new Label(text) { style = { whiteSpace = WhiteSpace.Normal, flexShrink = 1 } }; t.style.marginLeft = 6; if (cannot) t.AddToClassList("muted");
+            row.Add(t);
+            return row;
         }
 
         /// <summary>A generated world's map data, for the province panel's land; null on the Classic board.</summary>
@@ -274,7 +286,7 @@ namespace GreyBoxStrategy.Realm
             sec.Add(KeyValue("Development", $"{Chart.ChartLayout.DevelopmentOf(land)} of {Development.Max}"));
             sec.Add(KeyValue("Population", land.Population.ToString()));
             if (!string.IsNullOrEmpty(land.Good)) sec.Add(KeyValue("Goods", Cap(land.Good)));
-            sec.Add(Note("The chart draws the settlement and its fields by development, which comes from population, a capital and a port. Buildings will add to it (rules v2, R6)."));
+            sec.Add(Note("The bigger the settlement, the more of the land around it is farmed."));
             var special = Land.Specials?.FirstOrDefault(x => x.Province == id);
             if (special != null)
             {
@@ -320,7 +332,6 @@ namespace GreyBoxStrategy.Realm
                 var ruler = Sec(body, "RULER", "persona, not country");
                 var p = new Label(personality ?? ""); p.AddToClassList("insp-sub"); ruler.Add(p);
                 if (knowledge != null) foreach (var k in knowledge) { var kl = new Label("· " + k); kl.AddToClassList("why-no"); ruler.Add(kl); }
-                ruler.Add(Src("AgentIdentity.Personality and Knowledge, from Personas.cs"));
             }
 
             var tre = Sec(body, "TREASURY", "");

@@ -29,6 +29,14 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: detail up close, fields that show, rule mode on a big map** (#20).
+  - Zoomed in, the visible part of the chart is drawn again at screen scale (trees, fields, settlements, roads),
+    not magnified.
+  - Farms and settlements grow visibly with development.
+  - Rule mode has a "next army awaiting orders" jump, and markers at the map's edge for off-screen battles and
+    your capital.
+  - The province panel speaks to a player.
+
 - **Painted Realm: a sharp chart and names that never collide** (#20).
   - Borders and occupation hatching stay sharp at any zoom: the shader takes each pixel's province from the
     world's cell grid, by the CPU raster's own vote.

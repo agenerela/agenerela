@@ -237,9 +237,8 @@ namespace GreyBoxStrategy.Realm
                     b.AddToClassList("order-move"); b.AddToClassList("wide"); if (legal.Equals(Chosen)) b.AddToClassList("pick");
                     sec.Add(b);
                 }
-                else sec.Add(Note($"{Describe(m)}: {why}"));
+                else sec.Add(Note($"{Describe(m)}: {Words.Plain(why)}"));
             }
-            sec.Add(Src("Legality.WhyNot, the rule the models are offered moves by"));
         }
 
         /// <summary>Your orders towards a rival: war and peace, or why not.</summary>
@@ -259,9 +258,8 @@ namespace GreyBoxStrategy.Realm
                     b.AddToClassList("order-move"); b.AddToClassList("wide"); if (legal.Equals(Chosen)) b.AddToClassList("pick");
                     sec.Add(b);
                 }
-                else sec.Add(Note($"{Describe(m)}: {why}"));
+                else sec.Add(Note($"{Describe(m)}: {Words.Plain(why)}"));
             }
-            sec.Add(Src("Legality.WhyNot, the rule the models are offered moves by"));
         }
 
         // ---- the envoy card ----

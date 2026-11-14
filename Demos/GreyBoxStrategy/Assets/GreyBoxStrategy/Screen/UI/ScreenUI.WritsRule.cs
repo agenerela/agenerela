@@ -96,6 +96,18 @@ namespace GreyBoxStrategy.Realm
             var withWrits = ArmiesWithWrits(req);
             var awaiting = WritLegality.Awaiting(w, You).Select(a => a.Id).ToList();
             body.Add(SectionHead("YOUR ARMIES", withWrits.Count < awaiting.Count ? $"{awaiting.Count - withWrits.Count} wait: no writ left" : "click one, then a lit province"));
+            if (withWrits.Count > 0)
+            {
+                // On a big world the army waiting may be anywhere: this finds it, as the N key does.
+                int open = withWrits.Count(a => !Plan.Armies.ContainsKey(a));
+                var next = new Button(() => NextArmyPressed?.Invoke())
+                {
+                    text = open > 0 ? $"Next army awaiting orders ({open}) · N" : "Next army · N",
+                    tooltip = "Choose the next army that has a writ and no order yet, and bring the map to it",
+                };
+                next.AddToClassList("order-move"); next.AddToClassList("next-army");
+                body.Add(next);
+            }
             foreach (var army in w.ArmiesOf(You).OrderBy(a => awaiting.IndexOf(a.Id) < 0 ? 99 : awaiting.IndexOf(a.Id)))
                 body.Add(ArmyRow(req, army, withWrits, awaiting));
             if (w.ArmiesOf(You).Count() == 0) body.Add(Text("No armies. Recruit at your capital to raise one.", "src"));
@@ -236,6 +248,9 @@ namespace GreyBoxStrategy.Realm
 
         /// <summary>What the panel shows of the plan, so the director redraws it only when it changed.</summary>
         public string WritsKey() => Plan.Court + "|" + Plan.Court2 + "|" + string.Join(",", Plan.Armies.Select(kv => kv.Key + ":" + kv.Value));
+
+        /// <summary>The council's "next army" button: the director does what the N key does.</summary>
+        public Action NextArmyPressed;
 
         /// <summary>The next of your armies that gets a writ and has no order yet (the N key), or the first again.</summary>
         public string NextArmy()
