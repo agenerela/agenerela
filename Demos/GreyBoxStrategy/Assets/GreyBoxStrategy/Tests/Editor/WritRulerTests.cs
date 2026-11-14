@@ -258,6 +258,24 @@ namespace GreyBoxStrategy.Tests
         }
 
         [Test]
+        public async Task SilentArmies_AskTheMarshalNoStatement_AndTheCourtKeepsItsLine()
+        {
+            var (record, seen) = await PlayVoice("default+silent-armies");
+            var army = seen.Where(x => x.asked.Moment == Moment.Army).ToList();
+            var rest = seen.Where(x => x.asked.Moment != Moment.Army).ToList();
+            Assert.That(army, Is.Not.Empty);
+            Assert.That(army.All(x => !x.req.Request.Schema.AsksForStatement), Is.True, "no statement field for an army order");
+            Assert.That(army.All(x => !Read(x.req).Contains("Lines we said lately") && !Read(x.req).Contains(WritRuler.SayNothingLine)), Is.True);
+            Assert.That(rest.All(x => x.req.Request.Schema.AsksForStatement), Is.True, "both court orders and the treaty answers keep their line");
+            Assert.That(rest.Any(x => x.asked.Turn > 1 && Read(x.req).Contains("Lines we said lately")), Is.True, "own lines stay on for the court");
+            Assert.That(record.Decisions.Where(d => d.Moment == Moment.Army).All(d => string.IsNullOrEmpty(d.Statement) && d.Unspoken == null), Is.True);
+            Assert.That(record.Decisions.Any(d => d.Moment == Moment.Council && !string.IsNullOrEmpty(d.Statement)), Is.True);
+
+            var (_, byDefault) = await PlayVoice("default");
+            Assert.That(byDefault.All(x => x.req.Request.Schema.AsksForStatement), Is.True, "off by default");
+        }
+
+        [Test]
         public void ARuler_IsForTheWritsTurnOnly()
         {
             var game = new Game(1);
