@@ -1217,7 +1217,7 @@ effect of 1% or more, and the counters turned the result of 6% of them.
 - Every army gets a general named for it ("Nessa" leads `nessa_host`) with one trait drawn from the seed: `bold`
   (+10% attacking, +10% own losses), `wary` (+10% defending), `horse-born` and `bowmaster` (their type +15%, with
   unit types), `swift` (a march's first step a turn shorter), `stubborn` (retreats where it would be routed),
-  `inspiring` (-20% own losses). Siegewright came with the sieges (R3 part four, only with `GameRules.Sieges` on); forager and marshal wait for supply and army sizes.
+  `inspiring` (-20% own losses). Siegewright came with the sieges (R3 part four, only with `GameRules.Sieges` on); the forager came with supply (R3 part five, only with `GameRules.Supply` on); the marshal waits for army sizes.
 - A side's commander is its largest army's general. Three wins bring a second trait; a losing general falls 5%
   of the time, and the army keeps its id under a new one.
 - The report names the commander whose traits moved the battle most ("…; Maren the Bold led the attack (+10%)"),
