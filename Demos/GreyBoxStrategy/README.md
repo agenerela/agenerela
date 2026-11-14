@@ -50,9 +50,10 @@ language model through the framework, fighting over 25 provinces on a painted se
        chosen by its crest, against four).
      - Choose the model (`qwen3.5:4b` by default) and the seed (Roll picks one), then **Start**.
      - **Map:** Classic (the painting) or **Generated** (a chart drawn by code), with a size and a
-       land shape. A generated world is a first look: the rules' scripted rulers play it at once
-       and you watch the replay. It plays in watch mode only, with no model and no server
-       ([the drawn chart](#the-drawn-chart-spike-12-november)).
+       land shape. A generated world was first a look: the scripted rulers played it at once
+       and you watched the replay ([the drawn chart](#the-drawn-chart-spike-12-november)). It now
+       also plays live, and you can rule a realm on it, on the writs turn
+       ([the writs turn on generated worlds](#the-writs-turn-on-generated-worlds-14-november)).
      - **Storyteller:** Off (the random event table, as every measured game), or one of its
        presets: Even hand, Underdog, Cruel fate, Quiet years, Saga
        ([what it shows](#the-storyteller-on-screen-13-november)).
@@ -642,7 +643,8 @@ Unlimited writs for the person waits for the rules' per-country setting.
 ### The writs turn on screen: rule mode (13 November)
 
 The third part of the screen's R1: you rule one country on the writs turn against four model rulers, a
-court and a marshal each, on the Classic board. A generated world stays watch only for now.
+court and a marshal each, on the Classic board. (Generated worlds came on 14 November: see
+[the writs turn on generated worlds](#the-writs-turn-on-generated-worlds-14-november).)
 
 **See it:** New game → Rule → The turn: Writs and armies. Or use the dev menu: `writs-rule kesh 3 [preset]`
 plays stand-in rulers through the same agents, with no server. `plan court recruit`,
