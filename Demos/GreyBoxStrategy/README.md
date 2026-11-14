@@ -498,7 +498,7 @@ in the console.
 ### The writs turn on screen: watch and replay (13 November)
 
 The screen's half of R1, first part: a writs game played back on the map, by stand-in rulers. Rule
-mode on the writs turn is the next part, and model rulers on the screen with it. The one-move game
+mode on the writs turn and model rulers on the screen came after, in the two sections below. The one-move game
 and Classic's painting stay the default.
 
 **See it:** New game → The turn: Writs and armies (with the victory preset), on Classic or a
