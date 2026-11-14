@@ -241,11 +241,11 @@ framework writes the moves as one line among the facts, `LegalTargets = Observat
 
 Each game log shows the model's answer and its statement under each of its moves.
 
-**Tests:** 370 EditMode tests in all, counted on 13 November. 289 are the game's, in
+**Tests:** 374 EditMode tests in all, counted on 13 November. 289 are the game's, in
 `Assets/GreyBoxStrategy/Tests/Editor/`: 285 run every time, about a minute once the project has
 imported (the map generator's take most of it), and four long ones are run by hand. Of the game's,
 twenty drive the model seat through `ScriptedProvider`, sixteen in `TableTests` the table, the
-personas and the scorecard, and fifteen in `StorytellerTests` the storyteller. 81 are the screen's,
+personas and the scorecard, and fifteen in `StorytellerTests` the storyteller. 85 are the screen's,
 in `Screen/Tests/Editor/`.
 
 ## Rules v2, being built
@@ -552,6 +552,62 @@ world's in about 0.5 to 0.9 s, off the main thread behind the loading card.
 - The seal can sit under a piece standing on the same province.
 - The scripted rulers order armies into land they may not enter, so the chronicle shows many
   refused orders; that is the stand-ins' play, not the screen's.
+
+### The writs turn on screen: rule mode (13 November)
+
+The third part of the screen's R1: you rule one country on the writs turn against four model rulers, a
+court and a marshal each, on the Classic board. A generated world stays watch only for now.
+
+**See it:** New game → Rule → The turn: Writs and armies. Or use the dev menu: `writs-rule kesh 3 [preset]`
+plays stand-in rulers through the same agents, with no server. `plan court recruit`,
+`plan maren_host march corwick` and `plan end` give orders from the command line.
+
+**Your turn is one plan** (`RuleSession.WritsPlan`):
+- the court's order;
+- an order for each army that gets a writ;
+- a second court order when a writ is left.
+
+The rules ask for these round by round, and the session answers each round from the plan. Anything the
+plan has no order for holds. You are offered, and held to, exactly what a model ruler is: the court's
+moves come from `WritLegality.CourtMoves`, an army's from `WritLegality.ArmyMoves`. An order not on the
+list is refused with the rules' reason.
+
+**What the council panel shows** (`Screen/UI/ScreenUI.WritsRule.cs`):
+- **Your writs** as pips, filled as the plan spends them, and "Orders · writs 1 of 3" in the top bar.
+  The tooltip gives the rule. The cap is the rules' setting (`BaseWrits`, `ProvincesPerWrit`,
+  `MaxWrits`), read from each request.
+- **The court's orders.** One not offered is greyed and says why. A treaty term shows the war score
+  with that country.
+- **Your armies, in the order the rules ask them:**
+  - those with a writ, with their order once given;
+  - those awaiting orders with no writ left, in red ("no writ left: it holds");
+  - those carrying out a standing order (marching, with the turns left, or holding) and what wakes them.
+- **An army chosen** in the list, by its piece, or with **N** (the next army awaiting orders) has
+  its plate ringed. The map lights its legal destinations and dims the rest. A click on a lit province
+  orders the march; a click elsewhere says why not. The panel lists the nearest provinces it cannot
+  go to, with each reason.
+
+**A treaty term put to you** is a card: the proposer's crest, face and line, the term in words, and the
+war score from your side, with Accept and Refuse.
+
+**Fog of war** (v2 3.8, `WritsSight`): your court sees its own and controlled provinces, every province
+with one of its armies, and the provinces bordering all of them. A rival army beyond that is not
+drawn; one inside it shows its size rounded to ten ("~30"), and its march line only while it is seen.
+
+**A ruler saying the same thing again** (`RepeatFilter`): on the writs turn a country speaks several
+times a turn, and the measured rulers repeat lines word for word (35% against 5% in the one-move game).
+A line said again at once shows no second banner, and the chronicle writes "(said again)".
+
+**The storyteller plays the writs turn now.** The rule and live sessions call it before every upkeep.
+Its dilemmas are answered by the model rulers' courts (`WritRuler` answers `Moment.Choice`) or by you, and
+New game offers it for the writs turn again. With stand-in rulers and the saga preset, six turns had
+four events, and two dilemmas were answered by the courts. Nothing on the rules side was missing: the
+screen's sessions had simply never called it.
+
+**What the rules would need for unlimited writs for a person:** `World.Writs` is one formula for
+every country. A per-country setting (for example a writs override by country in `GameRules`, read
+by `World.Writs`) would let "unlimited" be an easy option for the person alone while the models keep
+the cap. The screen reads the count from each request, so it needs no change.
 
 ### The writs turn on screen: model rulers, live (13 November)
 

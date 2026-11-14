@@ -29,6 +29,15 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: rule mode on the writs turn** (#20). You rule one country against four model rulers
+  with a plan a turn: a court order, an order for each army with a writ, a second court order.
+  - Your writs are counted, and armies waiting for want of a writ are marked.
+  - An army chosen on the map lights its legal destinations; the others say why not.
+  - A treaty term put to you is a card with the war score.
+  - Rival armies show only where your court sees.
+  - The storyteller plays the writs turn.
+  - A ruler's line said again shows once.
+
 - **Painted Realm: model rulers play the writs turn live on screen** (#20). Each country has a court
   and a marshal with its persona, on the RTX 5080.
   - Every decision is recorded as the game asked it, with the army a marshal's order is for.
