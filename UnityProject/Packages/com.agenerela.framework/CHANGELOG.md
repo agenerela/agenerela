@@ -61,6 +61,14 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **A fact ledger** (#216 item 4, #266 item 5). `FactLedger`, an `IObservationSource`,
+  `IReportsDroppedObservations` and `IExportsMemory`: `Set(key, line, expiresAfter)`, `Word(key,
+  reader, line)` for one reader's own wording, `Remove`, `Tick()` counting expiry in the game's
+  units, `MaxLines` for a budget that keeps the newest lines and reports the oldest, and `For(reader)`
+  for one agent's `FactLedgerView`, so one ledger is read by many agents, each in its own words.
+  Lines come in the order facts were last set. `Export` and `Import` save it. An observation
+  source like any other: nothing new reaches the model, and no prompt changes unless a game adds it.
+
 - **A choice among options given with the call** (#266 item 2, DR-022). `DecideOptions.Choices`,
   null by default, a list of the new `Choice` (id, description, `Available`): the call offers those
   choices instead of the agent's registered actions, then `none`, with no `target` field, and the
