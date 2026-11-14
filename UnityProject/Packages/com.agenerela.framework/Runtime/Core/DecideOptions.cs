@@ -88,6 +88,11 @@ namespace Agenerela
         /// (<see cref="PromptOptions.MaxListedTargets"/>). A negative value is a mistake the call
         /// throws for.
         /// </summary>
+        /// <remarks>
+        /// The cut is silent: the prompt says nothing of the targets left out, which are always the
+        /// last in schema order, whatever the game would rather keep (#244 item 5).
+        /// <see cref="DecisionTelemetry.TargetsUnlisted"/> records them.
+        /// </remarks>
         public int MaxListedTargets = PromptOptions.DefaultMaxListedTargets;
 
         /// <summary>

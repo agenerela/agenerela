@@ -64,7 +64,10 @@ Targets:
   `ProximityObservationSource` instead (build plan §2.8).
 - **The budget.** `MaxListedTargets`, 12 by default, caps the target lines. The first targets in
   schema order are kept, so a source that offers the nearest first, as `ProximityTargetSource`
-  does, loses the far ones. A target past the cap can still be chosen, but it gets no line. Every
+  does, loses the far ones. **The cut is silent**: the prompt says nothing about targets left out,
+  and the ones cut are always the last in schema order, registration order then each source's
+  order, whatever matters most to the game (#244 item 5, N2). Order your sources and registrations
+  so what the model must see comes first, or raise the cap. A target past the cap can still be chosen, but it gets no line. Every
   action is always listed: the developer decides how many there are, and dropping one would hide
   it. 0 lists no targets. A negative value throws at the call.
 - **With the target rule.** On a provider without token probabilities, with `CheckTarget` on
@@ -286,6 +289,33 @@ changes and who pays for it.
 
 Whether a policy line works better as knowledge than as an observation is in findings,
 9 November 2026, "Policy lines as knowledge or as observations".
+
+## Two texts in one statement: a title and a story
+
+A decision has one free-text field. An event that wants a title and a story can ask for both in
+it and split them (#266 item 3), as GreyBoxStrategy's storyteller does:
+
+```csharp
+identity.StatementRules = "A title of two to five words, a colon, then one or two sentences telling what happened.";
+
+// In the handler, or wherever the game reads the statement:
+string s = result.Decision.Statement ?? "";
+int colon = s.IndexOf(':');
+string title = colon > 0 && colon < 60 ? s.Substring(0, colon).Trim() : null;
+string story = title != null ? s.Substring(colon + 1).Trim() : s.Trim();
+if (title == null) title = gameMadeTitle;   // the model often leaves it out
+```
+
+- **Expect the title to be missing.** In GreyBoxStrategy's first storyteller, `qwen3.5:4b` left it out
+  of 47% of events (findings, 12 November, "A storyteller in GreyBoxStrategy"). Have a fallback.
+- **A second, short call is the measured fix.** A second agent asked only for the title, given the
+  story, cut titles missing from 47% to 0%, at 0.35 to 0.39 s an event, 20 games an arm (findings,
+  12 November, "The storyteller's stage S2"). It costs one more request per event; telemetry shows two
+  unrelated decisions, since nothing links them (#266, N14).
+- **Bound the split.** A colon inside the story is common; take the first one, and only when the
+  part before it is short.
+
+A second text field is not built: one game needs it so far.
 
 ## Counter-examples
 
