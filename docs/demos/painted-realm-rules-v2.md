@@ -2095,7 +2095,7 @@ line, and `findings.md` for anything measured.
 **R3, armies in depth**
 - [x] Three types, costs, the counter rule (`GameRules.UnitTypes`, off; scripted only, 14 November)
 - [x] The model rulers' recruit orders by type and the mix in their facts (14 November; unmeasured live, so still off)
-- [ ] Generals: names, ten traits, second trait, death and capture
+- [x] Generals: names, seven of the ten traits, second trait, a general falling (`GameRules.Generals`, off; scripted only, 14 November). Siegewright, forager and marshal wait for sieges, supply and army sizes; capture waits for prisoners
 - [ ] Walls and sieges, breach, broken siege, forts hold the road
 - [ ] Supply model B, the army cap; sim A/B of B against A against none
 - [ ] Fog of war for facts and scripted players; totals rounded; forest; scouting

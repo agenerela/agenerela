@@ -29,6 +29,11 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm R3, part three: generals with traits** (#20), behind `GameRules.Generals`, off by default.
+  Every army has a general with one of seven traits (bold, wary, horse-born, bowmaster, swift, stubborn,
+  inspiring); a side's commander counts in strength, losses and marches, wins a second trait after three
+  victories, and falls 5% of the time in a lost battle. The report and the rulers' facts name them.
+
 - **Painted Realm R3, part two: the model rulers recruit by type and read the mix** (#20), only with
   `GameRules.UnitTypes`, still off. The court registers `recruit_pikes`, `recruit_riders` and `recruit_bows`
   in place of `recruit`; the facts give each army's mix and what a rival's armies mostly are. Off, every prompt
