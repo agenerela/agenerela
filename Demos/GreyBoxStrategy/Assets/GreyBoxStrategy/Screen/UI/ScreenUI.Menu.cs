@@ -33,6 +33,10 @@ namespace GreyBoxStrategy.Realm
         public bool UnitTypes;
         /// <summary>R3 on the writs turn: a general with traits for every army (<see cref="GameRules.Generals"/>). Off by default.</summary>
         public bool Generals;
+        /// <summary>R3 on the writs turn: land with forts is besieged over turns (<see cref="GameRules.Sieges"/>). Off by default.</summary>
+        public bool Sieges;
+        /// <summary>R3 on the writs turn: armies carry stores and go hungry abroad (<see cref="GameRules.Supply"/>). Off by default.</summary>
+        public bool Supply;
         /// <summary>Rule mode with model rulers: a model on your own seat proposes each turn's plan (the lead's answer 29). On by default.</summary>
         public bool Advisor = true;
         /// <summary>Whether this choice starts the advisor: ruling, on the writs turn, with model rulers.</summary>
@@ -304,9 +308,13 @@ namespace GreyBoxStrategy.Realm
             var armiesNote = new Label(); armiesNote.AddToClassList("src"); armiesNote.style.whiteSpace = WhiteSpace.Normal;
             void ArmiesNote() => armiesNote.text =
                 (choice.UnitTypes ? "Unit types: armies of pikes, riders and bows; pikes beat riders, riders beat bows, bows beat pikes. " : "Unit types off: every soldier is the same. ")
-                + (choice.Generals ? "Generals: every army is led by one with a trait, who can gain another or fall." : "Generals off.");
+                + (choice.Generals ? "Generals: every army is led by one with a trait, who can gain another or fall. " : "Generals off. ")
+                + (choice.Sieges ? "Sieges: land with forts is besieged, two turns a fort, before it falls. " : "Sieges off. ")
+                + (choice.Supply ? "Supply: armies carry four turns of stores, refilled at home; with none they starve and fight weaker." : "Supply off.");
             var unitsRow = Steps("Unit types", new[] { "Off", "On" }, choice.UnitTypes ? 1 : 0, i => { choice.UnitTypes = i == 1; ArmiesNote(); });
             var generalsRow = Steps("Generals", new[] { "Off", "On" }, choice.Generals ? 1 : 0, i => { choice.Generals = i == 1; ArmiesNote(); });
+            var siegesRow = Steps("Sieges", new[] { "Off", "On" }, choice.Sieges ? 1 : 0, i => { choice.Sieges = i == 1; ArmiesNote(); });
+            var supplyRow = Steps("Supply", new[] { "Off", "On" }, choice.Supply ? 1 : 0, i => { choice.Supply = i == 1; ArmiesNote(); });
             ArmiesNote();
             void Turn(bool writs)
             {
@@ -315,6 +323,8 @@ namespace GreyBoxStrategy.Realm
                 writsRow.SetEnabled(writs);
                 unitsRow.SetEnabled(writs);
                 generalsRow.SetEnabled(writs);
+                siegesRow.SetEnabled(writs);
+                supplyRow.SetEnabled(writs);
                 armiesNote.style.display = writs ? DisplayStyle.Flex : DisplayStyle.None;
                 writsNote.style.display = writs ? DisplayStyle.Flex : DisplayStyle.None;
                 victoryNote.style.display = writs ? DisplayStyle.Flex : DisplayStyle.None;
@@ -331,6 +341,8 @@ namespace GreyBoxStrategy.Realm
             card.Add(writsNote);
             card.Add(unitsRow);
             card.Add(generalsRow);
+            card.Add(siegesRow);
+            card.Add(supplyRow);
             card.Add(armiesNote);
             card.Add(turnNote);
             Turn(choice.Writs);

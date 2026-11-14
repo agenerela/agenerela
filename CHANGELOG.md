@@ -29,6 +29,11 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm R3 sieges and supply on screen** (#20). New game has "Sieges" and "Supply" switches, off by
+  default. A besieged province carries "Siege 2 of 4" beside its forts; your army rows show their stores as pips
+  and a red "No stores" when there are none; the chronicle tells sieges begun, broken and ended, and hunger. A
+  replay with sieges on no longer stops at the first siege that ends. With both off the screen is unchanged.
+
 - **Painted Realm R3 armies on screen** (#20). New game has "Unit types" and "Generals" switches, off by default,
   for every way of playing the writs turn. With them on, pieces show their largest type, your army rows and
   tooltips the mix, a rival's piece only what it mostly is; the council offers the three recruit orders with cost

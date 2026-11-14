@@ -139,7 +139,7 @@ namespace GreyBoxStrategy.Replay
                 // R3: the moments inside a turn come from the rules' snapshots, which carry no mix or general: each army's
                 // is the one it ends the turn with (losses come from every type in proportion, so the shares hold), or
                 // the one it began with if it did not live to the end.
-                if (game.Rules.UnitTypes || game.Rules.Generals)
+                if (game.Rules.UnitTypes || game.Rules.Generals || game.Rules.Supply)
                 {
                     var seen = new HashSet<ReplayState>();
                     foreach (var st in new[] { turn.Council }.Concat(turn.Events.Select(x => x.After)))
@@ -383,6 +383,14 @@ namespace GreyBoxStrategy.Replay
         {
             foreach (var a in s.Armies)
             {
+                // R3's supply: stores change only at the turn's end, so inside a turn an army has what it began with
+                // (a new one what it ends with); a hunger line has already set it to none.
+                var stores = start?.Army(a.Id) ?? end?.Army(a.Id);
+                if (stores != null && stores.HasStores)
+                {
+                    if (!a.HasStores) a.HalfStores = stores.HalfStores;
+                    a.MaxHalfStores = stores.MaxHalfStores;
+                }
                 var src = end?.Army(a.Id) ?? start?.Army(a.Id);
                 if (src == null) continue;
                 a.General = src.General;
@@ -495,8 +503,18 @@ namespace GreyBoxStrategy.Replay
                     Pikes = w.Rules.UnitTypes ? a.Pikes : 0, Riders = w.Rules.UnitTypes ? a.Riders : 0, Bows = w.Rules.UnitTypes ? a.Bows : 0,
                     General = w.Rules.Generals ? a.General?.Name : null,
                     Traits = w.Rules.Generals && a.General != null ? a.General.Traits.ToList() : new List<string>(),
+                    HalfStores = w.Rules.Supply ? a.HalfStores : -1,
+                    MaxHalfStores = w.Rules.Supply ? 2 * w.Rules.MaxStores : 0,
                 }).ToList(),
             };
+            if (w.Rules.Sieges)
+            {
+                var ps = provinceIds.Select(id => w.Province(id)).ToArray();
+                s.SiegedBy = ps.Select(p => p.SiegedBy).ToArray();
+                s.SiegeTurns = ps.Select(p => p.SiegedBy != null ? p.SiegeTurns : 0).ToArray();
+                s.SiegeNeeded = ps.Select(p => p.SiegedBy == null ? 0
+                    : Game.SiegeTurnsNeeded(w.Rules, p, w.ArmiesAt(p.Id).Where(a => a.Owner == p.SiegedBy).ToList())).ToArray();
+            }
             foreach (var c in w.CountryList)
                 s.Countries[c.Id] = new CountryState
                 {

@@ -178,6 +178,8 @@ namespace GreyBoxStrategy.Realm
             advisorNext = c.AdvisorFor;
             nextUnitTypes = c.UnitTypes;
             nextGenerals = c.Generals;
+            nextSieges = c.Sieges;
+            nextSupply = c.Supply;
             switch (c.Route(out string why))
             {
                 case NewGameRoute.None: ui.ShowMenuStatus(why); return;

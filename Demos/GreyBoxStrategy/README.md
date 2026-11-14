@@ -677,6 +677,41 @@ and each side's mix on `BattleRecord`.
 - with both on, every army's mix adds up to its soldiers and names its general, and every report's mix agrees with
   its counter sentence (broken by swapping riders and bows in a side's mix).
 
+### R3's sieges and supply on screen (14 November)
+
+R3's parts four and five, sieges (#311) and supply (#313), on the screen, the same way as unit types and
+generals: two more settings in New game, both off by default, and with them off the screen is exactly as it was.
+
+**In New game.** "Sieges: off / on" and "Supply: off / on" under "Generals", for every way of playing the writs
+turn, through the same `ReplayDirector.RulesFor`.
+
+**Sieges.** A besieged province carries a tag beside its fort marks, "Siege 2 of 4", edged in the besieger's
+colour: the turns the siege has lasted and the turns it needs (`Game.SiegeTurnsNeeded`, so a siegewright or a
+three-to-one host shortens it). The chronicle says when a siege begins ("Valen besieges Corwick, Orsk's"), is
+broken, or ends ("Valen takes Corwick, Orsk's, after a siege: the walls were breached early"). An ended siege
+lands like an occupation, its hatching spreading from the nearest held land, with the walls a level lower.
+
+Before this, a replay with sieges on stopped at the first siege that ended: it did not read the rules' line, so its
+occupiers no longer matched the game's.
+
+**Supply.** Your army's row shows its stores as four pips, half-filled for half a turn, and its tooltip "Stores: 3
+of 4 turns; refilled in your own land." An army with none shows "No stores" in red on its row, a red edge on its
+piece, and a tooltip that says it loses soldiers every turn outside your land and fights weaker. The chronicle
+says when an army goes hungry and how many it lost, or when it starves. A rival's stores are not shown.
+
+**What the replay knows.** The turn-end states carry each siege and each army's stores. Inside a turn an army has
+the stores it began with (they change only at the turn's end), a new army full stores (as the rules raise it), and
+a hungry one none from its hunger line.
+
+**Tests** (`SiegesSupplyScreenTests`), each seen failing once against a deliberate break:
+- New game's two settings reach the rules of every writs game, and never the one-move game's or the standard rules
+  (broken by dropping supply from the routing);
+- with both off, no province has a siege, no army has stores, every tooltip is as before, and the chronicle has no
+  siege or hunger line (broken by keeping stores with supply off);
+- with both on, over four scripted games: sieges begin and end, an ended siege is occupied by its besieger and has no
+  tag, every turn's end tags each siege with the game's own turns, every army has its stores at every moment, and a
+  hungry army shows the warning to you and not to a rival (broken by not reading the line of a siege that ended).
+
 ### Generated worlds: detail up close, fields that show, rule mode on a big map (14 November)
 
 R4's third part on screen.
