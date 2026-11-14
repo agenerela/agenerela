@@ -152,9 +152,14 @@ namespace GreyBoxStrategy
         public IEnumerable<Army> ArmiesOf(string countryId) => Armies.Where(a => a.Owner == countryId);
         public IEnumerable<Army> ArmiesAt(string provinceId) => Armies.Where(a => a.Location == provinceId);
 
-        /// <summary>Writs this country has this turn: 2 + 1 per 8 provinces owned, at most 5 (v2 1.1).</summary>
+        /// <summary>
+        /// Writs this country has this turn: <see cref="GameRules.BaseWrits"/> + 1 per <see cref="GameRules.ProvincesPerWrit"/>
+        /// provinces owned, at most <see cref="GameRules.MaxWrits"/> (v2 1.1), unless <see cref="GameRules.WritsOverride"/>
+        /// sets this country's own number.
+        /// </summary>
         public int Writs(string countryId) =>
-            System.Math.Min(Rules.MaxWrits, Rules.BaseWrits + ProvinceCount(countryId) / Rules.ProvincesPerWrit);
+            countryId != null && Rules.WritsOverride != null && Rules.WritsOverride.TryGetValue(countryId, out int own) ? System.Math.Max(1, own)
+            : System.Math.Min(Rules.MaxWrits, Rules.BaseWrits + ProvinceCount(countryId) / Rules.ProvincesPerWrit);
 
         /// <summary>The record of the war between two countries, made when first asked.</summary>
         public WarRecord War(string a, string b)

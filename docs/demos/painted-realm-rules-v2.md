@@ -170,7 +170,8 @@ awaiting orders" key, each army's order from its panel, writs shown in the top b
 The screen page already kept a short queue of orders above End turn for this. **A person is held
 to the same cap** (the lead: "Yeah lets have the same cap but to be honest I would eventually wont
 to have no cap of orders. We can have smth like civ has."). "Unlimited writs for the player"
-stays an easy difficulty setting. [1.6](#16-the-route-to-no-cap) designs the route to no cap.
+stays an easy difficulty setting, now a rule: `GameRules.WritsOverride` gives one country its own count, or
+`UnlimitedWrits`. [1.6](#16-the-route-to-no-cap) designs the route to no cap.
 
 ### 1.2 How a model ruler takes such a turn: five ways
 
@@ -1608,6 +1609,49 @@ exists, and where it differs from the list above:
   Five uncapped games end by stalemate after about 190 turns; five on a medium world did not finish in 40.
   The run found army orders for targets the list left out, now contained (`WritRuler.NotOffered`). Numbers:
   [`findings.md`](../llm-wiki/findings.md), 13 November.
+- **The statement repeats, measured** (13 and 14 November), 15 games an arm: showing a ruler its own last four
+  lines (`+own-lines`) cut repeats from 36% to 22% with legality, model time and persona unchanged, and is the
+  demo's default now. One voice a turn (`+one-voice`) made them worse (45%) and halved the treaties. Asking a
+  decision without its statement field came to the framework just after (#266, `AskForStatement`). Numbers: `findings.md`, 13–14 November.
+- **A country's own writ count** (14 November): `GameRules.WritsOverride`, read by `World.Writs`, for the
+  person's unlimited writs on screen.
+
+**Why Classic stalls, and three candidate changes** (13 November, from R1c's five uncapped games; _for the
+tech lead to pick, nothing built_). The games lasted 165 to 220 turns. Four of the five ended in a
+stalemate (12 turns with no province changing hands), and in 83% of turns no province changed hands at all.
+Three things in the rules add up to this:
+
+- **Land changes owner only by treaty, and most treaties undo the war.** Occupation never moves
+  ownership. The 88 treaties were mostly white peace, which returns every occupied province and starts a
+  3-turn truce. Courts offered white peace 806 times and envoys accepted 109. A demand for occupied land is
+  enforced only at a war score of 90, which happened 9 times in 964 game-turns. A conqueror can hold half a
+  neighbour for 20 turns, then lose it all to one accepted white peace.
+- **A growing realm cannot move its armies.** Writs top out at 5, one kept for the court. After turn 60,
+  rulers with 5 or more armies averaged 7.5 armies with 5.8 waiting, and ordered 2.7 a turn. The leader's
+  armies pile up: kesh had 18 armies at turn 183 in game 22.
+- **A last province holds out.** A realm breaks only when every province is occupied and it has no army
+  left. In game 22, kesh (22 provinces, 412 soldiers) could not finish orsk, which kept one province and an
+  army of 7. The stalemate rule then ended the game with kesh short of a win.
+
+Candidates, each with its cost:
+
+1. **Occupation held becomes ownership.** A province occupied for N turns in a row (say 8) passes to the
+   occupier, with no treaty. Treaties remain the faster way. _Cost:_ a small rules change and one fact line
+   ("held 5 of 8 turns"). The scripted pace tests need new pinned numbers. It snowballs more and makes
+   white peace matter less. It adds no model time.
+2. **Waiting armies keep a standing order.** An army left without a writ carries on with its last order:
+   it keeps marching to its target, or holds. A cheaper alternative is to grow the writ cap with the army
+   count (5 → base + armies ÷ 2). _Cost:_ standing orders are R3 work (wake conditions already exist) and add
+   no model time. Growing the cap costs about 0.5 s a decision, so about +2 s a turn for a leader with 7
+   armies, and the turn waits on the largest realm.
+3. **End the last stand.** A realm breaks when every province it owns is occupied, whatever army it has
+   left elsewhere. The stalemate counter also stops while some country occupies another's land. _Cost:_
+   two small rules changes and one new test each. A cornered player loses a little sooner. Alone it does not
+   speed the middle game.
+
+_Mine:_ 1 and 3 together. Together they would end most Classic games in well under 100 turns at no model
+cost, and leave 2 for R3, where standing orders belong. That reading is unmeasured: the scripted series
+would show it in minutes before any live run.
 
 The screen's half is the screen session's.
 
@@ -1645,8 +1689,8 @@ Still open in R4:
 - treaty terms as cards with the war score;
 - fog of war for your country.
 
-The storyteller now plays the writs turn on screen. Unlimited writs for the person alone needs a
-per-country writs setting in the rules: `World.Writs` has one formula for every country.
+The storyteller now plays the writs turn on screen. Unlimited writs for the person alone needed a
+per-country writs setting in the rules; it is `GameRules.WritsOverride` now (14 November), read by `World.Writs`.
 
 **The screen's half, second part: built** (13 November). Model rulers play the writs turn live on the
 screen, a court and a marshal for every country (`WritRuler`), with each decision recorded with its

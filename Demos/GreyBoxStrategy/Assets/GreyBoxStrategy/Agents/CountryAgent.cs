@@ -28,6 +28,8 @@ namespace GreyBoxStrategy
         public string Action;
         public string Target;
         public string Statement;
+        /// <summary>A line the model wrote for a decision asked to say nothing (<see cref="ModelSeatOptions.OneVoice"/>), dropped: never spoken, never in <see cref="Statement"/>.</summary>
+        public string Unspoken;
         public float LatencySeconds;
         public int PromptTokens;
         /// <summary>The guard that stopped the decision, or null.</summary>

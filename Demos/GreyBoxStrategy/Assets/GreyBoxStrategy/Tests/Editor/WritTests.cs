@@ -120,6 +120,48 @@ namespace GreyBoxStrategy.Tests
             Assert.That(g.World.ArmiesOf("valen").Count(a => a.Awaiting), Is.EqualTo(2), "the others keep waiting");
         }
 
+        // The screen's "unlimited writs" for the person alone (#286): one country's own number, the others
+        // on the formula.
+        [Test]
+        public void Writs_AnOverride_GivesOneCountryItsOwnNumber_TheOthersKeepTheFormula()
+        {
+            var rules = WritRules();
+            rules.WritsOverride["valen"] = GameRules.UnlimitedWrits;
+            rules.WritsOverride["orsk"] = 2;
+            var g = NewWrits(1, rules);
+            Assert.That(g.World.Writs("valen"), Is.EqualTo(GameRules.UnlimitedWrits));
+            Assert.That(g.World.Writs("orsk"), Is.EqualTo(2));
+            Assert.That(g.World.Writs("merrow"), Is.EqualTo(3), "no override: the formula");
+            Assert.That(WritFacts.Standing(g.World, "valen")[0], Does.Contain("Writs: no limit this turn."));
+            Turn(g);
+            foreach (var c in new[] { "valen", "merrow" })
+                for (int i = 0; i < 4; i++)
+                    g.World.Armies.Add(new Army($"extra{i}_{c}_host", c, ArmyOf(g, c).Location, 10, g.World.Turn));
+            foreach (var c in g.World.CountryList) c.Army = g.World.ArmiesOf(c.Id).Sum(a => a.Soldiers);
+            Ready(g, "valen");
+            Ready(g, "merrow");
+            Turn(g, r => r.Moment == Moment.Council && r.Ordered.Count == 0 ? new Move(Actions.RaiseTaxes) : null);
+            var valen = asked.Where(r => r.CountryId == "valen" && r.Moment != Moment.Envoy).ToList();
+            var merrow = asked.Where(r => r.CountryId == "merrow" && r.Moment != Moment.Envoy).ToList();
+            Assert.That(valen.Count(r => r.Moment == Moment.Army), Is.EqualTo(5), "no limit: every army waiting is asked");
+            Assert.That(valen.Count(r => r.Moment == Moment.Council), Is.EqualTo(2), "and the second court order");
+            Assert.That(g.World.ArmiesOf("valen").Count(a => a.Awaiting), Is.EqualTo(0));
+            Assert.That(merrow.Count(r => r.Moment == Moment.Army), Is.EqualTo(2), "3 writs: two armies of five");
+            Assert.That(merrow.Count, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void Writs_AnOverride_IsCopiedWithTheRules_NotShared()
+        {
+            var rules = WritRules();
+            rules.WritsOverride["valen"] = 9;
+            var copy = rules.Clone();
+            copy.WritsOverride["valen"] = 1;
+            copy.WritsOverride["orsk"] = 4;
+            Assert.That(rules.WritsOverride["valen"], Is.EqualTo(9));
+            Assert.That(rules.WritsOverride.ContainsKey("orsk"), Is.False);
+        }
+
         [Test]
         public void Writs_GrowWithTheRealm()
         {
