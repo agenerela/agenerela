@@ -1760,7 +1760,7 @@ has the detail.
 - **A border crossing:** the winner steps through, and the loser never crosses. Since the winner now
   stands in the province the loser was leaving, the loser falls back from it, with no second battle.
   Section 1.1's "the loser stays in the province it was leaving" cannot hold with the winner there.
-- **Sieges, stores, unit types and generals' traits wait for R3** (unit types were built in R3's first part, 14 November, behind `GameRules.UnitTypes`, seven of the ten general traits in its third, behind `GameRules.Generals`, and sieges at forts in its fourth, behind `GameRules.Sieges`; all off; wake conditions 3 and 6 are not checked here). A walled province is fought for
+- **Sieges, stores, unit types and generals' traits wait for R3** (unit types were built in R3's first part, 14 November, behind `GameRules.UnitTypes`, seven of the ten general traits in its third, behind `GameRules.Generals`, and sieges at forts in its fourth, behind `GameRules.Sieges`; supply (stores, hunger, the forager trait) in its fifth, behind `GameRules.Supply`; all off; wake conditions 3 and 6 are not checked here). A walled province is fought for
   through its militia (5 + 10 a fort, plus the capital bonus; R1b: 3 + 6 a fort) rather than besieged. Wake conditions 3
   and 6 (a siege ends, stores run low) wait with them.
 - **Recruiting** keeps today's levy (5 + 5 a province, paid at 2 gold a soldier). It appears at the
@@ -2132,7 +2132,7 @@ line, and `findings.md` for anything measured.
 **R3, armies in depth**
 - [x] Three types, costs, the counter rule (`GameRules.UnitTypes`, off; scripted only, 14 November)
 - [x] The model rulers' recruit orders by type and the mix in their facts (14 November; unmeasured live, so still off)
-- [x] Generals: names, seven of the ten traits, second trait, a general falling (`GameRules.Generals`, off; scripted only, 14 November). Siegewright came with the sieges (#311, only with `GameRules.Sieges` on); forager and marshal wait for supply and army sizes; capture waits for prisoners
+- [x] Generals: names, seven of the ten traits, second trait, a general falling (`GameRules.Generals`, off; scripted only, 14 November). Siegewright came with the sieges (#311, only with `GameRules.Sieges` on); the forager came with supply (#313, only with `GameRules.Supply` on); the marshal waits for army sizes; capture waits for prisoners
 - [x] Sieges at forts over several turns, breach, broken siege, siegewright (`GameRules.Sieges`, off; scripted only, 14 November). Forts stand for walls; the fort that holds the road, and income lost under siege, are not built yet
 - [x] Supply model B, with forager (`GameRules.Supply`, off; scripted against none, 14 November). Still open: the army cap, and A against B (A needs farms)
 - [x] Fog of war for the rulers' facts: totals rounded, forest, scouting (`GameRules.Fog`, `ArmySight`, off; 14 November). Still open: fog for the scripted players, allies' sight and watchtowers
