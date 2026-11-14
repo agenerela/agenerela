@@ -170,14 +170,20 @@ namespace GreyBoxStrategy
         }
 
         public static string PairKey(string a, string b) => Key(a, b);
-        public int Upkeep(Country c) => c.Army / Rules.SoldiersPerUpkeepGold;
+        /// <summary>Gold a turn to keep the army; with unit types a rider counts <see cref="GameRules.RiderCostFactor"/> times.</summary>
+        public int Upkeep(Country c) =>
+            (c.Army + (Rules.UnitTypes ? Armies.Where(a => a.Owner == c.Id).Sum(a => a.Riders) * (Rules.RiderCostFactor - 1) : 0))
+            / Rules.SoldiersPerUpkeepGold;
 
         /// <summary>How many soldiers a recruit would raise now: the levy, cut to what the treasury pays for.</summary>
         /// <remarks>In the writs turn an occupied province raises no one: the levy counts the land the country still controls.</remarks>
-        public int Levy(Country c) =>
+        public int Levy(Country c) => Levy(c, UnitType.Pikes);
+
+        /// <summary>A recruit of one type: the same levy, cut to what the treasury pays at that type's cost.</summary>
+        public int Levy(Country c, UnitType type) =>
             System.Math.Min(Rules.LevyBase + Rules.LevyPerProvince * (Rules.Turn == TurnStyle.Writs
                     ? ProvinceList.Count(p => p.Owner == c.Id && p.Occupier == null) : ProvinceCount(c.Id)),
-                c.Gold / Rules.GoldPerSoldier);
+                c.Gold / (Rules.GoldPerSoldier * Units.CostFactor(Rules, type)));
 
         public IEnumerable<Province> Neighbours(Province p) => Map.Neighbours(p.Id).Select(Province);
 

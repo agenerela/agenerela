@@ -569,6 +569,162 @@ namespace GreyBoxStrategy.Tests
             Assert.That(records.Any(b => b.FortTerm > 0 && b.Why.Contains("fort")), Is.True);
         }
 
+        // --- R3: unit types and the counter rule (rules v2 3.3), off by default ------------------
+
+        private static GameRules Typed()
+        {
+            var r = WritRules();
+            r.UnitTypes = true;
+            return r;
+        }
+
+        [Test]
+        public void Counter_PikesFacingAllRiders_FightAtOneAndAHalf_AndRidersFacingPikesAtAHalf()
+        {
+            var r = Typed();
+            var riders = new UnitMix { Riders = 10 };
+            var pikes = new UnitMix { Pikes = 10 };
+            Assert.That(Units.Multiplier(r, UnitType.Pikes, riders), Is.EqualTo(1.5).Within(1e-9));
+            Assert.That(Units.Multiplier(r, UnitType.Riders, pikes), Is.EqualTo(0.5).Within(1e-9));
+            Assert.That(Units.Multiplier(r, UnitType.Bows, pikes), Is.EqualTo(1.5).Within(1e-9), "bows counter pikes");
+            Assert.That(Units.Multiplier(r, UnitType.Riders, new UnitMix { Bows = 10 }), Is.EqualTo(1.5).Within(1e-9), "riders counter bows");
+            Assert.That(Units.Multiplier(r, UnitType.Pikes, pikes), Is.EqualTo(1.0).Within(1e-9), "a type against itself");
+            Assert.That(Units.Strength(r, pikes, riders), Is.EqualTo(10 * 1.0 * 1.5).Within(1e-9));
+            Assert.That(Units.Strength(r, riders, pikes), Is.EqualTo(10 * 1.4 * 0.5).Within(1e-9));
+            var mixed = new UnitMix { Pikes = 5, Riders = 3, Bows = 2 };
+            Assert.That(Units.Multiplier(r, UnitType.Pikes, mixed), Is.EqualTo(1 + 0.5 * 0.3 - 0.5 * 0.2).Within(1e-9));
+            Assert.That(Units.Describe(r, "valen", pikes, "orsk", riders), Is.EqualTo("valen's pikes broke orsk's riders (+50%)"));
+        }
+
+        [Test]
+        public void Losses_ComeFromEachTypeInProportion_AndAPikesOnlyArmyStaysPikes()
+        {
+            var a = new Army("maren_host", "valen", "stonereach", 0, 1);
+            a.Add(UnitType.Pikes, 50);
+            a.Add(UnitType.Riders, 30);
+            a.Add(UnitType.Bows, 20);
+            a.Soldiers = 50;
+            Assert.That((a.Pikes, a.Riders, a.Bows), Is.EqualTo((25, 15, 10)));
+            a.Soldiers = 7;
+            Assert.That(a.Pikes + a.Riders + a.Bows, Is.EqualTo(7));
+            Assert.That(a.Pikes, Is.GreaterThanOrEqualTo(a.Riders));
+            var old = new Army("tolly_host", "valen", "stonereach", 40, 1);
+            old.Soldiers -= 15;
+            Assert.That((old.Pikes, old.Riders, old.Bows), Is.EqualTo((25, 0, 0)), "with unit types off every soldier is a pike");
+        }
+
+        [Test]
+        public void Riders_CostTwiceAPike_ToRecruitAndToKeep()
+        {
+            var g = NewWrits(1, Typed());
+            var valen = g.World.Country("valen");
+            int gps = g.World.Rules.GoldPerSoldier;
+            valen.Gold = 100000;
+            int cap = g.World.Levy(valen, UnitType.Pikes);
+            Assert.That(g.World.Levy(valen, UnitType.Riders), Is.EqualTo(cap), "a full treasury raises the whole levy of either");
+            valen.Gold = cap * gps;
+            Assert.That(g.World.Levy(valen, UnitType.Pikes), Is.EqualTo(cap));
+            Assert.That(g.World.Levy(valen, UnitType.Riders), Is.EqualTo(cap / 2), "the same gold buys half as many riders");
+            ArmyOf(g, "valen").Add(UnitType.Riders, 20);
+            valen.Army = g.World.ArmiesOf("valen").Sum(a => a.Soldiers);
+            int ridersNow = g.World.ArmiesOf("valen").Sum(a => a.Riders);
+            Assert.That(g.World.Upkeep(valen), Is.EqualTo((valen.Army + ridersNow) / g.World.Rules.SoldiersPerUpkeepGold), "a rider is kept as two soldiers");
+            g.World.Rules.UnitTypes = false;
+            Assert.That(g.World.Upkeep(valen), Is.EqualTo(valen.Army / g.World.Rules.SoldiersPerUpkeepGold));
+            g.World.Rules.UnitTypes = true;
+
+            valen.Gold = 200;
+            var report = Turn(g, r => r.CountryId == "valen" && r.Moment == Moment.Council && r.Ordered.Count == 0 ? new Move(Actions.RecruitRiders) : null);
+            int raised = g.World.ArmiesOf("valen").Sum(a => a.Riders) - 20;
+            Assert.That(raised, Is.GreaterThan(0), "the levy joined as riders");
+            Assert.That(report.Outcomes.Any(o => (o.Text ?? "").Contains($"raised {raised} riders")), Is.True,
+                string.Join("; ", report.Outcomes.Select(o => o.Text)));
+        }
+
+        [Test]
+        public void RecruitByType_IsOfferedOnlyWithUnitTypes_AndRecruitOnlyWithout()
+        {
+            bool Offers(Game g, string action) => WritLegality.CourtMoves(g.World, "valen").Any(m => m.Action == action);
+            var off = NewWrits();
+            off.World.Country("valen").Gold = 200;
+            Assert.That(Offers(off, Actions.Recruit), Is.True);
+            Assert.That(Actions.RecruitTypes.Any(a => Offers(off, a)), Is.False);
+            Assert.That(WritLegality.WhyNotCourt(off.World, "valen", new Move(Actions.RecruitRiders)), Is.EqualTo("unit types are off"));
+
+            var on = NewWrits(1, Typed());
+            on.World.Country("valen").Gold = 200;
+            Assert.That(Offers(on, Actions.Recruit), Is.False);
+            Assert.That(Actions.RecruitTypes.All(a => Offers(on, a)), Is.True);
+            on.World.Country("valen").Gold = on.World.Rules.MinLevy * on.World.Rules.GoldPerSoldier;
+            Assert.That(Offers(on, Actions.RecruitPikes), Is.True);
+            Assert.That(Offers(on, Actions.RecruitRiders), Is.False, "riders cost more than the treasury holds");
+        }
+
+        [Test]
+        public void ABattle_CountsTheCounter_AndTheReportNamesIt()
+        {
+            var g = NewWrits(1, Typed());
+            Turn(g);
+            var host = ArmyOf(g, "valen");
+            host.Soldiers = 0;
+            host.Add(UnitType.Riders, 60);
+            g.World.Country("valen").Army = 60;
+            var target = g.World.ProvincesOf("orsk").OrderBy(p => p.Id).First();
+            var orsk = ArmyOf(g, "orsk");
+            orsk.Soldiers = 0;
+            orsk.Add(UnitType.Pikes, 50);
+            g.World.Country("orsk").Army = 50;
+            orsk.Location = target.Id;
+            host.Location = target.Id;
+            War(g, "valen", "orsk");
+            var report = Turn(g);
+            var battle = report.BattleRecords.FirstOrDefault(b => b.Province == target.Id);
+            Assert.That(battle, Is.Not.Null, string.Join("\n", report.Resolution));
+            Assert.That(battle.CounterNote, Does.Contain("pikes broke").And.Contain("riders"));
+            double ridersSide = battle.Attacker == "valen" ? battle.AttackCounter : battle.DefenceCounter;
+            double pikesSide = battle.Attacker == "valen" ? battle.DefenceCounter : battle.AttackCounter;
+            Assert.That(ridersSide, Is.LessThan(1), "riders facing pikes");
+            Assert.That(pikesSide, Is.GreaterThan(1), "pikes facing riders");
+            Assert.That(battle.Why, Does.Contain("pikes broke"));
+            Assert.That(report.Resolution.Any(l => l.StartsWith("Battle at") && l.Contains("pikes broke")), Is.True);
+        }
+
+        [Test]
+        public void UnitTypes_ScriptedPlayersRecruitEveryType_AndOnlyLegalMoves()
+        {
+            int riders = 0, bows = 0, pikes = 0;
+            for (int seed = 1; seed <= 3; seed++)
+            {
+                var setup = GameSetup.Writs(seed);
+                var map = setup.BuildMap();
+                var rules = setup.BuildRules(map);
+                rules.UnitTypes = true;
+                var g = new Game(seed, map, rules);
+                var players = map.Countries.Select((c, i) => (c.Id, p: new ScriptedPlayer(i % 2 == 0 ? Temperament.Expansionist : Temperament.Cautious)))
+                    .ToDictionary(x => x.Id, x => x.p);
+                for (int t = 0; t < 60 && !g.IsOver; t++)
+                {
+                    Turn(g, r => players[r.CountryId].Decide(r));
+                    foreach (var r in asked)
+                        Assert.That(r.Legal.Any(m => m.Action == Actions.Recruit), Is.False, "no plain recruit with unit types");
+                    foreach (var a in g.World.Armies) { riders += a.Riders; bows += a.Bows; pikes += a.Pikes; }
+                    foreach (var o in g.Reports.Last().Outcomes)
+                        Assert.That(o.Text ?? "", Does.Not.Contain("not offered"));
+                }
+            }
+            Assert.That((pikes > 0, riders > 0, bows > 0), Is.EqualTo((true, true, true)), $"pikes {pikes}, riders {riders}, bows {bows}");
+        }
+
+        [Test]
+        public void UnitTypes_OffByDefault_AndOffPlaysTheGameAsBefore()
+        {
+            Assert.That(new GameRules().UnitTypes, Is.False);
+            Assert.That(GameSetup.Writs(1).BuildRules(GameSetup.Writs(1).BuildMap()).UnitTypes, Is.False);
+            var played = GameRunner.Play(GameSetup.Writs(2), "mixed", 2);
+            Assert.That(played.Game.World.Armies.All(a => a.Riders == 0 && a.Bows == 0), Is.True);
+            Assert.That(played.Reports.SelectMany(r => r.BattleRecords).All(b => b.CounterNote == null && b.AttackCounter == 1 && b.DefenceCounter == 1), Is.True);
+        }
+
         [Test]
         public void Snapshots_HoldEveryArmyAndOccupation_AsTheCouncilSawThem()
         {

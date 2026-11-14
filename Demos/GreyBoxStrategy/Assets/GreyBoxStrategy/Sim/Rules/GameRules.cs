@@ -178,6 +178,22 @@ namespace GreyBoxStrategy
         /// </summary>
         public bool BreakWhenCapitalFalls = false;
 
+        // --- R3, armies in depth: unit types and the counter rule (rules v2 3.3) ---
+
+        /// <summary>
+        /// Pikes, riders and bows with the counter rule, recruited by <c>recruit_pikes</c>, <c>recruit_riders</c> and
+        /// <c>recruit_bows</c> in place of <c>recruit</c>. Off by default: every soldier is a pike and battles are
+        /// fought as before. The writs turn only.
+        /// </summary>
+        public bool UnitTypes = false;
+        public double PikeStrength = 1.0;
+        public double RiderStrength = 1.4;
+        public double BowStrength = 0.9;
+        /// <summary>The counter rule's c: pikes facing all riders fight at 1 + c, riders facing all pikes at 1 - c.</summary>
+        public double CounterStrength = 0.5;
+        /// <summary>Riders cost this many times a pike to recruit and to keep.</summary>
+        public int RiderCostFactor = 2;
+
         /// <summary>Turns to enter a province of this terrain (v2 3.2): 1 on plains and forest, 2 elsewhere.</summary>
         public int TurnsToEnter(Terrain t) => t == Terrain.Plains || t == Terrain.Forest ? 1 : 2;
 

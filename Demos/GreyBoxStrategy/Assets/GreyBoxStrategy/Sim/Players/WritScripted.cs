@@ -73,7 +73,7 @@ namespace GreyBoxStrategy
             // 3. Keep up with the strongest neighbour.
             int threat = w.Alive.Where(c => c.Id != me && w.Borders(me, c.Id)).Select(c => c.Army).DefaultIfEmpty(0).Max();
             if (my.Army < threat * t.ArmyPerThreat || !w.ArmiesOf(me).Any())
-                if (Legal(Actions.Recruit) is Move recruit) return recruit;
+                if (Recruit(r, Legal) is Move recruit) return recruit;
 
             // 4. Fortify the front while at war (cautious only), then war for the cautious.
             if (t.FortifyAtWar && w.EnemiesOf(me).Any() && my.Gold >= w.Rules.FortCost + 40)
@@ -88,8 +88,31 @@ namespace GreyBoxStrategy
 
             // 5. Money.
             if (my.Gold < 20 && Legal(Actions.RaiseTaxes) is Move tax && my.Stability >= t.TaxMinStability) return tax;
-            if (my.Gold >= 80 && Legal(Actions.Recruit) is Move more) return more;
+            if (my.Gold >= 80 && Recruit(r, Legal) is Move more) return more;
             return Move.Hold;
+        }
+
+        /// <summary>
+        /// The recruit order to give: <c>recruit</c>, or with unit types (R3) the type that counters the largest type
+        /// of the strongest enemy or neighbour, else whatever type the treasury pays for.
+        /// </summary>
+        public static Move Recruit(CountryRequest r, Func<string, string, Move> legal)
+        {
+            var w = r.World;
+            if (!w.Rules.UnitTypes) return legal(Actions.Recruit, null);
+            string me = r.CountryId;
+            var rival = w.Alive.Where(c => c.Id != me && (w.AtWar(me, c.Id) || w.Borders(me, c.Id)))
+                .OrderByDescending(c => w.AtWar(me, c.Id)).ThenByDescending(c => c.Army).ThenBy(c => c.Id, StringComparer.Ordinal).FirstOrDefault();
+            if (rival != null)
+            {
+                var mix = UnitMix.Of(w.ArmiesOf(rival.Id));
+                if (mix.Total > 0)
+                {
+                    var largest = Units.All.OrderByDescending(mix.Of).ThenBy(x => x).First();
+                    if (legal(Actions.RecruitFor(Units.BeatenBy(largest)), null) is Move counter) return counter;
+                }
+            }
+            return Units.All.Select(x => legal(Actions.RecruitFor(x), null)).FirstOrDefault(m => m != null);
         }
 
         private static Move Answer(Temperament t, CountryRequest r)

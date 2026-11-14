@@ -36,6 +36,17 @@ namespace GreyBoxStrategy
         /// <summary>The court's orders in the writs turn: no attack (armies do that) and treaty terms for peace.</summary>
         public static readonly string[] Court = { Recruit, Fortify, RaiseTaxes, DeclareWar, OfferWhitePeace, DemandOccupied, CedeOccupied, None };
         public static readonly string[] ArmyOrders = { March, None };
+
+        // R3: recruiting one unit type, in place of recruit while GameRules.UnitTypes is on (rules v2 3.1).
+        public const string RecruitPikes = "recruit_pikes";
+        public const string RecruitRiders = "recruit_riders";
+        public const string RecruitBows = "recruit_bows";
+        /// <summary>The court's recruit orders by type, offered only while <see cref="GameRules.UnitTypes"/> is on.</summary>
+        public static readonly string[] RecruitTypes = { RecruitPikes, RecruitRiders, RecruitBows };
+        /// <summary>The unit type a recruit order raises, or null for any other action.</summary>
+        public static UnitType? RecruitsType(string action) =>
+            action == RecruitPikes ? UnitType.Pikes : action == RecruitRiders ? UnitType.Riders : action == RecruitBows ? UnitType.Bows : (UnitType?)null;
+        public static string RecruitFor(UnitType t) => t == UnitType.Riders ? RecruitRiders : t == UnitType.Bows ? RecruitBows : RecruitPikes;
         /// <summary>Whether the action is a treaty term, answered by the other side.</summary>
         public static bool IsTerm(string action) => action == OfferWhitePeace || action == DemandOccupied || action == CedeOccupied;
         public static readonly string[] Envoy = { AcceptPeace, RefusePeace };
