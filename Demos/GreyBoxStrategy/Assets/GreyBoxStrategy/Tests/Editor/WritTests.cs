@@ -804,6 +804,167 @@ namespace GreyBoxStrategy.Tests
             Assert.That(played.Reports.SelectMany(r => r.BattleRecords).All(b => b.CounterNote == null && b.AttackCounter == 1 && b.DefenceCounter == 1), Is.True);
         }
 
+        // --- R3: generals with traits (rules v2 3.5), off by default --------------------------------
+
+        private static GameRules Led(bool types = false)
+        {
+            var r = WritRules();
+            r.Generals = true;
+            r.UnitTypes = types;
+            return r;
+        }
+
+        private static void Lead(Army a, params string[] traits)
+        {
+            a.General = new General { Name = "Test" };
+            a.General.Traits.AddRange(traits);
+        }
+
+        [Test]
+        public void Generals_EveryArmyHasOne_NamedForIt_WithATrait_AndNoneWhenOff()
+        {
+            Assert.That(new GameRules().Generals, Is.False, "off by default");
+            var g = NewWrits(1, Led());
+            Turn(g);
+            Assert.That(g.World.Armies, Is.Not.Empty);
+            foreach (var a in g.World.Armies)
+            {
+                Assert.That(a.General, Is.Not.Null, a.Id);
+                Assert.That(a.Id.StartsWith(a.General.Name.ToLowerInvariant()), Is.True, $"{a.General.Name} leads {a.Id}");
+                Assert.That(a.General.Traits.Count, Is.EqualTo(1));
+                Assert.That(GeneralTraits.All, Does.Contain(a.General.Traits[0]));
+            }
+            var off = NewWrits(1);
+            Turn(off);
+            Assert.That(off.World.Armies.All(a => a.General == null), Is.True);
+            Assert.That(WritFacts.Standing(g.World, "valen").Any(l => l.StartsWith("Our armies:") && l.Contains(", led by ")), Is.True, "the court reads its generals");
+            Assert.That(WritFacts.Standing(off.World, "valen").Any(l => l.Contains("led by")), Is.False);
+        }
+
+        [Test]
+        public void Traits_CountInStrengthAndCasualties_AsThePageHasThem()
+        {
+            var r = Led(types: true);
+            var g = new General { Name = "Test" };
+            var mix = new UnitMix { Pikes = 50, Riders = 50 };
+            Assert.That(GeneralTraits.Strength(r, null, true, mix), Is.EqualTo(1));
+            g.Traits.Add(GeneralTraits.Bold);
+            Assert.That(GeneralTraits.Strength(r, g, true, mix), Is.EqualTo(1.10).Within(1e-9), "bold attacking");
+            Assert.That(GeneralTraits.Strength(r, g, false, mix), Is.EqualTo(1.0).Within(1e-9), "bold defending gains nothing");
+            Assert.That(GeneralTraits.Casualties(r, g, true), Is.EqualTo(1.10).Within(1e-9), "bold loses more attacking");
+            var wary = new General { Name = "Test", Traits = { GeneralTraits.Wary } };
+            Assert.That(GeneralTraits.Strength(r, wary, false, mix), Is.EqualTo(1.10).Within(1e-9));
+            Assert.That(GeneralTraits.Strength(r, wary, true, mix), Is.EqualTo(1.0).Within(1e-9));
+            var horse = new General { Name = "Test", Traits = { GeneralTraits.HorseBorn } };
+            double riderShare = 50 * r.RiderStrength / (50 * r.PikeStrength + 50 * r.RiderStrength);
+            Assert.That(GeneralTraits.Strength(r, horse, true, mix), Is.EqualTo(1 + 0.15 * riderShare).Within(1e-9), "horse-born: riders +15%");
+            var inspiring = new General { Name = "Test", Traits = { GeneralTraits.Inspiring } };
+            Assert.That(GeneralTraits.Casualties(r, inspiring, false), Is.EqualTo(0.8).Within(1e-9));
+            Assert.That(new General { Name = "Maren", Traits = { GeneralTraits.Wary, GeneralTraits.Bold } }.Title, Is.EqualTo("Maren the Wary and Bold"));
+        }
+
+        [Test]
+        public void ABattle_CountsTheGenerals_AndTheReportNamesThem()
+        {
+            var g = NewWrits(1, Led());
+            Turn(g);
+            var target = g.World.ProvincesOf("orsk").OrderBy(p => p.Id).First();
+            var host = ArmyOf(g, "valen");
+            var orsk = ArmyOf(g, "orsk");
+            host.Soldiers = 60;
+            orsk.Soldiers = 50;
+            g.World.Country("valen").Army = 60;
+            g.World.Country("orsk").Army = 50;
+            Lead(host, GeneralTraits.Bold);
+            Lead(orsk, GeneralTraits.Wary);
+            orsk.Location = target.Id;
+            host.Location = target.Id;
+            War(g, "valen", "orsk");
+            var report = Turn(g);
+            var battle = report.BattleRecords.FirstOrDefault(b => b.Province == target.Id);
+            Assert.That(battle, Is.Not.Null, string.Join("\n", report.Resolution));
+            double valen = battle.Attacker == "valen" ? battle.AttackGeneral : battle.DefenceGeneral;
+            double them = battle.Attacker == "valen" ? battle.DefenceGeneral : battle.AttackGeneral;
+            Assert.That((valen, them), Is.EqualTo(battle.Attacker == "valen" ? (1.10, 1.10) : (1.0, 1.0)).Within(1e-9),
+                "bold counts attacking, wary defending");
+            if (battle.Attacker == "valen")
+            {
+                Assert.That(battle.GeneralNote, Does.Contain("Test the "));
+                Assert.That(report.Resolution.Any(l => l.StartsWith("Battle at") && l.Contains("Test the ")), Is.True);
+            }
+        }
+
+        [Test]
+        public void Stubborn_IsNeverRouted_ButRetreats()
+        {
+            bool Survives(bool stubborn)
+            {
+                var g = NewWrits(1, Led());
+                Turn(g);
+                var target = g.World.ProvincesOf("orsk").OrderBy(p => p.Id).First();
+                var host = ArmyOf(g, "valen");
+                var orsk = ArmyOf(g, "orsk");
+                host.Soldiers = 300;
+                orsk.Soldiers = 5;
+                g.World.Country("valen").Army = 300;
+                g.World.Country("orsk").Army = 5;
+                Lead(host);
+                if (stubborn) Lead(orsk, GeneralTraits.Stubborn); else Lead(orsk);
+                orsk.Location = target.Id;
+                host.Location = target.Id;
+                War(g, "valen", "orsk");
+                var report = Turn(g);
+                Assert.That(report.BattleRecords.Any(b => b.Province == target.Id), Is.True, string.Join("\n", report.Resolution));
+                return g.World.FindArmy(orsk.Id) != null;
+            }
+            Assert.That(Survives(false), Is.False, "5 against 300 is routed");
+            Assert.That(Survives(true), Is.True, "a stubborn general retreats instead");
+        }
+
+        [Test]
+        public void Swift_TakesATurnOffAMarchsFirstStep()
+        {
+            for (int seed = 1; seed <= 10; seed++)
+            {
+                var probe = NewWrits(seed, Led());
+                Turn(probe);
+                var army = ArmyOf(probe, "valen");
+                var slow = WritLegality.ArmyMoves(probe.World, "valen", army.Id).Where(m => m.Action == Actions.March)
+                    .FirstOrDefault(m => probe.World.Rules.TurnsToEnter(probe.World.Province(WritLegality.Paths(probe.World, "valen", army.Location, probe.World.Rules.MarchRange)[m.Target][0]).Info.Terrain) >= 2);
+                if (slow == null) continue;
+
+                string first = WritLegality.Paths(probe.World, "valen", army.Location, probe.World.Rules.MarchRange)[slow.Target][0];
+                string After(bool swift)
+                {
+                    var g = NewWrits(seed, Led());
+                    Turn(g);
+                    var a = ArmyOf(g, "valen");
+                    if (swift) Lead(a, GeneralTraits.Swift); else Lead(a);
+                    Turn(g, r => r.CountryId == "valen" && r.Moment == Moment.Army && r.ArmyId == a.Id ? slow : null);
+                    return a.Location;
+                }
+                Assert.That(After(false), Is.EqualTo(army.Location), $"seed {seed}: rough ground takes two turns");
+                Assert.That(After(true), Is.EqualTo(first), $"seed {seed}: a swift general's first step takes one");
+                return;
+            }
+            Assert.Inconclusive("no rough first step for valen on seeds 1 to 10");
+        }
+
+        [Test]
+        public void Generals_InScriptedGames_GainASecondTrait_AndSomeFall()
+        {
+            int second = 0, fell = 0, notes = 0;
+            for (int seed = 1; seed <= 6; seed++)
+            {
+                var played = GameRunner.Play(seed, GameSetup.Writs(seed).BuildMap().Countries.ToDictionary(c => c.Id, c => (IPlayer)new ScriptedPlayer(Temperament.Expansionist)),
+                    GameSetup.Writs(seed).BuildMap(), Led());
+                fell += played.Reports.SelectMany(r => r.Resolution).Count(l => l.Contains(" fell; "));
+                notes += played.Reports.SelectMany(r => r.BattleRecords).Count(b => b.GeneralNote != null);
+                second += played.Game.World.Armies.Count(a => a.General != null && a.General.Traits.Count == 2);
+            }
+            Assert.That((second > 0, fell > 0, notes > 0), Is.EqualTo((true, true, true)), $"second traits {second}, fallen {fell}, battles with a general's note {notes}");
+        }
+
         [Test]
         public void Snapshots_HoldEveryArmyAndOccupation_AsTheCouncilSawThem()
         {

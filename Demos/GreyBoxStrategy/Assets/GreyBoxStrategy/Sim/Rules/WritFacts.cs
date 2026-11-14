@@ -36,7 +36,8 @@ namespace GreyBoxStrategy
             if (armies.Count > 0)
             {
                 // With unit types (R3), each army's mix: "maren_host 50 (25 pikes, 15 riders, 10 bows) at stonereach".
-                var shown = armies.Take(MaxArmiesListed).Select(a => $"{a.Id} {a.Soldiers}" + (rules.UnitTypes ? $" ({Units.Mix(a)})" : "") + $" at {a.Location}, " +
+                var shown = armies.Take(MaxArmiesListed).Select(a => $"{a.Id} {a.Soldiers}" + (rules.UnitTypes ? $" ({Units.Mix(a)})" : "")
+                    + (rules.Generals && a.General != null ? $", led by {a.General.Title}," : "") + $" at {a.Location}, " +
                     (a.Marching ? $"marching to {a.Destination}" : a.Awaiting ? "awaiting orders" : "holding"));
                 lines.Add("Our armies: " + string.Join("; ", shown) + (armies.Count > MaxArmiesListed ? $"; and {armies.Count - MaxArmiesListed} more" : "") + ".");
             }

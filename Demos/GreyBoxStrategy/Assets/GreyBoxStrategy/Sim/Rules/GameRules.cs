@@ -197,6 +197,19 @@ namespace GreyBoxStrategy
         /// fought as before. The writs turn only.
         /// </summary>
         public bool UnitTypes = false;
+
+        /// <summary>
+        /// R3, rules v2 3.5: every army has a general with a trait, which counts in its battles and marches.
+        /// Off by default. Seven of the page's ten traits; siegewright, forager and marshal wait for sieges,
+        /// supply and army sizes.
+        /// </summary>
+        public bool Generals = false;
+        /// <summary>A trait's strength or casualty effect, as a fraction (bold, wary +10%; horse-born, bowmaster +15% of that type; inspiring -20% casualties).</summary>
+        public double BoldStrength = 0.10, BoldCasualties = 0.10, WaryStrength = 0.10, TypeTraitStrength = 0.15, InspiringCasualties = 0.20;
+        /// <summary>Battles a general must win to gain a second trait.</summary>
+        public int WinsForSecondTrait = 3;
+        /// <summary>The chance a general falls in any lost battle (routed, always); the army then gets a new one.</summary>
+        public double GeneralFallsChance = 0.05;
         public double PikeStrength = 1.0;
         public double RiderStrength = 1.4;
         public double BowStrength = 0.9;
