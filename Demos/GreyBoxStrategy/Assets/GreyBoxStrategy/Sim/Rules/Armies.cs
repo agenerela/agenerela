@@ -312,9 +312,12 @@ namespace GreyBoxStrategy
     public static class GeneralTraits
     {
         public const string Bold = "bold", Wary = "wary", HorseBorn = "horse-born", Bowmaster = "bowmaster",
-            Swift = "swift", Stubborn = "stubborn", Inspiring = "inspiring";
-        /// <summary>The traits built so far, in the page's order.</summary>
+            Swift = "swift", Stubborn = "stubborn", Inspiring = "inspiring", Siegewright = "siegewright";
+        /// <summary>The traits built so far, in the page's order; siegewright only with sieges (<see cref="Pool"/>).</summary>
         public static readonly string[] All = { Bold, Wary, HorseBorn, Bowmaster, Swift, Stubborn, Inspiring };
+
+        /// <summary>The traits a general can be given under these rules: <see cref="All"/>, and siegewright with sieges on.</summary>
+        public static string[] Pool(GameRules r) => r.Sieges ? All.Concat(new[] { Siegewright }).ToArray() : All;
 
         public static string Epithet(string trait) => trait == HorseBorn ? "Horse-born" : char.ToUpperInvariant(trait[0]) + trait.Substring(1);
 
@@ -324,7 +327,8 @@ namespace GreyBoxStrategy
             string first = a.Id.EndsWith("_host", StringComparison.Ordinal) ? a.Id.Substring(0, a.Id.Length - 5) : a.Id;
             first = new string(first.TakeWhile(char.IsLetter).ToArray());
             var g = new General { Name = char.ToUpperInvariant(first[0]) + first.Substring(1) };
-            g.Traits.Add(All[Dice.Int(w.Seed, w.Turn, a.Id, "general-trait" + salt, 0, All.Length)]);
+            var pool = Pool(w.Rules);
+            g.Traits.Add(pool[Dice.Int(w.Seed, w.Turn, a.Id, "general-trait" + salt, 0, pool.Length)]);
             return g;
         }
 
@@ -336,7 +340,8 @@ namespace GreyBoxStrategy
             string name = Enumerable.Range(0, ArmyNames.Generals.Length).Select(k => ArmyNames.Generals[(start + k) % ArmyNames.Generals.Length])
                 .Select(n => char.ToUpperInvariant(n[0]) + n.Substring(1)).FirstOrDefault(n => !used.Contains(n)) ?? "Anon";
             var g = new General { Name = name };
-            g.Traits.Add(All[Dice.Int(w.Seed, w.Turn, a.Id, "successor-trait", 0, All.Length)]);
+            var pool = Pool(w.Rules);
+            g.Traits.Add(pool[Dice.Int(w.Seed, w.Turn, a.Id, "successor-trait", 0, pool.Length)]);
             return g;
         }
 

@@ -29,6 +29,10 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm R3, part four: sieges at forts** (#20), behind `GameRules.Sieges`, off by default. Enemy
+  land with forts is besieged over 2 turns a fort (less with a siegewright or three to one, a 10% breach a turn)
+  and occupied one fort fewer; the siege breaks when the besiegers leave or lose. Both sides read it.
+
 - **Painted Realm R3, part three: generals with traits** (#20), behind `GameRules.Generals`, off by default.
   Every army has a general with one of seven traits (bold, wary, horse-born, bowmaster, swift, stubborn,
   inspiring); a side's commander counts in strength, losses and marches, wins a second trait after three

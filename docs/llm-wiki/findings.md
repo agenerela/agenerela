@@ -4240,3 +4240,17 @@ GreyBoxStrategy (#20), rules v2 3.5, `GameRules.Generals`. Scripted only, no mod
 - Traits are drawn evenly from seven, so a side's edge from its commander is up to 10 to 15%, about the size of the counter rule's; scripted rulers do not choose by trait, so these numbers say what the traits do to battles, not how a ruler plays to them.
 - Unmeasured: how the model rulers read "led by Nessa the Wary"; the switch stays off until a live run.
 
+### Painted Realm R3, sieges: scripted, a siege lengthens a Classic game by 3 turns alone, and the three R3 rules together shorten it by 3 (14 November 2026)
+
+GreyBoxStrategy (#20), rules v2 3.7, `GameRules.Sieges`. Scripted only: the `.NET 9` harness (`pace classic 100 rule:Sieges=True`), 100 Classic games of the `mixed` lineup on seeds 1 to 100, writs turn, conquest.
+
+| | turns (mean, median, p90) | endings | battles a game | treaties a game |
+|---|---|---|---|---|
+| off | 77, 75, 106 | 97 last standing, 3 stalemate | 147 | 7.6 |
+| sieges | 80, 77, 112 | 94 last standing, 5 stalemate, 1 unfinished | 142 | 7.7 |
+| sieges, generals and unit types | 74, 71, 102 | 97 last standing, 3 stalemate | 140 | 7.6 |
+
+- Fewer battles with sieges: a walled province is no longer stormed through its militia, and the turns spent before it falls lengthen a war.
+- With all three R3 rules on, the game is 3 turns shorter than off. The rules are not independent: siegewright and three-to-one make sieges short where a general or a big army is.
+- Unmeasured live; the switch stays off.
+

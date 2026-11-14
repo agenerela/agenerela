@@ -582,6 +582,15 @@ namespace GreyBoxStrategy
         private void Settle(Province p, List<string> order)
         {
             var here = World.ArmiesAt(p.Id).ToList();
+            // A siege is broken when the besiegers are gone: they left, or lost a battle here.
+            if (p.SiegedBy != null && !here.Any(a => a.Owner == p.SiegedBy && World.AtWar(a.Owner, p.Controller ?? "")))
+            {
+                report.Resolution.Add($"The siege of {p.Id} by {p.SiegedBy} is broken.");
+                Tell(p.SiegedBy, 1, $"Our siege of {p.Id} is broken.");
+                if (p.Controller != null) Tell(p.Controller, 1, $"{p.SiegedBy}'s siege of our {p.Id} is broken.");
+                p.SiegedBy = null;
+                p.SiegeTurns = 0;
+            }
             if (here.Count == 0) return;
             bool Acts(string s) =>
                 p.Owner == null                                                                  // neutral land to take
@@ -612,6 +621,11 @@ namespace GreyBoxStrategy
                 lastChangeTurn = World.Turn;
                 return;
             }
+            if (Rules.Sieges && p.Forts > 0)
+            {
+                Besiege(p, who, mine);
+                return;
+            }
             int militia = Rules.MilitiaBase + Rules.MilitiaPerFort * p.Forts;
             string holder = p.Controller;
             if (!Battle(p.Id, who, mine, holder, new List<Army>(), militia, p)) return;
@@ -620,6 +634,42 @@ namespace GreyBoxStrategy
             report.Resolution.Add($"{who} occupies {p.Id} ({p.Owner}'s).");
             Tell(who, 1, $"We occupy {p.Id}, {p.Owner}'s.");
             Tell(p.Owner, 0, $"{who} occupies our {p.Id}.");
+        }
+
+        /// <summary>The turns a siege of <paramref name="p"/> by <paramref name="besiegers"/> takes (rules v2 3.7), never below 1.</summary>
+        public static int SiegeTurnsNeeded(GameRules r, Province p, IReadOnlyCollection<Army> besiegers)
+        {
+            int turns = r.SiegeTurnsPerFort * p.Forts;
+            var lead = besiegers.Where(a => a.General != null).OrderByDescending(a => a.Soldiers).ThenBy(a => a.Id, StringComparer.Ordinal).FirstOrDefault()?.General;
+            if (r.Generals && lead != null && lead.Has(GeneralTraits.Siegewright)) turns--;
+            if (besiegers.Sum(a => a.Soldiers) >= r.SiegeOutnumber * r.GarrisonPerFort * p.Forts) turns--;
+            return Math.Max(1, turns);
+        }
+
+        // An army alone in enemy land with walls besieges it: a turn of the siege each turn it stays, an early
+        // breach on a seeded roll; when it ends the walls drop one level and the province is occupied.
+        private void Besiege(Province p, string who, List<Army> mine)
+        {
+            if (p.SiegedBy != who)
+            {
+                p.SiegedBy = who;
+                p.SiegeTurns = 0;
+                report.Resolution.Add($"{who} besieges {p.Id} ({p.Owner}'s, {p.Forts} {(p.Forts == 1 ? "fort" : "forts")}).");
+                Tell(who, 1, $"We besiege {p.Id}.");
+                Tell(p.Controller, 0, $"{who} besieges our {p.Id}.");
+            }
+            p.SiegeTurns++;
+            int needed = SiegeTurnsNeeded(Rules, p, mine);
+            bool breach = p.SiegeTurns < needed && Dice.Unit(Seed, World.Turn, p.Id, "breach:" + who) < Rules.SiegeBreachChance;
+            if (p.SiegeTurns < needed && !breach) return;
+            p.Forts = Math.Max(0, p.Forts - 1);
+            p.SiegedBy = null;
+            p.SiegeTurns = 0;
+            p.Occupier = who;
+            lastChangeTurn = World.Turn;
+            report.Resolution.Add($"{who} took {p.Id} after a siege" + (breach ? ", the walls breached early" : "") + $"; {p.Forts} {(p.Forts == 1 ? "fort" : "forts")} left.");
+            Tell(who, 1, $"We took {p.Id} after a siege.");
+            Tell(p.Owner, 0, $"{who} took our {p.Id} after a siege.");
         }
 
         /// <summary>
@@ -770,7 +820,7 @@ namespace GreyBoxStrategy
                 a.General.Wins++;
                 if (a.General.Wins == Rules.WinsForSecondTrait && a.General.Traits.Count == 1)
                 {
-                    var other = GeneralTraits.All.Where(t => !a.General.Has(t)).ToList();
+                    var other = GeneralTraits.Pool(Rules).Where(t => !a.General.Has(t)).ToList();
                     string t2 = other[Dice.Int(Seed, World.Turn, a.Id, "second-trait:" + key, 0, other.Count)];
                     a.General.Traits.Add(t2);
                     Tell(a.Owner, 1, $"{a.General.Name} has won {Rules.WinsForSecondTrait} battles and is {a.General.Title} now.");

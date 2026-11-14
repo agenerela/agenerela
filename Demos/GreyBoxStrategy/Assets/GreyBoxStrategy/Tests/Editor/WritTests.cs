@@ -971,6 +971,101 @@ namespace GreyBoxStrategy.Tests
             Assert.That((second > 0, fell > 0, notes > 0), Is.EqualTo((true, true, true)), $"second traits {second}, fallen {fell}, battles with a general's note {notes}");
         }
 
+        // --- R3: sieges at forts (rules v2 3.7), off by default ------------------------------------
+
+        private static GameRules Walled(bool on = true)
+        {
+            var r = WritRules();
+            r.Sieges = on;
+            r.SiegeBreachChance = 0; // no early breach, so the turns are exact
+            return r;
+        }
+
+        // valen at war with orsk, a 20-soldier army of valen alone in an orsk province with two forts.
+        private static (Game g, Province p, Army a) Besieging(GameRules rules)
+        {
+            var g = NewWrits(1, rules);
+            Turn(g);
+            var p = g.World.ProvincesOf("orsk").Where(x => !x.IsCapital).OrderBy(x => x.Id).First();
+            p.Forts = 2;
+            foreach (var o in g.World.ArmiesOf("orsk").ToList()) o.Location = g.World.ProvincesOf("orsk").First(x => x.IsCapital).Id;
+            var a = ArmyOf(g, "valen");
+            a.Soldiers = 20;
+            g.World.Country("valen").Army = g.World.ArmiesOf("valen").Sum(x => x.Soldiers);
+            a.Location = p.Id;
+            War(g, "valen", "orsk");
+            return (g, p, a);
+        }
+
+        [Test]
+        public void Siege_AWalledProvince_TakesTwoTurnsAFort_ThenIsOccupied_OneFortLess()
+        {
+            var (g, p, a) = Besieging(Walled());
+            Assert.That(Game.SiegeTurnsNeeded(g.World.Rules, p, new[] { a }), Is.EqualTo(4), "2 turns a fort, 20 soldiers do not outnumber 20 three to one");
+            for (int t = 1; t <= 3; t++)
+            {
+                var report = Turn(g);
+                Assert.That((p.SiegedBy, p.SiegeTurns, p.Occupier, p.Forts), Is.EqualTo(("valen", t, (string)null, 2)), $"turn {t} of the siege: " + string.Join("\n", report.Resolution));
+                Assert.That(report.BattleRecords.Any(b => b.Province == p.Id), Is.False, "no storm of the militia");
+            }
+            Assert.That(WritFacts.Standing(g.World, "valen").Any(l => l.Contains($"besieging {p.Id}, turn 3 of 4")), Is.True, "the besieger reads its siege");
+            Assert.That(WritFacts.Standing(g.World, "orsk").Any(l => l.StartsWith("valen:") && l.Contains($"it besieges our {p.Id}")), Is.True, "and the besieged");
+            var last = Turn(g);
+            Assert.That((p.SiegedBy, p.Occupier, p.Forts), Is.EqualTo(((string)null, "valen", 1)), string.Join("\n", last.Resolution));
+            Assert.That(last.Resolution.Any(l => l.Contains($"took {p.Id} after a siege")), Is.True);
+
+            var (off, op, _) = Besieging(Walled(false));
+            Turn(off);
+            Assert.That(op.SiegedBy, Is.Null, "off: the militia is stormed, as before");
+        }
+
+        [Test]
+        public void Siege_IsBroken_WhenTheBesiegersLeave()
+        {
+            var (g, p, a) = Besieging(Walled());
+            Turn(g);
+            Assert.That(p.SiegedBy, Is.EqualTo("valen"));
+            a.Location = g.World.ProvincesOf("valen").First().Id;
+            var report = Turn(g);
+            Assert.That((p.SiegedBy, p.SiegeTurns, p.Occupier), Is.EqualTo(((string)null, 0, (string)null)));
+            Assert.That(report.Resolution.Any(l => l.Contains($"siege of {p.Id} by valen is broken")), Is.True, string.Join("\n", report.Resolution));
+        }
+
+        [Test]
+        public void SiegeTurns_ASiegewrightAndThreeToOne_EachTakeATurnOff_NeverBelowOne()
+        {
+            var r = Walled();
+            r.Generals = true;
+            var p = new Province(NewWrits().World.ProvinceList[0].Info) { Forts = 2 };
+            var a = new Army("maren_host", "valen", p.Id, 20, 1);
+            Assert.That(Game.SiegeTurnsNeeded(r, p, new[] { a }), Is.EqualTo(4));
+            a.General = new General { Name = "Maren", Traits = { GeneralTraits.Siegewright } };
+            Assert.That(Game.SiegeTurnsNeeded(r, p, new[] { a }), Is.EqualTo(3), "siegewright");
+            a.Soldiers = 60;
+            Assert.That(Game.SiegeTurnsNeeded(r, p, new[] { a }), Is.EqualTo(2), "and three to one against 20");
+            p.Forts = 1;
+            Assert.That(Game.SiegeTurnsNeeded(r, p, new[] { a }), Is.EqualTo(1), "never below 1");
+            Assert.That(GeneralTraits.Pool(r), Does.Contain(GeneralTraits.Siegewright));
+            Assert.That(GeneralTraits.Pool(WritRules()), Does.Not.Contain(GeneralTraits.Siegewright), "only with sieges");
+        }
+
+        [Test]
+        public void Sieges_InScriptedGames_AreLaidAndWon()
+        {
+            int laid = 0, won = 0;
+            for (int seed = 1; seed <= 6; seed++)
+            {
+                var map = GameSetup.Writs(seed).BuildMap();
+                var rules = WritRules();
+                rules.Sieges = true;
+                var played = GameRunner.Play(seed, map.Countries.ToDictionary(c => c.Id, c => (IPlayer)new ScriptedPlayer(Temperament.Expansionist)), map, rules);
+                var lines = played.Reports.SelectMany(r => r.Resolution).ToList();
+                laid += lines.Count(l => l.Contains(" besieges "));
+                won += lines.Count(l => l.Contains(" after a siege"));
+            }
+            Assert.That((laid > 0, won > 0), Is.EqualTo((true, true)), $"sieges laid {laid}, won {won}");
+        }
+
         [Test]
         public void Snapshots_HoldEveryArmyAndOccupation_AsTheCouncilSawThem()
         {

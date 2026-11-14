@@ -210,6 +210,20 @@ namespace GreyBoxStrategy
         public int WinsForSecondTrait = 3;
         /// <summary>The chance a general falls in any lost battle (routed, always); the army then gets a new one.</summary>
         public double GeneralFallsChance = 0.05;
+
+        /// <summary>
+        /// R3, rules v2 3.7: an enemy province with forts (walls) is besieged over several turns instead of
+        /// stormed: no militia battle, the province occupied when the siege ends, its walls one level lower.
+        /// Off by default. The fort that holds the road, and income lost under siege, are not built yet.
+        /// </summary>
+        public bool Sieges = false;
+        /// <summary>Turns a siege takes per fort (walls level).</summary>
+        public int SiegeTurnsPerFort = 2;
+        /// <summary>The garrison a fort holds, for the three-to-one rule: besiegers that many times the garrison take a turn off.</summary>
+        public int GarrisonPerFort = 10;
+        public int SiegeOutnumber = 3;
+        /// <summary>Each turn of a siege, the seeded chance that the walls are breached early.</summary>
+        public double SiegeBreachChance = 0.10;
         public double PikeStrength = 1.0;
         public double RiderStrength = 1.4;
         public double BowStrength = 0.9;
