@@ -92,6 +92,12 @@ namespace GreyBoxStrategy
 
         /// <summary>Whether the storyteller reads an inspiration line (<see cref="GreyBoxStrategy.Storyteller.InspirationLine"/>); <c>+no-inspiration</c> drops it.</summary>
         public bool Inspiration = true;
+        /// <summary>
+        /// With <c>+history</c>, the history check runs as the storyteller's guard (<see cref="GreyBoxStrategy.Storyteller.HistoryGuard"/>,
+        /// #292), which replaces the story through the framework; <c>+history-in-game</c> leaves it to the event's
+        /// check at the queue, as before. The verdicts are the same either way.
+        /// </summary>
+        public bool HistoryGuard = true;
 
         /// <summary>Which inspiration draw the storyteller gets: <c>+inspiration-1</c> draws other words on the same seeds, for the divergence runs.</summary>
         public int InspirationSalt;
@@ -245,6 +251,7 @@ namespace GreyBoxStrategy
                         options.Preset = options.Preset ?? StorytellerSettings.EvenHand.Name;
                     }
                     else if (modifier == "no-inspiration") options.Inspiration = false;
+                    else if (modifier == "history-in-game") options.HistoryGuard = false;
                     else if (modifier.StartsWith("inspiration-") && int.TryParse(modifier.Substring("inspiration-".Length), out int salt) && salt >= 0)
                         options.InspirationSalt = salt;
                     else return null;
