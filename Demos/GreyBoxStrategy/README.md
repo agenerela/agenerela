@@ -1248,6 +1248,10 @@ effect of 1% or more, and the counters turned the result of 6% of them.
 Scripted they barely move the pace (77 turns off, 74 to 76 on); the stall is the model rulers', and a live run
 will tell. Numbers in [`findings.md`](../../docs/llm-wiki/findings.md), 14 November.
 
+Live, two pairs on `qwen3.5:4b` (14 November): both on made the games longer, 249 turns against 101, because
+every province that passes by occupation resets the stalemate counter. Both stay off; the rules v2 page lists
+what to try instead.
+
 ## The first real run
 
 `mixed`, 200 games, seeds 1 to 200, standard rules, run in batch mode on 10 November 2026. The

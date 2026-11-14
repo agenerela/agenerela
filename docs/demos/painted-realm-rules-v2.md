@@ -1664,6 +1664,17 @@ settle within 8 turns, so no occupation lasts long enough. Only model rulers sta
 only be read from a live run: for example 5 uncapped games with both on, on R1c's uncapped seeds 21 to 25.
 Numbers: [`findings.md`](../llm-wiki/findings.md), 14 November.
 
+**Live, a first look (14 November, two pairs):** with both on, the models' games ran **longer**, not shorter:
+249 turns against 101 (one to the 300-turn guard), with 54 and 22 provinces passing by occupation. Land moves
+(no-change turns 77% against 85%), but every province that passes resets the 12-turn stalemate counter, so a
+stalled war that used to end in a stalemate now grinds on. **Both stay off.** What the result suggests instead:
+- **Ownership without resetting the stalemate counter:** a province that passes by holding counts as no change,
+  so the stalemate still ends a war that only trades held land; or count the counter on war score, not land.
+- **The break rule alone:** this run had both on, so it cannot say what `BreakWhenAllOccupied` does by itself;
+  each realm-break in it may have come from either rule.
+- **Ownership only at a war's end**, as a treaty term the model already has (`demand_occupied`), made cheaper.
+Each needs its own live pair.
+
 The screen's half is the screen session's.
 
 **The screen's half, first part: built** (13 November). Watch and replay of a writs game by stand-in
