@@ -162,7 +162,9 @@ namespace GreyBoxStrategy.Realm
             }
             if (showMenu && !isLive && !generated)
             {
-                ShowMainMenu();
+                // "New game" on the end screen: the scene reloads straight to New game.
+                if (newGameNext) { newGameNext = false; ShowNewGame(); }
+                else ShowMainMenu();
                 return;
             }
             StartCoroutine(Play());
@@ -588,6 +590,9 @@ namespace GreyBoxStrategy.Realm
             }
             ui.GameOver = true;
             if (rule != null) RuleOver();
+            // The end screen, once the last turn has landed: every way of playing ends on it.
+            if (game.Result != null && !replayingEnd) ShowEnd();
+            replayingEnd = false;
             if (game.Result != null) ui.SetTurn(game.Result.Turns, $"{CountryLook.NameOf(game.Result.Winner)} wins");
             else ui.SetTurn(game.Turns.Count, live != null && live.Error != null ? "live game stopped: " + live.Error : "stopped");
             playing = false;

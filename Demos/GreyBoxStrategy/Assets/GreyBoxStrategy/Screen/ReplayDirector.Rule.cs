@@ -35,7 +35,8 @@ namespace GreyBoxStrategy.Realm
                 edgeItems.Add(new ScreenUI.EdgeMark { Kind = "capital", Province = cap, Colour = CountryLook.Of(rule.You).Colour, Text = "Your capital, " + Wording.Province(game.ProvinceIds[cap]) });
             int turn = played.Count > 0 ? played[played.Count - 1].Turn : -1;
             foreach (var e in played)
-                if (e.Kind == ReplayEventKind.Battle && e.Turn == turn && e.ProvinceIndex >= 0)
+                // One marker a place, however many battles were fought there.
+                if (e.Kind == ReplayEventKind.Battle && e.Turn == turn && e.ProvinceIndex >= 0 && !edgeItems.Any(x => x.Province == e.ProvinceIndex))
                     edgeItems.Add(new ScreenUI.EdgeMark { Kind = "battle", Province = e.ProvinceIndex, Event = e, Colour = new Color(0.86f, 0.3f, 0.22f), Text = "Battle at " + Wording.Province(game.ProvinceIds[e.ProvinceIndex]) });
             ui.PlaceEdgeMarks(edgeItems);
         }
@@ -390,6 +391,8 @@ namespace GreyBoxStrategy.Realm
                     ui.Plan = new RuleSession.WritsPlan();
                     ui.SelectedArmy = null;
                     lastOrdersStatus = null;
+                    // A first rule game: the help opens once the council is drawn, and never again by itself.
+                    if (PlayerPrefs.GetInt(HelpSeenKey, 0) == 0 && !ui.HelpOpen) ui.Root.schedule.Execute(ShowHelp).StartingIn(400);
                     Show(ReplayBuilder.StateOf(rule.Orders.World, game.ProvinceIds, shown), null);
                     ui.SetPlaying(false, speed);
                     RefreshSide();
