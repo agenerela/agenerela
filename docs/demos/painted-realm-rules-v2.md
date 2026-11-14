@@ -1602,7 +1602,12 @@ exists, and where it differs from the list above:
 - **R1a, the rules, headless: built.**
 - **R1b, built** (both parts, 12 November; see below): the court and marshal agents, and the prompt fixes R2 found: the standing facts, the length
   of the moves line, and the game's length.
-- **R1c:** the live measurement on `qwen3.5:4b`.
+- **R1c, measured** (12 and 13 November): the live measurement on `qwen3.5:4b`. 20 writs games on Classic
+  against 20 one-move games: 7.1 s of model time a turn (estimate 7 to 9 s), no game finished in 40 turns,
+  armies used, treaties made, the persona still showing, statements repeated word for word 35% against 5%.
+  Five uncapped games end by stalemate after about 190 turns; five on a medium world did not finish in 40.
+  The run found army orders for targets the list left out, now contained (`WritRuler.NotOffered`). Numbers:
+  [`findings.md`](../llm-wiki/findings.md), 13 November.
 
 The screen's half is the screen session's.
 
@@ -1668,7 +1673,7 @@ _For the lead:_ a 75% domination win gives 144 turns on medium (median 118) and 
 wanted before R7. **Decided 13 November:** "Both, conquest default" (answer 9 in [11](#11-the-leads-answers-to-this-pages-questions)).
 
 **Three writs** raise R1c's model time: decisions a ruler a turn rise from about 1.9 to 2.3 on Classic.
-R1c measures the cost.
+R1c measured 2.9 decisions a ruler a turn (14.4 a turn for five) and 7.1 s of model time a turn.
 
 ### R2. The map generator, headless, and a drawn-chart spike
 
@@ -1967,14 +1972,14 @@ line, and `findings.md` for anything measured.
 - [x] War score; `offer_white_peace`, `demand_occupied`, `cede_occupied` and their answers; broken realms
 - [ ] Occupation hatching, the treaty flow from hatch to wash with the seal, hatching lifting on return
 - [x] Scripted expansionist and cautious with armies; random player
-- [x] Court and marshal agents, the army in `Correlation`, both moves lines, chained decisions, memory 4 (R1b, `WritRuler`); the army statement rule waits for R1c's A/B
+- [x] Court and marshal agents, the army in `Correlation`, both moves lines, chained decisions, memory 4 (R1b, `WritRuler`); the army statement rule waits for its own A/B (R1c measured the baseline: 35% of statements repeated word for word)
 - [ ] Pieces, march lines, step animation, battle card; rule mode's writs, cycle key and order queue
 - [ ] `ReplayBuilder` rebuilds armies
 - [x] Tests: costs, simultaneity, determinism, writ cap, every wake condition, occupation never changes
       the owner, a treaty transfers exactly its term, scripted beats random; [x] the fake model plays the
       scripted game (R1b)
 - [x] Sim: armies awaiting orders a ruler a turn, game length, battles
-- [ ] Live: the latency probe; then the persona table, 20 games, 40-turn cap, against the one-move game
+- [x] Live: the latency probe; then the persona table, 20 games, 40-turn cap, against the one-move game (R1c, 13 November)
 
 **R2, the generator headless and the chart spike**
 - [x] Land shapes, seeds, provinces, adjacency, ridges and passes, terrain quotas, coasts, ports

@@ -29,6 +29,12 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm rules v2, R1c: the writs turn measured live on `qwen3.5:4b`** (#20). Tables can play the
+  writs turn (`-strategyTurn writs`, with `-strategyCap`, `-strategyMap`, `-strategyMapSeed` and
+  `-strategyVictory`), and a writs run writes `writs-turns.csv`. 20 writs games on Classic against 20 one-move
+  games, then 5 uncapped and 5 on a medium world: 7.1 s of model time a turn, no capped game finished, armies
+  used, treaties made, personas distinct, statements repeated far more. Results in `findings.md`, 13 November.
+
 - **Painted Realm rules v2, R1b's second part: model rulers for the writs turn** (#20). `WritRuler` is two
   framework agents with one persona: a court for court orders, treaties and dilemmas, and a marshal for
   army orders, the army carried in the decision's correlation. Each keeps a memory of four decisions.
@@ -595,6 +601,11 @@ phase table and the open issues, not here.
   (findings, 10 November) found one regression, on the route examples, fixed in the branch.
 
 ### Fixed
+
+- **Painted Realm: a writs ruler's targets are the decision's own list** (#20). The court's and the marshal's
+  availability followed the rules alone, so a model could name a march or fortify target the capped list left
+  out and the game held it as "not offered" (61 army orders in R1c's main run). The scorecard also counted a
+  second court order as a second council move in the same turn.
 
 - **Painted Realm: two offers of peace to you in one turn** were answered only once. The
   replay then stopped at that turn. Each envoy now waits for its own answer. A replay that
