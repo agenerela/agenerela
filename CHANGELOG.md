@@ -29,6 +29,11 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm R3, part six: what a country sees of a rival army** (#20), behind `GameRules.Fog`, off by
+  default. `ArmySight` holds the rules: rival armies near our land and armies show position, general and size
+  rounded to 10, nothing in forest but presence, their mix only to our riders. The rulers' facts follow it;
+  scripted players do not yet.
+
 - **Painted Realm R3, part five: supply, model B** (#20), behind `GameRules.Supply`, off by default. Armies
   carry 0 to 4 turns of stores, refilled at home and eaten abroad, twice as fast in poor land; with none they
   lose 10% a turn and fight 15% weaker; a forager eats half. The rulers read each army's stores; scripted

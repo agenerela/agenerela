@@ -1252,6 +1252,18 @@ distance attrition). `GameRules.Supply`, off by default:
 - Scripted, 100 Classic games: 90 turns against 77 off (91 last standing, 5 stalemates, 4 unfinished); with
   all four R3 rules, 84. Unmeasured live, so off.
 
+**R3, part six: what a country sees of a rival army** (14 November; rules v2 3.8, the lead's answer 12).
+`GameRules.Fog`, off by default, as rules data (`ArmySight`; the screen keeps its own `Fog`):
+- A country sees its own land and its armies' provinces, and every province bordering them.
+- There a rival army shows its position, general and size rounded to 10 ("orsk's caspar_host, about 40, led by
+  Caspar the Bold, at corwick"); in forest only "an army of orsk's at corwick"; its mix only when one of our
+  armies with riders stands in or beside it. Nothing deeper in.
+- The rulers' facts gain "Rival armies we see: …" (at most 5, the nearest enemies first); each rival's line gives
+  its total rounded ("about 60 soldiers in 2 armies"), with "mostly riders" only from what our riders scout; a
+  march's detail names only the enemy armies we see.
+- Scripted players still read everything, so the scripted numbers do not move; fog for them, allies' sight and
+  watchtowers wait.
+
 **Two pacing settings, both off** (14 November; the rules v2 page's "Why Classic stalls"):
 - `GameRules.OccupationBecomesOwnership`: a province occupied that many turns in a row becomes the occupier's,
   with no treaty. `Province.OccupiedTurns` counts the turn ends it has been held, back to 0 when the occupier
