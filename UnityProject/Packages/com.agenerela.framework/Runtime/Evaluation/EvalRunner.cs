@@ -336,8 +336,11 @@ namespace Agenerela.Evaluation
                 .Concat(PromptSetChecks.CompareWithProfile(Set, Profile))
                 .Concat(IdleExampleProblems(ArmA, prompts))
                 .Concat(IdleExampleProblems(ArmB, prompts))
+                .Concat(BareExampleProblems(ArmA, prompts))
+                .Concat(BareExampleProblems(ArmB, prompts))
                 .Concat(LegalityProblems(ArmA, prompts))
                 .Concat(LegalityProblems(ArmB, prompts))
+                .Distinct()
                 .ToList();
             if (problems.Count > 0)
             {
@@ -415,6 +418,26 @@ namespace Agenerela.Evaluation
         // An arm's own idle example, and its statement (#190, G14), replace the profile's, which
         // PromptSetChecks has checked, so they are checked here: scoring a prompt the model was
         // shown in an example measures nothing (hard rule 4).
+        // An arm that shows the examples without their situations (DecideOptions.ExampleObservations
+        // off) shows each one's bare stimulus, so hard rule 4 judges that alone there (#216 item 1).
+        private IEnumerable<string> BareExampleProblems(EvalArm arm, List<(string Category, EvalPrompt Prompt)> prompts)
+        {
+            if (arm == null || arm.Options == null || arm.Options.ExampleObservations || Profile == null)
+            {
+                yield break;
+            }
+
+            foreach (var (_, prompt) in prompts)
+            {
+                var found = new List<string>();
+                PromptSetChecks.CheckExamples(prompt, Profile, (rule, message) => found.Add($"{prompt.Id}: {message}"), withSituations: false);
+                foreach (string problem in found)
+                {
+                    yield return problem;
+                }
+            }
+        }
+
         private IEnumerable<string> IdleExampleProblems(EvalArm arm, List<(string Category, EvalPrompt Prompt)> prompts)
         {
             var texts = new[]
@@ -811,6 +834,7 @@ namespace Agenerela.Evaluation
                 ExampleStimulus = action.ExampleStimulus,
                 PreferredExampleTargets = action.PreferredExampleTargets == null ? null : (string[])action.PreferredExampleTargets.Clone(),
                 ExampleStatement = action.ExampleStatement,
+                ExampleObservations = action.ExampleObservations == null ? null : (string[])action.ExampleObservations.Clone(),
                 CounterExampleStimulus = action.CounterExampleStimulus,
                 CounterExampleStatement = action.CounterExampleStatement,
                 TargetCategories = categories == null ? null : (string[])categories.Clone(),
@@ -983,6 +1007,7 @@ namespace Agenerela.Evaluation
                     CounterExamples = arm.Options.CounterExamples,
                     IdleExampleStatement = arm.Options.IdleExampleStatement,
                     ExampleStatements = arm.Options.ExampleStatements,
+                    ExampleObservations = arm.Options.ExampleObservations,
                     ExampleTargetFallback = arm.Options.ExampleTargetFallback,
                     PairTargetsWithActions = arm.Options.PairTargetsWithActions,
                     LegalTargets = arm.Options.LegalTargets.ToString(),

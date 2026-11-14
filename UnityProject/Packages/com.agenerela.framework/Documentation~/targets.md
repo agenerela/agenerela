@@ -200,6 +200,38 @@ before, a wrong-category preferred target included.
 
 One thing it does not do yet: `[Available]` gives no reason when it leaves a whole action out.
 
+## A group as one target
+
+A decision names one target. An event on "the north" or "orsk and kesh" names a **group**: a
+target of its own, registered in a category of its own, whose description lists its members
+(#266 item 1). GreyBoxStrategy's storyteller does this for events that strike several countries.
+
+```csharp
+// A group the game makes for this decision: its members, and a line saying who they are.
+sealed class CountryGroup : IDescribedTarget
+{
+    public readonly IReadOnlyList<string> Members;
+    public CountryGroup(IReadOnlyList<string> members) { Members = members; }
+    public string Description => "the countries " + string.Join(" and ", Members);
+}
+
+into.Offer("north", new CountryGroup(new[] { "orsk", "kesh" }), "group");
+```
+
+- **The model reads the description**, in the action and target list (`ListActionsAndTargets`) or
+  in an observation the game writes; it never reads the category. Name the members by their ids.
+- **The handler expands it.** `ctx.Targets.TryGet("north", out object g)` gives the group back, and
+  the handler applies the effect to each member, each with its own amount if the game wants one.
+- **An action that takes groups names the category** (`TargetCategories = new[] { "group" }`), and
+  one that takes single countries does not take groups, so the paired schema keeps them apart.
+- **Fairness is the game's**, when it builds the groups: leave out a member the rules protect
+  (struck last turn, at peace) rather than offering the group and refusing it afterwards.
+- **Keep groups few.** Each is a target in the enum. Offer the handful that make sense this turn,
+  not every combination.
+
+A target array beside `target` is not built; it would be a new field in the schema, and waits for
+the typed parameters of #266 item 2, if groups prove clumsy.
+
 ## Facts told through an action
 
 Some knowledge counts only once it is told: the clue an innkeeper gives, the password a guard lets

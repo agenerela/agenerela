@@ -68,6 +68,10 @@ namespace Agenerela
         // once settled it stays, marked, so nothing remembers it twice (DR-018).
         internal PendingMemory Pending { get; set; }
 
+        // Whether the call chose among DecideOptions.Choices (DR-022): Execute then runs no handler
+        // and no re-check, since the choices were the call's, not the agent's.
+        internal bool FromChoices { get; set; }
+
         /// <summary>
         /// A result no guard stopped: <see cref="ModelDecision"/> is <paramref name="decision"/>
         /// and <see cref="Verdict"/> is null.

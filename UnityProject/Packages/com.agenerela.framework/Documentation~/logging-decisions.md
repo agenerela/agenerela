@@ -48,6 +48,7 @@ chain fields, still read, with no chain. A field that is null is left out.
 | `promptTokens`, `completionTokens` | As the provider reported them |
 | `targetGrounding`, `targetGroundingStatus`, `historyTurnsSent`, `historyTurnsDropped`, `targetsDropped`, `observationsDropped` | From the telemetry; `observationsDropped` is a count |
 | `targetsUnavailable` | Each action and target pair a per-target check rejected, as `action`, `target` and `reason` (left out when the check gave none); the line has no such key when none was rejected ([targets.md](targets.md#conditions-per-target)) |
+| `choicesOffered`, `choicesUnavailable` | For a call that chose among `DecideOptions.Choices` (DR-022): the ids offered, and each one given as unavailable with its reason; the line has no such keys for an ordinary call ([prompt.md](prompt.md#a-choice-among-options-given-with-the-call)) |
 | `targetIgnored` | The target the model named for an action that takes none (`TakesNoTarget`), dropped before the guards; the line has no such key when none was ([targets.md](targets.md#an-action-that-takes-no-target)) |
 | `reply` | The model's reply exactly as the provider returned it, which a replay scripts with `ScriptedReply.Raw` |
 | `request` | Only with `IncludePrompt` on: the system prompt, few-shot block, observations, history, stimulus turn, and the actions and targets offered |

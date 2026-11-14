@@ -120,6 +120,25 @@ namespace GreyBoxStrategy
             Settings = Preset == null ? new StorytellerSettings() : StorytellerSettings.Named(Preset),
         };
 
+        // --- The writs turn's voice (rules v2, after R1c: statements repeated 35% word for word) ---
+
+        /// <summary>
+        /// <c>+one-voice</c>: in the writs turn only a ruler's first court decision of a turn speaks. The second
+        /// court order, army orders, treaty answers and dilemmas are asked to leave the statement empty, and a
+        /// line written anyway is dropped (<see cref="ModelDecision.Unspoken"/>). The framework always asks for
+        /// the statement field, so this is the demo's way. The framework's own way, <c>DecideOptions.AskForStatement</c> (#266),
+        /// merged after the A/B of 13–14 November and is not used here yet.
+        /// </summary>
+        public bool OneVoice;
+        /// <summary>
+        /// <c>+own-lines</c>: in the writs turn a decision that speaks reads the ruler's last few lines, and is asked to
+        /// say something new. On in <see cref="Default"/> since 14 November 2026 (statements repeated word for word fell
+        /// from 36% to 22% in 15 games an arm, legality and persona unchanged); <c>+no-own-lines</c> switches it off.
+        /// </summary>
+        public bool OwnLines;
+        /// <summary>How many of the ruler's last lines <see cref="OwnLines"/> shows.</summary>
+        public const int OwnLinesShown = 4;
+
         /// <summary>A short name for logs and tables: "control", "per-target", "no-moves-line", and so on.</summary>
         public string Arm = "control";
 
@@ -128,10 +147,12 @@ namespace GreyBoxStrategy
         /// on) plus the paired schema, which cut the model's illegal answers to none at no measured
         /// cost, and a grounding threshold of 0.6, which with the framework's 20 alternatives cut the
         /// guard's containments of legal moves from 72 to 3 (qwen3.5:4b) and 94 to 3 (qwen3.5:2b) in
-        /// 30 games (README, gap N4). The arm measured as <c>default</c> on 10 November is
-        /// <c>control+paired+alternatives-5</c> now.
+        /// 30 games (README, gap N4), and in the writs turn the ruler's own last lines (<see cref="OwnLines"/>,
+        /// measured 13–14 November). The arm measured as <c>default</c> on 10 November is
+        /// <c>control+paired+alternatives-5</c> now; the writs turn's <c>default</c> before 14 November is
+        /// <c>default+no-own-lines</c>.
         /// </summary>
-        public static ModelSeatOptions Default => new ModelSeatOptions { PairTargets = true, GroundingThreshold = 0.6f, Arm = "default" };
+        public static ModelSeatOptions Default => new ModelSeatOptions { PairTargets = true, GroundingThreshold = 0.6f, OwnLines = true, Arm = "default" };
 
         /// <summary>Stage 2's control arm: the moves line, a flat schema, grounding on.</summary>
         public static ModelSeatOptions Control => new ModelSeatOptions();
@@ -159,7 +180,8 @@ namespace GreyBoxStrategy
         /// moves line, <c>+moves-sentence</c> has the framework say the legal moves as an observation
         /// line (<see cref="LegalTargetListing.ObservationLine"/>), and <c>+how-it-reads</c> and
         /// <c>+own-words</c> word the statement rules (<see cref="StatementRulesWording"/>)
-        /// ("default+no-moves-line+moves-sentence", "default+how-it-reads"), and <c>+memory-move</c>
+        /// ("default+no-moves-line+moves-sentence", "default+how-it-reads"), <c>+one-voice</c>, <c>+own-lines</c> and
+        /// <c>+no-own-lines</c> for the writs turn's statements, and <c>+memory-move</c>
         /// and <c>+memory-outcome</c> what a remembered move holds (<see cref="Remembers"/>, #244 item 4).
         /// For the storyteller: <c>+storyteller</c> (<see cref="Storyteller"/>), <c>+no-inspiration</c> and
         /// <c>+inspiration-&lt;n&gt;</c> ("default+storyteller+inspiration-1"); stage S2's <c>+choices</c>,
@@ -194,6 +216,9 @@ namespace GreyBoxStrategy
                     else if (modifier == "moves-sentence") options.LegalTargets = LegalTargetListing.ObservationLine;
                     else if (modifier == "how-it-reads") options.RulesWording = StatementRulesWording.HowItShouldRead;
                     else if (modifier == "own-words") options.RulesWording = StatementRulesWording.InYourOwnWords;
+                    else if (modifier == "one-voice") options.OneVoice = true;
+                    else if (modifier == "own-lines") options.OwnLines = true;
+                    else if (modifier == "no-own-lines") options.OwnLines = false;
                     else if (modifier == "storyteller") options.Storyteller = true;
                     else if (modifier == "choices") options.Choices = true;
                     else if (modifier == "multi") options.Multi = true;

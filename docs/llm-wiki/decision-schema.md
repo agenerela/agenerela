@@ -159,6 +159,13 @@ line and a target rule that does not ask the agent to say anything. A serializer
 but walk `Fields` (tests in `NoStatementTests`). The default is on, and every request sent with it
 is byte-identical to one sent before the option existed.
 
+### A choice call (DR-022)
+
+A call with `DecideOptions.Choices` is shape 2, or shape 2 without `statement`: the `action` enum
+is the call's available choice ids in the order given, then `none`, and there is no `target`
+field, because the call's context has no targets. Nothing new for a serializer. Its paired form
+does not arise: with no target registered a schema is flat (`ChoiceTests`).
+
 ### 4. Statement only
 
 `DecisionSchema.StatementOnly()`: one free-form `statement` field and nothing else. It is the
@@ -253,7 +260,8 @@ So nobody looks for them:
   prices or a strength are not fields (#190 LV #12, #266 item 2).
 - **No reasoning field.** A field before `action` measured worst of five variants.
 - **No length cap on `statement`.** A runaway reply has been seen once per 460 calls (#244
-  item 11); a cap is not built.
+  item 11). The schema holds no cap; `DecideOptions.MaxReplyTokens` (#296) cuts a reply
+  at the provider instead, and a cut reply ends as an `UnreadableReply`.
 - **Nothing about the prompt.** Which actions and targets are listed in the prompt, and how
   (`DecideOptions.ListActionsAndTargets`, `LegalTargets`), is `PromptBuilder`'s business and does
   not change the schema.

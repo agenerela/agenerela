@@ -114,6 +114,78 @@ namespace Agenerela.Tests
             Assert.That(provider.TokenAlternatives, Is.EqualTo(alternatives));
         }
 
+        // ---- Sampling and a reply cap per call (#266 item 7, #244 item 11) ------------------------
+
+        [Test]
+        public async Task ACallThatSetsNoSamplingSendsOnlyTemperatureAndContext()
+        {
+            var handler = ScriptedHandler.Replying(Envelope(GoToTheTower));
+            var provider = Provider(handler, new OllamaSettings { Temperature = 0.25f });
+
+            await NotCancelled(provider.RequestAsync(Request(), CancellationToken.None));
+
+            var options = (Newtonsoft.Json.Linq.JObject)Parse(handler.Requests[0].Body)["options"];
+            Assert.That(options.Properties().Select(p => p.Name), Is.EqualTo(new[] { "temperature", "num_ctx" }));
+            Assert.That((float)options["temperature"], Is.EqualTo(0.25f), "The provider's own temperature.");
+        }
+
+        [Test]
+        public async Task ACallsTemperatureSeedAndCapAreSentAsOptions()
+        {
+            var handler = ScriptedHandler.Replying(Envelope(GoToTheTower));
+            var provider = Provider(handler);
+            var request = Request();
+            request.Temperature = 0.8f;
+            request.Seed = 7;
+            request.MaxReplyTokens = 400;
+
+            await NotCancelled(provider.RequestAsync(request, CancellationToken.None));
+
+            var options = (Newtonsoft.Json.Linq.JObject)Parse(handler.Requests[0].Body)["options"];
+            Assert.That(options.Properties().Select(p => p.Name), Is.EqualTo(new[] { "temperature", "num_ctx", "seed", "num_predict" }));
+            Assert.That((float)options["temperature"], Is.EqualTo(0.8f));
+            Assert.That((int)options["seed"], Is.EqualTo(7));
+            Assert.That((int)options["num_predict"], Is.EqualTo(400));
+        }
+
+        [Test]
+        public async Task AnAgentSendsItsCallsSamplingAndTheRefusalLineKeepsIt()
+        {
+            var fake = new FakeProvider("{\"action\":\"follow_player\",\"target\":\"no_target\",\"statement\":\"\"}");
+            var agent = Fixtures.VillageGuard(fake);
+            agent.Guards.Add(FakeGuard.Rewriting("Judge"));
+            agent.RefusalStatement = null;
+
+            await Fixtures.NotCancelled(agent.DecideAsync("Follow me.",
+                new DecideOptions { Temperature = 0.8f, Seed = 11, MaxReplyTokens = 300, AskForRefusalLine = true }));
+
+            Assert.That(fake.Requests.Count, Is.EqualTo(2), "The decision, then the refusal line.");
+            foreach (var sent in fake.Requests)
+            {
+                Assert.That(sent.Temperature, Is.EqualTo(0.8f));
+                Assert.That(sent.Seed, Is.EqualTo(11));
+                Assert.That(sent.MaxReplyTokens, Is.EqualTo(300));
+            }
+
+            await Fixtures.NotCancelled(agent.DecideAsync("Follow me."));
+            Assert.That(fake.LastRequest.Temperature, Is.Null, "Null by default: the provider's own.");
+            Assert.That(fake.LastRequest.Seed, Is.Null);
+            Assert.That(fake.LastRequest.MaxReplyTokens, Is.Null);
+        }
+
+        [TestCase(-0.1f, null)]
+        [TestCase(float.NaN, null)]
+        [TestCase(float.PositiveInfinity, null)]
+        [TestCase(null, 0)]
+        [TestCase(null, -5)]
+        public void AnAgentRefusesSamplingOutOfRange(float? temperature, int? cap)
+        {
+            var agent = Fixtures.VillageGuard(new FakeProvider());
+
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                agent.DecideAsync("Follow me.", new DecideOptions { Temperature = temperature, MaxReplyTokens = cap }));
+        }
+
         [Test]
         public void TheDefaultsAreTheMeasuredOnes()
         {

@@ -676,6 +676,12 @@ namespace Agenerela
             // the guards read from them.
             options = options == null ? new DecideOptions() : options.Copy();
 
+            if (options.Choices != null)
+            {
+                // Built once here only to check them, so a bad list throws at the call (DR-022).
+                ChoiceRegistry(options.Choices);
+            }
+
             // Checked here, outside the async body, so the mistake throws at the call rather than
             // becoming a PipelineError.
             if (string.IsNullOrWhiteSpace(options.StimulusLabel))
@@ -689,6 +695,18 @@ namespace Agenerela
             {
                 throw new ArgumentOutOfRangeException(nameof(options), options.MaxListedTargets,
                     "DecideOptions.MaxListedTargets cannot be negative. 0 lists no targets.");
+            }
+
+            if (options.Temperature.HasValue && (!(options.Temperature.Value >= 0f) || float.IsInfinity(options.Temperature.Value)))
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), options.Temperature,
+                    "DecideOptions.Temperature must be 0 or above. Null uses the provider's own.");
+            }
+
+            if (options.MaxReplyTokens.HasValue && options.MaxReplyTokens.Value <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), options.MaxReplyTokens,
+                    "DecideOptions.MaxReplyTokens must be above 0. Null caps nothing.");
             }
 
             if (!(options.TargetGroundingThreshold >= 0f && options.TargetGroundingThreshold <= 1f))
@@ -1059,6 +1077,12 @@ namespace Agenerela
                 return ActionResult.NoAction();
             }
 
+            // A choice the call offered: the game acts on the id, and there is no handler (DR-022).
+            if (result.FromChoices)
+            {
+                return ActionResult.Done();
+            }
+
             var verdict = Recheck(result, "@Execute", out var ctx);
             if (verdict.Kind != GuardVerdictKind.Pass)
             {
@@ -1085,6 +1109,12 @@ namespace Agenerela
             // No dropped targets to fill: this Collect overwrites a source's Dropped, but the result
             // already holds its own copy from the decision.
             ctx = Snapshot("", Array.Empty<string>(), dropped: null, result.Correlation);
+
+            // The choices were the call's, not the agent's, so there is nothing of now to check them against (DR-022).
+            if (result.FromChoices)
+            {
+                return GuardVerdict.Pass;
+            }
 
             // No request and no reply: only the agent as it is now. The options are the defaults
             // with the call's correlation, and no guard that runs here reads them.
@@ -1358,6 +1388,8 @@ namespace Agenerela
             // other reset does, so it is never remembered into the memory just cleared (G12).
             reset.ThrowIfCancellationRequested();
 
+            result.FromChoices = call.Choices != null;
+
             // After the guards and the line, so what is remembered is what the agent will do and
             // say (§2.9, rule 1). A guard that failed left no decision, and a pipeline error
             // remembers nothing. Under OnExecute it waits on the result for the game to settle it
@@ -1387,6 +1419,24 @@ namespace Agenerela
             out AvailabilityAnswer availability)
         {
             ctx = Observe(Snapshot(stimulus, observations, telemetry.TargetsDropped, call.Correlation, seen), telemetry.ObservationsDropped, seen);
+            if (call.Choices != null)
+            {
+                // The call's choices in place of the agent's actions, and no targets (DR-022).
+                ctx = new AgentContext(ctx.Identity, ctx.Stimulus, ctx.Observations, ctx.State, new TargetRegistry(),
+                    ChoiceRegistry(call.Choices), ctx.Correlation);
+                foreach (var choice in call.Choices)
+                {
+                    if (choice.Available.IsAvailable)
+                    {
+                        telemetry.ChoicesOffered.Add(choice.Id);
+                    }
+                    else
+                    {
+                        telemetry.ChoicesUnavailable.Add(new UnavailableChoice(choice.Id, choice.Available.Reason));
+                    }
+                }
+            }
+
             if (seen != null)
             {
                 seen.Context = ctx;
@@ -1397,7 +1447,8 @@ namespace Agenerela
                 StimulusLabel = call.StimulusLabel,
                 IdleExampleStimulus = idleExample,
                 TargetRule = call.CheckTarget && provider.Capabilities?.ReportsTokenProbabilities != true,
-                ListActionsAndTargets = call.ListActionsAndTargets,
+                // A choice's words reach a local model only through the list (DR-022).
+                ListActionsAndTargets = call.ListActionsAndTargets || call.Choices != null,
                 MaxListedTargets = call.MaxListedTargets,
                 LegalTargets = call.LegalTargets,
                 StatementRulesWording = call.StatementRulesWording,
@@ -1406,6 +1457,7 @@ namespace Agenerela
                 // A call that asks for no statement shows none in its examples either (#266).
                 ExampleStatements = call.ExampleStatements && call.AskForStatement,
                 ExampleTargetFallback = call.ExampleTargetFallback,
+                ExampleObservations = call.ExampleObservations,
                 Stimulus = stimulus,
                 // Observe keeps the call's own lines last in ctx, after every source's.
                 ObservationPlacement = call.ObservationPlacement,
@@ -1427,7 +1479,7 @@ namespace Agenerela
                 available = DecisionSchema.Takeable(available, ctx.Targets, availability);
             }
 
-            seen?.SetActions(ctx, Definitions(), availability, available);
+            seen?.SetActions(ctx, call.Choices != null ? ctx.Actions.Definitions : Definitions(), availability, available);
 
             var schema = DecisionSchema.Build(ctx, available, paired, availability, call.AskForStatement);
             string fewShot = FewShotBuilder.Build(available, ctx.Targets, options, availability);
@@ -1446,6 +1498,9 @@ namespace Agenerela
             var request = PromptBuilder.Build(ctx, schema, fewShot, history, options, availability, telemetry.TargetsUnlisted);
             seen?.SetUnlisted(telemetry.TargetsUnlisted);
             request.AgentId = Id;
+            request.Temperature = call.Temperature;
+            request.Seed = call.Seed;
+            request.MaxReplyTokens = call.MaxReplyTokens;
             telemetry.TargetRuleSent = PromptBuilder.SendsTargetRule(schema, options);
             return request;
         }
@@ -1813,6 +1868,63 @@ namespace Agenerela
         // order (DR-014). What a source reports dropping is copied into dropped, when given, right
         // after its Collect and before the next source runs, since its list lasts only until then.
         // A preview, when seen is given, gets each source's own share (#166).
+        // The registry a choice call offers (DR-022): one action per choice, taking no target, whose
+        // availability is the choice's own and whose handler does nothing. ActionRegistry's checks are
+        // the choices' checks, reworded for the option they came from.
+        private static ActionRegistry ChoiceRegistry(IList<Choice> choices)
+        {
+            if (choices.Count == 0)
+            {
+                throw new ArgumentException(
+                    "DecideOptions.Choices is empty: there is nothing to choose. Leave it null to offer the agent's actions.", "options");
+            }
+
+            var registry = new ActionRegistry();
+            for (int i = 0; i < choices.Count; i++)
+            {
+                var choice = choices[i];
+                if (choice == null)
+                {
+                    throw new ArgumentException($"DecideOptions.Choices[{i}] is null.", "options");
+                }
+
+                if (string.IsNullOrWhiteSpace(choice.Description))
+                {
+                    throw new ArgumentException(
+                        $"DecideOptions.Choices[{i}] ('{choice.Id}') has no description: it is all a local model reads of it.", "options");
+                }
+
+                try
+                {
+                    registry.Register(new ActionDefinition { Id = choice.Id, Description = choice.Description, TakesNoTarget = true },
+                        new ChoiceHandler(choice.Available.IsAvailable));
+                }
+                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+                {
+                    throw new ArgumentException($"DecideOptions.Choices[{i}] ('{choice.Id}') cannot be offered: {e.Message}", "options", e);
+                }
+            }
+
+            return registry;
+        }
+
+        // A choice's handler: available as the call said, and nothing to run (DR-022).
+        private sealed class ChoiceHandler : IActionHandler
+        {
+            private readonly bool available;
+
+            public ChoiceHandler(bool available)
+            {
+                this.available = available;
+            }
+
+            public bool IsAvailable(AgentContext ctx) => available;
+
+            public void Execute(AgentContext ctx, AgentDecision decision)
+            {
+            }
+        }
+
         private AgentContext Snapshot(string stimulus, IReadOnlyList<string> observations, List<string> dropped, object correlation,
             AgentPreview seen = null)
         {
