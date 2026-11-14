@@ -173,6 +173,45 @@ namespace GreyBoxStrategy.Tests
         }
 
         [Test]
+        public void AChoiceCall_GivesItsOptionsWithTheCall_AndRegisteredChoicesKeepsTheOldWay()
+        {
+            var g = AtTurnTwo(Rules(r => r.Choices = true));
+            g.World.Country("valen").Gold = 100;
+            Tell(g, "sellswords", "valen", Story);
+            var request = g.ChoiceRequests().Single();
+            var options = new[] { "hire_sellswords", "send_sellswords_away" };
+            bool Registers(Agent a) => a.Actions.Definitions.Any(d => options.Contains(d.Id));
+
+            var seat = new CountryAgent(g.World, "valen", new ScriptedProvider(), ModelSeatOptions.Named("default+storyteller+choices"));
+            var call = seat.OptionsFor(request);
+            Assert.That(call.Choices?.Select(c => c.Id), Is.EqualTo(options), "the options come with the call (DR-022)");
+            Assert.That(call.Choices.Select(c => c.Description), Has.All.StartWith("Choose to "));
+            Assert.That(Registers(seat.Agent), Is.False, "no option registered as an action");
+            var writs = new WritRuler(g.World, "valen", new ScriptedProvider(), ModelSeatOptions.Named("default+storyteller+choices"));
+            Assert.That(writs.OptionsFor(request).Choices?.Select(c => c.Id), Is.EqualTo(options));
+            Assert.That(Registers(writs.Court), Is.False);
+
+            var old = new CountryAgent(g.World, "valen", new ScriptedProvider(), ModelSeatOptions.Named("default+storyteller+choices+registered-choices"));
+            Assert.That(old.OptionsFor(request).Choices, Is.Null);
+            Assert.That(Registers(old.Agent), Is.True, "+registered-choices registers them, as before");
+            var oldWrits = new WritRuler(g.World, "valen", new ScriptedProvider(), ModelSeatOptions.Named("default+storyteller+choices+registered-choices"));
+            Assert.That(oldWrits.OptionsFor(request).Choices, Is.Null);
+            Assert.That(Registers(oldWrits.Court), Is.True);
+        }
+
+        [Test]
+        public void TheStoryteller_CapsItsReplies_AndNoReplyCapSendsNone()
+        {
+            var g = AtTurnTwo(Rules());
+            var capped = new Storyteller(g, new ScriptedProvider(), ModelSeatOptions.Named("default+storyteller+title-call"));
+            Assert.That(capped.OptionsForCall().MaxReplyTokens, Is.EqualTo(ModelSeatOptions.StorytellerReplyCap));
+            Assert.That(capped.TitleOptions().MaxReplyTokens, Is.EqualTo(ModelSeatOptions.StorytellerReplyCap));
+            var open = new Storyteller(g, new ScriptedProvider(), ModelSeatOptions.Named("default+storyteller+title-call+no-reply-cap"));
+            Assert.That(open.OptionsForCall().MaxReplyTokens, Is.Null);
+            Assert.That(open.TitleOptions().MaxReplyTokens, Is.Null);
+        }
+
+        [Test]
         public void TheGameDealsEachTurn_ATale_ADilemma_OrAnOrdinaryEvent()
         {
             var d = AtTurnTwo(Rules(r => r.Choices = true));
