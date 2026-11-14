@@ -1567,7 +1567,7 @@ exists, and where it differs from the list above:
 ### R1. The turn of writs and armies as pieces
 
 - **Sim:**
-  - `Army` (one soldier type until R3), its orders and wake conditions.
+  - `Army` (one soldier type until R3; R3 part one adds three behind `GameRules.UnitTypes`, off), its orders and wake conditions.
   - Writs and the order cycle ([1.3](#13-the-order-of-decisions-within-a-turn)).
   - Simultaneous movement with terrain costs; border crossings.
   - Battles between armies with today's formula; retreat and rout; militia and neutral garrisons.
@@ -1723,7 +1723,7 @@ has the detail.
 - **A border crossing:** the winner steps through, and the loser never crosses. Since the winner now
   stands in the province the loser was leaving, the loser falls back from it, with no second battle.
   Section 1.1's "the loser stays in the province it was leaving" cannot hold with the winner there.
-- **Sieges, stores, unit types and generals' traits wait for R3.** A walled province is fought for
+- **Sieges, stores, unit types and generals' traits wait for R3** (unit types were built in R3's first part, 14 November, behind `GameRules.UnitTypes`, off). A walled province is fought for
   through its militia (5 + 10 a fort, plus the capital bonus; R1b: 3 + 6 a fort) rather than besieged. Wake conditions 3
   and 6 (a siege ends, stores run low) wait with them.
 - **Recruiting** keeps today's levy (5 + 5 a province, paid at 2 gold a soldier). It appears at the
@@ -2093,7 +2093,7 @@ line, and `findings.md` for anything measured.
 - [x] Tests: seeds per size pass (100 per size and shape by hand, a few in every run); cell adjacency equals the graph; no corner borders; generation time
 
 **R3, armies in depth**
-- [ ] Three types, costs, the counter rule
+- [x] Three types, costs, the counter rule (`GameRules.UnitTypes`, off; scripted only, 14 November; the model rulers' orders next)
 - [ ] Generals: names, ten traits, second trait, death and capture
 - [ ] Walls and sieges, breach, broken siege, forts hold the road
 - [ ] Supply model B, the army cap; sim A/B of B against A against none
