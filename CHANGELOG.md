@@ -29,6 +29,11 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: the advisor in rule mode** (#20). A model on your own seat proposes each writs turn's plan in
+  the council: its counsel, each order with Take and Why, and "Take the advice". It is on by default with model
+  rulers and can be switched in New game and the pause menu. It is asked alongside the rulers, its orders always
+  map to legal moves, and only advice you take is recorded as yours.
+
 - **Painted Realm: detail up close, fields that show, rule mode on a big map** (#20).
   - Zoomed in, the visible part of the chart is drawn again at screen scale (trees, fields, settlements, roads),
     not magnified.

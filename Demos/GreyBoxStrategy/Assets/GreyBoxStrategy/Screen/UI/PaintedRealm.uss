@@ -74,6 +74,13 @@
 .labels { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
 .plab { position: absolute; font-size: 12px; -unity-font-style: italic; color: rgb(243, 231, 200); -unity-text-outline-width: 0.25px; -unity-text-outline-color: rgb(20, 14, 8); text-shadow: 1px 1px 2px rgba(15, 10, 5, 0.95); translate: -50% -50%; }
 .rlab { position: absolute; font-size: 13px; -unity-font-style: italic; letter-spacing: 6px; color: rgba(246, 234, 204, 0.86); text-shadow: 1px 1px 3px rgba(15, 10, 5, 0.95); translate: -50% -50%; }
+/* The advisor in the council: its counsel, then each suggestion with Take and Why. */
+.advice-counsel { -unity-font-style: italic; font-size: 12.5px; color: rgb(222, 206, 170); white-space: normal; margin: 2px 0 6px 0; }
+.advice-row { flex-direction: row; align-items: center; margin-bottom: 3px; }
+.advice-text { flex-grow: 1; flex-shrink: 1; font-size: 12.5px; white-space: normal; color: rgb(234, 223, 198); }
+.advice-take { margin-left: 6px; }
+.advice-why { width: auto; padding-left: 6px; padding-right: 6px; margin-left: 4px; }
+.advice-all { margin-top: 2px; margin-bottom: 6px; }
 /* A realm's name, zoomed out: widely spaced capitals along its land (rules v2 2.6), turned by the screen. */
 /* A marker at the map area's edge pointing to an off-screen battle or your capital (rule mode). */
 .edge-mark { position: absolute; flex-direction: row; align-items: center; translate: -50% -50%; padding: 2px 7px 2px 3px; background-color: rgb(26, 21, 15); border-width: 1px; border-color: rgba(201, 164, 90, 0.75); border-radius: 3px; }
