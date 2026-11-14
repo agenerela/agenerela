@@ -2304,7 +2304,7 @@ The events of all four arms can be read game by game, with every choice and ever
   because one statement cannot carry a line per option; and every option of every dilemma is an action
   registered on every seat, unavailable except on its own choice call.
 - **3, one free-text field:** hit, and the second call fixed it (titles missing 47% to 0%, 0.37 s an event).
-- **4, keep the move and replace the statement:** hit again, by the history check, invisible to telemetry.
+- **4, keep the move and replace the statement:** hit again, by the history check, invisible to telemetry. Since #308 the history check is a guard, and telemetry records it in `StatementsReplaced`.
 - **5, the fact ledger:** hit: tale state, the happenings line and a choice's facts are game code.
 - **6, remembering as a list:** hit: "told so far" by template and target, and each tale's description.
 - **8, fairness and cooldowns:** hit harder: a template's own cooldown, two open tales at most, one long
