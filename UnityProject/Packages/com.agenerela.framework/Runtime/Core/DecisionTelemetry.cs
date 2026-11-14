@@ -13,7 +13,8 @@ namespace Agenerela{
         public string Model = string.Empty; // The model that answered, as the provider reported it, such as qwen3.5:2b; empty when it did not say (#88)
         public string ProviderConfig = string.Empty; // The name of the provider config asset whose provider answered, such as OllamaLocal; empty when the provider was built in code (#92, DR-013)
         public string FrameworkVersion = string.Empty; // AgenerelaInfo.version
-        public List<string> GuardsFired = new List<string>(); // Each guard that did not pass the decision, in order: at most one from DecideAsync, then "SchemaLegalityGuard@Execute" for each refusal by Execute's re-check (#106)
+        public List<string> GuardsFired = new List<string>(); // Each guard that did not pass the decision, in order: from DecideAsync, each that replaced the statement (StatementsReplaced) and at most one that stopped it, then "SchemaLegalityGuard@Execute" for each refusal by Execute's re-check (#106)
+        public List<ReplacedStatement> StatementsReplaced = new List<ReplacedStatement>(); // Each statement a guard replaced while keeping the move (GuardVerdict.ReplaceStatement), in order, with the guard, its reason and both texts; empty when none did. Never a stop: Verdict stays null unless a later guard stopped the move (#266 item 4)
         public GuardVerdictKind? Verdict; // The verdict of the guard that stopped the decision, or of Execute's re-check when it refused; null when every guard passed (#106)
         public string GuardReason; // That guard's reason, word for word; null when every guard passed (#106)
         public List<string> TargetsDropped = new List<string>(); // Target ids a source found but left out because of its cap (#32)
@@ -55,6 +56,7 @@ namespace Agenerela{
             ProviderConfig = string.Empty;
             FrameworkVersion = string.Empty;
             GuardsFired = new List<string>();
+            StatementsReplaced = new List<ReplacedStatement>();
             Verdict = null;
             GuardReason = null;
             TargetsDropped = new List<string>();
