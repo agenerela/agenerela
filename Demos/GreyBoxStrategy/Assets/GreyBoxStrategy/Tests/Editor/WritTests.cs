@@ -467,7 +467,9 @@ namespace GreyBoxStrategy.Tests
             War(g, "valen", "orsk");
             War(g, "merrow", "orsk");
             foreach (var p in g.World.ProvincesOf("orsk").ToList()) p.Occupier = "valen";
-            ArmyOf(g, "orsk").Location = g.World.ProvincesOf("kesh").First().Id;
+            // Abroad in an enemy's land, so it is not sent home (it would find no home and disband) and meets no army.
+            ArmyOf(g, "orsk").Location = g.World.ProvincesOf("merrow").OrderBy(p => p.IsCapital).ThenBy(p => p.Id)
+                .First(p => !g.World.Armies.Any(x => x.Location == p.Id)).Id;
             Turn(g);
             return g;
         }
