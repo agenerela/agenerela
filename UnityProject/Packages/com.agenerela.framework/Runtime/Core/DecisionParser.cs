@@ -38,7 +38,9 @@ namespace Agenerela
         /// must be one too, and may be left out only when <paramref name="schema"/> had no target
         /// field, which means no target was registered; the decision's target is then
         /// <see cref="TargetRegistry.NoTarget"/>. <c>statement</c> missing or null is empty, and
-        /// otherwise must be a string. Any other field is ignored.
+        /// otherwise must be a string. Any other field is ignored, and so is a <c>statement</c>
+        /// when <paramref name="schema"/> asked for none (<see cref="DecideOptions.AskForStatement"/>,
+        /// #266): the decision's statement is then empty, whatever the provider sent.
         /// </summary>
         /// <param name="schema">The schema the request carried, which says whether it asked for a target.</param>
         /// <param name="problem">Why the reply was rejected, or null.</param>
@@ -68,7 +70,7 @@ namespace Agenerela
             }
 
             string statement = "";
-            var statementToken = answer[DecisionSchema.StatementFieldName];
+            var statementToken = schema.AsksForStatement ? answer[DecisionSchema.StatementFieldName] : null;
             if (statementToken != null && statementToken.Type != JTokenType.Null)
             {
                 if (statementToken.Type != JTokenType.String)

@@ -61,6 +61,18 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **A decision that asks for no statement** (#266). `DecideOptions.AskForStatement`, on by default,
+  leaves the free-text field out of a call when false: the schema has `action` and `target` only
+  (or `action` alone with no target registered), flat and in every branch of a paired schema; the
+  identity's statement rules line is not sent; the examples show no statement; and the target rule,
+  when sent, no longer asks the agent to say that a thing is not here. The parsed decision's
+  `Statement` is empty, even if the provider sent one; memory remembers the reply without it; a
+  decision a guard stops asks neither `Agent.RefusalStatement` nor a refusal line. New:
+  `DecisionSchema.Build(ctx, pairTargets, askForStatement)`, `DecisionSchema.AsksForStatement`,
+  `DecisionTelemetry.StatementAsked` and the decision log's `statementAsked`, written only when
+  false. With the option on, every request is byte-identical to one sent before. It changes what
+  the model reads, so it is unmeasured as a default and owed an A/B run (#151).
+
 - **What a remembered decision holds, and what came of it** (#244 item 4, #216 item 3).
   `RollingHistory.Remembers` takes a `RememberedDecision`: `Whole`, the default, sends each past
   decision as before, byte for byte; `Move` leaves its statement out; `MoveAndOutcome` leaves the

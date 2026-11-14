@@ -18,8 +18,8 @@ flowchart LR
     A[Registered actions<br/>ActionRegistry] --> V[ActionAvailability.Evaluate<br/>what the agent may do now]
     T[Registered targets<br/>TargetRegistry] --> V
     S[Agent state] --> V
-    V --> B["DecisionSchema.Build(ctx, pairTargets)"]
-    B --> D["DecisionSchema<br/>Fields: action, target?, statement<br/>Pairs: null or branches"]
+    V --> B["DecisionSchema.Build(ctx, pairTargets, askForStatement)"]
+    B --> D["DecisionSchema<br/>Fields: action, target?, statement?<br/>Pairs: null or branches"]
     D --> J[JsonSchemaSerializer<br/>JSON Schema text]
     D --> G[GbnfSerializer<br/>GBNF text, #126]
     J --> O[Ollama and cloud APIs<br/>SchemaDialect.JsonSchema]
@@ -46,7 +46,7 @@ A `SchemaField` has:
 | `Name` | The JSON key: `action`, `target` or `statement` (`DecisionSchema.ActionFieldName` and its siblings). |
 | `Description` | Text for a model that is shown the schema. JSON Schema carries it; a grammar has nowhere to put it, so GBNF drops it. |
 | `AllowedValues` | The only values allowed, in order, or `null` for a free-form string. |
-| `Required` | Whether every answer must contain the field. All three are `true` in every schema `DecisionSchema.Build` makes. A hand-built schema may set it `false`, and `JsonSchemaSerializer` then leaves the field out of `required` (test `OnlyRequiredFieldsAreListedAsRequired`). |
+| `Required` | Whether every answer must contain the field. Every field is `true` in every schema `DecisionSchema.Build` makes. A hand-built schema may set it `false`, and `JsonSchemaSerializer` then leaves the field out of `required` (test `OnlyRequiredFieldsAreListedAsRequired`). |
 
 An `ActionTargets` branch has `Actions` (ids in the action enum's order) and `Targets` (ids in the
 target enum's order, `no_target` first when the actions may take none). Every action in a branch
@@ -148,6 +148,17 @@ So in a paired schema an action appears in **exactly one** branch, every branch'
 non-empty, and every value comes from the flat enums. `JsonSchemaSerializer.ValidatePairs` refuses
 a schema that breaks any of these.
 
+### Any of the three without `statement` (#266)
+
+A call that sets `DecideOptions.AskForStatement = false` gets shape 1, 2 or 3 with the `statement`
+field left out of `Fields`, and so out of every branch of a paired schema: `{action, target}`, or
+`{action}` alone when no target is registered. The enums and the pairs are exactly what they are
+with it. `DecisionSchema.AsksForStatement` says which a schema is; the parser reads it, and keeps no
+statement a provider sends anyway, and so does `PromptBuilder`, which then sends no statement rules
+line and a target rule that does not ask the agent to say anything. A serializer has nothing to do
+but walk `Fields` (tests in `NoStatementTests`). The default is on, and every request sent with it
+is byte-identical to one sent before the option existed.
+
 ### 4. Statement only
 
 `DecisionSchema.StatementOnly()`: one free-form `statement` field and nothing else. It is the
@@ -196,8 +207,8 @@ These are suggestions, not a specification; the grammar's exact text is #126's t
   `ActionTargets`, each with its own action alternation and its own target alternation. Because an
   action is in exactly one branch, once the model has written the action only one branch can still
   match, so the target is constrained to that action's targets. That is the whole point of pairing.
-- **No target field** and **statement only** fall out of walking `Fields` rather than assuming
-  three fields.
+- **No target field**, **no statement field** and **statement only** fall out of walking `Fields`
+  rather than assuming three fields.
 - **`Required = false`:** JSON Schema lets such a field be absent. No schema the framework builds
   has one today. Either make the field optional in the grammar or refuse it clearly; say which in
   the pull request.
@@ -230,13 +241,15 @@ least:
 | An agent with no targets | flat, no target field | `EmptyTargetRegistryShapeHasNoTargetProperty` |
 | The quest giver | paired, three branches | `PairedSchemaTests.QuestGiverJson` |
 | A refusal line | statement only | `DecisionSchema.StatementOnly()` |
+| A move with no statement | flat and paired, no statement field | `NoStatementTests` (#266) |
 | Ids with a quote, a backslash and a non-ASCII letter | flat | New for #126. `EscapesTextThatWouldBreakTheJson` covers a description, which a grammar does not carry; in GBNF the escaping risk is in the enum values |
 
 ## What is not in the schema
 
 So nobody looks for them:
 
-- **No typed parameters.** A decision is one action, one target and one statement. Quantities,
+- **No typed parameters.** A decision is one action, one target and one statement, or no statement
+  at all (#266). Quantities,
   prices or a strength are not fields (#190 LV #12, #266 item 2).
 - **No reasoning field.** A field before `action` measured worst of five variants.
 - **No length cap on `statement`.** A runaway reply has been seen once per 460 calls (#244
