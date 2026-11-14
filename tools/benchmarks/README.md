@@ -128,7 +128,9 @@ script's own client, so the key is read and sent as it does and never printed;
 `AGENERELA_OLLAMA_REMOTE` points it at another checkout's copy when this one has no `.env` beside
 it. 48 requests, about a minute. Which internal chat path a model takes (rendered, which keeps key
 order, or native, which sorts it) depends on the model: say which you ran. It leaves the model
-loaded. The result is in `docs/llm-wiki/findings.md`, dated the day it ran.
+loaded. The gateway answers 403 for `/v1/chat/completions`, so through the RTX 5080 only the
+`/api/chat` half runs; the OpenAI-compatible half needs a local Ollama. The result of
+14 November 2026 is in `docs/llm-wiki/findings.md`.
 
 ## `non_llm_decider_probe.py` and `non_llm_examples.json`
 

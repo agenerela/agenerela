@@ -4106,3 +4106,62 @@ Nothing like either had been measured (findings and build plan Appendix A checke
 - **A loses:** the few lines left repeat more (the one court line a turn says the same thing turn after turn), the model wrote a statement anyway on 1,259 of the 6,036 decisions asked to stay silent (21%), and treaties fell by more than half, with the peace η² halved (0.63 → 0.31). The statement seems to carry part of the diplomacy. It saves 1.7 s a turn, so asking without the field for model time alone is worth its own run with #266's `AskForStatement`, which also leaves the statement rules out of the prompt.
 - What B does not reach: 22% is still far above the one-move game's 5%; a ruler shown four lines can still return to a fifth.
 - **A defect in arm B as measured, found after the run:** the rulers' agents keep 12 observation lines, the call's own lines count first, and the sources fill the rest, so the last source lines are cut. The own-lines line pushed out "Ordered this turn" (the orders already given) and, now and then, an army's moves line. In 5 scripted 40-turn games the ordered line was missing from 780 of 1,817 later orders (43%) with own lines against 21 in the control, and the moves line from 21 of 1,625 army orders against none. The rulers measured in B therefore often did not see their earlier orders of the turn; its legality held regardless (0 illegal answers). **Fixed with the default:** with own lines on, the agents keep 13 lines, which restores exactly the control's lines (21 and 0 in the same probe); test `TheCourtAndTheMarshal_ReadLocalFacts_AndTheirOwnMovesLine` failed without the fix. The fixed default is unmeasured live until the next A/B, which carries a `default+no-own-lines` arm to confirm it.
+
+### A closed choice beside action and target: Ollama's grammar holds an enum and a bounded array of target ids on `/api/chat`, and a parameter written after `statement` lands in the statement (14 November 2026)
+
+The probe #266 item 2 asks for before any design for typed parameters, with no framework code:
+`tools/benchmarks/closed_choice_grammar_probe.py`. It sends hand-written schemas shaped as
+`JsonSchemaSerializer` writes them (`required`, `propertyOrdering`, `additionalProperties: false`)
+and checks every reply in code. It is not an accuracy claim, and there is no control arm: it asks
+what the grammar allows, not which answer is better.
+
+**Conditions.** RTX 5080, Docker Ollama 0.40.14, over the network (home or VPN), through the
+gateway; `qwen3.5:4b` alone resident (`ps` empty before), temperature 0.7, seed 7, `think: false`,
+`num_predict` 200. One storyteller system prompt (four countries; events famine, windfall, none;
+strengths minor, major), six stimuli that push against the constraints (three countries, "every
+country", "catastrophic", none at all), 6 requests an arm. Raw replies:
+`.scratch/266-gaps/probe-20261114-0214.jsonl` in this worktree (`266-framework-gaps-459b69`).
+
+**Arms.** `strength` (enum `minor`/`major`) after `target`; `strength` after `statement`;
+`targets`, an array of the country ids with `minItems` 1 and `maxItems` 2; the same with
+`uniqueItems`.
+
+| `/api/chat` with `format` | n | Parsed | Key order kept | Enum value | Array, 1–2 allowed ids | No duplicate |
+|---|---:|---:|---:|---:|---:|---:|
+| `strength` after `target` | 6 | 6 | 6 | 6 | – | – |
+| `strength` after `statement` | 6 | 6 | 6 | 6 | – | – |
+| `targets`, 1–2 | 6 | 6 | 6 | – | 6 | 6 |
+| `targets`, 1–2, `uniqueItems` | 6 | 6 | 6 | – | 6 | 6 |
+
+- **The grammar held every constraint.** Every `strength` was `minor` or `major`, "worse than
+  anything before" included. Every array held one or two allowed ids: "Strike orsk, kesh and
+  fenmark" and "Strike every country" came back as two, so `maxItems` cuts silently, and "Nothing
+  should happen to anyone" still struck two, because `minItems` 1 forces one (a game wanting
+  "nobody" needs `minItems` 0 or the `none` action to take no targets).
+- **The key order was kept on all 24**, as the schema gave it. `qwen3.5:4b` takes Ollama's
+  rendered path (`renderer_parser`, 5 November), so this says nothing about the native path, which
+  sorts keys alphabetically; there `strength` and `targets` would both sort after `statement`,
+  the order that failed here (next point). That path is not covered: it needs a model served through its GGUF
+  template (`MiniCPM5-2B` logged that path on 4 November), which was not pulled.
+- **A parameter after `statement` is written into the statement.** With `strength` last, 3 of 6
+  statements were the bare word `minor` or `major` ("Strike orsk, kesh and fenmark": statement
+  `minor`, strength `major`). With `strength` before `statement`, none were. The model never reads
+  the schema (10 October), so it writes what the prompt asks for ("how hard") in the first free
+  slot. A design should put parameters before `statement`, as `target` is (DR-008's order rule),
+  and say in the prompt what each one is.
+- **`uniqueItems` is not shown to do anything.** The two array arms gave identical replies, seed
+  for seed, and no reply in either repeated an id, so whether the grammar enforces it is unknown.
+- **Pairing is not in the grammar.** `none` came with a strength and a target (`orsk`) or two
+  targets; nothing ties a parameter to an action in these schemas, as `TakesNoTarget` (#245) does
+  for the target.
+- **The OpenAI-compatible endpoint was not reached.** The gateway answers 403 for
+  `/v1/chat/completions` by design (it exposes `/v1/systemone` only,
+  `tools/ollama-server/README.md`), so that arm stopped after its first refusals, 5 requests. It
+  needs a local Ollama, never compared with this one, or a gateway route, which is not this probe's
+  to add.
+- Replies took 0.4 to 1.0 s, the first 6.6 s (the load).
+
+**What would change this.** A native-path model that keeps a parameter's value valid but moves it
+after `statement`, which would make the field order unreachable by schema for such models, as
+for `target` (5 November). A reply with a repeated id under `uniqueItems`. A later Ollama that
+changes either path.
