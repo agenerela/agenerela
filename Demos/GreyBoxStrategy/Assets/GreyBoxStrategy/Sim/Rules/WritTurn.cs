@@ -53,6 +53,32 @@ namespace GreyBoxStrategy
         private List<CountryRequest> openRequests;
         private List<Proposal> proposals;
         private int lastChangeTurn;
+        // With StalemateByWarScore: each war's score when the counter last moved for it.
+        private readonly Dictionary<string, int> scoreAtChange = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        // Land changed hands: the stalemate counter restarts, except, with StalemateByWarScore, for land taken or
+        // freed by force of arms (occupation, a siege, holding), which the war score already tells.
+        private void LandChanged(bool byForce)
+        {
+            if (!(Rules.StalemateByWarScore && byForce)) lastChangeTurn = World.Turn;
+        }
+
+        // With StalemateByWarScore: a new war, or a war whose score moved StalemateWarScoreStep since the counter
+        // last moved for it, restarts the counter.
+        private void WarScoresMoved()
+        {
+            var alive = World.Alive.Select(c => c.Id).OrderBy(x => x, StringComparer.Ordinal).ToList();
+            for (int i = 0; i < alive.Count; i++)
+                for (int j = i + 1; j < alive.Count; j++)
+                {
+                    if (!World.AtWar(alive[i], alive[j])) continue;
+                    string key = alive[i] + "|" + alive[j];
+                    int score = WarScore.Of(World, alive[i], alive[j]);
+                    if (scoreAtChange.TryGetValue(key, out int was) && Math.Abs(score - was) < Rules.StalemateWarScoreStep) continue;
+                    scoreAtChange[key] = score;
+                    lastChangeTurn = World.Turn;
+                }
+        }
 
         /// <summary>The proposals now waiting for an answer (the screen and a log show them).</summary>
         public IReadOnlyList<CountryRequest> TreatyRequests => proposals?.Where(p => p.Request != null).Select(p => p.Request).ToList() ?? new List<CountryRequest>();
@@ -317,12 +343,15 @@ namespace GreyBoxStrategy
             foreach (var c in World.CountryList) report.ProvinceCounts[c.Id] = World.ProvinceCount(c.Id);
             Reports.Add(report);
             CheckForWinner();
+            if (Rules.StalemateByWarScore) WarScoresMoved();
             if (Result == null && Rules.StalemateTurns > 0 && World.Turn - lastChangeTurn >= Rules.StalemateTurns)
             {
                 var counts = World.CountryList.ToDictionary(c => c.Id, c => World.ProvinceCount(c.Id), StringComparer.Ordinal);
                 var leader = World.Alive.OrderByDescending(c => counts[c.Id]).ThenByDescending(c => c.Army).ThenByDescending(c => c.Gold).First();
                 Result = new GameResult(leader.Id, Ending.Stalemate, World.Turn, counts);
-                report.Resolution.Add($"No province changed hands for {Rules.StalemateTurns} turns: a stalemate.");
+                report.Resolution.Add(Rules.StalemateByWarScore
+                    ? $"No treaty, no free land taken and no war moving {Rules.StalemateWarScoreStep} points for {Rules.StalemateTurns} turns: a stalemate."
+                    : $"No province changed hands for {Rules.StalemateTurns} turns: a stalemate.");
             }
             phase = IsOver ? Phase.Over : Phase.AwaitingTurn;
             return report;
@@ -394,7 +423,7 @@ namespace GreyBoxStrategy
                 if (term.Action == Actions.DemandOccupied && fromHoldsTheirs) { p.Owner = from; moved++; }
                 else if (term.Action == Actions.CedeOccupied && toHoldsOurs) { p.Owner = to; moved++; }
                 p.Occupier = null;
-                lastChangeTurn = World.Turn;
+                LandChanged(byForce: false);
             }
             report.TerritoryChanges += moved;
             World.SetRelation(from, to, Relation.Truce, Rules.TruceTurns);
@@ -610,7 +639,7 @@ namespace GreyBoxStrategy
                 p.Garrison = 0;
                 p.Occupier = null;
                 report.TerritoryChanges++;
-                lastChangeTurn = World.Turn;
+                LandChanged(byForce: false);
                 report.Resolution.Add($"{who} took {p.Id}, neutral land.");
                 Tell(who, 1, $"We took {p.Id}.");
                 return;
@@ -621,7 +650,7 @@ namespace GreyBoxStrategy
                 Tell(p.Occupier, 1, $"{who} freed {p.Id} from our occupation.");
                 Tell(who, 1, $"We freed {p.Id}.");
                 p.Occupier = null;
-                lastChangeTurn = World.Turn;
+                LandChanged(byForce: true);
                 return;
             }
             if (Rules.Sieges && p.Forts > 0)
@@ -633,7 +662,7 @@ namespace GreyBoxStrategy
             string holder = p.Controller;
             if (!Battle(p.Id, who, mine, holder, new List<Army>(), militia, p)) return;
             p.Occupier = who;
-            lastChangeTurn = World.Turn;
+            LandChanged(byForce: true);
             report.Resolution.Add($"{who} occupies {p.Id} ({p.Owner}'s).");
             Tell(who, 1, $"We occupy {p.Id}, {p.Owner}'s.");
             Tell(p.Owner, 0, $"{who} occupies our {p.Id}.");
@@ -669,7 +698,7 @@ namespace GreyBoxStrategy
             p.SiegedBy = null;
             p.SiegeTurns = 0;
             p.Occupier = who;
-            lastChangeTurn = World.Turn;
+            LandChanged(byForce: true);
             report.Resolution.Add($"{who} took {p.Id} after a siege" + (breach ? ", the walls breached early" : "") + $"; {p.Forts} {(p.Forts == 1 ? "fort" : "forts")} left.");
             Tell(who, 1, $"We took {p.Id} after a siege.");
             Tell(p.Owner, 0, $"{who} took our {p.Id} after a siege.");
@@ -1001,7 +1030,7 @@ namespace GreyBoxStrategy
                     p.Garrison = 0;
                     report.TerritoryChanges++;
                 }
-                lastChangeTurn = World.Turn;
+                LandChanged(byForce: false);
                 Eliminate(c, $"{c.Id}'s realm is broken: every province occupied, no army left. Its occupiers keep what they hold.");
             }
         }
@@ -1020,7 +1049,7 @@ namespace GreyBoxStrategy
                 p.Occupier = null;
                 p.Garrison = 0;
                 report.TerritoryChanges++;
-                lastChangeTurn = World.Turn;
+                LandChanged(byForce: true);
                 report.Resolution.Add($"{to} has held {p.Id} for {Rules.OccupationBecomesOwnership} turns: it is {to}'s now.");
                 Tell(to, 1, $"{p.Id} is ours now, held {Rules.OccupationBecomesOwnership} turns.");
                 Tell(from, 1, $"{p.Id}, held by {to} for {Rules.OccupationBecomesOwnership} turns, is {to}'s now.");

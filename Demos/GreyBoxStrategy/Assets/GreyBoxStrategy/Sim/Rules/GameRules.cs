@@ -189,6 +189,16 @@ namespace GreyBoxStrategy
         /// </summary>
         public bool BreakWhenAllOccupied = false;
 
+        /// <summary>
+        /// Pacing candidate (the tech lead's pick after the live look of 14 November): the stalemate counter reads
+        /// war score and land held by treaty, not occupation. Land taken or freed by force of arms (occupation, a
+        /// siege, holding it <see cref="OccupationBecomesOwnership"/> turns) no longer restarts it; a treaty, free
+        /// land taken, a realm broken, a new war, or a war's score moving <see cref="StalemateWarScoreStep"/> points
+        /// does. Off by default.
+        /// </summary>
+        public bool StalemateByWarScore = false;
+        public int StalemateWarScoreStep = 10;
+
         // --- R3, armies in depth: unit types and the counter rule (rules v2 3.3) ---
 
         /// <summary>
