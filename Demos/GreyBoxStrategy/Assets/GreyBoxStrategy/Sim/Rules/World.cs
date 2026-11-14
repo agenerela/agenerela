@@ -70,6 +70,13 @@ namespace GreyBoxStrategy
         /// turn; 0 when it is not occupied, and back to 0 whenever the occupier changes.
         /// </summary>
         public int OccupiedTurns { get; set; }
+        /// <summary>
+        /// With <see cref="GameRules.Sieges"/>: the country besieging it, or null; and the turns its siege has lasted.
+        /// The province stays its controller's until the siege ends.
+        /// </summary>
+        public string SiegedBy { get; set; }
+        public int SiegeTurns { get; set; }
+
         /// <summary>Who controls it now: the occupier, or else the owner (null for neutral land).</summary>
         public string Controller => Occupier ?? Owner;
 

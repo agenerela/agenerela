@@ -38,7 +38,9 @@ namespace GreyBoxStrategy
                 // With unit types (R3), each army's mix: "maren_host 50 (25 pikes, 15 riders, 10 bows) at stonereach".
                 var shown = armies.Take(MaxArmiesListed).Select(a => $"{a.Id} {a.Soldiers}" + (rules.UnitTypes ? $" ({Units.Mix(a)})" : "")
                     + (rules.Generals && a.General != null ? $", led by {a.General.Title}," : "") + $" at {a.Location}, " +
-                    (a.Marching ? $"marching to {a.Destination}" : a.Awaiting ? "awaiting orders" : "holding"));
+                    (a.Marching ? $"marching to {a.Destination}"
+                     : rules.Sieges && world.Province(a.Location)?.SiegedBy == countryId ? Siege(world, a.Location)
+                     : a.Awaiting ? "awaiting orders" : "holding"));
                 lines.Add("Our armies: " + string.Join("; ", shown) + (armies.Count > MaxArmiesListed ? $"; and {armies.Count - MaxArmiesListed} more" : "") + ".");
             }
             var occupiedOfOurs = world.ProvinceList.Where(p => p.Owner == countryId && p.Occupier != null).ToList();
@@ -63,13 +65,23 @@ namespace GreyBoxStrategy
                 lines.Add($"{other.Id}: {relation}; {other.Army} soldiers in {Plural(theirArmies, "army", "armies")}" + (mostly != null ? $", {mostly}" : "") + $", {Facts.Provinces(world.ProvinceCount(other.Id))}"
                           + (world.Borders(countryId, other.Id) ? "; borders us" : "")
                           + (weOccupy.Length > 0 ? $"; we occupy {weOccupy}" : "")
-                          + (occupies.Length > 0 ? $"; it occupies our {occupies}" : "") + ".");
+                          + (occupies.Length > 0 ? $"; it occupies our {occupies}" : "")
+                          + (rules.Sieges && world.ProvinceList.Any(p => p.Controller == countryId && p.SiegedBy == other.Id)
+                              ? "; it besieges our " + string.Join(", ", world.ProvinceList.Where(p => p.Controller == countryId && p.SiegedBy == other.Id).Select(p => p.Id)) : "") + ".");
             }
 
             int neutralNear = world.ProvinceList.Count(p => p.IsNeutral && world.Neighbours(p).Any(n => n.Controller == countryId));
             if (neutralNear > 0 && lines.Count < MaxStanding)
                 lines.Add(neutralNear == 1 ? "1 neutral province borders our land." : $"{neutralNear} neutral provinces border our land.");
             return lines.Take(MaxStanding).ToList();
+        }
+
+        // "besieging corwick, turn 2 of 4": a siege as its besieger reads it.
+        private static string Siege(World world, string provinceId)
+        {
+            var p = world.Province(provinceId);
+            int needed = Game.SiegeTurnsNeeded(world.Rules, p, world.ArmiesAt(p.Id).Where(a => a.Owner == p.SiegedBy).ToList());
+            return $"besieging {p.Id}, turn {p.SiegeTurns} of {needed}";
         }
 
         /// <summary>The court's moves as one line among its facts, from the moves it was offered.</summary>
