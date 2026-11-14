@@ -1165,6 +1165,16 @@ voice saved 1.7 s a turn but halved the treaties. Numbers in [`findings.md`](../
 took a place the agents' 12 lines did not have; with own lines on the agents keep 13 now, so the default reads
 exactly the control's lines plus its own.
 
+**Silent armies** (`+silent-armies`, 14 November): the marshal's army orders are asked with no statement at
+all (`DecideOptions.AskForStatement` false, #266), so the schema has no `statement` field and the prompt no
+statement rules; both court orders keep their line and own lines. 15 games an arm against `default`, with
+`default+no-own-lines` as a third arm: 0.59 s a turn faster (6.87 to 6.28; an army order 0.50 s to 0.33 s),
+repeats in the court's lines unchanged (20% and 22%), no illegal answers, but 3.5 treaties a game against 4.7,
+a drop the run cannot tell from noise and cannot rule out. **Not the default**: it needs a time win with no loss
+elsewhere. Statements reach no other ruler; a line is kept only in its own ruler's memory (the last four
+decisions) and its own lines. The third arm confirmed the fixed own lines: repeats 36% to 21% against
+`no-own-lines`, treaties and time unchanged.
+
 **A country's own writ count.** `GameRules.WritsOverride` maps a country to its own number of writs a turn,
 in place of the formula; `GameRules.UnlimitedWrits` means no limit (shown as "Writs: no limit this turn."),
 so the screen can give the person alone unlimited writs as an easy setting. `World.Writs` reads it, it is
