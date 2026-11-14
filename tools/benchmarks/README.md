@@ -108,6 +108,28 @@ python tools/benchmarks/paired_schema_probe.py qwen3.5:2b .scratch/paired/probe.
 Takes about a minute per model. It appends to the output file and does not create its folder. Re-run it after upgrading Ollama, and unload other models first. The result of 6 November 2026 is in
 `docs/llm-wiki/findings.md`.
 
+## `closed_choice_grammar_probe.py`
+
+The probe #266 item 2 asks for before any design of typed parameters: does Ollama's grammar keep a
+closed choice beside `action` and `target`? Four schemas, each with six stimuli that push against
+it (three countries, a strength the enum lacks, no country at all): an enum field (`strength`,
+`minor` or `major`) after `target` and after `statement`, and an array of target ids with
+`minItems` 1 and `maxItems` 2, without and with `uniqueItems`. Each goes to both of Ollama's chat
+endpoints, `/api/chat` with `format` and `/v1/chat/completions` with `response_format`, at
+temperature 0.7 and seed 7, and each reply is checked in code: parsed, key order (the schema's, or
+sorted), enum values, array length, items and duplicates. A refused schema is recorded.
+
+```bash
+python tools/benchmarks/closed_choice_grammar_probe.py qwen3.5:4b .scratch/probe/closed_choice.jsonl
+```
+
+It talks to the server `tools/ollama-server/ollama_remote.py` is configured for, through that
+script's own client, so the key is read and sent as it does and never printed;
+`AGENERELA_OLLAMA_REMOTE` points it at another checkout's copy when this one has no `.env` beside
+it. 48 requests, about a minute. Which internal chat path a model takes (rendered, which keeps key
+order, or native, which sorts it) depends on the model: say which you ran. It leaves the model
+loaded. The result is in `docs/llm-wiki/findings.md`, dated the day it ran.
+
 ## `non_llm_decider_probe.py` and `non_llm_examples.json`
 
 Measures choosing the action and target **without a generative model**: embedding models by
