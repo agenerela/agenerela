@@ -61,6 +61,13 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **Sampling and a reply cap per call** (#266 item 7, #244 item 11). `DecideOptions.Temperature`,
+  `Seed` and `MaxReplyTokens`, null by default, carried on the new `DecisionRequest.Temperature`,
+  `Seed` and `MaxReplyTokens` and sent by `OllamaProvider` as `options.temperature` (in place of
+  `OllamaSettings.Temperature`), `options.seed` and `options.num_predict`, the last two only when set.
+  A call that sets none sends exactly the request sent before. A refusal line is sampled as its
+  decision was. A negative or non-finite temperature, or a cap of 0 or less, throws at the call.
+
 - **A choice among options given with the call** (#266 item 2, DR-022). `DecideOptions.Choices`,
   null by default, a list of the new `Choice` (id, description, `Available`): the call offers those
   choices instead of the agent's registered actions, then `none`, with no `target` field, and the
