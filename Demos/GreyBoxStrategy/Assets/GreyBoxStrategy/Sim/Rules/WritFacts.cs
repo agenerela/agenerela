@@ -63,10 +63,10 @@ namespace GreyBoxStrategy
                 string weOccupy = string.Join(", ", world.ProvinceList.Where(p => p.Owner == other.Id && p.Occupier == countryId).Select(Held));
                 // With unit types (R3), what its armies are mostly: "orsk: at war with us; 60 soldiers in 2 armies, mostly riders, ...".
                 // With fog (R3), the total rounded, and the mix only of the armies our riders scout.
-                var known = rules.Fog ? world.ArmiesOf(other.Id).Where(a => Fog.Scouts(world, countryId, a.Location) && Fog.Sees(world, countryId, a.Location)).ToList()
+                var known = rules.Fog ? world.ArmiesOf(other.Id).Where(a => ArmySight.Scouts(world, countryId, a.Location) && ArmySight.Sees(world, countryId, a.Location)).ToList()
                                       : world.ArmiesOf(other.Id).ToList();
                 string mostly = rules.UnitTypes ? Units.Mostly(UnitMix.Of(known)) : null;
-                string total = rules.Fog ? Fog.About(other.Army) : other.Army.ToString();
+                string total = rules.Fog ? ArmySight.About(other.Army) : other.Army.ToString();
                 lines.Add($"{other.Id}: {relation}; {total} soldiers in {Plural(theirArmies, "army", "armies")}" + (mostly != null ? $", {mostly}" : "") + $", {Facts.Provinces(world.ProvinceCount(other.Id))}"
                           + (world.Borders(countryId, other.Id) ? "; borders us" : "")
                           + (weOccupy.Length > 0 ? $"; we occupy {weOccupy}" : "")
@@ -77,7 +77,7 @@ namespace GreyBoxStrategy
 
             if (rules.Fog)
             {
-                var sightings = Fog.Sightings(world, countryId, rules.MaxSightings);
+                var sightings = ArmySight.Sightings(world, countryId, rules.MaxSightings);
                 lines.Add(sightings.Count == 0 ? "Rival armies we see: none." : "Rival armies we see: " + string.Join("; ", sightings) + ".");
             }
 

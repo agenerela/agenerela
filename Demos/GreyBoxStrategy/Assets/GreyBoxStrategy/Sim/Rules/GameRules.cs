@@ -241,7 +241,7 @@ namespace GreyBoxStrategy
         public int HungerMinLoss = 2;
 
         /// <summary>
-        /// R3, rules v2 3.8: the rulers read rival armies only where they see (<see cref="Fog"/>): position, general
+        /// R3, rules v2 3.8: the rulers read rival armies only where they see (<see cref="ArmySight"/>): position, general
         /// and size rounded to 10 near their land and their armies, the mix only when scouted by riders; each
         /// rival's total, rounded, always. Off by default. Scripted players still read everything.
         /// </summary>

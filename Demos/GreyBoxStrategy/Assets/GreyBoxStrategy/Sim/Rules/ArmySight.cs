@@ -16,7 +16,7 @@ namespace GreyBoxStrategy
     /// or beside that province. Always known: each rival's total soldiers, rounded to 10, and how many armies it
     /// has. Allies and watchtowers are not built.
     /// </remarks>
-    public static class Fog
+    public static class ArmySight
     {
         /// <summary>The provinces <paramref name="countryId"/> sees.</summary>
         public static HashSet<string> Seen(World w, string countryId)

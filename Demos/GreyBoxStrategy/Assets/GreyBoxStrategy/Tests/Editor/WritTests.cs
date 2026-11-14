@@ -1192,7 +1192,7 @@ namespace GreyBoxStrategy.Tests
         [Test]
         public void Fog_RoundsToTen_AndSaysAFewUnderFive()
         {
-            Assert.That((Fog.About(44), Fog.About(45), Fog.About(5), Fog.About(3), Fog.About(120)),
+            Assert.That((ArmySight.About(44), ArmySight.About(45), ArmySight.About(5), ArmySight.About(3), ArmySight.About(120)),
                 Is.EqualTo(("about 40", "about 50", "about 10", "a few", "about 120")));
         }
 
@@ -1201,26 +1201,26 @@ namespace GreyBoxStrategy.Tests
         {
             var g = Fogged();
             var w = g.World;
-            var seen = Fog.Seen(w, "valen");
+            var seen = ArmySight.Seen(w, "valen");
             var orsk = ArmyOf(g, "orsk");
             var near = w.ProvinceList.First(p => p.Controller != "valen" && seen.Contains(p.Id) && p.Info.Terrain != Terrain.Forest);
             var far = w.ProvinceList.First(p => !seen.Contains(p.Id));
             orsk.Soldiers = 44;
             orsk.Location = near.Id;
-            string sighting = Fog.Sighting(w, "valen", orsk);
+            string sighting = ArmySight.Sighting(w, "valen", orsk);
             Assert.That(sighting, Is.EqualTo($"orsk's {orsk.Id}, about 40, led by {orsk.General.Title}, at {near.Id}"));
             var facts = WritFacts.Standing(w, "valen");
             Assert.That(facts.Any(l => l.StartsWith("Rival armies we see: ") && l.Contains(orsk.Id)), Is.True, string.Join("\n", facts));
             orsk.Location = far.Id;
-            Assert.That(Fog.Sighting(w, "valen", orsk), Is.Null, "nothing deeper in");
+            Assert.That(ArmySight.Sighting(w, "valen", orsk), Is.Null, "nothing deeper in");
             Assert.That(WritFacts.Standing(w, "valen").Any(l => l.Contains(orsk.Id)), Is.False);
-            Assert.That(Fog.ArmiesThere(w, "valen", far.Id), Is.Null, "a march order's detail hides it too");
+            Assert.That(ArmySight.ArmiesThere(w, "valen", far.Id), Is.Null, "a march order's detail hides it too");
 
             var forest = w.ProvinceList.FirstOrDefault(p => p.Controller != "valen" && seen.Contains(p.Id) && p.Info.Terrain == Terrain.Forest);
             if (forest != null)
             {
                 orsk.Location = forest.Id;
-                Assert.That(Fog.Sighting(w, "valen", orsk), Is.EqualTo($"an army of orsk's at {forest.Id}"), "in forest, only that an army is there");
+                Assert.That(ArmySight.Sighting(w, "valen", orsk), Is.EqualTo($"an army of orsk's at {forest.Id}"), "in forest, only that an army is there");
             }
 
             var off = NewWrits(1);
@@ -1234,17 +1234,17 @@ namespace GreyBoxStrategy.Tests
         {
             var g = Fogged(types: true);
             var w = g.World;
-            var seen = Fog.Seen(w, "valen");
+            var seen = ArmySight.Seen(w, "valen");
             var orsk = ArmyOf(g, "orsk");
             var near = w.ProvinceList.First(p => p.Controller != "valen" && seen.Contains(p.Id) && p.Info.Terrain != Terrain.Forest);
             orsk.Location = near.Id;
             orsk.Soldiers = 0;
             orsk.Add(UnitType.Riders, 30);
-            Assert.That(Fog.Sighting(w, "valen", orsk), Does.Not.Contain("riders"), "no riders of ours beside it");
+            Assert.That(ArmySight.Sighting(w, "valen", orsk), Does.Not.Contain("riders"), "no riders of ours beside it");
             var host = ArmyOf(g, "valen");
             host.Add(UnitType.Riders, 5);
             host.Location = near.Id;
-            Assert.That(Fog.Sighting(w, "valen", orsk), Does.Contain("(30 riders)"), "our riders scout it");
+            Assert.That(ArmySight.Sighting(w, "valen", orsk), Does.Contain("(30 riders)"), "our riders scout it");
         }
 
         [Test]

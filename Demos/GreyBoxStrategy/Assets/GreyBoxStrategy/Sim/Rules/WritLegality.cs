@@ -245,7 +245,7 @@ namespace GreyBoxStrategy
             else what = p.Occupier == countryId ? $"{p.Owner}'s, occupied by us" : $"{p.Owner}'s, at war";
             if (world.Rules.Fog)
             {
-                string seen = Fog.ArmiesThere(world, countryId, provinceId);
+                string seen = ArmySight.ArmiesThere(world, countryId, provinceId);
                 return $"{what}; {where}" + (seen != null ? $"; {seen}" : "");
             }
             int armies = world.ArmiesAt(provinceId).Where(a => a.Owner != countryId).Sum(a => a.Soldiers);
