@@ -36,6 +36,7 @@ phase table and the open issues, not here.
   - Rule mode has a "next army awaiting orders" jump, and markers at the map's edge for off-screen battles and
     your capital.
   - The province panel speaks to a player.
+  - New game: "Your writs: unlimited" for rule mode, off by default; the council reads "no limit".
 
 - **Painted Realm: a ruler's own last lines, the writs turn's default, and a country's own writ count** (#20).
   - Two voice arms for the writs turn: `+one-voice` (only the first court decision of a turn speaks) and

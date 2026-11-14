@@ -77,10 +77,19 @@ namespace GreyBoxStrategy.Realm
             int used = WritsUsed(req);
             var writs = new VisualElement(); writs.AddToClassList("writs-row");
             writs.Add(new Label("WRITS") { style = { fontSize = 10, letterSpacing = 2, color = new Color(0.55f, 0.5f, 0.4f), width = 52 } });
-            for (int k = 0; k < req.Writs; k++) { var pip = new VisualElement(); pip.AddToClassList("writ-pip"); pip.EnableInClassList("on", k < used); writs.Add(pip); }
-            writs.Add(new Label($"{used} of {req.Writs}") { style = { marginLeft = 6, fontSize = 12, color = new Color(0.86f, 0.8f, 0.66f) } });
-            writs.tooltip = $"Writs a turn: {w.Rules.BaseWrits} + 1 for every {w.Rules.ProvincesPerWrit} provinces you own, at most {w.Rules.MaxWrits}. " +
-                            "The court's order takes one; each army awaiting orders takes one, the most urgent first, until one is left for the court; unused writs are lost.";
+            if (req.Writs == GameRules.UnlimitedWrits)
+            {
+                // New game's "Your writs: unlimited": no pips to count, every army awaiting orders is asked.
+                writs.Add(new Label($"no limit · {used} used") { style = { fontSize = 12, color = new Color(0.86f, 0.8f, 0.66f) } });
+                writs.tooltip = "Your writs have no limit this game (New game, Your writs: unlimited): every army awaiting orders asks you, and your court may give a second order. The rulers keep the rules' count.";
+            }
+            else
+            {
+                for (int k = 0; k < req.Writs; k++) { var pip = new VisualElement(); pip.AddToClassList("writ-pip"); pip.EnableInClassList("on", k < used); writs.Add(pip); }
+                writs.Add(new Label($"{used} of {req.Writs}") { style = { marginLeft = 6, fontSize = 12, color = new Color(0.86f, 0.8f, 0.66f) } });
+                writs.tooltip = $"Writs a turn: {w.Rules.BaseWrits} + 1 for every {w.Rules.ProvincesPerWrit} provinces you own, at most {w.Rules.MaxWrits}. " +
+                                "The court's order takes one; each army awaiting orders takes one, the most urgent first, until one is left for the court; unused writs are lost.";
+            }
             body.Add(writs);
 
             // The court: its order, then a second one if a writ is left.

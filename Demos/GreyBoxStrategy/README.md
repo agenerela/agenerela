@@ -605,6 +605,16 @@ The test now asks a developed province to have 2.5 times a poor one's fields; it
   (`ScreenUI.EdgeMarks.cs`). Each marker keeps inside the free map area, clear of the panels, the council and the
   map key, and stacks along the edge with its neighbours. A click pans there and opens a battle's report.
 
+**Your writs: unlimited**, a New game setting for rule mode on the writs turn, off by default ("As the rules give").
+It gives you alone the rules' `GameRules.UnlimitedWrits` (#294, `WritsOverride`), through
+`ReplayDirector.WithYourWrits` as the rule game begins:
+- every army awaiting orders asks you;
+- your court may give a second order;
+- the council reads "no limit" instead of pips.
+
+The model rulers keep the rules' count. The setting is ignored when watching and on the one-move turn. Tested headless
+through a rule session's own rules (`Unlimited_writs_from_new_game_reach_the_rules_and_every_army_is_asked`).
+
 **The province panel speaks to a player:**
 - No rule or file names: the notes naming `Legality.WhyNot` and `Personas.cs`, and the line about rules v2 and R6,
   are gone.

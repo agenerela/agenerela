@@ -119,6 +119,7 @@ namespace GreyBoxStrategy.Realm
         private void StartNewGame(NewGameChoice c)
         {
             string arm = StoryArms.For(c.Storyteller);
+            yourWritsUnlimited = c.YourWritsUnlimited;
             switch (c.Route(out string why))
             {
                 case NewGameRoute.None: ui.ShowMenuStatus(why); return;
