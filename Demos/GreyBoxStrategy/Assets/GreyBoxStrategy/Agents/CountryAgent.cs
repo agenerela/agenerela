@@ -246,9 +246,10 @@ namespace GreyBoxStrategy
             Council(Actions.OfferPeace, "Ask a country we are at war with for a truce.", new[] { AtWar });
             Envoy(Actions.AcceptPeace, "Accept the offered truce.");
             Envoy(Actions.RefusePeace, "Refuse the offered truce and fight on.");
-            // S2's dilemmas come with the call as DecideOptions.Choices (DR-022). +registered-choices keeps
-            // the old way: every option of every dilemma is an action, open only on its own choice call.
-            if (Options.Choices && Options.RegisteredChoices)
+            // S2's dilemmas: every option of every dilemma is an action, open only on its own choice
+            // call. Registered only with +choices, so the other arms' registry is S1's exactly; with
+            // +call-choices the options come with the call instead (DecideOptions.Choices, DR-022).
+            if (Options.Choices && !Options.CallChoices)
                 foreach (var t in EventRules.S2Templates.Where(t => t.IsChoice))
                     foreach (var o in t.Options)
                         Agent.Actions.Register(new ActionDefinition { Id = o.Id, Description = $"Choose to {o.Label}.", TakesNoTarget = true },
@@ -359,7 +360,7 @@ namespace GreyBoxStrategy
                 LegalTargets = Options.LegalTargets,
                 StatementRulesWording = Options.RulesWording,
                 PairTargetsWithActions = Options.PairTargets,
-                Choices = request.Moment == Moment.Choice && !Options.RegisteredChoices ? DilemmaChoices(request) : null,
+                Choices = request.Moment == Moment.Choice && Options.CallChoices ? DilemmaChoices(request) : null,
                 Correlation = request.Moment == Moment.Envoy ? new EnvoyOffer(request.OfferId, request.OfferedBy)
                     : request.Moment == Moment.Choice ? new ChoiceCall(request.OfferId, request.Legal.Select(m => m.Action).ToList())
                     : (object)null,

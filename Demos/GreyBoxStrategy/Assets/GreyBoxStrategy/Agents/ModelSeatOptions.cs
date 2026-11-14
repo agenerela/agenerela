@@ -106,17 +106,14 @@ namespace GreyBoxStrategy
 
         // --- The storyteller's stage S2 (the README's "Storyteller"), each a modifier on +storyteller ---
 
-        /// <summary>
-        /// <c>+choices</c>: dilemmas; the ruler struck chooses among the options, given with the call as
-        /// <see cref="DecideOptions.Choices"/> (DR-022).
-        /// </summary>
+        /// <summary><c>+choices</c>: dilemmas; the ruler struck chooses (and the seats register the options as actions).</summary>
         public bool Choices;
         /// <summary>
-        /// <c>+registered-choices</c>: a dilemma's options are registered as the seat's actions, each open only
-        /// on its own choice call, as before <see cref="DecideOptions.Choices"/> (#293). The control arm of
-        /// the adoption's A/B.
+        /// <c>+call-choices</c>: a dilemma's options come with the call as <see cref="DecideOptions.Choices"/>
+        /// (#293, DR-022) instead of being registered as the seat's actions. It changes what the model reads,
+        /// so it is an arm until its A/B.
         /// </summary>
-        public bool RegisteredChoices;
+        public bool CallChoices;
         /// <summary><c>+multi</c>: group events reach the members the fairness rules allow.</summary>
         public bool Multi;
         /// <summary><c>+history</c>: the recent-happenings line, and the story check against invented history.</summary>
@@ -247,7 +244,7 @@ namespace GreyBoxStrategy
                     else if (modifier == "silent-armies") options.SilentArmies = true;
                     else if (modifier == "storyteller") options.Storyteller = true;
                     else if (modifier == "choices") options.Choices = true;
-                    else if (modifier == "registered-choices") options.RegisteredChoices = true;
+                    else if (modifier == "call-choices") options.CallChoices = true;
                     else if (modifier == "multi") options.Multi = true;
                     else if (modifier == "history") options.History = true;
                     else if (modifier == "traits") options.Traits = true;
