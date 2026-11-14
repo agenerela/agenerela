@@ -119,6 +119,22 @@ namespace GreyBoxStrategy.Replay
                     line.Category = ChronicleCategory.War;
                     line.Text = e.Text;
                     break;
+                case ReplayEventKind.Siege:
+                    line.Category = ChronicleCategory.War;
+                    line.Text = e.Text.StartsWith("The siege", StringComparison.Ordinal)
+                        ? $"{N(e.Country)}'s siege of {P(e.Province)} is broken"
+                        : $"{N(e.Country)} besieges {P(e.Province)}, {N(e.Other)}'s";
+                    break;
+                case ReplayEventKind.SiegeTaken:
+                    line.Category = ChronicleCategory.Land;
+                    line.Text = $"{N(e.Country)} takes {P(e.Province)}, {N(e.Other)}'s, after a siege" + (e.Text.Contains("breached") ? ": the walls were breached early" : "");
+                    break;
+                case ReplayEventKind.Hunger:
+                    line.Category = ChronicleCategory.War;
+                    line.Text = e.Text.Contains("starved")
+                        ? $"{Host(e.Army)} of {N(e.Country)} starves at {P(e.Province)}"
+                        : $"{Host(e.Army)} of {N(e.Country)} is out of stores at {P(e.Province)}: " + System.Text.RegularExpressions.Regex.Match(e.Text, @": (\d+) lost").Groups[1].Value + " lost to hunger";
+                    break;
                 case ReplayEventKind.Upkeep:
                     line.Category = ChronicleCategory.Economy;
                     int colon = e.Text.IndexOf(':');

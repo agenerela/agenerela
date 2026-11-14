@@ -66,6 +66,8 @@ namespace GreyBoxStrategy.Realm
                 bool rival = sight != null && a.Owner != You;
                 piece.Q<Label>(className: "host-n").text = rival ? $"~{(int)Math.Round(a.Soldiers / 10.0) * 10}" : a.Soldiers.ToString();
                 piece.Q(className: "host-wait").style.display = ShowAwaiting && a.Awaiting && a.Owner == You ? DisplayStyle.Flex : DisplayStyle.None;
+                // R3's supply: an army out of stores, edged in red; a rival's hunger is not yours to see.
+                piece.EnableInClassList("host-hungry", !(sight != null && a.Owner != You) && a.Hungry);
                 piece.tooltip = rival ? $"{Chronicle.Host(a.Id)} ({CountryLook.NameOf(a.Owner)}), about {(int)Math.Round(a.Soldiers / 10.0) * 10} soldiers at {Cap(a.Location)}. Your court sees no more of it than that."
                     : HostLine(a) + "\nClick: its army.";
                 // R3: a rival in sight shows what it mostly is, never its exact mix (rules v2 3.8); yours shows all of it.

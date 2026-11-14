@@ -286,6 +286,14 @@
 .order-move.recruit-type { height: 36px; flex-direction: column; align-items: flex-start; justify-content: center; padding-top: 2px; padding-bottom: 2px; }
 .recruit-type > Label { margin: 0; padding: 0; }
 .recruit-note { font-size: 10px; color: rgb(190, 176, 146); }
+/* R3: a siege beside the province's forts, an army's stores, and an army out of them. */
+.siege-tag { margin-left: 3px; padding: 0 3px; font-size: 10px; -unity-font-style: bold; color: rgb(40, 28, 16); background-color: rgba(240, 226, 192, 0.9); border-width: 1px; border-radius: 2px; }
+.stores { flex-direction: row; align-items: center; margin-top: 2px; }
+.store-pip { width: 7px; height: 7px; margin-right: 2px; border-width: 1px; border-color: rgba(214, 190, 140, 0.7); background-color: rgba(0, 0, 0, 0); }
+.store-pip.full { background-color: rgb(196, 168, 102); }
+.store-pip.half { background-color: rgba(196, 168, 102, 0.45); }
+.hungry-note { margin-left: 4px; font-size: 10px; -unity-font-style: bold; color: rgb(232, 112, 96); }
+.host.host-hungry { border-color: rgb(226, 84, 66); border-width: 2px; }
 .order-move.wide { align-self: stretch; -unity-text-align: middle-left; margin-right: 0; }
 .target-chip { height: 22px; margin: 0 4px 4px 0; padding-left: 7px; padding-right: 7px; font-size: 12px; background-color: rgba(210, 173, 98, 0.1); border-width: 1px; border-color: rgba(201, 164, 90, 0.35); border-radius: 0; color: rgb(234, 223, 198); }
 .target-chip:hover { border-color: rgb(210, 173, 98); }

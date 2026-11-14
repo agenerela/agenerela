@@ -62,7 +62,27 @@ namespace GreyBoxStrategy.Replay
             if (mix != null) lines.Add(rival ? Cap(mix) + "." : Cap(mix) + ".");
             string leader = Leader(a);
             if (leader != null) lines.Add("Led by " + leader + ".");
+            // R3's supply: your own army's stores; a rival's are not yours to know.
+            if (!rival && Stores(a) is string stores) lines.Add(stores);
             return lines;
+        }
+
+        /// <summary>"Stores: 3 of 4 turns." or the hungry warning; null without supply.</summary>
+        public static string Stores(ArmyState a)
+        {
+            if (a == null || !a.HasStores) return null;
+            if (a.Hungry) return "No stores: outside your own land it loses soldiers every turn, and it fights weaker. Bring it home to refill.";
+            return $"Stores: {Turns(a.HalfStores)} of {Turns(a.MaxHalfStores)} turns; refilled in your own land.";
+        }
+
+        private static string Turns(int half) => half % 2 == 0 ? (half / 2).ToString() : $"{half / 2}½";
+
+        /// <summary>"Siege 2 of 4": the tag on a besieged province; null when none is besieged there or the rules have no sieges.</summary>
+        public static string SiegeTag(ReplayState s, int province)
+        {
+            if (s?.SiegedBy == null || province < 0 || province >= s.SiegedBy.Length || s.SiegedBy[province] == null) return null;
+            int turns = s.SiegeTurns[province], needed = s.SiegeNeeded[province];
+            return needed > 0 ? $"Siege {turns} of {needed}" : $"Siege, turn {turns}";
         }
 
         /// <summary>"Recruit pikes": a recruit order's name, or null for any other action.</summary>

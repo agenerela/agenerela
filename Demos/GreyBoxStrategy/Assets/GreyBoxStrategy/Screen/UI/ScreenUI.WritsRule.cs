@@ -255,6 +255,20 @@ namespace GreyBoxStrategy.Realm
             var st = hostState?.Army(army.Id);
             if (st != null && st.HasMix) head.Add(new MixBars(st));
             if (ArmyLook.Leader(st) is string leader) { var gl = new Label(ReplayBuilder.Title(st)) { tooltip = "Led by " + leader }; gl.AddToClassList("army-general"); head.Add(gl); }
+            // R3's supply: a pip a turn of stores, half-filled for half a turn, and a warning when there are none.
+            if (st != null && st.HasStores)
+            {
+                var stores = new VisualElement { tooltip = ArmyLook.Stores(st) }; stores.AddToClassList("stores");
+                for (int k = 0; k < st.MaxHalfStores / 2; k++)
+                {
+                    var pip = new VisualElement(); pip.AddToClassList("store-pip");
+                    pip.EnableInClassList("full", st.HalfStores >= 2 * (k + 1));
+                    pip.EnableInClassList("half", st.HalfStores == 2 * k + 1);
+                    stores.Add(pip);
+                }
+                if (st.Hungry) { var h = new Label("No stores"); h.AddToClassList("hungry-note"); stores.Add(h); }
+                head.Add(stores);
+            }
             row.Add(head);
             string state;
             if (hasWrit)

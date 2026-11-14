@@ -205,6 +205,14 @@ namespace GreyBoxStrategy.Realm
                 fortMarks[i].Clear();
                 if (!Fog.KnowsProvince(s, i)) continue;
                 for (int k = 0; k < s.Forts[i]; k++) fortMarks[i].Add(new Icon(IconKind.Fort, 11) { Tint = new Color32(233, 217, 176, 255) });
+                // R3's sieges: "Siege 2 of 4", edged in the besieger's colour.
+                if (ArmyLook.SiegeTag(s, i) is string siege)
+                {
+                    var tag = new Label(siege) { pickingMode = PickingMode.Ignore }; tag.AddToClassList("siege-tag");
+                    var c = (Color)CountryLook.Of(s.SiegedBy[i]).Colour;
+                    tag.style.borderLeftColor = c; tag.style.borderRightColor = c; tag.style.borderTopColor = c; tag.style.borderBottomColor = c;
+                    fortMarks[i].Add(tag);
+                }
             }
         }
 
