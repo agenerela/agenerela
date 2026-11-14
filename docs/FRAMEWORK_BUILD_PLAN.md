@@ -2432,6 +2432,54 @@ the two are executed interleaved.
 **Revisit if:** a game needs one agent asked twice in a round, a broadcast with merged answers
 (#216, F8), or a round deadline the token cannot express.
 
+### DR-022 — A choice among options given with the call is a call whose actions are those options
+
+**Status:** Decided, 14 November 2026 (#266 item 2's cheaper half, and its S2 comment), by the #266
+framework-gaps session, for the framework tech lead's review in the pull request that builds it. Additive: a call that passes no choices is
+exactly what it was, and removing the option changes nothing in `Agent`'s other paths.
+
+**Context.** GreyBoxStrategy's storyteller deals a dilemma, and the ruler it strikes picks one of
+its two or three options ("hire them: pay 30 gold, 14 soldiers join our army"). The framework can
+offer only registered actions, so the demo registers every option of every dilemma as an action on
+every seat, 20 actions, and keeps all but the current dilemma's unavailable. A per-call list of
+options is what the game means; the 20 registrations, their availability code and their handlers
+are the workaround. The full half of #266 item 2, typed parameters beside action and target, needs
+a probe and its own record; this is not that.
+
+**Options considered**
+
+| Question | Options | Verdict |
+|---|---|---|
+| Where the options go | A new method (`Agent.ChooseAsync`); a list on `DecideOptions`; a per-call filter over registered actions (`OfferOnly`) | **`DecideOptions.Choices`**, a list of `Choice` (id, description, availability). A filter still needs the 20 registrations; a new method would duplicate `DecideAsync`'s queue, backlog, feed, relay and round paths, which all take `DecideOptions` already |
+| What the choices become | A new field in the schema; the `action` field's values for this call | **The `action` field's values.** The schema, the parser, the legality guard, memory, telemetry and the feed already read a chosen action id; a new field would need a probe first (#266 item 2) |
+| Choices beside the registered actions, or instead of them | Joined; instead | **Instead.** A dilemma's question is "which of these", and the agent's ordinary moves in the same enum would compete with them. A game that wants both registers its moves as choices too |
+| `none` | Left out of a choice call; kept, last, as in every enum | **Kept, last** (build plan §2.2: in every action enum). The game reads it as "declined", and can deal a default option itself |
+| Targets | Per-choice categories; no target field | **No target field.** A choice takes no target, so the schema is shape 2 (no target field), as for an agent with no targets registered; the target rule, the grounding guard and the target list have nothing to do |
+| How a local model learns the options | Only from the schema; the prompt's action list | **The prompt's action list, always**, on a choice call: Ollama never shows the schema (findings, 10 October 2026), so without it a model sees no option's words. Only choice calls carry it, so no existing prompt changes |
+| What `Execute` does with a chosen option | Run a delegate each choice carries; nothing | **Nothing**: no handler runs and no re-check (the choices were the call's, not the agent's), `Done` is recorded, and memory under `OnExecute` is settled. The game acts on `Decision.ActionId`. A delegate is a later, additive field if a game wants one |
+| An unavailable option | Leave it out of the list given; mark it | **Marked, and left out of the schema and the prompt**, its reason in `DecisionTelemetry.ChoicesUnavailable`, so "why was that not offered?" has an answer in the log (#172), as a per-target check's does |
+
+**Decision.** `DecideOptions.Choices`, null by default, a list of `Choice { Id, Description,
+Available }` (`Available` an `Availability`, `Yes` by default). When it holds any, the call's
+context has an action registry made of those choices (each `TakesNoTarget`, with no example) and an
+empty target registry, so everything downstream runs unchanged on it: availability, the schema
+(available choices, then `none`; no target field), the few-shot block (only the idle example and
+any counter-example can appear: the choices have none), the legality guard and the developer's
+guards. The system prompt lists the offered choices with their descriptions whatever
+`ListActionsAndTargets` says. `DecisionTelemetry.ChoicesOffered` and `ChoicesUnavailable`, and the
+decision log's `choices` and `choicesUnavailable`, record the call. An empty list, a choice id
+`ActionDefinition` would refuse, `none`, or an id given twice throws, as a mistake in the call.
+
+**Consequences.** GreyBoxStrategy's ruler drops its 20 registered dilemma actions and their
+availability, and asks `DecideAsync(stimulus, new DecideOptions { Choices = dilemma.Options })`.
+The agent's identity, observations and memory are the same as on any other call, so a remembered
+choice is replayed to the next call like any decision; an agent that should not remember its
+choices uses its own memory or none. A developer guard runs on a choice call too, and can tell one
+from `input.Options.Choices`. The prompt a choice call sends is new and unmeasured (#151).
+
+**Revisit if:** a choice needs a target or a quantity (that is #266 item 2's typed parameters), a
+game wants choices and its ordinary actions in one enum, or a chosen option should run code.
+
 ### Decisions already recorded elsewhere in this plan
 
 | ID | Decision | Where |

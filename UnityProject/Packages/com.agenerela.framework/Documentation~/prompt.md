@@ -382,6 +382,46 @@ a turn, where each army asked to speak made the rulers repeat themselves (35 to 
 word, findings, 13 November). It changes what the model reads, so it is unmeasured as a default
 and owed an A/B run (#151); on by default, every request is byte-identical to one sent before.
 
+## A choice among options given with the call
+
+`DecideOptions.Choices` asks the agent to pick one of a list the call passes, instead of its
+registered actions (DR-022, #266 item 2): a dilemma's two or three options, say, without
+registering every option of every dilemma as an action and keeping the rest unavailable.
+
+```csharp
+var result = await ruler.DecideAsync("Mercenaries are at the gate, asking for work.", new DecideOptions
+{
+    Choices = new List<Choice>
+    {
+        new Choice("hire_them", "Pay 30 gold, and 14 soldiers join our army"),
+        new Choice("send_them_away", "They leave, and nothing changes"),
+        new Choice("seize_their_arms", "Take their weapons by force", Availability.No("no army at hand")),
+    },
+});
+string picked = result.Decision.ActionId;   // "hire_them", "send_them_away" or "none"
+```
+
+- **The schema** offers the available choices in the order given, then `none`, and has no
+  `target` field, since a choice takes none. The agent's own actions and targets are not offered.
+- **The prompt** lists the offered choices with their descriptions ("Allowed actions:"), whatever
+  `ListActionsAndTargets` says, because a model served through Ollama never reads the schema. No
+  example of the agent's actions is shown; the idle example is. Identity, observations and memory
+  are the agent's, as on any call.
+- **An unavailable choice** (`Choice.Available`, an `Availability`) is left out of both, and its
+  reason goes to `DecisionTelemetry.ChoicesUnavailable` and the log's `choicesUnavailable`; the
+  offered ids go to `ChoicesOffered` and `choicesOffered`.
+- **The guards** run as on any call: `SchemaLegalityGuard` rejects an id that was not offered, and
+  a guard of your own reads the list from `input.Options.Choices`.
+- **`Execute`** runs no handler and no re-check for a chosen option, records `Done` and settles
+  memory held by `MemoryCommit.OnExecute`. The game acts on the id. A remembered choice is
+  replayed to later calls like any decision; give the agent its own memory, or none, if it should
+  not be.
+- A bad list (empty, a null entry, an id an action could not have, `none`, an id twice, an empty
+  description) throws at the call.
+
+The prompt a choice call sends is new and unmeasured (#151). With `Choices` null, the default,
+nothing changes.
+
 ## The example's target
 
 An example that needs a target names the first registered one from its action's

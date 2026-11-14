@@ -61,6 +61,17 @@ While the version stays `0.x`, the public API may change in any release.
 
 ### Added
 
+- **A choice among options given with the call** (#266 item 2, DR-022). `DecideOptions.Choices`,
+  null by default, a list of the new `Choice` (id, description, `Available`): the call offers those
+  choices instead of the agent's registered actions, then `none`, with no `target` field, and the
+  system prompt lists them with their descriptions whatever `ListActionsAndTargets` says. An
+  unavailable choice is left out, its reason in the new `DecisionTelemetry.ChoicesUnavailable`
+  (`UnavailableChoice`); `DecisionTelemetry.ChoicesOffered` lists the rest, and the decision log
+  writes both (`choicesOffered`, `choicesUnavailable`) only for a choice call. The legality guard
+  holds the reply to what was offered; `Agent.Execute` runs no handler and no re-check for a chosen
+  option, records `Done` and settles memory. A bad list throws at the call. With `Choices` null
+  every request is what it was; a choice call's prompt is new and unmeasured (#151).
+
 - **A guard verdict that keeps the move and replaces only the statement** (#266 item 4).
   `GuardVerdict.ReplaceStatement(reason, statement)`, with `GuardVerdictKind.ReplaceStatement` (at
   the end of the enum) and `GuardVerdict.Statement`: the action and target stand, the statement is

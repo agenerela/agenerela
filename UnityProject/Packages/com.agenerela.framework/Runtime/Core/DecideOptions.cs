@@ -192,6 +192,37 @@ namespace Agenerela
         public IList<string> Observations = new List<string>();
 
         /// <summary>
+        /// Options to choose among on this call, instead of the agent's registered actions (DR-022,
+        /// #266 item 2). Null by default: the call offers the agent's actions, as every call did before.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// With any choices, the reply's <c>action</c> is one of the available choices' ids, or
+        /// <see cref="ActionRegistry.None"/>, offered last as on every call; the schema has no
+        /// <c>target</c> field, since a choice takes none. The system prompt lists the offered choices
+        /// with their descriptions whatever <see cref="ListActionsAndTargets"/> says, because a model
+        /// served through Ollama never reads the schema. A choice that is not
+        /// <see cref="Choice.Available"/> is left out of both, its reason in
+        /// <see cref="DecisionTelemetry.ChoicesUnavailable"/>; <see cref="DecisionTelemetry.ChoicesOffered"/>
+        /// lists the rest. The agent's identity, observations, memory and guards are those of any
+        /// other call. Its registered actions and targets are not offered, and none of their
+        /// examples is shown; the idle example is.
+        /// </para>
+        /// <para>
+        /// The game acts on the chosen id, <see cref="AgentDecision.ActionId"/>. <see cref="Agent.Execute(DecisionResult)"/>
+        /// runs no handler and no re-check for it, records <see cref="ExecutionStatus.Done"/> and
+        /// settles memory held by <see cref="MemoryCommit.OnExecute"/>. A remembered choice is replayed
+        /// to later calls like any decision.
+        /// </para>
+        /// <para>
+        /// An empty list, a null choice, an id an action could not have (<see cref="ActionDefinition.ValidateId"/>),
+        /// <c>none</c>, an id given twice or an empty description is a mistake the call throws for. The
+        /// list is copied when the call starts. The prompt a choice call sends is new and unmeasured (#151).
+        /// </para>
+        /// </remarks>
+        public IList<Choice> Choices;
+
+        /// <summary>
         /// Where this call's own <see cref="Observations"/> go in the request (#151):
         /// <see cref="Agenerela.ObservationPlacement.AfterSources"/> by default, the end of the
         /// observation block, after every line of <see cref="Agent.ObservationSources"/>, which is
@@ -316,6 +347,7 @@ namespace Agenerela
         {
             var copy = (DecideOptions)MemberwiseClone();
             copy.Observations = Observations == null ? null : new List<string>(Observations);
+            copy.Choices = Choices == null ? null : new List<Choice>(Choices);
             return copy;
         }
     }
