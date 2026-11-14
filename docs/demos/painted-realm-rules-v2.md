@@ -805,6 +805,23 @@ and the battle report can mention. A's per-province number would cost a line per
 prompt and a label per province on the map. The sim A/Bs B against no supply at all before it
 ships ([R3](#r3-armies-in-depth)).
 
+**Three ways considered, 14 November (before the code, as the lead asked):**
+1. **A, what the land carries** (above). Rejected for now: it needs farms ([4.2](#42-food)), which are not
+   built, and a feed number per province that the prompt and the map have no room for.
+2. **B, stores and lines** (above). **Chosen**, and built first because it needs only what exists today:
+   terrain, ownership and the writs turn's armies. One number per army ("stores 2 of 4") is all a ruler has to
+   read, and it answers both halves of the lead's line, far from home and poor land.
+3. **C, distance attrition**: an army more than N steps from its own land loses a share of its soldiers a turn,
+   with no stores at all. The simplest, but a ruler cannot see it coming or plan around it (no number counts
+   down), poor land does not matter, and a relief march or a return home has nothing to restore. Kept as the
+   fallback if B's two numbers prove too much for the models.
+
+**Built (B), behind `GameRules.Supply`, off:** stores 0 to 4 a turn of food; full in our own land, refilled 2
+a turn there; elsewhere 1 a turn in plains and forest, 2 in hills, marsh and mountains; at 0, 10% of the soldiers
+lost a turn (at least 2) and −15% strength in battle; a `forager` general eats half (counted in half-stores).
+Supplied land is our own only, since alliances and passage are not built; healing springs, famine and the
+100-soldier cap wait for their systems.
+
 ### 3.7 Forts and sieges
 
 - **Walls** are a building with three levels ([4.4](#44-buildings)). Today's forts become walls
