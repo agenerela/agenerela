@@ -93,6 +93,12 @@ namespace GreyBoxStrategy
         /// <summary>Whether the storyteller reads an inspiration line (<see cref="GreyBoxStrategy.Storyteller.InspirationLine"/>); <c>+no-inspiration</c> drops it.</summary>
         public bool Inspiration = true;
         /// <summary>
+        /// With <c>+history</c>, the history check runs as the storyteller's guard (<see cref="GreyBoxStrategy.Storyteller.HistoryGuard"/>,
+        /// #292), which replaces the story through the framework; <c>+history-in-game</c> leaves it to the event's
+        /// check at the queue, as before. The verdicts are the same either way.
+        /// </summary>
+        public bool HistoryGuard = true;
+        /// <summary>
         /// The most tokens a storyteller's reply may run to (<see cref="DecideOptions.MaxReplyTokens"/>, #244 item 11),
         /// on its event call and its title call: <see cref="StorytellerReplyCap"/> by default, which binds only a
         /// runaway (a story is a hundred or two); <c>+no-reply-cap</c> sends none, as before.
@@ -260,6 +266,7 @@ namespace GreyBoxStrategy
                         options.Preset = options.Preset ?? StorytellerSettings.EvenHand.Name;
                     }
                     else if (modifier == "no-inspiration") options.Inspiration = false;
+                    else if (modifier == "history-in-game") options.HistoryGuard = false;
                     else if (modifier == "no-reply-cap") options.StorytellerMaxReplyTokens = null;
                     else if (modifier.StartsWith("inspiration-") && int.TryParse(modifier.Substring("inspiration-".Length), out int salt) && salt >= 0)
                         options.InspirationSalt = salt;

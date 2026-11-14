@@ -12,6 +12,8 @@ namespace GreyBoxStrategy
     public sealed class StorytellerDecision
     {
         public int Seed;
+        /// <summary>Why the history guard replaced the story (#292), or null; <see cref="Statement"/> stays the model's.</summary>
+        public string HistoryReplaced;
         /// <summary>The turn the event was for (the upkeep it lands at).</summary>
         public int Turn;
         /// <summary>What the model answered, before any guard.</summary>
@@ -185,6 +187,8 @@ namespace GreyBoxStrategy
                 // No memory of its replies: the "Told so far" line says what happened instead (gap 6).
                 Memory = null,
             };
+            // +history: the history check is a guard that replaces the story and keeps the event (#292).
+            if (rules.History && this.options.HistoryGuard) Agent.Guards.Add(new HistoryGuard(game));
             Agent.TargetSources.Add(new EventTargetSource(game));
             Agent.ObservationSources.Add(new StorytellerFacts(this));
             foreach (var t in EventRules.TemplatesFor(rules)) Register(t);
@@ -214,6 +218,29 @@ namespace GreyBoxStrategy
 
         // The title the scribe gave the event being queued, read by the handler.
         private string calledTitle;
+        // What the history guard did to the event being queued (its reason, and the model's own words), read by the handler.
+        private string historyReplaced, modelStatement;
+
+        /// <summary>
+        /// The history check as a guard (#292): a story that tells of a fight that never happened is replaced
+        /// by the template's own line, under the model's title, and the event stands. The game's
+        /// <see cref="Game.HistoryVerdict"/> decides, so the verdict is the one the event's check gave before.
+        /// </summary>
+        public sealed class HistoryGuard : IDecisionGuard
+        {
+            public const string GuardName = "history";
+            private readonly Game game;
+            public HistoryGuard(Game game) { this.game = game; }
+            public string Name => GuardName;
+
+            public GuardVerdict Inspect(GuardInput input)
+            {
+                var d = input.Decision;
+                if (d == null || d.ActionId == ActionRegistry.None) return GuardVerdict.Pass;
+                var v = game.HistoryVerdict(d.ActionId, d.TargetId, d.Statement);
+                return v == null ? GuardVerdict.Pass : GuardVerdict.ReplaceStatement(v.Value.reason, v.Value.statement);
+            }
+        }
 
         /// <summary>A target's line in the storyteller's list: S1's, with a province's traits and a tale's story so far in S2.</summary>
         public static string Describe(Game game, string id)
@@ -264,7 +291,11 @@ namespace GreyBoxStrategy
                 ctx => EventRules.TargetIds(game.World, game.Events).Any(id => game.WhyNotEvent(t.Id, id) == null),
                 (ctx, d) =>
                 {
-                    game.QueueEvent(new StoryEvent(d.ActionId, d.TargetId, d.Statement, calledTitle));
+                    game.QueueEvent(new StoryEvent(d.ActionId, d.TargetId, d.Statement, calledTitle)
+                    {
+                        HistoryReplaced = historyReplaced,
+                        ModelStatement = historyReplaced != null ? modelStatement : null,
+                    });
                     return ActionResult.Done();
                 });
             handler.IsAvailableFor = (ctx, target) =>
@@ -412,7 +443,8 @@ namespace GreyBoxStrategy
                 ModelTarget = result?.ModelDecision?.TargetId,
                 Action = result?.Decision?.ActionId,
                 Target = result?.Decision?.TargetId,
-                Statement = result?.Decision?.Statement ?? result?.ModelDecision?.Statement,
+                // The model's own words, as before the history check became a guard (#292).
+                Statement = result?.ModelDecision?.Statement ?? result?.Decision?.Statement,
                 LatencySeconds = t?.LatencySeconds ?? 0,
                 PromptTokens = t?.PromptTokens ?? 0,
                 Verdict = t?.Verdict,
@@ -435,8 +467,11 @@ namespace GreyBoxStrategy
                 record.TitleLatencySeconds = named?.Telemetry?.LatencySeconds ?? 0;
                 calledTitle = record.TitleStatement;
             }
+            historyReplaced = t?.StatementsReplaced.FirstOrDefault(x => x.Guard == HistoryGuard.GuardName)?.Reason;
+            modelStatement = result.ModelDecision?.Statement;
+            record.HistoryReplaced = historyReplaced;
             Agent.Execute(result, out var outcome);
-            calledTitle = null;
+            calledTitle = historyReplaced = modelStatement = null;
             record.Execution = outcome.Status;
             record.ExecutionReason = outcome.Reason;
             record.Queued = outcome.Succeeded;

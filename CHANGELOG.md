@@ -29,6 +29,12 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: the storyteller's history check is a guard** (#20). With `+history`, a story that tells
+  of a fight that never happened is replaced through `GuardVerdict.ReplaceStatement` (#292) before the event
+  is queued, and the event stands. `Game.HistoryVerdict` runs the event's own checks in the same order, so
+  the verdicts, stories and the record of the model's words are the same as before, which a test checks
+  against `+history-in-game` (the check at the queue, kept for comparison).
+
 - **Painted Realm: the storyteller caps its replies, and dilemmas can come with the call** (#20).
   - The storyteller's event and title calls send `MaxReplyTokens` 400 (#244 item 11), which binds only a
     runaway; `+no-reply-cap` sends none, as before.

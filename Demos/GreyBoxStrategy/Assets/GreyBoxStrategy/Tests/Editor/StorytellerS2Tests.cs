@@ -404,6 +404,34 @@ namespace GreyBoxStrategy.Tests
         }
 
         [Test]
+        public async Task AnInventedStory_IsReplacedByTheHistoryGuard_WithTheVerdictTheGameGaveBefore()
+        {
+            const string Invented = "Gold Rush: After valen stormed ashby's walls, gold poured in.";
+            const string Plain = "Gold Rush: Gold was found in the hills of valen.";
+            async Task<(StorytellerDecision d, EventRecord e)> Told(string arm, string story)
+            {
+                var g = AtTurnTwo(Rules(r => r.History = true));
+                var provider = new ScriptedProvider().Otherwise(ScriptedReply.Decide(EventRules.Windfall, "valen", story));
+                var teller = new Storyteller(g, provider, ModelSeatOptions.Named(arm));
+                var d = await Await.NotCancelled(teller.TellAsync());
+                return (d, PlayTurn(g).Events.Single());
+            }
+
+            var (guarded, ge) = await Told("default+storyteller+history", Invented);
+            var (old, oe) = await Told("default+storyteller+history+history-in-game", Invented);
+            Assert.That(guarded.HistoryReplaced, Is.EqualTo("invented: no fight or capture at ashby yet"), "the guard replaced it (#292)");
+            Assert.That(old.HistoryReplaced, Is.Null, "+history-in-game leaves it to the event's check");
+            Assert.That(ge.StoryVerdict, Is.EqualTo("replaced: invented: no fight or capture at ashby yet"));
+            Assert.That((ge.StoryVerdict, ge.HistoryRef, ge.Title, ge.Story, ge.Statement), Is.EqualTo((oe.StoryVerdict, oe.HistoryRef, oe.Title, oe.Story, oe.Statement)),
+                "the event reads as it did with the check in the game");
+            Assert.That((ge.Title, ge.Story, ge.Statement), Is.EqualTo(("Gold Rush", "Fortune smiled on valen.", Invented)), "the model's title, the template's story, the model's words kept");
+            Assert.That(guarded.Statement, Is.EqualTo(Invented), "the record keeps the model's words");
+
+            var (kept, ke) = await Told("default+storyteller+history", Plain);
+            Assert.That((kept.HistoryReplaced, ke.StoryVerdict, ke.Story), Is.EqualTo(((string)null, "kept", "Gold was found in the hills of valen.")));
+        }
+
+        [Test]
         public void Happenings_AreReadFromTheReports()
         {
             var g = NewGame();
