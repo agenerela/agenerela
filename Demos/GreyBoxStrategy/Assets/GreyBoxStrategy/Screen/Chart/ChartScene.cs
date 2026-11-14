@@ -36,6 +36,12 @@ namespace GreyBoxStrategy.Chart
         public static bool Capital(int p) => (p & 8) != 0;
         public static int Forts(int p) => (p >> 4) & 3;
         public static bool Port(int p) => (p & 64) != 0;
+
+        /// <summary>The settlement a province's chart shows, 0 to 4: its development, a capital's city above all.</summary>
+        public static int TierOf(ProvinceData p) => p.Capital ? 4 : Math.Min(3, ChartLayout.DevelopmentOf(p));
+
+        /// <summary>What a tier is called in the province panel.</summary>
+        public static string Name(int tier) => tier switch { 0 => "a hamlet", 1 => "a village", 2 => "a market town", 3 => "a walled town", _ => "a capital city" };
     }
 
     public enum StrokeKind { River, Highway, Track }
@@ -165,8 +171,7 @@ namespace GreyBoxStrategy.Chart
                     (float u, float v) at = (lu, lv - 1.8f);
                     if (!Inside(at.u, at.v, p, 0.8f)) at = (shape.Centre[0] + 0.5f, shape.Centre[1] + 0.5f);
                     Scene.Settlements[p] = at;
-                    int dev = Scene.DevelopmentOf[p];
-                    int tier = pr.Capital ? 4 : Math.Min(3, dev);
+                    int tier = SettlementLook.TierOf(pr);
                     float size = 1.25f + 0.14f * tier;
                     Scene.Glyphs.Add(new GlyphInstance { Kind = GlyphKind.Settlement, U = at.u, V = at.v, Size = size, Variant = Hash8(p, 1),
                         Param = SettlementLook.Pack(tier, pr.Capital, pr.Forts, pr.Port) });

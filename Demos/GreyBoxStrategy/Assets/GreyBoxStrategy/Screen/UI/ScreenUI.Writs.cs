@@ -109,8 +109,9 @@ namespace GreyBoxStrategy.Realm
             // Several armies in one province stand side by side, two rows when there are many, so each reads.
             int perRow = n <= 3 ? n : (n + 1) / 2;
             int row = k / perRow, col = k % perRow, inRow = Math.Min(perRow, n - row * perRow);
-            float dx = (col - (inRow - 1) / 2f) * 58 * HostScale;
-            return p + new Vector2(dx, (-24 - row * 24) * HostScale);
+            // Spaced by the pieces' own size, as the last layout measured it, so neighbours never touch.
+            float dx = (col - (inRow - 1) / 2f) * Math.Max(58, pieceSize.x + 4) * HostScale;
+            return p + new Vector2(dx, (-24 - row * Math.Max(24, pieceSize.y + 3)) * HostScale);
         }
 
         /// <summary>
@@ -124,14 +125,18 @@ namespace GreyBoxStrategy.Realm
             var done = new List<int>();
             foreach (int j in order)
             {
-                for (int tries = 0; !moving[j] && tries < 16; tries++)
+                int dir = 0;
+                for (int tries = 0; !moving[j] && tries < 32; tries++)
                 {
                     int k = -1;
                     foreach (int i in done) if (Overlap(at, size, i, j, gap) > 0) { k = i; break; }
                     if (k < 0) break;
                     // Clear of it by what is missing: upwards when level or above it, as pieces stand above their provinces.
-                    float h = (size[k].y + size[j].y) / 2 + gap, dy = at[j].y - at[k].y;
-                    at[j] = new Vector2(at[j].x, dy > 0 ? at[k].y + h : at[k].y - h);
+                    // Once a piece starts moving one way it keeps going that way: turning back between two pieces would
+                    // bounce it between them until the tries ran out, still overlapping.
+                    float h = (size[k].y + size[j].y) / 2 + gap;
+                    if (dir == 0) dir = at[j].y - at[k].y > 0 ? 1 : -1;
+                    at[j] = new Vector2(at[j].x, dir > 0 ? at[k].y + h : at[k].y - h);
                 }
                 done.Add(j);
             }
@@ -165,6 +170,9 @@ namespace GreyBoxStrategy.Realm
         /// <summary>Where a piece is drawn: its point, nudged clear of the others.</summary>
         public Vector2 PlacedPoint(ArmyState a) => placed.TryGetValue(a.Id, out var p) ? p : HostPoint(a);
 
+        // The largest piece as last laid out, unscaled: how far apart pieces stand side by side and in rows.
+        private Vector2 pieceSize = new Vector2(52, 20);
+
         // The armies standing still in each province, in the order they stand side by side; rebuilt each frame.
         private Dictionary<string, List<ArmyState>> standing;
 
@@ -176,6 +184,8 @@ namespace GreyBoxStrategy.Realm
             var shown = hostState.Armies.Where(a => hosts.ContainsKey(a.Id)).ToList();
             var at = shown.Select(HostPoint).ToList();
             var size = shown.Select(a => { var r = hosts[a.Id].resolvedStyle; return HostScale * new Vector2(float.IsNaN(r.width) || r.width < 1 ? 52 : r.width, float.IsNaN(r.height) || r.height < 1 ? 20 : r.height); }).ToList();
+            // The widest and tallest piece, unscaled, for the next frame's spacing (HostPoint).
+            if (size.Count > 0) pieceSize = new Vector2(size.Max(v => v.x), size.Max(v => v.y)) / Math.Max(0.01f, HostScale);
             Unclutter(at, size, shown.Select(a => hostMotion.ContainsKey(a.Id)).ToList());
             placed.Clear();
             for (int k = 0; k < shown.Count; k++)
@@ -318,6 +328,9 @@ namespace GreyBoxStrategy.Realm
                     p.BeginPath(); p.Arc(end, 4.5f, Angle.Degrees(0), Angle.Degrees(360)); p.Fill(); p.Stroke();
                 }
             }
+
+            /// <summary>The turns tags in use this frame, for the collision pass.</summary>
+            public IEnumerable<Label> Tags => turnLabels;
 
             private void Hide(int from) { for (int i = from; i < turnLabels.Count; i++) turnLabels[i].style.display = DisplayStyle.None; }
 

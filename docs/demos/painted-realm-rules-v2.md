@@ -1626,7 +1626,16 @@ awaiting marks, the army cycle key, orders queued above End turn) came in the th
 - realm lists and the chronicle fold;
 - frame time is measured on a huge world.
 
-The rest of R4's checklist is not started: settlement tiers, label collisions at three zooms, the id map at 4096, local facts.
+**R4 on screen, second part: built** (14 November).
+- The chart stays sharp at any zoom: provinces come from the cell grid per screen pixel, not the id map.
+- Collisions are settled among pieces, tags and every kind of name, and tested at three zooms.
+- Realm names are drawn.
+- The province panel shows settlement tiers and special places. The tiers themselves were already drawn by
+  development; changing them during play waits for R6's buildings.
+
+Still open in R4:
+- local facts and per-call target sets (Sim and Agents);
+- the id map's adjacency test at 2048 and 4096.
 
 **The screen's half, third part: built** (13 November). Rule mode on the writs turn:
 - writs in the top bar and the council panel;

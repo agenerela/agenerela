@@ -16,6 +16,10 @@
 //              row 4 occupier colour + hatching amount, row 5 (sweep centre u, v, sweep angle / 2pi, 1 = drawn in
 //              by a sweep from that side, 0 = lifting from the edges inward): the writs turn's occupation
 //   _SpreadTex distance from the attacker's border inside the province being captured, 0..1
+//   _CellTex   a generated world's cell grid, 16-bit in RG as _IdTex, top row first (point). With _Geo on,
+//              each pixel takes its province from the cells by the same noisy vote as ChartRaster.IdAtCell,
+//              at the screen's resolution rather than the province map's, so borders stay sharp at any zoom
+//              and the vote's margin gives the distance to the border for antialiased lines.
 Shader "GreyBoxStrategy/PaintedMap"
 {
     Properties
@@ -30,6 +34,9 @@ Shader "GreyBoxStrategy/PaintedMap"
         _EdgeFade ("Fade into the open sea at the edge (uv)", Float) = 0.04
         _IdWide ("Province ids are 16-bit (a generated world)", Float) = 0
         _HatchReach ("A province's reach in uv, for the hatching's sweep", Float) = 0.09
+        _CellTex ("Cell grid (a generated world)", 2D) = "black" {}
+        _Geo ("Provinces from the cell grid, per screen pixel", Float) = 0
+        _Grid ("Grid width, height in cells, province-map pixels per cell", Vector) = (1, 1, 1, 0)
     }
     SubShader
     {
@@ -56,6 +63,10 @@ Shader "GreyBoxStrategy/PaintedMap"
             float _EdgeFade;
             float _IdWide;
             float _HatchReach;
+            TEXTURE2D(_CellTex);
+            float _Geo;
+            float4 _Grid;
+            int _Seed;
 
             struct Attributes { float4 positionOS : POSITION; float2 uv : TEXCOORD0; };
             struct Varyings { float4 positionCS : SV_POSITION; float2 uv : TEXCOORD0; };
@@ -110,6 +121,97 @@ Shader "GreyBoxStrategy/PaintedMap"
                 float v = t.r * 255;
                 return v > 250 ? -1 : (int)round(v / 10);
             }
+            // ---- ChartNoise and ChartRaster.IdAtCell, bit for bit (the ground shader carries the same port) ----
+            uint HashI(int x, int y, int seed)
+            {
+                uint h = (uint)x * 374761393u + (uint)y * 668265263u + (uint)seed * 2246822519u;
+                h = (h ^ (h >> 13)) * 1274126177u;
+                return h ^ (h >> 16);
+            }
+            float HashI01(int x, int y, int seed) { return (HashI(x, y, seed) & 0xFFFFFFu) / 16777216.0; }
+            float ValueI(float x, float y, int seed)
+            {
+                int x0 = (int)floor(x), y0 = (int)floor(y);
+                float fx = x - x0, fy = y - y0;
+                fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy);
+                float a = HashI01(x0, y0, seed), b = HashI01(x0 + 1, y0, seed), c = HashI01(x0, y0 + 1, seed), d = HashI01(x0 + 1, y0 + 1, seed);
+                return (a + (b - a) * fx) * (1 - fy) + (c + (d - c) * fx) * fy;
+            }
+            float FbmI(float x, float y, int seed)
+            {
+                return 0.55 * ValueI(x, y, seed) + 0.30 * ValueI(x * 2 + 0.37, y * 2 + 0.61, seed + 1) + 0.15 * ValueI(x * 4 + 0.13, y * 4 + 0.29, seed + 2);
+            }
+            // A cell's id as the province map has it: a province's index, or -1 for sea, inland water and scenery islands.
+            int CellId(int x, int y)
+            {
+                x = clamp(x, 0, (int)_Grid.x - 1); y = clamp(y, 0, (int)_Grid.y - 1);
+                float4 t = LOAD_TEXTURE2D(_CellTex, int2(x, y));
+                int w = (int)round(t.r * 255) + 256 * (int)round(t.g * 255);
+                return w >= 65533 ? -1 : w;
+            }
+            static const float BorderH = 0.02;   // the step, in cells, the vote's slope is measured over
+            // The noisy point the vote is taken at, for a point in grid units (v down).
+            float2 Warp(float2 g)
+            {
+                const float amp = 0.42, freq = 0.38;
+                return float2(g.x + amp * (FbmI(g.x * freq, g.y * freq, _Seed + 11) * 2 - 1),
+                              g.y + amp * (FbmI(g.x * freq + 17.3, g.y * freq - 5.1, _Seed + 29) * 2 - 1));
+            }
+            // Two provinces' weights at a point: the border between them is where the two are equal.
+            float PairMargin(float2 g, int a, int b)
+            {
+                float2 wp = Warp(g);
+                int cx = (int)floor(wp.x), cy = (int)floor(wp.y);
+                float m = 0;
+                [unroll] for (int dy = -1; dy <= 1; dy++)
+                [unroll] for (int dx = -1; dx <= 1; dx++)
+                {
+                    float ex = cx + dx + 0.5 - wp.x, ey = cy + dy + 0.5 - wp.y;
+                    float w = max(0, 1.44 - (ex * ex + ey * ey));
+                    int id = CellId(cx + dx, cy + dy);
+                    m += id == a ? w : id == b ? -w : 0;
+                }
+                return m;
+            }
+            // The vote at a point in grid units (v down): the winner, the runner-up (-2 for none), and the margin
+            // between their weights, which is 0 on the border between them and grows smoothly away from it.
+            void Vote(float2 g, out int best, out int second, out float margin)
+            {
+                const float r2 = 1.44;
+                float2 wp = Warp(g);
+                float wu = wp.x, wv = wp.y;
+                int cx = (int)floor(wu), cy = (int)floor(wv);
+                int ids[9]; float ws[9]; int kinds = 0;
+                [unroll] for (int k = 0; k < 9; k++) { ids[k] = -3; ws[k] = 0; }
+                [unroll] for (int dy = -1; dy <= 1; dy++)
+                [unroll] for (int dx = -1; dx <= 1; dx++)
+                {
+                    float ex = cx + dx + 0.5 - wu, ey = cy + dy + 0.5 - wv;
+                    float w = r2 - (ex * ex + ey * ey);
+                    if (w > 0)
+                    {
+                        int id = CellId(cx + dx, cy + dy);
+                        int slot = min(kinds, 8);
+                        [unroll] for (int j = 0; j < 9; j++) if (j < kinds && ids[j] == id) slot = j;
+                        if (slot == kinds) kinds++;
+                        // Written through fixed indices: a computed one makes the compiler doubt the bounds.
+                        [unroll] for (int q = 0; q < 9; q++) if (q == slot) { ids[q] = id; ws[q] += w; }
+                    }
+                }
+                best = CellId(cx, cy); second = -2; margin = 1e3;
+                if (kinds == 0) return;
+                // Unused slots weigh 0 and every used one more, so the scan needs no count.
+                float w1 = -1, w2 = -1; int i1 = -3, i2 = -2;
+                [unroll] for (int k1 = 0; k1 < 9; k1++)
+                {
+                    if (k1 >= kinds) continue;
+                    if (ws[k1] > w1) { w2 = w1; i2 = i1; w1 = ws[k1]; i1 = ids[k1]; }
+                    else if (ws[k1] > w2) { w2 = ws[k1]; i2 = ids[k1]; }
+                }
+                best = i1;
+                if (w2 >= 0) { second = i2; margin = w1 - w2; }
+            }
+
             float4 State(int id, int row) { return LOAD_TEXTURE2D(_StateTex, int2(id, row)); }
             float OwnerSlot(int id) { return id < 0 ? -1 : State(id, 0).a; }
 
@@ -130,16 +232,61 @@ Shader "GreyBoxStrategy/PaintedMap"
                 return ring;
             }
 
+            // Coverage of the band [0, width) of a repeating pattern at phase f (0 to 1), antialiased over w, the
+            // phase's change across one screen pixel: the hatching keeps clean edges at any zoom.
+            float Band(float f, float width, float w)
+            {
+                if (width >= 1) return 1;
+                float inside = f < width ? min(f, width - f) : -min(f - width, 1 - f);
+                return saturate(0.5 + inside / max(w, 1e-5));
+            }
+
             half4 frag(Varyings i) : SV_Target
             {
                 float3 painting = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv).rgb;
                 float2 px = i.uv * _IdTex_TexelSize.zw;
                 int id = IdAt(i.uv);
                 float3 colour = painting;
+                // A generated world: the province, and how far the border is, from the cell grid at this pixel.
+                bool geo = _Geo > 0.5;
+                int across = -2; float borderTx = 1e3, texelsPerPixel = max(1e-4, max(fwidth(px.x), fwidth(px.y)));
+                // Deep inside a province the province map already knows the answer: the vote runs only within 5 of its
+                // pixels of a border, where the lines are, which keeps the cost to a fraction of the screen.
+                if (geo && SAMPLE_TEXTURE2D_LOD(_EdgeTex, sampler_EdgeTex, i.uv, 0).r * 255 / 16 < 5)
+                {
+                    float2 g = float2(i.uv.x, 1 - i.uv.y) * _Grid.xy;
+                    float margin;
+                    Vote(g, id, across, margin);
+                    // The margin over its slope is the distance to the border, in cells, then in province-map pixels, the
+                    // unit every width below is written in. The slope is taken a fiftieth of a cell away for the same two
+                    // provinces, so it is smooth; screen derivatives of the margin were too coarse and frayed the lines.
+                    if (across != -2)
+                    {
+                        // Newton steps onto the border (where the two weights are equal), each at most a quarter cell, then
+                        // the distance to that point: the margin over its slope alone frays the gilt, as the weights bend
+                        // within a cell. Far from the border the edge field is used anyway, so the walk stops there.
+                        float2 at = g; float m = margin;
+                        [unroll] for (int step = 0; step < 3; step++)
+                        {
+                            float2 grad = (float2(PairMargin(at + float2(BorderH, 0), id, across), PairMargin(at + float2(0, BorderH), id, across)) - m) / BorderH;
+                            float2 move = -m * grad / max(dot(grad, grad), 1e-6);
+                            float len = length(move);
+                            at += len > 0.25 ? move * (0.25 / len) : move;
+                            if (length(at - g) * _Grid.z > 4) break;
+                            m = PairMargin(at, id, across);
+                            if (abs(m) < 1e-3) break;
+                        }
+                        borderTx = length(at - g) * _Grid.z;
+                    }
+                }
 
                 if (id >= 0)
                 {
                     float edgePx = SAMPLE_TEXTURE2D(_EdgeTex, sampler_EdgeTex, i.uv).r * 255 / 16;
+                    // Near a border the vote's distance is exact and smooth; farther in, where the vote sees only one
+                    // province, the edge field takes over. A pixel next to the border is 0 in the edge field, its centre
+                    // half a pixel from the border.
+                    if (geo) edgePx = lerp(max(0, borderTx - 0.5), edgePx, smoothstep(2, 3, borderTx));
                     float n = Grain(px);
                     float pool = exp(-edgePx / (_Engraved > 0.5 ? 5 : 7));
                     float4 now = State(id, 0), before = State(id, 1), cap = State(id, 2), extra = State(id, 3);
@@ -171,13 +318,14 @@ Shader "GreyBoxStrategy/PaintedMap"
                     else
                     {
                         tint = neutral; tintA = 0.75;
-                        if (frac((px.x + px.y) / 9) < 0.145) { ink = _Engraved > 0.5 ? float3(0.05, 0.03, 0.015) : float3(0.01, 0.007, 0.004); inkA = 0.28; }
+                        float hatch = Band(frac((px.x + px.y) / 9), 0.145, 2 * texelsPerPixel / 9);
+                        ink = _Engraved > 0.5 ? float3(0.05, 0.03, 0.015) : float3(0.01, 0.007, 0.004); inkA = 0.28 * hatch;
                     }
                     // The lit stripes keep 8 screen pixels apart at any zoom, and frac, not fmod: fmod of a negative
                     // number stays negative, which filled every lit province west of the diagonal solid red. In texture pixels, a far view of a big
                     // world blurred them into a flat red that read as a realm's colour.
-                    float texelsPerPixel = max(1.0, fwidth(px.x) + fwidth(px.y));
-                    if (reach > 0.5 && frac((px.x - px.y) / (8 * texelsPerPixel)) < 0.25) { ink = ToLinear(float3(0.82, 0.27, 0.2)); inkA = 0.5; }
+                    float stripeTexels = max(1.0, fwidth(px.x) + fwidth(px.y));
+                    if (reach > 0.5 && frac((px.x - px.y) / (8 * stripeTexels)) < 0.25) { ink = ToLinear(float3(0.82, 0.27, 0.2)); inkA = 0.5; }
 
                     colour = lerp(painting, ColorBlend(painting, tint), tintA);
                     colour = lerp(colour, ink, inkA);
@@ -201,10 +349,11 @@ Shader "GreyBoxStrategy/PaintedMap"
                         else shown = step(1 - amount, saturate(edgePx / 10) + 0.02);
                         float period = 9, f = frac((px.x - px.y) / period);
                         float width = lerp(0.42, 1.02, thick);
-                        float band = step(f, width);
+                        float aa = 2 * texelsPerPixel / period;
+                        float band = Band(f, width, aa);
                         // Each stroke: a dark ink edge on both sides, the occupier's colour, laid on thick.
                         float edgeW = 0.11;
-                        float edge = band * (1 - step(edgeW, f)) + band * step(width - edgeW, f) * (1 - step(1, width));
+                        float edge = width >= 1 ? 0 : band * (1 - Band(frac(f - edgeW), width - 2 * edgeW, aa));
                         float3 occColour = ToLinear(occ.rgb);
                         float a = shown * band * (0.85 + 0.15 * n);
                         colour = lerp(colour, lerp(ColorBlend(colour, occColour), occColour, 0.55), a * 0.92);
@@ -212,11 +361,28 @@ Shader "GreyBoxStrategy/PaintedMap"
                     }
 
                     // Ink lines: heavy between owners (with a gilt or red-ink edge), thin inside a country.
-                    float ring = CountryBorder(i.uv, id);
-                    if (ring == 1) colour = lerp(colour, _Engraved > 0.5 ? float3(0.012, 0.006, 0.003) : float3(0.004, 0.002, 0.001), 0.92);
-                    else if (ring >= 2) colour = lerp(colour, _Engraved > 0.5 ? ToLinear(float3(0.43, 0.16, 0.1)) : ToLinear(float3(0.84, 0.69, 0.39)), 0.6);
-                    else if (edgePx < 1.3) colour = lerp(colour, float3(0.009, 0.005, 0.003), 0.62);
-                    if (cap.a > 0.5 && edgePx < 3.2) colour = lerp(colour, ToLinear(float3(0.94, 0.84, 0.59)), 0.95);
+                    float3 darkInk = _Engraved > 0.5 ? float3(0.012, 0.006, 0.003) : float3(0.004, 0.002, 0.001);
+                    float3 gilt = _Engraved > 0.5 ? ToLinear(float3(0.43, 0.16, 0.1)) : ToLinear(float3(0.84, 0.69, 0.39));
+                    if (geo)
+                    {
+                        // The same widths as the province map's rings, measured from the true border and
+                        // antialiased over a screen pixel: dark to 1 pixel each side, gilt to 3, a thin line inside.
+                        float px1 = texelsPerPixel;
+                        float country = across >= 0 && abs(OwnerSlot(across) - OwnerSlot(id)) > 0.001 ? 1 : 0;
+                        float dark = saturate((1 - borderTx) / px1 + 0.5), giltA = saturate((3 - borderTx) / px1 + 0.5);
+                        float thin = saturate((1.8 - borderTx) / px1 + 0.5);
+                        colour = lerp(colour, gilt, 0.6 * country * (giltA - dark));
+                        colour = lerp(colour, darkInk, 0.92 * country * dark);
+                        colour = lerp(colour, float3(0.009, 0.005, 0.003), 0.62 * (1 - country) * thin);
+                    }
+                    else
+                    {
+                        float ring = CountryBorder(i.uv, id);
+                        if (ring == 1) colour = lerp(colour, darkInk, 0.92);
+                        else if (ring >= 2) colour = lerp(colour, gilt, 0.6);
+                        else if (edgePx < 1.3) colour = lerp(colour, float3(0.009, 0.005, 0.003), 0.62);
+                    }
+                    if (cap.a > 0.5) colour = lerp(colour, ToLinear(float3(0.94, 0.84, 0.59)), 0.95 * saturate((3.2 - edgePx) / texelsPerPixel + 0.5));
                 }
 
                 // The focus: everything but the province being captured steps back.

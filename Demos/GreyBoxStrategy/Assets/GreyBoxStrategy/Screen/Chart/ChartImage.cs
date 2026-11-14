@@ -209,4 +209,132 @@ namespace GreyBoxStrategy.Chart
         /// <summary>A label's width in screen pixels: book serif capitals for capitals and regions (widely spaced), mixed case otherwise.</summary>
         public static float Width(MapLabel l) => l.Text.Length * l.Size * (l.Region ? 0.95f : l.Capital ? 0.72f : 0.56f);
     }
+    /// <summary>A realm's name on the map, set along its land: where, at what angle, and how long a line it has.</summary>
+    public sealed class RealmLabel
+    {
+        public string Country, Text;
+        /// <summary>Its centre in grid units, on the realm's own land.</summary>
+        public float U, V;
+        /// <summary>Degrees, clockwise on screen, within ±<see cref="RealmLabels.MaxAngle"/>.</summary>
+        public float Angle;
+        /// <summary>The length of land along that angle, in grid units.</summary>
+        public float Span;
+        /// <summary>Set by <see cref="RealmLabels.Fit"/>: its font size in screen pixels, and whether it shows.</summary>
+        public float Size;
+        public bool Visible;
+    }
+
+    /// <summary>
+    /// Realm names (rules v2 section 2.6): widely spaced capitals along a realm's longest axis, recomputed when its
+    /// land changes. They show zoomed out, where province names step back, and only for a realm of two provinces or
+    /// more: a one-province realm is named by its province.
+    /// </summary>
+    public static class RealmLabels
+    {
+        public const float MaxAngle = 35, MinSize = 12, MaxSize = 30;
+
+        public static List<RealmLabel> For(WorldMap world, IReadOnlyList<string> owners, Func<string, string> nameOf)
+        {
+            var geo = world.Geometry;
+            var list = new List<RealmLabel>();
+            if (geo == null || owners == null) return list;
+            var point = new (float u, float v, float w)[world.Provinces.Count];
+            for (int p = 0; p < point.Length; p++)
+            {
+                var shape = geo.Provinces[p];
+                float room = Math.Max(1, shape.LabelRadius);
+                point[p] = (shape.Label[0] + 0.5f, shape.Label[1] + 0.5f, room * room);
+            }
+            var index = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (int p = 0; p < world.Provinces.Count; p++) index[world.Provinces[p].Id] = p;
+            var next = Enumerable.Range(0, point.Length).Select(_ => new List<int>()).ToArray();
+            foreach (var b in world.Borders ?? new List<string[]>())
+                if (index.TryGetValue(b[0], out int x) && index.TryGetValue(b[1], out int y)) { next[x].Add(y); next[y].Add(x); }
+            foreach (var g in Enumerable.Range(0, Math.Min(owners.Count, point.Length)).Where(p => owners[p] != null).GroupBy(p => owners[p]).OrderBy(g => g.Key, StringComparer.Ordinal))
+            {
+                // Named on its largest stretch of joined land: a realm in two pieces is not named across the land between.
+                var mine = Largest(g.ToList(), next, point, owners, g.Key);
+                if (mine.Count < 2) continue;
+                double sw = mine.Sum(p => point[p].w);
+                double cu = mine.Sum(p => point[p].u * point[p].w) / sw, cv = mine.Sum(p => point[p].v * point[p].w) / sw;
+                double suu = 0, svv = 0, suv = 0;
+                foreach (int p in mine)
+                {
+                    double du = point[p].u - cu, dv = point[p].v - cv;
+                    suu += point[p].w * du * du; svv += point[p].w * dv * dv; suv += point[p].w * du * dv;
+                }
+                // The principal axis, kept readable: never steeper than MaxAngle, never upside down.
+                double angle = 0.5 * Math.Atan2(2 * suv, suu - svv) * 180 / Math.PI;
+                if (angle > 90) angle -= 180; else if (angle < -90) angle += 180;
+                angle = Math.Max(-MaxAngle, Math.Min(MaxAngle, angle));
+                double ax = Math.Cos(angle * Math.PI / 180), ay = Math.Sin(angle * Math.PI / 180);
+                double lo = double.MaxValue, hi = double.MinValue;
+                foreach (int p in mine)
+                {
+                    double t = (point[p].u - cu) * ax + (point[p].v - cv) * ay, r = Math.Sqrt(point[p].w);
+                    lo = Math.Min(lo, t - r); hi = Math.Max(hi, t + r);
+                }
+                // On its own land: the centre where the realm holds it, else the realm's province nearest to it.
+                int nearest = Nearest(point, Enumerable.Range(0, point.Length), cu, cv);
+                if (owners[nearest] != g.Key)
+                {
+                    int own = Nearest(point, mine, cu, cv);
+                    cu = point[own].u; cv = point[own].v;
+                }
+                list.Add(new RealmLabel { Country = g.Key, Text = nameOf(g.Key), U = (float)cu, V = (float)cv, Angle = (float)angle, Span = (float)(hi - lo) });
+            }
+            return list;
+        }
+
+        // The largest piece of a realm's land, by area, its provinces joined by shared borders.
+        private static List<int> Largest(List<int> all, List<int>[] next, (float u, float v, float w)[] point, IReadOnlyList<string> owners, string who)
+        {
+            var seen = new HashSet<int>();
+            List<int> best = new List<int>(); double bestArea = -1;
+            foreach (int start in all)
+            {
+                if (!seen.Add(start)) continue;
+                var part = new List<int> { start };
+                for (int k = 0; k < part.Count; k++)
+                    foreach (int q in next[part[k]])
+                        if (owners[q] == who && seen.Add(q)) part.Add(q);
+                double area = part.Sum(p => point[p].w);
+                if (area > bestArea) { bestArea = area; best = part; }
+            }
+            return best;
+        }
+
+        private static int Nearest((float u, float v, float w)[] point, IEnumerable<int> among, double u, double v)
+        {
+            int best = -1; double d = double.MaxValue;
+            foreach (int p in among)
+            {
+                double e = (point[p].u - u) * (point[p].u - u) + (point[p].v - v) * (point[p].v - v);
+                if (e < d) { d = e; best = p; }
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// Sizes each name to most of its realm's length at <paramref name="pxPerCell"/>, between
+        /// <see cref="MinSize"/> and <see cref="MaxSize"/>; shown only zoomed out (<see cref="ChartLabels.RegionZoom"/>).
+        /// </summary>
+        public static void Fit(IReadOnlyList<RealmLabel> realms, float pxPerCell, float uiScale = 1)
+        {
+            bool far = pxPerCell < ChartLabels.RegionZoom;
+            foreach (var r in realms)
+            {
+                // The text's width is about 0.75 of its size a letter, plus the letter spacing: most of the land's length.
+                float size = (r.Span * pxPerCell * 0.85f / Math.Max(1, r.Text.Length) - LetterSpacing * uiScale) / 0.75f;
+                r.Size = Math.Min(MaxSize * uiScale, size);
+                r.Visible = far && r.Size >= MinSize * uiScale;
+            }
+        }
+
+        /// <summary>A realm name's width along its line, in screen pixels: widely spaced capitals.</summary>
+        public static float Width(RealmLabel r) => r.Text.Length * (r.Size * 0.75f + LetterSpacing);
+
+        /// <summary>The realm name's letter spacing in panel pixels, as the style sheet's <c>.realmlab</c> has it.</summary>
+        public const float LetterSpacing = 9;
+    }
 }

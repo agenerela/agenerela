@@ -223,6 +223,7 @@ namespace GreyBoxStrategy.Realm
             if (!known) hold.Add(Note("Your court knows the garrisons and forts of your own provinces and of those touching your land, as a model ruler is told."));
             hold.Add(KeyValue("Income", owner == null ? "none" : $"{Queries.Rules.IncomePerProvince} gold a turn"));
             var nb = new Label("Borders: " + string.Join(", ", Queries.Neighbours(p).Select(q => Cap(ProvinceIds[q])))); nb.AddToClassList("why-no"); hold.Add(nb);
+            LandSection(body, id);
 
 
             if (Fog.On) ProvinceOrders(body, p);
@@ -252,6 +253,34 @@ namespace GreyBoxStrategy.Realm
                     if (e.Decision != null && Fog.KnowsDecision(e.Decision.AgentId, GameOver)) { row.tooltip = "Click: the decision"; row.RegisterCallback<ClickEvent>(_ => DecisionPressed?.Invoke(e)); }
                     hist.Add(row);
                 }
+            }
+        }
+
+        /// <summary>A generated world's map data, for the province panel's land; null on the Classic board.</summary>
+        public WorldMap Land;
+
+        // The land itself, as the map describes it: what the chart draws there, and a special place's story. Every
+        // court knows it, as every ruler knows the map.
+        private void LandSection(VisualElement body, string id)
+        {
+            var land = Land?.Provinces.FirstOrDefault(x => x.Id == id);
+            if (land == null) return;
+            var sec = Sec(body, "THE LAND", "from the map");
+            sec.Add(KeyValue("Terrain", land.Terrain.ToString().ToLowerInvariant() + (land.Port ? ", a port" : land.Coastal ? ", on the coast" : "")));
+            var region = Land.Regions.FirstOrDefault(r => r.Id == land.Region);
+            if (region != null) sec.Add(KeyValue("Region", region.Name ?? region.Id));
+            int tier = Chart.SettlementLook.TierOf(land);
+            sec.Add(KeyValue("Settlement", Chart.SettlementLook.Name(tier)));
+            sec.Add(KeyValue("Development", $"{Chart.ChartLayout.DevelopmentOf(land)} of {Development.Max}"));
+            sec.Add(KeyValue("Population", land.Population.ToString()));
+            if (!string.IsNullOrEmpty(land.Good)) sec.Add(KeyValue("Goods", Cap(land.Good)));
+            sec.Add(Note("The chart draws the settlement and its fields by development, which comes from population, a capital and a port. Buildings will add to it (rules v2, R6)."));
+            var special = Land.Specials?.FirstOrDefault(x => x.Province == id);
+            if (special != null)
+            {
+                var sp = Sec(body, "A SPECIAL PLACE", (special.Template ?? "").Replace('-', ' ').Replace('_', ' '));
+                var t = new Label(special.Name); t.AddToClassList("insp-title"); sp.Add(t);
+                if (!string.IsNullOrEmpty(special.Story)) sp.Add(Note(special.Story));
             }
         }
 

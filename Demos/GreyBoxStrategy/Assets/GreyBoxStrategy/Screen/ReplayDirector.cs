@@ -131,6 +131,7 @@ namespace GreyBoxStrategy.Realm
             if (ui.Conquest) ui.WinAt = game.ProvinceIds.Count;
             ui.MaxTurns = game.Rules?.MaxTurns ?? 30;
             if (world != null) ui.ProvinceLabelSize = i => labelSizes[i];
+            ui.Land = world?.Geometry != null ? world : null;
             ui.BuildPanels();
             ui.ModePressed = SetMode;
             ui.FollowPressed = Follow;

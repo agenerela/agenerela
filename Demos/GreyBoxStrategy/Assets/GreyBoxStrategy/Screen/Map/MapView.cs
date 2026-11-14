@@ -142,6 +142,7 @@ namespace GreyBoxStrategy.Realm
 
             Assemble(chartTex, idTex, edgeTex, true);
             material.SetFloat("_EdgeFade", 0.03f);
+            UseCells(cells, geo.Width, geo.Height, seed, width / (float)geo.Width);
 
             var tile = new Texture2D(chart.SeaTileSize, chart.SeaTileSize, TextureFormat.RGBA32, true, false) { wrapMode = TextureWrapMode.Repeat, filterMode = FilterMode.Trilinear, name = "Sea tile (drawn)" };
             tile.SetPixelData(Flip(chart.SeaTile, chart.SeaTileSize, chart.SeaTileSize, 4), 0); tile.Apply(true, true);
@@ -152,6 +153,39 @@ namespace GreyBoxStrategy.Realm
         }
 
         private RenderTexture gpuChart;
+        private Texture2D cellTex;
+
+        /// <summary>
+        /// The cell grid for the shader, which takes each pixel's province from it by the raster's own vote
+        /// (<see cref="ChartRaster.IdAtCell"/>), so borders stay sharp however far the camera zooms in.
+        /// </summary>
+        private void UseCells(int[] cells, int gw, int gh, int seed, float pixelsPerCell)
+        {
+            var bytes = new byte[gw * gh * 2];
+            for (int i = 0; i < cells.Length; i++)
+            {
+                int c = cells[i];
+                ushort v = c >= 0 ? (ushort)c : c == MapGeometry.Water ? ChartRaster.Water : c == MapGeometry.Island ? ChartRaster.Island : ChartRaster.Sea;
+                bytes[i * 2] = (byte)(v & 0xFF); bytes[i * 2 + 1] = (byte)(v >> 8);
+            }
+            // Top row first, as the shader loads it: no flip.
+            cellTex = new Texture2D(gw, gh, TextureFormat.RG16, false, true) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp, name = "Cells (drawn)" };
+            cellTex.SetPixelData(bytes, 0); cellTex.Apply(false, true);
+            material.SetTexture("_CellTex", cellTex);
+            material.SetVector("_Grid", new Vector4(gw, gh, pixelsPerCell, 0));
+            material.SetInt("_Seed", seed);
+            GeometricBorders = true;
+        }
+
+        /// <summary>
+        /// A drawn chart's provinces and borders taken per screen pixel from the cell grid (on, the default) or from
+        /// the province map's pixels (off: staircased when zoomed in). For the Unity CLI, to compare the two.
+        /// </summary>
+        public bool GeometricBorders
+        {
+            get => material != null && material.GetFloat("_Geo") > 0.5f;
+            set { if (material != null && cellTex != null) material.SetFloat("_Geo", value ? 1 : 0); }
+        }
 
         /// <summary>The width the chart was last drawn at, in pixels.</summary>
         public int ChartWidth { get; private set; }
@@ -194,6 +228,7 @@ namespace GreyBoxStrategy.Realm
         private void OnDestroy()
         {
             ChartGpu.ReleaseInputs();
+            if (cellTex != null) Destroy(cellTex);
             if (gpuChart != null) { gpuChart.Release(); Destroy(gpuChart); }
         }
 
