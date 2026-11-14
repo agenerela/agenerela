@@ -120,6 +120,20 @@ namespace GreyBoxStrategy
             Settings = Preset == null ? new StorytellerSettings() : StorytellerSettings.Named(Preset),
         };
 
+        // --- The writs turn's voice (rules v2, after R1c: statements repeated 35% word for word) ---
+
+        /// <summary>
+        /// <c>+one-voice</c>: in the writs turn only a ruler's first court decision of a turn speaks. The second
+        /// court order, army orders, treaty answers and dilemmas are asked to leave the statement empty, and a
+        /// line written anyway is dropped (<see cref="ModelDecision.Unspoken"/>). The framework always asks for
+        /// the statement field, so this is the demo's way (a gap for #216 / #244).
+        /// </summary>
+        public bool OneVoice;
+        /// <summary><c>+own-lines</c>: a decision that speaks reads the ruler's last few lines, and is asked to say something new.</summary>
+        public bool OwnLines;
+        /// <summary>How many of the ruler's last lines <see cref="OwnLines"/> shows.</summary>
+        public const int OwnLinesShown = 4;
+
         /// <summary>A short name for logs and tables: "control", "per-target", "no-moves-line", and so on.</summary>
         public string Arm = "control";
 
@@ -194,6 +208,8 @@ namespace GreyBoxStrategy
                     else if (modifier == "moves-sentence") options.LegalTargets = LegalTargetListing.ObservationLine;
                     else if (modifier == "how-it-reads") options.RulesWording = StatementRulesWording.HowItShouldRead;
                     else if (modifier == "own-words") options.RulesWording = StatementRulesWording.InYourOwnWords;
+                    else if (modifier == "one-voice") options.OneVoice = true;
+                    else if (modifier == "own-lines") options.OwnLines = true;
                     else if (modifier == "storyteller") options.Storyteller = true;
                     else if (modifier == "choices") options.Choices = true;
                     else if (modifier == "multi") options.Multi = true;

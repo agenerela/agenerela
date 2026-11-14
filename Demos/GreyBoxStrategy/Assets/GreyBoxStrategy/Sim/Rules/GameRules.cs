@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace GreyBoxStrategy
 {
     /// <summary>How a turn is played (rules v2, section 1).</summary>
@@ -135,6 +137,13 @@ namespace GreyBoxStrategy
         public int BaseWrits = 3;
         public int ProvincesPerWrit = 8;
         public int MaxWrits = 5;
+        /// <summary>Writs for <see cref="WritsOverride"/> that set no cap: every army awaiting orders is asked, and the second court order.</summary>
+        public const int UnlimitedWrits = int.MaxValue;
+        /// <summary>
+        /// A country's writs a turn in place of the formula, by country id: a number, or <see cref="UnlimitedWrits"/>
+        /// (rules v2 1.6: the screen's "unlimited writs" for the person alone, an easy setting). Empty by default.
+        /// </summary>
+        public Dictionary<string, int> WritsOverride = new Dictionary<string, int>();
         /// <summary>An army asks for orders again after this many turns on one order (wake condition 8), and a hold lasts this long.</summary>
         public int WakeAfterTurns = 4;
         /// <summary>A march may be ordered to a province at most this many steps away.</summary>
@@ -176,6 +185,11 @@ namespace GreyBoxStrategy
         public static GameRules Standard => new GameRules();
 
         /// <summary>A copy, for a test that changes one number.</summary>
-        public GameRules Clone() => (GameRules)MemberwiseClone();
+        public GameRules Clone()
+        {
+            var copy = (GameRules)MemberwiseClone();
+            copy.WritsOverride = new Dictionary<string, int>(WritsOverride);
+            return copy;
+        }
     }
 }

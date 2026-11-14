@@ -199,6 +199,9 @@ namespace GreyBoxStrategy
         {
             // The court's headline already says its first fact; an army's first fact is its own line.
             var facts = r.Moment == Moment.Council ? r.TurnFacts.Skip(1).ToList() : r.TurnFacts.ToList();
+            bool speaks = Speaks(r);
+            if (!speaks) facts.Add(SayNothingLine);
+            else if (Options.OwnLines && OwnLinesLine() is string own) facts.Add(own);
             return new DecideOptions
             {
                 StimulusLabel = r.Moment == Moment.Army ? "Army" : r.Moment == Moment.Envoy ? "Treaty" : r.Moment == Moment.Choice ? "Choice" : "Court",
@@ -212,11 +215,36 @@ namespace GreyBoxStrategy
                 LegalTargets = Options.LegalTargets,
                 StatementRulesWording = Options.RulesWording,
                 PairTargetsWithActions = Options.PairTargets,
+                ExampleStatements = speaks,
                 Correlation = r.Moment == Moment.Army ? new ArmyOrder(r.ArmyId)
                     : r.Moment == Moment.Envoy ? new TreatyOffer(r.OfferId, r.OfferedBy)
                     : r.Moment == Moment.Choice ? new ChoiceCall(r.OfferId, r.Legal.Select(m => m.Action).ToList())
                     : (object)null,
             };
+        }
+
+        /// <summary>The line a decision that should say nothing reads (<see cref="ModelSeatOptions.OneVoice"/>).</summary>
+        public const string SayNothingLine = "Say nothing this time: leave the statement empty.";
+
+        /// <summary>Whether this decision carries a statement: always, unless <see cref="ModelSeatOptions.OneVoice"/>
+        /// leaves the turn's voice to the ruler's first court decision.</summary>
+        public bool Speaks(CountryRequest r) => !Options.OneVoice || (r.Moment == Moment.Council && r.Ordered.Count == 0);
+
+        /// <summary>
+        /// <see cref="ModelSeatOptions.OwnLines"/>: the ruler's last few distinct lines, newest last, with a plain
+        /// ask for something new; null before the ruler has said anything.
+        /// </summary>
+        public string OwnLinesLine()
+        {
+            var lines = new List<string>();
+            for (int i = Decisions.Count - 1; i >= 0 && lines.Count < ModelSeatOptions.OwnLinesShown; i--)
+            {
+                string s = Decisions[i].Statement?.Trim();
+                if (!string.IsNullOrEmpty(s) && !lines.Contains(s)) lines.Add(s);
+            }
+            if (lines.Count == 0) return null;
+            lines.Reverse();
+            return "Lines we said lately: " + string.Join(" ", lines.Select(l => "\"" + l + "\"")) + " Say something new, not one of these.";
         }
 
         /// <summary>Asks the right agent for this request's move; a failed decision holds (or refuses a treaty).</summary>
@@ -253,6 +281,11 @@ namespace GreyBoxStrategy
                 Guard = t != null && t.GuardsFired.Count > 0 ? t.GuardsFired[0] : null,
                 Error = result == null ? PipelineErrorKind.ProviderFailed : t?.ErrorKind,
             };
+            if (!Speaks(r) && !string.IsNullOrWhiteSpace(record.Statement))
+            {
+                record.Unspoken = record.Statement;
+                record.Statement = "";
+            }
             var move = ToMove(r, result?.Decision);
             record.Move = move;
             record.Offered = r.Legal.Contains(move);

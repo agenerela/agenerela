@@ -171,6 +171,80 @@ namespace GreyBoxStrategy.Tests
             Assert.That(unoffered, Is.Empty, "orders the game held as not offered: " + string.Join("; ", unoffered.Take(5)));
         }
 
+        // What the model reads of a call: the sources' block and the stimulus, which carries the call's own lines.
+        private static string Read(ScriptedRequest req) => req.Request.Observations + " " + req.Request.Stimulus;
+
+        // After R1c (35% of statements repeated word for word): the two voice arms.
+        private static async Task<(WritModelRecord record, List<(CountryRequest asked, ScriptedRequest req)> seen)> PlayVoice(string arm, int turns = 15)
+        {
+            var seats = new Dictionary<string, WritRuler>();
+            var seen = new List<(CountryRequest, ScriptedRequest)>();
+            var options = ModelSeatOptions.Named(arm);
+            ILLMProvider Provider(string id)
+            {
+                var script = new ScriptedPlayer(Temperament.Expansionist);
+                int n = 0;
+                return new ScriptedProvider
+                {
+                    Callback = req =>
+                    {
+                        var r = seats[id].Asking;
+                        seen.Add((r, req));
+                        var m = script.Decide(r);
+                        string line = $"Line {++n % 3} of {id}.";
+                        return m.Action == Actions.None
+                            ? ScriptedReply.Decide(ActionRegistry.None, TargetRegistry.NoTarget, line)
+                            : ScriptedReply.Decide(m.Action, m.Target ?? TargetRegistry.NoTarget, line);
+                    },
+                };
+            }
+            var setup = GameSetup.Writs(2);
+            setup.TurnCap = turns;
+            var record = await Await.NotCancelled(WritModelRunner.PlayAsync(setup, Enumerable.Repeat(ModelGameRunner.Model, 5).ToList(),
+                (w, id) => seats[id] = new WritRuler(w, id, Provider(id), options), "fake"));
+            return (record, seen);
+        }
+
+        [Test]
+        public async Task OneVoice_OnlyTheFirstCourtDecisionOfATurnSpeaks()
+        {
+            var (record, seen) = await PlayVoice("default+one-voice");
+            bool First(CountryRequest r) => r.Moment == Moment.Council && r.Ordered.Count == 0;
+            Assert.That(seen.Any(x => !First(x.asked)), Is.True);
+            foreach (var (asked, req) in seen)
+                Assert.That(Read(req).Contains(WritRuler.SayNothingLine), Is.EqualTo(!First(asked)), $"{asked.CountryId} {asked.Moment} turn {asked.Turn}");
+            var spoken = record.Decisions.Where(d => !string.IsNullOrEmpty(d.Statement)).ToList();
+            Assert.That(spoken, Is.Not.Empty);
+            Assert.That(record.Decisions.Where(d => d.Moment != Moment.Council).All(d => d.Statement == "" && d.Unspoken != null), Is.True, "a line written anyway is dropped");
+            Assert.That(record.Decisions.Count(d => d.Moment == Moment.Council && !string.IsNullOrEmpty(d.Statement)),
+                Is.EqualTo(record.Decisions.Count(d => d.Moment == Moment.Council) - record.Decisions.Count(d => d.Moment == Moment.Council && d.Unspoken != null)));
+            Assert.That(record.Decisions.Any(d => d.Moment == Moment.Council && d.Unspoken != null), Is.True, "the second court order says nothing");
+        }
+
+        [Test]
+        public async Task OwnLines_ADecisionReadsTheRulersLastLines_AndOnlyWhenItSpeaks()
+        {
+            var (_, seen) = await PlayVoice("default+own-lines");
+            var later = seen.Where(x => x.asked.Turn > 1).ToList();
+            Assert.That(later, Is.Not.Empty);
+            Assert.That(later.All(x => Read(x.req).Contains("Lines we said lately: \"Line ") && Read(x.req).Contains("Say something new")), Is.True);
+            Assert.That(Read(seen.First().req).Contains("Lines we said lately"), Is.False, "nothing said yet");
+            Assert.That(seen.All(x => !Read(x.req).Contains(WritRuler.SayNothingLine)), Is.True);
+
+            var (_, both) = await PlayVoice("default+one-voice+own-lines");
+            Assert.That(both.Where(x => Read(x.req).Contains(WritRuler.SayNothingLine)).All(x => !Read(x.req).Contains("Lines we said lately")), Is.True,
+                "a silent decision is not shown the lines");
+            Assert.That(both.Any(x => x.asked.Turn > 1 && Read(x.req).Contains("Lines we said lately")), Is.True);
+        }
+
+        [Test]
+        public void TheVoiceArms_AreNamed_AndOffByDefault()
+        {
+            Assert.That(ModelSeatOptions.Default.OneVoice || ModelSeatOptions.Default.OwnLines, Is.False);
+            var both = ModelSeatOptions.Named("default+one-voice+own-lines");
+            Assert.That(both.OneVoice && both.OwnLines, Is.True);
+        }
+
         [Test]
         public void ARuler_IsForTheWritsTurnOnly()
         {
