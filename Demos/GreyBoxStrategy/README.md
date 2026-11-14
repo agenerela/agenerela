@@ -647,8 +647,8 @@ A marshal's says which army it ordered.
 
 **R1a, the writs turn and armies as pieces, headless** (12 November). Rules v2's turn, as a setting
 beside today's: `GameSetup.Writs(seed)` (or `"turn": "writs"`) plays it, conquest with no turn limit.
-The default stays the one-move game, so every pinned series and recording is unchanged. Nothing asks a
-model yet; the scripted players and the random baseline play it. R1b's second part, below, adds model rulers (`WritRuler`), which no run has called yet.
+The default stays the one-move game, so every pinned series and recording is unchanged. In R1a the scripted players and the random baseline played it, and nothing asked a
+model. R1b's second part, below, adds model rulers (`WritRuler`), and R1c measured them live.
 
 - **A turn.** Each ruler has writs: 2, plus 1 for every 8 provinces it owns, at most 5 (R1b, #281: three writs, not two; the R1b paragraph below gives the rest of the retune). The court is
   asked first. Then come the armies that are waiting for orders, the most urgent first (an enemy army
