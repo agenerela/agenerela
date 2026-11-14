@@ -36,7 +36,7 @@ namespace GreyBoxStrategy.Realm
             float scale = CurrentUiScale();
             panelSettings.scale = scale;
             ui?.SetCompact(Screen.width / scale < 1600);
-            if (cam != null) FitCamera();
+            if (cam != null) { if (framedRealm != null) FrameRealm(framedRealm); else FitCamera(); }
         }
 
         /// <summary>Applies settings at once. The display (a built game only) changes only when it differs from <paramref name="before"/>.</summary>
@@ -118,28 +118,23 @@ namespace GreyBoxStrategy.Realm
 
         private void StartNewGame(NewGameChoice c)
         {
-            if (c.Writs)
-            {
-                if (c.Rule)
-                {
-                    if (c.Generated) { ui.ShowMenuStatus("Rule mode on the writs turn plays the Classic board for now; a generated world is watch only."); return; }
-                    TryRuleWrits(c.Country, c.Model, c.Seed, c.Victory, StoryArms.For(c.Storyteller));
-                    return;
-                }
-                // Model rulers on the RTX 5080: a court and a marshal for every country.
-                if (c.Generated) StartGeneratedLive(c.Size, c.Seed, c.Model, c.Victory, 0, StoryArms.For(c.Storyteller));
-                else TryLiveWrits(c.Model, c.Seed, c.Victory, false, 0, StoryArms.For(c.Storyteller));
-                return;
-            }
-            if (c.Generated)
-            {
-                if (c.Rule) { ui.ShowMenuStatus("A generated world is watch only for now: scripted rulers play it. Rule mode on it comes with generated worlds in full (R4)."); return; }
-                StartGeneratedWatch(c.Size, c.Shape, c.Seed);
-                return;
-            }
             string arm = StoryArms.For(c.Storyteller);
-            if (c.Rule) TryRule(c.Country, c.Model, c.Seed, arm);
-            else TryLive(c.Model, c.Seed, arm);
+            switch (c.Route(out string why))
+            {
+                case NewGameRoute.None: ui.ShowMenuStatus(why); return;
+                case NewGameRoute.WorldRule: StartGeneratedRule(c.Size, c.Shape, c.Seed, c.CountriesFor(), c.Slot, c.Model, c.Scripted, c.Victory, arm); return;
+                case NewGameRoute.WorldReplay: StartGeneratedWatch(c.Size, c.Shape, c.Seed, c.CountriesFor(), c.Writs, c.Victory); return;
+                // Model rulers on the RTX 5080: a court and a marshal for every country.
+                case NewGameRoute.WorldLive: StartGeneratedLive(c.Size, c.Seed, c.Model, c.Victory, 0, arm, c.Shape, c.CountriesFor()); return;
+                case NewGameRoute.ClassicWritsRule: TryRuleWrits(c.Country, c.Model, c.Seed, c.Victory, arm); return;
+                case NewGameRoute.ClassicWritsRuleScripted: ui.HideMenu(); StartRuleScriptedWrits(c.Country, c.Seed, c.Victory, arm); return;
+                case NewGameRoute.ClassicWritsReplay: StartWritsWatch(c.Seed, c.Victory); return;
+                case NewGameRoute.ClassicWritsLive: TryLiveWrits(c.Model, c.Seed, c.Victory, false, 0, arm); return;
+                case NewGameRoute.ClassicRule: TryRule(c.Country, c.Model, c.Seed, arm); return;
+                case NewGameRoute.ClassicRuleScripted: ui.HideMenu(); StartRuleScripted(c.Country, c.Seed, 0, arm); return;
+                case NewGameRoute.ClassicReplay: StartReplay(); return;
+                case NewGameRoute.ClassicLive: TryLive(c.Model, c.Seed, arm); return;
+            }
         }
 
         private static void Quit()

@@ -1662,6 +1662,16 @@ lifting from freed land, war scores, and `ReplayBuilder` rebuilding armies. The 
 "The writs turn on screen" has the detail. Rule mode on the writs turn (writs in the top bar, the
 awaiting marks, the army cycle key, orders queued above End turn) came in the third part, below.
 
+**R4 on screen, first part: built** (14 November). Generated worlds in all three ways of playing:
+- New game routes every combination (`NewGameChoice.Route`);
+- a rule game opens on your realm;
+- the camera zooms and pans on any size;
+- pieces scale with the spacing of provinces on screen;
+- realm lists and the chronicle fold;
+- frame time is measured on a huge world.
+
+The rest of R4's checklist is not started: settlement tiers, label collisions at three zooms, the id map at 4096, local facts.
+
 **The screen's half, third part: built** (13 November). Rule mode on the writs turn:
 - writs in the top bar and the council panel;
 - the awaiting marks, and the armies left without a writ;

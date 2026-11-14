@@ -143,6 +143,11 @@ never holds the model's original words.
 `Execute`'s own re-check is different: it refuses a decision that passed, at the moment of acting,
 and never rewrites it, so that decision keeps its statement.
 
+**A call that asked for no statement** (`DecideOptions.AskForStatement = false`, #266) gets none
+here either: neither your callback nor a refusal line is asked, and the stopped decision's statement
+stays empty. A guard of your own that judges the statement should pass such a call, which it can
+tell from `input.Options.AskForStatement`; `input.Decision.Statement` is empty there.
+
 ## A guard, or availability?
 
 There are two places to stop an action, and they are not interchangeable.

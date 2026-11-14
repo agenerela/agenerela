@@ -63,7 +63,7 @@ namespace GreyBoxStrategy.Realm
             if (showReport) rep.AddToClassList("on");
             head.Add(rep);
             orders.Add(head);
-            var body = new ScrollView { style = { paddingLeft = 10, paddingRight = 10, paddingTop = 7, paddingBottom = 8, maxHeight = 560 } };
+            var body = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden, style = { paddingLeft = 10, paddingRight = 10, paddingTop = 7, paddingBottom = 8, maxHeight = 560 } };
             orders.Add(body);
             if (showReport)
             {
@@ -103,14 +103,23 @@ namespace GreyBoxStrategy.Realm
             if (SelectedArmy != null && withWrits.Contains(SelectedArmy))
             {
                 var moves = WritLegality.ArmyMoves(w, You, SelectedArmy);
-                var hint = Text($"{Chronicle.Host(SelectedArmy)}: click a lit province to march there, or hold.", "src"); body.Add(hint);
+                bool canMarch = moves.Any(m => m.Action == Actions.March);
+                var hint = Text(canMarch ? $"{Chronicle.Host(SelectedArmy)}: click a lit province to march there, or hold."
+                                         : $"{Chronicle.Host(SelectedArmy)}: no march is offered from {Cap(w.FindArmy(SelectedArmy)?.Location)}; it can only hold.", "src"); body.Add(hint);
                 var hold = new Button(() => { Plan.Armies[SelectedArmy] = moves.First(m => m.Action == Actions.None); PlanChanged?.Invoke(); ShowOrders(status); }) { text = "Hold", tooltip = "Hold where it stands; it waits for orders again when something wakes it" };
-                hold.AddToClassList("tbtn"); hold.style.width = StyleKeyword.Auto; hold.style.paddingLeft = 8; hold.style.paddingRight = 8; body.Add(hold);
-                // Why the rest of the map is not offered, the nearest first.
-                var not = ProvinceIds.Where(p => !moves.Any(m => m.Target == p))
+                hold.AddToClassList("order-move"); hold.style.alignSelf = Align.FlexStart; hold.style.marginTop = 2;
+                if (Plan.Armies.TryGetValue(SelectedArmy, out var given) && given.Action == Actions.None) hold.AddToClassList("pick");
+                body.Add(hold);
+                // Why the nearest provinces it may not go to are not offered: three at most, the nearest first; any other, a click on the map says.
+                var army = w.FindArmy(SelectedArmy);
+                var steps = Steps(army?.Location);
+                var not = ProvinceIds.Where(p => p != army?.Location && !moves.Any(m => m.Target == p) && steps.ContainsKey(p))
+                    .OrderBy(p => steps[p]).ThenBy(p => p, StringComparer.Ordinal)
                     .Select(p => (p, why: WritLegality.WhyNotArmy(w, You, SelectedArmy, new Move(Actions.March, p))))
-                    .Where(x => x.why != null && !x.why.Contains("more than")).Take(5).ToList();
-                foreach (var (p, why) in not) body.Add(Text($"{Cap(p)}: {why}", "why-no"));
+                    .Where(x => x.why != null).Take(3).ToList();
+                if (not.Count > 0) body.Add(Text("Not offered, the nearest:", "src"));
+                foreach (var (p, why) in not) body.Add(Text($"{Cap(p)}: {Words.Destination(why)}", "why-no"));
+                if (not.Count > 0) body.Add(Text("Any other province: click it on the map to hear why.", "src"));
             }
 
             var foot = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center, marginTop = 8 } };
@@ -136,15 +145,19 @@ namespace GreyBoxStrategy.Realm
             {
                 var legal = req.Legal.Where(m => m.Action == action).ToList();
                 string a = action;
+                string why = legal.Count == 0 ? WhyNotCourtAction(w, action) ?? "Not offered this turn." : null;
                 var b = new Button(() =>
                 {
+                    // Not offered: the button stays where it is, dim, and says why rather than going grey and silent.
+                    if (why != null) { if (ordersStatus != null) ordersStatus.text = $"{CourtLabel(a)}: {why}"; return; }
                     if (legal.Count == 1 && (legal[0].Target == null || !Actions.TargetsCountry(a) && !Actions.TargetsProvince(a))) Set(second, legal[0], status);
                     else { openCourt = openCourt == a && openCourt2 == second ? null : a; openCourt2 = second; ShowOrders(status); }
                 }) { text = CourtLabel(action) };
-                b.AddToClassList("move-btn");
-                if (legal.Count == 0) { b.SetEnabled(false); b.tooltip = WhyNotCourtAction(w, action) ?? "Not offered this turn."; }
+                b.AddToClassList("order-move");
+                if (why != null) { b.AddToClassList("off"); b.tooltip = "Not offered: " + why; }
                 else b.tooltip = Explain(action);
                 if (chosen != null && chosen.Action == action) b.AddToClassList("pick");
+                else if (openCourt == action && openCourt2 == second) b.AddToClassList("on");
                 row.Add(b);
             }
             box.Add(row);
@@ -192,7 +205,7 @@ namespace GreyBoxStrategy.Realm
             foreach (string target in targets)
             {
                 string why = WritLegality.WhyNotCourt(w, You, new Move(action, target));
-                if (why != null) return (target != null ? (Actions.TargetsCountry(action) ? CountryLook.NameOf(target) : Cap(target)) + ": " : "") + why;
+                if (why != null) return (target != null ? (Actions.TargetsCountry(action) ? CountryLook.NameOf(target) : Cap(target)) + ": " : "") + Words.Plain(why);
             }
             return null;
         }
@@ -207,7 +220,7 @@ namespace GreyBoxStrategy.Realm
             if (hasWrit)
             {
                 var m = Plan.Armies.TryGetValue(army.Id, out var x) ? x : null;
-                state = m == null ? $"at {Cap(army.Location)}, awaiting: a writ for it" : m.Action == Actions.March ? $"orders: march to {Cap(m.Target)}" : "orders: hold";
+                state = m == null ? $"at {Cap(army.Location)}, awaiting orders: it has a writ" : m.Action == Actions.March ? $"orders: march to {Cap(m.Target)}" : "orders: hold";
                 row.AddToClassList(m == null ? "needs" : "ordered");
             }
             else if (waits) { state = $"at {Cap(army.Location)}, awaiting, but no writ left: it holds"; row.AddToClassList("no-writ"); }
@@ -245,12 +258,26 @@ namespace GreyBoxStrategy.Realm
             if (OrdersRequest == null || SelectedArmy == null || province < 0) return null;
             string p = ProvinceIds[province];
             var m = WritLegality.ArmyMoves(OrdersRequest.World, You, SelectedArmy).FirstOrDefault(x => x.Action == Actions.March && x.Target == p);
-            if (m == null) return WritLegality.WhyNotArmy(OrdersRequest.World, You, SelectedArmy, new Move(Actions.March, p)) ?? "not offered";
+            if (m == null) return Words.Destination(WritLegality.WhyNotArmy(OrdersRequest.World, You, SelectedArmy, new Move(Actions.March, p))) ?? "not offered";
             Plan.Armies[SelectedArmy] = m;
             SelectedArmy = null;
             PlanChanged?.Invoke();
             ShowOrders(ordersStatus?.text);
             return null;
+        }
+
+        // Steps from a province to every other, over the map's borders: how near a refused destination is.
+        private Dictionary<string, int> Steps(string from)
+        {
+            var d = new Dictionary<string, int>(StringComparer.Ordinal);
+            if (from == null || NeighboursOf == null) return d;
+            var q = new Queue<string>(); d[from] = 0; q.Enqueue(from);
+            while (q.Count > 0)
+            {
+                string p = q.Dequeue();
+                foreach (string n in NeighboursOf(p)) if (!d.ContainsKey(n)) { d[n] = d[p] + 1; q.Enqueue(n); }
+            }
+            return d;
         }
 
         /// <summary>The chosen army's legal destinations, by province index, for the map's highlight.</summary>

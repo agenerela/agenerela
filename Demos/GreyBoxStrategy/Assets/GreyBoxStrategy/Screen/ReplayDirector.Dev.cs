@@ -78,6 +78,20 @@ namespace GreyBoxStrategy.Realm
             c.Add("writs-rule", "writs-rule <country> [seed] [storyteller preset]", "rule a country on the writs turn against four stand-in rulers through the real agents, and a stand-in storyteller with a preset; no server, no card",
                 a => { if (a.Length < 1) return "Name a country."; if (started) return "A game is running: Esc, then Main menu, first."; string why = Preset(a, 2); if (why != null) return why;
                        ui.HideMenu(); StartRuleScriptedWrits(a[0], a.Length > 1 ? int.Parse(a[1]) : 3, GameSetup.ConquestPreset, StoryArms.For(a.Length > 2 ? a[2] : null)); return $"writs rule game, {a[0]}, stand-in rulers{(a.Length > 2 ? ", storyteller " + a[2] : "")}"; });
+            c.Add("writs-rule-world", "writs-rule-world <small|medium|large|huge> [seed] [seat] [countries] [model]",
+                "rule the realm in a seat (0 is the first) of a generated world on the writs turn: stand-in rulers through the real agents, or a model on the RTX 5080 when one is named",
+                a =>
+                {
+                    Need(a.Length >= 1, "Give a size.");
+                    var size = (MapSize)Enum.Parse(typeof(MapSize), a[0], true);
+                    int seed = N(a, 1, 7), seat = N(a, 2, 0), countries = N(a, 3, MapSettings.DefaultCountries(size));
+                    string why = new MapSettings { Size = size, Shape = LandShape.Continent }.WhyInvalid(countries);
+                    if (why != null) return why;
+                    Need(seat >= 0 && seat < countries, $"A seat from 0 to {countries - 1}.");
+                    bool scripted = a.Length < 5;
+                    StartGeneratedRule(size, LandShape.Continent, seed, countries, seat, scripted ? null : a[4], scripted);
+                    return $"a {size} world, seed {seed}, {countries} countries: you rule seat {seat}, {(scripted ? "stand-in rulers" : a[4])}";
+                });
             c.Add("plan", "plan court <move> | court2 <move> | <army> <march province|hold> | end", "the writs turn's orders, as the panel and the map give them (rule mode)", a => WritsPlanCommand(a));
             c.Add("writs-live", "writs-live classic|<size> [seed] [turns] [model]", "model rulers play the writs turn live on the RTX 5080, a court and a marshal each (the lock, its pause file and the server are checked first)",
                 a => LiveWritsCommand(a, null));

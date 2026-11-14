@@ -39,6 +39,21 @@ phase table and the open issues, not here.
     unlimited writs on screen.
   - `model.csv` gains an `unspoken` column: a line written where none was asked.
 
+- **Painted Realm: the writs turn on generated worlds** (#20). New game plays a generated world of any size
+  and number of countries in all three ways: a scripted replay, model rulers live, or ruling a realm.
+  - The camera zooms and pans comfortably on any size, and opens on your realm.
+  - Pieces scale with how close provinces stand on screen.
+  - Long realm lists and the chronicle fold.
+  - A huge world plays at about 6 ms a frame.
+  - The lit destinations no longer fill solid red on the chart's west side.
+
+- **Painted Realm: the writs turn polished** (#20).
+  - The council's buttons read as offered, chosen or not offered, with the reason.
+  - The chronicle and the panel use names, never ids.
+  - A ruler's orders of a turn are one entry with its line once.
+  - Refused destinations are the nearest three.
+  - Pieces in neighbouring provinces no longer overlap, and a treaty's seal shows above them.
+
 - **Painted Realm rules v2, R1c: the writs turn measured live on `qwen3.5:4b`** (#20). Tables can play the
   writs turn (`-strategyTurn writs`, with `-strategyCap`, `-strategyMap`, `-strategyMapSeed` and
   `-strategyVictory`), and a writs run writes `writs-turns.csv`. 20 writs games on Classic against 20 one-move

@@ -173,7 +173,11 @@ Shader "GreyBoxStrategy/PaintedMap"
                         tint = neutral; tintA = 0.75;
                         if (frac((px.x + px.y) / 9) < 0.145) { ink = _Engraved > 0.5 ? float3(0.05, 0.03, 0.015) : float3(0.01, 0.007, 0.004); inkA = 0.28; }
                     }
-                    if (reach > 0.5 && fmod(floor(px.x - px.y), 8) < 2) { ink = ToLinear(float3(0.82, 0.27, 0.2)); inkA = 0.5; }
+                    // The lit stripes keep 8 screen pixels apart at any zoom, and frac, not fmod: fmod of a negative
+                    // number stays negative, which filled every lit province west of the diagonal solid red. In texture pixels, a far view of a big
+                    // world blurred them into a flat red that read as a realm's colour.
+                    float texelsPerPixel = max(1.0, fwidth(px.x) + fwidth(px.y));
+                    if (reach > 0.5 && frac((px.x - px.y) / (8 * texelsPerPixel)) < 0.25) { ink = ToLinear(float3(0.82, 0.27, 0.2)); inkA = 0.5; }
 
                     colour = lerp(painting, ColorBlend(painting, tint), tintA);
                     colour = lerp(colour, ink, inkA);

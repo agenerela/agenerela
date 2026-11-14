@@ -42,6 +42,7 @@ namespace Agenerela{
         public float BacklogWaitSeconds; // From the call to its turn in the agent's own Agent.Backlog, before it was prepared; 0 with no backlog, and never part of QueueWaitSeconds (#190, G5)
         public string ChainId; // DecideOptions.Chain's id: the chain of relayed decisions this one is in; null for none (#190, G4)
         public int ChainHop; // That chain's hop: relays from its start, 0 for its first decision; 0 with no chain (#190, G4)
+        public bool StatementAsked = true; // DecideOptions.AskForStatement: whether the request's schema had a statement field; false for a call that asked for the move alone, whose decision's statement is empty (#266)
         public string ChainSource; // The Agent.Id of the agent whose decision was relayed to this one; null at a chain's start, with no chain, or when that agent has no id (#190, G4)
 
         public DecisionTelemetry()
@@ -83,6 +84,7 @@ namespace Agenerela{
             ChainId = null;
             ChainHop = 0;
             ChainSource = null;
+            StatementAsked = true;
         }
     }
 

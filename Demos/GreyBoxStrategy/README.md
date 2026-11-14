@@ -50,9 +50,10 @@ language model through the framework, fighting over 25 provinces on a painted se
        chosen by its crest, against four).
      - Choose the model (`qwen3.5:4b` by default) and the seed (Roll picks one), then **Start**.
      - **Map:** Classic (the painting) or **Generated** (a chart drawn by code), with a size and a
-       land shape. A generated world is a first look: the rules' scripted rulers play it at once
-       and you watch the replay. It plays in watch mode only, with no model and no server
-       ([the drawn chart](#the-drawn-chart-spike-12-november)).
+       land shape. A generated world was first a look: the scripted rulers played it at once
+       and you watched the replay ([the drawn chart](#the-drawn-chart-spike-12-november)). It now
+       also plays live, and you can rule a realm on it, on the writs turn
+       ([the writs turn on generated worlds](#the-writs-turn-on-generated-worlds-14-november)).
      - **Storyteller:** Off (the random event table, as every measured game), or one of its
        presets: Even hand, Underdog, Cruel fate, Quiet years, Saga
        ([what it shows](#the-storyteller-on-screen-13-november)).
@@ -553,10 +554,97 @@ world's in about 0.5 to 0.9 s, off the main thread behind the loading card.
 - The scripted rulers order armies into land they may not enter, so the chronicle shows many
   refused orders; that is the stand-ins' play, not the screen's.
 
+### The writs turn on generated worlds (14 November)
+
+R4's first part on screen: a generated world in all three ways of playing, on the drawn chart.
+
+**See it:** New game → World: Generated, drawn, with a Size, a Shape and a number of Countries ("By size" is
+the size's own number). Then Rulers: "Models, live" or "Scripted, a replay", and Watch or Rule. Rule mode on a
+generated world picks the realm by its seat and colour: its name comes with the world. The dev menu:
+`writs-rule-world medium 7 2 6` rules the third seat of a medium world of six realms, with stand-ins and no server.
+Add a model's name to play against model rulers on the RTX 5080.
+
+**What New game starts** (`NewGameChoice.Route`, tested):
+
+| | Watch, scripted | Watch, models | Rule |
+|---|---|---|---|
+| **Classic** | the replay, or the writs replay | live rulers | rule a country |
+| **Generated** | the replay (writs, or one move) | live rulers on the writs turn | rule a realm on the writs turn |
+
+**The camera on any size.** Scroll or Page Up and Page Down to zoom, drag with any mouse button or use the arrow keys
+to pan, and Home to see the whole world. The view never leaves the land. The wheel over a panel scrolls the
+panel, not the map.
+
+A rule game on a generated world opens on your realm and its neighbours, in the space left of the council. It
+stays framed when the window changes size, until Home.
+
+**Pieces scale with the map:** full size while neighbouring provinces stand more than 110 panel pixels apart, down
+to 60% as a big world or a far zoom brings them closer (`ReplayDirector.HostScaleFor`). Below 70% a piece drops
+its general's initial. Classic at its fitted view keeps full size.
+
+**Lists on a big world:** the realm panel's wars, truces and neutral land show eight rows, then "Show all N".
+Neutral land is sorted as your court knows it, the weakest garrisons first, and a click finds the province. The
+chronicle draws its newest 150 entries, with older ones behind "Show older entries".
+
+**Smooth on a huge world** (150 provinces, ten realms, about 75 armies at turn 50, 1080p):
+
+| | screen update | Unity's player loop |
+|---|---|---|
+| paused | 2.4 ms mean | 4.6 ms mean, 6.7 ms worst |
+| playing at 4× | 2.4 ms mean | 5.8 ms mean, 65 ms worst |
+
+A medium world in rule mode, paused, runs at 1.5 ms a frame. Before two fixes the huge world playing cost 37 ms
+a frame:
+- the chronicle rebuilt every line it had on each new one;
+- every piece sorted every army to find its neighbours.
+
+`FrameStats` reports these, for the Unity CLI.
+
+**Also fixed:**
+- **The lit destinations** of a chosen army drew solid red over every province west of the chart's diagonal:
+  `fmod` of a negative number stays negative. The stripes now use `frac`, and keep eight screen pixels apart at
+  any zoom.
+- **Hard-coded counts:** "the four rulers" and "five countries" now say how many there are.
+- **Your realm's name** stays in the top bar however many realms share it.
+- **The panels** are nearly opaque (98.5%, from 93%): zoomed in on a generated world, province names showed through
+  the chronicle's text.
+
+**Not yet:**
+- Rule mode on a generated world plays the writs turn only.
+- Unlimited writs for you waits for the build session's per-country writs setting.
+- R4's other parts (settlement tiers, label collision tests at three zooms, the id map's adjacency test at 4096)
+  are not part of this.
+
+### The writs turn on screen: polish (14 November)
+
+What the frames of rule mode showed, fixed:
+- **The council's buttons** look like the screen's other order buttons: gold on dark when offered. The
+  chosen one is filled and bold. One not offered is dim, its tooltip gives the rules' reason, and a click
+  says it in the panel rather than doing nothing.
+- **No ids in the chronicle or the panel.** A recruit reads "Orsk raises 15 soldiers at Orskhaven for
+  Fenna's host". A refusal or a reason the rules give is said with proper names and capitals
+  (`Wording` in `Screen/Replay/Chronicle.cs`).
+- **A ruler's orders of a turn are one entry.** On the writs turn a ruler gives several orders, and each
+  made its own line with its words under it. Now each ruler gets a heading, "Merrow's orders", with one
+  line an order ("fortifies Glimmerford, twice"), and what it said is shown once. A click on an order
+  still finds it on the map. Battles, land and the storyteller stay lines of their own (`Chronicle.Group`).
+- **Refused destinations:** the three nearest, nearest first, said of the province ("Highmoor: Valen's,
+  and we are at peace"). Any other is a click on the map away.
+- **Pieces never overlap.** Pieces in neighbouring provinces that would touch are set apart, one above
+  the other, while a moving piece keeps its path (`ScreenUI.Unclutter`). A treaty's seal is drawn above
+  the pieces, so a piece on the province no longer hides it. March lines run under the pieces, so a line never strikes through a piece's number. A march's "N turns" tag sits under its destination's name, not on it.
+- **The orders panel:** no stray horizontal scrollbar; Hold is a button like the others; an army with no march
+  offered says so instead of asking for a lit province; army names numbered by the rules read "Tolly's second host".
+- **The top bar** drops each country's lesser stats (gold, change, stability) when five countries in full
+  would push Menu off the right edge, as at 1080p in watch mode.
+
+Unlimited writs for the person waits for the rules' per-country setting.
+
 ### The writs turn on screen: rule mode (13 November)
 
 The third part of the screen's R1: you rule one country on the writs turn against four model rulers, a
-court and a marshal each, on the Classic board. A generated world stays watch only for now.
+court and a marshal each, on the Classic board. (Generated worlds came on 14 November: see
+[the writs turn on generated worlds](#the-writs-turn-on-generated-worlds-14-november).)
 
 **See it:** New game → Rule → The turn: Writs and armies. Or use the dev menu: `writs-rule kesh 3 [preset]`
 plays stand-in rulers through the same agents, with no server. `plan court recruit`,
@@ -647,8 +735,8 @@ A marshal's says which army it ordered.
 
 **R1a, the writs turn and armies as pieces, headless** (12 November). Rules v2's turn, as a setting
 beside today's: `GameSetup.Writs(seed)` (or `"turn": "writs"`) plays it, conquest with no turn limit.
-The default stays the one-move game, so every pinned series and recording is unchanged. Nothing asks a
-model yet; the scripted players and the random baseline play it. R1b's second part, below, adds model rulers (`WritRuler`), which no run has called yet.
+The default stays the one-move game, so every pinned series and recording is unchanged. In R1a the scripted players and the random baseline played it, and nothing asked a
+model. R1b's second part, below, adds model rulers (`WritRuler`), and R1c measured them live.
 
 - **A turn.** Each ruler has writs: 2, plus 1 for every 8 provinces it owns, at most 5 (R1b, #281: three writs, not two; the R1b paragraph below gives the rest of the retune). The court is
   asked first. Then come the armies that are waiting for orders, the most urgent first (an enemy army

@@ -61,6 +61,13 @@ namespace Agenerela
             " and target " + TargetRegistry.NoTarget +
             ", and say it is not here. Never act on a different thing instead.";
 
+        // The same rule for a schema with no statement (#266, DecideOptions.AskForStatement): it
+        // cannot ask the agent to say anything. New and unmeasured.
+        private const string TargetRuleEndSilent =
+            ". If you are asked to act on anything else, choose action " + ActionRegistry.None +
+            " and target " + TargetRegistry.NoTarget +
+            ". Never act on a different thing instead.";
+
         private const string ObservationsHeader = "What you know right now:";
 
         // The identity's standing knowledge and statement rules (#190, Living Vale #14), after the
@@ -219,8 +226,9 @@ namespace Agenerela
 
             return new DecisionRequest
             {
-                SystemPrompt = SystemPrompt(ctx.Identity, options.StatementRulesWording, choices,
-                    options.TargetRule ? TargetRuleLine(schema) : null),
+                // With no statement field, the rules for one are not sent either (#266).
+                SystemPrompt = SystemPrompt(ctx.Identity, schema.AsksForStatement ? options.StatementRulesWording : (StatementRulesWording?)null,
+                    choices, options.TargetRule ? TargetRuleLine(schema) : null),
                 FewShotBlock = fewShotBlock,
                 Observations = ObservationsBlock(block),
                 // Copied, so a memory strategy changing its list afterwards does not change a
@@ -278,7 +286,9 @@ namespace Agenerela
                     }
                 }
 
-                return ids.Count > 0 ? TargetRuleStart + string.Join(", ", ids) + TargetRuleEnd : null;
+                return ids.Count > 0
+                    ? TargetRuleStart + string.Join(", ", ids) + (schema.AsksForStatement ? TargetRuleEnd : TargetRuleEndSilent)
+                    : null;
             }
 
             return null;
@@ -510,8 +520,9 @@ namespace Agenerela
         // Who the agent is, its goals, its knowledge and its statement rules, each when it has
         // them, then the fixed instruction line, then the action and target list and the target
         // rule, each when there is one. With no knowledge and no rules the prompt is exactly what
-        // it was before them (#190, Living Vale #14).
-        private static string SystemPrompt(AgentIdentity identity, StatementRulesWording wording, string choices, string targetRule)
+        // it was before them (#190, Living Vale #14). A null wording sends no rules line: the
+        // schema asks for no statement (#266).
+        private static string SystemPrompt(AgentIdentity identity, StatementRulesWording? wording, string choices, string targetRule)
         {
             var lines = new List<string>(7);
 
@@ -534,9 +545,9 @@ namespace Agenerela
             }
 
             string rules = OneLine(identity.StatementRules);
-            if (rules.Length > 0)
+            if (rules.Length > 0 && wording.HasValue)
             {
-                lines.Add(RulesPrefix(wording) + EndSentence(rules));
+                lines.Add(RulesPrefix(wording.Value) + EndSentence(rules));
             }
 
             lines.Add(InstructionLine);

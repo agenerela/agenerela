@@ -1403,7 +1403,8 @@ namespace Agenerela
                 StatementRulesWording = call.StatementRulesWording,
                 CounterExamples = call.CounterExamples,
                 IdleExampleStatement = call.IdleExampleStatement,
-                ExampleStatements = call.ExampleStatements,
+                // A call that asks for no statement shows none in its examples either (#266).
+                ExampleStatements = call.ExampleStatements && call.AskForStatement,
                 ExampleTargetFallback = call.ExampleTargetFallback,
                 Stimulus = stimulus,
                 // Observe keeps the call's own lines last in ctx, after every source's.
@@ -1428,7 +1429,7 @@ namespace Agenerela
 
             seen?.SetActions(ctx, Definitions(), availability, available);
 
-            var schema = DecisionSchema.Build(ctx, available, paired, availability);
+            var schema = DecisionSchema.Build(ctx, available, paired, availability, call.AskForStatement);
             string fewShot = FewShotBuilder.Build(available, ctx.Targets, options, availability);
 
             var history = Recall(memory, ctx, telemetry);
@@ -1514,6 +1515,12 @@ namespace Agenerela
             CancellationToken ct, CancellationToken reset)
         {
             var verdict = stopped.Verdict.Value;
+
+            // A call that asked for no statement gets none here either (#266).
+            if (!call.AskForStatement)
+            {
+                return stopped;
+            }
 
             string line = DevelopersLine(verdict, ctx);
             if (line == null && call.AskForRefusalLine)
@@ -2003,6 +2010,7 @@ namespace Agenerela
                 ProviderConfig = ProviderConfig.NameOf(provider),
                 FrameworkVersion = AgenerelaInfo.Version,
                 Priority = call.Priority,
+                StatementAsked = call.AskForStatement,
                 ChainId = call.Chain?.Id,
                 ChainHop = call.Chain?.Hop ?? 0,
                 ChainSource = call.Chain?.SourceAgentId,

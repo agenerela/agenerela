@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace GreyBoxStrategy.Replay
 {
@@ -29,6 +30,23 @@ namespace GreyBoxStrategy.Replay
         public string Text;
         /// <summary>The ruler's words under it, or empty.</summary>
         public string Quote;
+        /// <summary>The line without its country's name in front ("fortifies Glimmerford"), for a ruler's orders grouped under its name.</summary>
+        public string Short;
+    }
+
+    /// <summary>One ruler's orders of one turn, under one heading, with what it said once.</summary>
+    public sealed class ChronicleGroup
+    {
+        public int Turn;
+        public string Country;
+        /// <summary>Newest first, as the chronicle shows lines.</summary>
+        public List<ChronicleLine> Lines = new List<ChronicleLine>();
+        /// <summary>The orders in words, oldest first, the same order given twice said once with "twice".</summary>
+        public List<(string text, ChronicleLine line)> Items = new List<(string, ChronicleLine)>();
+        /// <summary>What the ruler said, each different line once, oldest first.</summary>
+        public List<string> Quotes = new List<string>();
+        /// <summary>A lone line: drawn as itself, not as a group.</summary>
+        public bool Single => Lines.Count == 1;
     }
 
     /// <summary>
@@ -91,7 +109,7 @@ namespace GreyBoxStrategy.Replay
                     break;
                 case ReplayEventKind.Recruit:
                     line.Category = ChronicleCategory.Economy;
-                    line.Text = $"{N(e.Country)} recruits {e.Text.Replace("recruited ", "")}";
+                    line.Text = $"{N(e.Country)} {RecruitText(e.Text, P)}";
                     break;
                 case ReplayEventKind.Taxes:
                     line.Category = ChronicleCategory.Economy;
@@ -189,16 +207,97 @@ namespace GreyBoxStrategy.Replay
                 default:
                     return null;
             }
+            string speaker = N(e.Country);
+            line.Short = e.Country != null && line.Text.StartsWith(speaker + ": ", StringComparison.Ordinal) ? line.Text.Substring(speaker.Length + 2)
+                       : e.Country != null && line.Text.StartsWith(speaker + " ", StringComparison.Ordinal) ? line.Text.Substring(speaker.Length + 1)
+                       : line.Text;
             return line;
         }
 
-        /// <summary>An army's name as the chronicle says it: "maren_host" is "Maren's host".</summary>
+        private static readonly Regex Raised = new Regex(@"^raised (\d+) soldiers at (\w+)(?: \((.*)\))?");
+        private static readonly Regex JoinedArmy = new Regex(@"^(new )?(\w+?_host\d*) \+?(\d+)$");
+
+        /// <summary>
+        /// A recruit in words, without the ids the rules write: "raised 15 soldiers at orskhaven (fenna_host +15)" is
+        /// "raises 15 soldiers at Orskhaven for Fenna's host"; the one-move game's "recruited 10 soldiers for 50 gold"
+        /// is "recruits 10 soldiers for 50 gold".
+        /// </summary>
+        public static string RecruitText(string text, Func<string, string> province)
+        {
+            text = text ?? "";
+            if (text.StartsWith("recruited ", StringComparison.Ordinal)) return "recruits " + text.Substring("recruited ".Length);
+            var m = Raised.Match(text);
+            if (!m.Success) return "recruits " + text;
+            string at = $"raises {m.Groups[1].Value} soldiers at {province(m.Groups[2].Value)}";
+            if (!m.Groups[3].Success) return at;
+            var parts = m.Groups[3].Value.Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(p => JoinedArmy.Match(p.Trim())).Where(x => x.Success).ToList();
+            if (parts.Count == 1)
+                return parts[0].Groups[1].Success ? $"{at}: a new army, {Host(parts[0].Groups[2].Value)}" : $"{at} for {Host(parts[0].Groups[2].Value)}";
+            var said = parts.Select(x => x.Groups[1].Success ? $"a new army, {Host(x.Groups[2].Value)}, of {x.Groups[3].Value}" : $"{x.Groups[3].Value} for {Host(x.Groups[2].Value)}").ToList();
+            return parts.Count == 0 ? at : $"{at}: " + string.Join(" and ", said);
+        }
+
+        // The rules number a general whose name is taken again: "tolly2_host" (and allow "tolly_host2").
+        private static readonly Regex HostId = new Regex(@"^([A-Za-z_]+?)(\d*)_host(\d*)$");
+        private static readonly string[] Ordinals = { "", "", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth" };
+
+        /// <summary>An army's name as the chronicle says it: "maren_host" is "Maren's host", "maren2_host" "Maren's second host".</summary>
         public static string Host(string armyId)
         {
             if (string.IsNullOrEmpty(armyId)) return "an army";
-            string general = armyId.EndsWith("_host") ? armyId.Substring(0, armyId.Length - 5) : armyId;
-            return char.ToUpperInvariant(general[0]) + general.Substring(1) + "'s host";
+            var m = HostId.Match(armyId);
+            string general = m.Success ? m.Groups[1].Value : armyId;
+            string name = char.ToUpperInvariant(general[0]) + general.Substring(1).Replace('_', ' ') + "'s";
+            string number = m.Success ? m.Groups[2].Value + m.Groups[3].Value : "";
+            if (number == "") return name + " host";
+            int n = int.Parse(number);
+            return n < Ordinals.Length && n >= 2 ? $"{name} {Ordinals[n]} host" : $"{name} host {n}";
         }
+
+        /// <summary>The kinds that are a ruler's own orders: grouped by ruler and turn in the chronicle.</summary>
+        public static bool IsOrder(ReplayEventKind k) =>
+            k == ReplayEventKind.Recruit || k == ReplayEventKind.Taxes || k == ReplayEventKind.Fort || k == ReplayEventKind.Hold
+            || k == ReplayEventKind.ArmyOrder || k == ReplayEventKind.WarDeclared || k == ReplayEventKind.TermOffered || k == ReplayEventKind.Refused;
+
+        /// <summary>
+        /// Lines as the chronicle draws them (newest first), with a ruler's orders of one turn gathered under one
+        /// heading where the first of them stands: on the writs turn a ruler gives several orders a turn, and each
+        /// would otherwise make its own line with the same words under it. Battles, land and the storyteller stay lines.
+        /// </summary>
+        public static List<ChronicleGroup> Group(IReadOnlyList<ChronicleLine> newestFirst, string saidAgain = null)
+        {
+            var groups = new List<ChronicleGroup>();
+            var open = new Dictionary<(int, string), ChronicleGroup>();
+            foreach (var l in newestFirst)
+            {
+                if (l.Country != null && IsOrder(l.Event.Kind))
+                {
+                    if (!open.TryGetValue((l.Turn, l.Country), out var g))
+                    {
+                        g = new ChronicleGroup { Turn = l.Turn, Country = l.Country };
+                        open[(l.Turn, l.Country)] = g;
+                        groups.Add(g);
+                    }
+                    g.Lines.Add(l);
+                }
+                else groups.Add(new ChronicleGroup { Turn = l.Turn, Country = l.Country, Lines = { l } });
+            }
+            foreach (var g in groups.Where(g => !g.Single))
+            {
+                var oldest = Enumerable.Reverse(g.Lines).ToList();
+                foreach (var same in oldest.GroupBy(l => l.Short ?? l.Text))
+                {
+                    int n = same.Count();
+                    g.Items.Add((n == 1 ? same.Key : n == 2 ? same.Key + ", twice" : $"{same.Key}, {n} times", same.First()));
+                }
+                foreach (var l in oldest)
+                    if (!string.IsNullOrWhiteSpace(l.Quote) && l.Quote != saidAgain && !g.Quotes.Any(q => Same(q, l.Quote))) g.Quotes.Add(l.Quote);
+            }
+            return groups;
+        }
+
+        private static bool Same(string a, string b) => string.Equals(a?.Trim().TrimEnd('.', '!'), b?.Trim().TrimEnd('.', '!'), StringComparison.OrdinalIgnoreCase);
 
         /// <summary>A treaty's term in words, from the proposer's side.</summary>
         public static string TermText(string term, string from, string to, Func<string, string> name)
@@ -216,5 +315,54 @@ namespace GreyBoxStrategy.Replay
         public static List<ChronicleLine> Filter(IEnumerable<ChronicleLine> lines, ISet<string> countries, ISet<ChronicleCategory> categories) =>
             lines.Where(l => l != null && (l.Country == null || countries.Contains(l.Country)) && categories.Contains(l.Category))
                 .Reverse().ToList();
+    }
+
+    /// <summary>
+    /// The rules' reasons and lines in the screen's words: proper names and capitals, no ids, no underscores.
+    /// "highmoor belongs to valen, at peace with us" is "Highmoor is Valen's, and we are at peace".
+    /// </summary>
+    public sealed class Wording
+    {
+        private readonly Func<string, string> name;
+        private readonly HashSet<string> countries, provinces;
+
+        public Wording(IEnumerable<string> countryIds, IEnumerable<string> provinceIds, Func<string, string> countryName)
+        {
+            countries = new HashSet<string>(countryIds ?? Enumerable.Empty<string>(), StringComparer.Ordinal);
+            provinces = new HashSet<string>(provinceIds ?? Enumerable.Empty<string>(), StringComparer.Ordinal);
+            name = countryName;
+        }
+
+        private static readonly Regex Army = new Regex(@"\b\w+?_host\d*\b");
+        private static readonly Regex Word = new Regex(@"\b[a-z][a-z_]*\b");
+        private static readonly Regex AtPeace = new Regex(@"^(\w+) belongs to (\w+), at peace with us$");
+        private static readonly Regex TooFar = new Regex(@"^(\w+) is more than (\d+) steps away$");
+        private static readonly Regex Already = new Regex(@"^\w+ is already at (\w+)$");
+
+        /// <summary>A province's name: its id with a capital.</summary>
+        public static string Province(string id) => string.IsNullOrEmpty(id) ? "" : char.ToUpperInvariant(id[0]) + id.Substring(1);
+
+        /// <summary>Ids to names (armies, countries, provinces), actions to words, and a capital first.</summary>
+        public string Plain(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return text;
+            var m = AtPeace.Match(text);
+            if (m.Success && provinces.Contains(m.Groups[1].Value)) text = $"{m.Groups[1].Value} is {m.Groups[2].Value}'s, and we are at peace";
+            text = Army.Replace(text, x => Chronicle.Host(x.Value));
+            text = Word.Replace(text, x =>
+                countries.Contains(x.Value) ? name(x.Value) : provinces.Contains(x.Value) ? Province(x.Value) : x.Value.Replace('_', ' '));
+            return char.ToUpperInvariant(text[0]) + text.Substring(1);
+        }
+
+        /// <summary>Why an army may not march to a province, said of the province: "Valen's, and we are at peace".</summary>
+        public string Destination(string why)
+        {
+            if (string.IsNullOrEmpty(why)) return why;
+            var m = AtPeace.Match(why);
+            if (m.Success) return $"{name(m.Groups[2].Value)}'s, and we are at peace";
+            if ((m = TooFar.Match(why)).Success) return $"more than {m.Groups[2].Value} steps away";
+            if (Already.IsMatch(why)) return "the army is already there";
+            return Plain(why);
+        }
     }
 }

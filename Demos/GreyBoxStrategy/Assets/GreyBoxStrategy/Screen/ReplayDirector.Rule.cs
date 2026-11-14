@@ -46,12 +46,27 @@ namespace GreyBoxStrategy.Realm
         {
             var setup = GameSetup.Writs(gameSeed, GameSetup.ClassicMapId, victory);
             var map = setup.BuildMap();
+            BeginRuleOn(country, "scripted", true, arm, gameSeed, map, setup.BuildRules(map));
+        }
+
+        /// <summary>
+        /// A rule game on a world already made (Classic or generated): stand-in rulers through the agents when
+        /// <paramref name="scripted"/>, else model rulers behind the card's lock (the server checked before).
+        /// </summary>
+        private void BeginRuleOn(string country, string model, bool scripted, string arm, int gameSeed, MapDefinition map, GameRules rules)
+        {
+            if (!scripted)
+            {
+                ruleLock = new CardLock(model, $"rule game on the writs turn, {model} with personas, seed {gameSeed}, {map.Provinces.Count} provinces");
+                BeginRule(country, model, gameSeed, (m, w) => Gateway.Provider(m), ruleLock, arm, map, rules);
+                return;
+            }
             var rng = new System.Random(gameSeed);
             World world = null;
             var provider = new ScriptedProvider { Callback = r => ScriptedRuler(r, rng, world) };
             provider.Otherwise(ScriptedReply.Decide("none", statement: "We wait."));
             var wrapped = DevProvider.Wrap(provider);
-            BeginRule(country, "scripted", gameSeed, (m, w) => { world = w; return wrapped; }, null, arm, map, setup.BuildRules(map));
+            BeginRule(country, "scripted", gameSeed, (m, w) => { world = w; return wrapped; }, null, arm, map, rules);
             if (rule != null) rule.Dev = true;
         }
 
@@ -295,7 +310,7 @@ namespace GreyBoxStrategy.Realm
                 int used = ui.WritsUsed(rule.Orders), waiting = WritLegality.Awaiting(rule.Orders.World, rule.You).Count(), withWrit = ui.ArmiesWithWrits(rule.Orders).Count;
                 ui.SetTurn(rule.Orders.Turn, $"Orders · writs {used} of {rule.Orders.Writs}");
                 string writsLine = waiting > withWrit ? $" {waiting - withWrit} of your armies wait for want of a writ: they hold." : "";
-                status = (rule.ModelsThinking ? RulersLine("The four rulers are deciding while you choose") : "The four rulers have decided. Your orders?") + writsLine;
+                status = (rule.ModelsThinking ? RulersLine($"The {OtherRulers} are deciding while you choose") : $"The {OtherRulers} have decided. Your orders?") + writsLine;
                 ui.SetThinking(rule.ModelsThinking);
             }
             else if (w == RuleSession.Waiting.Orders && rule.Orders != null)
@@ -310,8 +325,8 @@ namespace GreyBoxStrategy.Realm
                     ui.SetPlaying(false, speed);
                     RefreshSide();
                 }
-                status = rule.ModelsThinking ? RulersLine("The four rulers are deciding while you choose")
-                    : "The four rulers have decided. Your order?";
+                status = rule.ModelsThinking ? RulersLine($"The {OtherRulers} are deciding while you choose")
+                    : $"The {OtherRulers} have decided. Your order?";
                 ui.SetThinking(rule.ModelsThinking);
             }
             else if (w == RuleSession.Waiting.Envoy && rule.Offer != null)
@@ -327,7 +342,7 @@ namespace GreyBoxStrategy.Realm
             else if (!rule.Game.World.Country(rule.You).Alive)
             {
                 ui.OrdersRequest = null;
-                status = $"{CountryLook.NameOf(rule.You)} has lost its last province. The four rulers play on; watch how it ends.";
+                status = $"{CountryLook.NameOf(rule.You)} has lost its last province. The {OtherRulers} play on; watch how it ends.";
                 ui.SetThinking(rule.ModelsThinking);
             }
             else
@@ -349,6 +364,17 @@ namespace GreyBoxStrategy.Realm
         /// Back to the start menu: stops the game, lets the card go (unloading the model), and loads
         /// the scene afresh. The Menu button in the top bar, and the Unity CLI.
         /// </summary>
+        /// <summary>"four rulers" on the Classic board, "seven rulers" on a world of eight realms: the others, in words.</summary>
+        private string OtherRulers
+        {
+            get
+            {
+                int n = Math.Max(1, (game?.CountryIds.Count ?? 5) - 1);
+                string[] words = { "", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine" };
+                return (n < words.Length ? words[n] : n.ToString()) + (n == 1 ? " ruler" : " rulers");
+            }
+        }
+
         public void LeaveToMenu()
         {
             rule?.Stop();
@@ -369,7 +395,7 @@ namespace GreyBoxStrategy.Realm
             ui.SetThinking(false);
             ui.HideOffer();
             ui.OrdersRequest = null;
-            lastOrdersStatus = $"Turn {turn} resolves: your order and the four rulers' moves land in the rules' order.";
+            lastOrdersStatus = $"Turn {turn} resolves: your order and the {OtherRulers}' moves land in the rules' order.";
             lastOrdersKey = null;
             ui.ShowOrders(lastOrdersStatus);
             ui.SetCard(rule.HoldsCard ? "held" : null);

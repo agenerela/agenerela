@@ -122,6 +122,36 @@ namespace Agenerela
         public StatementRulesWording StatementRulesWording = StatementRulesWording.YourStatement;
 
         /// <summary>
+        /// Whether this call asks for the free-text <c>statement</c> at all (#266). On by default,
+        /// the request every call sent before this option, byte for byte. False leaves the field out
+        /// of the schema, flat, without targets and paired alike, and out of what the prompt says
+        /// about it, so the reply is <c>action</c> and <c>target</c> alone.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// For a call whose move is all the game needs, such as a marshal ordering ten armies a turn:
+        /// asked to speak on each, a model repeats itself (GreyBoxStrategy, findings 13 November
+        /// 2026). The field order stays <c>action</c>, <c>target</c> (DR-004).
+        /// </para>
+        /// <para>
+        /// Off, the examples show no statement, the identity's <see cref="AgentIdentity.StatementRules"/>
+        /// line is not sent, and the target rule, when it is sent, no longer asks the agent to say
+        /// that a thing is not here. The decision's <see cref="AgentDecision.Statement"/> is empty,
+        /// even if the provider answered with one anyway; memory remembers the reply without it, as
+        /// the schema asked. A decision a guard stops keeps its empty statement:
+        /// <see cref="Agent.RefusalStatement"/> is not asked, and <see cref="AskForRefusalLine"/>
+        /// sends nothing. <see cref="DecisionTelemetry.StatementAsked"/> records the choice. A guard
+        /// of your own that judges the statement should pass a call that asked for none, by
+        /// reading this option on <see cref="GuardInput.Options"/>.
+        /// </para>
+        /// <para>
+        /// It changes what the model reads, so it is a choice per call, never a default, until an
+        /// A/B run says otherwise (#151). Nothing here classifies the call (DR-008).
+        /// </para>
+        /// </remarks>
+        public bool AskForStatement = true;
+
+        /// <summary>
         /// Whether this call's examples show each action's
         /// <see cref="ActionDefinition.CounterExampleStimulus"/>, answered with <c>none</c> (#190). On
         /// by default, which shows only what a developer wrote. False leaves them out of this call, as

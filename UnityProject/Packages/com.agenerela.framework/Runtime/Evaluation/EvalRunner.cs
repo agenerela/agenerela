@@ -710,8 +710,7 @@ namespace Agenerela.Evaluation
         // without its request counts as asking.
         private static bool AsksForStatement(DecisionResult result)
         {
-            var fields = result.Request?.Schema?.Fields;
-            return fields == null || fields.Any(f => f != null && f.Name == DecisionSchema.StatementFieldName);
+            return result.Request?.Schema?.AsksForStatement ?? true;
         }
 
         // The lines every prompt of the arm is told whatever it asks: the arm's own, the state's,

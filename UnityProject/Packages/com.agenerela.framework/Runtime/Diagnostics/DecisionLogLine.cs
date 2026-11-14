@@ -181,6 +181,12 @@ namespace Agenerela
         [JsonProperty("targetIgnored")] public string TargetIgnored;
 
         /// <summary>
+        /// False when the call asked for no statement (<see cref="DecisionTelemetry.StatementAsked"/>,
+        /// #266); left out when it asked for one, as every call did before.
+        /// </summary>
+        [JsonProperty("statementAsked")] public bool? StatementAsked;
+
+        /// <summary>
         /// How many observation lines the request does not carry
         /// (<see cref="DecisionTelemetry.ObservationsDropped"/>). The count, not the lines: they are
         /// prompt text, written only with the prompt.
@@ -280,6 +286,7 @@ namespace Agenerela
             }
 
             line.TargetIgnored = telemetry.TargetIgnored;
+            line.StatementAsked = telemetry.StatementAsked ? (bool?)null : false;
 
             if (telemetry.TargetsUnavailable != null && telemetry.TargetsUnavailable.Count > 0)
             {

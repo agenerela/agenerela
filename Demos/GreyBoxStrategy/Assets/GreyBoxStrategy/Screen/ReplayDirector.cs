@@ -121,6 +121,7 @@ namespace GreyBoxStrategy.Realm
                     if (CanInspect(l.Event)) ui.ShowCard(DecisionCard.From(l.Event));
                 },
                 CountryPressed = id => { OpenCountry(id); FrameCountry(id); },
+                ProvincePressed = p => { PanTo(p); OpenProvince(p); },
             };
             queries = new RealmQueries(game, game.Map, game.Rules);
             ui.Queries = queries;
@@ -145,6 +146,17 @@ namespace GreyBoxStrategy.Realm
             ui.SetTurn(1, "Council");
             playing = playOnStart;
             ui.SetPlaying(playing, speed);
+            if (ruleStart != null)
+            {
+                // A rule game on a generated world: the session begins on the screen just built for its world.
+                var r = ruleStart.Value;
+                ruleStart = null;
+                started = false;
+                BeginRuleOn(r.country, r.model, r.scripted, r.arm, r.seed, r.map, r.rules);
+                // After the first frames: the first Update fits the camera to the window, which would undo it.
+                ui.Root.schedule.Execute(() => FrameRealm(r.country)).StartingIn(150);
+                return;
+            }
             if (showMenu && !isLive && !generated)
             {
                 ShowMainMenu();
@@ -344,7 +356,7 @@ namespace GreyBoxStrategy.Realm
 
         // ---- input: pan, zoom, keys ----
 
-        private void Update()
+        private void UpdateScreen()
         {
             if (ui == null) return;
             if (Screen.width != lastSize.x || Screen.height != lastSize.y)
@@ -375,10 +387,12 @@ namespace GreyBoxStrategy.Realm
                 if (kb.dKey.wasPressedThisFrame) ToggleDiplomacy();
                 if ((kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame) && rule != null) EndTurn();
             }
+            if (kb != null && !ui.Typing) CameraKeys(kb);
             if (mouse != null)
             {
                 float wheel = mouse.scroll.ReadValue().y;
-                if (Mathf.Abs(wheel) > 0.01f)
+                // The wheel over a panel scrolls the panel (a long chronicle, a world's lists), not the map.
+                if (Mathf.Abs(wheel) > 0.01f && OverMap(mouse.position.ReadValue()))
                 {
                     var before = cam.ScreenToWorldPoint(mouse.position.ReadValue());
                     cam.orthographicSize = Mathf.Clamp(cam.orthographicSize * Mathf.Exp(-wheel * 0.0015f), zoomMin, zoomMax);
@@ -388,8 +402,16 @@ namespace GreyBoxStrategy.Realm
                 if (mouse.middleButton.wasPressedThisFrame || mouse.rightButton.wasPressedThisFrame) { dragging = true; dragStart = cam.ScreenToWorldPoint(mouse.position.ReadValue()); }
                 if (mouse.middleButton.wasReleasedThisFrame || mouse.rightButton.wasReleasedThisFrame) dragging = false;
                 if (dragging) cam.transform.position += dragStart - cam.ScreenToWorldPoint(mouse.position.ReadValue());
-                // A left click on the map (not on a panel) opens the province's panel.
-                if (mouse.leftButton.wasPressedThisFrame) clickStart = mouse.position.ReadValue();
+                // A left click on the map (not on a panel) opens the province's panel; a left drag pans, as the other buttons do.
+                if (mouse.leftButton.wasPressedThisFrame)
+                {
+                    clickStart = mouse.position.ReadValue();
+                    leftDrag = OverMap(clickStart);
+                    leftDragStart = cam.ScreenToWorldPoint(clickStart);
+                }
+                if (leftDrag && mouse.leftButton.isPressed && (mouse.position.ReadValue() - clickStart).sqrMagnitude >= 25)
+                    cam.transform.position += leftDragStart - cam.ScreenToWorldPoint(mouse.position.ReadValue());
+                if (mouse.leftButton.wasReleasedThisFrame) leftDrag = false;
                 if (mouse.leftButton.wasReleasedThisFrame && (mouse.position.ReadValue() - clickStart).sqrMagnitude < 25)
                 {
                     var sp = mouse.position.ReadValue();
@@ -407,6 +429,8 @@ namespace GreyBoxStrategy.Realm
                     }
                 }
             }
+            ClampCamera();
+            ui.HostScale = HostScaleNow();
             FitChartLabels();
             ui.PlaceLabels(shown);
             RedrawChartIfDue();
