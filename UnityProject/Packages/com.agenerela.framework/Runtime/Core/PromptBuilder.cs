@@ -68,7 +68,8 @@ namespace Agenerela
             " and target " + TargetRegistry.NoTarget +
             ". Never act on a different thing instead.";
 
-        private const string ObservationsHeader = "What you know right now:";
+        // Internal so an example's situation is rendered under the same heading (#216 item 1).
+        internal const string ObservationsHeader = "What you know right now:";
 
         // The identity's standing knowledge and statement rules (#190, Living Vale #14), after the
         // goals. "What you know:" sets the knowledge against the observations' "What you know right

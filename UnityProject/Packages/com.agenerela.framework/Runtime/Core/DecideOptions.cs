@@ -53,6 +53,15 @@ namespace Agenerela
         public bool ExampleStatements = true;
 
         /// <summary>
+        /// Whether this call's examples show their situation: each action's
+        /// <see cref="ActionDefinition.ExampleObservations"/>, rendered above its example as a real
+        /// call's observations are (#216 item 1). Off by default: it changes the examples, and is owed
+        /// an A/B run (#151). With it off, or with no example observations written, the block is
+        /// byte-identical to one built before it existed.
+        /// </summary>
+        public bool ExampleObservations;
+
+        /// <summary>
         /// Whether an example whose action has no registered target among its
         /// <see cref="ActionDefinition.PreferredExampleTargets"/> names the first offered target the
         /// action takes, rather than being left out (#190, Living Vale #20). Off by default: it changes

@@ -1445,6 +1445,7 @@ namespace Agenerela
                 // A call that asks for no statement shows none in its examples either (#266).
                 ExampleStatements = call.ExampleStatements && call.AskForStatement,
                 ExampleTargetFallback = call.ExampleTargetFallback,
+                ExampleObservations = call.ExampleObservations,
                 Stimulus = stimulus,
                 // Observe keeps the call's own lines last in ctx, after every source's.
                 ObservationPlacement = call.ObservationPlacement,
