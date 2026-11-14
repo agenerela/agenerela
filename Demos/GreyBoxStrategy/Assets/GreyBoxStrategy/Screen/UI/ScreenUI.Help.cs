@@ -74,7 +74,23 @@ namespace GreyBoxStrategy.Realm
                     blocked.Add(new Rect(at, new Vector2(w, h)));
                     box.style.left = at.x; box.style.top = at.y;
                     var from = new Vector2(Mathf.Clamp(a.center.x, at.x, at.x + w), Mathf.Clamp(a.center.y, at.y, at.y + h));
-                    lines.Links.Add((from, new Vector2(Mathf.Clamp(from.x, a.xMin, a.xMax), Mathf.Clamp(from.y, a.yMin, a.yMax)), a));
+                    var to = new Vector2(Mathf.Clamp(from.x, a.xMin, a.xMax), Mathf.Clamp(from.y, a.yMin, a.yMax));
+                    // A target deep inside the council (End turn, at its far corner): the line runs along the panel's
+                    // edge and under it, never across what the panel says.
+                    var council = orders != null && orders.resolvedStyle.display != DisplayStyle.None ? orders.worldBound : Rect.zero;
+                    if (council.width > 0 && council.Overlaps(a) && a.xMin - council.xMin > 40 && from.x < council.xMin)
+                    {
+                        float under = Mathf.Min(council.yMax + 4, area.height - 2);
+                        lines.Links.Add((new[] { from, new Vector2(council.xMin - 6, from.y), new Vector2(council.xMin - 6, under), new Vector2(a.center.x, under), new Vector2(a.center.x, a.yMax) }, a));
+                    }
+                    else if (council.width > 0 && council.Overlaps(a) && from.y < council.yMin && a.yMin - council.yMin > 40)
+                    {
+                        // A note above the council: across to the panel's right edge, down beside it, in to the target.
+                        float side = Mathf.Min(council.xMax + 6, area.width - 2);
+                        var top = new Vector2(Mathf.Clamp(council.xMax, at.x, at.x + w), at.y + h);
+                        lines.Links.Add((new[] { top, new Vector2(top.x, (top.y + council.yMin) / 2), new Vector2(side, (top.y + council.yMin) / 2), new Vector2(side, a.center.y), new Vector2(a.xMax, a.center.y) }, a));
+                    }
+                    else lines.Links.Add((new[] { from, to }, a));
                 }
                 lines.MarkDirtyRepaint();
             }
@@ -114,7 +130,7 @@ namespace GreyBoxStrategy.Realm
         /// <summary>The ink lines from each note to what it explains, with a ring round the target.</summary>
         private sealed class HelpLines : VisualElement
         {
-            public readonly List<(Vector2 from, Vector2 to, Rect target)> Links = new List<(Vector2, Vector2, Rect)>();
+            public readonly List<(Vector2[] path, Rect target)> Links = new List<(Vector2[], Rect)>();
             public HelpLines()
             {
                 pickingMode = PickingMode.Ignore;
@@ -122,10 +138,10 @@ namespace GreyBoxStrategy.Realm
                 generateVisualContent += ctx =>
                 {
                     var p = ctx.painter2D;
-                    foreach (var (from, to, target) in Links)
+                    foreach (var (path, target) in Links)
                     {
-                        p.strokeColor = new Color(0.93f, 0.8f, 0.5f, 0.9f); p.lineWidth = 1.6f;
-                        p.BeginPath(); p.MoveTo(from); p.LineTo(to); p.Stroke();
+                        p.strokeColor = new Color(0.93f, 0.8f, 0.5f, 0.9f); p.lineWidth = 1.6f; p.lineJoin = LineJoin.Round;
+                        p.BeginPath(); p.MoveTo(path[0]); for (int i = 1; i < path.Length; i++) p.LineTo(path[i]); p.Stroke();
                         p.lineWidth = 1.4f;
                         p.BeginPath();
                         var r = new Rect(target.xMin - 3, target.yMin - 3, target.width + 6, target.height + 6);
