@@ -1176,6 +1176,77 @@ namespace GreyBoxStrategy.Tests
             Assert.That((homeward > 0, stayed), Is.EqualTo((true, 0)), $"hungry armies abroad that could go home: went {homeward}, stayed {stayed}; hunger losses {hunger}");
         }
 
+        // --- R3: what a country sees of a rival army (rules v2 3.8), off by default ------------------
+
+        private static Game Fogged(bool types = false)
+        {
+            var r = WritRules();
+            r.Fog = true;
+            r.Generals = true;
+            r.UnitTypes = types;
+            var g = NewWrits(1, r);
+            Turn(g);
+            return g;
+        }
+
+        [Test]
+        public void Fog_RoundsToTen_AndSaysAFewUnderFive()
+        {
+            Assert.That((ArmySight.About(44), ArmySight.About(45), ArmySight.About(5), ArmySight.About(3), ArmySight.About(120)),
+                Is.EqualTo(("about 40", "about 50", "about 10", "a few", "about 120")));
+        }
+
+        [Test]
+        public void Fog_ARulerSeesArmiesNearItsLand_RoundedAndLed_AndNothingDeeperIn()
+        {
+            var g = Fogged();
+            var w = g.World;
+            var seen = ArmySight.Seen(w, "valen");
+            var orsk = ArmyOf(g, "orsk");
+            var near = w.ProvinceList.First(p => p.Controller != "valen" && seen.Contains(p.Id) && p.Info.Terrain != Terrain.Forest);
+            var far = w.ProvinceList.First(p => !seen.Contains(p.Id));
+            orsk.Soldiers = 44;
+            orsk.Location = near.Id;
+            string sighting = ArmySight.Sighting(w, "valen", orsk);
+            Assert.That(sighting, Is.EqualTo($"orsk's {orsk.Id}, about 40, led by {orsk.General.Title}, at {near.Id}"));
+            var facts = WritFacts.Standing(w, "valen");
+            Assert.That(facts.Any(l => l.StartsWith("Rival armies we see: ") && l.Contains(orsk.Id)), Is.True, string.Join("\n", facts));
+            orsk.Location = far.Id;
+            Assert.That(ArmySight.Sighting(w, "valen", orsk), Is.Null, "nothing deeper in");
+            Assert.That(WritFacts.Standing(w, "valen").Any(l => l.Contains(orsk.Id)), Is.False);
+            Assert.That(ArmySight.ArmiesThere(w, "valen", far.Id), Is.Null, "a march order's detail hides it too");
+
+            var forest = w.ProvinceList.FirstOrDefault(p => p.Controller != "valen" && seen.Contains(p.Id) && p.Info.Terrain == Terrain.Forest);
+            if (forest != null)
+            {
+                orsk.Location = forest.Id;
+                Assert.That(ArmySight.Sighting(w, "valen", orsk), Is.EqualTo($"an army of orsk's at {forest.Id}"), "in forest, only that an army is there");
+            }
+
+            var off = NewWrits(1);
+            Turn(off);
+            var plain = WritFacts.Standing(off.World, "valen");
+            Assert.That(plain.Any(l => l.StartsWith("Rival armies we see")), Is.False, "off: as before");
+        }
+
+        [Test]
+        public void Fog_TheMixShowsOnlyWhenOurRidersScout()
+        {
+            var g = Fogged(types: true);
+            var w = g.World;
+            var seen = ArmySight.Seen(w, "valen");
+            var orsk = ArmyOf(g, "orsk");
+            var near = w.ProvinceList.First(p => p.Controller != "valen" && seen.Contains(p.Id) && p.Info.Terrain != Terrain.Forest);
+            orsk.Location = near.Id;
+            orsk.Soldiers = 0;
+            orsk.Add(UnitType.Riders, 30);
+            Assert.That(ArmySight.Sighting(w, "valen", orsk), Does.Not.Contain("riders"), "no riders of ours beside it");
+            var host = ArmyOf(g, "valen");
+            host.Add(UnitType.Riders, 5);
+            host.Location = near.Id;
+            Assert.That(ArmySight.Sighting(w, "valen", orsk), Does.Contain("(30 riders)"), "our riders scout it");
+        }
+
         [Test]
         public void Snapshots_HoldEveryArmyAndOccupation_AsTheCouncilSawThem()
         {

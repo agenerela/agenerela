@@ -2127,7 +2127,7 @@ line, and `findings.md` for anything measured.
 - [x] Generals: names, seven of the ten traits, second trait, a general falling (`GameRules.Generals`, off; scripted only, 14 November). Siegewright came with the sieges (#311, only with `GameRules.Sieges` on); the forager came with supply (#313, only with `GameRules.Supply` on); the marshal waits for army sizes; capture waits for prisoners
 - [x] Sieges at forts over several turns, breach, broken siege, siegewright (`GameRules.Sieges`, off; scripted only, 14 November). Forts stand for walls; the fort that holds the road, and income lost under siege, are not built yet
 - [x] Supply model B, with forager (`GameRules.Supply`, off; scripted against none, 14 November). Still open: the army cap, and A against B (A needs farms)
-- [ ] Fog of war for facts and scripted players; totals rounded; forest; scouting
+- [x] Fog of war for the rulers' facts: totals rounded, forest, scouting (`GameRules.Fog`, `ArmySight`, off; 14 November). Still open: fog for the scripted players, allies' sight and watchtowers
 - [ ] Support and pursuit; the report's factors
 - [ ] Every feature behind a rules flag; sim A/B each against off
 - [ ] Army panel, siege marks, stores pips, the full report card, fog in rule mode

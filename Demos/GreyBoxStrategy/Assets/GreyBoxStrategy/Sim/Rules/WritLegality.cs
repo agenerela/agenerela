@@ -243,6 +243,11 @@ namespace GreyBoxStrategy
             if (p.Owner == null) what = $"neutral, garrison {p.Garrison}";
             else if (p.Owner == countryId) what = p.Occupier == null ? "ours" : $"ours, occupied by {p.Occupier}";
             else what = p.Occupier == countryId ? $"{p.Owner}'s, occupied by us" : $"{p.Owner}'s, at war";
+            if (world.Rules.Fog)
+            {
+                string seen = ArmySight.ArmiesThere(world, countryId, provinceId);
+                return $"{what}; {where}" + (seen != null ? $"; {seen}" : "");
+            }
             int armies = world.ArmiesAt(provinceId).Where(a => a.Owner != countryId).Sum(a => a.Soldiers);
             return $"{what}; {where}" + (armies > 0 ? $"; enemy armies {armies}" : "");
         }
