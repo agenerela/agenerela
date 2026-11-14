@@ -48,12 +48,44 @@ namespace GreyBoxStrategy.Realm
         /// For the menu, the dev menu and the Unity CLI: a generated world played live, the writs turn with model
         /// rulers (checked first, as on the Classic board) or stand-ins through the same agents.
         /// </summary>
-        public void StartGeneratedLive(MapSize size, int seed, string model, string victory = GameSetup.ConquestPreset, int turns = 0, string arm = null) =>
-            StartCoroutine(GeneratedLive(size, seed, model, victory, turns, arm));
+        public void StartGeneratedLive(MapSize size, int seed, string model, string victory = GameSetup.ConquestPreset, int turns = 0, string arm = null,
+            LandShape shape = LandShape.Continent, int countries = 0) =>
+            StartCoroutine(GeneratedLive(size, seed, model, victory, turns, arm, shape, countries));
 
         private static string pendingLiveArm;
 
-        private IEnumerator GeneratedLive(MapSize size, int seed, string model, string victory, int turns, string arm)
+        /// <summary>Set before the scene reloads: the next generated world is a rule game, you ruling the realm in this seat.</summary>
+        private sealed class PendingRule { public int Slot; public string Model; public bool Scripted; public string Arm; }
+        private static PendingRule pendingRule;
+        /// <summary>A rule game on a generated world, begun once the screen is built on the world.</summary>
+        private (string country, string model, bool scripted, string arm, int seed, MapDefinition map, GameRules rules)? ruleStart;
+
+        /// <summary>
+        /// For the menu, the dev menu and the Unity CLI: rule the realm in <paramref name="slot"/> of a generated world on the
+        /// writs turn, against model rulers (checked first) or stand-ins through the same agents.
+        /// </summary>
+        public void StartGeneratedRule(MapSize size, LandShape shape, int seed, int countries, int slot, string model, bool scripted,
+            string victory = GameSetup.ConquestPreset, string arm = null) =>
+            StartCoroutine(GeneratedRule(size, shape, seed, countries, slot, model, scripted, victory, arm));
+
+        private IEnumerator GeneratedRule(MapSize size, LandShape shape, int seed, int countries, int slot, string model, bool scripted, string victory, string arm)
+        {
+            model = string.IsNullOrWhiteSpace(model) ? "qwen3.5:4b" : model.Trim();
+            if (!scripted)
+            {
+                string why = Gateway.WhyNotSet();
+                if (why != null) { ui?.ShowMenuStatus(why); yield break; }
+                if (Gateway.Paused) { ui?.ShowMenuStatus("The RTX 5080 is paused for a measurement (its lock's pause file is set). Try again when it is lifted."); yield break; }
+                ui?.ShowMenuStatus("Asking the server...", true);
+                string serverWhy = null;
+                yield return Gateway.CheckServer(w => serverWhy = w);
+                if (serverWhy != null) { ui?.ShowMenuStatus(serverWhy); yield break; }
+            }
+            pendingRule = new PendingRule { Slot = slot, Model = scripted ? "scripted" : model, Scripted = scripted, Arm = arm };
+            StartGeneratedWatch(size, shape, seed, countries, true, victory);
+        }
+
+        private IEnumerator GeneratedLive(MapSize size, int seed, string model, string victory, int turns, string arm, LandShape shape = LandShape.Continent, int countries = 0)
         {
             pendingLiveArm = arm;
             if (model != "scripted")
@@ -67,7 +99,7 @@ namespace GreyBoxStrategy.Realm
             }
             pendingLiveModel = model;
             pendingLiveTurns = turns;
-            StartGeneratedWatch(size, LandShape.Continent, seed, 0, true, victory);
+            StartGeneratedWatch(size, shape, seed, countries, true, victory);
         }
 
         /// <summary>Set before the scene reloads: the next start plays the writs turn on the Classic board with scripted rulers.</summary>
@@ -147,12 +179,14 @@ namespace GreyBoxStrategy.Realm
             loading.Set("Playing the game and drawing the chart...", 0.65f);
             string liveModel = pendingLiveModel;
             pendingLiveModel = null;
+            var ruling = pendingRule;
+            pendingRule = null;
             MapDefinition liveMap = null; GameRules liveRules = null;
             var preparing = System.Threading.Tasks.Task.Run(() =>
             {
                 var mapDef = world.ToDefinition();
                 var rules = setup.BuildRules(mapDef);
-                if (liveModel != null)
+                if (liveModel != null || ruling != null)
                 {
                     // Played live: only the chart is made here; the game starts once the world is drawn.
                     liveMap = mapDef; liveRules = rules;
@@ -183,6 +217,14 @@ namespace GreyBoxStrategy.Realm
                 pendingLiveArm = null;
                 if (live.Error != null) Debug.LogWarning("Painted Realm: the live game could not start: " + live.Error);
                 game = live.Replay();
+            }
+            if (ruling != null)
+            {
+                // The screen is built on the game as it stands before turn 1; the rule session takes over once it is (StartScreen).
+                string you = world.Countries[Mathf.Clamp(ruling.Slot, 0, world.Countries.Count - 1)].Id;
+                var opening = new RuleSession(you, ruling.Model, ruling.Arm ?? "default", setup.Seed, null, (m, w) => null, null, liveMap, liveRules);
+                game = opening.BuildReplay();
+                ruleStart = (you, ruling.Model, ruling.Scripted, ruling.Arm, setup.Seed, liveMap, liveRules);
             }
             loading.Set("Laying out the chart...", 0.95f);
             yield return null;
@@ -264,6 +306,142 @@ namespace GreyBoxStrategy.Realm
             }
             ui.PlaceRegionLabels(regions);
         }
+
+        // ---- frame time, for the readouts and the Unity CLI: is a big world smooth? ----
+
+        private readonly float[] screenMs = new float[240], loopMs = new float[240];
+        private int frameK, frameN;
+        private UnityEngine.Profiling.Recorder loopRecorder;
+
+        private void Update()
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            UpdateScreen();
+            if (loopRecorder == null) { loopRecorder = UnityEngine.Profiling.Recorder.Get("PlayerLoop"); loopRecorder.enabled = true; }
+            screenMs[frameK] = (float)sw.Elapsed.TotalMilliseconds;
+            loopMs[frameK] = loopRecorder.isValid ? loopRecorder.elapsedNanoseconds / 1e6f : 0;
+            frameK = (frameK + 1) % screenMs.Length;
+            frameN = Math.Min(frameN + 1, screenMs.Length);
+        }
+
+        /// <summary>
+        /// The last 240 frames: the screen's own update (pieces, labels, lines, panels) and Unity's whole player loop
+        /// (the previous frame's, as the recorder reports it), mean and worst, in milliseconds.
+        /// </summary>
+        public string FrameStats
+        {
+            get
+            {
+                if (frameN == 0) return "no frames yet";
+                var s = screenMs.Take(frameN).ToList(); var l = loopMs.Take(frameN).ToList();
+                return $"screen update {s.Average():0.00} ms mean, {s.Max():0.00} worst; player loop {l.Average():0.00} ms mean, {l.Max():0.00} worst; over {frameN} frames" +
+                       (game != null ? $"; {game.ProvinceIds.Count} provinces, {shown?.Armies.Count ?? 0} armies" : "");
+            }
+        }
+
+        // ---- the camera on a world of any size ----
+
+        private bool leftDrag;
+        private Vector3 leftDragStart;
+
+        /// <summary>True when the pointer is over the map rather than a panel.</summary>
+        private bool OverMap(Vector2 screen)
+        {
+            var panel = document?.rootVisualElement?.panel;
+            if (panel == null) return true;
+            return panel.Pick(RuntimePanelUtils.ScreenToPanel(panel, new Vector2(screen.x, Screen.height - screen.y))) == null;
+        }
+
+        /// <summary>
+        /// A rule game on a big world opens on your realm: its provinces and their neighbours fill the map area left
+        /// free by the panels (the council on the right included), within the zoom range. Home shows the whole world.
+        /// </summary>
+        public void FrameRealm(string country)
+        {
+            if (game == null || shown == null) return;
+            framedRealm = country;
+            var mine = Enumerable.Range(0, game.ProvinceIds.Count).Where(q => shown.Owners[q] == country).ToList();
+            if (mine.Count == 0) return;
+            var near = new HashSet<int>(mine);
+            foreach (int q in mine) foreach (string n in game.Map.Neighbours(game.ProvinceIds[q])) { int j = game.IndexOf(n); if (j >= 0) near.Add(j); }
+            var pts = near.Select(q => map.ProvinceWorld(q)).ToList();
+            float xMin = pts.Min(p => p.x), xMax = pts.Max(p => p.x), yMin = pts.Min(p => p.y), yMax = pts.Max(p => p.y);
+            float scale = CurrentUiScale();
+            float left = 248 * scale, right = 356 * scale, top = 50 * scale, bottom = 46 * scale;
+            // The council panel stands over the map's lower right in rule mode: frame in the space to its left.
+            float council = rule != null ? 520 * scale : 0;
+            float freeW = Mathf.Max(200, Screen.width - left - right - council), freeH = Mathf.Max(200, Screen.height - top - bottom);
+            float margin = 1.35f;
+            float upp = Mathf.Max((xMax - xMin) * margin / freeW, (yMax - yMin) * margin / freeH);
+            cam.orthographicSize = Mathf.Clamp(upp * Screen.height / 2, zoomMin, zoomMax);
+            upp = cam.orthographicSize * 2 / Screen.height;
+            float cx = (left + freeW / 2) - Screen.width / 2f, cy = (bottom + freeH / 2) - Screen.height / 2f;
+            cam.transform.position = new Vector3((xMin + xMax) / 2 - cx * upp, (yMin + yMax) / 2 - cy * upp, cam.transform.position.z);
+        }
+
+        /// <summary>The realm the view was framed on, kept framed when the window changes size, until Home.</summary>
+        private string framedRealm;
+
+        /// <summary>The arrow keys pan, Page Up and Page Down zoom, Home shows the whole world again.</summary>
+        private void CameraKeys(UnityEngine.InputSystem.Keyboard kb)
+        {
+            float dt = Mathf.Min(0.05f, Time.unscaledDeltaTime);
+            var move = Vector2.zero;
+            if (kb.leftArrowKey.isPressed) move.x -= 1;
+            if (kb.rightArrowKey.isPressed) move.x += 1;
+            if (kb.upArrowKey.isPressed) move.y += 1;
+            if (kb.downArrowKey.isPressed) move.y -= 1;
+            if (move != Vector2.zero) cam.transform.position += (Vector3)(move.normalized * cam.orthographicSize * 1.4f * dt);
+            float z = (kb.pageDownKey.isPressed ? 1 : 0) - (kb.pageUpKey.isPressed ? 1 : 0);
+            if (z != 0) cam.orthographicSize = Mathf.Clamp(cam.orthographicSize * Mathf.Exp(z * 1.6f * dt), zoomMin, zoomMax);
+            if (kb.homeKey.wasPressedThisFrame) { framedRealm = null; FitCamera(); }
+        }
+
+        /// <summary>The view never leaves the land: its centre stays within the land's rectangle, give or take a quarter view.</summary>
+        private void ClampCamera()
+        {
+            if (map == null || cam == null) return;
+            var land = map.LandWorld;
+            float h = cam.orthographicSize, w = h * cam.aspect;
+            var p = cam.transform.position;
+            cam.transform.position = new Vector3(
+                Mathf.Clamp(p.x, land.xMin - w * 0.25f, land.xMax + w * 0.25f),
+                Mathf.Clamp(p.y, land.yMin - h * 0.25f, land.yMax + h * 0.25f), p.z);
+        }
+
+        private float spacingWorld = -1;
+        private ReplayGame spacingFor;
+
+        /// <summary>
+        /// How large the army pieces are drawn: full size while provinces stand well apart on screen, smaller (down to
+        /// 60%) as a big world or a far zoom brings them close, so pieces do not bury the map. From the median distance
+        /// between neighbouring provinces' centres, in panel pixels.
+        /// </summary>
+        private float HostScaleNow()
+        {
+            if (game == null || game.Map == null || cam == null) return 1;
+            if (spacingFor != game)
+            {
+                spacingFor = game;
+                var ds = new List<float>();
+                for (int i = 0; i < game.ProvinceIds.Count; i++)
+                {
+                    float best = float.MaxValue;
+                    foreach (string n in game.Map.Neighbours(game.ProvinceIds[i]))
+                    {
+                        int j = game.IndexOf(n);
+                        if (j >= 0) best = Mathf.Min(best, (map.ProvinceWorld(i) - map.ProvinceWorld(j)).magnitude);
+                    }
+                    if (best < float.MaxValue) ds.Add(best);
+                }
+                ds.Sort();
+                spacingWorld = ds.Count > 0 ? ds[ds.Count / 2] : 1;
+            }
+            return HostScaleFor(spacingWorld * (Screen.height / (2 * cam.orthographicSize)) / CurrentUiScale());
+        }
+
+        /// <summary>The pieces' scale for a median spacing between neighbouring provinces, in panel pixels.</summary>
+        public static float HostScaleFor(float spacingPanelPixels) => Mathf.Clamp(spacingPanelPixels / 110f, 0.6f, 1f);
 
         /// <summary>What the readouts say about the map.</summary>
         private string MapReadout() => world == null ? "map: Classic, the painting" :

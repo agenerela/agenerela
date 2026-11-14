@@ -138,7 +138,7 @@ namespace GreyBoxStrategy.Realm
             var head = new VisualElement(); head.AddToClassList("nation"); head.AddToClassList("me");
             head.tooltip = Fog.On ? $"You rule {look.Name}. Click: your panel. Your rivals are on the right." : $"Following {look.Name}. Click: its panel. The other rulers are on the right.";
             head.RegisterCallback<ClickEvent>(_ => CountryPressed?.Invoke(me));
-            head.Add(new Crest(look)); var nm = new Label(look.Name.ToUpperInvariant()); nm.AddToClassList("nation-name"); head.Add(nm);
+            head.Add(new Crest(look)); var nm = new Label(look.Name.ToUpperInvariant()); nm.AddToClassList("nation-name"); nm.AddToClassList("my-name"); head.Add(nm);
             followBar.Add(head);
             Segment("PROVINCES", $"{n} / {WinAt}", Conquest ? $"{n} of {ProvinceIds.Count} provinces. Conquest: the last realm standing wins." : $"{n} of {ProvinceIds.Count} provinces; {WinAt} wins. {Math.Max(0, WinAt - n)} to go.");
             int hostCount = s.Armies.Count(a => a.Owner == me);
@@ -168,7 +168,7 @@ namespace GreyBoxStrategy.Realm
             }
             followBar.Add(rivals);
             if (Fog.On) return; // rule mode: the bar is your own country, for the whole game
-            var stop = new Button(() => FollowPressed?.Invoke(null)) { text = "×", tooltip = "Stop following: all five countries again" }; stop.AddToClassList("tbtn"); stop.style.marginLeft = 4; followBar.Add(stop);
+            var stop = new Button(() => FollowPressed?.Invoke(null)) { text = "×", tooltip = "Stop following: every country again" }; stop.AddToClassList("tbtn"); stop.style.marginLeft = 4; followBar.Add(stop);
         }
 
         private VisualElement Segment(string label, string value, string tip)

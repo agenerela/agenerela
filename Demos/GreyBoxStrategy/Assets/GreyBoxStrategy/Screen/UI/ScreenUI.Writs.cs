@@ -33,6 +33,7 @@ namespace GreyBoxStrategy.Realm
         private void ShowHosts(ReplayState s)
         {
             hostState = s;
+            standing = null; // a new state: the next PlaceHosts indexes it
             if (hostLayer == null)
             {
                 hostLayer = new VisualElement { pickingMode = PickingMode.Ignore, name = "hosts" };
@@ -72,6 +73,9 @@ namespace GreyBoxStrategy.Realm
             ShowPennants(s);
         }
 
+        /// <summary>How large the pieces are drawn, 0.6 to 1: the director shrinks them as provinces come close on screen.</summary>
+        public float HostScale = 1;
+
         /// <summary>The open-seal mark on armies awaiting orders: rule mode's, on the person's own armies.</summary>
         public bool ShowAwaiting;
 
@@ -96,15 +100,17 @@ namespace GreyBoxStrategy.Realm
             if (hostMotion.TryGetValue(a.Id, out var m)) return Vector2.Lerp(ProvinceToPanel(m.from), ProvinceToPanel(m.to), m.t) + new Vector2(0, -20);
             int at = IndexOf(a.Location);
             if (at < 0) return new Vector2(-1000, -1000);
-            var here = hostState.Armies.Where(x => x.Location == a.Location && !hostMotion.ContainsKey(x.Id)).OrderBy(x => x.Owner, StringComparer.Ordinal).ThenBy(x => x.Id, StringComparer.Ordinal).ToList();
+            // Who stands here with it: from the frame's index (PlaceHosts), not a sort of every army for every piece.
+            var here = standing != null && standing.TryGetValue(a.Location ?? "", out var st) ? st
+                : hostState.Armies.Where(x => x.Location == a.Location && !hostMotion.ContainsKey(x.Id)).OrderBy(x => x.Owner, StringComparer.Ordinal).ThenBy(x => x.Id, StringComparer.Ordinal).ToList();
             int k = Math.Max(0, here.IndexOf(a)), n = Math.Max(1, here.Count);
             var p = ProvinceToPanel(at);
             if (a.StepTurnsLeft > 1 && a.Marching && a.Path.Count > 0 && IndexOf(a.Path[0]) >= 0) p = Vector2.Lerp(p, ProvinceToPanel(IndexOf(a.Path[0])), 0.45f);
             // Several armies in one province stand side by side, two rows when there are many, so each reads.
             int perRow = n <= 3 ? n : (n + 1) / 2;
             int row = k / perRow, col = k % perRow, inRow = Math.Min(perRow, n - row * perRow);
-            float dx = (col - (inRow - 1) / 2f) * 58;
-            return p + new Vector2(dx, -24 - row * 24);
+            float dx = (col - (inRow - 1) / 2f) * 58 * HostScale;
+            return p + new Vector2(dx, (-24 - row * 24) * HostScale);
         }
 
         /// <summary>
@@ -139,11 +145,19 @@ namespace GreyBoxStrategy.Realm
             return Math.Abs(d.x) >= w || Math.Abs(d.y) >= h ? 0 : h - Math.Abs(d.y);
         }
 
+        private Dictionary<string, int> provinceIndex;
+        private IReadOnlyList<string> provinceIndexFor;
+
         private int IndexOf(string province)
         {
             if (province == null) return -1;
-            for (int i = 0; i < ProvinceIds.Count; i++) if (ProvinceIds[i] == province) return i;
-            return -1;
+            if (provinceIndexFor != ProvinceIds)
+            {
+                provinceIndexFor = ProvinceIds;
+                provinceIndex = new Dictionary<string, int>(StringComparer.Ordinal);
+                for (int i = 0; i < ProvinceIds.Count; i++) provinceIndex[ProvinceIds[i]] = i;
+            }
+            return provinceIndex.TryGetValue(province, out int k) ? k : -1;
         }
 
         private readonly Dictionary<string, Vector2> placed = new Dictionary<string, Vector2>(StringComparer.Ordinal);
@@ -151,18 +165,29 @@ namespace GreyBoxStrategy.Realm
         /// <summary>Where a piece is drawn: its point, nudged clear of the others.</summary>
         public Vector2 PlacedPoint(ArmyState a) => placed.TryGetValue(a.Id, out var p) ? p : HostPoint(a);
 
+        // The armies standing still in each province, in the order they stand side by side; rebuilt each frame.
+        private Dictionary<string, List<ArmyState>> standing;
+
         private void PlaceHosts()
         {
             if (hostState == null) return;
+            standing = hostState.Armies.Where(x => !hostMotion.ContainsKey(x.Id)).GroupBy(x => x.Location ?? "")
+                .ToDictionary(g => g.Key, g => g.OrderBy(x => x.Owner, StringComparer.Ordinal).ThenBy(x => x.Id, StringComparer.Ordinal).ToList(), StringComparer.Ordinal);
             var shown = hostState.Armies.Where(a => hosts.ContainsKey(a.Id)).ToList();
             var at = shown.Select(HostPoint).ToList();
-            var size = shown.Select(a => { var r = hosts[a.Id].resolvedStyle; return new Vector2(float.IsNaN(r.width) || r.width < 1 ? 52 : r.width, float.IsNaN(r.height) || r.height < 1 ? 20 : r.height); }).ToList();
+            var size = shown.Select(a => { var r = hosts[a.Id].resolvedStyle; return HostScale * new Vector2(float.IsNaN(r.width) || r.width < 1 ? 52 : r.width, float.IsNaN(r.height) || r.height < 1 ? 20 : r.height); }).ToList();
             Unclutter(at, size, shown.Select(a => hostMotion.ContainsKey(a.Id)).ToList());
             placed.Clear();
             for (int k = 0; k < shown.Count; k++)
             {
                 var a = shown[k]; var piece = hosts[a.Id];
                 piece.EnableInClassList("chosen", a.Id == SelectedArmy);
+                // Scaled about its foot, where it stands on the map; a chosen piece a little larger, as its style has it.
+                float sc = HostScale * (a.Id == SelectedArmy ? 1.15f : 1f);
+                piece.style.transformOrigin = new TransformOrigin(Length.Percent(50), Length.Percent(100));
+                piece.style.scale = new Scale(new Vector3(sc, sc, 1));
+                // Small pieces keep the number and drop the general's initial, so they stay narrow on a far view.
+                piece.Q(className: "host-g").style.display = HostScale < 0.7f ? DisplayStyle.None : DisplayStyle.Flex;
                 placed[a.Id] = at[k];
                 piece.style.left = at[k].x;
                 piece.style.top = at[k].y;

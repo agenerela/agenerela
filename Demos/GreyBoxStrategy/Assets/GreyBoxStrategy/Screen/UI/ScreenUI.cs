@@ -64,7 +64,7 @@ namespace GreyBoxStrategy.Realm
             // ---- top bar ----
             var top = new VisualElement(); top.AddToClassList("topbar");
             var brand = new Label("PAINTED REALM"); brand.AddToClassList("brand");
-            brand.tooltip = "Working title. Five rulers, each a framework agent, play for 25 provinces. " + title;
+            brand.tooltip = $"Working title. {countryIds.Count} rulers, each a framework agent, play for {provinceIds.Count} provinces. " + title;
             top.Add(brand);
             nations = new VisualElement(); nations.AddToClassList("nations"); top.Add(nations);
             var time = new VisualElement(); time.AddToClassList("time");
@@ -225,37 +225,57 @@ namespace GreyBoxStrategy.Realm
 
         private void RenderRealm(ReplayState s)
         {
+            realmState = s;
             realmBody.Clear();
             var rank = CountryIds.OrderByDescending(id => s.ProvinceCount(id)).ToList();
             Section("STANDING", Conquest ? "last realm wins" : $"{WinAt} wins", rank.Select(id => BarRow(id, s.ProvinceCount(id), WinAt, Conquest
                 ? $"{CountryLook.NameOf(id)}: {s.ProvinceCount(id)} of {WinAt} provinces. Conquest: the last realm standing wins."
                 : $"{CountryLook.NameOf(id)}: {s.ProvinceCount(id)} provinces, {Math.Max(0, WinAt - s.ProvinceCount(id))} to win")));
-            var wars = s.Relations.Where(r => r.Kind == "war").ToList();
-            Section("WARS", wars.Count.ToString(), wars.Select(r => PairRow(r.A, r.B, IconKind.War, Writs ? $"{s.WarScore(r.A, r.B):+0;-0;0}" : r.Since > 0 ? $"since t{r.Since}" : "", "bad")));
-            var truces = s.Relations.Where(r => r.Kind == "truce").ToList();
-            Section("TRUCES", truces.Count.ToString(), truces.Select(r => PairRow(r.A, r.B, IconKind.Truce, $"{r.TruceTurnsLeft} left", "warn")));
+            // Many realms make many wars: the sharpest first (the largest war score either way), the rest a click away.
+            var wars = s.Relations.Where(r => r.Kind == "war").OrderByDescending(r => Writs ? Math.Abs(s.WarScore(r.A, r.B)) : 0).ToList();
+            Section("WARS", wars.Count.ToString(), wars.Select(r => PairRow(r.A, r.B, IconKind.War, Writs ? $"{s.WarScore(r.A, r.B):+0;-0;0}" : r.Since > 0 ? $"since t{r.Since}" : "", "bad")), ListLimit);
+            var truces = s.Relations.Where(r => r.Kind == "truce").OrderBy(r => r.TruceTurnsLeft).ToList();
+            Section("TRUCES", truces.Count.ToString(), truces.Select(r => PairRow(r.A, r.B, IconKind.Truce, $"{r.TruceTurnsLeft} left", "warn")), ListLimit);
             int max = Math.Max(1, s.Countries.Values.Max(c => c.Army));
             Section("ARMIES", "", rank.Where(id => s.Countries[id].Alive).Select(id => BarRow(id, s.Countries[id].Army, max, $"{CountryLook.NameOf(id)}'s army: {s.Countries[id].Army} soldiers")));
-            var neutral = Enumerable.Range(0, s.Owners.Length).Where(i => s.Owners[i] == null).ToList();
+            // A generated world starts with dozens of neutral provinces: those your court knows first, the weakest garrisons first.
+            var neutral = Enumerable.Range(0, s.Owners.Length).Where(i => s.Owners[i] == null)
+                .OrderBy(i => Fog.KnowsProvince(s, i) ? 0 : 1).ThenBy(i => Fog.KnowsProvince(s, i) ? s.Garrisons[i] : 0).ThenBy(i => ProvinceIds[i], StringComparer.Ordinal).ToList();
             Section("NEUTRAL LAND", neutral.Count.ToString(), neutral.Select(i =>
             {
                 var row = new VisualElement(); row.AddToClassList("row");
                 row.Add(new Label(Cap(ProvinceIds[i])));
                 var g = new Label(Fog.KnowsProvince(s, i) ? $"garrison {s.Garrisons[i]}" : "garrison ?") { tooltip = Fog.KnowsProvince(s, i) ? null : "Beyond your borders: your court does not know its garrison" }; g.AddToClassList("muted"); g.style.marginLeft = StyleKeyword.Auto; row.Add(g);
+                row.tooltip = "Click: find it on the map";
+                int at = i;
+                row.RegisterCallback<ClickEvent>(_ => ProvincePressed?.Invoke(at));
                 return row;
-            }));
+            }), ListLimit);
         }
 
-        private void Section(string title, string note, IEnumerable<VisualElement> rows)
+        /// <summary>The longest a realm list grows before the rest folds behind "show all": a big world has dozens of neutral provinces.</summary>
+        public const int ListLimit = 8;
+        private readonly HashSet<string> unfolded = new HashSet<string>(StringComparer.Ordinal);
+        private ReplayState realmState;
+
+        private void Section(string title, string note, IEnumerable<VisualElement> rows, int limit = 0)
         {
             var head = new VisualElement(); head.AddToClassList("section-head");
             head.Add(new Label(title) { style = { flexGrow = 1 } });
             head.Add(new Label(note));
             realmBody.Add(head);
             var body = new VisualElement(); body.AddToClassList("section-body");
-            int n = 0;
-            foreach (var r in rows) { body.Add(r); n++; }
-            if (n == 0) { var none = new Label("None"); none.AddToClassList("muted"); body.Add(none); }
+            var all = rows.ToList();
+            bool open = unfolded.Contains(title);
+            int shown = limit > 0 && !open ? Math.Min(limit, all.Count) : all.Count;
+            for (int k = 0; k < shown; k++) body.Add(all[k]);
+            if (all.Count == 0) { var none = new Label("None"); none.AddToClassList("muted"); body.Add(none); }
+            if (limit > 0 && all.Count > limit)
+            {
+                var more = new Label(open ? "Show fewer" : $"Show all {all.Count} ({all.Count - limit} more)"); more.AddToClassList("list-more");
+                more.RegisterCallback<ClickEvent>(_ => { if (!unfolded.Remove(title)) unfolded.Add(title); if (realmState != null) RenderRealm(realmState); });
+                body.Add(more);
+            }
             realmBody.Add(body);
         }
 
@@ -308,7 +328,11 @@ namespace GreyBoxStrategy.Realm
             }
         }
 
-        public void ClearChronicle() { lines.Clear(); RenderChronicle(null); }
+        public void ClearChronicle() { lines.Clear(); chronicleShown = ChronicleStep; RenderChronicle(null); }
+
+        /// <summary>How many entries the chronicle draws before "show older".</summary>
+        public const int ChronicleStep = 150;
+        private int chronicleShown = ChronicleStep;
 
         public void AddLine(ChronicleLine line)
         {
@@ -323,9 +347,20 @@ namespace GreyBoxStrategy.Realm
         private void RenderChronicle(ChronicleLine fresh)
         {
             chronicleBody.Clear();
-            int turn = -1;
-            foreach (var g in Chronicle.Group(Chronicle.Filter(lines, countryFilter, categoryFilter), SaidAgain))
+            int turn = -1, drawn = 0;
+            var groups = Chronicle.Group(Chronicle.Filter(lines, countryFilter, categoryFilter), SaidAgain);
+            foreach (var g in groups)
             {
+                // A long game on a big world writes thousands of lines: the newest are drawn, the older a click away,
+                // so a new line never rebuilds the whole history.
+                if (drawn++ >= chronicleShown)
+                {
+                    var older = new Label($"Show older entries ({groups.Count - chronicleShown} more)"); older.AddToClassList("list-more");
+                    older.style.paddingLeft = 10; older.style.paddingTop = 6; older.style.paddingBottom = 8;
+                    older.RegisterCallback<ClickEvent>(_ => { chronicleShown += ChronicleStep; RenderChronicle(null); });
+                    chronicleBody.Add(older);
+                    break;
+                }
                 if (g.Turn != turn) { turn = g.Turn; var h = new Label($"TURN {turn}"); h.AddToClassList("lg-turn"); chronicleBody.Add(h); }
                 if (!g.Single) { chronicleBody.Add(GroupRow(g, fresh)); continue; }
                 var l = g.Lines[0];
