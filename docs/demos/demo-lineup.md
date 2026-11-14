@@ -87,7 +87,7 @@ same thing as an observation source. The proposal: a stock `FactLedger` that is 
 `Remove(key)`, and lines rendered in a stable order within a budget. One instance can be
 shared by several agents. That is the colony's group knowledge, and it does not break
 memory's "never shared" rule, because it is an observation source. Existing sources already
-work this way, so it adds a convenience, not a new path to the model.
+work this way, so it adds a convenience, not a new path to the model. **Built** as `FactLedger` and `FactLedgerView` in `Runtime/Observations/` (#295, 14 November).
 
 **F5. A summary of older memory.** *Colony; any agent that lives long.* A settler lives
 30 days, but `RollingHistory` keeps 6 exchanges. The proposal: a strategy that folds
