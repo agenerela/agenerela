@@ -34,6 +34,11 @@ phase table and the open issues, not here.
   `GameRules.BreakWhenAllOccupied` breaks a fully occupied realm with armies left. Scripted they leave the pace
   as it was; the models' stall waits for a live run. Numbers in `findings.md`, 14 November.
 
+- **Painted Realm: silent armies, an arm for the writs turn** (#20). `+silent-armies` asks the marshal's army
+  orders without a statement (`DecideOptions.AskForStatement`, #266). On `qwen3.5:4b`, 15 games an arm, it saves
+  0.59 s a turn with repeats and legality unchanged, but treaties fell from 4.7 to 3.5 a game within noise, so
+  `default` keeps every line. Results in `findings.md`, 14 November.
+
 - **Painted Realm: detail up close, fields that show, rule mode on a big map** (#20).
   - Zoomed in, the visible part of the chart is drawn again at screen scale (trees, fields, settlements, roads),
     not magnified.

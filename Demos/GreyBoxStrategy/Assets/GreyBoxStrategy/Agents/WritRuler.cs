@@ -203,8 +203,9 @@ namespace GreyBoxStrategy
             // The court's headline already says its first fact; an army's first fact is its own line.
             var facts = r.Moment == Moment.Council ? r.TurnFacts.Skip(1).ToList() : r.TurnFacts.ToList();
             bool speaks = Speaks(r);
-            if (!speaks) facts.Add(SayNothingLine);
-            else if (Options.OwnLines && OwnLinesLine() is string own) facts.Add(own);
+            bool asked = AsksForStatement(r);
+            if (!speaks && asked) facts.Add(SayNothingLine);
+            else if (asked && Options.OwnLines && OwnLinesLine() is string own) facts.Add(own);
             return new DecideOptions
             {
                 StimulusLabel = r.Moment == Moment.Army ? "Army" : r.Moment == Moment.Envoy ? "Treaty" : r.Moment == Moment.Choice ? "Choice" : "Court",
@@ -218,7 +219,8 @@ namespace GreyBoxStrategy
                 LegalTargets = Options.LegalTargets,
                 StatementRulesWording = Options.RulesWording,
                 PairTargetsWithActions = Options.PairTargets,
-                ExampleStatements = speaks,
+                ExampleStatements = speaks && asked,
+                AskForStatement = asked,
                 Correlation = r.Moment == Moment.Army ? new ArmyOrder(r.ArmyId)
                     : r.Moment == Moment.Envoy ? new TreatyOffer(r.OfferId, r.OfferedBy)
                     : r.Moment == Moment.Choice ? new ChoiceCall(r.OfferId, r.Legal.Select(m => m.Action).ToList())
@@ -232,6 +234,10 @@ namespace GreyBoxStrategy
         /// <summary>Whether this decision carries a statement: always, unless <see cref="ModelSeatOptions.OneVoice"/>
         /// leaves the turn's voice to the ruler's first court decision.</summary>
         public bool Speaks(CountryRequest r) => !Options.OneVoice || (r.Moment == Moment.Council && r.Ordered.Count == 0);
+
+        /// <summary>Whether the call asks for a statement at all: not for an army order under
+        /// <see cref="ModelSeatOptions.SilentArmies"/>, which leaves the field out of the request (#266).</summary>
+        public bool AsksForStatement(CountryRequest r) => !(Options.SilentArmies && r.Moment == Moment.Army);
 
         /// <summary>
         /// <see cref="ModelSeatOptions.OwnLines"/>: the ruler's last few distinct lines, newest last, with a plain
