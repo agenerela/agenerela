@@ -904,10 +904,11 @@ namespace GreyBoxStrategy.Tests
                 var target = g.World.ProvincesOf("orsk").Where(p => !p.IsCapital && p.Forts == 0).OrderBy(p => p.Id).First();
                 var host = ArmyOf(g, "valen");
                 var orsk = ArmyOf(g, "orsk");
-                host.Soldiers = 200; // strong enough to rout (more than 2.5 to 1), not to destroy (30% of 200 is 60)
-                orsk.Soldiers = 70;
-                g.World.Country("valen").Army = 200;
-                g.World.Country("orsk").Army = 70;
+                g.World.Rules.RoutRatio = 1.0; // any beaten army is routed, so the test needs no exact odds
+                host.Soldiers = 300; // wins, and takes at most 30% of 345 (104) from the 120
+                orsk.Soldiers = 120;
+                g.World.Country("valen").Army = 300;
+                g.World.Country("orsk").Army = 120;
                 Lead(host);
                 if (stubborn) Lead(orsk, GeneralTraits.Stubborn); else Lead(orsk);
                 orsk.Location = target.Id;
@@ -920,7 +921,7 @@ namespace GreyBoxStrategy.Tests
                 else Assert.That(g.World.FindArmy(orsk.Id), Is.Null);
                 return battle.Routed;
             }
-            Assert.That(Routed(false), Is.True, "70 against 200 is routed");
+            Assert.That(Routed(false), Is.True, "a beaten army is routed");
             Assert.That(Routed(true), Is.False, "a stubborn general retreats instead");
         }
 
