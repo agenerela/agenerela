@@ -126,7 +126,8 @@ namespace GreyBoxStrategy
         /// <c>+one-voice</c>: in the writs turn only a ruler's first court decision of a turn speaks. The second
         /// court order, army orders, treaty answers and dilemmas are asked to leave the statement empty, and a
         /// line written anyway is dropped (<see cref="ModelDecision.Unspoken"/>). The framework always asks for
-        /// the statement field, so this is the demo's way (a gap for #216 / #244).
+        /// the statement field, so this is the demo's way. The framework's own way, <c>DecideOptions.AskForStatement</c> (#266),
+        /// merged after the A/B of 13–14 November and is not used here yet.
         /// </summary>
         public bool OneVoice;
         /// <summary>

@@ -1612,7 +1612,7 @@ exists, and where it differs from the list above:
 - **The statement repeats, measured** (13 and 14 November), 15 games an arm: showing a ruler its own last four
   lines (`+own-lines`) cut repeats from 36% to 22% with legality, model time and persona unchanged, and is the
   demo's default now. One voice a turn (`+one-voice`) made them worse (45%) and halved the treaties. Asking a
-  decision without its statement field needs the framework (#216, #244). Numbers: `findings.md`, 13–14 November.
+  decision without its statement field came to the framework just after (#266, `AskForStatement`). Numbers: `findings.md`, 13–14 November.
 - **A country's own writ count** (14 November): `GameRules.WritsOverride`, read by `World.Writs`, for the
   person's unlimited writs on screen.
 

@@ -914,7 +914,7 @@ What it measured on `qwen3.5:4b`, 20 writs games on Classic against 20 one-move 
 **The statement repeats, measured** (13 and 14 November). Two voice arms for the writs turn, modifiers on any arm:
 - `+one-voice`: only a ruler's first court decision of a turn speaks. The framework always asks for the
   `statement` field, so the others are told to leave it empty, and a line written anyway is dropped and kept
-  in `model.csv`'s `unspoken` column. Asking a decision without the field is a framework gap (#216, #244).
+  in `model.csv`'s `unspoken` column. Since #266 the framework can ask without the field (`DecideOptions.AskForStatement`); this arm, measured just before, does not use it yet.
 - `+own-lines`: a decision that speaks reads the ruler's last four distinct lines and is asked to say
   something new (`WritRuler.OwnLinesLine`). **On in `default`** since 14 November; `+no-own-lines` turns it off.
 
