@@ -410,6 +410,8 @@ namespace GreyBoxStrategy.Replay
             for (int i = 0; i < ids.Count; i++)
                 for (int j = i + 1; j < ids.Count; j++)
                 {
+                    // A country out of the game is at war with nobody, whatever its last relations were.
+                    if (!w.Country(ids[i]).Alive || !w.Country(ids[j]).Alive) { since.Remove(ids[i] + "|" + ids[j]); continue; }
                     var rel = w.RelationBetween(ids[i], ids[j]);
                     string key = ids[i] + "|" + ids[j];
                     if (rel == Relation.War)

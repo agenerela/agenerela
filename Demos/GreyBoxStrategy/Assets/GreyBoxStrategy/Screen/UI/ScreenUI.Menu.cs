@@ -75,6 +75,10 @@ namespace GreyBoxStrategy.Realm
             return b;
         }
 
+        private static string WatchNote(bool writs) => writs
+            ? "Five model rulers play the writs turn, a court and a marshal each; you follow, inspect and pause"
+            : "Five model rulers with personas play; you follow, inspect and pause";
+
         private static Label Heading(string text) { var l = new Label(text); l.AddToClassList("menu-head"); return l; }
 
         private static VisualElement Row(params VisualElement[] items)
@@ -111,7 +115,7 @@ namespace GreyBoxStrategy.Realm
             card.Add(Heading("NEW GAME"));
 
             card.Add(Section2("MODE"));
-            var watchB = BigButton("Watch", "Five model rulers with personas play; you follow, inspect and pause", null);
+            var watchB = BigButton("Watch", WatchNote(choice.Writs), null);
             var ruleB = BigButton("Rule", "You rule one country against four model rulers", null);
             var crests = new VisualElement(); crests.AddToClassList("menu-row");
             void Mode(bool rule)
@@ -158,10 +162,15 @@ namespace GreyBoxStrategy.Realm
             var victoryRow = Steps("Victory", new[] { "Conquest, the last realm standing", "75% of all provinces" },
                 choice.Victory == GameSetup.DominationPreset ? 1 : 0, i => choice.Victory = i == 1 ? GameSetup.DominationPreset : GameSetup.ConquestPreset);
             var turnNote = new Label(); turnNote.AddToClassList("src"); turnNote.style.whiteSpace = WhiteSpace.Normal;
+            VisualElement storytellerRow = null; Label storyNote = null;
             void Turn(bool writs)
             {
                 choice.Writs = writs;
                 victoryRow.SetEnabled(writs);
+                watchB.Q<Label>(className: "menu-big-note").text = WatchNote(writs);
+                // The storyteller plays the one-move game only, so far: the writs game runs with the random event table.
+                storytellerRow?.SetEnabled(!writs);
+                if (storyNote != null) storyNote.style.display = writs ? DisplayStyle.Flex : DisplayStyle.None;
                 turnNote.text = writs
                     ? "Writs: each ruler gives a few orders a turn, to its court and to armies awaiting them; armies march, fight and occupy; land changes hands by treaty. Scripted rulers play it, you watch (rule mode on it comes next)."
                     : "One move: each ruler makes one move a turn, as every measured game so far.";
@@ -180,10 +189,14 @@ namespace GreyBoxStrategy.Realm
             void Note(int i) => presetNote.text = i == 0
                 ? "Off: the random event table (harvests, bandits, unrest), as every measured game so far."
                 : presets[i - 1].Description + " Dilemmas, events on many, planned tales, and a second call that titles each event.";
-            card.Add(Steps("Storyteller", new[] { "Off" }.Concat(presets.Select(p => p.Label)).ToArray(), sel,
-                i => { choice.Storyteller = i == 0 ? "off" : presets[i - 1].Name; Note(i); }));
+            storytellerRow = Steps("Storyteller", new[] { "Off" }.Concat(presets.Select(p => p.Label)).ToArray(), sel,
+                i => { choice.Storyteller = i == 0 ? "off" : presets[i - 1].Name; Note(i); });
+            card.Add(storytellerRow);
             Note(sel);
             card.Add(presetNote);
+            storyNote = new Label("The storyteller joins the writs turn later: a writs game has the random event table."); storyNote.AddToClassList("src");
+            card.Add(storyNote);
+            Turn(choice.Writs);
             card.Add(Coming("Advisor", "A model that counsels you in rule mode: on by default, off in a click"));
 
             menuStatus = new Label(); menuStatus.AddToClassList("menu-status"); card.Add(menuStatus);
