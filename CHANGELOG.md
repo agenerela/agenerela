@@ -38,6 +38,8 @@ phase table and the open issues, not here.
   - `GameRules.WritsOverride` gives one country its own writs a turn, or `UnlimitedWrits`, for the person's
     unlimited writs on screen.
   - `model.csv` gains an `unspoken` column: a line written where none was asked.
+  - With own lines on, the rulers keep 13 observation lines, not 12, so the extra line no longer pushes out
+    "Ordered this turn" (cut from 43% of later orders in the arm as measured) or an army's moves line.
 
 - **Painted Realm: the writs turn on generated worlds** (#20). New game plays a generated world of any size
   and number of countries in all three ways: a scripted replay, model rulers live, or ruling a realm.

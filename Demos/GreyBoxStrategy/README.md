@@ -921,7 +921,9 @@ What it measured on `qwen3.5:4b`, 20 writs games on Classic against 20 one-move 
 15 games an arm on the same seeds: repeated word for word 35.6% (control), 44.5% (one voice), 21.6% (own
 lines), with no illegal answers, the same model time and the persona as clear as before with own lines. One
 voice saved 1.7 s a turn but halved the treaties. Numbers in [`findings.md`](../../docs/llm-wiki/findings.md),
-13–14 November.
+13–14 November. The arm as measured cut "Ordered this turn" from 43% of later orders, because the extra line
+took a place the agents' 12 lines did not have; with own lines on the agents keep 13 now, so the default reads
+exactly the control's lines plus its own.
 
 **A country's own writ count.** `GameRules.WritsOverride` maps a country to its own number of writs a turn,
 in place of the formula; `GameRules.UnlimitedWrits` means no limit (shown as "Writs: no limit this turn."),

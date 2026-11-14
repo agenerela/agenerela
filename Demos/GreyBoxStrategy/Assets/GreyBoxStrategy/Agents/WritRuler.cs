@@ -100,7 +100,10 @@ namespace GreyBoxStrategy
             return new Agent(identity, Array.Empty<ActionDefinition>(), provider)
             {
                 Id = id,
-                MaxObservations = 12,
+                // The call's own lines count first and the sources fill what is left, so the moves line and the
+                // ordered line, the sources' last, are the ones cut. The own-lines line gets a place of its own:
+                // without it 43% of later orders lost "Ordered this turn" in a scripted probe (14 November).
+                MaxObservations = Options.OwnLines ? 13 : 12,
                 MemoryCommit = MemoryCommit.OnExecute,
                 Memory = new RollingHistory(MemoryDecisions) { Remembers = Options.Remembers },
             };
