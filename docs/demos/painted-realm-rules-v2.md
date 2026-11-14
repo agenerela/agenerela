@@ -1692,6 +1692,14 @@ stalled war that used to end in a stalemate now grinds on. **Both stay off.** Wh
 - **Ownership only at a war's end**, as a treaty term the model already has (`demand_occupied`), made cheaper.
 Each needs its own live pair.
 
+**The tech lead's pick, built off** (14 November): `GameRules.StalemateByWarScore`. The counter reads war
+score and land by treaty: land taken or freed by force of arms (occupation, a siege, holding it) no longer
+restarts it; a treaty, free land taken, a realm broken, a new war, or a war's score moving
+`StalemateWarScoreStep` (10) points does. Meant with `OccupationBecomesOwnership` 8 on top. Scripted, ordinary
+scripts barely notice (77 turns either way); peaceable scripts that stand in for the models end at 44 turns
+instead of 29, all in stalemates, because each new war and each 10-point swing restarts the count. No live run
+yet.
+
 The screen's half is the screen session's.
 
 **The screen's half, first part: built** (13 November). Watch and replay of a writs game by stand-in

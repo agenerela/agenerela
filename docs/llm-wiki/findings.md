@@ -4285,3 +4285,18 @@ GreyBoxStrategy (#20), the two settings of #305 on the models. `personas` table,
 - **No default changes.** Both settings stay off. The rules v2 page lists what the result suggests instead: ownership that does not reset the stalemate counter, the break rule alone, or a cheaper `demand_occupied`, each for its own live pair.
 - The runner gained a deadline (no block starts that would end past 08:00, by the longest block so far plus 10%) and `-strategyRules`, which #309 brought to `test`.
 
+### Painted Realm stalemate counter by war score, scripted: ordinary scripts do not notice it, and peaceable ones end later (14 November 2026)
+
+GreyBoxStrategy (#20), `GameRules.StalemateByWarScore` (the tech lead's pick after the pacing settings' live look). Scripted only: the `.NET 9` harness, 100 Classic games of the `mixed` lineup on seeds 1 to 100, writs turn, conquest, 12-turn stalemate. "Peaceable" is the earlier stand-in for the models (white peace offered at a war score of 30 or less and accepted at 10 or less, wars settled after 8 turns: `exp:`/`cau:` `WhitePeaceAtScore=30`, `AcceptWhitePeaceAtScore=10`, `StuckWarTurns=8`).
+
+| | ordinary scripts: turns, endings | peaceable scripts: turns, endings, treaties |
+|---|---|---|
+| off | 77; 97 last standing, 3 stalemate | 29; 100 stalemate; 26.7 |
+| ownership after 8 | 75; 94, 6 | 29; 100 stalemate; 26.7 |
+| counter by war score | 77; 98, 2 | 44; 100 stalemate; 42.6 |
+| counter by war score, ownership after 8 | 75; 94, 6 | 44; 100 stalemate; 42.6 |
+
+- Ordinary scripts press wars to the end, so the counter rarely matters to them.
+- Peaceable scripts settle every war fast and declare the next. With the counter by war score, each new war and each 10-point swing restarts it, so their games run 15 turns longer and make more treaties, still ending in stalemates. Ownership after 8 changes nothing for them: peace comes before any occupation is old enough.
+- What it cannot show: how the models' long stalled wars, where land moves by occupation for a hundred turns, behave under it. That needs the live pair the tech lead holds for later.
+
