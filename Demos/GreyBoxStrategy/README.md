@@ -1016,6 +1016,28 @@ in place of the formula; `GameRules.UnlimitedWrits` means no limit (shown as "Wr
 so the screen can give the person alone unlimited writs as an easy setting. `World.Writs` reads it, it is
 copied with the rules, and any number below 1 counts as 1.
 
+**R3, part one: unit types and the counter rule** (14 November; rules v2 3.3). `GameRules.UnitTypes`, off by
+default, gives the writs turn three types:
+- **Pikes, riders and bows.** Pikes counter riders, riders counter bows, bows counter pikes. Base strength
+  a soldier: pikes 1.0, riders 1.4, bows 0.9 (`PikeStrength`, `RiderStrength`, `BowStrength`).
+- **The counter rule** (`Units.Multiplier`): m(t) = 1 + 0.5 × the enemy's share of what t counters − 0.5 × the
+  enemy's share of what counters t (`CounterStrength`). A side's strength is the sum of soldiers × base × m(t);
+  a militia or a garrison fights as pikes.
+- **The army keeps its mix.** `Army.Pikes`, `Riders` and `Bows`; `Army.Soldiers` stays the total, and setting
+  it takes losses from each type in proportion. With the flag off every soldier is a pike, so a game plays
+  exactly as before.
+- **Recruiting by type.** `recruit_pikes`, `recruit_riders` and `recruit_bows` replace `recruit`. Riders cost
+  twice a pike to raise and to keep (`RiderCostFactor`).
+- **The report** names the largest counter effect: for example "…; valen's pikes broke
+  orsk's riders (+50%)." The battle record keeps `AttackCounter`, `DefenceCounter` and `CounterNote`.
+- **Scripted players** recruit the type that counters the largest type of their strongest enemy or neighbour.
+
+Scripted, 100 Classic games of the `mixed` lineup with the .NET harness (`pace classic 100 rule:UnitTypes=True`):
+off, 77 turns on average (the same games as before); on, 82 turns, 158 battles a game against 147, the same
+endings (97 last standing). Soldiers were 44% pikes, 13% riders and 43% bows; 82% of battles had a counter
+effect of 1% or more, and the counters turned the result of 6% of them. The model rulers' `recruit_*` orders
+and the army line with its mix come in the next part.
+
 ## The first real run
 
 `mixed`, 200 games, seeds 1 to 200, standard rules, run in batch mode on 10 November 2026. The

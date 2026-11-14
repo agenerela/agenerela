@@ -29,6 +29,13 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm R3, part one: pikes, riders and bows with the counter rule** (#20), behind
+  `GameRules.UnitTypes`, off by default.
+  - Armies keep soldiers by type; losses keep the mix; `Army.Soldiers` stays the total.
+  - `recruit_pikes`, `recruit_riders` and `recruit_bows` replace `recruit`; riders cost twice a pike to raise and keep.
+  - Battles weigh each type by the counter rule, and the report names the largest effect.
+  - Scripted players recruit what counters their strongest rival. Scripted numbers in `findings.md`, 14 November.
+
 - **Painted Realm: a ruler's own last lines, the writs turn's default, and a country's own writ count** (#20).
   - Two voice arms for the writs turn: `+one-voice` (only the first court decision of a turn speaks) and
     `+own-lines` (a decision that speaks reads the ruler's last four lines and is asked to say something new).
