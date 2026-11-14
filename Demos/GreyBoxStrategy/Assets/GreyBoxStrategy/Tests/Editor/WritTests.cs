@@ -411,6 +411,82 @@ namespace GreyBoxStrategy.Tests
             Assert.That(report.Resolution.Any(l => l.Contains("realm is broken")), Is.True);
         }
 
+        // --- Pacing candidates (rules v2 page, "Why Classic stalls"), off by default ---------------
+
+        private static int HeldUntilOwned(GameRules rules, int turns, out Game g)
+        {
+            g = NewWrits(1, rules);
+            Turn(g);
+            War(g, "valen", "orsk");
+            g.World.Province("corwick").Occupier = "valen";
+            for (int t = 1; t <= turns; t++)
+            {
+                var report = Turn(g);
+                if (g.World.Province("corwick").Owner == "valen")
+                {
+                    Assert.That(report.Resolution.Any(l => l.Contains("has held corwick")), Is.True);
+                    return t;
+                }
+            }
+            return 0;
+        }
+
+        [Test]
+        public void Occupation_HeldItsTurns_PassesToTheOccupier_AndNeverWhenOff()
+        {
+            var rules = WritRules();
+            rules.OccupationBecomesOwnership = 3;
+            Assert.That(HeldUntilOwned(rules, 6, out var g), Is.EqualTo(3), "the third turn end held makes it valen's");
+            Assert.That(g.World.Province("corwick").Occupier, Is.Null);
+            Assert.That(g.World.Province("corwick").OccupiedTurns, Is.Zero);
+
+            Assert.That(WritRules().OccupationBecomesOwnership, Is.Zero, "off by default");
+            Assert.That(HeldUntilOwned(WritRules(), 6, out var off), Is.Zero);
+            Assert.That((off.World.Province("corwick").Owner, off.World.Province("corwick").OccupiedTurns), Is.EqualTo(("orsk", 6)), "still counted, never owned");
+        }
+
+        [Test]
+        public void Occupation_ANewOccupier_StartsTheCountAgain()
+        {
+            var p = NewWrits().World.Province("corwick");
+            p.Occupier = "valen";
+            p.OccupiedTurns = 2;
+            p.Occupier = "valen";
+            Assert.That(p.OccupiedTurns, Is.EqualTo(2), "the same occupier keeps its count");
+            p.Occupier = "merrow";
+            Assert.That(p.OccupiedTurns, Is.Zero);
+            p.OccupiedTurns = 2;
+            p.Occupier = null;
+            Assert.That(p.OccupiedTurns, Is.Zero, "freed land counts nothing");
+        }
+
+        private static Game EveryProvinceOccupied_ArmyAbroad(GameRules rules)
+        {
+            var g = NewWrits(1, rules);
+            Turn(g);
+            War(g, "valen", "orsk");
+            War(g, "merrow", "orsk");
+            foreach (var p in g.World.ProvincesOf("orsk").ToList()) p.Occupier = "valen";
+            ArmyOf(g, "orsk").Location = g.World.ProvincesOf("kesh").First().Id;
+            Turn(g);
+            return g;
+        }
+
+        [Test]
+        public void BreakWhenAllOccupied_BreaksARealmWithAnArmyLeft_AndNotWhenOff()
+        {
+            var rules = WritRules();
+            rules.BreakWhenAllOccupied = true;
+            var on = EveryProvinceOccupied_ArmyAbroad(rules);
+            Assert.That(on.World.Country("orsk").Alive, Is.False);
+            Assert.That(on.World.ArmiesOf("orsk"), Is.Empty, "its armies are disbanded with it");
+            Assert.That(on.World.ProvinceList.Where(p => p.Owner == "orsk"), Is.Empty);
+
+            Assert.That(WritRules().BreakWhenAllOccupied, Is.False, "off by default");
+            var off = EveryProvinceOccupied_ArmyAbroad(WritRules());
+            Assert.That(off.World.Country("orsk").Alive, Is.True, "an army left saves the realm, as v2 5.1 has it");
+        }
+
         // --- Wake conditions ------------------------------------------------------------------
 
         [Test]

@@ -51,8 +51,11 @@ namespace GreyBoxStrategy
                 string relation = rel == Relation.War ? $"at war with us, war score {WarScore.Of(world, countryId, other.Id):+0;-0;0}"
                     : rel == Relation.Truce ? $"truce with us for {world.TruceTurnsLeft(countryId, other.Id)} more turns" : "at peace with us";
                 int theirArmies = world.ArmiesOf(other.Id).Count();
-                string occupies = string.Join(", ", occupiedOfOurs.Where(p => p.Occupier == other.Id).Select(p => p.Id));
-                string weOccupy = string.Join(", ", world.ProvinceList.Where(p => p.Owner == other.Id && p.Occupier == countryId).Select(p => p.Id));
+                // With OccupationBecomesOwnership on, each occupation says how long it has been held: "corwick (held 3 of 8 turns)".
+                int keepAfter = world.Rules.OccupationBecomesOwnership;
+                string Held(Province p) => keepAfter > 0 ? $"{p.Id} (held {p.OccupiedTurns} of {keepAfter} turns)" : p.Id;
+                string occupies = string.Join(", ", occupiedOfOurs.Where(p => p.Occupier == other.Id).Select(Held));
+                string weOccupy = string.Join(", ", world.ProvinceList.Where(p => p.Owner == other.Id && p.Occupier == countryId).Select(Held));
                 lines.Add($"{other.Id}: {relation}; {other.Army} soldiers in {Plural(theirArmies, "army", "armies")}, {Facts.Provinces(world.ProvinceCount(other.Id))}"
                           + (world.Borders(countryId, other.Id) ? "; borders us" : "")
                           + (weOccupy.Length > 0 ? $"; we occupy {weOccupy}" : "")
