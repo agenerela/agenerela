@@ -115,6 +115,10 @@ namespace GreyBoxStrategy.Replay
                     line.Category = ChronicleCategory.Economy;
                     line.Text = $"{N(e.Country)} raises taxes";
                     break;
+                case ReplayEventKind.General:
+                    line.Category = ChronicleCategory.War;
+                    line.Text = e.Text;
+                    break;
                 case ReplayEventKind.Upkeep:
                     line.Category = ChronicleCategory.Economy;
                     int colon = e.Text.IndexOf(':');

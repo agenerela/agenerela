@@ -67,7 +67,7 @@ namespace GreyBoxStrategy.Realm
             started = true;
             var setup = GameSetup.Writs(seed, GameSetup.ClassicMapId, victory);
             var map = setup.BuildMap();
-            var rules = setup.BuildRules(map);
+            var rules = RulesFor(setup, map);
             live.Configure(true, seed, turns, model);
             live.BeginWrits(map, rules, seed, scripted, arm);
             if (live.Error != null) { ui.ShowMenuStatus(live.Error); started = false; yield break; }

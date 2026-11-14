@@ -29,6 +29,12 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm R3 armies on screen** (#20). New game has "Unit types" and "Generals" switches, off by default,
+  for every way of playing the writs turn. With them on, pieces show their largest type, your army rows and
+  tooltips the mix, a rival's piece only what it mostly is; the council offers the three recruit orders with cost
+  and counter; army rows name their general; the chronicle tells a general's new trait or fall; the battle report
+  shows both mixes and the counters' and generals' effect in words. With both off the screen is unchanged.
+
 - **Painted Realm R3: unit types, a first live look** (#20). Six pairs on `qwen3.5:4b`: no illegal answers and no
   extra model time with unit types on, but the courts recruit mostly pikes and counter the type they see only 22% of
   the time. `UnitTypes` stays off. Results in `findings.md`, 14 November.

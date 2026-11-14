@@ -176,6 +176,8 @@ namespace GreyBoxStrategy.Realm
             string arm = StoryArms.For(c.Storyteller);
             yourWritsUnlimited = c.YourWritsUnlimited;
             advisorNext = c.AdvisorFor;
+            nextUnitTypes = c.UnitTypes;
+            nextGenerals = c.Generals;
             switch (c.Route(out string why))
             {
                 case NewGameRoute.None: ui.ShowMenuStatus(why); return;
