@@ -30,7 +30,32 @@ namespace GreyBoxStrategy.Realm
         /// <summary>The menu's third choice, and the Unity CLI's: rule <paramref name="country"/> against four model rulers on the server.</summary>
         public void TryRule(string country, string model, int gameSeed, string arm = null) => StartCoroutine(StartRule(country, model, gameSeed, arm));
 
-        private IEnumerator StartRule(string country, string model, int gameSeed, string arm)
+        /// <summary>
+        /// Rule mode on the writs turn (rules v2, R1) on the Classic board: you rule <paramref name="country"/>,
+        /// four model rulers with a court and a marshal each the rest, on the server behind the card's lock.
+        /// </summary>
+        public void TryRuleWrits(string country, string model, int gameSeed, string victory = GameSetup.ConquestPreset, string arm = null)
+        {
+            var setup = GameSetup.Writs(gameSeed, GameSetup.ClassicMapId, victory);
+            var map = setup.BuildMap();
+            StartCoroutine(StartRule(country, model, gameSeed, arm, map, setup.BuildRules(map)));
+        }
+
+        /// <summary>For the Unity CLI, the dev menu and frames without a server: the writs turn with four stand-in rulers through the same agents.</summary>
+        public void StartRuleScriptedWrits(string country, int gameSeed, string victory = GameSetup.ConquestPreset, string arm = null)
+        {
+            var setup = GameSetup.Writs(gameSeed, GameSetup.ClassicMapId, victory);
+            var map = setup.BuildMap();
+            var rng = new System.Random(gameSeed);
+            World world = null;
+            var provider = new ScriptedProvider { Callback = r => ScriptedRuler(r, rng, world) };
+            provider.Otherwise(ScriptedReply.Decide("none", statement: "We wait."));
+            var wrapped = DevProvider.Wrap(provider);
+            BeginRule(country, "scripted", gameSeed, (m, w) => { world = w; return wrapped; }, null, arm, map, setup.BuildRules(map));
+            if (rule != null) rule.Dev = true;
+        }
+
+        private IEnumerator StartRule(string country, string model, int gameSeed, string arm, MapDefinition map = null, GameRules rules = null)
         {
             if (started) yield break;
             string why = Gateway.WhyNotSet();
@@ -40,8 +65,9 @@ namespace GreyBoxStrategy.Realm
             yield return Gateway.CheckServer(w => serverWhy = w);
             if (serverWhy != null) { ui.ShowMenuStatus(serverWhy); yield break; }
             model = string.IsNullOrWhiteSpace(model) ? "qwen3.5:4b" : model.Trim();
-            ruleLock = new CardLock(model, $"rule game, {model} x4 with personas, seed {gameSeed}");
-            BeginRule(country, model, gameSeed, (m, w) => Gateway.Provider(m), ruleLock, arm);
+            if (Gateway.Paused) { ui.ShowMenuStatus("The RTX 5080 is paused for a measurement (its lock's pause file is set). Try again when it is lifted."); yield break; }
+            ruleLock = new CardLock(model, $"rule game{(rules?.Turn == TurnStyle.Writs ? " on the writs turn" : "")}, {model} x4 with personas, seed {gameSeed}");
+            BeginRule(country, model, gameSeed, (m, w) => Gateway.Provider(m), ruleLock, arm, map, rules);
         }
 
         /// <summary>
@@ -122,20 +148,23 @@ namespace GreyBoxStrategy.Realm
             return ScriptedReply.Decide(pick.Action, pick.Target ?? TargetRegistry.NoTarget, StockLines[rng.Next(StockLines.Length)]);
         }
 
-        private void BeginRule(string country, string model, int gameSeed, Func<string, World, ILLMProvider> providerFor, RuleSession.ICardLock cardLock, string arm = null)
+        private void BeginRule(string country, string model, int gameSeed, Func<string, World, ILLMProvider> providerFor, RuleSession.ICardLock cardLock, string arm = null,
+            MapDefinition map = null, GameRules rules = null)
         {
             if (started) return;
             started = true;
             string path = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "Rule", $"seed-{gameSeed:D4}-{country}-{DateTime.Now:yyyyMMdd-HHmmss}.jsonl"));
-            rule = new RuleSession(country, model, arm ?? "default", gameSeed, path, providerFor, cardLock);
+            rule = new RuleSession(country, model, arm ?? "default", gameSeed, path, providerFor, cardLock, map, rules);
             Debug.Log($"Painted Realm: rule game, you rule {country}, seed {gameSeed}, {model} x4 with personas; decisions into {path}");
             RunRule();
 
             ui.Players = rule.Players;
             game = rule.BuildReplay();
-            queries = new RealmQueries(game, game.Map, game.Rules);
-            ui.Queries = queries;
+            UseGame();
             ui.Fog = new Fog(country, queries);
+            ui.NeighboursOf = id => game.Map.Neighbours(id);
+            ui.ShowAwaiting = rule.Writs;
+            ui.PlanChanged = () => { ApplyMode(); RefreshSide(); };
             ui.SetRuleMode(country);
             followed = country;
             ui.OrderPressed = m => { ui.Chosen = m; lastOrdersStatus = null; RuleTick(); RefreshSide(); };
@@ -171,6 +200,20 @@ namespace GreyBoxStrategy.Realm
         public void EndTurn()
         {
             if (rule == null || rule.WaitingFor != RuleSession.Waiting.Orders || ui.OrdersRequest == null) return;
+            if (rule.Writs)
+            {
+                // Your plan for the turn; armies with a writ and no order hold, as the rules hold them.
+                try { rule.Plan(ui.Plan); }
+                catch (ArgumentException e) { ui.ShowNotice(e.Message); return; }
+                ui.OrdersRequest = null;
+                ui.SelectedArmy = null;
+                ui.Plan = new RuleSession.WritsPlan();
+                lastOrdersStatus = null;
+                ApplyMode();
+                RuleTick();
+                RefreshSide();
+                return;
+            }
             var m = ui.Chosen ?? Move.Hold;
             rule.Order(m);
             ui.OrdersRequest = null;
@@ -236,6 +279,25 @@ namespace GreyBoxStrategy.Realm
                          "The game takes the card when it is free and holds it until you leave. Esc, then Main menu, leaves now.";
                 ui.SetThinking(false);
             }
+            else if (w == RuleSession.Waiting.Orders && rule.Orders != null && rule.Writs)
+            {
+                if (ui.OrdersRequest != rule.Orders)
+                {
+                    // Your court meets: the map shows the state it meets on, your plan starts empty.
+                    ui.OrdersRequest = rule.Orders;
+                    ui.Plan = new RuleSession.WritsPlan();
+                    ui.SelectedArmy = null;
+                    lastOrdersStatus = null;
+                    Show(ReplayBuilder.StateOf(rule.Orders.World, game.ProvinceIds, shown), null);
+                    ui.SetPlaying(false, speed);
+                    RefreshSide();
+                }
+                int used = ui.WritsUsed(rule.Orders), waiting = WritLegality.Awaiting(rule.Orders.World, rule.You).Count(), withWrit = ui.ArmiesWithWrits(rule.Orders).Count;
+                ui.SetTurn(rule.Orders.Turn, $"Orders · writs {used} of {rule.Orders.Writs}");
+                string writsLine = waiting > withWrit ? $" {waiting - withWrit} of your armies wait for want of a writ: they hold." : "";
+                status = (rule.ModelsThinking ? RulersLine("The four rulers are deciding while you choose") : "The four rulers have decided. Your orders?") + writsLine;
+                ui.SetThinking(rule.ModelsThinking);
+            }
             else if (w == RuleSession.Waiting.Orders && rule.Orders != null)
             {
                 if (ui.OrdersRequest != rule.Orders)
@@ -257,7 +319,8 @@ namespace GreyBoxStrategy.Realm
                 if (lastOffer != rule.Offer)
                 {
                     lastOffer = rule.Offer;
-                    ui.ShowOffer(rule.Offer.OfferedBy, rule.OfferStatement, queries.Rules.TruceTurns, () => rule.Answer(true), () => rule.Answer(false));
+                    if (rule.Writs) ui.ShowTreaty(rule.Offer, rule.OfferStatement, () => rule.Answer(true), () => rule.Answer(false));
+                    else ui.ShowOffer(rule.Offer.OfferedBy, rule.OfferStatement, queries.Rules.TruceTurns, () => rule.Answer(true), () => rule.Answer(false));
                 }
                 status = $"{CountryLook.NameOf(rule.Offer.OfferedBy)}'s envoy waits for your answer.";
             }
@@ -275,7 +338,7 @@ namespace GreyBoxStrategy.Realm
             }
             // Rebuild the panel only when what it offers changes; the clock updates its line alone,
             // so a button is never rebuilt under the pointer.
-            var key = (ui.OrdersRequest, ui.Chosen, w);
+            var key = (ui.OrdersRequest, ui.Chosen, w, ui.SelectedArmy, ui.WritsKey());
             if (!Equals(key, lastOrdersKey) || lastOrdersStatus == null) { lastOrdersKey = key; lastOrdersStatus = status; ui.ShowOrders(status); }
             else if (status != lastOrdersStatus) { lastOrdersStatus = status; ui.SetOrdersStatus(status); }
         }

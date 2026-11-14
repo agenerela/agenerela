@@ -47,6 +47,7 @@ namespace GreyBoxStrategy.Realm
         public void ShowOrders(string status)
         {
             if (orders == null) { orders = new VisualElement(); orders.AddToClassList("panel"); orders.AddToClassList("orders"); Root.Add(orders); }
+            if (Writs && OrdersRequest != null) { ShowWritsOrders(status); return; }
             orders.Clear();
             var req = OrdersRequest;
             var head = new VisualElement(); head.AddToClassList("panel-head");

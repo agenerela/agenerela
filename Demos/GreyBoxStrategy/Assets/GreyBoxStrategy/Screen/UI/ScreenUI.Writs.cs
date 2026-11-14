@@ -40,10 +40,13 @@ namespace GreyBoxStrategy.Realm
                 labels.Insert(0, hostLayer);
             }
             foreach (var kv in armyPieces) kv.Value.style.display = DisplayStyle.None;
-            var alive = new HashSet<string>(s.Armies.Select(a => a.Id), StringComparer.Ordinal);
+            var sight = Sight(s);
+            bool Seen(ArmyState a) => sight == null || a.Owner == You || sight.Contains(a.Location);
+            var alive = new HashSet<string>(s.Armies.Where(Seen).Select(a => a.Id), StringComparer.Ordinal);
             foreach (var id in hosts.Keys.Where(k => !alive.Contains(k)).ToList()) { hosts[id].RemoveFromHierarchy(); hosts.Remove(id); }
             foreach (var a in s.Armies)
             {
+                if (!Seen(a)) continue;
                 if (!hosts.TryGetValue(a.Id, out var piece))
                 {
                     piece = new VisualElement { pickingMode = PickingMode.Position }; piece.AddToClassList("host");
@@ -57,9 +60,11 @@ namespace GreyBoxStrategy.Realm
                     hosts[a.Id] = piece;
                 }
                 piece.style.backgroundColor = (Color)Darker(CountryLook.Of(a.Owner).Colour);
-                piece.Q<Label>(className: "host-n").text = a.Soldiers.ToString();
-                piece.Q(className: "host-wait").style.display = ShowAwaiting && a.Awaiting ? DisplayStyle.Flex : DisplayStyle.None;
-                piece.tooltip = HostLine(a) + "\nClick: its army.";
+                bool rival = sight != null && a.Owner != You;
+                piece.Q<Label>(className: "host-n").text = rival ? $"~{(int)Math.Round(a.Soldiers / 10.0) * 10}" : a.Soldiers.ToString();
+                piece.Q(className: "host-wait").style.display = ShowAwaiting && a.Awaiting && a.Owner == You ? DisplayStyle.Flex : DisplayStyle.None;
+                piece.tooltip = rival ? $"{Chronicle.Host(a.Id)} ({CountryLook.NameOf(a.Owner)}), about {(int)Math.Round(a.Soldiers / 10.0) * 10} soldiers at {Cap(a.Location)}. Your court sees no more of it than that."
+                    : HostLine(a) + "\nClick: its army.";
             }
             if (marchLines == null) { marchLines = new MarchLines { Owner = this }; fx.Insert(0, marchLines); }
             marchLines.MarkDirtyRepaint();
@@ -114,6 +119,7 @@ namespace GreyBoxStrategy.Realm
             foreach (var a in hostState.Armies)
             {
                 if (!hosts.TryGetValue(a.Id, out var piece)) continue;
+                piece.EnableInClassList("chosen", a.Id == SelectedArmy);
                 var p = HostPoint(a);
                 piece.style.left = p.x;
                 piece.style.top = p.y;
@@ -185,7 +191,8 @@ namespace GreyBoxStrategy.Realm
                 var lines = new List<(ArmyState, List<Vector2>)>();
                 var s = Owner?.hostState;
                 if (s == null) return lines;
-                foreach (var a in s.Armies.Where(a => a.Marching && a.Path.Count > 0))
+                var sight = Owner.Sight(s);
+                foreach (var a in s.Armies.Where(a => a.Marching && a.Path.Count > 0 && (sight == null || a.Owner == Owner.You || sight.Contains(a.Location))))
                 {
                     var pts = new List<Vector2> { Owner.HostPoint(a) + new Vector2(0, 14) };
                     foreach (string step in a.Path)

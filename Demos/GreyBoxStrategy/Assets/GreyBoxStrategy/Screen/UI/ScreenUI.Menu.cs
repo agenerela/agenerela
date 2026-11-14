@@ -171,16 +171,14 @@ namespace GreyBoxStrategy.Realm
             var victoryRow = Steps("Victory", new[] { "Conquest", "Hold 75%" }, choice.Victory == GameSetup.DominationPreset ? 1 : 0, Victory);
             Victory(choice.Victory == GameSetup.DominationPreset ? 1 : 0);
             var turnNote = new Label(); turnNote.AddToClassList("src"); turnNote.style.whiteSpace = WhiteSpace.Normal;
-            VisualElement storytellerRow = null; Label storyNote = null;
+            VisualElement storytellerRow = null;
             void Turn(bool writs)
             {
                 choice.Writs = writs;
                 victoryRow.SetEnabled(writs);
                 victoryNote.style.display = writs ? DisplayStyle.Flex : DisplayStyle.None;
                 watchB.Q<Label>(className: "menu-big-note").text = WatchNote(writs);
-                // The storyteller plays the one-move game only, so far: the writs game runs with the random event table.
-                storytellerRow?.SetEnabled(!writs);
-                if (storyNote != null) storyNote.style.display = writs ? DisplayStyle.Flex : DisplayStyle.None;
+
                 turnNote.text = writs
                     ? "Writs: each ruler gives a few orders a turn, to its court and to armies awaiting them; armies march, fight and occupy; land changes hands by treaty. Model rulers play it, a court and a marshal each; you watch (rule mode on it comes next)."
                     : "One move: each ruler makes one move a turn, as every measured game so far.";
@@ -205,8 +203,6 @@ namespace GreyBoxStrategy.Realm
             card.Add(storytellerRow);
             Note(sel);
             card.Add(presetNote);
-            storyNote = new Label("The storyteller joins the writs turn later: a writs game has the random event table."); storyNote.AddToClassList("src");
-            card.Add(storyNote);
             Turn(choice.Writs);
             card.Add(Coming("Advisor", "A model that counsels you in rule mode: on by default, off in a click"));
 
