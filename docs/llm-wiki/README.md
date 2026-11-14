@@ -12,7 +12,7 @@ knowledge that is expensive to rediscover.
 | Why is the design the way it is? | Build plan §7, Decision Records |
 | What was already measured in the prototype? | Build plan, **Appendix A** |
 | What have *we* measured since? | [`findings.md`](findings.md) |
-| Which developer guards should we explore, and how will we evaluate them? | [`guards-research.md`](guards-research.md) — source review and proposed work for [#138](https://github.com/agenerela/agenerela/issues/138), researched 4 November 2026; no new measurements |
+| Which developer guards should we explore, and how will we evaluate them? | [`guards-research.md`](guards-research.md) — source review and proposed work for [#138](https://github.com/agenerela/agenerela/issues/138), researched 4 November 2026, with the statement-replacing verdict added 14 November (#266 item 4); no new measurements |
 | How do I set my machine up, or use another machine's Ollama over the network? | [`environment.md`](environment.md), including "Ollama on another machine, over the local network", which points to the RTX 5080's Docker server in [`tools/ollama-server/`](../../tools/ollama-server/README.md); a run another machine should do is a file in [`../run-requests/`](../run-requests/) |
 | How does an agent check a running game, or run the EditMode tests, without the mouse? | [`environment.md`](environment.md#the-unity-cli-in-game-checks), "The Unity CLI: in-game checks" |
 | What do I check before I write down an accuracy or latency number? | [`measuring.md`](measuring.md) — build plan §4's seven rules, and what has been learned since |
