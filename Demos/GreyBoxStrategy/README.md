@@ -57,7 +57,8 @@ language model through the framework, fighting over 25 provinces on a painted se
      - **Storyteller:** Off (the random event table, as every measured game), or one of its
        presets: Even hand, Underdog, Cruel fate, Quiet years, Saga
        ([what it shows](#the-storyteller-on-screen-13-november)).
-     - The persona mix and advisor are listed as coming.
+     - **Advisor:** on or off, for rule mode with model rulers (on by default; [the advisor in rule
+       mode](#the-advisor-in-rule-mode-14-november)). The persona mix is listed as coming.
    - **Replay:** seed 4 of the persona table, five `qwen3.5:4b` rulers. Kesh wins by domination
      on turn 17. Every line is the rulers' own. It needs no model and no server.
    - **Settings:**
@@ -265,7 +266,8 @@ changed is where it comes from.
   terrain set by hand from the painting.
 - **The settings are data.** `GameSetup` (`Sim/Rules/`) is what the menu, the runners and the tests
   share: seed, map, number of countries, victory mode and its values, the storyteller preset and the
-  advisor switch (both data only so far). Its saved form:
+  advisor switch (both were data only at first; the storyteller is played since 13 November and the
+  advisor since 14 November). Its saved form:
 
   ```json
   { "version": 1, "turn": "one_move", "seed": 4, "map": "classic", "countries": 5, "victory": "domination",
@@ -553,6 +555,82 @@ world's in about 0.5 to 0.9 s, off the main thread behind the loading card.
 - The seal can sit under a piece standing on the same province.
 - The scripted rulers order armies into land they may not enter, so the chronicle shows many
   refused orders; that is the stand-ins' play, not the screen's.
+
+### The end of a game, and a first look (14 November)
+
+**The end screen.** Every way of playing ends on it, once the last turn has landed (`ScreenUI.EndScreen.cs`, from
+`Replay/EndSummary.cs`). It shows:
+- who won and how ("by conquest, the last realm standing"), or that nobody did, and the leader;
+- **Watch the replay**, **New game** and **Back to the map** (Esc), right under the heading;
+- **the land**: provinces each realm held, turn by turn, a line in its colour, the winner's drawn thickest;
+- **wars and treaties**, at most twelve: every realm's fall first, then the earliest wars and peaces, one line for
+  a pair's peace on a turn. A realm falls when the rules eliminate it, or when it loses its last province for good,
+  as a broken realm does while its occupiers keep what they hold;
+- **the rulers**, the winner first: face, persona and model (a scripted ruler names only its style), its land or
+  the turn it fell, and its last two distinct lines.
+
+**Watch the replay** plays the same game again from turn 1 with every council open. After a rule game, the council,
+the advisor and the fog step aside. **New game** reloads straight to the New game page.
+
+**The first-turn help** in rule mode on the writs turn (`ScreenUI.Help.cs`, from `Replay/HelpCallouts.cs`): no more
+than six notes, each beside what it explains, with an ink line and a ring round it:
+- writs;
+- ordering an army;
+- the stripes of occupation;
+- the markers at the map's edge (on a world of more than 40 provinces);
+- your advisor (when it is on);
+- End turn.
+
+It opens by itself the first time your council meets, once. "How to play" in the pause menu opens it again, and
+Esc or "Got it" closes it. Notes look their targets up each time they are placed, and are placed again once the
+council has its advice. They keep clear of the council, the chronicle and each other.
+
+**Also:** two battles in one place get one edge marker.
+
+**Tests**, each seen failing once against a deliberate break:
+- `EndSummaryTests`: the land chart runs from the start to the result; every fall is kept, and the timeline is
+  short and in order; each ruler speaks in its own last lines;
+- `HelpCalloutsTests`: at most six notes, about what this game shows, in a player's words.
+
+### The advisor in rule mode (14 November)
+
+The lead's answer 29: "have it optional and enabled by default which you can disable in game or turn on in game".
+
+**What it is.** When your turn opens on the writs turn, a model on your own seat proposes the turn's plan
+(`Agents/Advisor.cs`). It is the same court and marshal a model ruler has, a `WritRuler` used as it is, asked with
+your realm's facts:
+- the court's order first;
+- then an order for each army a writ reaches, each told the orders before it.
+
+Every suggestion maps to a move the rules offer on that request, and an answer naming any other move holds instead.
+Nothing it decides is carried out, and its memory drops each turn.
+
+**In the council.** A YOUR ADVISOR section shows:
+- its counsel: the first line any of its decisions kept;
+- each suggestion, with **Take** and **Why?**;
+- **Take the advice**, which fills your plan with them all.
+
+You can take one order, change any, or ignore them all; nothing is sent until End turn. **Why?** opens the inspector
+on the advisor's decision (what it read, was offered and answered), headed "your advisor ... advice, not a move".
+
+**Asked alongside the rulers.** The advice starts when your court request opens, beside the rulers' decisions. The
+turn never waits for it, and ending the turn drops advice still being decided. Its agents have their own names in
+the decision log (`kesh_advisor`, `kesh_advisor_marshal`), so the recording never takes them for yours. Only advice
+you take becomes your move, recorded as yours.
+
+**The switch:**
+- **In New game:** "Advisor: on / off" beside the rulers. On by default, and hidden for scripted rulers, where there
+  is no model to advise.
+- **In game:** "Advisor: on / off" in the pause menu, from the next turn (`ReplayDirector.SetAdvisor`).
+
+The stand-in rulers answer for the advisor too, so frames work without a server.
+
+**Tests**, each seen failing once against a deliberate break (`AdvisorTests`, a scripted model that names
+moves the rules never offer on alternate calls):
+- the advice maps only to moves the rules offer, checked against the rules themselves, and a legal answer is
+  the advice exactly;
+- taking it gives exactly that plan, and ignored advice is never recorded as your move;
+- with it off, no call is made, and turning it on in game asks it from the next turn.
 
 ### Generated worlds: detail up close, fields that show, rule mode on a big map (14 November)
 

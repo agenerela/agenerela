@@ -110,6 +110,61 @@ namespace GreyBoxStrategy.Realm
             ui.ShowMainMenu(game.Title, ShowNewGame, StartReplay, () => OpenSettings(ShowMainMenu), Quit);
         }
 
+        /// <summary>Set by the end screen's "New game": the next start opens New game, not the main menu.</summary>
+        private static bool newGameNext;
+
+        // A replay watched from the end screen does not end on it again.
+        private bool replayingEnd;
+
+        /// <summary>The end of the game: who won and how, the land over the turns, the wars and treaties, the rulers.</summary>
+        public void ShowEnd()
+        {
+            if (game == null) return;
+            var summary = EndSummary.From(game, CountryLook.NameOf);
+            ui.ShowEnd(summary, rule?.You, WatchReplay, () => { newGameNext = true; LeaveToMenu(); });
+        }
+
+        /// <summary>
+        /// The end screen's "Watch the replay": the same game again from turn 1, every council open, as the replay of a
+        /// recording plays. A rule game's council and fog step aside; the game stays as it was.
+        /// </summary>
+        public void WatchReplay()
+        {
+            ui.HideMenu();
+            if (rule != null)
+            {
+                rule.Stop();
+                ruleLock?.ReleaseNow();
+                rule = null;
+                ui.OrdersRequest = null;
+                ui.HideOrders();
+                ui.AdvisorShown = false;
+                ui.ShowAwaiting = false;
+                ui.Fog = new Fog(null, queries);
+                ui.Root.RemoveFromClassList("rule");
+            }
+            played.Clear();
+            ui.ClearChronicle();
+            ui.CloseInspector();
+            ui.CloseSide();
+            skipUntilTurn = 0;
+            replayingEnd = false;
+            if (game.Turns.Count > 0) Show(game.Turns[0].Start, null);
+            playing = true;
+            ui.SetPlaying(true, speed);
+            StartCoroutine(Play());
+        }
+
+        /// <summary>The first-turn help, now: the notes for this game, each beside what it explains.</summary>
+        public void ShowHelp()
+        {
+            if (ui == null || rule == null || !rule.Writs) return;
+            ui.ShowHelp(HelpCallouts.ForRule(rule.AdvisorOn, world != null && world.Provinces.Count > 40), () => PlayerPrefs.SetInt(HelpSeenKey, 1));
+        }
+
+        /// <summary>Remembered once the first-turn help has been closed: it opens by itself only once.</summary>
+        public const string HelpSeenKey = "painted-realm.help-seen";
+
         public void ShowNewGame()
         {
             if (live != null) { newGame.Model = live.Model; }
@@ -120,6 +175,7 @@ namespace GreyBoxStrategy.Realm
         {
             string arm = StoryArms.For(c.Storyteller);
             yourWritsUnlimited = c.YourWritsUnlimited;
+            advisorNext = c.AdvisorFor;
             switch (c.Route(out string why))
             {
                 case NewGameRoute.None: ui.ShowMenuStatus(why); return;
@@ -154,7 +210,10 @@ namespace GreyBoxStrategy.Realm
         {
             if (!started) return;
             if (!ui.MenuOpen) { pausedByMenu = playing; playing = false; ui.SetPlaying(false, speed); }
-            ui.ShowPause(ResumeFromPause, () => OpenSettings(OpenPause), LeaveToMenu, DevTools.Available ? "F1 opens the dev menu (editor and development builds)" : null);
+            bool advisable = rule != null && rule.Writs && rule.Model != "scripted";
+            if (rule != null && rule.Writs) ui.ShowPauseHelp(() => { ResumeFromPause(); ShowHelp(); });
+            ui.ShowPause(ResumeFromPause, () => OpenSettings(OpenPause), LeaveToMenu, DevTools.Available ? "F1 opens the dev menu (editor and development builds)" : null,
+                advisable ? () => rule.AdvisorOn : (System.Func<bool>)null, advisable ? SetAdvisor : (System.Action<bool>)null);
         }
 
         private void ResumeFromPause()
@@ -171,6 +230,7 @@ namespace GreyBoxStrategy.Realm
         private void Escape()
         {
             if (ui.DisplayConfirmOpen) return;
+            if (ui.HelpOpen) { ui.CloseHelp(); return; }
             if (ui.MenuOpen) { ui.MenuBack?.Invoke(); return; }
             // The choice card closes only by choosing: Esc opens the pause menu over it.
             if (ui.EventOpen) { ui.CloseEvent(); return; }

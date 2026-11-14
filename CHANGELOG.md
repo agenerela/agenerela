@@ -35,6 +35,16 @@ phase table and the open issues, not here.
   the verdicts, stories and the record of the model's words are the same as before, which a test checks
   against `+history-in-game` (the check at the queue, kept for comparison).
 
+- **Painted Realm: the end of a game, and a first look** (#20). An end screen in every way of playing: who won
+  and how, provinces per realm over the turns, wars and treaties, each ruler in its own words, and "watch the
+  replay" or "new game". A first-turn help layer for rule mode, six notes at most, which opens once and stays in
+  the pause menu.
+
+- **Painted Realm: the advisor in rule mode** (#20). A model on your own seat proposes each writs turn's plan in
+  the council: its counsel, each order with Take and Why, and "Take the advice". It is on by default with model
+  rulers and can be switched in New game and the pause menu. It is asked alongside the rulers, its orders always
+  map to legal moves, and only advice you take is recorded as yours.
+
 - **Painted Realm R3, part one: pikes, riders and bows with the counter rule** (#20), behind
   `GameRules.UnitTypes`, off by default.
   - Armies keep soldiers by type; losses keep the mix; `Army.Soldiers` stays the total.

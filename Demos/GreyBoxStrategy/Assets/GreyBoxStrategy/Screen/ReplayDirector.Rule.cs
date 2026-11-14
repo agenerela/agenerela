@@ -35,7 +35,8 @@ namespace GreyBoxStrategy.Realm
                 edgeItems.Add(new ScreenUI.EdgeMark { Kind = "capital", Province = cap, Colour = CountryLook.Of(rule.You).Colour, Text = "Your capital, " + Wording.Province(game.ProvinceIds[cap]) });
             int turn = played.Count > 0 ? played[played.Count - 1].Turn : -1;
             foreach (var e in played)
-                if (e.Kind == ReplayEventKind.Battle && e.Turn == turn && e.ProvinceIndex >= 0)
+                // One marker a place, however many battles were fought there.
+                if (e.Kind == ReplayEventKind.Battle && e.Turn == turn && e.ProvinceIndex >= 0 && !edgeItems.Any(x => x.Province == e.ProvinceIndex))
                     edgeItems.Add(new ScreenUI.EdgeMark { Kind = "battle", Province = e.ProvinceIndex, Event = e, Colour = new Color(0.86f, 0.3f, 0.22f), Text = "Battle at " + Wording.Province(game.ProvinceIds[e.ProvinceIndex]) });
             ui.PlaceEdgeMarks(edgeItems);
         }
@@ -164,10 +165,20 @@ namespace GreyBoxStrategy.Realm
 
         // The writs turn's stand-in: the court picks one of its court orders, the marshal a march for the army
         // its stimulus names ("Orders for maren_host."), both from what the rules offer now.
+        // The stand-in advisor's counsel, for frames without a server.
+        private static readonly string[] AdvisorLines =
+        {
+            "My lord, strike while their armies are away.", "Hold what we have, my lord, and let them bleed each other.",
+            "Our treasury can bear more soldiers, my lord.", "A fort on the border would sleep more soundly than a promise.",
+        };
+
         private static ScriptedReply ScriptedWrits(ScriptedRequest r, System.Random rng, World world)
         {
             bool marshal = r.AgentId.EndsWith(RecordedDecision.MarshalSuffix, StringComparison.Ordinal);
             string country = marshal ? r.AgentId.Substring(0, r.AgentId.Length - RecordedDecision.MarshalSuffix.Length) : r.AgentId;
+            // The advisor's agents answer for your own seat, so frames without a server show advice too.
+            bool advisor = country.EndsWith(Advisor.AgentSuffix, StringComparison.Ordinal);
+            if (advisor) country = country.Substring(0, country.Length - Advisor.AgentSuffix.Length);
             List<Move> moves;
             if (marshal)
             {
@@ -181,7 +192,7 @@ namespace GreyBoxStrategy.Realm
             var pick = moves.FirstOrDefault(x => Actions.IsTerm(x.Action) && rng.NextDouble() < 0.5)
                        ?? moves.FirstOrDefault(x => x.Action == Actions.DeclareWar && rng.NextDouble() < 0.3)
                        ?? moves[rng.Next(moves.Count)];
-            return ScriptedReply.Decide(pick.Action, pick.Target ?? TargetRegistry.NoTarget, StockLines[rng.Next(StockLines.Length)]);
+            return ScriptedReply.Decide(pick.Action, pick.Target ?? TargetRegistry.NoTarget, advisor ? AdvisorLines[rng.Next(AdvisorLines.Length)] : StockLines[rng.Next(StockLines.Length)]);
         }
 
         /// <summary>
@@ -189,6 +200,36 @@ namespace GreyBoxStrategy.Realm
         /// reloads the scene before its rule game begins; used once.
         /// </summary>
         private static bool yourWritsUnlimited;
+
+        /// <summary>
+        /// New game's "Advisor: on", for the next rule game with model rulers (the lead's answer 29: on by default).
+        /// Static for the same reason as <see cref="yourWritsUnlimited"/>; used once.
+        /// </summary>
+        private static bool advisorNext;
+
+        /// <summary>For the menu and the Unity CLI: the next rule game starts with the advisor on.</summary>
+        public static bool NextRuleAdvisor { get => advisorNext; set => advisorNext = value; }
+
+        /// <summary>The in-game menu's switch: the advisor on or off from the next turn.</summary>
+        public void SetAdvisor(bool on)
+        {
+            if (rule == null || !rule.Writs) return;
+            rule.AdvisorOn = on;
+            lastOrdersStatus = null;
+        }
+
+        // "Why?" on a suggestion: the advice's decision in the inspector, as any ruler's, marked as advice.
+        private void ShowAdvice(AdviceItem item)
+        {
+            var d = rule?.AdviceDecision(item);
+            if (d == null) return;
+            var e = new ReplayEvent { Turn = d.Turn, Country = rule.You, Decision = d, Kind = d.ArmyId != null ? ReplayEventKind.ArmyOrder : ReplayEventKind.Hold, Text = "Your advisor's suggestion" };
+            var card = DecisionCard.From(e);
+            // Your realm's card, its agent the advisor's: the inspector looks the country up by its id.
+            card.Country = rule.You;
+            card.Moment = "your advisor, as " + card.Moment + ": advice, not a move";
+            ui.ShowCard(card);
+        }
 
         /// <summary>For the menu and the Unity CLI: the next rule game gives you unlimited writs.</summary>
         public static bool NextRuleUnlimitedWrits { get => yourWritsUnlimited; set => yourWritsUnlimited = value; }
@@ -212,8 +253,11 @@ namespace GreyBoxStrategy.Realm
             started = true;
             rules = WithYourWrits(rules, country, yourWritsUnlimited);
             yourWritsUnlimited = false;
+            bool advise = advisorNext && model != "scripted";
+            advisorNext = false;
             string path = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "Rule", $"seed-{gameSeed:D4}-{country}-{DateTime.Now:yyyyMMdd-HHmmss}.jsonl"));
-            rule = new RuleSession(country, model, arm ?? "default", gameSeed, path, providerFor, cardLock, map, rules);
+            rule = new RuleSession(country, model, arm ?? "default", gameSeed, path, providerFor, cardLock, map, rules) { AdvisorOn = advise };
+            ui.AdviceWhy = ShowAdvice;
             Debug.Log($"Painted Realm: rule game, you rule {country}, seed {gameSeed}, {model} x4 with personas; decisions into {path}");
             RunRule();
 
@@ -347,6 +391,8 @@ namespace GreyBoxStrategy.Realm
                     ui.Plan = new RuleSession.WritsPlan();
                     ui.SelectedArmy = null;
                     lastOrdersStatus = null;
+                    // A first rule game: the help opens once the council is drawn, and never again by itself.
+                    if (PlayerPrefs.GetInt(HelpSeenKey, 0) == 0 && !ui.HelpOpen) ui.Root.schedule.Execute(ShowHelp).StartingIn(400);
                     Show(ReplayBuilder.StateOf(rule.Orders.World, game.ProvinceIds, shown), null);
                     ui.SetPlaying(false, speed);
                     RefreshSide();
@@ -397,7 +443,14 @@ namespace GreyBoxStrategy.Realm
             }
             // Rebuild the panel only when what it offers changes; the clock updates its line alone,
             // so a button is never rebuilt under the pointer.
-            var key = (ui.OrdersRequest, ui.Chosen, w, ui.SelectedArmy, ui.WritsKey());
+            if (rule.Writs)
+            {
+                ui.AdvisorShown = rule.AdvisorOn;
+                ui.Advice = rule.Advice;
+                ui.AdvisorThinking = rule.AdvisorThinking;
+                ui.AdvisorError = rule.AdvisorError;
+            }
+            var key = (ui.OrdersRequest, ui.Chosen, w, ui.SelectedArmy, ui.WritsKey() + "|" + ui.AdviceKey());
             if (!Equals(key, lastOrdersKey) || lastOrdersStatus == null) { lastOrdersKey = key; lastOrdersStatus = status; ui.ShowOrders(status); }
             else if (status != lastOrdersStatus) { lastOrdersStatus = status; ui.SetOrdersStatus(status); }
         }
