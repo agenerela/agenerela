@@ -1037,7 +1037,7 @@ moves come from `WritLegality.CourtMoves`, an army's from `WritLegality.ArmyMove
 list is refused with the rules' reason.
 
 **What the council panel shows** (`Screen/UI/ScreenUI.WritsRule.cs`):
-- **Your writs** as pips, filled as the plan spends them, and "Orders · writs 1 of 3" in the top bar.
+- **Your writs** as pips, filled as the plan spends them, and, in the top bar, "Orders · writs 1 of 3 used" (since the 15 November clarity pass the counter says "used").
   The tooltip gives the rule. The cap is the rules' setting (`BaseWrits`, `ProvincesPerWrit`,
   `MaxWrits`, or a country's own `WritsOverride`), read from each request.
 - **The court's orders.** One not offered is greyed and says why. A treaty term shows the war score
