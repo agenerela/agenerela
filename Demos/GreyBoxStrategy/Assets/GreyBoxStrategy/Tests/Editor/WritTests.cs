@@ -1090,6 +1090,40 @@ namespace GreyBoxStrategy.Tests
         }
 
         [Test]
+        public void Supply_AnArmyHoldingAbroadIsAskedAgain_AsItsStoresRunLow_AndEveryTurnItStarves()
+        {
+            var (g, p, a) = Abroad(Supplied());
+            int eat = Game.Eats(g.World, a);
+            a.HalfStores = 2 * eat;
+            a.Wake.Clear();
+            Turn(g); // eats one turn's food: one turn left
+            Assert.That(a.Wake, Does.Contain("stores running low"));
+            a.Wake.Clear();
+            a.HalfStores = 0;
+            Turn(g);
+            Assert.That(a.Wake, Does.Contain("starving"), "asked again while it starves");
+            a.Wake.Clear();
+            Turn(g);
+            Assert.That(a.Wake, Does.Contain("starving"), "and the next turn too");
+            var (h, _, full) = Abroad(Supplied());
+            full.Wake.Clear();
+            Turn(h);
+            Assert.That(full.Wake, Is.Empty, "full stores: the hold stands");
+        }
+
+        [Test]
+        public void Supply_WithGenerals_AnArmyReadsItsGeneralAndStoresWithOneComma()
+        {
+            var r = Supplied();
+            r.Generals = true;
+            var g = NewWrits(1, r);
+            Turn(g);
+            var line = WritFacts.Standing(g.World, "valen").First(l => l.StartsWith("Our armies:"));
+            Assert.That(line, Does.Contain(", stores 4 of 4, at ").And.Not.Contain(",,"));
+            Assert.That(asked.Where(q => q.Moment == Moment.Army).SelectMany(q => q.StandingFacts.Concat(q.TurnFacts)).Any(f => f.Contains(",,")), Is.False, "the army's own line too");
+        }
+
+        [Test]
         public void Supply_StoresAreFullAtHome_AndEatenAbroad_TwiceAsFastInPoorLand()
         {
             var g = NewWrits(1, Supplied());
