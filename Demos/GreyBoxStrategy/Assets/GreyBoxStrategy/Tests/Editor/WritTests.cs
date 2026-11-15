@@ -1281,7 +1281,7 @@ namespace GreyBoxStrategy.Tests
                 var w = g.World;
                 var host = ArmyOf(g, "valen");
                 var orsk = ArmyOf(g, "orsk");
-                string next = WritLegality.ArmyMoves(w, "valen", host.Id).First(m => m.Action == Actions.March && m.Detail.Contains("next to us") && !m.Detail.StartsWith("ours")).Target;
+                string next = WritLegality.ArmyMoves(w, "valen", host.Id).First(m => m.Action == Actions.March && !m.Detail.StartsWith("ours")).Target;
                 orsk.Location = next;
                 return WritLegality.ArmyMoves(w, "valen", host.Id).Single(m => m.Action == Actions.March && m.Target == next).Detail;
             }
