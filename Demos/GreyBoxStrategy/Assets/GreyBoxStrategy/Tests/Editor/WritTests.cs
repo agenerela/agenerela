@@ -1249,6 +1249,63 @@ namespace GreyBoxStrategy.Tests
             Assert.That(asked.Where(q => q.Moment == Moment.Army).SelectMany(q => q.StandingFacts.Concat(q.TurnFacts)).Any(f => f.Contains(",,")), Is.False, "the army's own line too");
         }
 
+        private static GameRules HungerFirst(bool on)
+        {
+            var r = Supplied();
+            r.HungerFirst = on;
+            return r;
+        }
+
+        [Test]
+        public void HungerFirst_AStarvingArmyIsAskedFirst_ThenOneWithStoresRunningLow()
+        {
+            List<string> Order(bool on)
+            {
+                var (g, p, a) = Abroad(HungerFirst(on));
+                var w = g.World;
+                var home = w.ProvincesOf("valen").OrderBy(x => x.Id).First();
+                var big = new Army("big_host", "valen", home.Id, 80, 1);
+                var low = new Army("low_host", "valen", p.Id, 30, 1);
+                w.Armies.Add(big);
+                w.Armies.Add(low);
+                foreach (var x in new[] { a, big, low }) { x.Wake.Clear(); x.Wake.Add("test"); }
+                a.HalfStores = 0;                       // starving
+                low.HalfStores = Game.Eats(w, low);     // one turn left
+                a.Soldiers = 10;
+                return WritLegality.Awaiting(w, "valen").Where(x => x == a || x == big || x == low).Select(x => x == a ? "starving" : x == low ? "low" : "big").ToList();
+            }
+            Assert.That(Order(on: true), Is.EqualTo(new[] { "starving", "low", "big" }));
+            Assert.That(Order(on: false), Is.EqualTo(new[] { "big", "low", "starving" }), "off: by size, as before");
+        }
+
+        [Test]
+        public void HungerFirst_AHungryArmyReadsWhatHungerCostsAndTheNearestLandThatFeedsIt()
+        {
+            List<string> ArmyFacts(bool on, int halfStores)
+            {
+                var (g, p, a) = Abroad(HungerFirst(on));
+                a.HalfStores = halfStores;
+                a.Wake.Clear();
+                a.Wake.Add("test");
+                Turn(g);
+                return asked.Where(q => q.Moment == Moment.Army && q.ArmyId == a.Id).SelectMany(q => q.StandingFacts.Concat(q.TurnFacts)).ToList();
+            }
+            var (h, hp, ha) = Abroad(HungerFirst(true));
+            ha.HalfStores = 0;
+            var near = WritLegality.NearestSupply(h.World, ha);
+            Assert.That(near, Is.Not.Null);
+            Assert.That(h.World.Province(near.Value.province).Owner, Is.EqualTo("valen"));
+            int loss = Math.Max(h.World.Rules.HungerMinLoss, (int)Math.Round(ha.Soldiers * h.World.Rules.HungerLoss));
+            Assert.That(Game.HungerFact(h.World, ha), Does.StartWith($"Starving: losing about {loss} soldiers a turn")
+                .And.Contain($"nearest {near.Value.province}, {near.Value.steps} step").And.Contain("land it occupies does not"));
+
+            Assert.That(ArmyFacts(on: true, halfStores: 0), Has.Some.StartsWith("Starving: losing about"), "a starving army reads it in its request");
+            var (lg, lp, la) = Abroad(HungerFirst(true));
+            Assert.That(ArmyFacts(on: true, halfStores: Game.Eats(lg.World, la)), Has.Some.StartsWith("Stores for 1 more turn here"));
+            Assert.That(ArmyFacts(on: true, halfStores: 8), Has.None.Contains("Starving").And.None.Contains("more turn here"), "full stores: nothing");
+            Assert.That(ArmyFacts(on: false, halfStores: 0), Has.None.Contains("Starving: losing"), "off: no word of it");
+        }
+
         [Test]
         public void Supply_StoresAreFullAtHome_AndEatenAbroad_TwiceAsFastInPoorLand()
         {
