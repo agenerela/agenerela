@@ -756,6 +756,8 @@ namespace GreyBoxStrategy.Tests
                 orsk.Soldiers = 0;
                 orsk.Add(UnitType.Pikes, 30);
                 orsk.Add(UnitType.Bows, 20);
+                g.World.Country("valen").Army = g.World.ArmiesOf("valen").Sum(x => x.Soldiers);
+                g.World.Country("orsk").Army = g.World.ArmiesOf("orsk").Sum(x => x.Soldiers);
                 orsk.Location = target.Id;
                 host.Location = target.Id;
                 War(g, "valen", "orsk");
