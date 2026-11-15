@@ -178,8 +178,9 @@ namespace GreyBoxStrategy
         private CountryRequest ArmyRequest(Docket d, Army army)
         {
             var facts = new List<string> { $"{army.Id}: {army.Soldiers} soldiers" + (Rules.UnitTypes ? $" ({Units.Mix(army)})" : "")
-                + (Rules.Generals && army.General != null ? $", led by {army.General.Title}," : "")
-                + (Rules.Supply ? $", stores {army.Stores} of {Rules.MaxStores}" + (Eats(World, army) > 0 ? $", eating {Eats(World, army) / 2.0:0.#} a turn here," : ",") : "") + $" at {army.Location}; " + (army.Wake.Count > 0 ? "awaiting orders: " + string.Join(", ", army.Wake) : "") + "." };
+                + (Rules.Generals && army.General != null ? $", led by {army.General.Title}" : "")
+                + (Rules.Supply ? $", stores {army.Stores} of {Rules.MaxStores}" + (Eats(World, army) > 0 ? $", eating {Eats(World, army) / 2.0:0.#} a turn here," : ",")
+                   : Rules.Generals && army.General != null ? "," : "") + $" at {army.Location}; " + (army.Wake.Count > 0 ? "awaiting orders: " + string.Join(", ", army.Wake) : "") + "." };
             facts.AddRange(Facts.Select(pending[d.Country], Facts.MaxTurnFacts - 1));
             return new CountryRequest(Moment.Army, World.Turn, d.Country, World,
                 WritFacts.Standing(World, d.Country), facts, WritLegality.ArmyMoves(World, d.Country, army.Id))
@@ -668,15 +669,22 @@ namespace GreyBoxStrategy
             Tell(p.Owner, 0, $"{who} occupies our {p.Id}.");
         }
 
-        /// <summary>The turns a siege of <paramref name="p"/> by <paramref name="besiegers"/> takes (rules v2 3.7), never below 1.</summary>
+        /// <summary>
+        /// The turns a siege of <paramref name="p"/> by <paramref name="besiegers"/> takes (rules v2 3.7), never below
+        /// <see cref="MinSiegeTurns"/>: the turn it begins and one full turn after, so the defender always has a turn to
+        /// relieve it (15 November; before, a one-fort siege by a large army fell the turn it began).
+        /// </summary>
         public static int SiegeTurnsNeeded(GameRules r, Province p, IReadOnlyCollection<Army> besiegers)
         {
             int turns = r.SiegeTurnsPerFort * p.Forts;
             var lead = besiegers.Where(a => a.General != null).OrderByDescending(a => a.Soldiers).ThenBy(a => a.Id, StringComparer.Ordinal).FirstOrDefault()?.General;
             if (r.Generals && lead != null && lead.Has(GeneralTraits.Siegewright)) turns--;
             if (besiegers.Sum(a => a.Soldiers) >= r.SiegeOutnumber * r.GarrisonPerFort * p.Forts) turns--;
-            return Math.Max(1, turns);
+            return Math.Max(MinSiegeTurns, turns);
         }
+
+        /// <summary>The shortest siege: it never falls in the turn it begins, whatever the besiegers' numbers or general.</summary>
+        public const int MinSiegeTurns = 2;
 
         // An army alone in enemy land with walls besieges it: a turn of the siege each turn it stays, an early
         // breach on a seeded roll; when it ends the walls drop one level and the province is occupied.
@@ -692,7 +700,7 @@ namespace GreyBoxStrategy
             }
             p.SiegeTurns++;
             int needed = SiegeTurnsNeeded(Rules, p, mine);
-            bool breach = p.SiegeTurns < needed && Dice.Unit(Seed, World.Turn, p.Id, "breach:" + who) < Rules.SiegeBreachChance;
+            bool breach = p.SiegeTurns > 1 && p.SiegeTurns < needed && Dice.Unit(Seed, World.Turn, p.Id, "breach:" + who) < Rules.SiegeBreachChance;
             if (p.SiegeTurns < needed && !breach) return;
             p.Forts = Math.Max(0, p.Forts - 1);
             p.SiegedBy = null;
@@ -867,8 +875,18 @@ namespace GreyBoxStrategy
                     continue;
                 }
                 int eat = Eats(World, a);
-                if (a.HalfStores >= eat) { a.HalfStores -= eat; continue; }
+                if (a.HalfStores >= eat)
+                {
+                    a.HalfStores -= eat;
+                    // Wake condition 6 (rules v2 1.3): stores run low, a turn's food or less left where it stands.
+                    if (eat > 0 && a.HalfStores > 0 && a.HalfStores <= eat && !a.Marching && !a.Wake.Contains("stores running low"))
+                        a.Wake.Add("stores running low");
+                    continue;
+                }
                 a.HalfStores = 0;
+                // A starving army that holds is asked again every turn it starves, so a hold given with full stores
+                // does not stand while it starves away.
+                if (!a.Marching && !a.Wake.Contains("starving")) a.Wake.Add("starving");
                 int loss = Math.Min(a.Soldiers, Math.Max(Rules.HungerMinLoss, (int)Math.Round(a.Soldiers * Rules.HungerLoss)));
                 a.Soldiers -= loss;
                 World.Country(a.Owner).Army -= loss;

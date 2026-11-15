@@ -829,9 +829,13 @@ Supplied land is our own only, since alliances and passage are not built; healin
 - **An undefended walled province cannot be walked into.** An army whose march enters a hostile
   walled province **besieges** it instead: it stands in the province, the province still belongs to
   its owner, and produces no income or food for it.
-- **A siege takes** 2 turns per walls level (*to tune*): −1 with a `siegewright` general, −1 if the
+- **A siege takes** 2 turns per walls level (*to tune*), and never falls in the turn it begins (see below): −1 with a `siegewright` general, −1 if the
   besiegers outnumber the garrison (10 a level) three to one, never below 1. Each turn of a siege
   also has a 10% seeded chance of an early breach.
+- **A siege lasts two turns at least** (changed 15 November): the turn it begins and one full turn after, whatever
+  the besiegers' numbers, general or an early breach, so the defender always has a turn to relieve it. Before,
+  a one-fort siege by an army three times the garrison fell the turn it began, and in the first live look with
+  every army rule on 14 of 15 sieges did: no player would have seen them.
 - **When it ends** the walls drop one level and the province is occupied.
 - **A siege is broken** when the besieging army leaves or loses a battle there. The owner's army
   that marches in fights it, with the walls' bonus if the garrison sallies.

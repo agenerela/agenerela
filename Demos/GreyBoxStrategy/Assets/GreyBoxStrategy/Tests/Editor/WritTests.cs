@@ -1020,6 +1020,21 @@ namespace GreyBoxStrategy.Tests
         }
 
         [Test]
+        public void Siege_NeverFallsTheTurnItBegins_HoweverLargeTheBesiegers_OrHoweverLikelyABreach()
+        {
+            var r = Walled();
+            r.SiegeBreachChance = 1; // a breach every turn it may come
+            var (g, p, a) = Besieging(r);
+            p.Forts = 1;
+            a.Soldiers = 200;
+            g.World.Country("valen").Army = g.World.ArmiesOf("valen").Sum(x => x.Soldiers);
+            var first = Turn(g);
+            Assert.That((p.SiegedBy, p.Occupier), Is.EqualTo(("valen", (string)null)), "the turn it begins, the defender keeps it: " + string.Join("\n", first.Resolution));
+            var second = Turn(g);
+            Assert.That((p.SiegedBy, p.Occupier), Is.EqualTo(((string)null, "valen")), "it falls the turn after: " + string.Join("\n", second.Resolution));
+        }
+
+        [Test]
         public void Siege_IsBroken_WhenTheBesiegersLeave()
         {
             var (g, p, a) = Besieging(Walled());
@@ -1032,7 +1047,7 @@ namespace GreyBoxStrategy.Tests
         }
 
         [Test]
-        public void SiegeTurns_ASiegewrightAndThreeToOne_EachTakeATurnOff_NeverBelowOne()
+        public void SiegeTurns_ASiegewrightAndThreeToOne_EachTakeATurnOff_NeverBelowTwo()
         {
             var r = Walled();
             r.Generals = true;
@@ -1044,7 +1059,7 @@ namespace GreyBoxStrategy.Tests
             a.Soldiers = 60;
             Assert.That(Game.SiegeTurnsNeeded(r, p, new[] { a }), Is.EqualTo(2), "and three to one against 20");
             p.Forts = 1;
-            Assert.That(Game.SiegeTurnsNeeded(r, p, new[] { a }), Is.EqualTo(1), "never below 1");
+            Assert.That(Game.SiegeTurnsNeeded(r, p, new[] { a }), Is.EqualTo(2), "never below 2: the turn it begins and one more");
             Assert.That(GeneralTraits.Pool(r), Does.Contain(GeneralTraits.Siegewright));
             Assert.That(GeneralTraits.Pool(WritRules()), Does.Not.Contain(GeneralTraits.Siegewright), "only with sieges");
         }
@@ -1087,6 +1102,40 @@ namespace GreyBoxStrategy.Tests
             var a = ArmyOf(g, "valen");
             a.Location = p.Id;
             return (g, p, a);
+        }
+
+        [Test]
+        public void Supply_AnArmyHoldingAbroadIsAskedAgain_AsItsStoresRunLow_AndEveryTurnItStarves()
+        {
+            var (g, p, a) = Abroad(Supplied());
+            int eat = Game.Eats(g.World, a);
+            a.HalfStores = 2 * eat;
+            a.Wake.Clear();
+            Turn(g); // eats one turn's food: one turn left
+            Assert.That(a.Wake, Does.Contain("stores running low"));
+            a.Wake.Clear();
+            a.HalfStores = 0;
+            Turn(g);
+            Assert.That(a.Wake, Does.Contain("starving"), "asked again while it starves");
+            a.Wake.Clear();
+            Turn(g);
+            Assert.That(a.Wake, Does.Contain("starving"), "and the next turn too");
+            var (h, _, full) = Abroad(Supplied());
+            full.Wake.Clear();
+            Turn(h);
+            Assert.That(full.Wake, Is.Empty, "full stores: the hold stands");
+        }
+
+        [Test]
+        public void Supply_WithGenerals_AnArmyReadsItsGeneralAndStoresWithOneComma()
+        {
+            var r = Supplied();
+            r.Generals = true;
+            var g = NewWrits(1, r);
+            Turn(g);
+            var line = WritFacts.Standing(g.World, "valen").First(l => l.StartsWith("Our armies:"));
+            Assert.That(line, Does.Contain(", stores 4 of 4, at ").And.Not.Contain(",,"));
+            Assert.That(asked.Where(q => q.Moment == Moment.Army).SelectMany(q => q.StandingFacts.Concat(q.TurnFacts)).Any(f => f.Contains(",,")), Is.False, "the army's own line too");
         }
 
         [Test]
