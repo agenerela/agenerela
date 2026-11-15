@@ -1426,6 +1426,9 @@ distance attrition). `GameRules.Supply`, off by default:
     ashby, 2 steps. Neutral land it takes becomes ours and feeds it; land it occupies does not." or "Stores for 1
     more turn here, then it starves. …" (`WritLegality.NearestSupply`, by steps it may take).
   - No standing order sends it home by itself: the ruler decides. Off, every request is as before.
+  - Live, 15 November (6 pairs on `qwen3.5:4b`, findings): soldiers lost to hunger fell from 580 to 125 and no army
+    starved out, because the woken marshals went home instead of attacking on; battles, sieges and land changing
+    hands fell with it. Still off; the tech lead decides.
 - **Wake condition 6** (15 November): an army abroad that holds is asked again when a turn's food or less is
   left ("stores running low") and every turn it starves ("starving"). Before, nothing woke it, and in the first
   live look with every army rule on 16 armies starved where a hold given with full stores left them, one for

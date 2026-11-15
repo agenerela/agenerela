@@ -4392,3 +4392,33 @@ How the marshals answered the hunger wakes (the march's target as the order read
 - **About half of the starving army-turns got no ask at all** (138 of 252): the wake adds the army to the queue, but the rules ask the most urgent armies first (a hostile army beside it, then size) within the writs, and a starving army is not ranked as urgent. That is a rules question, not a bug in the fix, and is put to the tech lead: a starving army first in the queue, or a standing order to go home when stores run out, would each be an A/B.
 - **What it can and cannot show:** six games an arm, 40 turns, a control from earlier in the session; enough to see that sieges now last and that hunger is not solved by asking, not enough for battles, land or treaties. No default changes.
 
+### Painted Realm R3, hunger first, live: starving armies asked first and told the way home lose a fifth as many soldiers to hunger, and the realms fight less (15 November 2026)
+
+GreyBoxStrategy (#20), `GameRules.HungerFirst` (#330) on the models. `personas` table, five `qwen3.5:4b` seats with today's default options, RTX 5080 (Docker Ollama 0.40.14), `-strategyTurn writs -strategyCap 40`, Classic, conquest. Both arms have all five army rules and the counters line on (test's head 6c43f7a, where `CountersLine` is on by default): control `c`, `-strategyRules "UnitTypes=true;Generals=true;Sieges=true;Supply=true;Fog=true"`, against `a`, the same plus `HungerFirst=true`. Seeds 1 to 6, one game a block, interleaved (c1 a1 … c6 a6, 06:30 to 07:38), from a checkout that did not change during the run; no Unity test ran beside it. Kit and data: `.scratch/realm-build-map/hungerfirst-live/`, `python report.py` and `python noask.py data`.
+
+| | off (`c`) | on (`a`) |
+|---|---|---|
+| Decisions; illegal answers; refused by the rules | 3,424; 0; 5.3% | 3,369; 0; 4.4% |
+| Model seconds a turn | 7.91 | 7.73 (paired −0.19, SD 0.23) |
+| Soldiers lost to hunger; army-turns starving | 580; 258 | 125; 54 |
+| Armies starved out; starving 3+ turns in one place | 13; 24 | 0; 4 |
+| Starving army-turns with no ask the next turn (a game's last turn has no next) | 114 of 252 (45%) | 21 of 50 (42%) |
+| Battles a game; wars | 103; 8.0 | 93; 9.7 |
+| Sieges begun; taken; relieved (broken) | 31; 7; 24 | 16; 5; 11 |
+| Provinces changing hands a game; turns with no change | 15.5; 74% | 11.8; 80% |
+| Treaties a game | 2.8 | 3.8 |
+
+How the marshals answered the hunger wakes (the march's target as the order read it):
+
+| Wake | | Attacked (enemy land) | Marched elsewhere (neutral or occupied) | Went home | Held |
+|---|---|---|---|---|---|
+| "stores running low" | off, 106 | 69 | 21 | 14 | 2 |
+| | on, 120 | 11 | 7 | 99 | 3 |
+| "starving" | off, 137 | 99 | 25 | 7 | 6 |
+| | on, 18 | 4 | 1 | 11 | 2 |
+
+- **Hunger fell in every pair** (soldiers lost, off against on: 100/10, 72/20, 81/41, 144/36, 126/0, 57/18), and no army starved out. The mechanism is in the answers: told "Stores for 1 more turn here, then it starves" and the nearest land that feeds it, a marshal goes home five times in six, where without it it attacked on two times in three. So most armies go home before they starve, and few are ever starving.
+- **The ask itself barely changed:** of the army-turns that did starve, about as many went unasked the next turn (42% against 45%). Why those few went unasked was not checked. The fall is in how many starve, not in how often a starving one is asked.
+- **The cost is fighting.** Battles fell in 5 pairs of 6 (103 a game against 93), sieges begun by half, and land changed hands less (11.8 a game against 15.5, lower in 5 pairs of 6): the armies that went home were not at the front. Treaties rose a little (3.8 against 2.8).
+- **What it can and cannot show:** six pairs, 40 turns. The direction of hunger is the same in all six and large; battles and land move the same way in five of six, enough to name a cost but not its size. The queue and the facts are one switch, so nothing here says which of them did it. Legal and no slower.
+- **No default changes.** `HungerFirst` stays off; the tech lead decides. The starving no-ask share is recounted here by one stated rule (an army that lost soldiers to hunger at the end of a turn, with no army request of its own the next turn); by that rule the second all-on run's 138 of 252 is 133 of 253.
