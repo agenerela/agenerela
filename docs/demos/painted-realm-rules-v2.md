@@ -1766,7 +1766,7 @@ has the detail.
   Section 1.1's "the loser stays in the province it was leaving" cannot hold with the winner there.
 - **Sieges, stores, unit types and generals' traits wait for R3** (unit types were built in R3's first part, 14 November, behind `GameRules.UnitTypes`, seven of the ten general traits in its third, behind `GameRules.Generals`, and sieges at forts in its fourth, behind `GameRules.Sieges`; supply (stores, hunger, the forager trait) in its fifth, behind `GameRules.Supply`; all off; wake conditions 3 and 6 are not checked here). A walled province is fought for
   through its militia (5 + 10 a fort, plus the capital bonus; R1b: 3 + 6 a fort) rather than besieged. Wake conditions 3
-  and 6 (a siege ends, stores run low) wait with them.
+  and 6 (a siege ends, stores run low) waited with them; 6 was built in R3's fifth part's follow-up (#322, 15 November), 3 is not checked here.
 - **Recruiting** keeps today's levy (5 + 5 a province, paid at 2 gold a soldier). It appears at the
   capital, joining an army standing there up to 100, the rest forming new armies. Companies of 10 by
   type come with R3.
@@ -2107,7 +2107,7 @@ line, and `findings.md` for anything measured.
 - [x] Test: settings round-trip; conquest ends; old recordings replay
 
 **R1, the turn of writs and armies as pieces**
-- [x] `Army`, orders, standing orders and the wake conditions (six of eight; sieges and stores in R3)
+- [x] `Army`, orders, standing orders and the wake conditions (six of eight; sieges and stores in R3; stores running low was built 15 November, #322)
 - [x] Writs a turn, the order cycle, the second court order
 - [x] Simultaneous movement with terrain turns; border crossings; re-check on landing
 - [x] Battles between armies, retreat and rout, militia and neutral garrisons
