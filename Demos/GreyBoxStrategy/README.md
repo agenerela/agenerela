@@ -1466,7 +1466,9 @@ what to try instead.
 
 `GameRules.StalemateByWarScore`, off, is the first of those: the stalemate counter restarts on a treaty, free
 land taken, a realm broken, a new war, or a war's score moving 10 points (`StalemateWarScoreStep`), and no
-longer on land taken or freed by force of arms. Scripted only so far.
+longer on land taken or freed by force of arms. Live, 15 November (4 uncapped pairs on `qwen3.5:4b`, findings):
+it never lengthened a game and ended two sooner (mean 186 turns against 217); the arms play the same game until
+one rule stops it. Still off; the tech lead decides.
 
 ## The first real run
 
