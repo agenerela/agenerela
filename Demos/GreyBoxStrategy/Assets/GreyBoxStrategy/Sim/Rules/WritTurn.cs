@@ -669,15 +669,22 @@ namespace GreyBoxStrategy
             Tell(p.Owner, 0, $"{who} occupies our {p.Id}.");
         }
 
-        /// <summary>The turns a siege of <paramref name="p"/> by <paramref name="besiegers"/> takes (rules v2 3.7), never below 1.</summary>
+        /// <summary>
+        /// The turns a siege of <paramref name="p"/> by <paramref name="besiegers"/> takes (rules v2 3.7), never below
+        /// <see cref="MinSiegeTurns"/>: the turn it begins and one full turn after, so the defender always has a turn to
+        /// relieve it (15 November; before, a one-fort siege by a large army fell the turn it began).
+        /// </summary>
         public static int SiegeTurnsNeeded(GameRules r, Province p, IReadOnlyCollection<Army> besiegers)
         {
             int turns = r.SiegeTurnsPerFort * p.Forts;
             var lead = besiegers.Where(a => a.General != null).OrderByDescending(a => a.Soldiers).ThenBy(a => a.Id, StringComparer.Ordinal).FirstOrDefault()?.General;
             if (r.Generals && lead != null && lead.Has(GeneralTraits.Siegewright)) turns--;
             if (besiegers.Sum(a => a.Soldiers) >= r.SiegeOutnumber * r.GarrisonPerFort * p.Forts) turns--;
-            return Math.Max(1, turns);
+            return Math.Max(MinSiegeTurns, turns);
         }
+
+        /// <summary>The shortest siege: it never falls in the turn it begins, whatever the besiegers' numbers or general.</summary>
+        public const int MinSiegeTurns = 2;
 
         // An army alone in enemy land with walls besieges it: a turn of the siege each turn it stays, an early
         // breach on a seeded roll; when it ends the walls drop one level and the province is occupied.
@@ -693,7 +700,7 @@ namespace GreyBoxStrategy
             }
             p.SiegeTurns++;
             int needed = SiegeTurnsNeeded(Rules, p, mine);
-            bool breach = p.SiegeTurns < needed && Dice.Unit(Seed, World.Turn, p.Id, "breach:" + who) < Rules.SiegeBreachChance;
+            bool breach = p.SiegeTurns > 1 && p.SiegeTurns < needed && Dice.Unit(Seed, World.Turn, p.Id, "breach:" + who) < Rules.SiegeBreachChance;
             if (p.SiegeTurns < needed && !breach) return;
             p.Forts = Math.Max(0, p.Forts - 1);
             p.SiegedBy = null;

@@ -1020,6 +1020,23 @@ namespace GreyBoxStrategy.Tests
         }
 
         [Test]
+        public void Siege_NeverFallsTheTurnItBegins_HoweverLargeTheBesiegers_OrHoweverLikelyABreach()
+        {
+            var r = Walled();
+            r.SiegeBreachChance = 1; // a breach every turn it may come
+            var (g, p, a) = Besieging(r);
+            p.Forts = 1;
+            a.Soldiers = 200;
+            g.World.Country("valen").Army = g.World.ArmiesOf("valen").Sum(x => x.Soldiers);
+            var first = Turn(g);
+            Assert.That((p.SiegedBy, p.Occupier), Is.EqualTo(("valen", (string)null)), "the turn it begins, the defender keeps it: " + string.Join("
+", first.Resolution));
+            var second = Turn(g);
+            Assert.That((p.SiegedBy, p.Occupier), Is.EqualTo(((string)null, "valen")), "it falls the turn after: " + string.Join("
+", second.Resolution));
+        }
+
+        [Test]
         public void Siege_IsBroken_WhenTheBesiegersLeave()
         {
             var (g, p, a) = Besieging(Walled());
@@ -1032,7 +1049,7 @@ namespace GreyBoxStrategy.Tests
         }
 
         [Test]
-        public void SiegeTurns_ASiegewrightAndThreeToOne_EachTakeATurnOff_NeverBelowOne()
+        public void SiegeTurns_ASiegewrightAndThreeToOne_EachTakeATurnOff_NeverBelowTwo()
         {
             var r = Walled();
             r.Generals = true;
@@ -1044,7 +1061,7 @@ namespace GreyBoxStrategy.Tests
             a.Soldiers = 60;
             Assert.That(Game.SiegeTurnsNeeded(r, p, new[] { a }), Is.EqualTo(2), "and three to one against 20");
             p.Forts = 1;
-            Assert.That(Game.SiegeTurnsNeeded(r, p, new[] { a }), Is.EqualTo(1), "never below 1");
+            Assert.That(Game.SiegeTurnsNeeded(r, p, new[] { a }), Is.EqualTo(2), "never below 2: the turn it begins and one more");
             Assert.That(GeneralTraits.Pool(r), Does.Contain(GeneralTraits.Siegewright));
             Assert.That(GeneralTraits.Pool(WritRules()), Does.Not.Contain(GeneralTraits.Siegewright), "only with sieges");
         }
