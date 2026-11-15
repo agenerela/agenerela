@@ -99,7 +99,42 @@ namespace Agenerela
         }
         private static string GbnfTerminal(string value)
         {
-            
+            var terminal = new StringBuilder();
+            terminal.Append('"');
+
+            for (var i = 0; i < value.Length; i++)
+            {
+                var c = value[i];
+
+                if (c == '"')
+                {
+                    terminal.Append("\\\"");
+                }
+                else if (c == '\\')
+                {
+                    terminal.Append("\\\\");
+                }
+                else if (char.IsHighSurrogate(c) &&
+                         i + 1 < value.Length &&
+                         char.IsLowSurrogate(value[i + 1]))
+                {
+                    var codePoint = char.ConvertToUtf32(c, value[++i]);
+                    terminal.Append("\\U");
+                    AppendHex8(terminal, codePoint);
+                }
+                else if (c > 0x7f)
+                {
+                    terminal.Append("\\u");
+                    AppendHex4(terminal, c);
+                }
+                else
+                {
+                    terminal.Append(c);
+                }
+            }
+
+            terminal.Append('"');
+            return terminal.ToString();
         }
 
         private static void AppendHex4(StringBuilder output, int value)
