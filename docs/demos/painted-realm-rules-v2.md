@@ -132,7 +132,9 @@ since its last order (_Mine_):
 7. it was recruited this turn, or merged or split;
 8. 4 turns passed since its last order.
 
-An army awaiting orders that gets no writ **holds**, and keeps waiting. The screen marks it.
+An army awaiting orders that gets no writ **holds**, and keeps waiting. The screen marks it. (Built since: a
+person's plan may also recall a holding army for a writ, "recalled by the court", #327, 15 November; model rulers
+never recall.)
 
 **When the turn resolves.** Every country decides on the same snapshot, then the turn resolves at
 once, in this order (_Mine_, extending today's peace, home moves, wars, attacks):
