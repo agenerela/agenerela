@@ -67,6 +67,38 @@ namespace GreyBoxStrategy.Tests
         // --- Armies, writs and orders ----------------------------------------------------------
 
         [Test]
+        public void Recall_AsksAHoldingArmyFirst_WithItsReason_OnlyBeforeTheCourtsFirstOrder()
+        {
+            CountryRequest FirstArmyAsk(Game g, string recall)
+            {
+                var first = g.BeginTurn();
+                if (recall != null) Assert.That(g.Recall("valen", recall), Is.Null);
+                var round = g.Submit(first.Select(r => new CountryAnswer(r, Move.Hold)).ToList());
+                var ask = round.FirstOrDefault(r => r.CountryId == "valen" && r.Moment == Moment.Army);
+                while (round.Count > 0) round = g.Submit(round.Select(r => new CountryAnswer(r, r.Moment == Moment.Envoy ? new Move(Actions.RefusePeace) : Move.Hold)).ToList());
+                g.Resolve();
+                return ask;
+            }
+            var g = NewWrits();
+            Turn(g); // every army asked once and held: now holding, nothing wakes it
+            var host = ArmyOf(g, "valen");
+            Assert.That(host.Awaiting, Is.False);
+            Assert.That(FirstArmyAsk(g, null), Is.Null, "a holding army is not asked");
+            var asked = FirstArmyAsk(g, host.Id);
+            Assert.That(asked?.ArmyId, Is.EqualTo(host.Id), "recalled, it is asked");
+            Assert.That(string.Join(" ", asked.StandingFacts.Concat(asked.TurnFacts)), Does.Contain(Game.RecalledReason));
+
+            var h = NewWrits();
+            Turn(h);
+            var requests = h.BeginTurn();
+            Assert.That(h.Recall("valen", ArmyOf(h, "orsk").Id), Does.Contain("not one of valen's armies"));
+            Assert.That(h.ArmyWrits("valen"), Is.EqualTo(h.World.Writs("valen") - 1));
+            h.Submit(requests.Select(r => new CountryAnswer(r, Move.Hold)).ToList());
+            Assert.That(h.Recall("valen", ArmyOf(h, "valen").Id), Does.Contain("first order"), "too late once the court has spoken");
+        }
+
+
+        [Test]
         public void Armies_StandAtTheCapitals_AndAskForOrders()
         {
             var g = NewWrits();

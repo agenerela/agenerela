@@ -632,6 +632,8 @@ namespace GreyBoxStrategy.Replay
         private readonly Dictionary<string, RecordedDecision> council = new Dictionary<string, RecordedDecision>(StringComparer.Ordinal);
 
         private readonly Dictionary<string, RecordedDecision> told = new Dictionary<string, RecordedDecision>(StringComparer.Ordinal);
+        // Each turn's army orders, in the order the game asked them.
+        private readonly Dictionary<int, List<RecordedDecision>> armyOrders = new Dictionary<int, List<RecordedDecision>>();
 
         public RecordedPlayers(Recording recording)
         {
@@ -646,6 +648,11 @@ namespace GreyBoxStrategy.Replay
                 string k = Key(d.Turn, d.Country, d.IsEnvoy);
                 if (!queues.TryGetValue(k, out var q)) queues[k] = q = new Queue<RecordedDecision>();
                 q.Enqueue(d);
+                if (d.ArmyId != null && d.Moment == RecordedDecision.ArmyMoment)
+                {
+                    if (!armyOrders.TryGetValue(d.Turn, out var list)) armyOrders[d.Turn] = list = new List<RecordedDecision>();
+                    list.Add(d);
+                }
             }
         }
 
@@ -664,6 +671,22 @@ namespace GreyBoxStrategy.Replay
             if (!envoy) council[r.Turn + "|" + r.CountryId] = d;
             if (envoy) return d.Action == Actions.AcceptPeace ? new Move(Actions.AcceptPeace) : new Move(Actions.RefusePeace);
             return new Move(d.Action ?? Actions.None, d.HasTarget ? d.Target : null);
+        }
+
+        /// <summary>
+        /// The writs turn: asks the game again for every army the recording shows was asked this turn, in the order it was
+        /// asked (<see cref="Game.Recall"/>). For a model's armies that is the order the rules ask anyway; a person's plan
+        /// may have recalled an army that was holding, and only this brings its order back.
+        /// </summary>
+        public void Recall(Game game, int turn)
+        {
+            if (!armyOrders.TryGetValue(turn, out var list)) return;
+            foreach (var d in list)
+            {
+                string why = game.Recall(d.Country, d.ArmyId);
+                if (why != null)
+                    throw new InvalidOperationException($"Turn {turn}: the recording has an order for {d.ArmyId}, but {why}: it is from a different game or different rules.");
+            }
         }
 
         public RecordedDecision Story(int turn) => told.TryGetValue($"{RecordedDecision.StoryMoment}|{turn}|", out var d) ? d : null;

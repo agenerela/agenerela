@@ -32,6 +32,7 @@ namespace GreyBoxStrategy.Replay
         private static TurnReport PlayWritsTurn(Game game, RecordedPlayers players, out Dictionary<string, List<string>> paths)
         {
             var requests = game.BeginTurn();
+            players.Recall(game, game.World.Turn);
             var answers = new List<CountryAnswer>();
             while (requests.Count > 0)
             {

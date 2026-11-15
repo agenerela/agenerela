@@ -37,6 +37,8 @@ namespace GreyBoxStrategy.Realm
             public readonly Dictionary<string, Move> Armies = new Dictionary<string, Move>(StringComparer.Ordinal);
             public Move Court2 = Move.Hold;
             internal bool CourtTaken;
+            /// <summary>The armies whose orders the rules asked for and this plan answered, this turn.</summary>
+            internal readonly HashSet<string> Asked = new HashSet<string>(StringComparer.Ordinal);
 
             /// <summary>The advisor's whole advice as a plan: its court order and every army's, as "Take the advice" fills it.</summary>
             public static WritsPlan From(Advice advice)
@@ -50,7 +52,11 @@ namespace GreyBoxStrategy.Realm
             public Move For(CountryRequest r)
             {
                 Move m;
-                if (r.Moment == Moment.Army) m = r.ArmyId != null && Armies.TryGetValue(r.ArmyId, out var a) ? a : Move.Hold;
+                if (r.Moment == Moment.Army)
+                {
+                    m = r.ArmyId != null && Armies.TryGetValue(r.ArmyId, out var a) ? a : Move.Hold;
+                    if (r.ArmyId != null) Asked.Add(r.ArmyId);
+                }
                 else if (!CourtTaken) { CourtTaken = true; m = Court ?? Move.Hold; }
                 else m = Court2 ?? Move.Hold;
                 // Only what the rules offer on this request lands; anything else holds, as for a model.
@@ -71,6 +77,13 @@ namespace GreyBoxStrategy.Realm
         }
 
         public enum Waiting { Nothing, Card, Orders, Envoy, Models, Storyteller, Choice }
+
+        /// <summary>
+        /// This writs turn's planned army orders that could not be given, each "army_id: why": a recall the rules refused,
+        /// or an army the rules never asked for. Empty when every order was given. Cleared when the next plan is given.
+        /// </summary>
+        public IReadOnlyList<string> PlanRefusals => planRefusals;
+        private readonly List<string> planRefusals = new List<string>();
 
         /// <summary>How long one round of the rulers' decisions may take before the game stops and says so.</summary>
         public TimeSpan RoundTimeout { get; set; } = TimeSpan.FromSeconds(150);
@@ -290,7 +303,9 @@ namespace GreyBoxStrategy.Realm
         /// <summary>
         /// The writs turn: your orders for this turn, while <see cref="WaitingFor"/> is <see cref="Waiting.Orders"/>.
         /// Every order must be one the rules offer now: the court's on <see cref="Orders"/>, an army's from
-        /// <see cref="WritLegality.ArmyMoves"/> for an army awaiting orders.
+        /// <see cref="WritLegality.ArmyMoves"/>. Any of your armies may have one, whether or not it has woken: the
+        /// court recalls it (<see cref="Game.Recall"/>), and it spends a writ. At most <see cref="Game.ArmyWrits"/>
+        /// armies a turn; a plan with more is refused with the reason.
         /// </summary>
         public void Plan(WritsPlan plan)
         {
@@ -299,11 +314,13 @@ namespace GreyBoxStrategy.Realm
             var w = Orders.World;
             if (plan.Court != null && !Orders.Legal.Contains(plan.Court))
                 throw new ArgumentException($"{plan.Court} is not offered to your court: {WritLegality.WhyNotCourt(w, You, plan.Court) ?? "not on the list"}.");
+            int armyWrits = Game.ArmyWrits(You);
+            if (plan.Armies.Count > armyWrits)
+                throw new ArgumentException($"{plan.Armies.Count} army orders, but this turn's writs give orders to {armyWrits} {(armyWrits == 1 ? "army" : "armies")}: one writ is the court's.");
             foreach (var kv in plan.Armies)
             {
-                // The rules ask only armies awaiting orders; an order for any other would be taken here and never given.
-                if (w.FindArmy(kv.Key) is Army held && !held.Awaiting)
-                    throw new ArgumentException($"{kv.Key} is holding until it wakes: the rules ask an army for orders only when it arrives, fights, is blocked, its stores run low, or four turns pass.");
+                if (!(w.FindArmy(kv.Key) is Army mine) || mine.Owner != You)
+                    throw new ArgumentException($"{kv.Key} is not one of your armies.");
                 if (!WritLegality.ArmyMoves(w, You, kv.Key).Contains(kv.Value))
                     throw new ArgumentException($"{kv.Key} cannot {kv.Value}: {WritLegality.WhyNotArmy(w, You, kv.Key, kv.Value) ?? "not on the list"}.");
             }
@@ -518,6 +535,10 @@ namespace GreyBoxStrategy.Realm
                             Advise(r);
                             plan = await AskPlan(r);
                             EndAdvice();
+                            // Every army the plan orders is asked, first and in the plan's order, woken or not.
+                            planRefusals.Clear();
+                            foreach (string id in plan.Armies.Keys)
+                                if (Game.Recall(You, id) is string why) planRefusals.Add($"{id}: {why}");
                         }
                         move = plan.For(r);
                     }
@@ -528,6 +549,10 @@ namespace GreyBoxStrategy.Realm
                 answers.AddRange(await models);
                 requests = Game.Submit(answers);
             }
+            // A planned order the rules never asked for is said, never dropped.
+            if (plan != null)
+                foreach (string id in plan.Armies.Keys.Where(id => !plan.Asked.Contains(id) && !PlanRefusals.Any(x => x.StartsWith(id + ":", StringComparison.Ordinal))))
+                    planRefusals.Add($"{id}: the rules did not ask for its orders this turn");
             var report = Game.Resolve();
             foreach (var seat in writSeats.Values) seat.Learn(report);
             foreach (var seat in writSeats.Values) seat.EndTurn();
