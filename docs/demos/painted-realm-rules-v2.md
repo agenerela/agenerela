@@ -844,7 +844,10 @@ Supplied land is our own only, since alliances and passage are not built; healin
 - **A fort holds the road** (priority 2): an enemy army that enters a province bordering an
   unbesieged hostile walled province must stop there, and can only besiege or go back. This is the
   genre's zone of control for forts (EU4, 2015 and 2016, [sources](#sources)), in its simplest
-  form: it makes walls shape where wars are fought.
+  form: it makes walls shape where wars are fought. Built 15 November as `GameRules.FortsHoldTheRoad`, off.
+  On Classic only the 5 capitals start with a fort (the other 20 provinces have none, and more come only from
+  `fortify` orders), and a generated map likewise starts only its capitals with one, so with the rule on a war
+  is held up around capitals and fortified provinces, not province by province.
 
 ### 3.8 Fog of war
 
