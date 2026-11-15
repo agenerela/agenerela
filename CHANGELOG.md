@@ -29,6 +29,10 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm R3: every army rule on, run again with the hunger wake and the siege floor** (#20). Sieges now
+  last and are relieved; armies woken as they starve mostly attack on rather than go home, and half the starving
+  army-turns get no writ. No default changes. Results in `findings.md`, 15 November.
+
 - **Painted Realm: you may order any of your armies in the council, woken or not** (#20). `Game.Recall` asks the
   rules for a holding army's orders ("recalled by the court", for a writ); the rule game recalls every army your
   plan orders, refuses a plan with more army orders than the writs with the reason, and says any order not taken in
