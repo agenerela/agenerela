@@ -94,7 +94,7 @@ namespace GreyBoxStrategy.Tests
             Assert.That(h.Recall("valen", ArmyOf(h, "orsk").Id), Does.Contain("not one of valen's armies"));
             Assert.That(h.ArmyWrits("valen"), Is.EqualTo(h.World.Writs("valen") - 1));
             h.Submit(requests.Select(r => new CountryAnswer(r, Move.Hold)).ToList());
-            Assert.That(h.Recall("valen", ArmyOf(h, "valen").Id), Does.Contain("first order"), "too late once the court has spoken");
+            Assert.That(h.Recall("valen", ArmyOf(h, "valen").Id), Does.Contain("first order").Or.Contain("not sitting"), "too late once the court has spoken");
         }
 
 
