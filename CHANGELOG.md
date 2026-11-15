@@ -29,6 +29,10 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm R3: hunger first** (#20), behind `GameRules.HungerFirst`, off. With supply on, a starving army
+  and then one about to run out are asked first within the writs, and read what hunger costs and the nearest land
+  that feeds them. Scripted only so far.
+
 - **Painted Realm R3: every army rule on, run again with the hunger wake and the siege floor** (#20). Sieges now
   last and are relieved; armies woken as they starve mostly attack on rather than go home, and half the starving
   army-turns get no writ. No default changes. Results in `findings.md`, 15 November.
