@@ -1128,7 +1128,7 @@ model. R1b's second part, below, adds model rulers (`WritRuler`), and R1c measur
 
 - **A turn.** Each ruler has writs: 2, plus 1 for every 8 provinces it owns, at most 5 (R1b, #281: three writs, not two; the R1b paragraph below gives the rest of the retune). The court is
   asked first. Then come the armies that are waiting for orders, the most urgent first (an enemy army
-  beside them, then the largest), while writs are left beyond one kept for the court. Last, a second
+  beside them, then the largest; with `GameRules.HungerFirst`, off, the starving first), while writs are left beyond one kept for the court. Last, a second
   court order if a writ is left. Rounds of requests all see one snapshot:
   ```csharp
   var requests = game.BeginTurn();

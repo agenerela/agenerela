@@ -232,7 +232,8 @@ For each ruler, in this order (_Mine_):
 1. **The court order** (always asked; `none` allowed). It carries the turn's proclamation.
 2. **Each army awaiting orders**, most urgent first: a hostile army beside it, then a siege it leads
    or that holds it, then stores at 1 or 0, then the rest by size. One writ each, until writs − 1 are
-   used (one is always kept for the court).
+   used (one is always kept for the court). With `GameRules.HungerFirst` (off, #330, 15 November) a starving army,
+   then one with a turn of stores or less, comes before the rest of this list.
 3. **A second court order**, if a writ is left and the first was not `none`.
 
 Each decision after the first reads one more line, `Ordered this turn: recruit at highmoor; maren_host
