@@ -1259,6 +1259,7 @@ namespace GreyBoxStrategy.Tests
         [Test]
         public void HungerFirst_AStarvingArmyIsAskedFirst_ThenOneWithStoresRunningLow()
         {
+            List<string> oldOrder = null;
             List<string> Order(bool on)
             {
                 var (g, p, a) = Abroad(HungerFirst(on));
@@ -1279,7 +1280,6 @@ namespace GreyBoxStrategy.Tests
                     .ThenBy(x => x.Id, StringComparer.Ordinal).Select(Name).ToList();
                 return WritLegality.Awaiting(w, "valen").Where(mine.Contains).Select(Name).ToList();
             }
-            List<string> oldOrder = null;
             Assert.That(Order(on: true), Is.EqualTo(new[] { "starving", "low", "big" }));
             var off = Order(on: false);
             Assert.That(off, Is.EqualTo(oldOrder), "off: the order as before");
