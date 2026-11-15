@@ -29,6 +29,10 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm rule mode, ready for a playtest with R3 on** (#20). Fixes from a pass with all four R3 settings on:
+  typed recruits read as names in the chronicle, an army's row says why it waits and when it besieges, the siege tag
+  shows beyond your borders, the battle report and the end card lose a stray sentence and comma.
+
 - **Painted Realm R3: a fort holds the road, and a siege stops income** (#20), each behind its own switch, off by
   default (`GameRules.FortsHoldTheRoad`, `SiegeStopsIncome`). A march stops beside an enemy fort no one besieges,
   and from there may only besiege it or go back; a besieged province gives its owner nothing. A battle record now

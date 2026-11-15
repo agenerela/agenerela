@@ -18,6 +18,8 @@ namespace GreyBoxStrategy.Realm
         public bool Writs;
         /// <summary>For a march line's label: the turns an army needs for the rest of its path.</summary>
         public Func<ArmyState, int> TurnsLeft;
+        /// <summary>R3's unit types or generals are on in this game: the battle report says so even when neither changed a battle.</summary>
+        public bool ArmyRules;
         /// <summary>A piece clicked: the army, for the side panel.</summary>
         public Action<string> HostPressed;
 
@@ -93,7 +95,7 @@ namespace GreyBoxStrategy.Realm
         /// <summary>An army in one line: "Maren's host (Orsk), 40 soldiers at Corwick, marching to Ashby (2 turns)".</summary>
         public string HostLine(ArmyState a)
         {
-            string order = a.Marching ? $", marching to {Cap(a.Destination)}" + (TurnsLeft != null ? $" ({TurnsLeft(a)} turns)" : "") : ", holding";
+            string order = a.Marching ? $", marching to {Cap(a.Destination)}" + (TurnsLeft != null ? $" ({TurnsLeft(a)} turn{(TurnsLeft(a) == 1 ? "" : "s")})" : "") : ", holding";
             string waits = a.Awaiting ? $"\nAwaiting orders: {string.Join(", ", a.Wake)}." : "";
             string border = a.StepTurnsLeft > 1 && a.Path.Count > 0 ? $"\nOn the border with {Cap(a.Path[0])}: rough ground takes two turns." : "";
             return $"{Chronicle.Host(a.Id)} ({CountryLook.NameOf(a.Owner)}), {a.Soldiers} soldiers at {Cap(a.Location)}{order}.{border}{waits}";
@@ -473,7 +475,7 @@ namespace GreyBoxStrategy.Realm
             body.Add(Bar("Strength", b.AttackStrength, b.DefenceStrength, max, b, plain: true, total: true));
             var told = new[] { b.CounterNote, b.GeneralNote }.Where(x => !string.IsNullOrEmpty(x)).Select(x => Cap1(Named(x).TrimEnd('.')) + ".").ToList();
             if (told.Count > 0) body.Add(Text(string.Join(" ", told), "event-chose"));
-            bool r3 = b.AttackCounter != 1 || b.DefenceCounter != 1 || b.AttackGeneral != 1 || b.DefenceGeneral != 1 || b.CounterNote != null || b.GeneralNote != null;
+            bool r3 = ArmyRules || b.AttackCounter != 1 || b.DefenceCounter != 1 || b.AttackGeneral != 1 || b.DefenceGeneral != 1 || b.CounterNote != null || b.GeneralNote != null;
             if (b.Terrain != null) body.Add(Text(r3 ? $"Fought on {b.Terrain}: terrain does not change a battle yet." : $"Fought on {b.Terrain}: terrain does not change a battle until unit types and generals come (R3).", "src"));
 
             var after = new List<string>();

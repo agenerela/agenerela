@@ -234,7 +234,7 @@ namespace GreyBoxStrategy.Replay
             return line;
         }
 
-        private static readonly Regex Raised = new Regex(@"^raised (\d+) soldiers at (\w+)(?: \((.*)\))?");
+        private static readonly Regex Raised = new Regex(@"^raised (\d+) (soldiers|pikes|riders|bows) at (\w+)(?: \((.*)\))?");
         private static readonly Regex JoinedArmy = new Regex(@"^(new )?(\w+?_host\d*) \+?(\d+)$");
 
         /// <summary>
@@ -248,9 +248,10 @@ namespace GreyBoxStrategy.Replay
             if (text.StartsWith("recruited ", StringComparison.Ordinal)) return "recruits " + text.Substring("recruited ".Length);
             var m = Raised.Match(text);
             if (!m.Success) return "recruits " + text;
-            string at = $"raises {m.Groups[1].Value} soldiers at {province(m.Groups[2].Value)}";
-            if (!m.Groups[3].Success) return at;
-            var parts = m.Groups[3].Value.Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries)
+            // R3's unit types name the type raised ("raised 20 bows at highmoor").
+            string at = $"raises {m.Groups[1].Value} {m.Groups[2].Value} at {province(m.Groups[3].Value)}";
+            if (!m.Groups[4].Success) return at;
+            var parts = m.Groups[4].Value.Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries)
                 .Select(p => JoinedArmy.Match(p.Trim())).Where(x => x.Success).ToList();
             if (parts.Count == 1)
                 return parts[0].Groups[1].Success ? $"{at}: a new army, {Host(parts[0].Groups[2].Value)}" : $"{at} for {Host(parts[0].Groups[2].Value)}";

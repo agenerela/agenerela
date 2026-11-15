@@ -28,7 +28,7 @@ namespace GreyBoxStrategy.Realm
             if (s.Winner != null) head.Add(new Crest(CountryLook.Of(s.Winner), 34) { style = { marginRight = 10 } });
             var ht = new VisualElement();
             ht.Add(Heading(title));
-            var how = new Label($"{(s.Winner == null ? "" : Capitalised(s.How))}, after {s.Turns} turns." + (you != null && s.Winner != null && s.Winner != you ? $" You ruled {CountryLook.NameOf(you)}." : ""));
+            var how = new Label((s.Winner == null ? $"After {s.Turns} turns." : $"{Capitalised(s.How)}, after {s.Turns} turns.") + (you != null && s.Winner != null && s.Winner != you ? $" You ruled {CountryLook.NameOf(you)}." : ""));
             how.AddToClassList("menu-sub"); how.style.unityTextAlign = TextAnchor.MiddleLeft; how.style.whiteSpace = WhiteSpace.Normal;
             ht.Add(how);
             head.Add(ht);
