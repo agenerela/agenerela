@@ -1707,8 +1707,10 @@ score and land by treaty: land taken or freed by force of arms (occupation, a si
 restarts it; a treaty, free land taken, a realm broken, a new war, or a war's score moving
 `StalemateWarScoreStep` (10) points does. Meant with `OccupationBecomesOwnership` 8 on top. Scripted, ordinary
 scripts barely notice (77 turns either way); peaceable scripts that stand in for the models end at 44 turns
-instead of 29, all in stalemates, because each new war and each 10-point swing restarts the count. No live run
-yet.
+instead of 29, all in stalemates, because each new war and each 10-point swing restarts the count. Live
+(15 November, 4 uncapped pairs, findings): on the models it never lengthened a game and ended two of four
+sooner (turn 187 against the 300-turn guard, 121 against 135); the arms are the same game until a rule stops
+it. Still off.
 
 The screen's half is the screen session's.
 
