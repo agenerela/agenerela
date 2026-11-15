@@ -33,7 +33,8 @@ with the targets the prompts name.
 |---|---|
 | `agent` | Display name |
 | `actions[].id` | An action the agent can take. `none` is the idle action the schema adds to every agent |
-| `actions[].needsTarget` | `true` if the action takes a registered target, `false` if it always takes `no_target` |
+| `actions[].needsTarget` | `true` if the action requires a registered target. `false` leaves it optional (DR-020) |
+| `actions[].takesNoTarget` | `true` if the action never takes a target, so `no_target` is its only correct answer. Omit for an optional target |
 | `actions[].onlyWhen` | Optional. The state in which the action is available, in the same shape as a prompt's `preconditionState`. `stop_following` needs `{ "isFollowing": true }` |
 | `targets[].id` | A registered target id, the only values `expectedTarget` may hold besides `no_target` |
 | `targets[].description` | One line saying what the target is. It may reach the prompt, so it describes the world, not the test |

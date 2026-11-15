@@ -82,8 +82,8 @@ namespace Agenerela.Evaluation
                 else if (declared.NeedsTarget != action.RequiresTarget)
                 {
                     differences.Add(action.RequiresTarget
-                        ? $"'{action.Id}' requires a target in the profile, but the set says it takes none"
-                        : $"'{action.Id}' takes no target in the profile, but the set says it needs one");
+                        ? $"'{action.Id}' requires a target in the profile, but the set says it does not"
+                        : $"'{action.Id}' does not require a target in the profile, but the set says it does");
                 }
             }
 
@@ -163,11 +163,13 @@ namespace Agenerela.Evaluation
                 return;
             }
 
+            // Three states since DR-020, not two: an action requires a target, never takes one, or
+            // leaves it optional. Only the first two constrain the answer.
             if (declared.NeedsTarget && noTarget)
             {
                 add(PromptRule.ActionNeedsTarget, $"{action} needs a target, so it cannot take no_target");
             }
-            else if (!declared.NeedsTarget && (targets.Count != 1 || !noTarget))
+            else if (declared.TakesNoTarget && (targets.Count != 1 || !noTarget))
             {
                 add(PromptRule.ActionTakesNoTarget, $"{action} takes no target: use no_target");
             }

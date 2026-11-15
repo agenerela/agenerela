@@ -28,6 +28,7 @@ namespace Agenerela.Evaluation
             {
                 Id = a.Id,
                 NeedsTarget = a.NeedsTarget,
+                TakesNoTarget = a.TakesNoTarget,
                 OnlyWhen = (JObject)a.OnlyWhen?.DeepClone(),
             }).ToList();
 
