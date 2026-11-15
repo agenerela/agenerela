@@ -1029,11 +1029,9 @@ namespace GreyBoxStrategy.Tests
             a.Soldiers = 200;
             g.World.Country("valen").Army = g.World.ArmiesOf("valen").Sum(x => x.Soldiers);
             var first = Turn(g);
-            Assert.That((p.SiegedBy, p.Occupier), Is.EqualTo(("valen", (string)null)), "the turn it begins, the defender keeps it: " + string.Join("
-", first.Resolution));
+            Assert.That((p.SiegedBy, p.Occupier), Is.EqualTo(("valen", (string)null)), "the turn it begins, the defender keeps it: " + string.Join("\n", first.Resolution));
             var second = Turn(g);
-            Assert.That((p.SiegedBy, p.Occupier), Is.EqualTo(((string)null, "valen")), "it falls the turn after: " + string.Join("
-", second.Resolution));
+            Assert.That((p.SiegedBy, p.Occupier), Is.EqualTo(((string)null, "valen")), "it falls the turn after: " + string.Join("\n", second.Resolution));
         }
 
         [Test]
