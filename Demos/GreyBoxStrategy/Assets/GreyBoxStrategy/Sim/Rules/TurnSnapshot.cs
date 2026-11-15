@@ -23,6 +23,12 @@ namespace GreyBoxStrategy
             Path = a.Path.ToList();
             StepTurnsLeft = a.StepTurnsLeft;
             Wake = a.Wake.ToList();
+            Pikes = a.Pikes;
+            Riders = a.Riders;
+            Bows = a.Bows;
+            General = a.General?.Name;
+            Traits = a.General?.Traits.ToList() ?? new List<string>();
+            HalfStores = a.HalfStores;
         }
 
         public string Id { get; }
@@ -35,6 +41,15 @@ namespace GreyBoxStrategy
         public int StepTurnsLeft { get; }
         /// <summary>Why it was waiting for orders; empty while it carried one out.</summary>
         public IReadOnlyList<string> Wake { get; }
+        /// <summary>R3's unit types: soldiers by type (every one a pike while <see cref="GameRules.UnitTypes"/> is off).</summary>
+        public int Pikes { get; }
+        public int Riders { get; }
+        public int Bows { get; }
+        /// <summary>R3's generals: who led it and their traits; null and empty while <see cref="GameRules.Generals"/> is off.</summary>
+        public string General { get; }
+        public IReadOnlyList<string> Traits { get; }
+        /// <summary>R3's supply: its stores in half-turns (meaningful only while <see cref="GameRules.Supply"/> is on).</summary>
+        public int HalfStores { get; }
     }
 
     public sealed class TurnSnapshot
@@ -47,7 +62,18 @@ namespace GreyBoxStrategy
             Owners = world.ProvinceList.ToDictionary(p => p.Id, p => p.Owner, StringComparer.Ordinal);
             Occupiers = world.ProvinceList.Where(p => p.Occupier != null).ToDictionary(p => p.Id, p => p.Occupier, StringComparer.Ordinal);
             Armies = world.Armies.Select(a => new ArmySnapshot(a)).ToList();
+            var sieged = world.ProvinceList.Where(p => p.SiegedBy != null).ToList();
+            SiegedBy = sieged.ToDictionary(p => p.Id, p => p.SiegedBy, StringComparer.Ordinal);
+            SiegeTurns = sieged.ToDictionary(p => p.Id, p => p.SiegeTurns, StringComparer.Ordinal);
+            SiegeTurnsNeeded = sieged.ToDictionary(p => p.Id,
+                p => Game.SiegeTurnsNeeded(world.Rules, p, world.ArmiesAt(p.Id).Where(a => a.Owner == p.SiegedBy).ToList()), StringComparer.Ordinal);
         }
+
+        /// <summary>R3's sieges: who besieges each besieged province, by province id; empty without sieges.</summary>
+        public IReadOnlyDictionary<string, string> SiegedBy { get; }
+        /// <summary>R3's sieges: the turns each siege has lasted, and the turns it needs with the besiegers standing there.</summary>
+        public IReadOnlyDictionary<string, int> SiegeTurns { get; }
+        public IReadOnlyDictionary<string, int> SiegeTurnsNeeded { get; }
 
         /// <summary>The writs turn: who occupies each occupied province, by province id.</summary>
         public IReadOnlyDictionary<string, string> Occupiers { get; }

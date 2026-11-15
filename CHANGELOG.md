@@ -29,6 +29,10 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm replay: the council as the live game had it** (#20). `ArmySnapshot` now carries each army's mix,
+  general, traits and stores, and `TurnSnapshot` each siege, so a replay's council shows the same pieces, generals,
+  stores and siege tags as the live game did, and the turn's battle reports start from the exact mixes.
+
 - **Painted Realm: a stalemate counter that reads war score and land by treaty** (#20), behind
   `GameRules.StalemateByWarScore`, off by default. Land taken or freed by force no longer restarts it; a treaty,
   free land, a broken realm, a new war or a 10-point swing does. Scripted only; no live run yet.
