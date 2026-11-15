@@ -46,11 +46,7 @@ namespace GreyBoxStrategy
             }
             var occupiedOfOurs = world.ProvinceList.Where(p => p.Owner == countryId && p.Occupier != null).ToList();
 
-            var rivals = world.Alive.Where(c => c.Id != countryId && (world.AtWar(countryId, c.Id) || world.Borders(countryId, c.Id)))
-                .OrderByDescending(c => world.AtWar(countryId, c.Id))
-                .ThenByDescending(c => c.Army).ThenBy(c => c.Id, StringComparer.Ordinal)
-                .Take(MaxRivals);
-            foreach (var other in rivals)
+            foreach (var other in Rivals(world, countryId))
             {
                 var rel = world.RelationBetween(countryId, other.Id);
                 string relation = rel == Relation.War ? $"at war with us, war score {WarScore.Of(world, countryId, other.Id):+0;-0;0}"
@@ -63,9 +59,7 @@ namespace GreyBoxStrategy
                 string weOccupy = string.Join(", ", world.ProvinceList.Where(p => p.Owner == other.Id && p.Occupier == countryId).Select(Held));
                 // With unit types (R3), what its armies are mostly: "orsk: at war with us; 60 soldiers in 2 armies, mostly riders, ...".
                 // With fog (R3), the total rounded, and the mix only of the armies our riders scout.
-                var known = rules.Fog ? world.ArmiesOf(other.Id).Where(a => ArmySight.Scouts(world, countryId, a.Location) && ArmySight.Sees(world, countryId, a.Location)).ToList()
-                                      : world.ArmiesOf(other.Id).ToList();
-                string mostly = rules.UnitTypes ? Units.Mostly(UnitMix.Of(known)) : null;
+                string mostly = rules.UnitTypes ? Units.Mostly(KnownMix(world, countryId, other.Id)) : null;
                 string total = rules.Fog ? ArmySight.About(other.Army) : other.Army.ToString();
                 lines.Add($"{other.Id}: {relation}; {total} soldiers in {Plural(theirArmies, "army", "armies")}" + (mostly != null ? $", {mostly}" : "") + $", {Facts.Provinces(world.ProvinceCount(other.Id))}"
                           + (world.Borders(countryId, other.Id) ? "; borders us" : "")
@@ -85,6 +79,38 @@ namespace GreyBoxStrategy
             if (neutralNear > 0 && lines.Count < MaxStanding)
                 lines.Add(neutralNear == 1 ? "1 neutral province borders our land." : $"{neutralNear} neutral provinces border our land.");
             return lines.Take(MaxStanding).ToList();
+        }
+
+        // The rivals a ruler's facts name: those at war with us, then those our land borders, the largest first.
+        private static IEnumerable<Country> Rivals(World world, string countryId) =>
+            world.Alive.Where(c => c.Id != countryId && (world.AtWar(countryId, c.Id) || world.Borders(countryId, c.Id)))
+                .OrderByDescending(c => world.AtWar(countryId, c.Id))
+                .ThenByDescending(c => c.Army).ThenBy(c => c.Id, StringComparer.Ordinal)
+                .Take(MaxRivals);
+
+        // What we know of a rival's soldiers by type: all of them, or with fog only the armies our riders scout.
+        private static UnitMix KnownMix(World world, string countryId, string rivalId) =>
+            UnitMix.Of(world.Rules.Fog
+                ? world.ArmiesOf(rivalId).Where(a => ArmySight.Scouts(world, countryId, a.Location) && ArmySight.Sees(world, countryId, a.Location))
+                : world.ArmiesOf(rivalId));
+
+        /// <summary>
+        /// The counter rule as the court reads it, with <see cref="GameRules.CountersLine"/> and unit types on: "Pikes
+        /// beat riders, riders beat bows, and bows beat pikes; orsk is mostly riders, which pikes beat." Each rival the
+        /// facts name that is mostly one type is named with what beats it. Null when off.
+        /// </summary>
+        public static string CountersLine(World world, string countryId)
+        {
+            var rules = world.Rules;
+            if (!rules.UnitTypes || !rules.CountersLine) return null;
+            var parts = new List<string>();
+            foreach (var other in Rivals(world, countryId))
+            {
+                var mix = KnownMix(world, countryId, other.Id);
+                if (Units.Largest(mix) is UnitType t)
+                    parts.Add($"{other.Id} is mostly {Units.Name(t)}, which {Units.Name(Units.BeatenBy(t))} beat");
+            }
+            return "Pikes beat riders, riders beat bows, and bows beat pikes" + (parts.Count > 0 ? "; " + string.Join("; ", parts) : "") + ".";
         }
 
         // "besieging corwick, turn 2 of 4": a siege as its besieger reads it.

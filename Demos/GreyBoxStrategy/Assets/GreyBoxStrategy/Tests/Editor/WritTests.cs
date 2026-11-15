@@ -1247,6 +1247,48 @@ namespace GreyBoxStrategy.Tests
             Assert.That(ArmySight.Sighting(w, "valen", orsk), Does.Contain("(30 riders)"), "our riders scout it");
         }
 
+        // --- R3: the counters line, off by default ---------------------------------------------------
+
+        private static Game Countered(bool on, bool types = true)
+        {
+            var r = WritRules();
+            r.UnitTypes = types;
+            r.CountersLine = on;
+            var g = NewWrits(1, r);
+            Turn(g);
+            War(g, "valen", "orsk");
+            foreach (var a in g.World.ArmiesOf("orsk")) { a.Soldiers = 0; a.Add(UnitType.Riders, 30); }
+            return g;
+        }
+
+        [Test]
+        public void CountersLine_SaysWhatBeatsWhat_AndWhatBeatsEachRivalItNames()
+        {
+            Assert.That(WritFacts.CountersLine(Countered(true).World, "valen"),
+                Does.StartWith("Pikes beat riders, riders beat bows, and bows beat pikes;").And.Contain("orsk is mostly riders, which pikes beat"));
+            var mixed = Countered(true);
+            foreach (var a in mixed.World.ArmiesOf("orsk")) { a.Soldiers = 0; a.Add(UnitType.Riders, 10); a.Add(UnitType.Bows, 10); a.Add(UnitType.Pikes, 10); }
+            Assert.That(WritFacts.CountersLine(mixed.World, "valen"), Does.Not.Contain("orsk"), "a mixed rival is not named");
+            Assert.That(WritFacts.CountersLine(Countered(false).World, "valen"), Is.Null, "off");
+            Assert.That(WritFacts.CountersLine(Countered(true, types: false).World, "valen"), Is.Null, "no unit types, no line");
+        }
+
+        [Test]
+        public void CountersLine_AMarchNamesTheLargestTypeAmongTheEnemyArmiesThere()
+        {
+            string Detail(Game g)
+            {
+                var w = g.World;
+                var host = ArmyOf(g, "valen");
+                var orsk = ArmyOf(g, "orsk");
+                string next = WritLegality.ArmyMoves(w, "valen", host.Id).First(m => m.Action == Actions.March && m.Detail.Contains("next to us") && !m.Detail.StartsWith("ours")).Target;
+                orsk.Location = next;
+                return WritLegality.ArmyMoves(w, "valen", host.Id).Single(m => m.Action == Actions.March && m.Target == next).Detail;
+            }
+            Assert.That(Detail(Countered(true)), Does.Contain("enemy armies 30, mostly riders"));
+            Assert.That(Detail(Countered(false)), Does.Contain("enemy armies 30").And.Not.Contain("mostly"), "off");
+        }
+
         // --- Pacing: a stalemate counter that reads war score and land by treaty, off by default -----
 
         // valen at war with orsk from turn 2; orsk's two other provinces pass to valen by holding on turns 2 and 3.

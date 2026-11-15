@@ -246,10 +246,19 @@ namespace GreyBoxStrategy
             if (world.Rules.Fog)
             {
                 string seen = ArmySight.ArmiesThere(world, countryId, provinceId);
-                return $"{what}; {where}" + (seen != null ? $"; {seen}" : "");
+                bool scouted = seen != null && p.Info.Terrain != Terrain.Forest && ArmySight.Scouts(world, countryId, provinceId);
+                return $"{what}; {where}" + (seen != null ? $"; {seen}" + (scouted ? MostlyThere(world, countryId, provinceId) : "") : "");
             }
             int armies = world.ArmiesAt(provinceId).Where(a => a.Owner != countryId).Sum(a => a.Soldiers);
-            return $"{what}; {where}" + (armies > 0 ? $"; enemy armies {armies}" : "");
+            return $"{what}; {where}" + (armies > 0 ? $"; enemy armies {armies}" + MostlyThere(world, countryId, provinceId) : "");
+        }
+
+        // With the counters line (R3), the largest type among the enemy armies in a march's province: ", mostly pikes".
+        private static string MostlyThere(World world, string countryId, string provinceId)
+        {
+            if (!world.Rules.UnitTypes || !world.Rules.CountersLine) return "";
+            var t = Units.Largest(UnitMix.Of(world.ArmiesAt(provinceId).Where(a => a.Owner != countryId)));
+            return t is UnitType u ? $", mostly {Units.Name(u)}" : "";
         }
 
         /// <summary>

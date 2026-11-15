@@ -209,6 +209,14 @@ namespace GreyBoxStrategy
         public bool UnitTypes = false;
 
         /// <summary>
+        /// With <see cref="UnitTypes"/> on, the counter rule in the rulers' own facts: the court reads one line saying
+        /// what beats what and what each rival it names is mostly, and a march order names the largest type among the
+        /// enemy armies it can see there. The recruit orders' descriptions say the same, but a model served by Ollama
+        /// never reads the schema. Off by default until an A/B run with the models.
+        /// </summary>
+        public bool CountersLine = false;
+
+        /// <summary>
         /// R3, rules v2 3.5: every army has a general with a trait, which counts in its battles and marches.
         /// Off by default. Seven of the page's ten traits; siegewright, forager and marshal wait for sieges,
         /// supply and army sizes.
