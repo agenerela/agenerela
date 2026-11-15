@@ -152,6 +152,10 @@ namespace GreyBoxStrategy
         /// <summary>With generals: each side's commander's strength factor (1 with none) and the report's line, "Maren the Wary held firm (+10%)", or null.</summary>
         public double AttackGeneral = 1, DefenceGeneral = 1;
         public string GeneralNote;
+        /// <summary>With unit types (R3): each side's soldiers by type as the battle began (a militia or garrison as pikes); null without them.</summary>
+        public UnitMix? AttackerMix, DefenderMix;
+        /// <summary>With generals (R3): each side's commander as the battle began, "Maren the Wary", or null for none.</summary>
+        public string AttackerCommander, DefenderCommander;
         public int AttackerLost;
         public int DefenderLost;
         public bool AttackerWon;

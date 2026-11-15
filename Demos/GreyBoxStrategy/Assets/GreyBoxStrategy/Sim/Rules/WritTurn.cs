@@ -741,10 +741,13 @@ namespace GreyBoxStrategy
             double attackBase = att, defenceBase = def;
             string counterNote = null;
             double attackCounter = 1, defenceCounter = 1;
+            UnitMix? attackerMix = null, defenderMix = null;
             if (r.UnitTypes)
             {
                 var aMix = UnitMix.Of(attackers);
                 var dMix = UnitMix.Of(defenders, fixedDefence);
+                attackerMix = aMix;
+                defenderMix = dMix;
                 attackBase = Units.Strength(r, aMix, dMix);
                 defenceBase = Units.Strength(r, dMix, aMix);
                 attackCounter = Units.Plain(r, aMix) > 0 ? attackBase / Units.Plain(r, aMix) : 1;
@@ -795,6 +798,10 @@ namespace GreyBoxStrategy
                 AttackGeneral = attackGeneral,
                 DefenceGeneral = defenceGeneral,
                 GeneralNote = generalNote,
+                AttackerMix = attackerMix,
+                DefenderMix = defenderMix,
+                AttackerCommander = attackLead?.Title,
+                DefenderCommander = defenceLead?.Title,
             };
             bool attackerWon = attack > defence;
             double attCas = r.Generals ? GeneralTraits.Casualties(r, attackLead, true) : 1;

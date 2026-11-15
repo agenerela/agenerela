@@ -740,6 +740,40 @@ namespace GreyBoxStrategy.Tests
         }
 
         [Test]
+        public void ABattleRecord_KeepsEachSidesMixAndCommander_AsTheBattleBegan()
+        {
+            BattleRecord Fight(bool on)
+            {
+                var r = on ? Typed() : WritRules();
+                r.Generals = on;
+                var g = NewWrits(1, r);
+                Turn(g);
+                var host = ArmyOf(g, "valen");
+                host.Soldiers = 0;
+                host.Add(UnitType.Riders, 60);
+                var target = g.World.ProvincesOf("orsk").OrderBy(p => p.Id).First();
+                var orsk = ArmyOf(g, "orsk");
+                orsk.Soldiers = 0;
+                orsk.Add(UnitType.Pikes, 30);
+                orsk.Add(UnitType.Bows, 20);
+                orsk.Location = target.Id;
+                host.Location = target.Id;
+                War(g, "valen", "orsk");
+                var report = Turn(g);
+                return report.BattleRecords.First(b => b.Province == target.Id);
+            }
+            var battle = Fight(on: true);
+            var valen = battle.Attacker == "valen" ? battle.AttackerMix : battle.DefenderMix;
+            var orsk = battle.Attacker == "valen" ? battle.DefenderMix : battle.AttackerMix;
+            Assert.That((valen?.Riders, valen?.Total), Is.EqualTo((60, 60)), "before the losses");
+            Assert.That((orsk?.Pikes, orsk?.Bows), Is.EqualTo((30 + (battle.Attacker == "valen" ? battle.Militia : 0), 20)));
+            Assert.That(battle.AttackerCommander, Does.Contain(" the "));
+            Assert.That(battle.DefenderCommander, Does.Contain(" the "));
+            var off = Fight(on: false);
+            Assert.That((off.AttackerMix, off.DefenderMix, off.AttackerCommander, off.DefenderCommander), Is.EqualTo(((UnitMix?)null, (UnitMix?)null, (string)null, (string)null)), "off");
+        }
+
+        [Test]
         public void ABattle_CountsTheCounter_AndTheReportNamesIt()
         {
             var g = NewWrits(1, Typed());
