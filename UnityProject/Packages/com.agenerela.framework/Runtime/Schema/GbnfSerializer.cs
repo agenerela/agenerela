@@ -51,9 +51,65 @@ namespace Agenerela
                 else
                 {
                     var alternatives = new List<string> (field.AllowedValues.Count);
-                    
+                    foreach (var value in field.AllowedValues)
+                    {
+                        alternatives.Add(GbnfTermina(JsonQuote(value)));
+                    }
+
+                    AppendRule(grammar, "value-" + i, string.Join(" | ", alternatives));
                 }
             }
+
+            if (fields.Count > 0)
+            {
+                grammar.Append('\n');
+                AppendRule(grammar, "json-string", GbnfTerminal("\"") + " json-char " + GbnfTerminal("\n"));
+            }
+
+            grammar.Append( @"json-char ::= [^""\\\x7F\x00-\x1F] | 
+            [\\] ([""\\bfnrt] | ""u"" [0-9a-fA-F]{4})").Append('\n');
+
+            grammar.Append(@"ws ::= | "" "" | ""\n"" [ \t]{0,20}").Append('\n');
+
+            return grammar.ToString();
+        }
+
+        private static void AppendFieldSequenceRules(StringBuilder grammar, IReadOnlyList<SchemaField> fields)
+        {
+            
+        }
+        
+        private static void Validate(IReadOnlyList<SchemaField> fields)
+        {
+            
+        }
+
+        private static void AppendRule(StringBuilder grammar, string name, string expression)
+        {
+            
+        }
+        private static string JsonQuote(string value)
+        {
+            
+        }
+
+        private static void AppendJsonUnicodeEscape(StringBuilder output, char value)
+        {
+            
+        }
+        private static string GbnfTerminal(string value)
+        {
+            
+        }
+
+        private static void AppendHex4(StringBuilder output, int value)
+        {
+            
+        }
+
+        private static void AppendHex8(StringBuilder output, int value)
+        {
+            
         }
     }    
 }
