@@ -171,9 +171,14 @@ namespace GreyBoxStrategy
                 if (paths[at].Count >= range) continue;
                 // A province held against us is where a march fights; it goes no further through it.
                 if (at != from && Blocks(world, countryId, world.Province(at))) continue;
+                // A fort holds the road: a march stops beside an enemy fort, and an army already there may only
+                // step to the fort or back into our land.
+                bool held = HeldByFort(world, countryId, at);
+                if (at != from && held) continue;
                 foreach (string n in world.Map.Neighbours(at))
                 {
                     if (paths.ContainsKey(n) || !Passable(world, countryId, world.Province(n))) continue;
+                    if (held && world.Province(n).Controller != countryId && !HoldsTheRoad(world, countryId, world.Province(n))) continue;
                     var path = new List<string>(paths[at]) { n };
                     paths[n] = path;
                     queue.Enqueue(n);
@@ -181,6 +186,19 @@ namespace GreyBoxStrategy
             }
             paths.Remove(from);
             return paths;
+        }
+
+        /// <summary>With <see cref="GameRules.FortsHoldTheRoad"/>: an enemy's walled province, held by a country we are at war with, that no one besieges.</summary>
+        public static bool HoldsTheRoad(World world, string countryId, Province p) =>
+            world.Rules.FortsHoldTheRoad && p.Forts > 0 && p.SiegedBy == null && p.Controller != null && p.Controller != countryId
+            && world.AtWar(countryId, p.Controller);
+
+        /// <summary>With <see cref="GameRules.FortsHoldTheRoad"/>: whether a province not ours borders a fort that holds the road against us.</summary>
+        public static bool HeldByFort(World world, string countryId, string provinceId)
+        {
+            if (!world.Rules.FortsHoldTheRoad) return false;
+            var p = world.Province(provinceId);
+            return p.Controller != countryId && world.Neighbours(p).Any(n => HoldsTheRoad(world, countryId, n));
         }
 
         /// <summary>Whether a march must stop in this province to fight: neutral land with a garrison, or land held by an enemy.</summary>

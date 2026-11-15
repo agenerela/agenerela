@@ -29,6 +29,11 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm R3: a fort holds the road, and a siege stops income** (#20), each behind its own switch, off by
+  default (`GameRules.FortsHoldTheRoad`, `SiegeStopsIncome`). A march stops beside an enemy fort no one besieges,
+  and from there may only besiege it or go back; a besieged province gives its owner nothing. A battle record now
+  keeps each side's unit mix and commander as the battle began, for the replay. Scripted only.
+
 - **Painted Realm R3: every army rule on at once, a first live look** (#20). Six pairs on `qwen3.5:4b`: no illegal
   answers and no extra model time, more battles and fewer treaties; every siege but one ended the turn it began, and
   armies left holding abroad starved where they stood, a rule bug fixed in its own PR. No default changes. Results in

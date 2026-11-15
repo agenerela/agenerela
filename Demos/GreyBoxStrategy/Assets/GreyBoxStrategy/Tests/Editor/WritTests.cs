@@ -740,6 +740,43 @@ namespace GreyBoxStrategy.Tests
         }
 
         [Test]
+        public void ABattleRecord_KeepsEachSidesMixAndCommander_AsTheBattleBegan()
+        {
+            BattleRecord Fight(bool on)
+            {
+                var r = on ? Typed() : WritRules();
+                r.Generals = on;
+                var g = NewWrits(1, r);
+                Turn(g);
+                var host = ArmyOf(g, "valen");
+                host.Soldiers = 0;
+                host.Add(UnitType.Riders, 60);
+                var target = g.World.ProvincesOf("orsk").OrderBy(p => p.Id).First();
+                var orsk = ArmyOf(g, "orsk");
+                orsk.Soldiers = 0;
+                orsk.Add(UnitType.Pikes, 30);
+                orsk.Add(UnitType.Bows, 20);
+                g.World.Country("valen").Army = g.World.ArmiesOf("valen").Sum(x => x.Soldiers);
+                g.World.Country("orsk").Army = g.World.ArmiesOf("orsk").Sum(x => x.Soldiers);
+                orsk.Location = target.Id;
+                host.Location = target.Id;
+                War(g, "valen", "orsk");
+                var report = Turn(g);
+                return report.BattleRecords.First(b => b.Province == target.Id);
+            }
+            var battle = Fight(on: true);
+            var valen = battle.Attacker == "valen" ? battle.AttackerMix : battle.DefenderMix;
+            var orsk = battle.Attacker == "valen" ? battle.DefenderMix : battle.AttackerMix;
+            Assert.That(valen.HasValue && orsk.HasValue, Is.True, "both mixes kept");
+            Assert.That((valen.Value.Riders, valen.Value.Total), Is.EqualTo((60, 60)), "before the losses");
+            Assert.That((orsk.Value.Pikes, orsk.Value.Bows), Is.EqualTo((30 + (battle.Attacker == "valen" ? battle.Militia : 0), 20)));
+            Assert.That(battle.AttackerCommander, Does.Contain(" the "));
+            Assert.That(battle.DefenderCommander, Does.Contain(" the "));
+            var off = Fight(on: false);
+            Assert.That((off.AttackerMix, off.DefenderMix, off.AttackerCommander, off.DefenderCommander), Is.EqualTo(((UnitMix?)null, (UnitMix?)null, (string)null, (string)null)), "off");
+        }
+
+        [Test]
         public void ABattle_CountsTheCounter_AndTheReportNamesIt()
         {
             var g = NewWrits(1, Typed());
@@ -1294,6 +1331,95 @@ namespace GreyBoxStrategy.Tests
             host.Add(UnitType.Riders, 5);
             host.Location = near.Id;
             Assert.That(ArmySight.Sighting(w, "valen", orsk), Does.Contain("(30 riders)"), "our riders scout it");
+        }
+
+        // --- R3: a fort holds the road, and a siege stops income; both off by default ------------------
+
+        // A small road beside an orsk fort F: valen's Y, then X (neutral, no garrison) bordering F, then Z (neutral,
+        // no garrison) beyond X. valen's host stands at Y; valen and orsk are at war.
+        private static (Game g, Army host, Province f, Province x, Province y, Province z) Road(bool on)
+        {
+            var r = WritRules();
+            r.Sieges = true;
+            r.FortsHoldTheRoad = on;
+            var g = NewWrits(1, r);
+            Turn(g);
+            War(g, "valen", "orsk");
+            var w = g.World;
+            foreach (var f in w.ProvincesOf("orsk").OrderBy(p => p.Id).ToList())
+            foreach (var x in w.Neighbours(f).Where(n => n.Owner != "orsk").OrderBy(p => p.Id))
+            {
+                var rest = w.Neighbours(x).Where(n => n != f && !w.Neighbours(f).Contains(n) && n.Owner != "orsk" && !n.IsCapital).OrderBy(p => p.Id).ToList();
+                if (rest.Count < 2 || x.IsCapital) continue;
+                Province y = rest[0], z = rest[1];
+                f.Forts = Math.Max(1, f.Forts);
+                x.Owner = null; x.Occupier = null; x.Garrison = 0;
+                y.Owner = "valen"; y.Occupier = null; y.Garrison = 0;
+                z.Owner = null; z.Occupier = null; z.Garrison = 0;
+                var host = ArmyOf(g, "valen");
+                host.Location = y.Id;
+                return (g, host, f, x, y, z);
+            }
+            Assert.Fail("no road beside an orsk province on this map");
+            return default;
+        }
+
+        [Test]
+        public void FortsHoldTheRoad_NoMarchIsOfferedPastAnEnemyFort_AndBesideItOnlyTheFortOrOurLand()
+        {
+            var (g, host, f, x, y, z) = Road(on: true);
+            var w = g.World;
+            var paths = WritLegality.Paths(w, "valen", y.Id, 3);
+            Assert.That(paths.ContainsKey(x.Id), Is.True, "the land beside the fort can be reached");
+            Assert.That(paths.Values.Any(p => p.Count > 1 && p[0] == x.Id), Is.False, "no march goes on through it");
+            host.Location = x.Id;
+            var beside = WritLegality.Paths(w, "valen", x.Id, 3);
+            Assert.That(beside.Values.All(p => p[0] == f.Id || w.Province(p[0]).Controller == "valen"), Is.True, "only the fort, or back into our land");
+            Assert.That(beside.ContainsKey(f.Id), Is.True, "the fort can be besieged");
+
+            var (offGame, _, _, offX, offY, offZ) = Road(on: false);
+            Assert.That(WritLegality.Paths(offGame.World, "valen", offY.Id, 3).Values.Any(p => p.Count > 1 && p[0] == offX.Id), Is.True,
+                "off: the road through the land beside the fort is open");
+            Assert.That(WritLegality.Paths(offGame.World, "valen", offX.Id, 3).ContainsKey(offZ.Id), Is.True, "off: from beside it, anywhere");
+        }
+
+        [Test]
+        public void FortsHoldTheRoad_AMarchUnderWayStopsBesideAnEnemyFort_AndABesiegedFortHoldsNothing()
+        {
+            Army Marched(bool on, bool besieged)
+            {
+                var (g, host, f, x, y, z) = Road(on);
+                if (besieged) f.SiegedBy = "kesh";
+                host.Wake.Clear();
+                host.Destination = z.Id;
+                host.Path.Clear();
+                host.Path.AddRange(new[] { x.Id, z.Id });
+                host.StepTurnsLeft = 1;
+                Turn(g);
+                return host;
+            }
+            var held = Marched(on: true, besieged: false);
+            Assert.That((held.Marching, held.Wake.Any(r => r.StartsWith("held up by "))), Is.EqualTo((false, true)), "stopped beside the fort, waiting for orders");
+            Assert.That(Marched(on: false, besieged: false).Wake.Any(r => r.StartsWith("held up")), Is.False, "off: the march goes on");
+            Assert.That(Marched(on: true, besieged: true).Wake.Any(r => r.StartsWith("held up")), Is.False, "a fort under siege holds no road");
+        }
+
+        [Test]
+        public void SiegeStopsIncome_ABesiegedProvinceGivesItsOwnerNothing()
+        {
+            int Income(bool on, bool besieged)
+            {
+                var r = WritRules();
+                r.Sieges = true;
+                r.SiegeStopsIncome = on;
+                var g = NewWrits(1, r);
+                var p = g.World.ProvincesOf("valen").OrderBy(q => q.Id).First();
+                if (besieged) p.SiegedBy = "orsk";
+                return g.World.Income(g.World.Country("valen"));
+            }
+            int full = Income(on: true, besieged: false);
+            Assert.That(Income(on: true, besieged: true), Is.EqualTo(full - WritRules().IncomePerProvince));
+            Assert.That(Income(on: false, besieged: true), Is.EqualTo(full), "off: income as before");
         }
 
         // --- Pacing: a stalemate counter that reads war score and land by treaty, off by default -----

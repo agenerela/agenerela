@@ -577,7 +577,15 @@ namespace GreyBoxStrategy
                 a.Location = to;
                 if (a.Path.Count == 0) continue; // won a battle on the border: it completes its step, then waits for orders
                 a.Path.RemoveAt(0);
-                if (a.Path.Count == 0)
+                if (a.Path.Count > 0 && WritLegality.HeldByFort(World, a.Owner, to))
+                {
+                    // A fort holds the road (rules v2 3.7): a march that reaches land beside an enemy fort stops there.
+                    var fort = World.Neighbours(World.Province(to)).First(n => WritLegality.HoldsTheRoad(World, a.Owner, n));
+                    a.Stop($"held up by {fort.Id}'s walls");
+                    report.Resolution.Add($"{a.Id} is held up at {to} by the walls of {fort.Id}.");
+                    Tell(a.Owner, 1, $"{a.Id} is held up at {to} by the walls of {fort.Id}.");
+                }
+                else if (a.Path.Count == 0)
                 {
                     a.Destination = null;
                     a.Wake.Add("arrived");
@@ -733,10 +741,13 @@ namespace GreyBoxStrategy
             double attackBase = att, defenceBase = def;
             string counterNote = null;
             double attackCounter = 1, defenceCounter = 1;
+            UnitMix? attackerMix = null, defenderMix = null;
             if (r.UnitTypes)
             {
                 var aMix = UnitMix.Of(attackers);
                 var dMix = UnitMix.Of(defenders, fixedDefence);
+                attackerMix = aMix;
+                defenderMix = dMix;
                 attackBase = Units.Strength(r, aMix, dMix);
                 defenceBase = Units.Strength(r, dMix, aMix);
                 attackCounter = Units.Plain(r, aMix) > 0 ? attackBase / Units.Plain(r, aMix) : 1;
@@ -787,6 +798,10 @@ namespace GreyBoxStrategy
                 AttackGeneral = attackGeneral,
                 DefenceGeneral = defenceGeneral,
                 GeneralNote = generalNote,
+                AttackerMix = attackerMix,
+                DefenderMix = defenderMix,
+                AttackerCommander = attackLead?.Title,
+                DefenderCommander = defenceLead?.Title,
             };
             bool attackerWon = attack > defence;
             double attCas = r.Generals ? GeneralTraits.Casualties(r, attackLead, true) : 1;

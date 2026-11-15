@@ -146,12 +146,13 @@ namespace GreyBoxStrategy
 
         /// <summary>
         /// Gold a turn. In the writs turn an occupied province gives its owner nothing and its
-        /// occupier half (v2 5.1); otherwise every province owned gives the same.
+        /// occupier half (v2 5.1), and with <see cref="GameRules.SiegeStopsIncome"/> a besieged one gives
+        /// its owner nothing (v2 3.7); otherwise every province owned gives the same.
         /// </summary>
         public int Income(Country c)
         {
             if (Rules.Turn != TurnStyle.Writs) return ProvinceCount(c.Id) * Rules.IncomePerProvince;
-            int own = ProvinceList.Count(p => p.Owner == c.Id && p.Occupier == null);
+            int own = ProvinceList.Count(p => p.Owner == c.Id && p.Occupier == null && !(Rules.SiegeStopsIncome && p.SiegedBy != null));
             int occupied = ProvinceList.Count(p => p.Occupier == c.Id);
             return own * Rules.IncomePerProvince + occupied * Rules.IncomePerProvince / 2;
         }
