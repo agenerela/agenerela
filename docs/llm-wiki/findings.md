@@ -4366,3 +4366,29 @@ GreyBoxStrategy (#20), `GameRules.CountersLine` with unit types on in both arms.
 - **Decision (the tech lead's rule, set before the second six pairs were read):** the share held, and illegal answers, time, treaties and the aggression and peace η² were not worse beyond noise, so `CountersLine` is on by default from 15 November; it does nothing unless unit types are on. The recruit η² drop is the cost, recorded here for the lead. `-strategyRules "CountersLine=false"` runs the old prompt as an arm. Unit types themselves stay off.
 - **What it can and cannot show:** twelve games an arm capped at 40 turns, one model; the counter share is a large count, the η² differences are from 60 seat-games an arm.
 
+### Painted Realm R3, all army rules on, run again with the hunger wake and the siege floor: sieges now last and are relieved; armies are woken to starve and mostly attack on (15 November 2026)
+
+The all-on arm of "all army rules on, a first look" (15 November), run again on the fixes it led to (#322: an army abroad is asked again as its stores run low and each turn it starves; a siege lasts two turns at least). All five rules, no counters line, so it compares with the first look: `-strategyRules "UnitTypes=true;Generals=true;Sieges=true;Supply=true;Fog=true"`, seeds 1 to 6, one game a block, the same table, model, card and settings. Every block ran on test at 2e35705 (#322 and #323 in, #326's counters line not yet), from a checkout that did not change during the run (03:58 to 04:33). **The control was not rerun:** the all-off games of the first look (00:30 to 01:40, this session, the same machine and card) stand as the control, so the comparison is two to three hours apart rather than interleaved, and the fixes cannot touch an arm with supply and sieges off. Kit and data: `.scratch/realm-build-map/allrules-live/` (`rerun/`; `python report.py combined2`).
+
+| | control (first look) | all on, first look | all on, again |
+|---|---|---|---|
+| Illegal answers; refused by the rules | 0; 4.7% | 0; 5.6% | 0; 5.6% |
+| Model seconds a turn | 8.23 | 7.77 | 7.85 (paired −0.38, SD 0.55) |
+| Battles a game; wars | 82; 10.0 | 102; 8.0 | 103; 8.8 |
+| Sieges begun; taken; lasted past the turn they began; relieved (broken) | – | 15; 14; 1; 1 | 18; 5; 5; 13 |
+| Soldiers lost to hunger; armies starved out; starving 3+ turns in one place | – | 381; 16; 16 | 592; 20; 25 |
+| Provinces changing hands a game; turns with no change | 17.2; 72% | 16.0; 75% | 14.7; 77% |
+| Treaties a game | 4.8 | 2.3 | 3.2 |
+
+How the marshals answered the hunger wakes (the march's target as the order read it):
+
+| Wake | Attacked (enemy land) | Marched elsewhere (neutral or occupied) | Went home | Held |
+|---|---|---|---|---|
+| "stores running low", 140 | 84 | 33 | 14 | 9 |
+| "starving", 122 | 71 | 20 | 13 | 18 |
+
+- **Sieges work as meant now:** every siege taken lasted past the turn it began, and most were relieved (13 of 18 broken). Before the floor, 14 of 15 fell the turn they began.
+- **The hunger wake fires, and the 4B mostly attacks on.** Asked as their stores ran low or while starving, the marshals went home about one time in ten and attacked deeper six times in ten. Hunger is worse than in the first look (592 soldiers lost against 381; 25 stretches of starving in place against 16, the longest ten turns: `a2`'s aldo_host, asked on turns 15 and 16 and holding, then not asked again until it starved out).
+- **About half of the starving army-turns got no ask at all** (138 of 252): the wake adds the army to the queue, but the rules ask the most urgent armies first (a hostile army beside it, then size) within the writs, and a starving army is not ranked as urgent. That is a rules question, not a bug in the fix, and is put to the tech lead: a starving army first in the queue, or a standing order to go home when stores run out, would each be an A/B.
+- **What it can and cannot show:** six games an arm, 40 turns, a control from earlier in the session; enough to see that sieges now last and that hunger is not solved by asking, not enough for battles, land or treaties. No default changes.
+
