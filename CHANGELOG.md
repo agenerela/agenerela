@@ -29,6 +29,11 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: you may order any of your armies in the council, woken or not** (#20). `Game.Recall` asks the
+  rules for a holding army's orders ("recalled by the court", for a writ); the rule game recalls every army your
+  plan orders, refuses a plan with more army orders than the writs with the reason, and says any order not taken in
+  `RuleSession.PlanRefusals`. Model rulers never recall, and every recording replays as before.
+
 - **Painted Realm R3: the counters line, on whenever unit types are** (#20). The court's facts say what beats what
   and what each rival is mostly, and a march names the largest type it would meet. Twelve pairs on `qwen3.5:4b`:
   recruits that counter the type seen 20% → 67%, no illegal answers, nothing else measured worse beyond noise; the
