@@ -29,6 +29,12 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm R3: the counters line, on whenever unit types are** (#20). The court's facts say what beats what
+  and what each rival is mostly, and a march names the largest type it would meet. Twelve pairs on `qwen3.5:4b`:
+  recruits that counter the type seen 20% → 67%, no illegal answers, nothing else measured worse beyond noise; the
+  personas no longer differ in which types they buy. `GameRules.CountersLine`, on by default; unit types stay off.
+  Results in `findings.md`, 15 November.
+
 - **Painted Realm R3: a fort holds the road, and a siege stops income** (#20), each behind its own switch, off by
   default (`GameRules.FortsHoldTheRoad`, `SiegeStopsIncome`). A march stops beside an enemy fort no one besieges,
   and from there may only besiege it or go back; a besieged province gives its owner nothing. A battle record now

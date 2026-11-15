@@ -1300,6 +1300,14 @@ effect of 1% or more, and the counters turned the result of 6% of them.
 - Off, every prompt is exactly as before. A first live look (14 November, six pairs on `qwen3.5:4b`): no illegal
   answers and no extra model time, but the courts recruit mostly pikes and counter the type they see only 22% of the
   time (chance 33%), so the setting stays off; numbers in `findings.md`.
+- **The counters line** (`GameRules.CountersLine`, on by default since 15 November; it acts only with unit types).
+  The recruit orders' descriptions say what beats what, but a model served by Ollama never reads the schema, so the
+  court's facts now say it: "Pikes beat riders, riders beat bows, and bows beat pikes; orsk is mostly riders, which
+  pikes beat" (`WritFacts.CountersLine`, each rival the facts name that is mostly one type). A march's detail names
+  the largest type among the enemy armies there ("enemy armies 30, mostly riders"; with fog, only where our riders
+  scout). Twelve pairs: the courts counter the type they see 67% of the time against 20%, with nothing else
+  measured worse beyond noise; the cost is personas that no longer differ in which types they buy.
+  `-strategyRules "CountersLine=false"` runs without it.
 - Headless table runs take rule settings, `-strategyRules "UnitTypes=true"` (`GameSetup.Numbers`, never saved
   with a setup), for that run.
 
