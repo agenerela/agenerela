@@ -1343,7 +1343,7 @@ distance attrition). `GameRules.Supply`, off by default:
   seven turns.
 - Not built yet: allies' and passage land as supplied, healing springs, famine and the 100-soldier cap.
 - Scripted, 100 Classic games: 90 turns against 77 off (91 last standing, 5 stalemates, 4 unfinished); with
-  all four R3 rules, 84. Unmeasured live, so off.
+  all four R3 rules, 84. Off; a first live look at every army rule on is in `findings.md`, 15 November, with a rule fix and rerun owed.
 
 **R3, part six: what a country sees of a rival army** (14 November; rules v2 3.8, the lead's answer 12).
 `GameRules.Fog`, off by default, as rules data (`ArmySight`; the screen keeps its own `Fog`):

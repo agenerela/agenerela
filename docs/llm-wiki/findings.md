@@ -4320,3 +4320,25 @@ GreyBoxStrategy (#20), `GameRules.UnitTypes` (#306, #309) on the models before i
 - **Lines that name types,** 1,232 of them. Good: "Bows rise at ashby; I crush orsk's pikes before they strike again." "Riders strike bows; we raise forces to crush Merrow's garrison at Glimmerford." Wrong: "Pikes stand firm against bows; gold is dust, but Ilvarion's steel remains." (bows beat pikes). Repeated: "Pikes shall march to every province, for land is never given!"
 - **What it can and cannot show:** six games an arm, capped at 40 turns, so time, treaties and η² only within noise; the counter share is a large count (714 recruits) but from six games' worth of situations. No switch flips on it. The counter share is the thing to fix before unit types are on: a counters line in the court's facts ("orsk is mostly pikes: bows beat pikes") is the next A/B.
 
+### Painted Realm R3, all army rules on, a first look: legal and no slower, with more battles and fewer treaties; armies left holding abroad starve where they stand (15 November 2026)
+
+GreyBoxStrategy (#20), every R3 army rule at once before any is switched on: unit types, generals, sieges, supply and fog (#306, #309 to #311, #313, #314). `personas` table, five `qwen3.5:4b` seats with today's default options, RTX 5080 (Docker Ollama 0.40.14), `-strategyTurn writs -strategyCap 40`, Classic, conquest. Control (`c`, all off) against all on (`a`, `-strategyRules "UnitTypes=true;Generals=true;Sieges=true;Supply=true;Fog=true"`), the same seeds 1 to 6, one game a block, interleaved (c1 a1 … c6 a6, 00:30 to 01:40), on test at 250d85b. Kit and data: `.scratch/realm-build-map/allrules-live/`, `python report.py`.
+
+| | control | all on |
+|---|---|---|
+| Decisions; illegal answers; guard rewrites; orders refused by the rules | 3,435; 0; 20; 163 (4.7%) | 3,366; 0; 27; 188 (5.6%) |
+| Model seconds a turn | 8.23 | 7.77 (paired −0.46, SD 0.82 over 6 seeds: within) |
+| Wars declared, battles, a game | 10.0, 82 | 8.0, 102 |
+| Sieges begun; taken; broken; open at the end | – | 15; 14; 1; 0 |
+| Soldiers lost to hunger; armies starved out | – | 381 over 172 army-turns; 16 |
+| Provinces changing hands a game; turns with no change | 17.2; 72% | 16.0; 75% |
+| Treaties a game | 4.8 | 2.3 |
+| Lines that repeat one already said in the game | 21% | 19% |
+
+- **What works:** no illegal answer in 3,366 decisions with every rule on, and no slower. The orders refused by the rules rose by one point. The rulers' lines follow the new rules ("I raise taxes to fund pikes that will crush the bows and secure our starving borders").
+- **Sieges end the turn they begin.** 14 of 15 were taken the same turn: the Classic board's provinces have one fort, a siege of one fort takes 2 turns, and an army three times the garrison of 10 takes one off. Working as written; a siege only lasts on a capital or a fortified province, which this board has few of.
+- **A rule bug: armies left holding abroad starve where they stand.** 16 armies starved three turns or more in one place, the longest seven (`a5`'s morrow_host at harrow: held on turn 25 with full stores, empty on turn 32, starved to turn 38, never asked again). The supply rule never woke an army as its stores ran out (wake condition 6 of rules v2 1.3 was not built), so a hold given with full stores stood until the army died. Its own PR wakes it; the all-on arm is to be run again on it, so the hunger row and everything that depends on it (battles, land, treaties) are not a result yet.
+- **A typo in the facts:** with generals and supply both on, an army reads "led by Morrow the Forager,, stores 4 of 4"; the same PR fixes it.
+- **Treaties fell again** (4.8 to 2.3 a game; unit types alone, 4.2 to 2.5 on 14 November). Six games, within noise either time, but the same direction twice.
+- **What it can and cannot show:** six games an arm, capped at 40 turns, a first look; no default changes on it. The all-on arm with the hunger fix is the next run, and 15 pairs would make it a result.
+

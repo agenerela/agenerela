@@ -29,6 +29,11 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm R3: every army rule on at once, a first live look** (#20). Six pairs on `qwen3.5:4b`: no illegal
+  answers and no extra model time, more battles and fewer treaties; every siege but one ended the turn it began, and
+  armies left holding abroad starved where they stood, a rule bug fixed in its own PR. No default changes. Results in
+  `findings.md`, 15 November.
+
 - **Painted Realm replay: the council as the live game had it** (#20). `ArmySnapshot` now carries each army's mix,
   general, traits and stores, and `TurnSnapshot` each siege, so a replay's council shows the same pieces, generals,
   stores and siege tags as the live game did, and the turn's battle reports start from the exact mixes.
