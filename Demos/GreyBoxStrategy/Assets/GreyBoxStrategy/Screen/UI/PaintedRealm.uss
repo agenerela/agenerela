@@ -81,6 +81,10 @@
 .mix-pikes { background-color: rgb(206, 196, 168); }
 .mix-riders { background-color: rgb(214, 150, 84); }
 .mix-bows { background-color: rgb(132, 168, 112); }
+.mix-counts { font-size: 10px; color: rgb(190, 176, 146); white-space: normal; }
+.stores-name { font-size: 10px; color: rgb(190, 176, 146); margin-right: 4px; }
+.council-note { color: rgb(200, 186, 152); }
+.council-note.bad { color: rgb(232, 112, 96); }
 .army-general { font-size: 11px; -unity-font-style: italic; color: rgb(196, 182, 150); white-space: normal; }
 /* The first-turn help: a veil, notes beside what they explain, an ink line to each. */
 .help-veil { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(8, 6, 4, 0.45); }

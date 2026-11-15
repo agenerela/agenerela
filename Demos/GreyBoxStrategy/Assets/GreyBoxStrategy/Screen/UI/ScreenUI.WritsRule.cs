@@ -50,9 +50,35 @@ namespace GreyBoxStrategy.Realm
             return (court1 ? 1 : 0) + armies + (court2 ? 1 : 0);
         }
 
+        private Label Note(string text, string cls = null)
+        {
+            var l = new Label(text) { style = { whiteSpace = WhiteSpace.Normal, fontSize = 11, marginTop = 2, marginBottom = 4 } };
+            l.AddToClassList("council-note"); if (cls != null) l.AddToClassList(cls);
+            return l;
+        }
+
+        /// <summary>"The treasury runs dry in 2 turns": gold against the rules' income and upkeep; null while it holds.</summary>
+        public static string TreasuryLine(int gold, int income, int upkeep)
+        {
+            int net = income - upkeep;
+            if (net >= 0) return null;
+            if (gold < 0) return $"The treasury is empty ({net:+0;-0} a turn): below zero, 15% of the army deserts each turn.";
+            // Gold falls below zero on the first turn that gold + turns × net < 0.
+            int turns = gold / -net + 1;
+            return turns > 10 ? null : $"The treasury runs dry in {turns} turn{(turns == 1 ? "" : "s")} ({gold} gold, {net:+0;-0} a turn): below zero, 15% of the army deserts.";
+        }
+
+        private string Treasury(World w)
+        {
+            var c = w.Country(You);
+            return c == null ? null : TreasuryLine(c.Gold, w.Income(c), w.Upkeep(c));
+        }
+
         private void ShowWritsOrders(string status)
         {
             var req = OrdersRequest;
+            // 7. A march ordered now is drawn at once, lighter than one under way.
+            marchLines?.MarkDirtyRepaint();
             var w = req.World;
             orders.Clear();
             var head = new VisualElement(); head.AddToClassList("panel-head");
@@ -86,11 +112,18 @@ namespace GreyBoxStrategy.Realm
             else
             {
                 for (int k = 0; k < req.Writs; k++) { var pip = new VisualElement(); pip.AddToClassList("writ-pip"); pip.EnableInClassList("on", k < used); writs.Add(pip); }
-                writs.Add(new Label($"{used} of {req.Writs}") { style = { marginLeft = 6, fontSize = 12, color = new Color(0.86f, 0.8f, 0.66f) } });
+                writs.Add(new Label($"{used} of {req.Writs} used") { style = { marginLeft = 6, fontSize = 12, color = new Color(0.86f, 0.8f, 0.66f) } });
                 writs.tooltip = $"Writs a turn: {w.Rules.BaseWrits} + 1 for every {w.Rules.ProvincesPerWrit} provinces you own, at most {w.Rules.MaxWrits}. " +
                                 "The court's order takes one; each army awaiting orders takes one, the most urgent first, until one is left for the court; unused writs are lost.";
             }
             body.Add(writs);
+            // A turn with nothing to order says why, rather than leaving the buttons grey.
+            if (ArmiesWithWrits(req).Count == 0 && !req.Legal.Any(m => m.Action != Actions.None))
+                body.Add(Note("Nothing to order this turn: your court has no order it may give, and no army awaits orders. An army waits again when it arrives, fights, is blocked, its stores run low, or four turns pass."));
+            else if (!w.ArmiesOf(You).Any(a => a.Awaiting))
+                body.Add(Note("No army awaits orders this turn: an army waits again when it arrives, fights, is blocked, its stores run low, or four turns pass."));
+            // 6. The treasury, by the rules' own numbers: when it runs dry, and what that costs.
+            if (Treasury(w) is string dry) body.Add(Note(dry, "bad"));
 
             // Your advisor's proposal for the turn, when it is on: suggestions only.
             AdvisorSection(body, req);
@@ -254,12 +287,13 @@ namespace GreyBoxStrategy.Realm
             head.Add(new Label($"{Chronicle.Host(army.Id)} · {army.Soldiers}") { style = { fontSize = 12, unityFontStyleAndWeight = FontStyle.Bold } });
             // R3: its mix as three small bars, and its general; nothing more when the rules have neither.
             var st = hostState?.Army(army.Id);
-            if (st != null && st.HasMix) head.Add(new MixBars(st));
+            if (st != null && st.HasMix) { head.Add(new MixBars(st)); var mix = new Label(ArmyLook.Mix(st)); mix.AddToClassList("mix-counts"); head.Add(mix); }
             if (ArmyLook.Leader(st) is string leader) { var gl = new Label(ReplayBuilder.Title(st)) { tooltip = "Led by " + leader }; gl.AddToClassList("army-general"); head.Add(gl); }
             // R3's supply: a pip a turn of stores, half-filled for half a turn, and a warning when there are none.
             if (st != null && st.HasStores)
             {
                 var stores = new VisualElement { tooltip = ArmyLook.Stores(st) }; stores.AddToClassList("stores");
+                var named = new Label("stores"); named.AddToClassList("stores-name"); stores.Add(named);
                 for (int k = 0; k < st.MaxHalfStores / 2; k++)
                 {
                     var pip = new VisualElement(); pip.AddToClassList("store-pip");
@@ -282,7 +316,8 @@ namespace GreyBoxStrategy.Realm
             }
             else if (waits) { state = $"at {Cap(army.Location)}, awaiting, but no writ left: it holds"; row.AddToClassList("no-writ"); }
             else if (army.Marching) state = $"marching to {Cap(army.Destination)}" + (TurnsLeft != null && hostState?.Army(army.Id) is ArmyState s ? $", {TurnsLeft(s)} turn{(TurnsLeft(s) == 1 ? "" : "s")}" : "");
-            else state = $"holding at {Cap(army.Location)}";
+            // The rules ask an army for orders only when it wakes: until then it is not yours to order (#20, item 8).
+            else state = $"holding at {Cap(army.Location)} until it wakes";
             // R3's sieges: an army besieging where it stands says so, with the siege's turns.
             if (ArmyLook.SiegeTag(hostState, IndexOf(army.Location)) is string siege && hostState.SiegedBy[IndexOf(army.Location)] == army.Owner)
                 state += $"; besieging it: {siege.Substring(0, 1).ToLowerInvariant()}{siege.Substring(1)}";

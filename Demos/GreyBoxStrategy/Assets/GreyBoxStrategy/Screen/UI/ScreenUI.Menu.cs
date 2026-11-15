@@ -158,7 +158,7 @@ namespace GreyBoxStrategy.Realm
             sub.AddToClassList("menu-sub"); card.Add(sub);
             card.Add(new GiltRule());
             card.Add(BigButton("New game", "Watch model rulers, or rule a country against them, on Classic or a generated world", newGame));
-            card.Add(BigButton("Replay", replayTitle + " · no model or server needed", replay));
+            card.Add(BigButton("Replay", replayTitle + " · plays without a server", replay));
             card.Add(BigButton("Settings", "Display, UI scale, speed, sound", settings));
             card.Add(BigButton("Quit", null, quit));
             card.Add(new GiltRule());
@@ -177,10 +177,12 @@ namespace GreyBoxStrategy.Realm
             var watchB = BigButton("Watch", WatchNote(choice.Writs), null);
             var ruleB = BigButton("Rule", "You rule one country against the others", null);
             var crests = new VisualElement(); crests.AddToClassList("menu-row");
+            Button scriptedB = null;
             void Mode(bool rule)
             {
                 choice.Rule = rule;
                 watchB.EnableInClassList("pick", !rule); ruleB.EnableInClassList("pick", rule);
+                if (scriptedB != null) scriptedB.text = ScriptedLabel(rule);
                 crests.SetEnabled(rule);
             }
             watchB.clicked += () => Mode(false); ruleB.clicked += () => Mode(true);
@@ -222,7 +224,7 @@ namespace GreyBoxStrategy.Realm
             }
             card.Add(crests);
 
-            card.Add(Section2("THE RULERS", "models on the server in " + Gateway.UrlVariable + ", or the rules' scripted rulers"));
+            card.Add(Section2("THE RULERS", "language models on a server, or the rules' own scripted rulers"));
             var rulersNote = new Label(); rulersNote.AddToClassList("src"); rulersNote.style.whiteSpace = WhiteSpace.Normal;
             var model = new TextField("Model") { value = choice.Model }; model.AddToClassList("menu-field");
             VisualElement advisorRow = null; Label advisorNote = null;
@@ -230,13 +232,17 @@ namespace GreyBoxStrategy.Realm
             {
                 choice.Scripted = scripted;
                 model.SetEnabled(!scripted);
+                // The model's name matters only when models rule.
+                model.style.display = scripted ? DisplayStyle.None : DisplayStyle.Flex;
                 // The advisor is a model: with scripted rulers there is none, and no switch for it.
                 if (advisorRow != null) advisorRow.style.display = advisorNote.style.display = scripted ? DisplayStyle.None : DisplayStyle.Flex;
                 rulersNote.text = scripted
-                    ? "Scripted: the rules' own rulers, no model and no server. Watching, the game is made at once and replayed; ruling, they answer through the same agents a model would."
-                    : "Models: each ruler is a model on the server, behind the RTX 5080's lock; the game is played as you watch.";
+                    ? "Scripted: the rules' own rulers, no model and no server. Watching, the game is made at once and replayed; ruling, they are your rivals and answer through the same agents a model would."
+                    : "Models: each ruler is a language model on the server; the game is played as you watch.";
             }
-            card.Add(Steps("Rulers", new[] { "Models, live", "Scripted, a replay" }, choice.Scripted ? 1 : 0, i => Rulers(i == 1)));
+            var rulersRow = Steps("Rulers", new[] { "Models, live", ScriptedLabel(choice.Rule) }, choice.Scripted ? 1 : 0, i => Rulers(i == 1));
+            scriptedB = rulersRow.Query<Button>().ToList().Last();
+            card.Add(rulersRow);
             card.Add(rulersNote);
             advisorNote = new Label(); advisorNote.AddToClassList("src"); advisorNote.style.whiteSpace = WhiteSpace.Normal;
             void AdvisorChoice(int i)
@@ -444,6 +450,9 @@ namespace GreyBoxStrategy.Realm
             var backB = new Button(back) { text = "Back" }; backB.AddToClassList("menu-button"); backB.AddToClassList("quiet");
             var foot = Row(backB); foot.style.marginTop = 10; card.Add(foot);
         }
+
+        /// <summary>Scripted rulers are your rivals when you rule, and a game made at once and replayed when you watch.</summary>
+        private static string ScriptedLabel(bool rule) => rule ? "Scripted rivals" : "Scripted, a replay";
 
         private static VisualElement Steps(string label, string[] options, int selected, Action<int> chose)
         {

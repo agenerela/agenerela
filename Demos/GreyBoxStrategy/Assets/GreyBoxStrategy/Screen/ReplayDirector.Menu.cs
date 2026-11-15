@@ -104,10 +104,18 @@ namespace GreyBoxStrategy.Realm
 
         private readonly NewGameChoice newGame = new NewGameChoice();
 
+        /// <summary>The replay's line on the main menu, in a player's words: who won and how, never ids or model names.</summary>
+        private string MenuTitle()
+        {
+            if (game?.Result == null) return game?.Title;
+            var s = EndSummary.From(game, CountryLook.NameOf);
+            return s.Winner == null ? $"A game of {s.Turns} turns" : $"{CountryLook.NameOf(s.Winner)} wins {s.How}, after {s.Turns} turns";
+        }
+
         /// <summary>The game's first screen.</summary>
         public void ShowMainMenu()
         {
-            ui.ShowMainMenu(game.Title, ShowNewGame, StartReplay, () => OpenSettings(ShowMainMenu), Quit);
+            ui.ShowMainMenu(MenuTitle(), ShowNewGame, StartReplay, () => OpenSettings(ShowMainMenu), Quit);
         }
 
         /// <summary>Set by the end screen's "New game": the next start opens New game, not the main menu.</summary>

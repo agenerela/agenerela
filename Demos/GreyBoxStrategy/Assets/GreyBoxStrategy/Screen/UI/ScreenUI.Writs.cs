@@ -277,6 +277,25 @@ namespace GreyBoxStrategy.Realm
                 generateVisualContent += Draw;
             }
 
+            /// <summary>Marches ordered this council and not yet under way: a lighter stroke from the army to its target.</summary>
+            private List<(string owner, List<Vector2> pts)> Planned()
+            {
+                var lines = new List<(string, List<Vector2>)>();
+                var req = Owner?.OrdersRequest; var s = Owner?.hostState;
+                if (req == null || s == null || Owner.Plan == null) return lines;
+                foreach (var kv in Owner.Plan.Armies.Where(kv => kv.Value.Action == Actions.March))
+                {
+                    var a = s.Army(kv.Key); var army = req.World.FindArmy(kv.Key);
+                    if (a == null || army == null) continue;
+                    var paths = WritLegality.Paths(req.World, army.Owner, army.Location, req.World.Rules.MarchRange);
+                    if (!paths.TryGetValue(kv.Value.Target, out var path)) continue;
+                    var pts = new List<Vector2> { Owner.PlacedPoint(a) + new Vector2(0, 14) };
+                    foreach (string step in path) { int i = Owner.IndexOf(step); if (i >= 0) pts.Add(Owner.ProvinceToPanel(i)); }
+                    if (pts.Count >= 2) lines.Add((a.Owner, pts));
+                }
+                return lines;
+            }
+
             private List<(ArmyState army, List<Vector2> pts)> Lines()
             {
                 var lines = new List<(ArmyState, List<Vector2>)>();
@@ -339,6 +358,16 @@ namespace GreyBoxStrategy.Realm
                     var end = pts[pts.Count - 1];
                     p.fillColor = c; p.strokeColor = new Color(0.08f, 0.05f, 0.02f, 1); p.lineWidth = 1.4f;
                     p.BeginPath(); p.Arc(end, 4.5f, Angle.Degrees(0), Angle.Degrees(360)); p.Fill(); p.Stroke();
+                }
+                foreach (var (owner, pts) in Planned())
+                {
+                    var c = (Color)CountryLook.Of(owner).Colour;
+                    p.lineCap = LineCap.Round;
+                    Dashed(p, pts, new Color(0.08f, 0.05f, 0.02f, 0.4f), 3.2f);
+                    Dashed(p, pts, new Color(Mathf.Lerp(c.r, 1, 0.45f), Mathf.Lerp(c.g, 1, 0.45f), Mathf.Lerp(c.b, 1, 0.45f), 0.7f), 1.6f);
+                    var end = pts[pts.Count - 1];
+                    p.strokeColor = new Color(Mathf.Lerp(c.r, 1, 0.45f), Mathf.Lerp(c.g, 1, 0.45f), Mathf.Lerp(c.b, 1, 0.45f), 0.8f); p.lineWidth = 1.4f;
+                    p.BeginPath(); p.Arc(end, 4f, Angle.Degrees(0), Angle.Degrees(360)); p.Stroke();
                 }
             }
 
@@ -454,9 +483,14 @@ namespace GreyBoxStrategy.Realm
             // R3: each side's mix, as it stood (losses come from every type in proportion); a garrison or militia fights as pikes.
             if (b.CounterNote != null || b.AttackCounter != 1 || b.DefenceCounter != 1)
             {
-                if (e.AttackMix != null) attackSide.Add(Text(e.AttackMix, "src"));
-                if (e.DefenceMix != null) defenceSide.Add(Text(e.DefenceMix, "src"));
+                // The rules' own record of each side as the battle began (#323), or the replay's reckoning without one.
+                string atk = ArmyLook.MixText(b.AttackerMix) ?? e.AttackMix, def = ArmyLook.MixText(b.DefenderMix) ?? e.DefenceMix;
+                if (atk != null) attackSide.Add(Text(atk, "src"));
+                if (def != null) defenceSide.Add(Text(def, "src"));
             }
+            // R3's generals: who commanded each side, as the rules recorded it.
+            if (b.AttackerCommander != null) attackSide.Add(Text("led by " + b.AttackerCommander, "src"));
+            if (b.DefenderCommander != null) defenceSide.Add(Text("led by " + b.DefenderCommander, "src"));
             sides.Add(attackSide);
             sides.Add(defenceSide);
             body.Add(sides);
@@ -476,7 +510,7 @@ namespace GreyBoxStrategy.Realm
             var told = new[] { b.CounterNote, b.GeneralNote }.Where(x => !string.IsNullOrEmpty(x)).Select(x => Cap1(Named(x).TrimEnd('.')) + ".").ToList();
             if (told.Count > 0) body.Add(Text(string.Join(" ", told), "event-chose"));
             bool r3 = ArmyRules || b.AttackCounter != 1 || b.DefenceCounter != 1 || b.AttackGeneral != 1 || b.DefenceGeneral != 1 || b.CounterNote != null || b.GeneralNote != null;
-            if (b.Terrain != null) body.Add(Text(r3 ? $"Fought on {b.Terrain}: terrain does not change a battle yet." : $"Fought on {b.Terrain}: terrain does not change a battle until unit types and generals come (R3).", "src"));
+            if (b.Terrain != null) body.Add(Text(r3 ? $"Fought on {b.Terrain}: terrain does not change a battle yet." : $"Fought on {b.Terrain}: terrain does not change a battle.", "src"));
 
             var after = new List<string>();
             foreach (var kv in b.Retreats) after.Add($"{Chronicle.Host(kv.Key)} fell back to {Cap(kv.Value)}");
