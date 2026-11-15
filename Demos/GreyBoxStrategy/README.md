@@ -1087,7 +1087,8 @@ model. R1b's second part, below, adds model rulers (`WritRuler`), and R1c measur
   - war or peace was made;
   - four turns passed.
 
-  The other two conditions, a siege ending and stores running low, wait for R3. `Country.Army` stays the
+  The other two conditions, a siege ending and stores running low, wait for R3 (stores running low came with the
+  hunger wake, 15 November). `Country.Army` stays the
   total, so upkeep, desertion and the storyteller's events land on the armies unchanged.
 - **The landing order** (`Sim/Rules/WritTurn.cs`):
   1. treaties, then declarations of war;
@@ -1313,8 +1314,11 @@ effect of 1% or more, and the counters turned the result of 6% of them.
 **R3, part four: sieges** (14 November; rules v2 3.7). `GameRules.Sieges`, off by default:
 - An army alone in enemy land with forts besieges it instead of storming the militia. The province stays its
   controller's until the siege ends: 2 turns a fort (`SiegeTurnsPerFort`), a turn off for a `siegewright`
-  commander and for besiegers three times the garrison (10 a fort), never below 1, and a 10% seeded breach each
-  turn (`SiegeBreachChance`). Then the province is occupied with one fort fewer.
+  commander and for besiegers three times the garrison (10 a fort), and a 10% seeded breach each turn after the
+  first (`SiegeBreachChance`). Then the province is occupied with one fort fewer.
+- **Never below two turns** (`Game.MinSiegeTurns`, changed 15 November): a siege never falls in the turn it begins,
+  so the defender always has a turn to relieve it. Before, it could be 1, and in the first live look with every
+  army rule on 14 of 15 sieges fell the turn they began.
 - The siege breaks when the besiegers leave or are beaten there. `Province.SiegedBy` and `SiegeTurns` hold it.
 - The besieger reads "besieging corwick, turn 2 of 4" for its army, the besieged "it besieges our corwick" on the
   rival's line.
@@ -1333,6 +1337,10 @@ distance attrition). `GameRules.Supply`, off by default:
 - The rulers read "stores 2 of 4" for each army, and an army what it eats where it stands ("eating 2 a turn
   here").
 - Scripted armies abroad with a turn of stores left go home to refill, unless their siege ends next turn.
+- **Wake condition 6** (15 November): an army abroad that holds is asked again when a turn's food or less is
+  left ("stores running low") and every turn it starves ("starving"). Before, nothing woke it, and in the first
+  live look with every army rule on 16 armies starved where a hold given with full stores left them, one for
+  seven turns.
 - Not built yet: allies' and passage land as supplied, healing springs, famine and the 100-soldier cap.
 - Scripted, 100 Classic games: 90 turns against 77 off (91 last standing, 5 stalemates, 4 unfinished); with
   all four R3 rules, 84. Unmeasured live, so off.

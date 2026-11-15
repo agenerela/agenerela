@@ -780,6 +780,12 @@ phase table and the open issues, not here.
 
 ### Fixed
 
+- **Painted Realm R3: an army starving abroad is asked for orders again, and a siege lasts two turns at least**
+  (#20). The first live look with every army rule on found armies starving where a hold had left them (nothing woke
+  them as their stores ran out) and sieges falling the turn they began. With supply on, an army abroad is woken when
+  a turn's food is left and each turn it starves; with sieges on, a siege never falls the turn it begins. An army's
+  facts no longer read "led by Maren the Wary,, stores 4 of 4".
+
 - **GreyBoxStrategy's map generator speed test no longer fails when the machine is busy** (#20). It timed one
   Huge try in wall time, which doubled when other Unity runs shared the CPU (two failures on 14 November, both passing
   alone). It now takes the cheapest of three tries in this process's CPU time, under the same 3 s; a generator made
