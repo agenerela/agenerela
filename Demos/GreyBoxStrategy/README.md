@@ -1417,6 +1417,15 @@ distance attrition). `GameRules.Supply`, off by default:
 - The rulers read "stores 2 of 4" for each army, and an army what it eats where it stands ("eating 2 a turn
   here").
 - Scripted armies abroad with a turn of stores left go home to refill, unless their siege ends next turn.
+- **Hunger first** (`GameRules.HungerFirst`, off; 15 November, the tech lead's call after the second all-on run,
+  where half the starving army-turns got no writ and the woken marshals mostly attacked on). With supply on:
+  - a starving army, then one whose stores last one more turn or less, is asked before the others within the
+    writs (`WritLegality.Hunger`), ahead of "a hostile army beside it" and size;
+  - its own facts say what hunger costs and where it ends, in the rules' numbers (`Game.HungerFact`): "Starving:
+    losing about 3 soldiers a turn, and fighting 15% weaker. It is fed only in land we own and hold: nearest
+    ashby, 2 steps. Neutral land it takes becomes ours and feeds it; land it occupies does not." or "Stores for 1
+    more turn here, then it starves. …" (`WritLegality.NearestSupply`, by steps it may take).
+  - No standing order sends it home by itself: the ruler decides. Off, every request is as before.
 - **Wake condition 6** (15 November): an army abroad that holds is asked again when a turn's food or less is
   left ("stores running low") and every turn it starves ("starving"). Before, nothing woke it, and in the first
   live look with every army rule on 16 armies starved where a hold given with full stores left them, one for

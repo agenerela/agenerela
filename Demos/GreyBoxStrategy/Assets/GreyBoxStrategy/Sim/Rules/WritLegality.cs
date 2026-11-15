@@ -285,10 +285,43 @@ namespace GreyBoxStrategy
         /// </summary>
         public static List<Army> Awaiting(World world, string countryId) =>
             world.ArmiesOf(countryId).Where(a => a.Awaiting)
-                .OrderByDescending(a => HostileBeside(world, a) ? 1 : 0)
+                .OrderByDescending(a => world.Rules.HungerFirst && world.Rules.Supply ? Hunger(world, a) : 0)
+                .ThenByDescending(a => HostileBeside(world, a) ? 1 : 0)
                 .ThenByDescending(a => a.Soldiers)
                 .ThenBy(a => a.Id, StringComparer.Ordinal)
                 .ToList();
+
+        /// <summary>
+        /// How hungry an army is where it stands, for <see cref="GameRules.HungerFirst"/>: 2 with no stores left in land
+        /// that does not feed it, 1 when its stores last one more turn there or less, else 0.
+        /// </summary>
+        public static int Hunger(World world, Army a)
+        {
+            int eats = Game.Eats(world, a);
+            if (eats <= 0) return 0;
+            if (a.HalfStores <= 0) return 2;
+            return a.HalfStores <= eats ? 1 : 0;
+        }
+
+        /// <summary>The nearest land that feeds this army (ours, held by us) by steps it may take, and how many; null when none can be reached.</summary>
+        public static (string province, int steps)? NearestSupply(World world, Army a)
+        {
+            var seen = new Dictionary<string, int>(StringComparer.Ordinal) { [a.Location] = 0 };
+            var queue = new Queue<string>();
+            queue.Enqueue(a.Location);
+            while (queue.Count > 0)
+            {
+                string at = queue.Dequeue();
+                if (at != a.Location && Game.Supplied(world.Province(at), a.Owner)) return (at, seen[at]);
+                foreach (string n in world.Map.Neighbours(at).OrderBy(x => x, StringComparer.Ordinal))
+                {
+                    if (seen.ContainsKey(n) || !Passable(world, a.Owner, world.Province(n))) continue;
+                    seen[n] = seen[at] + 1;
+                    queue.Enqueue(n);
+                }
+            }
+            return null;
+        }
 
         /// <summary>Whether an enemy army stands in the army's province or one bordering it.</summary>
         public static bool HostileBeside(World world, Army a) =>

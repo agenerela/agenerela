@@ -211,7 +211,8 @@ namespace GreyBoxStrategy
                 + (Rules.Generals && army.General != null ? $", led by {army.General.Title}" : "")
                 + (Rules.Supply ? $", stores {army.Stores} of {Rules.MaxStores}" + (Eats(World, army) > 0 ? $", eating {Eats(World, army) / 2.0:0.#} a turn here," : ",")
                    : Rules.Generals && army.General != null ? "," : "") + $" at {army.Location}; " + (army.Wake.Count > 0 ? "awaiting orders: " + string.Join(", ", army.Wake) : "") + "." };
-            facts.AddRange(Facts.Select(pending[d.Country], Facts.MaxTurnFacts - 1));
+            if (Rules.HungerFirst && Rules.Supply && HungerFact(World, army) is string hunger) facts.Add(hunger);
+            facts.AddRange(Facts.Select(pending[d.Country], Facts.MaxTurnFacts - (facts.Count)));
             return new CountryRequest(Moment.Army, World.Turn, d.Country, World,
                 WritFacts.Standing(World, d.Country), facts, WritLegality.ArmyMoves(World, d.Country, army.Id))
             {
@@ -892,6 +893,28 @@ namespace GreyBoxStrategy
         {
             int all = side.Sum(a => a.Soldiers);
             return all == 0 ? 1 : 1 - r.HungerStrength * side.Where(a => a.HalfStores <= 0).Sum(a => a.Soldiers) / (double)all;
+        }
+
+        /// <summary>
+        /// With <see cref="GameRules.HungerFirst"/>, what hunger means for this army where it stands, in the rules' own
+        /// numbers: "Starving: losing about 3 soldiers a turn, and fighting 15% weaker. It is fed only in land we own and
+        /// hold: nearest ashby, 2 steps. Neutral land it takes becomes ours and feeds it; land it occupies does not." Null
+        /// when it is not hungry.
+        /// </summary>
+        public static string HungerFact(World w, Army a)
+        {
+            int level = WritLegality.Hunger(w, a);
+            if (level == 0) return null;
+            var r = w.Rules;
+            var near = WritLegality.NearestSupply(w, a);
+            string where = near is (string p, int steps) ? $"nearest {p}, {(steps == 1 ? "1 step" : steps + " steps")}" : "none we can reach";
+            string fed = $"It is fed only in land we own and hold: {where}. Neutral land it takes becomes ours and feeds it; land it occupies does not.";
+            if (level == 2)
+            {
+                int loss = Math.Min(a.Soldiers, Math.Max(r.HungerMinLoss, (int)Math.Round(a.Soldiers * r.HungerLoss)));
+                return $"Starving: losing about {loss} soldiers a turn, and fighting {r.HungerStrength * 100:0}% weaker. {fed}";
+            }
+            return $"Stores for 1 more turn here, then it starves. {fed}";
         }
 
         /// <summary>Half-stores an army eats a turn where it stands: none in our own land, else by terrain, halved for a forager.</summary>
