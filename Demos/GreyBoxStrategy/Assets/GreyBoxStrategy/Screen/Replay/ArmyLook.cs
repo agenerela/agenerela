@@ -25,6 +25,18 @@ namespace GreyBoxStrategy.Replay
         public static string Mix(ArmyState a) =>
             a == null || !a.HasMix ? null : string.Join(", ", Units.All.Where(t => Count(a, t) > 0).Select(t => $"{Count(a, t)} {Units.Name(t)}"));
 
+        /// <summary>"24 pikes, 12 riders": a battle side's mix as the rules recorded it; null without one.</summary>
+        public static string MixText(UnitMix? m)
+        {
+            if (m == null || m.Value.Total <= 0) return null;
+            var v = m.Value;
+            var parts = new List<string>();
+            if (v.Pikes > 0) parts.Add($"{v.Pikes} pikes");
+            if (v.Riders > 0) parts.Add($"{v.Riders} riders");
+            if (v.Bows > 0) parts.Add($"{v.Bows} bows");
+            return string.Join(", ", parts);
+        }
+
         /// <summary>"mostly riders", or "mixed": what a rival's army looks like from your side (rules v2 3.8); null without types.</summary>
         public static string Mostly(ArmyState a) =>
             a == null || !a.HasMix ? null : Units.Mostly(new UnitMix { Pikes = a.Pikes, Riders = a.Riders, Bows = a.Bows });
