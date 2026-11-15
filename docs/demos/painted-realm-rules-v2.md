@@ -2137,7 +2137,7 @@ line, and `findings.md` for anything measured.
 - [x] Three types, costs, the counter rule (`GameRules.UnitTypes`, off; scripted only, 14 November)
 - [x] The model rulers' recruit orders by type and the mix in their facts (14 November; first live look, #316: no illegal answers, but the courts counter the type they see 22% of the time, so still off)
 - [x] Generals: names, seven of the ten traits, second trait, a general falling (`GameRules.Generals`, off; scripted only, 14 November). Siegewright came with the sieges (#311, only with `GameRules.Sieges` on); the forager came with supply (#313, only with `GameRules.Supply` on); the marshal waits for army sizes; capture waits for prisoners
-- [x] Sieges at forts over several turns, breach, broken siege, siegewright (`GameRules.Sieges`, off; scripted only, 14 November). Forts stand for walls; the fort that holds the road, and income lost under siege, are not built yet
+- [x] Sieges at forts over several turns, breach, broken siege, siegewright (`GameRules.Sieges`, off; scripted only, 14 November). Forts stand for walls. The fort that holds the road (`GameRules.FortsHoldTheRoad`) and income lost under siege (`GameRules.SiegeStopsIncome`) came on 15 November, each its own switch, off; scripted only
 - [x] Supply model B, with forager (`GameRules.Supply`, off; scripted against none, 14 November). Still open: the army cap, and A against B (A needs farms)
 - [x] Fog of war for the rulers' facts: totals rounded, forest, scouting (`GameRules.Fog`, `ArmySight`, off; 14 November). Still open: fog for the scripted players, allies' sight and watchtowers
 - [ ] Support and pursuit; the report's factors

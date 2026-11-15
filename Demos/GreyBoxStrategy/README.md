@@ -668,7 +668,9 @@ Wary held firm (+10%)." With R3 on, its terrain line says terrain does not chang
 on, fails without them). The moments after the council carry each army's council mix on, split over the soldiers
 left the way the rules split losses, and its council general (a fall is told at the turn's end). An army raised
 and routed in the same turn has no mix to show unless its recruit order typed it, and no general; its side of the
-report then shows no mix rather than a wrong one. Each side's mix on `BattleRecord` would close that last gap.
+report then shows no mix rather than a wrong one. Since 15 November `BattleRecord` carries each side's mix and
+commander as the battle began (`AttackerMix`, `DefenderMix`, `AttackerCommander`, `DefenderCommander`), which
+closes that gap once the screen reads them.
 Recordings hold only decisions, and the replay plays the rules again, so recordings made before this load as they did.
 
 **Tests** (`ArmiesScreenTests`), each seen failing once against a deliberate break:
@@ -1168,6 +1170,8 @@ tune.
   - the sides, armies and soldiers, and the militia or garrison;
   - terrain, forts, and the fort and capital terms;
   - both rolls and strengths, the losses, the winner, a rout, and each retreat;
+  - with unit types and generals, each side's mix and commander as the battle began (`AttackerMix`,
+    `DefenderMix`, `AttackerCommander`, `DefenderCommander`; null without them);
   - `Why`, one sentence of the three terms that weighed most ("kesh won: 51 against 9; 1 fort (+15) for
     the defence; the capital (+8) for the defence.").
 - **Snapshots.** `TurnSnapshot.Armies` and `Occupiers` hold every army and occupation as the council
@@ -1323,7 +1327,14 @@ effect of 1% or more, and the counters turned the result of 6% of them.
 - The besieger reads "besieging corwick, turn 2 of 4" for its army, the besieged "it besieges our corwick" on the
   rival's line.
 - `siegewright` joins the generals' traits only with sieges on (`GeneralTraits.Pool`).
-- Not built yet: the fort that holds the road, and the income a besieged province loses.
+- **A fort holds the road** (`GameRules.FortsHoldTheRoad`, its own switch, off; 15 November): a march goes no
+  further than land beside an enemy's walled province that no one besieges, and an army standing there may step
+  only into that province (to besiege it) or back into land we hold. Our own land is never held up. A march under
+  way stops there and waits for orders ("held up by corwick's walls"). `WritLegality.HoldsTheRoad` and
+  `HeldByFort` say which.
+- **A siege stops income** (`GameRules.SiegeStopsIncome`, off; 15 November): a besieged province gives its owner
+  nothing (`World.Income`).
+- Both are scripted-tested only; neither has been in a live run.
 - Scripted, 100 Classic games: 80 turns on average against 77 off (94 last standing, 5 stalemates); with unit
   types and generals too, 74. Unmeasured live, so off.
 
