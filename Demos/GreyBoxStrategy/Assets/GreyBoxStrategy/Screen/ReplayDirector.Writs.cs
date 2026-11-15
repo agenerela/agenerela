@@ -102,7 +102,7 @@ namespace GreyBoxStrategy.Realm
                 var a = shown?.Army(id);
                 if (a == null) return;
                 // Rule mode: your army with a writ is chosen for orders; anything else opens where it stands.
-                if (rule != null && rule.Writs && ui.OrdersRequest != null && a.Owner == rule.You && ui.ArmiesWithWrits(ui.OrdersRequest).Contains(id))
+                if (rule != null && rule.Writs && ui.OrdersRequest != null && a.Owner == rule.You && (ui.ArmiesWithWrits(ui.OrdersRequest).Contains(id) || ui.CanRecall(ui.OrdersRequest, id)))
                 {
                     if (ui.SelectedArmy != id) { ui.SelectedArmy = id; ApplyMode(); lastOrdersStatus = null; RuleTick(); }
                     return;

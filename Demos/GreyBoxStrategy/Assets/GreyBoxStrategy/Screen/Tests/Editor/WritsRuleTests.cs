@@ -102,6 +102,50 @@ namespace GreyBoxStrategy.Screen.Tests
         }
 
         [Test]
+        public async Task The_council_offers_a_holding_army_for_a_writ_and_counts_it_as_the_rules_ask()
+        {
+            var s = Session();
+            var run = s.RunAsync();
+            var ui = new ScreenUI(new UnityEngine.UIElements.VisualElement(), ScriptableObject.CreateInstance<UnityEngine.UIElements.StyleSheet>(), null, s.Game.World.CountryList.Select(c => c.Id).ToList(),
+                s.Game.World.ProvinceList.Select(p => p.Id).ToList(), new Dictionary<string, RecordedPlayer>(), "test");
+            int recalls = 0;
+            for (int t = 1; t <= 12 && recalls == 0; t++)
+            {
+                await Until(() => (s.WaitingFor == RuleSession.Waiting.Orders && s.Orders != null) || s.WaitingFor == RuleSession.Waiting.Envoy || s.Finished, $"turn {t}'s orders");
+                if (s.Finished) break;
+                if (s.WaitingFor == RuleSession.Waiting.Envoy) { s.Answer(false); t--; continue; }
+                var court = s.Orders; var w = court.World;
+                ui.Plan = new RuleSession.WritsPlan();
+                // Unplanned, the writs go to the armies awaiting orders, as before.
+                Assert.That(ui.ArmiesWithWrits(court), Is.EqualTo(WritLegality.Awaiting(w, You).Take(s.Game.ArmyWrits(You)).Select(a => a.Id)));
+                var held = w.ArmiesOf(You).FirstOrDefault(a => !a.Awaiting && WritLegality.ArmyMoves(w, You, a.Id).Any(m => m.Action == Actions.March));
+                int turn = t;
+                if (held != null && s.Game.ArmyWrits(You) > 0)
+                {
+                    Assert.That(ui.CanRecall(court, held.Id), Is.True, $"turn {t}: a holding army may be given new orders while a writ is left");
+                    ui.Plan.Armies[held.Id] = WritLegality.ArmyMoves(w, You, held.Id).First(m => m.Action == Actions.March);
+                    var with = ui.ArmiesWithWrits(court);
+                    Assert.That(with.First(), Is.EqualTo(held.Id), "an army your plan orders is asked first, as the rules recall it");
+                    Assert.That(with.Count, Is.LessThanOrEqualTo(s.Game.ArmyWrits(You)), "never more armies than the writs give");
+                    if (ui.Plan.Armies.Count >= s.Game.ArmyWrits(You))
+                        Assert.That(w.ArmiesOf(You).Where(a => !with.Contains(a.Id)).Any(a => ui.CanRecall(court, a.Id)), Is.False, "no writ left: no other army is offered");
+                    s.Plan(ui.Plan);
+                    recalls++;
+                    await Until(() => s.Resolved == turn || s.Finished, $"turn {turn} to resolve");
+                    Assert.That(s.PlanRefusals, Is.Empty, "the order was taken (the rules' side is #327's own test)");
+                }
+                else
+                {
+                    s.Plan(new RuleSession.WritsPlan());
+                    await Until(() => s.Resolved == turn || s.Finished, $"turn {turn} to resolve");
+                }
+            }
+            Assert.That(recalls, Is.GreaterThan(0), "a holding army was given new orders");
+            s.Stop();
+            await run;
+        }
+
+        [Test]
         public async Task Your_plan_lands_as_the_rules_ask_it_and_the_replay_rebuilds_your_turns()
         {
             var s = Session();

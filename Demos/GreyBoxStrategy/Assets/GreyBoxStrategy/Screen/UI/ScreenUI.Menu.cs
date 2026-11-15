@@ -188,7 +188,7 @@ namespace GreyBoxStrategy.Realm
             watchB.clicked += () => Mode(false); ruleB.clicked += () => Mode(true);
             var modes = Row(watchB, ruleB); modes.AddToClassList("menu-modes"); card.Add(modes);
 
-            card.Add(Section2("YOUR COUNTRY", "rule mode"));
+            card.Add(Section2("YOUR COUNTRY", "the realm you rule, when you rule"));
             // The Classic five by name; on a generated world, its realms by seat, in the colours they will wear:
             // their names come with the world.
             void Crests()
@@ -285,7 +285,7 @@ namespace GreyBoxStrategy.Realm
             card.Add(sizeRow); card.Add(shapeRow); card.Add(countriesRow); card.Add(mapNote);
             World(choice.Generated);
 
-            card.Add(Section2("THE TURN", "rules v2: armies on the map, occupation, treaties"));
+            card.Add(Section2("THE TURN", "how a turn plays: armies on the map, land held by force, peace by treaty"));
             // The lead's choice (13 November): both, conquest the default. Lengths are scripted games' (R1b's tuning).
             var victoryNote = new Label(); victoryNote.AddToClassList("src"); victoryNote.style.whiteSpace = WhiteSpace.Normal;
             void Victory(int i)

@@ -33,6 +33,10 @@ phase table and the open issues, not here.
   and then one about to run out are asked first within the writs, and read what hunger costs and the nearest land
   that feeds them. Scripted only so far.
 
+- **Painted Realm: give new orders to any army** (#20). On #327's recall, a holding or marching army's row offers new
+  orders for a writ, the council counts the army writs left and shows orders the rules did not take, and New game's
+  section hints are in a player's words.
+
 - **Painted Realm R3: every army rule on, run again with the hunger wake and the siege floor** (#20). Sieges now
   last and are relieved; armies woken as they starve mostly attack on rather than go home, and half the starving
   army-turns get no writ. No default changes. Results in `findings.md`, 15 November.
