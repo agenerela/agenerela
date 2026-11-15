@@ -178,8 +178,9 @@ namespace GreyBoxStrategy
         private CountryRequest ArmyRequest(Docket d, Army army)
         {
             var facts = new List<string> { $"{army.Id}: {army.Soldiers} soldiers" + (Rules.UnitTypes ? $" ({Units.Mix(army)})" : "")
-                + (Rules.Generals && army.General != null ? $", led by {army.General.Title}," : "")
-                + (Rules.Supply ? $", stores {army.Stores} of {Rules.MaxStores}" + (Eats(World, army) > 0 ? $", eating {Eats(World, army) / 2.0:0.#} a turn here," : ",") : "") + $" at {army.Location}; " + (army.Wake.Count > 0 ? "awaiting orders: " + string.Join(", ", army.Wake) : "") + "." };
+                + (Rules.Generals && army.General != null ? $", led by {army.General.Title}" : "")
+                + (Rules.Supply ? $", stores {army.Stores} of {Rules.MaxStores}" + (Eats(World, army) > 0 ? $", eating {Eats(World, army) / 2.0:0.#} a turn here," : ",")
+                   : Rules.Generals && army.General != null ? "," : "") + $" at {army.Location}; " + (army.Wake.Count > 0 ? "awaiting orders: " + string.Join(", ", army.Wake) : "") + "." };
             facts.AddRange(Facts.Select(pending[d.Country], Facts.MaxTurnFacts - 1));
             return new CountryRequest(Moment.Army, World.Turn, d.Country, World,
                 WritFacts.Standing(World, d.Country), facts, WritLegality.ArmyMoves(World, d.Country, army.Id))
@@ -867,8 +868,18 @@ namespace GreyBoxStrategy
                     continue;
                 }
                 int eat = Eats(World, a);
-                if (a.HalfStores >= eat) { a.HalfStores -= eat; continue; }
+                if (a.HalfStores >= eat)
+                {
+                    a.HalfStores -= eat;
+                    // Wake condition 6 (rules v2 1.3): stores run low, a turn's food or less left where it stands.
+                    if (eat > 0 && a.HalfStores > 0 && a.HalfStores <= eat && !a.Marching && !a.Wake.Contains("stores running low"))
+                        a.Wake.Add("stores running low");
+                    continue;
+                }
                 a.HalfStores = 0;
+                // A starving army that holds is asked again every turn it starves, so a hold given with full stores
+                // does not stand while it starves away.
+                if (!a.Marching && !a.Wake.Contains("starving")) a.Wake.Add("starving");
                 int loss = Math.Min(a.Soldiers, Math.Max(Rules.HungerMinLoss, (int)Math.Round(a.Soldiers * Rules.HungerLoss)));
                 a.Soldiers -= loss;
                 World.Country(a.Owner).Army -= loss;
