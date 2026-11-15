@@ -1419,7 +1419,8 @@ distance attrition). `GameRules.Supply`, off by default:
 - **Wake condition 6** (15 November): an army abroad that holds is asked again when a turn's food or less is
   left ("stores running low") and every turn it starves ("starving"). Before, nothing woke it, and in the first
   live look with every army rule on 16 armies starved where a hold given with full stores left them, one for
-  seven turns.
+  seven turns. Run again with this wake (15 November, `findings.md`), hunger was not solved by asking: the
+  models mostly attack on when woken and half the starving army-turns get no writ. Sieges now last and are relieved.
 - Not built yet: allies' and passage land as supplied, healing springs, famine and the 100-soldier cap.
 - Scripted, 100 Classic games: 90 turns against 77 off (91 last standing, 5 stalemates, 4 unfinished); with
   all four R3 rules, 84. Off; a first live look at every army rule on is in `findings.md`, 15 November, with a rule fix and rerun owed.
