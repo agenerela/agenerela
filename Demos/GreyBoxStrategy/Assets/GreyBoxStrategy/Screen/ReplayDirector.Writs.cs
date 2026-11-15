@@ -96,6 +96,7 @@ namespace GreyBoxStrategy.Realm
             ui.Writs = game.Writs;
             if (!game.Writs) return;
             ui.TurnsLeft = TurnsLeft;
+            ui.ArmyRules = game.Rules != null && (game.Rules.UnitTypes || game.Rules.Generals);
             ui.HostPressed = id =>
             {
                 var a = shown?.Army(id);

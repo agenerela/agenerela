@@ -203,8 +203,9 @@ namespace GreyBoxStrategy.Realm
             for (int i = 0; i < ProvinceIds.Count; i++)
             {
                 fortMarks[i].Clear();
-                if (!Fog.KnowsProvince(s, i)) continue;
-                for (int k = 0; k < s.Forts[i]; k++) fortMarks[i].Add(new Icon(IconKind.Fort, 11) { Tint = new Color32(233, 217, 176, 255) });
+                // Forts beyond your borders are your court's guess; a siege is news to everyone, like the land.
+                if (Fog.KnowsProvince(s, i))
+                    for (int k = 0; k < s.Forts[i]; k++) fortMarks[i].Add(new Icon(IconKind.Fort, 11) { Tint = new Color32(233, 217, 176, 255) });
                 // R3's sieges: "Siege 2 of 4", edged in the besieger's colour.
                 if (ArmyLook.SiegeTag(s, i) is string siege)
                 {

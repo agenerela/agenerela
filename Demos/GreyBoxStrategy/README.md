@@ -717,6 +717,27 @@ a hungry one none from its hunger line.
   tag, every turn's end tags each siege with the game's own turns, every army has its stores at every moment, and a
   hungry army shows the warning to you and not to a rival (broken by not reading the line of a siege that ended).
 
+### Rule mode with all four R3 settings on: a readiness pass (15 November)
+
+A first-time player's path, played through the Unity CLI with Unit types, Generals, Sieges and Supply on, scripted
+rivals, on Classic and on a medium generated world, at 1080p and 4K. Fixes only:
+- **Chronicle.** A typed recruit ("raised 20 bows at highmoor (perrin_host +20)") now reads "raises 20 bows at
+  Highmoor for Perrin's host", like an untyped one.
+- **Army row.**
+  - An army awaiting orders says why, in the rules' words: "awaiting orders (stores running low)", "(starving)",
+    "(fought a battle)".
+  - An army besieging where it stands says so: "besieging it: siege 2 of 3".
+  - A long general's title wraps inside its column.
+  - "1 turn", not "1 turns", here and in the piece's tooltip.
+- **Map.** The siege tag shows on any besieged province. Before, rule mode hid it with the forts of land beyond your
+  borders, so your own army's siege of a rival capital had no sign on the map.
+- **Battle report.** With unit types or generals on, a battle where neither counted no longer says terrain will
+  matter "until unit types and generals come (R3)".
+- **End card.** A game that stopped with no winner reads "After 27 turns.", not ", after 27 turns.".
+
+What was found and left for a decision (the writs counter, war score's sign, holding armies, unlabelled numbers) is in
+the pull request.
+
 ### Generated worlds: detail up close, fields that show, rule mode on a big map (14 November)
 
 R4's third part on screen.

@@ -249,7 +249,8 @@ namespace GreyBoxStrategy.Realm
             var row = new VisualElement(); row.AddToClassList("army-row");
             bool hasWrit = withWrits.Contains(army.Id), waits = awaiting.Contains(army.Id);
             if (army.Id == SelectedArmy) row.AddToClassList("pick");
-            var head = new VisualElement { style = { width = 150 } };
+            // A fixed column: a long general's title wraps inside it rather than running under the state beside it.
+            var head = new VisualElement { style = { width = 150, flexShrink = 0, marginRight = 6 } };
             head.Add(new Label($"{Chronicle.Host(army.Id)} · {army.Soldiers}") { style = { fontSize = 12, unityFontStyleAndWeight = FontStyle.Bold } });
             // R3: its mix as three small bars, and its general; nothing more when the rules have neither.
             var st = hostState?.Army(army.Id);
@@ -274,12 +275,17 @@ namespace GreyBoxStrategy.Realm
             if (hasWrit)
             {
                 var m = Plan.Armies.TryGetValue(army.Id, out var x) ? x : null;
-                state = m == null ? $"at {Cap(army.Location)}, awaiting orders: it has a writ" : m.Action == Actions.March ? $"orders: march to {Cap(m.Target)}" : "orders: hold";
+                // Why it waits, in the rules' own words ("stores running low", "fought a battle"), newest first.
+                string why = army.Wake.Count > 0 ? $" ({army.Wake[army.Wake.Count - 1]})" : "";
+                state = m == null ? $"at {Cap(army.Location)}, awaiting orders{why}: it has a writ" : m.Action == Actions.March ? $"orders: march to {Cap(m.Target)}" : "orders: hold";
                 row.AddToClassList(m == null ? "needs" : "ordered");
             }
             else if (waits) { state = $"at {Cap(army.Location)}, awaiting, but no writ left: it holds"; row.AddToClassList("no-writ"); }
-            else if (army.Marching) state = $"marching to {Cap(army.Destination)}" + (TurnsLeft != null && hostState?.Army(army.Id) is ArmyState s ? $", {TurnsLeft(s)} turns" : "");
+            else if (army.Marching) state = $"marching to {Cap(army.Destination)}" + (TurnsLeft != null && hostState?.Army(army.Id) is ArmyState s ? $", {TurnsLeft(s)} turn{(TurnsLeft(s) == 1 ? "" : "s")}" : "");
             else state = $"holding at {Cap(army.Location)}";
+            // R3's sieges: an army besieging where it stands says so, with the siege's turns.
+            if (ArmyLook.SiegeTag(hostState, IndexOf(army.Location)) is string siege && hostState.SiegedBy[IndexOf(army.Location)] == army.Owner)
+                state += $"; besieging it: {siege.Substring(0, 1).ToLowerInvariant()}{siege.Substring(1)}";
             var l = new Label(state) { style = { fontSize = 12, flexShrink = 1, whiteSpace = WhiteSpace.Normal } }; row.Add(l);
             row.tooltip = (waits ? "Awaiting orders: " + string.Join(", ", army.Wake) + ". " : "") +
                           (hasWrit ? "Click, then click a lit province on the map." : waits ? "The rules ask armies the most urgent first, one writ each, keeping one for the court." : "Carrying out its order: it costs no writ. It awaits orders again when it arrives, fights, is blocked, or four turns pass.");

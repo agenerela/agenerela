@@ -263,6 +263,8 @@ namespace GreyBoxStrategy.Screen.Tests
             Assert.That(Chronicle.RecruitText("raised 15 soldiers at highmoor (maren_host +5, new tolly_host2 10)", P),
                 Is.EqualTo("raises 15 soldiers at Highmoor: 5 for Maren's host and a new army, Tolly's second host, of 10"));
             Assert.That(Chronicle.Host("hester2_host"), Is.EqualTo("Hester's second host"), "a general's name taken again is numbered by the rules");
+            Assert.That(Chronicle.RecruitText("raised 20 bows at highmoor (perrin_host +20)", P), Is.EqualTo("raises 20 bows at Highmoor for Perrin's host"),
+                "R3's unit types name the type");
             Assert.That(Chronicle.RecruitText("recruited 10 soldiers for 50 gold", P), Is.EqualTo("recruits 10 soldiers for 50 gold"), "the one-move game's recruit");
             var e = new ReplayEvent { Turn = 3, Kind = ReplayEventKind.Recruit, Country = "orsk", Text = "raised 15 soldiers at orskhaven (fenna_host +15)" };
             var line = Chronicle.Line(e, id => P(id));
