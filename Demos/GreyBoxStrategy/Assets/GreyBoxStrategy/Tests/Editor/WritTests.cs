@@ -1373,6 +1373,7 @@ namespace GreyBoxStrategy.Tests
             }
             Assert.That(Detail(Countered(true)), Does.Contain("enemy armies 30, mostly riders"));
             Assert.That(Detail(Countered(false)), Does.Contain("enemy armies 30").And.Not.Contain("mostly"), "off");
+        }
 
         // --- R3: a fort holds the road, and a siege stops income; both off by default ------------------
 
