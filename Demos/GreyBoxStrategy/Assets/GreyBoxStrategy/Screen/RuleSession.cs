@@ -300,8 +300,13 @@ namespace GreyBoxStrategy.Realm
             if (plan.Court != null && !Orders.Legal.Contains(plan.Court))
                 throw new ArgumentException($"{plan.Court} is not offered to your court: {WritLegality.WhyNotCourt(w, You, plan.Court) ?? "not on the list"}.");
             foreach (var kv in plan.Armies)
+            {
+                // The rules ask only armies awaiting orders; an order for any other would be taken here and never given.
+                if (w.FindArmy(kv.Key) is Army held && !held.Awaiting)
+                    throw new ArgumentException($"{kv.Key} is holding until it wakes: the rules ask an army for orders only when it arrives, fights, is blocked, its stores run low, or four turns pass.");
                 if (!WritLegality.ArmyMoves(w, You, kv.Key).Contains(kv.Value))
                     throw new ArgumentException($"{kv.Key} cannot {kv.Value}: {WritLegality.WhyNotArmy(w, You, kv.Key, kv.Value) ?? "not on the list"}.");
+            }
             var p = pendingPlan; pendingPlan = null;
             p.SetResult(plan);
         }

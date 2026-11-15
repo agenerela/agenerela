@@ -35,6 +35,15 @@ phase table and the open issues, not here.
   personas no longer differ in which types they buy. `GameRules.CountersLine`, on by default; unit types stay off.
   Results in `findings.md`, 15 November.
 
+- **Painted Realm rule mode in plain words** (#20). The war score has one sign and a label; every number on the bar and
+  army rows has a unit; the writs counter says "used"; the council warns before the treasury runs dry and says when no
+  army awaits orders; a planned march is drawn at once; a holding army is not offered as orderable; menus lose ids,
+  model names and "R3"; battle reports read each side's mix and commander from the rules' record.
+
+- **Painted Realm rule mode, ready for a playtest with R3 on** (#20). Fixes from a pass with all four R3 settings on:
+  typed recruits read as names in the chronicle, an army's row says why it waits and when it besieges, the siege tag
+  shows beyond your borders, the battle report and the end card lose a stray sentence and comma.
+
 - **Painted Realm R3: a fort holds the road, and a siege stops income** (#20), each behind its own switch, off by
   default (`GameRules.FortsHoldTheRoad`, `SiegeStopsIncome`). A march stops beside an enemy fort no one besieges,
   and from there may only besiege it or go back; a besieged province gives its owner nothing. A battle record now

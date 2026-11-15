@@ -152,6 +152,13 @@ namespace GreyBoxStrategy.Replay
                     var seen = new HashSet<ReplayState>();
                     foreach (var st in new[] { turn.Council }.Concat(turn.Events.Select(x => x.After)))
                         if (st != null && st != end && seen.Add(st)) FillArmies(st, end, turn.Start);
+                    // An army raised and routed within the turn is in no state with its mix or general: a side of one army
+                    // takes both from the rules' battle record (#323), in every moment of the turn it stands in.
+                    foreach (var ev in turn.Events.Where(x => x.Kind == ReplayEventKind.Battle && x.Battle != null))
+                    {
+                        FromRecord(turn, ev.Battle.AttackerArmies, ev.Battle.AttackerMix, 0, ev.Battle.AttackerCommander);
+                        FromRecord(turn, ev.Battle.DefenderArmies, ev.Battle.DefenderMix, ev.Battle.Militia, ev.Battle.DefenderCommander);
+                    }
                     // Each battle's sides as they stood just before it: a routed army is gone from every state after.
                     if (game.Rules.UnitTypes)
                     {
@@ -160,8 +167,8 @@ namespace GreyBoxStrategy.Replay
                         {
                             if (ev.Kind == ReplayEventKind.Battle && ev.Battle != null && before != null)
                             {
-                                ev.AttackMix = SideMix(before, ev.Battle.AttackerArmies, ev.Battle.AttackerSoldiers, 0);
-                                ev.DefenceMix = SideMix(before, ev.Battle.DefenderArmies, ev.Battle.DefenderSoldiers, ev.Battle.Militia);
+                                ev.AttackMix = ArmyLook.MixText(ev.Battle.AttackerMix) ?? SideMix(before, ev.Battle.AttackerArmies, ev.Battle.AttackerSoldiers, 0);
+                                ev.DefenceMix = ArmyLook.MixText(ev.Battle.DefenderMix) ?? SideMix(before, ev.Battle.DefenderArmies, ev.Battle.DefenderSoldiers, ev.Battle.Militia);
                             }
                             if (ev.After != null) before = ev.After;
                         }
@@ -408,6 +415,39 @@ namespace GreyBoxStrategy.Replay
                 if (mix == null || !mix.HasMix || (mix == a && a.Pikes + a.Riders + a.Bows == a.Soldiers)) continue;
                 Scale(a, mix.Pikes, mix.Riders, mix.Bows);
             }
+        }
+
+        /// <summary>A side of one army: its mix (less the militia, who fight as pikes) and general from the record, where no state knew them.</summary>
+        private static void FromRecord(ReplayTurn turn, List<string> armies, UnitMix? mix, int militia, string commander)
+        {
+            if (armies == null || armies.Count != 1) return;
+            string id = armies[0];
+            foreach (var st in new[] { turn.Council }.Concat(turn.Events.Select(x => x.After)).Where(x => x != null).Distinct())
+            {
+                var a = st.Army(id);
+                if (a == null) continue;
+                if (!a.HasMix && mix is UnitMix m && m.Total > 0)
+                {
+                    int pikes = Math.Max(0, m.Pikes - militia);
+                    if (pikes + m.Riders + m.Bows > 0) Scale(a, pikes, m.Riders, m.Bows);
+                }
+                if (a.General == null && commander != null)
+                {
+                    var (name, traits) = ParseTitle(commander);
+                    a.General = name; a.Traits = traits;
+                }
+            }
+        }
+
+        /// <summary>"Maren the Wary and Bold" back into the general's name and traits.</summary>
+        public static (string name, List<string> traits) ParseTitle(string title)
+        {
+            int at = title.IndexOf(" the ", StringComparison.Ordinal);
+            if (at < 0) return (title, new List<string>());
+            var traits = title.Substring(at + 5).Split(new[] { " and " }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(e => GeneralTraits.All.Concat(new[] { GeneralTraits.Siegewright, GeneralTraits.Forager }).Distinct().FirstOrDefault(t => GeneralTraits.Epithet(t) == e))
+                .Where(t => t != null).ToList();
+            return (title.Substring(0, at), traits);
         }
 
         /// <summary>

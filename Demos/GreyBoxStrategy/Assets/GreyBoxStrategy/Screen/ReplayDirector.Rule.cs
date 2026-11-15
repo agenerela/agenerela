@@ -389,6 +389,8 @@ namespace GreyBoxStrategy.Realm
                     // Your court meets: the map shows the state it meets on, your plan starts empty.
                     ui.OrdersRequest = rule.Orders;
                     ui.Plan = new RuleSession.WritsPlan();
+                    // 5. A battle report opened last turn closes when the next council opens.
+                    ui.CloseBattle();
                     ui.SelectedArmy = null;
                     lastOrdersStatus = null;
                     // A first rule game: the help opens once the council is drawn, and never again by itself.

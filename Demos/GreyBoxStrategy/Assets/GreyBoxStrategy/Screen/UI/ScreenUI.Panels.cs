@@ -142,16 +142,16 @@ namespace GreyBoxStrategy.Realm
             followBar.Add(head);
             Segment("PROVINCES", $"{n} / {WinAt}", Conquest ? $"{n} of {ProvinceIds.Count} provinces. Conquest: the last realm standing wins." : $"{n} of {ProvinceIds.Count} provinces; {WinAt} wins. {Math.Max(0, WinAt - n)} to go.");
             int hostCount = s.Armies.Count(a => a.Owner == me);
-            Segment("ARMY", Writs ? $"{c.Army} · {hostCount}" : c.Army.ToString(), Writs
+            Segment("ARMY", Writs ? $"{c.Army} in {hostCount} {(hostCount == 1 ? "army" : "armies")}" : c.Army.ToString(), Writs
                 ? $"{c.Army} soldiers in {hostCount} {(hostCount == 1 ? "army" : "armies")}. A province with no army defends with its militia."
                 : $"{c.Army} soldiers. A province of ours defends with 70% of it.");
-            Segment("TREASURY", $"{c.Gold}  {net:+0;-0}", $"{c.Gold} gold, {net:+0;-0} a turn. Below zero, 15% of the army deserts.");
+            Segment("TREASURY", $"{c.Gold}  {net:+0;-0} a turn", $"{c.Gold} gold, {net:+0;-0} a turn. Below zero, 15% of the army deserts.");
             Segment("INCOME", $"+{c.Income}", $"10 gold for each of {n} provinces.");
             Segment("UPKEEP", $"-{c.Upkeep}", $"1 gold per 2 soldiers: {c.Army} soldiers.");
             Segment("STABILITY", $"{c.Stability} of 5", "Rises 1 a turn without a tax rise. At 1, a province may revolt.");
             var wars = CountryIds.Where(o => o != me && s.Relation(me, o)?.Kind == "war").ToList();
             var truces = CountryIds.Where(o => o != me && s.Relation(me, o)?.Kind == "truce").ToList();
-            Segment("WARS", wars.Count == 0 ? "none" : string.Join(", ", wars.Select(o => Writs ? $"{CountryLook.NameOf(o)} {s.WarScore(me, o):+0;-0;0}" : CountryLook.NameOf(o))),
+            Segment(Writs && wars.Count > 0 ? "WARS · WAR SCORE" : "WARS", wars.Count == 0 ? "none" : string.Join(", ", wars.Select(o => Writs ? $"{CountryLook.NameOf(o)} {s.WarScore(me, o):+0;-0;0}" : CountryLook.NameOf(o))),
                 Writs ? "Whom it is at war with, and the war score from our side, -100 to +100: what we occupy of theirs against what they occupy of ours, battles won, their capital. A treaty's terms cost war score." : "Whom it is at war with.");
             Segment("TRUCES", truces.Count == 0 ? "none" : string.Join(", ", truces.Select(CountryLook.NameOf)), "Truces: no war may be declared until they end.");
             Segment("BUILDINGS", "—", "Room for province development (decision 12). Not in the game yet.").AddToClassList("later");

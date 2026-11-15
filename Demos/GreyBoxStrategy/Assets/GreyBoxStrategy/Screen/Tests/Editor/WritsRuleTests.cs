@@ -108,7 +108,7 @@ namespace GreyBoxStrategy.Screen.Tests
             Assert.That(s.Writs, Is.True);
             var run = s.RunAsync();
             var ui = new RuleSession.WritsPlan();
-            int marches = 0;
+            int marches = 0, heldRefused = 0;
             for (int t = 1; t <= 6; t++)
             {
                 await Until(() => (s.WaitingFor == RuleSession.Waiting.Orders && s.Orders != null) || s.WaitingFor == RuleSession.Waiting.Envoy || s.Finished, $"turn {t}'s orders");
@@ -127,11 +127,19 @@ namespace GreyBoxStrategy.Screen.Tests
                 // An order the rules do not offer is refused before it is sent.
                 var bad = new RuleSession.WritsPlan { Court = new Move(Actions.DeclareWar, You) };
                 Assert.Throws<ArgumentException>(() => s.Plan(bad));
+                // So is an order for an army holding until it wakes: the rules would never ask it, and drop the order.
+                foreach (var held in w.ArmiesOf(You).Where(a => !a.Awaiting))
+                {
+                    var hold = new RuleSession.WritsPlan(); hold.Armies[held.Id] = Move.Hold;
+                    Assert.That(Assert.Throws<ArgumentException>(() => s.Plan(hold)).Message, Does.Contain("holding until it wakes"));
+                    heldRefused++;
+                }
                 s.Plan(plan);
                 int turn = t;
                 await Until(() => s.Resolved == turn || s.Finished, $"turn {turn} to resolve");
             }
             Assert.That(marches, Is.GreaterThan(0), "you ordered armies");
+            Assert.That(heldRefused, Is.GreaterThan(0), "an army held until it woke at least once");
 
             var g = s.BuildReplay();
             Assert.That(g.Turns.Count, Is.EqualTo(s.Resolved), "the screen plays every turn that resolved");
@@ -263,6 +271,8 @@ namespace GreyBoxStrategy.Screen.Tests
             Assert.That(Chronicle.RecruitText("raised 15 soldiers at highmoor (maren_host +5, new tolly_host2 10)", P),
                 Is.EqualTo("raises 15 soldiers at Highmoor: 5 for Maren's host and a new army, Tolly's second host, of 10"));
             Assert.That(Chronicle.Host("hester2_host"), Is.EqualTo("Hester's second host"), "a general's name taken again is numbered by the rules");
+            Assert.That(Chronicle.RecruitText("raised 20 bows at highmoor (perrin_host +20)", P), Is.EqualTo("raises 20 bows at Highmoor for Perrin's host"),
+                "R3's unit types name the type");
             Assert.That(Chronicle.RecruitText("recruited 10 soldiers for 50 gold", P), Is.EqualTo("recruits 10 soldiers for 50 gold"), "the one-move game's recruit");
             var e = new ReplayEvent { Turn = 3, Kind = ReplayEventKind.Recruit, Country = "orsk", Text = "raised 15 soldiers at orskhaven (fenna_host +15)" };
             var line = Chronicle.Line(e, id => P(id));

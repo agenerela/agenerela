@@ -717,6 +717,55 @@ a hungry one none from its hunger line.
   tag, every turn's end tags each siege with the game's own turns, every army has its stores at every moment, and a
   hungry army shows the warning to you and not to a rival (broken by not reading the line of a siege that ended).
 
+### Rule mode in plain words (15 November)
+
+The tech lead's clarity list after the readiness pass, each a frame before and after:
+- **War score.** One sign everywhere, labelled "WARS · WAR SCORE" in the top bar and the Realm panel.
+  - In rule mode it is your side: positive, you are winning. Your wars list you first.
+  - Elsewhere it is the first-named realm's side.
+- **No developer words on the menus.**
+  - The replay card says who won and how, not an id and a model.
+  - New game names no environment variable.
+  - With scripted rulers, Rule mode says "Scripted rivals" and hides the model field.
+  - The battle report no longer mentions "R3".
+- **Every number labelled.**
+  - In the top bar: "30 in 1 army" and "55 +15 a turn".
+  - An army's row names its stores and gives its mix in words ("20 pikes, 8 riders").
+- **Writs.** "2 of 3 used", matching the filled dots. A turn where no army awaits orders, or nothing can be ordered,
+  says why.
+- **The battle report** closes when the next council opens.
+- **The treasury.** When it will run dry within ten turns, the council says so, by the rules' own income and upkeep:
+  "The treasury runs dry in 2 turns (55 gold, -30 a turn)".
+- **A planned march** is drawn the moment it is ordered, in a lighter dashed stroke than a march under way.
+- **A holding army.** Its row says "holding at X until it wakes".
+  - `RuleSession.Plan` refuses an order for it: the rules ask an army only when it wakes, so such an order used to be
+    taken and dropped.
+  - Ordering any army in any council is a rules change for the build session.
+- **Battle report sides.** Each side's mix and commander come from the rules' battle record (#323), as the battle
+  began.
+  - An army raised and routed in one turn now shows its general and mix wherever it fought alone on its side.
+
+### Rule mode with all four R3 settings on: a readiness pass (15 November)
+
+A first-time player's path, played through the Unity CLI with Unit types, Generals, Sieges and Supply on, scripted
+rivals, on Classic and on a medium generated world, at 1080p and 4K. Fixes only:
+- **Chronicle.** A typed recruit ("raised 20 bows at highmoor (perrin_host +20)") now reads "raises 20 bows at
+  Highmoor for Perrin's host", like an untyped one.
+- **Army row.**
+  - An army awaiting orders says why, in the rules' words: "awaiting orders (stores running low)", "(starving)",
+    "(fought a battle)".
+  - An army besieging where it stands says so: "besieging it: siege 2 of 3".
+  - A long general's title wraps inside its column.
+  - "1 turn", not "1 turns", here and in the piece's tooltip.
+- **Map.** The siege tag shows on any besieged province. Before, rule mode hid it with the forts of land beyond your
+  borders, so your own army's siege of a rival capital had no sign on the map.
+- **Battle report.** With unit types or generals on, a battle where neither counted no longer says terrain will
+  matter "until unit types and generals come (R3)".
+- **End card.** A game that stopped with no winner reads "After 27 turns.", not ", after 27 turns.".
+
+What was found and left for a decision (the writs counter, war score's sign, holding armies, unlabelled numbers) is in
+the pull request.
+
 ### Generated worlds: detail up close, fields that show, rule mode on a big map (14 November)
 
 R4's third part on screen.
@@ -988,7 +1037,7 @@ moves come from `WritLegality.CourtMoves`, an army's from `WritLegality.ArmyMove
 list is refused with the rules' reason.
 
 **What the council panel shows** (`Screen/UI/ScreenUI.WritsRule.cs`):
-- **Your writs** as pips, filled as the plan spends them, and "Orders · writs 1 of 3" in the top bar.
+- **Your writs** as pips, filled as the plan spends them, and, in the top bar, "Orders · writs 1 of 3 used" (since the 15 November clarity pass the counter says "used").
   The tooltip gives the rule. The cap is the rules' setting (`BaseWrits`, `ProvincesPerWrit`,
   `MaxWrits`, or a country's own `WritsOverride`), read from each request.
 - **The court's orders.** One not offered is greyed and says why. A treaty term shows the war score
