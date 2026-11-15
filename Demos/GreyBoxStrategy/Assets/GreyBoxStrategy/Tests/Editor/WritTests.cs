@@ -1272,10 +1272,18 @@ namespace GreyBoxStrategy.Tests
                 a.HalfStores = 0;                       // starving
                 low.HalfStores = Game.Eats(w, low);     // one turn left
                 a.Soldiers = 10;
-                return WritLegality.Awaiting(w, "valen").Where(x => x == a || x == big || x == low).Select(x => x == a ? "starving" : x == low ? "low" : "big").ToList();
+                string Name(Army x) => x == a ? "starving" : x == low ? "low" : "big";
+                var mine = new[] { a, big, low };
+                // The order before hunger first: a hostile army beside it, then size, then id.
+                oldOrder = mine.OrderByDescending(x => WritLegality.HostileBeside(w, x) ? 1 : 0).ThenByDescending(x => x.Soldiers)
+                    .ThenBy(x => x.Id, StringComparer.Ordinal).Select(Name).ToList();
+                return WritLegality.Awaiting(w, "valen").Where(mine.Contains).Select(Name).ToList();
             }
+            List<string> oldOrder = null;
             Assert.That(Order(on: true), Is.EqualTo(new[] { "starving", "low", "big" }));
-            Assert.That(Order(on: false), Is.EqualTo(new[] { "big", "low", "starving" }), "off: by size, as before");
+            var off = Order(on: false);
+            Assert.That(off, Is.EqualTo(oldOrder), "off: the order as before");
+            Assert.That(off[0], Is.Not.EqualTo("starving"), "and the setup tells them apart");
         }
 
         [Test]
