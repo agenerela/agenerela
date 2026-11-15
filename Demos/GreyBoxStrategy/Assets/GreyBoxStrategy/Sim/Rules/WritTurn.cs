@@ -577,7 +577,15 @@ namespace GreyBoxStrategy
                 a.Location = to;
                 if (a.Path.Count == 0) continue; // won a battle on the border: it completes its step, then waits for orders
                 a.Path.RemoveAt(0);
-                if (a.Path.Count == 0)
+                if (a.Path.Count > 0 && WritLegality.HeldByFort(World, a.Owner, to))
+                {
+                    // A fort holds the road (rules v2 3.7): a march that reaches land beside an enemy fort stops there.
+                    var fort = World.Neighbours(World.Province(to)).First(n => WritLegality.HoldsTheRoad(World, a.Owner, n));
+                    a.Stop($"held up by {fort.Id}'s walls");
+                    report.Resolution.Add($"{a.Id} is held up at {to} by the walls of {fort.Id}.");
+                    Tell(a.Owner, 1, $"{a.Id} is held up at {to} by the walls of {fort.Id}.");
+                }
+                else if (a.Path.Count == 0)
                 {
                     a.Destination = null;
                     a.Wake.Add("arrived");
