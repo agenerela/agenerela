@@ -4336,9 +4336,33 @@ GreyBoxStrategy (#20), every R3 army rule at once before any is switched on: uni
 | Lines that repeat one already said in the game | 21% | 19% |
 
 - **What works:** no illegal answer in 3,366 decisions with every rule on, and no slower. The orders refused by the rules rose by one point. The rulers' lines follow the new rules ("I raise taxes to fund pikes that will crush the bows and secure our starving borders").
-- **Sieges end the turn they begin.** 14 of 15 were taken the same turn: the Classic board's provinces have one fort, a siege of one fort takes 2 turns, and an army three times the garrison of 10 takes one off. Working as written; a siege only lasts on a capital or a fortified province, which this board has few of.
+- **Sieges end the turn they begin.** 14 of 15 were taken the same turn: the provinces besieged had one fort each (one had two) _(corrected 15 November: an earlier version said every Classic province has one fort; Classic starts its 5 capitals with one fort and its other 20 provinces with none, and 11 of the 15 sieges were at capitals, the other 4 at provinces the courts had fortified)_, a siege of one fort takes 2 turns, and an army three times the garrison of 10 takes one off. Working as written; a siege only lasts on a capital or a fortified province, which this board has few of.
 - **A rule bug: armies left holding abroad starve where they stand.** 16 armies starved three turns or more in one place, the longest seven (`a5`'s morrow_host at harrow: held on turn 25 with full stores, empty on turn 32, starved to turn 38, never asked again). The supply rule never woke an army as its stores ran out (wake condition 6 of rules v2 1.3 was not built), so a hold given with full stores stood until the army died. Its own PR wakes it; the all-on arm is to be run again on it, so the hunger row and everything that depends on it (battles, land, treaties) are not a result yet.
 - **A typo in the facts:** with generals and supply both on, an army reads "led by Morrow the Forager,, stores 4 of 4"; the same PR fixes it.
 - **Treaties fell again** (4.8 to 2.3 a game; unit types alone, 4.2 to 2.5 on 14 November). Six games, within noise either time, but the same direction twice.
 - **What it can and cannot show:** six games an arm, capped at 40 turns, a first look; no default changes on it. The all-on arm with the hunger fix is the next run, and 15 pairs would make it a result.
+
+### Painted Realm R3, the counters line: told what beats what, the courts counter the type they see 67% of the time against 20%; the personas stop differing in which types they buy (15 November 2026)
+
+GreyBoxStrategy (#20), `GameRules.CountersLine` with unit types on in both arms. The recruit orders' descriptions already said what beats what, but a model served by Ollama never reads the schema (findings, 10 October), so the 4B had never been told. The line puts it in the court's facts, "Pikes beat riders, riders beat bows, and bows beat pikes; orsk is mostly riders, which pikes beat", one clause for each rival the facts name that is mostly one type, and a march's detail names the largest type among the enemy armies there ("enemy armies 30, mostly riders"). `personas` table, five `qwen3.5:4b` seats with today's default options, RTX 5080 (Docker Ollama 0.40.14), `-strategyTurn writs -strategyCap 40`, Classic, conquest. Control (`u`, `-strategyRules UnitTypes=true`, the line off: its default during the run) against the line (`k`, `UnitTypes=true;CountersLine=true`), the same seeds 1 to 12, one game a block, interleaved, in two runs of six pairs (01:44 to 02:51, then 02:52 to 03:58; the second to confirm the first). Kit and data: `.scratch/realm-build-map/counters-live/`, `python report.py`, `python paired.py`.
+
+| | control | the line |
+|---|---|---|
+| Decisions, illegal answers | 6,763, 0 | 6,879, 0 |
+| Recruits by type: pikes, riders, bows | 1,056, 327, 249 (65%, 20%, 15%) | 613, 554, 744 (32%, 29%, 39%) |
+| Recruits that counter the largest type the court sees (rules v2 9.2) | 294 of 1,481 (20%; chance 33%); per game 7% to 41% | 1,155 of 1,724 (67%); per game 53% to 78% |
+| Battles a game; won by the countering side; and with fewer soldiers | 87; 59% of 608; 63 | 99; 64% of 907; 117 |
+| Model seconds a turn | 7.62 | 7.75 (paired +0.13, SE 0.20) |
+| Prompt tokens, court | 1,258 | 1,290 |
+| Treaties a game | 3.1 | 2.7 (paired −0.42, SE 0.82) |
+| Persona η² (60 seat-games an arm): aggression; peace | 0.95; 0.63 | 0.92; 0.50 |
+| Persona η², how often a seat recruits (its share of decisions that are a recruit) | 0.23 (p 0.006) | 0.14 (p 0.09) |
+| Persona η², which types it picks (its recruits' share that are pikes; riders; bows) | 0.51; 0.33; 0.31 (p ≤ 0.001) | 0.02; 0.08; 0.03 (p 0.30 to 0.86) |
+
+- **The line works, and held over the second six pairs:** 64% in the first six, 67% over twelve; every game with the line (53% to 78%) above the best without (41%). The courts now buy all three types and buy what beats what they see; battles won by the countering side rose, and battles a game with it.
+- **Nothing measured got worse beyond noise:** no illegal answer in either arm, model time a turn +0.13 s (SE 0.20), treaties −0.42 a game (SE 0.82). Persona η² for aggression fell 0.03 (bootstrap over seeds 95% −0.05 to +0.00, the control's own two halves differ by 0.06) and for peace 0.13 (−0.25 to +0.04; the control's halves differ by 0.29): within noise, though aggression's interval only just reaches zero.
+- **The cost:** the personas no longer differ in which types they buy (η² 0.31 to 0.51 down to 0.02 to 0.08), and somewhat less in how often they recruit (0.23 to 0.14). Told what beats what they face, every persona buys the same answer.
+- **Lines:** "We recruit bows to counter orsk's pikes before they grow too strong." "Riders mount to hunt bows; gold spent wisely on the army that beats them." Wrong: "We raise pikes at our capital to counter Kesh's bows" (bows beat pikes).
+- **Decision (the tech lead's rule, set before the second six pairs were read):** the share held, and illegal answers, time, treaties and the aggression and peace η² were not worse beyond noise, so `CountersLine` is on by default from 15 November; it does nothing unless unit types are on. The recruit η² drop is the cost, recorded here for the lead. `-strategyRules "CountersLine=false"` runs the old prompt as an arm. Unit types themselves stay off.
+- **What it can and cannot show:** twelve games an arm capped at 40 turns, one model; the counter share is a large count, the η² differences are from 60 seat-games an arm.
 

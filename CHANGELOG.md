@@ -29,6 +29,12 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm R3: the counters line, on whenever unit types are** (#20). The court's facts say what beats what
+  and what each rival is mostly, and a march names the largest type it would meet. Twelve pairs on `qwen3.5:4b`:
+  recruits that counter the type seen 20% → 67%, no illegal answers, nothing else measured worse beyond noise; the
+  personas no longer differ in which types they buy. `GameRules.CountersLine`, on by default; unit types stay off.
+  Results in `findings.md`, 15 November.
+
 - **Painted Realm rule mode in plain words** (#20). The war score has one sign and a label; every number on the bar and
   army rows has a unit; the writs counter says "used"; the council warns before the treasury runs dry and says when no
   army awaits orders; a planned march is drawn at once; a holding army is not offered as orderable; menus lose ids,

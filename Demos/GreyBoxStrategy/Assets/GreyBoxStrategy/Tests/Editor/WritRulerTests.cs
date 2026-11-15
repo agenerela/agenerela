@@ -87,6 +87,27 @@ namespace GreyBoxStrategy.Tests
         }
 
         [Test]
+        public async Task CountersLine_TheCourtReadsIt_TheMarshalDoesNot_AndOffNobodyDoes()
+        {
+            async Task<List<ScriptedRequest>> Play(bool on)
+            {
+                var seen = new List<ScriptedRequest>();
+                var setup = GameSetup.Writs(5);
+                setup.TurnCap = 12;
+                setup.Numbers = GameRules.Standard;
+                setup.Numbers.UnitTypes = true;
+                setup.Numbers.CountersLine = on;
+                await PlayFakes(setup, seen);
+                return seen;
+            }
+            const string Rule = "Pikes beat riders, riders beat bows, and bows beat pikes";
+            var seenOn = await Play(true);
+            Assert.That(seenOn.Where(r => r.Label == "Court").All(r => r.Request.Observations.Contains(Rule)), Is.True, "every court call");
+            Assert.That(seenOn.Where(r => r.Label == "Army").Any(r => r.Request.Observations.Contains(Rule)), Is.False, "not the marshal");
+            Assert.That((await Play(false)).Any(r => r.Request.Observations.Contains(Rule)), Is.False, "off");
+        }
+
+        [Test]
         public async Task TheCourtAndTheMarshal_ReadLocalFacts_AndTheirOwnMovesLine()
         {
             var seen = new List<ScriptedRequest>();

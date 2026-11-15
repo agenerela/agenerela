@@ -266,8 +266,15 @@ namespace GreyBoxStrategy
         public static string Mostly(UnitMix m)
         {
             if (m.Total <= 0) return null;
+            return Largest(m) is UnitType t ? $"mostly {Name(t)}" : "mixed";
+        }
+
+        /// <summary>The type that is half the soldiers or more, as <see cref="Mostly"/> reads it; null when none is, or no soldiers.</summary>
+        public static UnitType? Largest(UnitMix m)
+        {
+            if (m.Total <= 0) return null;
             var t = All.OrderByDescending(m.Of).ThenBy(x => x).First();
-            return m.Of(t) * 2 >= m.Total ? $"mostly {Name(t)}" : "mixed";
+            return m.Of(t) * 2 >= m.Total ? t : (UnitType?)null;
         }
 
         public static double Base(GameRules r, UnitType t) => t == UnitType.Riders ? r.RiderStrength : t == UnitType.Bows ? r.BowStrength : r.PikeStrength;

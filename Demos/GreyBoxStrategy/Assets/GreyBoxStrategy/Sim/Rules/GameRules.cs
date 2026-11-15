@@ -209,6 +209,17 @@ namespace GreyBoxStrategy
         public bool UnitTypes = false;
 
         /// <summary>
+        /// With <see cref="UnitTypes"/> on, the counter rule in the rulers' own facts: the court reads one line saying
+        /// what beats what and what each rival it names is mostly, and a march order names the largest type among the
+        /// enemy armies it can see there. The recruit orders' descriptions say the same, but a model served by Ollama
+        /// never reads the schema. On by default (15 November), so it is there whenever unit types are; it does
+        /// nothing without them. Twelve pairs on qwen3.5:4b: the courts counter the type they see 67% of the time
+        /// against 20% without it, at the cost of personas that no longer differ in which types they buy
+        /// (findings, 15 November). <c>-strategyRules "CountersLine=false"</c> runs the old prompt as an arm.
+        /// </summary>
+        public bool CountersLine = true;
+
+        /// <summary>
         /// R3, rules v2 3.5: every army has a general with a trait, which counts in its battles and marches.
         /// Off by default. Seven of the page's ten traits; siegewright, forager and marshal wait for sieges,
         /// supply and army sizes.
