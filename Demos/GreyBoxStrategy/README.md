@@ -737,11 +737,12 @@ The tech lead's clarity list after the readiness pass, each a frame before and a
 - **The treasury.** When it will run dry within ten turns, the council says so, by the rules' own income and upkeep:
   "The treasury runs dry in 2 turns (55 gold, -30 a turn)".
 - **A planned march** is drawn the moment it is ordered, in a lighter dashed stroke than a march under way.
-- **A holding army.** Its row says "holding at X until it wakes".
-  - `RuleSession.Plan` refused an order for it: the rules ask an army only when it wakes, so such an order used to be
-    taken and dropped. Since #327 the court may recall it for a writ ("Any of your armies may have an order", in
-    the council section further down).
-  - Ordering any army in any council is a rules change for the build session.
+- **A holding or marching army** can be given new orders for a writ (#327 recalls it).
+  - Its row says "holding at X: click to give new orders (a writ)" while a writ is left, and "… until it wakes" when
+    none is.
+  - The armies' heading counts the writs left for armies ("1 of 2 army writs left"), one writ always the court's.
+  - Writs go as the rules give them: the armies your plan orders first, then those awaiting orders.
+  - Orders the rules did not take last turn (`RuleSession.PlanRefusals`) show in the council, with the reason.
 - **Battle report sides.** Each side's mix and commander come from the rules' battle record (#323), as the battle
   began.
   - An army raised and routed in one turn now shows its general and mix wherever it fought alone on its side.

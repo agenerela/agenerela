@@ -391,6 +391,7 @@ namespace GreyBoxStrategy.Realm
                     ui.Plan = new RuleSession.WritsPlan();
                     // 5. A battle report opened last turn closes when the next council opens.
                     ui.CloseBattle();
+                    ui.PlanRefusals = rule.PlanRefusals;
                     ui.SelectedArmy = null;
                     lastOrdersStatus = null;
                     // A first rule game: the help opens once the council is drawn, and never again by itself.
