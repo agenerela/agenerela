@@ -662,11 +662,14 @@ who takes command.
 on each side when it is not ×1, and a sentence a player reads: "Kesh's bows broke Merrow's pikes (+29%). Maren the
 Wary held firm (+10%)." With R3 on, its terrain line says terrain does not change a battle yet.
 
-**What the replay knows.** The turn-end states carry each army's mix and general from the rules' world. The
-moments inside a turn come from `ArmySnapshot`, which has neither, so the screen scales the turn's mix to the army's
-soldiers there. An army raised and routed in the same turn has no mix to show; its side of the report then shows
-no mix rather than a wrong one. Two names in the rules would close that gap: the mix and general on `ArmySnapshot`,
-and each side's mix on `BattleRecord`.
+**What the replay knows.** The turn-end states carry each army's mix and general from the rules' world, and since
+15 November so does the council: `ArmySnapshot` carries each army's mix, general, traits and stores, and
+`TurnSnapshot` each siege, so a replay's council is the live game's (`ReplayCouncilTests`, with all four R3 settings
+on, fails without them). The moments after the council carry each army's council mix on, split over the soldiers
+left the way the rules split losses, and its council general (a fall is told at the turn's end). An army raised
+and routed in the same turn has no mix to show unless its recruit order typed it, and no general; its side of the
+report then shows no mix rather than a wrong one. Each side's mix on `BattleRecord` would close that last gap.
+Recordings hold only decisions, and the replay plays the rules again, so recordings made before this load as they did.
 
 **Tests** (`ArmiesScreenTests`), each seen failing once against a deliberate break:
 - New game's two settings reach the rules of every writs game, each on its own and together, and never the
