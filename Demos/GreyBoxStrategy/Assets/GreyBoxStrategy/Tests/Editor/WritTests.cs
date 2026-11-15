@@ -767,8 +767,9 @@ namespace GreyBoxStrategy.Tests
             var battle = Fight(on: true);
             var valen = battle.Attacker == "valen" ? battle.AttackerMix : battle.DefenderMix;
             var orsk = battle.Attacker == "valen" ? battle.DefenderMix : battle.AttackerMix;
-            Assert.That((valen?.Riders, valen?.Total), Is.EqualTo((60, 60)), "before the losses");
-            Assert.That((orsk?.Pikes, orsk?.Bows), Is.EqualTo((30 + (battle.Attacker == "valen" ? battle.Militia : 0), 20)));
+            Assert.That(valen.HasValue && orsk.HasValue, Is.True, "both mixes kept");
+            Assert.That((valen.Value.Riders, valen.Value.Total), Is.EqualTo((60, 60)), "before the losses");
+            Assert.That((orsk.Value.Pikes, orsk.Value.Bows), Is.EqualTo((30 + (battle.Attacker == "valen" ? battle.Militia : 0), 20)));
             Assert.That(battle.AttackerCommander, Does.Contain(" the "));
             Assert.That(battle.DefenderCommander, Does.Contain(" the "));
             var off = Fight(on: false);
