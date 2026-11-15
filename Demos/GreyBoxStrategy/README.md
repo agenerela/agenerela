@@ -1036,6 +1036,16 @@ plan has no order for holds. You are offered, and held to, exactly what a model 
 moves come from `WritLegality.CourtMoves`, an army's from `WritLegality.ArmyMoves`. An order not on the
 list is refused with the rules' reason.
 
+**Any of your armies may have an order, woken or not** (15 November, the tech lead's decision). The rules ask
+only armies something woke; for one holding, the court recalls it (`Game.Recall(country, armyId)`, before the
+court's first order): it is asked first, in the plan's order, with the wake reason "recalled by the court"
+(`Game.RecalledReason`), and spends a writ like any army asked. A plan may order at most `Game.ArmyWrits(country)`
+armies (the writs less one for the court) and is refused with the reason if it orders more. A planned order the
+rules still did not take is said in `RuleSession.PlanRefusals` ("army_id: why"), never dropped. The model
+rulers never recall: their requests and prompts are as before. A replay recalls every army a recorded order
+names, in the order asked (`RecordedPlayers.Recall`); for a model's armies that is the order the rules ask
+anyway, so every recording replays as it did (`WritTests.Recall_OfTheArmiesAGameAskedAnyway_ChangesNoRequestAndNoResult`).
+
 **What the council panel shows** (`Screen/UI/ScreenUI.WritsRule.cs`):
 - **Your writs** as pips, filled as the plan spends them, and, in the top bar, "Orders · writs 1 of 3 used" (since the 15 November clarity pass the counter says "used").
   The tooltip gives the rule. The cap is the rules' setting (`BaseWrits`, `ProvincesPerWrit`,

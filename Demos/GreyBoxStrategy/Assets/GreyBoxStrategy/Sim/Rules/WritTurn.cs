@@ -33,6 +33,8 @@ namespace GreyBoxStrategy
             public bool SecondAsked;
             public Queue<Army> Queue;
             public int ArmiesAsked;
+            /// <summary>Armies the court recalled this turn, in the order recalled: asked first.</summary>
+            public readonly List<string> Recalled = new List<string>();
             public readonly List<string> Ordered = new List<string>();
             public readonly List<CountryAnswer> Answers = new List<CountryAnswer>();
         }
@@ -131,7 +133,9 @@ namespace GreyBoxStrategy
                 if (court && d.FirstCourt == null)
                 {
                     d.FirstCourt = answer.Choice;
-                    d.Queue = new Queue<Army>(WritLegality.Awaiting(World, d.Country));
+                    // Recalled armies first, in the order recalled, then the rest awaiting orders in the rules' order.
+                    var recalled = d.Recalled.Select(World.FindArmy).Where(x => x != null).ToList();
+                    d.Queue = new Queue<Army>(recalled.Concat(WritLegality.Awaiting(World, d.Country).Where(x => !recalled.Contains(x))));
                 }
                 if (!(court && answer.Choice.Action == Actions.None)) d.Used++;
                 d.Ordered.Add(request.ArmyId == null ? answer.Choice.ToString()
@@ -147,6 +151,32 @@ namespace GreyBoxStrategy
             phase = Phase.AwaitingEnvoys;
             return proposals.Where(p => p.Request != null).Select(p => p.Request).ToList();
         }
+
+        /// <summary>The wake reason a recalled army is asked with.</summary>
+        public const string RecalledReason = "recalled by the court";
+
+        /// <summary>
+        /// The writs turn, after <see cref="BeginTurn"/> and before the country's first court answer is submitted: asks
+        /// for orders from one of its armies whether or not anything woke it. A recalled army is asked before the others,
+        /// in the order recalled, and spends a writ like any army asked; one that was not awaiting is asked with
+        /// <see cref="RecalledReason"/>. Returns null, or why the army cannot be recalled. No model seat calls it: it is how
+        /// a person's plan reaches a holding army, and how a replay asks again what a recording shows was asked.
+        /// </summary>
+        public string Recall(string countryId, string armyId)
+        {
+            if (Rules.Turn != TurnStyle.Writs || phase != Phase.AwaitingCouncil || dockets == null) return "the council is not sitting";
+            if (!dockets.TryGetValue(countryId ?? "", out var d)) return $"{countryId} has no council this turn";
+            if (d.FirstCourt != null) return "the court has already given its first order this turn";
+            var army = World.FindArmy(armyId);
+            if (army == null || army.Owner != countryId) return $"{armyId} is not one of {countryId}'s armies";
+            if (d.Recalled.Contains(armyId)) return null;
+            if (!army.Awaiting) army.Wake.Add(RecalledReason);
+            d.Recalled.Add(armyId);
+            return null;
+        }
+
+        /// <summary>How many armies a country may still be asked about this turn: its writs, less one kept for the court.</summary>
+        public int ArmyWrits(string countryId) => dockets != null && dockets.TryGetValue(countryId ?? "", out var d) ? Math.Max(0, d.Writs - 1) : 0;
 
         private CountryRequest NextRequest(Docket d)
         {

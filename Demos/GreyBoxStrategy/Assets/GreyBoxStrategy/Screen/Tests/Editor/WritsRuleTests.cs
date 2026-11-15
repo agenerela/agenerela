@@ -108,7 +108,8 @@ namespace GreyBoxStrategy.Screen.Tests
             Assert.That(s.Writs, Is.True);
             var run = s.RunAsync();
             var ui = new RuleSession.WritsPlan();
-            int marches = 0, heldRefused = 0;
+            int marches = 0, recalled = 0, overRefused = 0;
+            var heldOrders = new List<(int turn, string army)>();
             for (int t = 1; t <= 6; t++)
             {
                 await Until(() => (s.WaitingFor == RuleSession.Waiting.Orders && s.Orders != null) || s.WaitingFor == RuleSession.Waiting.Envoy || s.Finished, $"turn {t}'s orders");
@@ -127,19 +128,29 @@ namespace GreyBoxStrategy.Screen.Tests
                 // An order the rules do not offer is refused before it is sent.
                 var bad = new RuleSession.WritsPlan { Court = new Move(Actions.DeclareWar, You) };
                 Assert.Throws<ArgumentException>(() => s.Plan(bad));
-                // So is an order for an army holding until it wakes: the rules would never ask it, and drop the order.
+                // More army orders than the writs give is refused, with the reason, before anything is sent.
+                var over = new RuleSession.WritsPlan();
+                for (int i = 0; i <= s.Game.ArmyWrits(You); i++) over.Armies[$"army_{i}"] = Move.Hold;
+                Assert.That(Assert.Throws<ArgumentException>(() => s.Plan(over)).Message, Does.Contain("writs give orders to"));
+                overRefused++;
+                // An army holding until it wakes may be ordered too: the court recalls it, for a writ.
                 foreach (var held in w.ArmiesOf(You).Where(a => !a.Awaiting))
                 {
-                    var hold = new RuleSession.WritsPlan(); hold.Armies[held.Id] = Move.Hold;
-                    Assert.That(Assert.Throws<ArgumentException>(() => s.Plan(hold)).Message, Does.Contain("holding until it wakes"));
-                    heldRefused++;
+                    if (plan.Armies.Count >= s.Game.ArmyWrits(You)) break;
+                    var march = WritLegality.ArmyMoves(w, You, held.Id).FirstOrDefault(m => m.Action == Actions.March);
+                    if (march == null) continue;
+                    plan.Armies[held.Id] = march;
+                    heldOrders.Add((t, held.Id));
+                    recalled++;
                 }
                 s.Plan(plan);
                 int turn = t;
                 await Until(() => s.Resolved == turn || s.Finished, $"turn {turn} to resolve");
+                Assert.That(s.PlanRefusals, Is.Empty, $"turn {turn}: every planned order was given");
             }
             Assert.That(marches, Is.GreaterThan(0), "you ordered armies");
-            Assert.That(heldRefused, Is.GreaterThan(0), "an army held until it woke at least once");
+            Assert.That(recalled, Is.GreaterThan(0), "you ordered an army that was holding at least once");
+            Assert.That(overRefused, Is.GreaterThan(0));
 
             var g = s.BuildReplay();
             Assert.That(g.Turns.Count, Is.EqualTo(s.Resolved), "the screen plays every turn that resolved");
@@ -147,6 +158,9 @@ namespace GreyBoxStrategy.Screen.Tests
             var yours = g.AllEvents.Where(e => e.Decision != null && e.Decision.ModelName == RuleSession.YourModel).ToList();
             Assert.That(yours.Any(e => e.Kind == ReplayEventKind.Recruit), Is.True, "your court's orders are in the replay");
             Assert.That(yours.Any(e => e.Kind == ReplayEventKind.ArmyOrder && e.Decision.ArmyId == e.Army), Is.True, "your armies' orders are in the replay with their army");
+            foreach (var (turn, army) in heldOrders)
+                Assert.That(yours.Any(e => e.Turn == turn && e.Kind == ReplayEventKind.ArmyOrder && e.Army == army), Is.True,
+                    $"turn {turn}: the order for {army}, holding when you gave it, was carried out and replays");
             Assert.That(g.AllEvents.Any(e => e.Decision != null && e.Decision.AgentId.EndsWith("_marshal")), Is.True, "the model rulers' marshals ordered armies");
 
             s.Stop();
