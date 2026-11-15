@@ -2139,7 +2139,7 @@ line, and `findings.md` for anything measured.
 - [ ] Support and pursuit; the report's factors
 - [ ] Every feature behind a rules flag; sim A/B each against off
 - [ ] Army panel, siege marks, stores pips, the full report card, fog in rule mode (built, each behind its setting in New game, 14 November: the mix and general on army rows and the battle report, #315; siege tags and stores pips, #317; fog in rule mode not checked here)
-- [ ] Live: all on against R1, persona table, 20 games; fog on against off
+- [ ] Live: all on against R1, persona table, 20 games; fog on against off (a first look, six pairs, 15 November: `findings.md`; a rule fix and a rerun are owed)
 
 **R4, generated worlds on screen**
 - [ ] Renderer: paper, sea, ripples, rhumb lines, land, terrain glyph atlas, ridges, wash, borders
