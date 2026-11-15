@@ -67,6 +67,48 @@ namespace GreyBoxStrategy.Tests
         // --- Armies, writs and orders ----------------------------------------------------------
 
         [Test]
+        public void Recall_OfTheArmiesAGameAskedAnyway_ChangesNoRequestAndNoResult()
+        {
+            // What a replay now does for every turn of a model's recording: recall each army the recording shows was
+            // asked, in its order. For armies the rules asked anyway, that must change nothing at all.
+            List<string> Play(Dictionary<int, List<(string country, string army)>> recall, Dictionary<int, List<(string country, string army)>> asked)
+            {
+                var map = GameSetup.Writs(3).BuildMap();
+                var g = new Game(3, map, GameSetup.Writs(3).BuildRules(map));
+                var players = map.Countries.ToDictionary(c => c.Id, c => (IPlayer)new ScriptedPlayer(Temperament.Expansionist));
+                var trace = new List<string>();
+                for (int t = 0; t < 25 && g.Result == null; t++)
+                {
+                    var requests = g.BeginTurn();
+                    int turn = g.World.Turn;
+                    if (recall != null && recall.TryGetValue(turn, out var list))
+                        foreach (var (country, army) in list) Assert.That(g.Recall(country, army), Is.Null);
+                    while (requests.Count > 0)
+                    {
+                        foreach (var r in requests)
+                        {
+                            trace.Add($"{turn} {r.CountryId} {r.Moment} {r.ArmyId} | {string.Join(" / ", r.StandingFacts.Concat(r.TurnFacts))} | {string.Join(",", r.Legal)}");
+                            if (asked != null && r.Moment == Moment.Army)
+                            {
+                                if (!asked.TryGetValue(turn, out var a)) asked[turn] = a = new List<(string, string)>();
+                                a.Add((r.CountryId, r.ArmyId));
+                            }
+                        }
+                        requests = g.Submit(requests.Select(r => new CountryAnswer(r, players[r.CountryId].Decide(r))).ToList());
+                    }
+                    var report = g.Resolve();
+                    trace.AddRange(report.Resolution.Select(l => $"{turn} = {l}"));
+                }
+                return trace;
+            }
+            var firstAsked = new Dictionary<int, List<(string country, string army)>>();
+            var plain = Play(null, firstAsked);
+            Assert.That(firstAsked.Values.Sum(l => l.Count), Is.GreaterThan(20), "armies were asked");
+            var again = Play(firstAsked, null);
+            Assert.That(again, Is.EqualTo(plain), "the same requests, facts, offers and results");
+        }
+
+        [Test]
         public void Recall_AsksAHoldingArmyFirst_WithItsReason_OnlyBeforeTheCourtsFirstOrder()
         {
             CountryRequest FirstArmyAsk(Game g, string recall)
