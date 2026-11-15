@@ -29,6 +29,20 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm R3: a fort holds the road, and a siege stops income** (#20), each behind its own switch, off by
+  default (`GameRules.FortsHoldTheRoad`, `SiegeStopsIncome`). A march stops beside an enemy fort no one besieges,
+  and from there may only besiege it or go back; a besieged province gives its owner nothing. A battle record now
+  keeps each side's unit mix and commander as the battle began, for the replay. Scripted only.
+
+- **Painted Realm R3: every army rule on at once, a first live look** (#20). Six pairs on `qwen3.5:4b`: no illegal
+  answers and no extra model time, more battles and fewer treaties; every siege but one ended the turn it began, and
+  armies left holding abroad starved where they stood, a rule bug fixed in its own PR. No default changes. Results in
+  `findings.md`, 15 November.
+
+- **Painted Realm replay: the council as the live game had it** (#20). `ArmySnapshot` now carries each army's mix,
+  general, traits and stores, and `TurnSnapshot` each siege, so a replay's council shows the same pieces, generals,
+  stores and siege tags as the live game did, and the turn's battle reports start from the exact mixes.
+
 - **Painted Realm: a stalemate counter that reads war score and land by treaty** (#20), behind
   `GameRules.StalemateByWarScore`, off by default. Land taken or freed by force no longer restarts it; a treaty,
   free land, a broken realm, a new war or a 10-point swing does. Scripted only; no live run yet.
@@ -775,6 +789,12 @@ phase table and the open issues, not here.
   (findings, 10 November) found one regression, on the route examples, fixed in the branch.
 
 ### Fixed
+
+- **Painted Realm R3: an army starving abroad is asked for orders again, and a siege lasts two turns at least**
+  (#20). The first live look with every army rule on found armies starving where a hold had left them (nothing woke
+  them as their stores ran out) and sieges falling the turn they began. With supply on, an army abroad is woken when
+  a turn's food is left and each turn it starves; with sieges on, a siege never falls the turn it begins. An army's
+  facts no longer read "led by Maren the Wary,, stores 4 of 4".
 
 - **GreyBoxStrategy's map generator speed test no longer fails when the machine is busy** (#20). It timed one
   Huge try in wall time, which doubled when other Unity runs shared the CPU (two failures on 14 November, both passing

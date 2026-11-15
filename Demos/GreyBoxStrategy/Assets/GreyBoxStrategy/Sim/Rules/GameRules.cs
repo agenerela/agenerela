@@ -244,6 +244,16 @@ namespace GreyBoxStrategy
         public double SiegeBreachChance = 0.10;
 
         /// <summary>
+        /// R3, rules v2 3.7, a fort holds the road: a march goes no further than a province bordering an enemy's
+        /// walled province that no one besieges, and an army standing in one may step only into that walled province
+        /// (to besiege or attack it) or into land we hold. Our own land is never held up. Off by default.
+        /// </summary>
+        public bool FortsHoldTheRoad = false;
+
+        /// <summary>R3, rules v2 3.7: a province under siege gives its owner no income. Off by default.</summary>
+        public bool SiegeStopsIncome = false;
+
+        /// <summary>
         /// R3, rules v2 3.6, model B: every army carries stores, full and refilled in our own land, eaten
         /// elsewhere, faster in poor land; an army with none loses soldiers and fights weaker. Off by default.
         /// </summary>

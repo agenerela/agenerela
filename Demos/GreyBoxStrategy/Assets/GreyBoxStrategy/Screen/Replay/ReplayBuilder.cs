@@ -106,7 +106,16 @@ namespace GreyBoxStrategy.Replay
                 if (replay.Writs)
                 {
                     for (int i = 0; i < provinceIds.Length; i++) councilState.Occupiers[i] = snap.Occupiers.TryGetValue(provinceIds[i], out var occ) ? occ : null;
-                    councilState.Armies = snap.Armies.Select(ArmyOf).ToList();
+                    councilState.Armies = snap.Armies.Select(a => ArmyOf(a, game.Rules)).ToList();
+                    // R3's sieges as they stood at the council, from the rules' own snapshot.
+                    if (councilState.SiegedBy != null)
+                        for (int i = 0; i < provinceIds.Length; i++)
+                        {
+                            bool sieged = snap.SiegedBy.TryGetValue(provinceIds[i], out var by);
+                            councilState.SiegedBy[i] = sieged ? by : null;
+                            councilState.SiegeTurns[i] = sieged ? snap.SiegeTurns[provinceIds[i]] : 0;
+                            councilState.SiegeNeeded[i] = sieged ? snap.SiegeTurnsNeeded[provinceIds[i]] : 0;
+                        }
                 }
                 var upkeepEvents = UpkeepEvents(tr, state, councilState, replay, turn.Turn);
                 if (story != null) upkeepEvents.InsertRange(0, StoryEvents(tr, state, replay, players));
@@ -136,9 +145,8 @@ namespace GreyBoxStrategy.Replay
                 // The last event carries the game's own numbers for the turn's end.
                 if (turn.Events.Count > 0) turn.Events[turn.Events.Count - 1].After = end;
                 else turn.Council = end;
-                // R3: the moments inside a turn come from the rules' snapshots, which carry no mix or general: each army's
-                // is the one it ends the turn with (losses come from every type in proportion, so the shares hold), or
-                // the one it began with if it did not live to the end.
+                // R3: the council comes from the rules' snapshot with each army's mix, general and stores; the moments after
+                // it carry those on, the mix scaled to the soldiers left (losses come from every type in proportion).
                 if (game.Rules.UnitTypes || game.Rules.Generals || game.Rules.Supply)
                 {
                     var seen = new HashSet<ReplayState>();
@@ -391,16 +399,37 @@ namespace GreyBoxStrategy.Replay
                     if (!a.HasStores) a.HalfStores = stores.HalfStores;
                     a.MaxHalfStores = stores.MaxHalfStores;
                 }
+                // The council's general stays with an army through the turn (a fall is told at its end); one the state
+                // does not know (raised this turn) is the one it ends with.
                 var src = end?.Army(a.Id) ?? start?.Army(a.Id);
-                if (src == null) continue;
-                a.General = src.General;
-                a.Traits = src.Traits.ToList();
-                int total = src.Pikes + src.Riders + src.Bows;
-                if (total <= 0) continue;
-                a.Riders = (int)Math.Round((double)a.Soldiers * src.Riders / total);
-                a.Bows = Math.Min(a.Soldiers - a.Riders, (int)Math.Round((double)a.Soldiers * src.Bows / total));
-                a.Pikes = Math.Max(0, a.Soldiers - a.Riders - a.Bows);
+                if (a.General == null && src?.General != null) { a.General = src.General; a.Traits = src.Traits.ToList(); }
+                // Its own mix, carried from the council, scaled to the soldiers it has now; one it lacks from where it ends.
+                var mix = a.HasMix ? a : src;
+                if (mix == null || !mix.HasMix || (mix == a && a.Pikes + a.Riders + a.Bows == a.Soldiers)) continue;
+                Scale(a, mix.Pikes, mix.Riders, mix.Bows);
             }
+        }
+
+        /// <summary>
+        /// The rules' own split of a new total over the types (<c>Army.Soldiers</c>'s setter): in proportion, the remainder
+        /// to the largest fractions, pikes first on ties.
+        /// </summary>
+        public static void Scale(ArmyState a, int pikes, int riders, int bows)
+        {
+            int value = a.Soldiers, total = pikes + riders + bows;
+            if (value <= 0 || total <= 0) { a.Pikes = a.Riders = a.Bows = 0; return; }
+            var have = new[] { pikes, riders, bows };
+            var now = new int[3];
+            var frac = new double[3];
+            for (int i = 0; i < 3; i++)
+            {
+                double exact = (double)value * have[i] / total;
+                now[i] = (int)Math.Floor(exact);
+                frac[i] = exact - now[i];
+            }
+            int left = value - now.Sum();
+            foreach (int i in Enumerable.Range(0, 3).OrderByDescending(i => frac[i]).ThenBy(i => i).Take(left)) now[i]++;
+            a.Pikes = now[0]; a.Riders = now[1]; a.Bows = now[2];
         }
 
         /// <summary>
@@ -451,10 +480,16 @@ namespace GreyBoxStrategy.Replay
         /// <summary>"Maren the Wary", "Maren the Wary and Bold": the rules' own title for a general.</summary>
         public static string Title(ArmyState a) => a.General == null ? null : a.General + " the " + string.Join(" and ", a.Traits.Select(GeneralTraits.Epithet));
 
-        private static ArmyState ArmyOf(ArmySnapshot a) => new ArmyState
+        /// <summary>An army at the council, as <see cref="Capture"/> shows one: R3's fields only with their settings.</summary>
+        private static ArmyState ArmyOf(ArmySnapshot a, GameRules rules) => new ArmyState
         {
             Id = a.Id, Owner = a.Owner, Location = a.Location, Soldiers = a.Soldiers, Destination = a.Destination,
             Path = a.Path.ToList(), StepTurnsLeft = a.StepTurnsLeft, Wake = a.Wake.ToList(),
+            Pikes = rules.UnitTypes ? a.Pikes : 0, Riders = rules.UnitTypes ? a.Riders : 0, Bows = rules.UnitTypes ? a.Bows : 0,
+            General = rules.Generals ? a.General : null,
+            Traits = rules.Generals && a.General != null ? a.Traits.ToList() : new List<string>(),
+            HalfStores = rules.Supply ? a.HalfStores : -1,
+            MaxHalfStores = rules.Supply ? 2 * rules.MaxStores : 0,
         };
 
         private static bool Pair(RelationState r, string a, string b) => (r.A == a && r.B == b) || (r.A == b && r.B == a);

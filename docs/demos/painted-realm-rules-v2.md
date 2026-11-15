@@ -829,9 +829,13 @@ Supplied land is our own only, since alliances and passage are not built; healin
 - **An undefended walled province cannot be walked into.** An army whose march enters a hostile
   walled province **besieges** it instead: it stands in the province, the province still belongs to
   its owner, and produces no income or food for it.
-- **A siege takes** 2 turns per walls level (*to tune*): −1 with a `siegewright` general, −1 if the
+- **A siege takes** 2 turns per walls level (*to tune*), and never falls in the turn it begins (see below): −1 with a `siegewright` general, −1 if the
   besiegers outnumber the garrison (10 a level) three to one, never below 1. Each turn of a siege
   also has a 10% seeded chance of an early breach.
+- **A siege lasts two turns at least** (changed 15 November): the turn it begins and one full turn after, whatever
+  the besiegers' numbers, general or an early breach, so the defender always has a turn to relieve it. Before,
+  a one-fort siege by an army three times the garrison fell the turn it began, and in the first live look with
+  every army rule on 14 of 15 sieges did: no player would have seen them.
 - **When it ends** the walls drop one level and the province is occupied.
 - **A siege is broken** when the besieging army leaves or loses a battle there. The owner's army
   that marches in fights it, with the walls' bonus if the garrison sallies.
@@ -1762,7 +1766,7 @@ has the detail.
   Section 1.1's "the loser stays in the province it was leaving" cannot hold with the winner there.
 - **Sieges, stores, unit types and generals' traits wait for R3** (unit types were built in R3's first part, 14 November, behind `GameRules.UnitTypes`, seven of the ten general traits in its third, behind `GameRules.Generals`, and sieges at forts in its fourth, behind `GameRules.Sieges`; supply (stores, hunger, the forager trait) in its fifth, behind `GameRules.Supply`; all off; wake conditions 3 and 6 are not checked here). A walled province is fought for
   through its militia (5 + 10 a fort, plus the capital bonus; R1b: 3 + 6 a fort) rather than besieged. Wake conditions 3
-  and 6 (a siege ends, stores run low) wait with them.
+  and 6 (a siege ends, stores run low) waited with them; 6 was built in R3's fifth part's follow-up (#322, 15 November), 3 is not checked here.
 - **Recruiting** keeps today's levy (5 + 5 a province, paid at 2 gold a soldier). It appears at the
   capital, joining an army standing there up to 100, the rest forming new armies. Companies of 10 by
   type come with R3.
@@ -2103,7 +2107,7 @@ line, and `findings.md` for anything measured.
 - [x] Test: settings round-trip; conquest ends; old recordings replay
 
 **R1, the turn of writs and armies as pieces**
-- [x] `Army`, orders, standing orders and the wake conditions (six of eight; sieges and stores in R3)
+- [x] `Army`, orders, standing orders and the wake conditions (six of eight; sieges and stores in R3; stores running low was built 15 November, #322)
 - [x] Writs a turn, the order cycle, the second court order
 - [x] Simultaneous movement with terrain turns; border crossings; re-check on landing
 - [x] Battles between armies, retreat and rout, militia and neutral garrisons
@@ -2133,13 +2137,13 @@ line, and `findings.md` for anything measured.
 - [x] Three types, costs, the counter rule (`GameRules.UnitTypes`, off; scripted only, 14 November)
 - [x] The model rulers' recruit orders by type and the mix in their facts (14 November; first live look, #316: no illegal answers, but the courts counter the type they see 22% of the time, so still off)
 - [x] Generals: names, seven of the ten traits, second trait, a general falling (`GameRules.Generals`, off; scripted only, 14 November). Siegewright came with the sieges (#311, only with `GameRules.Sieges` on); the forager came with supply (#313, only with `GameRules.Supply` on); the marshal waits for army sizes; capture waits for prisoners
-- [x] Sieges at forts over several turns, breach, broken siege, siegewright (`GameRules.Sieges`, off; scripted only, 14 November). Forts stand for walls; the fort that holds the road, and income lost under siege, are not built yet
+- [x] Sieges at forts over several turns, breach, broken siege, siegewright (`GameRules.Sieges`, off; scripted only, 14 November). Forts stand for walls. The fort that holds the road (`GameRules.FortsHoldTheRoad`) and income lost under siege (`GameRules.SiegeStopsIncome`) came on 15 November, each its own switch, off; scripted only
 - [x] Supply model B, with forager (`GameRules.Supply`, off; scripted against none, 14 November). Still open: the army cap, and A against B (A needs farms)
 - [x] Fog of war for the rulers' facts: totals rounded, forest, scouting (`GameRules.Fog`, `ArmySight`, off; 14 November). Still open: fog for the scripted players, allies' sight and watchtowers
 - [ ] Support and pursuit; the report's factors
 - [ ] Every feature behind a rules flag; sim A/B each against off
 - [ ] Army panel, siege marks, stores pips, the full report card, fog in rule mode (built, each behind its setting in New game, 14 November: the mix and general on army rows and the battle report, #315; siege tags and stores pips, #317; fog in rule mode not checked here)
-- [ ] Live: all on against R1, persona table, 20 games; fog on against off
+- [ ] Live: all on against R1, persona table, 20 games; fog on against off (a first look, six pairs, 15 November: `findings.md`; a rule fix and a rerun are owed)
 
 **R4, generated worlds on screen**
 - [ ] Renderer: paper, sea, ripples, rhumb lines, land, terrain glyph atlas, ridges, wash, borders
