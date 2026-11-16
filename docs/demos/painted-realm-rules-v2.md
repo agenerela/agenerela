@@ -2148,6 +2148,7 @@ line, and `findings.md` for anything measured.
 - [x] Sieges at forts over several turns, breach, broken siege, siegewright (`GameRules.Sieges`, off; scripted only, 14 November). Forts stand for walls. The fort that holds the road (`GameRules.FortsHoldTheRoad`) and income lost under siege (`GameRules.SiegeStopsIncome`) came on 15 November, each its own switch, off; scripted only
 - [x] Supply model B, with forager (`GameRules.Supply`, off; scripted against none, 14 November). Still open: the army cap, and A against B (A needs farms)
 - [x] Fog of war for the rulers' facts: totals rounded, forest, scouting (`GameRules.Fog`, `ArmySight`, off; 14 November). Still open: fog for the scripted players, allies' sight and watchtowers
+- [x] On by default (15 November, the lead's call): unit types, generals, sieges, supply, fog and hunger first, on the writs turn; New game starts on a generated world. Headless runs keep Classic, and an arm turns a rule off with `-strategyRules "Supply=false"` (the demo README's "The defaults since 15 November")
 - [ ] Support and pursuit; the report's factors
 - [ ] Every feature behind a rules flag; sim A/B each against off
 - [ ] Army panel, siege marks, stores pips, the full report card, fog in rule mode (built, each behind its setting in New game, 14 November: the mix and general on army rows and the battle report, #315; siege tags and stores pips, #317; fog in rule mode not checked here)
