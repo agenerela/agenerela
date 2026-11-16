@@ -2482,25 +2482,26 @@ game wants choices and its ordinary actions in one enum, or a chosen option shou
 
 ### DR-023 — Typed parameters beside action and target: declared on the action, written before the statement, sent only in the paired schema
 
-**Status:** Proposed, 14 November 2026 (#266 item 2, its second box), by the #266 framework-gaps
-session. Nothing is built. The lead decides the questions below; the verdicts in the table are the
-proposal, not decisions.
+**Status:** Accepted, 15 November 2026. Proposed on 14 November (#266 item 2, its second box) by
+the #266 framework-gaps session; the lead answered "Yes to all five" to the questions below, so each
+proposed answer is the decision. Nothing is built yet, and nothing becomes a default before the
+measurement in question 5.
 
-**The lead's questions** (each has a recommendation in the table further down):
+**The lead's questions, each decided as proposed** (the table further down gives the reasons):
 
 1. **Build it now, or keep the "a parameter is a target" idiom** (Living Vale's bundled ids,
    `stock_mara_potion_one`, and the storyteller's `windfall_major`; design review F9, 7 October)
-   until a game shows the idiom failing? *Proposed: build it, off unless declared, because the
+   until a game shows the idiom failing? *Decided: build it, off unless declared, because the
    storyteller and Living Vale want the same thing, and the probe shows the grammar holds it.*
-2. **Which kinds come first.** *Proposed: a closed set (`minor | major`) and a number given as a
+2. **Which kinds come first.** *Decided: a closed set (`minor | major`) and a number given as a
    short list of allowed values, first. An open number range and extra targets come second, each
    after its own probe or design pass.*
 3. **Several targets: how.** An array that *replaces* `target`, or `target` kept and an
    `also_targets` array of 0 to N−1 more beside it, or groups as targets only (the #298 recipe).
-   *Proposed: `target` kept plus `also_targets`, in the second step.*
-4. **Should a parameter force the paired schema** for the actions that declare one? *Proposed:
+   *Decided: `target` kept plus `also_targets`, in the second step.*
+4. **Should a parameter force the paired schema** for the actions that declare one? *Decided:
    yes.* A flat schema could only carry parameters with a "not used" value in every enum.
-5. **Which game measures first.** *Proposed: GreyBoxStrategy's storyteller: strength as a
+5. **Which game measures first.** *Decided: GreyBoxStrategy's storyteller: strength as a
    parameter against the bundled `windfall_major` ids, 20 games an arm on `qwen3.5:4b`.*
 
 **Context.** A decision is `action`, `target`, `statement`. A game that needs "how hard", "how
