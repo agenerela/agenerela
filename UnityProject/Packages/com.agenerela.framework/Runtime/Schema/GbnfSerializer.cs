@@ -90,7 +90,13 @@ namespace Agenerela
         }
         private static string JsonQuote(string value)
         {
-            
+             var json = new StringBuilder();
+            json.Append('"');
+
+            for (var i = 0; i < value.Length; i++)
+            {
+                var c = value[i];
+            }
         }
 
         private static void AppendJsonUnicodeEscape(StringBuilder output, char value)
