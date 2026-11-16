@@ -301,8 +301,8 @@ the design they lead to.
 ## The lead's direction, 15 November 2026
 
 Passed on by the framework tech lead session after the lead played the game. His words are quoted.
-Nothing here is built yet; the defaults and the land bonuses below are described only as decided, and
-move to built when their pull requests merge.
+The defaults are built (#334, 15 November). The rest is decided, not built, and the land bonuses move to
+built when their pull request merges.
 
 - **UI and controls come first.** "the main points we should adjust now are UI and controls ... We need to
   completely refactor it and make sure it matches EU4 or EU5 or victoria. The left panel is kind of strange,
