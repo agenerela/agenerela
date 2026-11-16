@@ -302,7 +302,7 @@ the design they lead to.
 
 Passed on by the framework tech lead session after the lead played the game. His words are quoted.
 The defaults are built (#334, 15 November), and so are the land bonuses (`GameRules.LandTraditions`, #336,
-off, scripted only). The rest is decided, not built.
+off; a live A/B on 16 November left it off, #337). The rest is decided, not built.
 
 - **UI and controls come first.** "the main points we should adjust now are UI and controls ... We need to
   completely refactor it and make sure it matches EU4 or EU5 or victoria. The left panel is kind of strange,
