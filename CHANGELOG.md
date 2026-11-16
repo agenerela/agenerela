@@ -29,6 +29,11 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm UI rework, a first draft** (#20). The top bar shows your shield and each number with an icon, a
+  colour and a breakdown; the left panel holds one thing at a time (realm, province, army, rival); the chronicle marks
+  each entry's kind; right click orders a chosen army; I opens the decisions. Marches under way hold on their own
+  colour. The page `docs/demos/painted-realm-ui-draft.md` asks the lead what to build next.
+
 - **Painted Realm: marches as coloured arrows** (#20). A march under way is a solid arrow in its owner's colour along
   its path; one ordered this council is the same arrow, pale. Both read the same at every zoom.
 

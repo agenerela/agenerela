@@ -339,7 +339,7 @@ namespace GreyBoxStrategy.Realm
             {
                 var chip = new VisualElement(); chip.AddToClassList("chip");
                 chip.EnableInClassList("off", !categoryFilter.Contains(c));
-                chip.Add(new Label(c.ToString()));
+                chip.Add(new Icon(KindIcon(c), 11) { Tint = KindTint(c) }); chip.Add(new Label(c.ToString()) { style = { marginLeft = 3 } });
                 chip.RegisterCallback<ClickEvent>(_ => { if (!categoryFilter.Remove(c)) categoryFilter.Add(c); RenderFilters(); RenderChronicle(null); });
                 filters.Add(chip);
             }
@@ -387,6 +387,8 @@ namespace GreyBoxStrategy.Realm
                 row.RegisterCallback<ClickEvent>(_ => LinePressed?.Invoke(l));
                 // The storyteller's events carry its crest, not the country they struck.
                 row.Add(new Crest(told ? CountryLook.Storyteller : CountryLook.Of(l.Country), 16));
+                // What kind of entry it is, at a glance: a battle, land, a treaty, gold, a building, a story.
+                var kind = new Icon(KindIcon(l.Category), 12) { Tint = KindTint(l.Category) }; kind.AddToClassList("lg-kind"); row.Add(kind);
                 if (told) row.AddToClassList("lg-tale");
                 var body = new VisualElement(); body.AddToClassList("lg-body");
                 var t = new Label(l.Text); t.AddToClassList("lg-text"); body.Add(t);
@@ -399,11 +401,36 @@ namespace GreyBoxStrategy.Realm
             }
         }
 
+        /// <summary>The chronicle's icon for a kind of entry.</summary>
+        public static IconKind KindIcon(ChronicleCategory c) => c switch
+        {
+            ChronicleCategory.Land => IconKind.Province,
+            ChronicleCategory.War => IconKind.Swords,
+            ChronicleCategory.Peace => IconKind.Seal,
+            ChronicleCategory.Building => IconKind.Hammer,
+            ChronicleCategory.Economy => IconKind.Gold,
+            ChronicleCategory.Refused => IconKind.Refused,
+            ChronicleCategory.Guard => IconKind.Shield,
+            _ => IconKind.Quill,
+        };
+
+        private static Color KindTint(ChronicleCategory c) => c switch
+        {
+            ChronicleCategory.Land => new Color32(150, 200, 120, 255),
+            ChronicleCategory.War => new Color32(226, 110, 90, 255),
+            ChronicleCategory.Peace => new Color32(150, 190, 225, 255),
+            ChronicleCategory.Economy => new Color32(232, 196, 92, 255),
+            ChronicleCategory.Refused => new Color32(200, 120, 110, 255),
+            ChronicleCategory.Guard => new Color32(200, 170, 230, 255),
+            _ => new Color32(214, 196, 158, 255),
+        };
+
         // A ruler's orders of one turn: its name once, each order a line of its own (a click finds it), what it said once.
         private VisualElement GroupRow(ChronicleGroup g, ChronicleLine fresh)
         {
             var row = new VisualElement(); row.AddToClassList("lg"); row.AddToClassList("lg-group");
             row.Add(new Crest(CountryLook.Of(g.Country), 16));
+            var kind = new Icon(IconKind.Quill, 12) { Tint = new Color32(214, 196, 158, 255) }; kind.AddToClassList("lg-kind"); row.Add(kind);
             var body = new VisualElement(); body.AddToClassList("lg-body");
             var t = new Label($"{CountryLook.NameOf(g.Country)}'s orders"); t.AddToClassList("lg-text"); body.Add(t);
             foreach (var (text, line) in g.Items)

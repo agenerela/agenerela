@@ -215,9 +215,10 @@
 .compact .turn { font-size: 13px; margin-right: 6px; }
 
 /* the side panel: a province or a country, over the realm list's right edge */
-.side { left: 248px; top: 50px; width: 310px; max-height: 80%; display: none; background-color: rgb(20, 16, 12); }
+.side { left: 8px; top: 50px; width: 310px; bottom: 8px; display: none; background-color: rgb(20, 16, 12); }
+.side-open .realm { display: none; }
 .side.on { display: flex; }
-.compact .side { left: 50px; }
+.compact .side { left: 8px; }
 
 /* the diplomacy view */
 .diplomacy { left: 50%; top: 18%; width: 640px; translate: -50% 0; display: none; background-color: rgb(20, 16, 12); }
@@ -239,6 +240,28 @@
 /* the followed country's own bar */
 .follow-bar { flex-direction: row; flex-grow: 1; align-items: stretch; display: none; overflow: hidden; }
 .nation.me { border-top-width: 2px; border-top-color: rgb(210, 173, 98); }
+/* The UI draft (#20): the top bar's stats, the left panel as one place, the chronicle's kinds. */
+#my-crest { margin-right: 2px; }
+.bstat { flex-direction: row; align-items: center; padding-left: 10px; padding-right: 10px; border-right-width: 1px; border-right-color: rgba(201, 164, 90, 0.22); }
+.bstat:hover { background-color: rgba(210, 173, 98, 0.12); }
+.bstat-icon { margin-right: 6px; }
+.bstat-value { font-size: 15px; -unity-font-style: bold; color: rgb(236, 224, 196); }
+.bstat-sub { font-size: 10px; margin-left: 4px; color: rgb(160, 146, 118); }
+.bstat-sub.good { color: rgb(150, 200, 120); }
+.bstat-sub.bad { color: rgb(232, 112, 96); }
+.st-gold .bstat-icon { color: rgb(232, 196, 92); }
+.st-army .bstat-icon { color: rgb(196, 204, 214); }
+.st-land .bstat-icon { color: rgb(150, 200, 120); }
+.st-writ .bstat-icon { color: rgb(214, 120, 90); }
+.st-stab .bstat-icon { color: rgb(170, 190, 220); }
+.st-stab .pips { margin-left: 6px; }
+.st-war .bstat-icon { color: rgb(226, 110, 90); }
+.st-truce .bstat-icon { color: rgb(150, 190, 225); }
+.riv-war { color: rgb(226, 110, 90); margin-left: 2px; }
+.insp-btn { flex-direction: row; align-items: center; width: auto; padding-left: 8px; padding-right: 8px; margin-left: 4px; }
+.insp-btn > Label { margin-left: 5px; font-size: 12px; }
+.lg-kind { margin-left: 4px; margin-right: 2px; margin-top: 2px; }
+.side-back { width: auto; padding-left: 6px; padding-right: 6px; margin-right: 8px; }
 .seg2 { justify-content: center; padding-left: 9px; padding-right: 9px; border-right-width: 1px; border-right-color: rgba(201, 164, 90, 0.22); }
 .seg2-label { font-size: 9px; -unity-font-style: bold; letter-spacing: 1px; color: rgb(141, 127, 102); }
 .seg2-value { font-size: 12.5px; -unity-font-style: bold; }
@@ -252,7 +275,7 @@
 .riv.truce { color: rgb(216, 162, 74); }
 
 /* an open side panel pushes the map-mode bar and its legend to its right: panels and bars never overlap */
-.side-open .modes, .side-open .legend { left: 568px; }
+.side-open .modes, .side-open .legend { left: 326px; }
 .compact.side-open .modes, .compact.side-open .legend { left: 370px; }
 
 /* the start menu */
