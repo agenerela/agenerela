@@ -255,7 +255,8 @@ least:
 
 So nobody looks for them:
 
-- **No typed parameters.** A decision is one action, one target and one statement, or no statement
+- **No typed parameters, yet.** DR-023 (accepted 15 November, nothing built, nothing a default before its
+  storyteller A/B) puts them beside action and target; until it is built a decision is one action, one target and one statement, or no statement
   at all (#266). Quantities,
   prices or a strength are not fields (#190 LV #12, #266 item 2).
   What Ollama's grammar can hold beside them was probed on 14 November: an enum and a bounded array

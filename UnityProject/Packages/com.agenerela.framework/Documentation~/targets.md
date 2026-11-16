@@ -230,7 +230,7 @@ into.Offer("north", new CountryGroup(new[] { "orsk", "kesh" }), "group");
   not every combination.
 
 A target array beside `target` is not built; it would be a new field in the schema, and waits for
-the typed parameters of #266 item 2, if groups prove clumsy.
+the typed parameters of #266 item 2 (DR-023, accepted, not built), if groups prove clumsy.
 
 ## Facts told through an action
 
