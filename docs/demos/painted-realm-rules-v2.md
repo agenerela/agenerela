@@ -2150,7 +2150,7 @@ line, and `findings.md` for anything measured.
 - [x] Fog of war for the rulers' facts: totals rounded, forest, scouting (`GameRules.Fog`, `ArmySight`, off; 14 November). Still open: fog for the scripted players, allies' sight and watchtowers
 - [ ] Support and pursuit; the report's factors
 - [ ] Every feature behind a rules flag; sim A/B each against off
-- [ ] Army panel, siege marks, stores pips, the full report card, fog in rule mode (built, each behind its setting in New game, 14 November: the mix and general on army rows and the battle report, #315; siege tags and stores pips, #317; fog in rule mode not checked here)
+- [ ] Army panel, siege marks, stores pips, the full report card, fog in rule mode (built, each behind its setting in New game, 14 November: the mix and general on army rows and the battle report, #315; siege tags and stores pips, #317; fog in rule mode not checked here; a march drawn as a filled arrow, solid under way and pale when ordered this council, #333, 15 November)
 - [ ] Live: all on against R1, persona table, 20 games; fog on against off (a first look, six pairs, 15 November: `findings.md`; the all-on arm rerun on #322's fixes, 15 November: sieges last, hunger not solved by asking; the control was not rerun; `HungerFirst` (off) run against off, 6 pairs, 15 November, #331: `findings.md`)
 
 **R4, generated worlds on screen**
