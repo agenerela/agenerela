@@ -289,6 +289,18 @@ namespace GreyBoxStrategy
         /// On by default since 15 November (the lead's call); <c>-strategyRules "Fog=false"</c> turns it off for an arm.
         /// </summary>
         public bool Fog = true;
+        /// <summary>
+        /// R3, land traditions (the lead's answer to the counters line's cost, 15 November: the land, not the persona,
+        /// should make realms differ). With <see cref="UnitTypes"/> on, each type's soldiers fight stronger for the share
+        /// of the realm's held land that leans to it: hills and mountains to pikes, plains to riders, forest to bows, marsh
+        /// to none; the specials <c>iron_deep</c>, <c>horse_plains</c> and <c>great_wood</c> a step each. Battle strength
+        /// only, capped so the counter rule still decides between equal realms; the court reads it in one line
+        /// (<see cref="LandTraditions"/>). Off by default until an A/B run with the models.
+        /// </summary>
+        public bool LandTraditions = false;
+        /// <summary>The strength one step gives, each full <see cref="LandShareStep"/> of held land, and the cap.</summary>
+        public double LandStep = 0.05, LandShareStep = 0.20, LandCap = 0.15;
+
         /// <summary>The most rival armies a ruler's "Rival armies we see" line names.</summary>
         public int MaxSightings = 5;
         public double PikeStrength = 1.0;

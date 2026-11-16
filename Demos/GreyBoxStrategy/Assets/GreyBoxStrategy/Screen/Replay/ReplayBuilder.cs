@@ -18,6 +18,14 @@ namespace GreyBoxStrategy.Replay
     /// </remarks>
     public static partial class ReplayBuilder
     {
+        /// <summary>The rules a recording that names none was played with: the standard ones, R3's army rules off.</summary>
+        public static GameRules RecordedRules()
+        {
+            var r = GameRules.Standard;
+            r.UnitTypes = r.Generals = r.Sieges = r.Supply = r.Fog = r.HungerFirst = false;
+            return r;
+        }
+
         private static readonly Regex Took = new Regex(@"^took (\w+) from (\w+|the neutrals) \((\d+) against (\d+)\)");
         private static readonly Regex Failed = new Regex(@"^attack on (\w+) failed \((\d+) against (\d+)\)");
         private static readonly Regex Built = new Regex(@"^built a fort in (\w+)");
@@ -25,11 +33,15 @@ namespace GreyBoxStrategy.Replay
         private static readonly Regex TruceEnded = new Regex(@"^The truce between (\w+) and (\w+) ended");
         private static readonly Regex OutOfGame = new Regex(@"^(\w+) has lost its last province");
 
+        /// <param name="rules">The rules it was played with. A recording holds only decisions, so a saved one,
+        /// built with none, replays under the standard rules with R3's six army rules off, as every game was played
+        /// before they came on by default (15 November): a recording that does not say plays them off.</param>
         /// <param name="partial">For a game still being played: stop at the first turn the recording
         /// cannot finish, and return the turns before it, rather than throw.</param>
         public static ReplayGame Build(Recording recording, MapDefinition map = null, GameRules rules = null, bool partial = false)
         {
             map = map ?? MapDefinition.Standard();
+            rules = rules ?? RecordedRules();
             var game = new Game(recording.Seed, map, rules);
             // A storyteller game: no random table, the storyteller's rules, its recorded events.
             var story = StoryArms.Rules(recording.StoryArm);

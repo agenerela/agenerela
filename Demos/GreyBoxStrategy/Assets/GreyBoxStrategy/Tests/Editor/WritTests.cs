@@ -733,6 +733,135 @@ namespace GreyBoxStrategy.Tests
             return r;
         }
 
+        // --- R3: land traditions, off by default ------------------------------------------------
+
+        private static GameRules Landed()
+        {
+            var r = Typed();
+            r.LandTraditions = true;
+            return r;
+        }
+
+        private static double Bonus(List<LandTraditions.Tradition> ts, UnitType t) => ts.Single(x => x.Type == t).Bonus;
+
+        [Test]
+        public void LandTraditions_EachTypeGainsAStepForEachFifthOfHeldLandThatLeansToIt_AndOneForASpecial_UpToTheCap()
+        {
+            var r = Landed();
+            Assert.That(new GameRules().LandTraditions, Is.False, "off by default");
+            var held = new List<(Terrain, string)>();
+            for (int i = 0; i < 4; i++) held.Add((i % 2 == 0 ? Terrain.Hills : Terrain.Mountains, null));
+            for (int i = 0; i < 2; i++) held.Add((Terrain.Plains, null));
+            for (int i = 0; i < 3; i++) held.Add((Terrain.Forest, null));
+            held.Add((Terrain.Marsh, null));
+            var ts = LandTraditions.From(r, held);
+            Assert.That(Bonus(ts, UnitType.Pikes), Is.EqualTo(0.10).Within(1e-9), "4 of 10 hills and mountains: two fifths");
+            Assert.That(Bonus(ts, UnitType.Riders), Is.EqualTo(0.05).Within(1e-9), "2 of 10 plains: one fifth");
+            Assert.That(Bonus(ts, UnitType.Bows), Is.EqualTo(0.05).Within(1e-9), "3 of 10 forest: one full fifth");
+            Assert.That(ts.Single(x => x.Type == UnitType.Pikes).Leaning, Is.EqualTo(4));
+            Assert.That(ts.Sum(x => x.Leaning), Is.EqualTo(9), "marsh leans to none");
+
+            held[4] = (Terrain.Plains, "horse_plains");
+            Assert.That(Bonus(LandTraditions.From(r, held), UnitType.Riders), Is.EqualTo(0.10).Within(1e-9), "a special place: one step more");
+
+            var mountains = Enumerable.Range(0, 10).Select(i => (Terrain.Mountains, i == 0 ? "iron_deep" : null)).ToList();
+            Assert.That(Bonus(LandTraditions.From(r, mountains), UnitType.Pikes), Is.EqualTo(r.LandCap).Within(1e-9), "never past the cap");
+            Assert.That(LandTraditions.From(r, new List<(Terrain, string)>()).All(x => x.Bonus == 0), Is.True, "no land, no tradition");
+        }
+
+        [Test]
+        public void LandTraditions_OfARealm_CountOnlyTheLandItOwnsAndHolds_AndNoneWhenOff()
+        {
+            var g = NewWrits(1, Landed());
+            var w = g.World;
+            List<LandTraditions.Tradition> Expected() =>
+                LandTraditions.From(w.Rules, w.ProvincesOf("valen").Where(p => p.Occupier == null).Select(p => (p.Info.Terrain, p.Info.Special)).ToList());
+            var before = LandTraditions.Of(w, "valen");
+            Assert.That(before.Select(t => (t.Type, t.Bonus, t.Leaning, t.Held)), Is.EqualTo(Expected().Select(t => (t.Type, t.Bonus, t.Leaning, t.Held))));
+            Assert.That(before.First().Held, Is.EqualTo(w.ProvincesOf("valen").Count()));
+
+            var taken = w.ProvincesOf("valen").First(p => !p.IsCapital && LandTraditions.Leaning(p.Info.Terrain) != null);
+            taken.Occupier = "orsk";
+            var after = LandTraditions.Of(w, "valen");
+            Assert.That(after.First().Held, Is.EqualTo(before.First().Held - 1), "land another occupies is not held");
+            Assert.That(after.Single(t => t.Type == LandTraditions.Leaning(taken.Info.Terrain)).Leaning,
+                Is.EqualTo(before.Single(t => t.Type == LandTraditions.Leaning(taken.Info.Terrain)).Leaning - 1));
+
+            Assert.That(LandTraditions.Of(NewWrits(1, Typed()).World, "valen"), Is.Empty, "off");
+            var noTypes = Landed();
+            noTypes.UnitTypes = false;
+            Assert.That(LandTraditions.Of(NewWrits(1, noTypes).World, "valen"), Is.Empty, "only with unit types");
+            Assert.That(LandTraditions.Of(w, null), Is.Empty, "a neutral garrison has none");
+        }
+
+        [Test]
+        public void LandTraditions_StrengthenTheTypesTheLandLeansTo_AndAPureCounterStillWinsAgainstTheCap()
+        {
+            var r = Landed();
+            var pikesTen = new List<LandTraditions.Tradition> { new LandTraditions.Tradition { Type = UnitType.Pikes, Bonus = 0.10 } };
+            Assert.That(LandTraditions.Strength(r, pikesTen, new UnitMix { Pikes = 30 }), Is.EqualTo(1.10).Within(1e-9));
+            Assert.That(LandTraditions.Strength(r, pikesTen, new UnitMix { Riders = 30 }), Is.EqualTo(1.0).Within(1e-9), "riders gain nothing from hills");
+            var half = new UnitMix { Pikes = 14, Riders = 10 };   // plain strength 14 + 14: half of it pikes
+            Assert.That(LandTraditions.Strength(r, pikesTen, half), Is.EqualTo(1.05).Within(1e-9));
+
+            // A side of one type facing the type it counters, the loser at the cap in its own type and the dice at their
+            // most against the winner: the counter still decides.
+            foreach (var t in Units.All)
+            {
+                var beaten = Units.All.Single(x => Units.BeatenBy(x) == t);   // the type t beats
+                var winner = new UnitMix { Pikes = t == UnitType.Pikes ? 30 : 0, Riders = t == UnitType.Riders ? 30 : 0, Bows = t == UnitType.Bows ? 30 : 0 };
+                var lost = new UnitMix { Pikes = beaten == UnitType.Pikes ? 30 : 0, Riders = beaten == UnitType.Riders ? 30 : 0, Bows = beaten == UnitType.Bows ? 30 : 0 };
+                var capped = new List<LandTraditions.Tradition> { new LandTraditions.Tradition { Type = beaten, Bonus = r.LandCap } };
+                double win = Units.Strength(r, winner, lost) * r.RollMin;
+                double lose = Units.Strength(r, lost, winner) * LandTraditions.Strength(r, capped, lost) * r.RollMax;
+                Assert.That(win, Is.GreaterThan(lose), $"{t} against {beaten} at the cap");
+            }
+
+            // In the game: every battle's strength carries each side's land factor, and some battles have one.
+            var records = new List<BattleRecord>();
+            for (int seed = 1; seed <= 3; seed++)
+            {
+                var setup = GameSetup.Writs(seed);
+                setup.Numbers = ArmyRulesOff();
+                setup.Numbers.UnitTypes = true;
+                setup.Numbers.LandTraditions = true;
+                records.AddRange(GameRunner.Play(setup, "mixed", seed).Reports.SelectMany(x => x.BattleRecords));
+            }
+            Assert.That(records.Count, Is.GreaterThan(50));
+            foreach (var b in records)
+            {
+                Assert.That(b.AttackStrength, Is.EqualTo(Units.Plain(r, b.AttackerMix.Value) * b.AttackCounter * b.AttackLand * b.AttackRoll).Within(1e-6));
+                Assert.That(b.DefenceStrength, Is.EqualTo(Units.Plain(r, b.DefenderMix.Value) * b.DefenceCounter * b.DefenceLand * b.DefenceRoll + b.FortTerm + b.CapitalTerm).Within(1e-6));
+                Assert.That(b.AttackLand, Is.InRange(1.0, 1 + r.LandCap + 1e-9));
+            }
+            Assert.That(records.Any(b => b.AttackLand > 1 || b.DefenceLand > 1), Is.True, "the land counts in battles");
+            var off = GameSetup.Writs(1);
+            off.Numbers = ArmyRulesOff();
+            off.Numbers.UnitTypes = true;
+            Assert.That(GameRunner.Play(off, "mixed", 1).Reports.SelectMany(x => x.BattleRecords).All(b => b.AttackLand == 1 && b.DefenceLand == 1), Is.True, "off: no land factor");
+        }
+
+        [Test]
+        public void LandTraditions_TheCourtsLine_SaysWhatItsLandGivesInTheRulesNumbers_InOneLine()
+        {
+            var g = NewWrits(1, Landed());
+            var w = g.World;
+            foreach (var c in w.Alive)
+            {
+                var ts = LandTraditions.Of(w, c.Id).Where(t => t.Bonus > 0).ToList();
+                string line = LandTraditions.Line(w, c.Id);
+                if (ts.Count == 0) { Assert.That(line, Is.Null, c.Id); continue; }
+                Assert.That(line, Does.StartWith("Our land makes our ").And.EndWith(").").And.Not.Contain("\n"), c.Id);
+                foreach (var t in ts)
+                    Assert.That(line, Does.Contain($"our {Units.Name(t.Type)} {Math.Round(t.Bonus * 100):0}% stronger (").And.Contain($", {t.Leaning} of {t.Held}"), $"{c.Id} {t.Type}");
+                if (ts.Count == 2) Assert.That(line.Split(new[] { " and our " }, StringSplitOptions.None).Length, Is.EqualTo(2), "two: joined by and");
+            }
+            Assert.That(w.Alive.Any(c => LandTraditions.Line(w, c.Id) != null), Is.True, "Classic gives some realm a tradition");
+            Assert.That(LandTraditions.Line(NewWrits(1, Typed()).World, "valen"), Is.Null, "off");
+            var h = new List<(Terrain, string)> { (Terrain.Hills, null), (Terrain.Hills, null), (Terrain.Plains, null), (Terrain.Marsh, null), (Terrain.Marsh, null) };
+            Assert.That(LandTraditions.From(Landed(), h).Count(t => t.Bonus > 0), Is.EqualTo(2), "hills 2 of 5 and plains 1 of 5");
+        }
+
         [Test]
         public void Counter_PikesFacingAllRiders_FightAtOneAndAHalf_AndRidersFacingPikesAtAHalf()
         {

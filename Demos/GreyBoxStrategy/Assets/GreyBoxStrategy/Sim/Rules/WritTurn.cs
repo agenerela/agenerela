@@ -799,8 +799,15 @@ namespace GreyBoxStrategy
             }
             // With supply (rules v2 3.6), the soldiers of armies with no stores fight 15% weaker.
             double attackHunger = r.Supply ? Hunger(r, attackers) : 1, defenceHunger = r.Supply ? Hunger(r, defenders) : 1;
-            double attack = attackBase * attackGeneral * attackHunger * attackRoll;
-            double defence = defenceBase * defenceGeneral * defenceHunger * defenceRoll + fortTerm + capitalTerm;
+            // With land traditions, each side's realm's held land strengthens the types it leans to.
+            double attackLand = 1, defenceLand = 1;
+            if (r.UnitTypes && r.LandTraditions)
+            {
+                attackLand = LandTraditions.Strength(r, LandTraditions.Of(World, attackerId), UnitMix.Of(attackers));
+                defenceLand = LandTraditions.Strength(r, LandTraditions.Of(World, defenderId), UnitMix.Of(defenders, fixedDefence));
+            }
+            double attack = attackBase * attackGeneral * attackHunger * attackLand * attackRoll;
+            double defence = defenceBase * defenceGeneral * defenceHunger * defenceLand * defenceRoll + fortTerm + capitalTerm;
             var site = World.Province(where);
             var record = new BattleRecord
             {
@@ -828,6 +835,8 @@ namespace GreyBoxStrategy
                 CounterNote = counterNote,
                 AttackGeneral = attackGeneral,
                 DefenceGeneral = defenceGeneral,
+                AttackLand = attackLand,
+                DefenceLand = defenceLand,
                 GeneralNote = generalNote,
                 AttackerMix = attackerMix,
                 DefenderMix = defenderMix,
