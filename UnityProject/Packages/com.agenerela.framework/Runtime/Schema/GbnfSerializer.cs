@@ -86,7 +86,7 @@ namespace Agenerela
 
         private static void AppendRule(StringBuilder grammar, string name, string expression)
         {
-            
+             grammar.Append(name).Append(" ::= ").Append(expression).Append('\n');
         }
         private static string JsonQuote(string value)
         {
@@ -114,8 +114,7 @@ namespace Agenerela
                 {
                     terminal.Append("\\\\");
                 }
-                else if (char.IsHighSurrogate(c) &&
-                         i + 1 < value.Length &&
+                else if (char.IsHighSurrogate(c) && i + 1 < value.Length &&
                          char.IsLowSurrogate(value[i + 1]))
                 {
                     var codePoint = char.ConvertToUtf32(c, value[++i]);
