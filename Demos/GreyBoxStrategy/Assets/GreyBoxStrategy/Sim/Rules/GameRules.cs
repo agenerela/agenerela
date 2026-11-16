@@ -203,10 +203,10 @@ namespace GreyBoxStrategy
 
         /// <summary>
         /// Pikes, riders and bows with the counter rule, recruited by <c>recruit_pikes</c>, <c>recruit_riders</c> and
-        /// <c>recruit_bows</c> in place of <c>recruit</c>. Off by default: every soldier is a pike and battles are
-        /// fought as before. The writs turn only.
+        /// <c>recruit_bows</c> in place of <c>recruit</c>. Off, every soldier is a pike and battles are fought as
+        /// before. The writs turn only. On by default since 15 November (the lead's call); <c>-strategyRules "UnitTypes=false"</c> turns it off for an arm.
         /// </summary>
-        public bool UnitTypes = false;
+        public bool UnitTypes = true;
 
         /// <summary>
         /// With <see cref="UnitTypes"/> on, the counter rule in the rulers' own facts: the court reads one line saying
@@ -221,10 +221,10 @@ namespace GreyBoxStrategy
 
         /// <summary>
         /// R3, rules v2 3.5: every army has a general with a trait, which counts in its battles and marches.
-        /// Off by default. Seven of the page's ten traits; siegewright, forager and marshal wait for sieges,
-        /// supply and army sizes.
+        /// Seven of the page's ten traits; siegewright, forager and marshal wait for sieges, supply and army sizes.
+        /// On by default since 15 November (the lead's call); <c>-strategyRules "Generals=false"</c> turns it off for an arm.
         /// </summary>
-        public bool Generals = false;
+        public bool Generals = true;
         /// <summary>A trait's strength or casualty effect, as a fraction (bold, wary +10%; horse-born, bowmaster +15% of that type; inspiring -20% casualties).</summary>
         public double BoldStrength = 0.10, BoldCasualties = 0.10, WaryStrength = 0.10, TypeTraitStrength = 0.15, InspiringCasualties = 0.20;
         /// <summary>Battles a general must win to gain a second trait.</summary>
@@ -235,9 +235,10 @@ namespace GreyBoxStrategy
         /// <summary>
         /// R3, rules v2 3.7: an enemy province with forts (walls) is besieged over several turns instead of
         /// stormed: no militia battle, the province occupied when the siege ends, its walls one level lower.
-        /// Off by default. The fort that holds the road, and income lost under siege, are not built yet.
+        /// The fort that holds the road and income lost under siege are their own settings, off.
+        /// On by default since 15 November (the lead's call); <c>-strategyRules "Sieges=false"</c> turns it off for an arm.
         /// </summary>
-        public bool Sieges = false;
+        public bool Sieges = true;
         /// <summary>Turns a siege takes per fort (walls level).</summary>
         public int SiegeTurnsPerFort = 2;
         /// <summary>The garrison a fort holds, for the three-to-one rule: besiegers that many times the garrison take a turn off.</summary>
@@ -258,9 +259,10 @@ namespace GreyBoxStrategy
 
         /// <summary>
         /// R3, rules v2 3.6, model B: every army carries stores, full and refilled in our own land, eaten
-        /// elsewhere, faster in poor land; an army with none loses soldiers and fights weaker. Off by default.
+        /// elsewhere, faster in poor land; an army with none loses soldiers and fights weaker.
+        /// On by default since 15 November (the lead's call); <c>-strategyRules "Supply=false"</c> turns it off for an arm.
         /// </summary>
-        public bool Supply = false;
+        public bool Supply = true;
         /// <summary>The most stores an army carries, in turns of food.</summary>
         public int MaxStores = 4;
         /// <summary>Stores refilled a turn in our own land.</summary>
@@ -274,16 +276,19 @@ namespace GreyBoxStrategy
         /// <summary>
         /// With <see cref="Supply"/> on, hunger first (the tech lead's call, 15 November): a starving army, then one whose
         /// stores run out next turn, is asked before the others within the writs, and its own facts say what hunger costs
-        /// and the nearest land that would feed it. Off by default until an A/B run with the models.
+        /// and the nearest land that would feed it. Six pairs on qwen3.5:4b: soldiers lost to hunger 580 against 125, with
+        /// fewer battles and sieges (findings, 15 November). It does nothing without supply.
+        /// On by default since 15 November (the lead's call); <c>-strategyRules "HungerFirst=false"</c> turns it off for an arm.
         /// </summary>
-        public bool HungerFirst = false;
+        public bool HungerFirst = true;
 
         /// <summary>
         /// R3, rules v2 3.8: the rulers read rival armies only where they see (<see cref="ArmySight"/>): position, general
         /// and size rounded to 10 near their land and their armies, the mix only when scouted by riders; each
-        /// rival's total, rounded, always. Off by default. Scripted players still read everything.
+        /// rival's total, rounded, always. Scripted players still read everything.
+        /// On by default since 15 November (the lead's call); <c>-strategyRules "Fog=false"</c> turns it off for an arm.
         /// </summary>
-        public bool Fog = false;
+        public bool Fog = true;
         /// <summary>The most rival armies a ruler's "Rival armies we see" line names.</summary>
         public int MaxSightings = 5;
         public double PikeStrength = 1.0;

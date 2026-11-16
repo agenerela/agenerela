@@ -182,6 +182,12 @@ namespace GreyBoxStrategy
                 rules.StalemateTurns = 12;
                 rules.TruceTurns = 3;
             }
+            else
+            {
+                // R3's army rules are the writs turn's, on by default since 15 November: the one-move game has no
+                // armies to type, feed or besiege, so its rules carry them off and say so.
+                rules.UnitTypes = rules.Generals = rules.Sieges = rules.Supply = rules.Fog = rules.HungerFirst = false;
+            }
             rules.MaxTurns = Victory == VictoryMode.Conquest ? TurnCap : TurnLimit;
             if (Victory == VictoryMode.Domination)
                 rules.ProvincesToWin = (map.Provinces.Count * DominationPercent + 99) / 100;

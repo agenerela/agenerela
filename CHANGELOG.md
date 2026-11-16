@@ -804,6 +804,11 @@ phase table and the open issues, not here.
 
 ### Changed
 
+- **Painted Realm: R3's army rules on by default, a generated world first** (#20, the lead's call). `UnitTypes`, `Generals`,
+  `Sieges`, `Supply`, `Fog` and `HungerFirst` are on for the writs turn; the one-move game carries them off. New game
+  starts on a generated world on the writs turn; Classic and each rule's Off stay choices. Headless runs keep Classic;
+  an arm repeats an earlier run with `-strategyRules "Supply=false"` and so on.
+
 - **GreyBoxStrategy marks the moves that take no target** (#244 item 2): recruit, raise_taxes and
   the two envoy answers set `ActionDefinition.TakesNoTarget`, so the framework drops a target the
   model names for one and records it, and the seat's `TargetIgnored` reads the framework's

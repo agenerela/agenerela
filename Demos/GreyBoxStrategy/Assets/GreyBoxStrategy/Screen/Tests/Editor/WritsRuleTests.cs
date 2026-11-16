@@ -92,7 +92,7 @@ namespace GreyBoxStrategy.Screen.Tests
                 foreach (var other in court.World.CountryList.Where(c => c.Info.Id != You))
                     Assert.That(court.World.Writs(other.Info.Id), Is.LessThanOrEqualTo(court.World.Rules.MaxWrits), $"{other.Info.Id} keeps the rules' count");
                 // Every army awaiting orders gets one, however many: the plan the rules accept says so.
-                var plan = new RuleSession.WritsPlan { Court = court.Legal.FirstOrDefault(m => m.Action == Actions.Recruit) ?? court.Legal.First() };
+                var plan = new RuleSession.WritsPlan { Court = court.Legal.FirstOrDefault(m => m.Action == Actions.Recruit || Actions.RecruitTypes.Contains(m.Action)) ?? court.Legal.First() };
                 foreach (var a in WritLegality.Awaiting(court.World, You))
                     plan.Armies[a.Id] = WritLegality.ArmyMoves(court.World, You, a.Id).FirstOrDefault(m => m.Action == Actions.March) ?? WritLegality.ArmyMoves(court.World, You, a.Id).First();
                 s.Plan(plan);
@@ -163,7 +163,7 @@ namespace GreyBoxStrategy.Screen.Tests
                 Assert.That(court.Writs, Is.EqualTo(w.Writs(You)), "your writs are the rules' count, a setting, not a constant");
                 Assert.That(court.Legal, Is.EqualTo(WritLegality.CourtMoves(w, You)), "your court is offered exactly what a model's court is offered");
 
-                var plan = new RuleSession.WritsPlan { Court = court.Legal.FirstOrDefault(m => m.Action == Actions.Recruit) ?? court.Legal.First() };
+                var plan = new RuleSession.WritsPlan { Court = court.Legal.FirstOrDefault(m => m.Action == Actions.Recruit || Actions.RecruitTypes.Contains(m.Action)) ?? court.Legal.First() };
                 foreach (var a in WritLegality.Awaiting(w, You))
                 {
                     var march = WritLegality.ArmyMoves(w, You, a.Id).FirstOrDefault(m => m.Action == Actions.March);
@@ -234,7 +234,7 @@ namespace GreyBoxStrategy.Screen.Tests
                 if (s.WaitingFor == RuleSession.Waiting.Envoy) { s.Answer(false); t--; continue; }
                 var court = s.Orders;
                 Assert.That(court.Legal, Is.EqualTo(WritLegality.CourtMoves(court.World, you)));
-                var plan = new RuleSession.WritsPlan { Court = court.Legal.FirstOrDefault(m => m.Action == Actions.Recruit) ?? court.Legal.First() };
+                var plan = new RuleSession.WritsPlan { Court = court.Legal.FirstOrDefault(m => m.Action == Actions.Recruit || Actions.RecruitTypes.Contains(m.Action)) ?? court.Legal.First() };
                 foreach (var a in WritLegality.Awaiting(court.World, you))
                 {
                     var march = WritLegality.ArmyMoves(court.World, you, a.Id).FirstOrDefault(m => m.Action == Actions.March);
@@ -279,6 +279,36 @@ namespace GreyBoxStrategy.Screen.Tests
         }
 
         [Test]
+        public void New_game_starts_a_generated_writs_world_with_the_army_rules_on_and_Off_turns_each_off()
+        {
+            var c = new NewGameChoice();
+            Assert.That((c.Generated, c.Writs), Is.EqualTo((true, true)), "a generated world on the writs turn, by default");
+            Assert.That(c.Route(out _), Is.EqualTo(NewGameRoute.WorldLive), "the default choice starts a game");
+            Assert.That(c.UnitTypes && c.Generals && c.Sieges && c.Supply, Is.True, "the four army rules on by default");
+
+            var setup = GameSetup.Writs(5);
+            var map = setup.BuildMap();
+            var built = setup.BuildRules(map);
+            Assert.That(built.UnitTypes && built.Generals && built.Sieges && built.Supply && built.Fog && built.HungerFirst, Is.True,
+                "the rules' own defaults: on for the writs turn");
+            var on = ReplayDirector.WithArmySettings(built, c.UnitTypes, c.Generals, c.Sieges, c.Supply);
+            Assert.That(on.UnitTypes && on.Generals && on.Sieges && on.Supply, Is.True);
+            foreach (string off in new[] { "UnitTypes", "Generals", "Sieges", "Supply" })
+            {
+                var r = ReplayDirector.WithArmySettings(built, off != "UnitTypes", off != "Generals", off != "Sieges", off != "Supply");
+                var got = new Dictionary<string, bool> { ["UnitTypes"] = r.UnitTypes, ["Generals"] = r.Generals, ["Sieges"] = r.Sieges, ["Supply"] = r.Supply };
+                Assert.That(got[off], Is.False, $"Off for {off} turns a rule that is on by default off");
+                Assert.That(got.Where(kv => kv.Key != off).All(kv => kv.Value), Is.True, $"Off for {off} leaves the others on");
+            }
+            Assert.That(built.Supply, Is.True, "the setup's own rules are not changed");
+
+            var one = GameSetup.Classic(5);
+            var oneRules = one.BuildRules(one.BuildMap());
+            Assert.That(oneRules.UnitTypes || oneRules.Generals || oneRules.Sieges || oneRules.Supply || oneRules.Fog || oneRules.HungerFirst, Is.False,
+                "the one-move game carries the army rules off");
+        }
+
+        [Test]
         public void Pieces_shrink_as_provinces_come_close_on_screen()
         {
             Assert.That(ReplayDirector.HostScaleFor(200), Is.EqualTo(1f), "far apart: full size");
@@ -296,7 +326,7 @@ namespace GreyBoxStrategy.Screen.Tests
             var court = requests.Single(r => r.CountryId == You);
             var army = game.World.ArmiesOf(You).First();
             var march = WritLegality.ArmyMoves(game.World, You, army.Id).First(m => m.Action == Actions.March);
-            var recruit = court.Legal.First(m => m.Action == Actions.Recruit);
+            var recruit = court.Legal.First(m => m.Action == Actions.Recruit || Actions.RecruitTypes.Contains(m.Action));
             var taxes = court.Legal.First(m => m.Action == Actions.RaiseTaxes);
             var plan = new RuleSession.WritsPlan { Court = recruit, Court2 = taxes };
             plan.Armies[army.Id] = march;
