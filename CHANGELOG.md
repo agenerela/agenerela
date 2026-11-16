@@ -29,6 +29,10 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm R3: land traditions** (#20), behind `GameRules.LandTraditions`, off. The share of a realm's held
+  land that leans to a type (hills and mountains pikes, plains riders, forest bows) makes that type up to 15%
+  stronger in battle, and the court reads it in one line. Scripted only so far.
+
 - **Painted Realm: marches as coloured arrows** (#20). A march under way is a solid arrow in its owner's colour along
   its path; one ordered this council is the same arrow, pale. Both read the same at every zoom.
 

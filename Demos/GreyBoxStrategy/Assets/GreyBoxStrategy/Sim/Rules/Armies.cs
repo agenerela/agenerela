@@ -152,6 +152,8 @@ namespace GreyBoxStrategy
         /// <summary>With generals: each side's commander's strength factor (1 with none) and the report's line, "Maren the Wary held firm (+10%)", or null.</summary>
         public double AttackGeneral = 1, DefenceGeneral = 1;
         public string GeneralNote;
+        /// <summary>With land traditions (R3): each side's strength factor from its realm's held land; 1 without them.</summary>
+        public double AttackLand = 1, DefenceLand = 1;
         /// <summary>With unit types (R3): each side's soldiers by type as the battle began (a militia or garrison as pikes); null without them.</summary>
         public UnitMix? AttackerMix, DefenderMix;
         /// <summary>With generals (R3): each side's commander as the battle began, "Maren the Wary", or null for none.</summary>
@@ -391,6 +393,82 @@ namespace GreyBoxStrategy
             if (attacking && g.Has(Bold)) f += r.BoldCasualties;
             if (g.Has(Inspiring)) f -= r.InspiringCasualties;
             return f;
+        }
+    }
+
+    /// <summary>
+    /// R3's land traditions (<see cref="GameRules.LandTraditions"/>): what a realm's held land makes each type of its
+    /// soldiers worth in battle.
+    /// </summary>
+    public static class LandTraditions
+    {
+        /// <summary>The type a terrain leans to: hills and mountains pikes, plains riders, forest bows, marsh none.</summary>
+        public static UnitType? Leaning(Terrain t) =>
+            t == Terrain.Hills || t == Terrain.Mountains ? UnitType.Pikes : t == Terrain.Plains ? UnitType.Riders : t == Terrain.Forest ? UnitType.Bows : (UnitType?)null;
+
+        /// <summary>The type a special place adds a step to, or null.</summary>
+        public static UnitType? SpecialLeaning(string special) =>
+            special == "iron_deep" ? UnitType.Pikes : special == "horse_plains" ? UnitType.Riders : special == "great_wood" ? UnitType.Bows : (UnitType?)null;
+
+        /// <summary>One type's tradition: its bonus, the held provinces that lean to it, of how many held, and its specials held.</summary>
+        public struct Tradition
+        {
+            public UnitType Type;
+            public double Bonus;
+            public int Leaning, Held, Specials;
+        }
+
+        /// <summary>
+        /// Each type's tradition from held land given as (terrain, special): a step for each full
+        /// <see cref="GameRules.LandShareStep"/> of it that leans to the type, a step for each special of the type, at most
+        /// <see cref="GameRules.LandCap"/>.
+        /// </summary>
+        public static List<Tradition> From(GameRules r, IReadOnlyList<(Terrain terrain, string special)> held)
+        {
+            var list = new List<Tradition>();
+            foreach (var t in Units.All)
+            {
+                int leaning = held.Count(h => Leaning(h.terrain) == t);
+                int specials = held.Count(h => SpecialLeaning(h.special) == t);
+                int steps = held.Count == 0 ? 0 : (int)Math.Floor(leaning / (double)held.Count / r.LandShareStep + 1e-9);
+                list.Add(new Tradition { Type = t, Leaning = leaning, Held = held.Count, Specials = specials, Bonus = Math.Min(r.LandCap, (steps + specials) * r.LandStep) });
+            }
+            return list;
+        }
+
+        /// <summary>A realm's traditions from the land it owns and holds (owned, and not occupied by another); none when off.</summary>
+        public static List<Tradition> Of(World w, string countryId)
+        {
+            if (!w.Rules.UnitTypes || !w.Rules.LandTraditions || countryId == null || w.Country(countryId) == null) return new List<Tradition>();
+            var held = w.ProvincesOf(countryId).Where(p => p.Occupier == null).Select(p => (p.Info.Terrain, p.Info.Special)).ToList();
+            return From(w.Rules, held);
+        }
+
+        /// <summary>
+        /// A side's strength factor from its realm's traditions: 1 + each type's bonus times that type's share of the
+        /// side's plain strength, as a general's horse-born or bowmaster counts. 1 when off or for no realm.
+        /// </summary>
+        public static double Strength(GameRules r, IReadOnlyList<Tradition> traditions, UnitMix side)
+        {
+            double plain = Units.Plain(r, side);
+            if (traditions == null || traditions.Count == 0 || plain <= 0) return 1;
+            return 1 + traditions.Sum(t => t.Bonus * side.Of(t.Type) * Units.Base(r, t.Type) / plain);
+        }
+
+        private static string LandName(UnitType t) => t == UnitType.Pikes ? "hills and mountains" : t == UnitType.Riders ? "plains" : "forest";
+
+        /// <summary>
+        /// The court's line, "Our land makes our pikes 10% stronger (hills and mountains, 4 of 9) and our riders 5% stronger
+        /// (plains, 2 of 9).", in the rules' numbers, for each type with a bonus; null when off or when none has one.
+        /// </summary>
+        public static string Line(World w, string countryId)
+        {
+            var parts = Of(w, countryId).Where(t => t.Bonus > 0).OrderByDescending(t => t.Bonus).ThenBy(t => t.Type)
+                .Select(t => $"our {Units.Name(t.Type)} {Math.Round(t.Bonus * 100):0}% stronger ({LandName(t.Type)}, {t.Leaning} of {t.Held}" +
+                             (t.Specials > 0 ? $", and {t.Specials} special place{(t.Specials > 1 ? "s" : "")}" : "") + ")").ToList();
+            if (parts.Count == 0) return null;
+            string joined = parts.Count == 1 ? parts[0] : string.Join(", ", parts.Take(parts.Count - 1)) + " and " + parts.Last();
+            return "Our land makes " + joined + ".";
         }
     }
 

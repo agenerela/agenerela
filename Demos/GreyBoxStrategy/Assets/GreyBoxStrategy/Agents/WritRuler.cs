@@ -367,6 +367,7 @@ namespace GreyBoxStrategy
                 var r = ruler.Asking;
                 foreach (string line in WritFacts.Standing(ruler.world, ruler.CountryId)) yield return line;
                 if (r?.Moment == Moment.Council && WritFacts.CountersLine(ruler.world, ruler.CountryId) is string counters) yield return counters;
+                if (r?.Moment == Moment.Council && LandTraditions.Line(ruler.world, ruler.CountryId) is string land) yield return land;
                 if (r == null || !ruler.Options.MovesLine) yield break;
                 if (r.Moment == Moment.Council && WritFacts.CourtMovesLine(r.Legal) is string court) yield return court;
                 if (r.Moment == Moment.Army) yield return WritFacts.ArmyMovesLine(r.ArmyId, r.Legal);
