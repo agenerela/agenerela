@@ -1506,8 +1506,9 @@ personas by default prioritize something"). `GameRules.LandTraditions`, off, act
   land makes our pikes 15% stronger (hills and mountains, 2 of 3) and our bows 5% stronger (forest, 1 of 3)."
   The marshal does not; off, no one does. Personas are not told to prefer any type.
 - On Classic each realm starts on three provinces: valen, orsk and kesh lean to pikes, ilvar and merrow to riders.
-  The screen's half (the bonus in recruit and army rows) is the screen session's, later. The A/B kit is
-  `.scratch/realm-build-map/landbonus-live/`, not run yet.
+  The screen's half (the bonus in recruit and army rows) is the screen session's, later. The live A/B (16 November, 12 pairs on
+  Classic) found courts buying 7 points more of their land's type, the persona still explaining most of it; still
+  off, see findings.
 
 **Two pacing settings, both off** (14 November; the rules v2 page's "Why Classic stalls"):
 - `GameRules.OccupationBecomesOwnership`: a province occupied that many turns in a row becomes the occupier's,

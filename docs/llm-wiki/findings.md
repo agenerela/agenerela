@@ -4439,3 +4439,31 @@ GreyBoxStrategy (#20), `GameRules.StalemateByWarScore` on the models, the live p
 - **On these four games the rule never kept a game going** that the old counter ended, and it ended two sooner, one of them a game that otherwise ran into the guard. The scripted worry, peaceable play that new wars and 10-point swings keep restarting, did not show in these four; why each rule stopped where it did, turn by turn, was not traced.
 - **What it cannot show:** four games, two of which neither rule ends in 300 turns. Uncapped Classic games of the off arm lasted 95 to 300 turns across this run and the pacing run of 14 November (seeds 21 and 22, 107 and 95); four seeds say nothing about how often a game runs into the guard.
 - **No default changes.** `StalemateByWarScore` stays off; the tech lead decides. Because the arms are one game each, more seeds of the off arm alone would answer more: the rule on can be judged by where it would have stopped, if the counter were replayed from the records, which is not built.
+
+### Painted Realm R3, land traditions live: courts lean 7 points more toward their land's type, the persona still decides most of it (16 November 2026)
+
+GreyBoxStrategy (#20), `GameRules.LandTraditions` (#336, off) on the models. `personas` table, five `qwen3.5:4b` seats with today's default options, RTX 5080 (Docker Ollama 0.40.14), `-strategyTurn writs -strategyCap 40`, Classic, conquest. Control `n`, the defaults of 15 November (all six army rules and the counters line on), against `l`, the same plus `-strategyRules LandTraditions=true`. Seeds 1 to 12, one game a block, interleaved (n1 l1 as the first slice 22:20 to 22:31, then n2 l2 … n12 l12 to 00:30), every block on test at 42e0ec8 from a checkout that did not change during the run; no Unity test ran beside it. Kit and data: `.scratch/realm-build-map/landbonus-live/`, `python land_report.py`, `python report.py`, `python paired.py`, `python extra.py`.
+
+On Classic each seat starts on three provinces, so its starting land is fixed: valen, orsk (pikes 15%) and kesh (pikes 5%, riders 5%) lean to pikes, ilvar and merrow (riders 15%) to riders, no seat to bows. Personas rotate across seats with period 5 (seed 1 = 6 = 11), so over 12 seeds each persona sat on each seat two or three times and seat and persona are not the same grouping. A seat-game is one country in one game, with its court's typed recruits as shares of pikes, riders and bows (60 an arm).
+
+| | n (off) | l (land traditions) | l − n, 95% over seeds |
+|---|---|---|---|
+| Illegal answers | 0 of 6,858 | 0 of 6,972 | |
+| Recruits: pikes, riders, bows | 57%, 15%, 29% (1,761) | 58%, 16%, 27% (1,758) | |
+| Share of a seat's recruits in its starting land's top type (chance 33%) | 40.2% | 47.5% | **+7.3 points [+2.8, +11.6]**, l higher in 10 of 12 pairs |
+| η² of the pike share by persona / by seat / by top tradition | 0.61 / 0.01 / 0.00 | 0.51 / 0.08 / 0.07 (p 0.03) | seat +0.07 [−0.17, +0.29]; persona −0.10 [−0.28, +0.13] |
+| η² of the rider share by persona / seat / top tradition | 0.25 / 0.05 / 0.02 | 0.35 / 0.10 / 0.07 (p 0.03) | seat +0.05 [−0.15, +0.26]; persona +0.10 [−0.11, +0.31] |
+| η² of the bow share by persona / seat / top tradition | 0.60 / 0.02 / 0.00 | 0.40 / 0.04 / 0.03 | seat +0.02 [−0.15, +0.19]; persona −0.20 [−0.34, +0.01] |
+| Recruits of the type the court's own land line names first | (no line) | 856 of 1,758 (49%) | |
+| Counter share (a rival mostly one type, the counter bought) | 79% of 423 | 77% of 461 | |
+| Battles a game | 96.4 | 99.8 | +3.3 [−6.0, +12.3] |
+| Provinces changing hands a game | 13.3 | 12.8 | −0.4 [−3.0, +2.3] |
+| Treaties a game | 3.8 | 4.8 | +1.0 [−0.4, +2.3], l more in 9 of 12 |
+| Model seconds a turn | 7.45 | 7.61 | +0.17 (SE 0.10) |
+| Court prompt tokens | 1,381 | 1,400 | the one line |
+
+- **The land moves recruiting, a little.** With the rule on, a seat buys 7 points more of the type its starting land favours, a paired interval that excludes zero, and the seat and its top tradition explain 7 to 10% of the pike and rider shares where they explained 0 to 5% without it (permutation p 0.03 for the top tradition). Half the court's recruits are the type its land line names first; pikes are 58% of all recruits and lead most lines, so that 49% is not measured against a control and says little alone. Which part comes from the court reading the line and which from battles going differently was not separated: the rule changes both.
+- **The persona still decides most of it.** The persona explains 35 to 51% of each type's share with the rule on (25 to 61% off). Its η² fell for pikes and bows and rose for riders, all within the bootstrap. The personas were not told to prefer any type, and the land did not erase them; it tilted them.
+- **Nothing else broke.** 0 illegal answers in either arm; the counters line works as before (77% against 79%); battles, land changing hands and time a turn within noise; the line costs about 19 prompt tokens. Treaties went up in 9 of 12 pairs, an interval that crosses zero.
+- **What 12 pairs cannot show:** the games are capped at 40 turns and none finished, so nothing about who wins or how long a game lasts. No seat on Classic leans to bows, so a bow tradition is untested, and the starting land stands for land that changes during a game. One map: on a generated world the land differs more between seats, which is where the rule should matter, and no generated-world pair was run. The η² differences between arms are within their intervals; only the +7-point match is outside.
+- **No default changes.** `LandTraditions` stays off; the tech lead decides.
