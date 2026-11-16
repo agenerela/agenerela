@@ -1499,6 +1499,8 @@ everything a script can.
 
 ## 10. The build as slices
 
+**From 15 November the order of work is the lead's newer direction:** defaults, then UI and controls, then map art, then generated identity and voice, then the storyteller, with balance last. It is in [`grey-box-strategy-screen.md`](grey-box-strategy-screen.md#the-leads-direction-15-november-2026), and the slices below are not reordered by it yet.
+
 The lead's order: armies with the new mechanics, then the bigger map, then events with choices and
 chains, then buildings and economy, then diplomacy ("Ok"). Three slices he wants "eventually" come
 after: no cap on orders (R8), the world shaped by the model (R9), and names and histories by the
@@ -2151,7 +2153,7 @@ line, and `findings.md` for anything measured.
 - [x] On by default (15 November, the lead's call): unit types, generals, sieges, supply, fog and hunger first, on the writs turn; New game starts on a generated world. Headless runs keep Classic, and an arm turns a rule off with `-strategyRules "Supply=false"` (the demo README's "The defaults since 15 November")
 - [ ] Support and pursuit; the report's factors
 - [ ] Every feature behind a rules flag; sim A/B each against off
-- [ ] Army panel, siege marks, stores pips, the full report card, fog in rule mode (built, each behind its setting in New game, 14 November: the mix and general on army rows and the battle report, #315; siege tags and stores pips, #317; fog in rule mode not checked here)
+- [ ] Army panel, siege marks, stores pips, the full report card, fog in rule mode (built, each behind its setting in New game, 14 November: the mix and general on army rows and the battle report, #315; siege tags and stores pips, #317; fog in rule mode not checked here; a march drawn as a filled arrow, solid under way and pale when ordered this council, #333, 15 November)
 - [ ] Live: all on against R1, persona table, 20 games; fog on against off (a first look, six pairs, 15 November: `findings.md`; the all-on arm rerun on #322's fixes, 15 November: sieges last, hunger not solved by asking; the control was not rerun; `HungerFirst` (off) run against off, 6 pairs, 15 November, #331: `findings.md`)
 
 **R4, generated worlds on screen**
