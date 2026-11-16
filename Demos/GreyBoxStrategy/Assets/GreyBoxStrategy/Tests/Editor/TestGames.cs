@@ -19,6 +19,17 @@ namespace GreyBoxStrategy.Tests
             return r;
         }
 
+        /// <summary>
+        /// <paramref name="r"/> with R3's six army rules off, as they were by default before 15 November: for a test that
+        /// measures one of them alone, or a game as it played before them.
+        /// </summary>
+        public static GameRules ArmyRulesOff(GameRules r = null)
+        {
+            r = r ?? GameRules.Standard;
+            r.UnitTypes = r.Generals = r.Sieges = r.Supply = r.Fog = r.HungerFirst = false;
+            return r;
+        }
+
         public static Game NewGame(int seed = 1, GameRules rules = null) => new Game(seed, MapDefinition.Standard(), rules ?? Calm());
 
         /// <summary>Hands a province to a country (or to nobody), as if it had been taken.</summary>

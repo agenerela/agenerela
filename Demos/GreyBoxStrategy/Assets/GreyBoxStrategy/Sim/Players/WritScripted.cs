@@ -73,7 +73,7 @@ namespace GreyBoxStrategy
             // 3. Keep up with the strongest neighbour.
             int threat = w.Alive.Where(c => c.Id != me && w.Borders(me, c.Id)).Select(c => c.Army).DefaultIfEmpty(0).Max();
             if (my.Army < threat * t.ArmyPerThreat || !w.ArmiesOf(me).Any())
-                if (Legal(Actions.Recruit) is Move recruit) return recruit;
+                if (Recruit(r, Legal) is Move recruit) return recruit;
 
             // 4. Fortify the front while at war (cautious only), then war for the cautious.
             if (t.FortifyAtWar && w.EnemiesOf(me).Any() && my.Gold >= w.Rules.FortCost + 40)
@@ -88,8 +88,31 @@ namespace GreyBoxStrategy
 
             // 5. Money.
             if (my.Gold < 20 && Legal(Actions.RaiseTaxes) is Move tax && my.Stability >= t.TaxMinStability) return tax;
-            if (my.Gold >= 80 && Legal(Actions.Recruit) is Move more) return more;
+            if (my.Gold >= 80 && Recruit(r, Legal) is Move more) return more;
             return Move.Hold;
+        }
+
+        /// <summary>
+        /// The recruit order to give: <c>recruit</c>, or with unit types (R3) the type that counters the largest type
+        /// of the strongest enemy or neighbour, else whatever type the treasury pays for.
+        /// </summary>
+        public static Move Recruit(CountryRequest r, Func<string, string, Move> legal)
+        {
+            var w = r.World;
+            if (!w.Rules.UnitTypes) return legal(Actions.Recruit, null);
+            string me = r.CountryId;
+            var rival = w.Alive.Where(c => c.Id != me && (w.AtWar(me, c.Id) || w.Borders(me, c.Id)))
+                .OrderByDescending(c => w.AtWar(me, c.Id)).ThenByDescending(c => c.Army).ThenBy(c => c.Id, StringComparer.Ordinal).FirstOrDefault();
+            if (rival != null)
+            {
+                var mix = UnitMix.Of(w.ArmiesOf(rival.Id));
+                if (mix.Total > 0)
+                {
+                    var largest = Units.All.OrderByDescending(mix.Of).ThenBy(x => x).First();
+                    if (legal(Actions.RecruitFor(Units.BeatenBy(largest)), null) is Move counter) return counter;
+                }
+            }
+            return Units.All.Select(x => legal(Actions.RecruitFor(x), null)).FirstOrDefault(m => m != null);
         }
 
         private static Move Answer(Temperament t, CountryRequest r)
@@ -112,6 +135,16 @@ namespace GreyBoxStrategy
             string me = r.CountryId;
             var rules = w.Rules;
             var paths = WritLegality.Paths(w, me, army.Location, rules.MarchRange);
+
+            // With supply (R3), an army abroad with a turn of stores or less goes home to refill, to the
+            // nearest province of ours it may march to; one that sits a siege it is about to win stays.
+            if (rules.Supply && army.Stores <= 1 && !Game.Supplied(w.Province(army.Location), me)
+                && !(w.Province(army.Location)?.SiegedBy == me && w.Province(army.Location).SiegeTurns + 1 >= Game.SiegeTurnsNeeded(rules, w.Province(army.Location), new[] { army })))
+            {
+                var home = r.Legal.Where(m => m.Action == Actions.March && Game.Supplied(w.Province(m.Target), me) && paths.ContainsKey(m.Target))
+                    .OrderBy(m => paths[m.Target].Count).ThenBy(m => m.Target, StringComparer.Ordinal).FirstOrDefault();
+                if (home != null) return home;
+            }
 
             // The value of marching on a province, or 0 when it is no target at these odds.
             double Worth(Province p)

@@ -29,6 +29,140 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm R3: land traditions** (#20), behind `GameRules.LandTraditions`, off. The share of a realm's held
+  land that leans to a type (hills and mountains pikes, plains riders, forest bows) makes that type up to 15%
+  stronger in battle, and the court reads it in one line. Scripted only so far.
+
+- **Painted Realm: marches as coloured arrows** (#20). A march under way is a solid arrow in its owner's colour along
+  its path; one ordered this council is the same arrow, pale. Both read the same at every zoom.
+
+- **Painted Realm R3: hunger first** (#20), behind `GameRules.HungerFirst`, off. With supply on, a starving army
+  and then one about to run out are asked first within the writs, and read what hunger costs and the nearest land
+  that feeds them. Scripted only so far.
+
+- **Painted Realm: give new orders to any army** (#20). On #327's recall, a holding or marching army's row offers new
+  orders for a writ, the council counts the army writs left and shows orders the rules did not take, and New game's
+  section hints are in a player's words.
+
+- **Painted Realm R3: every army rule on, run again with the hunger wake and the siege floor** (#20). Sieges now
+  last and are relieved; armies woken as they starve mostly attack on rather than go home, and half the starving
+  army-turns get no writ. No default changes. Results in `findings.md`, 15 November.
+
+- **Painted Realm: you may order any of your armies in the council, woken or not** (#20). `Game.Recall` asks the
+  rules for a holding army's orders ("recalled by the court", for a writ); the rule game recalls every army your
+  plan orders, refuses a plan with more army orders than the writs with the reason, and says any order not taken in
+  `RuleSession.PlanRefusals`. Model rulers never recall, and every recording replays as before.
+
+- **Painted Realm R3: the counters line, on whenever unit types are** (#20). The court's facts say what beats what
+  and what each rival is mostly, and a march names the largest type it would meet. Twelve pairs on `qwen3.5:4b`:
+  recruits that counter the type seen 20% → 67%, no illegal answers, nothing else measured worse beyond noise; the
+  personas no longer differ in which types they buy. `GameRules.CountersLine`, on by default; unit types stay off.
+  Results in `findings.md`, 15 November.
+
+- **Painted Realm rule mode in plain words** (#20). The war score has one sign and a label; every number on the bar and
+  army rows has a unit; the writs counter says "used"; the council warns before the treasury runs dry and says when no
+  army awaits orders; a planned march is drawn at once; a holding army is not offered as orderable; menus lose ids,
+  model names and "R3"; battle reports read each side's mix and commander from the rules' record.
+
+- **Painted Realm rule mode, ready for a playtest with R3 on** (#20). Fixes from a pass with all four R3 settings on:
+  typed recruits read as names in the chronicle, an army's row says why it waits and when it besieges, the siege tag
+  shows beyond your borders, the battle report and the end card lose a stray sentence and comma.
+
+- **Painted Realm R3: a fort holds the road, and a siege stops income** (#20), each behind its own switch, off by
+  default (`GameRules.FortsHoldTheRoad`, `SiegeStopsIncome`). A march stops beside an enemy fort no one besieges,
+  and from there may only besiege it or go back; a besieged province gives its owner nothing. A battle record now
+  keeps each side's unit mix and commander as the battle began, for the replay. Scripted only.
+
+- **Painted Realm R3: every army rule on at once, a first live look** (#20). Six pairs on `qwen3.5:4b`: no illegal
+  answers and no extra model time, more battles and fewer treaties; every siege but one ended the turn it began, and
+  armies left holding abroad starved where they stood, a rule bug fixed in its own PR. No default changes. Results in
+  `findings.md`, 15 November.
+
+- **Painted Realm replay: the council as the live game had it** (#20). `ArmySnapshot` now carries each army's mix,
+  general, traits and stores, and `TurnSnapshot` each siege, so a replay's council shows the same pieces, generals,
+  stores and siege tags as the live game did, and the turn's battle reports start from the exact mixes.
+
+- **Painted Realm: a stalemate counter that reads war score and land by treaty** (#20), behind
+  `GameRules.StalemateByWarScore`, off by default. Land taken or freed by force no longer restarts it; a treaty,
+  free land, a broken realm, a new war or a 10-point swing does. Scripted only; no live run yet.
+
+- **Painted Realm R3 sieges and supply on screen** (#20). New game has "Sieges" and "Supply" switches, off by
+  default. A besieged province carries "Siege 2 of 4" beside its forts; your army rows show their stores as pips
+  and a red "No stores" when there are none; the chronicle tells sieges begun, broken and ended, and hunger. A
+  replay with sieges on no longer stops at the first siege that ends. With both off the screen is unchanged.
+
+- **Painted Realm R3 armies on screen** (#20). New game has "Unit types" and "Generals" switches, off by default,
+  for every way of playing the writs turn. With them on, pieces show their largest type, your army rows and
+  tooltips the mix, a rival's piece only what it mostly is; the council offers the three recruit orders with cost
+  and counter; army rows name their general; the chronicle tells a general's new trait or fall; the battle report
+  shows both mixes and the counters' and generals' effect in words. With both off the screen is unchanged.
+
+- **Painted Realm R3: unit types, a first live look** (#20). Six pairs on `qwen3.5:4b`: no illegal answers and no
+  extra model time with unit types on, but the courts recruit mostly pikes and counter the type they see only 22% of
+  the time. `UnitTypes` stays off. Results in `findings.md`, 14 November.
+
+- **Painted Realm R3, part six: what a country sees of a rival army** (#20), behind `GameRules.Fog`, off by
+  default. `ArmySight` holds the rules: rival armies near our land and armies show position, general and size
+  rounded to 10, nothing in forest but presence, their mix only to our riders. The rulers' facts follow it;
+  scripted players do not yet.
+
+- **Painted Realm R3, part five: supply, model B** (#20), behind `GameRules.Supply`, off by default. Armies
+  carry 0 to 4 turns of stores, refilled at home and eaten abroad, twice as fast in poor land; with none they
+  lose 10% a turn and fight 15% weaker; a forager eats half. The rulers read each army's stores; scripted
+  armies go home to refill. The rules page records the three models considered and why B.
+
+- **Painted Realm pacing settings, measured live** (#20). On two pairs of uncapped `qwen3.5:4b` games, ownership
+  after 8 turns with the break rule made games longer (249 turns against 101): each province that passes resets
+  the stalemate counter. Both stay off; the rules v2 page lists what to try instead. Results in `findings.md`.
+
+- **Painted Realm R3, part four: sieges at forts** (#20), behind `GameRules.Sieges`, off by default. Enemy
+  land with forts is besieged over 2 turns a fort (less with a siegewright or three to one, a 10% breach a turn)
+  and occupied one fort fewer; the siege breaks when the besiegers leave or lose. Both sides read it.
+
+- **Painted Realm R3, part three: generals with traits** (#20), behind `GameRules.Generals`, off by default.
+  Every army has a general with one of seven traits (bold, wary, horse-born, bowmaster, swift, stubborn,
+  inspiring); a side's commander counts in strength, losses and marches, wins a second trait after three
+  victories, and falls 5% of the time in a lost battle. The report and the rulers' facts name them.
+
+- **Painted Realm R3, part two: the model rulers recruit by type and read the mix** (#20), only with
+  `GameRules.UnitTypes`, still off. The court registers `recruit_pikes`, `recruit_riders` and `recruit_bows`
+  in place of `recruit`; the facts give each army's mix and what a rival's armies mostly are. Off, every prompt
+  is as before. Headless table runs take `-strategyRules "Field=value;..."` for rule settings.
+
+- **Painted Realm: the storyteller's history check is a guard** (#20). With `+history`, a story that tells
+  of a fight that never happened is replaced through `GuardVerdict.ReplaceStatement` (#292) before the event
+  is queued, and the event stands. `Game.HistoryVerdict` runs the event's own checks in the same order, so
+  the verdicts, stories and the record of the model's words are the same as before, which a test checks
+  against `+history-in-game` (the check at the queue, kept for comparison).
+
+- **Painted Realm: the storyteller caps its replies, and dilemmas can come with the call** (#20).
+  - The storyteller's event and title calls send `MaxReplyTokens` 400 (#244 item 11), which binds only a
+    runaway; `+no-reply-cap` sends none, as before.
+  - `+call-choices` gives a dilemma's options with the call as `DecideOptions.Choices` (#293, DR-022) in place
+    of registering them as the seat's actions. It is an arm, unmeasured, until its A/B; the default is unchanged.
+
+- **Painted Realm: the end of a game, and a first look** (#20). An end screen in every way of playing: who won
+  and how, provinces per realm over the turns, wars and treaties, each ruler in its own words, and "watch the
+  replay" or "new game". A first-turn help layer for rule mode, six notes at most, which opens once and stays in
+  the pause menu.
+
+- **Painted Realm: the advisor in rule mode** (#20). A model on your own seat proposes each writs turn's plan in
+  the council: its counsel, each order with Take and Why, and "Take the advice". It is on by default with model
+  rulers and can be switched in New game and the pause menu. It is asked alongside the rulers, its orders always
+  map to legal moves, and only advice you take is recorded as yours.
+
+- **Painted Realm R3, part one: pikes, riders and bows with the counter rule** (#20), behind
+  `GameRules.UnitTypes`, off by default.
+  - Armies keep soldiers by type; losses keep the mix; `Army.Soldiers` stays the total.
+  - `recruit_pikes`, `recruit_riders` and `recruit_bows` replace `recruit`; riders cost twice a pike to raise and keep.
+  - Battles weigh each type by the counter rule, and the report names the largest effect.
+  - Scripted players recruit what counters their strongest rival. Scripted numbers in `findings.md`, 14 November.
+
+- **Painted Realm: two pacing settings for the writs turn, both off** (#20).
+  `GameRules.OccupationBecomesOwnership` makes a province held N turns the occupier's, and
+  `GameRules.BreakWhenAllOccupied` breaks a fully occupied realm with armies left. Scripted they leave the pace
+  as it was; the models' stall waits for a live run. Numbers in `findings.md`, 14 November.
+
 - **`tools/benchmarks/closed_choice_grammar_probe.py`** (#266 item 2): asks Ollama, with no framework code,
   whether its grammar keeps an enum field beside `action` and `target` and an array of target ids with
   `minItems`/`maxItems`, and in which key order. First run on `qwen3.5:4b`, RTX 5080: every constraint held on
@@ -674,6 +808,11 @@ phase table and the open issues, not here.
 
 ### Changed
 
+- **Painted Realm: R3's army rules on by default, a generated world first** (#20, the lead's call). `UnitTypes`, `Generals`,
+  `Sieges`, `Supply`, `Fog` and `HungerFirst` are on for the writs turn; the one-move game carries them off. New game
+  starts on a generated world on the writs turn; Classic and each rule's Off stay choices. Headless runs keep Classic;
+  an arm repeats an earlier run with `-strategyRules "Supply=false"` and so on.
+
 - **GreyBoxStrategy marks the moves that take no target** (#244 item 2): recruit, raise_taxes and
   the two envoy answers set `ActionDefinition.TakesNoTarget`, so the framework drops a target the
   model names for one and records it, and the seat's `TargetIgnored` reads the framework's
@@ -694,6 +833,17 @@ phase table and the open issues, not here.
   (findings, 10 November) found one regression, on the route examples, fixed in the branch.
 
 ### Fixed
+
+- **Painted Realm R3: an army starving abroad is asked for orders again, and a siege lasts two turns at least**
+  (#20). The first live look with every army rule on found armies starving where a hold had left them (nothing woke
+  them as their stores ran out) and sieges falling the turn they began. With supply on, an army abroad is woken when
+  a turn's food is left and each turn it starves; with sieges on, a siege never falls the turn it begins. An army's
+  facts no longer read "led by Maren the Wary,, stores 4 of 4".
+
+- **GreyBoxStrategy's map generator speed test no longer fails when the machine is busy** (#20). It timed one
+  Huge try in wall time, which doubled when other Unity runs shared the CPU (two failures on 14 November, both passing
+  alone). It now takes the cheapest of three tries in this process's CPU time, under the same 3 s; a generator made
+  about three times slower still fails it.
 
 - **Painted Realm: a writs ruler's targets are the decision's own list** (#20). The court's and the marshal's
   availability followed the rules alone, so a model could name a march or fortify target the capped list left

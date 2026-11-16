@@ -170,6 +170,40 @@ namespace GreyBoxStrategy
             if (story.IsS2) Draft(e);
         }
 
+        /// <summary>
+        /// The history check (S2's <c>+history</c>) on a story before it is queued, for the storyteller's guard
+        /// (#292): null when the check keeps it, or leaves it to the name, number and length check that runs
+        /// first; else why it is invented, and the statement to queue in its place, the template's own story
+        /// under the model's title. The same checks, in the same order, as the event's at <see cref="QueueEvent"/>.
+        /// </summary>
+        public (string reason, string statement)? HistoryVerdict(string template, string target, string statement)
+        {
+            if (!story.IsS2 || !story.History || string.IsNullOrWhiteSpace(statement)) return null;
+            int turn = NextTurn;
+            var asked = EventRules.Template(template);
+            var t = asked?.Skeleton != null ? EventRules.BeginStage(World, Events, turn, asked, target, story) : asked;
+            if (t == null || EventRules.WhyNot(World, Events, turn, template, target, story) != null) return null;
+            var chain = Events.Chain(target);
+            var (hit, _) = EventRules.ReachFor(World, Events, turn, t, target, story);
+            string subject = chain?.Subject ?? target;
+            string province = World.IsProvince(subject) ? subject : null;
+            var happenings = History.Of(this);
+            var allowed = new HashSet<string>(History.Named(happenings), StringComparer.Ordinal);
+            if (chain != null)
+            {
+                allowed.UnionWith(chain.Countries);
+                if (chain.Province != null) allowed.Add(chain.Province);
+            }
+            // The title call's title is not known yet; the event's own check judges it at the queue.
+            var (_, told, verdict) = EventRules.CheckStory(World, t, hit, province, statement, null, allowed.Count > 0 ? allowed : null, story.TitleCall);
+            if (verdict != null && verdict.StartsWith("replaced", StringComparison.Ordinal)) return null;
+            string why = History.Check(World, happenings, History.Recent(happenings, turn), hit, told);
+            if (why == null || !why.StartsWith("invented", StringComparison.Ordinal)) return null;
+            string fallback = EventRules.FallbackStory(t, hit, province);
+            string modelTitle = story.TitleCall ? null : EventRules.SplitTitle(statement).title;
+            return (why, modelTitle != null ? $"{modelTitle}: {fallback}" : fallback);
+        }
+
         // S2: the event as the rulers will read it, built when it is queued, and the choices it asks.
         private void Draft(StoryEvent q)
         {
@@ -193,7 +227,7 @@ namespace GreyBoxStrategy
                 Action = q.Template,
                 Target = q.Target,
                 Province = province,
-                Statement = q.Statement,
+                Statement = q.ModelStatement ?? q.Statement,
             };
             e.Hit.AddRange(hit);
             e.Spared.AddRange(spared);
@@ -211,7 +245,13 @@ namespace GreyBoxStrategy
             (e.Title, e.Story, e.StoryVerdict) = EventRules.CheckStory(World, t, e.Hit, province, q.Statement, q.Title,
                 allowed.Count > 0 ? allowed : null, story.TitleCall);
             e.ModelTitle = story.TitleCall ? EventRules.CleanTitle(q.Title) : EventRules.SplitTitle(q.Statement).title;
-            if (happenings != null && !e.StoryReplaced)
+            if (q.HistoryReplaced != null && !e.StoryReplaced)
+            {
+                // The storyteller's guard ran this check before the event was queued and told the template's line.
+                e.HistoryRef = q.HistoryReplaced;
+                e.StoryVerdict = "replaced: " + q.HistoryReplaced;
+            }
+            else if (happenings != null && !e.StoryReplaced)
             {
                 e.HistoryRef = History.Check(World, happenings, History.Recent(happenings, turn), e.Hit, e.Story);
                 if (e.HistoryRef != null && e.HistoryRef.StartsWith("invented", StringComparison.Ordinal))

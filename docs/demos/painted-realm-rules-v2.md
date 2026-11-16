@@ -132,7 +132,9 @@ since its last order (_Mine_):
 7. it was recruited this turn, or merged or split;
 8. 4 turns passed since its last order.
 
-An army awaiting orders that gets no writ **holds**, and keeps waiting. The screen marks it.
+An army awaiting orders that gets no writ **holds**, and keeps waiting. The screen marks it. (Built since: a
+person's plan may also recall a holding army for a writ, "recalled by the court", #327, 15 November; model rulers
+never recall.)
 
 **When the turn resolves.** Every country decides on the same snapshot, then the turn resolves at
 once, in this order (_Mine_, extending today's peace, home moves, wars, attacks):
@@ -230,7 +232,8 @@ For each ruler, in this order (_Mine_):
 1. **The court order** (always asked; `none` allowed). It carries the turn's proclamation.
 2. **Each army awaiting orders**, most urgent first: a hostile army beside it, then a siege it leads
    or that holds it, then stores at 1 or 0, then the rest by size. One writ each, until writs − 1 are
-   used (one is always kept for the court).
+   used (one is always kept for the court). With `GameRules.HungerFirst` (#330, 15 November; on by default since #334) a starving army,
+   then one with a turn of stores or less, comes before the rest of this list.
 3. **A second court order**, if a writ is left and the first was not `none`.
 
 Each decision after the first reads one more line, `Ordered this turn: recruit at highmoor; maren_host
@@ -805,6 +808,23 @@ and the battle report can mention. A's per-province number would cost a line per
 prompt and a label per province on the map. The sim A/Bs B against no supply at all before it
 ships ([R3](#r3-armies-in-depth)).
 
+**Three ways considered, 14 November (before the code, as the lead asked):**
+1. **A, what the land carries** (above). Rejected for now: it needs farms ([4.2](#42-food)), which are not
+   built, and a feed number per province that the prompt and the map have no room for.
+2. **B, stores and lines** (above). **Chosen**, and built first because it needs only what exists today:
+   terrain, ownership and the writs turn's armies. One number per army ("stores 2 of 4") is all a ruler has to
+   read, and it answers both halves of the lead's line, far from home and poor land.
+3. **C, distance attrition**: an army more than N steps from its own land loses a share of its soldiers a turn,
+   with no stores at all. The simplest, but a ruler cannot see it coming or plan around it (no number counts
+   down), poor land does not matter, and a relief march or a return home has nothing to restore. Kept as the
+   fallback if B's two numbers prove too much for the models.
+
+**Built (B), behind `GameRules.Supply` (on by default since 15 November, off until then):** stores 0 to 4 a turn of food; full in our own land, refilled 2
+a turn there; elsewhere 1 a turn in plains and forest, 2 in hills, marsh and mountains; at 0, 10% of the soldiers
+lost a turn (at least 2) and −15% strength in battle; a `forager` general eats half (counted in half-stores).
+Supplied land is our own only, since alliances and passage are not built; healing springs, famine and the
+100-soldier cap wait for their systems.
+
 ### 3.7 Forts and sieges
 
 - **Walls** are a building with three levels ([4.4](#44-buildings)). Today's forts become walls
@@ -812,9 +832,13 @@ ships ([R3](#r3-armies-in-depth)).
 - **An undefended walled province cannot be walked into.** An army whose march enters a hostile
   walled province **besieges** it instead: it stands in the province, the province still belongs to
   its owner, and produces no income or food for it.
-- **A siege takes** 2 turns per walls level (*to tune*): −1 with a `siegewright` general, −1 if the
+- **A siege takes** 2 turns per walls level (*to tune*), and never falls in the turn it begins (see below): −1 with a `siegewright` general, −1 if the
   besiegers outnumber the garrison (10 a level) three to one, never below 1. Each turn of a siege
   also has a 10% seeded chance of an early breach.
+- **A siege lasts two turns at least** (changed 15 November): the turn it begins and one full turn after, whatever
+  the besiegers' numbers, general or an early breach, so the defender always has a turn to relieve it. Before,
+  a one-fort siege by an army three times the garrison fell the turn it began, and in the first live look with
+  every army rule on 14 of 15 sieges did: no player would have seen them.
 - **When it ends** the walls drop one level and the province is occupied.
 - **A siege is broken** when the besieging army leaves or loses a battle there. The owner's army
   that marches in fights it, with the walls' bonus if the garrison sallies.
@@ -823,7 +847,10 @@ ships ([R3](#r3-armies-in-depth)).
 - **A fort holds the road** (priority 2): an enemy army that enters a province bordering an
   unbesieged hostile walled province must stop there, and can only besiege or go back. This is the
   genre's zone of control for forts (EU4, 2015 and 2016, [sources](#sources)), in its simplest
-  form: it makes walls shape where wars are fought.
+  form: it makes walls shape where wars are fought. Built 15 November as `GameRules.FortsHoldTheRoad`, off.
+  On Classic only the 5 capitals start with a fort (the other 20 provinces have none, and more come only from
+  `fortify` orders), and a generated map likewise starts only its capitals with one, so with the rule on a war
+  is held up around capitals and fortified provinces, not province by province.
 
 ### 3.8 Fog of war
 
@@ -1405,7 +1432,8 @@ lines and the moves line; every slice measures them.
 4. **A fact ledger** (#216 item 4, #266 item 5) for opinions' reasons, chains, "last seen" walls, and
    lasting events. The game can compute each without one.
 5. **A reply cap** (#244 item 11, N12): needed now. With about 15 decisions a turn, a 20 s runaway in
-   460 calls stalls a game about once every 30 turns.
+   460 calls stalls a game about once every 30 turns. Built since: `DecideOptions.MaxReplyTokens` (#296), and the storyteller's calls
+   send 400 by default (#307, 14 November); the rulers' calls send none yet.
 6. **The moves-line workaround** (N1, N8, N11) for every decision kind. The game writes each line;
    `LegalTargets = ObservationLine` measured worse.
 7. **Per-call target sets.** The prompt's target list must hold only the targets this decision can use
@@ -1470,6 +1498,8 @@ Per game becomes per turn, plus the turn windows of [6.3](#63-what-it-means-for-
 everything a script can.
 
 ## 10. The build as slices
+
+**From 15 November the order of work is the lead's newer direction:** defaults, then UI and controls, then map art, then generated identity and voice, then the storyteller, with balance last. It is in [`grey-box-strategy-screen.md`](grey-box-strategy-screen.md#the-leads-direction-15-november-2026), and the slices below are not reordered by it yet.
 
 The lead's order: armies with the new mechanics, then the bigger map, then events with choices and
 chains, then buildings and economy, then diplomacy ("Ok"). Three slices he wants "eventually" come
@@ -1567,7 +1597,7 @@ exists, and where it differs from the list above:
 ### R1. The turn of writs and armies as pieces
 
 - **Sim:**
-  - `Army` (one soldier type until R3), its orders and wake conditions.
+  - `Army` (one soldier type until R3; R3 part one adds three behind `GameRules.UnitTypes`, on by default since 15 November), its orders and wake conditions.
   - Writs and the order cycle ([1.3](#13-the-order-of-decisions-within-a-turn)).
   - Simultaneous movement with terrain costs; border crossings.
   - Battles between armies with today's formula; retreat and rout; militia and neutral garrisons.
@@ -1650,8 +1680,39 @@ Candidates, each with its cost:
    speed the middle game.
 
 _Mine:_ 1 and 3 together. Together they would end most Classic games in well under 100 turns at no model
-cost, and leave 2 for R3, where standing orders belong. That reading is unmeasured: the scripted series
+cost, and leave 2 for R3, where standing orders belong. That reading was unmeasured when written, and the live first look below found the opposite for both on together. The scripted series
 would show it in minutes before any live run.
+
+**Built, both off** (14 November): `GameRules.OccupationBecomesOwnership` (candidate 1: a province occupied that
+many turns in a row passes to the occupier; 0, the default, never) and `GameRules.BreakWhenAllOccupied`
+(candidate 3, the break rule only; the stalemate counter is unchanged). With candidate 1 on, the rulers' facts
+show each occupation's count ("corwick (held 3 of 8 turns)"). **Scripted, they change nothing that matters:**
+100 Classic games of the `mixed` lineup take 77 turns off, 74 to 76 with either or both on. Scripted rulers
+press a war to the end and do not stall; when they are made to make peace as readily as the models do, they
+settle within 8 turns, so no occupation lasts long enough. Only model rulers stall, so which candidate helps can
+only be read from a live run; the first look, two pairs of uncapped games with both on, is the next paragraph.
+Numbers: [`findings.md`](../llm-wiki/findings.md), 14 November.
+
+**Live, a first look (14 November, two pairs):** with both on, the models' games ran **longer**, not shorter:
+249 turns against 101 (one to the 300-turn guard), with 54 and 22 provinces passing by occupation. Land moves
+(no-change turns 77% against 85%), but every province that passes resets the 12-turn stalemate counter, so a
+stalled war that used to end in a stalemate now grinds on. **Both stay off.** What the result suggests instead:
+- **Ownership without resetting the stalemate counter:** a province that passes by holding counts as no change,
+  so the stalemate still ends a war that only trades held land; or count the counter on war score, not land.
+- **The break rule alone:** this run had both on, so it cannot say what `BreakWhenAllOccupied` does by itself;
+  each realm-break in it may have come from either rule.
+- **Ownership only at a war's end**, as a treaty term the model already has (`demand_occupied`), made cheaper.
+Each needs its own live pair.
+
+**The tech lead's pick, built off** (14 November): `GameRules.StalemateByWarScore`. The counter reads war
+score and land by treaty: land taken or freed by force of arms (occupation, a siege, holding it) no longer
+restarts it; a treaty, free land taken, a realm broken, a new war, or a war's score moving
+`StalemateWarScoreStep` (10) points does. Meant with `OccupationBecomesOwnership` 8 on top. Scripted, ordinary
+scripts barely notice (77 turns either way); peaceable scripts that stand in for the models end at 44 turns
+instead of 29, all in stalemates, because each new war and each 10-point swing restarts the count. Live
+(15 November, 4 uncapped pairs, findings): on the models it never lengthened a game and ended two of four
+sooner (turn 187 against the 300-turn guard, 121 against 135); the arms are the same game until a rule stops
+it. Still off.
 
 The screen's half is the screen session's.
 
@@ -1713,9 +1774,9 @@ has the detail.
 - **A border crossing:** the winner steps through, and the loser never crosses. Since the winner now
   stands in the province the loser was leaving, the loser falls back from it, with no second battle.
   Section 1.1's "the loser stays in the province it was leaving" cannot hold with the winner there.
-- **Sieges, stores, unit types and generals' traits wait for R3.** A walled province is fought for
+- **Sieges, stores, unit types and generals' traits wait for R3** (unit types were built in R3's first part, 14 November, behind `GameRules.UnitTypes`, seven of the ten general traits in its third, behind `GameRules.Generals`, and sieges at forts in its fourth, behind `GameRules.Sieges`; supply (stores, hunger, the forager trait) in its fifth, behind `GameRules.Supply`; all off; wake conditions 3 and 6 are not checked here). A walled province is fought for
   through its militia (5 + 10 a fort, plus the capital bonus; R1b: 3 + 6 a fort) rather than besieged. Wake conditions 3
-  and 6 (a siege ends, stores run low) wait with them.
+  and 6 (a siege ends, stores run low) waited with them; 6 was built in R3's fifth part's follow-up (#322, 15 November), 3 is not checked here.
 - **Recruiting** keeps today's levy (5 + 5 a province, paid at 2 gold a soldier). It appears at the
   capital, joining an army standing there up to 100, the rest forming new armies. Companies of 10 by
   type come with R3.
@@ -2056,7 +2117,7 @@ line, and `findings.md` for anything measured.
 - [x] Test: settings round-trip; conquest ends; old recordings replay
 
 **R1, the turn of writs and armies as pieces**
-- [x] `Army`, orders, standing orders and the wake conditions (six of eight; sieges and stores in R3)
+- [x] `Army`, orders, standing orders and the wake conditions (six of eight; sieges and stores in R3; stores running low was built 15 November, #322)
 - [x] Writs a turn, the order cycle, the second court order
 - [x] Simultaneous movement with terrain turns; border crossings; re-check on landing
 - [x] Battles between armies, retreat and rout, militia and neutral garrisons
@@ -2083,15 +2144,18 @@ line, and `findings.md` for anything measured.
 - [x] Tests: seeds per size pass (100 per size and shape by hand, a few in every run); cell adjacency equals the graph; no corner borders; generation time
 
 **R3, armies in depth**
-- [ ] Three types, costs, the counter rule
-- [ ] Generals: names, ten traits, second trait, death and capture
-- [ ] Walls and sieges, breach, broken siege, forts hold the road
-- [ ] Supply model B, the army cap; sim A/B of B against A against none
-- [ ] Fog of war for facts and scripted players; totals rounded; forest; scouting
+- [x] Three types, costs, the counter rule (`GameRules.UnitTypes`, off when built, on by default since 15 November; scripted only, 14 November)
+- [x] The model rulers' recruit orders by type and the mix in their facts (14 November; first live look, #316: no illegal answers, but the courts counter the type they see 22% of the time, so still off then; #326's counters line, on by default but acting only with unit types on, raised that to 67% in 12 pairs, `findings.md`, 15 November)
+- [x] Generals: names, seven of the ten traits, second trait, a general falling (`GameRules.Generals`, off when built, on by default since 15 November; scripted only, 14 November). Siegewright came with the sieges (#311, only with `GameRules.Sieges` on); the forager came with supply (#313, only with `GameRules.Supply` on); the marshal waits for army sizes; capture waits for prisoners
+- [x] Sieges at forts over several turns, breach, broken siege, siegewright (`GameRules.Sieges`, off when built, on by default since 15 November; scripted only, 14 November). Forts stand for walls. The fort that holds the road (`GameRules.FortsHoldTheRoad`) and income lost under siege (`GameRules.SiegeStopsIncome`) came on 15 November, each its own switch, off; scripted only
+- [x] Supply model B, with forager (`GameRules.Supply`, off when built, on by default since 15 November; scripted against none, 14 November). Still open: the army cap, and A against B (A needs farms)
+- [x] Fog of war for the rulers' facts: totals rounded, forest, scouting (`GameRules.Fog`, `ArmySight`, off when built, on by default since 15 November; 14 November). Still open: fog for the scripted players, allies' sight and watchtowers
+- [x] On by default (15 November, the lead's call): unit types, generals, sieges, supply, fog and hunger first, on the writs turn; New game starts on a generated world. Headless runs keep Classic, and an arm turns a rule off with `-strategyRules "Supply=false"` (the demo README's "The defaults since 15 November")
+- [x] Land traditions (`GameRules.LandTraditions`, off; scripted only, 15 November): the share of held land that leans to a type makes it up to 15% stronger in battle, and the court reads one line; personas are not told to prefer a type. Its live A/B waits for the card
 - [ ] Support and pursuit; the report's factors
 - [ ] Every feature behind a rules flag; sim A/B each against off
-- [ ] Army panel, siege marks, stores pips, the full report card, fog in rule mode
-- [ ] Live: all on against R1, persona table, 20 games; fog on against off
+- [ ] Army panel, siege marks, stores pips, the full report card, fog in rule mode (built, each behind its setting in New game, 14 November: the mix and general on army rows and the battle report, #315; siege tags and stores pips, #317; fog in rule mode not checked here; a march drawn as a filled arrow, solid under way and pale when ordered this council, #333, 15 November)
+- [ ] Live: all on against R1, persona table, 20 games; fog on against off (a first look, six pairs, 15 November: `findings.md`; the all-on arm rerun on #322's fixes, 15 November: sieges last, hunger not solved by asking; the control was not rerun; `HungerFirst` (off) run against off, 6 pairs, 15 November, #331: `findings.md`)
 
 **R4, generated worlds on screen**
 - [ ] Renderer: paper, sea, ripples, rhumb lines, land, terrain glyph atlas, ridges, wash, borders
@@ -2130,8 +2194,11 @@ line, and `findings.md` for anything measured.
 - [ ] Live: opinion reasons in facts on against off (invented grievances); deals and length
 
 **A, the advisor**
-- [ ] Advise mode with the person's country's facts; refuses in character
-- [ ] On by default; switchable in game from the top bar; its model preset
+- [x] Advise mode with the person's country's facts: a `WritRuler` on the person's seat proposes the turn's
+  plan, built 14 November (`Agents/Advisor.cs`, demo README "The advisor in rule mode"); "refuses in character"
+  is not needed, as it only advises
+- [x] On by default with model rulers; switchable in New game and in game (the pause menu, not the top bar)
+- [ ] Its own model preset (today the session's model)
 
 **R8, orders without a cap**
 - [ ] The cap off behind a rules flag; writs kept as a setting

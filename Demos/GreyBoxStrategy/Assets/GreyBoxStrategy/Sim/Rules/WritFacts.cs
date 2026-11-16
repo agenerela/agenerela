@@ -35,34 +35,90 @@ namespace GreyBoxStrategy
             };
             if (armies.Count > 0)
             {
-                var shown = armies.Take(MaxArmiesListed).Select(a => $"{a.Id} {a.Soldiers} at {a.Location}, " +
-                    (a.Marching ? $"marching to {a.Destination}" : a.Awaiting ? "awaiting orders" : "holding"));
+                // With unit types (R3), each army's mix: "maren_host 50 (25 pikes, 15 riders, 10 bows) at stonereach".
+                var shown = armies.Take(MaxArmiesListed).Select(a => $"{a.Id} {a.Soldiers}" + (rules.UnitTypes ? $" ({Units.Mix(a)})" : "")
+                    + (rules.Generals && a.General != null ? $", led by {a.General.Title}" : "")
+                    + (rules.Supply ? $", stores {a.Stores} of {rules.MaxStores}," : rules.Generals && a.General != null ? "," : "") + $" at {a.Location}, " +
+                    (a.Marching ? $"marching to {a.Destination}"
+                     : rules.Sieges && world.Province(a.Location)?.SiegedBy == countryId ? Siege(world, a.Location)
+                     : a.Awaiting ? "awaiting orders" : "holding"));
                 lines.Add("Our armies: " + string.Join("; ", shown) + (armies.Count > MaxArmiesListed ? $"; and {armies.Count - MaxArmiesListed} more" : "") + ".");
             }
             var occupiedOfOurs = world.ProvinceList.Where(p => p.Owner == countryId && p.Occupier != null).ToList();
 
-            var rivals = world.Alive.Where(c => c.Id != countryId && (world.AtWar(countryId, c.Id) || world.Borders(countryId, c.Id)))
-                .OrderByDescending(c => world.AtWar(countryId, c.Id))
-                .ThenByDescending(c => c.Army).ThenBy(c => c.Id, StringComparer.Ordinal)
-                .Take(MaxRivals);
-            foreach (var other in rivals)
+            foreach (var other in Rivals(world, countryId))
             {
                 var rel = world.RelationBetween(countryId, other.Id);
                 string relation = rel == Relation.War ? $"at war with us, war score {WarScore.Of(world, countryId, other.Id):+0;-0;0}"
                     : rel == Relation.Truce ? $"truce with us for {world.TruceTurnsLeft(countryId, other.Id)} more turns" : "at peace with us";
                 int theirArmies = world.ArmiesOf(other.Id).Count();
-                string occupies = string.Join(", ", occupiedOfOurs.Where(p => p.Occupier == other.Id).Select(p => p.Id));
-                string weOccupy = string.Join(", ", world.ProvinceList.Where(p => p.Owner == other.Id && p.Occupier == countryId).Select(p => p.Id));
-                lines.Add($"{other.Id}: {relation}; {other.Army} soldiers in {Plural(theirArmies, "army", "armies")}, {Facts.Provinces(world.ProvinceCount(other.Id))}"
+                // With OccupationBecomesOwnership on, each occupation says how long it has been held: "corwick (held 3 of 8 turns)".
+                int keepAfter = world.Rules.OccupationBecomesOwnership;
+                string Held(Province p) => keepAfter > 0 ? $"{p.Id} (held {p.OccupiedTurns} of {keepAfter} turns)" : p.Id;
+                string occupies = string.Join(", ", occupiedOfOurs.Where(p => p.Occupier == other.Id).Select(Held));
+                string weOccupy = string.Join(", ", world.ProvinceList.Where(p => p.Owner == other.Id && p.Occupier == countryId).Select(Held));
+                // With unit types (R3), what its armies are mostly: "orsk: at war with us; 60 soldiers in 2 armies, mostly riders, ...".
+                // With fog (R3), the total rounded, and the mix only of the armies our riders scout.
+                string mostly = rules.UnitTypes ? Units.Mostly(KnownMix(world, countryId, other.Id)) : null;
+                string total = rules.Fog ? ArmySight.About(other.Army) : other.Army.ToString();
+                lines.Add($"{other.Id}: {relation}; {total} soldiers in {Plural(theirArmies, "army", "armies")}" + (mostly != null ? $", {mostly}" : "") + $", {Facts.Provinces(world.ProvinceCount(other.Id))}"
                           + (world.Borders(countryId, other.Id) ? "; borders us" : "")
                           + (weOccupy.Length > 0 ? $"; we occupy {weOccupy}" : "")
-                          + (occupies.Length > 0 ? $"; it occupies our {occupies}" : "") + ".");
+                          + (occupies.Length > 0 ? $"; it occupies our {occupies}" : "")
+                          + (rules.Sieges && world.ProvinceList.Any(p => p.Controller == countryId && p.SiegedBy == other.Id)
+                              ? "; it besieges our " + string.Join(", ", world.ProvinceList.Where(p => p.Controller == countryId && p.SiegedBy == other.Id).Select(p => p.Id)) : "") + ".");
+            }
+
+            if (rules.Fog)
+            {
+                var sightings = ArmySight.Sightings(world, countryId, rules.MaxSightings);
+                lines.Add(sightings.Count == 0 ? "Rival armies we see: none." : "Rival armies we see: " + string.Join("; ", sightings) + ".");
             }
 
             int neutralNear = world.ProvinceList.Count(p => p.IsNeutral && world.Neighbours(p).Any(n => n.Controller == countryId));
             if (neutralNear > 0 && lines.Count < MaxStanding)
                 lines.Add(neutralNear == 1 ? "1 neutral province borders our land." : $"{neutralNear} neutral provinces border our land.");
             return lines.Take(MaxStanding).ToList();
+        }
+
+        // The rivals a ruler's facts name: those at war with us, then those our land borders, the largest first.
+        private static IEnumerable<Country> Rivals(World world, string countryId) =>
+            world.Alive.Where(c => c.Id != countryId && (world.AtWar(countryId, c.Id) || world.Borders(countryId, c.Id)))
+                .OrderByDescending(c => world.AtWar(countryId, c.Id))
+                .ThenByDescending(c => c.Army).ThenBy(c => c.Id, StringComparer.Ordinal)
+                .Take(MaxRivals);
+
+        // What we know of a rival's soldiers by type: all of them, or with fog only the armies our riders scout.
+        private static UnitMix KnownMix(World world, string countryId, string rivalId) =>
+            UnitMix.Of(world.Rules.Fog
+                ? world.ArmiesOf(rivalId).Where(a => ArmySight.Scouts(world, countryId, a.Location) && ArmySight.Sees(world, countryId, a.Location))
+                : world.ArmiesOf(rivalId));
+
+        /// <summary>
+        /// The counter rule as the court reads it, with <see cref="GameRules.CountersLine"/> and unit types on: "Pikes
+        /// beat riders, riders beat bows, and bows beat pikes; orsk is mostly riders, which pikes beat." Each rival the
+        /// facts name that is mostly one type is named with what beats it. Null when off.
+        /// </summary>
+        public static string CountersLine(World world, string countryId)
+        {
+            var rules = world.Rules;
+            if (!rules.UnitTypes || !rules.CountersLine) return null;
+            var parts = new List<string>();
+            foreach (var other in Rivals(world, countryId))
+            {
+                var mix = KnownMix(world, countryId, other.Id);
+                if (Units.Largest(mix) is UnitType t)
+                    parts.Add($"{other.Id} is mostly {Units.Name(t)}, which {Units.Name(Units.BeatenBy(t))} beat");
+            }
+            return "Pikes beat riders, riders beat bows, and bows beat pikes" + (parts.Count > 0 ? "; " + string.Join("; ", parts) : "") + ".";
+        }
+
+        // "besieging corwick, turn 2 of 4": a siege as its besieger reads it.
+        private static string Siege(World world, string provinceId)
+        {
+            var p = world.Province(provinceId);
+            int needed = Game.SiegeTurnsNeeded(world.Rules, p, world.ArmiesAt(p.Id).Where(a => a.Owner == p.SiegedBy).ToList());
+            return $"besieging {p.Id}, turn {p.SiegeTurns} of {needed}";
         }
 
         /// <summary>The court's moves as one line among its facts, from the moves it was offered.</summary>
@@ -78,6 +134,9 @@ namespace GreyBoxStrategy
                 parts.Add(verb + " " + (targets.Count == 1 ? targets[0] : string.Join(", ", targets.Take(targets.Count - 1)) + " or " + targets.Last()));
             }
             Add(Actions.Recruit, "recruit");
+            Add(Actions.RecruitPikes, "recruit pikes");
+            Add(Actions.RecruitRiders, "recruit riders");
+            Add(Actions.RecruitBows, "recruit bows");
             Add(Actions.Fortify, "fortify");
             Add(Actions.RaiseTaxes, "raise taxes");
             Add(Actions.DeclareWar, "declare war on");

@@ -18,6 +18,14 @@ namespace GreyBoxStrategy.Replay
     /// </remarks>
     public static partial class ReplayBuilder
     {
+        /// <summary>The rules a recording that names none was played with: the standard ones, R3's army rules off.</summary>
+        public static GameRules RecordedRules()
+        {
+            var r = GameRules.Standard;
+            r.UnitTypes = r.Generals = r.Sieges = r.Supply = r.Fog = r.HungerFirst = false;
+            return r;
+        }
+
         private static readonly Regex Took = new Regex(@"^took (\w+) from (\w+|the neutrals) \((\d+) against (\d+)\)");
         private static readonly Regex Failed = new Regex(@"^attack on (\w+) failed \((\d+) against (\d+)\)");
         private static readonly Regex Built = new Regex(@"^built a fort in (\w+)");
@@ -25,11 +33,15 @@ namespace GreyBoxStrategy.Replay
         private static readonly Regex TruceEnded = new Regex(@"^The truce between (\w+) and (\w+) ended");
         private static readonly Regex OutOfGame = new Regex(@"^(\w+) has lost its last province");
 
+        /// <param name="rules">The rules it was played with. A recording holds only decisions, so a saved one,
+        /// built with none, replays under the standard rules with R3's six army rules off, as every game was played
+        /// before they came on by default (15 November): a recording that does not say plays them off.</param>
         /// <param name="partial">For a game still being played: stop at the first turn the recording
         /// cannot finish, and return the turns before it, rather than throw.</param>
         public static ReplayGame Build(Recording recording, MapDefinition map = null, GameRules rules = null, bool partial = false)
         {
             map = map ?? MapDefinition.Standard();
+            rules = rules ?? RecordedRules();
             var game = new Game(recording.Seed, map, rules);
             // A storyteller game: no random table, the storyteller's rules, its recorded events.
             var story = StoryArms.Rules(recording.StoryArm);
@@ -106,7 +118,16 @@ namespace GreyBoxStrategy.Replay
                 if (replay.Writs)
                 {
                     for (int i = 0; i < provinceIds.Length; i++) councilState.Occupiers[i] = snap.Occupiers.TryGetValue(provinceIds[i], out var occ) ? occ : null;
-                    councilState.Armies = snap.Armies.Select(ArmyOf).ToList();
+                    councilState.Armies = snap.Armies.Select(a => ArmyOf(a, game.Rules)).ToList();
+                    // R3's sieges as they stood at the council, from the rules' own snapshot.
+                    if (councilState.SiegedBy != null)
+                        for (int i = 0; i < provinceIds.Length; i++)
+                        {
+                            bool sieged = snap.SiegedBy.TryGetValue(provinceIds[i], out var by);
+                            councilState.SiegedBy[i] = sieged ? by : null;
+                            councilState.SiegeTurns[i] = sieged ? snap.SiegeTurns[provinceIds[i]] : 0;
+                            councilState.SiegeNeeded[i] = sieged ? snap.SiegeTurnsNeeded[provinceIds[i]] : 0;
+                        }
                 }
                 var upkeepEvents = UpkeepEvents(tr, state, councilState, replay, turn.Turn);
                 if (story != null) upkeepEvents.InsertRange(0, StoryEvents(tr, state, replay, players));
@@ -131,9 +152,40 @@ namespace GreyBoxStrategy.Replay
                 if (replay.Writs)
                     turn.ArmyDrift = end.Armies.Count(a => running.Army(a.Id) is ArmyState r ? r.Location != a.Location : true)
                                      + running.Armies.Count(a => end.Army(a.Id) == null);
+                // R3: a general who gained a trait or fell, as a line of its own at the turn's end.
+                if (game.Rules.Generals) turn.Events.AddRange(GeneralEvents(turn.Start, end, turn.Turn));
                 // The last event carries the game's own numbers for the turn's end.
                 if (turn.Events.Count > 0) turn.Events[turn.Events.Count - 1].After = end;
                 else turn.Council = end;
+                // R3: the council comes from the rules' snapshot with each army's mix, general and stores; the moments after
+                // it carry those on, the mix scaled to the soldiers left (losses come from every type in proportion).
+                if (game.Rules.UnitTypes || game.Rules.Generals || game.Rules.Supply)
+                {
+                    var seen = new HashSet<ReplayState>();
+                    foreach (var st in new[] { turn.Council }.Concat(turn.Events.Select(x => x.After)))
+                        if (st != null && st != end && seen.Add(st)) FillArmies(st, end, turn.Start);
+                    // An army raised and routed within the turn is in no state with its mix or general: a side of one army
+                    // takes both from the rules' battle record (#323), in every moment of the turn it stands in.
+                    foreach (var ev in turn.Events.Where(x => x.Kind == ReplayEventKind.Battle && x.Battle != null))
+                    {
+                        FromRecord(turn, ev.Battle.AttackerArmies, ev.Battle.AttackerMix, 0, ev.Battle.AttackerCommander);
+                        FromRecord(turn, ev.Battle.DefenderArmies, ev.Battle.DefenderMix, ev.Battle.Militia, ev.Battle.DefenderCommander);
+                    }
+                    // Each battle's sides as they stood just before it: a routed army is gone from every state after.
+                    if (game.Rules.UnitTypes)
+                    {
+                        var before = turn.Council;
+                        foreach (var ev in turn.Events)
+                        {
+                            if (ev.Kind == ReplayEventKind.Battle && ev.Battle != null && before != null)
+                            {
+                                ev.AttackMix = ArmyLook.MixText(ev.Battle.AttackerMix) ?? SideMix(before, ev.Battle.AttackerArmies, ev.Battle.AttackerSoldiers, 0);
+                                ev.DefenceMix = ArmyLook.MixText(ev.Battle.DefenderMix) ?? SideMix(before, ev.Battle.DefenderArmies, ev.Battle.DefenderSoldiers, ev.Battle.Militia);
+                            }
+                            if (ev.After != null) before = ev.After;
+                        }
+                    }
+                }
                 turn.TerritoryChanges = tr.TerritoryChanges;
                 replay.Turns.Add(turn);
                 state = end;
@@ -350,10 +402,146 @@ namespace GreyBoxStrategy.Replay
             }
         }
 
-        private static ArmyState ArmyOf(ArmySnapshot a) => new ArmyState
+        /// <summary>
+        /// R3: an army's mix and general where the rules' snapshot has none, from the turn's end (or its start): the mix
+        /// scaled to the soldiers it has at that moment.
+        /// </summary>
+        public static void FillArmies(ReplayState s, ReplayState end, ReplayState start)
+        {
+            foreach (var a in s.Armies)
+            {
+                // R3's supply: stores change only at the turn's end, so inside a turn an army has what it began with
+                // (a new one what it ends with); a hunger line has already set it to none.
+                var stores = start?.Army(a.Id) ?? end?.Army(a.Id);
+                if (stores != null && stores.HasStores)
+                {
+                    if (!a.HasStores) a.HalfStores = stores.HalfStores;
+                    a.MaxHalfStores = stores.MaxHalfStores;
+                }
+                // The council's general stays with an army through the turn (a fall is told at its end); one the state
+                // does not know (raised this turn) is the one it ends with.
+                var src = end?.Army(a.Id) ?? start?.Army(a.Id);
+                if (a.General == null && src?.General != null) { a.General = src.General; a.Traits = src.Traits.ToList(); }
+                // Its own mix, carried from the council, scaled to the soldiers it has now; one it lacks from where it ends.
+                var mix = a.HasMix ? a : src;
+                if (mix == null || !mix.HasMix || (mix == a && a.Pikes + a.Riders + a.Bows == a.Soldiers)) continue;
+                Scale(a, mix.Pikes, mix.Riders, mix.Bows);
+            }
+        }
+
+        /// <summary>A side of one army: its mix (less the militia, who fight as pikes) and general from the record, where no state knew them.</summary>
+        private static void FromRecord(ReplayTurn turn, List<string> armies, UnitMix? mix, int militia, string commander)
+        {
+            if (armies == null || armies.Count != 1) return;
+            string id = armies[0];
+            foreach (var st in new[] { turn.Council }.Concat(turn.Events.Select(x => x.After)).Where(x => x != null).Distinct())
+            {
+                var a = st.Army(id);
+                if (a == null) continue;
+                if (!a.HasMix && mix is UnitMix m && m.Total > 0)
+                {
+                    int pikes = Math.Max(0, m.Pikes - militia);
+                    if (pikes + m.Riders + m.Bows > 0) Scale(a, pikes, m.Riders, m.Bows);
+                }
+                if (a.General == null && commander != null)
+                {
+                    var (name, traits) = ParseTitle(commander);
+                    a.General = name; a.Traits = traits;
+                }
+            }
+        }
+
+        /// <summary>"Maren the Wary and Bold" back into the general's name and traits.</summary>
+        public static (string name, List<string> traits) ParseTitle(string title)
+        {
+            int at = title.IndexOf(" the ", StringComparison.Ordinal);
+            if (at < 0) return (title, new List<string>());
+            var traits = title.Substring(at + 5).Split(new[] { " and " }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(e => GeneralTraits.All.Concat(new[] { GeneralTraits.Siegewright, GeneralTraits.Forager }).Distinct().FirstOrDefault(t => GeneralTraits.Epithet(t) == e))
+                .Where(t => t != null).ToList();
+            return (title.Substring(0, at), traits);
+        }
+
+        /// <summary>
+        /// The rules' own split of a new total over the types (<c>Army.Soldiers</c>'s setter): in proportion, the remainder
+        /// to the largest fractions, pikes first on ties.
+        /// </summary>
+        public static void Scale(ArmyState a, int pikes, int riders, int bows)
+        {
+            int value = a.Soldiers, total = pikes + riders + bows;
+            if (value <= 0 || total <= 0) { a.Pikes = a.Riders = a.Bows = 0; return; }
+            var have = new[] { pikes, riders, bows };
+            var now = new int[3];
+            var frac = new double[3];
+            for (int i = 0; i < 3; i++)
+            {
+                double exact = (double)value * have[i] / total;
+                now[i] = (int)Math.Floor(exact);
+                frac[i] = exact - now[i];
+            }
+            int left = value - now.Sum();
+            foreach (int i in Enumerable.Range(0, 3).OrderByDescending(i => frac[i]).ThenBy(i => i).Take(left)) now[i]++;
+            a.Pikes = now[0]; a.Riders = now[1]; a.Bows = now[2];
+        }
+
+        /// <summary>
+        /// R3: a side's mix, "24 pikes, 12 riders": its armies' shares in <paramref name="s"/>, scaled to the soldiers it
+        /// fought with; a garrison or militia as pikes. Null when one of its armies' mix is not known.
+        /// </summary>
+        public static string SideMix(ReplayState s, List<string> armies, int soldiers, int militia)
+        {
+            double p = 0, r = 0, w = 0;
+            int unknown = 0;
+            foreach (var id in armies)
+            {
+                var a = s.Army(id);
+                if (a == null || !a.HasMix) { unknown++; continue; }
+                p += a.Pikes; r += a.Riders; w += a.Bows;
+            }
+            // An army raised and lost within one turn is in no state the screen sees with its mix (the rules' snapshots
+            // carry none): rather than guess, say nothing of that side.
+            if (unknown > 0) return null;
+            double sum = p + r + w;
+            int fighting = soldiers - militia;
+            int riders = sum > 0 ? (int)Math.Round(fighting * r / sum) : 0, bows = sum > 0 ? (int)Math.Round(fighting * w / sum) : 0;
+            int pikes = soldiers - riders - bows;
+            var parts = new List<string>();
+            if (pikes > 0) parts.Add($"{pikes} pikes");
+            if (riders > 0) parts.Add($"{riders} riders");
+            if (bows > 0) parts.Add($"{bows} bows");
+            return string.Join(", ", parts);
+        }
+
+        /// <summary>R3: the chronicle's lines for generals, from the turn's start and end: a trait gained, a general fallen.</summary>
+        public static List<ReplayEvent> GeneralEvents(ReplayState start, ReplayState end, int turn)
+        {
+            var list = new List<ReplayEvent>();
+            foreach (var a in end.Armies)
+            {
+                var before = start?.Army(a.Id);
+                if (before?.General == null || a.General == null) continue;
+                string host = Chronicle.Host(a.Id);
+                if (before.General != a.General)
+                    list.Add(new ReplayEvent { Turn = turn, Kind = ReplayEventKind.General, Country = a.Owner, Text = $"{Title(before)}, who led {host}, has fallen; {Title(a)} takes command", After = end });
+                else if (a.Traits.Count > before.Traits.Count)
+                    list.Add(new ReplayEvent { Turn = turn, Kind = ReplayEventKind.General, Country = a.Owner, Text = $"{before.General}, leading {host}, is now {Title(a)} after three victories", After = end });
+            }
+            return list;
+        }
+
+        /// <summary>"Maren the Wary", "Maren the Wary and Bold": the rules' own title for a general.</summary>
+        public static string Title(ArmyState a) => a.General == null ? null : a.General + " the " + string.Join(" and ", a.Traits.Select(GeneralTraits.Epithet));
+
+        /// <summary>An army at the council, as <see cref="Capture"/> shows one: R3's fields only with their settings.</summary>
+        private static ArmyState ArmyOf(ArmySnapshot a, GameRules rules) => new ArmyState
         {
             Id = a.Id, Owner = a.Owner, Location = a.Location, Soldiers = a.Soldiers, Destination = a.Destination,
             Path = a.Path.ToList(), StepTurnsLeft = a.StepTurnsLeft, Wake = a.Wake.ToList(),
+            Pikes = rules.UnitTypes ? a.Pikes : 0, Riders = rules.UnitTypes ? a.Riders : 0, Bows = rules.UnitTypes ? a.Bows : 0,
+            General = rules.Generals ? a.General : null,
+            Traits = rules.Generals && a.General != null ? a.Traits.ToList() : new List<string>(),
+            HalfStores = rules.Supply ? a.HalfStores : -1,
+            MaxHalfStores = rules.Supply ? 2 * rules.MaxStores : 0,
         };
 
         private static bool Pair(RelationState r, string a, string b) => (r.A == a && r.B == b) || (r.A == b && r.B == a);
@@ -398,8 +586,22 @@ namespace GreyBoxStrategy.Replay
                 {
                     Id = a.Id, Owner = a.Owner, Location = a.Location, Soldiers = a.Soldiers, Destination = a.Destination,
                     Path = a.Path.ToList(), StepTurnsLeft = a.StepTurnsLeft, Wake = a.Wake.ToList(),
+                    // R3, only with its settings: with them off every soldier is a pike and nobody leads, as the screen always showed.
+                    Pikes = w.Rules.UnitTypes ? a.Pikes : 0, Riders = w.Rules.UnitTypes ? a.Riders : 0, Bows = w.Rules.UnitTypes ? a.Bows : 0,
+                    General = w.Rules.Generals ? a.General?.Name : null,
+                    Traits = w.Rules.Generals && a.General != null ? a.General.Traits.ToList() : new List<string>(),
+                    HalfStores = w.Rules.Supply ? a.HalfStores : -1,
+                    MaxHalfStores = w.Rules.Supply ? 2 * w.Rules.MaxStores : 0,
                 }).ToList(),
             };
+            if (w.Rules.Sieges)
+            {
+                var ps = provinceIds.Select(id => w.Province(id)).ToArray();
+                s.SiegedBy = ps.Select(p => p.SiegedBy).ToArray();
+                s.SiegeTurns = ps.Select(p => p.SiegedBy != null ? p.SiegeTurns : 0).ToArray();
+                s.SiegeNeeded = ps.Select(p => p.SiegedBy == null ? 0
+                    : Game.SiegeTurnsNeeded(w.Rules, p, w.ArmiesAt(p.Id).Where(a => a.Owner == p.SiegedBy).ToList())).ToArray();
+            }
             foreach (var c in w.CountryList)
                 s.Countries[c.Id] = new CountryState
                 {
@@ -442,6 +644,8 @@ namespace GreyBoxStrategy.Replay
         private readonly Dictionary<string, RecordedDecision> council = new Dictionary<string, RecordedDecision>(StringComparer.Ordinal);
 
         private readonly Dictionary<string, RecordedDecision> told = new Dictionary<string, RecordedDecision>(StringComparer.Ordinal);
+        // Each turn's army orders, in the order the game asked them.
+        private readonly Dictionary<int, List<RecordedDecision>> armyOrders = new Dictionary<int, List<RecordedDecision>>();
 
         public RecordedPlayers(Recording recording)
         {
@@ -456,6 +660,11 @@ namespace GreyBoxStrategy.Replay
                 string k = Key(d.Turn, d.Country, d.IsEnvoy);
                 if (!queues.TryGetValue(k, out var q)) queues[k] = q = new Queue<RecordedDecision>();
                 q.Enqueue(d);
+                if (d.ArmyId != null && d.Moment == RecordedDecision.ArmyMoment)
+                {
+                    if (!armyOrders.TryGetValue(d.Turn, out var list)) armyOrders[d.Turn] = list = new List<RecordedDecision>();
+                    list.Add(d);
+                }
             }
         }
 
@@ -474,6 +683,22 @@ namespace GreyBoxStrategy.Replay
             if (!envoy) council[r.Turn + "|" + r.CountryId] = d;
             if (envoy) return d.Action == Actions.AcceptPeace ? new Move(Actions.AcceptPeace) : new Move(Actions.RefusePeace);
             return new Move(d.Action ?? Actions.None, d.HasTarget ? d.Target : null);
+        }
+
+        /// <summary>
+        /// The writs turn: asks the game again for every army the recording shows was asked this turn, in the order it was
+        /// asked (<see cref="Game.Recall"/>). For a model's armies that is the order the rules ask anyway; a person's plan
+        /// may have recalled an army that was holding, and only this brings its order back.
+        /// </summary>
+        public void Recall(Game game, int turn)
+        {
+            if (!armyOrders.TryGetValue(turn, out var list)) return;
+            foreach (var d in list)
+            {
+                string why = game.Recall(d.Country, d.ArmyId);
+                if (why != null)
+                    throw new InvalidOperationException($"Turn {turn}: the recording has an order for {d.ArmyId}, but {why}: it is from a different game or different rules.");
+            }
         }
 
         public RecordedDecision Story(int turn) => told.TryGetValue($"{RecordedDecision.StoryMoment}|{turn}|", out var d) ? d : null;

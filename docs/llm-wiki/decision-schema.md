@@ -258,6 +258,9 @@ So nobody looks for them:
 - **No typed parameters.** A decision is one action, one target and one statement, or no statement
   at all (#266). Quantities,
   prices or a strength are not fields (#190 LV #12, #266 item 2).
+  What Ollama's grammar can hold beside them was probed on 14 November: an enum and a bounded array
+  of target ids, kept in key order, and a parameter written after `statement` lands in the
+  statement (`findings.md`, "A closed choice beside action and target").
 - **No reasoning field.** A field before `action` measured worst of five variants.
 - **No length cap on `statement`.** A runaway reply has been seen once per 460 calls (#244
   item 11). The schema holds no cap; `DecideOptions.MaxReplyTokens` (#296) cuts a reply

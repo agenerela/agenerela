@@ -34,8 +34,20 @@ namespace GreyBoxStrategy.Realm
         public List<string> ArmiesWithWrits(CountryRequest court)
         {
             var w = court.World;
-            return WritLegality.Awaiting(w, court.CountryId).Take(Math.Max(0, court.Writs - 1)).Select(a => a.Id).ToList();
+            // As the rules ask them (#327): the armies your plan orders first (the court recalls any that has not woken),
+            // then those awaiting orders, the most urgent first, one writ each until one is left for the court.
+            var planned = Plan.Armies.Keys.Where(id => w.FindArmy(id)?.Owner == court.CountryId).ToList();
+            return planned.Concat(WritLegality.Awaiting(w, court.CountryId).Select(a => a.Id).Where(id => !planned.Contains(id)))
+                .Take(Math.Max(0, court.Writs - 1)).ToList();
         }
+
+        /// <summary>Whether an army of yours with no writ yet may be given new orders: a writ is left to recall it.</summary>
+        public bool CanRecall(CountryRequest court, string armyId) =>
+            court != null && court.World.FindArmy(armyId)?.Owner == court.CountryId && !ArmiesWithWrits(court).Contains(armyId)
+            && Plan.Armies.Count < Math.Max(0, court.Writs - 1);
+
+        /// <summary>Orders the rules did not take last turn ("army_id: why"), from <c>RuleSession.PlanRefusals</c>.</summary>
+        public IReadOnlyList<string> PlanRefusals;
 
         /// <summary>Whether a second court order is asked: the first is not "none" and a writ is left after the armies.</summary>
         public bool SecondCourt(CountryRequest court) =>
@@ -50,9 +62,35 @@ namespace GreyBoxStrategy.Realm
             return (court1 ? 1 : 0) + armies + (court2 ? 1 : 0);
         }
 
+        private Label Note(string text, string cls = null)
+        {
+            var l = new Label(text) { style = { whiteSpace = WhiteSpace.Normal, fontSize = 11, marginTop = 2, marginBottom = 4 } };
+            l.AddToClassList("council-note"); if (cls != null) l.AddToClassList(cls);
+            return l;
+        }
+
+        /// <summary>"The treasury runs dry in 2 turns": gold against the rules' income and upkeep; null while it holds.</summary>
+        public static string TreasuryLine(int gold, int income, int upkeep)
+        {
+            int net = income - upkeep;
+            if (net >= 0) return null;
+            if (gold < 0) return $"The treasury is empty ({net:+0;-0} a turn): below zero, 15% of the army deserts each turn.";
+            // Gold falls below zero on the first turn that gold + turns × net < 0.
+            int turns = gold / -net + 1;
+            return turns > 10 ? null : $"The treasury runs dry in {turns} turn{(turns == 1 ? "" : "s")} ({gold} gold, {net:+0;-0} a turn): below zero, 15% of the army deserts.";
+        }
+
+        private string Treasury(World w)
+        {
+            var c = w.Country(You);
+            return c == null ? null : TreasuryLine(c.Gold, w.Income(c), w.Upkeep(c));
+        }
+
         private void ShowWritsOrders(string status)
         {
             var req = OrdersRequest;
+            // 7. A march ordered now is drawn at once, lighter than one under way.
+            marchLines?.MarkDirtyRepaint();
             var w = req.World;
             orders.Clear();
             var head = new VisualElement(); head.AddToClassList("panel-head");
@@ -86,11 +124,28 @@ namespace GreyBoxStrategy.Realm
             else
             {
                 for (int k = 0; k < req.Writs; k++) { var pip = new VisualElement(); pip.AddToClassList("writ-pip"); pip.EnableInClassList("on", k < used); writs.Add(pip); }
-                writs.Add(new Label($"{used} of {req.Writs}") { style = { marginLeft = 6, fontSize = 12, color = new Color(0.86f, 0.8f, 0.66f) } });
+                writs.Add(new Label($"{used} of {req.Writs} used") { style = { marginLeft = 6, fontSize = 12, color = new Color(0.86f, 0.8f, 0.66f) } });
                 writs.tooltip = $"Writs a turn: {w.Rules.BaseWrits} + 1 for every {w.Rules.ProvincesPerWrit} provinces you own, at most {w.Rules.MaxWrits}. " +
                                 "The court's order takes one; each army awaiting orders takes one, the most urgent first, until one is left for the court; unused writs are lost.";
             }
             body.Add(writs);
+            // A turn with nothing to order says why, rather than leaving the buttons grey.
+            if (ArmiesWithWrits(req).Count == 0 && !req.Legal.Any(m => m.Action != Actions.None))
+                body.Add(Note("Nothing to order this turn: your court has no order it may give, and no army awaits orders. An army waits again when it arrives, fights, is blocked, its stores run low, or four turns pass."));
+            else if (!w.ArmiesOf(You).Any(a => a.Awaiting) && Plan.Armies.Count == 0)
+                body.Add(Note("No army awaits orders this turn. Click any of your armies to give it new orders, for a writ."));
+            // Orders the rules did not take last turn, and why, rather than letting them vanish.
+            if (PlanRefusals != null && PlanRefusals.Count > 0)
+                body.Add(Note("Not carried out last turn: " + string.Join("; ", PlanRefusals.Select(r =>
+                {
+                    int at = r.IndexOf(": ", StringComparison.Ordinal);
+                    return at > 0 ? $"{Chronicle.Host(r.Substring(0, at))}, {r.Substring(at + 2)}" : r;
+                })) + ".", "bad"));
+            // 6. The treasury, by the rules' own numbers: when it runs dry, and what that costs.
+            if (Treasury(w) is string dry) body.Add(Note(dry, "bad"));
+
+            // Your advisor's proposal for the turn, when it is on: suggestions only.
+            AdvisorSection(body, req);
 
             // The court: its order, then a second one if a writ is left.
             body.Add(SectionHead("THE COURT", "one order, a writ"));
@@ -104,7 +159,10 @@ namespace GreyBoxStrategy.Realm
             // The armies: which gets a writ, which waits for want of one, which carries out its order.
             var withWrits = ArmiesWithWrits(req);
             var awaiting = WritLegality.Awaiting(w, You).Select(a => a.Id).ToList();
-            body.Add(SectionHead("YOUR ARMIES", withWrits.Count < awaiting.Count ? $"{awaiting.Count - withWrits.Count} wait: no writ left" : "click one, then a lit province"));
+            // How many more armies this turn's writs can order (one writ is the court's; an army awaiting orders holds one already).
+            int armyWrits = Math.Max(0, req.Writs - 1);
+            string ordered = req.Writs == GameRules.UnlimitedWrits ? "" : $"{Math.Max(0, armyWrits - withWrits.Count)} of {armyWrits} army writs left · ";
+            body.Add(SectionHead("YOUR ARMIES", ordered + (withWrits.Count < awaiting.Count ? $"{awaiting.Count - withWrits.Count} wait: no writ left" : "click one, then a lit province")));
             if (withWrits.Count > 0)
             {
                 // On a big world the army waiting may be anywhere: this finds it, as the N key does.
@@ -121,7 +179,7 @@ namespace GreyBoxStrategy.Realm
                 body.Add(ArmyRow(req, army, withWrits, awaiting));
             if (w.ArmiesOf(You).Count() == 0) body.Add(Text("No armies. Recruit at your capital to raise one.", "src"));
 
-            if (SelectedArmy != null && withWrits.Contains(SelectedArmy))
+            if (SelectedArmy != null && (withWrits.Contains(SelectedArmy) || CanRecall(req, SelectedArmy)))
             {
                 var moves = WritLegality.ArmyMoves(w, You, SelectedArmy);
                 bool canMarch = moves.Any(m => m.Action == Actions.March);
@@ -162,7 +220,9 @@ namespace GreyBoxStrategy.Realm
             box.Add(line);
             var row = new VisualElement(); row.AddToClassList("order-moves");
             var w = req.World;
-            foreach (string action in new[] { Actions.Recruit, Actions.RaiseTaxes, Actions.Fortify, Actions.DeclareWar, Actions.OfferWhitePeace, Actions.DemandOccupied, Actions.CedeOccupied, Actions.None })
+            // R3's unit types: three recruit orders, one a type, in place of one.
+            var recruits = w.Rules.UnitTypes ? Actions.RecruitTypes : new[] { Actions.Recruit };
+            foreach (string action in recruits.Concat(new[] { Actions.RaiseTaxes, Actions.Fortify, Actions.DeclareWar, Actions.OfferWhitePeace, Actions.DemandOccupied, Actions.CedeOccupied, Actions.None }))
             {
                 var legal = req.Legal.Where(m => m.Action == action).ToList();
                 string a = action;
@@ -175,8 +235,16 @@ namespace GreyBoxStrategy.Realm
                     else { openCourt = openCourt == a && openCourt2 == second ? null : a; openCourt2 = second; ShowOrders(status); }
                 }) { text = CourtLabel(action) };
                 b.AddToClassList("order-move");
+                if (Actions.RecruitsType(action) is UnitType rt)
+                {
+                    // Its cost and what it beats, on the button itself, under its name.
+                    b.text = "";
+                    b.AddToClassList("recruit-type");
+                    b.Add(new Label(ArmyLook.RecruitName(action)) { pickingMode = PickingMode.Ignore });
+                    var note = new Label(ArmyLook.RecruitNote(w.Rules, rt)) { pickingMode = PickingMode.Ignore }; note.AddToClassList("recruit-note"); b.Add(note);
+                }
                 if (why != null) { b.AddToClassList("off"); b.tooltip = "Not offered: " + why; }
-                else b.tooltip = Explain(action);
+                else b.tooltip = Actions.RecruitsType(action) is UnitType tt ? ArmyLook.RecruitTooltip(w.Rules, tt, w.Levy(w.Country(You), tt)) : Explain(action);
                 if (chosen != null && chosen.Action == action) b.AddToClassList("pick");
                 else if (openCourt == action && openCourt2 == second) b.AddToClassList("on");
                 row.Add(b);
@@ -234,24 +302,60 @@ namespace GreyBoxStrategy.Realm
         private VisualElement ArmyRow(CountryRequest req, Army army, List<string> withWrits, List<string> awaiting)
         {
             var row = new VisualElement(); row.AddToClassList("army-row");
-            bool hasWrit = withWrits.Contains(army.Id), waits = awaiting.Contains(army.Id);
+            bool hasWrit = withWrits.Contains(army.Id), waits = awaiting.Contains(army.Id), recall = !hasWrit && !waits && CanRecall(req, army.Id);
             if (army.Id == SelectedArmy) row.AddToClassList("pick");
-            row.Add(new Label($"{Chronicle.Host(army.Id)} · {army.Soldiers}") { style = { width = 150, fontSize = 12, unityFontStyleAndWeight = FontStyle.Bold } });
+            // A fixed column: a long general's title wraps inside it rather than running under the state beside it.
+            var head = new VisualElement { style = { width = 150, flexShrink = 0, marginRight = 6 } };
+            head.Add(new Label($"{Chronicle.Host(army.Id)} · {army.Soldiers}") { style = { fontSize = 12, unityFontStyleAndWeight = FontStyle.Bold } });
+            // R3: its mix as three small bars, and its general; nothing more when the rules have neither.
+            var st = hostState?.Army(army.Id);
+            if (st != null && st.HasMix) { head.Add(new MixBars(st)); var mix = new Label(ArmyLook.Mix(st)); mix.AddToClassList("mix-counts"); head.Add(mix); }
+            if (ArmyLook.Leader(st) is string leader) { var gl = new Label(ReplayBuilder.Title(st)) { tooltip = "Led by " + leader }; gl.AddToClassList("army-general"); head.Add(gl); }
+            // R3's supply: a pip a turn of stores, half-filled for half a turn, and a warning when there are none.
+            if (st != null && st.HasStores)
+            {
+                var stores = new VisualElement { tooltip = ArmyLook.Stores(st) }; stores.AddToClassList("stores");
+                var named = new Label("stores"); named.AddToClassList("stores-name"); stores.Add(named);
+                for (int k = 0; k < st.MaxHalfStores / 2; k++)
+                {
+                    var pip = new VisualElement(); pip.AddToClassList("store-pip");
+                    pip.EnableInClassList("full", st.HalfStores >= 2 * (k + 1));
+                    pip.EnableInClassList("half", st.HalfStores == 2 * k + 1);
+                    stores.Add(pip);
+                }
+                if (st.Hungry) { var h = new Label("No stores"); h.AddToClassList("hungry-note"); stores.Add(h); }
+                head.Add(stores);
+            }
+            row.Add(head);
             string state;
             if (hasWrit)
             {
                 var m = Plan.Armies.TryGetValue(army.Id, out var x) ? x : null;
-                state = m == null ? $"at {Cap(army.Location)}, awaiting orders: it has a writ" : m.Action == Actions.March ? $"orders: march to {Cap(m.Target)}" : "orders: hold";
+                // Why it waits, in the rules' own words ("stores running low", "fought a battle"), newest first.
+                string why = army.Wake.Count > 0 ? $" ({army.Wake[army.Wake.Count - 1]})" : "";
+                state = m == null ? $"at {Cap(army.Location)}, awaiting orders{why}: it has a writ" : m.Action == Actions.March ? $"orders: march to {Cap(m.Target)}" : "orders: hold";
                 row.AddToClassList(m == null ? "needs" : "ordered");
             }
             else if (waits) { state = $"at {Cap(army.Location)}, awaiting, but no writ left: it holds"; row.AddToClassList("no-writ"); }
-            else if (army.Marching) state = $"marching to {Cap(army.Destination)}" + (TurnsLeft != null && hostState?.Army(army.Id) is ArmyState s ? $", {TurnsLeft(s)} turns" : "");
-            else state = $"holding at {Cap(army.Location)}";
+            else
+            {
+                // Not awaiting orders: the court may still recall it for a writ (#327), while one is left.
+                string doing = army.Marching
+                    ? $"marching to {Cap(army.Destination)}" + (TurnsLeft != null && hostState?.Army(army.Id) is ArmyState s ? $", {TurnsLeft(s)} turn{(TurnsLeft(s) == 1 ? "" : "s")}" : "")
+                    : $"holding at {Cap(army.Location)}";
+                state = recall ? doing + ": click to give new orders (a writ)" : army.Marching ? doing : doing + " until it wakes";
+                if (recall) row.AddToClassList("recall");
+            }
+            // R3's sieges: an army besieging where it stands says so, with the siege's turns.
+            if (ArmyLook.SiegeTag(hostState, IndexOf(army.Location)) is string siege && hostState.SiegedBy[IndexOf(army.Location)] == army.Owner)
+                state += $"; besieging it: {siege.Substring(0, 1).ToLowerInvariant()}{siege.Substring(1)}";
             var l = new Label(state) { style = { fontSize = 12, flexShrink = 1, whiteSpace = WhiteSpace.Normal } }; row.Add(l);
             row.tooltip = (waits ? "Awaiting orders: " + string.Join(", ", army.Wake) + ". " : "") +
-                          (hasWrit ? "Click, then click a lit province on the map." : waits ? "The rules ask armies the most urgent first, one writ each, keeping one for the court." : "Carrying out its order: it costs no writ. It awaits orders again when it arrives, fights, is blocked, or four turns pass.");
+                          (hasWrit ? "Click, then click a lit province on the map." : waits ? "The rules ask armies the most urgent first, one writ each, keeping one for the court."
+                           : recall ? "Carrying out its order. Click to give it new orders: the court recalls it, for a writ."
+                           : "Carrying out its order: it costs no writ. Every writ an army may use is spent this turn; it awaits orders again when it arrives, fights, is blocked, or four turns pass.");
             string id = army.Id;
-            row.RegisterCallback<ClickEvent>(_ => { SelectedArmy = hasWrit ? (SelectedArmy == id ? null : id) : null; PlanChanged?.Invoke(); ShowOrders(ordersStatus?.text); HostPressed?.Invoke(id); });
+            row.RegisterCallback<ClickEvent>(_ => { SelectedArmy = hasWrit || recall ? (SelectedArmy == id ? null : id) : null; PlanChanged?.Invoke(); ShowOrders(ordersStatus?.text); HostPressed?.Invoke(id); });
             return row;
         }
 

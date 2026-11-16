@@ -29,9 +29,22 @@ namespace GreyBoxStrategy
                     return move.Target == null ? null : "none takes no target";
 
                 case Actions.Recruit:
+                    if (rules.UnitTypes) return "with unit types, recruit pikes, riders or bows";
                     if (move.Target != null) return "recruit takes no target";
                     if (RecruitSite(world, countryId) == null) return "we hold no province of ours to recruit in";
                     return world.Levy(me) >= rules.MinLevy ? null : $"recruiting needs {rules.MinLevy * rules.GoldPerSoldier} gold";
+
+                case Actions.RecruitPikes:
+                case Actions.RecruitRiders:
+                case Actions.RecruitBows:
+                {
+                    if (!rules.UnitTypes) return "unit types are off";
+                    if (move.Target != null) return $"{move.Action} takes no target";
+                    if (RecruitSite(world, countryId) == null) return "we hold no province of ours to recruit in";
+                    var type = Actions.RecruitsType(move.Action).Value;
+                    return world.Levy(me, type) >= rules.MinLevy ? null
+                        : $"recruiting {Units.Name(type)} needs {rules.MinLevy * rules.GoldPerSoldier * Units.CostFactor(rules, type)} gold";
+                }
 
                 case Actions.RaiseTaxes:
                     if (move.Target != null) return "raise_taxes takes no target";
@@ -91,7 +104,7 @@ namespace GreyBoxStrategy
         public static List<Move> CourtMoves(World world, string countryId)
         {
             var legal = new List<Move>();
-            foreach (string action in Actions.Court)
+            foreach (string action in world.Rules.UnitTypes ? Actions.Court.Concat(Actions.RecruitTypes) : Actions.Court)
             {
                 if (action == Actions.None) continue;
                 IEnumerable<Move> candidates = Actions.TargetsProvince(action)
@@ -158,9 +171,14 @@ namespace GreyBoxStrategy
                 if (paths[at].Count >= range) continue;
                 // A province held against us is where a march fights; it goes no further through it.
                 if (at != from && Blocks(world, countryId, world.Province(at))) continue;
+                // A fort holds the road: a march stops beside an enemy fort, and an army already there may only
+                // step to the fort or back into our land.
+                bool held = HeldByFort(world, countryId, at);
+                if (at != from && held) continue;
                 foreach (string n in world.Map.Neighbours(at))
                 {
                     if (paths.ContainsKey(n) || !Passable(world, countryId, world.Province(n))) continue;
+                    if (held && world.Province(n).Controller != countryId && !HoldsTheRoad(world, countryId, world.Province(n))) continue;
                     var path = new List<string>(paths[at]) { n };
                     paths[n] = path;
                     queue.Enqueue(n);
@@ -168,6 +186,19 @@ namespace GreyBoxStrategy
             }
             paths.Remove(from);
             return paths;
+        }
+
+        /// <summary>With <see cref="GameRules.FortsHoldTheRoad"/>: an enemy's walled province, held by a country we are at war with, that no one besieges.</summary>
+        public static bool HoldsTheRoad(World world, string countryId, Province p) =>
+            world.Rules.FortsHoldTheRoad && p.Forts > 0 && p.SiegedBy == null && p.Controller != null && p.Controller != countryId
+            && world.AtWar(countryId, p.Controller);
+
+        /// <summary>With <see cref="GameRules.FortsHoldTheRoad"/>: whether a province not ours borders a fort that holds the road against us.</summary>
+        public static bool HeldByFort(World world, string countryId, string provinceId)
+        {
+            if (!world.Rules.FortsHoldTheRoad) return false;
+            var p = world.Province(provinceId);
+            return p.Controller != countryId && world.Neighbours(p).Any(n => HoldsTheRoad(world, countryId, n));
         }
 
         /// <summary>Whether a march must stop in this province to fight: neutral land with a garrison, or land held by an enemy.</summary>
@@ -230,8 +261,22 @@ namespace GreyBoxStrategy
             if (p.Owner == null) what = $"neutral, garrison {p.Garrison}";
             else if (p.Owner == countryId) what = p.Occupier == null ? "ours" : $"ours, occupied by {p.Occupier}";
             else what = p.Occupier == countryId ? $"{p.Owner}'s, occupied by us" : $"{p.Owner}'s, at war";
+            if (world.Rules.Fog)
+            {
+                string seen = ArmySight.ArmiesThere(world, countryId, provinceId);
+                bool scouted = seen != null && p.Info.Terrain != Terrain.Forest && ArmySight.Scouts(world, countryId, provinceId);
+                return $"{what}; {where}" + (seen != null ? $"; {seen}" + (scouted ? MostlyThere(world, countryId, provinceId) : "") : "");
+            }
             int armies = world.ArmiesAt(provinceId).Where(a => a.Owner != countryId).Sum(a => a.Soldiers);
-            return $"{what}; {where}" + (armies > 0 ? $"; enemy armies {armies}" : "");
+            return $"{what}; {where}" + (armies > 0 ? $"; enemy armies {armies}" + MostlyThere(world, countryId, provinceId) : "");
+        }
+
+        // With the counters line (R3), the largest type among the enemy armies in a march's province: ", mostly pikes".
+        private static string MostlyThere(World world, string countryId, string provinceId)
+        {
+            if (!world.Rules.UnitTypes || !world.Rules.CountersLine) return "";
+            var t = Units.Largest(UnitMix.Of(world.ArmiesAt(provinceId).Where(a => a.Owner != countryId)));
+            return t is UnitType u ? $", mostly {Units.Name(u)}" : "";
         }
 
         /// <summary>
@@ -240,10 +285,43 @@ namespace GreyBoxStrategy
         /// </summary>
         public static List<Army> Awaiting(World world, string countryId) =>
             world.ArmiesOf(countryId).Where(a => a.Awaiting)
-                .OrderByDescending(a => HostileBeside(world, a) ? 1 : 0)
+                .OrderByDescending(a => world.Rules.HungerFirst && world.Rules.Supply ? Hunger(world, a) : 0)
+                .ThenByDescending(a => HostileBeside(world, a) ? 1 : 0)
                 .ThenByDescending(a => a.Soldiers)
                 .ThenBy(a => a.Id, StringComparer.Ordinal)
                 .ToList();
+
+        /// <summary>
+        /// How hungry an army is where it stands, for <see cref="GameRules.HungerFirst"/>: 2 with no stores left in land
+        /// that does not feed it, 1 when its stores last one more turn there or less, else 0.
+        /// </summary>
+        public static int Hunger(World world, Army a)
+        {
+            int eats = Game.Eats(world, a);
+            if (eats <= 0) return 0;
+            if (a.HalfStores <= 0) return 2;
+            return a.HalfStores <= eats ? 1 : 0;
+        }
+
+        /// <summary>The nearest land that feeds this army (ours, held by us) by steps it may take, and how many; null when none can be reached.</summary>
+        public static (string province, int steps)? NearestSupply(World world, Army a)
+        {
+            var seen = new Dictionary<string, int>(StringComparer.Ordinal) { [a.Location] = 0 };
+            var queue = new Queue<string>();
+            queue.Enqueue(a.Location);
+            while (queue.Count > 0)
+            {
+                string at = queue.Dequeue();
+                if (at != a.Location && Game.Supplied(world.Province(at), a.Owner)) return (at, seen[at]);
+                foreach (string n in world.Map.Neighbours(at).OrderBy(x => x, StringComparer.Ordinal))
+                {
+                    if (seen.ContainsKey(n) || !Passable(world, a.Owner, world.Province(n))) continue;
+                    seen[n] = seen[at] + 1;
+                    queue.Enqueue(n);
+                }
+            }
+            return null;
+        }
 
         /// <summary>Whether an enemy army stands in the army's province or one bordering it.</summary>
         public static bool HostileBeside(World world, Army a) =>

@@ -122,7 +122,7 @@ namespace GreyBoxStrategy.Realm
             var playing = System.Threading.Tasks.Task.Run(() =>
             {
                 var mapDef = setup.BuildMap();
-                var rules = setup.BuildRules(mapDef);
+                var rules = RulesFor(setup, mapDef);
                 var rec = ScriptedWorldGame.Play(setup, mapDef, rules);
                 scripted = (setup, mapDef, rules);
                 return (rec, ReplayBuilder.Build(rec, mapDef, rules));
@@ -185,7 +185,7 @@ namespace GreyBoxStrategy.Realm
             var preparing = System.Threading.Tasks.Task.Run(() =>
             {
                 var mapDef = world.ToDefinition();
-                var rules = setup.BuildRules(mapDef);
+                var rules = RulesFor(setup, mapDef);
                 if (liveModel != null || ruling != null)
                 {
                     // Played live: only the chart is made here; the game starts once the world is drawn.

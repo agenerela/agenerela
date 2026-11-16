@@ -203,8 +203,17 @@ namespace GreyBoxStrategy.Realm
             for (int i = 0; i < ProvinceIds.Count; i++)
             {
                 fortMarks[i].Clear();
-                if (!Fog.KnowsProvince(s, i)) continue;
-                for (int k = 0; k < s.Forts[i]; k++) fortMarks[i].Add(new Icon(IconKind.Fort, 11) { Tint = new Color32(233, 217, 176, 255) });
+                // Forts beyond your borders are your court's guess; a siege is news to everyone, like the land.
+                if (Fog.KnowsProvince(s, i))
+                    for (int k = 0; k < s.Forts[i]; k++) fortMarks[i].Add(new Icon(IconKind.Fort, 11) { Tint = new Color32(233, 217, 176, 255) });
+                // R3's sieges: "Siege 2 of 4", edged in the besieger's colour.
+                if (ArmyLook.SiegeTag(s, i) is string siege)
+                {
+                    var tag = new Label(siege) { pickingMode = PickingMode.Ignore }; tag.AddToClassList("siege-tag");
+                    var c = (Color)CountryLook.Of(s.SiegedBy[i]).Colour;
+                    tag.style.borderLeftColor = c; tag.style.borderRightColor = c; tag.style.borderTopColor = c; tag.style.borderBottomColor = c;
+                    fortMarks[i].Add(tag);
+                }
             }
         }
 
@@ -233,7 +242,15 @@ namespace GreyBoxStrategy.Realm
                 : $"{CountryLook.NameOf(id)}: {s.ProvinceCount(id)} provinces, {Math.Max(0, WinAt - s.ProvinceCount(id))} to win")));
             // Many realms make many wars: the sharpest first (the largest war score either way), the rest a click away.
             var wars = s.Relations.Where(r => r.Kind == "war").OrderByDescending(r => Writs ? Math.Abs(s.WarScore(r.A, r.B)) : 0).ToList();
-            Section("WARS", wars.Count.ToString(), wars.Select(r => PairRow(r.A, r.B, IconKind.War, Writs ? $"{s.WarScore(r.A, r.B):+0;-0;0}" : r.Since > 0 ? $"since t{r.Since}" : "", "bad")), ListLimit);
+            // One sign everywhere: in rule mode your side of your wars first, otherwise the first-named realm's.
+            Section(Writs && wars.Count > 0 ? "WARS · WAR SCORE" : "WARS", wars.Count.ToString(), wars.Select(r =>
+            {
+                bool flip = Fog.On && r.B == You;
+                string a = flip ? r.B : r.A, b = flip ? r.A : r.B;
+                var row = PairRow(a, b, IconKind.War, Writs ? $"{s.WarScore(a, b):+0;-0;0}" : r.Since > 0 ? $"since t{r.Since}" : "", "bad");
+                if (Writs) row.tooltip = $"War score from {CountryLook.NameOf(a)}'s side, -100 to +100: positive, {CountryLook.NameOf(a)} is winning.";
+                return row;
+            }), ListLimit);
             var truces = s.Relations.Where(r => r.Kind == "truce").OrderBy(r => r.TruceTurnsLeft).ToList();
             Section("TRUCES", truces.Count.ToString(), truces.Select(r => PairRow(r.A, r.B, IconKind.Truce, $"{r.TruceTurnsLeft} left", "warn")), ListLimit);
             int max = Math.Max(1, s.Countries.Values.Max(c => c.Army));

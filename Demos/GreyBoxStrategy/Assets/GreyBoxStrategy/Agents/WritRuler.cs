@@ -113,7 +113,14 @@ namespace GreyBoxStrategy
 
         private void RegisterCourt()
         {
-            CourtOrder(Actions.Recruit, "Raise soldiers with gold, at our capital.", null);
+            // With unit types (R3), the three recruit orders take recruit's place: what each counters, and what counters it.
+            if (world.Rules.UnitTypes)
+            {
+                CourtOrder(Actions.RecruitPikes, "Raise pikes with gold, at our capital: pikes beat riders, and bows beat pikes.", null);
+                CourtOrder(Actions.RecruitRiders, "Raise riders with gold, at our capital, at twice a pike's cost: riders beat bows, and pikes beat riders.", null);
+                CourtOrder(Actions.RecruitBows, "Raise bows with gold, at our capital: bows beat pikes, and riders beat bows.", null);
+            }
+            else CourtOrder(Actions.Recruit, "Raise soldiers with gold, at our capital.", null);
             CourtOrder(Actions.Fortify, "Build a fort in one of our border provinces.", new[] { CountryAgent.Ours });
             CourtOrder(Actions.RaiseTaxes, "Take gold from our people, at a cost in stability.", null);
             CourtOrder(Actions.DeclareWar, "Go to war with a country our land borders.", new[] { CountryAgent.AtPeace });
@@ -123,7 +130,7 @@ namespace GreyBoxStrategy
             foreach (var (action, description) in new[] { (Actions.AcceptPeace, "Accept the proposed treaty."), (Actions.RefusePeace, "Refuse the proposed treaty and fight on.") })
                 Court.Actions.Register(new ActionDefinition { Id = action, Description = description, TakesNoTarget = true },
                     DelegateActionHandler.WithResult(ctx => ctx.Correlation is TreatyOffer, (ctx, d) => ActionResult.Done()));
-            if (Options.Choices)
+            if (Options.Choices && !Options.CallChoices)
                 foreach (var t in EventRules.S2Templates.Where(t => t.IsChoice))
                     foreach (var o in t.Options)
                         Court.Actions.Register(new ActionDefinition { Id = o.Id, Description = $"Choose to {o.Label}.", TakesNoTarget = true },
@@ -221,6 +228,7 @@ namespace GreyBoxStrategy
                 PairTargetsWithActions = Options.PairTargets,
                 ExampleStatements = speaks && asked,
                 AskForStatement = asked,
+                Choices = r.Moment == Moment.Choice && Options.CallChoices ? CountryAgent.DilemmaChoices(r) : null,
                 Correlation = r.Moment == Moment.Army ? new ArmyOrder(r.ArmyId)
                     : r.Moment == Moment.Envoy ? new TreatyOffer(r.OfferId, r.OfferedBy)
                     : r.Moment == Moment.Choice ? new ChoiceCall(r.OfferId, r.Legal.Select(m => m.Action).ToList())
@@ -358,6 +366,8 @@ namespace GreyBoxStrategy
             {
                 var r = ruler.Asking;
                 foreach (string line in WritFacts.Standing(ruler.world, ruler.CountryId)) yield return line;
+                if (r?.Moment == Moment.Council && WritFacts.CountersLine(ruler.world, ruler.CountryId) is string counters) yield return counters;
+                if (r?.Moment == Moment.Council && LandTraditions.Line(ruler.world, ruler.CountryId) is string land) yield return land;
                 if (r == null || !ruler.Options.MovesLine) yield break;
                 if (r.Moment == Moment.Council && WritFacts.CourtMovesLine(r.Legal) is string court) yield return court;
                 if (r.Moment == Moment.Army) yield return WritFacts.ArmyMovesLine(r.ArmyId, r.Legal);

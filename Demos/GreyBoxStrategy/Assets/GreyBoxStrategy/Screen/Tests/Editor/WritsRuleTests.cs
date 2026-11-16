@@ -92,7 +92,7 @@ namespace GreyBoxStrategy.Screen.Tests
                 foreach (var other in court.World.CountryList.Where(c => c.Info.Id != You))
                     Assert.That(court.World.Writs(other.Info.Id), Is.LessThanOrEqualTo(court.World.Rules.MaxWrits), $"{other.Info.Id} keeps the rules' count");
                 // Every army awaiting orders gets one, however many: the plan the rules accept says so.
-                var plan = new RuleSession.WritsPlan { Court = court.Legal.FirstOrDefault(m => m.Action == Actions.Recruit) ?? court.Legal.First() };
+                var plan = new RuleSession.WritsPlan { Court = court.Legal.FirstOrDefault(m => m.Action == Actions.Recruit || Actions.RecruitTypes.Contains(m.Action)) ?? court.Legal.First() };
                 foreach (var a in WritLegality.Awaiting(court.World, You))
                     plan.Armies[a.Id] = WritLegality.ArmyMoves(court.World, You, a.Id).FirstOrDefault(m => m.Action == Actions.March) ?? WritLegality.ArmyMoves(court.World, You, a.Id).First();
                 s.Plan(plan);
@@ -102,13 +102,58 @@ namespace GreyBoxStrategy.Screen.Tests
         }
 
         [Test]
+        public async Task The_council_offers_a_holding_army_for_a_writ_and_counts_it_as_the_rules_ask()
+        {
+            var s = Session();
+            var run = s.RunAsync();
+            var ui = new ScreenUI(new UnityEngine.UIElements.VisualElement(), ScriptableObject.CreateInstance<UnityEngine.UIElements.StyleSheet>(), null, s.Game.World.CountryList.Select(c => c.Id).ToList(),
+                s.Game.World.ProvinceList.Select(p => p.Id).ToList(), new Dictionary<string, RecordedPlayer>(), "test");
+            int recalls = 0;
+            for (int t = 1; t <= 12 && recalls == 0; t++)
+            {
+                await Until(() => (s.WaitingFor == RuleSession.Waiting.Orders && s.Orders != null) || s.WaitingFor == RuleSession.Waiting.Envoy || s.Finished, $"turn {t}'s orders");
+                if (s.Finished) break;
+                if (s.WaitingFor == RuleSession.Waiting.Envoy) { s.Answer(false); t--; continue; }
+                var court = s.Orders; var w = court.World;
+                ui.Plan = new RuleSession.WritsPlan();
+                // Unplanned, the writs go to the armies awaiting orders, as before.
+                Assert.That(ui.ArmiesWithWrits(court), Is.EqualTo(WritLegality.Awaiting(w, You).Take(s.Game.ArmyWrits(You)).Select(a => a.Id)));
+                var held = w.ArmiesOf(You).FirstOrDefault(a => !a.Awaiting && WritLegality.ArmyMoves(w, You, a.Id).Any(m => m.Action == Actions.March));
+                int turn = t;
+                if (held != null && s.Game.ArmyWrits(You) > 0)
+                {
+                    Assert.That(ui.CanRecall(court, held.Id), Is.True, $"turn {t}: a holding army may be given new orders while a writ is left");
+                    ui.Plan.Armies[held.Id] = WritLegality.ArmyMoves(w, You, held.Id).First(m => m.Action == Actions.March);
+                    var with = ui.ArmiesWithWrits(court);
+                    Assert.That(with.First(), Is.EqualTo(held.Id), "an army your plan orders is asked first, as the rules recall it");
+                    Assert.That(with.Count, Is.LessThanOrEqualTo(s.Game.ArmyWrits(You)), "never more armies than the writs give");
+                    if (ui.Plan.Armies.Count >= s.Game.ArmyWrits(You))
+                        Assert.That(w.ArmiesOf(You).Where(a => !with.Contains(a.Id)).Any(a => ui.CanRecall(court, a.Id)), Is.False, "no writ left: no other army is offered");
+                    s.Plan(ui.Plan);
+                    recalls++;
+                    await Until(() => s.Resolved == turn || s.Finished, $"turn {turn} to resolve");
+                    Assert.That(s.PlanRefusals, Is.Empty, "the order was taken (the rules' side is #327's own test)");
+                }
+                else
+                {
+                    s.Plan(new RuleSession.WritsPlan());
+                    await Until(() => s.Resolved == turn || s.Finished, $"turn {turn} to resolve");
+                }
+            }
+            Assert.That(recalls, Is.GreaterThan(0), "a holding army was given new orders");
+            s.Stop();
+            await run;
+        }
+
+        [Test]
         public async Task Your_plan_lands_as_the_rules_ask_it_and_the_replay_rebuilds_your_turns()
         {
             var s = Session();
             Assert.That(s.Writs, Is.True);
             var run = s.RunAsync();
             var ui = new RuleSession.WritsPlan();
-            int marches = 0;
+            int marches = 0, recalled = 0, overRefused = 0;
+            var heldOrders = new List<(int turn, string army)>();
             for (int t = 1; t <= 6; t++)
             {
                 await Until(() => (s.WaitingFor == RuleSession.Waiting.Orders && s.Orders != null) || s.WaitingFor == RuleSession.Waiting.Envoy || s.Finished, $"turn {t}'s orders");
@@ -118,7 +163,7 @@ namespace GreyBoxStrategy.Screen.Tests
                 Assert.That(court.Writs, Is.EqualTo(w.Writs(You)), "your writs are the rules' count, a setting, not a constant");
                 Assert.That(court.Legal, Is.EqualTo(WritLegality.CourtMoves(w, You)), "your court is offered exactly what a model's court is offered");
 
-                var plan = new RuleSession.WritsPlan { Court = court.Legal.FirstOrDefault(m => m.Action == Actions.Recruit) ?? court.Legal.First() };
+                var plan = new RuleSession.WritsPlan { Court = court.Legal.FirstOrDefault(m => m.Action == Actions.Recruit || Actions.RecruitTypes.Contains(m.Action)) ?? court.Legal.First() };
                 foreach (var a in WritLegality.Awaiting(w, You))
                 {
                     var march = WritLegality.ArmyMoves(w, You, a.Id).FirstOrDefault(m => m.Action == Actions.March);
@@ -127,11 +172,29 @@ namespace GreyBoxStrategy.Screen.Tests
                 // An order the rules do not offer is refused before it is sent.
                 var bad = new RuleSession.WritsPlan { Court = new Move(Actions.DeclareWar, You) };
                 Assert.Throws<ArgumentException>(() => s.Plan(bad));
+                // More army orders than the writs give is refused, with the reason, before anything is sent.
+                var over = new RuleSession.WritsPlan();
+                for (int i = 0; i <= s.Game.ArmyWrits(You); i++) over.Armies[$"army_{i}"] = Move.Hold;
+                Assert.That(Assert.Throws<ArgumentException>(() => s.Plan(over)).Message, Does.Contain("writs give orders to"));
+                overRefused++;
+                // An army holding until it wakes may be ordered too: the court recalls it, for a writ.
+                foreach (var held in w.ArmiesOf(You).Where(a => !a.Awaiting))
+                {
+                    if (plan.Armies.Count >= s.Game.ArmyWrits(You)) break;
+                    var march = WritLegality.ArmyMoves(w, You, held.Id).FirstOrDefault(m => m.Action == Actions.March);
+                    if (march == null) continue;
+                    plan.Armies[held.Id] = march;
+                    heldOrders.Add((t, held.Id));
+                    recalled++;
+                }
                 s.Plan(plan);
                 int turn = t;
                 await Until(() => s.Resolved == turn || s.Finished, $"turn {turn} to resolve");
+                Assert.That(s.PlanRefusals, Is.Empty, $"turn {turn}: every planned order was given");
             }
             Assert.That(marches, Is.GreaterThan(0), "you ordered armies");
+            Assert.That(recalled, Is.GreaterThan(0), "you ordered an army that was holding at least once");
+            Assert.That(overRefused, Is.GreaterThan(0));
 
             var g = s.BuildReplay();
             Assert.That(g.Turns.Count, Is.EqualTo(s.Resolved), "the screen plays every turn that resolved");
@@ -139,6 +202,9 @@ namespace GreyBoxStrategy.Screen.Tests
             var yours = g.AllEvents.Where(e => e.Decision != null && e.Decision.ModelName == RuleSession.YourModel).ToList();
             Assert.That(yours.Any(e => e.Kind == ReplayEventKind.Recruit), Is.True, "your court's orders are in the replay");
             Assert.That(yours.Any(e => e.Kind == ReplayEventKind.ArmyOrder && e.Decision.ArmyId == e.Army), Is.True, "your armies' orders are in the replay with their army");
+            foreach (var (turn, army) in heldOrders)
+                Assert.That(yours.Any(e => e.Turn == turn && e.Kind == ReplayEventKind.ArmyOrder && e.Army == army), Is.True,
+                    $"turn {turn}: the order for {army}, holding when you gave it, was carried out and replays");
             Assert.That(g.AllEvents.Any(e => e.Decision != null && e.Decision.AgentId.EndsWith("_marshal")), Is.True, "the model rulers' marshals ordered armies");
 
             s.Stop();
@@ -168,7 +234,7 @@ namespace GreyBoxStrategy.Screen.Tests
                 if (s.WaitingFor == RuleSession.Waiting.Envoy) { s.Answer(false); t--; continue; }
                 var court = s.Orders;
                 Assert.That(court.Legal, Is.EqualTo(WritLegality.CourtMoves(court.World, you)));
-                var plan = new RuleSession.WritsPlan { Court = court.Legal.FirstOrDefault(m => m.Action == Actions.Recruit) ?? court.Legal.First() };
+                var plan = new RuleSession.WritsPlan { Court = court.Legal.FirstOrDefault(m => m.Action == Actions.Recruit || Actions.RecruitTypes.Contains(m.Action)) ?? court.Legal.First() };
                 foreach (var a in WritLegality.Awaiting(court.World, you))
                 {
                     var march = WritLegality.ArmyMoves(court.World, you, a.Id).FirstOrDefault(m => m.Action == Actions.March);
@@ -213,6 +279,36 @@ namespace GreyBoxStrategy.Screen.Tests
         }
 
         [Test]
+        public void New_game_starts_a_generated_writs_world_with_the_army_rules_on_and_Off_turns_each_off()
+        {
+            var c = new NewGameChoice();
+            Assert.That((c.Generated, c.Writs), Is.EqualTo((true, true)), "a generated world on the writs turn, by default");
+            Assert.That(c.Route(out _), Is.EqualTo(NewGameRoute.WorldLive), "the default choice starts a game");
+            Assert.That(c.UnitTypes && c.Generals && c.Sieges && c.Supply, Is.True, "the four army rules on by default");
+
+            var setup = GameSetup.Writs(5);
+            var map = setup.BuildMap();
+            var built = setup.BuildRules(map);
+            Assert.That(built.UnitTypes && built.Generals && built.Sieges && built.Supply && built.Fog && built.HungerFirst, Is.True,
+                "the rules' own defaults: on for the writs turn");
+            var on = ReplayDirector.WithArmySettings(built, c.UnitTypes, c.Generals, c.Sieges, c.Supply);
+            Assert.That(on.UnitTypes && on.Generals && on.Sieges && on.Supply, Is.True);
+            foreach (string off in new[] { "UnitTypes", "Generals", "Sieges", "Supply" })
+            {
+                var r = ReplayDirector.WithArmySettings(built, off != "UnitTypes", off != "Generals", off != "Sieges", off != "Supply");
+                var got = new Dictionary<string, bool> { ["UnitTypes"] = r.UnitTypes, ["Generals"] = r.Generals, ["Sieges"] = r.Sieges, ["Supply"] = r.Supply };
+                Assert.That(got[off], Is.False, $"Off for {off} turns a rule that is on by default off");
+                Assert.That(got.Where(kv => kv.Key != off).All(kv => kv.Value), Is.True, $"Off for {off} leaves the others on");
+            }
+            Assert.That(built.Supply, Is.True, "the setup's own rules are not changed");
+
+            var one = GameSetup.Classic(5);
+            var oneRules = one.BuildRules(one.BuildMap());
+            Assert.That(oneRules.UnitTypes || oneRules.Generals || oneRules.Sieges || oneRules.Supply || oneRules.Fog || oneRules.HungerFirst, Is.False,
+                "the one-move game carries the army rules off");
+        }
+
+        [Test]
         public void Pieces_shrink_as_provinces_come_close_on_screen()
         {
             Assert.That(ReplayDirector.HostScaleFor(200), Is.EqualTo(1f), "far apart: full size");
@@ -230,7 +326,7 @@ namespace GreyBoxStrategy.Screen.Tests
             var court = requests.Single(r => r.CountryId == You);
             var army = game.World.ArmiesOf(You).First();
             var march = WritLegality.ArmyMoves(game.World, You, army.Id).First(m => m.Action == Actions.March);
-            var recruit = court.Legal.First(m => m.Action == Actions.Recruit);
+            var recruit = court.Legal.First(m => m.Action == Actions.Recruit || Actions.RecruitTypes.Contains(m.Action));
             var taxes = court.Legal.First(m => m.Action == Actions.RaiseTaxes);
             var plan = new RuleSession.WritsPlan { Court = recruit, Court2 = taxes };
             plan.Armies[army.Id] = march;
@@ -263,6 +359,8 @@ namespace GreyBoxStrategy.Screen.Tests
             Assert.That(Chronicle.RecruitText("raised 15 soldiers at highmoor (maren_host +5, new tolly_host2 10)", P),
                 Is.EqualTo("raises 15 soldiers at Highmoor: 5 for Maren's host and a new army, Tolly's second host, of 10"));
             Assert.That(Chronicle.Host("hester2_host"), Is.EqualTo("Hester's second host"), "a general's name taken again is numbered by the rules");
+            Assert.That(Chronicle.RecruitText("raised 20 bows at highmoor (perrin_host +20)", P), Is.EqualTo("raises 20 bows at Highmoor for Perrin's host"),
+                "R3's unit types name the type");
             Assert.That(Chronicle.RecruitText("recruited 10 soldiers for 50 gold", P), Is.EqualTo("recruits 10 soldiers for 50 gold"), "the one-move game's recruit");
             var e = new ReplayEvent { Turn = 3, Kind = ReplayEventKind.Recruit, Country = "orsk", Text = "raised 15 soldiers at orskhaven (fenna_host +15)" };
             var line = Chronicle.Line(e, id => P(id));

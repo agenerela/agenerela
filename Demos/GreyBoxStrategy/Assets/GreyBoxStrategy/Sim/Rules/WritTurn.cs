@@ -33,6 +33,8 @@ namespace GreyBoxStrategy
             public bool SecondAsked;
             public Queue<Army> Queue;
             public int ArmiesAsked;
+            /// <summary>Armies the court recalled this turn, in the order recalled: asked first.</summary>
+            public readonly List<string> Recalled = new List<string>();
             public readonly List<string> Ordered = new List<string>();
             public readonly List<CountryAnswer> Answers = new List<CountryAnswer>();
         }
@@ -53,6 +55,32 @@ namespace GreyBoxStrategy
         private List<CountryRequest> openRequests;
         private List<Proposal> proposals;
         private int lastChangeTurn;
+        // With StalemateByWarScore: each war's score when the counter last moved for it.
+        private readonly Dictionary<string, int> scoreAtChange = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        // Land changed hands: the stalemate counter restarts, except, with StalemateByWarScore, for land taken or
+        // freed by force of arms (occupation, a siege, holding), which the war score already tells.
+        private void LandChanged(bool byForce)
+        {
+            if (!(Rules.StalemateByWarScore && byForce)) lastChangeTurn = World.Turn;
+        }
+
+        // With StalemateByWarScore: a new war, or a war whose score moved StalemateWarScoreStep since the counter
+        // last moved for it, restarts the counter.
+        private void WarScoresMoved()
+        {
+            var alive = World.Alive.Select(c => c.Id).OrderBy(x => x, StringComparer.Ordinal).ToList();
+            for (int i = 0; i < alive.Count; i++)
+                for (int j = i + 1; j < alive.Count; j++)
+                {
+                    if (!World.AtWar(alive[i], alive[j])) continue;
+                    string key = alive[i] + "|" + alive[j];
+                    int score = WarScore.Of(World, alive[i], alive[j]);
+                    if (scoreAtChange.TryGetValue(key, out int was) && Math.Abs(score - was) < Rules.StalemateWarScoreStep) continue;
+                    scoreAtChange[key] = score;
+                    lastChangeTurn = World.Turn;
+                }
+        }
 
         /// <summary>The proposals now waiting for an answer (the screen and a log show them).</summary>
         public IReadOnlyList<CountryRequest> TreatyRequests => proposals?.Where(p => p.Request != null).Select(p => p.Request).ToList() ?? new List<CountryRequest>();
@@ -105,7 +133,9 @@ namespace GreyBoxStrategy
                 if (court && d.FirstCourt == null)
                 {
                     d.FirstCourt = answer.Choice;
-                    d.Queue = new Queue<Army>(WritLegality.Awaiting(World, d.Country));
+                    // Recalled armies first, in the order recalled, then the rest awaiting orders in the rules' order.
+                    var recalled = d.Recalled.Select(World.FindArmy).Where(x => x != null).ToList();
+                    d.Queue = new Queue<Army>(recalled.Concat(WritLegality.Awaiting(World, d.Country).Where(x => !recalled.Contains(x))));
                 }
                 if (!(court && answer.Choice.Action == Actions.None)) d.Used++;
                 d.Ordered.Add(request.ArmyId == null ? answer.Choice.ToString()
@@ -121,6 +151,32 @@ namespace GreyBoxStrategy
             phase = Phase.AwaitingEnvoys;
             return proposals.Where(p => p.Request != null).Select(p => p.Request).ToList();
         }
+
+        /// <summary>The wake reason a recalled army is asked with.</summary>
+        public const string RecalledReason = "recalled by the court";
+
+        /// <summary>
+        /// The writs turn, after <see cref="BeginTurn"/> and before the country's first court answer is submitted: asks
+        /// for orders from one of its armies whether or not anything woke it. A recalled army is asked before the others,
+        /// in the order recalled, and spends a writ like any army asked; one that was not awaiting is asked with
+        /// <see cref="RecalledReason"/>. Returns null, or why the army cannot be recalled. No model seat calls it: it is how
+        /// a person's plan reaches a holding army, and how a replay asks again what a recording shows was asked.
+        /// </summary>
+        public string Recall(string countryId, string armyId)
+        {
+            if (Rules.Turn != TurnStyle.Writs || phase != Phase.AwaitingCouncil || dockets == null) return "the council is not sitting";
+            if (!dockets.TryGetValue(countryId ?? "", out var d)) return $"{countryId} has no council this turn";
+            if (d.FirstCourt != null) return "the court has already given its first order this turn";
+            var army = World.FindArmy(armyId);
+            if (army == null || army.Owner != countryId) return $"{armyId} is not one of {countryId}'s armies";
+            if (d.Recalled.Contains(armyId)) return null;
+            if (!army.Awaiting) army.Wake.Add(RecalledReason);
+            d.Recalled.Add(armyId);
+            return null;
+        }
+
+        /// <summary>How many armies a country may still be asked about this turn: its writs, less one kept for the court.</summary>
+        public int ArmyWrits(string countryId) => dockets != null && dockets.TryGetValue(countryId ?? "", out var d) ? Math.Max(0, d.Writs - 1) : 0;
 
         private CountryRequest NextRequest(Docket d)
         {
@@ -151,8 +207,12 @@ namespace GreyBoxStrategy
 
         private CountryRequest ArmyRequest(Docket d, Army army)
         {
-            var facts = new List<string> { $"{army.Id}: {army.Soldiers} soldiers at {army.Location}; " + (army.Wake.Count > 0 ? "awaiting orders: " + string.Join(", ", army.Wake) : "") + "." };
-            facts.AddRange(Facts.Select(pending[d.Country], Facts.MaxTurnFacts - 1));
+            var facts = new List<string> { $"{army.Id}: {army.Soldiers} soldiers" + (Rules.UnitTypes ? $" ({Units.Mix(army)})" : "")
+                + (Rules.Generals && army.General != null ? $", led by {army.General.Title}" : "")
+                + (Rules.Supply ? $", stores {army.Stores} of {Rules.MaxStores}" + (Eats(World, army) > 0 ? $", eating {Eats(World, army) / 2.0:0.#} a turn here," : ",")
+                   : Rules.Generals && army.General != null ? "," : "") + $" at {army.Location}; " + (army.Wake.Count > 0 ? "awaiting orders: " + string.Join(", ", army.Wake) : "") + "." };
+            if (Rules.HungerFirst && Rules.Supply && HungerFact(World, army) is string hunger) facts.Add(hunger);
+            facts.AddRange(Facts.Select(pending[d.Country], Facts.MaxTurnFacts - (facts.Count)));
             return new CountryRequest(Moment.Army, World.Turn, d.Country, World,
                 WritFacts.Standing(World, d.Country), facts, WritLegality.ArmyMoves(World, d.Country, army.Id))
             {
@@ -254,7 +314,7 @@ namespace GreyBoxStrategy
             SendHomeArmiesInPeacefulLand();
 
             // b. Home: recruits appear, taxes, forts.
-            foreach (string action in new[] { Actions.Recruit, Actions.RaiseTaxes, Actions.Fortify })
+            foreach (string action in new[] { Actions.Recruit, Actions.RecruitPikes, Actions.RecruitRiders, Actions.RecruitBows, Actions.RaiseTaxes, Actions.Fortify })
                 foreach (var a in all.Where(a => !landed.Contains(a) && a.Choice.Action == action && a.Request.Moment == Moment.Council))
                 {
                     landed.Add(a);
@@ -277,6 +337,8 @@ namespace GreyBoxStrategy
                     army.Destination = a.Choice.Target;
                     army.Path.AddRange(WritLegality.Paths(World, army.Owner, army.Location, Rules.MarchRange)[a.Choice.Target]);
                     army.StepTurnsLeft = Rules.TurnsToEnter(World.Province(army.Path[0]).Info.Terrain);
+                    if (Rules.Generals && army.General != null && army.General.Has(GeneralTraits.Swift))
+                        army.StepTurnsLeft = Math.Max(1, army.StepTurnsLeft - 1);
                     Done(a, $"{army.Id} marches to {army.Destination}");
                 }
                 else Done(a, $"{army.Id} holds at {army.Location}");
@@ -292,6 +354,8 @@ namespace GreyBoxStrategy
             foreach (var p in World.ProvinceList.OrderBy(p => p.Id, StringComparer.Ordinal)) FightIn(p, order);
             foreach (var p in World.ProvinceList.OrderBy(p => p.Id, StringComparer.Ordinal)) Settle(p, order);
             SendHomeArmiesInPeacefulLand();
+            HoldOccupations();
+            if (Rules.Supply) Supply();
 
             // 5. Broken realms, eliminations, victory.
             BreakRealms();
@@ -311,12 +375,15 @@ namespace GreyBoxStrategy
             foreach (var c in World.CountryList) report.ProvinceCounts[c.Id] = World.ProvinceCount(c.Id);
             Reports.Add(report);
             CheckForWinner();
+            if (Rules.StalemateByWarScore) WarScoresMoved();
             if (Result == null && Rules.StalemateTurns > 0 && World.Turn - lastChangeTurn >= Rules.StalemateTurns)
             {
                 var counts = World.CountryList.ToDictionary(c => c.Id, c => World.ProvinceCount(c.Id), StringComparer.Ordinal);
                 var leader = World.Alive.OrderByDescending(c => counts[c.Id]).ThenByDescending(c => c.Army).ThenByDescending(c => c.Gold).First();
                 Result = new GameResult(leader.Id, Ending.Stalemate, World.Turn, counts);
-                report.Resolution.Add($"No province changed hands for {Rules.StalemateTurns} turns: a stalemate.");
+                report.Resolution.Add(Rules.StalemateByWarScore
+                    ? $"No treaty, no free land taken and no war moving {Rules.StalemateWarScoreStep} points for {Rules.StalemateTurns} turns: a stalemate."
+                    : $"No province changed hands for {Rules.StalemateTurns} turns: a stalemate.");
             }
             phase = IsOver ? Phase.Over : Phase.AwaitingTurn;
             return report;
@@ -388,7 +455,7 @@ namespace GreyBoxStrategy
                 if (term.Action == Actions.DemandOccupied && fromHoldsTheirs) { p.Owner = from; moved++; }
                 else if (term.Action == Actions.CedeOccupied && toHoldsOurs) { p.Owner = to; moved++; }
                 p.Occupier = null;
-                lastChangeTurn = World.Turn;
+                LandChanged(byForce: false);
             }
             report.TerritoryChanges += moved;
             World.SetRelation(from, to, Relation.Truce, Rules.TruceTurns);
@@ -418,6 +485,19 @@ namespace GreyBoxStrategy
                     Done(a, $"raised {levy} soldiers at {site.Id} ({joined})");
                     break;
                 }
+                case Actions.RecruitPikes:
+                case Actions.RecruitRiders:
+                case Actions.RecruitBows:
+                {
+                    var type = Actions.RecruitsType(a.Choice.Action).Value;
+                    int levy = World.Levy(me, type);
+                    me.Gold -= levy * r.GoldPerSoldier * Units.CostFactor(r, type);
+                    me.Army += levy;
+                    var site = WritLegality.RecruitSite(World, me.Id);
+                    var joined = Reinforce(me.Id, site.Id, levy, type);
+                    Done(a, $"raised {levy} {Units.Name(type)} at {site.Id} ({joined})");
+                    break;
+                }
                 case Actions.RaiseTaxes:
                     me.Gold += r.TaxGold;
                     me.Stability--;
@@ -436,7 +516,7 @@ namespace GreyBoxStrategy
         }
 
         // Soldiers join the armies standing at a province, up to the army cap; the rest form new armies.
-        private string Reinforce(string countryId, string provinceId, int soldiers)
+        private string Reinforce(string countryId, string provinceId, int soldiers, UnitType type = UnitType.Pikes)
         {
             var names = new List<string>();
             foreach (var army in World.ArmiesAt(provinceId).Where(x => x.Owner == countryId && !x.Marching).OrderBy(x => x.Id, StringComparer.Ordinal))
@@ -444,7 +524,7 @@ namespace GreyBoxStrategy
                 if (soldiers <= 0) break;
                 int add = Math.Min(soldiers, Rules.ArmyMax - army.Soldiers);
                 if (add <= 0) continue;
-                army.Soldiers += add;
+                army.Add(type, add);
                 soldiers -= add;
                 if (!army.Wake.Contains("reinforced")) army.Wake.Add("reinforced");
                 names.Add($"{army.Id} +{add}");
@@ -452,7 +532,10 @@ namespace GreyBoxStrategy
             while (soldiers > 0)
             {
                 int size = Math.Min(soldiers, Rules.ArmyMax);
-                var army = new Army(ArmyNames.Next(World, countryId), countryId, provinceId, size, World.Turn);
+                var army = new Army(ArmyNames.Next(World, countryId), countryId, provinceId, 0, World.Turn);
+                army.Add(type, size);
+                if (Rules.Generals) army.General = GeneralTraits.For(World, army);
+                if (Rules.Supply) army.HalfStores = 2 * Rules.MaxStores;
                 World.Armies.Add(army);
                 soldiers -= size;
                 names.Add($"new {army.Id} {size}");
@@ -525,7 +608,15 @@ namespace GreyBoxStrategy
                 a.Location = to;
                 if (a.Path.Count == 0) continue; // won a battle on the border: it completes its step, then waits for orders
                 a.Path.RemoveAt(0);
-                if (a.Path.Count == 0)
+                if (a.Path.Count > 0 && WritLegality.HeldByFort(World, a.Owner, to))
+                {
+                    // A fort holds the road (rules v2 3.7): a march that reaches land beside an enemy fort stops there.
+                    var fort = World.Neighbours(World.Province(to)).First(n => WritLegality.HoldsTheRoad(World, a.Owner, n));
+                    a.Stop($"held up by {fort.Id}'s walls");
+                    report.Resolution.Add($"{a.Id} is held up at {to} by the walls of {fort.Id}.");
+                    Tell(a.Owner, 1, $"{a.Id} is held up at {to} by the walls of {fort.Id}.");
+                }
+                else if (a.Path.Count == 0)
                 {
                     a.Destination = null;
                     a.Wake.Add("arrived");
@@ -563,6 +654,15 @@ namespace GreyBoxStrategy
         private void Settle(Province p, List<string> order)
         {
             var here = World.ArmiesAt(p.Id).ToList();
+            // A siege is broken when the besiegers are gone: they left, or lost a battle here.
+            if (p.SiegedBy != null && !here.Any(a => a.Owner == p.SiegedBy && World.AtWar(a.Owner, p.Controller ?? "")))
+            {
+                report.Resolution.Add($"The siege of {p.Id} by {p.SiegedBy} is broken.");
+                Tell(p.SiegedBy, 1, $"Our siege of {p.Id} is broken.");
+                if (p.Controller != null) Tell(p.Controller, 1, $"{p.SiegedBy}'s siege of our {p.Id} is broken.");
+                p.SiegedBy = null;
+                p.SiegeTurns = 0;
+            }
             if (here.Count == 0) return;
             bool Acts(string s) =>
                 p.Owner == null                                                                  // neutral land to take
@@ -579,7 +679,7 @@ namespace GreyBoxStrategy
                 p.Garrison = 0;
                 p.Occupier = null;
                 report.TerritoryChanges++;
-                lastChangeTurn = World.Turn;
+                LandChanged(byForce: false);
                 report.Resolution.Add($"{who} took {p.Id}, neutral land.");
                 Tell(who, 1, $"We took {p.Id}.");
                 return;
@@ -590,17 +690,65 @@ namespace GreyBoxStrategy
                 Tell(p.Occupier, 1, $"{who} freed {p.Id} from our occupation.");
                 Tell(who, 1, $"We freed {p.Id}.");
                 p.Occupier = null;
-                lastChangeTurn = World.Turn;
+                LandChanged(byForce: true);
+                return;
+            }
+            if (Rules.Sieges && p.Forts > 0)
+            {
+                Besiege(p, who, mine);
                 return;
             }
             int militia = Rules.MilitiaBase + Rules.MilitiaPerFort * p.Forts;
             string holder = p.Controller;
             if (!Battle(p.Id, who, mine, holder, new List<Army>(), militia, p)) return;
             p.Occupier = who;
-            lastChangeTurn = World.Turn;
+            LandChanged(byForce: true);
             report.Resolution.Add($"{who} occupies {p.Id} ({p.Owner}'s).");
             Tell(who, 1, $"We occupy {p.Id}, {p.Owner}'s.");
             Tell(p.Owner, 0, $"{who} occupies our {p.Id}.");
+        }
+
+        /// <summary>
+        /// The turns a siege of <paramref name="p"/> by <paramref name="besiegers"/> takes (rules v2 3.7), never below
+        /// <see cref="MinSiegeTurns"/>: the turn it begins and one full turn after, so the defender always has a turn to
+        /// relieve it (15 November; before, a one-fort siege by a large army fell the turn it began).
+        /// </summary>
+        public static int SiegeTurnsNeeded(GameRules r, Province p, IReadOnlyCollection<Army> besiegers)
+        {
+            int turns = r.SiegeTurnsPerFort * p.Forts;
+            var lead = besiegers.Where(a => a.General != null).OrderByDescending(a => a.Soldiers).ThenBy(a => a.Id, StringComparer.Ordinal).FirstOrDefault()?.General;
+            if (r.Generals && lead != null && lead.Has(GeneralTraits.Siegewright)) turns--;
+            if (besiegers.Sum(a => a.Soldiers) >= r.SiegeOutnumber * r.GarrisonPerFort * p.Forts) turns--;
+            return Math.Max(MinSiegeTurns, turns);
+        }
+
+        /// <summary>The shortest siege: it never falls in the turn it begins, whatever the besiegers' numbers or general.</summary>
+        public const int MinSiegeTurns = 2;
+
+        // An army alone in enemy land with walls besieges it: a turn of the siege each turn it stays, an early
+        // breach on a seeded roll; when it ends the walls drop one level and the province is occupied.
+        private void Besiege(Province p, string who, List<Army> mine)
+        {
+            if (p.SiegedBy != who)
+            {
+                p.SiegedBy = who;
+                p.SiegeTurns = 0;
+                report.Resolution.Add($"{who} besieges {p.Id} ({p.Owner}'s, {p.Forts} {(p.Forts == 1 ? "fort" : "forts")}).");
+                Tell(who, 1, $"We besiege {p.Id}.");
+                Tell(p.Controller, 0, $"{who} besieges our {p.Id}.");
+            }
+            p.SiegeTurns++;
+            int needed = SiegeTurnsNeeded(Rules, p, mine);
+            bool breach = p.SiegeTurns > 1 && p.SiegeTurns < needed && Dice.Unit(Seed, World.Turn, p.Id, "breach:" + who) < Rules.SiegeBreachChance;
+            if (p.SiegeTurns < needed && !breach) return;
+            p.Forts = Math.Max(0, p.Forts - 1);
+            p.SiegedBy = null;
+            p.SiegeTurns = 0;
+            p.Occupier = who;
+            LandChanged(byForce: true);
+            report.Resolution.Add($"{who} took {p.Id} after a siege" + (breach ? ", the walls breached early" : "") + $"; {p.Forts} {(p.Forts == 1 ? "fort" : "forts")} left.");
+            Tell(who, 1, $"We took {p.Id} after a siege.");
+            Tell(p.Owner, 0, $"{who} took our {p.Id} after a siege.");
         }
 
         /// <summary>
@@ -619,8 +767,47 @@ namespace GreyBoxStrategy
             double defenceRoll = Dice.Range(Seed, World.Turn, defenderId ?? "neutral", "battle-defence:" + key, r.RollMin, r.RollMax);
             int fortTerm = held != null ? held.Forts * r.FortBonus : 0;
             int capitalTerm = held != null && held.IsCapital ? r.CapitalBonus : 0;
-            double attack = att * attackRoll;
-            double defence = def * defenceRoll + fortTerm + capitalTerm;
+            // With unit types, each side's soldiers count by type and the counter rule (rules v2 3.3); a militia or
+            // garrison fights as pikes. Off, every soldier counts once, as before.
+            double attackBase = att, defenceBase = def;
+            string counterNote = null;
+            double attackCounter = 1, defenceCounter = 1;
+            UnitMix? attackerMix = null, defenderMix = null;
+            if (r.UnitTypes)
+            {
+                var aMix = UnitMix.Of(attackers);
+                var dMix = UnitMix.Of(defenders, fixedDefence);
+                attackerMix = aMix;
+                defenderMix = dMix;
+                attackBase = Units.Strength(r, aMix, dMix);
+                defenceBase = Units.Strength(r, dMix, aMix);
+                attackCounter = Units.Plain(r, aMix) > 0 ? attackBase / Units.Plain(r, aMix) : 1;
+                defenceCounter = Units.Plain(r, dMix) > 0 ? defenceBase / Units.Plain(r, dMix) : 1;
+                counterNote = Units.Describe(r, attackerId, aMix, defenderId ?? "the garrison", dMix);
+            }
+            // With generals (rules v2 3.5), each side's commander, its largest army's general, adds its traits.
+            General attackLead = null, defenceLead = null;
+            double attackGeneral = 1, defenceGeneral = 1;
+            string generalNote = null;
+            if (r.Generals)
+            {
+                attackLead = Commander(attackers);
+                defenceLead = Commander(defenders);
+                attackGeneral = GeneralTraits.Strength(r, attackLead, true, UnitMix.Of(attackers));
+                defenceGeneral = GeneralTraits.Strength(r, defenceLead, false, UnitMix.Of(defenders, fixedDefence));
+                generalNote = GeneralNote(attackLead, attackGeneral, defenceLead, defenceGeneral);
+            }
+            // With supply (rules v2 3.6), the soldiers of armies with no stores fight 15% weaker.
+            double attackHunger = r.Supply ? Hunger(r, attackers) : 1, defenceHunger = r.Supply ? Hunger(r, defenders) : 1;
+            // With land traditions, each side's realm's held land strengthens the types it leans to.
+            double attackLand = 1, defenceLand = 1;
+            if (r.UnitTypes && r.LandTraditions)
+            {
+                attackLand = LandTraditions.Strength(r, LandTraditions.Of(World, attackerId), UnitMix.Of(attackers));
+                defenceLand = LandTraditions.Strength(r, LandTraditions.Of(World, defenderId), UnitMix.Of(defenders, fixedDefence));
+            }
+            double attack = attackBase * attackGeneral * attackHunger * attackLand * attackRoll;
+            double defence = defenceBase * defenceGeneral * defenceHunger * defenceLand * defenceRoll + fortTerm + capitalTerm;
             var site = World.Province(where);
             var record = new BattleRecord
             {
@@ -643,10 +830,24 @@ namespace GreyBoxStrategy
                 DefenceRoll = defenceRoll,
                 AttackStrength = attack,
                 DefenceStrength = defence,
+                AttackCounter = attackCounter,
+                DefenceCounter = defenceCounter,
+                CounterNote = counterNote,
+                AttackGeneral = attackGeneral,
+                DefenceGeneral = defenceGeneral,
+                AttackLand = attackLand,
+                DefenceLand = defenceLand,
+                GeneralNote = generalNote,
+                AttackerMix = attackerMix,
+                DefenderMix = defenderMix,
+                AttackerCommander = attackLead?.Title,
+                DefenderCommander = defenceLead?.Title,
             };
             bool attackerWon = attack > defence;
-            int attLoss = Math.Min(att, (int)Math.Round(defence * r.CasualtyRate * (attackerWon ? r.HeldCasualtyFactor : 1)));
-            int defLoss = Math.Min(def, (int)Math.Round(attack * r.CasualtyRate * (attackerWon ? 1 : r.HeldCasualtyFactor)));
+            double attCas = r.Generals ? GeneralTraits.Casualties(r, attackLead, true) : 1;
+            double defCas = r.Generals ? GeneralTraits.Casualties(r, defenceLead, false) : 1;
+            int attLoss = Math.Min(att, (int)Math.Round(defence * r.CasualtyRate * (attackerWon ? r.HeldCasualtyFactor : 1) * attCas));
+            int defLoss = Math.Min(def, (int)Math.Round(attack * r.CasualtyRate * (attackerWon ? 1 : r.HeldCasualtyFactor) * defCas));
             Lose(attackers, attLoss);
             int armyLoss = Math.Min(defenders.Sum(a => a.Soldiers), defLoss);
             Lose(defenders, armyLoss);
@@ -660,7 +861,8 @@ namespace GreyBoxStrategy
             string defName = defenderId ?? "the garrison";
             if (defenders.Count == 0 && defenderId != null) defName = $"{defenderId}'s militia";
             report.Resolution.Add($"Battle at {where}: {attackerId} {att} against {defName} {def}; " +
-                                  (attackerWon ? $"{attackerId} won" : $"{defName} held") + $" ({attLoss} and {defLoss} lost).");
+                                  (attackerWon ? $"{attackerId} won" : $"{defName} held") + $" ({attLoss} and {defLoss} lost)"
+                                  + (counterNote != null ? $"; {counterNote}" : "") + (generalNote != null ? $"; {generalNote}" : "") + ".");
             if (defenderId != null)
             {
                 var war = World.War(attackerId, defenderId);
@@ -672,15 +874,17 @@ namespace GreyBoxStrategy
 
             foreach (var a in attackers.Concat(defenders).Where(a => World.FindArmy(a.Id) != null)) a.Stop("fought a battle");
             var losers = attackerWon ? defenders : attackers;
+            if (r.Generals) AfterBattle(attackerWon ? attackers : defenders, losers, key);
             double loserStrength = attackerWon ? defence : attack, winnerStrength = attackerWon ? attack : defence;
             bool rout = loserStrength * r.RoutRatio < winnerStrength;
-            record.Routed = rout && losers.Count > 0;
+            record.Routed = rout && losers.Any(a => !(r.Generals && a.General != null && a.General.Has(GeneralTraits.Stubborn)));
             record.Why = Why(record, defName);
             foreach (var a in losers.Where(a => World.FindArmy(a.Id) != null).ToList())
             {
                 // On a border the loser never crosses; the winner steps into the province it was leaving,
                 // so it is beaten off that too and falls back, without a second battle (our reading of v2 1.1).
-                string back = rout ? null : RetreatTo(a, attackerWon || onBorder ? null : a.CameFrom);
+                bool stubborn = r.Generals && a.General != null && a.General.Has(GeneralTraits.Stubborn);
+                string back = rout && !stubborn ? null : RetreatTo(a, attackerWon || onBorder ? null : a.CameFrom);
                 if (back == null)
                 {
                     record.Routed = true;
@@ -693,6 +897,118 @@ namespace GreyBoxStrategy
             return attackerWon;
         }
 
+        /// <summary>A side's hunger factor: 1 less <see cref="GameRules.HungerStrength"/> times the share of its soldiers in armies with no stores.</summary>
+        public static double Hunger(GameRules r, List<Army> side)
+        {
+            int all = side.Sum(a => a.Soldiers);
+            return all == 0 ? 1 : 1 - r.HungerStrength * side.Where(a => a.HalfStores <= 0).Sum(a => a.Soldiers) / (double)all;
+        }
+
+        /// <summary>
+        /// With <see cref="GameRules.HungerFirst"/>, what hunger means for this army where it stands, in the rules' own
+        /// numbers: "Starving: losing about 3 soldiers a turn, and fighting 15% weaker. It is fed only in land we own and
+        /// hold: nearest ashby, 2 steps. Neutral land it takes becomes ours and feeds it; land it occupies does not." Null
+        /// when it is not hungry.
+        /// </summary>
+        public static string HungerFact(World w, Army a)
+        {
+            int level = WritLegality.Hunger(w, a);
+            if (level == 0) return null;
+            var r = w.Rules;
+            var near = WritLegality.NearestSupply(w, a);
+            string where = near is (string p, int steps) ? $"nearest {p}, {(steps == 1 ? "1 step" : steps + " steps")}" : "none we can reach";
+            string fed = $"It is fed only in land we own and hold: {where}. Neutral land it takes becomes ours and feeds it; land it occupies does not.";
+            if (level == 2)
+            {
+                int loss = Math.Min(a.Soldiers, Math.Max(r.HungerMinLoss, (int)Math.Round(a.Soldiers * r.HungerLoss)));
+                return $"Starving: losing about {loss} soldiers a turn, and fighting {r.HungerStrength * 100:0}% weaker. {fed}";
+            }
+            return $"Stores for 1 more turn here, then it starves. {fed}";
+        }
+
+        /// <summary>Half-stores an army eats a turn where it stands: none in our own land, else by terrain, halved for a forager.</summary>
+        public static int Eats(World w, Army a)
+        {
+            var p = w.Province(a.Location);
+            if (Supplied(p, a.Owner)) return 0;
+            var t = p.Info.Terrain;
+            int turns = t == Terrain.Plains || t == Terrain.Forest ? w.Rules.StoresRich : w.Rules.StoresPoor;
+            bool forager = w.Rules.Generals && a.General != null && a.General.Has(GeneralTraits.Forager);
+            return forager ? turns : 2 * turns;
+        }
+
+        /// <summary>Supplied land: our own province, held by us (alliances and passage are not built).</summary>
+        public static bool Supplied(Province p, string countryId) => p != null && p.Owner == countryId && p.Occupier == null;
+
+        // Every army eats or refills; one that has nothing left to eat goes hungry and loses soldiers.
+        private void Supply()
+        {
+            foreach (var a in World.Armies.OrderBy(x => x.Id, StringComparer.Ordinal).ToList())
+            {
+                var p = World.Province(a.Location);
+                if (Supplied(p, a.Owner))
+                {
+                    a.HalfStores = Math.Min(2 * Rules.MaxStores, a.HalfStores + 2 * Rules.StoresRefill);
+                    continue;
+                }
+                int eat = Eats(World, a);
+                if (a.HalfStores >= eat)
+                {
+                    a.HalfStores -= eat;
+                    // Wake condition 6 (rules v2 1.3): stores run low, a turn's food or less left where it stands.
+                    if (eat > 0 && a.HalfStores > 0 && a.HalfStores <= eat && !a.Marching && !a.Wake.Contains("stores running low"))
+                        a.Wake.Add("stores running low");
+                    continue;
+                }
+                a.HalfStores = 0;
+                // A starving army that holds is asked again every turn it starves, so a hold given with full stores
+                // does not stand while it starves away.
+                if (!a.Marching && !a.Wake.Contains("starving")) a.Wake.Add("starving");
+                int loss = Math.Min(a.Soldiers, Math.Max(Rules.HungerMinLoss, (int)Math.Round(a.Soldiers * Rules.HungerLoss)));
+                a.Soldiers -= loss;
+                World.Country(a.Owner).Army -= loss;
+                report.Resolution.Add($"{a.Id} has no stores at {a.Location}: {loss} lost to hunger.");
+                Tell(a.Owner, 1, $"{a.Id} is starving at {a.Location}: {loss} lost.");
+                if (a.Soldiers == 0) Disband(a, $"{a.Id} starved at {a.Location}");
+            }
+        }
+
+        // A side's commander: its largest army's general (the first by id on a tie); null with none.
+        private static General Commander(List<Army> side) =>
+            side.Where(a => a.General != null).OrderByDescending(a => a.Soldiers).ThenBy(a => a.Id, StringComparer.Ordinal).FirstOrDefault()?.General;
+
+        // "Maren the Wary held firm (+10%)": the commander whose traits moved its side most, or null.
+        private static string GeneralNote(General attack, double attackFactor, General defence, double defenceFactor)
+        {
+            var (g, f, verb) = attackFactor - 1 >= defenceFactor - 1 ? (attack, attackFactor, "led the attack") : (defence, defenceFactor, "held firm");
+            return g == null || f - 1 < 0.01 ? null : $"{g.Title} {verb} (+{Math.Round((f - 1) * 100)}%)";
+        }
+
+        // After a battle: every winning general counts the win, and the third brings a second trait; a losing
+        // general falls with a 5% chance (a routed army's always falls with it), and the army gets a new one.
+        private void AfterBattle(List<Army> winners, List<Army> losers, string key)
+        {
+            foreach (var a in winners.Where(a => a.General != null && World.FindArmy(a.Id) != null))
+            {
+                a.General.Wins++;
+                if (a.General.Wins == Rules.WinsForSecondTrait && a.General.Traits.Count == 1)
+                {
+                    var other = GeneralTraits.Pool(Rules).Where(t => !a.General.Has(t)).ToList();
+                    string t2 = other[Dice.Int(Seed, World.Turn, a.Id, "second-trait:" + key, 0, other.Count)];
+                    a.General.Traits.Add(t2);
+                    Tell(a.Owner, 1, $"{a.General.Name} has won {Rules.WinsForSecondTrait} battles and is {a.General.Title} now.");
+                }
+            }
+            foreach (var a in losers.Where(a => a.General != null && World.FindArmy(a.Id) != null))
+            {
+                if (Dice.Unit(Seed, World.Turn, a.Id, "general-falls:" + key) >= Rules.GeneralFallsChance) continue;
+                string fallen = a.General.Title;
+                a.General = GeneralTraits.Successor(World, a);
+                report.Resolution.Add($"{fallen} fell; {a.General.Title} leads {a.Id} now.");
+                Tell(a.Owner, 1, $"{fallen} fell; {a.General.Title} leads {a.Id} now.");
+            }
+        }
+
         // "orsk won: 52 against 40; the dice favoured orsk (+6); 1 fort (+15) for the defence." The three
         // terms that moved the result most, each with what it was worth in strength.
         private static string Why(BattleRecord b, string defName)
@@ -703,6 +1019,10 @@ namespace GreyBoxStrategy
                 (-b.FortTerm, b.Forts == 1 ? $"1 fort (+{b.FortTerm}) for the defence" : $"{b.Forts} forts (+{b.FortTerm}) for the defence"),
                 (-b.CapitalTerm, $"the capital (+{b.CapitalTerm}) for the defence"),
             };
+            if (b.CounterNote != null)
+                terms.Add((b.AttackerSoldiers * (b.AttackCounter - 1) - b.DefenderSoldiers * (b.DefenceCounter - 1), b.CounterNote));
+            if (b.GeneralNote != null)
+                terms.Add((b.AttackerSoldiers * (b.AttackGeneral - 1) - b.DefenderSoldiers * (b.DefenceGeneral - 1), b.GeneralNote));
             double dice = b.AttackerSoldiers * (b.AttackRoll - 1) - b.DefenderSoldiers * (b.DefenceRoll - 1);
             terms.Add((dice, $"the dice favoured {(dice >= 0 ? b.Attacker : defName)} (+{Math.Abs(dice):0})"));
             var top = terms.Where(t => Math.Abs(t.weight) >= 0.5 || t.text.Contains(" against "))
@@ -792,9 +1112,11 @@ namespace GreyBoxStrategy
             foreach (var c in World.Alive.ToList())
             {
                 var owned = World.ProvincesOf(c.Id).ToList();
-                if (owned.Count == 0 || World.ArmiesOf(c.Id).Any()) continue;
+                if (owned.Count == 0) continue;
                 var capital = owned.FirstOrDefault(p => p.IsCapital && p.Occupier != null);
                 bool all = owned.All(p => p.Occupier != null);
+                // Armies left elsewhere save the realm, unless BreakWhenAllOccupied: then they are disbanded with it.
+                if (World.ArmiesOf(c.Id).Any() && !(Rules.BreakWhenAllOccupied && all)) continue;
                 if (!all && !(Rules.BreakWhenCapitalFalls && capital != null)) continue;
                 foreach (var p in owned)
                 {
@@ -803,8 +1125,29 @@ namespace GreyBoxStrategy
                     p.Garrison = 0;
                     report.TerritoryChanges++;
                 }
-                lastChangeTurn = World.Turn;
+                LandChanged(byForce: false);
                 Eliminate(c, $"{c.Id}'s realm is broken: every province occupied, no army left. Its occupiers keep what they hold.");
+            }
+        }
+
+        // Each occupation held through another turn counts; one held OccupationBecomesOwnership turns passes the
+        // province to its occupier (the rules v2 page's pacing candidate 1). Off while the setting is 0.
+        private void HoldOccupations()
+        {
+            foreach (var p in World.ProvinceList.OrderBy(p => p.Id, StringComparer.Ordinal))
+            {
+                if (p.Occupier == null) continue;
+                p.OccupiedTurns++;
+                if (Rules.OccupationBecomesOwnership <= 0 || p.OccupiedTurns < Rules.OccupationBecomesOwnership) continue;
+                string from = p.Owner, to = p.Occupier;
+                p.Owner = to;
+                p.Occupier = null;
+                p.Garrison = 0;
+                report.TerritoryChanges++;
+                LandChanged(byForce: true);
+                report.Resolution.Add($"{to} has held {p.Id} for {Rules.OccupationBecomesOwnership} turns: it is {to}'s now.");
+                Tell(to, 1, $"{p.Id} is ours now, held {Rules.OccupationBecomesOwnership} turns.");
+                Tell(from, 1, $"{p.Id}, held by {to} for {Rules.OccupationBecomesOwnership} turns, is {to}'s now.");
             }
         }
 

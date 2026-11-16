@@ -59,7 +59,24 @@ namespace GreyBoxStrategy
         /// The writs turn: the country occupying it, or null while its owner controls it. Occupation
         /// never changes the owner; only a treaty does (v2 5.1).
         /// </summary>
-        public string Occupier { get; set; }
+        public string Occupier
+        {
+            get => occupier;
+            set { if (value != occupier) OccupiedTurns = 0; occupier = value; }
+        }
+        private string occupier;
+        /// <summary>
+        /// Turn ends this province has stood occupied by its present <see cref="Occupier"/>, counted by the writs
+        /// turn; 0 when it is not occupied, and back to 0 whenever the occupier changes.
+        /// </summary>
+        public int OccupiedTurns { get; set; }
+        /// <summary>
+        /// With <see cref="GameRules.Sieges"/>: the country besieging it, or null; and the turns its siege has lasted.
+        /// The province stays its controller's until the siege ends.
+        /// </summary>
+        public string SiegedBy { get; set; }
+        public int SiegeTurns { get; set; }
+
         /// <summary>Who controls it now: the occupier, or else the owner (null for neutral land).</summary>
         public string Controller => Occupier ?? Owner;
 
@@ -129,12 +146,13 @@ namespace GreyBoxStrategy
 
         /// <summary>
         /// Gold a turn. In the writs turn an occupied province gives its owner nothing and its
-        /// occupier half (v2 5.1); otherwise every province owned gives the same.
+        /// occupier half (v2 5.1), and with <see cref="GameRules.SiegeStopsIncome"/> a besieged one gives
+        /// its owner nothing (v2 3.7); otherwise every province owned gives the same.
         /// </summary>
         public int Income(Country c)
         {
             if (Rules.Turn != TurnStyle.Writs) return ProvinceCount(c.Id) * Rules.IncomePerProvince;
-            int own = ProvinceList.Count(p => p.Owner == c.Id && p.Occupier == null);
+            int own = ProvinceList.Count(p => p.Owner == c.Id && p.Occupier == null && !(Rules.SiegeStopsIncome && p.SiegedBy != null));
             int occupied = ProvinceList.Count(p => p.Occupier == c.Id);
             return own * Rules.IncomePerProvince + occupied * Rules.IncomePerProvince / 2;
         }
@@ -170,14 +188,20 @@ namespace GreyBoxStrategy
         }
 
         public static string PairKey(string a, string b) => Key(a, b);
-        public int Upkeep(Country c) => c.Army / Rules.SoldiersPerUpkeepGold;
+        /// <summary>Gold a turn to keep the army; with unit types a rider counts <see cref="GameRules.RiderCostFactor"/> times.</summary>
+        public int Upkeep(Country c) =>
+            (c.Army + (Rules.UnitTypes ? Armies.Where(a => a.Owner == c.Id).Sum(a => a.Riders) * (Rules.RiderCostFactor - 1) : 0))
+            / Rules.SoldiersPerUpkeepGold;
 
         /// <summary>How many soldiers a recruit would raise now: the levy, cut to what the treasury pays for.</summary>
         /// <remarks>In the writs turn an occupied province raises no one: the levy counts the land the country still controls.</remarks>
-        public int Levy(Country c) =>
+        public int Levy(Country c) => Levy(c, UnitType.Pikes);
+
+        /// <summary>A recruit of one type: the same levy, cut to what the treasury pays at that type's cost.</summary>
+        public int Levy(Country c, UnitType type) =>
             System.Math.Min(Rules.LevyBase + Rules.LevyPerProvince * (Rules.Turn == TurnStyle.Writs
                     ? ProvinceList.Count(p => p.Owner == c.Id && p.Occupier == null) : ProvinceCount(c.Id)),
-                c.Gold / Rules.GoldPerSoldier);
+                c.Gold / (Rules.GoldPerSoldier * Units.CostFactor(Rules, type)));
 
         public IEnumerable<Province> Neighbours(Province p) => Map.Neighbours(p.Id).Select(Province);
 

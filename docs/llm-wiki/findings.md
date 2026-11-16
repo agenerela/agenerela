@@ -4107,6 +4107,41 @@ Nothing like either had been measured (findings and build plan Appendix A checke
 - What B does not reach: 22% is still far above the one-move game's 5%; a ruler shown four lines can still return to a fifth.
 - **A defect in arm B as measured, found after the run:** the rulers' agents keep 12 observation lines, the call's own lines count first, and the sources fill the rest, so the last source lines are cut. The own-lines line pushed out "Ordered this turn" (the orders already given) and, now and then, an army's moves line. In 5 scripted 40-turn games the ordered line was missing from 780 of 1,817 later orders (43%) with own lines against 21 in the control, and the moves line from 21 of 1,625 army orders against none. The rulers measured in B therefore often did not see their earlier orders of the turn; its legality held regardless (0 illegal answers). **Fixed with the default:** with own lines on, the agents keep 13 lines, which restores exactly the control's lines (21 and 0 in the same probe); test `TheCourtAndTheMarshal_ReadLocalFacts_AndTheirOwnMovesLine` failed without the fix. The fixed default is unmeasured live until the next A/B, which carries a `default+no-own-lines` arm to confirm it.
 
+### Painted Realm R3, unit types: the counter rule changes 6% of battles and lengthens a scripted game by 5 turns (14 November 2026)
+
+GreyBoxStrategy (#20), rules v2 3.3, `GameRules.UnitTypes`. Scripted only, no model: the `.NET 9` harness of `Sim/`
+(`.scratch/realm-build-map/r3/`), 100 Classic games of the `mixed` lineup on seeds 1 to 100, writs turn, conquest.
+
+| | turns (mean, median, p90) | endings | battles a game | treaties a game |
+|---|---|---|---|---|
+| off | 77, 75, 106 | 97 last standing, 3 stalemate | 147 | 7.6 |
+| on | 82, 77, 112 | 97 last standing, 2 stalemate, 1 unfinished | 158 | 7.3 |
+| on, counter strength 0 | 77, 75, 106 | 96 last standing, 3 stalemate, 1 unfinished | 149 | 7.1 |
+
+- **Off is today's game:** the harness prints the same line as before the change (turns, endings, battles, treaties all equal), and the pinned tests check it game by game.
+- **Mix** (every army, every turn): 44% pikes, 13% riders, 43% bows. Riders cost double, so the scripts buy few.
+- **Counters:** 82% of battles had an effect of 1% or more for one side; the mean gap between the sides' multipliers was 0.42; the result would have gone the other way without counters in 6.1% of battles (by plain strength × roll against the result).
+- With the counter strength at 0 the pace returns to the control's, so the longer games come from the counters themselves, not from the costs.
+- Every offered move was legal in all 100 games, and each army's types summed to its soldiers every turn.
+- Unmeasured: how a model ruler chooses types (next part, with the `recruit_*` orders in its prompt).
+
+### Painted Realm pacing candidates, scripted: occupation turning into ownership and the end of the last stand leave the scripted pace where it was (14 November 2026)
+
+GreyBoxStrategy (#20), candidates 1 and 3 of the rules v2 page's "Why Classic stalls" (R1c's uncapped model games took about 190 turns, 83% of them with no province changing hands). Scripted only: the `.NET 9` harness (`pace classic 100`), 100 Classic games of the `mixed` lineup, seeds 1 to 100, writs turn, conquest, 12-turn stalemate.
+
+| | turns (mean, median, p90) | endings | treaties a game |
+|---|---|---|---|
+| both off | 77, 75, 106 | 97 last standing, 3 stalemate | 7.6 |
+| ownership after 8 turns | 75, 71, 104 | 94, 6 | 7.2 |
+| ownership after 5 turns | 75, 71, 99 | 98, 1, 1 unfinished | 6.6 |
+| break when all occupied | 76, 75, 103 | 97, 3 | 6.2 |
+| ownership after 8, and break | 75, 73, 104 | 94, 6 | 6.0 |
+| ownership after 5, and break | 74, 74, 99 | 97, 3 | 5.4 |
+
+- **No candidate changes the scripted pace** by more than 3 turns: scripted rulers push a war to elimination, so they never stall the way the models do.
+- With the scripts made as peaceable as the models (white peace offered at a war score of 30 or less and accepted at 10 or less, wars settled after 8 turns), every game ended in a 12-turn stalemate after 29 turns; the candidates changed almost nothing (only ownership after 5 turns with the break moved the first elimination, from turn 19 to 27): peace comes before an occupation is old enough.
+- What it means: the scripted series cannot choose between the candidates. The stall is the models' (white peace offered 806 times in five uncapped games), so the choice needs a live run with the settings on.
+
 ### Painted Realm's writs turn, silent armies: asking army orders without a statement saves 0.6 s a turn, but treaties may fall, so the demo keeps every line (14 November 2026)
 
 GreyBoxStrategy (#20), the #151 row that `DecideOptions.AskForStatement` (#290) owes, and the follow-up the one-voice result asked for. `personas` table, five `qwen3.5:4b` seats, RTX 5080 (Docker Ollama 0.40.14), `-strategyTurn writs -strategyCap 40`, Classic, seeds 1 to 15, interleaved in blocks of five seeds (n1 d1 s1 n2 d2 s2 n3 d3 s3, 01:38 to 05:07), one Unity run and one lock window a block, nothing else on the card or on the laptop's CPU:
@@ -4190,3 +4225,217 @@ country", "catastrophic", none at all), 6 requests an arm. Raw replies:
 after `statement`, which would make the field order unreachable by schema for such models, as
 for `target` (5 November). A reply with a repeated id under `uniqueItems`. A later Ollama that
 changes either path.
+
+### Painted Realm R3, generals: scripted, they shorten a Classic game by 6 turns alone and leave it as it was with unit types (14 November 2026)
+
+GreyBoxStrategy (#20), rules v2 3.5, `GameRules.Generals`. Scripted only, no model: the `.NET 9` harness of `Sim/` (`pace classic 100 rule:Generals=True`), 100 Classic games of the `mixed` lineup on seeds 1 to 100, writs turn, conquest.
+
+| | turns (mean, median, p90) | endings | battles a game | treaties a game |
+|---|---|---|---|---|
+| off | 77, 75, 106 | 97 last standing, 3 stalemate | 147 | 7.6 |
+| generals | 71, 68, 100 | 94 last standing, 6 stalemate | 144 | 7.3 |
+| generals and unit types | 78, 72, 115 | 96 last standing, 3 stalemate, 1 unfinished | 156 | 7.2 |
+
+- Off, the harness prints the same line as before the change.
+- Traits are drawn evenly from seven, so a side's edge from its commander is up to 10 to 15%, about the size of the counter rule's; scripted rulers do not choose by trait, so these numbers say what the traits do to battles, not how a ruler plays to them.
+- Unmeasured: how the model rulers read "led by Nessa the Wary"; the switch stays off until a live run.
+
+### Painted Realm R3, sieges: scripted, a siege lengthens a Classic game by 3 turns alone, and the three R3 rules together shorten it by 3 (14 November 2026)
+
+GreyBoxStrategy (#20), rules v2 3.7, `GameRules.Sieges`. Scripted only: the `.NET 9` harness (`pace classic 100 rule:Sieges=True`), 100 Classic games of the `mixed` lineup on seeds 1 to 100, writs turn, conquest.
+
+| | turns (mean, median, p90) | endings | battles a game | treaties a game |
+|---|---|---|---|---|
+| off | 77, 75, 106 | 97 last standing, 3 stalemate | 147 | 7.6 |
+| sieges | 80, 77, 112 | 94 last standing, 5 stalemate, 1 unfinished | 142 | 7.7 |
+| sieges, generals and unit types | 74, 71, 102 | 97 last standing, 3 stalemate | 140 | 7.6 |
+
+- Fewer battles with sieges: a walled province is no longer stormed through its militia, and the turns spent before it falls lengthen a war.
+- With all three R3 rules on, the game is 3 turns shorter than off. The rules are not independent: siegewright and three-to-one make sieges short where a general or a big army is.
+- Unmeasured live; the switch stays off.
+
+### Painted Realm R3, supply: scripted, stores lengthen a Classic game by 13 turns, mostly because hungry armies go home (14 November 2026)
+
+GreyBoxStrategy (#20), rules v2 3.6, model B, `GameRules.Supply`. Scripted only: the `.NET 9` harness (`pace classic 100 rule:Supply=True`), 100 Classic games of the `mixed` lineup on seeds 1 to 100, writs turn, conquest.
+
+| | turns (mean, median, p90) | endings | battles a game | treaties a game |
+|---|---|---|---|---|
+| off | 77, 75, 106 | 97 last standing, 3 stalemate | 147 | 7.6 |
+| supply, scripts that ignore it | 80, 76, 109 | 96 last standing, 3 stalemate, 1 unfinished | 153 | 7.7 |
+| supply, scripts that go home at 1 store | 90, 85, 122 | 91 last standing, 5 stalemate, 4 unfinished | 163 | 7.6 |
+| all four R3 rules | 84, 83, 116 | 93 last standing, 6 stalemate, 1 unfinished | 149 | 8.3 |
+
+- The stores themselves cost little: scripts that ignore them lose soldiers to hunger and still finish 3 turns later. Going home to refill is what slows a war, by another 10 turns: an army that leaves its front for two or three turns gives the enemy time.
+- The first elimination moves from turn 19 to 21: early wars stall at the first long march.
+- Unmeasured live: whether a model ruler reads "stores 1 of 4" as a reason to come home. The switch stays off.
+
+### Painted Realm pacing settings, live: occupation turning into ownership makes the models' games longer, because each province that passes resets the stalemate counter (14 November 2026)
+
+GreyBoxStrategy (#20), the two settings of #305 on the models. `personas` table, five `qwen3.5:4b` seats with today's default options, RTX 5080 (Docker Ollama 0.40.14), `-strategyTurn writs -strategyCap 300` (uncapped but for R1c's 300-turn guard), Classic, conquest. Control (both off) against `-strategyRules OccupationBecomesOwnership=8;BreakWhenAllOccupied=true` (both on), on R1c's uncapped seeds 21 and 22, one game a block, interleaved (c21 t21 c22 t22, 05:36 to 06:50). Seed 23 was not run: the tech lead ended the run after the first pair answered the question. Kit and data: `.scratch/realm-build-map/pace-live/`, `python report.py`.
+
+| | turns | ending | turns with no province changing | provinces changing hands a turn | treaties | eliminations | armies waiting a ruler-turn | leader at three quarters of the land | provinces passed by occupation |
+|---|---|---|---|---|---|---|---|---|---|
+| c21, off | 107 | stalemate | 84% | 0.24 | 10 | 1 | 1.71 | never | – |
+| t21, on | 300 | unfinished (guard) | 74% | 0.30 | 32 | 2 | 2.08 | never | 54 |
+| c22, off | 95 | stalemate | 87% | 0.22 | 8 | 1 | 2.68 | never | – |
+| t22, on | 198 | stalemate | 79% | 0.26 | 10 | 2 | 2.52 | turn 160 | 22 |
+
+- **What it can show:** in both pairs the treatment game ran about twice as long or more, land moved more often, and two realms fell instead of one. The direction is the same in both, and the mechanism is plain in the records: a province passing by occupation counts as a change of land, so the 12-turn stalemate counter restarts and a stalled war that used to end in a stalemate goes on.
+- **What it cannot show:** with two games an arm, nothing about size; and with both settings on together, nothing about either alone. The realm breaks (2 a game against 1) may be either rule's.
+- **No default changes.** Both settings stay off. The rules v2 page lists what the result suggests instead: ownership that does not reset the stalemate counter, the break rule alone, or a cheaper `demand_occupied`, each for its own live pair.
+- The runner gained a deadline (no block starts that would end past 08:00, by the longest block so far plus 10%) and `-strategyRules`, which #309 brought to `test`.
+
+### Painted Realm stalemate counter by war score, scripted: ordinary scripts do not notice it, and peaceable ones end later (14 November 2026)
+
+GreyBoxStrategy (#20), `GameRules.StalemateByWarScore` (the tech lead's pick after the pacing settings' live look). Scripted only: the `.NET 9` harness, 100 Classic games of the `mixed` lineup on seeds 1 to 100, writs turn, conquest, 12-turn stalemate. "Peaceable" is the earlier stand-in for the models (white peace offered at a war score of 30 or less and accepted at 10 or less, wars settled after 8 turns: `exp:`/`cau:` `WhitePeaceAtScore=30`, `AcceptWhitePeaceAtScore=10`, `StuckWarTurns=8`).
+
+| | ordinary scripts: turns, endings | peaceable scripts: turns, endings, treaties |
+|---|---|---|
+| off | 77; 97 last standing, 3 stalemate | 29; 100 stalemate; 26.7 |
+| ownership after 8 | 75; 94, 6 | 29; 100 stalemate; 26.7 |
+| counter by war score | 77; 98, 2 | 44; 100 stalemate; 42.6 |
+| counter by war score, ownership after 8 | 75; 94, 6 | 44; 100 stalemate; 42.6 |
+
+- Ordinary scripts press wars to the end, so the counter rarely matters to them.
+- Peaceable scripts settle every war fast and declare the next. With the counter by war score, each new war and each 10-point swing restarts it, so their games run 15 turns longer and make more treaties, still ending in stalemates. Ownership after 8 changes nothing for them: peace comes before any occupation is old enough.
+- What it cannot show: how the models' long stalled wars, where land moves by occupation for a hundred turns, behave under it. That needs the live pair the tech lead holds for later.
+
+### Painted Realm R3, unit types live, a first look: the models recruit by type without one illegal answer, but mostly pikes, and do not answer the type they see (14 November 2026)
+
+GreyBoxStrategy (#20), `GameRules.UnitTypes` (#306, #309) on the models before it is switched on. `personas` table, five `qwen3.5:4b` seats with today's default options, RTX 5080 (Docker Ollama 0.40.14), `-strategyTurn writs -strategyCap 40`, Classic, conquest. Off (`o`) against on (`u`, `-strategyRules UnitTypes=true`), the same seeds 1 to 6, one game a block, interleaved (o1 u1 … o6 u6, 06:50 to 07:50); a seventh off game ran before the 08:00 deadline stopped the runner and is left out. Kit and data: `.scratch/realm-build-map/units-live/`, `python report.py`.
+
+| | off | on |
+|---|---|---|
+| Decisions, illegal answers | 3,345, 0 | 3,298, 0 |
+| Court recruits | 605 `recruit` | 788 by type: 505 pikes (64%), 150 riders (19%), 133 bows (17%); no plain `recruit` |
+| Recruits that counter the largest type the court sees (rules v2 9.2) | – | 157 of 714 (22%; chance 33%) |
+| Battles a game; with a counter note; won by the countering side with fewer soldiers | 81; –; – | 79; 289 of 474; 25 |
+| Model seconds a turn | 6.75 | 6.79 (paired +0.04, SD 1.02 over 6 seeds: within) |
+| Prompt tokens: court, army, treaty | 1,172, 1,232, 1,178 | 1,258, 1,283, 1,226 (+86, +51, +48) |
+| Treaties a game | 4.2 | 2.5 (paired −1.7, SD 2.3: within) |
+| Persona η² aggression / peace / recruit (30 seat-games) | 0.75 / 0.32 / 0.38 | 0.92 / 0.51 / 0.42 |
+
+- **What works:** every order by type was legal and offered, the courts used all three, the time a turn did not change, and the personas stayed as distinct or more. The prompt grew by 50 to 90 tokens.
+- **What does not, yet:** the courts answer what they see with pikes. Of 714 recruits made while a rival line said "mostly" one type, 344 were pikes against pikes (the counter is bows) and only 22% countered it, below the 33% of choosing at random. The descriptions say what beats what ("pikes beat riders, and bows beat pikes"), but the 4B reads its own army's type as the one to add. Riders are bought at twice the price and still 19%.
+- **Lines that name types,** 1,232 of them. Good: "Bows rise at ashby; I crush orsk's pikes before they strike again." "Riders strike bows; we raise forces to crush Merrow's garrison at Glimmerford." Wrong: "Pikes stand firm against bows; gold is dust, but Ilvarion's steel remains." (bows beat pikes). Repeated: "Pikes shall march to every province, for land is never given!"
+- **What it can and cannot show:** six games an arm, capped at 40 turns, so time, treaties and η² only within noise; the counter share is a large count (714 recruits) but from six games' worth of situations. No switch flips on it. The counter share is the thing to fix before unit types are on: a counters line in the court's facts ("orsk is mostly pikes: bows beat pikes") is the next A/B.
+
+### Painted Realm R3, all army rules on, a first look: legal and no slower, with more battles and fewer treaties; armies left holding abroad starve where they stand (15 November 2026)
+
+GreyBoxStrategy (#20), every R3 army rule at once before any is switched on: unit types, generals, sieges, supply and fog (#306, #309 to #311, #313, #314). `personas` table, five `qwen3.5:4b` seats with today's default options, RTX 5080 (Docker Ollama 0.40.14), `-strategyTurn writs -strategyCap 40`, Classic, conquest. Control (`c`, all off) against all on (`a`, `-strategyRules "UnitTypes=true;Generals=true;Sieges=true;Supply=true;Fog=true"`), the same seeds 1 to 6, one game a block, interleaved (c1 a1 … c6 a6, 00:30 to 01:40), on test at 250d85b. Kit and data: `.scratch/realm-build-map/allrules-live/`, `python report.py`.
+
+| | control | all on |
+|---|---|---|
+| Decisions; illegal answers; guard rewrites; orders refused by the rules | 3,435; 0; 20; 163 (4.7%) | 3,366; 0; 27; 188 (5.6%) |
+| Model seconds a turn | 8.23 | 7.77 (paired −0.46, SD 0.82 over 6 seeds: within) |
+| Wars declared, battles, a game | 10.0, 82 | 8.0, 102 |
+| Sieges begun; taken; broken; open at the end | – | 15; 14; 1; 0 |
+| Soldiers lost to hunger; armies starved out | – | 381 over 172 army-turns; 16 |
+| Provinces changing hands a game; turns with no change | 17.2; 72% | 16.0; 75% |
+| Treaties a game | 4.8 | 2.3 |
+| Lines that repeat one already said in the game | 21% | 19% |
+
+- **What works:** no illegal answer in 3,366 decisions with every rule on, and no slower. The orders refused by the rules rose by one point. The rulers' lines follow the new rules ("I raise taxes to fund pikes that will crush the bows and secure our starving borders").
+- **Sieges end the turn they begin.** 14 of 15 were taken the same turn: the provinces besieged had one fort each (one had two) _(corrected 15 November: an earlier version said every Classic province has one fort; Classic starts its 5 capitals with one fort and its other 20 provinces with none, and 11 of the 15 sieges were at capitals, the other 4 at provinces the courts had fortified)_, a siege of one fort takes 2 turns, and an army three times the garrison of 10 takes one off. Working as written; a siege only lasts on a capital or a fortified province, which this board has few of.
+- **A rule bug: armies left holding abroad starve where they stand.** 16 armies starved three turns or more in one place, the longest seven (`a5`'s morrow_host at harrow: held on turn 25 with full stores, empty on turn 32, starved to turn 38, never asked again). The supply rule never woke an army as its stores ran out (wake condition 6 of rules v2 1.3 was not built), so a hold given with full stores stood until the army died. Its own PR wakes it; the all-on arm is to be run again on it, so the hunger row and everything that depends on it (battles, land, treaties) are not a result yet.
+- **A typo in the facts:** with generals and supply both on, an army reads "led by Morrow the Forager,, stores 4 of 4"; the same PR fixes it.
+- **Treaties fell again** (4.8 to 2.3 a game; unit types alone, 4.2 to 2.5 on 14 November). Six games, within noise either time, but the same direction twice.
+- **What it can and cannot show:** six games an arm, capped at 40 turns, a first look; no default changes on it. The all-on arm with the hunger fix is the next run, and 15 pairs would make it a result.
+
+### Painted Realm R3, the counters line: told what beats what, the courts counter the type they see 67% of the time against 20%; the personas stop differing in which types they buy (15 November 2026)
+
+GreyBoxStrategy (#20), `GameRules.CountersLine` with unit types on in both arms. The recruit orders' descriptions already said what beats what, but a model served by Ollama never reads the schema (findings, 10 October), so the 4B had never been told. The line puts it in the court's facts, "Pikes beat riders, riders beat bows, and bows beat pikes; orsk is mostly riders, which pikes beat", one clause for each rival the facts name that is mostly one type, and a march's detail names the largest type among the enemy armies there ("enemy armies 30, mostly riders"). `personas` table, five `qwen3.5:4b` seats with today's default options, RTX 5080 (Docker Ollama 0.40.14), `-strategyTurn writs -strategyCap 40`, Classic, conquest. Control (`u`, `-strategyRules UnitTypes=true`, the line off: its default during the run) against the line (`k`, `UnitTypes=true;CountersLine=true`), the same seeds 1 to 12, one game a block, interleaved, in two runs of six pairs (01:44 to 02:51, then 02:52 to 03:58; the second to confirm the first). Kit and data: `.scratch/realm-build-map/counters-live/`, `python report.py`, `python paired.py`.
+
+| | control | the line |
+|---|---|---|
+| Decisions, illegal answers | 6,763, 0 | 6,879, 0 |
+| Recruits by type: pikes, riders, bows | 1,056, 327, 249 (65%, 20%, 15%) | 613, 554, 744 (32%, 29%, 39%) |
+| Recruits that counter the largest type the court sees (rules v2 9.2) | 294 of 1,481 (20%; chance 33%); per game 7% to 41% | 1,155 of 1,724 (67%); per game 53% to 78% |
+| Battles a game; won by the countering side; and with fewer soldiers | 87; 59% of 608; 63 | 99; 64% of 907; 117 |
+| Model seconds a turn | 7.62 | 7.75 (paired +0.13, SE 0.20) |
+| Prompt tokens, court | 1,258 | 1,290 |
+| Treaties a game | 3.1 | 2.7 (paired −0.42, SE 0.82) |
+| Persona η² (60 seat-games an arm): aggression; peace | 0.95; 0.63 | 0.92; 0.50 |
+| Persona η², how often a seat recruits (its share of decisions that are a recruit) | 0.23 (p 0.006) | 0.14 (p 0.09) |
+| Persona η², which types it picks (its recruits' share that are pikes; riders; bows) | 0.51; 0.33; 0.31 (p ≤ 0.001) | 0.02; 0.08; 0.03 (p 0.30 to 0.86) |
+
+- **The line works, and held over the second six pairs:** 64% in the first six, 67% over twelve; every game with the line (53% to 78%) above the best without (41%). The courts now buy all three types and buy what beats what they see; battles won by the countering side rose, and battles a game with it.
+- **Nothing measured got worse beyond noise:** no illegal answer in either arm, model time a turn +0.13 s (SE 0.20), treaties −0.42 a game (SE 0.82). Persona η² for aggression fell 0.03 (bootstrap over seeds 95% −0.05 to +0.00, the control's own two halves differ by 0.06) and for peace 0.13 (−0.25 to +0.04; the control's halves differ by 0.29): within noise, though aggression's interval only just reaches zero.
+- **The cost:** the personas no longer differ in which types they buy (η² 0.31 to 0.51 down to 0.02 to 0.08), and somewhat less in how often they recruit (0.23 to 0.14). Told what beats what they face, every persona buys the same answer.
+- **Lines:** "We recruit bows to counter orsk's pikes before they grow too strong." "Riders mount to hunt bows; gold spent wisely on the army that beats them." Wrong: "We raise pikes at our capital to counter Kesh's bows" (bows beat pikes).
+- **Decision (the tech lead's rule, set before the second six pairs were read):** the share held, and illegal answers, time, treaties and the aggression and peace η² were not worse beyond noise, so `CountersLine` is on by default from 15 November; it does nothing unless unit types are on. The recruit η² drop is the cost, recorded here for the lead. `-strategyRules "CountersLine=false"` runs the old prompt as an arm. Unit types themselves stay off.
+- **What it can and cannot show:** twelve games an arm capped at 40 turns, one model; the counter share is a large count, the η² differences are from 60 seat-games an arm.
+
+### Painted Realm R3, all army rules on, run again with the hunger wake and the siege floor: sieges now last and are relieved; armies are woken to starve and mostly attack on (15 November 2026)
+
+The all-on arm of "all army rules on, a first look" (15 November), run again on the fixes it led to (#322: an army abroad is asked again as its stores run low and each turn it starves; a siege lasts two turns at least). All five rules, no counters line, so it compares with the first look: `-strategyRules "UnitTypes=true;Generals=true;Sieges=true;Supply=true;Fog=true"`, seeds 1 to 6, one game a block, the same table, model, card and settings. Every block ran on test at 2e35705 (#322 and #323 in, #326's counters line not yet), from a checkout that did not change during the run (03:58 to 04:33). **The control was not rerun:** the all-off games of the first look (00:30 to 01:40, this session, the same machine and card) stand as the control, so the comparison is two to three hours apart rather than interleaved, and the fixes cannot touch an arm with supply and sieges off. Kit and data: `.scratch/realm-build-map/allrules-live/` (`rerun/`; `python report.py combined2`).
+
+| | control (first look) | all on, first look | all on, again |
+|---|---|---|---|
+| Illegal answers; refused by the rules | 0; 4.7% | 0; 5.6% | 0; 5.6% |
+| Model seconds a turn | 8.23 | 7.77 | 7.85 (paired −0.38, SD 0.55) |
+| Battles a game; wars | 82; 10.0 | 102; 8.0 | 103; 8.8 |
+| Sieges begun; taken; lasted past the turn they began; relieved (broken) | – | 15; 14; 1; 1 | 18; 5; 5; 13 |
+| Soldiers lost to hunger; armies starved out; starving 3+ turns in one place | – | 381; 16; 16 | 592; 20; 25 |
+| Provinces changing hands a game; turns with no change | 17.2; 72% | 16.0; 75% | 14.7; 77% |
+| Treaties a game | 4.8 | 2.3 | 3.2 |
+
+How the marshals answered the hunger wakes (the march's target as the order read it):
+
+| Wake | Attacked (enemy land) | Marched elsewhere (neutral or occupied) | Went home | Held |
+|---|---|---|---|---|
+| "stores running low", 140 | 84 | 33 | 14 | 9 |
+| "starving", 122 | 71 | 20 | 13 | 18 |
+
+- **Sieges work as meant now:** every siege taken lasted past the turn it began, and most were relieved (13 of 18 broken). Before the floor, 14 of 15 fell the turn they began.
+- **The hunger wake fires, and the 4B mostly attacks on.** Asked as their stores ran low or while starving, the marshals went home about one time in ten and attacked deeper six times in ten. Hunger is worse than in the first look (592 soldiers lost against 381; 25 stretches of starving in place against 16, the longest ten turns: `a2`'s aldo_host, asked on turns 15 and 16 and holding, then not asked again until it starved out).
+- **About half of the starving army-turns got no ask at all** (138 of 252): the wake adds the army to the queue, but the rules ask the most urgent armies first (a hostile army beside it, then size) within the writs, and a starving army is not ranked as urgent. That is a rules question, not a bug in the fix, and is put to the tech lead: a starving army first in the queue, or a standing order to go home when stores run out, would each be an A/B.
+- **What it can and cannot show:** six games an arm, 40 turns, a control from earlier in the session; enough to see that sieges now last and that hunger is not solved by asking, not enough for battles, land or treaties. No default changes.
+
+### Painted Realm R3, hunger first, live: starving armies asked first and told the way home lose a fifth as many soldiers to hunger, and the realms fight less (15 November 2026)
+
+GreyBoxStrategy (#20), `GameRules.HungerFirst` (#330) on the models. `personas` table, five `qwen3.5:4b` seats with today's default options, RTX 5080 (Docker Ollama 0.40.14), `-strategyTurn writs -strategyCap 40`, Classic, conquest. Both arms have all five army rules and the counters line on (test's head 6c43f7a, where `CountersLine` is on by default): control `c`, `-strategyRules "UnitTypes=true;Generals=true;Sieges=true;Supply=true;Fog=true"`, against `a`, the same plus `HungerFirst=true`. Seeds 1 to 6, one game a block, interleaved (c1 a1 … c6 a6, 06:30 to 07:38), from a checkout that did not change during the run; no Unity test ran beside it. Kit and data: `.scratch/realm-build-map/hungerfirst-live/`, `python report.py` and `python noask.py data`.
+
+| | off (`c`) | on (`a`) |
+|---|---|---|
+| Decisions; illegal answers; refused by the rules | 3,424; 0; 5.3% | 3,369; 0; 4.4% |
+| Model seconds a turn | 7.91 | 7.73 (paired −0.19, SD 0.23) |
+| Soldiers lost to hunger; army-turns starving | 580; 258 | 125; 54 |
+| Armies starved out; starving 3+ turns in one place | 13; 24 | 0; 4 |
+| Starving army-turns with no ask the next turn (a game's last turn has no next) | 114 of 252 (45%) | 21 of 50 (42%) |
+| Battles a game; wars | 103; 8.0 | 93; 9.7 |
+| Sieges begun; taken; relieved (broken) | 31; 7; 24 | 16; 5; 11 |
+| Provinces changing hands a game; turns with no change | 15.5; 74% | 11.8; 80% |
+| Treaties a game | 2.8 | 3.8 |
+
+How the marshals answered the hunger wakes (the march's target as the order read it):
+
+| Wake | | Attacked (enemy land) | Marched elsewhere (neutral or occupied) | Went home | Held |
+|---|---|---|---|---|---|
+| "stores running low" | off, 106 | 69 | 21 | 14 | 2 |
+| | on, 120 | 11 | 7 | 99 | 3 |
+| "starving" | off, 137 | 99 | 25 | 7 | 6 |
+| | on, 18 | 4 | 1 | 11 | 2 |
+
+- **Hunger fell in every pair** (soldiers lost, off against on: 100/10, 72/20, 81/41, 144/36, 126/0, 57/18), and no army starved out. The mechanism is in the answers: told "Stores for 1 more turn here, then it starves" and the nearest land that feeds it, a marshal goes home five times in six, where without it it attacked on two times in three. So most armies go home before they starve, and few are ever starving.
+- **The ask itself barely changed:** of the army-turns that did starve, about as many went unasked the next turn (42% against 45%). Why those few went unasked was not checked. The fall is in how many starve, not in how often a starving one is asked.
+- **The cost is fighting.** Battles fell in 5 pairs of 6 (103 a game against 93), sieges begun by half, and land changed hands less (11.8 a game against 15.5, lower in 5 pairs of 6): the armies that went home were not at the front. Treaties rose a little (3.8 against 2.8).
+- **What it can and cannot show:** six pairs, 40 turns. The direction of hunger is the same in all six and large; battles and land move the same way in five of six, enough to name a cost but not its size. The queue and the facts are one switch, so nothing here says which of them did it. Legal and no slower.
+- **No default changes.** `HungerFirst` stays off; the tech lead decides. The starving no-ask share is recounted here by one stated rule (an army that lost soldiers to hunger at the end of a turn, with no army request of its own the next turn); by that rule the second all-on run's 138 of 252 is 133 of 253.
+
+### Painted Realm stalemate counter by war score, live: it never lengthened a model game, and ended two of four sooner (15 November 2026)
+
+GreyBoxStrategy (#20), `GameRules.StalemateByWarScore` on the models, the live pair the scripted entry of 14 November left owed. `personas` table, five `qwen3.5:4b` seats with today's default options, RTX 5080 (Docker Ollama 0.40.14), `-strategyTurn writs -strategyCap 300` (uncapped but for the 300-turn guard), Classic, conquest, the writs turn's 12-turn stalemate. Off (`s`) against `-strategyRules StalemateByWarScore=true` (`w`), seeds 31 to 34, one game a block, interleaved (s31 w31 s32 w32 04:32 to 06:30; s33 w33 s34 w34 07:38 to 08:33), every block on test at f203752. **All four pairs ran.** The tech lead put the HungerFirst A/B between pairs 2 and 3; the checkout was put back on f203752 for pairs 3 and 4, and each block was started only if it would end by 09:45. Some of pairs 1 and 2 shared the laptop's CPU with Unity test runs; nothing here is timed. Kit and data: `.scratch/realm-build-map/stalemate-live/`, `python report.py`.
+
+| Seed | off: turns, ending | on: turns, ending | battles off, on | provinces changing hands off, on | turns with no change | treaties off, on |
+|---|---|---|---|---|---|---|
+| 31 | 300, unfinished (guard) | 300, unfinished (guard) | 483, 483 | 41, 41 | 90% | 21, 21 |
+| 32 | 300, unfinished (guard) | 187, stalemate | 509, 350 | 35, 22 | 93%, 94% | 11, 6 |
+| 33 | 135, stalemate | 121, stalemate | 163, 160 | 35, 31 | 87% | 24, 21 |
+| 34 | 134, stalemate | 134, stalemate | 195, 195 | 31, 31 | 81% | 17, 17 |
+| Mean | 217; 2 stalemate, 2 unfinished | 186; 3 stalemate, 1 unfinished | | | | |
+
+- **The two arms play the same game.** The counter is in no prompt, and `qwen3.5:4b` answered the same request the same way, so with the step timings set aside each pair's records are identical turn for turn until one rule ends the game: seed 31 for all 300 turns, seed 34 to the same last turn (134) by both rules, seeds 32 and 33 until the rule on ended it (turn 187 against 300, 121 against 135). The comparison is therefore not of two samples but of two stopping rules on one game each, and every difference above (battles, land, treaties) is only the turns the shorter game did not play.
+- **On these four games the rule never kept a game going** that the old counter ended, and it ended two sooner, one of them a game that otherwise ran into the guard. The scripted worry, peaceable play that new wars and 10-point swings keep restarting, did not show in these four; why each rule stopped where it did, turn by turn, was not traced.
+- **What it cannot show:** four games, two of which neither rule ends in 300 turns. Uncapped Classic games of the off arm lasted 95 to 300 turns across this run and the pacing run of 14 November (seeds 21 and 22, 107 and 95); four seeds say nothing about how often a game runs into the guard.
+- **No default changes.** `StalemateByWarScore` stays off; the tech lead decides. Because the arms are one game each, more seeds of the off arm alone would answer more: the rule on can be judged by where it would have stopped, if the counter were replayed from the records, which is not built.

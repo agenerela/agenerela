@@ -177,6 +177,139 @@ namespace GreyBoxStrategy
         /// occupied (v2 5.1's rule); its land not occupied goes to its capital's occupier. Ours, for pace.
         /// </summary>
         public bool BreakWhenCapitalFalls = false;
+        /// <summary>
+        /// The writs turn's pace, candidate 1 of the rules v2 page's "Why Classic stalls": a province occupied
+        /// this many turns in a row passes to its occupier, with no treaty. 0, the default: never; occupation
+        /// changes no owner, as v2 5.1 has it.
+        /// </summary>
+        public int OccupationBecomesOwnership = 0;
+        /// <summary>
+        /// The writs turn's pace, candidate 3: a realm whose every province is occupied breaks even with armies
+        /// left elsewhere, which are disbanded. Off by default: such a realm breaks only once it has no army.
+        /// </summary>
+        public bool BreakWhenAllOccupied = false;
+
+        /// <summary>
+        /// Pacing candidate (the tech lead's pick after the live look of 14 November): the stalemate counter reads
+        /// war score and land held by treaty, not occupation. Land taken or freed by force of arms (occupation, a
+        /// siege, holding it <see cref="OccupationBecomesOwnership"/> turns) no longer restarts it; a treaty, free
+        /// land taken, a realm broken, a new war, or a war's score moving <see cref="StalemateWarScoreStep"/> points
+        /// does. Off by default.
+        /// </summary>
+        public bool StalemateByWarScore = false;
+        public int StalemateWarScoreStep = 10;
+
+        // --- R3, armies in depth: unit types and the counter rule (rules v2 3.3) ---
+
+        /// <summary>
+        /// Pikes, riders and bows with the counter rule, recruited by <c>recruit_pikes</c>, <c>recruit_riders</c> and
+        /// <c>recruit_bows</c> in place of <c>recruit</c>. Off, every soldier is a pike and battles are fought as
+        /// before. The writs turn only. On by default since 15 November (the lead's call); <c>-strategyRules "UnitTypes=false"</c> turns it off for an arm.
+        /// </summary>
+        public bool UnitTypes = true;
+
+        /// <summary>
+        /// With <see cref="UnitTypes"/> on, the counter rule in the rulers' own facts: the court reads one line saying
+        /// what beats what and what each rival it names is mostly, and a march order names the largest type among the
+        /// enemy armies it can see there. The recruit orders' descriptions say the same, but a model served by Ollama
+        /// never reads the schema. On by default (15 November), so it is there whenever unit types are; it does
+        /// nothing without them. Twelve pairs on qwen3.5:4b: the courts counter the type they see 67% of the time
+        /// against 20% without it, at the cost of personas that no longer differ in which types they buy
+        /// (findings, 15 November). <c>-strategyRules "CountersLine=false"</c> runs the old prompt as an arm.
+        /// </summary>
+        public bool CountersLine = true;
+
+        /// <summary>
+        /// R3, rules v2 3.5: every army has a general with a trait, which counts in its battles and marches.
+        /// Seven of the page's ten traits; siegewright, forager and marshal wait for sieges, supply and army sizes.
+        /// On by default since 15 November (the lead's call); <c>-strategyRules "Generals=false"</c> turns it off for an arm.
+        /// </summary>
+        public bool Generals = true;
+        /// <summary>A trait's strength or casualty effect, as a fraction (bold, wary +10%; horse-born, bowmaster +15% of that type; inspiring -20% casualties).</summary>
+        public double BoldStrength = 0.10, BoldCasualties = 0.10, WaryStrength = 0.10, TypeTraitStrength = 0.15, InspiringCasualties = 0.20;
+        /// <summary>Battles a general must win to gain a second trait.</summary>
+        public int WinsForSecondTrait = 3;
+        /// <summary>The chance a general falls in any lost battle (routed, always); the army then gets a new one.</summary>
+        public double GeneralFallsChance = 0.05;
+
+        /// <summary>
+        /// R3, rules v2 3.7: an enemy province with forts (walls) is besieged over several turns instead of
+        /// stormed: no militia battle, the province occupied when the siege ends, its walls one level lower.
+        /// The fort that holds the road and income lost under siege are their own settings, off.
+        /// On by default since 15 November (the lead's call); <c>-strategyRules "Sieges=false"</c> turns it off for an arm.
+        /// </summary>
+        public bool Sieges = true;
+        /// <summary>Turns a siege takes per fort (walls level).</summary>
+        public int SiegeTurnsPerFort = 2;
+        /// <summary>The garrison a fort holds, for the three-to-one rule: besiegers that many times the garrison take a turn off.</summary>
+        public int GarrisonPerFort = 10;
+        public int SiegeOutnumber = 3;
+        /// <summary>Each turn of a siege, the seeded chance that the walls are breached early.</summary>
+        public double SiegeBreachChance = 0.10;
+
+        /// <summary>
+        /// R3, rules v2 3.7, a fort holds the road: a march goes no further than a province bordering an enemy's
+        /// walled province that no one besieges, and an army standing in one may step only into that walled province
+        /// (to besiege or attack it) or into land we hold. Our own land is never held up. Off by default.
+        /// </summary>
+        public bool FortsHoldTheRoad = false;
+
+        /// <summary>R3, rules v2 3.7: a province under siege gives its owner no income. Off by default.</summary>
+        public bool SiegeStopsIncome = false;
+
+        /// <summary>
+        /// R3, rules v2 3.6, model B: every army carries stores, full and refilled in our own land, eaten
+        /// elsewhere, faster in poor land; an army with none loses soldiers and fights weaker.
+        /// On by default since 15 November (the lead's call); <c>-strategyRules "Supply=false"</c> turns it off for an arm.
+        /// </summary>
+        public bool Supply = true;
+        /// <summary>The most stores an army carries, in turns of food.</summary>
+        public int MaxStores = 4;
+        /// <summary>Stores refilled a turn in our own land.</summary>
+        public int StoresRefill = 2;
+        /// <summary>Stores eaten a turn elsewhere: plains and forest, then hills, marsh and mountains.</summary>
+        public int StoresRich = 1, StoresPoor = 2;
+        /// <summary>An army with no stores loses this share of its soldiers a turn, at least <see cref="HungerMinLoss"/>, and fights this much weaker.</summary>
+        public double HungerLoss = 0.10, HungerStrength = 0.15;
+        public int HungerMinLoss = 2;
+
+        /// <summary>
+        /// With <see cref="Supply"/> on, hunger first (the tech lead's call, 15 November): a starving army, then one whose
+        /// stores run out next turn, is asked before the others within the writs, and its own facts say what hunger costs
+        /// and the nearest land that would feed it. Six pairs on qwen3.5:4b: soldiers lost to hunger 580 against 125, with
+        /// fewer battles and sieges (findings, 15 November). It does nothing without supply.
+        /// On by default since 15 November (the lead's call); <c>-strategyRules "HungerFirst=false"</c> turns it off for an arm.
+        /// </summary>
+        public bool HungerFirst = true;
+
+        /// <summary>
+        /// R3, rules v2 3.8: the rulers read rival armies only where they see (<see cref="ArmySight"/>): position, general
+        /// and size rounded to 10 near their land and their armies, the mix only when scouted by riders; each
+        /// rival's total, rounded, always. Scripted players still read everything.
+        /// On by default since 15 November (the lead's call); <c>-strategyRules "Fog=false"</c> turns it off for an arm.
+        /// </summary>
+        public bool Fog = true;
+        /// <summary>
+        /// R3, land traditions (the lead's answer to the counters line's cost, 15 November: the land, not the persona,
+        /// should make realms differ). With <see cref="UnitTypes"/> on, each type's soldiers fight stronger for the share
+        /// of the realm's held land that leans to it: hills and mountains to pikes, plains to riders, forest to bows, marsh
+        /// to none; the specials <c>iron_deep</c>, <c>horse_plains</c> and <c>great_wood</c> a step each. Battle strength
+        /// only, capped so the counter rule still decides between equal realms; the court reads it in one line
+        /// (<see cref="LandTraditions"/>). Off by default until an A/B run with the models.
+        /// </summary>
+        public bool LandTraditions = false;
+        /// <summary>The strength one step gives, each full <see cref="LandShareStep"/> of held land, and the cap.</summary>
+        public double LandStep = 0.05, LandShareStep = 0.20, LandCap = 0.15;
+
+        /// <summary>The most rival armies a ruler's "Rival armies we see" line names.</summary>
+        public int MaxSightings = 5;
+        public double PikeStrength = 1.0;
+        public double RiderStrength = 1.4;
+        public double BowStrength = 0.9;
+        /// <summary>The counter rule's c: pikes facing all riders fight at 1 + c, riders facing all pikes at 1 - c.</summary>
+        public double CounterStrength = 0.5;
+        /// <summary>Riders cost this many times a pike to recruit and to keep.</summary>
+        public int RiderCostFactor = 2;
 
         /// <summary>Turns to enter a province of this terrain (v2 3.2): 1 on plains and forest, 2 elsewhere.</summary>
         public int TurnsToEnter(Terrain t) => t == Terrain.Plains || t == Terrain.Forest ? 1 : 2;

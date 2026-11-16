@@ -92,6 +92,20 @@ namespace GreyBoxStrategy
 
         /// <summary>Whether the storyteller reads an inspiration line (<see cref="GreyBoxStrategy.Storyteller.InspirationLine"/>); <c>+no-inspiration</c> drops it.</summary>
         public bool Inspiration = true;
+        /// <summary>
+        /// With <c>+history</c>, the history check runs as the storyteller's guard (<see cref="GreyBoxStrategy.Storyteller.HistoryGuard"/>,
+        /// #292), which replaces the story through the framework; <c>+history-in-game</c> leaves it to the event's
+        /// check at the queue, as before. The verdicts are the same either way.
+        /// </summary>
+        public bool HistoryGuard = true;
+        /// <summary>
+        /// The most tokens a storyteller's reply may run to (<see cref="DecideOptions.MaxReplyTokens"/>, #244 item 11),
+        /// on its event call and its title call: <see cref="StorytellerReplyCap"/> by default, which binds only a
+        /// runaway (a story is a hundred or two); <c>+no-reply-cap</c> sends none, as before.
+        /// </summary>
+        public int? StorytellerMaxReplyTokens = StorytellerReplyCap;
+        /// <summary>The storyteller's reply cap: a story runs to one or two hundred tokens.</summary>
+        public const int StorytellerReplyCap = 400;
 
         /// <summary>Which inspiration draw the storyteller gets: <c>+inspiration-1</c> draws other words on the same seeds, for the divergence runs.</summary>
         public int InspirationSalt;
@@ -100,6 +114,12 @@ namespace GreyBoxStrategy
 
         /// <summary><c>+choices</c>: dilemmas; the ruler struck chooses (and the seats register the options as actions).</summary>
         public bool Choices;
+        /// <summary>
+        /// <c>+call-choices</c>: a dilemma's options come with the call as <see cref="DecideOptions.Choices"/>
+        /// (#293, DR-022) instead of being registered as the seat's actions. It changes what the model reads,
+        /// so it is an arm until its A/B.
+        /// </summary>
+        public bool CallChoices;
         /// <summary><c>+multi</c>: group events reach the members the fairness rules allow.</summary>
         public bool Multi;
         /// <summary><c>+history</c>: the recent-happenings line, and the story check against invented history.</summary>
@@ -230,6 +250,7 @@ namespace GreyBoxStrategy
                     else if (modifier == "silent-armies") options.SilentArmies = true;
                     else if (modifier == "storyteller") options.Storyteller = true;
                     else if (modifier == "choices") options.Choices = true;
+                    else if (modifier == "call-choices") options.CallChoices = true;
                     else if (modifier == "multi") options.Multi = true;
                     else if (modifier == "history") options.History = true;
                     else if (modifier == "traits") options.Traits = true;
@@ -245,6 +266,8 @@ namespace GreyBoxStrategy
                         options.Preset = options.Preset ?? StorytellerSettings.EvenHand.Name;
                     }
                     else if (modifier == "no-inspiration") options.Inspiration = false;
+                    else if (modifier == "history-in-game") options.HistoryGuard = false;
+                    else if (modifier == "no-reply-cap") options.StorytellerMaxReplyTokens = null;
                     else if (modifier.StartsWith("inspiration-") && int.TryParse(modifier.Substring("inspiration-".Length), out int salt) && salt >= 0)
                         options.InspirationSalt = salt;
                     else return null;
