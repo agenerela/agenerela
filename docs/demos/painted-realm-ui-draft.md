@@ -4,7 +4,9 @@ The lead, after playing: "the main points we should adjust now are UI and contro
 or victoria. The left panel is kind of strange, we are missing icons and colors on top and your like flag on the
 left. The chronicle on the right can be refactored maybe too and we can make councill feel even more better."
 
-He asked to see the layout before it is built out. This draft is real code running in the game; the frames are
+He asked to see the layout before it is built out. This is variant A, built; variant B, which goes further and is
+pictures only, is in [`painted-realm-ui-variant-b.md`](painted-realm-ui-variant-b.md). The frames of both are in
+[`painted-realm-ui/`](painted-realm-ui/). This draft is real code running in the game; the frames are
 taken from it. It matches the grand-strategy games in structure and density and copies none of their art. Each
 section below says what moved and why, and the questions at the end need his answers before the rest is built.
 
