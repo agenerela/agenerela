@@ -131,6 +131,18 @@ namespace Agenerela
                             {
                                 json.Append(c).Append(value[++i]);
                             }
+                            else
+                            {
+                                AppendJsonUnicodeEscape(json, c);
+                            }
+                        }
+                        else if (char.IsHighSurrogate(c))
+                        {
+                            AppendJsonUnicodeEscape(json, c);
+                        }
+                        else
+                        {
+                            json.Append(c);
                         }
                 }
             }
