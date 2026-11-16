@@ -1499,13 +1499,13 @@ everything a script can.
 
 ## 10. The build as slices
 
+**From 15 November the order of work is the lead's newer direction:** defaults, then UI and controls, then map art, then generated identity and voice, then the storyteller, with balance last. It is in [`grey-box-strategy-screen.md`](grey-box-strategy-screen.md#the-leads-direction-15-november-2026), and the slices below are not reordered by it yet.
+
 The lead's order: armies with the new mechanics, then the bigger map, then events with choices and
 chains, then buildings and economy, then diplomacy ("Ok"). Three slices he wants "eventually" come
 after: no cap on orders (R8), the world shaped by the model (R9), and names and histories by the
 model (R10). R9 and R10 touch only creation and may run any time after R4. Adjusted where something
 must come first (_Mine_):
-
-**From 15 November the order of work is the lead's newer direction:** defaults, then UI and controls, then map art, then generated identity and voice, then the storyteller, with balance last. It is in [`grey-box-strategy-screen.md`](grey-box-strategy-screen.md#the-leads-direction-15-november-2026), and the slices below are not reordered by it yet.
 
 - **R0, settings and the map as data, comes first:** every later slice reads a map with terrain and
   a settings object. The lead asked to "start with menu and the settings already".
