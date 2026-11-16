@@ -265,7 +265,7 @@ namespace GreyBoxStrategy.Realm
 
         // ---- march lines ----
 
-        private sealed class MarchLines : VisualElement
+        public sealed class MarchLines : VisualElement
         {
             public ScreenUI Owner;
             private readonly List<Label> turnLabels = new List<Label>();
@@ -348,26 +348,17 @@ namespace GreyBoxStrategy.Realm
             private void Draw(MeshGenerationContext ctx)
             {
                 var p = ctx.painter2D;
+                // A march under way: a solid arrow in the owner's colour, inked at the edge, along a smoothed path.
                 foreach (var (a, pts) in Lines())
                 {
                     var c = (Color)CountryLook.Of(a.Owner).Colour;
-                    p.lineCap = LineCap.Round;
-                    // A dark casing under a dash in the owner's colour, as ink over the wash.
-                    Dashed(p, pts, new Color(0.08f, 0.05f, 0.02f, 0.85f), 4.2f);
-                    Dashed(p, pts, Color.Lerp(c, Color.white, 0.15f), 2.2f);
-                    var end = pts[pts.Count - 1];
-                    p.fillColor = c; p.strokeColor = new Color(0.08f, 0.05f, 0.02f, 1); p.lineWidth = 1.4f;
-                    p.BeginPath(); p.Arc(end, 4.5f, Angle.Degrees(0), Angle.Degrees(360)); p.Fill(); p.Stroke();
+                    Arrow(p, pts, Color.Lerp(c, Color.white, 0.12f), new Color(0.07f, 0.04f, 0.02f, 0.95f), ArrowBody, ArrowHead);
                 }
+                // A march ordered this council: the same arrow, pale with a coloured edge, so it reads as "to come".
                 foreach (var (owner, pts) in Planned())
                 {
                     var c = (Color)CountryLook.Of(owner).Colour;
-                    p.lineCap = LineCap.Round;
-                    Dashed(p, pts, new Color(0.08f, 0.05f, 0.02f, 0.4f), 3.2f);
-                    Dashed(p, pts, new Color(Mathf.Lerp(c.r, 1, 0.45f), Mathf.Lerp(c.g, 1, 0.45f), Mathf.Lerp(c.b, 1, 0.45f), 0.7f), 1.6f);
-                    var end = pts[pts.Count - 1];
-                    p.strokeColor = new Color(Mathf.Lerp(c.r, 1, 0.45f), Mathf.Lerp(c.g, 1, 0.45f), Mathf.Lerp(c.b, 1, 0.45f), 0.8f); p.lineWidth = 1.4f;
-                    p.BeginPath(); p.Arc(end, 4f, Angle.Degrees(0), Angle.Degrees(360)); p.Stroke();
+                    Arrow(p, pts, new Color(Mathf.Lerp(c.r, 1, 0.7f), Mathf.Lerp(c.g, 1, 0.7f), Mathf.Lerp(c.b, 1, 0.65f), 0.88f), Color.Lerp(c, Color.black, 0.25f), ArrowBody, ArrowHead);
                 }
             }
 
@@ -376,24 +367,94 @@ namespace GreyBoxStrategy.Realm
 
             private void Hide(int from) { for (int i = from; i < turnLabels.Count; i++) turnLabels[i].style.display = DisplayStyle.None; }
 
-            private static void Dashed(Painter2D p, List<Vector2> pts, Color colour, float width)
+            // In panel pixels, so an arrow reads the same at every zoom.
+            private const float ArrowBody = 7f, ArrowHead = 20f;
+
+            /// <summary>
+            /// An arrow along <paramref name="pts"/>: the path smoothed, a body of even width, and a head on the last
+            /// point; filled with <paramref name="fill"/> and edged with <paramref name="edge"/>.
+            /// </summary>
+            public static void Arrow(Painter2D p, List<Vector2> pts, Color fill, Color edge, float body, float head)
             {
-                p.strokeColor = colour; p.lineWidth = width;
-                const float dash = 7, gap = 5;
-                float carry = 0; bool on = true;
-                for (int k = 1; k < pts.Count; k++)
+                var outline = ArrowOutline(pts, body, head);
+                if (outline.Count < 3) return;
+                p.BeginPath();
+                p.MoveTo(outline[0]);
+                for (int k = 1; k < outline.Count; k++) p.LineTo(outline[k]);
+                p.ClosePath();
+                p.fillColor = fill; p.Fill();
+                p.strokeColor = edge; p.lineWidth = 1.6f; p.lineJoin = LineJoin.Round; p.Stroke();
+            }
+
+            /// <summary>
+            /// The arrow's outline, clockwise from the tail's left: the body's left edge, the head (its tip the path's last
+            /// point), the body's right edge back to the tail. Empty when the path has no length.
+            /// </summary>
+            public static List<Vector2> ArrowOutline(List<Vector2> pts, float body, float head)
+            {
+                var outline = new List<Vector2>();
+                var path = Smooth(pts);
+                if (path.Count < 2) return outline;
+                float headLen = head * 0.95f;
+                var tip = path[path.Count - 1];
+                float total = 0; for (int k = 1; k < path.Count; k++) total += Vector2.Distance(path[k - 1], path[k]);
+                if (total < 1e-3f) return outline;
+                if (total < headLen * 1.2f) headLen = total * 0.6f;
+                var shaft = Trim(path, headLen);
+                var dir = (tip - shaft[shaft.Count - 1]).normalized;
+                if (dir == Vector2.zero) return outline;
+                var n = new Vector2(-dir.y, dir.x);
+                var left = new List<Vector2>(); var right = new List<Vector2>();
+                for (int k = 0; k < shaft.Count; k++)
                 {
-                    Vector2 a = pts[k - 1], b = pts[k];
-                    float len = Vector2.Distance(a, b), at = 0;
-                    var dir = len > 0 ? (b - a) / len : Vector2.zero;
-                    while (at < len)
-                    {
-                        float seg = Mathf.Min((on ? dash : gap) - carry, len - at);
-                        if (on) { p.BeginPath(); p.MoveTo(a + dir * at); p.LineTo(a + dir * (at + seg)); p.Stroke(); }
-                        at += seg; carry += seg;
-                        if (carry >= (on ? dash : gap) - 0.001f) { carry = 0; on = !on; }
-                    }
+                    Vector2 d0 = k > 0 ? (shaft[k] - shaft[k - 1]).normalized : (shaft[1] - shaft[0]).normalized;
+                    Vector2 d1 = k < shaft.Count - 1 ? (shaft[k + 1] - shaft[k]).normalized : d0;
+                    var nk = new Vector2(-(d0.y + d1.y), d0.x + d1.x);
+                    nk = nk.sqrMagnitude < 1e-6f ? new Vector2(-d0.y, d0.x) : nk.normalized;
+                    float w = body / 2;
+                    left.Add(shaft[k] + nk * w); right.Add(shaft[k] - nk * w);
                 }
+                var baseC = shaft[shaft.Count - 1];
+                outline.AddRange(left);
+                outline.Add(baseC + n * head / 2);
+                outline.Add(tip);
+                outline.Add(baseC - n * head / 2);
+                for (int k = right.Count - 1; k >= 0; k--) outline.Add(right[k]);
+                return outline;
+            }
+
+            // Corners rounded by cutting each twice (Chaikin), the ends kept where they are.
+            private static List<Vector2> Smooth(List<Vector2> pts)
+            {
+                var cur = pts;
+                for (int it = 0; it < 2 && cur.Count > 2; it++)
+                {
+                    var next = new List<Vector2> { cur[0] };
+                    for (int k = 0; k < cur.Count - 1; k++)
+                    {
+                        Vector2 a = cur[k], b = cur[k + 1];
+                        if (k > 0) next.Add(Vector2.Lerp(a, b, 0.25f));
+                        if (k < cur.Count - 2) next.Add(Vector2.Lerp(a, b, 0.75f));
+                    }
+                    next.Add(cur[cur.Count - 1]);
+                    cur = next;
+                }
+                return cur;
+            }
+
+            // The path less its last <paramref name="cut"/> pixels.
+            private static List<Vector2> Trim(List<Vector2> path, float cut)
+            {
+                var res = new List<Vector2>(path);
+                while (res.Count >= 2 && cut > 0)
+                {
+                    var b = res[res.Count - 1]; var a = res[res.Count - 2];
+                    float len = Vector2.Distance(a, b);
+                    if (len > cut) { res[res.Count - 1] = Vector2.Lerp(b, a, cut / len); break; }
+                    cut -= len; res.RemoveAt(res.Count - 1);
+                }
+                if (res.Count < 2) res = new List<Vector2> { path[0], Vector2.Lerp(path[0], path[path.Count - 1], 0.4f) };
+                return res;
             }
         }
 

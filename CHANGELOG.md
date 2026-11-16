@@ -29,6 +29,9 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: marches as coloured arrows** (#20). A march under way is a solid arrow in its owner's colour along
+  its path; one ordered this council is the same arrow, pale. Both read the same at every zoom.
+
 - **Painted Realm R3: hunger first** (#20), behind `GameRules.HungerFirst`, off. With supply on, a starving army
   and then one about to run out are asked first within the writs, and read what hunger costs and the nearest land
   that feeds them. Scripted only so far.

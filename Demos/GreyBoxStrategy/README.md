@@ -717,6 +717,16 @@ a hungry one none from its hunger line.
   tag, every turn's end tags each siege with the game's own turns, every army has its stores at every moment, and a
   hungry army shows the warning to you and not to a rival (broken by not reading the line of a siege that ended).
 
+### March arrows (15 November, evening)
+
+The lead found the planned march "too little and easy to miss" and asked for coloured arrows. A march is now a filled
+arrow along its path, with the corners rounded, a body 7 pixels wide and a head 20 wide. It is drawn in panel pixels, so it reads
+the same at every zoom.
+- **Under way.** The arrow is solid in the owner's colour, edged in ink.
+- **Ordered this council.** The same arrow, pale with an edge in the owner's colour.
+- The arrows follow the sight rules the lines did: yours, and rivals you can see.
+- `MarchArrowTests` checks the outline: the tip on the destination, an even body, a wider head.
+
 ### Rule mode in plain words (15 November)
 
 The tech lead's clarity list after the readiness pass, each a frame before and after:
