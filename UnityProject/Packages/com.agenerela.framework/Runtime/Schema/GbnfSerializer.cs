@@ -96,6 +96,30 @@ namespace Agenerela
             for (var i = 0; i < value.Length; i++)
             {
                 var c = value[i];
+
+                switch (c)
+                {
+                    case '"':
+                        json.Append("\\\"");
+                        break;
+                    case '\\':
+                        json.Append("\\\\");
+                        break;
+                    case '\b':
+                        json.Append("\\b");
+                        break;
+                    case '\f':
+                        json.Append("\\f");
+                        break;
+                    case '\n':
+                        json.Append("\\n");
+                        break;
+                    case '\r':
+                        json.Append("\\r");
+                        break;
+                    case '\t':
+                        json.Append("\\t");
+                        break;
             }
         }
 
