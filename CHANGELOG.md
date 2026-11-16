@@ -29,6 +29,10 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm R3: the land traditions live A/B** (#20), 12 pairs on Classic with `qwen3.5:4b`: with
+  `LandTraditions` on, a seat buys 7 points more of the type its starting land favours (paired 95% +3 to +12), the
+  persona still explains most of which types it buys, and nothing else moved outside noise. The rule stays off.
+
 - **Painted Realm R3: land traditions** (#20), behind `GameRules.LandTraditions`, off. The share of a realm's held
   land that leans to a type (hills and mountains pikes, plains riders, forest bows) makes that type up to 15%
   stronger in battle, and the court reads it in one line. Scripted only so far.
