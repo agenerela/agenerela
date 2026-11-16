@@ -232,7 +232,7 @@ For each ruler, in this order (_Mine_):
 1. **The court order** (always asked; `none` allowed). It carries the turn's proclamation.
 2. **Each army awaiting orders**, most urgent first: a hostile army beside it, then a siege it leads
    or that holds it, then stores at 1 or 0, then the rest by size. One writ each, until writs − 1 are
-   used (one is always kept for the court). With `GameRules.HungerFirst` (off, #330, 15 November) a starving army,
+   used (one is always kept for the court). With `GameRules.HungerFirst` (#330, 15 November; on by default since #334) a starving army,
    then one with a turn of stores or less, comes before the rest of this list.
 3. **A second court order**, if a writ is left and the first was not `none`.
 
@@ -819,7 +819,7 @@ ships ([R3](#r3-armies-in-depth)).
    down), poor land does not matter, and a relief march or a return home has nothing to restore. Kept as the
    fallback if B's two numbers prove too much for the models.
 
-**Built (B), behind `GameRules.Supply`, off:** stores 0 to 4 a turn of food; full in our own land, refilled 2
+**Built (B), behind `GameRules.Supply` (on by default since 15 November, off until then):** stores 0 to 4 a turn of food; full in our own land, refilled 2
 a turn there; elsewhere 1 a turn in plains and forest, 2 in hills, marsh and mountains; at 0, 10% of the soldiers
 lost a turn (at least 2) and −15% strength in battle; a `forager` general eats half (counted in half-stores).
 Supplied land is our own only, since alliances and passage are not built; healing springs, famine and the
@@ -1597,7 +1597,7 @@ exists, and where it differs from the list above:
 ### R1. The turn of writs and armies as pieces
 
 - **Sim:**
-  - `Army` (one soldier type until R3; R3 part one adds three behind `GameRules.UnitTypes`, off), its orders and wake conditions.
+  - `Army` (one soldier type until R3; R3 part one adds three behind `GameRules.UnitTypes`, on by default since 15 November), its orders and wake conditions.
   - Writs and the order cycle ([1.3](#13-the-order-of-decisions-within-a-turn)).
   - Simultaneous movement with terrain costs; border crossings.
   - Battles between armies with today's formula; retreat and rout; militia and neutral garrisons.
@@ -2144,12 +2144,13 @@ line, and `findings.md` for anything measured.
 - [x] Tests: seeds per size pass (100 per size and shape by hand, a few in every run); cell adjacency equals the graph; no corner borders; generation time
 
 **R3, armies in depth**
-- [x] Three types, costs, the counter rule (`GameRules.UnitTypes`, off; scripted only, 14 November)
-- [x] The model rulers' recruit orders by type and the mix in their facts (14 November; first live look, #316: no illegal answers, but the courts counter the type they see 22% of the time, so still off; #326's counters line, on by default but acting only with unit types on, raised that to 67% in 12 pairs, `findings.md`, 15 November)
-- [x] Generals: names, seven of the ten traits, second trait, a general falling (`GameRules.Generals`, off; scripted only, 14 November). Siegewright came with the sieges (#311, only with `GameRules.Sieges` on); the forager came with supply (#313, only with `GameRules.Supply` on); the marshal waits for army sizes; capture waits for prisoners
-- [x] Sieges at forts over several turns, breach, broken siege, siegewright (`GameRules.Sieges`, off; scripted only, 14 November). Forts stand for walls. The fort that holds the road (`GameRules.FortsHoldTheRoad`) and income lost under siege (`GameRules.SiegeStopsIncome`) came on 15 November, each its own switch, off; scripted only
-- [x] Supply model B, with forager (`GameRules.Supply`, off; scripted against none, 14 November). Still open: the army cap, and A against B (A needs farms)
-- [x] Fog of war for the rulers' facts: totals rounded, forest, scouting (`GameRules.Fog`, `ArmySight`, off; 14 November). Still open: fog for the scripted players, allies' sight and watchtowers
+- [x] Three types, costs, the counter rule (`GameRules.UnitTypes`, off when built, on by default since 15 November; scripted only, 14 November)
+- [x] The model rulers' recruit orders by type and the mix in their facts (14 November; first live look, #316: no illegal answers, but the courts counter the type they see 22% of the time, so still off then; #326's counters line, on by default but acting only with unit types on, raised that to 67% in 12 pairs, `findings.md`, 15 November)
+- [x] Generals: names, seven of the ten traits, second trait, a general falling (`GameRules.Generals`, off when built, on by default since 15 November; scripted only, 14 November). Siegewright came with the sieges (#311, only with `GameRules.Sieges` on); the forager came with supply (#313, only with `GameRules.Supply` on); the marshal waits for army sizes; capture waits for prisoners
+- [x] Sieges at forts over several turns, breach, broken siege, siegewright (`GameRules.Sieges`, off when built, on by default since 15 November; scripted only, 14 November). Forts stand for walls. The fort that holds the road (`GameRules.FortsHoldTheRoad`) and income lost under siege (`GameRules.SiegeStopsIncome`) came on 15 November, each its own switch, off; scripted only
+- [x] Supply model B, with forager (`GameRules.Supply`, off when built, on by default since 15 November; scripted against none, 14 November). Still open: the army cap, and A against B (A needs farms)
+- [x] Fog of war for the rulers' facts: totals rounded, forest, scouting (`GameRules.Fog`, `ArmySight`, off when built, on by default since 15 November; 14 November). Still open: fog for the scripted players, allies' sight and watchtowers
+- [x] On by default (15 November, the lead's call): unit types, generals, sieges, supply, fog and hunger first, on the writs turn; New game starts on a generated world. Headless runs keep Classic, and an arm turns a rule off with `-strategyRules "Supply=false"` (the demo README's "The defaults since 15 November")
 - [ ] Support and pursuit; the report's factors
 - [ ] Every feature behind a rules flag; sim A/B each against off
 - [ ] Army panel, siege marks, stores pips, the full report card, fog in rule mode (built, each behind its setting in New game, 14 November: the mix and general on army rows and the battle report, #315; siege tags and stores pips, #317; fog in rule mode not checked here; a march drawn as a filled arrow, solid under way and pale when ordered this council, #333, 15 November)

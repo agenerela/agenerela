@@ -9,9 +9,10 @@ namespace GreyBoxStrategy.Tests
     /// <summary>Rules v2 slice R1a: the writs turn, armies as pieces, occupation and the first treaty terms.</summary>
     public sealed class WritTests
     {
+        // The army rules off (on by default since 15 November): each test turns on the ones it measures.
         private static GameRules WritRules()
         {
-            var r = Calm();
+            var r = ArmyRulesOff(Calm());
             r.Turn = TurnStyle.Writs;
             r.Victory = VictoryMode.Conquest;
             r.MaxTurns = 150;
@@ -697,7 +698,9 @@ namespace GreyBoxStrategy.Tests
             var records = new List<BattleRecord>();
             for (int seed = 1; seed <= 3; seed++)
             {
-                var played = GameRunner.Play(GameSetup.Writs(seed), "mixed", seed);
+                var setup = GameSetup.Writs(seed);
+                setup.Numbers = ArmyRulesOff(); // the plain terms: each army rule adds its own, tested with it
+                var played = GameRunner.Play(setup, "mixed", seed);
                 foreach (var report in played.Reports)
                 {
                     Assert.That(report.BattleRecords.Count, Is.EqualTo(report.Battles), $"turn {report.Turn}: one record a battle");
@@ -906,11 +909,14 @@ namespace GreyBoxStrategy.Tests
         }
 
         [Test]
-        public void UnitTypes_OffByDefault_AndOffPlaysTheGameAsBefore()
+        public void UnitTypes_OnByDefault_AndOffPlaysTheGameAsBefore()
         {
-            Assert.That(new GameRules().UnitTypes, Is.False);
-            Assert.That(GameSetup.Writs(1).BuildRules(GameSetup.Writs(1).BuildMap()).UnitTypes, Is.False);
-            var played = GameRunner.Play(GameSetup.Writs(2), "mixed", 2);
+            Assert.That(new GameRules().UnitTypes, Is.True, "on by default since 15 November");
+            Assert.That(GameSetup.Writs(1).BuildRules(GameSetup.Writs(1).BuildMap()).UnitTypes, Is.True);
+            var setup = GameSetup.Writs(2);
+            setup.Numbers = GameRules.Standard;
+            setup.Numbers.UnitTypes = false;
+            var played = GameRunner.Play(setup, "mixed", 2);
             Assert.That(played.Game.World.Armies.All(a => a.Riders == 0 && a.Bows == 0), Is.True);
             Assert.That(played.Reports.SelectMany(r => r.BattleRecords).All(b => b.CounterNote == null && b.AttackCounter == 1 && b.DefenceCounter == 1), Is.True);
         }
@@ -934,7 +940,7 @@ namespace GreyBoxStrategy.Tests
         [Test]
         public void Generals_EveryArmyHasOne_NamedForIt_WithATrait_AndNoneWhenOff()
         {
-            Assert.That(new GameRules().Generals, Is.False, "off by default");
+            Assert.That(new GameRules().Generals, Is.True, "on by default since 15 November");
             var g = NewWrits(1, Led());
             Turn(g);
             Assert.That(g.World.Armies, Is.Not.Empty);
@@ -1760,6 +1766,7 @@ namespace GreyBoxStrategy.Tests
             Assert.That(GameSetup.Writs(1).Victory, Is.EqualTo(VictoryMode.Conquest));
             var setup = GameSetup.Writs(6, victory: GameSetup.DominationPreset);
             var back = GameSetup.FromJson(setup.ToJson());
+            back.Numbers = ArmyRulesOff(); // the endings below are the scripts' game without the army rules, as written
             var rules = back.BuildRules(back.BuildMap());
             Assert.That((rules.Victory, rules.ProvincesToWin, rules.MaxTurns), Is.EqualTo((VictoryMode.Domination, 19, 150)), "75% of 25 provinces, rounded up");
             var g = GameRunner.Play(back, "scripted");

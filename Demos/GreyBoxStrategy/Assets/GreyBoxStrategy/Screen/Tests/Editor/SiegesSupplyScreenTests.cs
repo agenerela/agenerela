@@ -24,7 +24,7 @@ namespace GreyBoxStrategy.Screen.Tests
         private static List<ReplayState> States(ReplayGame g) =>
             g.Turns.SelectMany(t => new[] { t.Start, t.Council }.Concat(t.Events.Select(e => e.After))).Where(s => s != null).Distinct().ToList();
 
-        [TearDown] public void Reset() { ReplayDirector.NextSieges = false; ReplayDirector.NextSupply = false; }
+        [TearDown] public void Reset() { ReplayDirector.NextSieges = true; ReplayDirector.NextSupply = true; }
 
         [Test]
         public void New_games_sieges_and_supply_reach_the_rules_of_every_writs_game_and_only_those()
@@ -32,8 +32,12 @@ namespace GreyBoxStrategy.Screen.Tests
             foreach (var setup in new[] { GameSetup.Writs(5), GameSetup.Writs(5, GameSetup.ClassicMapId, GameSetup.DominationPreset) })
             {
                 var map = setup.BuildMap();
+                ReplayDirector.NextSieges = true; ReplayDirector.NextSupply = true;   // as New game's defaults set them
+                var on = ReplayDirector.RulesFor(setup, map);
+                Assert.That((on.Sieges, on.Supply), Is.EqualTo((true, true)), "on by default");
+                ReplayDirector.NextSieges = false; ReplayDirector.NextSupply = false;
                 var off = ReplayDirector.RulesFor(setup, map);
-                Assert.That(off.Sieges || off.Supply, Is.False, "off by default");
+                Assert.That(off.Sieges || off.Supply, Is.False, "Off turns a rule that is on by default off");
                 ReplayDirector.NextSieges = true;
                 var sieges = ReplayDirector.RulesFor(setup, map);
                 Assert.That((sieges.Sieges, sieges.Supply), Is.EqualTo((true, false)));
@@ -43,8 +47,8 @@ namespace GreyBoxStrategy.Screen.Tests
                 ReplayDirector.NextSieges = false;
                 var supply = ReplayDirector.RulesFor(setup, map);
                 Assert.That((supply.Sieges, supply.Supply), Is.EqualTo((false, true)));
-                Assert.That(supply.UnitTypes || supply.Generals, Is.False, "the other settings stay as they were");
-                Assert.That(GameRules.Standard.Sieges || GameRules.Standard.Supply, Is.False, "the standard rules are not changed");
+                Assert.That(supply.UnitTypes && supply.Generals, Is.True, "the other settings stay as they were");
+                Assert.That(GameRules.Standard.Sieges && GameRules.Standard.Supply, Is.True, "the standard rules are not changed");
                 ReplayDirector.NextSupply = false;
             }
             var classic = GameSetup.Classic(5);

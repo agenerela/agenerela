@@ -14,8 +14,11 @@ namespace GreyBoxStrategy.Realm
         public string Country = "kesh";
         public string Model = "qwen3.5:4b";
         public int Seed = 101;
-        /// <summary>A generated world instead of the Classic board, drawn by code, in all three ways of playing.</summary>
-        public bool Generated;
+        /// <summary>
+        /// A generated world instead of the Classic board, drawn by code, in all three ways of playing. On by default since
+        /// 15 November (the lead's call); Classic stays a choice.
+        /// </summary>
+        public bool Generated = true;
         public MapSize Size = MapSize.Medium;
         public LandShape Shape = LandShape.Continent;
         /// <summary>A generated world's countries; 0 is the size's own number (<see cref="MapSettings.DefaultCountries"/>).</summary>
@@ -27,16 +30,19 @@ namespace GreyBoxStrategy.Realm
 
         /// <summary>"off", or a storyteller preset's name (<see cref="StorytellerSettings.Presets"/>).</summary>
         public string Storyteller = "off";
-        /// <summary>Rules v2's writs turn: armies as pieces, occupation and treaties (R1). The one-move game stays the default.</summary>
-        public bool Writs;
-        /// <summary>R3 on the writs turn: pikes, riders and bows, and the counter rule (<see cref="GameRules.UnitTypes"/>). Off by default.</summary>
-        public bool UnitTypes;
-        /// <summary>R3 on the writs turn: a general with traits for every army (<see cref="GameRules.Generals"/>). Off by default.</summary>
-        public bool Generals;
-        /// <summary>R3 on the writs turn: land with forts is besieged over turns (<see cref="GameRules.Sieges"/>). Off by default.</summary>
-        public bool Sieges;
-        /// <summary>R3 on the writs turn: armies carry stores and go hungry abroad (<see cref="GameRules.Supply"/>). Off by default.</summary>
-        public bool Supply;
+        /// <summary>
+        /// Rules v2's writs turn: armies as pieces, occupation and treaties (R1). The default since 15 November, with the
+        /// generated world: model rulers play a generated world only on the writs turn. The one-move game stays a choice.
+        /// </summary>
+        public bool Writs = true;
+        /// <summary>R3 on the writs turn: pikes, riders and bows, and the counter rule (<see cref="GameRules.UnitTypes"/>). On by default (15 November).</summary>
+        public bool UnitTypes = true;
+        /// <summary>R3 on the writs turn: a general with traits for every army (<see cref="GameRules.Generals"/>). On by default (15 November).</summary>
+        public bool Generals = true;
+        /// <summary>R3 on the writs turn: land with forts is besieged over turns (<see cref="GameRules.Sieges"/>). On by default (15 November).</summary>
+        public bool Sieges = true;
+        /// <summary>R3 on the writs turn: armies carry stores and go hungry abroad (<see cref="GameRules.Supply"/>). On by default (15 November).</summary>
+        public bool Supply = true;
         /// <summary>Rule mode with model rulers: a model on your own seat proposes each turn's plan (the lead's answer 29). On by default.</summary>
         public bool Advisor = true;
         /// <summary>Whether this choice starts the advisor: ruling, on the writs turn, with model rulers.</summary>

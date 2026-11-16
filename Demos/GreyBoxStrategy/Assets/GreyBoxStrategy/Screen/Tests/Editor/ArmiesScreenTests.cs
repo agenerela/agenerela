@@ -15,11 +15,11 @@ namespace GreyBoxStrategy.Screen.Tests
         {
             var setup = GameSetup.Writs(seed);
             var map = setup.BuildMap();
-            var rules = ReplayDirector.WithArmySettings(setup.BuildRules(map), units, generals);
+            var rules = ReplayDirector.WithArmySettings(setup.BuildRules(map), units, generals, false, false);
             return ReplayBuilder.Build(Recording.Parse(ScriptedWorldGame.Play(setup, map, rules).ToJson()), map, rules);
         }
 
-        [TearDown] public void Reset() { ReplayDirector.NextUnitTypes = false; ReplayDirector.NextGenerals = false; }
+        [TearDown] public void Reset() { ReplayDirector.NextUnitTypes = true; ReplayDirector.NextGenerals = true; }
 
         [Test]
         public void New_games_switches_reach_the_rules_of_every_writs_game_and_only_those()
@@ -27,9 +27,12 @@ namespace GreyBoxStrategy.Screen.Tests
             foreach (var setup in new[] { GameSetup.Writs(5), GameSetup.Writs(5, GameSetup.ClassicMapId, GameSetup.DominationPreset) })
             {
                 var map = setup.BuildMap();
+                ReplayDirector.NextUnitTypes = true; ReplayDirector.NextGenerals = true;   // as New game's defaults set them
+                var on = ReplayDirector.RulesFor(setup, map);
+                Assert.That((on.UnitTypes, on.Generals), Is.EqualTo((true, true)), "on by default");
                 ReplayDirector.NextUnitTypes = false; ReplayDirector.NextGenerals = false;
                 var off = ReplayDirector.RulesFor(setup, map);
-                Assert.That(off.UnitTypes || off.Generals, Is.False, "off by default");
+                Assert.That(off.UnitTypes || off.Generals, Is.False, "Off turns a rule that is on by default off");
                 ReplayDirector.NextUnitTypes = true;
                 var units = ReplayDirector.RulesFor(setup, map);
                 Assert.That((units.UnitTypes, units.Generals), Is.EqualTo((true, false)));
@@ -39,7 +42,7 @@ namespace GreyBoxStrategy.Screen.Tests
                 ReplayDirector.NextUnitTypes = false;
                 var gens = ReplayDirector.RulesFor(setup, map);
                 Assert.That((gens.UnitTypes, gens.Generals), Is.EqualTo((false, true)));
-                Assert.That(GameRules.Standard.UnitTypes || GameRules.Standard.Generals, Is.False, "the standard rules are not changed");
+                Assert.That(GameRules.Standard.UnitTypes && GameRules.Standard.Generals, Is.True, "the standard rules are not changed");
             }
             // The one-move game has no armies to type: its rules stay as they are.
             var classic = GameSetup.Classic(5);

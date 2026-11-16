@@ -82,6 +82,8 @@ namespace GreyBoxStrategy.Tests
             var offSeen = new List<ScriptedRequest>();
             var off = GameSetup.Writs(5);
             off.TurnCap = 12;
+            off.Numbers = GameRules.Standard;
+            off.Numbers.UnitTypes = false;
             await PlayFakes(off, offSeen);
             Assert.That(offSeen.All(r => !Read(r).Contains(" pikes") && !r.Request.Observations.Contains("mostly ")), Is.True, "off: no word of types");
         }
