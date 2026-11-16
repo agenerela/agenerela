@@ -120,12 +120,18 @@ namespace Agenerela
                     case '\t':
                         json.Append("\\t");
                         break;
+                    default:
+                        if (c < 0x20 || c == 0x7f)
+                        {
+                            AppendJasonUnicodeEscape(json, c);
+                        }
+                }
             }
         }
 
         private static void AppendJsonUnicodeEscape(StringBuilder output, char value)
         {
-            
+            output.Append("\\u");
         }
         private static string GbnfTerminal(string value)
         {
