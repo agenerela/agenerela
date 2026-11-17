@@ -26,6 +26,12 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm: the council for free orders** (#20), behind `GameRules.FreeOrders`, off by default, with a New game
+  switch (Rules, "Free orders (new turn, in testing)") so the lead can play it. No writs: the court is a list you build,
+  as many orders as gold allows, with each order's cost, gold committed and left, and the reason a button is shut;
+  every army may be ordered; End turn shows the rulers still deciding and waits for them visibly. The top bar drops
+  its writs stat. Two rule queries the screen needed, `WritLegality.CourtOrderCost` and `CourtMovesAfter`, are
+  extracted from the free turn's own code, which now calls them. `CourtList`, `CourtListTests`.
 - **Painted Realm: the first sounds** (#20). A small audio layer: `SoundManager.Play("<cue>")` plays a cue from one
   table, `SoundCues`, on one of four buses (music, effects, interface, voice). Each bus has its volume in Settings,
   saved with the rest (Interface is new). Nothing plays while the window has no focus, and headless runs and tests make
