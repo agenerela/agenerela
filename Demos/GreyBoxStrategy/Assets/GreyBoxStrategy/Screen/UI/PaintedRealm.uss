@@ -686,3 +686,17 @@
 /* reserved slots, empty until built: the speaker button in the head, the choice buttons above So be it */
 .story-speaker { flex-direction: row; flex-shrink: 0; }
 .story-choices { flex-direction: row; justify-content: center; flex-wrap: wrap; }
+
+/* The top bar never overlaps (#20, 17 November): a stat is never squeezed into its neighbour; between the full form and
+   the compact one, the sub-labels go when the measured stats do not fit ("bare", ScreenUI.FitStats). */
+.bstat { flex-shrink: 0; }
+.bare .bstat-sub { display: none; }
+.bare .bstat { padding-left: 7px; padding-right: 7px; }
+.squeezed .bstat { padding-left: 5px; padding-right: 5px; }
+.squeezed .bstat-value { font-size: 19px; }
+.squeezed .bstat-icon { scale: 0.75 0.75; margin-right: 2px; }
+.squeezed .bstat.first { margin-left: 180px; }
+.squeezed .riv { padding: 2px 2px; }
+.rivals > * { flex-shrink: 0; }
+.narrow .bstat-icon { display: none; }
+.narrow .bstat.first { margin-left: 176px; }

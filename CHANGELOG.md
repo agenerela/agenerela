@@ -31,6 +31,12 @@ phase table and the open issues, not here.
   a province orders every chosen army there and names those that cannot go; a left click only selects (it used to
   order the march, and a left-drag used to pan). The map pans at the window's edges, a setting on by default.
 
+- **Painted Realm: free orders in rule mode, the rulers deciding while you plan** (#20, the turn rework's first
+  slice, second part). With `FreeOrders` on, the model rulers decide from the moment the council opens, and End turn
+  waits only for what is left. Your court gives as many orders as gold allows. `Game.Answer` takes one ruler's
+  answer at a time; `RuleSession.RulersDeciding`, `RulersStillDeciding` and `EndTurnWaitSeconds` are for the screen.
+  Recordings say `freeOrders` and replay so.
+
 - **Painted Realm: free orders, the rules** (#20, the turn rework's first slice). `GameRules.FreeOrders` (off) plays the
   writs turn without writs: a court gives orders until it answers none (three at most, a realm's own number by
   override), its gold held back as it goes; an army is asked when woken or after holding three turns unasked. Off, the game and what
@@ -46,6 +52,11 @@ phase table and the open issues, not here.
 
 ### Changed
 
+- **Painted Realm: the top bar never overlaps, and an opened feed entry shows whole** (#20). At 1707 × 1067 the
+  stats' sub-labels ran into the next stat's icon. Stats no longer shrink into each other; between the full and the
+  compact form the bar takes measured steps (sub-labels go, then smaller numbers and icons, then the icons), decided by
+  the stats' width against the bar's, never by a breakpoint. An entry opened at the feed's foot now scrolls into view
+  whole. `LayoutTests`.
 - **Painted Realm: the storyteller's events and tales are impossible to miss** (#20). Every event now opens a window in
   the middle of the screen, in the style of a grand strategy game's: the art pack's picture, the title, the story, each
   realm struck with its effect as icons, and So be it. Every event, tales too, stops the turn until dismissed, ruling or
