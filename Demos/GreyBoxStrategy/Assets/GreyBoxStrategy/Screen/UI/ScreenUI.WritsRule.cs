@@ -212,7 +212,8 @@ namespace GreyBoxStrategy.Realm
             var end = new Button(() => EndTurnPressed?.Invoke()) { text = "End turn", tooltip = "Send your orders (Enter). Every ruler's orders then land in the rules' order, and every army steps at once." };
             end.AddToClassList("menu-button"); end.AddToClassList("end-turn"); foot.Add(end);
             orders.Add(foot);
-            foot.style.paddingLeft = 10; foot.style.paddingRight = 10; foot.style.paddingBottom = 8;
+            // The council's foot never shrinks: when the panel reaches its height, the body above scrolls instead.
+            foot.style.paddingLeft = 10; foot.style.paddingRight = 10; foot.style.paddingBottom = 8; foot.style.flexShrink = 0;
         }
 
         private VisualElement CourtRow(CountryRequest req, bool second, string status)

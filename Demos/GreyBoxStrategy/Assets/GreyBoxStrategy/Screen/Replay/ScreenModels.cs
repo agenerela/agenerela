@@ -252,5 +252,60 @@ namespace GreyBoxStrategy.Replay
             Feed.Land => l.Category == ChronicleCategory.Land || l.Category == ChronicleCategory.Peace,
             _ => true,
         };
+
+        /// <summary>What a left click on the map does.</summary>
+        public enum MapClick { Nothing, CloseInspector, OrderMarch, OpenProvince, ClearSelection }
+
+        /// <summary>
+        /// A left click (not a drag) on the screen. A click on a panel is the panel's. With the inspector open, a click on
+        /// the map outside it only closes it, as Esc does, so dismissing the window never also orders a march. Otherwise a
+        /// province with one of your armies chosen in your council orders its march, any other province opens, and the
+        /// sea clears the choice.
+        /// </summary>
+        public static MapClick OnMapClick(bool overPanel, bool inspectorOpen, int province, bool armyChosen)
+        {
+            if (overPanel) return MapClick.Nothing;
+            if (inspectorOpen) return MapClick.CloseInspector;
+            if (province < 0) return MapClick.ClearSelection;
+            return armyChosen ? MapClick.OrderMarch : MapClick.OpenProvince;
+        }
+
+        /// <summary>A panel's or a banner's box on the screen, in the root's coordinates (this assembly has no UnityEngine).</summary>
+        public readonly struct Box
+        {
+            public readonly float xMin, yMin, xMax, yMax;
+            public Box(float x, float y, float width, float height) { xMin = x; yMin = y; xMax = x + width; yMax = y + height; }
+            public bool Overlaps(Box o) => xMax > o.xMin && xMin < o.xMax && yMax > o.yMin && yMin < o.yMax;
+        }
+
+        /// <summary>
+        /// Where a ruler's words go: the centre x and the bottom line of the banner, which hangs above that line. They sit
+        /// above the capital at <paramref name="px"/>, <paramref name="py"/> and never under a panel or off the screen:
+        /// right of the side panel when it is open; above the chronicle and the council when they would fall under
+        /// them; beside the inspector on the nearer side with room, or below it when neither side has room (a small
+        /// screen); always inside the screen. 248 px on the left and 356 on the right are the old realm list and
+        /// chronicle, still kept clear.
+        /// </summary>
+        public static (float x, float bottom) PlaceWords(float px, float py, float half, float height, float screenW, float screenH,
+            Box? side, IEnumerable<Box> below, Box? inspector)
+        {
+            float minX = 248 + half, maxX = screenW - 356 - half;
+            float x = maxX > minX ? Math.Min(Math.Max(px, minX), maxX) : px;
+            float bottom = Math.Max(50 + height, py - 26);
+            bool Covers(Box r, float pad) => x + half > r.xMin - pad && x - half < r.xMax + pad && bottom > r.yMin - pad && bottom - height < r.yMax;
+            if (side is Box s && Covers(s, 8)) x = s.xMax + 8 + half;
+            foreach (var r in below)
+                if (Covers(r, 8)) bottom = r.yMin - 8;
+            if (inspector is Box w && Covers(w, 0))
+            {
+                float left = w.xMin - 8 - half, right = w.xMax + 8 + half;
+                bool leftFits = left >= minX, rightFits = right <= maxX;
+                if (leftFits && (!rightFits || x - left <= right - x)) x = left;
+                else if (rightFits) x = right;
+                else bottom = w.yMax + 8 + height;
+            }
+            float lowest = Math.Max(50 + height, screenH - 8);
+            return (x, Math.Min(Math.Max(bottom, 50 + height), lowest));
+        }
     }
 }

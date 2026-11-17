@@ -22,6 +22,12 @@ phase table and the open issues, not here.
 
 ### Changed
 
+- **Painted Realm: the inspector window and the council's foot** (#20). With the decision inspector open, a click
+  on the map outside it only closes it, as Esc does, so dismissing it never also orders a march. End turn stays
+  inside the council's frame at every size: the council's foot no longer shrinks when the panel reaches its height.
+  A ruler's words never fall under the chronicle, the council or a side panel, nor off the bottom of the screen.
+  The Model tab's timing bar is full height, and the advisor's buttons clear the council's scrollbar.
+
 - **Painted Realm: an army sees the forts where it stands** (#20). Under the screen's fog, a province beyond your
   borders showed its garrison and forts as "not known" even with your army besieging it or passing through.
   `Fog.KnowsProvince` now knows a province where one of your armies stands. The rulers' facts never hid forts.
