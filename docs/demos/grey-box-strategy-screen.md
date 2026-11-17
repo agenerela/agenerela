@@ -346,7 +346,7 @@ On 16 November he decided:
 | A left click on a province with an army chosen | **Orders the march** (a right click does too) |
 
 B is built in three slices:
-- **1, the layout (built).**
+- **1, the layout (built, #340).**
   - The top bar is 74 px high. The realm's banner hangs below it, with an empty portrait frame. The numbers are
     large, each with a coloured icon and a tooltip that breaks it down. The date, the controls and **Decisions**
     sit in a framed block.
@@ -356,8 +356,8 @@ B is built in three slices:
   - The chronicle is a one-line feed with All, Me, War and Land filters. An entry opens in place, with a link to
     find it on the map and to its decision.
   - Every panel has a gilt frame.
-- **2, the panels.** A row kit (icon, label, bar or pips, value) for the province, army and rival views, tabs with
-  icons, and portrait frames in the panel headers.
+- **2, the panels (built).** A row kit (icon, label, bar or pips, value) for the province, army and rival views,
+  tabs with icons, and portrait frames in the panel headers. Fog decides what a row shows.
 - **3, the inspector and the council.** The inspector becomes a framed window with tabs. Writs show as seals,
   End turn becomes larger, and speech bubbles open their decision.
 

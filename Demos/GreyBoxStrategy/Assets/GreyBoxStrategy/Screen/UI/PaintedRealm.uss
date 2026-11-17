@@ -574,3 +574,35 @@
 .legend, .rule .legend { flex-wrap: nowrap; max-width: 62%; overflow: hidden; }
 .legend > * { flex-shrink: 0; }
 .panel-head { flex-shrink: 0; }
+/* ==== Variant B, slice 2: the panels' kit (#20) ==== */
+.khead { flex-direction: row; align-items: center; padding: 10px 12px; background-color: rgb(40, 30, 18); border-bottom-width: 1px; border-bottom-color: rgb(110, 86, 49); }
+.khead > .crest { flex-shrink: 0; }
+.khead-portrait { margin-left: 10px; flex-shrink: 0; }
+.khead-text { margin-left: 12px; flex-shrink: 1; }
+.khead-title { font-size: 18px; -unity-font-style: bold; letter-spacing: 1px; color: rgb(236, 224, 196); white-space: normal; }
+.khead-sub { font-size: 12px; -unity-font-style: italic; color: rgb(168, 151, 122); white-space: normal; }
+.ktabs { flex-direction: row; padding: 6px 8px 0 8px; border-bottom-width: 1px; border-bottom-color: rgb(110, 86, 49); }
+.ktab { flex-direction: row; align-items: center; padding: 4px 9px; margin-right: 3px; border-width: 1px; border-bottom-width: 0; border-color: rgb(90, 70, 40); background-color: rgb(33, 24, 14); color: rgb(168, 151, 122); font-size: 12px; }
+.ktab > Label { margin-left: 5px; }
+.ktab:hover { color: rgb(236, 224, 196); }
+.ktab.on { background-color: rgb(58, 43, 24); color: rgb(226, 194, 122); border-color: rgb(138, 106, 56); }
+.kpage { padding: 4px 0 8px 0; }
+.krow { flex-direction: row; align-items: center; min-height: 28px; padding: 3px 12px; border-bottom-width: 1px; border-bottom-color: rgba(201, 164, 90, 0.08); }
+.krow:hover { background-color: rgba(226, 194, 122, 0.08); }
+.krow-label { margin-left: 9px; font-size: 13px; flex-shrink: 1; }
+.krow-bar { flex-grow: 1; height: 9px; margin-left: 10px; margin-right: 8px; background-color: rgb(40, 31, 21); border-width: 1px; border-color: rgb(90, 70, 40); min-width: 60px; }
+.krow-fill { height: 100%; background-color: rgb(196, 204, 214); }
+.krow-pips { flex-direction: row; margin-left: 10px; }
+.krow-pips > .icon { margin-right: 2px; }
+.krow-value { margin-left: auto; padding-left: 8px; font-size: 14px; -unity-font-style: bold; -unity-text-align: middle-right; white-space: normal; flex-shrink: 1; }
+.kgen { flex-direction: row; align-items: center; padding: 8px 12px; }
+.kgen > .khead-title { margin-left: 12px; font-size: 15px; }
+
+/* Slice 2 review: the outliner's foot (its ledger buttons) outside the scroll; its headers fold; the legend keeps
+   every entry on one line at 1366 by tightening, not by dropping. */
+.ol-foot { flex-shrink: 0; border-top-width: 1px; border-top-color: rgba(201, 164, 90, 0.25); }
+.ol-head:hover { background-color: rgba(226, 194, 122, 0.08); }
+.ol-head.folded { color: rgb(160, 146, 118); }
+.legend, .rule .legend { max-width: 1000px; }
+.compact .legend, .rule.compact .legend { padding: 4px 6px; font-size: 11px; max-width: 1000px; }
+.compact .legend > * { margin-right: 6px; }

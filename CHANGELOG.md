@@ -22,6 +22,11 @@ phase table and the open issues, not here.
 
 ### Added
 
+- **Painted Realm UI, variant B: the panels** (#20). The province, army and realm views on the left share one kit: a
+  header band with crest and portrait frame, tabs with icons, and rows of icon, bar or pips, and value, with the
+  explaining sentence as a tooltip. Fog decides what a rival's rows show. An icon's own tint now wins over the
+  stylesheet's colour.
+
 - **Painted Realm UI, variant B: the layout** (#20), the lead's choice of 16 November. The top bar is taller, with
   the realm's banner hanging below it, an empty portrait frame, and each number with a large icon and a breakdown in
   its tooltip. An outliner top right lists your armies (stores as loaves), sieges and wars, and opens the ledgers. The
