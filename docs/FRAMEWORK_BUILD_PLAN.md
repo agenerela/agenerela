@@ -2652,27 +2652,29 @@ come through the Prompt Set window (#134), not this record.
 
 ### DR-024 — Speech and images are two more provider kinds; the model reaches them only through its statement and through actions
 
-**Status:** Proposed, 17 November 2026, by the framework tech lead at the lead's request ("I was
-thinking of using framework just like we wanted for TTS but also for image gen models"). Nothing
-is built in the framework. GreyBoxStrategy builds both in its own code first, behind interfaces
-shaped like the ones below, so the framework lifts something a game has already used. Issues:
-#358 (the speech provider) and #359 (the image provider).
+**Status:** Accepted, 17 November 2026. Proposed that morning by the framework tech lead at the
+lead's request ("I was thinking of using framework just like we wanted for TTS but also for image
+gen models"); the lead answered "Yes to all 5 but we may want it sooner then phase 4", so each
+proposed answer below is the decision, and question 5's timing is his to call: it may be built
+before Phase 4's gate. Nothing is built in the framework yet. GreyBoxStrategy builds both in its
+own code first, behind interfaces shaped like the ones below, so the framework lifts something a
+game has already used. Issues: #358 (the speech provider) and #359 (the image provider).
 
-**The lead's questions, each with the proposed answer** (the table further down gives the
+**The lead's questions, each decided as proposed** (the table further down gives the
 reasons):
 
-1. **One provider that does everything, or separate kinds?** *Proposed: separate. `ILLMProvider`
+1. **One provider that does everything, or separate kinds?** *Decided: separate. `ILLMProvider`
    stays as it is; `ISpeechProvider` and `IImageProvider` stand beside it.*
-2. **Where do they live?** *Proposed: the two interfaces and their plain value types in the core,
+2. **Where do they live?** *Decided: the two interfaces and their plain value types in the core,
    which adds no dependency; turning bytes into an `AudioClip` or a `Texture2D` in
    `Runtime/Unity/`; every real backend in its own package or behind a version define, as hard
    rule 6 already asks of providers.*
-3. **Does an agent speak every statement by itself?** *Proposed: no. The developer calls for it,
+3. **Does an agent speak every statement by itself?** *Decided: no. The developer calls for it,
    as with `DecideAsync` (DR-008, DR-015): the framework never decides the moment.*
-4. **May the model ask an image model for a picture directly?** *Proposed: no. It chooses a
+4. **May the model ask an image model for a picture directly?** *Decided: no. It chooses a
    registered action, and that action's handler calls the image provider (hard rule 5).*
-5. **When?** *Proposed: after GreyBoxStrategy's voices and live pictures work in the game, and
-   not before Phase 4's gate (7 December) unless the lead says sooner.*
+5. **When?** *Decided: after GreyBoxStrategy's voices and live pictures work in the game. The
+   lead may ask for it before Phase 4's gate (7 December).*
 
 **Context.** The framework knows one kind of request: a `DecisionRequest` goes to an
 `ILLMProvider` and a decision comes back. A speech model takes text and returns sound; an image
@@ -2692,7 +2694,7 @@ plumbing each time: a queue so requests do not pile up, a cache so a replay show
 picture, a voice per character, and the care that model-written text needs before it reaches
 another model.
 
-**Decision (proposed).**
+**Decision.**
 
 | Question | Decision | Why |
 |---|---|---|

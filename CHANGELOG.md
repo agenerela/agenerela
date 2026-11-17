@@ -22,7 +22,7 @@ phase table and the open issues, not here.
 
 ### Framework
 
-- **DR-024, proposed:** speech and images as two more provider kinds beside the language model (`ISpeechProvider`, `IImageProvider`), reached only through an agent's statement and through actions. Nothing is built; GreyBoxStrategy builds both in its own code first. Issues #358 and #359.
+- **DR-024, accepted 17 November:** speech and images as two more provider kinds beside the language model (`ISpeechProvider`, `IImageProvider`), reached only through an agent's statement and through actions. Nothing is built; GreyBoxStrategy builds both in its own code first. Issues #358 and #359.
 
 ### Added
 
