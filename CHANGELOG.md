@@ -29,6 +29,11 @@ phase table and the open issues, not here.
   bottom left, with All, Me, War and Land, each entry opening in place. Panels are framed; a click orders a chosen
   army's march, I opens the decisions. Diplomacy no longer fails to open during a rule game's council.
 
+- **Painted Realm: one fog rounding for the court and the screen** (#20). `ArmySight.Short` gives a rival army's
+  short label, "~40", and "<5" under 5 soldiers, so an army that exists never reads "~0"; it rounds halves up, as
+  the rulers' facts (`ArmySight.About`) always have. The map piece still uses its own rounding until the screen
+  calls it.
+
 ## [0.4.0-preview.2] - 2026-11-16
 
 ### Framework

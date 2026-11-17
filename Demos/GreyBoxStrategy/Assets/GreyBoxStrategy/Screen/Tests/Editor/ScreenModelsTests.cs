@@ -118,5 +118,23 @@ namespace GreyBoxStrategy.Screen.Tests
             Assert.That(lines.Any(l => ScreenModels.Keeps(l, ScreenModels.Feed.War, me)) && lines.Any(l => ScreenModels.Keeps(l, ScreenModels.Feed.Land, me)), Is.True);
             Assert.That(lines.Any(l => ScreenModels.Keeps(l, ScreenModels.Feed.Me, null)), Is.False, "watch mode has no Me");
         }
+
+        [Test]
+        public void The_feed_offers_Me_exactly_when_you_rule_a_realm()
+        {
+            var g = Game();
+            var ui = new ScreenUI(new UnityEngine.UIElements.VisualElement(), UnityEngine.ScriptableObject.CreateInstance<UnityEngine.UIElements.StyleSheet>(), null,
+                g.CountryIds, g.ProvinceIds, new Dictionary<string, RecordedPlayer>(), "test");
+            ui.BuildPanels();
+            var s = Ends(g).First();
+            ui.RenderOutliner(s);
+            Assert.That(ui.FeedFilters(), Is.EqualTo(new[] { "All", "War", "Land" }), "watching: no Me");
+            ui.Fog = new Fog(g.CountryIds[0], new RealmQueries(g, g.Map, g.Rules));
+            ui.RenderOutliner(s);
+            Assert.That(ui.FeedFilters(), Is.EqualTo(new[] { "All", "Me", "War", "Land" }), "ruling a realm: Me, second");
+            ui.Fog = new Fog(null, null);
+            ui.RenderOutliner(s);
+            Assert.That(ui.FeedFilters(), Does.Not.Contain("Me"), "back to watching: Me goes");
+        }
     }
 }

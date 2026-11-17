@@ -108,11 +108,13 @@ namespace GreyBoxStrategy.Replay
         public static Outliner OutlinerOf(ReplayState s, string me, IReadOnlyList<string> provinceIds, Func<string, string> provinceName, Func<ArmyState, int> turnsLeft = null)
         {
             var o = new Outliner();
+            var index = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (int i = 0; i < provinceIds.Count; i++) index[provinceIds[i]] = i;
             if (me != null)
                 foreach (var a in s.Armies.Where(a => a.Owner == me)
                              .OrderByDescending(a => a.Hungry).ThenByDescending(a => a.Awaiting).ThenByDescending(a => a.Soldiers).ThenBy(a => a.Id, StringComparer.Ordinal))
                 {
-                    int at = Array.IndexOf(provinceIds.ToArray(), a.Location);
+                    int at = a.Location != null && index.TryGetValue(a.Location, out int x) ? x : -1;
                     bool besieging = at >= 0 && s.SiegedBy != null && s.SiegedBy[at] == a.Owner;
                     o.Armies.Add(new ArmyRow
                     {

@@ -1557,6 +1557,18 @@ namespace GreyBoxStrategy.Tests
         }
 
         [Test]
+        public void Fog_TheShortLabel_NeverReadsZeroForAnArmyThatExists_AndRoundsAsTheCourtDoes()
+        {
+            Assert.That((ArmySight.Short(1), ArmySight.Short(4), ArmySight.Short(5), ArmySight.Short(25), ArmySight.Short(45), ArmySight.Short(120)),
+                Is.EqualTo(("<5", "<5", "~10", "~30", "~50", "~120")));
+            for (int n = 1; n <= 300; n++)
+            {
+                Assert.That(ArmySight.Short(n), Is.Not.EqualTo("~0"), $"{n} soldiers");
+                if (n >= 5) Assert.That(ArmySight.Short(n).Substring(1), Is.EqualTo(ArmySight.About(n).Substring("about ".Length)), $"{n}: label and court agree");
+            }
+        }
+
+        [Test]
         public void Fog_ARulerSeesArmiesNearItsLand_RoundedAndLed_AndNothingDeeperIn()
         {
             var g = Fogged();

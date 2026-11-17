@@ -562,3 +562,15 @@
 .compact .riv > Crest, .compact .riv > .crest { scale: 0.8 0.8; }
 .compact .bstat.first { margin-left: 180px; }
 .tbtn.insp-btn { width: auto; padding-left: 8px; padding-right: 8px; }
+
+/* Slice 1 review (#340): the date block never shrinks its buttons (the rivals and the orders note give way); the
+   outliner ends above the council at every size and scrolls inside; the map-mode legend keeps one line. */
+.time > * { flex-shrink: 0; }
+.time > .phase { flex-shrink: 1; min-width: 0; overflow: hidden; }
+.follow-bar { flex-shrink: 1; min-width: 0; }
+.rivals { flex-shrink: 1; min-width: 0; overflow: hidden; }
+.outliner { max-height: 34%; }
+.orders { max-height: 50%; }
+.legend, .rule .legend { flex-wrap: nowrap; max-width: 62%; overflow: hidden; }
+.legend > * { flex-shrink: 0; }
+.panel-head { flex-shrink: 0; }

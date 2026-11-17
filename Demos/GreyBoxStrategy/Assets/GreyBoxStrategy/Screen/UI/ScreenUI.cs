@@ -334,13 +334,22 @@ namespace GreyBoxStrategy.Realm
 
         private ScreenModels.Feed feedFilter = ScreenModels.Feed.All;
 
+        /// <summary>For tests: the feed's filters as they stand, by name.</summary>
+        public List<string> FeedFilters()
+        {
+            var names = new List<string>();
+            filters.Query<Label>().ForEach(l => names.Add(l.text));
+            return names;
+        }
+
         // The feed's filters (variant B, #20): everything, what concerns you, war, land. "Me" only when you rule.
         private void RenderFilters()
         {
             filters.Clear();
             foreach (ScreenModels.Feed f in Enum.GetValues(typeof(ScreenModels.Feed)))
             {
-                if (f == ScreenModels.Feed.Me && !Fog.On) continue;
+                // "Me" is what you, ruling a realm, did and had done to you: there is none while you watch.
+                if (f == ScreenModels.Feed.Me && You == null) continue;
                 var chip = new VisualElement { tooltip = f == ScreenModels.Feed.All ? "Every entry" : f == ScreenModels.Feed.Me ? "What you did, and what was done to you" : f == ScreenModels.Feed.War ? "Battles, sieges, refusals" : "Land taken and treaties" };
                 chip.AddToClassList("chip"); chip.EnableInClassList("off", feedFilter != f);
                 if (f == ScreenModels.Feed.War) chip.Add(new Icon(IconKind.Swords, 11) { Tint = KindTint(ChronicleCategory.War) });
@@ -349,6 +358,8 @@ namespace GreyBoxStrategy.Realm
                 chip.RegisterCallback<ClickEvent>(_ => { feedFilter = f; RenderFilters(); RenderChronicle(null); });
                 filters.Add(chip);
             }
+            // A feed with nothing in it yet says so, rather than stand empty.
+            if (lines.Count == 0) RenderChronicle(null);
         }
 
         public void ClearChronicle() { lines.Clear(); chronicleShown = ChronicleStep; RenderChronicle(null); }
@@ -372,6 +383,7 @@ namespace GreyBoxStrategy.Realm
             chronicleBody.Clear();
             int turn = -1, drawn = 0;
             var groups = Chronicle.Group(lines.Where(x => ScreenModels.Keeps(x, feedFilter, You)).Reverse().ToList(), SaidAgain);
+            if (groups.Count == 0) { var none = new Label(lines.Count == 0 ? "Nothing yet: the chronicle fills as the turns are played." : "Nothing here under this filter."); none.AddToClassList("ol-note"); chronicleBody.Add(none); }
             foreach (var g in groups)
             {
                 // A long game on a big world writes thousands of lines: the newest are drawn, the older a click away,

@@ -74,7 +74,7 @@ namespace GreyBoxStrategy.Realm
         // ---- the outliner (variant B, #20) ----
 
         private VisualElement outliner;
-        private bool filtersForFog;
+        private string filtersForYou;
         private ScrollView outlinerBody;
 
         /// <summary>
@@ -85,7 +85,7 @@ namespace GreyBoxStrategy.Realm
         {
             if (outlinerBody == null || s == null) return;
             // The feed's "Me" exists only once you rule: its filters are rebuilt when the fog comes on or goes.
-            if (filtersForFog != Fog.On) { filtersForFog = Fog.On; RenderFilters(); }
+            if (filtersForYou != You) { filtersForYou = You; RenderFilters(); }
             outlinerBody.Clear();
             string me = Fog.On ? You : Followed;
             var o = ScreenModels.OutlinerOf(s, me, ProvinceIds, Cap, TurnsLeft);
@@ -402,13 +402,13 @@ namespace GreyBoxStrategy.Realm
             hdr.Add(new Crest(CountryLook.Of(a.Owner), 30));
             var hb = new VisualElement { style = { marginLeft = 10 } };
             var name = new Label(Chronicle.Host(a.Id)); name.AddToClassList("insp-title"); hb.Add(name);
-            var sub = new Label($"{CountryLook.NameOf(a.Owner)} · {(rival ? "about " + (a.Soldiers + 5) / 10 * 10 : a.Soldiers.ToString())} soldiers"); sub.AddToClassList("insp-sub"); hb.Add(sub);
+            var sub = new Label($"{CountryLook.NameOf(a.Owner)} · {(rival ? ArmySight.About(a.Soldiers) : a.Soldiers.ToString())} soldiers"); sub.AddToClassList("insp-sub"); hb.Add(sub);
             hdr.Add(hb); body.Add(hdr);
 
             var str = Sec(body, "STRENGTH", rival ? "what your court sees" : "");
             if (a.HasMix && !rival) { str.Add(new MixBars(a)); str.Add(KeyValue("Made of", ArmyLook.Mix(a))); }
             else if (a.HasMix) str.Add(KeyValue("Mostly", ArmyLook.Mostly(a) ?? "not known"));
-            str.Add(KeyValue("Soldiers", rival ? $"about {(a.Soldiers + 5) / 10 * 10}" : a.Soldiers.ToString()));
+            str.Add(KeyValue("Soldiers", rival ? ArmySight.About(a.Soldiers) : a.Soldiers.ToString()));
             if (ArmyLook.Leader(a) is string leader)
             {
                 var gen = Sec(body, "GENERAL", "");
