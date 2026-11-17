@@ -22,6 +22,11 @@ phase table and the open issues, not here.
 
 ### Changed
 
+- **Painted Realm: the mouse wheel zooms in clear steps** (#20). A notch zoomed 0.15%: the code read the wheel in
+  Windows' units (120 a notch) while the Input System reports 1 a notch by default. A notch is now a 20% step toward
+  the cursor, eased over about a tenth of a second, and either unit reads as the same notch; a trackpad's small
+  readings are fractions of one.
+
 - **Painted Realm: the inspector window and the council's foot** (#20). With the decision inspector open, a click
   on the map outside it only closes it, as Esc does, so dismissing it never also orders a march. End turn stays
   inside the council's frame at every size: the council's foot no longer shrinks when the panel reaches its height.

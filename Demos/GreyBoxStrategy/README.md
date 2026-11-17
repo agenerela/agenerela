@@ -76,7 +76,9 @@ language model through the framework, fighting over 25 provinces on a painted se
    - Every country's army stands at its capital with its size, in every map mode.
    - Click a province, a crest or a chronicle line to open it. A chronicle line or a speech banner
      opens the decision behind it.
-   - Right-drag pans the map, and the wheel zooms.
+   - Right-drag pans the map, and the wheel zooms: a notch is a 20% step toward the cursor, eased over about a tenth
+     of a second, so out to in takes about twelve notches (`ScreenModels.WheelNotches`, `ZoomTarget`, `EaseZoom`).
+     It was tuned for 120 a notch, but the Input System reports 1 a notch by default, so a notch moved it 0.15%.
    - **Main menu** in the pause menu ends the game and lets the RTX 5080 go.
 4. When you rule a country:
    - The orders panel, bottom centre, lists every move the rules offer you. These are the moves
