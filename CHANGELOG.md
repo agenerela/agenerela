@@ -20,6 +20,17 @@ phase table and the open issues, not here.
 
 ## [Unreleased]
 
+### Added
+
+- **Painted Realm: a start menu** (#20). The game opens on a title screen in its own look: the title and large
+  buttons for the keyboard and the mouse (New game, Watch a game, Load a replay, Settings, Credits, Quit) over the
+  Classic painting, which drifts and changes hands behind a veil. A line at the foot says which model the game will
+  use and whether its server answers, asked through the framework's `IModelLifecycle` without holding the menu up;
+  while another session holds the RTX 5080's lock the server is not asked. New game is a framed window with four
+  groups behind tabs (World, Rivals, Rules, Model). A game played or watched to its end is kept for Load a replay,
+  newest first with the date, the turns and who won. Settings gained Event windows. The pause menu gained Quit and
+  asks before a game under way is left. Continue stays hidden: nothing saves a game in progress yet.
+
 ### Changed
 
 - **Painted Realm: the inspector window and the council's foot** (#20). With the decision inspector open, a click

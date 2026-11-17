@@ -59,6 +59,7 @@ namespace GreyBoxStrategy.Realm
         {
             if (e.ProvinceIndex >= 0) map.SetFocus(e.ProvinceIndex, 0.55f);
             var banner = ui.Tell(e, () => OpenEvent(e));
+            if (settings != null && settings.EventWindows) OpenEvent(e); // Settings: event windows open by themselves
             yield return Wait(0.5f);
             Show(e.After, null);
             ui.AddLine(line);

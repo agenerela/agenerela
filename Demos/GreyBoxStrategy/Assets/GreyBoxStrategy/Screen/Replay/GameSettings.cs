@@ -30,6 +30,8 @@ namespace GreyBoxStrategy.Replay
         public bool VSync = true;
         public int FrameCap;
         public float PlaybackSpeed = 1f;
+        /// <summary>Whether a storyteller event's window opens by itself as the event lands, or waits for a click on its banner (the default).</summary>
+        public bool EventWindows;
         public float MasterVolume = 0.8f, MusicVolume = 0.6f, EffectsVolume = 0.8f, VoiceVolume = 0.8f;
 
         public GameSettings Clone() => (GameSettings)MemberwiseClone();

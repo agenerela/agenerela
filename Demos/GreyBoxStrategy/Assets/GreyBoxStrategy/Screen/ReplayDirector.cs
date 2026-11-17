@@ -398,9 +398,9 @@ namespace GreyBoxStrategy.Realm
                 if (kb.digit4Key.wasPressedThisFrame) SetMode(MapMode.Reach);
                 if (kb.dKey.wasPressedThisFrame) ToggleDiplomacy();
                 if (kb.iKey.wasPressedThisFrame) { if (ui.InspectorOpen) ui.CloseInspector(); else ui.InspectPressed?.Invoke(); }
-                if ((kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame) && rule != null) EndTurn();
+                if ((kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame) && rule != null && !ui.MenuOpen) EndTurn(); // Enter on a menu presses its button
             }
-            if (kb != null && !ui.Typing) CameraKeys(kb);
+            if (kb != null && !ui.Typing && !ui.MenuOpen) CameraKeys(kb); // the arrows walk a menu's buttons
             if (mouse != null)
             {
                 float wheel = mouse.scroll.ReadValue().y;
