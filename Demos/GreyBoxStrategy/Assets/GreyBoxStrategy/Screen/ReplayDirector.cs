@@ -137,6 +137,12 @@ namespace GreyBoxStrategy.Realm
             ui.FollowPressed = Follow;
             ui.DiplomacyPressed = ToggleDiplomacy;
             ui.DecisionPressed = e => { if (CanInspect(e)) ui.ShowCard(DecisionCard.From(e)); };
+            // The showcase one click (or I) away: the newest decision you may read, in the inspector.
+            ui.InspectPressed = () =>
+            {
+                var e = played.LastOrDefault(x => x.Decision != null && CanInspect(x));
+                if (e != null) ui.ShowCard(DecisionCard.From(e)); else ui.ShowNotice("No decision to show yet.");
+            };
             ui.AddMenuButton(OpenPause);
             ui.NextArmyPressed = NextArmyJump;
             ui.EdgeMarkPressed = m => { PanTo(m.Province, closer: true); if (m.Event != null) ui.ShowBattle(m.Event); };
@@ -274,7 +280,7 @@ namespace GreyBoxStrategy.Realm
         private MapMode mode = MapMode.Political;
         private string followed;
         private readonly List<ReplayEvent> played = new List<ReplayEvent>();
-        private Vector2 clickStart;
+        private Vector2 clickStart, rightClickStart;
         private int selected = -1;
 
         /// <summary>For the Unity CLI: switch the map mode, follow a country (null for none), open a panel.</summary>
@@ -321,7 +327,8 @@ namespace GreyBoxStrategy.Realm
         public void ToggleDiplomacy()
         {
             if (ui.DiplomacyOpen) { ui.CloseDiplomacy(); return; }
-            int turn = turnIndex < game.Turns.Count ? game.Turns[turnIndex].Turn : game.Result.Turns;
+            // In a rule game the council's turn is not played yet, and there is no result: the turn is the one being decided.
+            int turn = turnIndex < game.Turns.Count ? game.Turns[turnIndex].Turn : game.Result?.Turns ?? (rule != null ? rule.Resolved + 1 : game.Turns.Count);
             ui.ShowDiplomacy(shown, turn, played.Where(e => e.Turn == turn && (e.Kind == ReplayEventKind.PeaceOffered || e.Kind == ReplayEventKind.PeaceAccepted || e.Kind == ReplayEventKind.PeaceRefused || e.Kind == ReplayEventKind.PeaceMutual)));
         }
 
@@ -390,6 +397,7 @@ namespace GreyBoxStrategy.Realm
                 if (kb.digit3Key.wasPressedThisFrame) SetMode(MapMode.Forts);
                 if (kb.digit4Key.wasPressedThisFrame) SetMode(MapMode.Reach);
                 if (kb.dKey.wasPressedThisFrame) ToggleDiplomacy();
+                if (kb.iKey.wasPressedThisFrame) { if (ui.InspectorOpen) ui.CloseInspector(); else ui.InspectPressed?.Invoke(); }
                 if ((kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame) && rule != null) EndTurn();
             }
             if (kb != null && !ui.Typing) CameraKeys(kb);
@@ -403,6 +411,14 @@ namespace GreyBoxStrategy.Realm
                     cam.orthographicSize = Mathf.Clamp(cam.orthographicSize * Mathf.Exp(-wheel * 0.0015f), zoomMin, zoomMax);
                     var after = cam.ScreenToWorldPoint(mouse.position.ReadValue());
                     cam.transform.position += before - after;
+                }
+                if (mouse.rightButton.wasPressedThisFrame) rightClickStart = mouse.position.ReadValue();
+                // A right click (not a drag) on a province, with one of your armies chosen, orders its march there.
+                if (mouse.rightButton.wasReleasedThisFrame && (mouse.position.ReadValue() - rightClickStart).sqrMagnitude < 25
+                    && rule != null && rule.Writs && ui.OrdersRequest != null && ui.SelectedArmy != null && OverMap(rightClickStart))
+                {
+                    int p = map.ProvinceAt(cam.ScreenToWorldPoint(mouse.position.ReadValue()));
+                    if (p >= 0) { string why = ui.OrderArmyTo(p); ui.ShowNotice(why == null ? null : $"{Cap(game.ProvinceIds[p])}: {why}"); }
                 }
                 if (mouse.middleButton.wasPressedThisFrame || mouse.rightButton.wasPressedThisFrame) { dragging = true; dragStart = cam.ScreenToWorldPoint(mouse.position.ReadValue()); }
                 if (mouse.middleButton.wasReleasedThisFrame || mouse.rightButton.wasReleasedThisFrame) dragging = false;

@@ -105,10 +105,11 @@ namespace GreyBoxStrategy.Realm
                 if (rule != null && rule.Writs && ui.OrdersRequest != null && a.Owner == rule.You && (ui.ArmiesWithWrits(ui.OrdersRequest).Contains(id) || ui.CanRecall(ui.OrdersRequest, id)))
                 {
                     if (ui.SelectedArmy != id) { ui.SelectedArmy = id; ApplyMode(); lastOrdersStatus = null; RuleTick(); }
+                    ui.ShowArmy(id, shown, played);
                     return;
                 }
-                int at = game.IndexOf(a.Location);
-                if (at >= 0) OpenProvince(at);
+                // The UI draft (#20): an army opens its own panel on the left, as a province does.
+                ui.ShowArmy(id, shown, played);
             };
         }
 

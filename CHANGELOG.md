@@ -20,6 +20,15 @@ phase table and the open issues, not here.
 
 ## [Unreleased]
 
+### Added
+
+- **Painted Realm UI, variant B: the layout** (#20), the lead's choice of 16 November. The top bar is taller, with
+  the realm's banner hanging below it, an empty portrait frame, and each number with a large icon and a breakdown in
+  its tooltip. An outliner top right lists your armies (stores as loaves), sieges and wars, and opens the ledgers. The
+  left side stays empty until a province, an army, a rival or a ledger opens there. The chronicle is a one-line feed
+  bottom left, with All, Me, War and Land, each entry opening in place. Panels are framed; a click orders a chosen
+  army's march, I opens the decisions. Diplomacy no longer fails to open during a rule game's council.
+
 ## [0.4.0-preview.2] - 2026-11-16
 
 ### Framework

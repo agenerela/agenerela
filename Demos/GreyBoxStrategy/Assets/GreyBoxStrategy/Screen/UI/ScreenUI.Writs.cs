@@ -319,6 +319,7 @@ namespace GreyBoxStrategy.Realm
             public void PlaceLabels()
             {
                 int used = 0;
+                var placed = new List<Vector2>();
                 if (Owner.TurnsLeft != null)
                     foreach (var (a, pts) in Lines())
                     {
@@ -340,6 +341,9 @@ namespace GreyBoxStrategy.Realm
                             if (fort.resolvedStyle.display != DisplayStyle.None && fort.childCount > 0 && !float.IsNaN(fort.layout.height) && fort.layout.height > 0)
                                 below = Math.Max(below, fort.layout.y + fort.layout.height + 1);
                         }
+                        // Marches sharing a road end on the same spot: each tag below the last, never on top of it.
+                        while (placed.Any(q => Mathf.Abs(q.x - end.x) < 40 && Mathf.Abs(q.y - below) < 14)) below += 15;
+                        placed.Add(new Vector2(end.x, below));
                         label.style.left = end.x; label.style.top = below;
                     }
                 Hide(used);
@@ -352,7 +356,8 @@ namespace GreyBoxStrategy.Realm
                 foreach (var (a, pts) in Lines())
                 {
                     var c = (Color)CountryLook.Of(a.Owner).Colour;
-                    Arrow(p, pts, Color.Lerp(c, Color.white, 0.12f), new Color(0.07f, 0.04f, 0.02f, 0.95f), ArrowBody, ArrowHead);
+                    // Brighter than the land it crosses, a heavy ink edge and a light spine: it holds even on its own colour.
+                    Arrow(p, pts, Color.Lerp(c, Color.white, 0.35f), new Color(0.05f, 0.03f, 0.01f, 1f), ArrowBody, ArrowHead, 2.6f, new Color(1f, 0.97f, 0.88f, 0.8f));
                 }
                 // A march ordered this council: the same arrow, pale with a coloured edge, so it reads as "to come".
                 foreach (var (owner, pts) in Planned())
@@ -374,7 +379,7 @@ namespace GreyBoxStrategy.Realm
             /// An arrow along <paramref name="pts"/>: the path smoothed, a body of even width, and a head on the last
             /// point; filled with <paramref name="fill"/> and edged with <paramref name="edge"/>.
             /// </summary>
-            public static void Arrow(Painter2D p, List<Vector2> pts, Color fill, Color edge, float body, float head)
+            public static void Arrow(Painter2D p, List<Vector2> pts, Color fill, Color edge, float body, float head, float edgeWidth = 1.6f, Color? spine = null)
             {
                 var outline = ArrowOutline(pts, body, head);
                 if (outline.Count < 3) return;
@@ -383,7 +388,15 @@ namespace GreyBoxStrategy.Realm
                 for (int k = 1; k < outline.Count; k++) p.LineTo(outline[k]);
                 p.ClosePath();
                 p.fillColor = fill; p.Fill();
-                p.strokeColor = edge; p.lineWidth = 1.6f; p.lineJoin = LineJoin.Round; p.Stroke();
+                p.strokeColor = edge; p.lineWidth = edgeWidth; p.lineJoin = LineJoin.Round; p.Stroke();
+                if (spine is Color sp)
+                {
+                    // A thin light line down the middle of the body, stopping short of the head.
+                    var mid = Trim(Smooth(pts), head * 1.1f);
+                    if (mid.Count < 2) return;
+                    p.strokeColor = sp; p.lineWidth = 1.3f; p.lineCap = LineCap.Round;
+                    p.BeginPath(); p.MoveTo(mid[0]); for (int k = 1; k < mid.Count; k++) p.LineTo(mid[k]); p.Stroke();
+                }
             }
 
             /// <summary>

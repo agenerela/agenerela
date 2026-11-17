@@ -93,6 +93,7 @@ namespace GreyBoxStrategy.Realm
 
             // ---- chronicle ----
             var chronicle = Panel("CHRONICLE", "chronicle");
+            chronicle.AddToClassList("feed");
             var quotes = new Button(() => { showQuotes = !showQuotes; RenderChronicle(null); }) { text = "“", tooltip = "Show or hide the rulers' words" };
             quotes.AddToClassList("tbtn");
             var tales = new Button(() => ToggleTales()) { text = "Tales", tooltip = "The storyteller's tales, each followed from its start to its end" };
@@ -103,6 +104,11 @@ namespace GreyBoxStrategy.Realm
             chronicleBody = new ScrollView(); chronicleBody.style.flexGrow = 1; chronicle.Add(chronicleBody);
             root.Add(chronicle);
             RenderFilters();
+
+            // ---- outliner (variant B, #20): your armies, sieges and wars at a glance; the ledgers behind a button ----
+            outliner = Panel("OUTLINER", "outliner");
+            outlinerBody = new ScrollView(); outlinerBody.style.flexShrink = 1; outliner.Add(outlinerBody);
+            root.Add(outliner);
 
             root.Add(BuildInspector());
             BuildTooltips();
@@ -199,6 +205,8 @@ namespace GreyBoxStrategy.Realm
                 nations.Add(chip);
             }
             RenderRealm(s);
+            RenderOutliner(s);
+            Ornament();
             ShowArmies(s);
             for (int i = 0; i < ProvinceIds.Count; i++)
             {
@@ -324,23 +332,21 @@ namespace GreyBoxStrategy.Realm
 
         // ---- chronicle ----
 
+        private ScreenModels.Feed feedFilter = ScreenModels.Feed.All;
+
+        // The feed's filters (variant B, #20): everything, what concerns you, war, land. "Me" only when you rule.
         private void RenderFilters()
         {
             filters.Clear();
-            foreach (var id in CountryIds)
+            foreach (ScreenModels.Feed f in Enum.GetValues(typeof(ScreenModels.Feed)))
             {
-                var chip = new VisualElement { tooltip = "Show or hide " + CountryLook.NameOf(id) }; chip.AddToClassList("chip");
-                chip.EnableInClassList("off", !countryFilter.Contains(id));
-                chip.Add(new Crest(CountryLook.Of(id), 14));
-                chip.RegisterCallback<ClickEvent>(_ => { if (!countryFilter.Remove(id)) countryFilter.Add(id); RenderFilters(); RenderChronicle(null); });
-                filters.Add(chip);
-            }
-            foreach (ChronicleCategory c in Enum.GetValues(typeof(ChronicleCategory)))
-            {
-                var chip = new VisualElement(); chip.AddToClassList("chip");
-                chip.EnableInClassList("off", !categoryFilter.Contains(c));
-                chip.Add(new Label(c.ToString()));
-                chip.RegisterCallback<ClickEvent>(_ => { if (!categoryFilter.Remove(c)) categoryFilter.Add(c); RenderFilters(); RenderChronicle(null); });
+                if (f == ScreenModels.Feed.Me && !Fog.On) continue;
+                var chip = new VisualElement { tooltip = f == ScreenModels.Feed.All ? "Every entry" : f == ScreenModels.Feed.Me ? "What you did, and what was done to you" : f == ScreenModels.Feed.War ? "Battles, sieges, refusals" : "Land taken and treaties" };
+                chip.AddToClassList("chip"); chip.EnableInClassList("off", feedFilter != f);
+                if (f == ScreenModels.Feed.War) chip.Add(new Icon(IconKind.Swords, 11) { Tint = KindTint(ChronicleCategory.War) });
+                if (f == ScreenModels.Feed.Land) chip.Add(new Icon(IconKind.Province, 11) { Tint = KindTint(ChronicleCategory.Land) });
+                chip.Add(new Label(f.ToString()) { style = { marginLeft = 3 } });
+                chip.RegisterCallback<ClickEvent>(_ => { feedFilter = f; RenderFilters(); RenderChronicle(null); });
                 filters.Add(chip);
             }
         }
@@ -365,7 +371,7 @@ namespace GreyBoxStrategy.Realm
         {
             chronicleBody.Clear();
             int turn = -1, drawn = 0;
-            var groups = Chronicle.Group(Chronicle.Filter(lines, countryFilter, categoryFilter), SaidAgain);
+            var groups = Chronicle.Group(lines.Where(x => ScreenModels.Keeps(x, feedFilter, You)).Reverse().ToList(), SaidAgain);
             foreach (var g in groups)
             {
                 // A long game on a big world writes thousands of lines: the newest are drawn, the older a click away,
@@ -383,14 +389,20 @@ namespace GreyBoxStrategy.Realm
                 var l = g.Lines[0];
                 var row = new VisualElement(); row.AddToClassList("lg");
                 bool told = l.Event.Kind == ReplayEventKind.Story;
-                row.tooltip = told ? "Click: open the event" : l.Event.Decision != null ? "Click: find it on the map and open the decision" : "Click: find it on the map";
-                row.RegisterCallback<ClickEvent>(_ => LinePressed?.Invoke(l));
+                // One line in the feed; a click opens it in place, and its link finds it on the map (and its decision).
+                row.tooltip = l.Text;
+                row.RegisterCallback<ClickEvent>(_ => row.ToggleInClassList("open"));
                 // The storyteller's events carry its crest, not the country they struck.
                 row.Add(new Crest(told ? CountryLook.Storyteller : CountryLook.Of(l.Country), 16));
+                // What kind of entry it is, at a glance: a battle, land, a treaty, gold, a building, a story.
+                var kind = new Icon(KindIcon(l.Category), 12) { Tint = KindTint(l.Category) }; kind.AddToClassList("lg-kind"); row.Add(kind);
                 if (told) row.AddToClassList("lg-tale");
                 var body = new VisualElement(); body.AddToClassList("lg-body");
                 var t = new Label(l.Text); t.AddToClassList("lg-text"); body.Add(t);
                 if (showQuotes && !string.IsNullOrEmpty(l.Quote)) { var q = new Label($"“{l.Quote}”"); q.AddToClassList("lg-quote"); body.Add(q); }
+                var link = new Label(told ? "Open the event ›" : l.Event.Decision != null ? "Find it on the map · open the decision ›" : "Find it on the map ›"); link.AddToClassList("lg-link");
+                link.RegisterCallback<ClickEvent>(e => { LinePressed?.Invoke(l); e.StopPropagation(); });
+                body.Add(link);
                 row.Add(body);
                 string tag = l.Category == ChronicleCategory.Land ? "land" : l.Category == ChronicleCategory.Refused ? "ref" : l.Category == ChronicleCategory.Guard ? "guard" : null;
                 if (tag != null) { var tg = new Label(tag == "ref" ? "REFUSED" : tag.ToUpperInvariant()); tg.AddToClassList("tag"); tg.AddToClassList(tag); row.Add(tg); }
@@ -399,13 +411,39 @@ namespace GreyBoxStrategy.Realm
             }
         }
 
+        /// <summary>The chronicle's icon for a kind of entry.</summary>
+        public static IconKind KindIcon(ChronicleCategory c) => c switch
+        {
+            ChronicleCategory.Land => IconKind.Province,
+            ChronicleCategory.War => IconKind.Swords,
+            ChronicleCategory.Peace => IconKind.Seal,
+            ChronicleCategory.Building => IconKind.Hammer,
+            ChronicleCategory.Economy => IconKind.Gold,
+            ChronicleCategory.Refused => IconKind.Refused,
+            ChronicleCategory.Guard => IconKind.Shield,
+            _ => IconKind.Quill,
+        };
+
+        private static Color KindTint(ChronicleCategory c) => c switch
+        {
+            ChronicleCategory.Land => new Color32(150, 200, 120, 255),
+            ChronicleCategory.War => new Color32(226, 110, 90, 255),
+            ChronicleCategory.Peace => new Color32(150, 190, 225, 255),
+            ChronicleCategory.Economy => new Color32(232, 196, 92, 255),
+            ChronicleCategory.Refused => new Color32(200, 120, 110, 255),
+            ChronicleCategory.Guard => new Color32(200, 170, 230, 255),
+            _ => new Color32(214, 196, 158, 255),
+        };
+
         // A ruler's orders of one turn: its name once, each order a line of its own (a click finds it), what it said once.
         private VisualElement GroupRow(ChronicleGroup g, ChronicleLine fresh)
         {
             var row = new VisualElement(); row.AddToClassList("lg"); row.AddToClassList("lg-group");
             row.Add(new Crest(CountryLook.Of(g.Country), 16));
+            var kind = new Icon(IconKind.Quill, 12) { Tint = new Color32(214, 196, 158, 255) }; kind.AddToClassList("lg-kind"); row.Add(kind);
             var body = new VisualElement(); body.AddToClassList("lg-body");
-            var t = new Label($"{CountryLook.NameOf(g.Country)}'s orders"); t.AddToClassList("lg-text"); body.Add(t);
+            // One line: the ruler and its orders in brief; a click opens each order, each a link of its own.
+            var t = new Label($"{CountryLook.NameOf(g.Country)}: " + string.Join("; ", g.Items.Select(x => x.text))); t.AddToClassList("lg-text"); body.Add(t);
             foreach (var (text, line) in g.Items)
             {
                 var item = new Label("· " + char.ToUpperInvariant(text[0]) + text.Substring(1)); item.AddToClassList("lg-item");
@@ -418,8 +456,8 @@ namespace GreyBoxStrategy.Realm
             }
             if (showQuotes) foreach (var q in g.Quotes) { var ql = new Label($"“{q}”"); ql.AddToClassList("lg-quote"); body.Add(ql); }
             row.Add(body);
-            row.tooltip = "Click an order: find it on the map";
-            row.RegisterCallback<ClickEvent>(_ => LinePressed?.Invoke(g.Lines[0]));
+            row.tooltip = "Click: its orders, each to find on the map";
+            row.RegisterCallback<ClickEvent>(_ => row.ToggleInClassList("open"));
             if (fresh != null && g.Lines.Contains(fresh)) { row.AddToClassList("new"); row.schedule.Execute(() => row.RemoveFromClassList("new")).StartingIn(50); }
             return row;
         }
