@@ -29,10 +29,12 @@ namespace GreyBoxStrategy.Tests
         private static Move Refuse(CountryRequest r) => new Move(Actions.RefusePeace);
 
         /// <summary>Plays a turn: <paramref name="decide"/> answers (null holds); returns every request asked, in order.</summary>
-        private static List<CountryRequest> Turn(Game g, Func<CountryRequest, Move> decide = null)
+        private static List<CountryRequest> Turn(Game g, Func<CountryRequest, Move> decide = null, Action inCouncil = null)
         {
             var asked = new List<CountryRequest>();
             var requests = g.BeginTurn();
+            // After upkeep, as the council sits: the requests after the first are built on the world as the test sets it.
+            inCouncil?.Invoke();
             while (requests.Count > 0)
             {
                 asked.AddRange(requests);
@@ -87,11 +89,14 @@ namespace GreyBoxStrategy.Tests
             var me = g.World.Country("valen");
             me.Gold = 100000;
             int company = g.World.Levy(me); // a full company
-            // One company, and less than the smallest levy or a fort over.
+            // One company, and less than the smallest levy or a fort over, set as the council sits.
             int left = Math.Min(g.Rules.MinLevy * g.Rules.GoldPerSoldier, g.Rules.FortCost) - 1;
-            me.Gold = company * g.Rules.GoldPerSoldier + left;
-            int armyBefore = me.Army;
-            var asked = Turn(g, Court("valen", Actions.Recruit, Actions.Fortify));
+            int armyBefore = 0;
+            var asked = Turn(g, Court("valen", Actions.Recruit, Actions.Fortify), () =>
+            {
+                me.Gold = company * g.Rules.GoldPerSoldier + left;
+                armyBefore = me.Army;
+            });
             var courts = asked.Where(r => r.CountryId == "valen" && r.Moment == Moment.Council).ToList();
             Assert.That(courts[0].Legal.Any(m => m.Action == Actions.Recruit), Is.True);
             Assert.That(courts.Count, Is.EqualTo(2), "nothing left to order after the recruit, so the court answers none");
