@@ -136,6 +136,11 @@ namespace GreyBoxStrategy.Replay
         /// <summary>True for a game the dev menu touched, or played with stand-in rulers: never a measured game.</summary>
         public bool Dev;
         /// <summary>
+        /// The game was played with free orders (<see cref="GameRules.FreeOrders"/>); the replay plays it so, with the
+        /// person's court unlimited. A recording from before has none and replays as the writs turn.
+        /// </summary>
+        public bool FreeOrders;
+        /// <summary>
         /// The human player's merges and splits (#20), in the order given; each is given again in its turn's council
         /// before the recalls. A recording from before them has none, and replays as it always did.
         /// </summary>
@@ -161,6 +166,7 @@ namespace GreyBoxStrategy.Replay
             foreach (var d in (JArray)root["decisions"])
                 rec.Decisions.Add(ParseDecision((JObject)d));
             rec.Dev = (bool?)root["dev"] ?? false;
+            rec.FreeOrders = (bool?)root["freeOrders"] ?? false;
             rec.StoryArm = (string)root["storyArm"];
             if (root["devEdits"] is JArray edits)
                 foreach (var e in edits) rec.DevEdits.Add(new DevEdit { Turn = (int)e["turn"], Command = (string)e["command"] });
@@ -189,6 +195,8 @@ namespace GreyBoxStrategy.Replay
                 ["dev"] = Dev,
             };
             if (StoryArm != null) root["storyArm"] = StoryArm;
+            // Written only when true, so a writs game saves exactly as before.
+            if (FreeOrders) root["freeOrders"] = true;
             var players = new JObject();
             foreach (var kv in Players) players[kv.Key] = new JObject { ["model"] = kv.Value.Model, ["persona"] = kv.Value.Persona };
             root["players"] = players;
