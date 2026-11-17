@@ -217,6 +217,10 @@ CI check or a test starts enforcing a lesson, delete it from this list.
   test whose `Task` ends cancelled as passed, so a cancelled decision hides a failure.
 - **After merging `test` into a branch, diff it against the branch's head before the merge.**
   A merge with `test` silently dropped #90's memory tests and docs; c9d6160 restored them.
+- **Before every push, read `git diff --stat origin/test...HEAD` and `git diff --diff-filter=D --name-only origin/test...HEAD`.**
+  The first must list only your files and the second is usually empty. A `git reset --soft origin/test` after
+  `test` has moved commits your old tree on top of the new head and silently reverts everything merged since:
+  #343 would have deleted typed parameters (#342) and #344 a UI slice, both on 16 November, both green in CI.
 - **Check a pull request is still open before pushing to it** (`gh pr view <n> --json state`).
   Green pull requests merge fast: a commit pushed to #37 after its merge never reached `test`
   and had to become #38.
