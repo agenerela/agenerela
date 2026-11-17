@@ -13,6 +13,7 @@ model, a script or random, with personas; [the table of models](#models-at-one-t
 Stage 3, the map and the screen, has begun: [watch mode plays back a recorded game](#the-screen-watch-mode-playing-back-a-recorded-game).
 A [storyteller](#storyteller) that invents the game's events is built as an arm, `+storyteller`, and measured against the random event table.
 [Rules v2](../../docs/demos/painted-realm-rules-v2.md), the deeper game, is being built a slice at a time; [what exists so far](#rules-v2-being-built).
+How a turn is played in Rule mode, step by step with its timings, and three proposed changes: [`docs/demos/painted-realm-turn-flow.md`](../../docs/demos/painted-realm-turn-flow.md) (research, 16 November; nothing built).
 
 ## Play it
 
