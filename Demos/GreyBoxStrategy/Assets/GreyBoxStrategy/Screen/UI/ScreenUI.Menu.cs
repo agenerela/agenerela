@@ -494,6 +494,10 @@ namespace GreyBoxStrategy.Realm
             card.Add(Section2("GAME"));
             var speeds = GameSettings.Speeds;
             card.Add(Steps("Playback speed", speeds.Select(x => $"{x:0}×").ToArray(), Array.IndexOf(speeds, s.PlaybackSpeed), i => { s.PlaybackSpeed = speeds[i]; Changed(); }));
+            // The storyteller's event windows: the chronicle has every event under every choice.
+            var ew = Steps("Event windows", new[] { "All", "Mine only", "Off" }, (int)s.EventWindows, i => { s.EventWindows = (EventWindows)i; Changed(); });
+            ew.tooltip = "All: every storyteller event opens a window in the middle of the screen. Mine only: those striking your realm. Off: the chronicle and the map's bubble only.";
+            card.Add(ew);
 
             var eventNote = new Label(); eventNote.AddToClassList("src"); eventNote.style.whiteSpace = WhiteSpace.Normal;
             void EventNote() => eventNote.text = s.EventWindows

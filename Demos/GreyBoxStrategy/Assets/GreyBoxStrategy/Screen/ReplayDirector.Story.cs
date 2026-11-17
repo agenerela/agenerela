@@ -54,8 +54,50 @@ namespace GreyBoxStrategy.Realm
             ui.ShowCard(DecisionCard.From(new ReplayEvent { Turn = e.Turn, Kind = ReplayEventKind.Story, Decision = d, Text = e.Text }));
         }
 
-        // A storyteller event lands: the chronicler's banner where it strikes, the line, the numbers.
+        private readonly StoryQueue storyQueue = new StoryQueue();
+
+        // A storyteller event lands. An event with an effect opens the event window in the middle of the screen (the
+        // turn waits for it when you rule; watching, it closes by itself), a tale the banner under the top bar; the
+        // setting "Event windows" can keep either to your own realm or off, and then it is the chronicler's bubble.
         private IEnumerator LandStory(ReplayEvent e, ChronicleLine line)
+        {
+            var viewer = ui.Fog.Viewer;
+            var card = StoryCards.For(e, viewer, CountryLook.NameOf, Cap, ui.GameOver);
+            ui.EventWindowsSetting = settings?.EventWindows ?? EventWindows.All;
+            var show = StoryCards.Show(card, ui.EventWindowsSetting);
+            if (show == StoryShow.Bubble) { yield return LandStoryBubble(e, line); yield break; }
+            // The turn's windows, in the order they land: "1 of 2" when two land in one turn.
+            if (storyQueue.Turn != e.Turn || !storyQueue.Has(e))
+            {
+                var turn = game.Turns.FirstOrDefault(t => t.Turn == e.Turn);
+                storyQueue.Load(e.Turn, (turn?.Events ?? new List<ReplayEvent> { e }).Where(x => x.Kind == ReplayEventKind.Story && x.Story != null)
+                    .Select(x => StoryCards.For(x, viewer, CountryLook.NameOf, Cap, ui.GameOver))
+                    .Where(c => StoryCards.Show(c, ui.EventWindowsSetting) == StoryShow.Window));
+            }
+            if (e.ProvinceIndex >= 0) map.SetFocus(e.ProvinceIndex, 0.55f);
+            Show(e.After, null);
+            ui.AddLine(line);
+            if (ui.TalesOpen) ui.RenderTales();
+            if (show == StoryShow.Banner)
+            {
+                ui.ShowTaleBanner(card, StoryCards.StaySeconds(card, speed) + 2f);
+                yield return Wait(1.2f);
+                map.SetFocus(-1, 0);
+                yield break;
+            }
+            bool open = true;
+            ui.ShowEvent(e, storyQueue.Place(e), () => open = false);
+            bool waits = StoryCards.Waits(viewer, autoOrders || autoplaying);
+            float shut = Time.unscaledTime + StoryCards.StaySeconds(card, speed);
+            // Skip never waits: a jump ahead (skipUntilTurn) closes the window at once.
+            while (open && skipUntilTurn <= e.Turn && (waits || Time.unscaledTime < shut)) yield return null;
+            if (open) ui.DismissEvent();
+            storyQueue.Pass(e);
+            map.SetFocus(-1, 0);
+        }
+
+        // The chronicler's bubble where it strikes, the line, the numbers: the event when the setting keeps its window shut.
+        private IEnumerator LandStoryBubble(ReplayEvent e, ChronicleLine line)
         {
             if (e.ProvinceIndex >= 0) map.SetFocus(e.ProvinceIndex, 0.55f);
             var banner = ui.Tell(e, () => OpenEvent(e));

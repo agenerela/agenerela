@@ -89,6 +89,9 @@ countries deciding on one snapshot, and `Sim/` with no UnityEngine at all. The g
 
 ## 1. The turn
 
+How this turn plays out on the screen in Rule mode, what a person waits for and when, and three proposed changes to
+it are in [`painted-realm-turn-flow.md`](painted-realm-turn-flow.md) (research, 16 November).
+
 ### 1.1 What a country does in a turn
 
 **Writs.** A country has a number of **writs** each turn: sealed orders its court can send.
@@ -678,10 +681,11 @@ generals with traits; fog of war with totals visible.
   level 3), cut to what the treasury pays. The company joins an army of ours in that province, or
   forms a new one with a new general.
 - **Merging and splitting** (built 16 November, the human player's council only). Two or more armies of
-  one realm in one province, none marching, merge into the largest: soldiers and types add up, to the
-  100 cap; stores are the soldier-weighted average, rounded down; the largest army's general leads and
-  the others are dismissed. An army not marching splits 1 to size less one soldiers off as a new army
-  there: types in proportion, the same stores, no general. Neither costs a writ. No model court is
+  one realm in one province, none marching, merge into the senior general's army (longest in command, then the
+  larger, then the lower id), so a split and a merge back never reroll a general: soldiers and types
+  add up, to the 100 cap; stores are the soldier-weighted average, rounded down; the other generals are
+  dismissed. An army not marching splits 1 to size less one soldiers off as a new army
+  there: types in proportion, the same stores, and a general of its own, as a raised army gets. Neither costs a writ. No model court is
   offered either yet; offering them is a later A/B.
 - **Provinces without an army** defend with a militia of 5 plus 10 per walls level (*to tune*).
   Today's rule, where every province defends with 70% of the whole army, goes, since armies are now

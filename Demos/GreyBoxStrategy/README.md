@@ -13,6 +13,7 @@ model, a script or random, with personas; [the table of models](#models-at-one-t
 Stage 3, the map and the screen, has begun: [watch mode plays back a recorded game](#the-screen-watch-mode-playing-back-a-recorded-game).
 A [storyteller](#storyteller) that invents the game's events is built as an arm, `+storyteller`, and measured against the random event table.
 [Rules v2](../../docs/demos/painted-realm-rules-v2.md), the deeper game, is being built a slice at a time; [what exists so far](#rules-v2-being-built).
+How a turn is played in Rule mode, step by step with its timings, and three proposed changes: [`docs/demos/painted-realm-turn-flow.md`](../../docs/demos/painted-realm-turn-flow.md) (research, 16 November; nothing built).
 
 ## Play it
 
@@ -86,7 +87,9 @@ language model through the framework, fighting over 25 provinces on a painted se
    - Every country's army stands at its capital with its size, in every map mode.
    - Click a province, a crest or a chronicle line to open it. A chronicle line or a speech banner
      opens the decision behind it.
-   - Right-drag pans the map, and the wheel zooms.
+   - Right-drag pans the map, and the wheel zooms: a notch is a 20% step toward the cursor, eased over about a tenth
+     of a second, so out to in takes about twelve notches (`ScreenModels.WheelNotches`, `ZoomTarget`, `EaseZoom`).
+     It was tuned for 120 a notch, but the Input System reports 1 a notch by default, so a notch moved it 0.15%.
    - **Back to the start menu** in the pause menu ends the game and lets the RTX 5080 go.
 4. When you rule a country:
    - The orders panel, bottom centre, lists every move the rules offer you. These are the moves
@@ -839,18 +842,43 @@ Variant B's empty picture frames are filled, from an art pack made ahead of time
   has its picture, at the right shape; a missing picture is null; and a realm's panel hangs the portrait the
   catalogue chose. The three that read the pack were seen failing before the pack existed.
 
+### Free orders, the rules (17 November; the turn rework, slice 1)
+
+The lead's direction ([`painted-realm-direction.md`](../../docs/demos/painted-realm-direction.md)): no writs, the same
+rules for human and model realms, everyone ordering on one snapshot. This first part is the rules, behind
+`GameRules.FreeOrders` (off; off is the writs turn exactly as before). The rulers deciding while you plan, and the
+screen's side, come next.
+
+- **The court** gives orders one at a time until it answers `none`. A person's court follows gold alone. A model
+  court stops at `MaxCourtOrders` (3) a turn: a pacing setting that bounds its calls, not a rule of the game (a realm's
+  own number goes in `CourtOrdersOverride`). Each later request is built on the same snapshot, tells the orders already
+  given, and offers only what is left: the gold its earlier orders will spend is held back (`Country.Reserved`), and an
+  order given once is not offered again, except a recruit, which raises one more company.
+- **The armies.** Every order stands: a hold as much as a march or a siege. An army is asked again when a wake rule
+  fires, or when it has held `AskHoldingArmyEvery` (3) turns unasked, another pacing setting: in watch mode every
+  call is a wait. Armies the court recalled come first.
+- **No writs.** A ruler reads no "Writs:" line, and `ArmyWrits` is every army.
+- **Resolution** is unchanged. The held-back gold is released as the orders land, in the rules' order.
+- `Submit` keeps its shape: each answer returns that realm's next request. So the headless runners, the tables
+  (`-strategyRules FreeOrders=true`) and the replay play a free game with no change.
+
+**Tests**, each seen failing once against a deliberate break: `FreeOrderTests` (the court until none and the cap, the
+override, gold held back, orders not offered twice, which armies are asked and the holding timer, a whole game) and `FreeOrderReplayTests`
+(a scripted free game replays with no drift).
+
 ### Merging and splitting armies: the rules (16 November)
 
 The lead, after playing variant B: "a possibility to unify armies and separate". The rules are in the Sim; the
 buttons come in the screen's own pull request, built on the calls below.
 
-- **Merge.** Two or more of your armies in one province, none marching, become the largest of them (ties: the
-  lower id). Soldiers and each type add up, at most 100 (an army's cap, `ArmyMax`). Stores are the soldier-weighted
-  average in half-turns, rounded down. The largest army's general leads; the others are dismissed, and the chronicle
-  says so. A siege goes on where it was, since its progress belongs to the province.
+- **Merge.** Two or more of your armies in one province, none marching, become the army of the senior general, the one
+  longest in command (ties: the larger army, then the lower id), so splitting and merging back never rerolls a
+  general. Soldiers and each type add up, at most 100 (an army's cap, `ArmyMax`). Stores are the soldier-weighted
+  average in half-turns, rounded down. The other generals are dismissed, and the chronicle says so. A siege goes on where it was, since its progress belongs to the province.
 - **Split.** One army, not marching, gives 1 to its size less one soldiers to a new army in the same province. Each
   type goes in proportion, the remainder to the largest fractions, as losses are taken, so the totals hold. Both
-  keep the same stores level. The general stays with the original; the new army has none, and holds.
+  keep the same stores level. The general stays with the original; the new army gets a general of its own,
+  named as a newly raised army's is (every army has one), and holds.
 - **When.** On the writs turn, while the game waits for your orders and before they are given. Neither costs a writ.
   A merged or new army is ordered like any other, for its writ.
 - **Only yours.** No model court or marshal is offered either, and nothing a model reads changes:
@@ -864,7 +892,7 @@ For the screen (`RuleSession`, each returns null, or why not):
 | Call | Does |
 |---|---|
 | `CanMerge(armyIds)` | whether these armies can merge now |
-| `Merge(armyIds)` | merges them into the largest |
+| `Merge(armyIds)` | merges them into the senior general's army |
 | `CanSplit(armyId, soldiers)` | whether this army can split that many off now |
 | `Split(armyId, soldiers)` | splits them off; the new army's id is `Game.ArmyOrdersGiven.Last().Others[0]` |
 

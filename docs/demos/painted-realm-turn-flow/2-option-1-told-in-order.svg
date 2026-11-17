@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 388" width="1280" height="388" role="img" aria-labelledby="t d">
+  <title id="t">Option 1: the same turn, told in order</title>
+  <desc id="d">Option 1. The council opens with a short report of what upkeep did. The rivals give all their orders in the background while you plan, so End turn starts the resolution within a second. The resolution plays in five named steps, with your part first in each, and can be skipped.</desc>
+  <style>text{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif}</style>
+  <rect width="1280" height="388" rx="10" fill="#0d1117"/>
+  <text x="20" y="34" font-size="18" font-weight="600" fill="#e6edf3">Option 1: the same turn, told in order</text>
+  <rect x="12" y="56" width="1256" height="52" rx="6" fill="#161b22"/>
+  <text x="20" y="82" font-size="13" font-weight="600" fill="#e6edf3" dominant-baseline="middle">You</text>
+  <rect x="12" y="118" width="1256" height="52" rx="6" fill="#161b22"/>
+  <text x="20" y="137" font-size="13" font-weight="600" fill="#e6edf3" dominant-baseline="middle">Rival rulers</text>
+  <text x="20" y="154" font-size="11" fill="#8b949e" dominant-baseline="middle">the model, one call at a time</text>
+  <rect x="12" y="180" width="1256" height="36" rx="6" fill="#161b22"/>
+  <text x="20" y="198" font-size="13" font-weight="600" fill="#e6edf3" dominant-baseline="middle">The rules</text>
+  <rect x="12" y="226" width="1256" height="68" rx="6" fill="#161b22"/>
+  <text x="20" y="260" font-size="13" font-weight="600" fill="#e6edf3" dominant-baseline="middle">The screen</text>
+  <line x1="170.0" y1="52" x2="170.0" y2="302" stroke="#f0f6fc" stroke-width="1.5" stroke-dasharray="4 4" opacity=".6"/>
+  <line x1="713.0" y1="52" x2="713.0" y2="302" stroke="#f0f6fc" stroke-width="1.5" stroke-dasharray="4 4" opacity=".6"/>
+  <line x1="789.0" y1="52" x2="789.0" y2="302" stroke="#f0f6fc" stroke-width="1.5" stroke-dasharray="4 4" opacity=".6"/>
+  <line x1="1256.0" y1="52" x2="1256.0" y2="302" stroke="#f0f6fc" stroke-width="1.5" stroke-dasharray="4 4" opacity=".6"/>
+  <rect x="172.0" y="61" width="93.7" height="42" rx="5" fill="#12351f" stroke="#2ea043"/>
+  <text x="218.9" y="74.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Read the</text>
+  <text x="218.9" y="90.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">dawn report</text>
+  <rect x="269.7" y="61" width="441.3" height="42" rx="5" fill="#12351f" stroke="#2ea043"/>
+  <text x="490.4" y="82.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Council, as today: one court order and your armies</text>
+  <rect x="791.0" y="61" width="463.0" height="42" rx="5" fill="#12351f" stroke="#2ea043"/>
+  <text x="1022.5" y="82.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Watch the resolution, or skip to your next council</text>
+  <rect x="172.0" y="123" width="278.4" height="42" rx="5" fill="#11264f" stroke="#4d8eff"/>
+  <text x="311.2" y="136.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Every round of every rival, in the</text>
+  <text x="311.2" y="152.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">background: 13 to 18 calls, 6.5 to 9 s</text>
+  <rect x="715.0" y="123" width="72.0" height="42" rx="5" fill="#11264f" stroke="#4d8eff"/>
+  <text x="751.0" y="136.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Treaty</text>
+  <text x="751.0" y="152.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">answers</text>
+  <rect x="867.0" y="123" width="278.4" height="42" rx="5" fill="#11264f" stroke="#4d8eff"/>
+  <text x="1006.2" y="136.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Storyteller, then all of next turn&#x27;s</text>
+  <text x="1006.2" y="152.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">rounds</text>
+  <rect x="172.0" y="185" width="539.0" height="26" rx="5" fill="#21262d" stroke="#6e7681"/>
+  <text x="441.5" y="198.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">One snapshot, taken after upkeep. Nothing lands. Unchanged</text>
+  <rect x="791.0" y="185" width="72.0" height="26" rx="5" fill="#21262d" stroke="#6e7681"/>
+  <text x="827.0" y="198.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Resolve</text>
+  <rect x="867.0" y="185" width="126.3" height="26" rx="5" fill="#21262d" stroke="#6e7681"/>
+  <text x="930.2" y="198.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Next upkeep</text>
+  <rect x="172.0" y="231" width="93.7" height="58" rx="5" fill="#2a1d47" stroke="#a371f7"/>
+  <text x="218.9" y="244.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Dawn report:</text>
+  <text x="218.9" y="260.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">upkeep and</text>
+  <text x="218.9" y="276.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">events</text>
+  <rect x="269.7" y="231" width="441.3" height="58" rx="5" fill="#2a1d47" stroke="#a371f7"/>
+  <text x="490.4" y="260.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">Council panel, with &quot;3 of 5 courts have sealed their orders&quot;</text>
+  <rect x="791.0" y="231" width="93.7" height="58" rx="5" fill="#2a1d47" stroke="#a371f7"/>
+  <text x="837.9" y="252.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">1 Envoys and</text>
+  <text x="837.9" y="268.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">wars</text>
+  <rect x="888.8" y="231" width="93.7" height="58" rx="5" fill="#2a1d47" stroke="#a371f7"/>
+  <text x="935.6" y="252.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">2 Courts, as</text>
+  <text x="935.6" y="268.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">one list</text>
+  <rect x="986.5" y="231" width="82.9" height="58" rx="5" fill="#2a1d47" stroke="#a371f7"/>
+  <text x="1027.9" y="260.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">3 The march</text>
+  <rect x="1073.4" y="231" width="104.6" height="58" rx="5" fill="#2a1d47" stroke="#a371f7"/>
+  <text x="1125.7" y="252.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">4 Battles,</text>
+  <text x="1125.7" y="268.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">yours first</text>
+  <rect x="1182.0" y="231" width="72.0" height="58" rx="5" fill="#2a1d47" stroke="#a371f7"/>
+  <text x="1218.0" y="260.0" font-size="12" fill="#e6edf3" text-anchor="middle" dominant-baseline="middle">5 Land</text>
+  <text x="170.0" y="318" font-size="12" font-weight="600" fill="#f0f6fc" text-anchor="start">Council opens</text>
+  <text x="713.0" y="318" font-size="12" font-weight="600" fill="#f0f6fc" text-anchor="middle">End turn</text>
+  <text x="789.0" y="318" font-size="12" font-weight="600" fill="#f0f6fc" text-anchor="middle">Resolves</text>
+  <text x="1256.0" y="318" font-size="12" font-weight="600" fill="#f0f6fc" text-anchor="end">Next council opens</text>
+  <text x="20" y="342" font-size="13" fill="#c9d1d9">Not to scale. The rules, the snapshot and every model decision are the same as today; only when the calls are made and how the turn is shown change.</text>
+  <rect x="20" y="360" width="16" height="12" rx="3" fill="#12351f" stroke="#2ea043"/>
+  <text x="42" y="370" font-size="12" fill="#8b949e">you</text>
+  <rect x="85.2" y="360" width="16" height="12" rx="3" fill="#11264f" stroke="#4d8eff"/>
+  <text x="107.2" y="370" font-size="12" fill="#8b949e">model rulers (qwen3.5:4b)</text>
+  <rect x="291.2" y="360" width="16" height="12" rx="3" fill="#21262d" stroke="#6e7681"/>
+  <text x="313.2" y="370" font-size="12" fill="#8b949e">the rules</text>
+  <rect x="394.79999999999995" y="360" width="16" height="12" rx="3" fill="#2a1d47" stroke="#a371f7"/>
+  <text x="416.79999999999995" y="370" font-size="12" fill="#8b949e">what the screen shows</text>
+  <rect x="575.1999999999999" y="360" width="16" height="12" rx="3" fill="#3b2a08" stroke="#d29922"/>
+  <text x="597.1999999999999" y="370" font-size="12" fill="#8b949e">waiting</text>
+</svg>

@@ -85,6 +85,8 @@ namespace GreyBoxStrategy.Realm
             // Five countries in full can outgrow a 1080p bar and push Menu off the right edge: the bar then drops
             // each country's lesser stats ("tight") rather than clip the controls.
             root.schedule.Execute(FitTopBar).Every(400);
+            // Nothing is cut off at the bottom: windows fitted to the screen, scrolling lists shaded (ScreenUI.Layout.cs).
+            root.schedule.Execute(KeepLayout).Every(250);
 
             // ---- realm ----
             var realm = Panel("REALM", "realm");
@@ -155,6 +157,52 @@ namespace GreyBoxStrategy.Realm
             float need = 0;
             foreach (var c in nations.Children()) need += c.layout.width;
             if (!tight && need > nations.layout.width + 1) { Root.AddToClassList("tight"); tightAt = w; }
+            FitStats();
+        }
+
+        /// <summary>
+        /// The steps between the top bar's full form and its compact one, taken in turn while the stats and rivals do not
+        /// fit the room the bar has: 0 full; 1 "bare", the sub-labels go ("+5 a turn", "1 army", "of 3 writs"), their
+        /// words staying in each stat's tooltip; 2 "squeezed", smaller numbers and icons, as the compact form draws them;
+        /// 3 "narrow", the stats' icons go, each value keeping its caption (GOLD, SOLDIERS).
+        /// </summary>
+        public static int StatsStep(int step, float room, float need) => need > room - 1 ? Math.Min(StatsSteps.Length, step + 1) : step;
+
+        private static readonly string[] StatsSteps = { "bare", "squeezed", "narrow" };
+
+        private float statsAt = -1, lastNeed = -1;
+
+        // Measured, never a breakpoint, as the countries' "tight" is: one step a tick while it does not fit; all steps
+        // undone only when the bar's width changes, so it never flickers between two forms.
+        private void FitStats()
+        {
+            if (followBar == null || followBar.resolvedStyle.display == DisplayStyle.None || float.IsNaN(followBar.layout.width)) return;
+            float room = followBar.layout.width;
+            int step = 0;
+            while (step < StatsSteps.Length && Root.ClassListContains(StatsSteps[step])) step++;
+            if (step > 0 && Math.Abs(room - statsAt) > 1) { foreach (string c in StatsSteps) Root.RemoveFromClassList(c); return; }
+            float need = 0;
+            foreach (var c in followBar.Children())
+            {
+                if (c.resolvedStyle.position == Position.Absolute || c.resolvedStyle.display == DisplayStyle.None) continue;
+                // The rivals sit right with an auto margin, which resolves to the free room: their crests count, the margin not.
+                need += c.ClassListContains("rivals") ? NaturalWidth(c) : c.layout.width + c.resolvedStyle.marginLeft + c.resolvedStyle.marginRight;
+            }
+            // A step changes the stats' widths a frame later: step again only once the measure has held for a tick.
+            if (Math.Abs(need - lastNeed) > 0.5f) { lastNeed = need; return; }
+            int next = StatsStep(step, room, need);
+            if (next == step) return;
+            lastNeed = -1;
+            statsAt = room;
+            for (int i = 0; i < StatsSteps.Length; i++) Root.EnableInClassList(StatsSteps[i], next > i);
+        }
+
+        // A row's width with nothing squeezed: its children side by side, its padding and borders.
+        private static float NaturalWidth(VisualElement row)
+        {
+            float w = row.resolvedStyle.paddingLeft + row.resolvedStyle.paddingRight + row.resolvedStyle.borderLeftWidth + row.resolvedStyle.borderRightWidth;
+            foreach (var c in row.Children()) w += c.layout.width + c.resolvedStyle.marginLeft + c.resolvedStyle.marginRight;
+            return w;
         }
 
         /// <summary>The rules' numbers the screen shows: the Classic board's 15 of 25 in 30 turns, or a generated world's.</summary>
@@ -404,11 +452,12 @@ namespace GreyBoxStrategy.Realm
                 bool told = l.Event.Kind == ReplayEventKind.Story;
                 // One line in the feed; a click opens it in place, and its link finds it on the map (and its decision).
                 row.tooltip = l.Text;
-                row.RegisterCallback<ClickEvent>(_ => row.ToggleInClassList("open"));
+                row.RegisterCallback<ClickEvent>(_ => OpenEntry(row));
                 // The storyteller's events carry its crest, not the country they struck.
                 row.Add(new Crest(told ? CountryLook.Storyteller : CountryLook.Of(l.Country), 16));
                 // What kind of entry it is, at a glance: a battle, land, a treaty, gold, a building, a story.
-                var kind = new Icon(KindIcon(l.Category), 12) { Tint = KindTint(l.Category) }; kind.AddToClassList("lg-kind"); row.Add(kind);
+                // The storyteller's own mark, a scroll in gilt: a ruler's orders carry the quill.
+                var kind = new Icon(told ? IconKind.Scroll : KindIcon(l.Category), told ? 14 : 12) { Tint = told ? new Color32(236, 200, 120, 255) : KindTint(l.Category) }; kind.AddToClassList("lg-kind"); row.Add(kind);
                 if (told) row.AddToClassList("lg-tale");
                 var body = new VisualElement(); body.AddToClassList("lg-body");
                 var t = new Label(l.Text); t.AddToClassList("lg-text"); body.Add(t);
@@ -422,6 +471,29 @@ namespace GreyBoxStrategy.Realm
                 if (l == fresh) { row.AddToClassList("new"); row.schedule.Execute(() => row.RemoveFromClassList("new")).StartingIn(50); }
                 chronicleBody.Add(row);
             }
+        }
+
+        /// <summary>
+        /// Opens or folds a feed entry in place. An opened entry is scrolled into view whole, so it never ends on a half
+        /// line at the feed's foot; one taller than the feed shows from its top, and the feed scrolls for the rest.
+        /// </summary>
+        private void OpenEntry(VisualElement row)
+        {
+            row.ToggleInClassList("open");
+            if (!row.ClassListContains("open")) return;
+            // After the opened entry is laid out at its new height.
+            row.schedule.Execute(() => { if (chronicleBody is ScrollView v) v.scrollOffset = new Vector2(v.scrollOffset.x, EntryScroll(row.layout.y, row.layout.height, v.contentViewport.layout.height, v.scrollOffset.y)); }).StartingIn(30);
+        }
+
+        /// <summary>
+        /// Where the feed scrolls so an entry is whole in view: unchanged when it already is; its top at the top when it
+        /// is taller than the feed or starts above it; its foot at the foot otherwise.
+        /// </summary>
+        public static float EntryScroll(float top, float height, float viewport, float offset)
+        {
+            if (top >= offset && top + height <= offset + viewport) return offset;
+            if (height >= viewport || top < offset) return top;
+            return top + height - viewport;
         }
 
         /// <summary>The chronicle's icon for a kind of entry.</summary>
@@ -470,7 +542,7 @@ namespace GreyBoxStrategy.Realm
             if (showQuotes) foreach (var q in g.Quotes) { var ql = new Label($"“{q}”"); ql.AddToClassList("lg-quote"); body.Add(ql); }
             row.Add(body);
             row.tooltip = "Click: its orders, each to find on the map";
-            row.RegisterCallback<ClickEvent>(_ => row.ToggleInClassList("open"));
+            row.RegisterCallback<ClickEvent>(_ => OpenEntry(row));
             if (fresh != null && g.Lines.Contains(fresh)) { row.AddToClassList("new"); row.schedule.Execute(() => row.RemoveFromClassList("new")).StartingIn(50); }
             return row;
         }

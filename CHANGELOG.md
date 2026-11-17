@@ -20,6 +20,10 @@ phase table and the open issues, not here.
 
 ## [Unreleased]
 
+### Framework
+
+- **DR-024, accepted 17 November:** speech and images as two more provider kinds beside the language model (`ISpeechProvider`, `IImageProvider`), reached only through an agent's statement and through actions. Nothing is built; GreyBoxStrategy builds both in its own code first. Issues #358 and #359.
+
 ### Added
 
 - **Painted Realm: a start menu** (#20). The game opens on a title screen in its own look: the title and large
@@ -30,6 +34,11 @@ phase table and the open issues, not here.
   groups behind tabs (World, Rivals, Rules, Model). A game played or watched to its end is kept for Load a replay,
   newest first with the date, the turns and who won. Settings gained Event windows. The pause menu gained Quit and
   asks before a game under way is left. Continue stays hidden: nothing saves a game in progress yet.
+- **Painted Realm: free orders, the rules** (#20, the turn rework's first slice). `GameRules.FreeOrders` (off) plays the
+  writs turn without writs: a court gives orders until it answers none (three at most, a realm's own number by
+  override), its gold held back as it goes; an army is asked when woken or after holding three turns unasked. Off, the game and what
+  every model reads are unchanged. The rulers deciding while you plan, and the screen's side, follow.
+
 - **Painted Realm: the first art pack** (#20). Every ruler, general and storyteller event has a picture, made ahead of
   time on the team's asset server in one style, like an illuminated chronicle, and shipped with the game: 19 ruler
   portraits (three a persona, four neutral faces you click through for your own realm), 12 generals and 27 event
@@ -39,6 +48,33 @@ phase table and the open issues, not here.
   in code: a generated emblem did not read at the top bar's 14 px.
 
 ### Changed
+
+- **Painted Realm: the top bar never overlaps, and an opened feed entry shows whole** (#20). At 1707 × 1067 the
+  stats' sub-labels ran into the next stat's icon. Stats no longer shrink into each other; between the full and the
+  compact form the bar takes measured steps (sub-labels go, then smaller numbers and icons, then the icons), decided by
+  the stats' width against the bar's, never by a breakpoint. An entry opened at the feed's foot now scrolls into view
+  whole. `LayoutTests`.
+- **Painted Realm: the storyteller's events and tales are impossible to miss** (#20). Every event now opens a window in
+  the middle of the screen, in the style of a grand strategy game's: the art pack's picture, the title, the story, each
+  realm struck with its effect as icons, and So be it. Every event, tales too, stops the turn until dismissed, ruling or
+  watching. A rival's event under fog shows the news, not its cost. The feed marks the storyteller's entries in gilt. A
+  new setting, Event windows: all (each stops the turn), mine only, off. Slots for choice buttons and a speaker button
+  are marked, not built. `StoryCards`, `StoryCardsTests`.
+- **Painted Realm: nothing is cut off at the bottom** (#20). An audit at six game-view sizes, 1280 × 720 to 2560 × 1440,
+  found windows opening over the top bar, the tales panel over the outliner, the diplomacy table running off small
+  screens and lists ending on half a row with nothing to say more lay below. Windows now open under the top bar, fit
+  the room below them and scroll inside; every scrolling list fades at its foot while more lies below; every panel
+  keeps its bottom padding; the tales take the outliner's place; the advisor's counsel folds after three lines behind
+  **more**. `ScreenUI.Layout.cs`, `LayoutTests`.
+- **Painted Realm: the mouse wheel zooms in clear steps** (#20). A notch zoomed 0.15%: the code read the wheel in
+  Windows' units (120 a notch) while the Input System reports 1 a notch by default. A notch is now a 20% step toward
+  the cursor, eased over about a tenth of a second, and either unit reads as the same notch; a trackpad's small
+  readings are fractions of one.
+
+- **Painted Realm: the senior general leads a merged army, and a split-off army gets a general** (#20). A merge now
+  keeps the army of the general longest in command (`General.CommandSince`; ties to the larger army, then the lower
+  id), not the largest, so splitting off the majority and merging back never rerolls a general. A split-off army is
+  given a general at once, as a newly raised army is. Human orders only; nothing a model reads changes.
 
 - **Painted Realm: the inspector window and the council's foot** (#20). With the decision inspector open, a click
   on the map outside it only closes it, as Esc does, so dismissing it never also orders a march. End turn stays
@@ -58,6 +94,11 @@ phase table and the open issues, not here.
   general for the new one), each at once and for no writ. `RuleSession.CanMerge`, `Merge`, `CanSplit` and `Split`
   are the screen's calls; the buttons follow. Recorded and replayed; older recordings replay as before. No model is
   offered either, and a test pins that every request a model reads is byte for byte as before.
+- **Painted Realm: research on how a turn is played** (#20). `docs/demos/painted-realm-turn-flow.md` describes a Rule
+  mode turn step by step from the code, a real model game's log and games played for it, with timings (about 5 s of
+  waiting after End turn, about 37 s of playback at 1×, of which about 5 s is your own realm); ranks what is likely
+  to feel strange; and proposes three options with timelines, from the same turn told in order to a clock with
+  pause. No game code changed.
 
 - **Land traditions measured on generated worlds** (#20). Twelve paired games on `qwen3.5:4b`: a court buys 8 points
   more of its land's type with the rule on ([+2.4, +13.4]), as on Classic, and the counter 8 points less often
