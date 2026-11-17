@@ -163,6 +163,8 @@ namespace GreyBoxStrategy.Screen.Tests
             List<string> In(int g) => groups[g].Query<Label>().ToList().Select(l => l.text).ToList();
             Assert.That(In(0), Has.Some.EqualTo("Size").And.Some.EqualTo("Shape").And.Some.EqualTo("Countries").And.Some.EqualTo("SEED"));
             Assert.That(In(1), Has.Some.EqualTo("Rulers").And.Some.EqualTo("Advisor").And.Some.EqualTo("THEIR PERSONAS").And.Some.EqualTo("Warmonger"));
+            Assert.That(In(1), Has.Some.EqualTo("Your face"));
+            Assert.That(groups[1].Query<Button>(className: "face-pick").ToList().Count, Is.EqualTo(ArtCatalogue.PlayerFaces), "the four neutral faces");
             Assert.That(In(2), Has.Some.EqualTo("Victory").And.Some.EqualTo("Sieges").And.Some.EqualTo("Storyteller"));
             Assert.That(In(3), Has.Some.EqualTo("THE MODEL"));
             Assert.That(In(0), Has.None.EqualTo("Victory"));

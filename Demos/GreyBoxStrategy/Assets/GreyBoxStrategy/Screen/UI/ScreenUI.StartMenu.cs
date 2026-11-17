@@ -80,34 +80,38 @@ namespace GreyBoxStrategy.Realm
         }
 
         /// <summary>
-        /// A dark veil that is nearly solid behind the buttons and clears toward the right, so the map shows: vertical
-        /// bands, each a little lighter than the last (UI Toolkit draws no gradients of its own).
+        /// A dark veil that is nearly solid behind the buttons and clears toward the right, so the map shows: one strip
+        /// of texture, dark to light, stretched over the screen (UI Toolkit draws no gradients of its own).
         /// </summary>
         private sealed class TitleVeil : VisualElement
         {
-            public const int Bands = 24;
+            private static Texture2D ramp;
 
             public TitleVeil()
             {
                 pickingMode = PickingMode.Ignore;
                 AddToClassList("title-veil");
-                for (int i = 0; i < Bands; i++)
-                {
-                    float x = i / (float)Bands;
-                    // Solid to 30%, then easing to a light wash at the right edge.
-                    float t = Mathf.Clamp01((x - 0.30f) / 0.45f);
-                    float alpha = Mathf.Lerp(0.90f, 0.22f, t * t * (3 - 2 * t));
-                    Add(new VisualElement
-                    {
-                        pickingMode = PickingMode.Ignore,
-                        style =
-                        {
-                            position = Position.Absolute, top = 0, bottom = 0,
-                            left = Length.Percent(100f * i / Bands), width = Length.Percent(100f / Bands + 0.2f),
-                            backgroundColor = new Color(9 / 255f, 7 / 255f, 5 / 255f, alpha),
-                        },
-                    });
-                }
+                style.backgroundImage = new StyleBackground(Ramp());
+                style.backgroundSize = new BackgroundSize(BackgroundSizeType.Length) { x = Length.Percent(100), y = Length.Percent(100) };
+            }
+
+            /// <summary>Solid to 30% of the width, then easing to a light wash at the right edge.</summary>
+            public static float Alpha(float x)
+            {
+                float t = Mathf.Clamp01((x - 0.30f) / 0.45f);
+                return Mathf.Lerp(0.90f, 0.22f, t * t * (3 - 2 * t));
+            }
+
+            private static Texture2D Ramp()
+            {
+                if (ramp != null) return ramp;
+                const int w = 256;
+                ramp = new Texture2D(w, 1, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, hideFlags = HideFlags.HideAndDontSave };
+                var px = new Color32[w];
+                for (int i = 0; i < w; i++) px[i] = new Color32(9, 7, 5, (byte)Mathf.RoundToInt(255 * Alpha(i / (float)(w - 1))));
+                ramp.SetPixels32(px);
+                ramp.Apply();
+                return ramp;
             }
         }
 
@@ -274,6 +278,28 @@ namespace GreyBoxStrategy.Realm
             var backB = new Button(back) { text = "Back" }; backB.AddToClassList("menu-button"); backB.AddToClassList("quiet");
             var foot = Row(backB); foot.style.marginTop = 10; card.Add(foot);
             Ornament();
+        }
+
+        // ---- New game: your ruler's face ----
+
+        /// <summary>The art pack's four neutral faces for your own realm, the one you wear framed (<see cref="YourFace"/>).</summary>
+        private VisualElement FacePicker()
+        {
+            var row = new VisualElement(); row.AddToClassList("set-row"); row.AddToClassList("face-row");
+            row.Add(new Label("Your face") { style = { width = 130 } });
+            var faces = new List<Button>();
+            for (int i = 0; i < ArtCatalogue.PlayerFaces; i++)
+            {
+                int k = i;
+                var b = new Button { tooltip = "Wear this face when you rule" }; b.AddToClassList("face-pick");
+                var tex = ArtCatalogue.Portrait($"you-{i + 1}");
+                if (tex != null) b.style.backgroundImage = new StyleBackground(tex);
+                else b.text = (i + 1).ToString();
+                b.clicked += () => { YourFace = k; for (int j = 0; j < faces.Count; j++) faces[j].EnableInClassList("pick", j == k); };
+                b.EnableInClassList("pick", i == YourFace);
+                faces.Add(b); row.Add(b);
+            }
+            return row;
         }
 
         // ---- a confirmation ----

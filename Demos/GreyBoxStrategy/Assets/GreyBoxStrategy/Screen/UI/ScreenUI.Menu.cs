@@ -254,6 +254,7 @@ namespace GreyBoxStrategy.Realm
                 }
             }
             rivalsG.Add(crests);
+            rivalsG.Add(FacePicker());
 
             rivalsG.Add(Section2("THE RULERS", "language models on a server, or the rules' own scripted rulers"));
             var rulersNote = new Label(); rulersNote.AddToClassList("src"); rulersNote.style.whiteSpace = WhiteSpace.Normal;
