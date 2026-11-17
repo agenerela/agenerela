@@ -83,6 +83,7 @@ namespace GreyBoxStrategy.Realm
                 var b = new VisualElement { tooltip = tabs[i].name }; b.AddToClassList("ktab");
                 b.Add(new Icon(tabs[i].icon, 13)); b.Add(new Label(tabs[i].name));
                 b.RegisterCallback<ClickEvent>(_ => Show(k));
+                b.userData = (Action)(() => Show(k)); // what a click runs, for the CLI and tests
                 buttons.Add(b); strip.Add(b);
             }
             into.Add(strip); into.Add(page);
@@ -103,8 +104,8 @@ namespace GreyBoxStrategy.Realm
         {
             VisualElement hit = null;
             side.Query(className: "ktab").ForEach(t => { if (t.Q<Label>()?.text == name) hit = t; });
-            if (hit == null) return false;
-            using (var e = ClickEvent.GetPooled()) { e.target = hit; hit.SendEvent(e); }
+            if (!(hit?.userData is Action show)) return false;
+            show();
             return true;
         }
     }
