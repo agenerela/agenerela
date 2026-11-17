@@ -44,6 +44,11 @@ phase table and the open issues, not here.
   the room below them and scroll inside; every scrolling list fades at its foot while more lies below; every panel
   keeps its bottom padding; the tales take the outliner's place; the advisor's counsel folds after three lines behind
   **more**. `ScreenUI.Layout.cs`, `LayoutTests`.
+- **Painted Realm: the mouse wheel zooms in clear steps** (#20). A notch zoomed 0.15%: the code read the wheel in
+  Windows' units (120 a notch) while the Input System reports 1 a notch by default. A notch is now a 20% step toward
+  the cursor, eased over about a tenth of a second, and either unit reads as the same notch; a trackpad's small
+  readings are fractions of one.
+
 - **Painted Realm: the senior general leads a merged army, and a split-off army gets a general** (#20). A merge now
   keeps the army of the general longest in command (`General.CommandSince`; ties to the larger army, then the lower
   id), not the largest, so splitting off the majority and merging back never rerolls a general. A split-off army is
