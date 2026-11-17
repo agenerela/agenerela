@@ -750,8 +750,8 @@ a hungry one none from its hunger line.
 ### The screen, variant B: the panels (16 November)
 
 Slice 2: the province, army and realm views on the left are built from one kit (`ScreenUI.Rows.cs`).
-- **Header band:** a large crest, a portrait frame (the persona's face where the game has one, an empty frame
-  otherwise), the name and a line under it.
+- **Header band:** a large crest, an empty portrait frame (every realm alike, until generated portraits come), the
+  name and a line under it.
 - **Tabs with icons**, each remembered per kind of view:
   - **Army:** Army, General, Orders, Battles.
   - **Province:** Holding, Land (generated worlds), Orders (rule mode) or Attack (watch mode), History.

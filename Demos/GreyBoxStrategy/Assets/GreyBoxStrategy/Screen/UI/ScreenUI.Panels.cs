@@ -576,15 +576,9 @@ namespace GreyBoxStrategy.Realm
         {
             var look = CountryLook.Of(id); var player = Players?.GetValueOrDefault(id);
             var body = SideHead(id == You ? "YOUR REALM" : "REALM");
-            // The persona's face where the game has one, in the portrait's frame; an empty frame otherwise.
-            VisualElement face;
-            if (portraits != null && player?.Persona != null)
-            {
-                var img = new Image { image = portraits, uv = Faces.Uv(player.Persona, look.Slot % 2), scaleMode = ScaleMode.ScaleAndCrop };
-                img.style.width = 52; img.style.height = 62; img.AddToClassList("portrait-slot");
-                face = img;
-            }
-            else face = new PortraitSlot(52, 62);
+            // An empty frame for every realm, yours and your rivals' alike, until generated portraits come (the lead, 16
+            // November). The persona sheet has a face only for model rulers, never for you.
+            VisualElement face = new PortraitSlot(52, 62, $"{look.Name}'s ruler: a portrait will hang here");
             var head = KitHeader(look, look.Name, id == You ? "You rule it" : $"the {player?.Persona ?? "ruler"}" + (player?.Model != null ? " · " + player.Model : ""), face);
             if (!Fog.On)
             {
