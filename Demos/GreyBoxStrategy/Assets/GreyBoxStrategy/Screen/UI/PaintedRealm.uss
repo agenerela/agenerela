@@ -615,7 +615,12 @@
 .inspector .ktabs { padding-top: 8px; }
 .inspector .sec { margin-top: 2px; flex-shrink: 0; }
 .inspector .sec > * { flex-shrink: 0; }
+.advice-row, .advice-all { margin-right: 8px; } /* clear of the council's scrollbar */
+.advice-take, .advice-why { flex-shrink: 0; }
+.timebar-part { margin: 0; padding: 0 4px; } /* a label's default margins left the fill 8 px of the bar's 14 */
 .writ-seal { margin-right: 3px; }
 .end-turn { font-size: 17px; height: 40px; padding-left: 22px; padding-right: 22px; -unity-font-style: bold; border-width: 2px; border-color: rgb(201, 164, 90); background-color: rgb(92, 66, 30); }
 .end-turn:hover { background-color: rgb(120, 88, 40); }
+.orders .end-turn { align-self: center; flex-shrink: 0; margin-top: 0; }
+.compact .orders .end-turn { height: 34px; font-size: 15px; }
 .orders .panel-head { height: 38px; }

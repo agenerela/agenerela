@@ -582,29 +582,28 @@ namespace GreyBoxStrategy.Realm
 
         private void PlaceBanner(Banner b)
         {
-            // Above the capital, but kept in the space between the realm list and the chronicle, so
-            // no panel, the inspector included, ever hides a ruler's words.
+            // Above the capital, but never under a panel or off the screen (ScreenModels.PlaceWords).
             var p = ProvinceToPanel(b.Province);
             float half = Mathf.Max(60, b.Element.resolvedStyle.width) / 2, height = Mathf.Max(40, b.Element.resolvedStyle.height);
-            float minX = 248 + half, maxX = Root.layout.width - 356 - half;
-            float x = maxX > minX ? Mathf.Clamp(p.x, minX, maxX) : p.x;
-            float bottom = Mathf.Max(50 + height, p.y - 26); // the banner hangs above this line (translate -100%)
-            if (InspectorOpen)
-            {
-                // The inspector is a window in the middle: the words go to the nearer side of it that has
-                // room, or below it when neither side has (a small screen).
-                var w = Root.WorldToLocal(inspector.worldBound);
-                if (x + half > w.xMin && x - half < w.xMax && bottom > w.yMin && bottom - height < w.yMax)
-                {
-                    float left = w.xMin - 8 - half, right = w.xMax + 8 + half;
-                    bool leftFits = left >= minX, rightFits = right <= maxX;
-                    if (leftFits && (!rightFits || x - left <= right - x)) x = left;
-                    else if (rightFits) x = right;
-                    else bottom = w.yMax + 8 + height;
-                }
-            }
+            chronicleBox ??= Root.Q(className: "chronicle");
+            ScreenModels.Box BoxOf(VisualElement e) { var r = Root.WorldToLocal(e.worldBound); return new ScreenModels.Box(r.x, r.y, r.width, r.height); }
+            var below = new List<ScreenModels.Box>();
+            foreach (var panel in new[] { chronicleBox, orders })
+                if (panel != null && panel.resolvedStyle.display != DisplayStyle.None) below.Add(BoxOf(panel));
+            var (x, bottom) = ScreenModels.PlaceWords(p.x, p.y, half, height, Root.layout.width, Root.layout.height,
+                SideOpen ? BoxOf(side) : (ScreenModels.Box?)null, below, InspectorOpen ? BoxOf(inspector) : (ScreenModels.Box?)null);
             b.Element.style.left = x;
             b.Element.style.top = bottom;
+        }
+
+        private VisualElement chronicleBox;
+
+        /// <summary>For the CLI: where each shown banner is drawn, in the root's coordinates.</summary>
+        public List<Rect> BannerRects()
+        {
+            var list = new List<Rect>();
+            foreach (var b in banners) list.Add(Root.WorldToLocal(b.Element.worldBound));
+            return list;
         }
 
         // ---- battle marks: the arrow, the swords and the score ----
