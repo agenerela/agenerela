@@ -216,11 +216,71 @@ namespace GreyBoxStrategy.Tests
             Assert.That(fresh.Location, Is.EqualTo(big.Location), "in the same province");
             Assert.That(fresh.HalfStores, Is.EqualTo(big.HalfStores).And.EqualTo(8), "the same stores level for both");
             Assert.That(big.General.Title, Is.EqualTo("Toma the Bold"), "the general stays with the original");
-            Assert.That(fresh.General, Is.Null, "the new army has none");
+            var raised = GeneralTraits.For(g.World, fresh);
+            Assert.That(fresh.General, Is.Not.Null, "every army has a general: the new one gets its own");
+            Assert.That((fresh.General.Title, fresh.General.CommandSince), Is.EqualTo((raised.Title, g.World.Turn)), "named as a newly raised army's is, in command from this turn");
             Assert.That(fresh.Marching || fresh.Awaiting, Is.False, "it holds where it stands");
             Assert.That(g.World.ArmiesOf("valen").Count(), Is.EqualTo(before + 1));
             Assert.That(g.World.Country("valen").Army, Is.EqualTo(g.World.ArmiesOf("valen").Sum(a => a.Soldiers)), "no soldier made or lost");
-            Assert.That(record.Text, Does.Contain($"as {fresh.Id}, with no general"));
+            Assert.That(record.Text, Does.Contain($"as {fresh.Id}, led by {fresh.General.Title}"));
+        }
+
+        [Test]
+        public void Split_WithGeneralsOff_TheNewArmyHasNone()
+        {
+            var r = Rules();
+            r.Generals = false;
+            var g = New(r);
+            Turn(g);
+            g.BeginTurn();
+            var a = g.World.ArmiesOf("valen").OrderByDescending(x => x.Soldiers).First();
+            Assert.That(g.Split("valen", a.Id, a.Soldiers / 2), Is.Null);
+            Assert.That(g.World.FindArmy(g.ArmyOrdersGiven.Single().Others.Single()).General, Is.Null);
+        }
+
+        [Test]
+        public void Merge_TheSeniorGeneralLeads_LongestInCommand_ThenTheLarger_ThenTheLowerId()
+        {
+            var g = New();
+            Turn(g);
+            g.BeginTurn();
+            var (big, mid, small) = ThreeAt(g);
+            big.General.CommandSince = 5; mid.General.CommandSince = 2; small.General.CommandSince = 2;
+            Assert.That(g.Merge("valen", new[] { big.Id, mid.Id, small.Id }), Is.Null);
+            var kept = g.World.ArmiesOf("valen").Single();
+            Assert.That(kept.Id, Is.EqualTo("milo_host"), "in command since turn 2, and larger than bea_host, also since 2");
+            Assert.That(kept.General.Title, Is.EqualTo("Milo the Wary"));
+            Assert.That(kept.Soldiers, Is.EqualTo(75));
+            Assert.That(g.ArmyOrdersGiven.Single().Dismissed, Is.EqualTo(new[] { "Bea the Swift", "Toma the Bold" }));
+        }
+
+        [Test]
+        public void SplittingOffTheMajority_AndMergingBack_NeverRerollsTheGeneral()
+        {
+            var g = New();
+            Turn(g);
+            Turn(g);
+            var a = g.World.ArmiesOf("valen").OrderByDescending(x => x.Soldiers).First();
+            a.Soldiers = 40;
+            g.World.Country("valen").Army = g.World.ArmiesOf("valen").Sum(x => x.Soldiers);
+            string before = a.General.Title;
+            int since = a.General.CommandSince;
+            Assert.That(since, Is.LessThan(g.World.Turn + 1), "in command before this turn");
+
+            // Split off the larger part, so the new army is the bigger one with a fresh general, then merge back.
+            var report = Turn(g, x =>
+            {
+                Assert.That(x.Split("valen", a.Id, 30), Is.Null);
+                string fresh = x.ArmyOrdersGiven.Last().Others.Single();
+                Assert.That(x.World.FindArmy(fresh).Soldiers, Is.GreaterThan(a.Soldiers), "the new army is the larger");
+                Assert.That(x.World.FindArmy(fresh).General, Is.Not.Null, "the new army has its own general");
+                Assert.That(x.Merge("valen", new[] { a.Id, fresh }), Is.Null);
+            });
+            var back = g.World.FindArmy(a.Id);
+            Assert.That(back, Is.Not.Null, "the original army stays");
+            Assert.That((back.General.Title, back.General.CommandSince), Is.EqualTo((before, since)), "its general leads, as before");
+            Assert.That(back.Soldiers, Is.EqualTo(40));
+            Assert.That(report.ArmyOrders.Last().Dismissed.Count, Is.EqualTo(1), "the split-off general is dismissed");
         }
 
         [Test]

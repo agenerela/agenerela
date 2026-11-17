@@ -120,7 +120,7 @@ namespace GreyBoxStrategy.Screen.Tests
             var lines = orders.Select(e => Chronicle.Line(e, id => char.ToUpperInvariant(id[0]) + id.Substring(1))).ToList();
             Assert.That(lines.All(l => l != null && l.Text.Length > 0), Is.True, "the chronicle tells each");
             Assert.That(lines.Any(l => l.Text.Contains(" merges ")), Is.True);
-            Assert.That(lines.Any(l => l.Text.Contains(" splits ") && l.Text.Contains("with no general")), Is.True);
+            Assert.That(lines.Any(l => l.Text.Contains(" splits ") && l.Text.Contains(", led by ")), Is.True, "the new army's general is named");
             foreach (var e in orders)
             {
                 var after = e.After.Armies;
