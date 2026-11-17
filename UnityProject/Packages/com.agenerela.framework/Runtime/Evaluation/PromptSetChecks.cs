@@ -64,7 +64,7 @@ namespace Agenerela.Evaluation
 
         /// <summary>
         /// Where <paramref name="profile"/> and the actions <paramref name="set"/> declares disagree:
-        /// an action only one of them has, or one whose need for a target differs. <c>none</c> is in
+        /// an action only one of them has, or one whose target differs: required, optional or never taken. <c>none</c> is in
         /// every set and no profile. The window shows these and never fixes them.
         /// </summary>
         public static IReadOnlyList<string> CompareWithProfile(PromptSet set, AgentProfile profile)
@@ -82,8 +82,14 @@ namespace Agenerela.Evaluation
                 else if (declared.NeedsTarget != action.RequiresTarget)
                 {
                     differences.Add(action.RequiresTarget
-                        ? $"'{action.Id}' requires a target in the profile, but the set says it takes none"
-                        : $"'{action.Id}' takes no target in the profile, but the set says it needs one");
+                        ? $"'{action.Id}' requires a target in the profile, but the set says it does not"
+                        : $"'{action.Id}' does not require a target in the profile, but the set says it does");
+                }
+                else if (declared.TakesNoTarget != action.TakesNoTarget)
+                {
+                    differences.Add(action.TakesNoTarget
+                        ? $"'{action.Id}' takes no target in the profile, but the set says it may take one"
+                        : $"'{action.Id}' may take a target in the profile, but the set says it takes none");
                 }
             }
 
@@ -163,11 +169,13 @@ namespace Agenerela.Evaluation
                 return;
             }
 
+            // Three states since DR-020, not two: an action requires a target, never takes one, or
+            // leaves it optional. Only the first two constrain the answer.
             if (declared.NeedsTarget && noTarget)
             {
                 add(PromptRule.ActionNeedsTarget, $"{action} needs a target, so it cannot take no_target");
             }
-            else if (!declared.NeedsTarget && (targets.Count != 1 || !noTarget))
+            else if (declared.TakesNoTarget && (targets.Count != 1 || !noTarget))
             {
                 add(PromptRule.ActionTakesNoTarget, $"{action} takes no target: use no_target");
             }

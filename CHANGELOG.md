@@ -20,6 +20,16 @@ phase table and the open issues, not here.
 
 ## [Unreleased]
 
+### Added
+
+- **Painted Realm: the first art pack** (#20). Every ruler, general and storyteller event has a picture, made ahead of
+  time on the team's asset server in one style, like an illuminated chronicle, and shipped with the game: 19 ruler
+  portraits (three a persona, four neutral faces you click through for your own realm), 12 generals and 27 event
+  pictures. A realm keeps its face for the whole game and in its replay, and no two realms of one game share a
+  face; the portraits hang in the top bar, the realm and army panels, the inspector, the envoy's card and the end
+  screen. `ArtCatalogue` chooses them, and the event window can ask it for its picture. Flags stay the crests drawn
+  in code: a generated emblem did not read at the top bar's 14 px.
+
 ### Changed
 
 - **Painted Realm: the mouse wheel zooms in clear steps** (#20). A notch zoomed 0.15%: the code read the wheel in

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Agenerela.Evaluation;
@@ -93,10 +94,26 @@ namespace Agenerela.Tests.Evaluation
         [Test]
         public void AnActionThatTakesNoTargetIsNotGivenOne()
         {
+            set.FindAction("follow_player").TakesNoTarget = true;
             var prompt = Valid();
             prompt.ExpectedAction = "follow_player";
 
             AssertBreaks(prompt, PromptRule.ActionTakesNoTarget);
+        }
+
+        [Test]
+        public void AnActionWhoseTargetIsOptionalTakesEitherAnswer()
+        {
+            // DR-020: needsTarget false on its own leaves the target optional. Reading it as
+            // "takes no target" is what this check used to do, and it flagged a correct prompt.
+            var prompt = Valid();
+            prompt.ExpectedAction = "follow_player";
+
+            Assert.That(Rules(prompt), Has.No.Member(PromptRule.ActionTakesNoTarget), "A target is allowed.");
+
+            prompt.ExpectedTarget = ExpectedTarget.NoTarget;
+
+            Assert.That(Rules(prompt), Has.No.Member(PromptRule.ActionNeedsTarget), "So is no_target.");
         }
 
         [Test]
@@ -262,6 +279,14 @@ namespace Agenerela.Tests.Evaluation
             Assert.That(set.FindAction("move_to").NeedsTarget, Is.False, "The set is left as it was.");
         }
 
+        [Test]
+        public void ADifferenceInTakingNoTargetIsReported()
+        {
+            set.FindAction("follow_player").TakesNoTarget = true;
+
+            Assert.That(PromptSetChecks.CompareWithProfile(set, profile), Has.Some.Contains("follow_player"));
+        }
+
         // ---- An example that carries its situation (#216 item 1) ----------------------------------
 
         [Test]
@@ -319,6 +344,10 @@ namespace Agenerela.Tests.Evaluation
             Assert.That(PromptSetChecks.CheckPrompt(set, commands, prompt, profile), Is.Empty, "The valid prompt is not valid.");
             return prompt;
         }
+
+        /// <summary>The rules <paramref name="prompt"/> breaks, for asserting that it breaks none.</summary>
+        private IEnumerable<PromptRule> Rules(EvalPrompt prompt)
+            => PromptSetChecks.CheckPrompt(set, commands, prompt, profile).Select(p => p.Rule);
 
         private void AssertBreaks(EvalPrompt prompt, PromptRule rule)
         {
