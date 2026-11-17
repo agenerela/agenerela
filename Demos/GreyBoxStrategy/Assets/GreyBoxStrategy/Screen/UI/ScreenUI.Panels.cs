@@ -654,6 +654,8 @@ namespace GreyBoxStrategy.Realm
             var t = new Label("DIPLOMACY"); t.AddToClassList("panel-title"); head.Add(t);
             var close = new Button(CloseDiplomacy) { text = "×", tooltip = "Close (Esc)" }; close.AddToClassList("tbtn"); head.Add(close);
             diplomacy.Add(head);
+            // A world of many realms makes a tall table: it scrolls inside the window rather than run off the screen.
+            var body = new ScrollView(); diplomacy.Add(body);
             var grid = new VisualElement { style = { paddingLeft = 10, paddingRight = 10, paddingTop = 8, paddingBottom = 8 } };
             var hr = new VisualElement(); hr.AddToClassList("mx-row"); hr.Add(new VisualElement { style = { width = 110 } });
             foreach (var b in CountryIds) { var cell = new VisualElement(); cell.AddToClassList("mx-head"); cell.Add(new Crest(CountryLook.Of(b), 16)); cell.Add(new Label(CountryLook.NameOf(b))); hr.Add(cell); }
@@ -677,14 +679,17 @@ namespace GreyBoxStrategy.Realm
                 }
                 grid.Add(row);
             }
-            diplomacy.Add(grid);
+            body.Add(grid);
             var env = new VisualElement(); env.AddToClassList("sec");
             env.Add(new Label("THIS TURN'S ENVOYS") { style = { fontSize = 10, color = new Color(0.55f, 0.5f, 0.4f), letterSpacing = 2 } });
             var list = envoysThisTurn.ToList();
             if (list.Count == 0) env.Add(Note($"None on turn {turn}. Envoys are answered before any move lands; an accepted offer is a 5-turn truce."));
             foreach (var e in list) env.Add(Note(Chronicle.Line(e, CountryLook.NameOf)?.Text ?? e.Text));
-            diplomacy.Add(env);
+            body.Add(env);
             diplomacy.AddToClassList("on");
+            // A window over the map: in front of the council and the feed, never under them.
+            diplomacy.BringToFront();
+            KeepLayout();
         }
     }
 }

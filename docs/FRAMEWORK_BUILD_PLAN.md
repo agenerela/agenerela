@@ -2650,6 +2650,84 @@ come through the Prompt Set window (#134), not this record.
 
 ---
 
+### DR-024 — Speech and images are two more provider kinds; the model reaches them only through its statement and through actions
+
+**Status:** Accepted, 17 November 2026. Proposed that morning by the framework tech lead at the
+lead's request ("I was thinking of using framework just like we wanted for TTS but also for image
+gen models"); the lead answered "Yes to all 5 but we may want it sooner then phase 4", so each
+proposed answer below is the decision, and question 5's timing is his to call: it may be built
+before Phase 4's gate. Nothing is built in the framework yet. GreyBoxStrategy builds both in its
+own code first, behind interfaces shaped like the ones below, so the framework lifts something a
+game has already used. Issues: #358 (the speech provider) and #359 (the image provider).
+
+**The lead's questions, each decided as proposed** (the table further down gives the
+reasons):
+
+1. **One provider that does everything, or separate kinds?** *Decided: separate. `ILLMProvider`
+   stays as it is; `ISpeechProvider` and `IImageProvider` stand beside it.*
+2. **Where do they live?** *Decided: the two interfaces and their plain value types in the core,
+   which adds no dependency; turning bytes into an `AudioClip` or a `Texture2D` in
+   `Runtime/Unity/`; every real backend in its own package or behind a version define, as hard
+   rule 6 already asks of providers.*
+3. **Does an agent speak every statement by itself?** *Decided: no. The developer calls for it,
+   as with `DecideAsync` (DR-008, DR-015): the framework never decides the moment.*
+4. **May the model ask an image model for a picture directly?** *Decided: no. It chooses a
+   registered action, and that action's handler calls the image provider (hard rule 5).*
+5. **When?** *Decided: after GreyBoxStrategy's voices and live pictures work in the game. The
+   lead may ask for it before Phase 4's gate (7 December).*
+
+**Context.** The framework knows one kind of request: a `DecisionRequest` goes to an
+`ILLMProvider` and a decision comes back. A speech model takes text and returns sound; an image
+model takes a prompt and returns a picture. Neither fits that slot, and nothing in the framework
+carries audio or images.
+
+Two things made the question concrete on 16 and 17 November:
+
+- GreyBoxStrategy's rulers say a line every turn and its storyteller writes event stories; the
+  lead wants them spoken (`docs/demos/painted-realm-direction.md`), and a session is building
+  that in the demo behind one interface with a Windows-voices backend and a local neural one.
+- The demo's art pack (#353) was generated on the team's asset server, and the next step is
+  pictures made during play from a ruler's name and an event's story.
+
+A developer using Agenerela for talking, illustrated characters would otherwise write the same
+plumbing each time: a queue so requests do not pile up, a cache so a replay shows the same
+picture, a voice per character, and the care that model-written text needs before it reaches
+another model.
+
+**Decision.**
+
+| Question | Decision | Why |
+|---|---|---|
+| Kinds | `ISpeechProvider`: text, a voice and options in; audio out. `IImageProvider`: a prompt, a size and a seed in; an image out. Each has a `Name`, capabilities, cancellation and the same health reporting as an LLM provider (DR-015 as amended) | Different inputs and outputs; a developer may want one without the others, or a different backend for each |
+| Data types | Plain data, no scene types: audio as PCM samples with a sample rate and channel count, an image as encoded bytes with its format. `Runtime/Unity/` holds the helpers that make an `AudioClip` or a `Texture2D` | DR-011: only `Runtime/Unity/` touches Unity's scene and asset types, so a headless game and a test need neither |
+| Backends | None in the core. A scripted provider of each kind ships with the framework for tests, as `ScriptedProvider` does. Real ones (a local neural voice, an HTTP image server, a cloud API) are separate packages or sit behind a version define | Hard rule 6 and DR-009: the core's one dependency stays Newtonsoft JSON |
+| Speech and the agent | `AgentIdentity` gains an optional voice: an open string id plus rate and pitch. A helper speaks a `DecisionResult`'s statement through the provider, and always the statement after the guards, never `ModelDecision`'s | The open string follows DR-008 (no taxonomy); a contained refusal must not be heard saying what the agent did not do (#109) |
+| When to speak | Only when the developer calls. Nothing is spoken as a side effect of `DecideAsync` | DR-008 and DR-015: the developer's systems decide the moment |
+| Images and the agent | No new field in the decision. An action's handler asks the image provider; the framework offers a prompt builder that puts the developer's fixed style first, caps the length, adds the developer's exclusions, and treats model-written text as untrusted | Hard rule 5; a storyteller's words must not be able to steer the picture off the game's art direction |
+| Queueing | Each kind has its own small queue, one request at a time by default, apart from the decision queue. A speech or image request never delays a decision | A decision's latency is what the game waits on; DR-015's queue is measured for decisions only |
+| Sharing a GPU | The framework does not arbitrate between a language model, a voice and an image model on one card. It reports each request's time, and DR-019's lifecycle interface is available to a backend that can unload | The right policy depends on the game and the machine; measured in GreyBoxStrategy first |
+| Caching | An optional cache keyed by a hash of the request, so a replay or a second visit shows the same picture and voice without the provider. The cache's storage is the developer's; a file cache ships in `Runtime/Unity/` | Generation is not repeatable across backends, and a recorded game must replay the same |
+| Telemetry | Each result carries its timings and the backend's name. The decision log gains line kinds for a speech and an image request. No change to `DecisionTelemetry` | A decision's record stays a decision's; a developer still sees what was asked of every model |
+| Editor | The provider settings page (DR-013) gains a slot for each kind, resolved the same three ways | One place to choose backends |
+
+**Not in this decision.** Speech to text. Audio that streams while it is generated. Lip sync.
+Images or audio as input to the language model. Music. Any default voice or art style.
+
+**Consequences.**
+
+- The framework's public API grows by two interfaces, their request and result types, a voice on
+  the identity and two helpers. Each is optional; an agent that uses none sends and does exactly
+  what it does today.
+- Two more scripted providers and their tests.
+- Phase 6's provider work gains two kinds to document. Phase 8's demos are the first users.
+- A developer can ship a game that never loads a voice or image model: with no provider of a
+  kind configured, the helpers do nothing and say so once.
+
+**What would change this.** GreyBoxStrategy's version showing that one of the two needs something
+this shape cannot carry (streaming audio for long stories, or pictures that need the previous
+picture as input). A measured finding that speech or pictures on the same card slow decisions
+enough to need arbitration in the framework.
+
 ## Appendix A — carried measurements (source: test-ai-framework prototype, Aug 2026, RTX 4060 Laptop 8GB, qwen3.5 family via Ollama)
 
 | Finding | Numbers |

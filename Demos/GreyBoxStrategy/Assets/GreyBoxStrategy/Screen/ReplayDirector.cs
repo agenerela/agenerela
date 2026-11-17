@@ -502,7 +502,9 @@ namespace GreyBoxStrategy.Realm
                 if (kb.digit4Key.wasPressedThisFrame) SetMode(MapMode.Reach);
                 if (kb.dKey.wasPressedThisFrame) ToggleDiplomacy();
                 if (kb.iKey.wasPressedThisFrame) { if (ui.InspectorOpen) ui.CloseInspector(); else ui.InspectPressed?.Invoke(); }
-                if ((kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame) && rule != null) EndTurn();
+                // Enter dismisses a storyteller's event window first; only then is it End turn.
+                if ((kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame) && ui.EventOpen) ui.DismissEvent();
+                else if ((kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame) && rule != null) EndTurn();
             }
             if (kb != null && !ui.Typing) CameraKeys(kb);
             if (mouse != null)

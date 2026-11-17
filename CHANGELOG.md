@@ -20,12 +20,21 @@ phase table and the open issues, not here.
 
 ## [Unreleased]
 
+### Framework
+
+- **DR-024, accepted 17 November:** speech and images as two more provider kinds beside the language model (`ISpeechProvider`, `IImageProvider`), reached only through an agent's statement and through actions. Nothing is built; GreyBoxStrategy builds both in its own code first. Issues #358 and #359.
+
 ### Added
 
 - **Painted Realm: box selection, right-click orders, edge scrolling** (#20). A left-drag on the map chooses every
   army of yours inside the box, Shift-click adds or removes one, and the left panel shows the group. A right click on
   a province orders every chosen army there and names those that cannot go; a left click only selects (it used to
   order the march, and a left-drag used to pan). The map pans at the window's edges, a setting on by default.
+
+- **Painted Realm: free orders, the rules** (#20, the turn rework's first slice). `GameRules.FreeOrders` (off) plays the
+  writs turn without writs: a court gives orders until it answers none (three at most, a realm's own number by
+  override), its gold held back as it goes; an army is asked when woken or after holding three turns unasked. Off, the game and what
+  every model reads are unchanged. The rulers deciding while you plan, and the screen's side, follow.
 
 - **Painted Realm: the first art pack** (#20). Every ruler, general and storyteller event has a picture, made ahead of
   time on the team's asset server in one style, like an illuminated chronicle, and shipped with the game: 19 ruler
@@ -37,6 +46,18 @@ phase table and the open issues, not here.
 
 ### Changed
 
+- **Painted Realm: the storyteller's events and tales are impossible to miss** (#20). Every event now opens a window in
+  the middle of the screen, in the style of a grand strategy game's: the art pack's picture, the title, the story, each
+  realm struck with its effect as icons, and So be it. Every event, tales too, stops the turn until dismissed, ruling or
+  watching. A rival's event under fog shows the news, not its cost. The feed marks the storyteller's entries in gilt. A
+  new setting, Event windows: all (each stops the turn), mine only, off. Slots for choice buttons and a speaker button
+  are marked, not built. `StoryCards`, `StoryCardsTests`.
+- **Painted Realm: nothing is cut off at the bottom** (#20). An audit at six game-view sizes, 1280 × 720 to 2560 × 1440,
+  found windows opening over the top bar, the tales panel over the outliner, the diplomacy table running off small
+  screens and lists ending on half a row with nothing to say more lay below. Windows now open under the top bar, fit
+  the room below them and scroll inside; every scrolling list fades at its foot while more lies below; every panel
+  keeps its bottom padding; the tales take the outliner's place; the advisor's counsel folds after three lines behind
+  **more**. `ScreenUI.Layout.cs`, `LayoutTests`.
 - **Painted Realm: the mouse wheel zooms in clear steps** (#20). A notch zoomed 0.15%: the code read the wheel in
   Windows' units (120 a notch) while the Input System reports 1 a notch by default. A notch is now a 20% step toward
   the cursor, eased over about a tenth of a second, and either unit reads as the same notch; a trackpad's small

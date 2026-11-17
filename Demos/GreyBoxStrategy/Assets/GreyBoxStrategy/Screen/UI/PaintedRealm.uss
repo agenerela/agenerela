@@ -625,3 +625,64 @@
 .orders .end-turn { align-self: center; flex-shrink: 0; margin-top: 0; }
 .compact .orders .end-turn { height: 34px; font-size: 15px; }
 .orders .panel-head { height: 38px; }
+
+/* ==== Nothing is cut off at the bottom (#20, the lead on 16 November). Nothing is ever half shown: a list ends on a
+   whole row or scrolls with its scrollbar (and a fade at its foot while more lies below); every panel keeps its bottom
+   padding; a panel never runs under another or off the window. The rules no line here can say (a window no taller
+   than the room below its own top, the fade) are in ScreenUI.Layout.cs. ==== */
+.panel .unity-scroll-view__content-container { padding-bottom: 6px; }
+.panel > .unity-scroll-view, .window > .unity-scroll-view { flex-shrink: 1; min-height: 0; }
+.panel-head, .orders-foot, .ol-foot, .ktabs { flex-shrink: 0; }
+/* windows open under the top bar, never over it */
+.event-card { top: 84px; max-height: none; }
+.inspector, .compact .inspector { max-height: none; }
+/* the tales take the outliner's place while open, as the ledger takes the left */
+.tales-open .outliner { display: none; }
+/* a model's free text in a panel: three whole lines, then "more" */
+.fold { flex-shrink: 0; margin: 2px 0 6px 0; }
+.fold-clip { overflow: hidden; flex-shrink: 0; }
+.fold > .fold-clip > Label { margin: 0; }
+.fold-more { padding: 1px 0 0 0; align-self: flex-start; }
+
+/* ==== The storyteller, impossible to miss (#20, the lead on 16 November) ==== */
+/* the event window: a picture, the title large, the story, each realm struck with what it did */
+.story-window { width: 560px; border-width: 3px; border-color: rgb(201, 164, 90); background-color: rgb(26, 20, 13); }
+.compact .story-window { width: 500px; }
+.story-window.mine { border-width: 4px; }
+.story-picture { height: 150px; margin: 2px 0 10px 0; border-width: 2px; border-color: rgb(138, 106, 56); background-color: rgb(40, 31, 21); align-items: center; justify-content: center; -unity-background-scale-mode: scale-and-crop; flex-shrink: 0; }
+.compact .story-picture { height: 110px; }
+.story-picture-hint { font-size: 12px; -unity-font-style: italic; color: rgb(120, 104, 78); }
+.story-kicker { font-size: 11px; -unity-font-style: bold; letter-spacing: 2px; color: rgb(201, 164, 90); -unity-text-align: middle-center; }
+.story-window.mine .story-kicker { color: rgb(240, 214, 150); }
+.story-title { font-size: 26px; -unity-font-style: bold; color: rgb(244, 228, 186); white-space: normal; -unity-text-align: middle-center; margin: 2px 0 6px 0; }
+.story-text { font-size: 16px; -unity-font-style: italic; color: rgb(230, 216, 184); white-space: normal; margin: 0 6px 10px 6px; -unity-text-align: middle-center; }
+.story-struck { flex-direction: row; align-items: flex-start; padding: 7px 8px; margin-bottom: 4px; background-color: rgba(201, 164, 90, 0.06); border-left-width: 3px; border-left-color: rgba(201, 164, 90, 0.35); }
+.story-struck.mine { background-color: rgba(201, 164, 90, 0.14); border-left-color: rgb(226, 194, 122); }
+.story-struck-col { margin-left: 10px; flex-shrink: 1; flex-grow: 1; }
+.story-who { font-size: 15px; -unity-font-style: bold; color: rgb(240, 228, 200); }
+.story-effects { flex-direction: row; flex-wrap: wrap; margin-top: 4px; }
+.story-effect { flex-direction: row; align-items: center; padding: 2px 8px 2px 5px; margin: 0 6px 4px 0; border-width: 1px; border-color: rgba(201, 164, 90, 0.35); background-color: rgba(0, 0, 0, 0.25); }
+.story-effect > Label { margin-left: 5px; font-size: 14px; -unity-font-style: bold; }
+.story-effect.gain > Label { color: rgb(150, 200, 120); }
+.story-effect.loss > Label { color: rgb(232, 112, 96); }
+.story-ok { align-self: center; min-width: 200px; height: 36px; font-size: 16px; margin: 10px 0 4px 0; }
+/* a tale: a parchment strip under the top bar, never stopping the turn */
+.tale-strip { position: absolute; left: 50%; top: 84px; translate: -50% 0; width: 560px; flex-direction: row; align-items: flex-start; padding: 8px 14px 8px 10px; background-color: rgba(226, 210, 168, 0.97); border-width: 2px; border-color: rgb(120, 86, 44); }
+.tale-strip:hover { border-color: rgb(160, 110, 50); }
+.tale-strip-col { margin-left: 10px; flex-shrink: 1; flex-grow: 1; }
+.tale-strip-title { font-size: 17px; -unity-font-style: bold; color: rgb(46, 32, 18); white-space: normal; }
+.tale-strip .list-more { color: rgb(110, 70, 30); }
+/* the chronicle: the storyteller's entries in gilt, apart from the orders */
+.feed .lg.lg-tale { background-color: rgba(201, 164, 90, 0.16); border-left-width: 3px; border-left-color: rgb(226, 194, 122); }
+.feed .lg.lg-tale .lg-text { color: rgb(244, 222, 168); }
+.story-foot { flex-shrink: 0; align-items: center; padding: 6px 0 8px 0; border-top-width: 1px; border-top-color: rgba(201, 164, 90, 0.3); background-color: rgb(30, 23, 15); }
+.story-foot > .story-ok { margin: 0; }
+.tale-strip .fold-more { margin-top: 3px; color: rgb(110, 60, 20); -unity-font-style: bold-and-italic; }
+/* 17 November: the art pack's pictures get room; the window is wider and the picture taller */
+.story-window { width: 680px; }
+.compact .story-window { width: 560px; }
+.story-picture { height: 280px; }
+.compact .story-picture { height: 170px; }
+/* reserved slots, empty until built: the speaker button in the head, the choice buttons above So be it */
+.story-speaker { flex-direction: row; flex-shrink: 0; }
+.story-choices { flex-direction: row; justify-content: center; flex-wrap: wrap; }

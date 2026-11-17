@@ -37,6 +37,9 @@ namespace GreyBoxStrategy
             public readonly List<string> Recalled = new List<string>();
             public readonly List<string> Ordered = new List<string>();
             public readonly List<CountryAnswer> Answers = new List<CountryAnswer>();
+            // Free orders: the court orders given so far, and whether the court has finished.
+            public readonly List<Move> CourtGiven = new List<Move>();
+            public bool CourtDone;
         }
 
         private sealed class Proposal
@@ -130,7 +133,13 @@ namespace GreyBoxStrategy
                 var answer = given.TryGetValue(request, out var a) ? new CountryAnswer(request, a.Choice ?? Move.Hold, a.Note) : new CountryAnswer(request, Move.Hold);
                 d.Answers.Add(answer);
                 bool court = request.Moment == Moment.Council;
-                if (court && d.FirstCourt == null)
+                if (Rules.FreeOrders)
+                {
+                    if (court && d.FirstCourt == null) d.FirstCourt = answer.Choice;
+                    if (court) GiveCourtOrder(d, answer.Choice);
+                    if (d.CourtDone && d.Queue == null) d.Queue = new Queue<Army>(FreeArmyQueue(d));
+                }
+                else if (court && d.FirstCourt == null)
                 {
                     d.FirstCourt = answer.Choice;
                     // Recalled armies first, in the order recalled, then the rest awaiting orders in the rules' order.
@@ -224,11 +233,63 @@ namespace GreyBoxStrategy
             foreach (var d in dockets.Values) d.Recalled.RemoveAll(id => World.FindArmy(id) == null);
         }
 
-        /// <summary>How many armies a country may still be asked about this turn: its writs, less one kept for the court.</summary>
-        public int ArmyWrits(string countryId) => dockets != null && dockets.TryGetValue(countryId ?? "", out var d) ? Math.Max(0, d.Writs - 1) : 0;
+        // The court's moves; with free orders, an order already given this turn is not offered again (recruits may repeat).
+        private List<Move> CourtMovesFor(Docket d)
+        {
+            var moves = WritLegality.CourtMoves(World, d.Country);
+            if (!Rules.FreeOrders || d.CourtGiven.Count == 0) return moves;
+            return moves.Where(m => m.Action == Actions.None || m.Action == Actions.Recruit || Actions.RecruitsType(m.Action) != null
+                                    || !d.CourtGiven.Any(g => g.Action == m.Action && (m.Action == Actions.RaiseTaxes || g.Target == m.Target))).ToList();
+        }
+
+        /// <summary>How many armies a country may still be asked about this turn: its writs, less one kept for the court; with free orders, every army.</summary>
+        public int ArmyWrits(string countryId) => Rules.FreeOrders ? World.ArmiesOf(countryId ?? "").Count() : dockets != null && dockets.TryGetValue(countryId ?? "", out var d) ? Math.Max(0, d.Writs - 1) : 0;
+
+        // Free orders: the court's order is held against its gold; none, or the realm's last allowed order, ends the court.
+        private void GiveCourtOrder(Docket d, Move order)
+        {
+            var me = World.Country(d.Country);
+            if (order.Action != Actions.None)
+            {
+                d.CourtGiven.Add(order);
+                if (Actions.RecruitsType(order.Action) is UnitType type)
+                    me.Reserved += World.Levy(me, type) * Rules.GoldPerSoldier * Units.CostFactor(Rules, type);
+                else if (order.Action == Actions.Recruit) me.Reserved += World.Levy(me) * Rules.GoldPerSoldier;
+                else if (order.Action == Actions.Fortify) me.Reserved += Rules.FortCost;
+            }
+            if (order.Action == Actions.None || d.CourtGiven.Count >= Rules.CourtOrdersFor(d.Country)) d.CourtDone = true;
+        }
+
+        /// <summary>
+        /// Free orders: whether a realm is asked about this army, after its court. Every order stands, a hold as much as a
+        /// march or a siege: an army is asked when a wake rule fired, or when it has held
+        /// <see cref="GameRules.AskHoldingArmyEvery"/> turns since its last order. Armies the court recalled are asked
+        /// first, the rest in id order.
+        /// </summary>
+        public static bool AskedFreely(World w, Army a) =>
+            a.Awaiting || (!a.Marching && !(w.Province(a.Location)?.SiegedBy == a.Owner) && w.Turn - a.OrderedOnTurn >= w.Rules.AskHoldingArmyEvery);
+
+        private IEnumerable<Army> FreeArmyQueue(Docket d)
+        {
+            var recalled = d.Recalled.Select(World.FindArmy).Where(x => x != null).ToList();
+            return recalled.Concat(World.ArmiesOf(d.Country).Where(a => AskedFreely(World, a) && !recalled.Contains(a))
+                .OrderBy(a => a.Id, StringComparer.Ordinal)).ToList();
+        }
 
         private CountryRequest NextRequest(Docket d)
         {
+            if (Rules.FreeOrders)
+            {
+                if (!d.CourtDone) return CourtRequest(d);
+                while (d.Queue.Count > 0)
+                {
+                    var army = d.Queue.Dequeue();
+                    if (World.FindArmy(army.Id) == null) continue;
+                    d.ArmiesAsked++;
+                    return ArmyRequest(d, army);
+                }
+                return null;
+            }
             // Armies awaiting orders, while writs are left beyond one kept for the court.
             while (d.Queue.Count > 0 && d.ArmiesAsked < d.Writs - 1 && d.Used < d.Writs)
             {
@@ -247,7 +308,7 @@ namespace GreyBoxStrategy
 
         private CountryRequest CourtRequest(Docket d) =>
             new CountryRequest(Moment.Council, World.Turn, d.Country, World,
-                WritFacts.Standing(World, d.Country), Facts.Select(pending[d.Country]), WritLegality.CourtMoves(World, d.Country))
+                WritFacts.Standing(World, d.Country), Facts.Select(pending[d.Country]), CourtMovesFor(d))
             {
                 Ordered = d.Ordered.ToList(),
                 Writ = d.Used + 1,
@@ -334,6 +395,8 @@ namespace GreyBoxStrategy
         {
             Expect(Phase.AwaitingEnvoys);
             if (treatyAnswers != null) Submit(treatyAnswers);
+            // Free orders: the gold held back for the council's orders is spent for real as they land.
+            foreach (var c in World.CountryList) c.Reserved = 0;
             foreach (var c in World.CountryList) pending[c.Id].Clear();
             var order = RotatedOrder();
             var all = order.Where(dockets.ContainsKey).SelectMany(id => dockets[id].Answers).ToList();

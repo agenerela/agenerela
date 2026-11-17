@@ -32,6 +32,13 @@ namespace GreyBoxStrategy
         public int EliminatedOnTurn { get; set; }
         /// <summary>Whether it raised taxes this turn, which stops stability recovering next upkeep.</summary>
         public bool RaisedTaxes { get; set; }
+        /// <summary>
+        /// With <see cref="GameRules.FreeOrders"/>: gold the court's orders this council will spend when they land, held
+        /// back so a later order is offered only what is left. 0 outside a council, and always without free orders.
+        /// </summary>
+        public int Reserved { get; set; }
+        /// <summary>The gold an order may still spend: <see cref="Gold"/> less <see cref="Reserved"/>.</summary>
+        public int Spendable => Gold - Reserved;
 
         public override string ToString() => Id;
     }
@@ -201,7 +208,7 @@ namespace GreyBoxStrategy
         public int Levy(Country c, UnitType type) =>
             System.Math.Min(Rules.LevyBase + Rules.LevyPerProvince * (Rules.Turn == TurnStyle.Writs
                     ? ProvinceList.Count(p => p.Owner == c.Id && p.Occupier == null) : ProvinceCount(c.Id)),
-                c.Gold / (Rules.GoldPerSoldier * Units.CostFactor(Rules, type)));
+                c.Spendable / (Rules.GoldPerSoldier * Units.CostFactor(Rules, type)));
 
         public IEnumerable<Province> Neighbours(Province p) => Map.Neighbours(p.Id).Select(Province);
 

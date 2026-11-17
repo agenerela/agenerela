@@ -101,6 +101,7 @@ namespace GreyBoxStrategy.Realm
             if (showReport) rep.AddToClassList("on");
             head.Add(rep);
             orders.Add(head);
+            // The council's orders scroll; its head and its foot (End turn) never give way to them (PaintedRealm.uss).
             var body = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden, style = { paddingLeft = 10, paddingRight = 10, paddingTop = 7, paddingBottom = 8, maxHeight = 560 } };
             orders.Add(body);
             if (showReport)
@@ -211,6 +212,7 @@ namespace GreyBoxStrategy.Realm
             ordersStatus = st;
             var end = new Button(() => EndTurnPressed?.Invoke()) { text = "End turn", tooltip = "Send your orders (Enter). Every ruler's orders then land in the rules' order, and every army steps at once." };
             end.AddToClassList("menu-button"); end.AddToClassList("end-turn"); foot.Add(end);
+            foot.AddToClassList("orders-foot");
             orders.Add(foot);
             // The council's foot never shrinks: when the panel reaches its height, the body above scrolls instead.
             foot.style.paddingLeft = 10; foot.style.paddingRight = 10; foot.style.paddingBottom = 8; foot.style.flexShrink = 0;

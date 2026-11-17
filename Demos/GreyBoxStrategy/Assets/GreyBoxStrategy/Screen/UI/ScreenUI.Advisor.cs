@@ -37,7 +37,8 @@ namespace GreyBoxStrategy.Realm
             if (!string.IsNullOrWhiteSpace(advice.Counsel))
             {
                 var counsel = new Label($"“{advice.Counsel.Trim()}”"); counsel.AddToClassList("advice-counsel");
-                body.Add(counsel);
+                // A model's counsel can run to ten lines: three, then "more" opens the rest in place.
+                body.Add(Fold(counsel));
             }
             foreach (var item in advice.Items)
             {
