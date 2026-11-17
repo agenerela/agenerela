@@ -17,8 +17,8 @@ namespace GreyBoxStrategy.Realm
     {
         /// <summary>Your orders for this writs turn, as the panel builds them; sent with End turn.</summary>
         public RuleSession.WritsPlan Plan = new RuleSession.WritsPlan();
-        /// <summary>The army the map's clicks order, or null.</summary>
-        public string SelectedArmy;
+        /// <summary>The first army chosen, or null; setting it chooses that army alone (ScreenUI.Group.cs keeps the group).</summary>
+        public string SelectedArmy { get => chosenArmies.Count > 0 ? chosenArmies[0] : null; set => ChooseArmies(value == null ? null : new[] { value }); }
         /// <summary>The panel changed what is selected or planned: the director redraws the map's highlights.</summary>
         public Action PlanChanged;
         /// <summary>Which provinces border which: for fog of war and the panel.</summary>
@@ -309,7 +309,7 @@ namespace GreyBoxStrategy.Realm
         {
             var row = new VisualElement(); row.AddToClassList("army-row");
             bool hasWrit = withWrits.Contains(army.Id), waits = awaiting.Contains(army.Id), recall = !hasWrit && !waits && CanRecall(req, army.Id);
-            if (army.Id == SelectedArmy) row.AddToClassList("pick");
+            if (IsChosen(army.Id)) row.AddToClassList("pick");
             // A fixed column: a long general's title wraps inside it rather than running under the state beside it.
             var head = new VisualElement { style = { width = 150, flexShrink = 0, marginRight = 6 } };
             head.Add(new Label($"{Chronicle.Host(army.Id)} · {army.Soldiers}") { style = { fontSize = 12, unityFontStyleAndWeight = FontStyle.Bold } });

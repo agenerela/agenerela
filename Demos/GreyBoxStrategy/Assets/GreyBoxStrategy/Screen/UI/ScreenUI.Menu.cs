@@ -445,6 +445,7 @@ namespace GreyBoxStrategy.Realm
             card.Add(Section2("GAME"));
             var speeds = GameSettings.Speeds;
             card.Add(Steps("Playback speed", speeds.Select(x => $"{x:0}×").ToArray(), Array.IndexOf(speeds, s.PlaybackSpeed), i => { s.PlaybackSpeed = speeds[i]; Changed(); }));
+            card.Add(Steps("Edge scrolling", new[] { "Off", "On" }, s.EdgeScroll ? 1 : 0, i => { s.EdgeScroll = i == 1; Changed(); }));
 
             card.Add(Section2("SOUND", "no sound plays yet; these are kept for when it does"));
             card.Add(Volume("Master", s.MasterVolume, v => { s.MasterVolume = v; Changed(); }));

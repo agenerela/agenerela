@@ -111,6 +111,7 @@ namespace GreyBoxStrategy.Realm
                     var doing = new Label(a.Hungry ? "no stores · " + a.Doing : a.Doing); doing.AddToClassList("ol-sub"); if (a.Hungry) doing.AddToClassList("bad"); row.Add(doing);
                     string id = a.Id;
                     row.RegisterCallback<ClickEvent>(_ => HostPressed?.Invoke(id));
+                    row.EnableInClassList("pick", IsChosen(id)); // chosen on the map (ScreenUI.Group.cs)
                     outlinerBody.Add(row);
                 }
                 if (o.Armies.Count == 0 && !Folded("ARMIES")) OutNote("No armies: recruit at your capital.");

@@ -241,18 +241,57 @@ namespace GreyBoxStrategy.Screen.Tests
         }
 
         [Test]
-        public void A_click_on_the_map_with_the_inspector_open_only_closes_it()
+        public void A_left_click_selects_and_never_orders_and_a_right_click_orders_the_chosen_armies()
         {
-            // Open: the map's click dismisses the window, whatever lies under it, and never orders a march.
-            Assert.That(ScreenModels.OnMapClick(false, true, 4, true), Is.EqualTo(ScreenModels.MapClick.CloseInspector));
-            Assert.That(ScreenModels.OnMapClick(false, true, 4, false), Is.EqualTo(ScreenModels.MapClick.CloseInspector));
-            Assert.That(ScreenModels.OnMapClick(false, true, -1, false), Is.EqualTo(ScreenModels.MapClick.CloseInspector));
-            // A click on a panel, the inspector included, is the panel's own.
-            Assert.That(ScreenModels.OnMapClick(true, true, 4, true), Is.EqualTo(ScreenModels.MapClick.Nothing));
-            // Closed: as before.
-            Assert.That(ScreenModels.OnMapClick(false, false, 4, true), Is.EqualTo(ScreenModels.MapClick.OrderMarch));
-            Assert.That(ScreenModels.OnMapClick(false, false, 4, false), Is.EqualTo(ScreenModels.MapClick.OpenProvince));
-            Assert.That(ScreenModels.OnMapClick(false, false, -1, true), Is.EqualTo(ScreenModels.MapClick.ClearSelection));
+            // Left: with the inspector open it only closes it; otherwise a province opens and the sea clears. Never a march.
+            Assert.That(ScreenModels.OnMapClick(false, true, 4), Is.EqualTo(ScreenModels.MapClick.CloseInspector));
+            Assert.That(ScreenModels.OnMapClick(false, true, -1), Is.EqualTo(ScreenModels.MapClick.CloseInspector));
+            Assert.That(ScreenModels.OnMapClick(true, true, 4), Is.EqualTo(ScreenModels.MapClick.Nothing), "a panel's own click");
+            Assert.That(ScreenModels.OnMapClick(false, false, 4), Is.EqualTo(ScreenModels.MapClick.OpenProvince));
+            Assert.That(ScreenModels.OnMapClick(false, false, -1), Is.EqualTo(ScreenModels.MapClick.ClearSelection));
+            // Right: a province with any army chosen orders the march; nothing otherwise.
+            Assert.That(ScreenModels.OnRightClick(false, 4, 1), Is.EqualTo(ScreenModels.MapClick.OrderMarch));
+            Assert.That(ScreenModels.OnRightClick(false, 4, 3), Is.EqualTo(ScreenModels.MapClick.OrderMarch));
+            Assert.That(ScreenModels.OnRightClick(false, 4, 0), Is.EqualTo(ScreenModels.MapClick.Nothing));
+            Assert.That(ScreenModels.OnRightClick(false, -1, 2), Is.EqualTo(ScreenModels.MapClick.Nothing), "the sea");
+            Assert.That(ScreenModels.OnRightClick(true, 4, 2), Is.EqualTo(ScreenModels.MapClick.Nothing), "a panel");
+        }
+
+        [Test]
+        public void A_box_chooses_every_army_of_yours_inside_it_and_shift_adds_or_removes_one()
+        {
+            var pieces = new[]
+            {
+                ("a1", "garran", 100f, 100f), ("a2", "garran", 180f, 140f), ("a3", "garran", 400f, 400f),
+                ("r1", "othow", 120f, 120f), // a rival's piece inside the box is never chosen
+            };
+            var box = new ScreenModels.Box(90, 90, 100, 60);
+            Assert.That(ScreenModels.BoxSelect(pieces, "garran", box, new[] { "a3" }, false), Is.EqualTo(new[] { "a1", "a2" }));
+            Assert.That(ScreenModels.BoxSelect(pieces, "garran", box, new[] { "a3" }, true), Is.EqualTo(new[] { "a3", "a1", "a2" }), "Shift adds");
+            Assert.That(ScreenModels.BoxSelect(pieces, "garran", new ScreenModels.Box(0, 0, 10, 10), new[] { "a3" }, false), Is.Empty);
+
+            // A drag shorter than 6 px is a click.
+            Assert.That(ScreenModels.IsDrag(3, 4), Is.False);
+            Assert.That(ScreenModels.IsDrag(6, 0), Is.True);
+
+            // A click chooses one; again un-chooses; Shift adds or removes.
+            Assert.That(ScreenModels.ClickArmy("a1", new[] { "a2", "a3" }, false), Is.EqualTo(new[] { "a1" }));
+            Assert.That(ScreenModels.ClickArmy("a1", new[] { "a1" }, false), Is.Empty);
+            Assert.That(ScreenModels.ClickArmy("a1", new[] { "a2" }, true), Is.EqualTo(new[] { "a2", "a1" }));
+            Assert.That(ScreenModels.ClickArmy("a2", new[] { "a2", "a1" }, true), Is.EqualTo(new[] { "a1" }));
+        }
+
+        [Test]
+        public void The_map_scrolls_while_the_pointer_touches_the_windows_border_and_never_over_a_panel()
+        {
+            Assert.That(ScreenModels.EdgeScroll(2, 500, 1920, 1080, true, true, false), Is.EqualTo((-1, 0)));
+            Assert.That(ScreenModels.EdgeScroll(1919, 1078, 1920, 1080, true, true, false), Is.EqualTo((1, 1)));
+            Assert.That(ScreenModels.EdgeScroll(960, 0, 1920, 1080, true, true, false), Is.EqualTo((0, -1)));
+            Assert.That(ScreenModels.EdgeScroll(960, 540, 1920, 1080, true, true, false), Is.EqualTo((0, 0)), "the middle");
+            Assert.That(ScreenModels.EdgeScroll(2, 500, 1920, 1080, false, true, false), Is.EqualTo((0, 0)), "the setting off");
+            Assert.That(ScreenModels.EdgeScroll(2, 500, 1920, 1080, true, false, false), Is.EqualTo((0, 0)), "no focus");
+            Assert.That(ScreenModels.EdgeScroll(2, 500, 1920, 1080, true, true, true), Is.EqualTo((0, 0)), "over a panel");
+            Assert.That(ScreenModels.EdgeScroll(-40, 500, 1920, 1080, true, true, false), Is.EqualTo((0, 0)), "outside the window");
         }
 
         // Panels as the game draws them (measured in play, 16 November): 1920 x 1080 and 1366 x 768.
