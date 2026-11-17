@@ -256,9 +256,11 @@ namespace Agenerela
             var available = answer.Offered;
             var takeable = Takeable(available, ctx.Targets, answer);
 
-            // A parameter forces the paired schema (DR-023), for the actions pairing can offer.
+            // A parameter forces the paired schema (DR-023), for the actions pairing can offer. An
+            // action with a parameter and no target it can take now is left out even when nothing
+            // else forces pairing, since only a branch could have carried it.
             bool pair = pairTargets || DeclaresParameters(takeable);
-            return Build(ctx, pair ? takeable : available, pair, answer, askForStatement);
+            return Build(ctx, pair || DeclaresParameters(available) ? takeable : available, pair, answer, askForStatement);
         }
 
         // Whether any of these actions declares a parameter, which makes their schema paired (DR-023).
@@ -331,9 +333,18 @@ namespace Agenerela
                 fields.Add(StatementField());
             }
 
-            // Paired when asked and there is a target to pair, or whenever an offered action declares
-            // a parameter (DR-023), targets or none. The caller has passed such a list through Takeable.
-            bool paired = (pairTargets && ctx.Targets.Count > 0) || DeclaresParameters(available);
+            // Paired when the caller says so and there is a target to pair, or an action that declares
+            // a parameter (DR-023), which is paired with targets or none. The caller decides, once
+            // (Agent.Prepare, the public Build), and has passed the list through Takeable; an action
+            // with a parameter in a list the caller did not pair is a mistake in the caller.
+            bool declares = DeclaresParameters(available);
+            if (declares && !pairTargets)
+            {
+                throw new ArgumentException(
+                    "An action that declares a parameter can only be offered in a paired schema.", nameof(available));
+            }
+
+            bool paired = pairTargets && (ctx.Targets.Count > 0 || declares);
             return new DecisionSchema(fields, paired ? PairsFor(available, ctx.Targets, answer) : null);
         }
 

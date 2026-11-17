@@ -23,7 +23,7 @@ namespace Agenerela
         // For each of the method's parameters, the [Argument] name it receives, or null (DR-023).
         private readonly string[] argumentNames;
         // The [AvailableValue] method of each parameter that has one, by parameter name, or null.
-        private readonly IReadOnlyDictionary<string, MethodInfo> valueChecks;
+        private readonly Dictionary<string, (MethodInfo Method, bool TakesContext)> valueChecks;
 
         /// <param name="check">The [Available] method, or null when the action is always available.</param>
         /// <param name="targetCheck">The [AvailableFor] method, or null when every target is.</param>
@@ -31,7 +31,16 @@ namespace Agenerela
         public MethodActionHandler(object owner, MethodInfo action, MethodInfo check, MethodInfo targetCheck = null,
             IReadOnlyDictionary<string, MethodInfo> valueChecks = null)
         {
-            this.valueChecks = valueChecks != null && valueChecks.Count > 0 ? valueChecks : null;
+            if (valueChecks != null && valueChecks.Count > 0)
+            {
+                // Each check's shape read once, not at every decision.
+                this.valueChecks = new Dictionary<string, (MethodInfo, bool)>(StringComparer.Ordinal);
+                foreach (var entry in valueChecks)
+                {
+                    this.valueChecks.Add(entry.Key, (entry.Value, entry.Value.GetParameters().Length == 2));
+                }
+            }
+
             this.targetCheck = targetCheck;
             targetCheckTakesContext = targetCheck != null && targetCheck.GetParameters().Length == 2;
             this.owner = owner;
@@ -107,6 +116,44 @@ namespace Agenerela
             return returned is ActionResult result ? result : ActionResult.Done();
         }
 
+        // The method against the definition it is registered under, which an asset may have replaced
+        // (DR-011): every [Argument] names a declared parameter, an int one a number list, and every
+        // [AvailableValue] check a declared parameter. Throws what the reader throws.
+        internal void CheckAgainst(ActionDefinition definition)
+        {
+            for (int i = 0; i < argumentNames.Length; i++)
+            {
+                if (argumentNames[i] == null) continue;
+
+                var parameter = definition.ParameterNamed(argumentNames[i]);
+                if (parameter == null)
+                {
+                    throw new ArgumentException(
+                        $"{name} takes the argument '{argumentNames[i]}', but the action '{definition.Id}' as defined declares no such parameter. " +
+                        "An asset's definition replaces the method's [AgentParameter]s: declare the parameter on the asset.", "owner");
+                }
+
+                if (parameterTypes[i] == typeof(int) && !parameter.IsNumber)
+                {
+                    throw new ArgumentException(
+                        $"{name} takes '{argumentNames[i]}' as an int, but not every value the action '{definition.Id}' declares for it is a whole number.", "owner");
+                }
+            }
+
+            if (valueChecks != null)
+            {
+                foreach (var check in valueChecks)
+                {
+                    if (definition.ParameterNamed(check.Key) == null)
+                    {
+                        throw new ArgumentException(
+                            $"{AgentActionReader.Name(check.Value.Method)} is the [AvailableValue] check for '{check.Key}', " +
+                            $"but the action '{definition.Id}' as defined declares no such parameter.", "owner");
+                    }
+                }
+            }
+        }
+
         // The [AvailableValue] checks as one function, or null when the action has none, so that an
         // action without one is never treated as having a per-value check (ValueChecks.Of). A
         // parameter with no check of its own offers every value.
@@ -115,12 +162,12 @@ namespace Agenerela
 
         private Availability IsAvailableValue(AgentContext ctx, string parameter, string value)
         {
-            if (!valueChecks.TryGetValue(parameter, out MethodInfo method))
+            if (!valueChecks.TryGetValue(parameter, out var check))
             {
                 return Availability.Yes;
             }
 
-            object returned = Call(method, method.GetParameters().Length == 2 ? new object[] { ctx, value } : new object[] { value });
+            object returned = Call(check.Method, check.TakesContext ? new object[] { ctx, value } : new object[] { value });
             return returned is Availability availability ? availability : (Availability)(bool)returned;
         }
 

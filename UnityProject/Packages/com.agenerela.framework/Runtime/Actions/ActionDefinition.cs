@@ -145,7 +145,9 @@ namespace Agenerela
         /// Declaring one changes what the model is sent for every call that offers this action: the
         /// schema is paired (<see cref="DecideOptions.PairTargetsWithActions"/>), with the parameters
         /// after <c>target</c> and before <c>statement</c>, and the prompt's action list is sent with
-        /// their values. Unmeasured beyond a grammar probe: the A/B is owed (#151). The chosen values
+        /// their values. Measured once: one harmless parameter cost 5.7 points on the interim set on
+        /// <c>qwen3.5:4b</c> and nothing on the curated one (findings, 16 November 2026). The A/B
+        /// against bundled ids in GreyBoxStrategy's storyteller is still owed (#151). The chosen values
         /// are in <see cref="AgentDecision.Arguments"/>. <see cref="ActionParameter.Validate"/> is the
         /// rule each must pass at registration, and two may not share a name.
         /// </remarks>

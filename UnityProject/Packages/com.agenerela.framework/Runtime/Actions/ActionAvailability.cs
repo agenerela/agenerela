@@ -321,7 +321,7 @@ namespace Agenerela
                     return delegated.IsAvailableValue;
                 case MethodActionHandler method:
                     return method.ValueCheck;
-                case IArgumentAvailability checks:
+                case IValueAvailability checks:
                     return checks.IsAvailableValue;
                 default:
                     return null;

@@ -70,7 +70,7 @@ namespace Agenerela
 
         /// <summary>
         /// Whether one value of one of the action's parameters can be chosen right now, given the
-        /// parameter's name and the value: <see cref="IArgumentAvailability"/> for a handler built
+        /// parameter's name and the value: <see cref="IValueAvailability"/> for a handler built
         /// from delegates (DR-023). Null, the default, offers every declared value.
         /// </summary>
         public Func<AgentContext, string, string, Availability> IsAvailableValue { get; set; }

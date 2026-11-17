@@ -390,11 +390,20 @@ namespace Agenerela
                 }
                 else
                 {
+                    // Named like a declared parameter and without [Argument], it would be handed the
+                    // target, or null: almost certainly a forgotten attribute (DR-023).
+                    if (Array.Exists(declared, p => p.Name == parameter.Name))
+                    {
+                        throw Error($"{Name(method)}: parameter '{parameter.Name}' is named like the action's [AgentParameter] " +
+                                    $"but has no [Argument(\"{parameter.Name}\")], so it would receive the target. Add the attribute, or rename it.");
+                    }
+
                     if (target != null)
                     {
                         throw Error($"{Name(method)} takes two targets, '{target}' and '{parameter.Name}'. " +
                                     "An action has at most one: every parameter that is not an " +
-                                    "AgentContext or an AgentDecision receives the target.");
+                                    "AgentContext or an AgentDecision receives the target." +
+                                    (declared.Length > 0 ? " One that should receive an [AgentParameter]'s value needs [Argument(\"name\")]." : ""));
                     }
 
                     target = parameter.Name;

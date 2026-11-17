@@ -23,11 +23,16 @@ namespace Agenerela
 
             if (Action.Parameters != null)
             {
+                var names = new System.Collections.Generic.HashSet<string>(System.StringComparer.Ordinal);
                 foreach (var parameter in Action.Parameters)
                 {
                     if (!ActionParameter.Validate(parameter, out string why))
                     {
                         Debug.LogWarning($"{name}: {why}", this);
+                    }
+                    else if (!names.Add(parameter.Name))
+                    {
+                        Debug.LogWarning($"{name}: the parameter '{parameter.Name}' is declared twice.", this);
                     }
                 }
             }

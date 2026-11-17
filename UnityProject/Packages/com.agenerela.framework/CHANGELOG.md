@@ -26,11 +26,21 @@ While the version stays `0.x`, the public API may change in any release.
     parameter's values on its action's line, whatever `ListActionsAndTargets` says, because a
     local model never reads the schema. The action's example shows a value. With no target
     registered the schema is paired and has no `target` field.
-  - **The framework checks the values, not the model.** A value left out or not offered takes the
-    parameter's `Default` when it has one (`DecisionTelemetry.ArgumentsDefaulted`); otherwise
-    `SchemaLegalityGuard` rejects the decision. `Agent.Execute` runs that check again before any
-    handler: every argument a declared value of a declared parameter, none missing.
-  - **Values per decision.** `IArgumentAvailability`, `[AvailableValue(action, parameter)]` or
+  - **The framework checks the values, not the model.** A value left out takes the
+    parameter's `Default` when it has one (`DecisionTelemetry.ArgumentsDefaulted`); with none,
+    `SchemaLegalityGuard` rejects the decision. The default covers only a missing value: a string
+    the parameter does not declare or the request did not offer is rejected, and a value of
+    another type (a float, a boolean, an integer past 64 bits) makes the reply unreadable.
+    `Agent.Execute` runs the guard again before any handler: every argument a declared value of a
+    declared parameter, none missing, and no default applied.
+  - **Left out when it cannot be offered.** An action with a parameter that requires a target and
+    has none it can take right now is left out of the decision, since only a branch of its own
+    could offer it.
+  - **An asset wins over the method, parameters included.** `RegisterMethods` checks the method's
+    `[Argument]`s and `[AvailableValue]` checks against the asset's parameters and throws when
+    they disagree. A method parameter named like a declared parameter with no `[Argument]` is
+    refused, as it would receive the target.
+  - **Values per decision.** `IValueAvailability`, `[AvailableValue(action, parameter)]` or
     `DelegateActionHandler.IsAvailableValue` leaves a value out of one decision's schema and
     prompt, with its reason in `DecisionTelemetry.ValuesUnavailable`; an action with a parameter
     that has no value left is left out; `Execute` asks again and refuses a stale value with the

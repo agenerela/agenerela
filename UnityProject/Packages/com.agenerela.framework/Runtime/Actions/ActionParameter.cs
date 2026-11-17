@@ -100,8 +100,9 @@ namespace Agenerela
 
         /// <summary>
         /// Whether this parameter can be sent: a valid snake_case name that is not a field of the
-        /// decision, at least one value, none empty or repeated, and a default and an example value
-        /// that are among the values. Gemini rejects <c>""</c> in an enum, so an empty value is refused.
+        /// decision, at least one value, none empty or repeated, none with a comma, a control
+        /// character or whitespace at either end, and a default and an example value that are among
+        /// the values. Gemini rejects <c>""</c> in an enum, so an empty value is refused.
         /// </summary>
         public static bool Validate(ActionParameter parameter, out string problem)
         {
@@ -138,6 +139,14 @@ namespace Agenerela
                     return false;
                 }
 
+                // The prompt lists the values as "a, b or c", on one line.
+                if (value != value.Trim() || value.IndexOf(',') >= 0 || HasControlCharacter(value))
+                {
+                    problem = $"Parameter '{parameter.Name}' has the value '{value}': a value cannot start or end with " +
+                              "whitespace, or hold a comma or a control character.";
+                    return false;
+                }
+
                 if (!seen.Add(value))
                 {
                     problem = $"Parameter '{parameter.Name}' lists '{value}' twice.";
@@ -159,6 +168,16 @@ namespace Agenerela
 
             problem = null;
             return true;
+        }
+
+        private static bool HasControlCharacter(string value)
+        {
+            foreach (char c in value)
+            {
+                if (char.IsControl(c)) return true;
+            }
+
+            return false;
         }
 
         /// <summary>A copy, its arrays copied too, so a registered definition never shares one with its source.</summary>

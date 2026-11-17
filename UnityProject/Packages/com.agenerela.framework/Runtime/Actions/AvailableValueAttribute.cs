@@ -4,7 +4,7 @@ namespace Agenerela
 {
     /// <summary>
     /// Marks the method that says whether one value of an <see cref="AgentActionAttribute"/> action's
-    /// parameter can be chosen right now: <see cref="IArgumentAvailability"/> for the code front door
+    /// parameter can be chosen right now: <see cref="IValueAvailability"/> for the code front door
     /// (DR-023, first step).
     /// </summary>
     /// <remarks>

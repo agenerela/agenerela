@@ -4468,7 +4468,7 @@ On Classic each seat starts on three provinces, so its starting land is fixed: v
 - **What 12 pairs cannot show:** the games are capped at 40 turns and none finished, so nothing about who wins or how long a game lasts. No seat on Classic leans to bows, so a bow tradition is untested, and the starting land stands for land that changes during a game. One map: on a generated world the land differs more between seats, which is where the rule should matter, and no generated-world pair was run. The η² differences between arms are within their intervals; only the +7-point match is outside.
 - **No default changes.** `LandTraditions` stays off; the tech lead decides.
 
-### One declared parameter on the evaluation sets: 5.7 points lost on the interim 389 on `qwen3.5:4b`, about a third of it from pairing and the action list, the rest from the field; nothing on the curated 76 (16 November 2026)
+### One declared parameter on the evaluation sets: 5.7 points lost on the interim 389 on `qwen3.5:4b`, beyond the floor, for the whole of what a parameter changes; nothing on the curated 76 (16 November 2026)
 
 DR-023's first step (#266 item 2, the pull request that builds it): an action may declare a closed
 choice beside its target. Declaring one changes three things in every call that offers the action:
@@ -4492,8 +4492,9 @@ alone resident (2995 MB in VRAM, `ps` empty before each hold), temperature 0, fr
 0.4.0-preview.2 with the pull request's code, `checkTarget` on, the 9 November state wording. Three
 holds of the card's lock on 16 November, 17:51 to 18:24 local: the curated set's two runs in one,
 then each interim run in its own, the model unloaded between. Unity batch mode on the laptop.
-Entry point, wrapper and the four reports: `.scratch/266-gaps/ab/` in the worktree
-`266-framework-gaps-459b69`.
+Entry point, wrapper and the four reports: `.scratch/266-gaps/ab/` in the lead's main checkout
+(`C:\Unity_Projects\agenerela\.scratch\266-gaps\ab\`, reports in `reports-20261116-1751/`),
+copied there from the worktree `266-framework-gaps-459b69`.
 
 | Set | Run | A | B (parameter) | B − A | Floor | |
 |---|---|---:|---:|---:|---:|---|
@@ -4520,15 +4521,19 @@ is inside the floor.
 | Pipeline errors | 0 | 0 | 0 |
 | Latency, median | 0.47 s | 0.48 s | 0.50 s |
 
-- **The cost is acting when nothing was asked.** Both treatments move answers from `none` to an
-  action. Listing the actions and pairing them does most of that (24 to 40 unasked actions), and
-  halves the missed commands (10 to 4). It also costs 7 impossible requests, and the guard contains
-  none where it contained 4.
-- **The field adds to it, on the action that carries it.** Against pair-list, the parameter arm
-  answers `move_to` 12 more times and is 14 answers worse, 7 of them in `situation` (48 to 41, the
-  one category beyond its own floor). `move_to` is the action whose line in the list is longest and
-  whose example shows the extra field; the build plan's Appendix A already says a longer
-  description draws a small model.
+- **What the table supports.** Declaring one parameter, with everything it changes (the pairing,
+  the list and the field), costs 5.7 points on the interim set, beyond the floor, and nothing on
+  the curated set. That is the only difference here that clears its floor.
+- **The cost is acting when nothing was asked.** Against control, the parameter arm gives 20 more
+  wrong answers where `none` was expected (24 to 44) and 6 fewer missed commands (10 to 4). It
+  handles 7 fewer impossible requests, and the guard contains none where it contained 4.
+- **How the cost splits between the list with pairing and the field is suggestive only.**
+  Pair-list sits between the two (323), with most of the unasked actions already there (40). But
+  control against pair-list comes from two separate runs and is inside the floor, and pair-list
+  against parameter (14 answers, 7 of them in `situation`, 48 to 41) sits exactly at it. The
+  parameter arm answers `move_to`, the action that carries the field, 12 more times than pair-list
+  does, which fits Appendix A's note that a longer description draws a small model; it is not
+  shown here.
 - **The grammar and the checks held.** No pipeline error, no reply without a pace or with one not
   offered, and no statement that was a bare `walk` or `run` in 930 parameter-arm replies: placed
   before the statement, the value stays out of it, as the 14 November probe found.
@@ -4540,7 +4545,7 @@ is inside the floor.
 agent that declares none sends the request it always sent (tests hold that). For a developer it
 says the feature is not free on the 4B: on a task that never uses the parameter, declaring one
 costs about 6 points in this set, mostly as unasked actions, so declare parameters where the game
-needs the value, and expect the action that carries one to be chosen more often. It does not say
+needs the value. It does not say
 whether a parameter is better than bundled ids (`windfall_major`) where the game does need the
 value: that is the storyteller's A/B, DR-023's question 5, still owed (#151).
 

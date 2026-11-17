@@ -493,8 +493,6 @@ namespace Agenerela
             return parts.Count == 0 ? null : MovesLinePrefix + string.Join("; ", parts) + ".";
         }
 
-        // An action's line with its pairs note: "- id: Its description. Target: no_target.", or with
-        // no description "- id: Target: no_target.".
         // The entry with the parameters the schema asks of this action, each as
         // "strength (how hard it strikes): minor or major." (DR-023): the values offered for this
         // decision, since a local model never reads the schema's enum. Unchanged for an action that
@@ -526,6 +524,8 @@ namespace Agenerela
             return string.Join(", ", head) + " or " + last;
         }
 
+        // An action's line with its pairs note: "- id: Its description. Target: no_target.", or with
+        // no description "- id: Target: no_target.".
         private static string WithNote(string entry, string note)
         {
             return entry.IndexOf(": ", StringComparison.Ordinal) >= 0 ? entry + " " + note : entry + ": " + note;

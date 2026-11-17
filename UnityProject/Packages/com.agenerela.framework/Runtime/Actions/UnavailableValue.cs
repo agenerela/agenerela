@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 namespace Agenerela
 {
     /// <summary>
-    /// One value of one action's parameter that a per-value check (<see cref="IArgumentAvailability"/>)
+    /// One value of one action's parameter that a per-value check (<see cref="IValueAvailability"/>)
     /// rejected when a decision was prepared, with its reason (DR-023). Recorded in
     /// <see cref="DecisionTelemetry.ValuesUnavailable"/> and the decision log's <c>valuesUnavailable</c>.
     /// </summary>

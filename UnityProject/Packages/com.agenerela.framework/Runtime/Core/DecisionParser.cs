@@ -46,8 +46,9 @@ namespace Agenerela
         /// <para>
         /// The parameters <paramref name="schema"/> asks of the chosen action (DR-023) are read by
         /// name into <see cref="AgentDecision.Arguments"/>, in the schema's order: a string as
-        /// written, a whole number as its invariant text. One missing or null is left out, and one of
-        /// another type is a problem. Whether a value is one the schema offered is not checked here.
+        /// written, a whole number that fits 64 bits as its invariant text. One missing or null is
+        /// left out, and one of another type is a problem, default or none. Whether a value is one
+        /// the schema offered is not checked here.
         /// </para>
         /// </summary>
         /// <param name="schema">The schema the request carried, which says whether it asked for a target.</param>
@@ -104,13 +105,15 @@ namespace Agenerela
                 {
                     value = (string)token;
                 }
-                else if (token.Type == JTokenType.Integer)
+                else if (token.Type == JTokenType.Integer && ((JValue)token).Value is long whole)
                 {
                     // A number list's value written bare, 2 for "2": unambiguous, so it is read.
-                    value = ((long)token).ToString(CultureInfo.InvariantCulture);
+                    value = whole.ToString(CultureInfo.InvariantCulture);
                 }
                 else
                 {
+                    // A float, a boolean, an array, or an integer past 64 bits: not a value a closed
+                    // list could hold, whatever the parameter's default (DR-023).
                     problem = $"'{parameter.Name}' is not a string.";
                     return false;
                 }

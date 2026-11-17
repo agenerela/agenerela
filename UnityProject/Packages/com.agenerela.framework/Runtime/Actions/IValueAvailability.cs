@@ -19,7 +19,7 @@ namespace Agenerela
     /// check offers every declared value.
     /// </para>
     /// </remarks>
-    public interface IArgumentAvailability
+    public interface IValueAvailability
     {
         /// <summary>Whether <paramref name="value"/> may be chosen for <paramref name="parameter"/> now, with a reason when not.</summary>
         Availability IsAvailableValue(AgentContext ctx, string parameter, string value);

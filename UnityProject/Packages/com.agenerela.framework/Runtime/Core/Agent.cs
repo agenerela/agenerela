@@ -1485,7 +1485,9 @@ namespace Agenerela
             var takeable = DecisionSchema.Takeable(available, ctx.Targets, availability);
 
             // An action with a parameter is offered only in the paired schema, and its values reach
-            // a local model only through the prompt's list, as a choice's words do (DR-023).
+            // a local model only through the prompt's list, as a choice's words do (DR-023). Decided
+            // here once, from the actions pairing can offer, and passed to the schema: an action
+            // with a parameter and no target it can take now is left out, never given an empty branch.
             bool parameters = DecisionSchema.DeclaresParameters(takeable);
             if (parameters)
             {
@@ -1493,7 +1495,7 @@ namespace Agenerela
                 options.ListActionsAndTargets = true;
             }
 
-            if (paired || call.LegalTargets != LegalTargetListing.Off)
+            if (paired || call.LegalTargets != LegalTargetListing.Off || DecisionSchema.DeclaresParameters(offered))
             {
                 // No example for an action the paired schema cannot offer (DR-020), and none offered
                 // at all when the prompt names the pairs and it has no legal target (#151).
@@ -1583,10 +1585,10 @@ namespace Agenerela
             return decision.WithTarget(TargetRegistry.NoTarget);
         }
 
-        // A parameter the model left out, or gave a value the schema did not offer, takes its
-        // declared default when that default is offered now, and telemetry says which did (DR-023).
-        // One with no default is left as the model wrote it, for SchemaLegalityGuard to reject. The
-        // model's own answer stays in ModelDecision.
+        // A parameter the model left out takes its declared default when that default is offered
+        // now, and telemetry says which did (DR-023). Only a missing value: one the model wrote is
+        // kept as written, offered or not, and one left out with no default stays out, both for
+        // SchemaLegalityGuard to judge. The model's own answer stays in ModelDecision.
         private static AgentDecision DefaultArguments(AgentDecision decision, AgentContext ctx, DecisionRequest request, DecisionTelemetry telemetry)
         {
             var asked = DecisionSchema.ParametersOf(request.Schema, decision.ActionId);
@@ -1599,9 +1601,8 @@ namespace Agenerela
             foreach (var field in asked)
             {
                 bool has = decision.TryGetArgument(field.Name, out string value);
-                bool offered = has && Contains(field.AllowedValues, value);
                 var parameter = definition.ParameterNamed(field.Name);
-                if (!offered && parameter != null && parameter.HasDefault && Contains(field.AllowedValues, parameter.Default))
+                if (!has && parameter != null && parameter.HasDefault && Contains(field.AllowedValues, parameter.Default))
                 {
                     value = parameter.Default;
                     has = true;

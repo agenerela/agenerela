@@ -42,8 +42,8 @@ new ActionDefinition
 |---|---|
 | `Name` | snake_case, the key the model writes. Not `action`, `target`, `statement` or `also_targets` |
 | `Description` | Optional. Shown beside the values in the prompt |
-| `Values` | The closed list. At least one, none empty (Gemini rejects `""` in an enum), none twice |
-| `Default` | Optional. The value used when the reply leaves the parameter out or names a value not offered |
+| `Values` | The closed list. At least one, none empty (Gemini rejects `""` in an enum), none twice. No comma, no control character and no whitespace at either end, since the prompt lists them as `a, b or c` |
+| `Default` | Optional. The value used when the reply leaves the parameter out. Only then: a value the model wrote is never replaced |
 | `ExampleValue` | Optional. The value the action's example shows; else `Default`, else the first offered |
 
 Two kinds, both a list:
@@ -55,6 +55,14 @@ Two kinds, both a list:
 There is no open number range and no free text: a small model invents numbers, and a second free
 text is a recipe ([prompt.md](prompt.md#two-texts-in-one-statement-a-title-and-a-story)). Compute a
 short list instead, such as three prices.
+
+**An asset wins over the method, parameters included.** When `RegisterMethods` is given an asset
+with the action's id, the asset's `Parameters` replace the method's `[AgentParameter]`s (DR-011).
+The method must then agree with the asset: every `[Argument]` and `[AvailableValue]` names a
+parameter the asset declares, and an `int` argument a number list, or registration throws.
+
+**`[Argument]` is not optional.** A method parameter without it receives the target. One named
+like a declared parameter and missing the attribute is refused at registration.
 
 With two parameters on one method, give each an `Order` (`[AgentParameter(..., Order = 1)]`): C#
 promises no order for several attributes on one method, and the order is the order the reply gives
@@ -109,10 +117,12 @@ Availability CanSell(AgentContext ctx, string quantity) =>
   an `AgentContext`, returning `bool` or `Availability`.
 - `DelegateActionHandler.IsAvailableValue`, a `Func<AgentContext, string, string, Availability>`
   given the parameter's name and the value.
-- `IArgumentAvailability` on a handler of your own.
+- `IValueAvailability` on a handler of your own.
 
 Each rejected value is recorded with its reason (below). An action with a parameter that has no
-value left is left out of the decision, as an action with no legal target is. The check runs once
+value left is left out of the decision, as an action with no legal target is. So is an action
+with a parameter that needs a target and has none it can take right now, in every call: only a
+branch of its own could offer it, and that branch would have no target. The check runs once
 per value per decision, and again at `Execute`; count nothing in it
 ([guards.md](guards.md#recipe-fairness-and-cooldowns)).
 
@@ -131,14 +141,17 @@ The framework checks the values itself; the model's reply is never trusted (hard
 | The reply | What happens |
 |---|---|
 | A value the schema offered | Kept |
-| A parameter left out, or a value not offered, and the parameter has a `Default` that is offered now | The default is used, and `DecisionTelemetry.ArgumentsDefaulted` names the parameter. `DecisionResult.ModelDecision` keeps what the model wrote |
-| The same, with no default | `SchemaLegalityGuard` rejects the decision: it becomes `none`, and nothing runs |
-| A value that is not a string or a whole number | The reply is unreadable: a pipeline error |
+| A parameter left out (or `null`), and the parameter has a `Default` that is offered now | The default is used, and `DecisionTelemetry.ArgumentsDefaulted` names the parameter. `DecisionResult.ModelDecision` keeps what the model wrote |
+| A parameter left out, with no default | `SchemaLegalityGuard` rejects the decision: it becomes `none`, and nothing runs |
+| A string the parameter does not declare, or one not offered for this decision | Rejected the same way, default or none: the default covers only a missing value |
+| A whole number written bare (`3` for `"3"`) | Read as its text |
+| Any other type: a float (`3.0`), a boolean, an array, an integer past 64 bits | The reply is unreadable: an `UnreadableReply` pipeline error, even when the parameter has a default |
 
 `Agent.Execute` runs the same guard again against the game as it is then: every argument must be a
 declared value of a declared parameter, none may be missing, and the per-value check is asked
 again. A value gone stale is refused with the check's reason in `ActionResult.AvailabilityReason`,
-and no handler runs. A guard of your own reads `input.Decision.Arguments`;
+and no handler runs. `Execute` never applies a `Default`: a decision you build yourself must carry
+every value, or it is refused. A guard of your own reads `input.Decision.Arguments`;
 `GuardVerdict.ReplaceStatement` keeps them.
 
 ## Where it is recorded

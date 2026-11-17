@@ -528,7 +528,7 @@ namespace Agenerela
         [JsonProperty("statement")] public string Statement;
 
         /// <summary>
-        /// The value chosen for each of the action's parameters, by name, in declared order
+        /// The value chosen for each of the action's parameters, by name
         /// (<see cref="AgentDecision.Arguments"/>, DR-023); left out for a decision with none.
         /// </summary>
         [JsonProperty("arguments", NullValueHandling = NullValueHandling.Ignore)] public Dictionary<string, string> Arguments;

@@ -93,7 +93,7 @@ namespace Agenerela
         public IReadOnlyList<UnavailableTarget> TargetsUnavailable { get; }
 
         /// <summary>
-        /// Each value of an action's parameter a per-value check (<see cref="IArgumentAvailability"/>)
+        /// Each value of an action's parameter a per-value check (<see cref="IValueAvailability"/>)
         /// rejected, with its reason, as <see cref="DecisionTelemetry.ValuesUnavailable"/> records it
         /// for a decision (DR-023): a value left out of the schema and the prompt. Empty when no
         /// handler has such a check. The parameters each offered action asks for, with the values
