@@ -397,6 +397,21 @@ map for a few seconds and a line in the feed; the full card opened only from the
 Everything comes from the recorded event; nothing the storyteller is told or offered changed. `StoryCards` decides
 what a viewer sees, and `StoryCardsTests` checks it without a scene.
 
+**The council with free orders (17 November, in testing).** With `GameRules.FreeOrders` on (New game, Rules, "Free
+orders (new turn, in testing)", rule mode only, off by default) the council has no writs:
+- **The court** is a list you build. Each button adds an order, as many as your gold allows; each row shows its cost
+  and a mark to take it back (a later order the rules no longer offer is taken out with it, and the panel says so).
+  Under the list, the gold now, committed and left. A shut button says why in its tooltip and the status line: the
+  gold, an order given once a turn (taxes), or the rules' own reason. The orders go to the plan in this order.
+- **Your armies**: every army may be ordered; a row shows the order given this turn, that it awaits orders, or the
+  standing order it keeps.
+- **End turn**: beside it, the crests of the rulers still deciding in the background and "2 rulers still deciding";
+  pressed while they decide, the button says "Waiting for 2…" until the turn resolves.
+- The top bar shows no writs stat, and the date block says "Orders" with no writ count.
+What is offered and what an order costs come from the rules (`WritLegality.CourtMovesAfter`, `CourtOrderCost`);
+`CourtList` keeps the order and the reasons, and `CourtListTests` checks it without a scene. With the switch off the
+writs council is drawn exactly as before.
+
 The numbers, the outliner's rows and the feed's filters come from `ScreenModels`, which `ScreenModelsTests` checks
 without a scene.
 

@@ -34,6 +34,7 @@ namespace GreyBoxStrategy.Realm
         public List<string> ArmiesWithWrits(CountryRequest court)
         {
             var w = court.World;
+            if (w.Rules.FreeOrders) return w.ArmiesOf(court.CountryId).Select(a => a.Id).ToList();
             // As the rules ask them (#327): the armies your plan orders first (the court recalls any that has not woken),
             // then those awaiting orders, the most urgent first, one writ each until one is left for the court.
             var planned = Plan.Armies.Keys.Where(id => w.FindArmy(id)?.Owner == court.CountryId).ToList();
@@ -89,6 +90,8 @@ namespace GreyBoxStrategy.Realm
         private void ShowWritsOrders(string status)
         {
             var req = OrdersRequest;
+            // Free orders (the lead's turn, 17 November): no writs; ScreenUI.FreeCouncil.cs draws the council.
+            if (req.World.Rules.FreeOrders) { ShowFreeOrders(status); return; }
             // 7. A march ordered now is drawn at once, lighter than one under way.
             marchLines?.MarkDirtyRepaint();
             var w = req.World;
@@ -336,7 +339,18 @@ namespace GreyBoxStrategy.Realm
             }
             row.Add(head);
             string state;
-            if (hasWrit)
+            if (req.World.Rules.FreeOrders)
+            {
+                // Free orders: no writs to count; an order given now, awaiting one, or the standing order it keeps.
+                var m = Plan.Armies.TryGetValue(army.Id, out var x) ? x : null;
+                string why = army.Wake.Count > 0 ? $" ({army.Wake[army.Wake.Count - 1]})" : "";
+                if (m != null) { state = m.Action == Actions.March ? $"orders: march to {Cap(m.Target)}" : "orders: hold"; row.AddToClassList("ordered"); }
+                else if (waits) { state = $"at {Cap(army.Location)}, awaiting orders{why}"; row.AddToClassList("needs"); }
+                else state = army.Marching
+                    ? $"standing order: march to {Cap(army.Destination)}" + (TurnsLeft != null && hostState?.Army(army.Id) is ArmyState fs ? $", {TurnsLeft(fs)} turn{(TurnsLeft(fs) == 1 ? "" : "s")}" : "")
+                    : $"standing order: hold at {Cap(army.Location)}";
+            }
+            else if (hasWrit)
             {
                 var m = Plan.Armies.TryGetValue(army.Id, out var x) ? x : null;
                 // Why it waits, in the rules' own words ("stores running low", "fought a battle"), newest first.
@@ -358,6 +372,13 @@ namespace GreyBoxStrategy.Realm
             if (ArmyLook.SiegeTag(hostState, IndexOf(army.Location)) is string siege && hostState.SiegedBy[IndexOf(army.Location)] == army.Owner)
                 state += $"; besieging it: {siege.Substring(0, 1).ToLowerInvariant()}{siege.Substring(1)}";
             var l = new Label(state) { style = { fontSize = 12, flexShrink = 1, whiteSpace = WhiteSpace.Normal } }; row.Add(l);
+            if (req.World.Rules.FreeOrders)
+            {
+                row.tooltip = (waits ? "Awaiting orders: " + string.Join(", ", army.Wake) + ". " : "") + "Click, then right-click a lit province on the map; it keeps an order until something wakes it.";
+                string fid = army.Id;
+                row.RegisterCallback<ClickEvent>(_ => { SelectedArmy = SelectedArmy == fid ? null : fid; PlanChanged?.Invoke(); ShowOrders(ordersStatus?.text); HostPressed?.Invoke(fid); });
+                return row;
+            }
             row.tooltip = (waits ? "Awaiting orders: " + string.Join(", ", army.Wake) + ". " : "") +
                           (hasWrit ? "Click, then right-click a lit province on the map." : waits ? "The rules ask armies the most urgent first, one writ each, keeping one for the court."
                            : recall ? "Carrying out its order. Click to give it new orders: the court recalls it, for a writ."
@@ -368,7 +389,7 @@ namespace GreyBoxStrategy.Realm
         }
 
         /// <summary>What the panel shows of the plan, so the director redraws it only when it changed.</summary>
-        public string WritsKey() => Plan.Court + "|" + Plan.Court2 + "|" + string.Join(",", Plan.Armies.Select(kv => kv.Key + ":" + kv.Value));
+        public string WritsKey() => Plan.Court + "|" + Plan.Court2 + "|" + string.Join(";", Plan.Courts) + "|" + string.Join(",", Plan.Armies.Select(kv => kv.Key + ":" + kv.Value));
 
         /// <summary>The council's "next army" button: the director does what the N key does.</summary>
         public Action NextArmyPressed;

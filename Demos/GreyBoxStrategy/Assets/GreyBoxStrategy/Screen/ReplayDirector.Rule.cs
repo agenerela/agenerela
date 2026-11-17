@@ -257,6 +257,7 @@ namespace GreyBoxStrategy.Realm
             advisorNext = false;
             string path = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "Rule", $"seed-{gameSeed:D4}-{country}-{DateTime.Now:yyyyMMdd-HHmmss}.jsonl"));
             rule = new RuleSession(country, model, arm ?? "default", gameSeed, path, providerFor, cardLock, map, rules) { AdvisorOn = advise };
+            ui.Deciding = () => rule?.RulersStillDeciding ?? (IReadOnlyCollection<string>)Array.Empty<string>();
             ui.AdviceWhy = ShowAdvice;
             Debug.Log($"Painted Realm: rule game, you rule {country}, seed {gameSeed}, {model} x4 with personas; decisions into {path}");
             RunRule();
@@ -402,7 +403,7 @@ namespace GreyBoxStrategy.Realm
                     RefreshSide();
                 }
                 int used = ui.WritsUsed(rule.Orders), waiting = WritLegality.Awaiting(rule.Orders.World, rule.You).Count(), withWrit = ui.ArmiesWithWrits(rule.Orders).Count;
-                ui.SetTurn(rule.Orders.Turn, rule.Orders.Writs == GameRules.UnlimitedWrits ? $"Orders · writs {used}, no limit" : $"Orders · writs {used} of {rule.Orders.Writs}");
+                ui.SetTurn(rule.Orders.Turn, rule.Orders.World.Rules.FreeOrders ? "Orders" : rule.Orders.Writs == GameRules.UnlimitedWrits ? $"Orders · writs {used}, no limit" : $"Orders · writs {used} of {rule.Orders.Writs}");
                 string writsLine = waiting > withWrit ? $" {waiting - withWrit} of your armies wait for want of a writ: they hold." : "";
                 status = (rule.ModelsThinking ? RulersLine($"The {OtherRulers} are deciding while you choose") : $"The {OtherRulers} have decided. Your orders?") + writsLine;
                 ui.SetThinking(rule.ModelsThinking);

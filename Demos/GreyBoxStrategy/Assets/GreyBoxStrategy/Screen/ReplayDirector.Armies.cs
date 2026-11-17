@@ -16,10 +16,17 @@ namespace GreyBoxStrategy.Realm
         public static bool NextGenerals { get => nextGenerals; set => nextGenerals = value; }
         public static bool NextSieges { get => nextSieges; set => nextSieges = value; }
         public static bool NextSupply { get => nextSupply; set => nextSupply = value; }
+        // The new turn in testing, for rule games from New game (and the CLI); off by default.
+        private static bool nextFreeOrders;
+        public static bool NextFreeOrders { get => nextFreeOrders; set => nextFreeOrders = value; }
 
         /// <summary>A setup's rules with New game's R3 settings: unchanged for the one-move game.</summary>
-        public static GameRules RulesFor(GameSetup setup, MapDefinition map) =>
-            WithArmySettings(setup.BuildRules(map), nextUnitTypes, nextGenerals, nextSieges, nextSupply);
+        public static GameRules RulesFor(GameSetup setup, MapDefinition map)
+        {
+            var rules = WithArmySettings(setup.BuildRules(map), nextUnitTypes, nextGenerals, nextSieges, nextSupply);
+            if (nextFreeOrders && rules != null && rules.Turn == TurnStyle.Writs) rules.FreeOrders = true;
+            return rules;
+        }
 
         /// <summary>
         /// The writs turn's rules with each of the four set as given, on or off: since they are on by default, New game's

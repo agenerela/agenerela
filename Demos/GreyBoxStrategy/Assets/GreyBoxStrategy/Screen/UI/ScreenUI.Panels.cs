@@ -335,7 +335,7 @@ namespace GreyBoxStrategy.Realm
 
         private void StatBar(ReplayState s, string me, CountryState c, CountryLook look, int n, int net)
         {
-            (int, int)? writs = OrdersRequest != null && OrdersRequest.CountryId == me && OrdersRequest.Writs != GameRules.UnlimitedWrits ? (OrdersRequest.Writs, WritsUsed(OrdersRequest)) : ((int, int)?)null;
+            (int, int)? writs = OrdersRequest != null && OrdersRequest.CountryId == me && !OrdersRequest.World.Rules.FreeOrders && OrdersRequest.Writs != GameRules.UnlimitedWrits ? (OrdersRequest.Writs, WritsUsed(OrdersRequest)) : ((int, int)?)null;
             foreach (var st in ScreenModels.TopBar(s, me, Queries?.Rules?.IncomePerProvince ?? 10, Conquest, WinAt, writs, CountryLook.NameOf, Cap))
             {
                 var (icon, cls, caption) = StatLook[st.Key];
