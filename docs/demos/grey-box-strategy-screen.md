@@ -79,6 +79,9 @@ At 1920 × 1080 and 1366 × 768, in `grey-box-strategy-screen/ui-shots/`:
 
 ### The screen
 
+*Round 2's layout. The layout built since 16 November, with the outliner top right and the chronicle as a feed,
+is in [the UI rework: variant B](#the-ui-rework-variant-b-16-november-2026), below.*
+
 The map fills the screen. Everything else floats over it, small and dense, with a tooltip on
 every number and icon.
 
@@ -324,6 +327,42 @@ off; a live A/B on 16 November left it off, #337). The rest is decided, not buil
 **The order that follows** (the tech lead's, from these answers): the defaults and the march arrows (#333);
 then UI and controls, shown to the lead as frames before they are built; then the map art; then generated
 identity and voice; then the storyteller's decisions and negotiation; and balance and pacing last.
+
+## The UI rework: variant B, 16 November 2026
+
+The lead looked at two drafts, both in [`painted-realm-ui-draft.md`](painted-realm-ui-draft.md) and
+[`painted-realm-ui-variant-b.md`](painted-realm-ui-variant-b.md):
+- **A**, the old screen with icons, built (#335);
+- **B**, which goes as far as those games do, drawn as pictures.
+
+On 16 November he decided:
+
+| Question | His answer |
+|---|---|
+| A, B or a mix | **B** |
+| Your realm at a glance | **An outliner, top right**; the left side stays empty until a click opens something there |
+| The chronicle | **A narrow feed, bottom left** |
+| Portraits | **Empty framed slots for now**; generated portraits come in a later stage |
+| A left click on a province with an army chosen | **Orders the march** (a right click does too) |
+
+B is built in three slices:
+- **1, the layout (built).**
+  - The top bar is 74 px high. The realm's banner hangs below it, with an empty portrait frame. The numbers are
+    large, each with a coloured icon and a tooltip that breaks it down. The date, the controls and **Decisions**
+    sit in a framed block.
+  - The outliner lists your armies (stores as loaves), your sieges, your wars, and the Realms and Diplomacy
+    ledgers.
+  - The left side is empty until a province, an army, a rival or a ledger opens there.
+  - The chronicle is a one-line feed with All, Me, War and Land filters. An entry opens in place, with a link to
+    find it on the map and to its decision.
+  - Every panel has a gilt frame.
+- **2, the panels.** A row kit (icon, label, bar or pips, value) for the province, army and rival views, tabs with
+  icons, and portrait frames in the panel headers.
+- **3, the inspector and the council.** The inspector becomes a framed window with tabs. Writs show as seals,
+  End turn becomes larger, and speech bubbles open their decision.
+
+The numbers, the outliner's rows and the feed's filters come from `ScreenModels`, which `ScreenModelsTests` checks
+without a scene.
 
 ## The mock-ups (round 1)
 

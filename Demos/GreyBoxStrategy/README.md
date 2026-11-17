@@ -747,6 +747,30 @@ a hungry one none from its hunger line.
   tag, every turn's end tags each siege with the game's own turns, every army has its stores at every moment, and a
   hungry army shows the warning to you and not to a rival (broken by not reading the line of a siege that ended).
 
+### The screen, variant B: layout (16 November)
+
+The lead chose variant B of the UI rework (`docs/demos/painted-realm-ui-variant-b.md`); this is its first slice.
+- **Top bar.**
+  - The realm's banner hangs below it, with an empty portrait frame beside it.
+  - Gold, soldiers, provinces, writs left, stability, wars and truces each have a 30 px icon, a large number and a
+    caption. Each number's tooltip breaks it down (`ScreenModels.TopBar`).
+  - The rivals' crests are on the right.
+  - The framed date block holds the turn, the controls, **Decisions** and Menu.
+- **Outliner, top right.**
+  - Your armies, the most pressing first, with stores as loaves and what each is doing.
+  - The sieges you lay or suffer, and your wars with their scores (`ScreenModels.OutlinerOf`).
+  - Watching, every siege and war.
+  - **Realms** and **Diplomacy** open the ledgers.
+- **Left side.** Empty until a click opens a province, an army, a rival or the realms' ledger there; "‹ Realm" or Esc
+  closes it.
+- **Chronicle.**
+  - A narrow feed at the bottom left, one line an entry, with the speaker's crest and the kind's icon.
+  - Filters: All, Me, War and Land (`ScreenModels.Keeps`). "Me" appears only when you rule.
+  - A click opens an entry in place, with what was said and a link to find it on the map and open its decision.
+- **Controls.** A left or right click on a province orders the chosen army's march; I opens the decisions.
+- **Smaller windows.** At 1366 × 768 the bar drops the words beside its numbers and shrinks its icons; the feed and
+  the outliner narrow.
+
 ### March arrows (15 November, evening)
 
 The lead found the planned march "too little and easy to miss" and asked for coloured arrows. A march is now a filled
@@ -1108,7 +1132,7 @@ war score from your side, with Accept and Refuse.
 
 **Fog of war** (v2 3.8, `WritsSight`): your court sees its own and controlled provinces, every province
 with one of its armies, and the provinces bordering all of them. A rival army beyond that is not
-drawn; one inside it shows its size rounded to ten ("~30"), and its march line only while it is seen.
+drawn; one inside it shows its size rounded to ten ("~30", and "<5" under five soldiers, `ArmySight.Short`), and its march line only while it is seen.
 
 **A ruler saying the same thing again** (`RepeatFilter`): on the writs turn a country speaks several
 times a turn, and the measured rulers repeat lines word for word (35% against 5% in the one-move game).
@@ -1481,7 +1505,7 @@ distance attrition). `GameRules.Supply`, on by default since 15 November (off un
 **R3, part six: what a country sees of a rival army** (14 November; rules v2 3.8, the lead's answer 12).
 `GameRules.Fog`, on by default since 15 November (off until then), as rules data (`ArmySight`; the screen keeps its own `Fog`):
 - A country sees its own land and its armies' provinces, and every province bordering them.
-- There a rival army shows its position, general and size rounded to 10 ("orsk's caspar_host, about 40, led by
+- There a rival army shows its position, general and size rounded to 10 (a few under 5; "orsk's caspar_host, about 40, led by
   Caspar the Bold, at corwick"); in forest only "an army of orsk's at corwick"; its mix only when one of our
   armies with riders stands in or beside it. Nothing deeper in.
 - The rulers' facts gain "Rival armies we see: …" (at most 5, the nearest enemies first); each rival's line gives

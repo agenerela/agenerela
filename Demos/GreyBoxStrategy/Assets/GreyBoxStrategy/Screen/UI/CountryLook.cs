@@ -169,7 +169,63 @@ namespace GreyBoxStrategy.Realm
     }
 
     /// <summary>The screen's small icons, drawn by code so they stay sharp at any scale (decision 28, 4K).</summary>
-    public enum IconKind { Province, Army, Gold, War, Truce, Fort, Play, Pause, Step, Scroll, Peace, Eye }
+    /// <summary>
+    /// Variant B's realm banner (#20): a pennant in the realm's colour, gilt-edged, hanging below the top bar, with the
+    /// realm's crest on it and its name at the foot.
+    /// </summary>
+    public sealed class RealmBanner : VisualElement
+    {
+        private readonly CountryLook look;
+
+        public RealmBanner(CountryLook look, float width = 104, float height = 148)
+        {
+            this.look = look;
+            AddToClassList("realm-banner");
+            style.width = width; style.height = height;
+            pickingMode = PickingMode.Position;
+            generateVisualContent += Draw;
+            var crest = new Crest(look, width * 0.6f); crest.AddToClassList("realm-banner-crest"); Add(crest);
+            var name = new Label(look.Name.ToUpperInvariant()); name.AddToClassList("realm-banner-name"); Add(name);
+        }
+
+        private void Draw(MeshGenerationContext ctx)
+        {
+            var r = contentRect; var p = ctx.painter2D;
+            Color c = look.Colour;
+            Color deep = Color.Lerp(c, Color.black, 0.45f);
+            float w = r.width, h = r.height, tip = h * 0.16f;
+            p.BeginPath();
+            p.MoveTo(new Vector2(0, 0)); p.LineTo(new Vector2(w, 0)); p.LineTo(new Vector2(w, h - tip)); p.LineTo(new Vector2(w / 2, h)); p.LineTo(new Vector2(0, h - tip)); p.ClosePath();
+            p.fillColor = deep; p.Fill();
+            p.strokeColor = new Color32(226, 194, 122, 255); p.lineWidth = 3; p.lineJoin = LineJoin.Miter; p.Stroke();
+            // An inner rule, as on a hung standard.
+            float m = 6;
+            p.BeginPath();
+            p.MoveTo(new Vector2(m, 0)); p.LineTo(new Vector2(m, h - tip - m * 0.5f)); p.LineTo(new Vector2(w / 2, h - m * 1.6f)); p.LineTo(new Vector2(w - m, h - tip - m * 0.5f)); p.LineTo(new Vector2(w - m, 0));
+            p.strokeColor = new Color(0, 0, 0, 0.45f); p.lineWidth = 1.5f; p.Stroke();
+        }
+    }
+
+    /// <summary>An empty, framed slot where a ruler's portrait will hang once portraits are made (a later stage).</summary>
+    public sealed class PortraitSlot : VisualElement
+    {
+        public PortraitSlot(float width = 58, float height = 70, string tip = "A portrait will hang here")
+        {
+            AddToClassList("portrait-slot");
+            style.width = width; style.height = height;
+            tooltip = tip;
+            generateVisualContent += ctx =>
+            {
+                var r = contentRect; var p = ctx.painter2D;
+                // A faint bust, so the frame reads as a portrait's and not an empty box.
+                p.fillColor = new Color(0.86f, 0.78f, 0.6f, 0.16f);
+                p.BeginPath(); p.Arc(new Vector2(r.width / 2, r.height * 0.4f), r.width * 0.17f, Angle.Degrees(0), Angle.Degrees(360)); p.Fill();
+                p.BeginPath(); p.MoveTo(new Vector2(r.width * 0.18f, r.height)); p.BezierCurveTo(new Vector2(r.width * 0.2f, r.height * 0.62f), new Vector2(r.width * 0.8f, r.height * 0.62f), new Vector2(r.width * 0.82f, r.height)); p.ClosePath(); p.Fill();
+            };
+        }
+    }
+
+    public enum IconKind { Province, Army, Gold, War, Truce, Fort, Play, Pause, Step, Scroll, Peace, Eye, Swords, Quill, Seal, Hammer, Scales, Shield, Refused, Hourglass, Loaf }
 
     public sealed class Icon : VisualElement
     {
@@ -205,6 +261,35 @@ namespace GreyBoxStrategy.Realm
                 case IconKind.Step: Poly(3, 2, 11, 8, 3, 14); Poly(12, 2, 14, 2, 14, 14, 12, 14); break;
                 case IconKind.Scroll: Poly(4, 1, 13, 1, 13, 15, 3, 15, 3, 12, 4, 12); break;
                 case IconKind.Peace: p.BeginPath(); p.MoveTo(P(2, 14)); p.BezierCurveTo(P(5, 8), P(9, 4), P(14, 2)); p.Stroke(); break;
+                // The UI draft's icons (#20): the same flat ink in the same tint, for the bar, the chronicle and the panels.
+                case IconKind.Swords:
+                    p.lineWidth = 1.7f * s;
+                    p.BeginPath(); p.MoveTo(P(3, 13)); p.LineTo(P(13, 3)); p.Stroke(); p.BeginPath(); p.MoveTo(P(13, 13)); p.LineTo(P(3, 3)); p.Stroke();
+                    p.BeginPath(); p.MoveTo(P(2.5f, 10)); p.LineTo(P(6, 13.5f)); p.Stroke(); p.BeginPath(); p.MoveTo(P(13.5f, 10)); p.LineTo(P(10, 13.5f)); p.Stroke();
+                    break;
+                case IconKind.Quill:
+                    p.BeginPath(); p.MoveTo(P(3, 14)); p.BezierCurveTo(P(5, 8), P(9, 3), P(14, 1.5f)); p.BezierCurveTo(P(12, 6), P(9, 10), P(4, 12.5f)); p.ClosePath(); p.Fill();
+                    p.BeginPath(); p.MoveTo(P(2, 15)); p.LineTo(P(5, 11)); p.Stroke();
+                    break;
+                case IconKind.Seal:
+                    Poly(5, 9, 7, 9, 6, 15, 4, 14); Poly(9, 9, 11, 9, 12, 14, 10, 15);
+                    p.BeginPath(); p.Arc(P(8, 6.5f), 5f * s, Angle.Degrees(0), Angle.Degrees(360)); p.Fill();
+                    break;
+                case IconKind.Hammer: Poly(2, 3, 10, 3, 10, 7, 2, 7); Poly(5.5f, 7, 7.5f, 7, 7.5f, 15, 5.5f, 15); break;
+                case IconKind.Scales:
+                    Poly(7.3f, 2, 8.7f, 2, 8.7f, 14, 7.3f, 14); Poly(4, 14, 12, 14, 12, 15.2f, 4, 15.2f); Poly(2, 4, 14, 4, 14, 5.2f, 2, 5.2f);
+                    p.BeginPath(); p.MoveTo(P(1, 9)); p.LineTo(P(6, 9)); p.LineTo(P(3.5f, 5)); p.ClosePath(); p.Stroke();
+                    p.BeginPath(); p.MoveTo(P(10, 9)); p.LineTo(P(15, 9)); p.LineTo(P(12.5f, 5)); p.ClosePath(); p.Stroke();
+                    break;
+                case IconKind.Shield: p.BeginPath(); p.MoveTo(P(2.5f, 2)); p.LineTo(P(13.5f, 2)); p.LineTo(P(13.5f, 8)); p.BezierCurveTo(P(13.5f, 12), P(10, 14), P(8, 15)); p.BezierCurveTo(P(6, 14), P(2.5f, 12), P(2.5f, 8)); p.ClosePath(); p.Fill(); break;
+                case IconKind.Refused:
+                    p.BeginPath(); p.Arc(P(8, 8), 5.8f * s, Angle.Degrees(0), Angle.Degrees(360)); p.Stroke();
+                    p.BeginPath(); p.MoveTo(P(4, 12)); p.LineTo(P(12, 4)); p.Stroke();
+                    break;
+                case IconKind.Loaf:
+                    p.BeginPath(); p.MoveTo(P(1.5f, 12)); p.BezierCurveTo(P(1.5f, 4), P(14.5f, 4), P(14.5f, 12)); p.LineTo(P(14.5f, 13.5f)); p.LineTo(P(1.5f, 13.5f)); p.ClosePath(); p.Fill();
+                    break;
+                case IconKind.Hourglass: Poly(3, 1.5f, 13, 1.5f, 13, 3, 9, 8, 13, 13, 13, 14.5f, 3, 14.5f, 3, 13, 7, 8, 3, 3); break;
                 case IconKind.Eye: p.BeginPath(); p.Arc(P(8, 8), 2.4f * s, Angle.Degrees(0), Angle.Degrees(360)); p.Fill(); p.BeginPath(); p.MoveTo(P(1, 8)); p.BezierCurveTo(P(5, 2), P(11, 2), P(15, 8)); p.BezierCurveTo(P(11, 14), P(5, 14), P(1, 8)); p.Stroke(); break;
             }
         }
