@@ -787,6 +787,30 @@ Variant B's empty picture frames are filled, from an art pack made ahead of time
   has its picture, at the right shape; a missing picture is null; and a realm's panel hangs the portrait the
   catalogue chose. The three that read the pack were seen failing before the pack existed.
 
+### Free orders, the rules (17 November; the turn rework, slice 1)
+
+The lead's direction ([`painted-realm-direction.md`](../../docs/demos/painted-realm-direction.md)): no writs, the same
+rules for human and model realms, everyone ordering on one snapshot. This first part is the rules, behind
+`GameRules.FreeOrders` (off; off is the writs turn exactly as before). The rulers deciding while you plan, and the
+screen's side, come next.
+
+- **The court** gives orders one at a time until it answers `none`. A person's court follows gold alone. A model
+  court stops at `MaxCourtOrders` (3) a turn: a pacing setting that bounds its calls, not a rule of the game (a realm's
+  own number goes in `CourtOrdersOverride`). Each later request is built on the same snapshot, tells the orders already
+  given, and offers only what is left: the gold its earlier orders will spend is held back (`Country.Reserved`), and an
+  order given once is not offered again, except a recruit, which raises one more company.
+- **The armies.** Every order stands: a hold as much as a march or a siege. An army is asked again when a wake rule
+  fires, or when it has held `AskHoldingArmyEvery` (3) turns unasked, another pacing setting: in watch mode every
+  call is a wait. Armies the court recalled come first.
+- **No writs.** A ruler reads no "Writs:" line, and `ArmyWrits` is every army.
+- **Resolution** is unchanged. The held-back gold is released as the orders land, in the rules' order.
+- `Submit` keeps its shape: each answer returns that realm's next request. So the headless runners, the tables
+  (`-strategyRules FreeOrders=true`) and the replay play a free game with no change.
+
+**Tests**, each seen failing once against a deliberate break: `FreeOrderTests` (the court until none and the cap, the
+override, gold held back, orders not offered twice, which armies are asked and the holding timer, a whole game) and `FreeOrderReplayTests`
+(a scripted free game replays with no drift).
+
 ### Merging and splitting armies: the rules (16 November)
 
 The lead, after playing variant B: "a possibility to unify armies and separate". The rules are in the Sim; the

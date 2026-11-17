@@ -153,6 +153,30 @@ namespace GreyBoxStrategy
         /// (rules v2 1.6: the screen's "unlimited writs" for the person alone, an easy setting). Empty by default.
         /// </summary>
         public Dictionary<string, int> WritsOverride = new Dictionary<string, int>();
+
+        // --- Free orders (the turn rework, slice 1, 17 November) ---------------------------------
+        /// <summary>
+        /// The writs turn without writs: a realm gives court orders one at a time until it answers none (at most
+        /// <see cref="MaxCourtOrders"/>), each on the council's snapshot with the gold its earlier orders spend held back,
+        /// then an order for each army with no standing order (not marching, not besieging) or woken. Human and model
+        /// realms play the same rules. Off: the writs turn exactly as before.
+        /// </summary>
+        public bool FreeOrders;
+        /// <summary>
+        /// With <see cref="FreeOrders"/>: court orders a realm may give a turn. A pacing setting for the model seats, which
+        /// bounds their calls a turn: the person's court follows gold alone (<see cref="CourtOrdersOverride"/>).
+        /// </summary>
+        public int MaxCourtOrders = 3;
+        /// <summary>
+        /// With <see cref="FreeOrders"/>: a holding army keeps its order, as a marching or besieging one does, and is asked
+        /// again when a wake rule fires or after standing this many turns unasked. A pacing setting: each ask is a call.
+        /// </summary>
+        public int AskHoldingArmyEvery = 3;
+        /// <summary>With <see cref="FreeOrders"/>: a realm's court orders a turn in place of <see cref="MaxCourtOrders"/> (the person's, no limit).</summary>
+        public Dictionary<string, int> CourtOrdersOverride = new Dictionary<string, int>();
+        /// <summary>With <see cref="FreeOrders"/>: the court orders this country may give a turn.</summary>
+        public int CourtOrdersFor(string countryId) =>
+            countryId != null && CourtOrdersOverride != null && CourtOrdersOverride.TryGetValue(countryId, out int n) ? System.Math.Max(1, n) : MaxCourtOrders;
         /// <summary>An army asks for orders again after this many turns on one order (wake condition 8), and a hold lasts this long.</summary>
         public int WakeAfterTurns = 4;
         /// <summary>A march may be ordered to a province at most this many steps away.</summary>
@@ -331,6 +355,7 @@ namespace GreyBoxStrategy
         {
             var copy = (GameRules)MemberwiseClone();
             copy.WritsOverride = new Dictionary<string, int>(WritsOverride);
+            copy.CourtOrdersOverride = new Dictionary<string, int>(CourtOrdersOverride);
             return copy;
         }
     }
